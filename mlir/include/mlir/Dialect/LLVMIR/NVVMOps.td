@@ -19,8 +19,8 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
 
-def LLVM_ptr_global : LLVM_PointerInAddressSpace<1>;
-def LLVM_ptr_shared : LLVM_PointerInAddressSpace<3>;
+def LLVM_PointerGlobal : LLVM_PointerInAddressSpace<1>;
+def LLVM_PointerShared : LLVM_PointerInAddressSpace<3>;
 
 //===----------------------------------------------------------------------===//
 // NVVM dialect definitions
@@ -226,7 +226,7 @@ def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
 
 /// mbarrier.init instruction with shared pointer type
 def NVVM_MBarrierInitSharedOp : NVVM_PTXBuilder_Op<"mbarrier.init.shared">,
-  Arguments<(ins LLVM_ptr_shared:$addr, I32:$count, PtxPredicate:$predicate)> {
+  Arguments<(ins LLVM_PointerShared:$addr, I32:$count, PtxPredicate:$predicate)> {
   string llvmBuilder = [{
       createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_init_shared, {$addr, $count});
   }];
@@ -246,7 +246,7 @@ def NVVM_MBarrierInvalOp : NVVM_Op<"mbarrier.inval">,
 }
 
 def NVVM_MBarrierInvalSharedOp : NVVM_Op<"mbarrier.inval.shared">,
-  Arguments<(ins LLVM_ptr_shared:$addr)> {
+  Arguments<(ins LLVM_PointerShared:$addr)> {
   string llvmBuilder = [{
       createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_inval_shared, {$addr});
   }];
@@ -264,7 +264,7 @@ def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
 
 def NVVM_MBarrierArriveSharedOp : NVVM_Op<"mbarrier.arrive.shared">,
   Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_ptr_shared:$addr)> {
+  Arguments<(ins LLVM_PointerShared:$addr)> {
   string llvmBuilder = [{
       $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_arrive_shared, {$addr});
   }];
@@ -282,7 +282,7 @@ def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
 
 def NVVM_MBarrierArriveNocompleteSharedOp : NVVM_Op<"mbarrier.arrive.nocomplete.shared">,
   Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_ptr_shared:$addr, I32:$count)> {
+  Arguments<(ins LLVM_PointerShared:$addr, I32:$count)> {
   string llvmBuilder = [{
       $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_arrive_noComplete_shared, {$addr, $count});
   }];
@@ -298,7 +298,7 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
 }
 
 def NVVM_MBarrierArriveExpectTxSharedOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_tx.shared">,  
-  Arguments<(ins LLVM_ptr_shared:$addr, I32:$txcount, PtxPredicate:$predicate)> {    
+  Arguments<(ins LLVM_PointerShared:$addr, I32:$txcount, PtxPredicate:$predicate)> {    
   let assemblyFormat = "$addr `,` $txcount (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.shared.b64 _, [%0], %1;"); }
@@ -325,7 +325,7 @@ def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity"
 }
 
 def NVVM_MBarrierTryWaitParitySharedOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity.shared">,  
-  Arguments<(ins LLVM_ptr_shared:$addr, I32:$phase, I32:$ticks)> {  
+  Arguments<(ins LLVM_PointerShared:$addr, I32:$phase, I32:$ticks)> {  
   let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
@@ -354,7 +354,7 @@ def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
 
 def NVVM_MBarrierTestWaitSharedOp : NVVM_Op<"mbarrier.test.wait.shared">,
   Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_ptr_shared:$addr, LLVM_Type:$state)> {
+  Arguments<(ins LLVM_PointerShared:$addr, LLVM_Type:$state)> {
   string llvmBuilder = [{
       $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_test_wait_shared, {$addr, $state});
   }];
@@ -499,8 +499,8 @@ def LoadCacheModifierKind : I32EnumAttr<"LoadCacheModifierKind",
 def LoadCacheModifierAttr : EnumAttr<NVVM_Dialect, LoadCacheModifierKind, "load_cache_modifier">;
 
 def NVVM_CpAsyncOp : NVVM_PTXBuilder_Op<"cp.async.shared.global">,
-  Arguments<(ins LLVM_ptr_shared:$dst,
-                 LLVM_ptr_global:$src,
+  Arguments<(ins LLVM_PointerShared:$dst,
+                 LLVM_PointerGlobal:$src,
                  I32Attr:$size,
                  LoadCacheModifierAttr:$modifier,
                  Optional<LLVM_Type>:$cpSize)> {
@@ -1185,7 +1185,7 @@ def NVVM_WMMAMmaOp : NVVM_Op<"wmma.mma">,
 }
 
 def NVVM_StMatrixOp: NVVM_PTXBuilder_Op<"stmatrix">, 
-  Arguments<(ins LLVM_ptr_shared:$ptr, 
+  Arguments<(ins LLVM_PointerShared:$ptr, 
                  Variadic<I32>:$sources, 
                  MMALayoutAttr:$layout)> {
   let summary = "cooperative matrix store";
@@ -1402,9 +1402,9 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
   NVVM_Op<"cp.async.bulk.tensor.shared.cluster.global", 
   [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
   AttrSizedOperandSegments]>,
-  Arguments<(ins  LLVM_ptr_shared:$dstMem,
+  Arguments<(ins  LLVM_PointerShared:$dstMem,
                   LLVM_AnyPointer:$tmaDescriptor,
-                  LLVM_ptr_shared:$mbar,
+                  LLVM_PointerShared:$mbar,
                   Variadic<I32>:$coordinates,
                   PtxPredicate:$predicate)> {
   let assemblyFormat = [{ 
@@ -1438,7 +1438,7 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp :
   [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
   AttrSizedOperandSegments]>,
   Arguments<(ins  LLVM_AnyPointer:$tmaDescriptor,
-                  LLVM_ptr_shared:$srcMem,
+                  LLVM_PointerShared:$srcMem,
                   Variadic<I32>:$coordinates,
                   PtxPredicate:$predicate)> {
   let assemblyFormat = [{ 
