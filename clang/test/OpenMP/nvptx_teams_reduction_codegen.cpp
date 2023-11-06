@@ -106,7 +106,6 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP8:%.*]] = load double, ptr [[E1]], align 8
 // CHECK1-NEXT:    [[ADD2:%.*]] = fadd double [[TMP7]], [[TMP8]]
 // CHECK1-NEXT:    store double [[ADD2]], ptr [[TMP0]], align 8
-// CHECK1-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP3]])
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK1:       .omp.reduction.done:
 // CHECK1-NEXT:    call void @__kmpc_free_shared(ptr [[E1]], i64 8)
@@ -402,7 +401,6 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP13:%.*]] = load float, ptr [[D2]], align 4
 // CHECK1-NEXT:    [[MUL8:%.*]] = fmul float [[TMP12]], [[TMP13]]
 // CHECK1-NEXT:    store float [[MUL8]], ptr [[TMP1]], align 4
-// CHECK1-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK1:       .omp.reduction.done:
 // CHECK1-NEXT:    call void @__kmpc_free_shared(ptr [[D2]], i64 4)
@@ -751,7 +749,6 @@ int bar(int n){
 // CHECK1:       cond.end:
 // CHECK1-NEXT:    [[COND:%.*]] = phi i16 [ [[TMP14]], [[COND_TRUE]] ], [ [[TMP15]], [[COND_FALSE]] ]
 // CHECK1-NEXT:    store i16 [[COND]], ptr [[TMP1]], align 2
-// CHECK1-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK1:       .omp.reduction.done:
 // CHECK1-NEXT:    ret void
@@ -821,7 +818,6 @@ int bar(int n){
 // CHECK1:       cond.end11:
 // CHECK1-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP15]], [[COND_TRUE9]] ], [ [[TMP16]], [[COND_FALSE10]] ]
 // CHECK1-NEXT:    store i16 [[COND12]], ptr [[TMP1]], align 2
-// CHECK1-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP6]])
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK1:       .omp.reduction.done:
 // CHECK1-NEXT:    ret void
@@ -1303,7 +1299,6 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP8:%.*]] = load double, ptr [[E1]], align 8
 // CHECK2-NEXT:    [[ADD2:%.*]] = fadd double [[TMP7]], [[TMP8]]
 // CHECK2-NEXT:    store double [[ADD2]], ptr [[TMP0]], align 8
-// CHECK2-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP3]])
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK2:       .omp.reduction.done:
 // CHECK2-NEXT:    call void @__kmpc_free_shared(ptr [[E1]], i32 8)
@@ -1599,7 +1594,6 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP13:%.*]] = load float, ptr [[D2]], align 4
 // CHECK2-NEXT:    [[MUL8:%.*]] = fmul float [[TMP12]], [[TMP13]]
 // CHECK2-NEXT:    store float [[MUL8]], ptr [[TMP1]], align 4
-// CHECK2-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK2:       .omp.reduction.done:
 // CHECK2-NEXT:    call void @__kmpc_free_shared(ptr [[D2]], i32 4)
@@ -1948,7 +1942,6 @@ int bar(int n){
 // CHECK2:       cond.end:
 // CHECK2-NEXT:    [[COND:%.*]] = phi i16 [ [[TMP14]], [[COND_TRUE]] ], [ [[TMP15]], [[COND_FALSE]] ]
 // CHECK2-NEXT:    store i16 [[COND]], ptr [[TMP1]], align 2
-// CHECK2-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK2:       .omp.reduction.done:
 // CHECK2-NEXT:    ret void
@@ -2018,7 +2011,6 @@ int bar(int n){
 // CHECK2:       cond.end11:
 // CHECK2-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP15]], [[COND_TRUE9]] ], [ [[TMP16]], [[COND_FALSE10]] ]
 // CHECK2-NEXT:    store i16 [[COND12]], ptr [[TMP1]], align 2
-// CHECK2-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP6]])
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK2:       .omp.reduction.done:
 // CHECK2-NEXT:    ret void
@@ -2500,7 +2492,6 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP8:%.*]] = load double, ptr [[E1]], align 8
 // CHECK3-NEXT:    [[ADD2:%.*]] = fadd double [[TMP7]], [[TMP8]]
 // CHECK3-NEXT:    store double [[ADD2]], ptr [[TMP0]], align 8
-// CHECK3-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP3]])
 // CHECK3-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK3:       .omp.reduction.done:
 // CHECK3-NEXT:    call void @__kmpc_free_shared(ptr [[E1]], i32 8)
@@ -2796,7 +2787,6 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP13:%.*]] = load float, ptr [[D2]], align 4
 // CHECK3-NEXT:    [[MUL8:%.*]] = fmul float [[TMP12]], [[TMP13]]
 // CHECK3-NEXT:    store float [[MUL8]], ptr [[TMP1]], align 4
-// CHECK3-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK3-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK3:       .omp.reduction.done:
 // CHECK3-NEXT:    call void @__kmpc_free_shared(ptr [[D2]], i32 4)
@@ -3145,7 +3135,6 @@ int bar(int n){
 // CHECK3:       cond.end:
 // CHECK3-NEXT:    [[COND:%.*]] = phi i16 [ [[TMP14]], [[COND_TRUE]] ], [ [[TMP15]], [[COND_FALSE]] ]
 // CHECK3-NEXT:    store i16 [[COND]], ptr [[TMP1]], align 2
-// CHECK3-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK3-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK3:       .omp.reduction.done:
 // CHECK3-NEXT:    ret void
@@ -3215,7 +3204,6 @@ int bar(int n){
 // CHECK3:       cond.end11:
 // CHECK3-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP15]], [[COND_TRUE9]] ], [ [[TMP16]], [[COND_FALSE10]] ]
 // CHECK3-NEXT:    store i16 [[COND12]], ptr [[TMP1]], align 2
-// CHECK3-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP6]])
 // CHECK3-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK3:       .omp.reduction.done:
 // CHECK3-NEXT:    ret void

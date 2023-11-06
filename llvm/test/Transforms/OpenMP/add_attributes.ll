@@ -722,8 +722,6 @@ declare void @__kmpc_kernel_prepare_parallel(ptr);
 
 declare i32 @__kmpc_masked(ptr, i32, i32);
 
-declare void @__kmpc_nvptx_end_reduce_nowait(i32);
-
 declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i32, i32, i64, ptr, ptr, ptr);
 
 declare i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, i32, ptr, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr);
@@ -1366,9 +1364,6 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK: declare i32 @__kmpc_masked(ptr, i32, i32)
-
-; CHECK-NOT: Function Attrs
-; CHECK: declare void @__kmpc_nvptx_end_reduce_nowait(i32)
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i32, i32, i64, ptr, ptr, ptr)
@@ -2014,9 +2009,6 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC: declare i32 @__kmpc_masked(ptr nocapture nofree readonly, i32, i32)
-
-; OPTIMISTIC-NOT: Function Attrs
-; OPTIMISTIC: declare void @__kmpc_nvptx_end_reduce_nowait(i32)
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i32, i32, i64, ptr, ptr, ptr)
@@ -2675,9 +2667,6 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 
 ; EXT: ; Function Attrs: nounwind
 ; EXT: declare signext i32 @__kmpc_masked(ptr, i32 signext, i32 signext)
-
-; EXT-NOT: Function Attrs
-; EXT: declare void @__kmpc_nvptx_end_reduce_nowait(i32 signext)
 
 ; EXT-NOT: Function Attrs
 ; EXT: declare signext i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i32 signext, i32 signext, i64, ptr, ptr, ptr)
