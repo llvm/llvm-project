@@ -325,7 +325,7 @@ void RegisterBankEmitter::emitRBIImplementation(raw_ostream &OS,
 
   OS << "namespace llvm {\n"
      << "namespace " << TargetName << " {\n"
-     << "RegisterBankInfo::PartialMapping PartMappings[] = {\n";
+     << "const RegisterBankInfo::PartialMapping PartMappings[] = {\n";
   for (const auto &Bank : Banks) {
     for (const CodeGenRegisterClass *RC :
          Bank.getExplicitlySpecifiedRegisterClasses(RegisterClassHierarchy)) {
@@ -342,7 +342,7 @@ void RegisterBankEmitter::emitRBIImplementation(raw_ostream &OS,
   OS << "};\n\n";
 
   // emit PartialMappingIdx of the first Register Class of each Register Bank
-  OS << "PartialMappingIdx BankIDToFirstRegisterClassIdx[] = {\n";
+  OS << "const PartialMappingIdx BankIDToFirstRegisterClassIdx[] = {\n";
   for (const auto &Bank : Banks) {
     OS << "  PMI_"
        << Bank.getExplicitlySpecifiedRegisterClasses(RegisterClassHierarchy)[0]
@@ -352,7 +352,7 @@ void RegisterBankEmitter::emitRBIImplementation(raw_ostream &OS,
   OS << "};\n\n";
 
   // emit count of Register Classes of each Register Bank
-  OS << "int BankIDToRegisterClassCount[] = {\n";
+  OS << "const int BankIDToRegisterClassCount[] = {\n";
   for (const auto &Bank : Banks) {
     OS << "  "
        << Bank.getExplicitlySpecifiedRegisterClasses(RegisterClassHierarchy)
