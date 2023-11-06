@@ -66,15 +66,17 @@ bool index::isFunctionLocalSymbol(const Decl *D) {
 
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
     switch (ND->getFormalLinkage()) {
-      case NoLinkage:
-      case InternalLinkage:
-        return true;
-      case VisibleNoLinkage:
-      case UniqueExternalLinkage:
-        llvm_unreachable("Not a sema linkage");
-      case ModuleLinkage:
-      case ExternalLinkage:
-        return false;
+    case Linkage::Invalid:
+      llvm_unreachable("Linkage hasn't been computed!");
+    case Linkage::None:
+    case Linkage::Internal:
+      return true;
+    case Linkage::VisibleNone:
+    case Linkage::UniqueExternal:
+      llvm_unreachable("Not a sema linkage");
+    case Linkage::Module:
+    case Linkage::External:
+      return false;
     }
   }
 
