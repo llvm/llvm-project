@@ -357,7 +357,8 @@ public:
   void createHeader(raw_ostream &o);
 
   // Emits core intrinsics in both arm_sme.h and arm_sve.h
-  void createCoreHeaderIntrinsics(raw_ostream &o, SVEEmitter &Emitter, ACLEKind Kind);
+  void createCoreHeaderIntrinsics(raw_ostream &o, SVEEmitter &Emitter,
+                                  ACLEKind Kind);
 
   /// Emit all the __builtin prototypes and code needed by Sema.
   void createBuiltins(raw_ostream &o);
@@ -1206,14 +1207,16 @@ void SVEEmitter::createCoreHeaderIntrinsics(raw_ostream &OS,
   // - Architectural guard (i.e. does it require SVE2 or SVE2_AES)
   // - Class (is intrinsic overloaded or not)
   // - Intrinsic name
-  std::stable_sort(
-      Defs.begin(), Defs.end(), [](const std::unique_ptr<Intrinsic> &A,
-                                   const std::unique_ptr<Intrinsic> &B) {
-        auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
-          return std::make_tuple(I->getGuard(), (unsigned)I->getClassKind(), I->getName());
-        };
-        return ToTuple(A) < ToTuple(B);
-      });
+  std::stable_sort(Defs.begin(), Defs.end(),
+                   [](const std::unique_ptr<Intrinsic> &A,
+                      const std::unique_ptr<Intrinsic> &B) {
+                     auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
+                       return std::make_tuple(I->getGuard(),
+                                              (unsigned)I->getClassKind(),
+                                              I->getName());
+                     };
+                     return ToTuple(A) < ToTuple(B);
+                   });
 
   // Actually emit the intrinsic declarations.
   for (auto &I : Defs)

@@ -1984,6 +1984,9 @@ defm SVREVD : SInstZPZ<"svrevd", "csilUcUsUiUl", "aarch64_sve_revd">;
 ////////////////////////////////////////////////////////////////////////////////
 // SME2
 
+// SME intrinsics which operate only on vectors and do not require ZA should be added here,
+// as they could possibly become SVE instructions in the future.
+
 let TargetGuard = "sme2" in {
 // == ADD (vectors) ==
   def SVADD_SINGLE_X2 : SInst<"svadd[_single_{d}_x2]", "22d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x2", [IsStreaming], []>;
