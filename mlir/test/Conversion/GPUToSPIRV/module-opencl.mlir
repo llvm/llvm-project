@@ -12,6 +12,8 @@ module attributes {
     //  CHECK-SAME:     {{%.*}}: !spirv.ptr<!spirv.array<12 x f32>, CrossWorkgroup>
     //   CHECK-NOT:     spirv.interface_var_abi
     //  CHECK-SAME:     spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 4, 1]>
+    // CHECK-LABEL:   func.func @basic_module_structure
+    //  CHECK-SAME:     attributes {gpu.kernel}
     gpu.func @basic_module_structure(%arg0 : f32, %arg1 : memref<12xf32, #spirv.storage_class<CrossWorkgroup>>) kernel
         attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 4, 1]>} {
       gpu.return
@@ -45,6 +47,8 @@ module attributes {
     //  CHECK-SAME:     {{%.*}}: !spirv.ptr<!spirv.array<12 x f32>, CrossWorkgroup>
     //   CHECK-NOT:     spirv.interface_var_abi
     //  CHECK-SAME:     spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 4, 1]>
+    // CHECK-LABEL:   func.func @basic_module_structure
+    //  CHECK-SAME:     attributes {gpu.kernel}
     gpu.func @basic_module_structure(%arg0 : f32, %arg1 : memref<12xf32, #spirv.storage_class<CrossWorkgroup>>) kernel
         attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 4, 1]>} {
       gpu.return
