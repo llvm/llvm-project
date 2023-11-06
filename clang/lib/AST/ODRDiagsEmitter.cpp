@@ -461,8 +461,10 @@ bool ODRDiagsEmitter::diagnoseSubMismatchObjCMethod(
   }
   if (FirstMethod->getImplementationControl() !=
       SecondMethod->getImplementationControl()) {
-    DiagError(ControlLevel) << FirstMethod->getImplementationControl();
-    DiagNote(ControlLevel) << SecondMethod->getImplementationControl();
+    DiagError(ControlLevel)
+        << llvm::to_underlying(FirstMethod->getImplementationControl());
+    DiagNote(ControlLevel) << llvm::to_underlying(
+        SecondMethod->getImplementationControl());
     return true;
   }
   if (FirstMethod->isThisDeclarationADesignatedInitializer() !=

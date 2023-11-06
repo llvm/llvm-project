@@ -57,6 +57,8 @@ Changes to the LLVM IR
 
   * ``and``
   * ``or``
+  * ``zext``
+  * ``sext``
 
 * Added `llvm.exp10` intrinsic.
 
@@ -166,6 +168,16 @@ Changes to the C API
 
   * ``LLVMConstAnd``
   * ``LLVMConstOr``
+  * ``LLVMConstZExt``
+  * ``LLVMConstSExt``
+  * ``LLVMConstZExtOrBitCast``
+  * ``LLVMConstSExtOrBitCast``
+  * ``LLVMConstIntCast``
+
+* Added ``LLVMCreateTargetMachineWithOptions``, along with helper functions for
+  an opaque option structure, as an alternative to ``LLVMCreateTargetMachine``.
+  The option structure exposes an additional setting (i.e., the target ABI) and
+  provides default values for unspecified settings.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -195,6 +207,8 @@ Changes to the LLVM tools
 
 * ``llvm-nm`` now supports the ``--line-numbers`` (``-l``) option to use
   debugging information to print symbols' filenames and line numbers.
+
+* llvm-symbolizer and llvm-addr2line now support addresses specified as symbol names.
 
 Changes to LLDB
 ---------------------------------

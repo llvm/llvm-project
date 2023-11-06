@@ -49,7 +49,7 @@ entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
   store i32 0, ptr %.zero.addr, align 4
-  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_10301_87b2c_foo_l7_kernel_environment)
+  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_10301_87b2c_foo_l7_kernel_environment, ptr null)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -64,7 +64,7 @@ worker.exit:                                      ; preds = %entry
   ret void
 }
 
-define weak i32 @__kmpc_target_init(ptr %0) {
+define weak i32 @__kmpc_target_init(ptr %0, ptr) {
   ret i32 0
 }
 

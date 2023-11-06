@@ -1532,6 +1532,30 @@ Currently, only the following parameter attributes are defined:
     If a function reads from a writeonly pointer argument, the behavior is
     undefined.
 
+``writable``
+    This attribute is only meaningful in conjunction with ``dereferenceable(N)``
+    or another attribute that implies the first ``N`` bytes of the pointer
+    argument are dereferenceable.
+
+    In that case, the attribute indicates that the first ``N`` bytes will be
+    (non-atomically) loaded and stored back on entry to the function.
+
+    This implies that it's possible to introduce spurious stores on entry to
+    the function without introducing traps or data races. This does not
+    necessarily hold throughout the whole function, as the pointer may escape
+    to a different thread during the execution of the function. See also the
+    :ref:`atomic optimization guide <Optimization outside atomic>`
+
+    The "other attributes" that imply dereferenceability are
+    ``dereferenceable_or_null`` (if the pointer is non-null) and the
+    ``sret``, ``byval``, ``byref``, ``inalloca``, ``preallocated`` family of
+    attributes. Note that not all of these combinations are useful, e.g.
+    ``byval`` arguments are known to be writable even without this attribute.
+
+    The ``writable`` attribute cannot be combined with ``readnone``,
+    ``readonly`` or a ``memory`` attribute that does not contain
+    ``argmem: write``.
+
 .. _gc:
 
 Garbage Collector Strategy Names
@@ -4633,10 +4657,6 @@ The following is the syntax for constant expressions:
 
 ``trunc (CST to TYPE)``
     Perform the :ref:`trunc operation <i_trunc>` on constants.
-``zext (CST to TYPE)``
-    Perform the :ref:`zext operation <i_zext>` on constants.
-``sext (CST to TYPE)``
-    Perform the :ref:`sext operation <i_sext>` on constants.
 ``fptrunc (CST to TYPE)``
     Truncate a floating-point constant to another floating-point type.
     The size of CST must be larger than the size of TYPE. Both types
@@ -5074,6 +5094,8 @@ AArch64:
   offsets). (However, LLVM currently does this for the ``m`` constraint as
   well.)
 - ``r``: A 32 or 64-bit integer register (W* or X*).
+- ``Uci``: Like r, but restricted to registers 8 to 11 inclusive.
+- ``Ucj``: Like r, but restricted to registers 12 to 15 inclusive.
 - ``w``: A 32, 64, or 128-bit floating-point, SIMD or SVE vector register.
 - ``x``: Like w, but restricted to registers 0 to 15 inclusive.
 - ``y``: Like w, but restricted to SVE vector registers Z0 to Z7 inclusive.
@@ -11229,6 +11251,10 @@ Overview:
 
 The '``zext``' instruction zero extends its operand to type ``ty2``.
 
+The ``nneg`` (non-negative) flag, if present, specifies that the operand is
+non-negative. This property may be used by optimization passes to later
+convert the ``zext`` into a ``sext``.
+
 Arguments:
 """"""""""
 
@@ -11245,6 +11271,9 @@ until it reaches the size of the destination type, ``ty2``.
 
 When zero extending from i1, the result will always be either 0 or 1.
 
+If the ``nneg`` flag is set, and the ``zext`` argument is negative, the result
+is a poison value.
+
 Example:
 """"""""
 
@@ -11253,6 +11282,9 @@ Example:
       %X = zext i32 257 to i64              ; yields i64:257
       %Y = zext i1 true to i32              ; yields i32:1
       %Z = zext <2 x i16> <i16 8, i16 7> to <2 x i32> ; yields <i32 8, i32 7>
+
+      %a = zext nneg i8 127 to i16 ; yields i16 127
+      %b = zext nneg i8 -1 to i16  ; yields i16 poison
 
 .. _i_sext:
 
@@ -13943,6 +13975,144 @@ should be inserted for value profiling of target expressions. ``-instrprof``
 pass will generate the appropriate data structures and replace the
 ``llvm.instrprof.value.profile`` intrinsic with the call to the profile
 runtime library with proper arguments.
+
+'``llvm.instrprof.mcdc.parameters``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof.mcdc.parameters(ptr <name>, i64 <hash>,
+                                                   i32 <bitmap-bytes>)
+
+Overview:
+"""""""""
+
+The '``llvm.instrprof.mcdc.parameters``' intrinsic is used to initiate MC/DC
+code coverage instrumentation for a function.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to a global variable containing the
+name of the entity being instrumented. This should generally be the
+(mangled) function name for a set of counters.
+
+The second argument is a hash value that can be used by the consumer
+of the profile data to detect changes to the instrumented source.
+
+The third argument is the number of bitmap bytes required by the function to
+record the number of test vectors executed for each boolean expression.
+
+Semantics:
+""""""""""
+
+This intrinsic represents basic MC/DC parameters initiating one or more MC/DC
+instrumentation sequences in a function. It will cause the ``-instrprof`` pass
+to generate the appropriate data structures and the code to instrument MC/DC
+test vectors in a format that can be written out by a compiler runtime and
+consumed via the ``llvm-profdata`` tool.
+
+'``llvm.instrprof.mcdc.condbitmap.update``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof.mcdc.condbitmap.update(ptr <name>, i64 <hash>,
+                                                          i32 <condition-id>,
+                                                          ptr <mcdc-temp-addr>,
+                                                          i1 <bool-value>)
+
+Overview:
+"""""""""
+
+The '``llvm.instrprof.mcdc.condbitmap.update``' intrinsic is used to track
+MC/DC condition evaluation for each condition in a boolean expression.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to a global variable containing the
+name of the entity being instrumented. This should generally be the
+(mangled) function name for a set of counters.
+
+The second argument is a hash value that can be used by the consumer
+of the profile data to detect changes to the instrumented source.
+
+The third argument is an ID of a condition to track. This value is used as a
+bit index into the condition bitmap.
+
+The fourth argument is the address of the condition bitmap.
+
+The fifth argument is the boolean value representing the evaluation of the
+condition (true or false)
+
+Semantics:
+""""""""""
+
+This intrinsic represents the update of a condition bitmap that is local to a
+function and will cause the ``-instrprof`` pass to generate the code to
+instrument the control flow around each condition in a boolean expression. The
+ID of each condition corresponds to a bit index in the condition bitmap which
+is set based on the evaluation of the condition.
+
+'``llvm.instrprof.mcdc.tvbitmap.update``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof.mcdc.tvbitmap.update(ptr <name>, i64 <hash>,
+                                                        i32 <bitmap-bytes>)
+                                                        i32 <bitmap-index>,
+                                                        ptr <mcdc-temp-addr>)
+
+Overview:
+"""""""""
+
+The '``llvm.instrprof.mcdc.tvbitmap.update``' intrinsic is used to track MC/DC
+test vector execution after each boolean expression has been fully executed.
+The overall value of the condition bitmap, after it has been successively
+updated using the '``llvm.instrprof.mcdc.condbitmap.update``' intrinsic with
+the true or false evaluation of each condition, uniquely identifies an executed
+MC/DC test vector and is used as a bit index into the global test vector
+bitmap.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to a global variable containing the
+name of the entity being instrumented. This should generally be the
+(mangled) function name for a set of counters.
+
+The second argument is a hash value that can be used by the consumer
+of the profile data to detect changes to the instrumented source.
+
+The third argument is the number of bitmap bytes required by the function to
+record the number of test vectors executed for each boolean expression.
+
+The fourth argument is the byte index into the global test vector bitmap
+corresponding to the function.
+
+The fifth argument is the address of the condition bitmap, which contains a
+value representing an executed MC/DC test vector. It is loaded and used as the
+bit index of the test vector bitmap.
+
+Semantics:
+""""""""""
+
+This intrinsic represents the final operation of an MC/DC instrumentation
+sequence and will cause the ``-instrprof`` pass to generate the code to
+instrument an update of a function's global test vector bitmap to indicate that
+a test vector has been executed. The global test vector bitmap can be consumed
+by the ``llvm-profdata`` and ``llvm-cov`` tools.
 
 '``llvm.thread.pointer``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -18349,6 +18519,45 @@ Arguments:
 Both arguments must be vectors of the same type whereby their logical
 concatenation matches the result type.
 
+'``llvm.experimental.cttz.elts``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ```llvm.experimental.cttz.elts```
+on any vector of integer elements, both fixed width and scalable.
+
+::
+
+      declare i8 @llvm.experimental.cttz.elts.i8.v8i1(<8 x i1> <src>, i1 <is_zero_poison>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.cttz.elts``' intrinsic counts the number of trailing
+zero elements of a vector.
+
+Arguments:
+""""""""""
+
+The first argument is the vector to be counted. This argument must be a vector
+with integer element type. The return type must also be an integer type which is
+wide enough to hold the maximum number of elements of the source vector. The
+behaviour of this intrinsic is undefined if the return type is not wide enough
+for the number of elements in the input vector.
+
+The second argument is a constant flag that indicates whether the intrinsic
+returns a valid result if the first argument is all zero. If the first argument
+is all zero and the second argument is true, the result is poison.
+
+Semantics:
+""""""""""
+
+The '``llvm.experimental.cttz.elts``' intrinsic counts the trailing (least
+significant) zero elements in a vector. If ``src == 0`` the result is the
+number of elements in the input vector.
+
 '``llvm.experimental.vector.splice``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -21546,6 +21755,42 @@ Examples:
  llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, 1, 2, 3);  ==> <B, E, F, poison> index
  llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, -2, 3, 2); ==> <B, C, poison, poison> trailing elements
 
+
+.. _int_experimental_vp_reverse:
+
+
+'``llvm.experimental.vp.reverse``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <2 x double> @llvm.experimental.vp.reverse.v2f64(<2 x double> %vec, <2 x i1> %mask, i32 %evl)
+      declare <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask, i32 %evl)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.vp.reverse.*``' intrinsic is the vector length
+predicated version of the '``llvm.experimental.vector.reverse.*``' intrinsic.
+
+Arguments:
+""""""""""
+
+The result and the first argument ``vec`` are vectors with the same type.
+The second argument ``mask`` is a vector mask and has the same number of
+elements as the result. The third argument is the explicit vector length of
+the operation.
+
+Semantics:
+""""""""""
+
+This intrinsic reverses the order of the first ``evl`` elements in a vector.
+The lanes in the result vector disabled by ``mask`` are ``poison``. The
+elements past ``evl`` are poison.
 
 .. _int_vp_load:
 

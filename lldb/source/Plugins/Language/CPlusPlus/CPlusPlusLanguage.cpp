@@ -45,6 +45,7 @@
 #include "LibCxxVariant.h"
 #include "LibStdcpp.h"
 #include "MSVCUndecoratedNameParser.h"
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1415,7 +1416,8 @@ CPlusPlusLanguage::GetHardcodedSummaries() {
                   lldb_private::formatters::CXXFunctionPointerSummaryProvider,
                   "Function pointer summary provider"));
           if (CompilerType CT = valobj.GetCompilerType();
-              CT.IsFunctionPointerType() || CT.IsMemberFunctionPointerType()) {
+              CT.IsFunctionPointerType() || CT.IsMemberFunctionPointerType() ||
+              valobj.GetValueType() == lldb::eValueTypeVTableEntry) {
             return formatter_sp;
           }
           return nullptr;

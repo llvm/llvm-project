@@ -723,6 +723,15 @@ define void @byval_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
   ret void
 }
 
+define void @memcpy_memory_none(ptr %p, ptr %p2, i64 %size) {
+; CHECK-LABEL: @memcpy_memory_none(
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[P2:%.*]], i64 [[SIZE:%.*]], i1 false) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %p2, i64 %size, i1 false) memory(none)
+  ret void
+}
+
 !0 = !{!0}
 !1 = !{!1, !0}
 !2 = !{!1}

@@ -4744,8 +4744,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
     Register Dst = MI.getOperand(0).getReg();
-    Register Src0 = MI.getOperand(1).getReg();
-    Register Src1 = MI.getOperand(2).getReg();
+    const MachineOperand &Src0 = MI.getOperand(1);
+    const MachineOperand &Src1 = MI.getOperand(2);
     const DebugLoc &DL = MI.getDebugLoc();
     Register SrcCond = MI.getOperand(3).getReg();
 
@@ -4754,20 +4754,42 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     const auto *CondRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
     Register SrcCondCopy = MRI.createVirtualRegister(CondRC);
 
+    const TargetRegisterClass *Src0RC = Src0.isReg()
+                                            ? MRI.getRegClass(Src0.getReg())
+                                            : &AMDGPU::VReg_64RegClass;
+    const TargetRegisterClass *Src1RC = Src1.isReg()
+                                            ? MRI.getRegClass(Src1.getReg())
+                                            : &AMDGPU::VReg_64RegClass;
+
+    const TargetRegisterClass *Src0SubRC =
+        TRI->getSubRegisterClass(Src0RC, AMDGPU::sub0);
+    const TargetRegisterClass *Src1SubRC =
+        TRI->getSubRegisterClass(Src1RC, AMDGPU::sub1);
+
+    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub0, Src0SubRC);
+    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, Src1RC, AMDGPU::sub0, Src1SubRC);
+
+    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub1, Src0SubRC);
+    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, Src1RC, AMDGPU::sub1, Src1SubRC);
+
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), SrcCondCopy)
       .addReg(SrcCond);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstLo)
-      .addImm(0)
-      .addReg(Src0, 0, AMDGPU::sub0)
-      .addImm(0)
-      .addReg(Src1, 0, AMDGPU::sub0)
-      .addReg(SrcCondCopy);
+        .addImm(0)
+        .add(Src0Sub0)
+        .addImm(0)
+        .add(Src1Sub0)
+        .addReg(SrcCondCopy);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstHi)
-      .addImm(0)
-      .addReg(Src0, 0, AMDGPU::sub1)
-      .addImm(0)
-      .addReg(Src1, 0, AMDGPU::sub1)
-      .addReg(SrcCondCopy);
+        .addImm(0)
+        .add(Src0Sub1)
+        .addImm(0)
+        .add(Src1Sub1)
+        .addReg(SrcCondCopy);
 
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), Dst)
       .addReg(DstLo)
@@ -6725,24 +6747,12 @@ buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
   //   $symbol@*@hi with lower 32 bits and higher 32 bits of a literal constant,
   //   which is a 64-bit pc-relative offset from the encoding of the $symbol
   //   operand to the global variable.
-  //
-  // What we want here is an offset from the value returned by s_getpc
-  // (which is the address of the s_add_u32 instruction) to the global
-  // variable, but since the encoding of $symbol starts 4 bytes after the start
-  // of the s_add_u32 instruction, we end up with an offset that is 4 bytes too
-  // small. This requires us to add 4 to the global variable offset in order to
-  // compute the correct address. Similarly for the s_addc_u32 instruction, the
-  // encoding of $symbol starts 12 bytes after the start of the s_add_u32
-  // instruction.
-  SDValue PtrLo =
-      DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 4, GAFlags);
+  SDValue PtrLo = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset, GAFlags);
   SDValue PtrHi;
-  if (GAFlags == SIInstrInfo::MO_NONE) {
+  if (GAFlags == SIInstrInfo::MO_NONE)
     PtrHi = DAG.getTargetConstant(0, DL, MVT::i32);
-  } else {
-    PtrHi =
-        DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 12, GAFlags + 1);
-  }
+  else
+    PtrHi = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset, GAFlags + 1);
   return DAG.getNode(AMDGPUISD::PC_ADD_REL_OFFSET, DL, PtrVT, PtrLo, PtrHi);
 }
 

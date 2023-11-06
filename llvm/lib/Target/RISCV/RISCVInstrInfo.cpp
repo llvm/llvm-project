@@ -471,6 +471,36 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  if (RISCV::FPR32RegClass.contains(DstReg) &&
+      RISCV::GPRRegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_W_X), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (RISCV::GPRRegClass.contains(DstReg) &&
+      RISCV::FPR32RegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_W), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (RISCV::FPR64RegClass.contains(DstReg) &&
+      RISCV::GPRRegClass.contains(SrcReg)) {
+    assert(STI.getXLen() == 64 && "Unexpected GPR size");
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_D_X), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (RISCV::GPRRegClass.contains(DstReg) &&
+      RISCV::FPR64RegClass.contains(SrcReg)) {
+    assert(STI.getXLen() == 64 && "Unexpected GPR size");
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_D), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
   // VR->VR copies.
   if (RISCV::VRRegClass.contains(DstReg, SrcReg)) {
     copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V);
@@ -1127,6 +1157,125 @@ bool RISCVInstrInfo::reverseBranchCondition(
   auto CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
   Cond[0].setImm(getOppositeBranchCondition(CC));
   return false;
+}
+
+bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+
+  MachineBasicBlock *TBB, *FBB;
+  SmallVector<MachineOperand, 3> Cond;
+  if (analyzeBranch(*MBB, TBB, FBB, Cond, /*AllowModify=*/false))
+    return false;
+  (void)FBB;
+
+  RISCVCC::CondCode CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
+  assert(CC != RISCVCC::COND_INVALID);
+
+  if (CC == RISCVCC::COND_EQ || CC == RISCVCC::COND_NE)
+    return false;
+
+  // For two constants C0 and C1 from
+  // ```
+  // li Y, C0
+  // li Z, C1
+  // ```
+  // 1. if C1 = C0 + 1
+  // we can turn:
+  //  (a) blt Y, X -> bge X, Z
+  //  (b) bge Y, X -> blt X, Z
+  //
+  // 2. if C1 = C0 - 1
+  // we can turn:
+  //  (a) blt X, Y -> bge Z, X
+  //  (b) bge X, Y -> blt Z, X
+  //
+  // To make sure this optimization is really beneficial, we only
+  // optimize for cases where Y had only one use (i.e. only used by the branch).
+
+  // Right now we only care about LI (i.e. ADDI x0, imm)
+  auto isLoadImm = [](const MachineInstr *MI, int64_t &Imm) -> bool {
+    if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
+        MI->getOperand(1).getReg() == RISCV::X0) {
+      Imm = MI->getOperand(2).getImm();
+      return true;
+    }
+    return false;
+  };
+  // Either a load from immediate instruction or X0.
+  auto isFromLoadImm = [&](const MachineOperand &Op, int64_t &Imm) -> bool {
+    if (!Op.isReg())
+      return false;
+    Register Reg = Op.getReg();
+    if (Reg == RISCV::X0) {
+      Imm = 0;
+      return true;
+    }
+    if (!Reg.isVirtual())
+      return false;
+    return isLoadImm(MRI.getVRegDef(Op.getReg()), Imm);
+  };
+
+  MachineOperand &LHS = MI.getOperand(0);
+  MachineOperand &RHS = MI.getOperand(1);
+  // Try to find the register for constant Z; return
+  // invalid register otherwise.
+  auto searchConst = [&](int64_t C1) -> Register {
+    MachineBasicBlock::reverse_iterator II(&MI), E = MBB->rend();
+    auto DefC1 = std::find_if(++II, E, [&](const MachineInstr &I) -> bool {
+      int64_t Imm;
+      return isLoadImm(&I, Imm) && Imm == C1;
+    });
+    if (DefC1 != E)
+      return DefC1->getOperand(0).getReg();
+
+    return Register();
+  };
+
+  bool Modify = false;
+  int64_t C0;
+  if (isFromLoadImm(LHS, C0) && MRI.hasOneUse(LHS.getReg())) {
+    // Might be case 1.
+    // Signed integer overflow is UB. (UINT64_MAX is bigger so we don't need
+    // to worry about unsigned overflow here)
+    if (C0 < INT64_MAX)
+      if (Register RegZ = searchConst(C0 + 1)) {
+        reverseBranchCondition(Cond);
+        Cond[1] = MachineOperand::CreateReg(RHS.getReg(), /*isDef=*/false);
+        Cond[2] = MachineOperand::CreateReg(RegZ, /*isDef=*/false);
+        // We might extend the live range of Z, clear its kill flag to
+        // account for this.
+        MRI.clearKillFlags(RegZ);
+        Modify = true;
+      }
+  } else if (isFromLoadImm(RHS, C0) && MRI.hasOneUse(RHS.getReg())) {
+    // Might be case 2.
+    // For unsigned cases, we don't want C1 to wrap back to UINT64_MAX
+    // when C0 is zero.
+    if ((CC == RISCVCC::COND_GE || CC == RISCVCC::COND_LT) || C0)
+      if (Register RegZ = searchConst(C0 - 1)) {
+        reverseBranchCondition(Cond);
+        Cond[1] = MachineOperand::CreateReg(RegZ, /*isDef=*/false);
+        Cond[2] = MachineOperand::CreateReg(LHS.getReg(), /*isDef=*/false);
+        // We might extend the live range of Z, clear its kill flag to
+        // account for this.
+        MRI.clearKillFlags(RegZ);
+        Modify = true;
+      }
+  }
+
+  if (!Modify)
+    return false;
+
+  // Build the new branch and remove the old one.
+  BuildMI(*MBB, MI, MI.getDebugLoc(),
+          getBrCond(static_cast<RISCVCC::CondCode>(Cond[0].getImm())))
+      .add(Cond[1])
+      .add(Cond[2])
+      .addMBB(TBB);
+  MI.eraseFromParent();
+
+  return true;
 }
 
 MachineBasicBlock *
@@ -3102,4 +3251,12 @@ RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
   case RISCV::VMV_S_X:
     return 1U << Log2SEW;
   }
+}
+
+unsigned RISCV::getRVVMCOpcode(unsigned RVVPseudoOpcode) {
+  const RISCVVPseudosTable::PseudoInfo *RVV =
+      RISCVVPseudosTable::getPseudoInfo(RVVPseudoOpcode);
+  if (!RVV)
+    return 0;
+  return RVV->BaseInstr;
 }

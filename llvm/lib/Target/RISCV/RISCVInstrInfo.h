@@ -121,6 +121,8 @@ public:
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 
+  bool optimizeCondBranch(MachineInstr &MI) const override;
+
   MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
 
   bool isBranchOffsetInRange(unsigned BranchOpc,
@@ -282,6 +284,9 @@ bool hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2);
 // returns null.
 std::optional<unsigned> getVectorLowDemandedScalarBits(uint16_t Opcode,
                                                        unsigned Log2SEW);
+
+// Returns the MC opcode of RVV pseudo instruction.
+unsigned getRVVMCOpcode(unsigned RVVPseudoOpcode);
 
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;

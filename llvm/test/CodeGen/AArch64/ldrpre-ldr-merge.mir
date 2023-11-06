@@ -17,7 +17,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: early-clobber $x1, renamable $w0, renamable $w2 = LDPWpre renamable $x1, 5 :: (load (s32))
-    ; CHECK-NEXT: STPWi renamable $w0, renamable $w2, renamable $x1, 0 :: (store (s32))
+    ; CHECK-NEXT: STPWi renamable $w0, killed renamable $w2, renamable $x1, 0 :: (store (s32))
     ; CHECK-NEXT: RET undef $lr
     early-clobber renamable $x1, renamable $w0 = LDRWpre killed renamable $x1, 20 :: (load (s32))
     renamable $w2 = LDRWui renamable $x1, 1 :: (load (s32))
