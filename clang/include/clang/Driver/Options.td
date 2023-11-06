@@ -768,7 +768,11 @@ def B : JoinedOrSeparate<["-"], "B">, MetaVarName<"<prefix>">,
     HelpText<"Search $prefix$file for executables, libraries, and data files. "
     "If $prefix is a directory, search $prefix/$file">;
 def gcc_install_dir_EQ : Joined<["--"], "gcc-install-dir=">,
-  HelpText<"Use GCC installation in the specified directory. The directory ends with path components like 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
+  HelpText<"Use GCC installation in the specified directory. The directory ends"
+           " with path components like 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
+           " This option can be specified multiple times in which case clang will"
+           " start with last option and search until it finds a valid gcc install"
+           " among the given paths."
   "Note: executables (e.g. ld) used by the compiler are not overridden by the selected GCC installation">;
 def gcc_toolchain : Joined<["--"], "gcc-toolchain=">, Flags<[NoXarchOption]>,
   HelpText<"Specify a directory where Clang can find 'include' and 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "

@@ -2126,26 +2126,35 @@ void Generic_GCC::GCCInstallationDetector::init(
   StringRef TripleNoVendorRef(TripleNoVendor);
 
   // If --gcc-install-dir= is specified, skip filesystem detection.
-  if (const Arg *A =
-          Args.getLastArg(clang::driver::options::OPT_gcc_install_dir_EQ);
-      A && A->getValue()[0]) {
-    StringRef InstallDir = A->getValue();
+  std::vector<std::string> FailedGCCInstallDirs;
+  std::vector<std::string> GCCInstallDirs = Args.getAllArgValues(clang::driver::options::OPT_gcc_install_dir_EQ);
+  for (auto it = GCCInstallDirs.rbegin(); it != GCCInstallDirs.rend(); ++it) {
+    StringRef InstallDir = *it;
     if (!ScanGCCForMultilibs(TargetTriple, Args, InstallDir, false)) {
-      D.Diag(diag::err_drv_invalid_gcc_install_dir) << InstallDir;
-    } else {
-      (void)InstallDir.consume_back("/");
-      StringRef VersionText = llvm::sys::path::filename(InstallDir);
-      StringRef TripleText =
-          llvm::sys::path::filename(llvm::sys::path::parent_path(InstallDir));
-
-      Version = GCCVersion::Parse(VersionText);
-      GCCTriple.setTriple(TripleText);
-      GCCInstallPath = std::string(InstallDir);
-      GCCParentLibPath = GCCInstallPath + "/../../..";
-      IsValid = true;
+      FailedGCCInstallDirs.push_back(std::string(InstallDir));
+      continue;
     }
+
+    (void)InstallDir.consume_back("/");
+    StringRef VersionText = llvm::sys::path::filename(InstallDir);
+    StringRef TripleText =
+        llvm::sys::path::filename(llvm::sys::path::parent_path(InstallDir));
+
+    Version = GCCVersion::Parse(VersionText);
+    GCCTriple.setTriple(TripleText);
+    GCCInstallPath = std::string(InstallDir);
+    GCCParentLibPath = GCCInstallPath + "/../../..";
+    IsValid = true;
     return;
   }
+
+  for (auto FailedDir : FailedGCCInstallDirs) {
+    D.Diag(diag::err_drv_invalid_gcc_install_dir) << FailedDir;
+  }
+
+  if (!FailedGCCInstallDirs.empty())
+    return;
+
 
   // Compute the set of prefixes for our search.
   SmallVector<std::string, 8> Prefixes;
