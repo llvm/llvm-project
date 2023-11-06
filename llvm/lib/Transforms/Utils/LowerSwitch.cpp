@@ -17,8 +17,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -534,6 +532,25 @@ void ProcessSwitchInst(SwitchInst *SI,
     DeleteList.insert(OldDefault);
 }
 
+/// Replace all SwitchInst instructions with chained branch instructions.
+class LowerSwitchLegacyPass : public FunctionPass {
+public:
+  // Pass identification, replacement for typeid
+  static char ID;
+
+  LowerSwitchLegacyPass() : FunctionPass(ID) {
+    initializeLowerSwitchLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnFunction(Function &F) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LazyValueInfoWrapperPass>();
+  }
+};
+
+} // end anonymous namespace
+namespace llvm {
 bool LowerSwitch(Function &F, LazyValueInfo *LVI, AssumptionCache *AC) {
   bool Changed = false;
   SmallPtrSet<BasicBlock *, 8> DeleteList;
@@ -558,26 +575,7 @@ bool LowerSwitch(Function &F, LazyValueInfo *LVI, AssumptionCache *AC) {
 
   return Changed;
 }
-
-/// Replace all SwitchInst instructions with chained branch instructions.
-class LowerSwitchLegacyPass : public FunctionPass {
-public:
-  // Pass identification, replacement for typeid
-  static char ID;
-
-  LowerSwitchLegacyPass() : FunctionPass(ID) {
-    initializeLowerSwitchLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LazyValueInfoWrapperPass>();
-  }
-};
-
-} // end anonymous namespace
-
+} // namespace llvm
 char LowerSwitchLegacyPass::ID = 0;
 
 // Publicly exposed interface to pass...

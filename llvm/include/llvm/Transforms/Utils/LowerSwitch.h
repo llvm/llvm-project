@@ -15,12 +15,15 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOWERSWITCH_H
 #define LLVM_TRANSFORMS_UTILS_LOWERSWITCH_H
 
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 struct LowerSwitchPass : public PassInfoMixin<LowerSwitchPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
+bool LowerSwitch(Function &F, LazyValueInfo *LVI, AssumptionCache *AC);
 } // namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_LOWERSWITCH_H
