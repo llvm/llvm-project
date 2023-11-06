@@ -10,8 +10,9 @@
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
 // RUN: -complex-range=cx_fortran -o - | FileCheck %s --check-prefix=FRTRN
 
-// RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
-// RUN: -ffast-math -o - | FileCheck %s --check-prefix=FRTRN
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
+// RUN: -ffast-math -complex-range=cx_fortran -emit-llvm -o - %s \
+// RUN: | FileCheck %s --check-prefix=FRTRN
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
 // RUN: -fno-cx-fortran-rules -o - | FileCheck %s --check-prefix=FULL

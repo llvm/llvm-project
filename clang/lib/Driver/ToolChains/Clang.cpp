@@ -2810,7 +2810,7 @@ static StringRef EnumComplexRangeToStr(LangOptions::ComplexRangeKind Range) {
 static void EmitComplexRangeDiag(const Driver &D,
                                   LangOptions::ComplexRangeKind Range1,
                                   LangOptions::ComplexRangeKind Range2) {
-   if (Range1 != LangOptions::ComplexRangeKind::CX_Full)
+   if (Range1 != LangOptions::ComplexRangeKind::CX_None)
     D.Diag(clang::diag::warn_drv_overriding_option)
          << EnumComplexRangeToStr(Range1) << EnumComplexRangeToStr(Range2);
  }
@@ -2868,8 +2868,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   bool StrictFPModel = false;
   StringRef Float16ExcessPrecision = "";
   StringRef BFloat16ExcessPrecision = "";
-  LangOptions::ComplexRangeKind Range =
-      LangOptions::ComplexRangeKind::CX_Full;
+  LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_None;
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
@@ -2958,7 +2957,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << Val;
       break;
-      }
+    }
     }
 
     switch (optID) {
@@ -3157,7 +3156,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       if (!OFastEnabled)
         continue;
       [[fallthrough]];
-    case options::OPT_ffast_math:
+    case options::OPT_ffast_math: {
       HonorINFs = false;
       HonorNaNs = false;
       MathErrno = false;
@@ -3171,7 +3170,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       // If fast-math is set then set the fp-contract mode to fast.
       FPContract = "fast";
       SeenUnsafeMathModeOption = true;
+      // ffast-math enables fortran rules for complex multiplication and
+      // division.
+      std::string ComplexRangeStr = RenderComplexRangeOption("cx_fortran");
+      if (!ComplexRangeStr.empty())
+        CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
       break;
+    }
     case options::OPT_fno_fast_math:
       HonorINFs = true;
       HonorNaNs = true;
