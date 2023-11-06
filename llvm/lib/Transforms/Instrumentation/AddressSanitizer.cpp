@@ -1189,17 +1189,17 @@ static size_t TypeStoreSizeToSizeIndex(uint32_t TypeSize) {
 /// Check if \p G has been created by a trusted compiler pass.
 static bool GlobalWasGeneratedByCompiler(GlobalVariable *G) {
   // Do not instrument @llvm.global_ctors, @llvm.used, etc.
-  if (G->getName().startswith("llvm.") ||
+  if (G->getName().starts_with("llvm.") ||
       // Do not instrument gcov counter arrays.
-      G->getName().startswith("__llvm_gcov_ctr") ||
+      G->getName().starts_with("__llvm_gcov_ctr") ||
       // Do not instrument rtti proxy symbols for function sanitizer.
-      G->getName().startswith("__llvm_rtti_proxy"))
+      G->getName().starts_with("__llvm_rtti_proxy"))
     return true;
 
   // Do not instrument asan globals.
-  if (G->getName().startswith(kAsanGenPrefix) ||
-      G->getName().startswith(kSanCovGenPrefix) ||
-      G->getName().startswith(kODRGenPrefix))
+  if (G->getName().starts_with(kAsanGenPrefix) ||
+      G->getName().starts_with(kSanCovGenPrefix) ||
+      G->getName().starts_with(kODRGenPrefix))
     return true;
 
   return false;
@@ -1870,7 +1870,7 @@ ModuleAddressSanitizer::getExcludedAliasedGlobal(const GlobalAlias &GA) const {
 
   // When compiling the kernel, globals that are aliased by symbols prefixed
   // by "__" are special and cannot be padded with a redzone.
-  if (GA.getName().startswith("__"))
+  if (GA.getName().starts_with("__"))
     return dyn_cast<GlobalVariable>(C->stripPointerCastsAndAliases());
 
   return nullptr;
@@ -1940,9 +1940,9 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
 
     // Do not instrument function pointers to initialization and termination
     // routines: dynamic linker will not properly handle redzones.
-    if (Section.startswith(".preinit_array") ||
-        Section.startswith(".init_array") ||
-        Section.startswith(".fini_array")) {
+    if (Section.starts_with(".preinit_array") ||
+        Section.starts_with(".init_array") ||
+        Section.starts_with(".fini_array")) {
       return false;
     }
 
@@ -1979,7 +1979,7 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
       // those conform to /usr/lib/objc/runtime.h, so we can't add redzones to
       // them.
       if (ParsedSegment == "__OBJC" ||
-          (ParsedSegment == "__DATA" && ParsedSection.startswith("__objc_"))) {
+          (ParsedSegment == "__DATA" && ParsedSection.starts_with("__objc_"))) {
         LLVM_DEBUG(dbgs() << "Ignoring ObjC runtime global: " << *G << "\n");
         return false;
       }
@@ -2007,7 +2007,7 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
   if (CompileKernel) {
     // Globals that prefixed by "__" are special and cannot be padded with a
     // redzone.
-    if (G->getName().startswith("__"))
+    if (G->getName().starts_with("__"))
       return false;
   }
 
@@ -2803,7 +2803,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
     return false;
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage) return false;
   if (!ClDebugFunc.empty() && ClDebugFunc == F.getName()) return false;
-  if (F.getName().startswith("__asan_")) return false;
+  if (F.getName().starts_with("__asan_")) return false;
 
   bool FunctionModified = false;
 
