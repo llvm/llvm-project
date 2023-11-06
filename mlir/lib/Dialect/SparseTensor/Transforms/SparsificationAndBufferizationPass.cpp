@@ -139,13 +139,13 @@ public:
     // of `bufferization.alloc_tensor` ops.
     {
       OpPassManager pm("builtin.module");
-      pm.addPass(
-          createSparseReinterpretMapPass(ReinterpretMapScope::kGenericOnly));
+      // We need to reinterpret maps on GenericOp, EmptyOp, and AllocTensorOp.
+      // empty BSR
+      pm.addPass(createSparseReinterpretMapPass(ReinterpretMapScope::kAll));
       pm.addPass(createSparsificationPass(sparsificationOptions));
       pm.addNestedPass<func::FuncOp>(createStageSparseOperationsPass());
       pm.addPass(createLowerSparseOpsToForeachPass(enableRuntimeLibrary,
                                                    /*enableConvert=*/true));
-      // Handle dim-to-lvl maps on operations other than linalg.generic.
       pm.addPass(
           createSparseReinterpretMapPass(ReinterpretMapScope::kExceptGeneric));
       pm.addNestedPass<func::FuncOp>(createLowerForeachToSCFPass());
