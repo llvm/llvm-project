@@ -6106,6 +6106,56 @@ struct AAPointerInfo : public AbstractAttribute {
     Type *Ty;
   };
 
+  /// A helper containing a list of offsets computed for a Use. Ideally this
+  /// list should be strictly ascending, but we ensure that only when we
+  /// actually translate the list of offsets to a RangeList.
+  struct OffsetInfo {
+    using VecTy = SmallVector<int64_t>;
+    using const_iterator = VecTy::const_iterator;
+    VecTy Offsets;
+
+    const_iterator begin() const { return Offsets.begin(); }
+    const_iterator end() const { return Offsets.end(); }
+
+    bool operator==(const OffsetInfo &RHS) const {
+      return Offsets == RHS.Offsets;
+    }
+
+    bool operator!=(const OffsetInfo &RHS) const { return !(*this == RHS); }
+
+    void insert(int64_t Offset) { Offsets.push_back(Offset); }
+    bool isUnassigned() const { return Offsets.empty(); }
+
+    bool isUnknown() const {
+      if (isUnassigned())
+        return false;
+      if (Offsets.size() == 1)
+        return Offsets.front() == AA::RangeTy::Unknown;
+      return false;
+    }
+
+    void setUnknown() {
+      Offsets.clear();
+      Offsets.push_back(AA::RangeTy::Unknown);
+    }
+
+    void addToAll(int64_t Inc) {
+      for (auto &Offset : Offsets)
+        Offset += Inc;
+    }
+
+    /// Copy offsets from \p R into the current list.
+    ///
+    /// Ideally all lists should be strictly ascending, but we defer that to the
+    /// actual use of the list. So we just blindly append here.
+    void merge(const OffsetInfo &R) {
+      Offsets.append(R.Offsets);
+      // ensure elements are unique.
+      sort(Offsets.begin(), Offsets.end());
+      Offsets.erase(std::unique(Offsets.begin(), Offsets.end()), Offsets.end());
+    }
+  };
+
   /// Create an abstract attribute view for the position \p IRP.
   static AAPointerInfo &createForPosition(const IRPosition &IRP, Attributor &A);
 
@@ -6120,6 +6170,9 @@ struct AAPointerInfo : public AbstractAttribute {
   virtual const_bin_iterator begin() const = 0;
   virtual const_bin_iterator end() const = 0;
   virtual int64_t numOffsetBins() const = 0;
+  virtual void dumpState(raw_ostream &O) const = 0;
+  virtual const Access &getBinAccess(unsigned Index) const = 0;
+  virtual const DenseMap<Value *, OffsetInfo> &getOffsetInfoMap() const = 0;
 
   /// Call \p CB on all accesses that might interfere with \p Range and return
   /// true if all such accesses were known and the callback returned true for
@@ -6148,6 +6201,9 @@ struct AAPointerInfo : public AbstractAttribute {
   static bool classof(const AbstractAttribute *AA) {
     return (AA->getIdAddr() == &ID);
   }
+
+  /// Offsets Info Map
+  DenseMap<Value *, OffsetInfo> OffsetInfoMap;
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -6285,11 +6341,37 @@ struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
     return AbstractAttribute::isValidIRPositionForInit(A, IRP);
   }
 
+  // A helper function to check is simplified values exists for the current
+  // instruction.
+  bool simplifiedValuesExists(Attributor &A, Instruction *LocalInst) {
+
+    // If there are potential values that replace the accessed instruction, we
+    // should use those instead
+    bool UsedAssumedInformation = false;
+    SmallVector<AA::ValueAndContext> Values;
+    if (A.getAssumedSimplifiedValues(IRPosition::inst(*LocalInst), *this,
+                                     Values, AA::AnyScope,
+                                     UsedAssumedInformation)) {
+
+      for (auto &ValAndContext : Values) {
+        // don't modify instruction if any simplified value exists
+        if (ValAndContext.getValue() && ValAndContext.getValue() != LocalInst) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   /// Create an abstract attribute view for the position \p IRP.
   static AAAllocationInfo &createForPosition(const IRPosition &IRP,
                                              Attributor &A);
 
   virtual std::optional<TypeSize> getAllocatedSize() const = 0;
+
+  using NewOffsetsTy = DenseMap<AA::RangeTy, AA::RangeTy>;
+  virtual const NewOffsetsTy &getNewOffsets() const = 0;
 
   /// See AbstractAttribute::getName()
   const std::string getName() const override { return "AAAllocationInfo"; }
