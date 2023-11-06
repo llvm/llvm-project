@@ -16,10 +16,6 @@ int f(int c) {
 }
 '''
 
-    @classmethod
-    def setUpClass(cls):
-        Config.set_compatibility_check(False)
-
     def setUp(self):
         self.tmp = tempfile.NamedTemporaryFile(suffix='.cpp', buffering=0)
         self.tmp.write(TestRewrite.code.encode('utf-8'))
