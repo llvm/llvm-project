@@ -47,10 +47,14 @@ public:
     const DataLayout &DL = MF.getDataLayout();
     const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
-    return RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
-                         LocInfo, Flags, State, Info.IsFixed, IsRet,
-                         Info.Ty, *Subtarget.getTargetLowering(),
-                         /*FirstMaskArgument=*/std::nullopt);
+    if (RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
+                      LocInfo, Flags, State, Info.IsFixed, IsRet, Info.Ty,
+                      *Subtarget.getTargetLowering(),
+                      /*FirstMaskArgument=*/std::nullopt))
+      return true;
+
+    StackSize = State.getStackSize();
+    return false;
   }
 };
 
@@ -181,10 +185,14 @@ public:
     const DataLayout &DL = MF.getDataLayout();
     const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
-    return RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
-                         LocInfo, Flags, State, /*IsFixed=*/true, IsRet,
-                         Info.Ty, *Subtarget.getTargetLowering(),
-                         /*FirstMaskArgument=*/std::nullopt);
+    if (RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
+                      LocInfo, Flags, State, /*IsFixed=*/true, IsRet, Info.Ty,
+                      *Subtarget.getTargetLowering(),
+                      /*FirstMaskArgument=*/std::nullopt))
+      return true;
+
+    StackSize = State.getStackSize();
+    return false;
   }
 };
 
@@ -436,6 +444,13 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
   }
 
+  if (!Info.OrigRet.Ty->isVoidTy() &&
+      !isSupportedReturnType(Info.OrigRet.Ty, Subtarget))
+    return false;
+
+  MachineInstrBuilder CallSeqStart =
+      MIRBuilder.buildInstr(RISCV::ADJCALLSTACKDOWN);
+
   SmallVector<ArgInfo, 32> SplitArgInfos;
   SmallVector<ISD::OutputArg, 8> Outs;
   for (auto &AInfo : Info.OrigArgs) {
@@ -469,11 +484,13 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   MIRBuilder.insertInstr(Call);
 
+  CallSeqStart.addImm(ArgAssigner.StackSize).addImm(0);
+  MIRBuilder.buildInstr(RISCV::ADJCALLSTACKUP)
+      .addImm(ArgAssigner.StackSize)
+      .addImm(0);
+
   if (Info.OrigRet.Ty->isVoidTy())
     return true;
-
-  if (!isSupportedReturnType(Info.OrigRet.Ty, Subtarget))
-    return false;
 
   SmallVector<ArgInfo, 4> SplitRetInfos;
   splitToValueTypes(Info.OrigRet, SplitRetInfos, DL, CC);
