@@ -191,6 +191,10 @@ def HasLUT          : Predicate<"Subtarget->hasLUT()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLUT), "lut">;
 def HasSME_LUTv2     : Predicate<"Subtarget->hasSME_LUTv2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME_LUTv2), "sme-lutv2">;
+def HasSMEF8F16     : Predicate<"Subtarget->hasSMEF8F16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF8F16), "sme-f8f16">;
+def HasSMEF8F32     : Predicate<"Subtarget->hasSMEF8F32()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF8F32), "sme-f8f32">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
