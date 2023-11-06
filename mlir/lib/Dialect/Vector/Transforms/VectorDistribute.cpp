@@ -801,13 +801,31 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
   using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *operand = getWarpResult(
-        warpOp, [](Operation *op) { return isa<vector::TransferReadOp>(op); });
-    if (!operand)
-      return failure();
-    auto read = operand->get().getDefiningOp<vector::TransferReadOp>();
-    // Don't duplicate transfer_read ops when distributing.
-    if (!read.getResult().hasOneUse())
+    // Try to find a distributable yielded read. Note that this pattern can
+    // still fail at the end after distribution, in which case this might have
+    // missed another distributable read.
+    vector::TransferReadOp read;
+    auto yield = cast<vector::YieldOp>(
+        warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    OpOperand *operand;
+    for (OpOperand &yieldOperand : yield->getOpOperands()) {
+      Value yieldValues = yieldOperand.get();
+      Operation *definedOp = yieldValues.getDefiningOp();
+      if (!definedOp)
+        continue;
+      auto maybeRead = dyn_cast<vector::TransferReadOp>(definedOp);
+      if (!maybeRead)
+        continue;
+      if (warpOp.getResult(yieldOperand.getOperandNumber()).use_empty())
+        continue;
+      // Don't duplicate transfer_read ops when distributing.
+      if (!maybeRead.getResult().hasOneUse())
+        continue;
+      read = maybeRead;
+      operand = &yieldOperand;
+      break;
+    }
+    if (!read)
       return failure();
     unsigned operandIndex = operand->getOperandNumber();
     Value distributedVal = warpOp.getResult(operandIndex);
@@ -913,6 +931,14 @@ struct WarpOpDeadResult : public OpRewritePattern<WarpExecuteOnLane0Op> {
     // Move the body of the old warpOp to a new warpOp.
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
         rewriter, warpOp, newYieldValues, newResultTypes);
+
+    // Simplify the new warp op after dropping dead results.
+    auto simplifyFn = [&](Operation *op) {
+      if (isOpTriviallyDead(op))
+        rewriter.eraseOp(op);
+    };
+    newWarpOp.getBody()->walk(simplifyFn);
+
     // Replace results of the old warpOp by the new, deduplicated results.
     SmallVector<Value> newValues;
     newValues.reserve(warpOp->getNumResults());
