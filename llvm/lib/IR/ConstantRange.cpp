@@ -949,6 +949,7 @@ bool ConstantRange::isIntrinsicSupported(Intrinsic::ID IntrinsicID) {
   case Intrinsic::smax:
   case Intrinsic::abs:
   case Intrinsic::ctlz:
+  case Intrinsic::ctpop:
     return true;
   default:
     return false;
@@ -986,6 +987,8 @@ ConstantRange ConstantRange::intrinsic(Intrinsic::ID IntrinsicID,
     assert(ZeroIsPoison->getBitWidth() == 1 && "Must be boolean");
     return Ops[0].ctlz(ZeroIsPoison->getBoolValue());
   }
+  case Intrinsic::ctpop:
+    return Ops[0].ctpop();
   default:
     assert(!isIntrinsicSupported(IntrinsicID) && "Shouldn't be supported");
     llvm_unreachable("Unsupported intrinsic");
@@ -1734,6 +1737,52 @@ ConstantRange ConstantRange::ctlz(bool ZeroIsPoison) const {
   // the result of countLeadingZero of the two extremes.
   return getNonEmpty(APInt(getBitWidth(), getUnsignedMax().countl_zero()),
                      APInt(getBitWidth(), getUnsignedMin().countl_zero() + 1));
+}
+
+static ConstantRange getUnsignedPopCountRange(const APInt &Lower,
+                                              const APInt &Upper) {
+  assert(!ConstantRange(Lower, Upper).isWrappedSet() &&
+         "Unexpected wrapped set.");
+  assert(Lower != Upper && "Unexpected empty set.");
+  unsigned BitWidth = Lower.getBitWidth();
+  if (Lower + 1 == Upper)
+    return ConstantRange(APInt(BitWidth, Lower.popcount()));
+
+  APInt Max = Upper - 1;
+  // Calculate longest common prefix.
+  unsigned LCPLength = (Lower ^ Max).countl_zero();
+  unsigned LCPPopCount = Lower.getHiBits(LCPLength).popcount();
+  // If Lower is {LCP, 000...}, the minimum is the popcount of LCP.
+  // Otherwise, the minimum is the popcount of LCP + 1.
+  unsigned MinBits =
+      LCPPopCount + (Lower.countr_zero() < BitWidth - LCPLength ? 1 : 0);
+  // If Max is {LCP, 111...}, the maximum is the popcount of LCP + (BitWidth -
+  // length of LCP).
+  // Otherwise, the minimum is the popcount of LCP + (BitWidth -
+  // length of LCP - 1).
+  unsigned MaxBits = LCPPopCount + (BitWidth - LCPLength) -
+                     (Max.countr_one() < BitWidth - LCPLength ? 1 : 0);
+  return ConstantRange(APInt(BitWidth, MinBits), APInt(BitWidth, MaxBits + 1));
+}
+
+ConstantRange ConstantRange::ctpop() const {
+  if (isEmptySet())
+    return getEmpty();
+
+  unsigned BitWidth = getBitWidth();
+  APInt Zero = APInt::getZero(BitWidth);
+  if (isFullSet())
+    return getNonEmpty(Zero, APInt(BitWidth, BitWidth + 1));
+  if (!isWrappedSet())
+    return getUnsignedPopCountRange(Lower, Upper);
+  // The range is wrapped. We decompose it into two ranges, [0, Upper) and
+  // [Lower, 0).
+  // Handle [Lower, 0) == [Lower, Max]
+  ConstantRange CR1 = ConstantRange(APInt(BitWidth, Lower.countl_one()),
+                                    APInt(BitWidth, BitWidth + 1));
+  // Handle [0, Upper)
+  ConstantRange CR2 = getUnsignedPopCountRange(Zero, Upper);
+  return CR1.unionWith(CR2);
 }
 
 ConstantRange::OverflowResult ConstantRange::unsignedAddMayOverflow(
