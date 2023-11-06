@@ -1081,7 +1081,8 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     VarDeclBits.addBit(D->isPreviousDeclInSameBlockScope());
 
     if (const auto *IPD = dyn_cast<ImplicitParamDecl>(D))
-      VarDeclBits.addBits(IPD->getParameterKind(), /*Width=*/3);
+      VarDeclBits.addBits(llvm::to_underlying(IPD->getParameterKind()),
+                          /*Width=*/3);
     else
       VarDeclBits.addBits(0, /*Width=*/3);
 

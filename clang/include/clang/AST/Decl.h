@@ -1654,36 +1654,36 @@ public:
   static bool classofKind(Kind K) { return K >= firstVar && K <= lastVar; }
 };
 
+/// Defines the kind of the implicit parameter: is this an implicit parameter
+/// with pointer to 'this', 'self', '_cmd', virtual table pointers, captured
+/// context or something else.
+enum class ImplicitParamKind {
+  /// Parameter for Objective-C 'self' argument
+  ObjCSelf,
+
+  /// Parameter for Objective-C '_cmd' argument
+  ObjCCmd,
+
+  /// Parameter for C++ 'this' argument
+  CXXThis,
+
+  /// Parameter for C++ virtual table pointers
+  CXXVTT,
+
+  /// Parameter for captured context
+  CapturedContext,
+
+  /// Parameter for Thread private variable
+  ThreadPrivateVar,
+
+  /// Other implicit parameter
+  Other,
+};
+
 class ImplicitParamDecl : public VarDecl {
   void anchor() override;
 
 public:
-  /// Defines the kind of the implicit parameter: is this an implicit parameter
-  /// with pointer to 'this', 'self', '_cmd', virtual table pointers, captured
-  /// context or something else.
-  enum ImplicitParamKind : unsigned {
-    /// Parameter for Objective-C 'self' argument
-    ObjCSelf,
-
-    /// Parameter for Objective-C '_cmd' argument
-    ObjCCmd,
-
-    /// Parameter for C++ 'this' argument
-    CXXThis,
-
-    /// Parameter for C++ virtual table pointers
-    CXXVTT,
-
-    /// Parameter for captured context
-    CapturedContext,
-
-    /// Parameter for Thread private variable
-    ThreadPrivateVar,
-
-    /// Other implicit parameter
-    Other,
-  };
-
   /// Create implicit parameter.
   static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
                                    SourceLocation IdLoc, IdentifierInfo *Id,
@@ -1698,7 +1698,7 @@ public:
                     ImplicitParamKind ParamKind)
       : VarDecl(ImplicitParam, C, DC, IdLoc, IdLoc, Id, Type,
                 /*TInfo=*/nullptr, SC_None) {
-    NonParmVarDeclBits.ImplicitParamKind = ParamKind;
+    NonParmVarDeclBits.ImplicitParamKind = llvm::to_underlying(ParamKind);
     setImplicit();
   }
 
@@ -1706,7 +1706,7 @@ public:
       : VarDecl(ImplicitParam, C, /*DC=*/nullptr, SourceLocation(),
                 SourceLocation(), /*Id=*/nullptr, Type,
                 /*TInfo=*/nullptr, SC_None) {
-    NonParmVarDeclBits.ImplicitParamKind = ParamKind;
+    NonParmVarDeclBits.ImplicitParamKind = llvm::to_underlying(ParamKind);
     setImplicit();
   }
 
