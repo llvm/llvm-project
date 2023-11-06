@@ -37,6 +37,7 @@ add_subdirectory(Tosa)
 add_subdirectory(Transform)
 add_subdirectory(UB)
 add_subdirectory(Utils)
+add_subdirectory(VCIX)
 add_subdirectory(Vector)
 add_subdirectory(X86Vector)
 

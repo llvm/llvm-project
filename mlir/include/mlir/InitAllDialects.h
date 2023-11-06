@@ -83,6 +83,7 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/PDLExtension/PDLExtension.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/VCIX/VCIXDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Vector/Transforms/SubsetOpInterfaceImpl.h"
@@ -137,6 +138,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   tosa::TosaDialect,
                   transform::TransformDialect,
                   ub::UBDialect,
+                  vcix::VCIXDialect,
                   vector::VectorDialect,
                   x86vector::X86VectorDialect>();
   // clang-format on

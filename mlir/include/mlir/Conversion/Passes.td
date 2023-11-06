@@ -1294,6 +1294,10 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "bool", /*default=*/"false",
            "Enables the use of ArmSVE dialect while lowering the vector "
        "dialect.">,
+    Option<"vcix", "enable-vcix",
+           "bool", /*default=*/"false",
+           "Enables the use of VCIX dialect while lowering the vector "
+           "dialect to RISC-V target">,
     Option<"x86Vector", "enable-x86vector",
            "bool", /*default=*/"false",
            "Enables the use of X86Vector dialect while lowering the vector "
@@ -1310,5 +1314,4 @@ def ConvertVectorToSPIRV : Pass<"convert-vector-to-spirv"> {
   let constructor = "mlir::createConvertVectorToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
 }
-
 #endif // MLIR_CONVERSION_PASSES
