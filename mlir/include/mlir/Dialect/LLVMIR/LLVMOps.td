@@ -281,7 +281,7 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
         indices.push_back(
             builder.getInt32(valueOrAttr.get<IntegerAttr>().getInt()));
     }
-    Type baseElementType = op.getSourceElementType();
+    Type baseElementType = op.getElemType();
     llvm::Type *elementType = moduleTranslation.convertType(baseElementType);
     $res = builder.CreateGEP(elementType, $base, indices, "", $inbounds);
   }];
@@ -293,9 +293,6 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
 
   let extraClassDeclaration = [{
     constexpr static int32_t kDynamicIndex = std::numeric_limits<int32_t>::min();
-
-    /// Returns the type pointed to by the pointer argument of this GEP.
-    Type getSourceElementType();
 
     GEPIndicesAdaptor<ValueRange> getIndices();
   }];
@@ -346,7 +343,6 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     (`volatile` $volatile_^)? $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
     attr-dict `:` qualified(type($addr)) `->` type($res)
-
   }];
   string llvmBuilder = [{
     auto *inst = builder.CreateLoad($_resultType, $addr, $volatile_);

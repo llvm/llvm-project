@@ -665,16 +665,14 @@ LogicalResult LLVM::GEPOp::verify() {
     return emitOpError("expected as many dynamic indices as specified in '")
            << getRawConstantIndicesAttrName().getValue() << "'";
 
-  return verifyStructIndices(getSourceElementType(), getIndices(),
+  return verifyStructIndices(getElemType(), getIndices(),
                              [&] { return emitOpError(); });
 }
-
-Type LLVM::GEPOp::getSourceElementType() { return getElemType(); }
 
 Type GEPOp::getResultPtrElementType() {
   // Set the initial type currently being used for indexing. This will be
   // updated as the indices get walked over.
-  Type selectedType = getSourceElementType();
+  Type selectedType = getElemType();
 
   // Follow the indexed elements in the gep.
   auto indices = getIndices();
@@ -2803,7 +2801,7 @@ OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
   if (changed) {
     SmallVector<int32_t> rawConstantIndices;
     SmallVector<Value> dynamicIndices;
-    destructureIndices(getSourceElementType(), gepArgs, rawConstantIndices,
+    destructureIndices(getElemType(), gepArgs, rawConstantIndices,
                        dynamicIndices);
 
     getDynamicIndicesMutable().assign(dynamicIndices);
