@@ -2612,8 +2612,6 @@ public:
   ConflictResolution getResolution(unsigned Num) const {
     return Vals[Num].Resolution;
   }
-
-  bool canCRReplaceBeResolved(JoinVals &Other);
 };
 
 } // end anonymous namespace
@@ -2907,6 +2905,20 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
   if (SubRangeJoin)
     return CR_Replace;
 
+  // If the other live range is killed by DefMI and the live ranges are still
+  // overlapping, it must be because we're looking at an early clobber def:
+  //
+  //   %dst<def,early-clobber> = ASM killed %src
+  //
+  // In this case, it is illegal to merge the two live ranges since the early
+  // clobber def would clobber %src before it was read.
+  if (OtherLRQ.isKill()) {
+    // This case where the def doesn't overlap the kill is handled above.
+    assert(VNI->def.isEarlyClobber() &&
+           "Only early clobber defs can overlap a kill");
+    return CR_Impossible;
+  }
+
   // If the lanes written by this instruction were all undef in OtherVNI, it is
   // still safe to join the live ranges. This can't be done with a simple value
   // mapping, though - OtherVNI will map to multiple values:
@@ -2921,20 +2933,6 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
   // handles this complex value mapping.
   if ((V.WriteLanes & OtherV.ValidLanes).none())
     return CR_Replace;
-
-  // If the other live range is killed by DefMI and the live ranges are still
-  // overlapping, it must be because we're looking at an early clobber def:
-  //
-  //   %dst<def,early-clobber> = ASM killed %src
-  //
-  // In this case, it is illegal to merge the two live ranges since the early
-  // clobber def would clobber %src before it was read.
-  if (OtherLRQ.isKill()) {
-    // This case where the def doesn't overlap the kill is handled above.
-    assert(VNI->def.isEarlyClobber() &&
-           "Only early clobber defs can overlap a kill");
-    return CR_Impossible;
-  }
 
   // VNI is clobbering live lanes in OtherVNI, but there is still the
   // possibility that no instructions actually read the clobbered lanes.
@@ -3483,39 +3481,6 @@ void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
   }
 }
 
-// If the overlapping segment all be mark as CR_Replace resolution,
-// but can't be resolved resolveConflicts/pruneValues function.
-//
-// This function target this particular pattern and make joinVReg fail.
-//
-// For example:
-//   LHS: %12 [32r,80r:0)[96r,240r:1) 0@32r 1@96r
-//   RHS: %17 [240e,288r:1) 0@48r 1@240e
-// [96r,240r:2) and [240e,288r:1) both be mark as CR_Replace,
-// but does't be resolved after pruneValues.
-//
-bool JoinVals::canCRReplaceBeResolved(JoinVals &Other) {
-  for (auto Seg : LR.segments) {
-    for (auto OtherSeg : Other.LR.segments) {
-      int NewVNInoSeg = getAssignments()[Seg.valno->id];
-      int NewVNInoOtherSeg = Other.getAssignments()[OtherSeg.valno->id];
-
-      if (NewVNInoSeg == NewVNInoOtherSeg)
-        continue;
-
-      if (!(getResolution(Seg.valno->id) == CR_Replace &&
-            Other.getResolution(OtherSeg.valno->id) == CR_Replace))
-        continue;
-
-      if (Seg.contains(OtherSeg.start) && OtherSeg.start.isEarlyClobber() &&
-          !Seg.end.isEarlyClobber() &&
-          (Seg.end.getBaseIndex() == OtherSeg.start.getBaseIndex()))
-        return false;
-    }
-  }
-  return true;
-}
-
 void RegisterCoalescer::joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
                                          LaneBitmask LaneMask,
                                          const CoalescerPair &CP) {
@@ -3632,11 +3597,6 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
 
   // Some conflicts can only be resolved after all values have been mapped.
   if (!LHSVals.resolveConflicts(RHSVals) || !RHSVals.resolveConflicts(LHSVals))
-    return false;
-
-  // Some CR_Replace can't be solved by pruneValues. Early exit here.
-  if (!LHSVals.canCRReplaceBeResolved(RHSVals) ||
-      !RHSVals.canCRReplaceBeResolved(LHSVals))
     return false;
 
   // All clear, the live ranges can be merged.
