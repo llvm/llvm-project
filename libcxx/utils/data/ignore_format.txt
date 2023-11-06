@@ -708,7 +708,6 @@ libcxx/test/libcxx/containers/views/views.span/span.elem/assert.op_idx.pass.cpp
 libcxx/test/libcxx/containers/views/views.span/span.sub/assert.first.pass.cpp
 libcxx/test/libcxx/containers/views/views.span/span.sub/assert.last.pass.cpp
 libcxx/test/libcxx/containers/views/views.span/span.sub/assert.subspan.pass.cpp
-libcxx/test/libcxx/debug/containers/associative_containers.pass.cpp
 libcxx/test/libcxx/debug/containers.multithread.pass.cpp
 libcxx/test/libcxx/debug/containers/sequence_container_iterators.pass.cpp
 libcxx/test/libcxx/debug/containers/string.pass.cpp
