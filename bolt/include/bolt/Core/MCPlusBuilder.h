@@ -557,10 +557,6 @@ public:
     return false;
   }
 
-  virtual bool isEHLabel(const MCInst &Inst) const {
-    return Inst.getOpcode() == TargetOpcode::EH_LABEL;
-  }
-
   virtual bool isPop(const MCInst &Inst) const { return false; }
 
   /// Return true if the instruction is used to terminate an indirect branch.
@@ -1734,15 +1730,6 @@ public:
                                    MCContext *Ctx) const {
     llvm_unreachable("not implemented");
     return false;
-  }
-
-  virtual bool createEHLabel(MCInst &Inst, const MCSymbol *Label,
-                             MCContext *Ctx) const {
-    Inst.setOpcode(TargetOpcode::EH_LABEL);
-    Inst.clear();
-    Inst.addOperand(MCOperand::createExpr(
-        MCSymbolRefExpr::create(Label, MCSymbolRefExpr::VK_None, *Ctx)));
-    return true;
   }
 
   /// Extract a symbol and an addend out of the fixup value expression.
