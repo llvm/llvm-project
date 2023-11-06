@@ -10628,9 +10628,7 @@ SDValue SITargetLowering::splitBinaryBitConstantOp(
   return SDValue();
 }
 
-// Returns true if argument is a boolean value which is not serialized into
-// memory or argument and does not require v_cndmask_b32 to be deserialized.
-static bool isBoolSGPR(SDValue V) {
+bool llvm::isBoolSGPR(SDValue V) {
   if (V.getValueType() != MVT::i1)
     return false;
   switch (V.getOpcode()) {
