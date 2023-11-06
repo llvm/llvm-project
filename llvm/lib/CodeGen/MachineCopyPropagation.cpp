@@ -826,7 +826,8 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         // L4: early-clobber r9 <- Invalid L2 from Tracker
         // L5: r0 = COPY r8     <- Miss remove chance
         // L6: use r0           <- Miss remove L5 chance
-        Tracker.clobberRegister(Def, *TRI, *TII, UseCopyInstr, /*CleanUp=*/true);
+        Tracker.clobberRegister(Def, *TRI, *TII, UseCopyInstr,
+                                /*CleanUp=*/true);
 
         for (const MachineOperand &MO : MI.implicit_operands()) {
           if (!MO.isReg() || !MO.isDef())
@@ -834,7 +835,8 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
           MCRegister Reg = MO.getReg().asMCReg();
           if (!Reg)
             continue;
-          Tracker.clobberRegister(Reg, *TRI, *TII, UseCopyInstr, /*CleanUp=*/true);
+          Tracker.clobberRegister(Reg, *TRI, *TII, UseCopyInstr,
+                                  /*CleanUp=*/true);
         }
 
         Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
