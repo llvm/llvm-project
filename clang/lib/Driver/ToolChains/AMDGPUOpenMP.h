@@ -59,35 +59,6 @@ private:
                                     const llvm::opt::ArgList &Args,
                                     llvm::StringRef TargetID,
                                     llvm::StringRef OutputFilePrefix) const;
-
-  /// \return llvm-link output file name.
-  const char *constructLLVMLinkCommand(
-      const toolchains::AMDGPUOpenMPToolChain &AMDGPUOpenMPTC, Compilation &C,
-      const JobAction &JA, const InputInfoList &Inputs,
-      const llvm::opt::ArgList &Args, llvm::StringRef TargetID,
-      llvm::StringRef OutputFilePrefix) const;
-
-  /// \return opt output file name.
-  const char *constructOptCommand(Compilation &C, const JobAction &JA,
-                                  const InputInfoList &Inputs,
-                                  const llvm::opt::ArgList &Args,
-                                  llvm::StringRef TargetID,
-                                  llvm::StringRef OutputFilePrefix,
-                                  const char *InputFileName) const;
-
-  /// \return llc output file name.
-  const char *constructLlcCommand(Compilation &C, const JobAction &JA,
-                                  const InputInfoList &Inputs,
-                                  const llvm::opt::ArgList &Args,
-                                  llvm::StringRef TargetID,
-                                  llvm::StringRef OutputFilePrefix,
-                                  const char *InputFileName,
-                                  bool OutputIsAsm = false) const;
-
-  void constructLldCommand(Compilation &C, const JobAction &JA,
-                           const InputInfoList &Inputs, const InputInfo &Output,
-                           const llvm::opt::ArgList &Args,
-                           const char *InputFileName) const;
 };
 
 } // end namespace AMDGCN
@@ -154,9 +125,6 @@ public:
   getDeviceLibs(const llvm::opt::ArgList &Args) const override;
 
   const ToolChain &HostTC;
-
-protected:
-  Tool *buildLinker() const override;
 
 private:
   const Action::OffloadKind OK;

@@ -4723,9 +4723,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                  JA.isDeviceOffloading(Action::OFK_Host));
   bool IsHostOffloadingAction =
       JA.isHostOffloading(C.getActiveOffloadKinds()) &&
-      Args.hasFlag(options::OPT_offload_new_driver,
-                   options::OPT_no_offload_new_driver,
-                   JA.isHostOffloading(Action::OFK_OpenMP));
+      (JA.isHostOffloading(Action::OFK_OpenMP) ||
+       Args.hasFlag(options::OPT_offload_new_driver,
+                    options::OPT_no_offload_new_driver, false));
 
   bool IsRDCMode =
       Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
@@ -8962,7 +8962,6 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
                                        const ArgList &Args,
                                        const llvm::Triple &TheTriple,
                                        const char *LinkingOutput) const {
-
   const ToolChain &TC = getToolChain();
   const Driver &D = getToolChain().getDriver();
   RocmInstallationDetector RocmInstallation(D, TheTriple, Args, true, true);

@@ -4499,9 +4499,19 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   handleArguments(C, Args, Inputs, Actions);
 
-  bool UseNewOffloadingDriver = Args.hasFlag(
-      options::OPT_offload_new_driver, options::OPT_no_offload_new_driver,
-      C.isOffloadingHostKind(Action::OFK_OpenMP));
+  bool UseNewOffloadingDriver =
+      C.isOffloadingHostKind(Action::OFK_OpenMP) ||
+      Args.hasFlag(options::OPT_offload_new_driver,
+                   options::OPT_no_offload_new_driver, false);
+
+  if (C.isOffloadingHostKind(Action::OFK_OpenMP) &&
+      Args.hasArg(options::OPT_offload_new_driver,
+                  options::OPT_no_offload_new_driver)) {
+    Arg *A = Args.getLastArg(options::OPT_offload_new_driver,
+                             options::OPT_no_offload_new_driver);
+    Diag(clang::diag::warn_ignored_clang_option) << A->getAsString(Args);
+    A->claim();
+  }
 
   // Builder to be used to build offloading actions.
   std::unique_ptr<OffloadingActionBuilder> OffloadBuilder =
