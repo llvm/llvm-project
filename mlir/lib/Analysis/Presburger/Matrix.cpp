@@ -460,8 +460,8 @@ FracMatrix FracMatrix::identity(unsigned dimension) {
 
 FracMatrix::FracMatrix(IntMatrix m)
     : FracMatrix(m.getNumRows(), m.getNumColumns()) {
-  for (unsigned i = 0; i < m.getNumRows(); i++)
-    for (unsigned j = 0; j < m.getNumColumns(); j++)
+  for (unsigned i = 0, r = m.getNumRows(); i < r; i++)
+    for (unsigned j = 0, c = m.getNumColumns(); j < c; j++)
       this->at(i, j) = m.at(i, j);
 }
 
@@ -552,20 +552,18 @@ Fraction FracMatrix::determinant(FracMatrix *inverse) const {
 
 FracMatrix FracMatrix::gramSchmidt() const {
   bool linIndep =
-      (nRows < nColumns) || (nRows == nColumns && determinant(nullptr) != 0);
+      (nRows < nColumns) || (nRows == nColumns && determinant() != 0);
   assert(linIndep && "the vectors must be linearly independent!");
 
   // Create a copy of the argument to store
   // the orthogonalised version.
   FracMatrix orth(*this);
 
-  // For each vector (row) in the matrix,
-  // subtract its unit projection along
-  // each of the previous vectors.
-  // This ensures that it has no component
-  // in the direction of any of the
-  // previous vectors.
-  for (unsigned i = 1; i < getNumRows(); i++) {
+  // For each vector (row) in the matrix, subtract its unit
+  // projection along each of the previous vectors.
+  // This ensures that it has no component in the direction
+  // of any of the previous vectors.
+  for (unsigned i = 1, e = getNumRows(); i < e; i++) {
     for (unsigned j = 0; j < i; j++) {
       Fraction projectionScale = dotProduct(orth.getRow(i), orth.getRow(j)) /
                                  dotProduct(orth.getRow(j), orth.getRow(j));

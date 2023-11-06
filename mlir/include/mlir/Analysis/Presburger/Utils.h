@@ -279,7 +279,7 @@ SmallVector<MPInt, 8> getComplementIneq(ArrayRef<MPInt> ineq);
 
 /// Compute the dot product of two vectors.
 /// The vectors must have the same sizes.
-Fraction dotProduct(MutableArrayRef<Fraction> a, MutableArrayRef<Fraction> b);
+Fraction dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b);
 
 } // namespace presburger
 } // namespace mlir
