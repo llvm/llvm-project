@@ -67,6 +67,13 @@ template <typename T> struct FPTest : public Test {
   static constexpr T aNaN = T(FPBits::build_quiet_nan(1));
   static constexpr T inf = T(FPBits::inf());
   static constexpr T neg_inf = T(FPBits::neg_inf());
+  static constexpr int N_ROUNDING_MODES = 4;
+  static constexpr fputil::testing::RoundingMode ROUNDING_MODES[4] = {
+      fputil::testing::RoundingMode::Nearest,
+      fputil::testing::RoundingMode::Upward,
+      fputil::testing::RoundingMode::Downward,
+      fputil::testing::RoundingMode::TowardZero,
+  };
 };
 
 } // namespace testing
