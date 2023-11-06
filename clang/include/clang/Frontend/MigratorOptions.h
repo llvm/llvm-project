@@ -18,7 +18,9 @@ namespace clang {
 
 class MigratorOptions {
 public:
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoNSAllocReallocError : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoFinalizeRemoval : 1;
   MigratorOptions() {
     NoNSAllocReallocError = 0;
