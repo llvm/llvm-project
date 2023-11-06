@@ -36,10 +36,10 @@ int main(int, char**) {
     char a;
     for (int j = 0; j < 5; j++) {
       // Generating random unsigned int with a linear congruential generator
-      seed = (214013*seed + 11) % 4294967295;
-      
+      seed = (214013 * seed + 11) % 4294967295;
+
       // Generating ASCII character from 33 (!) to 126 (~)
-      a = ((unsigned int) 33 + (seed % 93));
+      a = ((unsigned int)33 + (seed % 93));
       str += a;
     }
     vec[i] = str;
