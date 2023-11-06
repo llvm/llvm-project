@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cassert>
 #include <execution>
+#include <string>
 #include <vector>
 
 template <class Execution, class Input>
