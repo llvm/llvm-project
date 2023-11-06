@@ -15,6 +15,30 @@
 #include <cstdlib>
 #include <limits>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+
+#include <Lmcons.h> // UNLEN=256
+
+inline char *getlogin() {
+  char *username = NULL;
+  DWORD size = UNLEN + 1; // Constant for the maximum username length
+  username = (char *)malloc(size);
+
+  if (GetUserName(username, &size)) {
+    // Username retrieved successfully
+    return username;
+  } else {
+    free(username);
+    return NULL;
+  }
+}
+#else
+#include <unistd.h>
+#endif
+
 namespace Fortran::runtime {
 std::int32_t RTNAME(ArgumentCount)() {
   int argc{executionEnvironment.argc};
@@ -220,6 +244,22 @@ std::int32_t RTNAME(GetCommand)(const Descriptor *value,
   }
 
   return stat;
+}
+
+std::int32_t RTNAME(GetLog)(const Descriptor *value, const Descriptor *errmsg) {
+  FillWithSpaces(*value);
+
+  const char *arg = getlogin();
+  std::int64_t argLen{StringLength(arg)};
+  if (argLen <= 0) {
+    return ToErrmsg(errmsg, StatMissingArgument);
+  }
+
+  if (value) {
+    return CopyToDescriptor(*value, arg, argLen, errmsg);
+  }
+
+  return StatOk;
 }
 
 static std::size_t LengthWithoutTrailingSpaces(const Descriptor &d) {

@@ -37,5 +37,11 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
   (void)RTNAME(GetCommandArgument)(
       n, &value, nullptr, nullptr, __FILE__, __LINE__);
 }
+
+void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *arg, std::int64_t length) {
+  Descriptor value{*Descriptor::Create(1, length, arg, 0)};
+  (void)RTNAME(GetLog)(&value, nullptr);
+}
+
 } // namespace Fortran::runtime
 } // extern "C"

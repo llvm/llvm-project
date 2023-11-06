@@ -47,6 +47,12 @@ std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,
     bool trim_name = true, const Descriptor *errmsg = nullptr,
     const char *sourceFile = nullptr, int line = 0);
 }
+
+// Try to get the name of current user
+// Returns a STATUS as described in the standard.
+std::int32_t RTNAME(GetLog)(
+    const Descriptor *argument = nullptr, const Descriptor *errmsg = nullptr);
+
 } // namespace Fortran::runtime
 
 #endif // FORTRAN_RUNTIME_COMMAND_H_
