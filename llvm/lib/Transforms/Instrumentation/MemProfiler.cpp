@@ -364,13 +364,13 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
       StringRef SectionName = GV->getSection();
       // Check if the global is in the PGO counters section.
       auto OF = Triple(I->getModule()->getTargetTriple()).getObjectFormat();
-      if (SectionName.endswith(
+      if (SectionName.ends_with(
               getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false)))
         return std::nullopt;
     }
 
     // Do not instrument accesses to LLVM internal variables.
-    if (GV->getName().startswith("__llvm"))
+    if (GV->getName().starts_with("__llvm"))
       return std::nullopt;
   }
 
@@ -562,7 +562,7 @@ bool MemProfiler::instrumentFunction(Function &F) {
     return false;
   if (ClDebugFunc == F.getName())
     return false;
-  if (F.getName().startswith("__memprof_"))
+  if (F.getName().starts_with("__memprof_"))
     return false;
 
   bool FunctionModified = false;

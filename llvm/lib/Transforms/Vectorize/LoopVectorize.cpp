@@ -7629,7 +7629,7 @@ static void AddRuntimeUnrollDisableMetaData(Loop *L) {
       if (MD) {
         const auto *S = dyn_cast<MDString>(MD->getOperand(0));
         IsUnrollMetadata =
-            S && S->getString().startswith("llvm.loop.unroll.disable");
+            S && S->getString().starts_with("llvm.loop.unroll.disable");
       }
       MDs.push_back(LoopID->getOperand(i));
     }
