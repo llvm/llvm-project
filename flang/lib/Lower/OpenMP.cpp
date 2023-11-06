@@ -2527,12 +2527,13 @@ static void genBodyOfTargetOp(
         [&](const fir::CharArrayBoxValue &v) {
           converter.bindSymbol(
               *sym,
-              fir::CharArrayBoxValue(arg, v.getLen(),
+              fir::CharArrayBoxValue(arg, extractBoundArgs(1).front(),
                                      extractBoundArgs(v.getExtents().size()),
                                      extractBoundArgs(v.getLBounds().size())));
         },
         [&](const fir::CharBoxValue &v) {
-          converter.bindSymbol(*sym, fir::CharBoxValue(arg, v.getLen()));
+          converter.bindSymbol(
+              *sym, fir::CharBoxValue(arg, extractBoundArgs(1).front()));
         },
         [&](const fir::UnboxedValue &v) { converter.bindSymbol(*sym, arg); },
         [&](const auto &) {
@@ -2696,8 +2697,16 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
           addMapInfoForBounds(v.getLBounds());
         },
         [&](const fir::CharArrayBoxValue &v) {
+          llvm::SmallVector<mlir::Value> len;
+          len.push_back(v.getLen());
+          addMapInfoForBounds(len);
           addMapInfoForBounds(v.getExtents());
           addMapInfoForBounds(v.getLBounds());
+        },
+        [&](const fir::CharBoxValue &v) {
+          llvm::SmallVector<mlir::Value> len;
+          len.push_back(v.getLen());
+          addMapInfoForBounds(len);
         },
         [&](const auto &) {
           // Nothing to do for non-box values.
