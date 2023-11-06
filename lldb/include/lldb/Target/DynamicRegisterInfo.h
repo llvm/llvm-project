@@ -93,6 +93,10 @@ public:
     return llvm::iterator_range<reg_collection::const_iterator>(m_regs);
   }
 
+  llvm::iterator_range<reg_collection::iterator> registers_mutable() {
+    return llvm::iterator_range<reg_collection::iterator>(m_regs);
+  }
+
   void ConfigureOffsets();
 
 protected:
