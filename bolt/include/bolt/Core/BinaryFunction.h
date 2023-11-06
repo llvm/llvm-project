@@ -2309,15 +2309,10 @@ public:
   /// removed.
   uint64_t translateInputToOutputAddress(uint64_t Address) const;
 
-  /// Take address ranges corresponding to the input binary and translate
-  /// them to address ranges in the output binary.
-  DebugAddressRangesVector translateInputToOutputRanges(
-      const DWARFAddressRangesVector &InputRanges) const;
-
-  /// Similar to translateInputToOutputRanges() but operates on location lists
-  /// and moves associated data to output location lists.
-  DebugLocationsVector
-  translateInputToOutputLocationList(const DebugLocationsVector &InputLL) const;
+  /// Translate a contiguous range of addresses in the input binary into a set
+  /// of ranges in the output binary.
+  DebugAddressRangesVector
+  translateInputToOutputRange(DebugAddressRange InRange) const;
 
   /// Return true if the function is an AArch64 linker inserted veneer
   bool isAArch64Veneer() const;
