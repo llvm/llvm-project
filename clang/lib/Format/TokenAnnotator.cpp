@@ -4727,8 +4727,15 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Left.isOneOf(TT_VerilogDimensionedTypeName, Keywords.kw_function)) {
       return true;
     }
+    // In a tagged union expression, there should be a space after the tag.
+    if (Right.isOneOf(tok::period, Keywords.kw_apostrophe) &&
+        Keywords.isVerilogIdentifier(Left) && Left.getPreviousNonComment() &&
+        Left.getPreviousNonComment()->is(Keywords.kw_tagged)) {
+      return true;
+    }
     // Don't add spaces between a casting type and the quote or repetition count
-    // and the brace.
+    // and the brace.  The case of tagged union expressions is handled by the
+    // previous rule.
     if ((Right.is(Keywords.kw_apostrophe) ||
          (Right.is(BK_BracedInit) && Right.is(tok::l_brace))) &&
         !(Left.isOneOf(Keywords.kw_assign, Keywords.kw_unique) ||
