@@ -1181,7 +1181,7 @@ public:
   bool clearOffset(MCInst &Inst);
 
   /// Return the label of \p Inst, if available.
-  std::optional<MCSymbol *> getLabel(const MCInst &Inst) const;
+  MCSymbol *getLabel(const MCInst &Inst) const;
 
   /// Set the label of \p Inst. This label will be emitted right before \p Inst
   /// is emitted to MCStreamer.

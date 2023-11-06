@@ -161,9 +161,17 @@ private:
   /// \p FirstInstr indicates if \p NewLoc represents the first instruction
   /// in a sequence, such as a function fragment.
   ///
+  /// If \p NewLoc location matches \p PrevLoc, no new line number entry will be
+  /// created and the function will return \p PrevLoc while \p InstrLabel will
+  /// be ignored. Otherwise, the caller should use \p InstrLabel to mark the
+  /// corresponding instruction by emitting \p InstrLabel before it.
+  /// If \p InstrLabel is set by the caller, its value will be used with \p
+  /// \p NewLoc. If it was nullptr on entry, it will be populated with a pointer
+  /// to a new temp symbol used with \p NewLoc.
+  ///
   /// Return new current location which is either \p NewLoc or \p PrevLoc.
   SMLoc emitLineInfo(const BinaryFunction &BF, SMLoc NewLoc, SMLoc PrevLoc,
-                     bool FirstInstr);
+                     bool FirstInstr, MCSymbol *&InstrLabel);
 
   /// Use \p FunctionEndSymbol to mark the end of the line info sequence.
   /// Note that it does not automatically result in the insertion of the EOS
@@ -483,23 +491,28 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         // are relaxable, we should be safe.
       }
 
-      if (!EmitCodeOnly && opts::UpdateDebugSections && BF.getDWARFUnit()) {
-        LastLocSeen = emitLineInfo(BF, Instr.getLoc(), LastLocSeen, FirstInstr);
-        FirstInstr = false;
-      }
+      if (!EmitCodeOnly) {
+        // A symbol to be emitted before the instruction to mark its location.
+        MCSymbol *InstrLabel = BC.MIB->getLabel(Instr);
 
-      // Prepare to tag this location with a label if we need to keep track of
-      // the location of calls/returns for BOLT address translation maps
-      if (!EmitCodeOnly && BF.requiresAddressTranslation() &&
-          BC.MIB->getOffset(Instr)) {
-        const uint32_t Offset = *BC.MIB->getOffset(Instr);
-        MCSymbol *LocSym = BC.Ctx->createTempSymbol();
-        Streamer.emitLabel(LocSym);
-        BB->getLocSyms().emplace_back(Offset, LocSym);
-      }
+        if (opts::UpdateDebugSections && BF.getDWARFUnit()) {
+          LastLocSeen = emitLineInfo(BF, Instr.getLoc(), LastLocSeen,
+                                     FirstInstr, InstrLabel);
+          FirstInstr = false;
+        }
 
-      if (auto Label = BC.MIB->getLabel(Instr))
-        Streamer.emitLabel(*Label);
+        // Prepare to tag this location with a label if we need to keep track of
+        // the location of calls/returns for BOLT address translation maps
+        if (BF.requiresAddressTranslation() && BC.MIB->getOffset(Instr)) {
+          const uint32_t Offset = *BC.MIB->getOffset(Instr);
+          if (!InstrLabel)
+            InstrLabel = BC.Ctx->createTempSymbol();
+          BB->getLocSyms().emplace_back(Offset, InstrLabel);
+        }
+
+        if (InstrLabel)
+          Streamer.emitLabel(InstrLabel);
+      }
 
       Streamer.emitInstruction(Instr, *BC.STI);
       LastIsPrefix = BC.MIB->isPrefix(Instr);
@@ -661,7 +674,8 @@ void BinaryEmitter::emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
 }
 
 SMLoc BinaryEmitter::emitLineInfo(const BinaryFunction &BF, SMLoc NewLoc,
-                                  SMLoc PrevLoc, bool FirstInstr) {
+                                  SMLoc PrevLoc, bool FirstInstr,
+                                  MCSymbol *&InstrLabel) {
   DWARFUnit *FunctionCU = BF.getDWARFUnit();
   const DWARFDebugLine::LineTable *FunctionLineTable = BF.getDWARFLineTable();
   assert(FunctionCU && "cannot emit line info for function without CU");
@@ -711,12 +725,12 @@ SMLoc BinaryEmitter::emitLineInfo(const BinaryFunction &BF, SMLoc NewLoc,
   const MCDwarfLoc &DwarfLoc = BC.Ctx->getCurrentDwarfLoc();
   BC.Ctx->clearDwarfLocSeen();
 
-  MCSymbol *LineSym = BC.Ctx->createTempSymbol();
-  Streamer.emitLabel(LineSym);
+  if (!InstrLabel)
+    InstrLabel = BC.Ctx->createTempSymbol();
 
   BC.getDwarfLineTable(FunctionUnitIndex)
       .getMCLineSections()
-      .addLineEntry(MCDwarfLineEntry(LineSym, DwarfLoc),
+      .addLineEntry(MCDwarfLineEntry(InstrLabel, DwarfLoc),
                     Streamer.getCurrentSectionOnly());
 
   return NewLoc;
