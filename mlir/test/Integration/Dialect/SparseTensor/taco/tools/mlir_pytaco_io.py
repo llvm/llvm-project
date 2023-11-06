@@ -79,7 +79,7 @@ def write(filename: str, tensor: Tensor) -> None:
 
   tensor.to_file(filename)
 
-def write_kokkos(filename: str, tensor: Tensor, options: str = "", index_instance: int = 0) -> None:
+def write_kokkos(filename: str, tensor: Tensor, options: str = "", index_instance: int = 0, num_instances: int = 0) -> None:
   """Outputs a tensor to a given file. Computations are performed using the MLIR->Kokkos pipeline.
 
   The name suffix of the file specifies the format of the output. We currently
@@ -99,4 +99,4 @@ def write_kokkos(filename: str, tensor: Tensor, options: str = "", index_instanc
   if not isinstance(tensor, Tensor):
     raise ValueError(f"Expected a Tensor object: {tensor}.")
 
-  tensor.to_file_kokkos(filename,options=options,index_instance=index_instance)
+  tensor.to_file_kokkos(filename,options=options,index_instance=index_instance,num_instances=num_instances)
