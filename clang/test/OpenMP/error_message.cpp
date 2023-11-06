@@ -32,7 +32,7 @@ T tmain(T argc) {
   }
   switch (argc) {
 #pragma omp error // expected-error {{ERROR}}
-  case 1: // FIXME: error without 'at execution' is not a stand-alone directive and so this should be accepted.
+  case 1:
 #pragma omp error // expected-error {{'#pragma omp error' cannot be an immediate substatement}}
     break;
   default: {
