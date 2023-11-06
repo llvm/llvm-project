@@ -1946,7 +1946,7 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
                      Initializer);
 }
 
-static bool isLegalArrayNewInitializer(CXXNewInitializationStyle Style,
+static bool isLegalArrayNewInitializer(CXXNewExpr::InitializationStyle Style,
                                        Expr *Init) {
   if (!Init)
     return true;
@@ -1957,7 +1957,7 @@ static bool isLegalArrayNewInitializer(CXXNewInitializationStyle Style,
   else if (CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(Init))
     return !CCE->isListInitialization() &&
            CCE->getConstructor()->isDefaultConstructor();
-  else if (Style == CXXNewInitializationStyle::List) {
+  else if (Style == CXXNewExpr::ListInit) {
     assert(isa<InitListExpr>(Init) &&
            "Shouldn't create list CXXConstructExprs for arrays.");
     return true;
@@ -2008,49 +2008,44 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   SourceRange TypeRange = AllocTypeInfo->getTypeLoc().getSourceRange();
   SourceLocation StartLoc = Range.getBegin();
 
-  CXXNewInitializationStyle InitStyle;
+  CXXNewExpr::InitializationStyle initStyle;
   if (DirectInitRange.isValid()) {
     assert(Initializer && "Have parens but no initializer.");
-    InitStyle = CXXNewInitializationStyle::Call;
+    initStyle = CXXNewExpr::CallInit;
   } else if (Initializer && isa<InitListExpr>(Initializer))
-    InitStyle = CXXNewInitializationStyle::List;
+    initStyle = CXXNewExpr::ListInit;
   else {
     assert((!Initializer || isa<ImplicitValueInitExpr>(Initializer) ||
             isa<CXXConstructExpr>(Initializer)) &&
            "Initializer expression that cannot have been implicitly created.");
-    InitStyle = CXXNewInitializationStyle::None;
+    initStyle = CXXNewExpr::NoInit;
   }
 
   MultiExprArg Exprs(&Initializer, Initializer ? 1 : 0);
   if (ParenListExpr *List = dyn_cast_or_null<ParenListExpr>(Initializer)) {
-    assert(InitStyle == CXXNewInitializationStyle::Call &&
-           "paren init for non-call init");
+    assert(initStyle == CXXNewExpr::CallInit && "paren init for non-call init");
     Exprs = MultiExprArg(List->getExprs(), List->getNumExprs());
   }
 
   // C++11 [expr.new]p15:
   //   A new-expression that creates an object of type T initializes that
   //   object as follows:
-  InitializationKind Kind = [&] {
-    switch (InitStyle) {
-    //     - If the new-initializer is omitted, the object is default-
-    //       initialized (8.5); if no initialization is performed,
-    //       the object has indeterminate value
-    case CXXNewInitializationStyle::None:
-    case CXXNewInitializationStyle::Implicit:
-      return InitializationKind::CreateDefault(TypeRange.getBegin());
-    //     - Otherwise, the new-initializer is interpreted according to the
-    //       initialization rules of 8.5 for direct-initialization.
-    case CXXNewInitializationStyle::Call:
-      return InitializationKind::CreateDirect(TypeRange.getBegin(),
-                                              DirectInitRange.getBegin(),
-                                              DirectInitRange.getEnd());
-    case CXXNewInitializationStyle::List:
-      return InitializationKind::CreateDirectList(TypeRange.getBegin(),
-                                                  Initializer->getBeginLoc(),
-                                                  Initializer->getEndLoc());
-    }
-  }();
+  InitializationKind Kind
+      //     - If the new-initializer is omitted, the object is default-
+      //       initialized (8.5); if no initialization is performed,
+      //       the object has indeterminate value
+      = initStyle == CXXNewExpr::NoInit
+            ? InitializationKind::CreateDefault(TypeRange.getBegin())
+            //     - Otherwise, the new-initializer is interpreted according to
+            //     the
+            //       initialization rules of 8.5 for direct-initialization.
+            : initStyle == CXXNewExpr::ListInit
+                  ? InitializationKind::CreateDirectList(
+                        TypeRange.getBegin(), Initializer->getBeginLoc(),
+                        Initializer->getEndLoc())
+                  : InitializationKind::CreateDirect(TypeRange.getBegin(),
+                                                     DirectInitRange.getBegin(),
+                                                     DirectInitRange.getEnd());
 
   // C++11 [dcl.spec.auto]p6. Deduce the type which 'auto' stands in for.
   auto *Deduced = AllocType->getContainedDeducedType();
@@ -2071,14 +2066,13 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       return ExprError();
   } else if (Deduced && !Deduced->isDeduced()) {
     MultiExprArg Inits = Exprs;
-    bool Braced = (InitStyle == CXXNewInitializationStyle::List);
+    bool Braced = (initStyle == CXXNewExpr::ListInit);
     if (Braced) {
       auto *ILE = cast<InitListExpr>(Exprs[0]);
       Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
     }
 
-    if (InitStyle == CXXNewInitializationStyle::None ||
-        InitStyle == CXXNewInitializationStyle::Implicit || Inits.empty())
+    if (initStyle == CXXNewExpr::NoInit || Inits.empty())
       return ExprError(Diag(StartLoc, diag::err_auto_new_requires_ctor_arg)
                        << AllocType << TypeRange);
     if (Inits.size() > 1) {
@@ -2402,7 +2396,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // Array 'new' can't have any initializers except empty parentheses.
   // Initializer lists are also allowed, in C++11. Rely on the parser for the
   // dialect distinction.
-  if (ArraySize && !isLegalArrayNewInitializer(InitStyle, Initializer)) {
+  if (ArraySize && !isLegalArrayNewInitializer(initStyle, Initializer)) {
     SourceRange InitRange(Exprs.front()->getBeginLoc(),
                           Exprs.back()->getEndLoc());
     Diag(StartLoc, diag::err_new_array_init_args) << InitRange;
@@ -2474,7 +2468,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
   return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,
                             PassAlignment, UsualArrayDeleteWantsSize,
-                            PlacementArgs, TypeIdParens, ArraySize, InitStyle,
+                            PlacementArgs, TypeIdParens, ArraySize, initStyle,
                             Initializer, ResultType, AllocTypeInfo, Range,
                             DirectInitRange);
 }
