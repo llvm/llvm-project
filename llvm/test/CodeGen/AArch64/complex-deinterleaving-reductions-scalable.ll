@@ -195,13 +195,14 @@ define %"class.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    neg x10, x9
 ; CHECK-NEXT:    mov w11, #1000 // =0x3e8
+; CHECK-NEXT:    rdvl x13, #2
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    and x10, x10, x11
-; CHECK-NEXT:    rdvl x11, #4
 ; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
-; CHECK-NEXT:    addvl x12, x1, #2
-; CHECK-NEXT:    addvl x13, x0, #2
+; CHECK-NEXT:    rdvl x11, #4
+; CHECK-NEXT:    add x12, x1, x13
+; CHECK-NEXT:    add x13, x0, x13
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    mov z3.d, z0.d
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
