@@ -319,8 +319,7 @@ void RegisterBankEmitter::emitRBIHeader(
 }
 
 void RegisterBankEmitter::emitRBIImplementation(
-    raw_ostream &OS,
-    const StringRef TargetName,
+    raw_ostream &OS, const StringRef TargetName,
     const std::vector<RegisterBank> &Banks) {
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
 
