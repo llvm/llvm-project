@@ -2442,6 +2442,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       FullInit = Binder->getSubExpr();
 
     Initializer = FullInit.get();
+    if (InitStyle == CXXNewInitializationStyle::None && Initializer) {
+      InitStyle = CXXNewInitializationStyle::Implicit;
+    }
 
     // FIXME: If we have a KnownArraySize, check that the array bound of the
     // initializer is no greater than that constant value.
