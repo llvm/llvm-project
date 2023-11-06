@@ -14,6 +14,8 @@
 #ifndef LLVM_CLANG_FRONTEND_MIGRATOROPTIONS_H
 #define LLVM_CLANG_FRONTEND_MIGRATOROPTIONS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace clang {
 
 class MigratorOptions {
