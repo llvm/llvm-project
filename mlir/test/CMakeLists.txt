@@ -28,6 +28,8 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
       "If arch-specific Arm integration tests run emulated, find Arm native utility libraries in this directory.")
   set(MLIR_GPU_COMPILATION_TEST_FORMAT "fatbin" CACHE STRING
       "The GPU compilation format used by the tests.")
+  set(ARM_SME_ABI_ROUTINES_SHLIB "" CACHE STRING
+      "Path to a shared library containing Arm SME ABI routines, required for Arm SME integration tests.")
   option(MLIR_RUN_AMX_TESTS "Run AMX tests.")
   option(MLIR_RUN_X86VECTOR_TESTS "Run X86Vector tests.")
   option(MLIR_RUN_CUDA_TENSOR_CORE_TESTS "Run CUDA Tensor core WMMA tests.")
@@ -139,8 +141,8 @@ if(MLIR_ENABLE_ROCM_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_rocm_runtime)
 endif()
 
-if(MLIR_RUN_ARM_SME_TESTS)
-  list(APPEND MLIR_TEST_DEPENDS mlir_arm_sme_runtime)
+if (MLIR_RUN_ARM_SME_TESTS)
+  list(APPEND MLIR_TEST_DEPENDS mlir_arm_sme_abi_stubs)
 endif()
 
 list(APPEND MLIR_TEST_DEPENDS MLIRUnitTests)

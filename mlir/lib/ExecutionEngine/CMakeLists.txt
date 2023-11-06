@@ -178,38 +178,9 @@ if(LLVM_ENABLE_PIC)
     target_link_options(mlir_async_runtime PRIVATE "-Wl,-exclude-libs,ALL")
   endif()
 
-  if (MLIR_RUN_ARM_SME_TESTS)
-    if (NOT DEFINED LLVM_MAIN_SRC_DIR)
-      message(FATAL_ERROR "LLVM_MAIN_SRC_DIR must be provided to build the ArmSME runtime.")
-    endif()
-
-    if (NOT DEFINED MLIR_ARM_SME__CAN_ASSEMBLE_ARM_SME)
-      # This should work on an AArch64 host with a recent version of clang.
-      file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/has_arm_sme_check.S
-      ".arch armv9-a+sme
-      .global main
-      .type   main, %function
-      main: smstart
-      .size   main, .-main")
-      try_compile(MLIR_ARM_SME__CAN_ASSEMBLE_ARM_SME ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/has_arm_sme_check.S)
-    endif()
-
-    if (NOT MLIR_ARM_SME__CAN_ASSEMBLE_ARM_SME)
-      message(FATAL_ERROR "Host compiler must be able to assemble AArch64 SME instructions to build the ArmSME runtime.")
-    endif()
-
-    # FIXME: This is very far from ideal, but enabling compiler-rt in the main
-    # build requires building much more than we need, and does not expose
-    # individual targets (e.g. to build a standalone runtime).
-    add_mlir_library(mlir_arm_sme_runtime
-      SHARED
-      ArmSMEStub.cpp
-      ${LLVM_MAIN_SRC_DIR}/../compiler-rt/lib/builtins/aarch64/sme-abi-init.c
-      ${LLVM_MAIN_SRC_DIR}/../compiler-rt/lib/builtins/aarch64/sme-abi.S
-      EXCLUDE_FROM_LIBMLIR)
-
-    target_compile_definitions(mlir_arm_sme_runtime PRIVATE -DCOMPILER_RT_SHARED_LIB)
-  endif()
+  add_mlir_library(mlir_arm_sme_abi_stubs
+    SHARED
+    ArmSMEStub.cpp)
 
   if(MLIR_ENABLE_CUDA_RUNNER)
     # Configure CUDA support. Using check_language first allows us to give a
