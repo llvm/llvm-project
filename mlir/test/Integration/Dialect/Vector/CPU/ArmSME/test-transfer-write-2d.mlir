@@ -82,19 +82,20 @@ func.func @entry() {
   %c2 = arith.constant 2 : index
   %c4 = arith.constant 4 : index
 
+  // 1. Initialize memory
+  //
   // Allocate enough memory to load a 32-bit tile plus a tiny bit more to test
   // non-zero offsets while remaining inbounds.
   %vscale = vector.vscale
   %svl_s = arith.muli %c4, %vscale : index
   %svl_s_plus_two = arith.addi %svl_s, %c2 : index
+  %A = call @initialize_memory(%svl_s_plus_two, %svl_s_plus_two) : (index, index) -> memref<?x?xf32>
 
-  // 1. Initialize memory
   // CHECK-LABEL: TILE BEGIN:
   // CHECK-NEXT: ( 0, 1, 2, 3
   // CHECK-NEXT: ( 10, 11, 12, 13
   // CHECK-NEXT: ( 20, 21, 22, 23
   // CHECK-NEXT: ( 30, 31, 32, 33
-  %A = call @initialize_memory(%svl_s_plus_two, %svl_s_plus_two) : (index, index) -> memref<?x?xf32>
   call @load_and_print(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
 
   // 2. Write 2-D vector of zeroes to 1. at offset [2, 2].
