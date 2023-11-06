@@ -763,7 +763,7 @@ static void getICMPOperandsForBranch(MachineInstr &MI, MachineIRBuilder &MIB,
   RHS = MI.getOperand(3).getReg();
 
   // Adjust comparisons to use comparison with 0 if possible.
-  if (auto Constant = getIConstantVRegSExtVal(RHS, MRI, true)) {
+  if (auto Constant = getIConstantVRegSExtVal(RHS, MRI)) {
     switch (ICMPCC) {
     case CmpInst::Predicate::ICMP_SGT:
       // Convert X > -1 to X >= 0
