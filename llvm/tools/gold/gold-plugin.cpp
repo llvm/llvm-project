@@ -152,6 +152,7 @@ namespace options {
   static std::string extra_library_path;
   static std::string triple;
   static std::string mcpu;
+  static bool asm_verbose = false;
   // When the thinlto plugin option is specified, only read the function
   // the information from intermediate files and write a combined
   // global index for the ThinLTO backends.
@@ -308,6 +309,8 @@ namespace options {
       RemarksFormat = std::string(opt);
     } else if (opt.consume_front("stats-file=")) {
       stats_file = std::string(opt);
+    } else if (opt == "asm-verbose") {
+      asm_verbose = true;
     } else {
       // Save this option to pass to the code generator.
       // ParseCommandLineOptions() expects argv[0] to be program name. Lazily
@@ -950,6 +953,9 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.HasWholeProgramVisibility = options::whole_program_visibility;
 
   Conf.StatsFile = options::stats_file;
+
+  Conf.Options.MCOptions.AsmVerbose = options::asm_verbose;
+
   return std::make_unique<LTO>(std::move(Conf), Backend,
                                 options::ParallelCodeGenParallelismLevel);
 }
