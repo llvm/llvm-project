@@ -944,6 +944,11 @@ LogicalResult TargetOp::verify() {
   return verifyMapClause(*this, getMapOperands());
 }
 
+LogicalResult UpdateDataOp::verify() {
+  // TODO : Add checks for TO and FROM clauses
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // ParallelOp
 //===----------------------------------------------------------------------===//
