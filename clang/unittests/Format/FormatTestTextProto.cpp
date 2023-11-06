@@ -370,7 +370,7 @@ TEST_F(FormatTestTextProto, UnderstandsHashComments) {
             "### another triple-hash comment\n"
             "#### a quadriple-hash comment\n"
             "dd: 100\n"
-            "#### another quadriple-hash comment\n",
+            "#### another quadriple-hash comment",
             format("aaa: 100\n"
                    "##this is a double-hash comment.\n"
                    "bb: 100\n"
@@ -380,7 +380,7 @@ TEST_F(FormatTestTextProto, UnderstandsHashComments) {
                    "### another triple-hash comment\n"
                    "####a quadriple-hash comment\n"
                    "dd: 100\n"
-                   "#### another quadriple-hash comment\n",
+                   "#### another quadriple-hash comment",
                    Style));
 
   // Ensure we support a common pattern for naming sections.
@@ -540,7 +540,7 @@ TEST_F(FormatTestTextProto, AcceptsOperatorAsKey) {
 
 TEST_F(FormatTestTextProto, BreaksConsecutiveStringLiterals) {
   verifyFormat("ala: \"str1\"\n"
-               "     \"str2\"\n");
+               "     \"str2\"");
 }
 
 TEST_F(FormatTestTextProto, PutsMultipleEntriesInExtensionsOnNewlines) {
@@ -669,7 +669,7 @@ TEST_F(FormatTestTextProto, BreaksEntriesOfSubmessagesContainingSubmessages) {
                "  key: 1\n"
                "  sub: {}\n"
                "}\n"
-               "# comment\n");
+               "# comment");
   verifyFormat("sub: {\n"
                "  key: 1\n"
                "  # comment\n"

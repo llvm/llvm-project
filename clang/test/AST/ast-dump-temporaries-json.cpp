@@ -36,7 +36,6 @@ void MaterializeTemp() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "desugaredQualType": "const S",
 // CHECK-NEXT:   "qualType": "const S"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "valueCategory": "lvalue",
@@ -58,7 +57,6 @@ void MaterializeTemp() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "desugaredQualType": "const S",
 // CHECK-NEXT:     "qualType": "const S"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "valueCategory": "lvalue",
@@ -89,7 +87,6 @@ void MaterializeTemp() {
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
-// CHECK-NEXT:       "desugaredQualType": "const S",
 // CHECK-NEXT:       "qualType": "const S"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "prvalue",
@@ -111,7 +108,6 @@ void MaterializeTemp() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "desugaredQualType": "S",
 // CHECK-NEXT:         "qualType": "S"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
@@ -141,7 +137,6 @@ void MaterializeTemp() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "S",
 // CHECK-NEXT:           "qualType": "S"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",

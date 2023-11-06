@@ -9,6 +9,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "AffineMapDetail.h"
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Support/LogicalResult.h"
@@ -226,13 +227,21 @@ AffineMap AffineMap::getPermutationMap(ArrayRef<unsigned> permutation,
                                        MLIRContext *context) {
   assert(!permutation.empty() &&
          "Cannot create permutation map from empty permutation vector");
-  SmallVector<AffineExpr, 4> affExprs;
-  for (auto index : permutation)
-    affExprs.push_back(getAffineDimExpr(index, context));
   const auto *m = std::max_element(permutation.begin(), permutation.end());
-  auto permutationMap = AffineMap::get(*m + 1, 0, affExprs, context);
+  auto permutationMap = getMultiDimMapWithTargets(*m + 1, permutation, context);
   assert(permutationMap.isPermutation() && "Invalid permutation vector");
   return permutationMap;
+}
+
+AffineMap AffineMap::getMultiDimMapWithTargets(unsigned numDims,
+                                               ArrayRef<unsigned> targets,
+                                               MLIRContext *context) {
+  SmallVector<AffineExpr, 4> affExprs;
+  for (unsigned t : targets)
+    affExprs.push_back(getAffineDimExpr(t, context));
+  AffineMap result = AffineMap::get(/*dimCount=*/numDims, /*symbolCount=*/0,
+                                    affExprs, context);
+  return result;
 }
 
 template <typename AffineExprContainer>
@@ -656,6 +665,34 @@ AffineMap mlir::compressUnusedSymbols(AffineMap map) {
 SmallVector<AffineMap> mlir::compressUnusedSymbols(ArrayRef<AffineMap> maps) {
   return compressUnusedListImpl(
       maps, [](AffineMap m) { return compressUnusedSymbols(m); });
+}
+
+AffineMap mlir::foldAttributesIntoMap(Builder &b, AffineMap map,
+                                      ArrayRef<OpFoldResult> operands,
+                                      SmallVector<Value> &remainingValues) {
+  SmallVector<AffineExpr> dimReplacements, symReplacements;
+  int64_t numDims = 0;
+  for (int64_t i = 0; i < map.getNumDims(); ++i) {
+    if (auto attr = operands[i].dyn_cast<Attribute>()) {
+      dimReplacements.push_back(
+          b.getAffineConstantExpr(attr.cast<IntegerAttr>().getInt()));
+    } else {
+      dimReplacements.push_back(b.getAffineDimExpr(numDims++));
+      remainingValues.push_back(operands[i].get<Value>());
+    }
+  }
+  int64_t numSymbols = 0;
+  for (int64_t i = 0; i < map.getNumSymbols(); ++i) {
+    if (auto attr = operands[i + map.getNumDims()].dyn_cast<Attribute>()) {
+      symReplacements.push_back(
+          b.getAffineConstantExpr(attr.cast<IntegerAttr>().getInt()));
+    } else {
+      symReplacements.push_back(b.getAffineSymbolExpr(numSymbols++));
+      remainingValues.push_back(operands[i + map.getNumDims()].get<Value>());
+    }
+  }
+  return map.replaceDimsAndSymbols(dimReplacements, symReplacements, numDims,
+                                   numSymbols);
 }
 
 AffineMap mlir::simplifyAffineMap(AffineMap map) {

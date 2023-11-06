@@ -65,12 +65,10 @@ static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
 }
 #endif
 
-static int32_t nvptx_parallel_reduce_nowait(int32_t TId, int32_t num_vars,
-                                            uint64_t reduce_size,
+static int32_t nvptx_parallel_reduce_nowait(
                                             void *reduce_data,
                                             ShuffleReductFnTy shflFct,
-                                            InterWarpCopyFnTy cpyFct,
-                                            bool isSPMDExecutionMode, bool) {
+                                            InterWarpCopyFnTy cpyFct) {
   uint32_t BlockThreadId = mapping::getThreadIdInBlock();
   if (mapping::isMainThreadInGenericMode(/* IsSPMD */ false))
     BlockThreadId = 0;
@@ -155,7 +153,7 @@ static int32_t nvptx_parallel_reduce_nowait(int32_t TId, int32_t num_vars,
 
   // Get the OMP thread Id. This is different from BlockThreadId in the case of
   // an L2 parallel region.
-  return TId == 0;
+  return BlockThreadId == 0;
 #endif // __CUDA_ARCH__ >= 700
 }
 
@@ -167,25 +165,120 @@ uint32_t roundToWarpsize(uint32_t s) {
 
 uint32_t kmpcMin(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
-static uint32_t IterCnt = 0;
-static uint32_t Cnt = 0;
-
 } // namespace
 
 extern "C" {
-int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(
-    IdentTy *Loc, int32_t TId, int32_t num_vars, uint64_t reduce_size,
-    void *reduce_data, ShuffleReductFnTy shflFct, InterWarpCopyFnTy cpyFct) {
-  return nvptx_parallel_reduce_nowait(TId, num_vars, reduce_size, reduce_data,
-                                      shflFct, cpyFct, mapping::isSPMDMode(),
-                                      false);
+int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(IdentTy *Loc,
+                                               uint64_t reduce_data_size,
+                                               void *reduce_data,
+                                               ShuffleReductFnTy shflFct,
+                                               InterWarpCopyFnTy cpyFct) {
+  return nvptx_parallel_reduce_nowait(reduce_data, shflFct, cpyFct);
+}
+
+/// Mostly like _v2 but with the builtin assumption that we have less than
+/// num_of_records (by default 1024) teams.
+int32_t __kmpc_nvptx_teams_reduce_nowait_v3(
+    IdentTy *Loc, void *__restrict__ GlobalBuffer, uint32_t num_of_records,
+    uint64_t reduce_data_size, void *reduce_data, ShuffleReductFnTy shflFct,
+    InterWarpCopyFnTy cpyFct, ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct,
+    ListGlobalFnTy glcpyFct, ListGlobalFnTy glredFct) {
+  // Terminate all threads in non-SPMD mode except for the main thread.
+  uint32_t ThreadId = mapping::getThreadIdInBlock();
+  if (mapping::isGenericMode()) {
+    if (!mapping::isMainThreadInGenericMode())
+      return 0;
+    ThreadId = 0;
+  }
+
+  uint32_t &Cnt = state::getKernelLaunchEnvironment().ReductionCnt;
+
+  // In non-generic mode all workers participate in the teams reduction.
+  // In generic mode only the team main participates in the teams
+  // reduction because the workers are waiting for parallel work.
+  uint32_t NumThreads = omp_get_num_threads();
+  uint32_t TeamId = omp_get_team_num();
+  uint32_t NumTeams = omp_get_num_teams();
+  static unsigned SHARED(ChunkTeamCount);
+
+  // Block progress for teams greater than the current upper
+  // limit. We always only allow a number of teams less or equal
+  // to the number of slots in the buffer.
+  bool IsMain = (ThreadId == 0);
+
+  if (IsMain) {
+    lgcpyFct(GlobalBuffer, TeamId, reduce_data);
+
+    // Propagate the memory writes above to the world.
+    fence::kernel(atomic::release);
+
+    // Increment team counter.
+    // This counter is incremented by all teams in the current
+    // BUFFER_SIZE chunk.
+    ChunkTeamCount = atomic::inc(&Cnt, NumTeams, atomic::acq_rel,
+                                 atomic::MemScopeTy::device);
+  }
+
+  // Synchronize in SPMD mode as in generic mode all but 1 threads are in the
+  // state machine.
+  if (mapping::isSPMDMode())
+    synchronize::threadsAligned(atomic::acq_rel);
+
+  // Each thread will have a local struct containing the values to be
+  // reduced:
+  //      1. do reduction within each warp.
+  //      2. do reduction across warps.
+  //      3. write the final result to the main reduction variable
+  //         by returning 1 in the thread holding the reduction result.
+
+  // Check if this is the very last team.
+  if (ChunkTeamCount != NumTeams - 1)
+    return 0;
+
+  // Last team processing.
+  NumThreads = roundToWarpsize(kmpcMin(NumThreads, NumTeams));
+  if (ThreadId >= NumThreads)
+    return 0;
+
+  // Ensure we see the global memory writes by other teams
+  fence::kernel(atomic::aquire);
+
+  // Load from buffer and reduce.
+  glcpyFct(GlobalBuffer, ThreadId, reduce_data);
+  for (uint32_t i = NumThreads + ThreadId; i < NumTeams; i += NumThreads)
+    glredFct(GlobalBuffer, i, reduce_data);
+
+  // Reduce across warps to the warp main.
+  gpu_regular_warp_reduce(reduce_data, shflFct);
+
+  uint32_t ActiveThreads = kmpcMin(NumTeams, NumThreads);
+  uint32_t WarpsNeeded =
+      (ActiveThreads + mapping::getWarpSize() - 1) / mapping::getWarpSize();
+  // Gather all the reduced values from each warp
+  // to the first warp.
+  cpyFct(reduce_data, WarpsNeeded);
+
+  if (mapping::getWarpIdInBlock() == 0)
+    gpu_irregular_warp_reduce(reduce_data, shflFct, WarpsNeeded, ThreadId);
+
+  return IsMain;
 }
 
 int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
-    IdentTy *Loc, int32_t TId, void *GlobalBuffer, uint32_t num_of_records,
-    void *reduce_data, ShuffleReductFnTy shflFct, InterWarpCopyFnTy cpyFct,
-    ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct, ListGlobalFnTy glcpyFct,
-    ListGlobalFnTy glredFct) {
+    IdentTy *Loc, void *GlobalBuffer, uint32_t num_of_records,
+    uint64_t reduce_data_size, void *reduce_data, ShuffleReductFnTy shflFct,
+    InterWarpCopyFnTy cpyFct, ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct,
+    ListGlobalFnTy glcpyFct, ListGlobalFnTy glredFct) {
+  // The first check is a compile time constant, the second one a runtime check.
+  // If the first one succeeds we will use the specialized version.
+  if ((state::getKernelEnvironment().Configuration.MaxTeams >= 0 &&
+       state::getKernelEnvironment().Configuration.MaxTeams <= num_of_records &&
+       num_of_records == 1024) ||
+      (omp_get_num_teams() <= num_of_records))
+    return __kmpc_nvptx_teams_reduce_nowait_v3(
+        Loc, GlobalBuffer, num_of_records, reduce_data_size, reduce_data,
+        shflFct, cpyFct, lgcpyFct, lgredFct, glcpyFct, glredFct);
+
   // Terminate all threads in non-SPMD mode except for the master thread.
   uint32_t ThreadId = mapping::getThreadIdInBlock();
   if (mapping::isGenericMode()) {
@@ -193,6 +286,9 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
       return 0;
     ThreadId = 0;
   }
+
+  uint32_t &IterCnt = state::getKernelLaunchEnvironment().ReductionIterCnt;
+  uint32_t &Cnt = state::getKernelLaunchEnvironment().ReductionCnt;
 
   // In non-generic mode all workers participate in the teams reduction.
   // In generic mode only the team master participates in the teams
@@ -208,7 +304,7 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   // to the number of slots in the buffer.
   bool IsMaster = (ThreadId == 0);
   while (IsMaster) {
-    Bound = atomic::load(&IterCnt, atomic::seq_cst);
+    Bound = atomic::load(&IterCnt, atomic::aquire);
     if (TeamId < Bound + num_of_records)
       break;
   }
@@ -220,17 +316,20 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     } else
       lgredFct(GlobalBuffer, ModBockId, reduce_data);
 
-    fence::system(atomic::seq_cst);
+    // Propagate the memory writes above to the world.
+    fence::kernel(atomic::release);
 
     // Increment team counter.
     // This counter is incremented by all teams in the current
-    // BUFFER_SIZE chunk.
+    // num_of_records chunk.
     ChunkTeamCount = atomic::inc(&Cnt, num_of_records - 1u, atomic::seq_cst,
                                  atomic::MemScopeTy::device);
   }
-  // Synchronize
+
+  // Synchronize in SPMD mode as in generic mode all but 1 threads are in the
+  // state machine.
   if (mapping::isSPMDMode())
-    __kmpc_barrier(Loc, TId);
+    synchronize::threadsAligned(atomic::acq_rel);
 
   // reduce_data is global or shared so before being reduced within the
   // warp we need to bring it in local memory:
@@ -257,6 +356,9 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   // Check if this is the very last team.
   unsigned NumRecs = kmpcMin(NumTeams, uint32_t(num_of_records));
   if (ChunkTeamCount == NumTeams - Bound - 1) {
+    // Ensure we see the global memory writes by other teams
+    fence::kernel(atomic::aquire);
+
     //
     // Last team processing.
     //
@@ -307,10 +409,10 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 
   return 0;
 }
+}
 
-void __kmpc_nvptx_end_reduce(int32_t TId) {}
-
-void __kmpc_nvptx_end_reduce_nowait(int32_t TId) {}
+void *__kmpc_reduction_get_fixed_buffer() {
+  return state::getKernelLaunchEnvironment().ReductionBuffer;
 }
 
 #pragma omp end declare target

@@ -319,7 +319,7 @@ static void collectStatsForDie(DWARFDie Die, const std::string &FnPrefix,
         auto Offset = Die.find(dwarf::DW_AT_abstract_origin);
         // Do not track this variable any more, since it has location
         // coverage.
-        llvm::erase_value(*AbstractOriginVariables, (*Offset).getRawUValue());
+        llvm::erase(*AbstractOriginVariables, (*Offset).getRawUValue());
       }
     } else {
       // The locstats will be handled at the end of
@@ -743,7 +743,7 @@ static void updateVarsWithAbstractOriginLocCovInfo(
          Child.find(dwarf::DW_AT_const_value))) {
       auto OffsetVar = Child.find(dwarf::DW_AT_abstract_origin);
       if (OffsetVar)
-        llvm::erase_value(AbstractOriginVars, (*OffsetVar).getRawUValue());
+        llvm::erase(AbstractOriginVars, (*OffsetVar).getRawUValue());
     } else if (ChildTag == dwarf::DW_TAG_lexical_block)
       updateVarsWithAbstractOriginLocCovInfo(Child, AbstractOriginVars);
     Child = Child.getSibling();
@@ -792,7 +792,7 @@ static void collectZeroLocCovForVarsWithAbstractOrigin(
     ProcessedFns.push_back(FnOffset);
   }
   for (auto ProcessedFn : ProcessedFns)
-    llvm::erase_value(FnsWithAbstractOriginToBeProcessed, ProcessedFn);
+    llvm::erase(FnsWithAbstractOriginToBeProcessed, ProcessedFn);
 }
 
 /// Collect zero location coverage for inlined variables which refer to

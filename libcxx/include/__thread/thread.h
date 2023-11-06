@@ -21,7 +21,6 @@
 #include <__thread/id.h>
 #include <__threading_support>
 #include <__utility/forward.h>
-#include <iosfwd>
 #include <tuple>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION

@@ -49,11 +49,11 @@ enum PrimType : unsigned;
 class Block final {
 public:
   /// Creates a new block.
-  Block(const std::optional<unsigned> &DeclID, Descriptor *Desc,
+  Block(const std::optional<unsigned> &DeclID, const Descriptor *Desc,
         bool IsStatic = false, bool IsExtern = false)
       : DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern), Desc(Desc) {}
 
-  Block(Descriptor *Desc, bool IsStatic = false, bool IsExtern = false)
+  Block(const Descriptor *Desc, bool IsStatic = false, bool IsExtern = false)
       : DeclID((unsigned)-1), IsStatic(IsStatic), IsExtern(IsExtern),
         Desc(Desc) {}
 
@@ -120,8 +120,8 @@ protected:
   friend class DeadBlock;
   friend class InterpState;
 
-  Block(Descriptor *Desc, bool IsExtern, bool IsStatic, bool IsDead)
-    : IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true), Desc(Desc) {}
+  Block(const Descriptor *Desc, bool IsExtern, bool IsStatic, bool IsDead)
+      : IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true), Desc(Desc) {}
 
   /// Deletes a dead block at the end of its lifetime.
   void cleanup();
@@ -149,7 +149,7 @@ protected:
   /// via invokeCtor.
   bool IsInitialized = false;
   /// Pointer to the stack slot descriptor.
-  Descriptor *Desc;
+  const Descriptor *Desc;
 };
 
 /// Descriptor for a dead block.

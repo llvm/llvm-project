@@ -60,6 +60,10 @@ COMPILER_RT_VISIBILITY void __llvm_profile_reset_counters(void) {
       (__llvm_profile_get_version() & VARIANT_MASK_BYTE_COVERAGE) ? 0xFF : 0;
   memset(I, ResetValue, E - I);
 
+  I = __llvm_profile_begin_bitmap();
+  E = __llvm_profile_end_bitmap();
+  memset(I, 0x0, E - I);
+
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
   const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
   const __llvm_profile_data *DI;
@@ -84,4 +88,8 @@ COMPILER_RT_VISIBILITY void __llvm_profile_reset_counters(void) {
     }
   }
   lprofSetProfileDumped(0);
+}
+
+COMPILER_RT_VISIBILITY int __llvm_profile_has_correlation() {
+  return (__llvm_profile_get_version() & VARIANT_MASK_DBG_CORRELATE) != 0ULL;
 }

@@ -144,14 +144,8 @@ public:
     return SwiftBridge;
   }
 
-  void setSwiftBridge(const std::optional<std::string> &SwiftType) {
+  void setSwiftBridge(std::optional<std::string> SwiftType) {
     SwiftBridge = SwiftType;
-  }
-
-  void setSwiftBridge(const std::optional<llvm::StringRef> &SwiftType) {
-    SwiftBridge = SwiftType
-                      ? std::optional<std::string>(std::string(*SwiftType))
-                      : std::nullopt;
   }
 
   const std::optional<std::string> &getNSErrorDomain() const {

@@ -165,6 +165,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::v8f16, &AMDGPU::SGPR_128RegClass);
     addRegisterClass(MVT::v16i16, &AMDGPU::SGPR_256RegClass);
     addRegisterClass(MVT::v16f16, &AMDGPU::SGPR_256RegClass);
+    addRegisterClass(MVT::v32i16, &AMDGPU::SGPR_512RegClass);
+    addRegisterClass(MVT::v32f16, &AMDGPU::SGPR_512RegClass);
   }
 
   addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
@@ -269,13 +271,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // We only support LOAD/STORE and vector manipulation ops for vectors
   // with > 4 elements.
   for (MVT VT :
-       {MVT::v8i32,  MVT::v8f32,  MVT::v9i32,   MVT::v9f32,  MVT::v10i32,
-        MVT::v10f32, MVT::v11i32, MVT::v11f32,  MVT::v12i32, MVT::v12f32,
-        MVT::v16i32, MVT::v16f32, MVT::v2i64,   MVT::v2f64,  MVT::v4i16,
-        MVT::v4f16,  MVT::v3i64,  MVT::v3f64,   MVT::v6i32,  MVT::v6f32,
-        MVT::v4i64,  MVT::v4f64,  MVT::v8i64,   MVT::v8f64,  MVT::v8i16,
-        MVT::v8f16,  MVT::v16i16, MVT::v16f16,  MVT::v16i64, MVT::v16f64,
-        MVT::v32i32, MVT::v32f32}) {
+       {MVT::v8i32,  MVT::v8f32,  MVT::v9i32,  MVT::v9f32,  MVT::v10i32,
+        MVT::v10f32, MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32,
+        MVT::v16i32, MVT::v16f32, MVT::v2i64,  MVT::v2f64,  MVT::v4i16,
+        MVT::v4f16,  MVT::v3i64,  MVT::v3f64,  MVT::v6i32,  MVT::v6f32,
+        MVT::v4i64,  MVT::v4f64,  MVT::v8i64,  MVT::v8f64,  MVT::v8i16,
+        MVT::v8f16,  MVT::v16i16, MVT::v16f16, MVT::v16i64, MVT::v16f64,
+        MVT::v32i32, MVT::v32f32, MVT::v32i16, MVT::v32f16}) {
     for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
       switch (Op) {
       case ISD::LOAD:
@@ -553,8 +555,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     if (STI.hasMadF16())
       setOperationAction(ISD::FMAD, MVT::f16, Legal);
 
-    for (MVT VT : {MVT::v2i16, MVT::v2f16, MVT::v4i16, MVT::v4f16, MVT::v8i16,
-                   MVT::v8f16, MVT::v16i16, MVT::v16f16}) {
+    for (MVT VT :
+         {MVT::v2i16, MVT::v2f16, MVT::v4i16, MVT::v4f16, MVT::v8i16,
+          MVT::v8f16, MVT::v16i16, MVT::v16f16, MVT::v32i16, MVT::v32f16}) {
       for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
         switch (Op) {
         case ISD::LOAD:
@@ -640,6 +643,16 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::v16f16, Promote);
     AddPromotedToType(ISD::STORE, MVT::v16f16, MVT::v8i32);
 
+    setOperationAction(ISD::LOAD, MVT::v32i16, Promote);
+    AddPromotedToType(ISD::LOAD, MVT::v32i16, MVT::v16i32);
+    setOperationAction(ISD::LOAD, MVT::v32f16, Promote);
+    AddPromotedToType(ISD::LOAD, MVT::v32f16, MVT::v16i32);
+
+    setOperationAction(ISD::STORE, MVT::v32i16, Promote);
+    AddPromotedToType(ISD::STORE, MVT::v32i16, MVT::v16i32);
+    setOperationAction(ISD::STORE, MVT::v32f16, Promote);
+    AddPromotedToType(ISD::STORE, MVT::v32f16, MVT::v16i32);
+
     setOperationAction({ISD::ANY_EXTEND, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND},
                        MVT::v2i32, Expand);
     setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Expand);
@@ -662,12 +675,15 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FMAXNUM_IEEE, ISD::FMINNUM_IEEE}, MVT::f16, Legal);
 
     setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE},
-                       {MVT::v4f16, MVT::v8f16, MVT::v16f16}, Custom);
+                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
+                       Custom);
 
     setOperationAction({ISD::FMINNUM, ISD::FMAXNUM},
-                       {MVT::v4f16, MVT::v8f16, MVT::v16f16}, Expand);
+                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
+                       Expand);
 
-    for (MVT Vec16 : {MVT::v8i16, MVT::v8f16, MVT::v16i16, MVT::v16f16}) {
+    for (MVT Vec16 : {MVT::v8i16, MVT::v8f16, MVT::v16i16, MVT::v16f16,
+                      MVT::v32i16, MVT::v32f16}) {
       setOperationAction(
           {ISD::BUILD_VECTOR, ISD::EXTRACT_VECTOR_ELT, ISD::SCALAR_TO_VECTOR},
           Vec16, Custom);
@@ -690,10 +706,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::VECTOR_SHUFFLE,
                        {MVT::v4f16, MVT::v4i16, MVT::v8f16, MVT::v8i16,
-                        MVT::v16f16, MVT::v16i16},
+                        MVT::v16f16, MVT::v16i16, MVT::v32f16, MVT::v32i16},
                        Custom);
 
-    for (MVT VT : {MVT::v4i16, MVT::v8i16, MVT::v16i16})
+    for (MVT VT : {MVT::v4i16, MVT::v8i16, MVT::v16i16, MVT::v32i16})
       // Split vector operations.
       setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL, ISD::ADD, ISD::SUB,
                           ISD::MUL, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX,
@@ -701,7 +717,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                           ISD::SSUBSAT},
                          VT, Custom);
 
-    for (MVT VT : {MVT::v4f16, MVT::v8f16, MVT::v16f16})
+    for (MVT VT : {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16})
       // Split vector operations.
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE},
                          VT, Custom);
@@ -737,7 +753,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::SELECT,
                      {MVT::v4i16, MVT::v4f16, MVT::v2i8, MVT::v4i8, MVT::v8i8,
-                      MVT::v8i16, MVT::v8f16, MVT::v16i16, MVT::v16f16},
+                      MVT::v8i16, MVT::v8f16, MVT::v16i16, MVT::v16f16,
+                      MVT::v32i16, MVT::v32f16},
                      Custom);
 
   setOperationAction({ISD::SMULO, ISD::UMULO}, MVT::i64, Custom);
@@ -3261,6 +3278,9 @@ bool SITargetLowering::isEligibleForTailCallOptimization(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals,
     const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const {
+  if (AMDGPU::isChainCC(CalleeCC))
+    return true;
+
   if (!mayTailCallThisCC(CalleeCC))
     return false;
 
@@ -3345,7 +3365,36 @@ bool SITargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
 // The wave scratch offset register is used as the global base pointer.
 SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                                     SmallVectorImpl<SDValue> &InVals) const {
+  CallingConv::ID CallConv = CLI.CallConv;
+  bool IsChainCallConv = AMDGPU::isChainCC(CallConv);
+
   SelectionDAG &DAG = CLI.DAG;
+
+  TargetLowering::ArgListEntry RequestedExec;
+  if (IsChainCallConv) {
+    // The last argument should be the value that we need to put in EXEC.
+    // Pop it out of CLI.Outs and CLI.OutVals before we do any processing so we
+    // don't treat it like the rest of the arguments.
+    RequestedExec = CLI.Args.back();
+    assert(RequestedExec.Node && "No node for EXEC");
+
+    if (!RequestedExec.Ty->isIntegerTy(Subtarget->getWavefrontSize()))
+      return lowerUnhandledCall(CLI, InVals, "Invalid value for EXEC");
+
+    assert(CLI.Outs.back().OrigArgIndex == 2 && "Unexpected last arg");
+    CLI.Outs.pop_back();
+    CLI.OutVals.pop_back();
+
+    if (RequestedExec.Ty->isIntegerTy(64)) {
+      assert(CLI.Outs.back().OrigArgIndex == 2 && "Exec wasn't split up");
+      CLI.Outs.pop_back();
+      CLI.OutVals.pop_back();
+    }
+
+    assert(CLI.Outs.back().OrigArgIndex != 2 &&
+           "Haven't popped all the pieces of the EXEC mask");
+  }
+
   const SDLoc &DL = CLI.DL;
   SmallVector<ISD::OutputArg, 32> &Outs = CLI.Outs;
   SmallVector<SDValue, 32> &OutVals = CLI.OutVals;
@@ -3353,7 +3402,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
   bool &IsTailCall = CLI.IsTailCall;
-  CallingConv::ID CallConv = CLI.CallConv;
   bool IsVarArg = CLI.IsVarArg;
   bool IsSibCall = false;
   bool IsThisReturn = false;
@@ -3384,9 +3432,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsTailCall) {
     IsTailCall = isEligibleForTailCallOptimization(
       Callee, CallConv, IsVarArg, Outs, OutVals, Ins, DAG);
-    if (!IsTailCall && CLI.CB && CLI.CB->isMustTailCall()) {
+    if (!IsTailCall &&
+        ((CLI.CB && CLI.CB->isMustTailCall()) || IsChainCallConv)) {
       report_fatal_error("failed to perform tail call elimination on a call "
-                         "site marked musttail");
+                         "site marked musttail or on llvm.amdgcn.cs.chain");
     }
 
     bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
@@ -3409,7 +3458,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, IsVarArg);
 
-  if (CallConv != CallingConv::AMDGPU_Gfx) {
+  if (CallConv != CallingConv::AMDGPU_Gfx && !AMDGPU::isChainCC(CallConv)) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     passSpecialInputs(CLI, CCInfo, *Info, RegsToPass, MemOpChains, Chain);
   }
@@ -3435,16 +3484,20 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
-  if (!IsSibCall) {
+  if (!IsSibCall)
     Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
 
+  if (!IsSibCall || IsChainCallConv) {
     if (!Subtarget->enableFlatScratch()) {
       SmallVector<SDValue, 4> CopyFromChains;
 
       // In the HSA case, this should be an identity copy.
       SDValue ScratchRSrcReg
         = DAG.getCopyFromReg(Chain, DL, Info->getScratchRSrcReg(), MVT::v4i32);
-      RegsToPass.emplace_back(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, ScratchRSrcReg);
+      RegsToPass.emplace_back(IsChainCallConv
+                                  ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
+                                  : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3,
+                              ScratchRSrcReg);
       CopyFromChains.push_back(ScratchRSrcReg.getValue(1));
       Chain = DAG.getTokenFactor(DL, CopyFromChains);
     }
@@ -3589,6 +3642,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.push_back(DAG.getTargetConstant(FPDiff, DL, MVT::i32));
   }
 
+  if (IsChainCallConv)
+    Ops.push_back(RequestedExec.Node);
+
   // Add argument registers to the end of the list so that they are known live
   // into the call.
   for (auto &RegToPass : RegsToPass) {
@@ -3597,8 +3653,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Add a register mask operand representing the call-preserved registers.
-
-  auto *TRI = static_cast<const SIRegisterInfo*>(Subtarget->getRegisterInfo());
+  auto *TRI = static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
   const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
@@ -3612,8 +3667,17 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // actual call instruction.
   if (IsTailCall) {
     MFI.setHasTailCall();
-    unsigned OPC = CallConv == CallingConv::AMDGPU_Gfx ?
-                   AMDGPUISD::TC_RETURN_GFX : AMDGPUISD::TC_RETURN;
+    unsigned OPC = AMDGPUISD::TC_RETURN;
+    switch (CallConv) {
+    case CallingConv::AMDGPU_Gfx:
+      OPC = AMDGPUISD::TC_RETURN_GFX;
+      break;
+    case CallingConv::AMDGPU_CS_Chain:
+    case CallingConv::AMDGPU_CS_ChainPreserve:
+      OPC = AMDGPUISD::TC_RETURN_CHAIN;
+      break;
+    }
+
     return DAG.getNode(OPC, DL, NodeTys, Ops);
   }
 
@@ -4727,8 +4791,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
     Register Dst = MI.getOperand(0).getReg();
-    Register Src0 = MI.getOperand(1).getReg();
-    Register Src1 = MI.getOperand(2).getReg();
+    const MachineOperand &Src0 = MI.getOperand(1);
+    const MachineOperand &Src1 = MI.getOperand(2);
     const DebugLoc &DL = MI.getDebugLoc();
     Register SrcCond = MI.getOperand(3).getReg();
 
@@ -4737,20 +4801,42 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     const auto *CondRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
     Register SrcCondCopy = MRI.createVirtualRegister(CondRC);
 
+    const TargetRegisterClass *Src0RC = Src0.isReg()
+                                            ? MRI.getRegClass(Src0.getReg())
+                                            : &AMDGPU::VReg_64RegClass;
+    const TargetRegisterClass *Src1RC = Src1.isReg()
+                                            ? MRI.getRegClass(Src1.getReg())
+                                            : &AMDGPU::VReg_64RegClass;
+
+    const TargetRegisterClass *Src0SubRC =
+        TRI->getSubRegisterClass(Src0RC, AMDGPU::sub0);
+    const TargetRegisterClass *Src1SubRC =
+        TRI->getSubRegisterClass(Src1RC, AMDGPU::sub1);
+
+    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub0, Src0SubRC);
+    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, Src1RC, AMDGPU::sub0, Src1SubRC);
+
+    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub1, Src0SubRC);
+    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, Src1RC, AMDGPU::sub1, Src1SubRC);
+
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), SrcCondCopy)
       .addReg(SrcCond);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstLo)
-      .addImm(0)
-      .addReg(Src0, 0, AMDGPU::sub0)
-      .addImm(0)
-      .addReg(Src1, 0, AMDGPU::sub0)
-      .addReg(SrcCondCopy);
+        .addImm(0)
+        .add(Src0Sub0)
+        .addImm(0)
+        .add(Src1Sub0)
+        .addReg(SrcCondCopy);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstHi)
-      .addImm(0)
-      .addReg(Src0, 0, AMDGPU::sub1)
-      .addImm(0)
-      .addReg(Src1, 0, AMDGPU::sub1)
-      .addReg(SrcCondCopy);
+        .addImm(0)
+        .add(Src0Sub1)
+        .addImm(0)
+        .add(Src1Sub1)
+        .addReg(SrcCondCopy);
 
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), Dst)
       .addReg(DstLo)
@@ -5107,7 +5193,7 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
   assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4f32 ||
          VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v16i16 ||
          VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32);
+         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16);
 
   SDValue Lo, Hi;
   std::tie(Lo, Hi) = DAG.SplitVectorOperand(Op.getNode(), 0);
@@ -5130,7 +5216,7 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
   assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4f32 ||
          VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v16i16 ||
          VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32);
+         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16);
 
   SDValue Lo0, Hi0;
   std::tie(Lo0, Hi0) = DAG.SplitVectorOperand(Op.getNode(), 0);
@@ -5897,7 +5983,8 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
   if (IsIEEEMode)
     return expandFMINNUM_FMAXNUM(Op.getNode(), DAG);
 
-  if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16)
+  if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
+      VT == MVT::v16f16)
     return splitBinaryVectorOp(Op, DAG);
   return Op;
 }
@@ -6415,7 +6502,7 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   if (SDValue Combined = performExtractVectorEltCombine(Op.getNode(), DCI))
     return Combined;
 
-  if (VecSize == 128 || VecSize == 256) {
+  if (VecSize == 128 || VecSize == 256 || VecSize == 512) {
     SDValue Lo, Hi;
     EVT LoVT, HiVT;
     std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VecVT);
@@ -6428,9 +6515,7 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
       Hi = DAG.getBitcast(HiVT,
                           DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i64, V2,
                                       DAG.getConstant(1, SL, MVT::i32)));
-    } else {
-      assert(VecSize == 256);
-
+    } else if (VecSize == 256) {
       SDValue V2 = DAG.getBitcast(MVT::v4i64, Vec);
       SDValue Parts[4];
       for (unsigned P = 0; P < 4; ++P) {
@@ -6442,6 +6527,22 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
                                             Parts[0], Parts[1]));
       Hi = DAG.getBitcast(HiVT, DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i64,
                                             Parts[2], Parts[3]));
+    } else {
+      assert(VecSize == 512);
+
+      SDValue V2 = DAG.getBitcast(MVT::v8i64, Vec);
+      SDValue Parts[8];
+      for (unsigned P = 0; P < 8; ++P) {
+        Parts[P] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i64, V2,
+                               DAG.getConstant(P, SL, MVT::i32));
+      }
+
+      Lo = DAG.getBitcast(LoVT,
+                          DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v4i64,
+                                      Parts[0], Parts[1], Parts[2], Parts[3]));
+      Hi = DAG.getBitcast(HiVT,
+                          DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v4i64,
+                                      Parts[4], Parts[5],Parts[6], Parts[7]));
     }
 
     EVT IdxVT = Idx.getValueType();
@@ -6607,6 +6708,27 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
     return DAG.getNode(ISD::BITCAST, SL, VT, Blend);
   }
 
+  if (VT == MVT::v32i16 || VT == MVT::v32f16) {
+    EVT QuarterVT = MVT::getVectorVT(VT.getVectorElementType().getSimpleVT(),
+                                     VT.getVectorNumElements() / 8);
+    MVT QuarterIntVT = MVT::getIntegerVT(QuarterVT.getSizeInBits());
+
+    SmallVector<SDValue, 8> Parts[8];
+    for (unsigned I = 0, E = VT.getVectorNumElements() / 8; I != E; ++I) {
+      for (unsigned P = 0; P < 8; ++P)
+        Parts[P].push_back(Op.getOperand(I + P * E));
+    }
+    SDValue Casts[8];
+    for (unsigned P = 0; P < 8; ++P) {
+      SDValue Vec = DAG.getBuildVector(QuarterVT, SL, Parts[P]);
+      Casts[P] = DAG.getNode(ISD::BITCAST, SL, QuarterIntVT, Vec);
+    }
+
+    SDValue Blend =
+        DAG.getBuildVector(MVT::getVectorVT(QuarterIntVT, 8), SL, Casts);
+    return DAG.getNode(ISD::BITCAST, SL, VT, Blend);
+  }
+
   assert(VT == MVT::v2f16 || VT == MVT::v2i16);
   assert(!Subtarget->hasVOP3PInsts() && "this should be legal");
 
@@ -6672,24 +6794,12 @@ buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
   //   $symbol@*@hi with lower 32 bits and higher 32 bits of a literal constant,
   //   which is a 64-bit pc-relative offset from the encoding of the $symbol
   //   operand to the global variable.
-  //
-  // What we want here is an offset from the value returned by s_getpc
-  // (which is the address of the s_add_u32 instruction) to the global
-  // variable, but since the encoding of $symbol starts 4 bytes after the start
-  // of the s_add_u32 instruction, we end up with an offset that is 4 bytes too
-  // small. This requires us to add 4 to the global variable offset in order to
-  // compute the correct address. Similarly for the s_addc_u32 instruction, the
-  // encoding of $symbol starts 12 bytes after the start of the s_add_u32
-  // instruction.
-  SDValue PtrLo =
-      DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 4, GAFlags);
+  SDValue PtrLo = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset, GAFlags);
   SDValue PtrHi;
-  if (GAFlags == SIInstrInfo::MO_NONE) {
+  if (GAFlags == SIInstrInfo::MO_NONE)
     PtrHi = DAG.getTargetConstant(0, DL, MVT::i32);
-  } else {
-    PtrHi =
-        DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 12, GAFlags + 1);
-  }
+  else
+    PtrHi = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset, GAFlags + 1);
   return DAG.getNode(AMDGPUISD::PC_ADD_REL_OFFSET, DL, PtrVT, PtrLo, PtrHi);
 }
 
@@ -9507,7 +9617,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SITargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
-  if (VT.getSizeInBits() == 128 || VT.getSizeInBits() == 256)
+  if (VT.getSizeInBits() == 128 || VT.getSizeInBits() == 256 ||
+      VT.getSizeInBits() == 512)
     return splitTernaryVectorOp(Op, DAG);
 
   assert(VT.getSizeInBits() == 64);
@@ -10517,9 +10628,7 @@ SDValue SITargetLowering::splitBinaryBitConstantOp(
   return SDValue();
 }
 
-// Returns true if argument is a boolean value which is not serialized into
-// memory or argument and does not require v_cndmask_b32 to be deserialized.
-static bool isBoolSGPR(SDValue V) {
+bool llvm::isBoolSGPR(SDValue V) {
   if (V.getValueType() != MVT::i1)
     return false;
   switch (V.getOpcode()) {
@@ -10834,7 +10943,8 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
   if (Depth >= 6)
     return std::nullopt;
 
-  if (Op.getValueSizeInBits() < 8)
+  auto ValueSize = Op.getValueSizeInBits();
+  if (ValueSize != 8 && ValueSize != 16 && ValueSize != 32)
     return std::nullopt;
 
   switch (Op->getOpcode()) {
@@ -11125,6 +11235,8 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     auto VecIdx = IdxOp->getZExtValue();
     auto ScalarSize = Op.getScalarValueSizeInBits();
     if (ScalarSize != 32) {
+      if ((VecIdx + 1) * ScalarSize > 32)
+        return std::nullopt;
       Index = ScalarSize == 8 ? VecIdx : VecIdx * 2 + Index;
     }
 
@@ -11210,6 +11322,9 @@ static bool hasNon16BitAccesses(uint64_t PermMask, SDValue &Op,
   int Low16 = PermMask & 0xffff;
   int Hi16 = (PermMask & 0xffff0000) >> 16;
 
+  assert(Op.getValueType().isByteSized());
+  assert(OtherOp.getValueType().isByteSized());
+
   auto TempOp = peekThroughBitcasts(Op);
   auto TempOtherOp = peekThroughBitcasts(OtherOp);
 
@@ -11227,38 +11342,15 @@ static bool hasNon16BitAccesses(uint64_t PermMask, SDValue &Op,
   return !addresses16Bits(Low16) || !addresses16Bits(Hi16);
 }
 
-static SDValue getDWordFromOffset(SelectionDAG &DAG, SDLoc SL, SDValue Src,
-                                  unsigned DWordOffset) {
-  SDValue Ret;
-  if (Src.getValueSizeInBits() <= 32)
-    return DAG.getBitcastedAnyExtOrTrunc(Src, SL, MVT::i32);
-
-  if (Src.getValueSizeInBits() >= 256) {
-    assert(!(Src.getValueSizeInBits() % 32));
-    Ret = DAG.getBitcast(
-        MVT::getVectorVT(MVT::i32, Src.getValueSizeInBits() / 32), Src);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Ret,
-                       DAG.getConstant(DWordOffset, SL, MVT::i32));
-  }
-
-  Ret = DAG.getBitcastedAnyExtOrTrunc(
-      Src, SL, MVT::getIntegerVT(Src.getValueSizeInBits()));
-  if (DWordOffset) {
-    auto Shifted = DAG.getNode(ISD::SRL, SL, Ret.getValueType(), Ret,
-                               DAG.getConstant(DWordOffset * 32, SL, MVT::i32));
-    return DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Shifted);
-  }
-
-  return DAG.getBitcastedAnyExtOrTrunc(Ret, SL, MVT::i32);
-}
-
 static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
-  [[maybe_unused]] EVT VT = N->getValueType(0);
-  SmallVector<ByteProvider<SDValue>, 8> PermNodes;
+  EVT VT = N->getValueType(0);
+
+  if (VT != MVT::i32)
+    return SDValue();
 
   // VT is known to be MVT::i32, so we need to provide 4 bytes.
-  assert(VT == MVT::i32);
+  SmallVector<ByteProvider<SDValue>, 8> PermNodes;
   for (int i = 0; i < 4; i++) {
     // Find the ByteProvider that provides the ith byte of the result of OR
     std::optional<ByteProvider<SDValue>> P =
@@ -11272,8 +11364,8 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   if (PermNodes.size() != 4)
     return SDValue();
 
-  std::pair<unsigned, unsigned> FirstSrc(0, PermNodes[0].SrcOffset / 4);
-  std::optional<std::pair<unsigned, unsigned>> SecondSrc;
+  int FirstSrc = 0;
+  std::optional<int> SecondSrc;
   uint64_t PermMask = 0x00000000;
   for (size_t i = 0; i < PermNodes.size(); i++) {
     auto PermOp = PermNodes[i];
@@ -11281,31 +11373,33 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     // by sizeof(Src2) = 4
     int SrcByteAdjust = 4;
 
-    // If the Src uses a byte from a different DWORD, then it corresponds
-    // with a difference source
-    if (!PermOp.hasSameSrc(PermNodes[FirstSrc.first]) ||
-        ((PermOp.SrcOffset / 4) != FirstSrc.second)) {
-      if (SecondSrc)
-        if (!PermOp.hasSameSrc(PermNodes[SecondSrc->first]) ||
-            ((PermOp.SrcOffset / 4) != SecondSrc->second))
+    if (!PermOp.hasSameSrc(PermNodes[FirstSrc])) {
+      if (SecondSrc.has_value())
+        if (!PermOp.hasSameSrc(PermNodes[*SecondSrc]))
           return SDValue();
 
       // Set the index of the second distinct Src node
-      SecondSrc = {i, PermNodes[i].SrcOffset / 4};
-      assert(!(PermNodes[SecondSrc->first].Src->getValueSizeInBits() % 8));
+      SecondSrc = i;
+      assert(!(PermNodes[*SecondSrc].Src->getValueSizeInBits() % 8));
       SrcByteAdjust = 0;
     }
-    assert((PermOp.SrcOffset % 4) + SrcByteAdjust < 8);
+    assert(PermOp.SrcOffset + SrcByteAdjust < 8);
     assert(!DAG.getDataLayout().isBigEndian());
-    PermMask |= ((PermOp.SrcOffset % 4) + SrcByteAdjust) << (i * 8);
+    PermMask |= (PermOp.SrcOffset + SrcByteAdjust) << (i * 8);
   }
-  SDLoc DL(N);
-  SDValue Op = *PermNodes[FirstSrc.first].Src;
-  Op = getDWordFromOffset(DAG, DL, Op, FirstSrc.second);
-  assert(Op.getValueSizeInBits() == 32);
+
+  SDValue Op = *PermNodes[FirstSrc].Src;
+  SDValue OtherOp = SecondSrc.has_value() ? *PermNodes[*SecondSrc].Src
+                                          : *PermNodes[FirstSrc].Src;
+
+  // Check that we haven't just recreated the same FSHR node.
+  if (N->getOpcode() == ISD::FSHR &&
+      (N->getOperand(0) == Op || N->getOperand(0) == OtherOp) &&
+      (N->getOperand(1) == Op || N->getOperand(1) == OtherOp))
+    return SDValue();
 
   // Check that we are not just extracting the bytes in order from an op
-  if (!SecondSrc) {
+  if (Op == OtherOp && Op.getValueSizeInBits() == 32) {
     int Low16 = PermMask & 0xffff;
     int Hi16 = (PermMask & 0xffff0000) >> 16;
 
@@ -11317,16 +11411,8 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
       return DAG.getBitcast(MVT::getIntegerVT(32), Op);
   }
 
-  SDValue OtherOp =
-      SecondSrc.has_value() ? *PermNodes[SecondSrc->first].Src : Op;
-
-  if (SecondSrc)
-    OtherOp = getDWordFromOffset(DAG, DL, OtherOp, SecondSrc->second);
-
-  assert(Op.getValueSizeInBits() == 32);
-
   if (hasNon16BitAccesses(PermMask, Op, OtherOp)) {
-
+    SDLoc DL(N);
     assert(Op.getValueType().isByteSized() &&
            OtherOp.getValueType().isByteSized());
 
@@ -11341,6 +11427,7 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, Op, OtherOp,
                        DAG.getConstant(PermMask, DL, MVT::i32));
   }
+
   return SDValue();
 }
 
@@ -12808,32 +12895,25 @@ static unsigned addPermMasks(unsigned First, unsigned Second) {
   unsigned FirstNoCs = First & ~0x0c0c0c0c;
   unsigned SecondNoCs = Second & ~0x0c0c0c0c;
 
-  assert(FirstCs & 0xFF | SecondCs & 0xFF);
-  assert(FirstCs & 0xFF00 | SecondCs & 0xFF00);
-  assert(FirstCs & 0xFF0000 | SecondCs & 0xFF0000);
-  assert(FirstCs & 0xFF000000 | SecondCs & 0xFF000000);
+  assert((FirstCs & 0xFF) | (SecondCs & 0xFF));
+  assert((FirstCs & 0xFF00) | (SecondCs & 0xFF00));
+  assert((FirstCs & 0xFF0000) | (SecondCs & 0xFF0000));
+  assert((FirstCs & 0xFF000000) | (SecondCs & 0xFF000000));
 
   return (FirstNoCs | SecondNoCs) | (FirstCs & SecondCs);
 }
 
-struct DotSrc {
-  SDValue SrcOp;
-  int64_t PermMask;
-  int64_t DWordOffset;
-};
-
 static void placeSources(ByteProvider<SDValue> &Src0,
                          ByteProvider<SDValue> &Src1,
-                         SmallVectorImpl<DotSrc> &Src0s,
-                         SmallVectorImpl<DotSrc> &Src1s, int Step) {
+                         SmallVectorImpl<std::pair<SDValue, unsigned>> &Src0s,
+                         SmallVectorImpl<std::pair<SDValue, unsigned>> &Src1s,
+                         int Step) {
 
   assert(Src0.Src.has_value() && Src1.Src.has_value());
   // Src0s and Src1s are empty, just place arbitrarily.
   if (Step == 0) {
-    Src0s.push_back({*Src0.Src, ((Src0.SrcOffset % 4) << 24) + 0x0c0c0c,
-                     Src0.SrcOffset / 4});
-    Src1s.push_back({*Src1.Src, ((Src1.SrcOffset % 4) << 24) + 0x0c0c0c,
-                     Src1.SrcOffset / 4});
+    Src0s.push_back({*Src0.Src, (Src0.SrcOffset << 24) + 0x0c0c0c});
+    Src1s.push_back({*Src1.Src, (Src1.SrcOffset << 24) + 0x0c0c0c});
     return;
   }
 
@@ -12846,38 +12926,38 @@ static void placeSources(ByteProvider<SDValue> &Src0,
     unsigned FMask = 0xFF << (8 * (3 - Step));
 
     unsigned FirstMask =
-        (BPP.first.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask);
+        BPP.first.SrcOffset << (8 * (3 - Step)) | (ZeroMask & ~FMask);
     unsigned SecondMask =
-        (BPP.second.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask);
+        BPP.second.SrcOffset << (8 * (3 - Step)) | (ZeroMask & ~FMask);
     // Attempt to find Src vector which contains our SDValue, if so, add our
     // perm mask to the existing one. If we are unable to find a match for the
     // first SDValue, attempt to find match for the second.
     int FirstGroup = -1;
     for (int I = 0; I < 2; I++) {
-      SmallVectorImpl<DotSrc> &Srcs = I == 0 ? Src0s : Src1s;
-      auto MatchesFirst = [&BPP](DotSrc &IterElt) {
-        return IterElt.SrcOp == *BPP.first.Src &&
-               (IterElt.DWordOffset == (BPP.first.SrcOffset / 4));
+      SmallVectorImpl<std::pair<SDValue, unsigned>> &Srcs =
+          I == 0 ? Src0s : Src1s;
+      auto MatchesFirst = [&BPP](std::pair<SDValue, unsigned> IterElt) {
+        return IterElt.first == *BPP.first.Src;
       };
 
       auto Match = llvm::find_if(Srcs, MatchesFirst);
       if (Match != Srcs.end()) {
-        Match->PermMask = addPermMasks(FirstMask, Match->PermMask);
+        Match->second = addPermMasks(FirstMask, Match->second);
         FirstGroup = I;
         break;
       }
     }
     if (FirstGroup != -1) {
-      SmallVectorImpl<DotSrc> &Srcs = FirstGroup == 1 ? Src0s : Src1s;
-      auto MatchesSecond = [&BPP](DotSrc &IterElt) {
-        return IterElt.SrcOp == *BPP.second.Src &&
-               (IterElt.DWordOffset == (BPP.second.SrcOffset / 4));
+      SmallVectorImpl<std::pair<SDValue, unsigned>> &Srcs =
+          FirstGroup == 1 ? Src0s : Src1s;
+      auto MatchesSecond = [&BPP](std::pair<SDValue, unsigned> IterElt) {
+        return IterElt.first == *BPP.second.Src;
       };
       auto Match = llvm::find_if(Srcs, MatchesSecond);
       if (Match != Srcs.end()) {
-        Match->PermMask = addPermMasks(SecondMask, Match->PermMask);
+        Match->second = addPermMasks(SecondMask, Match->second);
       } else
-        Srcs.push_back({*BPP.second.Src, SecondMask, BPP.second.SrcOffset / 4});
+        Srcs.push_back({*BPP.second.Src, SecondMask});
       return;
     }
   }
@@ -12889,32 +12969,29 @@ static void placeSources(ByteProvider<SDValue> &Src0,
   unsigned FMask = 0xFF << (8 * (3 - Step));
 
   Src0s.push_back(
-      {*Src0.Src,
-       ((Src0.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask)),
-       Src1.SrcOffset / 4});
+      {*Src0.Src, (Src0.SrcOffset << (8 * (3 - Step)) | (ZeroMask & ~FMask))});
   Src1s.push_back(
-      {*Src1.Src,
-       ((Src1.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask)),
-       Src1.SrcOffset / 4});
+      {*Src1.Src, (Src1.SrcOffset << (8 * (3 - Step)) | (ZeroMask & ~FMask))});
 
   return;
 }
 
-static SDValue resolveSources(SelectionDAG &DAG, SDLoc SL,
-                              SmallVectorImpl<DotSrc> &Srcs, bool IsSigned,
-                              bool IsAny) {
+static SDValue
+resolveSources(SelectionDAG &DAG, SDLoc SL,
+               SmallVectorImpl<std::pair<SDValue, unsigned>> &Srcs,
+               bool IsSigned, bool IsAny) {
 
   // If we just have one source, just permute it accordingly.
   if (Srcs.size() == 1) {
     auto Elt = Srcs.begin();
-    auto EltOp = getDWordFromOffset(DAG, SL, Elt->SrcOp, Elt->DWordOffset);
+    auto EltVal = DAG.getBitcastedAnyExtOrTrunc(Elt->first, SL, MVT::i32);
 
-    // v_perm will produce the original value
-    if (Elt->PermMask == 0x3020100)
-      return EltOp;
+    // v_perm will produce the original value.
+    if (Elt->second == 0x3020100)
+      return EltVal;
 
-    return DAG.getNode(AMDGPUISD::PERM, SL, MVT::i32, EltOp, EltOp,
-                       DAG.getConstant(Elt->PermMask, SL, MVT::i32));
+    return DAG.getNode(AMDGPUISD::PERM, SL, MVT::i32, EltVal, EltVal,
+                       DAG.getConstant(Elt->second, SL, MVT::i32));
   }
 
   auto FirstElt = Srcs.begin();
@@ -12925,8 +13002,8 @@ static SDValue resolveSources(SelectionDAG &DAG, SDLoc SL,
   // If we have multiple sources in the chain, combine them via perms (using
   // calculated perm mask) and Ors.
   while (true) {
-    auto FirstMask = FirstElt->PermMask;
-    auto SecondMask = SecondElt->PermMask;
+    auto FirstMask = FirstElt->second;
+    auto SecondMask = SecondElt->second;
 
     unsigned FirstCs = FirstMask & 0x0c0c0c0c;
     unsigned FirstPlusFour = FirstMask | 0x04040404;
@@ -12936,9 +13013,9 @@ static SDValue resolveSources(SelectionDAG &DAG, SDLoc SL,
 
     auto PermMask = addPermMasks(FirstMask, SecondMask);
     auto FirstVal =
-        getDWordFromOffset(DAG, SL, FirstElt->SrcOp, FirstElt->DWordOffset);
+        DAG.getBitcastedAnyExtOrTrunc(FirstElt->first, SL, MVT::i32);
     auto SecondVal =
-        getDWordFromOffset(DAG, SL, SecondElt->SrcOp, SecondElt->DWordOffset);
+        DAG.getBitcastedAnyExtOrTrunc(SecondElt->first, SL, MVT::i32);
 
     Perms.push_back(DAG.getNode(AMDGPUISD::PERM, SL, MVT::i32, FirstVal,
                                 SecondVal,
@@ -12952,12 +13029,12 @@ static SDValue resolveSources(SelectionDAG &DAG, SDLoc SL,
     // If we only have a FirstElt, then just combine that into the cumulative
     // source node.
     if (SecondElt == Srcs.end()) {
-      auto EltOp =
-          getDWordFromOffset(DAG, SL, FirstElt->SrcOp, FirstElt->DWordOffset);
+      auto EltVal =
+          DAG.getBitcastedAnyExtOrTrunc(FirstElt->first, SL, MVT::i32);
 
       Perms.push_back(
-          DAG.getNode(AMDGPUISD::PERM, SL, MVT::i32, EltOp, EltOp,
-                      DAG.getConstant(FirstElt->PermMask, SL, MVT::i32)));
+          DAG.getNode(AMDGPUISD::PERM, SL, MVT::i32, EltVal, EltVal,
+                      DAG.getConstant(FirstElt->second, SL, MVT::i32)));
       break;
     }
   }
@@ -12968,8 +13045,9 @@ static SDValue resolveSources(SelectionDAG &DAG, SDLoc SL,
              : Perms[0];
 }
 
-static void fixMasks(SmallVectorImpl<DotSrc> &Srcs, unsigned ChainLength) {
-  for (auto &[EntryVal, EntryMask, EntryOffset] : Srcs) {
+static void fixMasks(SmallVectorImpl<std::pair<SDValue, unsigned>> &Srcs,
+                     unsigned ChainLength) {
+  for (auto &[EntryVal, EntryMask] : Srcs) {
     EntryMask = EntryMask >> ((4 - ChainLength) * 8);
     auto ZeroMask = ChainLength == 2 ? 0x0c0c0000 : 0x0c000000;
     EntryMask += ZeroMask;
@@ -13034,8 +13112,8 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       (Subtarget->hasDot1Insts() || Subtarget->hasDot8Insts())) {
     SDValue TempNode(N, 0);
     std::optional<bool> IsSigned;
-    SmallVector<DotSrc, 4> Src0s;
-    SmallVector<DotSrc, 4> Src1s;
+    SmallVector<std::pair<SDValue, unsigned>, 4> Src0s;
+    SmallVector<std::pair<SDValue, unsigned>, 4> Src1s;
     SmallVector<SDValue, 4> Src2s;
 
     // Match the v_dot4 tree, while collecting src nodes.
@@ -13113,11 +13191,11 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
     // (commutation).
     bool UseOriginalSrc = false;
     if (ChainLength == 4 && Src0s.size() == 1 && Src1s.size() == 1 &&
-        Src0s.begin()->PermMask == Src1s.begin()->PermMask &&
-        Src0s.begin()->SrcOp.getValueSizeInBits() >= 32 &&
-        Src1s.begin()->SrcOp.getValueSizeInBits() >= 32) {
+        Src0s.begin()->second == Src1s.begin()->second &&
+        Src0s.begin()->first.getValueSizeInBits() == 32 &&
+        Src1s.begin()->first.getValueSizeInBits() == 32) {
       SmallVector<unsigned, 4> SrcBytes;
-      auto Src0Mask = Src0s.begin()->PermMask;
+      auto Src0Mask = Src0s.begin()->second;
       SrcBytes.push_back(Src0Mask & 0xFF000000);
       bool UniqueEntries = true;
       for (auto I = 1; I < 4; I++) {
@@ -13132,19 +13210,11 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
 
       if (UniqueEntries) {
         UseOriginalSrc = true;
-
-        auto FirstElt = Src0s.begin();
-        auto FirstEltOp =
-            getDWordFromOffset(DAG, SL, FirstElt->SrcOp, FirstElt->DWordOffset);
-
-        auto SecondElt = Src1s.begin();
-        auto SecondEltOp = getDWordFromOffset(DAG, SL, SecondElt->SrcOp,
-                                              SecondElt->DWordOffset);
-
-        Src0 = DAG.getBitcastedAnyExtOrTrunc(FirstEltOp, SL,
-                                             MVT::getIntegerVT(32));
-        Src1 = DAG.getBitcastedAnyExtOrTrunc(SecondEltOp, SL,
-                                             MVT::getIntegerVT(32));
+        // Must be 32 bits to enter above conditional.
+        assert(Src0s.begin()->first.getValueSizeInBits() == 32);
+        assert(Src1s.begin()->first.getValueSizeInBits() == 32);
+        Src0 = DAG.getBitcast(MVT::getIntegerVT(32), Src0s.begin()->first);
+        Src1 = DAG.getBitcast(MVT::getIntegerVT(32), Src1s.begin()->first);
       }
     }
 

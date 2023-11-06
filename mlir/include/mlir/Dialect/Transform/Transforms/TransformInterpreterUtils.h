@@ -32,7 +32,7 @@ namespace detail {
 /// Each entry in `paths` may either be a regular file, in which case it ends up
 /// in the result list, or a directory, in which case all (regular) `.mlir`
 /// files in that directory are added. Any other file types lead to a failure.
-LogicalResult expandPathsToMLIRFiles(ArrayRef<std::string> &paths,
+LogicalResult expandPathsToMLIRFiles(ArrayRef<std::string> paths,
                                      MLIRContext *context,
                                      SmallVectorImpl<std::string> &fileNames);
 
@@ -69,20 +69,6 @@ TransformOpInterface findTransformEntryPoint(
     Operation *root, ModuleOp module,
     StringRef entryPoint = TransformDialect::kTransformEntryPointSymbolName);
 
-/// Merge all symbols from `other` into `target`. Both ops need to implement the
-/// `SymbolTable` trait. Operations are moved from `other`, i.e., `other` may be
-/// modified by this function and might not verify after the function returns.
-/// Upon merging, private symbols may be renamed in order to avoid collisions in
-/// the result. Public symbols may not collide, with the exception of
-/// instances of `SymbolOpInterface`, where collisions are allowed if at least
-/// one of the two is external, in which case the other op preserved (or any one
-/// of the two if both are external).
-// TODO: Reconsider cloning individual ops rather than forcing users of the
-//       function to clone (or move) `other` in order to improve efficiency.
-//       This might primarily make sense if we can also prune the symbols that
-//       are merged to a subset (such as those that are actually used).
-InFlightDiagnostic mergeSymbolsInto(Operation *target,
-                                    OwningOpRef<Operation *> other);
 } // namespace detail
 
 /// Standalone util to apply the named sequence `transformRoot` to `payload` IR.

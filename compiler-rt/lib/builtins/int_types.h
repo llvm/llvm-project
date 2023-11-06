@@ -165,6 +165,14 @@ typedef struct {
 #define HAS_80_BIT_LONG_DOUBLE 0
 #endif
 
+#if HAS_80_BIT_LONG_DOUBLE
+typedef long double xf_float;
+typedef union {
+  uqwords u;
+  xf_float f;
+} xf_bits;
+#endif
+
 #ifdef __powerpc64__
 // From https://gcc.gnu.org/wiki/Ieee128PowerPC:
 // PowerPC64 uses the following suffixes:
@@ -213,11 +221,6 @@ typedef union {
 #endif
 
 #if CRT_HAS_FLOATING_POINT
-typedef union {
-  uqwords u;
-  long double f;
-} long_double_bits;
-
 #if __STDC_VERSION__ >= 199901L
 typedef float _Complex Fcomplex;
 typedef double _Complex Dcomplex;

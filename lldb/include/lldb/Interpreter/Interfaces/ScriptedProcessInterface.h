@@ -21,11 +21,11 @@
 namespace lldb_private {
 class ScriptedProcessInterface : virtual public ScriptedInterface {
 public:
-  StructuredData::GenericSP
+  virtual llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
                      StructuredData::DictionarySP args_sp,
-                     StructuredData::Generic *script_obj = nullptr) override {
-    return {};
+                     StructuredData::Generic *script_obj = nullptr) {
+    return {llvm::make_error<UnimplementedError>()};
   }
 
   virtual StructuredData::DictionarySP GetCapabilities() { return {}; }
