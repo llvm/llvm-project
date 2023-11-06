@@ -41,9 +41,11 @@ def testFastMathFlags():
 def testArithValue():
     def _binary_op(lhs, rhs, op: str) -> "ArithValue":
         op = op.capitalize()
-        if arith._is_float_type(lhs.type):
+        if arith._is_float_type(lhs.type) and arith._is_float_type(rhs.type):
             op += "F"
-        elif arith._is_integer_like_type(lhs.type):
+        elif arith._is_integer_like_type(lhs.type) and arith._is_integer_like_type(
+            lhs.type
+        ):
             op += "I"
         else:
             raise NotImplementedError(f"Unsupported '{op}' operands: {lhs}, {rhs}")

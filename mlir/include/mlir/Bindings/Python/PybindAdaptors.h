@@ -497,11 +497,10 @@ public:
     if (getTypeIDFunction) {
       py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
           .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(
-              getTypeIDFunction(),
-              pybind11::cpp_function(
-                  [thisClass = thisClass](const py::object &mlirType) {
-                    return thisClass(mlirType);
-                  }));
+              getTypeIDFunction())(pybind11::cpp_function(
+              [thisClass = thisClass](const py::object &mlirType) {
+                return thisClass(mlirType);
+              }));
     }
   }
 };

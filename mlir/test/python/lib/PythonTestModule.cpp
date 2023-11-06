@@ -74,12 +74,11 @@ PYBIND11_MODULE(_mlirPythonTest, m) {
   MlirTypeID mlirRankedTensorTypeID = mlirRankedTensorTypeGetTypeID();
 
   py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
-      .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(
-          mlirRankedTensorTypeID,
+      .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(mlirRankedTensorTypeID,
+                                                        "replace"_a = true)(
           pybind11::cpp_function([typeCls](const py::object &mlirType) {
             return typeCls.get_class()(mlirType);
-          }),
-          /*replace=*/true);
+          }));
 
   auto valueCls = mlir_value_subclass(m, "TestTensorValue",
                                       mlirTypeIsAPythonTestTestTensorValue)

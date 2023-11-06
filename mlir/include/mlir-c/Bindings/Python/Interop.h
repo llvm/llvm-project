@@ -118,25 +118,24 @@
 
 /** Attribute on main C extension module (_mlir) that corresponds to the
  * type caster registration binding. The signature of the function is:
- *   def register_type_caster(MlirTypeID mlirTypeID, py::function typeCaster,
- *                              bool replace)
- * where replace indicates the typeCaster should replace any existing registered
- * type casters (such as those for upstream ConcreteTypes). The interface of the
- * typeCaster is:
- *   def type_caster(ir.Type) -> SubClassTypeT
- * where SubClassTypeT indicates the result should be a subclass (inherit from)
- * ir.Type.
+ *   def register_type_caster(MlirTypeID mlirTypeID, *, bool replace)
+ * which then takes a typeCaster (register_type_caster is meant to be used as a
+ * decorator from python), and where replace indicates the typeCaster should
+ * replace any existing registered type casters (such as those for upstream
+ * ConcreteTypes). The interface of the typeCaster is: def type_caster(ir.Type)
+ * -> SubClassTypeT where SubClassTypeT indicates the result should be a
+ * subclass (inherit from) ir.Type.
  */
 #define MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR "register_type_caster"
 
 /** Attribute on main C extension module (_mlir) that corresponds to the
  * value caster registration binding. The signature of the function is:
- *   def register_value_caster(MlirTypeID mlirTypeID, bool replace,
- *                              py::function valueCaster)
- * where replace indicates the valueCaster should replace any existing
- * registered value casters. The interface of the valueCaster is:
- *   def value_caster(ir.Value) -> SubClassValueT
- * where SubClassValueT indicates the result should be a subclass (inherit from)
+ *   def register_value_caster(MlirTypeID mlirTypeID, *, bool replace)
+ * which then takes a valueCaster (register_value_caster is meant to be used as
+ * a decorator, from python), and where replace indicates the valueCaster should
+ * replace any existing registered value casters. The interface of the
+ * valueCaster is: def value_caster(ir.Value) -> SubClassValueT where
+ * SubClassValueT indicates the result should be a subclass (inherit from)
  * ir.Value.
  */
 #define MLIR_PYTHON_CAPI_VALUE_CASTER_REGISTER_ATTR "register_value_caster"
