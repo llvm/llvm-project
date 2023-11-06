@@ -105,14 +105,14 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Iter> count() const noexcept { return __count_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__count_ > 0, "Iterator is equal to or past end.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__count_ > 0, "Iterator is equal to or past end.");
     return *__current_;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const
     requires __dereferenceable<const _Iter>
   {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__count_ > 0, "Iterator is equal to or past end.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__count_ > 0, "Iterator is equal to or past end.");
     return *__current_;
   }
 
@@ -229,7 +229,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](iter_difference_t<_Iter> __n) const
     requires random_access_iterator<_Iter>
   {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__n < __count_, "Subscript argument must be less than size.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < __count_, "Subscript argument must be less than size.");
     return __current_[__n];
   }
 
@@ -253,7 +253,7 @@ public:
   iter_move(const counted_iterator& __i) noexcept(noexcept(ranges::iter_move(__i.__current_)))
     requires input_iterator<_Iter>
   {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__i.__count_ > 0, "Iterator must not be past end of range.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__i.__count_ > 0, "Iterator must not be past end of range.");
     return ranges::iter_move(__i.__current_);
   }
 
@@ -261,7 +261,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend constexpr void
   iter_swap(const counted_iterator& __x,
             const counted_iterator<_I2>& __y) noexcept(noexcept(ranges::iter_swap(__x.__current_, __y.__current_))) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__x.__count_ > 0 && __y.__count_ > 0, "Iterators must not be past end of range.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __x.__count_ > 0 && __y.__count_ > 0, "Iterators must not be past end of range.");
     return ranges::iter_swap(__x.__current_, __y.__current_);
   }
 

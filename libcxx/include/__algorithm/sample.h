@@ -77,19 +77,13 @@ _LIBCPP_HIDE_FROM_ABI _SampleIterator __sample(
   return __output_iter;
 }
 
-template <class _AlgPolicy,
-          class _PopulationIterator,
-          class _PopulationSentinel,
-          class _SampleIterator,
-          class _Distance,
-          class _UniformRandomNumberGenerator>
 _LIBCPP_HIDE_FROM_ABI _SampleIterator __sample(
     _PopulationIterator __first,
     _PopulationSentinel __last,
     _SampleIterator __output_iter,
     _Distance __n,
     _UniformRandomNumberGenerator& __g) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__n >= 0, "N must be a positive number.");
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n >= 0, "N must be a positive number.");
 
   using _PopIterCategory = typename _IterOps<_AlgPolicy>::template __iterator_category<_PopulationIterator>;
   using _Difference      = typename _IterOps<_AlgPolicy>::template __difference_type<_PopulationIterator>;
