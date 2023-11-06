@@ -741,6 +741,7 @@ APINotesReader::Implementation::getSelector(ObjCSelectorRef Selector) {
 
   // Translate the identifiers.
   StoredObjCSelector Key;
+  Key.NumArgs = Selector.NumArgs;
   for (auto Ident : Selector.Identifiers) {
     if (auto IdentID = getIdentifier(Ident)) {
       Key.Identifiers.push_back(*IdentID);
