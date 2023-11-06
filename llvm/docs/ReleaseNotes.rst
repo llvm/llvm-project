@@ -179,6 +179,13 @@ Changes to the C API
   The option structure exposes an additional setting (i.e., the target ABI) and
   provides default values for unspecified settings.
 
+* Added the following getters for accessing the name, type parameters, and
+  integer parameters of Target Extension Types:
+
+  * ``LLVMGetTargetExtTypeName``
+  * ``LLVMCountTargetExtTypeTypeParams`` / ``LLVMGetTargetExtTypeTypeParams``
+  * ``LLVMCountTargetExtTypeIntParams`` / ``LLVMGetTargetExtTypeIntParams``
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
