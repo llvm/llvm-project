@@ -100,7 +100,7 @@ void DebugCounter::push_back(const std::string &Val) {
   }
   // Now we need to see if this is the skip or the count, remove the suffix, and
   // add it to the counter values.
-  if (CounterPair.first.endswith("-skip")) {
+  if (CounterPair.first.ends_with("-skip")) {
     auto CounterName = CounterPair.first.drop_back(5);
     unsigned CounterID = getCounterId(std::string(CounterName));
     if (!CounterID) {
@@ -113,7 +113,7 @@ void DebugCounter::push_back(const std::string &Val) {
     CounterInfo &Counter = Counters[CounterID];
     Counter.Skip = CounterVal;
     Counter.IsSet = true;
-  } else if (CounterPair.first.endswith("-count")) {
+  } else if (CounterPair.first.ends_with("-count")) {
     auto CounterName = CounterPair.first.drop_back(6);
     unsigned CounterID = getCounterId(std::string(CounterName));
     if (!CounterID) {
