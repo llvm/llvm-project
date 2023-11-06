@@ -323,6 +323,7 @@ public:
   LIBC_INLINE void send_n(const void *src, uint64_t size);
   template <typename A>
   LIBC_INLINE void recv_n(void **dst, uint64_t *size, A &&alloc);
+  LIBC_INLINE void recv_n(void *dst, uint64_t *size);
 
   LIBC_INLINE uint16_t get_opcode() const {
     return process.header[index].opcode;
@@ -359,7 +360,9 @@ struct Client {
       : process(port_count, buffer) {}
 
   using Port = rpc::Port<false>;
-  template <uint16_t opcode> LIBC_INLINE Port open();
+
+  template <uint16_t opcode> LIBC_INLINE Port open() { return open(opcode); }
+  LIBC_INLINE Port open(uint16_t opcode);
 
 private:
   Process<false> process;
@@ -484,6 +487,14 @@ LIBC_INLINE void Port<T>::send_n(const void *const *src, uint64_t *size) {
   }
 }
 
+/// Helper routine to simplify the interface when recieving from the GPU using
+/// thread private pointers to the underly value and the destination pointer
+/// contains enough data to recieve the values.
+template <bool T> LIBC_INLINE void Port<T>::recv_n(void *dst, uint64_t *size) {
+  void **dst_ptr = &dst;
+  recv_n(dst_ptr, size, [=](uint64_t) { return dst; });
+}
+
 /// Receives an arbitrarily sized data buffer across the shared channel in
 /// multiples of the packet length. The \p alloc function is called with the
 /// size of the data so that we can initialize the size of the \p dst buffer.
@@ -522,9 +533,9 @@ LIBC_INLINE void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
 /// is, there are send operations pending that haven't been serviced on this
 /// port. Each port instance uses an associated \p opcode to tell the server
 /// what to do. The Client interface provides the appropriate lane size to the
-/// port using the platform's returned value.
-template <uint16_t opcode>
-[[clang::convergent]] LIBC_INLINE Client::Port Client::open() {
+/// port using the platform's returned value. It is required that \p opcode is
+/// uniform between all the lanes for this to work.
+[[clang::convergent]] LIBC_INLINE Client::Port Client::open(uint16_t opcode) {
   // Repeatedly perform a naive linear scan for a port that can be opened to
   // send data.
   for (uint32_t index = gpu::get_cluster_id();; ++index) {

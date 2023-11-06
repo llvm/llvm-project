@@ -15,6 +15,7 @@ typedef enum : unsigned short {
   RPC_TEST_NOOP = 1 << 15,
   RPC_TEST_INCREMENT,
   RPC_TEST_INTERFACE,
+  RPC_TEST_EXTERNAL,
   RPC_TEST_STREAM,
 } rpc_test_opcode_t;
 

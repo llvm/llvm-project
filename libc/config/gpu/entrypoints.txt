@@ -211,6 +211,10 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # gpu/rpc.h entrypoints
     libc.src.gpu.rpc_host_call
+    libc.src.gpu.rpc_open_port
+    libc.src.gpu.rpc_send_n
+    libc.src.gpu.rpc_recv_n
+    libc.src.gpu.rpc_close_port
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

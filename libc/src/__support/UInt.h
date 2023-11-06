@@ -1057,24 +1057,13 @@ using make_integral_or_big_int_signed_t =
 
 namespace cpp {
 
-// Specialization of cpp::bit_cast ('bit.h') from T to BigInt.
-template <typename To, typename From>
-LIBC_INLINE constexpr cpp::enable_if_t<
-    (sizeof(To) == sizeof(From)) && cpp::is_trivially_copyable<To>::value &&
-        cpp::is_trivially_copyable<From>::value && is_big_int<To>::value,
-    To>
-bit_cast(const From &from) {
-  To out;
-  using Storage = decltype(out.val);
-  out.val = cpp::bit_cast<Storage>(from);
-  return out;
-}
-
 // Specialization of cpp::bit_cast ('bit.h') from BigInt to T.
 template <typename To, size_t Bits>
 LIBC_INLINE constexpr cpp::enable_if_t<
     sizeof(To) == sizeof(UInt<Bits>) &&
+#if !LIBC_HAS_BUILTIN(__builtin_bit_cast)
         cpp::is_trivially_constructible<To>::value &&
+#endif
         cpp::is_trivially_copyable<To>::value &&
         cpp::is_trivially_copyable<UInt<Bits>>::value,
     To>

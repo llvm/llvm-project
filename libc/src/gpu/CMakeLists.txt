@@ -8,3 +8,58 @@ add_entrypoint_object(
     libc.src.__support.RPC.rpc_client
     libc.src.__support.GPU.utils
 )
+
+add_entrypoint_object(
+  rpc_open_port
+  SRCS
+    rpc_open_port.cpp
+  HDRS
+    rpc_open_port.h
+  DEPENDS
+    libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.utils
+)
+
+add_entrypoint_object(
+  rpc_close_port
+  SRCS
+    rpc_close_port.cpp
+  HDRS
+    rpc_close_port.h
+  DEPENDS
+    libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.utils
+)
+
+add_entrypoint_object(
+  rpc_get_buffer
+  SRCS
+    rpc_get_buffer.cpp
+  HDRS
+    rpc_get_buffer.h
+  DEPENDS
+    libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.utils
+)
+
+add_entrypoint_object(
+  rpc_send_n
+  SRCS
+    rpc_send_n.cpp
+  HDRS
+    rpc_send_n.h
+  DEPENDS
+    libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.utils
+)
+
+add_entrypoint_object(
+  rpc_recv_n
+  SRCS
+    rpc_recv_n.cpp
+  HDRS
+    rpc_recv_n.h
+  DEPENDS
+    libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.utils
+)

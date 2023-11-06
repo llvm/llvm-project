@@ -25,12 +25,14 @@ namespace LIBC_NAMESPACE::cpp {
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
 
-// This implementation of bit_cast requires trivially-constructible To, to avoid
-// UB in the implementation.
 template <typename To, typename From>
 LIBC_INLINE constexpr cpp::enable_if_t<
     (sizeof(To) == sizeof(From)) &&
+// Implementation of bit_cast that cannot use the compiler builtin must be
+// trivially-constructible To, to avoid UB in the implementation.
+#if !LIBC_HAS_BUILTIN(__builtin_bit_cast)
         cpp::is_trivially_constructible<To>::value &&
+#endif
         cpp::is_trivially_copyable<To>::value &&
         cpp::is_trivially_copyable<From>::value,
     To>

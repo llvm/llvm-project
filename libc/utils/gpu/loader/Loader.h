@@ -11,8 +11,8 @@
 
 #include "utils/gpu/server/llvmlibc_rpc_server.h"
 
-#include "llvm-libc-types/rpc_opcodes_t.h"
 #include "include/llvm-libc-types/test_rpc_opcodes_t.h"
+#include "llvm-libc-types/rpc_opcodes_t.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -215,6 +215,28 @@ inline void register_rpc_callbacks(uint32_t device_id) {
             port, dst, sizes,
             [](uint64_t size, void *) -> void * { return new char[size]; },
             nullptr);
+        rpc_send_n(port, dst, sizes);
+        for (uint64_t i = 0; i < lane_size; ++i) {
+          if (dst[i])
+            delete[] reinterpret_cast<uint8_t *>(dst[i]);
+        }
+      },
+      nullptr);
+
+  // Register the stream test handler.
+  rpc_register_callback(
+      device_id, static_cast<rpc_opcode_t>(RPC_TEST_EXTERNAL),
+      [](rpc_port_t port, void *data) {
+        uint64_t sizes[lane_size] = {0};
+        void *dst[lane_size] = {nullptr};
+        rpc_recv_n(
+            port, dst, sizes,
+            [](uint64_t size, void *) -> void * { return new char[size]; },
+            nullptr);
+        for (uint64_t i = 0; i < lane_size; ++i) {
+          if (dst[i])
+            *reinterpret_cast<uint64_t *>(dst[i]) += 1;
+        }
         rpc_send_n(port, dst, sizes);
         for (uint64_t i = 0; i < lane_size; ++i) {
           if (dst[i])
