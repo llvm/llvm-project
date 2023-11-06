@@ -21,7 +21,6 @@
 #include "src/__support/builtin_wrappers.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/math/exp10f.h"
 
 #include "exp10f_impl.h" // Speedup for powf(10, y) = exp10f(y)
 #include "exp2f_impl.h"  // Speedup for powf(2, y) = exp2f(y)
