@@ -974,7 +974,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     AsanUseOdrIndicator =
         Args.hasFlag(options::OPT_fsanitize_address_use_odr_indicator,
                      options::OPT_fno_sanitize_address_use_odr_indicator,
-                     !TC.getTriple().isOSWindows());
+                     !TC.getTriple().isOSWindows() && !TC.getTriple().isOSDarwin());
 
     if (AllAddedKinds & SanitizerKind::PointerCompare & ~AllRemove) {
       AsanInvalidPointerCmp = true;
