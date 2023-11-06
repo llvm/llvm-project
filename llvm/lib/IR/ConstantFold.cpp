@@ -1112,70 +1112,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
   return nullptr;
 }
 
-/// This function determines if there is anything we can decide about the two
-/// constants provided. This doesn't need to handle simple things like
-/// ConstantFP comparisons, but should instead handle ConstantExprs.
-/// If we can determine that the two constants have a particular relation to
-/// each other, we should return the corresponding FCmpInst predicate,
-/// otherwise return FCmpInst::BAD_FCMP_PREDICATE. This is used below in
-/// ConstantFoldCompareInstruction.
-///
-/// To simplify this code we canonicalize the relation so that the first
-/// operand is always the most "complex" of the two.  We consider ConstantFP
-/// to be the simplest, and ConstantExprs to be the most complex.
-static FCmpInst::Predicate evaluateFCmpRelation(Constant *V1, Constant *V2) {
-  assert(V1->getType() == V2->getType() &&
-         "Cannot compare values of different types!");
-
-  // We do not know if a constant expression will evaluate to a number or NaN.
-  // Therefore, we can only say that the relation is unordered or equal.
-  if (V1 == V2) return FCmpInst::FCMP_UEQ;
-
-  if (!isa<ConstantExpr>(V1)) {
-    if (!isa<ConstantExpr>(V2)) {
-      // Simple case, use the standard constant folder.
-      ConstantInt *R = nullptr;
-      R = dyn_cast<ConstantInt>(
-                      ConstantExpr::getFCmp(FCmpInst::FCMP_OEQ, V1, V2));
-      if (R && !R->isZero())
-        return FCmpInst::FCMP_OEQ;
-      R = dyn_cast<ConstantInt>(
-                      ConstantExpr::getFCmp(FCmpInst::FCMP_OLT, V1, V2));
-      if (R && !R->isZero())
-        return FCmpInst::FCMP_OLT;
-      R = dyn_cast<ConstantInt>(
-                      ConstantExpr::getFCmp(FCmpInst::FCMP_OGT, V1, V2));
-      if (R && !R->isZero())
-        return FCmpInst::FCMP_OGT;
-
-      // Nothing more we can do
-      return FCmpInst::BAD_FCMP_PREDICATE;
-    }
-
-    // If the first operand is simple and second is ConstantExpr, swap operands.
-    FCmpInst::Predicate SwappedRelation = evaluateFCmpRelation(V2, V1);
-    if (SwappedRelation != FCmpInst::BAD_FCMP_PREDICATE)
-      return FCmpInst::getSwappedPredicate(SwappedRelation);
-  } else {
-    // Ok, the LHS is known to be a constantexpr.  The RHS can be any of a
-    // constantexpr or a simple constant.
-    ConstantExpr *CE1 = cast<ConstantExpr>(V1);
-    switch (CE1->getOpcode()) {
-    case Instruction::FPTrunc:
-    case Instruction::FPExt:
-    case Instruction::UIToFP:
-    case Instruction::SIToFP:
-      // We might be able to do something with these but we don't right now.
-      break;
-    default:
-      break;
-    }
-  }
-  // There are MANY other foldings that we could perform here.  They will
-  // probably be added on demand, as they seem needed.
-  return FCmpInst::BAD_FCMP_PREDICATE;
-}
-
 static ICmpInst::Predicate areGlobalsPotentiallyEqual(const GlobalValue *GV1,
                                                       const GlobalValue *GV2) {
   auto isGlobalUnsafeForEquality = [](const GlobalValue *GV) {
@@ -1511,79 +1447,14 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
     return ConstantVector::get(ResElts);
   }
 
-  if (C1->getType()->isFloatingPointTy() &&
-      // Only call evaluateFCmpRelation if we have a constant expr to avoid
-      // infinite recursive loop
-      (isa<ConstantExpr>(C1) || isa<ConstantExpr>(C2))) {
-    int Result = -1;  // -1 = unknown, 0 = known false, 1 = known true.
-    switch (evaluateFCmpRelation(C1, C2)) {
-    default: llvm_unreachable("Unknown relation!");
-    case FCmpInst::FCMP_UNO:
-    case FCmpInst::FCMP_ORD:
-    case FCmpInst::FCMP_UNE:
-    case FCmpInst::FCMP_ULT:
-    case FCmpInst::FCMP_UGT:
-    case FCmpInst::FCMP_ULE:
-    case FCmpInst::FCMP_UGE:
-    case FCmpInst::FCMP_TRUE:
-    case FCmpInst::FCMP_FALSE:
-    case FCmpInst::BAD_FCMP_PREDICATE:
-      break; // Couldn't determine anything about these constants.
-    case FCmpInst::FCMP_OEQ: // We know that C1 == C2
-      Result =
-          (Predicate == FCmpInst::FCMP_UEQ || Predicate == FCmpInst::FCMP_OEQ ||
-           Predicate == FCmpInst::FCMP_ULE || Predicate == FCmpInst::FCMP_OLE ||
-           Predicate == FCmpInst::FCMP_UGE || Predicate == FCmpInst::FCMP_OGE);
-      break;
-    case FCmpInst::FCMP_OLT: // We know that C1 < C2
-      Result =
-          (Predicate == FCmpInst::FCMP_UNE || Predicate == FCmpInst::FCMP_ONE ||
-           Predicate == FCmpInst::FCMP_ULT || Predicate == FCmpInst::FCMP_OLT ||
-           Predicate == FCmpInst::FCMP_ULE || Predicate == FCmpInst::FCMP_OLE);
-      break;
-    case FCmpInst::FCMP_OGT: // We know that C1 > C2
-      Result =
-          (Predicate == FCmpInst::FCMP_UNE || Predicate == FCmpInst::FCMP_ONE ||
-           Predicate == FCmpInst::FCMP_UGT || Predicate == FCmpInst::FCMP_OGT ||
-           Predicate == FCmpInst::FCMP_UGE || Predicate == FCmpInst::FCMP_OGE);
-      break;
-    case FCmpInst::FCMP_OLE: // We know that C1 <= C2
-      // We can only partially decide this relation.
-      if (Predicate == FCmpInst::FCMP_UGT || Predicate == FCmpInst::FCMP_OGT)
-        Result = 0;
-      else if (Predicate == FCmpInst::FCMP_ULT ||
-               Predicate == FCmpInst::FCMP_OLT)
-        Result = 1;
-      break;
-    case FCmpInst::FCMP_OGE: // We known that C1 >= C2
-      // We can only partially decide this relation.
-      if (Predicate == FCmpInst::FCMP_ULT || Predicate == FCmpInst::FCMP_OLT)
-        Result = 0;
-      else if (Predicate == FCmpInst::FCMP_UGT ||
-               Predicate == FCmpInst::FCMP_OGT)
-        Result = 1;
-      break;
-    case FCmpInst::FCMP_ONE: // We know that C1 != C2
-      // We can only partially decide this relation.
-      if (Predicate == FCmpInst::FCMP_OEQ || Predicate == FCmpInst::FCMP_UEQ)
-        Result = 0;
-      else if (Predicate == FCmpInst::FCMP_ONE ||
-               Predicate == FCmpInst::FCMP_UNE)
-        Result = 1;
-      break;
-    case FCmpInst::FCMP_UEQ: // We know that C1 == C2 || isUnordered(C1, C2).
-      // We can only partially decide this relation.
+  if (C1->getType()->isFPOrFPVectorTy()) {
+    if (C1 == C2) {
+      // We know that C1 == C2 || isUnordered(C1, C2).
       if (Predicate == FCmpInst::FCMP_ONE)
-        Result = 0;
+        return ConstantInt::getFalse(ResultTy);
       else if (Predicate == FCmpInst::FCMP_UEQ)
-        Result = 1;
-      break;
+        return ConstantInt::getTrue(ResultTy);
     }
-
-    // If we evaluated the result, return it now.
-    if (Result != -1)
-      return ConstantInt::get(ResultTy, Result);
-
   } else {
     // Evaluate the relation between the two constants, per the predicate.
     int Result = -1;  // -1 = unknown, 0 = known false, 1 = known true.
