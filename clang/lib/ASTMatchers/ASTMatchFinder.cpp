@@ -395,14 +395,15 @@ private:
 
   // Traverses the subtree rooted at 'Node'; returns true if the
   // traversal should continue after this function returns.
-  template <typename T>
-  bool traverse(const T &Node) {
-    static_assert(IsBaseType<T>::value,
-                  "traverse can only be instantiated with base type");
-    if (!match(Node))
-      return false;
-    return baseTraverse(Node);
-  }
+template <typename NodeType>
+bool traverse(const NodeType &node) {
+    static_assert(IsBaseType<NodeType>::value,
+        "traverse can only be instantiated with base type");
+    if (!shouldContinue(node))
+        return false;
+    return continueTraversal(node);
+}
+
 
   const DynTypedMatcher *const Matcher;
   ASTMatchFinder *const Finder;
