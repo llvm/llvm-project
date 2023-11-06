@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -324,7 +325,8 @@ SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP) {
           TLI.isLoadExtLegal(ISD::EXTLOAD, OrigVT, SVT) &&
           TLI.ShouldShrinkFPConstant(OrigVT)) {
         Type *SType = SVT.getTypeForEVT(*DAG.getContext());
-        LLVMC = cast<ConstantFP>(ConstantExpr::getFPTrunc(LLVMC, SType));
+        LLVMC = cast<ConstantFP>(ConstantFoldCastOperand(
+            Instruction::FPTrunc, LLVMC, SType, DAG.getDataLayout()));
         VT = SVT;
         Extend = true;
       }
