@@ -91,6 +91,7 @@
 #include <experimental/iterator>
 #include <experimental/list>
 #include <experimental/map>
+#include <experimental/memory>
 #include <experimental/memory_resource>
 #include <experimental/propagate_const>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
