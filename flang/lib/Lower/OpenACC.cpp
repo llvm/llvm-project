@@ -265,7 +265,8 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
     mlir::Value baseAddr = Fortran::lower::gatherDataOperandAddrAndBounds<
         Fortran::parser::AccObject, mlir::acc::DataBoundsType,
         mlir::acc::DataBoundsOp>(converter, builder, semanticsContext, stmtCtx,
-                                 accObject, operandLocation, asFortran, bounds);
+                                 accObject, operandLocation, asFortran, bounds,
+                                 /*treatIndexAsSection=*/true);
     Op op = createDataEntryOp<Op>(builder, operandLocation, baseAddr, asFortran,
                                   bounds, structured, implicit, dataClause,
                                   baseAddr.getType());
