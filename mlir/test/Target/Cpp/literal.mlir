@@ -10,6 +10,5 @@ func.func @emitc_literal(%arg0: f32) {
 // CPP-DEFAULT: float [[V2:[^ ]*]] = [[V0:[^ ]*]] + M_PI
 
 // CPP-DECLTOP: void emitc_literal(float [[V0:[^ ]*]]) {
-// CPP-DECLTOP: float M_PI;
 // CPP-DECLTOP: float [[V1:[^ ]*]];
 // CPP-DECLTOP: [[V1]] = [[V0:[^ ]*]] + M_PI

@@ -637,6 +637,8 @@ static LogicalResult printOperation(CppEmitter &emitter,
     // regions.
     WalkResult result =
         functionOp.walk<WalkOrder::PreOrder>([&](Operation *op) -> WalkResult {
+          if (isa<emitc::LiteralOp>(op))
+            return WalkResult::skip();
           for (OpResult result : op->getResults()) {
             if (failed(emitter.emitVariableDeclaration(
                     result, /*trailingSemicolon=*/true))) {
@@ -839,7 +841,8 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
 
 LogicalResult CppEmitter::emitOperands(Operation &op) {
   auto emitOperandName = [&](Value result) -> LogicalResult {
-    if (!hasValueInScope(result))
+    auto literalDef = dyn_cast_if_present<LiteralOp>(result.getDefiningOp());
+    if (!literalDef && !hasValueInScope(result))
       return op.emitOpError() << "operand value not in scope";
     os << getOrCreateName(result);
     return success();
