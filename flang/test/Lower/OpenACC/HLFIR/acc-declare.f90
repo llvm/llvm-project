@@ -269,25 +269,19 @@ module acc_declare_equivalent
 end module
 
 ! ALL-LABEL: acc.global_ctor @_QMacc_declare_equivalentEv2_acc_ctor {
-! ALL-DAG:     %[[C0:.*]] = arith.constant 0 : index
-! ALL-DAG:     %[[ADDR:.*]] = fir.address_of(@_QMacc_declare_equivalentEv1) : !fir.ref<!fir.array<40xi8>>
-! ALL:         %[[COORD:.*]] = fir.coordinate_of %[[ADDR]], %[[C0]] : (!fir.ref<!fir.array<40xi8>>, index) -> !fir.ref<i8>
-! ALL:         %[[CONV:.*]] = fir.convert %[[COORD]] {acc.declare = #acc.declare<dataClause =  acc_create>} : (!fir.ref<i8>) -> !fir.ptr<!fir.array<10xf32>>
-! ALL:         %[[CREATE:.*]] = acc.create varPtr(%[[CONV]] : !fir.ptr<!fir.array<10xf32>>) -> !fir.ptr<!fir.array<10xf32>> {name = "v2", structured = false}
-! ALL:         acc.declare_enter dataOperands(%[[CREATE]] : !fir.ptr<!fir.array<10xf32>>)
+! ALL:         %[[ADDR:.*]] = fir.address_of(@_QMacc_declare_equivalentEv1) {acc.declare = #acc.declare<dataClause = acc_create>} : !fir.ref<!fir.array<40xi8>>
+! ALL:         %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !fir.ref<!fir.array<40xi8>>) -> !fir.ref<!fir.array<40xi8>> {name = "v2", structured = false}
+! ALL:         acc.declare_enter dataOperands(%[[CREATE]] : !fir.ref<!fir.array<40xi8>>)
 ! ALL:         acc.terminator
 ! ALL:       }
 
-! ALL-LABEL:  acc.global_dtor @_QMacc_declare_equivalentEv2_acc_dtor {
-! ALL-DAG:      %[[C0:.*]] = arith.constant 0 : index
-! ALL-DAG:      %[[ADDR:.*]] = fir.address_of(@_QMacc_declare_equivalentEv1) : !fir.ref<!fir.array<40xi8>>
-! ALL:          %[[COORD:.*]] = fir.coordinate_of %[[ADDR]], %[[C0]] : (!fir.ref<!fir.array<40xi8>>, index) -> !fir.ref<i8>
-! ALL:          %[[CONV:.*]] = fir.convert %[[COORD]] {acc.declare = #acc.declare<dataClause =  acc_create>} : (!fir.ref<i8>) -> !fir.ptr<!fir.array<10xf32>>
-! ALL:          %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[CONV]] : !fir.ptr<!fir.array<10xf32>>) -> !fir.ptr<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_create>, name = "v2", structured = false}
-! ALL:          acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ptr<!fir.array<10xf32>>)
-! ALL:          acc.delete accPtr(%[[DEVICEPTR]] : !fir.ptr<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_create>, name = "v2", structured = false}
-! ALL:          acc.terminator
-! ALL:        }
+! ALL-LABEL: acc.global_dtor @_QMacc_declare_equivalentEv2_acc_dtor {
+! ALL:         %[[ADDR:.*]] = fir.address_of(@_QMacc_declare_equivalentEv1) {acc.declare = #acc.declare<dataClause =  acc_create>} : !fir.ref<!fir.array<40xi8>>
+! ALL:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[ADDR]] : !fir.ref<!fir.array<40xi8>>) -> !fir.ref<!fir.array<40xi8>> {dataClause = #acc<data_clause acc_create>, name = "v2", structured = false}
+! ALL:         acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<40xi8>>)
+! ALL:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<40xi8>>) {dataClause = #acc<data_clause acc_create>, name = "v2", structured = false}
+! ALL:         acc.terminator
+! ALL:       }
 
 module acc_declare_equivalent2
   real :: v1(10)
@@ -297,22 +291,16 @@ module acc_declare_equivalent2
 end module
 
 ! ALL-LABEL: acc.global_ctor @_QMacc_declare_equivalent2Ev2_acc_ctor {
-! ALL-DAG:     %[[C20:.*]] = arith.constant 20 : index
-! ALL-DAG:     %[[ADDR:.*]] = fir.address_of(@_QMacc_declare_equivalent2Ev1) : !fir.ref<!fir.array<40xi8>>
-! ALL:         %[[COORD:.*]] = fir.coordinate_of %[[ADDR]], %[[C20]] : (!fir.ref<!fir.array<40xi8>>, index) -> !fir.ref<i8>
-! ALL:         %[[CONV:.*]] = fir.convert %[[COORD]] {acc.declare = #acc.declare<dataClause =  acc_create>} : (!fir.ref<i8>) -> !fir.ptr<!fir.array<5xf32>>
-! ALL:         %[[CREATE:.*]] = acc.create varPtr(%[[CONV]] : !fir.ptr<!fir.array<5xf32>>) -> !fir.ptr<!fir.array<5xf32>> {name = "v2", structured = false}
-! ALL:         acc.declare_enter dataOperands(%[[CREATE]] : !fir.ptr<!fir.array<5xf32>>)
+! ALL:         %[[ADDR:.*]] = fir.address_of(@_QMacc_declare_equivalent2Ev1) {acc.declare = #acc.declare<dataClause =  acc_create>} : !fir.ref<!fir.array<40xi8>>
+! ALL:         %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !fir.ref<!fir.array<40xi8>>) -> !fir.ref<!fir.array<40xi8>> {name = "v2", structured = false}
+! ALL:         acc.declare_enter dataOperands(%[[CREATE]] : !fir.ref<!fir.array<40xi8>>)
 ! ALL:         acc.terminator
 ! ALL:       }
 
 ! ALL-LABEL: acc.global_dtor @_QMacc_declare_equivalent2Ev2_acc_dtor {
-! ALL-DAG:     %[[C20:.*]] = arith.constant 20 : index
-! ALL-DAG:     %[[ADDR:.*]] = fir.address_of(@_QMacc_declare_equivalent2Ev1) : !fir.ref<!fir.array<40xi8>>
-! ALL:         %[[COORD:.*]] = fir.coordinate_of %[[ADDR]], %[[C20]] : (!fir.ref<!fir.array<40xi8>>, index) -> !fir.ref<i8>
-! ALL:         %[[CONV:.*]] = fir.convert %[[COORD]] {acc.declare = #acc.declare<dataClause =  acc_create>} : (!fir.ref<i8>) -> !fir.ptr<!fir.array<5xf32>>
-! ALL:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[CONV]] : !fir.ptr<!fir.array<5xf32>>) -> !fir.ptr<!fir.array<5xf32>> {dataClause = #acc<data_clause acc_create>, name = "v2", structured = false}
-! ALL:         acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ptr<!fir.array<5xf32>>)
-! ALL:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ptr<!fir.array<5xf32>>) {dataClause = #acc<data_clause acc_create>, name = "v2", structured = false}
+! ALL:         %[[ADDR:.*]] = fir.address_of(@_QMacc_declare_equivalent2Ev1) {acc.declare = #acc.declare<dataClause =  acc_create>} : !fir.ref<!fir.array<40xi8>>
+! ALL:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[ADDR]] : !fir.ref<!fir.array<40xi8>>) -> !fir.ref<!fir.array<40xi8>> {dataClause = #acc<data_clause acc_create>, name = "v2", structured = false}
+! ALL:         acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<40xi8>>)
+! ALL:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<40xi8>>) {dataClause = #acc<data_clause acc_create>, name = "v2", structured = false}
 ! ALL:         acc.terminator
 ! ALL:       }
