@@ -1645,6 +1645,10 @@ void Fortran::lower::genDeclareSymbol(
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
+    // FIXME: Using the ultimate symbol for translating symbol attributes will
+    // lead to situations where the VOLATILE/ASYNCHRONOUS attributes are not
+    // propagated to the hlfir.declare (these attributes can be added when
+    // using module variables).
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(
             builder.getContext(), sym.GetUltimate(), extraFlags);
