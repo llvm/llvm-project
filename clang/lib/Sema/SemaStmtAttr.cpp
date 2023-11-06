@@ -331,15 +331,23 @@ CodeAlignAttr *Sema::BuildCodeAlignAttr(const AttributeCommonInfo &CI,
       return nullptr;
     E = Res.get();
 
-    int align_value = ArgVal.getSExtValue();
-    if (align_value < CodeAlignAttr::getMinValue() ||
-        align_value > CodeAlignAttr::getMaxValue() || !ArgVal.isPowerOf2()) {
+    // This attribute requires a strictly positive value.
+    if (ArgVal <= 0) {
+      Diag(E->getExprLoc(), diag::err_attribute_requires_positive_integer)
+          << CI << /*positive*/ 0;
+      return nullptr;
+    }
+
+    // This attribute requires an integer argument which is a constant power of
+    // two between 1 and 4096 inclusive.
+    int AlignValue = ArgVal.getSExtValue();
+    if (AlignValue > CodeAlignAttr::getMaxValue() || !ArgVal.isPowerOf2()) {
       Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
-          << CI << CodeAlignAttr::getMinValue() << CodeAlignAttr::getMaxValue();
+          << CI << CodeAlignAttr::getMinValue() << CodeAlignAttr::getMaxValue()
+	  << AlignValue;
       return nullptr;
     }
   }
-
   return new (Context) CodeAlignAttr(Context, CI, E);
 }
 
@@ -350,16 +358,16 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
 }
 
 // Emit duplicate error for [[clang::code_align()]] attribute.
-template <typename LoopAttrT>
 static void
-CheckForDuplicateLoopAttribute(Sema &S,
-                               const SmallVectorImpl<const Attr *> &Attrs) {
+CheckForDuplicateCodeAlignAttribute(Sema &S,
+                                    const SmallVectorImpl<const Attr *> &Attrs) {
   const Attr *A = nullptr;
   for (const auto *I : Attrs) {
-    if (isa<LoopAttrT>(I)) {
+    if (isa<CodeAlignAttr>(I)) {
       if (A) {
         // Cannot specify same type of attribute twice.
         S.Diag(I->getLocation(), diag::err_loop_attr_duplication) << A;
+	S.Diag(A->getLocation(),diag::note_previous_attribute);
       }
       A = I;
     }
@@ -587,5 +595,5 @@ void Sema::ProcessStmtAttributes(Stmt *S, const ParsedAttributes &InAttrs,
   }
 
   CheckForIncompatibleAttributes(*this, OutAttrs);
-  CheckForDuplicateLoopAttribute<CodeAlignAttr>(*this, OutAttrs);
+  CheckForDuplicateCodeAlignAttribute(*this, OutAttrs);
 }

@@ -21,24 +21,19 @@ void foo() {
 }
 
 void bar(int);
-#if __cplusplus >= 201103L
-// cpp-local-note@+2 {{declared here}}
-#endif
+// cpp-local-note@+1 {{declared here}}
 void foo1(int A)
 {
-  // expected-error@+1 {{'code_align' attribute must be a constant power of two between 1 and 4096 inclusive}}
+  // expected-error@+1 {{'code_align' attribute requires a positive integral compile time constant expression}}
   [[clang::code_align(0)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
-  // expected-error@+1{{'code_align' attribute must be a constant power of two between 1 and 4096 inclusive}}
+  // expected-error@+1 {{'code_align' attribute requires a positive integral compile time constant expression}}
   [[clang::code_align(-4)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
-#if __cplusplus >= 201103L
-    // cpp-local-error@+4 {{integral constant expression must have integral or unscoped enumeration type, not 'double'}}
-#else
-    // c-local-error@+2 {{integer constant expression must have integer type, not 'double'}}
-#endif
+    // cpp-local-error@+2 {{integral constant expression must have integral or unscoped enumeration type, not 'double'}}
+    // c-local-error@+1 {{integer constant expression must have integer type, not 'double'}}
   [[clang::code_align(64.0)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
@@ -54,38 +49,30 @@ void foo1(int A)
   [[clang::code_align(32)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
-#if __cplusplus >= 201103L
-  // cpp-local-error@+4 {{integral constant expression must have integral or unscoped enumeration type, not 'const char[4]'}}
-#else  
-  // c-local-error@+2 {{integer constant expression must have integer type, not 'char[4]'}}
-#endif
+  // cpp-local-error@+2 {{integral constant expression must have integral or unscoped enumeration type, not 'const char[4]'}}
+  // c-local-error@+1 {{integer constant expression must have integer type, not 'char[4]'}}
   [[clang::code_align("abc")]]
   for(int I=0; I<128; ++I) { bar(I); }
 
-  [[clang::code_align(64)]]
-  // expected-error@+1 {{duplicate loop attribute 'code_align'}}
-  [[clang::code_align(64)]]
+  [[clang::code_align(64)]] // expected-note {{previous attribute is here}}
+  [[clang::code_align(64)]] // expected-error {{duplicate loop attribute 'code_align'}}
   for(int I=0; I<128; ++I) { bar(I); }
 
-  // expected-error@+1 {{'code_align' attribute must be a constant power of two between 1 and 4096 inclusive}}
+  // expected-error@+1 {{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive - got 7}}
   [[clang::code_align(7)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
-  // expected-error@+1 {{'code_align' attribute must be a constant power of two between 1 and 4096 inclusive}}
+  // expected-error@+1 {{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive - got 5000}}
   [[clang::code_align(5000)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
-#if __cplusplus >= 201103L
-  // cpp-local-error@+5 {{expression is not an integral constant expression}}
-  // cpp-local-note@+4 {{function parameter 'A' with unknown value cannot be used in a constant expression}}
-#else
-  // c-local-error@+2 {{expression is not an integer constant expression}}
-#endif  
+  // cpp-local-error@+3 {{expression is not an integral constant expression}}
+  // cpp-local-note@+2 {{function parameter 'A' with unknown value cannot be used in a constant expression}}
+  // c-local-error@+1 {{expression is not an integer constant expression}}
   [[clang::code_align(A)]]
   for(int I=0; I<128; ++I) { bar(I); }
 }
 
-#if __cplusplus >= 201103L
 void check_code_align_expression() {
   int a[10];
 
@@ -97,24 +84,26 @@ void check_code_align_expression() {
   for (int i = 0; i != 10; ++i)
     a[i] = 0;
 
+#if __cplusplus >= 201103L
   // Test that checks expression is a constant expression.
   constexpr int bars = 0;
   [[clang::code_align(bars + 1)]]
   for (int i = 0; i != 10; ++i)
     a[i] = 0;
+#endif
 }
 
+#if __cplusplus >= 201103L
 template <int A, int B, int C, int D>
 void code_align_dependent() {
   [[clang::code_align(C)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
-  [[clang::code_align(A)]]
-  // cpp-local-error@+1 {{duplicate loop attribute 'code_align'}}
-  [[clang::code_align(B)]]
+  [[clang::code_align(A)]] // expected-note {{previous attribute is here}}
+  [[clang::code_align(B)]] // cpp-local-error  {{duplicate loop attribute 'code_align'}}
   for(int I=0; I<128; ++I) { bar(I); }
 
-  // cpp-local-error@+2{{'code_align' attribute must be a constant power of two between 1 and 4096 inclusive}}
+  // cpp-local-error@+2{{'code_align' attribute requires a positive integral compile time constant expression}}
   // cpp-local-note@#neg-instantiation {{in instantiation of function template specialization}}
   [[clang::code_align(D)]]
   for(int I=0; I<128; ++I) { bar(I); }
