@@ -6533,6 +6533,7 @@ cc_library(
     deps = [
         ":GPUDialect",
         ":SPIRVDialect",
+        ":Support",
     ],
 )
 
