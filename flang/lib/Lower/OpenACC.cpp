@@ -3201,8 +3201,21 @@ void Fortran::lower::genOpenACCRoutineConstruct(
     funcName = converter.mangleName(*name->symbol);
     funcOp = builder.getNamedFunction(mod, funcName);
   } else {
-    funcOp = builder.getFunction();
-    funcName = funcOp.getName();
+    Fortran::semantics::Scope &scope =
+        semanticsContext.FindScope(routineConstruct.source);
+    const Fortran::semantics::Scope &progUnit{GetProgramUnitContaining(scope)};
+    const auto *subpDetails{
+        progUnit.symbol()
+            ? progUnit.symbol()
+                  ->detailsIf<Fortran::semantics::SubprogramDetails>()
+            : nullptr};
+    if (subpDetails && subpDetails->isInterface()) {
+      funcName = converter.mangleName(*progUnit.symbol());
+      funcOp = builder.getNamedFunction(mod, funcName);
+    } else {
+      funcOp = builder.getFunction();
+      funcName = funcOp.getName();
+    }
   }
   bool hasSeq = false, hasGang = false, hasWorker = false, hasVector = false,
        hasNohost = false;
