@@ -638,6 +638,9 @@ Value *MemCmpExpansion::getMemCmpEqZeroOneBlock() {
 
 /// A memcmp expansion that only has one block of load and compare can bypass
 /// the compare, branch, and phi IR that is required in the general case.
+/// This function also analyses users of memcmp, and if there is only one user
+/// from which we can conclude that only 2 out of 3 memcmp outcomes really
+/// matter, then it generates more efficient code with only one comparison.
 Value *MemCmpExpansion::getMemCmpOneBlock() {
   bool NeedsBSwap = DL.isLittleEndian() && Size != 1;
   Type *LoadSizeType = IntegerType::get(CI->getContext(), Size * 8);
@@ -662,8 +665,8 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
   // If a user of memcmp cares only about two outcomes, for example:
   //    bool result = memcmp(a, b, NBYTES) > 0;
   // We can generate more optimal code with a smaller number of operations
-  if (auto *U = CI->getUniqueUndroppableUser()) {
-    auto *UI = cast<Instruction>(U);
+  if (CI->hasOneUser()) {
+    auto *UI = cast<Instruction>(*CI->user_begin());
     ICmpInst::Predicate Pred = ICmpInst::Predicate::BAD_ICMP_PREDICATE;
     uint64_t Shift;
     bool NeedsZExt = false;
@@ -673,7 +676,7 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
     // Compiler is clever enough to generate the following code:
     //    bool result = memcmp(a, b, NBYTES) >> 31;
     if (match(UI, m_LShr(m_Value(), m_ConstantInt(Shift))) &&
-        Shift == CI->getType()->getIntegerBitWidth() - 1) {
+        Shift == (CI->getType()->getIntegerBitWidth() - 1)) {
       Pred = ICmpInst::ICMP_SLT;
       NeedsZExt = true;
     } else {
