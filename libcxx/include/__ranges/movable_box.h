@@ -16,7 +16,6 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
-#include <__type_traits/is_empty.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_nothrow_copy_constructible.h>
 #include <__type_traits/is_nothrow_default_constructible.h>
@@ -135,6 +134,13 @@ concept __doesnt_need_empty_state =
          // 2. Otherwise, movable-box<T> should store only a T if either T models movable or
          //    is_nothrow_move_constructible_v<T> is true.
          : movable<_Tp> || is_nothrow_move_constructible_v<_Tp>);
+
+// we can only use no_unique_address if _Tp has assignment operators,
+// so that we don't need to add our own assignment operator, which
+// contains problematic construct_at
+template <class _Tp>
+concept __can_use_no_unique_address = (copy_constructible<_Tp> ? copyable<_Tp> : movable<_Tp>);
+
 #  else
 
 template <class _Tp>
@@ -145,32 +151,36 @@ concept __doesnt_need_empty_state_for_move = movable<_Tp> || is_nothrow_move_con
 
 template <class _Tp>
 concept __doesnt_need_empty_state = __doesnt_need_empty_state_for_copy<_Tp> && __doesnt_need_empty_state_for_move<_Tp>;
+
+template <class _Tp>
+concept __can_use_no_unique_address = copyable<_Tp>;
 #  endif
 
-template <class _Tp, bool _NoUniqueAddress>
-struct __no_unique_address_if {
+template <class _Tp>
+struct __movable_box_base {
   _Tp __val_;
 
   template <class... _Args>
     requires is_constructible_v<_Tp, _Args&&...>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __no_unique_address_if(_Args&&... __args)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __movable_box_base(_Args&&... __args)
       : __val_(std::forward<_Args>(__args)...) {}
 };
 
 template <class _Tp>
-struct __no_unique_address_if<_Tp, true> {
+  requires __can_use_no_unique_address<_Tp>
+struct __movable_box_base<_Tp> {
   _LIBCPP_NO_UNIQUE_ADDRESS _Tp __val_;
 
   template <class... _Args>
     requires is_constructible_v<_Tp, _Args&&...>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __no_unique_address_if(_Args&&... __args)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __movable_box_base(_Args&&... __args)
       : __val_(std::forward<_Args>(__args)...) {}
 };
 
 template <__movable_box_object _Tp>
   requires __doesnt_need_empty_state<_Tp>
-class __movable_box<_Tp> : private __no_unique_address_if<_Tp, is_empty_v<_Tp>> {
-  using __base = __no_unique_address_if<_Tp, is_empty_v<_Tp>>;
+class __movable_box<_Tp> : private __movable_box_base<_Tp> {
+  using __base = __movable_box_base<_Tp>;
 
 public:
   template <class... _Args>
@@ -197,6 +207,7 @@ public:
   // Implementation of assignment operators in case we perform optimization (2)
   _LIBCPP_HIDE_FROM_ABI constexpr __movable_box& operator=(__movable_box const& __other) noexcept {
     static_assert(is_nothrow_copy_constructible_v<_Tp>);
+    static_assert(!__can_use_no_unique_address<_Tp>);
     if (this != std::addressof(__other)) {
       std::destroy_at(std::addressof(this->__val_));
       std::construct_at(std::addressof(this->__val_), __other.__val_);
@@ -206,6 +217,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __movable_box& operator=(__movable_box&& __other) noexcept {
     static_assert(is_nothrow_move_constructible_v<_Tp>);
+    static_assert(!__can_use_no_unique_address<_Tp>);
     if (this != std::addressof(__other)) {
       std::destroy_at(std::addressof(this->__val_));
       std::construct_at(std::addressof(this->__val_), std::move(__other.__val_));
