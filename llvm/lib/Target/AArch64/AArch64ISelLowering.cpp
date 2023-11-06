@@ -4877,21 +4877,16 @@ SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
                            DAG.getConstant(1, DL, MVT::i32));
 
     // Multiply SVL and vnum then add it to the base
+    SDValue Mul =
+        DAG.getNode(ISD::MUL, DL, MVT::i64,
+                    {SVL, DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, VecNum)});
+    Base = DAG.getNode(ISD::ADD, DL, MVT::i64, {Base, Mul});
     // Just add vnum to the tileslice
-    SDValue BaseMulOps[] = {
-        SVL, VecNum.getValueType() == MVT::i32
-                 ? DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, VecNum)
-                 : VecNum};
-    SDValue Mul = DAG.getNode(ISD::MUL, DL, MVT::i64, BaseMulOps);
-
-    SDValue BaseAddOps[] = {Base, Mul};
-    Base = DAG.getNode(ISD::ADD, DL, MVT::i64, BaseAddOps);
-
-    SDValue SliceAddOps[] = {TileSlice, VecNum};
-    TileSlice = DAG.getNode(ISD::ADD, DL, MVT::i32, SliceAddOps);
+    TileSlice = DAG.getNode(ISD::ADD, DL, MVT::i32, {TileSlice, VecNum});
   }
 
-  SmallVector<SDValue, 4> Ops = {N.getOperand(0), TileSlice, Base, Remainder};
+  SmallVector<SDValue, 4> Ops = {/*Chain=*/N.getOperand(0), TileSlice, Base,
+                                 Remainder};
   auto LdrStr =
       DAG.getNode(IsLoad ? AArch64ISD::SME_ZA_LDR : AArch64ISD::SME_ZA_STR, DL,
                   MVT::Other, Ops);
