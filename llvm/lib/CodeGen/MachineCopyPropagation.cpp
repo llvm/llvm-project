@@ -163,7 +163,8 @@ public:
 
   /// Clobber a single register, removing it from the tracker's copy maps.
   void clobberRegister(MCRegister Reg, const TargetRegisterInfo &TRI,
-                       const TargetInstrInfo &TII, bool UseCopyInstr) {
+                       const TargetInstrInfo &TII, bool UseCopyInstr,
+                       bool CleanUp = false) {
     for (MCRegUnit Unit : TRI.regunits(Reg)) {
       auto I = Copies.find(Unit);
       if (I != Copies.end()) {
@@ -175,62 +176,38 @@ public:
         if (MachineInstr *MI = I->second.MI) {
           std::optional<DestSourcePair> CopyOperands =
               isCopyInstr(*MI, TII, UseCopyInstr);
-          markRegsUnavailable({CopyOperands->Destination->getReg().asMCReg()},
-                              TRI);
-        }
-        // Now we can erase the copy.
-        Copies.erase(I);
-      }
-    }
-  }
 
-  /// Clobber \p Reg first, and then remove the corresponding COPY
-  /// record pair from the tracker's copy maps. We need to locate and remove
-  /// the COPY instruction that defines \p Reg, as well as the
-  /// record that make src defines \p Reg.
-  void eraseRegMIPair(MCRegister Reg, const TargetRegisterInfo &TRI,
-                      const TargetInstrInfo &TII, bool UseCopyInstr) {
-    for (MCRegUnit Unit : TRI.regunits(Reg)) {
-      auto I = Copies.find(Unit);
-
-      if (I != Copies.end()) {
-        // When we clobber the source of a copy, we need to clobber everything
-        // it defined.
-        markRegsUnavailable(I->second.DefRegs, TRI);
-        // When we clobber the destination of a copy, we need to clobber the
-        // whole register it defined.
-        if (MachineInstr *MI = I->second.MI) {
-          std::optional<DestSourcePair> CopyOperands =
-              isCopyInstr(*MI, TII, UseCopyInstr);
-
-          MCRegister Src = CopyOperands->Source->getReg().asMCReg();
           MCRegister Def = CopyOperands->Destination->getReg().asMCReg();
 
           markRegsUnavailable(Def, TRI);
 
-          // At this point, we need to locate the record in copy maps that use
-          // Src to define Def, and remove them from Tracker.
-          for (MCRegUnit SrcUnit : TRI.regunits(Src)) {
-            auto SrcCopy = Copies.find(SrcUnit);
-            if (SrcCopy != Copies.end() && SrcCopy->second.LastSeenUseInCopy) {
-              // If Src define multiple values, we only need
-              // to erase the such record in DefRegs.
-              for (auto itr = SrcCopy->second.DefRegs.begin();
-                   itr != SrcCopy->second.DefRegs.end(); itr++) {
-                if (*itr == Def) {
-                  SrcCopy->second.DefRegs.erase(itr);
-                  // If DefReg becomes empty after removal, we can directly
-                  // remove SrcCopy from the tracker's copy maps.
-                  if (!SrcCopy->second.DefRegs.size()) {
-                    Copies.erase(SrcCopy);
+          // If CleanUP flag is specified, we will also locate the record in the
+          // copy maps that use Src to define Def, and remove it from Tracker.
+          if (CleanUp) {
+            MCRegister Src = CopyOperands->Source->getReg().asMCReg();
+            for (MCRegUnit SrcUnit : TRI.regunits(Src)) {
+              auto SrcCopy = Copies.find(SrcUnit);
+              if (SrcCopy != Copies.end() &&
+                  SrcCopy->second.LastSeenUseInCopy) {
+                // If SrcCopy defines multiple values, we only need
+                // to erase the record for Def in DefRegs.
+                for (auto itr = SrcCopy->second.DefRegs.begin();
+                     itr != SrcCopy->second.DefRegs.end(); itr++) {
+                  if (*itr == Def) {
+                    SrcCopy->second.DefRegs.erase(itr);
+                    // If DefReg becomes empty after removal, we can directly
+                    // remove SrcCopy from the tracker's copy maps.
+                    if (SrcCopy->second.DefRegs.empty()) {
+                      Copies.erase(SrcCopy);
+                    }
+                    break;
                   }
-                  break;
                 }
               }
             }
           }
         }
-        // Now we can erase the copy that define Reg.
+        // Now we can erase the copy.
         Copies.erase(I);
       }
     }
@@ -849,7 +826,7 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         // L4: early-clobber r9 <- Invalid L2 from Tracker
         // L5: r0 = COPY r8     <- Miss remove chance
         // L6: use r0           <- Miss remove L5 chance
-        Tracker.eraseRegMIPair(Def, *TRI, *TII, UseCopyInstr);
+        Tracker.clobberRegister(Def, *TRI, *TII, UseCopyInstr, /*CleanUp=*/true);
 
         for (const MachineOperand &MO : MI.implicit_operands()) {
           if (!MO.isReg() || !MO.isDef())
@@ -857,7 +834,7 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
           MCRegister Reg = MO.getReg().asMCReg();
           if (!Reg)
             continue;
-          Tracker.clobberRegister(Reg, *TRI, *TII, UseCopyInstr);
+          Tracker.clobberRegister(Reg, *TRI, *TII, UseCopyInstr, /*CleanUp=*/true);
         }
 
         Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
