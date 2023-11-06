@@ -2031,23 +2031,26 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // C++11 [expr.new]p15:
   //   A new-expression that creates an object of type T initializes that
   //   object as follows:
-  InitializationKind Kind
-      //     - If the new-initializer is omitted, the object is default-
-      //       initialized (8.5); if no initialization is performed,
-      //       the object has indeterminate value
-      = initStyle == CXXNewInitializationStyle::None ||
-                initStyle == CXXNewInitializationStyle::Implicit
-            ? InitializationKind::CreateDefault(TypeRange.getBegin())
-        //     - Otherwise, the new-initializer is interpreted according to
-        //     the
-        //       initialization rules of 8.5 for direct-initialization.
-        : initStyle == CXXNewInitializationStyle::List
-            ? InitializationKind::CreateDirectList(TypeRange.getBegin(),
-                                                   Initializer->getBeginLoc(),
-                                                   Initializer->getEndLoc())
-            : InitializationKind::CreateDirect(TypeRange.getBegin(),
-                                               DirectInitRange.getBegin(),
-                                               DirectInitRange.getEnd());
+  InitializationKind Kind = [&] {
+    switch (InitStyle) {
+    //     - If the new-initializer is omitted, the object is default-
+    //       initialized (8.5); if no initialization is performed,
+    //       the object has indeterminate value
+    case CXXNewInitializationStyle::None:
+    case CXXNewInitializationStyle::Implicit:
+      return InitializationKind::CreateDefault(TypeRange.getBegin());
+    //     - Otherwise, the new-initializer is interpreted according to the
+    //       initialization rules of 8.5 for direct-initialization.
+    case CXXNewInitializationStyle::Call:
+      return InitializationKind::CreateDirect(TypeRange.getBegin(),
+                                              DirectInitRange.getBegin(),
+                                              DirectInitRange.getEnd());
+    case CXXNewInitializationStyle::List:
+      return InitializationKind::CreateDirectList(TypeRange.getBegin(),
+                                                  Initializer->getBeginLoc(),
+                                                  Initializer->getEndLoc());
+    }
+  }();
 
   // C++11 [dcl.spec.auto]p6. Deduce the type which 'auto' stands in for.
   auto *Deduced = AllocType->getContainedDeducedType();
