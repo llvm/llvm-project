@@ -160,8 +160,6 @@ void DataAggregator::findPerfExecutable() {
 }
 
 void DataAggregator::start() {
-  std::string ItracePerfScriptArgs;
-
   outs() << "PERF2BOLT: Starting data aggregation job for " << Filename << "\n";
 
   // Don't launch perf for pre-aggregated files
@@ -176,7 +174,7 @@ void DataAggregator::start() {
                       "script -F pid,event,ip",
                       /*Wait = */false);
   } else if (!opts::ITraceAggregation.empty()) {
-    ItracePerfScriptArgs = llvm::formatv(
+    std::string ItracePerfScriptArgs = llvm::formatv(
         "script -F pid,ip,brstack --itrace={0}", opts::ITraceAggregation);
     launchPerfProcess("branch events with itrace", MainEventsPPI,
                       ItracePerfScriptArgs.c_str(),
