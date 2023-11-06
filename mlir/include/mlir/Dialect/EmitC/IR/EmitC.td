@@ -92,10 +92,10 @@ def EmitC_ApplyOp : EmitC_Op<"apply", []> {
   let hasVerifier = 1;
 }
 
-def EmitC_CallOp : EmitC_Op<"call", []> {
+def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", []> {
   let summary = "Call operation";
   let description = [{
-    The `call` operation represents a C++ function call. The call allows
+    The `call_opaque` operation represents a C++ function call. The call allows
     specifying order of operands and attributes in the call as follows:
 
     - integer value of index type refers to an operand;
@@ -105,7 +105,7 @@ def EmitC_CallOp : EmitC_Op<"call", []> {
 
     ```mlir
     // Custom form defining a call to `foo()`.
-    %0 = emitc.call "foo" () : () -> i32
+    %0 = emitc.call_opaque "foo" () : () -> i32
 
     // Generic form of the same operation.
     %0 = "emitc.call"() {callee = "foo"} : () -> i32
