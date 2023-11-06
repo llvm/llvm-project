@@ -147,10 +147,46 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(
   return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
+// Returns true if the scalar result of a VALU instruction depends on exec.
+static bool resultDependsOnExec(const MachineInstr &MI) {
+  // Ignore comparisons which are only used masked with exec.
+  // This allows some hoisting/sinking of VALU comparisons.
+  if (MI.isCompare()) {
+    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+    Register DstReg = MI.getOperand(0).getReg();
+    if (!DstReg.isVirtual())
+      return true;
+    for (MachineInstr &Use : MRI.use_nodbg_instructions(DstReg)) {
+      switch (Use.getOpcode()) {
+      case AMDGPU::S_AND_SAVEEXEC_B32:
+      case AMDGPU::S_AND_SAVEEXEC_B64:
+        break;
+      case AMDGPU::S_AND_B32:
+      case AMDGPU::S_AND_B64:
+        if (!Use.readsRegister(AMDGPU::EXEC))
+          return true;
+        break;
+      default:
+        return true;
+      }
+    }
+    return false;
+  }
+
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  case AMDGPU::V_READFIRSTLANE_B32:
+    return true;
+  }
+
+  return false;
+}
+
 bool SIInstrInfo::isIgnorableUse(const MachineOperand &MO) const {
   // Any implicit use of exec by VALU is not a real register read.
   return MO.getReg() == AMDGPU::EXEC && MO.isImplicit() &&
-         isVALU(*MO.getParent());
+         isVALU(*MO.getParent()) && !resultDependsOnExec(*MO.getParent());
 }
 
 bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
