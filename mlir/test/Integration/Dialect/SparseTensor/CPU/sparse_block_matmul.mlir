@@ -107,7 +107,6 @@ func.func @mul_dense(%arg0: tensor<4x4xf64>,
                                 [ 5.0, 6.0, 7.0, 8.0 ]]> : tensor<4x4xf64>
 
 
-    // constant -> BSR (either from SparseElementAttibutes or DenseElementAttribute)
     %2 = sparse_tensor.convert %td : tensor<4x4xf64> to tensor<4x4xf64, #BSR>
 
     %d = call @mul_dense(%td, %td)
