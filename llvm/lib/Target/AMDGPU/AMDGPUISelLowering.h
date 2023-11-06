@@ -389,6 +389,7 @@ enum NodeType : unsigned {
   CALL,
   TC_RETURN,
   TC_RETURN_GFX,
+  TC_RETURN_CHAIN,
   TRAP,
 
   // Masked control flow nodes.
