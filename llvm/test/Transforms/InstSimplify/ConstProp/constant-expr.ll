@@ -32,18 +32,6 @@
 
 @pr9011_3 = constant <4 x i32> bitcast (<16 x i8> zeroinitializer to <4 x i32>)
 ; CHECK: pr9011_3 = constant <4 x i32> zeroinitializer
-@pr9011_4 = constant <4 x float> uitofp (<4 x i8> zeroinitializer to <4 x float>)
-; CHECK: pr9011_4 = constant <4 x float> zeroinitializer
-@pr9011_5 = constant <4 x float> sitofp (<4 x i8> zeroinitializer to <4 x float>)
-; CHECK: pr9011_5 = constant <4 x float> zeroinitializer
-@pr9011_6 = constant <4 x i32> fptosi (<4 x float> zeroinitializer to <4 x i32>)
-; CHECK: pr9011_6 = constant <4 x i32> zeroinitializer
-@pr9011_7 = constant <4 x i32> fptoui (<4 x float> zeroinitializer to <4 x i32>)
-; CHECK: pr9011_7 = constant <4 x i32> zeroinitializer
-@pr9011_8 = constant <4 x float> fptrunc (<4 x double> zeroinitializer to <4 x float>)
-; CHECK: pr9011_8 = constant <4 x float> zeroinitializer
-@pr9011_9 = constant <4 x double> fpext (<4 x float> zeroinitializer to <4 x double>)
-; CHECK: pr9011_9 = constant <4 x double> zeroinitializer
 
 @pr9011_10 = constant <4 x double> bitcast (i256 0 to <4 x double>)
 ; CHECK: pr9011_10 = constant <4 x double> zeroinitializer
