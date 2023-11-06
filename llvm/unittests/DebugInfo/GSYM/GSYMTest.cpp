@@ -4324,4 +4324,4 @@ TEST(GSYMTest, TestLineTablesWithEmptyRanges) {
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   SourceLocation src_loc = {"foo", "/tmp", "main.cpp", 12, 16};
   EXPECT_THAT(LR->Locations, testing::ElementsAre(src_loc));
-git}
+}
