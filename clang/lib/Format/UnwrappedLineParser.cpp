@@ -3117,9 +3117,16 @@ void UnwrappedLineParser::parseForOrWhileLoop(bool HasParens) {
       FormatTok->setFinalizedType(TT_ConditionLParen);
     parseParens();
   }
-  // Event control.
-  if (Style.isVerilog())
+
+  if (Style.isVerilog()) {
+    // Event control.
     parseVerilogSensitivityList();
+  } else if (Style.AllowShortLoopsOnASingleLine && FormatTok->is(tok::semi) &&
+             Tokens->getPreviousToken()->is(tok::r_paren)) {
+    nextToken();
+    addUnwrappedLine();
+    return;
+  }
 
   handleAttributes();
   parseLoopBody(KeepBraces, /*WrapRightBrace=*/true);
