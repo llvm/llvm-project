@@ -30,6 +30,17 @@ static_assert(UBitIntZero1 == 0, "");
 constexpr unsigned _BitInt(2) BI1 = 3u;
 static_assert(BI1 == 3, "");
 
+namespace APCast {
+  constexpr _BitInt(10) A = 1;
+  constexpr _BitInt(11) B = A;
+  static_assert(B == 1, "");
+  constexpr _BitInt(16) B2 = A;
+  static_assert(B2 == 1, "");
+  constexpr _BitInt(32) B3 = A;
+  static_assert(B3 == 1, "");
+  constexpr unsigned _BitInt(32) B4 = A;
+  static_assert(B4 == 1, "");
+}
 
 #ifdef __SIZEOF_INT128__
 namespace i128 {
