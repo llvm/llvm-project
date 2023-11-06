@@ -524,11 +524,9 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       MachineBasicBlock::iterator InsertPt = SinkDst->getIterator();
       Register DstReg = SinkDst->getOperand(0).getReg();
       TII->reMaterialize(*SinkDst->getParent(), InsertPt, DstReg, 0, MI, *TRI);
-      // If the original instruction did not have source location, reuse a one
-      // from the COPY.
+      // Reuse the source location from the COPY.
       New = &*std::prev(InsertPt);
-      if (const DebugLoc &NewLoc = New->getDebugLoc(); !NewLoc)
-        New->setDebugLoc(SinkDst->getDebugLoc());
+      New->setDebugLoc(SinkDst->getDebugLoc());
     } else {
       // Fold instruction into the addressing mode of a memory instruction.
       New = TII->emitLdStWithAddr(*SinkDst, MaybeAM);
