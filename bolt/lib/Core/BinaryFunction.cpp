@@ -1375,8 +1375,8 @@ add_instruction:
     if (BC.keepOffsetForInstruction(Instruction))
       MIB->setOffset(Instruction, static_cast<uint32_t>(Offset));
 
-    if (BC.MIB->isNoop(Instruction)) {
-      // NOTE: disassembly loses the correct size information for noops.
+    if (BC.isX86() && BC.MIB->isNoop(Instruction)) {
+      // NOTE: disassembly loses the correct size information for noops on x86.
       //       E.g. nopw 0x0(%rax,%rax,1) is 9 bytes, but re-encoded it's only
       //       5 bytes. Preserve the size info using annotations.
       MIB->addAnnotation(Instruction, "Size", static_cast<uint32_t>(Size));
