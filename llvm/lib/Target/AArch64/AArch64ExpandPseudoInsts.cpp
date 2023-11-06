@@ -794,7 +794,8 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
     auto MOP = MI.getOperand(RegMaskStartIdx);
     assert(MOP.isReg() && "can only add register operands");
     OriginalCall->addOperand(MachineOperand::CreateReg(
-        MOP.getReg(), /*Def=*/false, /*Implicit=*/true));
+        MOP.getReg(), /*Def=*/false, /*Implicit=*/true, /*isKill=*/false,
+        /*isDead=*/false, /*isUndef=*/MOP.isUndef()));
     RegMaskStartIdx++;
   }
   for (const MachineOperand &MO :
