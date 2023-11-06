@@ -2864,18 +2864,21 @@ void OmpStructureChecker::Enter(const parser::OmpClause::IsDevicePtr &x) {
     const auto &isDevicePtrClause{
         std::get<parser::OmpClause::IsDevicePtr>(itr->second->u)};
     const auto &isDevicePtrList{isDevicePtrClause.v};
-    std::list<parser::Name> isDevicePtrNameList;
-    for (const auto &ompObject : isDevicePtrList.v) {
-      if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
-        if (name->symbol) {
-          if (!(IsBuiltinCPtr(*(name->symbol)))) {
-            context_.Say(itr->second->source,
-                "Variable '%s' in IS_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
-                name->ToString());
-          } else {
-            isDevicePtrNameList.push_back(*name);
-          }
-        }
+    SymbolSourceMap currSymbols;
+    GetSymbolsInObjectList(isDevicePtrList, currSymbols);
+    for (auto &[symbol, source] : currSymbols) {
+      if (!(IsBuiltinCPtr(*symbol))) {
+        context_.Say(itr->second->source,
+            "Variable '%s' in IS_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
+            source.ToString());
+      } else if (!(IsDummy(*symbol))) {
+        context_.Say(itr->second->source,
+            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument"_err_en_US,
+            source.ToString());
+      } else if (IsAllocatableOrPointer(*symbol) || IsValue(*symbol)) {
+        context_.Say(itr->second->source,
+            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute."_err_en_US,
+            source.ToString());
       }
     }
   }
