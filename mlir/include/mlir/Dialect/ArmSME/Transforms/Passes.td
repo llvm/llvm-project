@@ -38,7 +38,7 @@ def EnableArmStreaming
            "Select how ZA-storage is managed at the function-level.",
            [{::llvm::cl::values(
                 clEnumValN(mlir::arm_sme::ArmZaMode::Disabled, "disabled",
-					 	   "ZA storage is not enabled."),
+					 	   "ZA storage is disabled."),
                 clEnumValN(mlir::arm_sme::ArmZaMode::New, "new",
 					 	   "The function has ZA state. The ZA state is created on entry "
                "and destroyed on exit.")
