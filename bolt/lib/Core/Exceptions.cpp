@@ -398,8 +398,8 @@ void BinaryFunction::updateEHRanges() {
 
         // Same symbol is used for the beginning and the end of the range.
         MCSymbol *EHSymbol;
-        if (auto InstrLabel = BC.MIB->getLabel(Instr)) {
-          EHSymbol = *InstrLabel;
+        if (MCSymbol *InstrLabel = BC.MIB->getLabel(Instr)) {
+          EHSymbol = InstrLabel;
         } else {
           std::unique_lock<llvm::sys::RWMutex> Lock(BC.CtxMutex);
           EHSymbol = BC.Ctx->createNamedTempSymbol("EH");
