@@ -407,7 +407,8 @@ static void genEndInsert(OpBuilder &builder, Location loc,
         builder.setInsertionPointAfter(loop);
       }
     } else {
-      assert(isDenseDLT(dlt) || isLooseCompressedDLT(dlt) || isSingletonDLT(dlt) || is2OutOf4DLT(dlt));
+      assert(isDenseDLT(dlt) || isLooseCompressedDLT(dlt) ||
+             isSingletonDLT(dlt) || is2OutOf4DLT(dlt));
     }
   }
 }
@@ -497,7 +498,8 @@ public:
           Value two = constantIndex(builder, loc, 2);
           parentPos = builder.create<arith::MulIOp>(loc, parentPos, two);
         }
-        parentPos = genCompressed(builder, loc, desc, coords, value, parentPos, lvl);
+        parentPos =
+            genCompressed(builder, loc, desc, coords, value, parentPos, lvl);
       } else if (isSingletonDLT(dlt) || is2OutOf4DLT(dlt)) {
         // Create:
         //   coordinates[lvl].push_back(coords[lvl])
@@ -1498,7 +1500,8 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
     // Now construct the dim2lvl and lvl2dim buffers.
     Value dim2lvlBuffer;
     Value lvl2dimBuffer;
-    genMapBuffers(rewriter, loc, dstTp, dimShapesValues, dimSizesBuffer, dim2lvlBuffer, lvl2dimBuffer);
+    genMapBuffers(rewriter, loc, dstTp, dimShapesValues, dimSizesBuffer,
+                  dim2lvlBuffer, lvl2dimBuffer);
 
     // Read the COO tensor data.
     MutSparseTensorDescriptor desc(dstTp, fields);
