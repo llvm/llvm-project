@@ -1118,8 +1118,7 @@ void AccAttributeVisitor::DoNotAllowAssumedSizedArray(
   }
 }
 
-void AccAttributeVisitor::AllowOnlyVariable(
-    const parser::AccObject &object) {
+void AccAttributeVisitor::AllowOnlyVariable(const parser::AccObject &object) {
   common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
@@ -1129,13 +1128,11 @@ void AccAttributeVisitor::AllowOnlyVariable(
                   "Only variables are allowed in data clauses on the %s "
                   "directive"_err_en_US,
                   parser::ToUpperCaseLetters(
-                      llvm::acc::getOpenACCDirectiveName(
-                          GetContext().directive)
+                      llvm::acc::getOpenACCDirectiveName(GetContext().directive)
                           .str()));
             }
           },
-          [&](const auto &name) {
-          },
+          [&](const auto &name) {},
       },
       object.u);
 }
