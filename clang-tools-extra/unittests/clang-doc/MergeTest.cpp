@@ -84,7 +84,7 @@ TEST(MergeTest, mergeRecordInfos) {
   One.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
 
   One.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
-  One.TagType = TagTypeKind::TTK_Class;
+  One.TagType = TagTypeKind::Class;
   One.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   One.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
@@ -105,7 +105,7 @@ TEST(MergeTest, mergeRecordInfos) {
 
   Two.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  Two.TagType = TagTypeKind::TTK_Class;
+  Two.TagType = TagTypeKind::Class;
 
   Two.Children.Records.emplace_back(NonEmptySID, "SharedChildStruct",
                                     InfoType::IT_record, "path");
@@ -128,7 +128,7 @@ TEST(MergeTest, mergeRecordInfos) {
 
   Expected->Members.emplace_back(TypeInfo("int"), "X",
                                  AccessSpecifier::AS_private);
-  Expected->TagType = TagTypeKind::TTK_Class;
+  Expected->TagType = TagTypeKind::Class;
   Expected->Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   Expected->VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
   Expected->Bases.emplace_back(EmptySID, "F", "path/to/F", true,

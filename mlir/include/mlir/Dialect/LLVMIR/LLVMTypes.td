@@ -127,14 +127,12 @@ def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
   let summary = "LLVM pointer type";
   let description = [{
     The `!llvm.ptr` type is an LLVM pointer type. This type typically represents
-    a reference to an object in memory. Pointers may be opaque or parameterized
-    by the element type. Both opaque and non-opaque pointers are additionally
-    parameterized by the address space.
+    a reference to an object in memory. Pointers are optionally parameterized
+    by the address space.
 
     Example:
 
     ```mlir
-    !llvm.ptr<i8>
     !llvm.ptr
     ```
   }];

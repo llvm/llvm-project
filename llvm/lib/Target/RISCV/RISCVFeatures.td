@@ -688,14 +688,14 @@ def HasStdExtZicond : Predicate<"Subtarget->hasStdExtZicond()">,
                                 "'Zicond' (Integer Conditional Operations)">;
 
 def FeatureStdExtSmaia
-    : SubtargetFeature<"experimental-smaia", "HasStdExtSmaia", "true",
+    : SubtargetFeature<"smaia", "HasStdExtSmaia", "true",
                        "'Smaia' (Smaia encompasses all added CSRs and all "
                        "modifications to interrupt response behavior that the "
                        "AIA specifies for a hart, over all privilege levels.)",
                        []>;
 
 def FeatureStdExtSsaia
-    : SubtargetFeature<"experimental-ssaia", "HasStdExtSsaia", "true",
+    : SubtargetFeature<"ssaia", "HasStdExtSsaia", "true",
                        "'Ssaia' (Ssaia is essentially the same as Smaia except "
                        "excluding the machine-level CSRs and behavior not "
                        "directly visible to supervisor level.)", []>;
@@ -835,6 +835,22 @@ def FeatureVendorXSfvqmaccqoq
 def HasVendorXSfvqmaccqoq : Predicate<"Subtarget->hasVendorXSfvqmaccqoq()">,
                          AssemblerPredicate<(all_of FeatureVendorXSfvqmaccqoq),
                          "'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4))">;
+
+def FeatureVendorXSfvfwmaccqqq
+    : SubtargetFeature<"xsfvfwmaccqqq", "HasVendorXSfvfwmaccqqq", "true",
+                       "'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction and 4-by-4))",
+                       [FeatureStdExtZve32f]>;
+def HasVendorXSfvfwmaccqqq : Predicate<"Subtarget->hasVendorXSfvfwmaccqqq()">,
+                         AssemblerPredicate<(all_of FeatureVendorXSfvfwmaccqqq),
+                         "'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction and 4-by-4))">;
+
+def FeatureVendorXSfvfnrclipxfqf
+    : SubtargetFeature<"xsfvfnrclipxfqf", "HasVendorXSfvfnrclipxfqf", "true",
+                       "'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)",
+                       [FeatureStdExtZve32f]>;
+def HasVendorXSfvfnrclipxfqf : Predicate<"Subtarget->hasVendorXSfvfnrclipxfqf()">,
+                               AssemblerPredicate<(all_of FeatureVendorXSfvfnrclipxfqf),
+                               "'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)">;
 
 def FeatureVendorXCVbitmanip
     : SubtargetFeature<"xcvbitmanip", "HasVendorXCVbitmanip", "true",

@@ -232,6 +232,10 @@ New Compiler Flags
   preserving ``#include`` directives for "system" headers instead of copying
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
+* ``-fassume-nothrow-exception-dtor`` is added to assume that the destructor of
+  an thrown exception object will not throw. The generated code for catch
+  handlers will be smaller. A throw expression of a type with a
+  potentially-throwing destructor will lead to an error.
 
 Deprecated Compiler Flags
 -------------------------
@@ -737,6 +741,8 @@ Arm and AArch64 Support
   (https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst).
   This affects C++ functions with SVE ACLE parameters. Clang will use the old
   manglings if ``-fclang-abi-compat=17`` or lower is  specified.
+
+- New AArch64 asm constraints have been added for r8-r11(Uci) and r12-r15(Ucj).
 
 Android Support
 ^^^^^^^^^^^^^^^

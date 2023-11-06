@@ -61,8 +61,7 @@ private:
 
   // Custom selection methods
   bool selectCopy(MachineInstr &MI, MachineRegisterInfo &MRI) const;
-  bool selectConstant(MachineInstr &MI, MachineIRBuilder &MIB,
-                      MachineRegisterInfo &MRI) const;
+  bool materializeImm(Register Reg, int64_t Imm, MachineIRBuilder &MIB) const;
   bool selectGlobalValue(MachineInstr &MI, MachineIRBuilder &MIB,
                          MachineRegisterInfo &MRI) const;
   bool selectSExtInreg(MachineInstr &MI, MachineIRBuilder &MIB) const;
@@ -348,8 +347,52 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_TRUNC:
     return selectCopy(MI, MRI);
-  case TargetOpcode::G_CONSTANT:
-    return selectConstant(MI, MIB, MRI);
+  case TargetOpcode::G_CONSTANT: {
+    Register DstReg = MI.getOperand(0).getReg();
+    int64_t Imm = MI.getOperand(1).getCImm()->getSExtValue();
+
+    if (!materializeImm(DstReg, Imm, MIB))
+      return false;
+
+    MI.eraseFromParent();
+    return true;
+  }
+  case TargetOpcode::G_FCONSTANT: {
+    // TODO: Use constant pool for complext constants.
+    // TODO: Optimize +0.0 to use fcvt.d.w for s64 on rv32.
+    Register DstReg = MI.getOperand(0).getReg();
+    const APFloat &FPimm = MI.getOperand(1).getFPImm()->getValueAPF();
+    APInt Imm = FPimm.bitcastToAPInt();
+    unsigned Size = MRI.getType(DstReg).getSizeInBits();
+    if (Size == 32 || (Size == 64 && Subtarget->is64Bit())) {
+      Register GPRReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      if (!materializeImm(GPRReg, Imm.getSExtValue(), MIB))
+        return false;
+
+      unsigned Opcode = Size == 64 ? RISCV::FMV_D_X : RISCV::FMV_W_X;
+      auto FMV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg});
+      if (!FMV.constrainAllUses(TII, TRI, RBI))
+        return false;
+    } else {
+      assert(Size == 64 && !Subtarget->is64Bit() &&
+             "Unexpected size or subtarget");
+      // Split into two pieces and build through the stack.
+      Register GPRRegHigh = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      Register GPRRegLow = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      if (!materializeImm(GPRRegHigh, Imm.extractBits(32, 32).getSExtValue(),
+                          MIB))
+        return false;
+      if (!materializeImm(GPRRegLow, Imm.trunc(32).getSExtValue(), MIB))
+        return false;
+      MachineInstrBuilder PairF64 = MIB.buildInstr(
+          RISCV::BuildPairF64Pseudo, {DstReg}, {GPRRegLow, GPRRegHigh});
+      if (!PairF64.constrainAllUses(TII, TRI, RBI))
+        return false;
+    }
+
+    MI.eraseFromParent();
+    return true;
+  }
   case TargetOpcode::G_GLOBAL_VALUE:
     return selectGlobalValue(MI, MIB, MRI);
   case TargetOpcode::G_BRCOND: {
@@ -485,17 +528,13 @@ bool RISCVInstructionSelector::selectCopy(MachineInstr &MI,
   return true;
 }
 
-bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
-                                              MachineIRBuilder &MIB,
-                                              MachineRegisterInfo &MRI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT);
-  Register FinalReg = MI.getOperand(0).getReg();
-  int64_t Imm = MI.getOperand(1).getCImm()->getSExtValue();
+bool RISCVInstructionSelector::materializeImm(Register DstReg, int64_t Imm,
+                                              MachineIRBuilder &MIB) const {
+  MachineRegisterInfo &MRI = *MIB.getMRI();
 
   if (Imm == 0) {
-    MI.getOperand(1).ChangeToRegister(RISCV::X0, false);
-    RBI.constrainGenericRegister(FinalReg, RISCV::GPRRegClass, MRI);
-    MI.setDesc(TII.get(TargetOpcode::COPY));
+    MIB.buildCopy(DstReg, Register(RISCV::X0));
+    RBI.constrainGenericRegister(DstReg, RISCV::GPRRegClass, MRI);
     return true;
   }
 
@@ -505,47 +544,38 @@ bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
   Register SrcReg = RISCV::X0;
 
   for (unsigned i = 0; i < NumInsts; i++) {
-    Register DstReg = i < NumInsts - 1
+    Register TmpReg = i < NumInsts - 1
                           ? MRI.createVirtualRegister(&RISCV::GPRRegClass)
-                          : FinalReg;
+                          : DstReg;
     const RISCVMatInt::Inst &I = Seq[i];
     MachineInstr *Result;
 
     switch (I.getOpndKind()) {
     case RISCVMatInt::Imm:
       // clang-format off
-      Result = MIB.buildInstr(I.getOpcode())
-                   .addDef(DstReg)
+      Result = MIB.buildInstr(I.getOpcode(), {TmpReg}, {})
                    .addImm(I.getImm());
       // clang-format on
       break;
     case RISCVMatInt::RegX0:
-      Result = MIB.buildInstr(I.getOpcode())
-                   .addDef(DstReg)
-                   .addReg(SrcReg)
-                   .addReg(RISCV::X0);
+      Result = MIB.buildInstr(I.getOpcode(), {TmpReg},
+                              {SrcReg, Register(RISCV::X0)});
       break;
     case RISCVMatInt::RegReg:
-      Result = MIB.buildInstr(I.getOpcode())
-                   .addDef(DstReg)
-                   .addReg(SrcReg)
-                   .addReg(SrcReg);
+      Result = MIB.buildInstr(I.getOpcode(), {TmpReg}, {SrcReg, SrcReg});
       break;
     case RISCVMatInt::RegImm:
-      Result = MIB.buildInstr(I.getOpcode())
-                   .addDef(DstReg)
-                   .addReg(SrcReg)
-                   .addImm(I.getImm());
+      Result =
+          MIB.buildInstr(I.getOpcode(), {TmpReg}, {SrcReg}).addImm(I.getImm());
       break;
     }
 
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
       return false;
 
-    SrcReg = DstReg;
+    SrcReg = TmpReg;
   }
 
-  MI.eraseFromParent();
   return true;
 }
 
@@ -573,9 +603,8 @@ bool RISCVInstructionSelector::selectGlobalValue(
       // Use PC-relative addressing to access the symbol. This generates the
       // pattern (PseudoLLA sym), which expands to (addi (auipc %pcrel_hi(sym))
       // %pcrel_lo(auipc)).
-      Result = MIB.buildInstr(RISCV::PseudoLLA)
-                   .addDef(DefReg)
-                   .addGlobalAddress(GV, 0);
+      Result =
+          MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {}).addGlobalAddress(GV);
     } else {
       // Use PC-relative addressing to access the GOT for this symbol, then
       // load the address from the GOT. This generates the pattern (PseudoLGA
@@ -588,9 +617,8 @@ bool RISCVInstructionSelector::selectGlobalValue(
               MachineMemOperand::MOInvariant,
           DefTy, Align(DefTy.getSizeInBits() / 8));
 
-      Result = MIB.buildInstr(RISCV::PseudoLGA)
-                   .addDef(DefReg)
-                   .addGlobalAddress(GV, 0)
+      Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
+                   .addGlobalAddress(GV)
                    .addMemOperand(MemOp);
     }
 
@@ -612,16 +640,13 @@ bool RISCVInstructionSelector::selectGlobalValue(
     // absolute addresses -2 GiB and +2 GiB. This generates the pattern (addi
     // (lui %hi(sym)) %lo(sym)).
     Register AddrHiDest = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    MachineInstr *AddrHi = MIB.buildInstr(RISCV::LUI)
-                               .addDef(AddrHiDest)
-                               .addGlobalAddress(GV, RISCVII::MO_HI);
+    MachineInstr *AddrHi = MIB.buildInstr(RISCV::LUI, {AddrHiDest}, {})
+                               .addGlobalAddress(GV, 0, RISCVII::MO_HI);
 
     if (!constrainSelectedInstRegOperands(*AddrHi, TII, TRI, RBI))
       return false;
 
-    Result = MIB.buildInstr(RISCV::ADDI)
-                 .addDef(DefReg)
-                 .addReg(AddrHiDest)
+    Result = MIB.buildInstr(RISCV::ADDI, {DefReg}, {AddrHiDest})
                  .addGlobalAddress(GV, 0, RISCVII::MO_LO);
 
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
@@ -647,17 +672,15 @@ bool RISCVInstructionSelector::selectGlobalValue(
               MachineMemOperand::MOInvariant,
           DefTy, Align(DefTy.getSizeInBits() / 8));
 
-      Result = MIB.buildInstr(RISCV::PseudoLGA)
-                   .addDef(DefReg)
-                   .addGlobalAddress(GV, 0)
+      Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
+                   .addGlobalAddress(GV)
                    .addMemOperand(MemOp);
     } else {
       // Generate a sequence for accessing addresses within any 2GiB range
       // within the address space. This generates the pattern (PseudoLLA sym),
       // which expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
-      Result = MIB.buildInstr(RISCV::PseudoLLA)
-                   .addDef(DefReg)
-                   .addGlobalAddress(GV, 0);
+      Result =
+          MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {}).addGlobalAddress(GV);
     }
 
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
@@ -725,7 +748,7 @@ static void getICMPOperandsForBranch(MachineInstr &MI, MachineIRBuilder &MIB,
   RHS = MI.getOperand(3).getReg();
 
   // Adjust comparisons to use comparison with 0 if possible.
-  if (auto Constant = getIConstantVRegSExtVal(RHS, MRI, true)) {
+  if (auto Constant = getIConstantVRegSExtVal(RHS, MRI)) {
     switch (ICMPCC) {
     case CmpInst::Predicate::ICMP_SGT:
       // Convert X > -1 to X >= 0

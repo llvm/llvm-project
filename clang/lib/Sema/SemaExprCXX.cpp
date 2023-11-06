@@ -1101,6 +1101,16 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
           << (unsigned)ExnObjAlign.getQuantity();
     }
   }
+  if (!isPointer && getLangOpts().AssumeNothrowExceptionDtor) {
+    if (CXXDestructorDecl *Dtor = RD->getDestructor()) {
+      auto Ty = Dtor->getType();
+      if (auto *FT = Ty.getTypePtr()->getAs<FunctionProtoType>()) {
+        if (!isUnresolvedExceptionSpec(FT->getExceptionSpecType()) &&
+            !FT->isNothrow())
+          Diag(ThrowLoc, diag::err_throw_object_throwing_dtor) << RD;
+      }
+    }
+  }
 
   return false;
 }
@@ -3035,11 +3045,10 @@ void Sema::DeclareGlobalNewDelete() {
   if (!StdBadAlloc && !getLangOpts().CPlusPlus11) {
     // The "std::bad_alloc" class has not yet been declared, so build it
     // implicitly.
-    StdBadAlloc = CXXRecordDecl::Create(Context, TTK_Class,
-                                        getOrCreateStdNamespace(),
-                                        SourceLocation(), SourceLocation(),
-                                      &PP.getIdentifierTable().get("bad_alloc"),
-                                        nullptr);
+    StdBadAlloc = CXXRecordDecl::Create(
+        Context, TagTypeKind::Class, getOrCreateStdNamespace(),
+        SourceLocation(), SourceLocation(),
+        &PP.getIdentifierTable().get("bad_alloc"), nullptr);
     getStdBadAlloc()->setImplicit(true);
 
     // The implicitly declared "std::bad_alloc" should live in global module
@@ -4096,20 +4105,20 @@ Sema::IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType) {
         // explicit appropriate pointer target type (C++ 4.2p2).
         if (!ToPtrType->getPointeeType().hasQualifiers()) {
           switch (StrLit->getKind()) {
-            case StringLiteral::UTF8:
-            case StringLiteral::UTF16:
-            case StringLiteral::UTF32:
-              // We don't allow UTF literals to be implicitly converted
-              break;
-            case StringLiteral::Ordinary:
-              return (ToPointeeType->getKind() == BuiltinType::Char_U ||
-                      ToPointeeType->getKind() == BuiltinType::Char_S);
-            case StringLiteral::Wide:
-              return Context.typesAreCompatible(Context.getWideCharType(),
-                                                QualType(ToPointeeType, 0));
-            case StringLiteral::Unevaluated:
-              assert(false && "Unevaluated string literal in expression");
-              break;
+          case StringLiteralKind::UTF8:
+          case StringLiteralKind::UTF16:
+          case StringLiteralKind::UTF32:
+            // We don't allow UTF literals to be implicitly converted
+            break;
+          case StringLiteralKind::Ordinary:
+            return (ToPointeeType->getKind() == BuiltinType::Char_U ||
+                    ToPointeeType->getKind() == BuiltinType::Char_S);
+          case StringLiteralKind::Wide:
+            return Context.typesAreCompatible(Context.getWideCharType(),
+                                              QualType(ToPointeeType, 0));
+          case StringLiteralKind::Unevaluated:
+            assert(false && "Unevaluated string literal in expression");
+            break;
           }
         }
       }
@@ -4148,7 +4157,7 @@ static ExprResult BuildCXXCastArgument(Sema &S,
         CastLoc, Ty, FoundDecl, cast<CXXConstructorDecl>(Method),
         ConstructorArgs, HadMultipleCandidates,
         /*ListInit*/ false, /*StdInitListInit*/ false, /*ZeroInit*/ false,
-        CXXConstructExpr::CK_Complete, SourceRange());
+        CXXConstructionKind::Complete, SourceRange());
     if (Result.isInvalid())
       return ExprError();
 
@@ -4311,17 +4320,17 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
         return ExprError();
       return BuildCXXConstructExpr(
           /*FIXME:ConstructLoc*/ SourceLocation(), ToType,
-          SCS.FoundCopyConstructor, SCS.CopyConstructor,
-          ConstructorArgs, /*HadMultipleCandidates*/ false,
+          SCS.FoundCopyConstructor, SCS.CopyConstructor, ConstructorArgs,
+          /*HadMultipleCandidates*/ false,
           /*ListInit*/ false, /*StdInitListInit*/ false, /*ZeroInit*/ false,
-          CXXConstructExpr::CK_Complete, SourceRange());
+          CXXConstructionKind::Complete, SourceRange());
     }
     return BuildCXXConstructExpr(
         /*FIXME:ConstructLoc*/ SourceLocation(), ToType,
-        SCS.FoundCopyConstructor, SCS.CopyConstructor,
-        From, /*HadMultipleCandidates*/ false,
+        SCS.FoundCopyConstructor, SCS.CopyConstructor, From,
+        /*HadMultipleCandidates*/ false,
         /*ListInit*/ false, /*StdInitListInit*/ false, /*ZeroInit*/ false,
-        CXXConstructExpr::CK_Complete, SourceRange());
+        CXXConstructionKind::Complete, SourceRange());
   }
 
   // Resolve overloaded function references.
