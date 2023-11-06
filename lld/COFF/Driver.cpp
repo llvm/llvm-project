@@ -1662,9 +1662,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         config->includeDwarfChunks = true;
         config->writeSymtab = true;
         config->warnLongSectionNames = false;
+      } else if (s == "nodwarf") {
+        config->includeDwarfChunks = false;
       } else if (s == "symtab") {
         doGC = false;
         config->writeSymtab = true;
+      } else if (s == "nosymtab") {
+        config->writeSymtab = false;
       } else {
         error("/debug: unknown option: " + Twine(arg->getValue()));
       }
