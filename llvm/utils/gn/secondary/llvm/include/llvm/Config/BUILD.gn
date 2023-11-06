@@ -486,7 +486,7 @@ write_cmake_config("llvm-config") {
   if (llvm_build_X86) {
     values += [ "LLVM_HAS_X86_TARGET=1" ]
   } else {
-    values += [ "LLVM_HAS_86_TARGET=" ]
+    values += [ "LLVM_HAS_X86_TARGET=" ]
   }
 
   values += [ "LLVM_HAS_XCORE_TARGET=" ]
