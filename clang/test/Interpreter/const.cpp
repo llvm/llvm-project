@@ -1,6 +1,6 @@
 // UNSUPPORTED: system-aix
 // see https://github.com/llvm/llvm-project/issues/68092
-// XFAIL: target={{.*}}-windows-msvc
+// XFAIL: system-windows
 
 // RUN: cat %s | clang-repl | FileCheck %s
 // RUN: cat %s | clang-repl -Xcc -O2 | FileCheck %s
