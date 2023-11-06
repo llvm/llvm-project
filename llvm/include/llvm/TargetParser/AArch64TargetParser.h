@@ -168,6 +168,8 @@ enum ArchExtKind : unsigned {
   AEK_SSVE_FP8DOT2 =  64, // FEAT_SSVE_FP8DOT2
   AEK_FP8DOT4 =       65, // FEAT_FP8DOT4
   AEK_SSVE_FP8DOT4 =  66, // FEAT_SSVE_FP8DOT4
+  AEK_LUT =           67, // FEAT_LUT
+  AEK_SME_LUTv2 =     68, // FEAT_SME_LUTv2
   AEK_NUM_EXTENSIONS
 };
 using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
@@ -285,6 +287,8 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"ssve-fp8dot2", AArch64::AEK_SSVE_FP8DOT2, "+ssve-fp8dot2", "-ssve-fp8dot2", FEAT_INIT, "+sme2", 0},
     {"fp8dot4", AArch64::AEK_FP8DOT4, "+fp8dot4", "-fp8dot4", FEAT_INIT, "", 0},
     {"ssve-fp8dot4", AArch64::AEK_SSVE_FP8DOT4, "+ssve-fp8dot4", "-ssve-fp8dot4", FEAT_INIT, "+sme2", 0},
+    {"lut", AArch64::AEK_LUT, "+lut", "-lut", FEAT_INIT, "", 0},
+    {"sme-lutv2", AArch64::AEK_SME_LUTv2, "+sme-lutv2", "-sme-lutv2", FEAT_INIT, "", 0},
     // Special cases
     {"none", AArch64::AEK_NONE, {}, {}, FEAT_INIT, "", ExtensionInfo::MaxFMVPriority},
 };
