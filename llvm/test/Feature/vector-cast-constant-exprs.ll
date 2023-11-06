@@ -8,12 +8,6 @@ define <2 x float> @ga() {
 define <2 x double> @gb() {
   ret <2 x double> fpext (<2 x float><float 2.0, float 8.0> to <2 x double>)
 }
-define <2 x i64> @gd() {
-  ret <2 x i64> zext (<2 x i32><i32 3, i32 4> to <2 x i64>)
-}
-define <2 x i64> @ge() {
-  ret <2 x i64> sext (<2 x i32><i32 3, i32 4> to <2 x i64>)
-}
 define <2 x i32> @gf() {
   ret <2 x i32> trunc (<2 x i64><i64 3, i64 4> to <2 x i32>)
 }
