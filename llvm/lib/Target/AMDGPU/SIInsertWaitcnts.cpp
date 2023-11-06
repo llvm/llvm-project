@@ -56,6 +56,10 @@ static cl::opt<bool> EmitForAllMemOpFlag(
     "amdgpu-waitcnt-for-all-mem-op",
     cl::desc("Emit s_waitcnt 0 after each memory operation"), cl::init(false));
 
+static cl::opt<bool> PreciseMemOpFlag(
+  "amdgpu-precise-memory-op",
+  cl::desc("Emit s_waitcnt 0 after each memory operation"), cl::init(false));
+
 namespace {
 // Class of object that encapsulates latest instruction counter score
 // associated with the operand.  Used for determining whether
@@ -393,7 +397,6 @@ private:
   DenseSet<MachineInstr *> ReleaseVGPRInsts;
 
   bool insertWaitcntAfterMemOp(MachineFunction &MF);
-
 public:
   static char ID;
 
@@ -1631,6 +1634,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     bool FlushVmCnt = Block.getFirstTerminator() == Inst &&
                       isPreheaderToFlush(Block, ScoreBrackets);
 
+
     // Generate an s_waitcnt instruction to be placed before Inst, if needed.
     Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr,
                                           FlushVmCnt);
@@ -1844,8 +1848,8 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
   bool Modified = false;
 
-  if (EmitForAllMemOpFlag) {
-    Modified = insertWaitcntAfterMemOp(MF);
+  if (ST->isPreciseMemoryEnabled() || PreciseMemOpFlag) {
+    Modified |= insertWaitcntAfterMemOp(MF);
   }
 
   ForceEmitZeroWaitcnts = ForceEmitZeroFlag;

@@ -1,10 +1,10 @@
-; Testing the -amdgpu-waitcnt-for-all-mem-op option
-; COM: llc -mtriple=amdgcn -mcpu=hawaii -amdgpu-waitcnt-for-all-mem-op -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX7
-; COM: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-waitcnt-for-all-mem-op -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX8
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -amdgpu-waitcnt-for-all-mem-op -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX9
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -amdgpu-waitcnt-for-all-mem-op -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX90A
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -amdgpu-waitcnt-for-all-mem-op -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX10
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global,+enable-flat-scratch -amdgpu-use-divergent-register-indexing -amdgpu-waitcnt-for-all-mem-op -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX9-FLATSCR %s
+; Testing the -amdgpu-precise-memory-op option
+; COM: llc -mtriple=amdgcn -mcpu=hawaii -amdgpu-precise-memory-op -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX7
+; COM: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-precise-memory-op -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX8
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -amdgpu-precise-memory-op -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX9
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -amdgpu-precise-memory-op -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX90A
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -amdgpu-precise-memory-op -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX10
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global,+enable-flat-scratch -amdgpu-use-divergent-register-indexing -amdgpu-precise-memory-op -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX9-FLATSCR %s
 
 ; from atomicrmw-expand.ll
 ; covers flat_load, flat_atomic
