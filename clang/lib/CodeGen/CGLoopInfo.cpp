@@ -800,12 +800,10 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
   // Identify loop attribute 'code_align' from Attrs.
   // For attribute code_align:
   // n - 'llvm.loop.align i32 n' metadata will be emitted.
-  for (const auto *A : Attrs) {
-    if (const auto *CodeAlign = dyn_cast<CodeAlignAttr>(A)) {
-      const auto *CE = cast<ConstantExpr>(CodeAlign->getAlignment());
-      llvm::APSInt ArgVal = CE->getResultAsAPSInt();
-      setCodeAlign(ArgVal.getSExtValue());
-    }
+  if (const auto *CodeAlign = getSpecificAttr<const CodeAlignAttr>(Attrs)) {
+    const auto *CE = cast<ConstantExpr>(CodeAlign->getAlignment());
+    llvm::APSInt ArgVal = CE->getResultAsAPSInt();
+    setCodeAlign(ArgVal.getSExtValue());
   }
 
   setMustProgress(MustProgress);

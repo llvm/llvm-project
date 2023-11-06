@@ -24,11 +24,11 @@ void bar(int);
 // cpp-local-note@+1 {{declared here}}
 void foo1(int A)
 {
-  // expected-error@+1 {{'code_align' attribute requires a positive integral compile time constant expression}}
+  // expected-error@+1 {{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; got 0}}
   [[clang::code_align(0)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
-  // expected-error@+1 {{'code_align' attribute requires a positive integral compile time constant expression}}
+  // expected-error@+1 {{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; got -4}}
   [[clang::code_align(-4)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
@@ -58,11 +58,11 @@ void foo1(int A)
   [[clang::code_align(64)]] // expected-error {{duplicate loop attribute 'code_align'}}
   for(int I=0; I<128; ++I) { bar(I); }
 
-  // expected-error@+1 {{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive - got 7}}
+  // expected-error@+1 {{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; got 7}}
   [[clang::code_align(7)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
-  // expected-error@+1 {{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive - got 5000}}
+  // expected-error@+1 {{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; got 5000}}
   [[clang::code_align(5000)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
@@ -103,7 +103,7 @@ void code_align_dependent() {
   [[clang::code_align(B)]] // cpp-local-error  {{duplicate loop attribute 'code_align'}}
   for(int I=0; I<128; ++I) { bar(I); }
 
-  // cpp-local-error@+2{{'code_align' attribute requires a positive integral compile time constant expression}}
+  // cpp-local-error@+2{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; got -10}}
   // cpp-local-note@#neg-instantiation {{in instantiation of function template specialization}}
   [[clang::code_align(D)]]
   for(int I=0; I<128; ++I) { bar(I); }

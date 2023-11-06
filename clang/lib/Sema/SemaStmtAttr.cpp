@@ -331,17 +331,11 @@ CodeAlignAttr *Sema::BuildCodeAlignAttr(const AttributeCommonInfo &CI,
       return nullptr;
     E = Res.get();
 
-    // This attribute requires a strictly positive value.
-    if (ArgVal <= 0) {
-      Diag(E->getExprLoc(), diag::err_attribute_requires_positive_integer)
-          << CI << /*positive*/ 0;
-      return nullptr;
-    }
-
     // This attribute requires an integer argument which is a constant power of
     // two between 1 and 4096 inclusive.
     int AlignValue = ArgVal.getSExtValue();
-    if (AlignValue > CodeAlignAttr::getMaxValue() || !ArgVal.isPowerOf2()) {
+    if (AlignValue < CodeAlignAttr::getMinValue() ||
+        AlignValue > CodeAlignAttr::getMaxValue() || !ArgVal.isPowerOf2()) {
       Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
           << CI << CodeAlignAttr::getMinValue() << CodeAlignAttr::getMaxValue()
           << AlignValue;
