@@ -1401,6 +1401,26 @@ void OmpStructureChecker::CheckTargetUpdate() {
     context_.Say(GetContext().directiveSource,
         "At least one motion-clause (TO/FROM) must be specified on TARGET UPDATE construct."_err_en_US);
   }
+  if (toClause && fromClause) {
+    SymbolSourceMap toSymbols, fromSymbols;
+    GetSymbolsInObjectList(
+        std::get<parser::OmpClause::To>(toClause->u).v, toSymbols);
+    GetSymbolsInObjectList(
+        std::get<parser::OmpClause::From>(fromClause->u).v, fromSymbols);
+    for (auto &[symbol, source] : toSymbols) {
+      auto fromSymbol = fromSymbols.find(symbol);
+      if (fromSymbol != fromSymbols.end()) {
+        context_.Say(source,
+            "A list item ('%s') can only appear in a TO or FROM clause, but not in both."_err_en_US,
+            symbol->name());
+        context_.Say(source, "'%s' appears in the TO clause."_because_en_US,
+            symbol->name());
+        context_.Say(fromSymbol->second,
+            "'%s' appears in the FROM clause."_because_en_US,
+            fromSymbol->first->name());
+      }
+    }
+  }
 }
 
 void OmpStructureChecker::Enter(
