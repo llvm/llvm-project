@@ -3000,7 +3000,7 @@ LogicalResult KokkosCppEmitter::emitInitAndFinalize()
   os << "extern \"C\" void kokkos_mlir_initialize()\n";
   os << "{\n";
   os.indent();
-  os << "Kokkos::initialize();\n";
+  os << "if (!Kokkos::is_initialized()) Kokkos::initialize();\n";
   //For each global view: allocate it, and if there is initializing data, copy it
   for(auto& op : globalViews)
   {
@@ -3043,7 +3043,7 @@ LogicalResult KokkosCppEmitter::emitInitAndFinalize()
       return failure();
     os << "();\n";
   }
-  os << "Kokkos::finalize();\n";
+  os << "//Kokkos::finalize();\n"; // KL: To be fixed
   os.unindent();
   os << "}\n";
   return success();
