@@ -198,7 +198,7 @@ void simplifyExternals(Module &M) {
                                            AttributeList::FunctionIndex,
                                            F.getAttributes().getFnAttrs()));
     NewF->takeName(&F);
-    F.replaceAllUsesWith(ConstantExpr::getBitCast(NewF, F.getType()));
+    F.replaceAllUsesWith(NewF);
     F.eraseFromParent();
   }
 
