@@ -421,7 +421,7 @@ public:
 
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     internal_key_type Key;
-    Key.NumPieces =
+    Key.NumArgs =
         endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
     unsigned NumIdents = (Length - sizeof(uint16_t)) / sizeof(uint32_t);
     for (unsigned i = 0; i != NumIdents; ++i) {
