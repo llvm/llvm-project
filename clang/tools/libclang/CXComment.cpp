@@ -296,13 +296,13 @@ enum CXCommentParamPassDirection clang_ParamCommandComment_getDirection(
     return CXCommentParamPassDirection_In;
 
   switch (PCC->getDirection()) {
-  case ParamCommandComment::In:
+  case ParamCommandPassDirection::In:
     return CXCommentParamPassDirection_In;
 
-  case ParamCommandComment::Out:
+  case ParamCommandPassDirection::Out:
     return CXCommentParamPassDirection_Out;
 
-  case ParamCommandComment::InOut:
+  case ParamCommandPassDirection::InOut:
     return CXCommentParamPassDirection_InOut;
   }
   llvm_unreachable("unknown ParamCommandComment::PassDirection");

@@ -219,12 +219,12 @@ void Sema::checkContainerDecl(const BlockCommandComment *Comment) {
 
 /// Turn a string into the corresponding PassDirection or -1 if it's not
 /// valid.
-static int getParamPassDirection(StringRef Arg) {
-  return llvm::StringSwitch<int>(Arg)
-      .Case("[in]", ParamCommandComment::In)
-      .Case("[out]", ParamCommandComment::Out)
-      .Cases("[in,out]", "[out,in]", ParamCommandComment::InOut)
-      .Default(-1);
+static ParamCommandPassDirection getParamPassDirection(StringRef Arg) {
+  return llvm::StringSwitch<ParamCommandPassDirection>(Arg)
+      .Case("[in]", ParamCommandPassDirection::In)
+      .Case("[out]", ParamCommandPassDirection::Out)
+      .Cases("[in,out]", "[out,in]", ParamCommandPassDirection::InOut)
+      .Default(static_cast<ParamCommandPassDirection>(-1));
 }
 
 void Sema::actOnParamCommandDirectionArg(ParamCommandComment *Command,
@@ -232,25 +232,25 @@ void Sema::actOnParamCommandDirectionArg(ParamCommandComment *Command,
                                          SourceLocation ArgLocEnd,
                                          StringRef Arg) {
   std::string ArgLower = Arg.lower();
-  int Direction = getParamPassDirection(ArgLower);
+  ParamCommandPassDirection Direction = getParamPassDirection(ArgLower);
 
-  if (Direction == -1) {
+  if (Direction == static_cast<ParamCommandPassDirection>(-1)) {
     // Try again with whitespace removed.
     llvm::erase_if(ArgLower, clang::isWhitespace);
     Direction = getParamPassDirection(ArgLower);
 
     SourceRange ArgRange(ArgLocBegin, ArgLocEnd);
-    if (Direction != -1) {
-      const char *FixedName = ParamCommandComment::getDirectionAsString(
-          (ParamCommandComment::PassDirection)Direction);
+    if (Direction != static_cast<ParamCommandPassDirection>(-1)) {
+      const char *FixedName =
+          ParamCommandComment::getDirectionAsString(Direction);
       Diag(ArgLocBegin, diag::warn_doc_param_spaces_in_direction)
           << ArgRange << FixItHint::CreateReplacement(ArgRange, FixedName);
     } else {
       Diag(ArgLocBegin, diag::warn_doc_param_invalid_direction) << ArgRange;
-      Direction = ParamCommandComment::In; // Sane fall back.
+      Direction = ParamCommandPassDirection::In; // Sane fall back.
     }
   }
-  Command->setDirection((ParamCommandComment::PassDirection)Direction,
+  Command->setDirection(Direction,
                         /*Explicit=*/true);
 }
 
@@ -263,7 +263,8 @@ void Sema::actOnParamCommandParamNameArg(ParamCommandComment *Command,
 
   if (!Command->isDirectionExplicit()) {
     // User didn't provide a direction argument.
-    Command->setDirection(ParamCommandComment::In, /* Explicit = */ false);
+    Command->setDirection(ParamCommandPassDirection::In,
+                          /* Explicit = */ false);
   }
   auto *A = new (Allocator)
       Comment::Argument{SourceRange(ArgLocBegin, ArgLocEnd), Arg};
