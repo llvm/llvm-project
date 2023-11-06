@@ -5318,6 +5318,7 @@ cc_library(
         ":GPUDialect",
         ":GPUPassIncGen",
         ":Pass",
+        ":SPIRVDialect",
         ":Support",
         "//llvm:Support",
     ],
@@ -6529,12 +6530,12 @@ cc_library(
 cc_library(
     name = "SPIRVTarget",
     srcs = ["lib/Target/SPIRV/Target.cpp"],
-    hdrs = glob(["include/mlir/Target/SPIRV/*.h"]),
+    hdrs = ["include/mlir/Target/SPIRV/Target.h"],
     includes = ["include"],
     deps = [
         ":GPUDialect",
         ":SPIRVDialect",
-        ":Support",
+        ":SPIRVSerialization",
     ],
 )
 
