@@ -2556,17 +2556,15 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
   if (!Builder.GetInsertBlock()->getParent()->hasFnAttribute(
           Attribute::NoImplicitFloat) &&
       DestTy->isFloatingPointTy() && DestTy->isIEEE()) {
-    Value *L, *R;
     Value *Cast;
     if (match(Src, m_And(m_BitCast(m_Value(Cast)), m_MaxSignedValue()))) {
-        Type *EltTy = Cast->getType()->getScalarType();
-        if (EltTy->isFloatingPointTy() && EltTy->isIEEE() &&
-            EltTy->getPrimitiveSizeInBits() ==
-                Src->getType()->getScalarType()->getPrimitiveSizeInBits()) {
-          return CallInst::Create(Intrinsic::getDeclaration(
-                                      CI.getModule(), Intrinsic::fabs, DestTy),
-                                  {Cast});
-        }
+      Type *EltTy = Cast->getType()->getScalarType();
+      if (EltTy->isFloatingPointTy() && EltTy->isIEEE() &&
+          EltTy->getPrimitiveSizeInBits() ==
+              Src->getType()->getScalarType()->getPrimitiveSizeInBits()) {
+        return CallInst::Create(
+            Intrinsic::getDeclaration(CI.getModule(), Intrinsic::fabs, DestTy),
+            {Cast});
       }
     }
   }
