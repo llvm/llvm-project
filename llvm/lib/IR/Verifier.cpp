@@ -1289,8 +1289,7 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
   }
 
   if (N.getTag() == dwarf::DW_TAG_array_type) {
-    CheckDI(N.getRawBaseType(),
-            "array types must have a base type", &N);
+    CheckDI(N.getRawBaseType(), "array types must have a base type", &N);
   }
 }
 
