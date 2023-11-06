@@ -3,6 +3,15 @@
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,HLFIR
 
+! CHECK-LABEL: acc.private.recipe @privatization_ref_10xf32 : !fir.ref<!fir.array<10xf32>> init {
+! HLFIR:   ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>):
+! HLFIR:   %[[C10:.*]] = arith.constant 10 : index
+! HLFIR:   %[[SHAPE:.*]] = fir.shape %[[C10]] : (index) -> !fir.shape<1>
+! HLFIR:   %[[ALLOCA:.*]] = fir.alloca !fir.array<10xf32>
+! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.private.init"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<10xf32>>
+! CHECK: }
+
 ! CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_UxUx2xi32 : !fir.ref<!fir.array<?x?x2xi32>> init {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<?x?x2xi32>>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index):
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %[[ARG1]], %[[ARG2]], %[[ARG3]] : (index, index, index) -> !fir.shape<3>
@@ -363,3 +372,17 @@ subroutine acc_firstprivate_dynamic_extent(a, n)
 end subroutine
 
 ! CHECK: acc.parallel firstprivate(@firstprivatization_ref_UxUx2xi32 -> %{{.*}} : !fir.ref<!fir.array<?x?x2xi32>>)
+
+module acc_declare_equivalent
+  integer, parameter :: n = 10
+  real :: v1(n)
+  real :: v2(n)
+  equivalence(v1(1), v2(1))
+contains
+  subroutine sub1()
+    !$acc parallel private(v2)
+    !$acc end parallel
+  end subroutine
+end module
+
+! CHECK: acc.parallel private(@privatization_ref_10xf32 -> %{{.*}} : !fir.ref<!fir.array<10xf32>>)
