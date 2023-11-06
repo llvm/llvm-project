@@ -344,8 +344,8 @@ TEST(MatrixTest, gramSchmidt) {
 
   gramSchmidt = makeFracMatrix(
       3, 3,
-      {{Fraction(20, 1),       Fraction(17, 1),      Fraction(10, 1)},
-       {Fraction(460, 789),    Fraction(1180, 789),  Fraction(-2926, 789)},
+      {{Fraction(20, 1), Fraction(17, 1), Fraction(10, 1)},
+       {Fraction(460, 789), Fraction(1180, 789), Fraction(-2926, 789)},
        {Fraction(-2925, 3221), Fraction(3000, 3221), Fraction(750, 3221)}});
 
   gs = mat.gramSchmidt();
@@ -357,10 +357,10 @@ TEST(MatrixTest, gramSchmidt) {
 
   mat = makeFracMatrix(
       4, 4,
-      {{Fraction(1, 26),  Fraction(13, 12), Fraction(34, 13), Fraction(7, 10)},
-       {Fraction(40, 23), Fraction(34, 1),  Fraction(11, 19), Fraction(15, 1)},
-       {Fraction(21, 22), Fraction(10, 9),  Fraction(4, 11),  Fraction(14, 11)},
-       {Fraction(35, 22), Fraction(1, 15),  Fraction(5, 8),   Fraction(30, 1)}});
+      {{Fraction(1, 26), Fraction(13, 12), Fraction(34, 13), Fraction(7, 10)},
+       {Fraction(40, 23), Fraction(34, 1), Fraction(11, 19), Fraction(15, 1)},
+       {Fraction(21, 22), Fraction(10, 9), Fraction(4, 11), Fraction(14, 11)},
+       {Fraction(35, 22), Fraction(1, 15), Fraction(5, 8), Fraction(30, 1)}});
 
   gs = mat.gramSchmidt();
 
