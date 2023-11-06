@@ -224,7 +224,7 @@ float fun_default FUN(1)
 #endif
                                         float y();
 // CHECK-DDEFAULT: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
-// CHECK-DEBSTRICT: Function Attrs: noinline nounwind optnone strictfp{{$$}}
+// CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone strictfp{{$$}}
 // CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
 // CHECK-NOHONOR: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
 class ON {
@@ -246,10 +246,10 @@ class ON {
 };
 ON on;
 #pragma float_control(except, off)
-// CHECK-DDEFAULT: Function Attrs: noinline nounwind optnone{{$$}}
-// CHECK-DEBSTRICT: Function Attrs: noinline nounwind optnone{{$$}}
-// CHECK-FAST: Function Attrs: noinline nounwind optnone{{$$}}
-// CHECK-NOHONOR: Function Attrs: noinline nounwind optnone{{$$}}
+// CHECK-DDEFAULT: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+// CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+// CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+// CHECK-NOHONOR: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
 class OFF {
   float w = 2 + y() * 7;
 // CHECK-LABEL: define {{.*}} void @_ZN3OFFC2Ev{{.*}}
