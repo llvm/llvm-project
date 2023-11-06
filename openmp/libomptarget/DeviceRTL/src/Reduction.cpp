@@ -220,17 +220,20 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     } else
       lgredFct(GlobalBuffer, ModBockId, reduce_data);
 
+    // Propagate the memory writes above to the world.
+    fence::kernel(atomic::release);
+
     // Increment team counter.
     // This counter is incremented by all teams in the current
-    // BUFFER_SIZE chunk.
+    // num_of_records chunk.
     ChunkTeamCount = atomic::inc(&Cnt, num_of_records - 1u, atomic::seq_cst,
                                  atomic::MemScopeTy::device);
   }
-  // Synchronize
+
+  // Synchronize in SPMD mode as in generic mode all but 1 threads are in the
+  // state machine.
   if (mapping::isSPMDMode())
     synchronize::threadsAligned(atomic::acq_rel);
-  else
-    fence::kernel(atomic::acq_rel);
 
   // reduce_data is global or shared so before being reduced within the
   // warp we need to bring it in local memory:
@@ -257,6 +260,9 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   // Check if this is the very last team.
   unsigned NumRecs = kmpcMin(NumTeams, uint32_t(num_of_records));
   if (ChunkTeamCount == NumTeams - Bound - 1) {
+    // Ensure we see the global memory writes by other teams
+    fence::kernel(atomic::aquire);
+
     //
     // Last team processing.
     //
