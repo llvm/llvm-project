@@ -1587,30 +1587,30 @@ void TextNodeDumper::VisitDependentSizedExtVectorType(
 
 void TextNodeDumper::VisitVectorType(const VectorType *T) {
   switch (T->getVectorKind()) {
-  case VectorType::GenericVector:
+  case VectorKind::Generic:
     break;
-  case VectorType::AltiVecVector:
+  case VectorKind::AltiVecVector:
     OS << " altivec";
     break;
-  case VectorType::AltiVecPixel:
+  case VectorKind::AltiVecPixel:
     OS << " altivec pixel";
     break;
-  case VectorType::AltiVecBool:
+  case VectorKind::AltiVecBool:
     OS << " altivec bool";
     break;
-  case VectorType::NeonVector:
+  case VectorKind::Neon:
     OS << " neon";
     break;
-  case VectorType::NeonPolyVector:
+  case VectorKind::NeonPoly:
     OS << " neon poly";
     break;
-  case VectorType::SveFixedLengthDataVector:
+  case VectorKind::SveFixedLengthData:
     OS << " fixed-length sve data vector";
     break;
-  case VectorType::SveFixedLengthPredicateVector:
+  case VectorKind::SveFixedLengthPredicate:
     OS << " fixed-length sve predicate vector";
     break;
-  case VectorType::RVVFixedLengthDataVector:
+  case VectorKind::RVVFixedLengthData:
     OS << " fixed-length rvv data vector";
     break;
   }
@@ -2078,13 +2078,13 @@ void TextNodeDumper::VisitOMPDeclareReductionDecl(
     OS << " initializer";
     dumpPointer(Initializer);
     switch (D->getInitializerKind()) {
-    case OMPDeclareReductionDecl::DirectInit:
+    case OMPDeclareReductionInitKind::Direct:
       OS << " omp_priv = ";
       break;
-    case OMPDeclareReductionDecl::CopyInit:
+    case OMPDeclareReductionInitKind::Copy:
       OS << " omp_priv ()";
       break;
-    case OMPDeclareReductionDecl::CallInit:
+    case OMPDeclareReductionInitKind::Call:
       break;
     }
   }
@@ -2413,10 +2413,10 @@ void TextNodeDumper::VisitConstructorUsingShadowDecl(
 
 void TextNodeDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *D) {
   switch (D->getLanguage()) {
-  case LinkageSpecDecl::lang_c:
+  case LinkageSpecLanguageIDs::C:
     OS << " C";
     break;
-  case LinkageSpecDecl::lang_cxx:
+  case LinkageSpecLanguageIDs::CXX:
     OS << " C++";
     break;
   }

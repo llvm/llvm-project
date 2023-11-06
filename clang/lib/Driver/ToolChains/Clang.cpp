@@ -385,6 +385,9 @@ static bool addExceptionArgs(const ArgList &Args, types::ID InputType,
   // So we do not set EH to false.
   Args.AddLastArg(CmdArgs, options::OPT_fignore_exceptions);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_fassume_nothrow_exception_dtor,
+                    options::OPT_fno_assume_nothrow_exception_dtor);
+
   if (EH)
     CmdArgs.push_back("-fexceptions");
   return EH;
@@ -5723,16 +5726,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
     StringRef CM = A->getValue();
     bool Ok = false;
-    if (Triple.isOSAIX() && CM == "medium") {
+    if (Triple.isOSAIX() && CM == "medium")
       CM = "large";
-      Ok = true;
-    }
     if (Triple.isAArch64(64)) {
       Ok = CM == "tiny" || CM == "small" || CM == "large";
       if (CM == "large" && RelocationModel != llvm::Reloc::Static)
         D.Diag(diag::err_drv_argument_only_allowed_with)
             << A->getAsString(Args) << "-fno-pic";
-    } else if (Triple.isPPC64()) {
+    } else if (Triple.isPPC64() || Triple.isOSAIX()) {
       Ok = CM == "small" || CM == "medium" || CM == "large";
     } else if (Triple.isRISCV()) {
       if (CM == "medlow")

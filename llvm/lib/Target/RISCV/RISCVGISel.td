@@ -21,8 +21,6 @@ def simm12Plus1 : ImmLeaf<XLenVT, [{
 def simm12Plus1i32 : ImmLeaf<i32, [{
     return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
 
-def simm12i32 : ImmLeaf<i32, [{return isInt<12>(Imm);}]>;
-
 def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
 
 // FIXME: This doesn't check that the G_CONSTANT we're deriving the immediate
@@ -49,11 +47,6 @@ def GIAddrRegImm :
   GIComplexOperandMatcher<s32, "selectAddrRegImm">,
   GIComplexPatternEquiv<AddrRegImm>;
 
-// Convert from i32 immediate to i64 target immediate to make SelectionDAG type
-// checking happy so we can use ADDIW which expects an XLen immediate.
-def as_i64imm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
-}]>;
 def gi_as_i64imm : GICustomOperandRenderer<"renderImm">,
   GISDNodeXFormEquiv<as_i64imm>;
 
@@ -88,23 +81,8 @@ def : Pat<(XLenVT (sub GPR:$rs1, simm12Plus1:$imm)),
           (ADDI GPR:$rs1, (NegImm simm12Plus1:$imm))>;
 
 let Predicates = [IsRV64] in {
-def : Pat<(i32 (add GPR:$rs1, GPR:$rs2)), (ADDW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (sub GPR:$rs1, GPR:$rs2)), (SUBW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (and GPR:$rs1, GPR:$rs2)), (AND GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (or GPR:$rs1, GPR:$rs2)), (OR GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
-
-def : Pat<(i32 (add GPR:$rs1, simm12i32:$imm)),
-          (ADDIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
 def : Pat<(i32 (sub GPR:$rs1, simm12Plus1i32:$imm)),
           (ADDIW GPR:$rs1, (i64 (NegImm $imm)))>;
-
-def : Pat<(i32 (and GPR:$rs1, simm12i32:$imm)),
-          (ANDI GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (or GPR:$rs1, simm12i32:$imm)),
-          (ORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (xor GPR:$rs1, simm12i32:$imm)),
-          (XORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
 
 def : Pat<(i32 (shl GPR:$rs1, (i32 GPR:$rs2))), (SLLW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (sra GPR:$rs1, (i32 GPR:$rs2))), (SRAW GPR:$rs1, GPR:$rs2)>;
@@ -116,19 +94,6 @@ def : Pat<(i32 (sra GPR:$rs1, uimm5i32:$imm)),
           (SRAIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
 def : Pat<(i32 (srl GPR:$rs1, uimm5i32:$imm)),
           (SRLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-
-def : Pat<(i64 (sext i32:$rs)), (ADDIW GPR:$rs, 0)>;
-}
-
-let Predicates = [HasStdExtMOrZmmul, IsRV64] in {
-def : Pat<(i32 (mul GPR:$rs1, GPR:$rs2)), (MULW GPR:$rs1, GPR:$rs2)>;
-}
-
-let Predicates = [HasStdExtM, IsRV64] in {
-def : Pat<(i32 (sdiv GPR:$rs1, GPR:$rs2)), (DIVW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (srem GPR:$rs1, GPR:$rs2)), (REMW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (udiv GPR:$rs1, GPR:$rs2)), (DIVUW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (urem GPR:$rs1, GPR:$rs2)), (REMUW GPR:$rs1, GPR:$rs2)>;
 }
 
 let Predicates = [HasStdExtZba, IsRV64] in {
@@ -136,12 +101,7 @@ let Predicates = [HasStdExtZba, IsRV64] in {
 // in SDISel for RV64, which is not the case in GISel.
 def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
           (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
-
-def : Pat<(i64 (zext i32:$rs)), (ADD_UW GPR:$rs, (XLenVT X0))>;
 } // Predicates = [HasStdExtZba, IsRV64]
-
-let Predicates = [IsRV64, NotHasStdExtZba] in
-def: Pat<(i64 (zext i32:$rs)), (SRLI (SLLI GPR:$rs, 32), 32)>;
 
 // Ptr type used in patterns with GlobalISelEmitter
 def PtrVT : PtrValueTypeByHwMode<XLenVT, 0>;
@@ -196,8 +156,6 @@ def : Pat<(XLenVT (setle (Ty GPR:$rs1), (Ty GPR:$rs2))),
           (XORI (SLT GPR:$rs2, GPR:$rs1), 1)>;
 }
 
-// Define pattern expansions for load/extload and store/truncstore operations
-// for ptr return type
 let Predicates = [IsRV32] in {
 def : LdPat<load, LW, PtrVT>;
 def : StPat<store, SW, GPR, PtrVT>;
@@ -206,18 +164,4 @@ def : StPat<store, SW, GPR, PtrVT>;
 let Predicates = [IsRV64] in {
 def : LdPat<load, LD, PtrVT>;
 def : StPat<store, SD, GPR, PtrVT>;
-
-// Define pattern expansions for rv64 load/extloads and store/truncstore
-// operations for i32 return type
-def : LdPat<sextloadi8, LB, i32>;
-def : LdPat<extloadi8, LBU, i32>;
-def : LdPat<zextloadi8, LBU, i32>;
-def : LdPat<sextloadi16, LH, i32>;
-def : LdPat<extloadi16, LH, i32>;
-def : LdPat<zextloadi16, LHU, i32>;
-def : LdPat<load, LW, i32>;
-
-def : StPat<truncstorei8, SB, GPR, i32>;
-def : StPat<truncstorei16, SH, GPR, i32>;
-def : StPat<store, SW, GPR, i32>;
-} // Predicates = [IsRV64]
+}

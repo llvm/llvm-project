@@ -286,6 +286,7 @@ struct OMPInformationCache : public InformationCache {
       : InformationCache(M, AG, Allocator, CGSCC), OMPBuilder(M),
         OpenMPPostLink(OpenMPPostLink) {
 
+    OMPBuilder.Config.IsTargetDevice = isOpenMPDevice(OMPBuilder.M);
     OMPBuilder.initialize();
     initializeRuntimeFunctions(M);
     initializeInternalControlVars();
@@ -978,6 +979,9 @@ struct OpenMPOpt {
       }
     }
 
+    if (OMPInfoCache.OpenMPPostLink)
+      Changed |= removeRuntimeSymbols();
+
     return Changed;
   }
 
@@ -1505,6 +1509,37 @@ private:
     }
 
     return Changed;
+  }
+
+  /// Tries to remove known runtime symbols that are optional from the module.
+  bool removeRuntimeSymbols() {
+    // The RPC client symbol is defined in `libc` and indicates that something
+    // required an RPC server. If its users were all optimized out then we can
+    // safely remove it.
+    // TODO: This should be somewhere more common in the future.
+    if (GlobalVariable *GV = M.getNamedGlobal("__llvm_libc_rpc_client")) {
+      if (!GV->getType()->isPointerTy())
+        return false;
+
+      Constant *C = GV->getInitializer();
+      if (!C)
+        return false;
+
+      // Check to see if the only user of the RPC client is the external handle.
+      GlobalVariable *Client = dyn_cast<GlobalVariable>(C->stripPointerCasts());
+      if (!Client || Client->getNumUses() > 1 ||
+          Client->user_back() != GV->getInitializer())
+        return false;
+
+      Client->replaceAllUsesWith(PoisonValue::get(Client->getType()));
+      Client->eraseFromParent();
+
+      GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
+      GV->eraseFromParent();
+
+      return true;
+    }
+    return false;
   }
 
   /// Tries to hide the latency of runtime calls that involve host to
@@ -4533,6 +4568,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
       BasicBlock *PRNextBB =
           BasicBlock::Create(Ctx, "worker_state_machine.parallel_region.check",
                              Kernel, StateMachineEndParallelBB);
+      A.registerManifestAddedBasicBlock(*PRExecuteBB);
+      A.registerManifestAddedBasicBlock(*PRNextBB);
 
       // Check if we need to compare the pointer at all or if we can just
       // call the parallel region function.
@@ -4904,7 +4941,6 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       case OMPRTL___kmpc_barrier:
       case OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2:
       case OMPRTL___kmpc_nvptx_teams_reduce_nowait_v2:
-      case OMPRTL___kmpc_nvptx_end_reduce_nowait:
       case OMPRTL___kmpc_error:
       case OMPRTL___kmpc_flush:
       case OMPRTL___kmpc_get_hardware_thread_id_in_block:

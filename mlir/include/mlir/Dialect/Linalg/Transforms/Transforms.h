@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
@@ -28,6 +29,7 @@
 
 namespace mlir {
 namespace bufferization {
+class AllocTensorOp;
 class OneShotAnalysisState;
 } // namespace bufferization
 
@@ -50,8 +52,12 @@ struct BufferizeToAllocationOptions {
   enum class AllocOp { MemrefAlloc = 0, MemrefAlloca = 1 };
   AllocOp allocOp = AllocOp::MemrefAlloc;
 
-  enum class MemcpyOp { MemrefTensorStore = 0, MemrefCopy = 1, LinalgCopy = 2 };
-  MemcpyOp memcpyOp = MemcpyOp::MemrefTensorStore;
+  enum class MemcpyOp {
+    MaterializeInDestination = 0,
+    MemrefCopy = 1,
+    LinalgCopy = 2
+  };
+  MemcpyOp memcpyOp = MemcpyOp::MaterializeInDestination;
 
   /// If set to "true", only the destination tensor operands are bufferized to
   /// a new allocation (and wrapped in "bufferization.to_tensor"), but not the
@@ -66,7 +72,8 @@ struct BufferizeToAllocationOptions {
 };
 
 /// Materialize a buffer allocation for the given tensor.pad op and lower the
-/// op to linalg.fill/linalg.generic + memref.tensor_store. E.g.:
+/// op to linalg.fill/linalg.generic + bufferization.materialize_in_destination.
+/// E.g.:
 ///
 /// %0 = tensor.pad low[%l] high[%h] %t ...
 ///
@@ -75,7 +82,7 @@ struct BufferizeToAllocationOptions {
 /// %alloc = memref.alloc
 /// linalg.fill ... outs(%alloc)
 /// %subview = memref.subview %alloc [%l] [...] [1]
-/// memref.tensor_store %t, %subview
+/// bufferization.materialize_in_destination %t in %subview
 /// %0 = bufferization.to_tensor %alloc restrict writable
 ///
 /// In addition to rewriting the IR as shown above, this function returns the
@@ -96,7 +103,7 @@ Value bufferizeToAllocation(RewriterBase &rewriter,
 /// is lowered to:
 ///
 /// %alloc = memref.alloc
-/// memref.tensor_store %t, %subview
+/// bufferization.materialize_in_destination %t in %subview
 /// vector.mask {
 ///   vector.transfer_write %arg0, %alloc : vector<16xf32>, memref<?xf32>
 /// } : vector<16xi1>
@@ -108,6 +115,18 @@ Value bufferizeToAllocation(RewriterBase &rewriter,
 Value bufferizeToAllocation(RewriterBase &rewriter,
                             const BufferizeToAllocationOptions &options,
                             vector::MaskOp maskOp, Attribute memorySpace = {},
+                            Operation *insertionPoint = nullptr);
+
+/// Materialize a buffer allocation for the given bufferization.alloc_tensor op
+/// and lower the op to memref.alloc + memref.tensor_store.
+///
+/// In addition to rewriting the IR, this function returns the newly allocated
+/// buffer. The `insertionPoint` parameter can be used to specify a custom
+/// insertion point for the buffer allocation.
+Value bufferizeToAllocation(RewriterBase &rewriter,
+                            const BufferizeToAllocationOptions &options,
+                            bufferization::AllocTensorOp allocTensorOp,
+                            Attribute memorySpace = {},
                             Operation *insertionPoint = nullptr);
 
 /// Bufferize the given op with tensor semantics and materialize the result in

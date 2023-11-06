@@ -40,11 +40,11 @@ target triple = "amdgcn-amd-amdhsa"
 @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @__omp_offloading_20_11e3950_main_l12_exec_mode to ptr)], section "llvm.metadata"
 
 ; Function Attrs: alwaysinline convergent norecurse nounwind
-define weak_odr amdgpu_kernel void @__omp_offloading_20_11e3950_main_l12(i64 noundef %nxyz, i64 noundef %ng, ptr noundef nonnull align 8 dereferenceable(8) %aa) local_unnamed_addr #0 {
+define weak_odr amdgpu_kernel void @__omp_offloading_20_11e3950_main_l12(ptr %dyn, i64 noundef %nxyz, i64 noundef %ng, ptr noundef nonnull align 8 dereferenceable(8) %aa) local_unnamed_addr #0 {
 entry:
   %ng1 = alloca i32, align 4
   %captured_vars_addrs = alloca [2 x ptr], align 8, addrspace(5)
-  %0 = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @__omp_offloading_20_11e3950_main_l12_kernel_environment to ptr))
+  %0 = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @__omp_offloading_20_11e3950_main_l12_kernel_environment to ptr), ptr %dyn)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
 
@@ -108,7 +108,7 @@ entry:
 
 ; Function Attrs: convergent nounwind
 ; define internal i32 @__kmpc_target_init(ptr nocapture noundef readnone %Ident, i8 noundef signext %Mode, i1 noundef zeroext %UseGenericStateMachine) local_unnamed_addr #9 {
-define internal i32 @__kmpc_target_init(ptr nofree noundef nonnull align 8 dereferenceable(24) %KernelEnvironment) local_unnamed_addr #9 {
+define internal i32 @__kmpc_target_init(ptr nofree noundef nonnull align 8 dereferenceable(24) %KernelEnvironment, ptr %dyn) local_unnamed_addr #9 {
 entry:
   %0 = and i32 undef, undef
   %ExecMode = getelementptr inbounds %struct.ConfigurationEnvironmentTy, ptr %KernelEnvironment, i64 0, i32 2

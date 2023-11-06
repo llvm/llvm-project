@@ -48,7 +48,6 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Interpreter/Property.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -1612,6 +1611,22 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
   return false;
 }
 
+void ProcessGDBRemote::ParseExpeditedRegisters(
+    ExpeditedRegisterMap &expedited_register_map, ThreadSP thread_sp) {
+  ThreadGDBRemote *gdb_thread = static_cast<ThreadGDBRemote *>(thread_sp.get());
+  RegisterContextSP gdb_reg_ctx_sp(gdb_thread->GetRegisterContext());
+
+  for (const auto &pair : expedited_register_map) {
+    StringExtractor reg_value_extractor(pair.second);
+    WritableDataBufferSP buffer_sp(
+        new DataBufferHeap(reg_value_extractor.GetStringRef().size() / 2, 0));
+    reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
+    uint32_t lldb_regnum = gdb_reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
+        eRegisterKindProcessPlugin, pair.first);
+    gdb_thread->PrivateSetRegisterValue(lldb_regnum, buffer_sp->GetData());
+  }
+}
+
 ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     lldb::tid_t tid, ExpeditedRegisterMap &expedited_register_map,
     uint8_t signo, const std::string &thread_name, const std::string &reason,
@@ -1646,32 +1661,22 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
   reg_ctx_sp->InvalidateIfNeeded(true);
 
-  // AArch64 SVE/SME specific code below updates SVE and ZA register sizes and
-  // offsets if value of VG or SVG registers has changed since last stop.
-  const ArchSpec &arch = GetTarget().GetArchitecture();
-  if (arch.IsValid() && arch.GetTriple().isAArch64()) {
-    GDBRemoteRegisterContext *gdb_remote_reg_ctx =
-        static_cast<GDBRemoteRegisterContext *>(reg_ctx_sp.get());
-
-    if (gdb_remote_reg_ctx) {
-      gdb_remote_reg_ctx->AArch64Reconfigure();
-      gdb_remote_reg_ctx->InvalidateAllRegisters();
-    }
-  }
-
   auto iter = std::find(m_thread_ids.begin(), m_thread_ids.end(), tid);
   if (iter != m_thread_ids.end())
     SetThreadPc(thread_sp, iter - m_thread_ids.begin());
 
-  for (const auto &pair : expedited_register_map) {
-    StringExtractor reg_value_extractor(pair.second);
-    WritableDataBufferSP buffer_sp(
-        new DataBufferHeap(reg_value_extractor.GetStringRef().size() / 2, 0));
-    reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
-    uint32_t lldb_regnum = reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
-        eRegisterKindProcessPlugin, pair.first);
-    gdb_thread->PrivateSetRegisterValue(lldb_regnum, buffer_sp->GetData());
+  ParseExpeditedRegisters(expedited_register_map, thread_sp);
+
+  if (reg_ctx_sp->ReconfigureRegisterInfo()) {
+    // Now we have changed the offsets of all the registers, so the values
+    // will be corrupted.
+    reg_ctx_sp->InvalidateAllRegisters();
+    // Expedited registers values will never contain registers that would be
+    // resized by a reconfigure. So we are safe to continue using these
+    // values.
+    ParseExpeditedRegisters(expedited_register_map, thread_sp);
   }
+
   thread_sp->SetName(thread_name.empty() ? nullptr : thread_name.c_str());
 
   gdb_thread->SetThreadDispatchQAddr(thread_dispatch_qaddr);

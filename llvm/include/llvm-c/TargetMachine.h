@@ -67,6 +67,12 @@ typedef enum {
     LLVMObjectFile
 } LLVMCodeGenFileType;
 
+typedef enum {
+  LLVMGlobalISelAbortEnable,
+  LLVMGlobalISelAbortDisable,
+  LLVMGlobalISelAbortDisableWithDiag,
+} LLVMGlobalISelAbortMode;
+
 /** Returns the first llvm::Target in the registered targets list. */
 LLVMTargetRef LLVMGetFirstTarget(void);
 /** Returns the next llvm::Target given a previous one (or null if there's none) */
@@ -181,6 +187,21 @@ LLVMTargetDataRef LLVMCreateTargetDataLayout(LLVMTargetMachineRef T);
 /** Set the target machine's ASM verbosity. */
 void LLVMSetTargetMachineAsmVerbosity(LLVMTargetMachineRef T,
                                       LLVMBool VerboseAsm);
+
+/** Enable fast-path instruction selection. */
+void LLVMSetTargetMachineFastISel(LLVMTargetMachineRef T, LLVMBool Enable);
+
+/** Enable global instruction selection. */
+void LLVMSetTargetMachineGlobalISel(LLVMTargetMachineRef T, LLVMBool Enable);
+
+/** Set abort behaviour when global instruction selection fails to lower/select
+ * an instruction. */
+void LLVMSetTargetMachineGlobalISelAbort(LLVMTargetMachineRef T,
+                                         LLVMGlobalISelAbortMode Mode);
+
+/** Enable the MachineOutliner pass. */
+void LLVMSetTargetMachineMachineOutliner(LLVMTargetMachineRef T,
+                                         LLVMBool Enable);
 
 /** Emits an asm or object file for the given module to the filename. This
   wraps several c++ only classes (among them a file stream). Returns any

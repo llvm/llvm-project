@@ -26,7 +26,6 @@
 #include "llvm/Support/BalancedPartitioning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
@@ -348,7 +347,8 @@ enum class instrprof_error {
   uncompress_failed,
   empty_raw_profile,
   zlib_unavailable,
-  raw_profile_version_mismatch
+  raw_profile_version_mismatch,
+  counter_value_too_large,
 };
 
 /// An ordered list of functions identified by their NameRef found in

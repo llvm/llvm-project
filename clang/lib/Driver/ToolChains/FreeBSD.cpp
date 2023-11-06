@@ -264,7 +264,15 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs[0],
+    // Find the first filename InputInfo object.
+    auto Input = llvm::find_if(
+        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
+    if (Input == Inputs.end())
+      // For a very rare case, all of the inputs to the linker are
+      // InputArg. If that happens, just use the first InputInfo.
+      Input = Inputs.begin();
+
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
                   D.getLTOMode() == LTOK_Thin);
   }
 
@@ -290,6 +298,9 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       else
         CmdArgs.push_back("-lm");
     }
+
+    // Silence warnings when linking C code with a C++ '-stdlib' argument.
+    Args.ClaimAllArgs(options::OPT_stdlib_EQ);
 
     // Additional linker set-up and flags for Fortran. This is required in order
     // to generate executables. As Fortran runtime depends on the C runtime,
@@ -363,9 +374,6 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   ToolChain.addProfileRTLibs(Args, CmdArgs);
-
-  // Silence warnings when linking C code with a C++ '-stdlib' argument.
-  Args.ClaimAllArgs(options::OPT_stdlib_EQ);
 
   const char *Exec = Args.MakeArgString(getToolChain().GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this,

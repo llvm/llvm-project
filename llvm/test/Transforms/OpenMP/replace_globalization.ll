@@ -25,9 +25,9 @@ target triple = "nvptx64"
 @baz_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 2, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 
 
-define dso_local void @foo() "kernel" {
+define dso_local void @foo(ptr %dyn) "kernel" {
 entry:
-  %c = call i32 @__kmpc_target_init(ptr @foo_kernel_environment)
+  %c = call i32 @__kmpc_target_init(ptr @foo_kernel_environment, ptr %dyn)
   %x = call align 4 ptr @__kmpc_alloc_shared(i64 4)
   call void @unknown_no_openmp()
   call void @use(ptr %x)
@@ -36,8 +36,8 @@ entry:
   ret void
 }
 
-define void @bar() "kernel" {
-  %c = call i32 @__kmpc_target_init(ptr @bar_kernel_environment)
+define void @bar(ptr %dyn) "kernel" {
+  %c = call i32 @__kmpc_target_init(ptr @bar_kernel_environment, ptr %dyn)
   call void @unknown_no_openmp()
   %cmp = icmp eq i32 %c, -1
   br i1 %cmp, label %master1, label %exit
@@ -60,8 +60,8 @@ exit:
   ret void
 }
 
-define void @baz_spmd() "kernel" {
-  %c = call i32 @__kmpc_target_init(ptr @baz_kernel_environment)
+define void @baz_spmd(ptr %dyn) "kernel" {
+  %c = call i32 @__kmpc_target_init(ptr @baz_kernel_environment, ptr %dyn)
   call void @unknown_no_openmp()
   %c0 = icmp eq i32 %c, -1
   br i1 %c0, label %master3, label %exit
@@ -99,7 +99,7 @@ declare i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 declare i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
-define weak i32 @__kmpc_target_init(ptr) {
+define weak i32 @__kmpc_target_init(ptr, ptr) {
   ret i32 0
 }
 
@@ -138,9 +138,9 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: @[[Y_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] poison, align 4
 ;.
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr [[DYN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(ptr @foo_kernel_environment)
+; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(ptr @foo_kernel_environment, ptr [[DYN]])
 ; CHECK-NEXT:    [[X:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    call void @use.internalized(ptr nofree [[X]]) #[[ATTR7:[0-9]+]]
@@ -150,8 +150,8 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(ptr @bar_kernel_environment)
+; CHECK-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(ptr @bar_kernel_environment, ptr [[DYN]])
 ; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR5]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[MASTER1:%.*]], label [[EXIT:%.*]]
@@ -171,8 +171,8 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@baz_spmd
-; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(ptr @baz_kernel_environment)
+; CHECK-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(ptr @baz_kernel_environment, ptr [[DYN]])
 ; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR5]]
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[C]], -1
 ; CHECK-NEXT:    br i1 [[C0]], label [[MASTER3:%.*]], label [[EXIT:%.*]]
@@ -210,7 +210,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_target_init
-; CHECK-SAME: (ptr [[TMP0:%.*]]) {
+; CHECK-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) {
 ; CHECK-NEXT:    ret i32 0
 ;
 ;.

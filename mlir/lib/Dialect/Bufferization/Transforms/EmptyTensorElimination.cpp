@@ -15,7 +15,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dominance.h"
-#include "mlir/Interfaces/SubsetInsertionOpInterface.h"
+#include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {

@@ -72,8 +72,8 @@ ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
     // Strip off the last layer of the nested-name-specifier and build a
     // typename type for it.
     assert(NNS->getAsIdentifier() == &Name && "not a constructor name");
-    Type = Context.getDependentNameType(ETK_None, NNS->getPrefix(),
-                                        NNS->getAsIdentifier());
+    Type = Context.getDependentNameType(
+        ElaboratedTypeKeyword::None, NNS->getPrefix(), NNS->getAsIdentifier());
     break;
 
   case NestedNameSpecifier::Global:
@@ -101,7 +101,8 @@ ParsedType Sema::getConstructorName(IdentifierInfo &II,
   // friend declaration or an inherited constructor declaration), form an
   // unresolved "typename" type.
   if (CurClass->isDependentContext() && !EnteringContext && SS.getScopeRep()) {
-    QualType T = Context.getDependentNameType(ETK_None, SS.getScopeRep(), &II);
+    QualType T = Context.getDependentNameType(ElaboratedTypeKeyword::None,
+                                              SS.getScopeRep(), &II);
     return ParsedType::make(T);
   }
 
@@ -245,8 +246,9 @@ ParsedType Sema::getDestructorName(IdentifierInfo &II, SourceLocation NameLoc,
       if (IsAcceptableResult(Type)) {
         QualType T = Context.getTypeDeclType(Type);
         MarkAnyDeclReferenced(Type->getLocation(), Type, /*OdrUse=*/false);
-        return CreateParsedType(Context.getElaboratedType(ETK_None, nullptr, T),
-                                Context.getTrivialTypeSourceInfo(T, NameLoc));
+        return CreateParsedType(
+            Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr, T),
+            Context.getTrivialTypeSourceInfo(T, NameLoc));
       }
     }
 
@@ -362,9 +364,9 @@ ParsedType Sema::getDestructorName(IdentifierInfo &II, SourceLocation NameLoc,
     // We didn't find our type, but that's OK: it's dependent anyway.
 
     // FIXME: What if we have no nested-name-specifier?
-    QualType T = CheckTypenameType(ETK_None, SourceLocation(),
-                                   SS.getWithLocInContext(Context),
-                                   II, NameLoc);
+    QualType T =
+        CheckTypenameType(ElaboratedTypeKeyword::None, SourceLocation(),
+                          SS.getWithLocInContext(Context), II, NameLoc);
     return ParsedType::make(T);
   }
 
@@ -1097,6 +1099,16 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
       Diag(ThrowLoc, diag::note_throw_underaligned_obj)
           << Ty << (unsigned)TypeAlign.getQuantity()
           << (unsigned)ExnObjAlign.getQuantity();
+    }
+  }
+  if (!isPointer && getLangOpts().AssumeNothrowExceptionDtor) {
+    if (CXXDestructorDecl *Dtor = RD->getDestructor()) {
+      auto Ty = Dtor->getType();
+      if (auto *FT = Ty.getTypePtr()->getAs<FunctionProtoType>()) {
+        if (!isUnresolvedExceptionSpec(FT->getExceptionSpecType()) &&
+            !FT->isNothrow())
+          Diag(ThrowLoc, diag::err_throw_object_throwing_dtor) << RD;
+      }
     }
   }
 
@@ -3033,11 +3045,10 @@ void Sema::DeclareGlobalNewDelete() {
   if (!StdBadAlloc && !getLangOpts().CPlusPlus11) {
     // The "std::bad_alloc" class has not yet been declared, so build it
     // implicitly.
-    StdBadAlloc = CXXRecordDecl::Create(Context, TTK_Class,
-                                        getOrCreateStdNamespace(),
-                                        SourceLocation(), SourceLocation(),
-                                      &PP.getIdentifierTable().get("bad_alloc"),
-                                        nullptr);
+    StdBadAlloc = CXXRecordDecl::Create(
+        Context, TagTypeKind::Class, getOrCreateStdNamespace(),
+        SourceLocation(), SourceLocation(),
+        &PP.getIdentifierTable().get("bad_alloc"), nullptr);
     getStdBadAlloc()->setImplicit(true);
 
     // The implicitly declared "std::bad_alloc" should live in global module
@@ -4094,20 +4105,20 @@ Sema::IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType) {
         // explicit appropriate pointer target type (C++ 4.2p2).
         if (!ToPtrType->getPointeeType().hasQualifiers()) {
           switch (StrLit->getKind()) {
-            case StringLiteral::UTF8:
-            case StringLiteral::UTF16:
-            case StringLiteral::UTF32:
-              // We don't allow UTF literals to be implicitly converted
-              break;
-            case StringLiteral::Ordinary:
-              return (ToPointeeType->getKind() == BuiltinType::Char_U ||
-                      ToPointeeType->getKind() == BuiltinType::Char_S);
-            case StringLiteral::Wide:
-              return Context.typesAreCompatible(Context.getWideCharType(),
-                                                QualType(ToPointeeType, 0));
-            case StringLiteral::Unevaluated:
-              assert(false && "Unevaluated string literal in expression");
-              break;
+          case StringLiteralKind::UTF8:
+          case StringLiteralKind::UTF16:
+          case StringLiteralKind::UTF32:
+            // We don't allow UTF literals to be implicitly converted
+            break;
+          case StringLiteralKind::Ordinary:
+            return (ToPointeeType->getKind() == BuiltinType::Char_U ||
+                    ToPointeeType->getKind() == BuiltinType::Char_S);
+          case StringLiteralKind::Wide:
+            return Context.typesAreCompatible(Context.getWideCharType(),
+                                              QualType(ToPointeeType, 0));
+          case StringLiteralKind::Unevaluated:
+            assert(false && "Unevaluated string literal in expression");
+            break;
           }
         }
       }
@@ -4146,7 +4157,7 @@ static ExprResult BuildCXXCastArgument(Sema &S,
         CastLoc, Ty, FoundDecl, cast<CXXConstructorDecl>(Method),
         ConstructorArgs, HadMultipleCandidates,
         /*ListInit*/ false, /*StdInitListInit*/ false, /*ZeroInit*/ false,
-        CXXConstructExpr::CK_Complete, SourceRange());
+        CXXConstructionKind::Complete, SourceRange());
     if (Result.isInvalid())
       return ExprError();
 
@@ -4309,17 +4320,17 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
         return ExprError();
       return BuildCXXConstructExpr(
           /*FIXME:ConstructLoc*/ SourceLocation(), ToType,
-          SCS.FoundCopyConstructor, SCS.CopyConstructor,
-          ConstructorArgs, /*HadMultipleCandidates*/ false,
+          SCS.FoundCopyConstructor, SCS.CopyConstructor, ConstructorArgs,
+          /*HadMultipleCandidates*/ false,
           /*ListInit*/ false, /*StdInitListInit*/ false, /*ZeroInit*/ false,
-          CXXConstructExpr::CK_Complete, SourceRange());
+          CXXConstructionKind::Complete, SourceRange());
     }
     return BuildCXXConstructExpr(
         /*FIXME:ConstructLoc*/ SourceLocation(), ToType,
-        SCS.FoundCopyConstructor, SCS.CopyConstructor,
-        From, /*HadMultipleCandidates*/ false,
+        SCS.FoundCopyConstructor, SCS.CopyConstructor, From,
+        /*HadMultipleCandidates*/ false,
         /*ListInit*/ false, /*StdInitListInit*/ false, /*ZeroInit*/ false,
-        CXXConstructExpr::CK_Complete, SourceRange());
+        CXXConstructionKind::Complete, SourceRange());
   }
 
   // Resolve overloaded function references.
@@ -6403,7 +6414,7 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
           Context.getExtVectorType(ResultElementTy, CondVT->getNumElements());
     else
       ResultType = Context.getVectorType(
-          ResultElementTy, CondVT->getNumElements(), VectorType::GenericVector);
+          ResultElementTy, CondVT->getNumElements(), VectorKind::Generic);
 
     LHS = ImpCastExprToType(LHS.get(), ResultType, CK_VectorSplat);
     RHS = ImpCastExprToType(RHS.get(), ResultType, CK_VectorSplat);
@@ -8943,9 +8954,10 @@ Sema::ActOnTypeRequirement(SourceLocation TypenameKWLoc, CXXScopeSpec &SS,
          "Exactly one of TypeName and TemplateId must be specified.");
   TypeSourceInfo *TSI = nullptr;
   if (TypeName) {
-    QualType T = CheckTypenameType(ETK_Typename, TypenameKWLoc,
-                                   SS.getWithLocInContext(Context), *TypeName,
-                                   NameLoc, &TSI, /*DeducedTSTContext=*/false);
+    QualType T =
+        CheckTypenameType(ElaboratedTypeKeyword::Typename, TypenameKWLoc,
+                          SS.getWithLocInContext(Context), *TypeName, NameLoc,
+                          &TSI, /*DeducedTSTContext=*/false);
     if (T.isNull())
       return nullptr;
   } else {

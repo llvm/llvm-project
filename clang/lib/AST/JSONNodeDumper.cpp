@@ -677,30 +677,30 @@ void JSONNodeDumper::VisitDependentSizedExtVectorType(
 void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
   JOS.attribute("numElements", VT->getNumElements());
   switch (VT->getVectorKind()) {
-  case VectorType::GenericVector:
+  case VectorKind::Generic:
     break;
-  case VectorType::AltiVecVector:
+  case VectorKind::AltiVecVector:
     JOS.attribute("vectorKind", "altivec");
     break;
-  case VectorType::AltiVecPixel:
+  case VectorKind::AltiVecPixel:
     JOS.attribute("vectorKind", "altivec pixel");
     break;
-  case VectorType::AltiVecBool:
+  case VectorKind::AltiVecBool:
     JOS.attribute("vectorKind", "altivec bool");
     break;
-  case VectorType::NeonVector:
+  case VectorKind::Neon:
     JOS.attribute("vectorKind", "neon");
     break;
-  case VectorType::NeonPolyVector:
+  case VectorKind::NeonPoly:
     JOS.attribute("vectorKind", "neon poly");
     break;
-  case VectorType::SveFixedLengthDataVector:
+  case VectorKind::SveFixedLengthData:
     JOS.attribute("vectorKind", "fixed-length sve data vector");
     break;
-  case VectorType::SveFixedLengthPredicateVector:
+  case VectorKind::SveFixedLengthPredicate:
     JOS.attribute("vectorKind", "fixed-length sve predicate vector");
     break;
-  case VectorType::RVVFixedLengthDataVector:
+  case VectorKind::RVVFixedLengthData:
     JOS.attribute("vectorKind", "fixed-length rvv data vector");
     break;
   }
@@ -1027,8 +1027,12 @@ void JSONNodeDumper::VisitTemplateTemplateParmDecl(
 void JSONNodeDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *LSD) {
   StringRef Lang;
   switch (LSD->getLanguage()) {
-  case LinkageSpecDecl::lang_c: Lang = "C"; break;
-  case LinkageSpecDecl::lang_cxx: Lang = "C++"; break;
+  case LinkageSpecLanguageIDs::C:
+    Lang = "C";
+    break;
+  case LinkageSpecLanguageIDs::CXX:
+    Lang = "C++";
+    break;
   }
   JOS.attribute("language", Lang);
   attributeOnlyIfTrue("hasBraces", LSD->hasBraces());
@@ -1458,16 +1462,16 @@ void JSONNodeDumper::VisitCXXConstructExpr(const CXXConstructExpr *CE) {
   attributeOnlyIfTrue("isImmediateEscalating", CE->isImmediateEscalating());
 
   switch (CE->getConstructionKind()) {
-  case CXXConstructExpr::CK_Complete:
+  case CXXConstructionKind::Complete:
     JOS.attribute("constructionKind", "complete");
     break;
-  case CXXConstructExpr::CK_Delegating:
+  case CXXConstructionKind::Delegating:
     JOS.attribute("constructionKind", "delegating");
     break;
-  case CXXConstructExpr::CK_NonVirtualBase:
+  case CXXConstructionKind::NonVirtualBase:
     JOS.attribute("constructionKind", "non-virtual base");
     break;
-  case CXXConstructExpr::CK_VirtualBase:
+  case CXXConstructionKind::VirtualBase:
     JOS.attribute("constructionKind", "virtual base");
     break;
   }

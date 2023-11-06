@@ -98,13 +98,15 @@ int bar(int n){
 
 #endif
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24
-// CHECK-64-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[E:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[E:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
+// CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[E_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 8
+// CHECK-64-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_kernel_environment)
+// CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-64:       user_code.entry:
@@ -146,7 +148,6 @@ int bar(int n){
 // CHECK-64-NEXT:    [[TMP8:%.*]] = load double, ptr [[E1]], align 8
 // CHECK-64-NEXT:    [[ADD2:%.*]] = fadd double [[TMP7]], [[TMP8]]
 // CHECK-64-NEXT:    store double [[ADD2]], ptr [[TMP0]], align 8
-// CHECK-64-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP3]])
 // CHECK-64-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-64:       .omp.reduction.done:
 // CHECK-64-NEXT:    ret void
@@ -277,16 +278,18 @@ int bar(int n){
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29
-// CHECK-64-SAME: (ptr noundef nonnull align 1 dereferenceable(1) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK-64-NEXT:  entry:
+// CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 8
+// CHECK-64-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK-64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_kernel_environment)
+// CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-64:       user_code.entry:
@@ -349,7 +352,6 @@ int bar(int n){
 // CHECK-64-NEXT:    [[TMP13:%.*]] = load float, ptr [[D2]], align 4
 // CHECK-64-NEXT:    [[MUL8:%.*]] = fmul float [[TMP12]], [[TMP13]]
 // CHECK-64-NEXT:    store float [[MUL8]], ptr [[TMP1]], align 4
-// CHECK-64-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK-64-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-64:       .omp.reduction.done:
 // CHECK-64-NEXT:    ret void
@@ -514,16 +516,18 @@ int bar(int n){
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35
-// CHECK-64-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]]) #[[ATTR0]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]]) #[[ATTR0]] {
 // CHECK-64-NEXT:  entry:
+// CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 8
+// CHECK-64-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK-64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_kernel_environment)
+// CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-64:       user_code.entry:
@@ -603,7 +607,6 @@ int bar(int n){
 // CHECK-64:       cond.end11:
 // CHECK-64-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP15]], [[COND_TRUE9]] ], [ [[TMP16]], [[COND_FALSE10]] ]
 // CHECK-64-NEXT:    store i16 [[COND12]], ptr [[TMP1]], align 2
-// CHECK-64-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP6]])
 // CHECK-64-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-64:       .omp.reduction.done:
 // CHECK-64-NEXT:    ret void
@@ -768,13 +771,15 @@ int bar(int n){
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24
-// CHECK-32-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[E:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[E:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
+// CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[E_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 4
+// CHECK-32-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_kernel_environment)
+// CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32:       user_code.entry:
@@ -816,7 +821,6 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP8:%.*]] = load double, ptr [[E1]], align 8
 // CHECK-32-NEXT:    [[ADD2:%.*]] = fadd double [[TMP7]], [[TMP8]]
 // CHECK-32-NEXT:    store double [[ADD2]], ptr [[TMP0]], align 8
-// CHECK-32-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP3]])
 // CHECK-32-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32:       .omp.reduction.done:
 // CHECK-32-NEXT:    ret void
@@ -947,16 +951,18 @@ int bar(int n){
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29
-// CHECK-32-SAME: (ptr noundef nonnull align 1 dereferenceable(1) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK-32-NEXT:  entry:
+// CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 4
+// CHECK-32-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4
 // CHECK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_kernel_environment)
+// CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32:       user_code.entry:
@@ -1019,7 +1025,6 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load float, ptr [[D2]], align 4
 // CHECK-32-NEXT:    [[MUL8:%.*]] = fmul float [[TMP12]], [[TMP13]]
 // CHECK-32-NEXT:    store float [[MUL8]], ptr [[TMP1]], align 4
-// CHECK-32-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK-32-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32:       .omp.reduction.done:
 // CHECK-32-NEXT:    ret void
@@ -1184,16 +1189,18 @@ int bar(int n){
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35
-// CHECK-32-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]]) #[[ATTR0]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]]) #[[ATTR0]] {
 // CHECK-32-NEXT:  entry:
+// CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 4
+// CHECK-32-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
 // CHECK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_kernel_environment)
+// CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32:       user_code.entry:
@@ -1273,7 +1280,6 @@ int bar(int n){
 // CHECK-32:       cond.end11:
 // CHECK-32-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP15]], [[COND_TRUE9]] ], [ [[TMP16]], [[COND_FALSE10]] ]
 // CHECK-32-NEXT:    store i16 [[COND12]], ptr [[TMP1]], align 2
-// CHECK-32-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP6]])
 // CHECK-32-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32:       .omp.reduction.done:
 // CHECK-32-NEXT:    ret void
@@ -1438,13 +1444,15 @@ int bar(int n){
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24
-// CHECK-32-EX-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[E:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[E:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
+// CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[E_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 4
+// CHECK-32-EX-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 4
 // CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_kernel_environment)
+// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-32-EX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32-EX:       user_code.entry:
@@ -1486,7 +1494,6 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP8:%.*]] = load double, ptr [[E1]], align 8
 // CHECK-32-EX-NEXT:    [[ADD2:%.*]] = fadd double [[TMP7]], [[TMP8]]
 // CHECK-32-EX-NEXT:    store double [[ADD2]], ptr [[TMP0]], align 8
-// CHECK-32-EX-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP3]])
 // CHECK-32-EX-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32-EX:       .omp.reduction.done:
 // CHECK-32-EX-NEXT:    ret void
@@ -1617,16 +1624,18 @@ int bar(int n){
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29
-// CHECK-32-EX-SAME: (ptr noundef nonnull align 1 dereferenceable(1) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK-32-EX-NEXT:  entry:
+// CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 4
+// CHECK-32-EX-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 4
 // CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_kernel_environment)
+// CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-32-EX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32-EX:       user_code.entry:
@@ -1689,7 +1698,6 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load float, ptr [[D2]], align 4
 // CHECK-32-EX-NEXT:    [[MUL8:%.*]] = fmul float [[TMP12]], [[TMP13]]
 // CHECK-32-EX-NEXT:    store float [[MUL8]], ptr [[TMP1]], align 4
-// CHECK-32-EX-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK-32-EX-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32-EX:       .omp.reduction.done:
 // CHECK-32-EX-NEXT:    ret void
@@ -1854,16 +1862,18 @@ int bar(int n){
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35
-// CHECK-32-EX-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]]) #[[ATTR0]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]]) #[[ATTR0]] {
 // CHECK-32-EX-NEXT:  entry:
+// CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 4
+// CHECK-32-EX-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
 // CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_kernel_environment)
+// CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-32-EX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32-EX:       user_code.entry:
@@ -1943,7 +1953,6 @@ int bar(int n){
 // CHECK-32-EX:       cond.end11:
 // CHECK-32-EX-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP15]], [[COND_TRUE9]] ], [ [[TMP16]], [[COND_FALSE10]] ]
 // CHECK-32-EX-NEXT:    store i16 [[COND12]], ptr [[TMP1]], align 2
-// CHECK-32-EX-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP6]])
 // CHECK-32-EX-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32-EX:       .omp.reduction.done:
 // CHECK-32-EX-NEXT:    ret void

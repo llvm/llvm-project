@@ -2423,14 +2423,6 @@ let Predicates = [HasSVEorSME] in {
   }
 
   let AddedComplexity = 5 in {
-    def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
-              (ADDVL_XXI GPR64:$op, $imm)>;
-
-    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_rdvl_imm i32:$imm))))),
-              (i32 (EXTRACT_SUBREG (ADDVL_XXI (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
-                                             GPR32:$op, sub_32), $imm),
-                                   sub_32))>;
-
     def : Pat<(nxv8i16 (add ZPR:$op, (nxv8i16 (splat_vector (i32 (trunc (vscale (sve_cnth_imm i32:$imm)))))))),
               (INCH_ZPiI ZPR:$op, 31, $imm)>;
     def : Pat<(nxv4i32 (add ZPR:$op, (nxv4i32 (splat_vector (i32 (trunc (vscale (sve_cntw_imm i32:$imm)))))))),
@@ -2447,6 +2439,14 @@ let Predicates = [HasSVEorSME] in {
   }
 
   let Predicates = [HasSVEorSME, UseScalarIncVL], AddedComplexity = 5 in {
+    def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
+              (ADDVL_XXI GPR64:$op, $imm)>;
+
+    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_rdvl_imm i32:$imm))))),
+              (i32 (EXTRACT_SUBREG (ADDVL_XXI (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+                                             GPR32:$op, sub_32), $imm),
+                                   sub_32))>;
+
     def : Pat<(add GPR64:$op, (vscale (sve_cnth_imm i32:$imm))),
               (INCH_XPiI GPR64:$op, 31, $imm)>;
     def : Pat<(add GPR64:$op, (vscale (sve_cntw_imm i32:$imm))),
@@ -2487,9 +2487,6 @@ let Predicates = [HasSVEorSME] in {
                                                GPR32:$op, sub_32), 31, $imm),
                                     sub_32))>;
   }
-
-  def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
-            (ADDVL_XXI GPR64:$op, $imm)>;
 
   // FIXME: BigEndian requires an additional REV instruction to satisfy the
   // constraint that none of the bits change when stored to memory as one
@@ -4045,3 +4042,48 @@ let Predicates = [HasSVE2orSME2, HasFAMINMAX] in {
 defm FAMIN_ZPmZ : sve_fp_2op_p_zds<0b1111, "famin", "", null_frag, DestructiveOther>;
 defm FAMAX_ZPmZ : sve_fp_2op_p_zds<0b1110, "famax", "", null_frag, DestructiveOther>;
 } // End HasSVE2orSME2, HasFAMINMAX
+
+let Predicates = [HasSSVE_FP8FMA] in {
+// FP8 Widening Multiply-Add Long - Indexed Group
+def FMLALB_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b0, "fmlalb">;
+def FMLALT_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b1, "fmlalt">;
+// FP8 Widening Multiply-Add Long Group
+def FMLALB_ZZZ : sve2_fp8_mla<0b100, ZPR16, "fmlalb">;
+def FMLALT_ZZZ : sve2_fp8_mla<0b101, ZPR16, "fmlalt">;
+// FP8 Widening Multiply-Add Long Long - Indexed Group
+def FMLALLBB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b00, "fmlallbb">;
+def FMLALLBT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b01, "fmlallbt">;
+def FMLALLTB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b10, "fmlalltb">;
+def FMLALLTT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b11, "fmlalltt">;
+// FP8 Widening Multiply-Add Long Long Group
+def FMLALLBB_ZZZ : sve2_fp8_mla<0b000, ZPR32, "fmlallbb">;
+def FMLALLBT_ZZZ : sve2_fp8_mla<0b001, ZPR32, "fmlallbt">;
+def FMLALLTB_ZZZ : sve2_fp8_mla<0b010, ZPR32, "fmlalltb">;
+def FMLALLTT_ZZZ : sve2_fp8_mla<0b011, ZPR32, "fmlalltt">;
+} // End HasSSVE_FP8FMA
+
+let Predicates = [HasSSVE_FP8DOT2] in {
+// FP8 Widening Dot-Product - Indexed Group
+defm FDOT_ZZZI_BtoH : sve2_fp8_dot_indexed<"fdot">;
+// FP8 Widening Dot-Product - Group
+// TODO: Replace nxv16i8 by nxv16f8
+defm FDOT_ZZZ_BtoH : sve_float_dot<0b0, 0b1, ZPR16, ZPR8, "fdot", nxv16i8, null_frag>;
+}
+
+// TODO: Replace nxv16i8 by nxv16f8
+let Predicates = [HasSSVE_FP8DOT4] in {
+// FP8 Widening Dot-Product - Indexed Group
+defm FDOT_ZZZI_BtoS : sve_float_dot_indexed<0b1, 0b01, ZPR8, ZPR3b8, "fdot",
+                                            nxv16i8, null_frag>;
+// FP8 Widening Dot-Product - Group
+defm FDOT_ZZZ_BtoS : sve_float_dot<0b1, 0b1, ZPR32, ZPR8, "fdot", nxv16i8, null_frag>;
+}
+
+let Predicates = [HasSVE2orSME2, HasLUT] in {
+// LUTI2
+  defm LUTI2_ZZZI : sve2_luti2_vector_index<"luti2">;
+// LUTI4
+  defm LUTI4_ZZZI   : sve2_luti4_vector_index<"luti4">;
+// LUTI4 (two contiguous registers)
+  defm LUTI4_Z2ZZI  : sve2_luti4_vector_vg2_index<"luti4">;
+} // End HasSVE2orSME2, HasLUT

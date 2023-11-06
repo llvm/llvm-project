@@ -2255,7 +2255,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_isinf:
   case Builtin::BI__builtin_isinf_sign:
   case Builtin::BI__builtin_isnan:
+  case Builtin::BI__builtin_issignaling:
   case Builtin::BI__builtin_isnormal:
+  case Builtin::BI__builtin_issubnormal:
+  case Builtin::BI__builtin_iszero:
   case Builtin::BI__builtin_signbit:
   case Builtin::BI__builtin_signbitf:
   case Builtin::BI__builtin_signbitl:
@@ -4645,7 +4648,7 @@ static QualType DecodePPCMMATypeFromStr(ASTContext &Context, const char *&Str,
   switch (*Str++) {
   case 'V':
     return Context.getVectorType(Context.UnsignedCharTy, 16,
-                                 VectorType::VectorKind::AltiVecVector);
+                                 VectorKind::AltiVecVector);
   case 'i': {
     char *End;
     unsigned size = strtoul(Str, &End, 10);
@@ -6043,6 +6046,11 @@ void Sema::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D) {
       !TI.hasFeature("zvfh") && !TI.hasFeature("zvfhmin"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D)
         << Ty << "zvfh or zvfhmin";
+  // Check if enabled zvfbfmin for BFloat16
+  if (Ty->isRVVType(/* Bitwidth */ 16, /* IsFloat */ false,
+                    /* IsBFloat */ true) &&
+      !TI.hasFeature("experimental-zvfbfmin"))
+    Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zvfbfmin";
   if (Ty->isRVVType(/* Bitwidth */ 32, /* IsFloat */ true) &&
       !TI.hasFeature("zve32f"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve32f";
@@ -7333,7 +7341,7 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
 
         if (Context.getTargetInfo().getTriple().isOSAIX() && FDecl && Arg &&
             FDecl->hasLinkage() &&
-            FDecl->getFormalLinkage() != InternalLinkage &&
+            FDecl->getFormalLinkage() != Linkage::Internal &&
             CallType == VariadicDoesNotApply)
           checkAIXMemberAlignment((Arg->getExprLoc()), Arg);
 
@@ -9153,8 +9161,8 @@ ExprResult Sema::SemaBuiltinShuffleVector(CallExpr *TheCall) {
                                       TheCall->getArg(1)->getEndLoc()));
     } else if (numElements != numResElements) {
       QualType eltType = LHSType->castAs<VectorType>()->getElementType();
-      resType = Context.getVectorType(eltType, numResElements,
-                                      VectorType::GenericVector);
+      resType =
+          Context.getVectorType(eltType, numResElements, VectorKind::Generic);
     }
   }
 
@@ -10127,7 +10135,7 @@ class FormatStringLiteral {
   unsigned getLength() const { return FExpr->getLength() - Offset; }
   unsigned getCharByteWidth() const { return FExpr->getCharByteWidth(); }
 
-  StringLiteral::StringKind getKind() const { return FExpr->getKind(); }
+  StringLiteralKind getKind() const { return FExpr->getKind(); }
 
   QualType getType() const { return FExpr->getType(); }
 

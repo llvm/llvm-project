@@ -86,4 +86,20 @@ contains
 ! CHECK: return
 ! CHECK: }
 
+  subroutine acc_undefined_extent(a)
+    real, dimension(1:*) :: a
+
+    !$acc kernels present(a)
+    !$acc end kernels
+  end subroutine
+! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_undefined_extent(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a"}) {
+! HLFIR: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) {uniq_name = "_QMopenacc_boundsFacc_undefined_extentEa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+! CHECK: %[[ONE:.*]] = arith.constant 1 : index
+! CHECK: %[[ZERO:.*]] = arith.constant 0 : index
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[ZERO]] : index) upperbound(%[[ZERO]] : index) extent(%[[ZERO]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+! FIR:   %[[PRESENT:.*]] = acc.present varPtr(%[[ARG0]] : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "a"}
+! HLFIR: %[[PRESENT:.*]] = acc.present varPtr(%[[DECL_ARG0]]#1 : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "a"}
+! CHECK: acc.kernels dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<?xf32>>)
+
 end module

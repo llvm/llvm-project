@@ -98,7 +98,8 @@ public:
       return false;
     const auto *T = TL.getTypePtr();
     return TraverseTypeLoc(TL.getNamedTypeLoc(),
-                           T->getKeyword() != ETK_None || T->getQualifier());
+                           T->getKeyword() != ElaboratedTypeKeyword::None ||
+                               T->getQualifier());
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *S) {

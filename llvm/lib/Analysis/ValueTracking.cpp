@@ -5390,10 +5390,9 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
     if (CE->getOpcode() == Instruction::IntToPtr) {
       if (auto *PtrTy = dyn_cast<PointerType>(CE->getType())) {
         unsigned BitWidth = DL.getPointerSizeInBits(PtrTy->getAddressSpace());
-        return isBytewiseValue(
-            ConstantExpr::getIntegerCast(CE->getOperand(0),
-                                         Type::getIntNTy(Ctx, BitWidth), false),
-            DL);
+        if (Constant *Op = ConstantFoldIntegerCast(
+                CE->getOperand(0), Type::getIntNTy(Ctx, BitWidth), false, DL))
+          return isBytewiseValue(Op, DL);
       }
     }
   }
@@ -7881,22 +7880,22 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
     }
     break;
   case Instruction::FPTrunc:
-    CastedTo = ConstantExpr::getFPExtend(C, SrcTy, true);
+    CastedTo = ConstantFoldCastOperand(Instruction::FPExt, C, SrcTy, DL);
     break;
   case Instruction::FPExt:
-    CastedTo = ConstantExpr::getFPTrunc(C, SrcTy, true);
+    CastedTo = ConstantFoldCastOperand(Instruction::FPTrunc, C, SrcTy, DL);
     break;
   case Instruction::FPToUI:
-    CastedTo = ConstantExpr::getUIToFP(C, SrcTy, true);
+    CastedTo = ConstantFoldCastOperand(Instruction::UIToFP, C, SrcTy, DL);
     break;
   case Instruction::FPToSI:
-    CastedTo = ConstantExpr::getSIToFP(C, SrcTy, true);
+    CastedTo = ConstantFoldCastOperand(Instruction::SIToFP, C, SrcTy, DL);
     break;
   case Instruction::UIToFP:
-    CastedTo = ConstantExpr::getFPToUI(C, SrcTy, true);
+    CastedTo = ConstantFoldCastOperand(Instruction::FPToUI, C, SrcTy, DL);
     break;
   case Instruction::SIToFP:
-    CastedTo = ConstantExpr::getFPToSI(C, SrcTy, true);
+    CastedTo = ConstantFoldCastOperand(Instruction::FPToSI, C, SrcTy, DL);
     break;
   default:
     break;

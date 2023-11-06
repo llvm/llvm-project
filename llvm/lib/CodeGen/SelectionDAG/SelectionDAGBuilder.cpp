@@ -76,6 +76,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -3468,7 +3469,7 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
     }
 
     if (!IsUnaryAbs && Opc != ISD::DELETED_NODE &&
-        (TLI.isOperationLegalOrCustom(Opc, VT) ||
+        (TLI.isOperationLegalOrCustomOrPromote(Opc, VT) ||
          (UseScalarMinMax &&
           TLI.isOperationLegalOrCustom(Opc, VT.getScalarType()))) &&
         // If the underlying comparison instruction is used by any other
@@ -3527,18 +3528,20 @@ void SelectionDAGBuilder::visitZExt(const User &I) {
   auto &TLI = DAG.getTargetLoweringInfo();
   EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
 
-  // Since we don't yet have a representation of zext nneg in SDAG or MI,
-  // eagerly use the information to canonicalize towards sign_extend if
-  // that is the target's preference.  TODO: Add nneg support to the
-  // SDAG and MI representations.
-  if (auto *PNI = dyn_cast<PossiblyNonNegInst>(&I);
-      PNI && PNI->hasNonNeg() &&
+  SDNodeFlags Flags;
+  if (auto *PNI = dyn_cast<PossiblyNonNegInst>(&I))
+    Flags.setNonNeg(PNI->hasNonNeg());
+
+  // Eagerly use nonneg information to canonicalize towards sign_extend if
+  // that is the target's preference.
+  // TODO: Let the target do this later.
+  if (Flags.hasNonNeg() &&
       TLI.isSExtCheaperThanZExt(N.getValueType(), DestVT)) {
     setValue(&I, DAG.getNode(ISD::SIGN_EXTEND, getCurSDLoc(), DestVT, N));
     return;
   }
 
-  setValue(&I, DAG.getNode(ISD::ZERO_EXTEND, getCurSDLoc(), DestVT, N));
+  setValue(&I, DAG.getNode(ISD::ZERO_EXTEND, getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitSExt(const User &I) {
@@ -7440,6 +7443,54 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         ZeroMemory);
     DAG.setRoot(Val);
     setValue(&I, Val);
+    return;
+  }
+  case Intrinsic::amdgcn_cs_chain: {
+    assert(I.arg_size() == 5 && "Additional args not supported yet");
+    assert(cast<ConstantInt>(I.getOperand(4))->isZero() &&
+           "Non-zero flags not supported yet");
+
+    // At this point we don't care if it's amdgpu_cs_chain or
+    // amdgpu_cs_chain_preserve.
+    CallingConv::ID CC = CallingConv::AMDGPU_CS_Chain;
+
+    Type *RetTy = I.getType();
+    assert(RetTy->isVoidTy() && "Should not return");
+
+    SDValue Callee = getValue(I.getOperand(0));
+
+    // We only have 2 actual args: one for the SGPRs and one for the VGPRs.
+    // We'll also tack the value of the EXEC mask at the end.
+    TargetLowering::ArgListTy Args;
+    Args.reserve(3);
+
+    for (unsigned Idx : {2, 3, 1}) {
+      TargetLowering::ArgListEntry Arg;
+      Arg.Node = getValue(I.getOperand(Idx));
+      Arg.Ty = I.getOperand(Idx)->getType();
+      Arg.setAttributes(&I, Idx);
+      Args.push_back(Arg);
+    }
+
+    assert(Args[0].IsInReg && "SGPR args should be marked inreg");
+    assert(!Args[1].IsInReg && "VGPR args should not be marked inreg");
+    Args[2].IsInReg = true; // EXEC should be inreg
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(getCurSDLoc())
+        .setChain(getRoot())
+        .setCallee(CC, RetTy, Callee, std::move(Args))
+        .setNoReturn(true)
+        .setTailCall(true)
+        .setConvergent(I.isConvergent());
+    CLI.CB = &I;
+    std::pair<SDValue, SDValue> Result =
+        lowerInvokable(CLI, /*EHPadBB*/ nullptr);
+    (void)Result;
+    assert(!Result.first.getNode() && !Result.second.getNode() &&
+           "Should've lowered as tail call");
+
+    HasTailCall = true;
     return;
   }
   case Intrinsic::ptrmask: {
