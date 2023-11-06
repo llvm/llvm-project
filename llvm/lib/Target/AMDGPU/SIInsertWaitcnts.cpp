@@ -52,10 +52,6 @@ static cl::opt<bool> ForceEmitZeroFlag(
   cl::desc("Force all waitcnt instrs to be emitted as s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
   cl::init(false), cl::Hidden);
 
-static cl::opt<bool> EmitForAllMemOpFlag(
-    "amdgpu-waitcnt-for-all-mem-op",
-    cl::desc("Emit s_waitcnt 0 after each memory operation"), cl::init(false));
-
 static cl::opt<bool> PreciseMemOpFlag(
   "amdgpu-precise-memory-op",
   cl::desc("Emit s_waitcnt 0 after each memory operation"), cl::init(false));
