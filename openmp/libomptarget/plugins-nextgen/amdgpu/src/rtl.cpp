@@ -253,13 +253,6 @@ struct AMDGPUMemoryPoolTy {
     return Plugin::check(Status, "Error in hsa_amd_agents_allow_access: %s");
   }
 
-  Error zeroInitializeMemory(void *Ptr, size_t Size) {
-    uint64_t Rounded = sizeof(uint32_t) * ((Size + 3) / sizeof(uint32_t));
-    hsa_status_t Status =
-        hsa_amd_memory_fill(Ptr, 0, Rounded / sizeof(uint32_t));
-    return Plugin::check(Status, "Error in hsa_amd_memory_fill: %s");
-  }
-
   /// Get attribute from the memory pool.
   template <typename Ty>
   Error getAttr(hsa_amd_memory_pool_info_t Kind, Ty &Value) const {
@@ -1806,9 +1799,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = initMemoryPools())
       return Err;
 
-    if (auto Err = preAllocateDeviceMemoryPool())
-      return Err;
-
     char GPUName[64];
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_NAME, GPUName))
       return Err;
@@ -2633,46 +2623,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         });
   }
 
-/// Get the address of pointer to the preallocated device memory pool.
-  void *getPreAllocatedDeviceMemoryPool() {
-    return PreAllocatedDeviceMemoryPool;
-  }
-
-  /// Allocate and zero initialize a small memory pool from the coarse grained
-  /// device memory of each device.
-  Error preAllocateDeviceMemoryPool() {
-    Error Err = retrieveAllMemoryPools();
-    if (Err)
-      return Plugin::error("Unable to retieve all memmory pools");
-
-    void *DevPtr;
-    for (AMDGPUMemoryPoolTy *MemoryPool : AllMemoryPools) {
-      if (!MemoryPool->isGlobal())
-        continue;
-
-      if (MemoryPool->isCoarseGrained()) {
-        DevPtr = nullptr;
-        size_t PreAllocSize = 131072; //128 KB
-
-        Err = MemoryPool->allocate(PreAllocSize, &DevPtr);
-        if (Err)
-          return Plugin::error("Device memory pool preallocation failed");
-
-        Err = MemoryPool->enableAccess(DevPtr, PreAllocSize, {getAgent()});
-        if (Err)
-          return Plugin::error("Preallocated device memory pool inaccessible");
-
-        Err = MemoryPool->zeroInitializeMemory(DevPtr, PreAllocSize);
-        if (Err)
-          return Plugin::error(
-              "Zero initialization of preallocated device memory pool failed");
-
-        PreAllocatedDeviceMemoryPool = DevPtr;
-      }
-    }
-    return Plugin::success();
-  }
-
 private:
   using AMDGPUEventRef = AMDGPUResourceRef<AMDGPUEventTy>;
   using AMDGPUEventManagerTy = GenericDeviceResourceManagerTy<AMDGPUEventRef>;
@@ -2733,9 +2683,6 @@ private:
 
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;
-
-  /// Pointer to the preallocated device memory pool
-  void *PreAllocatedDeviceMemoryPool;
 
   /// The current size of the global device memory pool (managed by us).
   uint64_t DeviceMemoryPoolSize = 1L << 29L /* 512MB */;
@@ -3145,8 +3092,6 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     ImplArgs->GroupSizeY = 1;
     ImplArgs->GroupSizeZ = 1;
     ImplArgs->GridDims = 1;
-    ImplArgs->HeapV1Ptr =
-        (uint64_t)AMDGPUDevice.getPreAllocatedDeviceMemoryPool();
   }
 
   // Push the kernel launch into the stream.

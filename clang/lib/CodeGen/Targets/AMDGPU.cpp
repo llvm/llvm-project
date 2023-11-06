@@ -367,7 +367,8 @@ void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
   if (OriginalGV && !llvm::GlobalVariable::isExternalLinkage(OriginalGV->getLinkage()))
     return;
 
-  if(CGM.getTarget().getTargetOpts().CodeObjectVersion == clang::TargetOptions::COV_None)
+  if(CGM.getTarget().getTargetOpts().CodeObjectVersion ==
+     clang::TargetOptions::COV_None)
     return;
 
   auto *Type = llvm::IntegerType::getIntNTy(CGM.getModule().getContext(), 32);
