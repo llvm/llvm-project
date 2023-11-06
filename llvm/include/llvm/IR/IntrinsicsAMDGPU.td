@@ -1697,6 +1697,13 @@ def int_amdgcn_s_setprio :
   DefaultAttrsIntrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
                                 IntrHasSideEffects]>;
 
+def int_amdgcn_s_ttracedata :
+  DefaultAttrsIntrinsic<[], [llvm_i32_ty],
+                        [IntrNoMem, IntrHasSideEffects]>;
+def int_amdgcn_s_ttracedata_imm :
+  DefaultAttrsIntrinsic<[], [llvm_i16_ty],
+                        [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+
 // This is IntrHasSideEffects so it can be used to read cycle counters.
 def int_amdgcn_s_getreg :
   ClangBuiltin<"__builtin_amdgcn_s_getreg">,
@@ -1926,6 +1933,22 @@ def int_amdgcn_ballot :
 def int_amdgcn_inverse_ballot :
   Intrinsic<[llvm_i1_ty], [llvm_anyint_ty],
             [IntrNoMem, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+
+// Lowers to S_BITREPLICATE_B64_B32.
+// The argument must be uniform; otherwise, the result is undefined.
+def int_amdgcn_s_bitreplicate :
+  DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
+
+// Lowers to S_QUADMASK_B{32,64}
+// The argument must be uniform; otherwise, the result is undefined.
+def int_amdgcn_s_quadmask :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem, IntrConvergent]>;
+
+// Lowers to S_WQM_B{32,64}
+// The argument must be uniform; otherwise, the result is undefined.
+// Does not set WQM; merely calculates the bitmask.
+def int_amdgcn_s_wqm :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem, IntrConvergent]>;
 
 class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
     [data_ty],
@@ -2361,8 +2384,16 @@ class AMDGPUWmmaIntrinsicIU<LLVMType AB, LLVMType CD> :
 
 def int_amdgcn_wmma_f32_16x16x16_f16   : AMDGPUWmmaIntrinsic<llvm_v16f16_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x16_bf16  : AMDGPUWmmaIntrinsic<llvm_v16i16_ty, llvm_anyfloat_ty>;
+// The regular, untied f16/bf16 wmma intrinsics only write to one half
+// of the registers (set via the op_sel bit).
+// The content of the other 16-bit of the registers is undefined.
 def int_amdgcn_wmma_f16_16x16x16_f16   : AMDGPUWmmaIntrinsicOPSEL<llvm_v16f16_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_bf16_16x16x16_bf16 : AMDGPUWmmaIntrinsicOPSEL<llvm_v16i16_ty, llvm_anyint_ty>;
+// The tied versions of the f16/bf16 wmma intrinsics tie the destination matrix
+// registers to the input accumulator registers.
+// Essentially, the content of the other 16-bit is preserved from the input.
+def int_amdgcn_wmma_f16_16x16x16_f16_tied   : AMDGPUWmmaIntrinsicOPSEL<llvm_v16f16_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_bf16_16x16x16_bf16_tied : AMDGPUWmmaIntrinsicOPSEL<llvm_v16i16_ty, llvm_anyint_ty>;
 def int_amdgcn_wmma_i32_16x16x16_iu8   : AMDGPUWmmaIntrinsicIU<llvm_v4i32_ty, llvm_anyint_ty>;
 def int_amdgcn_wmma_i32_16x16x16_iu4   : AMDGPUWmmaIntrinsicIU<llvm_v2i32_ty, llvm_anyint_ty>;
 

@@ -46,7 +46,6 @@
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/LineTable.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeMap.h"
@@ -1454,6 +1453,17 @@ SymbolFileDWARF::GetDeclContextContainingUID(lldb::user_id_t type_uid) {
   return CompilerDeclContext();
 }
 
+std::vector<CompilerContext>
+SymbolFileDWARF::GetCompilerContextForUID(lldb::user_id_t type_uid) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  // Anytime we have a lldb::user_id_t, we must get the DIE by calling
+  // SymbolFileDWARF::GetDIE(). See comments inside the
+  // SymbolFileDWARF::GetDIE() for details.
+  if (DWARFDIE die = GetDIE(type_uid))
+    return die.GetDeclContext();
+  return {};
+}
+
 Type *SymbolFileDWARF::ResolveTypeUID(lldb::user_id_t type_uid) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // Anytime we have a lldb::user_id_t, we must get the DIE by calling
@@ -1521,11 +1531,11 @@ Type *SymbolFileDWARF::ResolveTypeUID(const DWARFDIE &die,
 // This function is used when SymbolFileDWARFDebugMap owns a bunch of
 // SymbolFileDWARF objects to detect if this DWARF file is the one that can
 // resolve a compiler_type.
-bool SymbolFileDWARF::HasForwardDeclForClangType(
+bool SymbolFileDWARF::HasForwardDeclForCompilerType(
     const CompilerType &compiler_type) {
   CompilerType compiler_type_no_qualifiers =
       ClangUtil::RemoveFastQualifiers(compiler_type);
-  if (GetForwardDeclClangTypeToDie().count(
+  if (GetForwardDeclCompilerTypeToDIE().count(
           compiler_type_no_qualifiers.GetOpaqueQualType())) {
     return true;
   }
@@ -1553,9 +1563,9 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   // We have a struct/union/class/enum that needs to be fully resolved.
   CompilerType compiler_type_no_qualifiers =
       ClangUtil::RemoveFastQualifiers(compiler_type);
-  auto die_it = GetForwardDeclClangTypeToDie().find(
+  auto die_it = GetForwardDeclCompilerTypeToDIE().find(
       compiler_type_no_qualifiers.GetOpaqueQualType());
-  if (die_it == GetForwardDeclClangTypeToDie().end()) {
+  if (die_it == GetForwardDeclCompilerTypeToDIE().end()) {
     // We have already resolved this type...
     return true;
   }
@@ -1566,7 +1576,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     // declaration map in case anyone child members or other types require this
     // type to get resolved. The type will get resolved when all of the calls
     // to SymbolFileDWARF::ResolveClangOpaqueTypeDefinition are done.
-    GetForwardDeclClangTypeToDie().erase(die_it);
+    GetForwardDeclCompilerTypeToDIE().erase(die_it);
 
     Type *type = GetDIEToType().lookup(dwarf_die.GetDIE());
 
@@ -1855,10 +1865,16 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   }
 
   if (!found) {
+    FileSpec error_dwo_path(dwo_name);
+    FileSystem::Instance().Resolve(error_dwo_path);
+    if (error_dwo_path.IsRelative() && comp_dir != nullptr) {
+      error_dwo_path.PrependPathComponent(comp_dir);
+      FileSystem::Instance().Resolve(error_dwo_path);
+    }
     unit.SetDwoError(Status::createWithFormat(
         "unable to locate .dwo debug file \"{0}\" for skeleton DIE "
         "{1:x16}",
-        dwo_file.GetPath().c_str(), cu_die.GetOffset()));
+        error_dwo_path.GetPath().c_str(), cu_die.GetOffset()));
 
     if (m_dwo_warning_issued.test_and_set(std::memory_order_relaxed) == false) {
       GetObjectFile()->GetModule()->ReportWarning(
@@ -2709,8 +2725,7 @@ void SymbolFileDWARF::FindTypes(
     if (!languages[GetLanguageFamily(*die.GetCU())])
       return true;
 
-    llvm::SmallVector<CompilerContext, 4> die_context;
-    die.GetDeclContext(die_context);
+    std::vector<CompilerContext> die_context = die.GetDeclContext();
     if (!contextMatches(die_context, pattern))
       return true;
 
@@ -4227,7 +4242,8 @@ void SymbolFileDWARF::DumpClangAST(Stream &s) {
   clang->Dump(s.AsRawOstream());
 }
 
-bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d) {
+bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
+                                           bool errors_only) {
   StructuredData::Array separate_debug_info_files;
   DWARFDebugInfo &info = DebugInfo();
   const size_t num_cus = info.GetNumUnits();
@@ -4280,7 +4296,8 @@ bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d) {
                               dwarf_cu->GetDwoError().AsCString("unknown"));
     }
     dwo_data->AddBooleanItem("loaded", dwo_symfile != nullptr);
-    separate_debug_info_files.AddItem(dwo_data);
+    if (!errors_only || dwo_data->HasKey("error"))
+      separate_debug_info_files.AddItem(dwo_data);
   }
 
   d.AddStringItem("type", "dwo");
@@ -4311,7 +4328,7 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
 
     FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
     FileSpec dwp_filespec =
-        Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+        PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
     if (FileSystem::Instance().Exists(dwp_filespec)) {
       DataBufferSP dwp_file_data_sp;
       lldb::offset_t dwp_file_data_offset = 0;

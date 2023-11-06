@@ -503,8 +503,8 @@ void CoreEngine::HandleVirtualBaseBranch(const CFGBlock *B,
   if (const auto *CallerCtor = dyn_cast_or_null<CXXConstructExpr>(
           LCtx->getStackFrame()->getCallSite())) {
     switch (CallerCtor->getConstructionKind()) {
-    case CXXConstructExpr::CK_NonVirtualBase:
-    case CXXConstructExpr::CK_VirtualBase: {
+    case CXXConstructionKind::NonVirtualBase:
+    case CXXConstructionKind::VirtualBase: {
       BlockEdge Loc(B, *B->succ_begin(), LCtx);
       HandleBlockEdge(Loc, Pred);
       return;

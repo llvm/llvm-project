@@ -1181,7 +1181,7 @@ public:
   bool clearOffset(MCInst &Inst);
 
   /// Return the label of \p Inst, if available.
-  std::optional<MCSymbol *> getLabel(const MCInst &Inst) const;
+  MCSymbol *getLabel(const MCInst &Inst) const;
 
   /// Set the label of \p Inst. This label will be emitted right before \p Inst
   /// is emitted to MCStreamer.
@@ -2075,6 +2075,12 @@ public:
       const std::vector<MCInst *> &TargetFetchInsns, MCContext *Ctx) const {
     llvm_unreachable("not implemented");
     return BlocksVectorTy();
+  }
+
+  virtual uint16_t getMinFunctionAlignment() const {
+    // We have to use at least 2-byte alignment for functions because of C++
+    // ABI.
+    return 2;
   }
 
   // AliasMap caches a mapping of registers to the set of registers that

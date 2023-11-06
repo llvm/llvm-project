@@ -42,7 +42,7 @@ define void @use_everything_else() {
 ; CHECK-NEXT:    [[VAL8:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
 ; CHECK-NEXT:    store volatile i32 [[VAL8]], ptr addrspace(1) null, align 4
 ; CHECK-NEXT:    [[VAL9:%.*]] = call i64 @llvm.amdgcn.dispatch.id()
-; CHECK-NEXT:    store volatile i64 [[VAL9]], ptr addrspace(1) null, align 4
+; CHECK-NEXT:    store volatile i64 [[VAL9]], ptr addrspace(1) null, align 8
 ; CHECK-NEXT:    ret void
 ;
   %val0 = call i32 @llvm.amdgcn.workitem.id.x()

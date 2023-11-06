@@ -445,7 +445,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
 DwarfDebug::~DwarfDebug() = default;
 
 static bool isObjCClass(StringRef Name) {
-  return Name.startswith("+") || Name.startswith("-");
+  return Name.starts_with("+") || Name.starts_with("-");
 }
 
 static bool hasObjCCategory(StringRef Name) {
@@ -583,7 +583,7 @@ static const DIExpression *combineDIExpressions(const DIExpression *Original,
   std::vector<uint64_t> Elts = Addition->getElements().vec();
   // Avoid multiple DW_OP_stack_values.
   if (Original->isImplicit() && Addition->isImplicit())
-    erase_value(Elts, dwarf::DW_OP_stack_value);
+    llvm::erase(Elts, dwarf::DW_OP_stack_value);
   const DIExpression *CombinedExpr =
       (Elts.size() > 0) ? DIExpression::append(Original, Elts) : Original;
   return CombinedExpr;
@@ -1211,12 +1211,13 @@ void DwarfDebug::beginModule(Module *M) {
         CU.getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
     }
 
-    for (auto *Ty : CUNode->getEnumTypes())
+    for (auto *Ty : CUNode->getEnumTypes()) {
+      assert(!isa_and_nonnull<DILocalScope>(Ty->getScope()) &&
+             "Unexpected function-local entity in 'enums' CU field.");
       CU.getOrCreateTypeDIE(cast<DIType>(Ty));
+    }
 
     for (auto *Ty : CUNode->getRetainedTypes()) {
-      // The retained types array by design contains pointers to
-      // MDNodes rather than DIRefs. Unique them here.
       if (DIType *RT = dyn_cast<DIType>(Ty))
         // There is no point in force-emitting a forward declaration.
         CU.getOrCreateTypeDIE(RT);
@@ -1389,6 +1390,10 @@ void DwarfDebug::finalizeModuleInfo() {
   InfoHolder.computeSizeAndOffsets();
   if (useSplitDwarf())
     SkeletonHolder.computeSizeAndOffsets();
+
+  // Now that offsets are computed, can replace DIEs in debug_names Entry with
+  // an actual offset.
+  AccelDebugNames.convertDieToOffset();
 }
 
 // Emit all Dwarf sections that should come after the content.
@@ -1410,9 +1415,13 @@ void DwarfDebug::endModule() {
              "Unexpected function-local entity in 'imports' CU field.");
       CU->getOrCreateImportedEntityDIE(IE);
     }
+
+    // Emit function-local entities.
     for (const auto *D : CU->getDeferredLocalDecls()) {
       if (auto *IE = dyn_cast<DIImportedEntity>(D))
         CU->getOrCreateImportedEntityDIE(IE);
+      else if (auto *Ty = dyn_cast<DIType>(D))
+        CU->getOrCreateTypeDIE(Ty);
       else
         llvm_unreachable("Unexpected local retained node!");
     }
@@ -1510,6 +1519,8 @@ static const DILocalScope *getRetainedNodeScope(const MDNode *N) {
     S = L->getScope();
   else if (const auto *IE = dyn_cast<DIImportedEntity>(N))
     S = IE->getScope();
+  else if (const auto *T = dyn_cast<DIType>(N))
+    S = T->getScope();
   else
     llvm_unreachable("Unexpected retained node!");
 
@@ -3547,9 +3558,11 @@ void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
   case AccelTableKind::Apple:
     AppleAccel.addName(Ref, Die);
     break;
-  case AccelTableKind::Dwarf:
-    AccelDebugNames.addName(Ref, Die);
+  case AccelTableKind::Dwarf: {
+    DwarfCompileUnit *DCU = CUMap.lookup(&CU);
+    AccelDebugNames.addName(Ref, Die, *DCU);
     break;
+  }
   case AccelTableKind::Default:
     llvm_unreachable("Default should have already been resolved.");
   case AccelTableKind::None:

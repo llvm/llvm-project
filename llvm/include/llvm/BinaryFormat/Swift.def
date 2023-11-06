@@ -34,4 +34,4 @@ HANDLE_SWIFT_SECTION(acfuncs, "__swift5_acfuncs", "swift5_accessible_functions",
 HANDLE_SWIFT_SECTION(mpenum, "__swift5_mpenum", "swift5_mpenum", ".sw5mpen$B")
 
 // Debug info.
-HANDLE_SWIFT_SECTION(swiftast, "__swift_ast", "swift_ast", "swiftast")
+HANDLE_SWIFT_SECTION(swiftast, "__swift_ast", ".swift_ast", "swiftast")

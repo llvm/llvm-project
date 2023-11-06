@@ -19,6 +19,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/TargetParser/Triple.h"
 #include <forward_list>
 #include <map>
 #include <optional>
@@ -445,7 +446,8 @@ public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
-      : M(M), Builder(M.getContext()), OffloadInfoManager(this) {}
+      : M(M), Builder(M.getContext()), OffloadInfoManager(this),
+        T(Triple(M.getTargetTriple())) {}
   ~OpenMPIRBuilder();
 
   /// Initialize the internal state, this will put structures types and
@@ -1358,27 +1360,6 @@ public:
   /// Value.
   GlobalValue *createGlobalFlag(unsigned Value, StringRef Name);
 
-  /// Create an offloading section struct used to register this global at
-  /// runtime.
-  ///
-  /// Type struct __tgt_offload_entry{
-  ///   void    *addr;      // Pointer to the offload entry info.
-  ///                       // (function or global)
-  ///   char    *name;      // Name of the function or global.
-  ///   size_t  size;       // Size of the entry info (0 if it a function).
-  ///   int32_t flags;
-  ///   int32_t reserved;
-  /// };
-  ///
-  /// \param Addr The pointer to the global being registered.
-  /// \param Name The symbol name associated with the global.
-  /// \param Size The size in bytes of the global (0 for functions).
-  /// \param Flags Flags associated with the entry.
-  /// \param SectionName The section this entry will be placed at.
-  void emitOffloadingEntry(Constant *Addr, StringRef Name, uint64_t Size,
-                           int32_t Flags,
-                           StringRef SectionName = "omp_offloading_entries");
-
   /// Generate control flow and cleanup for cancellation.
   ///
   /// \param CancelFlag Flag indicating if the cancellation is performed.
@@ -1468,6 +1449,9 @@ public:
 
   /// Info manager to keep track of target regions.
   OffloadEntriesInfoManager OffloadInfoManager;
+
+  /// The target triple of the underlying module.
+  const Triple T;
 
   /// Helper that contains information about regions we need to outline
   /// during finalization.
@@ -2042,20 +2026,51 @@ public:
   ///
   /// \param Loc The insert and source location description.
   /// \param IsSPMD Flag to indicate if the kernel is an SPMD kernel or not.
-  InsertPointTy createTargetInit(const LocationDescription &Loc, bool IsSPMD);
+  /// \param MinThreads Minimal number of threads, or 0.
+  /// \param MaxThreads Maximal number of threads, or 0.
+  /// \param MinTeams Minimal number of teams, or 0.
+  /// \param MaxTeams Maximal number of teams, or 0.
+  InsertPointTy createTargetInit(const LocationDescription &Loc, bool IsSPMD,
+                                 int32_t MinThreadsVal = 0,
+                                 int32_t MaxThreadsVal = 0,
+                                 int32_t MinTeamsVal = 0,
+                                 int32_t MaxTeamsVal = 0);
 
   /// Create a runtime call for kmpc_target_deinit
   ///
   /// \param Loc The insert and source location description.
-  void createTargetDeinit(const LocationDescription &Loc);
+  /// \param TeamsReductionDataSize The maximal size of all the reduction data
+  ///        for teams reduction.
+  /// \param TeamsReductionBufferLength The number of elements (each of up to
+  ///        \p TeamsReductionDataSize size), in the teams reduction buffer.
+  void createTargetDeinit(const LocationDescription &Loc,
+                          int32_t TeamsReductionDataSize = 0,
+                          int32_t TeamsReductionBufferLength = 1024);
 
+  ///}
+
+  /// Helpers to read/write kernel annotations from the IR.
+  ///
+  ///{
+
+  /// Read/write a bounds on threads for \p Kernel. Read will return 0 if none
+  /// is set.
+  static std::pair<int32_t, int32_t>
+  readThreadBoundsForKernel(const Triple &T, Function &Kernel);
+  static void writeThreadBoundsForKernel(const Triple &T, Function &Kernel,
+                                         int32_t LB, int32_t UB);
+
+  /// Read/write a bounds on teams for \p Kernel. Read will return 0 if none
+  /// is set.
+  static std::pair<int32_t, int32_t> readTeamBoundsForKernel(const Triple &T,
+                                                             Function &Kernel);
+  static void writeTeamsForKernel(const Triple &T, Function &Kernel, int32_t LB,
+                                  int32_t UB);
   ///}
 
 private:
   // Sets the function attributes expected for the outlined function
-  void setOutlinedTargetRegionFunctionAttributes(Function *OutlinedFn,
-                                                 int32_t NumTeams,
-                                                 int32_t NumThreads);
+  void setOutlinedTargetRegionFunctionAttributes(Function *OutlinedFn);
 
   // Creates the function ID/Address for the given outlined function.
   // In the case of an embedded device function the address of the function is
@@ -2100,13 +2115,10 @@ public:
   /// \param InfoManager The info manager keeping track of the offload entries
   /// \param EntryInfo The entry information about the function
   /// \param GenerateFunctionCallback The callback function to generate the code
-  /// \param NumTeams Number default teams
-  /// \param NumThreads Number default threads
   /// \param OutlinedFunction Pointer to the outlined function
   /// \param EntryFnIDName Name of the ID o be created
   void emitTargetRegionFunction(TargetRegionEntryInfo &EntryInfo,
                                 FunctionGenCallback &GenerateFunctionCallback,
-                                int32_t NumTeams, int32_t NumThreads,
                                 bool IsOffloadEntry, Function *&OutlinedFn,
                                 Constant *&OutlinedFnID);
 
@@ -2118,13 +2130,11 @@ public:
   /// \param OutlinedFunction Pointer to the outlined function
   /// \param EntryFnName Name of the outlined function
   /// \param EntryFnIDName Name of the ID o be created
-  /// \param NumTeams Number default teams
-  /// \param NumThreads Number default threads
   Constant *registerTargetRegionFunction(TargetRegionEntryInfo &EntryInfo,
                                          Function *OutlinedFunction,
                                          StringRef EntryFnName,
-                                         StringRef EntryFnIDName,
-                                         int32_t NumTeams, int32_t NumThreads);
+                                         StringRef EntryFnIDName);
+
   /// Type of BodyGen to use for region codegen
   ///
   /// Priv: If device pointer privatization is required, emit the body of the

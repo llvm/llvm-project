@@ -242,6 +242,7 @@ DEFAULT_PARAMETERS = [
                 AddFlag("-fsanitize=leaks")    if sanitizer == "Leaks" else None,
 
                 AddFeature("sanitizer-new-delete") if sanitizer in ["Address", "HWAddress", "Memory", "MemoryWithOrigins", "Thread"] else None,
+                AddFeature("lsan") if sanitizer in ["Address", "HWAddress", "Leaks"] else None,
             ]
         )
     ),

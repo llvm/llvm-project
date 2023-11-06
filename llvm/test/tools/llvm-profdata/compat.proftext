@@ -87,3 +87,26 @@ large_numbers
 # FORMATV4: Total functions: 3
 # FORMATV4: Maximum function count: 2305843009213693952
 # FORMATV4: Maximum internal block count: 1152921504606846976
+
+# RUN: llvm-profdata show %S/Inputs/compat.profdata.v10 -all-functions --counts | FileCheck %s -check-prefix=FORMATV10
+
+# FORMATV10: Counters:
+# FORMATV10:   large_numbers:
+# FORMATV10:     Hash: 0x3fffffffffffffff
+# FORMATV10:     Counters: 6
+# FORMATV10:     Function count: 2305843009213693952
+# FORMATV10:     Block counts: [1152921504606846976, 576460752303423488, 288230376151711744, 144115188075855872, 72057594037927936]
+# FORMATV10:   name with spaces:
+# FORMATV10:     Hash: 0x0000000000000400
+# FORMATV10:     Counters: 2
+# FORMATV10:     Function count: 0
+# FORMATV10:     Block counts: [0]
+# FORMATV10:   function_count_only:
+# FORMATV10:     Hash: 0x0000000000000000
+# FORMATV10:     Counters: 1
+# FORMATV10:     Function count: 97531
+# FORMATV10:     Block counts: []
+# FORMATV10: Functions shown: 3
+# FORMATV10: Total functions: 3
+# FORMATV10: Maximum function count: 2305843009213693952
+# FORMATV10: Maximum internal block count: 1152921504606846976

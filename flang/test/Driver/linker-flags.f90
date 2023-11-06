@@ -5,6 +5,11 @@
 ! RUN: %flang -### --target=ppc64le-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX
 ! RUN: %flang -### --target=aarch64-apple-darwin %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN
 ! RUN: %flang -### --target=sparc-sun-solaris2.11 %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX
+! RUN: %flang -### --target=x86_64-unknown-freebsd %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX
+! RUN: %flang -### --target=x86_64-unknown-netbsd %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX
+! RUN: %flang -### --target=x86_64-unknown-openbsd %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX
+! RUN: %flang -### --target=x86_64-unknown-dragonfly %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX
+! RUN: %flang -### --target=x86_64-unknown-haiku %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,HAIKU
 ! RUN: %flang -### --target=x86_64-windows-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MINGW
 
 ! NOTE: Clang's driver library, clangDriver, usually adds 'libcmt' and
@@ -31,6 +36,10 @@
 ! DARWIN-SAME: -lFortran_main
 ! DARWIN-SAME: -lFortranRuntime
 ! DARWIN-SAME: -lFortranDecimal
+
+! HAIKU-LABEL:  "{{.*}}ld{{(\.exe)?}}"
+! HAIKU-SAME: "[[object_file]]"
+! HAIKU-SAME: "-lFortran_main" "-lFortranRuntime" "-lFortranDecimal"
 
 ! MINGW-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! MINGW-SAME: "[[object_file]]"

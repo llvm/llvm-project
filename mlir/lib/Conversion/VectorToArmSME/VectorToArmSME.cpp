@@ -60,15 +60,30 @@ getSMETileAndCastToVector(PatternRewriter &rewriter, Location loc,
 
 namespace {
 
-/// Conversion pattern for vector.transfer_read op with transpose permutation
-/// map to vertical arm_sme.tile_load (in-flight transpose).
+/// Conversion pattern for vector.transfer_read.
+///
+/// ---
+///
+/// Example 1: op with identity permutation map to horizontal
+///            arm_sme.tile_load:
+///
+///   vector.transfer_read ...  permutation_map: (d0, d1) -> (d0, d1)
+///
+/// is converted to:
+///
+///   arm_sme.tile_load ...
+///
+/// ---
+///
+/// Example 2: op with transpose permutation map to vertical arm_sme.tile_load
+///            (in-flight transpose):
 ///
 ///   vector.transfer_read ...  permutation_map: (d0, d1) -> (d1, d0)
 ///
 /// is converted to:
 ///
 ///   arm_sme.tile_load ... layout<vertical>
-struct TransferReadPermutationToArmSMELowering
+struct TransferReadToArmSMELowering
     : public OpRewritePattern<vector::TransferReadOp> {
   using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
 
@@ -79,15 +94,6 @@ struct TransferReadPermutationToArmSMELowering
       return rewriter.notifyMatchFailure(transferReadOp,
                                          "not a 2 result permutation map");
 
-    AffineMap map = transferReadOp.getPermutationMap();
-
-    // Permutation map doesn't perform permutation, can be lowered to
-    // vector.load by TransferReadToVectorLoadLowering and then
-    // arm_sme.tile_load by VectorLoadToArmSMELowering.
-    if (map.isIdentity())
-      return rewriter.notifyMatchFailure(
-          transferReadOp, "map is an identity, apply another pattern");
-
     auto vectorType = transferReadOp.getVectorType();
     if (!arm_sme::isValidSMETileVectorType(vectorType))
       return rewriter.notifyMatchFailure(transferReadOp,
@@ -96,26 +102,33 @@ struct TransferReadPermutationToArmSMELowering
     if (!llvm::isa<MemRefType>(transferReadOp.getSource().getType()))
       return rewriter.notifyMatchFailure(transferReadOp, "not a memref source");
 
-    if (transferReadOp.getMask())
-      // TODO: support masking.
-      return rewriter.notifyMatchFailure(transferReadOp,
-                                         "masking not yet supported");
-
     // Out-of-bounds dims are not supported.
     if (transferReadOp.hasOutOfBoundsDim())
       return rewriter.notifyMatchFailure(transferReadOp,
                                          "not inbounds transfer read");
 
+    arm_sme::TileSliceLayout layout;
+
     AffineExpr d0, d1;
     bindDims(transferReadOp.getContext(), d0, d1);
-    if (map != AffineMap::get(map.getNumDims(), 0, {d1, d0},
-                              transferReadOp.getContext()))
+    AffineMap map = transferReadOp.getPermutationMap();
+    if (map.isIdentity())
+      layout = arm_sme::TileSliceLayout::Horizontal;
+    else if (map == AffineMap::get(map.getNumDims(), 0, {d1, d0},
+                                   transferReadOp.getContext()))
+      layout = arm_sme::TileSliceLayout::Vertical;
+    else
       return rewriter.notifyMatchFailure(transferReadOp,
-                                         "not true 2-D matrix transpose");
+                                         "unsupported permutation map");
 
+    // Padding isn't optional for transfer_read, but is only used in the case
+    // of out-of-bounds accesses (not supported here) and/or masking. Mask is
+    // optional, if it's not present don't pass padding.
+    auto mask = transferReadOp.getMask();
+    auto padding = mask ? transferReadOp.getPadding() : nullptr;
     rewriter.replaceOpWithNewOp<arm_sme::TileLoadOp>(
         transferReadOp, vectorType, transferReadOp.getSource(),
-        transferReadOp.getIndices(), arm_sme::TileSliceLayout::Vertical);
+        transferReadOp.getIndices(), padding, mask, layout);
 
     return success();
   }
@@ -144,8 +157,8 @@ struct TransferWriteToArmSMELowering
       return failure();
 
     rewriter.replaceOpWithNewOp<arm_sme::TileStoreOp>(
-        writeOp, writeOp.getVector(), writeOp.getSource(),
-        writeOp.getIndices());
+        writeOp, writeOp.getVector(), writeOp.getSource(), writeOp.getIndices(),
+        writeOp.getMask());
     return success();
   }
 };
@@ -427,12 +440,112 @@ struct TransposeOpToArmSMELowering
   }
 };
 
+/// Conversion pattern for vector.outerproduct.
+///
+/// If the vector.outerproduct is masked (and the mask is from a
+/// vector.create_mask), then the mask is decomposed into two 1-D masks for the
+/// operands.
+///
+/// Example:
+///
+///   %mask = vector.create_mask %dimA, %dimB : vector<[4]x[4]xi1>
+///   %result = vector.mask %mask {
+///                vector.outerproduct %vecA, %vecB
+///                 : vector<[4]xf32>, vector<[4]xf32>
+///             } : vector<[4]x[4]xi1> -> vector<[4]x[4]xf32>
+///
+/// is converted to:
+///
+///    %maskA = vector.create_mask %dimA : vector<[4]xi1>
+///    %maskB = vector.create_mask %dimB : vector<[4]xi1>
+///    %result = arm_sme.outerproduct %vecA, %vecB masks(%maskA, %maskB)
+///                : vector<[4]xf32>, vector<[4]xf32>
+///
+/// Unmasked outerproducts can be directly replaced with the arm_sme op.
+///
+/// Example:
+///
+///   %result = vector.outerproduct %vecA, %vecB
+///              : vector<[4]xf32>, vector<[4]xf32>
+///
+/// is converted to:
+///
+///   %result = arm_sme.outerproduct %vecA, %vecB
+///              : vector<[4]xf32>, vector<[4]xf32>
+///
+struct VectorOuterProductToArmSMELowering
+    : public OpRewritePattern<vector::OuterProductOp> {
+
+  using OpRewritePattern<vector::OuterProductOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::OuterProductOp outerProductOp,
+                                PatternRewriter &rewriter) const override {
+
+    // We don't yet support lowering AXPY operations to SME. These could be
+    // lowered by masking out all but the first element of the LHS.
+    if (!isa<VectorType>(outerProductOp.getOperandTypeRHS()))
+      return outerProductOp.emitError("AXPY operations not supported");
+
+    if (!arm_sme::isValidSMETileVectorType(
+            outerProductOp.getResultVectorType()))
+      return outerProductOp.emitError(
+          "outer product does not fit into SME tile");
+
+    auto kind = outerProductOp.getKind();
+    if (kind != vector::CombiningKind::ADD)
+      return outerProductOp.emitError(
+          "unsupported kind (lowering to SME only supports ADD at the moment)");
+
+    Value lhsMask = {};
+    Value rhsMask = {};
+    Operation *rootOp = outerProductOp;
+    auto loc = outerProductOp.getLoc();
+    if (outerProductOp.isMasked()) {
+      auto maskOp = outerProductOp.getMaskingOp();
+      rewriter.setInsertionPoint(maskOp);
+      rootOp = maskOp;
+      auto operandMasks = decomposeResultMask(loc, maskOp.getMask(), rewriter);
+      if (failed(operandMasks))
+        return failure();
+      std::tie(lhsMask, rhsMask) = *operandMasks;
+    }
+
+    rewriter.replaceOpWithNewOp<arm_sme::OuterProductOp>(
+        rootOp, outerProductOp.getResultVectorType(), outerProductOp.getLhs(),
+        outerProductOp.getRhs(), lhsMask, rhsMask, outerProductOp.getAcc());
+
+    return success();
+  }
+
+  static FailureOr<std::pair<Value, Value>>
+  decomposeResultMask(Location loc, Value mask, PatternRewriter &rewriter) {
+    // Attempt to extract masks from vector.create_mask.
+    // TODO: Add support for other mask sources.
+    auto createMaskOp = mask.getDefiningOp<vector::CreateMaskOp>();
+    if (!createMaskOp)
+      return failure();
+
+    auto maskType = createMaskOp.getVectorType();
+    Value lhsMaskDim = createMaskOp.getOperand(0);
+    Value rhsMaskDim = createMaskOp.getOperand(1);
+
+    VectorType operandMaskType = VectorType::Builder(maskType).dropDim(0);
+    Value lhsMask =
+        rewriter.create<vector::CreateMaskOp>(loc, operandMaskType, lhsMaskDim);
+    Value rhsMask =
+        rewriter.create<vector::CreateMaskOp>(loc, operandMaskType, rhsMaskDim);
+
+    return std::make_pair(lhsMask, rhsMask);
+  }
+};
+
 } // namespace
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
   patterns.add<BroadcastOpToArmSMELowering, ConstantOpToArmSMELowering,
-               SplatOpToArmSMELowering, TransferReadPermutationToArmSMELowering,
+               SplatOpToArmSMELowering, TransferReadToArmSMELowering,
                TransferWriteToArmSMELowering, TransposeOpToArmSMELowering,
-               VectorLoadToArmSMELowering, VectorStoreToArmSMELowering>(&ctx);
+               VectorLoadToArmSMELowering, VectorStoreToArmSMELowering,
+               VectorOuterProductToArmSMELowering>(&ctx);
 }

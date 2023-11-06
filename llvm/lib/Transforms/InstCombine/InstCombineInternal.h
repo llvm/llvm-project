@@ -131,7 +131,6 @@ public:
   Instruction *FoldShiftByConstant(Value *Op0, Constant *Op1,
                                    BinaryOperator &I);
   Instruction *commonCastTransforms(CastInst &CI);
-  Instruction *commonPointerCastTransforms(CastInst &CI);
   Instruction *visitTrunc(TruncInst &CI);
   Instruction *visitZExt(ZExtInst &Zext);
   Instruction *visitSExt(SExtInst &Sext);
@@ -545,6 +544,7 @@ public:
   /// Tries to simplify operands to an integer instruction based on its
   /// demanded bits.
   bool SimplifyDemandedInstructionBits(Instruction &Inst);
+  bool SimplifyDemandedInstructionBits(Instruction &Inst, KnownBits &Known);
 
   Value *SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
                                     APInt &UndefElts, unsigned Depth = 0,

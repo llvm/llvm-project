@@ -223,16 +223,16 @@ void DwarfEmitterImpl::emitDIE(DIE &Die) {
   DebugInfoSectionSize += Die.getSize();
 }
 
-void DwarfEmitterImpl::emitDebugNames(
-    AccelTable<DWARF5AccelTableStaticData> &Table,
-    DebugNamesUnitsOffsets &CUOffsets, CompUnitIDToIdx &CUidToIdx) {
+void DwarfEmitterImpl::emitDebugNames(DWARF5AccelTable &Table,
+                                      DebugNamesUnitsOffsets &CUOffsets,
+                                      CompUnitIDToIdx &CUidToIdx) {
   if (CUOffsets.empty())
     return;
 
   Asm->OutStreamer->switchSection(MOFI->getDwarfDebugNamesSection());
   emitDWARF5AccelTable(Asm.get(), Table, CUOffsets,
-                       [&CUidToIdx](const DWARF5AccelTableStaticData &Entry) {
-                         return CUidToIdx[Entry.getCUIndex()];
+                       [&CUidToIdx](const DWARF5AccelTableData &Entry) {
+                         return CUidToIdx[Entry.getUnitID()];
                        });
 }
 

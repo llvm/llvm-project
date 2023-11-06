@@ -146,12 +146,10 @@ as ``vg`` is showing the streaming mode vector length::
        tpidr = 0x0000fffff7ff4320
       tpidr2 = 0x1122334455667788
 
-  Scalable Matrix Array Storage Registers:
-          za = {0x01 0x01 0x01 0x01 0x01 0x01 0x01 0x01 0x01 0x01 0x01 <...> }
-
   Scalable Matrix Extension Registers:
          svg = 0x0000000000000002
         svcr = 0x0000000000000003
+          za = {0x00 <...> 0x00}
 
 Changing the Streaming Vector Length
 ....................................

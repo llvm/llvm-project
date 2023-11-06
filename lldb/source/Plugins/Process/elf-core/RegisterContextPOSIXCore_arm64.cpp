@@ -50,6 +50,17 @@ RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
   if (za_data.GetByteSize() >= sizeof(sve::user_za_header))
     opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskZA);
 
+  DataExtractor mte_data = getRegset(notes, arch.GetTriple(), AARCH64_MTE_Desc);
+  if (mte_data.GetByteSize() >= sizeof(uint64_t))
+    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskMTE);
+
+  DataExtractor zt_data = getRegset(notes, arch.GetTriple(), AARCH64_ZT_Desc);
+  // Although ZT0 can be in a disabled state like ZA can, the kernel reports
+  // its content as 0s in that state. Therefore even a disabled ZT0 will have
+  // a note containing those 0s. ZT0 is a 512 bit / 64 byte register.
+  if (zt_data.GetByteSize() >= 64)
+    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskZT);
+
   auto register_info_up =
       std::make_unique<RegisterInfoPOSIX_arm64>(arch, opt_regsets);
   return std::unique_ptr<RegisterContextCorePOSIX_arm64>(
@@ -71,7 +82,7 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
       m_register_info_up->GetTargetArchitecture().GetTriple();
   m_fpr_data = getRegset(notes, target_triple, FPR_Desc);
 
-  if (m_register_info_up->IsSSVEEnabled()) {
+  if (m_register_info_up->IsSSVEPresent()) {
     m_sve_data = getRegset(notes, target_triple, AARCH64_SSVE_Desc);
     lldb::offset_t flags_offset = 12;
     uint16_t flags = m_sve_data.GetU32(&flags_offset);
@@ -79,17 +90,23 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
       m_sve_state = SVEState::Streaming;
   }
 
-  if (m_sve_state != SVEState::Streaming && m_register_info_up->IsSVEEnabled())
+  if (m_sve_state != SVEState::Streaming && m_register_info_up->IsSVEPresent())
     m_sve_data = getRegset(notes, target_triple, AARCH64_SVE_Desc);
 
-  if (m_register_info_up->IsPAuthEnabled())
+  if (m_register_info_up->IsPAuthPresent())
     m_pac_data = getRegset(notes, target_triple, AARCH64_PAC_Desc);
 
-  if (m_register_info_up->IsTLSEnabled())
+  if (m_register_info_up->IsTLSPresent())
     m_tls_data = getRegset(notes, target_triple, AARCH64_TLS_Desc);
 
-  if (m_register_info_up->IsZAEnabled())
+  if (m_register_info_up->IsZAPresent())
     m_za_data = getRegset(notes, target_triple, AARCH64_ZA_Desc);
+
+  if (m_register_info_up->IsMTEPresent())
+    m_mte_data = getRegset(notes, target_triple, AARCH64_MTE_Desc);
+
+  if (m_register_info_up->IsZTPresent())
+    m_zt_data = getRegset(notes, target_triple, AARCH64_ZT_Desc);
 
   ConfigureRegisterContext();
 }
@@ -184,11 +201,9 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
 
   offset = reg_info->byte_offset;
   if (offset + reg_info->byte_size <= GetGPRSize()) {
-    uint64_t v = m_gpr_data.GetMaxU64(&offset, reg_info->byte_size);
-    if (offset == reg_info->byte_offset + reg_info->byte_size) {
-      value = v;
-      return true;
-    }
+    value.SetFromMemoryData(*reg_info, m_gpr_data.GetDataStart() + offset,
+                            reg_info->byte_size, lldb::eByteOrderLittle, error);
+    return error.Success();
   }
 
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
@@ -282,25 +297,18 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
     assert(offset < m_tls_data.GetByteSize());
     value.SetFromMemoryData(*reg_info, m_tls_data.GetDataStart() + offset,
                             reg_info->byte_size, lldb::eByteOrderLittle, error);
+  } else if (IsMTE(reg)) {
+    offset = reg_info->byte_offset - m_register_info_up->GetMTEOffset();
+    assert(offset < m_mte_data.GetByteSize());
+    value.SetFromMemoryData(*reg_info, m_mte_data.GetDataStart() + offset,
+                            reg_info->byte_size, lldb::eByteOrderLittle, error);
   } else if (IsSME(reg)) {
     // If you had SME in the process, active or otherwise, there will at least
     // be a ZA header. No header, no SME at all.
     if (m_za_data.GetByteSize() < sizeof(sve::user_za_header))
       return false;
 
-    if (!IsSMEZA(reg)) {
-      offset = reg_info->byte_offset - m_register_info_up->GetSMEOffset();
-      assert(offset < sizeof(m_sme_pseudo_regs));
-      // Host endian since these values are derived instead of being read from a
-      // core file note.
-      value.SetFromMemoryData(
-          *reg_info, reinterpret_cast<uint8_t *>(&m_sme_pseudo_regs) + offset,
-          reg_info->byte_size, lldb_private::endian::InlHostByteOrder(), error);
-    } else {
-      // If the process did not have the SME extension.
-      if (m_za_data.GetByteSize() < sizeof(sve::user_za_header))
-        return false;
-
+    if (m_register_info_up->IsSMERegZA(reg)) {
       // Don't use the size of the note to tell whether ZA is enabled. There may
       // be non-register padding data after the header. Use the embedded
       // header's size field instead.
@@ -329,6 +337,18 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
       value.SetFromMemoryData(*reg_info, src + sizeof(sve::user_za_header),
                               reg_info->byte_size, lldb::eByteOrderLittle,
                               error);
+    } else if (m_register_info_up->IsSMERegZT(reg)) {
+      value.SetFromMemoryData(*reg_info, m_zt_data.GetDataStart(),
+                              reg_info->byte_size, lldb::eByteOrderLittle,
+                              error);
+    } else {
+      offset = reg_info->byte_offset - m_register_info_up->GetSMEOffset();
+      assert(offset < sizeof(m_sme_pseudo_regs));
+      // Host endian since these values are derived instead of being read from a
+      // core file note.
+      value.SetFromMemoryData(
+          *reg_info, reinterpret_cast<uint8_t *>(&m_sme_pseudo_regs) + offset,
+          reg_info->byte_size, lldb_private::endian::InlHostByteOrder(), error);
     }
   } else
     return false;

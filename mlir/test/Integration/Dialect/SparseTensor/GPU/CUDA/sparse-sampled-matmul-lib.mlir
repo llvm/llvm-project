@@ -26,7 +26,7 @@
 // RUNNOT: %{compile} enable-runtime-library=false gpu-data-transfer-strategy=zero-copy" | %{run}
 //
 
-!Filename = !llvm.ptr<i8>
+!Filename = !llvm.ptr
 
 #CSR = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : dense, d1 : compressed)

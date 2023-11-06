@@ -92,6 +92,7 @@ static_library("Core") {
     "ValueObjectRegister.cpp",
     "ValueObjectSyntheticFilter.cpp",
     "ValueObjectUpdater.cpp",
+    "ValueObjectVTable.cpp",
     "ValueObjectVariable.cpp",
   ]
 }

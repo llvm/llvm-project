@@ -5351,6 +5351,10 @@ SDValue DAGCombiner::visitSMUL_LOHI(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
+  // Constant fold.
+  if (isa<ConstantSDNode>(N0) && isa<ConstantSDNode>(N1))
+    return DAG.getNode(ISD::SMUL_LOHI, DL, N->getVTList(), N0, N1);
+
   // canonicalize constant to RHS (vector doesn't have to splat)
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
@@ -5388,6 +5392,10 @@ SDValue DAGCombiner::visitUMUL_LOHI(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
+
+  // Constant fold.
+  if (isa<ConstantSDNode>(N0) && isa<ConstantSDNode>(N1))
+    return DAG.getNode(ISD::UMUL_LOHI, DL, N->getVTList(), N0, N1);
 
   // canonicalize constant to RHS (vector doesn't have to splat)
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
@@ -13476,8 +13484,11 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   // fold (sext x) -> (zext x) if the sign bit is known zero.
   if (!TLI.isSExtCheaperThanZExt(N0.getValueType(), VT) &&
       (!LegalOperations || TLI.isOperationLegal(ISD::ZERO_EXTEND, VT)) &&
-      DAG.SignBitIsZero(N0))
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0);
+      DAG.SignBitIsZero(N0)) {
+    SDNodeFlags Flags;
+    Flags.setNonNeg(true);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0, Flags);
+  }
 
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
     return NewVSel;
@@ -13706,8 +13717,8 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   // fold (zext (and/or/xor (load x), cst)) ->
   //      (and/or/xor (zextload x), (zext cst))
   // Unless (and (load x) cst) will match as a zextload already and has
-  // additional users.
-  if (ISD::isBitwiseLogicOp(N0.getOpcode()) &&
+  // additional users, or the zext is already free.
+  if (ISD::isBitwiseLogicOp(N0.getOpcode()) && !TLI.isZExtFree(N0, VT) &&
       isa<LoadSDNode>(N0.getOperand(0)) &&
       N0.getOperand(1).getOpcode() == ISD::Constant &&
       (!LegalOperations && TLI.isOperationLegal(N0.getOpcode(), VT))) {
@@ -27266,10 +27277,7 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
     // zext (setcc n0, n1)
     if (LegalTypes) {
       SCC = DAG.getSetCC(DL, CmpResVT, N0, N1, CC);
-      if (VT.bitsLT(SCC.getValueType()))
-        Temp = DAG.getZeroExtendInReg(SCC, SDLoc(N2), VT);
-      else
-        Temp = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N2), VT, SCC);
+      Temp = DAG.getZExtOrTrunc(SCC, SDLoc(N2), VT);
     } else {
       SCC = DAG.getSetCC(SDLoc(N0), MVT::i1, N0, N1, CC);
       Temp = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N2), VT, SCC);

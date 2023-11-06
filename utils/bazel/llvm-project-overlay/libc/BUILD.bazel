@@ -11,7 +11,6 @@ load(
     "libc_math_function",
     "libc_support_library",
 )
-load(":libc_namespace.bzl", "LIBC_NAMESPACE")
 load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
 
 package(
@@ -63,29 +62,16 @@ config_setting(
     flag_values = {":mpfr": "system"},
 )
 
-# This empty root library helps us add an include path to this directory
-# using the 'includes' attribute. The strings listed in the includes attribute
-# are relative paths wrt this library but are inherited by the dependents
-# appropriately. Hence, using this as a root dependency avoids adding include
-# paths of the kind "../../" to other libc targets.
-cc_library(
-    name = "libc_root",
-    defines = ["LIBC_NAMESPACE=" + LIBC_NAMESPACE],
-    includes = ["."],
-)
-
 ############################## Support libraries #############################
 
 libc_support_library(
     name = "__support_macros_properties_architectures",
     hdrs = ["src/__support/macros/properties/architectures.h"],
-    deps = [":libc_root"],
 )
 
 libc_support_library(
     name = "__support_macros_properties_compiler",
     hdrs = ["src/__support/macros/properties/compiler.h"],
-    deps = [":libc_root"],
 )
 
 libc_support_library(
@@ -93,14 +79,12 @@ libc_support_library(
     hdrs = ["src/__support/macros/properties/cpu_features.h"],
     deps = [
         "__support_macros_properties_architectures",
-        ":libc_root",
     ],
 )
 
 libc_support_library(
     name = "__support_macros_config",
     hdrs = ["src/__support/macros/config.h"],
-    deps = [":libc_root"],
 )
 
 libc_support_library(
@@ -108,7 +92,6 @@ libc_support_library(
     hdrs = ["src/__support/macros/attributes.h"],
     deps = [
         ":__support_macros_properties_architectures",
-        ":libc_root",
     ],
 )
 
@@ -119,7 +102,6 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_compiler",
-        ":libc_root",
     ],
 )
 
@@ -128,7 +110,6 @@ libc_support_library(
     hdrs = ["src/__support/macros/sanitizer.h"],
     deps = [
         ":__support_macros_config",
-        ":libc_root",
     ],
 )
 
@@ -141,7 +122,6 @@ libc_support_library(
     deps = [
         ":__support_macros_attributes",
         ":__support_macros_properties_architectures",
-        ":libc_root",
     ],
 )
 
@@ -150,7 +130,6 @@ libc_support_library(
     hdrs = ["src/__support/CPP/algorithm.h"],
     deps = [
         ":__support_macros_attributes",
-        ":libc_root",
     ],
 )
 
@@ -159,7 +138,6 @@ libc_support_library(
     hdrs = ["src/__support/CPP/array.h"],
     deps = [
         ":__support_macros_attributes",
-        ":libc_root",
     ],
 )
 
@@ -170,7 +148,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_config",
-        ":libc_root",
+        ":__support_macros_sanitizer",
     ],
 )
 
@@ -179,7 +157,6 @@ libc_support_library(
     hdrs = ["src/__support/CPP/bitset.h"],
     deps = [
         ":__support_macros_attributes",
-        ":libc_root",
     ],
 )
 
@@ -189,7 +166,6 @@ libc_support_library(
     deps = [
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
-        ":libc_root",
     ],
 )
 
@@ -197,7 +173,6 @@ libc_support_library(
     name = "__support_cpp_expected",
     hdrs = ["src/__support/CPP/expected.h"],
     deps = [
-        ":libc_root",
     ],
 )
 
@@ -208,14 +183,12 @@ libc_support_library(
         "__support_cpp_type_traits",
         "__support_cpp_utility",
         "__support_macros_attributes",
-        ":libc_root",
     ],
 )
 
 libc_support_library(
     name = "__support_cpp_limits",
     hdrs = ["src/__support/CPP/limits.h"],
-    deps = [":libc_root"],
 )
 
 libc_support_library(
@@ -224,7 +197,6 @@ libc_support_library(
     hdrs = ["src/__support/CPP/new.h"],
     deps = [
         ":__support_common",
-        ":libc_root",
     ],
 )
 
@@ -233,7 +205,6 @@ libc_support_library(
     hdrs = ["src/__support/CPP/optional.h"],
     deps = [
         ":__support_cpp_utility",
-        ":libc_root",
     ],
 )
 
@@ -243,7 +214,6 @@ libc_support_library(
     deps = [
         ":__support_cpp_array",
         ":__support_cpp_type_traits",
-        ":libc_root",
     ],
 )
 
@@ -252,7 +222,6 @@ libc_support_library(
     hdrs = ["src/__support/CPP/string_view.h"],
     deps = [
         ":__support_common",
-        ":libc_root",
     ],
 )
 
@@ -274,7 +243,6 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_string_view",
         ":__support_integer_to_string",
-        ":libc_root",
         ":string_memory_utils",
         ":string_utils",
     ],
@@ -339,7 +307,6 @@ libc_support_library(
     deps = [
         ":__support_macros_attributes",
         ":__support_macros_config",
-        ":libc_root",
     ],
 )
 
@@ -356,7 +323,6 @@ libc_support_library(
     deps = [
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
-        ":libc_root",
     ],
 )
 
@@ -367,7 +333,6 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_properties_architectures",
-        ":libc_root",
     ],
 )
 
@@ -376,7 +341,6 @@ libc_support_library(
     hdrs = ["src/__support/arg_list.h"],
     deps = [
         ":__support_common",
-        ":libc_root",
     ],
 )
 
@@ -385,7 +349,6 @@ libc_support_library(
     hdrs = ["src/__support/c_string.h"],
     deps = [
         ":__support_cpp_string",
-        ":libc_root",
     ],
 )
 
@@ -395,7 +358,6 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_expected",
-        ":libc_root",
     ],
 )
 
@@ -414,7 +376,6 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_libc_assert",
         ":__support_uint",
-        ":libc_root",
     ],
 )
 
@@ -424,7 +385,6 @@ libc_support_library(
     deps = [
         ":__support_cpp_type_traits",
         ":__support_named_pair",
-        ":libc_root",
     ],
 )
 
@@ -436,7 +396,6 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_type_traits",
         ":__support_number_pair",
-        ":libc_root",
     ],
 )
 
@@ -453,7 +412,6 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_optimization",
         ":__support_number_pair",
-        ":libc_root",
     ],
 )
 
@@ -462,7 +420,6 @@ libc_support_library(
     hdrs = ["src/__support/UInt128.h"],
     deps = [
         ":__support_uint",
-        ":libc_root",
     ],
 )
 
@@ -470,7 +427,6 @@ libc_support_library(
     name = "__support_str_to_num_result",
     hdrs = ["src/__support/str_to_num_result.h"],
     deps = [
-        ":libc_root",
     ],
 )
 
@@ -492,7 +448,6 @@ libc_support_library(
         ":__support_cpp_span",
         ":__support_cpp_string_view",
         ":__support_cpp_type_traits",
-        ":libc_root",
     ],
 )
 
@@ -504,7 +459,6 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_osutil_io",
         ":__support_osutil_quick_exit",
-        ":libc_root",
     ],
 )
 
@@ -558,7 +512,6 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
-        ":libc_root",
     ],
 )
 
@@ -572,7 +525,6 @@ libc_support_library(
         ":__support_error_or",
         ":__support_threads_mutex",
         ":errno",
-        ":libc_root",
     ],
 )
 
@@ -590,7 +542,6 @@ libc_support_library(
 libc_support_library(
     name = "__support_named_pair",
     hdrs = ["src/__support/named_pair.h"],
-    deps = [":libc_root"],
 )
 
 libc_support_library(
@@ -601,7 +552,6 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_named_pair",
-        ":libc_root",
     ],
 )
 
@@ -615,7 +565,6 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
-        ":libc_root",
         ":math_utils",
     ],
 )
@@ -629,7 +578,6 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_manipulation_functions",
         ":__support_fputil_normal_float",
-        ":libc_root",
     ],
 )
 
@@ -641,7 +589,6 @@ libc_support_library(
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
-        ":libc_root",
     ],
 )
 
@@ -659,7 +606,6 @@ libc_support_library(
         ":__support_macros_properties_architectures",
         ":__support_macros_sanitizer",
         ":errno",
-        ":libc_root",
     ],
 )
 
@@ -668,7 +614,6 @@ libc_support_library(
     hdrs = ["src/__support/FPUtil/rounding_mode.h"],
     deps = [
         ":__support_macros_attributes",
-        ":libc_root",
     ],
 )
 
@@ -678,7 +623,6 @@ libc_support_library(
     deps = [
         ":__support_fputil_platform_defs",
         ":__support_uint128",
-        ":libc_root",
     ],
 )
 
@@ -694,7 +638,6 @@ libc_support_library(
         ":__support_fputil_float_properties",
         ":__support_fputil_platform_defs",
         ":__support_uint128",
-        ":libc_root",
     ],
 )
 
@@ -710,7 +653,6 @@ libc_support_library(
         ":__support_fputil_platform_defs",
         ":__support_integer_to_string",
         ":__support_uint128",
-        ":libc_root",
     ],
 )
 
@@ -727,7 +669,6 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
         ":__support_uint128",
-        ":libc_root",
     ],
 )
 
@@ -745,7 +686,6 @@ libc_support_library(
         ":__support_fputil_platform_defs",
         ":__support_macros_optimization",
         ":__support_uint128",
-        ":libc_root",
     ],
 )
 
@@ -758,7 +698,6 @@ libc_support_library(
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
-        ":libc_root",
     ],
 )
 
@@ -769,7 +708,6 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
-        ":libc_root",
     ],
 )
 
@@ -778,7 +716,6 @@ libc_support_library(
     hdrs = ["src/__support/FPUtil/PlatformDefs.h"],
     deps = [
         ":__support_common",
-        ":libc_root",
     ],
 )
 
@@ -811,7 +748,6 @@ libc_support_library(
         ":__support_fputil_platform_defs",
         ":__support_fputil_rounding_mode",
         ":__support_uint128",
-        ":libc_root",
     ],
 )
 
@@ -843,7 +779,6 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_uint128",
-        ":libc_root",
     ],
 )
 
@@ -890,7 +825,6 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_architectures",
         ":__support_macros_properties_cpu_features",
-        ":libc_root",
     ],
 )
 
@@ -901,7 +835,6 @@ libc_support_library(
         ":__support_common",
         ":__support_fputil_multiply_add",
         ":__support_number_pair",
-        ":libc_root",
     ],
 )
 
@@ -910,7 +843,6 @@ libc_support_library(
     hdrs = ["src/__support/FPUtil/triple_double.h"],
     deps = [
         ":__support_common",
-        ":libc_root",
     ],
 )
 
@@ -924,7 +856,6 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_uint",
-        ":libc_root",
     ],
 )
 
@@ -939,7 +870,6 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
-        ":libc_root",
     ],
 )
 
@@ -953,7 +883,6 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_string_view",
         ":__support_osutil_syscall",
-        ":libc_root",
         ":string_utils",
     ],
 )
@@ -967,7 +896,6 @@ libc_support_library(
     ],
     deps = [
         ":__support_osutil_syscall",
-        ":libc_root",
     ],
 )
 
@@ -992,7 +920,6 @@ libc_support_library(
         ":__support_integer_to_string",
         ":__support_macros_attributes",
         ":errno",
-        ":libc_root",
     ],
 )
 
@@ -1009,7 +936,6 @@ libc_support_library(
     deps = [
         ":__support_cpp_atomic",
         ":__support_osutil_syscall",
-        ":libc_root",
     ],
 )
 
@@ -1179,7 +1105,6 @@ libc_support_library(
         "__support_cpp_type_traits",
         ":__support_common",
         ":errno",
-        ":libc_root",
     ],
 )
 
@@ -1190,7 +1115,6 @@ libc_support_library(
     deps = [
         ":__support_fputil_triple_double",
         ":__support_number_pair",
-        ":libc_root",
     ],
 )
 
@@ -1206,7 +1130,6 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
-        ":libc_root",
     ],
 )
 
@@ -1216,7 +1139,6 @@ libc_support_library(
     deps = [
         ":__support_fputil_fp_bits",
         ":__support_fputil_polyeval",
-        ":libc_root",
         ":range_reduction",
     ],
 )
@@ -1234,7 +1156,6 @@ libc_support_library(
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
         ":common_constants",
-        ":libc_root",
         ":math_utils",
     ],
 )
@@ -1251,7 +1172,6 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
-        ":libc_root",
         ":math_utils",
     ],
 )
@@ -2220,7 +2140,6 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_architectures",
         ":__support_macros_properties_cpu_features",
-        ":libc_root",
     ],
 )
 
@@ -2231,7 +2150,6 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bitset",
         ":__support_macros_optimization",
-        ":libc_root",
         ":string_memory_utils",
     ],
 )
@@ -2691,7 +2609,6 @@ libc_support_library(
     deps = [
         ":__support_cpp_string_view",
         ":__support_fputil_fp_bits",
-        ":libc_root",
     ],
 )
 
@@ -2700,7 +2617,6 @@ libc_support_library(
     hdrs = ["src/stdio/printf_core/printf_config.h"],
     defines = PRINTF_COPTS,
     deps = [
-        ":libc_root",
     ],
 )
 
@@ -2718,7 +2634,6 @@ libc_support_library(
         ":__support_ctype_utils",
         ":__support_fputil_fp_bits",
         ":__support_str_to_integer",
-        ":libc_root",
         ":printf_config",
         ":printf_core_structs",
     ],
@@ -2739,7 +2654,6 @@ libc_support_library(
         ":__support_ctype_utils",
         ":__support_fputil_fp_bits",
         ":__support_str_to_integer",
-        ":libc_root",
         ":printf_config",
         ":printf_core_structs",
     ],
@@ -2753,7 +2667,6 @@ libc_support_library(
     deps = [
         ":__support_cpp_string_view",
         ":__support_macros_optimization",
-        ":libc_root",
         ":printf_core_structs",
         ":string_memory_utils",
     ],
@@ -2790,7 +2703,6 @@ libc_support_library(
         ":__support_libc_assert",
         ":__support_uint",
         ":__support_uint128",
-        ":libc_root",
         ":printf_core_structs",
         ":printf_writer",
     ],
@@ -2803,7 +2715,6 @@ libc_support_library(
     defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
-        ":libc_root",
         ":printf_converter",
         ":printf_core_structs",
         ":printf_parser",

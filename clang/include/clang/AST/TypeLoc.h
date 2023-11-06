@@ -243,7 +243,7 @@ private:
 
 inline TypeSourceInfo::TypeSourceInfo(QualType ty, size_t DataSize) : Ty(ty) {
   // Init data attached to the object. See getTypeLoc.
-  memset(this + 1, 0, DataSize);
+  memset(static_cast<void *>(this + 1), 0, DataSize);
 }
 
 /// Return the TypeLoc for a type source info.
@@ -2294,7 +2294,7 @@ public:
   QualType getInnerType() const { return getTypePtr()->getNamedType(); }
 
   bool isEmpty() const {
-    return getTypePtr()->getKeyword() == ElaboratedTypeKeyword::ETK_None &&
+    return getTypePtr()->getKeyword() == ElaboratedTypeKeyword::None &&
            !getTypePtr()->getQualifier();
   }
 

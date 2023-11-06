@@ -10,7 +10,6 @@
 #include "definable.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
-#include <algorithm>
 
 namespace Fortran::semantics {
 
@@ -1394,6 +1393,16 @@ void OmpStructureChecker::CheckOrderedDependClause(
   }
 }
 
+void OmpStructureChecker::CheckTargetUpdate() {
+  const parser::OmpClause *toClause = FindClause(llvm::omp::Clause::OMPC_to);
+  const parser::OmpClause *fromClause =
+      FindClause(llvm::omp::Clause::OMPC_from);
+  if (!toClause && !fromClause) {
+    context_.Say(GetContext().directiveSource,
+        "At least one motion-clause (TO/FROM) must be specified on TARGET UPDATE construct."_err_en_US);
+  }
+}
+
 void OmpStructureChecker::Enter(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
   const auto &dir{std::get<parser::OmpSimpleStandaloneDirective>(x.t)};
@@ -1402,11 +1411,14 @@ void OmpStructureChecker::Enter(
 }
 
 void OmpStructureChecker::Leave(
-    const parser::OpenMPSimpleStandaloneConstruct &) {
+    const parser::OpenMPSimpleStandaloneConstruct &x) {
   switch (GetContext().directive) {
   case llvm::omp::Directive::OMPD_ordered:
     // [5.1] 2.19.9 Ordered Construct Restriction
     ChecksOnOrderedAsStandalone();
+    break;
+  case llvm::omp::Directive::OMPD_target_update:
+    CheckTargetUpdate();
     break;
   default:
     break;
@@ -2852,18 +2864,21 @@ void OmpStructureChecker::Enter(const parser::OmpClause::IsDevicePtr &x) {
     const auto &isDevicePtrClause{
         std::get<parser::OmpClause::IsDevicePtr>(itr->second->u)};
     const auto &isDevicePtrList{isDevicePtrClause.v};
-    std::list<parser::Name> isDevicePtrNameList;
-    for (const auto &ompObject : isDevicePtrList.v) {
-      if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
-        if (name->symbol) {
-          if (!(IsBuiltinCPtr(*(name->symbol)))) {
-            context_.Say(itr->second->source,
-                "Variable '%s' in IS_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
-                name->ToString());
-          } else {
-            isDevicePtrNameList.push_back(*name);
-          }
-        }
+    SymbolSourceMap currSymbols;
+    GetSymbolsInObjectList(isDevicePtrList, currSymbols);
+    for (auto &[symbol, source] : currSymbols) {
+      if (!(IsBuiltinCPtr(*symbol))) {
+        context_.Say(itr->second->source,
+            "Variable '%s' in IS_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
+            source.ToString());
+      } else if (!(IsDummy(*symbol))) {
+        context_.Say(itr->second->source,
+            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument"_err_en_US,
+            source.ToString());
+      } else if (IsAllocatableOrPointer(*symbol) || IsValue(*symbol)) {
+        context_.Say(itr->second->source,
+            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute."_err_en_US,
+            source.ToString());
       }
     }
   }

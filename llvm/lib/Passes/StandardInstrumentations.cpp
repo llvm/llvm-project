@@ -812,7 +812,8 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   ++CurrentPassNumber;
 
   if (shouldPrintPassNumbers())
-    dbgs() << " Running pass " << CurrentPassNumber << " " << PassID << "\n";   
+    dbgs() << " Running pass " << CurrentPassNumber << " " << PassID
+           << " on " << getIRName(IR) << "\n";
 
   if (!shouldPrintBeforePass(PassID))
     return;

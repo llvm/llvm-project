@@ -357,6 +357,10 @@ void AppleAccelTableWriter::emit() const {
   emitData();
 }
 
+DWARF5AccelTableData::DWARF5AccelTableData(const DIE &Die,
+                                           const DwarfCompileUnit &CU)
+    : OffsetVal(&Die), DieTag(Die.getTag()), UnitID(CU.getUniqueID()) {}
+
 template <typename DataT>
 void Dwarf5AccelTableWriter<DataT>::Header::emit(Dwarf5AccelTableWriter &Ctx) {
   assert(CompUnitCount > 0 && "Index must have at least one CU.");
@@ -545,8 +549,8 @@ void llvm::emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,
 }
 
 void llvm::emitDWARF5AccelTable(
-    AsmPrinter *Asm, AccelTable<DWARF5AccelTableData> &Contents,
-    const DwarfDebug &DD, ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs) {
+    AsmPrinter *Asm, DWARF5AccelTable &Contents, const DwarfDebug &DD,
+    ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs) {
   std::vector<std::variant<MCSymbol *, uint64_t>> CompUnits;
   SmallVector<unsigned, 1> CUIndex(CUs.size());
   int Count = 0;
@@ -575,20 +579,19 @@ void llvm::emitDWARF5AccelTable(
   Dwarf5AccelTableWriter<DWARF5AccelTableData>(
       Asm, Contents, CompUnits,
       [&](const DWARF5AccelTableData &Entry) {
-        const DIE *CUDie = Entry.getDie().getUnitDie();
-        return CUIndex[DD.lookupCU(CUDie)->getUniqueID()];
+        return CUIndex[Entry.getUnitID()];
       })
       .emit();
 }
 
 void llvm::emitDWARF5AccelTable(
-    AsmPrinter *Asm, AccelTable<DWARF5AccelTableStaticData> &Contents,
+    AsmPrinter *Asm, DWARF5AccelTable &Contents,
     ArrayRef<std::variant<MCSymbol *, uint64_t>> CUs,
-    llvm::function_ref<unsigned(const DWARF5AccelTableStaticData &)>
+    llvm::function_ref<unsigned(const DWARF5AccelTableData &)>
         getCUIndexForEntry) {
   Contents.finalize(Asm, "names");
-  Dwarf5AccelTableWriter<DWARF5AccelTableStaticData>(Asm, Contents, CUs,
-                                                     getCUIndexForEntry)
+  Dwarf5AccelTableWriter<DWARF5AccelTableData>(Asm, Contents, CUs,
+                                               getCUIndexForEntry)
       .emit();
 }
 
@@ -683,11 +686,6 @@ void AccelTableBase::print(raw_ostream &OS) const {
 }
 
 void DWARF5AccelTableData::print(raw_ostream &OS) const {
-  OS << "  Offset: " << getDieOffset() << "\n";
-  OS << "  Tag: " << dwarf::TagString(getDieTag()) << "\n";
-}
-
-void DWARF5AccelTableStaticData::print(raw_ostream &OS) const {
   OS << "  Offset: " << getDieOffset() << "\n";
   OS << "  Tag: " << dwarf::TagString(getDieTag()) << "\n";
 }

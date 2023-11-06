@@ -46,6 +46,15 @@ static cl::opt<unsigned>
     NeonNonConstStrideOverhead("neon-nonconst-stride-overhead", cl::init(10),
                                cl::Hidden);
 
+static cl::opt<unsigned> CallPenaltyChangeSM(
+    "call-penalty-sm-change", cl::init(5), cl::Hidden,
+    cl::desc(
+        "Penalty of calling a function that requires a change to PSTATE.SM"));
+
+static cl::opt<unsigned> InlineCallPenaltyChangeSM(
+    "inline-call-penalty-sm-change", cl::init(10), cl::Hidden,
+    cl::desc("Penalty of inlining a call that requires a change to PSTATE.SM"));
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -190,15 +199,48 @@ static cl::opt<bool> EnableFixedwidthAutovecInStreamingMode(
 static cl::opt<bool> EnableScalableAutovecInStreamingMode(
     "enable-scalable-autovec-in-streaming-mode", cl::init(false), cl::Hidden);
 
+static bool isSMEABIRoutineCall(const CallInst &CI) {
+  const auto *F = CI.getCalledFunction();
+  return F && StringSwitch<bool>(F->getName())
+                  .Case("__arm_sme_state", true)
+                  .Case("__arm_tpidr2_save", true)
+                  .Case("__arm_tpidr2_restore", true)
+                  .Case("__arm_za_disable", true)
+                  .Default(false);
+}
+
+/// Returns true if the function has explicit operations that can only be
+/// lowered using incompatible instructions for the selected mode. This also
+/// returns true if the function F may use or modify ZA state.
+static bool hasPossibleIncompatibleOps(const Function *F) {
+  for (const BasicBlock &BB : *F) {
+    for (const Instruction &I : BB) {
+      // Be conservative for now and assume that any call to inline asm or to
+      // intrinsics could could result in non-streaming ops (e.g. calls to
+      // @llvm.aarch64.* or @llvm.gather/scatter intrinsics). We can assume that
+      // all native LLVM instructions can be lowered to compatible instructions.
+      if (isa<CallInst>(I) && !I.isDebugOrPseudoInst() &&
+          (cast<CallInst>(I).isInlineAsm() || isa<IntrinsicInst>(I) ||
+           isSMEABIRoutineCall(cast<CallInst>(I))))
+        return true;
+    }
+  }
+  return false;
+}
+
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
   SMEAttrs CallerAttrs(*Caller);
   SMEAttrs CalleeAttrs(*Callee);
-  if (CallerAttrs.requiresSMChange(CalleeAttrs,
-                                   /*BodyOverridesInterface=*/true) ||
-      CallerAttrs.requiresLazySave(CalleeAttrs) ||
-      CalleeAttrs.hasNewZABody())
+  if (CalleeAttrs.hasNewZABody())
     return false;
+
+  if (CallerAttrs.requiresLazySave(CalleeAttrs) ||
+      CallerAttrs.requiresSMChange(CalleeAttrs,
+                                   /*BodyOverridesInterface=*/true)) {
+    if (hasPossibleIncompatibleOps(Callee))
+      return false;
+  }
 
   const TargetMachine &TM = getTLI()->getTargetMachine();
 
@@ -210,6 +252,64 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   // Inline a callee if its target-features are a subset of the callers
   // target-features.
   return (CallerBits & CalleeBits) == CalleeBits;
+}
+
+bool AArch64TTIImpl::areTypesABICompatible(
+    const Function *Caller, const Function *Callee,
+    const ArrayRef<Type *> &Types) const {
+  if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
+    return false;
+
+  // We need to ensure that argument promotion does not attempt to promote
+  // pointers to fixed-length vector types larger than 128 bits like
+  // <8 x float> (and pointers to aggregate types which have such fixed-length
+  // vector type members) into the values of the pointees. Such vector types
+  // are used for SVE VLS but there is no ABI for SVE VLS arguments and the
+  // backend cannot lower such value arguments. The 128-bit fixed-length SVE
+  // types can be safely treated as 128-bit NEON types and they cannot be
+  // distinguished in IR.
+  if (ST->useSVEForFixedLengthVectors() && llvm::any_of(Types, [](Type *Ty) {
+        auto FVTy = dyn_cast<FixedVectorType>(Ty);
+        return FVTy &&
+               FVTy->getScalarSizeInBits() * FVTy->getNumElements() > 128;
+      }))
+    return false;
+
+  return true;
+}
+
+unsigned
+AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
+                                     unsigned DefaultCallPenalty) const {
+  // This function calculates a penalty for executing Call in F.
+  //
+  // There are two ways this function can be called:
+  // (1)  F:
+  //       call from F -> G (the call here is Call)
+  //
+  // For (1), Call.getCaller() == F, so it will always return a high cost if
+  // a streaming-mode change is required (thus promoting the need to inline the
+  // function)
+  //
+  // (2)  F:
+  //       call from F -> G (the call here is not Call)
+  //      G:
+  //       call from G -> H (the call here is Call)
+  //
+  // For (2), if after inlining the body of G into F the call to H requires a
+  // streaming-mode change, and the call to G from F would also require a
+  // streaming-mode change, then there is benefit to do the streaming-mode
+  // change only once and avoid inlining of G into F.
+  SMEAttrs FAttrs(*F);
+  SMEAttrs CalleeAttrs(Call);
+  if (FAttrs.requiresSMChange(CalleeAttrs)) {
+    if (F == Call.getCaller()) // (1)
+      return CallPenaltyChangeSM * DefaultCallPenalty;
+    if (FAttrs.requiresSMChange(SMEAttrs(*Call.getCaller()))) // (2)
+      return InlineCallPenaltyChangeSM * DefaultCallPenalty;
+  }
+
+  return DefaultCallPenalty;
 }
 
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
@@ -1937,21 +2037,20 @@ TypeSize
 AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   switch (K) {
   case TargetTransformInfo::RGK_Scalar:
-    return TypeSize::getFixed(64);
+    return TypeSize::Fixed(64);
   case TargetTransformInfo::RGK_FixedWidthVector:
     if (!ST->isNeonAvailable() && !EnableFixedwidthAutovecInStreamingMode)
-      return TypeSize::getFixed(0);
+      return TypeSize::Fixed(0);
 
     if (ST->hasSVE())
-      return TypeSize::getFixed(
-          std::max(ST->getMinSVEVectorSizeInBits(), 128u));
+      return TypeSize::Fixed(std::max(ST->getMinSVEVectorSizeInBits(), 128u));
 
-    return TypeSize::getFixed(ST->hasNEON() ? 128 : 0);
+    return TypeSize::Fixed(ST->hasNEON() ? 128 : 0);
   case TargetTransformInfo::RGK_ScalableVector:
     if (!ST->isSVEAvailable() && !EnableScalableAutovecInStreamingMode)
-      return TypeSize::getScalable(0);
+      return TypeSize::Scalable(0);
 
-    return TypeSize::getScalable(ST->hasSVE() ? 128 : 0);
+    return TypeSize::Scalable(ST->hasSVE() ? 128 : 0);
   }
   llvm_unreachable("Unsupported register kind");
 }
@@ -2938,6 +3037,7 @@ AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   // they may wake up the FP unit, which raises the power consumption.  Perhaps
   // they could be used with no holds barred (-O3).
   Options.LoadSizes = {8, 4, 2, 1};
+  Options.AllowedTailExpansions = {3, 5, 6};
   return Options;
 }
 
@@ -2973,12 +3073,16 @@ static unsigned getSVEGatherScatterOverhead(unsigned Opcode) {
 InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
-  if (useNeonVector(DataTy))
+  if (useNeonVector(DataTy) || !isLegalMaskedGatherScatter(DataTy))
     return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
   auto *VT = cast<VectorType>(DataTy);
   auto LT = getTypeLegalizationCost(DataTy);
   if (!LT.first.isValid())
+    return InstructionCost::getInvalid();
+
+  if (!LT.second.isVector() ||
+      !isElementTypeLegalForScalableVector(VT->getElementType()))
     return InstructionCost::getInvalid();
 
   // The code-generator is currently not able to handle scalable vectors

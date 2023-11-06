@@ -2,6 +2,7 @@
 ;
 ; RUN: opt < %s -mtriple=avr-freebsd -passes=instcombine -S | FileCheck %s --check-prefix=AVR
 ; RUN: opt < %s -mtriple=msp430-linux -passes=instcombine -S | FileCheck %s --check-prefix=MSP430
+; REQUIRES: avr-registered-target,msp430-registered-target
 ;
 ; Verify that the puts to putchar transformation works correctly even for
 ; targets with 16-bit int.
@@ -24,21 +25,21 @@ declare i16 @printf(ptr, ...)
 
 define void @xform_printf(i8 %c8, i16 %c16) {
 ; AVR-LABEL: @xform_printf(
-; AVR-NEXT:    [[PUTCHAR:%.*]] = call i16 @putchar(i16 1)
-; AVR-NEXT:    [[PUTCHAR1:%.*]] = call i16 @putchar(i16 1)
-; AVR-NEXT:    [[PUTCHAR2:%.*]] = call i16 @putchar(i16 1)
-; AVR-NEXT:    [[PUTCHAR3:%.*]] = call i16 @putchar(i16 127)
-; AVR-NEXT:    [[PUTCHAR4:%.*]] = call i16 @putchar(i16 127)
-; AVR-NEXT:    [[PUTCHAR5:%.*]] = call i16 @putchar(i16 127)
-; AVR-NEXT:    [[PUTCHAR6:%.*]] = call i16 @putchar(i16 128)
-; AVR-NEXT:    [[PUTCHAR7:%.*]] = call i16 @putchar(i16 128)
-; AVR-NEXT:    [[PUTCHAR8:%.*]] = call i16 @putchar(i16 128)
-; AVR-NEXT:    [[PUTCHAR9:%.*]] = call i16 @putchar(i16 255)
-; AVR-NEXT:    [[PUTCHAR10:%.*]] = call i16 @putchar(i16 255)
-; AVR-NEXT:    [[PUTCHAR11:%.*]] = call i16 @putchar(i16 255)
+; AVR-NEXT:    [[PUTCHAR:%.*]] = call addrspace(1) i16 @putchar(i16 1)
+; AVR-NEXT:    [[PUTCHAR1:%.*]] = call addrspace(1) i16 @putchar(i16 1)
+; AVR-NEXT:    [[PUTCHAR2:%.*]] = call addrspace(1) i16 @putchar(i16 1)
+; AVR-NEXT:    [[PUTCHAR3:%.*]] = call addrspace(1) i16 @putchar(i16 127)
+; AVR-NEXT:    [[PUTCHAR4:%.*]] = call addrspace(1) i16 @putchar(i16 127)
+; AVR-NEXT:    [[PUTCHAR5:%.*]] = call addrspace(1) i16 @putchar(i16 127)
+; AVR-NEXT:    [[PUTCHAR6:%.*]] = call addrspace(1) i16 @putchar(i16 128)
+; AVR-NEXT:    [[PUTCHAR7:%.*]] = call addrspace(1) i16 @putchar(i16 128)
+; AVR-NEXT:    [[PUTCHAR8:%.*]] = call addrspace(1) i16 @putchar(i16 128)
+; AVR-NEXT:    [[PUTCHAR9:%.*]] = call addrspace(1) i16 @putchar(i16 255)
+; AVR-NEXT:    [[PUTCHAR10:%.*]] = call addrspace(1) i16 @putchar(i16 255)
+; AVR-NEXT:    [[PUTCHAR11:%.*]] = call addrspace(1) i16 @putchar(i16 255)
 ; AVR-NEXT:    [[TMP1:%.*]] = zext i8 [[C8:%.*]] to i16
-; AVR-NEXT:    [[PUTCHAR12:%.*]] = call i16 @putchar(i16 [[TMP1]])
-; AVR-NEXT:    [[PUTCHAR13:%.*]] = call i16 @putchar(i16 [[C16:%.*]])
+; AVR-NEXT:    [[PUTCHAR12:%.*]] = call addrspace(1) i16 @putchar(i16 [[TMP1]])
+; AVR-NEXT:    [[PUTCHAR13:%.*]] = call addrspace(1) i16 @putchar(i16 [[C16:%.*]])
 ; AVR-NEXT:    ret void
 ;
 ; MSP430-LABEL: @xform_printf(
