@@ -1293,8 +1293,7 @@ void ASTStmtReader::VisitSourceLocExpr(SourceLocExpr *E) {
   E->ParentContext = readDeclAs<DeclContext>();
   E->BuiltinLoc = readSourceLocation();
   E->RParenLoc = readSourceLocation();
-  E->SourceLocExprBits.Kind =
-      static_cast<SourceLocExpr::IdentKind>(Record.readInt());
+  E->SourceLocExprBits.Kind = Record.readInt();
 }
 
 void ASTStmtReader::VisitAddrLabelExpr(AddrLabelExpr *E) {

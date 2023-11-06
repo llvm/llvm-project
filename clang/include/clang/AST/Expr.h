@@ -4735,6 +4735,16 @@ public:
   }
 };
 
+enum class SourceLocIdentKind {
+  Function,
+  FuncSig,
+  File,
+  FileName,
+  Line,
+  Column,
+  SourceLocStruct
+};
+
 /// Represents a function call to one of __builtin_LINE(), __builtin_COLUMN(),
 /// __builtin_FUNCTION(), __builtin_FUNCSIG(), __builtin_FILE(),
 /// __builtin_FILE_NAME() or __builtin_source_location().
@@ -4743,19 +4753,9 @@ class SourceLocExpr final : public Expr {
   DeclContext *ParentContext;
 
 public:
-  enum IdentKind {
-    Function,
-    FuncSig,
-    File,
-    FileName,
-    Line,
-    Column,
-    SourceLocStruct
-  };
-
-  SourceLocExpr(const ASTContext &Ctx, IdentKind Type, QualType ResultTy,
-                SourceLocation BLoc, SourceLocation RParenLoc,
-                DeclContext *Context);
+  SourceLocExpr(const ASTContext &Ctx, SourceLocIdentKind Type,
+                QualType ResultTy, SourceLocation BLoc,
+                SourceLocation RParenLoc, DeclContext *Context);
 
   /// Build an empty call expression.
   explicit SourceLocExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
@@ -4768,20 +4768,20 @@ public:
   /// Return a string representing the name of the specific builtin function.
   StringRef getBuiltinStr() const;
 
-  IdentKind getIdentKind() const {
-    return static_cast<IdentKind>(SourceLocExprBits.Kind);
+  SourceLocIdentKind getIdentKind() const {
+    return static_cast<SourceLocIdentKind>(SourceLocExprBits.Kind);
   }
 
   bool isIntType() const {
     switch (getIdentKind()) {
-    case File:
-    case FileName:
-    case Function:
-    case FuncSig:
-    case SourceLocStruct:
+    case SourceLocIdentKind::File:
+    case SourceLocIdentKind::FileName:
+    case SourceLocIdentKind::Function:
+    case SourceLocIdentKind::FuncSig:
+    case SourceLocIdentKind::SourceLocStruct:
       return false;
-    case Line:
-    case Column:
+    case SourceLocIdentKind::Line:
+    case SourceLocIdentKind::Column:
       return true;
     }
     llvm_unreachable("unknown source location expression kind");
