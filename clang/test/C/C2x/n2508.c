@@ -21,3 +21,14 @@ void test() {
 final:
 }
 
+void test_labels() {
+label:
+  int i = 0;
+
+  switch (i) {
+  case 1:
+    _Static_assert(true);
+  default:
+    _Static_assert(true);
+  }
+}
