@@ -39,13 +39,18 @@ using namespace mlir;
 using namespace mlir::omp;
 
 namespace {
-/// Model for pointer-like types that already provide a `getElementType` method.
-template <typename T>
-struct PointerLikeModel
-    : public PointerLikeType::ExternalModel<PointerLikeModel<T>, T> {
+struct MemRefPointerLikeModel
+    : public PointerLikeType::ExternalModel<MemRefPointerLikeModel,
+                                            MemRefType> {
   Type getElementType(Type pointer) const {
-    return llvm::cast<T>(pointer).getElementType();
+    return llvm::cast<MemRefType>(pointer).getElementType();
   }
+};
+
+struct LLVMPointerPointerLikeModel
+    : public PointerLikeType::ExternalModel<LLVMPointerPointerLikeModel,
+                                            LLVM::LLVMPointerType> {
+  Type getElementType(Type pointer) const { return Type(); }
 };
 
 struct OpenMPDialectFoldInterface : public DialectFoldInterface {
@@ -73,11 +78,9 @@ void OpenMPDialect::initialize() {
       >();
 
   addInterface<OpenMPDialectFoldInterface>();
-  LLVM::LLVMPointerType::attachInterface<
-      PointerLikeModel<LLVM::LLVMPointerType>>(*getContext());
-  MemRefType::attachInterface<PointerLikeModel<MemRefType>>(*getContext());
-  LLVM::LLVMPointerType::attachInterface<
-      PointerLikeModel<LLVM::LLVMPointerType>>(*getContext());
+  MemRefType::attachInterface<MemRefPointerLikeModel>(*getContext());
+  LLVM::LLVMPointerType::attachInterface<LLVMPointerPointerLikeModel>(
+      *getContext());
 
   // Attach default offload module interface to module op to access
   // offload functionality through
@@ -1415,9 +1418,7 @@ LogicalResult AtomicUpdateOp::verify() {
   return verifySynchronizationHint(*this, getHintVal());
 }
 
-LogicalResult AtomicUpdateOp::verifyRegions() {
-  return verifyRegionsCommon();
-}
+LogicalResult AtomicUpdateOp::verifyRegions() { return verifyRegionsCommon(); }
 
 //===----------------------------------------------------------------------===//
 // Verifier for AtomicCaptureOp
