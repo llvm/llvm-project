@@ -2557,9 +2557,8 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
           Attribute::NoImplicitFloat) &&
       DestTy->isFloatingPointTy() && DestTy->isIEEE()) {
     Value *L, *R;
-    if (match(Src, m_And(m_Value(L), m_Value(R)))) {
-      Value *Cast;
-      if (match(L, m_BitCast(m_Value(Cast))) && match(R, m_MaxSignedValue())) {
+    Value *Cast;
+    if (match(Src, m_And(m_BitCast(m_Value(Cast)), m_MaxSignedValue()))) {
         Type *EltTy = Cast->getType()->getScalarType();
         if (EltTy->isFloatingPointTy() && EltTy->isIEEE() &&
             EltTy->getPrimitiveSizeInBits() ==
