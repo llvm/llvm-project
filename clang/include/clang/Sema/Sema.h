@@ -14030,7 +14030,9 @@ public:
 
     /// If true, \c Type should be compared with other expression's types for
     /// layout-compatibility.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned LayoutCompatible : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned MustBeNull : 1;
   };
 
