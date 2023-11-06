@@ -20,24 +20,25 @@ define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    whilelo p1.d, xzr, x9
 ; CHECK-NEXT:    cntd x10
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    mov x11, x10
+; CHECK-NEXT:    rdvl x11, #2
+; CHECK-NEXT:    mov x12, x10
 ; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    zip2 p3.d, p1.d, p1.d
-; CHECK-NEXT:    add x12, x0, x8
-; CHECK-NEXT:    add x13, x1, x8
+; CHECK-NEXT:    add x13, x0, x8
+; CHECK-NEXT:    add x14, x1, x8
 ; CHECK-NEXT:    zip1 p2.d, p1.d, p1.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    mov z7.d, z0.d
-; CHECK-NEXT:    whilelo p1.d, x11, x9
-; CHECK-NEXT:    addvl x8, x8, #2
-; CHECK-NEXT:    add x11, x11, x10
-; CHECK-NEXT:    ld1d { z2.d }, p3/z, [x12, #1, mul vl]
-; CHECK-NEXT:    ld1d { z3.d }, p2/z, [x12]
-; CHECK-NEXT:    ld1d { z4.d }, p3/z, [x13, #1, mul vl]
-; CHECK-NEXT:    ld1d { z5.d }, p2/z, [x13]
+; CHECK-NEXT:    whilelo p1.d, x12, x9
+; CHECK-NEXT:    add x8, x8, x11
+; CHECK-NEXT:    add x12, x12, x10
+; CHECK-NEXT:    ld1d { z2.d }, p3/z, [x13, #1, mul vl]
+; CHECK-NEXT:    ld1d { z3.d }, p2/z, [x13]
+; CHECK-NEXT:    ld1d { z4.d }, p3/z, [x14, #1, mul vl]
+; CHECK-NEXT:    ld1d { z5.d }, p2/z, [x14]
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #90
@@ -120,25 +121,26 @@ define %"class.std::complex" @complex_mul_predicated_v2f64(ptr %a, ptr %b, ptr %
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    mov x9, xzr
 ; CHECK-NEXT:    and x11, x11, x12
+; CHECK-NEXT:    rdvl x12, #2
 ; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1w { z2.d }, p0/z, [x2, x9, lsl #2]
-; CHECK-NEXT:    add x12, x0, x8
-; CHECK-NEXT:    add x13, x1, x8
+; CHECK-NEXT:    add x13, x0, x8
+; CHECK-NEXT:    add x14, x1, x8
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    mov z7.d, z0.d
 ; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    addvl x8, x8, #2
+; CHECK-NEXT:    add x8, x8, x12
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
 ; CHECK-NEXT:    cmp x11, x9
 ; CHECK-NEXT:    zip2 p2.d, p1.d, p1.d
 ; CHECK-NEXT:    zip1 p1.d, p1.d, p1.d
-; CHECK-NEXT:    ld1d { z2.d }, p2/z, [x12, #1, mul vl]
-; CHECK-NEXT:    ld1d { z3.d }, p1/z, [x12]
-; CHECK-NEXT:    ld1d { z4.d }, p2/z, [x13, #1, mul vl]
-; CHECK-NEXT:    ld1d { z5.d }, p1/z, [x13]
+; CHECK-NEXT:    ld1d { z2.d }, p2/z, [x13, #1, mul vl]
+; CHECK-NEXT:    ld1d { z3.d }, p1/z, [x13]
+; CHECK-NEXT:    ld1d { z4.d }, p2/z, [x14, #1, mul vl]
+; CHECK-NEXT:    ld1d { z5.d }, p1/z, [x14]
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #90
@@ -222,25 +224,26 @@ define %"class.std::complex" @complex_mul_predicated_x2_v2f64(ptr %a, ptr %b, pt
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    mov x9, xzr
 ; CHECK-NEXT:    cntd x11
+; CHECK-NEXT:    rdvl x12, #2
 ; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1w { z2.d }, p1/z, [x2, x9, lsl #2]
-; CHECK-NEXT:    add x12, x0, x8
-; CHECK-NEXT:    add x13, x1, x8
+; CHECK-NEXT:    add x13, x0, x8
+; CHECK-NEXT:    add x14, x1, x8
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    mov z7.d, z0.d
 ; CHECK-NEXT:    add x9, x9, x11
-; CHECK-NEXT:    addvl x8, x8, #2
+; CHECK-NEXT:    add x8, x8, x12
 ; CHECK-NEXT:    cmpne p1.d, p1/z, z2.d, #0
 ; CHECK-NEXT:    zip2 p3.d, p1.d, p1.d
 ; CHECK-NEXT:    zip1 p2.d, p1.d, p1.d
 ; CHECK-NEXT:    whilelo p1.d, x9, x10
-; CHECK-NEXT:    ld1d { z2.d }, p3/z, [x12, #1, mul vl]
-; CHECK-NEXT:    ld1d { z3.d }, p2/z, [x12]
-; CHECK-NEXT:    ld1d { z4.d }, p3/z, [x13, #1, mul vl]
-; CHECK-NEXT:    ld1d { z5.d }, p2/z, [x13]
+; CHECK-NEXT:    ld1d { z2.d }, p3/z, [x13, #1, mul vl]
+; CHECK-NEXT:    ld1d { z3.d }, p2/z, [x13]
+; CHECK-NEXT:    ld1d { z4.d }, p3/z, [x14, #1, mul vl]
+; CHECK-NEXT:    ld1d { z5.d }, p2/z, [x14]
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #90

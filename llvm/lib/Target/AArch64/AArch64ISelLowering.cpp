@@ -14649,7 +14649,7 @@ bool AArch64TargetLowering::shouldSinkOperands(
     }
   }
 
-  // Sink vscales close to uses for better isel
+  // Sink vscales closer to uses for better isel
   switch (I->getOpcode()) {
   case Instruction::GetElementPtr:
   case Instruction::Add:
