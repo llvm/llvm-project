@@ -878,6 +878,22 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // element if this is an array in an elemental call.
   hlfir::Entity actual = preparedActual.getActual(loc, builder);
 
+  // Handles the procedure pointer actual/dummy arguments.
+  // It could have a combination of
+  //     acutal             dummy
+  // 2.  procedure pointer  procedure pointer
+  // 3.  procedure pointer  procedure
+  // 4.  procedure          procedure pointer
+  if (hlfir::isBoxProcAddressType(actual.getType()) ||
+      hlfir::isBoxProcAddressType(dummyType)) {
+    if (actual.getType() != dummyType &&
+        hlfir::isBoxProcAddressType(actual.getType())) {
+      auto baseAddr{actual.getFirBase()};
+      actual = hlfir::Entity{builder.create<fir::LoadOp>(loc, baseAddr)};
+    }
+    return PreparedDummyArgument{actual, /*cleanups=*/{}};
+  }
+
   // Do nothing if this is a procedure argument. It is already a
   // fir.boxproc/fir.tuple<fir.boxproc, len> as it should.
   if (actual.isProcedure()) {
