@@ -738,6 +738,8 @@ Arm and AArch64 Support
   This affects C++ functions with SVE ACLE parameters. Clang will use the old
   manglings if ``-fclang-abi-compat=17`` or lower is  specified.
 
+- New AArch64 asm constraints have been added for r8-r11(Uci) and r12-r15(Ucj).
+
 Android Support
 ^^^^^^^^^^^^^^^
 

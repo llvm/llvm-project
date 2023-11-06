@@ -10386,6 +10386,31 @@ getPredicateRegisterClass(PredicateConstraint Constraint, EVT VT) {
   llvm_unreachable("Missing PredicateConstraint!");
 }
 
+enum class ReducedGprConstraint { Uci, Ucj };
+
+static std::optional<ReducedGprConstraint>
+parseReducedGprConstraint(StringRef Constraint) {
+  return StringSwitch<std::optional<ReducedGprConstraint>>(Constraint)
+      .Case("Uci", ReducedGprConstraint::Uci)
+      .Case("Ucj", ReducedGprConstraint::Ucj)
+      .Default(std::nullopt);
+}
+
+static const TargetRegisterClass *
+getReducedGprRegisterClass(ReducedGprConstraint Constraint, EVT VT) {
+  if (!VT.isScalarInteger() || VT.getFixedSizeInBits() > 64)
+    return nullptr;
+
+  switch (Constraint) {
+  case ReducedGprConstraint::Uci:
+    return &AArch64::MatrixIndexGPR32_8_11RegClass;
+  case ReducedGprConstraint::Ucj:
+    return &AArch64::MatrixIndexGPR32_12_15RegClass;
+  }
+
+  llvm_unreachable("Missing ReducedGprConstraint!");
+}
+
 // The set of cc code supported is from
 // https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html#Flag-Output-Operands
 static AArch64CC::CondCode parseConstraintCode(llvm::StringRef Constraint) {
@@ -10483,6 +10508,8 @@ AArch64TargetLowering::getConstraintType(StringRef Constraint) const {
     }
   } else if (parsePredicateConstraint(Constraint))
     return C_RegisterClass;
+  else if (parseReducedGprConstraint(Constraint))
+    return C_RegisterClass;
   else if (parseConstraintCode(Constraint) != AArch64CC::Invalid)
     return C_Other;
   return TargetLowering::getConstraintType(Constraint);
@@ -10516,7 +10543,8 @@ AArch64TargetLowering::getSingleConstraintMatchWeight(
     weight = CW_Constant;
     break;
   case 'U':
-    if (parsePredicateConstraint(constraint))
+    if (parsePredicateConstraint(constraint) ||
+        parseReducedGprConstraint(constraint))
       weight = CW_Register;
     break;
   }
@@ -10575,6 +10603,10 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
   } else {
     if (const auto PC = parsePredicateConstraint(Constraint))
       if (const auto *RegClass = getPredicateRegisterClass(*PC, VT))
+        return std::make_pair(0U, RegClass);
+
+    if (const auto RGC = parseReducedGprConstraint(Constraint))
+      if (const auto *RegClass = getReducedGprRegisterClass(*RGC, VT))
         return std::make_pair(0U, RegClass);
   }
   if (StringRef("{cc}").equals_insensitive(Constraint) ||
