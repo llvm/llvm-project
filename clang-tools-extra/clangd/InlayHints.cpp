@@ -591,13 +591,13 @@ public:
 
   bool dataTraverseStmtPre(Stmt *S) {
     // Do not show inlay hints for PseudoObjectExprs. They're never
-    // genuine user codes in C++.
+    // genuine user codes.
     //
     // For example, __builtin_dump_struct would expand to a PseudoObjectExpr
     // that includes a couple of calls to a printf function. Printing parameter
     // names for that anyway would end up with duplicate parameter names (which,
     // however, got de-duplicated after visiting) for the printf function.
-    if (AST.getLangOpts().CPlusPlus && isa<PseudoObjectExpr>(S))
+    if (isa<PseudoObjectExpr>(S))
       return false;
     return true;
   }
