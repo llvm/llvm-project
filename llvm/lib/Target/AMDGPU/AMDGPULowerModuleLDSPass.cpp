@@ -1027,6 +1027,42 @@ public:
     return N;
   }
 
+  /// Strip "amdgpu-no-lds-kernel-id" from any functions where we may have
+  /// introduced its use. If AMDGPUAttributor ran prior to the pass, we inferred
+  /// the lack of llvm.amdgcn.lds.kernel.id calls.
+  void removeNoLdsKernelIdFromReachable(CallGraph &CG, Function *KernelRoot) {
+    KernelRoot->removeFnAttr("amdgpu-no-lds-kernel-id");
+
+    SmallVector<Function *> Tmp({CG[KernelRoot]->getFunction()});
+    if (!Tmp.back())
+      return;
+
+    do {
+      Function *F = Tmp.pop_back_val();
+
+      for (auto &N : *CG[F]) {
+        if (!N.second)
+          continue;
+
+        Function *Callee = N.second->getFunction();
+        if (!Callee) {
+          // If we see any indirect calls, assume nothing about potential
+          // targets.
+          // TODO: This could be refined to possible LDS global users.
+          for (auto &N : *CG.getCallsExternalNode()) {
+            Function *PotentialCallee = N.second->getFunction();
+            Tmp.push_back(PotentialCallee);
+          }
+
+          continue;
+        }
+
+        Callee->removeFnAttr("amdgpu-no-lds-kernel-id");
+        Tmp.push_back(Callee);
+      }
+    } while (!Tmp.empty());
+  }
+
   DenseMap<Function *, GlobalVariable *> lowerDynamicLDSVariables(
       Module &M, LDSUsesInfoTy &LDSUsesInfo,
       DenseSet<Function *> const &KernelsThatIndirectlyAllocateDynamicLDS,
@@ -1176,6 +1212,13 @@ public:
           M, TableLookupVariablesOrdered, OrderedKernels, KernelToReplacement);
       replaceUsesInInstructionsWithTableLookup(M, TableLookupVariablesOrdered,
                                                LookupTable);
+
+      // Strip amdgpu-no-lds-kernel-id from all functions reachable from the
+      // kernel. We may have inferred this wasn't used prior to the pass.
+      //
+      // TODO: We could filter out subgraphs that do not access LDS globals.
+      for (Function *F : KernelsThatAllocateTableLDS)
+        removeNoLdsKernelIdFromReachable(CG, F);
     }
 
     DenseMap<Function *, GlobalVariable *> KernelToCreatedDynamicLDS =
