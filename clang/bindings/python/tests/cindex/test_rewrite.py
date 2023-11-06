@@ -3,7 +3,10 @@ import io
 import unittest
 import tempfile
 
-from clang.cindex import Rewriter, TranslationUnit, Config, File, SourceLocation, SourceRange
+from clang.cindex import (
+    Rewriter, TranslationUnit, Config, File, SourceLocation, SourceRange
+    )
+
 
 class TestRewrite(unittest.TestCase):
     code = '''

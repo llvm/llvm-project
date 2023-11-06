@@ -3584,8 +3584,6 @@ class Rewriter(ClangObject):
         conf.lib.clang_CXRewriter_writeMainFileToStdOut(self)
 
 
-
-
 # Now comes the plumbing to hook up the C library.
 
 # Register callback types in common container.
