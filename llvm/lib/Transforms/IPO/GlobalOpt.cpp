@@ -1614,7 +1614,7 @@ processGlobal(GlobalValue &GV,
               function_ref<TargetTransformInfo &(Function &)> GetTTI,
               function_ref<TargetLibraryInfo &(Function &)> GetTLI,
               function_ref<DominatorTree &(Function &)> LookupDomTree) {
-  if (GV.getName().startswith("llvm."))
+  if (GV.getName().starts_with("llvm."))
     return false;
 
   GlobalStatus GS;

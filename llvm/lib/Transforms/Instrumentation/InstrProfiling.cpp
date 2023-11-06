@@ -908,7 +908,7 @@ static std::string getVarName(InstrProfInstBase *Inc, StringRef Prefix,
   Renamed = true;
   uint64_t FuncHash = Inc->getHash()->getZExtValue();
   SmallVector<char, 24> HashPostfix;
-  if (Name.endswith((Twine(".") + Twine(FuncHash)).toStringRef(HashPostfix)))
+  if (Name.ends_with((Twine(".") + Twine(FuncHash)).toStringRef(HashPostfix)))
     return (Prefix + Name).str();
   return (Prefix + Name + "." + Twine(FuncHash)).str();
 }
