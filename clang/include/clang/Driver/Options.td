@@ -4789,6 +4789,12 @@ def mrop_protect : Flag<["-"], "mrop-protect">,
     Group<m_ppc_Features_Group>;
 def mprivileged : Flag<["-"], "mprivileged">,
     Group<m_ppc_Features_Group>;
+
+defm regnames : BoolOption<"m", "regnames",
+  CodeGenOpts<"PPCUseFullRegisterNames">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use full register names when writing assembly output">,
+  NegFlag<SetFalse, [], [ClangOption], "Use only register numbers when writing assembly output">>,
+  Group<m_Group>;
 } // let Flags = [TargetSpecific]
 def maix_small_local_exec_tls : Flag<["-"], "maix-small-local-exec-tls">,
   Group<m_ppc_Features_Group>,
