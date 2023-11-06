@@ -713,6 +713,11 @@ static ExprResult SemaBuiltinDumpStruct(Sema &S, CallExpr *TheCall) {
     return ExprError();
   }
   const RecordDecl *RD = PtrArgType->getPointeeType()->getAsRecordDecl();
+  if (!RD->isCompleteDefinition()) {
+    S.Diag(PtrArgResult.get()->getBeginLoc(), diag::err_incomplete_type)
+        << PtrArgType->getPointeeType();
+    return ExprError();
+  }
 
   // Second argument is a callable, but we can't fully validate it until we try
   // calling it.

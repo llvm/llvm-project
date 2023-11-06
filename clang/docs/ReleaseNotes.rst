@@ -691,6 +691,9 @@ Bug Fixes to C++ Support
   Fixes:
   (`#68769 <https://github.com/llvm/llvm-project/issues/68769>`_)
 
+- Clang now rejects incomplete types for ``__builtin_dump_struct``. Fixes:
+  (`#63506 <https://github.com/llvm/llvm-project/issues/63506>`_)
+
 - Clang now defers the instantiation of explicit specifier until constraint checking
   completes (except deduction guides). Fixes:
   (`#59827 <https://github.com/llvm/llvm-project/issues/59827>`_)
