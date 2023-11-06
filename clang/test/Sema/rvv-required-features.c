@@ -1,7 +1,7 @@
 // REQUIRES: riscv-registered-target
 // RUN: %clang_cc1 -triple riscv64 -target-feature +v -target-feature +xsfvcp \
 // RUN:     -target-feature +xsfvqmaccdod -target-feature +xsfvqmaccqoq \
-// RUN:     -target-feature +zvfh -target-feature +xsfvfwmaccqqq \
+// RUN:     -target-feature +experimental-zvfbfmin -target-feature +xsfvfwmaccqqq \
 // RUN:     -target-feature +xsfvfnrclipxfqf %s -fsyntax-only -verify
 
 // expected-no-diagnostics
@@ -29,7 +29,7 @@ void test_xsfvqmaccqoq(vint32m1_t vd, vint8m1_t vs1, vint8m1_t vs2, size_t vl) {
   __riscv_sf_vqmacc_4x8x4(vd, vs1, vs2, vl);
 }
 
-void test_xsfvfwmaccqqq(vfloat32m1_t vd, vfloat16m1_t vs1, vfloat16mf2_t vs2, size_t vl) {
+void test_xsfvfwmaccqqq(vfloat32m1_t vd, vbfloat16m1_t vs1, vbfloat16mf2_t vs2, size_t vl) {
   __riscv_sf_vfwmacc_4x4x4(vd, vs1, vs2, vl);
 }
 
