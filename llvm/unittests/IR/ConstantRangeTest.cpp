@@ -2438,6 +2438,20 @@ TEST_F(ConstantRangeTest, Ctlz) {
       });
 }
 
+TEST_F(ConstantRangeTest, Cttz) {
+  TestUnaryOpExhaustive(
+      [](const ConstantRange &CR) { return CR.cttz(); },
+      [](const APInt &N) { return APInt(N.getBitWidth(), N.countr_zero()); });
+
+  TestUnaryOpExhaustive(
+      [](const ConstantRange &CR) { return CR.cttz(/*ZeroIsPoison=*/true); },
+      [](const APInt &N) -> std::optional<APInt> {
+        if (N.isZero())
+          return std::nullopt;
+        return APInt(N.getBitWidth(), N.countr_zero());
+      });
+}
+
 TEST_F(ConstantRangeTest, Ctpop) {
   TestUnaryOpExhaustive(
       [](const ConstantRange &CR) { return CR.ctpop(); },

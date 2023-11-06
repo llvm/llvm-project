@@ -530,6 +530,10 @@ public:
   /// ignoring a possible zero value contained in the input range.
   ConstantRange ctlz(bool ZeroIsPoison = false) const;
 
+  /// Calculate cttz range. If \p ZeroIsPoison is set, the range is computed
+  /// ignoring a possible zero value contained in the input range.
+  ConstantRange cttz(bool ZeroIsPoison = false) const;
+
   /// Calculate ctpop range.
   ConstantRange ctpop() const;
 
