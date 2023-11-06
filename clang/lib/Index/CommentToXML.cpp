@@ -751,13 +751,13 @@ void CommentASTToXMLConverter::visitParamCommandComment(
 
   Result << "<Direction isExplicit=\"" << C->isDirectionExplicit() << "\">";
   switch (C->getDirection()) {
-  case ParamCommandComment::In:
+  case ParamCommandPassDirection::In:
     Result << "in";
     break;
-  case ParamCommandComment::Out:
+  case ParamCommandPassDirection::Out:
     Result << "out";
     break;
-  case ParamCommandComment::InOut:
+  case ParamCommandPassDirection::InOut:
     Result << "in,out";
     break;
   }

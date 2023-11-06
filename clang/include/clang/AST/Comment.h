@@ -675,6 +675,8 @@ public:
   }
 };
 
+enum class ParamCommandPassDirection { In, Out, InOut };
+
 /// Doxygen \\param command.
 class ParamCommandComment : public BlockCommandComment {
 private:
@@ -692,7 +694,8 @@ public:
       : BlockCommandComment(CommentKind::ParamCommandComment, LocBegin, LocEnd,
                             CommandID, CommandMarker),
         ParamIndex(InvalidParamIndex) {
-    ParamCommandCommentBits.Direction = In;
+    ParamCommandCommentBits.Direction =
+        llvm::to_underlying(ParamCommandPassDirection::In);
     ParamCommandCommentBits.IsDirectionExplicit = false;
   }
 
@@ -700,24 +703,19 @@ public:
     return C->getCommentKind() == CommentKind::ParamCommandComment;
   }
 
-  enum PassDirection {
-    In,
-    Out,
-    InOut
-  };
+  static const char *getDirectionAsString(ParamCommandPassDirection D);
 
-  static const char *getDirectionAsString(PassDirection D);
-
-  PassDirection getDirection() const LLVM_READONLY {
-    return static_cast<PassDirection>(ParamCommandCommentBits.Direction);
+  ParamCommandPassDirection getDirection() const LLVM_READONLY {
+    return static_cast<ParamCommandPassDirection>(
+        ParamCommandCommentBits.Direction);
   }
 
   bool isDirectionExplicit() const LLVM_READONLY {
     return ParamCommandCommentBits.IsDirectionExplicit;
   }
 
-  void setDirection(PassDirection Direction, bool Explicit) {
-    ParamCommandCommentBits.Direction = Direction;
+  void setDirection(ParamCommandPassDirection Direction, bool Explicit) {
+    ParamCommandCommentBits.Direction = llvm::to_underlying(Direction);
     ParamCommandCommentBits.IsDirectionExplicit = Explicit;
   }
 

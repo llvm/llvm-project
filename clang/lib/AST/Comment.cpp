@@ -187,13 +187,14 @@ static bool getFunctionTypeLoc(TypeLoc TL, FunctionTypeLoc &ResFTL) {
   return false;
 }
 
-const char *ParamCommandComment::getDirectionAsString(PassDirection D) {
+const char *
+ParamCommandComment::getDirectionAsString(ParamCommandPassDirection D) {
   switch (D) {
-  case ParamCommandComment::In:
+  case ParamCommandPassDirection::In:
     return "[in]";
-  case ParamCommandComment::Out:
+  case ParamCommandPassDirection::Out:
     return "[out]";
-  case ParamCommandComment::InOut:
+  case ParamCommandPassDirection::InOut:
     return "[in,out]";
   }
   llvm_unreachable("unknown PassDirection");
