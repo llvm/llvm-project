@@ -445,7 +445,7 @@ void ASTDeclWriter::VisitTagDecl(TagDecl *D) {
   Record.push_back(D->getIdentifierNamespace());
 
   BitsPacker TagDeclBits;
-  TagDeclBits.addBits(D->getTagKind(), /*BitWidth=*/3);
+  TagDeclBits.addBits(llvm::to_underlying(D->getTagKind()), /*BitWidth=*/3);
   TagDeclBits.addBit(!isa<CXXRecordDecl>(D) ? D->isCompleteDefinition() : 0);
   TagDeclBits.addBit(D->isEmbeddedInDeclarator());
   TagDeclBits.addBit(D->isFreeStanding());
@@ -1081,7 +1081,8 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     VarDeclBits.addBit(D->isPreviousDeclInSameBlockScope());
 
     if (const auto *IPD = dyn_cast<ImplicitParamDecl>(D))
-      VarDeclBits.addBits(IPD->getParameterKind(), /*Width=*/3);
+      VarDeclBits.addBits(llvm::to_underlying(IPD->getParameterKind()),
+                          /*Width=*/3);
     else
       VarDeclBits.addBits(0, /*Width=*/3);
 

@@ -189,6 +189,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
+  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
+
   // FP Operations
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FNEG,
@@ -207,6 +209,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       [=, &ST](const LegalityQuery &Query) -> bool {
         return (ST.hasStdExtD() && typeIs(0, s64)(Query) &&
                 typeIs(1, s32)(Query));
+      });
+
+  getActionDefinitionsBuilder(G_FCONSTANT)
+      .legalIf([=, &ST](const LegalityQuery &Query) -> bool {
+        return (ST.hasStdExtF() && typeIs(0, s32)(Query)) ||
+               (ST.hasStdExtD() && typeIs(0, s64)(Query));
       });
 
   getLegacyLegalizerInfo().computeTables();

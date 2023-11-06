@@ -46,7 +46,6 @@
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/LineTable.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeMap.h"
@@ -4329,7 +4328,7 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
 
     FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
     FileSpec dwp_filespec =
-        Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+        PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
     if (FileSystem::Instance().Exists(dwp_filespec)) {
       DataBufferSP dwp_file_data_sp;
       lldb::offset_t dwp_file_data_offset = 0;

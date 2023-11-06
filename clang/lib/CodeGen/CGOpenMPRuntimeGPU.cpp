@@ -806,7 +806,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
   // This is temporary until we remove the fixed sized buffer.
   ASTContext &C = CGM.getContext();
   RecordDecl *StaticRD = C.buildImplicitRecord(
-      "_openmp_teams_reduction_type_$_", RecordDecl::TagKind::TTK_Union);
+      "_openmp_teams_reduction_type_$_", RecordDecl::TagKind::Union);
   StaticRD->startDefinition();
   for (const RecordDecl *TeamReductionRec : TeamsReductions) {
     QualType RecTy = C.getRecordType(TeamReductionRec);
@@ -1815,12 +1815,12 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
   // At the stage of the computation when this function is called, partially
   // aggregated values reside in the first lane of every active warp.
   ImplicitParamDecl ReduceListArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                                  C.VoidPtrTy, ImplicitParamDecl::Other);
+                                  C.VoidPtrTy, ImplicitParamKind::Other);
   // NumWarps: number of warps active in the parallel region.  This could
   // be smaller than 32 (max warps in a CTA) for partial block reduction.
   ImplicitParamDecl NumWarpsArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
                                 C.getIntTypeForBitwidth(32, /* Signed */ true),
-                                ImplicitParamDecl::Other);
+                                ImplicitParamKind::Other);
   FunctionArgList Args;
   Args.push_back(&ReduceListArg);
   Args.push_back(&NumWarpsArg);
@@ -2113,16 +2113,16 @@ static llvm::Function *emitShuffleAndReduceFunction(
 
   // Thread local Reduce list used to host the values of data to be reduced.
   ImplicitParamDecl ReduceListArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                                  C.VoidPtrTy, ImplicitParamDecl::Other);
+                                  C.VoidPtrTy, ImplicitParamKind::Other);
   // Current lane id; could be logical.
   ImplicitParamDecl LaneIDArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, C.ShortTy,
-                              ImplicitParamDecl::Other);
+                              ImplicitParamKind::Other);
   // Offset of the remote source lane relative to the current lane.
   ImplicitParamDecl RemoteLaneOffsetArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                                        C.ShortTy, ImplicitParamDecl::Other);
+                                        C.ShortTy, ImplicitParamKind::Other);
   // Algorithm version.  This is expected to be known at compile time.
   ImplicitParamDecl AlgoVerArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                               C.ShortTy, ImplicitParamDecl::Other);
+                               C.ShortTy, ImplicitParamKind::Other);
   FunctionArgList Args;
   Args.push_back(&ReduceListArg);
   Args.push_back(&LaneIDArg);
@@ -2274,13 +2274,13 @@ static llvm::Value *emitListToGlobalCopyFunction(
 
   // Buffer: global reduction buffer.
   ImplicitParamDecl BufferArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                              C.VoidPtrTy, ImplicitParamDecl::Other);
+                              C.VoidPtrTy, ImplicitParamKind::Other);
   // Idx: index of the buffer.
   ImplicitParamDecl IdxArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, C.IntTy,
-                           ImplicitParamDecl::Other);
+                           ImplicitParamKind::Other);
   // ReduceList: thread local Reduce list.
   ImplicitParamDecl ReduceListArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                                  C.VoidPtrTy, ImplicitParamDecl::Other);
+                                  C.VoidPtrTy, ImplicitParamKind::Other);
   FunctionArgList Args;
   Args.push_back(&BufferArg);
   Args.push_back(&IdxArg);
@@ -2387,13 +2387,13 @@ static llvm::Value *emitListToGlobalReduceFunction(
 
   // Buffer: global reduction buffer.
   ImplicitParamDecl BufferArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                              C.VoidPtrTy, ImplicitParamDecl::Other);
+                              C.VoidPtrTy, ImplicitParamKind::Other);
   // Idx: index of the buffer.
   ImplicitParamDecl IdxArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, C.IntTy,
-                           ImplicitParamDecl::Other);
+                           ImplicitParamKind::Other);
   // ReduceList: thread local Reduce list.
   ImplicitParamDecl ReduceListArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                                  C.VoidPtrTy, ImplicitParamDecl::Other);
+                                  C.VoidPtrTy, ImplicitParamKind::Other);
   FunctionArgList Args;
   Args.push_back(&BufferArg);
   Args.push_back(&IdxArg);
@@ -2481,13 +2481,13 @@ static llvm::Value *emitGlobalToListCopyFunction(
 
   // Buffer: global reduction buffer.
   ImplicitParamDecl BufferArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                              C.VoidPtrTy, ImplicitParamDecl::Other);
+                              C.VoidPtrTy, ImplicitParamKind::Other);
   // Idx: index of the buffer.
   ImplicitParamDecl IdxArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, C.IntTy,
-                           ImplicitParamDecl::Other);
+                           ImplicitParamKind::Other);
   // ReduceList: thread local Reduce list.
   ImplicitParamDecl ReduceListArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                                  C.VoidPtrTy, ImplicitParamDecl::Other);
+                                  C.VoidPtrTy, ImplicitParamKind::Other);
   FunctionArgList Args;
   Args.push_back(&BufferArg);
   Args.push_back(&IdxArg);
@@ -2595,13 +2595,13 @@ static llvm::Value *emitGlobalToListReduceFunction(
 
   // Buffer: global reduction buffer.
   ImplicitParamDecl BufferArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                              C.VoidPtrTy, ImplicitParamDecl::Other);
+                              C.VoidPtrTy, ImplicitParamKind::Other);
   // Idx: index of the buffer.
   ImplicitParamDecl IdxArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, C.IntTy,
-                           ImplicitParamDecl::Other);
+                           ImplicitParamKind::Other);
   // ReduceList: thread local Reduce list.
   ImplicitParamDecl ReduceListArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                                  C.VoidPtrTy, ImplicitParamDecl::Other);
+                                  C.VoidPtrTy, ImplicitParamKind::Other);
   FunctionArgList Args;
   Args.push_back(&BufferArg);
   Args.push_back(&IdxArg);
@@ -3081,14 +3081,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
       ++IRHS;
     }
   };
-  llvm::Value *EndArgs[] = {ThreadId};
   RegionCodeGenTy RCG(CodeGen);
-  NVPTXActionTy Action(
-      nullptr, std::nullopt,
-      OMPBuilder.getOrCreateRuntimeFunction(
-          CGM.getModule(), OMPRTL___kmpc_nvptx_end_reduce_nowait),
-      EndArgs);
-  RCG.setAction(Action);
   RCG(CGF);
   // There is no need to emit line number for unconditional branch.
   (void)ApplyDebugLocation::CreateEmpty(CGF);
@@ -3118,7 +3111,7 @@ CGOpenMPRuntimeGPU::translateParameter(const FieldDecl *FD,
   if (isa<ImplicitParamDecl>(NativeParam))
     return ImplicitParamDecl::Create(
         CGM.getContext(), /*DC=*/nullptr, NativeParam->getLocation(),
-        NativeParam->getIdentifier(), ArgType, ImplicitParamDecl::Other);
+        NativeParam->getIdentifier(), ArgType, ImplicitParamKind::Other);
   return ParmVarDecl::Create(
       CGM.getContext(),
       const_cast<DeclContext *>(NativeParam->getDeclContext()),
@@ -3201,10 +3194,10 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
       Ctx.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/false);
   ImplicitParamDecl ParallelLevelArg(Ctx, /*DC=*/nullptr, D.getBeginLoc(),
                                      /*Id=*/nullptr, Int16QTy,
-                                     ImplicitParamDecl::Other);
+                                     ImplicitParamKind::Other);
   ImplicitParamDecl WrapperArg(Ctx, /*DC=*/nullptr, D.getBeginLoc(),
                                /*Id=*/nullptr, Int32QTy,
-                               ImplicitParamDecl::Other);
+                               ImplicitParamKind::Other);
   WrapperArgs.emplace_back(&ParallelLevelArg);
   WrapperArgs.emplace_back(&WrapperArg);
 

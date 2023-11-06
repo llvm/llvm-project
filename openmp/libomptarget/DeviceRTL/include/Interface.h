@@ -230,10 +230,6 @@ void __kmpc_target_deinit();
 /// Reduction
 ///
 ///{
-void __kmpc_nvptx_end_reduce(int32_t TId);
-
-void __kmpc_nvptx_end_reduce_nowait(int32_t TId);
-
 void *__kmpc_reduction_get_fixed_buffer();
 
 int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(

@@ -15,8 +15,8 @@ define i32 @test1(i32 %num) {
 ; CHECK-NEXT:    [[COUNT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[STATE:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ poison, [[FOR_INC]] ]
 ; CHECK-NEXT:    switch i32 [[STATE]], label [[FOR_INC_JT1:%.*]] [
-; CHECK-NEXT:    i32 1, label [[CASE1:%.*]]
-; CHECK-NEXT:    i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       for.body.jt2:
 ; CHECK-NEXT:    [[COUNT_JT2:%.*]] = phi i32 [ [[INC_JT2:%.*]], [[FOR_INC_JT2:%.*]] ]
@@ -91,8 +91,8 @@ define i32 @test2(i32 %num) {
 ; CHECK-NEXT:    [[COUNT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[STATE:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ poison, [[FOR_INC]] ]
 ; CHECK-NEXT:    switch i32 [[STATE]], label [[FOR_INC_JT1:%.*]] [
-; CHECK-NEXT:    i32 1, label [[CASE1:%.*]]
-; CHECK-NEXT:    i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       for.body.jt3:
 ; CHECK-NEXT:    [[COUNT_JT3:%.*]] = phi i32 [ [[INC_JT3:%.*]], [[FOR_INC_JT3:%.*]] ]
@@ -192,8 +192,8 @@ define i32 @test3(i32 %num) {
 ; CHECK-NEXT:    [[COUNT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[STATE:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ poison, [[FOR_INC]] ]
 ; CHECK-NEXT:    switch i32 [[STATE]], label [[FOR_INC_JT1:%.*]] [
-; CHECK-NEXT:    i32 1, label [[CASE1:%.*]]
-; CHECK-NEXT:    i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       for.body.jt4:
 ; CHECK-NEXT:    [[COUNT_JT4:%.*]] = phi i32 [ [[INC_JT4:%.*]], [[FOR_INC_JT4:%.*]] ]
@@ -315,4 +315,57 @@ for.cond:                                         ; preds = %lor.end, %entry
 
 lor.end:                                          ; preds = %for.cond
   br label %for.cond
+}
+
+define void @pr65222(i32 %flags, i1 %cmp, i1 %tobool.not) {
+; CHECK-LABEL: @pr65222(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
+; CHECK:       while.cond:
+; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT:%.*]], label [[SI_UNFOLD_TRUE:%.*]], label [[SI_UNFOLD_FALSE:%.*]]
+; CHECK:       si.unfold.true:
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_END]], label [[SI_UNFOLD_FALSE2:%.*]]
+; CHECK:       si.unfold.false:
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_END]], label [[SI_UNFOLD_FALSE1:%.*]]
+; CHECK:       si.unfold.false1:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       si.unfold.false2:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[UNFOLDED:%.*]] = phi i32 [ [[FLAGS:%.*]], [[WHILE_COND]] ], [ 3, [[SI_UNFOLD_TRUE]] ], [ 2, [[SI_UNFOLD_FALSE]] ], [ 0, [[SI_UNFOLD_FALSE1]] ], [ 1, [[SI_UNFOLD_FALSE2]] ]
+; CHECK-NEXT:    [[OTHER:%.*]] = phi i32 [ [[FLAGS]], [[WHILE_COND]] ], [ 0, [[SI_UNFOLD_TRUE]] ], [ 0, [[SI_UNFOLD_FALSE]] ], [ 0, [[SI_UNFOLD_FALSE1]] ], [ 0, [[SI_UNFOLD_FALSE2]] ]
+; CHECK-NEXT:    switch i32 [[UNFOLDED]], label [[UNREACHABLE:%.*]] [
+; CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       unreachable:
+; CHECK-NEXT:    unreachable
+; CHECK:       sw.bb:
+; CHECK-NEXT:    br label [[WHILE_COND]]
+;
+entry:
+  br label %while.cond
+
+while.cond:                                       ; preds = %sw.bb147, %if.end, %entry
+  br i1 %cmp, label %then, label %if.end
+
+then:                                        ; preds = %while.cond
+  %cond = select i1 %cmp, i32 2, i32 0
+  %cond1 = select i1 %cmp, i32 3, i32 1
+  %tounfold = select i1 %tobool.not, i32 %cond1, i32 %cond
+  br label %if.end
+
+if.end:                                        ; preds = %then, %while.cond
+  %unfolded = phi i32 [ %tounfold, %then ], [ %flags, %while.cond ]
+  %other = phi i32 [ 0, %then ], [ %flags, %while.cond ]
+  switch i32 %unfolded, label %unreachable [
+  i32 0, label %sw.bb
+  ]
+
+unreachable:
+  unreachable
+
+sw.bb:                                         ; preds = %if.end
+  br label %while.cond
 }

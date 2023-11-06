@@ -31782,7 +31782,7 @@ static StringRef getInstrStrFromOpNo(const SmallVectorImpl<StringRef> &AsmStrs,
   for (auto &AsmStr : AsmStrs) {
     // Match the OpNo string. We should match exactly to exclude match
     // sub-string, e.g. "$12" contain "$1"
-    if (AsmStr.endswith(OpNoStr1))
+    if (AsmStr.ends_with(OpNoStr1))
       I = AsmStr.size() - OpNoStr1.size();
 
     // Get the index of operand in AsmStr.
@@ -56317,7 +56317,7 @@ static bool matchAsm(StringRef S, ArrayRef<const char *> Pieces) {
   S = S.substr(S.find_first_not_of(" \t")); // Skip leading whitespace.
 
   for (StringRef Piece : Pieces) {
-    if (!S.startswith(Piece)) // Check if the piece matches.
+    if (!S.starts_with(Piece)) // Check if the piece matches.
       return false;
 
     S = S.substr(Piece.size());
@@ -57456,7 +57456,7 @@ X86TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
     assert(Target.isSymbol() && "Unexpected target operand for a direct call");
     // X86TargetLowering::EmitLoweredIndirectThunk always uses r11 for
     // 64-bit indirect thunk calls.
-    assert(StringRef(Target.getSymbolName()).endswith("_r11") &&
+    assert(StringRef(Target.getSymbolName()).ends_with("_r11") &&
            "Unexpected register for an indirect thunk call");
     TargetReg = X86::R11;
     break;
