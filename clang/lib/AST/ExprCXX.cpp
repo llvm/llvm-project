@@ -184,7 +184,7 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
                        bool UsualArrayDeleteWantsSize,
                        ArrayRef<Expr *> PlacementArgs, SourceRange TypeIdParens,
                        std::optional<Expr *> ArraySize,
-                       CXXNewInitializationStyle InitializationStyle,
+                       InitializationStyle InitializationStyle,
                        Expr *Initializer, QualType Ty,
                        TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
                        SourceRange DirectInitRange)
@@ -193,9 +193,7 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
       AllocatedTypeInfo(AllocatedTypeInfo), Range(Range),
       DirectInitRange(DirectInitRange) {
 
-  assert((Initializer != nullptr ||
-          InitializationStyle == CXXNewInitializationStyle::None ||
-          InitializationStyle == CXXNewInitializationStyle::Implicit) &&
+  assert((Initializer != nullptr || InitializationStyle == NoInit) &&
          "Only NoInit can have no initializer!");
 
   CXXNewExprBits.IsGlobalNew = IsGlobalNew;
@@ -203,7 +201,7 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
   CXXNewExprBits.ShouldPassAlignment = ShouldPassAlignment;
   CXXNewExprBits.UsualArrayDeleteWantsSize = UsualArrayDeleteWantsSize;
   CXXNewExprBits.StoredInitializationStyle =
-      llvm::to_underlying(InitializationStyle);
+      Initializer ? InitializationStyle + 1 : 0;
   bool IsParenTypeId = TypeIdParens.isValid();
   CXXNewExprBits.IsParenTypeId = IsParenTypeId;
   CXXNewExprBits.NumPlacementArgs = PlacementArgs.size();
@@ -219,10 +217,10 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
     getTrailingObjects<SourceRange>()[0] = TypeIdParens;
 
   switch (getInitializationStyle()) {
-  case CXXNewInitializationStyle::Call:
+  case CallInit:
     this->Range.setEnd(DirectInitRange.getEnd());
     break;
-  case CXXNewInitializationStyle::List:
+  case ListInit:
     this->Range.setEnd(getInitializer()->getSourceRange().getEnd());
     break;
   default:
@@ -242,14 +240,15 @@ CXXNewExpr::CXXNewExpr(EmptyShell Empty, bool IsArray,
   CXXNewExprBits.IsParenTypeId = IsParenTypeId;
 }
 
-CXXNewExpr *CXXNewExpr::Create(
-    const ASTContext &Ctx, bool IsGlobalNew, FunctionDecl *OperatorNew,
-    FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
-    bool UsualArrayDeleteWantsSize, ArrayRef<Expr *> PlacementArgs,
-    SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
-    CXXNewInitializationStyle InitializationStyle, Expr *Initializer,
-    QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
-    SourceRange DirectInitRange) {
+CXXNewExpr *
+CXXNewExpr::Create(const ASTContext &Ctx, bool IsGlobalNew,
+                   FunctionDecl *OperatorNew, FunctionDecl *OperatorDelete,
+                   bool ShouldPassAlignment, bool UsualArrayDeleteWantsSize,
+                   ArrayRef<Expr *> PlacementArgs, SourceRange TypeIdParens,
+                   std::optional<Expr *> ArraySize,
+                   InitializationStyle InitializationStyle, Expr *Initializer,
+                   QualType Ty, TypeSourceInfo *AllocatedTypeInfo,
+                   SourceRange Range, SourceRange DirectInitRange) {
   bool IsArray = ArraySize.has_value();
   bool HasInit = Initializer != nullptr;
   unsigned NumPlacementArgs = PlacementArgs.size();
