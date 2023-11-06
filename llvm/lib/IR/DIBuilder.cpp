@@ -405,12 +405,11 @@ DIDerivedType *
 DIBuilder::createStaticMemberType(DIScope *Scope, StringRef Name, DIFile *File,
                                   unsigned LineNumber, DIType *Ty,
                                   DINode::DIFlags Flags, llvm::Constant *Val,
-                                  uint32_t AlignInBits) {
+                                  unsigned Tag, uint32_t AlignInBits) {
   Flags |= DINode::FlagStaticMember;
-  return DIDerivedType::get(VMContext, dwarf::DW_TAG_member, Name, File,
-                            LineNumber, getNonCompileUnitScope(Scope), Ty, 0,
-                            AlignInBits, 0, std::nullopt, Flags,
-                            getConstantOrNull(Val));
+  return DIDerivedType::get(VMContext, Tag, Name, File, LineNumber,
+                            getNonCompileUnitScope(Scope), Ty, 0, AlignInBits,
+                            0, std::nullopt, Flags, getConstantOrNull(Val));
 }
 
 DIDerivedType *
