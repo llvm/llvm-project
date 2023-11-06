@@ -454,13 +454,13 @@ namespace {
 struct BuiltinDumpStructGenerator {
   Sema &S;
   CallExpr *TheCall;
-  SourceLocation Loc = TheCall->getBeginLoc();
+  SourceLocation Loc;
   SmallVector<Expr *, 32> Actions;
   DiagnosticErrorTrap ErrorTracker;
   PrintingPolicy Policy;
 
   BuiltinDumpStructGenerator(Sema &S, CallExpr *TheCall)
-      : S(S), TheCall(TheCall), ErrorTracker(S.getDiagnostics()),
+      : S(S), TheCall(TheCall), Loc(), ErrorTracker(S.getDiagnostics()),
         Policy(S.Context.getPrintingPolicy()) {
     Policy.AnonymousTagLocations = false;
   }
@@ -491,7 +491,7 @@ struct BuiltinDumpStructGenerator {
     // Register a note to explain why we're performing the call.
     Sema::CodeSynthesisContext Ctx;
     Ctx.Kind = Sema::CodeSynthesisContext::BuildingBuiltinDumpStructCall;
-    Ctx.PointOfInstantiation = Loc;
+    Ctx.PointOfInstantiation = TheCall->getBeginLoc();
     Ctx.CallArgs = Args.data();
     Ctx.NumCallArgs = Args.size();
     S.pushCodeSynthesisContext(Ctx);

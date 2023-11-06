@@ -1724,6 +1724,33 @@ TEST(InlayHints, RestrictRange) {
               ElementsAre(labelIs(": int"), labelIs(": char")));
 }
 
+TEST(ParameterHints, PseudoObjectExpr) {
+  Annotations Code(R"cpp(
+    struct S {
+      __declspec(property(get=GetX, put=PutX)) int x[];
+      int GetX(int y, int z) { return 42 + y; }
+      void PutX(int y) { x = $one[[y]]; } // FIXME: Undesired `x = y: y` for this ill-formed expression.
+    };
+
+    int printf(const char *Format, ...);
+
+    int main() {
+      S s;
+      __builtin_dump_struct(&s, printf); // Not `Format: __builtin_dump_struct()`
+      printf($Param[["Hello, %d"]], 42); // Normal calls are not affected.
+      return s.x[ $two[[1]] ][ $three[[2]] ]; // `x[y: 1][z: 2]`
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs.push_back("-fms-extensions");
+  auto AST = TU.build();
+  EXPECT_THAT(inlayHints(AST, std::nullopt),
+              ElementsAre(HintMatcher(ExpectedHint{"y: ", "one"}, Code),
+                          HintMatcher(ExpectedHint{"Format: ", "Param"}, Code),
+                          HintMatcher(ExpectedHint{"y: ", "two"}, Code),
+                          HintMatcher(ExpectedHint{"z: ", "three"}, Code)));
+}
+
 TEST(ParameterHints, ArgPacksAndConstructors) {
   assertParameterHints(
       R"cpp(
