@@ -60,11 +60,11 @@ struct Requirements {
 struct RequirementHandler {
 private:
   CapabilityList MinimalCaps;
-  
-  // AllCaps and AvailableCaps are related but different. AllCaps is a subset of 
-  // AvailableCaps. AvailableCaps is the complete set of capabilities that are available
-  // to the current target. AllCaps is the set of capabilities that are required
-  // by the current module.
+
+  // AllCaps and AvailableCaps are related but different. AllCaps is a subset of
+  // AvailableCaps. AvailableCaps is the complete set of capabilities that are
+  // available to the current target. AllCaps is the set of capabilities that
+  // are required by the current module.
   SmallSet<Capability::Capability, 8> AllCaps;
   DenseSet<unsigned> AvailableCaps;
 
