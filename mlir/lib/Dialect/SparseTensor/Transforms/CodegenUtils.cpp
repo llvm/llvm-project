@@ -421,8 +421,11 @@ Operation *mlir::sparse_tensor::getTop(Operation *op) {
 void sparse_tensor::foreachInSparseConstant(
     OpBuilder &builder, Location loc, SparseElementsAttr attr, AffineMap order,
     function_ref<void(ArrayRef<Value>, Value)> callback) {
-  const Dimension dimRank =
-      SparseTensorType(getRankedTensorType(attr)).getDimRank();
+  if (!order)
+    order = builder.getMultiDimIdentityMap(attr.getType().getRank());
+
+  auto stt = SparseTensorType(getRankedTensorType(attr));
+  const Dimension dimRank = stt.getDimRank();
   const auto coordinates = attr.getIndices().getValues<IntegerAttr>();
   const auto values = attr.getValues().getValues<Attribute>();
 
@@ -446,20 +449,23 @@ void sparse_tensor::foreachInSparseConstant(
 
   // Sorts the sparse element attribute based on coordinates.
   std::sort(elems.begin(), elems.end(),
-            [order, dimRank](const ElementAttr &lhs, const ElementAttr &rhs) {
-              const auto &lhsCoords = lhs.first;
-              const auto &rhsCoords = rhs.first;
-              for (Dimension d = 0; d < dimRank; d++) {
-                // FIXME: This only makes sense for permutations.
-                // And since we don't check that `order` is a permutation,
-                // it can also cause OOB errors when we use `l`.
-                const Level l = order ? order.getDimPosition(d) : d;
-                if (lhsCoords[l].getInt() == rhsCoords[l].getInt())
-                  continue;
-                return lhsCoords[l].getInt() < rhsCoords[l].getInt();
-              }
+            [order](const ElementAttr &lhs, const ElementAttr &rhs) {
               if (std::addressof(lhs) == std::addressof(rhs))
                 return false;
+
+              auto lhsCoords = llvm::map_to_vector(
+                  lhs.first, [](IntegerAttr i) { return i.getInt(); });
+              auto rhsCoords = llvm::map_to_vector(
+                  rhs.first, [](IntegerAttr i) { return i.getInt(); });
+
+              SmallVector<int64_t, 4> lhsLvlCrds = order.compose(lhsCoords);
+              SmallVector<int64_t, 4> rhsLvlCrds = order.compose(rhsCoords);
+              // Sort the element based on the lvl coordinates.
+              for (Level l = 0; l < order.getNumResults(); l++) {
+                if (lhsLvlCrds[l] == rhsLvlCrds[l])
+                  continue;
+                return lhsLvlCrds[l] < rhsLvlCrds[l];
+              }
               llvm_unreachable("no equal coordinate in sparse element attr");
             });
 
