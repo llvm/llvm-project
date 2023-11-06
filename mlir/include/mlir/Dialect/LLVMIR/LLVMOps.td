@@ -184,16 +184,14 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
   LLVM_MemOpPatterns {
   let arguments = (ins AnyInteger:$arraySize,
                    OptionalAttr<I64Attr>:$alignment,
-                   OptionalAttr<TypeAttr>:$elem_type,
+                   TypeAttr:$elem_type,
                    UnitAttr:$inalloca);
   let results = (outs Res<LLVM_AnyPointer, "",
                           [MemAlloc<AutomaticAllocationScopeResource>]>:$res);
   string llvmInstName = "Alloca";
   string llvmBuilder = [{
     auto addrSpace = $_resultType->getPointerAddressSpace();
-    llvm::Type *elementType = moduleTranslation.convertType(
-        $elem_type ? *$elem_type
-                   : ::llvm::cast<LLVMPointerType>(op.getType()).getElementType());
+    llvm::Type *elementType = moduleTranslation.convertType($elem_type);
     auto *inst = builder.CreateAlloca(elementType, addrSpace, $arraySize);
     }] # setAlignmentCode # [{
     inst->setUsedWithInAlloca($inalloca);
@@ -207,31 +205,16 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
     $res = $_builder.create<LLVM::AllocaOp>(
       $_location, $_resultType, $arraySize,
       alignment == 0 ? IntegerAttr() : $_builder.getI64IntegerAttr(alignment),
-      TypeAttr::get(allocatedType), allocaInst->isUsedWithInAlloca());
+      allocatedType, allocaInst->isUsedWithInAlloca());
   }];
   let builders = [
-    DeprecatedOpBuilder<"the usage of typed pointers is deprecated",
-               (ins "Type":$resultType, "Value":$arraySize,
-               "unsigned":$alignment),
-    [{
-      assert(!::llvm::cast<LLVMPointerType>(resultType).isOpaque() &&
-             "pass the allocated type explicitly if opaque pointers are used");
-      if (alignment == 0)
-        return build($_builder, $_state, resultType, arraySize, IntegerAttr(),
-                     TypeAttr(), false);
-      build($_builder, $_state, resultType, arraySize,
-        $_builder.getI64IntegerAttr(alignment), TypeAttr(), false);
-    }]>,
     OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$arraySize,
                CArg<"unsigned", "0">:$alignment),
     [{
-      TypeAttr elemTypeAttr =
-          ::llvm::cast<LLVMPointerType>(resultType).isOpaque() ?
-          TypeAttr::get(elementType) : TypeAttr();
       build($_builder, $_state, resultType, arraySize,
             alignment == 0 ? IntegerAttr()
                            : $_builder.getI64IntegerAttr(alignment),
-            elemTypeAttr, false);
+            elementType, false);
 
     }]>
     ];
@@ -247,7 +230,7 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$base,
                    Variadic<LLVM_ScalarOrVectorOf<AnyInteger>>:$dynamicIndices,
                    DenseI32ArrayAttr:$rawConstantIndices,
-                   OptionalAttr<TypeAttr>:$elem_type,
+                   TypeAttr:$elem_type,
                    UnitAttr:$inbounds);
   let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);
   let skipDefaultBuilders = 1;
@@ -282,14 +265,6 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
                "ValueRange":$indices, CArg<"bool", "false">:$inbounds,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
-    DeprecatedOpBuilder<"the usage of typed pointers is deprecated",
-               (ins "Type":$resultType, "Value":$basePtr,
-               "ValueRange":$indices, CArg<"bool", "false">:$inbounds,
-               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
-    DeprecatedOpBuilder<"the usage of typed pointers is deprecated",
-               (ins "Type":$resultType, "Value":$basePtr,
-               "ArrayRef<GEPArg>":$indices, CArg<"bool", "false">:$inbounds,
-               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
                "ArrayRef<GEPArg>":$indices, CArg<"bool", "false">:$inbounds,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
@@ -306,21 +281,18 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
         indices.push_back(
             builder.getInt32(valueOrAttr.get<IntegerAttr>().getInt()));
     }
-    Type baseElementType = op.getSourceElementType();
+    Type baseElementType = op.getElemType();
     llvm::Type *elementType = moduleTranslation.convertType(baseElementType);
     $res = builder.CreateGEP(elementType, $base, indices, "", $inbounds);
   }];
   let assemblyFormat = [{
     (`inbounds` $inbounds^)?
     $base `[` custom<GEPIndices>($dynamicIndices, $rawConstantIndices) `]` attr-dict
-    `:` functional-type(operands, results) (`,` $elem_type^)?
+    `:` functional-type(operands, results) `,` $elem_type
   }];
 
   let extraClassDeclaration = [{
     constexpr static int32_t kDynamicIndex = std::numeric_limits<int32_t>::min();
-
-    /// Returns the type pointed to by the pointer argument of this GEP.
-    Type getSourceElementType();
 
     GEPIndicesAdaptor<ValueRange> getIndices();
   }];
@@ -332,7 +304,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>]> {
-  dag args = (ins LLVM_PointerTo<LLVM_LoadableType>:$addr,
+  dag args = (ins LLVM_AnyPointer:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
               UnitAttr:$nontemporal,
@@ -370,7 +342,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
-    attr-dict `:` custom<LoadType>(type($addr), type($res))
+    attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
   string llvmBuilder = [{
     auto *inst = builder.CreateLoad($_resultType, $addr, $volatile_);
@@ -391,9 +363,6 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
         getLLVMSyncScope(loadInst));
   }];
   let builders = [
-    DeprecatedOpBuilder<"the usage of typed pointers is deprecated",
-      (ins "Value":$addr, CArg<"unsigned", "0">:$alignment,
-      CArg<"bool", "false">:$isVolatile, CArg<"bool", "false">:$isNonTemporal)>,
     OpBuilder<(ins "Type":$type, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
       CArg<"bool", "false">:$isNonTemporal,
@@ -408,7 +377,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
      DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>]> {
   dag args = (ins LLVM_LoadableType:$value,
-              LLVM_PointerTo<LLVM_LoadableType>:$addr,
+              LLVM_AnyPointer:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
               UnitAttr:$nontemporal,
@@ -445,7 +414,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $value `,` $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
-    attr-dict `:` custom<StoreType>(type($value), type($addr))
+    attr-dict `:` type($value) `,` qualified(type($addr))
   }];
   string llvmBuilder = [{
     auto *inst = builder.CreateStore($value, $addr, $volatile_);
@@ -651,8 +620,7 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     OpBuilder<(ins "LLVMFunctionType":$calleeType, "FlatSymbolRefAttr":$callee,
                    CArg<"ValueRange", "{}">:$args)>,
     OpBuilder<(ins "LLVMFunctionType":$calleeType, "StringRef":$callee,
-                   CArg<"ValueRange", "{}">:$args)>,
-    OpBuilder<(ins "Value":$callee, "ValueRange":$args)>
+                   CArg<"ValueRange", "{}">:$args)>
   ];
   let hasCustomAssemblyFormat = 1;
   let extraClassDeclaration = [{
@@ -1636,7 +1604,7 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
       TypesMatchWith<"result #0 and operand #1 have the same type",
                      "val", "res", "$_self">]> {
   dag args = (ins AtomicBinOp:$bin_op,
-              LLVM_PointerTo<LLVM_AtomicRMWType>:$ptr,
+              LLVM_AnyPointer:$ptr,
               LLVM_AtomicRMWType:$val, AtomicOrdering:$ordering,
               OptionalAttr<StrAttr>:$syncscope,
               OptionalAttr<I64Attr>:$alignment,
@@ -1687,7 +1655,7 @@ def LLVM_AtomicCmpXchgOp : LLVM_MemAccessOpBase<"cmpxchg", [
       TypesMatchWith<"result #0 has an LLVM struct type consisting of "
                      "the type of operand #2 and a bool", "val", "res",
                      "getValAndBoolStructType($_self)">]> {
-  dag args = (ins LLVM_PointerTo<LLVM_AtomicCmpXchgType>:$ptr,
+  dag args = (ins LLVM_AnyPointer:$ptr,
               LLVM_AtomicCmpXchgType:$cmp, LLVM_AtomicCmpXchgType:$val,
               AtomicOrdering:$success_ordering,
               AtomicOrdering:$failure_ordering,
