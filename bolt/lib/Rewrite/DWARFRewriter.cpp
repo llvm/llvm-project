@@ -88,6 +88,96 @@ static void printDie(DWARFUnit &DU, uint64_t DIEOffset) {
   }
 }
 
+using namespace bolt;
+
+/// Take a set of DWARF address ranges corresponding to the input binary and
+/// translate them to a set of address ranges in the output binary.
+static DebugAddressRangesVector
+translateInputToOutputRanges(const BinaryFunction &BF,
+                             const DWARFAddressRangesVector &InputRanges) {
+  DebugAddressRangesVector OutputRanges;
+
+  // If the function hasn't changed return the same ranges.
+  if (!BF.isEmitted()) {
+    OutputRanges.resize(InputRanges.size());
+    llvm::transform(InputRanges, OutputRanges.begin(),
+                    [](const DWARFAddressRange &Range) {
+                      return DebugAddressRange(Range.LowPC, Range.HighPC);
+                    });
+    return OutputRanges;
+  }
+
+  for (const DWARFAddressRange &Range : InputRanges)
+    llvm::append_range(OutputRanges, BF.translateInputToOutputRange(
+                                         {Range.LowPC, Range.HighPC}));
+
+  // Post-processing pass to sort and merge ranges.
+  llvm::sort(OutputRanges);
+  DebugAddressRangesVector MergedRanges;
+  uint64_t PrevHighPC = 0;
+  for (const DebugAddressRange &Range : OutputRanges) {
+    if (Range.LowPC <= PrevHighPC) {
+      MergedRanges.back().HighPC =
+          std::max(MergedRanges.back().HighPC, Range.HighPC);
+    } else {
+      MergedRanges.emplace_back(Range.LowPC, Range.HighPC);
+    }
+    PrevHighPC = MergedRanges.back().HighPC;
+  }
+
+  return MergedRanges;
+}
+
+/// Similar to translateInputToOutputRanges() but operates on location lists.
+static DebugLocationsVector
+translateInputToOutputLocationList(const BinaryFunction &BF,
+                                   const DebugLocationsVector &InputLL) {
+  DebugLocationsVector OutputLL;
+
+  // If the function hasn't changed - there's nothing to update.
+  if (!BF.isEmitted())
+    return InputLL;
+
+  for (const DebugLocationEntry &Entry : InputLL) {
+    DebugAddressRangesVector OutRanges =
+        BF.translateInputToOutputRange({Entry.LowPC, Entry.HighPC});
+    if (!OutRanges.empty() && !OutputLL.empty()) {
+      if (OutRanges.front().LowPC == OutputLL.back().HighPC &&
+          Entry.Expr == OutputLL.back().Expr) {
+        OutputLL.back().HighPC =
+            std::max(OutputLL.back().HighPC, OutRanges.front().HighPC);
+        OutRanges.erase(OutRanges.begin());
+      }
+    }
+    llvm::transform(OutRanges, std::back_inserter(OutputLL),
+                    [&Entry](const DebugAddressRange &R) {
+                      return DebugLocationEntry{R.LowPC, R.HighPC, Entry.Expr};
+                    });
+  }
+
+  // Sort and merge adjacent entries with identical locations.
+  llvm::stable_sort(
+      OutputLL, [](const DebugLocationEntry &A, const DebugLocationEntry &B) {
+        return A.LowPC < B.LowPC;
+      });
+  DebugLocationsVector MergedLL;
+  uint64_t PrevHighPC = 0;
+  const SmallVectorImpl<uint8_t> *PrevExpr = nullptr;
+  for (const DebugLocationEntry &Entry : OutputLL) {
+    if (Entry.LowPC <= PrevHighPC && *PrevExpr == Entry.Expr) {
+      MergedLL.back().HighPC = std::max(Entry.HighPC, MergedLL.back().HighPC);
+    } else {
+      const uint64_t Begin = std::max(Entry.LowPC, PrevHighPC);
+      const uint64_t End = std::max(Begin, Entry.HighPC);
+      MergedLL.emplace_back(DebugLocationEntry{Begin, End, Entry.Expr});
+    }
+    PrevHighPC = MergedLL.back().HighPC;
+    PrevExpr = &MergedLL.back().Expr;
+  }
+
+  return MergedLL;
+}
+
 namespace llvm {
 namespace bolt {
 /// Emits debug information into .debug_info or .debug_types section.
@@ -861,7 +951,7 @@ void DWARFRewriter::updateUnitDebugInfo(
               : nullptr;
       DebugAddressRangesVector OutputRanges;
       if (Function) {
-        OutputRanges = Function->translateInputToOutputRanges(*RangesOrError);
+        OutputRanges = translateInputToOutputRanges(*Function, *RangesOrError);
         LLVM_DEBUG(if (OutputRanges.empty() != RangesOrError->empty()) {
           dbgs() << "BOLT-DEBUG: problem with DIE at 0x"
                  << Twine::utohexstr(Die->getOffset()) << " in CU at 0x"
@@ -1022,7 +1112,7 @@ void DWARFRewriter::updateUnitDebugInfo(
             DebugLocationsVector OutputLL;
             if (const BinaryFunction *Function =
                     BC.getBinaryFunctionContainingAddress(Address)) {
-              OutputLL = Function->translateInputToOutputLocationList(InputLL);
+              OutputLL = translateInputToOutputLocationList(*Function, InputLL);
               LLVM_DEBUG(if (OutputLL.empty()) {
                 dbgs() << "BOLT-DEBUG: location list translated to an empty "
                           "one at 0x"
