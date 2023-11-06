@@ -21,3 +21,4 @@ def GPRRegBank : RegisterBank<"GPR", [ClassA]>;
 // CHECK: const PartialMappingIdx BankIDToFirstRegisterClassIdx
 // CHECK: PMI_ClassA,
 // CHECK: const int BankIDToRegisterClassCount
+// CHECK: 1,
