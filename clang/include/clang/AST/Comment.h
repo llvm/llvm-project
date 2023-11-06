@@ -297,31 +297,24 @@ private:
   bool isWhitespaceNoCache() const;
 };
 
+/// The most appropriate rendering mode for this command, chosen on command
+/// semantics in Doxygen.
+enum InlineCommandRenderKind { Normal, Bold, Monospaced, Emphasized, Anchor };
+
 /// A command with word-like arguments that is considered inline content.
 class InlineCommandComment : public InlineContentComment {
-public:
-  /// The most appropriate rendering mode for this command, chosen on command
-  /// semantics in Doxygen.
-  enum RenderKind {
-    RenderNormal,
-    RenderBold,
-    RenderMonospaced,
-    RenderEmphasized,
-    RenderAnchor
-  };
-
 protected:
   /// Command arguments.
   ArrayRef<Argument> Args;
 
 public:
   InlineCommandComment(SourceLocation LocBegin, SourceLocation LocEnd,
-                       unsigned CommandID, RenderKind RK,
+                       unsigned CommandID, InlineCommandRenderKind RK,
                        ArrayRef<Argument> Args)
       : InlineContentComment(CommentKind::InlineCommandComment, LocBegin,
                              LocEnd),
         Args(Args) {
-    InlineCommandCommentBits.RenderKind = RK;
+    InlineCommandCommentBits.RenderKind = llvm::to_underlying(RK);
     InlineCommandCommentBits.CommandID = CommandID;
   }
 
@@ -345,8 +338,9 @@ public:
     return SourceRange(getBeginLoc().getLocWithOffset(-1), getEndLoc());
   }
 
-  RenderKind getRenderKind() const {
-    return static_cast<RenderKind>(InlineCommandCommentBits.RenderKind);
+  InlineCommandRenderKind getRenderKind() const {
+    return static_cast<InlineCommandRenderKind>(
+        InlineCommandCommentBits.RenderKind);
   }
 
   unsigned getNumArgs() const {
