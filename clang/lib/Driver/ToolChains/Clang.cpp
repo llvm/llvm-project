@@ -5015,10 +5015,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Triple.isPPC())
-    if (const Arg *A =
-            Args.getLastArg(options::OPT_mregnames, options::OPT_mno_regnames))
-      if (A->getOption().matches(options::OPT_mregnames))
-        Args.AddLastArg(CmdArgs, options::OPT_mregnames);
+    Args.addOptInFlag(CmdArgs, options::OPT_mregnames,
+                      options::OPT_mno_regnames);
 
   if (Args.getLastArg(options::OPT_fthin_link_bitcode_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_fthin_link_bitcode_EQ);
