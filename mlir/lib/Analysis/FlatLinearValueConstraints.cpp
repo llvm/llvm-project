@@ -67,7 +67,7 @@ private:
 } // namespace
 
 // Flattens the expressions in map. Returns failure if 'expr' was unable to be
-// flattened.For example two specific cases:
+// flattened. For example two specific cases:
 // 1. semi-affine expressions not handled yet.
 // 2. has poison expression (i.e., division by zero).
 static LogicalResult
