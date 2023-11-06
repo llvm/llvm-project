@@ -4336,7 +4336,8 @@ void SymbolFileDWARF::DumpClangAST(Stream &s) {
   clang->Dump(s.AsRawOstream());
 }
 
-bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d) {
+bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
+                                           bool errors_only) {
   StructuredData::Array separate_debug_info_files;
   DWARFDebugInfo &info = DebugInfo();
   const size_t num_cus = info.GetNumUnits();
@@ -4389,7 +4390,8 @@ bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d) {
                               dwarf_cu->GetDwoError().AsCString("unknown"));
     }
     dwo_data->AddBooleanItem("loaded", dwo_symfile != nullptr);
-    separate_debug_info_files.AddItem(dwo_data);
+    if (!errors_only || dwo_data->HasKey("error"))
+      separate_debug_info_files.AddItem(dwo_data);
   }
 
   d.AddStringItem("type", "dwo");
