@@ -14,6 +14,7 @@ class TestVTableValue(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIf(compiler="clang", compiler_version=["<", "9.0"])
     @skipUnlessPlatform(["linux", "macosx"])
     def test_vtable(self):
         self.build()
