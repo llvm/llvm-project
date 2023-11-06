@@ -712,6 +712,8 @@ Miscellaneous Clang Crashes Fixed
   `Issue 64564 <https://github.com/llvm/llvm-project/issues/64564>`_
 - Fixed a crash when an ObjC ivar has an invalid type. See
   (`#68001 <https://github.com/llvm/llvm-project/pull/68001>`_)
+- Fixed a crash in C when redefined struct is another nested redefinition.
+  `Issue 41302 <https://github.com/llvm/llvm-project/issues/41302>`_
 
 Target Specific Changes
 -----------------------
