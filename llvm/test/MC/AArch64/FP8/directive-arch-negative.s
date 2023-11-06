@@ -35,3 +35,21 @@ fdot  v31.4h, v0.8b, v0.8b
 fdot  v0.2s, v0.8b, v31.8b
 // CHECK: error: instruction requires: fp8dot4
 // CHECK: fdot  v0.2s, v0.8b, v31.8b
+
+.arch armv9-a+lut
+.arch armv9-a+nolut
+luti2  v30.8h, { v20.8h }, v31[7]
+// CHECK: error: instruction requires: lut
+// CHECK: luti2  v30.8h, { v20.8h }, v31[7]
+
+.arch armv9-a+sve2+lut
+.arch armv9-a+nosve2+nolut
+luti2  z0.h, { z0.h }, z0[0]
+// CHECK: error: instruction requires: lut sve2 or sme2
+// CHECK: luti2  z0.h, { z0.h }, z0[0]
+
+.arch armv9-a+sme-lutv2
+.arch armv9-a+nosme-lutv2
+luti4  { z0.b - z3.b }, zt0, { z0, z1 }
+// CHECK: error: instruction requires: sme2 sme-lutv2
+// CHECK: luti4  { z0.b - z3.b }, zt0, { z0, z1 }

@@ -4081,3 +4081,12 @@ defm FDOT_ZZZI_BtoS : sve_float_dot_indexed<0b1, 0b01, ZPR8, ZPR3b8, "fdot",
 // FP8 Widening Dot-Product - Group
 defm FDOT_ZZZ_BtoS : sve_float_dot<0b1, 0b1, ZPR32, ZPR8, "fdot", nxv16i8, null_frag>;
 }
+
+let Predicates = [HasSVE2orSME2, HasLUT] in {
+// LUTI2
+  defm LUTI2_ZZZI : sve2_luti2_vector_index<"luti2">;
+// LUTI4
+  defm LUTI4_ZZZI   : sve2_luti4_vector_index<"luti4">;
+// LUTI4 (two contiguous registers)
+  defm LUTI4_Z2ZZI  : sve2_luti4_vector_vg2_index<"luti4">;
+} // End HasSVE2orSME2, HasLUT
