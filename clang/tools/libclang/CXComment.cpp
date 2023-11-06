@@ -44,43 +44,43 @@ enum CXCommentKind clang_Comment_getKind(CXComment CXC) {
     return CXComment_Null;
 
   switch (C->getCommentKind()) {
-  case Comment::NoCommentKind:
+  case CommentKind::None:
     return CXComment_Null;
 
-  case Comment::TextCommentKind:
+  case CommentKind::TextComment:
     return CXComment_Text;
 
-  case Comment::InlineCommandCommentKind:
+  case CommentKind::InlineCommandComment:
     return CXComment_InlineCommand;
 
-  case Comment::HTMLStartTagCommentKind:
+  case CommentKind::HTMLStartTagComment:
     return CXComment_HTMLStartTag;
 
-  case Comment::HTMLEndTagCommentKind:
+  case CommentKind::HTMLEndTagComment:
     return CXComment_HTMLEndTag;
 
-  case Comment::ParagraphCommentKind:
+  case CommentKind::ParagraphComment:
     return CXComment_Paragraph;
 
-  case Comment::BlockCommandCommentKind:
+  case CommentKind::BlockCommandComment:
     return CXComment_BlockCommand;
 
-  case Comment::ParamCommandCommentKind:
+  case CommentKind::ParamCommandComment:
     return CXComment_ParamCommand;
 
-  case Comment::TParamCommandCommentKind:
+  case CommentKind::TParamCommandComment:
     return CXComment_TParamCommand;
 
-  case Comment::VerbatimBlockCommentKind:
+  case CommentKind::VerbatimBlockComment:
     return CXComment_VerbatimBlockCommand;
 
-  case Comment::VerbatimBlockLineCommentKind:
+  case CommentKind::VerbatimBlockLineComment:
     return CXComment_VerbatimBlockLine;
 
-  case Comment::VerbatimLineCommentKind:
+  case CommentKind::VerbatimLineComment:
     return CXComment_VerbatimLine;
 
-  case Comment::FullCommentKind:
+  case CommentKind::FullComment:
     return CXComment_FullComment;
   }
   llvm_unreachable("unknown CommentKind");
