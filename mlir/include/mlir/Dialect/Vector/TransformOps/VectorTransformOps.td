@@ -15,6 +15,24 @@ include "mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def NarrowTypeEmulationConverterOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.vector.emulate_narrow_type_converter",
+    [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface>]> {
+  let description = [{
+    This operation provides a type converter that converts narrow integer or
+    float types that are not supported by the target hardware to wider types.
+
+    The type converter can be customized as follows:
+    - `load_store_emulate_bitwidth`: Bitwidth of target load/store emulation.
+    - `arith_compute_bitwidth`: Bitwidth of the arith computation.
+  }];
+
+  let arguments = (ins
+      DefaultValuedAttr<I64Attr, "8">:$load_store_emulate_bitwidth,
+      DefaultValuedAttr<I64Attr, "4">:$arith_compute_bitwidth);
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyVectorToLLVMConversionPatternsOp : Op<Transform_Dialect,
     "apply_conversion_patterns.vector.vector_to_llvm",
     [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
@@ -290,6 +308,19 @@ def ApplyLowerTransposePatternsOp : Op<Transform_Dialect,
     )
     attr-dict
   }];
+}
+
+def ApplyEmulateNarrowTypesPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.vector.emulate_narrow_types",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector narrow type emulations should be applied.
+
+    This is usually a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let assemblyFormat = "attr-dict";
 }
 
 def ApplyRewriteNarrowTypePatternsOp : Op<Transform_Dialect,

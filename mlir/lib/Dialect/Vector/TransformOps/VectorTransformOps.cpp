@@ -11,6 +11,8 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Transforms/NarrowTypeEmulationConverter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
@@ -43,6 +45,39 @@ transform::ApplyVectorToLLVMConversionPatternsOp::verifyTypeConverter(
   if (builder.getTypeConverterType() != "LLVMTypeConverter")
     return emitOpError("expected LLVMTypeConverter");
   return success();
+}
+
+std::unique_ptr<TypeConverter>
+transform::NarrowTypeEmulationConverterOp::getTypeConverter() {
+  auto typeConverter = std::make_unique<arith::NarrowTypeEmulationConverter>(
+      getLoadStoreEmulateBitwidth());
+  int64_t arithComputeBitwidth = getArithComputeBitwidth();
+  // Convert scalar type.
+  typeConverter->addConversion(
+      [arithComputeBitwidth](IntegerType ty) -> std::optional<Type> {
+        unsigned width = ty.getWidth();
+        if (width >= arithComputeBitwidth)
+          return ty;
+
+        return IntegerType::get(ty.getContext(), arithComputeBitwidth);
+      });
+
+  // Convert vector type.
+  typeConverter->addConversion(
+      [arithComputeBitwidth](VectorType ty) -> std::optional<Type> {
+        auto intTy = dyn_cast<IntegerType>(ty.getElementType());
+        if (!intTy)
+          return ty;
+
+        unsigned width = intTy.getWidth();
+        if (width >= arithComputeBitwidth)
+          return ty;
+
+        return VectorType::get(
+            to_vector(ty.getShape()),
+            IntegerType::get(ty.getContext(), arithComputeBitwidth));
+      });
+  return typeConverter;
 }
 
 //===----------------------------------------------------------------------===//
@@ -159,9 +194,16 @@ void transform::ApplyLowerTransposePatternsOp::populatePatterns(
   }
 }
 
+void transform::ApplyEmulateNarrowTypesPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  vector::populateVectorNarrowTypeEmulationPatterns(
+      static_cast<arith::NarrowTypeEmulationConverter &>(typeConverter),
+      patterns);
+}
+
 void transform::ApplyRewriteNarrowTypePatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  populateVectorNarrowTypeRewritePatterns(patterns);
+  vector::populateVectorNarrowTypeRewritePatterns(patterns);
 }
 
 void transform::ApplySplitTransferFullPartialPatternsOp::populatePatterns(
