@@ -1369,3 +1369,63 @@ func.func @warp_propagate_unconnected_read_write(%laneid: index, %buffer: memref
 //       CHECK-DIST-AND-PROP:   %[[CST:.+]] = arith.constant dense<2.000000e+00> : vector<4xf32>
 //       CHECK-DIST-AND-PROP:   vector.transfer_read {{.*}} : memref<128xf32>, vector<4xf32>
 //       CHECK-DIST-AND-PROP:   vector.transfer_write %[[CST]], {{.*}} : vector<4xf32>, memref<128xf32>
+
+// -----
+
+func.func @warp_propagate_create_mask(%laneid: index, %m0: index) -> vector<1xi1> {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xi1>) {
+    %1 = vector.create_mask %m0 : vector<32xi1>
+    vector.yield %1 : vector<32xi1>
+  }
+  return %r : vector<1xi1>
+}
+
+//   CHECK-PROP-DAG: #[[$SUB:.*]] = affine_map<()[s0, s1] -> (-s0 + s1)>
+// CHECK-PROP-LABEL: func @warp_propagate_create_mask
+//  CHECK-PROP-SAME: %[[LANEID:.+]]: index, %[[M0:.+]]: index
+//       CHECK-PROP:   %[[C0:.+]] = arith.constant 0 : index
+//       CHECK-PROP:   %[[C1:.+]] = arith.constant 1 : index
+//       CHECK-PROP:   %[[MBOUNDDIST:.+]] = affine.apply #[[$SUB]]()[%[[LANEID]], %[[M0]]]
+//       CHECK-PROP:   %[[CLAMPZERO:.+]] = arith.maxsi %[[MBOUNDDIST]], %[[C0]] : index
+//       CHECK-PROP:   %[[MDIST:.+]] = arith.minsi %[[CLAMPZERO]], %[[C1]] : index
+//       CHECK-PROP:   vector.create_mask %[[MDIST]] : vector<1xi1>
+
+// -----
+
+func.func @warp_propagate_multi_dim_create_mask(%laneid: index, %m0: index, %m1: index, %m2: index) -> vector<1x2x4xi1> {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x2x4xi1>) {
+    %1 = vector.create_mask %m0, %m1, %m2 : vector<16x4x4xi1>
+    vector.yield %1 : vector<16x4x4xi1>
+  }
+  return %r : vector<1x2x4xi1>
+}
+
+//   CHECK-PROP-DAG: #[[$SUBM0:.*]] = affine_map<()[s0, s1] -> (s0 - s1 floordiv 2)>
+//   CHECK-PROP-DAG: #[[$SUBM1:.*]] = affine_map<()[s0, s1] -> (s0 - s1 * 2 + (s1 floordiv 2) * 4)>
+// CHECK-PROP-LABEL: func @warp_propagate_multi_dim_create_mask
+//  CHECK-PROP-SAME: %[[LANEID:.+]]: index, %[[M0:.+]]: index, %[[M1:.+]]: index, %[[M2:.+]]: index
+//   CHECK-PROP-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-PROP-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//   CHECK-PROP-DAG:   %[[C2:.+]] = arith.constant 2 : index
+//   CHECK-PROP-DAG:   %[[C4:.+]] = arith.constant 4 : index
+
+// Compute distributed m0 based on the first (outermost) delinearized lane id.
+//       CHECK-PROP:   affine.apply #map()[%[[M0]], %[[LANEID]]]
+//       CHECK-PROP:   arith.maxsi {{.*}}, %[[C0]] : index
+//       CHECK-PROP:   %[[DISTM0:.+]] = arith.minsi {{.*}}, %[[C1]] : index
+//       CHECK-PROP:   arith.cmpi eq, {{.*}}, %[[C0]] : index
+
+// Compute m1 based on the second delinearized lane id. If m0 is zero, m1 must
+// also be zero for the mask to be valid.
+//       CHECK-PROP:   affine.apply #map1()[%[[M1]], %[[LANEID]]]
+//       CHECK-PROP:   arith.maxsi {{.*}}, %[[C0]] : index
+//       CHECK-PROP:   arith.minsi {{.*}}, %[[C2]] : index
+//       CHECK-PROP:   %[[DISTM1:.+]] = arith.select {{.*}}, %[[C0]], {{.*}} : index
+
+// Compute m3 and propagate zeros.
+//       CHECK-PROP:   arith.cmpi eq, {{.*}}, %[[C0]] : index
+//       CHECK-PROP:   arith.maxsi %[[M2]], %[[C0]] : index
+//       CHECK-PROP:   arith.minsi {{.*}}, %[[C4]] : index
+//       CHECK-PROP:   %[[DISTM2:.+]] = arith.select {{.*}}, %[[C0]], {{.*}} : index
+
+//       CHECK-PROP:   vector.create_mask %[[DISTM0]], %[[DISTM1]], %[[DISTM2]] : vector<1x2x4xi1>
