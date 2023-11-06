@@ -1782,10 +1782,9 @@ bool ClauseProcessor::processMap(
           std::stringstream asFortran;
           mlir::Value baseAddr = Fortran::lower::gatherDataOperandAddrAndBounds<
               Fortran::parser::OmpObject, mlir::omp::DataBoundsType,
-              mlir::omp::DataBoundsOp>(converter, firOpBuilder,
-                                       semanticsContext, stmtCtx, ompObject,
-                                       clauseLocation, asFortran, bounds,
-                                       treatIndexAsSection);
+              mlir::omp::DataBoundsOp>(
+              converter, firOpBuilder, semanticsContext, stmtCtx, ompObject,
+              clauseLocation, asFortran, bounds, treatIndexAsSection);
 
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
