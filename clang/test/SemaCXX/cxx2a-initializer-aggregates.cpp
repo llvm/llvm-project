@@ -39,6 +39,7 @@ A a1 = {
 };
 int arr[3] = {[1] = 5}; // pedantic-error {{array designators are a C99 extension}}
 B b = {.a.x = 0}; // pedantic-error {{nested designators are a C99 extension}}
+                  // wmissing-warning@-1 {{missing field 'y' initializer}}
 A a2 = {
   .x = 1, // pedantic-error {{mixture of designated and non-designated initializers in the same initializer list is a C99 extension}}
   2 // pedantic-note {{first non-designated initializer is here}}
@@ -60,7 +61,6 @@ B b2 = {.a = 1}; // pedantic-error {{brace elision for designated initializer is
 B b3 = {.a = 1, 2}; // pedantic-error {{mixture of designated and non-designated}} pedantic-note {{first non-designated}} pedantic-error {{brace elision}}
 B b4 = {.a = 1, 2, 3}; // pedantic-error {{mixture of designated and non-designated}} pedantic-note {{first non-designated}} pedantic-error {{brace elision}} expected-error {{excess elements}}
 B b5 = {.a = nullptr}; // expected-error {{cannot initialize}}
-                       // wmissing-warning@-1 {{missing field 'y' initializer}}
 struct C { int :0, x, :0, y, :0; };
 C c = {
   .x = 1, // override-note {{previous}}
