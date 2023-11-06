@@ -28,8 +28,8 @@ TEST(FileSpecTest, FileAndDirectoryComponents) {
 
   FileSpec fs_windows("F:\\bar", FileSpec::Style::windows);
   EXPECT_STREQ("F:\\bar", fs_windows.GetPath().c_str());
-  // EXPECT_STREQ("F:\\", fs_windows.GetDirectory().GetPath().c_str()); // It returns
-  // "F:/"
+  // EXPECT_STREQ("F:\\", fs_windows.GetDirectory().GetPath().c_str()); // It
+  // returns "F:/"
   EXPECT_STREQ("bar", fs_windows.GetFilename().GetCString());
 
   FileSpec fs_posix_root("/", FileSpec::Style::posix);
@@ -297,45 +297,18 @@ TEST(FileSpecTest, FormatFileSpec) {
 
 TEST(FileSpecTest, IsRelative) {
   llvm::StringRef not_relative[] = {
-    "/",
-    "/a",
-    "/a/",
-    "/a/b",
-    "/a/b/",
-    "//",
-    "//a/",
-    "//a/b",
-    "//a/b/",
-    "~",
-    "~/",
-    "~/a",
-    "~/a/",
-    "~/a/b",
-    "~/a/b/",
-    "/foo/.",
-    "/foo/..",
-    "/foo/../",
-    "/foo/../.",
+      "/",      "/a",     "/a/",     "/a/b",     "/a/b/",     "//",   "//a/",
+      "//a/b",  "//a/b/", "~",       "~/",       "~/a",       "~/a/", "~/a/b",
+      "~/a/b/", "/foo/.", "/foo/..", "/foo/../", "/foo/../.",
   };
-  for (const auto &path: not_relative) {
+  for (const auto &path : not_relative) {
     SCOPED_TRACE(path);
     EXPECT_FALSE(PosixSpec(path).IsRelative());
   }
   llvm::StringRef is_relative[] = {
-    ".",
-    "./",
-    ".///",
-    "a",
-    "./a",
-    "./a/",
-    "./a/",
-    "./a/b",
-    "./a/b/",
-    "../foo",
-    "foo/bar.c",
-    "./foo/bar.c"
-  };
-  for (const auto &path: is_relative) {
+      ".",    "./",    ".///",   "a",      "./a",       "./a/",
+      "./a/", "./a/b", "./a/b/", "../foo", "foo/bar.c", "./foo/bar.c"};
+  for (const auto &path : is_relative) {
     SCOPED_TRACE(path);
     EXPECT_TRUE(PosixSpec(path).IsRelative());
   }
@@ -421,7 +394,6 @@ TEST(FileSpecTest, Match) {
 
   EXPECT_TRUE(Match("", "/foo/bar"));
   EXPECT_TRUE(Match("", ""));
-
 }
 
 TEST(FileSpecTest, TestAbsoluteCaching) {
@@ -533,4 +505,16 @@ TEST(FileSpecTest, TestGetComponents) {
     FileSpec file_spec = WindowsSpec(pair.first);
     EXPECT_EQ(file_spec.GetComponents(), pair.second);
   }
+}
+
+TEST(FileSpecTest, TestChecksum) {
+  Checksum checksum({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15});
+  FileSpec file_spec("/foo/bar", FileSpec::Style::posix, checksum);
+  EXPECT_TRUE(static_cast<bool>(file_spec.GetChecksum()));
+  EXPECT_EQ(file_spec.GetChecksum(), checksum);
+
+  FileSpec copy = file_spec;
+
+  EXPECT_TRUE(static_cast<bool>(copy.GetChecksum()));
+  EXPECT_EQ(file_spec.GetChecksum(), copy.GetChecksum());
 }
