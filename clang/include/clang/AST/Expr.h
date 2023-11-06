@@ -1827,10 +1827,6 @@ class StringLiteral final
   ///
   /// * An array of getByteLength() char used to store the string data.
 
-public:
-  // enum StringKind { Ordinary, Wide, UTF8, UTF16, UTF32, Unevaluated };
-
-private:
   unsigned numTrailingObjects(OverloadToken<unsigned>) const { return 1; }
   unsigned numTrailingObjects(OverloadToken<SourceLocation>) const {
     return getNumConcatenated();
