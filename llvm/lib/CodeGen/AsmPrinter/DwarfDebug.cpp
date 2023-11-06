@@ -445,7 +445,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
 DwarfDebug::~DwarfDebug() = default;
 
 static bool isObjCClass(StringRef Name) {
-  return Name.startswith("+") || Name.startswith("-");
+  return Name.starts_with("+") || Name.starts_with("-");
 }
 
 static bool hasObjCCategory(StringRef Name) {
