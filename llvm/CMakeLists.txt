@@ -942,8 +942,8 @@ foreach(t ${LLVM_TARGETS_TO_BUILD})
   # LLVM_EXPERIMENTAL_TARGETS_TO_BUILD, not LLVM_TARGETS_TO_BUILD.
   # We allow experimental targets that are not in LLVM_ALL_EXPERIMENTAL_TARGETS,
   # as long as they are passed via LLVM_EXPERIMENTAL_TARGETS_TO_BUILD.
-  if ( NOT ${t} IN_LIST LLVM_ALL_TARGETS AND NOT ${t} IN_LIST LLVM_EXPERIMENTAL_TARGETS_TO_BUILD )
-    if( ${t} IN_LIST LLVM_ALL_EXPERIMENTAL_TARGETS )
+  if ( NOT "${t}" IN_LIST LLVM_ALL_TARGETS AND NOT "${t}" IN_LIST LLVM_EXPERIMENTAL_TARGETS_TO_BUILD )
+    if( "${t}" IN_LIST LLVM_ALL_EXPERIMENTAL_TARGETS )
       message(FATAL_ERROR "The target `${t}' is experimental and must be passed "
         "via LLVM_EXPERIMENTAL_TARGETS_TO_BUILD.")
     else()
@@ -955,6 +955,8 @@ foreach(t ${LLVM_TARGETS_TO_BUILD})
     endif()
   else()
     set(LLVM_ENUM_TARGETS "${LLVM_ENUM_TARGETS}LLVM_TARGET(${t})\n")
+    string(TOUPPER ${t} T_UPPER)
+    set(LLVM_HAS_${T_UPPER}_TARGET 1)
   endif()
 
   file(GLOB asmp_file "${td}/*AsmPrinter.cpp")

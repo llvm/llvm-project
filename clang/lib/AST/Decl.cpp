@@ -1204,12 +1204,11 @@ Linkage NamedDecl::getFormalLinkage() const {
   // [basic.namespace.general]/p2
   //   A namespace is never attached to a named module and never has a name with
   //   module linkage.
-  if (isInModulePurview(this) &&
-      InternalLinkage == ExternalLinkage &&
+  if (isInModulePurview(this) && InternalLinkage == Linkage::External &&
       !isExportedFromModuleInterfaceUnit(
           cast<NamedDecl>(this->getCanonicalDecl())) &&
       !isa<NamespaceDecl>(this))
-    InternalLinkage = ModuleLinkage;
+    InternalLinkage = Linkage::Module;
 
   return clang::getFormalLinkage(InternalLinkage);
 }
@@ -1337,7 +1336,7 @@ LinkageInfo LinkageComputer::getLVForClosure(const DeclContext *DC,
   // visible, then the lambda is too. We apply the same rules to blocks.
   if (!isExternallyVisible(OwnerLV.getLinkage()))
     return LinkageInfo::none();
-  return LinkageInfo(VisibleNoLinkage, OwnerLV.getVisibility(),
+  return LinkageInfo(Linkage::VisibleNone, OwnerLV.getVisibility(),
                      OwnerLV.isVisibilityExplicit());
 }
 
@@ -1382,7 +1381,7 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
 
       if (const VarDecl *Prev = Var->getPreviousDecl()) {
         LinkageInfo PrevLV = getLVForDecl(Prev, computation);
-        if (PrevLV.getLinkage())
+        if (PrevLV.getLinkage() != Linkage::Invalid)
           LV.setLinkage(PrevLV.getLinkage());
         LV.mergeVisibility(PrevLV);
       }
@@ -1433,14 +1432,14 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
             computation.isValueVisibility()
                 ? Context.getLangOpts().getValueVisibilityMode()
                 : Context.getLangOpts().getTypeVisibilityMode();
-        return LinkageInfo(VisibleNoLinkage, globalVisibility,
+        return LinkageInfo(Linkage::VisibleNone, globalVisibility,
                            /*visibilityExplicit=*/false);
       }
     }
   }
   if (!isExternallyVisible(LV.getLinkage()))
     return LinkageInfo::none();
-  return LinkageInfo(VisibleNoLinkage, LV.getVisibility(),
+  return LinkageInfo(Linkage::VisibleNone, LV.getVisibility(),
                      LV.isVisibilityExplicit());
 }
 
@@ -1921,7 +1920,21 @@ bool NamedDecl::declarationReplaces(NamedDecl *OldD, bool IsKnownNewer) const {
 }
 
 bool NamedDecl::hasLinkage() const {
-  return getFormalLinkage() != NoLinkage;
+  switch (getFormalLinkage()) {
+  case Linkage::Invalid:
+    llvm_unreachable("Linkage hasn't been computed!");
+  case Linkage::None:
+    return false;
+  case Linkage::Internal:
+    return true;
+  case Linkage::UniqueExternal:
+  case Linkage::VisibleNone:
+    llvm_unreachable("Non-formal linkage is not allowed here!");
+  case Linkage::Module:
+  case Linkage::External:
+    return true;
+  }
+  llvm_unreachable("Unhandled Linkage enum");
 }
 
 NamedDecl *NamedDecl::getUnderlyingDeclImpl() {
@@ -4626,8 +4639,8 @@ TagDecl::TagDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
                  SourceLocation StartL)
     : TypeDecl(DK, DC, L, Id, StartL), DeclContext(DK), redeclarable_base(C),
       TypedefNameDeclOrQualifier((TypedefNameDecl *)nullptr) {
-  assert((DK != Enum || TK == TTK_Enum) &&
-         "EnumDecl not matched with TTK_Enum");
+  assert((DK != Enum || TK == TagTypeKind::Enum) &&
+         "EnumDecl not matched with TagTypeKind::Enum");
   setPreviousDecl(PrevDecl);
   setTagKind(TK);
   setCompleteDefinition(false);
@@ -4760,7 +4773,7 @@ void TagDecl::setTemplateParameterListsInfo(
 EnumDecl::EnumDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                    SourceLocation IdLoc, IdentifierInfo *Id, EnumDecl *PrevDecl,
                    bool Scoped, bool ScopedUsingClassTag, bool Fixed)
-    : TagDecl(Enum, TTK_Enum, C, DC, IdLoc, Id, PrevDecl, StartLoc) {
+    : TagDecl(Enum, TagTypeKind::Enum, C, DC, IdLoc, Id, PrevDecl, StartLoc) {
   assert(Scoped || !ScopedUsingClassTag);
   IntegerType = nullptr;
   setNumPositiveBits(0);
@@ -4932,7 +4945,7 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
   setHasNonTrivialToPrimitiveDestructCUnion(false);
   setHasNonTrivialToPrimitiveCopyCUnion(false);
   setParamDestroyedInCallee(false);
-  setArgPassingRestrictions(APK_CanPassInRegs);
+  setArgPassingRestrictions(RecordArgPassingKind::CanPassInRegs);
   setIsRandomized(false);
   setODRHash(0);
 }
@@ -4949,9 +4962,9 @@ RecordDecl *RecordDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,
 }
 
 RecordDecl *RecordDecl::CreateDeserialized(const ASTContext &C, unsigned ID) {
-  RecordDecl *R =
-      new (C, ID) RecordDecl(Record, TTK_Struct, C, nullptr, SourceLocation(),
-                             SourceLocation(), nullptr, nullptr);
+  RecordDecl *R = new (C, ID)
+      RecordDecl(Record, TagTypeKind::Struct, C, nullptr, SourceLocation(),
+                 SourceLocation(), nullptr, nullptr);
   R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
   return R;
 }

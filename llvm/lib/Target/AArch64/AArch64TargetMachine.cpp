@@ -796,6 +796,9 @@ void AArch64PassConfig::addPreSched2() {
   // info.
   addPass(createAArch64SpeculationHardeningPass());
 
+  addPass(createAArch64IndirectThunks());
+  addPass(createAArch64SLSHardeningPass());
+
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     if (EnableFalkorHWPFFix)
       addPass(createFalkorHWPFFixPass());
@@ -828,8 +831,6 @@ void AArch64PassConfig::addPreEmitPass() {
 }
 
 void AArch64PassConfig::addPostBBSections() {
-  addPass(createAArch64IndirectThunks());
-  addPass(createAArch64SLSHardeningPass());
   addPass(createAArch64PointerAuthPass());
   if (EnableBranchTargets)
     addPass(createAArch64BranchTargetsPass());

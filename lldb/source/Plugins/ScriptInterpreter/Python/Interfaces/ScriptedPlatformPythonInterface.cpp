@@ -29,29 +29,15 @@ ScriptedPlatformPythonInterface::ScriptedPlatformPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)
     : ScriptedPlatformInterface(), ScriptedPythonInterface(interpreter) {}
 
-StructuredData::GenericSP ScriptedPlatformPythonInterface::CreatePluginObject(
+llvm::Expected<StructuredData::GenericSP>
+ScriptedPlatformPythonInterface::CreatePluginObject(
     llvm::StringRef class_name, ExecutionContext &exe_ctx,
     StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
-  if (class_name.empty())
-    return {};
-
-  StructuredDataImpl args_impl(args_sp);
-  std::string error_string;
-
-  Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
-                 Locker::FreeLock);
-
-  lldb::ExecutionContextRefSP exe_ctx_ref_sp =
+  ExecutionContextRefSP exe_ctx_ref_sp =
       std::make_shared<ExecutionContextRef>(exe_ctx);
-
-  PythonObject ret_val = SWIGBridge::LLDBSwigPythonCreateScriptedObject(
-      class_name.str().c_str(), m_interpreter.GetDictionaryName(),
-      exe_ctx_ref_sp, args_impl, error_string);
-
-  m_object_instance_sp =
-      StructuredData::GenericSP(new StructuredPythonObject(std::move(ret_val)));
-
-  return m_object_instance_sp;
+  StructuredDataImpl sd_impl(args_sp);
+  return ScriptedPythonInterface::CreatePluginObject(class_name, script_obj,
+                                                     exe_ctx_ref_sp, sd_impl);
 }
 
 StructuredData::DictionarySP ScriptedPlatformPythonInterface::ListProcesses() {

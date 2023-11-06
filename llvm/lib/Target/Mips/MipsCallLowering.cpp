@@ -185,7 +185,7 @@ MipsIncomingValueHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
 
   markPhysRegUsed(VALo.getLocReg());
   markPhysRegUsed(VAHi.getLocReg());
-  return 2;
+  return 1;
 }
 
 namespace {

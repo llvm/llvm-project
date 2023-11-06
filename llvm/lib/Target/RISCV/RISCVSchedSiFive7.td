@@ -455,11 +455,19 @@ foreach mx = SchedMxList in {
 // specific suffixes, but since SEW is already encoded in the name of the
 // resource, we do not need to use LMULSEWXXX constructors. However, we do
 // use the SEW from the name to determine the number of Cycles.
+
+// This predicate is true when the rs2 operand of vlse or vsse is x0, false
+// otherwise.
+def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
+
 foreach mx = SchedMxList in {
+  defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
   defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 8>.c;
   defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
+  defm SiFive7 : LMULWriteResMXVariant<"WriteVLDS8",  VLDSX0Pred, [SiFive7VL],
+                                       4, [VLDSX0Cycles], !add(3, Cycles),
+                                       [Cycles], mx, IsWorstCase>;
   let Latency = !add(3, Cycles), ReleaseAtCycles = [Cycles] in {
-    defm "" : LMULWriteResMX<"WriteVLDS8",  [SiFive7VL], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDUX8", [SiFive7VL], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDOX8", [SiFive7VL], mx, IsWorstCase>;
   }
@@ -469,11 +477,17 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVSTOX8", [SiFive7VS], mx, IsWorstCase>;
   }
 }
-foreach mx = SchedMxList in {
+// TODO: The MxLists need to be filtered by EEW. We only need to support
+// LMUL >= SEW_min/ELEN. Here, the smallest EEW prevents us from having MF8
+// since LMUL >= 16/64.
+foreach mx = ["MF4", "MF2", "M1", "M2", "M4", "M8"] in {
+  defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
   defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 16>.c;
   defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
+  defm SiFive7 : LMULWriteResMXVariant<"WriteVLDS16",  VLDSX0Pred, [SiFive7VL],
+                                       4, [VLDSX0Cycles], !add(3, Cycles),
+                                       [Cycles], mx, IsWorstCase>;
   let Latency = !add(3, Cycles), ReleaseAtCycles = [Cycles] in {
-    defm "" : LMULWriteResMX<"WriteVLDS16",  [SiFive7VL], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDUX16", [SiFive7VL], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDOX16", [SiFive7VL], mx, IsWorstCase>;
   }
@@ -483,11 +497,14 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVSTOX16", [SiFive7VS], mx, IsWorstCase>;
   }
 }
-foreach mx = SchedMxList in {
+foreach mx = ["MF2", "M1", "M2", "M4", "M8"] in {
+  defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
   defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 32>.c;
   defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
+  defm SiFive7 : LMULWriteResMXVariant<"WriteVLDS32",  VLDSX0Pred, [SiFive7VL],
+                                       4, [VLDSX0Cycles], !add(3, Cycles),
+                                       [Cycles], mx, IsWorstCase>;
   let Latency = !add(3, Cycles), ReleaseAtCycles = [Cycles] in {
-    defm "" : LMULWriteResMX<"WriteVLDS32",  [SiFive7VL], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDUX32", [SiFive7VL], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDOX32", [SiFive7VL], mx, IsWorstCase>;
   }
@@ -497,11 +514,14 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVSTOX32", [SiFive7VS], mx, IsWorstCase>;
   }
 }
-foreach mx = SchedMxList in {
+foreach mx = ["M1", "M2", "M4", "M8"] in {
+  defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
   defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 64>.c;
   defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
+  defm SiFive7 : LMULWriteResMXVariant<"WriteVLDS64",  VLDSX0Pred, [SiFive7VL],
+                                       4, [VLDSX0Cycles], !add(3, Cycles),
+                                       [Cycles], mx, IsWorstCase>;
   let Latency = !add(3, Cycles), ReleaseAtCycles = [Cycles] in {
-    defm "" : LMULWriteResMX<"WriteVLDS64",  [SiFive7VL], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDUX64", [SiFive7VL], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDOX64", [SiFive7VL], mx, IsWorstCase>;
   }
@@ -933,10 +953,13 @@ def : ReadAdvance<ReadFAdd32, 0>;
 def : ReadAdvance<ReadFAdd64, 0>;
 def : ReadAdvance<ReadFMul16, 0>;
 def : ReadAdvance<ReadFMA16, 0>;
+def : ReadAdvance<ReadFMA16Addend, 0>;
 def : ReadAdvance<ReadFMul32, 0>;
 def : ReadAdvance<ReadFMul64, 0>;
 def : ReadAdvance<ReadFMA32, 0>;
+def : ReadAdvance<ReadFMA32Addend, 0>;
 def : ReadAdvance<ReadFMA64, 0>;
+def : ReadAdvance<ReadFMA64Addend, 0>;
 def : ReadAdvance<ReadFDiv16, 0>;
 def : ReadAdvance<ReadFDiv32, 0>;
 def : ReadAdvance<ReadFDiv64, 0>;

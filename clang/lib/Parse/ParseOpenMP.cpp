@@ -4573,6 +4573,10 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       Data.ExtraModifierLoc = ConsumeToken();
       LinearT.consumeOpen();
       NeedRParenForLinear = true;
+      if (getLangOpts().OpenMP >= 52)
+        Diag(Data.ExtraModifierLoc, diag::err_omp_deprecate_old_syntax)
+            << "linear-modifier(list)" << getOpenMPClauseName(Kind)
+            << "linear(list: [linear-modifier,] step(step-size))";
     }
   } else if (Kind == OMPC_lastprivate) {
     // Try to parse modifier if any.

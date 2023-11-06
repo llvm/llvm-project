@@ -222,8 +222,7 @@ void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
 
   const TargetInstrInfo *TII =
       MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
-  assert (MF.size() == 0);
-  MF.push_back(MF.CreateMachineBasicBlock());
+  assert (MF.size() == 1);
   MachineBasicBlock *Entry = &MF.front();
   Entry->clear();
 

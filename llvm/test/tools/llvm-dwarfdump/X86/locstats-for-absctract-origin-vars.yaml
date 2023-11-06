@@ -32,7 +32,7 @@
 ##       DW_AT_high_pc (0x0000000000000007)
 ##       DW_AT_call_file       (0x01)
 ##       DW_AT_call_line       (1)
-##       DW_AT_call_column     (0x01)
+##       DW_AT_call_column     (1)
 ##       DW_TAG_formal_parameter
 ##         DW_AT_abstract_origin       (0x00000018)
 ##       DW_TAG_variable
@@ -44,7 +44,7 @@
 ##       DW_AT_high_pc       (0x0000000000000007)
 ##       DW_AT_call_file     (0x01)
 ##       DW_AT_call_line     (1)
-##       DW_AT_call_column   (0x01)
+##       DW_AT_call_column   (1)
 ##       DW_TAG_formal_parameter
 ##         DW_AT_abstract_origin     (0x00000018)
 ##         DW_AT_location    ()
@@ -57,28 +57,28 @@
 ##       DW_AT_high_pc       (0x0000000000000007)
 ##       DW_AT_call_file     (0x01)
 ##       DW_AT_call_line     (1)
-##       DW_AT_call_column   (0x01)
+##       DW_AT_call_column   (1)
 ##     DW_TAG_inlined_subroutine
 ##       DW_AT_abstract_origin (0x00000014)
 ##       DW_AT_low_pc  (0x0000000000000002)
 ##       DW_AT_high_pc (0x000000000000000a)
 ##       DW_AT_call_file       (0x01)
 ##       DW_AT_call_line       (3)
-##       DW_AT_call_column     (0x03)
+##       DW_AT_call_column     (3)
 ##     DW_TAG_inlined_subroutine
 ##       DW_AT_abstract_origin (0x000000e5)
 ##       DW_AT_low_pc  (0x0000000000000006)
 ##       DW_AT_high_pc (0x0000000000000010)
 ##       DW_AT_call_file       (0x01)
 ##       DW_AT_call_line       (3)
-##       DW_AT_call_column     (0x03)
+##       DW_AT_call_column     (3)
 ##     DW_TAG_inlined_subroutine
 ##       DW_AT_abstract_origin (0x000000e5)
 ##       DW_AT_low_pc  (0x0000000000000006)
 ##       DW_AT_high_pc (0x0000000000000010)
 ##       DW_AT_call_file       (0x01)
 ##       DW_AT_call_line       (3)
-##       DW_AT_call_column     (0x03)
+##       DW_AT_call_column     (3)
 ##       DW_TAG_formal_parameter
 ##         DW_AT_abstract_origin       (0x000000e9)
 ##         DW_AT_location      ()
@@ -88,7 +88,7 @@
 ##       DW_AT_high_pc (0x000000000000001a)
 ##       DW_AT_call_file       (0x01)
 ##       DW_AT_call_line       (3)
-##       DW_AT_call_column     (0x03)
+##       DW_AT_call_column     (3)
 ##       DW_TAG_formal_parameter
 ##         DW_AT_abstract_origin       (0x000000f4)
 ##       DW_TAG_lexical_block

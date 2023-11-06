@@ -1667,6 +1667,11 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
     return true;
   }
 
+  MemoryUseOrDef *MA = MSSA->getMemoryAccess(M);
+  if (!MA)
+    // Degenerate case: memcpy marked as not accessing memory.
+    return false;
+
   // If copying from a constant, try to turn the memcpy into a memset.
   if (auto *GV = dyn_cast<GlobalVariable>(M->getSource()))
     if (GV->isConstant() && GV->hasDefinitiveInitializer())
@@ -1675,8 +1680,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
         IRBuilder<> Builder(M);
         Instruction *NewM = Builder.CreateMemSet(
             M->getRawDest(), ByteVal, M->getLength(), M->getDestAlign(), false);
-        auto *LastDef =
-            cast<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(M));
+        auto *LastDef = cast<MemoryDef>(MA);
         auto *NewAccess =
             MSSAU->createMemoryAccessAfter(NewM, nullptr, LastDef);
         MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
@@ -1687,7 +1691,6 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       }
 
   BatchAAResults BAA(*AA);
-  MemoryUseOrDef *MA = MSSA->getMemoryAccess(M);
   // FIXME: Not using getClobberingMemoryAccess() here due to PR54682.
   MemoryAccess *AnyClobber = MA->getDefiningAccess();
   MemoryLocation DestLoc = MemoryLocation::getForDest(M);
@@ -1720,7 +1723,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       if (auto *CopySize = dyn_cast<ConstantInt>(M->getLength())) {
         if (auto *C = dyn_cast<CallInst>(MI)) {
           if (performCallSlotOptzn(M, M, M->getDest(), M->getSource(),
-                                   TypeSize::getFixed(CopySize->getZExtValue()),
+                                   TypeSize::Fixed(CopySize->getZExtValue()),
                                    M->getDestAlign().valueOrOne(), BAA,
                                    [C]() -> CallInst * { return C; })) {
             LLVM_DEBUG(dbgs() << "Performed call slot optimization:\n"
@@ -1766,7 +1769,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   if (Len == nullptr)
     return false;
   if (performStackMoveOptzn(M, M, DestAlloca, SrcAlloca,
-                            TypeSize::getFixed(Len->getZExtValue()), BAA)) {
+                            TypeSize::Fixed(Len->getZExtValue()), BAA)) {
     // Avoid invalidating the iterator.
     BBI = M->getNextNonDebugInstruction()->getIterator();
     eraseInstruction(M);
@@ -1829,7 +1832,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   // The length of the memcpy must be larger or equal to the size of the byval.
   auto *C1 = dyn_cast<ConstantInt>(MDep->getLength());
   if (!C1 || !TypeSize::isKnownGE(
-                 TypeSize::getFixed(C1->getValue().getZExtValue()), ByValSize))
+                 TypeSize::Fixed(C1->getValue().getZExtValue()), ByValSize))
     return false;
 
   // Get the alignment of the byval.  If the call doesn't specify the alignment,
@@ -1864,6 +1867,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
                     << "  " << CB << "\n");
 
   // Otherwise we're good!  Update the byval argument.
+  combineAAMetadata(&CB, MDep);
   CB.setArgOperand(ArgNo, MDep->getSource());
   ++NumMemCpyInstr;
   return true;

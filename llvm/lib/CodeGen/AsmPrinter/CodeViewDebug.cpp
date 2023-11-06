@@ -56,7 +56,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"

@@ -21,7 +21,6 @@
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"

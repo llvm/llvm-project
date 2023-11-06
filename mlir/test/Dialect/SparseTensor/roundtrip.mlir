@@ -3,11 +3,11 @@
 #SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 // CHECK-LABEL: func @sparse_new(
-// CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
-//       CHECK: %[[T:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr<i8> to tensor<128xf64, #{{.*}}>
+// CHECK-SAME: %[[A:.*]]: !llvm.ptr)
+//       CHECK: %[[T:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr to tensor<128xf64, #{{.*}}>
 //       CHECK: return %[[T]] : tensor<128xf64, #{{.*}}>
-func.func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<128xf64, #SparseVector> {
-  %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<128xf64, #SparseVector>
+func.func @sparse_new(%arg0: !llvm.ptr) -> tensor<128xf64, #SparseVector> {
+  %0 = sparse_tensor.new %arg0 : !llvm.ptr to tensor<128xf64, #SparseVector>
   return %0 : tensor<128xf64, #SparseVector>
 }
 
@@ -401,11 +401,11 @@ func.func @sparse_compression(%values: memref<?xf64>,
 
 // CHECK-LABEL: func @sparse_out(
 //  CHECK-SAME: %[[A:.*]]: tensor<?x?xf64, #sparse_tensor.encoding<{{.*}}>>,
-//  CHECK-SAME: %[[B:.*]]: !llvm.ptr<i8>)
-//       CHECK: sparse_tensor.out %[[A]], %[[B]] : tensor<?x?xf64, #sparse_tensor.encoding<{{.*}}>>, !llvm.ptr<i8>
+//  CHECK-SAME: %[[B:.*]]: !llvm.ptr)
+//       CHECK: sparse_tensor.out %[[A]], %[[B]] : tensor<?x?xf64, #sparse_tensor.encoding<{{.*}}>>, !llvm.ptr
 //       CHECK: return
-func.func @sparse_out(%arg0: tensor<?x?xf64, #SparseMatrix>, %arg1: !llvm.ptr<i8>) {
-  sparse_tensor.out %arg0, %arg1 : tensor<?x?xf64, #SparseMatrix>, !llvm.ptr<i8>
+func.func @sparse_out(%arg0: tensor<?x?xf64, #SparseMatrix>, %arg1: !llvm.ptr) {
+  sparse_tensor.out %arg0, %arg1 : tensor<?x?xf64, #SparseMatrix>, !llvm.ptr
   return
 }
 
@@ -689,4 +689,24 @@ func.func @sparse_crd_translate(%arg0: index, %arg1: index) -> (index, index, in
 func.func @sparse_lvl(%arg0: index, %t : tensor<?x?xi32, #BSR>) -> index {
   %l0 = sparse_tensor.lvl %t, %arg0 : tensor<?x?xi32, #BSR>
   return  %l0 : index
+}
+
+// -----
+
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) -> ( i floordiv 2 : dense,
+                      j floordiv 3 : compressed,
+                      i mod 2      : dense,
+                      j mod 3      : dense
+  )
+}>
+
+#DSDD = #sparse_tensor.encoding<{
+  map = (i, j, k, l) -> (i: dense, j: compressed, k: dense, l: dense)
+}>
+
+func.func @sparse_reinterpret_map(%t0 : tensor<6x12xi32, #BSR>) -> tensor<3x4x2x3xi32, #DSDD> {
+  %t1 = sparse_tensor.reinterpret_map %t0 : tensor<6x12xi32, #BSR>
+                                         to tensor<3x4x2x3xi32, #DSDD>
+  return %t1 : tensor<3x4x2x3xi32, #DSDD>
 }

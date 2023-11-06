@@ -210,6 +210,11 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (VScale && VScale->first && VScale->first == VScale->second)
     Builder.defineMacro("__riscv_v_fixed_vlen",
                         Twine(VScale->first * llvm::RISCV::RVVBitsPerBlock));
+
+  if (FastUnalignedAccess)
+    Builder.defineMacro("__riscv_misaligned_fast");
+  else
+    Builder.defineMacro("__riscv_misaligned_avoid");
 }
 
 static constexpr Builtin::Info BuiltinInfo[] = {
@@ -327,6 +332,8 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 
   if (ISAInfo->hasExtension("zfh") || ISAInfo->hasExtension("zhinx"))
     HasLegalHalfType = true;
+
+  FastUnalignedAccess = llvm::is_contained(Features, "+unaligned-scalar-mem");
 
   return true;
 }

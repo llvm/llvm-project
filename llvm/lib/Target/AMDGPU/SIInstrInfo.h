@@ -102,16 +102,15 @@ private:
 public:
   unsigned buildExtractSubReg(MachineBasicBlock::iterator MI,
                               MachineRegisterInfo &MRI,
-                              MachineOperand &SuperReg,
+                              const MachineOperand &SuperReg,
                               const TargetRegisterClass *SuperRC,
                               unsigned SubIdx,
                               const TargetRegisterClass *SubRC) const;
-  MachineOperand buildExtractSubRegOrImm(MachineBasicBlock::iterator MI,
-                                         MachineRegisterInfo &MRI,
-                                         MachineOperand &SuperReg,
-                                         const TargetRegisterClass *SuperRC,
-                                         unsigned SubIdx,
-                                         const TargetRegisterClass *SubRC) const;
+  MachineOperand buildExtractSubRegOrImm(
+      MachineBasicBlock::iterator MI, MachineRegisterInfo &MRI,
+      const MachineOperand &SuperReg, const TargetRegisterClass *SuperRC,
+      unsigned SubIdx, const TargetRegisterClass *SubRC) const;
+
 private:
   void swapOperands(MachineInstr &Inst) const;
 
@@ -274,6 +273,11 @@ public:
                             Register VReg) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
+
+  void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                     Register DestReg, unsigned SubIdx,
+                     const MachineInstr &Orig,
+                     const TargetRegisterInfo &TRI) const override;
 
   // Splits a V_MOV_B64_DPP_PSEUDO opcode into a pair of v_mov_b32_dpp
   // instructions. Returns a pair of generated instructions.
@@ -669,6 +673,11 @@ public:
 
   bool isSGPRSpill(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SGPRSpill;
+  }
+
+  bool isSpillOpcode(uint16_t Opcode) const {
+    return get(Opcode).TSFlags &
+           (SIInstrFlags::SGPRSpill | SIInstrFlags::VGPRSpill);
   }
 
   static bool isWWMRegSpillOpcode(uint16_t Opcode) {

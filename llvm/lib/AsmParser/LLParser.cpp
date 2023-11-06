@@ -3805,8 +3805,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   }
 
   case lltok::kw_trunc:
-  case lltok::kw_zext:
-  case lltok::kw_sext:
   case lltok::kw_fptrunc:
   case lltok::kw_fpext:
   case lltok::kw_bitcast:
@@ -3866,6 +3864,10 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     return error(ID.Loc, "fneg constexprs are no longer supported");
   case lltok::kw_select:
     return error(ID.Loc, "select constexprs are no longer supported");
+  case lltok::kw_zext:
+    return error(ID.Loc, "zext constexprs are no longer supported");
+  case lltok::kw_sext:
+    return error(ID.Loc, "sext constexprs are no longer supported");
   case lltok::kw_icmp:
   case lltok::kw_fcmp: {
     unsigned PredVal, Opc = Lex.getUIntVal();
@@ -6383,8 +6385,16 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   }
 
   // Casts.
+  case lltok::kw_zext: {
+    bool NonNeg = EatIfPresent(lltok::kw_nneg);
+    bool Res = parseCast(Inst, PFS, KeywordVal);
+    if (Res != 0)
+      return Res;
+    if (NonNeg)
+      Inst->setNonNeg();
+    return 0;
+  }
   case lltok::kw_trunc:
-  case lltok::kw_zext:
   case lltok::kw_sext:
   case lltok::kw_fptrunc:
   case lltok::kw_fpext:

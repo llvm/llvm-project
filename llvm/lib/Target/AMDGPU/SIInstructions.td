@@ -132,7 +132,7 @@ def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
   let isAsCheapAsAMove = 1;
   let isMoveImm = 1;
   let SchedRW = [Write64Bit];
-  let Size = 16; // Needs maximum 2 v_mov_b32 instructions 8 byte long each.
+  let Size = 4;
   let UseNamedOperandTable = 1;
 }
 
@@ -149,7 +149,7 @@ def S_MOV_B64_IMM_PSEUDO : SPseudoInstSI <(outs SReg_64:$sdst),
   let isAsCheapAsAMove = 1;
   let isMoveImm = 1;
   let SchedRW = [WriteSALU, Write64Bit];
-  let Size = 16; // Needs maximum 2 s_mov_b32 instructions 8 byte long each.
+  let Size = 4;
   let Uses = [];
   let UseNamedOperandTable = 1;
 }
@@ -665,6 +665,50 @@ def : GCNPat<
   (SI_TCRETURN_GFX Gfx_CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff)
 >;
 
+// Pseudo for the llvm.amdgcn.cs.chain intrinsic.
+// This is essentially a tail call, but it also takes a mask to put in EXEC
+// right before jumping to the callee.
+class SI_CS_CHAIN_TC<
+    ValueType execvt, Predicate wavesizepred,
+    RegisterOperand execrc = getSOPSrcForVT<execvt>.ret>
+    : SPseudoInstSI <(outs),
+      (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)> {
+  let FixedSize = 0;
+  let isCall = 1;
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isReturn = 1;
+  let UseNamedOperandTable = 1;
+  let SchedRW = [WriteBranch];
+  let isConvergent = 1;
+
+  let WaveSizePredicate = wavesizepred;
+}
+
+def SI_CS_CHAIN_TC_W32 : SI_CS_CHAIN_TC<i32, isWave32>;
+def SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64, isWave64>;
+
+// Handle selecting direct & indirect calls via SI_CS_CHAIN_TC_W32/64
+multiclass si_cs_chain_tc_pattern<
+  dag callee, ValueType execvt, RegisterOperand execrc, Instruction tc> {
+def : GCNPat<
+  (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
+  (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
+>;
+}
+
+multiclass si_cs_chain_tc_patterns<
+  ValueType execvt,
+  RegisterOperand execrc = getSOPSrcForVT<execvt>.ret,
+  Instruction tc = !if(!eq(execvt, i32), SI_CS_CHAIN_TC_W32, SI_CS_CHAIN_TC_W64)
+  > {
+  defm direct: si_cs_chain_tc_pattern<(tglobaladdr:$callee), execvt, execrc, tc>;
+  defm indirect: si_cs_chain_tc_pattern<(i64 0), execvt, execrc, tc>;
+}
+
+defm : si_cs_chain_tc_patterns<i32>;
+defm : si_cs_chain_tc_patterns<i64>;
+
 def ADJCALLSTACKUP : SPseudoInstSI<
   (outs), (ins i32imm:$amt0, i32imm:$amt1),
   [(callseq_start timm:$amt0, timm:$amt1)],
@@ -874,6 +918,28 @@ defm SI_SPILL_S352 : SI_SPILL_SGPR <SReg_352>;
 defm SI_SPILL_S384 : SI_SPILL_SGPR <SReg_384>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 defm SI_SPILL_S1024 : SI_SPILL_SGPR <SReg_1024>;
+
+let SGPRSpill = 1, VALU = 1, isConvergent = 1 in {
+def SI_SPILL_S32_TO_VGPR : PseudoInstSI <(outs VGPR_32:$vdst),
+  (ins SReg_32:$src0, i32imm:$src1, VGPR_32:$vdst_in)> {
+  let Size = 4;
+  let FixedSize = 1;
+  let IsNeverUniform = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Constraints = "$vdst = $vdst_in";
+}
+
+def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
+  (ins VGPR_32:$src0, i32imm:$src1)> {
+  let Size = 4;
+  let FixedSize = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+} // End SGPRSpill = 1, VALU = 1, isConvergent = 1
 
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.
@@ -1597,6 +1663,16 @@ def : BitConvert <v12i32, v12f32, VReg_384>;
 def : BitConvert <v12f32, v12i32, VReg_384>;
 
 // 512-bit bitcast
+def : BitConvert <v32f16, v32i16, VReg_512>;
+def : BitConvert <v32i16, v32f16, VReg_512>;
+def : BitConvert <v32f16, v16i32, VReg_512>;
+def : BitConvert <v32f16, v16f32, VReg_512>;
+def : BitConvert <v16f32, v32f16, VReg_512>;
+def : BitConvert <v16i32, v32f16, VReg_512>;
+def : BitConvert <v32i16, v16i32, VReg_512>;
+def : BitConvert <v32i16, v16f32, VReg_512>;
+def : BitConvert <v16f32, v32i16, VReg_512>;
+def : BitConvert <v16i32, v32i16, VReg_512>;
 def : BitConvert <v16i32, v16f32, VReg_512>;
 def : BitConvert <v16f32, v16i32, VReg_512>;
 def : BitConvert <v8i64,  v8f64,  VReg_512>;
@@ -1932,6 +2008,29 @@ def : GCNPat <
 def : GCNPat <
   (VGPRImm<(f16 fpimm)>:$imm),
   (V_MOV_B32_e32 (f16 (bitcast_fpimm_to_i32 $imm)))
+>;
+
+// V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
+// immediate and wil be expanded as needed, but we will only use these patterns
+// for values which can be encoded.
+def : GCNPat <
+  (VGPRImm<(i64 imm)>:$imm),
+  (V_MOV_B64_PSEUDO imm:$imm)
+>;
+
+def : GCNPat <
+  (VGPRImm<(f64 fpimm)>:$imm),
+  (V_MOV_B64_PSEUDO (f64 (bitcast_fpimm_to_i64 $imm)))
+>;
+
+def : GCNPat <
+  (i64 imm:$imm),
+  (S_MOV_B64_IMM_PSEUDO imm:$imm)
+>;
+
+def : GCNPat <
+  (f64 fpimm:$imm),
+  (S_MOV_B64_IMM_PSEUDO (i64 (bitcast_fpimm_to_i64 fpimm:$imm)))
 >;
 
 def : GCNPat <

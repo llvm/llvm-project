@@ -13,6 +13,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/Support/Compiler.h"
@@ -24,11 +25,6 @@ class ScriptedInterface {
 public:
   ScriptedInterface() = default;
   virtual ~ScriptedInterface() = default;
-
-  virtual StructuredData::GenericSP
-  CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
-                     StructuredData::DictionarySP args_sp,
-                     StructuredData::Generic *script_obj = nullptr) = 0;
 
   StructuredData::GenericSP GetScriptObjectInstance() {
     return m_object_instance_sp;

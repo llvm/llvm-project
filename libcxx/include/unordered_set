@@ -1976,6 +1976,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <cstdlib>
 #  include <functional>
 #  include <iterator>
+#  include <stdexcept>
 #  include <type_traits>
 #endif
 

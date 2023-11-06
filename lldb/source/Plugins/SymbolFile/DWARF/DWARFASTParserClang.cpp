@@ -834,9 +834,9 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
 
   CompilerType enumerator_clang_type;
   CompilerType clang_type;
-  clang_type =
-      CompilerType(m_ast.weak_from_this(),
-                   dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
+  clang_type = CompilerType(
+      m_ast.weak_from_this(),
+      dwarf->GetForwardDeclDIEToCompilerType().lookup(die.GetDIE()));
   if (!clang_type) {
     if (attrs.type.IsValid()) {
       Type *enumerator_type =
@@ -1637,13 +1637,13 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   int tag_decl_kind = -1;
   AccessType default_accessibility = eAccessNone;
   if (tag == DW_TAG_structure_type) {
-    tag_decl_kind = clang::TTK_Struct;
+    tag_decl_kind = llvm::to_underlying(clang::TagTypeKind::Struct);
     default_accessibility = eAccessPublic;
   } else if (tag == DW_TAG_union_type) {
-    tag_decl_kind = clang::TTK_Union;
+    tag_decl_kind = llvm::to_underlying(clang::TagTypeKind::Union);
     default_accessibility = eAccessPublic;
   } else if (tag == DW_TAG_class_type) {
-    tag_decl_kind = clang::TTK_Class;
+    tag_decl_kind = llvm::to_underlying(clang::TagTypeKind::Class);
     default_accessibility = eAccessPrivate;
   }
 
@@ -1762,11 +1762,11 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     }
   }
   assert(tag_decl_kind != -1);
-  (void)tag_decl_kind;
+  UNUSED_IF_ASSERT_DISABLED(tag_decl_kind);
   bool clang_type_was_created = false;
-  clang_type =
-      CompilerType(m_ast.weak_from_this(),
-                   dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
+  clang_type = CompilerType(
+      m_ast.weak_from_this(),
+      dwarf->GetForwardDeclDIEToCompilerType().lookup(die.GetDIE()));
   if (!clang_type) {
     clang::DeclContext *decl_ctx =
         GetClangDeclContextContainingDIE(die, nullptr);
@@ -1896,16 +1896,16 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       // the SymbolFile virtual function
       // "SymbolFileDWARF::CompleteType(Type *)" When the definition
       // needs to be defined.
-      assert(!dwarf->GetForwardDeclClangTypeToDie().count(
+      assert(!dwarf->GetForwardDeclCompilerTypeToDIE().count(
                  ClangUtil::RemoveFastQualifiers(clang_type)
                      .GetOpaqueQualType()) &&
              "Type already in the forward declaration map!");
       // Can't assume m_ast.GetSymbolFile() is actually a
       // SymbolFileDWARF, it can be a SymbolFileDWARFDebugMap for Apple
       // binaries.
-      dwarf->GetForwardDeclDieToClangType()[die.GetDIE()] =
+      dwarf->GetForwardDeclDIEToCompilerType()[die.GetDIE()] =
           clang_type.GetOpaqueQualType();
-      dwarf->GetForwardDeclClangTypeToDie().try_emplace(
+      dwarf->GetForwardDeclCompilerTypeToDIE().try_emplace(
           ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType(),
           *die.GetDIERef());
       m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
@@ -1929,7 +1929,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
         m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
     if (record_decl)
       record_decl->setArgPassingRestrictions(
-          clang::RecordDecl::APK_CannotPassInRegs);
+          clang::RecordArgPassingKind::CannotPassInRegs);
   }
   return type_sp;
 }
@@ -3852,7 +3852,7 @@ void DWARFASTParserClang::ParseRustVariantPart(
       decl_context, OptionalClangModuleID(), lldb::eAccessPublic,
       std::string(
           llvm::formatv("{0}$Inner", class_clang_type.GetTypeName(false))),
-      clang::TTK_Union, lldb::eLanguageTypeRust);
+      llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeRust);
   m_ast.StartTagDeclarationDefinition(inner_holder);
   m_ast.SetIsPacked(inner_holder);
 
@@ -3866,7 +3866,8 @@ void DWARFASTParserClang::ParseRustVariantPart(
         m_ast.GetDeclContextForType(inner_holder), OptionalClangModuleID(),
         lldb::eAccessPublic,
         std::string(llvm::formatv("{0}$Variant", member.GetName())),
-        clang::TTK_Struct, lldb::eLanguageTypeRust);
+        llvm::to_underlying(clang::TagTypeKind::Struct),
+        lldb::eLanguageTypeRust);
 
     m_ast.StartTagDeclarationDefinition(field_type);
     auto offset = member.byte_offset;

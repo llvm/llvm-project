@@ -1279,24 +1279,23 @@ define half @test_atomicrmw_fadd_f16_global_align4(ptr addrspace(1) %ptr, half %
 
 define half @test_atomicrmw_fadd_f16_local(ptr addrspace(3) %ptr, half %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_f16_local(
-; CI-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; CI-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; CI-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; CI-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; CI-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; CI-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; CI-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; CI-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; CI-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; CI-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; CI-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; CI-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CI-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; CI-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; CI-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; CI-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CI-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to half
 ; CI-NEXT:    [[NEW:%.*]] = fadd half [[TMP4]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP5:%.*]] = bitcast half [[NEW]] to i16
 ; CI-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; CI-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; CI-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; CI-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; CI-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; CI-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] seq_cst seq_cst, align 4
@@ -1304,30 +1303,29 @@ define half @test_atomicrmw_fadd_f16_local(ptr addrspace(3) %ptr, half %value) {
 ; CI-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; CI-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; CI:       atomicrmw.end:
-; CI-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; CI-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; CI-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CI-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to half
 ; CI-NEXT:    ret half [[TMP7]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f16_local(
-; GFX9-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX9-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX9-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX9-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX9-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX9-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX9-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX9-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX9-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX9-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX9-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX9-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX9-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX9-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX9-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX9-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX9-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to half
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd half [[TMP4]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP5:%.*]] = bitcast half [[NEW]] to i16
 ; GFX9-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX9-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX9-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX9-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX9-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX9-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] seq_cst seq_cst, align 4
@@ -1335,30 +1333,29 @@ define half @test_atomicrmw_fadd_f16_local(ptr addrspace(3) %ptr, half %value) {
 ; GFX9-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX9-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX9:       atomicrmw.end:
-; GFX9-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX9-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX9-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX9-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to half
 ; GFX9-NEXT:    ret half [[TMP7]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f16_local(
-; GFX908-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX908-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX908-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX908-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX908-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX908-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX908-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX908-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX908-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX908-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX908-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX908-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX908-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX908-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX908-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX908-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX908-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to half
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd half [[TMP4]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP5:%.*]] = bitcast half [[NEW]] to i16
 ; GFX908-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX908-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX908-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX908-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX908-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX908-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] seq_cst seq_cst, align 4
@@ -1366,30 +1363,29 @@ define half @test_atomicrmw_fadd_f16_local(ptr addrspace(3) %ptr, half %value) {
 ; GFX908-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX908:       atomicrmw.end:
-; GFX908-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX908-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX908-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX908-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to half
 ; GFX908-NEXT:    ret half [[TMP7]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_f16_local(
-; GFX90A-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX90A-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX90A-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX90A-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX90A-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX90A-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX90A-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX90A-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX90A-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX90A-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX90A-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX90A-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX90A-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX90A-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX90A-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to half
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd half [[TMP4]], [[VALUE:%.*]]
 ; GFX90A-NEXT:    [[TMP5:%.*]] = bitcast half [[NEW]] to i16
 ; GFX90A-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX90A-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX90A-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX90A-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX90A-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX90A-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] seq_cst seq_cst, align 4
@@ -1397,30 +1393,29 @@ define half @test_atomicrmw_fadd_f16_local(ptr addrspace(3) %ptr, half %value) {
 ; GFX90A-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX90A:       atomicrmw.end:
-; GFX90A-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX90A-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX90A-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX90A-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to half
 ; GFX90A-NEXT:    ret half [[TMP7]]
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_f16_local(
-; GFX940-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX940-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX940-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX940-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX940-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX940-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX940-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX940-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX940-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX940-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX940-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX940-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX940-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX940:       atomicrmw.start:
 ; GFX940-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX940-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX940-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX940-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to half
 ; GFX940-NEXT:    [[NEW:%.*]] = fadd half [[TMP4]], [[VALUE:%.*]]
 ; GFX940-NEXT:    [[TMP5:%.*]] = bitcast half [[NEW]] to i16
 ; GFX940-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX940-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX940-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX940-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX940-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX940-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] seq_cst seq_cst, align 4
@@ -1428,30 +1423,29 @@ define half @test_atomicrmw_fadd_f16_local(ptr addrspace(3) %ptr, half %value) {
 ; GFX940-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX940-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX940-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX940-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to half
 ; GFX940-NEXT:    ret half [[TMP7]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f16_local(
-; GFX11-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX11-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX11-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX11-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX11-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX11-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX11-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX11-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX11-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX11-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX11-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX11-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX11-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX11-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX11-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX11-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to half
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd half [[TMP4]], [[VALUE:%.*]]
 ; GFX11-NEXT:    [[TMP5:%.*]] = bitcast half [[NEW]] to i16
 ; GFX11-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX11-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX11-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX11-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX11-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX11-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] seq_cst seq_cst, align 4
@@ -1459,7 +1453,7 @@ define half @test_atomicrmw_fadd_f16_local(ptr addrspace(3) %ptr, half %value) {
 ; GFX11-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX11:       atomicrmw.end:
-; GFX11-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX11-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX11-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX11-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to half
 ; GFX11-NEXT:    ret half [[TMP7]]
@@ -2074,24 +2068,23 @@ define float @test_atomicrmw_fadd_f32_local_strictfp(ptr addrspace(3) %ptr, floa
 
 define bfloat @test_atomicrmw_fadd_bf16_local(ptr addrspace(3) %ptr, bfloat %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_bf16_local(
-; CI-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; CI-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; CI-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; CI-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; CI-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; CI-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; CI-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; CI-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; CI-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; CI-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; CI-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; CI-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CI-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; CI-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; CI-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; CI-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CI-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
 ; CI-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; CI-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; CI-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; CI-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; CI-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; CI-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; CI-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
@@ -2099,30 +2092,29 @@ define bfloat @test_atomicrmw_fadd_bf16_local(ptr addrspace(3) %ptr, bfloat %val
 ; CI-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; CI-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; CI:       atomicrmw.end:
-; CI-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; CI-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; CI-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CI-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
 ; CI-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_bf16_local(
-; GFX9-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX9-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX9-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX9-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX9-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX9-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX9-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX9-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX9-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX9-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX9-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX9-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX9-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX9-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX9-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX9-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX9-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX9-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX9-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX9-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX9-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX9-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX9-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
@@ -2130,30 +2122,29 @@ define bfloat @test_atomicrmw_fadd_bf16_local(ptr addrspace(3) %ptr, bfloat %val
 ; GFX9-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX9-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX9:       atomicrmw.end:
-; GFX9-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX9-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX9-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX9-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
 ; GFX9-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_bf16_local(
-; GFX908-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX908-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX908-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX908-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX908-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX908-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX908-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX908-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX908-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX908-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX908-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX908-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX908-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX908-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX908-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX908-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX908-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX908-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX908-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX908-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX908-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX908-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX908-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
@@ -2161,30 +2152,29 @@ define bfloat @test_atomicrmw_fadd_bf16_local(ptr addrspace(3) %ptr, bfloat %val
 ; GFX908-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX908:       atomicrmw.end:
-; GFX908-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX908-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX908-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX908-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
 ; GFX908-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_bf16_local(
-; GFX90A-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX90A-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX90A-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX90A-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX90A-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX90A-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX90A-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX90A-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX90A-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX90A-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX90A-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX90A-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX90A-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX90A-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX90A-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
 ; GFX90A-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX90A-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX90A-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX90A-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX90A-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX90A-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX90A-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
@@ -2192,30 +2182,29 @@ define bfloat @test_atomicrmw_fadd_bf16_local(ptr addrspace(3) %ptr, bfloat %val
 ; GFX90A-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX90A:       atomicrmw.end:
-; GFX90A-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX90A-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX90A-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX90A-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
 ; GFX90A-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_bf16_local(
-; GFX940-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX940-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX940-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX940-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX940-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX940-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX940-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX940-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX940-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX940-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX940-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX940-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX940-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX940:       atomicrmw.start:
 ; GFX940-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX940-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX940-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX940-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
 ; GFX940-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
 ; GFX940-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX940-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX940-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX940-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX940-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX940-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX940-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
@@ -2223,30 +2212,29 @@ define bfloat @test_atomicrmw_fadd_bf16_local(ptr addrspace(3) %ptr, bfloat %val
 ; GFX940-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX940-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX940-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX940-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
 ; GFX940-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_bf16_local(
-; GFX11-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX11-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX11-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX11-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX11-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX11-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX11-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX11-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX11-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX11-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX11-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX11-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX11-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX11-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX11-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX11-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
 ; GFX11-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX11-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX11-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX11-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX11-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX11-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX11-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
@@ -2254,7 +2242,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local(ptr addrspace(3) %ptr, bfloat %val
 ; GFX11-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX11:       atomicrmw.end:
-; GFX11-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX11-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX11-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX11-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
 ; GFX11-NEXT:    ret bfloat [[TMP7]]
@@ -3040,24 +3028,23 @@ define bfloat @test_atomicrmw_fadd_bf16_global_system_align4(ptr addrspace(1) %p
 
 define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bfloat %value) #2 {
 ; CI-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
-; CI-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; CI-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; CI-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; CI-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; CI-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; CI-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; CI-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; CI-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; CI-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; CI-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; CI-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; CI-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CI-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; CI-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; CI-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; CI-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CI-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
 ; CI-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; CI-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; CI-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; CI-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; CI-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; CI-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; CI-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
@@ -3065,30 +3052,29 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; CI-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; CI-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; CI:       atomicrmw.end:
-; CI-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; CI-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; CI-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CI-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
 ; CI-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
-; GFX9-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX9-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX9-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX9-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX9-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX9-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX9-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX9-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX9-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX9-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX9-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX9-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX9-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX9-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX9-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX9-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX9-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX9-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX9-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX9-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX9-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX9-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX9-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
@@ -3096,30 +3082,29 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GFX9-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX9-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX9:       atomicrmw.end:
-; GFX9-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX9-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX9-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX9-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
 ; GFX9-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
-; GFX908-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX908-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX908-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX908-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX908-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX908-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX908-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX908-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX908-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX908-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX908-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX908-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX908-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX908-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX908-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX908-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX908-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX908-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX908-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX908-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX908-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX908-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX908-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
@@ -3127,30 +3112,29 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GFX908-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX908:       atomicrmw.end:
-; GFX908-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX908-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX908-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX908-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
 ; GFX908-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
-; GFX90A-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX90A-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX90A-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX90A-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX90A-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX90A-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX90A-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX90A-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX90A-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX90A-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX90A-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX90A-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX90A-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX90A-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX90A-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
 ; GFX90A-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX90A-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX90A-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX90A-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX90A-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX90A-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX90A-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
@@ -3158,30 +3142,29 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GFX90A-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX90A:       atomicrmw.end:
-; GFX90A-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX90A-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX90A-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX90A-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
 ; GFX90A-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
-; GFX940-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX940-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX940-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX940-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX940-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX940-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX940-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX940-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX940-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX940-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX940-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX940-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX940-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX940:       atomicrmw.start:
 ; GFX940-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX940-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX940-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX940-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
 ; GFX940-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
 ; GFX940-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX940-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX940-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX940-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX940-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX940-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX940-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
@@ -3189,30 +3172,29 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GFX940-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX940-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX940-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX940-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
 ; GFX940-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
-; GFX11-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GFX11-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GFX11-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GFX11-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GFX11-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX11-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GFX11-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX11-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GFX11-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GFX11-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GFX11-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GFX11-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX11-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GFX11-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX11-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX11-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
 ; GFX11-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX11-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GFX11-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GFX11-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GFX11-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GFX11-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GFX11-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
@@ -3220,7 +3202,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GFX11-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX11:       atomicrmw.end:
-; GFX11-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GFX11-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GFX11-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GFX11-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
 ; GFX11-NEXT:    ret bfloat [[TMP7]]

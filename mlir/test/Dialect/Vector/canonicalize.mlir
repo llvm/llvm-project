@@ -2016,6 +2016,19 @@ func.func @insert_element_fold() -> vector<4xi32> {
 
 // -----
 
+// CHECK-LABEL: func @insert_element_invalid_fold
+func.func @insert_element_invalid_fold() -> vector<1xf32> {
+  // Out-of-bound index here.
+  %c26 = arith.constant 26 : index
+  %cst_2 = arith.constant 1.60215309E+9 : f32
+  %cst_20 = arith.constant dense<1.60215309E+9> : vector<1xf32>
+// CHECK: vector.insertelement
+  %46 = vector.insertelement %cst_2, %cst_20[%c26 : index] : vector<1xf32>
+  return %46 : vector<1xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @extract_element_fold
 //       CHECK:   %[[C:.+]] = arith.constant 5 : i32
 //       CHECK:   return %[[C]]
@@ -2399,4 +2412,28 @@ func.func @fold_shape_cast_with_constant_mask() -> vector<4xi1>{
   %1 = vector.constant_mask [1, 1, 1] : vector<4x1x1xi1>
   %2 = vector.shape_cast %1 : vector<4x1x1xi1> to vector<4xi1>
   return %2 : vector<4xi1>
+}
+
+// -----
+
+// TODO: This IR could be canonicalized but the canonicalization pattern is not
+// smart enough. For now, just make sure that we do not crash.
+
+// CHECK-LABEL: func.func @load_store_forwarding_rank_mismatch(
+//       CHECK:   vector.transfer_write
+//       CHECK:   vector.transfer_read
+func.func @load_store_forwarding_rank_mismatch(%v0: vector<4x1x1xf32>, %arg0: tensor<4x4x4xf32>) -> (vector<1x100x4x5xf32>) {
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  // d0 is explicitly written.
+  %w0 = vector.transfer_write %v0, %arg0[%c0, %c0, %c0]
+      {in_bounds = [true, true, true],
+      permutation_map = affine_map<(d0, d1, d2) -> (d2, d1, d0)>} :
+      vector<4x1x1xf32>, tensor<4x4x4xf32>
+  // d0 is implicitly read (rank-reduction of unit dim).
+  %r = vector.transfer_read %w0[%c0, %c0, %c0], %cf0
+      {in_bounds = [true, true, true, true],
+      permutation_map = affine_map<(d0, d1, d2) -> (d1, 0, d2, 0)>} :
+      tensor<4x4x4xf32>, vector<1x100x4x5xf32>
+  return %r : vector<1x100x4x5xf32>
 }

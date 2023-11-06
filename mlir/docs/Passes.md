@@ -32,6 +32,10 @@ This document describes the available MLIR passes and their contracts.
 
 [include "ArmSMEPasses.md"]
 
+## 'arm\_sve' Dialect Passes
+
+[include "ArmSVEPasses.md"]
+
 ## 'async' Dialect Passes
 
 [include "AsyncPasses.md"]

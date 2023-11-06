@@ -9249,6 +9249,7 @@ class sve2p1_ptrue_pn<string mnemonic, bits<2> sz, PNRP8to15RegOp pnrty, SDPatte
   let Inst{2-0}   = PNd;
 
   let hasSideEffects = 0;
+  let isReMaterializable = 1;
 }
 
 
@@ -10077,4 +10078,180 @@ multiclass sve2p1_tblq<string mnemonic> {
   def _H : sve2p1_permute_vec_elems_q<0b01, 0b110, mnemonic, ZPR16, Z_h>;
   def _S : sve2p1_permute_vec_elems_q<0b10, 0b110, mnemonic, ZPR32, Z_s>;
   def _D : sve2p1_permute_vec_elems_q<0b11, 0b110, mnemonic, ZPR64, Z_d>;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE2 FP8 Instructions
+//===----------------------------------------------------------------------===//
+
+// FP8 upconvert
+class sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic,
+                          ZPRRegOp dst_ty, ZPRRegOp src_ty>
+    : I<(outs dst_ty:$Zd), (ins src_ty:$Zn),
+      mnemonic, "\t$Zd, $Zn",
+      "", []>, Sched<[]>{
+  bits<5> Zd;
+  bits<5> Zn;
+  let Inst{31-17} = 0b011001010000100;
+  let Inst{16}    = L;
+  let Inst{15-12} = 0b0011;
+  let Inst{11-10} = opc;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic> {
+  def _BtoH : sve2_fp8_cvt_single<L, opc, mnemonic, ZPR16, ZPR8>;
+}
+
+// FP8 downconvert
+class sve2_fp8_down_cvt_single<bits<2> opc, string mnemonic,
+                              ZPRRegOp dst_ty, RegisterOperand src_ty>
+    : I<(outs dst_ty:$Zd), (ins src_ty:$Zn),
+      mnemonic, "\t$Zd, $Zn",
+      "", []>, Sched<[]>{
+  bits<5> Zd;
+  bits<4> Zn;
+  let Inst{31-12} = 0b01100101000010100011;
+  let Inst{11-10} = opc;
+  let Inst{9-6} = Zn;
+  let Inst{5} = 0b0;
+  let Inst{4-0} = Zd;
+}
+
+multiclass sve2_fp8_down_cvt_single<bits<2> opc, string mnemonic, RegisterOperand src> {
+  def NAME : sve2_fp8_down_cvt_single<opc, mnemonic, ZPR8, src>;
+}
+
+// FP8 Widening Multiply-Add Long - Indexed Group
+class sve2_fp8_mla_long_by_indexed_elem<bit T, string mnemonic>
+    : I<(outs ZPR16:$Zda),
+      (ins ZPR16:$_Zda, ZPR8:$Zn, ZPR3b8:$Zm, VectorIndexB:$imm4),
+      mnemonic, "\t$Zda, $Zn, $Zm$imm4",
+      "", []>, Sched<[]>{
+  bits<5> Zda;
+  bits<5> Zn;
+  bits<3> Zm;
+  bits<4> imm4;
+  let Inst{31-24} = 0b01100100;
+  let Inst{23}    = T;
+  let Inst{22-21} = 0b01;
+  let Inst{20-19} = imm4{3-2};
+  let Inst{18-16} = Zm;
+  let Inst{15-12} = 0b0101;
+  let Inst{11-10} = imm4{1-0};
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize         = ZPR16.ElementSize;
+}
+
+// FP8 Widening Multiply-Add (Long)/(Long Long) Group
+class sve2_fp8_mla<bits<3>opc, ZPRRegOp dst_ty, string mnemonic>
+    : I<(outs dst_ty:$Zda),
+      (ins dst_ty:$_Zda, ZPR8:$Zn, ZPR8:$Zm),
+      mnemonic, "\t$Zda, $Zn, $Zm",
+      "", []>, Sched<[]>{
+  bits<5> Zda;
+  bits<5> Zn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b01100100;
+  let Inst{23}    = opc{2};
+  let Inst{22-21} = 0b01;
+  let Inst{20-16} = Zm;
+  let Inst{15-14} = 0b10;
+  let Inst{13-12} = opc{1-0};
+  let Inst{11-10} = 0b10;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize         = dst_ty.ElementSize;
+}
+
+// FP8 Widening Multiply-Add Long Long - Indexed Group
+class sve2_fp8_mla_long_long_by_indexed_elem<bits<2> TT, string mnemonic>
+    : I<(outs ZPR32:$Zda),
+      (ins ZPR32:$_Zda, ZPR8:$Zn, ZPR3b8:$Zm, VectorIndexB:$imm4),
+      mnemonic, "\t$Zda, $Zn, $Zm$imm4",
+      "", []>, Sched<[]>{
+  bits<5> Zda;
+  bits<5> Zn;
+  bits<3> Zm;
+  bits<4> imm4;
+  let Inst{31-24} = 0b01100100;
+  let Inst{23-22} = TT;
+  let Inst{21}    = 0b1;
+  let Inst{20-19} = imm4{3-2};
+  let Inst{18-16} = Zm;
+  let Inst{15-12} = 0b1100;
+  let Inst{11-10} = imm4{1-0};
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize         = ZPR32.ElementSize;
+}
+
+// FP8 Widening Dot-Product - Indexed Group
+multiclass sve2_fp8_dot_indexed<string mnemonic>{
+  def NAME : sve_float_dot_indexed<0b0, ZPR16, ZPR8, ZPR3b8, VectorIndexH, mnemonic> {
+    bits<3> iop;
+    let Inst{20-19} = iop{2-1};
+    let Inst{11} = iop{0};
+    let Inst{10} = 0b1;
+  }
+}
+
+// FP8 Look up table
+class sve2_lut_vector_index<ZPRRegOp zd_ty, RegisterOperand zn_ty,
+                            Operand idx_ty, bits<4>opc, string mnemonic>
+    : I<(outs zd_ty:$Zd), (ins zn_ty:$Zn, ZPRAny:$Zm, idx_ty:$idx),
+      mnemonic, "\t$Zd, $Zn, $Zm$idx",
+      "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b01000101;
+  let Inst{22}    = opc{3};
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15-13} = 0b101;
+  let Inst{12-10} = opc{2-0};
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+// FP8 Look up table read with 2-bit indices
+multiclass sve2_luti2_vector_index<string mnemonic> {
+  def _B : sve2_lut_vector_index<ZPR8, Z_b, VectorIndexS32b, {?, 0b100}, mnemonic> {
+    bits<2> idx;
+    let Inst{23-22} = idx;
+  }
+  def _H : sve2_lut_vector_index<ZPR16, Z_h, VectorIndexH32b, {?,?,0b10}, mnemonic> {
+    bits<3> idx;
+    let Inst{23-22} = idx{2-1};
+    let Inst{12}    = idx{0};
+  }
+}
+
+// FP8 Look up table read with 4-bit indices
+multiclass sve2_luti4_vector_index<string mnemonic> {
+  def _B : sve2_lut_vector_index<ZPR8, Z_b, VectorIndexD32b, 0b1001, mnemonic> {
+    bit idx;
+    let Inst{23} = idx;
+  }
+  def _H : sve2_lut_vector_index<ZPR16, Z_h, VectorIndexS32b, {?, 0b111}, mnemonic> {
+    bits<2> idx;
+    let Inst{23-22} = idx;
+  }
+}
+
+// FP8 Look up table read with 4-bit indices (two contiguous registers)
+multiclass sve2_luti4_vector_vg2_index<string mnemonic> {
+  def _H : sve2_lut_vector_index<ZPR16, ZZ_h, VectorIndexS32b, {?, 0b101}, mnemonic> {
+    bits<2> idx;
+    let Inst{23-22} = idx;
+  }
 }

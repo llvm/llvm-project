@@ -849,7 +849,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               "    Priority: 2\n"
               "  - Regex: .*\n"
               "    Priority: 1\n"
-              "    CaseSensitive: true\n",
+              "    CaseSensitive: true",
               IncludeStyle.IncludeCategories, ExpectedCategories);
   CHECK_PARSE("IncludeIsMainRegex: 'abc$'", IncludeStyle.IncludeIsMainRegex,
               "abc$");

@@ -1197,8 +1197,9 @@ public:
 
   /// Create a new implicit TU-level CXXRecordDecl or RecordDecl
   /// declaration.
-  RecordDecl *buildImplicitRecord(StringRef Name,
-                                  RecordDecl::TagKind TK = TTK_Struct) const;
+  RecordDecl *buildImplicitRecord(
+      StringRef Name,
+      RecordDecl::TagKind TK = RecordDecl::TagKind::Struct) const;
 
   /// Create a new implicit TU-level typedef declaration.
   TypedefDecl *buildImplicitTypedef(QualType T, StringRef Name) const;
@@ -1430,8 +1431,7 @@ public:
   /// Return a non-unique reference to the type for a variable array of
   /// the specified element type.
   QualType getVariableArrayType(QualType EltTy, Expr *NumElts,
-                                ArrayType::ArraySizeModifier ASM,
-                                unsigned IndexTypeQuals,
+                                ArraySizeModifier ASM, unsigned IndexTypeQuals,
                                 SourceRange Brackets) const;
 
   /// Return a non-unique reference to the type for a dependently-sized
@@ -1440,21 +1440,19 @@ public:
   /// FIXME: We will need these to be uniqued, or at least comparable, at some
   /// point.
   QualType getDependentSizedArrayType(QualType EltTy, Expr *NumElts,
-                                      ArrayType::ArraySizeModifier ASM,
+                                      ArraySizeModifier ASM,
                                       unsigned IndexTypeQuals,
                                       SourceRange Brackets) const;
 
   /// Return a unique reference to the type for an incomplete array of
   /// the specified element type.
-  QualType getIncompleteArrayType(QualType EltTy,
-                                  ArrayType::ArraySizeModifier ASM,
+  QualType getIncompleteArrayType(QualType EltTy, ArraySizeModifier ASM,
                                   unsigned IndexTypeQuals) const;
 
   /// Return the unique reference to the type for a constant array of
   /// the specified element type.
   QualType getConstantArrayType(QualType EltTy, const llvm::APInt &ArySize,
-                                const Expr *SizeExpr,
-                                ArrayType::ArraySizeModifier ASM,
+                                const Expr *SizeExpr, ArraySizeModifier ASM,
                                 unsigned IndexTypeQuals) const;
 
   /// Return a type for a constant array for a string literal of the
@@ -1496,12 +1494,12 @@ public:
   ///
   /// \pre \p VectorType must be a built-in type.
   QualType getVectorType(QualType VectorType, unsigned NumElts,
-                         VectorType::VectorKind VecKind) const;
+                         VectorKind VecKind) const;
   /// Return the unique reference to the type for a dependently sized vector of
   /// the specified element type.
   QualType getDependentVectorType(QualType VectorType, Expr *SizeExpr,
                                   SourceLocation AttrLoc,
-                                  VectorType::VectorKind VecKind) const;
+                                  VectorKind VecKind) const;
 
   /// Return the unique reference to an extended vector type
   /// of the specified element type and size.

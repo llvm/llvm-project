@@ -46,3 +46,17 @@ subroutine atomic_read_pointer()
 
   x = y
 end
+
+subroutine atomic_read_with_convert()
+  integer(4) :: x
+  integer(8) :: y
+
+  !$acc atomic read
+  y = x
+end
+
+! CHECK-LABEL: func.func @_QPatomic_read_with_convert() {
+! CHECK: %[[X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFatomic_read_with_convertEx"}
+! CHECK: %[[Y:.*]] = fir.alloca i64 {bindc_name = "y", uniq_name = "_QFatomic_read_with_convertEy"}
+! CHECK: %[[CONV:.*]] = fir.convert %[[X]] : (!fir.ref<i32>) -> !fir.ref<i64>
+! CHECK: acc.atomic.read %[[Y]] = %[[CONV]] : !fir.ref<i64>, i32
