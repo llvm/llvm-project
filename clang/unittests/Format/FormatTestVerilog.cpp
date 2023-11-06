@@ -344,6 +344,20 @@ TEST_F(FormatTestVerilog, Case) {
                "        longfunction( //\n"
                "            arg);\n"
                "endcase");
+  verifyFormat("case (data)\n"
+               "  16'd0:\n"
+               "    //\n"
+               "    result = //\n"
+               "        10'b0111111111;\n"
+               "endcase");
+  verifyFormat("case (data)\n"
+               "  16'd0:\n"
+               "    //\n"
+               "\n"
+               "    //\n"
+               "    result = //\n"
+               "        10'b0111111111;\n"
+               "endcase");
   Style = getDefaultStyle();
   Style.ContinuationIndentWidth = 1;
   verifyFormat("case (data)\n"
