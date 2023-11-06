@@ -12,6 +12,8 @@ mesh.cluster @mesh2(rank = 2, dim_sizes = [0, 4])
 // CHECK: mesh.cluster @mesh3
 mesh.cluster @mesh3(rank = 2)
 
+mesh.cluster @mesh4(rank = 1, dim_sizes = [3])
+
 // CHECK-LABEL: func @mesh_shard_encoding_fully_replicated
 func.func @mesh_shard_encoding_fully_replicated(
     // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32, #mesh.shard<@mesh0, {{\[\[}}]]>>
@@ -125,4 +127,121 @@ func.func @mesh_shard_op_two_users(%arg0 : tensor<4x8xf32>) ->
   // CHECK-DAG: mesh.shard %[[V0]] to <@mesh0, {{\[\[}}2]]> annotate_for_users : tensor<4x8xf32>
   %2 = mesh.shard %0 to <@mesh0, [[2]]> annotate_for_users : tensor<4x8xf32>
   return %1, %2 : tensor<4x8xf32>, tensor<4x8xf32>
+}
+
+// CHECK-LABEL: func @all_reduce
+func.func @all_reduce(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<3x4xf32>
+    %arg0 : tensor<3x4xf32>) -> tensor<3x4xf64> {
+  // CHECK-NEXT: mesh.all_reduce %[[ARG]]
+  // CHECK-SAME: {mesh = @mesh0, mesh_axes = array<i16: 1, 0>, reduction = #mesh.partial<max>}
+  // CHECK-SAME: : tensor<3x4xf32> -> tensor<3x4xf64>
+  %0 = mesh.all_reduce %arg0 {
+      mesh = @mesh0, mesh_axes = array<i16: 1, 0>, reduction = #mesh.partial<max>
+    } : tensor<3x4xf32> -> tensor<3x4xf64>
+  return %0 : tensor<3x4xf64>
+}
+
+// CHECK-LABEL: func @all_gather
+func.func @all_gather(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<3x4xf32>
+    %arg0 : tensor<3x4xf32>) -> tensor<3x16xf32> {
+  // CHECK-NEXT: mesh.all_gather %[[ARG]]
+  // CHECK-SAME: {gather_axis = 1 : index, mesh = @mesh0, mesh_axes = array<i16: 2>}
+  // CHECK-SAME: : tensor<3x4xf32> -> tensor<3x16xf32>
+  %0 = mesh.all_gather %arg0 {
+      gather_axis = 1 : index, mesh = @mesh0, mesh_axes = array<i16: 2>
+    } : tensor<3x4xf32> -> tensor<3x16xf32>
+  return %0 : tensor<3x16xf32>
+}
+
+// CHECK-LABEL: func @all_gather_dynamic_dims_in_tensor
+func.func @all_gather_dynamic_dims_in_tensor(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<?x?xf32>
+    %arg0 : tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // CHECK-NEXT: mesh.all_gather %[[ARG]]
+  // CHECK-SAME: {gather_axis = 1 : index, mesh = @mesh0, mesh_axes = array<i16: 2>}
+  // CHECK-SAME: : tensor<?x?xf32> -> tensor<?x?xf32>
+  %0 = mesh.all_gather %arg0 {
+      gather_axis = 1 : index, mesh = @mesh0, mesh_axes = array<i16: 2>
+    } : tensor<?x?xf32> -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// CHECK-LABEL: func @all_gather_dynamic_dims_in_mesh
+func.func @all_gather_dynamic_dims_in_mesh(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<5x6xf32>
+    %arg0 : tensor<5x6xf32>) -> tensor<5x?xf32> {
+  // CHECK-NEXT: mesh.all_gather %[[ARG]]
+  // CHECK-SAME: {gather_axis = 1 : index, mesh = @mesh3, mesh_axes = array<i16: 1>}
+  // CHECK-SAME: : tensor<5x6xf32> -> tensor<5x?xf32>
+  %0 = mesh.all_gather %arg0 {
+      gather_axis = 1 : index, mesh = @mesh3, mesh_axes = array<i16: 1>
+    } : tensor<5x6xf32> -> tensor<5x?xf32>
+  return %0 : tensor<5x?xf32>
+}
+
+// CHECK-LABEL: func @all_to_all
+func.func @all_to_all(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<3x6xi8>
+    %arg0 : tensor<3x6xi8>) -> tensor<3x6xi8> {
+  // CHECK-NEXT: mesh.all_to_all %[[ARG]]
+  // CHECK-SAME: {concat_axis = 0 : i64, mesh = @mesh4, split_axis = 1 : i64}
+  // CHECK-SAME: : tensor<3x6xi8> -> tensor<3x6xi8>
+  %0 = mesh.all_to_all %arg0 {
+      concat_axis = 0, mesh = @mesh4, split_axis = 1
+    } : tensor<3x6xi8> -> tensor<3x6xi8>
+  return %0 : tensor<3x6xi8>
+}
+
+// CHECK-LABEL: func @all_to_all_dynamic_dims_in_result
+func.func @all_to_all_dynamic_dims_in_result(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<3x6xi8>
+    %arg0 : tensor<3x6xi8>) -> tensor<3x?xi8> {
+  // CHECK-NEXT: mesh.all_to_all %[[ARG]]
+  // CHECK-SAME: {concat_axis = 0 : i64, mesh = @mesh4, split_axis = 1 : i64}
+  // CHECK-SAME: : tensor<3x6xi8> -> tensor<3x?xi8>
+  %0 = mesh.all_to_all %arg0 {
+      concat_axis = 0, mesh = @mesh4, split_axis = 1
+    } : tensor<3x6xi8> -> tensor<3x?xi8>
+  return %0 : tensor<3x?xi8>
+}
+
+// CHECK-LABEL: func @all_to_all
+func.func @all_to_all_same_split_concat_dim_with_dynamic_device_group_size(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<3xi8>
+    %arg0 : tensor<3xi8>) -> tensor<3xi8> {
+  // CHECK-NEXT: mesh.all_to_all %[[ARG]]
+  // CHECK-SAME: {concat_axis = 0 : i64, mesh = @mesh4, split_axis = 0 : i64}
+  // CHECK-SAME: : tensor<3xi8> -> tensor<3xi8>
+  %0 = mesh.all_to_all %arg0 {
+      concat_axis = 0, mesh = @mesh4, split_axis = 0
+    } : tensor<3xi8> -> tensor<3xi8>
+  return %0 : tensor<3xi8>
+}
+
+// CHECK-LABEL: func @reduce_scatter_static_dimensions
+func.func @reduce_scatter_static_dimensions(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<3x4xf32>
+    %arg0 : tensor<3x4xf32>) -> tensor<3x1xf64> {
+  // CHECK-NEXT: mesh.reduce_scatter %[[ARG]]
+  // CHECK-SAME: {mesh = @mesh0, mesh_axes = array<i16: 2>, reduction = #mesh.partial<max>, scatter_axis = 1 : i64}
+  // CHECK-SAME: : tensor<3x4xf32> -> tensor<3x1xf64>
+  %0 = mesh.reduce_scatter %arg0 {
+      mesh = @mesh0, mesh_axes = array<i16: 2>, reduction = #mesh.partial<max>, scatter_axis = 1
+    } : tensor<3x4xf32> -> tensor<3x1xf64>
+  return %0 : tensor<3x1xf64>
+}
+
+// CHECK-LABEL: func @reduce_scatter_dynamic_dimensions
+func.func @reduce_scatter_dynamic_dimensions(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<?xf32>
+    %arg0 : tensor<?xf32>) -> tensor<?xf64> {
+  // CHECK-NEXT: mesh.reduce_scatter %[[ARG]]
+  // CHECK-SAME: {mesh = @mesh3, mesh_axes = array<i16: 0, 1>, scatter_axis = 0 : i64}
+  // CHECK-SAME: : tensor<?xf32> -> tensor<?xf64>
+  %0 = mesh.reduce_scatter %arg0 {
+      mesh = @mesh3, mesh_axes = array<i16: 0, 1>, scatter_axis = 0
+    } : tensor<?xf32> -> tensor<?xf64>
+  return %0 : tensor<?xf64>
 }
