@@ -228,9 +228,7 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info) {
           SetAllRegisterValid(true);
           return true;
         } else if (buffer_sp->GetByteSize() > 0) {
-          for (auto x : llvm::enumerate(
-                   m_reg_info_sp->registers<
-                       DynamicRegisterInfo::reg_collection_const_range>())) {
+          for (auto x : llvm::enumerate(m_reg_info_sp->registers())) {
             const struct RegisterInfo &reginfo = x.value();
             m_reg_valid[x.index()] =
                 (reginfo.byte_offset + reginfo.byte_size <=
