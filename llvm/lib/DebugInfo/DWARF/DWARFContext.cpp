@@ -286,7 +286,7 @@ public:
       DWARFContext::DWARFContextState(DC),
       DWPName(std::move(DWP)) {}
 
-  DWARFUnitVector &getNormalUnits() override {
+  const DWARFUnitVector &getNormalUnits() override {
     if (NormalUnits.empty()) {
       const DWARFObject &DObj = D.getDWARFObj();
       DObj.forEachInfoSections([&](const DWARFSection &S) {
@@ -300,16 +300,16 @@ public:
     return NormalUnits;
   }
 
-  DWARFUnitVector &getDWOUnits(bool Lazy) override {
+  const DWARFUnitVector &getDWOUnits() override {
     if (DWOUnits.empty()) {
       const DWARFObject &DObj = D.getDWARFObj();
 
       DObj.forEachInfoDWOSections([&](const DWARFSection &S) {
-        DWOUnits.addUnitsForDWOSection(D, S, DW_SECT_INFO, Lazy);
+        DWOUnits.addUnitsForDWOSection(D, S, DW_SECT_INFO);
       });
       DWOUnits.finishedInfoUnits();
       DObj.forEachTypesDWOSections([&](const DWARFSection &S) {
-        DWOUnits.addUnitsForDWOSection(D, S, DW_SECT_EXT_TYPES, Lazy);
+        DWOUnits.addUnitsForDWOSection(D, S, DW_SECT_EXT_TYPES);
       });
     }
     return DWOUnits;
@@ -633,13 +633,13 @@ public:
   ThreadSafeState(DWARFContext &DC, std::string &DWP) :
       ThreadUnsafeDWARFContextState(DC, DWP) {}
 
-  DWARFUnitVector &getNormalUnits() override {
+  const DWARFUnitVector &getNormalUnits() override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
     return ThreadUnsafeDWARFContextState::getNormalUnits();
   }
-  DWARFUnitVector &getDWOUnits(bool Lazy) override {
+  const DWARFUnitVector &getDWOUnits() override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
-    return ThreadUnsafeDWARFContextState::getDWOUnits(Lazy);
+    return ThreadUnsafeDWARFContextState::getDWOUnits();
   }
   const DWARFUnitIndex &getCUIndex() override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
@@ -1335,7 +1335,7 @@ void DWARFContext::dump(
 
 DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
                                                 bool IsDWO) {
-  DWARFUnitVector &DWOUnits = State->getDWOUnits();
+  const DWARFUnitVector &DWOUnits = State->getDWOUnits();
   if (const auto &TUI = getTUIndex()) {
     if (const auto *R = TUI.getFromHash(Hash))
       return dyn_cast_or_null<DWARFTypeUnit>(
@@ -1350,7 +1350,7 @@ DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
-  DWARFUnitVector &DWOUnits = State->getDWOUnits(LazyParse);
+  const DWARFUnitVector &DWOUnits = State->getDWOUnits();
 
   if (const auto &CUI = getCUIndex()) {
     if (const auto *R = CUI.getFromHash(Hash))
@@ -1497,8 +1497,8 @@ void DWARFContext::clearLineTableForUnit(DWARFUnit *U) {
   return State->clearLineTableForUnit(U);
 }
 
-DWARFUnitVector &DWARFContext::getDWOUnits(bool Lazy) {
-  return State->getDWOUnits(Lazy);
+const DWARFUnitVector &DWARFContext::getDWOUnits() {
+  return State->getDWOUnits();
 }
 
 DWARFCompileUnit *DWARFContext::getCompileUnitForOffset(uint64_t Offset) {
@@ -1526,7 +1526,7 @@ DWARFCompileUnit *DWARFContext::getCompileUnitForDataAddress(uint64_t Address) {
   //
   // So, we walk the CU's and their child DI's manually, looking for the
   // specific global variable.
-  for (std::unique_ptr<DWARFUnit> &CU : compile_units()) {
+  for (const std::unique_ptr<DWARFUnit> &CU : compile_units()) {
     if (CU->getVariableForAddress(Address)) {
       return static_cast<DWARFCompileUnit *>(CU.get());
     }

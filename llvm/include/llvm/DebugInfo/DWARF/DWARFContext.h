@@ -69,8 +69,8 @@ public:
   public:
     DWARFContextState(DWARFContext &DC) : D(DC) {}
     virtual ~DWARFContextState() = default;
-    virtual DWARFUnitVector &getNormalUnits() = 0;
-    virtual DWARFUnitVector &getDWOUnits(bool Lazy = false) = 0;
+    virtual const DWARFUnitVector &getNormalUnits() = 0;
+    virtual const DWARFUnitVector &getDWOUnits() = 0;
     virtual const DWARFDebugAbbrev *getDebugAbbrevDWO() = 0;
     virtual const DWARFUnitIndex &getCUIndex() = 0;
     virtual const DWARFUnitIndex &getTUIndex() = 0;
@@ -119,11 +119,8 @@ private:
   std::function<void(Error)> WarningHandler = WithColor::defaultWarningHandler;
 
   /// Read compile units from the debug_info.dwo section (if necessary)
-  /// and type units from the debug_types.dwo section (if necessary)
-  /// and store them in DWOUnits.
-  /// If \p Lazy is true, set up to parse but don't actually parse them.
-  enum { EagerParse = false, LazyParse = true };
-  DWARFUnitVector &getDWOUnits(bool Lazy = false);
+  /// and type units from the debug_types.dwo section (if necessary).
+  const DWARFUnitVector &getDWOUnits();
 
   std::unique_ptr<const DWARFObject> DObj;
 
@@ -167,7 +164,7 @@ public:
 
   /// Get units from .debug_info in this context.
   unit_iterator_range info_section_units() {
-    DWARFUnitVector &NormalUnits = State->getNormalUnits();
+    const DWARFUnitVector &NormalUnits = State->getNormalUnits();
     return unit_iterator_range(NormalUnits.begin(),
                                NormalUnits.begin() +
                                    NormalUnits.getNumInfoUnits());
@@ -179,7 +176,7 @@ public:
 
   /// Get units from .debug_types in this context.
   unit_iterator_range types_section_units() {
-    DWARFUnitVector &NormalUnits = State->getNormalUnits();
+    const DWARFUnitVector &NormalUnits = State->getNormalUnits();
     return unit_iterator_range(
         NormalUnits.begin() + NormalUnits.getNumInfoUnits(), NormalUnits.end());
   }
@@ -194,13 +191,13 @@ public:
 
   /// Get all normal compile/type units in this context.
   unit_iterator_range normal_units() {
-    DWARFUnitVector &NormalUnits = State->getNormalUnits();
+    const DWARFUnitVector &NormalUnits = State->getNormalUnits();
     return unit_iterator_range(NormalUnits.begin(), NormalUnits.end());
   }
 
   /// Get units from .debug_info..dwo in the DWO context.
   unit_iterator_range dwo_info_section_units() {
-    DWARFUnitVector &DWOUnits = State->getDWOUnits();
+    const DWARFUnitVector &DWOUnits = State->getDWOUnits();
     return unit_iterator_range(DWOUnits.begin(),
                                DWOUnits.begin() + DWOUnits.getNumInfoUnits());
   }
@@ -211,7 +208,7 @@ public:
 
   /// Get units from .debug_types.dwo in the DWO context.
   unit_iterator_range dwo_types_section_units() {
-    DWARFUnitVector &DWOUnits = State->getDWOUnits();
+    const DWARFUnitVector &DWOUnits = State->getDWOUnits();
     return unit_iterator_range(DWOUnits.begin() + DWOUnits.getNumInfoUnits(),
                                DWOUnits.end());
   }
@@ -227,7 +224,7 @@ public:
 
   /// Get all units in the DWO context.
   unit_iterator_range dwo_units() {
-    DWARFUnitVector &DWOUnits = State->getDWOUnits();
+    const DWARFUnitVector &DWOUnits = State->getDWOUnits();
     return unit_iterator_range(DWOUnits.begin(), DWOUnits.end());
   }
 
