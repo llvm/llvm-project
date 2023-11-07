@@ -84,13 +84,13 @@ if(CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
     COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} perf.data
     COMMENT "Clearing old perf data")
 
-  string(TOUPPER "${CLANG_BOLT}" uppercase_CLANG_BOLT)
-  if (uppercase_CLANG_BOLT STREQUAL "LBR")
+  string(TOUPPER "${CLANG_BOLT}" CLANG_BOLT)
+  if (CLANG_BOLT STREQUAL "LBR")
     set(BOLT_LBR "--lbr")
   endif()
 
   add_custom_target(merge-fdata-deps)
-  if (uppercase_CLANG_BOLT STREQUAL "INSTRUMENT")
+  if (CLANG_BOLT STREQUAL "INSTRUMENT")
     add_dependencies(merge-fdata-deps generate-bolt-fdata)
   else()
     # Convert perf profiles into fdata

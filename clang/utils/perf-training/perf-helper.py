@@ -74,15 +74,10 @@ def perf(args):
     parser.add_argument(
         "--lbr", action="store_true", help="Use perf with branch stacks"
     )
-    parser.add_argument("cmd", nargs="*", help="")
+    parser.add_argument("cmd", nargs=argparse.REMAINDER, help="")
 
-    # Use python's arg parser to handle all leading option arguments, but pass
-    # everything else through to perf
-    first_cmd = next(arg for arg in args if not arg.startswith("--"))
-    last_arg_idx = args.index(first_cmd)
-
-    opts = parser.parse_args(args[:last_arg_idx])
-    cmd = args[last_arg_idx:]
+    opts = parser.parse_args()
+    cmd = opts["cmd"][1:]
 
     perf_args = [
         "perf",

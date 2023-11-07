@@ -853,7 +853,7 @@ endif()
 set(CLANG_BOLT "INSTRUMENT" CACHE STRING "Apply BOLT optimization to Clang. \
   May be specified as Instrument or Perf or LBR to use a particular profiling \
   mechanism.")
-string(TOUPPER "${CLANG_BOLT}" uppercase_CLANG_BOLT)
+string(TOUPPER "${CLANG_BOLT}" CLANG_BOLT)
 
 if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
   set(CLANG_PATH ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
@@ -861,11 +861,11 @@ if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
   set(BOLT_FDATA ${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/prof.fdata)
 
   # Pass extra flag in no-LBR mode
-  if (uppercase_CLANG_BOLT STREQUAL "PERF")
+  if (CLANG_BOLT STREQUAL "PERF")
     set(BOLT_NO_LBR "-nl")
   endif()
 
-  if (uppercase_CLANG_BOLT STREQUAL "INSTRUMENT")
+  if (CLANG_BOLT STREQUAL "INSTRUMENT")
     # Instrument clang with BOLT
     add_custom_target(clang-instrumented
       DEPENDS ${CLANG_INSTRUMENTED}
