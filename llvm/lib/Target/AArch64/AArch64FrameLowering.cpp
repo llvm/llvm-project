@@ -3772,7 +3772,7 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
   // the insert list, this liveness check is done (which is not needed).
   LivePhysRegs LR(*(MBB->getParent()->getSubtarget().getRegisterInfo()));
   LR.addLiveOuts(*MBB);
-  for (auto I = MBB->rbegin(); ; ++I) {
+  for (auto I = MBB->rbegin();; ++I) {
     MachineInstr &MIns = *I;
     if (MIns == InsertI)
       break;
