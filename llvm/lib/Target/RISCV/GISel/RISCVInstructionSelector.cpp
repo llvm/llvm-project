@@ -61,8 +61,7 @@ private:
 
   // Custom selection methods
   bool selectCopy(MachineInstr &MI, MachineRegisterInfo &MRI) const;
-  bool selectConstant(MachineInstr &MI, MachineIRBuilder &MIB,
-                      MachineRegisterInfo &MRI) const;
+  bool materializeImm(Register Reg, int64_t Imm, MachineIRBuilder &MIB) const;
   bool selectGlobalValue(MachineInstr &MI, MachineIRBuilder &MIB,
                          MachineRegisterInfo &MRI) const;
   bool selectSExtInreg(MachineInstr &MI, MachineIRBuilder &MIB) const;
@@ -348,8 +347,16 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_TRUNC:
     return selectCopy(MI, MRI);
-  case TargetOpcode::G_CONSTANT:
-    return selectConstant(MI, MIB, MRI);
+  case TargetOpcode::G_CONSTANT: {
+    Register DstReg = MI.getOperand(0).getReg();
+    int64_t Imm = MI.getOperand(1).getCImm()->getSExtValue();
+
+    if (!materializeImm(DstReg, Imm, MIB))
+      return false;
+
+    MI.eraseFromParent();
+    return true;
+  }
   case TargetOpcode::G_GLOBAL_VALUE:
     return selectGlobalValue(MI, MIB, MRI);
   case TargetOpcode::G_BRCOND: {
@@ -485,17 +492,13 @@ bool RISCVInstructionSelector::selectCopy(MachineInstr &MI,
   return true;
 }
 
-bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
-                                              MachineIRBuilder &MIB,
-                                              MachineRegisterInfo &MRI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT);
-  Register FinalReg = MI.getOperand(0).getReg();
-  int64_t Imm = MI.getOperand(1).getCImm()->getSExtValue();
+bool RISCVInstructionSelector::materializeImm(Register DstReg, int64_t Imm,
+                                              MachineIRBuilder &MIB) const {
+  MachineRegisterInfo &MRI = *MIB.getMRI();
 
   if (Imm == 0) {
-    MI.getOperand(1).ChangeToRegister(RISCV::X0, false);
-    RBI.constrainGenericRegister(FinalReg, RISCV::GPRRegClass, MRI);
-    MI.setDesc(TII.get(TargetOpcode::COPY));
+    MIB.buildCopy(DstReg, Register(RISCV::X0));
+    RBI.constrainGenericRegister(DstReg, RISCV::GPRRegClass, MRI);
     return true;
   }
 
@@ -505,9 +508,9 @@ bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
   Register SrcReg = RISCV::X0;
 
   for (unsigned i = 0; i < NumInsts; i++) {
-    Register DstReg = i < NumInsts - 1
+    Register TmpReg = i < NumInsts - 1
                           ? MRI.createVirtualRegister(&RISCV::GPRRegClass)
-                          : FinalReg;
+                          : DstReg;
     const RISCVMatInt::Inst &I = Seq[i];
     MachineInstr *Result;
 
@@ -515,25 +518,25 @@ bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
     case RISCVMatInt::Imm:
       // clang-format off
       Result = MIB.buildInstr(I.getOpcode())
-                   .addDef(DstReg)
+                   .addDef(TmpReg)
                    .addImm(I.getImm());
       // clang-format on
       break;
     case RISCVMatInt::RegX0:
       Result = MIB.buildInstr(I.getOpcode())
-                   .addDef(DstReg)
+                   .addDef(TmpReg)
                    .addReg(SrcReg)
                    .addReg(RISCV::X0);
       break;
     case RISCVMatInt::RegReg:
       Result = MIB.buildInstr(I.getOpcode())
-                   .addDef(DstReg)
+                   .addDef(TmpReg)
                    .addReg(SrcReg)
                    .addReg(SrcReg);
       break;
     case RISCVMatInt::RegImm:
       Result = MIB.buildInstr(I.getOpcode())
-                   .addDef(DstReg)
+                   .addDef(TmpReg)
                    .addReg(SrcReg)
                    .addImm(I.getImm());
       break;
@@ -542,10 +545,9 @@ bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
       return false;
 
-    SrcReg = DstReg;
+    SrcReg = TmpReg;
   }
 
-  MI.eraseFromParent();
   return true;
 }
 
