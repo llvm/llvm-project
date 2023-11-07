@@ -299,9 +299,9 @@ declare i32 @printf(ptr, ...) #0
 ; Insert point of stg merge is followed by nzcv read
 ; Don't merge in this case
 
-define i32 @stg_no_merge(i32 %in) {
+define i32 @nzcv_clobber(i32 %in) {
 entry:
-; CHECK-LABEL: stg_no_merge:
+; CHECK-LABEL: nzcv_clobber:
 ; CHECK: stg sp, [sp, #528]
 ; CHECK-NEXT: .LBB10_1:
 ; CHECK: st2g x9, [x9], #32
@@ -333,9 +333,9 @@ return1:
 ; Insert point of stg merge is not followed by nzcv read
 ; Merge in this case
 
-define i32 @stg_merge(i32 %in) {
+define i32 @nzcv_no_clobber(i32 %in) {
 entry:
-; CHECK-LABEL: stg_merge:
+; CHECK-LABEL: nzcv_no_clobber:
 ; CHECK: mov x8, #544
 ; CHECK-NEXT: .LBB11_1:
 ; CHECK: st2g sp, [sp], #32
