@@ -89,12 +89,18 @@ public:
   GetRegisterInfo(llvm::StringRef reg_name) const;
 
   typedef std::vector<lldb_private::RegisterInfo> reg_collection;
-  llvm::iterator_range<reg_collection::const_iterator> registers() const {
-    return llvm::iterator_range<reg_collection::const_iterator>(m_regs);
+
+  template <typename T> T registers() = delete;
+
+  typedef llvm::iterator_range<reg_collection::const_iterator>
+      reg_collection_const_range;
+  template <> reg_collection_const_range registers() {
+    return reg_collection_const_range(m_regs);
   }
 
-  llvm::iterator_range<reg_collection::iterator> registers_mutable() {
-    return llvm::iterator_range<reg_collection::iterator>(m_regs);
+  typedef llvm::iterator_range<reg_collection::iterator> reg_collection_range;
+  template <> reg_collection_range registers() {
+    return reg_collection_range(m_regs);
   }
 
   void ConfigureOffsets();
