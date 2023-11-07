@@ -302,6 +302,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   } else if (!args.hasArg(OPT_strip_all)) {
     add("-debug:dwarf");
   }
+  add(args.hasArg(OPT_no_build_id) ? "-build-id:no" : "-build-id");
 
   if (args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false))
     add("-WX");

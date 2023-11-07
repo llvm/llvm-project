@@ -22,15 +22,6 @@
 # RUN: lld-link /Brepro /debug /dll /out:%t.dll /entry:DllMain %t.obj
 # RUN: llvm-readobj --coff-debug-directory %t.dll | FileCheck --check-prefix REPRODEBUG %s
 
-# Generate .buildid section when /lldmingw + /debug:dwarf are given and not generating pdb file.
-# RUN: rm -f %t.dll %t.pdb
-# RUN: lld-link /lldmingw /debug:dwarf /dll /out:%t.dll /entry:DllMain %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.dll | FileCheck --check-prefix BUILDID %s
-
-# RUN: rm -f %t.dll %t.pdb
-# RUN: lld-link /lldmingw /debug:dwarf /build-id /dll /out:%t.dll /entry:DllMain %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.dll | FileCheck --check-prefix BUILDID %s
-
 # Generate .buildid section when /build-id is given.
 # RUN: rm -f %t.dll %t.pdb
 # RUN: lld-link /build-id /dll /out:%t.dll /entry:DllMain %t.obj
@@ -47,9 +38,9 @@
 # PDB hash should be different from binary hash.
 # RUN: not diff %t.binary.guid %t.pdb.guid
 
-# Do not generate .buildid section under /lldmingw + /debug:dwarf + /build-id:no
+# Do not generate .buildid section under /build-id:no
 # RUN: rm -f %t.dll %t.pdb
-# RUN: lld-link /lldmingw /debug:dwarf /build-id:no /dll /out:%t.dll /entry:DllMain %t.obj
+# RUN: lld-link /build-id:no /dll /out:%t.dll /entry:DllMain %t.obj
 # RUN: llvm-readobj --coff-debug-directory %t.dll | FileCheck --check-prefix NO_BUILDID %s
 
 # RUN: rm -f %t.dll %t.pdb

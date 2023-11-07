@@ -2332,12 +2332,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     }
   }
 
-  // Generate build id hash in .buildid section if /build-id is given or
-  // /lldmingw + /debug are given:
+  // Generate build id hash in .buildid section if /build-id is given:
   // 1. If PDB is generated, the build id hash will be the hash of PDB content.
   // 2. Otherwise, the build id hash will be the hash of executable content.
-  if (args.hasFlag(OPT_build_id, OPT_build_id_no,
-                   config->mingw && config->debug))
+  if (args.hasFlag(OPT_build_id, OPT_build_id_no, false))
     config->buildIDHash =
         config->shouldCreatePDB ? BuildIDHash::PDB : BuildIDHash::Binary;
 

@@ -123,7 +123,7 @@ public:
     records.emplace_back(type, c);
   }
 
-  Chunk* getBuildIdChunk() {
+  Chunk *getBuildIdChunk() {
     for (const std::pair<COFF::DebugType, Chunk *> &record : records) {
       if (record.first == COFF::IMAGE_DEBUG_TYPE_CODEVIEW)
         return record.second;
