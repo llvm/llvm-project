@@ -5,12 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//  This file defines a DataflowAnalysisContext class that owns objects that
-//  encompass the state of a program and stores context that is used during
-//  dataflow analysis.
-//
-//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_SIMPLIFYCONSTRAINTS_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_SIMPLIFYCONSTRAINTS_H

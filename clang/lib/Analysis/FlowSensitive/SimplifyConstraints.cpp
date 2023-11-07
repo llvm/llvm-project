@@ -5,12 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//  This file defines a DataflowAnalysisContext class that owns objects that
-//  encompass the state of a program and stores context that is used during
-//  dataflow analysis.
-//
-//===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/SimplifyConstraints.h"
 #include "llvm/ADT/EquivalenceClasses.h"
@@ -18,7 +12,7 @@
 namespace clang {
 namespace dataflow {
 
-// Substitute all occurrences of a given atom in `F` by a given formula and
+// Substitutes all occurrences of a given atom in `F` by a given formula and
 // returns the resulting formula.
 static const Formula &
 substitute(const Formula &F,
@@ -98,13 +92,15 @@ void simplifyConstraints(llvm::SetVector<const Formula *> &Constraints,
         if (Constraint->operands()[0]->kind() == Formula::AtomRef)
           FalseAtoms.insert(Constraint->operands()[0]->getAtom());
         break;
-      case Formula::Equal:
-        if (Constraint->operands()[0]->kind() == Formula::AtomRef &&
-            Constraint->operands()[1]->kind() == Formula::AtomRef) {
-          EquivalentAtoms.unionSets(Constraint->operands()[0]->getAtom(),
-                                    Constraint->operands()[1]->getAtom());
+      case Formula::Equal: {
+        ArrayRef<const Formula *> operands = Constraint->operands();
+        if (operands[0]->kind() == Formula::AtomRef &&
+            operands[1]->kind() == Formula::AtomRef) {
+          EquivalentAtoms.unionSets(operands[0]->getAtom(),
+                                    operands[1]->getAtom());
         }
         break;
+      }
       default:
         break;
       }
@@ -150,7 +146,7 @@ void simplifyConstraints(llvm::SetVector<const Formula *> &Constraints,
 
     if (NewConstraints == Constraints)
       break;
-    Constraints = NewConstraints;
+    Constraints = std::move(NewConstraints);
   }
 
   if (Info) {
