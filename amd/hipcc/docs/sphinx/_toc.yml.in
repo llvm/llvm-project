@@ -8,3 +8,6 @@ subtrees:
     - file: usage
     - file: build
     - file: test
+  - caption: About
+    entries:
+    - file: license

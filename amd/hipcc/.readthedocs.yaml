@@ -10,9 +10,9 @@ formats: [htmlzip, pdf, epub]
 
 python:
   install:
-  - requirements: docs/.sphinx/requirements.txt
+  - requirements: docs/sphinx/requirements.txt
 
 build:
-  os: ubuntu-20.04
+  os: ubuntu-22.04
   tools:
     python: "3.8"

@@ -1,0 +1,11 @@
+version: 2
+updates:
+  - package-ecosystem: "pip" # See documentation for possible values
+    directory: "/amd/hipcc/docs/sphinx" # Location of package manifests
+    open-pull-requests-limit: 10
+    schedule:
+      interval: "daily"
+    labels:
+      - "documentation"
+    reviewers:
+      - "samjwu"
