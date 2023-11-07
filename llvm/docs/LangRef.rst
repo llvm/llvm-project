@@ -4657,38 +4657,6 @@ The following is the syntax for constant expressions:
 
 ``trunc (CST to TYPE)``
     Perform the :ref:`trunc operation <i_trunc>` on constants.
-``fptrunc (CST to TYPE)``
-    Truncate a floating-point constant to another floating-point type.
-    The size of CST must be larger than the size of TYPE. Both types
-    must be floating-point.
-``fpext (CST to TYPE)``
-    Floating-point extend a constant to another type. The size of CST
-    must be smaller or equal to the size of TYPE. Both types must be
-    floating-point.
-``fptoui (CST to TYPE)``
-    Convert a floating-point constant to the corresponding unsigned
-    integer constant. TYPE must be a scalar or vector integer type. CST
-    must be of scalar or vector floating-point type. Both CST and TYPE
-    must be scalars, or vectors of the same number of elements. If the
-    value won't fit in the integer type, the result is a
-    :ref:`poison value <poisonvalues>`.
-``fptosi (CST to TYPE)``
-    Convert a floating-point constant to the corresponding signed
-    integer constant. TYPE must be a scalar or vector integer type. CST
-    must be of scalar or vector floating-point type. Both CST and TYPE
-    must be scalars, or vectors of the same number of elements. If the
-    value won't fit in the integer type, the result is a
-    :ref:`poison value <poisonvalues>`.
-``uitofp (CST to TYPE)``
-    Convert an unsigned integer constant to the corresponding
-    floating-point constant. TYPE must be a scalar or vector floating-point
-    type.  CST must be of scalar or vector integer type. Both CST and TYPE must
-    be scalars, or vectors of the same number of elements.
-``sitofp (CST to TYPE)``
-    Convert a signed integer constant to the corresponding floating-point
-    constant. TYPE must be a scalar or vector floating-point type.
-    CST must be of scalar or vector integer type. Both CST and TYPE must
-    be scalars, or vectors of the same number of elements.
 ``ptrtoint (CST to TYPE)``
     Perform the :ref:`ptrtoint operation <i_ptrtoint>` on constants.
 ``inttoptr (CST to TYPE)``

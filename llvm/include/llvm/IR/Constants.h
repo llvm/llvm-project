@@ -1041,14 +1041,6 @@ public:
   static Constant *getLShr(Constant *C1, Constant *C2, bool isExact = false);
   static Constant *getAShr(Constant *C1, Constant *C2, bool isExact = false);
   static Constant *getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getFPTrunc(Constant *C, Type *Ty,
-                              bool OnlyIfReduced = false);
-  static Constant *getFPExtend(Constant *C, Type *Ty,
-                               bool OnlyIfReduced = false);
-  static Constant *getUIToFP(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getSIToFP(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getFPToUI(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getFPToSI(Constant *C, Type *Ty, bool OnlyIfReduced = false);
   static Constant *getPtrToInt(Constant *C, Type *Ty,
                                bool OnlyIfReduced = false);
   static Constant *getIntToPtr(Constant *C, Type *Ty,
@@ -1156,11 +1148,6 @@ public:
   static Constant *getPointerBitCastOrAddrSpaceCast(
       Constant *C, ///< The constant to addrspacecast or bitcast
       Type *Ty     ///< The type to bitcast or addrspacecast C to
-  );
-
-  /// Create a FPExt, Bitcast or FPTrunc for fp -> fp casts
-  static Constant *getFPCast(Constant *C, ///< The integer constant to be casted
-                             Type *Ty     ///< The integer type to cast to
   );
 
   /// Return true if this is a convert constant expression
