@@ -603,5 +603,5 @@ void Sema::ProcessStmtAttributes(Stmt *S, const ParsedAttributes &InAttrs,
   }
 
   CheckForIncompatibleAttributes(*this, OutAttrs);
-  CheckForDuplicateCodeAlignAttribute(*this, OutAttrs);
+  CheckForDuplicateCodeAlignAttrs(*this, OutAttrs);
 }
