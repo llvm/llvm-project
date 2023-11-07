@@ -15,8 +15,7 @@ define void @pr71330(i32 %conv, i1 %tobool19.not4, i16 %lb) {
 ; CHECK:       for.cond7.preheader.split.us.split:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.cond7:
-; CHECK-NEXT:    [[ADD9:%.*]] = add i32 [[CONV]], 3
-; CHECK-NEXT:    [[CMP12:%.*]] = icmp slt i32 [[ADD9]], 0
+; CHECK-NEXT:    [[CMP12:%.*]] = icmp slt i32 [[CONV]], 0
 ; CHECK-NEXT:    br i1 [[CMP12]], label [[FOR_BODY14:%.*]], label [[FOR_END25]]
 ; CHECK:       for.body14:
 ; CHECK-NEXT:    ret void
