@@ -156,6 +156,42 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
   }];
 }
 
+def LoopContinuousPeelOp : Op<Transform_Dialect, "loop.loop_continuous_peel",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait]> {
+  let description = [{
+    Transforms the loop into a chain of loops, with step sizes that are
+    powers of two and decrease exponetially across subsequent loops.
+    The transform is similar to loop.peel in the effect that it creates a loop
+    with a step (that is power of 2) to divide the range evenly, with the
+    difference that the remaining iterations are spread across similar loops
+    with exponentially decreasing step sizes, with the last loop with step size
+    of 2^0 = 1.
+
+    #### Return modes
+
+    This operation consumes the `target` handles and produces the
+    continuously-peeled loop.
+  }];
+
+  let arguments =
+      (ins TransformHandleTypeInterface:$target,
+           DefaultValuedAttr<BoolAttr, "false">:$single_iter_opt);
+  // TODO: Return both the peeled loop and the remainder loop.
+  let results = (outs TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat =
+    "$target attr-dict `:` functional-type(operands, results)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 def LoopPipelineOp : Op<Transform_Dialect, "loop.pipeline",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {

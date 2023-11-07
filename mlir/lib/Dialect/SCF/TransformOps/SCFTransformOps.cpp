@@ -217,6 +217,153 @@ transform::LoopPeelOp::applyToOne(transform::TransformRewriter &rewriter,
   return DiagnosedSilenceableFailure::success();
 }
 
+//===---------------------------------------------------------------------===//
+// LoopContinuousPeelOp
+//===---------------------------------------------------------------------===//
+
+static LogicalResult splitLoopHelper(RewriterBase &b, scf::ForOp &forOp,
+                                     scf::ForOp &partialIteration,
+                                     Value &splitBound) {
+  RewriterBase::InsertionGuard guard(b);
+  auto lbInt = getConstantIntValue(forOp.getLowerBound());
+  auto ubInt = getConstantIntValue(forOp.getUpperBound());
+  auto stepInt = getConstantIntValue(forOp.getStep());
+
+  // No specialization necessary if step already divides upper bound evenly.
+  if (lbInt && ubInt && stepInt && (*ubInt - *lbInt) % *stepInt == 0)
+    return failure();
+  // No specialization necessary if step size is 1.
+  if (stepInt == static_cast<int64_t>(1))
+    return failure();
+
+  // Create ForOp for partial iteration.
+  b.setInsertionPointAfter(forOp);
+  partialIteration = cast<scf::ForOp>(b.clone(*forOp.getOperation()));
+  partialIteration.getLowerBoundMutable().assign(splitBound);
+  forOp.replaceAllUsesWith(partialIteration->getResults());
+  partialIteration.getInitArgsMutable().assign(forOp->getResults());
+
+  // Set new upper loop bound.
+  b.updateRootInPlace(
+      forOp, [&]() { forOp.getUpperBoundMutable().assign(splitBound); });
+
+  return success();
+}
+
+static scf::IfOp convertSingleIterFor(RewriterBase &b, scf::ForOp &forOp) {
+  Location loc = forOp->getLoc();
+  IRMapping mapping;
+  mapping.map(forOp.getInductionVar(), forOp.getLowerBound());
+  for (auto [arg, operand] :
+       llvm::zip(forOp.getRegionIterArgs(), forOp.getInitsMutable())) {
+    mapping.map(arg, operand.get());
+  }
+  b.setInsertionPoint(forOp);
+  auto cond =
+      b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
+                              forOp.getLowerBound(), forOp.getUpperBound());
+  auto ifOp = b.create<scf::IfOp>(loc, forOp->getResultTypes(), cond, true);
+  // then branch
+  b.setInsertionPointToStart(ifOp.thenBlock());
+  for (Operation &op : forOp.getBody()->getOperations()) {
+    b.clone(op, mapping);
+  }
+  // else branch
+  b.setInsertionPointToStart(ifOp.elseBlock());
+  if (!forOp->getResultTypes().empty()) {
+    b.create<scf::YieldOp>(loc, forOp.getInits());
+  }
+  b.replaceOp(forOp, ifOp->getResults());
+  return ifOp;
+}
+
+DiagnosedSilenceableFailure transform::LoopContinuousPeelOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  scf::ForOp loop, currentLoop, partialLoop;
+  loop = dyn_cast<scf::ForOp>(target);
+  auto lbInt = getConstantIntValue(loop.getLowerBound());
+  auto stepInt = getConstantIntValue(loop.getStep());
+  if (!stepInt.has_value() || *stepInt <= 0)
+    return DiagnosedSilenceableFailure::
+        definiteFailure(); // step size must be a known positive constant
+  Value initialUb = loop.getUpperBound();
+  Value initialStep = loop.getStep();
+  uint64_t loopStep = *stepInt;
+  currentLoop = loop;
+  AffineExpr sym0, sym1, sym2;
+  bindSymbols(rewriter.getContext(), sym0, sym1, sym2);
+  AffineMap defaultSplitMap =
+      AffineMap::get(0, 3, {sym1 - ((sym1 - sym0) % sym2)});
+  AffineMap powerSplitMap = AffineMap::get(0, 3, {sym1 - (sym1 % sym2)});
+  bool usePowerSplit = (lbInt.has_value()) &&
+                       (*lbInt % *stepInt == static_cast<int64_t>(0)) &&
+                       (loopStep == llvm::bit_floor(loopStep));
+  AffineMap splitMap = usePowerSplit ? powerSplitMap : defaultSplitMap;
+  SmallVector<scf::ForOp> loops;
+  while (loopStep) {
+    rewriter.setInsertionPoint(currentLoop);
+    auto constStepOp =
+        rewriter.create<arith::ConstantIndexOp>(currentLoop.getLoc(), loopStep);
+    currentLoop.getStepMutable().assign(constStepOp);
+    rewriter.setInsertionPoint(currentLoop);
+    Value splitBound = rewriter.createOrFold<affine::AffineApplyOp>(
+        currentLoop.getLoc(), splitMap,
+        ValueRange{currentLoop.getLowerBound(), currentLoop.getUpperBound(),
+                   currentLoop.getStep()});
+    LogicalResult status =
+        splitLoopHelper(rewriter, currentLoop, partialLoop, splitBound);
+
+    // Canonicalize min/max affine operations
+    // It uses scf::rewritePeeledMinMaxOp to identify operations to be replaced,
+    // they are then replaced by the current step size.
+    // TODO: Alternative method - update affine map to reflect the loop step
+    // Example: min(ub - iv, 8) -> min(ub - iv, 4)
+    currentLoop.walk([&](affine::AffineMinOp affineOp) {
+      rewriter.setInsertionPoint(affineOp);
+      auto clonedOp = cast<affine::AffineMinOp>(rewriter.clone(*affineOp));
+      LogicalResult result = scf::rewritePeeledMinMaxOp(
+          rewriter, clonedOp, currentLoop.getInductionVar(), initialUb,
+          initialStep,
+          /*insideLoop=*/true);
+      if (result.succeeded())
+        rewriter.replaceOp(affineOp, currentLoop.getStep());
+      else
+        rewriter.eraseOp(clonedOp); // to avoid infinite walk
+    });
+    currentLoop.walk([&](affine::AffineMaxOp affineOp) {
+      rewriter.setInsertionPoint(affineOp);
+      auto clonedOp = cast<affine::AffineMaxOp>(rewriter.clone(*affineOp));
+      LogicalResult result = scf::rewritePeeledMinMaxOp(
+          rewriter, clonedOp, currentLoop.getInductionVar(), initialUb,
+          initialStep,
+          /*insideLoop=*/true);
+      if (result.succeeded())
+        rewriter.replaceOp(affineOp, currentLoop.getStep());
+      else
+        rewriter.eraseOp(clonedOp); // to avoid infinite walk
+    });
+
+    // Prepare for the next iteration
+    loops.push_back(currentLoop);
+    if (failed(status))
+      break;
+    currentLoop = partialLoop;
+    uint64_t maxPower = llvm::bit_floor(loopStep);
+    loopStep = maxPower == loopStep ? maxPower >> 1 : maxPower;
+  }
+  assert(loops.size() > 0 && "There should be at least one loop available");
+  if (getSingleIterOpt()) {
+    for (size_t i = 1; i < loops.size(); ++i) {
+      convertSingleIterFor(rewriter, loops[i]);
+    }
+  }
+
+  results.push_back(loops.front());
+  return DiagnosedSilenceableFailure::success();
+}
+
 //===----------------------------------------------------------------------===//
 // LoopPipelineOp
 //===----------------------------------------------------------------------===//
