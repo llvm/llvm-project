@@ -93,6 +93,9 @@ end
   non-global name in the same scope.  This is not conforming,
   but it is useful and unambiguous.
 * The argument to `RANDOM_NUMBER` may not be an assumed-size array.
+* `NULL()` without `MOLD=` is not allowed to be associated as an
+  actual argument corresponding to an assumed-rank dummy argument;
+  its rank in the called procedure would not be well-defined.
 
 ## Extensions, deletions, and legacy features supported by default
 
