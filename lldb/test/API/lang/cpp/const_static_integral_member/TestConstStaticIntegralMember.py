@@ -125,7 +125,7 @@ class TestCase(TestBase):
     # wouldn't get indexed into the Names accelerator table preventing LLDB from finding
     # them.
     @expectedFailureAll(compiler=["clang"], compiler_version=["<", "18.0"])
-    @expectedFailureAll(debug_info=no_match(["dsym"]), oslist=no_match(["linux"]))
+    @expectedFailureAll(debug_info=no_match(["dsym"]), oslist=no_match(["linux", "windows"]))
     def test_inline_static_members(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
