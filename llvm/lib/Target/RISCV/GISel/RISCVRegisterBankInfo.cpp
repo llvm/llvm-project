@@ -213,6 +213,12 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                             getFPValueMapping(FromTy.getSizeInBits())});
     break;
   }
+  case TargetOpcode::G_FCONSTANT: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OperandsMapping =
+        getOperandsMapping({getFPValueMapping(Ty.getSizeInBits()), nullptr});
+    break;
+  }
   default:
     return getInvalidInstructionMapping();
   }
