@@ -73,7 +73,7 @@ struct AffineExprAdmissibleVisitor
       admissible = false;
   }
 
-  // For input, mod, floor div and ceil div are not supported.
+  // We disallow mod, floor div and ceil div  on inputs.
   void visitModExpr(AffineBinaryOpExpr expr) { admissible = false; }
   void visitFloorDivExpr(AffineBinaryOpExpr expr) { admissible = false; }
   void visitCeilDivExpr(AffineBinaryOpExpr expr) { admissible = false; }
@@ -105,7 +105,7 @@ static InadmissInfo collectInadmissInfo(AffineMap map, bool isOutput) {
     if (!admissible) {
       // Record the inadmissible level.
       ret.first.set(lvl);
-      // Records the AffineDimExpr that is used in the inadmissible expr.
+      // Record the AffineDimExpr that is used in the inadmissible expr.
       collector.walkPostOrder(map.getResult(lvl));
     }
   }
@@ -113,7 +113,7 @@ static InadmissInfo collectInadmissInfo(AffineMap map, bool isOutput) {
   return ret;
 }
 
-// Build the AffineMap to replace the idx in idxMap to lvl such that all tht
+// Builds the AffineMap to replace the idx in idxMap to lvl such that all tht
 // inadmissible affine expressions can be eliminated.
 // For example, we can rewrite
 // idxMap = (d0, d1) -> (d0 floordiv 2, d1 floordiv 3, d0 mod 2, d1 mod 3)
@@ -137,7 +137,7 @@ static InadmissInfo collectInadmissInfo(AffineMap map, bool isOutput) {
 // idxMap = (d0, d1) -> (d0, d1 floordiv 4, d2 mod 4)
 // which is a typical map for block_2to4. The function returns:
 // inverse(idxMap) = (l0, l1, d0) -> (d0, l0 * 4 + l1)
-// in which, (l0, l1) together replaces `d1`, yet they appears
+// in which, (l0, l1) together replaces `d1`, yet they appear
 // before `d0` in the resulting affine map.
 // The the index (loop) order can later be canonicalized by a topo sort.
 static AffineMap
@@ -182,28 +182,41 @@ genReplaceDimToLvlMap(const InadmissInfo &info, AffineMap idxMap,
   // We do not need to replace the DimExpr that is not used in Inadmissible
   // level expressions. We use the first inAdLvl.count() dim to represent the
   // replaced level, the remainings are used for unchanged ones.
+  // Note that results from the inverse map computed previously does not follow
+  // the convention we used, and we fix the mismatch.
   unsigned curRepID = 0;
   unsigned curOriID = inAdLvls.count();
-  // Since we changed the ordered of the AffineMap's dimention, we need to
-  // update the dimension here.
   SmallVector<AffineExpr> results;
   SmallVector<AffineExpr> dimRep(idxMap.getNumResults(), AffineExpr());
   SmallVector<utils::IteratorType> transItTps;
 
   for (unsigned l : inAdLvls.set_bits()) {
+    // By our convention, the inadmissible level `l` always appears in the
+    // leading part (accumulated by curRepID) of the affine map. Record the
+    // mapping so that we can replace all the uses of `l` to the correct
+    // position after the translation.
     dimRep[l] = getAffineDimExpr(curRepID++, ctx);
+    // A new index variable is introduced for the inadmissible level, inherit
+    // the iterator type. E.g., if l0 = d0 floordiv 2, the
+    // iterator type of l0 equals to the iterator type of d0.
     AffineExpr lvlExp = idxMap.getResult(l);
     AffineDimCollector collector(idxMap.getNumDims());
     collector.walkPostOrder(lvlExp);
+    // We assumes a level can only be derived from one dimension.
     assert(collector.dims.count() == 1);
-    // Inherit the iterator type from the used idx.
     transItTps.push_back(itTps[collector.dims.find_first()]);
   }
 
   for (unsigned d = 0, e = idxMap.getNumDims(); d < e; d++) {
-    if (usedDims.test(d))
+    if (usedDims.test(d)) {
+      // The dimension is used in some of the inadmissible levels, and it need
+      // to be inversed. Get the inversion from the inverse map, and fix the
+      // mismatch captured by the above loop.
       results.push_back(lvl2Idx.getResult(d).replaceDims(dimRep));
-    else {
+    } else {
+      // The dimension is not used in any of the inadmissible levels, and it
+      // does not need to be inversed. Fix the mismatch by mapping it to the
+      // trailing part of the affine map (accumulated by curOriID).
       results.push_back(getAffineDimExpr(curOriID++, ctx));
       transItTps.push_back(itTps[d]);
     }
@@ -217,10 +230,9 @@ genReplaceDimToLvlMap(const InadmissInfo &info, AffineMap idxMap,
 // Translates a the index map in the linalg::GenericOp from idx->dim map to
 // idx->lvl map. Returns failure if the index map can not be translated to an
 // admissible form.
-// The funciton also update the GenericOp's index map and iterator type array
-// *in-place*.
-static LogicalResult translateMap(linalg::GenericOp op,
-                                  PatternRewriter &rewriter) {
+// Returns the translated index map array and the iterator type array.
+static std::optional<std::pair<ArrayAttr, ArrayAttr>>
+translateMap(linalg::GenericOp op, PatternRewriter &rewriter) {
   // idxMap is a idx2dim map before reinterpretation.
   MLIRContext *ctx = op.getContext();
   SmallVector<AffineMap> idxMapArray = op.getIndexingMapsArray();
@@ -276,7 +288,7 @@ static LogicalResult translateMap(linalg::GenericOp op,
         // resolve previous inadmissible expressions. We can not replace them
         // to bring back the inadmissible expressions.
         if (d < boundedNum)
-          return failure();
+          return std::nullopt;
       }
 
       if (inAdLvls.count() != 0) {
@@ -311,12 +323,8 @@ static LogicalResult translateMap(linalg::GenericOp op,
         return linalg::IteratorTypeAttr::get(ctx, itTp);
       });
 
-  rewriter.startRootUpdate(op);
-  op.setIndexingMapsAttr(rewriter.getAffineMapArrayAttr(idxMapArray));
-  op.setIteratorTypesAttr(rewriter.getArrayAttr(iterAttr));
-  rewriter.finalizeRootUpdate(op);
-
-  return success();
+  return std::make_pair(rewriter.getAffineMapArrayAttr(idxMapArray),
+                        rewriter.getArrayAttr(iterAttr));
 }
 
 // Generates a "de"mapping reinterpretation of the map.
@@ -374,20 +382,26 @@ public:
       return failure();
 
     // Try translating the index map.
-    if (failed(translateMap(linalgOp, rewriter)))
-      return failure();
+    auto transMap = translateMap(linalgOp, rewriter);
+    if (!transMap)
+      return rewriter.notifyMatchFailure(
+          linalgOp, "the sparse kernel can not be sparsified.");
 
-    // Must only have one result
+    // On success, replace update the linalg operands and maps in place.
     Value res = linalgOp.getResult(0);
     auto stt = tryGetSparseTensorType(res);
+    auto [idxMap, itTp] = *transMap;
 
     rewriter.startRootUpdate(linalgOp);
+    linalgOp.setIndexingMapsAttr(idxMap);
+    linalgOp.setIteratorTypesAttr(itTp);
+    // Use demapped arguments.
     linalgOp.getInputsMutable().assign(adaptor.getInputs());
     linalgOp.getDpsInitsMutable().assign(adaptor.getOutputs());
     res.setType(adaptor.getOutputs()[0].getType());
     rewriter.finalizeRootUpdate(linalgOp);
-    rewriter.setInsertionPointAfter(linalgOp);
 
+    rewriter.setInsertionPointAfter(linalgOp);
     if (stt && stt->hasEncoding()) {
       Value t = genRemap(rewriter, stt->getEncoding(), res);
       rewriter.replaceAllUsesExcept(res, t, t.getDefiningOp());

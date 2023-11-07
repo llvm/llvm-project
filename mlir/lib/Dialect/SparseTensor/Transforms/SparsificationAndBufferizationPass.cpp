@@ -139,8 +139,6 @@ public:
     // of `bufferization.alloc_tensor` ops.
     {
       OpPassManager pm("builtin.module");
-      // We need to reinterpret maps on GenericOp, EmptyOp, and AllocTensorOp.
-      // empty BSR
       pm.addPass(createSparseReinterpretMapPass(ReinterpretMapScope::kAll));
       pm.addPass(createSparsificationPass(sparsificationOptions));
       pm.addNestedPass<func::FuncOp>(createStageSparseOperationsPass());

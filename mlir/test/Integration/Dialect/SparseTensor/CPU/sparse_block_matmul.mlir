@@ -101,10 +101,10 @@ func.func @mul_dense(%arg0: tensor<4x4xf64>,
     %c2 = arith.constant 2 : index
 
 
-    %td = arith.constant dense<[[ 1.0, 2.0, 3.0, 4.0 ],
-                                [ 1.0, 2.0, 3.0, 4.0 ],
-                                [ 5.0, 6.0, 7.0, 8.0 ],
-                                [ 5.0, 6.0, 7.0, 8.0 ]]> : tensor<4x4xf64>
+    %td = arith.constant dense<[[ 1.0,  2.0,  3.0,  4.0],
+                                [ 5.0,  6.0,  7.0,  8.0],
+                                [ 9.0, 10.0, 11.0, 12.0],
+                                [13.0, 14.0, 15.0, 16.0]]> : tensor<4x4xf64>
 
 
     %2 = sparse_tensor.convert %td : tensor<4x4xf64> to tensor<4x4xf64, #BSR>
@@ -114,7 +114,7 @@ func.func @mul_dense(%arg0: tensor<4x4xf64>,
     %s = call @mul(%td, %2)
          : (tensor<4x4xf64>, tensor<4x4xf64, #BSR>) -> tensor<4x4xf64>
 
-    // CHECK-COUNT-2: ( ( 38, 48, 58, 68 ), ( 38, 48, 58, 68 ), ( 86, 112, 138, 164 ), ( 86, 112, 138, 164 ) )
+    // CHECK-COUNT-2: ( ( 90, 100, 110, 120 ), ( 202, 228, 254, 280 ), ( 314, 356, 398, 440 ), ( 426, 484, 542, 600 ) )
     call @dumpf64(%d) : (tensor<4x4xf64>) -> ()
     call @dumpf64(%s) : (tensor<4x4xf64>) -> ()
 
