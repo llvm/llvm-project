@@ -17609,10 +17609,10 @@ ExprResult Sema::ActOnPPEmbedExpr(SourceLocation BuiltinLoc,
   llvm::APSInt ArraySize(llvm::APInt(Context.getTypeSize(Context.getSizeType()),
                                      1, ArraySizeRawVal));
   QualType ArrayTy = Context.getConstantArrayType(ElementTy, ArraySize, nullptr,
-                                                  ArrayType::Normal, 0);
+                                                  ArraySizeModifier::Normal, 0);
   StringLiteral *BinaryDataLiteral = StringLiteral::Create(
       Context, StringRef(BinaryData.data(), BinaryData.size()),
-      StringLiteral::Ordinary, false, ArrayTy, Base64DataLocation);
+      StringLiteralKind::Ordinary, false, ArrayTy, Base64DataLocation);
   return new (Context)
       PPEmbedExpr(Context, ElementTy, Filename, BinaryDataLiteral, BuiltinLoc,
                   RPLoc, CurContext);

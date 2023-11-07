@@ -2918,7 +2918,7 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
     } else {
       StringLiteral *Base64Str = Base64ArgExpr.getAs<StringLiteral>();
       StringRef Base64StrData = Base64Str->getBytes();
-      if (Base64Str->getKind() != StringLiteral::Ordinary) {
+      if (Base64Str->getKind() != StringLiteralKind::Ordinary) {
         Diag(Base64Str->getExprLoc(), diag::err_expected_string_literal)
             << 0
             << "'__builtin_pp_embed' with valid base64 encoding that is an "
