@@ -44,6 +44,7 @@
 
 #include "mlir/ExecutionEngine/PartTensorRuntime.h"
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
+#include "mlir/ExecutionEngine/PartTensor/Storage.h"
 #include "mlir/ExecutionEngine/SparseTensorRuntime.h"
 #include <cassert>
 #include <cstdint>
@@ -309,6 +310,13 @@ void *_mlir_ciface_newPartTensor( // NOLINT
 }
 #undef CASE
 #undef CASE_SECSAME
+
+void _mlir_ciface_getPartitions( // NOLINT
+    StridedMemRefType<index_type, 1> *partsMemRef, void *tensor) {
+  std::vector<index_type> *parts;
+  static_cast<PartTensorStorageBase *>(tensor)->getPartitions(&parts);
+  aliasIntoMemref(parts->size(), parts->data(), *partsMemRef);
+}
 } // extern "C"
 
 #undef MEMREF_GET_PAYLOAD

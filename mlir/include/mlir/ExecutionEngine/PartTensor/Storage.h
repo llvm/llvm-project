@@ -74,6 +74,7 @@ using PartitionPlan = std::vector<PartSpec<num_dims, indexTy, PartPointTy>>;
 class PartTensorStorageBase {
 public:
   virtual ~PartTensorStorageBase() = default;
+  virtual void getPartitions(std::vector<index_type> **) = 0;
 };
 
 /// A memory-resident sparse tensor using a storage scheme based on
@@ -93,19 +94,21 @@ class PartTensorStorage : public PartTensorStorageBase {
 public:
   /// The called is resposible to keep spCOO alive for the lifetime of this
   /// partTensor.
-  PartTensorStorage(uint64_t nParts, const uint64_t *partSize,
+  PartTensorStorage(uint64_t nParts, const uint64_t *partDataPtr,
                     std::vector<unique_ptr<SparseTensorCOO<V>>> &&spCOO)
-      : partSize(partSize, partSize + nParts), parts(std::move(spCOO)) {}
+      : partData(partDataPtr, partDataPtr + nParts), parts(std::move(spCOO)) {}
 
   static PartTensorStorage<P, I, V> *
   newFromCOO(uint64_t nParts, const uint64_t *partData, uint64_t dimRank,
              const uint64_t *dimShape, const SparseTensorCOO<V> *spCOO);
 
   ~PartTensorStorage() = default;
-  auto &getParts() const { return parts; }
+  void getPartitions(std::vector<index_type> **partData) override {
+    *partData = &this->partData;
+  }
 
 protected:
-  const std::vector<uint64_t> partSize;
+  std::vector<index_type> partData;
   const std::vector<unique_ptr<SparseTensorCOO<V>>> parts;
 };
 
