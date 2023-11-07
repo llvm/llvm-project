@@ -590,15 +590,15 @@ public:
   }
 
   bool dataTraverseStmtPre(Stmt *S) {
-    // Do not show inlay hints for PseudoObjectExprs. They're never
-    // genuine user codes.
-    //
-    // For example, __builtin_dump_struct would expand to a PseudoObjectExpr
-    // that includes a couple of calls to a printf function. Printing parameter
-    // names for that anyway would end up with duplicate parameter names (which,
-    // however, got de-duplicated after visiting) for the printf function.
-    if (isa<PseudoObjectExpr>(S))
-      return false;
+    // Do not show inlay hints for the __builtin_dump_struct, which would expand
+    // to a PseudoObjectExpr that includes a couple of calls to a printf
+    // function. Printing parameter names for that anyway would end up with
+    // duplicate parameter names (which, however, got de-duplicated after
+    // visiting) for the printf function.
+    if (auto *POE = dyn_cast<PseudoObjectExpr>(S))
+      if (auto *CE = dyn_cast<CallExpr>(POE->getSyntacticForm());
+          CE && CE->getBuiltinCallee() == Builtin::BI__builtin_dump_struct)
+        return false;
     return true;
   }
 
