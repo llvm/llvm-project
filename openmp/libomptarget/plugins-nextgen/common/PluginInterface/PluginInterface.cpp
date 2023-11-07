@@ -515,14 +515,19 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   llvm::SmallVector<void *, 16> Args;
   llvm::SmallVector<void *, 16> Ptrs;
 
-  auto KernelLaunchEnvOrErr =
-      getKernelLaunchEnvironment(GenericDevice, AsyncInfoWrapper);
-  if (!KernelLaunchEnvOrErr)
-    return KernelLaunchEnvOrErr.takeError();
+  KernelLaunchEnvironmentTy *KLE = nullptr;
+  // Specialized kernels don't use the kernel launch environment.
+  if (!isBigJumpLoopMode() && !isNoLoopMode() && !isXTeamReductionsMode()) {
+    auto KernelLaunchEnvOrErr =
+        getKernelLaunchEnvironment(GenericDevice, AsyncInfoWrapper);
+    if (!KernelLaunchEnvOrErr)
+      return KernelLaunchEnvOrErr.takeError();
+    KLE = *KernelLaunchEnvOrErr;
+  }
 
   void *KernelArgsPtr =
       prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.Version,
-                  KernelArgs.NumArgs, Args, Ptrs, *KernelLaunchEnvOrErr);
+                  KernelArgs.NumArgs, Args, Ptrs, KLE);
 
   uint32_t NumThreads = getNumThreads(GenericDevice, KernelArgs.ThreadLimit);
 
