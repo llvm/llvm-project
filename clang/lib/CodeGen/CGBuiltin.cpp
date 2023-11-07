@@ -20335,6 +20335,10 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
 
     return Builder.CreateCall(Callee, {TableX, TableY, SrcIdx, DstIdx, NElems});
   }
+  case WebAssembly::BI__builtin_wasm_memory_randomtag: {
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomtag);
+    return Builder.CreateCall(Callee);
+  }
   default:
     return nullptr;
   }
