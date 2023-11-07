@@ -118,7 +118,6 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    jne .LBB0_22
 ; CHECK-NEXT:  # %bb.23: # %for.cond47
 ; CHECK-NEXT:    # in Loop: Header=BB0_22 Depth=2
-; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB0_22
 ; CHECK-NEXT:  .LBB0_9: # %ae
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
