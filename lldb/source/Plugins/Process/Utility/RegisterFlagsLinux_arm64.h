@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERFLAGSLINUX_ARM64_H
 
 #include "lldb/Target/RegisterFlags.h"
+#include "llvm/ADT/StringRef.h"
 #include <functional>
 
 namespace lldb_private {
@@ -57,11 +58,11 @@ private:
   static Fields DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2);
 
   struct RegisterEntry {
-    RegisterEntry(const char *name, unsigned size, DetectorFn detector)
+    RegisterEntry(llvm::StringRef name, unsigned size, DetectorFn detector)
         : m_name(name), m_flags(std::string(name) + "_flags", size, {{"", 0}}),
           m_detector(detector) {}
 
-    const char *m_name;
+    llvm::StringRef m_name;
     RegisterFlags m_flags;
     DetectorFn m_detector;
   } m_registers[1] = {
