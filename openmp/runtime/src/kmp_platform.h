@@ -23,6 +23,7 @@
 #define KMP_OS_DARWIN 0
 #define KMP_OS_WINDOWS 0
 #define KMP_OS_HURD 0
+#define KMP_OS_SOLARIS 0
 #define KMP_OS_UNIX 0 /* disjunction of KMP_OS_LINUX, KMP_OS_DARWIN etc. */
 
 #ifdef _WIN32
@@ -70,13 +71,19 @@
 #define KMP_OS_HURD 1
 #endif
 
+#if (defined __sun__ && defined __svr4__)
+#undef KMP_OS_SOLARIS
+#define KMP_OS_SOLARIS 1
+#endif
+
 #if (1 != KMP_OS_LINUX + KMP_OS_DRAGONFLY + KMP_OS_FREEBSD + KMP_OS_NETBSD +   \
-              KMP_OS_OPENBSD + KMP_OS_DARWIN + KMP_OS_WINDOWS + KMP_OS_HURD)
+              KMP_OS_OPENBSD + KMP_OS_DARWIN + KMP_OS_WINDOWS + KMP_OS_HURD +  \
+              KMP_OS_SOLARIS)
 #error Unknown OS
 #endif
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_DARWIN || KMP_OS_HURD
+    KMP_OS_OPENBSD || KMP_OS_DARWIN || KMP_OS_HURD || KMP_OS_SOLARIS
 #undef KMP_OS_UNIX
 #define KMP_OS_UNIX 1
 #endif
