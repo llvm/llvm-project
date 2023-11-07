@@ -90,7 +90,7 @@ public:
 
   typedef std::vector<lldb_private::RegisterInfo> reg_collection;
 
-  template <typename T> T registers();
+  template <typename T> T registers() = delete;
 
   typedef llvm::iterator_range<reg_collection::const_iterator>
       reg_collection_const_range;
