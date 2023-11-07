@@ -168,7 +168,7 @@ PartTensorStorage<P, I, V> *PartTensorStorage<P, I, V>::newFromCOO(
       }
     });
   }
-  return new PartTensorStorage<P, I, V>(numPartitions, partData,
+  return new PartTensorStorage<P, I, V>(partDataLength, partData,
                                         std::move(parts));
 }
 
