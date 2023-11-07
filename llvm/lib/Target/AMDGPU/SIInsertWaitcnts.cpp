@@ -394,6 +394,7 @@ private:
   DenseSet<MachineInstr *> ReleaseVGPRInsts;
 
   bool insertWaitcntAfterMemOp(MachineFunction &MF);
+
 public:
   static char ID;
 
@@ -1630,7 +1631,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     bool FlushVmCnt = Block.getFirstTerminator() == Inst &&
                       isPreheaderToFlush(Block, ScoreBrackets);
-
 
     // Generate an s_waitcnt instruction to be placed before Inst, if needed.
     Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr,
