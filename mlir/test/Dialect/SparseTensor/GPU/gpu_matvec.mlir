@@ -10,12 +10,12 @@
 //
 // CHECK-LABEL: gpu.module @sparse_kernels
 // CHECK:       gpu.func @kernel0(
-// CHECK-SAME:          %[[VAL_0:.*0]]: index,
-// CHECK-SAME:          %[[VAL_1:.*1]]: memref<?xf64>,
-// CHECK-SAME:          %[[VAL_2:.*2]]: memref<?xindex>,
-// CHECK-SAME:          %[[VAL_3:.*3]]: memref<?xindex>,
-// CHECK-SAME:          %[[VAL_4:.*4]]: memref<?xf64>,
-// CHECK-SAME:          %[[VAL_5:.*5]]: memref<?xf64>) kernel {
+// CHECK-SAME:    %[[VAL_0:.*0]]: index,
+// CHECK-SAME:    %[[VAL_1:.*1]]: memref<?xf64>,
+// CHECK-SAME:    %[[VAL_2:.*2]]: memref<?xindex>,
+// CHECK-SAME:    %[[VAL_3:.*3]]: memref<?xindex>,
+// CHECK-SAME:    %[[VAL_4:.*4]]: memref<?xf64>,
+// CHECK-SAME:    %[[VAL_5:.*5]]: memref<?xf64>) kernel {
 // CHECK:         %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK:         %[[VAL_7:.*]] = gpu.block_id  x
 // CHECK:         %[[VAL_8:.*]] = gpu.block_dim  x
