@@ -114,9 +114,7 @@ protected:
 
     bool isFirst() const {
       return Link.is<KnownLatest>() ||
-             // FIXME: 'template' is required on the next line due to an
-             // apparent clang bug.
-             Link.get<NotKnownLatest>().template is<UninitializedLatest>();
+             Link.get<NotKnownLatest>().is<UninitializedLatest>();
     }
 
     decl_type *getPrevious(const decl_type *D) const {
