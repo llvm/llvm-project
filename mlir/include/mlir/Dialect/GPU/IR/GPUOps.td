@@ -733,10 +733,13 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     static StringRef getDynamicSharedMemorySizeConstantKeyword() { 
       return "dynamicSharedMemorySizeConstant"; 
     }
-
-    static int getDynamicSharedMemorySizeDynamicValue() { 
+    
+    /// Returns dynamic value of the dynamic shared memory size. This is used 
+    /// if dynamic_shared_memory_size is SSA value
+    static uint32_t getDynamicSharedMemorySizeDynamicValue() { 
       return std::numeric_limits<uint32_t>::max(); 
     }
+    
     /// Returns a value of the dynamic shared memory size. 
     /// If it is a constant, it builds one
     mlir::OpFoldResult getDynamicSharedMemorySizeValue(OpBuilder &b) { 
