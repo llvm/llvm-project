@@ -848,7 +848,7 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
 
   // Clone them onto the second marker -- should allocate new DPVs.
   RetInst->DbgMarker->cloneDebugInfoFrom(FirstInst->DbgMarker, std::nullopt, false);
-  EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 2);
+  EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 2u);
   ItCount = 0;
   // Check these things store the same information; but that they're not the same
   // objects.
@@ -863,12 +863,12 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
   }
 
   RetInst->DbgMarker->dropDPValues();
-  EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 0);
+  EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 0u);
 
   // Try cloning one single DPValue.
   auto DIIt = std::next(FirstInst->DbgMarker->getDbgValueRange().begin());
   RetInst->DbgMarker->cloneDebugInfoFrom(FirstInst->DbgMarker, DIIt, false);
-  EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 1);
+  EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 1u);
   // The second DPValue should have been cloned; it should have the same values
   // as DPV1.
   EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.begin()->getRawLocation(),
@@ -879,7 +879,7 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
   // "Aborb" a DPMarker: this means pretend that the instruction it's attached
   // to is disappearing so it needs to be transferred into "this" marker.
   RetInst->DbgMarker->absorbDebugValues(*FirstInst->DbgMarker, true);
-  EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 2);
+  EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 2u);
   // Should be the DPV1 and DPV2 objects.
   ItCount = 0;
   for (DPValue &Item : RetInst->DbgMarker->getDbgValueRange()) {
@@ -900,7 +900,7 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
 
   DPMarker *EndMarker = ExitBlock->getTrailingDPValues();
   ASSERT_NE(EndMarker, nullptr);
-  EXPECT_EQ(EndMarker->StoredDPValues.size(), 2);
+  EXPECT_EQ(EndMarker->StoredDPValues.size(), 2u);
   // Test again that it's those two DPValues, DPV1 and DPV2.
   ItCount = 0;
   for (DPValue &Item : EndMarker->getDbgValueRange()) {
@@ -981,7 +981,7 @@ TEST(MetadataTest, DPValueConversionRoutines) {
 
   // There should be a DPMarker on each of the two instructions in the entry
   // block, each containing one DPValue.
-  EXPECT_EQ(BB1->size(), 2);
+  EXPECT_EQ(BB1->size(), 2u);
   Instruction *FirstInst = &BB1->front();
   Instruction *SecondInst = FirstInst->getNextNode();
   ASSERT_TRUE(FirstInst->DbgMarker);
@@ -990,13 +990,13 @@ TEST(MetadataTest, DPValueConversionRoutines) {
   EXPECT_EQ(FirstInst, FirstInst->DbgMarker->MarkedInstr);
   EXPECT_EQ(SecondInst, SecondInst->DbgMarker->MarkedInstr);
 
-  EXPECT_EQ(FirstInst->DbgMarker->StoredDPValues.size(), 1);
+  EXPECT_EQ(FirstInst->DbgMarker->StoredDPValues.size(), 1u);
   DPValue *DPV1 = &*FirstInst->DbgMarker->getDbgValueRange().begin();
   EXPECT_EQ(DPV1->getMarker(), FirstInst->DbgMarker);
   // Should point at %a, an argument.
   EXPECT_TRUE(isa<Argument>(DPV1->getVariableLocationOp(0)));
 
-  EXPECT_EQ(SecondInst->DbgMarker->StoredDPValues.size(), 1);
+  EXPECT_EQ(SecondInst->DbgMarker->StoredDPValues.size(), 1u);
   DPValue *DPV2 = &*SecondInst->DbgMarker->getDbgValueRange().begin();
   EXPECT_EQ(DPV2->getMarker(), SecondInst->DbgMarker);
   // Should point at FirstInst.
@@ -1031,7 +1031,7 @@ TEST(MetadataTest, DPValueConversionRoutines) {
   EXPECT_FALSE(F->IsNewDbgInfoFormat);
   EXPECT_FALSE(BB1->IsNewDbgInfoFormat);
 
-  EXPECT_EQ(BB1->size(), 4);
+  EXPECT_EQ(BB1->size(), 4u);
   ASSERT_TRUE(isa<DbgValueInst>(BB1->front()));
   DbgValueInst *DVI1 = cast<DbgValueInst>(&BB1->front());
   // These dbg.values should still point at the same places.
