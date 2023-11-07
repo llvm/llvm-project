@@ -332,12 +332,15 @@ void RegisterBankEmitter::emitRBIImplementation(
     for (const CodeGenRegisterClass *RC :
          Bank.getExplicitlySpecifiedRegisterClasses(RegisterClassHierarchy)) {
       if (RC->RSI.isSimple()) {
-        // StartIdx is currently 0 in all of the in-tree backends
-        OS << "  { 0, " << RC->RSI.getSimple().RegSize << ", "
-           << Bank.getInstanceVarName() << " },\n";
+        if (RC->getValueTypes()[0].getSimple() != MVT::Untyped) {
+          // StartIdx is currently 0 in all of the in-tree backends
+          OS << "  { 0, " << RC->RSI.getSimple().RegSize << ", "
+             << Bank.getInstanceVarName() << " },\n";
+        } else {
+          OS << "  #error Untyped RegisterClass " << RC->getName() << "\n";
+        }
       } else {
-        // FIXME: dumb workaround for RISCV assert() for now
-        OS << " // non-Simple() RegisterClass " << RC->getName() << "\n";
+        OS << "  #error non-Simple() RegisterClass " << RC->getName() << "\n";
       }
     }
   }
