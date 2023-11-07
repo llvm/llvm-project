@@ -12,7 +12,6 @@
 #include "src/string/memory_utils/op_generic.h"
 #include "src/string/memory_utils/op_x86.h"
 #include "src/string/memory_utils/utils.h" // Ptr, CPtr
-#include "third_party/llvm/llvm-project/libc/src/string/memory_utils/inline_memcpy.h"
 
 #include <stddef.h> // size_t
 
