@@ -228,9 +228,6 @@ protected:
 
   bool SectionIsLoadable(const lldb_private::Section *section);
 
-  llvm::StringRef
-  GetReflectionSectionIdentifier(swift::ReflectionSectionKind section) override;
-
   /// A corefile may include metadata about all of the binaries that were
   /// present in the process when the corefile was taken.  This is only
   /// implemented for Mach-O files for now; we'll generalize it when we

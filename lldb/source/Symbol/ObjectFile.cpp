@@ -732,13 +732,6 @@ void llvm::format_provider<ObjectFile::Strata>::format(
   }
 }
 
-llvm::StringRef ObjectFile::GetReflectionSectionIdentifier(
-    swift::ReflectionSectionKind section) {
-  assert(false &&
-         "Base class's GetReflectionSectionIdentifier should not be called");
-  return "";
-}
-
 Symtab *ObjectFile::GetSymtab() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {

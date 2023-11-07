@@ -398,9 +398,6 @@ private:
   /// .gnu_debugdata section or \c nullptr if an error occured or if there's no
   /// section with that name.
   std::shared_ptr<ObjectFileELF> GetGnuDebugDataObjectFile();
-
-  llvm::StringRef
-  GetReflectionSectionIdentifier(swift::ReflectionSectionKind section) override;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_OBJECTFILEELF_H
