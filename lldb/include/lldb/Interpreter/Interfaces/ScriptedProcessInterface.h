@@ -26,10 +26,6 @@ public:
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) = 0;
 
-  llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const override {
-    return {};
-  }
-
   virtual StructuredData::DictionarySP GetCapabilities() { return {}; }
 
   virtual Status Attach(const ProcessAttachInfo &attach_info) {
