@@ -15,7 +15,7 @@ namespace mlir {
 namespace partition {
 
 /// Sets up sparsification conversion rules with the given options.
-void populateSparsificationConversionPatterns(RewritePatternSet &patterns);
+void populatePartTensorConversionPatterns(RewritePatternSet &patterns);
 
 } // namespace partition
 } // namespace mlir

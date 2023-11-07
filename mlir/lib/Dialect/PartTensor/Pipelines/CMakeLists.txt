@@ -6,4 +6,7 @@ add_mlir_dialect_library(MLIRPartTensorPipelines
 
   LINK_LIBS PUBLIC
   MLIRSparseTensorPipelines
+  MLIRPartTensor
+  MLIRPartTensorTransforms
+  MLIRPartTensorToLLVM
 )

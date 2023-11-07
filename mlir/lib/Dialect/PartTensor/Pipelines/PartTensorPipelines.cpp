@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/PartTensor/Pipelines/Passes.h"
-#include "mlir/Dialect/SparseTensor/Pipelines/Passes.h"
+#include "mlir/Dialect/PartTensor/Transforms/Passes.h"
 
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/Passes.h"
@@ -57,6 +57,8 @@ getBufferizationOptions(bool analysisOnly) {
 
 void mlir::part_tensor::buildSparseCompiler(
     OpPassManager &pm, const SparseCompilerOptions &options) {
+  pm.addPass(createConvertFuncToLLVMPass());
+  pm.addPass(createPartTensorConversionPass());
   pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
   pm.addPass(createSparsificationAndBufferizationPass(
       getBufferizationOptions(options.testBufferizationAnalysisOnly),
@@ -98,7 +100,6 @@ void mlir::part_tensor::buildSparseCompiler(
   pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
   pm.addPass(createConvertComplexToLLVMPass());
   pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
-  pm.addPass(createConvertFuncToLLVMPass());
 
   // Finalize GPU code generation.
   if (gpuCodegen) {
