@@ -244,7 +244,7 @@ void DataflowAnalysisContext::dumpFlowCondition(Atom Token,
   }
   if (!Info.EquivalentAtoms.empty()) {
     OS << "Equivalent atoms:\n";
-    for (const llvm::SmallVector<Atom> Class : Info.EquivalentAtoms)
+    for (const llvm::SmallVector<Atom> &Class : Info.EquivalentAtoms)
       printAtomList(Class, OS);
   }
 
