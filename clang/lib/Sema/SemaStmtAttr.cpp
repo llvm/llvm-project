@@ -352,27 +352,26 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
 }
 
 // Emit duplicate error for [[clang::code_align()]] attribute.
-static void
-CheckForDuplicateCodeAlignAttrs(Sema &S,
-                                ArrayRef<const Attr *> Attrs) {
+static void CheckForDuplicateCodeAlignAttrs(Sema &S,
+                                            ArrayRef<const Attr *> Attrs) {
   // Create a list of CodeAlign attributes only.
   SmallVector<const CodeAlignAttr *, 8> OnlyCodeAlignAttrs;
   llvm::transform(
-      Attrs, std::back_inserter(OnlyCodeAlignAttrs), [](const Attr *A) {
-        return dyn_cast_or_null<const CodeAlignAttr>(A);
-      });
-  OnlyCodeAlignAttrs.erase(
-      std::remove(OnlyCodeAlignAttrs.begin(), OnlyCodeAlignAttrs.end(),
-                  static_cast<CodeAlignAttr *>(nullptr)),
-      OnlyCodeAlignAttrs.end());
+      Attrs, std::back_inserter(OnlyCodeAlignAttrs),
+      [](const Attr *A) { return dyn_cast_or_null<const CodeAlignAttr>(A); });
+  OnlyCodeAlignAttrs.erase(std::remove(OnlyCodeAlignAttrs.begin(),
+                                       OnlyCodeAlignAttrs.end(),
+                                       static_cast<CodeAlignAttr *>(nullptr)),
+                           OnlyCodeAlignAttrs.end());
+
   if (OnlyCodeAlignAttrs.empty())
     return;
 
   for (const auto *I : OnlyCodeAlignAttrs) {
     const auto *OtherAttrItr =
-    llvm::find_if(OnlyCodeAlignAttrs, [](const CodeAlignAttr *A) {
-      return isa<CodeAlignAttr>(A);
-    });
+        llvm::find_if(OnlyCodeAlignAttrs, [](const CodeAlignAttr *A) {
+          return isa<CodeAlignAttr>(A);
+        });
 
     const CodeAlignAttr *OtherAttr =
         OtherAttrItr == OnlyCodeAlignAttrs.end() ? nullptr : *OtherAttrItr;
