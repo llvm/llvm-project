@@ -1082,6 +1082,11 @@ Expected<bool> parseMemorySSAPrinterPassOptions(StringRef Params) {
                                "MemorySSAPrinterPass");
 }
 
+Expected<bool> parseSpeculativeExecutionPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "only-if-divergent-target",
+                               "SpeculativeExecutionPass");
+}
+
 Expected<std::string> parseMemProfUsePassOptions(StringRef Params) {
   std::string Result;
   while (!Params.empty()) {

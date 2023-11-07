@@ -142,3 +142,10 @@ SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref) {
     return DebugInfo().GetDIE(die_ref);
   return GetBaseSymbolFile().GetDIE(die_ref);
 }
+
+void SymbolFileDWARFDwo::FindGlobalVariables(
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
+    uint32_t max_matches, VariableList &variables) {
+  GetBaseSymbolFile().FindGlobalVariables(name, parent_decl_ctx, max_matches,
+                                          variables);
+}
