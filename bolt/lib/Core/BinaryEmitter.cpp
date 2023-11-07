@@ -469,13 +469,6 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         continue;
 
       // Handle pseudo instructions.
-      if (BC.MIB->isEHLabel(Instr)) {
-        const MCSymbol *Label = BC.MIB->getTargetSymbol(Instr);
-        assert(Instr.getNumOperands() >= 1 && Label &&
-               "bad EH_LABEL instruction");
-        Streamer.emitLabel(const_cast<MCSymbol *>(Label));
-        continue;
-      }
       if (BC.MIB->isCFI(Instr)) {
         emitCFIInstruction(*BF.getCFIFor(Instr));
         continue;

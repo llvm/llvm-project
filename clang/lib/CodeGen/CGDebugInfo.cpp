@@ -1728,22 +1728,13 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
 
   unsigned LineNumber = getLineNumber(Var->getLocation());
   StringRef VName = Var->getName();
-  llvm::Constant *C = nullptr;
-  if (Var->getInit()) {
-    const APValue *Value = Var->evaluateValue();
-    if (Value) {
-      if (Value->isInt())
-        C = llvm::ConstantInt::get(CGM.getLLVMContext(), Value->getInt());
-      if (Value->isFloat())
-        C = llvm::ConstantFP::get(CGM.getLLVMContext(), Value->getFloat());
-    }
-  }
 
   llvm::DINode::DIFlags Flags = getAccessFlag(Var->getAccess(), RD);
   auto Align = getDeclAlignIfRequired(Var, CGM.getContext());
   llvm::DIDerivedType *GV = DBuilder.createStaticMemberType(
-      RecordTy, VName, VUnit, LineNumber, VTy, Flags, C, Align);
+      RecordTy, VName, VUnit, LineNumber, VTy, Flags, /* Val */ nullptr, Align);
   StaticDataMemberCache[Var->getCanonicalDecl()].reset(GV);
+  StaticDataMemberDefinitionsToEmit.push_back(Var->getCanonicalDecl());
   return GV;
 }
 
@@ -6151,6 +6142,44 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
   GV.reset(DGV);
 }
 
+void CGDebugInfo::EmitGlobalVariable(const VarDecl *VD) {
+  // FIXME: Implement for heterogeneous debug info
+  if (CGM.getCodeGenOpts().HeterogeneousDwarf)
+    return;
+
+  assert(VD->hasInit());
+  assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
+  if (VD->hasAttr<NoDebugAttr>())
+    return;
+
+  auto &GV = DeclCache[VD];
+  if (GV)
+    return;
+
+  auto const *InitVal = VD->evaluateValue();
+  if (!InitVal)
+    return;
+
+  llvm::DIFile *Unit = nullptr;
+  llvm::DIScope *DContext = nullptr;
+  unsigned LineNo;
+  StringRef DeclName, LinkageName;
+  QualType T;
+  llvm::MDTuple *TemplateParameters = nullptr;
+  collectVarDeclProps(VD, Unit, LineNo, T, DeclName, LinkageName,
+                      TemplateParameters, DContext);
+
+  auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
+  llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(VD);
+  llvm::DIExpression *InitExpr = createConstantValueExpression(VD, *InitVal);
+  llvm::dwarf::MemorySpace MS = getDWARFMemorySpace(VD);
+
+  GV.reset(DBuilder.createGlobalVariableExpression(
+      TheCU, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
+      true, true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VD),
+      TemplateParameters, MS, Align, Annotations));
+}
+
 void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
                                        const VarDecl *D) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
@@ -6424,6 +6453,18 @@ void CGDebugInfo::finalize() {
     if (auto *GVE = dyn_cast_or_null<llvm::DIGlobalVariableExpression>(Repl))
       Repl = GVE->getVariable();
     DBuilder.replaceTemporary(std::move(FwdDecl), cast<llvm::MDNode>(Repl));
+  }
+
+  for (auto const *VD : StaticDataMemberDefinitionsToEmit) {
+    assert(VD->isStaticDataMember());
+
+    if (DeclCache.contains(VD))
+      continue;
+
+    if (!VD->hasInit())
+      continue;
+
+    EmitGlobalVariable(VD);
   }
 
   // We keep our own list of retained types, because we need to look
