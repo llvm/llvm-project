@@ -352,17 +352,33 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
 }
 
 // Emit duplicate error for [[clang::code_align()]] attribute.
-static void CheckForDuplicateCodeAlignAttribute(
-    Sema &S, const SmallVectorImpl<const Attr *> &Attrs) {
-  const Attr *A = nullptr;
-  for (const auto *I : Attrs) {
-    if (isa<CodeAlignAttr>(I)) {
-      if (A) {
-        // Cannot specify same type of attribute twice.
-        S.Diag(I->getLocation(), diag::err_loop_attr_duplication) << A;
-        S.Diag(A->getLocation(), diag::note_previous_attribute);
-      }
-      A = I;
+static void
+CheckForDuplicateCodeAlignAttrs(Sema &S,
+                                ArrayRef<const Attr *> Attrs) {
+  // Create a list of CodeAlign attributes only.
+  SmallVector<const CodeAlignAttr *, 8> OnlyCodeAlignAttrs;
+  llvm::transform(
+      Attrs, std::back_inserter(OnlyCodeAlignAttrs), [](const Attr *A) {
+        return dyn_cast_or_null<const CodeAlignAttr>(A);
+      });
+  OnlyCodeAlignAttrs.erase(
+      std::remove(OnlyCodeAlignAttrs.begin(), OnlyCodeAlignAttrs.end(),
+                  static_cast<CodeAlignAttr *>(nullptr)),
+      OnlyCodeAlignAttrs.end());
+  if (OnlyCodeAlignAttrs.empty())
+    return;
+
+  for (const auto *I : OnlyCodeAlignAttrs) {
+    const auto *OtherAttrItr =
+    llvm::find_if(OnlyCodeAlignAttrs, [](const CodeAlignAttr *A) {
+      return isa<CodeAlignAttr>(A);
+    });
+
+    const CodeAlignAttr *OtherAttr =
+        OtherAttrItr == OnlyCodeAlignAttrs.end() ? nullptr : *OtherAttrItr;
+    if (OtherAttr != I) {
+      S.Diag(I->getLocation(), diag::err_loop_attr_duplication) << OtherAttr;
+      S.Diag(OtherAttr->getLocation(), diag::note_previous_attribute);
     }
   }
 }
