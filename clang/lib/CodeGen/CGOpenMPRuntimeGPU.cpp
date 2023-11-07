@@ -90,18 +90,6 @@ public:
   ~ExecutionRuntimeModesRAII() { ExecMode = SavedExecMode; }
 };
 
-/// GPU Configuration:  This information can be derived from cuda registers,
-/// however, providing compile time constants helps generate more efficient
-/// code.  For all practical purposes this is fine because the configuration
-/// is the same for all known NVPTX architectures.
-enum MachineConfiguration : unsigned {
-  /// See "llvm/Frontend/OpenMP/OMPGridValues.h" for various related target
-  /// specific Grid Values like GV_Warp_Size, GV_Slot_Size
-
-  /// Global memory alignment for performance.
-  GlobalMemoryAlignment = 128,
-};
-
 static const ValueDecl *getPrivateItem(const Expr *RefExpr) {
   RefExpr = RefExpr->IgnoreParens();
   if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(RefExpr)) {
@@ -124,31 +112,23 @@ static const ValueDecl *getPrivateItem(const Expr *RefExpr) {
   return cast<ValueDecl>(ME->getMemberDecl()->getCanonicalDecl());
 }
 
-
 static RecordDecl *buildRecordForGlobalizedVars(
     ASTContext &C, ArrayRef<const ValueDecl *> EscapedDecls,
     ArrayRef<const ValueDecl *> EscapedDeclsForTeams,
     llvm::SmallDenseMap<const ValueDecl *, const FieldDecl *>
-        &MappedDeclsFields, int BufSize) {
+        &MappedDeclsFields,
+    int BufSize) {
   using VarsDataTy = std::pair<CharUnits /*Align*/, const ValueDecl *>;
   if (EscapedDecls.empty() && EscapedDeclsForTeams.empty())
     return nullptr;
   SmallVector<VarsDataTy, 4> GlobalizedVars;
   for (const ValueDecl *D : EscapedDecls)
-    GlobalizedVars.emplace_back(
-        CharUnits::fromQuantity(std::max(
-            C.getDeclAlign(D).getQuantity(),
-            static_cast<CharUnits::QuantityType>(GlobalMemoryAlignment))),
-        D);
+    GlobalizedVars.emplace_back(C.getDeclAlign(D), D);
   for (const ValueDecl *D : EscapedDeclsForTeams)
     GlobalizedVars.emplace_back(C.getDeclAlign(D), D);
-  llvm::stable_sort(GlobalizedVars, [](VarsDataTy L, VarsDataTy R) {
-    return L.first > R.first;
-  });
 
   // Build struct _globalized_locals_ty {
-  //         /*  globalized vars  */[WarSize] align (max(decl_align,
-  //         GlobalMemoryAlignment))
+  //         /*  globalized vars  */[WarSize] align (decl_align)
   //         /*  globalized vars  */ for EscapedDeclsForTeams
   //       };
   RecordDecl *GlobalizedRD = C.buildImplicitRecord("_globalized_locals_ty");
@@ -187,9 +167,7 @@ static RecordDecl *buildRecordForGlobalizedVars(
           /*BW=*/nullptr, /*Mutable=*/false,
           /*InitStyle=*/ICIS_NoInit);
       Field->setAccess(AS_public);
-      llvm::APInt Align(32, std::max(C.getDeclAlign(VD).getQuantity(),
-                                     static_cast<CharUnits::QuantityType>(
-                                         GlobalMemoryAlignment)));
+      llvm::APInt Align(32, Pair.first.getQuantity());
       Field->addAttr(AlignedAttr::CreateImplicit(
           C, /*IsAlignmentExpr=*/true,
           IntegerLiteral::Create(C, Align,
@@ -1769,11 +1747,6 @@ enum CopyAction : unsigned {
   RemoteLaneToThread,
   // ThreadCopy: Make a copy of a Reduce list on the thread's stack.
   ThreadCopy,
-  // ThreadToScratchpad: Copy a team-reduced array to the scratchpad.
-  ThreadToScratchpad,
-  // ScratchpadToThread: Copy from a scratchpad array in global memory
-  // containing team-reduced data to a thread's stack.
-  ScratchpadToThread,
 };
 } // namespace
 
@@ -1795,13 +1768,10 @@ static void emitReductionListCopy(
   CGBuilderTy &Bld = CGF.Builder;
 
   llvm::Value *RemoteLaneOffset = CopyOptions.RemoteLaneOffset;
-  llvm::Value *ScratchpadIndex = CopyOptions.ScratchpadIndex;
-  llvm::Value *ScratchpadWidth = CopyOptions.ScratchpadWidth;
 
   // Iterates, element-by-element, through the source Reduce list and
   // make a copy.
   unsigned Idx = 0;
-  unsigned Size = Privates.size();
   for (const Expr *Private : Privates) {
     Address SrcElementAddr = Address::invalid();
     Address DestElementAddr = Address::invalid();
@@ -1811,10 +1781,6 @@ static void emitReductionListCopy(
     // Set to true to update the pointer in the dest Reduce list to a
     // newly created element.
     bool UpdateDestListPtr = false;
-    // Increment the src or dest pointer to the scratchpad, for each
-    // new element.
-    bool IncrScratchpadSrc = false;
-    bool IncrScratchpadDest = false;
     QualType PrivatePtrType = C.getPointerType(Private->getType());
     llvm::Type *PrivateLlvmPtrType = CGF.ConvertType(PrivatePtrType);
 
@@ -1848,49 +1814,6 @@ static void emitReductionListCopy(
       DestElementAddr = CGF.EmitLoadOfPointer(
           DestElementPtrAddr.withElementType(PrivateLlvmPtrType),
           PrivatePtrType->castAs<PointerType>());
-      break;
-    }
-    case ThreadToScratchpad: {
-      // Step 1.1: Get the address for the src element in the Reduce list.
-      Address SrcElementPtrAddr = Bld.CreateConstArrayGEP(SrcBase, Idx);
-      SrcElementAddr = CGF.EmitLoadOfPointer(
-          SrcElementPtrAddr.withElementType(PrivateLlvmPtrType),
-          PrivatePtrType->castAs<PointerType>());
-
-      // Step 1.2: Get the address for dest element:
-      // address = base + index * ElementSizeInChars.
-      llvm::Value *ElementSizeInChars = CGF.getTypeSize(Private->getType());
-      llvm::Value *CurrentOffset =
-          Bld.CreateNUWMul(ElementSizeInChars, ScratchpadIndex);
-      llvm::Value *ScratchPadElemAbsolutePtrVal =
-          Bld.CreateNUWAdd(DestBase.getPointer(), CurrentOffset);
-      ScratchPadElemAbsolutePtrVal =
-          Bld.CreateIntToPtr(ScratchPadElemAbsolutePtrVal, CGF.VoidPtrTy);
-      DestElementAddr = Address(ScratchPadElemAbsolutePtrVal, CGF.Int8Ty,
-                                C.getTypeAlignInChars(Private->getType()));
-      IncrScratchpadDest = true;
-      break;
-    }
-    case ScratchpadToThread: {
-      // Step 1.1: Get the address for the src element in the scratchpad.
-      // address = base + index * ElementSizeInChars.
-      llvm::Value *ElementSizeInChars = CGF.getTypeSize(Private->getType());
-      llvm::Value *CurrentOffset =
-          Bld.CreateNUWMul(ElementSizeInChars, ScratchpadIndex);
-      llvm::Value *ScratchPadElemAbsolutePtrVal =
-          Bld.CreateNUWAdd(SrcBase.getPointer(), CurrentOffset);
-      ScratchPadElemAbsolutePtrVal =
-          Bld.CreateIntToPtr(ScratchPadElemAbsolutePtrVal, CGF.VoidPtrTy);
-      SrcElementAddr = Address(ScratchPadElemAbsolutePtrVal, CGF.Int8Ty,
-                               C.getTypeAlignInChars(Private->getType()));
-      IncrScratchpadSrc = true;
-
-      // Step 1.2: Create a temporary to store the element in the destination
-      // Reduce list.
-      DestElementPtrAddr = Bld.CreateConstArrayGEP(DestBase, Idx);
-      DestElementAddr =
-          CGF.CreateMemTemp(Private->getType(), ".omp.reduction.element");
-      UpdateDestListPtr = true;
       break;
     }
     }
@@ -1948,39 +1871,6 @@ static void emitReductionListCopy(
                                 DestElementAddr.getPointer(), CGF.VoidPtrTy),
                             DestElementPtrAddr, /*Volatile=*/false,
                             C.VoidPtrTy);
-    }
-
-    // Step 4.1: Increment SrcBase/DestBase so that it points to the starting
-    // address of the next element in scratchpad memory, unless we're currently
-    // processing the last one.  Memory alignment is also taken care of here.
-    if ((IncrScratchpadDest || IncrScratchpadSrc) && (Idx + 1 < Size)) {
-      // FIXME: This code doesn't make any sense, it's trying to perform
-      // integer arithmetic on pointers.
-      llvm::Value *ScratchpadBasePtr =
-          IncrScratchpadDest ? DestBase.getPointer() : SrcBase.getPointer();
-      llvm::Value *ElementSizeInChars = CGF.getTypeSize(Private->getType());
-      ScratchpadBasePtr = Bld.CreateNUWAdd(
-          ScratchpadBasePtr,
-          Bld.CreateNUWMul(ScratchpadWidth, ElementSizeInChars));
-
-      // Take care of global memory alignment for performance
-      ScratchpadBasePtr = Bld.CreateNUWSub(
-          ScratchpadBasePtr, llvm::ConstantInt::get(CGM.SizeTy, 1));
-      ScratchpadBasePtr = Bld.CreateUDiv(
-          ScratchpadBasePtr,
-          llvm::ConstantInt::get(CGM.SizeTy, GlobalMemoryAlignment));
-      ScratchpadBasePtr = Bld.CreateNUWAdd(
-          ScratchpadBasePtr, llvm::ConstantInt::get(CGM.SizeTy, 1));
-      ScratchpadBasePtr = Bld.CreateNUWMul(
-          ScratchpadBasePtr,
-          llvm::ConstantInt::get(CGM.SizeTy, GlobalMemoryAlignment));
-
-      if (IncrScratchpadDest)
-        DestBase =
-            Address(ScratchpadBasePtr, CGF.VoidPtrTy, CGF.getPointerAlign());
-      else /* IncrScratchpadSrc = true */
-        SrcBase =
-            Address(ScratchpadBasePtr, CGF.VoidPtrTy, CGF.getPointerAlign());
     }
 
     ++Idx;
