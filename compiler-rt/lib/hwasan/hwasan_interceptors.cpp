@@ -90,8 +90,7 @@ struct HWAsanInterceptorContext {
 #    include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
 #    define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size) \
-      do {                                                 \
-      } while (false)
+      HWASAN_WRITE_RANGE(ctx, ptr, size)
 
 #    define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size) \
       HWASAN_READ_RANGE(ctx, ptr, size)
@@ -145,22 +144,6 @@ struct HWAsanInterceptorContext {
 #    define COMMON_INTERCEPTOR_BLOCK_REAL(name) \
       do {                                      \
         (void)(name);                           \
-      } while (false)
-
-#    define COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size) \
-      do {                                                       \
-        (void)(ctx);                                             \
-        (void)(to);                                              \
-        (void)(from);                                            \
-        (void)(size);                                            \
-      } while (false)
-
-#    define COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, to, from, size) \
-      do {                                                      \
-        (void)(ctx);                                            \
-        (void)(to);                                             \
-        (void)(from);                                           \
-        (void)(size);                                           \
       } while (false)
 
 #    define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size) \
