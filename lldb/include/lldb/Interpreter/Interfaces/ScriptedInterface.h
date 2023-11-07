@@ -30,8 +30,6 @@ public:
     return m_object_instance_sp;
   }
 
-  virtual llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const = 0;
-
   template <typename Ret>
   static Ret ErrorWithMessage(llvm::StringRef caller_name,
                               llvm::StringRef error_msg, Status &error,
