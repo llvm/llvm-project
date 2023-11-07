@@ -368,6 +368,10 @@ static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget) {
     return true;
   }
 
+  if (T->isVectorTy() && Subtarget.hasVInstructions() && T->isScalableTy() &&
+      isLegalElementTypeForRVV(T->getScalarType(), Subtarget))
+    return true;
+
   return false;
 }
 
