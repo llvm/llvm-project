@@ -29,9 +29,6 @@ namespace {
 class PrintPass final : public llvm::AnalysisInfoMixin<PrintPass> {
   friend struct llvm::AnalysisInfoMixin<PrintPass>;
 
-private:
-  static llvm::AnalysisKey key;
-
 public:
   using Result = llvm::PreservedAnalyses;
 
