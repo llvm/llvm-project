@@ -81,6 +81,17 @@ public:
     RK_WithPattern, // Remark pattern specified via '-Rgroup=regexp'.
   };
 
+  enum class VectorLibrary {
+    NoLibrary,  // Don't use any vector library.
+    Accelerate, // Use the Accelerate framework.
+    LIBMVEC,    // GLIBC vector math library.
+    MASSV,      // IBM MASS vector library.
+    SVML,       // Intel short vector math library.
+    SLEEF,      // SLEEF SIMD Library for Evaluating Elementary Functions.
+    Darwin_libsystem_m, // Use Darwin's libsystem_m vector functions.
+    ArmPL               // Arm Performance Libraries.
+  };
+
   /// Optimization remark with an optional regular expression pattern.
   struct OptRemark {
     RemarkKind Kind = RemarkKind::RK_Missing;

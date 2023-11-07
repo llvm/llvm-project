@@ -843,6 +843,44 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
   llvm_unreachable("Invalid action!");
 }
 
+static std::unique_ptr<llvm::TargetLibraryInfoImpl>
+createTLII(llvm::Triple &targetTriple, const CodeGenOptions &codeGenOpts) {
+  auto tlii = std::make_unique<llvm::TargetLibraryInfoImpl>(targetTriple);
+  assert(tlii && "Failed to create TargetLibraryInfo");
+
+  using VecLib = llvm::TargetLibraryInfoImpl::VectorLibrary;
+  VecLib vecLib = VecLib::NoLibrary;
+  switch (codeGenOpts.getVecLib()) {
+  case CodeGenOptions::VectorLibrary::Accelerate:
+    vecLib = VecLib::Accelerate;
+    break;
+  case CodeGenOptions::VectorLibrary::LIBMVEC:
+    vecLib = VecLib::LIBMVEC_X86;
+    break;
+  case CodeGenOptions::VectorLibrary::MASSV:
+    vecLib = VecLib::MASSV;
+    break;
+  case CodeGenOptions::VectorLibrary::SVML:
+    vecLib = VecLib::SVML;
+    break;
+  case CodeGenOptions::VectorLibrary::SLEEF:
+    vecLib = VecLib::SLEEFGNUABI;
+    break;
+  case CodeGenOptions::VectorLibrary::Darwin_libsystem_m:
+    vecLib = VecLib::DarwinLibSystemM;
+    break;
+  case CodeGenOptions::VectorLibrary::ArmPL:
+    vecLib = VecLib::ArmPL;
+    break;
+  case CodeGenOptions::VectorLibrary::NoLibrary:
+    vecLib = VecLib::NoLibrary;
+    break;
+  }
+
+  tlii->addVectorizableFunctionsFromVecLib(vecLib, targetTriple);
+  return tlii;
+}
+
 /// Generate target-specific machine-code or assembly file from the input LLVM
 /// module.
 ///
@@ -851,11 +889,10 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
 /// \param [in] act Backend act to run (assembly vs machine-code generation)
 /// \param [in] llvmModule LLVM module to lower to assembly/machine-code
 /// \param [out] os Output stream to emit the generated code to
-static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
-                                              llvm::TargetMachine &tm,
-                                              BackendActionTy act,
-                                              llvm::Module &llvmModule,
-                                              llvm::raw_pwrite_stream &os) {
+static void generateMachineCodeOrAssemblyImpl(
+    clang::DiagnosticsEngine &diags, llvm::TargetMachine &tm,
+    BackendActionTy act, llvm::Module &llvmModule, llvm::raw_pwrite_stream &os,
+    const CodeGenOptions &codeGenOpts) {
   assert(((act == BackendActionTy::Backend_EmitObj) ||
           (act == BackendActionTy::Backend_EmitAssembly)) &&
          "Unsupported action");
@@ -869,8 +906,7 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
 
   llvm::Triple triple(llvmModule.getTargetTriple());
   std::unique_ptr<llvm::TargetLibraryInfoImpl> tlii =
-      std::make_unique<llvm::TargetLibraryInfoImpl>(triple);
-  assert(tlii && "Failed to create TargetLibraryInfo");
+      createTLII(triple, codeGenOpts);
   codeGenPasses.add(new llvm::TargetLibraryInfoWrapperPass(*tlii));
 
   llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
@@ -922,6 +958,12 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(pb);
 #include "llvm/Support/Extension.def"
+
+  // Register the target library analysis directly and give it a customized
+  // preset TLI depending on -fveclib
+  llvm::Triple triple(llvmModule->getTargetTriple());
+  std::unique_ptr<llvm::TargetLibraryInfoImpl> tlii = createTLII(triple, opts);
+  fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
 
   // Register all the basic analyses with the managers.
   pb.registerModuleAnalyses(mam);
@@ -1228,7 +1270,7 @@ void CodeGenAction::executeAction() {
       action == BackendActionTy::Backend_EmitObj) {
     generateMachineCodeOrAssemblyImpl(
         diags, *tm, action, *llvmModule,
-        ci.isOutputStreamNull() ? *os : ci.getOutputStream());
+        ci.isOutputStreamNull() ? *os : ci.getOutputStream(), codeGenOpts);
     return;
   }
 }
