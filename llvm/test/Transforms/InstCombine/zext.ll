@@ -825,7 +825,6 @@ define i64 @zext_nneg_signbit_extract(i32 %a) nounwind {
 }
 
 define i64 @zext_nneg_demanded_constant(i8 %a) nounwind {
-;
 ; CHECK-LABEL: @zext_nneg_demanded_constant(
 ; CHECK-NEXT:    [[B:%.*]] = zext nneg i8 [[A:%.*]] to i64
 ; CHECK-NEXT:    call void @use64(i64 [[B]]) #[[ATTR0:[0-9]+]]
