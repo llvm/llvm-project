@@ -452,19 +452,45 @@ entry:
   ret void
 }
 
+define void @ldr_with_off_many_var_high(i32 %tile_slice, ptr %ptr, i64 %vnum) {
+; CHECK-LABEL: ldr_with_off_many_var_high:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add w8, w2, #32
+; CHECK-NEXT:    rdsvl x10, #1
+; CHECK-NEXT:    sxtw x9, w8
+; CHECK-NEXT:    add w12, w0, w8
+; CHECK-NEXT:    madd x9, x10, x9, x1
+; CHECK-NEXT:    ldr za[w12, 1], [x9, #1, mul vl]
+; CHECK-NEXT:    ldr za[w12, 2], [x9, #2, mul vl]
+; CHECK-NEXT:    ldr za[w12, 3], [x9, #3, mul vl]
+; CHECK-NEXT:    ldr za[w12, 4], [x9, #4, mul vl]
+; CHECK-NEXT:    ret
+entry:
+  %0 = trunc i64 %vnum to i32
+  %1 = add i32 %0, 33
+  tail call void @llvm.aarch64.sme.ldr(i32 %tile_slice, ptr %ptr, i32 %1)
+  %2 = add i32 %0, 34
+  tail call void @llvm.aarch64.sme.ldr(i32 %tile_slice, ptr %ptr, i32 %2)
+  %3 = add i32 %0, 35
+  tail call void @llvm.aarch64.sme.ldr(i32 %tile_slice, ptr %ptr, i32 %3)
+  %4 = add i32 %0, 36
+  tail call void @llvm.aarch64.sme.ldr(i32 %tile_slice, ptr %ptr, i32 %4)
+  ret void
+}
+
 ; Ensure that the tile offset is sunk, given that this is likely to be an 'add'
 ; that's decomposed into a base + offset in ISel.
 define void @test_ld1_sink_tile0_offset_operand(<vscale x 4 x i1> %pg, ptr %src, i32 %base, i32 %N) {
 ; CHECK-LABEL: test_ld1_sink_tile0_offset_operand:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w12, w1
-; CHECK-NEXT:  .LBB23_1: // %for.body
+; CHECK-NEXT:  .LBB24_1: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1w {za0h.s[w12, 0]}, p0/z, [x0]
 ; CHECK-NEXT:    subs w2, w2, #1
 ; CHECK-NEXT:    ld1w {za0h.s[w12, 1]}, p0/z, [x0]
 ; CHECK-NEXT:    ld1w {za0h.s[w12, 2]}, p0/z, [x0]
-; CHECK-NEXT:    b.ne .LBB23_1
+; CHECK-NEXT:    b.ne .LBB24_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
 entry:

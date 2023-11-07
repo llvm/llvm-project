@@ -4845,32 +4845,48 @@ SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
   SDValue TileSlice = N->getOperand(2);
   SDValue Base = N->getOperand(3);
   SDValue VecNum = N->getOperand(4);
-  SDValue Remainder = DAG.getTargetConstant(0, DL, MVT::i32);
+  int Addend = 0;
+
+  // If the vnum is an add, we can fold that add into the instruction if the
+  // operand is an immediate. The range check is performed below.
+  if (VecNum.getOpcode() == ISD::ADD) {
+    if (auto ImmNode = dyn_cast<ConstantSDNode>(VecNum.getOperand(1))) {
+      Addend = ImmNode->getSExtValue();
+      VecNum = VecNum.getOperand(0);
+    }
+  }
+
+  SDValue Remainder = DAG.getTargetConstant(Addend, DL, MVT::i32);
 
   // true if the base and slice registers need to be modified
   bool NeedsAdd = true;
-  if (auto ImmNode = dyn_cast<ConstantSDNode>(VecNum)) {
-    int Imm = ImmNode->getSExtValue();
+  auto ImmNode = dyn_cast<ConstantSDNode>(VecNum);
+  if (ImmNode || Addend != 0) {
+    int Imm = ImmNode ? ImmNode->getSExtValue() + Addend : Addend;
+    Remainder = DAG.getTargetConstant(Imm % 16, DL, MVT::i32);
     if (Imm >= 0 && Imm <= 15) {
-      Remainder = DAG.getTargetConstant(Imm, DL, MVT::i32);
-      NeedsAdd = false;
+      // If vnum is an immediate in range then we don't need to modify the tile
+      // slice and base register. We could also get here because Addend != 0 but
+      // vecnum is not an immediate, in which case we still want the base and
+      // slice register to be modified
+      NeedsAdd = !ImmNode;
     } else {
-      Remainder = DAG.getTargetConstant(Imm % 16, DL, MVT::i32);
+      // If it isn't in range then we strip off the remainder and add the result
+      // to the base register and tile slice
       NeedsAdd = true;
-      VecNum = DAG.getConstant(Imm - (Imm % 16), DL, MVT::i32);
-    }
-  } else if (VecNum.getOpcode() == ISD::ADD) {
-    // If the vnum is an add, we can fold that add into the instruction if the
-    // operand is an immediate in range
-    if (auto ImmNode = dyn_cast<ConstantSDNode>(VecNum.getOperand(1))) {
-      int Imm = ImmNode->getSExtValue();
-      if (Imm >= 0 && Imm <= 15) {
-        VecNum = VecNum.getOperand(0);
-        Remainder = DAG.getTargetConstant(Imm, DL, MVT::i32);
-        NeedsAdd = true;
-      }
+      Imm -= Imm % 16;
+      // If the operand isn't an immediate and instead came from an ADD then we
+      // reconstruct the add but with a smaller operand. This means that
+      // successive loads and stores offset from each other can share the same
+      // ADD and have their own remainder in the instruction.
+      if (ImmNode)
+        VecNum = DAG.getConstant(Imm, DL, MVT::i32);
+      else
+        VecNum = DAG.getNode(ISD::ADD, DL, MVT::i32, VecNum,
+                             DAG.getConstant(Imm, DL, MVT::i32));
     }
   }
+
   if (NeedsAdd) {
     // Get the vector length that will be multiplied by vnum
     auto SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
