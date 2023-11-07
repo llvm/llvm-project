@@ -15,6 +15,11 @@
 #include <cstdlib>
 #include <limits>
 
+#ifdef _WIN32
+#else
+#include <unistd.h>
+#endif
+
 namespace Fortran::runtime {
 std::int32_t RTNAME(ArgumentCount)() {
   int argc{executionEnvironment.argc};
@@ -24,6 +29,8 @@ std::int32_t RTNAME(ArgumentCount)() {
   }
   return 0;
 }
+
+uid_t RTNAME(GetUID)() { return getuid(); }
 
 // Returns the length of the \p string. Assumes \p string is valid.
 static std::int64_t StringLength(const char *string) {

@@ -13,6 +13,10 @@
 
 #include <cstdint>
 
+#ifdef _WIN32
+#else
+#include "sys/types.h"
+#endif
 namespace Fortran::runtime {
 class Descriptor;
 
@@ -47,6 +51,10 @@ std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,
     bool trim_name = true, const Descriptor *errmsg = nullptr,
     const char *sourceFile = nullptr, int line = 0);
 }
+
+// Calls getuid()
+uid_t RTNAME(GetUID)();
+
 } // namespace Fortran::runtime
 
 #endif // FORTRAN_RUNTIME_COMMAND_H_

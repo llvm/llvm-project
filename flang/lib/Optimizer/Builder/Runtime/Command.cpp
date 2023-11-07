@@ -80,3 +80,11 @@ mlir::Value fir::runtime::genGetEnvVariable(fir::FirOpBuilder &builder,
       sourceFile, sourceLine);
   return builder.create<fir::CallOp>(loc, runtimeFunc, args).getResult(0);
 }
+
+mlir::Value fir::runtime::genGetUID(fir::FirOpBuilder &builder,
+                                    mlir::Location loc) {
+  auto runtimeFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(GetUID)>(loc, builder);
+
+  return builder.create<fir::CallOp>(loc, runtimeFunc).getResult(0);
+}

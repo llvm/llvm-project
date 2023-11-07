@@ -227,6 +227,11 @@ TEST_F(ZeroArguments, GetCommandArgument) {
 
 TEST_F(ZeroArguments, GetCommand) { CheckCommandValue(commandOnlyArgv, 1); }
 
+TEST_F(ZeroArguments, GetUID) {
+  // uid should always greater than 0, in both linux and windows
+  EXPECT_GT(RTNAME(GetUID)(), 0U);
+}
+
 static const char *oneArgArgv[]{"aProgram", "anArgumentOfLength20"};
 class OneArgument : public CommandFixture {
 protected:

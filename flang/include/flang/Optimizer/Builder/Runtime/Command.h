@@ -49,5 +49,9 @@ mlir::Value genGetEnvVariable(fir::FirOpBuilder &, mlir::Location,
                               mlir::Value length, mlir::Value trimName,
                               mlir::Value errmsg);
 
+/// Generate a call to the GetUID runtime function which implements the
+/// GETUID intrinsic.
+mlir::Value genGetUID(fir::FirOpBuilder &, mlir::Location);
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_COMMAND_H
