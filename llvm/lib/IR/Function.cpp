@@ -1183,7 +1183,7 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     DecodeIITType(NextElt, Infos, Info, OutputTable);
     return;
   case IIT_EXTERNREF:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 10));
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::WasmExternref, 0));
     return;
   case IIT_FUNCREF:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 20));
@@ -1339,7 +1339,8 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::PPCQuad: return Type::getPPC_FP128Ty(Context);
   case IITDescriptor::AArch64Svcount:
     return TargetExtType::get(Context, "aarch64.svcount");
-
+  case IITDescriptor::WasmExternref:
+    return TargetExtType::get(Context, "wasm.externref");
   case IITDescriptor::Integer:
     return IntegerType::get(Context, D.Integer_Width);
   case IITDescriptor::Vector:
@@ -1500,6 +1501,9 @@ static bool matchIntrinsicType(
     case IITDescriptor::AArch64Svcount:
       return !isa<TargetExtType>(Ty) ||
              cast<TargetExtType>(Ty)->getName() != "aarch64.svcount";
+    case IITDescriptor::WasmExternref:
+      return !isa<TargetExtType>(Ty) ||
+             cast<TargetExtType>(Ty)->getName() != "wasm.externref";
     case IITDescriptor::Vector: {
       VectorType *VT = dyn_cast<VectorType>(Ty);
       return !VT || VT->getElementCount() != D.Vector_Width ||

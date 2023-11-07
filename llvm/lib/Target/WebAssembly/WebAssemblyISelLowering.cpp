@@ -364,8 +364,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
 MVT WebAssemblyTargetLowering::getPointerTy(const DataLayout &DL,
                                             uint32_t AS) const {
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF)
-    return MVT::externref;
   if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
     return MVT::funcref;
   return TargetLowering::getPointerTy(DL, AS);
@@ -373,8 +371,6 @@ MVT WebAssemblyTargetLowering::getPointerTy(const DataLayout &DL,
 
 MVT WebAssemblyTargetLowering::getPointerMemTy(const DataLayout &DL,
                                                uint32_t AS) const {
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF)
-    return MVT::externref;
   if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
     return MVT::funcref;
   return TargetLowering::getPointerMemTy(DL, AS);

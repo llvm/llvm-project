@@ -305,11 +305,13 @@ public:
         getTypeID() == PointerTyID || getTypeID() == X86_MMXTyID ||
         getTypeID() == X86_AMXTyID)
       return true;
+
     // If it is not something that can have a size (e.g. a function or label),
     // it doesn't have a size.
     if (getTypeID() != StructTyID && getTypeID() != ArrayTyID &&
         !isVectorTy() && getTypeID() != TargetExtTyID)
       return false;
+
     // Otherwise we have to try harder to decide.
     return isSizedDerivedType(Visited);
   }

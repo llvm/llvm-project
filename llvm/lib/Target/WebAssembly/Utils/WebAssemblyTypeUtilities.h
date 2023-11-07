@@ -28,9 +28,8 @@ namespace WebAssembly {
 
 /// Return true if this is a WebAssembly Externref Type.
 inline bool isWebAssemblyExternrefType(const Type *Ty) {
-  return Ty->isPointerTy() &&
-         Ty->getPointerAddressSpace() ==
-             WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF;
+  const TargetExtType *TargetTy = dyn_cast<TargetExtType>(Ty);
+  return TargetTy && TargetTy->getName() == "wasm.externref";
 }
 
 /// Return true if this is a WebAssembly Funcref Type.
