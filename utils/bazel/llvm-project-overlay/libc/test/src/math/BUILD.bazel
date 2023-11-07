@@ -761,6 +761,13 @@ math_test(
 )
 
 math_test(
+    name = "powf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
     name = "fmod",
     hdrs = ["FModTest.h"],
 )
