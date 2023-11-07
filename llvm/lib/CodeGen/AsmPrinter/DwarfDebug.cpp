@@ -798,10 +798,10 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
                                       ParamSet &Params) {
   const MachineFunction *MF = CallMI->getMF();
   const auto &CalleesMap = MF->getCallSitesInfo();
-  auto CallFwdRegsInfo = CalleesMap.find(CallMI);
+  auto CSInfo = CalleesMap.find(CallMI);
 
   // There is no information for the call instruction.
-  if (CallFwdRegsInfo == CalleesMap.end())
+  if (CSInfo == CalleesMap.end())
     return;
 
   const MachineBasicBlock *MBB = CallMI->getParent();
@@ -815,7 +815,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
       DIExpression::get(MF->getFunction().getContext(), {});
 
   // Add all the forwarding registers into the ForwardedRegWorklist.
-  for (const auto &ArgReg : CallFwdRegsInfo->second) {
+  for (const auto &ArgReg : CSInfo->second.ArgRegPairs) {
     bool InsertedReg =
         ForwardedRegWorklist.insert({ArgReg.Reg, {{ArgReg.Reg, EmptyExpr}}})
             .second;
