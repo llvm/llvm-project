@@ -145,8 +145,8 @@ void test_T_assignment_sfinae() {
     };
     static_assert(!std::is_assignable<V, X>::value,
                   "no boolean conversion in operator=");
-    static_assert(!std::is_assignable<V, std::false_type>::value,
-                  "no converted to bool in operator=");
+    static_assert(std::is_assignable<V, std::false_type>::value,
+                  "converted to bool in operator=");
   }
   {
     struct X {};

@@ -19,6 +19,7 @@
 #include <type_traits>
 #include <variant>
 #include <memory>
+#include <vector>
 
 #include "test_macros.h"
 #include "variant_test_helpers.h"
@@ -79,8 +80,8 @@ void test_T_ctor_sfinae() {
     };
     static_assert(!std::is_constructible<V, X>::value,
                   "no boolean conversion in constructor");
-    static_assert(!std::is_constructible<V, std::false_type>::value,
-                  "no converted to bool in constructor");
+    static_assert(std::is_constructible<V, std::false_type>::value,
+                  "converted to bool in constructor");
   }
   {
     struct X {};
@@ -198,11 +199,18 @@ void test_construction_with_repeated_types() {
   static_assert(std::is_constructible<V, Bar>::value, "");
 }
 
+void test_vector_bool() {
+  std::vector<bool> vec = {true};
+  std::variant<bool, int> v = vec[0];
+  assert(v.index() == 0);
+}
+
 int main(int, char**) {
   test_T_ctor_basic();
   test_T_ctor_noexcept();
   test_T_ctor_sfinae();
   test_no_narrowing_check_for_class_types();
   test_construction_with_repeated_types();
+  test_vector_bool();
   return 0;
 }
