@@ -592,7 +592,7 @@ LLVM::GlobalOp getDynamicSharedMemorySymbol(
   auto zeroSizedArrayType = LLVM::LLVMArrayType::get(
       typeConverter->convertType(memrefType.getElementType()), 0);
   std::string name = std::string(llvm::formatv("{0}_{1}", prefix, index));
-  // TODO: better alignment calculation
+  
   uint64_t alignmentByte = alignmentBit / memrefType.getElementTypeBitWidth();
   return rewriter.create<LLVM::GlobalOp>(
       funcOp->getLoc(), zeroSizedArrayType, /*isConstant=*/false,
