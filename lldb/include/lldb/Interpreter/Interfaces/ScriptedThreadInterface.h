@@ -25,6 +25,10 @@ public:
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) = 0;
 
+  llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const override {
+    return {};
+  }
+
   virtual lldb::tid_t GetThreadID() { return LLDB_INVALID_THREAD_ID; }
 
   virtual std::optional<std::string> GetName() { return std::nullopt; }
