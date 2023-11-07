@@ -17,61 +17,55 @@ using namespace llvm::jitlink::aarch32;
 using namespace llvm::support;
 using namespace llvm::support::endian;
 
-auto G = std::make_unique<LinkGraph>("foo", Triple("armv7-linux-gnueabi"), 4,
-                                     llvm::endianness::little,
+constexpr unsigned PointerSize = 4;
+auto G = std::make_unique<LinkGraph>("foo", Triple("armv7-linux-gnueabi"),
+                                     PointerSize, llvm::endianness::little,
                                      getGenericEdgeKindName);
 auto &Sec =
     G->createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
-orc::ExecutorAddr B1Addr(0x1000);
+orc::ExecutorAddr B1DummyAddr(0x1000);
 
 auto ArmCfg = getArmConfigForCPUArch(ARMBuildAttrs::v7);
 
 TEST(AArch32_ELF, readAddendErrors) {
+  // Permanently undefined instruction
+  //    11110:op:imm4:1:op1:imm12
+  //    op  = 1111111 Permanent undefined
+  //    op1 = 010
+  ArrayRef<char> Content = "0xf7f0a000";
+  constexpr uint64_t Alignment = 4;
+  constexpr uint64_t AlignmentOffset = 0;
+  auto &B = G->createContentBlock(Sec, Content, B1DummyAddr, Alignment,
+                                  AlignmentOffset);
+  constexpr orc::ExecutorAddrDiff Offset = 0;
+  constexpr orc::ExecutorAddrDiff Size = 4;
+  Symbol &TargetSymbol = G->addAnonymousSymbol(B, Offset, Size, false, false);
+  Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
+                   0 /*Addend*/);
 
-  ArrayRef<char> Content = "hello, world!";
-  auto &B = G->createContentBlock(Sec, Content, B1Addr, 4, 0);
+  EXPECT_THAT_EXPECTED(readAddendData(*G, B, InvalidEdge),
+                       FailedWithMessage(testing::HasSubstr(
+                           "can not read implicit addend for aarch32 edge kind "
+                           "INVALID RELOCATION")));
 
-  Symbol &TargetSymbol = G->addAnonymousSymbol(B, 0, 4, false, false);
-  Edge InvalidEdge(FirstDataRelocation - 1, 0, TargetSymbol, 0);
+  EXPECT_THAT_EXPECTED(readAddendArm(*G, B, InvalidEdge),
+                       FailedWithMessage(testing::HasSubstr(
+                           "can not read implicit addend for aarch32 edge kind "
+                           "INVALID RELOCATION")));
 
-  EXPECT_THAT_EXPECTED(
-      readAddend(*G, B, InvalidEdge, ArmCfg),
-      FailedWithMessage(testing::HasSubstr(
-          "can not read implicit addend for aarch32 edge kind Keep-Alive")));
+  EXPECT_THAT_EXPECTED(readAddendThumb(*G, B, InvalidEdge, ArmCfg),
+                       FailedWithMessage(testing::HasSubstr(
+                           "can not read implicit addend for aarch32 edge kind "
+                           "INVALID RELOCATION")));
 
-  std::string ReadAddendError = "can not read implicit addend for aarch32 edge "
-                                "kind <Unrecognized edge kind>";
-
-  for (Edge::Kind K = FirstDataRelocation; K < LastDataRelocation; K += 1) {
-    Edge E(K, 0, TargetSymbol, 0);
-    EXPECT_THAT_EXPECTED(readAddendData(*G, B, E), Succeeded());
-    EXPECT_THAT_EXPECTED(
-        readAddendArm(*G, B, E),
-        FailedWithMessage(testing::HasSubstr(ReadAddendError)));
-    EXPECT_THAT_EXPECTED(
-        readAddendThumb(*G, B, E, ArmCfg),
-        FailedWithMessage(testing::HasSubstr(ReadAddendError)));
-  }
   for (Edge::Kind K = FirstArmRelocation; K < LastArmRelocation; K += 1) {
     Edge E(K, 0, TargetSymbol, 0);
     EXPECT_THAT_EXPECTED(
-        readAddendData(*G, B, E),
-        FailedWithMessage(testing::HasSubstr(ReadAddendError)));
-    EXPECT_THAT_EXPECTED(
         readAddendArm(*G, B, E),
         FailedWithMessage(testing::StartsWith("Invalid opcode")));
-    EXPECT_THAT_EXPECTED(
-        readAddendThumb(*G, B, E, ArmCfg),
-        FailedWithMessage(testing::HasSubstr(ReadAddendError)));
   }
   for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
     Edge E(K, 0, TargetSymbol, 0);
-    EXPECT_THAT_EXPECTED(
-        readAddendData(*G, B, E),
-        FailedWithMessage(testing::HasSubstr(ReadAddendError)));
-    EXPECT_THAT_EXPECTED(
-        readAddendArm(*G, B, E),
-        FailedWithMessage(testing::HasSubstr(ReadAddendError)));
     EXPECT_THAT_EXPECTED(
         readAddendThumb(*G, B, E, ArmCfg),
         FailedWithMessage(testing::StartsWith("Invalid opcode")));
@@ -79,49 +73,40 @@ TEST(AArch32_ELF, readAddendErrors) {
 }
 
 TEST(AArch32_ELF, applyFixupErrors) {
-  char ContentArray[] = "hello, world!";
+  // Permanently undefined instruction
+  char ContentArray[] = "0xf7f0a000";
   MutableArrayRef<char> MutableContent(ContentArray);
-  auto &B = G->createMutableContentBlock(Sec, MutableContent, B1Addr, 4, 0);
+  constexpr uint64_t Alignment = 4;
+  constexpr uint64_t AlignmentOffset = 0;
+  auto &B = G->createMutableContentBlock(Sec, MutableContent, B1DummyAddr,
+                                         Alignment, AlignmentOffset);
 
-  Symbol &TargetSymbol = G->addAnonymousSymbol(B, 0, 4, false, false);
-  Edge InvalidEdge(FirstDataRelocation - 1, 0, TargetSymbol, 0);
+  constexpr orc::ExecutorAddrDiff Offset = 0;
+  constexpr orc::ExecutorAddrDiff Size = 4;
+  Symbol &TargetSymbol = G->addAnonymousSymbol(B, Offset, Size, false, false);
+  Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
+                   0 /*Addend*/);
 
-  EXPECT_THAT_ERROR(applyFixup(*G, B, InvalidEdge, ArmCfg),
-                    FailedWithMessage(testing::HasSubstr(
-                        "encountered unfixable aarch32 edge kind Keep-Alive")));
+  EXPECT_THAT_ERROR(
+      applyFixupData(*G, B, InvalidEdge),
+      FailedWithMessage(testing::HasSubstr(
+          "encountered unfixable aarch32 edge kind INVALID RELOCATION")));
+  EXPECT_THAT_ERROR(
+      applyFixupArm(*G, B, InvalidEdge),
+      FailedWithMessage(testing::HasSubstr(
+          "encountered unfixable aarch32 edge kind INVALID RELOCATION")));
+  EXPECT_THAT_ERROR(
+      applyFixupThumb(*G, B, InvalidEdge, ArmCfg),
+      FailedWithMessage(testing::HasSubstr(
+          "encountered unfixable aarch32 edge kind INVALID RELOCATION")));
 
-  std::string UnfixableEdgeError =
-      "encountered unfixable aarch32 edge kind <Unrecognized edge kind>";
-
-  for (Edge::Kind K = FirstDataRelocation; K < LastDataRelocation; K += 1) {
-    Edge E(K, 0, TargetSymbol, 0);
-    EXPECT_THAT_ERROR(applyFixupData(*G, B, E), Succeeded());
-    EXPECT_THAT_ERROR(
-        applyFixupArm(*G, B, E),
-        FailedWithMessage(testing::HasSubstr(UnfixableEdgeError)));
-    EXPECT_THAT_ERROR(
-        applyFixupThumb(*G, B, E, ArmCfg),
-        FailedWithMessage(testing::HasSubstr(UnfixableEdgeError)));
-  }
   for (Edge::Kind K = FirstArmRelocation; K < LastArmRelocation; K += 1) {
     Edge E(K, 0, TargetSymbol, 0);
-    EXPECT_THAT_ERROR(
-        applyFixupData(*G, B, E),
-        FailedWithMessage(testing::HasSubstr(UnfixableEdgeError)));
     EXPECT_THAT_ERROR(applyFixupArm(*G, B, E),
                       FailedWithMessage(testing::StartsWith("Invalid opcode")));
-    EXPECT_THAT_ERROR(
-        applyFixupThumb(*G, B, E, ArmCfg),
-        FailedWithMessage(testing::HasSubstr(UnfixableEdgeError)));
   }
   for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
     Edge E(K, 0, TargetSymbol, 0);
-    EXPECT_THAT_ERROR(
-        applyFixupData(*G, B, E),
-        FailedWithMessage(testing::HasSubstr(UnfixableEdgeError)));
-    EXPECT_THAT_ERROR(
-        applyFixupArm(*G, B, E),
-        FailedWithMessage(testing::HasSubstr(UnfixableEdgeError)));
     EXPECT_THAT_ERROR(applyFixupThumb(*G, B, E, ArmCfg),
                       FailedWithMessage(testing::StartsWith("Invalid opcode")));
   }
