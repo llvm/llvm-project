@@ -167,11 +167,9 @@ def FeatureCuMode : SubtargetFeature<"cumode",
   "Enable CU wavefront execution mode"
 >;
 
-def FeaturePreciseMemory : SubtargetFeature<"amdgpu-precise-memory-op",
-  "EnablePreciseMemory",
-  "true",
-  "Enable precise memory mode"
->;
+def FeaturePreciseMemory
+    : SubtargetFeature<"amdgpu-precise-memory-op", "EnablePreciseMemory",
+                       "true", "Enable precise memory mode">;
 
 def FeatureSGPRInitBug : SubtargetFeature<"sgpr-init-bug",
   "SGPRInitBug",
