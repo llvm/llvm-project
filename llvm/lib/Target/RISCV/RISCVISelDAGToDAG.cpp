@@ -3517,9 +3517,9 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   if (!Info)
     return false;
 
-  // This transformation is illegal for accumlated operations, like viota.m,
-  // when Mask is not a true mask.
-  if (Info->IsAccumulatedOp && Mask && !usesAllOnesMask(Mask, Glue))
+  // When Mask is not a true mask, this transformation is illegal for some
+  // operations whose results are affected by mask, like viota.m.
+  if (Info->MaskAffectsResult && Mask && !usesAllOnesMask(Mask, Glue))
     return false;
 
   if (HasTiedDest && !isImplicitDef(True->getOperand(0))) {
