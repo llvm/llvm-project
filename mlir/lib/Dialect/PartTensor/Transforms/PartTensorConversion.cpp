@@ -31,6 +31,8 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+#include "CodegenUtils.h"
+
 using namespace mlir;
 using namespace mlir::part_tensor;
 
@@ -69,7 +71,22 @@ public:
   LogicalResult
   matchAndRewrite(GetPartitionOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
+    Type resType = op.getType();
+    const Type crdTp = cast<ShapedType>(resType).getElementType();
+    Location loc = op->getLoc();
+    MemRefType callRetType = mlir::sparse_tensor::get1DMemRefType(crdTp, false);
+    SmallVector<Value> operands{adaptor.getOperands()[0]};
+    auto fn = mlir::sparse_tensor::getFunc(
+        op->getParentOfType<ModuleOp>(), "getPartitions", callRetType, operands,
+        mlir::sparse_tensor::EmitCInterface::On);
+    Value callRet =
+        rewriter.create<func::CallOp>(loc, callRetType, fn, operands)
+            .getResult(0);
+    if (resType != callRetType)
+      callRet = rewriter.create<memref::CastOp>(loc, resType, callRet);
+    rewriter.replaceOp(op, callRet);
+    return success();
+#if 0
     llvm::errs() << "Op before transform \n";
     op->dump();
 
@@ -102,11 +119,12 @@ public:
     rewriter.replaceOpWithNewOp<func::CallOp>(
         op, "get_partitions_rt", resultType, adaptor.getOperands());
 
-    // assert(false);
     llvm::errs() << "Op after transform \n";
     op->dump();
+    assert(false);
 
     return success();
+#endif
   }
 };
 
