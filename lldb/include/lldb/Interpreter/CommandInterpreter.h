@@ -688,6 +688,9 @@ private:
                               StringList &commands_help,
                               const CommandObject::CommandMap &command_map);
 
+  void PrintCaretIndicator(StatusDetail detail, IOHandler &io_handler,
+                           std::string &command_line);
+
   // An interruptible wrapper around the stream output
   void PrintCommandOutput(IOHandler &io_handler, llvm::StringRef str,
                           bool is_stdout);

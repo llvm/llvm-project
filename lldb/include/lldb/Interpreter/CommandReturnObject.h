@@ -139,6 +139,8 @@ public:
 
   void SetStatus(lldb::ReturnStatus status);
 
+  std::vector<StatusDetail> GetStatusDetails() const;
+
   bool Succeeded() const;
 
   bool HasResult() const;
@@ -162,6 +164,7 @@ private:
   StreamTee m_err_stream;
 
   lldb::ReturnStatus m_status = lldb::eReturnStatusStarted;
+  std::vector<StatusDetail> m_status_details;
 
   bool m_did_change_process_state = false;
   bool m_suppress_immediate_output = false;

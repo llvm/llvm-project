@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_STATUS_H
 #define LLDB_UTILITY_STATUS_H
 
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
@@ -16,6 +17,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdarg>
 #include <cstdint>
+#include <sstream>
 #include <string>
 #include <system_error>
 #include <type_traits>
@@ -25,6 +27,101 @@ class raw_ostream;
 }
 
 namespace lldb_private {
+struct StatusDetail {
+private:
+  std::vector<std::string> m_message_lines;
+  DiagnosticSeverity m_message_type;
+  DiagnosticOrigin m_message_origin;
+
+  // Lazy, cmputed properties
+  mutable std::optional<std::string> m_message;
+  mutable std::optional<std::string> m_caret_string;
+
+  static std::string StringForSeverity(DiagnosticSeverity severity) {
+    switch (severity) {
+    case lldb_private::eDiagnosticSeverityError:
+      return std::string("error: ");
+    case lldb_private::eDiagnosticSeverityWarning:
+      return std::string("warning: ");
+    case lldb_private::eDiagnosticSeverityRemark:
+      return std::string("note: ");
+    }
+  }
+
+  std::vector<std::string>
+  GetMessageLinesFromDiagnostic(Diagnostic *diagnostic) {
+    const char newline = '\n';
+    std::vector<std::string> message_lines;
+
+    std::stringstream splitter(std::string(diagnostic->GetMessage()));
+    std::string split;
+
+    while (getline(splitter, split, newline)) {
+      message_lines.push_back(split);
+    }
+
+    return message_lines;
+  }
+
+public:
+  StatusDetail() = default;
+  StatusDetail(const std::unique_ptr<Diagnostic> &diagnostic)
+      : m_message_lines(GetMessageLinesFromDiagnostic(diagnostic.get())),
+        m_message_type(diagnostic->GetSeverity()),
+        m_message_origin(diagnostic->getKind()) {}
+
+  StatusDetail(const StatusDetail &other)
+      : m_message_lines(other.m_message_lines),
+        m_message_type(other.m_message_type),
+        m_message_origin(other.m_message_origin) {}
+
+  StatusDetail &operator=(const StatusDetail &rhs) {
+    m_message_lines = rhs.m_message_lines;
+    m_message_type = rhs.m_message_type;
+    m_message_origin = rhs.m_message_origin;
+    return *this;
+  }
+
+  std::vector<std::string> GetMessageLines() const { return m_message_lines; }
+
+  std::string GetMessage() const {
+    if (m_message)
+      return m_message.value();
+
+    std::string severity = StringForSeverity(m_message_type);
+    std::string message = severity;
+    for (auto line : m_message_lines) {
+      size_t start = line.find(severity);
+      if (start != std::string::npos)
+        line.erase(start, severity.length());
+
+      message += line + "\n";
+    }
+    message += "\n";
+    m_message = message;
+    return message;
+  }
+
+  std::optional<std::string> GetCaretString() const {
+    if (m_caret_string)
+      return m_caret_string;
+
+    if (m_message_lines.size() != 3) {
+      return {};
+    }
+
+    llvm::StringRef caret_string = m_message_lines[2];
+
+    // Check for clang-style diagnostic message.
+    if (caret_string.find("| ") != std::string::npos) {
+      const auto split = caret_string.split("| ");
+      caret_string = split.second;
+    }
+
+    m_caret_string = caret_string;
+    return m_caret_string;
+  }
+};
 
 /// \class Status Status.h "lldb/Utility/Status.h" An error handling class.
 ///
@@ -180,12 +277,18 @@ public:
   ///     success (non-erro), \b false otherwise.
   bool Success() const;
 
+  void AddDetail(StatusDetail detail);
+
+  std::vector<StatusDetail> GetDetails() const;
+
 protected:
   /// Member variables
   ValueType m_code = 0; ///< Status code as an integer value.
   lldb::ErrorType m_type =
       lldb::eErrorTypeInvalid;  ///< The type of the above error code.
   mutable std::string m_string; ///< A string representation of the error code.
+  std::vector<StatusDetail> m_status_details;
+
 private:
   explicit Status(const llvm::formatv_object_base &payload) {
     SetErrorToGenericError();

@@ -3031,6 +3031,33 @@ bool CommandInterpreter::WasInterrupted() const {
   lldbassert(!was_interrupted || m_iohandler_nesting_level > 0);
   return was_interrupted;
 }
+void CommandInterpreter::PrintCaretIndicator(StatusDetail detail,
+                                             IOHandler &io_handler,
+                                             std::string &command_line) {
+  // Check whether the first detail has an indicator caret (^) within it.
+  const auto message_lines = detail.GetMessageLines();
+  const auto caret_string_opt = detail.GetCaretString();
+  if (message_lines.size() >= 3 && caret_string_opt) {
+    const auto prompt = GetDebugger().GetPrompt();
+    // Check whether the developer just hit [Return] to repeat a command.
+    if (command_line.empty()) {
+      // Build a recreation of the prompt and the last command.
+      auto prompt_and_command = std::string(prompt);
+      prompt_and_command += m_repeat_command;
+
+      // Print the last command the developer entered for the caret line.
+      PrintCommandOutput(io_handler, prompt_and_command, false);
+    }
+
+    // Print the line with the indicator caret (^) below the command.
+    auto padding_size = prompt.size();
+    padding_size += command_line.size() - message_lines[1].size();
+    const std::string caret_line =
+        std::string(padding_size, ' ') + caret_string_opt.value() + "\n";
+
+    PrintCommandOutput(io_handler, caret_line, false);
+  }
+}
 
 void CommandInterpreter::PrintCommandOutput(IOHandler &io_handler,
                                             llvm::StringRef str,
@@ -3127,6 +3154,12 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
     // Now emit the command error text from the command we just executed
     if (!result.GetImmediateErrorStream()) {
+
+      // Check whether there's any status details.
+      std::vector<StatusDetail> details = result.GetStatusDetails();
+      if (!details.empty())
+        PrintCaretIndicator(details.front(), io_handler, line);
+
       llvm::StringRef error = result.GetErrorData();
       PrintCommandOutput(io_handler, error, false);
     }

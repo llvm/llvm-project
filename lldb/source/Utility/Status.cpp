@@ -284,3 +284,11 @@ void llvm::format_provider<lldb_private::Status>::format(
   llvm::format_provider<llvm::StringRef>::format(error.AsCString(), OS,
                                                  Options);
 }
+
+void Status::AddDetail(StatusDetail detail) {
+  m_status_details.push_back(detail);
+}
+
+std::vector<StatusDetail> Status::GetDetails() const {
+  return m_status_details;
+}

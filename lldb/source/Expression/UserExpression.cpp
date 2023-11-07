@@ -278,6 +278,21 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
       user_expression_sp->Parse(diagnostic_manager, exe_ctx, execution_policy,
                                 keep_expression_in_memory, generate_debug_info);
 
+  // Copy each diagnostic from the `Staus &error` instance's details list.
+  {
+    const DiagnosticList &diagnostics = diagnostic_manager.Diagnostics();
+
+    if (diagnostics.size() >= 1) {
+      std::vector<StatusDetail> status_details = error.GetDetails();
+      status_details.clear();
+
+      for (auto &diagnostic : diagnostics) {
+        StatusDetail detail(diagnostic);
+        error.AddDetail(detail);
+      }
+    }
+  }
+
   // Calculate the fixed expression always, since we need it for errors.
   std::string tmp_fixed_expression;
   if (fixed_expression == nullptr)
@@ -327,9 +342,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
       std::string msg;
       {
         llvm::raw_string_ostream os(msg);
-        if (!diagnostic_manager.Diagnostics().empty())
-          os << diagnostic_manager.GetString();
-        else
+        if (diagnostic_manager.Diagnostics().empty())
           os << "expression failed to parse (no further compiler diagnostics)";
         if (target->GetEnableNotifyAboutFixIts() && fixed_expression &&
             !fixed_expression->empty())

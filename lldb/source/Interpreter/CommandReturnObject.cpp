@@ -109,8 +109,19 @@ void CommandReturnObject::AppendError(llvm::StringRef in_string) {
 
 void CommandReturnObject::SetError(const Status &error,
                                    const char *fallback_error_cstr) {
-  if (error.Fail())
-    AppendError(error.AsCString(fallback_error_cstr));
+  m_status_details = error.GetDetails();
+
+  if (error.Fail()) {
+    if (m_status_details.size() > 0) {
+      std::string messages;
+
+      for (StatusDetail detail : m_status_details)
+        messages += detail.GetMessage();
+
+      AppendError(messages);
+    } else
+      AppendError(error.AsCString(fallback_error_cstr));
+  }
 }
 
 void CommandReturnObject::SetError(llvm::Error error) {
@@ -130,6 +141,10 @@ void CommandReturnObject::AppendRawError(llvm::StringRef in_string) {
 void CommandReturnObject::SetStatus(ReturnStatus status) { m_status = status; }
 
 ReturnStatus CommandReturnObject::GetStatus() const { return m_status; }
+
+std::vector<StatusDetail> CommandReturnObject::GetStatusDetails() const {
+  return m_status_details;
+}
 
 bool CommandReturnObject::Succeeded() const {
   return m_status <= eReturnStatusSuccessContinuingResult;
