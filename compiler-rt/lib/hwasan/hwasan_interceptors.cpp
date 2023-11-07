@@ -156,7 +156,7 @@ struct HWAsanInterceptorContext {
 #    define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!hwasan_inited)
 
 #    define COMMON_INTERCEPTOR_MEMSET_CHECK_IN_SHADOW(p) \
-  MemIsShadow(reinterpret_cast<uptr>(p))
+  (!MemIsApp(UntagAddr(reinterpret_cast<uptr>(p))))
 
 // The main purpose of the mmap interceptor is to prevent the user from
 // allocating on top of shadow pages.
