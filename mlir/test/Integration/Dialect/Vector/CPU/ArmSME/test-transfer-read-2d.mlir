@@ -11,7 +11,7 @@
 
 // RUN: %{compile} | %{run} | FileCheck %s
 
-// Vector load.
+// 2-D vector load (SME tile).
 func.func @transfer_read_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %c4 = arith.constant 4 : index
   %pad = arith.constant 0.0 : f32
@@ -24,7 +24,7 @@ func.func @transfer_read_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) 
   return
 }
 
-// Vector load + transpose.
+// 2-D vector load (SME tile) + transpose.
 func.func @transfer_read_2d_transposed(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %pad = arith.constant 0.0 : f32
   %0 = vector.transfer_read %A[%base1, %base2], %pad
@@ -37,7 +37,7 @@ func.func @transfer_read_2d_transposed(%A : memref<?x?xf32>, %base1: index, %bas
   return
 }
 
-// Vector load with mask and pad of zero.
+// 2-D vector load (SME tile) with mask and pad of zero.
 func.func @transfer_read_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
@@ -52,7 +52,7 @@ func.func @transfer_read_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: in
   return
 }
 
-// Vector load with mask and pad of zero + transpose.
+// 2-D vector load (SME tile) with mask and pad of zero + transpose.
 func.func @transfer_read_2d_mask_transposed(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
@@ -68,7 +68,7 @@ func.func @transfer_read_2d_mask_transposed(%A : memref<?x?xf32>, %base1: index,
   return
 }
 
-// Vector load with mask and non-zero pad.
+// 2-D vector load (SME tile) with mask and non-zero pad.
 func.func @transfer_read_2d_mask_non_zero_pad(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
@@ -83,7 +83,7 @@ func.func @transfer_read_2d_mask_non_zero_pad(%A : memref<?x?xf32>, %base1: inde
   return
 }
 
-// Vector load with mask and non-zero pad + transpose.
+// 2-D vector load (SME tile) with mask and non-zero pad + transpose.
 func.func @transfer_read_2d_mask_non_zero_pad_transposed(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index

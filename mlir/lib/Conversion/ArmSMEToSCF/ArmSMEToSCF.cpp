@@ -158,6 +158,7 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 ///  %c0 = arith.constant 0 : index
 ///  %c1 = arith.constant 1 : index
 ///  %tile = arm_sme.zero : vector<[4]x[4]xi32>
+///  %num_rows = arith.constant 2 : index
 ///  %num_cols = vector.create_mask %c4 : vector<[4]xi1>
 ///  scf.for %tile_slice_idx = %c0 to %num_rows step %c1 {
 ///    %tile_update = arm_sme.load_tile_slice
@@ -252,24 +253,12 @@ struct TileLoadOpWithMaskAndPadZeroConversion
 ///
 ///  AFTER:
 ///  ```mlir
+///  ...
 ///  %pad_1d = arith.constant dense<1> : vector<[4]xi32>
-///  %num_rows = arith.constant 2 : index
-///  %num_cols = arith.constant 4 : index
-///  %num_cols_i32 = arith.index_castui %num_cols : index to i32
-///  %tile_id = arm_sme.get_tile_id : i32
-///  %tile = arm_sme.cast_tile_to_vector %tile_id : i32 to vector<[4]x[4]xi32>
-///  %vscale = vector.vscale
-///  %c0 = arith.constant 0 : index
-///  %c1 = arith.constant 1 : index
-///  %min_svl_s = arith.constant 4 : index
-///  %svl_s = arith.muli %min_svl_s, %vscale : index
 ///  scf.for %tile_slice_idx = %c0 to %svl_s step %c1 {
-///    %row_is_active = arith.cmpi ult %tile_slice_idx, %num_rows : index
-///    %row_is_active_i32 = arith.extsi %row_is_active : i1 to i32
-///    %mask = arith.andi %row_is_active_i32, %num_cols_i32 : i32
-///    %mask_index = arith.index_cast %mask : i32 to index
-///    %mask_1d = vector.create_mask %mask_index : vector<[4]xi1>
-///    %slice = vector.maskedload %base[%tile_slice_idx, %c0], %mask_1d, %pad
+///    ...
+///    %mask_1d = vector.create_mask <combined_mask> : vector<[4]xi1>
+///    %slice = vector.maskedload %base[%tile_slice_idx, %c0], %mask_1d, %pad_1d
 ///      : memref<?x?xi32>, vector<[4]xi1>,
 ///        vector<[4]xi32> into vector<[4]xi32>
 ///    // Insert slice into tile
