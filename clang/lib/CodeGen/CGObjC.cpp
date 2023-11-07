@@ -52,8 +52,7 @@ llvm::Value *CodeGenFunction::EmitObjCStringLiteral(const ObjCStringLiteral *E)
 {
   llvm::Constant *C =
       CGM.getObjCRuntime().GenerateConstantString(E->getString()).getPointer();
-  // FIXME: This bitcast should just be made an invariant on the Runtime.
-  return llvm::ConstantExpr::getBitCast(C, ConvertType(E->getType()));
+  return C;
 }
 
 /// EmitObjCBoxedExpr - This routine generates code to call
@@ -3721,7 +3720,7 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
         CGM, Alignment, Alignment, Ty.isVolatileQualified(), Ty);
     Fn = CGM.getFunctionPointer(Fn,
                                 getObjCAtomicPropertyCopyHelperFunctionType(C));
-    return llvm::ConstantExpr::getBitCast(Fn, VoidPtrTy);
+    return Fn;
   }
 
   if (!getLangOpts().CPlusPlus ||
@@ -3803,7 +3802,6 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
   FinishFunction();
   HelperFn = CGM.getFunctionPointer(
       Fn, getObjCAtomicPropertyCopyHelperFunctionType(C));
-  HelperFn = llvm::ConstantExpr::getBitCast(HelperFn, VoidPtrTy);
   CGM.setAtomicSetterHelperFnMap(Ty, HelperFn);
   return HelperFn;
 }
@@ -3823,7 +3821,7 @@ llvm::Constant *CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
         CGM, Alignment, Alignment, Ty.isVolatileQualified(), Ty);
     Fn = CGM.getFunctionPointer(Fn,
                                 getObjCAtomicPropertyCopyHelperFunctionType(C));
-    return llvm::ConstantExpr::getBitCast(Fn, VoidPtrTy);
+    return Fn;
   }
 
   if (!getLangOpts().CPlusPlus ||
@@ -3926,7 +3924,6 @@ llvm::Constant *CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
   FinishFunction();
   HelperFn = CGM.getFunctionPointer(
       Fn, getObjCAtomicPropertyCopyHelperFunctionType(C));
-  HelperFn = llvm::ConstantExpr::getBitCast(HelperFn, VoidPtrTy);
   CGM.setAtomicGetterHelperFnMap(Ty, HelperFn);
   return HelperFn;
 }
