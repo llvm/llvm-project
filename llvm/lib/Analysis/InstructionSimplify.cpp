@@ -1674,43 +1674,6 @@ static Value *simplifyAndOrOfICmpsWithConstants(ICmpInst *Cmp0, ICmpInst *Cmp1,
   return nullptr;
 }
 
-static Value *simplifyAndOrOfICmpsWithZero(ICmpInst *Cmp0, ICmpInst *Cmp1,
-                                           bool IsAnd) {
-  ICmpInst::Predicate P0 = Cmp0->getPredicate(), P1 = Cmp1->getPredicate();
-  if (!match(Cmp0->getOperand(1), m_Zero()) ||
-      !match(Cmp1->getOperand(1), m_Zero()) || P0 != P1)
-    return nullptr;
-
-  if ((IsAnd && P0 != ICmpInst::ICMP_NE) || (!IsAnd && P1 != ICmpInst::ICMP_EQ))
-    return nullptr;
-
-  // We have either "(X == 0 || Y == 0)" or "(X != 0 && Y != 0)".
-  Value *X = Cmp0->getOperand(0);
-  Value *Y = Cmp1->getOperand(0);
-
-  // If one of the compares is a masked version of a (not) null check, then
-  // that compare implies the other, so we eliminate the other. Optionally, look
-  // through a pointer-to-int cast to match a null check of a pointer type.
-
-  // (X == 0) || (([ptrtoint] X & ?) == 0) --> ([ptrtoint] X & ?) == 0
-  // (X == 0) || ((? & [ptrtoint] X) == 0) --> (? & [ptrtoint] X) == 0
-  // (X != 0) && (([ptrtoint] X & ?) != 0) --> ([ptrtoint] X & ?) != 0
-  // (X != 0) && ((? & [ptrtoint] X) != 0) --> (? & [ptrtoint] X) != 0
-  if (match(Y, m_c_And(m_Specific(X), m_Value())) ||
-      match(Y, m_c_And(m_PtrToInt(m_Specific(X)), m_Value())))
-    return Cmp1;
-
-  // (([ptrtoint] Y & ?) == 0) || (Y == 0) --> ([ptrtoint] Y & ?) == 0
-  // ((? & [ptrtoint] Y) == 0) || (Y == 0) --> (? & [ptrtoint] Y) == 0
-  // (([ptrtoint] Y & ?) != 0) && (Y != 0) --> ([ptrtoint] Y & ?) != 0
-  // ((? & [ptrtoint] Y) != 0) && (Y != 0) --> (? & [ptrtoint] Y) != 0
-  if (match(X, m_c_And(m_Specific(Y), m_Value())) ||
-      match(X, m_c_And(m_PtrToInt(m_Specific(Y)), m_Value())))
-    return Cmp0;
-
-  return nullptr;
-}
-
 static Value *simplifyAndOfICmpsWithAdd(ICmpInst *Op0, ICmpInst *Op1,
                                         const InstrInfoQuery &IIQ) {
   // (icmp (add V, C0), C1) & (icmp V, C0)
@@ -1789,9 +1752,6 @@ static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1,
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, true))
     return X;
 
-  if (Value *X = simplifyAndOrOfICmpsWithZero(Op0, Op1, true))
-    return X;
-
   if (Value *X = simplifyAndOrOfICmpsWithCtpop(Op0, Op1, true))
     return X;
   if (Value *X = simplifyAndOrOfICmpsWithCtpop(Op1, Op0, true))
@@ -1860,9 +1820,6 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, false))
-    return X;
-
-  if (Value *X = simplifyAndOrOfICmpsWithZero(Op0, Op1, false))
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithCtpop(Op0, Op1, false))
