@@ -13,7 +13,6 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMIRToLLVMTranslation.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 
@@ -25,7 +24,6 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/Support/ModRef.h"
 
 using namespace mlir;
@@ -39,7 +37,6 @@ using namespace mlir::LLVM::detail;
 static bool isConvertibleIntrinsic(llvm::Intrinsic::ID id) {
   static const DenseSet<unsigned> convertibleIntrinsics = {
 #include "mlir/Dialect/LLVMIR/LLVMConvertibleLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/NVVMConvertibleLLVMIRIntrinsics.inc"
   };
   return convertibleIntrinsics.contains(id);
 }
@@ -49,7 +46,6 @@ static bool isConvertibleIntrinsic(llvm::Intrinsic::ID id) {
 static ArrayRef<unsigned> getSupportedIntrinsicsImpl() {
   static const SmallVector<unsigned> convertibleIntrinsics = {
 #include "mlir/Dialect/LLVMIR/LLVMConvertibleLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/NVVMConvertibleLLVMIRIntrinsics.inc"
   };
   return convertibleIntrinsics;
 }
@@ -67,7 +63,6 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
     SmallVector<llvm::Value *> args(inst->args());
     ArrayRef<llvm::Value *> llvmOperands(args);
 #include "mlir/Dialect/LLVMIR/LLVMIntrinsicFromLLVMIRConversions.inc"
-#include "mlir/Dialect/LLVMIR/NVVMFromLLVMIRConversions.inc"
   }
 
   return failure();
@@ -286,7 +281,6 @@ public:
 
 void mlir::registerLLVMDialectImport(DialectRegistry &registry) {
   registry.insert<LLVM::LLVMDialect>();
-  registry.insert<NVVM::NVVMDialect>();
   registry.addExtension(+[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
     dialect->addInterfaces<LLVMDialectLLVMIRImportInterface>();
   });
