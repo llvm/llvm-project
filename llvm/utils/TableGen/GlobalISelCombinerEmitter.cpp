@@ -35,10 +35,9 @@
 #include "GlobalISelMatchTableExecutorEmitter.h"
 #include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -128,20 +127,6 @@ template <typename Container> auto keys(Container &&C) {
 
 template <typename Container> auto values(Container &&C) {
   return map_range(C, [](auto &Entry) -> auto & { return Entry.second; });
-}
-
-template <typename SetTy> bool doSetsIntersect(const SetTy &A, const SetTy &B) {
-  for (const auto &Elt : A) {
-    if (B.contains(Elt))
-      return true;
-  }
-  return false;
-}
-
-template <class Ty>
-void setVectorUnion(SetVector<Ty> &S1, const SetVector<Ty> &S2) {
-  for (auto SI = S2.begin(), SE = S2.end(); SI != SE; ++SI)
-    S1.insert(*SI);
 }
 
 //===- MatchData Handling -------------------------------------------------===//
@@ -327,7 +312,7 @@ public:
   PatternType() : Kind(PT_None), Data() {}
 
   static std::optional<PatternType> get(ArrayRef<SMLoc> DiagLoc,
-                                        const Record *R);
+                                        const Record *R, Twine DiagCtx);
   static PatternType getTypeOf(StringRef OpName);
 
   bool isNone() const { return Kind == PT_None; }
@@ -363,7 +348,7 @@ private:
 };
 
 std::optional<PatternType> PatternType::get(ArrayRef<SMLoc> DiagLoc,
-                                            const Record *R) {
+                                            const Record *R, Twine DiagCtx) {
   assert(R);
   if (R->isSubClassOf("ValueType")) {
     PatternType PT(PT_ValueType);
@@ -374,8 +359,8 @@ std::optional<PatternType> PatternType::get(ArrayRef<SMLoc> DiagLoc,
   if (R->isSubClassOf(TypeOfClassName)) {
     auto RawOpName = R->getValueAsString("OpName");
     if (!RawOpName.starts_with("$")) {
-      PrintError(DiagLoc, "invalid operand name format '" + RawOpName +
-                              "' in " + TypeOfClassName +
+      PrintError(DiagLoc, DiagCtx + ": invalid operand name format '" +
+                              RawOpName + "' in " + TypeOfClassName +
                               ": expected '$' followed by an operand name");
       return std::nullopt;
     }
@@ -385,7 +370,7 @@ std::optional<PatternType> PatternType::get(ArrayRef<SMLoc> DiagLoc,
     return PT;
   }
 
-  PrintError(DiagLoc, "unknown type '" + R->getName() + "'");
+  PrintError(DiagLoc, DiagCtx + ": unknown type '" + R->getName() + "'");
   return std::nullopt;
 }
 
@@ -914,11 +899,11 @@ public:
     SmallVector<StringRef, 0> Keys(Table.keys());
     sort(Keys);
 
-    OS << "\n";
+    OS << '\n';
     for (const auto &Key : Keys) {
       const auto *Def = Table.at(Key);
       OS << Indent << "  " << Key << " -> "
-         << (Def ? Def->getName() : "<live-in>") << "\n";
+         << (Def ? Def->getName() : "<live-in>") << '\n';
     }
     OS << Indent << ")\n";
   }
@@ -1425,7 +1410,7 @@ bool PatFrag::buildOperandsTables() {
 }
 
 void PatFrag::print(raw_ostream &OS, StringRef Indent) const {
-  OS << Indent << "(PatFrag name:" << getName() << "\n";
+  OS << Indent << "(PatFrag name:" << getName() << '\n';
   if (!in_params().empty()) {
     OS << Indent << "  (ins ";
     printParamsList(OS, in_params());
@@ -1669,7 +1654,7 @@ public:
       OS << "Parsing " << PatFragClassName << " '" << Def.getName() << "'";
     else
       OS << "Parsing '" << Def.getName() << "'";
-    OS << "\n";
+    OS << '\n';
   }
 };
 
@@ -1691,7 +1676,7 @@ public:
 
     if (Pat)
       OS << " [" << Pat->getKindName() << " '" << Pat->getName() << "']";
-    OS << "\n";
+    OS << '\n';
   }
 };
 
@@ -1734,19 +1719,7 @@ private:
   /// e.g. [[a, b], [c, d]] means a and b have the same type, and c and
   /// d have the same type too. b/c and a/d don't have to have the same type,
   /// though.
-  ///
-  /// NOTE: We use a SetVector, not a Set. This is to guarantee a stable
-  /// iteration order which is important because:
-  ///   - During inference, we iterate that set and pick the first suitable
-  ///   candidate. Using a normal set could make inference inconsistent across
-  ///   runs if the Set uses the StringRef ptr to cache values.
-  ///   - We print this set if DebugInfer is set, and we don't want our tests to
-  ///   fail randomly due to the Set's iteration order changing.
-  using TypeEquivalenceClasses = std::vector<SetVector<StringRef>>;
-
-  static std::string toString(const SetVector<StringRef> &EqClass) {
-    return "[" + join(EqClass, ", ") + "]";
-  }
+  using TypeEquivalenceClasses = EquivalenceClasses<StringRef>;
 
   /// \returns true for `OPERAND_GENERIC_` 0 through 5.
   /// These are the MCOI types that can be registers. The other MCOI types are
@@ -1778,24 +1751,8 @@ private:
   void getInstEqClasses(const InstructionPattern &P,
                         TypeEquivalenceClasses &OutTECs) const;
 
-  /// Calculates the TypeEquivalenceClasses for each instruction, then merges
-  /// them into a common set of TypeEquivalenceClasses for the whole rule.
-  ///
-  /// This works by repeatedly merging intersecting type equivalence classes
-  /// until no more merging occurs.
-  ///
-  /// This essentially applies the "transitive" part of type inference. Let's
-  /// take the following equivalence classes:
-  ///   inst0: [a, b], [c, d]
-  ///   inst1: [b, c]
-  ///
-  /// If we see inst0 alone, we can't say that a and d have the same type -
-  /// they're not in the same equivalence classes. However if we just use logic,
-  /// we can say: "a == d because a == b, b == c and c == d".
-  ///
-  /// Merging condenses that information into a single big equivalence class
-  /// which can be looked at alone to make the same deduction.
-  ///   rule: [a, b, c, d]
+  /// Calls `getInstEqClasses` on all patterns of the rule to produce the whole
+  /// rule's TypeEquivalenceClasses.
   TypeEquivalenceClasses getRuleEqClasses() const;
 
   /// Tries to infer the type of the \p ImmOpIdx -th operand of \p IP using \p
@@ -1882,7 +1839,7 @@ void CombineRuleOperandTypeChecker::propagateAndInferTypes() {
         if (PatternType Ty =
                 inferNamedOperandType(*Pat, Op.getOperandName(), TECs)) {
           if (DebugTypeInfer)
-            errs() << "INFER: " << Op.describe() << " -> " << Ty.str() << "\n";
+            errs() << "INFER: " << Op.describe() << " -> " << Ty.str() << '\n';
           Op.setType(Ty);
           InferredAny = true;
         }
@@ -1894,7 +1851,7 @@ void CombineRuleOperandTypeChecker::propagateAndInferTypes() {
       if (Op.hasImmValue()) {
         if (PatternType Ty = inferImmediateType(*Pat, K, TECs)) {
           if (DebugTypeInfer)
-            errs() << "INFER: " << Op.describe() << " -> " << Ty.str() << "\n";
+            errs() << "INFER: " << Op.describe() << " -> " << Ty.str() << '\n';
           Op.setType(Ty);
           InferredAny = true;
         }
@@ -1921,10 +1878,11 @@ void CombineRuleOperandTypeChecker::propagateAndInferTypes() {
       errs() << "Apply patterns for rule " << RuleDef.getName()
              << " after inference:\n";
       for (auto *Pat : ApplyPats) {
+        errs() << "  ";
         Pat->print(errs(), /*PrintName*/ true);
-        errs() << "\n";
+        errs() << '\n';
       }
-      errs() << "\n";
+      errs() << '\n';
     }
   }
 }
@@ -1972,37 +1930,29 @@ PatternType CombineRuleOperandTypeChecker::inferNamedOperandType(
     const InstructionPattern &IP, StringRef OpName,
     const TypeEquivalenceClasses &TECs) const {
   // This is the simplest possible case, we just need to find a TEC that
-  // contains OpName.
-  for (const auto &TEC : TECs) {
-    if (!TEC.contains(OpName))
+  // contains OpName. Look at all other operands in equivalence class and try to
+  // find a suitable one.
+
+  // Check for a def of a matched pattern. This is guaranteed to always
+  // be a register so we can blindly use that.
+  StringRef GoodOpName;
+  for (auto It = TECs.findLeader(OpName); It != TECs.member_end(); ++It) {
+    if (*It == OpName)
       continue;
 
-    // This TEC mentions the operand. Look at all other operands in this TEC and
-    // try to find a suitable one.
+    const auto LookupRes = MatchOpTable.lookup(*It);
+    if (LookupRes.Def) // Favor defs
+      return PatternType::getTypeOf(*It);
 
-    // First, check for a def of a matched pattern. This is guaranteed to always
-    // be a register so we can blindly use that.
-    StringRef GoodOpName;
-    for (const auto &EqOp : TEC) {
-      if (EqOp == OpName)
-        continue;
-
-      const auto LookupRes = MatchOpTable.lookup(EqOp);
-      if (LookupRes.Def) // Favor defs
-        return PatternType::getTypeOf(EqOp);
-
-      // Otherwise just save this in case we don't find any def.
-      if (GoodOpName.empty() && LookupRes.Found)
-        GoodOpName = EqOp;
-    }
-
-    if (!GoodOpName.empty())
-      return PatternType::getTypeOf(GoodOpName);
-
-    // No good operand found, give up.
-    return {};
+    // Otherwise just save this in case we don't find any def.
+    if (GoodOpName.empty() && LookupRes.Found)
+      GoodOpName = *It;
   }
 
+  if (!GoodOpName.empty())
+    return PatternType::getTypeOf(GoodOpName);
+
+  // No good operand found, give up.
   return {};
 }
 
@@ -2076,31 +2026,42 @@ void CombineRuleOperandTypeChecker::getInstEqClasses(
   for (const auto &[Idx, Ty] : enumerate(MCOITypes))
     TyToOpIdx[Ty].push_back(Idx);
 
-  const unsigned FirstNewTEC = OutTECs.size();
+  if (DebugTypeInfer)
+    errs() << "\tGroups for " << P.getName() << ":\t";
+
   for (const auto &[Ty, Idxs] : TyToOpIdx) {
     if (!canMCOIOperandTypeBeARegister(Ty))
       continue;
 
-    SetVector<StringRef> OpNames;
+    if (DebugTypeInfer)
+      errs() << '[';
+    StringRef Sep = "";
+
     // We only collect named operands.
+    StringRef Leader;
     for (unsigned Idx : Idxs) {
       const auto &Op = P.getOperand(Idx);
-      if (Op.isNamedOperand())
-        OpNames.insert(Op.getOperandName());
+      if (!Op.isNamedOperand())
+        continue;
+
+      const auto OpName = Op.getOperandName();
+      if (DebugTypeInfer) {
+        errs() << Sep << OpName;
+        Sep = ", ";
+      }
+
+      if (Leader.empty())
+        OutTECs.insert((Leader = OpName));
+      else
+        OutTECs.unionSets(Leader, OpName);
     }
-    OutTECs.emplace_back(std::move(OpNames));
+
+    if (DebugTypeInfer)
+      errs() << "] ";
   }
 
-  if (DebugTypeInfer) {
-    errs() << "\t" << P.getName() << ":\t";
-    if (FirstNewTEC == OutTECs.size())
-      errs() << "(empty)";
-    else {
-      for (unsigned K = FirstNewTEC; K < OutTECs.size(); ++K)
-        errs() << "\t" << toString(OutTECs[K]);
-    }
-    errs() << "\n";
-  }
+  if (DebugTypeInfer)
+    errs() << '\n';
 }
 
 CombineRuleOperandTypeChecker::TypeEquivalenceClasses
@@ -2117,44 +2078,22 @@ CombineRuleOperandTypeChecker::getRuleEqClasses() const {
   for (const auto *Pat : ApplyPats)
     getInstEqClasses(*Pat, TECs);
 
-  bool Merged;
-  do {
-    Merged = false;
-    for (auto &X : TECs) {
-      if (X.empty()) // Already merged
-        continue;
-
-      for (auto &Y : TECs) {
-        if (&X == &Y || Y.empty()) // Same set or already merged.
-          continue;
-
-        if (doSetsIntersect(X, Y)) {
-          if (DebugTypeInfer)
-            errs() << "(merging " << toString(X) << " | " << toString(Y)
-                   << ")\n";
-          setVectorUnion(X, Y);
-          Merged = true;
-
-          // To avoid invalidating iterators during iteration, we just clear the
-          // other set then clean it up later.
-          Y.clear();
+  if (DebugTypeInfer) {
+    errs() << "Final Type Equivalence Classes: ";
+    for (auto ClassIt = TECs.begin(); ClassIt != TECs.end(); ++ClassIt) {
+      // only print non-empty classes.
+      if (auto MembIt = TECs.member_begin(ClassIt);
+          MembIt != TECs.member_end()) {
+        errs() << '[';
+        StringRef Sep = "";
+        for (; MembIt != TECs.member_end(); ++MembIt) {
+          errs() << Sep << *MembIt;
+          Sep = ", ";
         }
+        errs() << "] ";
       }
     }
-
-    // Remove empty sets.
-    erase_if(TECs, [&](auto &Set) { return Set.empty(); });
-  } while (Merged);
-
-  if (DebugTypeInfer) {
-    errs() << "Result: ";
-    if (TECs.empty())
-      errs() << "(empty)";
-    else {
-      for (const auto &TEC : TECs)
-        errs() << toString(TEC) << " ";
-    }
-    errs() << "\n";
+    errs() << '\n';
   }
 
   return TECs;
@@ -2414,14 +2353,14 @@ bool CombineRuleBuilder::emitRuleMatchers() {
 
 void CombineRuleBuilder::print(raw_ostream &OS) const {
   OS << "(CombineRule name:" << RuleDef.getName() << " id:" << RuleID
-     << " root:" << RootName << "\n";
+     << " root:" << RootName << '\n';
 
   if (!MatchDatas.empty()) {
     OS << "  (MatchDatas\n";
     for (const auto &MD : MatchDatas) {
       OS << "    ";
       MD.print(OS);
-      OS << "\n";
+      OS << '\n';
     }
     OS << "  )\n";
   }
@@ -2430,7 +2369,7 @@ void CombineRuleBuilder::print(raw_ostream &OS) const {
     OS << "  (PatFrags\n";
     for (const auto *PF : SeenPatFrags) {
       PF->print(OS, /*Indent=*/"    ");
-      OS << "\n";
+      OS << '\n';
     }
     OS << "  )\n";
   }
@@ -2442,7 +2381,7 @@ void CombineRuleBuilder::print(raw_ostream &OS) const {
       return;
     }
 
-    OS << "\n";
+    OS << '\n';
     for (const auto &[Name, Pat] : Pats) {
       OS << "    ";
       if (Pat.get() == MatchRoot)
@@ -2452,7 +2391,7 @@ void CombineRuleBuilder::print(raw_ostream &OS) const {
         OS << "<apply_root>";
       OS << Name << ":";
       Pat->print(OS, /*PrintName=*/false);
-      OS << "\n";
+      OS << '\n';
     }
     OS << "  )\n";
   };
@@ -2493,9 +2432,9 @@ void CombineRuleBuilder::verify() const {
       // Both strings are allocated in the pool using insertStrRef.
       if (Name.data() != Pat->getName().data()) {
         dbgs() << "Map StringRef: '" << Name << "' @ "
-               << (const void *)Name.data() << "\n";
+               << (const void *)Name.data() << '\n';
         dbgs() << "Pat String: '" << Pat->getName() << "' @ "
-               << (const void *)Pat->getName().data() << "\n";
+               << (const void *)Pat->getName().data() << '\n';
         PrintFatalError("StringRef stored in the PatternMap is not referencing "
                         "the same string as its Pattern!");
       }
@@ -2595,7 +2534,7 @@ void CombineRuleBuilder::addCXXPredicate(RuleMatcher &M,
       P.expandCode(CE, RuleDef.getLoc(), [&](raw_ostream &OS) {
         OS << "// Pattern Alternatives: ";
         print(OS, Alts);
-        OS << "\n";
+        OS << '\n';
       });
   IM->addPredicate<GenericInstructionPredicateMatcher>(
       ExpandedCode.getEnumNameWithPrefix(CXXPredPrefix));
@@ -3145,7 +3084,9 @@ bool CombineRuleBuilder::parseInstructionPatternOperand(
       return ParseErr();
 
     const Record *TyDef = DagOp->getOperatorAsDef(RuleDef.getLoc());
-    auto ImmTy = PatternType::get(RuleDef.getLoc(), TyDef);
+    auto ImmTy = PatternType::get(RuleDef.getLoc(), TyDef,
+                                  "cannot parse immediate '" +
+                                      DagOp->getAsUnquotedString() + "'");
     if (!ImmTy)
       return false;
 
@@ -3172,7 +3113,8 @@ bool CombineRuleBuilder::parseInstructionPatternOperand(
       return false;
     }
     const Record *Def = DefI->getDef();
-    auto Ty = PatternType::get(RuleDef.getLoc(), Def);
+    auto Ty =
+        PatternType::get(RuleDef.getLoc(), Def, "cannot parse operand type");
     if (!Ty)
       return false;
     IP.addOperand(OpName->getAsUnquotedString(), *Ty);
@@ -4244,7 +4186,7 @@ void GICombinerEmitter::emitRunCustomAction(raw_ostream &OS) {
     OS << "  switch(ApplyID) {\n";
     for (const auto &Apply : ApplyCode) {
       OS << "  case " << Apply->getEnumNameWithPrefix(CXXApplyPrefix) << ":{\n"
-         << "    " << join(split(Apply->Code, "\n"), "\n    ") << "\n"
+         << "    " << join(split(Apply->Code, '\n'), "\n    ") << '\n'
          << "    return;\n";
       OS << "  }\n";
     }
