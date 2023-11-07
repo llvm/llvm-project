@@ -587,7 +587,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
-               Optional<I32>:$dynamicSharedMemorySize)>,
+               Optional<I32>:$dynamicSharedMemorySize,
+               OptionalAttr<SI32Attr>:$dynamicSharedMemorySizeConstant)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
@@ -693,7 +694,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       CArg<"Type", "nullptr">:$asyncTokenType,
       CArg<"ValueRange", "{}">:$asyncDependencies,
       CArg<"TypeRange", "{}">:$workgroupAttributions,
-      CArg<"TypeRange", "{}">:$privateAttributions)>
+      CArg<"TypeRange", "{}">:$privateAttributions,
+      CArg<"IntegerAttr", "IntegerAttr()">:$dynamicSharedMemorySizeConstant)>
   ];
 
   let extraClassDeclaration = [{
@@ -728,6 +730,24 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     /// Returns the keywords used in the custom syntax for this Op.
     static StringRef getWorkgroupKeyword() { return "workgroup"; }
     static StringRef getPrivateKeyword() { return "private"; }
+    static StringRef getDynamicSharedMemorySizeConstantKeyword() { 
+      return "dynamicSharedMemorySizeConstant"; 
+    }
+
+    static int getDynamicSharedMemorySizeDynamicValue() { 
+      return std::numeric_limits<int32_t>::min(); 
+    }
+    /// Returns a value of the dynamic shared memory size. 
+    /// If it is a constant, it builds one
+    mlir::Value getDynamicSharedMemorySizeValue(OpBuilder &b) { 
+      int32_t kDynamic = getDynamicSharedMemorySizeDynamicValue();
+      if (getDynamicSharedMemorySizeConstant().value_or(kDynamic) == kDynamic)
+        return getDynamicSharedMemorySize();
+      return b.create<mlir::arith::ConstantOp>(
+            getLoc(), b.getIntegerType(32),
+            b.getI32IntegerAttr(
+                getDynamicSharedMemorySizeConstant().value()));
+    }
 
     /// Returns the number of buffers located in the workgroup memory.
     unsigned getNumWorkgroupAttributions() {

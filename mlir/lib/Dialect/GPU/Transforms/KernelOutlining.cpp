@@ -281,7 +281,7 @@ static void convertToLaunchFuncOp(gpu::LaunchOp launchOp,
   auto launchFunc = builder.create<gpu::LaunchFuncOp>(
       launchOp.getLoc(), kernelFunc, launchOp.getGridSizeOperandValues(),
       launchOp.getBlockSizeOperandValues(),
-      launchOp.getDynamicSharedMemorySize(), operands,
+      launchOp.getDynamicSharedMemorySizeValue(builder), operands,
       asyncToken ? asyncToken.getType() : nullptr,
       launchOp.getAsyncDependencies());
   launchOp.replaceAllUsesWith(launchFunc);
