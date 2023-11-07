@@ -419,7 +419,32 @@ public:
   operator=(const SwiftLanguageRuntimeStub &) = delete;
 };
 
+static std::unique_ptr<swift::SwiftObjectFileFormat>
+GetObjectFileFormat(llvm::Triple::ObjectFormatType obj_format_type) {
+  std::unique_ptr<swift::SwiftObjectFileFormat> obj_file_format;
+  switch (obj_format_type) {
+  case llvm::Triple::MachO:
+    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatMachO>();
+    break;
+  case llvm::Triple::ELF:
+    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatELF>();
+    break;
+  case llvm::Triple::COFF:
+    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatCOFF>();
+    break;
+  default:
+    if (Log *log = GetLog(LLDBLog::Types))
+      log->Printf("%s: Could not find out swift reflection section names for "
+                  "object format type.",
+                  __FUNCTION__);
+  }
+  return obj_file_format;
+}
+
 static bool HasReflectionInfo(ObjectFile *obj_file) {
+  if (!obj_file)
+    return false;
+
   auto findSectionInObject = [&](StringRef name) {
     ConstString section_name(name);
     SectionSP section_sp =
@@ -429,18 +454,24 @@ static bool HasReflectionInfo(ObjectFile *obj_file) {
     return false;
   };
 
-  StringRef field_md = obj_file->GetReflectionSectionIdentifier(
-      swift::ReflectionSectionKind::fieldmd);
-  StringRef assocty = obj_file->GetReflectionSectionIdentifier(
-      swift::ReflectionSectionKind::assocty);
-  StringRef builtin = obj_file->GetReflectionSectionIdentifier(
-      swift::ReflectionSectionKind::builtin);
-  StringRef capture = obj_file->GetReflectionSectionIdentifier(
-      swift::ReflectionSectionKind::capture);
-  StringRef typeref = obj_file->GetReflectionSectionIdentifier(
-      swift::ReflectionSectionKind::typeref);
-  StringRef reflstr = obj_file->GetReflectionSectionIdentifier(
-      swift::ReflectionSectionKind::reflstr);
+  const auto obj_format_type =
+      obj_file->GetArchitecture().GetTriple().getObjectFormat();
+  auto obj_file_format_up = GetObjectFileFormat(obj_format_type);
+  if (!obj_file_format_up)
+    return false;
+
+  StringRef field_md =
+      obj_file_format_up->getSectionName(swift::ReflectionSectionKind::fieldmd);
+  StringRef assocty =
+      obj_file_format_up->getSectionName(swift::ReflectionSectionKind::assocty);
+  StringRef builtin =
+      obj_file_format_up->getSectionName(swift::ReflectionSectionKind::builtin);
+  StringRef capture =
+      obj_file_format_up->getSectionName(swift::ReflectionSectionKind::capture);
+  StringRef typeref =
+      obj_file_format_up->getSectionName(swift::ReflectionSectionKind::typeref);
+  StringRef reflstr =
+      obj_file_format_up->getSectionName(swift::ReflectionSectionKind::reflstr);
 
   bool hasReflectionSection = false;
   hasReflectionSection |= findSectionInObject(field_md);
@@ -627,28 +658,6 @@ void SwiftLanguageRuntime::ModulesDidLoad(const ModuleList &module_list) {
     m_impl = std::make_unique<SwiftLanguageRuntimeImpl>(*m_process);
     m_impl->ModulesDidLoad(module_list);
   }
-}
-
-static std::unique_ptr<swift::SwiftObjectFileFormat>
-GetObjectFileFormat(llvm::Triple::ObjectFormatType obj_format_type) {
-  std::unique_ptr<swift::SwiftObjectFileFormat> obj_file_format;
-  switch (obj_format_type) {
-  case llvm::Triple::MachO:
-    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatMachO>();
-    break;
-  case llvm::Triple::ELF:
-    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatELF>();
-    break;
-  case llvm::Triple::COFF:
-    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatCOFF>();
-    break;
-  default:
-    if (Log *log = GetLog(LLDBLog::Types))
-      log->Printf("%s: Could not find out swift reflection section names for "
-                  "object format type.",
-                  __FUNCTION__);
-  }
-  return obj_file_format;
 }
 
 static llvm::SmallVector<llvm::StringRef, 1>
