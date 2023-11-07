@@ -39,6 +39,7 @@
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StructuredDataImpl.h"
@@ -1561,8 +1562,9 @@ lldb::SBModule SBTarget::AddModule(const SBModuleSpec &module_spec) {
                                                  true /* notify */));
     if (!sb_module.IsValid() && module_spec.m_opaque_up->GetUUID().IsValid()) {
       Status error;
-      if (Symbols::DownloadObjectAndSymbolFile(*module_spec.m_opaque_up, error,
-                                               /* force_lookup */ true)) {
+      if (PluginManager::DownloadObjectAndSymbolFile(*module_spec.m_opaque_up,
+                                                     error,
+                                                     /* force_lookup */ true)) {
         if (FileSystem::Instance().Exists(
                 module_spec.m_opaque_up->GetFileSpec())) {
           sb_module.SetSP(target_sp->GetOrCreateModule(*module_spec.m_opaque_up,
