@@ -226,6 +226,21 @@ module acc_declare
 ! HLFIR: %[[DEVICEPTR:.*]] = acc.deviceptr varPtr(%[[DECL]]#1 : !fir.ref<!fir.array<100xf32>>)   bounds(%{{.*}}) -> !fir.ref<!fir.array<100xf32>> {name = "dataparam"}
 ! ALL: acc.declare dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100xf32>>)
 
+  function acc_declare_in_func()
+    real :: a(1024)
+    !$acc declare device_resident(a)
+  end function acc_declare_in_func
+
+! ALL-LABEL: func.func @_QMacc_declarePacc_declare_in_func() -> f32 {
+! HLFIR: %[[DEVICE_RESIDENT:.*]] = acc.declare_device_resident varPtr(%{{.*}}#1 : !fir.ref<!fir.array<1024xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<1024xf32>> {name = "a"}
+! HLFIR: acc.declare dataOperands(%[[DEVICE_RESIDENT]] : !fir.ref<!fir.array<1024xf32>>) {
+! HLFIR:   acc.terminator
+! HLFIR: }
+! HLFIR: acc.delete accPtr(%[[DEVICE_RESIDENT]] : !fir.ref<!fir.array<1024xf32>>) bounds(%6) {dataClause = #acc<data_clause acc_declare_device_resident>, name = "a"}
+! HLFIR: %[[LOAD:.*]] = fir.load %{{.*}}#1 : !fir.ref<f32>
+! HLFIR: return %[[LOAD]] : f32
+! ALL: }
+
 end module
 
 module acc_declare_allocatable_test

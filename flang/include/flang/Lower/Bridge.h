@@ -108,6 +108,8 @@ public:
 
   Fortran::lower::StatementContext &fctCtx() { return functionContext; }
 
+  Fortran::lower::StatementContext &openAccCtx() { return openAccContext; }
+
   bool validModule() { return getModule(); }
 
   //===--------------------------------------------------------------------===//
@@ -138,6 +140,7 @@ private:
 
   Fortran::semantics::SemanticsContext &semanticsContext;
   Fortran::lower::StatementContext functionContext;
+  Fortran::lower::StatementContext openAccContext;
   const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds;
   const Fortran::evaluate::IntrinsicProcTable &intrinsics;
   const Fortran::evaluate::TargetCharacteristics &targetCharacteristics;
