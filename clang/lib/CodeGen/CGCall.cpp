@@ -3507,6 +3507,9 @@ static llvm::StoreInst *findDominatingStoreToReturnValue(CodeGenFunction &CGF) {
       return nullptr;
     // These aren't actually possible for non-coerced returns, and we
     // only care about non-coerced returns on this code path.
+    // All memory instructions inside __try block are volatile.
+    if (CGF.currentFunctionUsesSEHTry() && SI->isVolatile())
+      return SI;
     assert(!SI->isAtomic() && !SI->isVolatile());
     return SI;
   };
