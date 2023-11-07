@@ -29,8 +29,7 @@
 //               +-----------------+
 // clang-format on
 
-extern "C" void* __cdecl __asan_new_nothrow(
-                                            size_t size);
+extern "C" void* __cdecl __asan_new_nothrow(size_t size);
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)

@@ -31,11 +31,8 @@
 
 __asan_InitDefine<op_new_scalar> init_new_scalar;
 
-extern "C" void* __cdecl __asan_new(
-                                    size_t size);
+extern "C" void* __cdecl __asan_new(size_t size);
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
-void* operator new(size_t size) {
-  return __asan_new(size);
-}
+void* operator new(size_t size) { return __asan_new(size); }

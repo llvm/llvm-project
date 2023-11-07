@@ -37,6 +37,4 @@ extern "C" void __cdecl __asan_delete(void* ptr);
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
-void operator delete(void* ptr) noexcept {
-  __asan_delete(ptr);
-}
+void operator delete(void* ptr) noexcept { __asan_delete(ptr); }

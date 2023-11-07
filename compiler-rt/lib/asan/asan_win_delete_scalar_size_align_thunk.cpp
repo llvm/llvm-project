@@ -31,8 +31,8 @@
 // +-----------------------+  +--------------------------+
 // clang-format on
 
-extern "C" void __cdecl __asan_delete_size_align(void* ptr, size_t size,
-    std::align_val_t align) noexcept;
+extern "C" void __cdecl __asan_delete_size_align(
+    void* ptr, size_t size, std::align_val_t align) noexcept;
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)

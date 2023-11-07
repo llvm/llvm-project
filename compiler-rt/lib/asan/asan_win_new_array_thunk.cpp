@@ -31,8 +31,7 @@
 
 __asan_InitDefine<op_new_array> init_new_array;
 
-extern "C" void* __cdecl __asan_new_array(
-                                          size_t size);
+extern "C" void* __cdecl __asan_new_array(size_t size);
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)

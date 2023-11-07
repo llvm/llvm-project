@@ -32,7 +32,7 @@
 // clang-format on
 
 extern "C" void __cdecl __asan_delete_array_size_align(void* ptr, size_t size,
-    std::align_val_t align);
+                                                       std::align_val_t align);
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)

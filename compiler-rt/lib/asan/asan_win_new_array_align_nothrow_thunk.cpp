@@ -29,7 +29,8 @@
 //                     +-----------------------+
 // clang-format on
 
-extern "C" void* __cdecl __asan_new_array_align_nothrow(size_t size, std::align_val_t align);
+extern "C" void* __cdecl __asan_new_array_align_nothrow(size_t size,
+                                                        std::align_val_t align);
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
