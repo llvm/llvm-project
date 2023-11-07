@@ -46,7 +46,7 @@ class PPEmbedParameterPrefix : public PPDirectiveParameter {
 public:
   SmallVector<Token, 2> Tokens;
 
-  PPEmbedParameterPrefix(SmallVector<Token, 2> Tokens, SourceLocation Start,
+  PPEmbedParameterPrefix(SmallVectorImpl<Token> &&Tokens, SourceLocation Start,
                          SourceLocation End)
       : PPDirectiveParameter(Start, End), Tokens(std::move(Tokens)) {}
 };
@@ -57,7 +57,7 @@ class PPEmbedParameterSuffix : public PPDirectiveParameter {
 public:
   SmallVector<Token, 2> Tokens;
 
-  PPEmbedParameterSuffix(SmallVector<Token, 2> Tokens, SourceLocation Start,
+  PPEmbedParameterSuffix(SmallVectorImpl<Token> &&Tokens, SourceLocation Start,
                          SourceLocation End)
       : PPDirectiveParameter(Start, End), Tokens(std::move(Tokens)) {}
 };
@@ -68,7 +68,7 @@ class PPEmbedParameterIfEmpty : public PPDirectiveParameter {
 public:
   SmallVector<Token, 2> Tokens;
 
-  PPEmbedParameterIfEmpty(SmallVector<Token, 2> Tokens, SourceLocation Start,
+  PPEmbedParameterIfEmpty(SmallVectorImpl<Token> &&Tokens, SourceLocation Start,
                           SourceLocation End)
       : PPDirectiveParameter(Start, End), Tokens(std::move(Tokens)) {}
 };
