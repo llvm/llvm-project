@@ -176,9 +176,10 @@ def LoopContinuousPeelOp : Op<Transform_Dialect, "loop.loop_continuous_peel",
 
   let arguments =
       (ins TransformHandleTypeInterface:$target,
-           DefaultValuedAttr<BoolAttr, "false">:$single_iter_opt);
+           DefaultValuedAttr<BoolAttr, "false">:$convert_single_iter_loops_to_if);
   // TODO: Return both the peeled loop and the remainder loop.
-  let results = (outs TransformHandleTypeInterface:$transformed);
+  let results = (outs TransformHandleTypeInterface:$peeled_loop,
+                      TransformHandleTypeInterface:$remainder_loop);
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";

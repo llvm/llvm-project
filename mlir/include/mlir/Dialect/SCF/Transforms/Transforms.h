@@ -89,6 +89,47 @@ LogicalResult peelForLoopAndSimplifyBounds(RewriterBase &rewriter, ForOp forOp,
 LogicalResult peelForLoopFirstIteration(RewriterBase &rewriter, ForOp forOp,
                                         scf::ForOp &partialIteration);
 
+/// Rewrite a for loop with bounds/step that potentially do not divide the
+/// iteration space evenly into a chain of for loops where the step is a
+/// power of 2 and decreases exponentially across subsequent loops.
+///
+/// E.g., assuming a lower bound of 0, the following loop
+/// ```
+/// scf.for %iv = %c0 to %ub step %c8 {
+///   (loop body)
+/// }
+/// ```
+/// is rewritten into the following pseudo IR:
+/// ```
+/// %newUb = %ub - (%ub mod %c8)
+/// scf.for %iv = %c0 to %newUb step %c8 {
+///   (loop body)
+/// }
+/// %newUb2 = %ub - (%ub mod %c4)
+/// scf.for %iv2 = %newUb to %newUb2 {
+///   (loop body)
+/// }
+/// %newUb3 = %ub - (%ub mod %c2)
+/// scf.for %iv2 = %newUb2 to %newUb3 {
+///   (loop body)
+/// }
+/// scf.for %iv2 = %newUb3 to %ub {
+///   (loop body)
+/// }
+/// ```
+///
+/// Similar to loop peeling, this function simplifies the affine.min and
+/// affine.max ops in the body of each resulting for loop for better
+/// canonicalization opportunities.
+///
+/// The return value indicates if the loop was rewritten. The loop
+/// is not rewritten if the step size is 1 or dynamic.
+
+LogicalResult
+continuousPeelForLoopAndSimplifyBounds(RewriterBase &rewriter, ForOp forOp,
+                                       scf::ForOp &partialIteration,
+                                       bool convertSingleIterLoopsToIf);
+
 /// Tile a parallel loop of the form
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
 ///                                             step (%arg4, %arg5)

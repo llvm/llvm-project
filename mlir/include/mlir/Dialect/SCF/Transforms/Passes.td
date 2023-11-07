@@ -43,6 +43,17 @@ def SCFForLoopPeeling : Pass<"scf-for-loop-peeling"> {
   let dependentDialects = ["affine::AffineDialect"];
 }
 
+def SCFForLoopContinuousPeeling : Pass<"scf-for-loop-continuous-peeling"> {
+  let summary = "Convert a loop into a chain of loops with exponentially decreasing steps that are power of 2.";
+  let constructor = "mlir::createForLoopContinuousPeelingPass()";
+  let options = [
+    Option<"convertSingleIterLoopsToIf", "convert-single-iter-loops-to-if", "bool",
+           /*default=*/"false",
+           "Convert single iteration loops to if. ">
+  ];
+  let dependentDialects = ["affine::AffineDialect"];
+}
+
 def SCFForLoopSpecialization : Pass<"scf-for-loop-specialization"> {
   let summary = "Specialize `for` loops for vectorization";
   let constructor = "mlir::createForLoopSpecializationPass()";

@@ -28,6 +28,7 @@
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFFORLOOPPEELING
+#define GEN_PASS_DEF_SCFFORLOOPCONTINUOUSPEELING
 #define GEN_PASS_DEF_SCFFORLOOPSPECIALIZATION
 #define GEN_PASS_DEF_SCFPARALLELLOOPSPECIALIZATION
 #include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
@@ -103,6 +104,165 @@ static void specializeForLoopForUnrolling(ForOp op) {
   ifOp.getThenBodyBuilder().clone(*op.getOperation(), map);
   ifOp.getElseBodyBuilder().clone(*op.getOperation());
   op.erase();
+}
+
+static LogicalResult splitLoopHelper(RewriterBase &b, scf::ForOp &forOp,
+                                     scf::ForOp &partialIteration,
+                                     Value &splitBound) {
+  RewriterBase::InsertionGuard guard(b);
+  auto lbInt = getConstantIntValue(forOp.getLowerBound());
+  auto ubInt = getConstantIntValue(forOp.getUpperBound());
+  auto stepInt = getConstantIntValue(forOp.getStep());
+
+  // No specialization necessary if step already divides upper bound evenly.
+  if (lbInt && ubInt && stepInt && (*ubInt - *lbInt) % *stepInt == 0)
+    return failure();
+  // No specialization necessary if step size is 1.
+  if (stepInt == static_cast<int64_t>(1))
+    return failure();
+
+  // Create ForOp for partial iteration.
+  b.setInsertionPointAfter(forOp);
+  partialIteration = cast<scf::ForOp>(b.clone(*forOp.getOperation()));
+  partialIteration.getLowerBoundMutable().assign(splitBound);
+  forOp.replaceAllUsesWith(partialIteration->getResults());
+  partialIteration.getInitArgsMutable().assign(forOp->getResults());
+
+  // Set new upper loop bound.
+  b.updateRootInPlace(
+      forOp, [&]() { forOp.getUpperBoundMutable().assign(splitBound); });
+
+  return success();
+}
+
+static scf::IfOp convertSingleIterFor(RewriterBase &b, scf::ForOp &forOp) {
+  Location loc = forOp->getLoc();
+  IRMapping mapping;
+  mapping.map(forOp.getInductionVar(), forOp.getLowerBound());
+  for (auto [arg, operand] :
+       llvm::zip(forOp.getRegionIterArgs(), forOp.getInitsMutable())) {
+    mapping.map(arg, operand.get());
+  }
+  b.setInsertionPoint(forOp);
+  auto cond =
+      b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
+                              forOp.getLowerBound(), forOp.getUpperBound());
+  auto ifOp = b.create<scf::IfOp>(loc, forOp->getResultTypes(), cond, true);
+  // then branch
+  b.setInsertionPointToStart(ifOp.thenBlock());
+  for (Operation &op : forOp.getBody()->getOperations()) {
+    b.clone(op, mapping);
+  }
+  // else branch
+  b.setInsertionPointToStart(ifOp.elseBlock());
+  if (!forOp->getResultTypes().empty()) {
+    b.create<scf::YieldOp>(loc, forOp.getInits());
+  }
+  b.replaceOp(forOp, ifOp->getResults());
+  return ifOp;
+}
+
+/// Rewrite a for loop with bounds/step that potentially do not divide the
+/// iteration space evenly into a chain of for loops where the step is a
+/// power of 2 and decreases exponentially across subsequent loops. Helps
+/// divide the iteration space across all resulting peeled loops evenly.
+///
+/// Optionally, convert all single iteration for loops to if-else
+/// blocks when convert_single_iter_loops_to_if attribute is set to true or
+/// alternatively with the convert-single-iter-loops-to-if option for the
+/// scf-for-loop-continuous-peeling pass.
+static LogicalResult continuousPeelForLoop(RewriterBase &b, ForOp forOp,
+                                           ForOp &partialIteration,
+                                           bool convertSingleIterLoopsToIf) {
+
+  scf::ForOp currentLoop;
+  auto lbInt = getConstantIntValue(forOp.getLowerBound());
+  auto stepInt = getConstantIntValue(forOp.getStep());
+  if (!stepInt.has_value() || *stepInt <= 0)
+    return failure(); // step size must be a known positive constant
+  Value initialUb = forOp.getUpperBound();
+  Value initialStep = forOp.getStep();
+  uint64_t loopStep = *stepInt;
+  currentLoop = forOp;
+  AffineExpr sym0, sym1, sym2;
+  bindSymbols(b.getContext(), sym0, sym1, sym2);
+  AffineMap defaultSplitMap =
+      AffineMap::get(0, 3, {sym1 - ((sym1 - sym0) % sym2)});
+  AffineMap powerSplitMap = AffineMap::get(0, 3, {sym1 - (sym1 % sym2)});
+  bool usePowerSplit = (lbInt.has_value()) &&
+                       (*lbInt % *stepInt == static_cast<int64_t>(0)) &&
+                       (loopStep == llvm::bit_floor(loopStep));
+  AffineMap splitMap = usePowerSplit ? powerSplitMap : defaultSplitMap;
+  SmallVector<scf::ForOp> loops;
+  while (loopStep) {
+    b.setInsertionPoint(currentLoop);
+    auto constStepOp =
+        b.create<arith::ConstantIndexOp>(currentLoop.getLoc(), loopStep);
+    currentLoop.getStepMutable().assign(constStepOp);
+    b.setInsertionPoint(currentLoop);
+    Value splitBound = b.createOrFold<affine::AffineApplyOp>(
+        currentLoop.getLoc(), splitMap,
+        ValueRange{currentLoop.getLowerBound(), currentLoop.getUpperBound(),
+                   currentLoop.getStep()});
+    LogicalResult status =
+        splitLoopHelper(b, currentLoop, partialIteration, splitBound);
+
+    // Canonicalize min/max affine operations
+    // It uses scf::rewritePeeledMinMaxOp to identify operations to be replaced,
+    // they are then replaced by the current step size.
+    // TODO: Alternative method - update affine map to reflect the loop step
+    // Example: min(ub - iv, 8) -> min(ub - iv, 4)
+    currentLoop.walk([&](affine::AffineMinOp affineOp) {
+      b.setInsertionPoint(affineOp);
+      auto clonedOp = cast<affine::AffineMinOp>(b.clone(*affineOp));
+      LogicalResult result = scf::rewritePeeledMinMaxOp(
+          b, clonedOp, currentLoop.getInductionVar(), initialUb, initialStep,
+          /*insideLoop=*/true);
+      if (result.succeeded())
+        b.replaceOp(affineOp, currentLoop.getStep());
+      else
+        b.eraseOp(clonedOp); // to avoid infinite walk
+    });
+    currentLoop.walk([&](affine::AffineMaxOp affineOp) {
+      b.setInsertionPoint(affineOp);
+      auto clonedOp = cast<affine::AffineMaxOp>(b.clone(*affineOp));
+      LogicalResult result = scf::rewritePeeledMinMaxOp(
+          b, clonedOp, currentLoop.getInductionVar(), initialUb, initialStep,
+          /*insideLoop=*/true);
+      if (result.succeeded())
+        b.replaceOp(affineOp, currentLoop.getStep());
+      else
+        b.eraseOp(clonedOp); // to avoid infinite walk
+    });
+
+    // Prepare for the next iteration
+    loops.push_back(currentLoop);
+    if (failed(status))
+      break;
+    currentLoop = partialIteration;
+    uint64_t maxPower = llvm::bit_floor(loopStep);
+    loopStep = maxPower == loopStep ? maxPower >> 1 : maxPower;
+  }
+
+  assert(loops.size() > 0 && "There should be at least one loop available");
+  if (convertSingleIterLoopsToIf) {
+    for (size_t i = 1; i < loops.size(); ++i) {
+      convertSingleIterFor(b, loops[i]);
+    }
+  }
+
+  return success();
+}
+
+LogicalResult mlir::scf::continuousPeelForLoopAndSimplifyBounds(
+    RewriterBase &rewriter, ForOp forOp, ForOp &partialIteration,
+    bool convertSingleIterLoopsToIf) {
+
+  if (failed(continuousPeelForLoop(rewriter, forOp, partialIteration,
+                                   convertSingleIterLoopsToIf)))
+    return failure();
+
+  return success();
 }
 
 /// Rewrite a for loop with bounds/step that potentially do not divide evenly
@@ -309,6 +469,45 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
 } // namespace
 
 namespace {
+struct ForLoopContinuousPeelingPattern : public OpRewritePattern<ForOp> {
+  ForLoopContinuousPeelingPattern(MLIRContext *ctx,
+                                  bool convertSingleIterLoopsToIf)
+      : OpRewritePattern<ForOp>(ctx),
+        convertSingleIterLoopsToIf(convertSingleIterLoopsToIf) {}
+
+  LogicalResult matchAndRewrite(ForOp forOp,
+                                PatternRewriter &rewriter) const override {
+    // Do not peel already peeled loops.
+    if (forOp->hasAttr(kPeeledLoopLabel))
+      return failure();
+
+    // Apply continuous loop peeling.
+    scf::ForOp partialIteration;
+    if (failed(continuousPeelForLoopAndSimplifyBounds(
+            rewriter, forOp, partialIteration, convertSingleIterLoopsToIf)))
+      return failure();
+
+    rewriter.updateRootInPlace(partialIteration, [&]() {
+      partialIteration->setAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
+      partialIteration->setAttr(kPartialIterationLabel, rewriter.getUnitAttr());
+    });
+    rewriter.updateRootInPlace(forOp, [&]() {
+      forOp->setAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
+    });
+
+    return success();
+  }
+
+  /// If set to true, loops inside partial iterations of another peeled loop
+  /// are not peeled. This reduces the size of the generated code. Partial
+  /// iterations are not usually performance critical.
+  /// Note: Takes into account the entire chain of parent operations, not just
+  /// the direct parent.
+  bool convertSingleIterLoopsToIf;
+};
+} // namespace
+
+namespace {
 struct ParallelLoopSpecialization
     : public impl::SCFParallelLoopSpecializationBase<
           ParallelLoopSpecialization> {
@@ -340,6 +539,24 @@ struct ForLoopPeeling : public impl::SCFForLoopPeelingBase<ForLoopPeeling> {
     });
   }
 };
+
+struct ForLoopContinuousPeeling
+    : public impl::SCFForLoopContinuousPeelingBase<ForLoopContinuousPeeling> {
+  void runOnOperation() override {
+    auto *parentOp = getOperation();
+    MLIRContext *ctx = parentOp->getContext();
+    RewritePatternSet patterns(ctx);
+    patterns.add<ForLoopContinuousPeelingPattern>(ctx,
+                                                  convertSingleIterLoopsToIf);
+    (void)applyPatternsAndFoldGreedily(parentOp, std::move(patterns));
+
+    // Drop the markers.
+    parentOp->walk([](Operation *op) {
+      op->removeAttr(kPeeledLoopLabel);
+      op->removeAttr(kPartialIterationLabel);
+    });
+  }
+};
 } // namespace
 
 std::unique_ptr<Pass> mlir::createParallelLoopSpecializationPass() {
@@ -352,4 +569,8 @@ std::unique_ptr<Pass> mlir::createForLoopSpecializationPass() {
 
 std::unique_ptr<Pass> mlir::createForLoopPeelingPass() {
   return std::make_unique<ForLoopPeeling>();
+}
+
+std::unique_ptr<Pass> mlir::createForLoopContinuousPeelingPass() {
+  return std::make_unique<ForLoopContinuousPeeling>();
 }

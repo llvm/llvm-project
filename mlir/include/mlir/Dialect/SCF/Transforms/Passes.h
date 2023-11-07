@@ -31,6 +31,12 @@ std::unique_ptr<Pass> createForLoopSpecializationPass();
 /// better vectorization.
 std::unique_ptr<Pass> createForLoopPeelingPass();
 
+/// Creates a pass that transforms a for loop into a chain of loops
+/// where the step size is always a power of 2 but decreases exponentially
+/// across the loops. Helps with dividing the iteration space across all
+/// resulting peeled loops evenly.
+std::unique_ptr<Pass> createForLoopContinuousPeelingPass();
+
 /// Creates a pass that canonicalizes affine.min and affine.max operations
 /// inside of scf.for loops with known lower and upper bounds.
 std::unique_ptr<Pass> createSCFForLoopCanonicalizationPass();
