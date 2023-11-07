@@ -1619,6 +1619,16 @@ def : BitConvert <v12i32, v12f32, VReg_384>;
 def : BitConvert <v12f32, v12i32, VReg_384>;
 
 // 512-bit bitcast
+def : BitConvert <v32f16, v32i16, VReg_512>;
+def : BitConvert <v32i16, v32f16, VReg_512>;
+def : BitConvert <v32f16, v16i32, VReg_512>;
+def : BitConvert <v32f16, v16f32, VReg_512>;
+def : BitConvert <v16f32, v32f16, VReg_512>;
+def : BitConvert <v16i32, v32f16, VReg_512>;
+def : BitConvert <v32i16, v16i32, VReg_512>;
+def : BitConvert <v32i16, v16f32, VReg_512>;
+def : BitConvert <v16f32, v32i16, VReg_512>;
+def : BitConvert <v16i32, v32i16, VReg_512>;
 def : BitConvert <v16i32, v16f32, VReg_512>;
 def : BitConvert <v16f32, v16i32, VReg_512>;
 def : BitConvert <v8i64,  v8f64,  VReg_512>;
@@ -1954,6 +1964,29 @@ def : GCNPat <
 def : GCNPat <
   (VGPRImm<(f16 fpimm)>:$imm),
   (V_MOV_B32_e32 (f16 (bitcast_fpimm_to_i32 $imm)))
+>;
+
+// V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
+// immediate and wil be expanded as needed, but we will only use these patterns
+// for values which can be encoded.
+def : GCNPat <
+  (VGPRImm<(i64 imm)>:$imm),
+  (V_MOV_B64_PSEUDO imm:$imm)
+>;
+
+def : GCNPat <
+  (VGPRImm<(f64 fpimm)>:$imm),
+  (V_MOV_B64_PSEUDO (f64 (bitcast_fpimm_to_i64 $imm)))
+>;
+
+def : GCNPat <
+  (i64 imm:$imm),
+  (S_MOV_B64_IMM_PSEUDO imm:$imm)
+>;
+
+def : GCNPat <
+  (f64 fpimm:$imm),
+  (S_MOV_B64_IMM_PSEUDO (i64 (bitcast_fpimm_to_i64 fpimm:$imm)))
 >;
 
 def : GCNPat <

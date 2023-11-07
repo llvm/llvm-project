@@ -2532,7 +2532,7 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
       HasForcedDistribution
           ? "unsafe dependent memory operations in loop."
           : "unsafe dependent memory operations in loop. Use "
-            "#pragma loop distribute(enable) to allow loop distribution "
+            "#pragma clang loop distribute(enable) to allow loop distribution "
             "to attempt to isolate the offending operations into a separate "
             "loop";
   OptimizationRemarkAnalysis &R =

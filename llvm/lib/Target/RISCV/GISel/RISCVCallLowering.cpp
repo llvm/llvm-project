@@ -48,7 +48,7 @@ public:
     const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
     return RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
-                         LocInfo, Flags, State, /*IsFixed=*/true, IsRet,
+                         LocInfo, Flags, State, Info.IsFixed, IsRet,
                          Info.Ty, *Subtarget.getTargetLowering(),
                          /*FirstMaskArgument=*/std::nullopt);
   }
@@ -456,6 +456,8 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           .buildInstrNoInsert(Info.Callee.isReg() ? RISCV::PseudoCALLIndirect
                                                   : RISCV::PseudoCALL)
           .add(Info.Callee);
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv));
 
   RISCVOutgoingValueAssigner ArgAssigner(
       CC == CallingConv::Fast ? RISCV::CC_RISCV_FastCC : RISCV::CC_RISCV,

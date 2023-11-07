@@ -10,11 +10,12 @@ define void @test_call_void_noargs() {
 
   ; RV32I-LABEL: name: test_call_void_noargs
   ; RV32I: bb.1.entry:
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_noargs, implicit-def $x1
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_noargs, csr_ilp32_lp64, implicit-def $x1
   ; RV32I-NEXT:   PseudoRET
+  ;
   ; RV64I-LABEL: name: test_call_void_noargs
   ; RV64I: bb.1.entry:
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_noargs, implicit-def $x1
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_noargs, csr_ilp32_lp64, implicit-def $x1
   ; RV64I-NEXT:   PseudoRET
 entry:
   call void @void_noargs()
@@ -33,8 +34,9 @@ define void @test_call_void_args_i8() {
   ; RV32I-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[C1]](s8)
   ; RV32I-NEXT:   $x10 = COPY [[ANYEXT]](s32)
   ; RV32I-NEXT:   $x11 = COPY [[ANYEXT1]](s32)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i8, implicit-def $x1, implicit $x10, implicit $x11
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i8, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11
   ; RV32I-NEXT:   PseudoRET
+  ;
   ; RV64I-LABEL: name: test_call_void_args_i8
   ; RV64I: bb.1.entry:
   ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
@@ -43,7 +45,7 @@ define void @test_call_void_args_i8() {
   ; RV64I-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C1]](s8)
   ; RV64I-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; RV64I-NEXT:   $x11 = COPY [[ANYEXT1]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i8, implicit-def $x1, implicit $x10, implicit $x11
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i8, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11
   ; RV64I-NEXT:   PseudoRET
 entry:
   call void @void_args_i8(i8 0, i8 1)
@@ -62,8 +64,9 @@ define void @test_call_void_args_i8_zext() {
   ; RV32I-NEXT:   [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[C1]](s8)
   ; RV32I-NEXT:   $x10 = COPY [[ZEXT]](s32)
   ; RV32I-NEXT:   $x11 = COPY [[ZEXT1]](s32)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i8_zext, implicit-def $x1, implicit $x10, implicit $x11
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i8_zext, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11
   ; RV32I-NEXT:   PseudoRET
+  ;
   ; RV64I-LABEL: name: test_call_void_args_i8_zext
   ; RV64I: bb.1.entry:
   ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
@@ -72,7 +75,7 @@ define void @test_call_void_args_i8_zext() {
   ; RV64I-NEXT:   [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[C1]](s8)
   ; RV64I-NEXT:   $x10 = COPY [[ZEXT]](s64)
   ; RV64I-NEXT:   $x11 = COPY [[ZEXT1]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i8_zext, implicit-def $x1, implicit $x10, implicit $x11
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i8_zext, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11
   ; RV64I-NEXT:   PseudoRET
 entry:
   call void @void_args_i8_zext(i8 zeroext 0, i8 zeroext 1)
@@ -91,8 +94,9 @@ define void @test_call_void_args_i16_sext() {
   ; RV32I-NEXT:   [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[C1]](s16)
   ; RV32I-NEXT:   $x10 = COPY [[SEXT]](s32)
   ; RV32I-NEXT:   $x11 = COPY [[SEXT1]](s32)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i16_sext, implicit-def $x1, implicit $x10, implicit $x11
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i16_sext, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11
   ; RV32I-NEXT:   PseudoRET
+  ;
   ; RV64I-LABEL: name: test_call_void_args_i16_sext
   ; RV64I: bb.1.entry:
   ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
@@ -101,7 +105,7 @@ define void @test_call_void_args_i16_sext() {
   ; RV64I-NEXT:   [[SEXT1:%[0-9]+]]:_(s64) = G_SEXT [[C1]](s16)
   ; RV64I-NEXT:   $x10 = COPY [[SEXT]](s64)
   ; RV64I-NEXT:   $x11 = COPY [[SEXT1]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i16_sext, implicit-def $x1, implicit $x10, implicit $x11
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i16_sext, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11
   ; RV64I-NEXT:   PseudoRET
 entry:
   call void @void_args_i16_sext(i16 signext 0, i16 signext 1)
@@ -118,8 +122,9 @@ define void @test_call_void_args_i32() {
   ; RV32I-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; RV32I-NEXT:   $x10 = COPY [[C]](s32)
   ; RV32I-NEXT:   $x11 = COPY [[C1]](s32)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i32, implicit-def $x1, implicit $x10, implicit $x11
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i32, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11
   ; RV32I-NEXT:   PseudoRET
+  ;
   ; RV64I-LABEL: name: test_call_void_args_i32
   ; RV64I: bb.1.entry:
   ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -128,7 +133,7 @@ define void @test_call_void_args_i32() {
   ; RV64I-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C1]](s32)
   ; RV64I-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; RV64I-NEXT:   $x11 = COPY [[ANYEXT1]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i32, implicit-def $x1, implicit $x10, implicit $x11
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i32, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11
   ; RV64I-NEXT:   PseudoRET
 entry:
   call void @void_args_i32(i32 0, i32 1)
@@ -149,15 +154,16 @@ define void @test_call_void_args_i64() {
   ; RV32I-NEXT:   $x11 = COPY [[UV1]](s32)
   ; RV32I-NEXT:   $x12 = COPY [[UV2]](s32)
   ; RV32I-NEXT:   $x13 = COPY [[UV3]](s32)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i64, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13
   ; RV32I-NEXT:   PseudoRET
+  ;
   ; RV64I-LABEL: name: test_call_void_args_i64
   ; RV64I: bb.1.entry:
   ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64I-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; RV64I-NEXT:   $x10 = COPY [[C]](s64)
   ; RV64I-NEXT:   $x11 = COPY [[C1]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i64, implicit-def $x1, implicit $x10, implicit $x11
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_args_i64, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11
   ; RV64I-NEXT:   PseudoRET
 entry:
   call void @void_args_i64(i64 0, i64 1)
@@ -170,13 +176,14 @@ define void @test_call_i8_noargs() {
 
   ; RV32I-LABEL: name: test_call_i8_noargs
   ; RV32I: bb.1.entry:
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @i8_noargs, implicit-def $x1, implicit-def $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @i8_noargs, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
   ; RV32I-NEXT:   PseudoRET
+  ;
   ; RV64I-LABEL: name: test_call_i8_noargs
   ; RV64I: bb.1.entry:
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @i8_noargs, implicit-def $x1, implicit-def $x10
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @i8_noargs, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s64)
   ; RV64I-NEXT:   PseudoRET
@@ -191,13 +198,14 @@ define void @test_call_i16_noargs() {
 
   ; RV32I-LABEL: name: test_call_i16_noargs
   ; RV32I: bb.1.entry:
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @i16_noargs, implicit-def $x1, implicit-def $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @i16_noargs, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
   ; RV32I-NEXT:   PseudoRET
+  ;
   ; RV64I-LABEL: name: test_call_i16_noargs
   ; RV64I: bb.1.entry:
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @i16_noargs, implicit-def $x1, implicit-def $x10
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @i16_noargs, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s64)
   ; RV64I-NEXT:   PseudoRET
@@ -212,12 +220,13 @@ define void @test_call_i32_noargs() {
 
   ; RV32I-LABEL: name: test_call_i32_noargs
   ; RV32I: bb.1.entry:
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @i32_noargs, implicit-def $x1, implicit-def $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @i32_noargs, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32I-NEXT:   PseudoRET
+  ;
   ; RV64I-LABEL: name: test_call_i32_noargs
   ; RV64I: bb.1.entry:
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @i32_noargs, implicit-def $x1, implicit-def $x10
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @i32_noargs, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; RV64I-NEXT:   PseudoRET
@@ -232,14 +241,15 @@ define void @test_call_i64_noargs() {
 
   ; RV32I-LABEL: name: test_call_i64_noargs
   ; RV32I: bb.1.entry:
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @i64_noargs, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @i64_noargs, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10, implicit-def $x11
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
   ; RV32I-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; RV32I-NEXT:   PseudoRET
+  ;
   ; RV64I-LABEL: name: test_call_i64_noargs
   ; RV64I: bb.1.entry:
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @i64_noargs, implicit-def $x1, implicit-def $x10
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @i64_noargs, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   PseudoRET
 entry:
@@ -252,12 +262,13 @@ declare ptr @ptr_noargs()
 define void @test_call_ptr_noargs() {
   ; RV32I-LABEL: name: test_call_ptr_noargs
   ; RV32I: bb.1.entry:
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @ptr_noargs, implicit-def $x1, implicit-def $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @ptr_noargs, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
   ; RV32I-NEXT:   PseudoRET
+  ;
   ; RV64I-LABEL: name: test_call_ptr_noargs
   ; RV64I: bb.1.entry:
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @ptr_noargs, implicit-def $x1, implicit-def $x10
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @ptr_noargs, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
   ; RV64I-NEXT:   PseudoRET
 entry:
@@ -270,13 +281,14 @@ declare [2 x i32] @i32x2_noargs()
 define void @test_call_i32x2_noargs() {
   ; RV32I-LABEL: name: test_call_i32x2_noargs
   ; RV32I: bb.1.entry:
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @i32x2_noargs, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @i32x2_noargs, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10, implicit-def $x11
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
   ; RV32I-NEXT:   PseudoRET
+  ;
   ; RV64I-LABEL: name: test_call_i32x2_noargs
   ; RV64I: bb.1.entry:
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @i32x2_noargs, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @i32x2_noargs, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10, implicit-def $x11
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
@@ -297,13 +309,14 @@ define void @test_void_byval_args() {
   ; RV32I: bb.1.entry:
   ; RV32I-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @foo
   ; RV32I-NEXT:   $x10 = COPY [[GV]](p0)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_byval_args, implicit-def $x1, implicit $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_byval_args, csr_ilp32_lp64, implicit-def $x1, implicit $x10
   ; RV32I-NEXT:   PseudoRET
+  ;
   ; RV64I-LABEL: name: test_void_byval_args
   ; RV64I: bb.1.entry:
   ; RV64I-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @foo
   ; RV64I-NEXT:   $x10 = COPY [[GV]](p0)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_byval_args, implicit-def $x1, implicit $x10
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_byval_args, csr_ilp32_lp64, implicit-def $x1, implicit $x10
   ; RV64I-NEXT:   PseudoRET
 entry:
   call void @void_byval_args(ptr byval(%struct.Foo) @foo)
@@ -317,13 +330,14 @@ define void @test_void_sret_args() {
   ; RV32I: bb.1.entry:
   ; RV32I-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @foo
   ; RV32I-NEXT:   $x10 = COPY [[GV]](p0)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_sret_args, implicit-def $x1, implicit $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_sret_args, csr_ilp32_lp64, implicit-def $x1, implicit $x10
   ; RV32I-NEXT:   PseudoRET
+  ;
   ; RV64I-LABEL: name: test_void_sret_args
   ; RV64I: bb.1.entry:
   ; RV64I-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @foo
   ; RV64I-NEXT:   $x10 = COPY [[GV]](p0)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_sret_args, implicit-def $x1, implicit $x10
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_sret_args, csr_ilp32_lp64, implicit-def $x1, implicit $x10
   ; RV64I-NEXT:   PseudoRET
 entry:
   call void @void_sret_args(ptr sret(%struct.Foo) @foo)

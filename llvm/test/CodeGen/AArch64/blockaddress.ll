@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -code-model=large -mtriple=aarch64-none-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-LARGE %s
+; RUN: llc -code-model=large -relocation-model=pic -mtriple=aarch64-none-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 < %s | FileCheck %s
 ; RUN: llc -code-model=tiny -mtriple=aarch64-none-elf -aarch64-enable-atomic-cfg-tidy=0 -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-TINY %s
 
 @addr = global ptr null

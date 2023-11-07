@@ -38,8 +38,8 @@ using namespace llvm;
 //===----------------------------------------------------------------------===//
 
 void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
-  LLVM_DEBUG(dbgs() << "Scalarize node result " << ResNo << ": "; N->dump(&DAG);
-             dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Scalarize node result " << ResNo << ": ";
+             N->dump(&DAG));
   SDValue R = SDValue();
 
   switch (N->getOpcode()) {
@@ -659,8 +659,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_IS_FPCLASS(SDNode *N) {
 //===----------------------------------------------------------------------===//
 
 bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
-  LLVM_DEBUG(dbgs() << "Scalarize node operand " << OpNo << ": "; N->dump(&DAG);
-             dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Scalarize node operand " << OpNo << ": ";
+             N->dump(&DAG));
   SDValue Res = SDValue();
 
   switch (N->getOpcode()) {
@@ -970,7 +970,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE_SEQ(SDNode *N) {
 /// invalid operands or may have other results that need legalization, we just
 /// know that (at least) one result needs vector splitting.
 void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
-  LLVM_DEBUG(dbgs() << "Split node result: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Split node result: "; N->dump(&DAG));
   SDValue Lo, Hi;
 
   // See if the target wants to custom expand this node.
@@ -2897,7 +2897,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_INTERLEAVE(SDNode *N) {
 /// the node are known to be legal, but other operands of the node may need
 /// legalization as well as the specified one.
 bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
-  LLVM_DEBUG(dbgs() << "Split node operand: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Split node operand: "; N->dump(&DAG));
   SDValue Res = SDValue();
 
   // See if the target wants to custom split this node.
@@ -3983,8 +3983,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_FP_TO_XINT_SAT(SDNode *N) {
 //===----------------------------------------------------------------------===//
 
 void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
-  LLVM_DEBUG(dbgs() << "Widen node result " << ResNo << ": "; N->dump(&DAG);
-             dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Widen node result " << ResNo << ": "; N->dump(&DAG));
 
   // See if the target wants to custom widen this node.
   if (CustomWidenLowerNode(N, N->getValueType(ResNo)))
@@ -4205,6 +4204,11 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     Res = WidenVecRes_FP_TO_XINT_SAT(N);
     break;
 
+  case ISD::LRINT:
+  case ISD::LLRINT:
+    Res = WidenVecRes_XRINT(N);
+    break;
+
   case ISD::FABS:
   case ISD::FCEIL:
   case ISD::FCOS:
@@ -4217,8 +4221,6 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FLOG2:
   case ISD::FNEARBYINT:
   case ISD::FRINT:
-  case ISD::LRINT:
-  case ISD::LLRINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::FSIN:
@@ -4790,6 +4792,27 @@ SDValue DAGTypeLegalizer::WidenVecRes_FP_TO_XINT_SAT(SDNode *N) {
     return DAG.UnrollVectorOp(N, WidenNumElts.getKnownMinValue());
 
   return DAG.getNode(N->getOpcode(), dl, WidenVT, Src, N->getOperand(1));
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_XRINT(SDNode *N) {
+  SDLoc dl(N);
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  ElementCount WidenNumElts = WidenVT.getVectorElementCount();
+
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+
+  // Also widen the input.
+  if (getTypeAction(SrcVT) == TargetLowering::TypeWidenVector) {
+    Src = GetWidenedVector(Src);
+    SrcVT = Src.getValueType();
+  }
+
+  // Input and output not widened to the same size, give up.
+  if (WidenNumElts != SrcVT.getVectorElementCount())
+    return DAG.UnrollVectorOp(N, WidenNumElts.getKnownMinValue());
+
+  return DAG.getNode(N->getOpcode(), dl, WidenVT, Src);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_Convert_StrictFP(SDNode *N) {
@@ -5932,8 +5955,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_STRICT_FSETCC(SDNode *N) {
 // Widen Vector Operand
 //===----------------------------------------------------------------------===//
 bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
-  LLVM_DEBUG(dbgs() << "Widen node operand " << OpNo << ": "; N->dump(&DAG);
-             dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Widen node operand " << OpNo << ": "; N->dump(&DAG));
   SDValue Res = SDValue();
 
   // See if the target wants to custom widen this node.

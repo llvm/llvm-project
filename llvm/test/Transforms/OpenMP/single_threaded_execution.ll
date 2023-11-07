@@ -16,8 +16,8 @@
 ; CHECK: [openmp-opt] Basic block @kernel if.then is executed by a single thread.
 ; CHECK-NOT: [openmp-opt] Basic block @kernel if.else is executed by a single thread.
 ; CHECK-NOT: [openmp-opt] Basic block @kernel if.end is executed by a single thread.
-define void @kernel() "kernel" {
-  %call = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment)
+define void @kernel(ptr %dyn) "kernel" {
+  %call = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment, ptr %dyn)
   %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %if.then, label %if.else
 if.then:
@@ -108,7 +108,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 
 declare void @__kmpc_kernel_prepare_parallel(ptr)
 
-declare i32 @__kmpc_target_init(ptr)
+declare i32 @__kmpc_target_init(ptr, ptr)
 
 declare void @__kmpc_target_deinit()
 

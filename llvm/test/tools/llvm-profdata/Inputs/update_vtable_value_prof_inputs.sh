@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
 }
 EOF
 
-FLAGS="-fuse-ld=lld -O2 -g -fprofile-generate=. "
+FLAGS="-fuse-ld=lld -O2 -g -fprofile-generate=. -mllvm -enable-vtable-value-profiling"
 
 ${CLANG} ${FLAGS} ${OUTDIR}/vtable_prof.cc -o ${OUTDIR}/vtable_prof
 env LLVM_PROFILE_FILE=${OUTDIR}/vtable_prof.profraw ${OUTDIR}/vtable_prof

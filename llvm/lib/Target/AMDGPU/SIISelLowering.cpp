@@ -165,6 +165,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::v8f16, &AMDGPU::SGPR_128RegClass);
     addRegisterClass(MVT::v16i16, &AMDGPU::SGPR_256RegClass);
     addRegisterClass(MVT::v16f16, &AMDGPU::SGPR_256RegClass);
+    addRegisterClass(MVT::v32i16, &AMDGPU::SGPR_512RegClass);
+    addRegisterClass(MVT::v32f16, &AMDGPU::SGPR_512RegClass);
   }
 
   addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
@@ -269,13 +271,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // We only support LOAD/STORE and vector manipulation ops for vectors
   // with > 4 elements.
   for (MVT VT :
-       {MVT::v8i32,  MVT::v8f32,  MVT::v9i32,   MVT::v9f32,  MVT::v10i32,
-        MVT::v10f32, MVT::v11i32, MVT::v11f32,  MVT::v12i32, MVT::v12f32,
-        MVT::v16i32, MVT::v16f32, MVT::v2i64,   MVT::v2f64,  MVT::v4i16,
-        MVT::v4f16,  MVT::v3i64,  MVT::v3f64,   MVT::v6i32,  MVT::v6f32,
-        MVT::v4i64,  MVT::v4f64,  MVT::v8i64,   MVT::v8f64,  MVT::v8i16,
-        MVT::v8f16,  MVT::v16i16, MVT::v16f16,  MVT::v16i64, MVT::v16f64,
-        MVT::v32i32, MVT::v32f32}) {
+       {MVT::v8i32,  MVT::v8f32,  MVT::v9i32,  MVT::v9f32,  MVT::v10i32,
+        MVT::v10f32, MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32,
+        MVT::v16i32, MVT::v16f32, MVT::v2i64,  MVT::v2f64,  MVT::v4i16,
+        MVT::v4f16,  MVT::v3i64,  MVT::v3f64,  MVT::v6i32,  MVT::v6f32,
+        MVT::v4i64,  MVT::v4f64,  MVT::v8i64,  MVT::v8f64,  MVT::v8i16,
+        MVT::v8f16,  MVT::v16i16, MVT::v16f16, MVT::v16i64, MVT::v16f64,
+        MVT::v32i32, MVT::v32f32, MVT::v32i16, MVT::v32f16}) {
     for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
       switch (Op) {
       case ISD::LOAD:
@@ -553,8 +555,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     if (STI.hasMadF16())
       setOperationAction(ISD::FMAD, MVT::f16, Legal);
 
-    for (MVT VT : {MVT::v2i16, MVT::v2f16, MVT::v4i16, MVT::v4f16, MVT::v8i16,
-                   MVT::v8f16, MVT::v16i16, MVT::v16f16}) {
+    for (MVT VT :
+         {MVT::v2i16, MVT::v2f16, MVT::v4i16, MVT::v4f16, MVT::v8i16,
+          MVT::v8f16, MVT::v16i16, MVT::v16f16, MVT::v32i16, MVT::v32f16}) {
       for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
         switch (Op) {
         case ISD::LOAD:
@@ -640,6 +643,16 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::v16f16, Promote);
     AddPromotedToType(ISD::STORE, MVT::v16f16, MVT::v8i32);
 
+    setOperationAction(ISD::LOAD, MVT::v32i16, Promote);
+    AddPromotedToType(ISD::LOAD, MVT::v32i16, MVT::v16i32);
+    setOperationAction(ISD::LOAD, MVT::v32f16, Promote);
+    AddPromotedToType(ISD::LOAD, MVT::v32f16, MVT::v16i32);
+
+    setOperationAction(ISD::STORE, MVT::v32i16, Promote);
+    AddPromotedToType(ISD::STORE, MVT::v32i16, MVT::v16i32);
+    setOperationAction(ISD::STORE, MVT::v32f16, Promote);
+    AddPromotedToType(ISD::STORE, MVT::v32f16, MVT::v16i32);
+
     setOperationAction({ISD::ANY_EXTEND, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND},
                        MVT::v2i32, Expand);
     setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Expand);
@@ -662,12 +675,15 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FMAXNUM_IEEE, ISD::FMINNUM_IEEE}, MVT::f16, Legal);
 
     setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE},
-                       {MVT::v4f16, MVT::v8f16, MVT::v16f16}, Custom);
+                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
+                       Custom);
 
     setOperationAction({ISD::FMINNUM, ISD::FMAXNUM},
-                       {MVT::v4f16, MVT::v8f16, MVT::v16f16}, Expand);
+                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
+                       Expand);
 
-    for (MVT Vec16 : {MVT::v8i16, MVT::v8f16, MVT::v16i16, MVT::v16f16}) {
+    for (MVT Vec16 : {MVT::v8i16, MVT::v8f16, MVT::v16i16, MVT::v16f16,
+                      MVT::v32i16, MVT::v32f16}) {
       setOperationAction(
           {ISD::BUILD_VECTOR, ISD::EXTRACT_VECTOR_ELT, ISD::SCALAR_TO_VECTOR},
           Vec16, Custom);
@@ -690,10 +706,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::VECTOR_SHUFFLE,
                        {MVT::v4f16, MVT::v4i16, MVT::v8f16, MVT::v8i16,
-                        MVT::v16f16, MVT::v16i16},
+                        MVT::v16f16, MVT::v16i16, MVT::v32f16, MVT::v32i16},
                        Custom);
 
-    for (MVT VT : {MVT::v4i16, MVT::v8i16, MVT::v16i16})
+    for (MVT VT : {MVT::v4i16, MVT::v8i16, MVT::v16i16, MVT::v32i16})
       // Split vector operations.
       setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL, ISD::ADD, ISD::SUB,
                           ISD::MUL, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX,
@@ -701,7 +717,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                           ISD::SSUBSAT},
                          VT, Custom);
 
-    for (MVT VT : {MVT::v4f16, MVT::v8f16, MVT::v16f16})
+    for (MVT VT : {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16})
       // Split vector operations.
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE},
                          VT, Custom);
@@ -737,7 +753,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::SELECT,
                      {MVT::v4i16, MVT::v4f16, MVT::v2i8, MVT::v4i8, MVT::v8i8,
-                      MVT::v8i16, MVT::v8f16, MVT::v16i16, MVT::v16f16},
+                      MVT::v8i16, MVT::v8f16, MVT::v16i16, MVT::v16f16,
+                      MVT::v32i16, MVT::v32f16},
                      Custom);
 
   setOperationAction({ISD::SMULO, ISD::UMULO}, MVT::i64, Custom);
@@ -4727,8 +4744,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
     Register Dst = MI.getOperand(0).getReg();
-    Register Src0 = MI.getOperand(1).getReg();
-    Register Src1 = MI.getOperand(2).getReg();
+    const MachineOperand &Src0 = MI.getOperand(1);
+    const MachineOperand &Src1 = MI.getOperand(2);
     const DebugLoc &DL = MI.getDebugLoc();
     Register SrcCond = MI.getOperand(3).getReg();
 
@@ -4737,20 +4754,42 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     const auto *CondRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
     Register SrcCondCopy = MRI.createVirtualRegister(CondRC);
 
+    const TargetRegisterClass *Src0RC = Src0.isReg()
+                                            ? MRI.getRegClass(Src0.getReg())
+                                            : &AMDGPU::VReg_64RegClass;
+    const TargetRegisterClass *Src1RC = Src1.isReg()
+                                            ? MRI.getRegClass(Src1.getReg())
+                                            : &AMDGPU::VReg_64RegClass;
+
+    const TargetRegisterClass *Src0SubRC =
+        TRI->getSubRegisterClass(Src0RC, AMDGPU::sub0);
+    const TargetRegisterClass *Src1SubRC =
+        TRI->getSubRegisterClass(Src1RC, AMDGPU::sub1);
+
+    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub0, Src0SubRC);
+    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, Src1RC, AMDGPU::sub0, Src1SubRC);
+
+    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub1, Src0SubRC);
+    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, Src1RC, AMDGPU::sub1, Src1SubRC);
+
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), SrcCondCopy)
       .addReg(SrcCond);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstLo)
-      .addImm(0)
-      .addReg(Src0, 0, AMDGPU::sub0)
-      .addImm(0)
-      .addReg(Src1, 0, AMDGPU::sub0)
-      .addReg(SrcCondCopy);
+        .addImm(0)
+        .add(Src0Sub0)
+        .addImm(0)
+        .add(Src1Sub0)
+        .addReg(SrcCondCopy);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstHi)
-      .addImm(0)
-      .addReg(Src0, 0, AMDGPU::sub1)
-      .addImm(0)
-      .addReg(Src1, 0, AMDGPU::sub1)
-      .addReg(SrcCondCopy);
+        .addImm(0)
+        .add(Src0Sub1)
+        .addImm(0)
+        .add(Src1Sub1)
+        .addReg(SrcCondCopy);
 
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), Dst)
       .addReg(DstLo)
@@ -5107,7 +5146,7 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
   assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4f32 ||
          VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v16i16 ||
          VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32);
+         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16);
 
   SDValue Lo, Hi;
   std::tie(Lo, Hi) = DAG.SplitVectorOperand(Op.getNode(), 0);
@@ -5130,7 +5169,7 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
   assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4f32 ||
          VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v16i16 ||
          VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32);
+         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16);
 
   SDValue Lo0, Hi0;
   std::tie(Lo0, Hi0) = DAG.SplitVectorOperand(Op.getNode(), 0);
@@ -5897,7 +5936,8 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
   if (IsIEEEMode)
     return expandFMINNUM_FMAXNUM(Op.getNode(), DAG);
 
-  if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16)
+  if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
+      VT == MVT::v16f16)
     return splitBinaryVectorOp(Op, DAG);
   return Op;
 }
@@ -6415,7 +6455,7 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   if (SDValue Combined = performExtractVectorEltCombine(Op.getNode(), DCI))
     return Combined;
 
-  if (VecSize == 128 || VecSize == 256) {
+  if (VecSize == 128 || VecSize == 256 || VecSize == 512) {
     SDValue Lo, Hi;
     EVT LoVT, HiVT;
     std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VecVT);
@@ -6428,9 +6468,7 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
       Hi = DAG.getBitcast(HiVT,
                           DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i64, V2,
                                       DAG.getConstant(1, SL, MVT::i32)));
-    } else {
-      assert(VecSize == 256);
-
+    } else if (VecSize == 256) {
       SDValue V2 = DAG.getBitcast(MVT::v4i64, Vec);
       SDValue Parts[4];
       for (unsigned P = 0; P < 4; ++P) {
@@ -6442,6 +6480,22 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
                                             Parts[0], Parts[1]));
       Hi = DAG.getBitcast(HiVT, DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i64,
                                             Parts[2], Parts[3]));
+    } else {
+      assert(VecSize == 512);
+
+      SDValue V2 = DAG.getBitcast(MVT::v8i64, Vec);
+      SDValue Parts[8];
+      for (unsigned P = 0; P < 8; ++P) {
+        Parts[P] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i64, V2,
+                               DAG.getConstant(P, SL, MVT::i32));
+      }
+
+      Lo = DAG.getBitcast(LoVT,
+                          DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v4i64,
+                                      Parts[0], Parts[1], Parts[2], Parts[3]));
+      Hi = DAG.getBitcast(HiVT,
+                          DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v4i64,
+                                      Parts[4], Parts[5],Parts[6], Parts[7]));
     }
 
     EVT IdxVT = Idx.getValueType();
@@ -6607,6 +6661,27 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
     return DAG.getNode(ISD::BITCAST, SL, VT, Blend);
   }
 
+  if (VT == MVT::v32i16 || VT == MVT::v32f16) {
+    EVT QuarterVT = MVT::getVectorVT(VT.getVectorElementType().getSimpleVT(),
+                                     VT.getVectorNumElements() / 8);
+    MVT QuarterIntVT = MVT::getIntegerVT(QuarterVT.getSizeInBits());
+
+    SmallVector<SDValue, 8> Parts[8];
+    for (unsigned I = 0, E = VT.getVectorNumElements() / 8; I != E; ++I) {
+      for (unsigned P = 0; P < 8; ++P)
+        Parts[P].push_back(Op.getOperand(I + P * E));
+    }
+    SDValue Casts[8];
+    for (unsigned P = 0; P < 8; ++P) {
+      SDValue Vec = DAG.getBuildVector(QuarterVT, SL, Parts[P]);
+      Casts[P] = DAG.getNode(ISD::BITCAST, SL, QuarterIntVT, Vec);
+    }
+
+    SDValue Blend =
+        DAG.getBuildVector(MVT::getVectorVT(QuarterIntVT, 8), SL, Casts);
+    return DAG.getNode(ISD::BITCAST, SL, VT, Blend);
+  }
+
   assert(VT == MVT::v2f16 || VT == MVT::v2i16);
   assert(!Subtarget->hasVOP3PInsts() && "this should be legal");
 
@@ -6672,24 +6747,12 @@ buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
   //   $symbol@*@hi with lower 32 bits and higher 32 bits of a literal constant,
   //   which is a 64-bit pc-relative offset from the encoding of the $symbol
   //   operand to the global variable.
-  //
-  // What we want here is an offset from the value returned by s_getpc
-  // (which is the address of the s_add_u32 instruction) to the global
-  // variable, but since the encoding of $symbol starts 4 bytes after the start
-  // of the s_add_u32 instruction, we end up with an offset that is 4 bytes too
-  // small. This requires us to add 4 to the global variable offset in order to
-  // compute the correct address. Similarly for the s_addc_u32 instruction, the
-  // encoding of $symbol starts 12 bytes after the start of the s_add_u32
-  // instruction.
-  SDValue PtrLo =
-      DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 4, GAFlags);
+  SDValue PtrLo = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset, GAFlags);
   SDValue PtrHi;
-  if (GAFlags == SIInstrInfo::MO_NONE) {
+  if (GAFlags == SIInstrInfo::MO_NONE)
     PtrHi = DAG.getTargetConstant(0, DL, MVT::i32);
-  } else {
-    PtrHi =
-        DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 12, GAFlags + 1);
-  }
+  else
+    PtrHi = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset, GAFlags + 1);
   return DAG.getNode(AMDGPUISD::PC_ADD_REL_OFFSET, DL, PtrVT, PtrLo, PtrHi);
 }
 
@@ -9507,7 +9570,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SITargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
-  if (VT.getSizeInBits() == 128 || VT.getSizeInBits() == 256)
+  if (VT.getSizeInBits() == 128 || VT.getSizeInBits() == 256 ||
+      VT.getSizeInBits() == 512)
     return splitTernaryVectorOp(Op, DAG);
 
   assert(VT.getSizeInBits() == 64);

@@ -1133,7 +1133,7 @@ void CGOpenMPRuntime::emitUserDefinedReduction(
   if (const Expr *Init = D->getInitializer()) {
     Initializer = emitCombinerOrInitializer(
         CGM, D->getType(),
-        D->getInitializerKind() == OMPDeclareReductionDecl::CallInit ? Init
+        D->getInitializerKind() == OMPDeclareReductionInitKind::Call ? Init
                                                                      : nullptr,
         cast<VarDecl>(cast<DeclRefExpr>(D->getInitOrig())->getDecl()),
         cast<VarDecl>(cast<DeclRefExpr>(D->getInitPriv())->getDecl()),
@@ -1809,7 +1809,7 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
                                /*IsInitializer=*/true);
       CtorCGF.FinishFunction();
       Ctor = Fn;
-      ID = llvm::ConstantExpr::getBitCast(Fn, CGM.Int8PtrTy);
+      ID = Fn;
     } else {
       Ctor = new llvm::GlobalVariable(
           CGM.getModule(), CGM.Int8Ty, /*isConstant=*/true,
@@ -1858,7 +1858,7 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
                           DtorCGF.needsEHCleanup(ASTTy.isDestructedType()));
       DtorCGF.FinishFunction();
       Dtor = Fn;
-      ID = llvm::ConstantExpr::getBitCast(Fn, CGM.Int8PtrTy);
+      ID = Fn;
     } else {
       Dtor = new llvm::GlobalVariable(
           CGM.getModule(), CGM.Int8Ty, /*isConstant=*/true,
@@ -2368,7 +2368,7 @@ void CGOpenMPRuntime::emitSingleRegion(CodeGenFunction &CGF,
   if (DidIt.isValid()) {
     llvm::APInt ArraySize(/*unsigned int numBits=*/32, CopyprivateVars.size());
     QualType CopyprivateArrayTy = C.getConstantArrayType(
-        C.VoidPtrTy, ArraySize, nullptr, ArrayType::Normal,
+        C.VoidPtrTy, ArraySize, nullptr, ArraySizeModifier::Normal,
         /*IndexTypeQuals=*/0);
     // Create a list of all private variables for copyprivate.
     Address CopyprivateList =
@@ -3041,7 +3041,7 @@ createKmpTaskTRecordDecl(CodeGenModule &CGM, OpenMPDirectiveKind Kind,
   //         kmp_int32           liter;
   //         void *              reductions;
   //       };
-  RecordDecl *UD = C.buildImplicitRecord("kmp_cmplrdata_t", TTK_Union);
+  RecordDecl *UD = C.buildImplicitRecord("kmp_cmplrdata_t", TagTypeKind::Union);
   UD->startDefinition();
   addFieldToRecordDecl(C, UD, KmpInt32Ty);
   addFieldToRecordDecl(C, UD, KmpRoutineEntryPointerQTy);
@@ -3938,9 +3938,9 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
           VK_PRValue);
       CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, OVE,
                                                     RValue::get(NumOfElements));
-      KmpTaskAffinityInfoArrayTy =
-          C.getVariableArrayType(KmpTaskAffinityInfoTy, OVE, ArrayType::Normal,
-                                 /*IndexTypeQuals=*/0, SourceRange(Loc, Loc));
+      KmpTaskAffinityInfoArrayTy = C.getVariableArrayType(
+          KmpTaskAffinityInfoTy, OVE, ArraySizeModifier::Normal,
+          /*IndexTypeQuals=*/0, SourceRange(Loc, Loc));
       // Properly emit variable-sized array.
       auto *PD = ImplicitParamDecl::Create(C, KmpTaskAffinityInfoArrayTy,
                                            ImplicitParamDecl::Other);
@@ -3952,7 +3952,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
       KmpTaskAffinityInfoArrayTy = C.getConstantArrayType(
           KmpTaskAffinityInfoTy,
           llvm::APInt(C.getTypeSize(C.getSizeType()), NumAffinities), nullptr,
-          ArrayType::Normal, /*IndexTypeQuals=*/0);
+          ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
       AffinitiesArray =
           CGF.CreateMemTemp(KmpTaskAffinityInfoArrayTy, ".affs.arr.addr");
       AffinitiesArray = CGF.Builder.CreateConstArrayGEP(AffinitiesArray, 0);
@@ -4397,7 +4397,7 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
     CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, OVE,
                                                   RValue::get(NumOfElements));
     KmpDependInfoArrayTy =
-        C.getVariableArrayType(KmpDependInfoTy, OVE, ArrayType::Normal,
+        C.getVariableArrayType(KmpDependInfoTy, OVE, ArraySizeModifier::Normal,
                                /*IndexTypeQuals=*/0, SourceRange(Loc, Loc));
     // CGF.EmitVariablyModifiedType(KmpDependInfoArrayTy);
     // Properly emit variable-sized array.
@@ -4410,7 +4410,7 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
   } else {
     KmpDependInfoArrayTy = C.getConstantArrayType(
         KmpDependInfoTy, llvm::APInt(/*numBits=*/64, NumDependencies), nullptr,
-        ArrayType::Normal, /*IndexTypeQuals=*/0);
+        ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
     DependenciesArray =
         CGF.CreateMemTemp(KmpDependInfoArrayTy, ".dep.arr.addr");
     DependenciesArray = CGF.Builder.CreateConstArrayGEP(DependenciesArray, 0);
@@ -4490,7 +4490,7 @@ Address CGOpenMPRuntime::emitDepobjDependClause(
   } else {
     QualType KmpDependInfoArrayTy = C.getConstantArrayType(
         KmpDependInfoTy, llvm::APInt(/*numBits=*/64, NumDependencies + 1),
-        nullptr, ArrayType::Normal, /*IndexTypeQuals=*/0);
+        nullptr, ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
     CharUnits Sz = C.getTypeSizeInChars(KmpDependInfoArrayTy);
     Size = CGM.getSize(Sz.alignTo(Align));
     NumDepsVal = llvm::ConstantInt::get(CGF.IntPtrTy, NumDependencies);
@@ -5106,9 +5106,9 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
       ++Size;
   }
   llvm::APInt ArraySize(/*unsigned int numBits=*/32, Size);
-  QualType ReductionArrayTy =
-      C.getConstantArrayType(C.VoidPtrTy, ArraySize, nullptr, ArrayType::Normal,
-                             /*IndexTypeQuals=*/0);
+  QualType ReductionArrayTy = C.getConstantArrayType(
+      C.VoidPtrTy, ArraySize, nullptr, ArraySizeModifier::Normal,
+      /*IndexTypeQuals=*/0);
   Address ReductionList =
       CGF.CreateMemTemp(ReductionArrayTy, ".omp.reduction.red_list");
   const auto *IPriv = Privates.begin();
@@ -5577,8 +5577,9 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
   QualType RDType = C.getRecordType(RD);
   unsigned Size = Data.ReductionVars.size();
   llvm::APInt ArraySize(/*numBits=*/64, Size);
-  QualType ArrayRDType = C.getConstantArrayType(
-      RDType, ArraySize, nullptr, ArrayType::Normal, /*IndexTypeQuals=*/0);
+  QualType ArrayRDType =
+      C.getConstantArrayType(RDType, ArraySize, nullptr,
+                             ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
   // kmp_task_red_input_t .rd_input.[Size];
   Address TaskRedInput = CGF.CreateMemTemp(ArrayRDType, ".rd_input.");
   ReductionCodeGen RCG(Data.ReductionVars, Data.ReductionOrigs,
@@ -6002,6 +6003,42 @@ void CGOpenMPRuntime::emitUsesAllocatorsFini(CodeGenFunction &CGF,
       {ThreadId, AllocatorVal});
 }
 
+void CGOpenMPRuntime::computeMinAndMaxThreadsAndTeams(
+    const OMPExecutableDirective &D, CodeGenFunction &CGF,
+    int32_t &MinThreadsVal, int32_t &MaxThreadsVal, int32_t &MinTeamsVal,
+    int32_t &MaxTeamsVal) {
+
+  getNumTeamsExprForTargetDirective(CGF, D, MinTeamsVal, MaxTeamsVal);
+  getNumThreadsExprForTargetDirective(CGF, D, MaxThreadsVal,
+                                      /*UpperBoundOnly=*/true);
+
+  for (auto *C : D.getClausesOfKind<OMPXAttributeClause>()) {
+    for (auto *A : C->getAttrs()) {
+      int32_t AttrMinThreadsVal = 1, AttrMaxThreadsVal = -1;
+      int32_t AttrMinBlocksVal = 1, AttrMaxBlocksVal = -1;
+      if (auto *Attr = dyn_cast<CUDALaunchBoundsAttr>(A))
+        CGM.handleCUDALaunchBoundsAttr(nullptr, Attr, &AttrMaxThreadsVal,
+                                       &AttrMinBlocksVal, &AttrMaxBlocksVal);
+      else if (auto *Attr = dyn_cast<AMDGPUFlatWorkGroupSizeAttr>(A))
+        CGM.handleAMDGPUFlatWorkGroupSizeAttr(
+            nullptr, Attr, /*ReqdWGS=*/nullptr, &AttrMinThreadsVal,
+            &AttrMaxThreadsVal);
+      else
+        continue;
+
+      MinThreadsVal = std::max(MinThreadsVal, AttrMinThreadsVal);
+      if (AttrMaxThreadsVal > 0)
+        MaxThreadsVal = MaxThreadsVal > 0
+                            ? std::min(MaxThreadsVal, AttrMaxThreadsVal)
+                            : AttrMaxThreadsVal;
+      MinTeamsVal = std::max(MinTeamsVal, AttrMinBlocksVal);
+      if (AttrMaxBlocksVal > 0)
+        MaxTeamsVal = MaxTeamsVal > 0 ? std::min(MaxTeamsVal, AttrMaxBlocksVal)
+                                      : AttrMaxBlocksVal;
+    }
+  }
+}
+
 void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
     const OMPExecutableDirective &D, StringRef ParentName,
     llvm::Function *&OutlinedFn, llvm::Constant *&OutlinedFnID,
@@ -6020,47 +6057,8 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
         return CGF.GenerateOpenMPCapturedStmtFunction(CS, D.getBeginLoc());
       };
 
-  // Get NumTeams and ThreadLimit attributes
-  int32_t DefaultValMinTeams = 1;
-  int32_t DefaultValMaxTeams = -1;
-  uint32_t DefaultValMinThreads = 1;
-  uint32_t DefaultValMaxThreads = UINT32_MAX;
-
-  getNumTeamsExprForTargetDirective(CGF, D, DefaultValMinTeams,
-                                    DefaultValMaxTeams);
-  getNumThreadsExprForTargetDirective(CGF, D, DefaultValMaxThreads,
-                                      /*UpperBoundOnly=*/true);
-
-  for (auto *C : D.getClausesOfKind<OMPXAttributeClause>()) {
-    for (auto *A : C->getAttrs()) {
-      int32_t MinThreadsVal = 1, MaxThreadsVal = 0;
-      int32_t MinBlocksVal = 1, MaxBlocksVal = -1;
-      if (auto *Attr = dyn_cast<CUDALaunchBoundsAttr>(A))
-        CGM.handleCUDALaunchBoundsAttr(nullptr, Attr, &MaxThreadsVal,
-                                       &MinBlocksVal, &MaxBlocksVal);
-      else if (auto *Attr = dyn_cast<AMDGPUFlatWorkGroupSizeAttr>(A))
-        CGM.handleAMDGPUFlatWorkGroupSizeAttr(
-            nullptr, Attr, /*ReqdWGS=*/nullptr, &MinThreadsVal, &MaxThreadsVal);
-      else
-        continue;
-
-      DefaultValMinThreads =
-          std::max(DefaultValMinThreads, uint32_t(MinThreadsVal));
-      DefaultValMaxThreads =
-          DefaultValMaxThreads
-              ? std::min(DefaultValMaxThreads, uint32_t(MaxThreadsVal))
-              : MaxThreadsVal;
-      DefaultValMinTeams = DefaultValMinTeams
-                               ? std::max(DefaultValMinTeams, MinBlocksVal)
-                               : MinBlocksVal;
-      DefaultValMaxTeams = std::min(DefaultValMaxTeams, MaxBlocksVal);
-    }
-  }
-
-  OMPBuilder.emitTargetRegionFunction(
-      EntryInfo, GenerateOutlinedFunction, DefaultValMinTeams,
-      DefaultValMaxTeams, DefaultValMinThreads, DefaultValMaxThreads,
-      IsOffloadEntry, OutlinedFn, OutlinedFnID);
+  OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction,
+                                      IsOffloadEntry, OutlinedFn, OutlinedFnID);
 
   if (!OutlinedFn)
     return;
@@ -6306,7 +6304,7 @@ llvm::Value *CGOpenMPRuntime::emitNumTeamsForTargetDirective(
 /// store the condition in \p CondVal. If \p E, and \p CondVal respectively, are
 /// nullptr, no expression evaluation is perfomed.
 static void getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
-                          const Expr **E, uint32_t &UpperBound,
+                          const Expr **E, int32_t &UpperBound,
                           bool UpperBoundOnly, llvm::Value **CondVal) {
   const Stmt *Child = CGOpenMPRuntime::getSingleCompoundChild(
       CGF.getContext(), CS->getCapturedStmt());
@@ -6368,10 +6366,10 @@ static void getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
               UpperBound
                   ? Constant->getZExtValue()
                   : std::min(UpperBound,
-                             static_cast<uint32_t>(Constant->getZExtValue()));
+                             static_cast<int32_t>(Constant->getZExtValue()));
       // If we haven't found a upper bound, remember we saw a thread limiting
       // clause.
-      if (UpperBound == UINT32_MAX)
+      if (UpperBound == -1)
         UpperBound = 0;
       if (!E)
         return;
@@ -6397,7 +6395,7 @@ static void getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
 }
 
 const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
-    CodeGenFunction &CGF, const OMPExecutableDirective &D, uint32_t &UpperBound,
+    CodeGenFunction &CGF, const OMPExecutableDirective &D, int32_t &UpperBound,
     bool UpperBoundOnly, llvm::Value **CondVal, const Expr **ThreadLimitExpr) {
   assert((!CGF.getLangOpts().OpenMPIsTargetDevice || UpperBoundOnly) &&
          "Clauses associated with the teams directive expected to be emitted "
@@ -6414,11 +6412,11 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
       if (auto Constant = E->getIntegerConstantExpr(CGF.getContext()))
         UpperBound = UpperBound ? Constant->getZExtValue()
                                 : std::min(UpperBound,
-                                           uint32_t(Constant->getZExtValue()));
+                                           int32_t(Constant->getZExtValue()));
     }
     // If we haven't found a upper bound, remember we saw a thread limiting
     // clause.
-    if (UpperBound == UINT32_MAX)
+    if (UpperBound == -1)
       UpperBound = 0;
     if (EPtr)
       *EPtr = E;
@@ -6562,7 +6560,7 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
   llvm::Value *CondVal = nullptr;
   llvm::Value *ThreadLimitVal = nullptr;
   const Expr *ThreadLimitExpr = nullptr;
-  uint32_t UpperBound = -1;
+  int32_t UpperBound = -1;
 
   const Expr *NT = getNumThreadsExprForTargetDirective(
       CGF, D, UpperBound, /* UpperBoundOnly */ false, &CondVal,
@@ -11167,8 +11165,8 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
     RD = cast<RecordDecl>(KmpDimTy->getAsTagDecl());
   }
   llvm::APInt Size(/*numBits=*/32, NumIterations.size());
-  QualType ArrayTy =
-      C.getConstantArrayType(KmpDimTy, Size, nullptr, ArrayType::Normal, 0);
+  QualType ArrayTy = C.getConstantArrayType(KmpDimTy, Size, nullptr,
+                                            ArraySizeModifier::Normal, 0);
 
   Address DimsAddr = CGF.CreateMemTemp(ArrayTy, "dims");
   CGF.EmitNullInitialization(DimsAddr, ArrayTy);
@@ -11220,7 +11218,7 @@ static void EmitDoacrossOrdered(CodeGenFunction &CGF, CodeGenModule &CGM,
       CGM.getContext().getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1);
   llvm::APInt Size(/*numBits=*/32, C->getNumLoops());
   QualType ArrayTy = CGM.getContext().getConstantArrayType(
-      Int64Ty, Size, nullptr, ArrayType::Normal, 0);
+      Int64Ty, Size, nullptr, ArraySizeModifier::Normal, 0);
   Address CntAddr = CGF.CreateMemTemp(ArrayTy, ".cnt.addr");
   for (unsigned I = 0, E = C->getNumLoops(); I < E; ++I) {
     const Expr *CounterVal = C->getLoopData(I);

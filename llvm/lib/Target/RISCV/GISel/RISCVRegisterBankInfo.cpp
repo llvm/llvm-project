@@ -103,6 +103,12 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   }
 }
 
+static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
+  assert(Size == 32 || Size == 64);
+  unsigned Idx = Size == 64 ? RISCV::FPR64Idx : RISCV::FPR32Idx;
+  return &RISCV::ValueMappings[Idx];
+}
+
 const RegisterBankInfo::InstructionMapping &
 RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
@@ -178,11 +184,39 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FDIV: {
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OperandsMapping = Ty.getSizeInBits() == 64
-                          ? &RISCV::ValueMappings[RISCV::FPR64Idx]
-                          : &RISCV::ValueMappings[RISCV::FPR32Idx];
+    OperandsMapping = getFPValueMapping(Ty.getSizeInBits());
+    break;
+  }
+  case TargetOpcode::G_FMA: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    const RegisterBankInfo::ValueMapping *FPValueMapping =
+        getFPValueMapping(Ty.getSizeInBits());
+    OperandsMapping = getOperandsMapping(
+        {FPValueMapping, FPValueMapping, FPValueMapping, FPValueMapping});
+    break;
+  }
+  case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPTRUNC: {
+    LLT ToTy = MRI.getType(MI.getOperand(0).getReg());
+    (void)ToTy;
+    LLT FromTy = MRI.getType(MI.getOperand(1).getReg());
+    (void)FromTy;
+    OperandsMapping =
+        getOperandsMapping({getFPValueMapping(ToTy.getSizeInBits()),
+                            getFPValueMapping(FromTy.getSizeInBits())});
+    break;
+  }
+  case TargetOpcode::G_FCONSTANT: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OperandsMapping =
+        getOperandsMapping({getFPValueMapping(Ty.getSizeInBits()), nullptr});
     break;
   }
   default:

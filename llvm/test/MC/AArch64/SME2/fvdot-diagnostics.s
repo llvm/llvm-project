@@ -42,9 +42,9 @@ fvdot za.s[w8, 0, vgx2], {z1.h-z2.h}, z0.h[0]
 // --------------------------------------------------------------------------//
 // Invalid Matrix Operand
 
-fvdot za.h[w8, 0, vgx2], {z0.h-z2.h}, z0.h[0]
+fvdot za.b[w8, 0, vgx2], {z0.h-z2.h}, z0.h[0]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid matrix operand, expected suffix .s
-// CHECK-NEXT: fvdot za.h[w8, 0, vgx2], {z0.h-z2.h}, z0.h[0]
+// CHECK-NEXT: fvdot za.b[w8, 0, vgx2], {z0.h-z2.h}, z0.h[0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//

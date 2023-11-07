@@ -19,8 +19,8 @@
 ; SHOULDBE-NEXT: br i1
 
 define amdgpu_kernel void @uniform_unswitch(ptr nocapture %out, i32 %n, i32 %x) {
-; CHECK-LABEL: define amdgpu_kernel void @uniform_unswitch
-; CHECK-SAME: (ptr nocapture writeonly [[OUT:%.*]], i32 [[N:%.*]], i32 [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-LABEL: define amdgpu_kernel void @uniform_unswitch(
+; CHECK-SAME: ptr nocapture writeonly [[OUT:%.*]], i32 [[N:%.*]], i32 [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUT_GLOBAL:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N]], 0
@@ -34,7 +34,7 @@ define amdgpu_kernel void @uniform_unswitch(ptr nocapture %out, i32 %n, i32 %x) 
 ; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[I_07]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[I_07]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT_GLOBAL]], i64 [[TMP0]]
 ; CHECK-NEXT:    store i32 [[I_07]], ptr addrspace(1) [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]

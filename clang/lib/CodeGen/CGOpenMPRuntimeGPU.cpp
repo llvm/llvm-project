@@ -174,8 +174,8 @@ static RecordDecl *buildRecordForGlobalizedVars(
       }
     } else {
       llvm::APInt ArraySize(32, BufSize);
-      Type = C.getConstantArrayType(Type, ArraySize, nullptr, ArrayType::Normal,
-                                    0);
+      Type = C.getConstantArrayType(Type, ArraySize, nullptr,
+                                    ArraySizeModifier::Normal, 0);
       Field = FieldDecl::Create(
           C, GlobalizedRD, Loc, Loc, VD->getIdentifier(), Type,
           C.getTrivialTypeSourceInfo(Type, SourceLocation()),
@@ -757,13 +757,15 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
   // Emit target region as a standalone region.
   class NVPTXPrePostActionTy : public PrePostActionTy {
     CGOpenMPRuntimeGPU::EntryFunctionState &EST;
+    const OMPExecutableDirective &D;
 
   public:
-    NVPTXPrePostActionTy(CGOpenMPRuntimeGPU::EntryFunctionState &EST)
-        : EST(EST) {}
+    NVPTXPrePostActionTy(CGOpenMPRuntimeGPU::EntryFunctionState &EST,
+                         const OMPExecutableDirective &D)
+        : EST(EST), D(D) {}
     void Enter(CodeGenFunction &CGF) override {
       auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
-      RT.emitKernelInit(CGF, EST, /* IsSPMD */ false);
+      RT.emitKernelInit(D, CGF, EST, /* IsSPMD */ false);
       // Skip target region initialization.
       RT.setLocThreadIdInsertPt(CGF, /*AtCurrentPoint=*/true);
     }
@@ -772,7 +774,7 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
       RT.clearLocThreadIdInsertPt(CGF);
       RT.emitKernelDeinit(CGF, EST, /* IsSPMD */ false);
     }
-  } Action(EST);
+  } Action(EST, D);
   CodeGen.setAction(Action);
   IsInTTDRegion = true;
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
@@ -780,10 +782,17 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
   IsInTTDRegion = false;
 }
 
-void CGOpenMPRuntimeGPU::emitKernelInit(CodeGenFunction &CGF,
+void CGOpenMPRuntimeGPU::emitKernelInit(const OMPExecutableDirective &D,
+                                        CodeGenFunction &CGF,
                                         EntryFunctionState &EST, bool IsSPMD) {
+  int32_t MinThreadsVal = 1, MaxThreadsVal = -1, MinTeamsVal = 1,
+          MaxTeamsVal = -1;
+  computeMinAndMaxThreadsAndTeams(D, CGF, MinThreadsVal, MaxThreadsVal,
+                                  MinTeamsVal, MaxTeamsVal);
+
   CGBuilderTy &Bld = CGF.Builder;
-  Bld.restoreIP(OMPBuilder.createTargetInit(Bld, IsSPMD));
+  Bld.restoreIP(OMPBuilder.createTargetInit(
+      Bld, IsSPMD, MinThreadsVal, MaxThreadsVal, MinTeamsVal, MaxTeamsVal));
   if (!IsSPMD)
     emitGenericVarsProlog(CGF, EST.Loc);
 }
@@ -794,8 +803,30 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
   if (!IsSPMD)
     emitGenericVarsEpilog(CGF);
 
+  // This is temporary until we remove the fixed sized buffer.
+  ASTContext &C = CGM.getContext();
+  RecordDecl *StaticRD = C.buildImplicitRecord(
+      "_openmp_teams_reduction_type_$_", RecordDecl::TagKind::Union);
+  StaticRD->startDefinition();
+  for (const RecordDecl *TeamReductionRec : TeamsReductions) {
+    QualType RecTy = C.getRecordType(TeamReductionRec);
+    auto *Field = FieldDecl::Create(
+        C, StaticRD, SourceLocation(), SourceLocation(), nullptr, RecTy,
+        C.getTrivialTypeSourceInfo(RecTy, SourceLocation()),
+        /*BW=*/nullptr, /*Mutable=*/false,
+        /*InitStyle=*/ICIS_NoInit);
+    Field->setAccess(AS_public);
+    StaticRD->addDecl(Field);
+  }
+  StaticRD->completeDefinition();
+  QualType StaticTy = C.getRecordType(StaticRD);
+  llvm::Type *LLVMReductionsBufferTy =
+      CGM.getTypes().ConvertTypeForMem(StaticTy);
+  const auto &DL = CGM.getModule().getDataLayout();
+  uint64_t BufferSize =
+      DL.getTypeAllocSize(LLVMReductionsBufferTy).getFixedValue();
   CGBuilderTy &Bld = CGF.Builder;
-  OMPBuilder.createTargetDeinit(Bld);
+  OMPBuilder.createTargetDeinit(Bld, BufferSize);
 }
 
 void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
@@ -815,19 +846,20 @@ void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
     CGOpenMPRuntimeGPU::EntryFunctionState &EST;
     bool IsBareKernel;
     DataSharingMode Mode;
+    const OMPExecutableDirective &D;
 
   public:
     NVPTXPrePostActionTy(CGOpenMPRuntimeGPU &RT,
                          CGOpenMPRuntimeGPU::EntryFunctionState &EST,
-                         bool IsBareKernel)
+                         bool IsBareKernel, const OMPExecutableDirective &D)
         : RT(RT), EST(EST), IsBareKernel(IsBareKernel),
-          Mode(RT.CurrentDataSharingMode) {}
+          Mode(RT.CurrentDataSharingMode), D(D) {}
     void Enter(CodeGenFunction &CGF) override {
       if (IsBareKernel) {
         RT.CurrentDataSharingMode = DataSharingMode::DS_CUDA;
         return;
       }
-      RT.emitKernelInit(CGF, EST, /* IsSPMD */ true);
+      RT.emitKernelInit(D, CGF, EST, /* IsSPMD */ true);
       // Skip target region initialization.
       RT.setLocThreadIdInsertPt(CGF, /*AtCurrentPoint=*/true);
     }
@@ -839,7 +871,7 @@ void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
       RT.clearLocThreadIdInsertPt(CGF);
       RT.emitKernelDeinit(CGF, EST, /* IsSPMD */ true);
     }
-  } Action(*this, EST, IsBareKernel);
+  } Action(*this, EST, IsBareKernel, D);
   CodeGen.setAction(Action);
   IsInTTDRegion = true;
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
@@ -2924,9 +2956,9 @@ void CGOpenMPRuntimeGPU::emitReduction(
       ++Size;
   }
   llvm::APInt ArraySize(/*unsigned int numBits=*/32, Size);
-  QualType ReductionArrayTy =
-      C.getConstantArrayType(C.VoidPtrTy, ArraySize, nullptr, ArrayType::Normal,
-                             /*IndexTypeQuals=*/0);
+  QualType ReductionArrayTy = C.getConstantArrayType(
+      C.VoidPtrTy, ArraySize, nullptr, ArraySizeModifier::Normal,
+      /*IndexTypeQuals=*/0);
   Address ReductionList =
       CGF.CreateMemTemp(ReductionArrayTy, ".omp.reduction.red_list");
   auto IPriv = Privates.begin();
@@ -2988,15 +3020,10 @@ void CGOpenMPRuntimeGPU::emitReduction(
         CGM.getContext(), PrivatesReductions, std::nullopt, VarFieldMap,
         C.getLangOpts().OpenMPCUDAReductionBufNum);
     TeamsReductions.push_back(TeamReductionRec);
-    if (!KernelTeamsReductionPtr) {
-      KernelTeamsReductionPtr = new llvm::GlobalVariable(
-          CGM.getModule(), CGM.VoidPtrTy, /*isConstant=*/true,
-          llvm::GlobalValue::InternalLinkage, nullptr,
-          "_openmp_teams_reductions_buffer_$_$ptr");
-    }
-    llvm::Value *GlobalBufferPtr = CGF.EmitLoadOfScalar(
-        Address(KernelTeamsReductionPtr, CGF.VoidPtrTy, CGM.getPointerAlign()),
-        /*Volatile=*/false, C.getPointerType(C.VoidPtrTy), Loc);
+    auto *KernelTeamsReductionPtr = CGF.EmitRuntimeCall(
+        OMPBuilder.getOrCreateRuntimeFunction(
+            CGM.getModule(), OMPRTL___kmpc_reduction_get_fixed_buffer),
+        {}, "_openmp_teams_reductions_buffer_$_$ptr");
     llvm::Value *GlobalToBufferCpyFn = ::emitListToGlobalCopyFunction(
         CGM, Privates, ReductionArrayTy, Loc, TeamReductionRec, VarFieldMap);
     llvm::Value *GlobalToBufferRedFn = ::emitListToGlobalReduceFunction(
@@ -3011,7 +3038,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
     llvm::Value *Args[] = {
         RTLoc,
         ThreadId,
-        GlobalBufferPtr,
+        KernelTeamsReductionPtr,
         CGF.Builder.getInt32(C.getLangOpts().OpenMPCUDAReductionBufNum),
         RL,
         ShuffleAndReduceFn,
@@ -3054,14 +3081,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
       ++IRHS;
     }
   };
-  llvm::Value *EndArgs[] = {ThreadId};
   RegionCodeGenTy RCG(CodeGen);
-  NVPTXActionTy Action(
-      nullptr, std::nullopt,
-      OMPBuilder.getOrCreateRuntimeFunction(
-          CGM.getModule(), OMPRTL___kmpc_nvptx_end_reduce_nowait),
-      EndArgs);
-  RCG.setAction(Action);
   RCG(CGF);
   // There is no need to emit line number for unconditional branch.
   (void)ApplyDebugLocation::CreateEmpty(CGF);
@@ -3642,42 +3662,6 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
     }
   }
   CGOpenMPRuntime::processRequiresDirective(D);
-}
-
-void CGOpenMPRuntimeGPU::clear() {
-
-  if (!TeamsReductions.empty()) {
-    ASTContext &C = CGM.getContext();
-    RecordDecl *StaticRD = C.buildImplicitRecord(
-        "_openmp_teams_reduction_type_$_", RecordDecl::TagKind::TTK_Union);
-    StaticRD->startDefinition();
-    for (const RecordDecl *TeamReductionRec : TeamsReductions) {
-      QualType RecTy = C.getRecordType(TeamReductionRec);
-      auto *Field = FieldDecl::Create(
-          C, StaticRD, SourceLocation(), SourceLocation(), nullptr, RecTy,
-          C.getTrivialTypeSourceInfo(RecTy, SourceLocation()),
-          /*BW=*/nullptr, /*Mutable=*/false,
-          /*InitStyle=*/ICIS_NoInit);
-      Field->setAccess(AS_public);
-      StaticRD->addDecl(Field);
-    }
-    StaticRD->completeDefinition();
-    QualType StaticTy = C.getRecordType(StaticRD);
-    llvm::Type *LLVMReductionsBufferTy =
-        CGM.getTypes().ConvertTypeForMem(StaticTy);
-    // FIXME: nvlink does not handle weak linkage correctly (object with the
-    // different size are reported as erroneous).
-    // Restore CommonLinkage as soon as nvlink is fixed.
-    auto *GV = new llvm::GlobalVariable(
-        CGM.getModule(), LLVMReductionsBufferTy,
-        /*isConstant=*/false, llvm::GlobalValue::InternalLinkage,
-        llvm::Constant::getNullValue(LLVMReductionsBufferTy),
-        "_openmp_teams_reductions_buffer_$_");
-    KernelTeamsReductionPtr->setInitializer(
-        llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV,
-                                                             CGM.VoidPtrTy));
-  }
-  CGOpenMPRuntime::clear();
 }
 
 llvm::Value *CGOpenMPRuntimeGPU::getGPUNumThreads(CodeGenFunction &CGF) {

@@ -1041,6 +1041,9 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%Lf", 1.0L);
   ASSERT_STREQ_LEN(written, buff, "1.000000");
 
+  written = LIBC_NAMESPACE::sprintf(buff, "%.Lf", -2.5L);
+  ASSERT_STREQ_LEN(written, buff, "-2");
+
 #if defined(SPECIAL_X86_LONG_DOUBLE)
 
   written = LIBC_NAMESPACE::sprintf(buff, "%Lf", 1e100L);

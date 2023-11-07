@@ -5023,6 +5023,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::SREM:
   case ISD::UDIV:
   case ISD::UREM:
+  case ISD::SMIN:
+  case ISD::SMAX:
+  case ISD::UMIN:
+  case ISD::UMAX:
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR: {
@@ -5039,11 +5043,20 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
         break;
       case ISD::SDIV:
       case ISD::SREM:
+      case ISD::SMIN:
+      case ISD::SMAX:
         ExtOp = ISD::SIGN_EXTEND;
         break;
       case ISD::UDIV:
       case ISD::UREM:
         ExtOp = ISD::ZERO_EXTEND;
+        break;
+      case ISD::UMIN:
+      case ISD::UMAX:
+        if (TLI.isSExtCheaperThanZExt(OVT, NVT))
+          ExtOp = ISD::SIGN_EXTEND;
+        else
+          ExtOp = ISD::ZERO_EXTEND;
         break;
       }
       TruncOp = ISD::TRUNCATE;
@@ -5166,7 +5179,11 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     unsigned ExtOp = ISD::FP_EXTEND;
     if (NVT.isInteger()) {
       ISD::CondCode CCCode = cast<CondCodeSDNode>(Node->getOperand(2))->get();
-      ExtOp = isSignedIntSetCC(CCCode) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+      if (isSignedIntSetCC(CCCode) ||
+          TLI.isSExtCheaperThanZExt(Node->getOperand(0).getValueType(), NVT))
+        ExtOp = ISD::SIGN_EXTEND;
+      else
+        ExtOp = ISD::ZERO_EXTEND;
     }
     if (Node->isStrictFPOpcode()) {
       SDValue InChain = Node->getOperand(0);

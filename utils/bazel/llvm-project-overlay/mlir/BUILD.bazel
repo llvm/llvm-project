@@ -4416,6 +4416,7 @@ cc_library(
         ":SCFTransformOps",
         ":SparseTensorTransformOps",
         ":TensorTransformOps",
+        ":TransformLoopExtension",
         ":TransformPDLExtension",
         ":UBToLLVM",
         ":VectorTransformOps",
@@ -4598,6 +4599,7 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":SideEffectInterfaces",
+        ":SubsetOpInterface",
         ":Support",
         ":TensorDialect",
         ":Transforms",
@@ -6933,6 +6935,7 @@ cc_library(
         ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
+        ":SubsetOpInterface",
         ":TensorDialect",
         ":TensorPassIncGen",
         ":TensorUtils",
@@ -7034,6 +7037,7 @@ cc_library(
         ":MemorySlotInterfaces",
         ":Rewrite",
         ":SideEffectInterfaces",
+        ":SubsetOpInterface",
         ":Support",
         ":TransformsPassIncGen",
         ":config",
@@ -8046,6 +8050,7 @@ cc_library(
         ":Support",
         ":ViewLikeInterface",
         "//llvm:Support",
+        "//llvm:config",
     ],
 )
 
@@ -8396,6 +8401,7 @@ cc_library(
         ":LLVMIntrinsicConversionIncGen",
         ":Support",
         ":TranslateLib",
+        "//llvm:BinaryFormat",
         "//llvm:Core",
         "//llvm:IRPrinter",
         "//llvm:IRReader",
@@ -8672,6 +8678,7 @@ cc_library(
         ":TosaToLinalg",
         ":TransformDialect",
         ":TransformDialectTransforms",
+        ":TransformLoopExtension",
         ":TransformPDLExtension",
         ":Transforms",
         ":TransformsPassIncGen",
@@ -10187,9 +10194,9 @@ gentbl_cc_library(
 )
 
 td_library(
-    name = "SubsetInsertionOpInterfaceTdFiles",
+    name = "SubsetOpInterfaceTdFiles",
     srcs = [
-        "include/mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.td",
+        "include/mlir/Interfaces/SubsetOpInterface.td",
     ],
     includes = ["include"],
     deps = [
@@ -10198,21 +10205,36 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "SubsetInsertionOpInterfaceIncGen",
+    name = "SubsetOpInterfaceIncGen",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
-            "include/mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h.inc",
+            "include/mlir/Interfaces/SubsetOpInterface.h.inc",
         ),
         (
             ["-gen-op-interface-defs"],
-            "include/mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.cpp.inc",
+            "include/mlir/Interfaces/SubsetOpInterface.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.td",
+    td_file = "include/mlir/Interfaces/SubsetOpInterface.td",
     deps = [
-        ":SubsetInsertionOpInterfaceTdFiles",
+        ":SubsetOpInterfaceTdFiles",
+    ],
+)
+
+cc_library(
+    name = "SubsetOpInterface",
+    srcs = ["lib/Interfaces/SubsetOpInterface.cpp"],
+    hdrs = ["include/mlir/Interfaces/SubsetOpInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":DestinationStyleOpInterface",
+        ":IR",
+        ":SubsetOpInterfaceIncGen",
+        ":Support",
+        ":ValueBoundsOpInterface",
+        "//llvm:Support",
     ],
 )
 
@@ -10454,6 +10476,7 @@ cc_library(
         ":SCFTransforms",
         ":SCFUtils",
         ":SparseTensorDialect",
+        ":SubsetOpInterface",
         ":Support",
         ":TensorDialect",
         ":TensorTilingInterfaceImpl",
@@ -10513,6 +10536,7 @@ cc_library(
         ":IR",
         ":Support",
         ":ValueBoundsOpInterfaceIncGen",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -11375,6 +11399,52 @@ cc_library(
         ":Support",
         ":TransformDialect",
         ":TransformPDLExtensionOpsIncGen",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "TransformLoopExtensionTdFiles",
+    srcs = glob(["include/mlir/Dialect/Transform/LoopExtension/*.td"]),
+    deps = [
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TransformLoopExtensionOpsIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-op-decls",
+            ],
+            "include/mlir/Dialect/Transform/LoopExtension/LoopExtensionOps.h.inc",
+        ),
+        (
+            [
+                "-gen-op-defs",
+            ],
+            "include/mlir/Dialect/Transform/LoopExtension/LoopExtensionOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/LoopExtension/LoopExtensionOps.td",
+    deps = [":TransformLoopExtensionTdFiles"],
+)
+
+cc_library(
+    name = "TransformLoopExtension",
+    srcs = glob(["lib/Dialect/Transform/LoopExtension/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/LoopExtension/*.h"]),
+    deps = [
+        ":IR",
+        ":LoopLikeInterface",
+        ":Rewrite",
+        ":SideEffectInterfaces",
+        ":Support",
+        ":TransformDialect",
+        ":TransformLoopExtensionOpsIncGen",
+        ":Transforms",
         "//llvm:Support",
     ],
 )
@@ -12562,7 +12632,7 @@ gentbl_cc_library(
         ":BufferizableOpInterfaceTdFiles",
         ":BufferizationOpsTdFiles",
         ":DestinationStyleOpInterfaceTdFiles",
-        ":SubsetInsertionOpInterfaceTdFiles",
+        ":SubsetOpInterfaceTdFiles",
     ],
 )
 
@@ -12573,7 +12643,6 @@ cc_library(
         "lib/Dialect/Bufferization/IR/BufferizableOpInterface.cpp",
         "lib/Dialect/Bufferization/IR/BufferizationDialect.cpp",
         "lib/Dialect/Bufferization/IR/BufferizationOps.cpp",
-        "lib/Dialect/Bufferization/IR/SubsetInsertionOpInterface.cpp",
         "lib/Dialect/Bufferization/IR/UnstructuredControlFlow.cpp",
     ],
     hdrs = [
@@ -12581,7 +12650,6 @@ cc_library(
         "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h",
         "include/mlir/Dialect/Bufferization/IR/Bufferization.h",
         "include/mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h",
-        "include/mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h",
         "include/mlir/Dialect/Bufferization/IR/UnstructuredControlFlow.h",
     ],
     includes = ["include"],
@@ -12604,7 +12672,7 @@ cc_library(
         ":InferTypeOpInterface",
         ":MemRefDialect",
         ":SparseTensorDialect",
-        ":SubsetInsertionOpInterfaceIncGen",
+        ":SubsetOpInterface",
         ":Support",
         ":TensorDialect",
         "//llvm:Support",
@@ -12654,6 +12722,7 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":SideEffectInterfaces",
+        ":SubsetOpInterface",
         ":Support",
         ":TensorDialect",
         ":Transforms",

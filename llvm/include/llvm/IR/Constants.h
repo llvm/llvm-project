@@ -1041,8 +1041,6 @@ public:
   static Constant *getLShr(Constant *C1, Constant *C2, bool isExact = false);
   static Constant *getAShr(Constant *C1, Constant *C2, bool isExact = false);
   static Constant *getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getSExt(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getZExt(Constant *C, Type *Ty, bool OnlyIfReduced = false);
   static Constant *getFPTrunc(Constant *C, Type *Ty,
                               bool OnlyIfReduced = false);
   static Constant *getFPExtend(Constant *C, Type *Ty,
@@ -1140,28 +1138,11 @@ public:
   static Constant *getCast(unsigned ops, Constant *C, Type *Ty,
                            bool OnlyIfReduced = false);
 
-  // Create a ZExt or BitCast cast constant expression
-  static Constant *
-  getZExtOrBitCast(Constant *C, ///< The constant to zext or bitcast
-                   Type *Ty     ///< The type to zext or bitcast C to
-  );
-
-  // Create a SExt or BitCast cast constant expression
-  static Constant *
-  getSExtOrBitCast(Constant *C, ///< The constant to sext or bitcast
-                   Type *Ty     ///< The type to sext or bitcast C to
-  );
-
   // Create a Trunc or BitCast cast constant expression
   static Constant *
   getTruncOrBitCast(Constant *C, ///< The constant to trunc or bitcast
                     Type *Ty     ///< The type to trunc or bitcast C to
   );
-
-  /// Create either an sext, trunc or nothing, depending on whether Ty is
-  /// wider, narrower or the same as C->getType(). This only works with
-  /// integer or vector of integer types.
-  static Constant *getSExtOrTrunc(Constant *C, Type *Ty);
 
   /// Create a BitCast, AddrSpaceCast, or a PtrToInt cast constant
   /// expression.
@@ -1175,13 +1156,6 @@ public:
   static Constant *getPointerBitCastOrAddrSpaceCast(
       Constant *C, ///< The constant to addrspacecast or bitcast
       Type *Ty     ///< The type to bitcast or addrspacecast C to
-  );
-
-  /// Create a ZExt, Bitcast or Trunc for integer -> integer casts
-  static Constant *
-  getIntegerCast(Constant *C,  ///< The integer constant to be casted
-                 Type *Ty,     ///< The integer type to cast to
-                 bool IsSigned ///< Whether C should be treated as signed or not
   );
 
   /// Create a FPExt, Bitcast or FPTrunc for fp -> fp casts
@@ -1332,6 +1306,9 @@ public:
 
   /// Whether creating a constant expression for this cast is desirable.
   static bool isDesirableCastOp(unsigned Opcode);
+
+  /// Whether creating a constant expression for this cast is supported.
+  static bool isSupportedCastOp(unsigned Opcode);
 
   /// Whether creating a constant expression for this getelementptr type is
   /// supported.

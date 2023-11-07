@@ -42,7 +42,7 @@ namespace {
 /// Maps each sparse tensor type to an opaque pointer.
 static std::optional<Type> convertSparseTensorTypes(Type type) {
   if (getSparseTensorEncoding(type) != nullptr)
-    return LLVM::LLVMPointerType::get(IntegerType::get(type.getContext(), 8));
+    return LLVM::LLVMPointerType::get(type.getContext());
   return std::nullopt;
 }
 
@@ -96,8 +96,9 @@ static Value createOrFoldLvlCall(OpBuilder &builder, Location loc,
   // which is all we care about (for supporting permutations).
   const Dimension dim =
       stt.isIdentity() ? lvl : stt.getDimToLvl().getDimPosition(lvl);
-  if (const auto sz = stt.getStaticDimSize(dim))
-    return constantIndex(builder, loc, *sz);
+  const Size sz = stt.getDynamicDimSize(dim);
+  if (!ShapedType::isDynamic(sz))
+    return constantIndex(builder, loc, sz);
   // If we cannot statically compute the size from the shape, then we
   // must dynamically query it.  (In principle we could also dynamically
   // compute it, but since we already did so to construct the `tensor`
@@ -112,8 +113,9 @@ static Value createOrFoldLvlCall(OpBuilder &builder, Location loc,
 static Value createOrFoldDimCall(OpBuilder &builder, Location loc,
                                  SparseTensorType stt, Value tensor,
                                  Dimension dim) {
-  if (const auto sz = stt.getStaticDimSize(dim))
-    return constantIndex(builder, loc, *sz);
+  const Size sz = stt.getDynamicDimSize(dim);
+  if (!ShapedType::isDynamic(sz))
+    return constantIndex(builder, loc, sz);
   if (stt.hasEncoding())
     return genDimSizeCall(builder, loc, tensor, dim);
   return linalg::createOrFoldDimOp(builder, loc, tensor, dim);
@@ -268,13 +270,6 @@ static Value genValuesCall(OpBuilder &builder, Location loc, ShapedType tp,
                        primaryTypeFunctionSuffix(tp.getElementType())};
   return createFuncCall(builder, loc, name, tp, ptr, EmitCInterface::On)
       .getResult(0);
-}
-
-/// Generates a call to release/delete a `SparseTensorCOO`.
-static void genDelCOOCall(OpBuilder &builder, Location loc, Type elemTp,
-                          Value coo) {
-  SmallString<21> name{"delSparseTensorCOO", primaryTypeFunctionSuffix(elemTp)};
-  createFuncCall(builder, loc, name, {}, coo, EmitCInterface::Off);
 }
 
 //===----------------------------------------------------------------------===//
@@ -707,37 +702,6 @@ public:
   }
 };
 
-/// Sparse conversion rule for the output operator.
-class SparseTensorOutConverter : public OpConversionPattern<OutOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(OutOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    const Location loc = op->getLoc();
-    const auto srcTp = getSparseTensorType(op.getTensor());
-    // Convert to default permuted COO.
-    Value src = adaptor.getOperands()[0];
-    SmallVector<Value> dimSizes = getDimSizes(rewriter, loc, srcTp, src);
-    Value coo = NewCallParams(rewriter, loc)
-                    .genBuffers(srcTp.withoutDimToLvl(), dimSizes)
-                    .genNewCall(Action::kToCOO, src);
-    // Then output the tensor to external file with coordinates in the
-    // externally visible lexicographic coordinate order.  A sort is
-    // required if the source was not in that order yet (note that the
-    // sort can be dropped altogether if external format does not care
-    // about the order at all, but here we assume it does).
-    const Value sort = constantI1(rewriter, loc, !srcTp.isIdentity());
-    SmallVector<Value, 3> outParams{coo, adaptor.getOperands()[1], sort};
-    const Type elemTp = srcTp.getElementType();
-    SmallString<18> name{"outSparseTensor", primaryTypeFunctionSuffix(elemTp)};
-    createFuncCall(rewriter, loc, name, {}, outParams, EmitCInterface::Off);
-    genDelCOOCall(rewriter, loc, elemTp, coo);
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
-
 /// Sparse conversion rule for the sparse_tensor.pack operator.
 class SparseTensorAssembleConverter : public OpConversionPattern<AssembleOp> {
 public:
@@ -789,6 +753,5 @@ void mlir::populateSparseTensorConversionPatterns(TypeConverter &typeConverter,
            SparseTensorToValuesConverter, SparseNumberOfEntriesConverter,
            SparseTensorLoadConverter, SparseTensorInsertConverter,
            SparseTensorExpandConverter, SparseTensorCompressConverter,
-           SparseTensorOutConverter, SparseTensorAssembleConverter>(
-          typeConverter, patterns.getContext());
+           SparseTensorAssembleConverter>(typeConverter, patterns.getContext());
 }

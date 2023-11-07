@@ -62,7 +62,7 @@ declare void @llvm.assume(i1 noundef)
 ; GEN: @[[_ZTV5BASE1:[a-zA-Z0-9_$"\\.-]+]] = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI5Base1, ptr @_ZN5Base15func1Eii] }, align 8, !type !0, !type !1
 ; GEN: @[[_ZTV5BASE2:[a-zA-Z0-9_$"\\.-]+]] = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI5Base2, ptr @_ZN5Base25func2Eii] }, align 8, !type !9, !type !4
 ; GEN: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [2 x ptr] [ptr @_ZTV5Base1, ptr @_ZTV5Base2], section "llvm.metadata"
-; GEN: @[[__LLVM_PROFILE_RAW_VERSION:[a-zA-Z0-9_$"\\.-]+]] = hidden constant i64 72057594037927945, comdat
+; GEN: @[[__LLVM_PROFILE_RAW_VERSION:[a-zA-Z0-9_$"\\.-]+]] = hidden constant i64 72057594037927946, comdat
 ; GEN: @[[__PROFN_TEST_VTABLE_VALUE_PROFILING:[a-zA-Z0-9_$"\\.-]+]] = private constant [27 x i8] c"test_vtable_value_profiling"
 ;.
 ; LOWER: @[[_ZTV7DERIVED:[a-zA-Z0-9_$"\\.-]+]] = constant { [3 x ptr], [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI7Derived, ptr @_ZN5Base15func1Eii], [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr @_ZTI7Derived, ptr @_ZN5Base25func2Eii] }, comdat, align 8, !type !0, !type !1, !type !2, !type !3, !type !4, !type !5, !type !6, !type !7, !type !8
@@ -73,10 +73,10 @@ declare void @llvm.assume(i1 noundef)
 ; LOWER: @[[_ZTI7DERIVED:[a-zA-Z0-9_$"\\.-]+]] = constant { ptr, ptr, i32, i32, ptr, i64, ptr, i64 } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 2), ptr @_ZTS7Derived, i32 0, i32 2, ptr @_ZTI5Base1, i64 2, ptr @_ZTI5Base2, i64 2050 }, align 8
 ; LOWER: @[[_ZTV5BASE1:[a-zA-Z0-9_$"\\.-]+]] = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI5Base1, ptr @_ZN5Base15func1Eii] }, align 8, !type !0, !type !1
 ; LOWER: @[[_ZTV5BASE2:[a-zA-Z0-9_$"\\.-]+]] = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI5Base2, ptr @_ZN5Base25func2Eii] }, align 8, !type !9, !type !4
-; LOWER: @[[__LLVM_PROFILE_RAW_VERSION:[a-zA-Z0-9_$"\\.-]+]] = hidden constant i64 72057594037927945, comdat
+; LOWER: @[[__LLVM_PROFILE_RAW_VERSION:[a-zA-Z0-9_$"\\.-]+]] = hidden constant i64 72057594037927946, comdat
 ; LOWER: @[[__PROFC_TEST_VTABLE_VALUE_PROFILING:[a-zA-Z0-9_$"\\.-]+]] = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8
 ; LOWER: @[[__PROFVP_TEST_VTABLE_VALUE_PROFILING:[a-zA-Z0-9_$"\\.-]+]] = private global [4 x i64] zeroinitializer, section "__llvm_prf_vals", comdat($__profc_test_vtable_value_profiling), align 8
-; LOWER: @[[__PROFD_TEST_VTABLE_VALUE_PROFILING:[a-zA-Z0-9_$"\\.-]+]] = private global { i64, i64, i64, ptr, ptr, i32, [3 x i16] } { i64 1593873508557585901, i64 567090795815895039, i64 sub (i64 ptrtoint (ptr @__profc_test_vtable_value_profiling to i64), i64 ptrtoint (ptr @__profd_test_vtable_value_profiling to i64)), ptr @test_vtable_value_profiling.local, ptr @__profvp_test_vtable_value_profiling, i32 1, [3 x i16] [i16 2, i16 0, i16 2] }, section "__llvm_prf_data", comdat($__profc_test_vtable_value_profiling), align 8
+; LOWER: @[[__PROFD_TEST_VTABLE_VALUE_PROFILING:[a-zA-Z0-9_$"\\.-]+]] = private global { i64, i64, i64, i64, ptr, ptr, i32, [3 x i16], i32 } { i64 1593873508557585901, i64 567090795815895039, i64 sub (i64 ptrtoint (ptr @__profc_test_vtable_value_profiling to i64), i64 ptrtoint (ptr @__profd_test_vtable_value_profiling to i64)), i64 0, ptr @test_vtable_value_profiling.local, ptr @__profvp_test_vtable_value_profiling, i32 1, [3 x i16] [i16 2, i16 0, i16 2], i32 0 }, section "__llvm_prf_data", comdat($__profc_test_vtable_value_profiling), align 8
 ; LOWER: @[[__PROFVT__ZTV7DERIVED:[a-zA-Z0-9_$"\\.-]+]] = global { i64, ptr, i32 } { i64 -4576307468236080025, ptr @_ZTV7Derived, i32 48 }, section "__llvm_prf_vtab", comdat, align 8
 ; LOWER: @[[__PROFVT__ZTV5BASE1:[a-zA-Z0-9_$"\\.-]+]] = global { i64, ptr, i32 } { i64 3215870116411581797, ptr @_ZTV5Base1, i32 24 }, section "__llvm_prf_vtab", comdat, align 8
 ; LOWER: @[[__PROFVT__ZTV5BASE2:[a-zA-Z0-9_$"\\.-]+]] = global { i64, ptr, i32 } { i64 8378219803387680050, ptr @_ZTV5Base2, i32 24 }, section "__llvm_prf_vtab", comdat, align 8

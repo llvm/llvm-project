@@ -482,11 +482,14 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "Op print with all flags: ");
   mlirOperationPrintWithFlags(operation, flags, printToStderr, NULL);
   fprintf(stderr, "\n");
+  fprintf(stderr, "Op print with state: ");
+  MlirAsmState state = mlirAsmStateCreateForOperation(parentOperation, flags);
+  mlirOperationPrintWithState(operation, state, printToStderr, NULL);
+  fprintf(stderr, "\n");
   // clang-format off
   // CHECK: Op print with all flags: %{{.*}} = "arith.constant"() <{value = 0 : index}> {elts = dense_resource<__elided__> : tensor<4xi32>} : () -> index loc(unknown)
   // clang-format on
 
-  MlirAsmState state = mlirAsmStateCreateForOperation(parentOperation, flags);
   fprintf(stderr, "With state: |");
   mlirValuePrintAsOperand(value, state, printToStderr, NULL);
   // CHECK: With state: |%0|
