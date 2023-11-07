@@ -130,13 +130,6 @@ public:
 
   const GCNRegPressure &getPressure() const { return CurPressure; }
 
-  // returns MaxPressure, resetting it
-  decltype(MaxPressure) moveMaxPressure() {
-    auto Res = MaxPressure;
-    MaxPressure.clear();
-    return Res;
-  }
-
   decltype(LiveRegs) moveLiveRegs() {
     return std::move(LiveRegs);
   }
@@ -175,16 +168,11 @@ public:
   // to reported by LIS.
   bool isValid() const;
 
-  // deprecated.
-  decltype(MaxPressure) moveMaxPressure() = delete;
-
   const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
 
-  void resetMaxPressure() {
-    MaxPressure = CurPressure;
-  }
+  void resetMaxPressure() { MaxPressure = CurPressure; }
 
-  GCNRegPressure getMaxPressureAndReset() { 
+  GCNRegPressure getMaxPressureAndReset() {
     GCNRegPressure RP = MaxPressure;
     resetMaxPressure();
     return RP;
@@ -201,6 +189,13 @@ public:
   GCNDownwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
 
   MachineBasicBlock::const_iterator getNext() const { return NextMI; }
+
+  // Return MaxPressure and clear it.
+  decltype(MaxPressure) moveMaxPressure() {
+    auto Res = MaxPressure;
+    MaxPressure.clear();
+    return Res;
+  }
 
   // Reset tracker to the point before the MI
   // filling live regs upon this point using LIS.
@@ -234,8 +229,7 @@ LaneBitmask getLiveLaneMask(unsigned Reg,
 LaneBitmask getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
                             const MachineRegisterInfo &MRI);
 
-GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI,
-                                     const LiveIntervals &LIS,
+GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
                                      const MachineRegisterInfo &MRI);
 
 /// creates a map MachineInstr -> LiveRegSet

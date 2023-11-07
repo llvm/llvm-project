@@ -178,12 +178,11 @@ collectVirtualRegUses(SmallVectorImpl<RegisterMaskPair> &RegMaskPairs,
       continue;
 
     Register Reg = MO.getReg();
-    auto I = llvm::find_if(RegMaskPairs, [Reg](const RegisterMaskPair &RM) {
-      return RM.RegUnit == Reg;
-    });
-    if (I != RegMaskPairs.end())
+    if (llvm::any_of(RegMaskPairs, [Reg](const RegisterMaskPair &RM) {
+          return RM.RegUnit == Reg;
+        }))
       continue;
-      
+
     LaneBitmask UseMask;
     auto &LI = LIS.getInterval(Reg);
     if (!LI.hasSubRanges())
@@ -217,8 +216,7 @@ LaneBitmask llvm::getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
     for (const auto &S : LI.subranges())
       if (S.liveAt(SI)) {
         LiveMask |= S.LaneMask;
-        assert(LiveMask < MRI.getMaxLaneMaskForVReg(LI.reg()) ||
-               LiveMask == MRI.getMaxLaneMaskForVReg(LI.reg()));
+        assert(LiveMask == (LiveMask & MRI.getMaxLaneMaskForVReg(LI.reg())));
       }
   } else if (LI.liveAt(SI)) {
     LiveMask = MRI.getMaxLaneMaskForVReg(LI.reg());
@@ -257,11 +255,14 @@ void GCNRPTracker::reset(const MachineInstr &MI,
   MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// GCNUpwardRPTracker
+
 void GCNUpwardRPTracker::reset(const MachineRegisterInfo &MRI_,
                                const LiveRegSet &LiveRegs_) {
   MRI = &MRI_;
   LiveRegs = LiveRegs_;
-  LastTrackedMI = nullptr; // TODO: LastTrackedMI isnt' used, remove?
+  LastTrackedMI = nullptr;
   MaxPressure = CurPressure = getRegPressure(MRI_, LiveRegs_);
 }
 
@@ -318,6 +319,9 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
 
   assert(CurPressure == getRegPressure(*MRI, LiveRegs));
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// GCNDownwardRPTracker
 
 bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
                                  const LiveRegSet *LiveRegsCopy) {
