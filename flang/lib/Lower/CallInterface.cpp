@@ -1005,14 +1005,8 @@ private:
       if (isValueAttr &&
           !getConverter().getLoweringOptions().getLowerToHighLevelFIR())
         TODO(loc, "assumed shape dummy argument with VALUE attribute");
-      Property prop = Property::Box;
-      PassEntityBy passBy = PassEntityBy::Box;
-      /*if (isValueAttr) {
-        passBy = PassEntityBy::BaseAddressValueAttribute;
-        prop = Property::Value;
-      }*/
-      addFirOperand(boxType, nextPassedArgPosition(), prop, attrs);
-      addPassedArg(passBy, entity, characteristics);
+      addFirOperand(boxType, nextPassedArgPosition(), Property::Box, attrs);
+      addPassedArg(PassEntityBy::Box, entity, characteristics);
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Character) {
       // Pass as fir.box_char
