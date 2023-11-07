@@ -127,11 +127,11 @@ static InadmissInfo collectInadmissInfo(AffineMap map, bool isOutput) {
 //                             (l1 * 3 + l3) mod 3) = (l0, l1, l2, l3)
 //
 // This function builds the inverse(idxMap) that replace every dimensions used
-// in `info` to levels, and updates the iterator type array `itTps` for the  new
+// in `info` to levels, and updates the iterator type array `itTps` for the new
 // index variable introduced.
 //
 // Note that the returned affine map does not retain the order of the input
-// affine map. Instead, it always used the first `info.inAdlvls.count()` for the
+// affine map. Instead, it always uses the first `info.inAdlvls.count()` for the
 // replaced levels, and remaining ones for unused dimensions.
 // For example, to handle
 // idxMap = (d0, d1) -> (d0, d1 floordiv 4, d2 mod 4)
@@ -139,14 +139,14 @@ static InadmissInfo collectInadmissInfo(AffineMap map, bool isOutput) {
 // inverse(idxMap) = (l0, l1, d0) -> (d0, l0 * 4 + l1)
 // in which, (l0, l1) together replaces `d1`, yet they appear
 // before `d0` in the resulting affine map.
-// The the index (loop) order can later be canonicalized by a topo sort.
+// The index (loop) order can later be canonicalized by a topo sort.
 static AffineMap
 genReplaceDimToLvlMap(const InadmissInfo &info, AffineMap idxMap,
                       SmallVector<utils::IteratorType> &itTps) {
   MLIRContext *ctx = idxMap.getContext();
   auto [inAdLvls, usedDims] = info;
-  // Note that idxMap is not equal dim2Lvl map, it is computed by
-  // composing idx2Dim(dim2Lvl), they are only equal when idx2Dim is an
+  // Note that idxMap does not equal to dim2Lvl map, it is computed by
+  // composing idx2Dim(dim2Lvl). They are only equal when idx2Dim is an
   // ID map.
   // TODO: we might fail here, in those case we should really return
   // failure instead of assertion error.
@@ -179,11 +179,11 @@ genReplaceDimToLvlMap(const InadmissInfo &info, AffineMap idxMap,
   }
   assert(lvl2Idx.getNumResults() == idxMap.getNumDims());
 
-  // We do not need to replace the DimExpr that is not used in Inadmissible
+  // We do not need to replace the DimExpr that is not used in inadmissible
   // level expressions. We use the first inAdLvl.count() dim to represent the
-  // replaced level, the remainings are used for unchanged ones.
+  // replaced level, the remainings are reserved for unchanged ones.
   // Note that results from the inverse map computed previously does not follow
-  // the convention we used, and we fix the mismatch.
+  // the convention we used, and we need to fix the mismatch below.
   unsigned curRepID = 0;
   unsigned curOriID = inAdLvls.count();
   SmallVector<AffineExpr> results;
@@ -192,9 +192,9 @@ genReplaceDimToLvlMap(const InadmissInfo &info, AffineMap idxMap,
 
   for (unsigned l : inAdLvls.set_bits()) {
     // By our convention, the inadmissible level `l` always appears in the
-    // leading part (accumulated by curRepID) of the affine map. Record the
-    // mapping so that we can replace all the uses of `l` to the correct
-    // position after the translation.
+    // leading part (accumulated by curRepID) of the affine map's parameter
+    // list. Record the mapping so that we can replace all the uses of `l` to
+    // the correct position after the translation.
     dimRep[l] = getAffineDimExpr(curRepID++, ctx);
     // A new index variable is introduced for the inadmissible level, inherit
     // the iterator type. E.g., if l0 = d0 floordiv 2, the
@@ -227,7 +227,7 @@ genReplaceDimToLvlMap(const InadmissInfo &info, AffineMap idxMap,
   return AffineMap::get(numDim, 0, results, ctx);
 }
 
-// Translates a the index map in the linalg::GenericOp from idx->dim map to
+// Translates the index map in the linalg::GenericOp from idx->dim map to
 // idx->lvl map. Returns failure if the index map can not be translated to an
 // admissible form.
 // Returns the translated index map array and the iterator type array.
@@ -286,7 +286,7 @@ translateMap(linalg::GenericOp op, PatternRewriter &rewriter) {
       for (unsigned d : dimExprs.set_bits()) {
         // The first `boundedNum` used in the AffineMap is introduced to
         // resolve previous inadmissible expressions. We can not replace them
-        // to bring back the inadmissible expressions.
+        // as it might bring back the inadmissible expressions.
         if (d < boundedNum)
           return std::nullopt;
       }
