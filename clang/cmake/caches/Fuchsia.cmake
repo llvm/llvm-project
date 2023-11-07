@@ -197,6 +197,9 @@ foreach(variableName ${variableNames})
   endif()
 endforeach()
 
+# TODO: This is a temporary workaround until we figure out the right solution.
+set(BOOTSTRAP_LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
+
 # Setup the bootstrap build.
 set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
 set(CLANG_BOOTSTRAP_EXTRA_DEPS
