@@ -650,7 +650,7 @@ func.func @main() {
              threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
              dynamic_shared_memory_size %shmemSize
   {
-    // expected-error @+1 {{op Address space must be address_space<workgroup> or 3}}
+    // expected-error @below {{op Address space must be address_space<workgroup> or 3}}
     %0 = gpu.dynamic_shared_memory : memref<?xi8>  
     gpu.terminator
   }
@@ -667,7 +667,7 @@ func.func @main() {
              threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
              dynamic_shared_memory_size %shmemSize
   {
-    // expected-error @+1 {{result memref type must be memref<?xi8>}}
+    // expected-error @below {{result memref type must be memref<?xi8>}}
     %0 = gpu.dynamic_shared_memory : memref<1xi8,3>  
     gpu.terminator
   }
@@ -683,7 +683,7 @@ func.func @main(%arg0 : index) {
              threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
              dynamic_shared_memory_size %shmemSize
   {
-    // expected-error @+1 {{op result #0 must be 1D memref of 8-bit signless integer values, but got 'memref<?xf32, 3>}}
+    // expected-error @below {{op result #0 must be 1D memref of 8-bit signless integer values, but got 'memref<?xf32, 3>}}
     %0 = gpu.dynamic_shared_memory : memref<?xf32,3>  
     gpu.terminator
   }

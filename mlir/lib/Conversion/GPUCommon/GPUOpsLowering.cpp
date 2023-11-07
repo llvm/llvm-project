@@ -562,7 +562,7 @@ getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
                              gpu::DynamicSharedMemoryOp op,
                              const LLVMTypeConverter *typeConverter,
                              MemRefType memrefType, unsigned alignmentBit) {
-  std::optional<LLVM::GlobalOp> existingGlobalOp;
+  LLVM::GlobalOp existingGlobalOp;
 
   LLVM::LLVMFuncOp funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
   assert(funcOp && "cannot find llvm.func op");
@@ -570,22 +570,20 @@ getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
   gpu::GPUModuleOp moduleOp = funcOp->getParentOfType<gpu::GPUModuleOp>();
   assert(moduleOp && "cannot find gpu.module op");
 
-  // Use already generated global op if it exists
-  int index = 0;
-  std::string prefix = llvm::formatv("__shmem_{0}", funcOp.getSymName());
+  uint64_t alignmentByte = alignmentBit / memrefType.getElementTypeBitWidth();
+  // Use already generated global op if it exists.
   moduleOp->walk([&](LLVM::GlobalOp globalOp) {
     if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(globalOp.getType())) {
-      if (arrayType.getNumElements() == 0) {
+      if (arrayType.getNumElements() == 0 &&
+          globalOp.getAlignment().value_or(0) == alignmentByte) {
         existingGlobalOp = globalOp;
         return WalkResult::interrupt();
       }
     }
-    if (globalOp.getSymName().startswith(prefix))
-      index++;
     return WalkResult::advance();
   });
-  if (existingGlobalOp.has_value())
-    return existingGlobalOp.value();
+  if (existingGlobalOp)
+    return existingGlobalOp;
 
   // Generate a new global op
   OpBuilder::InsertionGuard guard(rewriter);
@@ -593,9 +591,8 @@ getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
 
   auto zeroSizedArrayType = LLVM::LLVMArrayType::get(
       typeConverter->convertType(memrefType.getElementType()), 0);
-  std::string name = std::string(llvm::formatv("{0}_{1}", prefix, index));
+  std::string name = llvm::formatv("__shmem_{0}", funcOp.getSymName());
 
-  uint64_t alignmentByte = alignmentBit / memrefType.getElementTypeBitWidth();
   return rewriter.create<LLVM::GlobalOp>(
       funcOp->getLoc(), zeroSizedArrayType, /*isConstant=*/false,
       LLVM::Linkage::Internal, name, /*value=*/Attribute(), alignmentByte,
@@ -607,7 +604,7 @@ LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
   MemRefType memrefType = op.getResultMemref().getType();
-  auto elementType = typeConverter->convertType(memrefType.getElementType());
+  Type elementType = typeConverter->convertType(memrefType.getElementType());
   assert(memrefType && "memref is not valid");
 
   // Step 1: Generate a memref<0xi8> type
