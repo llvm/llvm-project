@@ -7214,7 +7214,6 @@ libcxx/test/support/archetypes.h
 libcxx/test/support/archetypes.ipp
 libcxx/test/support/asan_testing.h
 libcxx/test/support/assert_macros.h
-libcxx/test/support/boolean_testable.h
 libcxx/test/support/callable_types.h
 libcxx/test/support/charconv_test_helpers.h
 libcxx/test/support/check_assertion.h
