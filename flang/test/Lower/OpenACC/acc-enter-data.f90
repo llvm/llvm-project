@@ -813,7 +813,20 @@ subroutine acc_enter_data_single_array_element()
 
   !$acc enter data create(e(2)%a(1,2))
 
-!CHECK: %[[CREATE:.*]] = acc.create varPtr(%{{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {name = "e(2_8)%a(1_8,2_8)", structured = false}
-!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<f32>)
+!CHECK-LABEL:   func.func @_QPacc_enter_data_single_array_element() {
+!CHECK-DAG:       %[[VAL_38:.*]]:3 = fir.box_dims %[[BOX:.*]], %[[VAL_37:.*]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>, index) -> (index, index, index)
+!CHECK-DAG:       %[[VAL_37]] = arith.constant 0 : index
+!CHECK-DAG:       %[[VAL_40:.*]]:3 = fir.box_dims %[[BOX]], %[[VAL_39:.*]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>, index) -> (index, index, index)
+!CHECK-DAG:       %[[VAL_39]] = arith.constant 1 : index
+!CHECK-DAG:       %[[VAL_41:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.heap<!fir.array<?x?xf32>>
+!CHECK:           %[[VAL_42:.*]] = arith.constant 1 : index
+!CHECK:           %[[VAL_43:.*]] = arith.constant 1 : index
+!CHECK:           %[[VAL_44:.*]] = arith.subi %[[VAL_43]], %[[VAL_38]]#0 : index
+!CHECK:           %[[VAL_45:.*]] = acc.bounds lowerbound(%[[VAL_44]] : index) upperbound(%[[VAL_44]] : index) extent(%[[VAL_42]] : index) stride(%[[VAL_42]] : index) startIdx(%[[VAL_38]]#0 : index)
+!CHECK:           %[[VAL_46:.*]] = arith.constant 2 : index
+!CHECK:           %[[VAL_47:.*]] = arith.subi %[[VAL_46]], %[[VAL_40]]#0 : index
+!CHECK:           %[[VAL_48:.*]] = acc.bounds lowerbound(%[[VAL_47]] : index) upperbound(%[[VAL_47]] : index) extent(%[[VAL_42]] : index) stride(%[[VAL_42]] : index) startIdx(%[[VAL_40]]#0 : index)
+!CHECK:           %[[CREATE:.*]] = acc.create varPtr(%[[VAL_41]] : !fir.heap<!fir.array<?x?xf32>>) bounds(%[[VAL_45]], %[[VAL_48]]) -> !fir.heap<!fir.array<?x?xf32>> {name = "e(2_8)%a(1,2)", structured = false}
+!CHECK:           acc.enter_data dataOperands(%[[CREATE]] : !fir.heap<!fir.array<?x?xf32>>)
 
 end subroutine
