@@ -1382,9 +1382,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/Transforms/Vectorize/*.h",
-    ]) + [
-        "include/llvm/Transforms/Vectorize.h",
-    ],
+    ]),
     copts = llvm_copts,
     deps = [
         ":Analysis",
