@@ -279,17 +279,34 @@ define <vscale x 2 x i32> @vpmerge_vid(<vscale x 2 x i32> %passthru, <vscale x 2
   ret <vscale x 2 x i32> %b
 }
 
-; Test riscv.viota
+; Test not combine VIOTA_M and VMERGE_VVM without true mask.
 declare <vscale x 2 x i32> @llvm.riscv.viota.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i1>, i64)
 define <vscale x 2 x i32> @vpmerge_viota(<vscale x 2 x i32> %passthru, <vscale x 2 x i1> %m, <vscale x 2 x i1> %vm, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_viota:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
-; CHECK-NEXT:    viota.m v8, v9, v0.t
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    viota.m v10, v9
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
   %a = call <vscale x 2 x i32> @llvm.riscv.viota.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> %vm, i64 %1)
   %b = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test combine VIOTA_M and VMERGE_VVM with true mask.
+define <vscale x 2 x i32> @vpmerge_viota2(<vscale x 2 x i32> %passthru, <vscale x 2 x i1> %vm, i32 zeroext %vl) {
+; CHECK-LABEL: vpmerge_viota2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    viota.m v8, v0
+; CHECK-NEXT:    ret
+  %1 = zext i32 %vl to i64
+  %a = call <vscale x 2 x i32> @llvm.riscv.viota.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> %vm, i64 %1)
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %true = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %b = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> %true, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
   ret <vscale x 2 x i32> %b
 }
 
@@ -730,8 +747,9 @@ define <vscale x 2 x i32> @vpselect_vid(<vscale x 2 x i32> %passthru, <vscale x 
 define <vscale x 2 x i32> @vpselect_viota(<vscale x 2 x i32> %passthru, <vscale x 2 x i1> %m, <vscale x 2 x i1> %vm, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_viota:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    viota.m v8, v9, v0.t
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    viota.m v10, v9
+; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
   %a = call <vscale x 2 x i32> @llvm.riscv.viota.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> %vm, i64 %1)
