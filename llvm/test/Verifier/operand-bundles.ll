@@ -105,4 +105,17 @@ declare ptr @objc_retainAutoreleasedReturnValue(ptr)
 declare ptr @objc_unsafeClaimAutoreleasedReturnValue(ptr)
 declare void @llvm.assume(i1)
 
+define void @f_type(i32* %ptr) {
+; CHECK: Multiple "type" operand bundles
+; CHECK-NEXT: call void @g() [ "type"(metadata !"_ZTSFvE.generalized"), "type"(metadata !"_ZTSFvE.generalized") ]
+; CHECK-NOT: call void @g() [ "type"(metadata !"_ZTSFvE.generalized") ]
+
+ entry:
+  %l = load i32, i32* %ptr
+  call void @g() [ "type"(metadata !"_ZTSFvE.generalized"), "type"(metadata !"_ZTSFvE.generalized") ]
+  call void @g() [ "type"(metadata !"_ZTSFvE.generalized") ]
+  %x = add i32 42, 1
+  ret void
+}
+
 attributes #0 = { noreturn }

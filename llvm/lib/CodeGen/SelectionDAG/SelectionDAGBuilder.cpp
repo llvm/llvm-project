@@ -3138,7 +3138,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
              {LLVMContext::OB_deopt, LLVMContext::OB_gc_transition,
               LLVMContext::OB_gc_live, LLVMContext::OB_funclet,
               LLVMContext::OB_cfguardtarget,
-              LLVMContext::OB_clang_arc_attachedcall}) &&
+              LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_type}) &&
          "Cannot lower invokes with arbitrary operand bundles yet!");
 
   const Value *Callee(I.getCalledOperand());
@@ -3225,8 +3225,9 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
 
   // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
   // have to do anything here to lower funclet bundles.
-  assert(!I.hasOperandBundlesOtherThan(
-             {LLVMContext::OB_deopt, LLVMContext::OB_funclet}) &&
+  assert(!I.hasOperandBundlesOtherThan({LLVMContext::OB_deopt,
+                                        LLVMContext::OB_funclet,
+                                        LLVMContext::OB_type}) &&
          "Cannot lower callbrs with arbitrary operand bundles yet!");
 
   assert(I.isInlineAsm() && "Only know how to handle inlineasm callbr");
@@ -8948,7 +8949,8 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
   assert(!I.hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
               LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
-              LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi}) &&
+              LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
+              LLVMContext::OB_type}) &&
          "Cannot lower calls with arbitrary operand bundles!");
 
   SDValue Callee = getValue(I.getCalledOperand());

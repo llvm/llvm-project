@@ -2714,7 +2714,17 @@ static void setLinkageForGV(llvm::GlobalValue *GV, const NamedDecl *ND) {
 
 void CodeGenModule::CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                                        llvm::Function *F) {
-  // Only if we are checking indirect calls.
+  bool EmittedMDIdGeneralized = false;
+  if (CodeGenOpts.CallGraphSection &&
+      (!F->hasLocalLinkage() ||
+       F->getFunction().hasAddressTaken(nullptr, /* IgnoreCallbackUses */ true,
+                                        /* IgnoreAssumeLikeCalls */ true,
+                                        /* IgnoreLLVMUsed */ false))) {
+    F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FD->getType()));
+    EmittedMDIdGeneralized = true;
+  }
+
+  // Add additional metadata only if we are checking indirect calls with CFI.
   if (!LangOpts.Sanitize.has(SanitizerKind::CFIICall))
     return;
 
@@ -2725,7 +2735,9 @@ void CodeGenModule::CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
 
   llvm::Metadata *MD = CreateMetadataIdentifierForType(FD->getType());
   F->addTypeMetadata(0, MD);
-  F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FD->getType()));
+  // Add the generalized identifier if not added already.
+  if (!EmittedMDIdGeneralized)
+    F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FD->getType()));
 
   // Emit a hash-based bit set entry for cross-DSO calls.
   if (CodeGenOpts.SanitizeCfiCrossDso)
@@ -2860,7 +2872,8 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   // are non-canonical then we need type metadata in order to produce the local
   // jump table.
   if (!CodeGenOpts.SanitizeCfiCrossDso ||
-      !CodeGenOpts.SanitizeCfiCanonicalJumpTables)
+      !CodeGenOpts.SanitizeCfiCanonicalJumpTables ||
+      CodeGenOpts.CallGraphSection)
     CreateFunctionTypeMetadataForIcall(FD, F);
 
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
