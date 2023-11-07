@@ -15,9 +15,9 @@
 #define MLIR_DIALECT_GPU_IR_GPUDIALECT_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/Traits.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
