@@ -56,6 +56,38 @@ transform.sequence failures(propagate) {
 
 // -----
 
+func.func @by_operand_type_negative_match() {
+  %c0 = arith.constant 1.0: f32
+  %res = arith.fptoui %c0 : f32 to i32
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %match_name = transform.structured.match
+    ops{["arith.fptoui"]} filter_operand_type = i32 in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.test_print_remark_at_operand %match_name, "matched op name" : !transform.any_op
+  transform.test_consume_operand %match_name : !transform.any_op
+}
+
+// -----
+
+func.func @by_operand_type_negative_match() {
+  %c0 = arith.constant 1.0: f32
+  %res = arith.fptoui %c0 : f32 to i32
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %match_name = transform.structured.match
+    ops{["arith.fptoui"]} filter_operand_type = i32 in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.test_print_remark_at_operand %match_name, "matched op name" : !transform.any_op
+  transform.test_consume_operand %match_name : !transform.any_op
+}
+
+// -----
+
 func.func @foo(%a: tensor<4x4xf32>, %b: tensor<4x4xf32>, %c: tensor<4x4xf32>) {
   %c0 = arith.constant 0.0 : f32
   // expected-remark @below {{tileable}}
