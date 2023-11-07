@@ -178,8 +178,11 @@ static LogicalResult continuousPeelForLoop(RewriterBase &b, ForOp forOp,
   scf::ForOp currentLoop;
   auto lbInt = getConstantIntValue(forOp.getLowerBound());
   auto stepInt = getConstantIntValue(forOp.getStep());
-  if (!stepInt.has_value() || *stepInt <= 0)
-    return failure(); // step size must be a known positive constant
+
+  // Step size must be a known positive constant greater than 1.
+  if (stepInt && stepInt <= static_cast<int64_t>(1))
+    return failure();
+
   Value initialUb = forOp.getUpperBound();
   Value initialStep = forOp.getStep();
   uint64_t loopStep = *stepInt;
