@@ -95,6 +95,7 @@ using InadmissInfo = std::pair<BitVector, BitVector>;
 // File Local Helper methods.
 //===----------------------------------------------------------------------===//
 
+// Collects the inadmissible affine expression imposed on levels.
 static InadmissInfo collectInadmissInfo(AffineMap map, bool isOutput) {
   auto ret = std::make_pair(BitVector(map.getNumResults()),
                             BitVector(map.getNumDims()));
