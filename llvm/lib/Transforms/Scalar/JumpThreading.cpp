@@ -491,8 +491,10 @@ static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
 
     // Blocks with NoDuplicate are modelled as having infinite cost, so they
     // are never duplicated.
+    // Conservatively disallow inline-asm instructions. Duplicating inline-asm
+    // instructions can potentially create duplicate labels.
     if (const CallInst *CI = dyn_cast<CallInst>(I))
-      if (CI->cannotDuplicate() || CI->isConvergent())
+      if (CI->cannotDuplicate() || CI->isConvergent() || CI->isInlineAsm())
         return ~0U;
 
     if (TTI->getInstructionCost(&*I, TargetTransformInfo::TCK_SizeAndLatency) ==

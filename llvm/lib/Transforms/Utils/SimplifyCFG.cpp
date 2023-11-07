@@ -3170,9 +3170,10 @@ static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
   // Walk the loop in reverse so that we can identify ephemeral values properly
   // (values only feeding assumes).
   for (Instruction &I : reverse(BB->instructionsWithoutDebug(false))) {
-    // Can't fold blocks that contain noduplicate or convergent calls.
+    // Can't fold blocks that contain noduplicate, convergent calls, or
+    // inline assembly.
     if (CallInst *CI = dyn_cast<CallInst>(&I))
-      if (CI->cannotDuplicate() || CI->isConvergent())
+      if (CI->cannotDuplicate() || CI->isConvergent() || CI->isInlineAsm())
         return false;
 
     // Ignore ephemeral values which are deleted during codegen.
