@@ -14,26 +14,33 @@
 #include "flang/Runtime/descriptor.h"
 #include <cstdlib>
 #include <limits>
+#include <string.h>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
 
-#include <Lmcons.h> // UNLEN=256
+#include <lmcons.h> // UNLEN=256
+#include <wchar.h> // wchar_t cast to LPWSTR
+#pragma comment(lib, "Advapi32.lib") // Link Advapi32.lib for GetUserName
 
-inline char *getlogin() {
-  char *username = NULL;
-  DWORD size = UNLEN + 1; // Constant for the maximum username length
-  username = (char *)malloc(size);
+static inline char *getlogin() {
+  static char username[UNLEN + 1];
+  wchar_t w_username[UNLEN + 1];
+  DWORD namelen = sizeof(w_username) / sizeof(w_username[0]);
 
-  if (GetUserName(username, &size)) {
-    // Username retrieved successfully
-    return username;
+  if (GetUserName(w_username, &namelen)) {
+    // Convert the wchar_t string to a regular C string
+    if (wcstombs(username, w_username, UNLEN + 1) == -1) {
+      // Conversion failed
+      return NULL;
+    }
+    return (username[0] == 0 ? NULL : username);
   } else {
-    free(username);
     return NULL;
   }
+  return nullptr;
 }
 #else
 #include <unistd.h>
