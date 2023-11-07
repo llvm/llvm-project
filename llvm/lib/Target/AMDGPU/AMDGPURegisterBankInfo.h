@@ -165,7 +165,7 @@ public:
   bool isDivergentRegBank(const RegisterBank *RB) const override;
 
   unsigned copyCost(const RegisterBank &A, const RegisterBank &B,
-                    unsigned Size) const override;
+                    TypeSize Size) const override;
 
   unsigned getBreakDownCost(const ValueMapping &ValMapping,
                             const RegisterBank *CurBank = nullptr) const override;
