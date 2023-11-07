@@ -132,7 +132,6 @@ define amdgpu_kernel void @v_test_imin_sle_i32(ptr addrspace(1) %out, ptr addrsp
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_min_i32_e32 v1, v1, v2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[4:5] scale_offset
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -224,7 +223,6 @@ define amdgpu_kernel void @s_test_imin_sle_i32(ptr addrspace(1) %out, i32 %a, i3
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp sle i32 %a, %b
@@ -310,7 +308,6 @@ define amdgpu_kernel void @s_test_imin_sle_v1i32(ptr addrspace(1) %out, <1 x i32
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp sle <1 x i32> %a, %b
@@ -442,7 +439,6 @@ define amdgpu_kernel void @s_test_imin_sle_v4i32(ptr addrspace(1) %out, <4 x i32
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX1210-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX1210-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp sle <4 x i32> %a, %b
@@ -574,7 +570,6 @@ define amdgpu_kernel void @s_test_imin_sle_i8(ptr addrspace(1) %out, [8 x i32], 
 ; GFX1210-NEXT:    s_min_i32 s2, s2, s3
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1210-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp sle i8 %a, %b
@@ -836,7 +831,6 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(ptr addrspace(1) %out, [8 x i32]
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1210-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX1210-NEXT:    global_store_b32 v2, v0, s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp sle <4 x i8> %a, %b
@@ -953,7 +947,6 @@ define amdgpu_kernel void @s_test_imin_sle_v2i16(ptr addrspace(1) %out, <2 x i16
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_pk_min_i16 v1, s2, s3
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp sle <2 x i16> %a, %b
@@ -1151,7 +1144,6 @@ define amdgpu_kernel void @s_test_imin_sle_v4i16(ptr addrspace(1) %out, <4 x i16
 ; GFX1210-NEXT:    v_pk_min_i16 v1, s5, s7
 ; GFX1210-NEXT:    v_pk_min_i16 v0, s4, s6
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp sle <4 x i16> %a, %b
@@ -1285,7 +1277,6 @@ define amdgpu_kernel void @v_test_imin_slt_i32(ptr addrspace(1) %out, ptr addrsp
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_min_i32_e32 v1, v1, v2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[4:5] scale_offset
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1441,7 +1432,6 @@ define amdgpu_kernel void @v_test_imin_slt_i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_min_i16 v1, v1, v2
 ; GFX1210-NEXT:    global_store_b16 v0, v1, s[4:5] scale_offset
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1534,7 +1524,6 @@ define amdgpu_kernel void @s_test_imin_slt_i32(ptr addrspace(1) %out, i32 %a, i3
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp slt i32 %a, %b
@@ -1640,7 +1629,6 @@ define amdgpu_kernel void @s_test_imin_slt_v2i32(ptr addrspace(1) %out, <2 x i32
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp slt <2 x i32> %a, %b
@@ -1733,7 +1721,6 @@ define amdgpu_kernel void @s_test_imin_slt_imm_i32(ptr addrspace(1) %out, i32 %a
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp slt i32 %a, 8
@@ -1826,7 +1813,6 @@ define amdgpu_kernel void @s_test_imin_sle_imm_i32(ptr addrspace(1) %out, i32 %a
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp sle i32 %a, 8
@@ -1960,7 +1946,6 @@ define amdgpu_kernel void @v_test_umin_ule_i32(ptr addrspace(1) %out, ptr addrsp
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_min_u32_e32 v1, v1, v2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[4:5] scale_offset
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -2119,7 +2104,6 @@ define amdgpu_kernel void @v_test_umin_ule_v3i32(ptr addrspace(1) %out, ptr addr
 ; GFX1210-NEXT:    v_min_u32_e32 v1, v1, v5
 ; GFX1210-NEXT:    v_min_u32_e32 v0, v0, v4
 ; GFX1210-NEXT:    global_store_b96 v3, v[0:2], s[4:5]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -2318,7 +2302,6 @@ define amdgpu_kernel void @v_test_umin_ule_v3i16(ptr addrspace(1) %out, ptr addr
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b16 v0, v1, s[4:5] offset:4
 ; GFX1210-NEXT:    global_store_b32 v0, v2, s[4:5]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -2411,7 +2394,6 @@ define amdgpu_kernel void @s_test_umin_ule_i32(ptr addrspace(1) %out, i32 %a, i3
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp ule i32 %a, %b
@@ -2545,7 +2527,6 @@ define amdgpu_kernel void @v_test_umin_ult_i32(ptr addrspace(1) %out, ptr addrsp
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_min_u32_e32 v1, v1, v2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[4:5] scale_offset
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -2687,7 +2668,6 @@ define amdgpu_kernel void @v_test_umin_ult_i8(ptr addrspace(1) %out, ptr addrspa
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_min_u16 v1, v1, v2
 ; GFX1210-NEXT:    global_store_b8 v0, v1, s[4:5]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -2780,7 +2760,6 @@ define amdgpu_kernel void @s_test_umin_ult_i32(ptr addrspace(1) %out, i32 %a, i3
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp ult i32 %a, %b
@@ -2942,7 +2921,6 @@ define amdgpu_kernel void @v_test_umin_ult_i32_multi_use(ptr addrspace(1) %out0,
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b32 v1, v2, s[0:1]
 ; GFX1210-NEXT:    global_store_b8 v1, v0, s[2:3]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %a = load i32, ptr addrspace(1) %aptr, align 4
@@ -3109,7 +3087,6 @@ define amdgpu_kernel void @v_test_umin_ult_i16_multi_use(ptr addrspace(1) %out0,
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b16 v1, v2, s[0:1]
 ; GFX1210-NEXT:    global_store_b8 v1, v0, s[2:3]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(1) %aptr, align 2
@@ -3198,7 +3175,6 @@ define amdgpu_kernel void @s_test_umin_ult_v1i32(ptr addrspace(1) %out, <1 x i32
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp ult <1 x i32> %a, %b
@@ -3403,7 +3379,6 @@ define amdgpu_kernel void @s_test_umin_ult_v8i32(ptr addrspace(1) %out, <8 x i32
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v8, v[0:3], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v8, v[4:7], s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp ult <8 x i32> %a, %b
@@ -3704,7 +3679,6 @@ define amdgpu_kernel void @s_test_umin_ult_v8i16(ptr addrspace(1) %out, <8 x i16
 ; GFX1210-NEXT:    v_pk_min_u16 v1, s5, s9
 ; GFX1210-NEXT:    v_pk_min_u16 v0, s4, s8
 ; GFX1210-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp ult <8 x i16> %a, %b
@@ -3829,7 +3803,6 @@ define amdgpu_kernel void @simplify_demanded_bits_test_umin_ult_i16(ptr addrspac
 ; GFX1210-NEXT:    s_min_u32 s2, s2, s3
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %a.ext = zext i16 %a to i32
@@ -3957,7 +3930,6 @@ define amdgpu_kernel void @simplify_demanded_bits_test_min_slt_i16(ptr addrspace
 ; GFX1210-NEXT:    s_min_i32 s2, s2, s3
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %a.ext = sext i16 %a to i32
@@ -4085,7 +4057,6 @@ define amdgpu_kernel void @s_test_imin_sle_i16(ptr addrspace(1) %out, i16 %a, i1
 ; GFX1210-NEXT:    s_min_i32 s2, s3, s2
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1210-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cmp = icmp sle i16 %a, %b
@@ -4211,7 +4182,6 @@ define amdgpu_kernel void @test_umin_ult_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_min_u64 v[0:1], s[6:7], s[0:1]
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tmp = icmp ult i64 %a, %b
@@ -4335,7 +4305,6 @@ define amdgpu_kernel void @test_umin_ule_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_min_u64 v[0:1], s[6:7], s[0:1]
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tmp = icmp ule i64 %a, %b
@@ -4459,7 +4428,6 @@ define amdgpu_kernel void @test_imin_slt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_min_i64 v[0:1], s[6:7], s[0:1]
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tmp = icmp slt i64 %a, %b
@@ -4583,7 +4551,6 @@ define amdgpu_kernel void @test_imin_sle_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_min_i64 v[0:1], s[6:7], s[0:1]
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tmp = icmp sle i64 %a, %b
@@ -4745,7 +4712,6 @@ define amdgpu_kernel void @v_test_imin_sle_v2i16(ptr addrspace(1) %out, ptr addr
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_pk_min_i16 v1, v1, v2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[4:5] scale_offset
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -4911,7 +4877,6 @@ define amdgpu_kernel void @v_test_imin_ule_v2i16(ptr addrspace(1) %out, ptr addr
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_pk_min_u16 v1, v1, v2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[4:5] scale_offset
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

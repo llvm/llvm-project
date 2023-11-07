@@ -4095,7 +4095,6 @@ define amdgpu_kernel void @compute_mad(ptr addrspace(4) %i18, ptr addrspace(4) %
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1210-NEXT:    v_mad_u32 v2, v3, v2, v3
 ; GFX1210-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
 bb:

@@ -1532,9 +1532,7 @@ public:
   // \returns true if the subtarget has a hazard requiring an "s_nop 0"
   // instruction before "s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)".
   bool requiresNopBeforeDeallocVGPRs() const {
-    // Currently all targets that support the dealloc VGPRs message also require
-    // the nop.
-    return true;
+    return !GFX12_10Insts;
   }
 
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }

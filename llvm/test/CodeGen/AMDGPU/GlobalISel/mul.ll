@@ -3013,7 +3013,6 @@ define amdgpu_ps void @s_mul_u64_zext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_mad_nc_u64_u32 v[2:3], 0x50, v2, 0
 ; GFX1210-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4
@@ -3131,7 +3130,6 @@ define amdgpu_kernel void @s_mul_u64_zext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4
@@ -3218,7 +3216,6 @@ define amdgpu_ps void @s_mul_u64_sext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_mad_nc_i64_i32 v[2:3], 0x50, v2, 0
 ; GFX1210-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4
@@ -3351,7 +3348,6 @@ define amdgpu_kernel void @s_mul_u64_sext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX1210-NEXT:    s_mul_u64 s[2:3], s[2:3], 0x50
 ; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4
