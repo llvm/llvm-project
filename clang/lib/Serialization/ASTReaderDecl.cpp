@@ -757,7 +757,8 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitTagDecl(TagDecl *TD) {
   TD->IdentifierNamespace = Record.readInt();
 
   BitsUnpacker TagDeclBits(Record.readInt());
-  TD->setTagKind((TagDecl::TagKind)TagDeclBits.getNextBits(/*Width=*/3));
+  TD->setTagKind(
+      static_cast<TagTypeKind>(TagDeclBits.getNextBits(/*Width=*/3)));
   TD->setCompleteDefinition(TagDeclBits.getNextBit());
   TD->setEmbeddedInDeclarator(TagDeclBits.getNextBit());
   TD->setFreeStanding(TagDeclBits.getNextBit());
@@ -4590,7 +4591,7 @@ void ASTDeclReader::UpdateDecl(Decl *D,
         }
       }
 
-      RD->setTagKind((TagTypeKind)Record.readInt());
+      RD->setTagKind(static_cast<TagTypeKind>(Record.readInt()));
       RD->setLocation(readSourceLocation());
       RD->setLocStart(readSourceLocation());
       RD->setBraceRange(readSourceRange());
