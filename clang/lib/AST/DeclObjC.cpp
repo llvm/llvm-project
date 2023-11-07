@@ -1194,7 +1194,7 @@ void ObjCMethodDecl::createImplicitParams(ASTContext &Context,
     getSelfType(Context, OID, selfIsPseudoStrong, selfIsConsumed);
   auto *Self = ImplicitParamDecl::Create(Context, this, SourceLocation(),
                                          &Context.Idents.get("self"), selfTy,
-                                         ImplicitParamDecl::ObjCSelf);
+                                         ImplicitParamKind::ObjCSelf);
   setSelfDecl(Self);
 
   if (selfIsConsumed)
@@ -1205,7 +1205,7 @@ void ObjCMethodDecl::createImplicitParams(ASTContext &Context,
 
   setCmdDecl(ImplicitParamDecl::Create(
       Context, this, SourceLocation(), &Context.Idents.get("_cmd"),
-      Context.getObjCSelType(), ImplicitParamDecl::ObjCCmd));
+      Context.getObjCSelType(), ImplicitParamKind::ObjCCmd));
 }
 
 ObjCInterfaceDecl *ObjCMethodDecl::getClassInterface() {
