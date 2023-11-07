@@ -228,8 +228,9 @@ TEST_F(ZeroArguments, GetCommandArgument) {
 TEST_F(ZeroArguments, GetCommand) { CheckCommandValue(commandOnlyArgv, 1); }
 
 TEST_F(ZeroArguments, GetUID) {
-  // uid should always greater than 0, in both linux and windows
-  EXPECT_GT(RTNAME(GetUID)(), 0U);
+  CheckMissingArgumentValue(-1);
+  CheckArgumentValue(commandOnlyArgv[0], 0);
+  CheckMissingArgumentValue(1);
 }
 
 static const char *oneArgArgv[]{"aProgram", "anArgumentOfLength20"};

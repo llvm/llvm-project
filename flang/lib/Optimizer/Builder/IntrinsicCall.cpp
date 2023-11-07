@@ -2907,6 +2907,14 @@ mlir::Value IntrinsicLibrary::genFraction(mlir::Type resultType,
       fir::runtime::genFraction(builder, loc, fir::getBase(args[0])));
 }
 
+// GETUID
+mlir::Value IntrinsicLibrary::genGetUID(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0 && "getuid takes no input");
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genGetUID(builder, loc));
+}
+
 // GET_COMMAND
 void IntrinsicLibrary::genGetCommand(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
@@ -2943,14 +2951,6 @@ void IntrinsicLibrary::genGetCommand(llvm::ArrayRef<fir::ExtendedValue> args) {
         .genThen([&]() { builder.createStoreWithConvert(loc, stat, statAddr); })
         .end();
   }
-}
-
-// GETUID
-mlir::Value IntrinsicLibrary::genGetUID(mlir::Type resultType,
-                                        llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 0 && "getuid takes no input");
-  return builder.createConvert(loc, resultType,
-                               fir::runtime::genGetUID(builder, loc));
 }
 
 // GET_COMMAND_ARGUMENT

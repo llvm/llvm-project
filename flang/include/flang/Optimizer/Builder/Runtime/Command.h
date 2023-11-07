@@ -23,6 +23,10 @@ namespace fir::runtime {
 /// Generate call to COMMAND_ARGUMENT_COUNT intrinsic runtime routine.
 mlir::Value genCommandArgumentCount(fir::FirOpBuilder &, mlir::Location);
 
+/// Generate a call to the GetUID runtime function which implements the
+/// GETUID intrinsic.
+mlir::Value genGetUID(fir::FirOpBuilder &, mlir::Location);
+
 /// Generate a call to the GetCommand runtime function which implements the
 /// GET_COMMAND intrinsic.
 /// \p command, \p length and \p errmsg must be fir.box that can be absent (but
@@ -48,10 +52,6 @@ mlir::Value genGetEnvVariable(fir::FirOpBuilder &, mlir::Location,
                               mlir::Value name, mlir::Value value,
                               mlir::Value length, mlir::Value trimName,
                               mlir::Value errmsg);
-
-/// Generate a call to the GetUID runtime function which implements the
-/// GETUID intrinsic.
-mlir::Value genGetUID(fir::FirOpBuilder &, mlir::Location);
 
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_COMMAND_H

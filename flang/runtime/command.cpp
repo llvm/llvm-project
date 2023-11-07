@@ -16,6 +16,7 @@
 #include <limits>
 
 #ifdef _WIN32
+inline uid_t getuid() { return 0; }
 #else
 #include <unistd.h>
 #endif
