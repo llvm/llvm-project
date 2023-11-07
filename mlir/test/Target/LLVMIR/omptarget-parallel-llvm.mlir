@@ -6,10 +6,11 @@
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.data_layout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8", llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true, omp.target = #omp.target<target_cpu = "gfx90a", target_features = "">} {
   llvm.func @_QQmain_omp_outline_1(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>, omp.outline_parent_name = "_QQmain"} {
     %0 = omp.map_info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = "d"}
-    omp.target map_entries(%0 : !llvm.ptr) {
+    omp.target map_entries(%0 -> %arg2 : !llvm.ptr) {
+    ^bb0(%arg2: !llvm.ptr):
       omp.parallel {
         %1 = llvm.mlir.constant(1 : i32) : i32
-        llvm.store %1, %arg0 : i32, !llvm.ptr
+        llvm.store %1, %arg2 : i32, !llvm.ptr
         omp.terminator
       }
     omp.terminator
@@ -19,7 +20,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 }
 
 // CHECK: define weak_odr protected amdgpu_kernel void [[FUNC0:@.*]](
-// CHECK-SAME: ptr [[TMP0:%.*]]) {
+// CHECK-SAME: ptr [[TMP:%.*]], ptr [[TMP0:.*]]) {
 // CHECK:         [[TMP1:%.*]] = alloca [1 x ptr], align 8, addrspace(5)
 // CHECK:         [[TMP2:%.*]] = addrspacecast ptr addrspace(5) [[TMP1]] to ptr
 // CHECK:         [[STRUCTARG:%.*]] = alloca { ptr }, align 8, addrspace(5)
@@ -27,7 +28,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK:         [[TMP3:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK:         [[TMP4:%.*]] = addrspacecast ptr addrspace(5) [[TMP3]] to ptr
 // CHECK:         store ptr [[TMP0]], ptr [[TMP4]], align 8
-// CHECK:         [[TMP5:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) [[KERNEL_ENV:@.*]] to ptr))
+// CHECK:         [[TMP5:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) [[KERNEL_ENV:@.*]] to ptr), ptr [[TMP]])
 // CHECK:         [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP5]], -1
 // CHECK:         br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:         [[TMP6:%.*]] = load ptr, ptr [[TMP4]], align 8
