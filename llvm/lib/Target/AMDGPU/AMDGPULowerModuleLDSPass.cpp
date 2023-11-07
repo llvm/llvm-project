@@ -854,7 +854,7 @@ public:
     appendToCompilerUsed(M, {static_cast<GlobalValue *>(
                                 ConstantExpr::getPointerBitCastOrAddrSpaceCast(
                                     cast<Constant>(ModuleScopeReplacement.SGV),
-                                    Type::getInt8PtrTy(Ctx)))});
+                                    PointerType::getUnqual(Ctx)))});
 
     // module.lds will be allocated at zero in any kernel that allocates it
     recordLDSAbsoluteAddress(&M, ModuleScopeReplacement.SGV, 0);
