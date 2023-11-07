@@ -1937,17 +1937,14 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
 
     // If we have only one valid type, this is likely a copy between a virtual
     // and physical register.
-    unsigned SrcSize = 0;
-    unsigned DstSize = 0;
+    TypeSize SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
+    TypeSize DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
     if (SrcReg.isPhysical() && DstTy.isValid()) {
       const TargetRegisterClass *SrcRC =
           TRI->getMinimalPhysRegClassLLT(SrcReg, DstTy);
       if (SrcRC)
         SrcSize = TRI->getRegSizeInBits(*SrcRC);
     }
-
-    if (SrcSize == 0)
-      SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
 
     if (DstReg.isPhysical() && SrcTy.isValid()) {
       const TargetRegisterClass *DstRC =
@@ -1956,10 +1953,15 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
         DstSize = TRI->getRegSizeInBits(*DstRC);
     }
 
-    if (DstSize == 0)
-      DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
+    // If this is a copy from physical register to virtual register, and if the
+    // Dst is scalable and the Src is fixed, then the Dst can only hold the Src
+    // if the minimum size Dst can hold is at least as big as Src.
+    if (SrcReg.isPhysical() && DstReg.isVirtual() && DstSize.isScalable() &&
+        !SrcSize.isScalable() &&
+        DstSize.getKnownMinValue() <= SrcSize.getFixedValue())
+      break;
 
-    if (SrcSize != 0 && DstSize != 0 && SrcSize != DstSize) {
+    if (SrcSize.isNonZero() && DstSize.isNonZero() && SrcSize != DstSize) {
       if (!DstOp.getSubReg() && !SrcOp.getSubReg()) {
         report("Copy Instruction is illegal with mismatching sizes", MI);
         errs() << "Def Size = " << DstSize << ", Src Size = " << SrcSize
