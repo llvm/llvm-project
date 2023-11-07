@@ -6880,15 +6880,12 @@ static ExprResult CopyObject(Sema &S,
           CurInitExpr->getType());
 
   // Actually perform the constructor call.
-  CurInit = S.BuildCXXConstructExpr(Loc, T, Best->FoundDecl, Constructor,
-                                    Elidable,
-                                    ConstructorArgs,
-                                    HadMultipleCandidates,
-                                    /*ListInit*/ false,
-                                    /*StdInitListInit*/ false,
-                                    /*ZeroInit*/ false,
-                                    CXXConstructExpr::CK_Complete,
-                                    SourceRange());
+  CurInit = S.BuildCXXConstructExpr(
+      Loc, T, Best->FoundDecl, Constructor, Elidable, ConstructorArgs,
+      HadMultipleCandidates,
+      /*ListInit*/ false,
+      /*StdInitListInit*/ false,
+      /*ZeroInit*/ false, CXXConstructionKind::Complete, SourceRange());
 
   // If we're supposed to bind temporaries, do so.
   if (!CurInit.isInvalid() && shouldBindAsTemporary(Entity))
@@ -7082,15 +7079,14 @@ PerformConstructorInitialization(Sema &S,
             ConstructorInitRequiresZeroInit),
         CalleeDecl);
   } else {
-    CXXConstructExpr::ConstructionKind ConstructKind =
-      CXXConstructExpr::CK_Complete;
+    CXXConstructionKind ConstructKind = CXXConstructionKind::Complete;
 
     if (Entity.getKind() == InitializedEntity::EK_Base) {
-      ConstructKind = Entity.getBaseSpecifier()->isVirtual() ?
-        CXXConstructExpr::CK_VirtualBase :
-        CXXConstructExpr::CK_NonVirtualBase;
+      ConstructKind = Entity.getBaseSpecifier()->isVirtual()
+                          ? CXXConstructionKind::VirtualBase
+                          : CXXConstructionKind::NonVirtualBase;
     } else if (Entity.getKind() == InitializedEntity::EK_Delegating) {
-      ConstructKind = CXXConstructExpr::CK_Delegating;
+      ConstructKind = CXXConstructionKind::Delegating;
     }
 
     // Only get the parenthesis or brace range if it is a list initialization or
@@ -8871,15 +8867,12 @@ ExprResult InitializationSequence::Perform(Sema &S,
           return ExprError();
 
         // Build an expression that constructs a temporary.
-        CurInit = S.BuildCXXConstructExpr(Loc, Step->Type,
-                                          FoundFn, Constructor,
-                                          ConstructorArgs,
-                                          HadMultipleCandidates,
-                                          /*ListInit*/ false,
-                                          /*StdInitListInit*/ false,
-                                          /*ZeroInit*/ false,
-                                          CXXConstructExpr::CK_Complete,
-                                          SourceRange());
+        CurInit = S.BuildCXXConstructExpr(
+            Loc, Step->Type, FoundFn, Constructor, ConstructorArgs,
+            HadMultipleCandidates,
+            /*ListInit*/ false,
+            /*StdInitListInit*/ false,
+            /*ZeroInit*/ false, CXXConstructionKind::Complete, SourceRange());
         if (CurInit.isInvalid())
           return ExprError();
 
