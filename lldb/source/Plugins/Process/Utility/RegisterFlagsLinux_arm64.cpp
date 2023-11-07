@@ -97,16 +97,19 @@ void LinuxArm64RegisterFlags::UpdateRegisterInfo(const RegisterInfo *reg_info,
   // * c == c, patch c, patch list is empty, exit early without looking at d.
   for (uint32_t idx = 0; idx < num_regs && search_registers.size();
        ++idx, ++reg_info) {
-    auto end = search_registers.cend();
-    for (auto it = search_registers.cbegin(); it != end; ++it) {
-      // If this register is one that must be patched.
-      if (reg_info->name == it->first) {
-        // Attach the field information.
-        reg_info->flags_type = it->second;
-        // We do not expect to see this name again, so don't look for it.
-        search_registers.erase(it);
-        break;
-      }
+    auto reg_it = std::find_if(
+        search_registers.cbegin(), search_registers.cend(),
+        [reg_info](auto reg) { return reg.first == reg_info->name; });
+
+    if (reg_it != search_registers.end()) {
+      // Attach the field information.
+      reg_info->flags_type = reg_it->second;
+      // We do not expect to see this name again so don't look for it again.
+      search_registers.erase(reg_it);
     }
   }
+
+  // We do not assert that search_registers is empty here, because it may
+  // contain registers from optional extensions that are not present on the
+  // current target.
 }
