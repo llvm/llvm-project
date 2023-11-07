@@ -2013,9 +2013,8 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
     case VTableComponent::CK_FunctionPointer: {
       const CXXMethodDecl *MD = Component.getFunctionDecl();
 
-      std::string Str =
-        PredefinedExpr::ComputeName(PredefinedExpr::PrettyFunctionNoVirtual,
-                                    MD);
+      std::string Str = PredefinedExpr::ComputeName(
+          PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
       Out << Str;
       if (MD->isPure())
         Out << " [pure]";
@@ -2096,9 +2095,8 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
     case VTableComponent::CK_UnusedFunctionPointer: {
       const CXXMethodDecl *MD = Component.getUnusedFunctionDecl();
 
-      std::string Str =
-        PredefinedExpr::ComputeName(PredefinedExpr::PrettyFunctionNoVirtual,
-                                    MD);
+      std::string Str = PredefinedExpr::ComputeName(
+          PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
       Out << "[unused] " << Str;
       if (MD->isPure())
         Out << " [pure]";
@@ -2175,9 +2173,8 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
 
     for (const auto &I : Thunks) {
       const CXXMethodDecl *MD = I.first;
-      std::string MethodName =
-        PredefinedExpr::ComputeName(PredefinedExpr::PrettyFunctionNoVirtual,
-                                    MD);
+      std::string MethodName = PredefinedExpr::ComputeName(
+          PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
 
       MethodNamesAndDecls.insert(std::make_pair(MethodName, MD));
     }
@@ -2240,9 +2237,8 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
       continue;
     MD = MD->getCanonicalDecl();
 
-    std::string MethodName =
-      PredefinedExpr::ComputeName(PredefinedExpr::PrettyFunctionNoVirtual,
-                                  MD);
+    std::string MethodName = PredefinedExpr::ComputeName(
+        PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
 
     if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
       GlobalDecl GD(DD, Dtor_Complete);
@@ -3265,7 +3261,7 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
       // FIXME: Figure out how to print the real thunk type, since they can
       // differ in the return type.
       std::string Str = PredefinedExpr::ComputeName(
-          PredefinedExpr::PrettyFunctionNoVirtual, MD);
+          PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
       Out << Str;
       if (MD->isPure())
         Out << " [pure]";
@@ -3320,7 +3316,7 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
     for (const auto &I : Thunks) {
       const CXXMethodDecl *MD = I.first;
       std::string MethodName = PredefinedExpr::ComputeName(
-          PredefinedExpr::PrettyFunctionNoVirtual, MD);
+          PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
 
       MethodNamesAndDecls.insert(std::make_pair(MethodName, MD));
     }
@@ -3752,7 +3748,7 @@ void MicrosoftVTableContext::dumpMethodLocations(
     assert(hasVtableSlot(MD));
 
     std::string MethodName = PredefinedExpr::ComputeName(
-        PredefinedExpr::PrettyFunctionNoVirtual, MD);
+        PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
 
     if (isa<CXXDestructorDecl>(MD)) {
       IndicesMap[I.second] = MethodName + " [scalar deleting]";
