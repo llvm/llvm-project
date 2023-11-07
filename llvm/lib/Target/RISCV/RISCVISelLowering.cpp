@@ -15223,9 +15223,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         return Src.getOperand(0);
       // TODO: Use insert_subvector/extract_subvector to change widen/narrow?
     }
-    [[fallthrough]];
-  }
-  case RISCVISD::VMV_S_X_VL: {
+
     const MVT VT = N->getSimpleValueType(0);
     SDValue Passthru = N->getOperand(0);
     SDValue Scalar = N->getOperand(1);
@@ -15243,15 +15241,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                            DAG.getConstant(0, DL, XLenVT));
       return Result;
     }
-
-    // We use a vmv.v.i if possible.  We limit this to LMUL1.  LMUL2 or
-    // higher would involve overly constraining the register allocator for
-    // no purpose.
-    if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Scalar);
-        Const && !Const->isZero() && isInt<5>(Const->getSExtValue()) &&
-        VT.bitsLE(getLMUL1VT(VT)) && Passthru.isUndef())
-      return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Scalar, VL);
-
     break;
   }
   case ISD::INTRINSIC_VOID:

@@ -2758,11 +2758,27 @@ foreach mti = AllMasks in {
 
 // 16. Vector Permutation Instructions
 
+def simm5_nonzero : ImmLeaf<XLenVT, [{return Imm != 0 && isInt<5>(Imm);}]>;
+
 // 16.1. Integer Scalar Move Instructions
 // 16.4. Vector Register Gather Instruction
 foreach vti = AllIntegerVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in {
     defvar isGroup = !isa<GroupVTypeInfo>(vti);
+
+    // Use vmv.v.i if we're inserting into undef and the scalar fits into simm5
+    // (and also isn't 0, since we could then just use x0)
+    defvar pseudoVIInstr = !if(isGroup,
+                               PseudoVMV_V_I_M1,
+                               !cast<Instruction>("PseudoVMV_V_I_" # vti.LMul.MX));
+    defvar pseudoVI = (pseudoVIInstr (IMPLICIT_DEF), simm5:$imm, GPR:$vl,
+                                     vti.Log2SEW, TU_MU);
+    def : Pat<(vti.Vector (riscv_vmv_s_x_vl (vti.Vector undef),
+                                            simm5_nonzero:$imm,
+                                            VLOpFrag)),
+              !if(isGroup, (INSERT_SUBREG (IMPLICIT_DEF), pseudoVI, sub_vrm1_0),
+                           pseudoVI)>;
+
     defvar merge = !if(isGroup,
                        (!cast<GroupVTypeInfo>(vti).VectorM1
                           (EXTRACT_SUBREG $merge, sub_vrm1_0)),
@@ -2775,7 +2791,6 @@ foreach vti = AllIntegerVectors in {
                                             VLOpFrag)),
               !if(isGroup, (INSERT_SUBREG $merge, pseudoVMV, sub_vrm1_0),
                             pseudoVMV)>;
-
 
     def : Pat<(vti.Vector (riscv_vrgather_vv_vl vti.RegClass:$rs2,
                                                 vti.RegClass:$rs1,
