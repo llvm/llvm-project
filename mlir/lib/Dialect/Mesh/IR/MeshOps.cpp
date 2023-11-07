@@ -42,6 +42,37 @@ Operation *MeshDialect::materializeConstant(OpBuilder &builder, Attribute value,
 }
 
 //===----------------------------------------------------------------------===//
+// Mesh utilities
+//===----------------------------------------------------------------------===//
+
+bool mesh::isReductionLoop(IteratorType iType) {
+  return iType != IteratorType::Parallel && iType != IteratorType::Invalid;
+}
+
+bool mesh::areReductionAndPartialMatch(IteratorType iType, Partial partial) {
+  return (partial == Partial::Generic &&
+          iType == IteratorType::ReductionGeneric) ||
+         (partial == Partial::Sum && iType == IteratorType::ReductionSum) ||
+         (partial == Partial::Max && iType == IteratorType::ReductionMax) ||
+         (partial == Partial::Min && iType == IteratorType::ReductionMin);
+}
+
+Partial mesh::getPartialTypeFromReduction(IteratorType iType) {
+  switch (iType) {
+  case IteratorType::ReductionGeneric:
+    return Partial::Generic;
+  case IteratorType::ReductionSum:
+    return Partial::Sum;
+  case IteratorType::ReductionMax:
+    return Partial::Max;
+  case IteratorType::ReductionMin:
+    return Partial::Min;
+  default:
+    assert(0 && "No corresponding partial type can be found");
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // mesh.cluster op
 //===----------------------------------------------------------------------===//
 
@@ -95,7 +126,6 @@ MeshShardingAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   }
   if (failed(checkMeshAxis(partialAxes)))
     return failure();
-
   return success();
 }
 
