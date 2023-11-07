@@ -196,7 +196,6 @@ defm guard_longjmp : B<"guard-longjmp",
   "Do not enable Control Flow Guard long jump hardening">;
 defm error_limit:
   EqLong<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
-def build_id: F<"build-id">, HelpText<"Generate build ID">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;

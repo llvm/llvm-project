@@ -35,10 +35,26 @@
 # RUN: rm -f %t.dll %t.pdb
 # RUN: lld-link /build-id /dll /out:%t.dll /entry:DllMain %t.obj
 # RUN: llvm-readobj --coff-debug-directory %t.dll | FileCheck --check-prefix BUILDID %s
+# RUN: llvm-readobj --coff-debug-directory %t.dll | grep "PDBGUID: " > %t.binary.guid
 
+# When generating PDB, generate extra .buildid section.
 # RUN: rm -f %t.dll %t.pdb
 # RUN: lld-link /build-id /debug /dll /out:%t.dll /entry:DllMain %t.obj
 # RUN: llvm-readobj --coff-debug-directory %t.dll | FileCheck --check-prefix BUILDID %s
+# RUN: llvm-readobj -S %t.dll | FileCheck --check-prefix BUILDID_SEC %s
+
+# RUN: llvm-readobj --coff-debug-directory %t.dll | grep "PDBGUID: " > %t.pdb.guid
+# PDB hash should be different from binary hash.
+# RUN: not diff %t.binary.guid %t.pdb.guid
+
+# Do not generate .buildid section under /lldmingw + /debug:dwarf + /build-id:no
+# RUN: rm -f %t.dll %t.pdb
+# RUN: lld-link /lldmingw /debug:dwarf /build-id:no /dll /out:%t.dll /entry:DllMain %t.obj
+# RUN: llvm-readobj --coff-debug-directory %t.dll | FileCheck --check-prefix NO_BUILDID %s
+
+# RUN: rm -f %t.dll %t.pdb
+# RUN: lld-link /dll /out:%t.dll /entry:DllMain %t.obj
+# RUN: llvm-readobj --coff-debug-directory %t.dll | FileCheck --check-prefix NO_BUILDID %s
 
 # CHECK: File: [[FILE:.*]].dll
 # CHECK: DebugDirectory [
@@ -181,6 +197,11 @@
 # BUILDID:     }
 # BUILDID:   }
 # BUILDID: ]
+
+# NO_BUILDID: DebugDirectory [
+# NO_BUILDID: ]
+
+# BUILDID_SEC: Name: .buildid
 --- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_I386

@@ -86,10 +86,8 @@ namespace {
 
 class DebugDirectoryChunk : public NonSectionChunk {
 public:
-  DebugDirectoryChunk(const COFFLinkerContext &c,
-                      const std::vector<std::pair<COFF::DebugType, Chunk *>> &r,
-                      bool writeRepro)
-      : records(r), writeRepro(writeRepro), ctx(c) {}
+  DebugDirectoryChunk(const COFFLinkerContext &c, bool writeRepro)
+      : writeRepro(writeRepro), ctx(c) {}
 
   size_t getSize() const override {
     return (records.size() + int(writeRepro)) * sizeof(debug_directory);
@@ -121,6 +119,18 @@ public:
       *tds = timeDateStamp;
   }
 
+  void addRecord(COFF::DebugType type, Chunk *c) {
+    records.emplace_back(type, c);
+  }
+
+  Chunk* getBuildIdChunk() {
+    for (const std::pair<COFF::DebugType, Chunk *> &record : records) {
+      if (record.first == COFF::IMAGE_DEBUG_TYPE_CODEVIEW)
+        return record.second;
+    }
+    return nullptr;
+  }
+
 private:
   void fillEntry(debug_directory *d, COFF::DebugType debugType, size_t size,
                  uint64_t rva, uint64_t offs) const {
@@ -137,7 +147,7 @@ private:
   }
 
   mutable std::vector<support::ulittle32_t *> timeDateStamps;
-  const std::vector<std::pair<COFF::DebugType, Chunk *>> &records;
+  std::vector<std::pair<COFF::DebugType, Chunk *>> records;
   bool writeRepro;
   const COFFLinkerContext &ctx;
 };
@@ -284,7 +294,6 @@ private:
   uint32_t tlsAlignment = 0;
 
   DebugDirectoryChunk *debugDirectory = nullptr;
-  std::vector<std::pair<COFF::DebugType, Chunk *>> debugRecords;
   CVDebugRecordChunk *buildId = nullptr;
   ArrayRef<uint8_t> sectionTable;
 
@@ -1040,15 +1049,16 @@ void Writer::createMiscChunks() {
   }
 
   // Create Debug Information Chunks
-  OutputSection *debugInfoSec = config->mingw ? buildidSec : rdataSec;
-  if (config->buildID || config->debug || config->repro || config->cetCompat) {
-    debugDirectory =
-        make<DebugDirectoryChunk>(ctx, debugRecords, config->repro);
+  std::vector<std::pair<COFF::DebugType, Chunk *>> debugRecords;
+  OutputSection *debugInfoSec = config->shouldCreatePDB ? rdataSec : buildidSec;
+  if (config->buildIDHash != BuildIDHash::None || config->debug ||
+      config->repro || config->cetCompat) {
+    debugDirectory = make<DebugDirectoryChunk>(ctx, config->repro);
     debugDirectory->setAlignment(4);
     debugInfoSec->addChunk(debugDirectory);
   }
 
-  if (config->debug || config->buildID) {
+  if (config->debug || config->buildIDHash != BuildIDHash::None) {
     // Make a CVDebugRecordChunk even when /DEBUG:CV is not specified.  We
     // output a PDB no matter what, and this chunk provides the only means of
     // allowing a debugger to match a PDB and an executable.  So we need it even
@@ -1067,16 +1077,19 @@ void Writer::createMiscChunks() {
   for (std::pair<COFF::DebugType, Chunk *> r : debugRecords) {
     r.second->setAlignment(4);
     debugInfoSec->addChunk(r.second);
+    debugDirectory->addRecord(r.first, r.second);
   }
 
-  // If .buildid section was not chosen and /build-id is given, create .buildid
-  // section.
-  if (config->buildID && debugInfoSec != buildidSec) {
+  // Create extra .buildid section if build id was stored in .rdata.
+  if (config->buildIDHash == BuildIDHash::PDB) {
+    DebugDirectoryChunk *debugDirectory =
+        make<DebugDirectoryChunk>(ctx, config->repro);
+    debugDirectory->setAlignment(4);
+    CVDebugRecordChunk *buildId = make<CVDebugRecordChunk>(ctx);
+    buildId->setAlignment(4);
+    debugDirectory->addRecord(COFF::IMAGE_DEBUG_TYPE_CODEVIEW, buildId);
     buildidSec->addChunk(debugDirectory);
-    for (std::pair<COFF::DebugType, Chunk *> r : debugRecords) {
-      r.second->setAlignment(4);
-      buildidSec->addChunk(r.second);
-    }
+    buildidSec->addChunk(buildId);
   }
 
   // Create SEH table. x86-only.
@@ -2038,7 +2051,7 @@ void Writer::writeBuildId() {
   // PE contents.
   Configuration *config = &ctx.config;
 
-  if (config->debug || config->buildID) {
+  if (config->debug || config->buildIDHash != BuildIDHash::None) {
     assert(buildId && "BuildId is not set!");
     // BuildId->BuildId was filled in when the PDB was written.
   }
@@ -2054,20 +2067,26 @@ void Writer::writeBuildId() {
   uint32_t timestamp = config->timestamp;
   uint64_t hash = 0;
 
-  if (config->repro || config->buildID)
+  if (config->repro || config->buildIDHash != BuildIDHash::None)
     hash = xxh3_64bits(outputFileData);
 
   if (config->repro)
     timestamp = static_cast<uint32_t>(hash);
 
-  if (config->buildID) {
-    // For MinGW builds without a PDB file, we still generate a build id
-    // to allow associating a crash dump to the executable.
+  if (config->buildIDHash == BuildIDHash::Binary) {
     buildId->buildId->PDB70.CVSignature = OMF::Signature::PDB70;
     buildId->buildId->PDB70.Age = 1;
     memcpy(buildId->buildId->PDB70.Signature, &hash, 8);
     // xxhash only gives us 8 bytes, so put some fixed data in the other half.
     memcpy(&buildId->buildId->PDB70.Signature[8], "LLD PDB.", 8);
+  }
+
+  // If using PDB hash, build id in .buildid section is not set yet.
+  if (config->buildIDHash == BuildIDHash::PDB) {
+    auto *buildIdChunk = buildidSec->chunks.back();
+    codeview::DebugInfo *buildIdInfo =
+        cast<CVDebugRecordChunk>(buildIdChunk)->buildId;
+    memcpy(buildIdInfo, buildId->buildId, sizeof(codeview::DebugInfo));
   }
 
   if (debugDirectory)

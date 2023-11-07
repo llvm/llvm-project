@@ -102,6 +102,12 @@ enum class ICFLevel {
         // behavior.
 };
 
+enum class BuildIDHash {
+  None,
+  PDB,
+  Binary,
+};
+
 // Global configuration.
 struct Configuration {
   enum ManifestKind { Default, SideBySide, Embed, No };
@@ -317,7 +323,8 @@ struct Configuration {
   bool writeCheckSum = false;
   EmitKind emit = EmitKind::Obj;
   bool allowDuplicateWeak = false;
-  bool buildID = false;
+  bool shouldCreatePDB = false;
+  BuildIDHash buildIDHash = BuildIDHash::None;
 };
 
 } // namespace lld::coff
