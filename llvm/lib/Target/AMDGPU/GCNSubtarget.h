@@ -167,6 +167,7 @@ protected:
   bool HasAtomicGlobalPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
   bool SupportsSRAMECC = false;
+  bool DynamicVGPR = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for SRAMECC.
@@ -1531,6 +1532,8 @@ public:
     // the nop.
     return true;
   }
+
+  bool isDynamicVGPREnabled() const { return DynamicVGPR; }
 };
 
 class GCNUserSGPRUsageInfo {
