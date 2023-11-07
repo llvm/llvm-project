@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_BUFFERIZATION_IR_SUBSETINSERTIONOPINTERFACE_H_
-#define MLIR_DIALECT_BUFFERIZATION_IR_SUBSETINSERTIONOPINTERFACE_H_
+#ifndef MLIR_INTERFACES_SUBSETINSERTIONOPINTERFACE_H_
+#define MLIR_INTERFACES_SUBSETINSERTIONOPINTERFACE_H_
 
 #include "mlir/IR/OpDefinition.h"
 
 namespace mlir {
-namespace bufferization {
 namespace detail {
 
 /// Return the destination/"init" operand of the op if it implements the
@@ -21,9 +20,8 @@ namespace detail {
 OpOperand &defaultGetDestinationOperand(Operation *op);
 
 } // namespace detail
-} // namespace bufferization
 } // namespace mlir
 
-#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h.inc"
+#include "mlir/Interfaces/SubsetInsertionOpInterface.h.inc"
 
-#endif // MLIR_DIALECT_BUFFERIZATION_IR_SUBSETINSERTIONOPINTERFACE_H_
+#endif // MLIR_INTERFACES_SUBSETINSERTIONOPINTERFACE_H_

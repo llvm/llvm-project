@@ -2111,6 +2111,14 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(AMDGPU::S_AND_SAVEEXEC_B32));
     break;
 
+  case AMDGPU::SI_SPILL_S32_TO_VGPR:
+    MI.setDesc(get(AMDGPU::V_WRITELANE_B32));
+    break;
+
+  case AMDGPU::SI_RESTORE_S32_FROM_VGPR:
+    MI.setDesc(get(AMDGPU::V_READLANE_B32));
+    break;
+
   case AMDGPU::V_MOV_B64_PSEUDO: {
     Register Dst = MI.getOperand(0).getReg();
     Register DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
@@ -4014,7 +4022,9 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   // However, executing them with EXEC = 0 causes them to operate on undefined
   // data, which we avoid by returning true here.
   if (Opcode == AMDGPU::V_READFIRSTLANE_B32 ||
-      Opcode == AMDGPU::V_READLANE_B32 || Opcode == AMDGPU::V_WRITELANE_B32)
+      Opcode == AMDGPU::V_READLANE_B32 || Opcode == AMDGPU::V_WRITELANE_B32 ||
+      Opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR ||
+      Opcode == AMDGPU::SI_SPILL_S32_TO_VGPR)
     return true;
 
   return false;
@@ -4408,7 +4418,9 @@ static bool shouldReadExec(const MachineInstr &MI) {
   if (SIInstrInfo::isVALU(MI)) {
     switch (MI.getOpcode()) {
     case AMDGPU::V_READLANE_B32:
+    case AMDGPU::SI_RESTORE_S32_FROM_VGPR:
     case AMDGPU::V_WRITELANE_B32:
+    case AMDGPU::SI_SPILL_S32_TO_VGPR:
       return false;
     }
 
@@ -5599,9 +5611,18 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
                      OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_INT64 ||
                      OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2INT32 ||
                      OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP32;
-    if (Is64BitOp && !AMDGPU::isValid32BitLiteral(Imm, Is64BitFPOp) &&
-        !AMDGPU::isInlinableLiteral64(Imm, ST.hasInv2PiInlineImm()))
-      return false;
+    if (Is64BitOp &&
+        !AMDGPU::isInlinableLiteral64(Imm, ST.hasInv2PiInlineImm())) {
+      if (!AMDGPU::isValid32BitLiteral(Imm, Is64BitFPOp))
+        return false;
+
+      // FIXME: We can use sign extended 64-bit literals, but only for signed
+      //        operands. At the moment we do not know if an operand is signed.
+      //        Such operand will be encoded as its low 32 bits and then either
+      //        correctly sign extended or incorrectly zero extended by HW.
+      if (!Is64BitFPOp && (int32_t)Imm < 0)
+        return false;
+    }
   }
 
   // Handle non-register types that are treated like immediates.
@@ -8427,8 +8448,16 @@ unsigned SIInstrInfo::getLiveRangeSplitOpcode(Register SrcReg,
 }
 
 bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI) const {
-  return !MI.isTerminator() && MI.getOpcode() != AMDGPU::COPY &&
-         MI.modifiesRegister(AMDGPU::EXEC, &RI);
+  // We need to handle instructions which may be inserted during register
+  // allocation to handle the prolog. The initial prolog instruction may have
+  // been separated from the start of the block by spills and copies inserted
+  // needed by the prolog.
+  uint16_t Opc = MI.getOpcode();
+
+  // FIXME: Copies inserted in the block prolog for live-range split should also
+  // be included.
+  return (isSpillOpcode(Opc) || (!MI.isTerminator() && Opc != AMDGPU::COPY &&
+                                 MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }
 
 MachineInstrBuilder
@@ -9071,7 +9100,9 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
     return InstructionUniformity::NeverUniform;
 
   unsigned opcode = MI.getOpcode();
-  if (opcode == AMDGPU::V_READLANE_B32 || opcode == AMDGPU::V_READFIRSTLANE_B32)
+  if (opcode == AMDGPU::V_READLANE_B32 ||
+      opcode == AMDGPU::V_READFIRSTLANE_B32 ||
+      opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR)
     return InstructionUniformity::AlwaysUniform;
 
   if (isCopyInstr(MI)) {

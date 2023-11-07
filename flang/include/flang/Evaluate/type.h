@@ -183,6 +183,7 @@ public:
   constexpr bool IsUnlimitedPolymorphic() const { // TYPE(*) or CLASS(*)
     return IsPolymorphic() && !derived_;
   }
+  bool IsLengthlessIntrinsicType() const;
   constexpr const semantics::DerivedTypeSpec &GetDerivedTypeSpec() const {
     return DEREF(derived_);
   }

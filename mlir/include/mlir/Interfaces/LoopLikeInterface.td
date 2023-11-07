@@ -238,7 +238,36 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       unsigned firstOperandIndex = initsMutable.begin()->getOperandNumber();
       return OperandRange(
           $_op->operand_begin() + firstOperandIndex,
-          $_op->operand_begin() + firstOperandIndex + initsMutable.size());    }
+          $_op->operand_begin() + firstOperandIndex + initsMutable.size());
+    }
+
+    /// Return the region iter_arg that corresponds to the given init operand.
+    BlockArgument getTiedLoopRegionIterArg(OpOperand *opOperand) {
+      auto initsMutable = $_op.getInitsMutable();
+      auto it = llvm::find(initsMutable, *opOperand);
+      if (it == initsMutable.end())
+        return {};
+      return $_op.getRegionIterArgs()[std::distance(initsMutable.begin(), it)];
+    }
+
+    /// Return the init operand that corresponds to the given region iter_arg.
+    OpOperand *getTiedLoopInit(BlockArgument bbArg) {
+      auto iterArgs = $_op.getRegionIterArgs();
+      auto it = llvm::find(iterArgs, bbArg);
+      if (it == iterArgs.end())
+        return {};
+      return &$_op.getInitsMutable()[std::distance(iterArgs.begin(), it)];
+    }
+
+    /// Return the yielded value that corresponds to the given region iter_arg.
+    OpOperand *getTiedLoopYieldedValue(BlockArgument bbArg) {
+      auto iterArgs = $_op.getRegionIterArgs();
+      auto it = llvm::find(iterArgs, bbArg);
+      if (it == iterArgs.end())
+        return {};
+      return
+          &$_op.getYieldedValuesMutable()[std::distance(iterArgs.begin(), it)];
+    }
   }];
 
   let verifyWithRegions = 1;

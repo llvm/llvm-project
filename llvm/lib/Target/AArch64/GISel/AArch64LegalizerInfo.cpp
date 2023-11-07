@@ -1270,11 +1270,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_mops_memset_tag: {
     assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
-    // Zext the value to 64 bit
+    // Anyext the value being set to 64 bit (only the bottom 8 bits are read by
+    // the instruction).
     MachineIRBuilder MIB(MI);
     auto &Value = MI.getOperand(3);
-    Register ZExtValueReg = MIB.buildAnyExt(LLT::scalar(64), Value).getReg(0);
-    Value.setReg(ZExtValueReg);
+    Register ExtValueReg = MIB.buildAnyExt(LLT::scalar(64), Value).getReg(0);
+    Value.setReg(ExtValueReg);
     return true;
   }
   case Intrinsic::prefetch: {
@@ -1793,11 +1794,12 @@ bool AArch64LegalizerInfo::legalizeMemOps(MachineInstr &MI,
 
   // Tagged version MOPSMemorySetTagged is legalised in legalizeIntrinsic
   if (MI.getOpcode() == TargetOpcode::G_MEMSET) {
-    // Zext the value operand to 64 bit
+    // Anyext the value being set to 64 bit (only the bottom 8 bits are read by
+    // the instruction).
     auto &Value = MI.getOperand(1);
-    Register ZExtValueReg =
+    Register ExtValueReg =
         MIRBuilder.buildAnyExt(LLT::scalar(64), Value).getReg(0);
-    Value.setReg(ZExtValueReg);
+    Value.setReg(ExtValueReg);
     return true;
   }
 

@@ -138,14 +138,13 @@ std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
   return std::nullopt;
 }
 
-std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *PD) {
+std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   // Dedup blocks since they are immutable and pointers cannot be compared.
-  if (auto It = DummyParams.find(PD);
-      It != DummyParams.end())
+  if (auto It = DummyParams.find(VD); It != DummyParams.end())
     return It->second;
 
   // Create dummy descriptor.
-  Descriptor *Desc = allocateDescriptor(PD, std::nullopt);
+  Descriptor *Desc = allocateDescriptor(VD, std::nullopt);
   // Allocate a block for storage.
   unsigned I = Globals.size();
 
@@ -154,7 +153,7 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *PD) {
   G->block()->invokeCtor();
 
   Globals.push_back(G);
-  DummyParams[PD] = I;
+  DummyParams[VD] = I;
   return I;
 }
 

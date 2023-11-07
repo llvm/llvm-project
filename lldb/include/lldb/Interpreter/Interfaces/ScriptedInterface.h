@@ -13,6 +13,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/Support/Compiler.h"

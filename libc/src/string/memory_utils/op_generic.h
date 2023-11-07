@@ -48,6 +48,13 @@ using generic_v256 = uint8_t __attribute__((__vector_size__(32)));
 using generic_v512 = uint8_t __attribute__((__vector_size__(64)));
 } // namespace LIBC_NAMESPACE
 
+namespace LIBC_NAMESPACE::sw_prefetch {
+// Size of a cacheline for software prefetching
+static constexpr size_t kCachelineSize = 64;
+// prefetch for write
+static inline void PrefetchW(CPtr dst) { __builtin_prefetch(dst, 1, 3); }
+} // namespace LIBC_NAMESPACE::sw_prefetch
+
 namespace LIBC_NAMESPACE::generic {
 
 // We accept three types of values as elements for generic operations:

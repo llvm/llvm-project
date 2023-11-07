@@ -80,6 +80,13 @@ struct ConfigurationEnvironmentTy {
   uint8_t UseGenericStateMachine;
   uint8_t MayUseNestedParallelism;
   llvm::omp::OMPTgtExecModeFlags ExecMode;
+  // Information about (legal) launch configurations.
+  //{
+  int32_t MinThreads;
+  int32_t MaxThreads;
+  int32_t MinTeams;
+  int32_t MaxTeams;
+  //}
 };
 
 // NOTE: Please don't change the order of those members as their indices are

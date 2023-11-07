@@ -3060,29 +3060,38 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   std::visit(
       Fortran::common::visitors{
           [&](const Fortran::parser::OmpAtomicRead &atomicRead) {
+            mlir::Location loc = converter.genLocation(atomicRead.source);
             Fortran::lower::genOmpAccAtomicRead<
                 Fortran::parser::OmpAtomicRead,
-                Fortran::parser::OmpAtomicClauseList>(converter, atomicRead);
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicRead,
+                                                      loc);
           },
           [&](const Fortran::parser::OmpAtomicWrite &atomicWrite) {
+            mlir::Location loc = converter.genLocation(atomicWrite.source);
             Fortran::lower::genOmpAccAtomicWrite<
                 Fortran::parser::OmpAtomicWrite,
-                Fortran::parser::OmpAtomicClauseList>(converter, atomicWrite);
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicWrite,
+                                                      loc);
           },
           [&](const Fortran::parser::OmpAtomic &atomicConstruct) {
+            mlir::Location loc = converter.genLocation(atomicConstruct.source);
             Fortran::lower::genOmpAtomic<Fortran::parser::OmpAtomic,
                                          Fortran::parser::OmpAtomicClauseList>(
-                converter, atomicConstruct);
+                converter, atomicConstruct, loc);
           },
           [&](const Fortran::parser::OmpAtomicUpdate &atomicUpdate) {
+            mlir::Location loc = converter.genLocation(atomicUpdate.source);
             Fortran::lower::genOmpAccAtomicUpdate<
                 Fortran::parser::OmpAtomicUpdate,
-                Fortran::parser::OmpAtomicClauseList>(converter, atomicUpdate);
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicUpdate,
+                                                      loc);
           },
           [&](const Fortran::parser::OmpAtomicCapture &atomicCapture) {
+            mlir::Location loc = converter.genLocation(atomicCapture.source);
             Fortran::lower::genOmpAccAtomicCapture<
                 Fortran::parser::OmpAtomicCapture,
-                Fortran::parser::OmpAtomicClauseList>(converter, atomicCapture);
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicCapture,
+                                                      loc);
           },
       },
       atomicConstruct.u);

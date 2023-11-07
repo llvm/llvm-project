@@ -558,7 +558,7 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
       break;
     if (forOp != outerLoop && !outerLoop->isAncestor(forOp))
       break;
-    OpOperand &operand = forOp.getOpOperandForRegionIterArg(bbArg);
+    OpOperand &operand = *forOp.getTiedLoopInit(bbArg);
     bvm.map(bbArg, operand.get());
     bbArg = dyn_cast<BlockArgument>(operand.get());
   }

@@ -294,20 +294,135 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
   return false;
 }
 
+void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator MBBI,
+                                       const DebugLoc &DL, MCRegister DstReg,
+                                       MCRegister SrcReg, bool KillSrc,
+                                       unsigned Opc, unsigned NF) const {
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
+
+  RISCVII::VLMUL LMul;
+  unsigned SubRegIdx;
+  unsigned VVOpc, VIOpc;
+  switch (Opc) {
+  default:
+    llvm_unreachable("Impossible LMUL for vector register copy.");
+  case RISCV::VMV1R_V:
+    LMul = RISCVII::LMUL_1;
+    SubRegIdx = RISCV::sub_vrm1_0;
+    VVOpc = RISCV::PseudoVMV_V_V_M1;
+    VIOpc = RISCV::PseudoVMV_V_I_M1;
+    break;
+  case RISCV::VMV2R_V:
+    LMul = RISCVII::LMUL_2;
+    SubRegIdx = RISCV::sub_vrm2_0;
+    VVOpc = RISCV::PseudoVMV_V_V_M2;
+    VIOpc = RISCV::PseudoVMV_V_I_M2;
+    break;
+  case RISCV::VMV4R_V:
+    LMul = RISCVII::LMUL_4;
+    SubRegIdx = RISCV::sub_vrm4_0;
+    VVOpc = RISCV::PseudoVMV_V_V_M4;
+    VIOpc = RISCV::PseudoVMV_V_I_M4;
+    break;
+  case RISCV::VMV8R_V:
+    assert(NF == 1);
+    LMul = RISCVII::LMUL_8;
+    SubRegIdx = RISCV::sub_vrm1_0; // There is no sub_vrm8_0.
+    VVOpc = RISCV::PseudoVMV_V_V_M8;
+    VIOpc = RISCV::PseudoVMV_V_I_M8;
+    break;
+  }
+
+  bool UseVMV_V_V = false;
+  bool UseVMV_V_I = false;
+  MachineBasicBlock::const_iterator DefMBBI;
+  if (isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
+    UseVMV_V_V = true;
+    Opc = VVOpc;
+
+    if (DefMBBI->getOpcode() == VIOpc) {
+      UseVMV_V_I = true;
+      Opc = VIOpc;
+    }
+  }
+
+  if (NF == 1) {
+    auto MIB = BuildMI(MBB, MBBI, DL, get(Opc), DstReg);
+    if (UseVMV_V_V)
+      MIB.addReg(DstReg, RegState::Undef);
+    if (UseVMV_V_I)
+      MIB = MIB.add(DefMBBI->getOperand(2));
+    else
+      MIB = MIB.addReg(SrcReg, getKillRegState(KillSrc));
+    if (UseVMV_V_V) {
+      const MCInstrDesc &Desc = DefMBBI->getDesc();
+      MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc)));  // AVL
+      MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
+      MIB.addImm(0);                                            // tu, mu
+      MIB.addReg(RISCV::VL, RegState::Implicit);
+      MIB.addReg(RISCV::VTYPE, RegState::Implicit);
+    }
+    return;
+  }
+
+  int I = 0, End = NF, Incr = 1;
+  unsigned SrcEncoding = TRI->getEncodingValue(SrcReg);
+  unsigned DstEncoding = TRI->getEncodingValue(DstReg);
+  unsigned LMulVal;
+  bool Fractional;
+  std::tie(LMulVal, Fractional) = RISCVVType::decodeVLMUL(LMul);
+  assert(!Fractional && "It is impossible be fractional lmul here.");
+  if (forwardCopyWillClobberTuple(DstEncoding, SrcEncoding, NF * LMulVal)) {
+    I = NF - 1;
+    End = -1;
+    Incr = -1;
+  }
+
+  for (; I != End; I += Incr) {
+    auto MIB =
+        BuildMI(MBB, MBBI, DL, get(Opc), TRI->getSubReg(DstReg, SubRegIdx + I));
+    if (UseVMV_V_V)
+      MIB.addReg(TRI->getSubReg(DstReg, SubRegIdx + I), RegState::Undef);
+    if (UseVMV_V_I)
+      MIB = MIB.add(DefMBBI->getOperand(2));
+    else
+      MIB = MIB.addReg(TRI->getSubReg(SrcReg, SubRegIdx + I),
+                       getKillRegState(KillSrc));
+    if (UseVMV_V_V) {
+      const MCInstrDesc &Desc = DefMBBI->getDesc();
+      MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc)));  // AVL
+      MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
+      MIB.addImm(0);                                            // tu, mu
+      MIB.addReg(RISCV::VL, RegState::Implicit);
+      MIB.addReg(RISCV::VTYPE, RegState::Implicit);
+    }
+  }
+}
+
 void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MBBI,
                                  const DebugLoc &DL, MCRegister DstReg,
                                  MCRegister SrcReg, bool KillSrc) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
-  if (RISCV::GPRPF64RegClass.contains(DstReg))
-    DstReg = TRI->getSubReg(DstReg, RISCV::sub_32);
-  if (RISCV::GPRPF64RegClass.contains(SrcReg))
-    SrcReg = TRI->getSubReg(SrcReg, RISCV::sub_32);
-
   if (RISCV::GPRRegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
+        .addImm(0);
+    return;
+  }
+
+  if (RISCV::GPRPF64RegClass.contains(DstReg, SrcReg)) {
+    // Emit an ADDI for both parts of GPRPF64.
+    BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
+            TRI->getSubReg(DstReg, RISCV::sub_32))
+        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_32), getKillRegState(KillSrc))
+        .addImm(0);
+    BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
+            TRI->getSubReg(DstReg, RISCV::sub_32_hi))
+        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_32_hi),
+                getKillRegState(KillSrc))
         .addImm(0);
     return;
   }
@@ -321,13 +436,8 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  // FPR->FPR copies and VR->VR copies.
-  unsigned Opc;
-  bool IsScalableVector = true;
-  unsigned NF = 1;
-  RISCVII::VLMUL LMul = RISCVII::LMUL_1;
-  unsigned SubRegIdx = RISCV::sub_vrm1_0;
   if (RISCV::FPR16RegClass.contains(DstReg, SrcReg)) {
+    unsigned Opc;
     if (STI.hasStdExtZfh()) {
       Opc = RISCV::FSGNJ_H;
     } else {
@@ -341,176 +451,144 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                         &RISCV::FPR32RegClass);
       Opc = RISCV::FSGNJ_S;
     }
-    IsScalableVector = false;
-  } else if (RISCV::FPR32RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::FSGNJ_S;
-    IsScalableVector = false;
-  } else if (RISCV::FPR64RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::FSGNJ_D;
-    IsScalableVector = false;
-  } else if (RISCV::VRRegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV1R_V;
-    LMul = RISCVII::LMUL_1;
-  } else if (RISCV::VRM2RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV2R_V;
-    LMul = RISCVII::LMUL_2;
-  } else if (RISCV::VRM4RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV4R_V;
-    LMul = RISCVII::LMUL_4;
-  } else if (RISCV::VRM8RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV8R_V;
-    LMul = RISCVII::LMUL_8;
-  } else if (RISCV::VRN2M1RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV1R_V;
-    SubRegIdx = RISCV::sub_vrm1_0;
-    NF = 2;
-    LMul = RISCVII::LMUL_1;
-  } else if (RISCV::VRN2M2RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV2R_V;
-    SubRegIdx = RISCV::sub_vrm2_0;
-    NF = 2;
-    LMul = RISCVII::LMUL_2;
-  } else if (RISCV::VRN2M4RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV4R_V;
-    SubRegIdx = RISCV::sub_vrm4_0;
-    NF = 2;
-    LMul = RISCVII::LMUL_4;
-  } else if (RISCV::VRN3M1RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV1R_V;
-    SubRegIdx = RISCV::sub_vrm1_0;
-    NF = 3;
-    LMul = RISCVII::LMUL_1;
-  } else if (RISCV::VRN3M2RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV2R_V;
-    SubRegIdx = RISCV::sub_vrm2_0;
-    NF = 3;
-    LMul = RISCVII::LMUL_2;
-  } else if (RISCV::VRN4M1RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV1R_V;
-    SubRegIdx = RISCV::sub_vrm1_0;
-    NF = 4;
-    LMul = RISCVII::LMUL_1;
-  } else if (RISCV::VRN4M2RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV2R_V;
-    SubRegIdx = RISCV::sub_vrm2_0;
-    NF = 4;
-    LMul = RISCVII::LMUL_2;
-  } else if (RISCV::VRN5M1RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV1R_V;
-    SubRegIdx = RISCV::sub_vrm1_0;
-    NF = 5;
-    LMul = RISCVII::LMUL_1;
-  } else if (RISCV::VRN6M1RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV1R_V;
-    SubRegIdx = RISCV::sub_vrm1_0;
-    NF = 6;
-    LMul = RISCVII::LMUL_1;
-  } else if (RISCV::VRN7M1RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV1R_V;
-    SubRegIdx = RISCV::sub_vrm1_0;
-    NF = 7;
-    LMul = RISCVII::LMUL_1;
-  } else if (RISCV::VRN8M1RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::VMV1R_V;
-    SubRegIdx = RISCV::sub_vrm1_0;
-    NF = 8;
-    LMul = RISCVII::LMUL_1;
-  } else {
-    llvm_unreachable("Impossible reg-to-reg copy");
-  }
-
-  if (IsScalableVector) {
-    bool UseVMV_V_V = false;
-    bool UseVMV_V_I = false;
-    MachineBasicBlock::const_iterator DefMBBI;
-    if (isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
-      UseVMV_V_V = true;
-      // We only need to handle LMUL = 1/2/4/8 here because we only define
-      // vector register classes for LMUL = 1/2/4/8.
-      unsigned VIOpc;
-      switch (LMul) {
-      default:
-        llvm_unreachable("Impossible LMUL for vector register copy.");
-      case RISCVII::LMUL_1:
-        Opc = RISCV::PseudoVMV_V_V_M1;
-        VIOpc = RISCV::PseudoVMV_V_I_M1;
-        break;
-      case RISCVII::LMUL_2:
-        Opc = RISCV::PseudoVMV_V_V_M2;
-        VIOpc = RISCV::PseudoVMV_V_I_M2;
-        break;
-      case RISCVII::LMUL_4:
-        Opc = RISCV::PseudoVMV_V_V_M4;
-        VIOpc = RISCV::PseudoVMV_V_I_M4;
-        break;
-      case RISCVII::LMUL_8:
-        Opc = RISCV::PseudoVMV_V_V_M8;
-        VIOpc = RISCV::PseudoVMV_V_I_M8;
-        break;
-      }
-
-      if (DefMBBI->getOpcode() == VIOpc) {
-        UseVMV_V_I = true;
-        Opc = VIOpc;
-      }
-    }
-
-    if (NF == 1) {
-      auto MIB = BuildMI(MBB, MBBI, DL, get(Opc), DstReg);
-      if (UseVMV_V_V)
-        MIB.addReg(DstReg, RegState::Undef);
-      if (UseVMV_V_I)
-        MIB = MIB.add(DefMBBI->getOperand(2));
-      else
-        MIB = MIB.addReg(SrcReg, getKillRegState(KillSrc));
-      if (UseVMV_V_V) {
-        const MCInstrDesc &Desc = DefMBBI->getDesc();
-        MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc))); // AVL
-        MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
-        MIB.addImm(0); // tu, mu
-        MIB.addReg(RISCV::VL, RegState::Implicit);
-        MIB.addReg(RISCV::VTYPE, RegState::Implicit);
-      }
-    } else {
-      int I = 0, End = NF, Incr = 1;
-      unsigned SrcEncoding = TRI->getEncodingValue(SrcReg);
-      unsigned DstEncoding = TRI->getEncodingValue(DstReg);
-      unsigned LMulVal;
-      bool Fractional;
-      std::tie(LMulVal, Fractional) = RISCVVType::decodeVLMUL(LMul);
-      assert(!Fractional && "It is impossible be fractional lmul here.");
-      if (forwardCopyWillClobberTuple(DstEncoding, SrcEncoding, NF * LMulVal)) {
-        I = NF - 1;
-        End = -1;
-        Incr = -1;
-      }
-
-      for (; I != End; I += Incr) {
-        auto MIB = BuildMI(MBB, MBBI, DL, get(Opc),
-                           TRI->getSubReg(DstReg, SubRegIdx + I));
-        if (UseVMV_V_V)
-          MIB.addReg(TRI->getSubReg(DstReg, SubRegIdx + I),
-                     RegState::Undef);
-        if (UseVMV_V_I)
-          MIB = MIB.add(DefMBBI->getOperand(2));
-        else
-          MIB = MIB.addReg(TRI->getSubReg(SrcReg, SubRegIdx + I),
-                           getKillRegState(KillSrc));
-        if (UseVMV_V_V) {
-          const MCInstrDesc &Desc = DefMBBI->getDesc();
-          MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc))); // AVL
-          MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
-          MIB.addImm(0);  // tu, mu
-          MIB.addReg(RISCV::VL, RegState::Implicit);
-          MIB.addReg(RISCV::VTYPE, RegState::Implicit);
-        }
-      }
-    }
-  } else {
     BuildMI(MBB, MBBI, DL, get(Opc), DstReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
         .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
   }
+
+  if (RISCV::FPR32RegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_S), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (RISCV::FPR64RegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_D), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (RISCV::FPR32RegClass.contains(DstReg) &&
+      RISCV::GPRRegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_W_X), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (RISCV::GPRRegClass.contains(DstReg) &&
+      RISCV::FPR32RegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_W), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (RISCV::FPR64RegClass.contains(DstReg) &&
+      RISCV::GPRRegClass.contains(SrcReg)) {
+    assert(STI.getXLen() == 64 && "Unexpected GPR size");
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_D_X), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (RISCV::GPRRegClass.contains(DstReg) &&
+      RISCV::FPR64RegClass.contains(SrcReg)) {
+    assert(STI.getXLen() == 64 && "Unexpected GPR size");
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_D), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  // VR->VR copies.
+  if (RISCV::VRRegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V);
+    return;
+  }
+
+  if (RISCV::VRM2RegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V);
+    return;
+  }
+
+  if (RISCV::VRM4RegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV4R_V);
+    return;
+  }
+
+  if (RISCV::VRM8RegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV8R_V);
+    return;
+  }
+
+  if (RISCV::VRN2M1RegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+                      /*NF=*/2);
+    return;
+  }
+
+  if (RISCV::VRN2M2RegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V,
+                      /*NF=*/2);
+    return;
+  }
+
+  if (RISCV::VRN2M4RegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV4R_V,
+                      /*NF=*/2);
+    return;
+  }
+
+  if (RISCV::VRN3M1RegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+                      /*NF=*/3);
+    return;
+  }
+
+  if (RISCV::VRN3M2RegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V,
+                      /*NF=*/3);
+    return;
+  }
+
+  if (RISCV::VRN4M1RegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+                      /*NF=*/4);
+    return;
+  }
+
+  if (RISCV::VRN4M2RegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V,
+                      /*NF=*/4);
+    return;
+  }
+
+  if (RISCV::VRN5M1RegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+                      /*NF=*/5);
+    return;
+  }
+
+  if (RISCV::VRN6M1RegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+                      /*NF=*/6);
+    return;
+  }
+
+  if (RISCV::VRN7M1RegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+                      /*NF=*/7);
+    return;
+  }
+
+  if (RISCV::VRN8M1RegClass.contains(DstReg, SrcReg)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+                      /*NF=*/8);
+    return;
+  }
+
+  llvm_unreachable("Impossible reg-to-reg copy");
 }
 
 void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
@@ -737,7 +815,8 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
 void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
                             const DebugLoc &DL, Register DstReg, uint64_t Val,
-                            MachineInstr::MIFlag Flag) const {
+                            MachineInstr::MIFlag Flag, bool DstRenamable,
+                            bool DstIsDead) const {
   Register SrcReg = RISCV::X0;
 
   if (!STI.is64Bit() && !isInt<32>(Val))
@@ -747,28 +826,40 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
       RISCVMatInt::generateInstSeq(Val, STI.getFeatureBits());
   assert(!Seq.empty());
 
+  bool SrcRenamable = false;
+  unsigned Num = 0;
+
   for (const RISCVMatInt::Inst &Inst : Seq) {
+    bool LastItem = ++Num == Seq.size();
+    unsigned DstRegState = getDeadRegState(DstIsDead && LastItem) |
+                           getRenamableRegState(DstRenamable);
+    unsigned SrcRegState = getKillRegState(SrcReg != RISCV::X0) |
+                           getRenamableRegState(SrcRenamable);
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
-      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
+      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
+          .addReg(DstReg, RegState::Define | DstRegState)
           .addImm(Inst.getImm())
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegX0:
-      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
+      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
+          .addReg(DstReg, RegState::Define | DstRegState)
+          .addReg(SrcReg, SrcRegState)
           .addReg(RISCV::X0)
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegReg:
-      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
-          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
+      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
+          .addReg(DstReg, RegState::Define | DstRegState)
+          .addReg(SrcReg, SrcRegState)
+          .addReg(SrcReg, SrcRegState)
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegImm:
-      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
+      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
+          .addReg(DstReg, RegState::Define | DstRegState)
+          .addReg(SrcReg, SrcRegState)
           .addImm(Inst.getImm())
           .setMIFlag(Flag);
       break;
@@ -776,6 +867,7 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
 
     // Only the first instruction has X0 as its source.
     SrcReg = DstReg;
+    SrcRenamable = DstRenamable;
   }
 }
 
@@ -3040,4 +3132,12 @@ RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
   case RISCV::VMV_S_X:
     return 1U << Log2SEW;
   }
+}
+
+unsigned RISCV::getRVVMCOpcode(unsigned RVVPseudoOpcode) {
+  const RISCVVPseudosTable::PseudoInfo *RVV =
+      RISCVVPseudosTable::getPseudoInfo(RVVPseudoOpcode);
+  if (!RVV)
+    return 0;
+  return RVV->BaseInstr;
 }

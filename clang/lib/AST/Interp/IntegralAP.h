@@ -35,10 +35,18 @@ private:
   friend IntegralAP<!Signed>;
   APInt V;
 
-  template <typename T> static T truncateCast(const APInt &V) {
+  template <typename T, bool InputSigned>
+  static T truncateCast(const APInt &V) {
     constexpr unsigned BitSize = sizeof(T) * 8;
-    if (BitSize >= V.getBitWidth())
-      return std::is_signed_v<T> ? V.getSExtValue() : V.getZExtValue();
+    if (BitSize >= V.getBitWidth()) {
+      APInt Extended;
+      if constexpr (InputSigned)
+        Extended = V.sext(BitSize);
+      else
+        Extended = V.zext(BitSize);
+      return std::is_signed_v<T> ? Extended.getSExtValue()
+                                 : Extended.getZExtValue();
+    }
 
     return std::is_signed_v<T> ? V.trunc(BitSize).getSExtValue()
                                : V.trunc(BitSize).getZExtValue();
@@ -80,15 +88,10 @@ public:
     return V.ult(RHS.V);
   }
 
-  explicit operator bool() const { return !V.isZero(); }
-  explicit operator int8_t() const { return truncateCast<int8_t>(V); }
-  explicit operator uint8_t() const { return truncateCast<uint8_t>(V); }
-  explicit operator int16_t() const { return truncateCast<int16_t>(V); }
-  explicit operator uint16_t() const { return truncateCast<uint16_t>(V); }
-  explicit operator int32_t() const { return truncateCast<int32_t>(V); }
-  explicit operator uint32_t() const { return truncateCast<uint32_t>(V); }
-  explicit operator int64_t() const { return truncateCast<int64_t>(V); }
-  explicit operator uint64_t() const { return truncateCast<uint64_t>(V); }
+  template <typename Ty, typename = std::enable_if_t<std::is_integral_v<Ty>>>
+  explicit operator Ty() const {
+    return truncateCast<Ty, Signed>(V);
+  }
 
   template <typename T> static IntegralAP from(T Value, unsigned NumBits = 0) {
     assert(NumBits > 0);
@@ -124,7 +127,7 @@ public:
   bool isNegative() const { return !V.isNonNegative(); }
   bool isMin() const { return V.isMinValue(); }
   bool isMax() const { return V.isMaxValue(); }
-  static bool isSigned() { return Signed; }
+  static constexpr bool isSigned() { return Signed; }
   bool isMinusOne() const { return Signed && V == -1; }
 
   unsigned countLeadingZeros() const { return V.countl_zero(); }

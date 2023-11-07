@@ -178,11 +178,54 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FDIV: {
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     OperandsMapping = Ty.getSizeInBits() == 64
                           ? &RISCV::ValueMappings[RISCV::FPR64Idx]
                           : &RISCV::ValueMappings[RISCV::FPR32Idx];
+    break;
+  }
+  case TargetOpcode::G_FMA: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OperandsMapping =
+        Ty.getSizeInBits() == 64
+            ? getOperandsMapping({&RISCV::ValueMappings[RISCV::FPR64Idx],
+                                  &RISCV::ValueMappings[RISCV::FPR64Idx],
+                                  &RISCV::ValueMappings[RISCV::FPR64Idx],
+                                  &RISCV::ValueMappings[RISCV::FPR64Idx]})
+            : getOperandsMapping({&RISCV::ValueMappings[RISCV::FPR32Idx],
+                                  &RISCV::ValueMappings[RISCV::FPR32Idx],
+                                  &RISCV::ValueMappings[RISCV::FPR32Idx],
+                                  &RISCV::ValueMappings[RISCV::FPR32Idx]});
+    break;
+  }
+  case TargetOpcode::G_FPEXT: {
+    LLT ToTy = MRI.getType(MI.getOperand(0).getReg());
+    (void)ToTy;
+    LLT FromTy = MRI.getType(MI.getOperand(1).getReg());
+    (void)FromTy;
+    assert(ToTy.getSizeInBits() == 64 && FromTy.getSizeInBits() == 32 &&
+           "Unsupported size for G_FPEXT");
+    OperandsMapping =
+        getOperandsMapping({&RISCV::ValueMappings[RISCV::FPR64Idx],
+                            &RISCV::ValueMappings[RISCV::FPR32Idx]});
+    break;
+  }
+  case TargetOpcode::G_FPTRUNC: {
+    LLT ToTy = MRI.getType(MI.getOperand(0).getReg());
+    (void)ToTy;
+    LLT FromTy = MRI.getType(MI.getOperand(1).getReg());
+    (void)FromTy;
+    assert(ToTy.getSizeInBits() == 32 && FromTy.getSizeInBits() == 64 &&
+           "Unsupported size for G_FPTRUNC");
+    OperandsMapping =
+        getOperandsMapping({&RISCV::ValueMappings[RISCV::FPR32Idx],
+                            &RISCV::ValueMappings[RISCV::FPR64Idx]});
     break;
   }
   default:

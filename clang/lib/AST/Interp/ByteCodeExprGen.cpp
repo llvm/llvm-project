@@ -1314,9 +1314,7 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXBindTemporaryExpr(
     const CXXBindTemporaryExpr *E) {
-  if (Initializing)
-    return this->visitInitializer(E->getSubExpr());
-  return this->visit(E->getSubExpr());
+  return this->delegate(E->getSubExpr());
 }
 
 template <class Emitter>
@@ -2549,9 +2547,7 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return DiscardResult ? this->emitPop(*T, E) : true;
   case UO_AddrOf: // &x
     // We should already have a pointer when we get here.
-    if (!this->visit(SubExpr))
-      return false;
-    return DiscardResult ? this->emitPop(*T, E) : true;
+    return this->delegate(SubExpr);
   case UO_Deref:  // *x
     return dereference(
         SubExpr, DerefKind::Read,

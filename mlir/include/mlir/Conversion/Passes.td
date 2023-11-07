@@ -1019,9 +1019,6 @@ def ConvertSPIRVToLLVMPass : Pass<"convert-spirv-to-llvm", "ModuleOp"> {
   let dependentDialects = ["LLVM::LLVMDialect"];
 
   let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                 /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                 "instead of typed pointers">,
     Option<"clientAPI", "client-api", "::mlir::spirv::ClientAPI",
 	   /*default=*/"::mlir::spirv::ClientAPI::Unknown",
 	   "Derive StorageClass to address space mapping from the client API",
@@ -1125,6 +1122,12 @@ def TosaToLinalgNamed
     Pass that converts TOSA operations to the equivalent operations using the
     Linalg named operations.
   }];
+
+  let options = [
+      Option<"preferConv2DKernelLayoutHWCF", "prefer-conv2d-kernel-layout-hwcf",
+           "bool", /*default=*/"false",
+           "Prefer generating linalg.conv_2d_nhwc_hwcf over linalg.conv_2d_nhwc_fhwc">
+  ];
 
   let constructor = "tosa::createTosaToLinalgNamed()";
 }

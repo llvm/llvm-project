@@ -34,6 +34,11 @@
     )
 }>
 
+#DSDD = #sparse_tensor.encoding<{
+  map = (i, j, k, l) -> ( i  : dense, j  : compressed, k  : dense, l  : dense)
+}>
+
+
 !Filename = !llvm.ptr<i8>
 
 //
@@ -76,6 +81,13 @@ module {
     %val = sparse_tensor.values %A : tensor<?x?xf64, #BSR> to memref<?xf64>
     %vecv = vector.transfer_read %val[%c0], %f0 : memref<?xf64>, vector<12xf64>
     vector.print %vecv : vector<12xf64>
+
+    // CHECK-NEXT: ( 1, 2, 0, 3, 4, 0, 0, 5, 6, 7, 8, 0 )
+    %t1 = sparse_tensor.reinterpret_map %A : tensor<?x?xf64, #BSR>
+                                          to tensor<?x?x2x2xf64, #DSDD>
+    %vdsdd = sparse_tensor.values %t1 : tensor<?x?x2x2xf64, #DSDD> to memref<?xf64>
+    %vecdsdd = vector.transfer_read %vdsdd[%c0], %f0 : memref<?xf64>, vector<12xf64>
+    vector.print %vecdsdd : vector<12xf64>
 
     // Release the resources.
     bufferization.dealloc_tensor %A: tensor<?x?xf64, #BSR>

@@ -230,3 +230,37 @@ define i1 @uaddo_or_commuted3(i64 %a, i64 %b){
   %cond = or i1 %cond_a, %cond_b
   ret i1 %cond
 }
+
+define i1 @pr69050(i32 %arg, i32 %arg1) {
+; CHECK-LABEL: @pr69050(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[ARG:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ne i32 [[ARG]], -1
+; CHECK-NEXT:    [[AND3:%.*]] = and i1 [[ICMP2]], [[ICMP]]
+; CHECK-NEXT:    ret i1 [[AND3]]
+;
+  %xor = xor i32 %arg, -1
+  %and = and i32 %xor, %arg1
+  %icmp = icmp ne i32 %and, 0
+  %icmp2 = icmp ne i32 %arg, -1
+  %and3 = and i1 %icmp2, %icmp
+  ret i1 %and3
+}
+
+define i1 @pr69091(i32 %arg, i32 %arg1) {
+; CHECK-LABEL: @pr69091(
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[ARG:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[ARG]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ADD]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ne i32 [[MUL]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ICMP]], [[ICMP2]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %icmp = icmp ne i32 %arg, -1
+  %add = add i32 %arg, 1
+  %mul = mul i32 %add, %arg1
+  %icmp2 = icmp ne i32 %mul, 0
+  %or = or i1 %icmp, %icmp2
+  ret i1 %or
+}

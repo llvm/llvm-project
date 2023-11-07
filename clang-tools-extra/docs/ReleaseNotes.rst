@@ -256,7 +256,8 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
-  ignore delegate constructors.
+  ignore delegate constructors and ignore re-assignment for reference or when
+  initialization depend on field that is initialized before.
 
 - Improved :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay>` check
@@ -367,6 +368,10 @@ Changes in existing checks
 - Improved :doc:`readability-braces-around-statements
   <clang-tidy/checks/readability/braces-around-statements>` check to
   ignore false-positive for ``if constexpr`` in lambda expression.
+
+- Improved :doc:`readability-avoid-const-params-in-decls
+  <clang-tidy/checks/readability/avoid-const-params-in-decls>` diagnositics to
+  highlight the const location
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check to

@@ -210,7 +210,8 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
       TypeAttr::get(allocatedType), allocaInst->isUsedWithInAlloca());
   }];
   let builders = [
-    OpBuilder<(ins "Type":$resultType, "Value":$arraySize,
+    DeprecatedOpBuilder<"the usage of typed pointers is deprecated",
+               (ins "Type":$resultType, "Value":$arraySize,
                "unsigned":$alignment),
     [{
       assert(!::llvm::cast<LLVMPointerType>(resultType).isOpaque() &&
@@ -281,10 +282,12 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
                "ValueRange":$indices, CArg<"bool", "false">:$inbounds,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "Type":$resultType, "Value":$basePtr,
+    DeprecatedOpBuilder<"the usage of typed pointers is deprecated",
+               (ins "Type":$resultType, "Value":$basePtr,
                "ValueRange":$indices, CArg<"bool", "false">:$inbounds,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "Type":$resultType, "Value":$basePtr,
+    DeprecatedOpBuilder<"the usage of typed pointers is deprecated",
+               (ins "Type":$resultType, "Value":$basePtr,
                "ArrayRef<GEPArg>":$indices, CArg<"bool", "false">:$inbounds,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
@@ -388,7 +391,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
         getLLVMSyncScope(loadInst));
   }];
   let builders = [
-    OpBuilder<(ins "Value":$addr, CArg<"unsigned", "0">:$alignment,
+    DeprecatedOpBuilder<"the usage of typed pointers is deprecated",
+      (ins "Value":$addr, CArg<"unsigned", "0">:$alignment,
       CArg<"bool", "false">:$isVolatile, CArg<"bool", "false">:$isNonTemporal)>,
     OpBuilder<(ins "Type":$type, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,

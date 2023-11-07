@@ -220,6 +220,10 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::ProcessSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::ProcessAttachInfoSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }

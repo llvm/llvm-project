@@ -8,6 +8,10 @@
 
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Analysis/AliasAnalysis/LocalAliasAnalysis.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Support/LLVM.h"
+#include <memory>
 
 using namespace mlir;
 

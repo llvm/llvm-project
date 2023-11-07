@@ -1240,7 +1240,7 @@ LogicalResult acc::SetOp::verify() {
   while ((currOp = currOp->getParentOp()))
     if (isComputeOperation(currOp))
       return emitOpError("cannot be nested in a compute operation");
-  if (!getDeviceType() && !getDefaultAsync() && !getDeviceNum())
+  if (!getDeviceTypeAttr() && !getDefaultAsync() && !getDeviceNum())
     return emitOpError("at least one default_async, device_num, or device_type "
                        "operand must appear");
   return success();
@@ -1285,8 +1285,7 @@ Value UpdateOp::getDataOperand(unsigned i) {
   unsigned numOptional = getAsyncOperand() ? 1 : 0;
   numOptional += getWaitDevnum() ? 1 : 0;
   numOptional += getIfCond() ? 1 : 0;
-  return getOperand(getWaitOperands().size() + getDeviceTypeOperands().size() +
-                    numOptional + i);
+  return getOperand(getWaitOperands().size() + numOptional + i);
 }
 
 void UpdateOp::getCanonicalizationPatterns(RewritePatternSet &results,

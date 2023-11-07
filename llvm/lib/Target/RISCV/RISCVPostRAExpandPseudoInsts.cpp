@@ -92,52 +92,13 @@ bool RISCVPostRAExpandPseudo::expandMovImm(MachineBasicBlock &MBB,
       Val, MBB.getParent()->getSubtarget().getFeatureBits());
   assert(!Seq.empty());
 
-  Register SrcReg = RISCV::X0;
   Register DstReg = MBBI->getOperand(0).getReg();
   bool DstIsDead = MBBI->getOperand(0).isDead();
   bool Renamable = MBBI->getOperand(0).isRenamable();
-  bool SrcRenamable = false;
-  unsigned Num = 0;
 
-  for (RISCVMatInt::Inst &Inst : Seq) {
-    bool LastItem = ++Num == Seq.size();
-    switch (Inst.getOpndKind()) {
-    case RISCVMatInt::Imm:
-      BuildMI(MBB, MBBI, DL, TII->get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define |
-                              getDeadRegState(DstIsDead && LastItem) |
-                              getRenamableRegState(Renamable))
-          .addImm(Inst.getImm());
-      break;
-    case RISCVMatInt::RegX0:
-      BuildMI(MBB, MBBI, DL, TII->get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define |
-                              getDeadRegState(DstIsDead && LastItem) |
-                              getRenamableRegState(Renamable))
-          .addReg(SrcReg, RegState::Kill | getRenamableRegState(SrcRenamable))
-          .addReg(RISCV::X0);
-      break;
-    case RISCVMatInt::RegReg:
-      BuildMI(MBB, MBBI, DL, TII->get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define |
-                              getDeadRegState(DstIsDead && LastItem) |
-                              getRenamableRegState(Renamable))
-          .addReg(SrcReg, RegState::Kill | getRenamableRegState(SrcRenamable))
-          .addReg(SrcReg, RegState::Kill | getRenamableRegState(SrcRenamable));
-      break;
-    case RISCVMatInt::RegImm:
-      BuildMI(MBB, MBBI, DL, TII->get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define |
-                              getDeadRegState(DstIsDead && LastItem) |
-                              getRenamableRegState(Renamable))
-          .addReg(SrcReg, RegState::Kill | getRenamableRegState(SrcRenamable))
-          .addImm(Inst.getImm());
-      break;
-    }
-    // Only the first instruction has X0 as its source.
-    SrcReg = DstReg;
-    SrcRenamable = Renamable;
-  }
+  TII->movImm(MBB, MBBI, DL, DstReg, Val, MachineInstr::NoFlags, Renamable,
+              DstIsDead);
+
   MBBI->eraseFromParent();
   return true;
 }

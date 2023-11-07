@@ -8,11 +8,10 @@
 
 #include "mlir/Dialect/Tensor/Transforms/SubsetInsertionOpInterfaceImpl.h"
 
-#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Interfaces/SubsetInsertionOpInterface.h"
 
 using namespace mlir;
-using namespace mlir::bufferization;
 using namespace mlir::tensor;
 
 namespace {

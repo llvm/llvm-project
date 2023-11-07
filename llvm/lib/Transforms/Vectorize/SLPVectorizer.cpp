@@ -7580,8 +7580,8 @@ public:
     auto *MaskVecTy =
         FixedVectorType::get(E1.Scalars.front()->getType(), Mask.size());
     unsigned NumParts = TTI.getNumberOfParts(MaskVecTy);
-    assert(NumParts > 0 && NumParts < Mask.size() &&
-           "Expected positive number of registers.");
+    if (NumParts == 0 || NumParts >= Mask.size())
+      NumParts = 1;
     unsigned SliceSize = Mask.size() / NumParts;
     const auto *It =
         find_if(Mask, [](int Idx) { return Idx != PoisonMaskElem; });
@@ -7598,8 +7598,8 @@ public:
     auto *MaskVecTy =
         FixedVectorType::get(E1.Scalars.front()->getType(), Mask.size());
     unsigned NumParts = TTI.getNumberOfParts(MaskVecTy);
-    assert(NumParts > 0 && NumParts < Mask.size() &&
-           "Expected positive number of registers.");
+    if (NumParts == 0 || NumParts >= Mask.size())
+      NumParts = 1;
     unsigned SliceSize = Mask.size() / NumParts;
     const auto *It =
         find_if(Mask, [](int Idx) { return Idx != PoisonMaskElem; });
@@ -13667,10 +13667,12 @@ class HorizontalReduction {
   static Value *createOp(IRBuilder<> &Builder, RecurKind RdxKind, Value *LHS,
                          Value *RHS, const Twine &Name,
                          const ReductionOpsListType &ReductionOps) {
-    bool UseSelect = ReductionOps.size() == 2 ||
-                     // Logical or/and.
-                     (ReductionOps.size() == 1 &&
-                      isa<SelectInst>(ReductionOps.front().front()));
+    bool UseSelect =
+        ReductionOps.size() == 2 ||
+        // Logical or/and.
+        (ReductionOps.size() == 1 && any_of(ReductionOps.front(), [](Value *V) {
+           return isa<SelectInst>(V);
+         }));
     assert((!UseSelect || ReductionOps.size() != 2 ||
             isa<SelectInst>(ReductionOps[1][0])) &&
            "Expected cmp + select pairs for reduction");
@@ -14104,6 +14106,16 @@ public:
         // Update the final value in the reduction.
         Builder.SetCurrentDebugLocation(
             cast<Instruction>(ReductionOps.front().front())->getDebugLoc());
+        if ((isa<PoisonValue>(VectorizedTree) && !isa<PoisonValue>(Res)) ||
+            (isGuaranteedNotToBePoison(Res) &&
+             !isGuaranteedNotToBePoison(VectorizedTree))) {
+          auto It = ReducedValsToOps.find(Res);
+          if (It != ReducedValsToOps.end() &&
+              any_of(It->getSecond(),
+                     [](Instruction *I) { return isBoolLogicOp(I); }))
+            std::swap(VectorizedTree, Res);
+        }
+
         return createOp(Builder, RdxKind, VectorizedTree, Res, "op.rdx",
                         ReductionOps);
       }

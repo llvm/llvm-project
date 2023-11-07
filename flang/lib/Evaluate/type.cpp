@@ -240,6 +240,11 @@ bool DynamicType::IsTypelessIntrinsicArgument() const {
   return category_ == TypeCategory::Integer && kind_ == TypelessKind;
 }
 
+bool DynamicType::IsLengthlessIntrinsicType() const {
+  return common::IsNumericTypeCategory(category_) ||
+      category_ == TypeCategory::Logical;
+}
+
 const semantics::DerivedTypeSpec *GetDerivedTypeSpec(
     const std::optional<DynamicType> &type) {
   return type ? GetDerivedTypeSpec(*type) : nullptr;

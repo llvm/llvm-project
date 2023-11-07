@@ -303,10 +303,13 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
   let builders = [
     AttrBuilder<(ins "ArrayRef<::mlir::sparse_tensor::DimLevelType>":$lvlTypes,
-                     "AffineMap":$dimToLvl,
-                     "AffineMap":$lvlToDim,
-                     "unsigned":$posWidth,
-                     "unsigned":$crdWidth), [{
+                     CArg<"AffineMap", "{}">:$dimToLvl,
+                     CArg<"AffineMap", "{}">:$lvlToDim,
+                     CArg<"unsigned", "0">:$posWidth,
+                     CArg<"unsigned", "0">:$crdWidth), [{
+      if (!dimToLvl) {
+        dimToLvl = ::mlir::AffineMap::getMultiDimIdentityMap(lvlTypes.size(), $_ctxt);
+      }
       if (!lvlToDim) {
         lvlToDim = ::mlir::sparse_tensor::inferLvlToDim(dimToLvl, $_ctxt);
       }
@@ -430,8 +433,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     std::optional<uint64_t> getStaticLvlSliceStride(::mlir::sparse_tensor::Level lvl) const;
 
     //
-    // Helper function to build IR related to the encoding.
+    // Helper function to translate between level/dimension space.
     //
+    SmallVector<int64_t> tranlateShape(::mlir::ArrayRef<int64_t> srcShape, ::mlir::sparse_tensor::CrdTransDirectionKind) const;
     ValueRange translateCrds(::mlir::OpBuilder &builder, ::mlir::Location loc, ::mlir::ValueRange crds, ::mlir::sparse_tensor::CrdTransDirectionKind) const;
 
     //

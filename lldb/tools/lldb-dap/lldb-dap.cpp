@@ -3591,7 +3591,7 @@ EXAMPLES:
   debugger to attach to the process.
 
     lldb-dap -g
-  )___";
+)___";
   llvm::outs() << examples;
 }
 

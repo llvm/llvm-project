@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
+#include "mlir/Interfaces/SubsetInsertionOpInterface.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 
-#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.cpp.inc"
+#include "mlir/Interfaces/SubsetInsertionOpInterface.cpp.inc"
 
 using namespace mlir;
 
-OpOperand &bufferization::detail::defaultGetDestinationOperand(Operation *op) {
+OpOperand &detail::defaultGetDestinationOperand(Operation *op) {
   auto dstOp = dyn_cast<DestinationStyleOpInterface>(op);
   assert(dstOp && "getDestination must be implemented for non-DPS ops");
   assert(

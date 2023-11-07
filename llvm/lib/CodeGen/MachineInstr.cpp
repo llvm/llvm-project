@@ -138,6 +138,12 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
   setFlags(MI.Flags);
 }
 
+void MachineInstr::setDesc(const MCInstrDesc &TID) {
+  if (getParent())
+    getMF()->handleChangeDesc(*this, TID);
+  MCID = &TID;
+}
+
 void MachineInstr::moveBefore(MachineInstr *MovePos) {
   MovePos->getParent()->splice(MovePos, getParent(), getIterator());
 }

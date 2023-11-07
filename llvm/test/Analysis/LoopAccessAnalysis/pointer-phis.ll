@@ -202,7 +202,7 @@ exit:                                             ; preds = %loop.latch
 define i32 @store_with_pointer_phi_incoming_phi(ptr %A, ptr %B, ptr %C, i1 %c.0, i1 %c.1) {
 ; CHECK-LABEL: 'store_with_pointer_phi_incoming_phi'
 ; CHECK-NEXT:  loop.header:
-; CHECK-NEXT:    Report: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:    Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT:    Unknown data dependence.
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:      Unknown:
@@ -279,7 +279,7 @@ exit:                                             ; preds = %loop.latch
 define i32 @store_with_pointer_phi_incoming_phi_irreducible_cycle(ptr %A, ptr %B, ptr %C, i1 %c.0, i1 %c.1) {
 ; CHECK-LABEL: 'store_with_pointer_phi_incoming_phi_irreducible_cycle'
 ; CHECK-NEXT:  loop.header:
-; CHECK-NEXT:    Report: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:    Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT:    Unknown data dependence.
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:      Unknown:
@@ -417,7 +417,7 @@ exit:                                             ; preds = %loop.latch
 define void @phi_load_store_memdep_check(i1 %c, ptr %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: Loop access info in function 'phi_load_store_memdep_check':
 ; CHECK-NEXT:   for.body:
-; CHECK-NEXT:    Report: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:    Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT:    Unknown data dependence.
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:      Unknown:

@@ -411,8 +411,7 @@ private:
 /// generic kernel class.
 struct AMDGPUKernelTy : public GenericKernelTy {
   /// Create an AMDGPU kernel with a name and an execution mode.
-  AMDGPUKernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode)
-      : GenericKernelTy(Name, ExecutionMode) {}
+  AMDGPUKernelTy(const char *Name) : GenericKernelTy(Name) {}
 
   /// Initialize the AMDGPU kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -650,8 +649,8 @@ struct AMDGPUQueueTy {
     hsa_kernel_dispatch_packet_t *Packet = acquirePacket(PacketId);
     assert(Packet && "Invalid packet");
 
-    // The header of the packet is written in the last moment.
-    Packet->setup = UINT16_C(1) << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+    // The first 32 bits of the packet are written after the other fields
+    uint16_t Setup = UINT16_C(1) << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
     Packet->workgroup_size_x = NumThreads;
     Packet->workgroup_size_y = 1;
     Packet->workgroup_size_z = 1;
@@ -667,7 +666,7 @@ struct AMDGPUQueueTy {
     Packet->completion_signal = OutputSignal->get();
 
     // Publish the packet. Do not modify the packet after this point.
-    publishKernelPacket(PacketId, Packet);
+    publishKernelPacket(PacketId, Setup, Packet);
 
     return Plugin::success();
   }
@@ -744,17 +743,17 @@ private:
   /// Publish the kernel packet so that the HSA runtime can start processing
   /// the kernel launch. Do not modify the packet once this function is called.
   /// Assumes the queue lock is acquired.
-  void publishKernelPacket(uint64_t PacketId,
+  void publishKernelPacket(uint64_t PacketId, uint16_t Setup,
                            hsa_kernel_dispatch_packet_t *Packet) {
     uint32_t *PacketPtr = reinterpret_cast<uint32_t *>(Packet);
 
-    uint16_t Setup = Packet->setup;
     uint16_t Header = HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE;
     Header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
     Header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
 
     // Publish the packet. Do not modify the package after this point.
-    __atomic_store_n(PacketPtr, Header | (Setup << 16), __ATOMIC_RELEASE);
+    uint32_t HeaderWord = Header | (Setup << 16u);
+    __atomic_store_n(PacketPtr, HeaderWord, __ATOMIC_RELEASE);
 
     // Signal the doorbell about the published packet.
     hsa_signal_store_relaxed(Queue->doorbell_signal, PacketId);
@@ -766,14 +765,14 @@ private:
   void publishBarrierPacket(uint64_t PacketId,
                             hsa_barrier_and_packet_t *Packet) {
     uint32_t *PacketPtr = reinterpret_cast<uint32_t *>(Packet);
-
     uint16_t Setup = 0;
     uint16_t Header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
     Header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
     Header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
 
     // Publish the packet. Do not modify the package after this point.
-    __atomic_store_n(PacketPtr, Header | (Setup << 16), __ATOMIC_RELEASE);
+    uint32_t HeaderWord = Header | (Setup << 16u);
+    __atomic_store_n(PacketPtr, HeaderWord, __ATOMIC_RELEASE);
 
     // Signal the doorbell about the published packet.
     hsa_signal_store_relaxed(Queue->doorbell_signal, PacketId);
@@ -1978,14 +1977,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// Allocate and construct an AMDGPU kernel.
   Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry,
-                  OMPTgtExecModeFlags ExecMode) override {
+  constructKernel(const __tgt_offload_entry &KernelEntry) override {
     // Allocate and construct the AMDGPU kernel.
     AMDGPUKernelTy *AMDGPUKernel = Plugin::get().allocate<AMDGPUKernelTy>();
     if (!AMDGPUKernel)
       return Plugin::error("Failed to allocate memory for AMDGPU kernel");
 
-    new (AMDGPUKernel) AMDGPUKernelTy(KernelEntry.name, ExecMode);
+    new (AMDGPUKernel) AMDGPUKernelTy(KernelEntry.name);
 
     return *AMDGPUKernel;
   }
@@ -2580,6 +2578,16 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         return Err;
     DeviceMemoryPoolSize = Value;
     return Plugin::success();
+  }
+  Error getDeviceMemorySize(uint64_t &Value) override {
+    for (AMDGPUMemoryPoolTy *Pool : AllMemoryPools) {
+      if (Pool->isGlobal()) {
+        hsa_status_t Status =
+            Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_SIZE, Value);
+        return Plugin::check(Status, "Error in getting device memory size: %s");
+      }
+    }
+    return Plugin::error("getDeviceMemorySize:: no global pool");
   }
 
   /// AMDGPU-specific function to get device attributes.

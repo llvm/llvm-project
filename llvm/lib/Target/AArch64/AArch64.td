@@ -514,6 +514,9 @@ def FeatureSME2 : SubtargetFeature<"sme2", "HasSME2", "true",
 def FeatureSME2p1 : SubtargetFeature<"sme2p1", "HasSME2p1", "true",
   "Enable Scalable Matrix Extension 2.1 (FEAT_SME2p1) instructions", [FeatureSME2]>;
 
+def FeatureFAMINMAX: SubtargetFeature<"faminmax", "HasFAMINMAX", "true",
+   "Enable FAMIN and FAMAX instructions (FEAT_FAMINMAX)">;
+
 def FeatureAppleA7SysReg  : SubtargetFeature<"apple-a7-sysreg", "HasAppleA7SysReg", "true",
   "Apple A7 (the CPU formerly known as Cyclone)">;
 

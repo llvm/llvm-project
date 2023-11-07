@@ -5179,7 +5179,7 @@ public:
 
   Options *GetOptions() override { return &m_option_group; }
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
     if (argc == 0) {
       ProcessGDBRemote *process =
@@ -5201,14 +5201,13 @@ public:
             num_packets, max_send, max_recv, k_recv_amount, json,
             output_stream_sp ? *output_stream_sp : result.GetOutputStream());
         result.SetStatus(eReturnStatusSuccessFinishResult);
-        return true;
+        return;
       }
     } else {
       result.AppendErrorWithFormat("'%s' takes no arguments",
                                    m_cmd_name.c_str());
     }
     result.SetStatus(eReturnStatusFailed);
-    return false;
   }
 
 protected:
@@ -5228,16 +5227,15 @@ public:
 
   ~CommandObjectProcessGDBRemotePacketHistory() override = default;
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     ProcessGDBRemote *process =
         (ProcessGDBRemote *)m_interpreter.GetExecutionContext().GetProcessPtr();
     if (process) {
       process->DumpPluginHistory(result.GetOutputStream());
       result.SetStatus(eReturnStatusSuccessFinishResult);
-      return true;
+      return;
     }
     result.SetStatus(eReturnStatusFailed);
-    return false;
   }
 };
 
@@ -5255,14 +5253,14 @@ public:
 
   ~CommandObjectProcessGDBRemotePacketXferSize() override = default;
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
     if (argc == 0) {
       result.AppendErrorWithFormat("'%s' takes an argument to specify the max "
                                    "amount to be transferred when "
                                    "reading/writing",
                                    m_cmd_name.c_str());
-      return false;
+      return;
     }
 
     ProcessGDBRemote *process =
@@ -5274,11 +5272,10 @@ public:
       if (errno == 0 && user_specified_max != 0) {
         process->SetUserSpecifiedMaxMemoryTransferSize(user_specified_max);
         result.SetStatus(eReturnStatusSuccessFinishResult);
-        return true;
+        return;
       }
     }
     result.SetStatus(eReturnStatusFailed);
-    return false;
   }
 };
 
@@ -5299,13 +5296,13 @@ public:
 
   ~CommandObjectProcessGDBRemotePacketSend() override = default;
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
     if (argc == 0) {
       result.AppendErrorWithFormat(
           "'%s' takes a one or more packet content arguments",
           m_cmd_name.c_str());
-      return false;
+      return;
     }
 
     ProcessGDBRemote *process =
@@ -5331,7 +5328,6 @@ public:
           output_strm.Printf("response: %s\n", response.GetStringRef().data());
       }
     }
-    return true;
   }
 };
 
@@ -5348,12 +5344,12 @@ public:
 
   ~CommandObjectProcessGDBRemotePacketMonitor() override = default;
 
-  bool DoExecute(llvm::StringRef command,
+  void DoExecute(llvm::StringRef command,
                  CommandReturnObject &result) override {
     if (command.empty()) {
       result.AppendErrorWithFormat("'%s' takes a command string argument",
                                    m_cmd_name.c_str());
-      return false;
+      return;
     }
 
     ProcessGDBRemote *process =
@@ -5377,7 +5373,6 @@ public:
       else
         output_strm.Printf("response: %s\n", response.GetStringRef().data());
     }
-    return true;
   }
 };
 
