@@ -511,8 +511,7 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
       if (!writeOp.getPermutationMap().isMinorIdentity())
         return failure();
       maskType =
-          getDistributedType(writeOp.getMask().getType().cast<VectorType>(),
-                             map, warpOp.getWarpSize());
+          getDistributedType(writeOp.getMaskType(), map, warpOp.getWarpSize());
     }
 
     // 3. clone the write into a new WarpExecuteOnLane0Op to separate it from
