@@ -556,15 +556,15 @@ multiclass F2<string OpcStr, SDNode OpNode> {
 }
 
 multiclass F2_Support_Half<string OpcStr, SDNode OpNode> {
-   def bf16 :     NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a),
+   def bf16 :      NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a),
                            !strconcat(OpcStr, ".bf16 \t$dst, $a;"),
                            [(set Int16Regs:$dst, (OpNode (bf16 Int16Regs:$a)))]>,
                            Requires<[hasSM<80>, hasPTX<70>]>;
-   def bf16x2 :     NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a),
+   def bf16x2 :    NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a),
                            !strconcat(OpcStr, ".v2bf16 \t$dst, $a;"),
                            [(set Int32Regs:$dst, (OpNode (v2bf16 Int32Regs:$a)))]>,
                            Requires<[hasSM<80>, hasPTX<70>]>;
-   def f16_ftz : NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a),
+   def f16_ftz :   NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a),
                            !strconcat(OpcStr, ".ftz.f16 \t$dst, $a;"),
                            [(set Int16Regs:$dst, (OpNode (f16 Int16Regs:$a)))]>,
                            Requires<[hasSM<53>, hasPTX<65>, doF32FTZ]>;
@@ -572,7 +572,7 @@ multiclass F2_Support_Half<string OpcStr, SDNode OpNode> {
                            !strconcat(OpcStr, ".ftz.f16x2 \t$dst, $a;"),
                            [(set Int32Regs:$dst, (OpNode (v2f16 Int32Regs:$a)))]>,
                            Requires<[hasSM<53>, hasPTX<65>, doF32FTZ]>;
-   def f16 :     NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a),
+   def f16 :       NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a),
                            !strconcat(OpcStr, ".f16 \t$dst, $a;"),
                            [(set Int16Regs:$dst, (OpNode (f16 Int16Regs:$a)))]>,
                            Requires<[hasSM<53>, hasPTX<65>]>;
