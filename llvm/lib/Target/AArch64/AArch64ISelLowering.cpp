@@ -4855,9 +4855,9 @@ SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
       Remainder = DAG.getTargetConstant(Imm, DL, MVT::i32);
       NeedsAdd = false;
     } else {
-      Remainder = DAG.getTargetConstant(Imm % 15, DL, MVT::i32);
+      Remainder = DAG.getTargetConstant(Imm % 16, DL, MVT::i32);
       NeedsAdd = true;
-      VecNum = DAG.getConstant(Imm - (Imm % 15), DL, MVT::i32);
+      VecNum = DAG.getConstant(Imm - (Imm % 16), DL, MVT::i32);
     }
   } else if (VecNum.getOpcode() == ISD::ADD) {
     // If the vnum is an add, we can fold that add into the instruction if the

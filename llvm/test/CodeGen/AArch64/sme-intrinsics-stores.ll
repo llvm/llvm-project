@@ -326,18 +326,17 @@ define void @str_with_off_16imm(ptr %ptr) {
 ; CHECK-LABEL: str_with_off_16imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mov w12, #30 // =0x1e
-; CHECK-NEXT:    sub x9, x0, x8
-; CHECK-NEXT:    add x8, x9, x8, lsl #4
+; CHECK-NEXT:    mov w12, #31 // =0x1f
+; CHECK-NEXT:    add x8, x0, x8, lsl #4
 ; CHECK-NEXT:    add x8, x8, #15
-; CHECK-NEXT:    str za[w12, 1], [x8, #1, mul vl]
+; CHECK-NEXT:    str za[w12, 0], [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr i8, ptr %ptr, i64 15
   call void @llvm.aarch64.sme.str(i32 15, ptr %base, i32 16)
   ret void;
 }
 
-define void @str_with_off_many_imm(i32 %tile_slice, ptr %ptr, i64 %vnum) {
+define void @str_with_off_many_imm(i32 %tile_slice, ptr %ptr) {
 ; CHECK-LABEL: str_with_off_many_imm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w12, w0
@@ -351,6 +350,85 @@ entry:
   tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 2)
   tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 3)
   tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 4)
+  ret void
+}
+
+define void @str_with_off_many_imm_15_18(i32 %tile_slice, ptr %ptr) {
+; CHECK-LABEL: str_with_off_many_imm_15_18:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    mov w12, w0
+; CHECK-NEXT:    add x8, x1, x8, lsl #4
+; CHECK-NEXT:    str za[w12, 15], [x1, #15, mul vl]
+; CHECK-NEXT:    add w12, w0, #16
+; CHECK-NEXT:    str za[w12, 0], [x8]
+; CHECK-NEXT:    str za[w12, 1], [x8, #1, mul vl]
+; CHECK-NEXT:    str za[w12, 2], [x8, #2, mul vl]
+; CHECK-NEXT:    ret
+entry:
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 15)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 16)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 17)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 18)
+  ret void
+}
+
+define void @str_with_off_many_imm_16_19(i32 %tile_slice, ptr %ptr) {
+; CHECK-LABEL: str_with_off_many_imm_16_19:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    add w12, w0, #16
+; CHECK-NEXT:    add x8, x1, x8, lsl #4
+; CHECK-NEXT:    str za[w12, 0], [x8]
+; CHECK-NEXT:    str za[w12, 1], [x8, #1, mul vl]
+; CHECK-NEXT:    str za[w12, 2], [x8, #2, mul vl]
+; CHECK-NEXT:    str za[w12, 3], [x8, #3, mul vl]
+; CHECK-NEXT:    ret
+entry:
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 16)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 17)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 18)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 19)
+  ret void
+}
+
+define void @str_with_off_many_imm_31_34(i32 %tile_slice, ptr %ptr) {
+; CHECK-LABEL: str_with_off_many_imm_31_34:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    add w12, w0, #16
+; CHECK-NEXT:    add w13, w0, #32
+; CHECK-NEXT:    add x9, x1, x8, lsl #4
+; CHECK-NEXT:    add x8, x1, x8, lsl #5
+; CHECK-NEXT:    str za[w12, 15], [x9, #15, mul vl]
+; CHECK-NEXT:    str za[w13, 0], [x8]
+; CHECK-NEXT:    str za[w13, 1], [x8, #1, mul vl]
+; CHECK-NEXT:    str za[w13, 2], [x8, #2, mul vl]
+; CHECK-NEXT:    ret
+entry:
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 31)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 32)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 33)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 34)
+  ret void
+}
+
+define void @str_with_off_many_imm_32_35(i32 %tile_slice, ptr %ptr) {
+; CHECK-LABEL: str_with_off_many_imm_32_35:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    add w12, w0, #32
+; CHECK-NEXT:    add x8, x1, x8, lsl #5
+; CHECK-NEXT:    str za[w12, 0], [x8]
+; CHECK-NEXT:    str za[w12, 1], [x8, #1, mul vl]
+; CHECK-NEXT:    str za[w12, 2], [x8, #2, mul vl]
+; CHECK-NEXT:    str za[w12, 3], [x8, #3, mul vl]
+; CHECK-NEXT:    ret
+entry:
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 32)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 33)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 34)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 35)
   ret void
 }
 
@@ -384,13 +462,13 @@ define void @test_sink_tile0_offset_operand(<vscale x 4 x i1> %pg, ptr %src, i32
 ; CHECK-LABEL: test_sink_tile0_offset_operand:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w12, w1
-; CHECK-NEXT:  .LBB19_1: // %for.body
+; CHECK-NEXT:  .LBB23_1: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    st1w {za0h.s[w12, 0]}, p0, [x0]
 ; CHECK-NEXT:    subs w2, w2, #1
 ; CHECK-NEXT:    st1w {za0h.s[w12, 1]}, p0, [x0]
 ; CHECK-NEXT:    st1w {za0h.s[w12, 2]}, p0, [x0]
-; CHECK-NEXT:    b.ne .LBB19_1
+; CHECK-NEXT:    b.ne .LBB23_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
 entry:
