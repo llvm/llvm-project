@@ -148,6 +148,7 @@ class MicrosoftMangleContextImpl : public MicrosoftMangleContext {
   llvm::DenseMap<GlobalDecl, unsigned> SEHFilterIds;
   llvm::DenseMap<GlobalDecl, unsigned> SEHFinallyIds;
   SmallString<16> AnonymousNamespaceHash;
+  bool IsLocalVFTAliasReq = false;
 
 public:
   MicrosoftMangleContextImpl(ASTContext &Context, DiagnosticsEngine &Diags,
@@ -165,7 +166,8 @@ public:
                           raw_ostream &) override;
   void mangleCXXVFTable(const CXXRecordDecl *Derived,
                         ArrayRef<const CXXRecordDecl *> BasePath,
-                        raw_ostream &Out) override;
+                        raw_ostream &Out,
+                        bool IsLocalVFTAliaesReq = false) override;
   void mangleCXXVBTable(const CXXRecordDecl *Derived,
                         ArrayRef<const CXXRecordDecl *> BasePath,
                         raw_ostream &Out) override;
@@ -211,6 +213,10 @@ public:
   void mangleSEHFinallyBlock(GlobalDecl EnclosingDecl,
                              raw_ostream &Out) override;
   void mangleStringLiteral(const StringLiteral *SL, raw_ostream &Out) override;
+  void setIsLocalVFTAliasReq(bool isLocalVFTAliasReq) {
+    IsLocalVFTAliasReq = isLocalVFTAliasReq;
+  }
+  bool getIsLocalVFTAliasReq() { return IsLocalVFTAliasReq; }
   bool getNextDiscriminator(const NamedDecl *ND, unsigned &disc) {
     const DeclContext *DC = getEffectiveDeclContext(ND);
     if (!DC->isFunctionOrMethod())
@@ -1106,6 +1112,10 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
       if (const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(TD)) {
         if (Record->isLambda()) {
           llvm::SmallString<10> Name("<lambda_");
+          if (Context.getIsLocalVFTAliasReq()) {
+            Name += Context.getAnonymousNamespaceHash();
+            Name += "_";
+          }
 
           Decl *LambdaContextDecl = Record->getLambdaContextDecl();
           unsigned LambdaManglingNumber = Record->getLambdaManglingNumber();
@@ -3634,11 +3644,12 @@ void MicrosoftMangleContextImpl::mangleCXXDtorThunk(
 
 void MicrosoftMangleContextImpl::mangleCXXVFTable(
     const CXXRecordDecl *Derived, ArrayRef<const CXXRecordDecl *> BasePath,
-    raw_ostream &Out) {
+    raw_ostream &Out, bool IsLocalVFTAliasReq) {
   // <mangled-name> ::= ?_7 <class-name> <storage-class>
   //                    <cvr-qualifiers> [<name>] @
   // NOTE: <cvr-qualifiers> here is always 'B' (const). <storage-class>
   // is always '6' for vftables.
+  setIsLocalVFTAliasReq(IsLocalVFTAliasReq);
   msvc_hashing_ostream MHO(Out);
   MicrosoftCXXNameMangler Mangler(*this, MHO);
   if (Derived->hasAttr<DLLImportAttr>())
@@ -3650,6 +3661,7 @@ void MicrosoftMangleContextImpl::mangleCXXVFTable(
   for (const CXXRecordDecl *RD : BasePath)
     Mangler.mangleName(RD);
   Mangler.getStream() << '@';
+  setIsLocalVFTAliasReq(false);
 }
 
 void MicrosoftMangleContextImpl::mangleCXXVBTable(

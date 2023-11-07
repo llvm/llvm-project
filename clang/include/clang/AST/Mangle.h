@@ -239,7 +239,8 @@ public:
   /// them correctly.
   virtual void mangleCXXVFTable(const CXXRecordDecl *Derived,
                                 ArrayRef<const CXXRecordDecl *> BasePath,
-                                raw_ostream &Out) = 0;
+                                raw_ostream &Out,
+                                bool IsLocalVFTAliasReq = false) = 0;
 
   /// Mangle vbtable symbols.  Only a subset of the bases along the path
   /// to the vbtable are included in the name.  It's up to the caller to pick
