@@ -162,10 +162,10 @@ private:
     if (Err)
       report_fatal_error("Error retrieving data for target pointer");
 
-    // Get the pre-record memory filename
+    // Get the pre-record memory filename.
     SmallString<128> InputFilename = {Filename.split('.').first, ".memory"};
 
-    // Read the pre-record memorydump
+    // Read the pre-record memorydump.
     auto InputFileBuffer = MemoryBuffer::getFileOrSTDIN(InputFilename);
     if (std::error_code EC = InputFileBuffer.getError())
       report_fatal_error("Error reading pre-record device memory");
@@ -180,32 +180,33 @@ private:
       report_fatal_error("Error dumping memory to file " + Filename + " :" +
                          EC.message());
 
-    // Get current memory contents
+    // Get current memory contents.
     StringRef DeviceMemoryContents(DeviceMemoryMB.get()->getBuffer().data(),
                                    DeviceMemoryMB.get()->getBuffer().size());
 
-    // Loop over all memory locations
-    // If mismatch is found create a new diff line
-    // Diff format: location, size, differences
+    // Loop over all memory locations.
+    // If mismatch is found, create a new diff line.
+    // Diff format: location, size, differences.
     for (size_t I = 0; I < MemorySize; ++I) {
       // If buffers are same, continue
       if (InputBufferContents[I] == DeviceMemoryContents[I])
         continue;
 
-      OS << I << " "; // Marks the start offset
+      // Mark the start offset
+      OS << I << " ";
 
       SmallVector<uint8_t, 128> Modified;
       Modified.push_back(DeviceMemoryContents[I]);
 
       for (I += 1; I < MemorySize; ++I) {
-        // If no more mismatch, break out of the loop
+        // If no more mismatch is found, break out of the loop.
         if (InputBufferContents[I] == DeviceMemoryContents[I])
           break;
-        // If mismatch continues - push diff to Modified
+        // If mismatch continues - push diff to Modified.
         Modified.push_back(DeviceMemoryContents[I]);
       }
-      OS << Modified.size()
-         << " "; // Marks the length of the mismatching sequence
+      // Mark the length of the mismatching sequence.
+      OS << Modified.size() << " ";
       for (const auto &Value : Modified)
         OS << Value << " ";
       OS << "\n";
