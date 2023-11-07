@@ -200,12 +200,12 @@ bool ParsedAttr::existsInTarget(const TargetInfo &Target) const {
   // function just returns true.
   bool HasSpelling = K != IgnoredAttribute && K != UnknownAttribute &&
                      K != NoSemaHandlerAttribute;
-  bool TargetSpecificSpellingExists = !HasSpelling ||
-    getInfo().spellingExistsInTarget(Target, getAttributeSpellingListIndex());
+  bool TargetSpecificSpellingExists =
+      !HasSpelling ||
+      getInfo().spellingExistsInTarget(Target, getAttributeSpellingListIndex());
 
   return getInfo().existsInTarget(Target) && TargetSpecificSpellingExists;
 }
-
 
 bool ParsedAttr::isKnownToGCC() const { return getInfo().IsKnownToGCC; }
 
