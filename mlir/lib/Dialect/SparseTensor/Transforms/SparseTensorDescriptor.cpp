@@ -65,7 +65,7 @@ SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
     if (!getSparseTensorEncoding(tp))
       // Not a sparse tensor.
       return std::nullopt;
-    // Sparse compiler knows how to cancel out these casts.
+    // Sparsifier knows how to cancel out these casts.
     return genTuple(builder, loc, tp, inputs);
   });
 }
