@@ -172,3 +172,24 @@ class TestCase(TestBase):
         self.expect_expr(
             "ClassWithEnumAlias::enum_alias_alias", result_value="scoped_enum_case1"
         )
+
+    def test_shadowed_static_inline_members(self):
+        """Tests that the expression evaluator and SBAPI can both
+        correctly determine the requested inline static variable
+        in the presence of multiple variables of the same name."""
+
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "bar")
+
+        self.check_global_var("ns::Foo::mem", "const int", "10")
+
+        self.expect_expr("mem", result_value="10")
+        self.expect_expr("Foo::mem", result_value="10")
+        self.expect_expr("ns::Foo::mem", result_value="10")
+        self.expect_expr("::Foo::mem", result_value="-29")
+
+    @expectedFailureAll(bugnumber="target var doesn't honour global namespace")
+    def test_shadowed_static_inline_members_xfail(self):
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "bar")
+        self.check_global_var("::Foo::mem", "const int", "-29")
