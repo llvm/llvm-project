@@ -863,7 +863,7 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     outputShape.resize(multiples.size(), ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
     return success();
-  } else if (inputShape.getRank() != multiples.size())
+  } else if (static_cast<size_t>(inputShape.getRank()) != multiples.size())
     return failure();
 
   // Any non dynamic dimension can be multiplied to a known size.
@@ -885,12 +885,13 @@ LogicalResult tosa::TileOp::verify() {
   auto multiples = getMultiples();
 
   if (inputType.hasRank()) {
-    if (inputType.getRank() != multiples.size())
+    if (static_cast<size_t>(inputType.getRank()) != multiples.size())
       return emitOpError("expect 'multiples' array to have length ")
              << inputType.getRank() << " but got " << multiples.size() << ".";
     if (outputType.hasRank() && inputType.getRank() != outputType.getRank())
       return emitOpError("expect same input and output tensor rank.");
-  } else if (outputType.hasRank() && outputType.getRank() != multiples.size())
+  } else if (outputType.hasRank() &&
+             static_cast<size_t>(outputType.getRank()) != multiples.size())
     return emitOpError("expect 'multiples' array to have length ")
            << outputType.getRank() << " but got " << multiples.size() << ".";
 
