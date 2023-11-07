@@ -4306,7 +4306,7 @@ BinaryFunction::translateInputToOutputRange(DebugAddressRange InRange) const {
     // block boundaries.
     auto translateBlockOffset = [&](const uint64_t Offset) {
       const uint64_t OutAddress = BB.getOutputAddressRange().first + Offset;
-      return OutAddress;
+      return std::min(OutAddress, BB.getOutputAddressRange().second);
     };
 
     uint64_t OutLowPC = BB.getOutputAddressRange().first;
