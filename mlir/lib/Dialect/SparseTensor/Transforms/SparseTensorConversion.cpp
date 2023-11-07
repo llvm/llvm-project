@@ -380,14 +380,13 @@ public:
   LogicalResult
   matchAndRewrite(bufferization::AllocTensorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (op.getCopy())
-      return rewriter.notifyMatchFailure(op,
-                                         "sparse tensor copy not implemented");
-    Location loc = op.getLoc();
     const auto stt = getSparseTensorType(op);
     if (!stt.hasEncoding())
       return failure();
+    if (op.getCopy())
+      return rewriter.notifyMatchFailure(op, "alloc copy not implemented");
     // Gather all dimension sizes as SSA values.
+    Location loc = op.getLoc();
     const Dimension dimRank = stt.getDimRank();
     SmallVector<Value> dimSizes;
     dimSizes.reserve(dimRank);
