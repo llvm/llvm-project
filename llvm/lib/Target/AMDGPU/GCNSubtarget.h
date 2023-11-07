@@ -579,9 +579,7 @@ public:
     return EnableCuMode;
   }
 
-  bool isPreciseMemoryEnabled() const {
-    return EnablePreciseMemory;
-  }
+  bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
 
   bool hasFlatAddressSpace() const {
     return FlatAddressSpace;
