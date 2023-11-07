@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,pedantic,override,reorder -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected,pedantic,override,reorder -Wno-c++20-designator -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,pedantic -Werror=c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
+// RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,pedantic -Werror=c99-designator -Wno-reorder-init-list -Wno-initializer-overrides -Werror=nested-anon-types -Werror=gnu-anonymous-struct
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,reorder -Wno-c99-designator -Werror=reorder-init-list -Wno-initializer-overrides
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,override -Wno-c99-designator -Wno-reorder-init-list -Werror=initializer-overrides
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected -Wno-c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
-// RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,wmissing -Wmissing-field-initializers -Wno-c99-designator -Wno-reorder-init-list -Wno-initializer-overrides -D NON_PEDANTIC
+// RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,wmissing -Wmissing-field-initializers -Wno-c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
 
 
 namespace class_with_ctor {
@@ -284,23 +284,25 @@ void foo() {
   B bb = {1}; // wmissing-warning {{missing field 'b' initializer}}
               // wmissing-warning@-1 {{missing field 'a' initializer}}
   C c = {.a = 1}; // wmissing-warning {{missing field 'b' initializer}}
-  CC cc = {.a = 1}; //// wmissing-warning {{missing field 'c' initializer}}
+  CC cc = {.a = 1}; // wmissing-warning {{missing field 'c' initializer}}
 }
 
-#if defined NON_PEDANTIC
 struct C1 {
   int m;
   union { float b; union {int n = 1; }; };
+  // pedantic-error@-1 {{anonymous types declared in an anonymous union are an extension}}
 };
 
 struct C2 {
   int m;
-  struct { float b; int n = 1; };
+  struct { float b; int n = 1; }; // pedantic-error {{anonymous structs are a GNU extension}}
 };
 
 struct C3 {
   int m;
   struct { float b = 1; union {int a;}; int n = 1; };
+  // pedantic-error@-1 {{anonymous structs are a GNU extension}}
+  // pedantic-error@-2 {{anonymous types declared in an anonymous struct are an extension}}
 };
 
 C1 c = C1{.m = 1};
@@ -309,5 +311,13 @@ C2 c1 = C2{.m = 1}; // wmissing-warning {{missing field 'b' initializer}}
 C2 c22 = C2{.m = 1, .b = 1};
 C3 c2 = C3{.b = 1}; // wmissing-warning {{missing field 'a' initializer}}
                     // wmissing-warning@-1 {{missing field 'm' initializer}}
-#endif // NON_PEDANTIC
+
+struct C4 {
+  union {
+    struct { int n; }; // pedantic-error {{anonymous structs are a GNU extension}}
+    // pedantic-error@-1 {{anonymous types declared in an anonymous union are an extension}}
+    int m = 0; };
+  int z;
+};
+C4 a = {.z = 1};
 }

@@ -349,12 +349,17 @@ class InitListChecker {
                       bool SubobjectIsDesignatorContext, unsigned &Index,
                       InitListExpr *StructuredList,
                       unsigned &StructuredIndex);
-  bool CheckDesignatedInitializer(
-      const InitializedEntity &Entity, InitListExpr *IList,
-      DesignatedInitExpr *DIE, unsigned DesigIdx, QualType &CurrentObjectType,
-      RecordDecl::field_iterator *NextField, llvm::APSInt *NextElementIndex,
-      unsigned &Index, InitListExpr *StructuredList, unsigned &StructuredIndex,
-      bool FinishSubobjectInit, bool TopLevelObject);
+  bool CheckDesignatedInitializer(const InitializedEntity &Entity,
+                                  InitListExpr *IList, DesignatedInitExpr *DIE,
+                                  unsigned DesigIdx,
+                                  QualType &CurrentObjectType,
+                                  RecordDecl::field_iterator *NextField,
+                                  llvm::APSInt *NextElementIndex,
+                                  unsigned &Index,
+                                  InitListExpr *StructuredList,
+                                  unsigned &StructuredIndex,
+                                  bool FinishSubobjectInit,
+                                  bool TopLevelObject);
   InitListExpr *getStructuredSubobjectInit(InitListExpr *IList, unsigned Index,
                                            QualType CurrentObjectType,
                                            InitListExpr *StructuredList,
@@ -461,7 +466,7 @@ class InitListChecker {
                                const InitializedEntity &ParentEntity,
                                InitListExpr *ILE, bool &RequiresSecondPass,
                                bool FillWithNoInit = false,
-                               bool MaybeEmitMFIWarning = true);
+                               bool WarnIfMissing = true);
   void FillInEmptyInitializations(const InitializedEntity &Entity,
                                   InitListExpr *ILE, bool &RequiresSecondPass,
                                   InitListExpr *OuterILE, unsigned OuterIndex,
@@ -660,7 +665,7 @@ static bool hasAnyDesignatedInits(const InitListExpr *IL) {
 void InitListChecker::FillInEmptyInitForField(
     unsigned Init, FieldDecl *Field, const InitializedEntity &ParentEntity,
     InitListExpr *ILE, bool &RequiresSecondPass, bool FillWithNoInit,
-    bool MaybeEmitMFIWarning) {
+    bool WarnIfMissing) {
   SourceLocation Loc = ILE->getEndLoc();
   unsigned NumInits = ILE->getNumInits();
   InitializedEntity MemberEntity
@@ -729,42 +734,36 @@ void InitListChecker::FillInEmptyInitForField(
     if (hadError || VerifyOnly) {
       // Do nothing
     } else if (Init < NumInits) {
-      if (MaybeEmitMFIWarning) {
+      if (WarnIfMissing) {
         auto CheckAnonMember = [&](const FieldDecl *FD,
-                                   auto &&CheckAnonMember) -> bool {
-          FieldDecl *FirstUninitialized = nullptr;
+                                   auto &&CheckAnonMember) -> FieldDecl * {
+          FieldDecl *Uninitialized = nullptr;
           RecordDecl *RD = FD->getType()->getAsRecordDecl();
           assert(RD && "Not anonymous member checked?");
           for (auto *F : RD->fields()) {
-            bool AllSet = false;
             if (F->isAnonymousStructOrUnion())
-              AllSet = CheckAnonMember(F, CheckAnonMember);
+              Uninitialized = CheckAnonMember(F, CheckAnonMember);
+            else if (!F->isUnnamedBitfield() &&
+                     !F->getType()->isIncompleteArrayType() && !Uninitialized &&
+                     !F->hasInClassInitializer())
+              Uninitialized = F;
 
-            if (AllSet || F->hasInClassInitializer()) {
-              if (RD->isUnion())
-                return true;
-              continue;
-            }
-
-            if (!F->isUnnamedBitfield() &&
-                !F->getType()->isIncompleteArrayType() &&
-                !F->isAnonymousStructOrUnion() && !FirstUninitialized)
-              FirstUninitialized = F;
+            if (RD->isUnion() && (F->hasInClassInitializer() || !Uninitialized))
+              return nullptr;
           }
-
-          if (FirstUninitialized) {
-            SemaRef.Diag(Loc, diag::warn_missing_field_initializers)
-                << FirstUninitialized;
-            return false;
-          }
-          return true;
+          return Uninitialized;
         };
 
+        FieldDecl *FieldToDiagnose = nullptr;
         if (Field->isAnonymousStructOrUnion())
-          CheckAnonMember(Field, CheckAnonMember);
+          FieldToDiagnose = CheckAnonMember(Field, CheckAnonMember);
         else if (!Field->isUnnamedBitfield() &&
                  !Field->getType()->isIncompleteArrayType())
-          SemaRef.Diag(Loc, diag::warn_missing_field_initializers) << Field;
+          FieldToDiagnose = Field;
+
+        if (FieldToDiagnose)
+          SemaRef.Diag(Loc, diag::warn_missing_field_initializers)
+              << FieldToDiagnose;
       }
 
       ILE->setInit(Init, MemberInit.getAs<Expr>());
@@ -848,13 +847,19 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
       // order to leave them uninitialized, the ILE is expanded and the extra
       // fields are then filled with NoInitExpr.
 
-      // Some checks that required for MFI warning are bound to how many
-      // elements the initializer list originally was provided, perform them
-      // before the list is expanded
-      bool MaybeEmitMFIWarning =
+      // Some checks that required for missing fields warning are bound to how
+      // many elements the initializer list originally was provided, perform
+      // them before the list is expanded.
+      bool WarnIfMissingField =
           !SForm->isIdiomaticZeroInitializer(SemaRef.getLangOpts()) &&
-          ILE->getNumInits() &&
-          !(hasAnyDesignatedInits(SForm) && !SemaRef.getLangOpts().CPlusPlus);
+          ILE->getNumInits();
+
+      // Disable check for missing fields when designators are used in C to
+      // match gcc behaviour.
+      // FIXME: Should we emulate possible gcc warning bug?
+      WarnIfMissingField &=
+          !(!SemaRef.getLangOpts().CPlusPlus && hasAnyDesignatedInits(SForm));
+
       unsigned NumElems = numStructUnionElements(ILE->getType());
       if (!RDecl->isUnion() && RDecl->hasFlexibleArrayMember())
         ++NumElems;
@@ -882,7 +887,7 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
           return;
 
         FillInEmptyInitForField(Init, Field, Entity, ILE, RequiresSecondPass,
-                                FillWithNoInit, MaybeEmitMFIWarning);
+                                FillWithNoInit, WarnIfMissingField);
         if (hadError)
           return;
 
@@ -2546,12 +2551,19 @@ class FieldInitializerValidatorCCC final : public CorrectionCandidateCallback {
 /// actually be initialized.
 ///
 /// @returns true if there was an error, false otherwise.
-bool InitListChecker::CheckDesignatedInitializer(
-    const InitializedEntity &Entity, InitListExpr *IList,
-    DesignatedInitExpr *DIE, unsigned DesigIdx, QualType &CurrentObjectType,
-    RecordDecl::field_iterator *NextField, llvm::APSInt *NextElementIndex,
-    unsigned &Index, InitListExpr *StructuredList, unsigned &StructuredIndex,
-    bool FinishSubobjectInit, bool TopLevelObject) {
+bool
+InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
+                                            InitListExpr *IList,
+                                            DesignatedInitExpr *DIE,
+                                            unsigned DesigIdx,
+                                            QualType &CurrentObjectType,
+                                          RecordDecl::field_iterator *NextField,
+                                            llvm::APSInt *NextElementIndex,
+                                            unsigned &Index,
+                                            InitListExpr *StructuredList,
+                                            unsigned &StructuredIndex,
+                                            bool FinishSubobjectInit,
+                                            bool TopLevelObject) {
   if (DesigIdx == DIE->size()) {
     // C++20 designated initialization can result in direct-list-initialization
     // of the designated subobject. This is the only way that we can end up
