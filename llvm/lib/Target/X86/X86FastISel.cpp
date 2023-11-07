@@ -3630,6 +3630,12 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   CLI.NumResultRegs = RVLocs.size();
   CLI.Call = MIB;
 
+  // Add call site info for call graph section.
+  if (TM.Options.EmitCallGraphSection && CB && CB->isIndirectCall()) {
+    MachineFunction::CallSiteInfo CSInfo(*CB);
+    MF->addCallSiteInfo(CLI.Call, std::move(CSInfo));
+  }
+
   return true;
 }
 
@@ -4025,6 +4031,8 @@ bool X86FastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
     MO.setReg(IndexReg);
   }
 
+  if (MI->isCall())
+    FuncInfo.MF->moveCallSiteInfo(MI, Result);
   Result->addMemOperand(*FuncInfo.MF, createMachineMemOperandFor(LI));
   Result->cloneInstrSymbols(*FuncInfo.MF, *MI);
   MachineBasicBlock::iterator I(MI);

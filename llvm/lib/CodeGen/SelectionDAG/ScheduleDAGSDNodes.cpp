@@ -888,8 +888,8 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     }
 
     if (MI->isCandidateForCallSiteEntry() &&
-        DAG->getTarget().Options.EmitCallSiteInfo) {
-      //MF.addCallArgsForwardingRegs(MI, DAG->getCallSiteInfo(Node));
+        (DAG->getTarget().Options.EmitCallSiteInfo ||
+         DAG->getTarget().Options.EmitCallGraphSection)) {      
       MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
     }
 

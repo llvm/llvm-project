@@ -27,7 +27,9 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/EHPersonalities.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -488,6 +490,38 @@ public:
 
     /// Callee type id.
     ConstantInt *TypeId = nullptr;
+
+    CallSiteInfo() {}
+
+    /// Extracts the numeric type id from the CallBase's type operand bundle,
+    /// and sets TypeId. This is used as type id for the indirect call in the
+    /// call graph section.
+    CallSiteInfo(const CallBase &CB) {
+      // Call graph section needs numeric type id only for indirect calls.
+      if (!CB.isIndirectCall())
+        return;
+
+      auto Opt = CB.getOperandBundle(LLVMContext::OB_type);
+      if (!Opt.has_value()) {
+        errs() << "warning: cannot find indirect call type operand bundle for  "
+                  "call graph section\n";
+        return;
+      }
+
+      // Get generalized type id string
+      auto OB = Opt.value();
+      assert(OB.Inputs.size() == 1 && "invalid input size");
+      auto *OBVal = OB.Inputs.front().get();
+      auto *TypeIdMD = cast<MetadataAsValue>(OBVal)->getMetadata();
+      auto *TypeIdStr = cast<MDString>(TypeIdMD);
+      assert(TypeIdStr->getString().endswith(".generalized") &&
+             "invalid type identifier");
+
+      // Compute numeric type id from generalized type id string
+      uint64_t TypeIdVal = llvm::MD5Hash(TypeIdStr->getString());
+      IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());
+      TypeId = llvm::ConstantInt::get(Int64Ty, TypeIdVal, /*IsSigned=*/false);
+    }
   };
 
 private:
