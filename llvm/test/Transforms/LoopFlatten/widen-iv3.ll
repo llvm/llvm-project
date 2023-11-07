@@ -34,11 +34,13 @@ define i16 @foo() {
 ; CHECK-NEXT:    [[J_011:%.*]] = phi i16 [ 0, [[FOR_COND1_PREHEADER]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
 ; CHECK-NEXT:    [[SUM_110:%.*]] = phi i16 [ [[SUM_012]], [[FOR_COND1_PREHEADER]] ], [ [[ADD5]], [[FOR_BODY4]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[INDVAR]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i16 [[J_011]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i32 [[TMP3]], [[TMP0]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[J_011]], [[MUL]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64 x i16], ptr @v, i16 0, i16 [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[ADD5]] = add nsw i16 [[TMP4]], [[SUM_110]]
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64 x i16], ptr @v, i16 0, i16 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i16, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ADD5]] = add nsw i16 [[TMP6]], [[SUM_110]]
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i16 [[J_011]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INDVAR_NEXT]], 16
