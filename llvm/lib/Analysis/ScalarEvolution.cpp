@@ -13437,9 +13437,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
     for (const auto *P : Preds)
       P->print(OS, 4);
   } else {
-    OS << "Unpredictable predicated backedge-taken count. ";
+    OS << "Unpredictable predicated backedge-taken count.\n";
   }
-  OS << "\n";
 
   if (SE->hasLoopInvariantBackedgeTakenCount(L)) {
     OS << "Loop ";
