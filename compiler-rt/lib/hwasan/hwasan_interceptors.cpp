@@ -147,6 +147,17 @@ struct HWAsanInterceptorContext {
         (void)(name);                           \
       } while (false)
 
+#    define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size)   \
+      {                                                         \
+        if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)          \
+          return internal_memset(dst, v, size);                 \
+        COMMON_INTERCEPTOR_ENTER(ctx, memset, dst, v, size);    \
+        if (MemIsApp(UntagAddr(reinterpret_cast<uptr>(dst))) && \
+            common_flags()->intercept_intrin)                   \
+          COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, size);       \
+        return REAL(memset)(dst, v, size);                      \
+      }
+
 #    define COMMON_INTERCEPTOR_STRERROR() \
       do {                                \
       } while (false)
@@ -154,9 +165,6 @@ struct HWAsanInterceptorContext {
 #    define COMMON_INTERCEPT_FUNCTION(name) HWASAN_INTERCEPT_FUNC(name)
 
 #    define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!hwasan_inited)
-
-#    define COMMON_INTERCEPTOR_MEMSET_CHECK_IN_APP_MEM(p) \
-  MemIsApp(UntagAddr(reinterpret_cast<uptr>(p)))
 
 // The main purpose of the mmap interceptor is to prevent the user from
 // allocating on top of shadow pages.
