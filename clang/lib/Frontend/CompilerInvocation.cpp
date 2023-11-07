@@ -3619,11 +3619,8 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
 }
 
 static void CheckBoundsSafetyLang(InputKind IK, DiagnosticsEngine &Diags) {
-  // Currently, bounds safety is only supported for C. However, it's also
-  // possible to pass assembly files and LLVM IR through Clang, and
-  // those should be trivially supported. This is especially important because
-  // some build systems, like xcbuild and somewhat clumsy Makefiles, will pass
-  // C_FLAGS to Clang while building assembly files.
+  // Currently, bounds safety is only supported for C and it's not supported
+  // in other languages, such as C++, Obj-C, and Obj-C++.
   switch (IK.getLanguage()) {
   case Language::Unknown:
   case Language::LLVM_IR:
