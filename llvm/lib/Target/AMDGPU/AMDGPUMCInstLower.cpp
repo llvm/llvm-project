@@ -61,6 +61,8 @@ static MCSymbolRefExpr::VariantKind getVariantKind(unsigned MOFlags) {
     return MCSymbolRefExpr::VK_AMDGPU_ABS32_LO;
   case SIInstrInfo::MO_ABS32_HI:
     return MCSymbolRefExpr::VK_AMDGPU_ABS32_HI;
+  case SIInstrInfo::MO_ABS64:
+    return MCSymbolRefExpr::VK_AMDGPU_ABS64;
   }
 }
 

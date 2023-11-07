@@ -211,6 +211,7 @@ public:
 
     MO_ABS32_LO = 8,
     MO_ABS32_HI = 9,
+    MO_ABS64 = 10,
   };
 
   explicit SIInstrInfo(const GCNSubtarget &ST);

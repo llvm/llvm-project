@@ -539,7 +539,8 @@ static bool needsPCRel(const MCExpr *Expr) {
     auto *SE = cast<MCSymbolRefExpr>(Expr);
     MCSymbolRefExpr::VariantKind Kind = SE->getKind();
     return Kind != MCSymbolRefExpr::VK_AMDGPU_ABS32_LO &&
-           Kind != MCSymbolRefExpr::VK_AMDGPU_ABS32_HI;
+           Kind != MCSymbolRefExpr::VK_AMDGPU_ABS32_HI &&
+           Kind != MCSymbolRefExpr::VK_AMDGPU_ABS64;
   }
   case MCExpr::Binary: {
     auto *BE = cast<MCBinaryExpr>(Expr);
