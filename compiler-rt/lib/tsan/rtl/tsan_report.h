@@ -34,8 +34,7 @@ enum ReportType {
   ReportTypeMutexBadReadUnlock,
   ReportTypeSignalUnsafe,
   ReportTypeErrnoInSignal,
-  ReportTypeDeadlock,
-  ReportTypeMutexHeldWrongContext
+  ReportTypeDeadlock
 };
 
 struct ReportStack {
