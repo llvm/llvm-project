@@ -540,6 +540,12 @@ def FeatureLUT: SubtargetFeature<"lut", "HasLUT", "true",
 def FeatureSME_LUTv2 : SubtargetFeature<"sme-lutv2", "HasSME_LUTv2", "true",
   "Enable Scalable Matrix Extension (SME) LUTv2 instructions (FEAT_SME_LUTv2)">;
 
+def FeatureSMEF8F16 : SubtargetFeature<"sme-f8f16", "HasSMEF8F16", "true",
+  "Enable Scalable Matrix Extension (SME) F8F16 instructions(FEAT_SME_F8F16)", [FeatureSME2, FeatureFP8]>;
+
+def FeatureSMEF8F32 : SubtargetFeature<"sme-f8f32", "HasSMEF8F32", "true",
+  "Enable Scalable Matrix Extension (SME) F8F32 instructions (FEAT_SME_F8F32)", [FeatureSME2, FeatureFP8]>;
+
 def FeatureAppleA7SysReg  : SubtargetFeature<"apple-a7-sysreg", "HasAppleA7SysReg", "true",
   "Apple A7 (the CPU formerly known as Cyclone)">;
 
@@ -770,8 +776,8 @@ let F = [HasSVE2p1, HasSVE2p1_or_HasSME2, HasSVE2p1_or_HasSME2p1] in
 def SVE2p1Unsupported : AArch64Unsupported;
 
 def SVE2Unsupported : AArch64Unsupported {
-  let F = !listconcat([HasSVE2, HasSVE2orSME, HasSSVE_FP8FMA,
-                       HasSVE2AES, HasSVE2SHA3, HasSVE2SM4, HasSVE2BitPerm],
+  let F = !listconcat([HasSVE2, HasSVE2orSME, HasSSVE_FP8FMA, HasSMEF8F16,
+                       HasSMEF8F32, HasSVE2AES, HasSVE2SHA3, HasSVE2SM4, HasSVE2BitPerm],
                        SVE2p1Unsupported.F);
 }
 
@@ -784,7 +790,8 @@ let F = [HasSME2p1, HasSVE2p1_or_HasSME2p1] in
 def SME2p1Unsupported : AArch64Unsupported;
 
 def SME2Unsupported : AArch64Unsupported {
-  let F = !listconcat([HasSME2, HasSVE2p1_or_HasSME2, HasSSVE_FP8FMA],
+  let F = !listconcat([HasSME2, HasSVE2p1_or_HasSME2, HasSSVE_FP8FMA,
+                      HasSMEF8F16, HasSMEF8F32],
                       SME2p1Unsupported.F);
 }
 
