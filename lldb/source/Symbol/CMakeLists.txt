@@ -33,7 +33,6 @@ add_lldb_library(lldbSymbol ${PLUGIN_DEPENDENCY_ARG}
   Function.cpp
   LineEntry.cpp
   LineTable.cpp
-  LocateSymbolFile.cpp
   ObjectContainer.cpp
   ObjectFile.cpp
   PostfixExpression.cpp
@@ -41,6 +40,7 @@ add_lldb_library(lldbSymbol ${PLUGIN_DEPENDENCY_ARG}
   SymbolContext.cpp
   SymbolFile.cpp
   SymbolFileOnDemand.cpp
+  SymbolLocator.cpp
   SymbolVendor.cpp
   Symtab.cpp
   Type.cpp
