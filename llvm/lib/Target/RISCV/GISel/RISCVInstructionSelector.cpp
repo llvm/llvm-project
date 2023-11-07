@@ -553,28 +553,20 @@ bool RISCVInstructionSelector::materializeImm(Register DstReg, int64_t Imm,
     switch (I.getOpndKind()) {
     case RISCVMatInt::Imm:
       // clang-format off
-      Result = MIB.buildInstr(I.getOpcode())
-                   .addDef(TmpReg)
+      Result = MIB.buildInstr(I.getOpcode(), {TmpReg}, {})
                    .addImm(I.getImm());
       // clang-format on
       break;
     case RISCVMatInt::RegX0:
-      Result = MIB.buildInstr(I.getOpcode())
-                   .addDef(TmpReg)
-                   .addReg(SrcReg)
-                   .addReg(RISCV::X0);
+      Result = MIB.buildInstr(I.getOpcode(), {TmpReg},
+                              {SrcReg, Register(RISCV::X0)});
       break;
     case RISCVMatInt::RegReg:
-      Result = MIB.buildInstr(I.getOpcode())
-                   .addDef(TmpReg)
-                   .addReg(SrcReg)
-                   .addReg(SrcReg);
+      Result = MIB.buildInstr(I.getOpcode(), {TmpReg}, {SrcReg, SrcReg});
       break;
     case RISCVMatInt::RegImm:
-      Result = MIB.buildInstr(I.getOpcode())
-                   .addDef(TmpReg)
-                   .addReg(SrcReg)
-                   .addImm(I.getImm());
+      Result =
+          MIB.buildInstr(I.getOpcode(), {TmpReg}, {SrcReg}).addImm(I.getImm());
       break;
     }
 
@@ -611,8 +603,7 @@ bool RISCVInstructionSelector::selectGlobalValue(
       // Use PC-relative addressing to access the symbol. This generates the
       // pattern (PseudoLLA sym), which expands to (addi (auipc %pcrel_hi(sym))
       // %pcrel_lo(auipc)).
-      Result = MIB.buildInstr(RISCV::PseudoLLA)
-                   .addDef(DefReg)
+      Result = MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {})
                    .addGlobalAddress(GV, 0);
     } else {
       // Use PC-relative addressing to access the GOT for this symbol, then
@@ -626,8 +617,7 @@ bool RISCVInstructionSelector::selectGlobalValue(
               MachineMemOperand::MOInvariant,
           DefTy, Align(DefTy.getSizeInBits() / 8));
 
-      Result = MIB.buildInstr(RISCV::PseudoLGA)
-                   .addDef(DefReg)
+      Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
                    .addGlobalAddress(GV, 0)
                    .addMemOperand(MemOp);
     }
@@ -650,16 +640,13 @@ bool RISCVInstructionSelector::selectGlobalValue(
     // absolute addresses -2 GiB and +2 GiB. This generates the pattern (addi
     // (lui %hi(sym)) %lo(sym)).
     Register AddrHiDest = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    MachineInstr *AddrHi = MIB.buildInstr(RISCV::LUI)
-                               .addDef(AddrHiDest)
+    MachineInstr *AddrHi = MIB.buildInstr(RISCV::LUI, {AddrHiDest}, {})
                                .addGlobalAddress(GV, RISCVII::MO_HI);
 
     if (!constrainSelectedInstRegOperands(*AddrHi, TII, TRI, RBI))
       return false;
 
-    Result = MIB.buildInstr(RISCV::ADDI)
-                 .addDef(DefReg)
-                 .addReg(AddrHiDest)
+    Result = MIB.buildInstr(RISCV::ADDI, {DefReg}, {AddrHiDest})
                  .addGlobalAddress(GV, 0, RISCVII::MO_LO);
 
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
@@ -685,16 +672,14 @@ bool RISCVInstructionSelector::selectGlobalValue(
               MachineMemOperand::MOInvariant,
           DefTy, Align(DefTy.getSizeInBits() / 8));
 
-      Result = MIB.buildInstr(RISCV::PseudoLGA)
-                   .addDef(DefReg)
+      Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
                    .addGlobalAddress(GV, 0)
                    .addMemOperand(MemOp);
     } else {
       // Generate a sequence for accessing addresses within any 2GiB range
       // within the address space. This generates the pattern (PseudoLLA sym),
       // which expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
-      Result = MIB.buildInstr(RISCV::PseudoLLA)
-                   .addDef(DefReg)
+      Result = MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {})
                    .addGlobalAddress(GV, 0);
     }
 
