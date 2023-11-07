@@ -150,8 +150,8 @@ public:
   bool DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
                        const Address &so_addr, bool show_fullpaths,
                        bool show_module, bool show_inlined_frames,
-                       bool show_function_arguments,
-                       bool show_function_name) const;
+                       bool show_function_arguments, bool show_function_name,
+                       const char *pattern = nullptr) const;
 
   /// Get the address range contained within a symbol context.
   ///
@@ -217,8 +217,8 @@ public:
   ///     The symbol that was found, or \b nullptr if none was found.
   const Symbol *FindBestGlobalDataSymbol(ConstString name, Status &error);
 
-  void GetDescription(Stream *s, lldb::DescriptionLevel level,
-                      Target *target) const;
+  void GetDescription(Stream *s, lldb::DescriptionLevel level, Target *target,
+                      const char *pattern = nullptr) const;
 
   uint32_t GetResolvedMask() const;
 

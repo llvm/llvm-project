@@ -8,11 +8,13 @@
 
 #include "lldb/Utility/Stream.h"
 
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Regex.h"
 
 #include <string>
 
@@ -68,6 +70,32 @@ size_t Stream::PutCString(llvm::StringRef str) {
   if (m_flags.Test(eBinary))
     bytes_written += PutChar('\0');
   return bytes_written;
+}
+
+void Stream::PutCStringColorHighlighted(llvm::StringRef text,
+                                        const char *pattern) {
+  if (!pattern) {
+    PutCString(text);
+    return;
+  }
+
+  // If pattern is not nullptr, we should use color
+  llvm::Regex reg_pattern(pattern);
+  llvm::SmallVector<llvm::StringRef, 1> matches;
+  llvm::StringRef remaining = text;
+  std::string format_str = lldb_private::ansi::FormatAnsiTerminalCodes(
+      "${ansi.fg.red}%s${ansi.normal}");
+  size_t last_pos = 0;
+  while (reg_pattern.match(remaining, &matches)) {
+    llvm::StringRef match = matches[0];
+    size_t match_start_pos = match.data() - remaining.data();
+    Write(remaining.data(), match_start_pos);
+    Printf(format_str.c_str(), match.str().c_str());
+    last_pos = match_start_pos + match.size();
+    remaining = remaining.drop_front(last_pos);
+  }
+  if (remaining.size())
+    PutCString(remaining);
 }
 
 // Print a double quoted NULL terminated C string to the stream using the

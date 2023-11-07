@@ -231,6 +231,22 @@ public:
   ///     The string to be output to the stream.
   size_t PutCString(llvm::StringRef cstr);
 
+  /// Output a C string to the stream with color highlighting.
+  ///
+  /// Print a C string \a text to the stream, applying red color highlighting to
+  /// the portions of the string that match the regex pattern \a pattern. The
+  /// pattern is matched as many times as possible throughout the string. If \a
+  /// pattern is nullptr, then no highlighting is applied.
+  ///
+  /// \param[in] text
+  ///     The string to be output to the stream.
+  ///
+  /// \param[in] pattern
+  ///     The regex pattern to match against the \a text string. Portions of \a
+  ///     text matching this pattern will be colorized. If this parameter is
+  ///     nullptr, highlighting is not performed.
+  void PutCStringColorHighlighted(llvm::StringRef text, const char *pattern);
+
   /// Output and End of Line character to the stream.
   size_t EOL();
 

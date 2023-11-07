@@ -8,6 +8,7 @@
 
 #include "lldb/Symbol/Symbol.h"
 
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Section.h"
@@ -225,7 +226,7 @@ bool Symbol::IsTrampoline() const { return m_type == eSymbolTypeTrampoline; }
 bool Symbol::IsIndirect() const { return m_type == eSymbolTypeResolver; }
 
 void Symbol::GetDescription(Stream *s, lldb::DescriptionLevel level,
-                            Target *target) const {
+                            Target *target, const char *pattern) const {
   s->Printf("id = {0x%8.8x}", m_uid);
 
   if (m_addr_range.GetBaseAddress().GetSection()) {
@@ -252,11 +253,16 @@ void Symbol::GetDescription(Stream *s, lldb::DescriptionLevel level,
       s->Printf(", value = 0x%16.16" PRIx64,
                 m_addr_range.GetBaseAddress().GetOffset());
   }
-  ConstString demangled = GetMangled().GetDemangledName();
-  if (demangled)
-    s->Printf(", name=\"%s\"", demangled.AsCString());
-  if (m_mangled.GetMangledName())
-    s->Printf(", mangled=\"%s\"", m_mangled.GetMangledName().AsCString());
+  if (ConstString demangled = m_mangled.GetDemangledName()) {
+    s->Printf(", name=\"");
+    s->PutCStringColorHighlighted(demangled.GetStringRef(), pattern);
+    s->Printf("\"");
+  }
+  if (ConstString mangled_name = m_mangled.GetMangledName()) {
+    s->Printf(", mangled=\"");
+    s->PutCStringColorHighlighted(mangled_name.GetStringRef(), pattern);
+    s->Printf("\"");
+  }
 }
 
 void Symbol::Dump(Stream *s, Target *target, uint32_t index,

@@ -246,8 +246,8 @@ public:
   /// \see Address::DumpStyle
   bool Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
             DumpStyle fallback_style = DumpStyleInvalid,
-            uint32_t addr_byte_size = UINT32_MAX,
-            bool all_ranges = false) const;
+            uint32_t addr_byte_size = UINT32_MAX, bool all_ranges = false,
+            const char *pattern = nullptr) const;
 
   AddressClass GetAddressClass() const;
 
