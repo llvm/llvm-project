@@ -140,7 +140,7 @@ public:
   AArch64RegisterBankInfo(const TargetRegisterInfo &TRI);
 
   unsigned copyCost(const RegisterBank &A, const RegisterBank &B,
-                    unsigned Size) const override;
+                    TypeSize Size) const override;
 
   const RegisterBank &getRegBankFromRegClass(const TargetRegisterClass &RC,
                                              LLT) const override;
