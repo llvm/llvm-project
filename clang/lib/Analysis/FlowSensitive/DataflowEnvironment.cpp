@@ -961,7 +961,7 @@ void Environment::dump(raw_ostream &OS) const {
     OS << "  [" << L << ", " << V << ": " << *V << "]\n";
   }
 
-  OS << "FlowConditionToken:\n";
+  OS << "\n";
   DACtx->dumpFlowCondition(FlowConditionToken, OS);
 }
 
