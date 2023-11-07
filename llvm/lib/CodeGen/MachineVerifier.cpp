@@ -1966,9 +1966,6 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     if (SrcReg.isVirtual() && DstReg.isPhysical() && SrcSize.isScalable() &&
         !DstSize.isScalable())
       break;
-    if (SrcReg.isVirtual() && DstReg.isPhysical() && SrcSize.isScalable() &&
-        !DstSize.isScalable())
-      break;
 
     if (SrcSize.isNonZero() && DstSize.isNonZero() && SrcSize != DstSize) {
       if (!DstOp.getSubReg() && !SrcOp.getSubReg()) {

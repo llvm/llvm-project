@@ -100,6 +100,20 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case RISCV::FPR64CRegClassID:
   case RISCV::FPR32CRegClassID:
     return getRegBank(RISCV::FPRBRegBankID);
+  case RISCV::VMRegClassID:
+  case RISCV::VRRegClassID:
+  case RISCV::VRNoV0RegClassID:
+  case RISCV::VRM2RegClassID:
+  case RISCV::VRM2NoV0RegClassID:
+  case RISCV::VRM4RegClassID:
+  case RISCV::VRM4NoV0RegClassID:
+  case RISCV::VMV0RegClassID:
+  case RISCV::VRM2_with_sub_vrm1_0_in_VMV0RegClassID:
+  case RISCV::VRM4_with_sub_vrm1_0_in_VMV0RegClassID:
+  case RISCV::VRM8RegClassID:
+  case RISCV::VRM8NoV0RegClassID:
+  case RISCV::VRM8_with_sub_vrm1_0_in_VMV0RegClassID:
+    return getRegBank(RISCV::VRBRegBankID);
   }
 }
 
