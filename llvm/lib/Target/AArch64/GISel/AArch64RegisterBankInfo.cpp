@@ -245,9 +245,10 @@ AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case AArch64::FPR32_with_hsub_in_FPR16_loRegClassID:
   case AArch64::FPR32RegClassID:
   case AArch64::FPR64RegClassID:
-  case AArch64::FPR64_loRegClassID:
   case AArch64::FPR128RegClassID:
+  case AArch64::FPR64_loRegClassID:
   case AArch64::FPR128_loRegClassID:
+  case AArch64::FPR128_0to7RegClassID:
   case AArch64::DDRegClassID:
   case AArch64::DDDRegClassID:
   case AArch64::DDDDRegClassID:
@@ -605,6 +606,33 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
   return hasFPConstraints(MI, MRI, TRI, Depth);
 }
 
+bool AArch64RegisterBankInfo::isLoadFromFPType(const MachineInstr &MI) const {
+  // GMemOperation because we also want to match indexed loads.
+  auto *MemOp = cast<GMemOperation>(&MI);
+  const Value *LdVal = MemOp->getMMO().getValue();
+  if (!LdVal)
+    return false;
+
+  Type *EltTy = nullptr;
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(LdVal)) {
+    EltTy = GV->getValueType();
+  } else {
+    // FIXME: grubbing around uses is pretty ugly, but with no more
+    // `getPointerElementType` there's not much else we can do.
+    for (const auto *LdUser : LdVal->users()) {
+      if (isa<LoadInst>(LdUser)) {
+        EltTy = LdUser->getType();
+        break;
+      }
+      if (isa<StoreInst>(LdUser) && LdUser->getOperand(1) == LdVal) {
+        EltTy = LdUser->getOperand(0)->getType();
+        break;
+      }
+    }
+  }
+  return EltTy && EltTy->isFPOrFPVectorTy();
+}
+
 const RegisterBankInfo::InstructionMapping &
 AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
@@ -814,30 +842,9 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
 
     // Try to guess the type of the load from the MMO.
-    const auto &MMO = **MI.memoperands_begin();
-    const Value *LdVal = MMO.getValue();
-    if (LdVal) {
-      Type *EltTy = nullptr;
-      if (const GlobalValue *GV = dyn_cast<GlobalValue>(LdVal)) {
-        EltTy = GV->getValueType();
-      } else {
-        // FIXME: grubbing around uses is pretty ugly, but with no more
-        // `getPointerElementType` there's not much else we can do.
-        for (const auto *LdUser : LdVal->users()) {
-          if (isa<LoadInst>(LdUser)) {
-            EltTy = LdUser->getType();
-            break;
-          }
-          if (isa<StoreInst>(LdUser) && LdUser->getOperand(1) == LdVal) {
-            EltTy = LdUser->getOperand(0)->getType();
-            break;
-          }
-        }
-      }
-      if (EltTy && EltTy->isFPOrFPVectorTy()) {
-        OpRegBankIdx[0] = PMI_FirstFPR;
-        break;
-      }
+    if (isLoadFromFPType(MI)) {
+      OpRegBankIdx[0] = PMI_FirstFPR;
+      break;
     }
 
     // Check if that load feeds fp instructions.
@@ -870,6 +877,27 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     break;
+  case TargetOpcode::G_INDEXED_STORE:
+    if (OpRegBankIdx[1] == PMI_FirstGPR) {
+      Register VReg = MI.getOperand(1).getReg();
+      if (!VReg)
+        break;
+      MachineInstr *DefMI = MRI.getVRegDef(VReg);
+      if (onlyDefinesFP(*DefMI, MRI, TRI))
+        OpRegBankIdx[1] = PMI_FirstFPR;
+      break;
+    }
+    break;
+  case TargetOpcode::G_INDEXED_SEXTLOAD:
+  case TargetOpcode::G_INDEXED_ZEXTLOAD:
+    // These should always be GPR.
+    OpRegBankIdx[0] = PMI_FirstGPR;
+    break;
+  case TargetOpcode::G_INDEXED_LOAD: {
+    if (isLoadFromFPType(MI))
+      OpRegBankIdx[0] = PMI_FirstFPR;
+    break;
+  }
   case TargetOpcode::G_SELECT: {
     // If the destination is FPR, preserve that.
     if (OpRegBankIdx[0] != PMI_FirstGPR)

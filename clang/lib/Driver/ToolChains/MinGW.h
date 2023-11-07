@@ -20,7 +20,7 @@ namespace clang {
 namespace driver {
 namespace tools {
 
-/// MinGW -- Directly call GNU Binutils assembler and linker
+/// Directly call GNU Binutils assembler and linker
 namespace MinGW {
 class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
 public:
@@ -34,7 +34,7 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("MinGW::Linker", "linker", TC) {}
 

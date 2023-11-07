@@ -199,9 +199,6 @@ protected:
                         const lldb_private::plugin::dwarf::DWARFDIE &die,
                         ParsedDWARFTypeAttributes &attrs);
 
-  lldb_private::Type *
-  GetTypeForDIE(const lldb_private::plugin::dwarf::DWARFDIE &die);
-
   clang::Decl *
   GetClangDeclForDIE(const lldb_private::plugin::dwarf::DWARFDIE &die);
 
@@ -247,6 +244,10 @@ protected:
   // module.
   lldb::ModuleSP
   GetModuleForType(const lldb_private::plugin::dwarf::DWARFDIE &die);
+
+  static bool classof(const DWARFASTParser *Parser) {
+    return Parser->GetKind() == Kind::DWARFASTParserClang;
+  }
 
 private:
   struct FieldInfo {
@@ -372,6 +373,17 @@ private:
                        lldb_private::CompilerType &class_clang_type,
                        const lldb::AccessType default_accesibility,
                        lldb_private::ClangASTImporter::LayoutInfo &layout_info);
+
+  /// Tries to find the definition DW_TAG_variable DIE of the the specified
+  /// DW_TAG_member 'die'. If such definition exists, returns the
+  /// DW_AT_const_value of that definition if available. Returns std::nullopt
+  /// otherwise.
+  ///
+  /// In newer versions of clang, DW_AT_const_value attributes are not attached
+  /// to the declaration of a inline static data-member anymore, but rather on
+  /// its definition. This function is used to locate said constant.
+  std::optional<lldb_private::plugin::dwarf::DWARFFormValue>
+  FindConstantOnVariableDefinition(lldb_private::plugin::dwarf::DWARFDIE die);
 };
 
 /// Parsed form of all attributes that are relevant for type reconstruction.

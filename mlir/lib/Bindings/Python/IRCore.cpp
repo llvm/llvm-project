@@ -635,6 +635,34 @@ size_t PyMlirContext::clearLiveOperations() {
   return numInvalidated;
 }
 
+void PyMlirContext::clearOperation(MlirOperation op) {
+  auto it = liveOperations.find(op.ptr);
+  if (it != liveOperations.end()) {
+    it->second.second->setInvalid();
+    liveOperations.erase(it);
+  }
+}
+
+void PyMlirContext::clearOperationsInside(PyOperationBase &op) {
+  typedef struct {
+    PyOperation &rootOp;
+    bool rootSeen;
+  } callBackData;
+  callBackData data{op.getOperation(), false};
+  // Mark all ops below the op that the passmanager will be rooted
+  // at (but not op itself - note the preorder) as invalid.
+  MlirOperationWalkCallback invalidatingCallback = [](MlirOperation op,
+                                                      void *userData) {
+    callBackData *data = static_cast<callBackData *>(userData);
+    if (LLVM_LIKELY(data->rootSeen))
+      data->rootOp.getOperation().getContext()->clearOperation(op);
+    else
+      data->rootSeen = true;
+  };
+  mlirOperationWalk(op.getOperation(), invalidatingCallback,
+                    static_cast<void *>(&data), MlirWalkPreOrder);
+}
+
 size_t PyMlirContext::getLiveModuleCount() { return liveModules.size(); }
 
 pybind11::object PyMlirContext::contextEnter() {
@@ -3207,7 +3235,18 @@ void mlir::python::populateIRCore(py::module &m) {
            "Inserts an operation.")
       .def_property_readonly(
           "block", [](PyInsertionPoint &self) { return self.getBlock(); },
-          "Returns the block that this InsertionPoint points to.");
+          "Returns the block that this InsertionPoint points to.")
+      .def_property_readonly(
+          "ref_operation",
+          [](PyInsertionPoint &self) -> py::object {
+            auto ref_operation = self.getRefOperation();
+            if (ref_operation)
+              return ref_operation->getObject();
+            return py::none();
+          },
+          "The reference operation before which new operations are "
+          "inserted, or None if the insertion point is at the end of "
+          "the block");
 
   //----------------------------------------------------------------------------
   // Mapping of PyAttribute.

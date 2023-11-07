@@ -428,6 +428,31 @@ TEST(IndexTest, NonTypeTemplateParameter) {
                              WrittenAt(Position(3, 15)))));
 }
 
+TEST(IndexTest, ReadWriteRoles) {
+  std::string Code = R"cpp(
+    int main() {
+      int foo = 0;
+      foo = 2;
+      foo += 1;
+      int bar = foo;
+  }
+  )cpp";
+  auto Index = std::make_shared<Indexer>();
+  IndexingOptions Opts;
+  Opts.IndexFunctionLocals = true;
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
+  EXPECT_THAT(
+      Index->Symbols,
+      AllOf(Contains(AllOf(QName("foo"), HasRole(SymbolRole::Write),
+                           WrittenAt(Position(4, 7)))),
+            Contains(AllOf(QName("foo"),
+                           HasRole(static_cast<unsigned>(SymbolRole::Read) |
+                                   static_cast<unsigned>(SymbolRole::Write)),
+                           WrittenAt(Position(5, 7)))),
+            Contains(AllOf(QName("foo"), HasRole(SymbolRole::Read),
+                           WrittenAt(Position(6, 17))))));
+}
+
 } // namespace
 } // namespace index
 } // namespace clang

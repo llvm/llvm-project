@@ -3867,12 +3867,42 @@ bool X86InstrInfo::verifyInstruction(const MachineInstr &MI,
 bool X86InstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
                                            const Register Reg,
                                            int64_t &ImmVal) const {
-  if (MI.getOpcode() != X86::MOV32ri && MI.getOpcode() != X86::MOV64ri)
+  Register MovReg = Reg;
+  const MachineInstr *MovMI = &MI;
+
+  // Follow use-def for SUBREG_TO_REG to find the real move immediate
+  // instruction. It is quite common for x86-64.
+  if (MI.isSubregToReg()) {
+    // We use following pattern to setup 64b immediate.
+    //      %8:gr32 = MOV32r0 implicit-def dead $eflags
+    //      %6:gr64 = SUBREG_TO_REG 0, killed %8:gr32, %subreg.sub_32bit
+    if (!MI.getOperand(1).isImm())
+      return false;
+    unsigned FillBits = MI.getOperand(1).getImm();
+    unsigned SubIdx = MI.getOperand(3).getImm();
+    MovReg = MI.getOperand(2).getReg();
+    if (SubIdx != X86::sub_32bit || FillBits != 0)
+      return false;
+    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+    MovMI = MRI.getUniqueVRegDef(MovReg);
+    if (!MovMI)
+      return false;
+  }
+
+  if (MovMI->getOpcode() == X86::MOV32r0 &&
+      MovMI->getOperand(0).getReg() == MovReg) {
+    ImmVal = 0;
+    return true;
+  }
+
+  if (MovMI->getOpcode() != X86::MOV32ri &&
+      MovMI->getOpcode() != X86::MOV64ri &&
+      MovMI->getOpcode() != X86::MOV32ri64 && MovMI->getOpcode() != X86::MOV8ri)
     return false;
   // Mov Src can be a global address.
-  if (!MI.getOperand(1).isImm() || MI.getOperand(0).getReg() != Reg)
+  if (!MovMI->getOperand(1).isImm() || MovMI->getOperand(0).getReg() != MovReg)
     return false;
-  ImmVal = MI.getOperand(1).getImm();
+  ImmVal = MovMI->getOperand(1).getImm();
   return true;
 }
 
@@ -4767,6 +4797,310 @@ MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
   }
 
   return nullptr;
+}
+
+/// Convert an ALUrr opcode to corresponding ALUri opcode. Such as
+///     ADD32rr  ==>  ADD32ri
+/// ShiftRotate will be set to true if the Opcode is shift or rotate.
+/// If the ALUri can be further changed to COPY when the immediate is 0, set
+/// CanConvert2Copy to true.
+static unsigned ConvertALUrr2ALUri(unsigned Opcode, bool &CanConvert2Copy,
+                                   bool &ShiftRotate) {
+  CanConvert2Copy = false;
+  ShiftRotate = false;
+  unsigned NewOpcode = 0;
+  switch (Opcode) {
+    case X86::ADD64rr:
+      NewOpcode = X86::ADD64ri32;
+      CanConvert2Copy = true;
+      break;
+    case X86::ADC64rr:
+      NewOpcode = X86::ADC64ri32;
+      break;
+    case X86::SUB64rr:
+      NewOpcode = X86::SUB64ri32;
+      CanConvert2Copy = true;
+      break;
+    case X86::SBB64rr:
+      NewOpcode = X86::SBB64ri32;
+      break;
+    case X86::AND64rr:
+      NewOpcode = X86::AND64ri32;
+      break;
+    case X86::OR64rr:
+      NewOpcode = X86::OR64ri32;
+      CanConvert2Copy = true;
+      break;
+    case X86::XOR64rr:
+      NewOpcode = X86::XOR64ri32;
+      CanConvert2Copy = true;
+      break;
+    case X86::TEST64rr:
+      NewOpcode = X86::TEST64ri32;
+      break;
+    case X86::CMP64rr:
+      NewOpcode = X86::CMP64ri32;
+      break;
+    case X86::SHR64rCL:
+      NewOpcode = X86::SHR64ri;
+      ShiftRotate = true;
+      break;
+    case X86::SHL64rCL:
+      NewOpcode = X86::SHL64ri;
+      ShiftRotate = true;
+      break;
+    case X86::SAR64rCL:
+      NewOpcode = X86::SAR64ri;
+      ShiftRotate = true;
+      break;
+    case X86::ROL64rCL:
+      NewOpcode = X86::ROL64ri;
+      ShiftRotate = true;
+      break;
+    case X86::ROR64rCL:
+      NewOpcode = X86::ROR64ri;
+      ShiftRotate = true;
+      break;
+    case X86::RCL64rCL:
+      NewOpcode = X86::RCL64ri;
+      ShiftRotate = true;
+      break;
+    case X86::RCR64rCL:
+      NewOpcode = X86::RCR64ri;
+      ShiftRotate = true;
+      break;
+    case X86::ADD32rr:
+      NewOpcode = X86::ADD32ri;
+      CanConvert2Copy = true;
+      break;
+    case X86::ADC32rr:
+      NewOpcode = X86::ADC32ri;
+      break;
+    case X86::SUB32rr:
+      NewOpcode = X86::SUB32ri;
+      CanConvert2Copy = true;
+      break;
+    case X86::SBB32rr:
+      NewOpcode = X86::SBB32ri;
+      break;
+    case X86::AND32rr:
+      NewOpcode = X86::AND32ri;
+      break;
+    case X86::OR32rr:
+      NewOpcode = X86::OR32ri;
+      CanConvert2Copy = true;
+      break;
+    case X86::XOR32rr:
+      NewOpcode = X86::XOR32ri;
+      CanConvert2Copy = true;
+      break;
+    case X86::TEST32rr:
+      NewOpcode = X86::TEST32ri;
+      break;
+    case X86::CMP32rr:
+      NewOpcode = X86::CMP32ri;
+      break;
+    case X86::SHR32rCL:
+      NewOpcode = X86::SHR32ri;
+      ShiftRotate = true;
+      break;
+    case X86::SHL32rCL:
+      NewOpcode = X86::SHL32ri;
+      ShiftRotate = true;
+      break;
+    case X86::SAR32rCL:
+      NewOpcode = X86::SAR32ri;
+      ShiftRotate = true;
+      break;
+    case X86::ROL32rCL:
+      NewOpcode = X86::ROL32ri;
+      ShiftRotate = true;
+      break;
+    case X86::ROR32rCL:
+      NewOpcode = X86::ROR32ri;
+      ShiftRotate = true;
+      break;
+    case X86::RCL32rCL:
+      NewOpcode = X86::RCL32ri;
+      ShiftRotate = true;
+      break;
+    case X86::RCR32rCL:
+      NewOpcode = X86::RCR32ri;
+      ShiftRotate = true;
+      break;
+  }
+  return NewOpcode;
+}
+
+/// Real implementation of FoldImmediate.
+/// Reg is assigned ImmVal in DefMI, and is used in UseMI.
+/// If MakeChange is true, this function tries to replace Reg by ImmVal in
+/// UseMI. If MakeChange is false, just check if folding is possible.
+/// Return true if folding is successful or possible.
+bool X86InstrInfo::FoldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
+                                     Register Reg, int64_t ImmVal,
+                                     MachineRegisterInfo *MRI,
+                                     bool MakeChange) const {
+  bool Modified = false;
+  bool ShiftRotate = false;
+  // When ImmVal is 0, some instructions can be changed to COPY.
+  bool CanChangeToCopy = false;
+  unsigned Opc = UseMI.getOpcode();
+
+  // 64 bit operations accept sign extended 32 bit immediates.
+  // 32 bit operations accept all 32 bit immediates, so we don't need to check
+  // them.
+  const TargetRegisterClass *RC = nullptr;
+  if (Reg.isVirtual())
+    RC = MRI->getRegClass(Reg);
+  if ((Reg.isPhysical() && X86::GR64RegClass.contains(Reg)) ||
+      (Reg.isVirtual() && X86::GR64RegClass.hasSubClassEq(RC))) {
+    if (!isInt<32>(ImmVal))
+      return false;
+  }
+
+  if (UseMI.findRegisterUseOperand(Reg)->getSubReg())
+    return false;
+  // Immediate has larger code size than register. So avoid folding the
+  // immediate if it has more than 1 use and we are optimizing for size.
+  if (UseMI.getMF()->getFunction().hasOptSize() && Reg.isVirtual() &&
+      !MRI->hasOneNonDBGUse(Reg))
+    return false;
+
+  unsigned NewOpc;
+  if (Opc == TargetOpcode::COPY) {
+    Register ToReg = UseMI.getOperand(0).getReg();
+    const TargetRegisterClass *RC = nullptr;
+    if (ToReg.isVirtual())
+      RC = MRI->getRegClass(ToReg);
+    bool GR32Reg = (ToReg.isVirtual() && X86::GR32RegClass.hasSubClassEq(RC)) ||
+                   (ToReg.isPhysical() && X86::GR32RegClass.contains(ToReg));
+    bool GR64Reg = (ToReg.isVirtual() && X86::GR64RegClass.hasSubClassEq(RC)) ||
+                   (ToReg.isPhysical() && X86::GR64RegClass.contains(ToReg));
+    bool GR8Reg = (ToReg.isVirtual() && X86::GR8RegClass.hasSubClassEq(RC)) ||
+                  (ToReg.isPhysical() && X86::GR8RegClass.contains(ToReg));
+
+    if (ImmVal == 0) {
+      // We have MOV32r0 only.
+      if (!GR32Reg)
+        return false;
+    }
+
+    if (GR64Reg) {
+      if (isUInt<32>(ImmVal))
+        NewOpc = X86::MOV32ri64;
+      else
+        NewOpc = X86::MOV64ri;
+    } else if (GR32Reg) {
+      NewOpc = X86::MOV32ri;
+      if (ImmVal == 0) {
+        // MOV32r0 clobbers EFLAGS.
+        const TargetRegisterInfo *TRI = &getRegisterInfo();
+        if (UseMI.getParent()->computeRegisterLiveness(TRI, X86::EFLAGS, UseMI)
+            != MachineBasicBlock::LQR_Dead)
+          return false;
+
+        // MOV32r0 is different than other cases because it doesn't encode the
+        // immediate in the instruction. So we directly modify it here.
+        if (!MakeChange)
+          return true;
+        UseMI.setDesc(get(X86::MOV32r0));
+        UseMI.removeOperand(UseMI.findRegisterUseOperandIdx(Reg));
+        UseMI.addOperand(MachineOperand::CreateReg(X86::EFLAGS, /*isDef=*/ true,
+                                                   /*isImp=*/ true,
+                                                   /*isKill=*/ false,
+                                                   /*isDead=*/ true));
+        Modified = true;
+      }
+    } else if (GR8Reg)
+      NewOpc = X86::MOV8ri;
+    else
+      return false;
+  } else
+    NewOpc = ConvertALUrr2ALUri(Opc, CanChangeToCopy, ShiftRotate);
+
+  if (!NewOpc)
+    return false;
+
+  // For SUB instructions the immediate can only be the second source operand.
+  if ((NewOpc == X86::SUB64ri32 || NewOpc == X86::SUB32ri ||
+       NewOpc == X86::SBB64ri32 || NewOpc == X86::SBB32ri) &&
+      UseMI.findRegisterUseOperandIdx(Reg) != 2)
+    return false;
+  // For CMP instructions the immediate can only be at index 1.
+  if ((NewOpc == X86::CMP64ri32 || NewOpc == X86::CMP32ri) &&
+      UseMI.findRegisterUseOperandIdx(Reg) != 1)
+    return false;
+
+  if (ShiftRotate) {
+    unsigned RegIdx = UseMI.findRegisterUseOperandIdx(Reg);
+    if (RegIdx < 2)
+      return false;
+    if (!isInt<8>(ImmVal))
+      return false;
+    assert(Reg == X86::CL);
+
+    if (!MakeChange)
+      return true;
+    UseMI.setDesc(get(NewOpc));
+    UseMI.removeOperand(RegIdx);
+    UseMI.addOperand(MachineOperand::CreateImm(ImmVal));
+    // Reg is physical register $cl, so we don't know if DefMI is dead through
+    // MRI. Let the caller handle it, or pass dead-mi-elimination can delete
+    // the dead physical register define instruction.
+    return true;
+  }
+
+  if (!MakeChange)
+    return true;
+
+  if (!Modified) {
+    // Modify the instruction.
+    if (ImmVal == 0 && CanChangeToCopy &&
+        UseMI.registerDefIsDead(X86::EFLAGS)) {
+      //          %100 = add %101, 0
+      //    ==>
+      //          %100 = COPY %101
+      UseMI.setDesc(get(TargetOpcode::COPY));
+      UseMI.removeOperand(UseMI.findRegisterUseOperandIdx(Reg));
+      UseMI.removeOperand(UseMI.findRegisterDefOperandIdx(X86::EFLAGS));
+      UseMI.untieRegOperand(0);
+      UseMI.clearFlag(MachineInstr::MIFlag::NoSWrap);
+      UseMI.clearFlag(MachineInstr::MIFlag::NoUWrap);
+    } else {
+      unsigned Op1 = 1, Op2 = CommuteAnyOperandIndex;
+      unsigned ImmOpNum = 2;
+      if (!UseMI.getOperand(0).isDef()) {
+        Op1 = 0;                                      // TEST, CMP
+        ImmOpNum = 1;
+      }
+      if (Opc == TargetOpcode::COPY)
+        ImmOpNum = 1;
+      if (findCommutedOpIndices(UseMI, Op1, Op2) &&
+          UseMI.getOperand(Op1).getReg() == Reg)
+        commuteInstruction(UseMI);
+
+      assert(UseMI.getOperand(ImmOpNum).getReg() == Reg);
+      UseMI.setDesc(get(NewOpc));
+      UseMI.getOperand(ImmOpNum).ChangeToImmediate(ImmVal);
+    }
+  }
+
+  if (Reg.isVirtual() && MRI->use_nodbg_empty(Reg))
+    DefMI->eraseFromBundle();
+
+  return true;
+}
+
+/// FoldImmediate - 'Reg' is known to be defined by a move immediate
+/// instruction, try to fold the immediate into the use instruction.
+bool X86InstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+                                 Register Reg, MachineRegisterInfo *MRI) const {
+  int64_t ImmVal;
+  if (!getConstValDefinedInReg(DefMI, Reg, ImmVal))
+    return false;
+
+  return FoldImmediateImpl(UseMI, &DefMI, Reg, ImmVal, MRI, true);
 }
 
 /// Expand a single-def pseudo instruction to a two-addr
@@ -9796,27 +10130,36 @@ X86InstrInfo::insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
   return It;
 }
 
-void X86InstrInfo::buildClearRegister(Register Reg,
-                                      MachineBasicBlock &MBB,
+void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator Iter,
-                                      DebugLoc &DL) const {
+                                      DebugLoc &DL,
+                                      bool AllowSideEffects) const {
   const MachineFunction &MF = *MBB.getParent();
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   const TargetRegisterInfo &TRI = getRegisterInfo();
 
   if (ST.hasMMX() && X86::VR64RegClass.contains(Reg))
-    // FIXME: Ignore MMX registers?
+    // FIXME: Should we ignore MMX registers?
     return;
 
   if (TRI.isGeneralPurposeRegister(MF, Reg)) {
-    BuildMI(MBB, Iter, DL, get(X86::XOR32rr), Reg)
-      .addReg(Reg, RegState::Undef)
-      .addReg(Reg, RegState::Undef);
+    // Convert register to the 32-bit version. Both 'movl' and 'xorl' clear the
+    // upper bits of a 64-bit register automagically.
+    Reg = getX86SubSuperRegister(Reg, 32);
+
+    if (!AllowSideEffects)
+      // XOR affects flags, so use a MOV instead.
+      BuildMI(MBB, Iter, DL, get(X86::MOV32ri), Reg).addImm(0);
+    else
+      BuildMI(MBB, Iter, DL, get(X86::XOR32rr), Reg)
+          .addReg(Reg, RegState::Undef)
+          .addReg(Reg, RegState::Undef);
   } else if (X86::VR128RegClass.contains(Reg)) {
     // XMM#
     if (!ST.hasSSE1())
       return;
 
+    // PXOR is safe to use because it doesn't affect flags.
     BuildMI(MBB, Iter, DL, get(X86::PXORrr), Reg)
       .addReg(Reg, RegState::Undef)
       .addReg(Reg, RegState::Undef);
@@ -9825,6 +10168,7 @@ void X86InstrInfo::buildClearRegister(Register Reg,
     if (!ST.hasAVX())
       return;
 
+    // VPXOR is safe to use because it doesn't affect flags.
     BuildMI(MBB, Iter, DL, get(X86::VPXORrr), Reg)
       .addReg(Reg, RegState::Undef)
       .addReg(Reg, RegState::Undef);
@@ -9833,6 +10177,7 @@ void X86InstrInfo::buildClearRegister(Register Reg,
     if (!ST.hasAVX512())
       return;
 
+    // VPXORY is safe to use because it doesn't affect flags.
     BuildMI(MBB, Iter, DL, get(X86::VPXORYrr), Reg)
       .addReg(Reg, RegState::Undef)
       .addReg(Reg, RegState::Undef);
@@ -9844,9 +10189,11 @@ void X86InstrInfo::buildClearRegister(Register Reg,
     if (!ST.hasVLX())
       return;
 
-    BuildMI(MBB, Iter, DL, get(ST.hasBWI() ? X86::KXORQrr : X86::KXORWrr), Reg)
-      .addReg(Reg, RegState::Undef)
-      .addReg(Reg, RegState::Undef);
+    // KXOR is safe to use because it doesn't affect flags.
+    unsigned Op = ST.hasBWI() ? X86::KXORQrr : X86::KXORWrr;
+    BuildMI(MBB, Iter, DL, get(Op), Reg)
+        .addReg(Reg, RegState::Undef)
+        .addReg(Reg, RegState::Undef);
   }
 }
 

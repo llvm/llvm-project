@@ -1445,6 +1445,8 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_PreserveAll;
   case CC_X86RegCall:
     return llvm::dwarf::DW_CC_LLVM_X86RegCall;
+  case CC_M68kRTD:
+    return llvm::dwarf::DW_CC_LLVM_M68kRTD;
   }
   return 0;
 }
@@ -1497,6 +1499,8 @@ CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
                                 llvm::DIScope *RecordTy, const RecordDecl *RD) {
   StringRef Name = BitFieldDecl->getName();
   QualType Ty = BitFieldDecl->getType();
+  if (BitFieldDecl->hasAttr<PreferredTypeAttr>())
+    Ty = BitFieldDecl->getAttr<PreferredTypeAttr>()->getType();
   SourceLocation Loc = BitFieldDecl->getLocation();
   llvm::DIFile *VUnit = getOrCreateFile(Loc);
   llvm::DIType *DebugType = getOrCreateType(Ty, VUnit);
@@ -1673,22 +1677,13 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
 
   unsigned LineNumber = getLineNumber(Var->getLocation());
   StringRef VName = Var->getName();
-  llvm::Constant *C = nullptr;
-  if (Var->getInit()) {
-    const APValue *Value = Var->evaluateValue();
-    if (Value) {
-      if (Value->isInt())
-        C = llvm::ConstantInt::get(CGM.getLLVMContext(), Value->getInt());
-      if (Value->isFloat())
-        C = llvm::ConstantFP::get(CGM.getLLVMContext(), Value->getFloat());
-    }
-  }
 
   llvm::DINode::DIFlags Flags = getAccessFlag(Var->getAccess(), RD);
   auto Align = getDeclAlignIfRequired(Var, CGM.getContext());
   llvm::DIDerivedType *GV = DBuilder.createStaticMemberType(
-      RecordTy, VName, VUnit, LineNumber, VTy, Flags, C, Align);
+      RecordTy, VName, VUnit, LineNumber, VTy, Flags, /* Val */ nullptr, Align);
   StaticDataMemberCache[Var->getCanonicalDecl()].reset(GV);
+  StaticDataMemberDefinitionsToEmit.push_back(Var->getCanonicalDecl());
   return GV;
 }
 
@@ -3117,8 +3112,8 @@ llvm::DIType *CGDebugInfo::CreateType(const VectorType *Ty,
     uint64_t NumVectorBytes = Size / Ctx.getCharWidth();
 
     // Construct the vector of 'char' type.
-    QualType CharVecTy = Ctx.getVectorType(Ctx.CharTy, NumVectorBytes,
-                                           VectorType::GenericVector);
+    QualType CharVecTy =
+        Ctx.getVectorType(Ctx.CharTy, NumVectorBytes, VectorKind::Generic);
     return CreateType(CharVecTy->getAs<VectorType>(), Unit);
   }
 
@@ -3872,7 +3867,7 @@ void CGDebugInfo::collectVarDeclProps(const VarDecl *VD, llvm::DIFile *&Unit,
     QualType ET = CGM.getContext().getAsArrayType(T)->getElementType();
 
     T = CGM.getContext().getConstantArrayType(ET, ConstVal, nullptr,
-                                              ArrayType::Normal, 0);
+                                              ArraySizeModifier::Normal, 0);
   }
 
   Name = VD->getName();
@@ -4544,7 +4539,7 @@ CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
     if (NumPaddingBytes.isPositive()) {
       llvm::APInt pad(32, NumPaddingBytes.getQuantity());
       FType = CGM.getContext().getConstantArrayType(
-          CGM.getContext().CharTy, pad, nullptr, ArrayType::Normal, 0);
+          CGM.getContext().CharTy, pad, nullptr, ArraySizeModifier::Normal, 0);
       EltTys.push_back(CreateMemberType(Unit, FType, "", &FieldOffset));
     }
   }
@@ -4615,8 +4610,8 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   // If this is implicit parameter of CXXThis or ObjCSelf kind, then give it an
   // object pointer flag.
   if (const auto *IPD = dyn_cast<ImplicitParamDecl>(VD)) {
-    if (IPD->getParameterKind() == ImplicitParamDecl::CXXThis ||
-        IPD->getParameterKind() == ImplicitParamDecl::ObjCSelf)
+    if (IPD->getParameterKind() == ImplicitParamKind::CXXThis ||
+        IPD->getParameterKind() == ImplicitParamKind::ObjCSelf)
       Flags |= llvm::DINode::FlagObjectPointer;
   }
 
@@ -4877,11 +4872,15 @@ CGDebugInfo::EmitDeclareOfAutoVariable(const VarDecl *VD, llvm::Value *Storage,
                                        const bool UsePointerValue) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
 
-  if (auto *DD = dyn_cast<DecompositionDecl>(VD))
+  if (auto *DD = dyn_cast<DecompositionDecl>(VD)) {
     for (auto *B : DD->bindings()) {
       EmitDeclare(B, Storage, std::nullopt, Builder,
                   VD->getType()->isReferenceType());
     }
+    // Don't emit an llvm.dbg.declare for the composite storage as it doesn't
+    // correspond to a user variable.
+    return nullptr;
+  }
 
   return EmitDeclare(VD, Storage, std::nullopt, Builder, UsePointerValue);
 }
@@ -4945,7 +4944,7 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
   // Self is passed along as an implicit non-arg variable in a
   // block. Mark it as the object pointer.
   if (const auto *IPD = dyn_cast<ImplicitParamDecl>(VD))
-    if (IPD->getParameterKind() == ImplicitParamDecl::ObjCSelf)
+    if (IPD->getParameterKind() == ImplicitParamKind::ObjCSelf)
       Ty = CreateSelfType(VD->getType(), Ty);
 
   // Get location information.
@@ -5572,25 +5571,8 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
   auto &GV = DeclCache[VD];
   if (GV)
     return;
-  llvm::DIExpression *InitExpr = nullptr;
-  if (CGM.getContext().getTypeSize(VD->getType()) <= 64) {
-    // FIXME: Add a representation for integer constants wider than 64 bits.
-    if (Init.isInt()) {
-      const llvm::APSInt &InitInt = Init.getInt();
-      std::optional<uint64_t> InitIntOpt;
-      if (InitInt.isUnsigned())
-        InitIntOpt = InitInt.tryZExtValue();
-      else if (auto tmp = InitInt.trySExtValue(); tmp.has_value())
-        // Transform a signed optional to unsigned optional. When cpp 23 comes,
-        // use std::optional::transform
-        InitIntOpt = (uint64_t)tmp.value();
-      if (InitIntOpt)
-        InitExpr = DBuilder.createConstantValueExpression(InitIntOpt.value());
-    } else if (Init.isFloat())
-      InitExpr = DBuilder.createConstantValueExpression(
-          Init.getFloat().bitcastToAPInt().getZExtValue());
-  }
 
+  llvm::DIExpression *InitExpr = createConstantValueExpression(VD, Init);
   llvm::MDTuple *TemplateParameters = nullptr;
 
   if (isa<VarTemplateSpecializationDecl>(VD))
@@ -5603,6 +5585,39 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
       DContext, Name, StringRef(), Unit, getLineNumber(VD->getLocation()), Ty,
       true, true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VarD),
       TemplateParameters, Align));
+}
+
+void CGDebugInfo::EmitGlobalVariable(const VarDecl *VD) {
+  assert(VD->hasInit());
+  assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
+  if (VD->hasAttr<NoDebugAttr>())
+    return;
+
+  auto &GV = DeclCache[VD];
+  if (GV)
+    return;
+
+  auto const *InitVal = VD->evaluateValue();
+  if (!InitVal)
+    return;
+
+  llvm::DIFile *Unit = nullptr;
+  llvm::DIScope *DContext = nullptr;
+  unsigned LineNo;
+  StringRef DeclName, LinkageName;
+  QualType T;
+  llvm::MDTuple *TemplateParameters = nullptr;
+  collectVarDeclProps(VD, Unit, LineNo, T, DeclName, LinkageName,
+                      TemplateParameters, DContext);
+
+  auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
+  llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(VD);
+  llvm::DIExpression *InitExpr = createConstantValueExpression(VD, *InitVal);
+
+  GV.reset(DBuilder.createGlobalVariableExpression(
+      TheCU, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
+      true, true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VD),
+      TemplateParameters, Align, Annotations));
 }
 
 void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
@@ -5875,6 +5890,18 @@ void CGDebugInfo::finalize() {
     DBuilder.replaceTemporary(std::move(FwdDecl), cast<llvm::MDNode>(Repl));
   }
 
+  for (auto const *VD : StaticDataMemberDefinitionsToEmit) {
+    assert(VD->isStaticDataMember());
+
+    if (DeclCache.contains(VD))
+      continue;
+
+    if (!VD->hasInit())
+      continue;
+
+    EmitGlobalVariable(VD);
+  }
+
   // We keep our own list of retained types, because we need to look
   // up the final type in the type cache.
   for (auto &RT : RetainedTypes)
@@ -5926,4 +5953,33 @@ llvm::DINode::DIFlags CGDebugInfo::getCallSiteRelatedAttrs() const {
     return llvm::DINode::FlagZero;
 
   return llvm::DINode::FlagAllCallsDescribed;
+}
+
+llvm::DIExpression *
+CGDebugInfo::createConstantValueExpression(const clang::ValueDecl *VD,
+                                           const APValue &Val) {
+  // FIXME: Add a representation for integer constants wider than 64 bits.
+  if (CGM.getContext().getTypeSize(VD->getType()) > 64)
+    return nullptr;
+
+  if (Val.isFloat())
+    return DBuilder.createConstantValueExpression(
+        Val.getFloat().bitcastToAPInt().getZExtValue());
+
+  if (!Val.isInt())
+    return nullptr;
+
+  llvm::APSInt const &ValInt = Val.getInt();
+  std::optional<uint64_t> ValIntOpt;
+  if (ValInt.isUnsigned())
+    ValIntOpt = ValInt.tryZExtValue();
+  else if (auto tmp = ValInt.trySExtValue())
+    // Transform a signed optional to unsigned optional. When cpp 23 comes,
+    // use std::optional::transform
+    ValIntOpt = static_cast<uint64_t>(*tmp);
+
+  if (ValIntOpt)
+    return DBuilder.createConstantValueExpression(ValIntOpt.value());
+
+  return nullptr;
 }

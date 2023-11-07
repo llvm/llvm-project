@@ -1099,39 +1099,6 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
       return Builder.CreateICmpUGE(Builder.CreateNeg(B), A);
   }
 
-  Value *Base, *Offset;
-  if (!match(ZeroCmpOp, m_Sub(m_Value(Base), m_Value(Offset))))
-    return nullptr;
-
-  if (!match(UnsignedICmp,
-             m_c_ICmp(UnsignedPred, m_Specific(Base), m_Specific(Offset))) ||
-      !ICmpInst::isUnsigned(UnsignedPred))
-    return nullptr;
-
-  // Base >=/> Offset && (Base - Offset) != 0  <-->  Base > Offset
-  // (no overflow and not null)
-  if ((UnsignedPred == ICmpInst::ICMP_UGE ||
-       UnsignedPred == ICmpInst::ICMP_UGT) &&
-      EqPred == ICmpInst::ICMP_NE && IsAnd)
-    return Builder.CreateICmpUGT(Base, Offset);
-
-  // Base <=/< Offset || (Base - Offset) == 0  <-->  Base <= Offset
-  // (overflow or null)
-  if ((UnsignedPred == ICmpInst::ICMP_ULE ||
-       UnsignedPred == ICmpInst::ICMP_ULT) &&
-      EqPred == ICmpInst::ICMP_EQ && !IsAnd)
-    return Builder.CreateICmpULE(Base, Offset);
-
-  // Base <= Offset && (Base - Offset) != 0  -->  Base < Offset
-  if (UnsignedPred == ICmpInst::ICMP_ULE && EqPred == ICmpInst::ICMP_NE &&
-      IsAnd)
-    return Builder.CreateICmpULT(Base, Offset);
-
-  // Base > Offset || (Base - Offset) == 0  -->  Base >= Offset
-  if (UnsignedPred == ICmpInst::ICMP_UGT && EqPred == ICmpInst::ICMP_EQ &&
-      !IsAnd)
-    return Builder.CreateICmpUGE(Base, Offset);
-
   return nullptr;
 }
 
@@ -1179,13 +1146,40 @@ Value *InstCombinerImpl::foldEqOfParts(ICmpInst *Cmp0, ICmpInst *Cmp1,
     return nullptr;
 
   CmpInst::Predicate Pred = IsAnd ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
-  if (Cmp0->getPredicate() != Pred || Cmp1->getPredicate() != Pred)
-    return nullptr;
+  auto GetMatchPart = [&](ICmpInst *Cmp,
+                          unsigned OpNo) -> std::optional<IntPart> {
+    if (Pred == Cmp->getPredicate())
+      return matchIntPart(Cmp->getOperand(OpNo));
 
-  std::optional<IntPart> L0 = matchIntPart(Cmp0->getOperand(0));
-  std::optional<IntPart> R0 = matchIntPart(Cmp0->getOperand(1));
-  std::optional<IntPart> L1 = matchIntPart(Cmp1->getOperand(0));
-  std::optional<IntPart> R1 = matchIntPart(Cmp1->getOperand(1));
+    const APInt *C;
+    // (icmp eq (lshr x, C), (lshr y, C)) gets optimized to:
+    // (icmp ult (xor x, y), 1 << C) so also look for that.
+    if (Pred == CmpInst::ICMP_EQ && Cmp->getPredicate() == CmpInst::ICMP_ULT) {
+      if (!match(Cmp->getOperand(1), m_Power2(C)) ||
+          !match(Cmp->getOperand(0), m_Xor(m_Value(), m_Value())))
+        return std::nullopt;
+    }
+
+    // (icmp ne (lshr x, C), (lshr y, C)) gets optimized to:
+    // (icmp ugt (xor x, y), (1 << C) - 1) so also look for that.
+    else if (Pred == CmpInst::ICMP_NE &&
+             Cmp->getPredicate() == CmpInst::ICMP_UGT) {
+      if (!match(Cmp->getOperand(1), m_LowBitMask(C)) ||
+          !match(Cmp->getOperand(0), m_Xor(m_Value(), m_Value())))
+        return std::nullopt;
+    } else {
+      return std::nullopt;
+    }
+
+    unsigned From = Pred == CmpInst::ICMP_NE ? C->popcount() : C->countr_zero();
+    Instruction *I = cast<Instruction>(Cmp->getOperand(0));
+    return {{I->getOperand(OpNo), From, C->getBitWidth() - From}};
+  };
+
+  std::optional<IntPart> L0 = GetMatchPart(Cmp0, 0);
+  std::optional<IntPart> R0 = GetMatchPart(Cmp0, 1);
+  std::optional<IntPart> L1 = GetMatchPart(Cmp1, 0);
+  std::optional<IntPart> R1 = GetMatchPart(Cmp1, 1);
   if (!L0 || !R0 || !L1 || !R1)
     return nullptr;
 
@@ -1798,29 +1792,6 @@ Instruction *InstCombinerImpl::foldCastedBitwiseLogic(BinaryOperator &I) {
     return CastInst::Create(CastOpcode, NewOp, DestTy);
   }
 
-  // For now, only 'and'/'or' have optimizations after this.
-  if (LogicOpc == Instruction::Xor)
-    return nullptr;
-
-  // If this is logic(cast(icmp), cast(icmp)), try to fold this even if the
-  // cast is otherwise not optimizable.  This happens for vector sexts.
-  ICmpInst *ICmp0 = dyn_cast<ICmpInst>(Cast0Src);
-  ICmpInst *ICmp1 = dyn_cast<ICmpInst>(Cast1Src);
-  if (ICmp0 && ICmp1) {
-    if (Value *Res =
-            foldAndOrOfICmps(ICmp0, ICmp1, I, LogicOpc == Instruction::And))
-      return CastInst::Create(CastOpcode, Res, DestTy);
-    return nullptr;
-  }
-
-  // If this is logic(cast(fcmp), cast(fcmp)), try to fold this even if the
-  // cast is otherwise not optimizable.  This happens for vector sexts.
-  FCmpInst *FCmp0 = dyn_cast<FCmpInst>(Cast0Src);
-  FCmpInst *FCmp1 = dyn_cast<FCmpInst>(Cast1Src);
-  if (FCmp0 && FCmp1)
-    if (Value *R = foldLogicOfFCmps(FCmp0, FCmp1, LogicOpc == Instruction::And))
-      return CastInst::Create(CastOpcode, R, DestTy);
-
   return nullptr;
 }
 
@@ -2304,13 +2275,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
     const APInt *AddC;
     if (match(Op0, m_Add(m_Value(X), m_APInt(AddC)))) {
-      // If we add zeros to every bit below a mask, the add has no effect:
-      // (X + AddC) & LowMaskC --> X & LowMaskC
-      unsigned Ctlz = C->countl_zero();
-      APInt LowMask(APInt::getLowBitsSet(Width, Width - Ctlz));
-      if ((*AddC & LowMask).isZero())
-        return BinaryOperator::CreateAnd(X, Op1);
-
       // If we are masking the result of the add down to exactly one bit and
       // the constant we are adding has no bits set below that bit, then the
       // add is flipping a single bit. Example:
@@ -2740,100 +2704,114 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
   // rotate matching code under visitSelect and visitTrunc?
   unsigned Width = Or.getType()->getScalarSizeInBits();
 
+  Instruction *Or0, *Or1;
+  if (!match(Or.getOperand(0), m_Instruction(Or0)) ||
+      !match(Or.getOperand(1), m_Instruction(Or1)))
+    return nullptr;
+
+  bool IsFshl = true; // Sub on LSHR.
+  SmallVector<Value *, 3> FShiftArgs;
+
   // First, find an or'd pair of opposite shifts:
   // or (lshr ShVal0, ShAmt0), (shl ShVal1, ShAmt1)
-  BinaryOperator *Or0, *Or1;
-  if (!match(Or.getOperand(0), m_BinOp(Or0)) ||
-      !match(Or.getOperand(1), m_BinOp(Or1)))
-    return nullptr;
+  if (isa<BinaryOperator>(Or0) && isa<BinaryOperator>(Or1)) {
+    Value *ShVal0, *ShVal1, *ShAmt0, *ShAmt1;
+    if (!match(Or0,
+               m_OneUse(m_LogicalShift(m_Value(ShVal0), m_Value(ShAmt0)))) ||
+        !match(Or1,
+               m_OneUse(m_LogicalShift(m_Value(ShVal1), m_Value(ShAmt1)))) ||
+        Or0->getOpcode() == Or1->getOpcode())
+      return nullptr;
 
-  Value *ShVal0, *ShVal1, *ShAmt0, *ShAmt1;
-  if (!match(Or0, m_OneUse(m_LogicalShift(m_Value(ShVal0), m_Value(ShAmt0)))) ||
-      !match(Or1, m_OneUse(m_LogicalShift(m_Value(ShVal1), m_Value(ShAmt1)))) ||
-      Or0->getOpcode() == Or1->getOpcode())
-    return nullptr;
-
-  // Canonicalize to or(shl(ShVal0, ShAmt0), lshr(ShVal1, ShAmt1)).
-  if (Or0->getOpcode() == BinaryOperator::LShr) {
-    std::swap(Or0, Or1);
-    std::swap(ShVal0, ShVal1);
-    std::swap(ShAmt0, ShAmt1);
-  }
-  assert(Or0->getOpcode() == BinaryOperator::Shl &&
-         Or1->getOpcode() == BinaryOperator::LShr &&
-         "Illegal or(shift,shift) pair");
-
-  // Match the shift amount operands for a funnel shift pattern. This always
-  // matches a subtraction on the R operand.
-  auto matchShiftAmount = [&](Value *L, Value *R, unsigned Width) -> Value * {
-    // Check for constant shift amounts that sum to the bitwidth.
-    const APInt *LI, *RI;
-    if (match(L, m_APIntAllowUndef(LI)) && match(R, m_APIntAllowUndef(RI)))
-      if (LI->ult(Width) && RI->ult(Width) && (*LI + *RI) == Width)
-        return ConstantInt::get(L->getType(), *LI);
-
-    Constant *LC, *RC;
-    if (match(L, m_Constant(LC)) && match(R, m_Constant(RC)) &&
-        match(L, m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, APInt(Width, Width))) &&
-        match(R, m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, APInt(Width, Width))) &&
-        match(ConstantExpr::getAdd(LC, RC), m_SpecificIntAllowUndef(Width)))
-      return ConstantExpr::mergeUndefsWith(LC, RC);
-
-    // (shl ShVal, X) | (lshr ShVal, (Width - x)) iff X < Width.
-    // We limit this to X < Width in case the backend re-expands the intrinsic,
-    // and has to reintroduce a shift modulo operation (InstCombine might remove
-    // it after this fold). This still doesn't guarantee that the final codegen
-    // will match this original pattern.
-    if (match(R, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(L))))) {
-      KnownBits KnownL = IC.computeKnownBits(L, /*Depth*/ 0, &Or);
-      return KnownL.getMaxValue().ult(Width) ? L : nullptr;
+    // Canonicalize to or(shl(ShVal0, ShAmt0), lshr(ShVal1, ShAmt1)).
+    if (Or0->getOpcode() == BinaryOperator::LShr) {
+      std::swap(Or0, Or1);
+      std::swap(ShVal0, ShVal1);
+      std::swap(ShAmt0, ShAmt1);
     }
+    assert(Or0->getOpcode() == BinaryOperator::Shl &&
+           Or1->getOpcode() == BinaryOperator::LShr &&
+           "Illegal or(shift,shift) pair");
 
-    // For non-constant cases, the following patterns currently only work for
-    // rotation patterns.
-    // TODO: Add general funnel-shift compatible patterns.
-    if (ShVal0 != ShVal1)
+    // Match the shift amount operands for a funnel shift pattern. This always
+    // matches a subtraction on the R operand.
+    auto matchShiftAmount = [&](Value *L, Value *R, unsigned Width) -> Value * {
+      // Check for constant shift amounts that sum to the bitwidth.
+      const APInt *LI, *RI;
+      if (match(L, m_APIntAllowUndef(LI)) && match(R, m_APIntAllowUndef(RI)))
+        if (LI->ult(Width) && RI->ult(Width) && (*LI + *RI) == Width)
+          return ConstantInt::get(L->getType(), *LI);
+
+      Constant *LC, *RC;
+      if (match(L, m_Constant(LC)) && match(R, m_Constant(RC)) &&
+          match(L,
+                m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, APInt(Width, Width))) &&
+          match(R,
+                m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, APInt(Width, Width))) &&
+          match(ConstantExpr::getAdd(LC, RC), m_SpecificIntAllowUndef(Width)))
+        return ConstantExpr::mergeUndefsWith(LC, RC);
+
+      // (shl ShVal, X) | (lshr ShVal, (Width - x)) iff X < Width.
+      // We limit this to X < Width in case the backend re-expands the
+      // intrinsic, and has to reintroduce a shift modulo operation (InstCombine
+      // might remove it after this fold). This still doesn't guarantee that the
+      // final codegen will match this original pattern.
+      if (match(R, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(L))))) {
+        KnownBits KnownL = IC.computeKnownBits(L, /*Depth*/ 0, &Or);
+        return KnownL.getMaxValue().ult(Width) ? L : nullptr;
+      }
+
+      // For non-constant cases, the following patterns currently only work for
+      // rotation patterns.
+      // TODO: Add general funnel-shift compatible patterns.
+      if (ShVal0 != ShVal1)
+        return nullptr;
+
+      // For non-constant cases we don't support non-pow2 shift masks.
+      // TODO: Is it worth matching urem as well?
+      if (!isPowerOf2_32(Width))
+        return nullptr;
+
+      // The shift amount may be masked with negation:
+      // (shl ShVal, (X & (Width - 1))) | (lshr ShVal, ((-X) & (Width - 1)))
+      Value *X;
+      unsigned Mask = Width - 1;
+      if (match(L, m_And(m_Value(X), m_SpecificInt(Mask))) &&
+          match(R, m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask))))
+        return X;
+
+      // Similar to above, but the shift amount may be extended after masking,
+      // so return the extended value as the parameter for the intrinsic.
+      if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
+          match(R,
+                m_And(m_Neg(m_ZExt(m_And(m_Specific(X), m_SpecificInt(Mask)))),
+                      m_SpecificInt(Mask))))
+        return L;
+
+      if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
+          match(R, m_ZExt(m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask)))))
+        return L;
+
+      return nullptr;
+    };
+
+    Value *ShAmt = matchShiftAmount(ShAmt0, ShAmt1, Width);
+    if (!ShAmt) {
+      ShAmt = matchShiftAmount(ShAmt1, ShAmt0, Width);
+      IsFshl = false; // Sub on SHL.
+    }
+    if (!ShAmt)
       return nullptr;
 
-    // For non-constant cases we don't support non-pow2 shift masks.
-    // TODO: Is it worth matching urem as well?
-    if (!isPowerOf2_32(Width))
-      return nullptr;
-
-    // The shift amount may be masked with negation:
-    // (shl ShVal, (X & (Width - 1))) | (lshr ShVal, ((-X) & (Width - 1)))
-    Value *X;
-    unsigned Mask = Width - 1;
-    if (match(L, m_And(m_Value(X), m_SpecificInt(Mask))) &&
-        match(R, m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask))))
-      return X;
-
-    // Similar to above, but the shift amount may be extended after masking,
-    // so return the extended value as the parameter for the intrinsic.
-    if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
-        match(R, m_And(m_Neg(m_ZExt(m_And(m_Specific(X), m_SpecificInt(Mask)))),
-                       m_SpecificInt(Mask))))
-      return L;
-
-    if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
-        match(R, m_ZExt(m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask)))))
-      return L;
-
-    return nullptr;
-  };
-
-  Value *ShAmt = matchShiftAmount(ShAmt0, ShAmt1, Width);
-  bool IsFshl = true; // Sub on LSHR.
-  if (!ShAmt) {
-    ShAmt = matchShiftAmount(ShAmt1, ShAmt0, Width);
-    IsFshl = false; // Sub on SHL.
+    FShiftArgs = {ShVal0, ShVal1, ShAmt};
   }
-  if (!ShAmt)
+
+  if (FShiftArgs.empty())
     return nullptr;
 
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
   Function *F = Intrinsic::getDeclaration(Or.getModule(), IID, Or.getType());
-  return CallInst::Create(F, {ShVal0, ShVal1, ShAmt});
+  return CallInst::Create(F, FShiftArgs);
 }
 
 /// Attempt to combine or(zext(x),shl(zext(y),bw/2) concat packing patterns.

@@ -241,12 +241,12 @@ InputSection *InputSectionBase::getLinkOrderDep() const {
   return cast<InputSection>(file->getSections()[link]);
 }
 
-// Find a function symbol that encloses a given location.
-Defined *InputSectionBase::getEnclosingFunction(uint64_t offset) {
+// Find a symbol that encloses a given location.
+Defined *InputSectionBase::getEnclosingSymbol(uint64_t offset, uint8_t type) {
   for (Symbol *b : file->getSymbols())
     if (Defined *d = dyn_cast<Defined>(b))
-      if (d->section == this && d->type == STT_FUNC && d->value <= offset &&
-          offset < d->value + d->size)
+      if (d->section == this && d->value <= offset &&
+          offset < d->value + d->size && (type == 0 || type == d->type))
         return d;
   return nullptr;
 }
@@ -296,10 +296,8 @@ std::string InputSectionBase::getObjMsg(uint64_t off) {
   // Find a symbol that encloses a given location. getObjMsg may be called
   // before ObjFile::initSectionsAndLocalSyms where local symbols are
   // initialized.
-  for (Symbol *b : file->getSymbols())
-    if (auto *d = dyn_cast_or_null<Defined>(b))
-      if (d->section == this && d->value <= off && off < d->value + d->size)
-        return filename + ":(" + toString(*d) + ")" + archive;
+  if (Defined *d = getEnclosingSymbol(off))
+    return filename + ":(" + toString(*d) + ")" + archive;
 
   // If there's no symbol, print out the offset in the section.
   return (filename + ":(" + name + "+0x" + utohexstr(off) + ")" + archive)
@@ -435,10 +433,7 @@ void InputSection::copyRelocations(uint8_t *buf,
         continue;
       }
       SectionBase *section = d->section;
-      if (!section->isLive()) {
-        p->setSymbolAndType(0, 0, false);
-        continue;
-      }
+      assert(section->isLive());
 
       int64_t addend = rel.addend;
       const uint8_t *bufLoc = sec->content().begin() + rel.offset;

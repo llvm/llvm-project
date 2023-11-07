@@ -213,7 +213,7 @@ void UnwrappedLineParser::parse() {
     }
 
     // Create line with eof token.
-    assert(FormatTok->is(tok::eof));
+    assert(eof());
     pushToken(FormatTok);
     addUnwrappedLine();
 
@@ -491,11 +491,18 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   SmallVector<StackEntry, 8> LBraceStack;
   assert(Tok->is(tok::l_brace));
   do {
-    // Get next non-comment token.
+    // Get next non-comment, non-preprocessor token.
     FormatToken *NextTok;
     do {
       NextTok = Tokens->getNextToken();
     } while (NextTok->is(tok::comment));
+    while (NextTok->is(tok::hash)) {
+      NextTok = Tokens->getNextToken();
+      do {
+        NextTok = Tokens->getNextToken();
+      } while (NextTok->is(tok::comment) ||
+               (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof)));
+    }
 
     switch (Tok->Tok.getKind()) {
     case tok::l_brace:
@@ -611,12 +618,9 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
       if (Tok->isNot(TT_StatementMacro))
         break;
       [[fallthrough]];
-    case tok::kw_if:
-      if (PrevTok->is(tok::hash))
-        break;
-      [[fallthrough]];
     case tok::at:
     case tok::semi:
+    case tok::kw_if:
     case tok::kw_while:
     case tok::kw_for:
     case tok::kw_switch:
@@ -1967,8 +1971,9 @@ void UnwrappedLineParser::parseStructuralElement(
         auto I = Line->Tokens.begin(), E = Line->Tokens.end();
         while (I != E && I->Tok->is(tok::comment))
           ++I;
-        while (I != E && Style.isVerilog() && I->Tok->is(tok::hash))
-          ++I;
+        if (Style.isVerilog())
+          while (I != E && I->Tok->is(tok::hash))
+            ++I;
         return I != E && (++I == E);
       };
       if (OneTokenSoFar()) {
@@ -2226,9 +2231,6 @@ bool UnwrappedLineParser::tryToParseLambda() {
     // followed by an `a->b` expression, such as:
     // ([obj func:arg] + a->b)
     // Otherwise the code below would parse as a lambda.
-    //
-    // FIXME: This heuristic is incorrect for C++20 generic lambdas with
-    // explicit template lists: []<bool b = true && false>(U &&u){}
     case tok::plus:
     case tok::minus:
     case tok::exclaim:
@@ -2258,7 +2260,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
       // This might or might not actually be a lambda arrow (this could be an
       // ObjC method invocation followed by a dereferencing arrow). We might
       // reset this back to TT_Unknown in TokenAnnotator.
-      FormatTok->setFinalizedType(TT_LambdaArrow);
+      FormatTok->setFinalizedType(TT_TrailingReturnArrow);
       SeenArrow = true;
       nextToken();
       break;
@@ -2268,6 +2270,11 @@ bool UnwrappedLineParser::tryToParseLambda() {
       parseRequiresClause(RequiresToken);
       break;
     }
+    case tok::equal:
+      if (!InTemplateParameterList)
+        return true;
+      nextToken();
+      break;
     default:
       return true;
     }
@@ -3114,9 +3121,16 @@ void UnwrappedLineParser::parseForOrWhileLoop(bool HasParens) {
       FormatTok->setFinalizedType(TT_ConditionLParen);
     parseParens();
   }
-  // Event control.
-  if (Style.isVerilog())
+
+  if (Style.isVerilog()) {
+    // Event control.
     parseVerilogSensitivityList();
+  } else if (Style.AllowShortLoopsOnASingleLine && FormatTok->is(tok::semi) &&
+             Tokens->getPreviousToken()->is(tok::r_paren)) {
+    nextToken();
+    addUnwrappedLine();
+    return;
+  }
 
   handleAttributes();
   parseLoopBody(KeepBraces, /*WrapRightBrace=*/true);
@@ -3133,6 +3147,8 @@ void UnwrappedLineParser::parseDoWhile() {
     addUnwrappedLine();
     return;
   }
+
+  FormatTok->setFinalizedType(TT_DoWhile);
 
   // If in Whitesmiths mode, the line with the while() needs to be indented
   // to the same level as the block.

@@ -29,17 +29,24 @@ namespace interp {
 using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
 template <unsigned Bits, bool Signed> class Integral;
-class Boolean;
 
 template <bool Signed> class IntegralAP final {
 private:
   friend IntegralAP<!Signed>;
-  APSInt V;
+  APInt V;
 
-  template <typename T> static T truncateCast(const APSInt &V) {
+  template <typename T, bool InputSigned>
+  static T truncateCast(const APInt &V) {
     constexpr unsigned BitSize = sizeof(T) * 8;
-    if (BitSize >= V.getBitWidth())
-      return std::is_signed_v<T> ? V.getSExtValue() : V.getZExtValue();
+    if (BitSize >= V.getBitWidth()) {
+      APInt Extended;
+      if constexpr (InputSigned)
+        Extended = V.sext(BitSize);
+      else
+        Extended = V.zext(BitSize);
+      return std::is_signed_v<T> ? Extended.getSExtValue()
+                                 : Extended.getZExtValue();
+    }
 
     return std::is_signed_v<T> ? V.trunc(BitSize).getSExtValue()
                                : V.trunc(BitSize).getZExtValue();
@@ -49,82 +56,78 @@ public:
   using AsUnsigned = IntegralAP<false>;
 
   template <typename T>
-  IntegralAP(T Value)
-      : V(APInt(sizeof(T) * 8, static_cast<uint64_t>(Value),
-                std::is_signed_v<T>)) {}
+  IntegralAP(T Value, unsigned BitWidth)
+      : V(APInt(BitWidth, static_cast<uint64_t>(Value), Signed)) {}
 
   IntegralAP(APInt V) : V(V) {}
-  IntegralAP(APSInt V) : V(V) {}
   /// Arbitrary value for uninitialized variables.
-  IntegralAP() : V(APSInt::getMaxValue(1024, Signed)) {}
+  IntegralAP() : IntegralAP(-1, 1024) {}
 
   IntegralAP operator-() const { return IntegralAP(-V); }
   IntegralAP operator-(const IntegralAP &Other) const {
     return IntegralAP(V - Other.V);
   }
-  bool operator>(IntegralAP RHS) const { return V > RHS.V; }
-  bool operator>=(IntegralAP RHS) const { return V >= RHS.V; }
-  bool operator<(IntegralAP RHS) const { return V < RHS.V; }
-  bool operator<=(IntegralAP RHS) const { return V <= RHS.V; }
+  bool operator>(const IntegralAP &RHS) const {
+    if constexpr (Signed)
+      return V.ugt(RHS.V);
+    return V.sgt(RHS.V);
+  }
+  bool operator>=(IntegralAP RHS) const {
+    if constexpr (Signed)
+      return V.uge(RHS.V);
+    return V.sge(RHS.V);
+  }
+  bool operator<(IntegralAP RHS) const {
+    if constexpr (Signed)
+      return V.slt(RHS.V);
+    return V.slt(RHS.V);
+  }
+  bool operator<=(IntegralAP RHS) const {
+    if constexpr (Signed)
+      return V.ult(RHS.V);
+    return V.ult(RHS.V);
+  }
 
-  explicit operator bool() const { return !V.isZero(); }
-  explicit operator int8_t() const { return truncateCast<int8_t>(V); }
-  explicit operator uint8_t() const { return truncateCast<uint8_t>(V); }
-  explicit operator int16_t() const { return truncateCast<int16_t>(V); }
-  explicit operator uint16_t() const { return truncateCast<uint16_t>(V); }
-  explicit operator int32_t() const { return truncateCast<int32_t>(V); }
-  explicit operator uint32_t() const { return truncateCast<uint32_t>(V); }
-  explicit operator int64_t() const { return truncateCast<int64_t>(V); }
-  explicit operator uint64_t() const { return truncateCast<uint64_t>(V); }
+  template <typename Ty, typename = std::enable_if_t<std::is_integral_v<Ty>>>
+  explicit operator Ty() const {
+    return truncateCast<Ty, Signed>(V);
+  }
 
   template <typename T> static IntegralAP from(T Value, unsigned NumBits = 0) {
     assert(NumBits > 0);
-    APSInt Copy = APSInt(APInt(NumBits, static_cast<int64_t>(Value), Signed), !Signed);
+    APInt Copy = APInt(NumBits, static_cast<uint64_t>(Value), Signed);
 
     return IntegralAP<Signed>(Copy);
   }
 
   template <bool InputSigned>
   static IntegralAP from(IntegralAP<InputSigned> V, unsigned NumBits = 0) {
-    if constexpr (Signed == InputSigned)
-      return V;
-
-    APSInt Copy = V.V;
-    Copy.setIsSigned(Signed);
-
-    return IntegralAP<Signed>(Copy);
+    return IntegralAP<Signed>(V.V);
   }
 
   template <unsigned Bits, bool InputSigned>
   static IntegralAP from(Integral<Bits, InputSigned> I, unsigned BitWidth) {
-    APSInt Copy =
-        APSInt(APInt(BitWidth, static_cast<int64_t>(I), InputSigned), !Signed);
-    Copy.setIsSigned(Signed);
+    APInt Copy = APInt(BitWidth, static_cast<uint64_t>(I), InputSigned);
 
-    assert(Copy.isSigned() == Signed);
     return IntegralAP<Signed>(Copy);
   }
-  static IntegralAP from(const Boolean &B) {
-    assert(false);
-    return IntegralAP::zero();
-  }
 
-  static IntegralAP zero() {
-    assert(false);
-    return IntegralAP(0);
+  static IntegralAP zero(int32_t BitWidth) {
+    APInt V = APInt(BitWidth, 0LL, Signed);
+    return IntegralAP(V);
   }
 
   constexpr unsigned bitWidth() const { return V.getBitWidth(); }
 
-  APSInt toAPSInt(unsigned Bits = 0) const { return V; }
-  APValue toAPValue() const { return APValue(V); }
+  APSInt toAPSInt(unsigned Bits = 0) const { return APSInt(V, Signed); }
+  APValue toAPValue() const { return APValue(APSInt(V, Signed)); }
 
   bool isZero() const { return V.isZero(); }
   bool isPositive() const { return V.isNonNegative(); }
   bool isNegative() const { return !V.isNonNegative(); }
   bool isMin() const { return V.isMinValue(); }
   bool isMax() const { return V.isMaxValue(); }
-  static bool isSigned() { return Signed; }
+  static constexpr bool isSigned() { return Signed; }
   bool isMinusOne() const { return Signed && V == -1; }
 
   unsigned countLeadingZeros() const { return V.countl_zero(); }
@@ -137,28 +140,43 @@ public:
     return NameStr;
   }
 
-  IntegralAP truncate(unsigned bitWidth) const {
-    assert(false);
-    return V;
+  IntegralAP truncate(unsigned BitWidth) const {
+    return IntegralAP(V.trunc(BitWidth));
   }
 
   IntegralAP<false> toUnsigned() const {
-    APSInt Copy = V;
-    Copy.setIsSigned(false);
+    APInt Copy = V;
     return IntegralAP<false>(Copy);
   }
 
   ComparisonCategoryResult compare(const IntegralAP &RHS) const {
-    return Compare(V, RHS.V);
+    assert(Signed == RHS.isSigned());
+    assert(bitWidth() == RHS.bitWidth());
+    if constexpr (Signed) {
+      if (V.slt(RHS.V))
+        return ComparisonCategoryResult::Less;
+      if (V.sgt(RHS.V))
+        return ComparisonCategoryResult::Greater;
+      return ComparisonCategoryResult::Equal;
+    }
+
+    assert(!Signed);
+    if (V.ult(RHS.V))
+      return ComparisonCategoryResult::Less;
+    if (V.ugt(RHS.V))
+      return ComparisonCategoryResult::Greater;
+    return ComparisonCategoryResult::Equal;
   }
 
   static bool increment(IntegralAP A, IntegralAP *R) {
+    // FIXME: Implement.
     assert(false);
-    *R = IntegralAP(A.V + 1);
+    *R = IntegralAP(A.V - 1);
     return false;
   }
 
   static bool decrement(IntegralAP A, IntegralAP *R) {
+    // FIXME: Implement.
     assert(false);
     *R = IntegralAP(A.V - 1);
     return false;
@@ -174,48 +192,46 @@ public:
   }
 
   static bool mul(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
+    // FIXME: Implement.
     assert(false);
-    // return CheckMulUB(A.V, B.V, R->V);
     return false;
   }
 
   static bool rem(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
+    // FIXME: Implement.
     assert(false);
-    *R = IntegralAP(A.V % B.V);
     return false;
   }
 
   static bool div(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
+    // FIXME: Implement.
     assert(false);
-    *R = IntegralAP(A.V / B.V);
     return false;
   }
 
   static bool bitAnd(IntegralAP A, IntegralAP B, unsigned OpBits,
                      IntegralAP *R) {
+    // FIXME: Implement.
     assert(false);
-    *R = IntegralAP(A.V & B.V);
     return false;
   }
 
   static bool bitOr(IntegralAP A, IntegralAP B, unsigned OpBits,
                     IntegralAP *R) {
     assert(false);
-    *R = IntegralAP(A.V | B.V);
     return false;
   }
 
   static bool bitXor(IntegralAP A, IntegralAP B, unsigned OpBits,
                      IntegralAP *R) {
+    // FIXME: Implement.
     assert(false);
-    *R = IntegralAP(A.V ^ B.V);
     return false;
   }
 
   static bool neg(const IntegralAP &A, IntegralAP *R) {
-    APSInt AI = A.V;
-
-    AI.setIsSigned(Signed);
+    APInt AI = A.V;
+    AI.negate();
     *R = IntegralAP(AI);
     return false;
   }
@@ -227,12 +243,12 @@ public:
 
   static void shiftLeft(const IntegralAP A, const IntegralAP B, unsigned OpBits,
                         IntegralAP *R) {
-    *R = IntegralAP(A.V << B.V.getZExtValue());
+    *R = IntegralAP(A.V.shl(B.V.getZExtValue()));
   }
 
   static void shiftRight(const IntegralAP A, const IntegralAP B,
                          unsigned OpBits, IntegralAP *R) {
-    *R = IntegralAP(A.V >> B.V.getZExtValue());
+    *R = IntegralAP(A.V.ashr(B.V.getZExtValue()));
   }
 
 private:
@@ -243,8 +259,8 @@ private:
       return false;
     }
 
-    const APSInt &LHS = A.V;
-    const APSInt &RHS = B.V;
+    const APSInt &LHS = APSInt(A.V, A.isSigned());
+    const APSInt &RHS = APSInt(B.V, B.isSigned());
 
     APSInt Value(LHS.extend(BitWidth) + RHS.extend(BitWidth), false);
     APSInt Result = Value.trunc(LHS.getBitWidth());

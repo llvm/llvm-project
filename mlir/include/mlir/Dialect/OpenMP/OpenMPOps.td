@@ -1144,14 +1144,15 @@ def DataBoundsOp : OpenMP_Op<"bounds",
 }
 
 def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
-  let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
+  let arguments = (ins Optional<AnyType>:$val,
+                       Optional<OpenMP_PointerLikeType>:$var_ptr,
+                       OptionalAttr<TypeAttr>:$var_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
                        Variadic<DataBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
                        OptionalAttr<UI64Attr>:$map_type,
                        OptionalAttr<VariableCaptureKindAttr>:$map_capture_type,
-                       DefaultValuedAttr<BoolAttr, "false">:$implicit,
                        OptionalAttr<StrAttr>:$name);
-  let results = (outs OpenMP_PointerLikeType:$omp_ptr);
+  let results = (outs AnyType:$omp_ptr);
 
   let description = [{
     The MapInfoOp captures information relating to individual OpenMP map clauses
@@ -1177,21 +1178,20 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
     ```
     =>
     ```mlir
-    omp.map_info var_ptr(%index_ssa) map_type(to) map_capture_type(ByRef) implicit(false)
+    omp.map_info var_ptr(%index_ssa) map_type(to) map_capture_type(ByRef)
       name(index)
     ```
 
     Description of arguments:
+    - `val`: The value to copy.
     - `var_ptr`: The address of variable to copy.
+    - `var_type`: The type of the variable/value to copy.
     - `var_ptr_ptr`: Used when the variable copied is a member of a class, structure
       or derived type and refers to the originating struct.
     - `bounds`: Used when copying slices of array's, pointers or pointer members of
       objects (e.g. derived types or classes), indicates the bounds to be copied
       of the variable. When it's an array slice it is in rank order where rank 0
       is the inner-most dimension.
-    - `implicit`: indicates where the map item has been specified explicitly in a
-      map clause or captured implicitly by being used in a target region with no
-      map or other data mapping construct.
     - 'map_clauses': OpenMP map type for this map capture, for example: from, to and
       always. It's a bitfield composed of the OpenMP runtime flags stored in
       OpenMPOffloadMappingFlags.
@@ -1201,9 +1201,10 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
   }];
 
   let assemblyFormat = [{
-    `var_ptr` `(` $var_ptr `:` type($var_ptr) `)`
     oilist(
-        `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `)`
+        `val` `(` $val `:` type($val) `)`
+      | `var_ptr` `(` $var_ptr `:` type($var_ptr) `,` $var_type `)`
+      | `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `)`
       | `map_clauses` `(` custom<MapClause>($map_type) `)`
       | `capture` `(` custom<CaptureType>($map_capture_type) `)`
       | `bounds` `(` $bounds `)`
@@ -1263,7 +1264,7 @@ def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments]>{
                        Optional<AnyInteger>:$device,
                        Variadic<OpenMP_PointerLikeType>:$use_device_ptr,
                        Variadic<OpenMP_PointerLikeType>:$use_device_addr,
-                       Variadic<OpenMP_PointerLikeType>:$map_operands);
+                       Variadic<AnyType>:$map_operands);
 
   let regions = (region AnyRegion:$region);
 
@@ -1312,7 +1313,7 @@ def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
   let arguments = (ins Optional<I1>:$if_expr,
                        Optional<AnyInteger>:$device,
                        UnitAttr:$nowait,
-                       Variadic<OpenMP_PointerLikeType>:$map_operands);
+                       Variadic<AnyType>:$map_operands);
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
@@ -1358,7 +1359,7 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
   let arguments = (ins Optional<I1>:$if_expr,
                        Optional<AnyInteger>:$device,
                        UnitAttr:$nowait,
-                       Variadic<OpenMP_PointerLikeType>:$map_operands);
+                       Variadic<AnyType>:$map_operands);
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
@@ -1375,7 +1376,7 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
 // 2.14.5 target construct
 //===----------------------------------------------------------------------===//
 
-def TargetOp : OpenMP_Op<"target",[OutlineableOpenMPOpInterface, AttrSizedOperandSegments]> {
+def TargetOp : OpenMP_Op<"target",[IsolatedFromAbove, OutlineableOpenMPOpInterface, AttrSizedOperandSegments]> {
   let summary = "target construct";
   let description = [{
     The target construct includes a region of code which is to be executed
@@ -1401,7 +1402,7 @@ def TargetOp : OpenMP_Op<"target",[OutlineableOpenMPOpInterface, AttrSizedOperan
                        Optional<AnyInteger>:$device,
                        Optional<AnyInteger>:$thread_limit,
                        UnitAttr:$nowait,
-                       Variadic<OpenMP_PointerLikeType>:$map_operands);
+                       Variadic<AnyType>:$map_operands);
 
   let regions = (region AnyRegion:$region);
 
@@ -1410,7 +1411,7 @@ def TargetOp : OpenMP_Op<"target",[OutlineableOpenMPOpInterface, AttrSizedOperan
     | `device` `(` $device `:` type($device) `)`
     | `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
     | `nowait` $nowait
-    | `map_entries` `(` $map_operands `:` type($map_operands) `)`
+    | `map_entries` `(` custom<MapEntries>($map_operands, type($map_operands)) `)`
     ) $region attr-dict
   }];
 

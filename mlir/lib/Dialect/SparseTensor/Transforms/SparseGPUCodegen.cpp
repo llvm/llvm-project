@@ -39,7 +39,7 @@ enum class CuSparseFormat {
   kCOO,
   kCSR,
   kCSC,
-  kBSR, // TODO: coming soon!
+  kBSR,
 };
 
 //===----------------------------------------------------------------------===//
@@ -428,6 +428,19 @@ static bool isAdmissibleCSC(SparseTensorType &aTp) {
          aTp.isOrderedLvl(1) && aTp.isUniqueLvl(1) && isAdmissibleMetaData(aTp);
 }
 
+/// Test for BSR matrix with suitable metadata.
+static bool isAdmissibleBSR(SparseTensorType &aTp) {
+  if (aTp.getDimRank() == 2 && aTp.getLvlRank() == 4 && aTp.isDenseLvl(0) &&
+      aTp.isCompressedLvl(1) && aTp.isOrderedLvl(1) && aTp.isUniqueLvl(1) &&
+      aTp.isDenseLvl(2) && aTp.isDenseLvl(3) && isAdmissibleMetaData(aTp)) {
+    // CuSparse only supports "square" blocks currently.
+    SmallVector<unsigned> dims = getBlockSize(aTp.getDimToLvl());
+    assert(dims.size() == 2);
+    return dims[0] = dims[1] && dims[0] > 1;
+  }
+  return false;
+}
+
 /// Returns a suitable sparse format for the operation and given operand
 /// types with cuSparse, or kNone if none is available.
 static CuSparseFormat getCuSparseFormat(SparseTensorType aTp,
@@ -448,6 +461,8 @@ static CuSparseFormat getCuSparseFormat(SparseTensorType aTp,
     return CuSparseFormat::kCSR;
   if (isAdmissibleCSC(aTp))
     return CuSparseFormat::kCSC;
+  if (isAdmissibleBSR(aTp))
+    return CuSparseFormat::kBSR;
   return CuSparseFormat::kNone;
 }
 
@@ -475,9 +490,10 @@ static Value genSecondCrds(OpBuilder &builder, Location loc, Value a,
 }
 
 /// Generates the sparse matrix handle.
-static Operation *genSpMat(OpBuilder &builder, Location loc, Type handleTp,
-                           Type tokenTp, Value token, Value sz1, Value sz2,
-                           Value nseA, Value rowA, Value colA, Value valA,
+static Operation *genSpMat(OpBuilder &builder, Location loc,
+                           SparseTensorType &aTp, Type handleTp, Type tokenTp,
+                           Value token, Value sz1, Value sz2, Value nseA,
+                           Value rowA, Value colA, Value valA,
                            CuSparseFormat format, bool enableRT) {
   if (format == CuSparseFormat::kCOO) {
     // Library uses SoA COO, direct IR uses AoS COO.
@@ -498,9 +514,24 @@ static Operation *genSpMat(OpBuilder &builder, Location loc, Type handleTp,
   if (format == CuSparseFormat::kCSR)
     return builder.create<gpu::CreateCsrOp>(loc, handleTp, tokenTp, token, sz1,
                                             sz2, nseA, rowA, colA, valA);
-  assert(format == CuSparseFormat::kCSC);
-  return builder.create<gpu::CreateCscOp>(loc, handleTp, tokenTp, token, sz1,
-                                          sz2, nseA, rowA, colA, valA);
+  if (format == CuSparseFormat::kCSC)
+    return builder.create<gpu::CreateCscOp>(loc, handleTp, tokenTp, token, sz1,
+                                            sz2, nseA, rowA, colA, valA);
+  // BSR requires a bit more work since we need to pass in the block size
+  // and all others sizes in terms of blocks (#block-rows, #block-cols,
+  // #nonzero-blocks).
+  assert(format == CuSparseFormat::kBSR);
+  SmallVector<unsigned> dims = getBlockSize(aTp.getDimToLvl());
+  assert(dims.size() == 2 && dims[0] == dims[1]);
+  uint64_t b = dims[0];
+  Value bSz = constantIndex(builder, loc, b);
+  Value bRows = builder.create<arith::DivUIOp>(loc, sz1, bSz);
+  Value bCols = builder.create<arith::DivUIOp>(loc, sz2, bSz);
+  Value bNum = builder.create<arith::DivUIOp>(
+      loc, nseA, constantIndex(builder, loc, b * b));
+  return builder.create<gpu::CreateBsrOp>(loc, handleTp, tokenTp, token, bRows,
+                                          bCols, bNum, bSz, bSz, rowA, colA,
+                                          valA);
 }
 
 /// Match and rewrite SpMV kernel.
@@ -566,8 +597,8 @@ rewriteSpMV(PatternRewriter &rewriter, linalg::GenericOp op, bool enableRT,
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
   Operation *spGenA =
-      genSpMat(rewriter, loc, spmatHandleTp, tokenTp, token, szY, szX, nseA,
-               rowA, colA, valA, format, enableRT);
+      genSpMat(rewriter, loc, aTp, spmatHandleTp, tokenTp, token, szY, szX,
+               nseA, rowA, colA, valA, format, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
   auto dvecX = rewriter.create<gpu::CreateDnTensorOp>(
@@ -691,8 +722,8 @@ rewriteSpMM(PatternRewriter &rewriter, linalg::GenericOp op, bool enableRT,
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
   Operation *spGenA =
-      genSpMat(rewriter, loc, spMatHandleTp, tokenTp, token, szm, szk, nseA,
-               rowA, colA, valA, format, enableRT);
+      genSpMat(rewriter, loc, aTp, spMatHandleTp, tokenTp, token, szm, szk,
+               nseA, rowA, colA, valA, format, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
   auto dmatB = rewriter.create<gpu::CreateDnTensorOp>(
@@ -806,13 +837,13 @@ rewriteSpGEMM(PatternRewriter &rewriter, linalg::GenericOp op, bool enableRT,
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
   Operation *spGenA =
-      genSpMat(rewriter, loc, spmatHandleTp, tokenTp, token, szm, szk, nseA,
-               rowA, colA, valA, format, enableRT);
+      genSpMat(rewriter, loc, aTp, spmatHandleTp, tokenTp, token, szm, szk,
+               nseA, rowA, colA, valA, format, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
   Operation *spGenB =
-      genSpMat(rewriter, loc, spmatHandleTp, tokenTp, token, szk, szn, nseB,
-               rowB, colB, valB, format, enableRT);
+      genSpMat(rewriter, loc, bTp, spmatHandleTp, tokenTp, token, szk, szn,
+               nseB, rowB, colB, valB, format, enableRT);
   Value spMatB = spGenB->getResult(0);
   token = spGenB->getResult(1);
 
@@ -830,8 +861,8 @@ rewriteSpGEMM(PatternRewriter &rewriter, linalg::GenericOp op, bool enableRT,
   Value valC = e3.getResult(0); // no free needed
   token = e3.getAsyncToken();
   Operation *spGenC =
-      genSpMat(rewriter, loc, spmatHandleTp, tokenTp, token, szm, szn, zero,
-               rowC, colC, valC, format, enableRT);
+      genSpMat(rewriter, loc, cTp, spmatHandleTp, tokenTp, token, szm, szn,
+               zero, rowC, colC, valC, format, enableRT);
   Value spMatC = spGenC->getResult(0);
   token = spGenC->getResult(1);
 
@@ -1137,8 +1168,8 @@ rewriteSDDMM(PatternRewriter &rewriter, linalg::GenericOp op, bool enableRT,
   Value dnB = dmatB.getResult(0);
   token = dmatB.getAsyncToken();
   Operation *spGenC =
-      genSpMat(rewriter, loc, spMatHandleTp, tokenTp, token, szm, szn, nseC,
-               rowC, colC, valC, format, enableRT);
+      genSpMat(rewriter, loc, cTp, spMatHandleTp, tokenTp, token, szm, szn,
+               nseC, rowC, colC, valC, format, enableRT);
   Value spMatC = spGenC->getResult(0);
   token = spGenC->getResult(1);
   auto dnCType = llvm::cast<ShapedType>(c.getType()).getElementType();

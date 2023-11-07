@@ -11,6 +11,38 @@
 
 include "mlir/Pass/PassBase.td"
 
+def SparseReinterpretMap : Pass<"sparse-reinterpret-map", "ModuleOp"> {
+  let summary = "Reinterprets sparse tensor type mappings";
+  let description = [{
+    A pass that reinterprets the mappings in all sparse tensor types in a
+    way that enables subsequent sparsification. This involves expressing all
+    `linalg.generic` operations in terms of level coordinates (rather than
+    the dimension coordinates of the input tensors) to align the iteration
+    space with the potentially remapped level space as well as resolving cycles
+    in the resulting iteration graphs with explicit sparse tensor conversions
+    where needed.
+  }];
+  let constructor = "mlir::createSparseReinterpretMapPass()";
+  let dependentDialects = [
+    "affine::AffineDialect",
+    "linalg::LinalgDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+  let options = [
+    Option<"scope", "scope", "mlir::ReinterpretMapScope",
+       "mlir::ReinterpretMapScope::kAll",
+       "Set the reiterpretation scope", [{llvm::cl::values(
+         clEnumValN(mlir::ReinterpretMapScope::kAll, "all",
+                    "Run on every applicable operations."),
+         clEnumValN(mlir::ReinterpretMapScope::kGenericOnly,
+                    "only-generic",
+                    "Run only on linalg.generic operations."),
+         clEnumValN(mlir::ReinterpretMapScope::kExceptGeneric,
+                    "except-generic",
+                    "Run on operations expect linalg.generic (e.g., foreach)"))}]>,
+  ];
+}
+
 def PreSparsificationRewrite : Pass<"pre-sparsification-rewrite", "ModuleOp"> {
   let summary = "Applies sparse tensor rewriting rules prior to sparsification";
   let description = [{
@@ -135,14 +167,14 @@ def StageSparseOperations : Pass<"stage-sparse-ops", "func::FuncOp"> {
   ];
 }
 
-def PostSparsificationRewrite : Pass<"post-sparsification-rewrite", "ModuleOp"> {
+def LowerSparseOpsToForeach : Pass<"lower-sparse-ops-to-foreach", "ModuleOp"> {
   let summary = "Applies sparse tensor rewriting rules after sparsification";
   let description = [{
-    A pass that applies rewriting rules to sparse tensor operations after
-    running the actual sparsification pass.
+    A pass that lowers high-level sparse operations to sparse_tensor.foreach.
   }];
-  let constructor = "mlir::createPostSparsificationRewritePass()";
+  let constructor = "mlir::createLowerSparseOpsToForeachPass()";
   let dependentDialects = [
+    "affine::AffineDialect",
     "arith::ArithDialect",
     "bufferization::BufferizationDialect",
     "linalg::LinalgDialect",
@@ -153,12 +185,24 @@ def PostSparsificationRewrite : Pass<"post-sparsification-rewrite", "ModuleOp"> 
   let options = [
     Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
            "true", "Enable runtime library for manipulating sparse tensors">,
-    Option<"enableForeach", "enable-foreach", "bool",
-           "true", "Enable rewriting rules for the foreach operator">,
     Option<"enableConvert", "enable-convert", "bool",
            "true", "Enable rewriting rules for the convert operator">,
   ];
 }
+
+def LowerForeachToSCF : Pass<"lower-sparse-foreach-to-scf", "func::FuncOp"> {
+  let summary = "Decompose a complex sparse operation into multiple stages";
+  let description = [{
+    A pass that lowers sparse_tensor.foreach operation to scf dialect.
+  }];
+  let constructor = "mlir::createLowerForeachToSCFPass()";
+  let dependentDialects = [
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+}
+
 
 def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
   let summary = "Convert sparse tensors and primitives to library calls";
@@ -183,10 +227,10 @@ def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
         }
 
       After:
-        func.func @foo(%arg0: !llvm.ptr<i8>) -> memref<?xindex> {
+        func.func @foo(%arg0: !llvm.ptr) -> memref<?xindex> {
           %c1 = arith.constant 1 : index
           %0 = call @sparsePointers0(%arg0, %c1)
-             : (!llvm.ptr<i8>, index) -> memref<?xindex>
+             : (!llvm.ptr, index) -> memref<?xindex>
           return %0 : memref<?xindex>
         }
     ```

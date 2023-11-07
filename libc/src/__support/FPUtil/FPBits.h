@@ -51,23 +51,23 @@ template <typename T> struct FPBits {
 
   UIntType bits;
 
-  LIBC_INLINE void set_mantissa(UIntType mantVal) {
+  LIBC_INLINE constexpr void set_mantissa(UIntType mantVal) {
     mantVal &= (FloatProp::MANTISSA_MASK);
     bits &= ~(FloatProp::MANTISSA_MASK);
     bits |= mantVal;
   }
 
-  LIBC_INLINE UIntType get_mantissa() const {
+  LIBC_INLINE constexpr UIntType get_mantissa() const {
     return bits & FloatProp::MANTISSA_MASK;
   }
 
-  LIBC_INLINE void set_unbiased_exponent(UIntType expVal) {
+  LIBC_INLINE constexpr void set_unbiased_exponent(UIntType expVal) {
     expVal = (expVal << (FloatProp::MANTISSA_WIDTH)) & FloatProp::EXPONENT_MASK;
     bits &= ~(FloatProp::EXPONENT_MASK);
     bits |= expVal;
   }
 
-  LIBC_INLINE uint16_t get_unbiased_exponent() const {
+  LIBC_INLINE constexpr uint16_t get_unbiased_exponent() const {
     return uint16_t((bits & FloatProp::EXPONENT_MASK) >>
                     (FloatProp::MANTISSA_WIDTH));
   }
@@ -81,13 +81,13 @@ template <typename T> struct FPBits {
            (FloatProp::MANTISSA_MASK & bits);
   }
 
-  LIBC_INLINE void set_sign(bool signVal) {
+  LIBC_INLINE constexpr void set_sign(bool signVal) {
     bits |= FloatProp::SIGN_MASK;
     if (!signVal)
       bits -= FloatProp::SIGN_MASK;
   }
 
-  LIBC_INLINE bool get_sign() const {
+  LIBC_INLINE constexpr bool get_sign() const {
     return (bits & FloatProp::SIGN_MASK) != 0;
   }
 
@@ -114,17 +114,19 @@ template <typename T> struct FPBits {
             cpp::enable_if_t<cpp::is_same_v<XType, UIntType>, int> = 0>
   constexpr explicit FPBits(XType x) : bits(x) {}
 
-  FPBits() : bits(0) {}
+  constexpr FPBits() : bits(0) {}
 
   LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
 
-  LIBC_INLINE void set_val(T value) { bits = cpp::bit_cast<UIntType>(value); }
+  LIBC_INLINE constexpr void set_val(T value) {
+    bits = cpp::bit_cast<UIntType>(value);
+  }
 
-  LIBC_INLINE explicit operator T() const { return get_val(); }
+  LIBC_INLINE constexpr explicit operator T() const { return get_val(); }
 
-  LIBC_INLINE UIntType uintval() const { return bits; }
+  LIBC_INLINE constexpr UIntType uintval() const { return bits; }
 
-  LIBC_INLINE int get_exponent() const {
+  LIBC_INLINE constexpr int get_exponent() const {
     return int(get_unbiased_exponent()) - EXPONENT_BIAS;
   }
 
@@ -134,7 +136,7 @@ template <typename T> struct FPBits {
   // values are calculated from the exponent, since just subtracting the bias
   // will give a slightly incorrect result. Additionally, zero has an exponent
   // of zero, and that should actually be treated as zero.
-  LIBC_INLINE int get_explicit_exponent() const {
+  LIBC_INLINE constexpr int get_explicit_exponent() const {
     const int unbiased_exp = int(get_unbiased_exponent());
     if (is_zero()) {
       return 0;
@@ -145,52 +147,60 @@ template <typename T> struct FPBits {
     }
   }
 
-  LIBC_INLINE bool is_zero() const {
+  LIBC_INLINE constexpr bool is_zero() const {
     // Remove sign bit by shift
     return (bits << 1) == 0;
   }
 
-  LIBC_INLINE bool is_inf() const {
+  LIBC_INLINE constexpr bool is_inf() const {
     return (bits & FloatProp::EXP_MANT_MASK) == FloatProp::EXPONENT_MASK;
   }
 
-  LIBC_INLINE bool is_nan() const {
+  LIBC_INLINE constexpr bool is_nan() const {
     return (bits & FloatProp::EXP_MANT_MASK) > FloatProp::EXPONENT_MASK;
   }
 
-  LIBC_INLINE bool is_quiet_nan() const {
+  LIBC_INLINE constexpr bool is_quiet_nan() const {
     return (bits & FloatProp::EXP_MANT_MASK) ==
            (FloatProp::EXPONENT_MASK | FloatProp::QUIET_NAN_MASK);
   }
 
-  LIBC_INLINE bool is_inf_or_nan() const {
+  LIBC_INLINE constexpr bool is_inf_or_nan() const {
     return (bits & FloatProp::EXPONENT_MASK) == FloatProp::EXPONENT_MASK;
   }
 
-  LIBC_INLINE static constexpr FPBits<T> zero(bool sign = false) {
-    return FPBits(sign ? FloatProp::SIGN_MASK : UIntType(0));
+  LIBC_INLINE static constexpr T zero(bool sign = false) {
+    return FPBits(sign ? FloatProp::SIGN_MASK : UIntType(0)).get_val();
   }
 
-  LIBC_INLINE static constexpr FPBits<T> neg_zero() { return zero(true); }
+  LIBC_INLINE static constexpr T neg_zero() { return zero(true); }
 
-  LIBC_INLINE static constexpr FPBits<T> inf(bool sign = false) {
-    FPBits<T> bits(sign ? FloatProp::SIGN_MASK : UIntType(0));
-    bits.set_unbiased_exponent(MAX_EXPONENT);
-    return bits;
+  LIBC_INLINE static constexpr T inf(bool sign = false) {
+    return FPBits((sign ? FloatProp::SIGN_MASK : UIntType(0)) |
+                  FloatProp::EXPONENT_MASK)
+        .get_val();
   }
 
-  LIBC_INLINE static constexpr FPBits<T> neg_inf() {
-    FPBits<T> bits = inf();
-    bits.set_sign(1);
-    return bits;
+  LIBC_INLINE static constexpr T neg_inf() { return inf(true); }
+
+  LIBC_INLINE static constexpr T min_normal() {
+    return FPBits(MIN_NORMAL).get_val();
   }
 
-  LIBC_INLINE static constexpr FPBits<T> min_normal() {
-    return FPBits<T>(MIN_NORMAL);
+  LIBC_INLINE static constexpr T max_normal() {
+    return FPBits(MAX_NORMAL).get_val();
+  }
+
+  LIBC_INLINE static constexpr T min_denormal() {
+    return FPBits(MIN_SUBNORMAL).get_val();
+  }
+
+  LIBC_INLINE static constexpr T max_denormal() {
+    return FPBits(MAX_SUBNORMAL).get_val();
   }
 
   LIBC_INLINE static constexpr T build_nan(UIntType v) {
-    FPBits<T> bits = inf();
+    FPBits<T> bits(inf());
     bits.set_mantissa(v);
     return T(bits);
   }
@@ -226,8 +236,8 @@ template <typename T> struct FPBits {
     return result;
   }
 
-  LIBC_INLINE static FPBits<T> create_value(bool sign, UIntType unbiased_exp,
-                                            UIntType mantissa) {
+  LIBC_INLINE static constexpr FPBits<T>
+  create_value(bool sign, UIntType unbiased_exp, UIntType mantissa) {
     FPBits<T> result;
     result.set_sign(sign);
     result.set_unbiased_exponent(unbiased_exp);

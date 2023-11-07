@@ -107,6 +107,10 @@ def NonBitField : SubsetSubject<Field,
                                 [{!S->isBitField()}],
                                 "non-bit-field non-static data members">;
 
+def BitField : SubsetSubject<Field,
+                             [{S->isBitField()}],
+                             "bit-field data members">;
+
 def NonStaticCXXMethod : SubsetSubject<CXXMethod,
                                        [{!S->isStatic()}],
                                        "non-static member functions">;
@@ -273,23 +277,28 @@ class DefaultIntArgument<string name, int default> : IntArgument<name, 1> {
   int Default = default;
 }
 
-// This argument is more complex, it includes the enumerator type name,
-// a list of strings to accept, and a list of enumerators to map them to.
+// This argument is more complex, it includes the enumerator type
+// name, whether the enum type is externally defined, a list of
+// strings to accept, and a list of enumerators to map them to.
 class EnumArgument<string name, string type, list<string> values,
-                   list<string> enums, bit opt = 0, bit fake = 0>
+                   list<string> enums, bit opt = 0, bit fake = 0,
+                   bit isExternalType = 0>
     : Argument<name, opt, fake> {
   string Type = type;
   list<string> Values = values;
   list<string> Enums = enums;
+  bit IsExternalType = isExternalType;
 }
 
 // FIXME: There should be a VariadicArgument type that takes any other type
 //        of argument and generates the appropriate type.
 class VariadicEnumArgument<string name, string type, list<string> values,
-                           list<string> enums> : Argument<name, 1>  {
+                           list<string> enums, bit isExternalType = 0>
+    : Argument<name, 1>  {
   string Type = type;
   list<string> Values = values;
   list<string> Enums = enums;
+  bit IsExternalType = isExternalType;
 }
 
 // This handles one spelling of an attribute.
@@ -2805,6 +2814,11 @@ def PreserveAll : DeclOrTypeAttr {
   let Documentation = [PreserveAllDocs];
 }
 
+def M68kRTD: DeclOrTypeAttr {
+  let Spellings = [Clang<"m68k_rtd">];
+  let Documentation = [M68kRTDDocs];
+}
+
 def Target : InheritableAttr {
   let Spellings = [GCC<"target">];
   let Args = [StringArgument<"featuresStr">];
@@ -4173,26 +4187,26 @@ def HLSLResource : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL];
-  let Args = [EnumArgument<"ResourceType", "ResourceClass",
+  let Args = [EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
                            ["SRV", "UAV", "CBuffer", "Sampler"],
-                           ["SRV", "UAV", "CBuffer", "Sampler"]
-                           >,
-              EnumArgument<"ResourceShape", "ResourceKind",
+                           ["SRV", "UAV", "CBuffer", "Sampler"],
+                           /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
+              EnumArgument<"ResourceKind", "llvm::hlsl::ResourceKind",
                            ["Texture1D", "Texture2D", "Texture2DMS",
                             "Texture3D", "TextureCube", "Texture1DArray",
                             "Texture2DArray", "Texture2DMSArray",
                             "TextureCubeArray", "TypedBuffer", "RawBuffer",
-                            "StructuredBuffer", "CBufferKind", "SamplerKind",
-                            "TBuffer", "RTAccelerationStructure", "FeedbackTexture2D",
-                            "FeedbackTexture2DArray"],
+                            "StructuredBuffer", "CBuffer", "Sampler",
+                            "TBuffer", "RTAccelerationStructure",
+                            "FeedbackTexture2D", "FeedbackTexture2DArray"],
                            ["Texture1D", "Texture2D", "Texture2DMS",
                             "Texture3D", "TextureCube", "Texture1DArray",
                             "Texture2DArray", "Texture2DMSArray",
                             "TextureCubeArray", "TypedBuffer", "RawBuffer",
-                            "StructuredBuffer", "CBufferKind", "SamplerKind",
-                            "TBuffer", "RTAccelerationStructure", "FeedbackTexture2D",
-                            "FeedbackTexture2DArray"]
-                            >
+                            "StructuredBuffer", "CBuffer", "Sampler",
+                            "TBuffer", "RTAccelerationStructure",
+                            "FeedbackTexture2D", "FeedbackTexture2DArray"],
+                           /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
               ];
   let Documentation = [InternalOnly];
 }
@@ -4245,4 +4259,29 @@ def AvailableOnlyInDefaultEvalMethod : InheritableAttr {
   let Spellings = [Clang<"available_only_in_default_eval_method">];
   let Subjects = SubjectList<[TypedefName], ErrorDiag>;
   let Documentation = [Undocumented];
+}
+
+def CountedBy : InheritableAttr {
+  let Spellings = [Clang<"counted_by">];
+  let Subjects = SubjectList<[Field]>;
+  let Args = [IdentifierArgument<"CountedByField">];
+  let Documentation = [CountedByDocs];
+  let LangOpts = [COnly];
+  // FIXME: This is ugly. Let using a DeclArgument would be nice, but a Decl
+  // isn't yet available due to the fact that we're still parsing the
+  // structure. Maybe that code could be changed sometime in the future.
+  code AdditionalMembers = [{
+    private:
+      SourceRange CountedByFieldLoc;
+    public:
+      SourceRange getCountedByFieldLoc() const { return CountedByFieldLoc; }
+      void setCountedByFieldLoc(SourceRange Loc) { CountedByFieldLoc = Loc; }
+  }];
+}
+
+def PreferredType: InheritableAttr {
+  let Spellings = [Clang<"preferred_type">];
+  let Subjects = SubjectList<[BitField], ErrorDiag>;
+  let Args = [TypeArgument<"Type", 1>];
+  let Documentation = [PreferredTypeDocumentation];
 }

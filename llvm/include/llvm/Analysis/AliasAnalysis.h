@@ -172,7 +172,7 @@ public:
 /// approximation to a precise "captures before" analysis.
 class EarliestEscapeInfo final : public CaptureInfo {
   DominatorTree &DT;
-  const LoopInfo &LI;
+  const LoopInfo *LI;
 
   /// Map from identified local object to an instruction before which it does
   /// not escape, or nullptr if it never escapes. The "earliest" instruction
@@ -184,12 +184,9 @@ class EarliestEscapeInfo final : public CaptureInfo {
   /// This is used for cache invalidation purposes.
   DenseMap<Instruction *, TinyPtrVector<const Value *>> Inst2Obj;
 
-  const SmallPtrSetImpl<const Value *> &EphValues;
-
 public:
-  EarliestEscapeInfo(DominatorTree &DT, const LoopInfo &LI,
-                     const SmallPtrSetImpl<const Value *> &EphValues)
-      : DT(DT), LI(LI), EphValues(EphValues) {}
+  EarliestEscapeInfo(DominatorTree &DT, const LoopInfo *LI = nullptr)
+      : DT(DT), LI(LI) {}
 
   bool isNotCapturedBeforeOrAt(const Value *Object,
                                const Instruction *I) override;
@@ -875,10 +872,16 @@ bool isNotVisibleOnUnwind(const Value *Object,
 
 /// Return true if the Object is writable, in the sense that any location based
 /// on this pointer that can be loaded can also be stored to without trapping.
+/// Additionally, at the point Object is declared, stores can be introduced
+/// without data races. At later points, this is only the case if the pointer
+/// can not escape to a different thread.
 ///
-/// By itself, this does not imply that introducing spurious stores is safe,
-/// for example due to thread-safety reasons.
-bool isWritableObject(const Value *Object);
+/// If ExplicitlyDereferenceableOnly is set to true, this property only holds
+/// for the part of Object that is explicitly marked as dereferenceable, e.g.
+/// using the dereferenceable(N) attribute. It does not necessarily hold for
+/// parts that are only known to be dereferenceable due to the presence of
+/// loads.
+bool isWritableObject(const Value *Object, bool &ExplicitlyDereferenceableOnly);
 
 /// A manager for alias analyses.
 ///

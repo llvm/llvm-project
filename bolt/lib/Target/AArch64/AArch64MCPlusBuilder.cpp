@@ -862,6 +862,14 @@ public:
   ///    add     x16, x16, #0xbe0
   ///    br      x17
   ///
+  ///  The other type of trampolines are located in .plt.got, that are used for
+  ///  non-lazy bindings so doesn't use x16 arg to transfer .got entry address:
+  ///
+  ///    adrp    x16, 230000
+  ///    ldr     x17, [x16, #3040]
+  ///    br      x17
+  ///    nop
+  ///
   uint64_t analyzePLTEntry(MCInst &Instruction, InstructionIterator Begin,
                            InstructionIterator End,
                            uint64_t BeginPC) const override {
@@ -1643,6 +1651,8 @@ public:
 
     return Relocation({RelOffset, RelSymbol, RelType, RelAddend, 0});
   }
+
+  uint16_t getMinFunctionAlignment() const override { return 4; }
 };
 
 } // end anonymous namespace

@@ -11,7 +11,7 @@
 ; CHECK: Invalidating analysis: LoopAccessAnalysis on test
 ; CHECK: Running pass: LoopAccessInfoPrinterPass
 ; CHECK: Running analysis: LoopAccessAnalysis on test
-; CHECK: Loop access info in function 'test':
+; CHECK: Printing analysis 'Loop Access Analysis' for function 'test':
 ; CHECK:   inner1.header:
 
 ; CHECK:   inner1.header.1:

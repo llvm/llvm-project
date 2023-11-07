@@ -436,9 +436,16 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // offset can by construction, at worst, a LUI and a ADD.
       int64_t Val = Offset.getFixed();
       int64_t Lo12 = SignExtend64<12>(Val);
-      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo12);
-      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo12,
-                                Offset.getScalable());
+      if ((MI.getOpcode() == RISCV::PREFETCH_I ||
+           MI.getOpcode() == RISCV::PREFETCH_R ||
+           MI.getOpcode() == RISCV::PREFETCH_W) &&
+          (Lo12 & 0b11111) != 0)
+        MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+      else {
+        MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo12);
+        Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo12,
+                                  Offset.getScalable());
+      }
     }
   }
 
@@ -656,6 +663,14 @@ RISCVRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                              const MachineFunction &) const {
   if (RC == &RISCV::VMV0RegClass)
     return &RISCV::VRRegClass;
+  if (RC == &RISCV::VRNoV0RegClass)
+    return &RISCV::VRRegClass;
+  if (RC == &RISCV::VRM2NoV0RegClass)
+    return &RISCV::VRM2RegClass;
+  if (RC == &RISCV::VRM4NoV0RegClass)
+    return &RISCV::VRM4RegClass;
+  if (RC == &RISCV::VRM8NoV0RegClass)
+    return &RISCV::VRM8RegClass;
   return RC;
 }
 

@@ -3011,6 +3011,16 @@ let TargetPrefix = "aarch64" in {
                             [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [IntrNoMem]>;
 
+  class SME2_BFMLS_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_nxv4f32_ty],
+                            [llvm_nxv4f32_ty, llvm_nxv8bf16_ty, llvm_nxv8bf16_ty],
+                            [IntrNoMem]>;
+
+  class SME2_BFMLS_Lane_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_nxv4f32_ty],
+                            [llvm_nxv4f32_ty, llvm_nxv8bf16_ty, llvm_nxv8bf16_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+
   class SME2_ZA_ArrayVector_Read_VG2_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                 [llvm_i32_ty],
@@ -3213,6 +3223,12 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_usmla_za32_lane_vg4x1 : SME2_Matrix_ArrayVector_Single_Index_Intrinsic;
   def int_aarch64_sme_usmla_za32_lane_vg4x2 : SME2_Matrix_ArrayVector_VG2_Multi_Index_Intrinsic;
   def int_aarch64_sme_usmla_za32_lane_vg4x4 : SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic;
+
+  def int_aarch64_sve_bfmlslb : SME2_BFMLS_Intrinsic;
+  def int_aarch64_sve_bfmlslb_lane : SME2_BFMLS_Lane_Intrinsic;
+
+  def int_aarch64_sve_bfmlslt : SME2_BFMLS_Intrinsic;
+  def int_aarch64_sve_bfmlslt_lane : SME2_BFMLS_Lane_Intrinsic;
 
   // Multi-vector signed saturating doubling multiply high
 

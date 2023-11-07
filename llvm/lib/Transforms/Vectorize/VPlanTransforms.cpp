@@ -162,17 +162,10 @@ static bool sinkScalarOperands(VPlan &Plan) {
       // TODO: add ".cloned" suffix to name of Clone's VPValue.
 
       Clone->insertBefore(SinkCandidate);
-      for (auto *U : to_vector(SinkCandidate->getVPSingleValue()->users())) {
-        auto *UI = cast<VPRecipeBase>(U);
-        if (UI->getParent() == SinkTo)
-          continue;
-
-        for (unsigned Idx = 0; Idx != UI->getNumOperands(); Idx++) {
-          if (UI->getOperand(Idx) != SinkCandidate->getVPSingleValue())
-            continue;
-          UI->setOperand(Idx, Clone);
-        }
-      }
+      SinkCandidate->getVPSingleValue()->replaceUsesWithIf(
+          Clone, [SinkTo](VPUser &U, unsigned) {
+            return cast<VPRecipeBase>(&U)->getParent() != SinkTo;
+          });
     }
     SinkCandidate->moveBefore(*SinkTo, SinkTo->getFirstNonPhi());
     for (VPValue *Op : SinkCandidate->operands())
@@ -277,16 +270,10 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
       VPValue *PredInst1 =
           cast<VPPredInstPHIRecipe>(&Phi1ToMove)->getOperand(0);
       VPValue *Phi1ToMoveV = Phi1ToMove.getVPSingleValue();
-      for (VPUser *U : to_vector(Phi1ToMoveV->users())) {
-        auto *UI = dyn_cast<VPRecipeBase>(U);
-        if (!UI || UI->getParent() != Then2)
-          continue;
-        for (unsigned I = 0, E = U->getNumOperands(); I != E; ++I) {
-          if (Phi1ToMoveV != U->getOperand(I))
-            continue;
-          U->setOperand(I, PredInst1);
-        }
-      }
+      Phi1ToMoveV->replaceUsesWithIf(PredInst1, [Then2](VPUser &U, unsigned) {
+        auto *UI = dyn_cast<VPRecipeBase>(&U);
+        return UI && UI->getParent() == Then2;
+      });
 
       Phi1ToMove.moveBefore(*Merge2, Merge2->begin());
     }
@@ -542,16 +529,10 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
 
     // Update scalar users of IV to use Step instead. Use SetVector to ensure
     // the list of users doesn't contain duplicates.
-    SetVector<VPUser *> Users(WideIV->user_begin(), WideIV->user_end());
-    for (VPUser *U : Users) {
-      if (HasOnlyVectorVFs && !U->usesScalars(WideIV))
-        continue;
-      for (unsigned I = 0, E = U->getNumOperands(); I != E; I++) {
-        if (U->getOperand(I) != WideIV)
-          continue;
-        U->setOperand(I, Steps);
-      }
-    }
+    WideIV->replaceUsesWithIf(
+        Steps, [HasOnlyVectorVFs, WideIV](VPUser &U, unsigned) {
+          return !HasOnlyVectorVFs || U.usesScalars(WideIV);
+        });
   }
 }
 
@@ -812,6 +793,8 @@ static bool isConstantOne(VPValue *V) {
 static unsigned getOpcodeForRecipe(VPRecipeBase &R) {
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(&R))
     return WidenR->getUnderlyingInstr()->getOpcode();
+  if (auto *WidenC = dyn_cast<VPWidenCastRecipe>(&R))
+    return WidenC->getOpcode();
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R))
     return RepR->getUnderlyingInstr()->getOpcode();
   if (auto *VPI = dyn_cast<VPInstruction>(&R))
@@ -819,16 +802,40 @@ static unsigned getOpcodeForRecipe(VPRecipeBase &R) {
   return 0;
 }
 
+/// Return the scalar size in bits for \p VPV if possible.
+static Type *getTypeForVPValue(VPValue *VPV) {
+  // TODO: Replace with VPlan type inference once ready.
+  if (auto *VPC = dyn_cast<VPWidenCastRecipe>(VPV))
+    return VPC->getResultType();
+  auto *UV = VPV->getUnderlyingValue();
+  return UV ? UV->getType() : nullptr;
+}
+
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R) {
-  unsigned Opcode = getOpcodeForRecipe(R);
-  if (Opcode == Instruction::Mul) {
+  switch (getOpcodeForRecipe(R)) {
+  case Instruction::Mul: {
     VPValue *A = R.getOperand(0);
     VPValue *B = R.getOperand(1);
     if (isConstantOne(A))
       return R.getVPSingleValue()->replaceAllUsesWith(B);
     if (isConstantOne(B))
       return R.getVPSingleValue()->replaceAllUsesWith(A);
+    break;
+  }
+  case Instruction::Trunc: {
+    VPRecipeBase *Zext = R.getOperand(0)->getDefiningRecipe();
+    if (!Zext || getOpcodeForRecipe(*Zext) != Instruction::ZExt)
+      break;
+    VPValue *A = Zext->getOperand(0);
+    VPValue *Trunc = R.getVPSingleValue();
+    Type *TruncToTy = getTypeForVPValue(Trunc);
+    if (TruncToTy && TruncToTy == getTypeForVPValue(A))
+      Trunc->replaceAllUsesWith(A);
+    break;
+  }
+  default:
+    break;
   }
 }
 

@@ -140,6 +140,17 @@ static bool runImpl(Module &M) {
                         {PointerType::get(AtExitFuncTy, 0), VoidStar, VoidStar},
                         /*isVarArg=*/false));
 
+  // If __cxa_atexit is defined (e.g. in the case of LTO) and arg0 is not
+  // actually used (i.e. it's dummy/stub function as used in emscripten when
+  // the program never exits) we can simply return early and clear out
+  // @llvm.global_dtors.
+  if (auto F = dyn_cast<Function>(AtExit.getCallee())) {
+    if (F && F->hasExactDefinition() && F->getArg(0)->getNumUses() == 0) {
+      GV->eraseFromParent();
+      return true;
+    }
+  }
+
   // Declare __dso_local.
   Type *DsoHandleTy = Type::getInt8Ty(C);
   Constant *DsoHandle = M.getOrInsertGlobal("__dso_handle", DsoHandleTy, [&] {

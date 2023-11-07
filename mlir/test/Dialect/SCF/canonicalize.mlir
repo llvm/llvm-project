@@ -1756,3 +1756,36 @@ func.func @do_not_fold_tensor_cast_from_dynamic_to_static_type_into_forall(
 // CHECK:         parallel_insert_slice
 // CHECK-SAME:      : tensor<1xi32> into tensor<2xi32>
 // CHECK:         tensor.cast
+
+// -----
+
+func.func @index_switch_fold() -> (f32, f32) {
+  %switch_cst = arith.constant 1: index
+  %0 = scf.index_switch %switch_cst -> f32
+  case 1 {
+    %y = arith.constant 1.0 : f32
+    scf.yield %y : f32
+  }
+  default {
+    %y = arith.constant 42.0 : f32
+    scf.yield %y : f32
+  }
+  
+  %switch_cst_2 = arith.constant 2: index
+  %1 = scf.index_switch %switch_cst_2 -> f32
+  case 0 {
+    %y = arith.constant 0.0 : f32
+    scf.yield %y : f32
+  }
+  default {
+    %y = arith.constant 42.0 : f32
+    scf.yield %y : f32
+  }
+  
+  return %0, %1 : f32, f32
+}
+
+// CHECK-LABEL: func.func @index_switch_fold()
+//  CHECK-NEXT:   %[[c1:.*]] = arith.constant 1.000000e+00 : f32
+//  CHECK-NEXT:   %[[c42:.*]] = arith.constant 4.200000e+01 : f32
+//  CHECK-NEXT:   return %[[c1]], %[[c42]] : f32, f32

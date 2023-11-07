@@ -2080,9 +2080,9 @@ public:
                             SourceLocation Loc, DeclarationName Entity);
   QualType BuildReferenceType(QualType T, bool LValueRef,
                               SourceLocation Loc, DeclarationName Entity);
-  QualType BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
-                          Expr *ArraySize, unsigned Quals,
-                          SourceRange Brackets, DeclarationName Entity);
+  QualType BuildArrayType(QualType T, ArraySizeModifier ASM, Expr *ArraySize,
+                          unsigned Quals, SourceRange Brackets,
+                          DeclarationName Entity);
   QualType BuildVectorType(QualType T, Expr *VecSize, SourceLocation AttrLoc);
   QualType BuildExtVectorType(QualType T, Expr *ArraySize,
                               SourceLocation AttrLoc);
@@ -3809,17 +3809,6 @@ public:
   // the purposes of [temp.friend] p9.
   bool FriendConstraintsDependOnEnclosingTemplate(const FunctionDecl *FD);
 
-  // Calculates whether two constraint expressions are equal irrespective of a
-  // difference in 'depth'. This takes a pair of optional 'NamedDecl's 'Old' and
-  // 'New', which are the "source" of the constraint, since this is necessary
-  // for figuring out the relative 'depth' of the constraint. The depth of the
-  // 'primary template' and the 'instantiated from' templates aren't necessarily
-  // the same, such as a case when one is a 'friend' defined in a class.
-  bool AreConstraintExpressionsEqual(const NamedDecl *Old,
-                                     const Expr *OldConstr,
-                                     const NamedDecl *New,
-                                     const Expr *NewConstr);
-
   enum class AllowedExplicit {
     /// Allow no explicit functions to be used.
     None,
@@ -4795,6 +4784,8 @@ public:
   bool CheckAlwaysInlineAttr(const Stmt *OrigSt, const Stmt *CurSt,
                              const AttributeCommonInfo &A);
 
+  bool CheckCountedByAttr(Scope *Scope, const FieldDecl *FD);
+
   /// Adjust the calling convention of a method to be the ABI default if it
   /// wasn't specified explicitly.  This handles method types formed from
   /// function type typedefs and typename template arguments.
@@ -5638,6 +5629,7 @@ public:
                       CorrectionCandidateCallback &CCC,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
                       ArrayRef<Expr *> Args = std::nullopt,
+                      DeclContext *LookupCtx = nullptr,
                       TypoExpr **Out = nullptr);
 
   DeclResult LookupIvarInObjCMethod(LookupResult &Lookup, Scope *S,
@@ -5731,8 +5723,7 @@ public:
   // __FUNCTION__) are replaced (expanded) with string-literal Tokens.
   std::vector<Token> ExpandFunctionLocalPredefinedMacros(ArrayRef<Token> Toks);
 
-  ExprResult BuildPredefinedExpr(SourceLocation Loc,
-                                 PredefinedExpr::IdentKind IK);
+  ExprResult BuildPredefinedExpr(SourceLocation Loc, PredefinedIdentKind IK);
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
   ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
 
@@ -6098,7 +6089,7 @@ public:
 
   // __builtin_LINE(), __builtin_FUNCTION(), __builtin_FUNCSIG(),
   // __builtin_FILE(), __builtin_COLUMN(), __builtin_source_location()
-  ExprResult ActOnSourceLocExpr(SourceLocExpr::IdentKind Kind,
+  ExprResult ActOnSourceLocExpr(SourceLocIdentKind Kind,
                                 SourceLocation BuiltinLoc,
                                 SourceLocation RPLoc);
 
@@ -6132,9 +6123,8 @@ public:
                            bool SingleAllowed = true);
 
   // Build a potentially resolved SourceLocExpr.
-  ExprResult BuildSourceLocExpr(SourceLocExpr::IdentKind Kind,
-                                QualType ResultTy, SourceLocation BuiltinLoc,
-                                SourceLocation RPLoc,
+  ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
+                                SourceLocation BuiltinLoc, SourceLocation RPLoc,
                                 DeclContext *ParentContext);
 
   // __null
@@ -6366,36 +6356,30 @@ public:
   /// including handling of its default argument expressions.
   ///
   /// \param ConstructKind - a CXXConstructExpr::ConstructionKind
-  ExprResult
-  BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                        NamedDecl *FoundDecl,
-                        CXXConstructorDecl *Constructor, MultiExprArg Exprs,
-                        bool HadMultipleCandidates, bool IsListInitialization,
-                        bool IsStdInitListInitialization,
-                        bool RequiresZeroInit, unsigned ConstructKind,
-                        SourceRange ParenRange);
+  ExprResult BuildCXXConstructExpr(
+      SourceLocation ConstructLoc, QualType DeclInitType, NamedDecl *FoundDecl,
+      CXXConstructorDecl *Constructor, MultiExprArg Exprs,
+      bool HadMultipleCandidates, bool IsListInitialization,
+      bool IsStdInitListInitialization, bool RequiresZeroInit,
+      CXXConstructionKind ConstructKind, SourceRange ParenRange);
 
   /// Build a CXXConstructExpr whose constructor has already been resolved if
   /// it denotes an inherited constructor.
-  ExprResult
-  BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                        CXXConstructorDecl *Constructor, bool Elidable,
-                        MultiExprArg Exprs,
-                        bool HadMultipleCandidates, bool IsListInitialization,
-                        bool IsStdInitListInitialization,
-                        bool RequiresZeroInit, unsigned ConstructKind,
-                        SourceRange ParenRange);
+  ExprResult BuildCXXConstructExpr(
+      SourceLocation ConstructLoc, QualType DeclInitType,
+      CXXConstructorDecl *Constructor, bool Elidable, MultiExprArg Exprs,
+      bool HadMultipleCandidates, bool IsListInitialization,
+      bool IsStdInitListInitialization, bool RequiresZeroInit,
+      CXXConstructionKind ConstructKind, SourceRange ParenRange);
 
   // FIXME: Can we remove this and have the above BuildCXXConstructExpr check if
   // the constructor can be elidable?
-  ExprResult
-  BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                        NamedDecl *FoundDecl,
-                        CXXConstructorDecl *Constructor, bool Elidable,
-                        MultiExprArg Exprs, bool HadMultipleCandidates,
-                        bool IsListInitialization,
-                        bool IsStdInitListInitialization, bool RequiresZeroInit,
-                        unsigned ConstructKind, SourceRange ParenRange);
+  ExprResult BuildCXXConstructExpr(
+      SourceLocation ConstructLoc, QualType DeclInitType, NamedDecl *FoundDecl,
+      CXXConstructorDecl *Constructor, bool Elidable, MultiExprArg Exprs,
+      bool HadMultipleCandidates, bool IsListInitialization,
+      bool IsStdInitListInitialization, bool RequiresZeroInit,
+      CXXConstructionKind ConstructKind, SourceRange ParenRange);
 
   ExprResult ConvertMemberDefaultInitExpression(FieldDecl *FD, Expr *InitExpr,
                                                 SourceLocation InitLoc);
@@ -8649,8 +8633,48 @@ public:
     TPL_TemplateParamsEquivalent,
   };
 
+  // A struct to represent the 'new' declaration, which is either itself just
+  // the named decl, or the important information we need about it in order to
+  // do constraint comparisons.
+  class TemplateCompareNewDeclInfo {
+    const NamedDecl *ND = nullptr;
+    const DeclContext *DC = nullptr;
+    const DeclContext *LexicalDC = nullptr;
+    SourceLocation Loc;
+
+  public:
+    TemplateCompareNewDeclInfo(const NamedDecl *ND) : ND(ND) {}
+    TemplateCompareNewDeclInfo(const DeclContext *DeclCtx,
+                               const DeclContext *LexicalDeclCtx,
+                               SourceLocation Loc)
+
+        : DC(DeclCtx), LexicalDC(LexicalDeclCtx), Loc(Loc) {
+      assert(DC && LexicalDC &&
+             "Constructor only for cases where we have the information to put "
+             "in here");
+    }
+
+    // If this was constructed with no information, we cannot do substitution
+    // for constraint comparison, so make sure we can check that.
+    bool isInvalid() const { return !ND && !DC; }
+
+    const NamedDecl *getDecl() const { return ND; }
+
+    bool ContainsDecl(const NamedDecl *ND) const { return this->ND == ND; }
+
+    const DeclContext *getLexicalDeclContext() const {
+      return ND ? ND->getLexicalDeclContext() : LexicalDC;
+    }
+
+    const DeclContext *getDeclContext() const {
+      return ND ? ND->getDeclContext() : DC;
+    }
+
+    SourceLocation getLocation() const { return ND ? ND->getLocation() : Loc; }
+  };
+
   bool TemplateParameterListsAreEqual(
-      const NamedDecl *NewInstFrom, TemplateParameterList *New,
+      const TemplateCompareNewDeclInfo &NewInstFrom, TemplateParameterList *New,
       const NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
       TemplateParameterListEqualKind Kind,
       SourceLocation TemplateArgLoc = SourceLocation());
@@ -8662,6 +8686,17 @@ public:
     return TemplateParameterListsAreEqual(nullptr, New, nullptr, Old, Complain,
                                           Kind, TemplateArgLoc);
   }
+
+  // Calculates whether two constraint expressions are equal irrespective of a
+  // difference in 'depth'. This takes a pair of optional 'NamedDecl's 'Old' and
+  // 'New', which are the "source" of the constraint, since this is necessary
+  // for figuring out the relative 'depth' of the constraint. The depth of the
+  // 'primary template' and the 'instantiated from' templates aren't necessarily
+  // the same, such as a case when one is a 'friend' defined in a class.
+  bool AreConstraintExpressionsEqual(const NamedDecl *Old,
+                                     const Expr *OldConstr,
+                                     const TemplateCompareNewDeclInfo &New,
+                                     const Expr *NewConstr);
 
   bool CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams);
 
@@ -9402,13 +9437,12 @@ public:
   // C++ Template Instantiation
   //
 
-  MultiLevelTemplateArgumentList
-  getTemplateInstantiationArgs(const NamedDecl *D, bool Final = false,
-                               const TemplateArgumentList *Innermost = nullptr,
-                               bool RelativeToPrimary = false,
-                               const FunctionDecl *Pattern = nullptr,
-                               bool ForConstraintInstantiation = false,
-                               bool SkipForSpecialization = false);
+  MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
+      const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
+      const TemplateArgumentList *Innermost = nullptr,
+      bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
+      bool ForConstraintInstantiation = false,
+      bool SkipForSpecialization = false);
 
   /// A context in which code is being synthesized (where a source location
   /// alone is not sufficient to identify the context). This covers template
@@ -10424,6 +10458,9 @@ public:
   void InstantiateMemInitializers(CXXConstructorDecl *New,
                                   const CXXConstructorDecl *Tmpl,
                             const MultiLevelTemplateArgumentList &TemplateArgs);
+
+  ExplicitSpecifier instantiateExplicitSpecifier(
+      const MultiLevelTemplateArgumentList &TemplateArgs, ExplicitSpecifier ES);
 
   NamedDecl *FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
                           const MultiLevelTemplateArgumentList &TemplateArgs,
@@ -12302,6 +12339,8 @@ public:
     bool IsMapTypeImplicit = false;
     SourceLocation ExtraModifierLoc;
     SourceLocation OmpAllMemoryLoc;
+    SourceLocation
+        StepModifierLoc; /// 'step' modifier location for linear clause
   };
 
   OMPClause *ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
@@ -12366,11 +12405,11 @@ public:
       const DeclarationNameInfo &ReductionId,
       ArrayRef<Expr *> UnresolvedReductions = std::nullopt);
   /// Called on well-formed 'linear' clause.
-  OMPClause *
-  ActOnOpenMPLinearClause(ArrayRef<Expr *> VarList, Expr *Step,
-                          SourceLocation StartLoc, SourceLocation LParenLoc,
-                          OpenMPLinearClauseKind LinKind, SourceLocation LinLoc,
-                          SourceLocation ColonLoc, SourceLocation EndLoc);
+  OMPClause *ActOnOpenMPLinearClause(
+      ArrayRef<Expr *> VarList, Expr *Step, SourceLocation StartLoc,
+      SourceLocation LParenLoc, OpenMPLinearClauseKind LinKind,
+      SourceLocation LinLoc, SourceLocation ColonLoc,
+      SourceLocation StepModifierLoc, SourceLocation EndLoc);
   /// Called on well-formed 'aligned' clause.
   OMPClause *ActOnOpenMPAlignedClause(ArrayRef<Expr *> VarList,
                                       Expr *Alignment,
@@ -14028,7 +14067,9 @@ public:
 
     /// If true, \c Type should be compared with other expression's types for
     /// layout-compatibility.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned LayoutCompatible : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned MustBeNull : 1;
   };
 

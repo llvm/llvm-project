@@ -1999,6 +1999,7 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'amdgpu_cs_chain_preserve'
 ///   ::= 'amdgpu_kernel'
 ///   ::= 'tailcc'
+///   ::= 'm68k_rtdcc'
 ///   ::= 'cc' UINT
 ///
 bool LLParser::parseOptionalCallingConv(unsigned &CC) {
@@ -2067,6 +2068,7 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
     break;
   case lltok::kw_amdgpu_kernel:  CC = CallingConv::AMDGPU_KERNEL; break;
   case lltok::kw_tailcc:         CC = CallingConv::Tail; break;
+  case lltok::kw_m68k_rtdcc:     CC = CallingConv::M68k_RTD; break;
   case lltok::kw_cc: {
       Lex.Lex();
       return parseUInt32(CC);
@@ -3803,16 +3805,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   }
 
   case lltok::kw_trunc:
-  case lltok::kw_zext:
-  case lltok::kw_sext:
-  case lltok::kw_fptrunc:
-  case lltok::kw_fpext:
   case lltok::kw_bitcast:
   case lltok::kw_addrspacecast:
-  case lltok::kw_uitofp:
-  case lltok::kw_sitofp:
-  case lltok::kw_fptoui:
-  case lltok::kw_fptosi:
   case lltok::kw_inttoptr:
   case lltok::kw_ptrtoint: {
     unsigned Opc = Lex.getUIntVal();
@@ -3864,6 +3858,22 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     return error(ID.Loc, "fneg constexprs are no longer supported");
   case lltok::kw_select:
     return error(ID.Loc, "select constexprs are no longer supported");
+  case lltok::kw_zext:
+    return error(ID.Loc, "zext constexprs are no longer supported");
+  case lltok::kw_sext:
+    return error(ID.Loc, "sext constexprs are no longer supported");
+  case lltok::kw_fptrunc:
+    return error(ID.Loc, "fptrunc constexprs are no longer supported");
+  case lltok::kw_fpext:
+    return error(ID.Loc, "fpext constexprs are no longer supported");
+  case lltok::kw_uitofp:
+    return error(ID.Loc, "uitofp constexprs are no longer supported");
+  case lltok::kw_sitofp:
+    return error(ID.Loc, "sitofp constexprs are no longer supported");
+  case lltok::kw_fptoui:
+    return error(ID.Loc, "fptoui constexprs are no longer supported");
+  case lltok::kw_fptosi:
+    return error(ID.Loc, "fptosi constexprs are no longer supported");
   case lltok::kw_icmp:
   case lltok::kw_fcmp: {
     unsigned PredVal, Opc = Lex.getUIntVal();
@@ -6381,8 +6391,16 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   }
 
   // Casts.
+  case lltok::kw_zext: {
+    bool NonNeg = EatIfPresent(lltok::kw_nneg);
+    bool Res = parseCast(Inst, PFS, KeywordVal);
+    if (Res != 0)
+      return Res;
+    if (NonNeg)
+      Inst->setNonNeg();
+    return 0;
+  }
   case lltok::kw_trunc:
-  case lltok::kw_zext:
   case lltok::kw_sext:
   case lltok::kw_fptrunc:
   case lltok::kw_fpext:

@@ -62,6 +62,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
@@ -1484,6 +1485,9 @@ bool IRTranslator::translateBitCast(const User &U,
 
 bool IRTranslator::translateCast(unsigned Opcode, const User &U,
                                  MachineIRBuilder &MIRBuilder) {
+  if (U.getType()->getScalarType()->isBFloatTy() ||
+      U.getOperand(0)->getType()->getScalarType()->isBFloatTy())
+    return false;
   Register Op = getOrCreateVReg(*U.getOperand(0));
   Register Res = getOrCreateVReg(U);
   MIRBuilder.buildInstr(Opcode, {Res}, {Op});
@@ -2390,6 +2394,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     Info.OrigRet = {Register(), Type::getVoidTy(CI.getContext()), 0};
     return CLI->lowerCall(MIRBuilder, Info);
   }
+  case Intrinsic::amdgcn_cs_chain:
+    return translateCallBase(CI, MIRBuilder);
   case Intrinsic::fptrunc_round: {
     uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
 

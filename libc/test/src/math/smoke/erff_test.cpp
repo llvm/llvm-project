@@ -15,11 +15,9 @@
 #include <errno.h>
 #include <stdint.h>
 
-using LIBC_NAMESPACE::testing::tlog;
+using LlvmLibcErffTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcErffTest, SpecialNumbers) {
+TEST_F(LlvmLibcErffTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::erff(aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::erff(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(-1.0f, LIBC_NAMESPACE::erff(neg_inf));

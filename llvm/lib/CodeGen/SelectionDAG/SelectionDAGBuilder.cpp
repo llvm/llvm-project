@@ -76,6 +76,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -1737,6 +1738,12 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
     if (const auto *NC = dyn_cast<NoCFIValue>(C))
       return getValue(NC->getGlobalValue());
+
+    if (VT == MVT::aarch64svcount) {
+      assert(C->isNullValue() && "Can only zero this target type!");
+      return DAG.getNode(ISD::BITCAST, getCurSDLoc(), VT,
+                         DAG.getConstant(0, getCurSDLoc(), MVT::nxv16i1));
+    }
 
     VectorType *VecTy = cast<VectorType>(V->getType());
 
@@ -3462,7 +3469,7 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
     }
 
     if (!IsUnaryAbs && Opc != ISD::DELETED_NODE &&
-        (TLI.isOperationLegalOrCustom(Opc, VT) ||
+        (TLI.isOperationLegalOrCustomOrPromote(Opc, VT) ||
          (UseScalarMinMax &&
           TLI.isOperationLegalOrCustom(Opc, VT.getScalarType()))) &&
         // If the underlying comparison instruction is used by any other
@@ -3518,9 +3525,23 @@ void SelectionDAGBuilder::visitZExt(const User &I) {
   // ZExt cannot be a no-op cast because sizeof(src) < sizeof(dest).
   // ZExt also can't be a cast to bool for same reason. So, nothing much to do
   SDValue N = getValue(I.getOperand(0));
-  EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
-                                                        I.getType());
-  setValue(&I, DAG.getNode(ISD::ZERO_EXTEND, getCurSDLoc(), DestVT, N));
+  auto &TLI = DAG.getTargetLoweringInfo();
+  EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+
+  SDNodeFlags Flags;
+  if (auto *PNI = dyn_cast<PossiblyNonNegInst>(&I))
+    Flags.setNonNeg(PNI->hasNonNeg());
+
+  // Eagerly use nonneg information to canonicalize towards sign_extend if
+  // that is the target's preference.
+  // TODO: Let the target do this later.
+  if (Flags.hasNonNeg() &&
+      TLI.isSExtCheaperThanZExt(N.getValueType(), DestVT)) {
+    setValue(&I, DAG.getNode(ISD::SIGN_EXTEND, getCurSDLoc(), DestVT, N));
+    return;
+  }
+
+  setValue(&I, DAG.getNode(ISD::ZERO_EXTEND, getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitSExt(const User &I) {
@@ -7191,6 +7212,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     llvm_unreachable("instrprof failed to lower a timestamp");
   case Intrinsic::instrprof_value_profile:
     llvm_unreachable("instrprof failed to lower a value profiling call");
+  case Intrinsic::instrprof_mcdc_parameters:
+    llvm_unreachable("instrprof failed to lower mcdc parameters");
+  case Intrinsic::instrprof_mcdc_tvbitmap_update:
+    llvm_unreachable("instrprof failed to lower an mcdc tvbitmap update");
+  case Intrinsic::instrprof_mcdc_condbitmap_update:
+    llvm_unreachable("instrprof failed to lower an mcdc condbitmap update");
   case Intrinsic::localescape: {
     MachineFunction &MF = DAG.getMachineFunction();
     const TargetInstrInfo *TII = DAG.getSubtarget().getInstrInfo();
@@ -7418,13 +7445,62 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, Val);
     return;
   }
+  case Intrinsic::amdgcn_cs_chain: {
+    assert(I.arg_size() == 5 && "Additional args not supported yet");
+    assert(cast<ConstantInt>(I.getOperand(4))->isZero() &&
+           "Non-zero flags not supported yet");
+
+    // At this point we don't care if it's amdgpu_cs_chain or
+    // amdgpu_cs_chain_preserve.
+    CallingConv::ID CC = CallingConv::AMDGPU_CS_Chain;
+
+    Type *RetTy = I.getType();
+    assert(RetTy->isVoidTy() && "Should not return");
+
+    SDValue Callee = getValue(I.getOperand(0));
+
+    // We only have 2 actual args: one for the SGPRs and one for the VGPRs.
+    // We'll also tack the value of the EXEC mask at the end.
+    TargetLowering::ArgListTy Args;
+    Args.reserve(3);
+
+    for (unsigned Idx : {2, 3, 1}) {
+      TargetLowering::ArgListEntry Arg;
+      Arg.Node = getValue(I.getOperand(Idx));
+      Arg.Ty = I.getOperand(Idx)->getType();
+      Arg.setAttributes(&I, Idx);
+      Args.push_back(Arg);
+    }
+
+    assert(Args[0].IsInReg && "SGPR args should be marked inreg");
+    assert(!Args[1].IsInReg && "VGPR args should not be marked inreg");
+    Args[2].IsInReg = true; // EXEC should be inreg
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(getCurSDLoc())
+        .setChain(getRoot())
+        .setCallee(CC, RetTy, Callee, std::move(Args))
+        .setNoReturn(true)
+        .setTailCall(true)
+        .setConvergent(I.isConvergent());
+    CLI.CB = &I;
+    std::pair<SDValue, SDValue> Result =
+        lowerInvokable(CLI, /*EHPadBB*/ nullptr);
+    (void)Result;
+    assert(!Result.first.getNode() && !Result.second.getNode() &&
+           "Should've lowered as tail call");
+
+    HasTailCall = true;
+    return;
+  }
   case Intrinsic::ptrmask: {
     SDValue Ptr = getValue(I.getOperand(0));
-    SDValue Const = getValue(I.getOperand(1));
+    SDValue Mask = getValue(I.getOperand(1));
 
     EVT PtrVT = Ptr.getValueType();
-    setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr,
-                             DAG.getZExtOrTrunc(Const, sdl, PtrVT)));
+    assert(PtrVT == Mask.getValueType() &&
+           "Pointers with different index type are not supported by SDAG");
+    setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr, Mask));
     return;
   }
   case Intrinsic::threadlocal_address: {
@@ -7487,6 +7563,62 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, sdl, VT, UMin);
 
     setValue(&I, Trunc);
+    return;
+  }
+  case Intrinsic::experimental_cttz_elts: {
+    auto DL = getCurSDLoc();
+    SDValue Op = getValue(I.getOperand(0));
+    EVT OpVT = Op.getValueType();
+
+    if (!TLI.shouldExpandCttzElements(OpVT)) {
+      visitTargetIntrinsic(I, Intrinsic);
+      return;
+    }
+
+    if (OpVT.getScalarType() != MVT::i1) {
+      // Compare the input vector elements to zero & use to count trailing zeros
+      SDValue AllZero = DAG.getConstant(0, DL, OpVT);
+      OpVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                              OpVT.getVectorElementCount());
+      Op = DAG.getSetCC(DL, OpVT, Op, AllZero, ISD::SETNE);
+    }
+
+    // Find the smallest "sensible" element type to use for the expansion.
+    ConstantRange CR(
+        APInt(64, OpVT.getVectorElementCount().getKnownMinValue()));
+    if (OpVT.isScalableVT())
+      CR = CR.umul_sat(getVScaleRange(I.getCaller(), 64));
+
+    // If the zero-is-poison flag is set, we can assume the upper limit
+    // of the result is VF-1.
+    if (!cast<ConstantSDNode>(getValue(I.getOperand(1)))->isZero())
+      CR = CR.subtract(APInt(64, 1));
+
+    unsigned EltWidth = I.getType()->getScalarSizeInBits();
+    EltWidth = std::min(EltWidth, (unsigned)CR.getActiveBits());
+    EltWidth = std::max(llvm::bit_ceil(EltWidth), (unsigned)8);
+
+    MVT NewEltTy = MVT::getIntegerVT(EltWidth);
+
+    // Create the new vector type & get the vector length
+    EVT NewVT = EVT::getVectorVT(*DAG.getContext(), NewEltTy,
+                                 OpVT.getVectorElementCount());
+
+    SDValue VL =
+        DAG.getElementCount(DL, NewEltTy, OpVT.getVectorElementCount());
+
+    SDValue StepVec = DAG.getStepVector(DL, NewVT);
+    SDValue SplatVL = DAG.getSplat(NewVT, DL, VL);
+    SDValue StepVL = DAG.getNode(ISD::SUB, DL, NewVT, SplatVL, StepVec);
+    SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, DL, NewVT, Op);
+    SDValue And = DAG.getNode(ISD::AND, DL, NewVT, StepVL, Ext);
+    SDValue Max = DAG.getNode(ISD::VECREDUCE_UMAX, DL, NewEltTy, And);
+    SDValue Sub = DAG.getNode(ISD::SUB, DL, NewEltTy, VL, Max);
+
+    EVT RetTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    SDValue Ret = DAG.getZExtOrTrunc(Sub, DL, RetTy);
+
+    setValue(&I, Ret);
     return;
   }
   case Intrinsic::vector_insert: {
@@ -9728,7 +9860,7 @@ SDValue SelectionDAGBuilder::lowerRangeToAssertZExt(SelectionDAG &DAG,
 void SelectionDAGBuilder::populateCallLoweringInfo(
     TargetLowering::CallLoweringInfo &CLI, const CallBase *Call,
     unsigned ArgIdx, unsigned NumArgs, SDValue Callee, Type *ReturnTy,
-    bool IsPatchPoint) {
+    AttributeSet RetAttrs, bool IsPatchPoint) {
   TargetLowering::ArgListTy Args;
   Args.reserve(NumArgs);
 
@@ -9749,7 +9881,8 @@ void SelectionDAGBuilder::populateCallLoweringInfo(
 
   CLI.setDebugLoc(getCurSDLoc())
       .setChain(getRoot())
-      .setCallee(Call->getCallingConv(), ReturnTy, Callee, std::move(Args))
+      .setCallee(Call->getCallingConv(), ReturnTy, Callee, std::move(Args),
+                 RetAttrs)
       .setDiscardResult(Call->use_empty())
       .setIsPatchPoint(IsPatchPoint)
       .setIsPreallocated(
@@ -9898,7 +10031,7 @@ void SelectionDAGBuilder::visitPatchpoint(const CallBase &CB,
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   populateCallLoweringInfo(CLI, &CB, NumMetaOpers, NumCallArgs, Callee,
-                           ReturnTy, true);
+                           ReturnTy, CB.getAttributes().getRetAttrs(), true);
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
   SDNode *CallEnd = Result.second.getNode();

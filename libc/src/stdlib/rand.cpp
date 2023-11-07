@@ -15,10 +15,12 @@ namespace LIBC_NAMESPACE {
 // An implementation of the xorshift64star pseudo random number generator. This
 // is a good general purpose generator for most non-cryptographics applications.
 LLVM_LIBC_FUNCTION(int, rand, (void)) {
-  rand_next ^= rand_next >> 12;
-  rand_next ^= rand_next << 25;
-  rand_next ^= rand_next >> 27;
-  return static_cast<int>((rand_next * 0x2545F4914F6CDD1Dul) >> 32) & RAND_MAX;
+  unsigned long x = rand_next;
+  x ^= x >> 12;
+  x ^= x << 25;
+  x ^= x >> 27;
+  rand_next = x;
+  return static_cast<int>((x * 0x2545F4914F6CDD1Dul) >> 32) & RAND_MAX;
 }
 
 } // namespace LIBC_NAMESPACE

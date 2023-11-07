@@ -50,24 +50,34 @@
 #include "bad_comparator_values.h"
 #include "check_assertion.h"
 
-void check_oob_sort_read() {
-    std::map<std::size_t, std::map<std::size_t, bool>> comparison_results; // terrible for performance, but really convenient
-    for (auto line : std::views::split(DATA, '\n') | std::views::filter([](auto const& line) { return !line.empty(); })) {
-        auto values = std::views::split(line, ' ');
-        auto it = values.begin();
-        std::size_t left = std::stol(std::string((*it).data(), (*it).size()));
-        it = std::next(it);
-        std::size_t right = std::stol(std::string((*it).data(), (*it).size()));
-        it = std::next(it);
-        bool result = static_cast<bool>(std::stol(std::string((*it).data(), (*it).size())));
-        comparison_results[left][right] = result;
+class ComparisonResults {
+public:
+    explicit ComparisonResults(std::string_view data) {
+        for (auto line : std::views::split(data, '\n') | std::views::filter([](auto const& line) { return !line.empty(); })) {
+            auto values = std::views::split(line, ' ');
+            auto it = values.begin();
+            std::size_t left = std::stol(std::string((*it).data(), (*it).size()));
+            it = std::next(it);
+            std::size_t right = std::stol(std::string((*it).data(), (*it).size()));
+            it = std::next(it);
+            bool result = static_cast<bool>(std::stol(std::string((*it).data(), (*it).size())));
+            comparison_results[left][right] = result;
+        }
     }
-    auto predicate = [&](std::size_t* left, std::size_t* right) {
-        assert(left != nullptr && right != nullptr && "something is wrong with the test");
-        assert(comparison_results.contains(*left) && comparison_results[*left].contains(*right) && "malformed input data?");
-        return comparison_results[*left][*right];
-    };
 
+    bool compare(size_t* left, size_t* right) const {
+        assert(left != nullptr && right != nullptr && "something is wrong with the test");
+        assert(comparison_results.contains(*left) && comparison_results.at(*left).contains(*right) && "malformed input data?");
+        return comparison_results.at(*left).at(*right);
+    }
+
+    size_t size() const { return comparison_results.size(); }
+private:
+    std::map<std::size_t, std::map<std::size_t, bool>> comparison_results; // terrible for performance, but really convenient
+};
+
+void check_oob_sort_read() {
+    ComparisonResults comparison_results(SORT_DATA);
     std::vector<std::unique_ptr<std::size_t>> elements;
     std::set<std::size_t*> valid_ptrs;
     for (std::size_t i = 0; i != comparison_results.size(); ++i) {
@@ -81,7 +91,7 @@ void check_oob_sort_read() {
         // because we're reading OOB.
         assert(valid_ptrs.contains(left));
         assert(valid_ptrs.contains(right));
-        return predicate(left, right);
+        return comparison_results.compare(left, right);
     };
 
     // Check the classic sorting algorithms
@@ -117,12 +127,6 @@ void check_oob_sort_read() {
         std::vector<std::size_t*> results(copy.size(), nullptr);
        TEST_LIBCPP_ASSERT_FAILURE(std::partial_sort_copy(copy.begin(), copy.end(), results.begin(), results.end(), checked_predicate), "not a valid strict-weak ordering");
     }
-    {
-        std::vector<std::size_t*> copy;
-        for (auto const& e : elements)
-            copy.push_back(e.get());
-        std::nth_element(copy.begin(), copy.end(), copy.end(), checked_predicate); // doesn't go OOB even with invalid comparator
-    }
 
     // Check the Ranges sorting algorithms
     {
@@ -157,11 +161,38 @@ void check_oob_sort_read() {
         std::vector<std::size_t*> results(copy.size(), nullptr);
         TEST_LIBCPP_ASSERT_FAILURE(std::ranges::partial_sort_copy(copy, results, checked_predicate), "not a valid strict-weak ordering");
     }
+}
+
+void check_oob_nth_element_read() {
+    ComparisonResults results(NTH_ELEMENT_DATA);
+    std::vector<std::unique_ptr<std::size_t>> elements;
+    std::set<std::size_t*> valid_ptrs;
+    for (std::size_t i = 0; i != results.size(); ++i) {
+        elements.push_back(std::make_unique<std::size_t>(i));
+        valid_ptrs.insert(elements.back().get());
+    }
+
+    auto checked_predicate = [&](size_t* left, size_t* right) {
+        // If the pointers passed to the comparator are not in the set of pointers we
+        // set up above, then we're being passed garbage values from the algorithm
+        // because we're reading OOB.
+        assert(valid_ptrs.contains(left));
+        assert(valid_ptrs.contains(right));
+        return results.compare(left, right);
+    };
+
     {
         std::vector<std::size_t*> copy;
         for (auto const& e : elements)
             copy.push_back(e.get());
-        std::ranges::nth_element(copy, copy.end(), checked_predicate); // doesn't go OOB even with invalid comparator
+        TEST_LIBCPP_ASSERT_FAILURE(std::nth_element(copy.begin(), copy.begin(), copy.end(), checked_predicate), "Would read out of bounds");
+    }
+
+    {
+        std::vector<std::size_t*> copy;
+        for (auto const& e : elements)
+            copy.push_back(e.get());
+        TEST_LIBCPP_ASSERT_FAILURE(std::ranges::nth_element(copy, copy.begin(), checked_predicate), "Would read out of bounds");
     }
 }
 
@@ -213,6 +244,8 @@ void check_irreflexive() {
 int main(int, char**) {
 
     check_oob_sort_read();
+
+    check_oob_nth_element_read();
 
     check_nan_floats();
 

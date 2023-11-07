@@ -19,7 +19,6 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1113,6 +1112,26 @@ void VPValue::replaceAllUsesWith(VPValue *New) {
     for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I)
       if (User->getOperand(I) == this)
         User->setOperand(I, New);
+    // If a user got removed after updating the current user, the next user to
+    // update will be moved to the current position, so we only need to
+    // increment the index if the number of users did not change.
+    if (NumUsers == getNumUsers())
+      J++;
+  }
+}
+
+void VPValue::replaceUsesWithIf(
+    VPValue *New,
+    llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace) {
+  for (unsigned J = 0; J < getNumUsers();) {
+    VPUser *User = Users[J];
+    unsigned NumUsers = getNumUsers();
+    for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I) {
+      if (User->getOperand(I) != this || !ShouldReplace(*User, I))
+        continue;
+
+      User->setOperand(I, New);
+    }
     // If a user got removed after updating the current user, the next user to
     // update will be moved to the current position, so we only need to
     // increment the index if the number of users did not change.

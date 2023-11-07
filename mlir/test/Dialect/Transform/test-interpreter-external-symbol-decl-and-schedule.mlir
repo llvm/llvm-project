@@ -1,7 +1,7 @@
-// RUN: mlir-opt %s --pass-pipeline="builtin.module(test-transform-dialect-interpreter{transform-file-name=%p/test-interpreter-external-symbol-decl.mlir transform-library-paths=%p/test-interpreter-library/definitions-self-contained.mlir})" \
+// RUN: mlir-opt %s --pass-pipeline="builtin.module(test-transform-dialect-interpreter{transform-file-name=%p%{fs-sep}test-interpreter-external-symbol-decl.mlir transform-library-paths=%p%{fs-sep}include%{fs-sep}test-interpreter-library/definitions-self-contained.mlir})" \
 // RUN:             --verify-diagnostics
 
-// RUN: mlir-opt %s --pass-pipeline="builtin.module(test-transform-dialect-interpreter{transform-file-name=%p/test-interpreter-external-symbol-decl.mlir transform-library-paths=%p/test-interpreter-library/definitions-self-contained.mlir}, test-transform-dialect-interpreter{transform-file-name=%p/test-interpreter-external-symbol-decl.mlir transform-library-paths=%p/test-interpreter-library/definitions-self-contained.mlir})" \
+// RUN: mlir-opt %s --pass-pipeline="builtin.module(test-transform-dialect-interpreter{transform-file-name=%p%{fs-sep}test-interpreter-external-symbol-decl.mlir transform-library-paths=%p%{fs-sep}include%{fs-sep}test-interpreter-library/definitions-self-contained.mlir}, test-transform-dialect-interpreter{transform-file-name=%p%{fs-sep}test-interpreter-external-symbol-decl.mlir transform-library-paths=%p%{fs-sep}include%{fs-sep}test-interpreter-library/definitions-self-contained.mlir})" \
 // RUN:             --verify-diagnostics
 
 // The external transform script has a declaration to the named sequence @foo,

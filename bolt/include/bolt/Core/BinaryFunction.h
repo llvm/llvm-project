@@ -1721,14 +1721,7 @@ public:
     // Align data in code BFs minimum to CI alignment
     if (!size() && hasIslandsInfo())
       return getConstantIslandAlignment();
-
-    // Minimal code alignment on AArch64 and RISCV is 4
-    if (BC.isAArch64() || BC.isRISCV())
-      return 4;
-
-    // We have to use at least 2-byte alignment for functions because
-    // of C++ ABI.
-    return 2;
+    return BC.MIB->getMinFunctionAlignment();
   }
 
   Align getMinAlign() const { return Align(getMinAlignment()); }
@@ -2316,15 +2309,10 @@ public:
   /// removed.
   uint64_t translateInputToOutputAddress(uint64_t Address) const;
 
-  /// Take address ranges corresponding to the input binary and translate
-  /// them to address ranges in the output binary.
-  DebugAddressRangesVector translateInputToOutputRanges(
-      const DWARFAddressRangesVector &InputRanges) const;
-
-  /// Similar to translateInputToOutputRanges() but operates on location lists
-  /// and moves associated data to output location lists.
-  DebugLocationsVector
-  translateInputToOutputLocationList(const DebugLocationsVector &InputLL) const;
+  /// Translate a contiguous range of addresses in the input binary into a set
+  /// of ranges in the output binary.
+  DebugAddressRangesVector
+  translateInputToOutputRange(DebugAddressRange InRange) const;
 
   /// Return true if the function is an AArch64 linker inserted veneer
   bool isAArch64Veneer() const;

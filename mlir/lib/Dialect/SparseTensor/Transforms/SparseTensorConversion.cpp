@@ -42,7 +42,7 @@ namespace {
 /// Maps each sparse tensor type to an opaque pointer.
 static std::optional<Type> convertSparseTensorTypes(Type type) {
   if (getSparseTensorEncoding(type) != nullptr)
-    return LLVM::LLVMPointerType::get(IntegerType::get(type.getContext(), 8));
+    return LLVM::LLVMPointerType::get(type.getContext());
   return std::nullopt;
 }
 
@@ -96,8 +96,9 @@ static Value createOrFoldLvlCall(OpBuilder &builder, Location loc,
   // which is all we care about (for supporting permutations).
   const Dimension dim =
       stt.isIdentity() ? lvl : stt.getDimToLvl().getDimPosition(lvl);
-  if (const auto sz = stt.getStaticDimSize(dim))
-    return constantIndex(builder, loc, *sz);
+  const Size sz = stt.getDynamicDimSize(dim);
+  if (!ShapedType::isDynamic(sz))
+    return constantIndex(builder, loc, sz);
   // If we cannot statically compute the size from the shape, then we
   // must dynamically query it.  (In principle we could also dynamically
   // compute it, but since we already did so to construct the `tensor`
@@ -112,8 +113,9 @@ static Value createOrFoldLvlCall(OpBuilder &builder, Location loc,
 static Value createOrFoldDimCall(OpBuilder &builder, Location loc,
                                  SparseTensorType stt, Value tensor,
                                  Dimension dim) {
-  if (const auto sz = stt.getStaticDimSize(dim))
-    return constantIndex(builder, loc, *sz);
+  const Size sz = stt.getDynamicDimSize(dim);
+  if (!ShapedType::isDynamic(sz))
+    return constantIndex(builder, loc, sz);
   if (stt.hasEncoding())
     return genDimSizeCall(builder, loc, tensor, dim);
   return linalg::createOrFoldDimOp(builder, loc, tensor, dim);
@@ -199,12 +201,15 @@ public:
   /// type-level information such as the encoding and sizes), generating
   /// MLIR buffers as needed, and returning `this` for method chaining.
   NewCallParams &genBuffers(SparseTensorType stt,
-                            ArrayRef<Value> dimSizesValues) {
+                            ArrayRef<Value> dimSizesValues,
+                            Value dimSizesBuffer = Value()) {
     assert(dimSizesValues.size() == static_cast<size_t>(stt.getDimRank()));
     // Sparsity annotations.
     params[kParamLvlTypes] = genLvlTypesBuffer(builder, loc, stt);
     // Construct dimSizes, lvlSizes, dim2lvl, and lvl2dim buffers.
-    params[kParamDimSizes] = allocaBuffer(builder, loc, dimSizesValues);
+    params[kParamDimSizes] = dimSizesBuffer
+                                 ? dimSizesBuffer
+                                 : allocaBuffer(builder, loc, dimSizesValues);
     params[kParamLvlSizes] =
         genMapBuffers(builder, loc, stt, dimSizesValues, params[kParamDimSizes],
                       params[kParamDim2Lvl], params[kParamLvl2Dim]);
@@ -267,13 +272,6 @@ static Value genValuesCall(OpBuilder &builder, Location loc, ShapedType tp,
       .getResult(0);
 }
 
-/// Generates a call to release/delete a `SparseTensorCOO`.
-static void genDelCOOCall(OpBuilder &builder, Location loc, Type elemTp,
-                          Value coo) {
-  SmallString<21> name{"delSparseTensorCOO", primaryTypeFunctionSuffix(elemTp)};
-  createFuncCall(builder, loc, name, {}, coo, EmitCInterface::Off);
-}
-
 //===----------------------------------------------------------------------===//
 // Conversion rules.
 //===----------------------------------------------------------------------===//
@@ -290,26 +288,28 @@ public:
   }
 };
 
-/// Sparse conversion rule for accessing dimension-sizes.
-class SparseTensorToDimSizeConverter
-    : public OpConversionPattern<tensor::DimOp> {
+/// Sparse conversion rule for accessing level-sizes.
+class SparseTensorLvlOpConverter : public OpConversionPattern<LvlOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(tensor::DimOp op, OpAdaptor adaptor,
+  matchAndRewrite(LvlOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     const auto stt = getSparseTensorType(op.getSource());
     // Only rewrite sparse DimOp.
     if (!stt.hasEncoding())
       return failure();
+
     // Only rewrite DimOp with constant index.
-    std::optional<int64_t> dim = op.getConstantIndex();
-    if (!dim)
+    std::optional<int64_t> lvl = op.getConstantLvlIndex();
+
+    if (!lvl)
       return failure();
-    // Generate the call.
+
+    // By now, if the level size is constant, the operation should have already
+    // been folded by LvlOp's folder, so we generate the call unconditionally.
     Value src = adaptor.getOperands()[0];
-    rewriter.replaceOp(
-        op, createOrFoldDimCall(rewriter, op->getLoc(), stt, src, *dim));
+    rewriter.replaceOp(op, genLvlSizeCall(rewriter, op.getLoc(), src, *lvl));
     return success();
   }
 };
@@ -331,6 +331,18 @@ public:
   }
 };
 
+class SparseReMapConverter : public OpConversionPattern<ReinterpretMapOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ReinterpretMapOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Simply fold the operation.
+    rewriter.replaceOp(op, adaptor.getSource());
+    return success();
+  }
+};
+
 /// Sparse conversion rule for the new operator.
 class SparseTensorNewConverter : public OpConversionPattern<NewOp> {
 public:
@@ -342,33 +354,15 @@ public:
     const auto stt = getSparseTensorType(op);
     if (!stt.hasEncoding())
       return failure();
-    // Construct the reader opening method calls.
+    // Construct the `reader` opening method calls.
     SmallVector<Value> dimShapesValues;
     Value dimSizesBuffer;
     Value reader = genReader(rewriter, loc, stt, adaptor.getOperands()[0],
                              dimShapesValues, dimSizesBuffer);
-    // Now construct the lvlSizes, dim2lvl, and lvl2dim buffers.
-    Value dim2lvlBuffer;
-    Value lvl2dimBuffer;
-    Value lvlSizesBuffer =
-        genMapBuffers(rewriter, loc, stt, dimShapesValues, dimSizesBuffer,
-                      dim2lvlBuffer, lvl2dimBuffer);
     // Use the `reader` to parse the file.
-    Type opaqueTp = getOpaquePointerType(rewriter);
-    Type eltTp = stt.getElementType();
-    Value valTp = constantPrimaryTypeEncoding(rewriter, loc, eltTp);
-    SmallVector<Value, 8> params{
-        reader,
-        lvlSizesBuffer,
-        genLvlTypesBuffer(rewriter, loc, stt),
-        dim2lvlBuffer,
-        lvl2dimBuffer,
-        constantPosTypeEncoding(rewriter, loc, stt.getEncoding()),
-        constantCrdTypeEncoding(rewriter, loc, stt.getEncoding()),
-        valTp};
-    Value tensor = createFuncCall(rewriter, loc, "newSparseTensorFromReader",
-                                  opaqueTp, params, EmitCInterface::On)
-                       .getResult(0);
+    Value tensor = NewCallParams(rewriter, loc)
+                       .genBuffers(stt, dimShapesValues, dimSizesBuffer)
+                       .genNewCall(Action::kFromReader, reader);
     // Free the memory for `reader`.
     createFuncCall(rewriter, loc, "delSparseTensorReader", {}, {reader},
                    EmitCInterface::Off);
@@ -386,14 +380,13 @@ public:
   LogicalResult
   matchAndRewrite(bufferization::AllocTensorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (op.getCopy())
-      return rewriter.notifyMatchFailure(op,
-                                         "sparse tensor copy not implemented");
-    Location loc = op.getLoc();
     const auto stt = getSparseTensorType(op);
     if (!stt.hasEncoding())
       return failure();
+    if (op.getCopy())
+      return rewriter.notifyMatchFailure(op, "alloc copy not implemented");
     // Gather all dimension sizes as SSA values.
+    Location loc = op.getLoc();
     const Dimension dimRank = stt.getDimRank();
     SmallVector<Value> dimSizes;
     dimSizes.reserve(dimRank);
@@ -604,8 +597,21 @@ public:
     const auto stt = getSparseTensorType(op.getTensor());
     const auto elemTp = stt.getElementType();
     const Level lvlRank = stt.getLvlRank();
-    auto lvlCoords = genAlloca(rewriter, loc, lvlRank, rewriter.getIndexType());
-    auto vref = genAllocaScalar(rewriter, loc, elemTp);
+    Value lvlCoords, vref;
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      Operation *loop = op;
+      // Finds the outermost loop.
+      while (auto l = loop->getParentOfType<LoopLikeOpInterface>())
+        loop = l;
+
+      if (llvm::isa<LoopLikeOpInterface>(loop)) {
+        // Hoists alloca outside the loop to avoid stack overflow.
+        rewriter.setInsertionPoint(loop);
+      }
+      lvlCoords = genAlloca(rewriter, loc, lvlRank, rewriter.getIndexType());
+      vref = genAllocaScalar(rewriter, loc, elemTp);
+    }
     storeAll(rewriter, loc, lvlCoords, adaptor.getLvlCoords());
     rewriter.create<memref::StoreOp>(loc, adaptor.getValue(), vref);
     SmallString<12> name{"lexInsert", primaryTypeFunctionSuffix(elemTp)};
@@ -695,37 +701,6 @@ public:
   }
 };
 
-/// Sparse conversion rule for the output operator.
-class SparseTensorOutConverter : public OpConversionPattern<OutOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(OutOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    const Location loc = op->getLoc();
-    const auto srcTp = getSparseTensorType(op.getTensor());
-    // Convert to default permuted COO.
-    Value src = adaptor.getOperands()[0];
-    SmallVector<Value> dimSizes = getDimSizes(rewriter, loc, srcTp, src);
-    Value coo = NewCallParams(rewriter, loc)
-                    .genBuffers(srcTp.withoutDimToLvl(), dimSizes)
-                    .genNewCall(Action::kToCOO, src);
-    // Then output the tensor to external file with coordinates in the
-    // externally visible lexicographic coordinate order.  A sort is
-    // required if the source was not in that order yet (note that the
-    // sort can be dropped altogether if external format does not care
-    // about the order at all, but here we assume it does).
-    const Value sort = constantI1(rewriter, loc, !srcTp.isIdentity());
-    SmallVector<Value, 3> outParams{coo, adaptor.getOperands()[1], sort};
-    const Type elemTp = srcTp.getElementType();
-    SmallString<18> name{"outSparseTensor", primaryTypeFunctionSuffix(elemTp)};
-    createFuncCall(rewriter, loc, name, {}, outParams, EmitCInterface::Off);
-    genDelCOOCall(rewriter, loc, elemTp, coo);
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
-
 /// Sparse conversion rule for the sparse_tensor.pack operator.
 class SparseTensorAssembleConverter : public OpConversionPattern<AssembleOp> {
 public:
@@ -769,14 +744,13 @@ mlir::SparseTensorTypeToPtrConverter::SparseTensorTypeToPtrConverter() {
 void mlir::populateSparseTensorConversionPatterns(TypeConverter &typeConverter,
                                                   RewritePatternSet &patterns) {
   patterns
-      .add<SparseReturnConverter, SparseTensorToDimSizeConverter,
-           SparseCastConverter, SparseTensorNewConverter,
+      .add<SparseReturnConverter, SparseTensorLvlOpConverter,
+           SparseCastConverter, SparseReMapConverter, SparseTensorNewConverter,
            SparseTensorAllocConverter, SparseTensorEmptyConverter,
            SparseTensorDeallocConverter, SparseTensorReorderCOOConverter,
            SparseTensorToPositionsConverter, SparseTensorToCoordinatesConverter,
            SparseTensorToValuesConverter, SparseNumberOfEntriesConverter,
            SparseTensorLoadConverter, SparseTensorInsertConverter,
            SparseTensorExpandConverter, SparseTensorCompressConverter,
-           SparseTensorOutConverter, SparseTensorAssembleConverter>(
-          typeConverter, patterns.getContext());
+           SparseTensorAssembleConverter>(typeConverter, patterns.getContext());
 }

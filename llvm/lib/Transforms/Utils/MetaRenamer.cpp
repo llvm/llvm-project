@@ -151,7 +151,7 @@ void MetaRename(Module &M,
   auto IsNameExcluded = [](StringRef &Name,
                            SmallVectorImpl<StringRef> &ExcludedPrefixes) {
     return any_of(ExcludedPrefixes,
-                  [&Name](auto &Prefix) { return Name.startswith(Prefix); });
+                  [&Name](auto &Prefix) { return Name.starts_with(Prefix); });
   };
 
   // Leave library functions alone because their presence or absence could
@@ -159,7 +159,7 @@ void MetaRename(Module &M,
   auto ExcludeLibFuncs = [&](Function &F) {
     LibFunc Tmp;
     StringRef Name = F.getName();
-    return Name.startswith("llvm.") || (!Name.empty() && Name[0] == 1) ||
+    return Name.starts_with("llvm.") || (!Name.empty() && Name[0] == 1) ||
            GetTLI(F).getLibFunc(F, Tmp) ||
            IsNameExcluded(Name, ExcludedFuncPrefixes);
   };
@@ -177,7 +177,7 @@ void MetaRename(Module &M,
   // Rename all aliases
   for (GlobalAlias &GA : M.aliases()) {
     StringRef Name = GA.getName();
-    if (Name.startswith("llvm.") || (!Name.empty() && Name[0] == 1) ||
+    if (Name.starts_with("llvm.") || (!Name.empty() && Name[0] == 1) ||
         IsNameExcluded(Name, ExcludedAliasesPrefixes))
       continue;
 
@@ -187,7 +187,7 @@ void MetaRename(Module &M,
   // Rename all global variables
   for (GlobalVariable &GV : M.globals()) {
     StringRef Name = GV.getName();
-    if (Name.startswith("llvm.") || (!Name.empty() && Name[0] == 1) ||
+    if (Name.starts_with("llvm.") || (!Name.empty() && Name[0] == 1) ||
         IsNameExcluded(Name, ExcludedGlobalsPrefixes))
       continue;
 

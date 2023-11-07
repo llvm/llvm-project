@@ -30,7 +30,7 @@ typedef __SVFloat16_t fixed_float16_t __attribute__((arm_sve_vector_bits(N)));
 typedef __SVFloat32_t fixed_float32_t __attribute__((arm_sve_vector_bits(N)));
 typedef __SVFloat64_t fixed_float64_t __attribute__((arm_sve_vector_bits(N)));
 
-typedef __SVBFloat16_t fixed_bfloat16_t __attribute__((arm_sve_vector_bits(N)));
+typedef __SVBfloat16_t fixed_bfloat16_t __attribute__((arm_sve_vector_bits(N)));
 
 typedef __SVBool_t fixed_bool_t __attribute__((arm_sve_vector_bits(N)));
 

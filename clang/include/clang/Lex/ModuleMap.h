@@ -20,8 +20,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -194,7 +194,7 @@ public:
     }
   };
 
-  using AdditionalModMapsSet = llvm::SmallPtrSet<FileEntryRef, 1>;
+  using AdditionalModMapsSet = llvm::DenseSet<FileEntryRef>;
 
 private:
   friend class ModuleMapParser;
@@ -232,16 +232,20 @@ private:
   /// The set of attributes that can be attached to a module.
   struct Attributes {
     /// Whether this is a system module.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsSystem : 1;
 
     /// Whether this is an extern "C" module.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsExternC : 1;
 
     /// Whether this is an exhaustive set of configuration macros.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsExhaustive : 1;
 
     /// Whether files in this module can only include non-modular headers
     /// and headers from used modules.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned NoUndeclaredIncludes : 1;
 
     Attributes()
@@ -252,6 +256,7 @@ private:
   /// A directory for which framework modules can be inferred.
   struct InferredDirectory {
     /// Whether to infer modules from this directory.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned InferModules : 1;
 
     /// The attributes to use for inferred modules.
@@ -410,12 +415,15 @@ public:
   }
 
   /// Get the directory that contains Clang-supplied include files.
-  const DirectoryEntry *getBuiltinDir() const {
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr getBuiltinDir() const {
     return BuiltinIncludeDir;
   }
 
   /// Is this a compiler builtin header?
   bool isBuiltinHeader(FileEntryRef File);
+
+  bool shouldImportRelativeToBuiltinIncludeDir(StringRef FileName,
+                                               Module *Module) const;
 
   /// Add a module map callback.
   void addModuleMapCallbacks(std::unique_ptr<ModuleMapCallbacks> Callback) {

@@ -145,6 +145,7 @@ CompilerInvocationBase::CompilerInvocationBase()
       PPOpts(std::make_shared<PreprocessorOptions>()),
       AnalyzerOpts(llvm::makeIntrusiveRefCnt<AnalyzerOptions>()),
       MigratorOpts(std::make_shared<MigratorOptions>()),
+      APINotesOpts(std::make_shared<APINotesOptions>()),
       CodeGenOpts(std::make_shared<CodeGenOptions>()),
       FSOpts(std::make_shared<FileSystemOptions>()),
       FrontendOpts(std::make_shared<FrontendOptions>()),
@@ -161,6 +162,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
     PPOpts = make_shared_copy(X.getPreprocessorOpts());
     AnalyzerOpts = makeIntrusiveRefCntCopy(X.getAnalyzerOpts());
     MigratorOpts = make_shared_copy(X.getMigratorOpts());
+    APINotesOpts = make_shared_copy(X.getAPINotesOpts());
     CodeGenOpts = make_shared_copy(X.getCodeGenOpts());
     FSOpts = make_shared_copy(X.getFileSystemOpts());
     FrontendOpts = make_shared_copy(X.getFrontendOpts());
@@ -180,6 +182,7 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
     PPOpts = X.PPOpts;
     AnalyzerOpts = X.AnalyzerOpts;
     MigratorOpts = X.MigratorOpts;
+    APINotesOpts = X.APINotesOpts;
     CodeGenOpts = X.CodeGenOpts;
     FSOpts = X.FSOpts;
     FrontendOpts = X.FrontendOpts;
@@ -231,6 +234,10 @@ AnalyzerOptions &CowCompilerInvocation::getMutAnalyzerOpts() {
 
 MigratorOptions &CowCompilerInvocation::getMutMigratorOpts() {
   return ensureOwned(MigratorOpts);
+}
+
+APINotesOptions &CowCompilerInvocation::getMutAPINotesOpts() {
+  return ensureOwned(APINotesOpts);
 }
 
 CodeGenOptions &CowCompilerInvocation::getMutCodeGenOpts() {
@@ -648,6 +655,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     emitError |= (DefaultCC == LangOptions::DCC_VectorCall ||
                   DefaultCC == LangOptions::DCC_RegCall) &&
                  !T.isX86();
+    emitError |= DefaultCC == LangOptions::DCC_RtdCall && Arch != llvm::Triple::m68k;
     if (emitError)
       Diags.Report(diag::err_drv_argument_not_allowed_with)
           << A->getSpelling() << T.getTriple();
@@ -3162,8 +3170,8 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
     StringRef Val = A->getValue();
     if (Val.contains('=')) {
       auto Split = Val.split('=');
-      Opts.PrebuiltModuleFiles.insert(
-          {std::string(Split.first), std::string(Split.second)});
+      Opts.PrebuiltModuleFiles.insert_or_assign(
+          std::string(Split.first), std::string(Split.second));
     }
   }
   for (const auto *A : Args.filtered(OPT_fprebuilt_module_path))
@@ -3258,6 +3266,17 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
     Opts.AddVFSOverlayFile(A->getValue());
 
   return Diags.getNumErrors() == NumErrorsBefore;
+}
+
+static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
+                              DiagnosticsEngine &diags) {
+  if (const Arg *A = Args.getLastArg(OPT_fapinotes_swift_version)) {
+    if (Opts.SwiftVersion.tryParse(A->getValue()))
+      diags.Report(diag::err_drv_invalid_value)
+          << A->getAsString(Args) << A->getValue();
+  }
+  for (const Arg *A : Args.filtered(OPT_iapinotes_modules))
+    Opts.ModuleSearchPaths.push_back(A->getValue());
 }
 
 /// Check if input file kind and language standard are compatible.
@@ -3865,11 +3884,17 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_argument_not_allowed_with)
           << A->getSpelling() << "-fdefault-calling-conv";
     else {
-      if (T.getArch() != llvm::Triple::x86)
+      switch (T.getArch()) {
+      case llvm::Triple::x86:
+        Opts.setDefaultCallingConv(LangOptions::DCC_StdCall);
+        break;
+      case llvm::Triple::m68k:
+        Opts.setDefaultCallingConv(LangOptions::DCC_RtdCall);
+        break;
+      default:
         Diags.Report(diag::err_drv_argument_not_allowed_with)
             << A->getSpelling() << T.getTriple();
-      else
-        Opts.setDefaultCallingConv(LangOptions::DCC_StdCall);
+      }
     }
   }
 
@@ -4550,6 +4575,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
+  ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
   ParseLangArgs(LangOpts, Args, DashX, T, Res.getPreprocessorOpts().Includes,
                 Diags);

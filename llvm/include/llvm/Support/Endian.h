@@ -25,13 +25,6 @@
 namespace llvm {
 namespace support {
 
-// TODO: Remove the following once we are done migrating to llvm::endianness,
-// llvm::endianness::big, etc.
-using endianness = llvm::endianness;
-constexpr llvm::endianness big = llvm::endianness::big;
-constexpr llvm::endianness little = llvm::endianness::little;
-constexpr llvm::endianness native = llvm::endianness::native;
-
 // These are named values for common alignments.
 enum {aligned = 0, unaligned = 1};
 
@@ -46,10 +39,6 @@ struct PickAlignment {
 } // end namespace detail
 
 namespace endian {
-
-LLVM_DEPRECATED("Use llvm::endianness::native instead",
-                "llvm::endianness::native")
-constexpr endianness system_endianness() { return llvm::endianness::native; }
 
 template <typename value_type>
 [[nodiscard]] inline value_type byte_swap(value_type value, endianness endian) {

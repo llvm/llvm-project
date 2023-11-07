@@ -25,8 +25,15 @@ using IdentTy = ident_t;
 
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 
+enum class DeviceDebugKind : uint32_t {
+  Assertion = 1U << 0,
+  FunctionTracing = 1U << 1,
+  CommonIssues = 1U << 2,
+  AllocationTracker = 1U << 3,
+};
+
 struct DeviceEnvironmentTy {
-  uint32_t DebugKind;
+  uint32_t DeviceDebugKind;
   uint32_t NumDevices;
   uint32_t DeviceNum;
   uint32_t DynamicMemSize;
@@ -34,6 +41,27 @@ struct DeviceEnvironmentTy {
   uintptr_t IndirectCallTable;
   uint64_t IndirectCallTableSize;
   uint64_t HardwareParallelism;
+};
+
+struct DeviceMemoryPoolTy {
+  void *Ptr;
+  uint64_t Size;
+};
+
+struct DeviceMemoryPoolTrackingTy {
+  uint64_t NumAllocations;
+  uint64_t AllocationTotal;
+  uint64_t AllocationMin;
+  uint64_t AllocationMax;
+
+  void combine(DeviceMemoryPoolTrackingTy &Other) {
+    NumAllocations += Other.NumAllocations;
+    AllocationTotal += Other.AllocationTotal;
+    AllocationMin = AllocationMin > Other.AllocationMin ? Other.AllocationMin
+                                                        : AllocationMin;
+    AllocationMax = AllocationMax < Other.AllocationMax ? Other.AllocationMax
+                                                        : AllocationMax;
+  }
 };
 
 // NOTE: Please don't change the order of those members as their indices are
@@ -49,17 +77,32 @@ struct DynamicEnvironmentTy {
 // NOTE: Please don't change the order of those members as their indices are
 // used in the middle end. Always add the new data member at the end.
 struct ConfigurationEnvironmentTy {
-  uint8_t UseGenericStateMachine;
-  uint8_t MayUseNestedParallelism;
-  llvm::omp::OMPTgtExecModeFlags ExecMode;
+  uint8_t UseGenericStateMachine = 2;
+  uint8_t MayUseNestedParallelism = 2;
+  llvm::omp::OMPTgtExecModeFlags ExecMode = llvm::omp::OMP_TGT_EXEC_MODE_SPMD;
+  // Information about (legal) launch configurations.
+  //{
+  int32_t MinThreads = -1;
+  int32_t MaxThreads = -1;
+  int32_t MinTeams = -1;
+  int32_t MaxTeams = -1;
+  int32_t ReductionDataSize = 0;
+  int32_t ReductionBufferLength = 0;
+  //}
 };
 
 // NOTE: Please don't change the order of those members as their indices are
 // used in the middle end. Always add the new data member at the end.
 struct KernelEnvironmentTy {
   ConfigurationEnvironmentTy Configuration;
-  IdentTy *Ident;
-  DynamicEnvironmentTy *DynamicEnv;
+  IdentTy *Ident = nullptr;
+  DynamicEnvironmentTy *DynamicEnv = nullptr;
+};
+
+struct KernelLaunchEnvironmentTy {
+  uint32_t ReductionCnt = 0;
+  uint32_t ReductionIterCnt = 0;
+  void *ReductionBuffer = nullptr;
 };
 
 #endif // _OMPTARGET_ENVIRONMENT_H_

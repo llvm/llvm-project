@@ -539,7 +539,8 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
   for (auto *ICI : ICmpUsers) {
     bool IsSwapped = L->isLoopInvariant(ICI->getOperand(0));
     auto *Op1 = IsSwapped ? ICI->getOperand(0) : ICI->getOperand(1);
-    Instruction *Ext = nullptr;
+    IRBuilder<> Builder(ICI);
+    Value *Ext = nullptr;
     // For signed/unsigned predicate, replace the old comparison with comparison
     // of immediate IV against sext/zext of the invariant argument. If we can
     // use either sext or zext (i.e. we are dealing with equality predicate),
@@ -550,18 +551,18 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
     if (IsSwapped) Pred = ICmpInst::getSwappedPredicate(Pred);
     if (CanUseZExt(ICI)) {
       assert(DoesZExtCollapse && "Unprofitable zext?");
-      Ext = new ZExtInst(Op1, IVTy, "zext", ICI);
+      Ext = Builder.CreateZExt(Op1, IVTy, "zext");
       Pred = ICmpInst::getUnsignedPredicate(Pred);
     } else {
       assert(DoesSExtCollapse && "Unprofitable sext?");
-      Ext = new SExtInst(Op1, IVTy, "sext", ICI);
+      Ext = Builder.CreateSExt(Op1, IVTy, "sext");
       assert(Pred == ICmpInst::getSignedPredicate(Pred) && "Must be signed!");
     }
     bool Changed;
     L->makeLoopInvariant(Ext, Changed);
     (void)Changed;
-    ICmpInst *NewICI = new ICmpInst(ICI, Pred, IV, Ext);
-    ICI->replaceAllUsesWith(NewICI);
+    auto *NewCmp = Builder.CreateICmp(Pred, IV, Ext);
+    ICI->replaceAllUsesWith(NewCmp);
     DeadInsts.emplace_back(ICI);
   }
 
@@ -659,12 +660,12 @@ bool SimplifyIndvar::replaceFloatIVWithIntegerIV(Instruction *UseInst) {
   Instruction *IVOperand = cast<Instruction>(UseInst->getOperand(0));
   // Get the symbolic expression for this instruction.
   const SCEV *IV = SE->getSCEV(IVOperand);
-  unsigned MaskBits;
+  int MaskBits;
   if (UseInst->getOpcode() == CastInst::SIToFP)
-    MaskBits = SE->getSignedRange(IV).getMinSignedBits();
+    MaskBits = (int)SE->getSignedRange(IV).getMinSignedBits();
   else
-    MaskBits = SE->getUnsignedRange(IV).getActiveBits();
-  unsigned DestNumSigBits = UseInst->getType()->getFPMantissaWidth();
+    MaskBits = (int)SE->getUnsignedRange(IV).getActiveBits();
+  int DestNumSigBits = UseInst->getType()->getFPMantissaWidth();
   if (MaskBits <= DestNumSigBits) {
     for (User *U : UseInst->users()) {
       // Match for fptosi/fptoui of sitofp and with same type.
@@ -1373,16 +1374,32 @@ WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
       DU.NarrowUse->getOperand(0) == DU.NarrowDef ? 1 : 0;
   assert(DU.NarrowUse->getOperand(1-ExtendOperIdx) == DU.NarrowDef && "bad DU");
 
-  const SCEV *ExtendOperExpr = nullptr;
   const OverflowingBinaryOperator *OBO =
     cast<OverflowingBinaryOperator>(DU.NarrowUse);
   ExtendKind ExtKind = getExtendKind(DU.NarrowDef);
-  if (ExtKind == ExtendKind::Sign && OBO->hasNoSignedWrap())
-    ExtendOperExpr = SE->getSignExtendExpr(
-      SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
-  else if (ExtKind == ExtendKind::Zero && OBO->hasNoUnsignedWrap())
-    ExtendOperExpr = SE->getZeroExtendExpr(
-      SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
+  if (!(ExtKind == ExtendKind::Sign && OBO->hasNoSignedWrap()) &&
+      !(ExtKind == ExtendKind::Zero && OBO->hasNoUnsignedWrap())) {
+    ExtKind = ExtendKind::Unknown;
+
+    // For a non-negative NarrowDef, we can choose either type of
+    // extension.  We want to use the current extend kind if legal
+    // (see above), and we only hit this code if we need to check
+    // the opposite case.
+    if (DU.NeverNegative) {
+      if (OBO->hasNoSignedWrap()) {
+        ExtKind = ExtendKind::Sign;
+      } else if (OBO->hasNoUnsignedWrap()) {
+        ExtKind = ExtendKind::Zero;
+      }
+    }
+  }
+
+  const SCEV *ExtendOperExpr =
+      SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx));
+  if (ExtKind == ExtendKind::Sign)
+    ExtendOperExpr = SE->getSignExtendExpr(ExtendOperExpr, WideType);
+  else if (ExtKind == ExtendKind::Zero)
+    ExtendOperExpr = SE->getZeroExtendExpr(ExtendOperExpr, WideType);
   else
     return {nullptr, ExtendKind::Unknown};
 

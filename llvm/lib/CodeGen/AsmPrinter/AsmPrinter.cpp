@@ -1372,7 +1372,11 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     if (BBAddrMapVersion > 1) {
       OutStreamer->AddComment("BB id");
       // Emit the BB ID for this basic block.
-      OutStreamer->emitULEB128IntValue(*MBB.getBBID());
+      // We only emit BaseID since CloneID is unset for
+      // basic-block-sections=labels.
+      // TODO: Emit the full BBID when labels and sections can be mixed
+      // together.
+      OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
     }
     // Emit the basic block offset relative to the end of the previous block.
     // This is zero unless the block is padded due to alignment.
@@ -1469,9 +1473,10 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
     }
   }
 
-  *StackUsageStream << MF.getFunction().getParent()->getName();
   if (const DISubprogram *DSP = MF.getFunction().getSubprogram())
-    *StackUsageStream << ':' << DSP->getLine();
+    *StackUsageStream << DSP->getFilename() << ':' << DSP->getLine();
+  else
+    *StackUsageStream << MF.getFunction().getParent()->getName();
 
   *StackUsageStream << ':' << MF.getName() << '\t' << StackSize << '\t';
   if (FrameInfo.hasVarSizedObjects())
@@ -1524,7 +1529,7 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
         const size_t OptStart = SecWithOpt.find('!'); // likely npos
         const StringRef Sec = SecWithOpt.substr(0, OptStart);
         const StringRef Opts = SecWithOpt.substr(OptStart); // likely empty
-        ConstULEB128 = Opts.find('C') != StringRef::npos;
+        ConstULEB128 = Opts.contains('C');
 #ifndef NDEBUG
         for (char O : Opts)
           assert((O == '!' || O == 'C') && "Invalid !pcsections options");
@@ -1931,30 +1936,33 @@ void AsmPrinter::emitFunctionBody() {
   // MBB profile information has been set
   if (MBBProfileDumpFileOutput && !MF->empty() &&
       MF->getFunction().getEntryCount()) {
-    if (!MF->hasBBLabels())
+    if (!MF->hasBBLabels()) {
       MF->getContext().reportError(
           SMLoc(),
           "Unable to find BB labels for MBB profile dump. -mbb-profile-dump "
           "must be called with -basic-block-sections=labels");
-    MachineBlockFrequencyInfo &MBFI =
-        getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
-    // The entry count and the entry basic block frequency aren't the same. We
-    // want to capture "absolute" frequencies, i.e. the frequency with which a
-    // MBB is executed when the program is executed. From there, we can derive
-    // Function-relative frequencies (divide by the value for the first MBB).
-    // We also have the information about frequency with which functions
-    // were called. This helps, for example, in a type of integration tests
-    // where we want to cross-validate the compiler's profile with a real
-    // profile.
-    // Using double precision because uint64 values used to encode mbb
-    // "frequencies" may be quite large.
-    const double EntryCount =
-        static_cast<double>(MF->getFunction().getEntryCount()->getCount());
-    for (const auto &MBB : *MF) {
-      const double MBBRelFreq = MBFI.getBlockFreqRelativeToEntryBlock(&MBB);
-      const double AbsMBBFreq = MBBRelFreq * EntryCount;
-      *MBBProfileDumpFileOutput.get()
-          << MF->getName() << "," << MBB.getBBID() << "," << AbsMBBFreq << "\n";
+    } else {
+      MachineBlockFrequencyInfo &MBFI =
+          getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
+      // The entry count and the entry basic block frequency aren't the same. We
+      // want to capture "absolute" frequencies, i.e. the frequency with which a
+      // MBB is executed when the program is executed. From there, we can derive
+      // Function-relative frequencies (divide by the value for the first MBB).
+      // We also have the information about frequency with which functions
+      // were called. This helps, for example, in a type of integration tests
+      // where we want to cross-validate the compiler's profile with a real
+      // profile.
+      // Using double precision because uint64 values used to encode mbb
+      // "frequencies" may be quite large.
+      const double EntryCount =
+          static_cast<double>(MF->getFunction().getEntryCount()->getCount());
+      for (const auto &MBB : *MF) {
+        const double MBBRelFreq = MBFI.getBlockFreqRelativeToEntryBlock(&MBB);
+        const double AbsMBBFreq = MBBRelFreq * EntryCount;
+        *MBBProfileDumpFileOutput.get()
+            << MF->getName() << "," << MBB.getBBID()->BaseID << ","
+            << AbsMBBFreq << "\n";
+      }
     }
   }
 }
@@ -2381,7 +2389,8 @@ bool AsmPrinter::doFinalization(Module &M) {
     OutStreamer->emitAddrsig();
     for (const GlobalValue &GV : M.global_values()) {
       if (!GV.use_empty() && !GV.isThreadLocal() &&
-          !GV.hasDLLImportStorageClass() && !GV.getName().startswith("llvm.") &&
+          !GV.hasDLLImportStorageClass() &&
+          !GV.getName().starts_with("llvm.") &&
           !GV.hasAtLeastLocalUnnamedAddr())
         OutStreamer->emitAddrsigSym(getSymbol(&GV));
     }
@@ -3044,9 +3053,12 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     // Handle casts to pointers by changing them into casts to the appropriate
     // integer type.  This promotes constant folding and simplifies this code.
     Constant *Op = CE->getOperand(0);
-    Op = ConstantExpr::getIntegerCast(Op, DL.getIntPtrType(CV->getType()),
-                                      false/*ZExt*/);
-    return lowerConstant(Op);
+    Op = ConstantFoldIntegerCast(Op, DL.getIntPtrType(CV->getType()),
+                                 /*IsSigned*/ false, DL);
+    if (Op)
+      return lowerConstant(Op);
+
+    break; // Error
   }
 
   case Instruction::PtrToInt: {

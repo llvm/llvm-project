@@ -103,19 +103,19 @@ define void @test_i64_add_optsize(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-V8-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[COUNT_1:%.*]], [[LOOP]] ]
 ; CHECK-V8-NEXT:    [[ADDR_A:%.*]] = getelementptr i64, ptr [[A:%.*]], i32 [[IV]]
 ; CHECK-V8-NEXT:    [[ADDR_B:%.*]] = getelementptr i64, ptr [[B:%.*]], i32 [[IV]]
-; CHECK-V8-NEXT:    [[DATA_A:%.*]] = load i64, ptr [[ADDR_A]], align 4
-; CHECK-V8-NEXT:    [[DATA_B:%.*]] = load i64, ptr [[ADDR_B]], align 4
+; CHECK-V8-NEXT:    [[DATA_A:%.*]] = load i64, ptr [[ADDR_A]], align 8
+; CHECK-V8-NEXT:    [[DATA_B:%.*]] = load i64, ptr [[ADDR_B]], align 8
 ; CHECK-V8-NEXT:    [[RES:%.*]] = add i64 [[DATA_A]], [[DATA_B]]
 ; CHECK-V8-NEXT:    [[ADDR_C:%.*]] = getelementptr i64, ptr [[C:%.*]], i32 [[IV]]
-; CHECK-V8-NEXT:    store i64 [[RES]], ptr [[ADDR_C]], align 4
+; CHECK-V8-NEXT:    store i64 [[RES]], ptr [[ADDR_C]], align 8
 ; CHECK-V8-NEXT:    [[COUNT:%.*]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-V8-NEXT:    [[ADDR_A_1:%.*]] = getelementptr i64, ptr [[A]], i32 [[COUNT]]
 ; CHECK-V8-NEXT:    [[ADDR_B_1:%.*]] = getelementptr i64, ptr [[B]], i32 [[COUNT]]
-; CHECK-V8-NEXT:    [[DATA_A_1:%.*]] = load i64, ptr [[ADDR_A_1]], align 4
-; CHECK-V8-NEXT:    [[DATA_B_1:%.*]] = load i64, ptr [[ADDR_B_1]], align 4
+; CHECK-V8-NEXT:    [[DATA_A_1:%.*]] = load i64, ptr [[ADDR_A_1]], align 8
+; CHECK-V8-NEXT:    [[DATA_B_1:%.*]] = load i64, ptr [[ADDR_B_1]], align 8
 ; CHECK-V8-NEXT:    [[RES_1:%.*]] = add i64 [[DATA_A_1]], [[DATA_B_1]]
 ; CHECK-V8-NEXT:    [[ADDR_C_1:%.*]] = getelementptr i64, ptr [[C]], i32 [[COUNT]]
-; CHECK-V8-NEXT:    store i64 [[RES_1]], ptr [[ADDR_C_1]], align 4
+; CHECK-V8-NEXT:    store i64 [[RES_1]], ptr [[ADDR_C_1]], align 8
 ; CHECK-V8-NEXT:    [[COUNT_1]] = add nuw nsw i32 [[IV]], 2
 ; CHECK-V8-NEXT:    [[END_1:%.*]] = icmp ne i32 [[COUNT_1]], 100
 ; CHECK-V8-NEXT:    br i1 [[END_1]], label [[LOOP]], label [[EXIT:%.*]]
@@ -150,19 +150,19 @@ define void @test_i64_add_minsize(ptr %a, ptr %b, ptr %c) #1 {
 ; CHECK-V8-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[COUNT_1:%.*]], [[LOOP]] ]
 ; CHECK-V8-NEXT:    [[ADDR_A:%.*]] = getelementptr i64, ptr [[A:%.*]], i32 [[IV]]
 ; CHECK-V8-NEXT:    [[ADDR_B:%.*]] = getelementptr i64, ptr [[B:%.*]], i32 [[IV]]
-; CHECK-V8-NEXT:    [[DATA_A:%.*]] = load i64, ptr [[ADDR_A]], align 4
-; CHECK-V8-NEXT:    [[DATA_B:%.*]] = load i64, ptr [[ADDR_B]], align 4
+; CHECK-V8-NEXT:    [[DATA_A:%.*]] = load i64, ptr [[ADDR_A]], align 8
+; CHECK-V8-NEXT:    [[DATA_B:%.*]] = load i64, ptr [[ADDR_B]], align 8
 ; CHECK-V8-NEXT:    [[RES:%.*]] = add i64 [[DATA_A]], [[DATA_B]]
 ; CHECK-V8-NEXT:    [[ADDR_C:%.*]] = getelementptr i64, ptr [[C:%.*]], i32 [[IV]]
-; CHECK-V8-NEXT:    store i64 [[RES]], ptr [[ADDR_C]], align 4
+; CHECK-V8-NEXT:    store i64 [[RES]], ptr [[ADDR_C]], align 8
 ; CHECK-V8-NEXT:    [[COUNT:%.*]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-V8-NEXT:    [[ADDR_A_1:%.*]] = getelementptr i64, ptr [[A]], i32 [[COUNT]]
 ; CHECK-V8-NEXT:    [[ADDR_B_1:%.*]] = getelementptr i64, ptr [[B]], i32 [[COUNT]]
-; CHECK-V8-NEXT:    [[DATA_A_1:%.*]] = load i64, ptr [[ADDR_A_1]], align 4
-; CHECK-V8-NEXT:    [[DATA_B_1:%.*]] = load i64, ptr [[ADDR_B_1]], align 4
+; CHECK-V8-NEXT:    [[DATA_A_1:%.*]] = load i64, ptr [[ADDR_A_1]], align 8
+; CHECK-V8-NEXT:    [[DATA_B_1:%.*]] = load i64, ptr [[ADDR_B_1]], align 8
 ; CHECK-V8-NEXT:    [[RES_1:%.*]] = add i64 [[DATA_A_1]], [[DATA_B_1]]
 ; CHECK-V8-NEXT:    [[ADDR_C_1:%.*]] = getelementptr i64, ptr [[C]], i32 [[COUNT]]
-; CHECK-V8-NEXT:    store i64 [[RES_1]], ptr [[ADDR_C_1]], align 4
+; CHECK-V8-NEXT:    store i64 [[RES_1]], ptr [[ADDR_C_1]], align 8
 ; CHECK-V8-NEXT:    [[COUNT_1]] = add nuw nsw i32 [[IV]], 2
 ; CHECK-V8-NEXT:    [[END_1:%.*]] = icmp ne i32 [[COUNT_1]], 100
 ; CHECK-V8-NEXT:    br i1 [[END_1]], label [[LOOP]], label [[EXIT:%.*]]
@@ -310,13 +310,13 @@ define i64 @test_i64_select_optsize(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-V8-NEXT:    [[ACC:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[ACC_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-V8-NEXT:    [[ADDR_A:%.*]] = getelementptr i64, ptr [[A:%.*]], i32 [[IV]]
 ; CHECK-V8-NEXT:    [[ADDR_B:%.*]] = getelementptr i64, ptr [[B:%.*]], i32 [[IV]]
-; CHECK-V8-NEXT:    [[DATA_A:%.*]] = load i64, ptr [[ADDR_A]], align 4
-; CHECK-V8-NEXT:    [[DATA_B:%.*]] = load i64, ptr [[ADDR_B]], align 4
+; CHECK-V8-NEXT:    [[DATA_A:%.*]] = load i64, ptr [[ADDR_A]], align 8
+; CHECK-V8-NEXT:    [[DATA_B:%.*]] = load i64, ptr [[ADDR_B]], align 8
 ; CHECK-V8-NEXT:    [[UGT:%.*]] = icmp ugt i64 [[DATA_A]], [[DATA_B]]
 ; CHECK-V8-NEXT:    [[UMAX:%.*]] = select i1 [[UGT]], i64 [[DATA_A]], i64 [[DATA_B]]
 ; CHECK-V8-NEXT:    [[ACC_NEXT]] = add i64 [[UMAX]], [[ACC]]
 ; CHECK-V8-NEXT:    [[ADDR_C:%.*]] = getelementptr i64, ptr [[C:%.*]], i32 [[IV]]
-; CHECK-V8-NEXT:    store i64 [[UMAX]], ptr [[ADDR_C]], align 4
+; CHECK-V8-NEXT:    store i64 [[UMAX]], ptr [[ADDR_C]], align 8
 ; CHECK-V8-NEXT:    [[COUNT]] = add nuw i32 [[IV]], 1
 ; CHECK-V8-NEXT:    [[END:%.*]] = icmp ne i32 [[COUNT]], 100
 ; CHECK-V8-NEXT:    br i1 [[END]], label [[LOOP]], label [[EXIT:%.*]]
@@ -356,13 +356,13 @@ define i64 @test_i64_select_minsize(ptr %a, ptr %b, ptr %c) #1 {
 ; CHECK-V8-NEXT:    [[ACC:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[ACC_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-V8-NEXT:    [[ADDR_A:%.*]] = getelementptr i64, ptr [[A:%.*]], i32 [[IV]]
 ; CHECK-V8-NEXT:    [[ADDR_B:%.*]] = getelementptr i64, ptr [[B:%.*]], i32 [[IV]]
-; CHECK-V8-NEXT:    [[DATA_A:%.*]] = load i64, ptr [[ADDR_A]], align 4
-; CHECK-V8-NEXT:    [[DATA_B:%.*]] = load i64, ptr [[ADDR_B]], align 4
+; CHECK-V8-NEXT:    [[DATA_A:%.*]] = load i64, ptr [[ADDR_A]], align 8
+; CHECK-V8-NEXT:    [[DATA_B:%.*]] = load i64, ptr [[ADDR_B]], align 8
 ; CHECK-V8-NEXT:    [[UGT:%.*]] = icmp ugt i64 [[DATA_A]], [[DATA_B]]
 ; CHECK-V8-NEXT:    [[UMAX:%.*]] = select i1 [[UGT]], i64 [[DATA_A]], i64 [[DATA_B]]
 ; CHECK-V8-NEXT:    [[ACC_NEXT]] = add i64 [[UMAX]], [[ACC]]
 ; CHECK-V8-NEXT:    [[ADDR_C:%.*]] = getelementptr i64, ptr [[C:%.*]], i32 [[IV]]
-; CHECK-V8-NEXT:    store i64 [[UMAX]], ptr [[ADDR_C]], align 4
+; CHECK-V8-NEXT:    store i64 [[UMAX]], ptr [[ADDR_C]], align 8
 ; CHECK-V8-NEXT:    [[COUNT]] = add nuw i32 [[IV]], 1
 ; CHECK-V8-NEXT:    [[END:%.*]] = icmp ne i32 [[COUNT]], 100
 ; CHECK-V8-NEXT:    br i1 [[END]], label [[LOOP]], label [[EXIT:%.*]]

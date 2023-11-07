@@ -89,16 +89,18 @@ template <size_t alignment, typename T> LIBC_INLINE T *assume_aligned(T *ptr) {
 // Returns true iff memory regions [p1, p1 + size] and [p2, p2 + size] are
 // disjoint.
 LIBC_INLINE bool is_disjoint(const void *p1, const void *p2, size_t size) {
-  const char *a = static_cast<const char *>(p1);
-  const char *b = static_cast<const char *>(p2);
-  if (a > b) {
-    // Swap a and b, this compiles down to conditionnal move for aarch64, x86
-    // and RISCV with zbb extension.
-    const char *tmp = a;
-    a = b;
-    b = tmp;
-  }
-  return a + size <= b;
+  const ptrdiff_t sdiff =
+      static_cast<const char *>(p1) - static_cast<const char *>(p2);
+  // We use bit_cast to make sure that we don't run into accidental integer
+  // promotion. Notably the unary minus operator goes through integer promotion
+  // at the expression level. We assume arithmetic to be two's complement (i.e.,
+  // bit_cast has the same behavior as a regular signed to unsigned cast).
+  static_assert(-1 == ~0, "not 2's complement");
+  const size_t udiff = cpp::bit_cast<size_t>(sdiff);
+  // Integer promition would be caught here.
+  const size_t neg_udiff = cpp::bit_cast<size_t>(-sdiff);
+  // This is expected to compile a conditional move.
+  return sdiff >= 0 ? size <= udiff : size <= neg_udiff;
 }
 
 #if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)

@@ -1,10 +1,12 @@
-// RUN: mlir-opt -split-input-file -test-transform-dialect-interpreter %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -transform-interpreter %s | FileCheck %s
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.tensor.rewrite_as_constant
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.tensor.rewrite_as_constant
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 // CHECK-LABEL: func @tensor_generate_constant(

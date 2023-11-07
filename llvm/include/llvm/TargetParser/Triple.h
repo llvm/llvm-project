@@ -221,7 +221,8 @@ public:
     Emscripten,
     ShaderModel, // DirectX ShaderModel
     LiteOS,
-    LastOSType = LiteOS
+    Serenity,
+    LastOSType = Serenity
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -417,9 +418,6 @@ public:
 
   /// Get the architecture (first) component of the triple.
   StringRef getArchName() const;
-
-  /// Get the architecture name based on Kind and SubArch.
-  StringRef getArchName(ArchType Kind, SubArchType SubArch = NoSubArch) const;
 
   /// Get the vendor (second) component of the triple.
   StringRef getVendorName() const;
@@ -669,6 +667,10 @@ public:
   /// Tests whether the OS is AIX.
   bool isOSAIX() const {
     return getOS() == Triple::AIX;
+  }
+
+  bool isOSSerenity() const {
+    return getOS() == Triple::Serenity;
   }
 
   /// Tests whether the OS uses the ELF binary format.
@@ -1117,6 +1119,9 @@ public:
 
   /// Get the canonical name for the \p Kind architecture.
   static StringRef getArchTypeName(ArchType Kind);
+
+  /// Get the architecture name based on \p Kind and \p SubArch.
+  static StringRef getArchName(ArchType Kind, SubArchType SubArch = NoSubArch);
 
   /// Get the "prefix" canonical name for the \p Kind architecture. This is the
   /// prefix used by the architecture specific builtins, and is suitable for
