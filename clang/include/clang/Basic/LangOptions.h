@@ -734,6 +734,7 @@ public:
       setAllowFEnvAccess(true);
     else
       setAllowFEnvAccess(LangOptions::FPM_Off);
+    setComplexRange(LO.getComplexRange());
   }
 
   bool allowFPContractWithinStatement() const {

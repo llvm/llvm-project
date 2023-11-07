@@ -1148,15 +1148,7 @@ ComplexExprEmitter::EmitBinOps(const BinaryOperator *E,
     Ops.Ty = PromotionType;
   else
     Ops.Ty = E->getType();
-  if (E->hasStoredFPFeatures()) {
-    if (E->getFPFeatures().hasComplexRangeOverride())
-      // A '#pragma STDC CX_LIMITED_RANGE' is present.
-      Ops.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
-  } else {
-    if (CGF.getLangOpts().getComplexRange() !=
-        LangOptions::ComplexRangeKind::CX_None)
-      Ops.FPFeatures.setComplexRange(CGF.getLangOpts().getComplexRange());
-  }
+  Ops.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
   return Ops;
 }
 
