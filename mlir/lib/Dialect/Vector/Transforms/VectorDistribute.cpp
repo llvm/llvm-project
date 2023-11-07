@@ -502,6 +502,14 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
     // 2.5 Compute the distributed type for the new mask;
     VectorType maskType;
     if (writeOp.getMask()) {
+      // TODO: Distribution of masked writes with non-trivial permutation maps
+      // requires the distribution of the mask to elementwise match the
+      // distribution of the permuted written vector. Currently the details
+      // of which lane is responsible for which element is captured strictly
+      // by shape information on the warp op, and thus requires materializing
+      // the permutation in IR.
+      if (!writeOp.getPermutationMap().isMinorIdentity())
+        return failure();
       maskType =
           getDistributedType(writeOp.getMask().getType().cast<VectorType>(),
                              map, warpOp.getWarpSize());
