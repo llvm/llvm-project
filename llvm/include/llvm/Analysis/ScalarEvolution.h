@@ -1942,7 +1942,9 @@ private:
   /// true.  Utility function used by isImpliedCondOperands.  Tries to get
   /// cases like "X `sgt` 0 => X - 1 `sgt` -1".
   bool isImpliedCondOperandsViaRanges(ICmpInst::Predicate Pred, const SCEV *LHS,
-                                      const SCEV *RHS, const SCEV *FoundLHS,
+                                      const SCEV *RHS,
+                                      ICmpInst::Predicate FoundPred,
+                                      const SCEV *FoundLHS,
                                       const SCEV *FoundRHS);
 
   /// Return true if the condition denoted by \p LHS \p Pred \p RHS is implied
