@@ -919,12 +919,28 @@ void OmpStructureChecker::ChecksOnOrderedAsBlock() {
   }
 }
 
+void OmpStructureChecker::CheckTargetData() {
+  const parser::OmpClause *mapClause = FindClause(llvm::omp::Clause::OMPC_map);
+  const parser::OmpClause *useDevicePtrClause =
+      FindClause(llvm::omp::Clause::OMPC_use_device_ptr);
+  const parser::OmpClause *useDeviceAddrClause =
+      FindClause(llvm::omp::OMPC_use_device_addr);
+  if (!mapClause && !useDevicePtrClause && !useDeviceAddrClause) {
+    context_.Say(GetContext().directiveSource,
+        "At least one MAP, USE_DEVICE_ADDR or USE_DEVICE_PTR clause must "
+        "appear on the TARGET DATA directive."_err_en_US);
+  }
+}
+
 void OmpStructureChecker::Leave(const parser::OmpBeginBlockDirective &) {
   switch (GetContext().directive) {
   case llvm::omp::Directive::OMPD_ordered:
     // [5.1] 2.19.9 Ordered Construct Restriction
     ChecksOnOrderedAsBlock();
     break;
+  case llvm::omp::Directive::OMPD_target_data:
+    CheckTargetData();
+    return;
   default:
     break;
   }
