@@ -13,7 +13,6 @@
 #ifndef LLVM_OBJECTYAML_GOFFYAML_H
 #define LLVM_OBJECTYAML_GOFFYAML_H
 
-//#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/ObjectYAML/YAML.h"
