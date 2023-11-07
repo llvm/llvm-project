@@ -15,6 +15,12 @@
 #include <cstdlib>
 #include <limits>
 
+#ifdef _WIN32
+inline gid_t getgid() { return 0; }
+#else
+#include <unistd.h>
+#endif
+
 namespace Fortran::runtime {
 std::int32_t RTNAME(ArgumentCount)() {
   int argc{executionEnvironment.argc};
@@ -24,6 +30,8 @@ std::int32_t RTNAME(ArgumentCount)() {
   }
   return 0;
 }
+
+gid_t RTNAME(GetGID)() { return getgid(); }
 
 // Returns the length of the \p string. Assumes \p string is valid.
 static std::int64_t StringLength(const char *string) {

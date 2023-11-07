@@ -44,3 +44,10 @@ TEST_F(RuntimeCallTest, genGetEnvVariable) {
   checkCallOp(result.getDefiningOp(), "_FortranAGetEnvVariable", /*nbArgs=*/5,
       /*addLocArgs=*/true);
 }
+
+TEST_F(RuntimeCallTest, genGetGID) {
+  mlir::Location loc = firBuilder->getUnknownLoc();
+  mlir::Value result = fir::runtime::genGetGID(*firBuilder, loc);
+  checkCallOp(result.getDefiningOp(), "_FortranAGetGID", /*nbArgs=*/0,
+      /*addLocArgs=*/false);
+}

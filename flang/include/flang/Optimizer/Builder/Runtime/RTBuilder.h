@@ -62,6 +62,14 @@ using FuncTypeBuilderFunc = mlir::FunctionType (*)(mlir::MLIRContext *);
 /// standard type `i32` when `sizeof(int)` is 4.
 template <typename T>
 static constexpr TypeBuilderFunc getModel();
+
+template <>
+constexpr TypeBuilderFunc getModel<unsigned int>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context, 8 * sizeof(unsigned int));
+  };
+}
+
 template <>
 constexpr TypeBuilderFunc getModel<short int>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {

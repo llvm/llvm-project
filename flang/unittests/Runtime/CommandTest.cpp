@@ -227,6 +227,12 @@ TEST_F(ZeroArguments, GetCommandArgument) {
 
 TEST_F(ZeroArguments, GetCommand) { CheckCommandValue(commandOnlyArgv, 1); }
 
+TEST_F(ZeroArguments, GetGID) {
+  CheckMissingArgumentValue(-1);
+  CheckArgumentValue(commandOnlyArgv[0], 0);
+  CheckMissingArgumentValue(1);
+}
+
 static const char *oneArgArgv[]{"aProgram", "anArgumentOfLength20"};
 class OneArgument : public CommandFixture {
 protected:

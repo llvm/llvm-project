@@ -23,6 +23,10 @@ namespace fir::runtime {
 /// Generate call to COMMAND_ARGUMENT_COUNT intrinsic runtime routine.
 mlir::Value genCommandArgumentCount(fir::FirOpBuilder &, mlir::Location);
 
+/// Generate a call to the GetGID runtime function which implements the
+/// GETGID intrinsic.
+mlir::Value genGetGID(fir::FirOpBuilder &, mlir::Location);
+
 /// Generate a call to the GetCommand runtime function which implements the
 /// GET_COMMAND intrinsic.
 /// \p command, \p length and \p errmsg must be fir.box that can be absent (but

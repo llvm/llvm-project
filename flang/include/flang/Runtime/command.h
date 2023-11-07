@@ -13,6 +13,12 @@
 
 #include <cstdint>
 
+#ifdef _WIN32
+typedef int gid_t;
+#else
+#include "sys/types.h" //gid_t
+#endif
+
 namespace Fortran::runtime {
 class Descriptor;
 
@@ -22,6 +28,9 @@ extern "C" {
 // Lowering may need to cast the result to match the precision of the default
 // integer kind.
 std::int32_t RTNAME(ArgumentCount)();
+
+// Calls getgid()
+gid_t RTNAME(GetGID)();
 
 // 16.9.82 GET_COMMAND
 // Try to get the value of the whole command. All of the parameters are
