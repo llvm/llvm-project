@@ -984,6 +984,12 @@ def FeatureGWS : SubtargetFeature<"gws",
   "Has Global Wave Sync"
 >;
 
+def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
+  "DynamicVGPR",
+  "true",
+  "Enable dynamic VGPR mode"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
