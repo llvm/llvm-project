@@ -1697,34 +1697,34 @@ m_ZExtOrSExtOrSelf(const OpTy &Op) {
 }
 
 template <typename OpTy>
-inline CastOperator_match<OpTy, Instruction::UIToFP> m_UIToFP(const OpTy &Op) {
-  return CastOperator_match<OpTy, Instruction::UIToFP>(Op);
+inline CastInst_match<OpTy, Instruction::UIToFP> m_UIToFP(const OpTy &Op) {
+  return CastInst_match<OpTy, Instruction::UIToFP>(Op);
 }
 
 template <typename OpTy>
-inline CastOperator_match<OpTy, Instruction::SIToFP> m_SIToFP(const OpTy &Op) {
-  return CastOperator_match<OpTy, Instruction::SIToFP>(Op);
+inline CastInst_match<OpTy, Instruction::SIToFP> m_SIToFP(const OpTy &Op) {
+  return CastInst_match<OpTy, Instruction::SIToFP>(Op);
 }
 
 template <typename OpTy>
-inline CastOperator_match<OpTy, Instruction::FPToUI> m_FPToUI(const OpTy &Op) {
-  return CastOperator_match<OpTy, Instruction::FPToUI>(Op);
+inline CastInst_match<OpTy, Instruction::FPToUI> m_FPToUI(const OpTy &Op) {
+  return CastInst_match<OpTy, Instruction::FPToUI>(Op);
 }
 
 template <typename OpTy>
-inline CastOperator_match<OpTy, Instruction::FPToSI> m_FPToSI(const OpTy &Op) {
-  return CastOperator_match<OpTy, Instruction::FPToSI>(Op);
+inline CastInst_match<OpTy, Instruction::FPToSI> m_FPToSI(const OpTy &Op) {
+  return CastInst_match<OpTy, Instruction::FPToSI>(Op);
 }
 
 template <typename OpTy>
-inline CastOperator_match<OpTy, Instruction::FPTrunc>
+inline CastInst_match<OpTy, Instruction::FPTrunc>
 m_FPTrunc(const OpTy &Op) {
-  return CastOperator_match<OpTy, Instruction::FPTrunc>(Op);
+  return CastInst_match<OpTy, Instruction::FPTrunc>(Op);
 }
 
 template <typename OpTy>
-inline CastOperator_match<OpTy, Instruction::FPExt> m_FPExt(const OpTy &Op) {
-  return CastOperator_match<OpTy, Instruction::FPExt>(Op);
+inline CastInst_match<OpTy, Instruction::FPExt> m_FPExt(const OpTy &Op) {
+  return CastInst_match<OpTy, Instruction::FPExt>(Op);
 }
 
 //===----------------------------------------------------------------------===//
