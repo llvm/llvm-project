@@ -429,7 +429,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return I;
     }
     assert(InputKnown.getBitWidth() == SrcBitWidth && "Src width changed?");
+    if (I->getOpcode() == Instruction::ZExt && I->hasNonNeg() &&
+        !InputKnown.isNegative())
+      InputKnown.makeNonNegative();
     Known = InputKnown.zextOrTrunc(BitWidth);
+
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     break;
   }

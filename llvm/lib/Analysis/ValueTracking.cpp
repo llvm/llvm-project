@@ -1103,6 +1103,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
     assert(SrcBitWidth && "SrcBitWidth can't be zero");
     Known = Known.anyextOrTrunc(SrcBitWidth);
     computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+    if (auto *Inst = dyn_cast<PossiblyNonNegInst>(I);
+        Inst && Inst->hasNonNeg() && !Known.isNegative())
+      Known.makeNonNegative();
     Known = Known.zextOrTrunc(BitWidth);
     break;
   }
