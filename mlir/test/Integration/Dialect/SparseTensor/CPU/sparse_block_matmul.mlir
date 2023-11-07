@@ -32,9 +32,9 @@
 
 #trait_mul = {
   indexing_maps = [
-    affine_map<(i,j,k) -> (i,j)>,  // A (in)
+    affine_map<(i,j,k) -> (i,k)>,  // A (in)
     affine_map<(i,j,k) -> (j,k)>,  // B (in, transposed)
-    affine_map<(i,j,k) -> (i,k)>   // X (out)
+    affine_map<(i,j,k) -> (i,j)>   // X (out)
   ],
   iterator_types = ["parallel", "parallel", "reduction"],
   doc = "X(i,j) *= A(i,j) * B(j,i)"
@@ -44,19 +44,19 @@
 #BSR = #sparse_tensor.encoding<{
   map = ( i, j ) ->
   ( i floordiv 2 : dense,
-    j floordiv 2 : compressed,
+    j floordiv 3 : compressed,
     i mod 2      : dense,
-    j mod 2      : dense
+    j mod 3      : dense
   )
 }>
 
 module {
 
-func.func @mul(%arg0: tensor<4x4xf64>,
-               %arg1: tensor<4x4xf64, #BSR>) -> tensor<4x4xf64> {
+func.func @mul(%arg0: tensor<4x6xf64>,
+               %arg1: tensor<4x6xf64, #BSR>) -> tensor<4x4xf64> {
   %out = tensor.empty() : tensor<4x4xf64>
   %0 = linalg.generic #trait_mul
-    ins(%arg0, %arg1: tensor<4x4xf64>, tensor<4x4xf64, #BSR>)
+    ins(%arg0, %arg1: tensor<4x6xf64>, tensor<4x6xf64, #BSR>)
     outs(%out: tensor<4x4xf64>) {
       ^bb(%x: f64, %y : f64, %z : f64):
         %1 = arith.mulf %x, %y : f64
@@ -66,11 +66,11 @@ func.func @mul(%arg0: tensor<4x4xf64>,
   return %0 : tensor<4x4xf64>
 }
 
-func.func @mul_dense(%arg0: tensor<4x4xf64>,
-                     %arg1: tensor<4x4xf64>) -> tensor<4x4xf64> {
+func.func @mul_dense(%arg0: tensor<4x6xf64>,
+                     %arg1: tensor<4x6xf64>) -> tensor<4x4xf64> {
   %out = tensor.empty() : tensor<4x4xf64>
   %0 = linalg.generic #trait_mul
-    ins(%arg0, %arg1: tensor<4x4xf64>, tensor<4x4xf64>)
+    ins(%arg0, %arg1: tensor<4x6xf64>, tensor<4x6xf64>)
     outs(%out: tensor<4x4xf64>) {
       ^bb(%x: f64, %y : f64, %z : f64):
         %1 = arith.mulf %x, %y : f64
@@ -101,20 +101,20 @@ func.func @mul_dense(%arg0: tensor<4x4xf64>,
     %c2 = arith.constant 2 : index
 
 
-    %td = arith.constant dense<[[ 1.0,  2.0,  3.0,  4.0],
-                                [ 5.0,  6.0,  7.0,  8.0],
-                                [ 9.0, 10.0, 11.0, 12.0],
-                                [13.0, 14.0, 15.0, 16.0]]> : tensor<4x4xf64>
+    %td = arith.constant dense<[[ 0.0,  1.0,  2.0,  3.0,  4.0,  5.0],
+                                [ 6.0,  7.0,  8.0,  9.0, 10.0, 11.0],
+                                [12.0, 13.0, 14.0, 15.0, 16.0, 17.0],
+                                [18.0, 19.0, 20.0, 21.0, 22.0, 23.0]]> : tensor<4x6xf64>
 
 
-    %2 = sparse_tensor.convert %td : tensor<4x4xf64> to tensor<4x4xf64, #BSR>
+    %2 = sparse_tensor.convert %td : tensor<4x6xf64> to tensor<4x6xf64, #BSR>
 
     %d = call @mul_dense(%td, %td)
-         : (tensor<4x4xf64>, tensor<4x4xf64>) -> tensor<4x4xf64>
+         : (tensor<4x6xf64>, tensor<4x6xf64>) -> tensor<4x4xf64>
     %s = call @mul(%td, %2)
-         : (tensor<4x4xf64>, tensor<4x4xf64, #BSR>) -> tensor<4x4xf64>
+         : (tensor<4x6xf64>, tensor<4x6xf64, #BSR>) -> tensor<4x4xf64>
 
-    // CHECK-COUNT-2: ( ( 90, 100, 110, 120 ), ( 202, 228, 254, 280 ), ( 314, 356, 398, 440 ), ( 426, 484, 542, 600 ) )
+    // CHECK-COUNT-2: ( ( 55, 145, 235, 325 ), ( 145, 451, 757, 1063 ), ( 235, 757, 1279, 1801 ), ( 325, 1063, 1801, 2539 ) )
     call @dumpf64(%d) : (tensor<4x4xf64>) -> ()
     call @dumpf64(%s) : (tensor<4x4xf64>) -> ()
 
