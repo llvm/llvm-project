@@ -514,8 +514,14 @@ public:
           !Method->isMoveAssignmentOperator())
         return;
 
-      auto *LocSrc =
-          cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg1));
+      RecordStorageLocation *LocSrc = nullptr;
+      if (Arg1->isPRValue()) {
+        if (auto *Val = cast_or_null<RecordValue>(Env.getValue(*Arg1)))
+          LocSrc = &Val->getLoc();
+      } else {
+        LocSrc =
+            cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg1));
+      }
       auto *LocDst =
           cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg0));
 
