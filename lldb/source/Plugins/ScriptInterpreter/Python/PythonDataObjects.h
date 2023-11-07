@@ -562,8 +562,6 @@ public:
 
   static bool Check(PyObject *py_obj);
 
-  bool HasKey(const llvm::Twine &key) const;
-
   uint32_t GetSize() const;
 
   PythonList GetKeys() const;
