@@ -1243,22 +1243,13 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
     Constant *CE1Op0 = CE1->getOperand(0);
 
     switch (CE1->getOpcode()) {
-    case Instruction::Trunc:
-    case Instruction::FPTrunc:
-    case Instruction::FPExt:
-    case Instruction::FPToUI:
-    case Instruction::FPToSI:
-      break; // We can't evaluate floating point casts or truncations.
-
     case Instruction::BitCast:
       // If this is a global value cast, check to see if the RHS is also a
       // GlobalValue.
       if (const GlobalValue *GV = dyn_cast<GlobalValue>(CE1Op0))
         if (const GlobalValue *GV2 = dyn_cast<GlobalValue>(V2))
           return areGlobalsPotentiallyEqual(GV, GV2);
-      [[fallthrough]];
-    case Instruction::UIToFP:
-    case Instruction::SIToFP:
+
       // We can't evaluate floating point casts or truncations.
       if (CE1Op0->getType()->isFPOrFPVectorTy())
         break;
