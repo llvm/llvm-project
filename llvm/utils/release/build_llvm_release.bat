@@ -286,9 +286,6 @@ set profile=%build_dir:\=/%/profile.profdata
 %stage0_bin_dir%\llvm-profdata merge -output=%profile% build64.instr\profiles\*.profraw || exit /b 1
 set cmake_flags=%cmake_flags% -DLLVM_PROFDATA_FILE=%profile%
 
-REM Enable ThinLTO
-set cmake_flags=%cmake_flags% -DLLVM_ENABLE_LTO=Thin
-
 mkdir build64
 cd build64
 cmake -GNinja %cmake_flags% ..\llvm-project\llvm || exit /b 1
