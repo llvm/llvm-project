@@ -63,7 +63,7 @@ inline_memset_x86_gt64_sw_prefetching(Ptr dst, uint8_t value, size_t count) {
     return generic::Memset<uint256_t>::loop_and_tail(dst, value, count);
   } else {
     generic::Memset<uint512_t>::block(dst, value);
-    generic::Memset<uint256_t>::block_offset(dst, value, SIZE);
+    generic::Memset<uint256_t>::block_offset(dst, value, sizeof(uint512_t));
     size_t offset = 96;
     while (offset + prefetch_degree + SIZE <= count) {
       for (size_t i = 0; i < prefetch_degree / x86::kOneCachelineSize; ++i)
