@@ -588,7 +588,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
                Optional<I32>:$dynamicSharedMemorySize,
-               OptionalAttr<SI32Attr>:$dynamicSharedMemorySizeConstant)>,
+               OptionalAttr<I32Attr>:$dynamicSharedMemorySizeConstant)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
@@ -735,18 +735,15 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     }
 
     static int getDynamicSharedMemorySizeDynamicValue() { 
-      return std::numeric_limits<int32_t>::min(); 
+      return std::numeric_limits<uint32_t>::max(); 
     }
     /// Returns a value of the dynamic shared memory size. 
     /// If it is a constant, it builds one
-    mlir::Value getDynamicSharedMemorySizeValue(OpBuilder &b) { 
-      int32_t kDynamic = getDynamicSharedMemorySizeDynamicValue();
+    mlir::OpFoldResult getDynamicSharedMemorySizeValue(OpBuilder &b) { 
+      uint32_t kDynamic = getDynamicSharedMemorySizeDynamicValue();
       if (getDynamicSharedMemorySizeConstant().value_or(kDynamic) == kDynamic)
         return getDynamicSharedMemorySize();
-      return b.create<mlir::arith::ConstantOp>(
-            getLoc(), b.getIntegerType(32),
-            b.getI32IntegerAttr(
-                getDynamicSharedMemorySizeConstant().value()));
+      return b.getI32IntegerAttr(getDynamicSharedMemorySizeConstant().value());
     }
 
     /// Returns the number of buffers located in the workgroup memory.

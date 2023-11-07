@@ -764,7 +764,7 @@ void LaunchOp::print(OpAsmPrinter &p) {
       << getDynamicSharedMemorySize();
   else if (getDynamicSharedMemorySizeConstantAttr()) {
     p << ' ' << getDynamicSharedMemorySizeKeyword() << ' '
-      << getDynamicSharedMemorySizeConstantAttr().getSInt();
+      << getDynamicSharedMemorySizeConstantAttr().getInt();
   }
 
   printAttributions(p, getWorkgroupKeyword(), getWorkgroupAttributions());
@@ -864,10 +864,10 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
           LaunchOp::getDynamicSharedMemorySizeKeyword())) {
     IntegerAttr shmemAttr;
     OptionalParseResult shmemAttrResult = parser.parseOptionalAttribute(
-        shmemAttr, parser.getBuilder().getIntegerType(32, true));
+        shmemAttr, parser.getBuilder().getIntegerType(32));
     if (!shmemAttrResult.has_value()) {
       hasDynamicSharedMemorySize = true;
-      shmemAttr = parser.getBuilder().getSI32IntegerAttr(
+      shmemAttr = parser.getBuilder().getI32IntegerAttr(
           getDynamicSharedMemorySizeDynamicValue());
       if (parser.parseOperand(dynamicSharedMemorySize) ||
           parser.resolveOperand(dynamicSharedMemorySize,
