@@ -11,7 +11,7 @@ int main() {
 // CHECK:   {{#0 .* main .*operator_new_left_oob.cpp}}:[[@LINE-3]]
 // CHECK: [[ADDR]] is located 1 bytes before 1-byte region
 // CHECK: allocated by thread T0 here:
-// CHECK:   {{#0 .* operator new}}
-// CHECK:   {{#1 .* main .*operator_new_left_oob.cpp}}:[[@LINE-8]]
+// CHECK:   #[[#NEW:]] {{.* operator new}}
+// CHECK:   #[[#NEW+1]] {{.* main .*operator_new_left_oob.cpp}}:[[@LINE-8]]
   delete buffer;
 }

@@ -20,7 +20,7 @@ int main(void) {
 // CHECK:   {{#0 0x[0-9a-f]* in main .*wrong_downcast_on_heap.cpp}}:[[@LINE-3]]
 // CHECK: [[ADDR]] is located 0 bytes after 4-byte region
 // CHECK: allocated by thread T0 here:
-// CHECK:   #0 {{.*}} operator new
+// CHECK:   {{.*}} operator new
   return 0;
 }
 

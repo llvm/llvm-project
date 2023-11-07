@@ -1,4 +1,4 @@
-// RUN: %clang_cl_asan -Od %s -Fe%t /link /WX
+// RUN: %clang_cl_asan -Od %s -Fe%t /MT /link /WX
 // RUN: %env_asan_opts=alloc_dealloc_mismatch=true %run %t
 
 // test fixing new already defined and mismatch between allocation and deallocation APis
