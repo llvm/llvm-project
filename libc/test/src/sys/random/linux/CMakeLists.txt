@@ -12,5 +12,5 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.math.fabs
     libc.src.sys.random.getrandom
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
