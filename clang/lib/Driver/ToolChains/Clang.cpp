@@ -5767,10 +5767,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (Triple.getArch() == llvm::Triple::x86_64) {
       Ok = llvm::is_contained({"small", "kernel", "medium", "large", "tiny"},
                               CM);
-    } else if (Triple.isNVPTX() || Triple.isAMDGPU()) {
-      // NVPTX/AMDGPU does not care about the code model and will accept
+    } else if (Triple.isNVPTX()) {
+      // NVPTX does not care about the code model and will accept
       // whatever works for the host.
       Ok = true;
+    } else if (Triple.isAMDGPU()) {
+      // AMDGPU does not care about the code model.
+      Ok = true;
+      // AMDGPU target does not accept CM tiny and kernel.
+      if (CM == "tiny" || CM == "kernel") {
+        D.Diag(diag::warn_ignored_clang_option) << A->getSpelling() << CM << TripleStr;
+      }
     }
     if (Ok) {
       CmdArgs.push_back(Args.MakeArgString("-mcmodel=" + CM));
