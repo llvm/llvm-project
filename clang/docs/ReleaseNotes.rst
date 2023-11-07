@@ -292,6 +292,11 @@ Attribute Changes in Clang
   When viewing ``S::FruitKind`` in a debugger, it will behave as if the member
   was declared as type ``E`` rather than ``unsigned``.
 
+- Clang now warns you that the ``_Alignas`` attribute on declaration specifiers
+  is ignored, changed from the former incorrect suggestion to move it past
+  declaration specifiers. (`#58637 <https://github.com/llvm/llvm-project/issues/58637>`_)
+
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang constexpr evaluator now prints template arguments when displaying
