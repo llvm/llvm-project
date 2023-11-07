@@ -232,6 +232,8 @@ createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
            << ObjectBuffer.getBufferIdentifier() << "...\n";
   });
 
+  aarch32::populateFixupInfos();
+
   auto ELFObj = ObjectFile::createELFObjectFile(ObjectBuffer);
   if (!ELFObj)
     return ELFObj.takeError();
