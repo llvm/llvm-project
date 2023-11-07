@@ -29,6 +29,12 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/CommandLine.h"
+
+static llvm::cl::opt<bool> treatIndexAsSection(
+    "openmp-treat-index-as-section",
+    llvm::cl::desc("In the OpenMP data clauses treat `a(N)` as `a(N:N)`."),
+    llvm::cl::init(true));
 
 using DeclareTargetCapturePair =
     std::pair<mlir::omp::DeclareTargetCaptureClause,
@@ -560,11 +566,21 @@ public:
             mlir::Value &result) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+
+  // This method is used to process a map clause.
+  // The optional parameters - mapSymTypes, mapSymLocs & mapSymbols are used to
+  // store the original type, location and Fortran symbol for the map operands.
+  // They may be used later on to create the block_arguments for some of the
+  // target directives that require it.
   bool processMap(mlir::Location currentLocation,
                   const llvm::omp::Directive &directive,
                   Fortran::semantics::SemanticsContext &semanticsContext,
                   Fortran::lower::StatementContext &stmtCtx,
-                  llvm::SmallVectorImpl<mlir::Value> &mapOperands) const;
+                  llvm::SmallVectorImpl<mlir::Value> &mapOperands,
+                  llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr,
+                  llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
+                  llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+                      *mapSymbols = nullptr) const;
   bool processReduction(
       mlir::Location currentLocation,
       llvm::SmallVectorImpl<mlir::Value> &reductionVars,
@@ -1691,31 +1707,29 @@ static mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::Value baseAddr, std::stringstream &name,
                 mlir::SmallVector<mlir::Value> bounds, uint64_t mapType,
-                mlir::omp::VariableCaptureKind mapCaptureType, bool implicit,
-                mlir::Type retTy) {
-  mlir::Value varPtrPtr;
+                mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
+                bool isVal = false) {
+  mlir::Value val, varPtr, varPtrPtr;
+  mlir::TypeAttr varType;
+
   if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
     baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
     retTy = baseAddr.getType();
   }
 
-  mlir::omp::MapInfoOp op =
-      builder.create<mlir::omp::MapInfoOp>(loc, retTy, baseAddr);
-  op.setVarTypeAttr(mlir::TypeAttr::get(
-      llvm::dyn_cast<mlir::omp::PointerLikeType>(retTy).getElementType()));
-  op.setNameAttr(builder.getStringAttr(name.str()));
-  op.setImplicit(implicit);
-  op.setMapType(mapType);
-  op.setMapCaptureType(mapCaptureType);
+  if (isVal)
+    val = baseAddr;
+  else
+    varPtr = baseAddr;
 
-  unsigned insPos = 1;
-  if (varPtrPtr)
-    op->insertOperands(insPos++, varPtrPtr);
-  if (bounds.size() > 0)
-    op->insertOperands(insPos, bounds);
-  op->setAttr(mlir::omp::MapInfoOp::getOperandSegmentSizeAttr(),
-              builder.getDenseI32ArrayAttr(
-                  {1, varPtrPtr ? 1 : 0, static_cast<int32_t>(bounds.size())}));
+  if (auto ptrType = llvm::dyn_cast<mlir::omp::PointerLikeType>(retTy))
+    varType = mlir::TypeAttr::get(ptrType.getElementType());
+
+  mlir::omp::MapInfoOp op = builder.create<mlir::omp::MapInfoOp>(
+      loc, retTy, val, varPtr, varType, varPtrPtr, bounds,
+      builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
+      builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
+      builder.getStringAttr(name.str()));
   return op;
 }
 
@@ -1723,7 +1737,11 @@ bool ClauseProcessor::processMap(
     mlir::Location currentLocation, const llvm::omp::Directive &directive,
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::StatementContext &stmtCtx,
-    llvm::SmallVectorImpl<mlir::Value> &mapOperands) const {
+    llvm::SmallVectorImpl<mlir::Value> &mapOperands,
+    llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
+    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols)
+    const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   return findRepeatableClause<ClauseTy::Map>(
       [&](const ClauseTy::Map *mapClause,
@@ -1776,20 +1794,27 @@ bool ClauseProcessor::processMap(
           std::stringstream asFortran;
           mlir::Value baseAddr = Fortran::lower::gatherDataOperandAddrAndBounds<
               Fortran::parser::OmpObject, mlir::omp::DataBoundsType,
-              mlir::omp::DataBoundsOp>(converter, firOpBuilder,
-                                       semanticsContext, stmtCtx, ompObject,
-                                       clauseLocation, asFortran, bounds);
+              mlir::omp::DataBoundsOp>(
+              converter, firOpBuilder, semanticsContext, stmtCtx, ompObject,
+              clauseLocation, asFortran, bounds, treatIndexAsSection);
 
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
-          mapOperands.push_back(createMapInfoOp(
+          mlir::Value mapOp = createMapInfoOp(
               firOpBuilder, clauseLocation, baseAddr, asFortran, bounds,
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                   mapTypeBits),
-              mlir::omp::VariableCaptureKind::ByRef, false,
-              baseAddr.getType()));
+              mlir::omp::VariableCaptureKind::ByRef, baseAddr.getType());
+
+          mapOperands.push_back(mapOp);
+          if (mapSymTypes)
+            mapSymTypes->push_back(baseAddr.getType());
+          if (mapSymLocs)
+            mapSymLocs->push_back(baseAddr.getLoc());
+          if (mapSymbols)
+            mapSymbols->push_back(getOmpObjectSymbol(ompObject));
         }
       });
 }
@@ -2172,8 +2197,9 @@ static void createBodyOfOp(
   }
 }
 
-static void createBodyOfTargetDataOp(
-    Fortran::lower::AbstractConverter &converter, mlir::omp::DataOp &dataOp,
+static void genBodyOfTargetDataOp(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::pft::Evaluation &eval, mlir::omp::DataOp &dataOp,
     const llvm::SmallVector<mlir::Type> &useDeviceTypes,
     const llvm::SmallVector<mlir::Location> &useDeviceLocs,
     const llvm::SmallVector<const Fortran::semantics::Symbol *>
@@ -2183,24 +2209,21 @@ static void createBodyOfTargetDataOp(
   mlir::Region &region = dataOp.getRegion();
 
   firOpBuilder.createBlock(&region, {}, useDeviceTypes, useDeviceLocs);
-  firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
-  firOpBuilder.setInsertionPointToStart(&region.front());
 
   unsigned argIndex = 0;
   for (const Fortran::semantics::Symbol *sym : useDeviceSymbols) {
     const mlir::BlockArgument &arg = region.front().getArgument(argIndex);
-    mlir::Value val = fir::getBase(arg);
     fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*sym);
-    if (auto refType = val.getType().dyn_cast<fir::ReferenceType>()) {
+    if (auto refType = arg.getType().dyn_cast<fir::ReferenceType>()) {
       if (fir::isa_builtin_cptr_type(refType.getElementType())) {
-        converter.bindSymbol(*sym, val);
+        converter.bindSymbol(*sym, arg);
       } else {
         extVal.match(
             [&](const fir::MutableBoxValue &mbv) {
               converter.bindSymbol(
                   *sym,
                   fir::MutableBoxValue(
-                      val, fir::factory::getNonDeferredLenParams(extVal), {}));
+                      arg, fir::factory::getNonDeferredLenParams(extVal), {}));
             },
             [&](const auto &) {
               TODO(converter.getCurrentLocation(),
@@ -2213,6 +2236,27 @@ static void createBodyOfTargetDataOp(
     }
     argIndex++;
   }
+
+  // Insert dummy instruction to remember the insertion position. The
+  // marker will be deleted by clean up passes since there are no uses.
+  // Remembering the position for further insertion is important since
+  // there are hlfir.declares inserted above while setting block arguments
+  // and new code from the body should be inserted after that.
+  mlir::Value undefMarker = firOpBuilder.create<fir::UndefOp>(
+      dataOp.getOperation()->getLoc(), firOpBuilder.getIndexType());
+
+  // Create blocks for unstructured regions. This has to be done since
+  // blocks are initially allocated with the function as the parent region.
+  if (eval.lowerAsUnstructured()) {
+    Fortran::lower::createEmptyRegionBlocks<mlir::omp::TerminatorOp,
+                                            mlir::omp::YieldOp>(
+        firOpBuilder, eval.getNestedEvaluations());
+  }
+
+  firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
+
+  // Set the insertion point after the marker.
+  firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
 }
 
 template <typename OpTy, typename... Args>
@@ -2360,6 +2404,7 @@ genTaskGroupOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::DataOp
 genDataOp(Fortran::lower::AbstractConverter &converter,
+          Fortran::lower::pft::Evaluation &eval,
           Fortran::semantics::SemanticsContext &semanticsContext,
           mlir::Location currentLocation,
           const Fortran::parser::OmpClauseList &clauseList) {
@@ -2386,8 +2431,8 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
   auto dataOp = converter.getFirOpBuilder().create<mlir::omp::DataOp>(
       currentLocation, ifClauseOperand, deviceOperand, devicePtrOperands,
       deviceAddrOperands, mapOperands);
-  createBodyOfTargetDataOp(converter, dataOp, useDeviceTypes, useDeviceLocs,
-                           useDeviceSymbols, currentLocation);
+  genBodyOfTargetDataOp(converter, eval, dataOp, useDeviceTypes, useDeviceLocs,
+                        useDeviceSymbols, currentLocation);
   return dataOp;
 }
 
@@ -2430,6 +2475,102 @@ genEnterExitDataOp(Fortran::lower::AbstractConverter &converter,
                                    deviceOperand, nowaitAttr, mapOperands);
 }
 
+// This functions creates a block for the body of the targetOp's region. It adds
+// all the symbols present in mapSymbols as block arguments to this block.
+static void genBodyOfTargetOp(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::pft::Evaluation &eval, mlir::omp::TargetOp &targetOp,
+    const llvm::SmallVector<mlir::Type> &mapSymTypes,
+    const llvm::SmallVector<mlir::Location> &mapSymLocs,
+    const llvm::SmallVector<const Fortran::semantics::Symbol *> &mapSymbols,
+    const mlir::Location &currentLocation) {
+  assert(mapSymTypes.size() == mapSymLocs.size());
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Region &region = targetOp.getRegion();
+
+  firOpBuilder.createBlock(&region, {}, mapSymTypes, mapSymLocs);
+
+  unsigned argIndex = 0;
+  unsigned blockArgsIndex = mapSymbols.size();
+
+  // The block arguments contain the map_operands followed by the bounds in
+  // order. This returns a vector containing the next 'n' block arguments for
+  // the bounds.
+  auto extractBoundArgs = [&](auto n) {
+    llvm::SmallVector<mlir::Value> argExtents;
+    while (n--) {
+      argExtents.push_back(fir::getBase(region.getArgument(blockArgsIndex)));
+      blockArgsIndex++;
+    }
+    return argExtents;
+  };
+
+  // Bind the symbols to their corresponding block arguments.
+  for (const Fortran::semantics::Symbol *sym : mapSymbols) {
+    const mlir::BlockArgument &arg = region.getArgument(argIndex);
+    fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*sym);
+    extVal.match(
+        [&](const fir::BoxValue &v) {
+          converter.bindSymbol(
+              *sym,
+              fir::BoxValue(arg, extractBoundArgs(v.getLBounds().size()),
+                            v.getExplicitParameters(), v.getExplicitExtents()));
+        },
+        [&](const fir::MutableBoxValue &v) {
+          converter.bindSymbol(
+              *sym,
+              fir::MutableBoxValue(arg, extractBoundArgs(v.getLBounds().size()),
+                                   v.getMutableProperties()));
+        },
+        [&](const fir::ArrayBoxValue &v) {
+          converter.bindSymbol(
+              *sym,
+              fir::ArrayBoxValue(arg, extractBoundArgs(v.getExtents().size()),
+                                 extractBoundArgs(v.getLBounds().size()),
+                                 v.getSourceBox()));
+        },
+        [&](const fir::CharArrayBoxValue &v) {
+          converter.bindSymbol(
+              *sym,
+              fir::CharArrayBoxValue(arg, extractBoundArgs(1).front(),
+                                     extractBoundArgs(v.getExtents().size()),
+                                     extractBoundArgs(v.getLBounds().size())));
+        },
+        [&](const fir::CharBoxValue &v) {
+          converter.bindSymbol(
+              *sym, fir::CharBoxValue(arg, extractBoundArgs(1).front()));
+        },
+        [&](const fir::UnboxedValue &v) { converter.bindSymbol(*sym, arg); },
+        [&](const auto &) {
+          TODO(converter.getCurrentLocation(),
+               "target map clause operand unsupported type");
+        });
+    argIndex++;
+  }
+
+  // Insert dummy instruction to remember the insertion position. The
+  // marker will be deleted since there are not uses.
+  // In the HLFIR flow there are hlfir.declares inserted above while
+  // setting block arguments.
+  mlir::Value undefMarker = firOpBuilder.create<fir::UndefOp>(
+      targetOp.getOperation()->getLoc(), firOpBuilder.getIndexType());
+
+  // Create blocks for unstructured regions. This has to be done since
+  // blocks are initially allocated with the function as the parent region.
+  // the parent region of blocks.
+  if (eval.lowerAsUnstructured()) {
+    Fortran::lower::createEmptyRegionBlocks<mlir::omp::TerminatorOp,
+                                            mlir::omp::YieldOp>(
+        firOpBuilder, eval.getNestedEvaluations());
+  }
+
+  firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
+
+  // Create the insertion point after the marker.
+  firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
+}
+
 static mlir::omp::TargetOp
 genTargetOp(Fortran::lower::AbstractConverter &converter,
             Fortran::lower::pft::Evaluation &eval,
@@ -2441,6 +2582,9 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   mlir::Value ifClauseOperand, deviceOperand, threadLimitOperand;
   mlir::UnitAttr nowaitAttr;
   llvm::SmallVector<mlir::Value> mapOperands;
+  llvm::SmallVector<mlir::Type> mapSymTypes;
+  llvm::SmallVector<mlir::Location> mapSymLocs;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> mapSymbols;
 
   ClauseProcessor cp(converter, clauseList);
   cp.processIf(stmtCtx,
@@ -2450,7 +2594,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   cp.processThreadLimit(stmtCtx, threadLimitOperand);
   cp.processNowait(nowaitAttr);
   cp.processMap(currentLocation, directive, semanticsContext, stmtCtx,
-                mapOperands);
+                mapOperands, &mapSymTypes, &mapSymLocs, &mapSymbols);
   cp.processTODO<Fortran::parser::OmpClause::Private,
                  Fortran::parser::OmpClause::Depend,
                  Fortran::parser::OmpClause::Firstprivate,
@@ -2463,10 +2607,126 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
                  Fortran::parser::OmpClause::Defaultmap>(
       currentLocation, llvm::omp::Directive::OMPD_target);
 
-  return genOpWithBody<mlir::omp::TargetOp>(
-      converter, eval, currentLocation, outerCombined, &clauseList,
-      ifClauseOperand, deviceOperand, threadLimitOperand, nowaitAttr,
-      mapOperands);
+  // 5.8.1 Implicit Data-Mapping Attribute Rules
+  // The following code follows the implicit data-mapping rules to map all the
+  // symbols used inside the region that have not been explicitly mapped using
+  // the map clause.
+  auto captureImplicitMap = [&](const Fortran::semantics::Symbol &sym) {
+    if (llvm::find(mapSymbols, &sym) == mapSymbols.end()) {
+      mlir::Value baseOp = converter.getSymbolAddress(sym);
+      if (!baseOp)
+        if (const auto *details = sym.template detailsIf<
+                                  Fortran::semantics::HostAssocDetails>()) {
+          baseOp = converter.getSymbolAddress(details->symbol());
+          converter.copySymbolBinding(details->symbol(), sym);
+        }
+
+      if (baseOp) {
+        llvm::SmallVector<mlir::Value> bounds;
+        std::stringstream name;
+        fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(sym);
+        name << sym.name().ToString();
+
+        mlir::Value baseAddr =
+            getDataOperandBaseAddr(converter, converter.getFirOpBuilder(), sym,
+                                   converter.getCurrentLocation());
+        if (fir::unwrapRefType(baseAddr.getType()).isa<fir::BaseBoxType>())
+          bounds =
+              Fortran::lower::genBoundsOpsFromBox<mlir::omp::DataBoundsOp,
+                                                  mlir::omp::DataBoundsType>(
+                  converter.getFirOpBuilder(), converter.getCurrentLocation(),
+                  converter, dataExv, baseAddr);
+        if (fir::unwrapRefType(baseAddr.getType()).isa<fir::SequenceType>())
+          bounds = Fortran::lower::genBaseBoundsOps<mlir::omp::DataBoundsOp,
+                                                    mlir::omp::DataBoundsType>(
+              converter.getFirOpBuilder(), converter.getCurrentLocation(),
+              converter, dataExv, baseAddr);
+
+        llvm::omp::OpenMPOffloadMappingFlags mapFlag =
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+        mlir::omp::VariableCaptureKind captureKind =
+            mlir::omp::VariableCaptureKind::ByRef;
+        if (auto refType = baseOp.getType().dyn_cast<fir::ReferenceType>()) {
+          auto eleType = refType.getElementType();
+          if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
+            captureKind = mlir::omp::VariableCaptureKind::ByCopy;
+          } else if (!fir::isa_builtin_cptr_type(eleType)) {
+            mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+            mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+          }
+        }
+
+        mlir::Value mapOp = createMapInfoOp(
+            converter.getFirOpBuilder(), baseOp.getLoc(), baseOp, name, bounds,
+            static_cast<
+                std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+                mapFlag),
+            captureKind, baseOp.getType());
+
+        mapOperands.push_back(mapOp);
+        mapSymTypes.push_back(baseOp.getType());
+        mapSymLocs.push_back(baseOp.getLoc());
+        mapSymbols.push_back(&sym);
+      }
+    }
+  };
+  Fortran::lower::pft::visitAllSymbols(eval, captureImplicitMap);
+
+  // Add the bounds and extents for box values to mapOperands
+  auto addMapInfoForBounds = [&](const auto &bounds) {
+    for (auto &val : bounds) {
+      mapSymLocs.push_back(val.getLoc());
+      mapSymTypes.push_back(val.getType());
+
+      llvm::SmallVector<mlir::Value> bounds;
+      std::stringstream name;
+
+      mlir::Value mapOp = createMapInfoOp(
+          converter.getFirOpBuilder(), val.getLoc(), val, name, bounds,
+          static_cast<
+              std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+              llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT),
+          mlir::omp::VariableCaptureKind::ByCopy, val.getType(), true);
+      mapOperands.push_back(mapOp);
+    }
+  };
+
+  for (const Fortran::semantics::Symbol *sym : mapSymbols) {
+    fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*sym);
+    extVal.match(
+        [&](const fir::BoxValue &v) { addMapInfoForBounds(v.getLBounds()); },
+        [&](const fir::MutableBoxValue &v) {
+          addMapInfoForBounds(v.getLBounds());
+        },
+        [&](const fir::ArrayBoxValue &v) {
+          addMapInfoForBounds(v.getExtents());
+          addMapInfoForBounds(v.getLBounds());
+        },
+        [&](const fir::CharArrayBoxValue &v) {
+          llvm::SmallVector<mlir::Value> len;
+          len.push_back(v.getLen());
+          addMapInfoForBounds(len);
+          addMapInfoForBounds(v.getExtents());
+          addMapInfoForBounds(v.getLBounds());
+        },
+        [&](const fir::CharBoxValue &v) {
+          llvm::SmallVector<mlir::Value> len;
+          len.push_back(v.getLen());
+          addMapInfoForBounds(len);
+        },
+        [&](const auto &) {
+          // Nothing to do for non-box values.
+        });
+  }
+
+  auto targetOp = converter.getFirOpBuilder().create<mlir::omp::TargetOp>(
+      currentLocation, ifClauseOperand, deviceOperand, threadLimitOperand,
+      nowaitAttr, mapOperands);
+
+  genBodyOfTargetOp(converter, eval, targetOp, mapSymTypes, mapSymLocs,
+                    mapSymbols, currentLocation);
+
+  return targetOp;
 }
 
 static mlir::omp::TeamsOp
@@ -2603,7 +2863,7 @@ genOmpSimpleStandalone(Fortran::lower::AbstractConverter &converter,
     firOpBuilder.create<mlir::omp::TaskyieldOp>(currentLocation);
     break;
   case llvm::omp::Directive::OMPD_target_data:
-    genDataOp(converter, semanticsContext, currentLocation, opClauseList);
+    genDataOp(converter, eval, semanticsContext, currentLocation, opClauseList);
     break;
   case llvm::omp::Directive::OMPD_target_enter_data:
     genEnterExitDataOp<mlir::omp::EnterDataOp>(converter, semanticsContext,
@@ -2847,8 +3107,6 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         !std::get_if<Fortran::parser::OmpClause::Allocate>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Default>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Final>(&clause.u) &&
-        !std::get_if<Fortran::parser::OmpClause::Untied>(&clause.u) &&
-        !std::get_if<Fortran::parser::OmpClause::Mergeable>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Priority>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Reduction>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Depend>(&clause.u) &&
@@ -2892,7 +3150,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                 beginClauseList, directive.v);
     break;
   case llvm::omp::Directive::OMPD_target_data:
-    genDataOp(converter, semanticsContext, currentLocation, beginClauseList);
+    genDataOp(converter, eval, semanticsContext, currentLocation,
+              beginClauseList);
     break;
   case llvm::omp::Directive::OMPD_task:
     genTaskOp(converter, eval, currentLocation, beginClauseList);

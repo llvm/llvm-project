@@ -2294,12 +2294,13 @@ CompilerType TypeSystemClang::CreateArrayType(const CompilerType &element_type,
 
       llvm::APInt ap_element_count(64, element_count);
       if (element_count == 0) {
-        return GetType(ast.getIncompleteArrayType(
-            ClangUtil::GetQualType(element_type), clang::ArrayType::Normal, 0));
+        return GetType(
+            ast.getIncompleteArrayType(ClangUtil::GetQualType(element_type),
+                                       clang::ArraySizeModifier::Normal, 0));
       } else {
         return GetType(ast.getConstantArrayType(
             ClangUtil::GetQualType(element_type), ap_element_count, nullptr,
-            clang::ArrayType::Normal, 0));
+            clang::ArraySizeModifier::Normal, 0));
       }
     }
   }
@@ -2319,8 +2320,9 @@ CompilerType TypeSystemClang::CreateStructForIdentifier(
     return type;
   }
 
-  type = CreateRecordType(nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-                          type_name, clang::TTK_Struct, lldb::eLanguageTypeC);
+  type = CreateRecordType(
+      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, type_name,
+      llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
   StartTagDeclarationDefinition(type);
   for (const auto &field : type_fields)
     AddFieldToRecordType(type, field.first, field.second, lldb::eAccessPublic,
@@ -4308,10 +4310,10 @@ CompilerType TypeSystemClang::GetArrayType(lldb::opaque_compiler_type_t type,
     if (size != 0)
       return GetType(ast_ctx.getConstantArrayType(
           qual_type, llvm::APInt(64, size), nullptr,
-          clang::ArrayType::ArraySizeModifier::Normal, 0));
+          clang::ArraySizeModifier::Normal, 0));
     else
       return GetType(ast_ctx.getIncompleteArrayType(
-          qual_type, clang::ArrayType::ArraySizeModifier::Normal, 0));
+          qual_type, clang::ArraySizeModifier::Normal, 0));
   }
 
   return CompilerType();
@@ -8009,8 +8011,8 @@ bool TypeSystemClang::AddObjCClassProperty(
     const bool isSynthesizedAccessorStub = false;
     const bool isImplicitlyDeclared = true;
     const bool isDefined = false;
-    const clang::ObjCMethodDecl::ImplementationControl impControl =
-        clang::ObjCMethodDecl::None;
+    const clang::ObjCImplementationControl impControl =
+        clang::ObjCImplementationControl::None;
     const bool HasRelatedResultType = false;
 
     getter = clang::ObjCMethodDecl::CreateDeserialized(clang_ast, 0);
@@ -8051,8 +8053,8 @@ bool TypeSystemClang::AddObjCClassProperty(
     const bool isSynthesizedAccessorStub = false;
     const bool isImplicitlyDeclared = true;
     const bool isDefined = false;
-    const clang::ObjCMethodDecl::ImplementationControl impControl =
-        clang::ObjCMethodDecl::None;
+    const clang::ObjCImplementationControl impControl =
+        clang::ObjCImplementationControl::None;
     const bool HasRelatedResultType = false;
 
     setter = clang::ObjCMethodDecl::CreateDeserialized(clang_ast, 0);
@@ -8173,8 +8175,8 @@ clang::ObjCMethodDecl *TypeSystemClang::AddMethodToObjCObjectType(
   /// Force this to true because we don't have source locations.
   const bool isImplicitlyDeclared = true;
   const bool isDefined = false;
-  const clang::ObjCMethodDecl::ImplementationControl impControl =
-      clang::ObjCMethodDecl::None;
+  const clang::ObjCImplementationControl impControl =
+      clang::ObjCImplementationControl::None;
   const bool HasRelatedResultType = false;
 
   const unsigned num_args = method_function_prototype->getNumParams();

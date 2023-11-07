@@ -717,6 +717,7 @@ enum AttributeKindCodes {
   ATTR_KIND_MEMORY = 86,
   ATTR_KIND_NOFPCLASS = 87,
   ATTR_KIND_OPTIMIZE_FOR_DEBUGGING = 88,
+  ATTR_KIND_WRITABLE = 89,
 };
 
 enum ComdatSelectionKindCodes {

@@ -502,7 +502,7 @@ static ConstantInt *GetConstantInt(Value *V, const DataLayout &DL) {
           return CI;
         else
           return cast<ConstantInt>(
-              ConstantExpr::getIntegerCast(CI, PtrTy, /*isSigned=*/false));
+              ConstantFoldIntegerCast(CI, PtrTy, /*isSigned=*/false, DL));
       }
   return nullptr;
 }

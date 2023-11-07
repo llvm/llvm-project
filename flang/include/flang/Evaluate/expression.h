@@ -735,7 +735,8 @@ public:
   StructureConstructor &Add(const semantics::Symbol &, Expr<SomeType> &&);
   int Rank() const { return 0; }
   DynamicType GetType() const;
-  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &,
+      const parser::CharBlock *derivedTypeRename = nullptr) const;
 
 private:
   std::optional<Expr<SomeType>> CreateParentComponent(const Symbol &) const;

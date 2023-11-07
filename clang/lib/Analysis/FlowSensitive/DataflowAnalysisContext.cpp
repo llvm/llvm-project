@@ -17,6 +17,7 @@
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Logger.h"
+#include "clang/Analysis/FlowSensitive/SimplifyConstraints.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
@@ -205,13 +206,50 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
   }
 }
 
+static void printAtomList(const llvm::SmallVector<Atom> &Atoms,
+                          llvm::raw_ostream &OS) {
+  OS << "(";
+  for (size_t i = 0; i < Atoms.size(); ++i) {
+    OS << Atoms[i];
+    if (i + 1 < Atoms.size())
+      OS << ", ";
+  }
+  OS << ")\n";
+}
+
 void DataflowAnalysisContext::dumpFlowCondition(Atom Token,
                                                 llvm::raw_ostream &OS) {
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeAtomRef(Token));
   addTransitiveFlowConditionConstraints(Token, Constraints);
 
-  for (const auto *Constraint : Constraints) {
+  OS << "Flow condition token: " << Token << "\n";
+  SimplifyConstraintsInfo Info;
+  llvm::SetVector<const Formula *> OriginalConstraints = Constraints;
+  simplifyConstraints(Constraints, arena(), &Info);
+  if (!Constraints.empty()) {
+    OS << "Constraints:\n";
+    for (const auto *Constraint : Constraints) {
+      Constraint->print(OS);
+      OS << "\n";
+    }
+  }
+  if (!Info.TrueAtoms.empty()) {
+    OS << "True atoms: ";
+    printAtomList(Info.TrueAtoms, OS);
+  }
+  if (!Info.FalseAtoms.empty()) {
+    OS << "False atoms: ";
+    printAtomList(Info.FalseAtoms, OS);
+  }
+  if (!Info.EquivalentAtoms.empty()) {
+    OS << "Equivalent atoms:\n";
+    for (const llvm::SmallVector<Atom> &Class : Info.EquivalentAtoms)
+      printAtomList(Class, OS);
+  }
+
+  OS << "\nFlow condition constraints before simplification:\n";
+  for (const auto *Constraint : OriginalConstraints) {
     Constraint->print(OS);
     OS << "\n";
   }

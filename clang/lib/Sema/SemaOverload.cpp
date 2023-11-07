@@ -5386,7 +5386,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
         }
         llvm::APInt Size(S.Context.getTypeSize(S.Context.getSizeType()), e);
         ContTy = S.Context.getConstantArrayType(InitTy, Size, nullptr,
-                                                ArrayType::Normal, 0);
+                                                ArraySizeModifier::Normal, 0);
       }
     }
 
@@ -6795,7 +6795,7 @@ void Sema::AddOverloadCandidate(
     if (auto *SpecInfo = Function->getTemplateSpecializationInfo())
       ND = SpecInfo->getTemplate();
 
-    if (ND->getFormalLinkage() == Linkage::InternalLinkage) {
+    if (ND->getFormalLinkage() == Linkage::Internal) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_module_mismatched;
       return;

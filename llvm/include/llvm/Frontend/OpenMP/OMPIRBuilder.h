@@ -2039,7 +2039,13 @@ public:
   /// Create a runtime call for kmpc_target_deinit
   ///
   /// \param Loc The insert and source location description.
-  void createTargetDeinit(const LocationDescription &Loc);
+  /// \param TeamsReductionDataSize The maximal size of all the reduction data
+  ///        for teams reduction.
+  /// \param TeamsReductionBufferLength The number of elements (each of up to
+  ///        \p TeamsReductionDataSize size), in the teams reduction buffer.
+  void createTargetDeinit(const LocationDescription &Loc,
+                          int32_t TeamsReductionDataSize = 0,
+                          int32_t TeamsReductionBufferLength = 1024);
 
   ///}
 

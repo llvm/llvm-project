@@ -161,6 +161,9 @@ static std::string getInstrProfErrString(instrprof_error Err,
   case instrprof_error::raw_profile_version_mismatch:
     OS << "raw profile version mismatch";
     break;
+  case instrprof_error::counter_value_too_large:
+    OS << "excessively large counter value suggests corrupted profile data";
+    break;
   }
 
   // If optional error message is not empty, append it to the message.

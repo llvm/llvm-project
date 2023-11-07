@@ -83,6 +83,7 @@ def _site_initialize():
 
     # If _mlirRegisterEverything is built, then include it as an initializer
     # module.
+    init_module = None
     if process_initializer_module("_mlirRegisterEverything"):
         init_module = importlib.import_module(f"._mlirRegisterEverything", __name__)
 

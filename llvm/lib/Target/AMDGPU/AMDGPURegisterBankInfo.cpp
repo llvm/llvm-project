@@ -2994,6 +2994,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       applyMappingBFE(B, OpdMapper, false);
       return;
     case Intrinsic::amdgcn_inverse_ballot:
+    case Intrinsic::amdgcn_s_bitreplicate:
+    case Intrinsic::amdgcn_s_quadmask:
+    case Intrinsic::amdgcn_s_wqm:
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 2); // Mask
       return;
@@ -3064,6 +3067,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 2);
       return;
     }
+    case Intrinsic::amdgcn_s_ttracedata:
+      constrainOpWithReadfirstlane(B, MI, 1); // M0
+      return;
     case Intrinsic::amdgcn_raw_buffer_load_lds:
     case Intrinsic::amdgcn_raw_ptr_buffer_load_lds: {
       applyDefaultMapping(OpdMapper);
@@ -4536,6 +4542,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = AMDGPU::getValueMapping(MaskBank, MaskSize);
       break;
     }
+    case Intrinsic::amdgcn_s_quadmask:
+    case Intrinsic::amdgcn_s_wqm: {
+      Register MaskReg = MI.getOperand(2).getReg();
+      unsigned MaskSize = MRI.getType(MaskReg).getSizeInBits();
+      unsigned MaskBank = getRegBankID(MaskReg, MRI, AMDGPU::SGPRRegBankID);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, MaskSize);
+      OpdsMapping[2] = AMDGPU::getValueMapping(MaskBank, MaskSize);
+      break;
+    }
     case Intrinsic::amdgcn_wave_reduce_umin:
     case Intrinsic::amdgcn_wave_reduce_umax: {
       unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
@@ -4546,6 +4561,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = AMDGPU::getValueMapping(regBankID, OpSize);
       break;
     }
+    case Intrinsic::amdgcn_s_bitreplicate:
+      Register MaskReg = MI.getOperand(2).getReg();
+      unsigned MaskBank = getRegBankID(MaskReg, MRI, AMDGPU::SGPRRegBankID);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 64);
+      OpdsMapping[2] = AMDGPU::getValueMapping(MaskBank, 32);
     }
     break;
   }
@@ -4653,6 +4673,13 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       unsigned Bank = getRegBankID(MI.getOperand(2).getReg(), MRI,
                                    AMDGPU::SGPRRegBankID);
       OpdsMapping[2] = AMDGPU::getValueMapping(Bank, 32);
+      break;
+    }
+    case Intrinsic::amdgcn_s_ttracedata: {
+      // This must be an SGPR, but accept a VGPR.
+      unsigned Bank =
+          getRegBankID(MI.getOperand(1).getReg(), MRI, AMDGPU::SGPRRegBankID);
+      OpdsMapping[1] = AMDGPU::getValueMapping(Bank, 32);
       break;
     }
     case Intrinsic::amdgcn_end_cf: {
