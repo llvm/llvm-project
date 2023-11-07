@@ -2387,6 +2387,7 @@ static int overlap_main(int argc, const char *argv[]) {
   return 0;
 }
 
+namespace show_llvmprofdata {
 namespace {
 struct ValueSitesStats {
   ValueSitesStats()
@@ -2447,14 +2448,101 @@ static void showValueSitesStats(raw_fd_ostream &OS, uint32_t VK,
   }
 }
 
-static int showInstrProfile(
-    const std::string &Filename, bool ShowCounts, uint32_t TopN,
-    bool ShowIndirectCallTargets, bool ShowMemOPSizes, bool ShowDetailedSummary,
-    std::vector<uint32_t> DetailedSummaryCutoffs, bool ShowAllFunctions,
-    bool ShowCS, uint64_t ValueCutoff, bool OnlyListBelow,
-    const std::string &ShowFunction, bool TextFormat, bool ShowBinaryIds,
-    bool ShowCovered, bool ShowProfileVersion, bool ShowTemporalProfTraces,
-    ShowFormat SFormat, raw_fd_ostream &OS) {
+cl::opt<std::string> Filename(cl::Positional, cl::desc("<profdata-file>"));
+
+cl::opt<bool> ShowCounts("counts", cl::init(false),
+                         cl::desc("Show counter values for shown functions"));
+cl::opt<ShowFormat>
+    SFormat("show-format", cl::init(ShowFormat::Text),
+            cl::desc("Emit output in the selected format if supported"),
+            cl::values(clEnumValN(ShowFormat::Text, "text",
+                                  "emit normal text output (default)"),
+                       clEnumValN(ShowFormat::Json, "json", "emit JSON"),
+                       clEnumValN(ShowFormat::Yaml, "yaml", "emit YAML")));
+// TODO: Consider replacing this with `--show-format=text-encoding`.
+cl::opt<bool>
+    TextFormat("text", cl::init(false),
+               cl::desc("Show instr profile data in text dump format"));
+cl::opt<bool>
+    JsonFormat("json", cl::desc("Show sample profile data in the JSON format "
+                                "(deprecated, please use --show-format=json)"));
+cl::opt<bool> ShowIndirectCallTargets(
+    "ic-targets", cl::init(false),
+    cl::desc("Show indirect call site target values for shown functions"));
+cl::opt<bool> ShowMemOPSizes(
+    "memop-sizes", cl::init(false),
+    cl::desc("Show the profiled sizes of the memory intrinsic calls "
+             "for shown functions"));
+cl::opt<bool> ShowDetailedSummary("detailed-summary", cl::init(false),
+                                  cl::desc("Show detailed profile summary"));
+cl::list<uint32_t> DetailedSummaryCutoffs(
+    cl::CommaSeparated, "detailed-summary-cutoffs",
+    cl::desc(
+        "Cutoff percentages (times 10000) for generating detailed summary"),
+    cl::value_desc("800000,901000,999999"));
+cl::opt<bool> ShowHotFuncList(
+    "hot-func-list", cl::init(false),
+    cl::desc("Show profile summary of a list of hot functions"));
+cl::opt<bool> ShowAllFunctions("all-functions", cl::init(false),
+                               cl::desc("Details for every function"));
+cl::opt<bool> ShowCS("showcs", cl::init(false),
+                     cl::desc("Show context sensitive counts"));
+cl::opt<std::string> ShowFunction("function",
+                                  cl::desc("Details for matching functions"));
+
+cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
+                                    cl::init("-"), cl::desc("Output file"));
+cl::alias OutputFilenameA("o", cl::desc("Alias for --output"),
+                          cl::aliasopt(OutputFilename));
+cl::opt<ProfileKinds> ProfileKind(
+    cl::desc("Profile kind:"), cl::init(instr),
+    cl::values(clEnumVal(instr, "Instrumentation profile (default)"),
+               clEnumVal(sample, "Sample profile"),
+               clEnumVal(memory, "MemProf memory access profile")));
+cl::opt<uint32_t> TopNFunctions(
+    "topn", cl::init(0),
+    cl::desc("Show the list of functions with the largest internal counts"));
+cl::opt<uint32_t> ValueCutoff(
+    "value-cutoff", cl::init(0),
+    cl::desc("Set the count value cutoff. Functions with the maximum count "
+             "less than this value will not be printed out. (Default is 0)"));
+cl::opt<bool> OnlyListBelow(
+    "list-below-cutoff", cl::init(false),
+    cl::desc("Only output names of functions whose max count values are "
+             "below the cutoff value"));
+cl::opt<bool> ShowProfileSymbolList(
+    "show-prof-sym-list", cl::init(false),
+    cl::desc("Show profile symbol list if it exists in the profile. "));
+cl::opt<bool> ShowSectionInfoOnly(
+    "show-sec-info-only", cl::init(false),
+    cl::desc("Show the information of each section in the sample profile. "
+             "The flag is only usable when the sample profile is in "
+             "extbinary format"));
+cl::opt<bool> ShowBinaryIds("binary-ids", cl::init(false),
+                            cl::desc("Show binary ids in the profile. "));
+cl::opt<bool> ShowTemporalProfTraces(
+    "temporal-profile-traces",
+    cl::desc("Show temporal profile traces in the profile."));
+cl::opt<std::string> DebugInfoFilename(
+    "debug-info", cl::init(""),
+    cl::desc("Read and extract profile metadata from debug info and show "
+             "the functions it found."));
+cl::opt<unsigned> MaxDbgCorrelationWarnings(
+    "max-debug-info-correlation-warnings",
+    cl::desc("The maximum number of warnings to emit when correlating "
+             "profile from debug info (0 = no limit)"),
+    cl::init(5));
+cl::opt<bool>
+    ShowCovered("covered", cl::init(false),
+                cl::desc("Show only the functions that have been executed."));
+cl::opt<std::string> ProfiledBinary(
+    "profiled-binary", cl::init(""),
+    cl::desc("Path to binary from which the profile was collected."));
+cl::opt<bool> ShowProfileVersion("profile-version", cl::init(false),
+                                 cl::desc("Show profile version. "));
+
+static int showInstrProfile(const std::string &Filename, ShowFormat SFormat,
+                            raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for instr profiles");
   if (SFormat == ShowFormat::Yaml)
@@ -2559,8 +2647,8 @@ static int showInstrProfile(
     } else if (OnlyListBelow)
       continue;
 
-    if (TopN) {
-      if (HottestFuncs.size() == TopN) {
+    if (TopNFunctions) {
+      if (HottestFuncs.size() == TopNFunctions) {
         if (HottestFuncs.top().second < FuncMax) {
           HottestFuncs.pop();
           HottestFuncs.emplace(std::make_pair(std::string(Func.Name), FuncMax));
@@ -2636,13 +2724,13 @@ static int showInstrProfile(
   OS << "Maximum function count: " << PS->getMaxFunctionCount() << "\n";
   OS << "Maximum internal block count: " << PS->getMaxInternalCount() << "\n";
 
-  if (TopN) {
+  if (TopNFunctions) {
     std::vector<std::pair<std::string, uint64_t>> SortedHottestFuncs;
     while (!HottestFuncs.empty()) {
       SortedHottestFuncs.emplace_back(HottestFuncs.top());
       HottestFuncs.pop();
     }
-    OS << "Top " << TopN
+    OS << "Top " << TopNFunctions
        << " functions with the largest internal block counts: \n";
     for (auto &hotfunc : llvm::reverse(SortedHottestFuncs))
       OS << "  " << hotfunc.first << ", max count = " << hotfunc.second << "\n";
@@ -2832,13 +2920,8 @@ static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
   return 0;
 }
 
-static int showSampleProfile(const std::string &Filename, bool ShowCounts,
-                             uint32_t TopN, bool ShowAllFunctions,
-                             bool ShowDetailedSummary,
-                             const std::string &ShowFunction,
-                             bool ShowProfileSymbolList,
-                             bool ShowSectionInfoOnly, bool ShowHotFuncList,
-                             ShowFormat SFormat, raw_fd_ostream &OS) {
+static int showSampleProfile(const std::string &Filename, ShowFormat SFormat,
+                             raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Yaml)
     exitWithError("YAML output is not supported for sample profiles");
   using namespace sampleprof;
@@ -2886,15 +2969,14 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
     PS.printDetailedSummary(OS);
   }
 
-  if (ShowHotFuncList || TopN)
-    showHotFunctionList(Reader->getProfiles(), Reader->getSummary(), TopN, OS);
+  if (ShowHotFuncList || TopNFunctions)
+    showHotFunctionList(Reader->getProfiles(), Reader->getSummary(),
+                        TopNFunctions, OS);
 
   return 0;
 }
 
-static int showMemProfProfile(const std::string &Filename,
-                              const std::string &ProfiledBinary,
-                              ShowFormat SFormat, raw_fd_ostream &OS) {
+static int showMemProfProfile(const std::string &Filename, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for MemProf");
   auto ReaderOr = llvm::memprof::RawMemProfReader::create(
@@ -2913,10 +2995,7 @@ static int showMemProfProfile(const std::string &Filename,
 }
 
 static int showDebugInfoCorrelation(const std::string &Filename,
-                                    bool ShowDetailedSummary,
-                                    bool ShowProfileSymbolList,
-                                    int MaxDbgCorrelationWarnings,
-                                    ShowFormat SFormat, raw_fd_ostream &OS) {
+                                    raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for debug info correlation");
   std::unique_ptr<InstrProfCorrelator> Correlator;
@@ -2950,101 +3029,8 @@ static int showDebugInfoCorrelation(const std::string &Filename,
   return 0;
 }
 
-static int show_main(int argc, const char *argv[]) {
-  cl::opt<std::string> Filename(cl::Positional, cl::desc("<profdata-file>"));
-
-  cl::opt<bool> ShowCounts("counts", cl::init(false),
-                           cl::desc("Show counter values for shown functions"));
-  cl::opt<ShowFormat> SFormat(
-      "show-format", cl::init(ShowFormat::Text),
-      cl::desc("Emit output in the selected format if supported"),
-      cl::values(clEnumValN(ShowFormat::Text, "text",
-                            "emit normal text output (default)"),
-                 clEnumValN(ShowFormat::Json, "json", "emit JSON"),
-                 clEnumValN(ShowFormat::Yaml, "yaml", "emit YAML")));
-  // TODO: Consider replacing this with `--show-format=text-encoding`.
-  cl::opt<bool> TextFormat(
-      "text", cl::init(false),
-      cl::desc("Show instr profile data in text dump format"));
-  cl::opt<bool> JsonFormat(
-      "json", cl::desc("Show sample profile data in the JSON format "
-                       "(deprecated, please use --show-format=json)"));
-  cl::opt<bool> ShowIndirectCallTargets(
-      "ic-targets", cl::init(false),
-      cl::desc("Show indirect call site target values for shown functions"));
-  cl::opt<bool> ShowMemOPSizes(
-      "memop-sizes", cl::init(false),
-      cl::desc("Show the profiled sizes of the memory intrinsic calls "
-               "for shown functions"));
-  cl::opt<bool> ShowDetailedSummary("detailed-summary", cl::init(false),
-                                    cl::desc("Show detailed profile summary"));
-  cl::list<uint32_t> DetailedSummaryCutoffs(
-      cl::CommaSeparated, "detailed-summary-cutoffs",
-      cl::desc(
-          "Cutoff percentages (times 10000) for generating detailed summary"),
-      cl::value_desc("800000,901000,999999"));
-  cl::opt<bool> ShowHotFuncList(
-      "hot-func-list", cl::init(false),
-      cl::desc("Show profile summary of a list of hot functions"));
-  cl::opt<bool> ShowAllFunctions("all-functions", cl::init(false),
-                                 cl::desc("Details for every function"));
-  cl::opt<bool> ShowCS("showcs", cl::init(false),
-                       cl::desc("Show context sensitive counts"));
-  cl::opt<std::string> ShowFunction("function",
-                                    cl::desc("Details for matching functions"));
-
-  cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
-                                      cl::init("-"), cl::desc("Output file"));
-  cl::alias OutputFilenameA("o", cl::desc("Alias for --output"),
-                            cl::aliasopt(OutputFilename));
-  cl::opt<ProfileKinds> ProfileKind(
-      cl::desc("Profile kind:"), cl::init(instr),
-      cl::values(clEnumVal(instr, "Instrumentation profile (default)"),
-                 clEnumVal(sample, "Sample profile"),
-                 clEnumVal(memory, "MemProf memory access profile")));
-  cl::opt<uint32_t> TopNFunctions(
-      "topn", cl::init(0),
-      cl::desc("Show the list of functions with the largest internal counts"));
-  cl::opt<uint32_t> ValueCutoff(
-      "value-cutoff", cl::init(0),
-      cl::desc("Set the count value cutoff. Functions with the maximum count "
-               "less than this value will not be printed out. (Default is 0)"));
-  cl::opt<bool> OnlyListBelow(
-      "list-below-cutoff", cl::init(false),
-      cl::desc("Only output names of functions whose max count values are "
-               "below the cutoff value"));
-  cl::opt<bool> ShowProfileSymbolList(
-      "show-prof-sym-list", cl::init(false),
-      cl::desc("Show profile symbol list if it exists in the profile. "));
-  cl::opt<bool> ShowSectionInfoOnly(
-      "show-sec-info-only", cl::init(false),
-      cl::desc("Show the information of each section in the sample profile. "
-               "The flag is only usable when the sample profile is in "
-               "extbinary format"));
-  cl::opt<bool> ShowBinaryIds("binary-ids", cl::init(false),
-                              cl::desc("Show binary ids in the profile. "));
-  cl::opt<bool> ShowTemporalProfTraces(
-      "temporal-profile-traces",
-      cl::desc("Show temporal profile traces in the profile."));
-  cl::opt<std::string> DebugInfoFilename(
-      "debug-info", cl::init(""),
-      cl::desc("Read and extract profile metadata from debug info and show "
-               "the functions it found."));
-  cl::opt<unsigned> MaxDbgCorrelationWarnings(
-      "max-debug-info-correlation-warnings",
-      cl::desc("The maximum number of warnings to emit when correlating "
-               "profile from debug info (0 = no limit)"),
-      cl::init(5));
-  cl::opt<bool> ShowCovered(
-      "covered", cl::init(false),
-      cl::desc("Show only the functions that have been executed."));
-  cl::opt<std::string> ProfiledBinary(
-      "profiled-binary", cl::init(""),
-      cl::desc("Path to binary from which the profile was collected."));
-  cl::opt<bool> ShowProfileVersion("profile-version", cl::init(false),
-                                   cl::desc("Show profile version. "));
+static int main(int argc, const char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data summary\n");
-
   if (Filename.empty() && DebugInfoFilename.empty())
     exitWithError(
         "the positional argument '<profdata-file>' is required unless '--" +
@@ -3067,24 +3053,16 @@ static int show_main(int argc, const char *argv[]) {
     WithColor::warning() << "-function argument ignored: showing all functions\n";
 
   if (!DebugInfoFilename.empty())
-    return showDebugInfoCorrelation(DebugInfoFilename, ShowDetailedSummary,
-                                    ShowProfileSymbolList,
-                                    MaxDbgCorrelationWarnings, SFormat, OS);
+    return showDebugInfoCorrelation(DebugInfoFilename, OS);
 
   if (ProfileKind == instr)
-    return showInstrProfile(
-        Filename, ShowCounts, TopNFunctions, ShowIndirectCallTargets,
-        ShowMemOPSizes, ShowDetailedSummary, DetailedSummaryCutoffs,
-        ShowAllFunctions, ShowCS, ValueCutoff, OnlyListBelow, ShowFunction,
-        TextFormat, ShowBinaryIds, ShowCovered, ShowProfileVersion,
-        ShowTemporalProfTraces, SFormat, OS);
+    return showInstrProfile(Filename, SFormat, OS);
   if (ProfileKind == sample)
-    return showSampleProfile(Filename, ShowCounts, TopNFunctions,
-                             ShowAllFunctions, ShowDetailedSummary,
-                             ShowFunction, ShowProfileSymbolList,
-                             ShowSectionInfoOnly, ShowHotFuncList, SFormat, OS);
-  return showMemProfProfile(Filename, ProfiledBinary, SFormat, OS);
+    return showSampleProfile(Filename, SFormat, OS);
+  return showMemProfProfile(Filename, SFormat, OS);
 }
+
+} // namespace show_llvmprofdata
 
 static int order_main(int argc, const char *argv[]) {
   cl::opt<std::string> Filename(cl::Positional, cl::desc("<profdata-file>"));
@@ -3130,7 +3108,7 @@ typedef int (*llvm_profdata_subcommand)(int, const char *[]);
 static std::tuple<StringRef, llvm_profdata_subcommand>
     llvm_profdata_subcommands[] = {
         {"merge", merge_main},
-        {"show", show_main},
+        {"show", show_llvmprofdata::main},
         {"order", order_main},
         {"overlap", overlap_main},
 };
