@@ -448,7 +448,12 @@ static std::string getSignature(FunctionType *FTy) {
 
 static Function *getEmscriptenFunction(FunctionType *Ty, const Twine &Name,
                                        Module *M) {
-  Function* F = Function::Create(Ty, GlobalValue::ExternalLinkage, Name, M);
+  return Function::Create(Ty, GlobalValue::ExternalLinkage, Name, M);
+}
+
+static Function *getInvokeFunction(FunctionType *Ty, const Twine &Name,
+                                   Module *M) {
+  Function *F = getEmscriptenFunction(Ty, Name, M);
   // Tell the linker that this function is expected to be imported from the
   // 'env' module.
   if (!F->hasFnAttribute("wasm-import-module")) {
@@ -591,7 +596,7 @@ Function *WebAssemblyLowerEmscriptenEHSjLj::getInvokeWrapper(CallBase *CI) {
 
   FunctionType *FTy = FunctionType::get(CalleeFTy->getReturnType(), ArgTys,
                                         CalleeFTy->isVarArg());
-  Function *F = getEmscriptenFunction(FTy, "__invoke_" + Sig, M);
+  Function *F = getInvokeFunction(FTy, "__invoke_" + Sig, M);
   InvokeWrappers[Sig] = F;
   return F;
 }
