@@ -1,5 +1,5 @@
-static_library("DebugSymbols") {
-  output_name = "lldbPluginSymbolLocatorDefault "
+static_library("Default") {
+  output_name = "lldbPluginSymbolLocatorDefault"
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
   deps = [
     "//lldb/source/Core",
@@ -7,5 +7,7 @@ static_library("DebugSymbols") {
     "//lldb/source/Symbol",
   ]
 
+  # Reaches into Plugins/ObjectFile/wasm.
+  include_dirs = [ "//lldb/source" ]
   sources = [ "SymbolLocatorDefault.cpp" ]
 }
