@@ -158,7 +158,8 @@ template <typename T> struct Memset {
     tail(dst, value, count);
   }
 
-  LIBC_INLINE static void loop_and_tail_offset(Ptr dst, uint8_t value, size_t count, size_t offset) {
+  LIBC_INLINE static void loop_and_tail_offset(Ptr dst, uint8_t value,
+                                               size_t count, size_t offset) {
     static_assert(SIZE > 1, "a loop of size 1 does not need tail");
     do {
       block_offset(dst, value, offset);
@@ -167,10 +168,9 @@ template <typename T> struct Memset {
     tail(dst, value, count);
   }
 
-    LIBC_INLINE static void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
-      return loop_and_tail_offset(dst, value, count, 0);
-    }
-
+  LIBC_INLINE static void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
+    return loop_and_tail_offset(dst, value, count, 0);
+  }
 };
 
 template <typename T, typename... TS> struct MemsetSequence {
