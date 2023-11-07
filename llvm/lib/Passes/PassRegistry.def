@@ -424,7 +424,6 @@ FUNCTION_PASS("sccp", SCCPPass())
 FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
-FUNCTION_PASS("speculative-execution", SpeculativeExecutionPass())
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
 FUNCTION_PASS("structurizecfg", StructurizeCFGPass())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
@@ -588,6 +587,13 @@ FUNCTION_PASS_WITH_PARAMS("print<memoryssa>",
                            },
                           parseMemorySSAPrinterPassOptions,
                           "no-ensure-optimized-uses")
+FUNCTION_PASS_WITH_PARAMS("speculative-execution",
+                          "SpeculativeExecutionPass",
+                          [](bool OnlyIfDivergentTarget) {
+                            return SpeculativeExecutionPass(OnlyIfDivergentTarget);
+                          },
+                          parseSpeculativeExecutionPassOptions,
+                          "only-if-divergent-target")
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS
