@@ -33,7 +33,7 @@
 #DCSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 
 // An example of a quantized sparse matmul. With the zero offset for the
-// sparse input, the sparse compiler generates very efficient code for the
+// sparse input, the sparsifier generates very efficient code for the
 //      x(i,j) += (ext(a(i,k)) - 2) * ext(b(k,j))
 // operation.
 module {
