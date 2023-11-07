@@ -196,8 +196,8 @@ define void @promote_latch_condition_decrementing_loop_01(ptr %p, ptr %a) {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ [[TMP0]], [[PREHEADER]] ]
 ; CHECK-NEXT:    [[EL:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store atomic i32 0, ptr [[EL]] unordered, align 4
-; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp slt i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp slt i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br i1 [[LOOPCOND]], label [[LOOPEXIT_LOOPEXIT:%.*]], label [[LOOP]]
 ;
 
@@ -336,8 +336,8 @@ define void @promote_latch_condition_decrementing_loop_04(ptr %p, ptr %a, i1 %co
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ [[TMP0]], [[PREHEADER]] ]
 ; CHECK-NEXT:    [[EL:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store atomic i32 0, ptr [[EL]] unordered, align 4
-; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp slt i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp slt i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br i1 [[LOOPCOND]], label [[LOOPEXIT_LOOPEXIT:%.*]], label [[LOOP]]
 ;
 
@@ -398,8 +398,8 @@ define void @promote_latch_condition_decrementing_loop_05(ptr %p, ptr %a, i1 %co
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ [[TMP0]], [[PREHEADER]] ]
 ; CHECK-NEXT:    [[EL:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store atomic i32 0, ptr [[EL]] unordered, align 4
-; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp slt i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp slt i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br i1 [[LOOPCOND]], label [[LOOPEXIT_LOOPEXIT:%.*]], label [[LOOP]]
 ;
 
