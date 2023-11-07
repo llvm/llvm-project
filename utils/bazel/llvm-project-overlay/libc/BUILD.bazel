@@ -1187,6 +1187,36 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "exp10f_impl",
+    hdrs = ["src/math/generic/exp10f_impl.h"],
+    deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":common_constants",
+        ":explogxf",
+    ],
+)
+
+libc_support_library(
+    name = "exp2f_impl",
+    hdrs = ["src/math/generic/exp2f_impl.h"],
+    deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":common_constants",
+        ":explogxf",
+    ],
+)
+
 libc_math_function(
     name = "erff",
     additional_deps = [
@@ -1274,14 +1304,7 @@ libc_math_function(
 libc_math_function(
     name = "exp10f",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":common_constants",
-        ":explogxf",
+        ":exp10f_impl",
     ],
 )
 
@@ -1304,13 +1327,17 @@ libc_math_function(
 libc_math_function(
     name = "exp2f",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
+        ":exp2f_impl",
+    ],
+)
+
+libc_math_function(
+    name = "powf",
+    additional_deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_sqrt",
+        ":exp2f",
+        ":exp10f",
         ":explogxf",
     ],
 )
