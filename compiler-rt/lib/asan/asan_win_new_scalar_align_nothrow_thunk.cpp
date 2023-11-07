@@ -37,7 +37,6 @@ extern "C" void* __cdecl __asan_new_align_nothrow(size_t size,
 void* operator new(size_t size, std::align_val_t align,
                    std::nothrow_t const&) noexcept {
   if (__asan_InitDefine<op_new_scalar_align>::defined) {
-    __asan_win_new_delete_data data{};
     return __asan_new_align_nothrow(size, align);
   }
 

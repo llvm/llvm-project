@@ -32,8 +32,8 @@ enum class align_val_t : size_t {};
 
 void* operator new(size_t, std::align_val_t);
 void* operator new[](size_t, std::align_val_t);
-void operator delete(void* ptr, std::align_val_t align);
-void operator delete[](void* ptr, std::align_val_t align);
+void operator delete(void* ptr, std::align_val_t align) noexcept;
+void operator delete[](void* ptr, std::align_val_t align) noexcept;
 
 ////////////////////////////////////
 // clang-format off
