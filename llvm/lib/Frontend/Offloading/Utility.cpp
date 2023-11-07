@@ -21,10 +21,10 @@ static StructType *getEntryTy(Module &M) {
   StructType *EntryTy =
       StructType::getTypeByName(C, "struct.__tgt_offload_entry");
   if (!EntryTy)
-    EntryTy = StructType::create("struct.__tgt_offload_entry",
-                                 Type::getInt8PtrTy(C), Type::getInt8PtrTy(C),
-                                 M.getDataLayout().getIntPtrType(C),
-                                 Type::getInt32Ty(C), Type::getInt32Ty(C));
+    EntryTy = StructType::create(
+        "struct.__tgt_offload_entry", PointerType::getUnqual(C),
+        PointerType::getUnqual(C), M.getDataLayout().getIntPtrType(C),
+        Type::getInt32Ty(C), Type::getInt32Ty(C));
   return EntryTy;
 }
 
@@ -32,7 +32,7 @@ static StructType *getEntryTy(Module &M) {
 void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
                                      uint64_t Size, int32_t Flags,
                                      StringRef SectionName) {
-  Type *Int8PtrTy = Type::getInt8PtrTy(M.getContext());
+  Type *Int8PtrTy = PointerType::getUnqual(M.getContext());
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
   Type *SizeTy = M.getDataLayout().getIntPtrType(M.getContext());
 

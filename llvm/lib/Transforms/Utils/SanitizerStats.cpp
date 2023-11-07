@@ -21,7 +21,7 @@
 using namespace llvm;
 
 SanitizerStatReport::SanitizerStatReport(Module *M) : M(M) {
-  StatTy = ArrayType::get(Type::getInt8PtrTy(M->getContext()), 2);
+  StatTy = ArrayType::get(PointerType::getUnqual(M->getContext()), 2);
   EmptyModuleStatsTy = makeModuleStatsTy();
 
   ModuleStatsGV = new GlobalVariable(*M, EmptyModuleStatsTy, false,
@@ -33,9 +33,10 @@ ArrayType *SanitizerStatReport::makeModuleStatsArrayTy() {
 }
 
 StructType *SanitizerStatReport::makeModuleStatsTy() {
-  return StructType::get(M->getContext(), {Type::getInt8PtrTy(M->getContext()),
-                                           Type::getInt32Ty(M->getContext()),
-                                           makeModuleStatsArrayTy()});
+  return StructType::get(M->getContext(),
+                         {PointerType::getUnqual(M->getContext()),
+                          Type::getInt32Ty(M->getContext()),
+                          makeModuleStatsArrayTy()});
 }
 
 void SanitizerStatReport::create(IRBuilder<> &B, SanitizerStatKind SK) {
@@ -73,7 +74,7 @@ void SanitizerStatReport::finish() {
     return;
   }
 
-  PointerType *Int8PtrTy = Type::getInt8PtrTy(M->getContext());
+  PointerType *Int8PtrTy = PointerType::getUnqual(M->getContext());
   IntegerType *Int32Ty = Type::getInt32Ty(M->getContext());
   Type *VoidTy = Type::getVoidTy(M->getContext());
 

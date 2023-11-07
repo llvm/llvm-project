@@ -90,7 +90,7 @@ FunctionPass *llvm::createSjLjEHPreparePass(const TargetMachine *TM) {
 bool SjLjEHPrepare::doInitialization(Module &M) {
   // Build the function context structure.
   // builtin_setjmp uses a five word jbuf
-  Type *VoidPtrTy = Type::getInt8PtrTy(M.getContext());
+  Type *VoidPtrTy = PointerType::getUnqual(M.getContext());
   unsigned DataBits =
       TM ? TM->getSjLjDataSize() : TargetMachine::DefaultSjLjDataSize;
   DataTy = Type::getIntNTy(M.getContext(), DataBits);

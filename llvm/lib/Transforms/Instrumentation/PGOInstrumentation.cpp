@@ -875,7 +875,7 @@ static void instrumentOneFunc(
       F, TLI, ComdatMembers, true, BPI, BFI, IsCS, PGOInstrumentEntry,
       PGOBlockCoverage);
 
-  Type *I8PtrTy = Type::getInt8PtrTy(M->getContext());
+  Type *I8PtrTy = PointerType::getUnqual(M->getContext());
   auto Name = ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy);
   auto CFGHash = ConstantInt::get(Type::getInt64Ty(M->getContext()),
                                   FuncInfo.FunctionHash);

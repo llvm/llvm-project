@@ -172,7 +172,7 @@ bool WinEHStatePass::runOnFunction(Function &F) {
   if (!HasPads)
     return false;
 
-  Type *Int8PtrType = Type::getInt8PtrTy(TheModule->getContext());
+  Type *Int8PtrType = PointerType::getUnqual(TheModule->getContext());
   SetJmp3 = TheModule->getOrInsertFunction(
       "_setjmp3", FunctionType::get(
                       Type::getInt32Ty(TheModule->getContext()),
@@ -214,7 +214,7 @@ Type *WinEHStatePass::getEHLinkRegistrationType() {
   Type *FieldTys[] = {
       PointerType::getUnqual(
           EHLinkRegistrationTy->getContext()), // EHRegistrationNode *Next
-      Type::getInt8PtrTy(Context) // EXCEPTION_DISPOSITION (*Handler)(...)
+      PointerType::getUnqual(Context) // EXCEPTION_DISPOSITION (*Handler)(...)
   };
   EHLinkRegistrationTy->setBody(FieldTys, false);
   return EHLinkRegistrationTy;
@@ -231,9 +231,9 @@ Type *WinEHStatePass::getCXXEHRegistrationType() {
     return CXXEHRegistrationTy;
   LLVMContext &Context = TheModule->getContext();
   Type *FieldTys[] = {
-      Type::getInt8PtrTy(Context), // void *SavedESP
-      getEHLinkRegistrationType(), // EHRegistrationNode SubRecord
-      Type::getInt32Ty(Context)    // int32_t TryLevel
+      PointerType::getUnqual(Context), // void *SavedESP
+      getEHLinkRegistrationType(),     // EHRegistrationNode SubRecord
+      Type::getInt32Ty(Context)        // int32_t TryLevel
   };
   CXXEHRegistrationTy =
       StructType::create(FieldTys, "CXXExceptionRegistration");
@@ -253,11 +253,11 @@ Type *WinEHStatePass::getSEHRegistrationType() {
     return SEHRegistrationTy;
   LLVMContext &Context = TheModule->getContext();
   Type *FieldTys[] = {
-      Type::getInt8PtrTy(Context), // void *SavedESP
-      Type::getInt8PtrTy(Context), // void *ExceptionPointers
-      getEHLinkRegistrationType(), // EHRegistrationNode SubRecord
-      Type::getInt32Ty(Context),   // int32_t EncodedScopeTable
-      Type::getInt32Ty(Context)    // int32_t TryLevel
+      PointerType::getUnqual(Context), // void *SavedESP
+      PointerType::getUnqual(Context), // void *ExceptionPointers
+      getEHLinkRegistrationType(),     // EHRegistrationNode SubRecord
+      Type::getInt32Ty(Context),       // int32_t EncodedScopeTable
+      Type::getInt32Ty(Context)        // int32_t TryLevel
   };
   SEHRegistrationTy = StructType::create(FieldTys, "SEHExceptionRegistration");
   return SEHRegistrationTy;
@@ -383,7 +383,7 @@ Value *WinEHStatePass::emitEHLSDA(IRBuilder<> &Builder, Function *F) {
 Function *WinEHStatePass::generateLSDAInEAXThunk(Function *ParentFunc) {
   LLVMContext &Context = ParentFunc->getContext();
   Type *Int32Ty = Type::getInt32Ty(Context);
-  Type *Int8PtrType = Type::getInt8PtrTy(Context);
+  Type *Int8PtrType = PointerType::getUnqual(Context);
   Type *ArgTys[5] = {Int8PtrType, Int8PtrType, Int8PtrType, Int8PtrType,
                      Int8PtrType};
   FunctionType *TrampolineTy =

@@ -256,10 +256,6 @@ IntegerType *Type::getIntNTy(LLVMContext &C, unsigned N) {
   return IntegerType::get(C, N);
 }
 
-PointerType *Type::getInt8PtrTy(LLVMContext &C, unsigned AS) {
-  return PointerType::get(C, AS);
-}
-
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
   // opaque pointer in addrspace(10)
   static PointerType *Ty = PointerType::get(C, 10);
