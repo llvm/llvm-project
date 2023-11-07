@@ -37,6 +37,10 @@ public:
   // current computers global settings.
   static std::optional<ModuleSpec>
   LocateExecutableObjectFile(const ModuleSpec &module_spec);
+
+  static std::optional<FileSpec>
+  FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec, const UUID *uuid,
+                         const ArchSpec *arch);
 };
 
 } // namespace lldb_private
