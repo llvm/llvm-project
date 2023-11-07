@@ -18,7 +18,14 @@ namespace bolt {
 
 using BasicBlockOrder = BinaryFunction::BasicBlockOrderType;
 
+struct JumpInfo {
+  bool HasUncondBranch = false;
+  BinaryBasicBlock *CondSuccessor = nullptr;
+  BinaryBasicBlock *UncondSuccessor = nullptr;
+};
+
 class CDSplit : public BinaryFunctionPass {
+
 private:
   /// Overall stats.
   std::atomic<uint64_t> SplitBytesHot{0ull};
@@ -28,6 +35,18 @@ private:
   /// All functions in the list are used to construct a call graph.
   /// A subset of functions in this list are considered for splitting.
   std::vector<BinaryFunction *> FunctionsToConsider;
+
+  /// Auxiliary variables used by the algorithm.
+  size_t TotalNumBlocks{0};
+  size_t OrigHotSectionSize{0};
+  DenseMap<const BinaryBasicBlock *, size_t> GlobalIndices;
+  DenseMap<const BinaryBasicBlock *, size_t> BBSizes;
+  DenseMap<const BinaryBasicBlock *, size_t> BBOffsets;
+  // Call graph.
+  std::vector<SmallVector<const BinaryBasicBlock *, 0>> Callers;
+  std::vector<SmallVector<const BinaryBasicBlock *, 0>> Callees;
+  // Conditional and unconditional successors of each BB.
+  DenseMap<const BinaryBasicBlock *, JumpInfo> JumpInfos;
 
   /// Helper functions to initialize global variables.
   void initialize(BinaryContext &BC);

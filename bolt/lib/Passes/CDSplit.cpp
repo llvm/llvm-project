@@ -39,6 +39,25 @@ namespace {
 bool shouldConsider(const BinaryFunction &BF) {
   return BF.hasValidIndex() && BF.hasValidProfile() && !BF.empty();
 }
+
+/// Find (un)conditional branch instruction info of the basic block.
+JumpInfo analyzeBranches(BinaryBasicBlock *BB) {
+  JumpInfo BBJumpInfo;
+  const MCSymbol *TBB = nullptr;
+  const MCSymbol *FBB = nullptr;
+  MCInst *CondBranch = nullptr;
+  MCInst *UncondBranch = nullptr;
+  if (BB->analyzeBranch(TBB, FBB, CondBranch, UncondBranch)) {
+    BBJumpInfo.HasUncondBranch = UncondBranch != nullptr;
+    if (BB->succ_size() == 1) {
+      BBJumpInfo.UncondSuccessor = BB->getSuccessor();
+    } else if (BB->succ_size() == 2) {
+      BBJumpInfo.CondSuccessor = BB->getConditionalSuccessor(true);
+      BBJumpInfo.UncondSuccessor = BB->getConditionalSuccessor(false);
+    }
+  }
+  return BBJumpInfo;
+}
 } // anonymous namespace
 
 bool CDSplit::shouldOptimize(const BinaryFunction &BF) const {
@@ -66,6 +85,69 @@ void CDSplit::initialize(BinaryContext &BC) {
   for (BinaryFunction *BF : SortedFunctions) {
     if (shouldConsider(*BF))
       FunctionsToConsider.push_back(BF);
+  }
+
+  // Initialize auxiliary variables.
+  for (BinaryFunction *BF : FunctionsToConsider) {
+    // Calculate the size of each BB after hot-cold splitting.
+    // This populates BinaryBasicBlock::OutputAddressRange which
+    // can be used to compute the size of each BB.
+    BC.calculateEmittedSize(*BF, /*FixBranches=*/true);
+
+    for (BinaryBasicBlock *BB : BF->getLayout().blocks()) {
+      // Unique global index.
+      GlobalIndices[BB] = TotalNumBlocks;
+      TotalNumBlocks++;
+
+      // Block size after hot-cold splitting.
+      BBSizes[BB] = BB->getOutputAddressRange().second -
+                    BB->getOutputAddressRange().first;
+
+      // Hot block offset after hot-cold splitting.
+      BBOffsets[BB] = OrigHotSectionSize;
+      if (!BB->isSplit())
+        OrigHotSectionSize += BBSizes[BB];
+
+      // Conditional and unconditional successors.
+      JumpInfos[BB] = analyzeBranches(BB);
+    }
+  }
+
+  // Build call graph.
+  Callers.resize(TotalNumBlocks);
+  Callees.resize(TotalNumBlocks);
+  for (BinaryFunction *SrcFunction : FunctionsToConsider) {
+    for (BinaryBasicBlock &SrcBB : SrcFunction->blocks()) {
+      // Skip blocks that are not executed
+      if (SrcBB.getKnownExecutionCount() == 0)
+        continue;
+
+      // Find call instructions and extract target symbols from each one
+      for (const MCInst &Inst : SrcBB) {
+        if (!BC.MIB->isCall(Inst))
+          continue;
+
+        // Call info
+        const MCSymbol *DstSym = BC.MIB->getTargetSymbol(Inst);
+        // Ignore calls w/o information
+        if (!DstSym)
+          continue;
+
+        const BinaryFunction *DstFunction = BC.getFunctionForSymbol(DstSym);
+        // Ignore calls that do not have a valid target, but do not ignore
+        // recursive calls, because caller block could be moved to warm.
+        if (!DstFunction || DstFunction->getLayout().block_empty())
+          continue;
+
+        const BinaryBasicBlock *DstBB = &(DstFunction->front());
+
+        // Record the call only if DstBB is also in FunctionsToConsider.
+        if (GlobalIndices.contains(DstBB)) {
+          Callers[GlobalIndices[DstBB]].push_back(&SrcBB);
+          Callees[GlobalIndices[&SrcBB]].push_back(DstBB);
+        }
+      }
+    }
   }
 }
 
