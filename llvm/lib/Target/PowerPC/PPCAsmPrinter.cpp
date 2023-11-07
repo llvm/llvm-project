@@ -68,8 +68,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -1638,8 +1638,8 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
          "Only local-exec accesses are handled!");
   MCSymbolRefExpr::VariantKind RefKind = MCSymbolRefExpr::VK_PPC_AIX_TLSLE;
 
-  const MCExpr *Expr = MCSymbolRefExpr::create(getSymbol(GValue), RefKind,
-                                               OutContext);
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(getSymbol(GValue), RefKind, OutContext);
 
   bool IsGlobalADeclaration = GValue->isDeclarationForLinker();
   // Find the GlobalVariable that corresponds to the particular TLS variable
@@ -1659,9 +1659,8 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
   // For when TLS variables are extern, this is safe to do because we can
   // assume that the address of extern TLS variables are zero.
   if ((FinalAddress < 32768) || IsGlobalADeclaration)
-    Expr = MCBinaryExpr::createAdd(Expr,
-                                   MCConstantExpr::create(Offset, OutContext),
-                                   OutContext);
+    Expr = MCBinaryExpr::createAdd(
+        Expr, MCConstantExpr::create(Offset, OutContext), OutContext);
   else {
     // Handle the written offset for cases where:
     //   address of the TLS variable + the offset is greater than 32KB.
@@ -1673,9 +1672,10 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
     // [-32768,32768).
     if (FinalAddress & 0x8000)
       FinalAddress = FinalAddress - 0x10000;
-    assert((FinalAddress < 32768) || (FinalAddress >= -32768) &&
-           "Expecting the final address for local-exec TLS variables to be "
-           "between [-32768,32768)!");
+    assert((FinalAddress < 32768) ||
+           (FinalAddress >= -32768) &&
+               "Expecting the final address for local-exec TLS variables to be "
+               "between [-32768,32768)!");
     // Get the offset that is actually written out in assembly by adding back
     // the original address of the TLS variable.
     ptrdiff_t WrittenOffset = FinalAddress - TLSVarAddress;

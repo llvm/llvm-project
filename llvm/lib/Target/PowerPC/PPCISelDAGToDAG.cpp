@@ -7589,8 +7589,7 @@ static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
   // This transformation is only performed if the first operand of the
   // addi is the thread pointer.
   SDValue TPRegNode = InitialADDI.getOperand(0);
-  RegisterSDNode *TPReg =
-      dyn_cast_or_null<RegisterSDNode>(TPRegNode.getNode());
+  RegisterSDNode *TPReg = dyn_cast_or_null<RegisterSDNode>(TPRegNode.getNode());
   if (!TPReg)
     return;
   if (TPReg->getReg() != Subtarget.getThreadPointerRegister())
@@ -7798,9 +7797,8 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd);
         if (!GA)
           continue;
-        ImmOpnd = CurDAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(GA),
-                                                 MVT::i64, Offset,
-                                                 GA->getTargetFlags());
+        ImmOpnd = CurDAG->getTargetGlobalAddress(
+            GA->getGlobal(), SDLoc(GA), MVT::i64, Offset, GA->getTargetFlags());
       }
     }
 
