@@ -42,6 +42,7 @@ substitute(const Formula &F,
     return arena.makeEquals(substitute(*F.operands()[0], Substitutions, arena),
                             substitute(*F.operands()[1], Substitutions, arena));
   }
+  llvm_unreachable("Unknown formula kind");
 }
 
 // Returns the result of replacing atoms in `Atoms` with the leader of their
