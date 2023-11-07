@@ -4330,8 +4330,14 @@ static void GeneratePreprocessorArgs(const PreprocessorOptions &Opts,
   for (const auto &EmbedEntry : Opts.EmbedEntries)
     GenerateArg(Consumer, OPT_embed_dir, EmbedEntry);
 
-  if (Opts.NoBuiltinPPEmbed)
-    GenerateArg(Consumer, OPT_fno_builtin_, "pp_embed");
+  if (Opts.NoBuiltinPPEmbed) {
+    // We need to figure out whether the user passed -fno-builtins or
+    // specifically disabled pp_embed. If NoBuiltin is true, we don't need to
+    // generate an arg because that disables everything. Otherwise, we assume
+    // the user passed -fno-builtin-pp_embed and generate that.
+    if (!LangOpts.NoBuiltin)
+      GenerateArg(Consumer, OPT_fno_builtin_, "pp_embed");
+  }
 
   // Don't handle LexEditorPlaceholders. It is implied by the action that is
   // generated elsewhere.
@@ -4432,10 +4438,12 @@ static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
 
   // Can disable the internal embed builtin / token
   for (const auto *A : Args.filtered(OPT_fno_builtin, OPT_fno_builtin_)) {
-    StringRef Val = A->getValue();
-    if (Val == "pp_embed") {
-      Opts.NoBuiltinPPEmbed = true;
-    }
+    bool NoBuiltinEmbed = false;
+    if (A->getNumValues())
+      NoBuiltinEmbed = A->getValue() == StringRef("pp_embed");
+    else
+      NoBuiltinEmbed = true; // All builtins are disabled.
+    Opts.NoBuiltinPPEmbed = NoBuiltinEmbed;
   }
 
   // Always avoid lexing editor placeholders when we're just running the
