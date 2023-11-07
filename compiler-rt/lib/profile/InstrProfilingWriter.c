@@ -255,10 +255,9 @@ COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
   const char *VNamesBegin = __llvm_profile_begin_vtabnames();
   const char *VNamesEnd = __llvm_profile_end_vtabnames();
   return lprofWriteDataImpl(Writer, DataBegin, DataEnd, CountersBegin,
-                            CountersEnd, BitmapBegin, BitmapEnd,
-                            VPDataReader, NamesBegin, NamesEnd,
-                            VTableBegin, VTableEnd, VNamesBegin,
-                            VNamesEnd, SkipNameDataWrite);
+                            CountersEnd, BitmapBegin, BitmapEnd, VPDataReader,
+                            NamesBegin, NamesEnd, VTableBegin, VTableEnd,
+                            VNamesBegin, VNamesEnd, SkipNameDataWrite);
 }
 
 COMPILER_RT_VISIBILITY int
@@ -288,20 +287,21 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
   const uint64_t VTableSectionSize =
       __llvm_profile_get_vtable_section_size(VTableBegin, VTableEnd);
   // Value profiling is not supported when DebugInfoCorrelate is true.
-  const uint64_t VNamesSize = __llvm_profile_get_name_size(VNamesBegin, VNamesEnd);
-  
+  const uint64_t VNamesSize =
+      __llvm_profile_get_name_size(VNamesBegin, VNamesEnd);
+
   /* Create the header. */
   __llvm_profile_header Header;
 
   /* Determine how much padding is needed before/after the counters and after
    * the names. */
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-     PaddingBytesAfterBitmapBytes,
-      PaddingBytesAfterNames, PaddingBytesAfterVTable, PaddingBytesAfterVNames;
+      PaddingBytesAfterBitmapBytes, PaddingBytesAfterNames,
+      PaddingBytesAfterVTable, PaddingBytesAfterVNames;
   __llvm_profile_get_padding_sizes_for_counters(
-      DataSectionSize, CountersSectionSize, NumBitmapBytes, NamesSize, VTableSectionSize,
-      VNamesSize, &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
-      &PaddingBytesAfterBitmapBytes,
+      DataSectionSize, CountersSectionSize, NumBitmapBytes, NamesSize,
+      VTableSectionSize, VNamesSize, &PaddingBytesBeforeCounters,
+      &PaddingBytesAfterCounters, &PaddingBytesAfterBitmapBytes,
       &PaddingBytesAfterNames, &PaddingBytesAfterVTable,
       &PaddingBytesAfterVNames);
 

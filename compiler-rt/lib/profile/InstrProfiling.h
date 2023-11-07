@@ -32,7 +32,7 @@ typedef struct __llvm_profile_header {
 #include "profile/InstrProfData.inc"
 } __llvm_profile_header;
 
-typedef struct ValueProfNode * PtrToNodeT;
+typedef struct ValueProfNode *PtrToNodeT;
 typedef struct ValueProfNode {
 #define INSTR_PROF_VALUE_NODE(Type, LLVMType, Name, Initializer) Type Name;
 #include "profile/InstrProfData.inc"
@@ -128,8 +128,7 @@ int __llvm_profile_merge_from_buffer(const char *Profile, uint64_t Size);
  *  structurally the in-process counters and bitmaps. If the profile data in
  *  buffer is not compatible, the interface returns 1 (failure).
  */
-int __llvm_profile_check_compatibility(const char *Profile,
-                                       uint64_t Size);
+int __llvm_profile_check_compatibility(const char *Profile, uint64_t Size);
 
 /*!
  * \brief Counts the number of times a target value is seen.
@@ -142,7 +141,7 @@ int __llvm_profile_check_compatibility(const char *Profile,
 void INSTR_PROF_VALUE_PROF_FUNC(
 #define VALUE_PROF_FUNC_PARAM(ArgType, ArgName, ArgLLVMType) ArgType ArgName
 #include "profile/InstrProfData.inc"
-    );
+);
 
 void __llvm_profile_instrument_target_value(uint64_t TargetValue, void *Data,
                                             uint32_t CounterIndex,
@@ -319,9 +318,8 @@ void __llvm_profile_get_padding_sizes_for_counters(
     uint64_t DataSize, uint64_t CountersSize, uint64_t NumBitmapBytes,
     uint64_t NamesSize, uint64_t VTableSize, uint64_t VNameSize,
     uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,
-    uint64_t *PaddingBytesAfterBitmap,
-    uint64_t *PaddingBytesAfterNames, uint64_t *PaddingBytesAfterVTable,
-    uint64_t *PaddingBytesAfterVNames);
+    uint64_t *PaddingBytesAfterBitmap, uint64_t *PaddingBytesAfterNames,
+    uint64_t *PaddingBytesAfterVTable, uint64_t *PaddingBytesAfterVNames);
 
 /*!
  * \brief Set the flag that profile data has been dumped to the file.

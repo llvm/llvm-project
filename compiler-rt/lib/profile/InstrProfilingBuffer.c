@@ -136,12 +136,11 @@ static int needsCounterPadding(void) {
 
 COMPILER_RT_VISIBILITY
 void __llvm_profile_get_padding_sizes_for_counters(
-    uint64_t DataSize, uint64_t CountersSize, uint64_t NumBitmapBytes, uint64_t NamesSize,
-    uint64_t VTableSize, uint64_t VNameSize,
+    uint64_t DataSize, uint64_t CountersSize, uint64_t NumBitmapBytes,
+    uint64_t NamesSize, uint64_t VTableSize, uint64_t VNameSize,
     uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,
-    uint64_t* PaddingBytesAfterBitmapBytes,
-    uint64_t *PaddingBytesAfterNames, uint64_t *PaddingBytesAfterVTable,
-    uint64_t *PaddingBytesAfterVName) {
+    uint64_t *PaddingBytesAfterBitmapBytes, uint64_t *PaddingBytesAfterNames,
+    uint64_t *PaddingBytesAfterVTable, uint64_t *PaddingBytesAfterVName) {
   // Counter padding is needed only if continuous mode is enabled.
   if (!needsCounterPadding()) {
     *PaddingBytesBeforeCounters = 0;
@@ -196,8 +195,9 @@ uint64_t __llvm_profile_get_size_for_buffer_internal(
       PaddingBytesAfterNames, PaddingBytesAfterBitmapBytes;
   __llvm_profile_get_padding_sizes_for_counters(
       DataSize, CountersSize, NumBitmapBytes, NamesSize, 0 /* VTableSize */,
-      0 /* VNameSize */, &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
-      &PaddingBytesAfterBitmapBytes, &PaddingBytesAfterNames, NULL /* PaddingBytesAfterVTable */,
+      0 /* VNameSize */, &PaddingBytesBeforeCounters,
+      &PaddingBytesAfterCounters, &PaddingBytesAfterBitmapBytes,
+      &PaddingBytesAfterNames, NULL /* PaddingBytesAfterVTable */,
       NULL /* PaddingbytesAfterVNames */);
 
   return sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) +
@@ -226,8 +226,9 @@ COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer_internal(
   ProfDataWriter BufferWriter;
   initBufferWriter(&BufferWriter, Buffer);
   // Set virtual table arguments to NULL since they are not supported yet.
-  return lprofWriteDataImpl(&BufferWriter, DataBegin, DataEnd, CountersBegin,
-                            CountersEnd, BitmapBegin, BitmapEnd, 0 /* VPDataReader */, NamesBegin, NamesEnd,
-                            NULL /* VTableBegin */, NULL /* VTableEnd */,
-                            NULL /* VNamesBegin */, NULL /* VNamesEnd */, 0 /* SkipNameDataWrite */);
+  return lprofWriteDataImpl(
+      &BufferWriter, DataBegin, DataEnd, CountersBegin, CountersEnd,
+      BitmapBegin, BitmapEnd, 0 /* VPDataReader */, NamesBegin, NamesEnd,
+      NULL /* VTableBegin */, NULL /* VTableEnd */, NULL /* VNamesBegin */,
+      NULL /* VNamesEnd */, 0 /* SkipNameDataWrite */);
 }
