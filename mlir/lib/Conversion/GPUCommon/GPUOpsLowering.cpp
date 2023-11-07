@@ -557,9 +557,11 @@ static IntegerAttr wrapNumericMemorySpace(MLIRContext *ctx, unsigned space) {
 
 /// Generates a symbol with 0-sized array type for dynamic shared memory usage,
 /// or uses existing symbol.
-LLVM::GlobalOp getDynamicSharedMemorySymbol(
-    ConversionPatternRewriter &rewriter, gpu::DynamicSharedMemoryOp op,
-    const LLVMTypeConverter *typeConverter, MemRefType memrefType, unsigned alignmentBit) {
+LLVM::GlobalOp
+getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
+                             gpu::DynamicSharedMemoryOp op,
+                             const LLVMTypeConverter *typeConverter,
+                             MemRefType memrefType, unsigned alignmentBit) {
   std::optional<LLVM::GlobalOp> existingGlobalOp;
 
   LLVM::LLVMFuncOp funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
@@ -592,7 +594,7 @@ LLVM::GlobalOp getDynamicSharedMemorySymbol(
   auto zeroSizedArrayType = LLVM::LLVMArrayType::get(
       typeConverter->convertType(memrefType.getElementType()), 0);
   std::string name = std::string(llvm::formatv("{0}_{1}", prefix, index));
-  
+
   uint64_t alignmentByte = alignmentBit / memrefType.getElementTypeBitWidth();
   return rewriter.create<LLVM::GlobalOp>(
       funcOp->getLoc(), zeroSizedArrayType, /*isConstant=*/false,
@@ -607,15 +609,16 @@ LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
   MemRefType memrefType = op.getResultMemref().getType();
   auto elementType = typeConverter->convertType(memrefType.getElementType());
   assert(memrefType && "memref is not valid");
-  
+
   // Step 1: Generate a memref<0xi8> type
   MemRefLayoutAttrInterface layout = {};
-  auto memrefType0sz = MemRefType::get({0}, elementType, layout, memrefType.getMemorySpace());  
+  auto memrefType0sz =
+      MemRefType::get({0}, elementType, layout, memrefType.getMemorySpace());
 
   // Step 2: Generate a global symbol or existing for the dynamic shared
   // memory with memref<0xi8> type
   LLVM::GlobalOp shmemOp = getDynamicSharedMemorySymbol(
-      rewriter, op, getTypeConverter(), memrefType0sz ,alignmentBit);
+      rewriter, op, getTypeConverter(), memrefType0sz, alignmentBit);
   assert(shmemOp && "cannot find module op or failed generating global op");
 
   // Step 3. Get address of the global symbol
