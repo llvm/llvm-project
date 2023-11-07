@@ -140,9 +140,8 @@ public:
     return NameStr;
   }
 
-  IntegralAP truncate(unsigned bitWidth) const {
-    assert(false);
-    return V;
+  IntegralAP truncate(unsigned BitWidth) const {
+    return IntegralAP(V.trunc(BitWidth));
   }
 
   IntegralAP<false> toUnsigned() const {
