@@ -1928,9 +1928,8 @@ void ItaniumVTableBuilder::LayoutVTablesForVirtualBases(
 
 static void printThunkMethod(const ThunkInfo &Info, raw_ostream &Out) {
   if (Info.Method) {
-    std::string Str =
-        PredefinedExpr::ComputeName(PredefinedExpr::PrettyFunctionNoVirtual,
-                                    Info.Method);
+    std::string Str = PredefinedExpr::ComputeName(
+        PredefinedIdentKind::PrettyFunctionNoVirtual, Info.Method);
     Out << " method: " << Str;
   }
 }
@@ -1943,12 +1942,10 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
   Out << "Original map\n";
 
   for (const auto &P : VTables.getOriginalMethodMap()) {
-    std::string Str0 =
-        PredefinedExpr::ComputeName(PredefinedExpr::PrettyFunctionNoVirtual,
-                                    P.first);
-    std::string Str1 =
-        PredefinedExpr::ComputeName(PredefinedExpr::PrettyFunctionNoVirtual,
-                                    P.second);
+    std::string Str0 = PredefinedExpr::ComputeName(
+        PredefinedIdentKind::PrettyFunctionNoVirtual, P.first);
+    std::string Str1 = PredefinedExpr::ComputeName(
+        PredefinedIdentKind::PrettyFunctionNoVirtual, P.second);
     Out << " " << Str0 << " -> " << Str1 << "\n";
   }
 
