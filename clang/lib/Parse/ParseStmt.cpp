@@ -700,11 +700,10 @@ static void DiagnoseLabelFollowedByDecl(Parser &P, const Stmt *SubStmt) {
   // label that is followed by a declaration rather than a statement.
   if (!P.getLangOpts().CPlusPlus && !P.getLangOpts().MicrosoftExt &&
       isa<DeclStmt>(SubStmt)) {
-    if (P.getLangOpts().C23)
-      P.Diag(SubStmt->getBeginLoc(),
-             diag::warn_c23_compat_label_followed_by_declaration);
-    else
-      P.Diag(SubStmt->getBeginLoc(), diag::ext_c_label_followed_by_declaration);
+    P.Diag(SubStmt->getBeginLoc(),
+           P.getLangOpts().C23
+               ? diag::warn_c23_compat_label_followed_by_declaration
+               : diag::ext_c_label_followed_by_declaration);
   }
 }
 
@@ -722,6 +721,9 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
   assert(Tok.is(tok::identifier) && Tok.getIdentifierInfo() &&
          "Not an identifier!");
 
+  // [OpenMP 5.1] 2.1.3: A stand-alone directive may not be used in place of a
+  // substatement in a selection statement, in place of the loop body in an
+  // iteration statement, or in place of the statement that follows a label.
   StmtCtx &= ~ParsedStmtContext::AllowStandaloneOpenMPDirectives;
 
   Token IdentTok = Tok;  // Save the whole token.
@@ -791,6 +793,9 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
                                       bool MissingCase, ExprResult Expr) {
   assert((MissingCase || Tok.is(tok::kw_case)) && "Not a case stmt!");
 
+  // [OpenMP 5.1] 2.1.3: A stand-alone directive may not be used in place of a
+  // substatement in a selection statement, in place of the loop body in an
+  // iteration statement, or in place of the statement that follows a label.
   StmtCtx &= ~ParsedStmtContext::AllowStandaloneOpenMPDirectives;
 
   // It is very common for code to contain many case statements recursively
@@ -933,6 +938,9 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
 StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
   assert(Tok.is(tok::kw_default) && "Not a default stmt!");
 
+  // [OpenMP 5.1] 2.1.3: A stand-alone directive may not be used in place of a
+  // substatement in a selection statement, in place of the loop body in an
+  // iteration statement, or in place of the statement that follows a label.
   StmtCtx &= ~ParsedStmtContext::AllowStandaloneOpenMPDirectives;
 
   SourceLocation DefaultLoc = ConsumeToken();  // eat the 'default'.
