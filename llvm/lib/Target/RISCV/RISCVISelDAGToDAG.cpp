@@ -3501,11 +3501,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   if (!True.isMachineOpcode())
     return false;
 
-  // This transformation is illegal for viota.m when Mask is not a true mask.
-  if (RISCV::getRVVMCOpcode(True->getMachineOpcode()) == RISCV::VIOTA_M)
-    if (Mask && !usesAllOnesMask(Mask, Glue))
-      return false;
-
   unsigned TrueOpc = True.getMachineOpcode();
   const MCInstrDesc &TrueMCID = TII->get(TrueOpc);
   uint64_t TrueTSFlags = TrueMCID.TSFlags;
@@ -3520,6 +3515,11 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   }
 
   if (!Info)
+    return false;
+
+  // This transformation is illegal for accumlated operations, like viota.m,
+  // when Mask is not a true mask.
+  if (Info->IsAccumulatedOp && Mask && !usesAllOnesMask(Mask, Glue))
     return false;
 
   if (HasTiedDest && !isImplicitDef(True->getOperand(0))) {
