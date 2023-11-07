@@ -292,12 +292,6 @@ let test_constants () =
 
   group "constant casts";
   (* CHECK: const_trunc{{.*}}trunc
-   * CHECK: const_fptrunc{{.*}}fptrunc
-   * CHECK: const_fpext{{.*}}fpext
-   * CHECK: const_uitofp{{.*}}uitofp
-   * CHECK: const_sitofp{{.*}}sitofp
-   * CHECK: const_fptoui{{.*}}fptoui
-   * CHECK: const_fptosi{{.*}}fptosi
    * CHECK: const_ptrtoint{{.*}}ptrtoint
    * CHECK: const_inttoptr{{.*}}inttoptr
    * CHECK: const_bitcast{{.*}}bitcast
@@ -305,12 +299,6 @@ let test_constants () =
   let i128_type = integer_type context 128 in
   ignore (define_global "const_trunc" (const_trunc (const_add foldbomb five)
                                                i8_type) m);
-  ignore (define_global "const_fptrunc" (const_fptrunc ffoldbomb float_type) m);
-  ignore (define_global "const_fpext" (const_fpext ffoldbomb fp128_type) m);
-  ignore (define_global "const_uitofp" (const_uitofp foldbomb double_type) m);
-  ignore (define_global "const_sitofp" (const_sitofp foldbomb double_type) m);
-  ignore (define_global "const_fptoui" (const_fptoui ffoldbomb i32_type) m);
-  ignore (define_global "const_fptosi" (const_fptosi ffoldbomb i32_type) m);
   ignore (define_global "const_ptrtoint" (const_ptrtoint
     (const_gep i8_type (const_null (pointer_type context))
                [| const_int i32_type 1 |])

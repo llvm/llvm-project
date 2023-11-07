@@ -21,7 +21,6 @@
 @t5 = global i33** @t3                           ;; Reference to a previous cast
 @t6 = global i33*** @t4
 @t7 = global float* inttoptr (i32 12345678 to float*) ;; Cast ordinary value to ptr
-@t9 = global i33 fptosi (float sitofp (i33 8 to float) to i33) ;; Nested cast expression
 
 
 @2 = global i32* bitcast (float* @4 to i32*)   ;; Forward numeric reference

@@ -1744,36 +1744,6 @@ LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
                                      unwrap(ToType)));
 }
 
-LLVMValueRef LLVMConstFPTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
-  return wrap(ConstantExpr::getFPTrunc(unwrap<Constant>(ConstantVal),
-                                       unwrap(ToType)));
-}
-
-LLVMValueRef LLVMConstFPExt(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
-  return wrap(ConstantExpr::getFPExtend(unwrap<Constant>(ConstantVal),
-                                        unwrap(ToType)));
-}
-
-LLVMValueRef LLVMConstUIToFP(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
-  return wrap(ConstantExpr::getUIToFP(unwrap<Constant>(ConstantVal),
-                                      unwrap(ToType)));
-}
-
-LLVMValueRef LLVMConstSIToFP(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
-  return wrap(ConstantExpr::getSIToFP(unwrap<Constant>(ConstantVal),
-                                      unwrap(ToType)));
-}
-
-LLVMValueRef LLVMConstFPToUI(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
-  return wrap(ConstantExpr::getFPToUI(unwrap<Constant>(ConstantVal),
-                                      unwrap(ToType)));
-}
-
-LLVMValueRef LLVMConstFPToSI(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
-  return wrap(ConstantExpr::getFPToSI(unwrap<Constant>(ConstantVal),
-                                      unwrap(ToType)));
-}
-
 LLVMValueRef LLVMConstPtrToInt(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
   return wrap(ConstantExpr::getPtrToInt(unwrap<Constant>(ConstantVal),
                                         unwrap(ToType)));
@@ -1805,11 +1775,6 @@ LLVMValueRef LLVMConstPointerCast(LLVMValueRef ConstantVal,
                                   LLVMTypeRef ToType) {
   return wrap(ConstantExpr::getPointerCast(unwrap<Constant>(ConstantVal),
                                            unwrap(ToType)));
-}
-
-LLVMValueRef LLVMConstFPCast(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
-  return wrap(ConstantExpr::getFPCast(unwrap<Constant>(ConstantVal),
-                                      unwrap(ToType)));
 }
 
 LLVMValueRef LLVMConstExtractElement(LLVMValueRef VectorConstant,
