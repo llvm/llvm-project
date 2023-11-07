@@ -301,7 +301,7 @@ std::string llvm::getUniqueModuleId(Module *M) {
   MD5 Md5;
   bool ExportsSymbols = false;
   auto AddGlobal = [&](GlobalValue &GV) {
-    if (GV.isDeclaration() || GV.getName().startswith("llvm.") ||
+    if (GV.isDeclaration() || GV.getName().starts_with("llvm.") ||
         !GV.hasExternalLinkage() || GV.hasComdat())
       return;
     ExportsSymbols = true;

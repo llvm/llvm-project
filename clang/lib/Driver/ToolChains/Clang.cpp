@@ -5069,6 +5069,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_fthinlto_index_EQ);
   }
 
+  if (Triple.isPPC())
+    Args.addOptInFlag(CmdArgs, options::OPT_mregnames,
+                      options::OPT_mno_regnames);
+
   if (Args.getLastArg(options::OPT_fthin_link_bitcode_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_fthin_link_bitcode_EQ);
 

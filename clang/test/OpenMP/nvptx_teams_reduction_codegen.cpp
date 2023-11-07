@@ -253,7 +253,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[E:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x double], ptr [[E]], i32 0, i32 [[TMP5]]
 // CHECK1-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP7]], align 8
-// CHECK1-NEXT:    store double [[TMP9]], ptr [[TMP8]], align 128
+// CHECK1-NEXT:    store double [[TMP9]], ptr [[TMP8]], align 8
 // CHECK1-NEXT:    ret void
 //
 //
@@ -294,7 +294,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // CHECK1-NEXT:    [[E:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x double], ptr [[E]], i32 0, i32 [[TMP5]]
-// CHECK1-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP8]], align 128
+// CHECK1-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP8]], align 8
 // CHECK1-NEXT:    store double [[TMP9]], ptr [[TMP7]], align 8
 // CHECK1-NEXT:    ret void
 //
@@ -583,13 +583,13 @@ int bar(int n){
 // CHECK1-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x i8], ptr [[C]], i32 0, i32 [[TMP5]]
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP7]], align 1
-// CHECK1-NEXT:    store i8 [[TMP9]], ptr [[TMP8]], align 128
+// CHECK1-NEXT:    store i8 [[TMP9]], ptr [[TMP8]], align 4
 // CHECK1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP3]], i64 0, i64 1
 // CHECK1-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 8
 // CHECK1-NEXT:    [[D:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0]], ptr [[TMP4]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1024 x float], ptr [[D]], i32 0, i32 [[TMP5]]
 // CHECK1-NEXT:    [[TMP13:%.*]] = load float, ptr [[TMP11]], align 4
-// CHECK1-NEXT:    store float [[TMP13]], ptr [[TMP12]], align 128
+// CHECK1-NEXT:    store float [[TMP13]], ptr [[TMP12]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -634,13 +634,13 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // CHECK1-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x i8], ptr [[C]], i32 0, i32 [[TMP5]]
-// CHECK1-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP8]], align 128
+// CHECK1-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP8]], align 4
 // CHECK1-NEXT:    store i8 [[TMP9]], ptr [[TMP7]], align 1
 // CHECK1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP3]], i64 0, i64 1
 // CHECK1-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 8
 // CHECK1-NEXT:    [[D:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0]], ptr [[TMP4]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1024 x float], ptr [[D]], i32 0, i32 [[TMP5]]
-// CHECK1-NEXT:    [[TMP13:%.*]] = load float, ptr [[TMP12]], align 128
+// CHECK1-NEXT:    [[TMP13:%.*]] = load float, ptr [[TMP12]], align 4
 // CHECK1-NEXT:    store float [[TMP13]], ptr [[TMP11]], align 4
 // CHECK1-NEXT:    ret void
 //
@@ -1156,13 +1156,13 @@ int bar(int n){
 // CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A]], i32 0, i32 [[TMP5]]
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP7]], align 4
-// CHECK1-NEXT:    store i32 [[TMP9]], ptr [[TMP8]], align 128
+// CHECK1-NEXT:    store i32 [[TMP9]], ptr [[TMP8]], align 4
 // CHECK1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP3]], i64 0, i64 1
 // CHECK1-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 8
 // CHECK1-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2]], ptr [[TMP4]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1024 x i16], ptr [[B]], i32 0, i32 [[TMP5]]
 // CHECK1-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP11]], align 2
-// CHECK1-NEXT:    store i16 [[TMP13]], ptr [[TMP12]], align 128
+// CHECK1-NEXT:    store i16 [[TMP13]], ptr [[TMP12]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1207,13 +1207,13 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A]], i32 0, i32 [[TMP5]]
-// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 128
+// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 4
 // CHECK1-NEXT:    store i32 [[TMP9]], ptr [[TMP7]], align 4
 // CHECK1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP3]], i64 0, i64 1
 // CHECK1-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 8
 // CHECK1-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2]], ptr [[TMP4]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1024 x i16], ptr [[B]], i32 0, i32 [[TMP5]]
-// CHECK1-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP12]], align 128
+// CHECK1-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP12]], align 4
 // CHECK1-NEXT:    store i16 [[TMP13]], ptr [[TMP11]], align 2
 // CHECK1-NEXT:    ret void
 //
@@ -1446,7 +1446,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[E:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x double], ptr [[E]], i32 0, i32 [[TMP5]]
 // CHECK2-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP7]], align 8
-// CHECK2-NEXT:    store double [[TMP9]], ptr [[TMP8]], align 128
+// CHECK2-NEXT:    store double [[TMP9]], ptr [[TMP8]], align 8
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1487,7 +1487,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
 // CHECK2-NEXT:    [[E:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x double], ptr [[E]], i32 0, i32 [[TMP5]]
-// CHECK2-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP8]], align 128
+// CHECK2-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP8]], align 8
 // CHECK2-NEXT:    store double [[TMP9]], ptr [[TMP7]], align 8
 // CHECK2-NEXT:    ret void
 //
@@ -1776,13 +1776,13 @@ int bar(int n){
 // CHECK2-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x i8], ptr [[C]], i32 0, i32 [[TMP5]]
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP7]], align 1
-// CHECK2-NEXT:    store i8 [[TMP9]], ptr [[TMP8]], align 128
+// CHECK2-NEXT:    store i8 [[TMP9]], ptr [[TMP8]], align 4
 // CHECK2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP3]], i32 0, i32 1
 // CHECK2-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 4
 // CHECK2-NEXT:    [[D:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0]], ptr [[TMP4]], i32 0, i32 1
 // CHECK2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1024 x float], ptr [[D]], i32 0, i32 [[TMP5]]
 // CHECK2-NEXT:    [[TMP13:%.*]] = load float, ptr [[TMP11]], align 4
-// CHECK2-NEXT:    store float [[TMP13]], ptr [[TMP12]], align 128
+// CHECK2-NEXT:    store float [[TMP13]], ptr [[TMP12]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1827,13 +1827,13 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
 // CHECK2-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x i8], ptr [[C]], i32 0, i32 [[TMP5]]
-// CHECK2-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP8]], align 128
+// CHECK2-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP8]], align 4
 // CHECK2-NEXT:    store i8 [[TMP9]], ptr [[TMP7]], align 1
 // CHECK2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP3]], i32 0, i32 1
 // CHECK2-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 4
 // CHECK2-NEXT:    [[D:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0]], ptr [[TMP4]], i32 0, i32 1
 // CHECK2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1024 x float], ptr [[D]], i32 0, i32 [[TMP5]]
-// CHECK2-NEXT:    [[TMP13:%.*]] = load float, ptr [[TMP12]], align 128
+// CHECK2-NEXT:    [[TMP13:%.*]] = load float, ptr [[TMP12]], align 4
 // CHECK2-NEXT:    store float [[TMP13]], ptr [[TMP11]], align 4
 // CHECK2-NEXT:    ret void
 //
@@ -2349,13 +2349,13 @@ int bar(int n){
 // CHECK2-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A]], i32 0, i32 [[TMP5]]
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP7]], align 4
-// CHECK2-NEXT:    store i32 [[TMP9]], ptr [[TMP8]], align 128
+// CHECK2-NEXT:    store i32 [[TMP9]], ptr [[TMP8]], align 4
 // CHECK2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP3]], i32 0, i32 1
 // CHECK2-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 4
 // CHECK2-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2]], ptr [[TMP4]], i32 0, i32 1
 // CHECK2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1024 x i16], ptr [[B]], i32 0, i32 [[TMP5]]
 // CHECK2-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP11]], align 2
-// CHECK2-NEXT:    store i16 [[TMP13]], ptr [[TMP12]], align 128
+// CHECK2-NEXT:    store i16 [[TMP13]], ptr [[TMP12]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -2400,13 +2400,13 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
 // CHECK2-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A]], i32 0, i32 [[TMP5]]
-// CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 128
+// CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 4
 // CHECK2-NEXT:    store i32 [[TMP9]], ptr [[TMP7]], align 4
 // CHECK2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP3]], i32 0, i32 1
 // CHECK2-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 4
 // CHECK2-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2]], ptr [[TMP4]], i32 0, i32 1
 // CHECK2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1024 x i16], ptr [[B]], i32 0, i32 [[TMP5]]
-// CHECK2-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP12]], align 128
+// CHECK2-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP12]], align 4
 // CHECK2-NEXT:    store i16 [[TMP13]], ptr [[TMP11]], align 2
 // CHECK2-NEXT:    ret void
 //
@@ -2639,7 +2639,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[E:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2048 x double], ptr [[E]], i32 0, i32 [[TMP5]]
 // CHECK3-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP7]], align 8
-// CHECK3-NEXT:    store double [[TMP9]], ptr [[TMP8]], align 128
+// CHECK3-NEXT:    store double [[TMP9]], ptr [[TMP8]], align 8
 // CHECK3-NEXT:    ret void
 //
 //
@@ -2680,7 +2680,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
 // CHECK3-NEXT:    [[E:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2048 x double], ptr [[E]], i32 0, i32 [[TMP5]]
-// CHECK3-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP8]], align 128
+// CHECK3-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP8]], align 8
 // CHECK3-NEXT:    store double [[TMP9]], ptr [[TMP7]], align 8
 // CHECK3-NEXT:    ret void
 //
@@ -2969,13 +2969,13 @@ int bar(int n){
 // CHECK3-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2048 x i8], ptr [[C]], i32 0, i32 [[TMP5]]
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP7]], align 1
-// CHECK3-NEXT:    store i8 [[TMP9]], ptr [[TMP8]], align 128
+// CHECK3-NEXT:    store i8 [[TMP9]], ptr [[TMP8]], align 4
 // CHECK3-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP3]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 4
 // CHECK3-NEXT:    [[D:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0]], ptr [[TMP4]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2048 x float], ptr [[D]], i32 0, i32 [[TMP5]]
 // CHECK3-NEXT:    [[TMP13:%.*]] = load float, ptr [[TMP11]], align 4
-// CHECK3-NEXT:    store float [[TMP13]], ptr [[TMP12]], align 128
+// CHECK3-NEXT:    store float [[TMP13]], ptr [[TMP12]], align 4
 // CHECK3-NEXT:    ret void
 //
 //
@@ -3020,13 +3020,13 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
 // CHECK3-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2048 x i8], ptr [[C]], i32 0, i32 [[TMP5]]
-// CHECK3-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP8]], align 128
+// CHECK3-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP8]], align 4
 // CHECK3-NEXT:    store i8 [[TMP9]], ptr [[TMP7]], align 1
 // CHECK3-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP3]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 4
 // CHECK3-NEXT:    [[D:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0]], ptr [[TMP4]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2048 x float], ptr [[D]], i32 0, i32 [[TMP5]]
-// CHECK3-NEXT:    [[TMP13:%.*]] = load float, ptr [[TMP12]], align 128
+// CHECK3-NEXT:    [[TMP13:%.*]] = load float, ptr [[TMP12]], align 4
 // CHECK3-NEXT:    store float [[TMP13]], ptr [[TMP11]], align 4
 // CHECK3-NEXT:    ret void
 //
@@ -3542,13 +3542,13 @@ int bar(int n){
 // CHECK3-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2048 x i32], ptr [[A]], i32 0, i32 [[TMP5]]
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP7]], align 4
-// CHECK3-NEXT:    store i32 [[TMP9]], ptr [[TMP8]], align 128
+// CHECK3-NEXT:    store i32 [[TMP9]], ptr [[TMP8]], align 4
 // CHECK3-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP3]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 4
 // CHECK3-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2]], ptr [[TMP4]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2048 x i16], ptr [[B]], i32 0, i32 [[TMP5]]
 // CHECK3-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP11]], align 2
-// CHECK3-NEXT:    store i16 [[TMP13]], ptr [[TMP12]], align 128
+// CHECK3-NEXT:    store i16 [[TMP13]], ptr [[TMP12]], align 4
 // CHECK3-NEXT:    ret void
 //
 //
@@ -3593,13 +3593,13 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
 // CHECK3-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2048 x i32], ptr [[A]], i32 0, i32 [[TMP5]]
-// CHECK3-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 128
+// CHECK3-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 4
 // CHECK3-NEXT:    store i32 [[TMP9]], ptr [[TMP7]], align 4
 // CHECK3-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP3]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 4
 // CHECK3-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2]], ptr [[TMP4]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2048 x i16], ptr [[B]], i32 0, i32 [[TMP5]]
-// CHECK3-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP12]], align 128
+// CHECK3-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP12]], align 4
 // CHECK3-NEXT:    store i16 [[TMP13]], ptr [[TMP11]], align 2
 // CHECK3-NEXT:    ret void
 //
