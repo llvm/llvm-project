@@ -5749,6 +5749,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
     StringRef CM = A->getValue();
     bool Ok = false;
+    bool Skip = false;
     if (Triple.isOSAIX() && CM == "medium")
       CM = "large";
     if (Triple.isAArch64(64)) {
@@ -5774,13 +5775,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (Triple.isAMDGPU()) {
       // AMDGPU does not care about the code model.
       Ok = true;
-      // AMDGPU target does not accept CM tiny and kernel.
+      // AMDGPU target ignores CM tiny and kernel.
       if (CM == "tiny" || CM == "kernel") {
+        Skip = true;
         D.Diag(diag::warn_ignored_clang_option)
             << A->getSpelling() << CM << TripleStr;
       }
     }
-    if (Ok) {
+    if (Skip) {
+      // CM option is not propogated further.
+    } else if (Ok) {
       CmdArgs.push_back(Args.MakeArgString("-mcmodel=" + CM));
     } else {
       D.Diag(diag::err_drv_unsupported_option_argument_for_target)
