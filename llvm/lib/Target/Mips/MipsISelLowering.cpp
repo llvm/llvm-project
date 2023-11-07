@@ -3369,7 +3369,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       // Collect CSInfo about which register passes which parameter.
       const TargetOptions &Options = DAG.getTarget().Options;
-      if (Options.SupportsDebugEntryValues)
+      if (Options.EmitCallSiteInfo && Options.SupportsDebugEntryValues)
         CSInfo.emplace_back(VA.getLocReg(), i);
 
       continue;
