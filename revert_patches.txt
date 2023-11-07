@@ -12,3 +12,6 @@ Johannes: breaks 4 sollve tests
    test_target_teams_distribute_reduction_and.c
    test_target_teams_distribute_reduction_multiply.c
 
+Johannes: break 552.pep and 452.ep and above 4 sollve tests
+[OpenMP][NFC] Split the reduction buffer size into two components
+
