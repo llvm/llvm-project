@@ -88,12 +88,22 @@ void LinuxArm64RegisterFlags::UpdateRegisterInfo(const RegisterInfo *reg_info,
       search_registers.push_back({reg.m_name, &reg.m_flags});
   }
 
-  uint32_t idx = 0;
-  for (; idx < num_regs && search_registers.size(); ++idx, ++reg_info) {
+  // Walk register information while there are registers we know need
+  // to be updated. Example:
+  // Register information: [a, b, c, d]
+  // To be patched: [b, c]
+  // * a != b, a != c, do nothing and move on.
+  // * b == b, patch b, new patch list is [c], move on.
+  // * c == c, patch c, patch list is empty, exit early without looking at d.
+  for (uint32_t idx = 0; idx < num_regs && search_registers.size();
+       ++idx, ++reg_info) {
     auto end = search_registers.cend();
     for (auto it = search_registers.cbegin(); it != end; ++it) {
+      // If this register is one that must be patched.
       if (reg_info->name == it->first) {
+        // Attach the field information.
         reg_info->flags_type = it->second;
+        // We do not expect to see this name again, so don't look for it.
         search_registers.erase(it);
         break;
       }
