@@ -63,19 +63,19 @@ int C::a = 4;
 // CHECK-NOT:                                 offset:
 // CHECK-SAME:                                flags: DIFlagStaticMember)
 //
-// CHECK:    ![[CONST_A_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "const_a"
-// CHECK-NOT:                           size:
-// CHECK-NOT:                           align:
-// CHECK-NOT:                           offset:
-// CHECK-SAME:                          flags: DIFlagStaticMember
-// CHECK-NOT:                           extraData:
+// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "const_a"
+// CHECK-NOT:            size:
+// CHECK-NOT:            align:
+// CHECK-NOT:            offset:
+// CHECK-SAME:           flags: DIFlagStaticMember,
+// CHECK-SAME:           extraData: i1 true)
 
-// CHECK:     ![[CONST_B_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "const_b"
-// CHECK-NOT:                            size:
-// CHECK-NOT:                            align:
-// CHECK-NOT:                            offset:
-// CHECK-SAME:                           flags: DIFlagProtected | DIFlagStaticMember
-// CHECK-NOT:                            extraData:
+// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "const_b"
+// CHECK-NOT:            size:
+// CHECK-NOT:            align:
+// CHECK-NOT:            offset:
+// CHECK-SAME:           flags: DIFlagProtected | DIFlagStaticMember,
+// CHECK-SAME:           extraData: float 0x{{.*}})
 
 // CHECK: ![[DECL_C:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "c"
 // CHECK-NOT:                                 size:
@@ -83,12 +83,12 @@ int C::a = 4;
 // CHECK-NOT:                                 offset:
 // CHECK-SAME:                                flags: DIFlagPublic | DIFlagStaticMember)
 //
-// CHECK:     ![[CONST_C_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "const_c"
-// CHECK-NOT:                            size:
-// CHECK-NOT:                            align:
-// CHECK-NOT:                            offset:
-// CHECK-SAME:                           flags: DIFlagPublic | DIFlagStaticMember
-// CHECK-NOT:                            extraData:
+// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "const_c"
+// CHECK-NOT:            size:
+// CHECK-NOT:            align:
+// CHECK-NOT:            offset:
+// CHECK-SAME:           flags: DIFlagPublic | DIFlagStaticMember,
+// CHECK-SAME:           extraData: i32 18)
 //
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "x_a"
 // CHECK-SAME:           flags: DIFlagPublic | DIFlagStaticMember)
@@ -144,7 +144,7 @@ struct V {
 // const_va is not emitted for MS targets.
 // NOT-MS: !DIDerivedType(tag: DW_TAG_member, name: "const_va",
 // NOT-MS-SAME:           line: [[@LINE-5]]
-// NOT-MS-NOT:            extraData:
+// NOT-MS-SAME:           extraData: i32 42
 const int V::const_va;
 
 namespace x {
@@ -156,15 +156,3 @@ struct y {
 };
 int y::z;
 }
-
-// CHECK:      !DIGlobalVariableExpression(var: ![[CONST_A_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 1, DW_OP_stack_value))
-// CHECK:      ![[CONST_A_VAR]] = distinct !DIGlobalVariable(name: "const_a"
-// CHECK-SAME:                    isLocal: true, isDefinition: true, declaration: ![[CONST_A_DECL]])
-
-// CHECK:      !DIGlobalVariableExpression(var: ![[CONST_B_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, {{.*}}, DW_OP_stack_value))
-// CHECK:      ![[CONST_B_VAR]] = distinct !DIGlobalVariable(name: "const_b"
-// CHECK-SAME:                    isLocal: true, isDefinition: true, declaration: ![[CONST_B_DECL]])
-
-// CHECK:      !DIGlobalVariableExpression(var: ![[CONST_C_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 18, DW_OP_stack_value))
-// CHECK:      ![[CONST_C_VAR]] = distinct !DIGlobalVariable(name: "const_c"
-// CHECK-SAME:                    isLocal: true, isDefinition: true, declaration: ![[CONST_C_DECL]])
