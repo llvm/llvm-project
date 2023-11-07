@@ -1272,42 +1272,6 @@ value llvm_const_trunc(value CV, value T) {
 }
 
 /* llvalue -> lltype -> llvalue */
-value llvm_const_fptrunc(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPTrunc(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_fpext(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPExt(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_uitofp(value CV, value T) {
-  LLVMValueRef Value = LLVMConstUIToFP(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_sitofp(value CV, value T) {
-  LLVMValueRef Value = LLVMConstSIToFP(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_fptoui(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPToUI(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_fptosi(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPToSI(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
 value llvm_const_ptrtoint(value CV, value T) {
   LLVMValueRef Value = LLVMConstPtrToInt(Value_val(CV), Type_val(T));
   return to_val(Value);
@@ -1334,12 +1298,6 @@ value llvm_const_trunc_or_bitcast(value CV, value T) {
 /* llvalue -> lltype -> llvalue */
 value llvm_const_pointercast(value CV, value T) {
   LLVMValueRef Value = LLVMConstPointerCast(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_fpcast(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPCast(Value_val(CV), Type_val(T));
   return to_val(Value);
 }
 
