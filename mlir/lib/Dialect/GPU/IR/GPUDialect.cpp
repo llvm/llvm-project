@@ -164,17 +164,20 @@ MMAMatrixType::verify(function_ref<InFlightDiagnostic()> emitError,
 // GPUDialect
 //===----------------------------------------------------------------------===//
 
-/// GPU memory space identifiers.
-enum GPUMemorySpace {
-  /// Generic memory space identifier.
-  kGenericMemorySpace = 0,
+bool GPUDialect::isWorkgroupMemoryAddressSpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return false;
+  if (auto intAttr = llvm::dyn_cast<IntegerAttr>(memorySpace))
+    return intAttr.getInt() == GPUMemorySpace::kSharedMemorySpace;
+  if (auto gpuAttr = llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuAttr.getValue() == getWorkgroupAddressSpace();
+  return false;
+}
 
-  /// Global memory space identifier.
-  kGlobalMemorySpace = 1,
-
-  /// Shared memory space identifier.
-  kSharedMemorySpace = 3
-};
+bool GPUDialect::hasWorkgroupMemoryAddressSpace(MemRefType type) {
+  Attribute memorySpace = type.getMemorySpace();
+  return isWorkgroupMemoryAddressSpace(memorySpace);
+}
 
 bool GPUDialect::isKernel(Operation *op) {
   UnitAttr isKernelAttr = op->getAttrOfType<UnitAttr>(getKernelFuncAttrName());
@@ -2021,6 +2024,24 @@ gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
              << "the target attribute must be a GPU Target attribute";
     }
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DynamicSharedMemoryOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult gpu::DynamicSharedMemoryOp::verify() {
+  MemRefType memrefType = getResultMemref().getType();
+  // Check address space
+  if (!GPUDialect::hasWorkgroupMemoryAddressSpace(memrefType)) {
+    return emitOpError() << "Address space must be "
+                         << gpu::AddressSpaceAttr::getMnemonic() << "<"
+                         << stringifyEnum(gpu::AddressSpace::Workgroup)
+                         << "> or " << int(GPUMemorySpace::kSharedMemorySpace);
+  }
+  if(memrefType.hasStaticShape()) 
+    return emitOpError() << "result memref type must be memref<?xi8>";
   return success();
 }
 
