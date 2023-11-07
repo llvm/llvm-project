@@ -39,7 +39,7 @@ define dso_local i32 @fn1() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[FOR_BODY3_US]] ], [ 0, [[FOR_COND1_PREHEADER_US]] ]
 ; CHECK-NEXT:    [[J_014_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY3_US]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[INDVAR]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = sext i32 [[J_014_US]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = zext nneg i32 [[J_014_US]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw i64 [[TMP8]], [[TMP5]]
 ; CHECK-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[J_014_US]], [[MUL_US]]
 ; CHECK-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[ADD_US]] to i64
