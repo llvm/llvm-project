@@ -1049,6 +1049,9 @@ public:
   }
 };
 
+/// Describes the kind of result that can be tail-allocated.
+enum class ConstantResultStorageKind { None, Int64, APValue };
+
 /// ConstantExpr - An expression that occurs in a constant context and
 /// optionally the result of evaluating the expression.
 class ConstantExpr final
@@ -1061,20 +1064,15 @@ class ConstantExpr final
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
-public:
-  /// Describes the kind of result that can be tail-allocated.
-  enum ResultStorageKind { RSK_None, RSK_Int64, RSK_APValue };
-
-private:
   size_t numTrailingObjects(OverloadToken<APValue>) const {
-    return ConstantExprBits.ResultKind == ConstantExpr::RSK_APValue;
+    return getResultStorageKind() == ConstantResultStorageKind::APValue;
   }
   size_t numTrailingObjects(OverloadToken<uint64_t>) const {
-    return ConstantExprBits.ResultKind == ConstantExpr::RSK_Int64;
+    return getResultStorageKind() == ConstantResultStorageKind::Int64;
   }
 
   uint64_t &Int64Result() {
-    assert(ConstantExprBits.ResultKind == ConstantExpr::RSK_Int64 &&
+    assert(getResultStorageKind() == ConstantResultStorageKind::Int64 &&
            "invalid accessor");
     return *getTrailingObjects<uint64_t>();
   }
@@ -1082,7 +1080,7 @@ private:
     return const_cast<ConstantExpr *>(this)->Int64Result();
   }
   APValue &APValueResult() {
-    assert(ConstantExprBits.ResultKind == ConstantExpr::RSK_APValue &&
+    assert(getResultStorageKind() == ConstantResultStorageKind::APValue &&
            "invalid accessor");
     return *getTrailingObjects<APValue>();
   }
@@ -1090,22 +1088,23 @@ private:
     return const_cast<ConstantExpr *>(this)->APValueResult();
   }
 
-  ConstantExpr(Expr *SubExpr, ResultStorageKind StorageKind,
+  ConstantExpr(Expr *SubExpr, ConstantResultStorageKind StorageKind,
                bool IsImmediateInvocation);
-  ConstantExpr(EmptyShell Empty, ResultStorageKind StorageKind);
+  ConstantExpr(EmptyShell Empty, ConstantResultStorageKind StorageKind);
 
 public:
   static ConstantExpr *Create(const ASTContext &Context, Expr *E,
                               const APValue &Result);
-  static ConstantExpr *Create(const ASTContext &Context, Expr *E,
-                              ResultStorageKind Storage = RSK_None,
-                              bool IsImmediateInvocation = false);
+  static ConstantExpr *
+  Create(const ASTContext &Context, Expr *E,
+         ConstantResultStorageKind Storage = ConstantResultStorageKind::None,
+         bool IsImmediateInvocation = false);
   static ConstantExpr *CreateEmpty(const ASTContext &Context,
-                                   ResultStorageKind StorageKind);
+                                   ConstantResultStorageKind StorageKind);
 
-  static ResultStorageKind getStorageKind(const APValue &Value);
-  static ResultStorageKind getStorageKind(const Type *T,
-                                          const ASTContext &Context);
+  static ConstantResultStorageKind getStorageKind(const APValue &Value);
+  static ConstantResultStorageKind getStorageKind(const Type *T,
+                                                  const ASTContext &Context);
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return SubExpr->getBeginLoc();
@@ -1126,8 +1125,8 @@ public:
   APValue::ValueKind getResultAPValueKind() const {
     return static_cast<APValue::ValueKind>(ConstantExprBits.APValueKind);
   }
-  ResultStorageKind getResultStorageKind() const {
-    return static_cast<ResultStorageKind>(ConstantExprBits.ResultKind);
+  ConstantResultStorageKind getResultStorageKind() const {
+    return static_cast<ConstantResultStorageKind>(ConstantExprBits.ResultKind);
   }
   bool isImmediateInvocation() const {
     return ConstantExprBits.IsImmediateInvocation;
