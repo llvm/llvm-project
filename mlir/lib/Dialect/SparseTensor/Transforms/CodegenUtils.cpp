@@ -633,8 +633,8 @@ void sparse_tensor::fillDimShape(OpBuilder &builder, Location loc,
                                  SmallVectorImpl<Value> &out) {
   out.clear();
   out.reserve(stt.getDimRank());
-  for (const Size sh : stt.getDimShape()) {
-    const auto s = ShapedType::isDynamic(sh) ? 0 : sh;
+  for (const Size sz : stt.getDimShape()) {
+    const auto s = ShapedType::isDynamic(sz) ? 0 : sz;
     out.push_back(constantIndex(builder, loc, s));
   }
 }
