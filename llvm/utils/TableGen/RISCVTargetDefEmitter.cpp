@@ -60,7 +60,7 @@ static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     if (MArch.empty())
       MArch = getMArch(*Rec);
 
-    bool FastUnalignedAccess =
+    const bool FastUnalignedAccess =
         any_of(Rec->getValueAsListOfDefs("Features"), [&](auto &Feature) {
           return Feature->getValueAsString("Name") == "unaligned-scalar-mem";
         });
