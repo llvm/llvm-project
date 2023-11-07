@@ -953,7 +953,6 @@ OptionalFileEntryRef Preprocessor::LookupFile(
 
   Module *RequestingModule = getModuleForLocation(
       FilenameLoc, LangOpts.ModulesValidateTextualHeaderIncludes);
-  bool RequestingModuleIsModuleInterface = !SourceMgr.isInMainFile(FilenameLoc);
 
   // If the header lookup mechanism may be relative to the current inclusion
   // stack, record the parent #includes.
@@ -1029,13 +1028,8 @@ OptionalFileEntryRef Preprocessor::LookupFile(
       Filename, FilenameLoc, isAngled, FromDir, &CurDir, Includers, SearchPath,
       RelativePath, RequestingModule, SuggestedModule, IsMapped,
       IsFrameworkFound, SkipCache, BuildSystemModule, OpenFile, CacheFailures);
-  if (FE) {
-    if (SuggestedModule && !LangOpts.AsmPreprocessor)
-      HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
-          RequestingModule, RequestingModuleIsModuleInterface, FilenameLoc,
-          Filename, *FE);
+  if (FE)
     return FE;
-  }
 
   const FileEntry *CurFileEnt;
   // Otherwise, see if this is a subframework header.  If so, this is relative
@@ -1046,10 +1040,6 @@ OptionalFileEntryRef Preprocessor::LookupFile(
       if (OptionalFileEntryRef FE = HeaderInfo.LookupSubframeworkHeader(
               Filename, CurFileEnt, SearchPath, RelativePath, RequestingModule,
               SuggestedModule)) {
-        if (SuggestedModule && !LangOpts.AsmPreprocessor)
-          HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
-              RequestingModule, RequestingModuleIsModuleInterface, FilenameLoc,
-              Filename, *FE);
         return FE;
       }
     }
@@ -1061,10 +1051,6 @@ OptionalFileEntryRef Preprocessor::LookupFile(
         if (OptionalFileEntryRef FE = HeaderInfo.LookupSubframeworkHeader(
                 Filename, CurFileEnt, SearchPath, RelativePath,
                 RequestingModule, SuggestedModule)) {
-          if (SuggestedModule && !LangOpts.AsmPreprocessor)
-            HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
-                RequestingModule, RequestingModuleIsModuleInterface,
-                FilenameLoc, Filename, *FE);
           return FE;
         }
       }
@@ -2093,12 +2079,28 @@ OptionalFileEntryRef Preprocessor::LookupHeaderIncludeOrImport(
     const FileEntry *LookupFromFile, StringRef &LookupFilename,
     SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
     ModuleMap::KnownHeader &SuggestedModule, bool isAngled) {
+  auto DiagnoseHeaderInclusion = [&](FileEntryRef FE) {
+    if (LangOpts.AsmPreprocessor)
+      return;
+
+    Module *RequestingModule = getModuleForLocation(
+        FilenameLoc, LangOpts.ModulesValidateTextualHeaderIncludes);
+    bool RequestingModuleIsModuleInterface =
+        !SourceMgr.isInMainFile(FilenameLoc);
+
+    HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
+        RequestingModule, RequestingModuleIsModuleInterface, FilenameLoc,
+        Filename, FE);
+  };
+
   OptionalFileEntryRef File = LookupFile(
       FilenameLoc, LookupFilename, isAngled, LookupFrom, LookupFromFile, CurDir,
       Callbacks ? &SearchPath : nullptr, Callbacks ? &RelativePath : nullptr,
       &SuggestedModule, &IsMapped, &IsFrameworkFound);
-  if (File)
+  if (File) {
+    DiagnoseHeaderInclusion(*File);
     return File;
+  }
 
   // Give the clients a chance to silently skip this include.
   if (Callbacks && Callbacks->FileNotFound(Filename))
@@ -2117,6 +2119,7 @@ OptionalFileEntryRef Preprocessor::LookupHeaderIncludeOrImport(
         &SuggestedModule, &IsMapped,
         /*IsFrameworkFound=*/nullptr);
     if (File) {
+      DiagnoseHeaderInclusion(*File);
       Diag(FilenameTok, diag::err_pp_file_not_found_angled_include_not_fatal)
           << Filename << IsImportDecl
           << FixItHint::CreateReplacement(FilenameRange,
@@ -2147,6 +2150,7 @@ OptionalFileEntryRef Preprocessor::LookupHeaderIncludeOrImport(
         Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped,
         /*IsFrameworkFound=*/nullptr);
     if (File) {
+      DiagnoseHeaderInclusion(*File);
       auto Hint =
           isAngled ? FixItHint::CreateReplacement(
                          FilenameRange, "<" + TypoCorrectionName.str() + ">")
