@@ -30,7 +30,7 @@ int taintDiagnosticOutOfBound(void) {
   scanf("%d", &index); // expected-note {{Taint originated here}}
                        // expected-note@-1 {{Taint propagated to the 2nd argument}}
   return Array[index]; // expected-warning {{Potential out of bound access to 'Array' with tainted offset}}
-                       // expected-note@-1 {{Access of 'Array' with a tainted offset that may be too large}}
+                       // expected-note@-1 {{Access of 'Array' with a tainted offset that may be out of bounds}}
 }
 
 int taintDiagnosticDivZero(int operand) {

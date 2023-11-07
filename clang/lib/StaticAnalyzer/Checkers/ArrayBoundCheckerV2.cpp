@@ -279,7 +279,7 @@ static std::string getTaintMsg(std::string RegName) {
   SmallString<128> Buf;
   llvm::raw_svector_ostream Out(Buf);
   Out << "Access of " << RegName
-      << " with a tainted offset that may be too large";
+      << " with a tainted offset that may be out of bounds";
   return std::string(Buf);
 }
 

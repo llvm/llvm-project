@@ -18,7 +18,7 @@ void taintedIndex(void) {
   // expected-note@-2 {{Taint propagated to the 2nd argument}}
   array[index] = 5;
   // expected-warning@-1 {{Potential out of bound access to 'array' with tainted offset}}
-  // expected-note@-2 {{Access of 'array' with a tainted offset that may be too large}}
+  // expected-note@-2 {{Access of 'array' with a tainted offset that may be out of bounds}}
 }
 
 void arrayOverflow(void) {
