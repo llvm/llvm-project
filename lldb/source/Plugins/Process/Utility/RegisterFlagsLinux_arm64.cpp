@@ -80,7 +80,8 @@ void LinuxArm64RegisterFlags::UpdateRegisterInfo(const RegisterInfo *reg_info,
   // Register names will not be duplicated, so we do not want to compare against
   // one if it has already been found. Each time we find one, we erase it from
   // this list.
-  std::vector<std::pair<llvm::StringRef, const RegisterFlags *>> search_registers;
+  std::vector<std::pair<llvm::StringRef, const RegisterFlags *>>
+      search_registers;
   for (const auto &reg : m_registers) {
     // It is possible that a register is all extension dependent fields, and
     // none of them are present.
