@@ -14,11 +14,14 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include <algorithm>
 #include <optional>
+#include <set>
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -182,4 +185,70 @@ void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
     printer << operand;
     i++;
   });
+}
+
+//===----------------------------------------------------------------------===//
+// TargetFeaturesAttr
+//===----------------------------------------------------------------------===//
+
+Attribute TargetFeaturesAttr::parse(mlir::AsmParser &parser, mlir::Type) {
+  std::string targetFeatures;
+  if (parser.parseLess() || parser.parseString(&targetFeatures) ||
+      parser.parseGreater())
+    return {};
+  return get(parser.getContext(), targetFeatures);
+}
+
+void TargetFeaturesAttr::print(mlir::AsmPrinter &printer) const {
+  printer << "<\"";
+  llvm::interleave(
+      getFeatures(), printer,
+      [&](auto &feature) { printer << StringRef(feature); }, ",");
+  printer << "\">";
+}
+
+TargetFeaturesAttr
+TargetFeaturesAttr::get(MLIRContext *context,
+                        llvm::ArrayRef<TargetFeature> featuresRef) {
+  // Sort and de-duplicate target features.
+  std::set<TargetFeature> features(featuresRef.begin(), featuresRef.end());
+  return Base::get(context, llvm::to_vector(features));
+}
+
+TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
+                                           StringRef targetFeatures) {
+  SmallVector<StringRef> features;
+  StringRef{targetFeatures}.split(features, ',', /*MaxSplit=*/-1,
+                                  /*KeepEmpty=*/false);
+  return get(context, llvm::map_to_vector(features, [](StringRef feature) {
+               return TargetFeature{feature};
+             }));
+}
+
+bool TargetFeaturesAttr::contains(TargetFeature feature) const {
+  if (!bool(*this))
+    return false; // Allows checking null target features.
+  ArrayRef<TargetFeature> features = getFeatures();
+  // Note: The attribute getter ensures the feature list is sorted.
+  return std::binary_search(features.begin(), features.end(), feature);
+}
+
+std::string TargetFeaturesAttr::getFeaturesString() const {
+  std::string features;
+  bool first = true;
+  for (TargetFeature feature : getFeatures()) {
+    if (!first)
+      features += ",";
+    features += StringRef(feature);
+    first = false;
+  }
+  return features;
+}
+
+TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
+  auto parentFunction = op->getParentOfType<FunctionOpInterface>();
+  if (!parentFunction)
+    return {};
+  return parentFunction.getOperation()->getAttrOfType<TargetFeaturesAttr>(
+      "target_features");
 }

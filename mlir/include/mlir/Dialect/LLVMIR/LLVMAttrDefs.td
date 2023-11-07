@@ -933,4 +933,57 @@ def LLVM_VScaleRangeAttr : LLVM_Attr<"VScaleRange", "vscale_range"> {
     "IntegerAttr":$maxRange);
   let assemblyFormat = "`<` struct(params) `>`";
 }
+
+//===----------------------------------------------------------------------===//
+// TargetFeaturesAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features"> {
+  let summary = "LLVM target features attribute";
+
+  let description = [{
+    Represents the LLVM target features in a manner that is efficient to query.
+
+    Example:
+    ```mlir
+    #llvm.target_features<"+sme,+sve,+sme-f64f64">
+    ```
+
+    Then within a pass or rewrite the features active at an op can be queried:
+
+    ```c++
+    auto targetFeatures = LLVM::TargetFeaturesAttr::featuresAt(op);
+
+    if (!targetFeatures.contains("+sme-f64f64"))
+      return failure();
+    ```
+  }];
+
+  let parameters = (ins
+    ArrayRefOfSelfAllocationParameter<"TargetFeature", "">: $features);
+
+  let builders = [
+    TypeBuilder<(ins "::llvm::ArrayRef<TargetFeature>": $features)>,
+    TypeBuilder<(ins "StringRef": $features)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Checks if a feature is contained within the features list.
+    bool contains(TargetFeature) const;
+    bool contains(StringRef feature) const {
+      return contains(TargetFeature{feature});
+    }
+
+    /// Returns the list of features as an LLVM-compatible string.
+    std::string getFeaturesString() const;
+
+    /// Finds the target features on the parent FunctionOpInterface.
+    /// Note: This assumes the attribute is called "target_features".
+    static TargetFeaturesAttr featuresAt(Operation* op);
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let skipDefaultBuilders = 1;
+}
+
 #endif // LLVMIR_ATTRDEFS
