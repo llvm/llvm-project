@@ -2040,7 +2040,7 @@ LogicalResult gpu::DynamicSharedMemoryOp::verify() {
                          << stringifyEnum(gpu::AddressSpace::Workgroup)
                          << "> or " << int(GPUMemorySpace::kSharedMemorySpace);
   }
-  if(memrefType.hasStaticShape()) 
+  if (memrefType.hasStaticShape())
     return emitOpError() << "result memref type must be memref<?xi8>";
   return success();
 }
