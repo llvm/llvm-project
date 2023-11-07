@@ -5776,7 +5776,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       Ok = true;
       // AMDGPU target does not accept CM tiny and kernel.
       if (CM == "tiny" || CM == "kernel") {
-        D.Diag(diag::warn_ignored_clang_option) << A->getSpelling() << CM << TripleStr;
+        D.Diag(diag::warn_ignored_clang_option)
+            << A->getSpelling() << CM << TripleStr;
       }
     }
     if (Ok) {
