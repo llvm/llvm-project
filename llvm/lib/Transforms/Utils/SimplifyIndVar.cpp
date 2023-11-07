@@ -1383,32 +1383,33 @@ WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
       DU.NarrowUse->getOperand(0) == DU.NarrowDef ? 1 : 0;
   assert(DU.NarrowUse->getOperand(1-ExtendOperIdx) == DU.NarrowDef && "bad DU");
 
-  const SCEV *ExtendOperExpr = nullptr;
   const OverflowingBinaryOperator *OBO =
     cast<OverflowingBinaryOperator>(DU.NarrowUse);
   ExtendKind ExtKind = getExtendKind(DU.NarrowDef);
-  if (ExtKind == ExtendKind::Sign && OBO->hasNoSignedWrap())
-    ExtendOperExpr = SE->getSignExtendExpr(
-      SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
-  else if (ExtKind == ExtendKind::Zero && OBO->hasNoUnsignedWrap())
-    ExtendOperExpr = SE->getZeroExtendExpr(
-      SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
-  else if (DU.NeverNegative) {
+  if (!(ExtKind == ExtendKind::Sign && OBO->hasNoSignedWrap()) &&
+      !(ExtKind == ExtendKind::Zero && OBO->hasNoUnsignedWrap())) {
+    ExtKind = ExtendKind::Unknown;
+
     // For a non-negative NarrowDef, we can choose either type of
     // extension.  We want to use the current extend kind if legal
     // (see above), and we only hit this code if we need to check
     // the opposite case.
-    if (OBO->hasNoSignedWrap()) {
-      ExtKind = ExtendKind::Sign;
-      ExtendOperExpr = SE->getSignExtendExpr(
-        SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
-    } else if (OBO->hasNoUnsignedWrap()) {
-      ExtKind = ExtendKind::Zero;
-      ExtendOperExpr = SE->getZeroExtendExpr(
-        SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
-    } else
-      return {nullptr, ExtendKind::Unknown};
-  } else
+    if (DU.NeverNegative) {
+      if (OBO->hasNoSignedWrap()) {
+        ExtKind = ExtendKind::Sign;
+      } else if (OBO->hasNoUnsignedWrap()) {
+        ExtKind = ExtendKind::Zero;
+      }
+    }
+  }
+
+  const SCEV *ExtendOperExpr =
+      SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx));
+  if (ExtKind == ExtendKind::Sign)
+    ExtendOperExpr = SE->getSignExtendExpr(ExtendOperExpr, WideType);
+  else if (ExtKind == ExtendKind::Zero)
+    ExtendOperExpr = SE->getZeroExtendExpr(ExtendOperExpr, WideType);
+  else
     return {nullptr, ExtendKind::Unknown};
 
   // When creating this SCEV expr, don't apply the current operations NSW or NUW
