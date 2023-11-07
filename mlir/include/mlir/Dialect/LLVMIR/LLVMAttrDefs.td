@@ -960,11 +960,11 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features"> {
   }];
 
   let parameters = (ins
-    ArrayRefOfSelfAllocationParameter<"TargetFeature", "">: $features);
+    ArrayRefOfSelfAllocationParameter<"TargetFeature", "">:$features);
 
   let builders = [
-    TypeBuilder<(ins "::llvm::ArrayRef<TargetFeature>": $features)>,
-    TypeBuilder<(ins "StringRef": $features)>
+    TypeBuilder<(ins "::llvm::ArrayRef<TargetFeature>":$features)>,
+    TypeBuilder<(ins "::llvm::StringRef":$features)>
   ];
 
   let extraClassDeclaration = [{
@@ -980,6 +980,11 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features"> {
     /// Finds the target features on the parent FunctionOpInterface.
     /// Note: This assumes the attribute is called "target_features".
     static TargetFeaturesAttr featuresAt(Operation* op);
+
+    /// Canonical name for this attribute within MLIR.
+    static constexpr StringLiteral attributeName() {
+      return StringLiteral("target_features");
+    }
   }];
 
   let hasCustomAssemblyFormat = 1;

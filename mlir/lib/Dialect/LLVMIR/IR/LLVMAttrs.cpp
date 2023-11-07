@@ -218,8 +218,8 @@ TargetFeaturesAttr::get(MLIRContext *context,
 TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
                                            StringRef targetFeatures) {
   SmallVector<StringRef> features;
-  StringRef{targetFeatures}.split(features, ',', /*MaxSplit=*/-1,
-                                  /*KeepEmpty=*/false);
+  targetFeatures.split(features, ',', /*MaxSplit=*/-1,
+                       /*KeepEmpty=*/false);
   return get(context, llvm::map_to_vector(features, [](StringRef feature) {
                return TargetFeature{feature};
              }));
@@ -234,15 +234,11 @@ bool TargetFeaturesAttr::contains(TargetFeature feature) const {
 }
 
 std::string TargetFeaturesAttr::getFeaturesString() const {
-  std::string features;
-  bool first = true;
-  for (TargetFeature feature : getFeatures()) {
-    if (!first)
-      features += ",";
-    features += StringRef(feature);
-    first = false;
-  }
-  return features;
+  std::string featuresString;
+  llvm::raw_string_ostream ss(featuresString);
+  llvm::interleave(
+      getFeatures(), ss, [&](auto &feature) { ss << StringRef(feature); }, ",");
+  return ss.str();
 }
 
 TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
@@ -250,5 +246,5 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
   if (!parentFunction)
     return {};
   return parentFunction.getOperation()->getAttrOfType<TargetFeaturesAttr>(
-      "target_features");
+      attributeName());
 }
