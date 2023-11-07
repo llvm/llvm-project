@@ -302,7 +302,16 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   } else if (!args.hasArg(OPT_strip_all)) {
     add("-debug:dwarf");
   }
-  add(args.hasArg(OPT_no_build_id) ? "-build-id:no" : "-build-id");
+  if (auto *a = args.getLastArg(OPT_build_id)) {
+    StringRef v = a->getValue();
+    if (v == "none")
+      add("-build-id:no");
+    else if (v.empty())
+      add("-build-id");
+    else
+      warn("unsupported build id hashing: " + a->getSpelling());
+  } else
+    add("-build-id");
 
   if (args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false))
     add("-WX");
