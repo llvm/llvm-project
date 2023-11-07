@@ -29,6 +29,13 @@ public:
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) override;
 
+  llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const override {
+    return llvm::SmallVector<llvm::StringLiteral>({"get_thread_info"
+                                                   "get_register_data",
+                                                   "get_stop_reason",
+                                                   "get_register_context"});
+  }
+
   StructuredData::DictionarySP CreateThread(lldb::tid_t tid,
                                             lldb::addr_t context) override;
 
