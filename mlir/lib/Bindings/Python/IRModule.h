@@ -1110,6 +1110,9 @@ public:
 /// bindings so such operation always exists).
 class PyValue {
 public:
+  // The virtual here is "load bearing" in that it enables RTTI
+  // for PyConcreteValue CRTP classes that support maybeDownCast.
+  // See PyValue::maybeDownCast.
   virtual ~PyValue() = default;
   PyValue(PyOperationRef parentOperation, MlirValue value)
       : parentOperation(std::move(parentOperation)), value(value) {}
