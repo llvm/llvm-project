@@ -28,33 +28,33 @@ template <typename T> struct PointerLikeTypeTraits;
 namespace detail {
 /// A tiny meta function to compute the log2 of a compile time constant.
 template <size_t N>
-struct ConstantLog2
+struct LLVM_CLASS_ABI ConstantLog2
     : std::integral_constant<size_t, ConstantLog2<N / 2>::value + 1> {};
-template <> struct ConstantLog2<1> : std::integral_constant<size_t, 0> {};
+template <> struct LLVM_CLASS_ABI ConstantLog2<1> : std::integral_constant<size_t, 0> {};
 
 // Provide a trait to check if T is pointer-like.
-template <typename T, typename U = void> struct HasPointerLikeTypeTraits {
+template <typename T, typename U = void> struct LLVM_CLASS_ABI HasPointerLikeTypeTraits {
   static const bool value = false;
 };
 
 // sizeof(T) is valid only for a complete T.
 template <typename T>
-struct HasPointerLikeTypeTraits<
+struct LLVM_CLASS_ABI HasPointerLikeTypeTraits<
     T, decltype((sizeof(PointerLikeTypeTraits<T>) + sizeof(T)), void())> {
   static const bool value = true;
 };
 
-template <typename T> struct IsPointerLike {
+template <typename T> struct LLVM_CLASS_ABI IsPointerLike {
   static const bool value = HasPointerLikeTypeTraits<T>::value;
 };
 
-template <typename T> struct IsPointerLike<T *> {
+template <typename T> struct LLVM_CLASS_ABI IsPointerLike<T *> {
   static const bool value = true;
 };
 } // namespace detail
 
 // Provide PointerLikeTypeTraits for non-cvr pointers.
-template <typename T> struct PointerLikeTypeTraits<T *> {
+template <typename T> struct LLVM_CLASS_ABI PointerLikeTypeTraits<T *> {
   static inline void *getAsVoidPointer(T *P) { return P; }
   static inline T *getFromVoidPointer(void *P) { return static_cast<T *>(P); }
 
@@ -62,7 +62,7 @@ template <typename T> struct PointerLikeTypeTraits<T *> {
       detail::ConstantLog2<alignof(T)>::value;
 };
 
-template <> struct PointerLikeTypeTraits<void *> {
+template <> struct LLVM_CLASS_ABI PointerLikeTypeTraits<void *> {
   static inline void *getAsVoidPointer(void *P) { return P; }
   static inline void *getFromVoidPointer(void *P) { return P; }
 
@@ -77,7 +77,7 @@ template <> struct PointerLikeTypeTraits<void *> {
 };
 
 // Provide PointerLikeTypeTraits for const things.
-template <typename T> struct PointerLikeTypeTraits<const T> {
+template <typename T> struct LLVM_CLASS_ABI PointerLikeTypeTraits<const T> {
   typedef PointerLikeTypeTraits<T> NonConst;
 
   static inline const void *getAsVoidPointer(const T P) {
@@ -90,7 +90,7 @@ template <typename T> struct PointerLikeTypeTraits<const T> {
 };
 
 // Provide PointerLikeTypeTraits for const pointers.
-template <typename T> struct PointerLikeTypeTraits<const T *> {
+template <typename T> struct LLVM_CLASS_ABI PointerLikeTypeTraits<const T *> {
   typedef PointerLikeTypeTraits<T *> NonConst;
 
   static inline const void *getAsVoidPointer(const T *P) {
@@ -103,7 +103,7 @@ template <typename T> struct PointerLikeTypeTraits<const T *> {
 };
 
 // Provide PointerLikeTypeTraits for uintptr_t.
-template <> struct PointerLikeTypeTraits<uintptr_t> {
+template <> struct LLVM_CLASS_ABI PointerLikeTypeTraits<uintptr_t> {
   static inline void *getAsVoidPointer(uintptr_t P) {
     return reinterpret_cast<void *>(P);
   }
@@ -123,7 +123,7 @@ template <> struct PointerLikeTypeTraits<uintptr_t> {
 /// customized form of this template explicitly with higher alignment, and
 /// potentially use alignment attributes on functions to satisfy that.
 template <int Alignment, typename FunctionPointerT>
-struct FunctionPointerLikeTypeTraits {
+struct LLVM_CLASS_ABI FunctionPointerLikeTypeTraits {
   static constexpr int NumLowBitsAvailable =
       detail::ConstantLog2<Alignment>::value;
   static inline void *getAsVoidPointer(FunctionPointerT P) {
@@ -145,7 +145,7 @@ struct FunctionPointerLikeTypeTraits {
 /// with weird unaligned function pointers won't work. But all practical systems
 /// we support satisfy this requirement.
 template <typename ReturnT, typename... ParamTs>
-struct PointerLikeTypeTraits<ReturnT (*)(ParamTs...)>
+struct LLVM_CLASS_ABI PointerLikeTypeTraits<ReturnT (*)(ParamTs...)>
     : FunctionPointerLikeTypeTraits<4, ReturnT (*)(ParamTs...)> {};
 
 } // end namespace llvm

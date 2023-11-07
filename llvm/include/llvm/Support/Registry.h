@@ -24,7 +24,7 @@ namespace llvm {
   /// A simple registry entry which provides only a name, description, and
   /// no-argument constructor.
   template <typename T>
-  class SimpleRegistryEntry {
+  class LLVM_CLASS_ABI SimpleRegistryEntry {
     StringRef Name, Desc;
     std::unique_ptr<T> (*Ctor)();
 
@@ -41,7 +41,7 @@ namespace llvm {
   /// pluggable components (like targets or garbage collectors) "just work" when
   /// linked with an executable.
   template <typename T>
-  class Registry {
+  class LLVM_CLASS_ABI Registry {
   public:
     typedef T type;
     typedef SimpleRegistryEntry<T> entry;

@@ -24,7 +24,7 @@ namespace dwarflinker_parallel {
 /// and a string body which is placed right after StringEntry.
 using StringEntry = StringMapEntry<std::nullopt_t>;
 
-class StringPoolEntryInfo {
+class LLVM_CLASS_ABI StringPoolEntryInfo {
 public:
   /// \returns Hash value for the specified \p Key.
   static inline uint64_t getHashValue(const StringRef &Key) {
@@ -48,7 +48,7 @@ public:
   }
 };
 
-class StringPool
+class LLVM_CLASS_ABI StringPool
     : public ConcurrentHashTableByPtr<StringRef, StringEntry,
                                       parallel::PerThreadBumpPtrAllocator,
                                       StringPoolEntryInfo> {

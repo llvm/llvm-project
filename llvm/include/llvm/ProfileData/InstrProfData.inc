@@ -308,7 +308,7 @@ INSTR_PROF_SECT_ENTRY(IPSK_orderfile, \
  * This is the header of the data structure that defines the on-disk
  * layout of the value profile data of a particular kind for one function.
  */
-typedef struct ValueProfRecord {
+typedef struct LLVM_CLASS_ABI ValueProfRecord {
   /* The kind of the value profile record. */
   uint32_t Kind;
   /*
@@ -358,7 +358,7 @@ typedef struct ValueProfRecord {
  * Per-function header/control data structure for value profiling
  * data in indexed format.
  */
-typedef struct ValueProfData {
+typedef struct LLVM_CLASS_ABI ValueProfData {
   /*
    * Total size in bytes including this field. It must be a multiple
    * of sizeof(uint64_t).
@@ -441,7 +441,7 @@ typedef struct ValueProfData {
  * For documentation of the member methods below, refer to corresponding methods
  * in class InstrProfRecord.
  */
-typedef struct ValueProfRecordClosure {
+typedef struct LLVM_CLASS_ABI ValueProfRecordClosure {
   const void *Record;
   uint32_t (*GetNumValueKinds)(const void *Record);
   uint32_t (*GetNumValueSites)(const void *Record, uint32_t VKind);
@@ -459,13 +459,13 @@ typedef struct ValueProfRecordClosure {
   ValueProfData *(*AllocValueProfData)(size_t TotalSizeInBytes);
 } ValueProfRecordClosure;
 
-INSTR_PROF_VISIBILITY ValueProfRecord *
+INSTR_PROF_VISIBILITY LLVM_FUNC_ABI ValueProfRecord *
 getFirstValueProfRecord(ValueProfData *VPD);
-INSTR_PROF_VISIBILITY ValueProfRecord *
+INSTR_PROF_VISIBILITY LLVM_FUNC_ABI ValueProfRecord *
 getValueProfRecordNext(ValueProfRecord *VPR);
-INSTR_PROF_VISIBILITY InstrProfValueData *
+INSTR_PROF_VISIBILITY LLVM_FUNC_ABI InstrProfValueData *
 getValueProfRecordValueData(ValueProfRecord *VPR);
-INSTR_PROF_VISIBILITY uint32_t
+INSTR_PROF_VISIBILITY LLVM_FUNC_ABI uint32_t
 getValueProfRecordHeaderSize(uint32_t NumValueSites);
 
 #undef INSTR_PROF_VALUE_PROF_DATA
@@ -780,7 +780,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* The data structure that represents a tracked value by the
  * value profiler.
  */
-typedef struct InstrProfValueData {
+typedef struct LLVM_CLASS_ABI InstrProfValueData {
   /* Profiled value. */
   uint64_t Value;
   /* Number of times the value appears in the training run. */

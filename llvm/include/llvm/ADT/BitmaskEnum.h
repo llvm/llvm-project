@@ -96,10 +96,10 @@ namespace llvm {
 /// Traits class to determine whether an enum has a
 /// LLVM_BITMASK_LARGEST_ENUMERATOR enumerator.
 template <typename E, typename Enable = void>
-struct is_bitmask_enum : std::false_type {};
+struct LLVM_CLASS_ABI is_bitmask_enum : std::false_type {};
 
 template <typename E>
-struct is_bitmask_enum<
+struct LLVM_CLASS_ABI is_bitmask_enum<
     E, std::enable_if_t<sizeof(E::LLVM_BITMASK_LARGEST_ENUMERATOR) >= 0>>
     : std::true_type {};
 
@@ -107,7 +107,7 @@ struct is_bitmask_enum<
 template <typename E, typename Enable = void> struct largest_bitmask_enum_bit;
 
 template <typename E>
-struct largest_bitmask_enum_bit<
+struct LLVM_CLASS_ABI largest_bitmask_enum_bit<
     E, std::enable_if_t<sizeof(E::LLVM_BITMASK_LARGEST_ENUMERATOR) >= 0>> {
   using UnderlyingTy = std::underlying_type_t<E>;
   static constexpr UnderlyingTy value =

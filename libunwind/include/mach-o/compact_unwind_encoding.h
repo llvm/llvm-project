@@ -406,7 +406,7 @@ enum {
 //
 
 #define UNWIND_SECTION_VERSION 1
-struct unwind_info_section_header
+struct LLVM_CLASS_ABI unwind_info_section_header
 {
     uint32_t    version;            // UNWIND_SECTION_VERSION
     uint32_t    commonEncodingsArraySectionOffset;
@@ -421,14 +421,14 @@ struct unwind_info_section_header
     // unwind_info_section_header_lsda_index_entry[]
 };
 
-struct unwind_info_section_header_index_entry
+struct LLVM_CLASS_ABI unwind_info_section_header_index_entry
 {
     uint32_t        functionOffset;
     uint32_t        secondLevelPagesSectionOffset;  // section offset to start of regular or compress page
     uint32_t        lsdaIndexArraySectionOffset;    // section offset to start of lsda_index array for this range
 };
 
-struct unwind_info_section_header_lsda_index_entry
+struct LLVM_CLASS_ABI unwind_info_section_header_lsda_index_entry
 {
     uint32_t        functionOffset;
     uint32_t        lsdaOffset;
@@ -441,14 +441,14 @@ struct unwind_info_section_header_lsda_index_entry
 // 511 entries.
 //
 
-struct unwind_info_regular_second_level_entry
+struct LLVM_CLASS_ABI unwind_info_regular_second_level_entry
 {
     uint32_t                    functionOffset;
     compact_unwind_encoding_t    encoding;
 };
 
 #define UNWIND_SECOND_LEVEL_REGULAR 2
-struct unwind_info_regular_second_level_page_header
+struct LLVM_CLASS_ABI unwind_info_regular_second_level_page_header
 {
     uint32_t    kind;    // UNWIND_SECOND_LEVEL_REGULAR
     uint16_t    entryPageOffset;
@@ -457,7 +457,7 @@ struct unwind_info_regular_second_level_page_header
 };
 
 #define UNWIND_SECOND_LEVEL_COMPRESSED 3
-struct unwind_info_compressed_second_level_page_header
+struct LLVM_CLASS_ABI unwind_info_compressed_second_level_page_header
 {
     uint32_t    kind;    // UNWIND_SECOND_LEVEL_COMPRESSED
     uint16_t    entryPageOffset;

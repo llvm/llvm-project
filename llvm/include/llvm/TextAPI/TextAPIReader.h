@@ -21,7 +21,7 @@ namespace MachO {
 class InterfaceFile;
 enum FileType : unsigned;
 
-class TextAPIReader {
+class LLVM_CLASS_ABI TextAPIReader {
 public:
   ///  Determine whether input can be interpreted as TAPI text file.
   ///  This allows one to exit early when file is not recognized as TAPI file

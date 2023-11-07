@@ -20,7 +20,7 @@ namespace llvm {
 namespace sys {
 
 /// Represents a closed range of Unicode code points [Lower, Upper].
-struct UnicodeCharRange {
+struct LLVM_CLASS_ABI UnicodeCharRange {
   uint32_t Lower;
   uint32_t Upper;
 };
@@ -35,7 +35,7 @@ inline bool operator<(UnicodeCharRange Range, uint32_t Value) {
 /// Holds a reference to an ordered array of UnicodeCharRange and allows
 /// to quickly check if a code point is contained in the set represented by this
 /// array.
-class UnicodeCharSet {
+class LLVM_CLASS_ABI UnicodeCharSet {
 public:
   typedef ArrayRef<UnicodeCharRange> CharRanges;
 

@@ -25,7 +25,7 @@ namespace llvm {
 /// IsInternalRead markers to MachineOperands which are defined inside the
 /// bundle, and it copies externally visible defs and uses to the BUNDLE
 /// instruction.
-void finalizeBundle(MachineBasicBlock &MBB,
+LLVM_FUNC_ABI void finalizeBundle(MachineBasicBlock &MBB,
                     MachineBasicBlock::instr_iterator FirstMI,
                     MachineBasicBlock::instr_iterator LastMI);
 
@@ -34,12 +34,12 @@ void finalizeBundle(MachineBasicBlock &MBB,
 /// used in cases where bundles are pre-determined by marking instructions
 /// with 'InsideBundle' marker. It returns the MBB instruction iterator that
 /// points to the end of the bundle.
-MachineBasicBlock::instr_iterator finalizeBundle(MachineBasicBlock &MBB,
+LLVM_FUNC_ABI MachineBasicBlock::instr_iterator finalizeBundle(MachineBasicBlock &MBB,
                     MachineBasicBlock::instr_iterator FirstMI);
 
 /// finalizeBundles - Finalize instruction bundles in the specified
 /// MachineFunction. Return true if any bundles are finalized.
-bool finalizeBundles(MachineFunction &MF);
+LLVM_FUNC_ABI bool finalizeBundles(MachineFunction &MF);
 
 /// Returns an iterator to the first instruction in the bundle containing \p I.
 inline MachineBasicBlock::instr_iterator getBundleStart(
@@ -92,7 +92,7 @@ inline MachineBasicBlock::const_instr_iterator getBundleEnd(
 ///   }
 ///
 template <typename ValueT>
-class MIBundleOperandIteratorBase
+class LLVM_CLASS_ABI MIBundleOperandIteratorBase
     : public iterator_facade_base<MIBundleOperandIteratorBase<ValueT>,
                                   std::forward_iterator_tag, ValueT> {
   MachineBasicBlock::instr_iterator InstrI, InstrE;
@@ -164,7 +164,7 @@ public:
 /// MIBundleOperands - Iterate over all operands in a bundle of machine
 /// instructions.
 ///
-class MIBundleOperands : public MIBundleOperandIteratorBase<MachineOperand> {
+class LLVM_CLASS_ABI MIBundleOperands : public MIBundleOperandIteratorBase<MachineOperand> {
   /// Constructor for an iterator past the last iteration.
   MIBundleOperands(MachineBasicBlock::instr_iterator InstrE,
                    MachineInstr::mop_iterator OpE)
@@ -183,7 +183,7 @@ public:
 /// ConstMIBundleOperands - Iterate over all operands in a const bundle of
 /// machine instructions.
 ///
-class ConstMIBundleOperands
+class LLVM_CLASS_ABI ConstMIBundleOperands
     : public MIBundleOperandIteratorBase<const MachineOperand> {
 
   /// Constructor for an iterator past the last iteration.
@@ -216,7 +216,7 @@ inline iterator_range<MIBundleOperands> mi_bundle_ops(MachineInstr &MI) {
 /// VirtRegInfo - Information about a virtual register used by a set of
 /// operands.
 ///
-struct VirtRegInfo {
+struct LLVM_CLASS_ABI VirtRegInfo {
   /// Reads - One of the operands read the virtual register.  This does not
   /// include undef or internal use operands, see MO::readsReg().
   bool Reads;
@@ -238,20 +238,20 @@ struct VirtRegInfo {
 /// @param Ops When set, this vector will receive an (MI, OpNum) entry for
 ///            each operand referring to Reg.
 /// @returns A filled-in RegInfo struct.
-VirtRegInfo AnalyzeVirtRegInBundle(
+LLVM_FUNC_ABI VirtRegInfo AnalyzeVirtRegInBundle(
     MachineInstr &MI, Register Reg,
     SmallVectorImpl<std::pair<MachineInstr *, unsigned>> *Ops = nullptr);
 
 /// Return a pair of lane masks (reads, writes) indicating which lanes this
 /// instruction uses with Reg.
-std::pair<LaneBitmask, LaneBitmask>
+LLVM_FUNC_ABI std::pair<LaneBitmask, LaneBitmask>
 AnalyzeVirtRegLanesInBundle(const MachineInstr &MI, Register Reg,
                             const MachineRegisterInfo &MRI,
                             const TargetRegisterInfo &TRI);
 
 /// Information about how a physical register Reg is used by a set of
 /// operands.
-struct PhysRegInfo {
+struct LLVM_CLASS_ABI PhysRegInfo {
   /// There is a regmask operand indicating Reg is clobbered.
   /// \see MachineOperand::CreateRegMask().
   bool Clobbered;
@@ -289,7 +289,7 @@ struct PhysRegInfo {
 ///
 /// @param Reg The physical register to analyze.
 /// @returns A filled-in PhysRegInfo struct.
-PhysRegInfo AnalyzePhysRegInBundle(const MachineInstr &MI, Register Reg,
+LLVM_FUNC_ABI PhysRegInfo AnalyzePhysRegInBundle(const MachineInstr &MI, Register Reg,
                                    const TargetRegisterInfo *TRI);
 
 } // End llvm namespace

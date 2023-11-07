@@ -59,7 +59,7 @@ const uint64_t NOMORE_ICP_MAGICNUM = -1;
 /// Root of the metadata hierarchy.
 ///
 /// This is a root class for typeless data in the IR.
-class Metadata {
+class LLVM_CLASS_ABI Metadata {
   friend class ReplaceableMetadataImpl;
 
   /// RTTI.
@@ -173,7 +173,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Metadata &MD) {
 ///
 /// Notably, this is the only thing in either hierarchy that is allowed to
 /// reference \a LocalAsMetadata.
-class MetadataAsValue : public Value {
+class LLVM_CLASS_ABI MetadataAsValue : public Value {
   friend class ReplaceableMetadataImpl;
   friend class LLVMContextImpl;
 
@@ -209,7 +209,7 @@ private:
 ///
 /// This API is not meant to be used directly.  See \a TrackingMDRef for a
 /// user-friendly tracking reference.
-class MetadataTracking {
+class LLVM_CLASS_ABI MetadataTracking {
 public:
   /// Track the reference to metadata.
   ///
@@ -278,7 +278,7 @@ private:
 /// Most metadata cannot be RAUW'ed.  This is a shared implementation of
 /// use-lists and associated API for the two that support it (\a ValueAsMetadata
 /// and \a TempMDNode).
-class ReplaceableMetadataImpl {
+class LLVM_CLASS_ABI ReplaceableMetadataImpl {
   friend class MetadataTracking;
 
 public:
@@ -342,7 +342,7 @@ private:
 /// Because of full uniquing support, each value is only wrapped by a single \a
 /// ValueAsMetadata object, so the lookup maps are far more efficient than
 /// those using ValueHandleBase.
-class ValueAsMetadata : public Metadata, ReplaceableMetadataImpl {
+class LLVM_CLASS_ABI ValueAsMetadata : public Metadata, ReplaceableMetadataImpl {
   friend class ReplaceableMetadataImpl;
   friend class LLVMContextImpl;
 
@@ -410,7 +410,7 @@ public:
   }
 };
 
-class ConstantAsMetadata : public ValueAsMetadata {
+class LLVM_CLASS_ABI ConstantAsMetadata : public ValueAsMetadata {
   friend class ValueAsMetadata;
 
   ConstantAsMetadata(Constant *C)
@@ -434,7 +434,7 @@ public:
   }
 };
 
-class LocalAsMetadata : public ValueAsMetadata {
+class LLVM_CLASS_ABI LocalAsMetadata : public ValueAsMetadata {
   friend class ValueAsMetadata;
 
   LocalAsMetadata(Value *Local)
@@ -509,7 +509,7 @@ namespace mdconst {
 namespace detail {
 
 template <class T> T &make();
-template <class T, class Result> struct HasDereference {
+template <class T, class Result> struct LLVM_CLASS_ABI HasDereference {
   using Yes = char[1];
   using No = char[2];
   template <size_t N> struct SFINAE {};
@@ -521,11 +521,11 @@ template <class T, class Result> struct HasDereference {
   static const bool value =
       sizeof(hasDereference<T, Result>(nullptr)) == sizeof(Yes);
 };
-template <class V, class M> struct IsValidPointer {
+template <class V, class M> struct LLVM_CLASS_ABI IsValidPointer {
   static const bool value = std::is_base_of<Constant, V>::value &&
                             HasDereference<M, const Metadata &>::value;
 };
-template <class V, class M> struct IsValidReference {
+template <class V, class M> struct LLVM_CLASS_ABI IsValidReference {
   static const bool value = std::is_base_of<Constant, V>::value &&
                             std::is_convertible<M, const Metadata &>::value;
 };
@@ -609,7 +609,7 @@ dyn_extract_or_null(Y &&MD) {
 ///
 /// These are used to efficiently contain a byte sequence for metadata.
 /// MDString is always unnamed.
-class MDString : public Metadata {
+class LLVM_CLASS_ABI MDString : public Metadata {
   friend class StringMapEntryStorage<MDString>;
 
   StringMapEntry<MDString> *Entry = nullptr;
@@ -649,7 +649,7 @@ public:
 
 /// A collection of metadata nodes that might be associated with a
 /// memory access used by the alias-analysis infrastructure.
-struct AAMDNodes {
+struct LLVM_CLASS_ABI AAMDNodes {
   explicit AAMDNodes() = default;
   explicit AAMDNodes(MDNode *T, MDNode *TS, MDNode *S, MDNode *N)
       : TBAA(T), TBAAStruct(TS), Scope(S), NoAlias(N) {}
@@ -740,7 +740,7 @@ struct AAMDNodes {
 
 // Specialize DenseMapInfo for AAMDNodes.
 template<>
-struct DenseMapInfo<AAMDNodes> {
+struct LLVM_CLASS_ABI DenseMapInfo<AAMDNodes> {
   static inline AAMDNodes getEmptyKey() {
     return AAMDNodes(DenseMapInfo<MDNode *>::getEmptyKey(),
                      nullptr, nullptr, nullptr);
@@ -770,7 +770,7 @@ struct DenseMapInfo<AAMDNodes> {
 /// re-unique itself.
 ///
 /// In particular, this is used by \a MDNode.
-class MDOperand {
+class LLVM_CLASS_ABI MDOperand {
   Metadata *MD = nullptr;
 
 public:
@@ -831,13 +831,13 @@ private:
   }
 };
 
-template <> struct simplify_type<MDOperand> {
+template <> struct LLVM_CLASS_ABI simplify_type<MDOperand> {
   using SimpleType = Metadata *;
 
   static SimpleType getSimplifiedValue(MDOperand &MD) { return MD.get(); }
 };
 
-template <> struct simplify_type<const MDOperand> {
+template <> struct LLVM_CLASS_ABI simplify_type<const MDOperand> {
   using SimpleType = Metadata *;
 
   static SimpleType getSimplifiedValue(const MDOperand &MD) { return MD.get(); }
@@ -847,7 +847,7 @@ template <> struct simplify_type<const MDOperand> {
 ///
 /// Either a raw (non-null) pointer to the \a LLVMContext, or an owned pointer
 /// to \a ReplaceableMetadataImpl (which has a reference to \a LLVMContext).
-class ContextAndReplaceableUses {
+class LLVM_CLASS_ABI ContextAndReplaceableUses {
   PointerUnion<LLVMContext *, ReplaceableMetadataImpl *> Ptr;
 
 public:
@@ -916,7 +916,7 @@ public:
   }
 };
 
-struct TempMDNodeDeleter {
+struct LLVM_CLASS_ABI TempMDNodeDeleter {
   inline void operator()(MDNode *Node) const;
 };
 
@@ -948,7 +948,7 @@ struct TempMDNodeDeleter {
 /// MDnodes are resizable, but only MDTuples support this capability.
 ///
 /// Clients can add operands to resizable MDNodes using push_back().
-class MDNode : public Metadata {
+class LLVM_CLASS_ABI MDNode : public Metadata {
   friend class ReplaceableMetadataImpl;
   friend class LLVMContextImpl;
   friend class DIArgList;
@@ -1343,7 +1343,7 @@ public:
 ///
 /// This is the simple \a MDNode arbitrary tuple.  Nodes are uniqued by
 /// default based on their operands.
-class MDTuple : public MDNode {
+class LLVM_CLASS_ABI MDTuple : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -1438,7 +1438,7 @@ void TempMDNodeDeleter::operator()(MDNode *Node) const {
 /// This is a simple wrapper around an MDNode which provides a higher-level
 /// interface by hiding the details of how alias analysis information is encoded
 /// in its operands.
-class AliasScopeNode {
+class LLVM_CLASS_ABI AliasScopeNode {
   const MDNode *Node = nullptr;
 
 public:
@@ -1466,7 +1466,7 @@ public:
 ///
 /// An iterator that transforms an \a MDNode::iterator into an iterator over a
 /// particular Metadata subclass.
-template <class T> class TypedMDOperandIterator {
+template <class T> class LLVM_CLASS_ABI TypedMDOperandIterator {
   MDNode::op_iterator I = nullptr;
 
 public:
@@ -1500,7 +1500,7 @@ public:
 ///
 /// This is a wrapper for \a MDTuple that makes it act like an array holding a
 /// particular type of metadata.
-template <class T> class MDTupleTypedArrayWrapper {
+template <class T> class LLVM_CLASS_ABI MDTupleTypedArrayWrapper {
   const MDTuple *N = nullptr;
 
 public:
@@ -1557,7 +1557,7 @@ public:
 /// While it would be possible to implement move operators, they would be
 /// fairly expensive.  Leave them unimplemented to discourage their use
 /// (clients can use std::deque, std::list, BumpPtrAllocator, etc.).
-class DistinctMDOperandPlaceholder : public Metadata {
+class LLVM_CLASS_ABI DistinctMDOperandPlaceholder : public Metadata {
   friend class MetadataTracking;
 
   Metadata **Use = nullptr;
@@ -1602,7 +1602,7 @@ public:
 /// NamedMDNodes are named module-level entities that contain lists of MDNodes.
 ///
 /// It is illegal for a NamedMDNode to appear as an operand of an MDNode.
-class NamedMDNode : public ilist_node<NamedMDNode> {
+class LLVM_CLASS_ABI NamedMDNode : public ilist_node<NamedMDNode> {
   friend class LLVMContextImpl;
   friend class Module;
 

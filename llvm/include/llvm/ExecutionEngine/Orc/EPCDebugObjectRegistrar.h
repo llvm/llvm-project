@@ -30,7 +30,7 @@ namespace orc {
 class ExecutionSession;
 
 /// Abstract interface for registering debug objects in the executor process.
-class DebugObjectRegistrar {
+class LLVM_CLASS_ABI DebugObjectRegistrar {
 public:
   virtual Error registerDebugObject(ExecutorAddrRange TargetMem,
                                     bool AutoRegisterCode) = 0;
@@ -39,7 +39,7 @@ public:
 
 /// Use ExecutorProcessControl to register debug objects locally or in a remote
 /// executor process.
-class EPCDebugObjectRegistrar : public DebugObjectRegistrar {
+class LLVM_CLASS_ABI EPCDebugObjectRegistrar : public DebugObjectRegistrar {
 public:
   EPCDebugObjectRegistrar(ExecutionSession &ES, ExecutorAddr RegisterFn)
       : ES(ES), RegisterFn(RegisterFn) {}
@@ -59,7 +59,7 @@ private:
 /// If RegistrationFunctionsDylib is non-None then it will be searched to find
 /// the registration functions. If it is None then the process dylib will be
 /// loaded to find the registration functions.
-Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
+LLVM_FUNC_ABI Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
     ExecutionSession &ES,
     std::optional<ExecutorAddr> RegistrationFunctionDylib = std::nullopt);
 

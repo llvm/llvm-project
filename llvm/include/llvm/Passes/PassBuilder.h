@@ -39,7 +39,7 @@ class FileSystem;
 } // namespace vfs
 
 /// Tunable parameters for passes in the default pipelines.
-class PipelineTuningOptions {
+class LLVM_CLASS_ABI PipelineTuningOptions {
 public:
   /// Constructor sets pipeline tuning defaults based on cl::opts. Each option
   /// can be set in the PassBuilder when using a LLVM as a library.
@@ -101,7 +101,7 @@ public:
 /// construction. The \c PassRegistry.def file specifies how to construct all
 /// of the built-in passes, and those may reference these members during
 /// construction.
-class PassBuilder {
+class LLVM_CLASS_ABI PassBuilder {
   TargetMachine *TM;
   PipelineTuningOptions PTO;
   std::optional<PGOOptions> PGOOpt;

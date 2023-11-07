@@ -29,7 +29,7 @@ namespace sys {
   /// various memory allocation operations.
   /// @see Memory
   /// Memory block abstraction.
-  class MemoryBlock {
+  class LLVM_CLASS_ABI MemoryBlock {
   public:
     MemoryBlock() : Address(nullptr), AllocatedSize(0) {}
     MemoryBlock(void *addr, size_t allocatedSize)
@@ -50,7 +50,7 @@ namespace sys {
   /// MemoryBlock instances.
   /// @since 1.4
   /// An abstraction for memory operations.
-  class Memory {
+  class LLVM_CLASS_ABI Memory {
   public:
     enum ProtectionFlags {
       MF_READ = 0x1000000,
@@ -135,7 +135,7 @@ namespace sys {
   };
 
   /// Owning version of MemoryBlock.
-  class OwningMemoryBlock {
+  class LLVM_CLASS_ABI OwningMemoryBlock {
   public:
     OwningMemoryBlock() = default;
     explicit OwningMemoryBlock(MemoryBlock M) : M(M) {}

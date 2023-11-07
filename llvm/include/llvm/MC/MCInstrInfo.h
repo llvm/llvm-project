@@ -24,7 +24,7 @@ class MCSubtargetInfo;
 
 //---------------------------------------------------------------------------
 /// Interface to description of machine instruction set.
-class MCInstrInfo {
+class LLVM_CLASS_ABI MCInstrInfo {
 public:
   using ComplexDeprecationPredicate = bool (*)(MCInst &,
                                                const MCSubtargetInfo &,

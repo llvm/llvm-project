@@ -91,7 +91,7 @@ namespace dwarflinker_parallel {
 
 /// ExtraDwarfEmitter allows adding extra data to the DWARFLinker output.
 /// The finish() method should be called after all extra data are emitted.
-class ExtraDwarfEmitter {
+class LLVM_CLASS_ABI ExtraDwarfEmitter {
 public:
   virtual ~ExtraDwarfEmitter() = default;
 
@@ -113,7 +113,7 @@ public:
   virtual AsmPrinter &getAsmPrinter() const = 0;
 };
 
-class DWARFLinker {
+class LLVM_CLASS_ABI DWARFLinker {
 public:
   /// Type of output file.
   enum class OutputFileType {

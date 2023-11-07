@@ -44,7 +44,7 @@ std::enable_if_t<std::is_class<T>::value, void> swapBytes(T &value) {
 // data is little-endian encoded and may not be properly aligned to read
 // directly from. The dereference operator creates a copy of the data and byte
 // swaps it as appropriate.
-template <typename T> struct ViewArray {
+template <typename T> struct LLVM_CLASS_ABI ViewArray {
   StringRef Data;
   uint32_t Stride = sizeof(T); // size of each element in the list.
 
@@ -117,7 +117,7 @@ template <typename T> struct ViewArray {
 };
 
 namespace DirectX {
-class PSVRuntimeInfo {
+class LLVM_CLASS_ABI PSVRuntimeInfo {
 
   using ResourceArray = ViewArray<dxbc::PSV::v2::ResourceBindInfo>;
   using SigElementArray = ViewArray<dxbc::PSV::v0::SignatureElement>;
@@ -234,7 +234,7 @@ public:
   }
 };
 
-class Signature {
+class LLVM_CLASS_ABI Signature {
   ViewArray<dxbc::ProgramSignatureElement> Parameters;
   uint32_t StringTableOffset;
   StringRef StringTable;
@@ -266,7 +266,7 @@ public:
 
 } // namespace DirectX
 
-class DXContainer {
+class LLVM_CLASS_ABI DXContainer {
 public:
   using DXILData = std::pair<dxbc::ProgramHeader, const char *>;
 

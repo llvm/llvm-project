@@ -9,8 +9,8 @@ class StringRef;
 namespace sys {
 namespace locale {
 
-int columnWidth(StringRef s);
-bool isPrint(int c);
+LLVM_FUNC_ABI int columnWidth(StringRef s);
+LLVM_FUNC_ABI bool isPrint(int c);
 
 }
 }

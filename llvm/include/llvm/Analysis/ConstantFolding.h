@@ -40,7 +40,7 @@ class Type;
 /// the constant. Because of constantexprs, this function is recursive.
 /// If the global is part of a dso_local_equivalent constant, return it through
 /// `Equiv` if it is provided.
-bool IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV, APInt &Offset,
+LLVM_FUNC_ABI bool IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV, APInt &Offset,
                                 const DataLayout &DL,
                                 DSOLocalEquivalent **DSOEquiv = nullptr);
 
@@ -49,13 +49,13 @@ bool IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV, APInt &Offset,
 /// Note that this fails if not all of the operands are constant.  Otherwise,
 /// this function can only fail when attempting to fold instructions like loads
 /// and stores, which have no constant expression form.
-Constant *ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
+LLVM_FUNC_ABI Constant *ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
                                   const TargetLibraryInfo *TLI = nullptr);
 
 /// ConstantFoldConstant - Fold the constant using the specified DataLayout.
 /// This function always returns a non-null constant: Either the folding result,
 /// or the original constant if further folding is not possible.
-Constant *ConstantFoldConstant(const Constant *C, const DataLayout &DL,
+LLVM_FUNC_ABI Constant *ConstantFoldConstant(const Constant *C, const DataLayout &DL,
                                const TargetLibraryInfo *TLI = nullptr);
 
 /// ConstantFoldInstOperands - Attempt to constant fold an instruction with the
@@ -64,7 +64,7 @@ Constant *ConstantFoldConstant(const Constant *C, const DataLayout &DL,
 /// fold instructions like loads and stores, which have no constant expression
 /// form.
 ///
-Constant *ConstantFoldInstOperands(Instruction *I, ArrayRef<Constant *> Ops,
+LLVM_FUNC_ABI Constant *ConstantFoldInstOperands(Instruction *I, ArrayRef<Constant *> Ops,
                                    const DataLayout &DL,
                                    const TargetLibraryInfo *TLI = nullptr);
 
@@ -72,24 +72,24 @@ Constant *ConstantFoldInstOperands(Instruction *I, ArrayRef<Constant *> Ops,
 /// specified operands. Returns null or a constant expression of the specified
 /// operands on failure.
 /// Denormal inputs may be flushed based on the denormal handling mode.
-Constant *ConstantFoldCompareInstOperands(
+LLVM_FUNC_ABI Constant *ConstantFoldCompareInstOperands(
     unsigned Predicate, Constant *LHS, Constant *RHS, const DataLayout &DL,
     const TargetLibraryInfo *TLI = nullptr, const Instruction *I = nullptr);
 
 /// Attempt to constant fold a unary operation with the specified operand.
 /// Returns null on failure.
-Constant *ConstantFoldUnaryOpOperand(unsigned Opcode, Constant *Op,
+LLVM_FUNC_ABI Constant *ConstantFoldUnaryOpOperand(unsigned Opcode, Constant *Op,
                                      const DataLayout &DL);
 
 /// Attempt to constant fold a binary operation with the specified operands.
 /// Returns null or a constant expression of the specified operands on failure.
-Constant *ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
+LLVM_FUNC_ABI Constant *ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
                                        Constant *RHS, const DataLayout &DL);
 
 /// Attempt to constant fold a floating point binary operation with the
 /// specified operands, applying the denormal handling mod to the operands.
 /// Returns null or a constant expression of the specified operands on failure.
-Constant *ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
+LLVM_FUNC_ABI Constant *ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
                                      Constant *RHS, const DataLayout &DL,
                                      const Instruction *I);
 
@@ -101,103 +101,103 @@ Constant *ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
 ///
 /// If the calling function's "denormal-fp-math" input mode is "dynamic" for the
 /// floating-point type, returns nullptr for denormal inputs.
-Constant *FlushFPConstant(Constant *Operand, const Instruction *I,
+LLVM_FUNC_ABI Constant *FlushFPConstant(Constant *Operand, const Instruction *I,
                           bool IsOutput);
 
 /// Attempt to constant fold a select instruction with the specified
 /// operands. The constant result is returned if successful; if not, null is
 /// returned.
-Constant *ConstantFoldSelectInstruction(Constant *Cond, Constant *V1,
+LLVM_FUNC_ABI Constant *ConstantFoldSelectInstruction(Constant *Cond, Constant *V1,
                                         Constant *V2);
 
 /// Attempt to constant fold a cast with the specified operand.  If it
 /// fails, it returns a constant expression of the specified operand.
-Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C, Type *DestTy,
+LLVM_FUNC_ABI Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C, Type *DestTy,
                                   const DataLayout &DL);
 
 /// Constant fold a zext, sext or trunc, depending on IsSigned and whether the
 /// DestTy is wider or narrower than C. Returns nullptr on failure.
-Constant *ConstantFoldIntegerCast(Constant *C, Type *DestTy, bool IsSigned,
+LLVM_FUNC_ABI Constant *ConstantFoldIntegerCast(Constant *C, Type *DestTy, bool IsSigned,
                                   const DataLayout &DL);
 
 /// ConstantFoldInsertValueInstruction - Attempt to constant fold an insertvalue
 /// instruction with the specified operands and indices.  The constant result is
 /// returned if successful; if not, null is returned.
-Constant *ConstantFoldInsertValueInstruction(Constant *Agg, Constant *Val,
+LLVM_FUNC_ABI Constant *ConstantFoldInsertValueInstruction(Constant *Agg, Constant *Val,
                                              ArrayRef<unsigned> Idxs);
 
 /// Attempt to constant fold an extractvalue instruction with the
 /// specified operands and indices.  The constant result is returned if
 /// successful; if not, null is returned.
-Constant *ConstantFoldExtractValueInstruction(Constant *Agg,
+LLVM_FUNC_ABI Constant *ConstantFoldExtractValueInstruction(Constant *Agg,
                                               ArrayRef<unsigned> Idxs);
 
 /// Attempt to constant fold an insertelement instruction with the
 /// specified operands and indices.  The constant result is returned if
 /// successful; if not, null is returned.
-Constant *ConstantFoldInsertElementInstruction(Constant *Val,
+LLVM_FUNC_ABI Constant *ConstantFoldInsertElementInstruction(Constant *Val,
                                                Constant *Elt,
                                                Constant *Idx);
 
 /// Attempt to constant fold an extractelement instruction with the
 /// specified operands and indices.  The constant result is returned if
 /// successful; if not, null is returned.
-Constant *ConstantFoldExtractElementInstruction(Constant *Val, Constant *Idx);
+LLVM_FUNC_ABI Constant *ConstantFoldExtractElementInstruction(Constant *Val, Constant *Idx);
 
 /// Attempt to constant fold a shufflevector instruction with the
 /// specified operands and mask.  See class ShuffleVectorInst for a description
 /// of the mask representation. The constant result is returned if successful;
 /// if not, null is returned.
-Constant *ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
+LLVM_FUNC_ABI Constant *ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
                                                ArrayRef<int> Mask);
 
 /// Extract value of C at the given Offset reinterpreted as Ty. If bits past
 /// the end of C are accessed, they are assumed to be poison.
-Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty, const APInt &Offset,
+LLVM_FUNC_ABI Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty, const APInt &Offset,
                                     const DataLayout &DL);
 
 /// Extract value of C reinterpreted as Ty. Same as previous API with zero
 /// offset.
-Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty,
+LLVM_FUNC_ABI Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty,
                                     const DataLayout &DL);
 
 /// Return the value that a load from C with offset Offset would produce if it
 /// is constant and determinable. If this is not determinable, return null.
-Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty, APInt Offset,
+LLVM_FUNC_ABI Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty, APInt Offset,
                                        const DataLayout &DL);
 
 /// Return the value that a load from C would produce if it is constant and
 /// determinable. If this is not determinable, return null.
-Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
+LLVM_FUNC_ABI Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
                                        const DataLayout &DL);
 
 /// If C is a uniform value where all bits are the same (either all zero, all
 /// ones, all undef or all poison), return the corresponding uniform value in
 /// the new type. If the value is not uniform or the result cannot be
 /// represented, return null.
-Constant *ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty);
+LLVM_FUNC_ABI Constant *ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty);
 
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.
-bool canConstantFoldCallTo(const CallBase *Call, const Function *F);
+LLVM_FUNC_ABI bool canConstantFoldCallTo(const CallBase *Call, const Function *F);
 
 /// ConstantFoldCall - Attempt to constant fold a call to the specified function
 /// with the specified arguments, returning null if unsuccessful.
-Constant *ConstantFoldCall(const CallBase *Call, Function *F,
+LLVM_FUNC_ABI Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                            ArrayRef<Constant *> Operands,
                            const TargetLibraryInfo *TLI = nullptr);
 
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to
 /// integer and vice versa if their sizes are equal.
-Constant *ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
+LLVM_FUNC_ABI Constant *ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
                                          const DataLayout &DL);
 
 /// Check whether the given call has no side-effects.
 /// Specifically checks for math routimes which sometimes set errno.
-bool isMathLibCallNoop(const CallBase *Call, const TargetLibraryInfo *TLI);
+LLVM_FUNC_ABI bool isMathLibCallNoop(const CallBase *Call, const TargetLibraryInfo *TLI);
 
-Constant *ReadByteArrayFromGlobal(const GlobalVariable *GV, uint64_t Offset);
+LLVM_FUNC_ABI Constant *ReadByteArrayFromGlobal(const GlobalVariable *GV, uint64_t Offset);
 }
 
 #endif

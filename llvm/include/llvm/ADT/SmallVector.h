@@ -49,7 +49,7 @@ using EnableIfConvertibleToInputIterator = std::enable_if_t<std::is_convertible<
 /// Using 64 bit size is desirable for cases like SmallVector<char>, where a
 /// 32 bit size would limit the vector to ~4GB. SmallVectors are used for
 /// buffering bitcode output - which can exceed 4GB.
-template <class Size_T> class SmallVectorBase {
+template <class Size_T> class LLVM_CLASS_ABI SmallVectorBase {
 protected:
   void *BeginX;
   Size_T Size = 0, Capacity;
@@ -110,7 +110,7 @@ using SmallVectorSizeType =
                        uint32_t>;
 
 /// Figure out the offset of the first element.
-template <class T, typename = void> struct SmallVectorAlignmentAndSize {
+template <class T, typename = void> struct LLVM_CLASS_ABI SmallVectorAlignmentAndSize {
   alignas(SmallVectorBase<SmallVectorSizeType<T>>) char Base[sizeof(
       SmallVectorBase<SmallVectorSizeType<T>>)];
   alignas(T) char FirstEl[sizeof(T)];
@@ -120,7 +120,7 @@ template <class T, typename = void> struct SmallVectorAlignmentAndSize {
 /// the type T is a POD. The extra dummy template argument is used by ArrayRef
 /// to avoid unnecessarily requiring T to be complete.
 template <typename T, typename = void>
-class SmallVectorTemplateCommon
+class LLVM_CLASS_ABI SmallVectorTemplateCommon
     : public SmallVectorBase<SmallVectorSizeType<T>> {
   using Base = SmallVectorBase<SmallVectorSizeType<T>>;
 
@@ -329,7 +329,7 @@ public:
 template <typename T, bool = (std::is_trivially_copy_constructible<T>::value) &&
                              (std::is_trivially_move_constructible<T>::value) &&
                              std::is_trivially_destructible<T>::value>
-class SmallVectorTemplateBase : public SmallVectorTemplateCommon<T> {
+class LLVM_CLASS_ABI SmallVectorTemplateBase : public SmallVectorTemplateCommon<T> {
   friend class SmallVectorTemplateCommon<T>;
 
 protected:
@@ -476,7 +476,7 @@ void SmallVectorTemplateBase<T, TriviallyCopyable>::takeAllocationForGrow(
 /// T's. This allows using memcpy in place of copy/move construction and
 /// skipping destruction.
 template <typename T>
-class SmallVectorTemplateBase<T, true> : public SmallVectorTemplateCommon<T> {
+class LLVM_CLASS_ABI SmallVectorTemplateBase<T, true> : public SmallVectorTemplateCommon<T> {
   friend class SmallVectorTemplateCommon<T>;
 
 protected:
@@ -574,7 +574,7 @@ public:
 /// This class consists of common code factored out of the SmallVector class to
 /// reduce code duplication based on the SmallVector 'N' template parameter.
 template <typename T>
-class SmallVectorImpl : public SmallVectorTemplateBase<T> {
+class LLVM_CLASS_ABI SmallVectorImpl : public SmallVectorTemplateBase<T> {
   using SuperClass = SmallVectorTemplateBase<T>;
 
 public:
@@ -1111,14 +1111,14 @@ SmallVectorImpl<T> &SmallVectorImpl<T>::operator=(SmallVectorImpl<T> &&RHS) {
 /// Storage for the SmallVector elements.  This is specialized for the N=0 case
 /// to avoid allocating unnecessary storage.
 template <typename T, unsigned N>
-struct SmallVectorStorage {
+struct LLVM_CLASS_ABI SmallVectorStorage {
   alignas(T) char InlineElts[N * sizeof(T)];
 };
 
 /// We need the storage to be properly aligned even for small-size of 0 so that
 /// the pointer math in \a SmallVectorTemplateCommon::getFirstEl() is
 /// well-defined.
-template <typename T> struct alignas(T) SmallVectorStorage<T, 0> {};
+template <typename T> struct LLVM_CLASS_ABI alignas(T) SmallVectorStorage<T, 0> {};
 
 /// Forward declaration of SmallVector so that
 /// calculateSmallVectorDefaultInlinedElements can reference
@@ -1130,7 +1130,7 @@ template <typename T, unsigned N> class LLVM_GSL_OWNER SmallVector;
 ///
 /// This should be migrated to a constexpr function when our minimum
 /// compiler support is enough for multi-statement constexpr functions.
-template <typename T> struct CalculateSmallVectorDefaultInlinedElements {
+template <typename T> struct LLVM_CLASS_ABI CalculateSmallVectorDefaultInlinedElements {
   // Parameter controlling the default number of inlined elements
   // for `SmallVector<T>`.
   //
@@ -1196,7 +1196,7 @@ template <typename T> struct CalculateSmallVectorDefaultInlinedElements {
 /// \see https://llvm.org/docs/ProgrammersManual.html#llvm-adt-smallvector-h
 template <typename T,
           unsigned N = CalculateSmallVectorDefaultInlinedElements<T>::value>
-class LLVM_GSL_OWNER SmallVector : public SmallVectorImpl<T>,
+class LLVM_CLASS_ABI LLVM_GSL_OWNER SmallVector : public SmallVectorImpl<T>,
                                    SmallVectorStorage<T, N> {
 public:
   SmallVector() : SmallVectorImpl<T>(N) {}
@@ -1318,9 +1318,9 @@ template <typename Out, typename R> SmallVector<Out> to_vector_of(R &&Range) {
 }
 
 // Explicit instantiations
-extern template class llvm::SmallVectorBase<uint32_t>;
+extern template class LLVM_CLASS_ABI llvm::SmallVectorBase<uint32_t>;
 #if SIZE_MAX > UINT32_MAX
-extern template class llvm::SmallVectorBase<uint64_t>;
+extern template class LLVM_CLASS_ABI llvm::SmallVectorBase<uint64_t>;
 #endif
 
 } // end namespace llvm

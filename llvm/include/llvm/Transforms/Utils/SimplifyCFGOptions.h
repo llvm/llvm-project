@@ -22,7 +22,7 @@ namespace llvm {
 
 class AssumptionCache;
 
-struct SimplifyCFGOptions {
+struct LLVM_CLASS_ABI SimplifyCFGOptions {
   int BonusInstThreshold = 1;
   bool ForwardSwitchCondToPhi = false;
   bool ConvertSwitchRangeToICmp = false;

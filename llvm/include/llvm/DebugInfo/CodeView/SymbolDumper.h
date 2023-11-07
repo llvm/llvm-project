@@ -25,7 +25,7 @@ namespace codeview {
 class TypeCollection;
 
 /// Dumper for CodeView symbol streams found in COFF object files and PDB files.
-class CVSymbolDumper {
+class LLVM_CLASS_ABI CVSymbolDumper {
 public:
   CVSymbolDumper(ScopedPrinter &W, TypeCollection &Types,
                  CodeViewContainer Container,

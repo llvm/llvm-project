@@ -31,14 +31,14 @@ namespace llvm {
   class StringRef;
 
   /// Helper functions for StringRef::getAsInteger.
-  bool getAsUnsignedInteger(StringRef Str, unsigned Radix,
+  LLVM_FUNC_ABI bool getAsUnsignedInteger(StringRef Str, unsigned Radix,
                             unsigned long long &Result);
 
-  bool getAsSignedInteger(StringRef Str, unsigned Radix, long long &Result);
+  LLVM_FUNC_ABI bool getAsSignedInteger(StringRef Str, unsigned Radix, long long &Result);
 
-  bool consumeUnsignedInteger(StringRef &Str, unsigned Radix,
+  LLVM_FUNC_ABI bool consumeUnsignedInteger(StringRef &Str, unsigned Radix,
                               unsigned long long &Result);
-  bool consumeSignedInteger(StringRef &Str, unsigned Radix, long long &Result);
+  LLVM_FUNC_ABI bool consumeSignedInteger(StringRef &Str, unsigned Radix, long long &Result);
 
   /// StringRef - Represent a constant reference to a string, i.e. a character
   /// array and a length, which need not be null terminated.
@@ -47,7 +47,7 @@ namespace llvm {
   /// situations where the character data resides in some other buffer, whose
   /// lifetime extends past that of the StringRef. For this reason, it is not in
   /// general safe to store a StringRef.
-  class LLVM_GSL_POINTER StringRef {
+  class LLVM_CLASS_ABI LLVM_GSL_POINTER StringRef {
   public:
     static constexpr size_t npos = ~size_t(0);
 
@@ -854,7 +854,7 @@ namespace llvm {
   ///
   /// constexpr StringLiteral S("test");
   ///
-  class StringLiteral : public StringRef {
+  class LLVM_CLASS_ABI StringLiteral : public StringRef {
   private:
     constexpr StringLiteral(const char *Str, size_t N) : StringRef(Str, N) {
     }
@@ -911,10 +911,10 @@ namespace llvm {
   /// @}
 
   /// Compute a hash_code for a StringRef.
-  [[nodiscard]] hash_code hash_value(StringRef S);
+  [[nodiscard]] LLVM_FUNC_ABI hash_code hash_value(StringRef S);
 
   // Provide DenseMapInfo for StringRefs.
-  template <> struct DenseMapInfo<StringRef, void> {
+  template <> struct LLVM_CLASS_ABI DenseMapInfo<StringRef, void> {
     static inline StringRef getEmptyKey() {
       return StringRef(
           reinterpret_cast<const char *>(~static_cast<uintptr_t>(0)), 0);

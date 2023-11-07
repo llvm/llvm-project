@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-Value *emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
+LLVM_FUNC_ABI Value *emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
                             bool isBuffered);
 
 } // end namespace llvm

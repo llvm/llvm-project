@@ -29,7 +29,7 @@
 namespace llvm {
 namespace orc {
 
-class SimpleRemoteEPC : public ExecutorProcessControl,
+class LLVM_CLASS_ABI SimpleRemoteEPC : public ExecutorProcessControl,
                         public SimpleRemoteEPCTransportClient {
 public:
   /// A setup object containing callbacks to construct a memory manager and

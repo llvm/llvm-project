@@ -24,13 +24,13 @@ namespace orc {
 /// Adds an initializer symbol to the given MU interface.
 /// The init symbol's name is guaranteed to be unique within I, and will be of
 /// the form $.<ObjFileName>.__inits.<N>, where N is some integer.
-void addInitSymbol(MaterializationUnit::Interface &I, ExecutionSession &ES,
+LLVM_FUNC_ABI void addInitSymbol(MaterializationUnit::Interface &I, ExecutionSession &ES,
                    StringRef ObjFileName);
 
 /// Returns a MaterializationUnit::Interface for the object file contained in
 /// the given buffer, or an error if the buffer does not contain a valid object
 /// file.
-Expected<MaterializationUnit::Interface>
+LLVM_FUNC_ABI Expected<MaterializationUnit::Interface>
 getObjectFileInterface(ExecutionSession &ES, MemoryBufferRef ObjBuffer);
 
 } // End namespace orc

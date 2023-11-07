@@ -509,7 +509,7 @@ enum { TOOL_CLANG = 1, TOOL_SWIFT = 2, TOOL_LD = 3, TOOL_LLD = 4 };
 
 // Structs from <mach-o/loader.h>
 
-struct mach_header {
+struct LLVM_CLASS_ABI mach_header {
   uint32_t magic;
   uint32_t cputype;
   uint32_t cpusubtype;
@@ -519,7 +519,7 @@ struct mach_header {
   uint32_t flags;
 };
 
-struct mach_header_64 {
+struct LLVM_CLASS_ABI mach_header_64 {
   uint32_t magic;
   uint32_t cputype;
   uint32_t cpusubtype;
@@ -530,12 +530,12 @@ struct mach_header_64 {
   uint32_t reserved;
 };
 
-struct load_command {
+struct LLVM_CLASS_ABI load_command {
   uint32_t cmd;
   uint32_t cmdsize;
 };
 
-struct segment_command {
+struct LLVM_CLASS_ABI segment_command {
   uint32_t cmd;
   uint32_t cmdsize;
   char segname[16];
@@ -549,7 +549,7 @@ struct segment_command {
   uint32_t flags;
 };
 
-struct segment_command_64 {
+struct LLVM_CLASS_ABI segment_command_64 {
   uint32_t cmd;
   uint32_t cmdsize;
   char segname[16];
@@ -563,7 +563,7 @@ struct segment_command_64 {
   uint32_t flags;
 };
 
-struct section {
+struct LLVM_CLASS_ABI section {
   char sectname[16];
   char segname[16];
   uint32_t addr;
@@ -577,7 +577,7 @@ struct section {
   uint32_t reserved2;
 };
 
-struct section_64 {
+struct LLVM_CLASS_ABI section_64 {
   char sectname[16];
   char segname[16];
   uint64_t addr;
@@ -597,58 +597,58 @@ inline bool isVirtualSection(uint8_t type) {
           type == MachO::S_THREAD_LOCAL_ZEROFILL);
 }
 
-struct fvmlib {
+struct LLVM_CLASS_ABI fvmlib {
   uint32_t name;
   uint32_t minor_version;
   uint32_t header_addr;
 };
 
 // The fvmlib_command is obsolete and no longer supported.
-struct fvmlib_command {
+struct LLVM_CLASS_ABI fvmlib_command {
   uint32_t cmd;
   uint32_t cmdsize;
   struct fvmlib fvmlib;
 };
 
-struct dylib {
+struct LLVM_CLASS_ABI dylib {
   uint32_t name;
   uint32_t timestamp;
   uint32_t current_version;
   uint32_t compatibility_version;
 };
 
-struct dylib_command {
+struct LLVM_CLASS_ABI dylib_command {
   uint32_t cmd;
   uint32_t cmdsize;
   struct dylib dylib;
 };
 
-struct sub_framework_command {
+struct LLVM_CLASS_ABI sub_framework_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t umbrella;
 };
 
-struct sub_client_command {
+struct LLVM_CLASS_ABI sub_client_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t client;
 };
 
-struct sub_umbrella_command {
+struct LLVM_CLASS_ABI sub_umbrella_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t sub_umbrella;
 };
 
-struct sub_library_command {
+struct LLVM_CLASS_ABI sub_library_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t sub_library;
 };
 
 // The prebound_dylib_command is obsolete and no longer supported.
-struct prebound_dylib_command {
+struct LLVM_CLASS_ABI prebound_dylib_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t name;
@@ -656,18 +656,18 @@ struct prebound_dylib_command {
   uint32_t linked_modules;
 };
 
-struct dylinker_command {
+struct LLVM_CLASS_ABI dylinker_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t name;
 };
 
-struct thread_command {
+struct LLVM_CLASS_ABI thread_command {
   uint32_t cmd;
   uint32_t cmdsize;
 };
 
-struct routines_command {
+struct LLVM_CLASS_ABI routines_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t init_address;
@@ -680,7 +680,7 @@ struct routines_command {
   uint32_t reserved6;
 };
 
-struct routines_command_64 {
+struct LLVM_CLASS_ABI routines_command_64 {
   uint32_t cmd;
   uint32_t cmdsize;
   uint64_t init_address;
@@ -693,7 +693,7 @@ struct routines_command_64 {
   uint64_t reserved6;
 };
 
-struct symtab_command {
+struct LLVM_CLASS_ABI symtab_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t symoff;
@@ -702,7 +702,7 @@ struct symtab_command {
   uint32_t strsize;
 };
 
-struct dysymtab_command {
+struct LLVM_CLASS_ABI dysymtab_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t ilocalsym;
@@ -725,12 +725,12 @@ struct dysymtab_command {
   uint32_t nlocrel;
 };
 
-struct dylib_table_of_contents {
+struct LLVM_CLASS_ABI dylib_table_of_contents {
   uint32_t symbol_index;
   uint32_t module_index;
 };
 
-struct dylib_module {
+struct LLVM_CLASS_ABI dylib_module {
   uint32_t module_name;
   uint32_t iextdefsym;
   uint32_t nextdefsym;
@@ -746,7 +746,7 @@ struct dylib_module {
   uint32_t objc_module_info_size;
 };
 
-struct dylib_module_64 {
+struct LLVM_CLASS_ABI dylib_module_64 {
   uint32_t module_name;
   uint32_t iextdefsym;
   uint32_t nextdefsym;
@@ -762,12 +762,12 @@ struct dylib_module_64 {
   uint64_t objc_module_info_addr;
 };
 
-struct dylib_reference {
+struct LLVM_CLASS_ABI dylib_reference {
   uint32_t isym : 24, flags : 8;
 };
 
 // The twolevel_hints_command is obsolete and no longer supported.
-struct twolevel_hints_command {
+struct LLVM_CLASS_ABI twolevel_hints_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t offset;
@@ -775,49 +775,49 @@ struct twolevel_hints_command {
 };
 
 // The twolevel_hints_command is obsolete and no longer supported.
-struct twolevel_hint {
+struct LLVM_CLASS_ABI twolevel_hint {
   uint32_t isub_image : 8, itoc : 24;
 };
 
 // The prebind_cksum_command is obsolete and no longer supported.
-struct prebind_cksum_command {
+struct LLVM_CLASS_ABI prebind_cksum_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t cksum;
 };
 
-struct uuid_command {
+struct LLVM_CLASS_ABI uuid_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint8_t uuid[16];
 };
 
-struct rpath_command {
+struct LLVM_CLASS_ABI rpath_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t path;
 };
 
-struct linkedit_data_command {
+struct LLVM_CLASS_ABI linkedit_data_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t dataoff;
   uint32_t datasize;
 };
 
-struct data_in_code_entry {
+struct LLVM_CLASS_ABI data_in_code_entry {
   uint32_t offset;
   uint16_t length;
   uint16_t kind;
 };
 
-struct source_version_command {
+struct LLVM_CLASS_ABI source_version_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint64_t version;
 };
 
-struct encryption_info_command {
+struct LLVM_CLASS_ABI encryption_info_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t cryptoff;
@@ -825,7 +825,7 @@ struct encryption_info_command {
   uint32_t cryptid;
 };
 
-struct encryption_info_command_64 {
+struct LLVM_CLASS_ABI encryption_info_command_64 {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t cryptoff;
@@ -834,7 +834,7 @@ struct encryption_info_command_64 {
   uint32_t pad;
 };
 
-struct version_min_command {
+struct LLVM_CLASS_ABI version_min_command {
   uint32_t cmd;     // LC_VERSION_MIN_MACOSX or
                     // LC_VERSION_MIN_IPHONEOS
   uint32_t cmdsize; // sizeof(struct version_min_command)
@@ -842,7 +842,7 @@ struct version_min_command {
   uint32_t sdk;     // X.Y.Z is encoded in nibbles xxxx.yy.zz
 };
 
-struct note_command {
+struct LLVM_CLASS_ABI note_command {
   uint32_t cmd;        // LC_NOTE
   uint32_t cmdsize;    // sizeof(struct note_command)
   char data_owner[16]; // owner name for this LC_NOTE
@@ -850,12 +850,12 @@ struct note_command {
   uint64_t size;       // length of data region
 };
 
-struct build_tool_version {
+struct LLVM_CLASS_ABI build_tool_version {
   uint32_t tool;    // enum for the tool
   uint32_t version; // version of the tool
 };
 
-struct build_version_command {
+struct LLVM_CLASS_ABI build_version_command {
   uint32_t cmd;      // LC_BUILD_VERSION
   uint32_t cmdsize;  // sizeof(struct build_version_command) +
                      // ntools * sizeof(struct build_tool_version)
@@ -865,13 +865,13 @@ struct build_version_command {
   uint32_t ntools;   // number of tool entries following this
 };
 
-struct dyld_env_command {
+struct LLVM_CLASS_ABI dyld_env_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t name;
 };
 
-struct dyld_info_command {
+struct LLVM_CLASS_ABI dyld_info_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t rebase_off;
@@ -886,7 +886,7 @@ struct dyld_info_command {
   uint32_t export_size;
 };
 
-struct linker_option_command {
+struct LLVM_CLASS_ABI linker_option_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t count;
@@ -896,7 +896,7 @@ union lc_str {
   uint32_t offset;
 };
 
-struct fileset_entry_command {
+struct LLVM_CLASS_ABI fileset_entry_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint64_t vmaddr;
@@ -906,7 +906,7 @@ struct fileset_entry_command {
 };
 
 // The symseg_command is obsolete and no longer supported.
-struct symseg_command {
+struct LLVM_CLASS_ABI symseg_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t offset;
@@ -914,38 +914,38 @@ struct symseg_command {
 };
 
 // The ident_command is obsolete and no longer supported.
-struct ident_command {
+struct LLVM_CLASS_ABI ident_command {
   uint32_t cmd;
   uint32_t cmdsize;
 };
 
 // The fvmfile_command is obsolete and no longer supported.
-struct fvmfile_command {
+struct LLVM_CLASS_ABI fvmfile_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint32_t name;
   uint32_t header_addr;
 };
 
-struct tlv_descriptor_32 {
+struct LLVM_CLASS_ABI tlv_descriptor_32 {
   uint32_t thunk;
   uint32_t key;
   uint32_t offset;
 };
 
-struct tlv_descriptor_64 {
+struct LLVM_CLASS_ABI tlv_descriptor_64 {
   uint64_t thunk;
   uint64_t key;
   uint64_t offset;
 };
 
-struct tlv_descriptor {
+struct LLVM_CLASS_ABI tlv_descriptor {
   uintptr_t thunk;
   uintptr_t key;
   uintptr_t offset;
 };
 
-struct entry_point_command {
+struct LLVM_CLASS_ABI entry_point_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint64_t entryoff;
@@ -953,12 +953,12 @@ struct entry_point_command {
 };
 
 // Structs from <mach-o/fat.h>
-struct fat_header {
+struct LLVM_CLASS_ABI fat_header {
   uint32_t magic;
   uint32_t nfat_arch;
 };
 
-struct fat_arch {
+struct LLVM_CLASS_ABI fat_arch {
   uint32_t cputype;
   uint32_t cpusubtype;
   uint32_t offset;
@@ -966,7 +966,7 @@ struct fat_arch {
   uint32_t align;
 };
 
-struct fat_arch_64 {
+struct LLVM_CLASS_ABI fat_arch_64 {
   uint32_t cputype;
   uint32_t cpusubtype;
   uint64_t offset;
@@ -976,13 +976,13 @@ struct fat_arch_64 {
 };
 
 // Structs from <mach-o/reloc.h>
-struct relocation_info {
+struct LLVM_CLASS_ABI relocation_info {
   int32_t r_address;
   uint32_t r_symbolnum : 24, r_pcrel : 1, r_length : 2, r_extern : 1,
       r_type : 4;
 };
 
-struct scattered_relocation_info {
+struct LLVM_CLASS_ABI scattered_relocation_info {
 #if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && (BYTE_ORDER == BIG_ENDIAN)
   uint32_t r_scattered : 1, r_pcrel : 1, r_length : 2, r_type : 4,
       r_address : 24;
@@ -994,19 +994,19 @@ struct scattered_relocation_info {
 };
 
 // Structs NOT from <mach-o/reloc.h>, but that make LLVM's life easier
-struct any_relocation_info {
+struct LLVM_CLASS_ABI any_relocation_info {
   uint32_t r_word0, r_word1;
 };
 
 // Structs from <mach-o/nlist.h>
-struct nlist_base {
+struct LLVM_CLASS_ABI nlist_base {
   uint32_t n_strx;
   uint8_t n_type;
   uint8_t n_sect;
   uint16_t n_desc;
 };
 
-struct nlist {
+struct LLVM_CLASS_ABI nlist {
   uint32_t n_strx;
   uint8_t n_type;
   uint8_t n_sect;
@@ -1014,7 +1014,7 @@ struct nlist {
   uint32_t n_value;
 };
 
-struct nlist_64 {
+struct LLVM_CLASS_ABI nlist_64 {
   uint32_t n_strx;
   uint8_t n_type;
   uint8_t n_sect;
@@ -1061,7 +1061,7 @@ enum {
 /// Structs for dyld chained fixups.
 /// dyld_chained_fixups_header is the data pointed to by LC_DYLD_CHAINED_FIXUPS
 /// load command.
-struct dyld_chained_fixups_header {
+struct LLVM_CLASS_ABI dyld_chained_fixups_header {
   uint32_t fixups_version; ///< 0
   uint32_t starts_offset;  ///< Offset of dyld_chained_starts_in_image.
   uint32_t imports_offset; ///< Offset of imports table in chain_data.
@@ -1074,12 +1074,12 @@ struct dyld_chained_fixups_header {
 /// dyld_chained_starts_in_image is embedded in LC_DYLD_CHAINED_FIXUPS payload.
 /// Each seg_info_offset entry is the offset into this struct for that
 /// segment followed by pool of dyld_chain_starts_in_segment data.
-struct dyld_chained_starts_in_image {
+struct LLVM_CLASS_ABI dyld_chained_starts_in_image {
   uint32_t seg_count;
   uint32_t seg_info_offset[1];
 };
 
-struct dyld_chained_starts_in_segment {
+struct LLVM_CLASS_ABI dyld_chained_starts_in_segment {
   uint32_t size;              ///< Size of this, including chain_starts entries
   uint16_t page_size;         ///< Page size in bytes (0x1000 or 0x4000)
   uint16_t pointer_format;    ///< DYLD_CHAINED_PTR*
@@ -1091,14 +1091,14 @@ struct dyld_chained_starts_in_segment {
 };
 
 // DYLD_CHAINED_IMPORT
-struct dyld_chained_import {
+struct LLVM_CLASS_ABI dyld_chained_import {
   uint32_t lib_ordinal : 8;
   uint32_t weak_import : 1;
   uint32_t name_offset : 23;
 };
 
 // DYLD_CHAINED_IMPORT_ADDEND
-struct dyld_chained_import_addend {
+struct LLVM_CLASS_ABI dyld_chained_import_addend {
   uint32_t lib_ordinal : 8;
   uint32_t weak_import : 1;
   uint32_t name_offset : 23;
@@ -1106,7 +1106,7 @@ struct dyld_chained_import_addend {
 };
 
 // DYLD_CHAINED_IMPORT_ADDEND64
-struct dyld_chained_import_addend64 {
+struct LLVM_CLASS_ABI dyld_chained_import_addend64 {
   uint64_t lib_ordinal : 16;
   uint64_t weak_import : 1;
   uint64_t reserved : 15;
@@ -1118,7 +1118,7 @@ struct dyld_chained_import_addend64 {
 // whether it is dyld_chained_ptr_64_bind or dyld_chained_ptr_64_rebase.
 
 // DYLD_CHAINED_PTR_64/DYLD_CHAINED_PTR_64_OFFSET
-struct dyld_chained_ptr_64_bind {
+struct LLVM_CLASS_ABI dyld_chained_ptr_64_bind {
   uint64_t ordinal : 24;
   uint64_t addend : 8;
   uint64_t reserved : 19;
@@ -1127,7 +1127,7 @@ struct dyld_chained_ptr_64_bind {
 };
 
 // DYLD_CHAINED_PTR_64/DYLD_CHAINED_PTR_64_OFFSET
-struct dyld_chained_ptr_64_rebase {
+struct LLVM_CLASS_ABI dyld_chained_ptr_64_rebase {
   uint64_t target : 36;
   uint64_t high8 : 8;
   uint64_t reserved : 7;
@@ -1666,10 +1666,10 @@ enum CPUSubTypePowerPC {
   CPU_SUBTYPE_MC98601 = CPU_SUBTYPE_POWERPC_601
 };
 
-Expected<uint32_t> getCPUType(const Triple &T);
-Expected<uint32_t> getCPUSubType(const Triple &T);
+LLVM_FUNC_ABI Expected<uint32_t> getCPUType(const Triple &T);
+LLVM_FUNC_ABI Expected<uint32_t> getCPUSubType(const Triple &T);
 
-struct x86_thread_state32_t {
+struct LLVM_CLASS_ABI x86_thread_state32_t {
   uint32_t eax;
   uint32_t ebx;
   uint32_t ecx;
@@ -1688,7 +1688,7 @@ struct x86_thread_state32_t {
   uint32_t gs;
 };
 
-struct x86_thread_state64_t {
+struct LLVM_CLASS_ABI x86_thread_state64_t {
   uint64_t rax;
   uint64_t rbx;
   uint64_t rcx;
@@ -1725,27 +1725,27 @@ enum x86_fp_control_rc {
   x86_FP_CHOP = 3
 };
 
-struct fp_control_t {
+struct LLVM_CLASS_ABI fp_control_t {
   unsigned short invalid : 1, denorm : 1, zdiv : 1, ovrfl : 1, undfl : 1,
       precis : 1, : 2, pc : 2, rc : 2, : 1, : 3;
 };
 
-struct fp_status_t {
+struct LLVM_CLASS_ABI fp_status_t {
   unsigned short invalid : 1, denorm : 1, zdiv : 1, ovrfl : 1, undfl : 1,
       precis : 1, stkflt : 1, errsumm : 1, c0 : 1, c1 : 1, c2 : 1, tos : 3,
       c3 : 1, busy : 1;
 };
 
-struct mmst_reg_t {
+struct LLVM_CLASS_ABI mmst_reg_t {
   char mmst_reg[10];
   char mmst_rsrv[6];
 };
 
-struct xmm_reg_t {
+struct LLVM_CLASS_ABI xmm_reg_t {
   char xmm_reg[16];
 };
 
-struct x86_float_state64_t {
+struct LLVM_CLASS_ABI x86_float_state64_t {
   int32_t fpu_reserved[2];
   fp_control_t fpu_fcw;
   fp_status_t fpu_fsw;
@@ -1788,7 +1788,7 @@ struct x86_float_state64_t {
   uint32_t fpu_reserved1;
 };
 
-struct x86_exception_state64_t {
+struct LLVM_CLASS_ABI x86_exception_state64_t {
   uint16_t trapno;
   uint16_t cpu;
   uint32_t err;
@@ -1862,12 +1862,12 @@ inline void swapStruct(x86_exception_state64_t &x) {
   sys::swapByteOrder(x.faultvaddr);
 }
 
-struct x86_state_hdr_t {
+struct LLVM_CLASS_ABI x86_state_hdr_t {
   uint32_t flavor;
   uint32_t count;
 };
 
-struct x86_thread_state_t {
+struct LLVM_CLASS_ABI x86_thread_state_t {
   x86_state_hdr_t tsh;
   union {
     x86_thread_state64_t ts64;
@@ -1875,14 +1875,14 @@ struct x86_thread_state_t {
   } uts;
 };
 
-struct x86_float_state_t {
+struct LLVM_CLASS_ABI x86_float_state_t {
   x86_state_hdr_t fsh;
   union {
     x86_float_state64_t fs64;
   } ufs;
 };
 
-struct x86_exception_state_t {
+struct LLVM_CLASS_ABI x86_exception_state_t {
   x86_state_hdr_t esh;
   union {
     x86_exception_state64_t es64;
@@ -1944,7 +1944,7 @@ const uint32_t x86_FLOAT_STATE_COUNT =
 const uint32_t x86_EXCEPTION_STATE_COUNT =
     sizeof(x86_exception_state_t) / sizeof(uint32_t);
 
-struct arm_thread_state32_t {
+struct LLVM_CLASS_ABI arm_thread_state32_t {
   uint32_t r[13];
   uint32_t sp;
   uint32_t lr;
@@ -1961,7 +1961,7 @@ inline void swapStruct(arm_thread_state32_t &x) {
   sys::swapByteOrder(x.cpsr);
 }
 
-struct arm_thread_state64_t {
+struct LLVM_CLASS_ABI arm_thread_state64_t {
   uint64_t x[29];
   uint64_t fp;
   uint64_t lr;
@@ -1981,12 +1981,12 @@ inline void swapStruct(arm_thread_state64_t &x) {
   sys::swapByteOrder(x.cpsr);
 }
 
-struct arm_state_hdr_t {
+struct LLVM_CLASS_ABI arm_state_hdr_t {
   uint32_t flavor;
   uint32_t count;
 };
 
-struct arm_thread_state_t {
+struct LLVM_CLASS_ABI arm_thread_state_t {
   arm_state_hdr_t tsh;
   union {
     arm_thread_state32_t ts32;
@@ -2020,7 +2020,7 @@ const uint32_t ARM_THREAD_STATE_COUNT =
 const uint32_t ARM_THREAD_STATE64_COUNT =
     sizeof(arm_thread_state64_t) / sizeof(uint32_t);
 
-struct ppc_thread_state32_t {
+struct LLVM_CLASS_ABI ppc_thread_state32_t {
   uint32_t srr0;
   uint32_t srr1;
   uint32_t r0;
@@ -2106,12 +2106,12 @@ inline void swapStruct(ppc_thread_state32_t &x) {
   sys::swapByteOrder(x.vrsave);
 }
 
-struct ppc_state_hdr_t {
+struct LLVM_CLASS_ABI ppc_state_hdr_t {
   uint32_t flavor;
   uint32_t count;
 };
 
-struct ppc_thread_state_t {
+struct LLVM_CLASS_ABI ppc_thread_state_t {
   ppc_state_hdr_t tsh;
   union {
     ppc_thread_state32_t ts32;
@@ -2318,7 +2318,7 @@ enum CodeSignMagic {
   CS_SUPPL_SIGNER_TYPE_LOCAL = 8,
 };
 
-struct CS_CodeDirectory {
+struct LLVM_CLASS_ABI CS_CodeDirectory {
   uint32_t magic;         /* magic number (CSMAGIC_CODEDIRECTORY) */
   uint32_t length;        /* total length of CodeDirectory blob */
   uint32_t version;       /* compatibility version */
@@ -2352,12 +2352,12 @@ struct CS_CodeDirectory {
 
 static_assert(sizeof(CS_CodeDirectory) == 88);
 
-struct CS_BlobIndex {
+struct LLVM_CLASS_ABI CS_BlobIndex {
   uint32_t type;   /* type of entry */
   uint32_t offset; /* offset of entry */
 };
 
-struct CS_SuperBlob {
+struct LLVM_CLASS_ABI CS_SuperBlob {
   uint32_t magic;  /* magic number */
   uint32_t length; /* total length of SuperBlob */
   uint32_t count;  /* number of index entries following */

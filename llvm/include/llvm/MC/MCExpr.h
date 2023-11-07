@@ -33,7 +33,7 @@ using SectionAddrMap = DenseMap<const MCSection *, uint64_t>;
 
 /// Base class for the full range of assembler expressions which are
 /// needed for parsing.
-class MCExpr {
+class LLVM_CLASS_ABI MCExpr {
 public:
   enum ExprKind : uint8_t {
     Binary,    ///< Binary expressions.
@@ -142,7 +142,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const MCExpr &E) {
 }
 
 ////  Represent a constant integer expression.
-class MCConstantExpr : public MCExpr {
+class LLVM_CLASS_ABI MCConstantExpr : public MCExpr {
   int64_t Value;
 
   // Subclass data stores SizeInBytes in bits 0..7 and PrintInHex in bit 8.
@@ -190,7 +190,7 @@ public:
 /// A symbol reference in an expression may be a use of a label, a use of an
 /// assembler variable (defined constant), or constitute an implicit definition
 /// of the symbol as external.
-class MCSymbolRefExpr : public MCExpr {
+class LLVM_CLASS_ABI MCSymbolRefExpr : public MCExpr {
 public:
   enum VariantKind : uint16_t {
     VK_None,
@@ -426,7 +426,7 @@ public:
 };
 
 /// Unary assembler expressions.
-class MCUnaryExpr : public MCExpr {
+class LLVM_CLASS_ABI MCUnaryExpr : public MCExpr {
 public:
   enum Opcode {
     LNot,  ///< Logical negation.
@@ -482,7 +482,7 @@ public:
 };
 
 /// Binary assembler expressions.
-class MCBinaryExpr : public MCExpr {
+class LLVM_CLASS_ABI MCBinaryExpr : public MCExpr {
 public:
   enum Opcode {
     Add,  ///< Addition.
@@ -646,7 +646,7 @@ public:
 ///
 /// NOTE: All subclasses are required to have trivial destructors because
 /// MCExprs are bump pointer allocated and not destructed.
-class MCTargetExpr : public MCExpr {
+class LLVM_CLASS_ABI MCTargetExpr : public MCExpr {
   virtual void anchor();
 
 protected:

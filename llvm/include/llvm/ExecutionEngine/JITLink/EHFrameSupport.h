@@ -23,7 +23,7 @@ namespace llvm {
 namespace jitlink {
 
 /// Inspect an eh-frame CFI record.
-class EHFrameCFIBlockInspector {
+class LLVM_CLASS_ABI EHFrameCFIBlockInspector {
 public:
   /// Identify CFI record type and edges based on number and order of edges
   /// in the given block only. This assumes that the block contains one CFI
@@ -85,7 +85,7 @@ private:
 };
 
 /// Supports registration/deregistration of EH-frames in a target process.
-class EHFrameRegistrar {
+class LLVM_CLASS_ABI EHFrameRegistrar {
 public:
   virtual ~EHFrameRegistrar();
   virtual Error registerEHFrames(orc::ExecutorAddrRange EHFrameSection) = 0;
@@ -93,7 +93,7 @@ public:
 };
 
 /// Registers / Deregisters EH-frames in the current process.
-class InProcessEHFrameRegistrar final : public EHFrameRegistrar {
+class LLVM_CLASS_ABI InProcessEHFrameRegistrar final : public EHFrameRegistrar {
 public:
   Error registerEHFrames(orc::ExecutorAddrRange EHFrameSection) override;
 
@@ -110,7 +110,7 @@ using StoreFrameRangeFunction = std::function<void(
 /// Authors of JITLinkContexts can use this function to register a post-fixup
 /// pass that records the range of the eh-frame section. This range can
 /// be used after finalization to register and deregister the frame.
-LinkGraphPassFunction
+LLVM_FUNC_ABI LinkGraphPassFunction
 createEHFrameRecorderPass(const Triple &TT,
                           StoreFrameRangeFunction StoreFrameRange);
 

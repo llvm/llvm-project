@@ -59,7 +59,7 @@ namespace llvm {
 namespace trailing_objects_internal {
 /// Helper template to calculate the max alignment requirement for a set of
 /// objects.
-template <typename First, typename... Rest> class AlignmentCalcHelper {
+template <typename First, typename... Rest> class LLVM_CLASS_ABI AlignmentCalcHelper {
 private:
   enum {
     FirstAlignment = alignof(First),
@@ -72,13 +72,13 @@ public:
   };
 };
 
-template <typename First> class AlignmentCalcHelper<First> {
+template <typename First> class LLVM_CLASS_ABI AlignmentCalcHelper<First> {
 public:
   enum { Alignment = alignof(First) };
 };
 
 /// The base class for TrailingObjects* classes.
-class TrailingObjectsBase {
+class LLVM_CLASS_ABI TrailingObjectsBase {
 protected:
   /// OverloadToken's purpose is to allow specifying function overloads
   /// for different types, without actually taking the types as
@@ -91,7 +91,7 @@ protected:
 // Just a little helper for transforming a type pack into the same
 // number of a different type. e.g.:
 //   ExtractSecondType<Foo..., int>::type
-template <typename Ty1, typename Ty2> struct ExtractSecondType {
+template <typename Ty1, typename Ty2> struct LLVM_CLASS_ABI ExtractSecondType {
   typedef Ty2 type;
 };
 
@@ -105,14 +105,14 @@ template <typename Ty1, typename Ty2> struct ExtractSecondType {
 
 template <int Align, typename BaseTy, typename TopTrailingObj, typename PrevTy,
           typename... MoreTys>
-class TrailingObjectsImpl {
+class LLVM_CLASS_ABI TrailingObjectsImpl {
   // The main template definition is never used -- the two
   // specializations cover all possibilities.
 };
 
 template <int Align, typename BaseTy, typename TopTrailingObj, typename PrevTy,
           typename NextTy, typename... MoreTys>
-class TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, PrevTy, NextTy,
+class LLVM_CLASS_ABI TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, PrevTy, NextTy,
                           MoreTys...>
     : public TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, NextTy,
                                  MoreTys...> {
@@ -187,7 +187,7 @@ protected:
 // The base case of the TrailingObjectsImpl inheritance recursion,
 // when there's no more trailing types.
 template <int Align, typename BaseTy, typename TopTrailingObj, typename PrevTy>
-class alignas(Align) TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, PrevTy>
+class LLVM_CLASS_ABI alignas(Align) TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, PrevTy>
     : public TrailingObjectsBase {
 protected:
   // This is a dummy method, only here so the "using" doesn't fail --
@@ -209,7 +209,7 @@ protected:
 /// See the file comment for details on the usage of the
 /// TrailingObjects type.
 template <typename BaseTy, typename... TrailingTys>
-class TrailingObjects : private trailing_objects_internal::TrailingObjectsImpl<
+class LLVM_CLASS_ABI TrailingObjects : private trailing_objects_internal::TrailingObjectsImpl<
                             trailing_objects_internal::AlignmentCalcHelper<
                                 TrailingTys...>::Alignment,
                             BaseTy, TrailingObjects<BaseTy, TrailingTys...>,

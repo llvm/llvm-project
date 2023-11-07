@@ -35,7 +35,7 @@
 namespace llvm {
 namespace orc {
 
-class RTDyldObjectLinkingLayer
+class LLVM_CLASS_ABI RTDyldObjectLinkingLayer
     : public RTTIExtends<RTDyldObjectLinkingLayer, ObjectLayer>,
       private ResourceManager {
 public:

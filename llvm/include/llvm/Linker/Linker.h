@@ -20,7 +20,7 @@ class Module;
 /// pointer to the merged module so far. It doesn't take ownership of the
 /// module since it is assumed that the user of this class will want to do
 /// something with it after the linking.
-class Linker {
+class LLVM_CLASS_ABI Linker {
   IRMover Mover;
 
 public:

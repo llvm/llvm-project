@@ -37,7 +37,7 @@ const char BigArchiveMagic[] = "<bigaf>\n";
 
 class Archive;
 
-class AbstractArchiveMemberHeader {
+class LLVM_CLASS_ABI AbstractArchiveMemberHeader {
 protected:
   AbstractArchiveMemberHeader(const Archive *Parent) : Parent(Parent){};
 
@@ -75,7 +75,7 @@ public:
 };
 
 template <typename T>
-class CommonArchiveMemberHeader : public AbstractArchiveMemberHeader {
+class LLVM_CLASS_ABI CommonArchiveMemberHeader : public AbstractArchiveMemberHeader {
 public:
   CommonArchiveMemberHeader(const Archive *Parent, const T *RawHeaderPtr)
       : AbstractArchiveMemberHeader(Parent), ArMemHdr(RawHeaderPtr){};
@@ -90,7 +90,7 @@ public:
   T const *ArMemHdr;
 };
 
-struct UnixArMemHdrType {
+struct LLVM_CLASS_ABI UnixArMemHdrType {
   char Name[16];
   char LastModified[12];
   char UID[6];
@@ -100,7 +100,7 @@ struct UnixArMemHdrType {
   char Terminator[2];
 };
 
-class ArchiveMemberHeader : public CommonArchiveMemberHeader<UnixArMemHdrType> {
+class LLVM_CLASS_ABI ArchiveMemberHeader : public CommonArchiveMemberHeader<UnixArMemHdrType> {
 public:
   ArchiveMemberHeader(const Archive *Parent, const char *RawHeaderPtr,
                       uint64_t Size, Error *Err);
@@ -118,7 +118,7 @@ public:
 };
 
 // File Member Header
-struct BigArMemHdrType {
+struct LLVM_CLASS_ABI BigArMemHdrType {
   char Size[20];       // File member size in decimal
   char NextOffset[20]; // Next member offset in decimal
   char PrevOffset[20]; // Previous member offset in decimal
@@ -134,7 +134,7 @@ struct BigArMemHdrType {
 };
 
 // Define file member header of AIX big archive.
-class BigArchiveMemberHeader
+class LLVM_CLASS_ABI BigArchiveMemberHeader
     : public CommonArchiveMemberHeader<BigArMemHdrType> {
 
 public:
@@ -154,7 +154,7 @@ public:
   Expected<bool> isThin() const override { return false; }
 };
 
-class Archive : public Binary {
+class LLVM_CLASS_ABI Archive : public Binary {
   virtual void anchor();
 
 public:
@@ -394,7 +394,7 @@ private:
   mutable std::vector<std::unique_ptr<MemoryBuffer>> ThinBuffers;
 };
 
-class BigArchive : public Archive {
+class LLVM_CLASS_ABI BigArchive : public Archive {
 public:
   /// Fixed-Length Header.
   struct FixLenHdr {

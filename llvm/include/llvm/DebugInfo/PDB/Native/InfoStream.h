@@ -22,7 +22,7 @@
 namespace llvm {
 namespace pdb {
 struct InfoStreamHeader;
-class InfoStream {
+class LLVM_CLASS_ABI InfoStream {
   friend class InfoStreamBuilder;
 
 public:

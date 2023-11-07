@@ -32,7 +32,7 @@ class Binary;
 class IRObjectFile;
 class MachOObjectFile;
 
-class Slice {
+class LLVM_CLASS_ABI Slice {
   const Binary *B;
   uint32_t CPUType;
   uint32_t CPUSubType;
@@ -100,10 +100,10 @@ public:
 
 enum class FatHeaderType { FatHeader, Fat64Header };
 
-Error writeUniversalBinary(ArrayRef<Slice> Slices, StringRef OutputFileName,
+LLVM_FUNC_ABI Error writeUniversalBinary(ArrayRef<Slice> Slices, StringRef OutputFileName,
                            FatHeaderType FatHeader = FatHeaderType::FatHeader);
 
-Error writeUniversalBinaryToStream(
+LLVM_FUNC_ABI Error writeUniversalBinaryToStream(
     ArrayRef<Slice> Slices, raw_ostream &Out,
     FatHeaderType FatHeader = FatHeaderType::FatHeader);
 

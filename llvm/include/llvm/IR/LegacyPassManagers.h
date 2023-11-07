@@ -107,7 +107,7 @@ enum PassDebuggingString {
 
 /// PassManagerPrettyStackEntry - This is used to print informative information
 /// about what pass is running when/if a stack trace is generated.
-class PassManagerPrettyStackEntry : public PrettyStackTraceEntry {
+class LLVM_CLASS_ABI PassManagerPrettyStackEntry : public PrettyStackTraceEntry {
   Pass *P;
   Value *V;
   Module *M;
@@ -134,7 +134,7 @@ public:
 /// using PMStack. Each Pass implements assignPassManager() to connect itself
 /// with appropriate manager. assignPassManager() walks PMStack to find
 /// suitable manager.
-class PMStack {
+class LLVM_CLASS_ABI PMStack {
 public:
   typedef std::vector<PMDataManager *>::const_reverse_iterator iterator;
   iterator begin() const { return S.rbegin(); }
@@ -156,7 +156,7 @@ private:
 //
 /// PMTopLevelManager manages LastUser info and collects common APIs used by
 /// top level pass managers.
-class PMTopLevelManager {
+class LLVM_CLASS_ABI PMTopLevelManager {
 protected:
   explicit PMTopLevelManager(PMDataManager *PMDM);
 
@@ -293,7 +293,7 @@ private:
 
 /// PMDataManager provides the common place to manage the analysis data
 /// used by pass managers.
-class PMDataManager {
+class LLVM_CLASS_ABI PMDataManager {
 public:
   explicit PMDataManager() { initializeAnalysisInfo(); }
 
@@ -455,7 +455,7 @@ private:
 /// It batches all function passes and basic block pass managers together and
 /// sequence them to process one function at a time before processing next
 /// function.
-class FPPassManager : public ModulePass, public PMDataManager {
+class LLVM_CLASS_ABI FPPassManager : public ModulePass, public PMDataManager {
 public:
   static char ID;
   explicit FPPassManager() : ModulePass(ID) {}

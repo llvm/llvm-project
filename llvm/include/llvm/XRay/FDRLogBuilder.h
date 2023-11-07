@@ -22,7 +22,7 @@ namespace xray {
 ///       .add<NewBufferRecord>(1)
 ///       .consume();
 ///
-class LogBuilder {
+class LLVM_CLASS_ABI LogBuilder {
   std::vector<std::unique_ptr<Record>> Records;
 
 public:

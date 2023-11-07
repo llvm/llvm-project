@@ -41,54 +41,54 @@ namespace llvm {
 
 /// Returns false if a debuginfod lookup can be determined to have no chance of
 /// succeeding.
-bool canUseDebuginfod();
+LLVM_FUNC_ABI bool canUseDebuginfod();
 
 /// Finds default array of Debuginfod server URLs by checking DEBUGINFOD_URLS
 /// environment variable.
-SmallVector<StringRef> getDefaultDebuginfodUrls();
+LLVM_FUNC_ABI SmallVector<StringRef> getDefaultDebuginfodUrls();
 
 /// Finds a default local file caching directory for the debuginfod client,
 /// first checking DEBUGINFOD_CACHE_PATH.
-Expected<std::string> getDefaultDebuginfodCacheDirectory();
+LLVM_FUNC_ABI Expected<std::string> getDefaultDebuginfodCacheDirectory();
 
 /// Finds a default timeout for debuginfod HTTP requests. Checks
 /// DEBUGINFOD_TIMEOUT environment variable, default is 90 seconds (90000 ms).
-std::chrono::milliseconds getDefaultDebuginfodTimeout();
+LLVM_FUNC_ABI std::chrono::milliseconds getDefaultDebuginfodTimeout();
 
 /// Fetches a specified source file by searching the default local cache
 /// directory and server URLs.
-Expected<std::string> getCachedOrDownloadSource(object::BuildIDRef ID,
+LLVM_FUNC_ABI Expected<std::string> getCachedOrDownloadSource(object::BuildIDRef ID,
                                                 StringRef SourceFilePath);
 
 /// Fetches an executable by searching the default local cache directory and
 /// server URLs.
-Expected<std::string> getCachedOrDownloadExecutable(object::BuildIDRef ID);
+LLVM_FUNC_ABI Expected<std::string> getCachedOrDownloadExecutable(object::BuildIDRef ID);
 
 /// Fetches a debug binary by searching the default local cache directory and
 /// server URLs.
-Expected<std::string> getCachedOrDownloadDebuginfo(object::BuildIDRef ID);
+LLVM_FUNC_ABI Expected<std::string> getCachedOrDownloadDebuginfo(object::BuildIDRef ID);
 
 /// Fetches any debuginfod artifact using the default local cache directory and
 /// server URLs.
-Expected<std::string> getCachedOrDownloadArtifact(StringRef UniqueKey,
+LLVM_FUNC_ABI Expected<std::string> getCachedOrDownloadArtifact(StringRef UniqueKey,
                                                   StringRef UrlPath);
 
 /// Fetches any debuginfod artifact using the specified local cache directory,
 /// server URLs, and request timeout (in milliseconds). If the artifact is
 /// found, uses the UniqueKey for the local cache file.
-Expected<std::string> getCachedOrDownloadArtifact(
+LLVM_FUNC_ABI Expected<std::string> getCachedOrDownloadArtifact(
     StringRef UniqueKey, StringRef UrlPath, StringRef CacheDirectoryPath,
     ArrayRef<StringRef> DebuginfodUrls, std::chrono::milliseconds Timeout);
 
 class ThreadPool;
 
-struct DebuginfodLogEntry {
+struct LLVM_CLASS_ABI DebuginfodLogEntry {
   std::string Message;
   DebuginfodLogEntry() = default;
   DebuginfodLogEntry(const Twine &Message);
 };
 
-class DebuginfodLog {
+class LLVM_CLASS_ABI DebuginfodLog {
   std::mutex QueueMutex;
   std::condition_variable QueueCondition;
   std::queue<DebuginfodLogEntry> LogEntryQueue;
@@ -104,7 +104,7 @@ public:
 };
 
 /// Tracks a collection of debuginfod artifacts on the local filesystem.
-class DebuginfodCollection {
+class LLVM_CLASS_ABI DebuginfodCollection {
   SmallVector<std::string, 1> Paths;
   sys::RWMutex BinariesMutex;
   StringMap<std::string> Binaries;
@@ -135,7 +135,7 @@ public:
   Expected<std::string> findBinaryPath(object::BuildIDRef);
 };
 
-struct DebuginfodServer {
+struct LLVM_CLASS_ABI DebuginfodServer {
   HTTPServer Server;
   DebuginfodLog &Log;
   DebuginfodCollection &Collection;

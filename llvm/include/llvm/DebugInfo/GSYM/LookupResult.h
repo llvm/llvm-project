@@ -19,7 +19,7 @@ namespace llvm {
 class raw_ostream;
 namespace gsym {
 
-struct SourceLocation {
+struct LLVM_CLASS_ABI SourceLocation {
   StringRef Name;      ///< Function or symbol name.
   StringRef Dir;       ///< Line entry source file directory path.
   StringRef Base;      ///< Line entry source file basename.
@@ -32,11 +32,11 @@ inline bool operator==(const SourceLocation &LHS, const SourceLocation &RHS) {
          LHS.Line == RHS.Line && LHS.Offset == RHS.Offset;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const SourceLocation &R);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SourceLocation &R);
 
 using SourceLocations = std::vector<SourceLocation>;
 
-struct LookupResult {
+struct LLVM_CLASS_ABI LookupResult {
   uint64_t LookupAddr = 0; ///< The address that this lookup pertains to.
   AddressRange FuncRange;  ///< The concrete function address range.
   StringRef FuncName; ///< The concrete function name that contains LookupAddr.
@@ -63,7 +63,7 @@ inline bool operator==(const LookupResult &LHS, const LookupResult &RHS) {
   return LHS.Locations == RHS.Locations;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const LookupResult &R);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const LookupResult &R);
 
 } // namespace gsym
 } // namespace llvm

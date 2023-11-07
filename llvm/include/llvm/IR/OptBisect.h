@@ -22,7 +22,7 @@ namespace llvm {
 
 /// Extensions to this class implement mechanisms to disable passes and
 /// individual optimizations at compile time.
-class OptPassGate {
+class LLVM_CLASS_ABI OptPassGate {
 public:
   virtual ~OptPassGate() = default;
 
@@ -41,7 +41,7 @@ public:
 /// optimizations at compile time based on a command line option
 /// (-opt-bisect-limit) in order to perform a bisecting search for
 /// optimization-related problems.
-class OptBisect : public OptPassGate {
+class LLVM_CLASS_ABI OptBisect : public OptPassGate {
 public:
   /// Default constructor. Initializes the state to "disabled". The bisection
   /// will be enabled by the cl::opt call-back when the command line option
@@ -84,7 +84,7 @@ private:
 
 /// Singleton instance of the OptBisect class, so multiple pass managers don't
 /// need to coordinate their uses of OptBisect.
-OptPassGate &getGlobalPassGate();
+LLVM_FUNC_ABI OptPassGate &getGlobalPassGate();
 
 } // end namespace llvm
 

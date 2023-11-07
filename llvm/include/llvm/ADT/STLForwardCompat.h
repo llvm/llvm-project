@@ -28,7 +28,7 @@ namespace llvm {
 //===----------------------------------------------------------------------===//
 
 template <typename T>
-struct remove_cvref // NOLINT(readability-identifier-naming)
+struct LLVM_CLASS_ABI remove_cvref // NOLINT(readability-identifier-naming)
 {
   using type = std::remove_cv_t<std::remove_reference_t<T>>;
 };

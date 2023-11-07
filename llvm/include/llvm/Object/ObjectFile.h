@@ -50,7 +50,7 @@ using section_iterator = content_iterator<SectionRef>;
 typedef std::function<bool(const SectionRef &)> SectionFilterPredicate;
 /// This is a value type class that represents a single relocation in the list
 /// of relocations in the object file.
-class RelocationRef {
+class LLVM_CLASS_ABI RelocationRef {
   DataRefImpl RelocationPimpl;
   const ObjectFile *OwningObject = nullptr;
 
@@ -79,7 +79,7 @@ using relocation_iterator = content_iterator<RelocationRef>;
 
 /// This is a value type class that represents a single section in the list of
 /// sections in the object file.
-class SectionRef {
+class LLVM_CLASS_ABI SectionRef {
   friend class SymbolRef;
 
   DataRefImpl SectionPimpl;
@@ -143,7 +143,7 @@ public:
   const ObjectFile *getObject() const;
 };
 
-struct SectionedAddress {
+struct LLVM_CLASS_ABI SectionedAddress {
   const static uint64_t UndefSection = UINT64_MAX;
 
   uint64_t Address = 0;
@@ -162,11 +162,11 @@ inline bool operator==(const SectionedAddress &LHS,
          std::tie(RHS.SectionIndex, RHS.Address);
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const SectionedAddress &Addr);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SectionedAddress &Addr);
 
 /// This is a value type class that represents a single symbol in the list of
 /// symbols in the object file.
-class SymbolRef : public BasicSymbolRef {
+class LLVM_CLASS_ABI SymbolRef : public BasicSymbolRef {
   friend class SectionRef;
 
 public:
@@ -206,7 +206,7 @@ public:
   const ObjectFile *getObject() const;
 };
 
-class symbol_iterator : public basic_symbol_iterator {
+class LLVM_CLASS_ABI symbol_iterator : public basic_symbol_iterator {
 public:
   symbol_iterator(SymbolRef Sym) : basic_symbol_iterator(Sym) {}
   symbol_iterator(const basic_symbol_iterator &B)
@@ -227,7 +227,7 @@ public:
 /// This class is the base class for all object file types. Concrete instances
 /// of this object are created by createObjectFile, which figures out which type
 /// to create.
-class ObjectFile : public SymbolicFile {
+class LLVM_CLASS_ABI ObjectFile : public SymbolicFile {
   virtual void anchor();
 
 protected:
@@ -403,7 +403,7 @@ public:
 
 /// A filtered iterator for SectionRefs that skips sections based on some given
 /// predicate.
-class SectionFilterIterator {
+class LLVM_CLASS_ABI SectionFilterIterator {
 public:
   SectionFilterIterator(SectionFilterPredicate Pred,
                         const section_iterator &Begin,
@@ -434,7 +434,7 @@ private:
 
 /// Creates an iterator range of SectionFilterIterators for a given Object and
 /// predicate.
-class SectionFilter {
+class LLVM_CLASS_ABI SectionFilter {
 public:
   SectionFilter(SectionFilterPredicate Pred, const ObjectFile &Obj)
       : Predicate(std::move(Pred)), Object(Obj) {}
@@ -642,7 +642,7 @@ inline const ObjectFile *RelocationRef::getObject() const {
 
 } // end namespace object
 
-template <> struct DenseMapInfo<object::SectionRef> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<object::SectionRef> {
   static bool isEqual(const object::SectionRef &A,
                       const object::SectionRef &B) {
     return A == B;

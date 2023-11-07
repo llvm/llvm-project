@@ -30,7 +30,7 @@ class GISelInstProfileBuilder;
 /// assert(C->getOpcode() == TargetOpcode::COPY);
 /// Explicitly passing in a register would materialize a copy if possible.
 /// CSEMIRBuilder also does trivial constant folding for binary ops.
-class CSEMIRBuilder : public MachineIRBuilder {
+class LLVM_CLASS_ABI CSEMIRBuilder : public MachineIRBuilder {
 
   /// Returns true if A dominates B (within the same basic block).
   /// Both iterators must be in the same basic block.

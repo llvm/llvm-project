@@ -22,14 +22,14 @@
 
 namespace llvm {
 
-struct SymbolsMapKey {
+struct LLVM_CLASS_ABI SymbolsMapKey {
   MachO::SymbolKind Kind;
   StringRef Name;
 
   SymbolsMapKey(MachO::SymbolKind Kind, StringRef Name)
       : Kind(Kind), Name(Name) {}
 };
-template <> struct DenseMapInfo<SymbolsMapKey> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<SymbolsMapKey> {
   static inline SymbolsMapKey getEmptyKey() {
     return SymbolsMapKey(MachO::SymbolKind::GlobalSymbol, StringRef{});
   }
@@ -73,7 +73,7 @@ bool operator!=(const DenseMapBase<DerivedT, SymbolsMapKey, MachO::Symbol *,
 
 namespace MachO {
 
-class SymbolSet {
+class LLVM_CLASS_ABI SymbolSet {
 private:
   llvm::BumpPtrAllocator Allocator;
   StringRef copyString(StringRef String) {

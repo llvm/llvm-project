@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-struct ToolContext {
+struct LLVM_CLASS_ABI ToolContext {
   const char *Path;
   const char *PrependArg;
   // PrependArg will be added unconditionally by the llvm-driver, but

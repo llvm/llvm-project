@@ -36,7 +36,7 @@ namespace llvm {
 /// performance for non-sequential find() operations.
 ///
 /// \tparam IndexT - The type of the index into the bitvector.
-template <typename IndexT> class CoalescingBitVector {
+template <typename IndexT> class LLVM_CLASS_ABI CoalescingBitVector {
   static_assert(std::is_unsigned<IndexT>::value,
                 "Index must be an unsigned integer.");
 

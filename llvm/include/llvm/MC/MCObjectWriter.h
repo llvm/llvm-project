@@ -32,7 +32,7 @@ class MCValue;
 /// points. Once assembly is complete, the object writer is given the
 /// MCAssembler instance, which contains all the symbol and section data which
 /// should be emitted as part of writeObject().
-class MCObjectWriter {
+class LLVM_CLASS_ABI MCObjectWriter {
 protected:
   std::vector<const MCSymbol *> AddrsigSyms;
   bool EmitAddrsigSection = false;
@@ -126,7 +126,7 @@ public:
 
 /// Base class for classes that define behaviour that is specific to both the
 /// target and the object format.
-class MCObjectTargetWriter {
+class LLVM_CLASS_ABI MCObjectTargetWriter {
 public:
   virtual ~MCObjectTargetWriter() = default;
   virtual Triple::ObjectFormatType getFormat() const = 0;

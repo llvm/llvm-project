@@ -83,7 +83,7 @@ enum OperandType {
 
 /// This holds information about one operand of a machine instruction,
 /// indicating the register class for register operands, etc.
-class MCOperandInfo {
+class LLVM_CLASS_ABI MCOperandInfo {
 public:
   /// This specifies the register class enumeration of the operand
   /// if the operand is a register.  If isLookupPtrRegClass is set, then this is
@@ -196,7 +196,7 @@ enum Flag {
 /// use and many other things.  There is one instance of this struct for each
 /// target instruction class, and the MachineInstr class points to this struct
 /// directly to describe itself.
-class MCInstrDesc {
+class LLVM_CLASS_ABI MCInstrDesc {
 public:
   // FIXME: Disable copies and moves.
   // Do not allow MCInstrDescs to be copied or moved. They should only exist in

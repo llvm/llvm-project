@@ -45,7 +45,7 @@ namespace llvm {
 class MachineBasicBlock;
 class MachineRegisterInfo;
 
-class LiveVariables : public MachineFunctionPass {
+class LLVM_CLASS_ABI LiveVariables : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
   LiveVariables() : MachineFunctionPass(ID) {

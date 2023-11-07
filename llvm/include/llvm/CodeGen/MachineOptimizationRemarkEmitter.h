@@ -28,7 +28,7 @@ class MachineInstr;
 
 /// Common features for diagnostics dealing with optimization remarks
 /// that are used by machine passes.
-class DiagnosticInfoMIROptimization : public DiagnosticInfoOptimizationBase {
+class LLVM_CLASS_ABI DiagnosticInfoMIROptimization : public DiagnosticInfoOptimizationBase {
 public:
   DiagnosticInfoMIROptimization(enum DiagnosticKind Kind, const char *PassName,
                                 StringRef RemarkName,
@@ -56,7 +56,7 @@ private:
 };
 
 /// Diagnostic information for applied optimization remarks.
-class MachineOptimizationRemark : public DiagnosticInfoMIROptimization {
+class LLVM_CLASS_ABI MachineOptimizationRemark : public DiagnosticInfoMIROptimization {
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass=, then the diagnostic will
@@ -82,7 +82,7 @@ public:
 };
 
 /// Diagnostic information for missed-optimization remarks.
-class MachineOptimizationRemarkMissed : public DiagnosticInfoMIROptimization {
+class LLVM_CLASS_ABI MachineOptimizationRemarkMissed : public DiagnosticInfoMIROptimization {
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-missed=, then the
@@ -108,7 +108,7 @@ public:
 };
 
 /// Diagnostic information for optimization analysis remarks.
-class MachineOptimizationRemarkAnalysis : public DiagnosticInfoMIROptimization {
+class LLVM_CLASS_ABI MachineOptimizationRemarkAnalysis : public DiagnosticInfoMIROptimization {
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the
@@ -150,7 +150,7 @@ using MNV = DiagnosticInfoMIROptimization::MachineArgument;
 /// along with the reasons for it.  Hotness information of the corresponding
 /// code region can be included in the remark if DiagnosticsHotnessRequested is
 /// enabled in the LLVM context.
-class MachineOptimizationRemarkEmitter {
+class LLVM_CLASS_ABI MachineOptimizationRemarkEmitter {
 public:
   MachineOptimizationRemarkEmitter(MachineFunction &MF,
                                    MachineBlockFrequencyInfo *MBFI)
@@ -218,7 +218,7 @@ private:
 /// Note that this pass shouldn't generally be marked as preserved by other
 /// passes.  It's holding onto BFI, so if the pass does not preserve BFI, BFI
 /// could be freed.
-class MachineOptimizationRemarkEmitterPass : public MachineFunctionPass {
+class LLVM_CLASS_ABI MachineOptimizationRemarkEmitterPass : public MachineFunctionPass {
   std::unique_ptr<MachineOptimizationRemarkEmitter> ORE;
 
 public:

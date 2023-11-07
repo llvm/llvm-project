@@ -70,13 +70,13 @@ typedef int (*LLVMOpInfoCallback)(void *DisInfo, uint64_t PC, uint64_t Offset,
  * type is one of the Target specific #defines below and is used to print
  * operands like "_foo@GOT", ":lower16:_foo", etc.
  */
-struct LLVMOpInfoSymbol1 {
+struct LLVM_CLASS_ABI LLVMOpInfoSymbol1 {
   uint64_t Present;  /* 1 if this symbol is present */
   const char *Name;  /* symbol name if not NULL */
   uint64_t Value;    /* symbol value if name is NULL */
 };
 
-struct LLVMOpInfo1 {
+struct LLVM_CLASS_ABI LLVMOpInfo1 {
   struct LLVMOpInfoSymbol1 AddSymbol;
   struct LLVMOpInfoSymbol1 SubtractSymbol;
   uint64_t Value;

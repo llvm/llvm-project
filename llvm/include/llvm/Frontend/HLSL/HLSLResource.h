@@ -55,7 +55,7 @@ enum class ResourceKind : uint32_t {
   NumEntries,
 };
 
-class FrontendResource {
+class LLVM_CLASS_ABI FrontendResource {
   MDNode *Entry;
 
 public:

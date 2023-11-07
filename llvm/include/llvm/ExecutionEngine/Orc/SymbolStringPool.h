@@ -30,12 +30,12 @@ class SymbolStringPtr;
 class NonOwningSymbolStringPtr;
 
 /// String pool for symbol names used by the JIT.
-class SymbolStringPool {
+class LLVM_CLASS_ABI SymbolStringPool {
   friend class SymbolStringPoolTest;
   friend class SymbolStringPtrBase;
 
   // Implemented in DebugUtils.h.
-  friend raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
+  friend LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
 
 public:
   /// Destroy a SymbolStringPool.
@@ -67,7 +67,7 @@ private:
 ///
 /// SymbolStringPtrBases are default-constructible and constructible
 /// from nullptr to enable comparison with these values.
-class SymbolStringPtrBase {
+class LLVM_CLASS_ABI SymbolStringPtrBase {
   friend class SymbolStringPool;
   friend struct DenseMapInfo<SymbolStringPtr>;
   friend struct DenseMapInfo<NonOwningSymbolStringPtr>;
@@ -134,7 +134,7 @@ protected:
 };
 
 /// Pointer to a pooled string representing a symbol name.
-class SymbolStringPtr : public SymbolStringPtrBase {
+class LLVM_CLASS_ABI SymbolStringPtr : public SymbolStringPtrBase {
   friend class OrcV2CAPIHelper;
   friend class SymbolStringPool;
   friend struct DenseMapInfo<SymbolStringPtr>;
@@ -202,7 +202,7 @@ private:
 /// represented by SymbolStringPtrs the edges can be represented by pairs of
 /// NonOwningSymbolStringPtrs and this will make the introduction of deletion
 /// of edges cheaper.
-class NonOwningSymbolStringPtr : public SymbolStringPtrBase {
+class LLVM_CLASS_ABI NonOwningSymbolStringPtr : public SymbolStringPtrBase {
   friend struct DenseMapInfo<orc::NonOwningSymbolStringPtr>;
 
 public:
@@ -272,7 +272,7 @@ SymbolStringPool::getRefCount(const SymbolStringPtrBase &S) const {
 } // end namespace orc
 
 template <>
-struct DenseMapInfo<orc::SymbolStringPtr> {
+struct LLVM_CLASS_ABI DenseMapInfo<orc::SymbolStringPtr> {
 
   static orc::SymbolStringPtr getEmptyKey() {
     return orc::SymbolStringPtr::getEmptyVal();
@@ -292,7 +292,7 @@ struct DenseMapInfo<orc::SymbolStringPtr> {
   }
 };
 
-template <> struct DenseMapInfo<orc::NonOwningSymbolStringPtr> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<orc::NonOwningSymbolStringPtr> {
 
   static orc::NonOwningSymbolStringPtr getEmptyKey() {
     return orc::NonOwningSymbolStringPtr::getEmptyVal();

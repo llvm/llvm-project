@@ -28,7 +28,7 @@ namespace llvm {
 class BasicBlock;
 class Instruction;
 
-class InstructionPrecedenceTracking {
+class LLVM_CLASS_ABI InstructionPrecedenceTracking {
   // Maps a block to the topmost special instruction in it. If the value is
   // nullptr, it means that it is known that this block does not contain any
   // special instructions.
@@ -97,7 +97,7 @@ public:
 /// is reached, then we need to make sure that there is no implicit control flow
 /// instruction (ICFI) preceding it. For example, this check is required if we
 /// perform PRE moving non-speculable instruction to other place.
-class ImplicitControlFlowTracking : public InstructionPrecedenceTracking {
+class LLVM_CLASS_ABI ImplicitControlFlowTracking : public InstructionPrecedenceTracking {
 public:
   /// Returns the topmost instruction with implicit control flow from the given
   /// basic block. Returns nullptr if there is no such instructions in the block.
@@ -119,7 +119,7 @@ public:
   bool isSpecialInstruction(const Instruction *Insn) const override;
 };
 
-class MemoryWriteTracking : public InstructionPrecedenceTracking {
+class LLVM_CLASS_ABI MemoryWriteTracking : public InstructionPrecedenceTracking {
 public:
   /// Returns the topmost instruction that may write memory from the given
   /// basic block. Returns nullptr if there is no such instructions in the block.

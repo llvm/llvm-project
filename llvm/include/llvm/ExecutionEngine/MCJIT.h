@@ -21,7 +21,7 @@
 extern "C" void LLVMLinkInMCJIT();
 
 namespace {
-  struct ForceMCJITLinking {
+  struct LLVM_CLASS_ABI ForceMCJITLinking {
     ForceMCJITLinking() {
       // We must reference MCJIT in such a way that compilers will not
       // delete it all as dead code, even with whole program optimization,

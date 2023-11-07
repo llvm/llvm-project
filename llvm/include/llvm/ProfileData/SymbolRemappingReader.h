@@ -68,7 +68,7 @@ namespace llvm {
 
 class MemoryBuffer;
 
-class SymbolRemappingParseError : public ErrorInfo<SymbolRemappingParseError> {
+class LLVM_CLASS_ABI SymbolRemappingParseError : public ErrorInfo<SymbolRemappingParseError> {
 public:
   SymbolRemappingParseError(StringRef File, int64_t Line, const Twine &Message)
       : File(File), Line(Line), Message(Message.str()) {}
@@ -96,7 +96,7 @@ private:
 ///
 /// Remaps the symbol names in profile data to match those in the program
 /// according to a set of rules specified in a given file.
-class SymbolRemappingReader {
+class LLVM_CLASS_ABI SymbolRemappingReader {
 public:
   /// Read remappings from the given buffer, which must live as long as
   /// the remapper.

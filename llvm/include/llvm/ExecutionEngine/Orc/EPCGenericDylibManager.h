@@ -27,7 +27,7 @@ namespace orc {
 
 class SymbolLookupSet;
 
-class EPCGenericDylibManager {
+class LLVM_CLASS_ABI EPCGenericDylibManager {
 public:
   /// Function addresses for memory access.
   struct SymbolAddrs {

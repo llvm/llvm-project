@@ -39,7 +39,7 @@ using PdbOrObj = PointerUnion<object::ObjectFile *, pdb::PDBFile *>;
 // - Prints and compares the logical views.
 //
 // The supported binary formats are: ELF, Mach-O and CodeView.
-class LVReaderHandler {
+class LLVM_CLASS_ABI LVReaderHandler {
   ArgVector &Objects;
   ScopedPrinter &W;
   raw_ostream &OS;

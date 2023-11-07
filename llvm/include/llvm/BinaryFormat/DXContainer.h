@@ -45,7 +45,7 @@ inline Triple::EnvironmentType getShaderStage(uint32_t Kind) {
   return static_cast<Triple::EnvironmentType>(Triple::Pixel + Kind);
 }
 
-struct Hash {
+struct LLVM_CLASS_ABI Hash {
   uint8_t Digest[16];
 };
 
@@ -55,7 +55,7 @@ enum class HashFlags : uint32_t {
                       // taking into account source information (-Zss)
 };
 
-struct ShaderHash {
+struct LLVM_CLASS_ABI ShaderHash {
   uint32_t Flags; // dxbc::HashFlags
   uint8_t Digest[16];
 
@@ -64,7 +64,7 @@ struct ShaderHash {
   void swapBytes() { sys::swapByteOrder(Flags); }
 };
 
-struct ContainerVersion {
+struct LLVM_CLASS_ABI ContainerVersion {
   uint16_t Major;
   uint16_t Minor;
 
@@ -74,7 +74,7 @@ struct ContainerVersion {
   }
 };
 
-struct Header {
+struct LLVM_CLASS_ABI Header {
   uint8_t Magic[4]; // "DXBC"
   Hash FileHash;
   ContainerVersion Version;
@@ -91,7 +91,7 @@ struct Header {
 };
 
 /// Use this type to describe the size and type of a DXIL container part.
-struct PartHeader {
+struct LLVM_CLASS_ABI PartHeader {
   uint8_t Name[4];
   uint32_t Size;
 
@@ -102,7 +102,7 @@ struct PartHeader {
   // Structure is followed directly by part data: uint8_t PartData[PartSize].
 };
 
-struct BitcodeHeader {
+struct LLVM_CLASS_ABI BitcodeHeader {
   uint8_t Magic[4];     // ACSII "DXIL".
   uint8_t MajorVersion; // DXIL version.
   uint8_t MinorVersion; // DXIL version.
@@ -119,7 +119,7 @@ struct BitcodeHeader {
   }
 };
 
-struct ProgramHeader {
+struct LLVM_CLASS_ABI ProgramHeader {
   uint8_t MinorVersion : 4;
   uint8_t MajorVersion : 4;
   uint8_t Unused;
@@ -149,9 +149,9 @@ enum class FeatureFlags : uint64_t {
 static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
 
-PartType parsePartType(StringRef S);
+LLVM_FUNC_ABI PartType parsePartType(StringRef S);
 
-struct VertexPSVInfo {
+struct LLVM_CLASS_ABI VertexPSVInfo {
   uint8_t OutputPositionPresent;
   uint8_t Unused[3];
 
@@ -160,7 +160,7 @@ struct VertexPSVInfo {
   }
 };
 
-struct HullPSVInfo {
+struct LLVM_CLASS_ABI HullPSVInfo {
   uint32_t InputControlPointCount;
   uint32_t OutputControlPointCount;
   uint32_t TessellatorDomain;
@@ -174,7 +174,7 @@ struct HullPSVInfo {
   }
 };
 
-struct DomainPSVInfo {
+struct LLVM_CLASS_ABI DomainPSVInfo {
   uint32_t InputControlPointCount;
   uint8_t OutputPositionPresent;
   uint8_t Unused[3];
@@ -186,7 +186,7 @@ struct DomainPSVInfo {
   }
 };
 
-struct GeometryPSVInfo {
+struct LLVM_CLASS_ABI GeometryPSVInfo {
   uint32_t InputPrimitive;
   uint32_t OutputTopology;
   uint32_t OutputStreamMask;
@@ -200,7 +200,7 @@ struct GeometryPSVInfo {
   }
 };
 
-struct PixelPSVInfo {
+struct LLVM_CLASS_ABI PixelPSVInfo {
   uint8_t DepthOutput;
   uint8_t SampleFrequency;
   uint8_t Unused[2];
@@ -210,7 +210,7 @@ struct PixelPSVInfo {
   }
 };
 
-struct MeshPSVInfo {
+struct LLVM_CLASS_ABI MeshPSVInfo {
   uint32_t GroupSharedBytesUsed;
   uint32_t GroupSharedBytesDependentOnViewID;
   uint32_t PayloadSizeInBytes;
@@ -226,7 +226,7 @@ struct MeshPSVInfo {
   }
 };
 
-struct AmplificationPSVInfo {
+struct LLVM_CLASS_ABI AmplificationPSVInfo {
   uint32_t PayloadSizeInBytes;
 
   void swapBytes() { sys::swapByteOrder(PayloadSizeInBytes); }
@@ -280,24 +280,24 @@ enum class SemanticKind : uint8_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<SemanticKind>> getSemanticKinds();
+LLVM_FUNC_ABI ArrayRef<EnumEntry<SemanticKind>> getSemanticKinds();
 
 #define COMPONENT_TYPE(Val, Enum) Enum = Val,
 enum class ComponentType : uint8_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<ComponentType>> getComponentTypes();
+LLVM_FUNC_ABI ArrayRef<EnumEntry<ComponentType>> getComponentTypes();
 
 #define INTERPOLATION_MODE(Val, Enum) Enum = Val,
 enum class InterpolationMode : uint8_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<InterpolationMode>> getInterpolationModes();
+LLVM_FUNC_ABI ArrayRef<EnumEntry<InterpolationMode>> getInterpolationModes();
 
 namespace v0 {
-struct RuntimeInfo {
+struct LLVM_CLASS_ABI RuntimeInfo {
   PipelinePSVInfo StageInfo;
   uint32_t MinimumWaveLaneCount; // minimum lane count required, 0 if unused
   uint32_t MaximumWaveLaneCount; // maximum lane count required,
@@ -311,7 +311,7 @@ struct RuntimeInfo {
   void swapBytes(Triple::EnvironmentType Stage) { StageInfo.swapBytes(Stage); }
 };
 
-struct ResourceBindInfo {
+struct LLVM_CLASS_ABI ResourceBindInfo {
   uint32_t Type;
   uint32_t Space;
   uint32_t LowerBound;
@@ -325,7 +325,7 @@ struct ResourceBindInfo {
   }
 };
 
-struct SignatureElement {
+struct LLVM_CLASS_ABI SignatureElement {
   uint32_t NameOffset;
   uint32_t IndicesOffset;
 
@@ -357,7 +357,7 @@ static_assert(sizeof(SignatureElement) == 4 * sizeof(uint32_t),
 
 namespace v1 {
 
-struct MeshRuntimeInfo {
+struct LLVM_CLASS_ABI MeshRuntimeInfo {
   uint8_t SigPrimVectors; // Primitive output for MS
   uint8_t MeshOutputTopology;
 };
@@ -369,7 +369,7 @@ union GeometryExtraInfo {
                                       // MeshInfo::SigPrimVectors)
   MeshRuntimeInfo MeshInfo;
 };
-struct RuntimeInfo : public v0::RuntimeInfo {
+struct LLVM_CLASS_ABI RuntimeInfo : public v0::RuntimeInfo {
   uint8_t ShaderStage; // PSVShaderKind
   uint8_t UsesViewID;
   GeometryExtraInfo GeomData;
@@ -397,7 +397,7 @@ struct RuntimeInfo : public v0::RuntimeInfo {
 } // namespace v1
 
 namespace v2 {
-struct RuntimeInfo : public v1::RuntimeInfo {
+struct LLVM_CLASS_ABI RuntimeInfo : public v1::RuntimeInfo {
   uint32_t NumThreadsX;
   uint32_t NumThreadsY;
   uint32_t NumThreadsZ;
@@ -413,7 +413,7 @@ struct RuntimeInfo : public v1::RuntimeInfo {
   }
 };
 
-struct ResourceBindInfo : public v0::ResourceBindInfo {
+struct LLVM_CLASS_ABI ResourceBindInfo : public v0::ResourceBindInfo {
   uint32_t Kind;
   uint32_t Flags;
 
@@ -432,23 +432,23 @@ enum class SigMinPrecision : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<SigMinPrecision>> getSigMinPrecisions();
+LLVM_FUNC_ABI ArrayRef<EnumEntry<SigMinPrecision>> getSigMinPrecisions();
 
 #define D3D_SYSTEM_VALUE(Val, Enum) Enum = Val,
 enum class D3DSystemValue : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<D3DSystemValue>> getD3DSystemValues();
+LLVM_FUNC_ABI ArrayRef<EnumEntry<D3DSystemValue>> getD3DSystemValues();
 
 #define COMPONENT_TYPE(Val, Enum) Enum = Val,
 enum class SigComponentType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<SigComponentType>> getSigComponentTypes();
+LLVM_FUNC_ABI ArrayRef<EnumEntry<SigComponentType>> getSigComponentTypes();
 
-struct ProgramSignatureHeader {
+struct LLVM_CLASS_ABI ProgramSignatureHeader {
   uint32_t ParamCount;
   uint32_t FirstParamOffset;
 
@@ -458,7 +458,7 @@ struct ProgramSignatureHeader {
   }
 };
 
-struct ProgramSignatureElement {
+struct LLVM_CLASS_ABI ProgramSignatureElement {
   uint32_t Stream;     // Stream index (parameters must appear in non-decreasing
                        // stream order)
   uint32_t NameOffset; // Offset from the start of the ProgramSignatureHeader to

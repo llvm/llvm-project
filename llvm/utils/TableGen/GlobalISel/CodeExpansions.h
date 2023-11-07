@@ -15,7 +15,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_CODEEXPANSIONS_H
 #define LLVM_UTILS_TABLEGEN_CODEEXPANSIONS_H
 namespace llvm {
-class CodeExpansions {
+class LLVM_CLASS_ABI CodeExpansions {
 public:
   using const_iterator = StringMap<std::string>::const_iterator;
 

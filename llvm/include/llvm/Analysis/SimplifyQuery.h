@@ -20,7 +20,7 @@ class TargetLibraryInfo;
 /// InstrInfoQuery provides an interface to query additional information for
 /// instructions like metadata or keywords like nsw, which provides conservative
 /// results if the users specified it is safe to use.
-struct InstrInfoQuery {
+struct LLVM_CLASS_ABI InstrInfoQuery {
   InstrInfoQuery(bool UMD) : UseInstrInfo(UMD) {}
   InstrInfoQuery() = default;
   bool UseInstrInfo = true;
@@ -56,7 +56,7 @@ struct InstrInfoQuery {
   }
 };
 
-struct SimplifyQuery {
+struct LLVM_CLASS_ABI SimplifyQuery {
   const DataLayout &DL;
   const TargetLibraryInfo *TLI = nullptr;
   const DominatorTree *DT = nullptr;

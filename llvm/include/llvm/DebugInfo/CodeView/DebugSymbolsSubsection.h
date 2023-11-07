@@ -16,7 +16,7 @@
 
 namespace llvm {
 namespace codeview {
-class DebugSymbolsSubsectionRef final : public DebugSubsectionRef {
+class LLVM_CLASS_ABI DebugSymbolsSubsectionRef final : public DebugSubsectionRef {
 public:
   DebugSymbolsSubsectionRef()
       : DebugSubsectionRef(DebugSubsectionKind::Symbols) {}
@@ -34,7 +34,7 @@ private:
   CVSymbolArray Records;
 };
 
-class DebugSymbolsSubsection final : public DebugSubsection {
+class LLVM_CLASS_ABI DebugSymbolsSubsection final : public DebugSubsection {
 public:
   DebugSymbolsSubsection() : DebugSubsection(DebugSubsectionKind::Symbols) {}
   static bool classof(const DebugSubsection *S) {

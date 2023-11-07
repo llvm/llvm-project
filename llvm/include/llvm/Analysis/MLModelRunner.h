@@ -24,7 +24,7 @@ class LLVMContext;
 /// NOTE: feature indices are expected to be consistent all accross
 /// MLModelRunners (pertaining to the same model), and also Loggers (see
 /// TFUtils.h)
-class MLModelRunner {
+class LLVM_CLASS_ABI MLModelRunner {
 public:
   // Disallows copy and assign.
   MLModelRunner(const MLModelRunner &) = delete;

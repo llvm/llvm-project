@@ -26,16 +26,16 @@ namespace sys {
 
   /// This function runs all the registered interrupt handlers, including the
   /// removal of files registered by RemoveFileOnSignal.
-  void RunInterruptHandlers();
+  LLVM_FUNC_ABI void RunInterruptHandlers();
 
   /// This function registers signal handlers to ensure that if a signal gets
   /// delivered that the named file is removed.
   /// Remove a file if a fatal signal occurs.
-  bool RemoveFileOnSignal(StringRef Filename, std::string* ErrMsg = nullptr);
+  LLVM_FUNC_ABI bool RemoveFileOnSignal(StringRef Filename, std::string* ErrMsg = nullptr);
 
   /// This function removes a file from the list of files to be removed on
   /// signal delivery.
-  void DontRemoveFileOnSignal(StringRef Filename);
+  LLVM_FUNC_ABI void DontRemoveFileOnSignal(StringRef Filename);
 
   /// When an error signal (such as SIGABRT or SIGSEGV) is delivered to the
   /// process, print a stack trace and then exit.
@@ -45,26 +45,26 @@ namespace sys {
   ///        StringRef(), in which case we will only search $PATH.
   /// \param DisableCrashReporting if \c true, disable the normal crash
   ///        reporting mechanisms on the underlying operating system.
-  void PrintStackTraceOnErrorSignal(StringRef Argv0,
+  LLVM_FUNC_ABI void PrintStackTraceOnErrorSignal(StringRef Argv0,
                                     bool DisableCrashReporting = false);
 
   /// Disable all system dialog boxes that appear when the process crashes.
-  void DisableSystemDialogsOnCrash();
+  LLVM_FUNC_ABI void DisableSystemDialogsOnCrash();
 
   /// Print the stack trace using the given \c raw_ostream object.
   /// \param Depth refers to the number of stackframes to print. If not
   ///        specified, the entire frame is printed.
-  void PrintStackTrace(raw_ostream &OS, int Depth = 0);
+  LLVM_FUNC_ABI void PrintStackTrace(raw_ostream &OS, int Depth = 0);
 
   // Run all registered signal handlers.
-  void RunSignalHandlers();
+  LLVM_FUNC_ABI void RunSignalHandlers();
 
   using SignalHandlerCallback = void (*)(void *);
 
   /// Add a function to be called when an abort/kill signal is delivered to the
   /// process. The handler can have a cookie passed to it to identify what
   /// instance of the handler it is.
-  void AddSignalHandler(SignalHandlerCallback FnPtr, void *Cookie);
+  LLVM_FUNC_ABI void AddSignalHandler(SignalHandlerCallback FnPtr, void *Cookie);
 
   /// This function registers a function to be called when the user "interrupts"
   /// the program (typically by pressing ctrl-c).  When the user interrupts the
@@ -75,7 +75,7 @@ namespace sys {
   /// functions.  An null interrupt function pointer disables the current
   /// installed function.  Note also that the handler may be executed on a
   /// different thread on some platforms.
-  void SetInterruptFunction(void (*IF)());
+  LLVM_FUNC_ABI void SetInterruptFunction(void (*IF)());
 
   /// Registers a function to be called when an "info" signal is delivered to
   /// the process.
@@ -87,7 +87,7 @@ namespace sys {
   /// functions.  An null function pointer disables the current installed
   /// function.  Note also that the handler may be executed on a different
   /// thread on some platforms.
-  void SetInfoSignalFunction(void (*Handler)());
+  LLVM_FUNC_ABI void SetInfoSignalFunction(void (*Handler)());
 
   /// Registers a function to be called in a "one-shot" manner when a pipe
   /// signal is delivered to the process (i.e., on a failed write to a pipe).
@@ -103,11 +103,11 @@ namespace sys {
   /// functions.  A null handler pointer disables the current installed
   /// function.  Note also that the handler may be executed on a
   /// different thread on some platforms.
-  void SetOneShotPipeSignalFunction(void (*Handler)());
+  LLVM_FUNC_ABI void SetOneShotPipeSignalFunction(void (*Handler)());
 
   /// On Unix systems and Windows, this function exits with an "IO error" exit
   /// code.
-  void DefaultOneShotPipeSignalHandler();
+  LLVM_FUNC_ABI void DefaultOneShotPipeSignalHandler();
 
 #ifdef _WIN32
   /// Windows does not support signals and this handler must be called manually.
@@ -121,9 +121,9 @@ namespace sys {
   /// - create a core/mini dump of the exception context whenever possible
   /// Context is a system-specific failure context: it is the signal type on
   /// Unix; the ExceptionContext on Windows.
-  void CleanupOnSignal(uintptr_t Context);
+  LLVM_FUNC_ABI void CleanupOnSignal(uintptr_t Context);
 
-  void unregisterHandlers();
+  LLVM_FUNC_ABI void unregisterHandlers();
 } // End sys namespace
 } // End llvm namespace
 

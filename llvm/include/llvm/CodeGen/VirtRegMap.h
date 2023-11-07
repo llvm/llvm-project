@@ -31,7 +31,7 @@ class MachineRegisterInfo;
 class raw_ostream;
 class TargetInstrInfo;
 
-  class VirtRegMap : public MachineFunctionPass {
+  class LLVM_CLASS_ABI VirtRegMap : public MachineFunctionPass {
   public:
     enum {
       NO_PHYS_REG = 0,

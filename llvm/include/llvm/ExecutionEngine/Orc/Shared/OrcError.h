@@ -43,9 +43,9 @@ enum class OrcErrorCode : int {
   UnexpectedSymbolDefinitions,
 };
 
-std::error_code orcError(OrcErrorCode ErrCode);
+LLVM_FUNC_ABI std::error_code orcError(OrcErrorCode ErrCode);
 
-class DuplicateDefinition : public ErrorInfo<DuplicateDefinition> {
+class LLVM_CLASS_ABI DuplicateDefinition : public ErrorInfo<DuplicateDefinition> {
 public:
   static char ID;
 
@@ -57,7 +57,7 @@ private:
   std::string SymbolName;
 };
 
-class JITSymbolNotFound : public ErrorInfo<JITSymbolNotFound> {
+class LLVM_CLASS_ABI JITSymbolNotFound : public ErrorInfo<JITSymbolNotFound> {
 public:
   static char ID;
 

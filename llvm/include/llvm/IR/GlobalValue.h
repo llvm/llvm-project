@@ -42,7 +42,7 @@ namespace Intrinsic {
 typedef unsigned ID;
 } // end namespace Intrinsic
 
-class GlobalValue : public Constant {
+class LLVM_CLASS_ABI GlobalValue : public Constant {
 public:
   /// An enumeration for the kinds of linkage for global values.
   enum LinkageTypes {

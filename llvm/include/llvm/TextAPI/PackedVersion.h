@@ -25,7 +25,7 @@ class StringRef;
 
 namespace MachO {
 
-class PackedVersion {
+class LLVM_CLASS_ABI PackedVersion {
   uint32_t Version{0};
 
 public:

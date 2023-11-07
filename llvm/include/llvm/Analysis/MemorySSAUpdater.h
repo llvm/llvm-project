@@ -52,7 +52,7 @@ using ValueToValueMapTy = ValueMap<const Value *, WeakTrackingVH>;
 using PhiToDefMap = SmallDenseMap<MemoryPhi *, MemoryAccess *>;
 using CFGUpdate = cfg::Update<BasicBlock *>;
 
-class MemorySSAUpdater {
+class LLVM_CLASS_ABI MemorySSAUpdater {
 private:
   MemorySSA *MSSA;
 

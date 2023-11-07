@@ -17,7 +17,7 @@
 namespace llvm {
 
 /// An auxiliary type to facilitate extraction of 3-byte entities.
-struct Uint24 {
+struct LLVM_CLASS_ABI Uint24 {
   uint8_t Bytes[3];
   Uint24(uint8_t U) {
     Bytes[0] = Bytes[1] = Bytes[2] = U;
@@ -39,7 +39,7 @@ inline uint24_t getSwappedBytes(uint24_t C) {
   return uint24_t(C.Bytes[2], C.Bytes[1], C.Bytes[0]);
 }
 
-class DataExtractor {
+class LLVM_CLASS_ABI DataExtractor {
   StringRef Data;
   uint8_t IsLittleEndian;
   uint8_t AddressSize;

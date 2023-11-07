@@ -31,7 +31,7 @@ class Value;
 /// along with the reasons for it.  Hotness information of the corresponding
 /// code region can be included in the remark if DiagnosticsHotnessRequested is
 /// enabled in the LLVM context.
-class OptimizationRemarkEmitter {
+class LLVM_CLASS_ABI OptimizationRemarkEmitter {
 public:
   OptimizationRemarkEmitter(const Function *F, BlockFrequencyInfo *BFI)
       : F(F), BFI(BFI) {}
@@ -144,7 +144,7 @@ using setExtraArgs = DiagnosticInfoOptimizationBase::setExtraArgs;
 /// Note that this pass shouldn't generally be marked as preserved by other
 /// passes.  It's holding onto BFI, so if the pass does not preserve BFI, BFI
 /// could be freed.
-class OptimizationRemarkEmitterWrapperPass : public FunctionPass {
+class LLVM_CLASS_ABI OptimizationRemarkEmitterWrapperPass : public FunctionPass {
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
 public:
@@ -162,7 +162,7 @@ public:
   static char ID;
 };
 
-class OptimizationRemarkEmitterAnalysis
+class LLVM_CLASS_ABI OptimizationRemarkEmitterAnalysis
     : public AnalysisInfoMixin<OptimizationRemarkEmitterAnalysis> {
   friend AnalysisInfoMixin<OptimizationRemarkEmitterAnalysis>;
   static AnalysisKey Key;

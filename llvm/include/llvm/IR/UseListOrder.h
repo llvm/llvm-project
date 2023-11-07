@@ -24,7 +24,7 @@ class Function;
 class Value;
 
 /// Structure to hold a use-list order.
-struct UseListOrder {
+struct LLVM_CLASS_ABI UseListOrder {
   const Value *V = nullptr;
   const Function *F = nullptr;
   std::vector<unsigned> Shuffle;

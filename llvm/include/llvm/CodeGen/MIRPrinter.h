@@ -25,11 +25,11 @@ class raw_ostream;
 template <typename T> class SmallVectorImpl;
 
 /// Print LLVM IR using the MIR serialization format to the given output stream.
-void printMIR(raw_ostream &OS, const Module &M);
+LLVM_FUNC_ABI void printMIR(raw_ostream &OS, const Module &M);
 
 /// Print a machine function using the MIR serialization format to the given
 /// output stream.
-void printMIR(raw_ostream &OS, const MachineFunction &MF);
+LLVM_FUNC_ABI void printMIR(raw_ostream &OS, const MachineFunction &MF);
 
 /// Determine a possible list of successors of a basic block based on the
 /// basic block machine operand being used inside the block. This should give
@@ -38,7 +38,7 @@ void printMIR(raw_ostream &OS, const MachineFunction &MF);
 /// The MIRPRinter will skip printing successors if they match the result of
 /// this function and the parser will use this function to construct a list if
 /// it is missing.
-void guessSuccessors(const MachineBasicBlock &MBB,
+LLVM_FUNC_ABI void guessSuccessors(const MachineBasicBlock &MBB,
                      SmallVectorImpl<MachineBasicBlock*> &Result,
                      bool &IsFallthrough);
 

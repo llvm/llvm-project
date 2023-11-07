@@ -29,10 +29,10 @@ namespace llvm {
 
 /// Reports a diagnostic message to indicate an invalid size request has been
 /// done on a scalable vector. This function may not return.
-void reportInvalidSizeRequest(const char *Msg);
+LLVM_FUNC_ABI void reportInvalidSizeRequest(const char *Msg);
 
 /// StackOffset holds a fixed and a scalable offset in bytes.
-class StackOffset {
+class LLVM_CLASS_ABI StackOffset {
   int64_t Fixed = 0;
   int64_t Scalable = 0;
 
@@ -87,7 +87,7 @@ public:
 namespace details {
 
 // Base class for ElementCount and TypeSize below.
-template <typename LeafTy, typename ValueTy> class FixedOrScalableQuantity {
+template <typename LeafTy, typename ValueTy> class LLVM_CLASS_ABI FixedOrScalableQuantity {
 public:
   using ScalarTy = ValueTy;
 
@@ -275,7 +275,7 @@ public:
 //  - ElementCount::getFixed(1) : A scalar value.
 //  - ElementCount::getFixed(2) : A vector type holding 2 values.
 //  - ElementCount::getScalable(4) : A scalable vector type holding 4 values.
-class ElementCount
+class LLVM_CLASS_ABI ElementCount
     : public details::FixedOrScalableQuantity<ElementCount, unsigned> {
   constexpr ElementCount(ScalarTy MinVal, bool Scalable)
       : FixedOrScalableQuantity(MinVal, Scalable) {}
@@ -310,7 +310,7 @@ public:
 // Stores the size of a type. If the type is of fixed size, it will represent
 // the exact size. If the type is a scalable vector, it will represent the known
 // minimum size.
-class TypeSize : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
+class LLVM_CLASS_ABI TypeSize : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
   TypeSize(const FixedOrScalableQuantity<TypeSize, uint64_t> &V)
       : FixedOrScalableQuantity(V) {}
 
@@ -403,7 +403,7 @@ operator<<(raw_ostream &OS,
   return OS;
 }
 
-template <> struct DenseMapInfo<ElementCount, void> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<ElementCount, void> {
   static inline ElementCount getEmptyKey() {
     return ElementCount::getScalable(~0U);
   }

@@ -24,7 +24,7 @@ class DWARFDataExtractor;
 /// A class representing an address table as specified in DWARF v5.
 /// The table consists of a header followed by an array of address values from
 /// .debug_addr section.
-class DWARFDebugAddrTable {
+class LLVM_CLASS_ABI DWARFDebugAddrTable {
   dwarf::DwarfFormat Format;
   uint64_t Offset;
   /// The total length of the entries for this table, not including the length

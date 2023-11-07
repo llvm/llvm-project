@@ -44,7 +44,7 @@ template <class ELFT> class Elf_Note_Impl;
 template <class ELFT> class Elf_Note_Iterator_Impl;
 template <class ELFT> struct Elf_CGProfile_Impl;
 
-template <endianness E, bool Is64> struct ELFType {
+template <endianness E, bool Is64> struct LLVM_CLASS_ABI ELFType {
 private:
   template <typename Ty>
   using packed = support::detail::packed_endian_specific_integral<Ty, E, 1>;
@@ -145,7 +145,7 @@ using ELF64BE = ELFType<llvm::endianness::big, true>;
 template <class ELFT> struct Elf_Shdr_Base;
 
 template <endianness TargetEndianness>
-struct Elf_Shdr_Base<ELFType<TargetEndianness, false>> {
+struct LLVM_CLASS_ABI Elf_Shdr_Base<ELFType<TargetEndianness, false>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
   Elf_Word sh_name;      // Section name (index into string table)
   Elf_Word sh_type;      // Section type (SHT_*)
@@ -160,7 +160,7 @@ struct Elf_Shdr_Base<ELFType<TargetEndianness, false>> {
 };
 
 template <endianness TargetEndianness>
-struct Elf_Shdr_Base<ELFType<TargetEndianness, true>> {
+struct LLVM_CLASS_ABI Elf_Shdr_Base<ELFType<TargetEndianness, true>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
   Elf_Word sh_name;       // Section name (index into string table)
   Elf_Word sh_type;       // Section type (SHT_*)
@@ -175,7 +175,7 @@ struct Elf_Shdr_Base<ELFType<TargetEndianness, true>> {
 };
 
 template <class ELFT>
-struct Elf_Shdr_Impl : Elf_Shdr_Base<ELFT> {
+struct LLVM_CLASS_ABI Elf_Shdr_Impl : Elf_Shdr_Base<ELFT> {
   using Elf_Shdr_Base<ELFT>::sh_entsize;
   using Elf_Shdr_Base<ELFT>::sh_size;
 
@@ -190,7 +190,7 @@ struct Elf_Shdr_Impl : Elf_Shdr_Base<ELFT> {
 template <class ELFT> struct Elf_Sym_Base;
 
 template <endianness TargetEndianness>
-struct Elf_Sym_Base<ELFType<TargetEndianness, false>> {
+struct LLVM_CLASS_ABI Elf_Sym_Base<ELFType<TargetEndianness, false>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
   Elf_Word st_name;       // Symbol name (index into string table)
   Elf_Addr st_value;      // Value or address associated with the symbol
@@ -201,7 +201,7 @@ struct Elf_Sym_Base<ELFType<TargetEndianness, false>> {
 };
 
 template <endianness TargetEndianness>
-struct Elf_Sym_Base<ELFType<TargetEndianness, true>> {
+struct LLVM_CLASS_ABI Elf_Sym_Base<ELFType<TargetEndianness, true>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
   Elf_Word st_name;       // Symbol name (index into string table)
   unsigned char st_info;  // Symbol's type and binding attributes
@@ -212,7 +212,7 @@ struct Elf_Sym_Base<ELFType<TargetEndianness, true>> {
 };
 
 template <class ELFT>
-struct Elf_Sym_Impl : Elf_Sym_Base<ELFT> {
+struct LLVM_CLASS_ABI Elf_Sym_Impl : Elf_Sym_Base<ELFT> {
   using Elf_Sym_Base<ELFT>::st_info;
   using Elf_Sym_Base<ELFT>::st_shndx;
   using Elf_Sym_Base<ELFT>::st_other;
@@ -287,7 +287,7 @@ Expected<StringRef> Elf_Sym_Impl<ELFT>::getName(StringRef StrTab) const {
 /// Elf_Versym: This is the structure of entries in the SHT_GNU_versym section
 /// (.gnu.version). This structure is identical for ELF32 and ELF64.
 template <class ELFT>
-struct Elf_Versym_Impl {
+struct LLVM_CLASS_ABI Elf_Versym_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Half vs_index; // Version index with flags (e.g. VERSYM_HIDDEN)
 };
@@ -295,7 +295,7 @@ struct Elf_Versym_Impl {
 /// Elf_Verdef: This is the structure of entries in the SHT_GNU_verdef section
 /// (.gnu.version_d). This structure is identical for ELF32 and ELF64.
 template <class ELFT>
-struct Elf_Verdef_Impl {
+struct LLVM_CLASS_ABI Elf_Verdef_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Half vd_version; // Version of this structure (e.g. VER_DEF_CURRENT)
   Elf_Half vd_flags;   // Bitwise flags (VER_DEF_*)
@@ -314,7 +314,7 @@ struct Elf_Verdef_Impl {
 /// Elf_Verdaux: This is the structure of auxiliary data in the SHT_GNU_verdef
 /// section (.gnu.version_d). This structure is identical for ELF32 and ELF64.
 template <class ELFT>
-struct Elf_Verdaux_Impl {
+struct LLVM_CLASS_ABI Elf_Verdaux_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Word vda_name; // Version name (offset in string table)
   Elf_Word vda_next; // Offset to next Verdaux entry (in bytes)
@@ -323,7 +323,7 @@ struct Elf_Verdaux_Impl {
 /// Elf_Verneed: This is the structure of entries in the SHT_GNU_verneed
 /// section (.gnu.version_r). This structure is identical for ELF32 and ELF64.
 template <class ELFT>
-struct Elf_Verneed_Impl {
+struct LLVM_CLASS_ABI Elf_Verneed_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Half vn_version; // Version of this structure (e.g. VER_NEED_CURRENT)
   Elf_Half vn_cnt;     // Number of associated Vernaux entries
@@ -335,7 +335,7 @@ struct Elf_Verneed_Impl {
 /// Elf_Vernaux: This is the structure of auxiliary data in SHT_GNU_verneed
 /// section (.gnu.version_r). This structure is identical for ELF32 and ELF64.
 template <class ELFT>
-struct Elf_Vernaux_Impl {
+struct LLVM_CLASS_ABI Elf_Vernaux_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Word vna_hash;  // Hash of dependency name
   Elf_Half vna_flags; // Bitwise Flags (VER_FLAG_*)
@@ -349,7 +349,7 @@ struct Elf_Vernaux_Impl {
 template <class ELFT> struct Elf_Dyn_Base;
 
 template <endianness TargetEndianness>
-struct Elf_Dyn_Base<ELFType<TargetEndianness, false>> {
+struct LLVM_CLASS_ABI Elf_Dyn_Base<ELFType<TargetEndianness, false>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
   Elf_Sword d_tag;
   union {
@@ -359,7 +359,7 @@ struct Elf_Dyn_Base<ELFType<TargetEndianness, false>> {
 };
 
 template <endianness TargetEndianness>
-struct Elf_Dyn_Base<ELFType<TargetEndianness, true>> {
+struct LLVM_CLASS_ABI Elf_Dyn_Base<ELFType<TargetEndianness, true>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
   Elf_Sxword d_tag;
   union {
@@ -370,7 +370,7 @@ struct Elf_Dyn_Base<ELFType<TargetEndianness, true>> {
 
 /// Elf_Dyn_Impl: This inherits from Elf_Dyn_Base, adding getters.
 template <class ELFT>
-struct Elf_Dyn_Impl : Elf_Dyn_Base<ELFT> {
+struct LLVM_CLASS_ABI Elf_Dyn_Impl : Elf_Dyn_Base<ELFT> {
   using Elf_Dyn_Base<ELFT>::d_tag;
   using Elf_Dyn_Base<ELFT>::d_un;
   using intX_t = std::conditional_t<ELFT::Is64Bits, int64_t, int32_t>;
@@ -381,7 +381,7 @@ struct Elf_Dyn_Impl : Elf_Dyn_Base<ELFT> {
 };
 
 template <endianness TargetEndianness>
-struct Elf_Rel_Impl<ELFType<TargetEndianness, false>, false> {
+struct LLVM_CLASS_ABI Elf_Rel_Impl<ELFType<TargetEndianness, false>, false> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
   static const bool IsRela = false;
   Elf_Addr r_offset; // Location (file byte offset, or program virtual addr)
@@ -416,7 +416,7 @@ struct Elf_Rel_Impl<ELFType<TargetEndianness, false>, false> {
 };
 
 template <endianness TargetEndianness>
-struct Elf_Rel_Impl<ELFType<TargetEndianness, false>, true>
+struct LLVM_CLASS_ABI Elf_Rel_Impl<ELFType<TargetEndianness, false>, true>
     : public Elf_Rel_Impl<ELFType<TargetEndianness, false>, false> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
   static const bool IsRela = true;
@@ -424,7 +424,7 @@ struct Elf_Rel_Impl<ELFType<TargetEndianness, false>, true>
 };
 
 template <endianness TargetEndianness>
-struct Elf_Rel_Impl<ELFType<TargetEndianness, true>, false> {
+struct LLVM_CLASS_ABI Elf_Rel_Impl<ELFType<TargetEndianness, true>, false> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
   static const bool IsRela = false;
   Elf_Addr r_offset; // Location (file byte offset, or program virtual addr)
@@ -469,7 +469,7 @@ struct Elf_Rel_Impl<ELFType<TargetEndianness, true>, false> {
 };
 
 template <endianness TargetEndianness>
-struct Elf_Rel_Impl<ELFType<TargetEndianness, true>, true>
+struct LLVM_CLASS_ABI Elf_Rel_Impl<ELFType<TargetEndianness, true>, true>
     : public Elf_Rel_Impl<ELFType<TargetEndianness, true>, false> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
   static const bool IsRela = true;
@@ -477,7 +477,7 @@ struct Elf_Rel_Impl<ELFType<TargetEndianness, true>, true>
 };
 
 template <class ELFT>
-struct Elf_Ehdr_Impl {
+struct LLVM_CLASS_ABI Elf_Ehdr_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   unsigned char e_ident[ELF::EI_NIDENT]; // ELF Identification bytes
   Elf_Half e_type;                       // Type of file (see ET_*)
@@ -504,7 +504,7 @@ struct Elf_Ehdr_Impl {
 };
 
 template <endianness TargetEndianness>
-struct Elf_Phdr_Impl<ELFType<TargetEndianness, false>> {
+struct LLVM_CLASS_ABI Elf_Phdr_Impl<ELFType<TargetEndianness, false>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
   Elf_Word p_type;   // Type of segment
   Elf_Off p_offset;  // FileOffset where segment is located, in bytes
@@ -517,7 +517,7 @@ struct Elf_Phdr_Impl<ELFType<TargetEndianness, false>> {
 };
 
 template <endianness TargetEndianness>
-struct Elf_Phdr_Impl<ELFType<TargetEndianness, true>> {
+struct LLVM_CLASS_ABI Elf_Phdr_Impl<ELFType<TargetEndianness, true>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
   Elf_Word p_type;    // Type of segment
   Elf_Word p_flags;   // Segment flags
@@ -531,7 +531,7 @@ struct Elf_Phdr_Impl<ELFType<TargetEndianness, true>> {
 
 // ELFT needed for endianness.
 template <class ELFT>
-struct Elf_Hash_Impl {
+struct LLVM_CLASS_ABI Elf_Hash_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Word nbucket;
   Elf_Word nchain;
@@ -548,7 +548,7 @@ struct Elf_Hash_Impl {
 
 // .gnu.hash section
 template <class ELFT>
-struct Elf_GnuHash_Impl {
+struct LLVM_CLASS_ABI Elf_GnuHash_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Word nbuckets;
   Elf_Word symndx;
@@ -574,7 +574,7 @@ struct Elf_GnuHash_Impl {
 // Compressed section headers.
 // http://www.sco.com/developers/gabi/latest/ch4.sheader.html#compression_header
 template <endianness TargetEndianness>
-struct Elf_Chdr_Impl<ELFType<TargetEndianness, false>> {
+struct LLVM_CLASS_ABI Elf_Chdr_Impl<ELFType<TargetEndianness, false>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
   Elf_Word ch_type;
   Elf_Word ch_size;
@@ -582,7 +582,7 @@ struct Elf_Chdr_Impl<ELFType<TargetEndianness, false>> {
 };
 
 template <endianness TargetEndianness>
-struct Elf_Chdr_Impl<ELFType<TargetEndianness, true>> {
+struct LLVM_CLASS_ABI Elf_Chdr_Impl<ELFType<TargetEndianness, true>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
   Elf_Word ch_type;
   Elf_Word ch_reserved;
@@ -592,7 +592,7 @@ struct Elf_Chdr_Impl<ELFType<TargetEndianness, true>> {
 
 /// Note header
 template <class ELFT>
-struct Elf_Nhdr_Impl {
+struct LLVM_CLASS_ABI Elf_Nhdr_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Word n_namesz;
   Elf_Word n_descsz;
@@ -613,7 +613,7 @@ struct Elf_Nhdr_Impl {
 /// Wraps a note header, providing methods for accessing the name and
 /// descriptor safely.
 template <class ELFT>
-class Elf_Note_Impl {
+class LLVM_CLASS_ABI Elf_Note_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
   const Elf_Nhdr_Impl<ELFT> &Nhdr;
@@ -651,7 +651,7 @@ public:
   Elf_Word getType() const { return Nhdr.n_type; }
 };
 
-template <class ELFT> class Elf_Note_Iterator_Impl {
+template <class ELFT> class LLVM_CLASS_ABI Elf_Note_Iterator_Impl {
 public:
   using iterator_category = std::forward_iterator_tag;
   using value_type = Elf_Note_Impl<ELFT>;
@@ -732,7 +732,7 @@ public:
   }
 };
 
-template <class ELFT> struct Elf_CGProfile_Impl {
+template <class ELFT> struct LLVM_CLASS_ABI Elf_CGProfile_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Xword cgp_weight;
 };
@@ -742,7 +742,7 @@ template <class ELFT>
 struct Elf_Mips_RegInfo;
 
 template <llvm::endianness TargetEndianness>
-struct Elf_Mips_RegInfo<ELFType<TargetEndianness, false>> {
+struct LLVM_CLASS_ABI Elf_Mips_RegInfo<ELFType<TargetEndianness, false>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
   Elf_Word ri_gprmask;     // bit-mask of used general registers
   Elf_Word ri_cprmask[4];  // bit-mask of used co-processor registers
@@ -750,7 +750,7 @@ struct Elf_Mips_RegInfo<ELFType<TargetEndianness, false>> {
 };
 
 template <llvm::endianness TargetEndianness>
-struct Elf_Mips_RegInfo<ELFType<TargetEndianness, true>> {
+struct LLVM_CLASS_ABI Elf_Mips_RegInfo<ELFType<TargetEndianness, true>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
   Elf_Word ri_gprmask;     // bit-mask of used general registers
   Elf_Word ri_pad;         // unused padding field
@@ -759,7 +759,7 @@ struct Elf_Mips_RegInfo<ELFType<TargetEndianness, true>> {
 };
 
 // .MIPS.options section
-template <class ELFT> struct Elf_Mips_Options {
+template <class ELFT> struct LLVM_CLASS_ABI Elf_Mips_Options {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   uint8_t kind;     // Determines interpretation of variable part of descriptor
   uint8_t size;     // Byte size of descriptor, including this header
@@ -778,7 +778,7 @@ template <class ELFT> struct Elf_Mips_Options {
 };
 
 // .MIPS.abiflags section content
-template <class ELFT> struct Elf_Mips_ABIFlags {
+template <class ELFT> struct LLVM_CLASS_ABI Elf_Mips_ABIFlags {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Half version;  // Version of the structure
   uint8_t isa_level; // ISA level: 1-5, 32, and 64
@@ -794,7 +794,7 @@ template <class ELFT> struct Elf_Mips_ABIFlags {
 };
 
 // Struct representing the BBAddrMap for one function.
-struct BBAddrMap {
+struct LLVM_CLASS_ABI BBAddrMap {
   uint64_t Addr; // Function address
   // Struct representing the BBAddrMap information for one basic block.
   struct BBEntry {

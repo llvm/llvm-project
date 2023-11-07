@@ -48,7 +48,7 @@ class ObjectLinkingLayerJITLinkContext;
 /// Clients can use this class to add relocatable object files to an
 /// ExecutionSession, and it typically serves as the base layer (underneath
 /// a compiling layer like IRCompileLayer) for the rest of the JIT.
-class ObjectLinkingLayer : public RTTIExtends<ObjectLinkingLayer, ObjectLayer>,
+class LLVM_CLASS_ABI ObjectLinkingLayer : public RTTIExtends<ObjectLinkingLayer, ObjectLayer>,
                            private ResourceManager {
   friend class ObjectLinkingLayerJITLinkContext;
 
@@ -203,7 +203,7 @@ private:
   std::vector<std::unique_ptr<Plugin>> Plugins;
 };
 
-class EHFrameRegistrationPlugin : public ObjectLinkingLayer::Plugin {
+class LLVM_CLASS_ABI EHFrameRegistrationPlugin : public ObjectLinkingLayer::Plugin {
 public:
   EHFrameRegistrationPlugin(
       ExecutionSession &ES,

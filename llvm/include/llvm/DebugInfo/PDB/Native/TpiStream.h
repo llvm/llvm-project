@@ -32,7 +32,7 @@ namespace pdb {
 struct TpiStreamHeader;
 class PDBFile;
 
-class TpiStream {
+class LLVM_CLASS_ABI TpiStream {
   friend class TpiStreamBuilder;
 
 public:

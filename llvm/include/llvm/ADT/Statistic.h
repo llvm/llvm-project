@@ -47,7 +47,7 @@ class raw_ostream;
 class raw_fd_ostream;
 class StringRef;
 
-class TrackingStatistic {
+class LLVM_CLASS_ABI TrackingStatistic {
 public:
   const char *const DebugType;
   const char *const Name;
@@ -129,7 +129,7 @@ protected:
   void RegisterStatistic();
 };
 
-class NoopStatistic {
+class LLVM_CLASS_ABI NoopStatistic {
 public:
   NoopStatistic(const char * /*DebugType*/, const char * /*Name*/,
                 const char * /*Desc*/) {}
@@ -173,25 +173,25 @@ using Statistic = NoopStatistic;
   static llvm::TrackingStatistic VARNAME = {DEBUG_TYPE, #VARNAME, DESC}
 
 /// Enable the collection and printing of statistics.
-void EnableStatistics(bool DoPrintOnExit = true);
+LLVM_FUNC_ABI void EnableStatistics(bool DoPrintOnExit = true);
 
 /// Check if statistics are enabled.
-bool AreStatisticsEnabled();
+LLVM_FUNC_ABI bool AreStatisticsEnabled();
 
 /// Return a file stream to print our output on.
-std::unique_ptr<raw_fd_ostream> CreateInfoOutputFile();
+LLVM_FUNC_ABI std::unique_ptr<raw_fd_ostream> CreateInfoOutputFile();
 
 /// Print statistics to the file returned by CreateInfoOutputFile().
-void PrintStatistics();
+LLVM_FUNC_ABI void PrintStatistics();
 
 /// Print statistics to the given output stream.
-void PrintStatistics(raw_ostream &OS);
+LLVM_FUNC_ABI void PrintStatistics(raw_ostream &OS);
 
 /// Print statistics in JSON format. This does include all global timers (\see
 /// Timer, TimerGroup). Note that the timers are cleared after printing and will
 /// not be printed in human readable form or in a second call of
 /// PrintStatisticsJSON().
-void PrintStatisticsJSON(raw_ostream &OS);
+LLVM_FUNC_ABI void PrintStatisticsJSON(raw_ostream &OS);
 
 /// Get the statistics. This can be used to look up the value of
 /// statistics without needing to parse JSON.
@@ -200,7 +200,7 @@ void PrintStatisticsJSON(raw_ostream &OS);
 /// during it's execution. It will return the value at the point that it is
 /// read. However, it will prevent new statistics from registering until it
 /// completes.
-std::vector<std::pair<StringRef, uint64_t>> GetStatistics();
+LLVM_FUNC_ABI std::vector<std::pair<StringRef, uint64_t>> GetStatistics();
 
 /// Reset the statistics. This can be used to zero and de-register the
 /// statistics in order to measure a compilation.
@@ -215,7 +215,7 @@ std::vector<std::pair<StringRef, uint64_t>> GetStatistics();
 /// compilation should ensure that no compilations are in progress at the point
 /// this function is called and that only one compilation executes until calling
 /// GetStatistics().
-void ResetStatistics();
+LLVM_FUNC_ABI void ResetStatistics();
 
 } // end namespace llvm
 

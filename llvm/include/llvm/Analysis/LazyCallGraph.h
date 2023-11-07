@@ -108,7 +108,7 @@ class Value;
 /// FIXME: This class is named LazyCallGraph in a lame attempt to distinguish
 /// it from the existing CallGraph. At some point, it is expected that this
 /// will be the only call graph and it will be renamed accordingly.
-class LazyCallGraph {
+class LLVM_CLASS_ABI LazyCallGraph {
 public:
   class Node;
   class EdgeSequence;
@@ -1237,7 +1237,7 @@ inline Function &LazyCallGraph::Edge::getFunction() const {
 }
 
 // Provide GraphTraits specializations for call graphs.
-template <> struct GraphTraits<LazyCallGraph::Node *> {
+template <> struct LLVM_CLASS_ABI GraphTraits<LazyCallGraph::Node *> {
   using NodeRef = LazyCallGraph::Node *;
   using ChildIteratorType = LazyCallGraph::EdgeSequence::iterator;
 
@@ -1245,7 +1245,7 @@ template <> struct GraphTraits<LazyCallGraph::Node *> {
   static ChildIteratorType child_begin(NodeRef N) { return (*N)->begin(); }
   static ChildIteratorType child_end(NodeRef N) { return (*N)->end(); }
 };
-template <> struct GraphTraits<LazyCallGraph *> {
+template <> struct LLVM_CLASS_ABI GraphTraits<LazyCallGraph *> {
   using NodeRef = LazyCallGraph::Node *;
   using ChildIteratorType = LazyCallGraph::EdgeSequence::iterator;
 
@@ -1255,7 +1255,7 @@ template <> struct GraphTraits<LazyCallGraph *> {
 };
 
 /// An analysis pass which computes the call graph for a module.
-class LazyCallGraphAnalysis : public AnalysisInfoMixin<LazyCallGraphAnalysis> {
+class LLVM_CLASS_ABI LazyCallGraphAnalysis : public AnalysisInfoMixin<LazyCallGraphAnalysis> {
   friend AnalysisInfoMixin<LazyCallGraphAnalysis>;
 
   static AnalysisKey Key;
@@ -1281,7 +1281,7 @@ public:
 /// A pass which prints the call graph to a \c raw_ostream.
 ///
 /// This is primarily useful for testing the analysis.
-class LazyCallGraphPrinterPass
+class LLVM_CLASS_ABI LazyCallGraphPrinterPass
     : public PassInfoMixin<LazyCallGraphPrinterPass> {
   raw_ostream &OS;
 
@@ -1294,7 +1294,7 @@ public:
 /// A pass which prints the call graph as a DOT file to a \c raw_ostream.
 ///
 /// This is primarily useful for visualization purposes.
-class LazyCallGraphDOTPrinterPass
+class LLVM_CLASS_ABI LazyCallGraphDOTPrinterPass
     : public PassInfoMixin<LazyCallGraphDOTPrinterPass> {
   raw_ostream &OS;
 

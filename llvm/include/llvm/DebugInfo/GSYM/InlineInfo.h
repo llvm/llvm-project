@@ -57,7 +57,7 @@ class GsymReader;
 /// - if this object has children, enocode each child InlineInfo using the
 ///   the first address range's start address as the base address.
 ///
-struct InlineInfo {
+struct LLVM_CLASS_ABI InlineInfo {
 
   uint32_t Name; ///< String table offset in the string table.
   uint32_t CallFile; ///< 1 based file index in the file table.
@@ -184,7 +184,7 @@ inline bool operator==(const InlineInfo &LHS, const InlineInfo &RHS) {
          LHS.Children == RHS.Children;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const InlineInfo &FI);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const InlineInfo &FI);
 
 } // namespace gsym
 } // namespace llvm

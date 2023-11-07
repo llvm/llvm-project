@@ -27,11 +27,11 @@
 #include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
-extern cl::opt<unsigned> SCEVCheapExpansionBudget;
+LLVM_FUNC_ABI extern cl::opt<unsigned> SCEVCheapExpansionBudget;
 
 /// struct for holding enough information to help calculate the cost of the
 /// given SCEV when expanded into IR.
-struct SCEVOperand {
+struct LLVM_CLASS_ABI SCEVOperand {
   explicit SCEVOperand(unsigned Opc, int Idx, const SCEV *S) :
     ParentOpcode(Opc), OperandIdx(Idx), S(S) { }
   /// LLVM instruction opcode that uses the operand.
@@ -48,7 +48,7 @@ struct SCEVOperand {
 /// Clients should create an instance of this class when rewriting is needed,
 /// and destroy it when finished to allow the release of the associated
 /// memory.
-class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
+class LLVM_CLASS_ABI SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   ScalarEvolution &SE;
   const DataLayout &DL;
 
@@ -504,7 +504,7 @@ private:
 
 /// Helper to remove instructions inserted during SCEV expansion, unless they
 /// are marked as used.
-class SCEVExpanderCleaner {
+class LLVM_CLASS_ABI SCEVExpanderCleaner {
   SCEVExpander &Expander;
 
   /// Indicates whether the result of the expansion is used. If false, the

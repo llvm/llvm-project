@@ -40,7 +40,7 @@ class Value;
 /// that create new assumptions are required to call registerAssumption() to
 /// register any new \@llvm.assume calls that they create. Deletions of
 /// \@llvm.assume calls do not require special handling.
-class AssumptionCache {
+class LLVM_CLASS_ABI AssumptionCache {
 public:
   /// Value of ResultElem::Index indicating that the argument to the call of the
   /// llvm.assume.
@@ -171,7 +171,7 @@ public:
 ///
 /// This analysis is intended for use with the new pass manager and will vend
 /// assumption caches for a given function.
-class AssumptionAnalysis : public AnalysisInfoMixin<AssumptionAnalysis> {
+class LLVM_CLASS_ABI AssumptionAnalysis : public AnalysisInfoMixin<AssumptionAnalysis> {
   friend AnalysisInfoMixin<AssumptionAnalysis>;
 
   static AnalysisKey Key;
@@ -183,7 +183,7 @@ public:
 };
 
 /// Printer pass for the \c AssumptionAnalysis results.
-class AssumptionPrinterPass : public PassInfoMixin<AssumptionPrinterPass> {
+class LLVM_CLASS_ABI AssumptionPrinterPass : public PassInfoMixin<AssumptionPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -200,7 +200,7 @@ public:
 /// function is deleted. The nature of the AssumptionCache is that it is not
 /// invalidated by any changes to the function body and so this is sufficient
 /// to be conservatively correct.
-class AssumptionCacheTracker : public ImmutablePass {
+class LLVM_CLASS_ABI AssumptionCacheTracker : public ImmutablePass {
   /// A callback value handle applied to function objects, which we use to
   /// delete our cache of intrinsics for a function when it is deleted.
   class FunctionCallbackVH final : public CallbackVH {
@@ -252,14 +252,14 @@ public:
   static char ID; // Pass identification, replacement for typeid
 };
 
-template<> struct simplify_type<AssumptionCache::ResultElem> {
+template<> struct LLVM_CLASS_ABI simplify_type<AssumptionCache::ResultElem> {
   using SimpleType = Value *;
 
   static SimpleType getSimplifiedValue(AssumptionCache::ResultElem &Val) {
     return Val;
   }
 };
-template<> struct simplify_type<const AssumptionCache::ResultElem> {
+template<> struct LLVM_CLASS_ABI simplify_type<const AssumptionCache::ResultElem> {
   using SimpleType = /*const*/ Value *;
 
   static SimpleType getSimplifiedValue(const AssumptionCache::ResultElem &Val) {

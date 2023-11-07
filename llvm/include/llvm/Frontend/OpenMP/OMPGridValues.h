@@ -54,7 +54,7 @@ namespace omp {
 ///    llvm::omp::GRIDVAL().GV_Warp_Size
 ///
 
-struct GV {
+struct LLVM_CLASS_ABI GV {
   /// The size reserved for data in a shared memory slot.
   unsigned GV_Slot_Size;
   /// The default value of maximum number of threads in a worker warp.

@@ -43,7 +43,7 @@ struct YAMLSubsectionBase;
 
 } // end namespace detail
 
-struct YAMLFrameData {
+struct LLVM_CLASS_ABI YAMLFrameData {
   uint32_t RvaStart;
   uint32_t CodeSize;
   uint32_t LocalSize;
@@ -55,40 +55,40 @@ struct YAMLFrameData {
   uint32_t Flags;
 };
 
-struct YAMLCrossModuleImport {
+struct LLVM_CLASS_ABI YAMLCrossModuleImport {
   StringRef ModuleName;
   std::vector<uint32_t> ImportIds;
 };
 
-struct SourceLineEntry {
+struct LLVM_CLASS_ABI SourceLineEntry {
   uint32_t Offset;
   uint32_t LineStart;
   uint32_t EndDelta;
   bool IsStatement;
 };
 
-struct SourceColumnEntry {
+struct LLVM_CLASS_ABI SourceColumnEntry {
   uint16_t StartColumn;
   uint16_t EndColumn;
 };
 
-struct SourceLineBlock {
+struct LLVM_CLASS_ABI SourceLineBlock {
   StringRef FileName;
   std::vector<SourceLineEntry> Lines;
   std::vector<SourceColumnEntry> Columns;
 };
 
-struct HexFormattedString {
+struct LLVM_CLASS_ABI HexFormattedString {
   std::vector<uint8_t> Bytes;
 };
 
-struct SourceFileChecksumEntry {
+struct LLVM_CLASS_ABI SourceFileChecksumEntry {
   StringRef FileName;
   codeview::FileChecksumKind Kind;
   HexFormattedString ChecksumBytes;
 };
 
-struct SourceLineInfo {
+struct LLVM_CLASS_ABI SourceLineInfo {
   uint32_t RelocOffset;
   uint32_t RelocSegment;
   codeview::LineFlags Flags;
@@ -96,19 +96,19 @@ struct SourceLineInfo {
   std::vector<SourceLineBlock> Blocks;
 };
 
-struct InlineeSite {
+struct LLVM_CLASS_ABI InlineeSite {
   uint32_t Inlinee;
   StringRef FileName;
   uint32_t SourceLineNum;
   std::vector<StringRef> ExtraFiles;
 };
 
-struct InlineeInfo {
+struct LLVM_CLASS_ABI InlineeInfo {
   bool HasExtraFiles;
   std::vector<InlineeSite> Sites;
 };
 
-struct YAMLDebugSubsection {
+struct LLVM_CLASS_ABI YAMLDebugSubsection {
   static Expected<YAMLDebugSubsection>
   fromCodeViewSubection(const codeview::StringsAndChecksumsRef &SC,
                         const codeview::DebugSubsectionRecord &SS);
@@ -116,15 +116,15 @@ struct YAMLDebugSubsection {
   std::shared_ptr<detail::YAMLSubsectionBase> Subsection;
 };
 
-Expected<std::vector<std::shared_ptr<codeview::DebugSubsection>>>
+LLVM_FUNC_ABI Expected<std::vector<std::shared_ptr<codeview::DebugSubsection>>>
 toCodeViewSubsectionList(BumpPtrAllocator &Allocator,
                          ArrayRef<YAMLDebugSubsection> Subsections,
                          const codeview::StringsAndChecksums &SC);
 
-std::vector<YAMLDebugSubsection>
+LLVM_FUNC_ABI std::vector<YAMLDebugSubsection>
 fromDebugS(ArrayRef<uint8_t> Data, const codeview::StringsAndChecksumsRef &SC);
 
-void initializeStringsAndChecksums(ArrayRef<YAMLDebugSubsection> Sections,
+LLVM_FUNC_ABI void initializeStringsAndChecksums(ArrayRef<YAMLDebugSubsection> Sections,
                                    codeview::StringsAndChecksums &SC);
 
 } // end namespace CodeViewYAML

@@ -22,7 +22,7 @@ namespace llvm {
 namespace omp {
 
 /// Helper to describe assume clauses.
-struct AssumptionClauseMappingInfo {
+struct LLVM_CLASS_ABI AssumptionClauseMappingInfo {
   /// The identifier describing the (beginning of the) clause.
   llvm::StringLiteral Identifier;
   /// Flag to determine if the identifier is a full name or the start of a name.

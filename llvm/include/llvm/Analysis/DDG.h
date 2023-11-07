@@ -42,7 +42,7 @@ class LPMUpdater;
 ///    nodes. The root node cannot be part of a pi-block.
 /// 4. Root node is a special node that connects to all components such that
 ///    there is always a path from it to any node in the graph.
-class DDGNode : public DDGNodeBase {
+class LLVM_CLASS_ABI DDGNode : public DDGNodeBase {
 public:
   using InstructionListType = SmallVectorImpl<Instruction *>;
 
@@ -91,7 +91,7 @@ private:
 
 /// Subclass of DDGNode representing the root node of the graph.
 /// There should only be one such node in a given graph.
-class RootDDGNode : public DDGNode {
+class LLVM_CLASS_ABI RootDDGNode : public DDGNode {
 public:
   RootDDGNode() : DDGNode(NodeKind::Root) {}
   RootDDGNode(const RootDDGNode &N) = delete;
@@ -106,7 +106,7 @@ public:
 };
 
 /// Subclass of DDGNode representing single or multi-instruction nodes.
-class SimpleDDGNode : public DDGNode {
+class LLVM_CLASS_ABI SimpleDDGNode : public DDGNode {
   friend class DDGBuilder;
 
 public:
@@ -168,7 +168,7 @@ private:
 /// {a -> b}, {b -> c, d}, {c -> a}
 /// the cycle a -> b -> c -> a is abstracted into a pi-block "p" as follows:
 /// {p -> d} with "p" containing: {a -> b}, {b -> c}, {c -> a}
-class PiBlockDDGNode : public DDGNode {
+class LLVM_CLASS_ABI PiBlockDDGNode : public DDGNode {
 public:
   using PiNodeList = SmallVector<DDGNode *, 4>;
 
@@ -211,7 +211,7 @@ private:
 /// a memory dependence based on the result of DependenceAnalysis.
 /// A rooted edge connects the root node to one of the components
 /// of the graph.
-class DDGEdge : public DDGEdgeBase {
+class LLVM_CLASS_ABI DDGEdge : public DDGEdgeBase {
 public:
   /// The kind of edge in the DDG
   enum class EdgeKind {
@@ -253,7 +253,7 @@ private:
 
 /// Encapsulate some common data and functionality needed for different
 /// variations of data dependence graphs.
-template <typename NodeType> class DependenceGraphInfo {
+template <typename NodeType> class LLVM_CLASS_ABI DependenceGraphInfo {
 public:
   using DependenceList = SmallVector<std::unique_ptr<Dependence>, 1>;
 
@@ -304,7 +304,7 @@ protected:
 using DDGInfo = DependenceGraphInfo<DDGNode>;
 
 /// Data Dependency Graph
-class DataDependenceGraph : public DDGBase, public DDGInfo {
+class LLVM_CLASS_ABI DataDependenceGraph : public DDGBase, public DDGInfo {
   friend AbstractDependenceGraphBuilder<DataDependenceGraph>;
   friend class DDGBuilder;
 
@@ -344,7 +344,7 @@ private:
 ///
 /// For information about time complexity of the build algorithm see the
 /// comments near the declaration of AbstractDependenceGraphBuilder.
-class DDGBuilder : public AbstractDependenceGraphBuilder<DataDependenceGraph> {
+class LLVM_CLASS_ABI DDGBuilder : public AbstractDependenceGraphBuilder<DataDependenceGraph> {
 public:
   DDGBuilder(DataDependenceGraph &G, DependenceInfo &D,
              const BasicBlockListType &BBs)
@@ -401,18 +401,18 @@ public:
   bool shouldCreatePiBlocks() const final;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const DDGNode &N);
-raw_ostream &operator<<(raw_ostream &OS, const DDGNode::NodeKind K);
-raw_ostream &operator<<(raw_ostream &OS, const DDGEdge &E);
-raw_ostream &operator<<(raw_ostream &OS, const DDGEdge::EdgeKind K);
-raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const DDGNode &N);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const DDGNode::NodeKind K);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const DDGEdge &E);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const DDGEdge::EdgeKind K);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
 
 //===--------------------------------------------------------------------===//
 // DDG Analysis Passes
 //===--------------------------------------------------------------------===//
 
 /// Analysis pass that builds the DDG for a loop.
-class DDGAnalysis : public AnalysisInfoMixin<DDGAnalysis> {
+class LLVM_CLASS_ABI DDGAnalysis : public AnalysisInfoMixin<DDGAnalysis> {
 public:
   using Result = std::unique_ptr<DataDependenceGraph>;
   Result run(Loop &L, LoopAnalysisManager &AM, LoopStandardAnalysisResults &AR);
@@ -423,7 +423,7 @@ private:
 };
 
 /// Textual printer pass for the DDG of a loop.
-class DDGAnalysisPrinterPass : public PassInfoMixin<DDGAnalysisPrinterPass> {
+class LLVM_CLASS_ABI DDGAnalysisPrinterPass : public PassInfoMixin<DDGAnalysisPrinterPass> {
 public:
   explicit DDGAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
@@ -484,7 +484,7 @@ DependenceGraphInfo<NodeType>::getDependenceString(const NodeType &Src,
 //===--------------------------------------------------------------------===//
 
 /// non-const versions of the grapth trait specializations for DDG
-template <> struct GraphTraits<DDGNode *> {
+template <> struct LLVM_CLASS_ABI GraphTraits<DDGNode *> {
   using NodeRef = DDGNode *;
 
   static DDGNode *DDGGetTargetNode(DGEdge<DDGNode, DDGEdge> *P) {
@@ -512,7 +512,7 @@ template <> struct GraphTraits<DDGNode *> {
 };
 
 template <>
-struct GraphTraits<DataDependenceGraph *> : public GraphTraits<DDGNode *> {
+struct LLVM_CLASS_ABI GraphTraits<DataDependenceGraph *> : public GraphTraits<DDGNode *> {
   using nodes_iterator = DataDependenceGraph::iterator;
   static NodeRef getEntryNode(DataDependenceGraph *DG) {
     return &DG->getRoot();
@@ -524,7 +524,7 @@ struct GraphTraits<DataDependenceGraph *> : public GraphTraits<DDGNode *> {
 };
 
 /// const versions of the grapth trait specializations for DDG
-template <> struct GraphTraits<const DDGNode *> {
+template <> struct LLVM_CLASS_ABI GraphTraits<const DDGNode *> {
   using NodeRef = const DDGNode *;
 
   static const DDGNode *DDGGetTargetNode(const DGEdge<DDGNode, DDGEdge> *P) {
@@ -552,7 +552,7 @@ template <> struct GraphTraits<const DDGNode *> {
 };
 
 template <>
-struct GraphTraits<const DataDependenceGraph *>
+struct LLVM_CLASS_ABI GraphTraits<const DataDependenceGraph *>
     : public GraphTraits<const DDGNode *> {
   using nodes_iterator = DataDependenceGraph::const_iterator;
   static NodeRef getEntryNode(const DataDependenceGraph *DG) {

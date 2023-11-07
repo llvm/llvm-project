@@ -37,7 +37,7 @@ namespace IDFCalculatorDetail {
 /// Generic utility class used for getting the children of a basic block.
 /// May be specialized if, for example, one wouldn't like to return nullpointer
 /// successors.
-template <class NodeTy, bool IsPostDom> struct ChildrenGetterTy {
+template <class NodeTy, bool IsPostDom> struct LLVM_CLASS_ABI ChildrenGetterTy {
   using NodeRef = typename GraphTraits<NodeTy *>::NodeRef;
   using ChildrenTy = SmallVector<NodeRef, 8>;
 
@@ -55,7 +55,7 @@ template <class NodeTy, bool IsPostDom> struct ChildrenGetterTy {
 /// pruned using the live-in set.
 /// By default, liveness is not used to prune the IDF computation.
 /// The template parameters should be of a CFG block type.
-template <class NodeTy, bool IsPostDom> class IDFCalculatorBase {
+template <class NodeTy, bool IsPostDom> class LLVM_CLASS_ABI IDFCalculatorBase {
 public:
   using OrderedNodeTy =
       std::conditional_t<IsPostDom, Inverse<NodeTy *>, NodeTy *>;

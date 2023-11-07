@@ -24,19 +24,19 @@ namespace llvm {
 
 class Module;
 
-extern cl::opt<int> SampleHotCallSiteThreshold;
-extern cl::opt<int> SampleColdCallSiteThreshold;
-extern cl::opt<int> ProfileInlineGrowthLimit;
-extern cl::opt<int> ProfileInlineLimitMin;
-extern cl::opt<int> ProfileInlineLimitMax;
-extern cl::opt<bool> SortProfiledSCC;
+LLVM_FUNC_ABI extern cl::opt<int> SampleHotCallSiteThreshold;
+LLVM_FUNC_ABI extern cl::opt<int> SampleColdCallSiteThreshold;
+LLVM_FUNC_ABI extern cl::opt<int> ProfileInlineGrowthLimit;
+LLVM_FUNC_ABI extern cl::opt<int> ProfileInlineLimitMin;
+LLVM_FUNC_ABI extern cl::opt<int> ProfileInlineLimitMax;
+LLVM_FUNC_ABI extern cl::opt<bool> SortProfiledSCC;
 
 namespace vfs {
 class FileSystem;
 } // namespace vfs
 
 /// The sample profiler data loader pass.
-class SampleProfileLoaderPass : public PassInfoMixin<SampleProfileLoaderPass> {
+class LLVM_CLASS_ABI SampleProfileLoaderPass : public PassInfoMixin<SampleProfileLoaderPass> {
 public:
   SampleProfileLoaderPass(
       std::string File = "", std::string RemappingFile = "",

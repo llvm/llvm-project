@@ -27,7 +27,7 @@ class MachineBasicBlock;
 /// A class that wraps MachineInstrs and derives from FoldingSetNode in order to
 /// be uniqued in a CSEMap. The tradeoff here is extra memory allocations for
 /// UniqueMachineInstr vs making MachineInstr bigger.
-class UniqueMachineInstr : public FoldingSetNode {
+class LLVM_CLASS_ABI UniqueMachineInstr : public FoldingSetNode {
   friend class GISelCSEInfo;
   const MachineInstr *MI;
   explicit UniqueMachineInstr(const MachineInstr *MI) : MI(MI) {}
@@ -37,14 +37,14 @@ public:
 };
 
 // A CSE config for fully optimized builds.
-class CSEConfigFull : public CSEConfigBase {
+class LLVM_CLASS_ABI CSEConfigFull : public CSEConfigBase {
 public:
   virtual ~CSEConfigFull() = default;
   bool shouldCSEOpc(unsigned Opc) override;
 };
 
 // Commonly used for O0 config.
-class CSEConfigConstantOnly : public CSEConfigBase {
+class LLVM_CLASS_ABI CSEConfigConstantOnly : public CSEConfigBase {
 public:
   virtual ~CSEConfigConstantOnly() = default;
   bool shouldCSEOpc(unsigned Opc) override;
@@ -54,7 +54,7 @@ public:
 // We have this logic here so targets can make use of it from their derived
 // TargetPassConfig, but can't put this logic into TargetPassConfig directly
 // because the CodeGen library can't depend on GlobalISel.
-std::unique_ptr<CSEConfigBase>
+LLVM_FUNC_ABI std::unique_ptr<CSEConfigBase>
 getStandardCSEConfigForOpt(CodeGenOptLevel Level);
 
 /// The CSE Analysis object.
@@ -67,7 +67,7 @@ getStandardCSEConfigForOpt(CodeGenOptLevel Level);
 /// CSEInfo should assert when trying to enter an incomplete instruction into
 /// the CSEMap. There is Opcode level granularity on which instructions can be
 /// CSE'd and for now, only Generic instructions are CSEable.
-class GISelCSEInfo : public GISelChangeObserver {
+class LLVM_CLASS_ABI GISelCSEInfo : public GISelChangeObserver {
   // Make it accessible only to CSEMIRBuilder.
   friend class CSEMIRBuilder;
 
@@ -167,7 +167,7 @@ class TargetRegisterClass;
 class RegisterBank;
 
 // Simple builder class to easily profile properties about MIs.
-class GISelInstProfileBuilder {
+class LLVM_CLASS_ABI GISelInstProfileBuilder {
   FoldingSetNodeID &ID;
   const MachineRegisterInfo &MRI;
 
@@ -202,7 +202,7 @@ public:
 /// 1) Lazily evaluate the MachineFunction to compute CSEable instructions.
 /// 2) Allows configuration of which instructions are CSEd through CSEConfig
 /// object. Provides a method called get which takes a CSEConfig object.
-class GISelCSEAnalysisWrapper {
+class LLVM_CLASS_ABI GISelCSEAnalysisWrapper {
   GISelCSEInfo Info;
   MachineFunction *MF = nullptr;
   bool AlreadyComputed = false;
@@ -220,7 +220,7 @@ public:
 };
 
 /// The actual analysis pass wrapper.
-class GISelCSEAnalysisWrapperPass : public MachineFunctionPass {
+class LLVM_CLASS_ABI GISelCSEAnalysisWrapperPass : public MachineFunctionPass {
   GISelCSEAnalysisWrapper Wrapper;
 
 public:

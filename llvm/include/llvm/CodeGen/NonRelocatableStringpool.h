@@ -21,7 +21,7 @@ namespace llvm {
 ///
 /// Use this class when a string table doesn't need relocations.
 /// This class provides this ability by just associating offsets with strings.
-class NonRelocatableStringpool {
+class LLVM_CLASS_ABI NonRelocatableStringpool {
 public:
   /// Entries are stored into the StringMap and simply linked together through
   /// the second element of this pair in order to keep track of insertion
@@ -65,7 +65,7 @@ private:
 };
 
 /// Helper for making strong types.
-template <typename T, typename S> class StrongType : public T {
+template <typename T, typename S> class LLVM_CLASS_ABI StrongType : public T {
 public:
   template <typename... Args>
   explicit StrongType(Args... A) : T(std::forward<Args>(A)...) {}
@@ -74,8 +74,8 @@ public:
 /// It's very easy to introduce bugs by passing the wrong string pool.
 /// By using strong types the interface enforces that the right
 /// kind of pool is used.
-struct UniqueTag {};
-struct OffsetsTag {};
+struct LLVM_CLASS_ABI UniqueTag {};
+struct LLVM_CLASS_ABI OffsetsTag {};
 using UniquingStringPool = StrongType<NonRelocatableStringpool, UniqueTag>;
 using OffsetsStringPool = StrongType<NonRelocatableStringpool, OffsetsTag>;
 

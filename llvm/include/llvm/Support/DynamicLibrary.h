@@ -31,7 +31,7 @@ namespace sys {
 /// It also allows for symbols to be defined which don't live in any library,
 /// but rather the main program itself, useful on Windows where the main
 /// executable cannot be searched.
-class DynamicLibrary {
+class LLVM_CLASS_ABI DynamicLibrary {
   // Placeholder whose address represents an invalid library.
   // We use this instead of NULL or a pointer-int pair because the OS library
   // might define 0 or 1 to be "special" handles, such as "search all".

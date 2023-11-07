@@ -19,7 +19,7 @@ namespace llvm {
 
 /// RelocAddrEntry contains relocated value and section index.
 /// Section index is -1LL if relocation points to absolute symbol.
-struct RelocAddrEntry {
+struct LLVM_CLASS_ABI RelocAddrEntry {
   uint64_t SectionIndex;
   object::RelocationRef Reloc;
   uint64_t SymbolValue;

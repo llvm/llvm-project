@@ -34,7 +34,7 @@ struct Remark;
 /// The string table used for serializing remarks.
 /// This table can be for example serialized in a section to be consumed after
 /// the compilation.
-struct StringTable {
+struct LLVM_CLASS_ABI StringTable {
   /// The string table containing all the unique strings used in the output.
   /// It maps a string to an unique ID.
   StringMap<unsigned, BumpPtrAllocator> StrTab;

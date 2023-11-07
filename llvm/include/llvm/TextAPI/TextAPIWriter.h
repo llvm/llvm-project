@@ -19,7 +19,7 @@ class raw_ostream;
 
 namespace MachO {
 
-class TextAPIWriter {
+class LLVM_CLASS_ABI TextAPIWriter {
 public:
   TextAPIWriter() = delete;
 

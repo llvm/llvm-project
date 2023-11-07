@@ -48,7 +48,7 @@ static inline unsigned combineHashValue(unsigned a, unsigned b) {
 /// in derived DenseMapInfo specializations; in non-SFINAE use cases this should
 /// just be `void`.
 template<typename T, typename Enable = void>
-struct DenseMapInfo {
+struct LLVM_CLASS_ABI DenseMapInfo {
   //static inline T getEmptyKey();
   //static inline T getTombstoneKey();
   //static unsigned getHashValue(const T &Val);
@@ -61,7 +61,7 @@ struct DenseMapInfo {
 // declared key types. Assume that no pointer key type requires more than 4096
 // bytes of alignment.
 template<typename T>
-struct DenseMapInfo<T*> {
+struct LLVM_CLASS_ABI DenseMapInfo<T*> {
   // The following should hold, but it would require T to be complete:
   // static_assert(alignof(T) <= (1 << Log2MaxAlign),
   //               "DenseMap does not support pointer keys requiring more than "
@@ -89,7 +89,7 @@ struct DenseMapInfo<T*> {
 };
 
 // Provide DenseMapInfo for chars.
-template<> struct DenseMapInfo<char> {
+template<> struct LLVM_CLASS_ABI DenseMapInfo<char> {
   static inline char getEmptyKey() { return ~0; }
   static inline char getTombstoneKey() { return ~0 - 1; }
   static unsigned getHashValue(const char& Val) { return Val * 37U; }
@@ -100,7 +100,7 @@ template<> struct DenseMapInfo<char> {
 };
 
 // Provide DenseMapInfo for unsigned chars.
-template <> struct DenseMapInfo<unsigned char> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<unsigned char> {
   static inline unsigned char getEmptyKey() { return ~0; }
   static inline unsigned char getTombstoneKey() { return ~0 - 1; }
   static unsigned getHashValue(const unsigned char &Val) { return Val * 37U; }
@@ -111,7 +111,7 @@ template <> struct DenseMapInfo<unsigned char> {
 };
 
 // Provide DenseMapInfo for unsigned shorts.
-template <> struct DenseMapInfo<unsigned short> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<unsigned short> {
   static inline unsigned short getEmptyKey() { return 0xFFFF; }
   static inline unsigned short getTombstoneKey() { return 0xFFFF - 1; }
   static unsigned getHashValue(const unsigned short &Val) { return Val * 37U; }
@@ -122,7 +122,7 @@ template <> struct DenseMapInfo<unsigned short> {
 };
 
 // Provide DenseMapInfo for unsigned ints.
-template<> struct DenseMapInfo<unsigned> {
+template<> struct LLVM_CLASS_ABI DenseMapInfo<unsigned> {
   static inline unsigned getEmptyKey() { return ~0U; }
   static inline unsigned getTombstoneKey() { return ~0U - 1; }
   static unsigned getHashValue(const unsigned& Val) { return Val * 37U; }
@@ -133,7 +133,7 @@ template<> struct DenseMapInfo<unsigned> {
 };
 
 // Provide DenseMapInfo for unsigned longs.
-template<> struct DenseMapInfo<unsigned long> {
+template<> struct LLVM_CLASS_ABI DenseMapInfo<unsigned long> {
   static inline unsigned long getEmptyKey() { return ~0UL; }
   static inline unsigned long getTombstoneKey() { return ~0UL - 1L; }
 
@@ -147,7 +147,7 @@ template<> struct DenseMapInfo<unsigned long> {
 };
 
 // Provide DenseMapInfo for unsigned long longs.
-template<> struct DenseMapInfo<unsigned long long> {
+template<> struct LLVM_CLASS_ABI DenseMapInfo<unsigned long long> {
   static inline unsigned long long getEmptyKey() { return ~0ULL; }
   static inline unsigned long long getTombstoneKey() { return ~0ULL - 1ULL; }
 
@@ -162,7 +162,7 @@ template<> struct DenseMapInfo<unsigned long long> {
 };
 
 // Provide DenseMapInfo for shorts.
-template <> struct DenseMapInfo<short> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<short> {
   static inline short getEmptyKey() { return 0x7FFF; }
   static inline short getTombstoneKey() { return -0x7FFF - 1; }
   static unsigned getHashValue(const short &Val) { return Val * 37U; }
@@ -170,7 +170,7 @@ template <> struct DenseMapInfo<short> {
 };
 
 // Provide DenseMapInfo for ints.
-template<> struct DenseMapInfo<int> {
+template<> struct LLVM_CLASS_ABI DenseMapInfo<int> {
   static inline int getEmptyKey() { return 0x7fffffff; }
   static inline int getTombstoneKey() { return -0x7fffffff - 1; }
   static unsigned getHashValue(const int& Val) { return (unsigned)(Val * 37U); }
@@ -181,7 +181,7 @@ template<> struct DenseMapInfo<int> {
 };
 
 // Provide DenseMapInfo for longs.
-template<> struct DenseMapInfo<long> {
+template<> struct LLVM_CLASS_ABI DenseMapInfo<long> {
   static inline long getEmptyKey() {
     return (1UL << (sizeof(long) * 8 - 1)) - 1UL;
   }
@@ -198,7 +198,7 @@ template<> struct DenseMapInfo<long> {
 };
 
 // Provide DenseMapInfo for long longs.
-template<> struct DenseMapInfo<long long> {
+template<> struct LLVM_CLASS_ABI DenseMapInfo<long long> {
   static inline long long getEmptyKey() { return 0x7fffffffffffffffLL; }
   static inline long long getTombstoneKey() { return -0x7fffffffffffffffLL-1; }
 
@@ -214,7 +214,7 @@ template<> struct DenseMapInfo<long long> {
 
 // Provide DenseMapInfo for all pairs whose members have info.
 template<typename T, typename U>
-struct DenseMapInfo<std::pair<T, U>> {
+struct LLVM_CLASS_ABI DenseMapInfo<std::pair<T, U>> {
   using Pair = std::pair<T, U>;
   using FirstInfo = DenseMapInfo<T>;
   using SecondInfo = DenseMapInfo<U>;
@@ -249,7 +249,7 @@ struct DenseMapInfo<std::pair<T, U>> {
 };
 
 // Provide DenseMapInfo for all tuples whose members have info.
-template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
+template <typename... Ts> struct LLVM_CLASS_ABI DenseMapInfo<std::tuple<Ts...>> {
   using Tuple = std::tuple<Ts...>;
 
   static inline Tuple getEmptyKey() {

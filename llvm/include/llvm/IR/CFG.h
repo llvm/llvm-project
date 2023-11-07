@@ -40,7 +40,7 @@ class Use;
 //===----------------------------------------------------------------------===//
 
 template <class Ptr, class USE_iterator> // Predecessor Iterator
-class PredIterator {
+class LLVM_CLASS_ABI PredIterator {
 public:
   using iterator_category = std::forward_iterator_tag;
   using value_type = Ptr;
@@ -136,7 +136,7 @@ inline const_pred_range predecessors(const BasicBlock *BB) {
 //===----------------------------------------------------------------------===//
 
 template <class InstructionT, class BlockT>
-class SuccIterator
+class LLVM_CLASS_ABI SuccIterator
     : public iterator_facade_base<SuccIterator<InstructionT, BlockT>,
                                   std::random_access_iterator_tag, BlockT, int,
                                   BlockT *, BlockT *> {
@@ -298,7 +298,7 @@ inline const_succ_range successors(const BasicBlock *BB) {
 // Provide specializations of GraphTraits to be able to treat a function as a
 // graph of basic blocks...
 
-template <> struct GraphTraits<BasicBlock*> {
+template <> struct LLVM_CLASS_ABI GraphTraits<BasicBlock*> {
   using NodeRef = BasicBlock *;
   using ChildIteratorType = succ_iterator;
 
@@ -307,7 +307,7 @@ template <> struct GraphTraits<BasicBlock*> {
   static ChildIteratorType child_end(NodeRef N) { return succ_end(N); }
 };
 
-template <> struct GraphTraits<const BasicBlock*> {
+template <> struct LLVM_CLASS_ABI GraphTraits<const BasicBlock*> {
   using NodeRef = const BasicBlock *;
   using ChildIteratorType = const_succ_iterator;
 
@@ -322,7 +322,7 @@ template <> struct GraphTraits<const BasicBlock*> {
 // a function is considered to be when traversing the predecessor edges of a BB
 // instead of the successor edges.
 //
-template <> struct GraphTraits<Inverse<BasicBlock*>> {
+template <> struct LLVM_CLASS_ABI GraphTraits<Inverse<BasicBlock*>> {
   using NodeRef = BasicBlock *;
   using ChildIteratorType = pred_iterator;
 
@@ -331,7 +331,7 @@ template <> struct GraphTraits<Inverse<BasicBlock*>> {
   static ChildIteratorType child_end(NodeRef N) { return pred_end(N); }
 };
 
-template <> struct GraphTraits<Inverse<const BasicBlock*>> {
+template <> struct LLVM_CLASS_ABI GraphTraits<Inverse<const BasicBlock*>> {
   using NodeRef = const BasicBlock *;
   using ChildIteratorType = const_pred_iterator;
 
@@ -348,7 +348,7 @@ template <> struct GraphTraits<Inverse<const BasicBlock*>> {
 // graph of basic blocks... these are the same as the basic block iterators,
 // except that the root node is implicitly the first node of the function.
 //
-template <> struct GraphTraits<Function*> : public GraphTraits<BasicBlock*> {
+template <> struct LLVM_CLASS_ABI GraphTraits<Function*> : public GraphTraits<BasicBlock*> {
   static NodeRef getEntryNode(Function *F) { return &F->getEntryBlock(); }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
@@ -364,7 +364,7 @@ template <> struct GraphTraits<Function*> : public GraphTraits<BasicBlock*> {
 
   static size_t size(Function *F) { return F->size(); }
 };
-template <> struct GraphTraits<const Function*> :
+template <> struct LLVM_CLASS_ABI GraphTraits<const Function*> :
   public GraphTraits<const BasicBlock*> {
   static NodeRef getEntryNode(const Function *F) { return &F->getEntryBlock(); }
 
@@ -387,13 +387,13 @@ template <> struct GraphTraits<const Function*> :
 // a function is considered to be when traversing the predecessor edges of a BB
 // instead of the successor edges.
 //
-template <> struct GraphTraits<Inverse<Function*>> :
+template <> struct LLVM_CLASS_ABI GraphTraits<Inverse<Function*>> :
   public GraphTraits<Inverse<BasicBlock*>> {
   static NodeRef getEntryNode(Inverse<Function *> G) {
     return &G.Graph->getEntryBlock();
   }
 };
-template <> struct GraphTraits<Inverse<const Function*>> :
+template <> struct LLVM_CLASS_ABI GraphTraits<Inverse<const Function*>> :
   public GraphTraits<Inverse<const BasicBlock*>> {
   static NodeRef getEntryNode(Inverse<const Function *> G) {
     return &G.Graph->getEntryBlock();

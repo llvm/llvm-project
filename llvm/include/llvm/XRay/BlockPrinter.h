@@ -21,7 +21,7 @@
 namespace llvm {
 namespace xray {
 
-class BlockPrinter : public RecordVisitor {
+class LLVM_CLASS_ABI BlockPrinter : public RecordVisitor {
   enum class State {
     Start,
     Preamble,

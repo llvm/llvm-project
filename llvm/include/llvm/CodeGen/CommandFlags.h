@@ -33,131 +33,131 @@ class TargetMachine;
 
 namespace codegen {
 
-std::string getMArch();
+LLVM_FUNC_ABI std::string getMArch();
 
-std::string getMCPU();
+LLVM_FUNC_ABI std::string getMCPU();
 
-std::vector<std::string> getMAttrs();
+LLVM_FUNC_ABI std::vector<std::string> getMAttrs();
 
-Reloc::Model getRelocModel();
-std::optional<Reloc::Model> getExplicitRelocModel();
+LLVM_FUNC_ABI Reloc::Model getRelocModel();
+LLVM_FUNC_ABI std::optional<Reloc::Model> getExplicitRelocModel();
 
-ThreadModel::Model getThreadModel();
+LLVM_FUNC_ABI ThreadModel::Model getThreadModel();
 
-CodeModel::Model getCodeModel();
-std::optional<CodeModel::Model> getExplicitCodeModel();
+LLVM_FUNC_ABI CodeModel::Model getCodeModel();
+LLVM_FUNC_ABI std::optional<CodeModel::Model> getExplicitCodeModel();
 
-uint64_t getLargeDataThreshold();
-std::optional<uint64_t> getExplicitLargeDataThreshold();
+LLVM_FUNC_ABI uint64_t getLargeDataThreshold();
+LLVM_FUNC_ABI std::optional<uint64_t> getExplicitLargeDataThreshold();
 
-llvm::ExceptionHandling getExceptionModel();
+LLVM_FUNC_ABI llvm::ExceptionHandling getExceptionModel();
 
-std::optional<CodeGenFileType> getExplicitFileType();
+LLVM_FUNC_ABI std::optional<CodeGenFileType> getExplicitFileType();
 
-CodeGenFileType getFileType();
+LLVM_FUNC_ABI CodeGenFileType getFileType();
 
-FramePointerKind getFramePointerUsage();
+LLVM_FUNC_ABI FramePointerKind getFramePointerUsage();
 
-bool getEnableUnsafeFPMath();
+LLVM_FUNC_ABI bool getEnableUnsafeFPMath();
 
-bool getEnableNoInfsFPMath();
+LLVM_FUNC_ABI bool getEnableNoInfsFPMath();
 
-bool getEnableNoNaNsFPMath();
+LLVM_FUNC_ABI bool getEnableNoNaNsFPMath();
 
-bool getEnableNoSignedZerosFPMath();
+LLVM_FUNC_ABI bool getEnableNoSignedZerosFPMath();
 
-bool getEnableApproxFuncFPMath();
+LLVM_FUNC_ABI bool getEnableApproxFuncFPMath();
 
-bool getEnableNoTrappingFPMath();
+LLVM_FUNC_ABI bool getEnableNoTrappingFPMath();
 
-DenormalMode::DenormalModeKind getDenormalFPMath();
-DenormalMode::DenormalModeKind getDenormalFP32Math();
+LLVM_FUNC_ABI DenormalMode::DenormalModeKind getDenormalFPMath();
+LLVM_FUNC_ABI DenormalMode::DenormalModeKind getDenormalFP32Math();
 
-bool getEnableHonorSignDependentRoundingFPMath();
+LLVM_FUNC_ABI bool getEnableHonorSignDependentRoundingFPMath();
 
-llvm::FloatABI::ABIType getFloatABIForCalls();
+LLVM_FUNC_ABI llvm::FloatABI::ABIType getFloatABIForCalls();
 
-llvm::FPOpFusion::FPOpFusionMode getFuseFPOps();
+LLVM_FUNC_ABI llvm::FPOpFusion::FPOpFusionMode getFuseFPOps();
 
-SwiftAsyncFramePointerMode getSwiftAsyncFramePointer();
+LLVM_FUNC_ABI SwiftAsyncFramePointerMode getSwiftAsyncFramePointer();
 
-bool getDontPlaceZerosInBSS();
+LLVM_FUNC_ABI bool getDontPlaceZerosInBSS();
 
-bool getEnableGuaranteedTailCallOpt();
+LLVM_FUNC_ABI bool getEnableGuaranteedTailCallOpt();
 
-bool getEnableAIXExtendedAltivecABI();
+LLVM_FUNC_ABI bool getEnableAIXExtendedAltivecABI();
 
-bool getDisableTailCalls();
+LLVM_FUNC_ABI bool getDisableTailCalls();
 
-bool getStackSymbolOrdering();
+LLVM_FUNC_ABI bool getStackSymbolOrdering();
 
-bool getStackRealign();
+LLVM_FUNC_ABI bool getStackRealign();
 
-std::string getTrapFuncName();
+LLVM_FUNC_ABI std::string getTrapFuncName();
 
-bool getUseCtors();
+LLVM_FUNC_ABI bool getUseCtors();
 
-bool getDisableIntegratedAS();
+LLVM_FUNC_ABI bool getDisableIntegratedAS();
 
-bool getRelaxELFRelocations();
+LLVM_FUNC_ABI bool getRelaxELFRelocations();
 
-bool getDataSections();
-std::optional<bool> getExplicitDataSections();
+LLVM_FUNC_ABI bool getDataSections();
+LLVM_FUNC_ABI std::optional<bool> getExplicitDataSections();
 
-bool getFunctionSections();
-std::optional<bool> getExplicitFunctionSections();
+LLVM_FUNC_ABI bool getFunctionSections();
+LLVM_FUNC_ABI std::optional<bool> getExplicitFunctionSections();
 
-bool getIgnoreXCOFFVisibility();
+LLVM_FUNC_ABI bool getIgnoreXCOFFVisibility();
 
-bool getXCOFFTracebackTable();
+LLVM_FUNC_ABI bool getXCOFFTracebackTable();
 
-std::string getBBSections();
+LLVM_FUNC_ABI std::string getBBSections();
 
-unsigned getTLSSize();
+LLVM_FUNC_ABI unsigned getTLSSize();
 
-bool getEmulatedTLS();
-std::optional<bool> getExplicitEmulatedTLS();
+LLVM_FUNC_ABI bool getEmulatedTLS();
+LLVM_FUNC_ABI std::optional<bool> getExplicitEmulatedTLS();
 
-bool getUniqueSectionNames();
+LLVM_FUNC_ABI bool getUniqueSectionNames();
 
-bool getUniqueBasicBlockSectionNames();
+LLVM_FUNC_ABI bool getUniqueBasicBlockSectionNames();
 
-llvm::EABI getEABIVersion();
+LLVM_FUNC_ABI llvm::EABI getEABIVersion();
 
-llvm::DebuggerKind getDebuggerTuningOpt();
+LLVM_FUNC_ABI llvm::DebuggerKind getDebuggerTuningOpt();
 
-bool getEnableStackSizeSection();
+LLVM_FUNC_ABI bool getEnableStackSizeSection();
 
-bool getEnableAddrsig();
+LLVM_FUNC_ABI bool getEnableAddrsig();
 
-bool getEmitCallSiteInfo();
+LLVM_FUNC_ABI bool getEmitCallSiteInfo();
 
-bool getEnableMachineFunctionSplitter();
+LLVM_FUNC_ABI bool getEnableMachineFunctionSplitter();
 
-bool getEnableDebugEntryValues();
+LLVM_FUNC_ABI bool getEnableDebugEntryValues();
 
-bool getValueTrackingVariableLocations();
-std::optional<bool> getExplicitValueTrackingVariableLocations();
+LLVM_FUNC_ABI bool getValueTrackingVariableLocations();
+LLVM_FUNC_ABI std::optional<bool> getExplicitValueTrackingVariableLocations();
 
-bool getForceDwarfFrameSection();
+LLVM_FUNC_ABI bool getForceDwarfFrameSection();
 
-bool getXRayFunctionIndex();
+LLVM_FUNC_ABI bool getXRayFunctionIndex();
 
-bool getDebugStrictDwarf();
+LLVM_FUNC_ABI bool getDebugStrictDwarf();
 
-unsigned getAlignLoops();
+LLVM_FUNC_ABI unsigned getAlignLoops();
 
-bool getJMCInstrument();
+LLVM_FUNC_ABI bool getJMCInstrument();
 
-bool getXCOFFReadOnlyPointers();
+LLVM_FUNC_ABI bool getXCOFFReadOnlyPointers();
 
 /// Create this object with static storage to register codegen-related command
 /// line options.
-struct RegisterCodeGenFlags {
+struct LLVM_CLASS_ABI RegisterCodeGenFlags {
   RegisterCodeGenFlags();
 };
 
-llvm::BasicBlockSection getBBSectionsMode(llvm::TargetOptions &Options);
+LLVM_FUNC_ABI llvm::BasicBlockSection getBBSectionsMode(llvm::TargetOptions &Options);
 
 /// Common utility function tightly tied to the options listed here. Initializes
 /// a TargetOptions object with CodeGen flags and returns it.
@@ -165,32 +165,32 @@ llvm::BasicBlockSection getBBSectionsMode(llvm::TargetOptions &Options);
 ///    options are not explicitly specified. If those triple dependant options
 ///    value do not have effect for your component, a default Triple() could be
 ///    passed in.
-TargetOptions InitTargetOptionsFromCodeGenFlags(const llvm::Triple &TheTriple);
+LLVM_FUNC_ABI TargetOptions InitTargetOptionsFromCodeGenFlags(const llvm::Triple &TheTriple);
 
-std::string getCPUStr();
+LLVM_FUNC_ABI std::string getCPUStr();
 
-std::string getFeaturesStr();
+LLVM_FUNC_ABI std::string getFeaturesStr();
 
-std::vector<std::string> getFeatureList();
+LLVM_FUNC_ABI std::vector<std::string> getFeatureList();
 
-void renderBoolStringAttr(AttrBuilder &B, StringRef Name, bool Val);
+LLVM_FUNC_ABI void renderBoolStringAttr(AttrBuilder &B, StringRef Name, bool Val);
 
 /// Set function attributes of function \p F based on CPU, Features, and command
 /// line flags.
-void setFunctionAttributes(StringRef CPU, StringRef Features, Function &F);
+LLVM_FUNC_ABI void setFunctionAttributes(StringRef CPU, StringRef Features, Function &F);
 
 /// Set function attributes of functions in Module M based on CPU,
 /// Features, and command line flags.
-void setFunctionAttributes(StringRef CPU, StringRef Features, Module &M);
+LLVM_FUNC_ABI void setFunctionAttributes(StringRef CPU, StringRef Features, Module &M);
 
 /// Should value-tracking variable locations / instruction referencing be
 /// enabled by default for this triple?
-bool getDefaultValueTrackingVariableLocations(const llvm::Triple &T);
+LLVM_FUNC_ABI bool getDefaultValueTrackingVariableLocations(const llvm::Triple &T);
 
 /// Creates a TargetMachine instance with the options defined on the command
 /// line. This can be used for tools that do not need further customization of
 /// the TargetOptions.
-Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
+LLVM_FUNC_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
     StringRef TargetTriple,
     CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
 

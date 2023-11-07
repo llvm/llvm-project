@@ -36,7 +36,7 @@ class raw_ostream;
 /// leads to operator << being ambiguous as function has matching constructors
 /// in some STL versions. I have seen the problem on gcc 4.6 libstdc++ and
 /// microsoft STL.
-class Printable {
+class LLVM_CLASS_ABI Printable {
 public:
   std::function<void(raw_ostream &OS)> Print;
   Printable(std::function<void(raw_ostream &OS)> Print)

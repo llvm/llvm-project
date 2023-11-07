@@ -27,19 +27,19 @@ enum class cv_error_code {
 
 namespace std {
 template <>
-struct is_error_code_enum<llvm::codeview::cv_error_code> : std::true_type {};
+struct LLVM_CLASS_ABI is_error_code_enum<llvm::codeview::cv_error_code> : std::true_type {};
 } // namespace std
 
 namespace llvm {
 namespace codeview {
-const std::error_category &CVErrorCategory();
+LLVM_FUNC_ABI const std::error_category &CVErrorCategory();
 
 inline std::error_code make_error_code(cv_error_code E) {
   return std::error_code(static_cast<int>(E), CVErrorCategory());
 }
 
 /// Base class for errors originating when parsing raw PDB files
-class CodeViewError : public ErrorInfo<CodeViewError, StringError> {
+class LLVM_CLASS_ABI CodeViewError : public ErrorInfo<CodeViewError, StringError> {
 public:
   using ErrorInfo<CodeViewError,
                   StringError>::ErrorInfo; // inherit constructors

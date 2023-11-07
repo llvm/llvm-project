@@ -20,7 +20,7 @@ namespace llvm {
 
 class raw_ostream;
 
-class DWARFAbbreviationDeclarationSet {
+class LLVM_CLASS_ABI DWARFAbbreviationDeclarationSet {
   uint64_t Offset;
   /// Code of the first abbreviation, if all abbreviations in the set have
   /// consecutive codes. UINT32_MAX otherwise.
@@ -56,7 +56,7 @@ private:
   void clear();
 };
 
-class DWARFDebugAbbrev {
+class LLVM_CLASS_ABI DWARFDebugAbbrev {
   using DWARFAbbreviationDeclarationSetMap =
       std::map<uint64_t, DWARFAbbreviationDeclarationSet>;
 

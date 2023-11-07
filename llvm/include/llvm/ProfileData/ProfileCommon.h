@@ -29,13 +29,13 @@
 
 namespace llvm {
 
-extern cl::opt<bool> UseContextLessSummary;
-extern cl::opt<int> ProfileSummaryCutoffHot;
-extern cl::opt<int> ProfileSummaryCutoffCold;
-extern cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold;
-extern cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold;
-extern cl::opt<uint64_t> ProfileSummaryHotCount;
-extern cl::opt<uint64_t> ProfileSummaryColdCount;
+LLVM_FUNC_ABI extern cl::opt<bool> UseContextLessSummary;
+LLVM_FUNC_ABI extern cl::opt<int> ProfileSummaryCutoffHot;
+LLVM_FUNC_ABI extern cl::opt<int> ProfileSummaryCutoffCold;
+LLVM_FUNC_ABI extern cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold;
+LLVM_FUNC_ABI extern cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold;
+LLVM_FUNC_ABI extern cl::opt<uint64_t> ProfileSummaryHotCount;
+LLVM_FUNC_ABI extern cl::opt<uint64_t> ProfileSummaryColdCount;
 
 namespace sampleprof {
 
@@ -43,7 +43,7 @@ class FunctionSamples;
 
 } // end namespace sampleprof
 
-class ProfileSummaryBuilder {
+class LLVM_CLASS_ABI ProfileSummaryBuilder {
 private:
   /// We keep track of the number of times a count (block count or samples)
   /// appears in the profile. The map is kept sorted in the descending order of
@@ -77,7 +77,7 @@ public:
   static uint64_t getColdCountThreshold(const SummaryEntryVector &DS);
 };
 
-class InstrProfSummaryBuilder final : public ProfileSummaryBuilder {
+class LLVM_CLASS_ABI InstrProfSummaryBuilder final : public ProfileSummaryBuilder {
   uint64_t MaxInternalBlockCount = 0;
 
   inline void addEntryCount(uint64_t Count);
@@ -91,7 +91,7 @@ public:
   std::unique_ptr<ProfileSummary> getSummary();
 };
 
-class SampleProfileSummaryBuilder final : public ProfileSummaryBuilder {
+class LLVM_CLASS_ABI SampleProfileSummaryBuilder final : public ProfileSummaryBuilder {
 public:
   SampleProfileSummaryBuilder(std::vector<uint32_t> Cutoffs)
       : ProfileSummaryBuilder(std::move(Cutoffs)) {}

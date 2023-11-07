@@ -19,7 +19,7 @@ namespace pdb {
 
 class NativeSession;
 
-class NativeRawSymbol : public IPDBRawSymbol {
+class LLVM_CLASS_ABI NativeRawSymbol : public IPDBRawSymbol {
   friend class SymbolCache;
   virtual void initialize() {}
 

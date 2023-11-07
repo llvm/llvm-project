@@ -38,21 +38,21 @@ class CallBase;
 /// that must remain in the entry block up before the split point. Static
 /// allocas and llvm.localescape calls, for example, must remain in the entry
 /// block.
-BasicBlock::iterator PrepareToSplitEntryBlock(BasicBlock &BB,
+LLVM_FUNC_ABI BasicBlock::iterator PrepareToSplitEntryBlock(BasicBlock &BB,
                                               BasicBlock::iterator IP);
 
 // Create a constant for Str so that we can pass it to the run-time lib.
-GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
+LLVM_FUNC_ABI GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
                                              bool AllowMerging,
                                              const char *NamePrefix = "");
 
 // Returns F.getComdat() if it exists.
 // Otherwise creates a new comdat, sets F's comdat, and returns it.
 // Returns nullptr on failure.
-Comdat *getOrCreateFunctionComdat(Function &F, Triple &T);
+LLVM_FUNC_ABI Comdat *getOrCreateFunctionComdat(Function &F, Triple &T);
 
 // Insert GCOV profiling instrumentation
-struct GCOVOptions {
+struct LLVM_CLASS_ABI GCOVOptions {
   static GCOVOptions getDefault();
 
   // Specify whether to emit .gcno files.
@@ -98,13 +98,13 @@ namespace pgo {
 // If \p AttachProfToDirectCall is true, a prof metadata is attached to the
 // new direct call to contain \p Count.
 // Returns the promoted direct call instruction.
-CallBase &promoteIndirectCall(CallBase &CB, Function *F, uint64_t Count,
+LLVM_FUNC_ABI CallBase &promoteIndirectCall(CallBase &CB, Function *F, uint64_t Count,
                               uint64_t TotalCount, bool AttachProfToDirectCall,
                               OptimizationRemarkEmitter *ORE);
 } // namespace pgo
 
 /// Options for the frontend instrumentation based profiling pass.
-struct InstrProfOptions {
+struct LLVM_CLASS_ABI InstrProfOptions {
   // Add the 'noredzone' attribute to added runtime library calls.
   bool NoRedZone = false;
 
@@ -124,7 +124,7 @@ struct InstrProfOptions {
 };
 
 // Options for sanitizer coverage instrumentation.
-struct SanitizerCoverageOptions {
+struct LLVM_CLASS_ABI SanitizerCoverageOptions {
   enum Type {
     SCK_None = 0,
     SCK_Function,
@@ -178,7 +178,7 @@ static inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
 // Some non-call instructions may be missing debug info, but when inserting
 // instrumentation calls, some builds (e.g. LTO) want calls to have debug info
 // if the enclosing function does.
-struct InstrumentationIRBuilder : IRBuilder<> {
+struct LLVM_CLASS_ABI InstrumentationIRBuilder : IRBuilder<> {
   static void ensureDebugInfo(IRBuilder<> &IRB, const Function &F) {
     if (IRB.getCurrentDebugLocation())
       return;

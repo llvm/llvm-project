@@ -25,14 +25,14 @@ namespace llvm {
 /// PrintRecyclingAllocatorStats - Helper for RecyclingAllocator for
 /// printing statistics.
 ///
-void PrintRecyclerStats(size_t Size, size_t Align, size_t FreeListSize);
+LLVM_FUNC_ABI void PrintRecyclerStats(size_t Size, size_t Align, size_t FreeListSize);
 
 /// Recycler - This class manages a linked-list of deallocated nodes
 /// and facilitates reusing deallocated memory in place of allocating
 /// new memory.
 ///
 template <class T, size_t Size = sizeof(T), size_t Align = alignof(T)>
-class Recycler {
+class LLVM_CLASS_ABI Recycler {
   struct FreeNode {
     FreeNode *Next;
   };

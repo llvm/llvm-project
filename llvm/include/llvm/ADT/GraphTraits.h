@@ -35,7 +35,7 @@ namespace llvm {
 // be achieved by carrying more data in NodeRef. See LoopBodyTraits for one
 // example.
 template<class GraphType>
-struct GraphTraits {
+struct LLVM_CLASS_ABI GraphTraits {
   // Elements to provide:
 
   // typedef NodeRef           - Type of Node token in the graph, which should
@@ -95,7 +95,7 @@ struct GraphTraits {
 // for (; I != E; ++I) { ... }
 //
 template <class GraphType>
-struct Inverse {
+struct LLVM_CLASS_ABI Inverse {
   const GraphType &Graph;
 
   inline Inverse(const GraphType &G) : Graph(G) {}
@@ -103,7 +103,7 @@ struct Inverse {
 
 // Provide a partial specialization of GraphTraits so that the inverse of an
 // inverse falls back to the original graph.
-template <class T> struct GraphTraits<Inverse<Inverse<T>>> : GraphTraits<T> {};
+template <class T> struct LLVM_CLASS_ABI GraphTraits<Inverse<Inverse<T>>> : GraphTraits<T> {};
 
 // Provide iterator ranges for the graph traits nodes and children
 template <class GraphType>

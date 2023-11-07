@@ -22,7 +22,7 @@
 namespace llvm {
 namespace orc {
 
-class ExecutorBootstrapService {
+class LLVM_CLASS_ABI ExecutorBootstrapService {
 public:
   virtual ~ExecutorBootstrapService();
 

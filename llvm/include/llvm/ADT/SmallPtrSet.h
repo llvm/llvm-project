@@ -47,7 +47,7 @@ namespace llvm {
 /// (-2), to allow deletion.  The hash table is resized when the table is 3/4 or
 /// more.  When this happens, the table is doubled in size.
 ///
-class SmallPtrSetImplBase : public DebugEpochBase {
+class LLVM_CLASS_ABI SmallPtrSetImplBase : public DebugEpochBase {
   friend class SmallPtrSetIteratorImpl;
 
 protected:
@@ -219,7 +219,7 @@ private:
 
 /// SmallPtrSetIteratorImpl - This is the common base class shared between all
 /// instances of SmallPtrSetIterator.
-class SmallPtrSetIteratorImpl {
+class LLVM_CLASS_ABI SmallPtrSetIteratorImpl {
 protected:
   const void *const *Bucket;
   const void *const *End;
@@ -264,7 +264,7 @@ protected:
 
 /// SmallPtrSetIterator - This implements a const_iterator for SmallPtrSet.
 template <typename PtrTy>
-class LLVM_DEBUGEPOCHBASE_HANDLEBASE_EMPTYBASE SmallPtrSetIterator
+class LLVM_CLASS_ABI LLVM_DEBUGEPOCHBASE_HANDLEBASE_EMPTYBASE SmallPtrSetIterator
     : public SmallPtrSetIteratorImpl,
       DebugEpochBase::HandleBase {
   using PtrTraits = PointerLikeTypeTraits<PtrTy>;
@@ -319,11 +319,11 @@ struct RoundUpToPowerOfTwo;
 /// RoundUpToPowerOfTwoH - If N is not a power of two, increase it.  This is a
 /// helper template used to implement RoundUpToPowerOfTwo.
 template<unsigned N, bool isPowerTwo>
-struct RoundUpToPowerOfTwoH {
+struct LLVM_CLASS_ABI RoundUpToPowerOfTwoH {
   enum { Val = N };
 };
 template<unsigned N>
-struct RoundUpToPowerOfTwoH<N, false> {
+struct LLVM_CLASS_ABI RoundUpToPowerOfTwoH<N, false> {
   enum {
     // We could just use NextVal = N+1, but this converges faster.  N|(N-1) sets
     // the right-most zero bits to one all at once, e.g. 0b0011000 -> 0b0011111.
@@ -332,7 +332,7 @@ struct RoundUpToPowerOfTwoH<N, false> {
 };
 
 template<unsigned N>
-struct RoundUpToPowerOfTwo {
+struct LLVM_CLASS_ABI RoundUpToPowerOfTwo {
   enum { Val = RoundUpToPowerOfTwoH<N, (N&(N-1)) == 0>::Val };
 };
 
@@ -342,7 +342,7 @@ struct RoundUpToPowerOfTwo {
 /// This is particularly useful for passing around between interface boundaries
 /// to avoid encoding a particular small size in the interface boundary.
 template <typename PtrType>
-class SmallPtrSetImpl : public SmallPtrSetImplBase {
+class LLVM_CLASS_ABI SmallPtrSetImpl : public SmallPtrSetImplBase {
   using ConstPtrType = typename add_const_past_pointer<PtrType>::type;
   using PtrTraits = PointerLikeTypeTraits<PtrType>;
   using ConstPtrTraits = PointerLikeTypeTraits<ConstPtrType>;
@@ -448,7 +448,7 @@ bool operator!=(const SmallPtrSetImpl<PtrType> &LHS,
 /// power of two if it is not already a power of two.  See the comments above
 /// SmallPtrSetImplBase for details of the algorithm.
 template<class PtrType, unsigned SmallSize>
-class SmallPtrSet : public SmallPtrSetImpl<PtrType> {
+class LLVM_CLASS_ABI SmallPtrSet : public SmallPtrSetImpl<PtrType> {
   // In small mode SmallPtrSet uses linear search for the elements, so it is
   // not a good idea to choose this value too high. You may consider using a
   // DenseSet<> instead if you expect many elements in the set.

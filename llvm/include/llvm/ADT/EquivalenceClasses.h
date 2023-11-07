@@ -58,7 +58,7 @@ namespace llvm {
 ///   5 1 2
 ///
 template <class ElemTy, class Compare = std::less<ElemTy>>
-class EquivalenceClasses {
+class LLVM_CLASS_ABI EquivalenceClasses {
   /// ECValue - The EquivalenceClasses data structure is just a set of these.
   /// Each of these represents a relation for a value.  First it stores the
   /// value itself, which provides the ordering that the set queries.  Next, it

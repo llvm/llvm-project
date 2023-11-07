@@ -116,7 +116,7 @@ class FileWriter;
 /// Opcodes that will push "Row" onto the LineEntry.Lines include the
 /// LTOC_AdvancePC opcode and all special opcodes. All other opcodes
 /// only modify the current "Row", or cause the line table to end.
-class LineTable {
+class LLVM_CLASS_ABI LineTable {
   typedef std::vector<gsym::LineEntry> Collection;
   Collection Lines; ///< All line entries in the line table.
 public:
@@ -226,7 +226,7 @@ public:
 
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const gsym::LineTable &LT);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const gsym::LineTable &LT);
 
 } // namespace gsym
 } // namespace llvm

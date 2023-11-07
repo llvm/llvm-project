@@ -33,7 +33,7 @@ namespace sampleprof {
 /// When representing a hash code, we utilize the LengthOrHashCode field to
 /// store it, and Name is set to null. When representing a string, it is same as
 /// StringRef.
-class FunctionId {
+class LLVM_CLASS_ABI FunctionId {
 
   const char *Data = nullptr;
 
@@ -113,7 +113,7 @@ public:
     return StringRef();
   }
 
-  friend raw_ostream &operator<<(raw_ostream &OS, const FunctionId &Obj);
+  friend LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const FunctionId &Obj);
 
   /// Get hash code of this object. Returns this object's hash code if it is
   /// already representing one, otherwise returns the MD5 of its string content.
@@ -176,7 +176,7 @@ inline uint64_t hash_value(const FunctionId &Obj) {
 
 /// Template specialization for FunctionId so that it can be used in LLVM map
 /// containers.
-template <> struct DenseMapInfo<sampleprof::FunctionId, void> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<sampleprof::FunctionId, void> {
 
   static inline sampleprof::FunctionId getEmptyKey() {
     return sampleprof::FunctionId(~0ULL);
@@ -202,7 +202,7 @@ namespace std {
 
 /// Template specialization for FunctionId so that it can be used in STL
 /// containers.
-template <> struct hash<llvm::sampleprof::FunctionId> {
+template <> struct LLVM_CLASS_ABI hash<llvm::sampleprof::FunctionId> {
   size_t operator()(const llvm::sampleprof::FunctionId &Val) const {
     return Val.getHashCode();
   }

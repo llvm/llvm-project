@@ -31,14 +31,14 @@ union CWrapperFunctionResultDataUnion {
 };
 
 // Must be kept in-sync with compiler-rt/lib/orc/c-api.h.
-typedef struct {
+typedef struct LLVM_CLASS_ABI {
   CWrapperFunctionResultDataUnion Data;
   size_t Size;
 } CWrapperFunctionResult;
 
 /// C++ wrapper function result: Same as CWrapperFunctionResult but
 /// auto-releases memory.
-class WrapperFunctionResult {
+class LLVM_CLASS_ABI WrapperFunctionResult {
 public:
   /// Create a default WrapperFunctionResult.
   WrapperFunctionResult() { init(R); }
@@ -180,7 +180,7 @@ serializeViaSPSToWrapperFunctionResult(const ArgTs &...Args) {
   return Result;
 }
 
-template <typename RetT> class WrapperFunctionHandlerCaller {
+template <typename RetT> class LLVM_CLASS_ABI WrapperFunctionHandlerCaller {
 public:
   template <typename HandlerT, typename ArgTupleT, std::size_t... I>
   static decltype(auto) call(HandlerT &&H, ArgTupleT &Args,
@@ -189,7 +189,7 @@ public:
   }
 };
 
-template <> class WrapperFunctionHandlerCaller<void> {
+template <> class LLVM_CLASS_ABI WrapperFunctionHandlerCaller<void> {
 public:
   template <typename HandlerT, typename ArgTupleT, std::size_t... I>
   static SPSEmpty call(HandlerT &&H, ArgTupleT &Args,
@@ -201,14 +201,14 @@ public:
 
 template <typename WrapperFunctionImplT,
           template <typename> class ResultSerializer, typename... SPSTagTs>
-class WrapperFunctionHandlerHelper
+class LLVM_CLASS_ABI WrapperFunctionHandlerHelper
     : public WrapperFunctionHandlerHelper<
           decltype(&std::remove_reference_t<WrapperFunctionImplT>::operator()),
           ResultSerializer, SPSTagTs...> {};
 
 template <typename RetT, typename... ArgTs,
           template <typename> class ResultSerializer, typename... SPSTagTs>
-class WrapperFunctionHandlerHelper<RetT(ArgTs...), ResultSerializer,
+class LLVM_CLASS_ABI WrapperFunctionHandlerHelper<RetT(ArgTs...), ResultSerializer,
                                    SPSTagTs...> {
 public:
   using ArgTuple = std::tuple<std::decay_t<ArgTs>...>;
@@ -241,7 +241,7 @@ private:
 // Map function pointers to function types.
 template <typename RetT, typename... ArgTs,
           template <typename> class ResultSerializer, typename... SPSTagTs>
-class WrapperFunctionHandlerHelper<RetT (*)(ArgTs...), ResultSerializer,
+class LLVM_CLASS_ABI WrapperFunctionHandlerHelper<RetT (*)(ArgTs...), ResultSerializer,
                                    SPSTagTs...>
     : public WrapperFunctionHandlerHelper<RetT(ArgTs...), ResultSerializer,
                                           SPSTagTs...> {};
@@ -249,7 +249,7 @@ class WrapperFunctionHandlerHelper<RetT (*)(ArgTs...), ResultSerializer,
 // Map non-const member function types to function types.
 template <typename ClassT, typename RetT, typename... ArgTs,
           template <typename> class ResultSerializer, typename... SPSTagTs>
-class WrapperFunctionHandlerHelper<RetT (ClassT::*)(ArgTs...), ResultSerializer,
+class LLVM_CLASS_ABI WrapperFunctionHandlerHelper<RetT (ClassT::*)(ArgTs...), ResultSerializer,
                                    SPSTagTs...>
     : public WrapperFunctionHandlerHelper<RetT(ArgTs...), ResultSerializer,
                                           SPSTagTs...> {};
@@ -257,21 +257,21 @@ class WrapperFunctionHandlerHelper<RetT (ClassT::*)(ArgTs...), ResultSerializer,
 // Map const member function types to function types.
 template <typename ClassT, typename RetT, typename... ArgTs,
           template <typename> class ResultSerializer, typename... SPSTagTs>
-class WrapperFunctionHandlerHelper<RetT (ClassT::*)(ArgTs...) const,
+class LLVM_CLASS_ABI WrapperFunctionHandlerHelper<RetT (ClassT::*)(ArgTs...) const,
                                    ResultSerializer, SPSTagTs...>
     : public WrapperFunctionHandlerHelper<RetT(ArgTs...), ResultSerializer,
                                           SPSTagTs...> {};
 
 template <typename WrapperFunctionImplT,
           template <typename> class ResultSerializer, typename... SPSTagTs>
-class WrapperFunctionAsyncHandlerHelper
+class LLVM_CLASS_ABI WrapperFunctionAsyncHandlerHelper
     : public WrapperFunctionAsyncHandlerHelper<
           decltype(&std::remove_reference_t<WrapperFunctionImplT>::operator()),
           ResultSerializer, SPSTagTs...> {};
 
 template <typename RetT, typename SendResultT, typename... ArgTs,
           template <typename> class ResultSerializer, typename... SPSTagTs>
-class WrapperFunctionAsyncHandlerHelper<RetT(SendResultT, ArgTs...),
+class LLVM_CLASS_ABI WrapperFunctionAsyncHandlerHelper<RetT(SendResultT, ArgTs...),
                                         ResultSerializer, SPSTagTs...> {
 public:
   using ArgTuple = std::tuple<std::decay_t<ArgTs>...>;
@@ -320,7 +320,7 @@ private:
 // Map function pointers to function types.
 template <typename RetT, typename... ArgTs,
           template <typename> class ResultSerializer, typename... SPSTagTs>
-class WrapperFunctionAsyncHandlerHelper<RetT (*)(ArgTs...), ResultSerializer,
+class LLVM_CLASS_ABI WrapperFunctionAsyncHandlerHelper<RetT (*)(ArgTs...), ResultSerializer,
                                         SPSTagTs...>
     : public WrapperFunctionAsyncHandlerHelper<RetT(ArgTs...), ResultSerializer,
                                                SPSTagTs...> {};
@@ -328,7 +328,7 @@ class WrapperFunctionAsyncHandlerHelper<RetT (*)(ArgTs...), ResultSerializer,
 // Map non-const member function types to function types.
 template <typename ClassT, typename RetT, typename... ArgTs,
           template <typename> class ResultSerializer, typename... SPSTagTs>
-class WrapperFunctionAsyncHandlerHelper<RetT (ClassT::*)(ArgTs...),
+class LLVM_CLASS_ABI WrapperFunctionAsyncHandlerHelper<RetT (ClassT::*)(ArgTs...),
                                         ResultSerializer, SPSTagTs...>
     : public WrapperFunctionAsyncHandlerHelper<RetT(ArgTs...), ResultSerializer,
                                                SPSTagTs...> {};
@@ -336,12 +336,12 @@ class WrapperFunctionAsyncHandlerHelper<RetT (ClassT::*)(ArgTs...),
 // Map const member function types to function types.
 template <typename ClassT, typename RetT, typename... ArgTs,
           template <typename> class ResultSerializer, typename... SPSTagTs>
-class WrapperFunctionAsyncHandlerHelper<RetT (ClassT::*)(ArgTs...) const,
+class LLVM_CLASS_ABI WrapperFunctionAsyncHandlerHelper<RetT (ClassT::*)(ArgTs...) const,
                                         ResultSerializer, SPSTagTs...>
     : public WrapperFunctionAsyncHandlerHelper<RetT(ArgTs...), ResultSerializer,
                                                SPSTagTs...> {};
 
-template <typename SPSRetTagT, typename RetT> class ResultSerializer {
+template <typename SPSRetTagT, typename RetT> class LLVM_CLASS_ABI ResultSerializer {
 public:
   static WrapperFunctionResult serialize(RetT Result) {
     return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
@@ -349,7 +349,7 @@ public:
   }
 };
 
-template <typename SPSRetTagT> class ResultSerializer<SPSRetTagT, Error> {
+template <typename SPSRetTagT> class LLVM_CLASS_ABI ResultSerializer<SPSRetTagT, Error> {
 public:
   static WrapperFunctionResult serialize(Error Err) {
     return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
@@ -358,7 +358,7 @@ public:
 };
 
 template <typename SPSRetTagT>
-class ResultSerializer<SPSRetTagT, ErrorSuccess> {
+class LLVM_CLASS_ABI ResultSerializer<SPSRetTagT, ErrorSuccess> {
 public:
   static WrapperFunctionResult serialize(ErrorSuccess Err) {
     return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
@@ -367,7 +367,7 @@ public:
 };
 
 template <typename SPSRetTagT, typename T>
-class ResultSerializer<SPSRetTagT, Expected<T>> {
+class LLVM_CLASS_ABI ResultSerializer<SPSRetTagT, Expected<T>> {
 public:
   static WrapperFunctionResult serialize(Expected<T> E) {
     return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
@@ -375,7 +375,7 @@ public:
   }
 };
 
-template <typename SPSRetTagT, typename RetT> class ResultDeserializer {
+template <typename SPSRetTagT, typename RetT> class LLVM_CLASS_ABI ResultDeserializer {
 public:
   static RetT makeValue() { return RetT(); }
   static void makeSafe(RetT &Result) {}
@@ -390,7 +390,7 @@ public:
   }
 };
 
-template <> class ResultDeserializer<SPSError, Error> {
+template <> class LLVM_CLASS_ABI ResultDeserializer<SPSError, Error> {
 public:
   static Error makeValue() { return Error::success(); }
   static void makeSafe(Error &Err) { cantFail(std::move(Err)); }
@@ -408,7 +408,7 @@ public:
 };
 
 template <typename SPSTagT, typename T>
-class ResultDeserializer<SPSExpected<SPSTagT>, Expected<T>> {
+class LLVM_CLASS_ABI ResultDeserializer<SPSExpected<SPSTagT>, Expected<T>> {
 public:
   static Expected<T> makeValue() { return T(); }
   static void makeSafe(Expected<T> &E) { cantFail(E.takeError()); }
@@ -426,7 +426,7 @@ public:
   }
 };
 
-template <typename SPSRetTagT, typename RetT> class AsyncCallResultHelper {
+template <typename SPSRetTagT, typename RetT> class LLVM_CLASS_ABI AsyncCallResultHelper {
   // Did you forget to use Error / Expected in your handler?
 };
 
@@ -435,7 +435,7 @@ template <typename SPSRetTagT, typename RetT> class AsyncCallResultHelper {
 template <typename SPSSignature> class WrapperFunction;
 
 template <typename SPSRetTagT, typename... SPSTagTs>
-class WrapperFunction<SPSRetTagT(SPSTagTs...)> {
+class LLVM_CLASS_ABI WrapperFunction<SPSRetTagT(SPSTagTs...)> {
 private:
   template <typename RetT>
   using ResultSerializer = detail::ResultSerializer<SPSRetTagT, RetT>;
@@ -549,7 +549,7 @@ private:
 };
 
 template <typename... SPSTagTs>
-class WrapperFunction<void(SPSTagTs...)>
+class LLVM_CLASS_ABI WrapperFunction<void(SPSTagTs...)>
     : private WrapperFunction<SPSEmpty(SPSTagTs...)> {
 
 public:
@@ -600,7 +600,7 @@ public:
 ///   @endcode
 ///
 template <typename RetT, typename ClassT, typename... ArgTs>
-class MethodWrapperHandler {
+class LLVM_CLASS_ABI MethodWrapperHandler {
 public:
   using MethodT = RetT (ClassT::*)(ArgTs...);
   MethodWrapperHandler(MethodT M) : M(M) {}
@@ -626,7 +626,7 @@ makeMethodWrapperHandler(RetT (ClassT::*Method)(ArgTs...)) {
 /// The motivating use-case for this API is JITLink allocation actions, where
 /// we want to run multiple functions to finalize linked memory without having
 /// to make separate IPC calls for each one.
-class WrapperFunctionCall {
+class LLVM_CLASS_ABI WrapperFunctionCall {
 public:
   using ArgDataBufferType = SmallVector<char, 24>;
 
@@ -709,7 +709,7 @@ private:
 using SPSWrapperFunctionCall = SPSTuple<SPSExecutorAddr, SPSSequence<char>>;
 
 template <>
-class SPSSerializationTraits<SPSWrapperFunctionCall, WrapperFunctionCall> {
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSWrapperFunctionCall, WrapperFunctionCall> {
 public:
   static size_t size(const WrapperFunctionCall &WFC) {
     return SPSWrapperFunctionCall::AsArgList::size(WFC.getCallee(),

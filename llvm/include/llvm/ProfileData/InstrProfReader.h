@@ -49,7 +49,7 @@ class FileSystem;
 /// A file format agnostic iterator over profiling data.
 template <class record_type = NamedInstrProfRecord,
           class reader_type = InstrProfReader>
-class InstrProfIterator {
+class LLVM_CLASS_ABI InstrProfIterator {
 public:
   using iterator_category = std::input_iterator_tag;
   using value_type = record_type;
@@ -89,7 +89,7 @@ public:
 
 /// Base class and interface for reading profiling data of any known instrprof
 /// format. Provides an iterator over NamedInstrProfRecords.
-class InstrProfReader {
+class LLVM_CLASS_ABI InstrProfReader {
   instrprof_error LastError = instrprof_error::success;
   std::string LastErrorMsg;
 
@@ -234,7 +234,7 @@ public:
 ///
 /// Each record consists of a function name, a function hash, a number of
 /// counters, and then each counter value, in that order.
-class TextInstrProfReader : public InstrProfReader {
+class LLVM_CLASS_ABI TextInstrProfReader : public InstrProfReader {
 private:
   /// The profile data file contents.
   std::unique_ptr<MemoryBuffer> DataBuffer;
@@ -311,7 +311,7 @@ public:
 /// Templated on the unsigned type whose size matches pointers on the platform
 /// that wrote the profile.
 template <class IntPtrT>
-class RawInstrProfReader : public InstrProfReader {
+class LLVM_CLASS_ABI RawInstrProfReader : public InstrProfReader {
 private:
   /// The profile data file contents.
   std::unique_ptr<MemoryBuffer> DataBuffer;
@@ -487,7 +487,7 @@ enum class HashT : uint32_t;
 
 /// Trait for lookups into the on-disk hash table for the binary instrprof
 /// format.
-class InstrProfLookupTrait {
+class LLVM_CLASS_ABI InstrProfLookupTrait {
   std::vector<NamedInstrProfRecord> DataBuffer;
   IndexedInstrProf::HashT HashType;
   unsigned FormatVersion;
@@ -538,7 +538,7 @@ public:
   }
 };
 
-struct InstrProfReaderIndexBase {
+struct LLVM_CLASS_ABI InstrProfReaderIndexBase {
   virtual ~InstrProfReaderIndexBase() = default;
 
   // Read all the profile records with the same key pointed to the current
@@ -575,7 +575,7 @@ template <typename HashTableImpl>
 class InstrProfReaderItaniumRemapper;
 
 template <typename HashTableImpl>
-class InstrProfReaderIndex : public InstrProfReaderIndexBase {
+class LLVM_CLASS_ABI InstrProfReaderIndex : public InstrProfReaderIndexBase {
 private:
   std::unique_ptr<HashTableImpl> HashTable;
   typename HashTableImpl::data_iterator RecordIterator;
@@ -641,7 +641,7 @@ public:
 };
 
 /// Name matcher supporting fuzzy matching of symbol names to names in profiles.
-class InstrProfReaderRemapper {
+class LLVM_CLASS_ABI InstrProfReaderRemapper {
 public:
   virtual ~InstrProfReaderRemapper() = default;
   virtual Error populateRemappings() { return Error::success(); }
@@ -650,7 +650,7 @@ public:
 };
 
 /// Reader for the indexed binary instrprof format.
-class IndexedInstrProfReader : public InstrProfReader {
+class LLVM_CLASS_ABI IndexedInstrProfReader : public InstrProfReader {
 private:
   /// The profile data file contents.
   std::unique_ptr<MemoryBuffer> DataBuffer;

@@ -52,7 +52,7 @@ class Value;
 /// necessary. Note that if we were guaranteed unique names, we could just
 /// compare those, but this would not work for stripped bitcodes or for those
 /// few symbols without a name.
-class GlobalNumberState {
+class LLVM_CLASS_ABI GlobalNumberState {
   struct Config : ValueMapConfig<GlobalValue *> {
     enum { FollowRAUW = false };
   };
@@ -91,7 +91,7 @@ public:
 /// they will generate machine code with the same behaviour. DataLayout is
 /// used if available. The comparator always fails conservatively (erring on the
 /// side of claiming that two functions are different).
-class FunctionComparator {
+class LLVM_CLASS_ABI FunctionComparator {
 public:
   FunctionComparator(const Function *F1, const Function *F2,
                      GlobalNumberState* GN)

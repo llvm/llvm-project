@@ -32,12 +32,12 @@
 namespace llvm {
 namespace object {
 
-struct VerdAux {
+struct LLVM_CLASS_ABI VerdAux {
   unsigned Offset;
   std::string Name;
 };
 
-struct VerDef {
+struct LLVM_CLASS_ABI VerDef {
   unsigned Offset;
   unsigned Version;
   unsigned Flags;
@@ -48,7 +48,7 @@ struct VerDef {
   std::vector<VerdAux> AuxV;
 };
 
-struct VernAux {
+struct LLVM_CLASS_ABI VernAux {
   unsigned Hash;
   unsigned Flags;
   unsigned Other;
@@ -56,7 +56,7 @@ struct VernAux {
   std::string Name;
 };
 
-struct VerNeed {
+struct LLVM_CLASS_ABI VerNeed {
   unsigned Version;
   unsigned Cnt;
   unsigned Offset;
@@ -64,14 +64,14 @@ struct VerNeed {
   std::vector<VernAux> AuxV;
 };
 
-struct VersionEntry {
+struct LLVM_CLASS_ABI VersionEntry {
   std::string Name;
   bool IsVerDef;
 };
 
-StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type);
-uint32_t getELFRelativeRelocationType(uint32_t Machine);
-StringRef getELFSectionTypeName(uint32_t Machine, uint32_t Type);
+LLVM_FUNC_ABI StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type);
+LLVM_FUNC_ABI uint32_t getELFRelativeRelocationType(uint32_t Machine);
+LLVM_FUNC_ABI StringRef getELFSectionTypeName(uint32_t Machine, uint32_t Type);
 
 // Subclasses of ELFFile may need this for template instantiation
 inline std::pair<unsigned char, unsigned char>
@@ -95,7 +95,7 @@ enum PPCInstrMasks : uint64_t {
 
 template <class ELFT> class ELFFile;
 
-template <class T> struct DataRegion {
+template <class T> struct LLVM_CLASS_ABI DataRegion {
   // This constructor is used when we know the start and the size of a data
   // region. We assume that Arr does not go past the end of the file.
   DataRegion(ArrayRef<T> Arr) : First(Arr.data()), Size(Arr.size()) {}
@@ -165,7 +165,7 @@ static inline Error defaultWarningHandler(const Twine &Msg) {
 }
 
 template <class ELFT>
-class ELFFile {
+class LLVM_CLASS_ABI ELFFile {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 

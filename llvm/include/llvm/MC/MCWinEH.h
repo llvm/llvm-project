@@ -19,7 +19,7 @@ class MCStreamer;
 class MCSymbol;
 
 namespace WinEH {
-struct Instruction {
+struct LLVM_CLASS_ABI Instruction {
   const MCSymbol *Label;
   unsigned Offset;
   unsigned Register;
@@ -37,7 +37,7 @@ struct Instruction {
   bool operator!=(const Instruction &I) const { return !(*this == I); }
 };
 
-struct FrameInfo {
+struct LLVM_CLASS_ABI FrameInfo {
   const MCSymbol *Begin = nullptr;
   const MCSymbol *End = nullptr;
   const MCSymbol *FuncletOrFuncEnd = nullptr;
@@ -97,7 +97,7 @@ struct FrameInfo {
   }
 };
 
-class UnwindEmitter {
+class LLVM_CLASS_ABI UnwindEmitter {
 public:
   virtual ~UnwindEmitter();
 

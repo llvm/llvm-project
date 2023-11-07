@@ -50,14 +50,14 @@
 
 namespace llvm {
 
-template <class N, class M> class LoopInfoBase;
+template <class N, class M> class LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LLVM_CLASS_ABI LoopInfoBase;
 template <class N, class M> class LoopBase;
 
 //===----------------------------------------------------------------------===//
 /// Instances of this class are used to represent loops that are detected in the
 /// flow graph.
 ///
-template <class BlockT, class LoopT> class LoopBase {
+template <class BlockT, class LoopT> class LLVM_CLASS_ABI LoopBase {
   LoopT *ParentLoop;
   // Loops contained entirely within this one.
   std::vector<LoopT *> SubLoops;
@@ -530,7 +530,7 @@ raw_ostream &operator<<(raw_ostream &OS, const LoopBase<BlockT, LoopT> &Loop) {
 /// structures in the specified function.
 ///
 
-template <class BlockT, class LoopT> class LoopInfoBase {
+template <class BlockT, class LoopT> class LLVM_CLASS_ABI LoopInfoBase {
   // BBMap - Mapping of basic blocks to the inner most loop they occur in
   DenseMap<const BlockT *, LoopT *> BBMap;
   std::vector<LoopT *> TopLevelLoops;

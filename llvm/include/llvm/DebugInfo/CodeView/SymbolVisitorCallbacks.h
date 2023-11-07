@@ -16,7 +16,7 @@
 namespace llvm {
 namespace codeview {
 
-class SymbolVisitorCallbacks {
+class LLVM_CLASS_ABI SymbolVisitorCallbacks {
   friend class CVSymbolVisitor;
 
 public:

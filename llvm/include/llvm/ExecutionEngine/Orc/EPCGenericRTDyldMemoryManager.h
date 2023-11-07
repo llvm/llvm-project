@@ -24,7 +24,7 @@ namespace llvm {
 namespace orc {
 
 /// Remote-mapped RuntimeDyld-compatible memory manager.
-class EPCGenericRTDyldMemoryManager : public RuntimeDyld::MemoryManager {
+class LLVM_CLASS_ABI EPCGenericRTDyldMemoryManager : public RuntimeDyld::MemoryManager {
 public:
   /// Symbol addresses for memory access.
   struct SymbolAddrs {

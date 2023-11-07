@@ -37,7 +37,7 @@ namespace llvm {
 /// This base class both documents the full public interface exposed by all
 /// LLVM-style allocators, and redirects all of the overloads to a single core
 /// set of methods which the derived class must define.
-template <typename DerivedT> class AllocatorBase {
+template <typename DerivedT> class LLVM_CLASS_ABI AllocatorBase {
 public:
   /// Allocate \a Size bytes of \a Alignment aligned memory. This method
   /// must be implemented by \c DerivedT.
@@ -84,7 +84,7 @@ public:
   }
 };
 
-class MallocAllocator : public AllocatorBase<MallocAllocator> {
+class LLVM_CLASS_ABI MallocAllocator : public AllocatorBase<MallocAllocator> {
 public:
   void Reset() {}
 
@@ -107,7 +107,7 @@ public:
 
 namespace detail {
 
-template <typename Alloc> class AllocatorHolder : Alloc {
+template <typename Alloc> class LLVM_CLASS_ABI AllocatorHolder : Alloc {
 public:
   AllocatorHolder() = default;
   AllocatorHolder(const Alloc &A) : Alloc(A) {}
@@ -116,7 +116,7 @@ public:
   const Alloc &getAllocator() const { return *this; }
 };
 
-template <typename Alloc> class AllocatorHolder<Alloc &> {
+template <typename Alloc> class LLVM_CLASS_ABI AllocatorHolder<Alloc &> {
   Alloc &A;
 
 public:

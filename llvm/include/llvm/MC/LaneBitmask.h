@@ -37,7 +37,7 @@
 
 namespace llvm {
 
-  struct LaneBitmask {
+  struct LLVM_CLASS_ABI LaneBitmask {
     // When changing the underlying type, change the format string as well.
     using Type = uint64_t;
     enum : unsigned { BitWidth = 8*sizeof(Type) };

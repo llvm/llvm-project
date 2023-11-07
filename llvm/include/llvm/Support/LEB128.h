@@ -199,10 +199,10 @@ inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
 }
 
 /// Utility function to get the size of the ULEB128-encoded value.
-extern unsigned getULEB128Size(uint64_t Value);
+LLVM_FUNC_ABI extern unsigned getULEB128Size(uint64_t Value);
 
 /// Utility function to get the size of the SLEB128-encoded value.
-extern unsigned getSLEB128Size(int64_t Value);
+LLVM_FUNC_ABI extern unsigned getSLEB128Size(int64_t Value);
 
 } // namespace llvm
 

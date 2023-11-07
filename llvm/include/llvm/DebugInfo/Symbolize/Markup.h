@@ -31,7 +31,7 @@ namespace symbolize {
 /// markup element. ANSI SGR control codes are also reported this way; if
 /// detected, then the control code will be the entirety of the Text field, and
 /// any surrounding text will be reported as preceding and following nodes.
-struct MarkupNode {
+struct LLVM_CLASS_ABI MarkupNode {
   /// The full text of this node in the input.
   StringRef Text;
 
@@ -49,7 +49,7 @@ struct MarkupNode {
 };
 
 /// Parses a log containing symbolizer markup into a sequence of nodes.
-class MarkupParser {
+class LLVM_CLASS_ABI MarkupParser {
 public:
   MarkupParser(StringSet<> MultilineTags = {});
 

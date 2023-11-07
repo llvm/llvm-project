@@ -24,7 +24,7 @@ namespace llvm {
 namespace sys {
 namespace fs {
 
-class UniqueID {
+class LLVM_CLASS_ABI UniqueID {
   uint64_t Device;
   uint64_t File;
 
@@ -53,7 +53,7 @@ public:
 } // end namespace sys
 
 // Support UniqueIDs as DenseMap keys.
-template <> struct DenseMapInfo<llvm::sys::fs::UniqueID> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<llvm::sys::fs::UniqueID> {
   static inline llvm::sys::fs::UniqueID getEmptyKey() {
     auto EmptyKey = DenseMapInfo<std::pair<uint64_t, uint64_t>>::getEmptyKey();
     return {EmptyKey.first, EmptyKey.second};

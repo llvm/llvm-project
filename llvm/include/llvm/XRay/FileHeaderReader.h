@@ -24,7 +24,7 @@ namespace xray {
 
 /// Convenience function for loading the file header given a data extractor at a
 /// specified offset.
-Expected<XRayFileHeader> readBinaryFormatHeader(DataExtractor &HeaderExtractor,
+LLVM_FUNC_ABI Expected<XRayFileHeader> readBinaryFormatHeader(DataExtractor &HeaderExtractor,
                                                 uint64_t &OffsetPtr);
 
 } // namespace xray

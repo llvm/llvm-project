@@ -40,7 +40,7 @@ namespace detail {
 /// Convenience base for all kinds of bitcode abbreviation fields.
 ///
 /// This just defines common properties queried by the metaprogramming.
-template <bool Compound = false> class BCField {
+template <bool Compound = false> class LLVM_CLASS_ABI BCField {
 public:
   static const bool IsCompound = Compound;
 
@@ -61,7 +61,7 @@ public:
 /// Note that because this uses a compile-time template, you cannot have a
 /// literal operand that is fixed at run-time without dropping down to the
 /// raw LLVM APIs.
-template <uint64_t Value> class BCLiteral : public detail::BCField<> {
+template <uint64_t Value> class LLVM_CLASS_ABI BCLiteral : public detail::BCField<> {
 public:
   static void emitOp(llvm::BitCodeAbbrev &abbrev) {
     abbrev.Add(llvm::BitCodeAbbrevOp(Value));
@@ -75,7 +75,7 @@ public:
 /// Represents a fixed-width value in a bitcode record.
 ///
 /// Note that the LLVM bitcode format only supports unsigned values.
-template <unsigned Width> class BCFixed : public detail::BCField<> {
+template <unsigned Width> class LLVM_CLASS_ABI BCFixed : public detail::BCField<> {
 public:
   static_assert(Width <= 64, "fixed-width field is too large");
 
@@ -100,7 +100,7 @@ public:
 /// The \p Width parameter should include the continuation bit.
 ///
 /// Note that the LLVM bitcode format only supports unsigned values.
-template <unsigned Width> class BCVBR : public detail::BCField<> {
+template <unsigned Width> class LLVM_CLASS_ABI BCVBR : public detail::BCField<> {
   static_assert(Width >= 2, "width does not have room for continuation bit");
 
 public:
@@ -119,7 +119,7 @@ public:
 /// exponents) and C identifiers (without dollar signs), but not much else.
 ///
 /// \sa http://llvm.org/docs/BitCodeFormat.html#char6-encoded-value
-class BCChar6 : public detail::BCField<> {
+class LLVM_CLASS_ABI BCChar6 : public detail::BCField<> {
 public:
   static void emitOp(llvm::BitCodeAbbrev &abbrev) {
     abbrev.Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Char6));
@@ -137,7 +137,7 @@ public:
 /// Represents an untyped blob of bytes.
 ///
 /// If present, this must be the last field in a record.
-class BCBlob : public detail::BCField<true> {
+class LLVM_CLASS_ABI BCBlob : public detail::BCField<true> {
 public:
   static void emitOp(llvm::BitCodeAbbrev &abbrev) {
     abbrev.Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
@@ -147,7 +147,7 @@ public:
 /// Represents an array of some other type.
 ///
 /// If present, this must be the last field in a record.
-template <typename ElementTy> class BCArray : public detail::BCField<true> {
+template <typename ElementTy> class LLVM_CLASS_ABI BCArray : public detail::BCField<true> {
   static_assert(!ElementTy::IsCompound, "arrays can only contain scalar types");
 
 public:
@@ -183,7 +183,7 @@ static void emitOps(llvm::BitCodeAbbrev &abbrev) {
 /// Helper class for dealing with a scalar element in the middle of a record.
 ///
 /// \sa BCRecordLayout
-template <typename ElementTy, typename... Fields> class BCRecordCoding {
+template <typename ElementTy, typename... Fields> class LLVM_CLASS_ABI BCRecordCoding {
 public:
   template <typename BufferTy, typename ElementDataTy, typename... DataTy>
   static void emit(llvm::BitstreamWriter &Stream, BufferTy &buffer,
@@ -220,7 +220,7 @@ public:
 /// off to the BitstreamWriter to be emitted.
 ///
 /// \sa BCRecordLayout
-template <typename ElementTy> class BCRecordCoding<ElementTy> {
+template <typename ElementTy> class LLVM_CLASS_ABI BCRecordCoding<ElementTy> {
 public:
   template <typename BufferTy, typename DataTy>
   static void emit(llvm::BitstreamWriter &Stream, BufferTy &buffer,
@@ -249,7 +249,7 @@ public:
 /// Helper class for dealing with an array at the end of a record.
 ///
 /// \sa BCRecordLayout::emitRecord
-template <typename ElementTy> class BCRecordCoding<BCArray<ElementTy>> {
+template <typename ElementTy> class LLVM_CLASS_ABI BCRecordCoding<BCArray<ElementTy>> {
 public:
   template <typename BufferTy>
   static void emit(llvm::BitstreamWriter &Stream, BufferTy &buffer,
@@ -304,7 +304,7 @@ public:
 /// Helper class for dealing with a blob at the end of a record.
 ///
 /// \sa BCRecordLayout
-template <> class BCRecordCoding<BCBlob> {
+template <> class LLVM_CLASS_ABI BCRecordCoding<BCBlob> {
 public:
   template <typename BufferTy>
   static void emit(llvm::BitstreamWriter &Stream, BufferTy &buffer,
@@ -321,11 +321,11 @@ public:
 };
 
 /// A type trait whose \c type field is the last of its template parameters.
-template <typename Head, typename... Tail> struct last_type {
+template <typename Head, typename... Tail> struct LLVM_CLASS_ABI last_type {
   using type = typename last_type<Tail...>::type;
 };
 
-template <typename Head> struct last_type<Head> { using type = Head; };
+template <typename Head> struct LLVM_CLASS_ABI last_type<Head> { using type = Head; };
 
 /// A type trait whose \c value field is \c true if the last type is BCBlob.
 template <typename... Types>
@@ -333,7 +333,7 @@ using has_blob = std::is_same<BCBlob, typename last_type<int, Types...>::type>;
 
 /// A type trait whose \c value field is \c true if the given type is a
 /// BCArray (of any element kind).
-template <typename T> struct is_array {
+template <typename T> struct LLVM_CLASS_ABI is_array {
 private:
   template <typename E> static bool check(BCArray<E> *);
   static int check(...);
@@ -354,7 +354,7 @@ using has_array = is_array<typename last_type<int, Types...>::type>;
 ///
 /// This class template is meant to be instantiated and then given a name,
 /// so that from then on that name can be used.
-template <typename IDField, typename... Fields> class BCGenericRecordLayout {
+template <typename IDField, typename... Fields> class LLVM_CLASS_ABI BCGenericRecordLayout {
   llvm::BitstreamWriter &Stream;
 
 public:
@@ -435,7 +435,7 @@ public:
 
 /// A record with a fixed record code.
 template <unsigned RecordCode, typename... Fields>
-class BCRecordLayout
+class LLVM_CLASS_ABI BCRecordLayout
     : public BCGenericRecordLayout<BCLiteral<RecordCode>, Fields...> {
   using Base = BCGenericRecordLayout<BCLiteral<RecordCode>, Fields...>;
 
@@ -471,7 +471,7 @@ public:
 };
 
 /// RAII object to pair entering and exiting a sub-block.
-class BCBlockRAII {
+class LLVM_CLASS_ABI BCBlockRAII {
   llvm::BitstreamWriter &Stream;
 
 public:

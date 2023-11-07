@@ -35,7 +35,7 @@ struct PassRegistrationListener;
 /// NOTE: PassRegistry is NOT thread-safe.  If you want to use LLVM on multiple
 /// threads simultaneously, you will need to use a separate PassRegistry on
 /// each thread.
-class PassRegistry {
+class LLVM_CLASS_ABI PassRegistry {
   mutable sys::SmartRWMutex<true> Lock;
 
   /// PassInfoMap - Keep track of the PassInfo object for each registered pass.

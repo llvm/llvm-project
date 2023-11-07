@@ -28,7 +28,7 @@ static const int kAsanStackUseAfterReturnMagic = 0xf5;
 static const int kAsanStackUseAfterScopeMagic = 0xf8;
 
 // Input/output data struct for ComputeASanStackFrameLayout.
-struct ASanStackVariableDescription {
+struct LLVM_CLASS_ABI ASanStackVariableDescription {
   const char *Name;    // Name of the variable that will be displayed by asan
                        // if a stack-related bug is reported.
   uint64_t Size;       // Size of the variable in bytes.
@@ -42,13 +42,13 @@ struct ASanStackVariableDescription {
 };
 
 // Output data struct for ComputeASanStackFrameLayout.
-struct ASanStackFrameLayout {
+struct LLVM_CLASS_ABI ASanStackFrameLayout {
   uint64_t Granularity;     // Shadow granularity.
   uint64_t FrameAlignment;  // Alignment for the entire frame.
   uint64_t FrameSize;       // Size of the frame in bytes.
 };
 
-ASanStackFrameLayout ComputeASanStackFrameLayout(
+LLVM_FUNC_ABI ASanStackFrameLayout ComputeASanStackFrameLayout(
     // The array of stack variables. The elements may get reordered and changed.
     SmallVectorImpl<ASanStackVariableDescription> &Vars,
     // AddressSanitizer's shadow granularity. Usually 8, may also be 16, 32, 64.
@@ -59,19 +59,19 @@ ASanStackFrameLayout ComputeASanStackFrameLayout(
     uint64_t MinHeaderSize);
 
 // Compute frame description, see DescribeAddressIfStack in ASan runtime.
-SmallString<64> ComputeASanStackFrameDescription(
+LLVM_FUNC_ABI SmallString<64> ComputeASanStackFrameDescription(
     const SmallVectorImpl<ASanStackVariableDescription> &Vars);
 
 // Returns shadow bytes with marked red zones. This shadow represents the state
 // if the stack frame when all local variables are inside of the own scope.
-SmallVector<uint8_t, 64>
+LLVM_FUNC_ABI SmallVector<uint8_t, 64>
 GetShadowBytes(const SmallVectorImpl<ASanStackVariableDescription> &Vars,
                const ASanStackFrameLayout &Layout);
 
 // Returns shadow bytes with marked red zones and after scope. This shadow
 // represents the state if the stack frame when all local variables are outside
 // of the own scope.
-SmallVector<uint8_t, 64> GetShadowBytesAfterScope(
+LLVM_FUNC_ABI SmallVector<uint8_t, 64> GetShadowBytesAfterScope(
     // The array of stack variables. The elements may get reordered and changed.
     const SmallVectorImpl<ASanStackVariableDescription> &Vars,
     const ASanStackFrameLayout &Layout);

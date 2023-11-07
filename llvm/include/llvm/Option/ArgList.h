@@ -38,7 +38,7 @@ namespace opt {
 
 /// arg_iterator - Iterates through arguments stored inside an ArgList.
 template<typename BaseIter, unsigned NumOptSpecifiers = 0>
-class arg_iterator {
+class LLVM_CLASS_ABI arg_iterator {
   /// The current argument and the end of the sequence we're iterating.
   BaseIter Current, End;
 
@@ -114,7 +114,7 @@ public:
 /// auxiliary data and convenience methods to allow Tools to quickly
 /// check for the presence of Arg instances for a particular Option
 /// and to iterate over groups of arguments.
-class ArgList {
+class LLVM_CLASS_ABI ArgList {
 public:
   using arglist_type = SmallVector<Arg *, 16>;
   using iterator = arg_iterator<arglist_type::iterator>;
@@ -387,7 +387,7 @@ public:
   /// @}
 };
 
-class InputArgList final : public ArgList {
+class LLVM_CLASS_ABI InputArgList final : public ArgList {
 private:
   /// List of argument strings used by the contained Args.
   ///
@@ -460,7 +460,7 @@ public:
 
 /// DerivedArgList - An ordered collection of driver arguments,
 /// whose storage may be in another argument list.
-class DerivedArgList final : public ArgList {
+class LLVM_CLASS_ABI DerivedArgList final : public ArgList {
   const InputArgList &BaseArgs;
 
   /// The list of arguments we synthesized.

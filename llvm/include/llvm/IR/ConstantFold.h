@@ -32,28 +32,28 @@ namespace llvm {
   class Type;
 
   // Constant fold various types of instruction...
-  Constant *ConstantFoldCastInstruction(
+  LLVM_FUNC_ABI Constant *ConstantFoldCastInstruction(
     unsigned opcode,     ///< The opcode of the cast
     Constant *V,         ///< The source constant
     Type *DestTy   ///< The destination type
   );
-  Constant *ConstantFoldSelectInstruction(Constant *Cond,
+  LLVM_FUNC_ABI Constant *ConstantFoldSelectInstruction(Constant *Cond,
                                           Constant *V1, Constant *V2);
-  Constant *ConstantFoldExtractElementInstruction(Constant *Val, Constant *Idx);
-  Constant *ConstantFoldInsertElementInstruction(Constant *Val, Constant *Elt,
+  LLVM_FUNC_ABI Constant *ConstantFoldExtractElementInstruction(Constant *Val, Constant *Idx);
+  LLVM_FUNC_ABI Constant *ConstantFoldInsertElementInstruction(Constant *Val, Constant *Elt,
                                                  Constant *Idx);
-  Constant *ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
+  LLVM_FUNC_ABI Constant *ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
                                                  ArrayRef<int> Mask);
-  Constant *ConstantFoldExtractValueInstruction(Constant *Agg,
+  LLVM_FUNC_ABI Constant *ConstantFoldExtractValueInstruction(Constant *Agg,
                                                 ArrayRef<unsigned> Idxs);
-  Constant *ConstantFoldInsertValueInstruction(Constant *Agg, Constant *Val,
+  LLVM_FUNC_ABI Constant *ConstantFoldInsertValueInstruction(Constant *Agg, Constant *Val,
                                                ArrayRef<unsigned> Idxs);
-  Constant *ConstantFoldUnaryInstruction(unsigned Opcode, Constant *V);
-  Constant *ConstantFoldBinaryInstruction(unsigned Opcode, Constant *V1,
+  LLVM_FUNC_ABI Constant *ConstantFoldUnaryInstruction(unsigned Opcode, Constant *V);
+  LLVM_FUNC_ABI Constant *ConstantFoldBinaryInstruction(unsigned Opcode, Constant *V1,
                                           Constant *V2);
-  Constant *ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
+  LLVM_FUNC_ABI Constant *ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
                                            Constant *C1, Constant *C2);
-  Constant *ConstantFoldGetElementPtr(Type *Ty, Constant *C, bool InBounds,
+  LLVM_FUNC_ABI Constant *ConstantFoldGetElementPtr(Type *Ty, Constant *C, bool InBounds,
                                       std::optional<unsigned> InRangeIndex,
                                       ArrayRef<Value *> Idxs);
 } // End llvm namespace

@@ -31,7 +31,7 @@ namespace llvm {
 ///   1. It could be a literal integer value ("the operand is always 17").
 ///   2. It could be an encoding specification ("this operand encoded like so").
 ///
-class BitCodeAbbrevOp {
+class LLVM_CLASS_ABI BitCodeAbbrevOp {
   uint64_t Val;           // A literal value or data for an encoding.
   bool IsLiteral : 1;     // Indicate whether this is a literal value or not.
   unsigned Enc   : 3;     // The encoding to use.
@@ -101,7 +101,7 @@ public:
 /// BitCodeAbbrev - This class represents an abbreviation record.  An
 /// abbreviation allows a complex record that has redundancy to be stored in a
 /// specialized format instead of the fully-general, fully-vbr, format.
-class BitCodeAbbrev {
+class LLVM_CLASS_ABI BitCodeAbbrev {
   SmallVector<BitCodeAbbrevOp, 32> OperandList;
 
 public:

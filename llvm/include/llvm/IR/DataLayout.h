@@ -69,7 +69,7 @@ enum AlignTypeEnum {
 ///
 /// \note The unusual order of elements in the structure attempts to reduce
 /// padding and make the structure slightly more cache friendly.
-struct LayoutAlignElem {
+struct LLVM_CLASS_ABI LayoutAlignElem {
   uint32_t TypeBitWidth;
   Align ABIAlign;
   Align PrefAlign;
@@ -86,7 +86,7 @@ struct LayoutAlignElem {
 ///
 /// \note The unusual order of elements in the structure attempts to reduce
 /// padding and make the structure slightly more cache friendly.
-struct PointerAlignElem {
+struct LLVM_CLASS_ABI PointerAlignElem {
   Align ABIAlign;
   Align PrefAlign;
   uint32_t TypeBitWidth;
@@ -107,7 +107,7 @@ struct PointerAlignElem {
 /// The target data layout string is specified *by the target* - a frontend
 /// generating LLVM IR is required to generate the right target data for the
 /// target being codegen'd to.
-class DataLayout {
+class LLVM_CLASS_ABI DataLayout {
 public:
   enum class FunctionPtrAlignType {
     /// The function pointer alignment is independent of the function alignment.
@@ -619,7 +619,7 @@ inline LLVMTargetDataRef wrap(const DataLayout *P) {
 
 /// Used to lazily calculate structure layout information for a target machine,
 /// based on the DataLayout structure.
-class StructLayout final : public TrailingObjects<StructLayout, TypeSize> {
+class LLVM_CLASS_ABI StructLayout final : public TrailingObjects<StructLayout, TypeSize> {
   TypeSize StructSize;
   Align StructAlignment;
   unsigned IsPadded : 1;

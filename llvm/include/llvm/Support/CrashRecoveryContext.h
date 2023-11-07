@@ -44,7 +44,7 @@ class CrashRecoveryContextCleanup;
 /// To assist recovery the class allows specifying set of actions that will be
 /// executed in any case, whether crash occurs or not. These actions may be used
 /// to reclaim resources in the case of crash.
-class CrashRecoveryContext {
+class LLVM_CLASS_ABI CrashRecoveryContext {
   void *Impl = nullptr;
   CrashRecoveryContextCleanup *head = nullptr;
 
@@ -125,7 +125,7 @@ public:
 ///
 /// Cleanup handlers are stored in a double list, which is owned and managed by
 /// a crash recovery context.
-class CrashRecoveryContextCleanup {
+class LLVM_CLASS_ABI CrashRecoveryContextCleanup {
 protected:
   CrashRecoveryContext *context = nullptr;
   CrashRecoveryContextCleanup(CrashRecoveryContext *context)
@@ -158,7 +158,7 @@ private:
 /// This class factors out creation of a cleanup handler. The latter requires
 /// knowledge of the current recovery context, which is provided by this class.
 template<typename Derived, typename T>
-class CrashRecoveryContextCleanupBase : public CrashRecoveryContextCleanup {
+class LLVM_CLASS_ABI CrashRecoveryContextCleanupBase : public CrashRecoveryContextCleanup {
 protected:
   T *resource;
   CrashRecoveryContextCleanupBase(CrashRecoveryContext *context, T *resource)
@@ -180,7 +180,7 @@ public:
 
 /// Cleanup handler that reclaims resource by calling destructor on it.
 template <typename T>
-class CrashRecoveryContextDestructorCleanup : public
+class LLVM_CLASS_ABI CrashRecoveryContextDestructorCleanup : public
   CrashRecoveryContextCleanupBase<CrashRecoveryContextDestructorCleanup<T>, T> {
 public:
   CrashRecoveryContextDestructorCleanup(CrashRecoveryContext *context,
@@ -195,7 +195,7 @@ public:
 
 /// Cleanup handler that reclaims resource by calling 'delete' on it.
 template <typename T>
-class CrashRecoveryContextDeleteCleanup : public
+class LLVM_CLASS_ABI CrashRecoveryContextDeleteCleanup : public
   CrashRecoveryContextCleanupBase<CrashRecoveryContextDeleteCleanup<T>, T> {
 public:
   CrashRecoveryContextDeleteCleanup(CrashRecoveryContext *context, T *resource)
@@ -207,7 +207,7 @@ public:
 
 /// Cleanup handler that reclaims resource by calling its method 'Release'.
 template <typename T>
-class CrashRecoveryContextReleaseRefCleanup : public
+class LLVM_CLASS_ABI CrashRecoveryContextReleaseRefCleanup : public
   CrashRecoveryContextCleanupBase<CrashRecoveryContextReleaseRefCleanup<T>, T> {
 public:
   CrashRecoveryContextReleaseRefCleanup(CrashRecoveryContext *context,
@@ -250,7 +250,7 @@ public:
 /// and the resource is reclaimed by cleanup object registered in the recovery
 /// context by the constructor of CrashRecoveryContextCleanupRegistrar.
 template <typename T, typename Cleanup = CrashRecoveryContextDeleteCleanup<T> >
-class CrashRecoveryContextCleanupRegistrar {
+class LLVM_CLASS_ABI CrashRecoveryContextCleanupRegistrar {
   CrashRecoveryContextCleanup *cleanup;
 
 public:

@@ -389,7 +389,7 @@ enum EdgeKind_x86_64 : Edge::Kind {
 
 /// Returns a string name for the given x86-64 edge. For debugging purposes
 /// only.
-const char *getEdgeKindName(Edge::Kind K);
+LLVM_FUNC_ABI const char *getEdgeKindName(Edge::Kind K);
 
 /// Apply fixup expression for edge to block content.
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
@@ -509,14 +509,14 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 constexpr uint64_t PointerSize = 8;
 
 /// x86-64 null pointer content.
-extern const char NullPointerContent[PointerSize];
+LLVM_FUNC_ABI extern const char NullPointerContent[PointerSize];
 
 /// x86-64 pointer jump stub content.
 ///
 /// Contains the instruction sequence for an indirect jump via an in-memory
 /// pointer:
 ///   jmpq *ptr(%rip)
-extern const char PointerJumpStubContent[6];
+LLVM_FUNC_ABI extern const char PointerJumpStubContent[6];
 
 /// Creates a new pointer block in the given section and returns an anonymous
 /// symbol pointing to it.
@@ -565,7 +565,7 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
 }
 
 /// Global Offset Table Builder.
-class GOTTableManager : public TableManager<GOTTableManager> {
+class LLVM_CLASS_ABI GOTTableManager : public TableManager<GOTTableManager> {
 public:
   static StringRef getSectionName() { return "$__GOT"; }
 
@@ -623,7 +623,7 @@ private:
 };
 
 /// Procedure Linkage Table Builder.
-class PLTTableManager : public TableManager<PLTTableManager> {
+class LLVM_CLASS_ABI PLTTableManager : public TableManager<PLTTableManager> {
 public:
   PLTTableManager(GOTTableManager &GOT) : GOT(GOT) {}
 
@@ -668,7 +668,7 @@ public:
 /// 2. BranchPCRel32ToPtrJumpStubRelaxable. For this edge kind, if the target is
 /// in range, replace a indirect jump by plt stub with a direct jump to the
 /// target
-Error optimizeGOTAndStubAccesses(LinkGraph &G);
+LLVM_FUNC_ABI Error optimizeGOTAndStubAccesses(LinkGraph &G);
 
 } // namespace x86_64
 } // end namespace jitlink

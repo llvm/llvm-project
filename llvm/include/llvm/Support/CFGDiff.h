@@ -55,7 +55,7 @@ template <bool B, typename Range> auto reverse_if(Range &&R) {
 // in the snapshot. The current diff treats the CFG as a graph rather than a
 // multigraph. Added edges are pruned to be unique, and deleted edges will
 // remove all existing edges between two blocks.
-template <typename NodePtr, bool InverseGraph = false> class GraphDiff {
+template <typename NodePtr, bool InverseGraph = false> class LLVM_CLASS_ABI GraphDiff {
   struct DeletesInserts {
     SmallVector<NodePtr, 2> DI[2];
   };

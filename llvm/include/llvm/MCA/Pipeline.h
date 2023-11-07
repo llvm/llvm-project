@@ -48,7 +48,7 @@ class HWEventListener;
 /// Internally, the Pipeline collects statistical information in the form of
 /// histograms. For example, it tracks how the dispatch group size changes
 /// over time.
-class Pipeline {
+class LLVM_CLASS_ABI Pipeline {
   Pipeline(const Pipeline &P) = delete;
   Pipeline &operator=(const Pipeline &P) = delete;
 

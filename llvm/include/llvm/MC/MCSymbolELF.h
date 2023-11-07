@@ -12,7 +12,7 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-class MCSymbolELF : public MCSymbol {
+class LLVM_CLASS_ABI MCSymbolELF : public MCSymbol {
   /// An expression describing how to calculate the size of a symbol. If a
   /// symbol has no size this field will be NULL.
   const MCExpr *SymbolSize = nullptr;

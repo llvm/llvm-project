@@ -45,11 +45,11 @@ class SourceMgr;
 
 namespace mcdwarf {
 // Emit the common part of the DWARF 5 range/locations list tables header.
-MCSymbol *emitListsTableHeaderStart(MCStreamer &S);
+LLVM_FUNC_ABI MCSymbol *emitListsTableHeaderStart(MCStreamer &S);
 } // namespace mcdwarf
 
 /// Manage the .debug_line_str section contents, if we use it.
-class MCDwarfLineStr {
+class LLVM_CLASS_ABI MCDwarfLineStr {
   BumpPtrAllocator Alloc;
   StringSaver Saver{Alloc};
   MCSymbol *LineStrLabel = nullptr;
@@ -85,7 +85,7 @@ public:
 /// numbers start from 0, with the MCDwarfFile with file number 0 being the
 /// primary source file, and file numbers correspond to their index in the
 /// vector.
-struct MCDwarfFile {
+struct LLVM_CLASS_ABI MCDwarfFile {
   // The base name of the file without its directory path.
   std::string Name;
 
@@ -103,7 +103,7 @@ struct MCDwarfFile {
 
 /// Instances of this class represent the information from a
 /// dwarf .loc directive.
-class MCDwarfLoc {
+class LLVM_CLASS_ABI MCDwarfLoc {
   uint32_t FileNum;
   uint32_t Line;
   uint16_t Column;
@@ -186,7 +186,7 @@ public:
 /// instruction is assembled and uses an address from a temporary label
 /// created at the current address in the current section and the info from
 /// the last .loc directive seen as stored in the context.
-class MCDwarfLineEntry : public MCDwarfLoc {
+class LLVM_CLASS_ABI MCDwarfLineEntry : public MCDwarfLoc {
   MCSymbol *Label;
 
 private:
@@ -219,7 +219,7 @@ public:
 /// unit where machine instructions have been assembled after seeing .loc
 /// directives.  This is the information used to build the dwarf line
 /// table for a section.
-class MCLineSection {
+class LLVM_CLASS_ABI MCLineSection {
 public:
   // Add an entry to this MCLineSection's line entries.
   void addLineEntry(const MCDwarfLineEntry &LineEntry, MCSection *Sec) {
@@ -246,7 +246,7 @@ public:
   }
 };
 
-struct MCDwarfLineTableParams {
+struct LLVM_CLASS_ABI MCDwarfLineTableParams {
   /// First special line opcode - leave room for the standard opcodes.
   /// Note: If you want to change this, you'll have to update the
   /// "StandardOpcodeLengths" table that is emitted in
@@ -259,7 +259,7 @@ struct MCDwarfLineTableParams {
   uint8_t DWARF2LineRange = 14;
 };
 
-struct MCDwarfLineTableHeader {
+struct LLVM_CLASS_ABI MCDwarfLineTableHeader {
   MCSymbol *Label = nullptr;
   SmallVector<std::string, 3> MCDwarfDirs;
   SmallVector<MCDwarfFile, 3> MCDwarfFiles;
@@ -323,7 +323,7 @@ private:
                            std::optional<MCDwarfLineStr> &LineStr) const;
 };
 
-class MCDwarfDwoLineTable {
+class LLVM_CLASS_ABI MCDwarfDwoLineTable {
   MCDwarfLineTableHeader Header;
   bool HasSplitLineTable = false;
 
@@ -348,7 +348,7 @@ public:
             MCSection *Section) const;
 };
 
-class MCDwarfLineTable {
+class LLVM_CLASS_ABI MCDwarfLineTable {
   MCDwarfLineTableHeader Header;
   MCLineSection MCLineSections;
 
@@ -431,7 +431,7 @@ public:
   }
 };
 
-class MCDwarfLineAddr {
+class LLVM_CLASS_ABI MCDwarfLineAddr {
 public:
   /// Utility function to encode a Dwarf pair of LineDelta and AddrDeltas.
   static void encode(MCContext &Context, MCDwarfLineTableParams Params,
@@ -442,7 +442,7 @@ public:
                    int64_t LineDelta, uint64_t AddrDelta);
 };
 
-class MCGenDwarfInfo {
+class LLVM_CLASS_ABI MCGenDwarfInfo {
 public:
   //
   // When generating dwarf for assembly source files this emits the Dwarf
@@ -453,7 +453,7 @@ public:
 
 // When generating dwarf for assembly source files this is the info that is
 // needed to be gathered for each symbol that will have a dwarf label.
-class MCGenDwarfLabelEntry {
+class LLVM_CLASS_ABI MCGenDwarfLabelEntry {
 private:
   // Name of the symbol without a leading underbar, if any.
   StringRef Name;
@@ -481,7 +481,7 @@ public:
                    SMLoc &Loc);
 };
 
-class MCCFIInstruction {
+class LLVM_CLASS_ABI MCCFIInstruction {
 public:
   enum OpType {
     OpSameValue,
@@ -694,7 +694,7 @@ public:
   SMLoc getLoc() const { return Loc; }
 };
 
-struct MCDwarfFrameInfo {
+struct LLVM_CLASS_ABI MCDwarfFrameInfo {
   MCDwarfFrameInfo() = default;
 
   MCSymbol *Begin = nullptr;
@@ -713,7 +713,7 @@ struct MCDwarfFrameInfo {
   bool IsMTETaggedFrame = false;
 };
 
-class MCDwarfFrameEmitter {
+class LLVM_CLASS_ABI MCDwarfFrameEmitter {
 public:
   //
   // This emits the frame info section.

@@ -32,7 +32,7 @@
 #include <cstdlib>
 
 namespace {
-  struct ForceVMCoreLinking {
+  struct LLVM_CLASS_ABI ForceVMCoreLinking {
     ForceVMCoreLinking() {
       // We must reference VMCore in such a way that compilers will not
       // delete it all as dead code, even with whole program optimization,

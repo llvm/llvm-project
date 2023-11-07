@@ -24,7 +24,7 @@ namespace codeview {
 class TypeIndex;
 enum class ContinuationRecordKind { FieldList, MethodOverloadList };
 
-class ContinuationRecordBuilder {
+class LLVM_CLASS_ABI ContinuationRecordBuilder {
   SmallVector<uint32_t, 4> SegmentOffsets;
   std::optional<ContinuationRecordKind> Kind;
   AppendingBinaryByteStream Buffer;

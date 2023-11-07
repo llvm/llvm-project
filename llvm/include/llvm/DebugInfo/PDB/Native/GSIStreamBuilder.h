@@ -26,7 +26,7 @@ class ProcRefSym;
 } // namespace codeview
 template <typename T> struct BinaryItemTraits;
 
-template <> struct BinaryItemTraits<codeview::CVSymbol> {
+template <> struct LLVM_CLASS_ABI BinaryItemTraits<codeview::CVSymbol> {
   static size_t length(const codeview::CVSymbol &Item) {
     return Item.RecordData.size();
   }
@@ -44,7 +44,7 @@ struct GSIHashStreamBuilder;
 struct BulkPublic;
 struct SymbolDenseMapInfo;
 
-class GSIStreamBuilder {
+class LLVM_CLASS_ABI GSIStreamBuilder {
 
 public:
   explicit GSIStreamBuilder(msf::MSFBuilder &Msf);
@@ -106,7 +106,7 @@ private:
 /// This struct is equivalent to codeview::PublicSym32, but it has been
 /// optimized for size to speed up bulk serialization and sorting operations
 /// during PDB writing.
-struct BulkPublic {
+struct LLVM_CLASS_ABI BulkPublic {
   BulkPublic() : Flags(0), BucketIdx(0) {}
 
   const char *Name = nullptr;

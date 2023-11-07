@@ -31,7 +31,7 @@ namespace llvm {
 template <typename T> class ArrayRef;
 class StringRef;
 
-class SHA256 {
+class LLVM_CLASS_ABI SHA256 {
 public:
   explicit SHA256() { init(); }
 

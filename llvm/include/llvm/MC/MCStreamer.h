@@ -91,7 +91,7 @@ using MCSectionSubPair = std::pair<MCSection *, const MCExpr *>;
 /// The base classes FooTargetAsmStreamer and FooTargetELFStreamer should
 /// *never* be treated differently. Callers should always talk to a
 /// FooTargetStreamer.
-class MCTargetStreamer {
+class LLVM_CLASS_ABI MCTargetStreamer {
 protected:
   MCStreamer &Streamer;
 
@@ -133,7 +133,7 @@ public:
 
 // FIXME: declared here because it is used from
 // lib/CodeGen/AsmPrinter/ARMException.cpp.
-class ARMTargetStreamer : public MCTargetStreamer {
+class LLVM_CLASS_ABI ARMTargetStreamer : public MCTargetStreamer {
 public:
   ARMTargetStreamer(MCStreamer &S);
   ~ARMTargetStreamer() override;
@@ -210,7 +210,7 @@ private:
 /// There are multiple implementations of this interface: one for writing out
 /// a .s file, and implementations that write out .o files of various formats.
 ///
-class MCStreamer {
+class LLVM_CLASS_ABI MCStreamer {
   MCContext &Context;
   std::unique_ptr<MCTargetStreamer> TargetStreamer;
 
@@ -1170,7 +1170,7 @@ public:
 
 /// Create a dummy machine code streamer, which does nothing. This is useful for
 /// timing the assembler front end.
-MCStreamer *createNullStreamer(MCContext &Ctx);
+LLVM_FUNC_ABI MCStreamer *createNullStreamer(MCContext &Ctx);
 
 } // end namespace llvm
 

@@ -25,7 +25,7 @@ namespace MinidumpYAML {
 /// one stream Kind can be used to represent multiple stream Types (e.g. any
 /// unrecognised stream Type will be handled via RawContentStream). The mapping
 /// from Types to Kinds is fixed and given by the static getKind function.
-struct Stream {
+struct LLVM_CLASS_ABI Stream {
   enum class StreamKind {
     Exception,
     MemoryInfoList,
@@ -59,7 +59,7 @@ namespace detail {
 /// A stream representing a list of abstract entries in a minidump stream. Its
 /// instantiations can be used to represent the ModuleList stream and other
 /// streams with a similar structure.
-template <typename EntryT> struct ListStream : public Stream {
+template <typename EntryT> struct LLVM_CLASS_ABI ListStream : public Stream {
   using entry_type = EntryT;
 
   std::vector<entry_type> Entries;
@@ -71,7 +71,7 @@ template <typename EntryT> struct ListStream : public Stream {
 };
 
 /// A structure containing all data belonging to a single minidump module.
-struct ParsedModule {
+struct LLVM_CLASS_ABI ParsedModule {
   static constexpr Stream::StreamKind Kind = Stream::StreamKind::ModuleList;
   static constexpr minidump::StreamType Type = minidump::StreamType::ModuleList;
 
@@ -82,7 +82,7 @@ struct ParsedModule {
 };
 
 /// A structure containing all data belonging to a single minidump thread.
-struct ParsedThread {
+struct LLVM_CLASS_ABI ParsedThread {
   static constexpr Stream::StreamKind Kind = Stream::StreamKind::ThreadList;
   static constexpr minidump::StreamType Type = minidump::StreamType::ThreadList;
 
@@ -92,7 +92,7 @@ struct ParsedThread {
 };
 
 /// A structure containing all data describing a single memory region.
-struct ParsedMemoryDescriptor {
+struct LLVM_CLASS_ABI ParsedMemoryDescriptor {
   static constexpr Stream::StreamKind Kind = Stream::StreamKind::MemoryList;
   static constexpr minidump::StreamType Type = minidump::StreamType::MemoryList;
 
@@ -106,7 +106,7 @@ using ThreadListStream = detail::ListStream<detail::ParsedThread>;
 using MemoryListStream = detail::ListStream<detail::ParsedMemoryDescriptor>;
 
 /// ExceptionStream minidump stream.
-struct ExceptionStream : public Stream {
+struct LLVM_CLASS_ABI ExceptionStream : public Stream {
   minidump::ExceptionStream MDExceptionStream;
   yaml::BinaryRef ThreadContext;
 
@@ -126,7 +126,7 @@ struct ExceptionStream : public Stream {
 
 /// A structure containing the list of MemoryInfo entries comprising a
 /// MemoryInfoList stream.
-struct MemoryInfoListStream : public Stream {
+struct LLVM_CLASS_ABI MemoryInfoListStream : public Stream {
   std::vector<minidump::MemoryInfo> Infos;
 
   MemoryInfoListStream()
@@ -146,7 +146,7 @@ struct MemoryInfoListStream : public Stream {
 
 /// A minidump stream represented as a sequence of hex bytes. This is used as a
 /// fallback when no other stream kind is suitable.
-struct RawContentStream : public Stream {
+struct LLVM_CLASS_ABI RawContentStream : public Stream {
   yaml::BinaryRef Content;
   yaml::Hex32 Size;
 
@@ -160,7 +160,7 @@ struct RawContentStream : public Stream {
 };
 
 /// SystemInfo minidump stream.
-struct SystemInfoStream : public Stream {
+struct LLVM_CLASS_ABI SystemInfoStream : public Stream {
   minidump::SystemInfo Info;
   std::string CSDVersion;
 
@@ -184,7 +184,7 @@ LLVM_YAML_STRONG_TYPEDEF(StringRef, BlockStringRef)
 
 /// A minidump stream containing textual data (typically, the contents of a
 /// /proc/<pid> file on linux).
-struct TextContentStream : public Stream {
+struct LLVM_CLASS_ABI TextContentStream : public Stream {
   BlockStringRef Text;
 
   TextContentStream(minidump::StreamType Type, StringRef Text = {})
@@ -199,7 +199,7 @@ struct TextContentStream : public Stream {
 /// minidump header, and zero or more streams. To construct an Object from a
 /// minidump file, use the static create function. To serialize to/from yaml,
 /// use the appropriate streaming operator on a yaml stream.
-struct Object {
+struct LLVM_CLASS_ABI Object {
   Object() = default;
   Object(const Object &) = delete;
   Object &operator=(const Object &) = delete;
@@ -222,7 +222,7 @@ struct Object {
 } // namespace MinidumpYAML
 
 namespace yaml {
-template <> struct BlockScalarTraits<MinidumpYAML::BlockStringRef> {
+template <> struct LLVM_CLASS_ABI BlockScalarTraits<MinidumpYAML::BlockStringRef> {
   static void output(const MinidumpYAML::BlockStringRef &Text, void *,
                      raw_ostream &OS) {
     OS << Text;
@@ -235,12 +235,12 @@ template <> struct BlockScalarTraits<MinidumpYAML::BlockStringRef> {
   }
 };
 
-template <> struct MappingTraits<std::unique_ptr<MinidumpYAML::Stream>> {
+template <> struct LLVM_CLASS_ABI MappingTraits<std::unique_ptr<MinidumpYAML::Stream>> {
   static void mapping(IO &IO, std::unique_ptr<MinidumpYAML::Stream> &S);
   static std::string validate(IO &IO, std::unique_ptr<MinidumpYAML::Stream> &S);
 };
 
-template <> struct MappingContextTraits<minidump::MemoryDescriptor, BinaryRef> {
+template <> struct LLVM_CLASS_ABI MappingContextTraits<minidump::MemoryDescriptor, BinaryRef> {
   static void mapping(IO &IO, minidump::MemoryDescriptor &Memory,
                       BinaryRef &Content);
 };

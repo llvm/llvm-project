@@ -33,7 +33,7 @@ class MCInst;
 //===----------------------------------------------------------------------===//
 
 /// Used to provide key value pairs for feature and CPU bit flags.
-struct SubtargetFeatureKV {
+struct LLVM_CLASS_ABI SubtargetFeatureKV {
   const char *Key;                      ///< K-V key string
   const char *Desc;                     ///< Help descriptor
   unsigned Value;                       ///< K-V integer value
@@ -53,7 +53,7 @@ struct SubtargetFeatureKV {
 //===----------------------------------------------------------------------===//
 
 /// Used to provide key value pairs for feature and CPU bit flags.
-struct SubtargetSubTypeKV {
+struct LLVM_CLASS_ABI SubtargetSubTypeKV {
   const char *Key;                      ///< K-V key string
   FeatureBitArray Implies;              ///< K-V bit mask
   FeatureBitArray TuneImplies;          ///< K-V bit mask
@@ -74,7 +74,7 @@ struct SubtargetSubTypeKV {
 ///
 /// Generic base class for all target subtargets.
 ///
-class MCSubtargetInfo {
+class LLVM_CLASS_ABI MCSubtargetInfo {
   Triple TargetTriple;
   std::string CPU; // CPU being targeted.
   std::string TuneCPU; // CPU being tuned for.

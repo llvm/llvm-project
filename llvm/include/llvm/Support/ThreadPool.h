@@ -50,7 +50,7 @@ class ThreadPoolTaskGroup;
 /// available threads are used up by tasks waiting for a task that has no thread
 /// left to run on (this includes waiting on the returned future). It should be
 /// generally safe to wait() for a group as long as groups do not form a cycle.
-class ThreadPool {
+class LLVM_CLASS_ABI ThreadPool {
 public:
   /// Construct a pool using the hardware strategy \p S for mapping hardware
   /// execution resources (threads, cores, CPUs)
@@ -222,7 +222,7 @@ private:
 /// groups can run on the same threadpool but can be waited for separately.
 /// It is even possible for tasks of one group to submit and wait for tasks
 /// of another group, as long as this does not form a loop.
-class ThreadPoolTaskGroup {
+class LLVM_CLASS_ABI ThreadPoolTaskGroup {
 public:
   /// The ThreadPool argument is the thread pool to forward calls to.
   ThreadPoolTaskGroup(ThreadPool &Pool) : Pool(Pool) {}

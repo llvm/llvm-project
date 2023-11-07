@@ -19,14 +19,14 @@
 namespace llvm {
 
 /// Magic data for optimising signed division by a constant.
-struct SignedDivisionByConstantInfo {
+struct LLVM_CLASS_ABI SignedDivisionByConstantInfo {
   static SignedDivisionByConstantInfo get(const APInt &D);
   APInt Magic;          ///< magic number
   unsigned ShiftAmount; ///< shift amount
 };
 
 /// Magic data for optimising unsigned division by a constant.
-struct UnsignedDivisionByConstantInfo {
+struct LLVM_CLASS_ABI UnsignedDivisionByConstantInfo {
   static UnsignedDivisionByConstantInfo
   get(const APInt &D, unsigned LeadingZeros = 0,
       bool AllowEvenDivisorOptimization = true);

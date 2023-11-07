@@ -48,13 +48,13 @@ namespace llvm {
 // df_iterator_storage - A private class which is used to figure out where to
 // store the visited set.
 template<class SetType, bool External>   // Non-external set
-class df_iterator_storage {
+class LLVM_CLASS_ABI df_iterator_storage {
 public:
   SetType Visited;
 };
 
 template<class SetType>
-class df_iterator_storage<SetType, true> {
+class LLVM_CLASS_ABI df_iterator_storage<SetType, true> {
 public:
   df_iterator_storage(SetType &VSet) : Visited(VSet) {}
   df_iterator_storage(const df_iterator_storage &S) : Visited(S.Visited) {}
@@ -67,7 +67,7 @@ public:
 // node have been processed. It is intended to distinguish of back and
 // cross edges in the spanning tree but is not used in the common case.
 template <typename NodeRef, unsigned SmallSize=8>
-struct df_iterator_default_set : public SmallPtrSet<NodeRef, SmallSize> {
+struct LLVM_CLASS_ABI df_iterator_default_set : public SmallPtrSet<NodeRef, SmallSize> {
   using BaseSet = SmallPtrSet<NodeRef, SmallSize>;
   using iterator = typename BaseSet::iterator;
 
@@ -83,7 +83,7 @@ template <class GraphT,
           class SetType =
               df_iterator_default_set<typename GraphTraits<GraphT>::NodeRef>,
           bool ExtStorage = false, class GT = GraphTraits<GraphT>>
-class df_iterator : public df_iterator_storage<SetType, ExtStorage> {
+class LLVM_CLASS_ABI df_iterator : public df_iterator_storage<SetType, ExtStorage> {
 public:
   using iterator_category = std::forward_iterator_tag;
   using value_type = typename GT::NodeRef;
@@ -233,7 +233,7 @@ iterator_range<df_iterator<T>> depth_first(const T& G) {
 
 // Provide global definitions of external depth first iterators...
 template <class T, class SetTy = df_iterator_default_set<typename GraphTraits<T>::NodeRef>>
-struct df_ext_iterator : public df_iterator<T, SetTy, true> {
+struct LLVM_CLASS_ABI df_ext_iterator : public df_iterator<T, SetTy, true> {
   df_ext_iterator(const df_iterator<T, SetTy, true> &V)
     : df_iterator<T, SetTy, true>(V) {}
 };
@@ -259,7 +259,7 @@ template <class T,
           class SetTy =
               df_iterator_default_set<typename GraphTraits<T>::NodeRef>,
           bool External = false>
-struct idf_iterator : public df_iterator<Inverse<T>, SetTy, External> {
+struct LLVM_CLASS_ABI idf_iterator : public df_iterator<Inverse<T>, SetTy, External> {
   idf_iterator(const df_iterator<Inverse<T>, SetTy, External> &V)
     : df_iterator<Inverse<T>, SetTy, External>(V) {}
 };
@@ -282,7 +282,7 @@ iterator_range<idf_iterator<T>> inverse_depth_first(const T& G) {
 
 // Provide global definitions of external inverse depth first iterators...
 template <class T, class SetTy = df_iterator_default_set<typename GraphTraits<T>::NodeRef>>
-struct idf_ext_iterator : public idf_iterator<T, SetTy, true> {
+struct LLVM_CLASS_ABI idf_ext_iterator : public idf_iterator<T, SetTy, true> {
   idf_ext_iterator(const idf_iterator<T, SetTy, true> &V)
     : idf_iterator<T, SetTy, true>(V) {}
   idf_ext_iterator(const df_iterator<Inverse<T>, SetTy, true> &V)

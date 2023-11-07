@@ -23,17 +23,17 @@ class BlockFrequencyInfo;
 class Function;
 
 // Returns number of calls of calledFunction by callerFunction.
-uint64_t
+LLVM_FUNC_ABI uint64_t
 getNumOfCalls(Function &callerFunction, Function &calledFunction);
 
 // Returns the maximum frequency of a BB in a function.
-uint64_t getMaxFreq(const Function &F, const BlockFrequencyInfo *BFI);
+LLVM_FUNC_ABI uint64_t getMaxFreq(const Function &F, const BlockFrequencyInfo *BFI);
 
 // Calculates heat color based on current and maximum frequencies.
-std::string getHeatColor(uint64_t freq, uint64_t maxFreq);
+LLVM_FUNC_ABI std::string getHeatColor(uint64_t freq, uint64_t maxFreq);
 
 // Calculates heat color based on percent of "hotness".
-std::string getHeatColor(double percent);
+LLVM_FUNC_ABI std::string getHeatColor(double percent);
 
 } // namespace llvm
 

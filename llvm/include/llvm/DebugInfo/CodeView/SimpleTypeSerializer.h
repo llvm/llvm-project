@@ -17,7 +17,7 @@ namespace llvm {
 namespace codeview {
 class FieldListRecord;
 
-class SimpleTypeSerializer {
+class LLVM_CLASS_ABI SimpleTypeSerializer {
   std::vector<uint8_t> ScratchBuffer;
 
 public:

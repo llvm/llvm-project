@@ -26,7 +26,7 @@ class Module;
 class ModulePass;
 class Pass;
 
-struct EmbedBitcodeOptions {
+struct LLVM_CLASS_ABI EmbedBitcodeOptions {
   EmbedBitcodeOptions() : EmbedBitcodeOptions(false, false) {}
   EmbedBitcodeOptions(bool IsThinLTO, bool EmitLTOSummary)
       : IsThinLTO(IsThinLTO), EmitLTOSummary(EmitLTOSummary) {}
@@ -36,7 +36,7 @@ struct EmbedBitcodeOptions {
 
 /// Pass embeds a copy of the module optimized with the provided pass pipeline
 /// into a global variable.
-class EmbedBitcodePass : public PassInfoMixin<EmbedBitcodePass> {
+class LLVM_CLASS_ABI EmbedBitcodePass : public PassInfoMixin<EmbedBitcodePass> {
   bool IsThinLTO;
   bool EmitLTOSummary;
   ModulePassManager MPM;

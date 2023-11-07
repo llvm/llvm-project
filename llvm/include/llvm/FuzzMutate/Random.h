@@ -31,7 +31,7 @@ template <typename T, typename GenT> T uniform(GenT &Gen) {
 
 /// Randomly selects an item by sampling into a set with an unknown number of
 /// elements, which may each be weighted to be more likely choices.
-template <typename T, typename GenT> class ReservoirSampler {
+template <typename T, typename GenT> class LLVM_CLASS_ABI ReservoirSampler {
   GenT &RandGen;
   std::remove_const_t<T> Selection = {};
   uint64_t TotalWeight = 0;

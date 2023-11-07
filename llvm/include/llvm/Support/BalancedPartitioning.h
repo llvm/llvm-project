@@ -54,7 +54,7 @@ namespace llvm {
 class ThreadPool;
 /// A function with a set of utility nodes where it is beneficial to order two
 /// functions close together if they have similar utility nodes
-class BPFunctionNode {
+class LLVM_CLASS_ABI BPFunctionNode {
   friend class BalancedPartitioning;
 
 public:
@@ -84,7 +84,7 @@ protected:
 };
 
 /// Algorithm parameters; default values are tuned on real-world binaries
-struct BalancedPartitioningConfig {
+struct LLVM_CLASS_ABI BalancedPartitioningConfig {
   /// The depth of the recursive bisection
   unsigned SplitDepth = 18;
   /// The maximum number of bp iterations per split
@@ -98,7 +98,7 @@ struct BalancedPartitioningConfig {
   unsigned TaskSplitDepth = 9;
 };
 
-class BalancedPartitioning {
+class LLVM_CLASS_ABI BalancedPartitioning {
 public:
   BalancedPartitioning(const BalancedPartitioningConfig &Config);
 

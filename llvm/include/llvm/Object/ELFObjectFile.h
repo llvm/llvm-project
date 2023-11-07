@@ -44,17 +44,17 @@ template <typename T> class SmallVectorImpl;
 namespace object {
 
 constexpr int NumElfSymbolTypes = 16;
-extern const llvm::EnumEntry<unsigned> ElfSymbolTypes[NumElfSymbolTypes];
+LLVM_FUNC_ABI extern const llvm::EnumEntry<unsigned> ElfSymbolTypes[NumElfSymbolTypes];
 
 class elf_symbol_iterator;
 
-struct ELFPltEntry {
+struct LLVM_CLASS_ABI ELFPltEntry {
   StringRef Section;
   std::optional<DataRefImpl> Symbol;
   uint64_t Address;
 };
 
-class ELFObjectFileBase : public ObjectFile {
+class LLVM_CLASS_ABI ELFObjectFileBase : public ObjectFile {
   friend class ELFRelocationRef;
   friend class ELFSectionRef;
   friend class ELFSymbolRef;
@@ -116,7 +116,7 @@ public:
   readBBAddrMap(std::optional<unsigned> TextSectionIndex = std::nullopt) const;
 };
 
-class ELFSectionRef : public SectionRef {
+class LLVM_CLASS_ABI ELFSectionRef : public SectionRef {
 public:
   ELFSectionRef(const SectionRef &B) : SectionRef(B) {
     assert(isa<ELFObjectFileBase>(SectionRef::getObject()));
@@ -139,7 +139,7 @@ public:
   }
 };
 
-class elf_section_iterator : public section_iterator {
+class LLVM_CLASS_ABI elf_section_iterator : public section_iterator {
 public:
   elf_section_iterator(const section_iterator &B) : section_iterator(B) {
     assert(isa<ELFObjectFileBase>(B->getObject()));
@@ -154,7 +154,7 @@ public:
   }
 };
 
-class ELFSymbolRef : public SymbolRef {
+class LLVM_CLASS_ABI ELFSymbolRef : public SymbolRef {
 public:
   ELFSymbolRef(const SymbolRef &B) : SymbolRef(B) {
     assert(isa<ELFObjectFileBase>(SymbolRef::getObject()));
@@ -191,7 +191,7 @@ public:
   }
 };
 
-class elf_symbol_iterator : public symbol_iterator {
+class LLVM_CLASS_ABI elf_symbol_iterator : public symbol_iterator {
 public:
   elf_symbol_iterator(const basic_symbol_iterator &B)
       : symbol_iterator(SymbolRef(B->getRawDataRefImpl(),
@@ -206,7 +206,7 @@ public:
   }
 };
 
-class ELFRelocationRef : public RelocationRef {
+class LLVM_CLASS_ABI ELFRelocationRef : public RelocationRef {
 public:
   ELFRelocationRef(const RelocationRef &B) : RelocationRef(B) {
     assert(isa<ELFObjectFileBase>(RelocationRef::getObject()));
@@ -221,7 +221,7 @@ public:
   }
 };
 
-class elf_relocation_iterator : public relocation_iterator {
+class LLVM_CLASS_ABI elf_relocation_iterator : public relocation_iterator {
 public:
   elf_relocation_iterator(const relocation_iterator &B)
       : relocation_iterator(RelocationRef(
@@ -243,7 +243,7 @@ ELFObjectFileBase::symbols() const {
   return elf_symbol_iterator_range(symbol_begin(), symbol_end());
 }
 
-template <class ELFT> class ELFObjectFile : public ELFObjectFileBase {
+template <class ELFT> class LLVM_CLASS_ABI ELFObjectFile : public ELFObjectFileBase {
   uint16_t getEMachine() const override;
   uint16_t getEType() const override;
   uint64_t getSymbolSize(DataRefImpl Sym) const override;

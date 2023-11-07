@@ -19,7 +19,7 @@
 namespace llvm {
 template <typename T> class ArrayRef;
 
-int libDriverMain(ArrayRef<const char *> ARgs);
+LLVM_FUNC_ABI int libDriverMain(ArrayRef<const char *> ARgs);
 
 }
 

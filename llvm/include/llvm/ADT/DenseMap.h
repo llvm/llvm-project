@@ -39,7 +39,7 @@ namespace detail {
 // We extend a pair to allow users to override the bucket type with their own
 // implementation without requiring two members.
 template <typename KeyT, typename ValueT>
-struct DenseMapPair : public std::pair<KeyT, ValueT> {
+struct LLVM_CLASS_ABI DenseMapPair : public std::pair<KeyT, ValueT> {
   using std::pair<KeyT, ValueT>::pair;
 
   KeyT &getFirst() { return std::pair<KeyT, ValueT>::first; }
@@ -58,7 +58,7 @@ class DenseMapIterator;
 
 template <typename DerivedT, typename KeyT, typename ValueT, typename KeyInfoT,
           typename BucketT>
-class DenseMapBase : public DebugEpochBase {
+class LLVM_CLASS_ABI DenseMapBase : public DebugEpochBase {
   template <typename T>
   using const_arg_type_t = typename const_pointer_or_const_ref<T>::type;
 
@@ -738,7 +738,7 @@ bool operator!=(
 template <typename KeyT, typename ValueT,
           typename KeyInfoT = DenseMapInfo<KeyT>,
           typename BucketT = llvm::detail::DenseMapPair<KeyT, ValueT>>
-class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
+class LLVM_CLASS_ABI DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
                                      KeyT, ValueT, KeyInfoT, BucketT> {
   friend class DenseMapBase<DenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
 
@@ -904,7 +904,7 @@ private:
 template <typename KeyT, typename ValueT, unsigned InlineBuckets = 4,
           typename KeyInfoT = DenseMapInfo<KeyT>,
           typename BucketT = llvm::detail::DenseMapPair<KeyT, ValueT>>
-class SmallDenseMap
+class LLVM_CLASS_ABI SmallDenseMap
     : public DenseMapBase<
           SmallDenseMap<KeyT, ValueT, InlineBuckets, KeyInfoT, BucketT>, KeyT,
           ValueT, KeyInfoT, BucketT> {
@@ -1218,7 +1218,7 @@ private:
 
 template <typename KeyT, typename ValueT, typename KeyInfoT, typename Bucket,
           bool IsConst>
-class DenseMapIterator : DebugEpochBase::HandleBase {
+class LLVM_CLASS_ABI DenseMapIterator : DebugEpochBase::HandleBase {
   friend class DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, true>;
   friend class DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, false>;
 

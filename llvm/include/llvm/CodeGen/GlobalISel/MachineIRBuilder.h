@@ -42,7 +42,7 @@ class GISelChangeObserver;
 /// Class which stores all the state required in a MachineIRBuilder.
 /// Since MachineIRBuilders will only store state in this object, it allows
 /// to transfer BuilderState between different kinds of MachineIRBuilders.
-struct MachineIRBuilderState {
+struct LLVM_CLASS_ABI MachineIRBuilderState {
   /// MachineFunction under construction.
   MachineFunction *MF = nullptr;
   /// Information used to access the description of the opcodes.
@@ -65,7 +65,7 @@ struct MachineIRBuilderState {
   GISelCSEInfo *CSEInfo = nullptr;
 };
 
-class DstOp {
+class LLVM_CLASS_ABI DstOp {
   union {
     LLT LLTTy;
     Register Reg;
@@ -126,7 +126,7 @@ private:
   DstType Ty;
 };
 
-class SrcOp {
+class LLVM_CLASS_ABI SrcOp {
   union {
     MachineInstrBuilder SrcMIB;
     Register Reg;
@@ -219,7 +219,7 @@ private:
 /// It keeps internally the insertion point and debug location for all
 /// the new instructions we want to create.
 /// This information can be modified via the related setters.
-class MachineIRBuilder {
+class LLVM_CLASS_ABI MachineIRBuilder {
 
   MachineIRBuilderState State;
 

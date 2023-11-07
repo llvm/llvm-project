@@ -54,7 +54,7 @@
 namespace llvm {
 namespace orc {
 
-class CompileOnDemandLayer : public IRLayer {
+class LLVM_CLASS_ABI CompileOnDemandLayer : public IRLayer {
   friend class PartitioningIRMaterializationUnit;
 
 public:

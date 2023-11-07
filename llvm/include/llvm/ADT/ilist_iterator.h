@@ -22,14 +22,14 @@ namespace ilist_detail {
 
 /// Find const-correct node types.
 template <class OptionsT, bool IsConst> struct IteratorTraits;
-template <class OptionsT> struct IteratorTraits<OptionsT, false> {
+template <class OptionsT> struct LLVM_CLASS_ABI IteratorTraits<OptionsT, false> {
   using value_type = typename OptionsT::value_type;
   using pointer = typename OptionsT::pointer;
   using reference = typename OptionsT::reference;
   using node_pointer = ilist_node_impl<OptionsT> *;
   using node_reference = ilist_node_impl<OptionsT> &;
 };
-template <class OptionsT> struct IteratorTraits<OptionsT, true> {
+template <class OptionsT> struct LLVM_CLASS_ABI IteratorTraits<OptionsT, true> {
   using value_type = const typename OptionsT::value_type;
   using pointer = typename OptionsT::const_pointer;
   using reference = typename OptionsT::const_reference;
@@ -38,13 +38,13 @@ template <class OptionsT> struct IteratorTraits<OptionsT, true> {
 };
 
 template <bool IsReverse> struct IteratorHelper;
-template <> struct IteratorHelper<false> : ilist_detail::NodeAccess {
+template <> struct LLVM_CLASS_ABI IteratorHelper<false> : ilist_detail::NodeAccess {
   using Access = ilist_detail::NodeAccess;
 
   template <class T> static void increment(T *&I) { I = Access::getNext(*I); }
   template <class T> static void decrement(T *&I) { I = Access::getPrev(*I); }
 };
-template <> struct IteratorHelper<true> : ilist_detail::NodeAccess {
+template <> struct LLVM_CLASS_ABI IteratorHelper<true> : ilist_detail::NodeAccess {
   using Access = ilist_detail::NodeAccess;
 
   template <class T> static void increment(T *&I) { I = Access::getPrev(*I); }
@@ -55,7 +55,7 @@ template <> struct IteratorHelper<true> : ilist_detail::NodeAccess {
 
 /// Iterator for intrusive lists  based on ilist_node.
 template <class OptionsT, bool IsReverse, bool IsConst>
-class ilist_iterator : ilist_detail::SpecificNodeAccess<OptionsT> {
+class LLVM_CLASS_ABI ilist_iterator : ilist_detail::SpecificNodeAccess<OptionsT> {
   friend ilist_iterator<OptionsT, IsReverse, !IsConst>;
   friend ilist_iterator<OptionsT, !IsReverse, IsConst>;
   friend ilist_iterator<OptionsT, !IsReverse, !IsConst>;
@@ -180,7 +180,7 @@ public:
 /// but with the addition of two bits recording whether this position (when in
 /// a range) is half or fully open.
 template <class OptionsT, bool IsReverse, bool IsConst>
-class ilist_iterator_w_bits : ilist_detail::SpecificNodeAccess<OptionsT> {
+class LLVM_CLASS_ABI ilist_iterator_w_bits : ilist_detail::SpecificNodeAccess<OptionsT> {
   friend ilist_iterator_w_bits<OptionsT, IsReverse, !IsConst>;
   friend ilist_iterator_w_bits<OptionsT, !IsReverse, IsConst>;
   friend ilist_iterator<OptionsT, !IsReverse, !IsConst>;
@@ -362,26 +362,26 @@ template <typename From> struct simplify_type;
 ///
 /// FIXME: remove this, since there is no implicit conversion to NodeTy.
 template <class OptionsT, bool IsConst>
-struct simplify_type<ilist_iterator<OptionsT, false, IsConst>> {
+struct LLVM_CLASS_ABI simplify_type<ilist_iterator<OptionsT, false, IsConst>> {
   using iterator = ilist_iterator<OptionsT, false, IsConst>;
   using SimpleType = typename iterator::pointer;
 
   static SimpleType getSimplifiedValue(const iterator &Node) { return &*Node; }
 };
 template <class OptionsT, bool IsConst>
-struct simplify_type<const ilist_iterator<OptionsT, false, IsConst>>
+struct LLVM_CLASS_ABI simplify_type<const ilist_iterator<OptionsT, false, IsConst>>
     : simplify_type<ilist_iterator<OptionsT, false, IsConst>> {};
 
 // ilist_iterator_w_bits should also be accessible via isa/dyn_cast.
 template <class OptionsT, bool IsConst>
-struct simplify_type<ilist_iterator_w_bits<OptionsT, false, IsConst>> {
+struct LLVM_CLASS_ABI simplify_type<ilist_iterator_w_bits<OptionsT, false, IsConst>> {
   using iterator = ilist_iterator_w_bits<OptionsT, false, IsConst>;
   using SimpleType = typename iterator::pointer;
 
   static SimpleType getSimplifiedValue(const iterator &Node) { return &*Node; }
 };
 template <class OptionsT, bool IsConst>
-struct simplify_type<const ilist_iterator_w_bits<OptionsT, false, IsConst>>
+struct LLVM_CLASS_ABI simplify_type<const ilist_iterator_w_bits<OptionsT, false, IsConst>>
     : simplify_type<ilist_iterator_w_bits<OptionsT, false, IsConst>> {};
 
 } // end namespace llvm

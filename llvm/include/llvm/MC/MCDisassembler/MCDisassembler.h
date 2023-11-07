@@ -19,14 +19,14 @@
 
 namespace llvm {
 
-struct XCOFFSymbolInfoTy {
+struct LLVM_CLASS_ABI XCOFFSymbolInfoTy {
   std::optional<XCOFF::StorageMappingClass> StorageMappingClass;
   std::optional<uint32_t> Index;
   bool IsLabel = false;
   bool operator<(const XCOFFSymbolInfoTy &SymInfo) const;
 };
 
-struct SymbolInfoTy {
+struct LLVM_CLASS_ABI SymbolInfoTy {
   uint64_t Addr;
   StringRef Name;
   // XCOFF uses XCOFFSymInfo. Other targets use Type.
@@ -81,7 +81,7 @@ class raw_ostream;
 
 /// Superclass for all disassemblers. Consumes a memory region and provides an
 /// array of assembly instructions.
-class MCDisassembler {
+class LLVM_CLASS_ABI MCDisassembler {
 public:
   /// Ternary decode status. Most backends will just use Fail and
   /// Success, however some have a concept of an instruction with

@@ -41,7 +41,7 @@ namespace llvm {
 ///   .Default(UnknownColor);
 /// \endcode
 template<typename T, typename R = T>
-class StringSwitch {
+class LLVM_CLASS_ABI StringSwitch {
   /// The string we are matching.
   const StringRef Str;
 

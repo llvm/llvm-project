@@ -106,7 +106,7 @@ inline std::pair<uint64_t, int16_t> getAdjusted64(uint64_t Digits,
 /// Multiply two 64-bit integers to create a 64-bit scaled number.
 ///
 /// Implemented with four 64-bit integer multiplies.
-std::pair<uint64_t, int16_t> multiply64(uint64_t LHS, uint64_t RHS);
+LLVM_FUNC_ABI std::pair<uint64_t, int16_t> multiply64(uint64_t LHS, uint64_t RHS);
 
 /// Multiply two 32-bit integers to create a 32-bit scaled number.
 ///
@@ -136,14 +136,14 @@ inline std::pair<uint64_t, int16_t> getProduct64(uint64_t LHS, uint64_t RHS) {
 /// Implemented with long division.
 ///
 /// \pre \c Dividend and \c Divisor are non-zero.
-std::pair<uint64_t, int16_t> divide64(uint64_t Dividend, uint64_t Divisor);
+LLVM_FUNC_ABI std::pair<uint64_t, int16_t> divide64(uint64_t Dividend, uint64_t Divisor);
 
 /// Divide two 32-bit integers to create a 32-bit scaled number.
 ///
 /// Implemented with one 64-bit integer divide/remainder pair.
 ///
 /// \pre \c Dividend and \c Divisor are non-zero.
-std::pair<uint32_t, int16_t> divide32(uint32_t Dividend, uint32_t Divisor);
+LLVM_FUNC_ABI std::pair<uint32_t, int16_t> divide32(uint32_t Dividend, uint32_t Divisor);
 
 /// Divide two 32-bit numbers to create a 32-bit scaled number.
 ///
@@ -243,7 +243,7 @@ template <class DigitsT> int32_t getLgCeiling(DigitsT Digits, int16_t Scale) {
 /// 1, and 0 for less than, greater than, and equal, respectively.
 ///
 /// \pre 0 <= ScaleDiff < 64.
-int compareImpl(uint64_t L, uint64_t R, int ScaleDiff);
+LLVM_FUNC_ABI int compareImpl(uint64_t L, uint64_t R, int ScaleDiff);
 
 /// Compare two scaled numbers.
 ///
@@ -418,7 +418,7 @@ inline std::pair<uint64_t, int16_t> getDifference64(uint64_t LDigits,
 namespace llvm {
 
 class raw_ostream;
-class ScaledNumberBase {
+class LLVM_CLASS_ABI ScaledNumberBase {
 public:
   static constexpr int DefaultPrecision = 10;
 
@@ -491,7 +491,7 @@ public:
 ///  1. Turn this into a wrapper around \a APFloat.
 ///  2. Share the algorithm implementations with \a APFloat.
 ///  3. Allow \a ScaledNumber to represent a signed number.
-template <class DigitsT> class ScaledNumber : ScaledNumberBase {
+template <class DigitsT> class LLVM_CLASS_ABI ScaledNumber : ScaledNumberBase {
 public:
   static_assert(!std::numeric_limits<DigitsT>::is_signed,
                 "only unsigned floats supported");

@@ -25,7 +25,7 @@ class MachineInstr;
 // FIXME: Does it make sense to factor out common code with the
 // instcombinerWorkList?
 template<unsigned N>
-class GISelWorkList {
+class LLVM_CLASS_ABI GISelWorkList {
   SmallVector<MachineInstr *, N> Worklist;
   DenseMap<MachineInstr *, unsigned> WorklistMap;
 

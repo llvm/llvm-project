@@ -24,7 +24,7 @@ class DWARFDataExtractor;
 class DWARFUnit;
 class raw_ostream;
 
-class DWARFFormValue {
+class LLVM_CLASS_ABI DWARFFormValue {
 public:
   enum FormClass {
     FC_Unknown,
@@ -358,7 +358,7 @@ toBlock(const std::optional<DWARFFormValue> &V) {
 /// \param FC an attribute form class to check.
 /// \param DwarfVersion the version of DWARF debug info keeping the attribute.
 /// \returns true if specified \p Form belongs to the \p FC class.
-bool doesFormBelongToClass(dwarf::Form Form, DWARFFormValue::FormClass FC,
+LLVM_FUNC_ABI bool doesFormBelongToClass(dwarf::Form Form, DWARFFormValue::FormClass FC,
                            uint16_t DwarfVersion);
 
 } // end namespace dwarf

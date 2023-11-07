@@ -25,7 +25,7 @@ namespace llvm {
 namespace orc {
 namespace rt_bootstrap {
 
-class ExecutorSharedMemoryMapperService final
+class LLVM_CLASS_ABI ExecutorSharedMemoryMapperService final
     : public ExecutorBootstrapService {
 public:
   ~ExecutorSharedMemoryMapperService(){};

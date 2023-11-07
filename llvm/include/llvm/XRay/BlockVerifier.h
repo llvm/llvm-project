@@ -21,7 +21,7 @@
 namespace llvm {
 namespace xray {
 
-class BlockVerifier : public RecordVisitor {
+class LLVM_CLASS_ABI BlockVerifier : public RecordVisitor {
 public:
   // We force State elements to be size_t, to be used as indices for containers.
   enum class State : std::size_t {

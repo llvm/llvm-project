@@ -1036,7 +1036,7 @@ public:
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the
 /// initializer elements of that global in a SmallVector and return the global
 /// itself.
-GlobalVariable *collectUsedGlobalVariables(const Module &M,
+LLVM_FUNC_ABI GlobalVariable *collectUsedGlobalVariables(const Module &M,
                                            SmallVectorImpl<GlobalValue *> &Vec,
                                            bool CompilerUsed);
 

@@ -7,7 +7,7 @@
 #include <string>
 
 namespace llvm {
-class DWPError : public ErrorInfo<DWPError> {
+class LLVM_CLASS_ABI DWPError : public ErrorInfo<DWPError> {
 public:
   DWPError(std::string Info) : Info(std::move(Info)) {}
   void log(raw_ostream &OS) const override { OS << Info; }

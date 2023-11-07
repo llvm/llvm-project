@@ -30,7 +30,7 @@ class ScopedPrinter;
 /// DWARF 5 accelerator tables.
 /// TODO: Generalize the rest of the AppleAcceleratorTable interface and move it
 /// to this class.
-class DWARFAcceleratorTable {
+class LLVM_CLASS_ABI DWARFAcceleratorTable {
 protected:
   DWARFDataExtractor AccelSection;
   DataExtractor StringSection;
@@ -82,7 +82,7 @@ public:
 
 /// This implements the Apple accelerator table format, a precursor of the
 /// DWARF 5 accelerator table format.
-class AppleAcceleratorTable : public DWARFAcceleratorTable {
+class LLVM_CLASS_ABI AppleAcceleratorTable : public DWARFAcceleratorTable {
   struct Header {
     uint32_t Magic;
     uint16_t Version;
@@ -365,7 +365,7 @@ public:
 /// The last segment consists of a list of entries, which is a 0-terminated list
 /// referenced by the name table and interpreted with the help of the
 /// abbreviation table.
-class DWARFDebugNames : public DWARFAcceleratorTable {
+class LLVM_CLASS_ABI DWARFDebugNames : public DWARFAcceleratorTable {
 public:
   class NameIndex;
   class NameIterator;
@@ -748,9 +748,9 @@ public:
 /// parameters, returns a substring of `Name` containing no template
 /// parameters.
 /// E.g.: StripTemplateParameters("foo<int>") = "foo".
-std::optional<StringRef> StripTemplateParameters(StringRef Name);
+LLVM_FUNC_ABI std::optional<StringRef> StripTemplateParameters(StringRef Name);
 
-struct ObjCSelectorNames {
+struct LLVM_CLASS_ABI ObjCSelectorNames {
   /// For "-[A(Category) method:]", this would be "method:"
   StringRef Selector;
   /// For "-[A(Category) method:]", this would be "A(category)"
@@ -764,7 +764,7 @@ struct ObjCSelectorNames {
 /// If `Name` is the AT_name of a DIE which refers to an Objective-C selector,
 /// returns an instance of ObjCSelectorNames. The Selector and ClassName fields
 /// are guaranteed to be non-empty in the result.
-std::optional<ObjCSelectorNames> getObjCNamesIfSelector(StringRef Name);
+LLVM_FUNC_ABI std::optional<ObjCSelectorNames> getObjCNamesIfSelector(StringRef Name);
 
 } // end namespace llvm
 

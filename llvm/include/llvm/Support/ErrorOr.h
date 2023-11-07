@@ -54,7 +54,7 @@ namespace llvm {
 ///
 /// T cannot be a rvalue reference.
 template<class T>
-class ErrorOr {
+class LLVM_CLASS_ABI ErrorOr {
   template <class OtherT> friend class ErrorOr;
 
   static constexpr bool isRef = std::is_reference_v<T>;

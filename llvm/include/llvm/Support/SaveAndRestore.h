@@ -21,7 +21,7 @@
 namespace llvm {
 
 /// A utility class that uses RAII to save and restore the value of a variable.
-template <typename T> struct SaveAndRestore {
+template <typename T> struct LLVM_CLASS_ABI SaveAndRestore {
   SaveAndRestore(T &X) : X(X), OldValue(X) {}
   SaveAndRestore(T &X, const T &NewValue) : X(X), OldValue(X) { X = NewValue; }
   SaveAndRestore(T &X, T &&NewValue) : X(X), OldValue(std::move(X)) {

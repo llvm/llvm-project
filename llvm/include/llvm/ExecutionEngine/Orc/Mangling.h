@@ -24,7 +24,7 @@ namespace orc {
 
 /// Mangles symbol names then uniques them in the context of an
 /// ExecutionSession.
-class MangleAndInterner {
+class LLVM_CLASS_ABI MangleAndInterner {
 public:
   MangleAndInterner(ExecutionSession &ES, const DataLayout &DL);
   SymbolStringPtr operator()(StringRef Name);
@@ -37,7 +37,7 @@ private:
 /// Maps IR global values to their linker symbol names / flags.
 ///
 /// This utility can be used when adding new IR globals in the JIT.
-class IRSymbolMapper {
+class LLVM_CLASS_ABI IRSymbolMapper {
 public:
   struct ManglingOptions {
     bool EmulatedTLS = false;

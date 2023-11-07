@@ -100,7 +100,7 @@ static inline int MCLOHIdToNbArgs(MCLOHType Kind) {
 }
 
 /// Store Linker Optimization Hint information (LOH).
-class MCLOHDirective {
+class LLVM_CLASS_ABI MCLOHDirective {
   MCLOHType Kind;
 
   /// Arguments of this directive. Order matters.
@@ -134,7 +134,7 @@ public:
                        const MCAsmLayout &Layout) const;
 };
 
-class MCLOHContainer {
+class LLVM_CLASS_ABI MCLOHContainer {
   /// Keep track of the emit size of all the LOHs.
   mutable uint64_t EmitSize = 0;
 

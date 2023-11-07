@@ -21,7 +21,7 @@
 namespace llvm {
 
 /// An arbitrary precision integer that knows its signedness.
-class [[nodiscard]] APSInt : public APInt {
+class LLVM_CLASS_ABI [[nodiscard]] APSInt : public APInt {
   bool IsUnsigned = false;
 
 public:
@@ -368,7 +368,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const APSInt &I) {
 }
 
 /// Provide DenseMapInfo for APSInt, using the DenseMapInfo for APInt.
-template <> struct DenseMapInfo<APSInt, void> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<APSInt, void> {
   static inline APSInt getEmptyKey() {
     return APSInt(DenseMapInfo<APInt, void>::getEmptyKey());
   }

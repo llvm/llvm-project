@@ -52,7 +52,7 @@ namespace llvm {
 /// and a SmallDenseMap if custom data structures are not provided.
 template <typename T, typename VectorT = std::vector<T>,
           typename MapT = DenseMap<T, ptrdiff_t>>
-class PriorityWorklist {
+class LLVM_CLASS_ABI PriorityWorklist {
 public:
   using value_type = T;
   using key_type = T;
@@ -252,7 +252,7 @@ private:
 /// A version of \c PriorityWorklist that selects small size optimized data
 /// structures for the vector and map.
 template <typename T, unsigned N>
-class SmallPriorityWorklist
+class LLVM_CLASS_ABI SmallPriorityWorklist
     : public PriorityWorklist<T, SmallVector<T, N>,
                               SmallDenseMap<T, ptrdiff_t>> {
 public:

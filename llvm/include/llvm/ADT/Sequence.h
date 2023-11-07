@@ -97,11 +97,11 @@ namespace llvm {
 // `is_iterable` set to `true` in the `llvm` namespace.
 // Alternatively, you can pass the `force_iteration_on_noniterable_enum` tag
 // to `enum_seq` or `enum_seq_inclusive`.
-template <typename EnumT> struct enum_iteration_traits {
+template <typename EnumT> struct LLVM_CLASS_ABI enum_iteration_traits {
   static constexpr bool is_iterable = false;
 };
 
-struct force_iteration_on_noniterable_enum_t {
+struct LLVM_CLASS_ABI force_iteration_on_noniterable_enum_t {
   explicit force_iteration_on_noniterable_enum_t() = default;
 };
 
@@ -124,7 +124,7 @@ template <typename T, typename U> bool canTypeFitValue(const U Value) {
 // - constructed from a value that doesn't fit into intmax_t,
 // - casted to a type that cannot hold the current value,
 // - its internal representation overflows.
-struct CheckedInt {
+struct LLVM_CLASS_ABI CheckedInt {
   // Integral constructor, asserts if Value cannot be represented as intmax_t.
   template <typename Integral,
             std::enable_if_t<std::is_integral<Integral>::value, bool> = 0>
@@ -186,7 +186,7 @@ private:
   intmax_t Value;
 };
 
-template <typename T, bool IsReverse> struct SafeIntIterator {
+template <typename T, bool IsReverse> struct LLVM_CLASS_ABI SafeIntIterator {
   using iterator_category = std::random_access_iterator_tag;
   using value_type = T;
   using difference_type = intmax_t;
@@ -260,7 +260,7 @@ private:
 
 } // namespace detail
 
-template <typename T> struct iota_range {
+template <typename T> struct LLVM_CLASS_ABI iota_range {
   using value_type = T;
   using reference = T &;
   using const_reference = const T &;

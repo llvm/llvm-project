@@ -131,7 +131,7 @@ class FileWriter;
 /// FunctionInfo objects. Each encoded FunctionInfo's data is pointed to by an
 /// entry in the Function Info Offsets Table. For details on the exact encoding
 /// of FunctionInfo objects, see "llvm/DebugInfo/GSYM/FunctionInfo.h".
-class GsymCreator {
+class LLVM_CLASS_ABI GsymCreator {
   // Private member variables require Mutex protections
   mutable std::mutex Mutex;
   std::vector<FunctionInfo> Funcs;

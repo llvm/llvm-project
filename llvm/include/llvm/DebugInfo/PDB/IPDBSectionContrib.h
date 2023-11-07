@@ -17,7 +17,7 @@ namespace pdb {
 
 /// IPDBSectionContrib defines an interface used to represent section
 /// contributions whose information are stored in the PDB.
-class IPDBSectionContrib {
+class LLVM_CLASS_ABI IPDBSectionContrib {
 public:
   virtual ~IPDBSectionContrib();
 

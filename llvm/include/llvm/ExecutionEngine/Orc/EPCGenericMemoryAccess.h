@@ -24,7 +24,7 @@
 namespace llvm {
 namespace orc {
 
-class EPCGenericMemoryAccess : public ExecutorProcessControl::MemoryAccess {
+class LLVM_CLASS_ABI EPCGenericMemoryAccess : public ExecutorProcessControl::MemoryAccess {
 public:
   /// Function addresses for memory access.
   struct FuncAddrs {

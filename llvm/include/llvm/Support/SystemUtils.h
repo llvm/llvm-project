@@ -23,7 +23,7 @@ class raw_ostream;
 /// generate a warning message to errs() advising against display of bitcode
 /// and return true. Otherwise just return false.
 /// Check for output written to a console
-bool CheckBitcodeOutputToConsole(
+LLVM_FUNC_ABI bool CheckBitcodeOutputToConsole(
     raw_ostream &stream_to_check ///< The stream to be checked
 );
 

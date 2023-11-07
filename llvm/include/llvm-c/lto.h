@@ -108,7 +108,7 @@ LLVM_C_EXTERN_C_BEGIN
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern const char*
+LLVM_FUNC_ABI extern const char*
 lto_get_version(void);
 
 /**
@@ -116,7 +116,7 @@ lto_get_version(void);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern const char*
+LLVM_FUNC_ABI extern const char*
 lto_get_error_message(void);
 
 /**
@@ -124,7 +124,7 @@ lto_get_error_message(void);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern lto_bool_t
+LLVM_FUNC_ABI extern lto_bool_t
 lto_module_is_object_file(const char* path);
 
 /**
@@ -132,7 +132,7 @@ lto_module_is_object_file(const char* path);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern lto_bool_t
+LLVM_FUNC_ABI extern lto_bool_t
 lto_module_is_object_file_for_target(const char* path,
                                      const char* target_triple_prefix);
 
@@ -142,7 +142,7 @@ lto_module_is_object_file_for_target(const char* path,
  *
  * \since LTO_API_VERSION=20
  */
-extern lto_bool_t
+LLVM_FUNC_ABI extern lto_bool_t
 lto_module_has_objc_category(const void *mem, size_t length);
 
 /**
@@ -150,7 +150,7 @@ lto_module_has_objc_category(const void *mem, size_t length);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern lto_bool_t lto_module_is_object_file_in_memory(const void *mem,
+LLVM_FUNC_ABI extern lto_bool_t lto_module_is_object_file_in_memory(const void *mem,
                                                       size_t length);
 
 /**
@@ -158,7 +158,7 @@ extern lto_bool_t lto_module_is_object_file_in_memory(const void *mem,
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern lto_bool_t
+LLVM_FUNC_ABI extern lto_bool_t
 lto_module_is_object_file_in_memory_for_target(const void* mem, size_t length,
                                               const char* target_triple_prefix);
 
@@ -168,7 +168,7 @@ lto_module_is_object_file_in_memory_for_target(const void* mem, size_t length,
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern lto_module_t
+LLVM_FUNC_ABI extern lto_module_t
 lto_module_create(const char* path);
 
 /**
@@ -177,7 +177,7 @@ lto_module_create(const char* path);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern lto_module_t
+LLVM_FUNC_ABI extern lto_module_t
 lto_module_create_from_memory(const void* mem, size_t length);
 
 /**
@@ -186,7 +186,7 @@ lto_module_create_from_memory(const void* mem, size_t length);
  *
  * \since LTO_API_VERSION=9
  */
-extern lto_module_t
+LLVM_FUNC_ABI extern lto_module_t
 lto_module_create_from_memory_with_path(const void* mem, size_t length,
                                         const char *path);
 
@@ -201,7 +201,7 @@ lto_module_create_from_memory_with_path(const void* mem, size_t length,
  *
  * \since LTO_API_VERSION=11
  */
-extern lto_module_t
+LLVM_FUNC_ABI extern lto_module_t
 lto_module_create_in_local_context(const void *mem, size_t length,
                                    const char *path);
 
@@ -215,7 +215,7 @@ lto_module_create_in_local_context(const void *mem, size_t length,
  *
  * \since LTO_API_VERSION=11
  */
-extern lto_module_t
+LLVM_FUNC_ABI extern lto_module_t
 lto_module_create_in_codegen_context(const void *mem, size_t length,
                                      const char *path, lto_code_gen_t cg);
 
@@ -225,7 +225,7 @@ lto_module_create_in_codegen_context(const void *mem, size_t length,
  *
  * \since LTO_API_VERSION=5
  */
-extern lto_module_t
+LLVM_FUNC_ABI extern lto_module_t
 lto_module_create_from_fd(int fd, const char *path, size_t file_size);
 
 /**
@@ -234,7 +234,7 @@ lto_module_create_from_fd(int fd, const char *path, size_t file_size);
  *
  * \since LTO_API_VERSION=5
  */
-extern lto_module_t
+LLVM_FUNC_ABI extern lto_module_t
 lto_module_create_from_fd_at_offset(int fd, const char *path, size_t file_size,
                                     size_t map_size, off_t offset);
 
@@ -244,7 +244,7 @@ lto_module_create_from_fd_at_offset(int fd, const char *path, size_t file_size,
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern void
+LLVM_FUNC_ABI extern void
 lto_module_dispose(lto_module_t mod);
 
 /**
@@ -252,7 +252,7 @@ lto_module_dispose(lto_module_t mod);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern const char*
+LLVM_FUNC_ABI extern const char*
 lto_module_get_target_triple(lto_module_t mod);
 
 /**
@@ -260,7 +260,7 @@ lto_module_get_target_triple(lto_module_t mod);
  *
  * \since LTO_API_VERSION=4
  */
-extern void
+LLVM_FUNC_ABI extern void
 lto_module_set_target_triple(lto_module_t mod, const char *triple);
 
 /**
@@ -268,7 +268,7 @@ lto_module_set_target_triple(lto_module_t mod, const char *triple);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern unsigned int
+LLVM_FUNC_ABI extern unsigned int
 lto_module_get_num_symbols(lto_module_t mod);
 
 /**
@@ -276,7 +276,7 @@ lto_module_get_num_symbols(lto_module_t mod);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern const char*
+LLVM_FUNC_ABI extern const char*
 lto_module_get_symbol_name(lto_module_t mod, unsigned int index);
 
 /**
@@ -284,7 +284,7 @@ lto_module_get_symbol_name(lto_module_t mod, unsigned int index);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern lto_symbol_attributes
+LLVM_FUNC_ABI extern lto_symbol_attributes
 lto_module_get_symbol_attribute(lto_module_t mod, unsigned int index);
 
 /**
@@ -295,7 +295,7 @@ lto_module_get_symbol_attribute(lto_module_t mod, unsigned int index);
  *
  * \since LTO_API_VERSION=16
  */
-extern const char*
+LLVM_FUNC_ABI extern const char*
 lto_module_get_linkeropts(lto_module_t mod);
 
 /**
@@ -309,7 +309,7 @@ lto_module_get_linkeropts(lto_module_t mod);
  *
  * \since LTO_API_VERSION=27
  */
-extern lto_bool_t lto_module_get_macho_cputype(lto_module_t mod,
+LLVM_FUNC_ABI extern lto_bool_t lto_module_get_macho_cputype(lto_module_t mod,
                                                unsigned int *out_cputype,
                                                unsigned int *out_cpusubtype);
 
@@ -322,7 +322,7 @@ extern lto_bool_t lto_module_get_macho_cputype(lto_module_t mod,
  *
  * \since LTO_API_VERSION=29
  */
-extern lto_bool_t lto_module_has_ctor_dtor(lto_module_t mod);
+LLVM_FUNC_ABI extern lto_bool_t lto_module_has_ctor_dtor(lto_module_t mod);
 /**
  * Diagnostic severity.
  *
@@ -354,7 +354,7 @@ typedef void (*lto_diagnostic_handler_t)(
  *
  * \since LTO_API_VERSION=7
  */
-extern void lto_codegen_set_diagnostic_handler(lto_code_gen_t,
+LLVM_FUNC_ABI extern void lto_codegen_set_diagnostic_handler(lto_code_gen_t,
                                                lto_diagnostic_handler_t,
                                                void *);
 
@@ -367,7 +367,7 @@ extern void lto_codegen_set_diagnostic_handler(lto_code_gen_t,
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern lto_code_gen_t
+LLVM_FUNC_ABI extern lto_code_gen_t
 lto_codegen_create(void);
 
 /**
@@ -379,7 +379,7 @@ lto_codegen_create(void);
  *
  * \since LTO_API_VERSION=11
  */
-extern lto_code_gen_t
+LLVM_FUNC_ABI extern lto_code_gen_t
 lto_codegen_create_in_local_context(void);
 
 /**
@@ -388,7 +388,7 @@ lto_codegen_create_in_local_context(void);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern void
+LLVM_FUNC_ABI extern void
 lto_codegen_dispose(lto_code_gen_t);
 
 /**
@@ -401,7 +401,7 @@ lto_codegen_dispose(lto_code_gen_t);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern lto_bool_t
+LLVM_FUNC_ABI extern lto_bool_t
 lto_codegen_add_module(lto_code_gen_t cg, lto_module_t mod);
 
 /**
@@ -412,7 +412,7 @@ lto_codegen_add_module(lto_code_gen_t cg, lto_module_t mod);
  *
  * \since LTO_API_VERSION=13
  */
-extern void
+LLVM_FUNC_ABI extern void
 lto_codegen_set_module(lto_code_gen_t cg, lto_module_t mod);
 
 /**
@@ -421,7 +421,7 @@ lto_codegen_set_module(lto_code_gen_t cg, lto_module_t mod);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern lto_bool_t
+LLVM_FUNC_ABI extern lto_bool_t
 lto_codegen_set_debug_model(lto_code_gen_t cg, lto_debug_model);
 
 /**
@@ -430,7 +430,7 @@ lto_codegen_set_debug_model(lto_code_gen_t cg, lto_debug_model);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern lto_bool_t
+LLVM_FUNC_ABI extern lto_bool_t
 lto_codegen_set_pic_model(lto_code_gen_t cg, lto_codegen_model);
 
 /**
@@ -438,7 +438,7 @@ lto_codegen_set_pic_model(lto_code_gen_t cg, lto_codegen_model);
  *
  * \since LTO_API_VERSION=4
  */
-extern void
+LLVM_FUNC_ABI extern void
 lto_codegen_set_cpu(lto_code_gen_t cg, const char *cpu);
 
 /**
@@ -447,7 +447,7 @@ lto_codegen_set_cpu(lto_code_gen_t cg, const char *cpu);
  *
  * \since LTO_API_VERSION=3
  */
-extern void
+LLVM_FUNC_ABI extern void
 lto_codegen_set_assembler_path(lto_code_gen_t cg, const char* path);
 
 /**
@@ -455,7 +455,7 @@ lto_codegen_set_assembler_path(lto_code_gen_t cg, const char* path);
  *
  * \since LTO_API_VERSION=4
  */
-extern void
+LLVM_FUNC_ABI extern void
 lto_codegen_set_assembler_args(lto_code_gen_t cg, const char **args,
                                int nargs);
 
@@ -466,7 +466,7 @@ lto_codegen_set_assembler_args(lto_code_gen_t cg, const char **args,
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern void
+LLVM_FUNC_ABI extern void
 lto_codegen_add_must_preserve_symbol(lto_code_gen_t cg, const char* symbol);
 
 /**
@@ -476,7 +476,7 @@ lto_codegen_add_must_preserve_symbol(lto_code_gen_t cg, const char* symbol);
  *
  * \since LTO_API_VERSION=5
  */
-extern lto_bool_t
+LLVM_FUNC_ABI extern lto_bool_t
 lto_codegen_write_merged_modules(lto_code_gen_t cg, const char* path);
 
 /**
@@ -491,7 +491,7 @@ lto_codegen_write_merged_modules(lto_code_gen_t cg, const char* path);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern const void*
+LLVM_FUNC_ABI extern const void*
 lto_codegen_compile(lto_code_gen_t cg, size_t* length);
 
 /**
@@ -503,7 +503,7 @@ lto_codegen_compile(lto_code_gen_t cg, size_t* length);
  *
  * \since LTO_API_VERSION=5
  */
-extern lto_bool_t
+LLVM_FUNC_ABI extern lto_bool_t
 lto_codegen_compile_to_file(lto_code_gen_t cg, const char** name);
 
 /**
@@ -511,7 +511,7 @@ lto_codegen_compile_to_file(lto_code_gen_t cg, const char** name);
  *
  * \since LTO_API_VERSION=12
  */
-extern lto_bool_t
+LLVM_FUNC_ABI extern lto_bool_t
 lto_codegen_optimize(lto_code_gen_t cg);
 
 /**
@@ -526,7 +526,7 @@ lto_codegen_optimize(lto_code_gen_t cg);
  *
  * \since LTO_API_VERSION=12
  */
-extern const void*
+LLVM_FUNC_ABI extern const void*
 lto_codegen_compile_optimized(lto_code_gen_t cg, size_t* length);
 
 /**
@@ -534,7 +534,7 @@ lto_codegen_compile_optimized(lto_code_gen_t cg, size_t* length);
  *
  * \since LTO_API_VERSION=12
  */
-extern unsigned int
+LLVM_FUNC_ABI extern unsigned int
 lto_api_version(void);
 
 /**
@@ -549,7 +549,7 @@ lto_api_version(void);
  *
  * \since LTO_API_VERSION=28
  */
-extern void lto_set_debug_options(const char *const *options, int number);
+LLVM_FUNC_ABI extern void lto_set_debug_options(const char *const *options, int number);
 
 /**
  * Sets options to help debug codegen bugs. Since parsing shud only happen once,
@@ -562,7 +562,7 @@ extern void lto_set_debug_options(const char *const *options, int number);
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern void
+LLVM_FUNC_ABI extern void
 lto_codegen_debug_options(lto_code_gen_t cg, const char *);
 
 /**
@@ -571,7 +571,7 @@ lto_codegen_debug_options(lto_code_gen_t cg, const char *);
  *
  * \since prior to LTO_API_VERSION=26
  */
-extern void lto_codegen_debug_options_array(lto_code_gen_t cg,
+LLVM_FUNC_ABI extern void lto_codegen_debug_options_array(lto_code_gen_t cg,
                                             const char *const *, int number);
 
 /**
@@ -580,7 +580,7 @@ extern void lto_codegen_debug_options_array(lto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=5
  */
-extern void
+LLVM_FUNC_ABI extern void
 lto_initialize_disassembler(void);
 
 /**
@@ -589,7 +589,7 @@ lto_initialize_disassembler(void);
  *
  * \since LTO_API_VERSION=14
  */
-extern void
+LLVM_FUNC_ABI extern void
 lto_codegen_set_should_internalize(lto_code_gen_t cg,
                                    lto_bool_t ShouldInternalize);
 
@@ -601,7 +601,7 @@ lto_codegen_set_should_internalize(lto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=15
  */
-extern void
+LLVM_FUNC_ABI extern void
 lto_codegen_set_should_embed_uselists(lto_code_gen_t cg,
                                       lto_bool_t ShouldEmbedUselists);
 
@@ -616,7 +616,7 @@ typedef struct LLVMOpaqueLTOInput *lto_input_t;
   *
   * \since LTO_API_VERSION=24
   */
-extern lto_input_t lto_input_create(const void *buffer,
+LLVM_FUNC_ABI extern lto_input_t lto_input_create(const void *buffer,
                                     size_t buffer_size,
                                     const char *path);
 
@@ -626,7 +626,7 @@ extern lto_input_t lto_input_create(const void *buffer,
   *
   * \since LTO_API_VERSION=24
   */
-extern void lto_input_dispose(lto_input_t input);
+LLVM_FUNC_ABI extern void lto_input_dispose(lto_input_t input);
 
 /**
   * Returns the number of dependent library specifiers
@@ -634,7 +634,7 @@ extern void lto_input_dispose(lto_input_t input);
   *
   * \since LTO_API_VERSION=24
   */
-extern unsigned lto_input_get_num_dependent_libraries(lto_input_t input);
+LLVM_FUNC_ABI extern unsigned lto_input_get_num_dependent_libraries(lto_input_t input);
 
 /**
   * Returns the ith dependent library specifier
@@ -643,7 +643,7 @@ extern unsigned lto_input_get_num_dependent_libraries(lto_input_t input);
   *
   * \since LTO_API_VERSION=24
   */
-extern const char * lto_input_get_dependent_library(lto_input_t input,
+LLVM_FUNC_ABI extern const char * lto_input_get_dependent_library(lto_input_t input,
                                                     size_t index,
                                                     size_t *size);
 
@@ -653,7 +653,7 @@ extern const char * lto_input_get_dependent_library(lto_input_t input,
  *
  * \since prior to LTO_API_VERSION=25
  */
-extern const char *const *lto_runtime_lib_symbols_list(size_t *size);
+LLVM_FUNC_ABI extern const char *const *lto_runtime_lib_symbols_list(size_t *size);
 
 /**
  * @} // endgoup LLVMCLTO
@@ -668,7 +668,7 @@ extern const char *const *lto_runtime_lib_symbols_list(size_t *size);
  *
  * \since LTO_API_VERSION=18
  */
-typedef struct {
+typedef struct LLVM_CLASS_ABI {
   const char *Buffer;
   size_t Size;
 } LTOObjectBuffer;
@@ -685,7 +685,7 @@ typedef struct {
  *
  * \since LTO_API_VERSION=18
  */
-extern thinlto_code_gen_t thinlto_create_codegen(void);
+LLVM_FUNC_ABI extern thinlto_code_gen_t thinlto_create_codegen(void);
 
 /**
  * Frees the generator and all memory it internally allocated.
@@ -693,7 +693,7 @@ extern thinlto_code_gen_t thinlto_create_codegen(void);
  *
  * \since LTO_API_VERSION=18
  */
-extern void thinlto_codegen_dispose(thinlto_code_gen_t cg);
+LLVM_FUNC_ABI extern void thinlto_codegen_dispose(thinlto_code_gen_t cg);
 
 /**
  * Add a module to a ThinLTO code generator. Identifier has to be unique among
@@ -706,7 +706,7 @@ extern void thinlto_codegen_dispose(thinlto_code_gen_t cg);
  *
  * \since LTO_API_VERSION=18
  */
-extern void thinlto_codegen_add_module(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI extern void thinlto_codegen_add_module(thinlto_code_gen_t cg,
                                        const char *identifier, const char *data,
                                        int length);
 
@@ -716,7 +716,7 @@ extern void thinlto_codegen_add_module(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=18
  */
-extern void thinlto_codegen_process(thinlto_code_gen_t cg);
+LLVM_FUNC_ABI extern void thinlto_codegen_process(thinlto_code_gen_t cg);
 
 /**
  * Returns the number of object files produced by the ThinLTO CodeGenerator.
@@ -727,7 +727,7 @@ extern void thinlto_codegen_process(thinlto_code_gen_t cg);
  *
  * \since LTO_API_VERSION=18
  */
-extern unsigned int thinlto_module_get_num_objects(thinlto_code_gen_t cg);
+LLVM_FUNC_ABI extern unsigned int thinlto_module_get_num_objects(thinlto_code_gen_t cg);
 
 /**
  * Returns a reference to the ith object file produced by the ThinLTO
@@ -738,7 +738,7 @@ extern unsigned int thinlto_module_get_num_objects(thinlto_code_gen_t cg);
  *
  * \since LTO_API_VERSION=18
  */
-extern LTOObjectBuffer thinlto_module_get_object(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI extern LTOObjectBuffer thinlto_module_get_object(thinlto_code_gen_t cg,
                                                  unsigned int index);
 
 /**
@@ -750,7 +750,7 @@ extern LTOObjectBuffer thinlto_module_get_object(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=21
  */
-unsigned int thinlto_module_get_num_object_files(thinlto_code_gen_t cg);
+LLVM_FUNC_ABI unsigned int thinlto_module_get_num_object_files(thinlto_code_gen_t cg);
 
 /**
  * Returns the path to the ith object file produced by the ThinLTO
@@ -761,7 +761,7 @@ unsigned int thinlto_module_get_num_object_files(thinlto_code_gen_t cg);
  *
  * \since LTO_API_VERSION=21
  */
-const char *thinlto_module_get_object_file(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI const char *thinlto_module_get_object_file(thinlto_code_gen_t cg,
                                            unsigned int index);
 
 /**
@@ -770,7 +770,7 @@ const char *thinlto_module_get_object_file(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=18
  */
-extern lto_bool_t thinlto_codegen_set_pic_model(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI extern lto_bool_t thinlto_codegen_set_pic_model(thinlto_code_gen_t cg,
                                                 lto_codegen_model);
 
 /**
@@ -780,7 +780,7 @@ extern lto_bool_t thinlto_codegen_set_pic_model(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=18
  */
-extern void thinlto_codegen_set_savetemps_dir(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI extern void thinlto_codegen_set_savetemps_dir(thinlto_code_gen_t cg,
                                               const char *save_temps_dir);
 
 /**
@@ -791,7 +791,7 @@ extern void thinlto_codegen_set_savetemps_dir(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=21
  */
-void thinlto_set_generated_objects_dir(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI void thinlto_set_generated_objects_dir(thinlto_code_gen_t cg,
                                        const char *save_temps_dir);
 
 /**
@@ -799,7 +799,7 @@ void thinlto_set_generated_objects_dir(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=18
  */
-extern void thinlto_codegen_set_cpu(thinlto_code_gen_t cg, const char *cpu);
+LLVM_FUNC_ABI extern void thinlto_codegen_set_cpu(thinlto_code_gen_t cg, const char *cpu);
 
 /**
  * Disable CodeGen, only run the stages till codegen and stop. The output will
@@ -807,7 +807,7 @@ extern void thinlto_codegen_set_cpu(thinlto_code_gen_t cg, const char *cpu);
  *
  * \since LTO_API_VERSION=19
  */
-extern void thinlto_codegen_disable_codegen(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI extern void thinlto_codegen_disable_codegen(thinlto_code_gen_t cg,
                                             lto_bool_t disable);
 
 /**
@@ -815,7 +815,7 @@ extern void thinlto_codegen_disable_codegen(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=19
  */
-extern void thinlto_codegen_set_codegen_only(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI extern void thinlto_codegen_set_codegen_only(thinlto_code_gen_t cg,
                                              lto_bool_t codegen_only);
 
 /**
@@ -823,14 +823,14 @@ extern void thinlto_codegen_set_codegen_only(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=18
  */
-extern void thinlto_debug_options(const char *const *options, int number);
+LLVM_FUNC_ABI extern void thinlto_debug_options(const char *const *options, int number);
 
 /**
  * Test if a module has support for ThinLTO linking.
  *
  * \since LTO_API_VERSION=18
  */
-extern lto_bool_t lto_module_is_thinlto(lto_module_t mod);
+LLVM_FUNC_ABI extern lto_bool_t lto_module_is_thinlto(lto_module_t mod);
 
 /**
  * Adds a symbol to the list of global symbols that must exist in the final
@@ -840,7 +840,7 @@ extern lto_bool_t lto_module_is_thinlto(lto_module_t mod);
  *
  * \since LTO_API_VERSION=18
  */
-extern void thinlto_codegen_add_must_preserve_symbol(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI extern void thinlto_codegen_add_must_preserve_symbol(thinlto_code_gen_t cg,
                                                      const char *name,
                                                      int length);
 
@@ -852,7 +852,7 @@ extern void thinlto_codegen_add_must_preserve_symbol(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=18
  */
-extern void thinlto_codegen_add_cross_referenced_symbol(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI extern void thinlto_codegen_add_cross_referenced_symbol(thinlto_code_gen_t cg,
                                                         const char *name,
                                                         int length);
 
@@ -883,7 +883,7 @@ extern void thinlto_codegen_add_cross_referenced_symbol(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=18
  */
-extern void thinlto_codegen_set_cache_dir(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI extern void thinlto_codegen_set_cache_dir(thinlto_code_gen_t cg,
                                           const char *cache_dir);
 
 /**
@@ -893,7 +893,7 @@ extern void thinlto_codegen_set_cache_dir(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=18
  */
-extern void thinlto_codegen_set_cache_pruning_interval(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI extern void thinlto_codegen_set_cache_pruning_interval(thinlto_code_gen_t cg,
                                                        int interval);
 
 /**
@@ -909,7 +909,7 @@ extern void thinlto_codegen_set_cache_pruning_interval(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=18
  */
-extern void thinlto_codegen_set_final_cache_size_relative_to_available_space(
+LLVM_FUNC_ABI extern void thinlto_codegen_set_final_cache_size_relative_to_available_space(
     thinlto_code_gen_t cg, unsigned percentage);
 
 /**
@@ -918,7 +918,7 @@ extern void thinlto_codegen_set_final_cache_size_relative_to_available_space(
  *
  * \since LTO_API_VERSION=18
  */
-extern void thinlto_codegen_set_cache_entry_expiration(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI extern void thinlto_codegen_set_cache_entry_expiration(thinlto_code_gen_t cg,
                                                        unsigned expiration);
 
 /**
@@ -929,7 +929,7 @@ extern void thinlto_codegen_set_cache_entry_expiration(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=22
  */
-extern void thinlto_codegen_set_cache_size_bytes(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI extern void thinlto_codegen_set_cache_size_bytes(thinlto_code_gen_t cg,
                                                  unsigned max_size_bytes);
 
 /**
@@ -938,7 +938,7 @@ extern void thinlto_codegen_set_cache_size_bytes(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=23
  */
-extern void
+LLVM_FUNC_ABI extern void
 thinlto_codegen_set_cache_size_megabytes(thinlto_code_gen_t cg,
                                          unsigned max_size_megabytes);
 
@@ -948,7 +948,7 @@ thinlto_codegen_set_cache_size_megabytes(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=22
  */
-extern void thinlto_codegen_set_cache_size_files(thinlto_code_gen_t cg,
+LLVM_FUNC_ABI extern void thinlto_codegen_set_cache_size_files(thinlto_code_gen_t cg,
                                                  unsigned max_size_files);
 
 /**

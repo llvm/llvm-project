@@ -26,7 +26,7 @@ namespace orc {
 
 /// An LLVMContext together with an associated mutex that can be used to lock
 /// the context to prevent concurrent access by other threads.
-class ThreadSafeContext {
+class LLVM_CLASS_ABI ThreadSafeContext {
 private:
   struct State {
     State(std::unique_ptr<LLVMContext> Ctx) : Ctx(std::move(Ctx)) {}
@@ -74,7 +74,7 @@ private:
 };
 
 /// An LLVM Module together with a shared ThreadSafeContext.
-class ThreadSafeModule {
+class LLVM_CLASS_ABI ThreadSafeModule {
 public:
   /// Default construct a ThreadSafeModule. This results in a null module and
   /// null context.
@@ -170,7 +170,7 @@ using GVPredicate = std::function<bool(const GlobalValue &)>;
 using GVModifier = std::function<void(GlobalValue &)>;
 
 /// Clones the given module on to a new context.
-ThreadSafeModule
+LLVM_FUNC_ABI ThreadSafeModule
 cloneToNewContext(const ThreadSafeModule &TSMW,
                   GVPredicate ShouldCloneDef = GVPredicate(),
                   GVModifier UpdateClonedDefSource = GVModifier());

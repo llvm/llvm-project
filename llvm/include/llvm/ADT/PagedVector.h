@@ -39,7 +39,7 @@ namespace llvm {
 /// while iterating, therefore materialising them and losing the gains in terms
 /// of memory usage this container provides. If you have such a use case, you
 /// probably want to use a normal std::vector or a llvm::SmallVector.
-template <typename T, size_t PageSize = 1024 / sizeof(T)> class PagedVector {
+template <typename T, size_t PageSize = 1024 / sizeof(T)> class LLVM_CLASS_ABI PagedVector {
   static_assert(PageSize > 1, "PageSize must be greater than 0. Most likely "
                               "you want it to be greater than 16.");
   /// The actual number of elements in the vector which can be accessed.

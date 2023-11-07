@@ -14,7 +14,7 @@
 
 namespace llvm {
 namespace pdb {
-class IPDBLineNumber {
+class LLVM_CLASS_ABI IPDBLineNumber {
 public:
   virtual ~IPDBLineNumber();
 

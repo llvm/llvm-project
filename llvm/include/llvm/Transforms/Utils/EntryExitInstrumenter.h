@@ -22,7 +22,7 @@ namespace llvm {
 
 class Function;
 
-struct EntryExitInstrumenterPass
+struct LLVM_CLASS_ABI EntryExitInstrumenterPass
     : public PassInfoMixin<EntryExitInstrumenterPass> {
   EntryExitInstrumenterPass(bool PostInlining) : PostInlining(PostInlining) {}
 

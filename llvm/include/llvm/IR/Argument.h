@@ -26,7 +26,7 @@ namespace llvm {
 /// for a specific function. When used in the body of said function, the
 /// argument of course represents the value of the actual argument that the
 /// function was called with.
-class Argument final : public Value {
+class LLVM_CLASS_ABI Argument final : public Value {
   Function *Parent;
   unsigned ArgNo;
 

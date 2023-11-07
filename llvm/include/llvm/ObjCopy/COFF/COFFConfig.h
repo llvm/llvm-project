@@ -16,7 +16,7 @@ namespace llvm {
 namespace objcopy {
 
 // Coff specific configuration for copying/stripping a single file.
-struct COFFConfig {
+struct LLVM_CLASS_ABI COFFConfig {
   std::optional<unsigned> Subsystem;
   std::optional<unsigned> MajorSubsystemVersion;
   std::optional<unsigned> MinorSubsystemVersion;

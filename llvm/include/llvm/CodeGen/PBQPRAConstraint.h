@@ -35,7 +35,7 @@ using PBQPRAGraph = PBQP::RegAlloc::PBQPRAGraph;
 
 /// Abstract base for classes implementing PBQP register allocation
 ///        constraints (e.g. Spill-costs, interference, coalescing).
-class PBQPRAConstraint {
+class LLVM_CLASS_ABI PBQPRAConstraint {
 public:
   virtual ~PBQPRAConstraint() = 0;
   virtual void apply(PBQPRAGraph &G) = 0;
@@ -48,7 +48,7 @@ private:
 ///
 ///   Constraints added to this list will be applied, in the order that they are
 /// added, to the PBQP graph.
-class PBQPRAConstraintList : public PBQPRAConstraint {
+class LLVM_CLASS_ABI PBQPRAConstraintList : public PBQPRAConstraint {
 public:
   void apply(PBQPRAGraph &G) override {
     for (auto &C : Constraints)

@@ -25,25 +25,25 @@ class Pass;
 //
 // ObjCARCContract - Late ObjC ARC cleanups.
 //
-Pass *createObjCARCContractPass();
+LLVM_FUNC_ABI Pass *createObjCARCContractPass();
 
-struct ObjCARCOptPass : public PassInfoMixin<ObjCARCOptPass> {
+struct LLVM_CLASS_ABI ObjCARCOptPass : public PassInfoMixin<ObjCARCOptPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct ObjCARCContractPass : public PassInfoMixin<ObjCARCContractPass> {
+struct LLVM_CLASS_ABI ObjCARCContractPass : public PassInfoMixin<ObjCARCContractPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct ObjCARCAPElimPass : public PassInfoMixin<ObjCARCAPElimPass> {
+struct LLVM_CLASS_ABI ObjCARCAPElimPass : public PassInfoMixin<ObjCARCAPElimPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-struct ObjCARCExpandPass : public PassInfoMixin<ObjCARCExpandPass> {
+struct LLVM_CLASS_ABI ObjCARCExpandPass : public PassInfoMixin<ObjCARCExpandPass> {
   PreservedAnalyses run(Function &M, FunctionAnalysisManager &AM);
 };
 
-struct PAEvalPass : public PassInfoMixin<PAEvalPass> {
+struct LLVM_CLASS_ABI PAEvalPass : public PassInfoMixin<PAEvalPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

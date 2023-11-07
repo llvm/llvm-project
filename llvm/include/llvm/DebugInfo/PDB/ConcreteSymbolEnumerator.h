@@ -21,7 +21,7 @@ namespace llvm {
 namespace pdb {
 
 template <typename ChildType>
-class ConcreteSymbolEnumerator : public IPDBEnumChildren<ChildType> {
+class LLVM_CLASS_ABI ConcreteSymbolEnumerator : public IPDBEnumChildren<ChildType> {
 public:
   ConcreteSymbolEnumerator(std::unique_ptr<IPDBEnumSymbols> SymbolEnumerator)
       : Enumerator(std::move(SymbolEnumerator)) {}

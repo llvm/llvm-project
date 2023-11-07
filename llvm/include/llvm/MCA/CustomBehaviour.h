@@ -34,7 +34,7 @@ namespace mca {
 /// A common usage of this class is to add immediate operands to certain
 /// instructions or to remove Defs/Uses from an instruction where the
 /// schedulinng model is incorrect.
-class InstrPostProcess {
+class LLVM_CLASS_ABI InstrPostProcess {
 protected:
   const MCSubtargetInfo &STI;
   const MCInstrInfo &MCII;
@@ -64,7 +64,7 @@ public:
 /// them properly.
 /// If you implement this class for your target, make sure to also implement
 /// a target specific InstrPostProcess class as well.
-class CustomBehaviour {
+class LLVM_CLASS_ABI CustomBehaviour {
 protected:
   const MCSubtargetInfo &STI;
   const mca::SourceMgr &SrcMgr;
@@ -116,7 +116,7 @@ public:
   getEndViews(llvm::MCInstPrinter &IP, llvm::ArrayRef<llvm::MCInst> Insts);
 };
 
-class Instrument {
+class LLVM_CLASS_ABI Instrument {
   /// The description of Instrument kind
   const StringRef Desc;
 
@@ -139,7 +139,7 @@ using UniqueInstrument = std::unique_ptr<Instrument>;
 /// This class allows targets to optionally customize the logic that resolves
 /// scheduling class IDs. Targets can use information encoded in Instrument
 /// objects to make more informed scheduling decisions.
-class InstrumentManager {
+class LLVM_CLASS_ABI InstrumentManager {
 protected:
   const MCSubtargetInfo &STI;
   const MCInstrInfo &MCII;

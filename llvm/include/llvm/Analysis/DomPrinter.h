@@ -23,7 +23,7 @@
 namespace llvm {
 
 template <>
-struct DOTGraphTraits<DomTreeNode *> : public DefaultDOTGraphTraits {
+struct LLVM_CLASS_ABI DOTGraphTraits<DomTreeNode *> : public DefaultDOTGraphTraits {
 
   DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
@@ -42,7 +42,7 @@ struct DOTGraphTraits<DomTreeNode *> : public DefaultDOTGraphTraits {
 };
 
 template <>
-struct DOTGraphTraits<DominatorTree *>
+struct LLVM_CLASS_ABI DOTGraphTraits<DominatorTree *>
     : public DOTGraphTraits<DomTreeNode *> {
 
   DOTGraphTraits(bool isSimple = false)
@@ -59,7 +59,7 @@ struct DOTGraphTraits<DominatorTree *>
 };
 
 template<>
-struct DOTGraphTraits<PostDominatorTree *>
+struct LLVM_CLASS_ABI DOTGraphTraits<PostDominatorTree *>
   : public DOTGraphTraits<DomTreeNode*> {
 
   DOTGraphTraits (bool isSimple=false)
@@ -75,44 +75,44 @@ struct DOTGraphTraits<PostDominatorTree *>
   }
 };
 
-struct DomViewer final : DOTGraphTraitsViewer<DominatorTreeAnalysis, false> {
+struct LLVM_CLASS_ABI DomViewer final : DOTGraphTraitsViewer<DominatorTreeAnalysis, false> {
   DomViewer() : DOTGraphTraitsViewer<DominatorTreeAnalysis, false>("dom") {}
 };
 
-struct DomOnlyViewer final : DOTGraphTraitsViewer<DominatorTreeAnalysis, true> {
+struct LLVM_CLASS_ABI DomOnlyViewer final : DOTGraphTraitsViewer<DominatorTreeAnalysis, true> {
   DomOnlyViewer()
       : DOTGraphTraitsViewer<DominatorTreeAnalysis, true>("domonly") {}
 };
 
-struct PostDomViewer final
+struct LLVM_CLASS_ABI PostDomViewer final
     : DOTGraphTraitsViewer<PostDominatorTreeAnalysis, false> {
   PostDomViewer()
       : DOTGraphTraitsViewer<PostDominatorTreeAnalysis, false>("postdom") {}
 };
 
-struct PostDomOnlyViewer final
+struct LLVM_CLASS_ABI PostDomOnlyViewer final
     : DOTGraphTraitsViewer<PostDominatorTreeAnalysis, true> {
   PostDomOnlyViewer()
       : DOTGraphTraitsViewer<PostDominatorTreeAnalysis, true>("postdomonly") {}
 };
 
-struct DomPrinter final : DOTGraphTraitsPrinter<DominatorTreeAnalysis, false> {
+struct LLVM_CLASS_ABI DomPrinter final : DOTGraphTraitsPrinter<DominatorTreeAnalysis, false> {
   DomPrinter() : DOTGraphTraitsPrinter<DominatorTreeAnalysis, false>("dom") {}
 };
 
-struct DomOnlyPrinter final
+struct LLVM_CLASS_ABI DomOnlyPrinter final
     : DOTGraphTraitsPrinter<DominatorTreeAnalysis, true> {
   DomOnlyPrinter()
       : DOTGraphTraitsPrinter<DominatorTreeAnalysis, true>("domonly") {}
 };
 
-struct PostDomPrinter final
+struct LLVM_CLASS_ABI PostDomPrinter final
     : DOTGraphTraitsPrinter<PostDominatorTreeAnalysis, false> {
   PostDomPrinter()
       : DOTGraphTraitsPrinter<PostDominatorTreeAnalysis, false>("postdom") {}
 };
 
-struct PostDomOnlyPrinter final
+struct LLVM_CLASS_ABI PostDomOnlyPrinter final
     : DOTGraphTraitsPrinter<PostDominatorTreeAnalysis, true> {
   PostDomOnlyPrinter()
       : DOTGraphTraitsPrinter<PostDominatorTreeAnalysis, true>("postdomonly") {}
@@ -121,14 +121,14 @@ struct PostDomOnlyPrinter final
 
 namespace llvm {
   class FunctionPass;
-  FunctionPass *createDomPrinterWrapperPassPass();
-  FunctionPass *createDomOnlyPrinterWrapperPassPass();
-  FunctionPass *createDomViewerWrapperPassPass();
-  FunctionPass *createDomOnlyViewerWrapperPassPass();
-  FunctionPass *createPostDomPrinterWrapperPassPass();
-  FunctionPass *createPostDomOnlyPrinterWrapperPassPass();
-  FunctionPass *createPostDomViewerWrapperPassPass();
-  FunctionPass *createPostDomOnlyViewerWrapperPassPass();
+  LLVM_FUNC_ABI FunctionPass *createDomPrinterWrapperPassPass();
+  LLVM_FUNC_ABI FunctionPass *createDomOnlyPrinterWrapperPassPass();
+  LLVM_FUNC_ABI FunctionPass *createDomViewerWrapperPassPass();
+  LLVM_FUNC_ABI FunctionPass *createDomOnlyViewerWrapperPassPass();
+  LLVM_FUNC_ABI FunctionPass *createPostDomPrinterWrapperPassPass();
+  LLVM_FUNC_ABI FunctionPass *createPostDomOnlyPrinterWrapperPassPass();
+  LLVM_FUNC_ABI FunctionPass *createPostDomViewerWrapperPassPass();
+  LLVM_FUNC_ABI FunctionPass *createPostDomOnlyViewerWrapperPassPass();
 } // End llvm namespace
 
 #endif

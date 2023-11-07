@@ -28,7 +28,7 @@ class Function;
 /// canonicalize things as it goes. It is intended to be fast and catch obvious
 /// cases so that instcombine and other passes are more effective. It is
 /// expected that a later pass of GVN will catch the interesting/hard cases.
-struct EarlyCSEPass : PassInfoMixin<EarlyCSEPass> {
+struct LLVM_CLASS_ABI EarlyCSEPass : PassInfoMixin<EarlyCSEPass> {
   EarlyCSEPass(bool UseMemorySSA = false) : UseMemorySSA(UseMemorySSA) {}
 
   /// Run the pass over the function.

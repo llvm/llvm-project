@@ -26,7 +26,7 @@
 namespace llvm {
 namespace logicalview {
 
-class LVStringPool {
+class LLVM_CLASS_ABI LVStringPool {
   static constexpr size_t BadIndex = std::numeric_limits<size_t>::max();
   using TableType = StringMap<size_t, BumpPtrAllocator>;
   using ValueType = TableType::value_type;

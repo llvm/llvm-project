@@ -30,7 +30,7 @@ namespace offloading {
 /// \param Size The size in bytes of the global (0 for functions).
 /// \param Flags Flags associated with the entry.
 /// \param SectionName The section this entry will be placed at.
-void emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
+LLVM_FUNC_ABI void emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
                          uint64_t Size, int32_t Flags, StringRef SectionName);
 
 } // namespace offloading

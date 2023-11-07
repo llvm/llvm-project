@@ -26,7 +26,7 @@ class MachineInstr;
 struct PerFunctionMIParsingState;
 
 /// MIRFormater - Interface to format MIR operand based on target
-class MIRFormatter {
+class LLVM_CLASS_ABI MIRFormatter {
 public:
   typedef function_ref<bool(StringRef::iterator Loc, const Twine &)>
       ErrorCallbackType;

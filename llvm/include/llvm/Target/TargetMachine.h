@@ -76,7 +76,7 @@ struct MachineFunctionInfo;
 /// machine.  All target-specific information should be accessible through this
 /// interface.
 ///
-class TargetMachine {
+class LLVM_CLASS_ABI TargetMachine {
 protected: // Can only create subclasses.
   TargetMachine(const Target &T, StringRef DataLayoutString,
                 const Triple &TargetTriple, StringRef CPU, StringRef FS,
@@ -421,7 +421,7 @@ public:
 /// This class describes a target machine that is implemented with the LLVM
 /// target-independent code generator.
 ///
-class LLVMTargetMachine : public TargetMachine {
+class LLVM_CLASS_ABI LLVMTargetMachine : public TargetMachine {
 protected: // Can only create subclasses.
   LLVMTargetMachine(const Target &T, StringRef DataLayoutString,
                     const Triple &TT, StringRef CPU, StringRef FS,

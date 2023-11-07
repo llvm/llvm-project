@@ -21,56 +21,56 @@ namespace orc {
 
 // MachO section names.
 
-extern StringRef MachODataCommonSectionName;
-extern StringRef MachODataDataSectionName;
-extern StringRef MachOEHFrameSectionName;
-extern StringRef MachOCompactUnwindInfoSectionName;
-extern StringRef MachOModInitFuncSectionName;
-extern StringRef MachOObjCCatListSectionName;
-extern StringRef MachOObjCCatList2SectionName;
-extern StringRef MachOObjCClassListSectionName;
-extern StringRef MachOObjCClassNameSectionName;
-extern StringRef MachOObjCClassRefsSectionName;
-extern StringRef MachOObjCConstSectionName;
-extern StringRef MachOObjCDataSectionName;
-extern StringRef MachOObjCImageInfoSectionName;
-extern StringRef MachOObjCMethNameSectionName;
-extern StringRef MachOObjCMethTypeSectionName;
-extern StringRef MachOObjCNLCatListSectionName;
-extern StringRef MachOObjCSelRefsSectionName;
-extern StringRef MachOSwift5ProtoSectionName;
-extern StringRef MachOSwift5ProtosSectionName;
-extern StringRef MachOSwift5TypesSectionName;
-extern StringRef MachOSwift5TypeRefSectionName;
-extern StringRef MachOSwift5FieldMetadataSectionName;
-extern StringRef MachOSwift5EntrySectionName;
-extern StringRef MachOThreadBSSSectionName;
-extern StringRef MachOThreadDataSectionName;
-extern StringRef MachOThreadVarsSectionName;
+LLVM_FUNC_ABI extern StringRef MachODataCommonSectionName;
+LLVM_FUNC_ABI extern StringRef MachODataDataSectionName;
+LLVM_FUNC_ABI extern StringRef MachOEHFrameSectionName;
+LLVM_FUNC_ABI extern StringRef MachOCompactUnwindInfoSectionName;
+LLVM_FUNC_ABI extern StringRef MachOModInitFuncSectionName;
+LLVM_FUNC_ABI extern StringRef MachOObjCCatListSectionName;
+LLVM_FUNC_ABI extern StringRef MachOObjCCatList2SectionName;
+LLVM_FUNC_ABI extern StringRef MachOObjCClassListSectionName;
+LLVM_FUNC_ABI extern StringRef MachOObjCClassNameSectionName;
+LLVM_FUNC_ABI extern StringRef MachOObjCClassRefsSectionName;
+LLVM_FUNC_ABI extern StringRef MachOObjCConstSectionName;
+LLVM_FUNC_ABI extern StringRef MachOObjCDataSectionName;
+LLVM_FUNC_ABI extern StringRef MachOObjCImageInfoSectionName;
+LLVM_FUNC_ABI extern StringRef MachOObjCMethNameSectionName;
+LLVM_FUNC_ABI extern StringRef MachOObjCMethTypeSectionName;
+LLVM_FUNC_ABI extern StringRef MachOObjCNLCatListSectionName;
+LLVM_FUNC_ABI extern StringRef MachOObjCSelRefsSectionName;
+LLVM_FUNC_ABI extern StringRef MachOSwift5ProtoSectionName;
+LLVM_FUNC_ABI extern StringRef MachOSwift5ProtosSectionName;
+LLVM_FUNC_ABI extern StringRef MachOSwift5TypesSectionName;
+LLVM_FUNC_ABI extern StringRef MachOSwift5TypeRefSectionName;
+LLVM_FUNC_ABI extern StringRef MachOSwift5FieldMetadataSectionName;
+LLVM_FUNC_ABI extern StringRef MachOSwift5EntrySectionName;
+LLVM_FUNC_ABI extern StringRef MachOThreadBSSSectionName;
+LLVM_FUNC_ABI extern StringRef MachOThreadDataSectionName;
+LLVM_FUNC_ABI extern StringRef MachOThreadVarsSectionName;
 
-extern StringRef MachOInitSectionNames[19];
+LLVM_FUNC_ABI extern StringRef MachOInitSectionNames[19];
 
 // ELF section names.
-extern StringRef ELFEHFrameSectionName;
+LLVM_FUNC_ABI extern StringRef ELFEHFrameSectionName;
 
-extern StringRef ELFInitArrayFuncSectionName;
-extern StringRef ELFInitFuncSectionName;
-extern StringRef ELFFiniArrayFuncSectionName;
-extern StringRef ELFFiniFuncSectionName;
-extern StringRef ELFCtorArrayFuncSectionName;
-extern StringRef ELFDtorArrayFuncSectionName;
+LLVM_FUNC_ABI extern StringRef ELFInitArrayFuncSectionName;
+LLVM_FUNC_ABI extern StringRef ELFInitFuncSectionName;
+LLVM_FUNC_ABI extern StringRef ELFFiniArrayFuncSectionName;
+LLVM_FUNC_ABI extern StringRef ELFFiniFuncSectionName;
+LLVM_FUNC_ABI extern StringRef ELFCtorArrayFuncSectionName;
+LLVM_FUNC_ABI extern StringRef ELFDtorArrayFuncSectionName;
 
-extern StringRef ELFInitSectionNames[3];
+LLVM_FUNC_ABI extern StringRef ELFInitSectionNames[3];
 
-extern StringRef ELFThreadBSSSectionName;
-extern StringRef ELFThreadDataSectionName;
+LLVM_FUNC_ABI extern StringRef ELFThreadBSSSectionName;
+LLVM_FUNC_ABI extern StringRef ELFThreadDataSectionName;
 
-bool isMachOInitializerSection(StringRef SegName, StringRef SecName);
-bool isMachOInitializerSection(StringRef QualifiedName);
+LLVM_FUNC_ABI bool isMachOInitializerSection(StringRef SegName, StringRef SecName);
+LLVM_FUNC_ABI bool isMachOInitializerSection(StringRef QualifiedName);
 
-bool isELFInitializerSection(StringRef SecName);
+LLVM_FUNC_ABI bool isELFInitializerSection(StringRef SecName);
 
-bool isCOFFInitializerSection(StringRef Name);
+LLVM_FUNC_ABI bool isCOFFInitializerSection(StringRef Name);
 
 } // end namespace orc
 } // end namespace llvm

@@ -64,7 +64,7 @@ class StringRef;
 
 /// This class manages callbacks registration, as well as provides a way for
 /// PassInstrumentation to pass control to the registered callbacks.
-class PassInstrumentationCallbacks {
+class LLVM_CLASS_ABI PassInstrumentationCallbacks {
 public:
   // Before/After callbacks accept IRUnits whenever appropriate, so they need
   // to take them as constant pointers, wrapped with llvm::Any.
@@ -190,7 +190,7 @@ private:
 
 /// This class provides instrumentation entry points for the Pass Manager,
 /// doing calls to callbacks registered in PassInstrumentationCallbacks.
-class PassInstrumentation {
+class LLVM_CLASS_ABI PassInstrumentation {
   PassInstrumentationCallbacks *Callbacks;
 
   // Template argument PassT of PassInstrumentation::runBeforePass could be two
@@ -328,7 +328,7 @@ public:
   }
 };
 
-bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials);
+LLVM_FUNC_ABI bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials);
 
 } // namespace llvm
 

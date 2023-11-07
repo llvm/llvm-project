@@ -35,17 +35,17 @@ using LVSortFunction = LVSortValue (*)(const LVObject *LHS,
                                        const LVObject *RHS);
 
 // Get the comparator function, based on the command line options.
-LVSortFunction getSortFunction();
+LLVM_FUNC_ABI LVSortFunction getSortFunction();
 
 // Comparator functions that can be used for sorting.
-LVSortValue compareKind(const LVObject *LHS, const LVObject *RHS);
-LVSortValue compareLine(const LVObject *LHS, const LVObject *RHS);
-LVSortValue compareName(const LVObject *LHS, const LVObject *RHS);
-LVSortValue compareOffset(const LVObject *LHS, const LVObject *RHS);
-LVSortValue compareRange(const LVObject *LHS, const LVObject *RHS);
-LVSortValue sortByKind(const LVObject *LHS, const LVObject *RHS);
-LVSortValue sortByLine(const LVObject *LHS, const LVObject *RHS);
-LVSortValue sortByName(const LVObject *LHS, const LVObject *RHS);
+LLVM_FUNC_ABI LVSortValue compareKind(const LVObject *LHS, const LVObject *RHS);
+LLVM_FUNC_ABI LVSortValue compareLine(const LVObject *LHS, const LVObject *RHS);
+LLVM_FUNC_ABI LVSortValue compareName(const LVObject *LHS, const LVObject *RHS);
+LLVM_FUNC_ABI LVSortValue compareOffset(const LVObject *LHS, const LVObject *RHS);
+LLVM_FUNC_ABI LVSortValue compareRange(const LVObject *LHS, const LVObject *RHS);
+LLVM_FUNC_ABI LVSortValue sortByKind(const LVObject *LHS, const LVObject *RHS);
+LLVM_FUNC_ABI LVSortValue sortByLine(const LVObject *LHS, const LVObject *RHS);
+LLVM_FUNC_ABI LVSortValue sortByName(const LVObject *LHS, const LVObject *RHS);
 
 } // end namespace logicalview
 } // end namespace llvm

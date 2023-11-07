@@ -79,7 +79,7 @@ namespace llvm {
   /// so we provide two additional methods (and accompanying operator+
   /// overloads) to guarantee that particularly important cases (cstring plus
   /// StringRef) codegen as desired.
-  class Twine {
+  class LLVM_CLASS_ABI Twine {
     /// NodeKind - Represent the type of an argument.
     enum NodeKind : unsigned char {
       /// An empty string; the result of concatenating anything with it is also

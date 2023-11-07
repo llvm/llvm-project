@@ -71,7 +71,7 @@ class GVNLegacyPass;
 ///      None - relying on a global default.
 /// Intended use is to create a default object, modify parameters with
 /// additional setters and then pass it to GVN.
-struct GVNOptions {
+struct LLVM_CLASS_ABI GVNOptions {
   std::optional<bool> AllowPRE;
   std::optional<bool> AllowLoadPRE;
   std::optional<bool> AllowLoadInLoopPRE;
@@ -114,7 +114,7 @@ struct GVNOptions {
 ///
 /// FIXME: We should have a good summary of the GVN algorithm implemented by
 /// this particular pass here.
-class GVNPass : public PassInfoMixin<GVNPass> {
+class LLVM_CLASS_ABI GVNPass : public PassInfoMixin<GVNPass> {
   GVNOptions Options;
 
 public:
@@ -376,18 +376,18 @@ private:
 
 /// Create a legacy GVN pass. This also allows parameterizing whether or not
 /// MemDep is enabled.
-FunctionPass *createGVNPass(bool NoMemDepAnalysis = false);
+LLVM_FUNC_ABI FunctionPass *createGVNPass(bool NoMemDepAnalysis = false);
 
 /// A simple and fast domtree-based GVN pass to hoist common expressions
 /// from sibling branches.
-struct GVNHoistPass : PassInfoMixin<GVNHoistPass> {
+struct LLVM_CLASS_ABI GVNHoistPass : PassInfoMixin<GVNHoistPass> {
   /// Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Uses an "inverted" value numbering to decide the similarity of
 /// expressions and sinks similar expressions into successors.
-struct GVNSinkPass : PassInfoMixin<GVNSinkPass> {
+struct LLVM_CLASS_ABI GVNSinkPass : PassInfoMixin<GVNSinkPass> {
   /// Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

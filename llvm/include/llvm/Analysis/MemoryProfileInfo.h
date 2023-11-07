@@ -24,31 +24,31 @@ namespace llvm {
 namespace memprof {
 
 /// Return the allocation type for a given set of memory profile values.
-AllocationType getAllocType(uint64_t TotalLifetimeAccessDensity,
+LLVM_FUNC_ABI AllocationType getAllocType(uint64_t TotalLifetimeAccessDensity,
                             uint64_t AllocCount, uint64_t TotalLifetime);
 
 /// Build callstack metadata from the provided list of call stack ids. Returns
 /// the resulting metadata node.
-MDNode *buildCallstackMetadata(ArrayRef<uint64_t> CallStack, LLVMContext &Ctx);
+LLVM_FUNC_ABI MDNode *buildCallstackMetadata(ArrayRef<uint64_t> CallStack, LLVMContext &Ctx);
 
 /// Returns the stack node from an MIB metadata node.
-MDNode *getMIBStackNode(const MDNode *MIB);
+LLVM_FUNC_ABI MDNode *getMIBStackNode(const MDNode *MIB);
 
 /// Returns the allocation type from an MIB metadata node.
-AllocationType getMIBAllocType(const MDNode *MIB);
+LLVM_FUNC_ABI AllocationType getMIBAllocType(const MDNode *MIB);
 
 /// Returns the string to use in attributes with the given type.
-std::string getAllocTypeAttributeString(AllocationType Type);
+LLVM_FUNC_ABI std::string getAllocTypeAttributeString(AllocationType Type);
 
 /// True if the AllocTypes bitmask contains just a single type.
-bool hasSingleAllocType(uint8_t AllocTypes);
+LLVM_FUNC_ABI bool hasSingleAllocType(uint8_t AllocTypes);
 
 /// Class to build a trie of call stack contexts for a particular profiled
 /// allocation call, along with their associated allocation types.
 /// The allocation will be at the root of the trie, which is then used to
 /// compute the minimum lists of context ids needed to associate a call context
 /// with a single allocation type.
-class CallStackTrie {
+class LLVM_CLASS_ABI CallStackTrie {
 private:
   struct CallStackTrieNode {
     // Allocation types for call context sharing the context prefix at this
@@ -111,7 +111,7 @@ public:
 /// (CallsiteInfo and MIBInfo). This simplifies implementation of client code
 /// which doesn't need to worry about whether we are operating with IR (Regular
 /// LTO), or summary (ThinLTO).
-template <class NodeT, class IteratorT> class CallStack {
+template <class NodeT, class IteratorT> class LLVM_CLASS_ABI CallStack {
 public:
   CallStack(const NodeT *N = nullptr) : N(N) {}
 

@@ -15,7 +15,7 @@ namespace llvm {
 namespace objcopy {
 
 // Wasm specific configuration for copying/stripping a single file.
-struct WasmConfig {};
+struct LLVM_CLASS_ABI WasmConfig {};
 
 } // namespace objcopy
 } // namespace llvm

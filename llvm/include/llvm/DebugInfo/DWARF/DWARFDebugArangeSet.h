@@ -21,7 +21,7 @@ namespace llvm {
 class raw_ostream;
 class DWARFDataExtractor;
 
-class DWARFDebugArangeSet {
+class LLVM_CLASS_ABI DWARFDebugArangeSet {
 public:
   struct Header {
     /// The total length of the entries for that set, not including the length

@@ -68,7 +68,7 @@ inline raw_ostream &operator << (raw_ostream &OS, RoundingMode RM) {
 
 /// Represent subnormal handling kind for floating point instruction inputs and
 /// outputs.
-struct DenormalMode {
+struct LLVM_CLASS_ABI DenormalMode {
   /// Represent handled modes for denormal (aka subnormal) modes in the floating
   /// point environment.
   enum DenormalModeKind : int8_t {
@@ -268,17 +268,17 @@ enum FPClassTest : unsigned {
 LLVM_DECLARE_ENUM_AS_BITMASK(FPClassTest, /* LargestValue */ fcPosInf);
 
 /// Return the test mask which returns true if the value's sign bit is flipped.
-FPClassTest fneg(FPClassTest Mask);
+LLVM_FUNC_ABI FPClassTest fneg(FPClassTest Mask);
 
 /// Return the test mask which returns true after fabs is applied to the value.
-FPClassTest inverse_fabs(FPClassTest Mask);
+LLVM_FUNC_ABI FPClassTest inverse_fabs(FPClassTest Mask);
 
 /// Return the test mask which returns true if the value could have the same set
 /// of classes, but with a different sign.
-FPClassTest unknown_sign(FPClassTest Mask);
+LLVM_FUNC_ABI FPClassTest unknown_sign(FPClassTest Mask);
 
 /// Write a human readable form of \p Mask to \p OS
-raw_ostream &operator<<(raw_ostream &OS, FPClassTest Mask);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, FPClassTest Mask);
 
 } // namespace llvm
 

@@ -26,7 +26,7 @@ class MemoryBuffer;
 /// able to return an instance of this base class from the stream callback, but
 /// if a client needs to perform some action after the stream is written to,
 /// that can be done by deriving from this class and overriding the destructor.
-class CachedFileStream {
+class LLVM_CLASS_ABI CachedFileStream {
 public:
   CachedFileStream(std::unique_ptr<raw_pwrite_stream> OS,
                    std::string OSPath = "")
@@ -70,7 +70,7 @@ using AddBufferFn = std::function<void(unsigned Task, const Twine &ModuleName,
 /// done lazily the first time a file is added.  The cache name appears in error
 /// messages for errors during caching. The temporary file prefix is used in the
 /// temporary file naming scheme used when writing files atomically.
-Expected<FileCache> localCache(
+LLVM_FUNC_ABI Expected<FileCache> localCache(
     const Twine &CacheNameRef, const Twine &TempFilePrefixRef,
     const Twine &CacheDirectoryPathRef,
     AddBufferFn AddBuffer = [](size_t Task, const Twine &ModuleName,

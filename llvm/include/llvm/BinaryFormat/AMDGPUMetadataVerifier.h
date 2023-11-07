@@ -42,7 +42,7 @@ namespace V3 {
 /// In strict mode, metadata must already be well-typed.
 ///
 /// In non-strict mode, metadata is coerced into expected types when possible.
-class MetadataVerifier {
+class LLVM_CLASS_ABI MetadataVerifier {
   bool Strict;
 
   bool verifyScalar(msgpack::DocNode &Node, msgpack::Type SKind,

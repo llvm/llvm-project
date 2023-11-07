@@ -31,7 +31,7 @@ namespace llvm {
   /// Extended Value Type. Capable of holding value types which are not native
   /// for any processor (such as the i12345 type), as well as the types an MVT
   /// can represent.
-  struct EVT {
+  struct LLVM_CLASS_ABI EVT {
   private:
     MVT V = MVT::INVALID_SIMPLE_VALUE_TYPE;
     Type *LLVMTy = nullptr;

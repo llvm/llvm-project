@@ -27,7 +27,7 @@ namespace llvm {
 /// null-terminated strings, integers in various flavors of endianness, etc.
 /// Can be subclassed to provide reading of custom datatypes, although no
 /// are overridable.
-class BinaryStreamReader {
+class LLVM_CLASS_ABI BinaryStreamReader {
 public:
   BinaryStreamReader() = default;
   explicit BinaryStreamReader(BinaryStreamRef Ref);

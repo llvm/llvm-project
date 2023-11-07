@@ -29,7 +29,7 @@
 namespace llvm {
 
 template <typename T, typename ToIndexT = identity<unsigned>>
-  class IndexedMap {
+  class LLVM_CLASS_ABI IndexedMap {
     using IndexT = typename ToIndexT::argument_type;
     // Prefer SmallVector with zero inline storage over std::vector. IndexedMaps
     // can grow very large and SmallVector grows more efficiently as long as T

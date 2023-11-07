@@ -19,7 +19,7 @@ namespace gsym {
 
 /// String tables in GSYM files are required to start with an empty
 /// string at offset zero. Strings must be UTF8 NULL terminated strings.
-struct StringTable {
+struct LLVM_CLASS_ABI StringTable {
   StringRef Data;
   StringTable() = default;
   StringTable(StringRef D) : Data(D) {}

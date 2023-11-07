@@ -47,7 +47,7 @@ typedef struct LLVMOpaquePassBuilderOptions *LLVMPassBuilderOptionsRef;
  * pipelines may also be invoked using `default<O3>` and friends. See opt for
  * full reference of the Passes format.
  */
-LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
+LLVM_FUNC_ABI LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
                            LLVMTargetMachineRef TM,
                            LLVMPassBuilderOptionsRef Options);
 
@@ -58,55 +58,55 @@ LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
  * responsible for it. The client should call LLVMDisposePassBuilderOptions
  * to free the pass builder options.
  */
-LLVMPassBuilderOptionsRef LLVMCreatePassBuilderOptions(void);
+LLVM_FUNC_ABI LLVMPassBuilderOptionsRef LLVMCreatePassBuilderOptions(void);
 
 /**
  * Toggle adding the VerifierPass for the PassBuilder, ensuring all functions
  * inside the module is valid.
  */
-void LLVMPassBuilderOptionsSetVerifyEach(LLVMPassBuilderOptionsRef Options,
+LLVM_FUNC_ABI void LLVMPassBuilderOptionsSetVerifyEach(LLVMPassBuilderOptionsRef Options,
                                          LLVMBool VerifyEach);
 
 /**
  * Toggle debug logging when running the PassBuilder
  */
-void LLVMPassBuilderOptionsSetDebugLogging(LLVMPassBuilderOptionsRef Options,
+LLVM_FUNC_ABI void LLVMPassBuilderOptionsSetDebugLogging(LLVMPassBuilderOptionsRef Options,
                                            LLVMBool DebugLogging);
 
-void LLVMPassBuilderOptionsSetLoopInterleaving(
+LLVM_FUNC_ABI void LLVMPassBuilderOptionsSetLoopInterleaving(
     LLVMPassBuilderOptionsRef Options, LLVMBool LoopInterleaving);
 
-void LLVMPassBuilderOptionsSetLoopVectorization(
+LLVM_FUNC_ABI void LLVMPassBuilderOptionsSetLoopVectorization(
     LLVMPassBuilderOptionsRef Options, LLVMBool LoopVectorization);
 
-void LLVMPassBuilderOptionsSetSLPVectorization(
+LLVM_FUNC_ABI void LLVMPassBuilderOptionsSetSLPVectorization(
     LLVMPassBuilderOptionsRef Options, LLVMBool SLPVectorization);
 
-void LLVMPassBuilderOptionsSetLoopUnrolling(LLVMPassBuilderOptionsRef Options,
+LLVM_FUNC_ABI void LLVMPassBuilderOptionsSetLoopUnrolling(LLVMPassBuilderOptionsRef Options,
                                             LLVMBool LoopUnrolling);
 
-void LLVMPassBuilderOptionsSetForgetAllSCEVInLoopUnroll(
+LLVM_FUNC_ABI void LLVMPassBuilderOptionsSetForgetAllSCEVInLoopUnroll(
     LLVMPassBuilderOptionsRef Options, LLVMBool ForgetAllSCEVInLoopUnroll);
 
-void LLVMPassBuilderOptionsSetLicmMssaOptCap(LLVMPassBuilderOptionsRef Options,
+LLVM_FUNC_ABI void LLVMPassBuilderOptionsSetLicmMssaOptCap(LLVMPassBuilderOptionsRef Options,
                                              unsigned LicmMssaOptCap);
 
-void LLVMPassBuilderOptionsSetLicmMssaNoAccForPromotionCap(
+LLVM_FUNC_ABI void LLVMPassBuilderOptionsSetLicmMssaNoAccForPromotionCap(
     LLVMPassBuilderOptionsRef Options, unsigned LicmMssaNoAccForPromotionCap);
 
-void LLVMPassBuilderOptionsSetCallGraphProfile(
+LLVM_FUNC_ABI void LLVMPassBuilderOptionsSetCallGraphProfile(
     LLVMPassBuilderOptionsRef Options, LLVMBool CallGraphProfile);
 
-void LLVMPassBuilderOptionsSetMergeFunctions(LLVMPassBuilderOptionsRef Options,
+LLVM_FUNC_ABI void LLVMPassBuilderOptionsSetMergeFunctions(LLVMPassBuilderOptionsRef Options,
                                              LLVMBool MergeFunctions);
 
-void LLVMPassBuilderOptionsSetInlinerThreshold(
+LLVM_FUNC_ABI void LLVMPassBuilderOptionsSetInlinerThreshold(
     LLVMPassBuilderOptionsRef Options, int Threshold);
 
 /**
  * Dispose of a heap-allocated PassBuilderOptions instance
  */
-void LLVMDisposePassBuilderOptions(LLVMPassBuilderOptionsRef Options);
+LLVM_FUNC_ABI void LLVMDisposePassBuilderOptions(LLVMPassBuilderOptionsRef Options);
 
 /**
  * @}

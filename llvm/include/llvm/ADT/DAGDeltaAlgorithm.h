@@ -36,7 +36,7 @@ namespace llvm {
 /// substantially fewer tests with appropriate dependencies. \see DeltaAlgorithm
 /// for more information on the properties which the predicate function itself
 /// should satisfy.
-class DAGDeltaAlgorithm {
+class LLVM_CLASS_ABI DAGDeltaAlgorithm {
   virtual void anchor();
 
 public:

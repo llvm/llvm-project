@@ -562,7 +562,7 @@ SaturatingMultiplyAdd(T X, T Y, T A, bool *ResultOverflowed = nullptr) {
 }
 
 /// Use this rather than HUGE_VALF; the latter causes warnings on MSVC.
-extern const float huge_valf;
+LLVM_FUNC_ABI extern const float huge_valf;
 
 
 /// Add two signed integers, computing the two's complement truncated result,

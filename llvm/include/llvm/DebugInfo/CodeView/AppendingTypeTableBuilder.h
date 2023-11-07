@@ -24,7 +24,7 @@ namespace codeview {
 
 class ContinuationRecordBuilder;
 
-class AppendingTypeTableBuilder : public TypeCollection {
+class LLVM_CLASS_ABI AppendingTypeTableBuilder : public TypeCollection {
 
   BumpPtrAllocator &RecordStorage;
   SimpleTypeSerializer SimpleSerializer;

@@ -350,7 +350,7 @@ enum EdgeKind_aarch64 : Edge::Kind {
 
 /// Returns a string name for the given aarch64 edge. For debugging purposes
 /// only
-const char *getEdgeKindName(Edge::Kind K);
+LLVM_FUNC_ABI const char *getEdgeKindName(Edge::Kind K);
 
 // Returns whether the Instr is LD/ST (imm12)
 inline bool isLoadStoreImm12(uint32_t Instr) {
@@ -607,7 +607,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
 constexpr uint64_t PointerSize = 8;
 
 /// AArch64 null pointer content.
-extern const char NullPointerContent[PointerSize];
+LLVM_FUNC_ABI extern const char NullPointerContent[PointerSize];
 
 /// AArch64 pointer jump stub content.
 ///
@@ -616,7 +616,7 @@ extern const char NullPointerContent[PointerSize];
 ///   ADRP x16, ptr@page21
 ///   LDR  x16, [x16, ptr@pageoff12]
 ///   BR   x16
-extern const char PointerJumpStubContent[12];
+LLVM_FUNC_ABI extern const char PointerJumpStubContent[12];
 
 /// Creates a new pointer block in the given section and returns an
 /// Anonymous symobl pointing to it.
@@ -666,7 +666,7 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
 }
 
 /// Global Offset Table Builder.
-class GOTTableManager : public TableManager<GOTTableManager> {
+class LLVM_CLASS_ABI GOTTableManager : public TableManager<GOTTableManager> {
 public:
   static StringRef getSectionName() { return "$__GOT"; }
 
@@ -727,7 +727,7 @@ private:
 };
 
 /// Procedure Linkage Table Builder.
-class PLTTableManager : public TableManager<PLTTableManager> {
+class LLVM_CLASS_ABI PLTTableManager : public TableManager<PLTTableManager> {
 public:
   PLTTableManager(GOTTableManager &GOT) : GOT(GOT) {}
 

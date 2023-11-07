@@ -20,7 +20,7 @@
 namespace llvm {
 
 // Traits for using WasmSignature in a DenseMap.
-template <> struct DenseMapInfo<wasm::WasmSignature, void> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<wasm::WasmSignature, void> {
   static wasm::WasmSignature getEmptyKey() {
     wasm::WasmSignature Sig;
     Sig.State = wasm::WasmSignature::Empty;
@@ -46,7 +46,7 @@ template <> struct DenseMapInfo<wasm::WasmSignature, void> {
 };
 
 // Traits for using WasmGlobalType in a DenseMap
-template <> struct DenseMapInfo<wasm::WasmGlobalType, void> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<wasm::WasmGlobalType, void> {
   static wasm::WasmGlobalType getEmptyKey() {
     return wasm::WasmGlobalType{1, true};
   }
@@ -63,7 +63,7 @@ template <> struct DenseMapInfo<wasm::WasmGlobalType, void> {
 };
 
 // Traits for using WasmLimits in a DenseMap
-template <> struct DenseMapInfo<wasm::WasmLimits, void> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<wasm::WasmLimits, void> {
   static wasm::WasmLimits getEmptyKey() {
     return wasm::WasmLimits{0xff, 0xff, 0xff};
   }
@@ -85,7 +85,7 @@ template <> struct DenseMapInfo<wasm::WasmLimits, void> {
 };
 
 // Traits for using WasmTableType in a DenseMap
-template <> struct DenseMapInfo<wasm::WasmTableType, void> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<wasm::WasmTableType, void> {
   static wasm::WasmTableType getEmptyKey() {
     return wasm::WasmTableType{
         0, DenseMapInfo<wasm::WasmLimits, void>::getEmptyKey()};

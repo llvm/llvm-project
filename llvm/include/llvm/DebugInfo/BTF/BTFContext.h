@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-class BTFContext final : public DIContext {
+class LLVM_CLASS_ABI BTFContext final : public DIContext {
   BTFParser BTF;
 
 public:

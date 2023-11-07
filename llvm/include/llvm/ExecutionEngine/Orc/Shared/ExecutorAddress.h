@@ -29,7 +29,7 @@ namespace orc {
 using ExecutorAddrDiff = uint64_t;
 
 /// Represents an address in the executor process.
-class ExecutorAddr {
+class LLVM_CLASS_ABI ExecutorAddr {
 public:
   /// A wrap/unwrap function that leaves pointers unmodified.
   template <typename T> using rawPtr = llvm::identity<T *>;
@@ -189,7 +189,7 @@ inline ExecutorAddrDiff operator%(const ExecutorAddr &LHS,
 }
 
 /// Represents an address range in the exceutor process.
-struct ExecutorAddrRange {
+struct LLVM_CLASS_ABI ExecutorAddrRange {
   ExecutorAddrRange() = default;
   ExecutorAddrRange(ExecutorAddr Start, ExecutorAddr End)
       : Start(Start), End(End) {}
@@ -247,10 +247,10 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ExecutorAddrRange &R) {
 
 namespace shared {
 
-class SPSExecutorAddr {};
+class LLVM_CLASS_ABI SPSExecutorAddr {};
 
 /// SPS serializatior for ExecutorAddr.
-template <> class SPSSerializationTraits<SPSExecutorAddr, ExecutorAddr> {
+template <> class LLVM_CLASS_ABI SPSSerializationTraits<SPSExecutorAddr, ExecutorAddr> {
 public:
   static size_t size(const ExecutorAddr &EA) {
     return SPSArgList<uint64_t>::size(EA.getValue());
@@ -273,7 +273,7 @@ using SPSExecutorAddrRange = SPSTuple<SPSExecutorAddr, SPSExecutorAddr>;
 
 /// Serialization traits for address ranges.
 template <>
-class SPSSerializationTraits<SPSExecutorAddrRange, ExecutorAddrRange> {
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSExecutorAddrRange, ExecutorAddrRange> {
 public:
   static size_t size(const ExecutorAddrRange &Value) {
     return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::size(Value.Start,
@@ -297,7 +297,7 @@ using SPSExecutorAddrRangeSequence = SPSSequence<SPSExecutorAddrRange>;
 } // End namespace orc.
 
 // Provide DenseMapInfo for ExecutorAddrs.
-template <> struct DenseMapInfo<orc::ExecutorAddr> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<orc::ExecutorAddr> {
   static inline orc::ExecutorAddr getEmptyKey() {
     return orc::ExecutorAddr(DenseMapInfo<uint64_t>::getEmptyKey());
   }

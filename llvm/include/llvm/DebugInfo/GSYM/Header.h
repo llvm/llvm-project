@@ -43,7 +43,7 @@ constexpr size_t GSYM_MAX_UUID_SIZE = 20;
 /// of the file (stand alone GSYM file) or section data (GSYM in a section).
 /// When endianness is swapped, the Header::decode() function should be used to
 /// decode the header.
-struct Header {
+struct LLVM_CLASS_ABI Header {
   /// The magic bytes should be set to GSYM_MAGIC. This helps detect if a file
   /// is a GSYM file by scanning the first 4 bytes of a file or section.
   /// This value might appear byte swapped
@@ -121,8 +121,8 @@ struct Header {
   llvm::Error encode(FileWriter &O) const;
 };
 
-bool operator==(const Header &LHS, const Header &RHS);
-raw_ostream &operator<<(raw_ostream &OS, const llvm::gsym::Header &H);
+LLVM_FUNC_ABI bool operator==(const Header &LHS, const Header &RHS);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const llvm::gsym::Header &H);
 
 } // namespace gsym
 } // namespace llvm

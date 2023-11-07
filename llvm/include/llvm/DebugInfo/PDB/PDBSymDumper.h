@@ -17,7 +17,7 @@ namespace llvm {
 class raw_ostream;
 namespace pdb {
 
-class PDBSymDumper {
+class LLVM_CLASS_ABI PDBSymDumper {
 public:
   PDBSymDumper(bool ShouldRequireImpl);
   virtual ~PDBSymDumper();

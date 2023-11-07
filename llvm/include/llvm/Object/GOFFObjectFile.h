@@ -29,7 +29,7 @@ namespace llvm {
 
 namespace object {
 
-class GOFFObjectFile : public ObjectFile {
+class LLVM_CLASS_ABI GOFFObjectFile : public ObjectFile {
   IndexedMap<const uint8_t *> EsdPtrs; // Indexed by EsdId.
 
   mutable DenseMap<uint32_t, std::pair<size_t, std::unique_ptr<char[]>>>

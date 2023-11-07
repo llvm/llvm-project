@@ -37,21 +37,21 @@ namespace llvm {
 /// This struct is a compact representation of a valid (non-zero power of two)
 /// alignment.
 /// It is suitable for use as static global constants.
-struct Align {
+struct LLVM_CLASS_ABI Align {
 private:
   uint8_t ShiftValue = 0; /// The log2 of the required alignment.
                           /// ShiftValue is less than 64 by construction.
 
   friend struct MaybeAlign;
-  friend unsigned Log2(Align);
-  friend bool operator==(Align Lhs, Align Rhs);
-  friend bool operator!=(Align Lhs, Align Rhs);
-  friend bool operator<=(Align Lhs, Align Rhs);
-  friend bool operator>=(Align Lhs, Align Rhs);
-  friend bool operator<(Align Lhs, Align Rhs);
-  friend bool operator>(Align Lhs, Align Rhs);
-  friend unsigned encode(struct MaybeAlign A);
-  friend struct MaybeAlign decodeMaybeAlign(unsigned Value);
+  friend LLVM_FUNC_ABI unsigned Log2(Align);
+  friend LLVM_FUNC_ABI bool operator==(Align Lhs, Align Rhs);
+  friend LLVM_FUNC_ABI bool operator!=(Align Lhs, Align Rhs);
+  friend LLVM_FUNC_ABI bool operator<=(Align Lhs, Align Rhs);
+  friend LLVM_FUNC_ABI bool operator>=(Align Lhs, Align Rhs);
+  friend LLVM_FUNC_ABI bool operator<(Align Lhs, Align Rhs);
+  friend LLVM_FUNC_ABI bool operator>(Align Lhs, Align Rhs);
+  friend LLVM_FUNC_ABI unsigned encode(struct MaybeAlign A);
+  friend LLVM_FUNC_ABI struct MaybeAlign decodeMaybeAlign(unsigned Value);
 
   /// A trivial type to allow construction of constexpr Align.
   /// This is currently needed to workaround a bug in GCC 5.3 which prevents
@@ -115,7 +115,7 @@ inline Align assumeAligned(uint64_t Value) {
 
 /// This struct is a compact representation of a valid (power of two) or
 /// undefined (0) alignment.
-struct MaybeAlign : public std::optional<Align> {
+struct LLVM_CLASS_ABI MaybeAlign : public std::optional<Align> {
 private:
   using UP = std::optional<Align>;
 

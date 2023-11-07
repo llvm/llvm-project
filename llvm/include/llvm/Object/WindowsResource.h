@@ -58,14 +58,14 @@ const uint32_t WIN_RES_HEADER_ALIGNMENT = 4;
 const uint32_t WIN_RES_DATA_ALIGNMENT = 4;
 const uint16_t WIN_RES_PURE_MOVEABLE = 0x0030;
 
-struct WinResHeaderPrefix {
+struct LLVM_CLASS_ABI WinResHeaderPrefix {
   support::ulittle32_t DataSize;
   support::ulittle32_t HeaderSize;
 };
 
 // Type and Name may each either be an integer ID or a string.  This struct is
 // only used in the case where they are both IDs.
-struct WinResIDs {
+struct LLVM_CLASS_ABI WinResIDs {
   uint16_t TypeFlag;
   support::ulittle16_t TypeID;
   uint16_t NameFlag;
@@ -82,7 +82,7 @@ struct WinResIDs {
   }
 };
 
-struct WinResHeaderSuffix {
+struct LLVM_CLASS_ABI WinResHeaderSuffix {
   support::ulittle32_t DataVersion;
   support::ulittle16_t MemoryFlags;
   support::ulittle16_t Language;
@@ -90,13 +90,13 @@ struct WinResHeaderSuffix {
   support::ulittle32_t Characteristics;
 };
 
-class EmptyResError : public GenericBinaryError {
+class LLVM_CLASS_ABI EmptyResError : public GenericBinaryError {
 public:
   EmptyResError(Twine Msg, object_error ECOverride)
       : GenericBinaryError(Msg, ECOverride) {}
 };
 
-class ResourceEntryRef {
+class LLVM_CLASS_ABI ResourceEntryRef {
 public:
   Error moveNext(bool &End);
   bool checkTypeString() const { return IsStringType; }
@@ -134,7 +134,7 @@ private:
   ArrayRef<uint8_t> Data;
 };
 
-class WindowsResource : public Binary {
+class LLVM_CLASS_ABI WindowsResource : public Binary {
 public:
   Expected<ResourceEntryRef> getHeadEntry();
 
@@ -151,7 +151,7 @@ private:
   BinaryByteStream BBS;
 };
 
-class WindowsResourceParser {
+class LLVM_CLASS_ABI WindowsResourceParser {
 public:
   class TreeNode;
   WindowsResourceParser(bool MinGW = false);
@@ -258,12 +258,12 @@ private:
   bool MinGW;
 };
 
-Expected<std::unique_ptr<MemoryBuffer>>
+LLVM_FUNC_ABI Expected<std::unique_ptr<MemoryBuffer>>
 writeWindowsResourceCOFF(llvm::COFF::MachineTypes MachineType,
                          const WindowsResourceParser &Parser,
                          uint32_t TimeDateStamp);
 
-void printResourceTypeName(uint16_t TypeID, raw_ostream &OS);
+LLVM_FUNC_ABI void printResourceTypeName(uint16_t TypeID, raw_ostream &OS);
 } // namespace object
 } // namespace llvm
 

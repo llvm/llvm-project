@@ -23,7 +23,7 @@ namespace llvm {
 /// SpecificBumpPtrAllocator, it'd be better to have a specific thread-safe
 /// BumpPtrAllocator implementation that only use a fair lock when allocating a
 /// new slab but otherwise using atomic and be lock-free.
-template <class AllocatorType> class ThreadSafeAllocator {
+template <class AllocatorType> class LLVM_CLASS_ABI ThreadSafeAllocator {
   struct LockGuard {
     LockGuard(std::atomic_flag &Flag) : Flag(Flag) {
       if (LLVM_UNLIKELY(Flag.test_and_set(std::memory_order_acquire)))

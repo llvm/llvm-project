@@ -37,7 +37,7 @@ namespace llvm {
 
 template <typename choice_type, typename choices_storage_type,
           int variable_smallsize>
-class CombinationGenerator {
+class LLVM_CLASS_ABI CombinationGenerator {
   template <typename T> struct WrappingIterator {
     using value_type = T;
 

@@ -17,7 +17,7 @@
 namespace llvm {
 namespace pdb {
 // This struct is defined as "SO" in langapi/include/pdb.h.
-struct SectionOffset {
+struct LLVM_CLASS_ABI SectionOffset {
   support::ulittle32_t Off;
   support::ulittle16_t Isect;
   char Padding[2];
@@ -26,7 +26,7 @@ struct SectionOffset {
 /// Header of the hash tables found in the globals and publics sections.
 /// Based on GSIHashHdr in
 /// https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/dbi/gsi.h
-struct GSIHashHeader {
+struct LLVM_CLASS_ABI GSIHashHeader {
   enum : unsigned {
     HdrSignature = ~0U,
     HdrVersion = 0xeffe0000 + 19990810,
@@ -38,13 +38,13 @@ struct GSIHashHeader {
 };
 
 // This is HRFile.
-struct PSHashRecord {
+struct LLVM_CLASS_ABI PSHashRecord {
   support::ulittle32_t Off; // Offset in the symbol record stream
   support::ulittle32_t CRef;
 };
 
 // This struct is defined as `SC` in include/dbicommon.h
-struct SectionContrib {
+struct LLVM_CLASS_ABI SectionContrib {
   support::ulittle16_t ISect;
   char Padding[2];
   support::little32_t Off;
@@ -57,14 +57,14 @@ struct SectionContrib {
 };
 
 // This struct is defined as `SC2` in include/dbicommon.h
-struct SectionContrib2 {
+struct LLVM_CLASS_ABI SectionContrib2 {
   // To guarantee SectionContrib2 is standard layout, we cannot use inheritance.
   SectionContrib Base;
   support::ulittle32_t ISectCoff;
 };
 
 // This corresponds to the `OMFSegMap` structure.
-struct SecMapHeader {
+struct LLVM_CLASS_ABI SecMapHeader {
   support::ulittle16_t SecCount;    // Number of segment descriptors in table
   support::ulittle16_t SecCountLog; // Number of logical segment descriptors
 };
@@ -72,7 +72,7 @@ struct SecMapHeader {
 // This corresponds to the `OMFSegMapDesc` structure.  The definition is not
 // present in the reference implementation, but the layout is derived from
 // code that accesses the fields.
-struct SecMapEntry {
+struct LLVM_CLASS_ABI SecMapEntry {
   support::ulittle16_t Flags; // Descriptor flags.  See OMFSegDescFlags
   support::ulittle16_t Ovl;   // Logical overlay number.
   support::ulittle16_t Group; // Group index into descriptor array.
@@ -92,7 +92,7 @@ struct SecMapEntry {
 /// across compilers and architectures (big / little endian in particular) we
 /// can't use the actual structures below, but must instead do the shifting
 /// and masking ourselves.  The struct definitions are provided for reference.
-struct DbiFlags {
+struct LLVM_CLASS_ABI DbiFlags {
   ///  uint16_t IncrementalLinking : 1; // True if linked incrementally
   ///  uint16_t IsStripped : 1;         // True if private symbols were
   ///  stripped.
@@ -103,7 +103,7 @@ struct DbiFlags {
   static const uint16_t FlagHasCTypesMask = 0x0004;
 };
 
-struct DbiBuildNo {
+struct LLVM_CLASS_ABI DbiBuildNo {
   ///  uint16_t MinorVersion : 8;
   ///  uint16_t MajorVersion : 7;
   ///  uint16_t NewVersionFormat : 1;
@@ -117,7 +117,7 @@ struct DbiBuildNo {
 };
 
 /// The fixed size header that appears at the beginning of the DBI Stream.
-struct DbiStreamHeader {
+struct LLVM_CLASS_ABI DbiStreamHeader {
   support::little32_t VersionSignature;
   support::ulittle32_t VersionHeader;
 
@@ -178,7 +178,7 @@ struct DbiStreamHeader {
 static_assert(sizeof(DbiStreamHeader) == 64, "Invalid DbiStreamHeader size!");
 
 /// The header preceding the File Info Substream of the DBI stream.
-struct FileInfoSubstreamHeader {
+struct LLVM_CLASS_ABI FileInfoSubstreamHeader {
   /// Total # of modules, should match number of records in the ModuleInfo
   /// substream.
   support::ulittle16_t NumModules;
@@ -197,7 +197,7 @@ struct FileInfoSubstreamHeader {
   /// it is computed by summing the `ModFileCounts` array.
 };
 
-struct ModInfoFlags {
+struct LLVM_CLASS_ABI ModInfoFlags {
   ///  uint16_t fWritten : 1;   // True if DbiModuleDescriptor is dirty
   ///  uint16_t fECEnabled : 1; // Is EC symbolic info present?  (What is EC?)
   ///  uint16_t unused : 6;     // Reserved
@@ -210,7 +210,7 @@ struct ModInfoFlags {
 
 /// The header preceding each entry in the Module Info substream of the DBI
 /// stream.  Corresponds to the type MODI in the reference implementation.
-struct ModuleInfoHeader {
+struct LLVM_CLASS_ABI ModuleInfoHeader {
   /// Currently opened module. This field is a pointer in the reference
   /// implementation, but that won't work on 64-bit systems, and anyway it
   /// doesn't make sense to read a pointer from a file. For now it is unused,
@@ -262,7 +262,7 @@ struct ModuleInfoHeader {
 
 // This is PSGSIHDR struct defined in
 // https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/dbi/gsi.h
-struct PublicsStreamHeader {
+struct LLVM_CLASS_ABI PublicsStreamHeader {
   support::ulittle32_t SymHash;
   support::ulittle32_t AddrMap;
   support::ulittle32_t NumThunks;
@@ -275,7 +275,7 @@ struct PublicsStreamHeader {
 
 // The header preceding the global TPI stream.
 // This corresponds to `HDR` in PDB/dbi/tpi.h.
-struct TpiStreamHeader {
+struct LLVM_CLASS_ABI TpiStreamHeader {
   struct EmbeddedBuf {
     support::little32_t Off;
     support::ulittle32_t Length;
@@ -302,7 +302,7 @@ const uint32_t MinTpiHashBuckets = 0x1000;
 const uint32_t MaxTpiHashBuckets = 0x40000;
 
 /// The header preceding the global PDB Stream (Stream 1)
-struct InfoStreamHeader {
+struct LLVM_CLASS_ABI InfoStreamHeader {
   support::ulittle32_t Version;
   support::ulittle32_t Signature;
   support::ulittle32_t Age;
@@ -310,7 +310,7 @@ struct InfoStreamHeader {
 };
 
 /// The header preceding the /names stream.
-struct PDBStringTableHeader {
+struct LLVM_CLASS_ABI PDBStringTableHeader {
   support::ulittle32_t Signature;   // PDBStringTableSignature
   support::ulittle32_t HashVersion; // 1 or 2
   support::ulittle32_t ByteSize;    // Number of bytes of names buffer.
@@ -319,7 +319,7 @@ struct PDBStringTableHeader {
 const uint32_t PDBStringTableSignature = 0xEFFEEFFE;
 
 /// The header preceding the /src/headerblock stream.
-struct SrcHeaderBlockHeader {
+struct LLVM_CLASS_ABI SrcHeaderBlockHeader {
   support::ulittle32_t Version; // PdbRaw_SrcHeaderBlockVer enumeration.
   support::ulittle32_t Size;    // Size of entire stream.
   uint64_t FileTime;            // Time stamp (Windows FILETIME format).
@@ -329,7 +329,7 @@ struct SrcHeaderBlockHeader {
 static_assert(sizeof(SrcHeaderBlockHeader) == 64, "Incorrect struct size!");
 
 /// A single file record entry within the /src/headerblock stream.
-struct SrcHeaderBlockEntry {
+struct LLVM_CLASS_ABI SrcHeaderBlockEntry {
   support::ulittle32_t Size;     // Record Length.
   support::ulittle32_t Version;  // PdbRaw_SrcHeaderBlockVer enumeration.
   support::ulittle32_t CRC;      // CRC of the original file contents.

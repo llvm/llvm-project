@@ -31,24 +31,24 @@ enum VisitorDataSource {
                     // supply the bytes.
 };
 
-Error visitTypeRecord(CVType &Record, TypeIndex Index,
+LLVM_FUNC_ABI Error visitTypeRecord(CVType &Record, TypeIndex Index,
                       TypeVisitorCallbacks &Callbacks,
                       VisitorDataSource Source = VDS_BytesPresent);
-Error visitTypeRecord(CVType &Record, TypeVisitorCallbacks &Callbacks,
+LLVM_FUNC_ABI Error visitTypeRecord(CVType &Record, TypeVisitorCallbacks &Callbacks,
                       VisitorDataSource Source = VDS_BytesPresent);
 
-Error visitMemberRecord(CVMemberRecord Record, TypeVisitorCallbacks &Callbacks,
+LLVM_FUNC_ABI Error visitMemberRecord(CVMemberRecord Record, TypeVisitorCallbacks &Callbacks,
                         VisitorDataSource Source = VDS_BytesPresent);
-Error visitMemberRecord(TypeLeafKind Kind, ArrayRef<uint8_t> Record,
+LLVM_FUNC_ABI Error visitMemberRecord(TypeLeafKind Kind, ArrayRef<uint8_t> Record,
                         TypeVisitorCallbacks &Callbacks);
 
-Error visitMemberRecordStream(ArrayRef<uint8_t> FieldList,
+LLVM_FUNC_ABI Error visitMemberRecordStream(ArrayRef<uint8_t> FieldList,
                               TypeVisitorCallbacks &Callbacks);
 
-Error visitTypeStream(const CVTypeArray &Types, TypeVisitorCallbacks &Callbacks,
+LLVM_FUNC_ABI Error visitTypeStream(const CVTypeArray &Types, TypeVisitorCallbacks &Callbacks,
                       VisitorDataSource Source = VDS_BytesPresent);
-Error visitTypeStream(CVTypeRange Types, TypeVisitorCallbacks &Callbacks);
-Error visitTypeStream(TypeCollection &Types, TypeVisitorCallbacks &Callbacks);
+LLVM_FUNC_ABI Error visitTypeStream(CVTypeRange Types, TypeVisitorCallbacks &Callbacks);
+LLVM_FUNC_ABI Error visitTypeStream(TypeCollection &Types, TypeVisitorCallbacks &Callbacks);
 
 } // end namespace codeview
 } // end namespace llvm

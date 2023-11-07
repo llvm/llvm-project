@@ -35,7 +35,7 @@ enum InstrType { Legal, LegalTerminator, Illegal, Invisible };
 
 /// An individual sequence of instructions to be replaced with a call to
 /// an outlined function.
-struct Candidate {
+struct LLVM_CLASS_ABI Candidate {
 private:
   /// The start index of this \p Candidate in the instruction list.
   unsigned StartIdx = 0;
@@ -212,7 +212,7 @@ public:
 
 /// The information necessary to create an outlined function for some
 /// class of candidate.
-struct OutlinedFunction {
+struct LLVM_CLASS_ABI OutlinedFunction {
 
 public:
   std::vector<Candidate> Candidates;

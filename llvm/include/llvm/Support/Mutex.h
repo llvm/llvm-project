@@ -26,7 +26,7 @@ namespace llvm
     /// indicates whether this mutex should become a no-op when we're not
     /// running in multithreaded mode.
     template<bool mt_only>
-    class SmartMutex {
+    class LLVM_CLASS_ABI SmartMutex {
       std::recursive_mutex impl;
       unsigned acquired = 0;
 

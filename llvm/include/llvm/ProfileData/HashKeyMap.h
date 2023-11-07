@@ -49,7 +49,7 @@ namespace sampleprof {
 ///   container.
 template <template <typename, typename, typename...> typename MapT,
           typename KeyT, typename ValueT, typename... MapTArgs>
-class HashKeyMap :
+class LLVM_CLASS_ABI HashKeyMap :
     public MapT<decltype(hash_value(KeyT())), ValueT, MapTArgs...> {
 public:
   using base_type = MapT<decltype(hash_value(KeyT())), ValueT, MapTArgs...>;

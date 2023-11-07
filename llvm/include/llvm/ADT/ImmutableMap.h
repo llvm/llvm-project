@@ -25,7 +25,7 @@ namespace llvm {
 /// and second elements in a pair are used to generate profile information,
 /// only the first element (the key) is used by isEqual and isLess.
 template <typename T, typename S>
-struct ImutKeyValueInfo {
+struct LLVM_CLASS_ABI ImutKeyValueInfo {
   using value_type = const std::pair<T,S>;
   using value_type_ref = const value_type&;
   using key_type = const T;
@@ -60,7 +60,7 @@ struct ImutKeyValueInfo {
 
 template <typename KeyT, typename ValT,
           typename ValInfo = ImutKeyValueInfo<KeyT,ValT>>
-class ImmutableMap {
+class LLVM_CLASS_ABI ImmutableMap {
 public:
   using value_type = typename ValInfo::value_type;
   using value_type_ref = typename ValInfo::value_type_ref;
@@ -200,7 +200,7 @@ public:
 // NOTE: This will possibly become the new implementation of ImmutableMap some day.
 template <typename KeyT, typename ValT,
 typename ValInfo = ImutKeyValueInfo<KeyT,ValT>>
-class ImmutableMapRef {
+class LLVM_CLASS_ABI ImmutableMapRef {
 public:
   using value_type = typename ValInfo::value_type;
   using value_type_ref = typename ValInfo::value_type_ref;

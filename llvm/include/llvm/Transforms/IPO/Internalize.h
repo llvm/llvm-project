@@ -32,7 +32,7 @@ class Module;
 
 /// A pass that internalizes all functions and variables other than those that
 /// must be preserved according to \c MustPreserveGV.
-class InternalizePass : public PassInfoMixin<InternalizePass> {
+class LLVM_CLASS_ABI InternalizePass : public PassInfoMixin<InternalizePass> {
   struct ComdatInfo {
     // The number of members. A comdat with one member which is not externally
     // visible can be freely dropped.

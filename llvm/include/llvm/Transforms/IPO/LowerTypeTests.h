@@ -31,7 +31,7 @@ class raw_ostream;
 
 namespace lowertypetests {
 
-struct BitSetInfo {
+struct LLVM_CLASS_ABI BitSetInfo {
   // The indices of the set bits in the bitset.
   std::set<uint64_t> Bits;
 
@@ -59,7 +59,7 @@ struct BitSetInfo {
   void print(raw_ostream &OS) const;
 };
 
-struct BitSetBuilder {
+struct LLVM_CLASS_ABI BitSetBuilder {
   SmallVector<uint64_t, 16> Offsets;
   uint64_t Min = std::numeric_limits<uint64_t>::max();
   uint64_t Max = 0;
@@ -124,7 +124,7 @@ struct BitSetBuilder {
 /// to be laid out, and calls addFragment for each bit set passing the object
 /// indices of its referenced globals. It then assembles a layout from the
 /// computed layout in the Fragments field.
-struct GlobalLayoutBuilder {
+struct LLVM_CLASS_ABI GlobalLayoutBuilder {
   /// The computed layout. Each element of this vector contains a fragment of
   /// layout (which may be empty) consisting of object indices.
   std::vector<std::vector<uint64_t>> Fragments;
@@ -172,7 +172,7 @@ struct GlobalLayoutBuilder {
 /// because for one thing it gives us better packing (the more bins there are,
 /// the less evenly they will be filled), and for another, the instruction
 /// sequences can be slightly shorter, both on x86 and ARM.
-struct ByteArrayBuilder {
+struct LLVM_CLASS_ABI ByteArrayBuilder {
   /// The byte array built so far.
   std::vector<uint8_t> Bytes;
 
@@ -194,11 +194,11 @@ struct ByteArrayBuilder {
                 uint64_t &AllocByteOffset, uint8_t &AllocMask);
 };
 
-bool isJumpTableCanonical(Function *F);
+LLVM_FUNC_ABI bool isJumpTableCanonical(Function *F);
 
 } // end namespace lowertypetests
 
-class LowerTypeTestsPass : public PassInfoMixin<LowerTypeTestsPass> {
+class LLVM_CLASS_ABI LowerTypeTestsPass : public PassInfoMixin<LowerTypeTestsPass> {
   bool UseCommandLine = false;
 
   ModuleSummaryIndex *ExportSummary = nullptr;

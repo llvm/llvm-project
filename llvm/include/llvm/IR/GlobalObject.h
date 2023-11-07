@@ -25,7 +25,7 @@ namespace llvm {
 class Comdat;
 class Metadata;
 
-class GlobalObject : public GlobalValue {
+class LLVM_CLASS_ABI GlobalObject : public GlobalValue {
 public:
   // VCallVisibility - values for visibility metadata attached to vtables. This
   // describes the scope in which a virtual call could end up being dispatched

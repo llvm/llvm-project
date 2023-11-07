@@ -26,7 +26,7 @@ namespace llvm {
 
 class raw_ostream;
 
-class DWARFDebugLine {
+class LLVM_CLASS_ABI DWARFDebugLine {
 public:
   struct FileNameEntry {
     FileNameEntry() = default;

@@ -32,7 +32,7 @@ using object::ObjectFile;
 using object::SectionedAddress;
 using object::SectionRef;
 
-class BTFParser {
+class LLVM_CLASS_ABI BTFParser {
   using BTFLinesVector = SmallVector<BTF::BPFLineInfo, 0>;
   using BTFRelocVector = SmallVector<BTF::BPFFieldReloc, 0>;
 

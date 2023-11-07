@@ -59,7 +59,7 @@ enum {
   EI_NIDENT = 16     // Number of bytes in e_ident.
 };
 
-struct Elf32_Ehdr {
+struct LLVM_CLASS_ABI Elf32_Ehdr {
   unsigned char e_ident[EI_NIDENT]; // ELF Identification bytes
   Elf32_Half e_type;                // Type of file (see ET_* below)
   Elf32_Half e_machine;   // Required architecture for this file (see EM_*)
@@ -85,7 +85,7 @@ struct Elf32_Ehdr {
 
 // 64-bit ELF header. Fields are the same as for ELF32, but with different
 // types (see above).
-struct Elf64_Ehdr {
+struct LLVM_CLASS_ABI Elf64_Ehdr {
   unsigned char e_ident[EI_NIDENT];
   Elf64_Half e_type;
   Elf64_Half e_machine;
@@ -954,7 +954,7 @@ enum {
 #undef ELF_RELOC
 
 // Section header.
-struct Elf32_Shdr {
+struct LLVM_CLASS_ABI Elf32_Shdr {
   Elf32_Word sh_name;      // Section name (index into string table)
   Elf32_Word sh_type;      // Section type (SHT_*)
   Elf32_Word sh_flags;     // Section flags (SHF_*)
@@ -968,7 +968,7 @@ struct Elf32_Shdr {
 };
 
 // Section header for ELF64 - same fields as ELF32, different types.
-struct Elf64_Shdr {
+struct LLVM_CLASS_ABI Elf64_Shdr {
   Elf64_Word sh_name;
   Elf64_Word sh_type;
   Elf64_Xword sh_flags;
@@ -1193,7 +1193,7 @@ enum : unsigned {
 };
 
 // Symbol table entries for ELF32.
-struct Elf32_Sym {
+struct LLVM_CLASS_ABI Elf32_Sym {
   Elf32_Word st_name;     // Symbol name (index into string table)
   Elf32_Addr st_value;    // Value or address associated with the symbol
   Elf32_Word st_size;     // Size of the symbol
@@ -1213,7 +1213,7 @@ struct Elf32_Sym {
 };
 
 // Symbol table entries for ELF64.
-struct Elf64_Sym {
+struct LLVM_CLASS_ABI Elf64_Sym {
   Elf64_Word st_name;     // Symbol name (index into string table)
   unsigned char st_info;  // Symbol's type and binding attributes
   unsigned char st_other; // Must be zero; reserved
@@ -1288,7 +1288,7 @@ enum {
 };
 
 // Relocation entry, without explicit addend.
-struct Elf32_Rel {
+struct LLVM_CLASS_ABI Elf32_Rel {
   Elf32_Addr r_offset; // Location (file byte offset, or program virtual addr)
   Elf32_Word r_info;   // Symbol table index and type of relocation to apply
 
@@ -1304,7 +1304,7 @@ struct Elf32_Rel {
 };
 
 // Relocation entry with explicit addend.
-struct Elf32_Rela {
+struct LLVM_CLASS_ABI Elf32_Rela {
   Elf32_Addr r_offset;  // Location (file byte offset, or program virtual addr)
   Elf32_Word r_info;    // Symbol table index and type of relocation to apply
   Elf32_Sword r_addend; // Compute value for relocatable field by adding this
@@ -1324,7 +1324,7 @@ struct Elf32_Rela {
 typedef Elf32_Word Elf32_Relr; // offset/bitmap for relative relocations
 
 // Relocation entry, without explicit addend.
-struct Elf64_Rel {
+struct LLVM_CLASS_ABI Elf64_Rel {
   Elf64_Addr r_offset; // Location (file byte offset, or program virtual addr).
   Elf64_Xword r_info;  // Symbol table index and type of relocation to apply.
 
@@ -1340,7 +1340,7 @@ struct Elf64_Rel {
 };
 
 // Relocation entry with explicit addend.
-struct Elf64_Rela {
+struct LLVM_CLASS_ABI Elf64_Rela {
   Elf64_Addr r_offset; // Location (file byte offset, or program virtual addr).
   Elf64_Xword r_info;  // Symbol table index and type of relocation to apply.
   Elf64_Sxword r_addend; // Compute value for relocatable field by adding this.
@@ -1360,7 +1360,7 @@ struct Elf64_Rela {
 typedef Elf64_Xword Elf64_Relr; // offset/bitmap for relative relocations
 
 // Program header for ELF32.
-struct Elf32_Phdr {
+struct LLVM_CLASS_ABI Elf32_Phdr {
   Elf32_Word p_type;   // Type of segment
   Elf32_Off p_offset;  // File offset where segment is located, in bytes
   Elf32_Addr p_vaddr;  // Virtual address of beginning of segment
@@ -1372,7 +1372,7 @@ struct Elf32_Phdr {
 };
 
 // Program header for ELF64.
-struct Elf64_Phdr {
+struct LLVM_CLASS_ABI Elf64_Phdr {
   Elf64_Word p_type;    // Type of segment
   Elf64_Word p_flags;   // Segment flags
   Elf64_Off p_offset;   // File offset where segment is located, in bytes
@@ -1442,7 +1442,7 @@ enum : unsigned {
 };
 
 // Dynamic table entry for ELF32.
-struct Elf32_Dyn {
+struct LLVM_CLASS_ABI Elf32_Dyn {
   Elf32_Sword d_tag; // Type of dynamic table entry.
   union {
     Elf32_Word d_val; // Integer value of entry.
@@ -1451,7 +1451,7 @@ struct Elf32_Dyn {
 };
 
 // Dynamic table entry for ELF64.
-struct Elf64_Dyn {
+struct LLVM_CLASS_ABI Elf64_Dyn {
   Elf64_Sxword d_tag; // Type of dynamic table entry.
   union {
     Elf64_Xword d_val; // Integer value of entry.
@@ -1805,14 +1805,14 @@ enum {
 };
 
 // Compressed section header for ELF32.
-struct Elf32_Chdr {
+struct LLVM_CLASS_ABI Elf32_Chdr {
   Elf32_Word ch_type;
   Elf32_Word ch_size;
   Elf32_Word ch_addralign;
 };
 
 // Compressed section header for ELF64.
-struct Elf64_Chdr {
+struct LLVM_CLASS_ABI Elf64_Chdr {
   Elf64_Word ch_type;
   Elf64_Word ch_reserved;
   Elf64_Xword ch_size;
@@ -1820,14 +1820,14 @@ struct Elf64_Chdr {
 };
 
 // Note header for ELF32.
-struct Elf32_Nhdr {
+struct LLVM_CLASS_ABI Elf32_Nhdr {
   Elf32_Word n_namesz;
   Elf32_Word n_descsz;
   Elf32_Word n_type;
 };
 
 // Note header for ELF64.
-struct Elf64_Nhdr {
+struct LLVM_CLASS_ABI Elf64_Nhdr {
   Elf64_Word n_namesz;
   Elf64_Word n_descsz;
   Elf64_Word n_type;
@@ -1844,10 +1844,10 @@ enum {
 };
 
 /// Convert an architecture name into ELF's e_machine value.
-uint16_t convertArchNameToEMachine(StringRef Arch);
+LLVM_FUNC_ABI uint16_t convertArchNameToEMachine(StringRef Arch);
 
 /// Convert an ELF's e_machine value into an architecture name.
-StringRef convertEMachineToArchName(uint16_t EMachine);
+LLVM_FUNC_ABI StringRef convertEMachineToArchName(uint16_t EMachine);
 
 } // end namespace ELF
 } // end namespace llvm

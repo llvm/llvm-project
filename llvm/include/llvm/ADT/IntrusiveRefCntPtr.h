@@ -74,7 +74,7 @@ namespace llvm {
 /// calls to Release() and Retain(), which increment and decrement the object's
 /// refcount, respectively.  When a Release() call decrements the refcount to 0,
 /// the object deletes itself.
-template <class Derived> class RefCountedBase {
+template <class Derived> class LLVM_CLASS_ABI RefCountedBase {
   mutable unsigned RefCount = 0;
 
 protected:
@@ -106,7 +106,7 @@ public:
 };
 
 /// A thread-safe version of \c RefCountedBase.
-template <class Derived> class ThreadSafeRefCountedBase {
+template <class Derived> class LLVM_CLASS_ABI ThreadSafeRefCountedBase {
   mutable std::atomic<int> RefCount{0};
 
 protected:
@@ -159,7 +159,7 @@ public:
 /// forward-declares Foo and specializes IntrusiveRefCntPtrInfo<Foo>.  Then
 /// Bar.h could use IntrusiveRefCntPtr<Foo>, although it still couldn't call any
 /// functions on Foo itself, because Foo would be an incomplete type.
-template <typename T> struct IntrusiveRefCntPtrInfo {
+template <typename T> struct LLVM_CLASS_ABI IntrusiveRefCntPtrInfo {
   static unsigned useCount(const T *obj) { return obj->UseCount(); }
   static void retain(T *obj) { obj->Retain(); }
   static void release(T *obj) { obj->Release(); }
@@ -171,7 +171,7 @@ template <typename T> struct IntrusiveRefCntPtrInfo {
 /// This class increments its pointee's reference count when it is created, and
 /// decrements its refcount when it's destroyed (or is changed to point to a
 /// different object).
-template <typename T> class IntrusiveRefCntPtr {
+template <typename T> class LLVM_CLASS_ABI IntrusiveRefCntPtr {
   T *Obj = nullptr;
 
 public:
@@ -293,7 +293,7 @@ bool operator!=(const IntrusiveRefCntPtr<T> &A, std::nullptr_t B) {
 // Casting.h.
 template <typename From> struct simplify_type;
 
-template <class T> struct simplify_type<IntrusiveRefCntPtr<T>> {
+template <class T> struct LLVM_CLASS_ABI simplify_type<IntrusiveRefCntPtr<T>> {
   using SimpleType = T *;
 
   static SimpleType getSimplifiedValue(IntrusiveRefCntPtr<T> &Val) {
@@ -301,7 +301,7 @@ template <class T> struct simplify_type<IntrusiveRefCntPtr<T>> {
   }
 };
 
-template <class T> struct simplify_type<const IntrusiveRefCntPtr<T>> {
+template <class T> struct LLVM_CLASS_ABI simplify_type<const IntrusiveRefCntPtr<T>> {
   using SimpleType = /*const*/ T *;
 
   static SimpleType getSimplifiedValue(const IntrusiveRefCntPtr<T> &Val) {

@@ -39,7 +39,7 @@ class APInt;
 /// Constants are created on demand as needed and never deleted: thus clients
 /// don't have to worry about the lifetime of the objects.
 /// LLVM Constant Representation
-class Constant : public User {
+class LLVM_CLASS_ABI Constant : public User {
 protected:
   Constant(Type *ty, ValueTy vty, Use *Ops, unsigned NumOps)
     : User(ty, vty, Ops, NumOps) {}

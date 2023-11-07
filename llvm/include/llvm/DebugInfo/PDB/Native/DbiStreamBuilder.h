@@ -38,7 +38,7 @@ struct MSFLayout;
 namespace pdb {
 class DbiModuleDescriptorBuilder;
 
-class DbiStreamBuilder {
+class LLVM_CLASS_ABI DbiStreamBuilder {
 public:
   DbiStreamBuilder(msf::MSFBuilder &Msf);
   ~DbiStreamBuilder();

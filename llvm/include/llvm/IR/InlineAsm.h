@@ -32,7 +32,7 @@ class FunctionType;
 class PointerType;
 template <class ConstantClass> class ConstantUniqueMap;
 
-class InlineAsm final : public Value {
+class LLVM_CLASS_ABI InlineAsm final : public Value {
 public:
   enum AsmDialect {
     AD_ATT,

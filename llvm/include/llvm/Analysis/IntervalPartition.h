@@ -40,7 +40,7 @@ class Interval;
 // interval is a (possibly nonexistent) loop with a "tail" of non-looping
 // nodes following it.
 //
-class IntervalPartition : public FunctionPass {
+class LLVM_CLASS_ABI IntervalPartition : public FunctionPass {
   using IntervalMapTy = std::map<BasicBlock *, Interval *>;
   IntervalMapTy IntervalMap;
 

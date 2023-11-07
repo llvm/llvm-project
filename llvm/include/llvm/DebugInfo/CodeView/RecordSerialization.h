@@ -30,7 +30,7 @@ using llvm::support::ulittle32_t;
 /// RecordPrefix. MSVC does not emit any records larger than this.
 enum : unsigned { MaxRecordLength = 0xFF00 };
 
-struct RecordPrefix {
+struct LLVM_CLASS_ABI RecordPrefix {
   RecordPrefix() = default;
   explicit RecordPrefix(uint16_t Kind) : RecordLen(2), RecordKind(Kind) {}
 
@@ -40,8 +40,8 @@ struct RecordPrefix {
 
 /// Reinterpret a byte array as an array of characters. Does not interpret as
 /// a C string, as StringRef has several helpers (split) that make that easy.
-StringRef getBytesAsCharacters(ArrayRef<uint8_t> LeafData);
-StringRef getBytesAsCString(ArrayRef<uint8_t> LeafData);
+LLVM_FUNC_ABI StringRef getBytesAsCharacters(ArrayRef<uint8_t> LeafData);
+LLVM_FUNC_ABI StringRef getBytesAsCString(ArrayRef<uint8_t> LeafData);
 
 inline Error consume(BinaryStreamReader &Reader) { return Error::success(); }
 
@@ -49,20 +49,20 @@ inline Error consume(BinaryStreamReader &Reader) { return Error::success(); }
 /// the type stream. If the value is positive and less than LF_NUMERIC (1 <<
 /// 15), it is emitted directly in Data. Otherwise, it has a tag like LF_CHAR
 /// that indicates the bitwidth and sign of the numeric data.
-Error consume(BinaryStreamReader &Reader, APSInt &Num);
+LLVM_FUNC_ABI Error consume(BinaryStreamReader &Reader, APSInt &Num);
 
 /// Decodes a numeric leaf value that is known to be a particular type.
-Error consume_numeric(BinaryStreamReader &Reader, uint64_t &Value);
+LLVM_FUNC_ABI Error consume_numeric(BinaryStreamReader &Reader, uint64_t &Value);
 
 /// Decodes signed and unsigned fixed-length integers.
-Error consume(BinaryStreamReader &Reader, uint32_t &Item);
-Error consume(BinaryStreamReader &Reader, int32_t &Item);
+LLVM_FUNC_ABI Error consume(BinaryStreamReader &Reader, uint32_t &Item);
+LLVM_FUNC_ABI Error consume(BinaryStreamReader &Reader, int32_t &Item);
 
 /// Decodes a null terminated string.
-Error consume(BinaryStreamReader &Reader, StringRef &Item);
+LLVM_FUNC_ABI Error consume(BinaryStreamReader &Reader, StringRef &Item);
 
-Error consume(StringRef &Data, APSInt &Num);
-Error consume(StringRef &Data, uint32_t &Item);
+LLVM_FUNC_ABI Error consume(StringRef &Data, APSInt &Num);
+LLVM_FUNC_ABI Error consume(StringRef &Data, uint32_t &Item);
 
 /// Decodes an arbitrary object whose layout matches that of the underlying
 /// byte sequence, and returns a pointer to the object.
@@ -70,7 +70,7 @@ template <typename T> Error consume(BinaryStreamReader &Reader, T *&Item) {
   return Reader.readObject(Item);
 }
 
-template <typename T, typename U> struct serialize_conditional_impl {
+template <typename T, typename U> struct LLVM_CLASS_ABI serialize_conditional_impl {
   serialize_conditional_impl(T &Item, U Func) : Item(Item), Func(Func) {}
 
   Error deserialize(BinaryStreamReader &Reader) const {
@@ -88,7 +88,7 @@ serialize_conditional_impl<T, U> serialize_conditional(T &Item, U Func) {
   return serialize_conditional_impl<T, U>(Item, Func);
 }
 
-template <typename T, typename U> struct serialize_array_impl {
+template <typename T, typename U> struct LLVM_CLASS_ABI serialize_array_impl {
   serialize_array_impl(ArrayRef<T> &Item, U Func) : Item(Item), Func(Func) {}
 
   Error deserialize(BinaryStreamReader &Reader) const {
@@ -99,7 +99,7 @@ template <typename T, typename U> struct serialize_array_impl {
   U Func;
 };
 
-template <typename T> struct serialize_vector_tail_impl {
+template <typename T> struct LLVM_CLASS_ABI serialize_vector_tail_impl {
   serialize_vector_tail_impl(std::vector<T> &Item) : Item(Item) {}
 
   Error deserialize(BinaryStreamReader &Reader) const {
@@ -116,7 +116,7 @@ template <typename T> struct serialize_vector_tail_impl {
   std::vector<T> &Item;
 };
 
-struct serialize_null_term_string_array_impl {
+struct LLVM_CLASS_ABI serialize_null_term_string_array_impl {
   serialize_null_term_string_array_impl(std::vector<StringRef> &Item)
       : Item(Item) {}
 
@@ -137,7 +137,7 @@ struct serialize_null_term_string_array_impl {
   std::vector<StringRef> &Item;
 };
 
-template <typename T> struct serialize_arrayref_tail_impl {
+template <typename T> struct LLVM_CLASS_ABI serialize_arrayref_tail_impl {
   serialize_arrayref_tail_impl(ArrayRef<T> &Item) : Item(Item) {}
 
   Error deserialize(BinaryStreamReader &Reader) const {
@@ -148,7 +148,7 @@ template <typename T> struct serialize_arrayref_tail_impl {
   ArrayRef<T> &Item;
 };
 
-template <typename T> struct serialize_numeric_impl {
+template <typename T> struct LLVM_CLASS_ABI serialize_numeric_impl {
   serialize_numeric_impl(T &Item) : Item(Item) {}
 
   Error deserialize(BinaryStreamReader &Reader) const {

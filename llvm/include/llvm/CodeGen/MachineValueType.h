@@ -32,7 +32,7 @@ namespace llvm {
   /// Machine Value Type. Every type that is supported natively by some
   /// processor targeted by LLVM occurs here. This means that any legal value
   /// type can be represented by an MVT.
-  class MVT {
+  class LLVM_CLASS_ABI MVT {
   public:
     enum SimpleValueType : uint8_t {
       // Simple value types that aren't explicitly part of this enumeration

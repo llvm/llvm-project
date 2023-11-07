@@ -34,7 +34,7 @@ constexpr uint32_t InvalidRegisterNumber = UINT32_MAX;
 /// A class that represents a location for the Call Frame Address (CFA) or a
 /// register. This is decoded from the DWARF Call Frame Information
 /// instructions and put into an UnwindRow.
-class UnwindLocation {
+class LLVM_CLASS_ABI UnwindLocation {
 public:
   enum Location {
     /// Not specified.
@@ -170,7 +170,7 @@ public:
   bool operator==(const UnwindLocation &RHS) const;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const UnwindLocation &R);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindLocation &R);
 
 /// A class that can track all registers with locations in a UnwindRow object.
 ///
@@ -180,7 +180,7 @@ raw_ostream &operator<<(raw_ostream &OS, const UnwindLocation &R);
 /// The register maps are put into a class so that all register locations can
 /// be copied when parsing the unwind opcodes DW_CFA_remember_state and
 /// DW_CFA_restore_state.
-class RegisterLocations {
+class LLVM_CLASS_ABI RegisterLocations {
   std::map<uint32_t, UnwindLocation> Locations;
 
 public:
@@ -235,7 +235,7 @@ public:
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const RegisterLocations &RL);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const RegisterLocations &RL);
 
 /// A class that represents a single row in the unwind table that is decoded by
 /// parsing the DWARF Call Frame Information opcodes.
@@ -253,7 +253,7 @@ raw_ostream &operator<<(raw_ostream &OS, const RegisterLocations &RL);
 /// needed for the address, CFA value, and register locations as the opcodes
 /// encode a state machine that produces a sorted array of UnwindRow objects
 /// \see UnwindTable.
-class UnwindRow {
+class LLVM_CLASS_ABI UnwindRow {
   /// The address will be valid when parsing the instructions in a FDE. If
   /// invalid, this object represents the initial instructions of a CIE.
   std::optional<uint64_t> Address; ///< Address for row in FDE, invalid for CIE.
@@ -308,7 +308,7 @@ public:
             unsigned IndentLevel = 0) const;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const UnwindRow &Row);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindRow &Row);
 
 class CFIProgram;
 class CIE;
@@ -319,7 +319,7 @@ class FDE;
 /// address, can be searched to find the UnwindRow with the lowest starting
 /// address that is greater than or equal to the address that is being looked
 /// up.
-class UnwindTable {
+class LLVM_CLASS_ABI UnwindTable {
 public:
   using RowContainer = std::vector<UnwindRow>;
   using iterator = RowContainer::iterator;
@@ -397,7 +397,7 @@ private:
                   const RegisterLocations *InitialLocs);
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const UnwindTable &Rows);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindTable &Rows);
 
 /// Represent a sequence of Call Frame Information instructions that, when read
 /// in order, construct a table mapping PC to frame state. This can also be
@@ -405,7 +405,7 @@ raw_ostream &operator<<(raw_ostream &OS, const UnwindTable &Rows);
 /// computer programs in the broader sense, and in this context each instruction
 /// would be a rule to establish the mapping. Refer to pg. 172 in the DWARF5
 /// manual, "6.4.1 Structure of Call Frame Information".
-class CFIProgram {
+class LLVM_CLASS_ABI CFIProgram {
 public:
   static constexpr size_t MaxOperands = 3;
   typedef SmallVector<uint64_t, MaxOperands> Operands;
@@ -530,7 +530,7 @@ private:
 
 /// An entry in either debug_frame or eh_frame. This entry can be a CIE or an
 /// FDE.
-class FrameEntry {
+class LLVM_CLASS_ABI FrameEntry {
 public:
   enum FrameKind { FK_CIE, FK_FDE };
 
@@ -565,7 +565,7 @@ protected:
 };
 
 /// DWARF Common Information Entry (CIE)
-class CIE : public FrameEntry {
+class LLVM_CLASS_ABI CIE : public FrameEntry {
 public:
   // CIEs (and FDEs) are simply container classes, so the only sensible way to
   // create them is by providing the full parsed contents in the constructor.
@@ -627,7 +627,7 @@ private:
 };
 
 /// DWARF Frame Description Entry (FDE)
-class FDE : public FrameEntry {
+class LLVM_CLASS_ABI FDE : public FrameEntry {
 public:
   FDE(bool IsDWARF64, uint64_t Offset, uint64_t Length, uint64_t CIEPointer,
       uint64_t InitialLocation, uint64_t AddressRange, CIE *Cie,
@@ -665,7 +665,7 @@ private:
 } // end namespace dwarf
 
 /// A parsed .debug_frame or .eh_frame section
-class DWARFDebugFrame {
+class LLVM_CLASS_ABI DWARFDebugFrame {
   const Triple::ArchType Arch;
   // True if this is parsing an eh_frame section.
   const bool IsEH;

@@ -27,7 +27,7 @@
 namespace llvm {
 namespace orc {
 
-struct IndirectStubsAllocationSizes {
+struct LLVM_CLASS_ABI IndirectStubsAllocationSizes {
   uint64_t StubBytes = 0;
   uint64_t PointerBytes = 0;
   unsigned NumStubs = 0;
@@ -53,7 +53,7 @@ getIndirectStubsBlockSizes(unsigned MinStubs, unsigned RoundToMultipleOf = 0) {
 /// ORC templates that require one (e.g. IndirectStubsManagers). It does not
 /// support lazy JITing however, and any attempt to use that functionality
 /// will result in execution of an llvm_unreachable.
-class OrcGenericABI {
+class LLVM_CLASS_ABI OrcGenericABI {
 public:
   static constexpr unsigned PointerSize = sizeof(uintptr_t);
   static constexpr unsigned TrampolineSize = 1;
@@ -87,7 +87,7 @@ public:
   }
 };
 
-class OrcAArch64 {
+class LLVM_CLASS_ABI OrcAArch64 {
 public:
   static constexpr unsigned PointerSize = 8;
   static constexpr unsigned TrampolineSize = 12;
@@ -128,7 +128,7 @@ public:
 /// X86_64 code that's common to all ABIs.
 ///
 /// X86_64 supports lazy JITing.
-class OrcX86_64_Base {
+class LLVM_CLASS_ABI OrcX86_64_Base {
 public:
   static constexpr unsigned PointerSize = 8;
   static constexpr unsigned TrampolineSize = 8;
@@ -156,7 +156,7 @@ public:
 /// X86_64 support for SysV ABI (Linux, MacOSX).
 ///
 /// X86_64_SysV supports lazy JITing.
-class OrcX86_64_SysV : public OrcX86_64_Base {
+class LLVM_CLASS_ABI OrcX86_64_SysV : public OrcX86_64_Base {
 public:
   static constexpr unsigned ResolverCodeSize = 0x6C;
 
@@ -176,7 +176,7 @@ public:
 /// X86_64 support for Win32.
 ///
 /// X86_64_Win32 supports lazy JITing.
-class OrcX86_64_Win32 : public OrcX86_64_Base {
+class LLVM_CLASS_ABI OrcX86_64_Win32 : public OrcX86_64_Base {
 public:
   static constexpr unsigned ResolverCodeSize = 0x74;
 
@@ -196,7 +196,7 @@ public:
 /// I386 support.
 ///
 /// I386 supports lazy JITing.
-class OrcI386 {
+class LLVM_CLASS_ABI OrcI386 {
 public:
   static constexpr unsigned PointerSize = 4;
   static constexpr unsigned TrampolineSize = 8;
@@ -237,7 +237,7 @@ public:
 // @brief Mips32 support.
 //
 // Mips32 supports lazy JITing.
-class OrcMips32_Base {
+class LLVM_CLASS_ABI OrcMips32_Base {
 public:
   static constexpr unsigned PointerSize = 4;
   static constexpr unsigned TrampolineSize = 20;
@@ -274,7 +274,7 @@ public:
                                       unsigned NumStubs);
 };
 
-class OrcMips32Le : public OrcMips32_Base {
+class LLVM_CLASS_ABI OrcMips32Le : public OrcMips32_Base {
 public:
   static void writeResolverCode(char *ResolverWorkingMem,
                                 ExecutorAddr ResolverTargetAddress,
@@ -285,7 +285,7 @@ public:
   }
 };
 
-class OrcMips32Be : public OrcMips32_Base {
+class LLVM_CLASS_ABI OrcMips32Be : public OrcMips32_Base {
 public:
   static void writeResolverCode(char *ResolverWorkingMem,
                                 ExecutorAddr ResolverTargetAddress,
@@ -299,7 +299,7 @@ public:
 // @brief Mips64 support.
 //
 // Mips64 supports lazy JITing.
-class OrcMips64 {
+class LLVM_CLASS_ABI OrcMips64 {
 public:
   static constexpr unsigned PointerSize = 8;
   static constexpr unsigned TrampolineSize = 40;
@@ -339,7 +339,7 @@ public:
 // @brief riscv64 support.
 //
 // RISC-V 64 supports lazy JITing.
-class OrcRiscv64 {
+class LLVM_CLASS_ABI OrcRiscv64 {
 public:
   static constexpr unsigned PointerSize = 8;
   static constexpr unsigned TrampolineSize = 16;
@@ -379,7 +379,7 @@ public:
 // @brief loongarch64 support.
 //
 // LoongArch 64 supports lazy JITing.
-class OrcLoongArch64 {
+class LLVM_CLASS_ABI OrcLoongArch64 {
 public:
   static constexpr unsigned PointerSize = 8;
   static constexpr unsigned TrampolineSize = 16;

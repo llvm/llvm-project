@@ -19,7 +19,7 @@
 namespace llvm {
 namespace jitlink {
 
-class JITLinkDylib {
+class LLVM_CLASS_ABI JITLinkDylib {
 public:
   JITLinkDylib(std::string Name) : Name(std::move(Name)) {}
 

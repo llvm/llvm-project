@@ -34,19 +34,19 @@ enum class raw_error_code {
 
 namespace std {
 template <>
-struct is_error_code_enum<llvm::pdb::raw_error_code> : std::true_type {};
+struct LLVM_CLASS_ABI is_error_code_enum<llvm::pdb::raw_error_code> : std::true_type {};
 } // namespace std
 
 namespace llvm {
 namespace pdb {
-const std::error_category &RawErrCategory();
+LLVM_FUNC_ABI const std::error_category &RawErrCategory();
 
 inline std::error_code make_error_code(raw_error_code E) {
   return std::error_code(static_cast<int>(E), RawErrCategory());
 }
 
 /// Base class for errors originating when parsing raw PDB files
-class RawError : public ErrorInfo<RawError, StringError> {
+class LLVM_CLASS_ABI RawError : public ErrorInfo<RawError, StringError> {
 public:
   using ErrorInfo<RawError, StringError>::ErrorInfo; // inherit constructors
   RawError(const Twine &S) : ErrorInfo(S, raw_error_code::unspecified) {}

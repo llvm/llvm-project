@@ -31,8 +31,8 @@ using MCPhysReg = uint16_t;
 using MCRegUnit = unsigned;
 
 /// Wrapper class representing physical registers. Should be passed by value.
-class MCRegister {
-  friend hash_code hash_value(const MCRegister &);
+class LLVM_CLASS_ABI MCRegister {
+  friend LLVM_FUNC_ABI hash_code hash_value(const MCRegister &);
   unsigned Reg;
 
 public:
@@ -107,7 +107,7 @@ public:
 };
 
 // Provide DenseMapInfo for MCRegister
-template <> struct DenseMapInfo<MCRegister> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<MCRegister> {
   static inline unsigned getEmptyKey() {
     return DenseMapInfo<unsigned>::getEmptyKey();
   }

@@ -41,7 +41,7 @@ class Section;
 ///
 /// Instances of this class may be accessed concurrently from multiple threads
 /// and their implemetations should include any necessary synchronization.
-class JITLinkMemoryManager {
+class LLVM_CLASS_ABI JITLinkMemoryManager {
 public:
 
   /// Represents a finalized allocation.
@@ -208,7 +208,7 @@ public:
 /// from a Graph, and then assign working memory and addresses to each of the
 /// Segments. These addreses will be mapped back onto the Graph blocks in
 /// the apply method.
-class BasicLayout {
+class LLVM_CLASS_ABI BasicLayout {
 public:
   /// The Alignment, ContentSize and ZeroFillSize of each segment will be
   /// pre-filled from the Graph. Clients must set the Addr and WorkingMem fields
@@ -295,7 +295,7 @@ private:
 ///
 /// Note: Segments with MemLifetime::NoAlloc are not permitted, since they would
 /// not be useful, and their presence is likely to indicate a bug.
-class SimpleSegmentAlloc {
+class LLVM_CLASS_ABI SimpleSegmentAlloc {
 public:
   /// Describes a segment to be allocated.
   struct Segment {
@@ -356,7 +356,7 @@ private:
 };
 
 /// A JITLinkMemoryManager that allocates in-process memory.
-class InProcessMemoryManager : public JITLinkMemoryManager {
+class LLVM_CLASS_ABI InProcessMemoryManager : public JITLinkMemoryManager {
 public:
   class IPInFlightAlloc;
 

@@ -25,7 +25,7 @@ namespace ifs {
 struct IFSStub;
 
 /// Attempt to read a binary ELF file from a MemoryBuffer.
-Expected<std::unique_ptr<IFSStub>> readELFFile(MemoryBufferRef Buf);
+LLVM_FUNC_ABI Expected<std::unique_ptr<IFSStub>> readELFFile(MemoryBufferRef Buf);
 
 /// Attempt to write a binary ELF stub.
 /// This function determines appropriate ELFType using the passed ELFTarget and
@@ -35,7 +35,7 @@ Expected<std::unique_ptr<IFSStub>> readELFFile(MemoryBufferRef Buf);
 /// @param Stub Source ELFStub to generate a binary ELF stub from.
 /// @param WriteIfChanged Whether or not to preserve timestamp if
 ///        the output stays the same.
-Error writeBinaryStub(StringRef FilePath, const IFSStub &Stub,
+LLVM_FUNC_ABI Error writeBinaryStub(StringRef FilePath, const IFSStub &Stub,
                       bool WriteIfChanged = false);
 
 } // end namespace ifs

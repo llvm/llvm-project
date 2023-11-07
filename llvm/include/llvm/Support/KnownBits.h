@@ -21,7 +21,7 @@
 namespace llvm {
 
 // Struct for tracking the known zeros and ones of a value.
-struct KnownBits {
+struct LLVM_CLASS_ABI KnownBits {
   APInt Zero;
   APInt One;
 

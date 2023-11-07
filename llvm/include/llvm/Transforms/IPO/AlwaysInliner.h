@@ -30,7 +30,7 @@ class Pass;
 /// be the simplest possible pass to remove always_inline function definitions'
 /// uses by inlining them. The \c GlobalDCE pass can be used to remove these
 /// functions once all users are gone.
-class AlwaysInlinerPass : public PassInfoMixin<AlwaysInlinerPass> {
+class LLVM_CLASS_ABI AlwaysInlinerPass : public PassInfoMixin<AlwaysInlinerPass> {
   bool InsertLifetime;
 
 public:
@@ -43,7 +43,7 @@ public:
 
 /// Create a legacy pass manager instance of a pass to inline and remove
 /// functions marked as "always_inline".
-Pass *createAlwaysInlinerLegacyPass(bool InsertLifetime = true);
+LLVM_FUNC_ABI Pass *createAlwaysInlinerLegacyPass(bool InsertLifetime = true);
 
 }
 

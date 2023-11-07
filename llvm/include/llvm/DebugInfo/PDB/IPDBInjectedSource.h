@@ -19,7 +19,7 @@ namespace pdb {
 /// which were injected directly into the PDB file during the compilation
 /// process.  This is used, for example, to add natvis files to a PDB, but
 /// in theory could be used to add arbitrary source code.
-class IPDBInjectedSource {
+class LLVM_CLASS_ABI IPDBInjectedSource {
 public:
   virtual ~IPDBInjectedSource();
 

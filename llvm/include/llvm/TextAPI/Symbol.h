@@ -80,7 +80,7 @@ typename C::iterator addEntry(C &Container, const Target &Targ) {
   return Container.insert(Iter, Targ);
 }
 
-class Symbol {
+class LLVM_CLASS_ABI Symbol {
 public:
   Symbol(SymbolKind Kind, StringRef Name, TargetList Targets, SymbolFlags Flags)
       : Name(Name), Targets(std::move(Targets)), Kind(Kind), Flags(Flags) {}

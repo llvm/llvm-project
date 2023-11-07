@@ -30,7 +30,7 @@ class Value;
 /// match exactly, they must at least be bitcast compatible. If \p FailureReason
 /// is non-null and the indirect call cannot be promoted, the failure reason
 /// will be stored in it.
-bool isLegalToPromote(const CallBase &CB, Function *Callee,
+LLVM_FUNC_ABI bool isLegalToPromote(const CallBase &CB, Function *Callee,
                       const char **FailureReason = nullptr);
 
 /// Promote the given indirect call site to unconditionally call \p Callee.
@@ -40,7 +40,7 @@ bool isLegalToPromote(const CallBase &CB, Function *Callee,
 /// of the callee, bitcast instructions are inserted where appropriate. If \p
 /// RetBitCast is non-null, it will be used to store the return value bitcast,
 /// if created.
-CallBase &promoteCall(CallBase &CB, Function *Callee,
+LLVM_FUNC_ABI CallBase &promoteCall(CallBase &CB, Function *Callee,
                       CastInst **RetBitCast = nullptr);
 
 /// Promote the given indirect call site to conditionally call \p Callee.
@@ -50,7 +50,7 @@ CallBase &promoteCall(CallBase &CB, Function *Callee,
 /// indirect call site is promoted, placed in the "then" block, and returned. If
 /// \p BranchWeights is non-null, it will be used to set !prof metadata on the
 /// new conditional branch.
-CallBase &promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
+LLVM_FUNC_ABI CallBase &promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
                                     MDNode *BranchWeights = nullptr);
 
 /// Try to promote (devirtualize) a virtual call on an Alloca. Return true on
@@ -74,7 +74,7 @@ CallBase &promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
 ///     [i8* null, i8* bitcast ({ i8*, i8*, i8* }* @_ZTI4Impl to i8*),
 ///     i8* bitcast (void (%class.Impl*)* @_ZN4Impl3RunEv to i8*)] }
 ///
-bool tryPromoteCall(CallBase &CB);
+LLVM_FUNC_ABI bool tryPromoteCall(CallBase &CB);
 
 /// Predicate and clone the given call site.
 ///
@@ -83,7 +83,7 @@ bool tryPromoteCall(CallBase &CB);
 /// callee. The original call site is moved into the "else" block, and a clone
 /// of the call site is placed in the "then" block. The cloned instruction is
 /// returned.
-CallBase &versionCallSite(CallBase &CB, Value *Callee, MDNode *BranchWeights);
+LLVM_FUNC_ABI CallBase &versionCallSite(CallBase &CB, Value *Callee, MDNode *BranchWeights);
 
 } // end namespace llvm
 

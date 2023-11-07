@@ -32,7 +32,7 @@ namespace codeview {
 /// records within a single sequence of types, because if two records both have
 /// a back-reference to the same type in the same stream, they will both have
 /// the same numeric value for the TypeIndex of the back reference.
-struct LocallyHashedType {
+struct LLVM_CLASS_ABI LocallyHashedType {
   hash_code Hash;
   ArrayRef<uint8_t> RecordData;
 
@@ -78,7 +78,7 @@ enum class GlobalTypeHashAlg : uint16_t {
 /// is considered "as good as" the original type.  Since type records can be
 /// quite large, this makes the equality comparison of the hash much faster than
 /// equality comparison of a full record.
-struct GloballyHashedType {
+struct LLVM_CLASS_ABI GloballyHashedType {
   GloballyHashedType() = default;
   GloballyHashedType(StringRef H)
       : GloballyHashedType(ArrayRef<uint8_t>(H.bytes_begin(), H.bytes_end())) {}
@@ -181,7 +181,7 @@ static_assert(std::is_trivially_copyable<GloballyHashedType>::value,
               "GloballyHashedType");
 } // namespace codeview
 
-template <> struct DenseMapInfo<codeview::LocallyHashedType> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<codeview::LocallyHashedType> {
   static codeview::LocallyHashedType Empty;
   static codeview::LocallyHashedType Tombstone;
 
@@ -201,7 +201,7 @@ template <> struct DenseMapInfo<codeview::LocallyHashedType> {
   }
 };
 
-template <> struct DenseMapInfo<codeview::GloballyHashedType> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<codeview::GloballyHashedType> {
   static codeview::GloballyHashedType Empty;
   static codeview::GloballyHashedType Tombstone;
 
@@ -219,7 +219,7 @@ template <> struct DenseMapInfo<codeview::GloballyHashedType> {
   }
 };
 
-template <> struct format_provider<codeview::LocallyHashedType> {
+template <> struct LLVM_CLASS_ABI format_provider<codeview::LocallyHashedType> {
 public:
   static void format(const codeview::LocallyHashedType &V,
                      llvm::raw_ostream &Stream, StringRef Style) {
@@ -227,7 +227,7 @@ public:
   }
 };
 
-template <> struct format_provider<codeview::GloballyHashedType> {
+template <> struct LLVM_CLASS_ABI format_provider<codeview::GloballyHashedType> {
 public:
   static void format(const codeview::GloballyHashedType &V,
                      llvm::raw_ostream &Stream, StringRef Style) {

@@ -22,7 +22,7 @@ namespace llvm {
 /// unique entry that is added.  T is the type of entries in the vector. This
 /// class should have an implementation of operator== and of operator<.
 /// Entries can be fetched using operator[] with the entry ID.
-template<class T> class UniqueVector {
+template<class T> class LLVM_CLASS_ABI UniqueVector {
 public:
   using VectorType = typename std::vector<T>;
   using iterator = typename VectorType::iterator;

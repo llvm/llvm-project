@@ -25,7 +25,7 @@
 namespace llvm {
 
 namespace detail {
-template <typename Ptr> struct PunnedPointer {
+template <typename Ptr> struct LLVM_CLASS_ABI PunnedPointer {
   static_assert(sizeof(Ptr) == sizeof(intptr_t), "");
 
   // Asserts that allow us to let the compiler implement the destructor and
@@ -77,7 +77,7 @@ struct PointerIntPairInfo;
 template <typename PointerTy, unsigned IntBits, typename IntType = unsigned,
           typename PtrTraits = PointerLikeTypeTraits<PointerTy>,
           typename Info = PointerIntPairInfo<PointerTy, IntBits, PtrTraits>>
-class PointerIntPair {
+class LLVM_CLASS_ABI PointerIntPair {
   // Used by MSVC visualizer and generally helpful for debugging/visualizing.
   using InfoTy = Info;
   detail::PunnedPointer<PointerTy> Value;
@@ -165,7 +165,7 @@ public:
 };
 
 template <typename PointerT, unsigned IntBits, typename PtrTraits>
-struct PointerIntPairInfo {
+struct LLVM_CLASS_ABI PointerIntPairInfo {
   static_assert(PtrTraits::NumLowBitsAvailable <
                     std::numeric_limits<uintptr_t>::digits,
                 "cannot use a pointer type that has all bits free");
@@ -216,7 +216,7 @@ struct PointerIntPairInfo {
 
 // Provide specialization of DenseMapInfo for PointerIntPair.
 template <typename PointerTy, unsigned IntBits, typename IntType>
-struct DenseMapInfo<PointerIntPair<PointerTy, IntBits, IntType>, void> {
+struct LLVM_CLASS_ABI DenseMapInfo<PointerIntPair<PointerTy, IntBits, IntType>, void> {
   using Ty = PointerIntPair<PointerTy, IntBits, IntType>;
 
   static Ty getEmptyKey() {
@@ -242,7 +242,7 @@ struct DenseMapInfo<PointerIntPair<PointerTy, IntBits, IntType>, void> {
 // Teach SmallPtrSet that PointerIntPair is "basically a pointer".
 template <typename PointerTy, unsigned IntBits, typename IntType,
           typename PtrTraits>
-struct PointerLikeTypeTraits<
+struct LLVM_CLASS_ABI PointerLikeTypeTraits<
     PointerIntPair<PointerTy, IntBits, IntType, PtrTraits>> {
   static inline void *
   getAsVoidPointer(const PointerIntPair<PointerTy, IntBits, IntType> &P) {
@@ -280,13 +280,13 @@ get(const PointerIntPair<PointerTy, IntBits, IntType, PtrTraits, Info> &Pair) {
 namespace std {
 template <typename PointerTy, unsigned IntBits, typename IntType,
           typename PtrTraits, typename Info>
-struct tuple_size<
+struct LLVM_CLASS_ABI tuple_size<
     llvm::PointerIntPair<PointerTy, IntBits, IntType, PtrTraits, Info>>
     : std::integral_constant<std::size_t, 2> {};
 
 template <std::size_t I, typename PointerTy, unsigned IntBits, typename IntType,
           typename PtrTraits, typename Info>
-struct tuple_element<
+struct LLVM_CLASS_ABI tuple_element<
     I, llvm::PointerIntPair<PointerTy, IntBits, IntType, PtrTraits, Info>>
     : std::conditional<I == 0, PointerTy, IntType> {};
 } // namespace std

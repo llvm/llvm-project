@@ -36,7 +36,7 @@ template <size_t NumBytes = LLVM_BLAKE3_OUT_LEN>
 using BLAKE3Result = std::array<uint8_t, NumBytes>;
 
 /// A class that wraps the BLAKE3 algorithm.
-class BLAKE3 {
+class LLVM_CLASS_ABI BLAKE3 {
 public:
   BLAKE3() { init(); }
 
@@ -99,7 +99,7 @@ private:
 ///
 /// This is useful for using BLAKE3 as the hasher type for \p HashBuilder with
 /// non-default hash sizes.
-template <size_t NumBytes> class TruncatedBLAKE3 : public BLAKE3 {
+template <size_t NumBytes> class LLVM_CLASS_ABI TruncatedBLAKE3 : public BLAKE3 {
 public:
   /// Finalize the hasher and put the result in \p Result.
   /// This doesn't modify the hasher itself, and it's possible to finalize again

@@ -35,21 +35,21 @@ class Trace;
 ///
 /// For any errors encountered in the loading of the profile data from
 /// |Filename|, this function will return an Error condition appropriately.
-Expected<Profile> loadProfile(StringRef Filename);
+LLVM_FUNC_ABI Expected<Profile> loadProfile(StringRef Filename);
 
 /// This algorithm will merge two Profile instances into a single Profile
 /// instance, aggregating blocks by Thread ID.
-Profile mergeProfilesByThread(const Profile &L, const Profile &R);
+LLVM_FUNC_ABI Profile mergeProfilesByThread(const Profile &L, const Profile &R);
 
 /// This algorithm will merge two Profile instances into a single Profile
 /// instance, aggregating blocks by function call stack.
-Profile mergeProfilesByStack(const Profile &L, const Profile &R);
+LLVM_FUNC_ABI Profile mergeProfilesByStack(const Profile &L, const Profile &R);
 
 /// This function takes a Trace and creates a Profile instance from it.
-Expected<Profile> profileFromTrace(const Trace &T);
+LLVM_FUNC_ABI Expected<Profile> profileFromTrace(const Trace &T);
 
 /// Profile instances are thread-compatible.
-class Profile {
+class LLVM_CLASS_ABI Profile {
 public:
   using ThreadID = uint64_t;
   using PathID = unsigned;

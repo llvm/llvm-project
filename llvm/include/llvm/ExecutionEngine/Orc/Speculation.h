@@ -32,7 +32,7 @@ class Speculator;
 // trampolines are created. Operations are guarded by locks tp ensure that Imap
 // stays in consistent state after read/write
 
-class ImplSymbolMap {
+class LLVM_CLASS_ABI ImplSymbolMap {
   friend class Speculator;
 
 public:
@@ -58,7 +58,7 @@ private:
 };
 
 // Defines Speculator Concept,
-class Speculator {
+class LLVM_CLASS_ABI Speculator {
 public:
   using TargetFAddr = ExecutorAddr;
   using FunctionCandidatesMap = DenseMap<SymbolStringPtr, SymbolNameSet>;
@@ -169,7 +169,7 @@ private:
   StubAddrLikelies GlobalSpecMap;
 };
 
-class IRSpeculationLayer : public IRLayer {
+class LLVM_CLASS_ABI IRSpeculationLayer : public IRLayer {
 public:
   using IRlikiesStrRef =
       std::optional<DenseMap<StringRef, DenseSet<StringRef>>>;

@@ -39,7 +39,7 @@ class raw_ostream;
 namespace msgpack {
 
 /// Writes MessagePack objects to an output stream, one at a time.
-class Writer {
+class LLVM_CLASS_ABI Writer {
 public:
   /// Construct a writer, optionally enabling "Compatibility Mode" as defined
   /// in the MessagePack specification.

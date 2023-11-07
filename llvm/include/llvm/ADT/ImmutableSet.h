@@ -40,7 +40,7 @@ template <typename ImutInfo> class ImutAVLTreeInOrderIterator;
 template <typename ImutInfo> class ImutAVLTreeGenericIterator;
 
 template <typename ImutInfo >
-class ImutAVLTree {
+class LLVM_CLASS_ABI ImutAVLTree {
 public:
   using key_type_ref = typename ImutInfo::key_type_ref;
   using value_type = typename ImutInfo::value_type;
@@ -346,7 +346,7 @@ public:
 };
 
 template <typename ImutInfo>
-struct IntrusiveRefCntPtrInfo<ImutAVLTree<ImutInfo>> {
+struct LLVM_CLASS_ABI IntrusiveRefCntPtrInfo<ImutAVLTree<ImutInfo>> {
   static void retain(ImutAVLTree<ImutInfo> *Tree) { Tree->retain(); }
   static void release(ImutAVLTree<ImutInfo> *Tree) { Tree->release(); }
 };
@@ -356,7 +356,7 @@ struct IntrusiveRefCntPtrInfo<ImutAVLTree<ImutInfo>> {
 //===----------------------------------------------------------------------===//
 
 template <typename ImutInfo >
-class ImutAVLFactory {
+class LLVM_CLASS_ABI ImutAVLFactory {
   friend class ImutAVLTree<ImutInfo>;
 
   using TreeTy = ImutAVLTree<ImutInfo>;
@@ -638,7 +638,7 @@ public:
 // Immutable AVL-Tree Iterators.
 //===----------------------------------------------------------------------===//
 
-template <typename ImutInfo> class ImutAVLTreeGenericIterator {
+template <typename ImutInfo> class LLVM_CLASS_ABI ImutAVLTreeGenericIterator {
   SmallVector<uintptr_t,20> stack;
 
 public:
@@ -752,7 +752,7 @@ public:
   }
 };
 
-template <typename ImutInfo> class ImutAVLTreeInOrderIterator {
+template <typename ImutInfo> class LLVM_CLASS_ABI ImutAVLTreeInOrderIterator {
   using InternalIteratorTy = ImutAVLTreeGenericIterator<ImutInfo>;
 
   InternalIteratorTy InternalItr;
@@ -812,7 +812,7 @@ public:
 /// Generic iterator that wraps a T::TreeTy::iterator and exposes
 /// iterator::getValue() on dereference.
 template <typename T>
-struct ImutAVLValueIterator
+struct LLVM_CLASS_ABI ImutAVLValueIterator
     : iterator_adaptor_base<
           ImutAVLValueIterator<T>, typename T::TreeTy::iterator,
           typename std::iterator_traits<
@@ -835,7 +835,7 @@ struct ImutAVLValueIterator
 /// profile method of an object.  Specializations for primitive integers
 /// and generic handling of pointers is done below.
 template <typename T>
-struct ImutProfileInfo {
+struct LLVM_CLASS_ABI ImutProfileInfo {
   using value_type = const T;
   using value_type_ref = const T&;
 
@@ -846,7 +846,7 @@ struct ImutProfileInfo {
 
 /// Profile traits for integers.
 template <typename T>
-struct ImutProfileInteger {
+struct LLVM_CLASS_ABI ImutProfileInteger {
   using value_type = const T;
   using value_type_ref = const T&;
 
@@ -873,7 +873,7 @@ PROFILE_INTEGER_INFO(unsigned long long)
 
 /// Profile traits for booleans.
 template <>
-struct ImutProfileInfo<bool> {
+struct LLVM_CLASS_ABI ImutProfileInfo<bool> {
   using value_type = const bool;
   using value_type_ref = const bool&;
 
@@ -885,7 +885,7 @@ struct ImutProfileInfo<bool> {
 /// Generic profile trait for pointer types.  We treat pointers as
 /// references to unique objects.
 template <typename T>
-struct ImutProfileInfo<T*> {
+struct LLVM_CLASS_ABI ImutProfileInfo<T*> {
   using value_type = const T*;
   using value_type_ref = value_type;
 
@@ -905,7 +905,7 @@ struct ImutProfileInfo<T*> {
 ///   elements of immutable containers that defaults to using
 ///   std::equal_to<> and std::less<> to perform comparison of elements.
 template <typename T>
-struct ImutContainerInfo : public ImutProfileInfo<T> {
+struct LLVM_CLASS_ABI ImutContainerInfo : public ImutProfileInfo<T> {
   using value_type = typename ImutProfileInfo<T>::value_type;
   using value_type_ref = typename ImutProfileInfo<T>::value_type_ref;
   using key_type = value_type;
@@ -931,7 +931,7 @@ struct ImutContainerInfo : public ImutProfileInfo<T> {
 ///  as references to unique objects.  Pointers are thus compared by
 ///  their addresses.
 template <typename T>
-struct ImutContainerInfo<T*> : public ImutProfileInfo<T*> {
+struct LLVM_CLASS_ABI ImutContainerInfo<T*> : public ImutProfileInfo<T*> {
   using value_type = typename ImutProfileInfo<T*>::value_type;
   using value_type_ref = typename ImutProfileInfo<T*>::value_type_ref;
   using key_type = value_type;
@@ -954,7 +954,7 @@ struct ImutContainerInfo<T*> : public ImutProfileInfo<T*> {
 //===----------------------------------------------------------------------===//
 
 template <typename ValT, typename ValInfo = ImutContainerInfo<ValT>>
-class ImmutableSet {
+class LLVM_CLASS_ABI ImmutableSet {
 public:
   using value_type = typename ValInfo::value_type;
   using value_type_ref = typename ValInfo::value_type_ref;
@@ -1080,7 +1080,7 @@ public:
 
 // NOTE: This may some day replace the current ImmutableSet.
 template <typename ValT, typename ValInfo = ImutContainerInfo<ValT>>
-class ImmutableSetRef {
+class LLVM_CLASS_ABI ImmutableSetRef {
 public:
   using value_type = typename ValInfo::value_type;
   using value_type_ref = typename ValInfo::value_type_ref;

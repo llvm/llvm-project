@@ -30,7 +30,7 @@ enum SanitizerStatKind {
   SanStat_CFI_ICall,
 };
 
-struct SanitizerStatReport {
+struct LLVM_CLASS_ABI SanitizerStatReport {
   SanitizerStatReport(Module *M);
 
   /// Generates code into B that increments a location-specific counter tagged

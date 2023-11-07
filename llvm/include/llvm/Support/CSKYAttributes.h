@@ -18,7 +18,7 @@
 namespace llvm {
 namespace CSKYAttrs {
 
-const TagNameMap &getCSKYAttributeTags();
+LLVM_FUNC_ABI const TagNameMap &getCSKYAttributeTags();
 
 enum AttrType {
   CSKY_ARCH_NAME = 4,

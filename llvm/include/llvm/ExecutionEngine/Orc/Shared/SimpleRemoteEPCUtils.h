@@ -31,8 +31,8 @@ namespace llvm {
 namespace orc {
 
 namespace SimpleRemoteEPCDefaultBootstrapSymbolNames {
-extern const char *ExecutorSessionObjectName;
-extern const char *DispatchFnName;
+LLVM_FUNC_ABI extern const char *ExecutorSessionObjectName;
+LLVM_FUNC_ABI extern const char *DispatchFnName;
 } // end namespace SimpleRemoteEPCDefaultBootstrapSymbolNames
 
 enum class SimpleRemoteEPCOpcode : uint8_t {
@@ -43,7 +43,7 @@ enum class SimpleRemoteEPCOpcode : uint8_t {
   LastOpC = CallWrapper
 };
 
-struct SimpleRemoteEPCExecutorInfo {
+struct LLVM_CLASS_ABI SimpleRemoteEPCExecutorInfo {
   std::string TargetTriple;
   uint64_t PageSize;
   StringMap<std::vector<char>> BootstrapMap;
@@ -52,7 +52,7 @@ struct SimpleRemoteEPCExecutorInfo {
 
 using SimpleRemoteEPCArgBytesVector = SmallVector<char, 128>;
 
-class SimpleRemoteEPCTransportClient {
+class LLVM_CLASS_ABI SimpleRemoteEPCTransportClient {
 public:
   enum HandleMessageAction { ContinueSession, EndSession };
 
@@ -76,7 +76,7 @@ public:
   virtual void handleDisconnect(Error Err) = 0;
 };
 
-class SimpleRemoteEPCTransport {
+class LLVM_CLASS_ABI SimpleRemoteEPCTransport {
 public:
   virtual ~SimpleRemoteEPCTransport();
 
@@ -101,7 +101,7 @@ public:
 };
 
 /// Uses read/write on FileDescriptors for transport.
-class FDSimpleRemoteEPCTransport : public SimpleRemoteEPCTransport {
+class LLVM_CLASS_ABI FDSimpleRemoteEPCTransport : public SimpleRemoteEPCTransport {
 public:
   /// Create a FDSimpleRemoteEPCTransport using the given FDs for
   /// reading (InFD) and writing (OutFD).
@@ -140,14 +140,14 @@ private:
   std::atomic<bool> Disconnected{false};
 };
 
-struct RemoteSymbolLookupSetElement {
+struct LLVM_CLASS_ABI RemoteSymbolLookupSetElement {
   std::string Name;
   bool Required;
 };
 
 using RemoteSymbolLookupSet = std::vector<RemoteSymbolLookupSetElement>;
 
-struct RemoteSymbolLookup {
+struct LLVM_CLASS_ABI RemoteSymbolLookup {
   uint64_t H;
   RemoteSymbolLookupSet Symbols;
 };
@@ -167,7 +167,7 @@ using SPSSimpleRemoteEPCExecutorInfo =
              SPSSequence<SPSTuple<SPSString, SPSExecutorAddr>>>;
 
 template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookupSetElement,
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSRemoteSymbolLookupSetElement,
                              RemoteSymbolLookupSetElement> {
 public:
   static size_t size(const RemoteSymbolLookupSetElement &V) {
@@ -186,7 +186,7 @@ public:
 };
 
 template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookup, RemoteSymbolLookup> {
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSRemoteSymbolLookup, RemoteSymbolLookup> {
 public:
   static size_t size(const RemoteSymbolLookup &V) {
     return SPSArgList<uint64_t, SPSRemoteSymbolLookupSet>::size(V.H, V.Symbols);
@@ -204,7 +204,7 @@ public:
 };
 
 template <>
-class SPSSerializationTraits<SPSSimpleRemoteEPCExecutorInfo,
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSSimpleRemoteEPCExecutorInfo,
                              SimpleRemoteEPCExecutorInfo> {
 public:
   static size_t size(const SimpleRemoteEPCExecutorInfo &SI) {

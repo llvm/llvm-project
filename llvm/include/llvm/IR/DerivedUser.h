@@ -25,7 +25,7 @@ class Use;
 /// that can't be extended by code outside of lib/IR. This class creates a
 /// loophole that allows classes outside of lib/IR to extend User to leverage
 /// its use/def list machinery.
-class DerivedUser : public User {
+class LLVM_CLASS_ABI DerivedUser : public User {
 protected:
   using  DeleteValueTy = void (*)(DerivedUser *);
 

@@ -21,7 +21,7 @@ namespace sys {
 
 enum class COMThreadingMode { SingleThreaded, MultiThreaded };
 
-class InitializeCOMRAII {
+class LLVM_CLASS_ABI InitializeCOMRAII {
 public:
   explicit InitializeCOMRAII(COMThreadingMode Threading,
                              bool SpeedOverMemory = false);

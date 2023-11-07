@@ -16,7 +16,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
-class TarWriter {
+class LLVM_CLASS_ABI TarWriter {
 public:
   static Expected<std::unique_ptr<TarWriter>> create(StringRef OutputPath,
                                                      StringRef BaseDir);

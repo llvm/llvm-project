@@ -70,7 +70,7 @@ class raw_ostream;
 /// This class exposes both the interface to the call graph for a module of IR.
 ///
 /// The core call graph itself can also be updated to reflect changes to the IR.
-class CallGraph {
+class LLVM_CLASS_ABI CallGraph {
   Module &M;
 
   using FunctionMapTy =
@@ -164,7 +164,7 @@ public:
 ///
 /// Typically represents a function in the call graph. There are also special
 /// "null" nodes used to represent theoretical entries in the call graph.
-class CallGraphNode {
+class LLVM_CLASS_ABI CallGraphNode {
 public:
   /// A pair of the calling instruction (a call or invoke)
   /// and the call graph node being called.
@@ -300,7 +300,7 @@ private:
 /// This class implements the concept of an analysis pass used by the \c
 /// ModuleAnalysisManager to run an analysis over a module and cache the
 /// resulting data.
-class CallGraphAnalysis : public AnalysisInfoMixin<CallGraphAnalysis> {
+class LLVM_CLASS_ABI CallGraphAnalysis : public AnalysisInfoMixin<CallGraphAnalysis> {
   friend AnalysisInfoMixin<CallGraphAnalysis>;
 
   static AnalysisKey Key;
@@ -316,7 +316,7 @@ public:
 };
 
 /// Printer pass for the \c CallGraphAnalysis results.
-class CallGraphPrinterPass : public PassInfoMixin<CallGraphPrinterPass> {
+class LLVM_CLASS_ABI CallGraphPrinterPass : public PassInfoMixin<CallGraphPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -326,7 +326,7 @@ public:
 };
 
 /// Printer pass for the summarized \c CallGraphAnalysis results.
-class CallGraphSCCsPrinterPass
+class LLVM_CLASS_ABI CallGraphSCCsPrinterPass
     : public PassInfoMixin<CallGraphSCCsPrinterPass> {
   raw_ostream &OS;
 
@@ -343,7 +343,7 @@ public:
 /// module pass which runs over a module of IR and produces the call graph. The
 /// call graph interface is entirelly a wrapper around a \c CallGraph object
 /// which is stored internally for each module.
-class CallGraphWrapperPass : public ModulePass {
+class LLVM_CLASS_ABI CallGraphWrapperPass : public ModulePass {
   std::unique_ptr<CallGraph> G;
 
 public:
@@ -426,7 +426,7 @@ public:
 
 // Provide graph traits for traversing call graphs using standard graph
 // traversals.
-template <> struct GraphTraits<CallGraphNode *> {
+template <> struct LLVM_CLASS_ABI GraphTraits<CallGraphNode *> {
   using NodeRef = CallGraphNode *;
   using CGNPairTy = CallGraphNode::CallRecord;
 
@@ -445,7 +445,7 @@ template <> struct GraphTraits<CallGraphNode *> {
   }
 };
 
-template <> struct GraphTraits<const CallGraphNode *> {
+template <> struct LLVM_CLASS_ABI GraphTraits<const CallGraphNode *> {
   using NodeRef = const CallGraphNode *;
   using CGNPairTy = CallGraphNode::CallRecord;
   using EdgeRef = const CallGraphNode::CallRecord &;
@@ -474,7 +474,7 @@ template <> struct GraphTraits<const CallGraphNode *> {
 };
 
 template <>
-struct GraphTraits<CallGraph *> : public GraphTraits<CallGraphNode *> {
+struct LLVM_CLASS_ABI GraphTraits<CallGraph *> : public GraphTraits<CallGraphNode *> {
   using PairTy =
       std::pair<const Function *const, std::unique_ptr<CallGraphNode>>;
 
@@ -500,7 +500,7 @@ struct GraphTraits<CallGraph *> : public GraphTraits<CallGraphNode *> {
 };
 
 template <>
-struct GraphTraits<const CallGraph *> : public GraphTraits<
+struct LLVM_CLASS_ABI GraphTraits<const CallGraph *> : public GraphTraits<
                                             const CallGraphNode *> {
   using PairTy =
       std::pair<const Function *const, std::unique_ptr<CallGraphNode>>;

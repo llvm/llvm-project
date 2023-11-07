@@ -31,11 +31,11 @@ enum class PerfJITRecordType {
   JIT_CODE_MAX
 };
 
-struct PerfJITRecordPrefix {
+struct LLVM_CLASS_ABI PerfJITRecordPrefix {
   PerfJITRecordType Id; // record type identifier, uint32_t
   uint32_t TotalSize;
 };
-struct PerfJITCodeLoadRecord {
+struct LLVM_CLASS_ABI PerfJITCodeLoadRecord {
   PerfJITRecordPrefix Prefix;
 
   uint32_t Pid;
@@ -47,21 +47,21 @@ struct PerfJITCodeLoadRecord {
   std::string Name;
 };
 
-struct PerfJITDebugEntry {
+struct LLVM_CLASS_ABI PerfJITDebugEntry {
   uint64_t Addr;
   uint32_t Lineno;  // source line number starting at 1
   uint32_t Discrim; // column discriminator, 0 is default
   std::string Name;
 };
 
-struct PerfJITDebugInfoRecord {
+struct LLVM_CLASS_ABI PerfJITDebugInfoRecord {
   PerfJITRecordPrefix Prefix;
 
   uint64_t CodeAddr;
   std::vector<PerfJITDebugEntry> Entries;
 };
 
-struct PerfJITCodeUnwindingInfoRecord {
+struct LLVM_CLASS_ABI PerfJITCodeUnwindingInfoRecord {
   PerfJITRecordPrefix Prefix;
 
   uint64_t UnwindDataSize;
@@ -76,7 +76,7 @@ struct PerfJITCodeUnwindingInfoRecord {
 };
 
 // Batch vehicle for minimizing RPC calls for perf jit records
-struct PerfJITRecordBatch {
+struct LLVM_CLASS_ABI PerfJITRecordBatch {
   std::vector<PerfJITDebugInfoRecord> DebugInfoRecords;
   std::vector<PerfJITCodeLoadRecord> CodeLoadRecords;
   // only valid if record size > 0
@@ -90,7 +90,7 @@ namespace shared {
 using SPSPerfJITRecordPrefix = SPSTuple<uint32_t, uint32_t>;
 
 template <>
-class SPSSerializationTraits<SPSPerfJITRecordPrefix, PerfJITRecordPrefix> {
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSPerfJITRecordPrefix, PerfJITRecordPrefix> {
 public:
   static size_t size(const PerfJITRecordPrefix &Val) {
     return SPSPerfJITRecordPrefix::AsArgList::size(
@@ -114,7 +114,7 @@ using SPSPerfJITCodeLoadRecord =
              uint64_t, uint64_t, SPSString>;
 
 template <>
-class SPSSerializationTraits<SPSPerfJITCodeLoadRecord, PerfJITCodeLoadRecord> {
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSPerfJITCodeLoadRecord, PerfJITCodeLoadRecord> {
 public:
   static size_t size(const PerfJITCodeLoadRecord &Val) {
     return SPSPerfJITCodeLoadRecord::AsArgList::size(
@@ -138,7 +138,7 @@ public:
 using SPSPerfJITDebugEntry = SPSTuple<uint64_t, uint32_t, uint32_t, SPSString>;
 
 template <>
-class SPSSerializationTraits<SPSPerfJITDebugEntry, PerfJITDebugEntry> {
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSPerfJITDebugEntry, PerfJITDebugEntry> {
 public:
   static size_t size(const PerfJITDebugEntry &Val) {
     return SPSPerfJITDebugEntry::AsArgList::size(Val.Addr, Val.Lineno,
@@ -160,7 +160,7 @@ using SPSPerfJITDebugInfoRecord = SPSTuple<SPSPerfJITRecordPrefix, uint64_t,
                                            SPSSequence<SPSPerfJITDebugEntry>>;
 
 template <>
-class SPSSerializationTraits<SPSPerfJITDebugInfoRecord,
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSPerfJITDebugInfoRecord,
                              PerfJITDebugInfoRecord> {
 public:
   static size_t size(const PerfJITDebugInfoRecord &Val) {
@@ -182,7 +182,7 @@ using SPSPerfJITCodeUnwindingInfoRecord =
     SPSTuple<SPSPerfJITRecordPrefix, uint64_t, uint64_t, uint64_t, uint64_t,
              SPSString, uint64_t>;
 template <>
-class SPSSerializationTraits<SPSPerfJITCodeUnwindingInfoRecord,
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSPerfJITCodeUnwindingInfoRecord,
                              PerfJITCodeUnwindingInfoRecord> {
 public:
   static size_t size(const PerfJITCodeUnwindingInfoRecord &Val) {
@@ -208,7 +208,7 @@ using SPSPerfJITRecordBatch = SPSTuple<SPSSequence<SPSPerfJITCodeLoadRecord>,
                                        SPSSequence<SPSPerfJITDebugInfoRecord>,
                                        SPSPerfJITCodeUnwindingInfoRecord>;
 template <>
-class SPSSerializationTraits<SPSPerfJITRecordBatch, PerfJITRecordBatch> {
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSPerfJITRecordBatch, PerfJITRecordBatch> {
 public:
   static size_t size(const PerfJITRecordBatch &Val) {
     return SPSPerfJITRecordBatch::AsArgList::size(

@@ -78,7 +78,7 @@ using TargetFlagsType = uint8_t;
 ///             | expr '<<' expr
 ///             | expr '>>' expr
 ///
-class RuntimeDyldChecker {
+class LLVM_CLASS_ABI RuntimeDyldChecker {
 public:
   class MemoryRegionInfo {
   public:

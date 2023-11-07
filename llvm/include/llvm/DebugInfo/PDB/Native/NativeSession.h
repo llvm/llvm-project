@@ -30,7 +30,7 @@ class PDBSymbolCompiland;
 class PDBSymbolExe;
 template <typename ChildType> class IPDBEnumChildren;
 
-class NativeSession : public IPDBSession {
+class LLVM_CLASS_ABI NativeSession : public IPDBSession {
   struct PdbSearchOptions {
     StringRef ExePath;
     // FIXME: Add other PDB search options (_NT_SYMBOL_PATH, symsrv)

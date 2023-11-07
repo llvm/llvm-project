@@ -36,7 +36,7 @@ LLVM_C_EXTERN_C_BEGIN
  *
  * @see llvm::ParseIR()
  */
-LLVMBool LLVMParseIRInContext(LLVMContextRef ContextRef,
+LLVM_FUNC_ABI LLVMBool LLVMParseIRInContext(LLVMContextRef ContextRef,
                               LLVMMemoryBufferRef MemBuf, LLVMModuleRef *OutM,
                               char **OutMessage);
 

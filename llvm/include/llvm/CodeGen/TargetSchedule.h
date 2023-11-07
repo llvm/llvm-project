@@ -28,7 +28,7 @@ class MachineInstr;
 class TargetInstrInfo;
 
 /// Provide an instruction scheduling machine model to CodeGen passes.
-class TargetSchedModel {
+class LLVM_CLASS_ABI TargetSchedModel {
   // For efficiency, hold a copy of the statically defined MCSchedModel for this
   // processor.
   MCSchedModel SchedModel;

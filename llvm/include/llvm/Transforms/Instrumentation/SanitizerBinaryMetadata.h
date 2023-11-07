@@ -21,7 +21,7 @@
 
 namespace llvm {
 
-struct SanitizerBinaryMetadataOptions {
+struct LLVM_CLASS_ABI SanitizerBinaryMetadataOptions {
   bool Covered = false;
   bool Atomics = false;
   bool UAR = false;
@@ -48,7 +48,7 @@ inline constexpr char kSanitizerBinaryMetadataAtomicsSection[] =
 /// metadata for binary analysis sanitizers.
 //
 /// The pass should be inserted after optimizations.
-class SanitizerBinaryMetadataPass
+class LLVM_CLASS_ABI SanitizerBinaryMetadataPass
     : public PassInfoMixin<SanitizerBinaryMetadataPass> {
 public:
   explicit SanitizerBinaryMetadataPass(

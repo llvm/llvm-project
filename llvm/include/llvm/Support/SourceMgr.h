@@ -29,7 +29,7 @@ class SMFixIt;
 
 /// This owns the files read by a parser, handles include stacks,
 /// and handles diagnostic wrangling.
-class SourceMgr {
+class LLVM_CLASS_ABI SourceMgr {
 public:
   enum DiagKind {
     DK_Error,
@@ -254,7 +254,7 @@ public:
 };
 
 /// Represents a single fixit, a replacement of one range of text with another.
-class SMFixIt {
+class LLVM_CLASS_ABI SMFixIt {
   SMRange Range;
 
   std::string Text;
@@ -279,7 +279,7 @@ public:
 
 /// Instances of this class encapsulate one diagnostic report, allowing
 /// printing to a raw_ostream as a caret diagnostic.
-class SMDiagnostic {
+class LLVM_CLASS_ABI SMDiagnostic {
   const SourceMgr *SM = nullptr;
   SMLoc Loc;
   std::string Filename;

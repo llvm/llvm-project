@@ -30,8 +30,8 @@ namespace fuzzerop {
 
 /// @{
 /// Populate a small list of potentially interesting constants of a given type.
-void makeConstantsWithType(Type *T, std::vector<Constant *> &Cs);
-std::vector<Constant *> makeConstantsWithType(Type *T);
+LLVM_FUNC_ABI void makeConstantsWithType(Type *T, std::vector<Constant *> &Cs);
+LLVM_FUNC_ABI std::vector<Constant *> makeConstantsWithType(Type *T);
 /// @}
 
 /// A matcher/generator for finding suitable values for the next source in an
@@ -41,7 +41,7 @@ std::vector<Constant *> makeConstantsWithType(Type *T);
 /// subset of its operands, this predicate determines if some value New is
 /// suitable for the next operand or generates a set of values that are
 /// suitable.
-class SourcePred {
+class LLVM_CLASS_ABI SourcePred {
 public:
   /// Given a list of already selected operands, returns whether a given new
   /// operand is suitable for the next operand.
@@ -87,7 +87,7 @@ public:
 };
 
 /// A description of some operation we can build while fuzzing IR.
-struct OpDescriptor {
+struct LLVM_CLASS_ABI OpDescriptor {
   unsigned Weight;
   SmallVector<SourcePred, 2> SourcePreds;
   std::function<Value *(ArrayRef<Value *>, Instruction *)> BuilderFunc;

@@ -27,7 +27,7 @@ namespace llvm {
 /// NOTE: This container doesn't allow you to store a null pointer into it.
 ///
 template <typename EltTy>
-class TinyPtrVector {
+class LLVM_CLASS_ABI TinyPtrVector {
 public:
   using VecTy = SmallVector<EltTy, 4>;
   using value_type = typename VecTy::value_type;

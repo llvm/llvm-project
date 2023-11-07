@@ -55,7 +55,7 @@ using UniformityInfo = GenericUniformityInfo<SSAContext>;
 /// FunctionLoweringInfo - This contains information that is global to a
 /// function that is used when lowering a region of the function.
 ///
-class FunctionLoweringInfo {
+class LLVM_CLASS_ABI FunctionLoweringInfo {
 public:
   const Function *Fn;
   MachineFunction *MF;

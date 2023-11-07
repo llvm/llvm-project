@@ -18,7 +18,7 @@ namespace llvm {
 namespace objcopy {
 
 // ELF specific configuration for copying/stripping a single file.
-struct ELFConfig {
+struct LLVM_CLASS_ABI ELFConfig {
   uint8_t NewSymbolVisibility = (uint8_t)ELF::STV_DEFAULT;
 
   // ELF entry point address expression. The input parameter is an entry point

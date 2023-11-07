@@ -46,7 +46,7 @@ namespace codeview {
 /// require more than one linear scan.  For a type stream of N elements divided
 /// into M chunks of roughly equal size, this yields a worst case lookup time
 /// of O(N/M) and an amortized time of O(1).
-class LazyRandomTypeCollection : public TypeCollection {
+class LLVM_CLASS_ABI LazyRandomTypeCollection : public TypeCollection {
   using PartialOffsetArray = FixedStreamArray<TypeIndexOffset>;
 
   struct CacheEntry {

@@ -31,7 +31,7 @@ constexpr LVSectionIndex UndefinedSectionIndex = 0;
 class LVScopeCompileUnit;
 class LVObject;
 
-class LVSplitContext final {
+class LLVM_CLASS_ABI LVSplitContext final {
   std::unique_ptr<ToolOutputFile> OutputFile;
   std::string Location;
 
@@ -58,7 +58,7 @@ public:
 /// The logical reader owns of all the logical elements created during
 /// the debug information parsing. For its creation it uses a specific
 ///  bump allocator for each type of logical element.
-class LVReader {
+class LLVM_CLASS_ABI LVReader {
   LVBinaryType BinaryType;
 
   // Context used by '--output=split' command line option.

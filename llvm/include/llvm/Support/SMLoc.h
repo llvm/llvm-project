@@ -21,7 +21,7 @@
 namespace llvm {
 
 /// Represents a location in source code.
-class SMLoc {
+class LLVM_CLASS_ABI SMLoc {
   const char *Ptr = nullptr;
 
 public:
@@ -46,7 +46,7 @@ public:
 /// SMRange is implemented using a half-open range, as is the convention in C++.
 /// In the string "abc", the range [1,3) represents the substring "bc", and the
 /// range [2,2) represents an empty range between the characters "b" and "c".
-class SMRange {
+class LLVM_CLASS_ABI SMRange {
 public:
   SMLoc Start, End;
 

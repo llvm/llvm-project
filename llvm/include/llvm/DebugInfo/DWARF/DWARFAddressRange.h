@@ -23,7 +23,7 @@ namespace llvm {
 class raw_ostream;
 class DWARFObject;
 
-struct DWARFAddressRange {
+struct LLVM_CLASS_ABI DWARFAddressRange {
   uint64_t LowPC;
   uint64_t HighPC;
   uint64_t SectionIndex;
@@ -83,7 +83,7 @@ inline bool operator==(const DWARFAddressRange &LHS,
   return std::tie(LHS.SectionIndex, LHS.LowPC, LHS.HighPC) == std::tie(RHS.SectionIndex, RHS.LowPC, RHS.HighPC);
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const DWARFAddressRange &R);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const DWARFAddressRange &R);
 
 /// DWARFAddressRangesVector - represents a set of absolute address ranges.
 using DWARFAddressRangesVector = std::vector<DWARFAddressRange>;

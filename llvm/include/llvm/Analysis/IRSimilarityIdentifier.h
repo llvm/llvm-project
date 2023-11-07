@@ -113,7 +113,7 @@ enum InstrType { Legal, Illegal, Invisible };
 /// by \ref isSameOperationAs.
 /// TODO: Handle GetElementPtrInsts, as some of the operands have to be the
 /// exact same, and some do not.
-struct IRInstructionData
+struct LLVM_CLASS_ABI IRInstructionData
     : ilist_node<IRInstructionData, ilist_sentinel_tracking<true>> {
 
   /// The source Instruction that is being wrapped.
@@ -301,7 +301,7 @@ struct IRInstructionData
   IRInstructionDataList *IDL = nullptr;
 };
 
-struct IRInstructionDataList
+struct LLVM_CLASS_ABI IRInstructionDataList
     : simple_ilist<IRInstructionData, ilist_sentinel_tracking<true>> {};
 
 /// Compare one IRInstructionData class to another IRInstructionData class for
@@ -313,9 +313,9 @@ struct IRInstructionDataList
 /// \param B - The second IRInstructionData class to compare
 /// \returns true if \p A and \p B are similar enough to be mapped to the same
 /// value.
-bool isClose(const IRInstructionData &A, const IRInstructionData &B);
+LLVM_FUNC_ABI bool isClose(const IRInstructionData &A, const IRInstructionData &B);
 
-struct IRInstructionDataTraits : DenseMapInfo<IRInstructionData *> {
+struct LLVM_CLASS_ABI IRInstructionDataTraits : DenseMapInfo<IRInstructionData *> {
   static inline IRInstructionData *getEmptyKey() { return nullptr; }
   static inline IRInstructionData *getTombstoneKey() {
     return reinterpret_cast<IRInstructionData *>(-1);
@@ -379,7 +379,7 @@ struct IRInstructionDataTraits : DenseMapInfo<IRInstructionData *> {
 ///
 /// TODO: This is very similar to the MachineOutliner, and should be
 /// consolidated into the same interface.
-struct IRInstructionMapper {
+struct LLVM_CLASS_ABI IRInstructionMapper {
   /// The starting illegal instruction number to map to.
   ///
   /// Set to -3 for compatibility with DenseMapInfo<unsigned>.
@@ -652,7 +652,7 @@ struct IRInstructionMapper {
 ///
 /// We cannot create the same mapping since the use of c4 is not used in the
 /// same way as %b or c2.
-class IRSimilarityCandidate {
+class LLVM_CLASS_ABI IRSimilarityCandidate {
 private:
   /// The start index of this IRSimilarityCandidate in the instruction list.
   unsigned StartIdx = 0;
@@ -1043,7 +1043,7 @@ typedef std::vector<SimilarityGroup> SimilarityGroupList;
 ///
 /// A list of the different similarity groups is then returned after
 /// analyzing the module.
-class IRSimilarityIdentifier {
+class LLVM_CLASS_ABI IRSimilarityIdentifier {
 public:
   IRSimilarityIdentifier(bool MatchBranches = true,
                          bool MatchIndirectCalls = true,
@@ -1160,7 +1160,7 @@ private:
 
 /// An analysis pass based on legacy pass manager that runs and returns
 /// IRSimilarityIdentifier run on the Module.
-class IRSimilarityIdentifierWrapperPass : public ModulePass {
+class LLVM_CLASS_ABI IRSimilarityIdentifierWrapperPass : public ModulePass {
   std::unique_ptr<IRSimilarity::IRSimilarityIdentifier> IRSI;
 
 public:
@@ -1180,7 +1180,7 @@ public:
 
 /// An analysis pass that runs and returns the IRSimilarityIdentifier run on the
 /// Module.
-class IRSimilarityAnalysis : public AnalysisInfoMixin<IRSimilarityAnalysis> {
+class LLVM_CLASS_ABI IRSimilarityAnalysis : public AnalysisInfoMixin<IRSimilarityAnalysis> {
 public:
   typedef IRSimilarity::IRSimilarityIdentifier Result;
 
@@ -1192,7 +1192,7 @@ private:
 };
 
 /// Printer pass that uses \c IRSimilarityAnalysis.
-class IRSimilarityAnalysisPrinterPass
+class LLVM_CLASS_ABI IRSimilarityAnalysisPrinterPass
     : public PassInfoMixin<IRSimilarityAnalysisPrinterPass> {
   raw_ostream &OS;
 

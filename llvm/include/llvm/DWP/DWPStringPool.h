@@ -8,7 +8,7 @@
 #include <cassert>
 
 namespace llvm {
-class DWPStringPool {
+class LLVM_CLASS_ABI DWPStringPool {
 
   struct CStrDenseMapInfo {
     static inline const char *getEmptyKey() {

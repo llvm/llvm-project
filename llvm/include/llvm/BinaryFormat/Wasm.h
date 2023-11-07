@@ -32,23 +32,23 @@ const uint32_t WasmMetadataVersion = 0x2;
 // Wasm uses a 64k page size
 const uint32_t WasmPageSize = 65536;
 
-struct WasmObjectHeader {
+struct LLVM_CLASS_ABI WasmObjectHeader {
   StringRef Magic;
   uint32_t Version;
 };
 
-struct WasmDylinkImportInfo {
+struct LLVM_CLASS_ABI WasmDylinkImportInfo {
   StringRef Module;
   StringRef Field;
   uint32_t Flags;
 };
 
-struct WasmDylinkExportInfo {
+struct LLVM_CLASS_ABI WasmDylinkExportInfo {
   StringRef Name;
   uint32_t Flags;
 };
 
-struct WasmDylinkInfo {
+struct LLVM_CLASS_ABI WasmDylinkInfo {
   uint32_t MemorySize; // Memory size in bytes
   uint32_t MemoryAlignment;  // P2 alignment of memory
   uint32_t TableSize;  // Table size in elements
@@ -58,41 +58,41 @@ struct WasmDylinkInfo {
   std::vector<WasmDylinkExportInfo> ExportInfo;
 };
 
-struct WasmProducerInfo {
+struct LLVM_CLASS_ABI WasmProducerInfo {
   std::vector<std::pair<std::string, std::string>> Languages;
   std::vector<std::pair<std::string, std::string>> Tools;
   std::vector<std::pair<std::string, std::string>> SDKs;
 };
 
-struct WasmFeatureEntry {
+struct LLVM_CLASS_ABI WasmFeatureEntry {
   uint8_t Prefix;
   std::string Name;
 };
 
-struct WasmExport {
+struct LLVM_CLASS_ABI WasmExport {
   StringRef Name;
   uint8_t Kind;
   uint32_t Index;
 };
 
-struct WasmLimits {
+struct LLVM_CLASS_ABI WasmLimits {
   uint8_t Flags;
   uint64_t Minimum;
   uint64_t Maximum;
 };
 
-struct WasmTableType {
+struct LLVM_CLASS_ABI WasmTableType {
   uint8_t ElemType;
   WasmLimits Limits;
 };
 
-struct WasmTable {
+struct LLVM_CLASS_ABI WasmTable {
   uint32_t Index;
   WasmTableType Type;
   StringRef SymbolName; // from the "linking" section
 };
 
-struct WasmInitExprMVP {
+struct LLVM_CLASS_ABI WasmInitExprMVP {
   uint8_t Opcode;
   union {
     int32_t Int32;
@@ -103,32 +103,32 @@ struct WasmInitExprMVP {
   } Value;
 };
 
-struct WasmInitExpr {
+struct LLVM_CLASS_ABI WasmInitExpr {
   uint8_t Extended; // Set to non-zero if extended const is used (i.e. more than
                     // one instruction)
   WasmInitExprMVP Inst;
   ArrayRef<uint8_t> Body;
 };
 
-struct WasmGlobalType {
+struct LLVM_CLASS_ABI WasmGlobalType {
   uint8_t Type;
   bool Mutable;
 };
 
-struct WasmGlobal {
+struct LLVM_CLASS_ABI WasmGlobal {
   uint32_t Index;
   WasmGlobalType Type;
   WasmInitExpr InitExpr;
   StringRef SymbolName; // from the "linking" section
 };
 
-struct WasmTag {
+struct LLVM_CLASS_ABI WasmTag {
   uint32_t Index;
   uint32_t SigIndex;
   StringRef SymbolName; // from the "linking" section
 };
 
-struct WasmImport {
+struct LLVM_CLASS_ABI WasmImport {
   StringRef Module;
   StringRef Field;
   uint8_t Kind;
@@ -140,12 +140,12 @@ struct WasmImport {
   };
 };
 
-struct WasmLocalDecl {
+struct LLVM_CLASS_ABI WasmLocalDecl {
   uint8_t Type;
   uint32_t Count;
 };
 
-struct WasmFunction {
+struct LLVM_CLASS_ABI WasmFunction {
   uint32_t Index;
   uint32_t SigIndex;
   std::vector<WasmLocalDecl> Locals;
@@ -159,7 +159,7 @@ struct WasmFunction {
   uint32_t Comdat;      // from the "comdat info" section
 };
 
-struct WasmDataSegment {
+struct LLVM_CLASS_ABI WasmDataSegment {
   uint32_t InitFlags;
   // Present if InitFlags & WASM_DATA_SEGMENT_HAS_MEMINDEX.
   uint32_t MemoryIndex;
@@ -173,7 +173,7 @@ struct WasmDataSegment {
   uint32_t Comdat; // from the "comdat info" section
 };
 
-struct WasmElemSegment {
+struct LLVM_CLASS_ABI WasmElemSegment {
   uint32_t Flags;
   uint32_t TableNumber;
   uint8_t ElemKind;
@@ -183,25 +183,25 @@ struct WasmElemSegment {
 
 // Represents the location of a Wasm data symbol within a WasmDataSegment, as
 // the index of the segment, and the offset and size within the segment.
-struct WasmDataReference {
+struct LLVM_CLASS_ABI WasmDataReference {
   uint32_t Segment;
   uint64_t Offset;
   uint64_t Size;
 };
 
-struct WasmRelocation {
+struct LLVM_CLASS_ABI WasmRelocation {
   uint8_t Type;    // The type of the relocation.
   uint32_t Index;  // Index into either symbol or type index space.
   uint64_t Offset; // Offset from the start of the section.
   int64_t Addend;  // A value to add to the symbol.
 };
 
-struct WasmInitFunc {
+struct LLVM_CLASS_ABI WasmInitFunc {
   uint32_t Priority;
   uint32_t Symbol;
 };
 
-struct WasmSymbolInfo {
+struct LLVM_CLASS_ABI WasmSymbolInfo {
   StringRef Name;
   uint8_t Kind;
   uint32_t Flags;
@@ -226,13 +226,13 @@ enum class NameType {
   DATA_SEGMENT,
 };
 
-struct WasmDebugName {
+struct LLVM_CLASS_ABI WasmDebugName {
   NameType Type;
   uint32_t Index;
   StringRef Name;
 };
 
-struct WasmLinkingData {
+struct LLVM_CLASS_ABI WasmLinkingData {
   uint32_t Version;
   std::vector<WasmInitFunc> InitFunctions;
   std::vector<StringRef> Comdats;
@@ -434,7 +434,7 @@ enum class ValType {
   EXTERNREF = WASM_TYPE_EXTERNREF,
 };
 
-struct WasmSignature {
+struct LLVM_CLASS_ABI WasmSignature {
   SmallVector<ValType, 1> Returns;
   SmallVector<ValType, 4> Params;
   // Support empty and tombstone instances, needed by DenseMap.
@@ -474,10 +474,10 @@ inline bool operator==(const WasmTableType &LHS, const WasmTableType &RHS) {
   return LHS.ElemType == RHS.ElemType && LHS.Limits == RHS.Limits;
 }
 
-llvm::StringRef toString(WasmSymbolType type);
-llvm::StringRef relocTypetoString(uint32_t type);
-llvm::StringRef sectionTypeToString(uint32_t type);
-bool relocTypeHasAddend(uint32_t type);
+LLVM_FUNC_ABI llvm::StringRef toString(WasmSymbolType type);
+LLVM_FUNC_ABI llvm::StringRef relocTypetoString(uint32_t type);
+LLVM_FUNC_ABI llvm::StringRef sectionTypeToString(uint32_t type);
+LLVM_FUNC_ABI bool relocTypeHasAddend(uint32_t type);
 
 } // end namespace wasm
 } // end namespace llvm

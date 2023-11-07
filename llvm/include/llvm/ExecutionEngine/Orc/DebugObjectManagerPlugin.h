@@ -46,7 +46,7 @@ class DebugObject;
 /// DebugObjectRegistrar is notified. Ownership of DebugObjects remains with the
 /// plugin.
 ///
-class DebugObjectManagerPlugin : public ObjectLinkingLayer::Plugin {
+class LLVM_CLASS_ABI DebugObjectManagerPlugin : public ObjectLinkingLayer::Plugin {
 public:
   // DEPRECATED - Please specify options explicitly
   DebugObjectManagerPlugin(ExecutionSession &ES,

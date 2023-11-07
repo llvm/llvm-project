@@ -34,7 +34,7 @@ using LVSymbolKindSet = std::set<LVSymbolKind>;
 using LVSymbolDispatch = std::map<LVSymbolKind, LVSymbolGetFunction>;
 using LVSymbolRequest = std::vector<LVSymbolGetFunction>;
 
-class LVSymbol final : public LVElement {
+class LLVM_CLASS_ABI LVSymbol final : public LVElement {
   enum class Property { HasLocation, FillGaps, LastEntry };
 
   // Typed bitvector with kinds and properties for this symbol.

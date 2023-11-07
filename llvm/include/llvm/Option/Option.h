@@ -53,7 +53,7 @@ enum DriverVisibility {
 /// flags. At runtime the driver parses the command line into
 /// concrete Arg instances, each of which corresponds to a
 /// particular Option instance.
-class Option {
+class LLVM_CLASS_ABI Option {
 public:
   enum OptionClass {
     GroupClass = 0,

@@ -39,7 +39,7 @@ class Value;
 class ValueLatticeElement;
 
 /// Helper struct shared between Function Specialization and SCCP Solver.
-struct ArgInfo {
+struct LLVM_CLASS_ABI ArgInfo {
   Argument *Formal; // The Formal argument being analysed.
   Constant *Actual; // A corresponding actual constant argument.
 
@@ -63,7 +63,7 @@ class SCCPInstVisitor;
 /// SCCPSolver - This interface class is a general purpose solver for Sparse
 /// Conditional Constant Propagation (SCCP).
 ///
-class SCCPSolver {
+class LLVM_CLASS_ABI SCCPSolver {
   std::unique_ptr<SCCPInstVisitor> Visitor;
 
 public:

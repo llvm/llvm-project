@@ -38,7 +38,7 @@ class Function;
 ///
 /// Initially the PhiValues is empty, and gets incrementally populated whenever
 /// it is queried.
-class PhiValues {
+class LLVM_CLASS_ABI PhiValues {
 public:
   using ValueSet = SmallSetVector<Value *, 4>;
 
@@ -113,7 +113,7 @@ private:
 ///
 /// The analysis does nothing by itself, and just returns an empty PhiValues
 /// which will get filled in as it's used.
-class PhiValuesAnalysis : public AnalysisInfoMixin<PhiValuesAnalysis> {
+class LLVM_CLASS_ABI PhiValuesAnalysis : public AnalysisInfoMixin<PhiValuesAnalysis> {
   friend AnalysisInfoMixin<PhiValuesAnalysis>;
   static AnalysisKey Key;
 
@@ -127,7 +127,7 @@ public:
 /// This pass doesn't print whatever information the PhiValues happens to hold,
 /// but instead first uses the PhiValues to analyze all the phis in the function
 /// so the complete information is printed.
-class PhiValuesPrinterPass : public PassInfoMixin<PhiValuesPrinterPass> {
+class LLVM_CLASS_ABI PhiValuesPrinterPass : public PassInfoMixin<PhiValuesPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -136,7 +136,7 @@ public:
 };
 
 /// Wrapper pass for the legacy pass manager
-class PhiValuesWrapperPass : public FunctionPass {
+class LLVM_CLASS_ABI PhiValuesWrapperPass : public FunctionPass {
   std::unique_ptr<PhiValues> Result;
 
 public:

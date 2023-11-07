@@ -30,7 +30,7 @@ namespace llvm {
 // This class implements inst_begin() & inst_end() for
 // inst_iterator and const_inst_iterator's.
 //
-template <class BB_t, class BB_i_t, class BI_t, class II_t> class InstIterator {
+template <class BB_t, class BB_i_t, class BI_t, class II_t> class LLVM_CLASS_ABI InstIterator {
   using BBty = BB_t;
   using BBIty = BB_i_t;
   using BIty = BI_t;

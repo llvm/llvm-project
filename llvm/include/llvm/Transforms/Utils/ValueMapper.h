@@ -34,7 +34,7 @@ using ValueToValueMapTy = ValueMap<const Value *, WeakTrackingVH>;
 
 /// This is a class that can be implemented by clients to remap types when
 /// cloning constants and instructions.
-class ValueMapTypeRemapper {
+class LLVM_CLASS_ABI ValueMapTypeRemapper {
   virtual void anchor(); // Out of line method.
 
 public:
@@ -47,7 +47,7 @@ public:
 
 /// This is a class that can be implemented by clients to materialize Values on
 /// demand.
-class ValueMaterializer {
+class LLVM_CLASS_ABI ValueMaterializer {
   virtual void anchor(); // Out of line method.
 
 protected:
@@ -142,7 +142,7 @@ inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {
 ///
 /// TODO: Update callers of \a RemapInstruction() and \a MapValue() (etc.) to
 /// use \a ValueMapper directly.
-class ValueMapper {
+class LLVM_CLASS_ABI ValueMapper {
   void *pImpl;
 
 public:

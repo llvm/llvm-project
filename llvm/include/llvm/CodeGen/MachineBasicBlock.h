@@ -49,7 +49,7 @@ class TargetRegisterInfo;
 //  {Type: Default, Number: (unsigned)} (These are regular section IDs)
 //  {Type: Exception, Number: 0}  (ExceptionSectionID)
 //  {Type: Cold, Number: 0}  (ColdSectionID)
-struct MBBSectionID {
+struct LLVM_CLASS_ABI MBBSectionID {
   enum SectionType {
     Default = 0, // Regular section (these sections are distinguished by the
                  // Number field).
@@ -76,13 +76,13 @@ private:
 };
 
 // This structure represents the information for a basic block.
-struct UniqueBBID {
+struct LLVM_CLASS_ABI UniqueBBID {
   unsigned BaseID;
   // sections profile).
   unsigned CloneID;
 };
 
-template <> struct ilist_traits<MachineInstr> {
+template <> struct LLVM_CLASS_ABI ilist_traits<MachineInstr> {
 private:
   friend class MachineBasicBlock; // Set by the owning MachineBasicBlock.
 
@@ -99,7 +99,7 @@ public:
   void deleteNode(MachineInstr *MI);
 };
 
-class MachineBasicBlock
+class LLVM_CLASS_ABI MachineBasicBlock
     : public ilist_node_with_parent<MachineBasicBlock, MachineFunction> {
 public:
   /// Pair of physical register and lane mask.
@@ -1217,7 +1217,7 @@ private:
   void removePredecessor(MachineBasicBlock *Pred);
 };
 
-raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);
+LLVM_FUNC_ABI raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);
 
 /// Prints a machine basic block reference.
 ///
@@ -1225,10 +1225,10 @@ raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);
 ///   %bb.5           - a machine basic block with MBB.getNumber() == 5.
 ///
 /// Usage: OS << printMBBReference(MBB) << '\n';
-Printable printMBBReference(const MachineBasicBlock &MBB);
+LLVM_FUNC_ABI Printable printMBBReference(const MachineBasicBlock &MBB);
 
 // This is useful when building IndexedMaps keyed on basic block pointers.
-struct MBB2NumberFunctor {
+struct LLVM_CLASS_ABI MBB2NumberFunctor {
   using argument_type = const MachineBasicBlock *;
   unsigned operator()(const MachineBasicBlock *MBB) const {
     return MBB->getNumber();
@@ -1243,7 +1243,7 @@ struct MBB2NumberFunctor {
 // MachineFunction as a graph of MachineBasicBlocks.
 //
 
-template <> struct GraphTraits<MachineBasicBlock *> {
+template <> struct LLVM_CLASS_ABI GraphTraits<MachineBasicBlock *> {
   using NodeRef = MachineBasicBlock *;
   using ChildIteratorType = MachineBasicBlock::succ_iterator;
 
@@ -1252,7 +1252,7 @@ template <> struct GraphTraits<MachineBasicBlock *> {
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 };
 
-template <> struct GraphTraits<const MachineBasicBlock *> {
+template <> struct LLVM_CLASS_ABI GraphTraits<const MachineBasicBlock *> {
   using NodeRef = const MachineBasicBlock *;
   using ChildIteratorType = MachineBasicBlock::const_succ_iterator;
 
@@ -1267,7 +1267,7 @@ template <> struct GraphTraits<const MachineBasicBlock *> {
 // to be when traversing the predecessor edges of a MBB
 // instead of the successor edges.
 //
-template <> struct GraphTraits<Inverse<MachineBasicBlock*>> {
+template <> struct LLVM_CLASS_ABI GraphTraits<Inverse<MachineBasicBlock*>> {
   using NodeRef = MachineBasicBlock *;
   using ChildIteratorType = MachineBasicBlock::pred_iterator;
 
@@ -1279,7 +1279,7 @@ template <> struct GraphTraits<Inverse<MachineBasicBlock*>> {
   static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
 };
 
-template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
+template <> struct LLVM_CLASS_ABI GraphTraits<Inverse<const MachineBasicBlock*>> {
   using NodeRef = const MachineBasicBlock *;
   using ChildIteratorType = MachineBasicBlock::const_pred_iterator;
 
@@ -1301,7 +1301,7 @@ inline auto predecessors(const MachineBasicBlock *BB) {
 /// containing the instruction it was initialized with, along with all
 /// those instructions inserted prior to or following that instruction
 /// at some point after the MachineInstrSpan is constructed.
-class MachineInstrSpan {
+class LLVM_CLASS_ABI MachineInstrSpan {
   MachineBasicBlock &MBB;
   MachineBasicBlock::iterator I, B, E;
 

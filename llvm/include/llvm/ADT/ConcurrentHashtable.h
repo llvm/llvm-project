@@ -74,7 +74,7 @@ namespace llvm {
 /// KeyDataTy items.
 
 template <typename KeyTy, typename KeyDataTy, typename AllocatorTy>
-class ConcurrentHashTableInfoByPtr {
+class LLVM_CLASS_ABI ConcurrentHashTableInfoByPtr {
 public:
   /// \returns Hash value for the specified \p Key.
   static inline uint64_t getHashValue(const KeyTy &Key) {
@@ -100,7 +100,7 @@ public:
 template <typename KeyTy, typename KeyDataTy, typename AllocatorTy,
           typename Info =
               ConcurrentHashTableInfoByPtr<KeyTy, KeyDataTy, AllocatorTy>>
-class ConcurrentHashTableByPtr {
+class LLVM_CLASS_ABI ConcurrentHashTableByPtr {
 public:
   ConcurrentHashTableByPtr(
       AllocatorTy &Allocator, uint64_t EstimatedSize = 100000,

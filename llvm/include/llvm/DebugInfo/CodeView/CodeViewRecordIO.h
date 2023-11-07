@@ -29,7 +29,7 @@ namespace codeview {
 class TypeIndex;
 struct GUID;
 
-class CodeViewRecordStreamer {
+class LLVM_CLASS_ABI CodeViewRecordStreamer {
 public:
   virtual void emitBytes(StringRef Data) = 0;
   virtual void emitIntValue(uint64_t Value, unsigned Size) = 0;
@@ -41,7 +41,7 @@ public:
   virtual ~CodeViewRecordStreamer() = default;
 };
 
-class CodeViewRecordIO {
+class LLVM_CLASS_ABI CodeViewRecordIO {
   uint32_t getCurrentOffset() const {
     if (isWriting())
       return Writer->getOffset();

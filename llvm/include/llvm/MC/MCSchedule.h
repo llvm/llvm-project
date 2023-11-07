@@ -29,7 +29,7 @@ class MCInst;
 class InstrItineraryData;
 
 /// Define a kind of processor resource that will be modeled by the scheduler.
-struct MCProcResourceDesc {
+struct LLVM_CLASS_ABI MCProcResourceDesc {
   const char *Name;
   unsigned NumUnits; // Number of resource of this kind
   unsigned SuperIdx; // Index of the resources kind that contains this kind.
@@ -61,7 +61,7 @@ struct MCProcResourceDesc {
 
 /// Identify one of the processor resource kinds consumed by a
 /// particular scheduling class for the specified number of cycles.
-struct MCWriteProcResEntry {
+struct LLVM_CLASS_ABI MCWriteProcResEntry {
   uint16_t ProcResourceIdx;
   /// Cycle at which the resource will be released by an instruction,
   /// relatively to the cycle in which the instruction is issued
@@ -84,7 +84,7 @@ struct MCWriteProcResEntry {
 /// an instruction with invalid latency to have infinite latency.  Also identify
 /// the WriteResources of this def. When the operand expands to a sequence of
 /// writes, this ID is the last write in the sequence.
-struct MCWriteLatencyEntry {
+struct LLVM_CLASS_ABI MCWriteLatencyEntry {
   int16_t Cycles;
   uint16_t WriteResourceID;
 
@@ -101,7 +101,7 @@ struct MCWriteLatencyEntry {
 ///
 /// MCReadAdvanceEntries are sorted first by operand index (UseIdx), then by
 /// WriteResourceIdx.
-struct MCReadAdvanceEntry {
+struct LLVM_CLASS_ABI MCReadAdvanceEntry {
   unsigned UseIdx;
   unsigned WriteResourceID;
   int Cycles;
@@ -116,7 +116,7 @@ struct MCReadAdvanceEntry {
 /// particular scheduling class.
 ///
 /// Defined as an aggregate struct for creating tables with initializer lists.
-struct MCSchedClassDesc {
+struct LLVM_CLASS_ABI MCSchedClassDesc {
   static const unsigned short InvalidNumMicroOps = (1U << 13) - 1;
   static const unsigned short VariantNumMicroOps = InvalidNumMicroOps - 1;
 
@@ -149,7 +149,7 @@ struct MCSchedClassDesc {
 /// and each COP updates a physical register. Basically, on Jaguar, a YMM
 /// register write effectively consumes two physical registers. That means,
 /// the cost of a YMM write in the BtVer2 model is 2.
-struct MCRegisterCostEntry {
+struct LLVM_CLASS_ABI MCRegisterCostEntry {
   unsigned RegisterClassID;
   unsigned Cost;
   bool AllowMoveElimination;
@@ -164,7 +164,7 @@ struct MCRegisterCostEntry {
 /// of read/write ports to the register file.  A value of zero for field
 /// 'NumPhysRegs' means: this register file has an unbounded number of physical
 /// registers.
-struct MCRegisterFileDesc {
+struct LLVM_CLASS_ABI MCRegisterFileDesc {
   const char *Name;
   uint16_t NumPhysRegs;
   uint16_t NumRegisterCostEntries;
@@ -184,7 +184,7 @@ struct MCRegisterFileDesc {
 /// normally used by the LLVM machine schedulers, but that can be consumed by
 /// external tools like llvm-mca to improve the quality of the peformance
 /// analysis.
-struct MCExtraProcessorInfo {
+struct LLVM_CLASS_ABI MCExtraProcessorInfo {
   // Actual size of the reorder buffer in hardware.
   unsigned ReorderBufferSize;
   // Number of instructions retired per cycle.
@@ -251,7 +251,7 @@ struct MCExtraProcessorInfo {
 /// the latency between pairs of instructions. However, they can still be used
 /// to detect potential bottlenecks across a sequence of instructions and bias
 /// the scheduling heuristics appropriately.
-struct MCSchedModel {
+struct LLVM_CLASS_ABI MCSchedModel {
   // IssueWidth is the maximum number of instructions that may be scheduled in
   // the same per-cycle group. This is meant to be a hard in-order constraint
   // (a.k.a. "hazard"). In the GenericScheduler strategy, no more than

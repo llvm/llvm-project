@@ -38,7 +38,7 @@ namespace llvm {
   /// This is intended to be trivially copyable, so it should be passed by
   /// value.
   template<typename T>
-  class LLVM_GSL_POINTER [[nodiscard]] ArrayRef {
+  class LLVM_CLASS_ABI LLVM_GSL_POINTER [[nodiscard]] ArrayRef {
   public:
     using value_type = T;
     using pointer = value_type *;
@@ -304,7 +304,7 @@ namespace llvm {
   /// This is intended to be trivially copyable, so it should be passed by
   /// value.
   template<typename T>
-  class [[nodiscard]] MutableArrayRef : public ArrayRef<T> {
+  class LLVM_CLASS_ABI [[nodiscard]] MutableArrayRef : public ArrayRef<T> {
   public:
     using value_type = T;
     using pointer = value_type *;
@@ -446,7 +446,7 @@ namespace llvm {
   };
 
   /// This is a MutableArrayRef that owns its array.
-  template <typename T> class OwningArrayRef : public MutableArrayRef<T> {
+  template <typename T> class LLVM_CLASS_ABI OwningArrayRef : public MutableArrayRef<T> {
   public:
     OwningArrayRef() = default;
     OwningArrayRef(size_t Size) : MutableArrayRef<T>(new T[Size], Size) {}
@@ -693,7 +693,7 @@ namespace llvm {
   }
 
   // Provide DenseMapInfo for ArrayRefs.
-  template <typename T> struct DenseMapInfo<ArrayRef<T>, void> {
+  template <typename T> struct LLVM_CLASS_ABI DenseMapInfo<ArrayRef<T>, void> {
     static inline ArrayRef<T> getEmptyKey() {
       return ArrayRef<T>(
           reinterpret_cast<const T *>(~static_cast<uintptr_t>(0)), size_t(0));

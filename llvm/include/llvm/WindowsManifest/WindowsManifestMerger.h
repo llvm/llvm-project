@@ -35,9 +35,9 @@ class MemoryBufferRef;
 
 namespace windows_manifest {
 
-bool isAvailable();
+LLVM_FUNC_ABI bool isAvailable();
 
-class WindowsManifestError : public ErrorInfo<WindowsManifestError, ECError> {
+class LLVM_CLASS_ABI WindowsManifestError : public ErrorInfo<WindowsManifestError, ECError> {
 public:
   static char ID;
   WindowsManifestError(const Twine &Msg);
@@ -47,7 +47,7 @@ private:
   std::string Msg;
 };
 
-class WindowsManifestMerger {
+class LLVM_CLASS_ABI WindowsManifestMerger {
 public:
   WindowsManifestMerger();
   ~WindowsManifestMerger();

@@ -56,7 +56,7 @@ template <typename T> struct MappingTraits;
 } // end namespace yaml
 
 /// Class to accumulate and hold information about a callee.
-struct CalleeInfo {
+struct LLVM_CLASS_ABI CalleeInfo {
   enum class HotnessType : uint8_t {
     Unknown = 0,
     Cold = 1,
@@ -125,7 +125,7 @@ class GlobalValueSummary;
 
 using GlobalValueSummaryList = std::vector<std::unique_ptr<GlobalValueSummary>>;
 
-struct alignas(8) GlobalValueSummaryInfo {
+struct LLVM_CLASS_ABI alignas(8) GlobalValueSummaryInfo {
   union NameOrGV {
     NameOrGV(bool HaveGVs) {
       if (HaveGVs)
@@ -167,7 +167,7 @@ using GlobalValueSummaryMapTy =
 
 /// Struct that holds a reference to a particular GUID in a global value
 /// summary.
-struct ValueInfo {
+struct LLVM_CLASS_ABI ValueInfo {
   enum Flags { HaveGV = 1, ReadOnly = 2, WriteOnly = 4 };
   PointerIntPair<const GlobalValueSummaryMapTy::value_type *, 3, int>
       RefAndFlags;
@@ -265,7 +265,7 @@ inline bool operator<(const ValueInfo &A, const ValueInfo &B) {
   return A.getGUID() < B.getGUID();
 }
 
-template <> struct DenseMapInfo<ValueInfo> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<ValueInfo> {
   static inline ValueInfo getEmptyKey() {
     return ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-8);
   }
@@ -288,7 +288,7 @@ template <> struct DenseMapInfo<ValueInfo> {
 };
 
 /// Summary of memprof callsite metadata.
-struct CallsiteInfo {
+struct LLVM_CLASS_ABI CallsiteInfo {
   // Actual callee function.
   ValueInfo Callee;
 
@@ -351,7 +351,7 @@ enum class AllocationType : uint8_t {
 };
 
 /// Summary of a single MIB in a memprof metadata on allocations.
-struct MIBInfo {
+struct LLVM_CLASS_ABI MIBInfo {
   // The allocation type for this profiled context.
   AllocationType AllocType;
 
@@ -379,7 +379,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const MIBInfo &MIB) {
 }
 
 /// Summary of memprof metadata on allocations.
-struct AllocInfo {
+struct LLVM_CLASS_ABI AllocInfo {
   // Used to record whole program analysis cloning decisions.
   // The ThinLTO backend will need to create as many clones as there are entries
   // in the vector (it is expected and should be confirmed that all such
@@ -418,7 +418,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
 
 /// Function and variable summary information to aid decisions and
 /// implementation of importing.
-class GlobalValueSummary {
+class LLVM_CLASS_ABI GlobalValueSummary {
 public:
   /// Sububclass discriminator (for dyn_cast<> et al.)
   enum SummaryKind : unsigned { AliasKind, FunctionKind, GlobalVarKind };
@@ -579,7 +579,7 @@ public:
 GlobalValueSummaryInfo::GlobalValueSummaryInfo(bool HaveGVs) : U(HaveGVs) {}
 
 /// Alias summary information.
-class AliasSummary : public GlobalValueSummary {
+class LLVM_CLASS_ABI AliasSummary : public GlobalValueSummary {
   ValueInfo AliaseeValueInfo;
 
   /// This is the Aliasee in the same module as alias (could get from VI, trades
@@ -643,7 +643,7 @@ inline GlobalValueSummary *GlobalValueSummary::getBaseObject() {
 
 /// Function summary information to aid decisions and implementation of
 /// importing.
-class FunctionSummary : public GlobalValueSummary {
+class LLVM_CLASS_ABI FunctionSummary : public GlobalValueSummary {
 public:
   /// <CalleeValueInfo, CalleeInfo> call edge pair.
   using EdgeTy = std::pair<ValueInfo, CalleeInfo>;
@@ -1016,7 +1016,7 @@ public:
   friend struct GraphTraits<ValueInfo>;
 };
 
-template <> struct DenseMapInfo<FunctionSummary::VFuncId> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<FunctionSummary::VFuncId> {
   static FunctionSummary::VFuncId getEmptyKey() { return {0, uint64_t(-1)}; }
 
   static FunctionSummary::VFuncId getTombstoneKey() {
@@ -1030,7 +1030,7 @@ template <> struct DenseMapInfo<FunctionSummary::VFuncId> {
   static unsigned getHashValue(FunctionSummary::VFuncId I) { return I.GUID; }
 };
 
-template <> struct DenseMapInfo<FunctionSummary::ConstVCall> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<FunctionSummary::ConstVCall> {
   static FunctionSummary::ConstVCall getEmptyKey() {
     return {{0, uint64_t(-1)}, {}};
   }
@@ -1052,7 +1052,7 @@ template <> struct DenseMapInfo<FunctionSummary::ConstVCall> {
 
 /// The ValueInfo and offset for a function within a vtable definition
 /// initializer array.
-struct VirtFuncOffset {
+struct LLVM_CLASS_ABI VirtFuncOffset {
   VirtFuncOffset(ValueInfo VI, uint64_t Offset)
       : FuncVI(VI), VTableOffset(Offset) {}
 
@@ -1071,7 +1071,7 @@ using VTableFuncList = std::vector<VirtFuncOffset>;
 /// const-folded, while writeonly vars can be completely eliminated
 /// together with corresponding stores. We let both things happen
 /// by means of internalizing such variables after ThinLTO import.
-class GlobalVarSummary : public GlobalValueSummary {
+class LLVM_CLASS_ABI GlobalVarSummary : public GlobalValueSummary {
 private:
   /// For vtable definitions this holds the list of functions and
   /// their corresponding offsets within the initializer array.
@@ -1143,7 +1143,7 @@ public:
   }
 };
 
-struct TypeTestResolution {
+struct LLVM_CLASS_ABI TypeTestResolution {
   /// Specifies which kind of type check we should emit for this byte array.
   /// See http://clang.llvm.org/docs/ControlFlowIntegrityDesign.html for full
   /// details on each kind of check; the enumerators are described with
@@ -1174,7 +1174,7 @@ struct TypeTestResolution {
   uint64_t InlineBits = 0;
 };
 
-struct WholeProgramDevirtResolution {
+struct LLVM_CLASS_ABI WholeProgramDevirtResolution {
   enum Kind {
     Indir,        ///< Just do a regular virtual call
     SingleImpl,   ///< Single implementation devirtualization
@@ -1211,7 +1211,7 @@ struct WholeProgramDevirtResolution {
   std::map<std::vector<uint64_t>, ByArg> ResByArg;
 };
 
-struct TypeIdSummary {
+struct LLVM_CLASS_ABI TypeIdSummary {
   TypeTestResolution TTRes;
 
   /// Mapping from byte offset to whole-program devirt resolution for that
@@ -1249,7 +1249,7 @@ using TypeIdSummaryMapTy =
 /// Holds information about vtable definitions decorated with type metadata:
 /// the vtable definition value and its address point offset in a type
 /// identifier metadata it is decorated (compatible) with.
-struct TypeIdOffsetVtableInfo {
+struct LLVM_CLASS_ABI TypeIdOffsetVtableInfo {
   TypeIdOffsetVtableInfo(uint64_t Offset, ValueInfo VI)
       : AddressPointOffset(Offset), VTableVI(VI) {}
 
@@ -1264,7 +1264,7 @@ using TypeIdCompatibleVtableInfo = std::vector<TypeIdOffsetVtableInfo>;
 
 /// Class to hold module path string table and global value map,
 /// and encapsulate methods for operating on them.
-class ModuleSummaryIndex {
+class LLVM_CLASS_ABI ModuleSummaryIndex {
 private:
   /// Map from value name to list of summary instances for values of that
   /// name (may be duplicates in the COMDAT case, e.g.).
@@ -1834,7 +1834,7 @@ public:
 };
 
 /// GraphTraits definition to build SCC for the index
-template <> struct GraphTraits<ValueInfo> {
+template <> struct LLVM_CLASS_ABI GraphTraits<ValueInfo> {
   typedef ValueInfo NodeRef;
   using EdgeRef = FunctionSummary::EdgeTy &;
 
@@ -1891,7 +1891,7 @@ template <> struct GraphTraits<ValueInfo> {
 };
 
 template <>
-struct GraphTraits<ModuleSummaryIndex *> : public GraphTraits<ValueInfo> {
+struct LLVM_CLASS_ABI GraphTraits<ModuleSummaryIndex *> : public GraphTraits<ValueInfo> {
   static NodeRef getEntryNode(ModuleSummaryIndex *I) {
     std::unique_ptr<GlobalValueSummary> Root =
         std::make_unique<FunctionSummary>(I->calculateCallGraphRoot());

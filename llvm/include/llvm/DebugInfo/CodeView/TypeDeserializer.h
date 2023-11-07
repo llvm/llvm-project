@@ -26,7 +26,7 @@
 namespace llvm {
 namespace codeview {
 
-class TypeDeserializer : public TypeVisitorCallbacks {
+class LLVM_CLASS_ABI TypeDeserializer : public TypeVisitorCallbacks {
   struct MappingInfo {
     explicit MappingInfo(ArrayRef<uint8_t> RecordData)
         : Stream(RecordData, llvm::endianness::little), Reader(Stream),
@@ -100,7 +100,7 @@ private:
   std::unique_ptr<MappingInfo> Mapping;
 };
 
-class FieldListDeserializer : public TypeVisitorCallbacks {
+class LLVM_CLASS_ABI FieldListDeserializer : public TypeVisitorCallbacks {
   struct MappingInfo {
     explicit MappingInfo(BinaryStreamReader &R)
         : Reader(R), Mapping(Reader), StartOffset(0) {}

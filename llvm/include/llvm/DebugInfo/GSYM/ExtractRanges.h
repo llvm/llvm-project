@@ -38,9 +38,9 @@ class FileWriter;
 /// encoded addresses easy to relocate as we just need to relocate one base
 /// address.
 /// @{
-AddressRange decodeRange(DataExtractor &Data, uint64_t BaseAddr,
+LLVM_FUNC_ABI AddressRange decodeRange(DataExtractor &Data, uint64_t BaseAddr,
                          uint64_t &Offset);
-void encodeRange(const AddressRange &Range, FileWriter &O, uint64_t BaseAddr);
+LLVM_FUNC_ABI void encodeRange(const AddressRange &Range, FileWriter &O, uint64_t BaseAddr);
 /// @}
 
 /// Skip an address range object in the specified data a the specified
@@ -49,15 +49,15 @@ void encodeRange(const AddressRange &Range, FileWriter &O, uint64_t BaseAddr);
 /// \param Data The binary stream to read the data from.
 ///
 /// \param Offset The byte offset within \a Data.
-void skipRange(DataExtractor &Data, uint64_t &Offset);
+LLVM_FUNC_ABI void skipRange(DataExtractor &Data, uint64_t &Offset);
 
 /// Address ranges are decoded and encoded to be relative to a base address.
 /// See the AddressRange comment for the encode and decode methods for full
 /// details.
 /// @{
-void decodeRanges(AddressRanges &Ranges, DataExtractor &Data, uint64_t BaseAddr,
+LLVM_FUNC_ABI void decodeRanges(AddressRanges &Ranges, DataExtractor &Data, uint64_t BaseAddr,
                   uint64_t &Offset);
-void encodeRanges(const AddressRanges &Ranges, FileWriter &O,
+LLVM_FUNC_ABI void encodeRanges(const AddressRanges &Ranges, FileWriter &O,
                   uint64_t BaseAddr);
 /// @}
 
@@ -69,13 +69,13 @@ void encodeRanges(const AddressRanges &Ranges, FileWriter &O,
 /// \param Offset The byte offset within \a Data.
 ///
 /// \returns The number of address ranges that were skipped.
-uint64_t skipRanges(DataExtractor &Data, uint64_t &Offset);
+LLVM_FUNC_ABI uint64_t skipRanges(DataExtractor &Data, uint64_t &Offset);
 
 } // namespace gsym
 
-raw_ostream &operator<<(raw_ostream &OS, const AddressRange &R);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const AddressRange &R);
 
-raw_ostream &operator<<(raw_ostream &OS, const AddressRanges &AR);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const AddressRanges &AR);
 
 } // namespace llvm
 

@@ -43,10 +43,10 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-uint64_t xxHash64(llvm::StringRef Data);
-uint64_t xxHash64(llvm::ArrayRef<uint8_t> Data);
+LLVM_FUNC_ABI uint64_t xxHash64(llvm::StringRef Data);
+LLVM_FUNC_ABI uint64_t xxHash64(llvm::ArrayRef<uint8_t> Data);
 
-uint64_t xxh3_64bits(ArrayRef<uint8_t> data);
+LLVM_FUNC_ABI uint64_t xxh3_64bits(ArrayRef<uint8_t> data);
 inline uint64_t xxh3_64bits(StringRef data) {
   return xxh3_64bits(ArrayRef(data.bytes_begin(), data.size()));
 }

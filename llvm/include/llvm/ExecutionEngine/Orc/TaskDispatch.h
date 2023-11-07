@@ -32,7 +32,7 @@ namespace llvm {
 namespace orc {
 
 /// Represents an abstract task for ORC to run.
-class Task : public RTTIExtends<Task, RTTIRoot> {
+class LLVM_CLASS_ABI Task : public RTTIExtends<Task, RTTIRoot> {
 public:
   static char ID;
 
@@ -49,14 +49,14 @@ private:
 };
 
 /// Base class for generic tasks.
-class GenericNamedTask : public RTTIExtends<GenericNamedTask, Task> {
+class LLVM_CLASS_ABI GenericNamedTask : public RTTIExtends<GenericNamedTask, Task> {
 public:
   static char ID;
   static const char *DefaultDescription;
 };
 
 /// Generic task implementation.
-template <typename FnT> class GenericNamedTaskImpl : public GenericNamedTask {
+template <typename FnT> class LLVM_CLASS_ABI GenericNamedTaskImpl : public GenericNamedTask {
 public:
   GenericNamedTaskImpl(FnT &&Fn, std::string DescBuffer)
       : Fn(std::forward<FnT>(Fn)), Desc(DescBuffer.c_str()),
@@ -93,7 +93,7 @@ makeGenericNamedTask(FnT &&Fn, const char *Desc = nullptr) {
 }
 
 /// Abstract base for classes that dispatch ORC Tasks.
-class TaskDispatcher {
+class LLVM_CLASS_ABI TaskDispatcher {
 public:
   virtual ~TaskDispatcher();
 
@@ -105,7 +105,7 @@ public:
 };
 
 /// Runs all tasks on the current thread.
-class InPlaceTaskDispatcher : public TaskDispatcher {
+class LLVM_CLASS_ABI InPlaceTaskDispatcher : public TaskDispatcher {
 public:
   void dispatch(std::unique_ptr<Task> T) override;
   void shutdown() override;
@@ -113,7 +113,7 @@ public:
 
 #if LLVM_ENABLE_THREADS
 
-class DynamicThreadPoolTaskDispatcher : public TaskDispatcher {
+class LLVM_CLASS_ABI DynamicThreadPoolTaskDispatcher : public TaskDispatcher {
 public:
   void dispatch(std::unique_ptr<Task> T) override;
   void shutdown() override;

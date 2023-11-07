@@ -16,7 +16,7 @@
 #include <vector>
 
 namespace llvm {
-struct UnitIndexEntry {
+struct LLVM_CLASS_ABI UnitIndexEntry {
   DWARFUnitIndex::Entry::SectionContribution Contributions[8];
   std::string Name;
   std::string DWOName;
@@ -26,7 +26,7 @@ struct UnitIndexEntry {
 // Holds data for Skeleton, Split Compilation, and Type Unit Headers (only in
 // v5) as defined in Dwarf 5 specification, 7.5.1.2, 7.5.1.3 and Dwarf 4
 // specification 7.5.1.1.
-struct InfoSectionUnitHeader {
+struct LLVM_CLASS_ABI InfoSectionUnitHeader {
   // unit_length field. Note that the type is uint64_t even in 32-bit dwarf.
   uint64_t Length = 0;
 
@@ -55,18 +55,18 @@ struct InfoSectionUnitHeader {
   uint8_t HeaderSize = 0;
 };
 
-struct CompileUnitIdentifiers {
+struct LLVM_CLASS_ABI CompileUnitIdentifiers {
   uint64_t Signature = 0;
   const char *Name = "";
   const char *DWOName = "";
 };
 
-Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
+LLVM_FUNC_ABI Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
             bool ContinueOnCuIndexOverflow);
 
-unsigned getContributionIndex(DWARFSectionKind Kind, uint32_t IndexVersion);
+LLVM_FUNC_ABI unsigned getContributionIndex(DWARFSectionKind Kind, uint32_t IndexVersion);
 
-Error handleSection(
+LLVM_FUNC_ABI Error handleSection(
     const StringMap<std::pair<MCSection *, DWARFSectionKind>> &KnownSections,
     const MCSection *StrSection, const MCSection *StrOffsetSection,
     const MCSection *TypesSection, const MCSection *CUIndexSection,
@@ -80,17 +80,17 @@ Error handleSection(
     StringRef &CurCUIndexSection, StringRef &CurTUIndexSection,
     std::vector<std::pair<DWARFSectionKind, uint32_t>> &SectionLength);
 
-Expected<InfoSectionUnitHeader> parseInfoSectionUnitHeader(StringRef Info);
+LLVM_FUNC_ABI Expected<InfoSectionUnitHeader> parseInfoSectionUnitHeader(StringRef Info);
 
-void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
+LLVM_FUNC_ABI void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
                             MCSection *StrOffsetSection,
                             StringRef CurStrSection,
                             StringRef CurStrOffsetSection, uint16_t Version);
 
-Error buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
+LLVM_FUNC_ABI Error buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
                           const CompileUnitIdentifiers &ID, StringRef DWPName);
 
-void writeIndex(MCStreamer &Out, MCSection *Section,
+LLVM_FUNC_ABI void writeIndex(MCStreamer &Out, MCSection *Section,
                 ArrayRef<unsigned> ContributionOffsets,
                 const MapVector<uint64_t, UnitIndexEntry> &IndexEntries,
                 uint32_t IndexVersion);

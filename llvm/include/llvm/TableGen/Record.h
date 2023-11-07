@@ -57,7 +57,7 @@ class TypedInit;
 //  Type Classes
 //===----------------------------------------------------------------------===//
 
-class RecTy {
+class LLVM_CLASS_ABI RecTy {
 public:
   /// Subclass discriminator (for dyn_cast<> et al.)
   enum RecTyKind {
@@ -108,7 +108,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const RecTy &Ty) {
 }
 
 /// 'bit' - Represent a single bit
-class BitRecTy : public RecTy {
+class LLVM_CLASS_ABI BitRecTy : public RecTy {
   friend detail::RecordKeeperImpl;
 
   BitRecTy(RecordKeeper &RK) : RecTy(BitRecTyKind, RK) {}
@@ -126,7 +126,7 @@ public:
 };
 
 /// 'bits<n>' - Represent a fixed number of bits
-class BitsRecTy : public RecTy {
+class LLVM_CLASS_ABI BitsRecTy : public RecTy {
   unsigned Size;
 
   explicit BitsRecTy(RecordKeeper &RK, unsigned Sz)
@@ -147,7 +147,7 @@ public:
 };
 
 /// 'int' - Represent an integer value of no particular size
-class IntRecTy : public RecTy {
+class LLVM_CLASS_ABI IntRecTy : public RecTy {
   friend detail::RecordKeeperImpl;
 
   IntRecTy(RecordKeeper &RK) : RecTy(IntRecTyKind, RK) {}
@@ -165,7 +165,7 @@ public:
 };
 
 /// 'string' - Represent an string value
-class StringRecTy : public RecTy {
+class LLVM_CLASS_ABI StringRecTy : public RecTy {
   friend detail::RecordKeeperImpl;
 
   StringRecTy(RecordKeeper &RK) : RecTy(StringRecTyKind, RK) {}
@@ -184,7 +184,7 @@ public:
 
 /// 'list<Ty>' - Represent a list of element values, all of which must be of
 /// the specified type. The type is stored in ElementTy.
-class ListRecTy : public RecTy {
+class LLVM_CLASS_ABI ListRecTy : public RecTy {
   friend ListRecTy *RecTy::getListTy();
 
   RecTy *ElementTy;
@@ -208,7 +208,7 @@ public:
 };
 
 /// 'dag' - Represent a dag fragment
-class DagRecTy : public RecTy {
+class LLVM_CLASS_ABI DagRecTy : public RecTy {
   friend detail::RecordKeeperImpl;
 
   DagRecTy(RecordKeeper &RK) : RecTy(DagRecTyKind, RK) {}
@@ -227,7 +227,7 @@ public:
 ///
 /// The list of superclasses is non-redundant, i.e. only contains classes that
 /// are not the superclass of some other listed class.
-class RecordRecTy final : public RecTy, public FoldingSetNode,
+class LLVM_CLASS_ABI RecordRecTy final : public RecTy, public FoldingSetNode,
                           public TrailingObjects<RecordRecTy, Record *> {
   friend class Record;
   friend detail::RecordKeeperImpl;
@@ -273,13 +273,13 @@ public:
 
 /// Find a common type that T1 and T2 convert to.
 /// Return 0 if no such type exists.
-RecTy *resolveTypes(RecTy *T1, RecTy *T2);
+LLVM_FUNC_ABI RecTy *resolveTypes(RecTy *T1, RecTy *T2);
 
 //===----------------------------------------------------------------------===//
 //  Initializer Classes
 //===----------------------------------------------------------------------===//
 
-class Init {
+class LLVM_CLASS_ABI Init {
 protected:
   /// Discriminator enum (for isa<>, dyn_cast<>, et al.)
   ///
@@ -411,7 +411,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Init &I) {
 
 /// This is the common superclass of types that have a specific,
 /// explicit type, stored in ValueTy.
-class TypedInit : public Init {
+class LLVM_CLASS_ABI TypedInit : public Init {
   RecTy *ValueTy;
 
 protected:
@@ -445,7 +445,7 @@ public:
 };
 
 /// '?' - Represents an uninitialized value.
-class UnsetInit : public Init {
+class LLVM_CLASS_ABI UnsetInit : public Init {
   friend detail::RecordKeeperImpl;
 
   /// The record keeper that initialized this Init.
@@ -485,7 +485,7 @@ public:
 
 // Represent an argument.
 using ArgAuxType = std::variant<unsigned, Init *>;
-class ArgumentInit : public Init, public FoldingSetNode {
+class LLVM_CLASS_ABI ArgumentInit : public Init, public FoldingSetNode {
 public:
   enum Kind {
     Positional,
@@ -546,7 +546,7 @@ public:
 };
 
 /// 'true'/'false' - Represent a concrete initializer for a bit.
-class BitInit final : public TypedInit {
+class LLVM_CLASS_ABI BitInit final : public TypedInit {
   friend detail::RecordKeeperImpl;
 
   bool Value;
@@ -578,7 +578,7 @@ public:
 
 /// '{ a, b, c }' - Represents an initializer for a BitsRecTy value.
 /// It contains a vector of bits, whose size is determined by the type.
-class BitsInit final : public TypedInit, public FoldingSetNode,
+class LLVM_CLASS_ABI BitsInit final : public TypedInit, public FoldingSetNode,
                        public TrailingObjects<BitsInit, Init *> {
   unsigned NumBits;
 
@@ -629,7 +629,7 @@ public:
 };
 
 /// '7' - Represent an initialization by a literal integer value.
-class IntInit : public TypedInit {
+class LLVM_CLASS_ABI IntInit : public TypedInit {
   int64_t Value;
 
   explicit IntInit(RecordKeeper &RK, int64_t V)
@@ -659,7 +659,7 @@ public:
 };
 
 /// "anonymous_n" - Represent an anonymous record name
-class AnonymousNameInit : public TypedInit {
+class LLVM_CLASS_ABI AnonymousNameInit : public TypedInit {
   unsigned Value;
 
   explicit AnonymousNameInit(RecordKeeper &RK, unsigned V)
@@ -689,7 +689,7 @@ public:
 };
 
 /// "foo" - Represent an initialization by a string value.
-class StringInit : public TypedInit {
+class LLVM_CLASS_ABI StringInit : public TypedInit {
 public:
   enum StringFormat {
     SF_String, // Format as "text"
@@ -744,7 +744,7 @@ public:
 
 /// [AL, AH, CL] - Represent a list of defs
 ///
-class ListInit final : public TypedInit, public FoldingSetNode,
+class LLVM_CLASS_ABI ListInit final : public TypedInit, public FoldingSetNode,
                        public TrailingObjects<ListInit, Init *> {
   unsigned NumValues;
 
@@ -809,7 +809,7 @@ public:
 
 /// Base class for operators
 ///
-class OpInit : public TypedInit {
+class LLVM_CLASS_ABI OpInit : public TypedInit {
 protected:
   explicit OpInit(InitKind K, RecTy *Type, uint8_t Opc)
     : TypedInit(K, Type, Opc) {}
@@ -834,7 +834,7 @@ public:
 
 /// !op (X) - Transform an init.
 ///
-class UnOpInit : public OpInit, public FoldingSetNode {
+class LLVM_CLASS_ABI UnOpInit : public OpInit, public FoldingSetNode {
 public:
   enum UnaryOp : uint8_t {
     TOLOWER,
@@ -895,7 +895,7 @@ public:
 };
 
 /// !op (X, Y) - Combine two inits.
-class BinOpInit : public OpInit, public FoldingSetNode {
+class LLVM_CLASS_ABI BinOpInit : public OpInit, public FoldingSetNode {
 public:
   enum BinaryOp : uint8_t {
     ADD,
@@ -981,7 +981,7 @@ public:
 };
 
 /// !op (X, Y, Z) - Combine two inits.
-class TernOpInit : public OpInit, public FoldingSetNode {
+class LLVM_CLASS_ABI TernOpInit : public OpInit, public FoldingSetNode {
 public:
   enum TernaryOp : uint8_t {
     SUBST,
@@ -1056,7 +1056,7 @@ public:
 /// !cond(condition_1: value1, ... , condition_n: value)
 /// Selects the first value for which condition is true.
 /// Otherwise reports an error.
-class CondOpInit final : public TypedInit, public FoldingSetNode,
+class LLVM_CLASS_ABI CondOpInit final : public TypedInit, public FoldingSetNode,
                       public TrailingObjects<CondOpInit, Init *> {
   unsigned NumConds;
   RecTy *ValType;
@@ -1131,7 +1131,7 @@ public:
 };
 
 /// !foldl (a, b, expr, start, lst) - Fold over a list.
-class FoldOpInit : public TypedInit, public FoldingSetNode {
+class LLVM_CLASS_ABI FoldOpInit : public TypedInit, public FoldingSetNode {
 private:
   Init *Start;
   Init *List;
@@ -1168,7 +1168,7 @@ public:
 };
 
 /// !isa<type>(expr) - Dynamically determine the type of an expression.
-class IsAOpInit : public TypedInit, public FoldingSetNode {
+class LLVM_CLASS_ABI IsAOpInit : public TypedInit, public FoldingSetNode {
 private:
   RecTy *CheckType;
   Init *Expr;
@@ -1202,7 +1202,7 @@ public:
 
 /// !exists<type>(expr) - Dynamically determine if a record of `type` named
 /// `expr` exists.
-class ExistsOpInit : public TypedInit, public FoldingSetNode {
+class LLVM_CLASS_ABI ExistsOpInit : public TypedInit, public FoldingSetNode {
 private:
   RecTy *CheckType;
   Init *Expr;
@@ -1235,7 +1235,7 @@ public:
 };
 
 /// 'Opcode' - Represent a reference to an entire variable object.
-class VarInit : public TypedInit {
+class LLVM_CLASS_ABI VarInit : public TypedInit {
   Init *VarName;
 
   explicit VarInit(Init *VN, RecTy *T)
@@ -1272,7 +1272,7 @@ public:
 };
 
 /// Opcode{0} - Represent access to one bit of a variable or field.
-class VarBitInit final : public TypedInit {
+class LLVM_CLASS_ABI VarBitInit final : public TypedInit {
   TypedInit *TI;
   unsigned Bit;
 
@@ -1309,7 +1309,7 @@ public:
 };
 
 /// AL - Represent a reference to a 'def' in the description
-class DefInit : public TypedInit {
+class LLVM_CLASS_ABI DefInit : public TypedInit {
   friend class Record;
 
   Record *Def;
@@ -1344,7 +1344,7 @@ public:
 
 /// classname<targs...> - Represent an uninstantiated anonymous class
 /// instantiation.
-class VarDefInit final : public TypedInit,
+class LLVM_CLASS_ABI VarDefInit final : public TypedInit,
                          public FoldingSetNode,
                          public TrailingObjects<VarDefInit, ArgumentInit *> {
   Record *Class;
@@ -1399,7 +1399,7 @@ public:
 };
 
 /// X.Y - Represent a reference to a subfield of a variable
-class FieldInit : public TypedInit {
+class LLVM_CLASS_ABI FieldInit : public TypedInit {
   Init *Rec;                // Record we are referring to
   StringInit *FieldName;    // Field we are accessing
 
@@ -1442,7 +1442,7 @@ public:
 /// (v a, b) - Represent a DAG tree value.  DAG inits are required
 /// to have at least one value then a (possibly empty) list of arguments.  Each
 /// argument can have a name associated with it.
-class DagInit final : public TypedInit, public FoldingSetNode,
+class LLVM_CLASS_ABI DagInit final : public TypedInit, public FoldingSetNode,
                       public TrailingObjects<DagInit, Init *, StringInit *> {
   friend TrailingObjects;
 
@@ -1541,7 +1541,7 @@ public:
 
 /// This class represents a field in a record, including its name, type,
 /// value, and source location.
-class RecordVal {
+class LLVM_CLASS_ABI RecordVal {
   friend class Record;
 
 public:
@@ -1629,7 +1629,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const RecordVal &RV) {
   return OS;
 }
 
-class Record {
+class LLVM_CLASS_ABI Record {
 public:
   struct AssertionInfo {
     SMLoc Loc;
@@ -1959,9 +1959,9 @@ public:
   DagInit *getValueAsDag(StringRef FieldName) const;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const Record &R);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const Record &R);
 
-class RecordKeeper {
+class LLVM_CLASS_ABI RecordKeeper {
   using RecordMap = std::map<std::string, std::unique_ptr<Record>, std::less<>>;
   using GlobalMap = std::map<std::string, Init *, std::less<>>;
 
@@ -2097,7 +2097,7 @@ private:
 };
 
 /// Sorting predicate to sort record pointers by name.
-struct LessRecord {
+struct LLVM_CLASS_ABI LessRecord {
   bool operator()(const Record *Rec1, const Record *Rec2) const {
     return StringRef(Rec1->getName()).compare_numeric(Rec2->getName()) < 0;
   }
@@ -2107,7 +2107,7 @@ struct LessRecord {
 /// unique ID. If you just need a deterministic order, use this, since it
 /// just compares two `unsigned`; the other sorting predicates require
 /// string manipulation.
-struct LessRecordByID {
+struct LLVM_CLASS_ABI LessRecordByID {
   bool operator()(const Record *LHS, const Record *RHS) const {
     return LHS->getID() < RHS->getID();
   }
@@ -2115,13 +2115,13 @@ struct LessRecordByID {
 
 /// Sorting predicate to sort record pointers by their
 /// name field.
-struct LessRecordFieldName {
+struct LLVM_CLASS_ABI LessRecordFieldName {
   bool operator()(const Record *Rec1, const Record *Rec2) const {
     return Rec1->getValueAsString("Name") < Rec2->getValueAsString("Name");
   }
 };
 
-struct LessRecordRegister {
+struct LLVM_CLASS_ABI LessRecordRegister {
   struct RecordParts {
     SmallVector<std::pair< bool, StringRef>, 4> Parts;
 
@@ -2203,7 +2203,7 @@ struct LessRecordRegister {
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const RecordKeeper &RK);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const RecordKeeper &RK);
 
 //===----------------------------------------------------------------------===//
 //  Resolvers
@@ -2211,7 +2211,7 @@ raw_ostream &operator<<(raw_ostream &OS, const RecordKeeper &RK);
 
 /// Interface for looking up the initializer for a variable name, used by
 /// Init::resolveReferences.
-class Resolver {
+class LLVM_CLASS_ABI Resolver {
   Record *CurRec;
   bool IsFinal = false;
 
@@ -2239,7 +2239,7 @@ public:
 };
 
 /// Resolve arbitrary mappings.
-class MapResolver final : public Resolver {
+class LLVM_CLASS_ABI MapResolver final : public Resolver {
   struct MappedValue {
     Init *V;
     bool Resolved;
@@ -2265,7 +2265,7 @@ public:
 };
 
 /// Resolve all variables from a record except for unset variables.
-class RecordResolver final : public Resolver {
+class LLVM_CLASS_ABI RecordResolver final : public Resolver {
   DenseMap<Init *, Init *> Cache;
   SmallVector<Init *, 4> Stack;
   Init *Name = nullptr;
@@ -2281,7 +2281,7 @@ public:
 };
 
 /// Delegate resolving to a sub-resolver, but shadow some variable names.
-class ShadowResolver final : public Resolver {
+class LLVM_CLASS_ABI ShadowResolver final : public Resolver {
   Resolver &R;
   DenseSet<Init *> Shadowed;
 
@@ -2302,7 +2302,7 @@ public:
 
 /// (Optionally) delegate resolving to a sub-resolver, and keep track whether
 /// there were unresolved references.
-class TrackUnresolvedResolver final : public Resolver {
+class LLVM_CLASS_ABI TrackUnresolvedResolver final : public Resolver {
   Resolver *R;
   bool FoundUnresolved = false;
 
@@ -2317,7 +2317,7 @@ public:
 
 /// Do not resolve anything, but keep track of whether a given variable was
 /// referenced.
-class HasReferenceResolver final : public Resolver {
+class LLVM_CLASS_ABI HasReferenceResolver final : public Resolver {
   Init *VarNameToTrack;
   bool Found = false;
 
@@ -2330,8 +2330,8 @@ public:
   Init *resolve(Init *VarName) override;
 };
 
-void EmitDetailedRecords(RecordKeeper &RK, raw_ostream &OS);
-void EmitJSON(RecordKeeper &RK, raw_ostream &OS);
+LLVM_FUNC_ABI void EmitDetailedRecords(RecordKeeper &RK, raw_ostream &OS);
+LLVM_FUNC_ABI void EmitJSON(RecordKeeper &RK, raw_ostream &OS);
 
 } // end namespace llvm
 

@@ -21,7 +21,7 @@ namespace llvm {
 /// The comments below describe these as if they were an inheritance hierarchy
 /// in order to explain the predicates below.
 ///
-class SectionKind {
+class LLVM_CLASS_ABI SectionKind {
   enum Kind {
     /// Metadata - Debug info sections or other metadata.
     Metadata,

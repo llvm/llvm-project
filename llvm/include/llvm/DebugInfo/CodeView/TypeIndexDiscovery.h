@@ -18,28 +18,28 @@ template <typename T> class SmallVectorImpl;
 namespace codeview {
 class TypeIndex;
 enum class TiRefKind { TypeRef, IndexRef };
-struct TiReference {
+struct LLVM_CLASS_ABI TiReference {
   TiRefKind Kind;
   uint32_t Offset;
   uint32_t Count;
 };
 
-void discoverTypeIndices(ArrayRef<uint8_t> RecordData,
+LLVM_FUNC_ABI void discoverTypeIndices(ArrayRef<uint8_t> RecordData,
                          SmallVectorImpl<TiReference> &Refs);
-void discoverTypeIndices(const CVType &Type,
+LLVM_FUNC_ABI void discoverTypeIndices(const CVType &Type,
                          SmallVectorImpl<TiReference> &Refs);
-void discoverTypeIndices(const CVType &Type,
+LLVM_FUNC_ABI void discoverTypeIndices(const CVType &Type,
                          SmallVectorImpl<TypeIndex> &Indices);
-void discoverTypeIndices(ArrayRef<uint8_t> RecordData,
+LLVM_FUNC_ABI void discoverTypeIndices(ArrayRef<uint8_t> RecordData,
                          SmallVectorImpl<TypeIndex> &Indices);
 
 /// Discover type indices in symbol records. Returns false if this is an unknown
 /// record.
-bool discoverTypeIndicesInSymbol(const CVSymbol &Symbol,
+LLVM_FUNC_ABI bool discoverTypeIndicesInSymbol(const CVSymbol &Symbol,
                                  SmallVectorImpl<TiReference> &Refs);
-bool discoverTypeIndicesInSymbol(ArrayRef<uint8_t> RecordData,
+LLVM_FUNC_ABI bool discoverTypeIndicesInSymbol(ArrayRef<uint8_t> RecordData,
                                  SmallVectorImpl<TiReference> &Refs);
-bool discoverTypeIndicesInSymbol(ArrayRef<uint8_t> RecordData,
+LLVM_FUNC_ABI bool discoverTypeIndicesInSymbol(ArrayRef<uint8_t> RecordData,
                                  SmallVectorImpl<TypeIndex> &Indices);
 }
 }

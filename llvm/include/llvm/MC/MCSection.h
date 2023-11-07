@@ -31,13 +31,13 @@ class MCSymbol;
 class raw_ostream;
 class Triple;
 
-template <> struct ilist_alloc_traits<MCFragment> {
+template <> struct LLVM_CLASS_ABI ilist_alloc_traits<MCFragment> {
   static void deleteNode(MCFragment *V);
 };
 
 /// Instances of this class represent a uniqued identifier for a section in the
 /// current translation unit.  The MCContext class uniques and creates these.
-class MCSection {
+class LLVM_CLASS_ABI MCSection {
 public:
   static constexpr unsigned NonUniqueID = ~0U;
 

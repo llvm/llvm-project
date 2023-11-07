@@ -97,7 +97,7 @@ __pragma(pack(push,1))
 // runtime context. This struct is shared between the compiler-rt runtime and
 // the raw profile reader. The indexed format uses a separate, self-describing
 // backwards compatible format.
-struct MemInfoBlock{
+struct LLVM_CLASS_ABI MemInfoBlock{
 
 #define MIBEntryDef(NameTag, Name, Type) Type Name;
 #include "MIBEntryDef.inc"

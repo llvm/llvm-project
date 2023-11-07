@@ -25,7 +25,7 @@ namespace mca {
 
 class InstRef;
 
-class Stage {
+class LLVM_CLASS_ABI Stage {
   Stage *NextInSequence = nullptr;
   std::set<HWEventListener *> Listeners;
 
@@ -88,7 +88,7 @@ public:
 
 /// This is actually not an error but a marker to indicate that
 /// the instruction stream is paused.
-struct InstStreamPause : public ErrorInfo<InstStreamPause> {
+struct LLVM_CLASS_ABI InstStreamPause : public ErrorInfo<InstStreamPause> {
   static char ID;
 
   std::error_code convertToErrorCode() const override {

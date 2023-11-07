@@ -49,7 +49,7 @@ using LVTypeDispatch = std::map<LVTypeKind, LVTypeGetFunction>;
 using LVTypeRequest = std::vector<LVTypeGetFunction>;
 
 // Class to represent a DWARF Type.
-class LVType : public LVElement {
+class LLVM_CLASS_ABI LVType : public LVElement {
   enum class Property { IsSubrangeCount, LastEntry };
 
   // Typed bitvector with kinds and properties for this type.
@@ -146,7 +146,7 @@ public:
 };
 
 // Class to represent DW_TAG_typedef_type.
-class LVTypeDefinition final : public LVType {
+class LLVM_CLASS_ABI LVTypeDefinition final : public LVType {
 public:
   LVTypeDefinition() : LVType() {
     setIsTypedef();
@@ -169,7 +169,7 @@ public:
 };
 
 // Class to represent a DW_TAG_enumerator.
-class LVTypeEnumerator final : public LVType {
+class LLVM_CLASS_ABI LVTypeEnumerator final : public LVType {
   // Index in the String pool representing any initial value.
   size_t ValueIndex = 0;
 
@@ -198,7 +198,7 @@ public:
 };
 
 // Class to represent DW_TAG_imported_module / DW_TAG_imported_declaration.
-class LVTypeImport final : public LVType {
+class LLVM_CLASS_ABI LVTypeImport final : public LVType {
 public:
   LVTypeImport() : LVType() { setIncludeInPrint(); }
   LVTypeImport(const LVTypeImport &) = delete;
@@ -212,7 +212,7 @@ public:
 };
 
 // Class to represent a DWARF Template parameter holder (type or param).
-class LVTypeParam final : public LVType {
+class LLVM_CLASS_ABI LVTypeParam final : public LVType {
   // Index in the String pool representing any initial value.
   size_t ValueIndex = 0;
 
@@ -241,7 +241,7 @@ public:
 };
 
 // Class to represent a DW_TAG_subrange_type.
-class LVTypeSubrange final : public LVType {
+class LLVM_CLASS_ABI LVTypeSubrange final : public LVType {
   // Values describing the subrange bounds.
   int64_t LowerBound = 0; // DW_AT_lower_bound or DW_AT_count value.
   int64_t UpperBound = 0; // DW_AT_upper_bound value.

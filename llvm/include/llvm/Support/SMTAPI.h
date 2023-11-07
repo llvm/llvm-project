@@ -24,7 +24,7 @@
 namespace llvm {
 
 /// Generic base class for SMT sorts
-class SMTSort {
+class LLVM_CLASS_ABI SMTSort {
 public:
   SMTSort() = default;
   virtual ~SMTSort() = default;
@@ -98,7 +98,7 @@ protected:
 using SMTSortRef = const SMTSort *;
 
 /// Generic base class for SMT exprs
-class SMTExpr {
+class LLVM_CLASS_ABI SMTExpr {
 public:
   SMTExpr() = default;
   virtual ~SMTExpr() = default;
@@ -134,7 +134,7 @@ using SMTExprRef = const SMTExpr *;
 /// This class is responsible for wrapping all sorts and expression generation,
 /// through the mk* methods. It also provides methods to create SMT expressions
 /// straight from clang's AST, through the from* methods.
-class SMTSolver {
+class LLVM_CLASS_ABI SMTSolver {
 public:
   SMTSolver() = default;
   virtual ~SMTSolver() = default;
@@ -441,7 +441,7 @@ public:
 using SMTSolverRef = std::shared_ptr<SMTSolver>;
 
 /// Convenience method to create and Z3Solver object
-SMTSolverRef CreateZ3Solver();
+LLVM_FUNC_ABI SMTSolverRef CreateZ3Solver();
 
 } // namespace llvm
 

@@ -28,7 +28,7 @@ class Function;
 ///
 /// This focuses on handling aliasing properties of globals and interprocedural
 /// function call mod/ref information.
-class GlobalsAAResult : public AAResultBase {
+class LLVM_CLASS_ABI GlobalsAAResult : public AAResultBase {
   class FunctionInfo;
 
   const DataLayout &DL;
@@ -125,7 +125,7 @@ private:
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
-class GlobalsAA : public AnalysisInfoMixin<GlobalsAA> {
+class LLVM_CLASS_ABI GlobalsAA : public AnalysisInfoMixin<GlobalsAA> {
   friend AnalysisInfoMixin<GlobalsAA>;
   static AnalysisKey Key;
 
@@ -135,12 +135,12 @@ public:
   GlobalsAAResult run(Module &M, ModuleAnalysisManager &AM);
 };
 
-struct RecomputeGlobalsAAPass : PassInfoMixin<RecomputeGlobalsAAPass> {
+struct LLVM_CLASS_ABI RecomputeGlobalsAAPass : PassInfoMixin<RecomputeGlobalsAAPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the GlobalsAAResult object.
-class GlobalsAAWrapperPass : public ModulePass {
+class LLVM_CLASS_ABI GlobalsAAWrapperPass : public ModulePass {
   std::unique_ptr<GlobalsAAResult> Result;
 
 public:
@@ -161,7 +161,7 @@ public:
 // createGlobalsAAWrapperPass - This pass provides alias and mod/ref info for
 // global values that do not have their addresses taken.
 //
-ModulePass *createGlobalsAAWrapperPass();
+LLVM_FUNC_ABI ModulePass *createGlobalsAAWrapperPass();
 }
 
 #endif

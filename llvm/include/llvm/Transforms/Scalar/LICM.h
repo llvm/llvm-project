@@ -43,10 +43,10 @@ class LPMUpdater;
 class Loop;
 class LoopNest;
 
-extern cl::opt<unsigned> SetLicmMssaOptCap;
-extern cl::opt<unsigned> SetLicmMssaNoAccForPromotionCap;
+LLVM_FUNC_ABI extern cl::opt<unsigned> SetLicmMssaOptCap;
+LLVM_FUNC_ABI extern cl::opt<unsigned> SetLicmMssaNoAccForPromotionCap;
 
-struct LICMOptions {
+struct LLVM_CLASS_ABI LICMOptions {
   unsigned MssaOptCap;
   unsigned MssaNoAccForPromotionCap;
   bool AllowSpeculation;
@@ -64,7 +64,7 @@ struct LICMOptions {
 };
 
 /// Performs Loop Invariant Code Motion Pass.
-class LICMPass : public PassInfoMixin<LICMPass> {
+class LLVM_CLASS_ABI LICMPass : public PassInfoMixin<LICMPass> {
   LICMOptions Opts;
 
 public:
@@ -82,7 +82,7 @@ public:
 };
 
 /// Performs LoopNest Invariant Code Motion Pass.
-class LNICMPass : public PassInfoMixin<LNICMPass> {
+class LLVM_CLASS_ABI LNICMPass : public PassInfoMixin<LNICMPass> {
   LICMOptions Opts;
 
 public:

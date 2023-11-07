@@ -55,7 +55,7 @@ namespace llvm {
 /// For best results, ValueT should not require a destructor.
 ///
 template<typename ValueT>
-struct SparseSetValTraits {
+struct LLVM_CLASS_ABI SparseSetValTraits {
   static unsigned getValIndex(const ValueT &Val) {
     return Val.getSparseSetIndex();
   }
@@ -66,7 +66,7 @@ struct SparseSetValTraits {
 /// getSparseSetIndex() or specialize SparseSetValTraits<>.
 ///
 template<typename KeyT, typename ValueT, typename KeyFunctorT>
-struct SparseSetValFunctor {
+struct LLVM_CLASS_ABI SparseSetValFunctor {
   unsigned operator()(const ValueT &Val) const {
     return SparseSetValTraits<ValueT>::getValIndex(Val);
   }
@@ -75,7 +75,7 @@ struct SparseSetValFunctor {
 /// SparseSetValFunctor<KeyT, KeyT> - Helper class for the common case of
 /// identity key/value sets.
 template<typename KeyT, typename KeyFunctorT>
-struct SparseSetValFunctor<KeyT, KeyT, KeyFunctorT> {
+struct LLVM_CLASS_ABI SparseSetValFunctor<KeyT, KeyT, KeyFunctorT> {
   unsigned operator()(const KeyT &Key) const {
     return KeyFunctorT()(Key);
   }
@@ -122,7 +122,7 @@ struct SparseSetValFunctor<KeyT, KeyT, KeyFunctorT> {
 template<typename ValueT,
          typename KeyFunctorT = identity<unsigned>,
          typename SparseT = uint8_t>
-class SparseSet {
+class LLVM_CLASS_ABI SparseSet {
   static_assert(std::is_unsigned_v<SparseT>,
                 "SparseT must be an unsigned integer type");
 

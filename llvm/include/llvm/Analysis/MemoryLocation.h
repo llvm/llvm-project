@@ -67,7 +67,7 @@ class Value;
 // std::nullopt.
 // Store Scalable information in bit 62 of Value. Scalable information is
 // required to do Alias Analysis on Scalable quantities
-class LocationSize {
+class LLVM_CLASS_ABI LocationSize {
   enum : uint64_t {
     BeforeOrAfterPointer = ~uint64_t(0),
     ScalableBit = uint64_t(1) << 62,
@@ -220,7 +220,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, LocationSize Size) {
 ///
 /// The primary user of this interface is LLVM's Alias Analysis, but other
 /// memory analyses such as MemoryDependence can use it as well.
-class MemoryLocation {
+class LLVM_CLASS_ABI MemoryLocation {
 public:
   /// UnknownSize - This is a special value which can be used with the
   /// size arguments in alias queries to indicate that the caller does not
@@ -328,7 +328,7 @@ public:
 };
 
 // Specialize DenseMapInfo.
-template <> struct DenseMapInfo<LocationSize> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<LocationSize> {
   static inline LocationSize getEmptyKey() { return LocationSize::mapEmpty(); }
   static inline LocationSize getTombstoneKey() {
     return LocationSize::mapTombstone();
@@ -341,7 +341,7 @@ template <> struct DenseMapInfo<LocationSize> {
   }
 };
 
-template <> struct DenseMapInfo<MemoryLocation> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<MemoryLocation> {
   static inline MemoryLocation getEmptyKey() {
     return MemoryLocation(DenseMapInfo<const Value *>::getEmptyKey(),
                           DenseMapInfo<LocationSize>::getEmptyKey());

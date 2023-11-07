@@ -33,7 +33,7 @@ enum : int {
 /// Returns a non-NULL pointer to a NUL-terminated C style string
 /// that should be explicitly freed, if successful. Otherwise, may return
 /// nullptr if mangled_name is not a valid mangling or is nullptr.
-char *itaniumDemangle(std::string_view mangled_name);
+LLVM_FUNC_ABI char *itaniumDemangle(std::string_view mangled_name);
 
 enum MSDemangleFlags {
   MSDF_None = 0,
@@ -52,29 +52,29 @@ enum MSDemangleFlags {
 /// bytes of the input string were consumed.
 /// status receives one of the demangle_ enum entries above if it's not nullptr.
 /// Flags controls various details of the demangled representation.
-char *microsoftDemangle(std::string_view mangled_name, size_t *n_read,
+LLVM_FUNC_ABI char *microsoftDemangle(std::string_view mangled_name, size_t *n_read,
                         int *status, MSDemangleFlags Flags = MSDF_None);
 
 // Demangles a Rust v0 mangled symbol.
-char *rustDemangle(std::string_view MangledName);
+LLVM_FUNC_ABI char *rustDemangle(std::string_view MangledName);
 
 // Demangles a D mangled symbol.
-char *dlangDemangle(std::string_view MangledName);
+LLVM_FUNC_ABI char *dlangDemangle(std::string_view MangledName);
 
 /// Attempt to demangle a string using different demangling schemes.
 /// The function uses heuristics to determine which demangling scheme to use.
 /// \param MangledName - reference to string to demangle.
 /// \returns - the demangled string, or a copy of the input string if no
 /// demangling occurred.
-std::string demangle(std::string_view MangledName);
+LLVM_FUNC_ABI std::string demangle(std::string_view MangledName);
 
-bool nonMicrosoftDemangle(std::string_view MangledName, std::string &Result,
+LLVM_FUNC_ABI bool nonMicrosoftDemangle(std::string_view MangledName, std::string &Result,
                           bool CanHaveLeadingDot = true);
 
 /// "Partial" demangler. This supports demangling a string into an AST
 /// (typically an intermediate stage in itaniumDemangle) and querying certain
 /// properties or partially printing the demangled name.
-struct ItaniumPartialDemangler {
+struct LLVM_CLASS_ABI ItaniumPartialDemangler {
   ItaniumPartialDemangler();
 
   ItaniumPartialDemangler(ItaniumPartialDemangler &&Other);

@@ -22,7 +22,7 @@ namespace gsym {
 /// directory and basename into two different strings in the string
 /// table. This allows paths to shared commont directory and filename
 /// strings and saves space.
-struct FileEntry {
+struct LLVM_CLASS_ABI FileEntry {
 
   /// Offsets in the string table.
   /// @{
@@ -45,7 +45,7 @@ struct FileEntry {
 
 } // namespace gsym
 
-template <> struct DenseMapInfo<gsym::FileEntry> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<gsym::FileEntry> {
   static inline gsym::FileEntry getEmptyKey() {
     uint32_t key = DenseMapInfo<uint32_t>::getEmptyKey();
     return gsym::FileEntry(key, key);

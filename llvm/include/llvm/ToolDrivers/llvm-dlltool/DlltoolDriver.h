@@ -19,7 +19,7 @@
 namespace llvm {
 template <typename T> class ArrayRef;
 
-int dlltoolDriverMain(ArrayRef<const char *> ArgsArr);
+LLVM_FUNC_ABI int dlltoolDriverMain(ArrayRef<const char *> ArgsArr);
 } // namespace llvm
 
 #endif

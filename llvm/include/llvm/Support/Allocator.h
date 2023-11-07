@@ -36,7 +36,7 @@ namespace detail {
 
 // We call out to an external function to actually print the message as the
 // printing code uses Allocator.h in its implementation.
-void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t BytesAllocated,
+LLVM_FUNC_ABI void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t BytesAllocated,
                                 size_t TotalMemory);
 
 } // end namespace detail
@@ -60,7 +60,7 @@ void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t BytesAllocated,
 /// increases the size of the slabs.
 template <typename AllocatorT = MallocAllocator, size_t SlabSize = 4096,
           size_t SizeThreshold = SlabSize, size_t GrowthDelay = 128>
-class BumpPtrAllocatorImpl
+class LLVM_CLASS_ABI BumpPtrAllocatorImpl
     : public AllocatorBase<BumpPtrAllocatorImpl<AllocatorT, SlabSize,
                                                 SizeThreshold, GrowthDelay>>,
       private detail::AllocatorHolder<AllocatorT> {
@@ -379,7 +379,7 @@ typedef BumpPtrAllocatorImpl<> BumpPtrAllocator;
 ///
 /// This allows calling the destructor in DestroyAll() and when the allocator is
 /// destroyed.
-template <typename T> class SpecificBumpPtrAllocator {
+template <typename T> class LLVM_CLASS_ABI SpecificBumpPtrAllocator {
   BumpPtrAllocator Allocator;
 
 public:

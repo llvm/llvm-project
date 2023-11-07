@@ -48,7 +48,7 @@ class raw_ostream;
 
 /// A set of physical registers with utility functions to track liveness
 /// when walking backward/forward through a basic block.
-class LivePhysRegs {
+class LLVM_CLASS_ABI LivePhysRegs {
   const TargetRegisterInfo *TRI = nullptr;
   using RegisterSet = SparseSet<MCPhysReg, identity<MCPhysReg>>;
   RegisterSet LiveRegs;
@@ -181,17 +181,17 @@ inline raw_ostream &operator<<(raw_ostream &OS, const LivePhysRegs& LR) {
 /// Computes registers live-in to \p MBB assuming all of its successors
 /// live-in lists are up-to-date. Puts the result into the given LivePhysReg
 /// instance \p LiveRegs.
-void computeLiveIns(LivePhysRegs &LiveRegs, const MachineBasicBlock &MBB);
+LLVM_FUNC_ABI void computeLiveIns(LivePhysRegs &LiveRegs, const MachineBasicBlock &MBB);
 
 /// Recomputes dead and kill flags in \p MBB.
-void recomputeLivenessFlags(MachineBasicBlock &MBB);
+LLVM_FUNC_ABI void recomputeLivenessFlags(MachineBasicBlock &MBB);
 
 /// Adds registers contained in \p LiveRegs to the block live-in list of \p MBB.
 /// Does not add reserved registers.
-void addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs);
+LLVM_FUNC_ABI void addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs);
 
 /// Convenience function combining computeLiveIns() and addLiveIns().
-void computeAndAddLiveIns(LivePhysRegs &LiveRegs,
+LLVM_FUNC_ABI void computeAndAddLiveIns(LivePhysRegs &LiveRegs,
                           MachineBasicBlock &MBB);
 
 /// Convenience function for recomputing live-in's for \p MBB.

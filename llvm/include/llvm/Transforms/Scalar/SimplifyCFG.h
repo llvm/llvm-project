@@ -27,7 +27,7 @@ namespace llvm {
 /// or remove control flow to put the CFG into a canonical form expected by
 /// other passes of the mid-level optimizer. Depending on the specified options,
 /// it may further optimize control-flow to create non-canonical forms.
-class SimplifyCFGPass : public PassInfoMixin<SimplifyCFGPass> {
+class LLVM_CLASS_ABI SimplifyCFGPass : public PassInfoMixin<SimplifyCFGPass> {
   SimplifyCFGOptions Options;
 
 public:

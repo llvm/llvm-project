@@ -30,7 +30,7 @@ struct DeclMapInfo;
 /// number of calls to realpath which is expensive. We assume the input are
 /// files, and cache the realpath of their parent. This way we can quickly
 /// resolve different files under the same path.
-class CachedPathResolver {
+class LLVM_CLASS_ABI CachedPathResolver {
 public:
   /// Resolve a path by calling realpath and cache its result. The returned
   /// StringRef is interned in the given \p StringPool.
@@ -76,7 +76,7 @@ private:
 /// allows to walk up the tree), but to query the existence of a specific
 /// DeclContext using a separate DenseMap keyed on the hash of the fully
 /// qualified name of the context.
-class DeclContext {
+class LLVM_CLASS_ABI DeclContext {
 public:
   using Map = DenseSet<DeclContext *, DeclMapInfo>;
 
@@ -125,7 +125,7 @@ private:
 /// This class gives a tree-like API to the DenseMap that stores the
 /// DeclContext objects. It holds the BumpPtrAllocator where these objects will
 /// be allocated.
-class DeclContextTree {
+class LLVM_CLASS_ABI DeclContextTree {
 public:
   /// Get the child of \a Context described by \a DIE in \a Unit. The
   /// required strings will be interned in \a StringPool.
@@ -166,7 +166,7 @@ private:
 };
 
 /// Info type for the DenseMap storing the DeclContext pointers.
-struct DeclMapInfo : private DenseMapInfo<DeclContext *> {
+struct LLVM_CLASS_ABI DeclMapInfo : private DenseMapInfo<DeclContext *> {
   using DenseMapInfo<DeclContext *>::getEmptyKey;
   using DenseMapInfo<DeclContext *>::getTombstoneKey;
 

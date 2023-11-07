@@ -31,7 +31,7 @@ namespace llvm {
 /// in the above abstractions without testing the particular active member.
 /// Also, the default constructed value zero initializes the integer.
 template <typename IntT, int Bits = sizeof(IntT) * CHAR_BIT>
-class PointerEmbeddedInt {
+class LLVM_CLASS_ABI PointerEmbeddedInt {
   uintptr_t Value = 0;
 
   // Note: This '<' is correct; using '<=' would result in some shifts
@@ -80,7 +80,7 @@ public:
 // Provide pointer like traits to support use with pointer unions and sum
 // types.
 template <typename IntT, int Bits>
-struct PointerLikeTypeTraits<PointerEmbeddedInt<IntT, Bits>> {
+struct LLVM_CLASS_ABI PointerLikeTypeTraits<PointerEmbeddedInt<IntT, Bits>> {
   using T = PointerEmbeddedInt<IntT, Bits>;
 
   static inline void *getAsVoidPointer(const T &P) {
@@ -101,7 +101,7 @@ struct PointerLikeTypeTraits<PointerEmbeddedInt<IntT, Bits>> {
 // Teach DenseMap how to use PointerEmbeddedInt objects as keys if the Int type
 // itself can be a key.
 template <typename IntT, int Bits>
-struct DenseMapInfo<PointerEmbeddedInt<IntT, Bits>> {
+struct LLVM_CLASS_ABI DenseMapInfo<PointerEmbeddedInt<IntT, Bits>> {
   using T = PointerEmbeddedInt<IntT, Bits>;
   using IntInfo = DenseMapInfo<IntT>;
 

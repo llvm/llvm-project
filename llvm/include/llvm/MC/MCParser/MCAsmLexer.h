@@ -21,7 +21,7 @@ namespace llvm {
 
 /// A callback class which is notified of each comment in an assembly file as
 /// it is lexed.
-class AsmCommentConsumer {
+class LLVM_CLASS_ABI AsmCommentConsumer {
 public:
   virtual ~AsmCommentConsumer() = default;
 
@@ -35,7 +35,7 @@ public:
 
 /// Generic assembler lexer interface, for use by target specific assembly
 /// lexers.
-class MCAsmLexer {
+class LLVM_CLASS_ABI MCAsmLexer {
   /// The current token, stored in the base class for faster access.
   SmallVector<AsmToken, 1> CurTok;
 

@@ -30,7 +30,7 @@ class DebugChecksumsSubsection;
 class DebugStringTableSubsection;
 
 // Corresponds to the `CV_DebugSLinesHeader_t` structure.
-struct LineFragmentHeader {
+struct LLVM_CLASS_ABI LineFragmentHeader {
   support::ulittle32_t RelocOffset;  // Code offset of line contribution.
   support::ulittle16_t RelocSegment; // Code segment of line contribution.
   support::ulittle16_t Flags;        // See LineFlags enumeration.
@@ -38,7 +38,7 @@ struct LineFragmentHeader {
 };
 
 // Corresponds to the `CV_DebugSLinesFileBlockHeader_t` structure.
-struct LineBlockFragmentHeader {
+struct LLVM_CLASS_ABI LineBlockFragmentHeader {
   support::ulittle32_t NameIndex; // Offset of FileChecksum entry in File
                                   // checksums buffer.  The checksum entry then
                                   // contains another offset into the string
@@ -52,24 +52,24 @@ struct LineBlockFragmentHeader {
 };
 
 // Corresponds to `CV_Line_t` structure
-struct LineNumberEntry {
+struct LLVM_CLASS_ABI LineNumberEntry {
   support::ulittle32_t Offset; // Offset to start of code bytes for line number
   support::ulittle32_t Flags;  // Start:24, End:7, IsStatement:1
 };
 
 // Corresponds to `CV_Column_t` structure
-struct ColumnNumberEntry {
+struct LLVM_CLASS_ABI ColumnNumberEntry {
   support::ulittle16_t StartColumn;
   support::ulittle16_t EndColumn;
 };
 
-struct LineColumnEntry {
+struct LLVM_CLASS_ABI LineColumnEntry {
   support::ulittle32_t NameIndex;
   FixedStreamArray<LineNumberEntry> LineNumbers;
   FixedStreamArray<ColumnNumberEntry> Columns;
 };
 
-class LineColumnExtractor {
+class LLVM_CLASS_ABI LineColumnExtractor {
 public:
   Error operator()(BinaryStreamRef Stream, uint32_t &Len,
                    LineColumnEntry &Item);
@@ -77,7 +77,7 @@ public:
   const LineFragmentHeader *Header = nullptr;
 };
 
-class DebugLinesSubsectionRef final : public DebugSubsectionRef {
+class LLVM_CLASS_ABI DebugLinesSubsectionRef final : public DebugSubsectionRef {
   friend class LineColumnExtractor;
 
   using LineInfoArray = VarStreamArray<LineColumnEntry, LineColumnExtractor>;
@@ -104,7 +104,7 @@ private:
   LineInfoArray LinesAndColumns;
 };
 
-class DebugLinesSubsection final : public DebugSubsection {
+class LLVM_CLASS_ABI DebugLinesSubsection final : public DebugSubsection {
   struct Block {
     Block(uint32_t ChecksumBufferOffset)
         : ChecksumBufferOffset(ChecksumBufferOffset) {}

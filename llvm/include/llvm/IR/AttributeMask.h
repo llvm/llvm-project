@@ -27,7 +27,7 @@ namespace llvm {
 /// \class
 /// This class stores enough information to efficiently remove some attributes
 /// from an existing AttrBuilder, AttributeSet or AttributeList.
-class AttributeMask {
+class LLVM_CLASS_ABI AttributeMask {
   std::bitset<Attribute::EndAttrKinds> Attrs;
   std::set<SmallString<32>, std::less<>> TargetDepAttrs;
 

@@ -32,13 +32,13 @@ using support::little32_t;
 using support::ulittle16_t;
 using support::ulittle32_t;
 
-struct CVMemberRecord {
+struct LLVM_CLASS_ABI CVMemberRecord {
   TypeLeafKind Kind;
   ArrayRef<uint8_t> Data;
 };
 
 /// Equvalent to CV_fldattr_t in cvinfo.h.
-struct MemberAttributes {
+struct LLVM_CLASS_ABI MemberAttributes {
   uint16_t Attrs = 0;
 
   enum {
@@ -98,7 +98,7 @@ struct MemberAttributes {
 
 // Does not correspond to any tag, this is the tail of an LF_POINTER record
 // if it represents a member pointer.
-class MemberPointerInfo {
+class LLVM_CLASS_ABI MemberPointerInfo {
 public:
   MemberPointerInfo() = default;
 
@@ -116,7 +116,7 @@ public:
       PointerToMemberRepresentation::Unknown;
 };
 
-class TypeRecord {
+class LLVM_CLASS_ABI TypeRecord {
 protected:
   TypeRecord() = default;
   explicit TypeRecord(TypeRecordKind Kind) : Kind(Kind) {}
@@ -128,7 +128,7 @@ public:
 };
 
 // LF_MODIFIER
-class ModifierRecord : public TypeRecord {
+class LLVM_CLASS_ABI ModifierRecord : public TypeRecord {
 public:
   ModifierRecord() = default;
   explicit ModifierRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -144,7 +144,7 @@ public:
 };
 
 // LF_PROCEDURE
-class ProcedureRecord : public TypeRecord {
+class LLVM_CLASS_ABI ProcedureRecord : public TypeRecord {
 public:
   ProcedureRecord() = default;
   explicit ProcedureRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -169,7 +169,7 @@ public:
 };
 
 // LF_MFUNCTION
-class MemberFunctionRecord : public TypeRecord {
+class LLVM_CLASS_ABI MemberFunctionRecord : public TypeRecord {
 public:
   MemberFunctionRecord() = default;
   explicit MemberFunctionRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -204,7 +204,7 @@ public:
 };
 
 // LF_LABEL
-class LabelRecord : public TypeRecord {
+class LLVM_CLASS_ABI LabelRecord : public TypeRecord {
 public:
   LabelRecord() = default;
   explicit LabelRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -215,7 +215,7 @@ public:
 };
 
 // LF_MFUNC_ID
-class MemberFuncIdRecord : public TypeRecord {
+class LLVM_CLASS_ABI MemberFuncIdRecord : public TypeRecord {
 public:
   MemberFuncIdRecord() = default;
   explicit MemberFuncIdRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -234,7 +234,7 @@ public:
 };
 
 // LF_ARGLIST
-class ArgListRecord : public TypeRecord {
+class LLVM_CLASS_ABI ArgListRecord : public TypeRecord {
 public:
   ArgListRecord() = default;
   explicit ArgListRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -248,7 +248,7 @@ public:
 };
 
 // LF_SUBSTR_LIST
-class StringListRecord : public TypeRecord {
+class LLVM_CLASS_ABI StringListRecord : public TypeRecord {
 public:
   StringListRecord() = default;
   explicit StringListRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -262,7 +262,7 @@ public:
 };
 
 // LF_POINTER
-class PointerRecord : public TypeRecord {
+class LLVM_CLASS_ABI PointerRecord : public TypeRecord {
 public:
   // ---------------------------XXXXX
   static const uint32_t PointerKindShift = 0;
@@ -368,7 +368,7 @@ private:
 };
 
 // LF_NESTTYPE
-class NestedTypeRecord : public TypeRecord {
+class LLVM_CLASS_ABI NestedTypeRecord : public TypeRecord {
 public:
   NestedTypeRecord() = default;
   explicit NestedTypeRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -383,7 +383,7 @@ public:
 };
 
 // LF_FIELDLIST
-class FieldListRecord : public TypeRecord {
+class LLVM_CLASS_ABI FieldListRecord : public TypeRecord {
 public:
   FieldListRecord() = default;
   explicit FieldListRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -394,7 +394,7 @@ public:
 };
 
 // LF_ARRAY
-class ArrayRecord : public TypeRecord {
+class LLVM_CLASS_ABI ArrayRecord : public TypeRecord {
 public:
   ArrayRecord() = default;
   explicit ArrayRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -414,7 +414,7 @@ public:
   StringRef Name;
 };
 
-class TagRecord : public TypeRecord {
+class LLVM_CLASS_ABI TagRecord : public TypeRecord {
 protected:
   TagRecord() = default;
   explicit TagRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -463,7 +463,7 @@ public:
 };
 
 // LF_CLASS, LF_STRUCTURE, LF_INTERFACE
-class ClassRecord : public TagRecord {
+class LLVM_CLASS_ABI ClassRecord : public TagRecord {
 public:
   ClassRecord() = default;
   explicit ClassRecord(TypeRecordKind Kind) : TagRecord(Kind) {}
@@ -496,7 +496,7 @@ public:
 };
 
 // LF_UNION
-struct UnionRecord : public TagRecord {
+struct LLVM_CLASS_ABI UnionRecord : public TagRecord {
   UnionRecord() = default;
   explicit UnionRecord(TypeRecordKind Kind) : TagRecord(Kind) {}
   UnionRecord(uint16_t MemberCount, ClassOptions Options, TypeIndex FieldList,
@@ -517,7 +517,7 @@ struct UnionRecord : public TagRecord {
 };
 
 // LF_ENUM
-class EnumRecord : public TagRecord {
+class LLVM_CLASS_ABI EnumRecord : public TagRecord {
 public:
   EnumRecord() = default;
   explicit EnumRecord(TypeRecordKind Kind) : TagRecord(Kind) {}
@@ -533,7 +533,7 @@ public:
 };
 
 // LF_BITFIELD
-class BitFieldRecord : public TypeRecord {
+class LLVM_CLASS_ABI BitFieldRecord : public TypeRecord {
 public:
   BitFieldRecord() = default;
   explicit BitFieldRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -551,7 +551,7 @@ public:
 };
 
 // LF_VTSHAPE
-class VFTableShapeRecord : public TypeRecord {
+class LLVM_CLASS_ABI VFTableShapeRecord : public TypeRecord {
 public:
   VFTableShapeRecord() = default;
   explicit VFTableShapeRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -573,7 +573,7 @@ public:
 };
 
 // LF_TYPESERVER2
-class TypeServer2Record : public TypeRecord {
+class LLVM_CLASS_ABI TypeServer2Record : public TypeRecord {
 public:
   TypeServer2Record() = default;
   explicit TypeServer2Record(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -593,7 +593,7 @@ public:
 };
 
 // LF_STRING_ID
-class StringIdRecord : public TypeRecord {
+class LLVM_CLASS_ABI StringIdRecord : public TypeRecord {
 public:
   StringIdRecord() = default;
   explicit StringIdRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -608,7 +608,7 @@ public:
 };
 
 // LF_FUNC_ID
-class FuncIdRecord : public TypeRecord {
+class LLVM_CLASS_ABI FuncIdRecord : public TypeRecord {
 public:
   FuncIdRecord() = default;
   explicit FuncIdRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -626,7 +626,7 @@ public:
 };
 
 // LF_UDT_SRC_LINE
-class UdtSourceLineRecord : public TypeRecord {
+class LLVM_CLASS_ABI UdtSourceLineRecord : public TypeRecord {
 public:
   UdtSourceLineRecord() = default;
   explicit UdtSourceLineRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -644,7 +644,7 @@ public:
 };
 
 // LF_UDT_MOD_SRC_LINE
-class UdtModSourceLineRecord : public TypeRecord {
+class LLVM_CLASS_ABI UdtModSourceLineRecord : public TypeRecord {
 public:
   UdtModSourceLineRecord() = default;
   explicit UdtModSourceLineRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -665,7 +665,7 @@ public:
 };
 
 // LF_BUILDINFO
-class BuildInfoRecord : public TypeRecord {
+class LLVM_CLASS_ABI BuildInfoRecord : public TypeRecord {
 public:
   BuildInfoRecord() = default;
   explicit BuildInfoRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -689,7 +689,7 @@ public:
 };
 
 // LF_VFTABLE
-class VFTableRecord : public TypeRecord {
+class LLVM_CLASS_ABI VFTableRecord : public TypeRecord {
 public:
   VFTableRecord() = default;
   explicit VFTableRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -718,7 +718,7 @@ public:
 };
 
 // LF_ONEMETHOD
-class OneMethodRecord : public TypeRecord {
+class LLVM_CLASS_ABI OneMethodRecord : public TypeRecord {
 public:
   OneMethodRecord() = default;
   explicit OneMethodRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -750,7 +750,7 @@ public:
 };
 
 // LF_METHODLIST
-class MethodOverloadListRecord : public TypeRecord {
+class LLVM_CLASS_ABI MethodOverloadListRecord : public TypeRecord {
 public:
   MethodOverloadListRecord() = default;
   explicit MethodOverloadListRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -763,7 +763,7 @@ public:
 };
 
 /// For method overload sets.  LF_METHOD
-class OverloadedMethodRecord : public TypeRecord {
+class LLVM_CLASS_ABI OverloadedMethodRecord : public TypeRecord {
 public:
   OverloadedMethodRecord() = default;
   explicit OverloadedMethodRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -782,7 +782,7 @@ public:
 };
 
 // LF_MEMBER
-class DataMemberRecord : public TypeRecord {
+class LLVM_CLASS_ABI DataMemberRecord : public TypeRecord {
 public:
   DataMemberRecord() = default;
   explicit DataMemberRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -807,7 +807,7 @@ public:
 };
 
 // LF_STMEMBER
-class StaticDataMemberRecord : public TypeRecord {
+class LLVM_CLASS_ABI StaticDataMemberRecord : public TypeRecord {
 public:
   StaticDataMemberRecord() = default;
   explicit StaticDataMemberRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -828,7 +828,7 @@ public:
 };
 
 // LF_ENUMERATE
-class EnumeratorRecord : public TypeRecord {
+class LLVM_CLASS_ABI EnumeratorRecord : public TypeRecord {
 public:
   EnumeratorRecord() = default;
   explicit EnumeratorRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -849,7 +849,7 @@ public:
 };
 
 // LF_VFUNCTAB
-class VFPtrRecord : public TypeRecord {
+class LLVM_CLASS_ABI VFPtrRecord : public TypeRecord {
 public:
   VFPtrRecord() = default;
   explicit VFPtrRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -862,7 +862,7 @@ public:
 };
 
 // LF_BCLASS, LF_BINTERFACE
-class BaseClassRecord : public TypeRecord {
+class LLVM_CLASS_ABI BaseClassRecord : public TypeRecord {
 public:
   BaseClassRecord() = default;
   explicit BaseClassRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -883,7 +883,7 @@ public:
 };
 
 // LF_VBCLASS, LF_IVBCLASS
-class VirtualBaseClassRecord : public TypeRecord {
+class LLVM_CLASS_ABI VirtualBaseClassRecord : public TypeRecord {
 public:
   VirtualBaseClassRecord() = default;
   explicit VirtualBaseClassRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -913,7 +913,7 @@ public:
 
 /// LF_INDEX - Used to chain two large LF_FIELDLIST or LF_METHODLIST records
 /// together. The first will end in an LF_INDEX record that points to the next.
-class ListContinuationRecord : public TypeRecord {
+class LLVM_CLASS_ABI ListContinuationRecord : public TypeRecord {
 public:
   ListContinuationRecord() = default;
   explicit ListContinuationRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -927,7 +927,7 @@ public:
 };
 
 // LF_PRECOMP
-class PrecompRecord : public TypeRecord {
+class LLVM_CLASS_ABI PrecompRecord : public TypeRecord {
 public:
   PrecompRecord() = default;
   explicit PrecompRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
@@ -944,7 +944,7 @@ public:
 };
 
 // LF_ENDPRECOMP
-class EndPrecompRecord : public TypeRecord {
+class LLVM_CLASS_ABI EndPrecompRecord : public TypeRecord {
 public:
   EndPrecompRecord() = default;
   explicit EndPrecompRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}

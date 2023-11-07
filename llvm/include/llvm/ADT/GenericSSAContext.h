@@ -39,7 +39,7 @@ template <typename _FunctionT> struct GenericSSATraits;
 //
 // We use FunctionT as a template argument and not GenericSSATraits to allow
 // forward declarations using well-known typenames.
-template <typename _FunctionT> class GenericSSAContext {
+template <typename _FunctionT> class LLVM_CLASS_ABI GenericSSAContext {
   using SSATraits = GenericSSATraits<_FunctionT>;
   const typename SSATraits::FunctionT *F;
 

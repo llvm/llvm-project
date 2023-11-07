@@ -35,7 +35,7 @@ class ProfOStream;
 class MemoryBuffer;
 class raw_fd_ostream;
 
-class InstrProfWriter {
+class LLVM_CLASS_ABI InstrProfWriter {
 public:
   using ProfilingData = SmallDenseMap<uint64_t, InstrProfRecord>;
 

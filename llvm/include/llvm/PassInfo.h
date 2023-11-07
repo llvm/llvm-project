@@ -28,7 +28,7 @@ class Pass;
 /// getPassInfo() method.  These objects are set up by the RegisterPass<>
 /// template.
 ///
-class PassInfo {
+class LLVM_CLASS_ABI PassInfo {
 public:
   using NormalCtor_t = Pass* (*)();
 

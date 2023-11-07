@@ -20,7 +20,7 @@ class BasicBlock;
 namespace IDFCalculatorDetail {
 
 /// Specialization for BasicBlock for the optional use of GraphDiff.
-template <bool IsPostDom> struct ChildrenGetterTy<BasicBlock, IsPostDom> {
+template <bool IsPostDom> struct LLVM_CLASS_ABI ChildrenGetterTy<BasicBlock, IsPostDom> {
   using NodeRef = BasicBlock *;
   using ChildrenTy = SmallVector<BasicBlock *, 8>;
 
@@ -37,7 +37,7 @@ template <bool IsPostDom> struct ChildrenGetterTy<BasicBlock, IsPostDom> {
 } // end of namespace IDFCalculatorDetail
 
 template <bool IsPostDom>
-class IDFCalculator final : public IDFCalculatorBase<BasicBlock, IsPostDom> {
+class LLVM_CLASS_ABI IDFCalculator final : public IDFCalculatorBase<BasicBlock, IsPostDom> {
 public:
   using IDFCalculatorBase =
       typename llvm::IDFCalculatorBase<BasicBlock, IsPostDom>;

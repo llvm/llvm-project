@@ -56,7 +56,7 @@ namespace llvm {
 /// Such two types of units reservation is used to model instruction domain
 /// change stalls, FUs using the same resource (e.g. same register file), etc.
 
-struct InstrStage {
+struct LLVM_CLASS_ABI InstrStage {
   enum ReservationKinds {
     Required = 0,
     Reserved = 1
@@ -96,7 +96,7 @@ struct InstrStage {
 /// This includes a set of stages occupied by the instruction and the pipeline
 /// cycle in which operands are read and written.
 ///
-struct InstrItinerary {
+struct LLVM_CLASS_ABI InstrItinerary {
   int16_t  NumMicroOps;        ///< # of micro-ops, -1 means it's variable
   uint16_t FirstStage;         ///< Index of first stage in itinerary
   uint16_t LastStage;          ///< Index of last + 1 stage in itinerary
@@ -107,7 +107,7 @@ struct InstrItinerary {
 //===----------------------------------------------------------------------===//
 /// Itinerary data supplied by a subtarget to be used by a target.
 ///
-class InstrItineraryData {
+class LLVM_CLASS_ABI InstrItineraryData {
 public:
   MCSchedModel SchedModel =
       MCSchedModel::GetDefaultSchedModel(); ///< Basic machine properties.

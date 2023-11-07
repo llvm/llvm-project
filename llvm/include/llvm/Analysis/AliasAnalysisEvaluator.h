@@ -32,7 +32,7 @@ class AAResults;
 class Function;
 class FunctionPass;
 
-class AAEvaluator : public PassInfoMixin<AAEvaluator> {
+class LLVM_CLASS_ABI AAEvaluator : public PassInfoMixin<AAEvaluator> {
   int64_t FunctionCount = 0;
   int64_t NoAliasCount = 0, MayAliasCount = 0, PartialAliasCount = 0;
   int64_t MustAliasCount = 0;

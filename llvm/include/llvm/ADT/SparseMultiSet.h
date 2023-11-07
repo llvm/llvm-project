@@ -84,7 +84,7 @@ namespace llvm {
 template<typename ValueT,
          typename KeyFunctorT = identity<unsigned>,
          typename SparseT = uint8_t>
-class SparseMultiSet {
+class LLVM_CLASS_ABI SparseMultiSet {
   static_assert(std::is_unsigned_v<SparseT>,
                 "SparseT must be an unsigned integer type");
 

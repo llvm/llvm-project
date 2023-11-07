@@ -24,7 +24,7 @@
 namespace llvm {
 namespace mca {
 
-class EntryStage final : public Stage {
+class LLVM_CLASS_ABI EntryStage final : public Stage {
   InstRef CurrentInstruction;
   SmallVector<std::unique_ptr<Instruction>, 16> Instructions;
   SourceMgr &SM;

@@ -22,7 +22,7 @@ namespace llvm {
 
 class Function;
 
-struct LowerExpectIntrinsicPass : PassInfoMixin<LowerExpectIntrinsicPass> {
+struct LLVM_CLASS_ABI LowerExpectIntrinsicPass : PassInfoMixin<LowerExpectIntrinsicPass> {
   /// Run the pass over the function.
   ///
   /// This will lower all of the expect intrinsic calls in this function into

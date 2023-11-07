@@ -21,7 +21,7 @@ namespace symbolize {
 
 using FunctionNameKind = DILineInfoSpecifier::FunctionNameKind;
 
-class SymbolizableModule {
+class LLVM_CLASS_ABI SymbolizableModule {
 public:
   virtual ~SymbolizableModule() = default;
 

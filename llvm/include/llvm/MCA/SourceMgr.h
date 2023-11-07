@@ -27,7 +27,7 @@ typedef std::pair<unsigned, const Instruction &> SourceRef;
 
 /// Abstracting the input code sequence (a sequence of MCInst) and assigning
 /// unique identifiers to every instruction in the sequence.
-struct SourceMgr {
+struct LLVM_CLASS_ABI SourceMgr {
   using UniqueInst = std::unique_ptr<Instruction>;
 
   /// Provides a fixed range of \a UniqueInst to iterate.
@@ -57,7 +57,7 @@ struct SourceMgr {
 /// The default implementation of \a SourceMgr. It always takes a fixed number
 /// of instructions and provides an option to loop the given sequence for a
 /// certain iterations.
-class CircularSourceMgr : public SourceMgr {
+class LLVM_CLASS_ABI CircularSourceMgr : public SourceMgr {
   ArrayRef<UniqueInst> Sequence;
   unsigned Current;
   const unsigned Iterations;

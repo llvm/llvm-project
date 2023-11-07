@@ -59,7 +59,7 @@ enum ImageKind : uint16_t {
 /// detect ABI stability and the size is used to find other offloading entries
 /// that may exist in the same section. All offsets are given as absolute byte
 /// offsets from the beginning of the file.
-class OffloadBinary : public Binary {
+class LLVM_CLASS_ABI OffloadBinary : public Binary {
 public:
   using string_iterator = MapVector<StringRef, StringRef>::const_iterator;
   using string_iterator_range = iterator_range<string_iterator>;
@@ -155,7 +155,7 @@ private:
 
 /// A class to contain the binary information for a single OffloadBinary that
 /// owns its memory.
-class OffloadFile : public OwningBinary<OffloadBinary> {
+class LLVM_CLASS_ABI OffloadFile : public OwningBinary<OffloadBinary> {
 public:
   using TargetID = std::pair<StringRef, StringRef>;
 
@@ -172,20 +172,20 @@ public:
 
 /// Extracts embedded device offloading code from a memory \p Buffer to a list
 /// of \p Binaries.
-Error extractOffloadBinaries(MemoryBufferRef Buffer,
+LLVM_FUNC_ABI Error extractOffloadBinaries(MemoryBufferRef Buffer,
                              SmallVectorImpl<OffloadFile> &Binaries);
 
 /// Convert a string \p Name to an image kind.
-ImageKind getImageKind(StringRef Name);
+LLVM_FUNC_ABI ImageKind getImageKind(StringRef Name);
 
 /// Convert an image kind to its string representation.
-StringRef getImageKindName(ImageKind Name);
+LLVM_FUNC_ABI StringRef getImageKindName(ImageKind Name);
 
 /// Convert a string \p Name to an offload kind.
-OffloadKind getOffloadKind(StringRef Name);
+LLVM_FUNC_ABI OffloadKind getOffloadKind(StringRef Name);
 
 /// Convert an offload kind to its string representation.
-StringRef getOffloadKindName(OffloadKind Name);
+LLVM_FUNC_ABI StringRef getOffloadKindName(OffloadKind Name);
 
 } // namespace object
 

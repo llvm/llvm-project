@@ -30,7 +30,7 @@ using MemProfSchema = llvm::SmallVector<Meta, static_cast<int>(Meta::Size)>;
 // Holds the actual MemInfoBlock data with all fields. Contents may be read or
 // written partially by providing an appropriate schema to the serialize and
 // deserialize methods.
-struct PortableMemInfoBlock {
+struct LLVM_CLASS_ABI PortableMemInfoBlock {
   PortableMemInfoBlock() = default;
   explicit PortableMemInfoBlock(const MemInfoBlock &Block) {
 #define MIBEntryDef(NameTag, Name, Type) Name = Block.Name;
@@ -140,7 +140,7 @@ using FrameId = uint64_t;
 // Describes a call frame for a dynamic allocation context. The contents of
 // the frame are populated by symbolizing the stack depot call frame from the
 // compiler runtime.
-struct Frame {
+struct LLVM_CLASS_ABI Frame {
   // A uuid (uint64_t) identifying the function. It is obtained by
   // llvm::md5(FunctionName) which returns the lower 64 bits.
   GlobalValue::GUID Function;
@@ -256,7 +256,7 @@ struct Frame {
 
 // Holds allocation information in a space efficient format where frames are
 // represented using unique identifiers.
-struct IndexedAllocationInfo {
+struct LLVM_CLASS_ABI IndexedAllocationInfo {
   // The dynamic calling context for the allocation in bottom-up (leaf-to-root)
   // order. Frame contents are stored out-of-line.
   llvm::SmallVector<FrameId> CallStack;
@@ -295,7 +295,7 @@ struct IndexedAllocationInfo {
 
 // Holds allocation information with frame contents inline. The type should
 // be used for temporary in-memory instances.
-struct AllocationInfo {
+struct LLVM_CLASS_ABI AllocationInfo {
   // Same as IndexedAllocationInfo::CallStack with the frame contents inline.
   llvm::SmallVector<Frame> CallStack;
   // Same as IndexedAllocationInfo::Info;
@@ -326,7 +326,7 @@ struct AllocationInfo {
 // Holds the memprof profile information for a function. The internal
 // representation stores frame ids for efficiency. This representation should
 // be used in the profile conversion and manipulation tools.
-struct IndexedMemProfRecord {
+struct LLVM_CLASS_ABI IndexedMemProfRecord {
   // Memory allocation sites in this function for which we have memory
   // profiling data.
   llvm::SmallVector<IndexedAllocationInfo> AllocSites;
@@ -400,7 +400,7 @@ struct IndexedMemProfRecord {
 // Holds the memprof profile information for a function. The internal
 // representation stores frame contents inline. This representation should
 // be used for small amount of temporary, in memory instances.
-struct MemProfRecord {
+struct LLVM_CLASS_ABI MemProfRecord {
   // Same as IndexedMemProfRecord::AllocSites with frame contents inline.
   llvm::SmallVector<AllocationInfo> AllocSites;
   // Same as IndexedMemProfRecord::CallSites with frame contents inline.
@@ -447,10 +447,10 @@ struct MemProfRecord {
 // ids in the schema. Subsequent entries are integers which map to memprof::Meta
 // enum class entries. After successfully reading the schema, the pointer is one
 // byte past the schema contents.
-Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer);
+LLVM_FUNC_ABI Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer);
 
 // Trait for reading IndexedMemProfRecord data from the on-disk hash table.
-class RecordLookupTrait {
+class LLVM_CLASS_ABI RecordLookupTrait {
 public:
   using data_type = const IndexedMemProfRecord &;
   using internal_key_type = uint64_t;
@@ -498,7 +498,7 @@ private:
 };
 
 // Trait for writing IndexedMemProfRecord data to the on-disk hash table.
-class RecordWriterTrait {
+class LLVM_CLASS_ABI RecordWriterTrait {
 public:
   using key_type = uint64_t;
   using key_type_ref = uint64_t;
@@ -544,7 +544,7 @@ public:
 };
 
 // Trait for writing frame mappings to the on-disk hash table.
-class FrameWriterTrait {
+class LLVM_CLASS_ABI FrameWriterTrait {
 public:
   using key_type = FrameId;
   using key_type_ref = FrameId;
@@ -581,7 +581,7 @@ public:
 };
 
 // Trait for reading frame mappings from the on-disk hash table.
-class FrameLookupTrait {
+class LLVM_CLASS_ABI FrameLookupTrait {
 public:
   using data_type = const Frame;
   using internal_key_type = FrameId;

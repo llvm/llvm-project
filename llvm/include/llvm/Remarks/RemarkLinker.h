@@ -30,7 +30,7 @@ class ObjectFile;
 
 namespace remarks {
 
-struct RemarkLinker {
+struct LLVM_CLASS_ABI RemarkLinker {
 private:
   /// Compare through the pointers.
   struct RemarkPtrCompare {
@@ -110,7 +110,7 @@ public:
 /// Returns a buffer with the contents of the remarks section depending on the
 /// format of the file. If the section doesn't exist, this returns an empty
 /// optional.
-Expected<std::optional<StringRef>>
+LLVM_FUNC_ABI Expected<std::optional<StringRef>>
 getRemarksSectionContents(const object::ObjectFile &Obj);
 
 } // end namespace remarks

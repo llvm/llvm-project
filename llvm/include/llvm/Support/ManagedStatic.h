@@ -20,16 +20,16 @@
 namespace llvm {
 
 /// object_creator - Helper method for ManagedStatic.
-template <class C> struct object_creator {
+template <class C> struct LLVM_CLASS_ABI object_creator {
   static void *call() { return new C(); }
 };
 
 /// object_deleter - Helper method for ManagedStatic.
 ///
-template <typename T> struct object_deleter {
+template <typename T> struct LLVM_CLASS_ABI object_deleter {
   static void call(void *Ptr) { delete (T *)Ptr; }
 };
-template <typename T, size_t N> struct object_deleter<T[N]> {
+template <typename T, size_t N> struct LLVM_CLASS_ABI object_deleter<T[N]> {
   static void call(void *Ptr) { delete[](T *)Ptr; }
 };
 
@@ -47,7 +47,7 @@ template <typename T, size_t N> struct object_deleter<T[N]> {
 #endif
 
 /// ManagedStaticBase - Common base class for ManagedStatic instances.
-class ManagedStaticBase {
+class LLVM_CLASS_ABI ManagedStaticBase {
 protected:
 #ifdef LLVM_USE_CONSTEXPR_CTOR
   mutable std::atomic<void *> Ptr{};
@@ -81,7 +81,7 @@ public:
 ///
 template <class C, class Creator = object_creator<C>,
           class Deleter = object_deleter<C>>
-class ManagedStatic : public ManagedStaticBase {
+class LLVM_CLASS_ABI ManagedStatic : public ManagedStaticBase {
 public:
   // Accessors.
   C &operator*() {
@@ -112,11 +112,11 @@ public:
 };
 
 /// llvm_shutdown - Deallocate and destroy all ManagedStatic variables.
-void llvm_shutdown();
+LLVM_FUNC_ABI void llvm_shutdown();
 
 /// llvm_shutdown_obj - This is a simple helper class that calls
 /// llvm_shutdown() when it is destroyed.
-struct llvm_shutdown_obj {
+struct LLVM_CLASS_ABI llvm_shutdown_obj {
   llvm_shutdown_obj() = default;
   ~llvm_shutdown_obj() { llvm_shutdown(); }
 };

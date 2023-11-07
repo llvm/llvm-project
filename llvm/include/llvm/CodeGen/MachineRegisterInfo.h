@@ -49,7 +49,7 @@ using RegClassOrRegBank =
 /// MachineRegisterInfo - Keep track of information for virtual and physical
 /// registers, including vreg register classes, use/def chains for registers,
 /// etc.
-class MachineRegisterInfo {
+class LLVM_CLASS_ABI MachineRegisterInfo {
 public:
   class Delegate {
     virtual void anchor();
@@ -1231,7 +1231,7 @@ public:
 /// Iterate over the pressure sets affected by the given physical or virtual
 /// register. If Reg is physical, it must be a register unit (from
 /// MCRegUnitIterator).
-class PSetIterator {
+class LLVM_CLASS_ABI PSetIterator {
   const int *PSet = nullptr;
   unsigned Weight = 0;
 

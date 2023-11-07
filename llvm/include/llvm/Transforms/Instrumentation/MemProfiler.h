@@ -33,7 +33,7 @@ class FileSystem;
 /// calls to the MemProfiler runtime library functions. The runtime library
 /// essentially replaces malloc() and free() with custom implementations that
 /// record data about the allocations.
-class MemProfilerPass : public PassInfoMixin<MemProfilerPass> {
+class LLVM_CLASS_ABI MemProfilerPass : public PassInfoMixin<MemProfilerPass> {
 public:
   explicit MemProfilerPass();
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -42,14 +42,14 @@ public:
 
 /// Public interface to the memory profiler module pass for instrumenting code
 /// to profile memory allocations and accesses.
-class ModuleMemProfilerPass : public PassInfoMixin<ModuleMemProfilerPass> {
+class LLVM_CLASS_ABI ModuleMemProfilerPass : public PassInfoMixin<ModuleMemProfilerPass> {
 public:
   explicit ModuleMemProfilerPass();
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 
-class MemProfUsePass : public PassInfoMixin<MemProfUsePass> {
+class LLVM_CLASS_ABI MemProfUsePass : public PassInfoMixin<MemProfUsePass> {
 public:
   explicit MemProfUsePass(std::string MemoryProfileFile,
                           IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);

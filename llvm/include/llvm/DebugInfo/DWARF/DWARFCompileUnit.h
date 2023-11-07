@@ -20,7 +20,7 @@ class raw_ostream;
 struct DIDumpOptions;
 struct DWARFSection;
 
-class DWARFCompileUnit : public DWARFUnit {
+class LLVM_CLASS_ABI DWARFCompileUnit : public DWARFUnit {
 public:
   DWARFCompileUnit(DWARFContext &Context, const DWARFSection &Section,
                    const DWARFUnitHeader &Header, const DWARFDebugAbbrev *DA,

@@ -67,13 +67,13 @@ enum class coveragemap_error {
   invalid_or_missing_arch_specifier
 };
 
-const std::error_category &coveragemap_category();
+LLVM_FUNC_ABI const std::error_category &coveragemap_category();
 
 inline std::error_code make_error_code(coveragemap_error E) {
   return std::error_code(static_cast<int>(E), coveragemap_category());
 }
 
-class CoverageMapError : public ErrorInfo<CoverageMapError> {
+class LLVM_CLASS_ABI CoverageMapError : public ErrorInfo<CoverageMapError> {
 public:
   CoverageMapError(coveragemap_error Err, const Twine &ErrStr = Twine())
       : Err(Err), Msg(ErrStr.str()) {
@@ -100,7 +100,7 @@ private:
 
 /// A Counter is an abstract value that describes how to compute the
 /// execution count for a region of code using the collected profile count data.
-struct Counter {
+struct LLVM_CLASS_ABI Counter {
   /// The CounterExpression kind (Add or Subtract) is encoded in bit 0 next to
   /// the CounterKind. This means CounterKind has to leave bit 0 free.
   enum CounterKind { Zero, CounterValueReference, Expression };
@@ -157,7 +157,7 @@ public:
 
 /// A Counter expression is a value that represents an arithmetic operation
 /// with two counters.
-struct CounterExpression {
+struct LLVM_CLASS_ABI CounterExpression {
   enum ExprKind { Subtract, Add };
   ExprKind Kind;
   Counter LHS, RHS;
@@ -168,7 +168,7 @@ struct CounterExpression {
 
 /// A Counter expression builder is used to construct the counter expressions.
 /// It avoids unnecessary duplication and simplifies algebraic expressions.
-class CounterExpressionBuilder {
+class LLVM_CLASS_ABI CounterExpressionBuilder {
   /// A list of all the counter expressions
   std::vector<CounterExpression> Expressions;
 
@@ -216,7 +216,7 @@ public:
 using LineColPair = std::pair<unsigned, unsigned>;
 
 /// A Counter mapping region associates a source range with a specific counter.
-struct CounterMappingRegion {
+struct LLVM_CLASS_ABI CounterMappingRegion {
   enum RegionKind {
     /// A CodeRegion associates some code with a counter
     CodeRegion,
@@ -311,7 +311,7 @@ struct CounterMappingRegion {
 };
 
 /// Associates a source range with an execution count.
-struct CountedRegion : public CounterMappingRegion {
+struct LLVM_CLASS_ABI CountedRegion : public CounterMappingRegion {
   uint64_t ExecutionCount;
   uint64_t FalseExecutionCount;
   bool Folded;
@@ -328,7 +328,7 @@ struct CountedRegion : public CounterMappingRegion {
 
 /// A Counter mapping context is used to connect the counters, expressions
 /// and the obtained counter values.
-class CounterMappingContext {
+class LLVM_CLASS_ABI CounterMappingContext {
   ArrayRef<CounterExpression> Expressions;
   ArrayRef<uint64_t> CounterValues;
 
@@ -350,7 +350,7 @@ public:
 };
 
 /// Code coverage information for a single function.
-struct FunctionRecord {
+struct LLVM_CLASS_ABI FunctionRecord {
   /// Raw function name.
   std::string Name;
   /// Mapping from FileID (i.e. vector index) to filename. Used to support
@@ -390,7 +390,7 @@ struct FunctionRecord {
 };
 
 /// Iterator over Functions, optionally filtered to a single file.
-class FunctionRecordIterator
+class LLVM_CLASS_ABI FunctionRecordIterator
     : public iterator_facade_base<FunctionRecordIterator,
                                   std::forward_iterator_tag, FunctionRecord> {
   ArrayRef<FunctionRecord> Records;
@@ -428,7 +428,7 @@ public:
 /// When covered code has pieces that can be expanded for more detail, such as a
 /// preprocessor macro use and its definition, these are represented as
 /// expansions whose coverage can be looked up independently.
-struct ExpansionRecord {
+struct LLVM_CLASS_ABI ExpansionRecord {
   /// The abstract file this expansion covers.
   unsigned FileID;
   /// The region that expands to this record.
@@ -445,7 +445,7 @@ struct ExpansionRecord {
 ///
 /// A sequence of CoverageSegments gives execution counts for a file in format
 /// that's simple to iterate through for processing.
-struct CoverageSegment {
+struct LLVM_CLASS_ABI CoverageSegment {
   /// The line where this segment begins.
   unsigned Line;
   /// The column where this segment begins.
@@ -482,7 +482,7 @@ struct CoverageSegment {
 ///
 /// Note that it's possible for a function to have more than one instantiation
 /// (consider C++ template specializations or static inline functions).
-class InstantiationGroup {
+class LLVM_CLASS_ABI InstantiationGroup {
   friend class CoverageMapping;
 
   unsigned Line;
@@ -539,7 +539,7 @@ public:
 /// This represents the coverage of an entire file, expansion, or function. It
 /// provides a sequence of CoverageSegments to iterate through, as well as the
 /// list of expansions that can be further processed.
-class CoverageData {
+class LLVM_CLASS_ABI CoverageData {
   friend class CoverageMapping;
 
   std::string Filename;
@@ -578,7 +578,7 @@ public:
 ///
 /// This is the main interface to get coverage information, using a profile to
 /// fill out execution counts.
-class CoverageMapping {
+class LLVM_CLASS_ABI CoverageMapping {
   DenseMap<size_t, DenseSet<size_t>> RecordProvenance;
   std::vector<FunctionRecord> Functions;
   DenseMap<size_t, SmallVector<unsigned, 0>> FilenameHash2RecordIndices;
@@ -681,7 +681,7 @@ public:
 };
 
 /// Coverage statistics for a single line.
-class LineCoverageStats {
+class LLVM_CLASS_ABI LineCoverageStats {
   uint64_t ExecutionCount;
   bool HasMultipleRegions;
   bool Mapped;
@@ -713,7 +713,7 @@ public:
 
 /// An iterator over the \c LineCoverageStats objects for lines described by
 /// a \c CoverageData instance.
-class LineCoverageIterator
+class LLVM_CLASS_ABI LineCoverageIterator
     : public iterator_facade_base<LineCoverageIterator,
                                   std::forward_iterator_tag,
                                   const LineCoverageStats> {
@@ -838,7 +838,7 @@ advanceByOneOutOfLine(const FuncRecordTy *Record, const char *MappingBuf) {
 
 LLVM_PACKED_START
 template <class IntPtrT>
-struct CovMapFunctionRecordV1 {
+struct LLVM_CLASS_ABI CovMapFunctionRecordV1 {
   using ThisT = CovMapFunctionRecordV1<IntPtrT>;
 
 #define COVMAP_V1
@@ -889,7 +889,7 @@ struct CovMapFunctionRecordV1 {
   }
 };
 
-struct CovMapFunctionRecordV2 {
+struct LLVM_CLASS_ABI CovMapFunctionRecordV2 {
   using ThisT = CovMapFunctionRecordV2;
 
 #define COVMAP_V2
@@ -933,7 +933,7 @@ struct CovMapFunctionRecordV2 {
   }
 };
 
-struct CovMapFunctionRecordV3 {
+struct LLVM_CLASS_ABI CovMapFunctionRecordV3 {
   using ThisT = CovMapFunctionRecordV3;
 
 #define COVMAP_V3
@@ -989,7 +989,7 @@ struct CovMapFunctionRecordV3 {
 
 // Per module coverage mapping data header, i.e. CoverageMapFileHeader
 // documented above.
-struct CovMapHeader {
+struct LLVM_CLASS_ABI CovMapHeader {
 #define COVMAP_HEADER(Type, LLVMType, Name, Init) Type Name;
 #include "llvm/ProfileData/InstrProfData.inc"
   template <llvm::endianness Endian> uint32_t getNRecords() const {
@@ -1047,22 +1047,22 @@ enum class TestingFormatVersion : uint64_t {
   CurrentVersion = Version2
 };
 
-template <int CovMapVersion, class IntPtrT> struct CovMapTraits {
+template <int CovMapVersion, class IntPtrT> struct LLVM_CLASS_ABI CovMapTraits {
   using CovMapFuncRecordType = CovMapFunctionRecordV3;
   using NameRefType = uint64_t;
 };
 
-template <class IntPtrT> struct CovMapTraits<CovMapVersion::Version3, IntPtrT> {
+template <class IntPtrT> struct LLVM_CLASS_ABI CovMapTraits<CovMapVersion::Version3, IntPtrT> {
   using CovMapFuncRecordType = CovMapFunctionRecordV2;
   using NameRefType = uint64_t;
 };
 
-template <class IntPtrT> struct CovMapTraits<CovMapVersion::Version2, IntPtrT> {
+template <class IntPtrT> struct LLVM_CLASS_ABI CovMapTraits<CovMapVersion::Version2, IntPtrT> {
   using CovMapFuncRecordType = CovMapFunctionRecordV2;
   using NameRefType = uint64_t;
 };
 
-template <class IntPtrT> struct CovMapTraits<CovMapVersion::Version1, IntPtrT> {
+template <class IntPtrT> struct LLVM_CLASS_ABI CovMapTraits<CovMapVersion::Version1, IntPtrT> {
   using CovMapFuncRecordType = CovMapFunctionRecordV1<IntPtrT>;
   using NameRefType = IntPtrT;
 };
@@ -1070,7 +1070,7 @@ template <class IntPtrT> struct CovMapTraits<CovMapVersion::Version1, IntPtrT> {
 } // end namespace coverage
 
 /// Provide DenseMapInfo for CounterExpression
-template<> struct DenseMapInfo<coverage::CounterExpression> {
+template<> struct LLVM_CLASS_ABI DenseMapInfo<coverage::CounterExpression> {
   static inline coverage::CounterExpression getEmptyKey() {
     using namespace coverage;
 

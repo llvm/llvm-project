@@ -32,7 +32,7 @@ class ArgList;
 ///
 /// The Arg class encodes just enough information to be able to
 /// derive the argument values efficiently.
-class Arg {
+class LLVM_CLASS_ABI Arg {
 private:
   /// The option this argument is an instance of.
   const Option Opt;

@@ -40,7 +40,7 @@ struct MetaSerializer;
 
 /// This is the base class for a remark serializer.
 /// It includes support for using a string table while emitting.
-struct RemarkSerializer {
+struct LLVM_CLASS_ABI RemarkSerializer {
   /// The format of the serializer.
   Format SerializerFormat;
   /// The open raw_ostream that the remark diagnostics are emitted to.
@@ -66,7 +66,7 @@ struct RemarkSerializer {
 };
 
 /// This is the base class for a remark metadata serializer.
-struct MetaSerializer {
+struct LLVM_CLASS_ABI MetaSerializer {
   /// The open raw_ostream that the metadata is emitted to.
   raw_ostream &OS;
 
@@ -78,12 +78,12 @@ struct MetaSerializer {
 };
 
 /// Create a remark serializer.
-Expected<std::unique_ptr<RemarkSerializer>>
+LLVM_FUNC_ABI Expected<std::unique_ptr<RemarkSerializer>>
 createRemarkSerializer(Format RemarksFormat, SerializerMode Mode,
                        raw_ostream &OS);
 
 /// Create a remark serializer that uses a pre-filled string table.
-Expected<std::unique_ptr<RemarkSerializer>>
+LLVM_FUNC_ABI Expected<std::unique_ptr<RemarkSerializer>>
 createRemarkSerializer(Format RemarksFormat, SerializerMode Mode,
                        raw_ostream &OS, remarks::StringTable StrTab);
 

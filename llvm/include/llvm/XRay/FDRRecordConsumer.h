@@ -18,7 +18,7 @@
 namespace llvm {
 namespace xray {
 
-class RecordConsumer {
+class LLVM_CLASS_ABI RecordConsumer {
 public:
   virtual Error consume(std::unique_ptr<Record> R) = 0;
   virtual ~RecordConsumer() = default;
@@ -26,7 +26,7 @@ public:
 
 // This consumer will collect all the records into a vector of records, in
 // arrival order.
-class LogBuilderConsumer : public RecordConsumer {
+class LLVM_CLASS_ABI LogBuilderConsumer : public RecordConsumer {
   std::vector<std::unique_ptr<Record>> &Records;
 
 public:
@@ -39,7 +39,7 @@ public:
 // A PipelineConsumer applies a set of visitors to every consumed Record, in the
 // order by which the visitors are added to the pipeline in the order of
 // appearance.
-class PipelineConsumer : public RecordConsumer {
+class LLVM_CLASS_ABI PipelineConsumer : public RecordConsumer {
   std::vector<RecordVisitor *> Visitors;
 
 public:

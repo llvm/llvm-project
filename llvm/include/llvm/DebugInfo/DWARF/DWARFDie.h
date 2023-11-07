@@ -40,7 +40,7 @@ class raw_ostream;
 /// relative offset. This class helps to ensure that this doesn't happen and
 /// also simplifies the attribute extraction calls by not having to specify the
 /// DWARFUnit for each call.
-class DWARFDie {
+class LLVM_CLASS_ABI DWARFDie {
   DWARFUnit *U = nullptr;
   const DWARFDebugInfoEntry *Die = nullptr;
 
@@ -308,7 +308,7 @@ class DWARFDie::attribute_iterator
   /// The attribute index within the abbreviation declaration in Die.
   uint32_t Index;
 
-  friend bool operator==(const attribute_iterator &LHS,
+  friend LLVM_FUNC_ABI bool operator==(const attribute_iterator &LHS,
                          const attribute_iterator &RHS);
 
   /// Update the attribute index and attempt to read the attribute value. If the
@@ -357,7 +357,7 @@ class DWARFDie::iterator
   DWARFDie Die;
 
   friend std::reverse_iterator<llvm::DWARFDie::iterator>;
-  friend bool operator==(const DWARFDie::iterator &LHS,
+  friend LLVM_FUNC_ABI bool operator==(const DWARFDie::iterator &LHS,
                          const DWARFDie::iterator &RHS);
 
 public:
@@ -402,7 +402,7 @@ inline iterator_range<DWARFDie::iterator> DWARFDie::children() const {
 namespace std {
 
 template <>
-class reverse_iterator<llvm::DWARFDie::iterator>
+class LLVM_CLASS_ABI reverse_iterator<llvm::DWARFDie::iterator>
     : public llvm::iterator_facade_base<
           reverse_iterator<llvm::DWARFDie::iterator>,
           bidirectional_iterator_tag, const llvm::DWARFDie> {
@@ -477,8 +477,8 @@ inline std::reverse_iterator<DWARFDie::iterator> DWARFDie::rend() const {
   return std::make_reverse_iterator(begin());
 }
 
-void dumpTypeQualifiedName(const DWARFDie &DIE, raw_ostream &OS);
-void dumpTypeUnqualifiedName(const DWARFDie &DIE, raw_ostream &OS,
+LLVM_FUNC_ABI void dumpTypeQualifiedName(const DWARFDie &DIE, raw_ostream &OS);
+LLVM_FUNC_ABI void dumpTypeUnqualifiedName(const DWARFDie &DIE, raw_ostream &OS,
                              std::string *OriginalFullName = nullptr);
 
 } // end namespace llvm

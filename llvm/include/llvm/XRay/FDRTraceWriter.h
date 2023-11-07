@@ -27,7 +27,7 @@ namespace xray {
 /// generate various kinds of execution traces without using the XRay runtime.
 /// Note that this writer does not do any validation, but uses the types of
 /// records defined in the FDRRecords.h file.
-class FDRTraceWriter : public RecordVisitor {
+class LLVM_CLASS_ABI FDRTraceWriter : public RecordVisitor {
 public:
   // Construct an FDRTraceWriter associated with an output stream.
   explicit FDRTraceWriter(raw_ostream &O, const XRayFileHeader &H);

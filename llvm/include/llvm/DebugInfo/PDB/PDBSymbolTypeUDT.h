@@ -21,7 +21,7 @@ namespace pdb {
 
 class PDBSymDumper;
 
-class PDBSymbolTypeUDT : public PDBSymbol {
+class LLVM_CLASS_ABI PDBSymbolTypeUDT : public PDBSymbol {
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::UDT)
 public:
   void dump(PDBSymDumper &Dumper) const override;

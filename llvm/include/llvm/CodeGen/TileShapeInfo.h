@@ -28,7 +28,7 @@
 
 namespace llvm {
 
-class ShapeT {
+class LLVM_CLASS_ABI ShapeT {
 public:
   ShapeT(MachineOperand *Row, MachineOperand *Col,
          const MachineRegisterInfo *MRI = nullptr)

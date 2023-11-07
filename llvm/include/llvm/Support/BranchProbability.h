@@ -28,7 +28,7 @@ class raw_ostream;
 // no greater than 1. It uses a fixed-point-like implementation, in which the
 // denominator is always a constant value (here we use 1<<31 for maximum
 // precision).
-class BranchProbability {
+class LLVM_CLASS_ABI BranchProbability {
   // Numerator
   uint32_t N;
 

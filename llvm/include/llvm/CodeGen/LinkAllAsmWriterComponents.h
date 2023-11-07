@@ -18,7 +18,7 @@
 #include <cstdlib>
 
 namespace {
-  struct ForceAsmWriterLinking {
+  struct LLVM_CLASS_ABI ForceAsmWriterLinking {
     ForceAsmWriterLinking() {
       // We must reference the plug-ins in such a way that compilers will not
       // delete it all as dead code, even with whole program optimization,

@@ -18,7 +18,7 @@
 
 namespace llvm {
 /// The gcov-style instrumentation pass
-class GCOVProfilerPass : public PassInfoMixin<GCOVProfilerPass> {
+class LLVM_CLASS_ABI GCOVProfilerPass : public PassInfoMixin<GCOVProfilerPass> {
 public:
   GCOVProfilerPass(const GCOVOptions &Options = GCOVOptions::getDefault()) : GCOVOpts(Options) { }
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);

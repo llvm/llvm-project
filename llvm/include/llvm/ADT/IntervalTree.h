@@ -197,7 +197,7 @@ namespace llvm {
 /// associated \a Value.
 /// \a PointT corresponds to the interval endpoints type.
 /// \a ValueT corresponds to the interval value type.
-template <typename PointT, typename ValueT> class IntervalData {
+template <typename PointT, typename ValueT> class LLVM_CLASS_ABI IntervalData {
 protected:
   using PointType = PointT;
   using ValueType = ValueT;
@@ -247,7 +247,7 @@ using ValueTypeIsValid = std::bool_constant<std::is_fundamental<T>::value ||
 
 template <typename PointT, typename ValueT,
           typename DataT = IntervalData<PointT, ValueT>>
-class IntervalTree {
+class LLVM_CLASS_ABI IntervalTree {
   static_assert(PointTypeIsValid<PointT>::value,
                 "PointT must be a fundamental type");
   static_assert(ValueTypeIsValid<ValueT>::value,

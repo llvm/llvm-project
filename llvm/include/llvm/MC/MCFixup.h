@@ -68,7 +68,7 @@ enum MCFixupKind {
 /// symbolic values become concrete. When relaxation is complete, any remaining
 /// fixups become relocations in the object file (or errors, if the fixup cannot
 /// be encoded on the target).
-class MCFixup {
+class LLVM_CLASS_ABI MCFixup {
   /// The value to put into the fixup location. The exact interpretation of the
   /// expression is target dependent, usually it will be one of the operands to
   /// an instruction or an assembler directive.

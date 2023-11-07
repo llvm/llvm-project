@@ -36,7 +36,7 @@ namespace orc {
 ///
 /// The easiest way to construct these call-throughs is using the lazyReexport
 /// function.
-class LazyCallThroughManager {
+class LLVM_CLASS_ABI LazyCallThroughManager {
 public:
   using NotifyResolvedFunction =
       unique_function<Error(ExecutorAddr ResolvedAddr)>;
@@ -84,7 +84,7 @@ private:
 };
 
 /// A lazy call-through manager that builds trampolines in the current process.
-class LocalLazyCallThroughManager : public LazyCallThroughManager {
+class LLVM_CLASS_ABI LocalLazyCallThroughManager : public LazyCallThroughManager {
 private:
   using NotifyTargetResolved = unique_function<void(ExecutorAddr)>;
 
@@ -129,7 +129,7 @@ public:
 
 /// Create a LocalLazyCallThroughManager from the given triple and execution
 /// session.
-Expected<std::unique_ptr<LazyCallThroughManager>>
+LLVM_FUNC_ABI Expected<std::unique_ptr<LazyCallThroughManager>>
 createLocalLazyCallThroughManager(const Triple &T, ExecutionSession &ES,
                                   ExecutorAddr ErrorHandlerAddr);
 
@@ -138,7 +138,7 @@ createLocalLazyCallThroughManager(const Triple &T, ExecutionSession &ES,
 /// Unlike a 'true' re-export, the address of the lazy re-export will not
 /// match the address of the re-exported symbol, but calling it will behave
 /// the same as calling the re-exported symbol.
-class LazyReexportsMaterializationUnit : public MaterializationUnit {
+class LLVM_CLASS_ABI LazyReexportsMaterializationUnit : public MaterializationUnit {
 public:
   LazyReexportsMaterializationUnit(LazyCallThroughManager &LCTManager,
                                    IndirectStubsManager &ISManager,

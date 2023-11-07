@@ -36,7 +36,7 @@ class MachineInstr;
 class MachineRegisterInfo;
 class RegisterClassInfo;
 
-struct RegisterMaskPair {
+struct LLVM_CLASS_ABI RegisterMaskPair {
   Register RegUnit; ///< Virtual register or register unit.
   LaneBitmask LaneMask;
 
@@ -45,7 +45,7 @@ struct RegisterMaskPair {
 };
 
 /// Base class for register pressure results.
-struct RegisterPressure {
+struct LLVM_CLASS_ABI RegisterPressure {
   /// Map of max reg pressure indexed by pressure set ID, not class ID.
   std::vector<unsigned> MaxSetPressure;
 
@@ -65,7 +65,7 @@ struct RegisterPressure {
 /// because delimiting regions by SlotIndex is more robust and convenient than
 /// holding block iterators. The block contents can change without invalidating
 /// the pressure result.
-struct IntervalPressure : RegisterPressure {
+struct LLVM_CLASS_ABI IntervalPressure : RegisterPressure {
   /// Record the boundary of the region being tracked.
   SlotIndex TopIdx;
   SlotIndex BottomIdx;
@@ -80,7 +80,7 @@ struct IntervalPressure : RegisterPressure {
 /// RegisterPressure computed within a region of instructions delimited by
 /// TopPos and BottomPos. This is a less precise version of IntervalPressure for
 /// use when LiveIntervals are unavailable.
-struct RegionPressure : RegisterPressure {
+struct LLVM_CLASS_ABI RegionPressure : RegisterPressure {
   /// Record the boundary of the region being tracked.
   MachineBasicBlock::const_iterator TopPos;
   MachineBasicBlock::const_iterator BottomPos;
@@ -100,7 +100,7 @@ struct RegionPressure : RegisterPressure {
 /// heuristics, so we don't check UnitInc overflow. Instead, we may have a
 /// higher level assert that pressure is consistent within a region. We also
 /// effectively ignore dead defs which don't affect heuristics much.
-class PressureChange {
+class LLVM_CLASS_ABI PressureChange {
   uint16_t PSetID = 0; // ID+1. 0=Invalid.
   int16_t UnitInc = 0;
 
@@ -138,7 +138,7 @@ public:
 /// Use a small fixed number, because we can fit more PressureChanges in an
 /// empty SmallVector than ever need to be tracked per register class. If more
 /// PSets are affected, then we only track the most constrained.
-class PressureDiff {
+class LLVM_CLASS_ABI PressureDiff {
   // The initial design was for MaxPSets=4, but that requires PSet partitions,
   // which are not yet implemented. (PSet partitions are equivalent PSets given
   // the register classes actually in use within the scheduling region.)
@@ -164,7 +164,7 @@ public:
 };
 
 /// List of registers defined and used by a machine instruction.
-class RegisterOperands {
+class LLVM_CLASS_ABI RegisterOperands {
 public:
   /// List of virtual registers and register units read by the instruction.
   SmallVector<RegisterMaskPair, 8> Uses;
@@ -195,7 +195,7 @@ public:
 };
 
 /// Array of PressureDiffs.
-class PressureDiffs {
+class LLVM_CLASS_ABI PressureDiffs {
   PressureDiff *PDiffArray = nullptr;
   unsigned Size = 0;
   unsigned Max = 0;
@@ -238,7 +238,7 @@ public:
 ///
 /// CurrentMax records the largest increase in the tracker's max pressure that
 /// exceeds the current limit for some pressure set determined by the client.
-struct RegPressureDelta {
+struct LLVM_CLASS_ABI RegPressureDelta {
   PressureChange Excess;
   PressureChange CriticalMax;
   PressureChange CurrentMax;
@@ -259,7 +259,7 @@ struct RegPressureDelta {
 ///
 /// This is a wrapper around a SparseSet which deals with mapping register unit
 /// and virtual register indexes to an index usable by the sparse set.
-class LiveRegSet {
+class LLVM_CLASS_ABI LiveRegSet {
 private:
   struct IndexMaskPair {
     unsigned Index;
@@ -357,7 +357,7 @@ public:
 /// explicitly called. Similarly, P.TopIdx is invalid during upward
 /// tracking. Changing direction has the side effect of closing region, and
 /// traversing past TopIdx or BottomIdx reopens it.
-class RegPressureTracker {
+class LLVM_CLASS_ABI RegPressureTracker {
   const MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   const RegisterClassInfo *RCI = nullptr;
@@ -568,7 +568,7 @@ protected:
   LaneBitmask getLiveThroughAt(Register RegUnit, SlotIndex Pos) const;
 };
 
-void dumpRegSetPressure(ArrayRef<unsigned> SetPressure,
+LLVM_FUNC_ABI void dumpRegSetPressure(ArrayRef<unsigned> SetPressure,
                         const TargetRegisterInfo *TRI);
 
 } // end namespace llvm

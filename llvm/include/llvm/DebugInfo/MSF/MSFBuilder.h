@@ -25,7 +25,7 @@ namespace msf {
 
 struct MSFLayout;
 
-class MSFBuilder {
+class LLVM_CLASS_ABI MSFBuilder {
 public:
   /// Create a new `MSFBuilder`.
   ///

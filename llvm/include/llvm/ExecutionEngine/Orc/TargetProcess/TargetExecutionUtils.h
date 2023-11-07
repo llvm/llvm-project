@@ -29,11 +29,11 @@ namespace orc {
 /// It is legal to have an empty argument list and no program name, however
 /// many main functions will expect a name argument at least, and will fail
 /// if none is provided.
-int runAsMain(int (*Main)(int, char *[]), ArrayRef<std::string> Args,
+LLVM_FUNC_ABI int runAsMain(int (*Main)(int, char *[]), ArrayRef<std::string> Args,
               std::optional<StringRef> ProgramName = std::nullopt);
 
-int runAsVoidFunction(int (*Func)(void));
-int runAsIntFunction(int (*Func)(int), int Arg);
+LLVM_FUNC_ABI int runAsVoidFunction(int (*Func)(void));
+LLVM_FUNC_ABI int runAsIntFunction(int (*Func)(int), int Arg);
 
 } // end namespace orc
 } // end namespace llvm

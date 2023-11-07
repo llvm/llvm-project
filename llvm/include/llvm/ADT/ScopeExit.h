@@ -23,7 +23,7 @@
 namespace llvm {
 namespace detail {
 
-template <typename Callable> class scope_exit {
+template <typename Callable> class LLVM_CLASS_ABI scope_exit {
   Callable ExitFunction;
   bool Engaged = true; // False once moved-from or release()d.
 

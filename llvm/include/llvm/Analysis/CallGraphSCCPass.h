@@ -32,7 +32,7 @@ class CallGraphNode;
 class CallGraphSCC;
 class PMStack;
 
-class CallGraphSCCPass : public Pass {
+class LLVM_CLASS_ABI CallGraphSCCPass : public Pass {
 public:
   explicit CallGraphSCCPass(char &pid) : Pass(PT_CallGraphSCC, pid) {}
 
@@ -85,7 +85,7 @@ protected:
 };
 
 /// CallGraphSCC - This is a single SCC that a CallGraphSCCPass is run on.
-class CallGraphSCC {
+class LLVM_CLASS_ABI CallGraphSCC {
   const CallGraph &CG; // The call graph for this SCC.
   void *Context; // The CGPassManager object that is vending this.
   std::vector<CallGraphNode *> Nodes;
@@ -116,11 +116,11 @@ public:
   const CallGraph &getCallGraph() { return CG; }
 };
 
-void initializeDummyCGSCCPassPass(PassRegistry &);
+LLVM_FUNC_ABI void initializeDummyCGSCCPassPass(PassRegistry &);
 
 /// This pass is required by interprocedural register allocation. It forces
 /// codegen to follow bottom up order on call graph.
-class DummyCGSCCPass : public CallGraphSCCPass {
+class LLVM_CLASS_ABI DummyCGSCCPass : public CallGraphSCCPass {
 public:
   static char ID;
 

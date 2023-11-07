@@ -35,11 +35,11 @@ class MDNode;
 class Module;
 struct AAMDNodes;
 
-template <> struct ilist_alloc_traits<Instruction> {
+template <> struct LLVM_CLASS_ABI ilist_alloc_traits<Instruction> {
   static inline void deleteNode(Instruction *V);
 };
 
-class Instruction : public User,
+class LLVM_CLASS_ABI Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock,
                                                   ilist_iterator_bits<true>> {
 public:

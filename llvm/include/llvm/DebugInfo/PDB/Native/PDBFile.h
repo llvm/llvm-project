@@ -38,7 +38,7 @@ class PublicsStream;
 class SymbolStream;
 class TpiStream;
 
-class PDBFile : public msf::IMSFFile {
+class LLVM_CLASS_ABI PDBFile : public msf::IMSFFile {
   friend PDBFileBuilder;
 
 public:

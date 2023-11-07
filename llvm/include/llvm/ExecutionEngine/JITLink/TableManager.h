@@ -25,7 +25,7 @@ namespace jitlink {
 /// The getEntyrForTarget function returns the table entry corresponding to the
 /// given target, calling down to the implementation class to build an entry if
 /// one does not already exist.
-template <typename TableManagerImplT> class TableManager {
+template <typename TableManagerImplT> class LLVM_CLASS_ABI TableManager {
 public:
   /// Return the constructed entry
   ///

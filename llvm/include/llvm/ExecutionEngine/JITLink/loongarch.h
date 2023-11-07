@@ -163,7 +163,7 @@ enum EdgeKind_loongarch : Edge::Kind {
 
 /// Returns a string name for the given loongarch edge. For debugging purposes
 /// only.
-const char *getEdgeKindName(Edge::Kind K);
+LLVM_FUNC_ABI const char *getEdgeKindName(Edge::Kind K);
 
 // Returns extract bits Val[Hi:Lo].
 inline uint32_t extractBits(uint32_t Val, unsigned Hi, unsigned Lo) {
@@ -258,7 +258,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
 }
 
 /// loongarch null pointer content.
-extern const char NullPointerContent[8];
+LLVM_FUNC_ABI extern const char NullPointerContent[8];
 inline ArrayRef<char> getGOTEntryBlockContent(LinkGraph &G) {
   return {reinterpret_cast<const char *>(NullPointerContent),
           G.getPointerSize()};
@@ -272,8 +272,8 @@ inline ArrayRef<char> getGOTEntryBlockContent(LinkGraph &G) {
 ///   ld.[w/d]  $t8, %pageoff12(ptr)
 ///   jr        $t8
 constexpr size_t StubEntrySize = 12;
-extern const uint8_t LA64StubContent[StubEntrySize];
-extern const uint8_t LA32StubContent[StubEntrySize];
+LLVM_FUNC_ABI extern const uint8_t LA64StubContent[StubEntrySize];
+LLVM_FUNC_ABI extern const uint8_t LA32StubContent[StubEntrySize];
 inline ArrayRef<char> getStubBlockContent(LinkGraph &G) {
   auto StubContent =
       G.getPointerSize() == 8 ? LA64StubContent : LA32StubContent;
@@ -313,7 +313,7 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
 }
 
 /// Global Offset Table Builder.
-class GOTTableManager : public TableManager<GOTTableManager> {
+class LLVM_CLASS_ABI GOTTableManager : public TableManager<GOTTableManager> {
 public:
   static StringRef getSectionName() { return "$__GOT"; }
 
@@ -357,7 +357,7 @@ private:
 };
 
 /// Procedure Linkage Table Builder.
-class PLTTableManager : public TableManager<PLTTableManager> {
+class LLVM_CLASS_ABI PLTTableManager : public TableManager<PLTTableManager> {
 public:
   PLTTableManager(GOTTableManager &GOT) : GOT(GOT) {}
 

@@ -29,7 +29,7 @@ class MDNode;
 class MemoryLocation;
 
 /// A simple AA result that uses TBAA metadata to answer queries.
-class TypeBasedAAResult : public AAResultBase {
+class LLVM_CLASS_ABI TypeBasedAAResult : public AAResultBase {
 public:
   /// Handle invalidation events from the new pass manager.
   ///
@@ -56,7 +56,7 @@ private:
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
-class TypeBasedAA : public AnalysisInfoMixin<TypeBasedAA> {
+class LLVM_CLASS_ABI TypeBasedAA : public AnalysisInfoMixin<TypeBasedAA> {
   friend AnalysisInfoMixin<TypeBasedAA>;
 
   static AnalysisKey Key;
@@ -68,7 +68,7 @@ public:
 };
 
 /// Legacy wrapper pass to provide the TypeBasedAAResult object.
-class TypeBasedAAWrapperPass : public ImmutablePass {
+class LLVM_CLASS_ABI TypeBasedAAWrapperPass : public ImmutablePass {
   std::unique_ptr<TypeBasedAAResult> Result;
 
 public:
@@ -89,7 +89,7 @@ public:
 // createTypeBasedAAWrapperPass - This pass implements metadata-based
 // type-based alias analysis.
 //
-ImmutablePass *createTypeBasedAAWrapperPass();
+LLVM_FUNC_ABI ImmutablePass *createTypeBasedAAWrapperPass();
 
 } // end namespace llvm
 

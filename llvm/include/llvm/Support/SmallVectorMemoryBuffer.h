@@ -27,7 +27,7 @@ namespace llvm {
 /// instances. This is useful for MCJIT and Orc, where object files are streamed
 /// into SmallVectors, then inspected using ObjectFile (which takes a
 /// MemoryBuffer).
-class SmallVectorMemoryBuffer : public MemoryBuffer {
+class LLVM_CLASS_ABI SmallVectorMemoryBuffer : public MemoryBuffer {
 public:
   /// Construct a SmallVectorMemoryBuffer from the given SmallVector r-value.
   SmallVectorMemoryBuffer(SmallVectorImpl<char> &&SV,

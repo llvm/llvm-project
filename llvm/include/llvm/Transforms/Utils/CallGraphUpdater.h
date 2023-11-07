@@ -27,7 +27,7 @@ class CallGraphSCC;
 /// Wrapper to unify "old style" CallGraph and "new style" LazyCallGraph. This
 /// simplifies the interface and the call sites, e.g., new and old pass manager
 /// passes can share the same code.
-class CallGraphUpdater {
+class LLVM_CLASS_ABI CallGraphUpdater {
   /// Containers for functions which we did replace or want to delete when
   /// `finalize` is called. This can happen explicitly or as part of the
   /// destructor. Dead functions in comdat sections are tracked separately

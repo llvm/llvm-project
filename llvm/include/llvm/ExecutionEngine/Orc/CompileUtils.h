@@ -28,13 +28,13 @@ class TargetMachine;
 
 namespace orc {
 
-IRSymbolMapper::ManglingOptions
+LLVM_FUNC_ABI IRSymbolMapper::ManglingOptions
 irManglingOptionsFromTargetOptions(const TargetOptions &Opts);
 
 /// Simple compile functor: Takes a single IR module and returns an ObjectFile.
 /// This compiler supports a single compilation thread and LLVMContext only.
 /// For multithreaded compilation, use ConcurrentIRCompiler below.
-class SimpleCompiler : public IRCompileLayer::IRCompiler {
+class LLVM_CLASS_ABI SimpleCompiler : public IRCompileLayer::IRCompiler {
 public:
   using CompileResult = std::unique_ptr<MemoryBuffer>;
 
@@ -64,7 +64,7 @@ private:
 ///
 /// This is convenient for clients who don't want to own their TargetMachines,
 /// e.g. LLJIT.
-class TMOwningSimpleCompiler : public SimpleCompiler {
+class LLVM_CLASS_ABI TMOwningSimpleCompiler : public SimpleCompiler {
 public:
   TMOwningSimpleCompiler(std::unique_ptr<TargetMachine> TM,
                          ObjectCache *ObjCache = nullptr)
@@ -80,7 +80,7 @@ private:
 ///
 /// This class creates a new TargetMachine and SimpleCompiler instance for each
 /// compile.
-class ConcurrentIRCompiler : public IRCompileLayer::IRCompiler {
+class LLVM_CLASS_ABI ConcurrentIRCompiler : public IRCompileLayer::IRCompiler {
 public:
   ConcurrentIRCompiler(JITTargetMachineBuilder JTMB,
                        ObjectCache *ObjCache = nullptr);

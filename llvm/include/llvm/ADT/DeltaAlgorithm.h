@@ -33,7 +33,7 @@ namespace llvm {
 /// requirements, and the algorithm will generally produce reasonable
 /// results. However, it may run substantially more tests than with a good
 /// predicate.
-class DeltaAlgorithm {
+class LLVM_CLASS_ABI DeltaAlgorithm {
 public:
   using change_ty = unsigned;
   // FIXME: Use a decent data structure.

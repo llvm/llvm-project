@@ -33,7 +33,7 @@ inline unsigned pred_size(const MachineBasicBlock *BB) {
 }
 inline auto instrs(const MachineBasicBlock &BB) { return BB.instrs(); }
 
-template <> struct GenericSSATraits<MachineFunction> {
+template <> struct LLVM_CLASS_ABI GenericSSATraits<MachineFunction> {
   using BlockT = MachineBasicBlock;
   using FunctionT = MachineFunction;
   using InstructionT = MachineInstr;

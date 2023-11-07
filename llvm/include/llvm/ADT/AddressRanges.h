@@ -20,7 +20,7 @@ namespace llvm {
 
 /// A class that represents an address range. The range is specified using
 /// a start and an end address: [Start, End).
-class AddressRange {
+class LLVM_CLASS_ABI AddressRange {
 public:
   AddressRange() {}
   AddressRange(uint64_t S, uint64_t E) : Start(S), End(E) {
@@ -56,7 +56,7 @@ private:
 /// The address ranges are always sorted and never contain any invalid,
 /// empty or intersected address ranges.
 
-template <typename T> class AddressRangesBase {
+template <typename T> class LLVM_CLASS_ABI AddressRangesBase {
 protected:
   using Collection = SmallVector<T>;
   Collection Ranges;
@@ -119,7 +119,7 @@ protected:
 /// insertions and searches efficiently. Intersecting([100,200), [150,300))
 /// and adjacent([100,200), [200,300)) address ranges are combined during
 /// insertion.
-class AddressRanges : public AddressRangesBase<AddressRange> {
+class LLVM_CLASS_ABI AddressRanges : public AddressRangesBase<AddressRange> {
 public:
   Collection::const_iterator insert(AddressRange Range) {
     if (Range.empty())
@@ -143,7 +143,7 @@ public:
   }
 };
 
-class AddressRangeValuePair {
+class LLVM_CLASS_ABI AddressRangeValuePair {
 public:
   operator AddressRange() const { return Range; }
 
@@ -163,7 +163,7 @@ inline bool operator==(const AddressRangeValuePair &LHS,
 /// Intersecting([100,200), [150,300)) ranges splitted into non-conflicting
 /// parts([100,200), [200,300)). Adjacent([100,200), [200,300)) address
 /// ranges are not combined during insertion.
-class AddressRangesMap : public AddressRangesBase<AddressRangeValuePair> {
+class LLVM_CLASS_ABI AddressRangesMap : public AddressRangesBase<AddressRangeValuePair> {
 public:
   void insert(AddressRange Range, int64_t Value) {
     if (Range.empty())

@@ -20,34 +20,34 @@
 
 namespace llvm {
 
-void PrintNote(const Twine &Msg);
-void PrintNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg);
+LLVM_FUNC_ABI void PrintNote(const Twine &Msg);
+LLVM_FUNC_ABI void PrintNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg);
 
-[[noreturn]] void PrintFatalNote(const Twine &Msg);
-[[noreturn]] void PrintFatalNote(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg);
-[[noreturn]] void PrintFatalNote(const Record *Rec, const Twine &Msg);
-[[noreturn]] void PrintFatalNote(const RecordVal *RecVal, const Twine &Msg);
+[[noreturn]] LLVM_FUNC_ABI void PrintFatalNote(const Twine &Msg);
+[[noreturn]] LLVM_FUNC_ABI void PrintFatalNote(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg);
+[[noreturn]] LLVM_FUNC_ABI void PrintFatalNote(const Record *Rec, const Twine &Msg);
+[[noreturn]] LLVM_FUNC_ABI void PrintFatalNote(const RecordVal *RecVal, const Twine &Msg);
 
-void PrintWarning(const Twine &Msg);
-void PrintWarning(ArrayRef<SMLoc> WarningLoc, const Twine &Msg);
-void PrintWarning(const char *Loc, const Twine &Msg);
+LLVM_FUNC_ABI void PrintWarning(const Twine &Msg);
+LLVM_FUNC_ABI void PrintWarning(ArrayRef<SMLoc> WarningLoc, const Twine &Msg);
+LLVM_FUNC_ABI void PrintWarning(const char *Loc, const Twine &Msg);
 
-void PrintError(const Twine &Msg);
-void PrintError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg);
-void PrintError(const char *Loc, const Twine &Msg);
-void PrintError(const Record *Rec, const Twine &Msg);
-void PrintError(const RecordVal *RecVal, const Twine &Msg);
+LLVM_FUNC_ABI void PrintError(const Twine &Msg);
+LLVM_FUNC_ABI void PrintError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg);
+LLVM_FUNC_ABI void PrintError(const char *Loc, const Twine &Msg);
+LLVM_FUNC_ABI void PrintError(const Record *Rec, const Twine &Msg);
+LLVM_FUNC_ABI void PrintError(const RecordVal *RecVal, const Twine &Msg);
 
-[[noreturn]] void PrintFatalError(const Twine &Msg);
-[[noreturn]] void PrintFatalError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg);
-[[noreturn]] void PrintFatalError(const Record *Rec, const Twine &Msg);
-[[noreturn]] void PrintFatalError(const RecordVal *RecVal, const Twine &Msg);
+[[noreturn]] LLVM_FUNC_ABI void PrintFatalError(const Twine &Msg);
+[[noreturn]] LLVM_FUNC_ABI void PrintFatalError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg);
+[[noreturn]] LLVM_FUNC_ABI void PrintFatalError(const Record *Rec, const Twine &Msg);
+[[noreturn]] LLVM_FUNC_ABI void PrintFatalError(const RecordVal *RecVal, const Twine &Msg);
 
-void CheckAssert(SMLoc Loc, Init *Condition, Init *Message);
-void dumpMessage(SMLoc Loc, Init *Message);
+LLVM_FUNC_ABI void CheckAssert(SMLoc Loc, Init *Condition, Init *Message);
+LLVM_FUNC_ABI void dumpMessage(SMLoc Loc, Init *Message);
 
-extern SourceMgr SrcMgr;
-extern unsigned ErrorsPrinted;
+LLVM_FUNC_ABI extern SourceMgr SrcMgr;
+LLVM_FUNC_ABI extern unsigned ErrorsPrinted;
 
 } // end namespace llvm
 

@@ -54,7 +54,7 @@ namespace llvm {
 namespace DomTreeBuilder {
 
 template <typename DomTreeT>
-struct SemiNCAInfo {
+struct LLVM_CLASS_ABI SemiNCAInfo {
   using NodePtr = typename DomTreeT::NodePtr;
   using NodeT = typename DomTreeT::NodeType;
   using TreeNodePtr = DomTreeNodeBase<NodeT> *;

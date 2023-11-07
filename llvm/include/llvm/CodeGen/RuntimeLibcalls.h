@@ -36,7 +36,7 @@ namespace RTLIB {
 
   /// GetFPLibCall - Helper to return the right libcall for the given floating
   /// point type, or UNKNOWN_LIBCALL if there is none.
-  Libcall getFPLibCall(EVT VT,
+  LLVM_FUNC_ABI Libcall getFPLibCall(EVT VT,
                        Libcall Call_F32,
                        Libcall Call_F64,
                        Libcall Call_F80,
@@ -45,62 +45,62 @@ namespace RTLIB {
 
   /// getFPEXT - Return the FPEXT_*_* value for the given types, or
   /// UNKNOWN_LIBCALL if there is none.
-  Libcall getFPEXT(EVT OpVT, EVT RetVT);
+  LLVM_FUNC_ABI Libcall getFPEXT(EVT OpVT, EVT RetVT);
 
   /// getFPROUND - Return the FPROUND_*_* value for the given types, or
   /// UNKNOWN_LIBCALL if there is none.
-  Libcall getFPROUND(EVT OpVT, EVT RetVT);
+  LLVM_FUNC_ABI Libcall getFPROUND(EVT OpVT, EVT RetVT);
 
   /// getFPTOSINT - Return the FPTOSINT_*_* value for the given types, or
   /// UNKNOWN_LIBCALL if there is none.
-  Libcall getFPTOSINT(EVT OpVT, EVT RetVT);
+  LLVM_FUNC_ABI Libcall getFPTOSINT(EVT OpVT, EVT RetVT);
 
   /// getFPTOUINT - Return the FPTOUINT_*_* value for the given types, or
   /// UNKNOWN_LIBCALL if there is none.
-  Libcall getFPTOUINT(EVT OpVT, EVT RetVT);
+  LLVM_FUNC_ABI Libcall getFPTOUINT(EVT OpVT, EVT RetVT);
 
   /// getSINTTOFP - Return the SINTTOFP_*_* value for the given types, or
   /// UNKNOWN_LIBCALL if there is none.
-  Libcall getSINTTOFP(EVT OpVT, EVT RetVT);
+  LLVM_FUNC_ABI Libcall getSINTTOFP(EVT OpVT, EVT RetVT);
 
   /// getUINTTOFP - Return the UINTTOFP_*_* value for the given types, or
   /// UNKNOWN_LIBCALL if there is none.
-  Libcall getUINTTOFP(EVT OpVT, EVT RetVT);
+  LLVM_FUNC_ABI Libcall getUINTTOFP(EVT OpVT, EVT RetVT);
 
   /// getPOWI - Return the POWI_* value for the given types, or
   /// UNKNOWN_LIBCALL if there is none.
-  Libcall getPOWI(EVT RetVT);
+  LLVM_FUNC_ABI Libcall getPOWI(EVT RetVT);
 
   /// getLDEXP - Return the LDEXP_* value for the given types, or
   /// UNKNOWN_LIBCALL if there is none.
-  Libcall getLDEXP(EVT RetVT);
+  LLVM_FUNC_ABI Libcall getLDEXP(EVT RetVT);
 
   /// getFREXP - Return the FREXP_* value for the given types, or
   /// UNKNOWN_LIBCALL if there is none.
-  Libcall getFREXP(EVT RetVT);
+  LLVM_FUNC_ABI Libcall getFREXP(EVT RetVT);
 
   /// Return the SYNC_FETCH_AND_* value for the given opcode and type, or
   /// UNKNOWN_LIBCALL if there is none.
-  Libcall getSYNC(unsigned Opc, MVT VT);
+  LLVM_FUNC_ABI Libcall getSYNC(unsigned Opc, MVT VT);
 
   /// Return the outline atomics value for the given opcode, atomic ordering
   /// and type, or UNKNOWN_LIBCALL if there is none.
-  Libcall getOUTLINE_ATOMIC(unsigned Opc, AtomicOrdering Order, MVT VT);
+  LLVM_FUNC_ABI Libcall getOUTLINE_ATOMIC(unsigned Opc, AtomicOrdering Order, MVT VT);
 
   /// getMEMCPY_ELEMENT_UNORDERED_ATOMIC - Return
   /// MEMCPY_ELEMENT_UNORDERED_ATOMIC_* value for the given element size or
   /// UNKNOW_LIBCALL if there is none.
-  Libcall getMEMCPY_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize);
+  LLVM_FUNC_ABI Libcall getMEMCPY_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize);
 
   /// getMEMMOVE_ELEMENT_UNORDERED_ATOMIC - Return
   /// MEMMOVE_ELEMENT_UNORDERED_ATOMIC_* value for the given element size or
   /// UNKNOW_LIBCALL if there is none.
-  Libcall getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize);
+  LLVM_FUNC_ABI Libcall getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize);
 
   /// getMEMSET_ELEMENT_UNORDERED_ATOMIC - Return
   /// MEMSET_ELEMENT_UNORDERED_ATOMIC_* value for the given element size or
   /// UNKNOW_LIBCALL if there is none.
-  Libcall getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize);
+  LLVM_FUNC_ABI Libcall getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize);
 
 }
 }

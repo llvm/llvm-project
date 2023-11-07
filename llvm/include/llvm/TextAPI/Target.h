@@ -26,7 +26,7 @@ namespace MachO {
 // This is similar to a llvm Triple, but the triple doesn't have all the
 // information we need. For example there is no enum value for x86_64h. The
 // only way to get that information is to parse the triple string.
-class Target {
+class LLVM_CLASS_ABI Target {
 public:
   Target() = default;
   Target(Architecture Arch, PlatformType Platform,
@@ -67,13 +67,13 @@ inline bool operator!=(const Target &LHS, const Architecture &RHS) {
   return LHS.Arch != RHS;
 }
 
-PlatformVersionSet mapToPlatformVersionSet(ArrayRef<Target> Targets);
-PlatformSet mapToPlatformSet(ArrayRef<Target> Targets);
-ArchitectureSet mapToArchitectureSet(ArrayRef<Target> Targets);
+LLVM_FUNC_ABI PlatformVersionSet mapToPlatformVersionSet(ArrayRef<Target> Targets);
+LLVM_FUNC_ABI PlatformSet mapToPlatformSet(ArrayRef<Target> Targets);
+LLVM_FUNC_ABI ArchitectureSet mapToArchitectureSet(ArrayRef<Target> Targets);
 
-std::string getTargetTripleName(const Target &Targ);
+LLVM_FUNC_ABI std::string getTargetTripleName(const Target &Targ);
 
-raw_ostream &operator<<(raw_ostream &OS, const Target &Target);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const Target &Target);
 
 } // namespace MachO
 } // namespace llvm

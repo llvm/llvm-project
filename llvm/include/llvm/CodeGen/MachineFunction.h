@@ -75,11 +75,11 @@ class TargetSubtargetInfo;
 struct WasmEHFuncInfo;
 struct WinEHFuncInfo;
 
-template <> struct ilist_alloc_traits<MachineBasicBlock> {
+template <> struct LLVM_CLASS_ABI ilist_alloc_traits<MachineBasicBlock> {
   void deleteNode(MachineBasicBlock *MBB);
 };
 
-template <> struct ilist_callback_traits<MachineBasicBlock> {
+template <> struct LLVM_CLASS_ABI ilist_callback_traits<MachineBasicBlock> {
   void addNodeToList(MachineBasicBlock* N);
   void removeNodeFromList(MachineBasicBlock* N);
 
@@ -93,7 +93,7 @@ template <> struct ilist_callback_traits<MachineBasicBlock> {
 /// hold private target-specific information for each MachineFunction.  Objects
 /// of type are accessed/created with MF::getInfo and destroyed when the
 /// MachineFunction is destroyed.
-struct MachineFunctionInfo {
+struct LLVM_CLASS_ABI MachineFunctionInfo {
   virtual ~MachineFunctionInfo();
 
   /// Factory function: default behavior is to call new using the
@@ -126,7 +126,7 @@ struct MachineFunctionInfo {
 /// Properties which a MachineFunction may have at a given point in time.
 /// Each of these has checking code in the MachineVerifier, and passes can
 /// require that a property be set.
-class MachineFunctionProperties {
+class LLVM_CLASS_ABI MachineFunctionProperties {
   // Possible TODO: Allow targets to extend this (perhaps by allowing the
   // constructor to specify the size of the bit vector)
   // Possible TODO: Allow requiring the negative (e.g. VRegsAllocated could be
@@ -235,7 +235,7 @@ private:
       BitVector(static_cast<unsigned>(Property::LastProperty)+1);
 };
 
-struct SEHHandler {
+struct LLVM_CLASS_ABI SEHHandler {
   /// Filter or finally function. Null indicates a catch-all.
   const Function *FilterOrFinally;
 
@@ -244,7 +244,7 @@ struct SEHHandler {
 };
 
 /// This structure is used to retain landing pad info for the current function.
-struct LandingPadInfo {
+struct LLVM_CLASS_ABI LandingPadInfo {
   MachineBasicBlock *LandingPadBlock;      // Landing pad block.
   SmallVector<MCSymbol *, 1> BeginLabels;  // Labels prior to invoke.
   SmallVector<MCSymbol *, 1> EndLabels;    // Labels after invoke.
@@ -1368,7 +1368,7 @@ public:
 // the same as the machine basic block iterators, except that the root
 // node is implicitly the first node of the function.
 //
-template <> struct GraphTraits<MachineFunction*> :
+template <> struct LLVM_CLASS_ABI GraphTraits<MachineFunction*> :
   public GraphTraits<MachineBasicBlock*> {
   static NodeRef getEntryNode(MachineFunction *F) { return &F->front(); }
 
@@ -1385,7 +1385,7 @@ template <> struct GraphTraits<MachineFunction*> :
 
   static unsigned       size       (MachineFunction *F) { return F->size(); }
 };
-template <> struct GraphTraits<const MachineFunction*> :
+template <> struct LLVM_CLASS_ABI GraphTraits<const MachineFunction*> :
   public GraphTraits<const MachineBasicBlock*> {
   static NodeRef getEntryNode(const MachineFunction *F) { return &F->front(); }
 
@@ -1410,13 +1410,13 @@ template <> struct GraphTraits<const MachineFunction*> :
 // a function is considered to be when traversing the predecessor edges of a BB
 // instead of the successor edges.
 //
-template <> struct GraphTraits<Inverse<MachineFunction*>> :
+template <> struct LLVM_CLASS_ABI GraphTraits<Inverse<MachineFunction*>> :
   public GraphTraits<Inverse<MachineBasicBlock*>> {
   static NodeRef getEntryNode(Inverse<MachineFunction *> G) {
     return &G.Graph->front();
   }
 };
-template <> struct GraphTraits<Inverse<const MachineFunction*>> :
+template <> struct LLVM_CLASS_ABI GraphTraits<Inverse<const MachineFunction*>> :
   public GraphTraits<Inverse<const MachineBasicBlock*>> {
   static NodeRef getEntryNode(Inverse<const MachineFunction *> G) {
     return &G.Graph->front();
@@ -1424,7 +1424,7 @@ template <> struct GraphTraits<Inverse<const MachineFunction*>> :
 };
 
 class MachineFunctionAnalysisManager;
-void verifyMachineFunction(MachineFunctionAnalysisManager *,
+LLVM_FUNC_ABI void verifyMachineFunction(MachineFunctionAnalysisManager *,
                            const std::string &Banner,
                            const MachineFunction &MF);
 

@@ -31,14 +31,14 @@ namespace llvm {
 /// fact that they are automatically dereferenced, and are not involved with the
 /// template selection process...  the default implementation is a noop.
 // TODO: rename this and/or replace it with other cast traits.
-template <typename From> struct simplify_type {
+template <typename From> struct LLVM_CLASS_ABI simplify_type {
   using SimpleType = From; // The real type this represents...
 
   // An accessor to get the real value...
   static SimpleType &getSimplifiedValue(From &Val) { return Val; }
 };
 
-template <typename From> struct simplify_type<const From> {
+template <typename From> struct LLVM_CLASS_ABI simplify_type<const From> {
   using NonConstSimpleType = typename simplify_type<From>::SimpleType;
   using SimpleType = typename add_const_past_pointer<NonConstSimpleType>::type;
   using RetType =
@@ -60,51 +60,51 @@ template <typename From> struct simplify_type<const From> {
 // The core of the implementation of isa<X> is here; To and From should be
 // the names of classes.  This template can be specialized to customize the
 // implementation of isa<> without rewriting it from scratch.
-template <typename To, typename From, typename Enabler = void> struct isa_impl {
+template <typename To, typename From, typename Enabler = void> struct LLVM_CLASS_ABI isa_impl {
   static inline bool doit(const From &Val) { return To::classof(&Val); }
 };
 
 // Always allow upcasts, and perform no dynamic check for them.
 template <typename To, typename From>
-struct isa_impl<To, From, std::enable_if_t<std::is_base_of_v<To, From>>> {
+struct LLVM_CLASS_ABI isa_impl<To, From, std::enable_if_t<std::is_base_of_v<To, From>>> {
   static inline bool doit(const From &) { return true; }
 };
 
-template <typename To, typename From> struct isa_impl_cl {
+template <typename To, typename From> struct LLVM_CLASS_ABI isa_impl_cl {
   static inline bool doit(const From &Val) {
     return isa_impl<To, From>::doit(Val);
   }
 };
 
-template <typename To, typename From> struct isa_impl_cl<To, const From> {
+template <typename To, typename From> struct LLVM_CLASS_ABI isa_impl_cl<To, const From> {
   static inline bool doit(const From &Val) {
     return isa_impl<To, From>::doit(Val);
   }
 };
 
 template <typename To, typename From>
-struct isa_impl_cl<To, const std::unique_ptr<From>> {
+struct LLVM_CLASS_ABI isa_impl_cl<To, const std::unique_ptr<From>> {
   static inline bool doit(const std::unique_ptr<From> &Val) {
     assert(Val && "isa<> used on a null pointer");
     return isa_impl_cl<To, From>::doit(*Val);
   }
 };
 
-template <typename To, typename From> struct isa_impl_cl<To, From *> {
+template <typename To, typename From> struct LLVM_CLASS_ABI isa_impl_cl<To, From *> {
   static inline bool doit(const From *Val) {
     assert(Val && "isa<> used on a null pointer");
     return isa_impl<To, From>::doit(*Val);
   }
 };
 
-template <typename To, typename From> struct isa_impl_cl<To, From *const> {
+template <typename To, typename From> struct LLVM_CLASS_ABI isa_impl_cl<To, From *const> {
   static inline bool doit(const From *Val) {
     assert(Val && "isa<> used on a null pointer");
     return isa_impl<To, From>::doit(*Val);
   }
 };
 
-template <typename To, typename From> struct isa_impl_cl<To, const From *> {
+template <typename To, typename From> struct LLVM_CLASS_ABI isa_impl_cl<To, const From *> {
   static inline bool doit(const From *Val) {
     assert(Val && "isa<> used on a null pointer");
     return isa_impl<To, From>::doit(*Val);
@@ -112,7 +112,7 @@ template <typename To, typename From> struct isa_impl_cl<To, const From *> {
 };
 
 template <typename To, typename From>
-struct isa_impl_cl<To, const From *const> {
+struct LLVM_CLASS_ABI isa_impl_cl<To, const From *const> {
   static inline bool doit(const From *Val) {
     assert(Val && "isa<> used on a null pointer");
     return isa_impl<To, From>::doit(*Val);
@@ -120,7 +120,7 @@ struct isa_impl_cl<To, const From *const> {
 };
 
 template <typename To, typename From, typename SimpleFrom>
-struct isa_impl_wrap {
+struct LLVM_CLASS_ABI isa_impl_wrap {
   // When From != SimplifiedType, we can simplify the type some more by using
   // the simplify_type template.
   static bool doit(const From &Val) {
@@ -131,7 +131,7 @@ struct isa_impl_wrap {
 };
 
 template <typename To, typename FromTy>
-struct isa_impl_wrap<To, FromTy, FromTy> {
+struct LLVM_CLASS_ABI isa_impl_wrap<To, FromTy, FromTy> {
   // When From == SimpleType, we are as simple as we are going to get.
   static bool doit(const FromTy &Val) {
     return isa_impl_cl<To, FromTy>::doit(Val);
@@ -146,27 +146,27 @@ template <class To, class From> struct cast_retty;
 
 // Calculate what type the 'cast' function should return, based on a requested
 // type of To and a source type of From.
-template <class To, class From> struct cast_retty_impl {
+template <class To, class From> struct LLVM_CLASS_ABI cast_retty_impl {
   using ret_type = To &; // Normal case, return Ty&
 };
-template <class To, class From> struct cast_retty_impl<To, const From> {
+template <class To, class From> struct LLVM_CLASS_ABI cast_retty_impl<To, const From> {
   using ret_type = const To &; // Normal case, return Ty&
 };
 
-template <class To, class From> struct cast_retty_impl<To, From *> {
+template <class To, class From> struct LLVM_CLASS_ABI cast_retty_impl<To, From *> {
   using ret_type = To *; // Pointer arg case, return Ty*
 };
 
-template <class To, class From> struct cast_retty_impl<To, const From *> {
+template <class To, class From> struct LLVM_CLASS_ABI cast_retty_impl<To, const From *> {
   using ret_type = const To *; // Constant pointer arg case, return const Ty*
 };
 
-template <class To, class From> struct cast_retty_impl<To, const From *const> {
+template <class To, class From> struct LLVM_CLASS_ABI cast_retty_impl<To, const From *const> {
   using ret_type = const To *; // Constant pointer arg case, return const Ty*
 };
 
 template <class To, class From>
-struct cast_retty_impl<To, std::unique_ptr<From>> {
+struct LLVM_CLASS_ABI cast_retty_impl<To, std::unique_ptr<From>> {
 private:
   using PointerType = typename cast_retty_impl<To, From *>::ret_type;
   using ResultType = std::remove_pointer_t<PointerType>;
@@ -175,19 +175,19 @@ public:
   using ret_type = std::unique_ptr<ResultType>;
 };
 
-template <class To, class From, class SimpleFrom> struct cast_retty_wrap {
+template <class To, class From, class SimpleFrom> struct LLVM_CLASS_ABI cast_retty_wrap {
   // When the simplified type and the from type are not the same, use the type
   // simplifier to reduce the type, then reuse cast_retty_impl to get the
   // resultant type.
   using ret_type = typename cast_retty<To, SimpleFrom>::ret_type;
 };
 
-template <class To, class FromTy> struct cast_retty_wrap<To, FromTy, FromTy> {
+template <class To, class FromTy> struct LLVM_CLASS_ABI cast_retty_wrap<To, FromTy, FromTy> {
   // When the simplified type is equal to the from type, use it directly.
   using ret_type = typename cast_retty_impl<To, FromTy>::ret_type;
 };
 
-template <class To, class From> struct cast_retty {
+template <class To, class From> struct LLVM_CLASS_ABI cast_retty {
   using ret_type = typename cast_retty_wrap<
       To, From, typename simplify_type<From>::SimpleType>::ret_type;
 };
@@ -199,7 +199,7 @@ template <class To, class From> struct cast_retty {
 // Ensure the non-simple values are converted using the simplify_type template
 // that may be specialized by smart pointers...
 //
-template <class To, class From, class SimpleFrom> struct cast_convert_val {
+template <class To, class From, class SimpleFrom> struct LLVM_CLASS_ABI cast_convert_val {
   // This is not a simple type, use the template to simplify it...
   static typename cast_retty<To, From>::ret_type doit(const From &Val) {
     return cast_convert_val<To, SimpleFrom,
@@ -208,7 +208,7 @@ template <class To, class From, class SimpleFrom> struct cast_convert_val {
   }
 };
 
-template <class To, class FromTy> struct cast_convert_val<To, FromTy, FromTy> {
+template <class To, class FromTy> struct LLVM_CLASS_ABI cast_convert_val<To, FromTy, FromTy> {
   // If it's a reference, switch to a pointer to do the cast and then deref it.
   static typename cast_retty<To, FromTy>::ret_type doit(const FromTy &Val) {
     return *(std::remove_reference_t<typename cast_retty<To, FromTy>::ret_type>
@@ -217,7 +217,7 @@ template <class To, class FromTy> struct cast_convert_val<To, FromTy, FromTy> {
 };
 
 template <class To, class FromTy>
-struct cast_convert_val<To, FromTy *, FromTy *> {
+struct LLVM_CLASS_ABI cast_convert_val<To, FromTy *, FromTy *> {
   // If it's a pointer, we can use c-style casting directly.
   static typename cast_retty<To, FromTy *>::ret_type doit(const FromTy *Val) {
     return (typename cast_retty<To, FromTy *>::ret_type) const_cast<FromTy *>(
@@ -229,7 +229,7 @@ struct cast_convert_val<To, FromTy *, FromTy *> {
 // is_simple_type
 //===----------------------------------------------------------------------===//
 
-template <class X> struct is_simple_type {
+template <class X> struct LLVM_CLASS_ABI is_simple_type {
   static const bool value =
       std::is_same_v<X, typename simplify_type<X>::SimpleType>;
 };
@@ -250,7 +250,7 @@ template <class X> struct is_simple_type {
 ///   }
 /// };
 template <typename To, typename From, typename Enable = void>
-struct CastIsPossible {
+struct LLVM_CLASS_ABI CastIsPossible {
   static inline bool isPossible(const From &f) {
     return isa_impl_wrap<
         To, const From,
@@ -263,7 +263,7 @@ struct CastIsPossible {
 // over. In fact, some of the isa_impl templates should be moved over to
 // CastIsPossible.
 template <typename To, typename From>
-struct CastIsPossible<To, std::optional<From>> {
+struct LLVM_CLASS_ABI CastIsPossible<To, std::optional<From>> {
   static inline bool isPossible(const std::optional<From> &f) {
     assert(f && "CastIsPossible::isPossible called on a nullopt!");
     return isa_impl_wrap<
@@ -275,7 +275,7 @@ struct CastIsPossible<To, std::optional<From>> {
 /// Upcasting (from derived to base) and casting from a type to itself should
 /// always be possible.
 template <typename To, typename From>
-struct CastIsPossible<To, From, std::enable_if_t<std::is_base_of_v<To, From>>> {
+struct LLVM_CLASS_ABI CastIsPossible<To, From, std::enable_if_t<std::is_base_of_v<To, From>>> {
   static inline bool isPossible(const From &f) { return true; }
 };
 
@@ -298,7 +298,7 @@ struct CastIsPossible<To, From, std::enable_if_t<std::is_base_of_v<To, From>>> {
 /// This cast trait just provides castFailed for the specified `To` type to make
 /// CastInfo specializations more declarative. In order to use this, the target
 /// result type must be `To` and `To` must be constructible from `nullptr`.
-template <typename To> struct NullableValueCastFailed {
+template <typename To> struct LLVM_CLASS_ABI NullableValueCastFailed {
   static To castFailed() { return To(nullptr); }
 };
 
@@ -306,7 +306,7 @@ template <typename To> struct NullableValueCastFailed {
 /// to make CastInfo specializations more declarative. The `Derived` template
 /// parameter *must* be provided for forwarding castFailed and doCast.
 template <typename To, typename From, typename Derived>
-struct DefaultDoCastIfPossible {
+struct LLVM_CLASS_ABI DefaultDoCastIfPossible {
   static To doCastIfPossible(From f) {
     if (!Derived::isPossible(f))
       return Derived::castFailed();
@@ -326,7 +326,7 @@ using SelfType = std::conditional_t<std::is_same_v<OptionalDerived, void>,
 /// value-typed object from a pointer-typed object. Note that `To` must be
 /// nullable/constructible from a pointer to `From` to use this cast.
 template <typename To, typename From, typename Derived = void>
-struct ValueFromPointerCast
+struct LLVM_CLASS_ABI ValueFromPointerCast
     : public CastIsPossible<To, From *>,
       public NullableValueCastFailed<To>,
       public DefaultDoCastIfPossible<
@@ -340,7 +340,7 @@ struct ValueFromPointerCast
 /// during the cast. It's also a good example of how to implement a move-only
 /// cast.
 template <typename To, typename From, typename Derived = void>
-struct UniquePtrCast : public CastIsPossible<To, From *> {
+struct LLVM_CLASS_ABI UniquePtrCast : public CastIsPossible<To, From *> {
   using Self = detail::SelfType<Derived, UniquePtrCast<To, From>>;
   using CastResultType = std::unique_ptr<
       std::remove_reference_t<typename cast_retty<To, From>::ret_type>>;
@@ -362,7 +362,7 @@ struct UniquePtrCast : public CastIsPossible<To, From *> {
 /// have a value type, you can cast it to another value type and have dyn_cast
 /// return an std::optional<T>.
 template <typename To, typename From, typename Derived = void>
-struct OptionalValueCast
+struct LLVM_CLASS_ABI OptionalValueCast
     : public CastIsPossible<To, From>,
       public DefaultDoCastIfPossible<
           std::optional<To>, From,
@@ -385,7 +385,7 @@ struct OptionalValueCast
 ///        ConstStrippingForwardingCast<foo, const bar, CastInfo<foo, bar>> {};
 ///
 template <typename To, typename From, typename ForwardTo>
-struct ConstStrippingForwardingCast {
+struct LLVM_CLASS_ABI ConstStrippingForwardingCast {
   // Remove the pointer if it exists, then we can get rid of consts/volatiles.
   using DecayedFrom = std::remove_cv_t<std::remove_pointer_t<From>>;
   // Now if it's a pointer, add it back. Otherwise, we want a ref.
@@ -420,7 +420,7 @@ struct ConstStrippingForwardingCast {
 ///       : public ForwardToPointerCast<foo, bar, CastInfo<foo, bar *>> {};
 ///
 template <typename To, typename From, typename ForwardTo>
-struct ForwardToPointerCast {
+struct LLVM_CLASS_ABI ForwardToPointerCast {
   static inline bool isPossible(const From &f) {
     return ForwardTo::isPossible(&f);
   }
@@ -473,7 +473,7 @@ struct ForwardToPointerCast {
 // take advantage of the cast traits whenever possible!
 
 template <typename To, typename From, typename Enable = void>
-struct CastInfo : public CastIsPossible<To, From> {
+struct LLVM_CLASS_ABI CastInfo : public CastIsPossible<To, From> {
   using Self = CastInfo<To, From, Enable>;
 
   using CastReturnType = typename cast_retty<To, From>::ret_type;
@@ -500,7 +500,7 @@ struct CastInfo : public CastIsPossible<To, From> {
 /// defined. This simply forwards to the appropriate CastInfo with the
 /// simplified type/value, so you don't have to implement both.
 template <typename To, typename From>
-struct CastInfo<To, From, std::enable_if_t<!is_simple_type<From>::value>> {
+struct LLVM_CLASS_ABI CastInfo<To, From, std::enable_if_t<!is_simple_type<From>::value>> {
   using Self = CastInfo<To, From>;
   using SimpleFrom = typename simplify_type<From>::SimpleType;
   using SimplifiedSelf = CastInfo<To, SimpleFrom>;
@@ -530,13 +530,13 @@ struct CastInfo<To, From, std::enable_if_t<!is_simple_type<From>::value>> {
 
 /// Provide a CastInfo specialized for std::unique_ptr.
 template <typename To, typename From>
-struct CastInfo<To, std::unique_ptr<From>> : public UniquePtrCast<To, From> {};
+struct LLVM_CLASS_ABI CastInfo<To, std::unique_ptr<From>> : public UniquePtrCast<To, From> {};
 
 /// Provide a CastInfo specialized for std::optional<From>. It's assumed that if
 /// the input is std::optional<From> that the output can be std::optional<To>.
 /// If that's not the case, specialize CastInfo for your use case.
 template <typename To, typename From>
-struct CastInfo<To, std::optional<From>> : public OptionalValueCast<To, From> {
+struct LLVM_CLASS_ABI CastInfo<To, std::optional<From>> : public OptionalValueCast<To, From> {
 };
 
 /// isa<X> - Return true if the parameter to the template is an instance of one
@@ -599,14 +599,14 @@ constexpr bool IsNullable =
 /// unwrapping a value (think calling .value() on an optional).
 
 // Generic values can't *not* be present.
-template <typename T, typename Enable = void> struct ValueIsPresent {
+template <typename T, typename Enable = void> struct LLVM_CLASS_ABI ValueIsPresent {
   using UnwrappedType = T;
   static inline bool isPresent(const T &t) { return true; }
   static inline decltype(auto) unwrapValue(T &t) { return t; }
 };
 
 // Optional provides its own way to check if something is present.
-template <typename T> struct ValueIsPresent<std::optional<T>> {
+template <typename T> struct LLVM_CLASS_ABI ValueIsPresent<std::optional<T>> {
   using UnwrappedType = T;
   static inline bool isPresent(const std::optional<T> &t) {
     return t.has_value();
@@ -617,7 +617,7 @@ template <typename T> struct ValueIsPresent<std::optional<T>> {
 // If something is "nullable" then we just compare it to nullptr to see if it
 // exists.
 template <typename T>
-struct ValueIsPresent<T, std::enable_if_t<IsNullable<T>>> {
+struct LLVM_CLASS_ABI ValueIsPresent<T, std::enable_if_t<IsNullable<T>>> {
   using UnwrappedType = T;
   static inline bool isPresent(const T &t) { return t != T(nullptr); }
   static inline decltype(auto) unwrapValue(T &t) { return t; }

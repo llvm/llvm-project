@@ -34,7 +34,7 @@ class MDNode;
 class MDString;
 class Metadata;
 
-class MDBuilder {
+class LLVM_CLASS_ABI MDBuilder {
   LLVMContext &Context;
 
 public:

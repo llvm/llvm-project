@@ -25,7 +25,7 @@ namespace ms_demangle {
 // STL containers.
 constexpr size_t AllocUnit = 4096;
 
-class ArenaAllocator {
+class LLVM_CLASS_ABI ArenaAllocator {
   struct AllocatorNode {
     uint8_t *Buf = nullptr;
     size_t Used = 0;
@@ -112,7 +112,7 @@ private:
   AllocatorNode *Head = nullptr;
 };
 
-struct BackrefContext {
+struct LLVM_CLASS_ABI BackrefContext {
   static constexpr size_t Max = 10;
 
   TypeNode *FunctionParams[Max];
@@ -137,7 +137,7 @@ enum class FunctionIdentifierCodeGroup { Basic, Under, DoubleUnder };
 // Demangler class takes the main role in demangling symbols.
 // It has a set of functions to parse mangled symbols into Type instances.
 // It also has a set of functions to convert Type instances to strings.
-class Demangler {
+class LLVM_CLASS_ABI Demangler {
 public:
   Demangler() = default;
   virtual ~Demangler() = default;

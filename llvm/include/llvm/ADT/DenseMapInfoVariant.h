@@ -21,7 +21,7 @@
 namespace llvm {
 
 // Provide DenseMapInfo for variants whose all alternatives have DenseMapInfo.
-template <typename... Ts> struct DenseMapInfo<std::variant<Ts...>> {
+template <typename... Ts> struct LLVM_CLASS_ABI DenseMapInfo<std::variant<Ts...>> {
   using Variant = std::variant<Ts...>;
   using FirstT = std::variant_alternative_t<0, Variant>;
 

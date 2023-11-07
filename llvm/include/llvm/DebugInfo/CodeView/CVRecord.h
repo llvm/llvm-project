@@ -27,7 +27,7 @@ namespace codeview {
 /// CVRecord is a fat pointer (base + size pair) to a symbol or type record.
 /// Carrying the size separately instead of trusting the size stored in the
 /// record prefix provides some extra safety and flexibility.
-template <typename Kind> class CVRecord {
+template <typename Kind> class LLVM_CLASS_ABI CVRecord {
 public:
   CVRecord() = default;
 
@@ -111,7 +111,7 @@ inline Expected<CVRecord<Kind>> readCVRecordFromStream(BinaryStreamRef Stream,
 } // end namespace codeview
 
 template <typename Kind>
-struct VarStreamArrayExtractor<codeview::CVRecord<Kind>> {
+struct LLVM_CLASS_ABI VarStreamArrayExtractor<codeview::CVRecord<Kind>> {
   Error operator()(BinaryStreamRef Stream, uint32_t &Len,
                    codeview::CVRecord<Kind> &Item) {
     auto ExpectedRec = codeview::readCVRecordFromStream<Kind>(Stream, 0);

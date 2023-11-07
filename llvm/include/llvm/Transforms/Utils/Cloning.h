@@ -46,20 +46,20 @@ class ReturnInst;
 class DomTreeUpdater;
 
 /// Return an exact copy of the specified module
-std::unique_ptr<Module> CloneModule(const Module &M);
-std::unique_ptr<Module> CloneModule(const Module &M, ValueToValueMapTy &VMap);
+LLVM_FUNC_ABI std::unique_ptr<Module> CloneModule(const Module &M);
+LLVM_FUNC_ABI std::unique_ptr<Module> CloneModule(const Module &M, ValueToValueMapTy &VMap);
 
 /// Return a copy of the specified module. The ShouldCloneDefinition function
 /// controls whether a specific GlobalValue's definition is cloned. If the
 /// function returns false, the module copy will contain an external reference
 /// in place of the global definition.
-std::unique_ptr<Module>
+LLVM_FUNC_ABI std::unique_ptr<Module>
 CloneModule(const Module &M, ValueToValueMapTy &VMap,
             function_ref<bool(const GlobalValue *)> ShouldCloneDefinition);
 
 /// This struct can be used to capture information about code
 /// being cloned, while it is being cloned.
-struct ClonedCodeInfo {
+struct LLVM_CLASS_ABI ClonedCodeInfo {
   /// This is set to true if the cloned code contains a normal call instruction.
   bool ContainsCalls = false;
 
@@ -116,7 +116,7 @@ struct ClonedCodeInfo {
 /// If you would like to collect additional information about the cloned
 /// function, you can specify a ClonedCodeInfo object with the optional fifth
 /// parameter.
-BasicBlock *CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
+LLVM_FUNC_ABI BasicBlock *CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                             const Twine &NameSuffix = "", Function *F = nullptr,
                             ClonedCodeInfo *CodeInfo = nullptr,
                             DebugInfoFinder *DIFinder = nullptr);
@@ -132,7 +132,7 @@ BasicBlock *CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
 ///
 /// \pre VMap contains no non-identity GlobalValue mappings.
 ///
-Function *CloneFunction(Function *F, ValueToValueMapTy &VMap,
+LLVM_FUNC_ABI Function *CloneFunction(Function *F, ValueToValueMapTy &VMap,
                         ClonedCodeInfo *CodeInfo = nullptr);
 
 enum class CloneFunctionChangeType {
@@ -166,7 +166,7 @@ enum class CloneFunctionChangeType {
 /// FIXME: Consider simplifying this function by splitting out \a
 /// CloneFunctionMetadataInto() and expecting / updating callers to call it
 /// first when / how it's needed.
-void CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
+LLVM_FUNC_ABI void CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
                        ValueToValueMapTy &VMap, CloneFunctionChangeType Changes,
                        SmallVectorImpl<ReturnInst *> &Returns,
                        const char *NameSuffix = "",
@@ -174,7 +174,7 @@ void CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
                        ValueMapTypeRemapper *TypeMapper = nullptr,
                        ValueMaterializer *Materializer = nullptr);
 
-void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
+LLVM_FUNC_ABI void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
                                const Instruction *StartingInst,
                                ValueToValueMapTy &VMap, bool ModuleLevelChanges,
                                SmallVectorImpl<ReturnInst *> &Returns,
@@ -192,7 +192,7 @@ void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 /// If ModuleLevelChanges is false, VMap contains no non-identity GlobalValue
 /// mappings.
 ///
-void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
+LLVM_FUNC_ABI void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
                                ValueToValueMapTy &VMap, bool ModuleLevelChanges,
                                SmallVectorImpl<ReturnInst*> &Returns,
                                const char *NameSuffix = "",
@@ -200,7 +200,7 @@ void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
 
 /// This class captures the data input to the InlineFunction call, and records
 /// the auxiliary results produced by it.
-class InlineFunctionInfo {
+class LLVM_CLASS_ABI InlineFunctionInfo {
 public:
   explicit InlineFunctionInfo(
       function_ref<AssumptionCache &(Function &)> GetAssumptionCache = nullptr,
@@ -264,7 +264,7 @@ public:
 ///
 /// The callee's function attributes are merged into the callers' if
 /// MergeAttributes is set to true.
-InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
+LLVM_FUNC_ABI InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                             bool MergeAttributes = false,
                             AAResults *CalleeAAR = nullptr,
                             bool InsertLifetime = true,
@@ -276,14 +276,14 @@ InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 /// Updates LoopInfo and DominatorTree assuming the loop is dominated by block
 /// \p LoopDomBB.  Insert the new blocks before block specified in \p Before.
 /// Note: Only innermost loops are supported.
-Loop *cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
+LLVM_FUNC_ABI Loop *cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
                              Loop *OrigLoop, ValueToValueMapTy &VMap,
                              const Twine &NameSuffix, LoopInfo *LI,
                              DominatorTree *DT,
                              SmallVectorImpl<BasicBlock *> &Blocks);
 
 /// Remaps instructions in \p Blocks using the mapping in \p VMap.
-void remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
+LLVM_FUNC_ABI void remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
                                ValueToValueMapTy &VMap);
 
 /// Split edge between BB and PredBB and duplicate all non-Phi instructions
@@ -292,7 +292,7 @@ void remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
 /// we replace them with the uses of corresponding Phi inputs. ValueMapping
 /// is used to map the original instructions from BB to their newly-created
 /// copies. Returns the split block.
-BasicBlock *DuplicateInstructionsInSplitBetween(BasicBlock *BB,
+LLVM_FUNC_ABI BasicBlock *DuplicateInstructionsInSplitBetween(BasicBlock *BB,
                                                 BasicBlock *PredBB,
                                                 Instruction *StopAt,
                                                 ValueToValueMapTy &ValueMapping,
@@ -301,20 +301,20 @@ BasicBlock *DuplicateInstructionsInSplitBetween(BasicBlock *BB,
 /// Updates profile information by adjusting the entry count by adding
 /// EntryDelta then scaling callsite information by the new count divided by the
 /// old count. VMap is used during inlinng to also update the new clone
-void updateProfileCallee(
+LLVM_FUNC_ABI void updateProfileCallee(
     Function *Callee, int64_t EntryDelta,
     const ValueMap<const Value *, WeakTrackingVH> *VMap = nullptr);
 
 /// Find the 'llvm.experimental.noalias.scope.decl' intrinsics in the specified
 /// basic blocks and extract their scope. These are candidates for duplication
 /// when cloning.
-void identifyNoAliasScopesToClone(
+LLVM_FUNC_ABI void identifyNoAliasScopesToClone(
     ArrayRef<BasicBlock *> BBs, SmallVectorImpl<MDNode *> &NoAliasDeclScopes);
 
 /// Find the 'llvm.experimental.noalias.scope.decl' intrinsics in the specified
 /// instruction range and extract their scope. These are candidates for
 /// duplication when cloning.
-void identifyNoAliasScopesToClone(
+LLVM_FUNC_ABI void identifyNoAliasScopesToClone(
     BasicBlock::iterator Start, BasicBlock::iterator End,
     SmallVectorImpl<MDNode *> &NoAliasDeclScopes);
 
@@ -323,7 +323,7 @@ void identifyNoAliasScopesToClone(
 /// Afterwards, the ClonedScopes contains the mapping of the original scope
 /// MDNode onto the cloned scope.
 /// Be aware that the cloned scopes are still part of the original scope domain.
-void cloneNoAliasScopes(
+LLVM_FUNC_ABI void cloneNoAliasScopes(
     ArrayRef<MDNode *> NoAliasDeclScopes,
     DenseMap<MDNode *, MDNode *> &ClonedScopes,
     StringRef Ext, LLVMContext &Context);
@@ -331,21 +331,21 @@ void cloneNoAliasScopes(
 /// Adapt the metadata for the specified instruction according to the
 /// provided mapping. This is normally used after cloning an instruction, when
 /// some noalias scopes needed to be cloned.
-void adaptNoAliasScopes(
+LLVM_FUNC_ABI void adaptNoAliasScopes(
     llvm::Instruction *I, const DenseMap<MDNode *, MDNode *> &ClonedScopes,
     LLVMContext &Context);
 
 /// Clone the specified noalias decl scopes. Then adapt all instructions in the
 /// NewBlocks basicblocks to the cloned versions.
 /// 'Ext' will be added to the duplicate scope names.
-void cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
+LLVM_FUNC_ABI void cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
                                 ArrayRef<BasicBlock *> NewBlocks,
                                 LLVMContext &Context, StringRef Ext);
 
 /// Clone the specified noalias decl scopes. Then adapt all instructions in the
 /// [IStart, IEnd] (IEnd included !) range to the cloned versions. 'Ext' will be
 /// added to the duplicate scope names.
-void cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
+LLVM_FUNC_ABI void cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
                                 Instruction *IStart, Instruction *IEnd,
                                 LLVMContext &Context, StringRef Ext);
 } // end namespace llvm

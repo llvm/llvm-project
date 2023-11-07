@@ -66,7 +66,7 @@ namespace llvm {
 /// an end value proves that there was no error, and is equivalent to checking
 /// that the Error is success). This allows early exits from the loop body
 /// without requiring redundant error checks.
-template <typename Underlying> class fallible_iterator {
+template <typename Underlying> class LLVM_CLASS_ABI fallible_iterator {
 private:
   template <typename T>
   using enable_if_struct_deref_supported = std::enable_if_t<

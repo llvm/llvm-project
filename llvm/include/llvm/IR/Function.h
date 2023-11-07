@@ -949,10 +949,10 @@ private:
 /// Null pointer access in non-zero address space is not considered undefined.
 /// Return value: false => null pointer dereference is undefined.
 /// Return value: true =>  null pointer dereference is not undefined.
-bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
+LLVM_FUNC_ABI bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
 
 template <>
-struct OperandTraits<Function> : public HungoffOperandTraits<3> {};
+struct LLVM_CLASS_ABI OperandTraits<Function> : public HungoffOperandTraits<3> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(Function, Value)
 

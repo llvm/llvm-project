@@ -53,7 +53,7 @@ namespace orc {
 namespace shared {
 
 /// Output char buffer with overflow check.
-class SPSOutputBuffer {
+class LLVM_CLASS_ABI SPSOutputBuffer {
 public:
   SPSOutputBuffer(char *Buffer, size_t Remaining)
       : Buffer(Buffer), Remaining(Remaining) {}
@@ -73,7 +73,7 @@ private:
 };
 
 /// Input char buffer with underflow check.
-class SPSInputBuffer {
+class LLVM_CLASS_ABI SPSInputBuffer {
 public:
   SPSInputBuffer() = default;
   SPSInputBuffer(const char *Buffer, size_t Remaining)
@@ -110,7 +110,7 @@ class SPSSerializationTraits;
 template <typename... ArgTs> class SPSArgList;
 
 // Empty list specialization for SPSArgList.
-template <> class SPSArgList<> {
+template <> class LLVM_CLASS_ABI SPSArgList<> {
 public:
   static size_t size() { return 0; }
 
@@ -126,7 +126,7 @@ public:
 
 // Non-empty list specialization for SPSArgList.
 template <typename SPSTagT, typename... SPSTagTs>
-class SPSArgList<SPSTagT, SPSTagTs...> {
+class LLVM_CLASS_ABI SPSArgList<SPSTagT, SPSTagTs...> {
 public:
   // FIXME: This typedef is here to enable SPS arg serialization from
   // JITLink. It can be removed once JITLink can access SPS directly.
@@ -154,7 +154,7 @@ public:
 
 /// SPS serialization for integral types, bool, and char.
 template <typename SPSTagT>
-class SPSSerializationTraits<
+class LLVM_CLASS_ABI SPSSerializationTraits<
     SPSTagT, SPSTagT,
     std::enable_if_t<std::is_same<SPSTagT, bool>::value ||
                      std::is_same<SPSTagT, char>::value ||
@@ -188,13 +188,13 @@ public:
 };
 
 // Any empty placeholder suitable as a substitute for void when deserializing
-class SPSEmpty {};
+class LLVM_CLASS_ABI SPSEmpty {};
 
 /// SPS tag type for tuples.
 ///
 /// A blob tuple should be serialized by serializing each of the elements in
 /// sequence.
-template <typename... SPSTagTs> class SPSTuple {
+template <typename... SPSTagTs> class LLVM_CLASS_ABI SPSTuple {
 public:
   /// Convenience typedef of the corresponding arg list.
   typedef SPSArgList<SPSTagTs...> AsArgList;
@@ -206,7 +206,7 @@ public:
 /// SPSTagT value is present, and false indicating that there is no value.
 /// If the boolean is true then the serialized SPSTagT will follow immediately
 /// after it.
-template <typename SPSTagT> class SPSOptional {};
+template <typename SPSTagT> class LLVM_CLASS_ABI SPSOptional {};
 
 /// SPS tag type for sequences.
 ///
@@ -224,7 +224,7 @@ template <typename SPSTagT1, typename SPSTagT2>
 using SPSMap = SPSSequence<SPSTuple<SPSTagT1, SPSTagT2>>;
 
 /// Serialization for SPSEmpty type.
-template <> class SPSSerializationTraits<SPSEmpty, SPSEmpty> {
+template <> class LLVM_CLASS_ABI SPSSerializationTraits<SPSEmpty, SPSEmpty> {
 public:
   static size_t size(const SPSEmpty &EP) { return 0; }
   static bool serialize(SPSOutputBuffer &OB, const SPSEmpty &BE) {
@@ -243,7 +243,7 @@ public:
 /// Specializing this template class means that you do not need to provide a
 /// specialization of SPSSerializationTraits for your type.
 template <typename SPSElementTagT, typename ConcreteSequenceT>
-class TrivialSPSSequenceSerialization {
+class LLVM_CLASS_ABI TrivialSPSSequenceSerialization {
 public:
   static constexpr bool available = false;
 };
@@ -259,19 +259,19 @@ public:
 /// Specializing this template class means that you do not need to provide a
 /// specialization of SPSSerializationTraits for your type.
 template <typename SPSElementTagT, typename ConcreteSequenceT>
-class TrivialSPSSequenceDeserialization {
+class LLVM_CLASS_ABI TrivialSPSSequenceDeserialization {
 public:
   static constexpr bool available = false;
 };
 
 /// Trivial std::string -> SPSSequence<char> serialization.
-template <> class TrivialSPSSequenceSerialization<char, std::string> {
+template <> class LLVM_CLASS_ABI TrivialSPSSequenceSerialization<char, std::string> {
 public:
   static constexpr bool available = true;
 };
 
 /// Trivial SPSSequence<char> -> std::string deserialization.
-template <> class TrivialSPSSequenceDeserialization<char, std::string> {
+template <> class LLVM_CLASS_ABI TrivialSPSSequenceDeserialization<char, std::string> {
 public:
   static constexpr bool available = true;
 
@@ -286,14 +286,14 @@ public:
 
 /// Trivial std::vector<T> -> SPSSequence<SPSElementTagT> serialization.
 template <typename SPSElementTagT, typename T>
-class TrivialSPSSequenceSerialization<SPSElementTagT, std::vector<T>> {
+class LLVM_CLASS_ABI TrivialSPSSequenceSerialization<SPSElementTagT, std::vector<T>> {
 public:
   static constexpr bool available = true;
 };
 
 /// Trivial SPSSequence<SPSElementTagT> -> std::vector<T> deserialization.
 template <typename SPSElementTagT, typename T>
-class TrivialSPSSequenceDeserialization<SPSElementTagT, std::vector<T>> {
+class LLVM_CLASS_ABI TrivialSPSSequenceDeserialization<SPSElementTagT, std::vector<T>> {
 public:
   static constexpr bool available = true;
 
@@ -308,14 +308,14 @@ public:
 
 /// Trivial SmallVectorImpl<T> -> SPSSequence<char> serialization.
 template <typename SPSElementTagT, typename T>
-class TrivialSPSSequenceSerialization<SPSElementTagT, SmallVectorImpl<T>> {
+class LLVM_CLASS_ABI TrivialSPSSequenceSerialization<SPSElementTagT, SmallVectorImpl<T>> {
 public:
   static constexpr bool available = true;
 };
 
 /// Trivial SPSSequence<SPSElementTagT> -> SmallVectorImpl<T> deserialization.
 template <typename SPSElementTagT, typename T>
-class TrivialSPSSequenceDeserialization<SPSElementTagT, SmallVectorImpl<T>> {
+class LLVM_CLASS_ABI TrivialSPSSequenceDeserialization<SPSElementTagT, SmallVectorImpl<T>> {
 public:
   static constexpr bool available = true;
 
@@ -330,19 +330,19 @@ public:
 
 /// Trivial SmallVectorImpl<T> -> SPSSequence<char> serialization.
 template <typename SPSElementTagT, typename T, unsigned N>
-class TrivialSPSSequenceSerialization<SPSElementTagT, SmallVector<T, N>>
+class LLVM_CLASS_ABI TrivialSPSSequenceSerialization<SPSElementTagT, SmallVector<T, N>>
     : public TrivialSPSSequenceSerialization<SPSElementTagT,
                                              SmallVectorImpl<T>> {};
 
 /// Trivial SPSSequence<SPSElementTagT> -> SmallVectorImpl<T> deserialization.
 template <typename SPSElementTagT, typename T, unsigned N>
-class TrivialSPSSequenceDeserialization<SPSElementTagT, SmallVector<T, N>>
+class LLVM_CLASS_ABI TrivialSPSSequenceDeserialization<SPSElementTagT, SmallVector<T, N>>
     : public TrivialSPSSequenceDeserialization<SPSElementTagT,
                                                SmallVectorImpl<T>> {};
 
 /// Trivial ArrayRef<T> -> SPSSequence<SPSElementTagT> serialization.
 template <typename SPSElementTagT, typename T>
-class TrivialSPSSequenceSerialization<SPSElementTagT, ArrayRef<T>> {
+class LLVM_CLASS_ABI TrivialSPSSequenceSerialization<SPSElementTagT, ArrayRef<T>> {
 public:
   static constexpr bool available = true;
 };
@@ -350,7 +350,7 @@ public:
 /// Specialized SPSSequence<char> -> ArrayRef<char> serialization.
 ///
 /// On deserialize, points directly into the input buffer.
-template <> class SPSSerializationTraits<SPSSequence<char>, ArrayRef<char>> {
+template <> class LLVM_CLASS_ABI SPSSerializationTraits<SPSSequence<char>, ArrayRef<char>> {
 public:
   static size_t size(const ArrayRef<char> &A) {
     return SPSArgList<uint64_t>::size(static_cast<uint64_t>(A.size())) +
@@ -380,7 +380,7 @@ public:
 /// followed by a for-earch loop over the elements of the sequence to serialize
 /// each of them.
 template <typename SPSElementTagT, typename SequenceT>
-class SPSSerializationTraits<SPSSequence<SPSElementTagT>, SequenceT,
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSSequence<SPSElementTagT>, SequenceT,
                              std::enable_if_t<TrivialSPSSequenceSerialization<
                                  SPSElementTagT, SequenceT>::available>> {
 public:
@@ -419,7 +419,7 @@ public:
 
 /// SPSTuple serialization for std::tuple.
 template <typename... SPSTagTs, typename... Ts>
-class SPSSerializationTraits<SPSTuple<SPSTagTs...>, std::tuple<Ts...>> {
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSTuple<SPSTagTs...>, std::tuple<Ts...>> {
 private:
   using TupleArgList = typename SPSTuple<SPSTagTs...>::AsArgList;
   using ArgIndices = std::make_index_sequence<sizeof...(Ts)>;
@@ -457,7 +457,7 @@ public:
 
 /// SPSTuple serialization for std::pair.
 template <typename SPSTagT1, typename SPSTagT2, typename T1, typename T2>
-class SPSSerializationTraits<SPSTuple<SPSTagT1, SPSTagT2>, std::pair<T1, T2>> {
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSTuple<SPSTagT1, SPSTagT2>, std::pair<T1, T2>> {
 public:
   static size_t size(const std::pair<T1, T2> &P) {
     return SPSArgList<SPSTagT1>::size(P.first) +
@@ -477,7 +477,7 @@ public:
 
 /// SPSOptional serialization for std::optional.
 template <typename SPSTagT, typename T>
-class SPSSerializationTraits<SPSOptional<SPSTagT>, std::optional<T>> {
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSOptional<SPSTagT>, std::optional<T>> {
 public:
   static size_t size(const std::optional<T> &Value) {
     size_t Size = SPSArgList<bool>::size(!!Value);
@@ -511,7 +511,7 @@ public:
 ///
 /// Serialization is as for regular strings. Deserialization points directly
 /// into the blob.
-template <> class SPSSerializationTraits<SPSString, StringRef> {
+template <> class LLVM_CLASS_ABI SPSSerializationTraits<SPSString, StringRef> {
 public:
   static size_t size(const StringRef &S) {
     return SPSArgList<uint64_t>::size(static_cast<uint64_t>(S.size())) +
@@ -541,7 +541,7 @@ public:
 
 /// Serialization for StringMap<ValueT>s.
 template <typename SPSValueT, typename ValueT>
-class SPSSerializationTraits<SPSSequence<SPSTuple<SPSString, SPSValueT>>,
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSSequence<SPSTuple<SPSString, SPSValueT>>,
                              StringMap<ValueT>> {
 public:
   static size_t size(const StringMap<ValueT> &M) {
@@ -600,7 +600,7 @@ namespace detail {
 ///
 /// The SPSSerializableError type is a helper that can be
 /// constructed from an llvm::Error, but inspected more than once.
-struct SPSSerializableError {
+struct LLVM_CLASS_ABI SPSSerializableError {
   bool HasError = false;
   std::string ErrMsg;
 };
@@ -610,7 +610,7 @@ struct SPSSerializableError {
 /// See SPSSerializableError for more details.
 ///
 // FIXME: Use std::variant for storage once we have c++17.
-template <typename T> struct SPSSerializableExpected {
+template <typename T> struct LLVM_CLASS_ABI SPSSerializableExpected {
   bool HasValue = false;
   T Value{};
   std::string ErrMsg;
@@ -648,7 +648,7 @@ Expected<T> fromSPSSerializable(SPSSerializableExpected<T> BSE) {
 
 /// Serialize to a SPSError from a detail::SPSSerializableError.
 template <>
-class SPSSerializationTraits<SPSError, detail::SPSSerializableError> {
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSError, detail::SPSSerializableError> {
 public:
   static size_t size(const detail::SPSSerializableError &BSE) {
     size_t Size = SPSArgList<bool>::size(BSE.HasError);
@@ -682,7 +682,7 @@ public:
 /// Serialize to a SPSExpected<SPSTagT> from a
 /// detail::SPSSerializableExpected<T>.
 template <typename SPSTagT, typename T>
-class SPSSerializationTraits<SPSExpected<SPSTagT>,
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSExpected<SPSTagT>,
                              detail::SPSSerializableExpected<T>> {
 public:
   static size_t size(const detail::SPSSerializableExpected<T> &BSE) {
@@ -719,7 +719,7 @@ public:
 
 /// Serialize to a SPSExpected<SPSTagT> from a detail::SPSSerializableError.
 template <typename SPSTagT>
-class SPSSerializationTraits<SPSExpected<SPSTagT>,
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSExpected<SPSTagT>,
                              detail::SPSSerializableError> {
 public:
   static size_t size(const detail::SPSSerializableError &BSE) {
@@ -739,7 +739,7 @@ public:
 
 /// Serialize to a SPSExpected<SPSTagT> from a T.
 template <typename SPSTagT, typename T>
-class SPSSerializationTraits<SPSExpected<SPSTagT>, T> {
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSExpected<SPSTagT>, T> {
 public:
   static size_t size(const T &Value) {
     return SPSArgList<bool>::size(true) + SPSArgList<SPSTagT>::size(Value);

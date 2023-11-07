@@ -23,7 +23,7 @@ namespace logicalview {
 
 using LVAddressRange = std::pair<LVAddress, LVAddress>;
 
-class LVRangeEntry final {
+class LLVM_CLASS_ABI LVRangeEntry final {
   LVAddress Lower = 0;
   LVAddress Upper = 0;
   LVScope *Scope = nullptr;
@@ -47,7 +47,7 @@ public:
 // scope; the addresses are stored in ascending order and can overlap.
 using LVRangeEntries = std::vector<LVRangeEntry>;
 
-class LVRange final : public LVObject {
+class LLVM_CLASS_ABI LVRange final : public LVObject {
   /// Map of where a user value is live, and its location.
   using LVRangesTree = IntervalTree<LVAddress, LVScope *>;
   using LVAllocator = LVRangesTree::Allocator;

@@ -39,7 +39,7 @@ const unsigned MAX_SUBTARGET_FEATURES = MAX_SUBTARGET_WORDS * 64;
 /// This is a constexpr reimplementation of a subset of std::bitset. It would be
 /// nice to use std::bitset directly, but it doesn't support constant
 /// initialization.
-class FeatureBitset {
+class LLVM_CLASS_ABI FeatureBitset {
   static_assert((MAX_SUBTARGET_FEATURES % 64) == 0,
                 "Should be a multiple of 64!");
   std::array<uint64_t, MAX_SUBTARGET_WORDS> Bits{};
@@ -154,7 +154,7 @@ public:
 };
 
 /// Class used to store the subtarget bits in the tables created by tablegen.
-class FeatureBitArray : public FeatureBitset {
+class LLVM_CLASS_ABI FeatureBitArray : public FeatureBitset {
 public:
   constexpr FeatureBitArray(const std::array<uint64_t, MAX_SUBTARGET_WORDS> &B)
       : FeatureBitset(B) {}
@@ -172,7 +172,7 @@ public:
 /// Each of the remaining features is prefixed with + or - indicating whether
 /// that feature should be enabled or disabled contrary to the cpu
 /// specification.
-class SubtargetFeatures {
+class LLVM_CLASS_ABI SubtargetFeatures {
   std::vector<std::string> Features;    ///< Subtarget features as a vector
 
 public:

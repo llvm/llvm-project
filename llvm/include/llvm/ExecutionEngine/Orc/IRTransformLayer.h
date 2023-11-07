@@ -25,7 +25,7 @@ namespace orc {
 /// A layer that applies a transform to emitted modules.
 /// The transform function is responsible for locking the ThreadSafeContext
 /// before operating on the module.
-class IRTransformLayer : public IRLayer {
+class LLVM_CLASS_ABI IRTransformLayer : public IRLayer {
 public:
   using TransformFunction = unique_function<Expected<ThreadSafeModule>(
       ThreadSafeModule, MaterializationResponsibility &R)>;

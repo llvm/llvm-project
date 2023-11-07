@@ -37,7 +37,7 @@ namespace llvm {
 
 /// This is a helper class used for handling formatted output.  It is the
 /// abstract base class of a templated derived class.
-class format_object_base {
+class LLVM_CLASS_ABI format_object_base {
 protected:
   const char *Fmt;
   ~format_object_base() = default; // Disallow polymorphic deletion.
@@ -81,15 +81,15 @@ public:
 // Helper to validate that format() parameters are scalars or pointers.
 template <typename... Args> struct validate_format_parameters;
 template <typename Arg, typename... Args>
-struct validate_format_parameters<Arg, Args...> {
+struct LLVM_CLASS_ABI validate_format_parameters<Arg, Args...> {
   static_assert(std::is_scalar_v<Arg>,
                 "format can't be used with non fundamental / non pointer type");
   validate_format_parameters() { validate_format_parameters<Args...>(); }
 };
-template <> struct validate_format_parameters<> {};
+template <> struct LLVM_CLASS_ABI validate_format_parameters<> {};
 
 template <typename... Ts>
-class format_object final : public format_object_base {
+class LLVM_CLASS_ABI format_object final : public format_object_base {
   std::tuple<Ts...> Vals;
 
   template <std::size_t... Is>
@@ -128,7 +128,7 @@ inline format_object<Ts...> format(const char *Fmt, const Ts &... Vals) {
 }
 
 /// This is a helper class for left_justify, right_justify, and center_justify.
-class FormattedString {
+class LLVM_CLASS_ABI FormattedString {
 public:
   enum Justification { JustifyNone, JustifyLeft, JustifyRight, JustifyCenter };
   FormattedString(StringRef S, unsigned W, Justification J)
@@ -163,7 +163,7 @@ inline FormattedString center_justify(StringRef Str, unsigned Width) {
 }
 
 /// This is a helper class used for format_hex() and format_decimal().
-class FormattedNumber {
+class LLVM_CLASS_ABI FormattedNumber {
   uint64_t HexValue;
   int64_t DecValue;
   unsigned Width;
@@ -214,7 +214,7 @@ inline FormattedNumber format_decimal(int64_t N, unsigned Width) {
   return FormattedNumber(0, N, Width, false, false, false);
 }
 
-class FormattedBytes {
+class LLVM_CLASS_ABI FormattedBytes {
   ArrayRef<uint8_t> Bytes;
 
   // If not std::nullopt, display offsets for each line relative to starting

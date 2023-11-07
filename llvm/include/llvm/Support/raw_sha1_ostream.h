@@ -20,7 +20,7 @@
 namespace llvm {
 
 /// A raw_ostream that hash the content using the sha1 algorithm.
-class raw_sha1_ostream : public raw_ostream {
+class LLVM_CLASS_ABI raw_sha1_ostream : public raw_ostream {
   SHA1 State;
 
   /// See raw_ostream::write_impl.

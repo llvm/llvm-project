@@ -39,7 +39,7 @@ class DWARFDebugMacro;
 ///
 /// All interactions with the MC layer that is used to build the debug
 /// information binary representation are handled in this class.
-class DwarfStreamer : public DwarfEmitter {
+class LLVM_CLASS_ABI DwarfStreamer : public DwarfEmitter {
 public:
   DwarfStreamer(DWARFLinker::OutputFileType OutFileType,
                 raw_pwrite_stream &OutFile,

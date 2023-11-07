@@ -100,15 +100,15 @@
 
 namespace llvm {
 
-extern cl::opt<bool> ForceTopDown;
-extern cl::opt<bool> ForceBottomUp;
-extern cl::opt<bool> VerifyScheduling;
+LLVM_FUNC_ABI extern cl::opt<bool> ForceTopDown;
+LLVM_FUNC_ABI extern cl::opt<bool> ForceBottomUp;
+LLVM_FUNC_ABI extern cl::opt<bool> VerifyScheduling;
 #ifndef NDEBUG
 extern cl::opt<bool> ViewMISchedDAGs;
 extern cl::opt<bool> PrintDAGs;
 #else
-extern const bool ViewMISchedDAGs;
-extern const bool PrintDAGs;
+LLVM_FUNC_ABI extern const bool ViewMISchedDAGs;
+LLVM_FUNC_ABI extern const bool PrintDAGs;
 #endif
 
 class AAResults;
@@ -126,7 +126,7 @@ class TargetRegisterInfo;
 
 /// MachineSchedContext provides enough context from the MachineScheduler pass
 /// for the target to instantiate a scheduler.
-struct MachineSchedContext {
+struct LLVM_CLASS_ABI MachineSchedContext {
   MachineFunction *MF = nullptr;
   const MachineLoopInfo *MLI = nullptr;
   const MachineDominatorTree *MDT = nullptr;
@@ -144,7 +144,7 @@ struct MachineSchedContext {
 
 /// MachineSchedRegistry provides a selection of available machine instruction
 /// schedulers.
-class MachineSchedRegistry
+class LLVM_CLASS_ABI MachineSchedRegistry
     : public MachinePassRegistryNode<
           ScheduleDAGInstrs *(*)(MachineSchedContext *)> {
 public:
@@ -182,7 +182,7 @@ class ScheduleDAGMI;
 /// Define a generic scheduling policy for targets that don't provide their own
 /// MachineSchedStrategy. This can be overriden for each scheduling region
 /// before building the DAG.
-struct MachineSchedPolicy {
+struct LLVM_CLASS_ABI MachineSchedPolicy {
   // Allow the scheduler to disable register pressure tracking.
   bool ShouldTrackPressure = false;
   /// Track LaneMasks to allow reordering of independent subregister writes
@@ -209,7 +209,7 @@ struct MachineSchedPolicy {
 ///
 /// Initialization sequence:
 ///   initPolicy -> shouldTrackPressure -> initialize(DAG) -> registerRoots
-class MachineSchedStrategy {
+class LLVM_CLASS_ABI MachineSchedStrategy {
   virtual void anchor();
 
 public:
@@ -274,7 +274,7 @@ public:
 /// schedules machine instructions according to the given MachineSchedStrategy
 /// without much extra book-keeping. This is the common functionality between
 /// PreRA and PostRA MachineScheduler.
-class ScheduleDAGMI : public ScheduleDAGInstrs {
+class LLVM_CLASS_ABI ScheduleDAGMI : public ScheduleDAGInstrs {
 protected:
   AAResults *AA;
   LiveIntervals *LIS;
@@ -396,7 +396,7 @@ protected:
 
 /// ScheduleDAGMILive is an implementation of ScheduleDAGInstrs that schedules
 /// machine instructions while updating LiveIntervals and tracking regpressure.
-class ScheduleDAGMILive : public ScheduleDAGMI {
+class LLVM_CLASS_ABI ScheduleDAGMILive : public ScheduleDAGMI {
 protected:
   RegisterClassInfo *RegClassInfo;
 
@@ -538,7 +538,7 @@ protected:
 ///
 /// This is a convenience class that may be used by implementations of
 /// MachineSchedStrategy.
-class ReadyQueue {
+class LLVM_CLASS_ABI ReadyQueue {
   unsigned ID;
   std::string Name;
   std::vector<SUnit*> Queue;
@@ -586,7 +586,7 @@ public:
 };
 
 /// Summarize the unscheduled region.
-struct SchedRemainder {
+struct LLVM_CLASS_ABI SchedRemainder {
   // Critical path through the DAG in expected latency.
   unsigned CriticalPath;
   unsigned CyclicCritPath;
@@ -625,7 +625,7 @@ struct SchedRemainder {
 ///
 /// A \ref ResourceSegments instance represents the cycle
 /// reservation history of the instance of and individual resource.
-class ResourceSegments {
+class LLVM_CLASS_ABI ResourceSegments {
 public:
   /// Represents an interval of discrete integer values closed on
   /// the left and open on the right: [a, b).
@@ -830,7 +830,7 @@ public:
 /// Each Scheduling boundary is associated with ready queues. It tracks the
 /// current cycle in the direction of movement, and maintains the state
 /// of "hazards" and other interlocks at the current cycle.
-class SchedBoundary {
+class LLVM_CLASS_ABI SchedBoundary {
 public:
   /// SUnit::NodeQueueId: 0 (none), 1 (top), 2 (bot), 3 (both)
   enum {
@@ -1065,7 +1065,7 @@ public:
 /// Base class for GenericScheduler. This class maintains information about
 /// scheduling candidates based on TargetSchedModel making it easy to implement
 /// heuristics for either preRA or postRA scheduling.
-class GenericSchedulerBase : public MachineSchedStrategy {
+class LLVM_CLASS_ABI GenericSchedulerBase : public MachineSchedStrategy {
 public:
   /// Represent the type of SchedCandidate found within a single queue.
   /// pickNodeBidirectional depends on these listed by decreasing priority.
@@ -1185,30 +1185,30 @@ private:
 };
 
 // Utility functions used by heuristics in tryCandidate().
-bool tryLess(int TryVal, int CandVal,
+LLVM_FUNC_ABI bool tryLess(int TryVal, int CandVal,
              GenericSchedulerBase::SchedCandidate &TryCand,
              GenericSchedulerBase::SchedCandidate &Cand,
              GenericSchedulerBase::CandReason Reason);
-bool tryGreater(int TryVal, int CandVal,
+LLVM_FUNC_ABI bool tryGreater(int TryVal, int CandVal,
                 GenericSchedulerBase::SchedCandidate &TryCand,
                 GenericSchedulerBase::SchedCandidate &Cand,
                 GenericSchedulerBase::CandReason Reason);
-bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
+LLVM_FUNC_ABI bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
                 GenericSchedulerBase::SchedCandidate &Cand,
                 SchedBoundary &Zone);
-bool tryPressure(const PressureChange &TryP,
+LLVM_FUNC_ABI bool tryPressure(const PressureChange &TryP,
                  const PressureChange &CandP,
                  GenericSchedulerBase::SchedCandidate &TryCand,
                  GenericSchedulerBase::SchedCandidate &Cand,
                  GenericSchedulerBase::CandReason Reason,
                  const TargetRegisterInfo *TRI,
                  const MachineFunction &MF);
-unsigned getWeakLeft(const SUnit *SU, bool isTop);
-int biasPhysReg(const SUnit *SU, bool isTop);
+LLVM_FUNC_ABI unsigned getWeakLeft(const SUnit *SU, bool isTop);
+LLVM_FUNC_ABI int biasPhysReg(const SUnit *SU, bool isTop);
 
 /// GenericScheduler shrinks the unscheduled zone using heuristics to balance
 /// the schedule.
-class GenericScheduler : public GenericSchedulerBase {
+class LLVM_CLASS_ABI GenericScheduler : public GenericSchedulerBase {
 public:
   GenericScheduler(const MachineSchedContext *C):
     GenericSchedulerBase(C), Top(SchedBoundary::TopQID, "TopQ"),
@@ -1290,7 +1290,7 @@ protected:
 ///
 /// Callbacks from ScheduleDAGMI:
 ///   initPolicy -> initialize(DAG) -> registerRoots -> pickNode ...
-class PostGenericScheduler : public GenericSchedulerBase {
+class LLVM_CLASS_ABI PostGenericScheduler : public GenericSchedulerBase {
 protected:
   ScheduleDAGMI *DAG = nullptr;
   SchedBoundary Top;
@@ -1343,20 +1343,20 @@ protected:
 /// Create the standard converging machine scheduler. This will be used as the
 /// default scheduler if the target does not set a default.
 /// Adds default DAG mutations.
-ScheduleDAGMILive *createGenericSchedLive(MachineSchedContext *C);
+LLVM_FUNC_ABI ScheduleDAGMILive *createGenericSchedLive(MachineSchedContext *C);
 
 /// Create a generic scheduler with no vreg liveness or DAG mutation passes.
-ScheduleDAGMI *createGenericSchedPostRA(MachineSchedContext *C);
+LLVM_FUNC_ABI ScheduleDAGMI *createGenericSchedPostRA(MachineSchedContext *C);
 
-std::unique_ptr<ScheduleDAGMutation>
+LLVM_FUNC_ABI std::unique_ptr<ScheduleDAGMutation>
 createLoadClusterDAGMutation(const TargetInstrInfo *TII,
                              const TargetRegisterInfo *TRI);
 
-std::unique_ptr<ScheduleDAGMutation>
+LLVM_FUNC_ABI std::unique_ptr<ScheduleDAGMutation>
 createStoreClusterDAGMutation(const TargetInstrInfo *TII,
                               const TargetRegisterInfo *TRI);
 
-std::unique_ptr<ScheduleDAGMutation>
+LLVM_FUNC_ABI std::unique_ptr<ScheduleDAGMutation>
 createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
                                const TargetRegisterInfo *TRI);
 

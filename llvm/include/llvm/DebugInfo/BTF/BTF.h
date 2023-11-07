@@ -76,7 +76,7 @@ enum {
 };
 
 /// The .BTF section header definition.
-struct Header {
+struct LLVM_CLASS_ABI Header {
   uint16_t Magic;  ///< Magic value
   uint8_t Version; ///< Version number
   uint8_t Flags;   ///< Extra flags
@@ -104,7 +104,7 @@ constexpr uint32_t ENUM_SIGNED_FLAG = 1u << 31;
 
 /// The BTF common type definition. Different kinds may have
 /// additional information after this structure data.
-struct CommonType {
+struct LLVM_CLASS_ABI CommonType {
   /// Type name offset in the string table.
   uint32_t NameOff;
 
@@ -151,7 +151,7 @@ enum : uint8_t {
 /// BTF_KIND_ENUM is followed by multiple "struct BTFEnum".
 /// The exact number of btf_enum is stored in the vlen (of the
 /// info in "struct CommonType").
-struct BTFEnum {
+struct LLVM_CLASS_ABI BTFEnum {
   uint32_t NameOff; ///< Enum name offset in the string table
   int32_t Val;      ///< Enum member value
 };
@@ -159,14 +159,14 @@ struct BTFEnum {
 /// BTF_KIND_ENUM64 is followed by multiple "struct BTFEnum64".
 /// The exact number of BTFEnum64 is stored in the vlen (of the
 /// info in "struct CommonType").
-struct BTFEnum64 {
+struct LLVM_CLASS_ABI BTFEnum64 {
   uint32_t NameOff;  ///< Enum name offset in the string table
   uint32_t Val_Lo32; ///< Enum member lo32 value
   uint32_t Val_Hi32; ///< Enum member hi32 value
 };
 
 /// BTF_KIND_ARRAY is followed by one "struct BTFArray".
-struct BTFArray {
+struct LLVM_CLASS_ABI BTFArray {
   uint32_t ElemType;  ///< Element type
   uint32_t IndexType; ///< Index type
   uint32_t Nelems;    ///< Number of elements for this array
@@ -182,7 +182,7 @@ struct BTFArray {
 /// and BitFieldSize(bits 24 - 31) with BitFieldSize = 0
 /// for non bitfield members. Otherwise, the Offset
 /// represents the BitOffset.
-struct BTFMember {
+struct LLVM_CLASS_ABI BTFMember {
   uint32_t NameOff; ///< Member name offset in the string table
   uint32_t Type;    ///< Member type
   uint32_t Offset;  ///< BitOffset or BitFieldSize+BitOffset
@@ -191,7 +191,7 @@ struct BTFMember {
 /// BTF_KIND_FUNC_PROTO are followed by multiple "struct BTFParam".
 /// The exist number of BTFParam is stored in the vlen (of the info
 /// in "struct CommonType").
-struct BTFParam {
+struct LLVM_CLASS_ABI BTFParam {
   uint32_t NameOff;
   uint32_t Type;
 };
@@ -213,14 +213,14 @@ enum : uint8_t {
 /// BTF_KIND_DATASEC are followed by multiple "struct BTFDataSecVar".
 /// The exist number of BTFDataSec is stored in the vlen (of the info
 /// in "struct CommonType").
-struct BTFDataSec {
+struct LLVM_CLASS_ABI BTFDataSec {
   uint32_t Type;   ///< A BTF_KIND_VAR type
   uint32_t Offset; ///< In-section offset
   uint32_t Size;   ///< Occupied memory size
 };
 
 /// The .BTF.ext section header definition.
-struct ExtHeader {
+struct LLVM_CLASS_ABI ExtHeader {
   uint16_t Magic;
   uint8_t Version;
   uint8_t Flags;
@@ -235,19 +235,19 @@ struct ExtHeader {
 };
 
 /// Specifying one function info.
-struct BPFFuncInfo {
+struct LLVM_CLASS_ABI BPFFuncInfo {
   uint32_t InsnOffset; ///< Byte offset in the section
   uint32_t TypeId;     ///< Type id referring to .BTF type section
 };
 
 /// Specifying function info's in one section.
-struct SecFuncInfo {
+struct LLVM_CLASS_ABI SecFuncInfo {
   uint32_t SecNameOff;  ///< Section name index in the .BTF string table
   uint32_t NumFuncInfo; ///< Number of func info's in this section
 };
 
 /// Specifying one line info.
-struct BPFLineInfo {
+struct LLVM_CLASS_ABI BPFLineInfo {
   uint32_t InsnOffset;  ///< Byte offset in this section
   uint32_t FileNameOff; ///< File name index in the .BTF string table
   uint32_t LineOff;     ///< Line index in the .BTF string table
@@ -258,13 +258,13 @@ struct BPFLineInfo {
 };
 
 /// Specifying line info's in one section.
-struct SecLineInfo {
+struct LLVM_CLASS_ABI SecLineInfo {
   uint32_t SecNameOff;  ///< Section name index in the .BTF string table
   uint32_t NumLineInfo; ///< Number of line info's in this section
 };
 
 /// Specifying one offset relocation.
-struct BPFFieldReloc {
+struct LLVM_CLASS_ABI BPFFieldReloc {
   uint32_t InsnOffset;    ///< Byte offset in this section
   uint32_t TypeID;        ///< TypeID for the relocation
   uint32_t OffsetNameOff; ///< The string to traverse types
@@ -272,7 +272,7 @@ struct BPFFieldReloc {
 };
 
 /// Specifying offset relocation's in one section.
-struct SecFieldReloc {
+struct LLVM_CLASS_ABI SecFieldReloc {
   uint32_t SecNameOff;    ///< Section name index in the .BTF string table
   uint32_t NumFieldReloc; ///< Number of offset reloc's in this section
 };
@@ -313,7 +313,7 @@ enum PatchableRelocKind : uint32_t {
     return ArrayRef<Type>(getTrailingObjects<Type>(), getVlen());              \
   }
 
-struct ArrayType final : CommonType,
+struct LLVM_CLASS_ABI ArrayType final : CommonType,
                          private TrailingObjects<ArrayType, BTFArray> {
   friend TrailingObjects;
   BTF_DEFINE_TAIL(BTFArray, getArray)
@@ -323,7 +323,7 @@ struct ArrayType final : CommonType,
   }
 };
 
-struct StructType final : CommonType,
+struct LLVM_CLASS_ABI StructType final : CommonType,
                           private TrailingObjects<StructType, BTFMember> {
   friend TrailingObjects;
   BTF_DEFINE_TAIL_ARR(BTFMember, members)
@@ -333,7 +333,7 @@ struct StructType final : CommonType,
   }
 };
 
-struct EnumType final : CommonType, private TrailingObjects<EnumType, BTFEnum> {
+struct LLVM_CLASS_ABI EnumType final : CommonType, private TrailingObjects<EnumType, BTFEnum> {
   friend TrailingObjects;
   BTF_DEFINE_TAIL_ARR(BTFEnum, values)
 
@@ -342,7 +342,7 @@ struct EnumType final : CommonType, private TrailingObjects<EnumType, BTFEnum> {
   }
 };
 
-struct Enum64Type final : CommonType,
+struct LLVM_CLASS_ABI Enum64Type final : CommonType,
                           private TrailingObjects<Enum64Type, BTFEnum64> {
   friend TrailingObjects;
   BTF_DEFINE_TAIL_ARR(BTFEnum64, values)

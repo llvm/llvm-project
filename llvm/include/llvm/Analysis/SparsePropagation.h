@@ -27,7 +27,7 @@ namespace llvm {
 
 /// A template for translating between LLVM Values and LatticeKeys. Clients must
 /// provide a specialization of LatticeKeyInfo for their LatticeKey type.
-template <class LatticeKey> struct LatticeKeyInfo {
+template <class LatticeKey> struct LLVM_CLASS_ABI LatticeKeyInfo {
   // static inline Value *getValueFromLatticeKey(LatticeKey Key);
   // static inline LatticeKey getLatticeKeyFromValue(Value *V);
 };
@@ -45,7 +45,7 @@ class SparseSolver;
 /// Internally, the generic solver currently uses a DenseMap to map lattice keys
 /// to lattice values.  If the lattice key is a non-standard type, a
 /// specialization of DenseMapInfo must be provided.
-template <class LatticeKey, class LatticeVal> class AbstractLatticeFunction {
+template <class LatticeKey, class LatticeVal> class LLVM_CLASS_ABI AbstractLatticeFunction {
 private:
   LatticeVal UndefVal, OverdefinedVal, UntrackedVal;
 
@@ -111,7 +111,7 @@ public:
 /// SparseSolver - This class is a general purpose solver for Sparse Conditional
 /// Propagation with a programmable lattice function.
 template <class LatticeKey, class LatticeVal, class KeyInfo>
-class SparseSolver {
+class LLVM_CLASS_ABI SparseSolver {
 
   /// LatticeFunc - This is the object that knows the lattice and how to
   /// compute transfer functions.

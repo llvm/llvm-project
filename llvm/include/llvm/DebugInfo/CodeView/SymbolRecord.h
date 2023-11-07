@@ -27,7 +27,7 @@
 namespace llvm {
 namespace codeview {
 
-class SymbolRecord {
+class LLVM_CLASS_ABI SymbolRecord {
 protected:
   explicit SymbolRecord(SymbolRecordKind Kind) : Kind(Kind) {}
 
@@ -39,7 +39,7 @@ public:
 
 // S_GPROC32, S_LPROC32, S_GPROC32_ID, S_LPROC32_ID, S_LPROC32_DPC or
 // S_LPROC32_DPC_ID
-class ProcSym : public SymbolRecord {
+class LLVM_CLASS_ABI ProcSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 32;
 
 public:
@@ -67,7 +67,7 @@ public:
 };
 
 // S_THUNK32
-class Thunk32Sym : public SymbolRecord {
+class LLVM_CLASS_ABI Thunk32Sym : public SymbolRecord {
 public:
   explicit Thunk32Sym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   Thunk32Sym(SymbolRecordKind Kind, uint32_t RecordOffset)
@@ -87,7 +87,7 @@ public:
 };
 
 // S_TRAMPOLINE
-class TrampolineSym : public SymbolRecord {
+class LLVM_CLASS_ABI TrampolineSym : public SymbolRecord {
 public:
   explicit TrampolineSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   TrampolineSym(SymbolRecordKind Kind, uint32_t RecordOffset)
@@ -104,7 +104,7 @@ public:
 };
 
 // S_SECTION
-class SectionSym : public SymbolRecord {
+class LLVM_CLASS_ABI SectionSym : public SymbolRecord {
 public:
   explicit SectionSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   SectionSym(SymbolRecordKind Kind, uint32_t RecordOffset)
@@ -121,7 +121,7 @@ public:
 };
 
 // S_COFFGROUP
-class CoffGroupSym : public SymbolRecord {
+class LLVM_CLASS_ABI CoffGroupSym : public SymbolRecord {
 public:
   explicit CoffGroupSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   CoffGroupSym(SymbolRecordKind Kind, uint32_t RecordOffset)
@@ -136,7 +136,7 @@ public:
   uint32_t RecordOffset = 0;
 };
 
-class ScopeEndSym : public SymbolRecord {
+class LLVM_CLASS_ABI ScopeEndSym : public SymbolRecord {
 public:
   explicit ScopeEndSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   ScopeEndSym(SymbolRecordKind Kind, uint32_t RecordOffset)
@@ -145,7 +145,7 @@ public:
   uint32_t RecordOffset = 0;
 };
 
-class JumpTableSym : public SymbolRecord {
+class LLVM_CLASS_ABI JumpTableSym : public SymbolRecord {
 public:
   explicit JumpTableSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   JumpTableSym(uint32_t RecordOffset)
@@ -166,7 +166,7 @@ public:
   uint32_t RecordOffset = 0;
 };
 
-class CallerSym : public SymbolRecord {
+class LLVM_CLASS_ABI CallerSym : public SymbolRecord {
 public:
   explicit CallerSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   CallerSym(SymbolRecordKind Kind, uint32_t RecordOffset)
@@ -177,7 +177,7 @@ public:
   uint32_t RecordOffset = 0;
 };
 
-struct DecodedAnnotation {
+struct LLVM_CLASS_ABI DecodedAnnotation {
   StringRef Name;
   ArrayRef<uint8_t> Bytes;
   BinaryAnnotationsOpCode OpCode = BinaryAnnotationsOpCode::Invalid;
@@ -186,7 +186,7 @@ struct DecodedAnnotation {
   int32_t S1 = 0;
 };
 
-struct BinaryAnnotationIterator
+struct LLVM_CLASS_ABI BinaryAnnotationIterator
     : public iterator_facade_base<BinaryAnnotationIterator,
                                   std::forward_iterator_tag,
                                   DecodedAnnotation> {
@@ -351,7 +351,7 @@ private:
 };
 
 // S_INLINESITE
-class InlineSiteSym : public SymbolRecord {
+class LLVM_CLASS_ABI InlineSiteSym : public SymbolRecord {
 public:
   explicit InlineSiteSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit InlineSiteSym(uint32_t RecordOffset)
@@ -371,7 +371,7 @@ public:
   uint32_t RecordOffset = 0;
 };
 
-struct PublicSym32Header {
+struct LLVM_CLASS_ABI PublicSym32Header {
   ulittle32_t Flags;
   ulittle32_t Offset;
   ulittle16_t Segment;
@@ -379,7 +379,7 @@ struct PublicSym32Header {
 };
 
 // S_PUB32
-class PublicSym32 : public SymbolRecord {
+class LLVM_CLASS_ABI PublicSym32 : public SymbolRecord {
 public:
   PublicSym32() : SymbolRecord(SymbolRecordKind::PublicSym32) {}
   explicit PublicSym32(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
@@ -396,7 +396,7 @@ public:
 };
 
 // S_REGISTER
-class RegisterSym : public SymbolRecord {
+class LLVM_CLASS_ABI RegisterSym : public SymbolRecord {
 public:
   explicit RegisterSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit RegisterSym(uint32_t RecordOffset)
@@ -411,7 +411,7 @@ public:
 };
 
 // S_PROCREF, S_LPROCREF
-class ProcRefSym : public SymbolRecord {
+class LLVM_CLASS_ABI ProcRefSym : public SymbolRecord {
 public:
   explicit ProcRefSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit ProcRefSym(uint32_t RecordOffset)
@@ -428,7 +428,7 @@ public:
 };
 
 // S_LOCAL
-class LocalSym : public SymbolRecord {
+class LLVM_CLASS_ABI LocalSym : public SymbolRecord {
 public:
   explicit LocalSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit LocalSym(uint32_t RecordOffset)
@@ -441,13 +441,13 @@ public:
   uint32_t RecordOffset = 0;
 };
 
-struct LocalVariableAddrRange {
+struct LLVM_CLASS_ABI LocalVariableAddrRange {
   uint32_t OffsetStart = 0;
   uint16_t ISectStart = 0;
   uint16_t Range = 0;
 };
 
-struct LocalVariableAddrGap {
+struct LLVM_CLASS_ABI LocalVariableAddrGap {
   uint16_t GapStartOffset = 0;
   uint16_t Range = 0;
 };
@@ -455,7 +455,7 @@ struct LocalVariableAddrGap {
 enum : uint16_t { MaxDefRange = 0xf000 };
 
 // S_DEFRANGE
-class DefRangeSym : public SymbolRecord {
+class LLVM_CLASS_ABI DefRangeSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 8;
 
 public:
@@ -476,7 +476,7 @@ public:
 };
 
 // S_DEFRANGE_SUBFIELD
-class DefRangeSubfieldSym : public SymbolRecord {
+class LLVM_CLASS_ABI DefRangeSubfieldSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 12;
 
 public:
@@ -497,13 +497,13 @@ public:
   uint32_t RecordOffset = 0;
 };
 
-struct DefRangeRegisterHeader {
+struct LLVM_CLASS_ABI DefRangeRegisterHeader {
   ulittle16_t Register;
   ulittle16_t MayHaveNoName;
 };
 
 // S_DEFRANGE_REGISTER
-class DefRangeRegisterSym : public SymbolRecord {
+class LLVM_CLASS_ABI DefRangeRegisterSym : public SymbolRecord {
 public:
   explicit DefRangeRegisterSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit DefRangeRegisterSym(uint32_t RecordOffset)
@@ -519,14 +519,14 @@ public:
   uint32_t RecordOffset = 0;
 };
 
-struct DefRangeSubfieldRegisterHeader {
+struct LLVM_CLASS_ABI DefRangeSubfieldRegisterHeader {
   ulittle16_t Register;
   ulittle16_t MayHaveNoName;
   ulittle32_t OffsetInParent;
 };
 
 // S_DEFRANGE_SUBFIELD_REGISTER
-class DefRangeSubfieldRegisterSym : public SymbolRecord {
+class LLVM_CLASS_ABI DefRangeSubfieldRegisterSym : public SymbolRecord {
 public:
   explicit DefRangeSubfieldRegisterSym(SymbolRecordKind Kind)
       : SymbolRecord(Kind) {}
@@ -543,12 +543,12 @@ public:
   uint32_t RecordOffset = 0;
 };
 
-struct DefRangeFramePointerRelHeader {
+struct LLVM_CLASS_ABI DefRangeFramePointerRelHeader {
   little32_t Offset;
 };
 
 // S_DEFRANGE_FRAMEPOINTER_REL
-class DefRangeFramePointerRelSym : public SymbolRecord {
+class LLVM_CLASS_ABI DefRangeFramePointerRelSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 8;
 
 public:
@@ -569,14 +569,14 @@ public:
   uint32_t RecordOffset = 0;
 };
 
-struct DefRangeRegisterRelHeader {
+struct LLVM_CLASS_ABI DefRangeRegisterRelHeader {
   ulittle16_t Register;
   ulittle16_t Flags;
   little32_t BasePointerOffset;
 };
 
 // S_DEFRANGE_REGISTER_REL
-class DefRangeRegisterRelSym : public SymbolRecord {
+class LLVM_CLASS_ABI DefRangeRegisterRelSym : public SymbolRecord {
 public:
   explicit DefRangeRegisterRelSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit DefRangeRegisterRelSym(uint32_t RecordOffset)
@@ -605,7 +605,7 @@ public:
 };
 
 // S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE
-class DefRangeFramePointerRelFullScopeSym : public SymbolRecord {
+class LLVM_CLASS_ABI DefRangeFramePointerRelFullScopeSym : public SymbolRecord {
 public:
   explicit DefRangeFramePointerRelFullScopeSym(SymbolRecordKind Kind)
       : SymbolRecord(Kind) {}
@@ -619,7 +619,7 @@ public:
 };
 
 // S_BLOCK32
-class BlockSym : public SymbolRecord {
+class LLVM_CLASS_ABI BlockSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 16;
 
 public:
@@ -642,7 +642,7 @@ public:
 };
 
 // S_LABEL32
-class LabelSym : public SymbolRecord {
+class LLVM_CLASS_ABI LabelSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 4;
 
 public:
@@ -663,7 +663,7 @@ public:
 };
 
 // S_OBJNAME
-class ObjNameSym : public SymbolRecord {
+class LLVM_CLASS_ABI ObjNameSym : public SymbolRecord {
 public:
   explicit ObjNameSym() : SymbolRecord(SymbolRecordKind::ObjNameSym) {}
   explicit ObjNameSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
@@ -678,7 +678,7 @@ public:
 };
 
 // S_ENVBLOCK
-class EnvBlockSym : public SymbolRecord {
+class LLVM_CLASS_ABI EnvBlockSym : public SymbolRecord {
 public:
   explicit EnvBlockSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit EnvBlockSym(uint32_t RecordOffset)
@@ -691,7 +691,7 @@ public:
 };
 
 // S_EXPORT
-class ExportSym : public SymbolRecord {
+class LLVM_CLASS_ABI ExportSym : public SymbolRecord {
 public:
   explicit ExportSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit ExportSym(uint32_t RecordOffset)
@@ -705,7 +705,7 @@ public:
 };
 
 // S_FILESTATIC
-class FileStaticSym : public SymbolRecord {
+class LLVM_CLASS_ABI FileStaticSym : public SymbolRecord {
 public:
   explicit FileStaticSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit FileStaticSym(uint32_t RecordOffset)
@@ -721,7 +721,7 @@ public:
 };
 
 // S_COMPILE2
-class Compile2Sym : public SymbolRecord {
+class LLVM_CLASS_ABI Compile2Sym : public SymbolRecord {
 public:
   explicit Compile2Sym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit Compile2Sym(uint32_t RecordOffset)
@@ -746,7 +746,7 @@ public:
 };
 
 // S_COMPILE3
-class Compile3Sym : public SymbolRecord {
+class LLVM_CLASS_ABI Compile3Sym : public SymbolRecord {
 public:
   Compile3Sym() : SymbolRecord(SymbolRecordKind::Compile3Sym) {}
   explicit Compile3Sym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
@@ -786,7 +786,7 @@ public:
 };
 
 // S_FRAMEPROC
-class FrameProcSym : public SymbolRecord {
+class LLVM_CLASS_ABI FrameProcSym : public SymbolRecord {
 public:
   explicit FrameProcSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit FrameProcSym(uint32_t RecordOffset)
@@ -819,7 +819,7 @@ private:
 };
 
 // S_CALLSITEINFO
-class CallSiteInfoSym : public SymbolRecord {
+class LLVM_CLASS_ABI CallSiteInfoSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 4;
 
 public:
@@ -839,7 +839,7 @@ public:
 };
 
 // S_HEAPALLOCSITE
-class HeapAllocationSiteSym : public SymbolRecord {
+class LLVM_CLASS_ABI HeapAllocationSiteSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 4;
 
 public:
@@ -861,7 +861,7 @@ public:
 };
 
 // S_FRAMECOOKIE
-class FrameCookieSym : public SymbolRecord {
+class LLVM_CLASS_ABI FrameCookieSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 4;
 
 public:
@@ -882,7 +882,7 @@ public:
 };
 
 // S_UDT, S_COBOLUDT
-class UDTSym : public SymbolRecord {
+class LLVM_CLASS_ABI UDTSym : public SymbolRecord {
 public:
   explicit UDTSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit UDTSym(uint32_t RecordOffset)
@@ -895,7 +895,7 @@ public:
 };
 
 // S_BUILDINFO
-class BuildInfoSym : public SymbolRecord {
+class LLVM_CLASS_ABI BuildInfoSym : public SymbolRecord {
 public:
   explicit BuildInfoSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit BuildInfoSym(uint32_t RecordOffset)
@@ -908,7 +908,7 @@ public:
 };
 
 // S_BPREL32
-class BPRelativeSym : public SymbolRecord {
+class LLVM_CLASS_ABI BPRelativeSym : public SymbolRecord {
 public:
   explicit BPRelativeSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit BPRelativeSym(uint32_t RecordOffset)
@@ -923,7 +923,7 @@ public:
 };
 
 // S_REGREL32
-class RegRelativeSym : public SymbolRecord {
+class LLVM_CLASS_ABI RegRelativeSym : public SymbolRecord {
 public:
   explicit RegRelativeSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit RegRelativeSym(uint32_t RecordOffset)
@@ -939,7 +939,7 @@ public:
 };
 
 // S_CONSTANT, S_MANCONSTANT
-class ConstantSym : public SymbolRecord {
+class LLVM_CLASS_ABI ConstantSym : public SymbolRecord {
 public:
   explicit ConstantSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit ConstantSym(uint32_t RecordOffset)
@@ -954,7 +954,7 @@ public:
 };
 
 // S_LDATA32, S_GDATA32, S_LMANDATA, S_GMANDATA
-class DataSym : public SymbolRecord {
+class LLVM_CLASS_ABI DataSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 8;
 
 public:
@@ -975,7 +975,7 @@ public:
 };
 
 // S_LTHREAD32, S_GTHREAD32
-class ThreadLocalDataSym : public SymbolRecord {
+class LLVM_CLASS_ABI ThreadLocalDataSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 8;
 
 public:
@@ -997,7 +997,7 @@ public:
 };
 
 // S_UNAMESPACE
-class UsingNamespaceSym : public SymbolRecord {
+class LLVM_CLASS_ABI UsingNamespaceSym : public SymbolRecord {
 public:
   explicit UsingNamespaceSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit UsingNamespaceSym(uint32_t RecordOffset)
@@ -1010,7 +1010,7 @@ public:
 };
 
 // S_ANNOTATION
-class AnnotationSym : public SymbolRecord {
+class LLVM_CLASS_ABI AnnotationSym : public SymbolRecord {
 public:
   explicit AnnotationSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit AnnotationSym(uint32_t RecordOffset)
@@ -1024,7 +1024,7 @@ public:
   uint32_t RecordOffset = 0;
 };
 
-Expected<CVSymbol> readSymbolFromStream(BinaryStreamRef Stream,
+LLVM_FUNC_ABI Expected<CVSymbol> readSymbolFromStream(BinaryStreamRef Stream,
                                         uint32_t Offset);
 
 } // end namespace codeview

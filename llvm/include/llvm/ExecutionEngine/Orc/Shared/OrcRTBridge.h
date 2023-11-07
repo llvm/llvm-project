@@ -22,33 +22,33 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
-extern const char *SimpleExecutorDylibManagerInstanceName;
-extern const char *SimpleExecutorDylibManagerOpenWrapperName;
-extern const char *SimpleExecutorDylibManagerLookupWrapperName;
+LLVM_FUNC_ABI extern const char *SimpleExecutorDylibManagerInstanceName;
+LLVM_FUNC_ABI extern const char *SimpleExecutorDylibManagerOpenWrapperName;
+LLVM_FUNC_ABI extern const char *SimpleExecutorDylibManagerLookupWrapperName;
 
-extern const char *SimpleExecutorMemoryManagerInstanceName;
-extern const char *SimpleExecutorMemoryManagerReserveWrapperName;
-extern const char *SimpleExecutorMemoryManagerFinalizeWrapperName;
-extern const char *SimpleExecutorMemoryManagerDeallocateWrapperName;
+LLVM_FUNC_ABI extern const char *SimpleExecutorMemoryManagerInstanceName;
+LLVM_FUNC_ABI extern const char *SimpleExecutorMemoryManagerReserveWrapperName;
+LLVM_FUNC_ABI extern const char *SimpleExecutorMemoryManagerFinalizeWrapperName;
+LLVM_FUNC_ABI extern const char *SimpleExecutorMemoryManagerDeallocateWrapperName;
 
-extern const char *ExecutorSharedMemoryMapperServiceInstanceName;
-extern const char *ExecutorSharedMemoryMapperServiceReserveWrapperName;
-extern const char *ExecutorSharedMemoryMapperServiceInitializeWrapperName;
-extern const char *ExecutorSharedMemoryMapperServiceDeinitializeWrapperName;
-extern const char *ExecutorSharedMemoryMapperServiceReleaseWrapperName;
+LLVM_FUNC_ABI extern const char *ExecutorSharedMemoryMapperServiceInstanceName;
+LLVM_FUNC_ABI extern const char *ExecutorSharedMemoryMapperServiceReserveWrapperName;
+LLVM_FUNC_ABI extern const char *ExecutorSharedMemoryMapperServiceInitializeWrapperName;
+LLVM_FUNC_ABI extern const char *ExecutorSharedMemoryMapperServiceDeinitializeWrapperName;
+LLVM_FUNC_ABI extern const char *ExecutorSharedMemoryMapperServiceReleaseWrapperName;
 
-extern const char *MemoryWriteUInt8sWrapperName;
-extern const char *MemoryWriteUInt16sWrapperName;
-extern const char *MemoryWriteUInt32sWrapperName;
-extern const char *MemoryWriteUInt64sWrapperName;
-extern const char *MemoryWriteBuffersWrapperName;
+LLVM_FUNC_ABI extern const char *MemoryWriteUInt8sWrapperName;
+LLVM_FUNC_ABI extern const char *MemoryWriteUInt16sWrapperName;
+LLVM_FUNC_ABI extern const char *MemoryWriteUInt32sWrapperName;
+LLVM_FUNC_ABI extern const char *MemoryWriteUInt64sWrapperName;
+LLVM_FUNC_ABI extern const char *MemoryWriteBuffersWrapperName;
 
-extern const char *RegisterEHFrameSectionWrapperName;
-extern const char *DeregisterEHFrameSectionWrapperName;
+LLVM_FUNC_ABI extern const char *RegisterEHFrameSectionWrapperName;
+LLVM_FUNC_ABI extern const char *DeregisterEHFrameSectionWrapperName;
 
-extern const char *RunAsMainWrapperName;
-extern const char *RunAsVoidFunctionWrapperName;
-extern const char *RunAsIntFunctionWrapperName;
+LLVM_FUNC_ABI extern const char *RunAsMainWrapperName;
+LLVM_FUNC_ABI extern const char *RunAsVoidFunctionWrapperName;
+LLVM_FUNC_ABI extern const char *RunAsIntFunctionWrapperName;
 
 using SPSSimpleExecutorDylibManagerOpenSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,

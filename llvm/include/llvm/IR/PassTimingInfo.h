@@ -32,17 +32,17 @@ class raw_ostream;
 /// If -time-passes has been specified, report the timings immediately and then
 /// reset the timers to zero. By default it uses the stream created by
 /// CreateInfoOutputFile().
-void reportAndResetTimings(raw_ostream *OutStream = nullptr);
+LLVM_FUNC_ABI void reportAndResetTimings(raw_ostream *OutStream = nullptr);
 
 /// Request the timer for this legacy-pass-manager's pass instance.
-Timer *getPassTimer(Pass *);
+LLVM_FUNC_ABI Timer *getPassTimer(Pass *);
 
 /// This class implements -time-passes functionality for new pass manager.
 /// It provides the pass-instrumentation callbacks that measure the pass
 /// execution time. They collect timing info into individual timers as
 /// passes are being run. At the end of its life-time it prints the resulting
 /// timing report.
-class TimePassesHandler {
+class LLVM_CLASS_ABI TimePassesHandler {
   /// Value of this type is capable of uniquely identifying pass invocations.
   /// It is a pair of string Pass-Identifier (which for now is common
   /// to all the instance of a given pass) + sequential invocation counter.

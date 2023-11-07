@@ -68,7 +68,7 @@ namespace llvm {
 ///
 /// This class defines virtual methods, dynamicClassID and isA, that enable
 /// type comparisons.
-class RTTIRoot {
+class LLVM_CLASS_ABI RTTIRoot {
 public:
   virtual ~RTTIRoot() = default;
 
@@ -113,7 +113,7 @@ private:
 /// };
 ///
 template <typename ThisT, typename ParentT>
-class RTTIExtends : public ParentT {
+class LLVM_CLASS_ABI RTTIExtends : public ParentT {
 public:
   // Inherit constructors from ParentT.
   using ParentT::ParentT;

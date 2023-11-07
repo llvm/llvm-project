@@ -22,7 +22,7 @@ namespace pdb {
 struct PublicsStreamHeader;
 struct SectionOffset;
 
-class PublicsStream {
+class LLVM_CLASS_ABI PublicsStream {
 public:
   PublicsStream(std::unique_ptr<msf::MappedBlockStream> Stream);
   ~PublicsStream();

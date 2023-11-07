@@ -23,13 +23,13 @@
 
 namespace llvm {
 namespace detail {
-struct ErrorHolder {
+struct LLVM_CLASS_ABI ErrorHolder {
   std::vector<std::shared_ptr<ErrorInfoBase>> Infos;
 
   bool Success() const { return Infos.empty(); }
 };
 
-template <typename T> struct ExpectedHolder : public ErrorHolder {
+template <typename T> struct LLVM_CLASS_ABI ExpectedHolder : public ErrorHolder {
   ExpectedHolder(ErrorHolder Err, Expected<T> &Exp)
       : ErrorHolder(std::move(Err)), Exp(Exp) {}
 
@@ -59,7 +59,7 @@ void PrintTo(const ExpectedHolder<T> &Item, std::ostream *Out) {
   }
 }
 
-template <class InnerMatcher> class ValueIsMatcher {
+template <class InnerMatcher> class LLVM_CLASS_ABI ValueIsMatcher {
 public:
   explicit ValueIsMatcher(InnerMatcher ValueMatcher)
       : ValueMatcher(ValueMatcher) {}
@@ -107,11 +107,11 @@ detail::ValueIsMatcher<InnerMatcher> ValueIs(const InnerMatcher &ValueMatcher) {
 }
 namespace unittest {
 
-SmallString<128> getInputFileDirectory(const char *Argv0);
+LLVM_FUNC_ABI SmallString<128> getInputFileDirectory(const char *Argv0);
 
 /// A RAII object that creates a temporary directory upon initialization and
 /// removes it upon destruction.
-class TempDir {
+class LLVM_CLASS_ABI TempDir {
   SmallString<128> Path;
 
 public:
@@ -171,7 +171,7 @@ public:
 /// removes it upon destruction.
 ///
 /// The link may be a soft or a hard link, depending on the platform.
-class TempLink {
+class LLVM_CLASS_ABI TempLink {
   SmallString<128> Path;
 
 public:
@@ -201,7 +201,7 @@ public:
 
 /// A RAII object that creates a file upon initialization and
 /// removes it upon destruction.
-class TempFile {
+class LLVM_CLASS_ABI TempFile {
   SmallString<128> Path;
 
 public:

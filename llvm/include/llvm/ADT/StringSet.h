@@ -21,7 +21,7 @@ namespace llvm {
 
 /// StringSet - A wrapper for StringMap that provides set-like functionality.
 template <class AllocatorTy = MallocAllocator>
-class StringSet : public StringMap<std::nullopt_t, AllocatorTy> {
+class LLVM_CLASS_ABI StringSet : public StringMap<std::nullopt_t, AllocatorTy> {
   using Base = StringMap<std::nullopt_t, AllocatorTy>;
 
 public:

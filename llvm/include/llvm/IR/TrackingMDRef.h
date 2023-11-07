@@ -23,7 +23,7 @@ namespace llvm {
 /// Tracking metadata reference.
 ///
 /// This class behaves like \a TrackingVH, but for metadata.
-class TrackingMDRef {
+class LLVM_CLASS_ABI TrackingMDRef {
   Metadata *MD = nullptr;
 
 public:
@@ -104,7 +104,7 @@ private:
 ///
 /// Track refererences of a particular type.  It's useful to use this for \a
 /// MDNode and \a ValueAsMetadata.
-template <class T> class TypedTrackingMDRef {
+template <class T> class LLVM_CLASS_ABI TypedTrackingMDRef {
   TrackingMDRef Ref;
 
 public:
@@ -143,13 +143,13 @@ using TrackingMDNodeRef = TypedTrackingMDRef<MDNode>;
 using TrackingValueAsMetadataRef = TypedTrackingMDRef<ValueAsMetadata>;
 
 // Expose the underlying metadata to casting.
-template <> struct simplify_type<TrackingMDRef> {
+template <> struct LLVM_CLASS_ABI simplify_type<TrackingMDRef> {
   using SimpleType = Metadata *;
 
   static SimpleType getSimplifiedValue(TrackingMDRef &MD) { return MD.get(); }
 };
 
-template <> struct simplify_type<const TrackingMDRef> {
+template <> struct LLVM_CLASS_ABI simplify_type<const TrackingMDRef> {
   using SimpleType = Metadata *;
 
   static SimpleType getSimplifiedValue(const TrackingMDRef &MD) {
@@ -157,7 +157,7 @@ template <> struct simplify_type<const TrackingMDRef> {
   }
 };
 
-template <class T> struct simplify_type<TypedTrackingMDRef<T>> {
+template <class T> struct LLVM_CLASS_ABI simplify_type<TypedTrackingMDRef<T>> {
   using SimpleType = T *;
 
   static SimpleType getSimplifiedValue(TypedTrackingMDRef<T> &MD) {
@@ -165,7 +165,7 @@ template <class T> struct simplify_type<TypedTrackingMDRef<T>> {
   }
 };
 
-template <class T> struct simplify_type<const TypedTrackingMDRef<T>> {
+template <class T> struct LLVM_CLASS_ABI simplify_type<const TypedTrackingMDRef<T>> {
   using SimpleType = T *;
 
   static SimpleType getSimplifiedValue(const TypedTrackingMDRef<T> &MD) {

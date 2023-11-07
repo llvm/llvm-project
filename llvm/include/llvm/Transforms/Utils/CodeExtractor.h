@@ -44,7 +44,7 @@ class Value;
 /// other mutating operations on the IR occur.
 ///
 /// Constructing this object is O(n) in the size of the function.
-class CodeExtractorAnalysisCache {
+class LLVM_CLASS_ABI CodeExtractorAnalysisCache {
   /// The allocas in the function.
   SmallVector<AllocaInst *, 16> Allocas;
 
@@ -83,7 +83,7 @@ public:
   ///    function to arguments.
   /// 3) Add allocas for any scalar outputs, adding all of the outputs' allocas
   ///    as arguments, and inserting stores to the arguments for any scalars.
-  class CodeExtractor {
+  class LLVM_CLASS_ABI CodeExtractor {
     using ValueSet = SetVector<Value *>;
 
     // Various bits of state computed on construction.

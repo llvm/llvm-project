@@ -26,7 +26,7 @@ namespace llvm {
 /// Arrays are allocated in a small number of fixed sizes. For each supported
 /// array size, the ArrayRecycler keeps a free list of available arrays.
 ///
-template <class T, size_t Align = alignof(T)> class ArrayRecycler {
+template <class T, size_t Align = alignof(T)> class LLVM_CLASS_ABI ArrayRecycler {
   // The free list for a given array size is a simple singly linked list.
   // We can't use iplist or Recycler here since those classes can't be copied.
   struct FreeList {

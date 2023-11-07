@@ -21,7 +21,7 @@ namespace codeview {
 
 class DebugStringTableSubsectionRef;
 
-class SymbolVisitorDelegate {
+class LLVM_CLASS_ABI SymbolVisitorDelegate {
 public:
   virtual ~SymbolVisitorDelegate() = default;
 

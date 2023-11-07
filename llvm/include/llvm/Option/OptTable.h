@@ -33,7 +33,7 @@ class Option;
 
 /// Helper for overload resolution while transitioning from
 /// FlagsToInclude/FlagsToExclude APIs to VisibilityMask APIs.
-class Visibility {
+class LLVM_CLASS_ABI Visibility {
   unsigned Mask = ~0U;
 
 public:
@@ -50,7 +50,7 @@ public:
 /// be needed at runtime; the OptTable class maintains enough information to
 /// parse command lines without instantiating Options, while letting other
 /// parts of the driver still use Option instances where convenient.
-class OptTable {
+class LLVM_CLASS_ABI OptTable {
 public:
   /// Entry for a single option instance in the option data table.
   struct Info {
@@ -328,7 +328,7 @@ private:
 };
 
 /// Specialization of OptTable
-class GenericOptTable : public OptTable {
+class LLVM_CLASS_ABI GenericOptTable : public OptTable {
   SmallVector<StringLiteral> PrefixesUnionBuffer;
 
 protected:
@@ -338,7 +338,7 @@ protected:
   }
 };
 
-class PrecomputedOptTable : public OptTable {
+class LLVM_CLASS_ABI PrecomputedOptTable : public OptTable {
   ArrayRef<StringLiteral> PrefixesUnion;
 
 protected:

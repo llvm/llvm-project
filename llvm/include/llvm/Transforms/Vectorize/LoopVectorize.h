@@ -77,12 +77,12 @@ class ScalarEvolution;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 
-extern cl::opt<bool> EnableLoopInterleaving;
-extern cl::opt<bool> EnableLoopVectorization;
+LLVM_FUNC_ABI extern cl::opt<bool> EnableLoopInterleaving;
+LLVM_FUNC_ABI extern cl::opt<bool> EnableLoopVectorization;
 
 /// A marker to determine if extra passes after loop vectorization should be
 /// run.
-struct ShouldRunExtraVectorPasses
+struct LLVM_CLASS_ABI ShouldRunExtraVectorPasses
     : public AnalysisInfoMixin<ShouldRunExtraVectorPasses> {
   static AnalysisKey Key;
   struct Result {
@@ -102,7 +102,7 @@ struct ShouldRunExtraVectorPasses
 /// vectorization, if requested. LoopVectorize caches the
 /// ShouldRunExtraVectorPasses analysis to request extra simplifications, if
 /// they could be beneficial.
-struct ExtraVectorPassManager : public FunctionPassManager {
+struct LLVM_CLASS_ABI ExtraVectorPassManager : public FunctionPassManager {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
     auto PA = PreservedAnalyses::all();
     if (AM.getCachedResult<ShouldRunExtraVectorPasses>(F))
@@ -112,7 +112,7 @@ struct ExtraVectorPassManager : public FunctionPassManager {
   }
 };
 
-struct LoopVectorizeOptions {
+struct LLVM_CLASS_ABI LoopVectorizeOptions {
   /// If false, consider all loops for interleaving.
   /// If true, only loops that explicitly request interleaving are considered.
   bool InterleaveOnlyWhenForced;
@@ -149,7 +149,7 @@ struct LoopVectorizeOptions {
 };
 
 /// Storage for information about made changes.
-struct LoopVectorizeResult {
+struct LLVM_CLASS_ABI LoopVectorizeResult {
   bool MadeAnyChange;
   bool MadeCFGChange;
 
@@ -158,7 +158,7 @@ struct LoopVectorizeResult {
 };
 
 /// The LoopVectorize Pass.
-struct LoopVectorizePass : public PassInfoMixin<LoopVectorizePass> {
+struct LLVM_CLASS_ABI LoopVectorizePass : public PassInfoMixin<LoopVectorizePass> {
 private:
   /// If false, consider all loops for interleaving.
   /// If true, only loops that explicitly request interleaving are considered.
@@ -203,14 +203,14 @@ public:
 /// purposes along with the corresponding optimization remark \p RemarkName.
 /// If \p I is passed, it is an instruction that prevents vectorization.
 /// Otherwise, the loop \p TheLoop is used for the location of the remark.
-void reportVectorizationFailure(const StringRef DebugMsg,
+LLVM_FUNC_ABI void reportVectorizationFailure(const StringRef DebugMsg,
     const StringRef OREMsg, const StringRef ORETag,
     OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr);
 
 /// Reports an informative message: print \p Msg for debugging purposes as well
 /// as an optimization remark. Uses either \p I as location of the remark, or
 /// otherwise \p TheLoop.
-void reportVectorizationInfo(const StringRef OREMsg, const StringRef ORETag,
+LLVM_FUNC_ABI void reportVectorizationInfo(const StringRef OREMsg, const StringRef ORETag,
                              OptimizationRemarkEmitter *ORE, Loop *TheLoop,
                              Instruction *I = nullptr);
 

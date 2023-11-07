@@ -54,7 +54,7 @@ namespace llvm {
 /// and is the default value.
 template <typename T, typename Vector = SmallVector<T, 0>,
           typename Set = DenseSet<T>, unsigned N = 0>
-class SetVector {
+class LLVM_CLASS_ABI SetVector {
   // Much like in SmallPtrSet, this value should not be too high to prevent
   // excessively long linear scans from occuring.
   static_assert(N <= 32, "Small size should be less than or equal to 32!");
@@ -367,7 +367,7 @@ private:
 /// A SetVector that performs no allocations if smaller than
 /// a certain size.
 template <typename T, unsigned N>
-class SmallSetVector : public SetVector<T, SmallVector<T, N>, DenseSet<T>, N> {
+class LLVM_CLASS_ABI SmallSetVector : public SetVector<T, SmallVector<T, N>, DenseSet<T>, N> {
 public:
   SmallSetVector() = default;
 

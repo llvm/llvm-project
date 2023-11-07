@@ -21,10 +21,10 @@
 
 namespace llvm {
 struct SimplifyQuery;
-KnownBits computeKnownBits(const Value *V, unsigned Depth,
+LLVM_FUNC_ABI KnownBits computeKnownBits(const Value *V, unsigned Depth,
                            const SimplifyQuery &Q);
 
-template <typename Arg> class WithCache {
+template <typename Arg> class LLVM_CLASS_ABI WithCache {
   static_assert(std::is_pointer_v<Arg>, "WithCache requires a pointer type!");
 
   using UnderlyingType = std::remove_pointer_t<Arg>;

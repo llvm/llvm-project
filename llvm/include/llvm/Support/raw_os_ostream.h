@@ -22,7 +22,7 @@ namespace llvm {
 /// raw_os_ostream - A raw_ostream that writes to an std::ostream.  This is a
 /// simple adaptor class.  It does not check for output errors; clients should
 /// use the underlying stream to detect errors.
-class raw_os_ostream : public raw_ostream {
+class LLVM_CLASS_ABI raw_os_ostream : public raw_ostream {
   std::ostream &OS;
 
   /// write_impl - See raw_ostream::write_impl.

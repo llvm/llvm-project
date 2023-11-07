@@ -37,7 +37,7 @@ class DominatorTree;
 /// used for book-keeping. That helps to share some common computations between
 /// updates of different uses (which is not the case when traditional SSAUpdater
 /// is used).
-class SSAUpdaterBulk {
+class LLVM_CLASS_ABI SSAUpdaterBulk {
   struct RewriteInfo {
     DenseMap<BasicBlock *, Value *> Defines;
     SmallVector<Use *, 4> Uses;

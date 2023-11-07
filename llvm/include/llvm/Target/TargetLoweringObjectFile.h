@@ -43,7 +43,7 @@ class StringRef;
 class TargetMachine;
 class DSOLocalEquivalent;
 
-class TargetLoweringObjectFile : public MCObjectFileInfo {
+class LLVM_CLASS_ABI TargetLoweringObjectFile : public MCObjectFileInfo {
   /// Name-mangler for global names.
   Mangler *Mang = nullptr;
 

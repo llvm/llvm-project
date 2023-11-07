@@ -41,7 +41,7 @@ enum Value {
 /// The offset to the local area is the offset from the stack pointer on
 /// function entry to the first location where function data (local variables,
 /// spill locations) can be stored.
-class TargetFrameLowering {
+class LLVM_CLASS_ABI TargetFrameLowering {
 public:
   enum StackDirection {
     StackGrowsUp,        // Adding to the stack increases the stack address

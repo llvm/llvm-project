@@ -18,7 +18,7 @@ namespace llvm {
 class MCSymbol;
 
 /// Data for a string pool entry.
-struct DwarfStringPoolEntry {
+struct LLVM_CLASS_ABI DwarfStringPoolEntry {
   static constexpr unsigned NotIndexed = -1;
 
   MCSymbol *Symbol = nullptr;
@@ -29,7 +29,7 @@ struct DwarfStringPoolEntry {
 };
 
 /// DwarfStringPoolEntry with string keeping externally.
-struct DwarfStringPoolEntryWithExtString : public DwarfStringPoolEntry {
+struct LLVM_CLASS_ABI DwarfStringPoolEntryWithExtString : public DwarfStringPoolEntry {
   StringRef String;
 };
 
@@ -47,7 +47,7 @@ struct DwarfStringPoolEntryWithExtString : public DwarfStringPoolEntry {
 /// DwarfStringPoolEntry. It is recommended to use external variant if not all
 /// entries of dwarf string pool have corresponding DwarfStringPoolEntry.
 
-class DwarfStringPoolEntryRef {
+class LLVM_CLASS_ABI DwarfStringPoolEntryRef {
   /// Pointer type for "By value" string entry.
   using ByValStringEntryPtr = const StringMapEntry<DwarfStringPoolEntry> *;
 

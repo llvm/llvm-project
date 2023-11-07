@@ -26,7 +26,7 @@ namespace llvm {
 template<class T,
          class Sequence = std::vector<T>,
          class Compare = std::less<typename Sequence::value_type> >
-class PriorityQueue : public std::priority_queue<T, Sequence, Compare> {
+class LLVM_CLASS_ABI PriorityQueue : public std::priority_queue<T, Sequence, Compare> {
 public:
   explicit PriorityQueue(const Compare &compare = Compare(),
                          const Sequence &sequence = Sequence())

@@ -19,7 +19,7 @@ namespace llvm {
 class raw_ostream;
 
 /// Convenience struct for specifying and reasoning about fast-math flags.
-class FastMathFlags {
+class LLVM_CLASS_ABI FastMathFlags {
 private:
   friend class FPMathOperator;
 

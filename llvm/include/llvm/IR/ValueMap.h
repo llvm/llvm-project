@@ -54,7 +54,7 @@ class ValueMapConstIterator;
 /// ValueMap<>.  User Configs should inherit from this class to be as compatible
 /// as possible with future versions of ValueMap.
 template<typename KeyT, typename MutexT = sys::Mutex>
-struct ValueMapConfig {
+struct LLVM_CLASS_ABI ValueMapConfig {
   using mutex_type = MutexT;
 
   /// If FollowRAUW is true, the ValueMap will update mappings on RAUW. If it's
@@ -82,7 +82,7 @@ struct ValueMapConfig {
 
 /// See the file comment.
 template<typename KeyT, typename ValueT, typename Config =ValueMapConfig<KeyT>>
-class ValueMap {
+class LLVM_CLASS_ABI ValueMap {
   friend class ValueMapCallbackVH<KeyT, ValueT, Config>;
 
   using ValueMapCVH = ValueMapCallbackVH<KeyT, ValueT, Config>;
@@ -238,7 +238,7 @@ private:
 // This CallbackVH updates its ValueMap when the contained Value changes,
 // according to the user's preferences expressed through the Config object.
 template <typename KeyT, typename ValueT, typename Config>
-class ValueMapCallbackVH final : public CallbackVH {
+class LLVM_CLASS_ABI ValueMapCallbackVH final : public CallbackVH {
   friend class ValueMap<KeyT, ValueT, Config>;
   friend struct DenseMapInfo<ValueMapCallbackVH>;
 
@@ -295,7 +295,7 @@ public:
 };
 
 template<typename KeyT, typename ValueT, typename Config>
-struct DenseMapInfo<ValueMapCallbackVH<KeyT, ValueT, Config>> {
+struct LLVM_CLASS_ABI DenseMapInfo<ValueMapCallbackVH<KeyT, ValueT, Config>> {
   using VH = ValueMapCallbackVH<KeyT, ValueT, Config>;
 
   static inline VH getEmptyKey() {
@@ -323,7 +323,7 @@ struct DenseMapInfo<ValueMapCallbackVH<KeyT, ValueT, Config>> {
   }
 };
 
-template <typename DenseMapT, typename KeyT> class ValueMapIterator {
+template <typename DenseMapT, typename KeyT> class LLVM_CLASS_ABI ValueMapIterator {
   using BaseT = typename DenseMapT::iterator;
   using ValueT = typename DenseMapT::mapped_type;
 
@@ -377,7 +377,7 @@ public:
   }
 };
 
-template <typename DenseMapT, typename KeyT> class ValueMapConstIterator {
+template <typename DenseMapT, typename KeyT> class LLVM_CLASS_ABI ValueMapConstIterator {
   using BaseT = typename DenseMapT::const_iterator;
   using ValueT = typename DenseMapT::mapped_type;
 

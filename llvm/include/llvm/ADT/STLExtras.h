@@ -51,20 +51,20 @@ namespace llvm {
 //     Extra additions to <type_traits>
 //===----------------------------------------------------------------------===//
 
-template <typename T> struct make_const_ptr {
+template <typename T> struct LLVM_CLASS_ABI make_const_ptr {
   using type = std::add_pointer_t<std::add_const_t<T>>;
 };
 
-template <typename T> struct make_const_ref {
+template <typename T> struct LLVM_CLASS_ABI make_const_ref {
   using type = std::add_lvalue_reference_t<std::add_const_t<T>>;
 };
 
 namespace detail {
-template <class, template <class...> class Op, class... Args> struct detector {
+template <class, template <class...> class Op, class... Args> struct LLVM_CLASS_ABI detector {
   using value_t = std::false_type;
 };
 template <template <class...> class Op, class... Args>
-struct detector<std::void_t<Op<Args...>>, Op, Args...> {
+struct LLVM_CLASS_ABI detector<std::void_t<Op<Args...>>, Op, Args...> {
   using value_t = std::true_type;
 };
 } // end namespace detail
@@ -84,11 +84,11 @@ using is_detected = typename detail::detector<void, Op, Args...>::value_t;
 ///   * To access the type of an argument: Traits::arg_t<Index>
 ///   * To access the type of the result:  Traits::result_t
 template <typename T, bool isClass = std::is_class<T>::value>
-struct function_traits : public function_traits<decltype(&T::operator())> {};
+struct LLVM_CLASS_ABI function_traits : public function_traits<decltype(&T::operator())> {};
 
 /// Overload for class function types.
 template <typename ClassType, typename ReturnType, typename... Args>
-struct function_traits<ReturnType (ClassType::*)(Args...) const, false> {
+struct LLVM_CLASS_ABI function_traits<ReturnType (ClassType::*)(Args...) const, false> {
   /// The number of arguments to this function.
   enum { num_args = sizeof...(Args) };
 
@@ -101,11 +101,11 @@ struct function_traits<ReturnType (ClassType::*)(Args...) const, false> {
 };
 /// Overload for class function types.
 template <typename ClassType, typename ReturnType, typename... Args>
-struct function_traits<ReturnType (ClassType::*)(Args...), false>
+struct LLVM_CLASS_ABI function_traits<ReturnType (ClassType::*)(Args...), false>
     : public function_traits<ReturnType (ClassType::*)(Args...) const> {};
 /// Overload for non-class function types.
 template <typename ReturnType, typename... Args>
-struct function_traits<ReturnType (*)(Args...), false> {
+struct LLVM_CLASS_ABI function_traits<ReturnType (*)(Args...), false> {
   /// The number of arguments to this function.
   enum { num_args = sizeof...(Args) };
 
@@ -117,11 +117,11 @@ struct function_traits<ReturnType (*)(Args...), false> {
   using arg_t = std::tuple_element_t<i, std::tuple<Args...>>;
 };
 template <typename ReturnType, typename... Args>
-struct function_traits<ReturnType (*const)(Args...), false>
+struct LLVM_CLASS_ABI function_traits<ReturnType (*const)(Args...), false>
     : public function_traits<ReturnType (*)(Args...)> {};
 /// Overload for non-class function type references.
 template <typename ReturnType, typename... Args>
-struct function_traits<ReturnType (&)(Args...), false>
+struct LLVM_CLASS_ABI function_traits<ReturnType (&)(Args...), false>
     : public function_traits<ReturnType (*)(Args...)> {};
 
 /// traits class for checking whether type T is one of any of the given
@@ -137,10 +137,10 @@ using are_base_of = std::conjunction<std::is_base_of<T, Ts>...>;
 namespace detail {
 template <typename T, typename... Us> struct TypesAreDistinct;
 template <typename T, typename... Us>
-struct TypesAreDistinct
+struct LLVM_CLASS_ABI TypesAreDistinct
     : std::integral_constant<bool, !is_one_of<T, Us...>::value &&
                                        TypesAreDistinct<Us...>::value> {};
-template <typename T> struct TypesAreDistinct<T> : std::true_type {};
+template <typename T> struct LLVM_CLASS_ABI TypesAreDistinct<T> : std::true_type {};
 } // namespace detail
 
 /// Determine if all types in Ts are distinct.
@@ -151,9 +151,9 @@ template <typename T> struct TypesAreDistinct<T> : std::true_type {};
 /// Expensive (currently quadratic in sizeof(Ts...)), and so should only be
 /// asserted once per instantiation of a type which requires it.
 template <typename... Ts> struct TypesAreDistinct;
-template <> struct TypesAreDistinct<> : std::true_type {};
+template <> struct LLVM_CLASS_ABI TypesAreDistinct<> : std::true_type {};
 template <typename... Ts>
-struct TypesAreDistinct
+struct LLVM_CLASS_ABI TypesAreDistinct
     : std::integral_constant<bool, detail::TypesAreDistinct<Ts...>::value> {};
 
 /// Find the first index where a type appears in a list of types.
@@ -168,10 +168,10 @@ struct TypesAreDistinct
 /// if is_one_of<T, Us...>::value is false.
 template <typename T, typename... Us> struct FirstIndexOfType;
 template <typename T, typename U, typename... Us>
-struct FirstIndexOfType<T, U, Us...>
+struct LLVM_CLASS_ABI FirstIndexOfType<T, U, Us...>
     : std::integral_constant<size_t, 1 + FirstIndexOfType<T, Us...>::value> {};
 template <typename T, typename... Us>
-struct FirstIndexOfType<T, T, Us...> : std::integral_constant<size_t, 0> {};
+struct LLVM_CLASS_ABI FirstIndexOfType<T, T, Us...> : std::integral_constant<size_t, 0> {};
 
 /// Find the type at a given index in a list of types.
 ///
@@ -208,7 +208,7 @@ namespace callable_detail {
 ///  - Function object
 template <typename T,
           bool = std::is_function_v<std::remove_pointer_t<remove_cvref_t<T>>>>
-class Callable {
+class LLVM_CLASS_ABI Callable {
   using value_type = std::remove_reference_t<T>;
   using reference = value_type &;
   using const_reference = value_type const &;
@@ -260,7 +260,7 @@ public:
 
 // Function specialization.  No need to waste extra space wrapping with a
 // std::optional.
-template <typename T> class Callable<T, true> {
+template <typename T> class LLVM_CLASS_ABI Callable<T, true> {
   static constexpr bool IsPtr = std::is_pointer_v<remove_cvref_t<T>>;
 
   using StorageT = std::conditional_t<IsPtr, T, std::remove_reference_t<T> *>;
@@ -345,7 +345,7 @@ template <typename T> auto drop_end(T &&RangeOrContainer, size_t N = 1) {
 template <typename ItTy, typename FuncTy,
           typename ReferenceTy =
               decltype(std::declval<FuncTy>()(*std::declval<ItTy>()))>
-class mapped_iterator
+class LLVM_CLASS_ABI mapped_iterator
     : public iterator_adaptor_base<
           mapped_iterator<ItTy, FuncTy>, ItTy,
           typename std::iterator_traits<ItTy>::iterator_category,
@@ -386,7 +386,7 @@ auto map_range(ContainerTy &&C, FuncTy F) {
 /// that defines how to map a value of the iterator to the provided reference
 /// type.
 template <typename DerivedT, typename ItTy, typename ReferenceTy>
-class mapped_iterator_base
+class LLVM_CLASS_ABI mapped_iterator_base
     : public iterator_adaptor_base<
           DerivedT, ItTy,
           typename std::iterator_traits<ItTy>::iterator_category,
@@ -407,7 +407,7 @@ public:
 };
 
 /// Helper to determine if type T has a member called rbegin().
-template <typename Ty> class has_rbegin_impl {
+template <typename Ty> class LLVM_CLASS_ABI has_rbegin_impl {
   using yes = char[1];
   using no = char[2];
 
@@ -423,7 +423,7 @@ public:
 
 /// Metafunction to determine if T& or T has a member called rbegin().
 template <typename Ty>
-struct has_rbegin : has_rbegin_impl<std::remove_reference_t<Ty>> {};
+struct LLVM_CLASS_ABI has_rbegin : has_rbegin_impl<std::remove_reference_t<Ty>> {};
 
 // Returns an iterator_range over the given container which iterates in reverse.
 template <typename ContainerTy> auto reverse(ContainerTy &&C) {
@@ -451,7 +451,7 @@ template <typename ContainerTy> auto reverse(ContainerTy &&C) {
 /// filter_iterator_impl exists to provide support for bidirectional iteration,
 /// conditional on whether the wrapped iterator supports it.
 template <typename WrappedIteratorT, typename PredicateT, typename IterTag>
-class filter_iterator_base
+class LLVM_CLASS_ABI filter_iterator_base
     : public iterator_adaptor_base<
           filter_iterator_base<WrappedIteratorT, PredicateT, IterTag>,
           WrappedIteratorT,
@@ -503,7 +503,7 @@ public:
 /// Specialization of filter_iterator_base for forward iteration only.
 template <typename WrappedIteratorT, typename PredicateT,
           typename IterTag = std::forward_iterator_tag>
-class filter_iterator_impl
+class LLVM_CLASS_ABI filter_iterator_impl
     : public filter_iterator_base<WrappedIteratorT, PredicateT, IterTag> {
 public:
   filter_iterator_impl() = default;
@@ -515,7 +515,7 @@ public:
 
 /// Specialization of filter_iterator_base for bidirectional iteration.
 template <typename WrappedIteratorT, typename PredicateT>
-class filter_iterator_impl<WrappedIteratorT, PredicateT,
+class LLVM_CLASS_ABI filter_iterator_impl<WrappedIteratorT, PredicateT,
                            std::bidirectional_iterator_tag>
     : public filter_iterator_base<WrappedIteratorT, PredicateT,
                                   std::bidirectional_iterator_tag> {
@@ -544,18 +544,18 @@ public:
 
 namespace detail {
 
-template <bool is_bidirectional> struct fwd_or_bidi_tag_impl {
+template <bool is_bidirectional> struct LLVM_CLASS_ABI fwd_or_bidi_tag_impl {
   using type = std::forward_iterator_tag;
 };
 
-template <> struct fwd_or_bidi_tag_impl<true> {
+template <> struct LLVM_CLASS_ABI fwd_or_bidi_tag_impl<true> {
   using type = std::bidirectional_iterator_tag;
 };
 
 /// Helper which sets its type member to forward_iterator_tag if the category
 /// of \p IterT does not derive from bidirectional_iterator_tag, and to
 /// bidirectional_iterator_tag otherwise.
-template <typename IterT> struct fwd_or_bidi_tag {
+template <typename IterT> struct LLVM_CLASS_ABI fwd_or_bidi_tag {
   using type = typename fwd_or_bidi_tag_impl<std::is_base_of<
       std::bidirectional_iterator_tag,
       typename std::iterator_traits<IterT>::iterator_category>::value>::type;
@@ -607,7 +607,7 @@ make_filter_range(RangeT &&Range, PredicateT Pred) {
 /// This means you can only dereference the iterator once, and you can only
 /// increment it once between dereferences.
 template <typename WrappedIteratorT>
-class early_inc_iterator_impl
+class LLVM_CLASS_ABI early_inc_iterator_impl
     : public iterator_adaptor_base<early_inc_iterator_impl<WrappedIteratorT>,
                                    WrappedIteratorT, std::input_iterator_tag> {
   using BaseT = typename early_inc_iterator_impl::iterator_adaptor_base;
@@ -687,7 +687,7 @@ using std::declval;
 
 // We have to alias this since inlining the actual type at the usage site
 // in the parameter list of iterator_facade_base<> below ICEs MSVC 2017.
-template<typename... Iters> struct ZipTupleType {
+template<typename... Iters> struct LLVM_CLASS_ABI ZipTupleType {
   using type = std::tuple<decltype(*declval<Iters>())...>;
 };
 
@@ -708,7 +708,7 @@ using zip_traits = iterator_facade_base<
     ReferenceTupleType *, ReferenceTupleType>;
 
 template <typename ZipType, typename ReferenceTupleType, typename... Iters>
-struct zip_common : public zip_traits<ZipType, ReferenceTupleType, Iters...> {
+struct LLVM_CLASS_ABI zip_common : public zip_traits<ZipType, ReferenceTupleType, Iters...> {
   using Base = zip_traits<ZipType, ReferenceTupleType, Iters...>;
   using IndexSequence = std::index_sequence_for<Iters...>;
   using value_type = typename Base::value_type;
@@ -759,7 +759,7 @@ public:
 };
 
 template <typename... Iters>
-struct zip_first : zip_common<zip_first<Iters...>,
+struct LLVM_CLASS_ABI zip_first : zip_common<zip_first<Iters...>,
                               typename ZipTupleType<Iters...>::type, Iters...> {
   using zip_common<zip_first, typename ZipTupleType<Iters...>::type,
                    Iters...>::zip_common;
@@ -770,7 +770,7 @@ struct zip_first : zip_common<zip_first<Iters...>,
 };
 
 template <typename... Iters>
-struct zip_shortest
+struct LLVM_CLASS_ABI zip_shortest
     : zip_common<zip_shortest<Iters...>, typename ZipTupleType<Iters...>::type,
                  Iters...> {
   using zip_common<zip_shortest, typename ZipTupleType<Iters...>::type,
@@ -797,7 +797,7 @@ struct ZippyIteratorTuple;
 /// Partial specialization for non-const tuple storage.
 template <template <typename...> class ItType, typename... Args,
           std::size_t... Ns>
-struct ZippyIteratorTuple<ItType, std::tuple<Args...>,
+struct LLVM_CLASS_ABI ZippyIteratorTuple<ItType, std::tuple<Args...>,
                           std::index_sequence<Ns...>> {
   using type = ItType<decltype(adl_begin(
       std::get<Ns>(declval<std::tuple<Args...> &>())))...>;
@@ -806,13 +806,13 @@ struct ZippyIteratorTuple<ItType, std::tuple<Args...>,
 /// Partial specialization for const tuple storage.
 template <template <typename...> class ItType, typename... Args,
           std::size_t... Ns>
-struct ZippyIteratorTuple<ItType, const std::tuple<Args...>,
+struct LLVM_CLASS_ABI ZippyIteratorTuple<ItType, const std::tuple<Args...>,
                           std::index_sequence<Ns...>> {
   using type = ItType<decltype(adl_begin(
       std::get<Ns>(declval<const std::tuple<Args...> &>())))...>;
 };
 
-template <template <typename...> class ItType, typename... Args> class zippy {
+template <template <typename...> class ItType, typename... Args> class LLVM_CLASS_ABI zippy {
 private:
   std::tuple<Args...> storage;
   using IndexSequence = std::index_sequence_for<Args...>;
@@ -908,17 +908,17 @@ auto deref_or_none(const Iter &I, const Iter &End) -> std::optional<
   return *I;
 }
 
-template <typename Iter> struct ZipLongestItemType {
+template <typename Iter> struct LLVM_CLASS_ABI ZipLongestItemType {
   using type = std::optional<std::remove_const_t<
       std::remove_reference_t<decltype(*std::declval<Iter>())>>>;
 };
 
-template <typename... Iters> struct ZipLongestTupleType {
+template <typename... Iters> struct LLVM_CLASS_ABI ZipLongestTupleType {
   using type = std::tuple<typename ZipLongestItemType<Iters>::type...>;
 };
 
 template <typename... Iters>
-class zip_longest_iterator
+class LLVM_CLASS_ABI zip_longest_iterator
     : public iterator_facade_base<
           zip_longest_iterator<Iters...>,
           std::common_type_t<
@@ -973,7 +973,7 @@ public:
   }
 };
 
-template <typename... Args> class zip_longest_range {
+template <typename... Args> class LLVM_CLASS_ABI zip_longest_range {
 public:
   using iterator =
       zip_longest_iterator<decltype(adl_begin(std::declval<Args>()))...>;
@@ -1028,7 +1028,7 @@ detail::zip_longest_range<T, U, Args...> zip_longest(T &&t, U &&u,
 /// Currently this only supports forward or higher iterator categories as
 /// inputs and always exposes a forward iterator interface.
 template <typename ValueT, typename... IterTs>
-class concat_iterator
+class LLVM_CLASS_ABI concat_iterator
     : public iterator_facade_base<concat_iterator<ValueT, IterTs...>,
                                   std::forward_iterator_tag, ValueT> {
   using BaseT = typename concat_iterator::iterator_facade_base;
@@ -1133,7 +1133,7 @@ namespace detail {
 /// This is designed to facilitate providing actual storage when temporaries
 /// are passed into the constructor such that we can use it as part of range
 /// based for loops.
-template <typename ValueT, typename... RangeTs> class concat_range {
+template <typename ValueT, typename... RangeTs> class LLVM_CLASS_ABI concat_range {
 public:
   using iterator =
       concat_iterator<ValueT,
@@ -1194,7 +1194,7 @@ detail::concat_range<ValueT, RangeTs...> concat(RangeTs &&... Ranges) {
 /// and an index. The iterator moves the index but keeps the base constant.
 template <typename DerivedT, typename BaseT, typename T,
           typename PointerT = T *, typename ReferenceT = T &>
-class indexed_accessor_iterator
+class LLVM_CLASS_ABI indexed_accessor_iterator
     : public llvm::iterator_facade_base<DerivedT,
                                         std::random_access_iterator_tag, T,
                                         std::ptrdiff_t, PointerT, ReferenceT> {
@@ -1246,7 +1246,7 @@ namespace detail {
 ///       elements.
 template <typename DerivedT, typename BaseT, typename T,
           typename PointerT = T *, typename ReferenceT = T &>
-class indexed_accessor_range_base {
+class LLVM_CLASS_ABI indexed_accessor_range_base {
 public:
   using RangeBaseT = indexed_accessor_range_base;
 
@@ -1376,7 +1376,7 @@ protected:
 ///     - Dereference an iterator pointing to a parent base at the given index.
 template <typename DerivedT, typename BaseT, typename T,
           typename PointerT = T *, typename ReferenceT = T &>
-class indexed_accessor_range
+class LLVM_CLASS_ABI indexed_accessor_range
     : public detail::indexed_accessor_range_base<
           DerivedT, std::pair<BaseT, ptrdiff_t>, T, PointerT, ReferenceT> {
 public:
@@ -1416,7 +1416,7 @@ namespace detail {
 /// When passing a range whose iterators return values instead of references,
 /// the reference must be dropped from `decltype((elt.first))`, which will
 /// always be a reference, to avoid returning a reference to a temporary.
-template <typename EltTy, typename FirstTy> class first_or_second_type {
+template <typename EltTy, typename FirstTy> class LLVM_CLASS_ABI first_or_second_type {
 public:
   using type = std::conditional_t<std::is_reference<EltTy>::value, FirstTy,
                                   std::remove_reference_t<FirstTy>>;
@@ -1452,7 +1452,7 @@ template <typename ContainerTy> auto make_second_range(ContainerTy &&c) {
 /// Function object to check whether the first component of a container
 /// supported by std::get (like std::pair and std::tuple) compares less than the
 /// first component of another container.
-struct less_first {
+struct LLVM_CLASS_ABI less_first {
   template <typename T> bool operator()(const T &lhs, const T &rhs) const {
     return std::less<>()(std::get<0>(lhs), std::get<0>(rhs));
   }
@@ -1461,7 +1461,7 @@ struct less_first {
 /// Function object to check whether the second component of a container
 /// supported by std::get (like std::pair and std::tuple) compares less than the
 /// second component of another container.
-struct less_second {
+struct LLVM_CLASS_ABI less_second {
   template <typename T> bool operator()(const T &lhs, const T &rhs) const {
     return std::less<>()(std::get<1>(lhs), std::get<1>(rhs));
   }
@@ -1470,7 +1470,7 @@ struct less_second {
 /// \brief Function object to apply a binary function to the first component of
 /// a std::pair.
 template<typename FuncTy>
-struct on_first {
+struct LLVM_CLASS_ABI on_first {
   FuncTy func;
 
   template <typename T>
@@ -1481,14 +1481,14 @@ struct on_first {
 
 /// Utility type to build an inheritance chain that makes it easy to rank
 /// overload candidates.
-template <int N> struct rank : rank<N - 1> {};
-template <> struct rank<0> {};
+template <int N> struct LLVM_CLASS_ABI rank : rank<N - 1> {};
+template <> struct LLVM_CLASS_ABI rank<0> {};
 
 namespace detail {
 template <typename... Ts> struct Visitor;
 
 template <typename HeadT, typename... TailTs>
-struct Visitor<HeadT, TailTs...> : remove_cvref_t<HeadT>, Visitor<TailTs...> {
+struct LLVM_CLASS_ABI Visitor<HeadT, TailTs...> : remove_cvref_t<HeadT>, Visitor<TailTs...> {
   explicit constexpr Visitor(HeadT &&Head, TailTs &&...Tail)
       : remove_cvref_t<HeadT>(std::forward<HeadT>(Head)),
         Visitor<TailTs...>(std::forward<TailTs>(Tail)...) {}
@@ -1496,7 +1496,7 @@ struct Visitor<HeadT, TailTs...> : remove_cvref_t<HeadT>, Visitor<TailTs...> {
   using Visitor<TailTs...>::operator();
 };
 
-template <typename HeadT> struct Visitor<HeadT> : remove_cvref_t<HeadT> {
+template <typename HeadT> struct LLVM_CLASS_ABI Visitor<HeadT> : remove_cvref_t<HeadT> {
   explicit constexpr Visitor(HeadT &&Head)
       : remove_cvref_t<HeadT>(std::forward<HeadT>(Head)) {}
   using remove_cvref_t<HeadT>::operator();
@@ -2146,14 +2146,14 @@ inline void interleaveComma(const Container &c, StreamT &os) {
 //     Extra additions to <memory>
 //===----------------------------------------------------------------------===//
 
-struct FreeDeleter {
+struct LLVM_CLASS_ABI FreeDeleter {
   void operator()(void* v) {
     ::free(v);
   }
 };
 
 template<typename First, typename Second>
-struct pair_hash {
+struct LLVM_CLASS_ABI pair_hash {
   size_t operator()(const std::pair<First, Second> &P) const {
     return std::hash<First>()(P.first) * 31 + std::hash<Second>()(P.second);
   }
@@ -2161,7 +2161,7 @@ struct pair_hash {
 
 /// Binary functor that adapts to any other binary functor after dereferencing
 /// operands.
-template <typename T> struct deref {
+template <typename T> struct LLVM_CLASS_ABI deref {
   T func;
 
   // Could be further improved to cope with non-derivable functors and
@@ -2194,7 +2194,7 @@ using EnumeratorTupleType = enumerator_result<decltype(*declval<Iters>())...>;
 /// This is similar to `std::vector<bool>::iterator` that returns bit reference
 /// wrappers on dereference.
 template <typename... Iters>
-struct zip_enumerator : zip_common<zip_enumerator<Iters...>,
+struct LLVM_CLASS_ABI zip_enumerator : zip_common<zip_enumerator<Iters...>,
                                    EnumeratorTupleType<Iters...>, Iters...> {
   static_assert(sizeof...(Iters) >= 2, "Expected at least two iteratees");
   using zip_common<zip_enumerator<Iters...>, EnumeratorTupleType<Iters...>,
@@ -2205,7 +2205,7 @@ struct zip_enumerator : zip_common<zip_enumerator<Iters...>,
   }
 };
 
-template <typename... Refs> struct enumerator_result<std::size_t, Refs...> {
+template <typename... Refs> struct LLVM_CLASS_ABI enumerator_result<std::size_t, Refs...> {
   static constexpr std::size_t NumRefs = sizeof...(Refs);
   static_assert(NumRefs != 0);
   // `NumValues` includes the index.
@@ -2275,7 +2275,7 @@ private:
   mutable range_reference_tuple Storage;
 };
 
-struct index_iterator
+struct LLVM_CLASS_ABI index_iterator
     : llvm::iterator_facade_base<index_iterator,
                                  std::random_access_iterator_tag, std::size_t> {
   index_iterator(std::size_t Index) : Index(Index) {}
@@ -2314,7 +2314,7 @@ private:
 };
 
 /// Infinite stream of increasing 0-based `size_t` indices.
-struct index_stream {
+struct LLVM_CLASS_ABI index_stream {
   index_iterator begin() const { return {0}; }
   index_iterator end() const {
     // We approximate 'infinity' with the max size_t value, which should be good
@@ -2326,7 +2326,7 @@ struct index_stream {
 } // end namespace detail
 
 /// Increasing range of `size_t` indices.
-class index_range {
+class LLVM_CLASS_ABI index_range {
   std::size_t Begin;
   std::size_t End;
 
@@ -2528,15 +2528,15 @@ constexpr bool is_incomplete_v = !is_detected<detail::has_sizeof, T>::value;
 
 namespace std {
 template <typename... Refs>
-struct tuple_size<llvm::detail::enumerator_result<Refs...>>
+struct LLVM_CLASS_ABI tuple_size<llvm::detail::enumerator_result<Refs...>>
     : std::integral_constant<std::size_t, sizeof...(Refs)> {};
 
 template <std::size_t I, typename... Refs>
-struct tuple_element<I, llvm::detail::enumerator_result<Refs...>>
+struct LLVM_CLASS_ABI tuple_element<I, llvm::detail::enumerator_result<Refs...>>
     : std::tuple_element<I, std::tuple<Refs...>> {};
 
 template <std::size_t I, typename... Refs>
-struct tuple_element<I, const llvm::detail::enumerator_result<Refs...>>
+struct LLVM_CLASS_ABI tuple_element<I, const llvm::detail::enumerator_result<Refs...>>
     : std::tuple_element<I, std::tuple<Refs...>> {};
 
 } // namespace std

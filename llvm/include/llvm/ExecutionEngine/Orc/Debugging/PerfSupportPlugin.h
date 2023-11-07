@@ -24,7 +24,7 @@ namespace orc {
 /// Log perf jitdump events for each object (see
 /// https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/tools/perf/Documentation/jitdump-specification.txt).
 /// Currently has support for dumping code load records and unwind info records.
-class PerfSupportPlugin : public ObjectLinkingLayer::Plugin {
+class LLVM_CLASS_ABI PerfSupportPlugin : public ObjectLinkingLayer::Plugin {
 public:
   PerfSupportPlugin(ExecutorProcessControl &EPC,
                     ExecutorAddr RegisterPerfStartAddr,

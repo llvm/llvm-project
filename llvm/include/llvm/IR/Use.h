@@ -40,7 +40,7 @@ class Value;
 /// all of the uses for a particular value definition. It also supports jumping
 /// directly to the used value when we arrive from the User's operands, and
 /// jumping directly to the User when we arrive from the Value's uses.
-class Use {
+class LLVM_CLASS_ABI Use {
 public:
   Use(const Use &U) = delete;
 
@@ -112,12 +112,12 @@ private:
 
 /// Allow clients to treat uses just like values when using
 /// casting operators.
-template <> struct simplify_type<Use> {
+template <> struct LLVM_CLASS_ABI simplify_type<Use> {
   using SimpleType = Value *;
 
   static SimpleType getSimplifiedValue(Use &Val) { return Val.get(); }
 };
-template <> struct simplify_type<const Use> {
+template <> struct LLVM_CLASS_ABI simplify_type<const Use> {
   using SimpleType = /*const*/ Value *;
 
   static SimpleType getSimplifiedValue(const Use &Val) { return Val.get(); }

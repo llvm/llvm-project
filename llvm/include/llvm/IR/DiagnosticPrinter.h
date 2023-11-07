@@ -29,7 +29,7 @@ class Twine;
 class Value;
 
 /// Interface for custom diagnostic printing.
-class DiagnosticPrinter {
+class LLVM_CLASS_ABI DiagnosticPrinter {
 public:
   virtual ~DiagnosticPrinter() = default;
 
@@ -59,7 +59,7 @@ public:
 };
 
 /// Basic diagnostic printer that uses an underlying raw_ostream.
-class DiagnosticPrinterRawOStream : public DiagnosticPrinter {
+class LLVM_CLASS_ABI DiagnosticPrinterRawOStream : public DiagnosticPrinter {
 protected:
   raw_ostream &Stream;
 

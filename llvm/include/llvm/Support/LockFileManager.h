@@ -25,7 +25,7 @@ class StringRef;
 /// system to ensure that only a single process can create that ".lock" file.
 /// When the lock file is removed, the owning process has finished the
 /// operation.
-class LockFileManager {
+class LLVM_CLASS_ABI LockFileManager {
 public:
   /// Describes the state of a lock file.
   enum LockFileState {

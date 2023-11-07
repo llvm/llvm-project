@@ -26,7 +26,7 @@ class PackedVectorBase;
 // This won't be necessary if we can specialize members without specializing
 // the parent template.
 template <typename T, unsigned BitNum, typename BitVectorTy>
-class PackedVectorBase<T, BitNum, BitVectorTy, false> {
+class LLVM_CLASS_ABI PackedVectorBase<T, BitNum, BitVectorTy, false> {
 protected:
   static T getValue(const BitVectorTy &Bits, unsigned Idx) {
     T val = T();
@@ -43,7 +43,7 @@ protected:
 };
 
 template <typename T, unsigned BitNum, typename BitVectorTy>
-class PackedVectorBase<T, BitNum, BitVectorTy, true> {
+class LLVM_CLASS_ABI PackedVectorBase<T, BitNum, BitVectorTy, true> {
 protected:
   static T getValue(const BitVectorTy &Bits, unsigned Idx) {
     T val = T();
@@ -73,7 +73,7 @@ protected:
 /// will create a vector accepting values -2, -1, 0, 1. Any other value will hit
 /// an assertion.
 template <typename T, unsigned BitNum, typename BitVectorTy = BitVector>
-class PackedVector : public PackedVectorBase<T, BitNum, BitVectorTy,
+class LLVM_CLASS_ABI PackedVector : public PackedVectorBase<T, BitNum, BitVectorTy,
                                             std::numeric_limits<T>::is_signed> {
   BitVectorTy Bits;
   using base = PackedVectorBase<T, BitNum, BitVectorTy,

@@ -24,7 +24,7 @@ template <typename T> class ArrayRef;
 class StringRef;
 
 /// A class that wrap the SHA1 algorithm.
-class SHA1 {
+class LLVM_CLASS_ABI SHA1 {
 public:
   SHA1() { init(); }
 

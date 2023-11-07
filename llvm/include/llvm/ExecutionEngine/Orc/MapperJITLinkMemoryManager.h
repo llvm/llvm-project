@@ -21,7 +21,7 @@
 namespace llvm {
 namespace orc {
 
-class MapperJITLinkMemoryManager : public jitlink::JITLinkMemoryManager {
+class LLVM_CLASS_ABI MapperJITLinkMemoryManager : public jitlink::JITLinkMemoryManager {
 public:
   MapperJITLinkMemoryManager(size_t ReservationGranularity,
                              std::unique_ptr<MemoryMapper> Mapper);

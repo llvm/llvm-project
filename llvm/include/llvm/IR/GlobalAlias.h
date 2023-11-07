@@ -26,7 +26,7 @@ class Twine;
 class Module;
 template <typename ValueSubClass, typename... Args> class SymbolTableListTraits;
 
-class GlobalAlias : public GlobalValue, public ilist_node<GlobalAlias> {
+class LLVM_CLASS_ABI GlobalAlias : public GlobalValue, public ilist_node<GlobalAlias> {
   friend class SymbolTableListTraits<GlobalAlias>;
 
   GlobalAlias(Type *Ty, unsigned AddressSpace, LinkageTypes Linkage,
@@ -105,7 +105,7 @@ public:
 };
 
 template <>
-struct OperandTraits<GlobalAlias>
+struct LLVM_CLASS_ABI OperandTraits<GlobalAlias>
     : public FixedNumOperandTraits<GlobalAlias, 1> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GlobalAlias, Constant)

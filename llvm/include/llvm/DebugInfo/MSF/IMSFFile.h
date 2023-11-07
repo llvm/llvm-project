@@ -18,7 +18,7 @@
 namespace llvm {
 namespace msf {
 
-class IMSFFile {
+class LLVM_CLASS_ABI IMSFFile {
 public:
   virtual ~IMSFFile() = default;
 

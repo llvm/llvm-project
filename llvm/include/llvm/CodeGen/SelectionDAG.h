@@ -94,7 +94,7 @@ using SSAContext = GenericSSAContext<Function>;
 template <typename T> class GenericUniformityInfo;
 using UniformityInfo = GenericUniformityInfo<SSAContext>;
 
-class SDVTListNode : public FoldingSetNode {
+class LLVM_CLASS_ABI SDVTListNode : public FoldingSetNode {
   friend struct FoldingSetTrait<SDVTListNode>;
 
   /// A reference to an Interned FoldingSetNodeID for this node.
@@ -123,7 +123,7 @@ public:
 
 /// Specialize FoldingSetTrait for SDVTListNode
 /// to avoid computing temp FoldingSetNodeID and hash value.
-template<> struct FoldingSetTrait<SDVTListNode> : DefaultFoldingSetTrait<SDVTListNode> {
+template<> struct LLVM_CLASS_ABI FoldingSetTrait<SDVTListNode> : DefaultFoldingSetTrait<SDVTListNode> {
   static void Profile(const SDVTListNode &X, FoldingSetNodeID& ID) {
     ID = X.FastID;
   }
@@ -140,7 +140,7 @@ template<> struct FoldingSetTrait<SDVTListNode> : DefaultFoldingSetTrait<SDVTLis
   }
 };
 
-template <> struct ilist_alloc_traits<SDNode> {
+template <> struct LLVM_CLASS_ABI ilist_alloc_traits<SDNode> {
   static void deleteNode(SDNode *) {
     llvm_unreachable("ilist_traits<SDNode> shouldn't see a deleteNode call!");
   }
@@ -157,7 +157,7 @@ template <> struct ilist_alloc_traits<SDNode> {
 /// should always go at the beginning of the function regardless of other code
 /// motion, and debug info for them is potentially useful even if the parameter
 /// is unused.  Right now only byval parameters are handled separately.
-class SDDbgInfo {
+class LLVM_CLASS_ABI SDDbgInfo {
   BumpPtrAllocator Alloc;
   SmallVector<SDDbgValue*, 32> DbgValues;
   SmallVector<SDDbgValue*, 32> ByvalParmDbgValues;
@@ -210,7 +210,7 @@ public:
   DbgLabelIterator DbgLabelEnd()   { return DbgLabels.end(); }
 };
 
-void checkForCycles(const SelectionDAG *DAG, bool force = false);
+LLVM_FUNC_ABI void checkForCycles(const SelectionDAG *DAG, bool force = false);
 
 /// This is used to represent a portion of an LLVM function in a low-level
 /// Data Dependence DAG representation suitable for instruction selection.
@@ -223,7 +223,7 @@ void checkForCycles(const SelectionDAG *DAG, bool force = false);
 /// but is significantly more simple, powerful, and is a graph form instead of a
 /// linear form.
 ///
-class SelectionDAG {
+class LLVM_CLASS_ABI SelectionDAG {
   const TargetMachine &TM;
   const SelectionDAGTargetInfo *TSI = nullptr;
   const TargetLowering *TLI = nullptr;
@@ -2432,7 +2432,7 @@ private:
   FlagInserter *Inserter = nullptr;
 };
 
-template <> struct GraphTraits<SelectionDAG*> : public GraphTraits<SDNode*> {
+template <> struct LLVM_CLASS_ABI GraphTraits<SelectionDAG*> : public GraphTraits<SDNode*> {
   using nodes_iterator = pointer_iterator<SelectionDAG::allnodes_iterator>;
 
   static nodes_iterator nodes_begin(SelectionDAG *G) {

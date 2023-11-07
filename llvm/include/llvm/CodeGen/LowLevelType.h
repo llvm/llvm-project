@@ -37,7 +37,7 @@ namespace llvm {
 class Type;
 class raw_ostream;
 
-class LLT {
+class LLVM_CLASS_ABI LLT {
 public:
   /// Get a low-level scalar or aggregate "bag of bits".
   static constexpr LLT scalar(unsigned SizeInBits) {
@@ -419,7 +419,7 @@ inline raw_ostream& operator<<(raw_ostream &OS, const LLT &Ty) {
   return OS;
 }
 
-template<> struct DenseMapInfo<LLT> {
+template<> struct LLVM_CLASS_ABI DenseMapInfo<LLT> {
   static inline LLT getEmptyKey() {
     LLT Invalid;
     Invalid.IsPointer = true;

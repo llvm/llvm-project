@@ -45,7 +45,7 @@ class ValueSymbolTable;
 ///
 /// Implementations create a typedef called \c type so that we only need a
 /// single template parameter for the list and traits.
-template <typename NodeTy> struct SymbolTableListParentType {};
+template <typename NodeTy> struct LLVM_CLASS_ABI SymbolTableListParentType {};
 
 #define DEFINE_SYMBOL_TABLE_PARENT_TYPE(NODE, PARENT)                          \
   template <> struct SymbolTableListParentType<NODE> { using type = PARENT; };
@@ -65,7 +65,7 @@ template <typename NodeTy, typename... Args> class SymbolTableList;
 // OptionsT        - Extra options to ilist nodes.
 //
 template <typename ValueSubClass, typename... Args>
-class SymbolTableListTraits : public ilist_alloc_traits<ValueSubClass> {
+class LLVM_CLASS_ABI SymbolTableListTraits : public ilist_alloc_traits<ValueSubClass> {
   using ListTy = SymbolTableList<ValueSubClass, Args...>;
   using iterator = typename simple_ilist<ValueSubClass, Args...>::iterator;
   using ItemParentClass =
@@ -113,7 +113,7 @@ public:
 /// symbol table will be automatically updated.  Similarly, parent links get
 /// updated automatically.
 template <class T, typename... Args>
-class SymbolTableList : public iplist_impl<simple_ilist<T, Args...>,
+class LLVM_CLASS_ABI SymbolTableList : public iplist_impl<simple_ilist<T, Args...>,
                                            SymbolTableListTraits<T, Args...>> {
 };
 

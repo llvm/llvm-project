@@ -29,7 +29,7 @@ class Value;
 
 /// Utility to calculate the size and a few similar metrics for a set
 /// of basic blocks.
-struct CodeMetrics {
+struct LLVM_CLASS_ABI CodeMetrics {
   /// True if this function contains a call to setjmp or other functions
   /// with attribute "returns twice" without having the attribute itself.
   bool exposesReturnsTwice = false;

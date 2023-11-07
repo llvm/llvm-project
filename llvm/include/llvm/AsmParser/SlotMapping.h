@@ -30,7 +30,7 @@ class Type;
 /// It can be used to save the parsing state of an LLVM IR module so that the
 /// textual references to the values in the module can be parsed outside of the
 /// module's source.
-struct SlotMapping {
+struct LLVM_CLASS_ABI SlotMapping {
   std::vector<GlobalValue *> GlobalValues;
   std::map<unsigned, TrackingMDNodeRef> MetadataNodes;
   StringMap<Type *> NamedTypes;

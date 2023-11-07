@@ -31,7 +31,7 @@ class Function;
 class Twine;
 class Module;
 
-class MatrixBuilder {
+class LLVM_CLASS_ABI MatrixBuilder {
   IRBuilderBase &B;
   Module *getModule() { return B.GetInsertBlock()->getParent()->getParent(); }
 

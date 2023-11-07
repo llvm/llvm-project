@@ -25,7 +25,7 @@
 namespace llvm {
 class PostDominatorTree;
 
-class DomTreeUpdater {
+class LLVM_CLASS_ABI DomTreeUpdater {
 public:
   enum class UpdateStrategy : unsigned char { Eager = 0, Lazy = 1 };
 

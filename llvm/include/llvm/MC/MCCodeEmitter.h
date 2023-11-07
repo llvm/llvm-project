@@ -20,7 +20,7 @@ class raw_ostream;
 template<typename T> class SmallVectorImpl;
 
 /// MCCodeEmitter - Generic instruction encoding interface.
-class MCCodeEmitter {
+class LLVM_CLASS_ABI MCCodeEmitter {
 protected: // Can only create subclasses.
   MCCodeEmitter();
 

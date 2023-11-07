@@ -45,7 +45,7 @@ const int OptMinSizeThreshold = 5;
 const int OptAggressiveThreshold = 250;
 
 // Various magic constants used to adjust heuristics.
-int getInstrCost();
+LLVM_FUNC_ABI int getInstrCost();
 const int IndirectCallThreshold = 100;
 const int LoopPenalty = 25;
 const int LastCallToStaticBonus = 15000;
@@ -64,7 +64,7 @@ const char MaxInlineStackSizeAttributeName[] = "inline-max-stacksize";
 } // namespace InlineConstants
 
 // The cost-benefit pair computed by cost-benefit analysis.
-class CostBenefitPair {
+class LLVM_CLASS_ABI CostBenefitPair {
 public:
   CostBenefitPair(APInt Cost, APInt Benefit) : Cost(Cost), Benefit(Benefit) {}
 
@@ -87,7 +87,7 @@ private:
 /// based on the information available for a particular callsite. They can be
 /// directly tested to determine if inlining should occur given the cost and
 /// threshold for this cost metric.
-class InlineCost {
+class LLVM_CLASS_ABI InlineCost {
   enum SentinelValues { AlwaysInlineCost = INT_MIN, NeverInlineCost = INT_MAX };
 
   /// The estimated cost of inlining this callsite.
@@ -177,7 +177,7 @@ public:
 
 /// InlineResult is basically true or false. For false results the message
 /// describes a reason.
-class InlineResult {
+class LLVM_CLASS_ABI InlineResult {
   const char *Message = nullptr;
   InlineResult(const char *Message = nullptr) : Message(Message) {}
 
@@ -203,7 +203,7 @@ public:
 /// (such as the pre-inliner) might have custom logic to compute \c InlineParams
 /// object.
 
-struct InlineParams {
+struct LLVM_CLASS_ABI InlineParams {
   /// The default threshold to start with for a callee.
   int DefaultThreshold = -1;
 
@@ -239,16 +239,16 @@ struct InlineParams {
   std::optional<bool> AllowRecursiveCall = false;
 };
 
-std::optional<int> getStringFnAttrAsInt(CallBase &CB, StringRef AttrKind);
+LLVM_FUNC_ABI std::optional<int> getStringFnAttrAsInt(CallBase &CB, StringRef AttrKind);
 
 /// Generate the parameters to tune the inline cost analysis based only on the
 /// commandline options.
-InlineParams getInlineParams();
+LLVM_FUNC_ABI InlineParams getInlineParams();
 
 /// Generate the parameters to tune the inline cost analysis based on command
 /// line options. If -inline-threshold option is not explicitly passed,
 /// \p Threshold is used as the default threshold.
-InlineParams getInlineParams(int Threshold);
+LLVM_FUNC_ABI InlineParams getInlineParams(int Threshold);
 
 /// Generate the parameters to tune the inline cost analysis based on command
 /// line options. If -inline-threshold option is not explicitly passed,
@@ -256,11 +256,11 @@ InlineParams getInlineParams(int Threshold);
 /// An \p OptLevel value above 3 is considered an aggressive optimization mode.
 /// \p SizeOptLevel of 1 corresponds to the -Os flag and 2 corresponds to
 /// the -Oz flag.
-InlineParams getInlineParams(unsigned OptLevel, unsigned SizeOptLevel);
+LLVM_FUNC_ABI InlineParams getInlineParams(unsigned OptLevel, unsigned SizeOptLevel);
 
 /// Return the cost associated with a callsite, including parameter passing
 /// and the call/return instruction.
-int getCallsiteCost(const TargetTransformInfo &TTI, const CallBase &Call,
+LLVM_FUNC_ABI int getCallsiteCost(const TargetTransformInfo &TTI, const CallBase &Call,
                     const DataLayout &DL);
 
 /// Get an InlineCost object representing the cost of inlining this
@@ -274,7 +274,7 @@ int getCallsiteCost(const TargetTransformInfo &TTI, const CallBase &Call,
 ///
 /// Also note that calling this function *dynamically* computes the cost of
 /// inlining the callsite. It is an expensive, heavyweight call.
-InlineCost
+LLVM_FUNC_ABI InlineCost
 getInlineCost(CallBase &Call, const InlineParams &Params,
               TargetTransformInfo &CalleeTTI,
               function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
@@ -288,7 +288,7 @@ getInlineCost(CallBase &Call, const InlineParams &Params,
 /// pointer. This behaves exactly as the version with no explicit callee
 /// parameter in all other respects.
 //
-InlineCost
+LLVM_FUNC_ABI InlineCost
 getInlineCost(CallBase &Call, Function *Callee, const InlineParams &Params,
               TargetTransformInfo &CalleeTTI,
               function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
@@ -303,7 +303,7 @@ getInlineCost(CallBase &Call, Function *Callee, const InlineParams &Params,
 /// directives or incompatibilities detectable without needing callee traversal.
 /// Otherwise returns std::nullopt, meaning that inlining should be decided
 /// based on other criteria (e.g. cost modeling).
-std::optional<InlineResult> getAttributeBasedInliningDecision(
+LLVM_FUNC_ABI std::optional<InlineResult> getAttributeBasedInliningDecision(
     CallBase &Call, Function *Callee, TargetTransformInfo &CalleeTTI,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
 
@@ -315,7 +315,7 @@ std::optional<InlineResult> getAttributeBasedInliningDecision(
 /// returns:
 /// - std::nullopt, if the inlining cannot happen (is illegal)
 /// - an integer, representing the cost.
-std::optional<int> getInliningCostEstimate(
+LLVM_FUNC_ABI std::optional<int> getInliningCostEstimate(
     CallBase &Call, TargetTransformInfo &CalleeTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
@@ -324,7 +324,7 @@ std::optional<int> getInliningCostEstimate(
 
 /// Get the expanded cost features. The features are returned unconditionally,
 /// even if inlining is impossible.
-std::optional<InlineCostFeatures> getInliningCostFeatures(
+LLVM_FUNC_ABI std::optional<InlineCostFeatures> getInliningCostFeatures(
     CallBase &Call, TargetTransformInfo &CalleeTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
@@ -332,12 +332,12 @@ std::optional<InlineCostFeatures> getInliningCostFeatures(
     OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Minimal filter to detect invalid constructs for inlining.
-InlineResult isInlineViable(Function &Callee);
+LLVM_FUNC_ABI InlineResult isInlineViable(Function &Callee);
 
 // This pass is used to annotate instructions during the inline process for
 // debugging and analysis. The main purpose of the pass is to see and test
 // inliner's decisions when creating new optimizations to InlineCost.
-struct InlineCostAnnotationPrinterPass
+struct LLVM_CLASS_ABI InlineCostAnnotationPrinterPass
     : PassInfoMixin<InlineCostAnnotationPrinterPass> {
   raw_ostream &OS;
 

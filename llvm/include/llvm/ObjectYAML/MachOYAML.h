@@ -29,7 +29,7 @@
 namespace llvm {
 namespace MachOYAML {
 
-struct Relocation {
+struct LLVM_CLASS_ABI Relocation {
   // Offset in the section to what is being relocated.
   llvm::yaml::Hex32 address;
   // Symbol index if r_extern == 1 else section index.
@@ -43,7 +43,7 @@ struct Relocation {
   int32_t value;
 };
 
-struct Section {
+struct LLVM_CLASS_ABI Section {
   char sectname[16];
   char segname[16];
   llvm::yaml::Hex64 addr;
@@ -60,7 +60,7 @@ struct Section {
   std::vector<Relocation> relocations;
 };
 
-struct FileHeader {
+struct LLVM_CLASS_ABI FileHeader {
   llvm::yaml::Hex32 magic;
   llvm::yaml::Hex32 cputype;
   llvm::yaml::Hex32 cpusubtype;
@@ -71,7 +71,7 @@ struct FileHeader {
   llvm::yaml::Hex32 reserved;
 };
 
-struct LoadCommand {
+struct LLVM_CLASS_ABI LoadCommand {
   virtual ~LoadCommand();
 
   llvm::MachO::macho_load_command Data;
@@ -82,7 +82,7 @@ struct LoadCommand {
   uint64_t ZeroPadBytes;
 };
 
-struct NListEntry {
+struct LLVM_CLASS_ABI NListEntry {
   uint32_t n_strx;
   llvm::yaml::Hex8 n_type;
   uint8_t n_sect;
@@ -90,13 +90,13 @@ struct NListEntry {
   uint64_t n_value;
 };
 
-struct RebaseOpcode {
+struct LLVM_CLASS_ABI RebaseOpcode {
   MachO::RebaseOpcode Opcode;
   uint8_t Imm;
   std::vector<yaml::Hex64> ExtraData;
 };
 
-struct BindOpcode {
+struct LLVM_CLASS_ABI BindOpcode {
   MachO::BindOpcode Opcode;
   uint8_t Imm;
   std::vector<yaml::Hex64> ULEBExtraData;
@@ -104,7 +104,7 @@ struct BindOpcode {
   StringRef Symbol;
 };
 
-struct ExportEntry {
+struct LLVM_CLASS_ABI ExportEntry {
   uint64_t TerminalSize = 0;
   uint64_t NodeOffset = 0;
   std::string Name;
@@ -115,13 +115,13 @@ struct ExportEntry {
   std::vector<MachOYAML::ExportEntry> Children;
 };
 
-struct DataInCodeEntry {
+struct LLVM_CLASS_ABI DataInCodeEntry {
   llvm::yaml::Hex32 Offset;
   uint16_t Length;
   llvm::yaml::Hex16 Kind;
 };
 
-struct LinkEditData {
+struct LLVM_CLASS_ABI LinkEditData {
   std::vector<MachOYAML::RebaseOpcode> RebaseOpcodes;
   std::vector<MachOYAML::BindOpcode> BindOpcodes;
   std::vector<MachOYAML::BindOpcode> WeakBindOpcodes;
@@ -137,7 +137,7 @@ struct LinkEditData {
   bool isEmpty() const;
 };
 
-struct Object {
+struct LLVM_CLASS_ABI Object {
   bool IsLittleEndian;
   FileHeader Header;
   std::vector<LoadCommand> LoadCommands;
@@ -147,12 +147,12 @@ struct Object {
   DWARFYAML::Data DWARF;
 };
 
-struct FatHeader {
+struct LLVM_CLASS_ABI FatHeader {
   llvm::yaml::Hex32 magic;
   uint32_t nfat_arch;
 };
 
-struct FatArch {
+struct LLVM_CLASS_ABI FatArch {
   llvm::yaml::Hex32 cputype;
   llvm::yaml::Hex32 cpusubtype;
   llvm::yaml::Hex64 offset;
@@ -161,7 +161,7 @@ struct FatArch {
   llvm::yaml::Hex32 reserved;
 };
 
-struct UniversalBinary {
+struct LLVM_CLASS_ABI UniversalBinary {
   FatHeader Header;
   std::vector<FatArch> FatArchs;
   std::vector<Object> Slices;
@@ -188,71 +188,71 @@ class raw_ostream;
 
 namespace yaml {
 
-template <> struct MappingTraits<MachOYAML::FileHeader> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachOYAML::FileHeader> {
   static void mapping(IO &IO, MachOYAML::FileHeader &FileHeader);
 };
 
-template <> struct MappingTraits<MachOYAML::Object> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachOYAML::Object> {
   static void mapping(IO &IO, MachOYAML::Object &Object);
 };
 
-template <> struct MappingTraits<MachOYAML::FatHeader> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachOYAML::FatHeader> {
   static void mapping(IO &IO, MachOYAML::FatHeader &FatHeader);
 };
 
-template <> struct MappingTraits<MachOYAML::FatArch> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachOYAML::FatArch> {
   static void mapping(IO &IO, MachOYAML::FatArch &FatArch);
 };
 
-template <> struct MappingTraits<MachOYAML::UniversalBinary> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachOYAML::UniversalBinary> {
   static void mapping(IO &IO, MachOYAML::UniversalBinary &UniversalBinary);
 };
 
-template <> struct MappingTraits<MachOYAML::LoadCommand> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachOYAML::LoadCommand> {
   static void mapping(IO &IO, MachOYAML::LoadCommand &LoadCommand);
 };
 
-template <> struct MappingTraits<MachOYAML::LinkEditData> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachOYAML::LinkEditData> {
   static void mapping(IO &IO, MachOYAML::LinkEditData &LinkEditData);
 };
 
-template <> struct MappingTraits<MachOYAML::RebaseOpcode> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachOYAML::RebaseOpcode> {
   static void mapping(IO &IO, MachOYAML::RebaseOpcode &RebaseOpcode);
 };
 
-template <> struct MappingTraits<MachOYAML::BindOpcode> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachOYAML::BindOpcode> {
   static void mapping(IO &IO, MachOYAML::BindOpcode &BindOpcode);
 };
 
-template <> struct MappingTraits<MachOYAML::ExportEntry> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachOYAML::ExportEntry> {
   static void mapping(IO &IO, MachOYAML::ExportEntry &ExportEntry);
 };
 
-template <> struct MappingTraits<MachOYAML::Relocation> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachOYAML::Relocation> {
   static void mapping(IO &IO, MachOYAML::Relocation &R);
 };
 
-template <> struct MappingTraits<MachOYAML::Section> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachOYAML::Section> {
   static void mapping(IO &IO, MachOYAML::Section &Section);
   static std::string validate(IO &io, MachOYAML::Section &Section);
 };
 
-template <> struct MappingTraits<MachOYAML::NListEntry> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachOYAML::NListEntry> {
   static void mapping(IO &IO, MachOYAML::NListEntry &NListEntry);
 };
 
-template <> struct MappingTraits<MachO::build_tool_version> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachO::build_tool_version> {
   static void mapping(IO &IO, MachO::build_tool_version &tool);
 };
 
-template <> struct MappingTraits<MachOYAML::DataInCodeEntry> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachOYAML::DataInCodeEntry> {
   static void mapping(IO &IO, MachOYAML::DataInCodeEntry &DataInCodeEntry);
 };
 
 #define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                         \
   io.enumCase(value, #LCName, MachO::LCName);
 
-template <> struct ScalarEnumerationTraits<MachO::LoadCommandType> {
+template <> struct LLVM_CLASS_ABI ScalarEnumerationTraits<MachO::LoadCommandType> {
   static void enumeration(IO &io, MachO::LoadCommandType &value) {
 #include "llvm/BinaryFormat/MachO.def"
     io.enumFallback<Hex32>(value);
@@ -261,7 +261,7 @@ template <> struct ScalarEnumerationTraits<MachO::LoadCommandType> {
 
 #define ENUM_CASE(Enum) io.enumCase(value, #Enum, MachO::Enum);
 
-template <> struct ScalarEnumerationTraits<MachO::RebaseOpcode> {
+template <> struct LLVM_CLASS_ABI ScalarEnumerationTraits<MachO::RebaseOpcode> {
   static void enumeration(IO &io, MachO::RebaseOpcode &value) {
     ENUM_CASE(REBASE_OPCODE_DONE)
     ENUM_CASE(REBASE_OPCODE_SET_TYPE_IMM)
@@ -276,7 +276,7 @@ template <> struct ScalarEnumerationTraits<MachO::RebaseOpcode> {
   }
 };
 
-template <> struct ScalarEnumerationTraits<MachO::BindOpcode> {
+template <> struct LLVM_CLASS_ABI ScalarEnumerationTraits<MachO::BindOpcode> {
   static void enumeration(IO &io, MachO::BindOpcode &value) {
     ENUM_CASE(BIND_OPCODE_DONE)
     ENUM_CASE(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM)
@@ -298,7 +298,7 @@ template <> struct ScalarEnumerationTraits<MachO::BindOpcode> {
 // This trait is used for 16-byte chars in Mach structures used for strings
 using char_16 = char[16];
 
-template <> struct ScalarTraits<char_16> {
+template <> struct LLVM_CLASS_ABI ScalarTraits<char_16> {
   static void output(const char_16 &Val, void *, raw_ostream &Out);
   static StringRef input(StringRef Scalar, void *, char_16 &Val);
   static QuotingType mustQuote(StringRef S);
@@ -308,7 +308,7 @@ template <> struct ScalarTraits<char_16> {
 // formatting style.
 using uuid_t = raw_ostream::uuid_t;
 
-template <> struct ScalarTraits<uuid_t> {
+template <> struct LLVM_CLASS_ABI ScalarTraits<uuid_t> {
   static void output(const uuid_t &Val, void *, raw_ostream &Out);
   static StringRef input(StringRef Scalar, void *, uuid_t &Val);
   static QuotingType mustQuote(StringRef S);
@@ -324,19 +324,19 @@ template <> struct ScalarTraits<uuid_t> {
 #include "llvm/BinaryFormat/MachO.def"
 
 // Extra structures used by load commands
-template <> struct MappingTraits<MachO::dylib> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachO::dylib> {
   static void mapping(IO &IO, MachO::dylib &LoadCommand);
 };
 
-template <> struct MappingTraits<MachO::fvmlib> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachO::fvmlib> {
   static void mapping(IO &IO, MachO::fvmlib &LoadCommand);
 };
 
-template <> struct MappingTraits<MachO::section> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachO::section> {
   static void mapping(IO &IO, MachO::section &LoadCommand);
 };
 
-template <> struct MappingTraits<MachO::section_64> {
+template <> struct LLVM_CLASS_ABI MappingTraits<MachO::section_64> {
   static void mapping(IO &IO, MachO::section_64 &LoadCommand);
 };
 

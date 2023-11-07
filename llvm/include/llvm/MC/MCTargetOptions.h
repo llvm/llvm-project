@@ -35,7 +35,7 @@ enum class EmitDwarfUnwindType {
 
 class StringRef;
 
-class MCTargetOptions {
+class LLVM_CLASS_ABI MCTargetOptions {
 public:
   enum AsmInstrumentation {
     AsmInstrumentationNone,

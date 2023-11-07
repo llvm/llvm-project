@@ -29,7 +29,7 @@ class MappedBlockStream;
 }
 namespace pdb {
 
-class ModuleDebugStreamRef {
+class LLVM_CLASS_ABI ModuleDebugStreamRef {
   using DebugSubsectionIterator = codeview::DebugSubsectionArray::Iterator;
 
 public:

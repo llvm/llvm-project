@@ -122,7 +122,7 @@ namespace llvm {
     Never,
   };
 
-  class TargetOptions {
+  class LLVM_CLASS_ABI TargetOptions {
   public:
     TargetOptions()
         : UnsafeFPMath(false), NoInfsFPMath(false), NoNaNsFPMath(false),

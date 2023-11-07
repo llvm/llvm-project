@@ -139,14 +139,14 @@ enum {
 };
 
 /// RuntimeFunction - An entry in the table of functions with unwind info.
-struct RuntimeFunction {
+struct LLVM_CLASS_ABI RuntimeFunction {
   support::ulittle32_t StartAddress;
   support::ulittle32_t EndAddress;
   support::ulittle32_t UnwindInfoOffset;
 };
 
 /// UnwindInfo - An entry in the exception table.
-struct UnwindInfo {
+struct LLVM_CLASS_ABI UnwindInfo {
   uint8_t VersionAndFlags;
   uint8_t PrologSize;
   uint8_t NumCodes;

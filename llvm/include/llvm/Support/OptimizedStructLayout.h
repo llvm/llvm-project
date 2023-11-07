@@ -43,7 +43,7 @@
 namespace llvm {
 
 /// A field in a structure.
-struct OptimizedStructLayoutField {
+struct LLVM_CLASS_ABI OptimizedStructLayoutField {
   /// A special value for Offset indicating that the field can be moved
   /// anywhere.
   static constexpr uint64_t FlexibleOffset = ~(uint64_t)0;
@@ -136,7 +136,7 @@ struct OptimizedStructLayoutField {
 /// The return value is the total size of the struct and its required
 /// alignment.  Note that the total size is not rounded up to a multiple
 /// of the required alignment; clients which require this can do so easily.
-std::pair<uint64_t, Align> performOptimizedStructLayout(
+LLVM_FUNC_ABI std::pair<uint64_t, Align> performOptimizedStructLayout(
                         MutableArrayRef<OptimizedStructLayoutField> Fields);
 
 } // namespace llvm

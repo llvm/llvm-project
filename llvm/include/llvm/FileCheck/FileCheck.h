@@ -28,7 +28,7 @@ class SourceMgr;
 template <typename T> class SmallVectorImpl;
 
 /// Contains info about various FileCheck options.
-struct FileCheckRequest {
+struct LLVM_CLASS_ABI FileCheckRequest {
   std::vector<StringRef> CheckPrefixes;
   std::vector<StringRef> CommentPrefixes;
   bool NoCanonicalizeWhiteSpace = false;
@@ -78,7 +78,7 @@ enum FileCheckKindModifier {
   Size
 };
 
-class FileCheckType {
+class LLVM_CLASS_ABI FileCheckType {
   FileCheckKind Kind;
   int Count; ///< optional Count for some checks
   /// Modifers for the check directive.
@@ -111,7 +111,7 @@ public:
 } // namespace Check
 
 /// Summary of a FileCheck diagnostic.
-struct FileCheckDiag {
+struct LLVM_CLASS_ABI FileCheckDiag {
   /// What is the FileCheck directive for this diagnostic?
   Check::FileCheckType CheckTy;
   /// Where is the FileCheck directive for this diagnostic?
@@ -178,7 +178,7 @@ struct FileCheckString;
 
 /// FileCheck class takes the request and exposes various methods that
 /// use information from the request.
-class FileCheck {
+class LLVM_CLASS_ABI FileCheck {
   FileCheckRequest Req;
   std::unique_ptr<FileCheckPatternContext> PatternContext;
   // C++17 TODO: make this a plain std::vector.

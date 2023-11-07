@@ -44,14 +44,14 @@ namespace xray {
 ///     // Handle the error here.
 ///   }
 ///
-class Trace {
+class LLVM_CLASS_ABI Trace {
   XRayFileHeader FileHeader;
   using RecordVector = std::vector<XRayRecord>;
   RecordVector Records;
 
   typedef std::vector<XRayRecord>::const_iterator citerator;
 
-  friend Expected<Trace> loadTrace(const DataExtractor &, bool);
+  friend LLVM_FUNC_ABI Expected<Trace> loadTrace(const DataExtractor &, bool);
 
 public:
   using size_type = RecordVector::size_type;
@@ -69,11 +69,11 @@ public:
 
 /// This function will attempt to load XRay trace records from the provided
 /// |Filename|.
-Expected<Trace> loadTraceFile(StringRef Filename, bool Sort = false);
+LLVM_FUNC_ABI Expected<Trace> loadTraceFile(StringRef Filename, bool Sort = false);
 
 /// This function will attempt to load XRay trace records from the provided
 /// DataExtractor.
-Expected<Trace> loadTrace(const DataExtractor &Extractor, bool Sort = false);
+LLVM_FUNC_ABI Expected<Trace> loadTrace(const DataExtractor &Extractor, bool Sort = false);
 
 } // namespace xray
 } // namespace llvm

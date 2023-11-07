@@ -20,7 +20,7 @@ class MachineModuleInfo;
 class MachineFunction;
 class Module;
 
-class MachineModuleSlotTracker : public ModuleSlotTracker {
+class LLVM_CLASS_ABI MachineModuleSlotTracker : public ModuleSlotTracker {
   const Function &TheFunction;
   const MachineModuleInfo &TheMMI;
   unsigned MDNStartSlot = 0, MDNEndSlot = 0;

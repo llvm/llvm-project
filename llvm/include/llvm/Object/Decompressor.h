@@ -19,7 +19,7 @@ namespace llvm {
 namespace object {
 
 /// Decompressor helps to handle decompression of compressed sections.
-class Decompressor {
+class LLVM_CLASS_ABI Decompressor {
 public:
   /// Create decompressor object.
   /// @param Name        Section name.

@@ -25,7 +25,7 @@ class Triple;
 class Twine;
 class raw_ostream;
 
-class Mangler {
+class LLVM_CLASS_ABI Mangler {
   /// We need to give global values the same name every time they are mangled.
   /// This keeps track of the number we give to anonymous ones.
   mutable DenseMap<const GlobalValue*, unsigned> AnonGlobalIDs;
@@ -47,10 +47,10 @@ public:
                                 const Twine &GVName, const DataLayout &DL);
 };
 
-void emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
+LLVM_FUNC_ABI void emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
                                   const Triple &TT, Mangler &Mangler);
 
-void emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
+LLVM_FUNC_ABI void emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
                                 const Triple &T, Mangler &M);
 
 } // End llvm namespace

@@ -27,7 +27,7 @@ namespace gsym {
 /// libraries to be enabled via the build process. This class needs the ability
 /// to seek to different spots in the binary stream that is produces to fixup
 /// offsets and sizes.
-class FileWriter {
+class LLVM_CLASS_ABI FileWriter {
   llvm::raw_pwrite_stream &OS;
   llvm::endianness ByteOrder;
 

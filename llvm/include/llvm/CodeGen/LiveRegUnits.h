@@ -28,7 +28,7 @@ class MachineInstr;
 class MachineBasicBlock;
 
 /// A set of register units used to track register liveness.
-class LiveRegUnits {
+class LLVM_CLASS_ABI LiveRegUnits {
   const TargetRegisterInfo *TRI = nullptr;
   BitVector Units;
 

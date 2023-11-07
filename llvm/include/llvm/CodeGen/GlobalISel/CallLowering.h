@@ -42,7 +42,7 @@ struct MachinePointerInfo;
 class MachineRegisterInfo;
 class TargetLowering;
 
-class CallLowering {
+class LLVM_CLASS_ABI CallLowering {
   const TargetLowering *TLI;
 
   virtual void anchor();

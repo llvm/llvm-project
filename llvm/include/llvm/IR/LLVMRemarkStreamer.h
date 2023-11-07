@@ -32,7 +32,7 @@ class RemarkStreamer;
 
 /// Streamer for LLVM remarks which has logic for dealing with DiagnosticInfo
 /// objects.
-class LLVMRemarkStreamer {
+class LLVM_CLASS_ABI LLVMRemarkStreamer {
   remarks::RemarkStreamer &RS;
   /// Convert diagnostics into remark objects.
   /// The lifetime of the members of the result is bound to the lifetime of
@@ -46,7 +46,7 @@ public:
 };
 
 template <typename ThisError>
-struct LLVMRemarkSetupErrorInfo : public ErrorInfo<ThisError> {
+struct LLVM_CLASS_ABI LLVMRemarkSetupErrorInfo : public ErrorInfo<ThisError> {
   std::string Msg;
   std::error_code EC;
 
@@ -61,21 +61,21 @@ struct LLVMRemarkSetupErrorInfo : public ErrorInfo<ThisError> {
   std::error_code convertToErrorCode() const override { return EC; }
 };
 
-struct LLVMRemarkSetupFileError
+struct LLVM_CLASS_ABI LLVMRemarkSetupFileError
     : LLVMRemarkSetupErrorInfo<LLVMRemarkSetupFileError> {
   static char ID;
   using LLVMRemarkSetupErrorInfo<
       LLVMRemarkSetupFileError>::LLVMRemarkSetupErrorInfo;
 };
 
-struct LLVMRemarkSetupPatternError
+struct LLVM_CLASS_ABI LLVMRemarkSetupPatternError
     : LLVMRemarkSetupErrorInfo<LLVMRemarkSetupPatternError> {
   static char ID;
   using LLVMRemarkSetupErrorInfo<
       LLVMRemarkSetupPatternError>::LLVMRemarkSetupErrorInfo;
 };
 
-struct LLVMRemarkSetupFormatError
+struct LLVM_CLASS_ABI LLVMRemarkSetupFormatError
     : LLVMRemarkSetupErrorInfo<LLVMRemarkSetupFormatError> {
   static char ID;
   using LLVMRemarkSetupErrorInfo<
@@ -83,7 +83,7 @@ struct LLVMRemarkSetupFormatError
 };
 
 /// Setup optimization remarks that output to a file.
-Expected<std::unique_ptr<ToolOutputFile>>
+LLVM_FUNC_ABI Expected<std::unique_ptr<ToolOutputFile>>
 setupLLVMOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
                              StringRef RemarksPasses, StringRef RemarksFormat,
                              bool RemarksWithHotness,
@@ -92,7 +92,7 @@ setupLLVMOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
 /// Setup optimization remarks that output directly to a raw_ostream.
 /// \p OS is managed by the caller and should be open for writing as long as \p
 /// Context is streaming remarks to it.
-Error setupLLVMOptimizationRemarks(
+LLVM_FUNC_ABI Error setupLLVMOptimizationRemarks(
     LLVMContext &Context, raw_ostream &OS, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
     std::optional<uint64_t> RemarksHotnessThreshold = 0);

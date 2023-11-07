@@ -33,7 +33,7 @@ class StringRef;
 class TargetMachine;
 
 /// Helper to gather options relevant to the target machine creation
-struct TargetMachineBuilder {
+struct LLVM_CLASS_ABI TargetMachineBuilder {
   Triple TheTriple;
   std::string MCpu;
   std::string MAttr;
@@ -50,7 +50,7 @@ struct TargetMachineBuilder {
 /// compilation: the model is that the client adds modules to the generator and
 /// ask to perform the ThinLTO optimizations / codegen, and finally destroys the
 /// codegenerator.
-class ThinLTOCodeGenerator {
+class LLVM_CLASS_ABI ThinLTOCodeGenerator {
 public:
   /// Add given module to the code generator.
   void addModule(StringRef Identifier, StringRef Data);

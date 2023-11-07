@@ -31,7 +31,7 @@ namespace llvm {
 /// SmallSetIterator - This class implements a const_iterator for SmallSet by
 /// delegating to the underlying SmallVector or Set iterators.
 template <typename T, unsigned N, typename C>
-class SmallSetIterator
+class LLVM_CLASS_ABI SmallSetIterator
     : public iterator_facade_base<SmallSetIterator<T, N, C>,
                                   std::forward_iterator_tag, T> {
 private:
@@ -132,7 +132,7 @@ public:
 /// maintained with no mallocs.  If the set gets large, we expand to using an
 /// std::set to maintain reasonable lookup times.
 template <typename T, unsigned N, typename C = std::less<T>>
-class SmallSet {
+class LLVM_CLASS_ABI SmallSet {
   /// Use a SmallVector to hold the elements here (even though it will never
   /// reach its 'large' stage) to avoid calling the default ctors of elements
   /// we will never use.
@@ -253,7 +253,7 @@ private:
 /// If this set is of pointer values, transparently switch over to using
 /// SmallPtrSet for performance.
 template <typename PointeeType, unsigned N>
-class SmallSet<PointeeType*, N> : public SmallPtrSet<PointeeType*, N> {};
+class LLVM_CLASS_ABI SmallSet<PointeeType*, N> : public SmallPtrSet<PointeeType*, N> {};
 
 /// Equality comparison for SmallSet.
 ///

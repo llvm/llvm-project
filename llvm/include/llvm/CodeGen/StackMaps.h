@@ -33,7 +33,7 @@ class TargetRegisterInfo;
 ///
 /// MI stackmap operations take the form:
 /// <id>, <numBytes>, live args...
-class StackMapOpers {
+class LLVM_CLASS_ABI StackMapOpers {
 public:
   /// Enumerate the meta operands.
   enum { IDPos, NBytesPos };
@@ -74,7 +74,7 @@ public:
 /// Patchpoints following the anyregcc convention are handled specially. For
 /// these, the stack map also records the location of the return value and
 /// arguments.
-class PatchPointOpers {
+class LLVM_CLASS_ABI PatchPointOpers {
 public:
   /// Enumerate the meta operands.
   enum { IDPos, NBytesPos, TargetPos, NArgPos, CCPos, MetaEnd };
@@ -156,7 +156,7 @@ public:
 ///   section.
 ///   All gc pointers assigned to VRegs produce new value (in form of MI Def
 ///   operand) and are tied to it.
-class StatepointOpers {
+class LLVM_CLASS_ABI StatepointOpers {
   // TODO:: we should change the STATEPOINT representation so that CC and
   // Flags should be part of meta operands, with args and deopt operands, and
   // gc operands all prefixed by their length and a type code. This would be
@@ -257,7 +257,7 @@ private:
   unsigned NumDefs;
 };
 
-class StackMaps {
+class LLVM_CLASS_ABI StackMaps {
 public:
   struct Location {
     enum LocationType {

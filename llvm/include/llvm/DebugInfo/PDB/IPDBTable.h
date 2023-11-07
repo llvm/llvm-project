@@ -14,7 +14,7 @@
 
 namespace llvm {
 namespace pdb {
-class IPDBTable {
+class LLVM_CLASS_ABI IPDBTable {
 public:
   virtual ~IPDBTable();
 

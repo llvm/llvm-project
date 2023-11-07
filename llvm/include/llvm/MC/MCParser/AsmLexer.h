@@ -23,7 +23,7 @@ namespace llvm {
 class MCAsmInfo;
 
 /// AsmLexer - Lexer class for assembly files.
-class AsmLexer : public MCAsmLexer {
+class LLVM_CLASS_ABI AsmLexer : public MCAsmLexer {
   const MCAsmInfo &MAI;
 
   const char *CurPtr = nullptr;

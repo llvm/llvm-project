@@ -33,7 +33,7 @@ namespace mca {
 /// A Memory group identifier is then stored as a "token" in field
 /// Instruction::LSUTokenID of each dispatched instructions. That token is used
 /// internally by the LSUnit to track memory dependencies.
-class MemoryGroup {
+class LLVM_CLASS_ABI MemoryGroup {
   unsigned NumPredecessors = 0;
   unsigned NumExecutingPredecessors = 0;
   unsigned NumExecutedPredecessors = 0;
@@ -188,7 +188,7 @@ public:
 };
 
 /// Abstract base interface for LS (load/store) units in llvm-mca.
-class LSUnitBase : public HardwareUnit {
+class LLVM_CLASS_ABI LSUnitBase : public HardwareUnit {
   /// Load queue size.
   ///
   /// A value of zero for this field means that the load queue is unbounded.
@@ -396,7 +396,7 @@ public:
 /// A load/store barrier is "executed" when it becomes the oldest entry in
 /// the load/store queue(s). That also means, all the older loads/stores have
 /// already been executed.
-class LSUnit : public LSUnitBase {
+class LLVM_CLASS_ABI LSUnit : public LSUnitBase {
   // This class doesn't know about the latency of a load instruction. So, it
   // conservatively/pessimistically assumes that the latency of a load opcode
   // matches the instruction latency.

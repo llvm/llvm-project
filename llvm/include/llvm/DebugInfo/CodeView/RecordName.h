@@ -18,8 +18,8 @@ namespace llvm {
 namespace codeview {
 class TypeCollection;
 class TypeIndex;
-std::string computeTypeName(TypeCollection &Types, TypeIndex Index);
-StringRef getSymbolName(CVSymbol Sym);
+LLVM_FUNC_ABI std::string computeTypeName(TypeCollection &Types, TypeIndex Index);
+LLVM_FUNC_ABI StringRef getSymbolName(CVSymbol Sym);
 } // namespace codeview
 } // namespace llvm
 

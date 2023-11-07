@@ -14,7 +14,7 @@
 
 namespace llvm {
 
-class MCSymbolWasm : public MCSymbol {
+class LLVM_CLASS_ABI MCSymbolWasm : public MCSymbol {
   std::optional<wasm::WasmSymbolType> Type;
   bool IsWeak = false;
   bool IsHidden = false;

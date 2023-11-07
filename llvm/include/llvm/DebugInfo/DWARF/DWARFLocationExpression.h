@@ -19,7 +19,7 @@ class raw_ostream;
 /// Represents a single DWARF expression, whose value is location-dependent.
 /// Typically used in DW_AT_location attributes to describe the location of
 /// objects.
-struct DWARFLocationExpression {
+struct LLVM_CLASS_ABI DWARFLocationExpression {
   /// The address range in which this expression is valid. std::nullopt denotes a
   /// default entry which is valid in addresses not covered by other location
   /// expressions, or everywhere if there are no other expressions.
@@ -39,7 +39,7 @@ inline bool operator!=(const DWARFLocationExpression &L,
   return !(L == R);
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const DWARFLocationExpression &Loc);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const DWARFLocationExpression &Loc);
 
 /// Represents a set of absolute location expressions.
 using DWARFLocationExpressionsVector = std::vector<DWARFLocationExpression>;

@@ -63,7 +63,7 @@ enum class AllocFnKind : uint64_t {
 /// to indicate how they should be treated by optimizations and code
 /// generation. This class represents one of those attributes. It's light-weight
 /// and should be passed around by-value.
-class Attribute {
+class LLVM_CLASS_ABI Attribute {
 public:
   /// This enumeration lists the attributes that can be associated with
   /// parameters, function results, or the function itself.
@@ -295,7 +295,7 @@ inline Attribute unwrap(LLVMAttributeRef Attr) {
 /// function, or return value. It is an immutable value type that is cheap to
 /// copy. Adding and removing enum attributes is intended to be fast, but adding
 /// and removing string or integer attributes involves a FoldingSet lookup.
-class AttributeSet {
+class LLVM_CLASS_ABI AttributeSet {
   friend AttributeListImpl;
   template <typename Ty, typename Enable> friend struct DenseMapInfo;
 
@@ -404,7 +404,7 @@ public:
 //===----------------------------------------------------------------------===//
 /// \class
 /// Provide DenseMapInfo for AttributeSet.
-template <> struct DenseMapInfo<AttributeSet, void> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<AttributeSet, void> {
   static AttributeSet getEmptyKey() {
     auto Val = static_cast<uintptr_t>(-1);
     Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
@@ -433,7 +433,7 @@ template <> struct DenseMapInfo<AttributeSet, void> {
 /// `AttributeList::FunctionIndex', the return value is at index
 /// `AttributeList::ReturnIndex', and the attributes for the parameters start at
 /// index `AttributeList::FirstArgIndex'.
-class AttributeList {
+class LLVM_CLASS_ABI AttributeList {
 public:
   enum AttrIndex : unsigned {
     ReturnIndex = 0U,
@@ -959,7 +959,7 @@ public:
 //===----------------------------------------------------------------------===//
 /// \class
 /// Provide DenseMapInfo for AttributeList.
-template <> struct DenseMapInfo<AttributeList, void> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<AttributeList, void> {
   static AttributeList getEmptyKey() {
     auto Val = static_cast<uintptr_t>(-1);
     Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
@@ -988,7 +988,7 @@ template <> struct DenseMapInfo<AttributeList, void> {
 /// create an Attribute object. The object itself is uniquified. The Builder's
 /// value, however, is not. So this can be used as a quick way to test for
 /// equality, presence of attributes, etc.
-class AttrBuilder {
+class LLVM_CLASS_ABI AttrBuilder {
   LLVMContext &Ctx;
   SmallVector<Attribute, 8> Attrs;
 
@@ -1206,24 +1206,24 @@ enum AttributeSafetyKind : uint8_t {
 
 /// Returns true if this is a type legal for the 'nofpclass' attribute. This
 /// follows the same type rules as FPMathOperator.
-bool isNoFPClassCompatibleType(Type *Ty);
+LLVM_FUNC_ABI bool isNoFPClassCompatibleType(Type *Ty);
 
 /// Which attributes cannot be applied to a type. The argument \p ASK indicates,
 /// if only attributes that are known to be safely droppable are contained in
 /// the mask; only attributes that might be unsafe to drop (e.g., ABI-related
 /// attributes) are in the mask; or both.
-AttributeMask typeIncompatible(Type *Ty, AttributeSafetyKind ASK = ASK_ALL);
+LLVM_FUNC_ABI AttributeMask typeIncompatible(Type *Ty, AttributeSafetyKind ASK = ASK_ALL);
 
 /// Get param/return attributes which imply immediate undefined behavior if an
 /// invalid value is passed. For example, this includes noundef (where undef
 /// implies UB), but not nonnull (where null implies poison). It also does not
 /// include attributes like nocapture, which constrain the function
 /// implementation rather than the passed value.
-AttributeMask getUBImplyingAttributes();
+LLVM_FUNC_ABI AttributeMask getUBImplyingAttributes();
 
 /// \returns Return true if the two functions have compatible target-independent
 /// attributes for inlining purposes.
-bool areInlineCompatible(const Function &Caller, const Function &Callee);
+LLVM_FUNC_ABI bool areInlineCompatible(const Function &Caller, const Function &Callee);
 
 
 /// Checks  if there are any incompatible function attributes between
@@ -1232,19 +1232,19 @@ bool areInlineCompatible(const Function &Caller, const Function &Callee);
 /// \param [in] A - The first function to be compared with.
 /// \param [in] B - The second function to be compared with.
 /// \returns true if the functions have compatible attributes.
-bool areOutlineCompatible(const Function &A, const Function &B);
+LLVM_FUNC_ABI bool areOutlineCompatible(const Function &A, const Function &B);
 
 /// Merge caller's and callee's attributes.
-void mergeAttributesForInlining(Function &Caller, const Function &Callee);
+LLVM_FUNC_ABI void mergeAttributesForInlining(Function &Caller, const Function &Callee);
 
 /// Merges the functions attributes from \p ToMerge into function \p Base.
 ///
 /// \param [in,out] Base - The function being merged into.
 /// \param [in] ToMerge - The function to merge attributes from.
-void mergeAttributesForOutlining(Function &Base, const Function &ToMerge);
+LLVM_FUNC_ABI void mergeAttributesForOutlining(Function &Base, const Function &ToMerge);
 
 /// Update min-legal-vector-width if it is in Attribute and less than Width.
-void updateMinLegalVectorWidthAttr(Function &Fn, uint64_t Width);
+LLVM_FUNC_ABI void updateMinLegalVectorWidthAttr(Function &Fn, uint64_t Width);
 
 } // end namespace AttributeFuncs
 

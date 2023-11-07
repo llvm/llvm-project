@@ -40,13 +40,13 @@ namespace pointer_union_detail {
   }
 
   /// Find the first type in a list of types.
-  template <typename T, typename...> struct GetFirstType {
+  template <typename T, typename...> struct LLVM_CLASS_ABI GetFirstType {
     using type = T;
   };
 
   /// Provide PointerLikeTypeTraits for void* that is used by PointerUnion
   /// for the template arguments.
-  template <typename ...PTs> class PointerUnionUIntTraits {
+  template <typename ...PTs> class LLVM_CLASS_ABI PointerUnionUIntTraits {
   public:
     static inline void *getAsVoidPointer(void *P) { return P; }
     static inline void *getFromVoidPointer(void *P) { return P; }
@@ -57,7 +57,7 @@ namespace pointer_union_detail {
   class PointerUnionMembers;
 
   template <typename Derived, typename ValTy, int I>
-  class PointerUnionMembers<Derived, ValTy, I> {
+  class LLVM_CLASS_ABI PointerUnionMembers<Derived, ValTy, I> {
   protected:
     ValTy Val;
     PointerUnionMembers() = default;
@@ -68,7 +68,7 @@ namespace pointer_union_detail {
 
   template <typename Derived, typename ValTy, int I, typename Type,
             typename ...Types>
-  class PointerUnionMembers<Derived, ValTy, I, Type, Types...>
+  class LLVM_CLASS_ABI PointerUnionMembers<Derived, ValTy, I, Type, Types...>
       : public PointerUnionMembers<Derived, ValTy, I + 1, Types...> {
     using Base = PointerUnionMembers<Derived, ValTy, I + 1, Types...>;
   public:
@@ -110,7 +110,7 @@ template <typename... PTs> struct CastInfoPointerUnionImpl;
 ///    X = P.get<int*>();     // runtime assertion failure.
 ///    PointerUnion<int*, int*> Q; // compile time failure.
 template <typename... PTs>
-class PointerUnion
+class LLVM_CLASS_ABI PointerUnion
     : public pointer_union_detail::PointerUnionMembers<
           PointerUnion<PTs...>,
           PointerIntPair<
@@ -224,7 +224,7 @@ bool operator<(PointerUnion<PTs...> lhs, PointerUnion<PTs...> rhs) {
 /// friend'.
 /// So we define this struct to be a bridge between CastInfo and
 /// PointerUnion.
-template <typename... PTs> struct CastInfoPointerUnionImpl {
+template <typename... PTs> struct LLVM_CLASS_ABI CastInfoPointerUnionImpl {
   using From = PointerUnion<PTs...>;
 
   template <typename To> static inline bool isPossible(From &F) {
@@ -239,7 +239,7 @@ template <typename... PTs> struct CastInfoPointerUnionImpl {
 
 // Specialization of CastInfo for PointerUnion
 template <typename To, typename... PTs>
-struct CastInfo<To, PointerUnion<PTs...>>
+struct LLVM_CLASS_ABI CastInfo<To, PointerUnion<PTs...>>
     : public DefaultDoCastIfPossible<To, PointerUnion<PTs...>,
                                      CastInfo<To, PointerUnion<PTs...>>> {
   using From = PointerUnion<PTs...>;
@@ -255,7 +255,7 @@ struct CastInfo<To, PointerUnion<PTs...>>
 };
 
 template <typename To, typename... PTs>
-struct CastInfo<To, const PointerUnion<PTs...>>
+struct LLVM_CLASS_ABI CastInfo<To, const PointerUnion<PTs...>>
     : public ConstStrippingForwardingCast<To, const PointerUnion<PTs...>,
                                           CastInfo<To, PointerUnion<PTs...>>> {
 };
@@ -263,7 +263,7 @@ struct CastInfo<To, const PointerUnion<PTs...>>
 // Teach SmallPtrSet that PointerUnion is "basically a pointer", that has
 // # low bits available = min(PT1bits,PT2bits)-1.
 template <typename ...PTs>
-struct PointerLikeTypeTraits<PointerUnion<PTs...>> {
+struct LLVM_CLASS_ABI PointerLikeTypeTraits<PointerUnion<PTs...>> {
   static inline void *getAsVoidPointer(const PointerUnion<PTs...> &P) {
     return P.getOpaqueValue();
   }
@@ -279,7 +279,7 @@ struct PointerLikeTypeTraits<PointerUnion<PTs...>> {
 };
 
 // Teach DenseMap how to use PointerUnions as keys.
-template <typename ...PTs> struct DenseMapInfo<PointerUnion<PTs...>> {
+template <typename ...PTs> struct LLVM_CLASS_ABI DenseMapInfo<PointerUnion<PTs...>> {
   using Union = PointerUnion<PTs...>;
   using FirstInfo =
       DenseMapInfo<typename pointer_union_detail::GetFirstType<PTs...>::type>;

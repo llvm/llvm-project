@@ -25,7 +25,7 @@ namespace xray {
 /// XRay traces all have a header providing some top-matter information useful
 /// to help tools determine how to interpret the information available in the
 /// trace.
-struct XRayFileHeader {
+struct LLVM_CLASS_ABI XRayFileHeader {
   /// Version of the XRay implementation that produced this file.
   uint16_t Version = 0;
 
@@ -67,7 +67,7 @@ enum class RecordTypes {
 /// An XRayRecord is the denormalized view of data associated in a trace. These
 /// records may not correspond to actual entries in the raw traces, but they are
 /// the logical representation of records in a higher-level event log.
-struct XRayRecord {
+struct LLVM_CLASS_ABI XRayRecord {
   /// RecordType values are used as "sub-types" which have meaning in the
   /// context of the `Type` below. For function call and custom event records,
   /// the RecordType is always 0, while for typed events we store the type in

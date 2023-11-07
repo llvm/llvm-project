@@ -31,7 +31,7 @@ namespace llvm {
 namespace orc {
 namespace tpctypes {
 
-struct RemoteAllocGroup {
+struct LLVM_CLASS_ABI RemoteAllocGroup {
   RemoteAllocGroup() = default;
   RemoteAllocGroup(MemProt Prot) : Prot(Prot) {}
   RemoteAllocGroup(MemProt Prot, bool FinalizeLifetime)
@@ -46,30 +46,30 @@ struct RemoteAllocGroup {
   bool FinalizeLifetime = false;
 };
 
-struct SegFinalizeRequest {
+struct LLVM_CLASS_ABI SegFinalizeRequest {
   RemoteAllocGroup RAG;
   ExecutorAddr Addr;
   uint64_t Size;
   ArrayRef<char> Content;
 };
 
-struct FinalizeRequest {
+struct LLVM_CLASS_ABI FinalizeRequest {
   std::vector<SegFinalizeRequest> Segments;
   shared::AllocActions Actions;
 };
 
-struct SharedMemorySegFinalizeRequest {
+struct LLVM_CLASS_ABI SharedMemorySegFinalizeRequest {
   RemoteAllocGroup RAG;
   ExecutorAddr Addr;
   uint64_t Size;
 };
 
-struct SharedMemoryFinalizeRequest {
+struct LLVM_CLASS_ABI SharedMemoryFinalizeRequest {
   std::vector<SharedMemorySegFinalizeRequest> Segments;
   shared::AllocActions Actions;
 };
 
-template <typename T> struct UIntWrite {
+template <typename T> struct LLVM_CLASS_ABI UIntWrite {
   UIntWrite() = default;
   UIntWrite(ExecutorAddr Addr, T Value) : Addr(Addr), Value(Value) {}
 
@@ -91,7 +91,7 @@ using UInt64Write = UIntWrite<uint64_t>;
 
 /// Describes a write to a buffer.
 /// For use with TargetProcessControl::MemoryAccess objects.
-struct BufferWrite {
+struct LLVM_CLASS_ABI BufferWrite {
   BufferWrite() = default;
   BufferWrite(ExecutorAddr Addr, StringRef Buffer)
       : Addr(Addr), Buffer(Buffer) {}
@@ -102,7 +102,7 @@ struct BufferWrite {
 
 /// Describes a write to a pointer.
 /// For use with TargetProcessControl::MemoryAccess objects.
-struct PointerWrite {
+struct LLVM_CLASS_ABI PointerWrite {
   PointerWrite() = default;
   PointerWrite(ExecutorAddr Addr, ExecutorAddr Value)
       : Addr(Addr), Value(Value) {}
@@ -147,7 +147,7 @@ using SPSMemoryAccessBufferWrite = SPSTuple<SPSExecutorAddr, SPSSequence<char>>;
 using SPSMemoryAccessPointerWrite = SPSTuple<SPSExecutorAddr, SPSExecutorAddr>;
 
 template <>
-class SPSSerializationTraits<SPSRemoteAllocGroup, tpctypes::RemoteAllocGroup> {
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSRemoteAllocGroup, tpctypes::RemoteAllocGroup> {
   enum WireBits {
     ReadBit = 1 << 0,
     WriteBit = 1 << 1,
@@ -193,7 +193,7 @@ public:
 };
 
 template <>
-class SPSSerializationTraits<SPSSegFinalizeRequest,
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSSegFinalizeRequest,
                              tpctypes::SegFinalizeRequest> {
   using SFRAL = SPSSegFinalizeRequest::AsArgList;
 
@@ -214,7 +214,7 @@ public:
 };
 
 template <>
-class SPSSerializationTraits<SPSFinalizeRequest, tpctypes::FinalizeRequest> {
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSFinalizeRequest, tpctypes::FinalizeRequest> {
   using FRAL = SPSFinalizeRequest::AsArgList;
 
 public:
@@ -233,7 +233,7 @@ public:
 };
 
 template <>
-class SPSSerializationTraits<SPSSharedMemorySegFinalizeRequest,
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSSharedMemorySegFinalizeRequest,
                              tpctypes::SharedMemorySegFinalizeRequest> {
   using SFRAL = SPSSharedMemorySegFinalizeRequest::AsArgList;
 
@@ -254,7 +254,7 @@ public:
 };
 
 template <>
-class SPSSerializationTraits<SPSSharedMemoryFinalizeRequest,
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSSharedMemoryFinalizeRequest,
                              tpctypes::SharedMemoryFinalizeRequest> {
   using FRAL = SPSSharedMemoryFinalizeRequest::AsArgList;
 
@@ -275,7 +275,7 @@ public:
 };
 
 template <typename T>
-class SPSSerializationTraits<SPSMemoryAccessUIntWrite<T>,
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSMemoryAccessUIntWrite<T>,
                              tpctypes::UIntWrite<T>> {
 public:
   static size_t size(const tpctypes::UIntWrite<T> &W) {
@@ -294,7 +294,7 @@ public:
 };
 
 template <>
-class SPSSerializationTraits<SPSMemoryAccessBufferWrite,
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSMemoryAccessBufferWrite,
                              tpctypes::BufferWrite> {
 public:
   static size_t size(const tpctypes::BufferWrite &W) {
@@ -315,7 +315,7 @@ public:
 };
 
 template <>
-class SPSSerializationTraits<SPSMemoryAccessPointerWrite,
+class LLVM_CLASS_ABI SPSSerializationTraits<SPSMemoryAccessPointerWrite,
                              tpctypes::PointerWrite> {
 public:
   static size_t size(const tpctypes::PointerWrite &W) {

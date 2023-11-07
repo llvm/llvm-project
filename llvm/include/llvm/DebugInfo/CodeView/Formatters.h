@@ -27,7 +27,7 @@ struct GUID;
 
 namespace detail {
 
-class GuidAdapter final : public FormatAdapter<ArrayRef<uint8_t>> {
+class LLVM_CLASS_ABI GuidAdapter final : public FormatAdapter<ArrayRef<uint8_t>> {
   ArrayRef<uint8_t> Guid;
 
 public:
@@ -49,7 +49,7 @@ inline detail::GuidAdapter fmt_guid(ArrayRef<uint8_t> Item) {
 
 } // end namespace codeview
 
-template <> struct format_provider<codeview::TypeIndex> {
+template <> struct LLVM_CLASS_ABI format_provider<codeview::TypeIndex> {
 public:
   static void format(const codeview::TypeIndex &V, raw_ostream &Stream,
                      StringRef Style) {
@@ -63,7 +63,7 @@ public:
   }
 };
 
-template <> struct format_provider<codeview::GUID> {
+template <> struct LLVM_CLASS_ABI format_provider<codeview::GUID> {
   static void format(const codeview::GUID &V, llvm::raw_ostream &Stream,
                      StringRef Style) {
     Stream << V;

@@ -16,7 +16,7 @@
 namespace llvm {
 namespace codeview {
 
-class DebugUnknownSubsectionRef final : public DebugSubsectionRef {
+class LLVM_CLASS_ABI DebugUnknownSubsectionRef final : public DebugSubsectionRef {
 public:
   DebugUnknownSubsectionRef(DebugSubsectionKind Kind, BinaryStreamRef Data)
       : DebugSubsectionRef(Kind), Data(Data) {}

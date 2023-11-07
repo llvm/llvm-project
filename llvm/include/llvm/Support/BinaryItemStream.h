@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-template <typename T> struct BinaryItemTraits {
+template <typename T> struct LLVM_CLASS_ABI BinaryItemTraits {
   static size_t length(const T &Item) = delete;
   static ArrayRef<uint8_t> bytes(const T &Item) = delete;
 };
@@ -32,7 +32,7 @@ template <typename T> struct BinaryItemTraits {
 /// contiguously in memory, but we may wish to read from or write to these
 /// records as if they were.
 template <typename T, typename Traits = BinaryItemTraits<T>>
-class BinaryItemStream : public BinaryStream {
+class LLVM_CLASS_ABI BinaryItemStream : public BinaryStream {
 public:
   explicit BinaryItemStream(llvm::endianness Endian) : Endian(Endian) {}
 

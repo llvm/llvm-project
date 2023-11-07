@@ -21,7 +21,7 @@ namespace llvm {
 namespace object {
 
 /// A class providing access to the contents of a minidump file.
-class MinidumpFile : public Binary {
+class LLVM_CLASS_ABI MinidumpFile : public Binary {
 public:
   /// Construct a new MinidumpFile object from the given memory buffer. Returns
   /// an error if this file cannot be identified as a minidump file, or if its

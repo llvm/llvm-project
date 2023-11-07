@@ -25,7 +25,7 @@ namespace parallel {
 /// TODO: The same approach might be implemented for ThreadPool.
 
 template <typename AllocatorTy>
-class PerThreadAllocator
+class LLVM_CLASS_ABI PerThreadAllocator
     : public AllocatorBase<PerThreadAllocator<AllocatorTy>> {
 public:
   PerThreadAllocator()

@@ -20,7 +20,7 @@
 namespace llvm {
 namespace mca {
 
-class HardwareUnit {
+class LLVM_CLASS_ABI HardwareUnit {
   HardwareUnit(const HardwareUnit &H) = delete;
   HardwareUnit &operator=(const HardwareUnit &H) = delete;
 

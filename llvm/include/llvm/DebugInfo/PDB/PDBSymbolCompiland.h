@@ -19,7 +19,7 @@ class raw_ostream;
 
 namespace pdb {
 
-class PDBSymbolCompiland : public PDBSymbol {
+class LLVM_CLASS_ABI PDBSymbolCompiland : public PDBSymbol {
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::Compiland)
 public:
   void dump(PDBSymDumper &Dumper) const override;

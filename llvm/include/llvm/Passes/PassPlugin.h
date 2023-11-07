@@ -38,7 +38,7 @@ extern "C" {
 /// This struct defines the core interface for pass plugins and is supposed to
 /// be filled out by plugin implementors. LLVM-side users of a plugin are
 /// expected to use the \c PassPlugin class below to interface with it.
-struct PassPluginLibraryInfo {
+struct LLVM_CLASS_ABI PassPluginLibraryInfo {
   /// The API version understood by this plugin, usually \c
   /// LLVM_PLUGIN_API_VERSION
   uint32_t APIVersion;
@@ -57,7 +57,7 @@ struct PassPluginLibraryInfo {
 ///
 /// An instance of this class wraps a loaded pass plugin and gives access to
 /// its interface defined by the \c PassPluginLibraryInfo it exposes.
-class PassPlugin {
+class LLVM_CLASS_ABI PassPlugin {
 public:
   /// Attempts to load a pass plugin from a given file.
   ///
@@ -107,7 +107,7 @@ private:
 ///   };
 /// }
 /// ```
-extern "C" ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
+extern "C" LLVM_FUNC_ABI ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
 llvmGetPassPluginInfo();
 
 #endif /* LLVM_PASSES_PASSPLUGIN_H */

@@ -32,7 +32,7 @@ class DataExtractor;
 struct DWARFSection;
 
 /// A class that verifies DWARF debug information given a DWARF Context.
-class DWARFVerifier {
+class LLVM_CLASS_ABI DWARFVerifier {
 public:
   /// A class that keeps the address range information for a single DIE.
   struct DieRangeInfo {

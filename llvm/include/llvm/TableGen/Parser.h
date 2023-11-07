@@ -28,7 +28,7 @@ class SourceMgr;
 ///
 /// NOTE: TableGen currently relies on global state within a given parser
 ///       invocation, so this function is not thread-safe.
-bool TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records);
+LLVM_FUNC_ABI bool TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records);
 
 } // end namespace llvm
 

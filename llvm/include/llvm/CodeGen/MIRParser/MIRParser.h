@@ -40,7 +40,7 @@ typedef llvm::function_ref<std::optional<std::string>(StringRef, StringRef)>
 
 /// This class initializes machine functions by applying the state loaded from
 /// a MIR file.
-class MIRParser {
+class LLVM_CLASS_ABI MIRParser {
   std::unique_ptr<MIRParserImpl> Impl;
 
 public:
@@ -74,7 +74,7 @@ public:
 /// \param Context - Context which will be used for the parsed LLVM IR module.
 /// \param ProcessIRFunction - function to run on every IR function or stub
 /// loaded from the MIR file.
-std::unique_ptr<MIRParser> createMIRParserFromFile(
+LLVM_FUNC_ABI std::unique_ptr<MIRParser> createMIRParserFromFile(
     StringRef Filename, SMDiagnostic &Error, LLVMContext &Context,
     std::function<void(Function &)> ProcessIRFunction = nullptr);
 
@@ -86,7 +86,7 @@ std::unique_ptr<MIRParser> createMIRParserFromFile(
 ///
 /// \param Contents - The MemoryBuffer containing the machine level IR.
 /// \param Context - Context which will be used for the parsed LLVM IR module.
-std::unique_ptr<MIRParser>
+LLVM_FUNC_ABI std::unique_ptr<MIRParser>
 createMIRParser(std::unique_ptr<MemoryBuffer> Contents, LLVMContext &Context,
                 std::function<void(Function &)> ProcessIRFunction = nullptr);
 

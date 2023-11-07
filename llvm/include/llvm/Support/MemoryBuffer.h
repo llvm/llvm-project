@@ -49,7 +49,7 @@ using file_t = int;
 /// be more efficient for clients which are reading all the data to stop
 /// reading when they encounter a '\0' than to continually check the file
 /// position to see if it has reached the end of the file.
-class MemoryBuffer {
+class LLVM_CLASS_ABI MemoryBuffer {
   const char *BufferStart; // Start of the buffer.
   const char *BufferEnd;   // End of the buffer.
 
@@ -179,7 +179,7 @@ public:
 /// access to the underlying contents.  It only supports creation methods that
 /// are guaranteed to produce a writable buffer.  For example, mapping a file
 /// read-only is not supported.
-class WritableMemoryBuffer : public MemoryBuffer {
+class LLVM_CLASS_ABI WritableMemoryBuffer : public MemoryBuffer {
 protected:
   WritableMemoryBuffer() = default;
 
@@ -243,7 +243,7 @@ private:
 /// the underlying contents and committing those changes to the original source.
 /// It only supports creation methods that are guaranteed to produce a writable
 /// buffer.  For example, mapping a file read-only is not supported.
-class WriteThroughMemoryBuffer : public MemoryBuffer {
+class LLVM_CLASS_ABI WriteThroughMemoryBuffer : public MemoryBuffer {
 protected:
   WriteThroughMemoryBuffer() = default;
 

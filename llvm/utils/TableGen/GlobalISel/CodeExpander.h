@@ -29,7 +29,7 @@ class raw_ostream;
 ///
 /// The emitted code can be given a custom indent to enable both indentation by
 /// an arbitrary amount of whitespace and emission of the code as a comment.
-class CodeExpander {
+class LLVM_CLASS_ABI CodeExpander {
   StringRef Code;
   const CodeExpansions &Expansions;
   const ArrayRef<SMLoc> &Loc;

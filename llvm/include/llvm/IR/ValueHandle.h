@@ -27,7 +27,7 @@ namespace llvm {
 /// ValueHandle's are smart pointers to Value's that have special behavior when
 /// the value is deleted or ReplaceAllUsesWith'd.  See the specific handles
 /// below for details.
-class ValueHandleBase {
+class LLVM_CLASS_ABI ValueHandleBase {
   friend class Value;
 
 protected:
@@ -142,7 +142,7 @@ private:
 ///
 /// This is a value handle that points to a value, and nulls itself
 /// out if that value is deleted.
-class WeakVH : public ValueHandleBase {
+class LLVM_CLASS_ABI WeakVH : public ValueHandleBase {
 public:
   WeakVH() : ValueHandleBase(Weak) {}
   WeakVH(Value *P) : ValueHandleBase(Weak, P) {}
@@ -165,19 +165,19 @@ public:
 
 // Specialize simplify_type to allow WeakVH to participate in
 // dyn_cast, isa, etc.
-template <> struct simplify_type<WeakVH> {
+template <> struct LLVM_CLASS_ABI simplify_type<WeakVH> {
   using SimpleType = Value *;
 
   static SimpleType getSimplifiedValue(WeakVH &WVH) { return WVH; }
 };
-template <> struct simplify_type<const WeakVH> {
+template <> struct LLVM_CLASS_ABI simplify_type<const WeakVH> {
   using SimpleType = Value *;
 
   static SimpleType getSimplifiedValue(const WeakVH &WVH) { return WVH; }
 };
 
 // Specialize DenseMapInfo to allow WeakVH to participate in DenseMap.
-template <> struct DenseMapInfo<WeakVH> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<WeakVH> {
   static inline WeakVH getEmptyKey() {
     return WeakVH(DenseMapInfo<Value *>::getEmptyKey());
   }
@@ -202,7 +202,7 @@ template <> struct DenseMapInfo<WeakVH> {
 /// is useful for advisory sorts of information, but should not be used as the
 /// key of a map (since the map would have to rearrange itself when the pointer
 /// changes).
-class WeakTrackingVH : public ValueHandleBase {
+class LLVM_CLASS_ABI WeakTrackingVH : public ValueHandleBase {
 public:
   WeakTrackingVH() : ValueHandleBase(WeakTracking) {}
   WeakTrackingVH(Value *P) : ValueHandleBase(WeakTracking, P) {}
@@ -229,12 +229,12 @@ public:
 
 // Specialize simplify_type to allow WeakTrackingVH to participate in
 // dyn_cast, isa, etc.
-template <> struct simplify_type<WeakTrackingVH> {
+template <> struct LLVM_CLASS_ABI simplify_type<WeakTrackingVH> {
   using SimpleType = Value *;
 
   static SimpleType getSimplifiedValue(WeakTrackingVH &WVH) { return WVH; }
 };
-template <> struct simplify_type<const WeakTrackingVH> {
+template <> struct LLVM_CLASS_ABI simplify_type<const WeakTrackingVH> {
   using SimpleType = Value *;
 
   static SimpleType getSimplifiedValue(const WeakTrackingVH &WVH) {
@@ -258,7 +258,7 @@ template <> struct simplify_type<const WeakTrackingVH> {
 /// AssertingVH's as it moves.  This is required because in non-assert mode this
 /// class turns into a trivial wrapper around a pointer.
 template <typename ValueTy>
-class AssertingVH
+class LLVM_CLASS_ABI AssertingVH
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
     : public ValueHandleBase
 #endif
@@ -311,7 +311,7 @@ public:
 // Treat AssertingVH<T> like T* inside maps. This also allows using find_as()
 // to look up a value without constructing a value handle.
 template<typename T>
-struct DenseMapInfo<AssertingVH<T>> : DenseMapInfo<T *> {};
+struct LLVM_CLASS_ABI DenseMapInfo<AssertingVH<T>> : DenseMapInfo<T *> {};
 
 /// Value handle that tracks a Value across RAUW.
 ///
@@ -329,7 +329,7 @@ struct DenseMapInfo<AssertingVH<T>> : DenseMapInfo<T *> {};
 ///
 /// Assigning a value to a TrackingVH is always allowed, even if said TrackingVH
 /// no longer points to a valid value.
-template <typename ValueTy> class TrackingVH {
+template <typename ValueTy> class LLVM_CLASS_ABI TrackingVH {
   WeakTrackingVH InnerHandle;
 
 public:
@@ -381,7 +381,7 @@ public:
 /// class can be used as the key of a map, as long as the user takes it out of
 /// the map before calling setValPtr() (since the map has to rearrange itself
 /// when the pointer changes).  Unlike ValueHandleBase, this class has a vtable.
-class CallbackVH : public ValueHandleBase {
+class LLVM_CLASS_ABI CallbackVH : public ValueHandleBase {
   virtual void anchor();
 protected:
   ~CallbackVH() = default;
@@ -443,7 +443,7 @@ public:
 /// PoisoningVH's as it moves. This is required because in non-assert mode this
 /// class turns into a trivial wrapper around a pointer.
 template <typename ValueTy>
-class PoisoningVH final
+class LLVM_CLASS_ABI PoisoningVH final
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
     : public CallbackVH
 #endif
@@ -524,7 +524,7 @@ public:
 };
 
 // Specialize DenseMapInfo to allow PoisoningVH to participate in DenseMap.
-template <typename T> struct DenseMapInfo<PoisoningVH<T>> {
+template <typename T> struct LLVM_CLASS_ABI DenseMapInfo<PoisoningVH<T>> {
   static inline PoisoningVH<T> getEmptyKey() {
     PoisoningVH<T> Res;
     Res.setRawValPtr(DenseMapInfo<Value *>::getEmptyKey());

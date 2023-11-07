@@ -43,7 +43,7 @@ inline Expected<std::optional<uint64_t>> parseHotnessThresholdOption(StringRef A
 }
 
 // A simple CL parser for '*-remarks-hotness-threshold='
-class HotnessThresholdParser : public cl::parser<std::optional<uint64_t>> {
+class LLVM_CLASS_ABI HotnessThresholdParser : public cl::parser<std::optional<uint64_t>> {
 public:
   HotnessThresholdParser(cl::Option &O) : cl::parser<std::optional<uint64_t>>(O) {}
 

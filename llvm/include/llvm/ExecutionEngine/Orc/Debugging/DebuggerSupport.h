@@ -20,7 +20,7 @@ namespace orc {
 
 class LLJIT;
 
-Error enableDebuggerSupport(LLJIT &J);
+LLVM_FUNC_ABI Error enableDebuggerSupport(LLJIT &J);
 
 } // namespace orc
 } // namespace llvm

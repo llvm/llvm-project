@@ -30,7 +30,7 @@ struct SymbolRecordBase;
 
 } // end namespace detail
 
-struct SymbolRecord {
+struct LLVM_CLASS_ABI SymbolRecord {
   std::shared_ptr<detail::SymbolRecordBase> Symbol;
 
   codeview::CVSymbol

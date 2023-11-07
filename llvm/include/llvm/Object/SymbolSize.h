@@ -16,16 +16,16 @@
 namespace llvm {
 namespace object {
 
-struct SymEntry {
+struct LLVM_CLASS_ABI SymEntry {
   symbol_iterator I;
   uint64_t Address;
   unsigned Number;
   unsigned SectionID;
 };
 
-int compareAddress(const SymEntry *A, const SymEntry *B);
+LLVM_FUNC_ABI int compareAddress(const SymEntry *A, const SymEntry *B);
 
-std::vector<std::pair<SymbolRef, uint64_t>>
+LLVM_FUNC_ABI std::vector<std::pair<SymbolRef, uint64_t>>
 computeSymbolSizes(const ObjectFile &O);
 
 }

@@ -28,7 +28,7 @@ namespace llvm {
 /// such as null-terminated strings, integers in various flavors of endianness,
 /// etc.  Can be subclassed to provide reading and writing of custom datatypes,
 /// although no methods are overridable.
-class BinaryStreamWriter {
+class LLVM_CLASS_ABI BinaryStreamWriter {
 public:
   BinaryStreamWriter() = default;
   explicit BinaryStreamWriter(WritableBinaryStreamRef Ref);

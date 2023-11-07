@@ -49,7 +49,7 @@ class TargetTransformInfo;
 /// makes them available to the loop passes "for free". Each loop pass is
 /// expected to update these analyses if necessary to ensure they're
 /// valid after it runs.
-struct LoopStandardAnalysisResults {
+struct LLVM_CLASS_ABI LoopStandardAnalysisResults {
   AAResults &AA;
   AssumptionCache &AC;
   DominatorTree &DT;
@@ -63,9 +63,9 @@ struct LoopStandardAnalysisResults {
 };
 
 /// Extern template declaration for the analysis set for this IR unit.
-extern template class AllAnalysesOn<Loop>;
+extern template class LLVM_CLASS_ABI AllAnalysesOn<Loop>;
 
-extern template class AnalysisManager<Loop, LoopStandardAnalysisResults &>;
+extern template class LLVM_CLASS_ABI AnalysisManager<Loop, LoopStandardAnalysisResults &>;
 /// The loop analysis manager.
 ///
 /// See the documentation for the AnalysisManager template for detail
@@ -149,7 +149,7 @@ LoopAnalysisManagerFunctionProxy::run(Function &F, FunctionAnalysisManager &AM);
 // template.
 extern template class InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
 
-extern template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop,
+extern template class LLVM_CLASS_ABI OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop,
                                                 LoopStandardAnalysisResults &>;
 /// A proxy from a \c FunctionAnalysisManager to a \c Loop.
 typedef OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop,
@@ -157,7 +157,7 @@ typedef OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop,
     FunctionAnalysisManagerLoopProxy;
 
 /// Returns the minimum set of Analyses that all loop passes must preserve.
-PreservedAnalyses getLoopPassPreservedAnalyses();
+LLVM_FUNC_ABI PreservedAnalyses getLoopPassPreservedAnalyses();
 }
 
 #endif // LLVM_ANALYSIS_LOOPANALYSISMANAGER_H

@@ -26,7 +26,7 @@
 namespace llvm {
 namespace mca {
 
-class InstructionTables final : public Stage {
+class LLVM_CLASS_ABI InstructionTables final : public Stage {
   const MCSchedModel &SM;
   SmallVector<ResourceUse, 4> UsedResources;
   SmallVector<uint64_t, 8> Masks;

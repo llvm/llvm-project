@@ -29,7 +29,7 @@ class Module;
 
 namespace orc {
 
-class IRCompileLayer : public IRLayer {
+class LLVM_CLASS_ABI IRCompileLayer : public IRLayer {
 public:
   class IRCompiler {
   public:

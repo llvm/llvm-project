@@ -23,7 +23,7 @@ namespace llvm {
 class Module;
 class raw_ostream;
 
-class ThinLTOBitcodeWriterPass
+class LLVM_CLASS_ABI ThinLTOBitcodeWriterPass
     : public PassInfoMixin<ThinLTOBitcodeWriterPass> {
   raw_ostream &OS;
   raw_ostream *ThinLinkOS;

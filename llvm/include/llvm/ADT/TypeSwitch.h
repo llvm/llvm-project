@@ -22,7 +22,7 @@
 namespace llvm {
 namespace detail {
 
-template <typename DerivedT, typename T> class TypeSwitchBase {
+template <typename DerivedT, typename T> class LLVM_CLASS_ABI TypeSwitchBase {
 public:
   TypeSwitchBase(const T &value) : value(value) {}
   TypeSwitchBase(TypeSwitchBase &&other) : value(other.value) {}
@@ -104,7 +104,7 @@ protected:
 ///    .Default([](Operation *op) { ... });
 ///
 template <typename T, typename ResultT = void>
-class TypeSwitch : public detail::TypeSwitchBase<TypeSwitch<T, ResultT>, T> {
+class LLVM_CLASS_ABI TypeSwitch : public detail::TypeSwitchBase<TypeSwitch<T, ResultT>, T> {
 public:
   using BaseT = detail::TypeSwitchBase<TypeSwitch<T, ResultT>, T>;
   using BaseT::BaseT;
@@ -150,7 +150,7 @@ private:
 
 /// Specialization of TypeSwitch for void returning callables.
 template <typename T>
-class TypeSwitch<T, void>
+class LLVM_CLASS_ABI TypeSwitch<T, void>
     : public detail::TypeSwitchBase<TypeSwitch<T, void>, T> {
 public:
   using BaseT = detail::TypeSwitchBase<TypeSwitch<T, void>, T>;

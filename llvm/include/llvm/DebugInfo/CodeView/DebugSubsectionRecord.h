@@ -28,12 +28,12 @@ namespace codeview {
 class DebugSubsection;
 
 // Corresponds to the `CV_DebugSSubsectionHeader_t` structure.
-struct DebugSubsectionHeader {
+struct LLVM_CLASS_ABI DebugSubsectionHeader {
   support::ulittle32_t Kind;   // codeview::DebugSubsectionKind enum
   support::ulittle32_t Length; // number of bytes occupied by this record.
 };
 
-class DebugSubsectionRecord {
+class LLVM_CLASS_ABI DebugSubsectionRecord {
 public:
   DebugSubsectionRecord();
   DebugSubsectionRecord(DebugSubsectionKind Kind, BinaryStreamRef Data);
@@ -49,7 +49,7 @@ private:
   BinaryStreamRef Data;
 };
 
-class DebugSubsectionRecordBuilder {
+class LLVM_CLASS_ABI DebugSubsectionRecordBuilder {
 public:
   DebugSubsectionRecordBuilder(std::shared_ptr<DebugSubsection> Subsection);
 
@@ -72,7 +72,7 @@ private:
 
 } // end namespace codeview
 
-template <> struct VarStreamArrayExtractor<codeview::DebugSubsectionRecord> {
+template <> struct LLVM_CLASS_ABI VarStreamArrayExtractor<codeview::DebugSubsectionRecord> {
   Error operator()(BinaryStreamRef Stream, uint32_t &Length,
                    codeview::DebugSubsectionRecord &Info) {
     // FIXME: We need to pass the container type through to this function.  In

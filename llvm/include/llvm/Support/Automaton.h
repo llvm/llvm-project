@@ -46,7 +46,7 @@ using NfaPath = SmallVector<uint64_t, 4>;
 /// Experimental results with large tables have shown a significant (multiple
 /// orders of magnitude) parsing speedup by using a custom struct here with a
 /// trivial constructor rather than std::pair<uint64_t, uint64_t>.
-struct NfaStatePair {
+struct LLVM_CLASS_ABI NfaStatePair {
   uint64_t FromDfaState, ToDfaState;
 
   bool operator<(const NfaStatePair &Other) const {
@@ -58,7 +58,7 @@ struct NfaStatePair {
 namespace internal {
 /// The internal class that maintains all possible paths through an NFA based
 /// on a path through the DFA.
-class NfaTranscriber {
+class LLVM_CLASS_ABI NfaTranscriber {
 private:
   /// Cached transition table. This is a table of NfaStatePairs that contains
   /// zero-terminated sequences pointed to by DFA transitions.
@@ -160,7 +160,7 @@ public:
 ///
 /// An automaton accepts a sequence of input tokens ("actions"). This class is
 /// templated on the type of these actions.
-template <typename ActionT> class Automaton {
+template <typename ActionT> class LLVM_CLASS_ABI Automaton {
   /// Map from {State, Action} to {NewState, TransitionInfoIdx}.
   /// TransitionInfoIdx is used by the DfaTranscriber to analyze the transition.
   /// FIXME: This uses a std::map because ActionT can be a pair type including

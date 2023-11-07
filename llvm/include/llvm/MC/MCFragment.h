@@ -28,7 +28,7 @@ class MCSection;
 class MCSubtargetInfo;
 class MCSymbol;
 
-class MCFragment : public ilist_node_with_parent<MCFragment, MCSection> {
+class LLVM_CLASS_ABI MCFragment : public ilist_node_with_parent<MCFragment, MCSection> {
   friend class MCAsmLayout;
 
 public:
@@ -113,7 +113,7 @@ public:
   unsigned getSubsectionNumber() const { return SubsectionNumber; }
 };
 
-class MCDummyFragment : public MCFragment {
+class LLVM_CLASS_ABI MCDummyFragment : public MCFragment {
 public:
   explicit MCDummyFragment(MCSection *Sec) : MCFragment(FT_Dummy, false, Sec) {}
 
@@ -123,7 +123,7 @@ public:
 /// Interface implemented by fragments that contain encoded instructions and/or
 /// data.
 ///
-class MCEncodedFragment : public MCFragment {
+class LLVM_CLASS_ABI MCEncodedFragment : public MCFragment {
   /// Should this fragment be aligned to the end of a bundle?
   bool AlignToBundleEnd = false;
 
@@ -185,7 +185,7 @@ public:
 /// data.
 ///
 template<unsigned ContentsSize>
-class MCEncodedFragmentWithContents : public MCEncodedFragment {
+class LLVM_CLASS_ABI MCEncodedFragmentWithContents : public MCEncodedFragment {
   SmallVector<char, ContentsSize> Contents;
 
 protected:
@@ -203,7 +203,7 @@ public:
 /// data and also have fixups registered.
 ///
 template<unsigned ContentsSize, unsigned FixupsSize>
-class MCEncodedFragmentWithFixups :
+class LLVM_CLASS_ABI MCEncodedFragmentWithFixups :
   public MCEncodedFragmentWithContents<ContentsSize> {
 
   /// The list of fixups in this fragment.
@@ -240,7 +240,7 @@ public:
 
 /// Fragment for data and encoded instructions.
 ///
-class MCDataFragment : public MCEncodedFragmentWithFixups<32, 4> {
+class LLVM_CLASS_ABI MCDataFragment : public MCEncodedFragmentWithFixups<32, 4> {
 public:
   MCDataFragment(MCSection *Sec = nullptr)
       : MCEncodedFragmentWithFixups<32, 4>(FT_Data, false, Sec) {}
@@ -258,7 +258,7 @@ public:
 /// it can be used instead of MCDataFragment and lead to lower memory
 /// consumption.
 ///
-class MCCompactEncodedInstFragment : public MCEncodedFragmentWithContents<4> {
+class LLVM_CLASS_ABI MCCompactEncodedInstFragment : public MCEncodedFragmentWithContents<4> {
 public:
   MCCompactEncodedInstFragment(MCSection *Sec = nullptr)
       : MCEncodedFragmentWithContents(FT_CompactEncodedInst, true, Sec) {
@@ -272,7 +272,7 @@ public:
 /// A relaxable fragment holds on to its MCInst, since it may need to be
 /// relaxed during the assembler layout and relaxation stage.
 ///
-class MCRelaxableFragment : public MCEncodedFragmentWithFixups<8, 1> {
+class LLVM_CLASS_ABI MCRelaxableFragment : public MCEncodedFragmentWithFixups<8, 1> {
 
   /// The instruction this is a fragment for.
   MCInst Inst;
@@ -296,7 +296,7 @@ public:
   }
 };
 
-class MCAlignFragment : public MCFragment {
+class LLVM_CLASS_ABI MCAlignFragment : public MCFragment {
   /// The alignment to ensure, in bytes.
   Align Alignment;
 
@@ -345,7 +345,7 @@ public:
   }
 };
 
-class MCFillFragment : public MCFragment {
+class LLVM_CLASS_ABI MCFillFragment : public MCFragment {
   uint8_t ValueSize;
   /// Value to use for filling bytes.
   uint64_t Value;
@@ -372,7 +372,7 @@ public:
   }
 };
 
-class MCNopsFragment : public MCFragment {
+class LLVM_CLASS_ABI MCNopsFragment : public MCFragment {
   /// The number of bytes to insert.
   int64_t Size;
   /// Maximum number of bytes allowed in each NOP instruction.
@@ -402,7 +402,7 @@ public:
   }
 };
 
-class MCOrgFragment : public MCFragment {
+class LLVM_CLASS_ABI MCOrgFragment : public MCFragment {
   /// Value to use for filling bytes.
   int8_t Value;
 
@@ -429,7 +429,7 @@ public:
   }
 };
 
-class MCLEBFragment : public MCFragment {
+class LLVM_CLASS_ABI MCLEBFragment : public MCFragment {
   /// True if this is a sleb128, false if uleb128.
   bool IsSigned;
 
@@ -458,7 +458,7 @@ public:
   }
 };
 
-class MCDwarfLineAddrFragment : public MCEncodedFragmentWithFixups<8, 1> {
+class LLVM_CLASS_ABI MCDwarfLineAddrFragment : public MCEncodedFragmentWithFixups<8, 1> {
   /// The value of the difference between the two line numbers
   /// between two .loc dwarf directives.
   int64_t LineDelta;
@@ -482,7 +482,7 @@ public:
   }
 };
 
-class MCDwarfCallFrameFragment : public MCEncodedFragmentWithFixups<8, 1> {
+class LLVM_CLASS_ABI MCDwarfCallFrameFragment : public MCEncodedFragmentWithFixups<8, 1> {
   /// The expression for the difference of the two symbols that
   /// make up the address delta between two .cfi_* dwarf directives.
   const MCExpr *AddrDelta;
@@ -501,7 +501,7 @@ public:
 };
 
 /// Represents a symbol table index fragment.
-class MCSymbolIdFragment : public MCFragment {
+class LLVM_CLASS_ABI MCSymbolIdFragment : public MCFragment {
   const MCSymbol *Sym;
 
 public:
@@ -518,7 +518,7 @@ public:
 
 /// Fragment representing the binary annotations produced by the
 /// .cv_inline_linetable directive.
-class MCCVInlineLineTableFragment : public MCFragment {
+class LLVM_CLASS_ABI MCCVInlineLineTableFragment : public MCFragment {
   unsigned SiteFuncId;
   unsigned StartFileId;
   unsigned StartLineNum;
@@ -551,7 +551,7 @@ public:
 };
 
 /// Fragment representing the .cv_def_range directive.
-class MCCVDefRangeFragment : public MCEncodedFragmentWithFixups<32, 4> {
+class LLVM_CLASS_ABI MCCVDefRangeFragment : public MCEncodedFragmentWithFixups<32, 4> {
   SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 2> Ranges;
   SmallString<32> FixedSizePortion;
 
@@ -581,7 +581,7 @@ public:
 /// Represents required padding such that a particular other set of fragments
 /// does not cross a particular power-of-two boundary. The other fragments must
 /// follow this one within the same section.
-class MCBoundaryAlignFragment : public MCFragment {
+class LLVM_CLASS_ABI MCBoundaryAlignFragment : public MCFragment {
   /// The alignment requirement of the branch to be aligned.
   Align AlignBoundary;
   /// The last fragment in the set of fragments to be aligned.
@@ -618,7 +618,7 @@ public:
   }
 };
 
-class MCPseudoProbeAddrFragment : public MCEncodedFragmentWithFixups<8, 1> {
+class LLVM_CLASS_ABI MCPseudoProbeAddrFragment : public MCEncodedFragmentWithFixups<8, 1> {
   /// The expression for the difference of the two symbols that
   /// make up the address delta between two .pseudoprobe directives.
   const MCExpr *AddrDelta;

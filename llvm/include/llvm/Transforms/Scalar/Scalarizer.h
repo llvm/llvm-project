@@ -27,7 +27,7 @@ namespace llvm {
 class Function;
 class FunctionPass;
 
-struct ScalarizerPassOptions {
+struct LLVM_CLASS_ABI ScalarizerPassOptions {
   // These options correspond 1:1 to cl::opt options defined in
   // Scalarizer.cpp. When the cl::opt are specified, they take precedence.
   // When the cl::opt are not specified, the present optional values allow to
@@ -37,7 +37,7 @@ struct ScalarizerPassOptions {
   std::optional<unsigned> ScalarizeMinBits;
 };
 
-class ScalarizerPass : public PassInfoMixin<ScalarizerPass> {
+class LLVM_CLASS_ABI ScalarizerPass : public PassInfoMixin<ScalarizerPass> {
   ScalarizerPassOptions Options;
 
 public:
@@ -54,7 +54,7 @@ public:
 };
 
 /// Create a legacy pass manager instance of the Scalarizer pass
-FunctionPass *createScalarizerPass();
+LLVM_FUNC_ABI FunctionPass *createScalarizerPass();
 
 }
 

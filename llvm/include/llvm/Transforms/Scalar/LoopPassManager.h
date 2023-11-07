@@ -67,7 +67,7 @@ using HasRunOnLoopT = decltype(std::declval<PassT>().run(
 // See the comments on the definition of the specialization for details on how
 // it differs from the primary template.
 template <>
-class PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
+class LLVM_CLASS_ABI PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
                   LPMUpdater &>
     : public PassInfoMixin<
           PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
@@ -221,7 +221,7 @@ typedef PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
 /// the extra parameters from a transformation's run method to the
 /// AnalysisManager's getResult.
 template <typename AnalysisT>
-struct RequireAnalysisPass<AnalysisT, Loop, LoopAnalysisManager,
+struct LLVM_CLASS_ABI RequireAnalysisPass<AnalysisT, Loop, LoopAnalysisManager,
                            LoopStandardAnalysisResults &, LPMUpdater &>
     : PassInfoMixin<
           RequireAnalysisPass<AnalysisT, Loop, LoopAnalysisManager,
@@ -260,7 +260,7 @@ class FunctionToLoopPassAdaptor;
 /// inserted recursively. On the other hand, in loop-nest mode, only top-level
 /// loops are contained in the worklist and the addition of new (top-level)
 /// loops will not trigger the addition of their subloops.
-class LPMUpdater {
+class LLVM_CLASS_ABI LPMUpdater {
 public:
   /// This can be queried by loop passes which run other loop passes (like pass
   /// managers) to know whether the loop needs to be skipped due to updates to
@@ -432,7 +432,7 @@ std::optional<PreservedAnalyses> LoopPassManager::runSinglePass(
 /// processed in loop-nest mode. Please refer to the various specializations of
 /// \fn createLoopFunctionToLoopPassAdaptor to see when loop mode and loop-nest
 /// mode are used.
-class FunctionToLoopPassAdaptor
+class LLVM_CLASS_ABI FunctionToLoopPassAdaptor
     : public PassInfoMixin<FunctionToLoopPassAdaptor> {
 public:
   using PassConceptT =
@@ -539,7 +539,7 @@ createFunctionToLoopPassAdaptor<LoopPassManager>(
 }
 
 /// Pass for printing a loop's contents as textual IR.
-class PrintLoopPass : public PassInfoMixin<PrintLoopPass> {
+class LLVM_CLASS_ABI PrintLoopPass : public PassInfoMixin<PrintLoopPass> {
   raw_ostream &OS;
   std::string Banner;
 

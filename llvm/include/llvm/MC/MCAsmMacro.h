@@ -19,7 +19,7 @@
 namespace llvm {
 
 /// Target independent representation for an assembler token.
-class AsmToken {
+class LLVM_CLASS_ABI AsmToken {
 public:
   enum TokenKind {
     // Markers
@@ -127,7 +127,7 @@ public:
   void dump(raw_ostream &OS) const;
 };
 
-struct MCAsmMacroParameter {
+struct LLVM_CLASS_ABI MCAsmMacroParameter {
   StringRef Name;
   std::vector<AsmToken> Value;
   bool Required = false;
@@ -140,7 +140,7 @@ struct MCAsmMacroParameter {
 };
 
 typedef std::vector<MCAsmMacroParameter> MCAsmMacroParameters;
-struct MCAsmMacro {
+struct LLVM_CLASS_ABI MCAsmMacro {
   StringRef Name;
   StringRef Body;
   MCAsmMacroParameters Parameters;

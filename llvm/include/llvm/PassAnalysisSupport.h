@@ -45,7 +45,7 @@ class StringRef;
 /// of these analyses).  This information is provided by a pass to the Pass
 /// infrastructure through the getAnalysisUsage virtual function.
 ///
-class AnalysisUsage {
+class LLVM_CLASS_ABI AnalysisUsage {
 public:
   using VectorType = SmallVectorImpl<AnalysisID>;
 
@@ -155,7 +155,7 @@ public:
 /// analysis information out of pass manager that is responsible to manage
 /// the pass.
 ///
-class AnalysisResolver {
+class LLVM_CLASS_ABI AnalysisResolver {
 public:
   AnalysisResolver() = delete;
   explicit AnalysisResolver(PMDataManager &P) : PM(P) {}

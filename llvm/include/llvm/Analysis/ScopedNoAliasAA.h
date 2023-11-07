@@ -27,7 +27,7 @@ class MDNode;
 class MemoryLocation;
 
 /// A simple AA result which uses scoped-noalias metadata to answer queries.
-class ScopedNoAliasAAResult : public AAResultBase {
+class LLVM_CLASS_ABI ScopedNoAliasAAResult : public AAResultBase {
 public:
   /// Handle invalidation events from the new pass manager.
   ///
@@ -49,7 +49,7 @@ private:
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
-class ScopedNoAliasAA : public AnalysisInfoMixin<ScopedNoAliasAA> {
+class LLVM_CLASS_ABI ScopedNoAliasAA : public AnalysisInfoMixin<ScopedNoAliasAA> {
   friend AnalysisInfoMixin<ScopedNoAliasAA>;
 
   static AnalysisKey Key;
@@ -61,7 +61,7 @@ public:
 };
 
 /// Legacy wrapper pass to provide the ScopedNoAliasAAResult object.
-class ScopedNoAliasAAWrapperPass : public ImmutablePass {
+class LLVM_CLASS_ABI ScopedNoAliasAAWrapperPass : public ImmutablePass {
   std::unique_ptr<ScopedNoAliasAAResult> Result;
 
 public:
@@ -82,7 +82,7 @@ public:
 // createScopedNoAliasAAWrapperPass - This pass implements metadata-based
 // scoped noalias analysis.
 //
-ImmutablePass *createScopedNoAliasAAWrapperPass();
+LLVM_FUNC_ABI ImmutablePass *createScopedNoAliasAAWrapperPass();
 
 } // end namespace llvm
 

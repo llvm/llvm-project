@@ -71,7 +71,7 @@ namespace xray {
 ///
 template <typename VertexAttribute, typename EdgeAttribute,
           typename VI = int32_t>
-class Graph {
+class LLVM_CLASS_ABI Graph {
 public:
   /// These objects are used to name edges and vertices in the graph.
   typedef VI VertexIdentifier;

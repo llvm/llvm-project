@@ -18,7 +18,7 @@ namespace pdb {
 
 /// IPDBFrameData defines an interface used to represent a frame data of some
 /// code block.
-class IPDBFrameData {
+class LLVM_CLASS_ABI IPDBFrameData {
 public:
   virtual ~IPDBFrameData();
 

@@ -15,7 +15,7 @@
 
 namespace llvm {
 
-class ExtractGVPass : public PassInfoMixin<ExtractGVPass> {
+class LLVM_CLASS_ABI ExtractGVPass : public PassInfoMixin<ExtractGVPass> {
 private:
   SetVector<GlobalValue *> Named;
   bool deleteStuff;

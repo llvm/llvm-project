@@ -45,7 +45,7 @@ namespace llvm {
 /// build up a vector of nodes in a particular SCC. Note that it is a forward
 /// iterator and thus you cannot backtrack or re-visit nodes.
 template <class GraphT, class GT = GraphTraits<GraphT>>
-class scc_iterator : public iterator_facade_base<
+class LLVM_CLASS_ABI scc_iterator : public iterator_facade_base<
                          scc_iterator<GraphT, GT>, std::forward_iterator_tag,
                          const std::vector<typename GT::NodeRef>, ptrdiff_t> {
   using NodeRef = typename GT::NodeRef;
@@ -251,7 +251,7 @@ template <class T> scc_iterator<T> scc_end(const T &G) {
 /// have a predecessor and then applied to all nodes of the SCC. Such order
 /// ensures that high-weighted edges are visited first during the traversal.
 template <class GraphT, class GT = GraphTraits<GraphT>>
-class scc_member_iterator {
+class LLVM_CLASS_ABI scc_member_iterator {
   using NodeType = typename GT::NodeType;
   using EdgeType = typename GT::EdgeType;
   using NodesType = std::vector<NodeType *>;
@@ -321,7 +321,7 @@ scc_member_iterator<GraphT, GT>::scc_member_iterator(
   }
 
   // Sort edges by weights.
-  struct EdgeComparer {
+  struct LLVM_CLASS_ABI EdgeComparer {
     bool operator()(const EdgeType *L, const EdgeType *R) const {
       return L->Weight > R->Weight;
     }

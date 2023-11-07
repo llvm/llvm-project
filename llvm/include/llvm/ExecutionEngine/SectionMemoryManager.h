@@ -37,7 +37,7 @@ namespace llvm {
 /// in the JITed object.  Permissions can be applied either by calling
 /// MCJIT::finalizeObject or by calling SectionMemoryManager::finalizeMemory
 /// directly.  Clients of MCJIT should call MCJIT::finalizeObject.
-class SectionMemoryManager : public RTDyldMemoryManager {
+class LLVM_CLASS_ABI SectionMemoryManager : public RTDyldMemoryManager {
 public:
   /// This enum describes the various reasons to allocate pages from
   /// allocateMappedMemory.

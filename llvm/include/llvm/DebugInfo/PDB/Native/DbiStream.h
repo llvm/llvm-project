@@ -37,7 +37,7 @@ struct SectionContrib;
 class PDBFile;
 class ISectionContribVisitor;
 
-class DbiStream {
+class LLVM_CLASS_ABI DbiStream {
   friend class DbiStreamBuilder;
 
 public:

@@ -25,7 +25,7 @@ namespace pdb {
 
 class NamedStreamMap;
 
-struct NamedStreamMapTraits {
+struct LLVM_CLASS_ABI NamedStreamMapTraits {
   NamedStreamMap *NS;
 
   explicit NamedStreamMapTraits(NamedStreamMap &NS);
@@ -34,7 +34,7 @@ struct NamedStreamMapTraits {
   uint32_t lookupKeyToStorageKey(StringRef S);
 };
 
-class NamedStreamMap {
+class LLVM_CLASS_ABI NamedStreamMap {
   friend class NamedStreamMapBuilder;
 
 public:

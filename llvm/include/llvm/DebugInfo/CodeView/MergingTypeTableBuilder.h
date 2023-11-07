@@ -26,7 +26,7 @@ struct LocallyHashedType;
 
 class ContinuationRecordBuilder;
 
-class MergingTypeTableBuilder : public TypeCollection {
+class LLVM_CLASS_ABI MergingTypeTableBuilder : public TypeCollection {
   /// Storage for records.  These need to outlive the TypeTableBuilder.
   BumpPtrAllocator &RecordStorage;
 

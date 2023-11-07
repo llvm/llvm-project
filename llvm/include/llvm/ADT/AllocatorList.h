@@ -31,7 +31,7 @@ namespace llvm {
 /// Because this list owns the allocator, calling \a splice() with a different
 /// list isn't generally safe.  As such, \a splice has been left out of the
 /// interface entirely.
-template <class T, class AllocatorT> class AllocatorList : AllocatorT {
+template <class T, class AllocatorT> class LLVM_CLASS_ABI AllocatorList : AllocatorT {
   struct Node : ilist_node<Node> {
     Node(Node &&) = delete;
     Node(const Node &) = delete;

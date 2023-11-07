@@ -24,7 +24,7 @@ namespace llvm {
 
 /// This represents a section on linux, lots of unix variants and some bare
 /// metal systems.
-class MCSectionELF final : public MCSection {
+class LLVM_CLASS_ABI MCSectionELF final : public MCSection {
   /// This is the sh_type field of a section, drawn from the enums below.
   unsigned Type;
 

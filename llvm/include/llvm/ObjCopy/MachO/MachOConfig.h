@@ -20,7 +20,7 @@ namespace llvm {
 namespace objcopy {
 
 // Mach-O specific configuration for copying/stripping a single file.
-struct MachOConfig {
+struct LLVM_CLASS_ABI MachOConfig {
   // Repeated options
   std::vector<StringRef> RPathToAdd;
   std::vector<StringRef> RPathToPrepend;

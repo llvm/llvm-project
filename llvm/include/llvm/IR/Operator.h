@@ -29,7 +29,7 @@ namespace llvm {
 
 /// This is a utility class that provides an abstraction for the common
 /// functionality between Instructions and ConstantExprs.
-class Operator : public User {
+class LLVM_CLASS_ABI Operator : public User {
 public:
   // The Operator class is intended to be used as a utility, and is never itself
   // instantiated.
@@ -73,7 +73,7 @@ public:
 /// Utility class for integer operators which may exhibit overflow - Add, Sub,
 /// Mul, and Shl. It does not include SDiv, despite that operator having the
 /// potential for overflow.
-class OverflowingBinaryOperator : public Operator {
+class LLVM_CLASS_ABI OverflowingBinaryOperator : public Operator {
 public:
   enum {
     AnyWrap        = 0,
@@ -127,7 +127,7 @@ public:
 
 /// A udiv or sdiv instruction, which can be marked as "exact",
 /// indicating that no bits are destroyed.
-class PossiblyExactOperator : public Operator {
+class LLVM_CLASS_ABI PossiblyExactOperator : public Operator {
 public:
   enum {
     IsExact = (1 << 0)
@@ -168,7 +168,7 @@ public:
 
 /// Utility class for floating point operations which can have
 /// information about relaxed accuracy requirements attached to them.
-class FPMathOperator : public Operator {
+class LLVM_CLASS_ABI FPMathOperator : public Operator {
 private:
   friend class Instruction;
 
@@ -334,7 +334,7 @@ public:
 
 /// A helper template for defining operators for individual opcodes.
 template<typename SuperClass, unsigned Opc>
-class ConcreteOperator : public SuperClass {
+class LLVM_CLASS_ABI ConcreteOperator : public SuperClass {
 public:
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Opc;
@@ -348,27 +348,27 @@ public:
   }
 };
 
-class AddOperator
+class LLVM_CLASS_ABI AddOperator
   : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Add> {
 };
-class SubOperator
+class LLVM_CLASS_ABI SubOperator
   : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Sub> {
 };
-class MulOperator
+class LLVM_CLASS_ABI MulOperator
   : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Mul> {
 };
-class ShlOperator
+class LLVM_CLASS_ABI ShlOperator
   : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Shl> {
 };
 
-class AShrOperator
+class LLVM_CLASS_ABI AShrOperator
   : public ConcreteOperator<PossiblyExactOperator, Instruction::AShr> {
 };
-class LShrOperator
+class LLVM_CLASS_ABI LShrOperator
   : public ConcreteOperator<PossiblyExactOperator, Instruction::LShr> {
 };
 
-class GEPOperator
+class LLVM_CLASS_ABI GEPOperator
   : public ConcreteOperator<Operator, Instruction::GetElementPtr> {
   friend class GetElementPtrInst;
   friend class ConstantExpr;
@@ -507,7 +507,7 @@ public:
                      APInt &ConstantOffset) const;
 };
 
-class PtrToIntOperator
+class LLVM_CLASS_ABI PtrToIntOperator
     : public ConcreteOperator<Operator, Instruction::PtrToInt> {
   friend class PtrToInt;
   friend class ConstantExpr;
@@ -535,7 +535,7 @@ public:
   }
 };
 
-class BitCastOperator
+class LLVM_CLASS_ABI BitCastOperator
     : public ConcreteOperator<Operator, Instruction::BitCast> {
   friend class BitCastInst;
   friend class ConstantExpr;
@@ -550,7 +550,7 @@ public:
   }
 };
 
-class AddrSpaceCastOperator
+class LLVM_CLASS_ABI AddrSpaceCastOperator
     : public ConcreteOperator<Operator, Instruction::AddrSpaceCast> {
   friend class AddrSpaceCastInst;
   friend class ConstantExpr;

@@ -67,9 +67,9 @@ enum Tag : uint16_t;
 
 class DbgVariableIntrinsic;
 
-extern cl::opt<bool> EnableFSDiscriminator;
+LLVM_FUNC_ABI extern cl::opt<bool> EnableFSDiscriminator;
 
-class DITypeRefArray {
+class LLVM_CLASS_ABI DITypeRefArray {
   const MDTuple *N = nullptr;
 
 public:
@@ -129,7 +129,7 @@ public:
 /// A metadata node with a DWARF tag (i.e., a constant named \c DW_TAG_*,
 /// defined in llvm/BinaryFormat/Dwarf.h).  Called \a DINode because it's
 /// potentially used for non-DWARF output.
-class DINode : public MDNode {
+class LLVM_CLASS_ABI DINode : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -228,7 +228,7 @@ public:
 /// (possibly empty) null-separated \a MDString header that contains arbitrary
 /// fields.  The remaining operands are \a dwarf_operands(), and are pointers
 /// to other metadata.
-class GenericDINode : public DINode {
+class LLVM_CLASS_ABI GenericDINode : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -301,7 +301,7 @@ public:
 /// Used to link stores (as an attachment) and dbg.assigns (as an operand).
 /// DIAssignID metadata is never uniqued as we compare instances using
 /// referential equality (the instance/address is the ID).
-class DIAssignID : public MDNode {
+class LLVM_CLASS_ABI DIAssignID : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -336,7 +336,7 @@ public:
 ///
 /// TODO: Merge into node for DW_TAG_array_type, which should have a custom
 /// type.
-class DISubrange : public DINode {
+class LLVM_CLASS_ABI DISubrange : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -399,7 +399,7 @@ public:
   }
 };
 
-class DIGenericSubrange : public DINode {
+class LLVM_CLASS_ABI DIGenericSubrange : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -447,7 +447,7 @@ public:
 ///
 /// TODO: Add a pointer to the context (DW_TAG_enumeration_type) once that no
 /// longer creates a type cycle.
-class DIEnumerator : public DINode {
+class LLVM_CLASS_ABI DIEnumerator : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -507,7 +507,7 @@ public:
 /// contexts).
 ///
 /// TODO: Separate the concepts of declaration contexts and lexical scopes.
-class DIScope : public DINode {
+class LLVM_CLASS_ABI DIScope : public DINode {
 protected:
   DIScope(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Tag,
           ArrayRef<Metadata *> Ops)
@@ -561,7 +561,7 @@ public:
 ///
 /// TODO: Merge with directory/file node (including users).
 /// TODO: Canonicalize paths on creation.
-class DIFile : public DIScope {
+class LLVM_CLASS_ABI DIFile : public DIScope {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -696,7 +696,7 @@ std::optional<StringRef> DIScope::getSource() const {
 /// TODO: Remove the hardcoded name and context, since many types don't use
 /// them.
 /// TODO: Split up flags.
-class DIType : public DIScope {
+class LLVM_CLASS_ABI DIType : public DIScope {
   unsigned Line;
   DIFlags Flags;
   uint64_t SizeInBits;
@@ -802,7 +802,7 @@ public:
 ///
 /// TODO: Split out DW_TAG_unspecified_type.
 /// TODO: Drop unused accessors.
-class DIBasicType : public DIType {
+class LLVM_CLASS_ABI DIBasicType : public DIType {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -870,7 +870,7 @@ public:
 };
 
 /// String type, Fortran CHARACTER(n)
-class DIStringType : public DIType {
+class LLVM_CLASS_ABI DIStringType : public DIType {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -962,7 +962,7 @@ public:
 /// class members.
 ///
 /// TODO: Split out members (inheritance, fields, methods, etc.).
-class DIDerivedType : public DIType {
+class LLVM_CLASS_ABI DIDerivedType : public DIType {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -1082,7 +1082,7 @@ public:
 ///
 /// TODO: Detach from DerivedTypeBase (split out MDEnumType?).
 /// TODO: Create a custom, unrelated node for DW_TAG_array_type.
-class DICompositeType : public DIType {
+class LLVM_CLASS_ABI DICompositeType : public DIType {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -1305,7 +1305,7 @@ public:
 /// Type array for a subprogram.
 ///
 /// TODO: Fold the array of types in directly as operands.
-class DISubroutineType : public DIType {
+class LLVM_CLASS_ABI DISubroutineType : public DIType {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -1362,7 +1362,7 @@ public:
 };
 
 /// Compile unit.
-class DICompileUnit : public DIScope {
+class LLVM_CLASS_ABI DICompileUnit : public DIScope {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -1568,7 +1568,7 @@ public:
 /// A legal scope for lexical blocks, local variables, and debug info
 /// locations.  Subclasses are \a DISubprogram, \a DILexicalBlock, and \a
 /// DILexicalBlockFile.
-class DILocalScope : public DIScope {
+class LLVM_CLASS_ABI DILocalScope : public DIScope {
 protected:
   DILocalScope(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Tag,
                ArrayRef<Metadata *> Ops)
@@ -1603,7 +1603,7 @@ public:
 };
 
 /// Subprogram description.
-class DISubprogram : public DILocalScope {
+class LLVM_CLASS_ABI DISubprogram : public DILocalScope {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -1877,7 +1877,7 @@ public:
 /// Debug location.
 ///
 /// A debug location in source code, used for debug info and otherwise.
-class DILocation : public MDNode {
+class LLVM_CLASS_ABI DILocation : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -2140,7 +2140,7 @@ public:
   }
 };
 
-class DILexicalBlockBase : public DILocalScope {
+class LLVM_CLASS_ABI DILexicalBlockBase : public DILocalScope {
 protected:
   DILexicalBlockBase(LLVMContext &C, unsigned ID, StorageType Storage,
                      ArrayRef<Metadata *> Ops);
@@ -2162,7 +2162,7 @@ public:
   }
 };
 
-class DILexicalBlock : public DILexicalBlockBase {
+class LLVM_CLASS_ABI DILexicalBlock : public DILexicalBlockBase {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -2215,7 +2215,7 @@ public:
   }
 };
 
-class DILexicalBlockFile : public DILexicalBlockBase {
+class LLVM_CLASS_ABI DILexicalBlockFile : public DILexicalBlockBase {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -2339,7 +2339,7 @@ DILocation::cloneByMultiplyingDuplicationFactor(unsigned DF) const {
   return std::nullopt;
 }
 
-class DINamespace : public DIScope {
+class LLVM_CLASS_ABI DINamespace : public DIScope {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -2388,7 +2388,7 @@ public:
 
 /// Represents a module in the programming language, for example, a Clang
 /// module, or a Fortran module.
-class DIModule : public DIScope {
+class LLVM_CLASS_ABI DIModule : public DIScope {
   friend class LLVMContextImpl;
   friend class MDNode;
   unsigned LineNo;
@@ -2461,7 +2461,7 @@ public:
 };
 
 /// Base class for template parameters.
-class DITemplateParameter : public DINode {
+class LLVM_CLASS_ABI DITemplateParameter : public DINode {
 protected:
   bool IsDefault;
 
@@ -2484,7 +2484,7 @@ public:
   }
 };
 
-class DITemplateTypeParameter : public DITemplateParameter {
+class LLVM_CLASS_ABI DITemplateTypeParameter : public DITemplateParameter {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -2523,7 +2523,7 @@ public:
   }
 };
 
-class DITemplateValueParameter : public DITemplateParameter {
+class LLVM_CLASS_ABI DITemplateValueParameter : public DITemplateParameter {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -2573,7 +2573,7 @@ public:
 };
 
 /// Base class for variables.
-class DIVariable : public DINode {
+class LLVM_CLASS_ABI DIVariable : public DINode {
   unsigned Line;
   uint32_t AlignInBits;
 
@@ -2639,7 +2639,7 @@ public:
 /// TODO: Co-allocate the expression elements.
 /// TODO: Separate from MDNode, or otherwise drop Distinct and Temporary
 /// storage types.
-class DIExpression : public MDNode {
+class LLVM_CLASS_ABI DIExpression : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -3059,7 +3059,7 @@ inline bool operator<(const DIExpression::FragmentInfo &A,
          std::tie(B.SizeInBits, B.OffsetInBits);
 }
 
-template <> struct DenseMapInfo<DIExpression::FragmentInfo> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<DIExpression::FragmentInfo> {
   using FragInfo = DIExpression::FragmentInfo;
   static const uint64_t MaxVal = std::numeric_limits<uint64_t>::max();
 
@@ -3077,7 +3077,7 @@ template <> struct DenseMapInfo<DIExpression::FragmentInfo> {
 /// Global variables.
 ///
 /// TODO: Remove DisplayName.  It's always equal to Name.
-class DIGlobalVariable : public DIVariable {
+class LLVM_CLASS_ABI DIGlobalVariable : public DIVariable {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -3162,7 +3162,7 @@ public:
   }
 };
 
-class DICommonBlock : public DIScope {
+class LLVM_CLASS_ABI DICommonBlock : public DIScope {
   unsigned LineNo;
 
   friend class LLVMContextImpl;
@@ -3221,7 +3221,7 @@ public:
 /// Local variable.
 ///
 /// TODO: Split up flags.
-class DILocalVariable : public DIVariable {
+class LLVM_CLASS_ABI DILocalVariable : public DIVariable {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -3311,7 +3311,7 @@ public:
 
 /// Label.
 ///
-class DILabel : public DINode {
+class LLVM_CLASS_ABI DILabel : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -3376,7 +3376,7 @@ public:
   }
 };
 
-class DIObjCProperty : public DINode {
+class LLVM_CLASS_ABI DIObjCProperty : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -3456,7 +3456,7 @@ public:
 };
 
 /// An imported module (C++ using directive or similar).
-class DIImportedEntity : public DINode {
+class LLVM_CLASS_ABI DIImportedEntity : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -3521,7 +3521,7 @@ public:
 };
 
 /// A pair of DIGlobalVariable and DIExpression.
-class DIGlobalVariableExpression : public MDNode {
+class LLVM_CLASS_ABI DIGlobalVariableExpression : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -3568,7 +3568,7 @@ public:
 /// \c DW_MACINFO_*, defined in llvm/BinaryFormat/Dwarf.h).  Called \a
 /// DIMacroNode
 /// because it's potentially used for non-DWARF output.
-class DIMacroNode : public MDNode {
+class LLVM_CLASS_ABI DIMacroNode : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -3612,7 +3612,7 @@ public:
   }
 };
 
-class DIMacro : public DIMacroNode {
+class LLVM_CLASS_ABI DIMacro : public DIMacroNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -3663,7 +3663,7 @@ public:
   }
 };
 
-class DIMacroFile : public DIMacroNode {
+class LLVM_CLASS_ABI DIMacroFile : public DIMacroNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -3729,7 +3729,7 @@ public:
 
 /// List of ValueAsMetadata, to be used as an argument to a dbg.value
 /// intrinsic.
-class DIArgList : public MDNode {
+class LLVM_CLASS_ABI DIArgList : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
   using iterator = SmallVectorImpl<ValueAsMetadata *>::iterator;
@@ -3784,7 +3784,7 @@ public:
 /// possible that a DebugVariable with different parameters may point to the
 /// same variable instance, but not that one DebugVariable points to multiple
 /// variable instances.
-class DebugVariable {
+class LLVM_CLASS_ABI DebugVariable {
   using FragmentInfo = DIExpression::FragmentInfo;
 
   const DILocalVariable *Variable;
@@ -3832,7 +3832,7 @@ public:
   }
 };
 
-template <> struct DenseMapInfo<DebugVariable> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<DebugVariable> {
   using FragmentInfo = DIExpression::FragmentInfo;
 
   /// Empty key: no key should be generated that has no DILocalVariable.
@@ -3861,7 +3861,7 @@ template <> struct DenseMapInfo<DebugVariable> {
 
 /// Identifies a unique instance of a whole variable (discards/ignores fragment
 /// information).
-class DebugVariableAggregate : public DebugVariable {
+class LLVM_CLASS_ABI DebugVariableAggregate : public DebugVariable {
 public:
   DebugVariableAggregate(const DbgVariableIntrinsic *DVI);
   DebugVariableAggregate(const DebugVariable &V)
@@ -3869,7 +3869,7 @@ public:
 };
 
 template <>
-struct DenseMapInfo<DebugVariableAggregate>
+struct LLVM_CLASS_ABI DenseMapInfo<DebugVariableAggregate>
     : public DenseMapInfo<DebugVariable> {};
 } // end namespace llvm
 

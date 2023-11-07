@@ -78,7 +78,7 @@ namespace llvm {
 template <typename DerivedT, typename IteratorCategoryT, typename T,
           typename DifferenceTypeT = std::ptrdiff_t, typename PointerT = T *,
           typename ReferenceT = T &>
-class iterator_facade_base {
+class LLVM_CLASS_ABI iterator_facade_base {
 public:
   using iterator_category = IteratorCategoryT;
   using value_type = T;
@@ -233,7 +233,7 @@ template <
         std::is_same<T, typename std::iterator_traits<
                             WrappedIteratorT>::value_type>::value,
         typename std::iterator_traits<WrappedIteratorT>::reference, T &>>
-class iterator_adaptor_base
+class LLVM_CLASS_ABI iterator_adaptor_base
     : public iterator_facade_base<DerivedT, IteratorCategoryT, T,
                                   DifferenceTypeT, PointerT, ReferenceT> {
   using BaseT = typename iterator_adaptor_base::iterator_facade_base;
@@ -318,7 +318,7 @@ public:
 template <typename WrappedIteratorT,
           typename T = std::remove_reference_t<decltype(
               **std::declval<WrappedIteratorT>())>>
-struct pointee_iterator
+struct LLVM_CLASS_ABI pointee_iterator
     : iterator_adaptor_base<
           pointee_iterator<WrappedIteratorT, T>, WrappedIteratorT,
           typename std::iterator_traits<WrappedIteratorT>::iterator_category,
@@ -342,7 +342,7 @@ make_pointee_range(RangeT &&Range) {
 
 template <typename WrappedIteratorT,
           typename T = decltype(&*std::declval<WrappedIteratorT>())>
-class pointer_iterator
+class LLVM_CLASS_ABI pointer_iterator
     : public iterator_adaptor_base<
           pointer_iterator<WrappedIteratorT, T>, WrappedIteratorT,
           typename std::iterator_traits<WrappedIteratorT>::iterator_category,

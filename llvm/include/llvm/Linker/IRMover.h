@@ -24,7 +24,7 @@ class StructType;
 class TrackingMDRef;
 class Type;
 
-class IRMover {
+class LLVM_CLASS_ABI IRMover {
   struct StructTypeKeyInfo {
     struct KeyTy {
       ArrayRef<Type *> ETypes;

@@ -31,7 +31,7 @@ namespace mca {
 
 /// This is a convenience struct to hold the parameters necessary for creating
 /// the pre-built "default" out-of-order pipeline.
-struct PipelineOptions {
+struct LLVM_CLASS_ABI PipelineOptions {
   PipelineOptions(unsigned UOPQSize, unsigned DecThr, unsigned DW, unsigned RFS,
                   unsigned LQS, unsigned SQS, bool NoAlias,
                   bool ShouldEnableBottleneckAnalysis = false)
@@ -49,7 +49,7 @@ struct PipelineOptions {
   bool EnableBottleneckAnalysis;
 };
 
-class Context {
+class LLVM_CLASS_ABI Context {
   SmallVector<std::unique_ptr<HardwareUnit>, 4> Hardware;
   const MCRegisterInfo &MRI;
   const MCSubtargetInfo &STI;

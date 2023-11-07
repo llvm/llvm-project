@@ -37,7 +37,7 @@ class raw_ostream;
 struct VerifierSupport;
 
 /// Verify that the TBAA Metadatas are valid.
-class TBAAVerifier {
+class LLVM_CLASS_ABI TBAAVerifier {
   VerifierSupport *Diagnostic = nullptr;
 
   /// Helper to diagnose a failure
@@ -86,7 +86,7 @@ public:
 /// If there are no errors, the function returns false. If an error is found,
 /// a message describing the error is written to OS (if non-null) and true is
 /// returned.
-bool verifyFunction(const Function &F, raw_ostream *OS = nullptr);
+LLVM_FUNC_ABI bool verifyFunction(const Function &F, raw_ostream *OS = nullptr);
 
 /// Check a module for errors.
 ///
@@ -98,14 +98,14 @@ bool verifyFunction(const Function &F, raw_ostream *OS = nullptr);
 /// supplied, DebugInfo verification failures won't be considered as
 /// error and instead *BrokenDebugInfo will be set to true. Debug
 /// info errors can be "recovered" from by stripping the debug info.
-bool verifyModule(const Module &M, raw_ostream *OS = nullptr,
+LLVM_FUNC_ABI bool verifyModule(const Module &M, raw_ostream *OS = nullptr,
                   bool *BrokenDebugInfo = nullptr);
 
-FunctionPass *createVerifierPass(bool FatalErrors = true);
+LLVM_FUNC_ABI FunctionPass *createVerifierPass(bool FatalErrors = true);
 
 /// Check a module for errors, and report separate error states for IR
 /// and debug info errors.
-class VerifierAnalysis : public AnalysisInfoMixin<VerifierAnalysis> {
+class LLVM_CLASS_ABI VerifierAnalysis : public AnalysisInfoMixin<VerifierAnalysis> {
   friend AnalysisInfoMixin<VerifierAnalysis>;
 
   static AnalysisKey Key;
@@ -130,7 +130,7 @@ public:
 ///
 /// Note that this creates a pass suitable for the legacy pass manager. It has
 /// nothing to do with \c VerifierPass.
-class VerifierPass : public PassInfoMixin<VerifierPass> {
+class LLVM_CLASS_ABI VerifierPass : public PassInfoMixin<VerifierPass> {
   bool FatalErrors;
 
 public:

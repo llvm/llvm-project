@@ -26,7 +26,7 @@ namespace llvm {
 
 /// Represent an edge in the directed graph.
 /// The edge contains the target node it connects to.
-template <class NodeType, class EdgeType> class DGEdge {
+template <class NodeType, class EdgeType> class LLVM_CLASS_ABI DGEdge {
 public:
   DGEdge() = delete;
   /// Create an edge pointing to the given node \p N.
@@ -71,7 +71,7 @@ protected:
 
 /// Represent a node in the directed graph.
 /// The node has a (possibly empty) list of outgoing edges.
-template <class NodeType, class EdgeType> class DGNode {
+template <class NodeType, class EdgeType> class LLVM_CLASS_ABI DGNode {
 public:
   using EdgeListTy = SetVector<EdgeType *>;
   using iterator = typename EdgeListTy::iterator;
@@ -171,7 +171,7 @@ protected:
 /// The graph is represented by a table of nodes.
 /// Each node contains a (possibly empty) list of outgoing edges.
 /// Each edge contains the target node it connects to.
-template <class NodeType, class EdgeType> class DirectedGraph {
+template <class NodeType, class EdgeType> class LLVM_CLASS_ABI DirectedGraph {
 protected:
   using NodeListTy = SmallVector<NodeType *, 10>;
   using EdgeListTy = SmallVector<EdgeType *, 10>;

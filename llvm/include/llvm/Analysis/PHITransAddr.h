@@ -33,7 +33,7 @@ class TargetLibraryInfo;
 /// This is designed to be a relatively small object that lives on the stack and
 /// is copyable.
 ///
-class PHITransAddr {
+class LLVM_CLASS_ABI PHITransAddr {
   /// Addr - The actual address we're analyzing.
   Value *Addr;
 

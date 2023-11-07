@@ -94,7 +94,7 @@ enum class SimpleTypeMode : uint32_t {
 /// A 32-bit type reference. Types are indexed by their order of appearance in
 /// .debug$T plus 0x1000. Type indices less than 0x1000 are "simple" types,
 /// composed of a SimpleTypeMode byte followed by a SimpleTypeKind byte.
-class TypeIndex {
+class LLVM_CLASS_ABI TypeIndex {
 public:
   static const uint32_t FirstNonSimpleIndex = 0x1000;
   static const uint32_t SimpleKindMask = 0x000000ff;
@@ -280,16 +280,16 @@ private:
 // Used for pseudo-indexing an array of type records.  An array of such records
 // sorted by TypeIndex can allow log(N) lookups even though such a type record
 // stream does not provide random access.
-struct TypeIndexOffset {
+struct LLVM_CLASS_ABI TypeIndexOffset {
   TypeIndex Type;
   support::ulittle32_t Offset;
 };
 
-void printTypeIndex(ScopedPrinter &Printer, StringRef FieldName, TypeIndex TI,
+LLVM_FUNC_ABI void printTypeIndex(ScopedPrinter &Printer, StringRef FieldName, TypeIndex TI,
                     TypeCollection &Types);
 }
 
-template <> struct DenseMapInfo<codeview::TypeIndex> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<codeview::TypeIndex> {
   static inline codeview::TypeIndex getEmptyKey() {
     return codeview::TypeIndex{DenseMapInfo<uint32_t>::getEmptyKey()};
   }

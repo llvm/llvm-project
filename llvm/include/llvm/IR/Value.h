@@ -72,7 +72,7 @@ using ValueName = StringMapEntry<Value *>;
 /// using this Value.  A Value can also have an arbitrary number of ValueHandle
 /// objects that watch it and listen to RAUW and Destroy events.  See
 /// llvm/IR/ValueHandle.h for details.
-class Value {
+class LLVM_CLASS_ABI Value {
   Type *VTy;
   Use *UseList;
 
@@ -865,7 +865,7 @@ protected:
   void setValueSubclassData(unsigned short D) { SubclassData = D; }
 };
 
-struct ValueDeleter { void operator()(Value *V) { V->deleteValue(); } };
+struct LLVM_CLASS_ABI ValueDeleter { void operator()(Value *V) { V->deleteValue(); } };
 
 /// Use this instead of std::unique_ptr<Value> or std::unique_ptr<Instruction>.
 /// Those don't work because Value and Instruction's destructors are protected,
@@ -963,82 +963,82 @@ template <class Compare> void Value::sortUseList(Compare Cmp) {
 // isa - Provide some specializations of isa so that we don't have to include
 // the subtype header files to test to see if the value is a subclass...
 //
-template <> struct isa_impl<Constant, Value> {
+template <> struct LLVM_CLASS_ABI isa_impl<Constant, Value> {
   static inline bool doit(const Value &Val) {
     static_assert(Value::ConstantFirstVal == 0, "Val.getValueID() >= Value::ConstantFirstVal");
     return Val.getValueID() <= Value::ConstantLastVal;
   }
 };
 
-template <> struct isa_impl<ConstantData, Value> {
+template <> struct LLVM_CLASS_ABI isa_impl<ConstantData, Value> {
   static inline bool doit(const Value &Val) {
     return Val.getValueID() >= Value::ConstantDataFirstVal &&
            Val.getValueID() <= Value::ConstantDataLastVal;
   }
 };
 
-template <> struct isa_impl<ConstantAggregate, Value> {
+template <> struct LLVM_CLASS_ABI isa_impl<ConstantAggregate, Value> {
   static inline bool doit(const Value &Val) {
     return Val.getValueID() >= Value::ConstantAggregateFirstVal &&
            Val.getValueID() <= Value::ConstantAggregateLastVal;
   }
 };
 
-template <> struct isa_impl<Argument, Value> {
+template <> struct LLVM_CLASS_ABI isa_impl<Argument, Value> {
   static inline bool doit (const Value &Val) {
     return Val.getValueID() == Value::ArgumentVal;
   }
 };
 
-template <> struct isa_impl<InlineAsm, Value> {
+template <> struct LLVM_CLASS_ABI isa_impl<InlineAsm, Value> {
   static inline bool doit(const Value &Val) {
     return Val.getValueID() == Value::InlineAsmVal;
   }
 };
 
-template <> struct isa_impl<Instruction, Value> {
+template <> struct LLVM_CLASS_ABI isa_impl<Instruction, Value> {
   static inline bool doit(const Value &Val) {
     return Val.getValueID() >= Value::InstructionVal;
   }
 };
 
-template <> struct isa_impl<BasicBlock, Value> {
+template <> struct LLVM_CLASS_ABI isa_impl<BasicBlock, Value> {
   static inline bool doit(const Value &Val) {
     return Val.getValueID() == Value::BasicBlockVal;
   }
 };
 
-template <> struct isa_impl<Function, Value> {
+template <> struct LLVM_CLASS_ABI isa_impl<Function, Value> {
   static inline bool doit(const Value &Val) {
     return Val.getValueID() == Value::FunctionVal;
   }
 };
 
-template <> struct isa_impl<GlobalVariable, Value> {
+template <> struct LLVM_CLASS_ABI isa_impl<GlobalVariable, Value> {
   static inline bool doit(const Value &Val) {
     return Val.getValueID() == Value::GlobalVariableVal;
   }
 };
 
-template <> struct isa_impl<GlobalAlias, Value> {
+template <> struct LLVM_CLASS_ABI isa_impl<GlobalAlias, Value> {
   static inline bool doit(const Value &Val) {
     return Val.getValueID() == Value::GlobalAliasVal;
   }
 };
 
-template <> struct isa_impl<GlobalIFunc, Value> {
+template <> struct LLVM_CLASS_ABI isa_impl<GlobalIFunc, Value> {
   static inline bool doit(const Value &Val) {
     return Val.getValueID() == Value::GlobalIFuncVal;
   }
 };
 
-template <> struct isa_impl<GlobalValue, Value> {
+template <> struct LLVM_CLASS_ABI isa_impl<GlobalValue, Value> {
   static inline bool doit(const Value &Val) {
     return isa<GlobalObject>(Val) || isa<GlobalAlias>(Val);
   }
 };
 
-template <> struct isa_impl<GlobalObject, Value> {
+template <> struct LLVM_CLASS_ABI isa_impl<GlobalObject, Value> {
   static inline bool doit(const Value &Val) {
     return isa<GlobalVariable>(Val) || isa<Function>(Val) ||
            isa<GlobalIFunc>(Val);

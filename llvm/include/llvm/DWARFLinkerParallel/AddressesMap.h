@@ -28,7 +28,7 @@ using RangesTy = AddressRangesMap;
 /// by debug information. Valid addresses are those which points to
 /// live code sections. i.e. relocations for these addresses point
 /// into sections which would be/are placed into resulting binary.
-class AddressesMap {
+class LLVM_CLASS_ABI AddressesMap {
 public:
   virtual ~AddressesMap() = default;
 

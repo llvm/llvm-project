@@ -39,16 +39,16 @@ constexpr int BestSpeedCompression = 1;
 constexpr int DefaultCompression = 6;
 constexpr int BestSizeCompression = 9;
 
-bool isAvailable();
+LLVM_FUNC_ABI bool isAvailable();
 
-void compress(ArrayRef<uint8_t> Input,
+LLVM_FUNC_ABI void compress(ArrayRef<uint8_t> Input,
               SmallVectorImpl<uint8_t> &CompressedBuffer,
               int Level = DefaultCompression);
 
-Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
+LLVM_FUNC_ABI Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                  size_t &UncompressedSize);
 
-Error decompress(ArrayRef<uint8_t> Input, SmallVectorImpl<uint8_t> &Output,
+LLVM_FUNC_ABI Error decompress(ArrayRef<uint8_t> Input, SmallVectorImpl<uint8_t> &Output,
                  size_t UncompressedSize);
 
 } // End of namespace zlib
@@ -60,16 +60,16 @@ constexpr int BestSpeedCompression = 1;
 constexpr int DefaultCompression = 5;
 constexpr int BestSizeCompression = 12;
 
-bool isAvailable();
+LLVM_FUNC_ABI bool isAvailable();
 
-void compress(ArrayRef<uint8_t> Input,
+LLVM_FUNC_ABI void compress(ArrayRef<uint8_t> Input,
               SmallVectorImpl<uint8_t> &CompressedBuffer,
               int Level = DefaultCompression);
 
-Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
+LLVM_FUNC_ABI Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                  size_t &UncompressedSize);
 
-Error decompress(ArrayRef<uint8_t> Input, SmallVectorImpl<uint8_t> &Output,
+LLVM_FUNC_ABI Error decompress(ArrayRef<uint8_t> Input, SmallVectorImpl<uint8_t> &Output,
                  size_t UncompressedSize);
 
 } // End of namespace zstd
@@ -91,7 +91,7 @@ inline Format formatFor(DebugCompressionType Type) {
   llvm_unreachable("");
 }
 
-struct Params {
+struct LLVM_CLASS_ABI Params {
   constexpr Params(Format F)
       : format(F), level(F == Format::Zlib ? zlib::DefaultCompression
                                            : zstd::DefaultCompression) {}
@@ -107,19 +107,19 @@ struct Params {
 // Return nullptr if LLVM was built with support (LLVM_ENABLE_ZLIB,
 // LLVM_ENABLE_ZSTD) for the specified compression format; otherwise
 // return a string literal describing the reason.
-const char *getReasonIfUnsupported(Format F);
+LLVM_FUNC_ABI const char *getReasonIfUnsupported(Format F);
 
 // Compress Input with the specified format P.Format. If Level is -1, use
 // *::DefaultCompression for the format.
-void compress(Params P, ArrayRef<uint8_t> Input,
+LLVM_FUNC_ABI void compress(Params P, ArrayRef<uint8_t> Input,
               SmallVectorImpl<uint8_t> &Output);
 
 // Decompress Input. The uncompressed size must be available.
-Error decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
+LLVM_FUNC_ABI Error decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
                  uint8_t *Output, size_t UncompressedSize);
-Error decompress(Format F, ArrayRef<uint8_t> Input,
+LLVM_FUNC_ABI Error decompress(Format F, ArrayRef<uint8_t> Input,
                  SmallVectorImpl<uint8_t> &Output, size_t UncompressedSize);
-Error decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
+LLVM_FUNC_ABI Error decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
                  SmallVectorImpl<uint8_t> &Output, size_t UncompressedSize);
 
 } // End of namespace compression

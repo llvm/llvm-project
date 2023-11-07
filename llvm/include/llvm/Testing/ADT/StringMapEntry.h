@@ -18,10 +18,10 @@ namespace llvm {
 namespace detail {
 
 template <typename T, typename = std::void_t<>>
-struct CanOutputToOStream : std::false_type {};
+struct LLVM_CLASS_ABI CanOutputToOStream : std::false_type {};
 
 template <typename T>
-struct CanOutputToOStream<T, std::void_t<decltype(std::declval<std::ostream &>()
+struct LLVM_CLASS_ABI CanOutputToOStream<T, std::void_t<decltype(std::declval<std::ostream &>()
                                                   << std::declval<T>())>>
     : std::true_type {};
 
@@ -43,7 +43,7 @@ std::ostream &operator<<(std::ostream &OS, const StringMapEntry<T> &E) {
 namespace detail {
 
 template <typename StringMapEntryT>
-class StringMapEntryMatcherImpl
+class LLVM_CLASS_ABI StringMapEntryMatcherImpl
     : public testing::MatcherInterface<StringMapEntryT> {
 public:
   using ValueT = typename std::remove_reference_t<StringMapEntryT>::ValueType;
@@ -97,7 +97,7 @@ private:
 };
 
 template <typename KeyMatcherT, typename ValueMatcherT>
-class StringMapEntryMatcher {
+class LLVM_CLASS_ABI StringMapEntryMatcher {
 public:
   StringMapEntryMatcher(KeyMatcherT KMArg, ValueMatcherT VMArg)
       : KM(std::move(KMArg)), VM(std::move(VMArg)) {}

@@ -26,7 +26,7 @@ class TargetRegisterInfo;
 /// This class implements the register bank concept.
 /// Two instances of RegisterBank must have different ID.
 /// This property is enforced by the RegisterBankInfo class.
-class RegisterBank {
+class LLVM_CLASS_ABI RegisterBank {
 private:
   unsigned ID;
   unsigned NumRegClasses;

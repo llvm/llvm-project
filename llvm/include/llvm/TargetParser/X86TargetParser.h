@@ -152,34 +152,34 @@ enum CPUKind {
 
 /// Parse \p CPU string into a CPUKind. Will only accept 64-bit capable CPUs if
 /// \p Only64Bit is true.
-CPUKind parseArchX86(StringRef CPU, bool Only64Bit = false);
-CPUKind parseTuneCPU(StringRef CPU, bool Only64Bit = false);
+LLVM_FUNC_ABI CPUKind parseArchX86(StringRef CPU, bool Only64Bit = false);
+LLVM_FUNC_ABI CPUKind parseTuneCPU(StringRef CPU, bool Only64Bit = false);
 
 /// Provide a list of valid CPU names. If \p Only64Bit is true, the list will
 /// only contain 64-bit capable CPUs.
-void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values,
+LLVM_FUNC_ABI void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values,
                           bool Only64Bit = false);
 /// Provide a list of valid -mtune names.
-void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values,
+LLVM_FUNC_ABI void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values,
                           bool Only64Bit = false);
 
 /// Get the key feature prioritizing target multiversioning.
-ProcessorFeatures getKeyFeature(CPUKind Kind);
+LLVM_FUNC_ABI ProcessorFeatures getKeyFeature(CPUKind Kind);
 
 /// Fill in the features that \p CPU supports into \p Features.
 /// "+" will be append in front of each feature if NeedPlus is true.
-void getFeaturesForCPU(StringRef CPU, SmallVectorImpl<StringRef> &Features,
+LLVM_FUNC_ABI void getFeaturesForCPU(StringRef CPU, SmallVectorImpl<StringRef> &Features,
                        bool NeedPlus = false);
 
 /// Set or clear entries in \p Features that are implied to be enabled/disabled
 /// by the provided \p Feature.
-void updateImpliedFeatures(StringRef Feature, bool Enabled,
+LLVM_FUNC_ABI void updateImpliedFeatures(StringRef Feature, bool Enabled,
                            StringMap<bool> &Features);
 
-char getCPUDispatchMangling(StringRef Name);
-bool validateCPUSpecificCPUDispatch(StringRef Name);
-std::array<uint32_t, 4> getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
-unsigned getFeaturePriority(ProcessorFeatures Feat);
+LLVM_FUNC_ABI char getCPUDispatchMangling(StringRef Name);
+LLVM_FUNC_ABI bool validateCPUSpecificCPUDispatch(StringRef Name);
+LLVM_FUNC_ABI std::array<uint32_t, 4> getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
+LLVM_FUNC_ABI unsigned getFeaturePriority(ProcessorFeatures Feat);
 
 } // namespace X86
 } // namespace llvm

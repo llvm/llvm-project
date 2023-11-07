@@ -25,7 +25,7 @@ class StringRef;
 
 /// Manages the emission of signposts into the recording method supported by
 /// the OS.
-class SignpostEmitter {
+class LLVM_CLASS_ABI SignpostEmitter {
   std::unique_ptr<SignpostEmitterImpl> Impl;
 
 public:

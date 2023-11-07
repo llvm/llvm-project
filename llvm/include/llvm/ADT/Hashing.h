@@ -72,7 +72,7 @@ template <typename T, typename Enable> struct DenseMapInfo;
 ///   using llvm::hash_value;
 ///   llvm::hash_code code = hash_value(x);
 /// \endcode
-class hash_code {
+class LLVM_CLASS_ABI hash_code {
   size_t value;
 
 public:
@@ -141,7 +141,7 @@ template <typename T> hash_code hash_value(const std::optional<T> &arg);
 /// undone. This makes it thread-hostile and very hard to use outside of
 /// immediately on start of a simple program designed for reproducible
 /// behavior.
-void set_fixed_execution_hash_seed(uint64_t fixed_value);
+LLVM_FUNC_ABI void set_fixed_execution_hash_seed(uint64_t fixed_value);
 
 
 // All of the implementation details of actually computing the various hash
@@ -266,7 +266,7 @@ inline uint64_t hash_short(const char *s, size_t length, uint64_t seed) {
 /// The intermediate state used during hashing.
 /// Currently, the algorithm for computing hash codes is based on CityHash and
 /// keeps 56 bytes of arbitrary state.
-struct hash_state {
+struct LLVM_CLASS_ABI hash_state {
   uint64_t h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0, h5 = 0, h6 = 0;
 
   /// Create a new hash_state structure and initialize it based on the
@@ -329,7 +329,7 @@ struct hash_state {
 /// This variable can be set using the \see llvm::set_fixed_execution_seed
 /// function. See that function for details. Do not, under any circumstances,
 /// set or read this variable.
-extern uint64_t fixed_seed_override;
+LLVM_FUNC_ABI extern uint64_t fixed_seed_override;
 
 inline uint64_t get_execution_seed() {
   // FIXME: This needs to be a per-execution seed. This is just a placeholder
@@ -356,7 +356,7 @@ inline uint64_t get_execution_seed() {
 // for equality. For all the platforms we care about, this holds for integers
 // and pointers, but there are platforms where it doesn't and we would like to
 // support user-defined types which happen to satisfy this property.
-template <typename T> struct is_hashable_data
+template <typename T> struct LLVM_CLASS_ABI is_hashable_data
   : std::integral_constant<bool, ((is_integral_or_enum<T>::value ||
                                    std::is_pointer<T>::value) &&
                                   64 % sizeof(T) == 0)> {};
@@ -365,7 +365,7 @@ template <typename T> struct is_hashable_data
 // is no alignment-derived padding in the pair. This is a bit of a lie because
 // std::pair isn't truly POD, but it's close enough in all reasonable
 // implementations for our use case of hashing the underlying data.
-template <typename T, typename U> struct is_hashable_data<std::pair<T, U> >
+template <typename T, typename U> struct LLVM_CLASS_ABI is_hashable_data<std::pair<T, U> >
   : std::integral_constant<bool, (is_hashable_data<T>::value &&
                                   is_hashable_data<U>::value &&
                                   (sizeof(T) + sizeof(U)) ==
@@ -505,7 +505,7 @@ namespace detail {
 /// recursive combining of arguments used in hash_combine. It is particularly
 /// useful at minimizing the code in the recursive calls to ease the pain
 /// caused by a lack of variadic functions.
-struct hash_combine_recursive_helper {
+struct LLVM_CLASS_ABI hash_combine_recursive_helper {
   char buffer[64] = {};
   hash_state state;
   const uint64_t seed;
@@ -675,7 +675,7 @@ template <typename T> hash_code hash_value(const std::optional<T> &arg) {
   return arg ? hash_combine(true, *arg) : hash_value(false);
 }
 
-template <> struct DenseMapInfo<hash_code, void> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<hash_code, void> {
   static inline hash_code getEmptyKey() { return hash_code(-1); }
   static inline hash_code getTombstoneKey() { return hash_code(-2); }
   static unsigned getHashValue(hash_code val) { return val; }
@@ -688,7 +688,7 @@ template <> struct DenseMapInfo<hash_code, void> {
 namespace std {
 
 template<>
-struct hash<llvm::hash_code> {
+struct LLVM_CLASS_ABI hash<llvm::hash_code> {
   size_t operator()(llvm::hash_code const& Val) const {
     return Val;
   }

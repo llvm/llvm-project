@@ -31,7 +31,7 @@ class raw_ostream;
 // per-line samples. Given a target counts percentile, we compute the minimum
 // number of counts needed to reach this target and the minimum among these
 // counts.
-struct ProfileSummaryEntry {
+struct LLVM_CLASS_ABI ProfileSummaryEntry {
   const uint32_t Cutoff;    ///< The required percentile of counts.
   const uint64_t MinCount;  ///< The minimum count for this percentile.
   const uint64_t NumCounts; ///< Number of counts >= the minimum count.
@@ -43,7 +43,7 @@ struct ProfileSummaryEntry {
 
 using SummaryEntryVector = std::vector<ProfileSummaryEntry>;
 
-class ProfileSummary {
+class LLVM_CLASS_ABI ProfileSummary {
 public:
   enum Kind { PSK_Instr, PSK_CSInstr, PSK_Sample };
 

@@ -29,7 +29,7 @@ namespace codeview {
 /// simple flat buffer consisting of null-terminated strings, where strings
 /// are retrieved by their offset in the buffer.  DebugStringTableSubsectionRef
 /// does not own the underlying storage for the buffer.
-class DebugStringTableSubsectionRef : public DebugSubsectionRef {
+class LLVM_CLASS_ABI DebugStringTableSubsectionRef : public DebugSubsectionRef {
 public:
   DebugStringTableSubsectionRef();
 
@@ -54,7 +54,7 @@ private:
 /// DebugStringTableSubsection owns the underlying storage for the table, and is
 /// capable of serializing the string table into a format understood by
 /// DebugStringTableSubsectionRef.
-class DebugStringTableSubsection : public DebugSubsection {
+class LLVM_CLASS_ABI DebugStringTableSubsection : public DebugSubsection {
 public:
   DebugStringTableSubsection();
 

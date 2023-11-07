@@ -28,25 +28,25 @@ namespace DWARFYAML {
 
 struct Data;
 
-Error emitDebugAbbrev(raw_ostream &OS, const Data &DI);
-Error emitDebugStr(raw_ostream &OS, const Data &DI);
+LLVM_FUNC_ABI Error emitDebugAbbrev(raw_ostream &OS, const Data &DI);
+LLVM_FUNC_ABI Error emitDebugStr(raw_ostream &OS, const Data &DI);
 
-Error emitDebugAranges(raw_ostream &OS, const Data &DI);
-Error emitDebugRanges(raw_ostream &OS, const Data &DI);
-Error emitDebugPubnames(raw_ostream &OS, const Data &DI);
-Error emitDebugPubtypes(raw_ostream &OS, const Data &DI);
-Error emitDebugGNUPubnames(raw_ostream &OS, const Data &DI);
-Error emitDebugGNUPubtypes(raw_ostream &OS, const Data &DI);
-Error emitDebugInfo(raw_ostream &OS, const Data &DI);
-Error emitDebugLine(raw_ostream &OS, const Data &DI);
-Error emitDebugAddr(raw_ostream &OS, const Data &DI);
-Error emitDebugStrOffsets(raw_ostream &OS, const Data &DI);
-Error emitDebugRnglists(raw_ostream &OS, const Data &DI);
-Error emitDebugLoclists(raw_ostream &OS, const Data &DI);
+LLVM_FUNC_ABI Error emitDebugAranges(raw_ostream &OS, const Data &DI);
+LLVM_FUNC_ABI Error emitDebugRanges(raw_ostream &OS, const Data &DI);
+LLVM_FUNC_ABI Error emitDebugPubnames(raw_ostream &OS, const Data &DI);
+LLVM_FUNC_ABI Error emitDebugPubtypes(raw_ostream &OS, const Data &DI);
+LLVM_FUNC_ABI Error emitDebugGNUPubnames(raw_ostream &OS, const Data &DI);
+LLVM_FUNC_ABI Error emitDebugGNUPubtypes(raw_ostream &OS, const Data &DI);
+LLVM_FUNC_ABI Error emitDebugInfo(raw_ostream &OS, const Data &DI);
+LLVM_FUNC_ABI Error emitDebugLine(raw_ostream &OS, const Data &DI);
+LLVM_FUNC_ABI Error emitDebugAddr(raw_ostream &OS, const Data &DI);
+LLVM_FUNC_ABI Error emitDebugStrOffsets(raw_ostream &OS, const Data &DI);
+LLVM_FUNC_ABI Error emitDebugRnglists(raw_ostream &OS, const Data &DI);
+LLVM_FUNC_ABI Error emitDebugLoclists(raw_ostream &OS, const Data &DI);
 
-std::function<Error(raw_ostream &, const Data &)>
+LLVM_FUNC_ABI std::function<Error(raw_ostream &, const Data &)>
 getDWARFEmitterByName(StringRef SecName);
-Expected<StringMap<std::unique_ptr<MemoryBuffer>>>
+LLVM_FUNC_ABI Expected<StringMap<std::unique_ptr<MemoryBuffer>>>
 emitDebugSections(StringRef YAMLString,
                   bool IsLittleEndian = sys::IsLittleEndianHost,
                   bool Is64BitAddrSize = true);

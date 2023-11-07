@@ -34,7 +34,7 @@ namespace llvm {
 template <typename KeyT, typename ValueT,
           typename MapType = DenseMap<KeyT, unsigned>,
           typename VectorType = SmallVector<std::pair<KeyT, ValueT>, 0>>
-class MapVector {
+class LLVM_CLASS_ABI MapVector {
   MapType Map;
   VectorType Vector;
 
@@ -229,7 +229,7 @@ void MapVector<KeyT, ValueT, MapType, VectorType>::remove_if(Function Pred) {
 /// A MapVector that performs no allocations if smaller than a certain
 /// size.
 template <typename KeyT, typename ValueT, unsigned N>
-struct SmallMapVector
+struct LLVM_CLASS_ABI SmallMapVector
     : MapVector<KeyT, ValueT, SmallDenseMap<KeyT, unsigned, N>,
                 SmallVector<std::pair<KeyT, ValueT>, N>> {
 };

@@ -23,7 +23,7 @@
 
 namespace llvm {
 
-class VectorBuilder {
+class LLVM_CLASS_ABI VectorBuilder {
 public:
   enum class Behavior {
     // Abort if the requested VP intrinsic could not be created.

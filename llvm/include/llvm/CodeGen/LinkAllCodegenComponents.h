@@ -20,7 +20,7 @@
 #include <cstdlib>
 
 namespace {
-  struct ForceCodegenLinking {
+  struct LLVM_CLASS_ABI ForceCodegenLinking {
     ForceCodegenLinking() {
       // We must reference the passes in such a way that compilers will not
       // delete it all as dead code, even with whole program optimization,

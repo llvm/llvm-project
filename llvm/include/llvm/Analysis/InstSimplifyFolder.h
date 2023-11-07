@@ -32,7 +32,7 @@ class Constant;
 /// InstSimplifyFolder - Use InstructionSimplify to fold operations to existing
 /// values. Also applies target-specific constant folding when not using
 /// InstructionSimplify.
-class InstSimplifyFolder final : public IRBuilderFolder {
+class LLVM_CLASS_ABI InstSimplifyFolder final : public IRBuilderFolder {
   TargetFolder ConstFolder;
   SimplifyQuery SQ;
 

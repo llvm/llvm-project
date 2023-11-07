@@ -28,12 +28,12 @@ class PseudoSourceValue;
 class raw_ostream;
 class TargetMachine;
 
-raw_ostream &operator<<(raw_ostream &OS, const PseudoSourceValue* PSV);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const PseudoSourceValue* PSV);
 
 /// Special value supplied for machine level alias analysis. It indicates that
 /// a memory access references the functions stack frame (e.g., a spill slot),
 /// below the stack frame (e.g., argument space), or constant pool.
-class PseudoSourceValue {
+class LLVM_CLASS_ABI PseudoSourceValue {
 public:
   enum PSVKind : unsigned {
     Stack,
@@ -49,7 +49,7 @@ public:
 private:
   unsigned Kind;
   unsigned AddressSpace;
-  friend raw_ostream &llvm::operator<<(raw_ostream &OS,
+  friend LLVM_FUNC_ABI raw_ostream &llvm::operator<<(raw_ostream &OS,
                                        const PseudoSourceValue* PSV);
 
   friend class MachineMemOperand; // For printCustom().
@@ -92,7 +92,7 @@ public:
 
 /// A specialized PseudoSourceValue for holding FixedStack values, which must
 /// include a frame index.
-class FixedStackPseudoSourceValue : public PseudoSourceValue {
+class LLVM_CLASS_ABI FixedStackPseudoSourceValue : public PseudoSourceValue {
   const int FI;
 
 public:
@@ -114,7 +114,7 @@ public:
   int getFrameIndex() const { return FI; }
 };
 
-class CallEntryPseudoSourceValue : public PseudoSourceValue {
+class LLVM_CLASS_ABI CallEntryPseudoSourceValue : public PseudoSourceValue {
 protected:
   CallEntryPseudoSourceValue(unsigned Kind, const TargetMachine &TM);
 
@@ -125,7 +125,7 @@ public:
 };
 
 /// A specialized pseudo source value for holding GlobalValue values.
-class GlobalValuePseudoSourceValue : public CallEntryPseudoSourceValue {
+class LLVM_CLASS_ABI GlobalValuePseudoSourceValue : public CallEntryPseudoSourceValue {
   const GlobalValue *GV;
 
 public:
@@ -139,7 +139,7 @@ public:
 };
 
 /// A specialized pseudo source value for holding external symbol values.
-class ExternalSymbolPseudoSourceValue : public CallEntryPseudoSourceValue {
+class LLVM_CLASS_ABI ExternalSymbolPseudoSourceValue : public CallEntryPseudoSourceValue {
   const char *ES;
 
 public:
@@ -153,7 +153,7 @@ public:
 };
 
 /// Manages creation of pseudo source values.
-class PseudoSourceValueManager {
+class LLVM_CLASS_ABI PseudoSourceValueManager {
   const TargetMachine &TM;
   const PseudoSourceValue StackPSV, GOTPSV, JumpTablePSV, ConstantPoolPSV;
   std::map<int, std::unique_ptr<FixedStackPseudoSourceValue>> FSValues;

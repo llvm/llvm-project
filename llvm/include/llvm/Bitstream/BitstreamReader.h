@@ -35,7 +35,7 @@
 namespace llvm {
 
 /// This class maintains the abbreviations read from a block info block.
-class BitstreamBlockInfo {
+class LLVM_CLASS_ABI BitstreamBlockInfo {
 public:
   /// This contains information emitted to BLOCKINFO_BLOCK blocks. These
   /// describe abbreviations that all blocks of the specified ID inherit.
@@ -77,7 +77,7 @@ public:
 /// This represents a position within a bitstream. There may be multiple
 /// independent cursors reading within one bitstream, each maintaining their
 /// own local state.
-class SimpleBitstreamCursor {
+class LLVM_CLASS_ABI SimpleBitstreamCursor {
   ArrayRef<uint8_t> BitcodeBytes;
   size_t NextChar = 0;
 
@@ -322,7 +322,7 @@ public:
 
 /// When advancing through a bitstream cursor, each advance can discover a few
 /// different kinds of entries:
-struct BitstreamEntry {
+struct LLVM_CLASS_ABI BitstreamEntry {
   enum {
     Error,    // Malformed bitcode was found.
     EndBlock, // We've reached the end of the current block, (or the end of the
@@ -355,7 +355,7 @@ struct BitstreamEntry {
 ///
 /// Unlike iterators, BitstreamCursors are heavy-weight objects that should not
 /// be passed by value.
-class BitstreamCursor : SimpleBitstreamCursor {
+class LLVM_CLASS_ABI BitstreamCursor : SimpleBitstreamCursor {
   // This is the declared size of code values used for the current block, in
   // bits.
   unsigned CurCodeSize = 2;

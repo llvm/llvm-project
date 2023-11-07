@@ -33,13 +33,13 @@ namespace hashbuilder_detail {
 /// Trait to indicate whether a type's bits can be hashed directly (after
 /// endianness correction).
 template <typename U>
-struct IsHashableData
+struct LLVM_CLASS_ABI IsHashableData
     : std::integral_constant<bool, is_integral_or_enum<U>::value> {};
 
 } // namespace hashbuilder_detail
 
 /// Declares the hasher member, and functions forwarding directly to the hasher.
-template <typename HasherT> class HashBuilderBase {
+template <typename HasherT> class LLVM_CLASS_ABI HashBuilderBase {
 public:
   template <typename HasherT_ = HasherT>
   using HashResultTy = decltype(std::declval<HasherT_ &>().final());
@@ -137,7 +137,7 @@ private:
 /// Specifiying a non-`native` `Endianness` template parameter allows to compute
 /// stable hash across platforms with different endianness.
 template <typename HasherT, llvm::endianness Endianness>
-class HashBuilder : public HashBuilderBase<HasherT> {
+class LLVM_CLASS_ABI HashBuilder : public HashBuilderBase<HasherT> {
 public:
   explicit HashBuilder(HasherT &Hasher) : HashBuilderBase<HasherT>(Hasher) {}
   template <typename... ArgTypes>
@@ -384,7 +384,7 @@ private:
 };
 
 namespace hashbuilder_detail {
-class HashCodeHasher {
+class LLVM_CLASS_ABI HashCodeHasher {
 public:
   HashCodeHasher() : Code(0) {}
   void update(ArrayRef<uint8_t> Data) {

@@ -39,7 +39,7 @@ namespace lto {
 
 /// LTO configuration. A linker can configure LTO by setting fields in this data
 /// structure and passing it to the lto::LTO constructor.
-struct Config {
+struct LLVM_CLASS_ABI Config {
   enum VisScheme {
     FromPrevailing,
     ELF,
@@ -281,7 +281,7 @@ struct Config {
                      const DenseSet<StringRef> &SaveTempsArgs = {});
 };
 
-struct LTOLLVMDiagnosticHandler : public DiagnosticHandler {
+struct LLVM_CLASS_ABI LTOLLVMDiagnosticHandler : public DiagnosticHandler {
   DiagnosticHandlerFunction *Fn;
   LTOLLVMDiagnosticHandler(DiagnosticHandlerFunction *DiagHandlerFn)
       : Fn(DiagHandlerFn) {}
@@ -295,7 +295,7 @@ struct LTOLLVMDiagnosticHandler : public DiagnosticHandler {
 /// diagnostic handler to the context, as opposed to the Config object (which
 /// may be ephemeral).
 // FIXME: This should not be required as diagnostic handler is not callback.
-struct LTOLLVMContext : LLVMContext {
+struct LLVM_CLASS_ABI LTOLLVMContext : LLVMContext {
 
   LTOLLVMContext(const Config &C) : DiagHandler(C.DiagHandler) {
     setDiscardValueNames(C.ShouldDiscardValueNames);

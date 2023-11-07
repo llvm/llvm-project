@@ -16,7 +16,7 @@
 namespace llvm {
 
 /// Implementations of list algorithms using ilist_node_base.
-template <bool EnableSentinelTracking> class ilist_base {
+template <bool EnableSentinelTracking> class LLVM_CLASS_ABI ilist_base {
 public:
   using node_base_type = ilist_node_base<EnableSentinelTracking>;
 

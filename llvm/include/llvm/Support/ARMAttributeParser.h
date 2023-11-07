@@ -19,7 +19,7 @@ namespace llvm {
 
 class ScopedPrinter;
 
-class ARMAttributeParser : public ELFAttributeParser {
+class LLVM_CLASS_ABI ARMAttributeParser : public ELFAttributeParser {
   struct DisplayHandler {
     ARMBuildAttrs::AttrType attribute;
     Error (ARMAttributeParser::*routine)(ARMBuildAttrs::AttrType);

@@ -39,7 +39,7 @@ class raw_ostream;
 /// If the symbol is defined/emitted into the current translation unit, the
 /// Section member is set to indicate what section it lives in.  Otherwise, if
 /// it is a reference to an external entity, it has a null section.
-class MCSymbol {
+class LLVM_CLASS_ABI MCSymbol {
 protected:
   /// The kind of the symbol.  If it is any value other than unset then this
   /// class is actually one of the appropriate subclasses of MCSymbol.

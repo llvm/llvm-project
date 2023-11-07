@@ -25,7 +25,7 @@ class MergingTypeTableBuilder;
 
 /// Used to forward information about PCH.OBJ (precompiled) files, when
 /// applicable.
-struct PCHMergerInfo {
+struct LLVM_CLASS_ABI PCHMergerInfo {
   uint32_t PCHSignature{};
   uint32_t EndPrecompIndex = ~0U;
 };
@@ -43,7 +43,7 @@ struct PCHMergerInfo {
 ///
 /// \returns Error::success() if the operation succeeded, otherwise an
 /// appropriate error code.
-Error mergeTypeRecords(MergingTypeTableBuilder &Dest,
+LLVM_FUNC_ABI Error mergeTypeRecords(MergingTypeTableBuilder &Dest,
                        SmallVectorImpl<TypeIndex> &SourceToDest,
                        const CVTypeArray &Types);
 
@@ -68,7 +68,7 @@ Error mergeTypeRecords(MergingTypeTableBuilder &Dest,
 ///
 /// \returns Error::success() if the operation succeeded, otherwise an
 /// appropriate error code.
-Error mergeIdRecords(MergingTypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
+LLVM_FUNC_ABI Error mergeIdRecords(MergingTypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
                      SmallVectorImpl<TypeIndex> &SourceToDest,
                      const CVTypeArray &Ids);
 
@@ -87,26 +87,26 @@ Error mergeIdRecords(MergingTypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
 ///
 /// \returns Error::success() if the operation succeeded, otherwise an
 /// appropriate error code.
-Error mergeTypeAndIdRecords(MergingTypeTableBuilder &DestIds,
+LLVM_FUNC_ABI Error mergeTypeAndIdRecords(MergingTypeTableBuilder &DestIds,
                             MergingTypeTableBuilder &DestTypes,
                             SmallVectorImpl<TypeIndex> &SourceToDest,
                             const CVTypeArray &IdsAndTypes,
                             std::optional<PCHMergerInfo> &PCHInfo);
 
-Error mergeTypeAndIdRecords(GlobalTypeTableBuilder &DestIds,
+LLVM_FUNC_ABI Error mergeTypeAndIdRecords(GlobalTypeTableBuilder &DestIds,
                             GlobalTypeTableBuilder &DestTypes,
                             SmallVectorImpl<TypeIndex> &SourceToDest,
                             const CVTypeArray &IdsAndTypes,
                             ArrayRef<GloballyHashedType> Hashes,
                             std::optional<PCHMergerInfo> &PCHInfo);
 
-Error mergeTypeRecords(GlobalTypeTableBuilder &Dest,
+LLVM_FUNC_ABI Error mergeTypeRecords(GlobalTypeTableBuilder &Dest,
                        SmallVectorImpl<TypeIndex> &SourceToDest,
                        const CVTypeArray &Types,
                        ArrayRef<GloballyHashedType> Hashes,
                        std::optional<PCHMergerInfo> &PCHInfo);
 
-Error mergeIdRecords(GlobalTypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
+LLVM_FUNC_ABI Error mergeIdRecords(GlobalTypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
                      SmallVectorImpl<TypeIndex> &SourceToDest,
                      const CVTypeArray &Ids,
                      ArrayRef<GloballyHashedType> Hashes);

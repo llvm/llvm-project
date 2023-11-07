@@ -19,7 +19,7 @@
 extern "C" void LLVMLinkInInterpreter();
 
 namespace {
-  struct ForceInterpreterLinking {
+  struct LLVM_CLASS_ABI ForceInterpreterLinking {
     ForceInterpreterLinking() { LLVMLinkInInterpreter(); }
   } ForceInterpreterLinking;
 }

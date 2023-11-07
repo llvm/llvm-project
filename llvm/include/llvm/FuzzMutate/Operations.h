@@ -23,32 +23,32 @@ namespace llvm {
 
 /// Getters for the default sets of operations, per general category.
 /// @{
-void describeFuzzerIntOps(std::vector<fuzzerop::OpDescriptor> &Ops);
-void describeFuzzerFloatOps(std::vector<fuzzerop::OpDescriptor> &Ops);
-void describeFuzzerControlFlowOps(std::vector<fuzzerop::OpDescriptor> &Ops);
-void describeFuzzerPointerOps(std::vector<fuzzerop::OpDescriptor> &Ops);
-void describeFuzzerAggregateOps(std::vector<fuzzerop::OpDescriptor> &Ops);
-void describeFuzzerVectorOps(std::vector<fuzzerop::OpDescriptor> &Ops);
-void describeFuzzerUnaryOperations(std::vector<fuzzerop::OpDescriptor> &Ops);
-void describeFuzzerOtherOps(std::vector<fuzzerop::OpDescriptor> &Ops);
+LLVM_FUNC_ABI void describeFuzzerIntOps(std::vector<fuzzerop::OpDescriptor> &Ops);
+LLVM_FUNC_ABI void describeFuzzerFloatOps(std::vector<fuzzerop::OpDescriptor> &Ops);
+LLVM_FUNC_ABI void describeFuzzerControlFlowOps(std::vector<fuzzerop::OpDescriptor> &Ops);
+LLVM_FUNC_ABI void describeFuzzerPointerOps(std::vector<fuzzerop::OpDescriptor> &Ops);
+LLVM_FUNC_ABI void describeFuzzerAggregateOps(std::vector<fuzzerop::OpDescriptor> &Ops);
+LLVM_FUNC_ABI void describeFuzzerVectorOps(std::vector<fuzzerop::OpDescriptor> &Ops);
+LLVM_FUNC_ABI void describeFuzzerUnaryOperations(std::vector<fuzzerop::OpDescriptor> &Ops);
+LLVM_FUNC_ABI void describeFuzzerOtherOps(std::vector<fuzzerop::OpDescriptor> &Ops);
 /// @}
 
 namespace fuzzerop {
 
 /// Descriptors for individual operations.
 /// @{
-OpDescriptor selectDescriptor(unsigned Weight);
-OpDescriptor fnegDescriptor(unsigned Weight);
-OpDescriptor binOpDescriptor(unsigned Weight, Instruction::BinaryOps Op);
-OpDescriptor cmpOpDescriptor(unsigned Weight, Instruction::OtherOps CmpOp,
+LLVM_FUNC_ABI OpDescriptor selectDescriptor(unsigned Weight);
+LLVM_FUNC_ABI OpDescriptor fnegDescriptor(unsigned Weight);
+LLVM_FUNC_ABI OpDescriptor binOpDescriptor(unsigned Weight, Instruction::BinaryOps Op);
+LLVM_FUNC_ABI OpDescriptor cmpOpDescriptor(unsigned Weight, Instruction::OtherOps CmpOp,
                              CmpInst::Predicate Pred);
-OpDescriptor splitBlockDescriptor(unsigned Weight);
-OpDescriptor gepDescriptor(unsigned Weight);
-OpDescriptor extractValueDescriptor(unsigned Weight);
-OpDescriptor insertValueDescriptor(unsigned Weight);
-OpDescriptor extractElementDescriptor(unsigned Weight);
-OpDescriptor insertElementDescriptor(unsigned Weight);
-OpDescriptor shuffleVectorDescriptor(unsigned Weight);
+LLVM_FUNC_ABI OpDescriptor splitBlockDescriptor(unsigned Weight);
+LLVM_FUNC_ABI OpDescriptor gepDescriptor(unsigned Weight);
+LLVM_FUNC_ABI OpDescriptor extractValueDescriptor(unsigned Weight);
+LLVM_FUNC_ABI OpDescriptor insertValueDescriptor(unsigned Weight);
+LLVM_FUNC_ABI OpDescriptor extractElementDescriptor(unsigned Weight);
+LLVM_FUNC_ABI OpDescriptor insertElementDescriptor(unsigned Weight);
+LLVM_FUNC_ABI OpDescriptor shuffleVectorDescriptor(unsigned Weight);
 
 /// @}
 

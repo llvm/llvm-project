@@ -25,7 +25,7 @@ namespace llvm {
 template <typename T> class ImmutableListFactory;
 
 template <typename T>
-class ImmutableListImpl : public FoldingSetNode {
+class LLVM_CLASS_ABI ImmutableListImpl : public FoldingSetNode {
   friend class ImmutableListFactory<T>;
 
   T Head;
@@ -62,7 +62,7 @@ public:
 ///  of a group of lists.  When the factory object is reclaimed, all lists
 ///  created by that factory are released as well.
 template <typename T>
-class ImmutableList {
+class LLVM_CLASS_ABI ImmutableList {
 public:
   using value_type = T;
   using Factory = ImmutableListFactory<T>;
@@ -147,7 +147,7 @@ public:
 };
 
 template <typename T>
-class ImmutableListFactory {
+class LLVM_CLASS_ABI ImmutableListFactory {
   using ListTy = ImmutableListImpl<T>;
   using CacheTy = FoldingSet<ListTy>;
 
@@ -221,7 +221,7 @@ public:
 // Partially-specialized Traits.
 //===----------------------------------------------------------------------===//
 
-template <typename T> struct DenseMapInfo<ImmutableList<T>, void> {
+template <typename T> struct LLVM_CLASS_ABI DenseMapInfo<ImmutableList<T>, void> {
   static inline ImmutableList<T> getEmptyKey() {
     return reinterpret_cast<ImmutableListImpl<T>*>(-1);
   }

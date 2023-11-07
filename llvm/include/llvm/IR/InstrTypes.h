@@ -53,7 +53,7 @@ typedef unsigned ID;
 //                          UnaryInstruction Class
 //===----------------------------------------------------------------------===//
 
-class UnaryInstruction : public Instruction {
+class LLVM_CLASS_ABI UnaryInstruction : public Instruction {
 protected:
   UnaryInstruction(Type *Ty, unsigned iType, Value *V,
                    Instruction *IB = nullptr)
@@ -88,7 +88,7 @@ public:
 };
 
 template <>
-struct OperandTraits<UnaryInstruction> :
+struct LLVM_CLASS_ABI OperandTraits<UnaryInstruction> :
   public FixedNumOperandTraits<UnaryInstruction, 1> {
 };
 
@@ -98,7 +98,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(UnaryInstruction, Value)
 //                                UnaryOperator Class
 //===----------------------------------------------------------------------===//
 
-class UnaryOperator : public UnaryInstruction {
+class LLVM_CLASS_ABI UnaryOperator : public UnaryInstruction {
   void AssertOK();
 
 protected:
@@ -185,7 +185,7 @@ public:
 //                           BinaryOperator Class
 //===----------------------------------------------------------------------===//
 
-class BinaryOperator : public Instruction {
+class LLVM_CLASS_ABI BinaryOperator : public Instruction {
   void AssertOK();
 
 protected:
@@ -410,7 +410,7 @@ public:
 };
 
 template <>
-struct OperandTraits<BinaryOperator> :
+struct LLVM_CLASS_ABI OperandTraits<BinaryOperator> :
   public FixedNumOperandTraits<BinaryOperator, 2> {
 };
 
@@ -426,7 +426,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BinaryOperator, Value)
 ///
 /// if (isa<CastInst>(Instr)) { ... }
 /// Base class of casting instructions.
-class CastInst : public UnaryInstruction {
+class LLVM_CLASS_ABI CastInst : public UnaryInstruction {
 protected:
   /// Constructor with insert-before-instruction semantics for subclasses
   CastInst(Type *Ty, unsigned iType, Value *S,
@@ -694,7 +694,7 @@ public:
 };
 
 /// Instruction that can have a nneg flag (only zext).
-class PossiblyNonNegInst : public CastInst {
+class LLVM_CLASS_ABI PossiblyNonNegInst : public CastInst {
 public:
   enum { NonNeg = (1 << 0) };
 
@@ -713,7 +713,7 @@ public:
 
 /// This class is the base class for the comparison instructions.
 /// Abstract base class of comparison instructions.
-class CmpInst : public Instruction {
+class LLVM_CLASS_ABI CmpInst : public Instruction {
 public:
   /// This enumeration lists the possible predicates for CmpInst subclasses.
   /// Values in the range 0-31 are reserved for FCmpInst, while values in the
@@ -1088,16 +1088,16 @@ private:
 
 // FIXME: these are redundant if CmpInst < BinaryOperator
 template <>
-struct OperandTraits<CmpInst> : public FixedNumOperandTraits<CmpInst, 2> {
+struct LLVM_CLASS_ABI OperandTraits<CmpInst> : public FixedNumOperandTraits<CmpInst, 2> {
 };
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CmpInst, Value)
 
-raw_ostream &operator<<(raw_ostream &OS, CmpInst::Predicate Pred);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, CmpInst::Predicate Pred);
 
 /// A lightweight accessor for an operand bundle meant to be passed
 /// around by value.
-struct OperandBundleUse {
+struct LLVM_CLASS_ABI OperandBundleUse {
   ArrayRef<Use> Inputs;
 
   OperandBundleUse() = default;
@@ -1155,7 +1155,7 @@ private:
 /// Unlike OperandBundleUse, OperandBundleDefT owns the memory it carries, and
 /// so it is possible to create and pass around "self-contained" instances of
 /// OperandBundleDef and ConstOperandBundleDef.
-template <typename InputTy> class OperandBundleDefT {
+template <typename InputTy> class LLVM_CLASS_ABI OperandBundleDefT {
   std::string Tag;
   std::vector<InputTy> Inputs;
 
@@ -1202,7 +1202,7 @@ using ConstOperandBundleDef = OperandBundleDefT<const Value *>;
 /// start of the arguments without knowing how many other operands a particular
 /// subclass requires. Note that accessing the end of the argument list isn't
 /// as cheap as most other operations on the base class.
-class CallBase : public Instruction {
+class LLVM_CLASS_ABI CallBase : public Instruction {
 protected:
   // The first two bits are reserved by CallInst for fast retrieval,
   using CallInstReservedField = Bitfield::Element<unsigned, 0, 2>;
@@ -2326,14 +2326,14 @@ private:
 };
 
 template <>
-struct OperandTraits<CallBase> : public VariadicOperandTraits<CallBase, 1> {};
+struct LLVM_CLASS_ABI OperandTraits<CallBase> : public VariadicOperandTraits<CallBase, 1> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CallBase, Value)
 
 //===----------------------------------------------------------------------===//
 //                           FuncletPadInst Class
 //===----------------------------------------------------------------------===//
-class FuncletPadInst : public Instruction {
+class LLVM_CLASS_ABI FuncletPadInst : public Instruction {
 private:
   FuncletPadInst(const FuncletPadInst &CPI);
 
@@ -2395,7 +2395,7 @@ public:
 };
 
 template <>
-struct OperandTraits<FuncletPadInst>
+struct LLVM_CLASS_ABI OperandTraits<FuncletPadInst>
     : public VariadicOperandTraits<FuncletPadInst, /*MINARITY=*/1> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(FuncletPadInst, Value)

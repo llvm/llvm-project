@@ -29,7 +29,7 @@
 namespace llvm {
 
 template <typename ItTy = User::const_op_iterator>
-class generic_gep_type_iterator {
+class LLVM_CLASS_ABI generic_gep_type_iterator {
 
   ItTy OpIt;
   PointerUnion<StructType *, Type *> CurTy;

@@ -20,7 +20,7 @@ namespace llvm {
 class FileCollectorFileSystem;
 class Twine;
 
-class FileCollectorBase {
+class LLVM_CLASS_ABI FileCollectorBase {
 public:
   FileCollectorBase();
   virtual ~FileCollectorBase();
@@ -67,7 +67,7 @@ protected:
 ///
 /// In order to preserve the relative topology of files we use their real paths
 /// as relative paths inside of the Root.
-class FileCollector : public FileCollectorBase {
+class LLVM_CLASS_ABI FileCollector : public FileCollectorBase {
 public:
   /// Helper utility that encapsulates the logic for canonicalizing a virtual
   /// path and a path to copy from.

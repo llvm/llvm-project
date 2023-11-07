@@ -39,7 +39,7 @@ namespace llvm {
 // PassNameParser class - Make use of the pass registration mechanism to
 // automatically add a command line argument to opt for each pass.
 //
-class PassNameParser : public PassRegistrationListener,
+class LLVM_CLASS_ABI PassNameParser : public PassRegistrationListener,
                        public cl::parser<const PassInfo*> {
 public:
   PassNameParser(cl::Option &O);

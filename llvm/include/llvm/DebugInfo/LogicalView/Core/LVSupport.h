@@ -30,7 +30,7 @@ namespace llvm {
 namespace logicalview {
 
 // Returns the unique string pool instance.
-LVStringPool &getStringPool();
+LLVM_FUNC_ABI LVStringPool &getStringPool();
 
 using LVStringRefs = std::vector<StringRef>;
 using LVLexicalComponent = std::tuple<StringRef, StringRef>;
@@ -38,7 +38,7 @@ using LVLexicalIndex =
     std::tuple<LVStringRefs::size_type, LVStringRefs::size_type>;
 
 // Used to record specific characteristics about the objects.
-template <typename T> class LVProperties {
+template <typename T> class LLVM_CLASS_ABI LVProperties {
   SmallBitVector Bits = SmallBitVector(static_cast<unsigned>(T::LastEntry) + 1);
 
 public:
@@ -142,7 +142,7 @@ void addItem(MapType *Map, KeyType Key, ValueType Value) {
 
 // Double map data structure.
 template <typename FirstKeyType, typename SecondKeyType, typename ValueType>
-class LVDoubleMap {
+class LLVM_CLASS_ABI LVDoubleMap {
   static_assert(std::is_pointer<ValueType>::value,
                 "ValueType must be a pointer.");
   using LVSecondMapType = std::map<SecondKeyType, ValueType>;
@@ -212,8 +212,8 @@ public:
 };
 
 // Unified and flattened pathnames.
-std::string transformPath(StringRef Path);
-std::string flattenedFilePath(StringRef Path);
+LLVM_FUNC_ABI std::string transformPath(StringRef Path);
+LLVM_FUNC_ABI std::string flattenedFilePath(StringRef Path);
 
 inline std::string formattedKind(StringRef Kind) {
   return (Twine("{") + Twine(Kind) + Twine("}")).str();
@@ -231,9 +231,9 @@ inline std::string formattedNames(StringRef Name1, StringRef Name2) {
 // scopes, such as: name, name<..>, scope::name, scope::..::name, etc.
 // The string can have multiple references to template instantiations.
 // It returns the inner most component.
-LVLexicalComponent getInnerComponent(StringRef Name);
-LVStringRefs getAllLexicalComponents(StringRef Name);
-std::string getScopedName(const LVStringRefs &Components,
+LLVM_FUNC_ABI LVLexicalComponent getInnerComponent(StringRef Name);
+LLVM_FUNC_ABI LVStringRefs getAllLexicalComponents(StringRef Name);
+LLVM_FUNC_ABI std::string getScopedName(const LVStringRefs &Components,
                           StringRef BaseName = {});
 
 // These are the values assigned to the debug location record IDs.

@@ -26,7 +26,7 @@ struct MemberAttributes;
 class TypeCollection;
 
 /// Dumper for CodeView type streams found in COFF object files and PDB files.
-class TypeDumpVisitor : public TypeVisitorCallbacks {
+class LLVM_CLASS_ABI TypeDumpVisitor : public TypeVisitorCallbacks {
 public:
   TypeDumpVisitor(TypeCollection &TpiTypes, ScopedPrinter *W,
                   bool PrintRecordBytes)

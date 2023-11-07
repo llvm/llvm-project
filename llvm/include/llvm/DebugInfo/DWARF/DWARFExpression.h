@@ -21,7 +21,7 @@ struct DIDumpOptions;
 class MCRegisterInfo;
 class raw_ostream;
 
-class DWARFExpression {
+class LLVM_CLASS_ABI DWARFExpression {
 public:
   class iterator;
 
@@ -141,7 +141,7 @@ public:
     }
 
     // Comparison operators are provided out of line.
-    friend bool operator==(const iterator &, const iterator &);
+    friend LLVM_FUNC_ABI bool operator==(const iterator &, const iterator &);
   };
 
   DWARFExpression(DataExtractor Data, uint8_t AddressSize,

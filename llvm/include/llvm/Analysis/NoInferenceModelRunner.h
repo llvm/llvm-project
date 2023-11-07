@@ -18,7 +18,7 @@ namespace llvm {
 /// A pseudo model runner. We use it to store feature values when collecting
 /// logs for the default policy, in 'development' mode, but never ask it to
 /// 'run'.
-class NoInferenceModelRunner : public MLModelRunner {
+class LLVM_CLASS_ABI NoInferenceModelRunner : public MLModelRunner {
 public:
   NoInferenceModelRunner(LLVMContext &Ctx,
                          const std::vector<TensorSpec> &Inputs);

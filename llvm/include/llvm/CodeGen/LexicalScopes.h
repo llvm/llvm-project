@@ -42,7 +42,7 @@ using InsnRange = std::pair<const MachineInstr *, const MachineInstr *>;
 //===----------------------------------------------------------------------===//
 /// LexicalScope - This class is used to track scope information.
 ///
-class LexicalScope {
+class LLVM_CLASS_ABI LexicalScope {
 public:
   LexicalScope(LexicalScope *P, const DILocalScope *D, const DILocation *I,
                bool A)
@@ -139,7 +139,7 @@ private:
 /// LexicalScopes -  This class provides interface to collect and use lexical
 /// scoping information from machine instruction.
 ///
-class LexicalScopes {
+class LLVM_CLASS_ABI LexicalScopes {
 public:
   LexicalScopes() = default;
 

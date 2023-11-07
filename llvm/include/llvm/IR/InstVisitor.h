@@ -76,7 +76,7 @@ namespace llvm {
 /// as efficient as having your own switch statement over the instruction
 /// opcode.
 template<typename SubClass, typename RetTy=void>
-class InstVisitor {
+class LLVM_CLASS_ABI InstVisitor {
   //===--------------------------------------------------------------------===//
   // Interface code - This is the public interface of the InstVisitor that you
   // use to visit instructions...

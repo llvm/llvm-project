@@ -122,8 +122,8 @@ class raw_ostream;
 
 namespace MSSAHelpers {
 
-struct AllAccessTag {};
-struct DefsOnlyTag {};
+struct LLVM_CLASS_ABI AllAccessTag {};
+struct LLVM_CLASS_ABI DefsOnlyTag {};
 
 } // end namespace MSSAHelpers
 
@@ -140,7 +140,7 @@ using const_memoryaccess_def_iterator =
 
 // The base for all memory accesses. All memory accesses in a block are
 // linked together using an intrusive list.
-class MemoryAccess
+class LLVM_CLASS_ABI MemoryAccess
     : public DerivedUser,
       public ilist_node<MemoryAccess, ilist_tag<MSSAHelpers::AllAccessTag>>,
       public ilist_node<MemoryAccess, ilist_tag<MSSAHelpers::DefsOnlyTag>> {
@@ -234,7 +234,7 @@ private:
 };
 
 template <>
-struct ilist_alloc_traits<MemoryAccess> {
+struct LLVM_CLASS_ABI ilist_alloc_traits<MemoryAccess> {
   static void deleteNode(MemoryAccess *MA) { MA->deleteValue(); }
 };
 
@@ -250,7 +250,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const MemoryAccess &MA) {
 ///
 /// This class should never be instantiated directly; make a MemoryUse or
 /// MemoryDef instead.
-class MemoryUseOrDef : public MemoryAccess {
+class LLVM_CLASS_ABI MemoryUseOrDef : public MemoryAccess {
 public:
   void *operator new(size_t) = delete;
 
@@ -310,7 +310,7 @@ private:
 /// In particular, the set of Instructions that will be represented by
 /// MemoryUse's is exactly the set of Instructions for which
 /// AliasAnalysis::getModRefInfo returns "Ref".
-class MemoryUse final : public MemoryUseOrDef {
+class LLVM_CLASS_ABI MemoryUse final : public MemoryUseOrDef {
 public:
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(MemoryAccess);
 
@@ -358,7 +358,7 @@ private:
 };
 
 template <>
-struct OperandTraits<MemoryUse> : public FixedNumOperandTraits<MemoryUse, 1> {};
+struct LLVM_CLASS_ABI OperandTraits<MemoryUse> : public FixedNumOperandTraits<MemoryUse, 1> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryUse, MemoryAccess)
 
 /// Represents a read-write access to memory, whether it is a must-alias,
@@ -370,7 +370,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryUse, MemoryAccess)
 /// Note that, in order to provide def-def chains, all defs also have a use
 /// associated with them. This use points to the nearest reaching
 /// MemoryDef/MemoryPhi.
-class MemoryDef final : public MemoryUseOrDef {
+class LLVM_CLASS_ABI MemoryDef final : public MemoryUseOrDef {
 public:
   friend class MemorySSA;
 
@@ -420,11 +420,11 @@ private:
 };
 
 template <>
-struct OperandTraits<MemoryDef> : public FixedNumOperandTraits<MemoryDef, 2> {};
+struct LLVM_CLASS_ABI OperandTraits<MemoryDef> : public FixedNumOperandTraits<MemoryDef, 2> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryDef, MemoryAccess)
 
 template <>
-struct OperandTraits<MemoryUseOrDef> {
+struct LLVM_CLASS_ABI OperandTraits<MemoryUseOrDef> {
   static Use *op_begin(MemoryUseOrDef *MUD) {
     if (auto *MU = dyn_cast<MemoryUse>(MUD))
       return OperandTraits<MemoryUse>::op_begin(MU);
@@ -477,7 +477,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryUseOrDef, MemoryAccess)
 /// disconnected completely from the SSA graph below that point.
 /// Because MemoryUse's do not generate new definitions, they do not have this
 /// issue.
-class MemoryPhi final : public MemoryAccess {
+class LLVM_CLASS_ABI MemoryPhi final : public MemoryAccess {
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S); }
 
@@ -693,12 +693,12 @@ inline void MemoryUseOrDef::resetOptimized() {
     cast<MemoryUse>(this)->resetOptimized();
 }
 
-template <> struct OperandTraits<MemoryPhi> : public HungoffOperandTraits<2> {};
+template <> struct LLVM_CLASS_ABI OperandTraits<MemoryPhi> : public HungoffOperandTraits<2> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryPhi, MemoryAccess)
 
 /// Encapsulates MemorySSA, including all data associated with memory
 /// accesses.
-class MemorySSA {
+class LLVM_CLASS_ABI MemorySSA {
 public:
   MemorySSA(Function &, AliasAnalysis *, DominatorTree *);
 
@@ -906,10 +906,10 @@ private:
 /// The checks which this flag enables is exensive and disabled by default
 /// unless `EXPENSIVE_CHECKS` is defined.  The flag `-verify-memoryssa` can be
 /// used to selectively enable the verification without re-compilation.
-extern bool VerifyMemorySSA;
+LLVM_FUNC_ABI extern bool VerifyMemorySSA;
 
 // Internal MemorySSA utils, for use by MemorySSA classes and walkers
-class MemorySSAUtil {
+class LLVM_CLASS_ABI MemorySSAUtil {
 protected:
   friend class GVNHoist;
   friend class MemorySSAWalker;
@@ -921,7 +921,7 @@ protected:
 
 /// An analysis that produces \c MemorySSA for a function.
 ///
-class MemorySSAAnalysis : public AnalysisInfoMixin<MemorySSAAnalysis> {
+class LLVM_CLASS_ABI MemorySSAAnalysis : public AnalysisInfoMixin<MemorySSAAnalysis> {
   friend AnalysisInfoMixin<MemorySSAAnalysis>;
 
   static AnalysisKey Key;
@@ -945,7 +945,7 @@ public:
 };
 
 /// Printer pass for \c MemorySSA.
-class MemorySSAPrinterPass : public PassInfoMixin<MemorySSAPrinterPass> {
+class LLVM_CLASS_ABI MemorySSAPrinterPass : public PassInfoMixin<MemorySSAPrinterPass> {
   raw_ostream &OS;
   bool EnsureOptimizedUses;
 
@@ -957,7 +957,7 @@ public:
 };
 
 /// Printer pass for \c MemorySSA via the walker.
-class MemorySSAWalkerPrinterPass
+class LLVM_CLASS_ABI MemorySSAWalkerPrinterPass
     : public PassInfoMixin<MemorySSAWalkerPrinterPass> {
   raw_ostream &OS;
 
@@ -968,12 +968,12 @@ public:
 };
 
 /// Verifier pass for \c MemorySSA.
-struct MemorySSAVerifierPass : PassInfoMixin<MemorySSAVerifierPass> {
+struct LLVM_CLASS_ABI MemorySSAVerifierPass : PassInfoMixin<MemorySSAVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Legacy analysis pass which computes \c MemorySSA.
-class MemorySSAWrapperPass : public FunctionPass {
+class LLVM_CLASS_ABI MemorySSAWrapperPass : public FunctionPass {
 public:
   MemorySSAWrapperPass();
 
@@ -1004,7 +1004,7 @@ private:
 /// disambiguate memory accesses, or they may want the nearest dominating
 /// may-aliasing MemoryDef for a call or a store. This API enables a
 /// standardized interface to getting and using that info.
-class MemorySSAWalker {
+class LLVM_CLASS_ABI MemorySSAWalker {
 public:
   MemorySSAWalker(MemorySSA *);
   virtual ~MemorySSAWalker() = default;
@@ -1091,7 +1091,7 @@ protected:
 
 /// A MemorySSAWalker that does no alias queries, or anything else. It
 /// simply returns the links as they were constructed by the builder.
-class DoNothingMemorySSAWalker final : public MemorySSAWalker {
+class LLVM_CLASS_ABI DoNothingMemorySSAWalker final : public MemorySSAWalker {
 public:
   // Keep the overrides below from hiding the Instruction overload of
   // getClobberingMemoryAccess.
@@ -1110,7 +1110,7 @@ using ConstMemoryAccessPair = std::pair<const MemoryAccess *, MemoryLocation>;
 /// Iterator base class used to implement const and non-const iterators
 /// over the defining accesses of a MemoryAccess.
 template <class T>
-class memoryaccess_def_iterator_base
+class LLVM_CLASS_ABI memoryaccess_def_iterator_base
     : public iterator_facade_base<memoryaccess_def_iterator_base<T>,
                                   std::forward_iterator_tag, T, ptrdiff_t, T *,
                                   T *> {
@@ -1182,7 +1182,7 @@ inline const_memoryaccess_def_iterator MemoryAccess::defs_end() const {
 
 /// GraphTraits for a MemoryAccess, which walks defs in the normal case,
 /// and uses in the inverse case.
-template <> struct GraphTraits<MemoryAccess *> {
+template <> struct LLVM_CLASS_ABI GraphTraits<MemoryAccess *> {
   using NodeRef = MemoryAccess *;
   using ChildIteratorType = memoryaccess_def_iterator;
 
@@ -1191,7 +1191,7 @@ template <> struct GraphTraits<MemoryAccess *> {
   static ChildIteratorType child_end(NodeRef N) { return N->defs_end(); }
 };
 
-template <> struct GraphTraits<Inverse<MemoryAccess *>> {
+template <> struct LLVM_CLASS_ABI GraphTraits<Inverse<MemoryAccess *>> {
   using NodeRef = MemoryAccess *;
   using ChildIteratorType = MemoryAccess::iterator;
 
@@ -1208,7 +1208,7 @@ template <> struct GraphTraits<Inverse<MemoryAccess *>> {
 /// want when walking upwards through MemorySSA def chains. It takes a pair of
 /// <MemoryAccess,MemoryLocation>, and walks defs, properly translating the
 /// memory location through phi nodes for the user.
-class upward_defs_iterator
+class LLVM_CLASS_ABI upward_defs_iterator
     : public iterator_facade_base<upward_defs_iterator,
                                   std::forward_iterator_tag,
                                   const MemoryAccessPair> {
@@ -1313,7 +1313,7 @@ upward_defs(const MemoryAccessPair &Pair, DominatorTree &DT) {
 /// So if you are just trying to find, given a store, what the next
 /// thing that would clobber the same memory is, you want the optimized chain.
 template <class T, bool UseOptimizedChain = false>
-struct def_chain_iterator
+struct LLVM_CLASS_ABI def_chain_iterator
     : public iterator_facade_base<def_chain_iterator<T, UseOptimizedChain>,
                                   std::forward_iterator_tag, MemoryAccess *> {
   def_chain_iterator() : MA(nullptr) {}

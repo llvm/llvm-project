@@ -29,7 +29,7 @@
 
 namespace llvm {
 
-template <class IRBuilderTy> class FixedPointBuilder {
+template <class IRBuilderTy> class LLVM_CLASS_ABI FixedPointBuilder {
   IRBuilderTy &B;
 
   Value *Convert(Value *Src, const FixedPointSemantics &SrcSema,

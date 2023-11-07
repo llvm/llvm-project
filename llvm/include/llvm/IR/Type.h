@@ -42,7 +42,7 @@ template <typename PtrType> class SmallPtrSetImpl;
 /// in class Type and in derived classes.  Once allocated, Types are never
 /// free'd.
 ///
-class Type {
+class LLVM_CLASS_ABI Type {
 public:
   //===--------------------------------------------------------------------===//
   /// Definitions of all of the base types for the Type system.  Based on this
@@ -504,7 +504,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Type &T) {
 }
 
 // allow isa<PointerType>(x) to work without DerivedTypes.h included.
-template <> struct isa_impl<PointerType, Type> {
+template <> struct LLVM_CLASS_ABI isa_impl<PointerType, Type> {
   static inline bool doit(const Type &Ty) {
     return Ty.getTypeID() == Type::PointerTyID;
   }

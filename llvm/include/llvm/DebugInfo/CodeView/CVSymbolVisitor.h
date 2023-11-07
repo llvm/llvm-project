@@ -17,7 +17,7 @@ namespace llvm {
 namespace codeview {
 class SymbolVisitorCallbacks;
 
-class CVSymbolVisitor {
+class LLVM_CLASS_ABI CVSymbolVisitor {
 public:
   struct FilterOptions {
     std::optional<uint32_t> SymbolOffset;

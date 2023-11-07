@@ -23,7 +23,7 @@
 namespace llvm {
 namespace ArchYAML {
 
-struct Archive {
+struct LLVM_CLASS_ABI Archive {
   struct Child {
     struct Field {
       Field() = default;
@@ -63,12 +63,12 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ArchYAML::Archive::Child)
 namespace llvm {
 namespace yaml {
 
-template <> struct MappingTraits<ArchYAML::Archive> {
+template <> struct LLVM_CLASS_ABI MappingTraits<ArchYAML::Archive> {
   static void mapping(IO &IO, ArchYAML::Archive &A);
   static std::string validate(IO &, ArchYAML::Archive &A);
 };
 
-template <> struct MappingTraits<ArchYAML::Archive::Child> {
+template <> struct LLVM_CLASS_ABI MappingTraits<ArchYAML::Archive::Child> {
   static void mapping(IO &IO, ArchYAML::Archive::Child &C);
   static std::string validate(IO &, ArchYAML::Archive::Child &C);
 };

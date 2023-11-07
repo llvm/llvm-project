@@ -28,7 +28,7 @@ namespace llvm {
 /// allow convenient creation of passes that operate on the MachineFunction
 /// representation. Instead of overriding runOnFunction, subclasses
 /// override runOnMachineFunction.
-class MachineFunctionPass : public FunctionPass {
+class LLVM_CLASS_ABI MachineFunctionPass : public FunctionPass {
 public:
   bool doInitialization(Module&) override {
     // Cache the properties info at module-init time so we don't have to

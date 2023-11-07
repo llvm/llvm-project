@@ -24,7 +24,7 @@
 namespace llvm {
 namespace MSP430Attrs {
 
-const TagNameMap &getMSP430AttributeTags();
+LLVM_FUNC_ABI const TagNameMap &getMSP430AttributeTags();
 
 enum AttrType : unsigned {
   // Attribute types in ELF/.MSP430.attributes.

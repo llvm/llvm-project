@@ -46,7 +46,7 @@ enum class NodeKind : uint8_t {
   Sequence,
 };
 
-struct EmptyContext {};
+struct LLVM_CLASS_ABI EmptyContext {};
 
 /// This class should be specialized by any type that needs to be converted
 /// to/from a YAML mapping.  For example:
@@ -59,7 +59,7 @@ struct EmptyContext {};
 ///       }
 ///     };
 template<class T>
-struct MappingTraits {
+struct LLVM_CLASS_ABI MappingTraits {
   // Must provide:
   // static void mapping(IO &io, T &fields);
   // Optionally may provide:
@@ -82,7 +82,7 @@ struct MappingTraits {
 ///         ++c.TimesMapped;
 ///       }
 ///     };
-template <class T, class Context> struct MappingContextTraits {
+template <class T, class Context> struct LLVM_CLASS_ABI MappingContextTraits {
   // Must provide:
   // static void mapping(IO &io, T &fields, Context &Ctx);
   // Optionally may provide:
@@ -104,7 +104,7 @@ template <class T, class Context> struct MappingContextTraits {
 ///           io.enumCase(value, "green", cGreen);
 ///         }
 ///       };
-template <typename T, typename Enable = void> struct ScalarEnumerationTraits {
+template <typename T, typename Enable = void> struct LLVM_CLASS_ABI ScalarEnumerationTraits {
   // Must provide:
   // static void enumeration(IO &io, T &value);
 };
@@ -120,7 +120,7 @@ template <typename T, typename Enable = void> struct ScalarEnumerationTraits {
 ///          io.bitSetCase(value, "round", flagRound);
 ///        }
 ///      };
-template <typename T, typename Enable = void> struct ScalarBitSetTraits {
+template <typename T, typename Enable = void> struct LLVM_CLASS_ABI ScalarBitSetTraits {
   // Must provide:
   // static void bitset(IO &io, T &value);
 };
@@ -146,7 +146,7 @@ enum class QuotingType { None, Single, Double };
 ///      }
 ///      static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
 ///    };
-template <typename T, typename Enable = void> struct ScalarTraits {
+template <typename T, typename Enable = void> struct LLVM_CLASS_ABI ScalarTraits {
   // Must provide:
   //
   // Function to write the value as a string:
@@ -177,7 +177,7 @@ template <typename T, typename Enable = void> struct ScalarTraits {
 ///      }
 ///    };
 template <typename T>
-struct BlockScalarTraits {
+struct LLVM_CLASS_ABI BlockScalarTraits {
   // Must provide:
   //
   // Function to write the value as a string:
@@ -213,7 +213,7 @@ struct BlockScalarTraits {
 ///        return QuotingType::Single;
 ///      }
 ///    };
-template <typename T> struct TaggedScalarTraits {
+template <typename T> struct LLVM_CLASS_ABI TaggedScalarTraits {
   // Must provide:
   //
   // Function to write the value and tag as strings:
@@ -244,7 +244,7 @@ template <typename T> struct TaggedScalarTraits {
 ///      }
 ///    };
 template<typename T, typename EnableIf = void>
-struct SequenceTraits {
+struct LLVM_CLASS_ABI SequenceTraits {
   // Must provide:
   // static size_t size(IO &io, T &seq);
   // static T::value_type& element(IO &io, T &seq, size_t index);
@@ -257,7 +257,7 @@ struct SequenceTraits {
 /// This class should be specialized by any type for which vectors of that
 /// type need to be converted to/from a YAML sequence.
 template<typename T, typename EnableIf = void>
-struct SequenceElementTraits {
+struct LLVM_CLASS_ABI SequenceElementTraits {
   // Must provide:
   // static const bool flow;
 };
@@ -265,7 +265,7 @@ struct SequenceElementTraits {
 /// This class should be specialized by any type that needs to be converted
 /// to/from a list of YAML documents.
 template<typename T>
-struct DocumentListTraits {
+struct LLVM_CLASS_ABI DocumentListTraits {
   // Must provide:
   // static size_t size(IO &io, T &seq);
   // static T::value_type& element(IO &io, T &seq, size_t index);
@@ -275,7 +275,7 @@ struct DocumentListTraits {
 /// to/from a YAML mapping in the case where the names of the keys are not known
 /// in advance, e.g. a string map.
 template <typename T>
-struct CustomMappingTraits {
+struct LLVM_CLASS_ABI CustomMappingTraits {
   // static void inputOne(IO &io, StringRef key, T &elem);
   // static void output(IO &io, T &elem);
 };
@@ -297,7 +297,7 @@ struct CustomMappingTraits {
 ///      }
 ///      // ...
 ///    };
-template <typename T> struct PolymorphicTraits {
+template <typename T> struct LLVM_CLASS_ABI PolymorphicTraits {
   // Must provide:
   // static NodeKind getKind(const T &poly);
   // static scalar_type &getAsScalar(T &poly);
@@ -311,7 +311,7 @@ struct MissingTrait;
 
 // Test if ScalarEnumerationTraits<T> is defined on type T.
 template <class T>
-struct has_ScalarEnumerationTraits
+struct LLVM_CLASS_ABI has_ScalarEnumerationTraits
 {
   using Signature_enumeration = void (*)(class IO&, T&);
 
@@ -327,7 +327,7 @@ struct has_ScalarEnumerationTraits
 
 // Test if ScalarBitSetTraits<T> is defined on type T.
 template <class T>
-struct has_ScalarBitSetTraits
+struct LLVM_CLASS_ABI has_ScalarBitSetTraits
 {
   using Signature_bitset = void (*)(class IO&, T&);
 
@@ -342,7 +342,7 @@ struct has_ScalarBitSetTraits
 
 // Test if ScalarTraits<T> is defined on type T.
 template <class T>
-struct has_ScalarTraits
+struct LLVM_CLASS_ABI has_ScalarTraits
 {
   using Signature_input = StringRef (*)(StringRef, void*, T&);
   using Signature_output = void (*)(const T&, void*, raw_ostream&);
@@ -362,7 +362,7 @@ struct has_ScalarTraits
 
 // Test if BlockScalarTraits<T> is defined on type T.
 template <class T>
-struct has_BlockScalarTraits
+struct LLVM_CLASS_ABI has_BlockScalarTraits
 {
   using Signature_input = StringRef (*)(StringRef, void *, T &);
   using Signature_output = void (*)(const T &, void *, raw_ostream &);
@@ -379,7 +379,7 @@ struct has_BlockScalarTraits
 };
 
 // Test if TaggedScalarTraits<T> is defined on type T.
-template <class T> struct has_TaggedScalarTraits {
+template <class T> struct LLVM_CLASS_ABI has_TaggedScalarTraits {
   using Signature_input = StringRef (*)(StringRef, StringRef, void *, T &);
   using Signature_output = void (*)(const T &, void *, raw_ostream &,
                                     raw_ostream &);
@@ -397,7 +397,7 @@ template <class T> struct has_TaggedScalarTraits {
 };
 
 // Test if MappingContextTraits<T> is defined on type T.
-template <class T, class Context> struct has_MappingTraits {
+template <class T, class Context> struct LLVM_CLASS_ABI has_MappingTraits {
   using Signature_mapping = void (*)(class IO &, T &, Context &);
 
   template <typename U>
@@ -411,7 +411,7 @@ template <class T, class Context> struct has_MappingTraits {
 };
 
 // Test if MappingTraits<T> is defined on type T.
-template <class T> struct has_MappingTraits<T, EmptyContext> {
+template <class T> struct LLVM_CLASS_ABI has_MappingTraits<T, EmptyContext> {
   using Signature_mapping = void (*)(class IO &, T &);
 
   template <typename U>
@@ -423,7 +423,7 @@ template <class T> struct has_MappingTraits<T, EmptyContext> {
 };
 
 // Test if MappingContextTraits<T>::validate() is defined on type T.
-template <class T, class Context> struct has_MappingValidateTraits {
+template <class T, class Context> struct LLVM_CLASS_ABI has_MappingValidateTraits {
   using Signature_validate = std::string (*)(class IO &, T &, Context &);
 
   template <typename U>
@@ -437,7 +437,7 @@ template <class T, class Context> struct has_MappingValidateTraits {
 };
 
 // Test if MappingTraits<T>::validate() is defined on type T.
-template <class T> struct has_MappingValidateTraits<T, EmptyContext> {
+template <class T> struct LLVM_CLASS_ABI has_MappingValidateTraits<T, EmptyContext> {
   using Signature_validate = std::string (*)(class IO &, T &);
 
   template <typename U>
@@ -449,7 +449,7 @@ template <class T> struct has_MappingValidateTraits<T, EmptyContext> {
 };
 
 // Test if MappingContextTraits<T>::enumInput() is defined on type T.
-template <class T, class Context> struct has_MappingEnumInputTraits {
+template <class T, class Context> struct LLVM_CLASS_ABI has_MappingEnumInputTraits {
   using Signature_validate = void (*)(class IO &, T &);
 
   template <typename U>
@@ -462,7 +462,7 @@ template <class T, class Context> struct has_MappingEnumInputTraits {
 };
 
 // Test if MappingTraits<T>::enumInput() is defined on type T.
-template <class T> struct has_MappingEnumInputTraits<T, EmptyContext> {
+template <class T> struct LLVM_CLASS_ABI has_MappingEnumInputTraits<T, EmptyContext> {
   using Signature_validate = void (*)(class IO &, T &);
 
   template <typename U>
@@ -475,7 +475,7 @@ template <class T> struct has_MappingEnumInputTraits<T, EmptyContext> {
 
 // Test if SequenceTraits<T> is defined on type T.
 template <class T>
-struct has_SequenceMethodTraits
+struct LLVM_CLASS_ABI has_SequenceMethodTraits
 {
   using Signature_size = size_t (*)(class IO&, T&);
 
@@ -490,7 +490,7 @@ struct has_SequenceMethodTraits
 
 // Test if CustomMappingTraits<T> is defined on type T.
 template <class T>
-struct has_CustomMappingTraits
+struct LLVM_CLASS_ABI has_CustomMappingTraits
 {
   using Signature_input = void (*)(IO &io, StringRef key, T &v);
 
@@ -507,7 +507,7 @@ struct has_CustomMappingTraits
 // has_FlowTraits<int> will cause an error with some compilers because
 // it subclasses int.  Using this wrapper only instantiates the
 // real has_FlowTraits only if the template type is a class.
-template <typename T, bool Enabled = std::is_class_v<T>> class has_FlowTraits {
+template <typename T, bool Enabled = std::is_class_v<T>> class LLVM_CLASS_ABI has_FlowTraits {
 public:
    static const bool value = false;
 };
@@ -516,7 +516,7 @@ public:
 // for members, so test for ambiguity cause by the base and derived
 // classes both defining the member.
 template <class T>
-struct has_FlowTraits<T, true>
+struct LLVM_CLASS_ABI has_FlowTraits<T, true>
 {
   struct Fallback { bool flow; };
   struct Derived : T, Fallback { };
@@ -532,12 +532,12 @@ struct has_FlowTraits<T, true>
 
 // Test if SequenceTraits<T> is defined on type T
 template<typename T>
-struct has_SequenceTraits : public std::integral_constant<bool,
+struct LLVM_CLASS_ABI has_SequenceTraits : public std::integral_constant<bool,
                                       has_SequenceMethodTraits<T>::value > { };
 
 // Test if DocumentListTraits<T> is defined on type T
 template <class T>
-struct has_DocumentListTraits
+struct LLVM_CLASS_ABI has_DocumentListTraits
 {
   using Signature_size = size_t (*)(class IO &, T &);
 
@@ -550,7 +550,7 @@ struct has_DocumentListTraits
   static bool const value = (sizeof(test<DocumentListTraits<T>>(nullptr))==1);
 };
 
-template <class T> struct has_PolymorphicTraits {
+template <class T> struct LLVM_CLASS_ABI has_PolymorphicTraits {
   using Signature_getKind = NodeKind (*)(const T &);
 
   template <typename U>
@@ -744,7 +744,7 @@ inline QuotingType needsQuotes(StringRef S) {
 }
 
 template <typename T, typename Context>
-struct missingTraits
+struct LLVM_CLASS_ABI missingTraits
     : public std::integral_constant<bool,
                                     !has_ScalarEnumerationTraits<T>::value &&
                                         !has_ScalarBitSetTraits<T>::value &&
@@ -758,19 +758,19 @@ struct missingTraits
                                         !has_PolymorphicTraits<T>::value> {};
 
 template <typename T, typename Context>
-struct validatedMappingTraits
+struct LLVM_CLASS_ABI validatedMappingTraits
     : public std::integral_constant<
           bool, has_MappingTraits<T, Context>::value &&
                     has_MappingValidateTraits<T, Context>::value> {};
 
 template <typename T, typename Context>
-struct unvalidatedMappingTraits
+struct LLVM_CLASS_ABI unvalidatedMappingTraits
     : public std::integral_constant<
           bool, has_MappingTraits<T, Context>::value &&
                     !has_MappingValidateTraits<T, Context>::value> {};
 
 // Base class for Input and Output.
-class IO {
+class LLVM_CLASS_ABI IO {
 public:
   IO(void *Ctxt = nullptr);
   virtual ~IO();
@@ -1185,91 +1185,91 @@ yamlize(IO &io, T &Seq, bool, Context &Ctx) {
 }
 
 template<>
-struct ScalarTraits<bool> {
+struct LLVM_CLASS_ABI ScalarTraits<bool> {
   static void output(const bool &, void* , raw_ostream &);
   static StringRef input(StringRef, void *, bool &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template<>
-struct ScalarTraits<StringRef> {
+struct LLVM_CLASS_ABI ScalarTraits<StringRef> {
   static void output(const StringRef &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, StringRef &);
   static QuotingType mustQuote(StringRef S) { return needsQuotes(S); }
 };
 
 template<>
-struct ScalarTraits<std::string> {
+struct LLVM_CLASS_ABI ScalarTraits<std::string> {
   static void output(const std::string &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, std::string &);
   static QuotingType mustQuote(StringRef S) { return needsQuotes(S); }
 };
 
 template<>
-struct ScalarTraits<uint8_t> {
+struct LLVM_CLASS_ABI ScalarTraits<uint8_t> {
   static void output(const uint8_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, uint8_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template<>
-struct ScalarTraits<uint16_t> {
+struct LLVM_CLASS_ABI ScalarTraits<uint16_t> {
   static void output(const uint16_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, uint16_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template<>
-struct ScalarTraits<uint32_t> {
+struct LLVM_CLASS_ABI ScalarTraits<uint32_t> {
   static void output(const uint32_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, uint32_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template<>
-struct ScalarTraits<uint64_t> {
+struct LLVM_CLASS_ABI ScalarTraits<uint64_t> {
   static void output(const uint64_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, uint64_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template<>
-struct ScalarTraits<int8_t> {
+struct LLVM_CLASS_ABI ScalarTraits<int8_t> {
   static void output(const int8_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, int8_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template<>
-struct ScalarTraits<int16_t> {
+struct LLVM_CLASS_ABI ScalarTraits<int16_t> {
   static void output(const int16_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, int16_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template<>
-struct ScalarTraits<int32_t> {
+struct LLVM_CLASS_ABI ScalarTraits<int32_t> {
   static void output(const int32_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, int32_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template<>
-struct ScalarTraits<int64_t> {
+struct LLVM_CLASS_ABI ScalarTraits<int64_t> {
   static void output(const int64_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, int64_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template<>
-struct ScalarTraits<float> {
+struct LLVM_CLASS_ABI ScalarTraits<float> {
   static void output(const float &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, float &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template<>
-struct ScalarTraits<double> {
+struct LLVM_CLASS_ABI ScalarTraits<double> {
   static void output(const double &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, double &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
@@ -1279,7 +1279,7 @@ struct ScalarTraits<double> {
 // type.  This way endian aware types are supported whenever the traits are
 // defined for the underlying type.
 template <typename value_type, llvm::endianness endian, size_t alignment>
-struct ScalarTraits<support::detail::packed_endian_specific_integral<
+struct LLVM_CLASS_ABI ScalarTraits<support::detail::packed_endian_specific_integral<
                         value_type, endian, alignment>,
                     std::enable_if_t<has_ScalarTraits<value_type>::value>> {
   using endian_type =
@@ -1303,7 +1303,7 @@ struct ScalarTraits<support::detail::packed_endian_specific_integral<
 };
 
 template <typename value_type, llvm::endianness endian, size_t alignment>
-struct ScalarEnumerationTraits<
+struct LLVM_CLASS_ABI ScalarEnumerationTraits<
     support::detail::packed_endian_specific_integral<value_type, endian,
                                                      alignment>,
     std::enable_if_t<has_ScalarEnumerationTraits<value_type>::value>> {
@@ -1319,7 +1319,7 @@ struct ScalarEnumerationTraits<
 };
 
 template <typename value_type, llvm::endianness endian, size_t alignment>
-struct ScalarBitSetTraits<
+struct LLVM_CLASS_ABI ScalarBitSetTraits<
     support::detail::packed_endian_specific_integral<value_type, endian,
                                                      alignment>,
     std::enable_if_t<has_ScalarBitSetTraits<value_type>::value>> {
@@ -1336,7 +1336,7 @@ struct ScalarBitSetTraits<
 // Utility for use within MappingTraits<>::mapping() method
 // to [de]normalize an object for use with YAML conversion.
 template <typename TNorm, typename TFinal>
-struct MappingNormalization {
+struct LLVM_CLASS_ABI MappingNormalization {
   MappingNormalization(IO &i_o, TFinal &Obj)
       : io(i_o), BufPtr(nullptr), Result(Obj) {
     if ( io.outputting() ) {
@@ -1368,7 +1368,7 @@ private:
 // Utility for use within MappingTraits<>::mapping() method
 // to [de]normalize an object for use with YAML conversion.
 template <typename TNorm, typename TFinal>
-struct MappingNormalizationHeap {
+struct LLVM_CLASS_ABI MappingNormalizationHeap {
   MappingNormalizationHeap(IO &i_o, TFinal &Obj, BumpPtrAllocator *allocator)
     : io(i_o), Result(Obj) {
     if ( io.outputting() ) {
@@ -1414,7 +1414,7 @@ private:
 /// the mapRequired() method calls may not be in the same order
 /// as the keys in the document.
 ///
-class Input : public IO {
+class LLVM_CLASS_ABI Input : public IO {
 public:
   // Construct a yaml Input object from a StringRef and optional
   // user-data. The DiagHandler can be specified to provide
@@ -1572,7 +1572,7 @@ private:
 /// The Output class is used to generate a yaml document from in-memory structs
 /// and vectors.
 ///
-class Output : public IO {
+class LLVM_CLASS_ABI Output : public IO {
 public:
   Output(raw_ostream &, void *Ctxt = nullptr, int WrapColumn = 70);
   ~Output() override;
@@ -1729,34 +1729,34 @@ LLVM_YAML_STRONG_TYPEDEF(uint32_t, Hex32)
 LLVM_YAML_STRONG_TYPEDEF(uint64_t, Hex64)
 
 template<>
-struct ScalarTraits<Hex8> {
+struct LLVM_CLASS_ABI ScalarTraits<Hex8> {
   static void output(const Hex8 &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, Hex8 &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template<>
-struct ScalarTraits<Hex16> {
+struct LLVM_CLASS_ABI ScalarTraits<Hex16> {
   static void output(const Hex16 &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, Hex16 &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template<>
-struct ScalarTraits<Hex32> {
+struct LLVM_CLASS_ABI ScalarTraits<Hex32> {
   static void output(const Hex32 &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, Hex32 &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template<>
-struct ScalarTraits<Hex64> {
+struct LLVM_CLASS_ABI ScalarTraits<Hex64> {
   static void output(const Hex64 &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, Hex64 &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
-template <> struct ScalarTraits<VersionTuple> {
+template <> struct LLVM_CLASS_ABI ScalarTraits<VersionTuple> {
   static void output(const VersionTuple &Value, void *, llvm::raw_ostream &Out);
   static StringRef input(StringRef, void *, VersionTuple &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
@@ -1937,17 +1937,17 @@ operator<<(Output &yout, T &seq) {
   return yout;
 }
 
-template <bool B> struct IsFlowSequenceBase {};
-template <> struct IsFlowSequenceBase<true> { static const bool flow = true; };
+template <bool B> struct LLVM_CLASS_ABI IsFlowSequenceBase {};
+template <> struct LLVM_CLASS_ABI IsFlowSequenceBase<true> { static const bool flow = true; };
 
 template <typename T, typename U = void>
-struct IsResizable : std::false_type {};
+struct LLVM_CLASS_ABI IsResizable : std::false_type {};
 
 template <typename T>
-struct IsResizable<T, std::void_t<decltype(std::declval<T>().resize(0))>>
+struct LLVM_CLASS_ABI IsResizable<T, std::void_t<decltype(std::declval<T>().resize(0))>>
     : public std::true_type {};
 
-template <typename T, bool B> struct IsResizableBase {
+template <typename T, bool B> struct LLVM_CLASS_ABI IsResizableBase {
   using type = typename T::value_type;
 
   static type &element(IO &io, T &seq, size_t index) {
@@ -1957,7 +1957,7 @@ template <typename T, bool B> struct IsResizableBase {
   }
 };
 
-template <typename T> struct IsResizableBase<T, false> {
+template <typename T> struct LLVM_CLASS_ABI IsResizableBase<T, false> {
   using type = typename T::value_type;
 
   static type &element(IO &io, T &seq, size_t index) {
@@ -1971,57 +1971,57 @@ template <typename T> struct IsResizableBase<T, false> {
 };
 
 template <typename T, bool Flow>
-struct SequenceTraitsImpl
+struct LLVM_CLASS_ABI SequenceTraitsImpl
     : IsFlowSequenceBase<Flow>, IsResizableBase<T, IsResizable<T>::value> {
   static size_t size(IO &io, T &seq) { return seq.size(); }
 };
 
 // Simple helper to check an expression can be used as a bool-valued template
 // argument.
-template <bool> struct CheckIsBool { static const bool value = true; };
+template <bool> struct LLVM_CLASS_ABI CheckIsBool { static const bool value = true; };
 
 // If T has SequenceElementTraits, then vector<T> and SmallVector<T, N> have
 // SequenceTraits that do the obvious thing.
 template <typename T>
-struct SequenceTraits<
+struct LLVM_CLASS_ABI SequenceTraits<
     std::vector<T>,
     std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
     : SequenceTraitsImpl<std::vector<T>, SequenceElementTraits<T>::flow> {};
 template <typename T, unsigned N>
-struct SequenceTraits<
+struct LLVM_CLASS_ABI SequenceTraits<
     SmallVector<T, N>,
     std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
     : SequenceTraitsImpl<SmallVector<T, N>, SequenceElementTraits<T>::flow> {};
 template <typename T>
-struct SequenceTraits<
+struct LLVM_CLASS_ABI SequenceTraits<
     SmallVectorImpl<T>,
     std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
     : SequenceTraitsImpl<SmallVectorImpl<T>, SequenceElementTraits<T>::flow> {};
 template <typename T>
-struct SequenceTraits<
+struct LLVM_CLASS_ABI SequenceTraits<
     MutableArrayRef<T>,
     std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
     : SequenceTraitsImpl<MutableArrayRef<T>, SequenceElementTraits<T>::flow> {};
 
 // Sequences of fundamental types use flow formatting.
 template <typename T>
-struct SequenceElementTraits<T, std::enable_if_t<std::is_fundamental_v<T>>> {
+struct LLVM_CLASS_ABI SequenceElementTraits<T, std::enable_if_t<std::is_fundamental_v<T>>> {
   static const bool flow = true;
 };
 
 // Sequences of strings use block formatting.
-template<> struct SequenceElementTraits<std::string> {
+template<> struct LLVM_CLASS_ABI SequenceElementTraits<std::string> {
   static const bool flow = false;
 };
-template<> struct SequenceElementTraits<StringRef> {
+template<> struct LLVM_CLASS_ABI SequenceElementTraits<StringRef> {
   static const bool flow = false;
 };
-template<> struct SequenceElementTraits<std::pair<std::string, std::string>> {
+template<> struct LLVM_CLASS_ABI SequenceElementTraits<std::pair<std::string, std::string>> {
   static const bool flow = false;
 };
 
 /// Implementation of CustomMappingTraits for std::map<std::string, T>.
-template <typename T> struct StdMapStringCustomMappingTraitsImpl {
+template <typename T> struct LLVM_CLASS_ABI StdMapStringCustomMappingTraitsImpl {
   using map_type = std::map<std::string, T>;
 
   static void inputOne(IO &io, StringRef key, map_type &v) {

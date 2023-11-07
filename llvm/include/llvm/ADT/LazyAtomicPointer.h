@@ -31,7 +31,7 @@ namespace llvm {
 ///
 /// TODO: In C++20, use std::atomic<T>::wait() instead of spinning and call
 /// std::atomic<T>::notify_all() in \a loadOrGenerate().
-template <class T> class LazyAtomicPointer {
+template <class T> class LLVM_CLASS_ABI LazyAtomicPointer {
   static constexpr uintptr_t getNull() { return 0; }
   static constexpr uintptr_t getBusy() { return -1ULL; }
 

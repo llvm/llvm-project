@@ -75,7 +75,7 @@ namespace llvm {
 ///
 /// See \a is_valid_option for steps on adding a new option.
 template <typename T, class... Options>
-class simple_ilist
+class LLVM_CLASS_ABI simple_ilist
     : ilist_detail::compute_node_options<T, Options...>::type::list_base_type,
       ilist_detail::SpecificNodeAccess<
           typename ilist_detail::compute_node_options<T, Options...>::type> {

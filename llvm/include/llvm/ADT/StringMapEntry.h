@@ -23,7 +23,7 @@
 namespace llvm {
 
 /// StringMapEntryBase - Shared base class of StringMapEntry instances.
-class StringMapEntryBase {
+class LLVM_CLASS_ABI StringMapEntryBase {
   size_t keyLength;
 
 public:
@@ -67,7 +67,7 @@ void *StringMapEntryBase::allocateWithKey(size_t EntrySize, size_t EntryAlign,
 /// This is primarily intended to support StringSet, which doesn't need a value
 /// stored at all.
 template <typename ValueTy>
-class StringMapEntryStorage : public StringMapEntryBase {
+class LLVM_CLASS_ABI StringMapEntryStorage : public StringMapEntryBase {
 public:
   ValueTy second;
 
@@ -86,7 +86,7 @@ public:
 };
 
 template <>
-class StringMapEntryStorage<std::nullopt_t> : public StringMapEntryBase {
+class LLVM_CLASS_ABI StringMapEntryStorage<std::nullopt_t> : public StringMapEntryBase {
 public:
   explicit StringMapEntryStorage(size_t keyLength,
                                  std::nullopt_t = std::nullopt)
@@ -100,7 +100,7 @@ public:
 /// a StringMap.  It contains the Value itself and the key: the string length
 /// and data.
 template <typename ValueTy>
-class StringMapEntry final : public StringMapEntryStorage<ValueTy> {
+class LLVM_CLASS_ABI StringMapEntry final : public StringMapEntryStorage<ValueTy> {
 public:
   using StringMapEntryStorage<ValueTy>::StringMapEntryStorage;
 
@@ -163,11 +163,11 @@ decltype(auto) get(const StringMapEntry<ValueTy> &E) {
 
 namespace std {
 template <typename ValueTy>
-struct tuple_size<llvm::StringMapEntry<ValueTy>>
+struct LLVM_CLASS_ABI tuple_size<llvm::StringMapEntry<ValueTy>>
     : std::integral_constant<std::size_t, 2> {};
 
 template <std::size_t I, typename ValueTy>
-struct tuple_element<I, llvm::StringMapEntry<ValueTy>>
+struct LLVM_CLASS_ABI tuple_element<I, llvm::StringMapEntry<ValueTy>>
     : std::conditional<I == 0, llvm::StringRef, ValueTy> {};
 } // namespace std
 

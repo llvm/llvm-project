@@ -33,7 +33,7 @@ class Instruction;
 // Internal trie tree representation used for tracking context tree and sample
 // profiles. The path from root node to a given node represents the context of
 // that nodes' profile.
-class ContextTrieNode {
+class LLVM_CLASS_ABI ContextTrieNode {
 public:
   ContextTrieNode(ContextTrieNode *Parent = nullptr,
                   FunctionId FName = FunctionId(),
@@ -88,7 +88,7 @@ private:
 // accurate post-inline profile for functions. Internally context profiles
 // are organized in a trie, with each node representing profile for specific
 // calling context and the context is identified by path from root to the node.
-class SampleContextTracker {
+class LLVM_CLASS_ABI SampleContextTracker {
 public:
   using ContextSamplesTy = std::vector<FunctionSamples *>;
 

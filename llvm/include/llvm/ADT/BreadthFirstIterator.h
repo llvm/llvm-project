@@ -31,7 +31,7 @@ namespace llvm {
 
 // bf_iterator_storage - A private class which is used to figure out where to
 // store the visited set. We only provide a non-external variant for now.
-template <class SetType> class bf_iterator_storage {
+template <class SetType> class LLVM_CLASS_ABI bf_iterator_storage {
 public:
   SetType Visited;
 };
@@ -45,7 +45,7 @@ template <class GraphT,
           class SetType =
               bf_iterator_default_set<typename GraphTraits<GraphT>::NodeRef>,
           class GT = GraphTraits<GraphT>>
-class bf_iterator : public bf_iterator_storage<SetType> {
+class LLVM_CLASS_ABI bf_iterator : public bf_iterator_storage<SetType> {
 public:
   using iterator_category = std::forward_iterator_tag;
   using value_type = typename GT::NodeRef;

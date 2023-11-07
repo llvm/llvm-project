@@ -17,7 +17,7 @@
 namespace llvm {
 enum class AlignStyle { Left, Center, Right };
 
-struct FmtAlign {
+struct LLVM_CLASS_ABI FmtAlign {
   detail::format_adapter &Adapter;
   AlignStyle Where;
   size_t Amount;

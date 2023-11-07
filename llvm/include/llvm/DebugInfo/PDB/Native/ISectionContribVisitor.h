@@ -17,7 +17,7 @@ namespace pdb {
 struct SectionContrib;
 struct SectionContrib2;
 
-class ISectionContribVisitor {
+class LLVM_CLASS_ABI ISectionContribVisitor {
 public:
   virtual ~ISectionContribVisitor() = default;
 

@@ -49,7 +49,7 @@
 #include <cstdlib>
 
 namespace {
-  struct ForcePassLinking {
+  struct LLVM_CLASS_ABI ForcePassLinking {
     ForcePassLinking() {
       // We must reference the passes in such a way that compilers will not
       // delete it all as dead code, even with whole program optimization,

@@ -51,7 +51,7 @@ using imported_symbol_iterator = content_iterator<ImportedSymbolRef>;
 using base_reloc_iterator = content_iterator<BaseRelocRef>;
 
 /// The DOS compatible header at the front of all PE/COFF executables.
-struct dos_header {
+struct LLVM_CLASS_ABI dos_header {
   char                 Magic[2];
   support::ulittle16_t UsedBytesInTheLastPage;
   support::ulittle16_t FileSizeInPages;
@@ -73,7 +73,7 @@ struct dos_header {
   support::ulittle32_t AddressOfNewExeHeader;
 };
 
-struct coff_file_header {
+struct LLVM_CLASS_ABI coff_file_header {
   support::ulittle16_t Machine;
   support::ulittle16_t NumberOfSections;
   support::ulittle32_t TimeDateStamp;
@@ -85,7 +85,7 @@ struct coff_file_header {
   bool isImportLibrary() const { return NumberOfSections == 0xffff; }
 };
 
-struct coff_bigobj_file_header {
+struct LLVM_CLASS_ABI coff_bigobj_file_header {
   support::ulittle16_t Sig1;
   support::ulittle16_t Sig2;
   support::ulittle16_t Version;
@@ -102,7 +102,7 @@ struct coff_bigobj_file_header {
 };
 
 /// The 32-bit PE header that follows the COFF header.
-struct pe32_header {
+struct LLVM_CLASS_ABI pe32_header {
   support::ulittle16_t Magic;
   uint8_t MajorLinkerVersion;
   uint8_t MinorLinkerVersion;
@@ -138,7 +138,7 @@ struct pe32_header {
 };
 
 /// The 64-bit PE header that follows the COFF header.
-struct pe32plus_header {
+struct LLVM_CLASS_ABI pe32plus_header {
   support::ulittle16_t Magic;
   uint8_t MajorLinkerVersion;
   uint8_t MinorLinkerVersion;
@@ -170,12 +170,12 @@ struct pe32plus_header {
   support::ulittle32_t NumberOfRvaAndSize;
 };
 
-struct data_directory {
+struct LLVM_CLASS_ABI data_directory {
   support::ulittle32_t RelativeVirtualAddress;
   support::ulittle32_t Size;
 };
 
-struct debug_directory {
+struct LLVM_CLASS_ABI debug_directory {
   support::ulittle32_t Characteristics;
   support::ulittle32_t TimeDateStamp;
   support::ulittle16_t MajorVersion;
@@ -187,7 +187,7 @@ struct debug_directory {
 };
 
 template <typename IntTy>
-struct import_lookup_table_entry {
+struct LLVM_CLASS_ABI import_lookup_table_entry {
   IntTy Data;
 
   bool isOrdinal() const { return Data < 0; }
@@ -208,7 +208,7 @@ using import_lookup_table_entry32 =
 using import_lookup_table_entry64 =
     import_lookup_table_entry<support::little64_t>;
 
-struct delay_import_directory_table_entry {
+struct LLVM_CLASS_ABI delay_import_directory_table_entry {
   // dumpbin reports this field as "Characteristics" instead of "Attributes".
   support::ulittle32_t Attributes;
   support::ulittle32_t Name;
@@ -220,7 +220,7 @@ struct delay_import_directory_table_entry {
   support::ulittle32_t TimeStamp;
 };
 
-struct export_directory_table_entry {
+struct LLVM_CLASS_ABI export_directory_table_entry {
   support::ulittle32_t ExportFlags;
   support::ulittle32_t TimeDateStamp;
   support::ulittle16_t MajorVersion;
@@ -242,13 +242,13 @@ union export_address_table_entry {
 using export_name_pointer_table_entry = support::ulittle32_t;
 using export_ordinal_table_entry = support::ulittle16_t;
 
-struct StringTableOffset {
+struct LLVM_CLASS_ABI StringTableOffset {
   support::ulittle32_t Zeroes;
   support::ulittle32_t Offset;
 };
 
 template <typename SectionNumberType>
-struct coff_symbol {
+struct LLVM_CLASS_ABI coff_symbol {
   union {
     char ShortName[COFF::NameSize];
     StringTableOffset Offset;
@@ -267,7 +267,7 @@ using coff_symbol16 = coff_symbol<support::ulittle16_t>;
 using coff_symbol32 = coff_symbol<support::ulittle32_t>;
 
 // Contains only common parts of coff_symbol16 and coff_symbol32.
-struct coff_symbol_generic {
+struct LLVM_CLASS_ABI coff_symbol_generic {
   union {
     char ShortName[COFF::NameSize];
     StringTableOffset Offset;
@@ -278,7 +278,7 @@ struct coff_symbol_generic {
 struct coff_aux_section_definition;
 struct coff_aux_weak_external;
 
-class COFFSymbolRef {
+class LLVM_CLASS_ABI COFFSymbolRef {
 public:
   COFFSymbolRef() = default;
   COFFSymbolRef(const coff_symbol16 *CS) : CS16(CS) {}
@@ -438,7 +438,7 @@ private:
   const coff_symbol32 *CS32 = nullptr;
 };
 
-struct coff_section {
+struct LLVM_CLASS_ABI coff_section {
   char Name[COFF::NameSize];
   support::ulittle32_t VirtualSize;
   support::ulittle32_t VirtualAddress;
@@ -472,13 +472,13 @@ struct coff_section {
   }
 };
 
-struct coff_relocation {
+struct LLVM_CLASS_ABI coff_relocation {
   support::ulittle32_t VirtualAddress;
   support::ulittle32_t SymbolTableIndex;
   support::ulittle16_t Type;
 };
 
-struct coff_aux_function_definition {
+struct LLVM_CLASS_ABI coff_aux_function_definition {
   support::ulittle32_t TagIndex;
   support::ulittle32_t TotalSize;
   support::ulittle32_t PointerToLinenumber;
@@ -489,7 +489,7 @@ struct coff_aux_function_definition {
 static_assert(sizeof(coff_aux_function_definition) == 18,
               "auxiliary entry must be 18 bytes");
 
-struct coff_aux_bf_and_ef_symbol {
+struct LLVM_CLASS_ABI coff_aux_bf_and_ef_symbol {
   char Unused1[4];
   support::ulittle16_t Linenumber;
   char Unused2[6];
@@ -500,7 +500,7 @@ struct coff_aux_bf_and_ef_symbol {
 static_assert(sizeof(coff_aux_bf_and_ef_symbol) == 18,
               "auxiliary entry must be 18 bytes");
 
-struct coff_aux_weak_external {
+struct LLVM_CLASS_ABI coff_aux_weak_external {
   support::ulittle32_t TagIndex;
   support::ulittle32_t Characteristics;
   char Unused1[10];
@@ -509,7 +509,7 @@ struct coff_aux_weak_external {
 static_assert(sizeof(coff_aux_weak_external) == 18,
               "auxiliary entry must be 18 bytes");
 
-struct coff_aux_section_definition {
+struct LLVM_CLASS_ABI coff_aux_section_definition {
   support::ulittle32_t Length;
   support::ulittle16_t NumberOfRelocations;
   support::ulittle16_t NumberOfLinenumbers;
@@ -529,7 +529,7 @@ struct coff_aux_section_definition {
 static_assert(sizeof(coff_aux_section_definition) == 18,
               "auxiliary entry must be 18 bytes");
 
-struct coff_aux_clr_token {
+struct LLVM_CLASS_ABI coff_aux_clr_token {
   uint8_t              AuxType;
   uint8_t              Reserved;
   support::ulittle32_t SymbolTableIndex;
@@ -539,7 +539,7 @@ struct coff_aux_clr_token {
 static_assert(sizeof(coff_aux_clr_token) == 18,
               "auxiliary entry must be 18 bytes");
 
-struct coff_import_header {
+struct LLVM_CLASS_ABI coff_import_header {
   support::ulittle16_t Sig1;
   support::ulittle16_t Sig2;
   support::ulittle16_t Version;
@@ -553,7 +553,7 @@ struct coff_import_header {
   int getNameType() const { return (TypeInfo >> 2) & 0x7; }
 };
 
-struct coff_import_directory_table_entry {
+struct LLVM_CLASS_ABI coff_import_directory_table_entry {
   support::ulittle32_t ImportLookupTableRVA;
   support::ulittle32_t TimeDateStamp;
   support::ulittle32_t ForwarderChain;
@@ -567,7 +567,7 @@ struct coff_import_directory_table_entry {
 };
 
 template <typename IntTy>
-struct coff_tls_directory {
+struct LLVM_CLASS_ABI coff_tls_directory {
   IntTy StartAddressOfRawData;
   IntTy EndAddressOfRawData;
   IntTy AddressOfIndex;
@@ -600,7 +600,7 @@ using coff_tls_directory64 = coff_tls_directory<support::little64_t>;
 
 enum class frame_type : uint16_t { Fpo = 0, Trap = 1, Tss = 2, NonFpo = 3 };
 
-struct coff_load_config_code_integrity {
+struct LLVM_CLASS_ABI coff_load_config_code_integrity {
   support::ulittle16_t Flags;
   support::ulittle16_t Catalog;
   support::ulittle32_t CatalogOffset;
@@ -608,7 +608,7 @@ struct coff_load_config_code_integrity {
 };
 
 /// 32-bit load config (IMAGE_LOAD_CONFIG_DIRECTORY32)
-struct coff_load_configuration32 {
+struct LLVM_CLASS_ABI coff_load_configuration32 {
   support::ulittle32_t Size;
   support::ulittle32_t TimeDateStamp;
   support::ulittle16_t MajorVersion;
@@ -666,7 +666,7 @@ struct coff_load_configuration32 {
 };
 
 /// 64-bit load config (IMAGE_LOAD_CONFIG_DIRECTORY64)
-struct coff_load_configuration64 {
+struct LLVM_CLASS_ABI coff_load_configuration64 {
   support::ulittle32_t Size;
   support::ulittle32_t TimeDateStamp;
   support::ulittle16_t MajorVersion;
@@ -723,7 +723,7 @@ struct coff_load_configuration64 {
   support::ulittle64_t CastGuardOsDeterminedFailureMode;
 };
 
-struct chpe_metadata {
+struct LLVM_CLASS_ABI chpe_metadata {
   support::ulittle32_t Version;
   support::ulittle32_t CodeMap;
   support::ulittle32_t CodeMapCount;
@@ -748,7 +748,7 @@ struct chpe_metadata {
 
 enum chpe_range_type { Arm64 = 0, Arm64EC = 1, Amd64 = 2 };
 
-struct chpe_range_entry {
+struct LLVM_CLASS_ABI chpe_range_entry {
   support::ulittle32_t StartOffset;
   support::ulittle32_t Length;
 
@@ -759,36 +759,36 @@ struct chpe_range_entry {
   uint16_t getType() const { return StartOffset & TypeMask; }
 };
 
-struct chpe_code_range_entry {
+struct LLVM_CLASS_ABI chpe_code_range_entry {
   support::ulittle32_t StartRva;
   support::ulittle32_t EndRva;
   support::ulittle32_t EntryPoint;
 };
 
-struct chpe_redirection_entry {
+struct LLVM_CLASS_ABI chpe_redirection_entry {
   support::ulittle32_t Source;
   support::ulittle32_t Destination;
 };
 
-struct coff_runtime_function_x64 {
+struct LLVM_CLASS_ABI coff_runtime_function_x64 {
   support::ulittle32_t BeginAddress;
   support::ulittle32_t EndAddress;
   support::ulittle32_t UnwindInformation;
 };
 
-struct coff_base_reloc_block_header {
+struct LLVM_CLASS_ABI coff_base_reloc_block_header {
   support::ulittle32_t PageRVA;
   support::ulittle32_t BlockSize;
 };
 
-struct coff_base_reloc_block_entry {
+struct LLVM_CLASS_ABI coff_base_reloc_block_entry {
   support::ulittle16_t Data;
 
   int getType() const { return Data >> 12; }
   int getOffset() const { return Data & ((1 << 12) - 1); }
 };
 
-struct coff_resource_dir_entry {
+struct LLVM_CLASS_ABI coff_resource_dir_entry {
   union {
     support::ulittle32_t NameOffset;
     support::ulittle32_t ID;
@@ -811,14 +811,14 @@ struct coff_resource_dir_entry {
   } Offset;
 };
 
-struct coff_resource_data_entry {
+struct LLVM_CLASS_ABI coff_resource_data_entry {
   support::ulittle32_t DataRVA;
   support::ulittle32_t DataSize;
   support::ulittle32_t Codepage;
   support::ulittle32_t Reserved;
 };
 
-struct coff_resource_dir_table {
+struct LLVM_CLASS_ABI coff_resource_dir_table {
   support::ulittle32_t Characteristics;
   support::ulittle32_t TimeDateStamp;
   support::ulittle16_t MajorVersion;
@@ -827,13 +827,13 @@ struct coff_resource_dir_table {
   support::ulittle16_t NumberOfIDEntries;
 };
 
-struct debug_h_header {
+struct LLVM_CLASS_ABI debug_h_header {
   support::ulittle32_t Magic;
   support::ulittle16_t Version;
   support::ulittle16_t HashAlgorithm;
 };
 
-class COFFObjectFile : public ObjectFile {
+class LLVM_CLASS_ABI COFFObjectFile : public ObjectFile {
 private:
   COFFObjectFile(MemoryBufferRef Object);
 
@@ -1171,7 +1171,7 @@ public:
 };
 
 // The iterator for the import directory table.
-class ImportDirectoryEntryRef {
+class LLVM_CLASS_ABI ImportDirectoryEntryRef {
 public:
   ImportDirectoryEntryRef() = default;
   ImportDirectoryEntryRef(const coff_import_directory_table_entry *Table,
@@ -1202,7 +1202,7 @@ private:
   const COFFObjectFile *OwningObject = nullptr;
 };
 
-class DelayImportDirectoryEntryRef {
+class LLVM_CLASS_ABI DelayImportDirectoryEntryRef {
 public:
   DelayImportDirectoryEntryRef() = default;
   DelayImportDirectoryEntryRef(const delay_import_directory_table_entry *T,
@@ -1228,7 +1228,7 @@ private:
 };
 
 // The iterator for the export directory table entry.
-class ExportDirectoryEntryRef {
+class LLVM_CLASS_ABI ExportDirectoryEntryRef {
 public:
   ExportDirectoryEntryRef() = default;
   ExportDirectoryEntryRef(const export_directory_table_entry *Table, uint32_t I,
@@ -1253,7 +1253,7 @@ private:
   const COFFObjectFile *OwningObject = nullptr;
 };
 
-class ImportedSymbolRef {
+class LLVM_CLASS_ABI ImportedSymbolRef {
 public:
   ImportedSymbolRef() = default;
   ImportedSymbolRef(const import_lookup_table_entry32 *Entry, uint32_t I,
@@ -1278,7 +1278,7 @@ private:
   const COFFObjectFile *OwningObject = nullptr;
 };
 
-class BaseRelocRef {
+class LLVM_CLASS_ABI BaseRelocRef {
 public:
   BaseRelocRef() = default;
   BaseRelocRef(const coff_base_reloc_block_header *Header,
@@ -1296,7 +1296,7 @@ private:
   uint32_t Index;
 };
 
-class ResourceSectionRef {
+class LLVM_CLASS_ABI ResourceSectionRef {
 public:
   ResourceSectionRef() = default;
   explicit ResourceSectionRef(StringRef Ref)
@@ -1334,7 +1334,7 @@ private:
 };
 
 // Corresponds to `_FPO_DATA` structure in the PE/COFF spec.
-struct FpoData {
+struct LLVM_CLASS_ABI FpoData {
   support::ulittle32_t Offset; // ulOffStart: Offset 1st byte of function code
   support::ulittle32_t Size;   // cbProcSize: # bytes in function
   support::ulittle32_t NumLocals; // cdwLocals: # bytes in locals/4
@@ -1357,7 +1357,7 @@ struct FpoData {
   frame_type getFP() const { return static_cast<frame_type>(Attributes >> 14); }
 };
 
-class SectionStrippedError
+class LLVM_CLASS_ABI SectionStrippedError
     : public ErrorInfo<SectionStrippedError, BinaryError> {
 public:
   SectionStrippedError() { setErrorCode(object_error::section_stripped); }

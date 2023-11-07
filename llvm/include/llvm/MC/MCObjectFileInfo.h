@@ -26,7 +26,7 @@ namespace llvm {
 class MCContext;
 class MCSection;
 
-class MCObjectFileInfo {
+class LLVM_CLASS_ABI MCObjectFileInfo {
 protected:
   /// True if target object file supports a weak_definition of constant 0 for an
   /// omitted EH frame.

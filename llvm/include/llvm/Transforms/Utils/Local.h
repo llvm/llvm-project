@@ -60,7 +60,7 @@ class TargetTransformInfo;
 /// Also calls RecursivelyDeleteTriviallyDeadInstructions() on any branch/switch
 /// conditions and indirectbr addresses this might make dead if
 /// DeleteDeadConditions is true.
-bool ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions = false,
+LLVM_FUNC_ABI bool ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions = false,
                             const TargetLibraryInfo *TLI = nullptr,
                             DomTreeUpdater *DTU = nullptr);
 
@@ -71,13 +71,13 @@ bool ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions = false,
 /// Return true if the result produced by the instruction is not used, and the
 /// instruction will return. Certain side-effecting instructions are also
 /// considered dead if there are no uses of the instruction.
-bool isInstructionTriviallyDead(Instruction *I,
+LLVM_FUNC_ABI bool isInstructionTriviallyDead(Instruction *I,
                                 const TargetLibraryInfo *TLI = nullptr);
 
 /// Return true if the result produced by the instruction would have no side
 /// effects if it was not used. This is equivalent to checking whether
 /// isInstructionTriviallyDead would be true if the use count was 0.
-bool wouldInstructionBeTriviallyDead(const Instruction *I,
+LLVM_FUNC_ABI bool wouldInstructionBeTriviallyDead(const Instruction *I,
                                      const TargetLibraryInfo *TLI = nullptr);
 
 /// Return true if the result produced by the instruction has no side effects on
@@ -85,13 +85,13 @@ bool wouldInstructionBeTriviallyDead(const Instruction *I,
 /// wouldInstructionBeTriviallyDead which is based on the assumption
 /// that the use count will be 0. An example usage of this API is for
 /// identifying instructions that can be sunk down to use(s).
-bool wouldInstructionBeTriviallyDeadOnUnusedPaths(
+LLVM_FUNC_ABI bool wouldInstructionBeTriviallyDeadOnUnusedPaths(
     Instruction *I, const TargetLibraryInfo *TLI = nullptr);
 
 /// If the specified value is a trivially dead instruction, delete it.
 /// If that makes any of its operands trivially dead, delete them too,
 /// recursively. Return true if any instructions were deleted.
-bool RecursivelyDeleteTriviallyDeadInstructions(
+LLVM_FUNC_ABI bool RecursivelyDeleteTriviallyDeadInstructions(
     Value *V, const TargetLibraryInfo *TLI = nullptr,
     MemorySSAUpdater *MSSAU = nullptr,
     std::function<void(Value *)> AboutToDeleteCallback =
@@ -105,7 +105,7 @@ bool RecursivelyDeleteTriviallyDeadInstructions(
 ///
 /// `DeadInsts` will be used as scratch storage for this routine and will be
 /// empty afterward.
-void RecursivelyDeleteTriviallyDeadInstructions(
+LLVM_FUNC_ABI void RecursivelyDeleteTriviallyDeadInstructions(
     SmallVectorImpl<WeakTrackingVH> &DeadInsts,
     const TargetLibraryInfo *TLI = nullptr, MemorySSAUpdater *MSSAU = nullptr,
     std::function<void(Value *)> AboutToDeleteCallback =
@@ -115,7 +115,7 @@ void RecursivelyDeleteTriviallyDeadInstructions(
 /// instructions that are not trivially dead. These will be ignored.
 /// Returns true if any changes were made, i.e. any instructions trivially dead
 /// were found and deleted.
-bool RecursivelyDeleteTriviallyDeadInstructionsPermissive(
+LLVM_FUNC_ABI bool RecursivelyDeleteTriviallyDeadInstructionsPermissive(
     SmallVectorImpl<WeakTrackingVH> &DeadInsts,
     const TargetLibraryInfo *TLI = nullptr, MemorySSAUpdater *MSSAU = nullptr,
     std::function<void(Value *)> AboutToDeleteCallback =
@@ -126,7 +126,7 @@ bool RecursivelyDeleteTriviallyDeadInstructionsPermissive(
 /// by a trivially dead instruction, delete it. If that makes any of its
 /// operands trivially dead, delete them too, recursively. Return true if a
 /// change was made.
-bool RecursivelyDeleteDeadPHINode(PHINode *PN,
+LLVM_FUNC_ABI bool RecursivelyDeleteDeadPHINode(PHINode *PN,
                                   const TargetLibraryInfo *TLI = nullptr,
                                   MemorySSAUpdater *MSSAU = nullptr);
 
@@ -135,14 +135,14 @@ bool RecursivelyDeleteDeadPHINode(PHINode *PN,
 ///
 /// This returns true if it changed the code, note that it can delete
 /// instructions in other blocks as well in this block.
-bool SimplifyInstructionsInBlock(BasicBlock *BB,
+LLVM_FUNC_ABI bool SimplifyInstructionsInBlock(BasicBlock *BB,
                                  const TargetLibraryInfo *TLI = nullptr);
 
 /// Replace all the uses of an SSA value in @llvm.dbg intrinsics with
 /// undef. This is useful for signaling that a variable, e.g. has been
 /// found dead and hence it's unavailable at a given program point.
 /// Returns true if the dbg values have been changed.
-bool replaceDbgUsesWithUndef(Instruction *I);
+LLVM_FUNC_ABI bool replaceDbgUsesWithUndef(Instruction *I);
 
 //===----------------------------------------------------------------------===//
 //  Control Flow Graph Restructuring.
@@ -151,13 +151,13 @@ bool replaceDbgUsesWithUndef(Instruction *I);
 /// BB is a block with one predecessor and its predecessor is known to have one
 /// successor (BB!). Eliminate the edge between them, moving the instructions in
 /// the predecessor into BB. This deletes the predecessor block.
-void MergeBasicBlockIntoOnlyPred(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
+LLVM_FUNC_ABI void MergeBasicBlockIntoOnlyPred(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 
 /// BB is known to contain an unconditional branch, and contains no instructions
 /// other than PHI nodes, potential debug intrinsics and the branch. If
 /// possible, eliminate BB by rewriting all the predecessors to branch to the
 /// successor block and return true. If we can't transform, return false.
-bool TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
+LLVM_FUNC_ABI bool TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
                                              DomTreeUpdater *DTU = nullptr);
 
 /// Check for and eliminate duplicate PHI nodes in this block. This doesn't try
@@ -165,14 +165,14 @@ bool TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 /// values, but instcombine orders them so it usually won't matter.
 ///
 /// This overload removes the duplicate PHI nodes directly.
-bool EliminateDuplicatePHINodes(BasicBlock *BB);
+LLVM_FUNC_ABI bool EliminateDuplicatePHINodes(BasicBlock *BB);
 
 /// Check for and eliminate duplicate PHI nodes in this block. This doesn't try
 /// to be clever about PHI nodes which differ only in the order of the incoming
 /// values, but instcombine orders them so it usually won't matter.
 ///
 /// This overload collects the PHI nodes to be removed into the ToRemove set.
-bool EliminateDuplicatePHINodes(BasicBlock *BB,
+LLVM_FUNC_ABI bool EliminateDuplicatePHINodes(BasicBlock *BB,
                                 SmallPtrSetImpl<PHINode *> &ToRemove);
 
 /// This function is used to do simplification of a CFG.  For example, it
@@ -181,8 +181,8 @@ bool EliminateDuplicatePHINodes(BasicBlock *BB,
 /// It returns true if a modification was made, possibly deleting the basic
 /// block that was pointed to. LoopHeaders is an optional input parameter
 /// providing the set of loop headers that SimplifyCFG should not eliminate.
-extern cl::opt<bool> RequireAndPreserveDomTree;
-bool simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
+LLVM_FUNC_ABI extern cl::opt<bool> RequireAndPreserveDomTree;
+LLVM_FUNC_ABI bool simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
                  DomTreeUpdater *DTU = nullptr,
                  const SimplifyCFGOptions &Options = {},
                  ArrayRef<WeakVH> LoopHeaders = {});
@@ -190,12 +190,12 @@ bool simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
 /// This function is used to flatten a CFG. For example, it uses parallel-and
 /// and parallel-or mode to collapse if-conditions and merge if-regions with
 /// identical statements.
-bool FlattenCFG(BasicBlock *BB, AAResults *AA = nullptr);
+LLVM_FUNC_ABI bool FlattenCFG(BasicBlock *BB, AAResults *AA = nullptr);
 
 /// If this basic block is ONLY a setcc and a branch, and if a predecessor
 /// branches to us and one of our successors, fold the setcc into the
 /// predecessor and use logical operations to pick the right destination.
-bool FoldBranchToCommonDest(BranchInst *BI, llvm::DomTreeUpdater *DTU = nullptr,
+LLVM_FUNC_ABI bool FoldBranchToCommonDest(BranchInst *BI, llvm::DomTreeUpdater *DTU = nullptr,
                             MemorySSAUpdater *MSSAU = nullptr,
                             const TargetTransformInfo *TTI = nullptr,
                             unsigned BonusInstThreshold = 1);
@@ -205,14 +205,14 @@ bool FoldBranchToCommonDest(BranchInst *BI, llvm::DomTreeUpdater *DTU = nullptr,
 /// This allows the CFG to be changed around without fear of invalidating the
 /// SSA information for the value. It returns the pointer to the alloca inserted
 /// to create a stack slot for X.
-AllocaInst *DemoteRegToStack(Instruction &X,
+LLVM_FUNC_ABI AllocaInst *DemoteRegToStack(Instruction &X,
                              bool VolatileLoads = false,
                              Instruction *AllocaPoint = nullptr);
 
 /// This function takes a virtual register computed by a phi node and replaces
 /// it with a slot in the stack frame, allocated via alloca. The phi node is
 /// deleted and it returns the pointer to the alloca inserted.
-AllocaInst *DemotePHIToStack(PHINode *P, Instruction *AllocaPoint = nullptr);
+LLVM_FUNC_ABI AllocaInst *DemotePHIToStack(PHINode *P, Instruction *AllocaPoint = nullptr);
 
 /// If the specified pointer points to an object that we control, try to modify
 /// the object's alignment to PrefAlign. Returns a minimum known alignment of
@@ -221,7 +221,7 @@ AllocaInst *DemotePHIToStack(PHINode *P, Instruction *AllocaPoint = nullptr);
 /// Increating value alignment isn't often possible though. If alignment is
 /// important, a more reliable approach is to simply align all global variables
 /// and allocation instructions to their preferred alignment from the beginning.
-Align tryEnforceAlignment(Value *V, Align PrefAlign, const DataLayout &DL);
+LLVM_FUNC_ABI Align tryEnforceAlignment(Value *V, Align PrefAlign, const DataLayout &DL);
 
 /// Try to ensure that the alignment of \p V is at least \p PrefAlign bytes. If
 /// the owning object can be modified and has an alignment less than \p
@@ -232,7 +232,7 @@ Align tryEnforceAlignment(Value *V, Align PrefAlign, const DataLayout &DL);
 /// so if alignment is important, a more reliable approach is to simply align
 /// all global variables and allocation instructions to their preferred
 /// alignment from the beginning.
-Align getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
+LLVM_FUNC_ABI Align getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
                                  const DataLayout &DL,
                                  const Instruction *CxtI = nullptr,
                                  AssumptionCache *AC = nullptr,
@@ -250,10 +250,10 @@ inline Align getKnownAlignment(Value *V, const DataLayout &DL,
 /// attributes, debug information, etc. The call is not placed in a block and it
 /// will not have a name. The invoke instruction is not removed, nor are the
 /// uses replaced by the new call.
-CallInst *createCallMatchingInvoke(InvokeInst *II);
+LLVM_FUNC_ABI CallInst *createCallMatchingInvoke(InvokeInst *II);
 
 /// This function converts the specified invoke into a normal call.
-CallInst *changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr);
+LLVM_FUNC_ABI CallInst *changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr);
 
 ///===---------------------------------------------------------------------===//
 ///  Dbg Intrinsic utilities
@@ -261,25 +261,25 @@ CallInst *changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr);
 
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
 /// that has an associated llvm.dbg.declare intrinsic.
-void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
+LLVM_FUNC_ABI void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                      StoreInst *SI, DIBuilder &Builder);
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
 /// that has an associated llvm.dbg.declare intrinsic.
-void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
+LLVM_FUNC_ABI void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                      LoadInst *LI, DIBuilder &Builder);
 
 /// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
 /// llvm.dbg.declare intrinsic.
-void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
+LLVM_FUNC_ABI void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                      PHINode *LI, DIBuilder &Builder);
 
 /// Lowers llvm.dbg.declare intrinsics into appropriate set of
 /// llvm.dbg.value intrinsics.
-bool LowerDbgDeclare(Function &F);
+LLVM_FUNC_ABI bool LowerDbgDeclare(Function &F);
 
 /// Propagate dbg.value intrinsics through the newly inserted PHIs.
-void insertDebugValuesForPHIs(BasicBlock *BB,
+LLVM_FUNC_ABI void insertDebugValuesForPHIs(BasicBlock *BB,
                               SmallVectorImpl<PHINode *> &InsertedPHIs);
 
 /// Replaces llvm.dbg.declare instruction when the address it
@@ -287,7 +287,7 @@ void insertDebugValuesForPHIs(BasicBlock *BB,
 /// additional DW_OP_deref is prepended to the expression. If Offset
 /// is non-zero, a constant displacement is added to the expression
 /// (between the optional Deref operations). Offset can be negative.
-bool replaceDbgDeclare(Value *Address, Value *NewAddress, DIBuilder &Builder,
+LLVM_FUNC_ABI bool replaceDbgDeclare(Value *Address, Value *NewAddress, DIBuilder &Builder,
                        uint8_t DIExprFlags, int Offset);
 
 /// Replaces multiple llvm.dbg.value instructions when the alloca it describes
@@ -295,19 +295,19 @@ bool replaceDbgDeclare(Value *Address, Value *NewAddress, DIBuilder &Builder,
 /// is added to the expression (after the mandatory Deref). Offset can be
 /// negative. New llvm.dbg.value instructions are inserted at the locations of
 /// the instructions they replace.
-void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
+LLVM_FUNC_ABI void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                               DIBuilder &Builder, int Offset = 0);
 
 /// Assuming the instruction \p I is going to be deleted, attempt to salvage
 /// debug users of \p I by writing the effect of \p I in a DIExpression. If it
 /// cannot be salvaged changes its debug uses to undef.
-void salvageDebugInfo(Instruction &I);
+LLVM_FUNC_ABI void salvageDebugInfo(Instruction &I);
 
 
 /// Implementation of salvageDebugInfo, applying only to instructions in
 /// \p Insns, rather than all debug users from findDbgUsers( \p I).
 /// Mark undef if salvaging cannot be completed.
-void salvageDebugInfoForDbgValues(Instruction &I,
+LLVM_FUNC_ABI void salvageDebugInfoForDbgValues(Instruction &I,
                                   ArrayRef<DbgVariableIntrinsic *> Insns);
 
 /// Given an instruction \p I and DIExpression \p DIExpr operating on
@@ -331,7 +331,7 @@ void salvageDebugInfoForDbgValues(Instruction &I,
 ///   Return = %a
 ///   Ops = llvm::dwarf::DW_OP_LLVM_arg0 llvm::dwarf::DW_OP_add
 ///   AdditionalValues = %b
-Value *salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
+LLVM_FUNC_ABI Value *salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
                             SmallVectorImpl<uint64_t> &Ops,
                             SmallVectorImpl<Value *> &AdditionalValues);
 
@@ -349,7 +349,7 @@ Value *salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
 /// If a debug user cannot be preserved without reordering variable updates or
 /// introducing a use-before-def, it is either salvaged (\ref salvageDebugInfo)
 /// or deleted. Returns true if any debug users were updated.
-bool replaceAllDbgUsesWith(Instruction &From, Value &To, Instruction &DomPoint,
+LLVM_FUNC_ABI bool replaceAllDbgUsesWith(Instruction &From, Value &To, Instruction &DomPoint,
                            DominatorTree &DT);
 
 /// Remove all instructions from a basic block other than its terminator
@@ -357,12 +357,12 @@ bool replaceAllDbgUsesWith(Instruction &From, Value &To, Instruction &DomPoint,
 /// is the number of instructions (excluding debug info intrinsics) that have
 /// been removed, and the second element is the number of debug info intrinsics
 /// that have been removed.
-std::pair<unsigned, unsigned>
+LLVM_FUNC_ABI std::pair<unsigned, unsigned>
 removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB);
 
 /// Insert an unreachable instruction before the specified
 /// instruction, making it and the rest of the code in the block dead.
-unsigned changeToUnreachable(Instruction *I, bool PreserveLCSSA = false,
+LLVM_FUNC_ABI unsigned changeToUnreachable(Instruction *I, bool PreserveLCSSA = false,
                              DomTreeUpdater *DTU = nullptr,
                              MemorySSAUpdater *MSSAU = nullptr);
 
@@ -370,7 +370,7 @@ unsigned changeToUnreachable(Instruction *I, bool PreserveLCSSA = false,
 /// block.  This also splits the basic block where CI is located, because
 /// InvokeInst is a terminator instruction.  Returns the newly split basic
 /// block.
-BasicBlock *changeToInvokeAndSplitBasicBlock(CallInst *CI,
+LLVM_FUNC_ABI BasicBlock *changeToInvokeAndSplitBasicBlock(CallInst *CI,
                                              BasicBlock *UnwindEdge,
                                              DomTreeUpdater *DTU = nullptr);
 
@@ -381,12 +381,12 @@ BasicBlock *changeToInvokeAndSplitBasicBlock(CallInst *CI,
 ///
 /// \param BB  Block whose terminator will be replaced.  Its terminator must
 ///            have an unwind successor.
-Instruction *removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
+LLVM_FUNC_ABI Instruction *removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 
 /// Remove all blocks that can not be reached from the function's entry.
 ///
 /// Returns true if any basic block was removed.
-bool removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU = nullptr,
+LLVM_FUNC_ABI bool removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU = nullptr,
                              MemorySSAUpdater *MSSAU = nullptr);
 
 /// Combine the metadata of two instructions so that K can replace J. Some
@@ -394,7 +394,7 @@ bool removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU = nullptr,
 /// J in the original IR.
 ///
 /// Metadata not listed as known via KnownIDs is removed
-void combineMetadata(Instruction *K, const Instruction *J,
+LLVM_FUNC_ABI void combineMetadata(Instruction *K, const Instruction *J,
                      ArrayRef<unsigned> KnownIDs, bool DoesKMove);
 
 /// Combine the metadata of two instructions so that K can replace J. This
@@ -403,29 +403,29 @@ void combineMetadata(Instruction *K, const Instruction *J,
 /// K cannot be hoisted.
 ///
 /// Unknown metadata is removed.
-void combineMetadataForCSE(Instruction *K, const Instruction *J,
+LLVM_FUNC_ABI void combineMetadataForCSE(Instruction *K, const Instruction *J,
                            bool DoesKMove);
 
 /// Copy the metadata from the source instruction to the destination (the
 /// replacement for the source instruction).
-void copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source);
+LLVM_FUNC_ABI void copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source);
 
 /// Patch the replacement so that it is not more restrictive than the value
 /// being replaced. It assumes that the replacement does not get moved from
 /// its original position.
-void patchReplacementInstruction(Instruction *I, Value *Repl);
+LLVM_FUNC_ABI void patchReplacementInstruction(Instruction *I, Value *Repl);
 
 // Replace each use of 'From' with 'To', if that use does not belong to basic
 // block where 'From' is defined. Returns the number of replacements made.
-unsigned replaceNonLocalUsesWith(Instruction *From, Value *To);
+LLVM_FUNC_ABI unsigned replaceNonLocalUsesWith(Instruction *From, Value *To);
 
 /// Replace each use of 'From' with 'To' if that use is dominated by
 /// the given edge.  Returns the number of replacements made.
-unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
+LLVM_FUNC_ABI unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
                                   const BasicBlockEdge &Edge);
 /// Replace each use of 'From' with 'To' if that use is dominated by
 /// the end of the given BasicBlock. Returns the number of replacements made.
-unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
+LLVM_FUNC_ABI unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
                                   const BasicBlock *BB);
 
 /// Return true if this call calls a gc leaf function.
@@ -436,34 +436,34 @@ unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
 ///
 /// Most passes can and should ignore this information, and it is only used
 /// during lowering by the GC infrastructure.
-bool callsGCLeafFunction(const CallBase *Call, const TargetLibraryInfo &TLI);
+LLVM_FUNC_ABI bool callsGCLeafFunction(const CallBase *Call, const TargetLibraryInfo &TLI);
 
 /// Copy a nonnull metadata node to a new load instruction.
 ///
 /// This handles mapping it to range metadata if the new load is an integer
 /// load instead of a pointer load.
-void copyNonnullMetadata(const LoadInst &OldLI, MDNode *N, LoadInst &NewLI);
+LLVM_FUNC_ABI void copyNonnullMetadata(const LoadInst &OldLI, MDNode *N, LoadInst &NewLI);
 
 /// Copy a range metadata node to a new load instruction.
 ///
 /// This handles mapping it to nonnull metadata if the new load is a pointer
 /// load instead of an integer load and the range doesn't cover null.
-void copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI, MDNode *N,
+LLVM_FUNC_ABI void copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI, MDNode *N,
                        LoadInst &NewLI);
 
 /// Remove the debug intrinsic instructions for the given instruction.
-void dropDebugUsers(Instruction &I);
+LLVM_FUNC_ABI void dropDebugUsers(Instruction &I);
 
 /// Hoist all of the instructions in the \p IfBlock to the dominant block
 /// \p DomBlock, by moving its instructions to the insertion point \p InsertPt.
 ///
 /// The moved instructions receive the insertion point debug location values
 /// (DILocations) and their debug intrinsic instructions are removed.
-void hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
+LLVM_FUNC_ABI void hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
                               BasicBlock *BB);
 
 /// Given a constant, create a debug information expression.
-DIExpression *getExpressionForConstant(DIBuilder &DIB, const Constant &C,
+LLVM_FUNC_ABI DIExpression *getExpressionForConstant(DIBuilder &DIB, const Constant &C,
                                        Type &Ty);
 
 //===----------------------------------------------------------------------===//
@@ -481,7 +481,7 @@ DIExpression *getExpressionForConstant(DIBuilder &DIB, const Constant &C,
 /// to BW / 4 nodes to be searched, so is significantly faster.
 ///
 /// This function returns true on a successful match or false otherwise.
-bool recognizeBSwapOrBitReverseIdiom(
+LLVM_FUNC_ABI bool recognizeBSwapOrBitReverseIdiom(
     Instruction *I, bool MatchBSwaps, bool MatchBitReversals,
     SmallVectorImpl<Instruction *> &InsertedInsts);
 
@@ -493,7 +493,7 @@ bool recognizeBSwapOrBitReverseIdiom(
 /// and mark it with NoBuiltin if so.  To be used by sanitizers that intend
 /// to intercept string functions and want to avoid converting them to target
 /// specific instructions.
-void maybeMarkSanitizerLibraryCallNoBuiltin(CallInst *CI,
+LLVM_FUNC_ABI void maybeMarkSanitizerLibraryCallNoBuiltin(CallInst *CI,
                                             const TargetLibraryInfo *TLI);
 
 //===----------------------------------------------------------------------===//
@@ -502,14 +502,14 @@ void maybeMarkSanitizerLibraryCallNoBuiltin(CallInst *CI,
 
 /// Given an instruction, is it legal to set operand OpIdx to a non-constant
 /// value?
-bool canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx);
+LLVM_FUNC_ABI bool canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx);
 
 //===----------------------------------------------------------------------===//
 //  Value helper functions
 //
 
 /// Invert the given true/false value, possibly reusing an existing copy.
-Value *invertCondition(Value *Condition);
+LLVM_FUNC_ABI Value *invertCondition(Value *Condition);
 
 
 //===----------------------------------------------------------------------===//
@@ -518,7 +518,7 @@ Value *invertCondition(Value *Condition);
 
 /// If we can infer one attribute from another on the declaration of a
 /// function, explicitly materialize the maximal set in the IR.
-bool inferAttributesFromOthers(Function &F);
+LLVM_FUNC_ABI bool inferAttributesFromOthers(Function &F);
 
 } // end namespace llvm
 

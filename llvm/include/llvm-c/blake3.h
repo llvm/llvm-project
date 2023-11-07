@@ -34,7 +34,7 @@ extern "C" {
 
 // This struct is a private implementation detail. It has to be here because
 // it's part of llvm_blake3_hasher below.
-typedef struct {
+typedef struct LLVM_CLASS_ABI {
   uint32_t cv[8];
   uint64_t chunk_counter;
   uint8_t buf[LLVM_BLAKE3_BLOCK_LEN];
@@ -43,7 +43,7 @@ typedef struct {
   uint8_t flags;
 } llvm_blake3_chunk_state;
 
-typedef struct {
+typedef struct LLVM_CLASS_ABI {
   uint32_t key[8];
   llvm_blake3_chunk_state chunk;
   uint8_t cv_stack_len;
@@ -55,23 +55,23 @@ typedef struct {
   uint8_t cv_stack[(LLVM_BLAKE3_MAX_DEPTH + 1) * LLVM_BLAKE3_OUT_LEN];
 } llvm_blake3_hasher;
 
-const char *llvm_blake3_version(void);
-void llvm_blake3_hasher_init(llvm_blake3_hasher *self);
-void llvm_blake3_hasher_init_keyed(llvm_blake3_hasher *self,
+LLVM_FUNC_ABI const char *llvm_blake3_version(void);
+LLVM_FUNC_ABI void llvm_blake3_hasher_init(llvm_blake3_hasher *self);
+LLVM_FUNC_ABI void llvm_blake3_hasher_init_keyed(llvm_blake3_hasher *self,
                                    const uint8_t key[LLVM_BLAKE3_KEY_LEN]);
-void llvm_blake3_hasher_init_derive_key(llvm_blake3_hasher *self,
+LLVM_FUNC_ABI void llvm_blake3_hasher_init_derive_key(llvm_blake3_hasher *self,
                                         const char *context);
-void llvm_blake3_hasher_init_derive_key_raw(llvm_blake3_hasher *self,
+LLVM_FUNC_ABI void llvm_blake3_hasher_init_derive_key_raw(llvm_blake3_hasher *self,
                                             const void *context,
                                             size_t context_len);
-void llvm_blake3_hasher_update(llvm_blake3_hasher *self, const void *input,
+LLVM_FUNC_ABI void llvm_blake3_hasher_update(llvm_blake3_hasher *self, const void *input,
                                size_t input_len);
-void llvm_blake3_hasher_finalize(const llvm_blake3_hasher *self, uint8_t *out,
+LLVM_FUNC_ABI void llvm_blake3_hasher_finalize(const llvm_blake3_hasher *self, uint8_t *out,
                                  size_t out_len);
-void llvm_blake3_hasher_finalize_seek(const llvm_blake3_hasher *self,
+LLVM_FUNC_ABI void llvm_blake3_hasher_finalize_seek(const llvm_blake3_hasher *self,
                                       uint64_t seek, uint8_t *out,
                                       size_t out_len);
-void llvm_blake3_hasher_reset(llvm_blake3_hasher *self);
+LLVM_FUNC_ABI void llvm_blake3_hasher_reset(llvm_blake3_hasher *self);
 
 #ifdef __cplusplus
 }

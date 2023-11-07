@@ -147,7 +147,7 @@ template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 }
 
 namespace detail {
-template <typename T, std::size_t SizeOfT> struct TrailingZerosCounter {
+template <typename T, std::size_t SizeOfT> struct LLVM_CLASS_ABI TrailingZerosCounter {
   static unsigned count(T Val) {
     if (!Val)
       return std::numeric_limits<T>::digits;
@@ -171,7 +171,7 @@ template <typename T, std::size_t SizeOfT> struct TrailingZerosCounter {
 };
 
 #if defined(__GNUC__) || defined(_MSC_VER)
-template <typename T> struct TrailingZerosCounter<T, 4> {
+template <typename T> struct LLVM_CLASS_ABI TrailingZerosCounter<T, 4> {
   static unsigned count(T Val) {
     if (Val == 0)
       return 32;
@@ -187,7 +187,7 @@ template <typename T> struct TrailingZerosCounter<T, 4> {
 };
 
 #if !defined(_MSC_VER) || defined(_M_X64)
-template <typename T> struct TrailingZerosCounter<T, 8> {
+template <typename T> struct LLVM_CLASS_ABI TrailingZerosCounter<T, 8> {
   static unsigned count(T Val) {
     if (Val == 0)
       return 64;
@@ -218,7 +218,7 @@ template <typename T> [[nodiscard]] int countr_zero(T Val) {
 }
 
 namespace detail {
-template <typename T, std::size_t SizeOfT> struct LeadingZerosCounter {
+template <typename T, std::size_t SizeOfT> struct LLVM_CLASS_ABI LeadingZerosCounter {
   static unsigned count(T Val) {
     if (!Val)
       return std::numeric_limits<T>::digits;
@@ -237,7 +237,7 @@ template <typename T, std::size_t SizeOfT> struct LeadingZerosCounter {
 };
 
 #if defined(__GNUC__) || defined(_MSC_VER)
-template <typename T> struct LeadingZerosCounter<T, 4> {
+template <typename T> struct LLVM_CLASS_ABI LeadingZerosCounter<T, 4> {
   static unsigned count(T Val) {
     if (Val == 0)
       return 32;
@@ -253,7 +253,7 @@ template <typename T> struct LeadingZerosCounter<T, 4> {
 };
 
 #if !defined(_MSC_VER) || defined(_M_X64)
-template <typename T> struct LeadingZerosCounter<T, 8> {
+template <typename T> struct LLVM_CLASS_ABI LeadingZerosCounter<T, 8> {
   static unsigned count(T Val) {
     if (Val == 0)
       return 64;
@@ -347,7 +347,7 @@ template <typename T> [[nodiscard]] T bit_ceil(T Value) {
 }
 
 namespace detail {
-template <typename T, std::size_t SizeOfT> struct PopulationCounter {
+template <typename T, std::size_t SizeOfT> struct LLVM_CLASS_ABI PopulationCounter {
   static int count(T Value) {
     // Generic version, forward to 32 bits.
     static_assert(SizeOfT <= 4, "Not implemented!");
@@ -362,7 +362,7 @@ template <typename T, std::size_t SizeOfT> struct PopulationCounter {
   }
 };
 
-template <typename T> struct PopulationCounter<T, 8> {
+template <typename T> struct LLVM_CLASS_ABI PopulationCounter<T, 8> {
   static int count(T Value) {
 #if defined(__GNUC__)
     return (int)__builtin_popcountll(Value);

@@ -39,14 +39,14 @@ class OpenMPIRBuilder;
 /// \p New will be added such that there is no semantic change. Otherwise, the
 /// \p IP insert block remains degenerate and it is up to the caller to insert a
 /// terminator.
-void spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
+LLVM_FUNC_ABI void spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
               bool CreateBranch);
 
 /// Splice a BasicBlock at an IRBuilder's current insertion point. Its new
 /// insert location will stick to after the instruction before the insertion
 /// point (instead of moving with the instruction the InsertPoint stores
 /// internally).
-void spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch);
+LLVM_FUNC_ABI void spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch);
 
 /// Split a BasicBlock at an InsertPoint, even if the block is degenerate
 /// (missing the terminator).
@@ -57,24 +57,24 @@ void spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch);
 /// semantically there is no change; otherwise the block of the insertion point
 /// remains degenerate and it is the caller's responsibility to insert a
 /// terminator. Returns the new successor block.
-BasicBlock *splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
+LLVM_FUNC_ABI BasicBlock *splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
                     llvm::Twine Name = {});
 
 /// Split a BasicBlock at \p Builder's insertion point, even if the block is
 /// degenerate (missing the terminator).  Its new insert location will stick to
 /// after the instruction before the insertion point (instead of moving with the
 /// instruction the InsertPoint stores internally).
-BasicBlock *splitBB(IRBuilderBase &Builder, bool CreateBranch,
+LLVM_FUNC_ABI BasicBlock *splitBB(IRBuilderBase &Builder, bool CreateBranch,
                     llvm::Twine Name = {});
 
 /// Split a BasicBlock at \p Builder's insertion point, even if the block is
 /// degenerate (missing the terminator).  Its new insert location will stick to
 /// after the instruction before the insertion point (instead of moving with the
 /// instruction the InsertPoint stores internally).
-BasicBlock *splitBB(IRBuilder<> &Builder, bool CreateBranch, llvm::Twine Name);
+LLVM_FUNC_ABI BasicBlock *splitBB(IRBuilder<> &Builder, bool CreateBranch, llvm::Twine Name);
 
 /// Like splitBB, but reuses the current block's name for the new name.
-BasicBlock *splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
+LLVM_FUNC_ABI BasicBlock *splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
                               llvm::Twine Suffix = ".split");
 
 /// Captures attributes that affect generating LLVM-IR using the
@@ -82,7 +82,7 @@ BasicBlock *splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
 /// required for all classes or functions. In some use cases the configuration
 /// is not necessary at all, because because the only functions that are called
 /// are ones that are not dependent on the configuration.
-class OpenMPIRBuilderConfig {
+class LLVM_CLASS_ABI OpenMPIRBuilderConfig {
 public:
   /// Flag for specifying if the compilation is done for embedded device code
   /// or host code.
@@ -172,7 +172,7 @@ private:
 
 /// Data structure to contain the information needed to uniquely identify
 /// a target entry.
-struct TargetRegionEntryInfo {
+struct LLVM_CLASS_ABI TargetRegionEntryInfo {
   std::string ParentName;
   unsigned DeviceID;
   unsigned FileID;
@@ -198,7 +198,7 @@ struct TargetRegionEntryInfo {
 };
 
 /// Class that manages information about offload code regions and data
-class OffloadEntriesInfoManager {
+class LLVM_CLASS_ABI OffloadEntriesInfoManager {
   /// Number of entries registered so far.
   OpenMPIRBuilder *OMPBuilder;
   unsigned OffloadingEntriesNum = 0;
@@ -442,7 +442,7 @@ private:
 /// An interface to create LLVM-IR for OpenMP directives.
 ///
 /// Each OpenMP directive has a corresponding public generator method.
-class OpenMPIRBuilder {
+class LLVM_CLASS_ABI OpenMPIRBuilder {
 public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
   /// not have an effect on \p M (see initialize)
@@ -2701,7 +2701,7 @@ public:
 ///
 /// Defined outside OpenMPIRBuilder because nested classes cannot be
 /// forward-declared, e.g. to avoid having to include the entire OMPIRBuilder.h.
-class CanonicalLoopInfo {
+class LLVM_CLASS_ABI CanonicalLoopInfo {
   friend class OpenMPIRBuilder;
 
 private:

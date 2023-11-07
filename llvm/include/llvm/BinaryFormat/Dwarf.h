@@ -634,42 +634,42 @@ enum GDBIndexEntryLinkage { GIEL_EXTERNAL, GIEL_STATIC };
 /// isn't known.
 ///
 /// @{
-StringRef TagString(unsigned Tag);
-StringRef ChildrenString(unsigned Children);
-StringRef AttributeString(unsigned Attribute);
-StringRef FormEncodingString(unsigned Encoding);
-StringRef OperationEncodingString(unsigned Encoding);
-StringRef SubOperationEncodingString(unsigned OpEncoding,
+LLVM_FUNC_ABI StringRef TagString(unsigned Tag);
+LLVM_FUNC_ABI StringRef ChildrenString(unsigned Children);
+LLVM_FUNC_ABI StringRef AttributeString(unsigned Attribute);
+LLVM_FUNC_ABI StringRef FormEncodingString(unsigned Encoding);
+LLVM_FUNC_ABI StringRef OperationEncodingString(unsigned Encoding);
+LLVM_FUNC_ABI StringRef SubOperationEncodingString(unsigned OpEncoding,
                                      unsigned SubOpEncoding);
-StringRef AttributeEncodingString(unsigned Encoding);
-StringRef DecimalSignString(unsigned Sign);
-StringRef EndianityString(unsigned Endian);
-StringRef AccessibilityString(unsigned Access);
-StringRef DefaultedMemberString(unsigned DefaultedEncodings);
-StringRef VisibilityString(unsigned Visibility);
-StringRef VirtualityString(unsigned Virtuality);
-StringRef LanguageString(unsigned Language);
-StringRef CaseString(unsigned Case);
-StringRef ConventionString(unsigned Convention);
-StringRef InlineCodeString(unsigned Code);
-StringRef ArrayOrderString(unsigned Order);
-StringRef LNStandardString(unsigned Standard);
-StringRef LNExtendedString(unsigned Encoding);
-StringRef MacinfoString(unsigned Encoding);
-StringRef MacroString(unsigned Encoding);
-StringRef GnuMacroString(unsigned Encoding);
-StringRef RangeListEncodingString(unsigned Encoding);
-StringRef LocListEncodingString(unsigned Encoding);
-StringRef CallFrameString(unsigned Encoding, Triple::ArchType Arch);
-StringRef ApplePropertyString(unsigned);
-StringRef UnitTypeString(unsigned);
-StringRef AtomTypeString(unsigned Atom);
-StringRef GDBIndexEntryKindString(GDBIndexEntryKind Kind);
-StringRef GDBIndexEntryLinkageString(GDBIndexEntryLinkage Linkage);
-StringRef IndexString(unsigned Idx);
-StringRef FormatString(DwarfFormat Format);
-StringRef FormatString(bool IsDWARF64);
-StringRef RLEString(unsigned RLE);
+LLVM_FUNC_ABI StringRef AttributeEncodingString(unsigned Encoding);
+LLVM_FUNC_ABI StringRef DecimalSignString(unsigned Sign);
+LLVM_FUNC_ABI StringRef EndianityString(unsigned Endian);
+LLVM_FUNC_ABI StringRef AccessibilityString(unsigned Access);
+LLVM_FUNC_ABI StringRef DefaultedMemberString(unsigned DefaultedEncodings);
+LLVM_FUNC_ABI StringRef VisibilityString(unsigned Visibility);
+LLVM_FUNC_ABI StringRef VirtualityString(unsigned Virtuality);
+LLVM_FUNC_ABI StringRef LanguageString(unsigned Language);
+LLVM_FUNC_ABI StringRef CaseString(unsigned Case);
+LLVM_FUNC_ABI StringRef ConventionString(unsigned Convention);
+LLVM_FUNC_ABI StringRef InlineCodeString(unsigned Code);
+LLVM_FUNC_ABI StringRef ArrayOrderString(unsigned Order);
+LLVM_FUNC_ABI StringRef LNStandardString(unsigned Standard);
+LLVM_FUNC_ABI StringRef LNExtendedString(unsigned Encoding);
+LLVM_FUNC_ABI StringRef MacinfoString(unsigned Encoding);
+LLVM_FUNC_ABI StringRef MacroString(unsigned Encoding);
+LLVM_FUNC_ABI StringRef GnuMacroString(unsigned Encoding);
+LLVM_FUNC_ABI StringRef RangeListEncodingString(unsigned Encoding);
+LLVM_FUNC_ABI StringRef LocListEncodingString(unsigned Encoding);
+LLVM_FUNC_ABI StringRef CallFrameString(unsigned Encoding, Triple::ArchType Arch);
+LLVM_FUNC_ABI StringRef ApplePropertyString(unsigned);
+LLVM_FUNC_ABI StringRef UnitTypeString(unsigned);
+LLVM_FUNC_ABI StringRef AtomTypeString(unsigned Atom);
+LLVM_FUNC_ABI StringRef GDBIndexEntryKindString(GDBIndexEntryKind Kind);
+LLVM_FUNC_ABI StringRef GDBIndexEntryLinkageString(GDBIndexEntryLinkage Linkage);
+LLVM_FUNC_ABI StringRef IndexString(unsigned Idx);
+LLVM_FUNC_ABI StringRef FormatString(DwarfFormat Format);
+LLVM_FUNC_ABI StringRef FormatString(bool IsDWARF64);
+LLVM_FUNC_ABI StringRef RLEString(unsigned RLE);
 /// @}
 
 /// \defgroup DwarfConstantsParsing Dwarf constants parsing functions
@@ -682,16 +682,16 @@ StringRef RLEString(unsigned RLE);
 /// \li \a getMacinfo() returns \a DW_MACINFO_invalid on invalid input.
 ///
 /// @{
-unsigned getTag(StringRef TagString);
-unsigned getOperationEncoding(StringRef OperationEncodingString);
-unsigned getSubOperationEncoding(unsigned OpEncoding,
+LLVM_FUNC_ABI unsigned getTag(StringRef TagString);
+LLVM_FUNC_ABI unsigned getOperationEncoding(StringRef OperationEncodingString);
+LLVM_FUNC_ABI unsigned getSubOperationEncoding(unsigned OpEncoding,
                                  StringRef SubOperationEncodingString);
-unsigned getVirtuality(StringRef VirtualityString);
-unsigned getLanguage(StringRef LanguageString);
-unsigned getCallingConvention(StringRef LanguageString);
-unsigned getAttributeEncoding(StringRef EncodingString);
-unsigned getMacinfo(StringRef MacinfoString);
-unsigned getMacro(StringRef MacroString);
+LLVM_FUNC_ABI unsigned getVirtuality(StringRef VirtualityString);
+LLVM_FUNC_ABI unsigned getLanguage(StringRef LanguageString);
+LLVM_FUNC_ABI unsigned getCallingConvention(StringRef LanguageString);
+LLVM_FUNC_ABI unsigned getAttributeEncoding(StringRef EncodingString);
+LLVM_FUNC_ABI unsigned getMacinfo(StringRef MacinfoString);
+LLVM_FUNC_ABI unsigned getMacro(StringRef MacroString);
 /// @}
 
 /// \defgroup DwarfConstantsVersioning Dwarf version for constants
@@ -702,12 +702,12 @@ unsigned getMacro(StringRef MacroString);
 /// Otherwise returns 0.
 ///
 /// @{
-unsigned TagVersion(Tag T);
-unsigned AttributeVersion(Attribute A);
-unsigned FormVersion(Form F);
-unsigned OperationVersion(LocationAtom O);
-unsigned AttributeEncodingVersion(TypeKind E);
-unsigned LanguageVersion(SourceLanguage L);
+LLVM_FUNC_ABI unsigned TagVersion(Tag T);
+LLVM_FUNC_ABI unsigned AttributeVersion(Attribute A);
+LLVM_FUNC_ABI unsigned FormVersion(Form F);
+LLVM_FUNC_ABI unsigned OperationVersion(LocationAtom O);
+LLVM_FUNC_ABI unsigned AttributeEncodingVersion(TypeKind E);
+LLVM_FUNC_ABI unsigned LanguageVersion(SourceLanguage L);
 /// @}
 
 /// \defgroup DwarfConstantsVendor Dwarf "vendor" for constants
@@ -716,15 +716,15 @@ unsigned LanguageVersion(SourceLanguage L);
 /// either the DWARF standard itself or the vendor who defined the extension.
 ///
 /// @{
-unsigned TagVendor(Tag T);
-unsigned AttributeVendor(Attribute A);
-unsigned FormVendor(Form F);
-unsigned OperationVendor(LocationAtom O);
-unsigned AttributeEncodingVendor(TypeKind E);
-unsigned LanguageVendor(SourceLanguage L);
+LLVM_FUNC_ABI unsigned TagVendor(Tag T);
+LLVM_FUNC_ABI unsigned AttributeVendor(Attribute A);
+LLVM_FUNC_ABI unsigned FormVendor(Form F);
+LLVM_FUNC_ABI unsigned OperationVendor(LocationAtom O);
+LLVM_FUNC_ABI unsigned AttributeEncodingVendor(TypeKind E);
+LLVM_FUNC_ABI unsigned LanguageVendor(SourceLanguage L);
 /// @}
 
-std::optional<unsigned> LanguageLowerBound(SourceLanguage L);
+LLVM_FUNC_ABI std::optional<unsigned> LanguageLowerBound(SourceLanguage L);
 
 /// The size of a reference determined by the DWARF 32/64-bit format.
 inline uint8_t getDwarfOffsetByteSize(DwarfFormat Format) {
@@ -740,7 +740,7 @@ inline uint8_t getDwarfOffsetByteSize(DwarfFormat Format) {
 /// A helper struct providing information about the byte size of DW_FORM
 /// values that vary in size depending on the DWARF version, address byte
 /// size, or DWARF32/DWARF64.
-struct FormParams {
+struct LLVM_CLASS_ABI FormParams {
   uint16_t Version;
   uint8_t AddrSize;
   DwarfFormat Format;
@@ -786,20 +786,20 @@ inline uint8_t getUnitLengthFieldByteSize(DwarfFormat Format) {
 /// \param Params DWARF parameters to help interpret forms.
 /// \returns std::optional<uint8_t> value with the fixed byte size or
 /// std::nullopt if \p Form doesn't have a fixed byte size.
-std::optional<uint8_t> getFixedFormByteSize(dwarf::Form Form,
+LLVM_FUNC_ABI std::optional<uint8_t> getFixedFormByteSize(dwarf::Form Form,
                                             FormParams Params);
 
 /// Tells whether the specified form is defined in the specified version,
 /// or is an extension if extensions are allowed.
-bool isValidFormForVersion(Form F, unsigned Version, bool ExtensionsOk = true);
+LLVM_FUNC_ABI bool isValidFormForVersion(Form F, unsigned Version, bool ExtensionsOk = true);
 
 /// Returns the symbolic string representing Val when used as a value
 /// for attribute Attr.
-StringRef AttributeValueString(uint16_t Attr, unsigned Val);
+LLVM_FUNC_ABI StringRef AttributeValueString(uint16_t Attr, unsigned Val);
 
 /// Returns the symbolic string representing Val when used as a value
 /// for atom Atom.
-StringRef AtomValueString(uint16_t Atom, unsigned Val);
+LLVM_FUNC_ABI StringRef AtomValueString(uint16_t Atom, unsigned Val);
 
 /// Describes an entry of the various gnu_pub* debug sections.
 ///
@@ -811,7 +811,7 @@ StringRef AtomValueString(uint16_t Atom, unsigned Val);
 ///
 /// A gdb_index descriptor includes the above kind, shifted 24 bits up with the
 /// offset of the cu within the debug_info section stored in those 24 bits.
-struct PubIndexEntryDescriptor {
+struct LLVM_CLASS_ABI PubIndexEntryDescriptor {
   GDBIndexEntryKind Kind;
   GDBIndexEntryLinkage Linkage;
   PubIndexEntryDescriptor(GDBIndexEntryKind Kind, GDBIndexEntryLinkage Linkage)
@@ -836,34 +836,34 @@ private:
   };
 };
 
-template <typename Enum> struct EnumTraits : public std::false_type {};
+template <typename Enum> struct LLVM_CLASS_ABI EnumTraits : public std::false_type {};
 
-template <> struct EnumTraits<Attribute> : public std::true_type {
+template <> struct LLVM_CLASS_ABI EnumTraits<Attribute> : public std::true_type {
   static constexpr char Type[3] = "AT";
   static constexpr StringRef (*StringFn)(unsigned) = &AttributeString;
 };
 
-template <> struct EnumTraits<Form> : public std::true_type {
+template <> struct LLVM_CLASS_ABI EnumTraits<Form> : public std::true_type {
   static constexpr char Type[5] = "FORM";
   static constexpr StringRef (*StringFn)(unsigned) = &FormEncodingString;
 };
 
-template <> struct EnumTraits<Index> : public std::true_type {
+template <> struct LLVM_CLASS_ABI EnumTraits<Index> : public std::true_type {
   static constexpr char Type[4] = "IDX";
   static constexpr StringRef (*StringFn)(unsigned) = &IndexString;
 };
 
-template <> struct EnumTraits<Tag> : public std::true_type {
+template <> struct LLVM_CLASS_ABI EnumTraits<Tag> : public std::true_type {
   static constexpr char Type[4] = "TAG";
   static constexpr StringRef (*StringFn)(unsigned) = &TagString;
 };
 
-template <> struct EnumTraits<LineNumberOps> : public std::true_type {
+template <> struct LLVM_CLASS_ABI EnumTraits<LineNumberOps> : public std::true_type {
   static constexpr char Type[4] = "LNS";
   static constexpr StringRef (*StringFn)(unsigned) = &LNStandardString;
 };
 
-template <> struct EnumTraits<LocationAtom> : public std::true_type {
+template <> struct LLVM_CLASS_ABI EnumTraits<LocationAtom> : public std::true_type {
   static constexpr char Type[3] = "OP";
   static constexpr StringRef (*StringFn)(unsigned) = &OperationEncodingString;
 };
@@ -880,7 +880,7 @@ inline uint64_t computeTombstoneAddress(uint8_t AddressByteSize) {
 /// dumping functions above, these format unknown enumerator values as
 /// DW_TYPE_unknown_1234 (e.g. DW_TAG_unknown_ffff).
 template <typename Enum>
-struct format_provider<Enum, std::enable_if_t<dwarf::EnumTraits<Enum>::value>> {
+struct LLVM_CLASS_ABI format_provider<Enum, std::enable_if_t<dwarf::EnumTraits<Enum>::value>> {
   static void format(const Enum &E, raw_ostream &OS, StringRef Style) {
     StringRef Str = dwarf::EnumTraits<Enum>::StringFn(E);
     if (Str.empty()) {

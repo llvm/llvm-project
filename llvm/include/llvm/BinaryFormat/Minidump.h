@@ -30,7 +30,7 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 /// The minidump header is the first part of a minidump file. It identifies the
 /// file as a minidump file, and gives the location of the stream directory.
-struct Header {
+struct LLVM_CLASS_ABI Header {
   static constexpr uint32_t MagicSignature = 0x504d444d; // PMDM
   static constexpr uint16_t MagicVersion = 0xa793;
 
@@ -57,7 +57,7 @@ enum class StreamType : uint32_t {
 
 /// Specifies the location (and size) of various objects in the minidump file.
 /// The location is relative to the start of the file.
-struct LocationDescriptor {
+struct LLVM_CLASS_ABI LocationDescriptor {
   support::ulittle32_t DataSize;
   support::ulittle32_t RVA;
 };
@@ -65,13 +65,13 @@ static_assert(sizeof(LocationDescriptor) == 8);
 
 /// Describes a single memory range (both its VM address and where to find it in
 /// the file) of the process from which this minidump file was generated.
-struct MemoryDescriptor {
+struct LLVM_CLASS_ABI MemoryDescriptor {
   support::ulittle64_t StartOfMemoryRange;
   LocationDescriptor Memory;
 };
 static_assert(sizeof(MemoryDescriptor) == 16);
 
-struct MemoryInfoListHeader {
+struct LLVM_CLASS_ABI MemoryInfoListHeader {
   support::ulittle32_t SizeOfHeader;
   support::ulittle32_t SizeOfEntry;
   support::ulittle64_t NumberOfEntries;
@@ -102,7 +102,7 @@ enum class MemoryType : uint32_t {
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/0xffffffffu),
 };
 
-struct MemoryInfo {
+struct LLVM_CLASS_ABI MemoryInfo {
   support::ulittle64_t BaseAddress;
   support::ulittle64_t AllocationBase;
   support::little_t<MemoryProtection> AllocationProtect;
@@ -118,7 +118,7 @@ static_assert(sizeof(MemoryInfo) == 48);
 /// Specifies the location and type of a single stream in the minidump file. The
 /// minidump stream directory is an array of entries of this type, with its size
 /// given by Header.NumberOfStreams.
-struct Directory {
+struct LLVM_CLASS_ABI Directory {
   support::little_t<StreamType> Type;
   LocationDescriptor Location;
 };
@@ -159,7 +159,7 @@ static_assert(sizeof(CPUInfo) == 24);
 
 /// The SystemInfo stream, containing various information about the system where
 /// this minidump was generated.
-struct SystemInfo {
+struct LLVM_CLASS_ABI SystemInfo {
   support::little_t<ProcessorArchitecture> ProcessorArch;
   support::ulittle16_t ProcessorLevel;
   support::ulittle16_t ProcessorRevision;
@@ -180,7 +180,7 @@ struct SystemInfo {
 };
 static_assert(sizeof(SystemInfo) == 56);
 
-struct VSFixedFileInfo {
+struct LLVM_CLASS_ABI VSFixedFileInfo {
   support::ulittle32_t Signature;
   support::ulittle32_t StructVersion;
   support::ulittle32_t FileVersionHigh;
@@ -201,7 +201,7 @@ inline bool operator==(const VSFixedFileInfo &LHS, const VSFixedFileInfo &RHS) {
   return memcmp(&LHS, &RHS, sizeof(VSFixedFileInfo)) == 0;
 }
 
-struct Module {
+struct LLVM_CLASS_ABI Module {
   support::ulittle64_t BaseOfImage;
   support::ulittle32_t SizeOfImage;
   support::ulittle32_t Checksum;
@@ -217,7 +217,7 @@ static_assert(sizeof(Module) == 108);
 
 /// Describes a single thread in the minidump file. Part of the ThreadList
 /// stream.
-struct Thread {
+struct LLVM_CLASS_ABI Thread {
   support::ulittle32_t ThreadId;
   support::ulittle32_t SuspendCount;
   support::ulittle32_t PriorityClass;
@@ -228,7 +228,7 @@ struct Thread {
 };
 static_assert(sizeof(Thread) == 48);
 
-struct Exception {
+struct LLVM_CLASS_ABI Exception {
   static constexpr size_t MaxParameters = 15;
 
   support::ulittle32_t ExceptionCode;
@@ -241,7 +241,7 @@ struct Exception {
 };
 static_assert(sizeof(Exception) == 152);
 
-struct ExceptionStream {
+struct LLVM_CLASS_ABI ExceptionStream {
   support::ulittle32_t ThreadId;
   support::ulittle32_t UnusedAlignment;
   Exception ExceptionRecord;
@@ -251,7 +251,7 @@ static_assert(sizeof(ExceptionStream) == 168);
 
 } // namespace minidump
 
-template <> struct DenseMapInfo<minidump::StreamType> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<minidump::StreamType> {
   static minidump::StreamType getEmptyKey() { return minidump::StreamType(-1); }
 
   static minidump::StreamType getTombstoneKey() {

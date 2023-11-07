@@ -108,7 +108,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, MemLifetime MLP) {
 /// A pair of memory protections and allocation policies.
 ///
 /// Optimized for use as a small map key.
-class AllocGroup {
+class LLVM_CLASS_ABI AllocGroup {
   friend struct llvm::DenseMapInfo<AllocGroup>;
 
   using underlying_type = uint8_t;
@@ -163,7 +163,7 @@ private:
 /// A specialized small-map for AllocGroups.
 ///
 /// Iteration order is guaranteed to match key ordering.
-template <typename T> class AllocGroupSmallMap {
+template <typename T> class LLVM_CLASS_ABI AllocGroupSmallMap {
 private:
   using ElemT = std::pair<AllocGroup, T>;
   using VectorTy = SmallVector<ElemT, 4>;
@@ -209,7 +209,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, AllocGroup AG) {
 
 } // end namespace orc
 
-template <> struct DenseMapInfo<orc::MemProt> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<orc::MemProt> {
   static inline orc::MemProt getEmptyKey() { return orc::MemProt(~uint8_t(0)); }
   static inline orc::MemProt getTombstoneKey() {
     return orc::MemProt(~uint8_t(0) - 1);
@@ -223,7 +223,7 @@ template <> struct DenseMapInfo<orc::MemProt> {
   }
 };
 
-template <> struct DenseMapInfo<orc::AllocGroup> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<orc::AllocGroup> {
   static inline orc::AllocGroup getEmptyKey() {
     return orc::AllocGroup(~uint8_t(0));
   }

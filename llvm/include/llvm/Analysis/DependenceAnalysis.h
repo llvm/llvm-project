@@ -69,7 +69,7 @@ namespace llvm {
   /// if successor edges for its source instruction. These sets are represented
   /// as singly-linked lists, with the "next" fields stored in the dependence
   /// itelf.
-  class Dependence {
+  class LLVM_CLASS_ABI Dependence {
   protected:
     Dependence(Dependence &&) = default;
     Dependence &operator=(Dependence &&) = default;
@@ -224,7 +224,7 @@ namespace llvm {
   /// (for output, flow, and anti dependences), the dependence implies an
   /// ordering, where the source must precede the destination; in contrast,
   /// input dependences are unordered.
-  class FullDependence final : public Dependence {
+  class LLVM_CLASS_ABI FullDependence final : public Dependence {
   public:
     FullDependence(Instruction *Src, Instruction *Dst, bool LoopIndependent,
                    unsigned Levels);
@@ -291,7 +291,7 @@ namespace llvm {
 
   /// DependenceInfo - This class is the main dependence-analysis driver.
   ///
-  class DependenceInfo {
+  class LLVM_CLASS_ABI DependenceInfo {
   public:
     DependenceInfo(Function *F, AAResults *AA, ScalarEvolution *SE,
                    LoopInfo *LI)
@@ -976,7 +976,7 @@ namespace llvm {
   }; // class DependenceInfo
 
   /// AnalysisPass to compute dependence information in a function
-  class DependenceAnalysis : public AnalysisInfoMixin<DependenceAnalysis> {
+  class LLVM_CLASS_ABI DependenceAnalysis : public AnalysisInfoMixin<DependenceAnalysis> {
   public:
     typedef DependenceInfo Result;
     Result run(Function &F, FunctionAnalysisManager &FAM);
@@ -987,7 +987,7 @@ namespace llvm {
   }; // class DependenceAnalysis
 
   /// Printer pass to dump DA results.
-  struct DependenceAnalysisPrinterPass
+  struct LLVM_CLASS_ABI DependenceAnalysisPrinterPass
       : public PassInfoMixin<DependenceAnalysisPrinterPass> {
     DependenceAnalysisPrinterPass(raw_ostream &OS,
                                   bool NormalizeResults = false)
@@ -1001,7 +1001,7 @@ namespace llvm {
   }; // class DependenceAnalysisPrinterPass
 
   /// Legacy pass manager pass to access dependence information
-  class DependenceAnalysisWrapperPass : public FunctionPass {
+  class LLVM_CLASS_ABI DependenceAnalysisWrapperPass : public FunctionPass {
   public:
     static char ID; // Class identification, replacement for typeinfo
     DependenceAnalysisWrapperPass();
@@ -1018,7 +1018,7 @@ namespace llvm {
 
   /// createDependenceAnalysisPass - This creates an instance of the
   /// DependenceAnalysis wrapper pass.
-  FunctionPass *createDependenceAnalysisWrapperPass();
+  LLVM_FUNC_ABI FunctionPass *createDependenceAnalysisWrapperPass();
 
 } // namespace llvm
 

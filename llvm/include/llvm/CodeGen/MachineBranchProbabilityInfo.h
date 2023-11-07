@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-class MachineBranchProbabilityInfo : public ImmutablePass {
+class LLVM_CLASS_ABI MachineBranchProbabilityInfo : public ImmutablePass {
   virtual void anchor();
 
   // Default weight value. Used when we don't have information about the edge.

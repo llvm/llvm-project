@@ -36,7 +36,7 @@ struct LegalityQuery;
 class MachineRegisterInfo;
 namespace GISelAddressing {
 /// Helper struct to store a base, index and offset that forms an address
-struct BaseIndexOffset {
+struct LLVM_CLASS_ABI BaseIndexOffset {
   Register BaseReg;
   Register IndexReg;
   int64_t Offset = 0;
@@ -44,25 +44,25 @@ struct BaseIndexOffset {
 };
 
 /// Returns a BaseIndexOffset which describes the pointer in \p Ptr.
-BaseIndexOffset getPointerInfo(Register Ptr, MachineRegisterInfo &MRI);
+LLVM_FUNC_ABI BaseIndexOffset getPointerInfo(Register Ptr, MachineRegisterInfo &MRI);
 
 /// Compute whether or not a memory access at \p MI1 aliases with an access at
 /// \p MI2 \returns true if either alias/no-alias is known. Sets \p IsAlias
 /// accordingly.
-bool aliasIsKnownForLoadStore(const MachineInstr &MI1, const MachineInstr &MI2,
+LLVM_FUNC_ABI bool aliasIsKnownForLoadStore(const MachineInstr &MI1, const MachineInstr &MI2,
                               bool &IsAlias, MachineRegisterInfo &MRI);
 
 /// Returns true if the instruction \p MI may alias \p Other.
 /// This function uses multiple strategies to detect aliasing, whereas
 /// aliasIsKnownForLoadStore just looks at the addresses of load/stores and is
 /// tries to reason about base/index/offsets.
-bool instMayAlias(const MachineInstr &MI, const MachineInstr &Other,
+LLVM_FUNC_ABI bool instMayAlias(const MachineInstr &MI, const MachineInstr &Other,
                   MachineRegisterInfo &MRI, AliasAnalysis *AA);
 } // namespace GISelAddressing
 
 using namespace GISelAddressing;
 
-class LoadStoreOpt : public MachineFunctionPass {
+class LLVM_CLASS_ABI LoadStoreOpt : public MachineFunctionPass {
 public:
   static char ID;
 

@@ -43,7 +43,7 @@ class VirtRegMap;
 class LiveIntervals;
 class LiveInterval;
 
-class TargetRegisterClass {
+class LLVM_CLASS_ABI TargetRegisterClass {
 public:
   using iterator = const MCPhysReg *;
   using const_iterator = const MCPhysReg *;
@@ -214,7 +214,7 @@ public:
 
 /// Extra information, not in MCRegisterDesc, about registers.
 /// These are used by codegen, not by MC.
-struct TargetRegisterInfoDesc {
+struct LLVM_CLASS_ABI TargetRegisterInfoDesc {
   const uint8_t *CostPerUse; // Extra cost of instructions using register.
   unsigned NumCosts; // Number of cost values associated with each register.
   const bool
@@ -223,7 +223,7 @@ struct TargetRegisterInfoDesc {
 
 /// Each TargetRegisterClass has a per register weight, and weight
 /// limit which must be less than the limits of its pressure sets.
-struct RegClassWeight {
+struct LLVM_CLASS_ABI RegClassWeight {
   unsigned RegWeight;
   unsigned WeightLimit;
 };
@@ -234,7 +234,7 @@ struct RegClassWeight {
 /// to this array so that we can turn register number into a register
 /// descriptor.
 ///
-class TargetRegisterInfo : public MCRegisterInfo {
+class LLVM_CLASS_ABI TargetRegisterInfo : public MCRegisterInfo {
 public:
   using regclass_iterator = const TargetRegisterClass * const *;
   using vt_iterator = const MVT::SimpleValueType *;
@@ -1189,7 +1189,7 @@ public:
 // The iterator can include (O, RC->getSubClassMask()) as the first entry which
 // also satisfies the above requirement, assuming Reg:0 == Reg.
 //
-class SuperRegClassIterator {
+class LLVM_CLASS_ABI SuperRegClassIterator {
   const unsigned RCMaskWords;
   unsigned SubReg = 0;
   const uint16_t *Idx;
@@ -1235,7 +1235,7 @@ public:
 /// the various RegClass related APIs.
 /// E.g., this class can be used to iterate over the subclasses provided by
 /// TargetRegisterClass::getSubClassMask or SuperRegClassIterator::getMask.
-class BitMaskClassIterator {
+class LLVM_CLASS_ABI BitMaskClassIterator {
   /// Total number of register classes.
   const unsigned NumRegClasses;
   /// Base index of CurrentChunk.
@@ -1319,7 +1319,7 @@ public:
 };
 
 // This is useful when building IndexedMaps keyed on virtual registers
-struct VirtReg2IndexFunctor {
+struct LLVM_CLASS_ABI VirtReg2IndexFunctor {
   using argument_type = Register;
   unsigned operator()(Register Reg) const {
     return Register::virtReg2Index(Reg);
@@ -1336,7 +1336,7 @@ struct VirtReg2IndexFunctor {
 ///   %physreg17      - a physical register when no TRI instance given.
 ///
 /// Usage: OS << printReg(Reg, TRI, SubRegIdx) << '\n';
-Printable printReg(Register Reg, const TargetRegisterInfo *TRI = nullptr,
+LLVM_FUNC_ABI Printable printReg(Register Reg, const TargetRegisterInfo *TRI = nullptr,
                    unsigned SubIdx = 0,
                    const MachineRegisterInfo *MRI = nullptr);
 
@@ -1348,15 +1348,15 @@ Printable printReg(Register Reg, const TargetRegisterInfo *TRI = nullptr,
 ///   fp0~st7 - Dual roots.
 ///
 /// Usage: OS << printRegUnit(Unit, TRI) << '\n';
-Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
+LLVM_FUNC_ABI Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print virtual registers and physical
 /// registers on a \ref raw_ostream.
-Printable printVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
+LLVM_FUNC_ABI Printable printVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print register classes or register banks
 /// on a \ref raw_ostream.
-Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
+LLVM_FUNC_ABI Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
                               const TargetRegisterInfo *TRI);
 
 } // end namespace llvm

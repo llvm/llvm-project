@@ -27,7 +27,7 @@ namespace llvm {
 /// ReleaseModeModelRunner - production mode implementation of the
 /// MLModelRunner. It uses an AOT-compiled SavedModel for efficient execution.
 template <class TGen>
-class ReleaseModeModelRunner final : public MLModelRunner {
+class LLVM_CLASS_ABI ReleaseModeModelRunner final : public MLModelRunner {
 public:
   /// FeatureNames' type should be an indexed collection of std::string, like
   /// std::array or std::vector, that has a size() method.
@@ -72,7 +72,7 @@ private:
 /// A mock class satisfying the interface expected by ReleaseModeModelRunner for
 /// its `TGen` parameter. Useful to avoid conditional compilation complexity, as
 /// a compile-time replacement for a real AOT-ed model.
-class NoopSavedModelImpl final {
+class LLVM_CLASS_ABI NoopSavedModelImpl final {
 #define NOOP_MODEL_ERRMSG                                                      \
   "The mock AOT-ed saved model is a compile-time stub and should not be "      \
   "called."

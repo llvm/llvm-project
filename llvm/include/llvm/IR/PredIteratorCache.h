@@ -25,7 +25,7 @@ namespace llvm {
 /// PredIteratorCache - This class is an extremely trivial cache for
 /// predecessor iterator queries.  This is useful for code that repeatedly
 /// wants the predecessor list for the same blocks.
-class PredIteratorCache {
+class LLVM_CLASS_ABI PredIteratorCache {
   /// BlockToPredsMap - Pointer to null-terminated list.
   mutable DenseMap<BasicBlock *, BasicBlock **> BlockToPredsMap;
   mutable DenseMap<BasicBlock *, unsigned> BlockToPredCountMap;

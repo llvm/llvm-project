@@ -25,7 +25,7 @@ namespace llvm {
 namespace mca {
 
 template <typename T>
-class InstructionError : public ErrorInfo<InstructionError<T>> {
+class LLVM_CLASS_ABI InstructionError : public ErrorInfo<InstructionError<T>> {
 public:
   static char ID;
   std::string Message;
@@ -49,7 +49,7 @@ template <typename T> char InstructionError<T>::ID;
 /// number of resources, are kept separate.  This is used by the
 /// ResourcePressureView to calculate the average resource cycles
 /// per instruction/iteration.
-class ReleaseAtCycles {
+class LLVM_CLASS_ABI ReleaseAtCycles {
   unsigned Numerator, Denominator;
 
 public:
@@ -93,7 +93,7 @@ public:
 ///
 /// Resource masks are used by the ResourceManager to solve set membership
 /// problems with simple bit manipulation operations.
-void computeProcResourceMasks(const MCSchedModel &SM,
+LLVM_FUNC_ABI void computeProcResourceMasks(const MCSchedModel &SM,
                               MutableArrayRef<uint64_t> Masks);
 
 // Returns the index of the highest bit set. For resource masks, the position of
@@ -107,7 +107,7 @@ inline unsigned getResourceStateIndex(uint64_t Mask) {
 /// cycles. The reciprocal block throughput is computed as the MAX between:
 ///  - NumMicroOps / DispatchWidth
 ///  - ProcReleaseAtCycles / #ProcResourceUnits  (for every consumed resource).
-double computeBlockRThroughput(const MCSchedModel &SM, unsigned DispatchWidth,
+LLVM_FUNC_ABI double computeBlockRThroughput(const MCSchedModel &SM, unsigned DispatchWidth,
                                unsigned NumMicroOps,
                                ArrayRef<unsigned> ProcResourceUsage);
 } // namespace mca

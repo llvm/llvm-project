@@ -68,12 +68,12 @@ class Type;
 class Value;
 enum SCEVTypes : unsigned short;
 
-extern bool VerifySCEV;
+LLVM_FUNC_ABI extern bool VerifySCEV;
 
 /// This class represents an analyzed expression in the program.  These are
 /// opaque objects that the client is not allowed to do much with directly.
 ///
-class SCEV : public FoldingSetNode {
+class LLVM_CLASS_ABI SCEV : public FoldingSetNode {
   friend struct FoldingSetTrait<SCEV>;
 
   /// A reference to an Interned FoldingSetNodeID for this node.  The
@@ -185,7 +185,7 @@ public:
 
 // Specialize FoldingSetTrait for SCEV to avoid needing to compute
 // temporary FoldingSetNodeID values.
-template <> struct FoldingSetTrait<SCEV> : DefaultFoldingSetTrait<SCEV> {
+template <> struct LLVM_CLASS_ABI FoldingSetTrait<SCEV> : DefaultFoldingSetTrait<SCEV> {
   static void Profile(const SCEV &X, FoldingSetNodeID &ID) { ID = X.FastID; }
 
   static bool Equals(const SCEV &X, const FoldingSetNodeID &ID, unsigned IDHash,
@@ -207,7 +207,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const SCEV &S) {
 /// For example, if you ask for the number of iterations of a linked-list
 /// traversal loop, you will get one of these.  None of the standard SCEV
 /// operations are valid on this class, it is just a marker.
-struct SCEVCouldNotCompute : public SCEV {
+struct LLVM_CLASS_ABI SCEVCouldNotCompute : public SCEV {
   SCEVCouldNotCompute();
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -216,7 +216,7 @@ struct SCEVCouldNotCompute : public SCEV {
 
 /// This class represents an assumption made using SCEV expressions which can
 /// be checked at run-time.
-class SCEVPredicate : public FoldingSetNode {
+class LLVM_CLASS_ABI SCEVPredicate : public FoldingSetNode {
   friend struct FoldingSetTrait<SCEVPredicate>;
 
   /// A reference to an Interned FoldingSetNodeID for this node.  The
@@ -261,7 +261,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const SCEVPredicate &P) {
 // Specialize FoldingSetTrait for SCEVPredicate to avoid needing to compute
 // temporary FoldingSetNodeID values.
 template <>
-struct FoldingSetTrait<SCEVPredicate> : DefaultFoldingSetTrait<SCEVPredicate> {
+struct LLVM_CLASS_ABI FoldingSetTrait<SCEVPredicate> : DefaultFoldingSetTrait<SCEVPredicate> {
   static void Profile(const SCEVPredicate &X, FoldingSetNodeID &ID) {
     ID = X.FastID;
   }
@@ -279,7 +279,7 @@ struct FoldingSetTrait<SCEVPredicate> : DefaultFoldingSetTrait<SCEVPredicate> {
 
 /// This class represents an assumption that the expression LHS Pred RHS
 /// evaluates to true, and this can be checked at run-time.
-class SCEVComparePredicate final : public SCEVPredicate {
+class LLVM_CLASS_ABI SCEVComparePredicate final : public SCEVPredicate {
   /// We assume that LHS Pred RHS is true.
   const ICmpInst::Predicate Pred;
   const SCEV *LHS;
@@ -319,7 +319,7 @@ public:
 /// predicated backedge taken count of X, we only guarantee that {0,+,1} has
 /// nusw in the first X iterations. {0,+,1} may still wrap in the loop if we
 /// have more than X iterations.
-class SCEVWrapPredicate final : public SCEVPredicate {
+class LLVM_CLASS_ABI SCEVWrapPredicate final : public SCEVPredicate {
 public:
   /// Similar to SCEV::NoWrapFlags, but with slightly different semantics
   /// for FlagNUSW. The increment is considered to be signed, and a + b
@@ -414,7 +414,7 @@ public:
 ///
 /// NB! Unlike other SCEVPredicate sub-classes this class does not live in the
 /// ScalarEvolution::Preds folding set.  This is why the \c add function is sound.
-class SCEVUnionPredicate final : public SCEVPredicate {
+class LLVM_CLASS_ABI SCEVUnionPredicate final : public SCEVPredicate {
 private:
   using PredicateMap =
       DenseMap<const SCEV *, SmallVector<const SCEVPredicate *, 4>>;
@@ -450,7 +450,7 @@ public:
 /// The main scalar evolution driver. Because client code (intentionally)
 /// can't do much with the SCEV objects directly, they must ask this class
 /// for services.
-class ScalarEvolution {
+class LLVM_CLASS_ABI ScalarEvolution {
   friend class ScalarEvolutionsTest;
 
 public:
@@ -2226,7 +2226,7 @@ private:
 };
 
 /// Analysis pass that exposes the \c ScalarEvolution for a function.
-class ScalarEvolutionAnalysis
+class LLVM_CLASS_ABI ScalarEvolutionAnalysis
     : public AnalysisInfoMixin<ScalarEvolutionAnalysis> {
   friend AnalysisInfoMixin<ScalarEvolutionAnalysis>;
 
@@ -2239,14 +2239,14 @@ public:
 };
 
 /// Verifier pass for the \c ScalarEvolutionAnalysis results.
-class ScalarEvolutionVerifierPass
+class LLVM_CLASS_ABI ScalarEvolutionVerifierPass
     : public PassInfoMixin<ScalarEvolutionVerifierPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Printer pass for the \c ScalarEvolutionAnalysis results.
-class ScalarEvolutionPrinterPass
+class LLVM_CLASS_ABI ScalarEvolutionPrinterPass
     : public PassInfoMixin<ScalarEvolutionPrinterPass> {
   raw_ostream &OS;
 
@@ -2256,7 +2256,7 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-class ScalarEvolutionWrapperPass : public FunctionPass {
+class LLVM_CLASS_ABI ScalarEvolutionWrapperPass : public FunctionPass {
   std::unique_ptr<ScalarEvolution> SE;
 
 public:
@@ -2287,7 +2287,7 @@ public:
 ///     rewriting, we will continue to get an AddRec expression for that
 ///     Value.
 ///   - lowers the number of expression rewrites.
-class PredicatedScalarEvolution {
+class LLVM_CLASS_ABI PredicatedScalarEvolution {
 public:
   PredicatedScalarEvolution(ScalarEvolution &SE, Loop &L);
 
@@ -2372,7 +2372,7 @@ private:
   const SCEV *BackedgeCount = nullptr;
 };
 
-template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
+template <> struct LLVM_CLASS_ABI DenseMapInfo<ScalarEvolution::FoldID> {
   static inline ScalarEvolution::FoldID getEmptyKey() {
     ScalarEvolution::FoldID ID(0);
     return ID;

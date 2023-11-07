@@ -30,11 +30,11 @@ constexpr StringRef AssumptionAttrKey = "llvm.assume";
 
 /// A set of known assumption strings that are accepted without warning and
 /// which can be recommended as typo correction.
-extern StringSet<> KnownAssumptionStrings;
+LLVM_FUNC_ABI extern StringSet<> KnownAssumptionStrings;
 
 /// Helper that allows to insert a new assumption string in the known assumption
 /// set by creating a (static) object.
-struct KnownAssumptionString {
+struct LLVM_CLASS_ABI KnownAssumptionString {
   KnownAssumptionString(const char *AssumptionStr)
       : AssumptionStr(AssumptionStr) {
     KnownAssumptionStrings.insert(AssumptionStr);
@@ -50,25 +50,25 @@ private:
 };
 
 /// Return true if \p F has the assumption \p AssumptionStr attached.
-bool hasAssumption(const Function &F,
+LLVM_FUNC_ABI bool hasAssumption(const Function &F,
                    const KnownAssumptionString &AssumptionStr);
 
 /// Return true if \p CB or the callee has the assumption \p AssumptionStr
 /// attached.
-bool hasAssumption(const CallBase &CB,
+LLVM_FUNC_ABI bool hasAssumption(const CallBase &CB,
                    const KnownAssumptionString &AssumptionStr);
 
 /// Return the set of all assumptions for the function \p F.
-DenseSet<StringRef> getAssumptions(const Function &F);
+LLVM_FUNC_ABI DenseSet<StringRef> getAssumptions(const Function &F);
 
 /// Return the set of all assumptions for the call \p CB.
-DenseSet<StringRef> getAssumptions(const CallBase &CB);
+LLVM_FUNC_ABI DenseSet<StringRef> getAssumptions(const CallBase &CB);
 
 /// Appends the set of assumptions \p Assumptions to \F.
-bool addAssumptions(Function &F, const DenseSet<StringRef> &Assumptions);
+LLVM_FUNC_ABI bool addAssumptions(Function &F, const DenseSet<StringRef> &Assumptions);
 
 /// Appends the set of assumptions \p Assumptions to \CB.
-bool addAssumptions(CallBase &CB, const DenseSet<StringRef> &Assumptions);
+LLVM_FUNC_ABI bool addAssumptions(CallBase &CB, const DenseSet<StringRef> &Assumptions);
 
 } // namespace llvm
 

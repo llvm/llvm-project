@@ -40,7 +40,7 @@ namespace llvm {
 /// etc) do not perform as well in practice as a linked list with this iterator
 /// kept up to date.  They are also significantly more memory intensive.
 
-template <unsigned ElementSize = 128> struct SparseBitVectorElement {
+template <unsigned ElementSize = 128> struct LLVM_CLASS_ABI SparseBitVectorElement {
 public:
   using BitWord = unsigned long;
   using size_type = unsigned;
@@ -254,7 +254,7 @@ public:
 };
 
 template <unsigned ElementSize = 128>
-class SparseBitVector {
+class LLVM_CLASS_ABI SparseBitVector {
   using ElementList = std::list<SparseBitVectorElement<ElementSize>>;
   using ElementListIter = typename ElementList::iterator;
   using ElementListConstIter = typename ElementList::const_iterator;

@@ -31,74 +31,74 @@ namespace orc {
 // --raw_ostream operators for ORC types--
 
 /// Render a SymbolStringPtr.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPtr &Sym);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPtr &Sym);
 
 /// Render a SymbolNameSet.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolNameSet &Symbols);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolNameSet &Symbols);
 
 /// Render a SymbolNameVector.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolNameVector &Symbols);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolNameVector &Symbols);
 
 /// Render an array of SymbolStringPtrs.
-raw_ostream &operator<<(raw_ostream &OS, ArrayRef<SymbolStringPtr> Symbols);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, ArrayRef<SymbolStringPtr> Symbols);
 
 /// Render JITSymbolFlags.
-raw_ostream &operator<<(raw_ostream &OS, const JITSymbolFlags &Flags);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const JITSymbolFlags &Flags);
 
 /// Render a SymbolFlagsMap entry.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolFlagsMap::value_type &KV);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolFlagsMap::value_type &KV);
 
 /// Render a SymbolMap entry.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolMap::value_type &KV);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolMap::value_type &KV);
 
 /// Render a SymbolFlagsMap.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolFlagsMap &SymbolFlags);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolFlagsMap &SymbolFlags);
 
 /// Render a SymbolMap.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolMap &Symbols);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolMap &Symbols);
 
 /// Render a SymbolDependenceMap entry.
-raw_ostream &operator<<(raw_ostream &OS,
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS,
                         const SymbolDependenceMap::value_type &KV);
 
 /// Render a SymbolDependendeMap.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolDependenceMap &Deps);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolDependenceMap &Deps);
 
 /// Render a MaterializationUnit.
-raw_ostream &operator<<(raw_ostream &OS, const MaterializationUnit &MU);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const MaterializationUnit &MU);
 
 //// Render a JITDylibLookupFlags instance.
-raw_ostream &operator<<(raw_ostream &OS,
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS,
                         const JITDylibLookupFlags &JDLookupFlags);
 
 /// Render a SymbolLookupFlags instance.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupFlags &LookupFlags);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupFlags &LookupFlags);
 
 /// Render a SymbolLookupSet entry.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupSet::value_type &KV);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupSet::value_type &KV);
 
 /// Render a SymbolLookupSet.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupSet &LookupSet);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupSet &LookupSet);
 
 /// Render a JITDylibSearchOrder.
-raw_ostream &operator<<(raw_ostream &OS,
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS,
                         const JITDylibSearchOrder &SearchOrder);
 
 /// Render a SymbolAliasMap.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolAliasMap &Aliases);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolAliasMap &Aliases);
 
 /// Render a SymbolState.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolState &S);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolState &S);
 
 /// Render a LookupKind.
-raw_ostream &operator<<(raw_ostream &OS, const LookupKind &K);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const LookupKind &K);
 
 /// Dump a SymbolStringPool. Useful for debugging dangling-pointer crashes.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
+LLVM_FUNC_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
 
 /// A function object that can be used as an ObjectTransformLayer transform
 /// to dump object files to disk at a specified path.
-class DumpObjects {
+class LLVM_CLASS_ABI DumpObjects {
 public:
   /// Construct a DumpObjects transform that will dump objects to disk.
   ///

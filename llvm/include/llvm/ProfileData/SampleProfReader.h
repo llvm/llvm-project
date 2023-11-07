@@ -263,7 +263,7 @@ class SampleProfileReader;
 /// SampleProfileReaderItaniumRemapper remaps the profile data from a
 /// sample profile data reader, by applying a provided set of equivalences
 /// between components of the symbol names in the profile.
-class SampleProfileReaderItaniumRemapper {
+class LLVM_CLASS_ABI SampleProfileReaderItaniumRemapper {
 public:
   SampleProfileReaderItaniumRemapper(std::unique_ptr<MemoryBuffer> B,
                                      std::unique_ptr<SymbolRemappingReader> SRR,
@@ -344,7 +344,7 @@ private:
 /// The reader supports two file formats: text and binary. The text format
 /// is useful for debugging and testing, while the binary format is more
 /// compact and I/O efficient. They can both be used interchangeably.
-class SampleProfileReader {
+class LLVM_CLASS_ABI SampleProfileReader {
 public:
   SampleProfileReader(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
                       SampleProfileFormat Format = SPF_None)
@@ -555,7 +555,7 @@ protected:
   bool ProfileIsMD5 = false;
 };
 
-class SampleProfileReaderText : public SampleProfileReader {
+class LLVM_CLASS_ABI SampleProfileReaderText : public SampleProfileReader {
 public:
   SampleProfileReaderText(std::unique_ptr<MemoryBuffer> B, LLVMContext &C)
       : SampleProfileReader(std::move(B), C, SPF_Text) {}
@@ -578,7 +578,7 @@ private:
   std::list<SampleContextFrameVector> CSNameTable;
 };
 
-class SampleProfileReaderBinary : public SampleProfileReader {
+class LLVM_CLASS_ABI SampleProfileReaderBinary : public SampleProfileReader {
 public:
   SampleProfileReaderBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
                             SampleProfileFormat Format = SPF_None)
@@ -675,7 +675,7 @@ private:
   virtual std::error_code verifySPMagic(uint64_t Magic) = 0;
 };
 
-class SampleProfileReaderRawBinary : public SampleProfileReaderBinary {
+class LLVM_CLASS_ABI SampleProfileReaderRawBinary : public SampleProfileReaderBinary {
 private:
   std::error_code verifySPMagic(uint64_t Magic) override;
 
@@ -707,7 +707,7 @@ public:
 /// commonly used sections of a profile in extensible binary format. It is
 /// possible to define other types of profile inherited from
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase.
-class SampleProfileReaderExtBinaryBase : public SampleProfileReaderBinary {
+class LLVM_CLASS_ABI SampleProfileReaderExtBinaryBase : public SampleProfileReaderBinary {
 private:
   std::error_code decompressSection(const uint8_t *SecStart,
                                     const uint64_t SecSize,
@@ -784,7 +784,7 @@ public:
   void setSkipFlatProf(bool Skip) override { SkipFlatProf = Skip; }
 };
 
-class SampleProfileReaderExtBinary : public SampleProfileReaderExtBinaryBase {
+class LLVM_CLASS_ABI SampleProfileReaderExtBinary : public SampleProfileReaderExtBinaryBase {
 private:
   std::error_code verifySPMagic(uint64_t Magic) override;
   std::error_code readCustomSection(const SecHdrTableEntry &Entry) override {
@@ -817,7 +817,7 @@ enum HistType {
   HIST_TYPE_INDIR_CALL_TOPN
 };
 
-class SampleProfileReaderGCC : public SampleProfileReader {
+class LLVM_CLASS_ABI SampleProfileReaderGCC : public SampleProfileReader {
 public:
   SampleProfileReaderGCC(std::unique_ptr<MemoryBuffer> B, LLVMContext &C)
       : SampleProfileReader(std::move(B), C, SPF_GCC),

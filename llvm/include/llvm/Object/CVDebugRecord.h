@@ -14,7 +14,7 @@
 
 namespace llvm {
 namespace OMF {
-struct Signature {
+struct LLVM_CLASS_ABI Signature {
   enum ID : uint32_t {
     PDB70 = 0x53445352, // RSDS
     PDB20 = 0x3031424e, // NB10
@@ -28,14 +28,14 @@ struct Signature {
 }
 
 namespace codeview {
-struct PDB70DebugInfo {
+struct LLVM_CLASS_ABI PDB70DebugInfo {
   support::ulittle32_t CVSignature;
   uint8_t Signature[16];
   support::ulittle32_t Age;
   // char PDBFileName[];
 };
 
-struct PDB20DebugInfo {
+struct LLVM_CLASS_ABI PDB20DebugInfo {
   support::ulittle32_t CVSignature;
   support::ulittle32_t Offset;
   support::ulittle32_t Signature;

@@ -33,7 +33,7 @@ class MCSubRegIterator;
 class MCSuperRegIterator;
 
 /// MCRegisterClass - Base class of TargetRegisterClass.
-class MCRegisterClass {
+class LLVM_CLASS_ABI MCRegisterClass {
 public:
   using iterator = const MCPhysReg*;
   using const_iterator = const MCPhysReg*;
@@ -107,7 +107,7 @@ public:
 /// super-registers of the specific register, e.g. RAX, EAX, are
 /// super-registers of AX.
 ///
-struct MCRegisterDesc {
+struct LLVM_CLASS_ABI MCRegisterDesc {
   uint32_t Name;      // Printable name for the reg (for debugging)
   uint32_t SubRegs;   // Sub-register set, described above
   uint32_t SuperRegs; // Super-register set, described above
@@ -137,7 +137,7 @@ struct MCRegisterDesc {
 /// TableGen generated physical register data. It must not be extended with
 /// virtual methods.
 ///
-class MCRegisterInfo {
+class LLVM_CLASS_ABI MCRegisterInfo {
 public:
   using regclass_iterator = const MCRegisterClass *;
 
@@ -508,7 +508,7 @@ public:
 
 /// MCSubRegIterator enumerates all sub-registers of Reg.
 /// If IncludeSelf is set, Reg itself is included in the list.
-class MCSubRegIterator
+class LLVM_CLASS_ABI MCSubRegIterator
     : public iterator_adaptor_base<MCSubRegIterator,
                                    MCRegisterInfo::DiffListIterator,
                                    std::forward_iterator_tag, const MCPhysReg> {
@@ -543,7 +543,7 @@ public:
 
 /// Iterator that enumerates the sub-registers of a Reg and the associated
 /// sub-register indices.
-class MCSubRegIndexIterator {
+class LLVM_CLASS_ABI MCSubRegIndexIterator {
   MCSubRegIterator SRIter;
   const uint16_t *SRIndex;
 
@@ -577,7 +577,7 @@ public:
 
 /// MCSuperRegIterator enumerates all super-registers of Reg.
 /// If IncludeSelf is set, Reg itself is included in the list.
-class MCSuperRegIterator
+class LLVM_CLASS_ABI MCSuperRegIterator
     : public iterator_adaptor_base<MCSuperRegIterator,
                                    MCRegisterInfo::DiffListIterator,
                                    std::forward_iterator_tag, const MCPhysReg> {
@@ -622,7 +622,7 @@ inline bool MCRegisterInfo::isSuperRegister(MCRegister RegA, MCRegister RegB) co
 
 // MCRegUnitIterator enumerates a list of register units for Reg. The list is
 // in ascending numerical order.
-class MCRegUnitIterator
+class LLVM_CLASS_ABI MCRegUnitIterator
     : public iterator_adaptor_base<MCRegUnitIterator,
                                    MCRegisterInfo::DiffListIterator,
                                    std::forward_iterator_tag, const MCRegUnit> {
@@ -661,7 +661,7 @@ public:
 /// MCRegUnitMaskIterator enumerates a list of register units and their
 /// associated lane masks for Reg. The register units are in ascending
 /// numerical order.
-class MCRegUnitMaskIterator {
+class LLVM_CLASS_ABI MCRegUnitMaskIterator {
   MCRegUnitIterator RUIter;
   const LaneBitmask *MaskListIter;
 
@@ -701,7 +701,7 @@ public:
 //    }
 
 /// MCRegUnitRootIterator enumerates the root registers of a register unit.
-class MCRegUnitRootIterator {
+class LLVM_CLASS_ABI MCRegUnitRootIterator {
   uint16_t Reg0 = 0;
   uint16_t Reg1 = 0;
 
@@ -735,7 +735,7 @@ public:
 /// MCRegAliasIterator enumerates all registers aliasing Reg.  If IncludeSelf is
 /// set, Reg itself is included in the list.  This iterator does not guarantee
 /// any ordering or that entries are unique.
-class MCRegAliasIterator {
+class LLVM_CLASS_ABI MCRegAliasIterator {
 private:
   MCRegister Reg;
   const MCRegisterInfo *MCRI;

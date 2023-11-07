@@ -22,7 +22,7 @@ namespace llvm {
 
 /// InstructionWorklist - This is the worklist management logic for
 /// InstCombine and other simplification passes.
-class InstructionWorklist {
+class LLVM_CLASS_ABI InstructionWorklist {
   SmallVector<Instruction *, 256> Worklist;
   DenseMap<Instruction *, unsigned> WorklistMap;
   /// These instructions will be added in reverse order after the current

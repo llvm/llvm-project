@@ -38,7 +38,7 @@ enum class FileFormat {
 // This type keeps track of the machine info for various architectures. This
 // lets us map architecture names to ELF types and the e_machine value of the
 // ELF file.
-struct MachineInfo {
+struct LLVM_CLASS_ABI MachineInfo {
   MachineInfo(uint16_t EM, uint8_t ABI, bool Is64, bool IsLittle)
       : EMachine(EM), OSABI(ABI), Is64Bit(Is64), IsLittleEndian(IsLittle) {}
   // Alternative constructor that defaults to NONE for OSABI.
@@ -74,13 +74,13 @@ enum SectionFlag {
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/SecLarge)
 };
 
-struct SectionRename {
+struct LLVM_CLASS_ABI SectionRename {
   StringRef OriginalName;
   StringRef NewName;
   std::optional<SectionFlag> NewFlags;
 };
 
-struct SectionFlagsUpdate {
+struct LLVM_CLASS_ABI SectionFlagsUpdate {
   StringRef Name;
   SectionFlag NewFlags;
 };
@@ -97,7 +97,7 @@ enum class MatchStyle {
   Regex,    // Enabled with --regex.
 };
 
-class NameOrPattern {
+class LLVM_CLASS_ABI NameOrPattern {
   StringRef Name;
   // Regex is shared between multiple CommonConfig instances.
   std::shared_ptr<Regex> R;
@@ -130,7 +130,7 @@ public:
 
 // Matcher that checks symbol or section names against the command line flags
 // provided for that option.
-class NameMatcher {
+class LLVM_CLASS_ABI NameMatcher {
   DenseSet<CachedHashStringRef> PosNames;
   std::vector<NameOrPattern> PosPatterns;
   std::vector<NameOrPattern> NegMatchers;
@@ -181,7 +181,7 @@ enum class SymbolFlag {
 
 // Symbol info specified by --add-symbol option. Symbol flags not supported
 // by a concrete format should be ignored.
-struct NewSymbolInfo {
+struct LLVM_CLASS_ABI NewSymbolInfo {
   StringRef SymbolName;
   StringRef SectionName;
   uint64_t Value = 0;
@@ -190,7 +190,7 @@ struct NewSymbolInfo {
 };
 
 // Specify section name and section body for newly added or updated section.
-struct NewSectionInfo {
+struct LLVM_CLASS_ABI NewSectionInfo {
   NewSectionInfo() = default;
   NewSectionInfo(StringRef Name, std::unique_ptr<MemoryBuffer> &&Buffer)
       : SectionName(Name), SectionData(std::move(Buffer)) {}
@@ -200,7 +200,7 @@ struct NewSectionInfo {
 };
 
 // Configuration for copying/stripping a single file.
-struct CommonConfig {
+struct LLVM_CLASS_ABI CommonConfig {
   // Main input/output options
   StringRef InputFilename;
   FileFormat InputFormat = FileFormat::Unspecified;

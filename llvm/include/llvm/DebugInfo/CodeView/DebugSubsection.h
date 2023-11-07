@@ -19,7 +19,7 @@ namespace llvm {
 class BinaryStreamWriter;
 namespace codeview {
 
-class DebugSubsectionRef {
+class LLVM_CLASS_ABI DebugSubsectionRef {
 public:
   explicit DebugSubsectionRef(DebugSubsectionKind Kind) : Kind(Kind) {}
   virtual ~DebugSubsectionRef();
@@ -32,7 +32,7 @@ protected:
   DebugSubsectionKind Kind;
 };
 
-class DebugSubsection {
+class LLVM_CLASS_ABI DebugSubsection {
 public:
   explicit DebugSubsection(DebugSubsectionKind Kind) : Kind(Kind) {}
   virtual ~DebugSubsection();

@@ -89,7 +89,7 @@ private:
 /// SmartMutex - An R/W mutex with a compile time constant parameter that
 /// indicates whether this mutex should become a no-op when we're not
 /// running in multithreaded mode.
-template <bool mt_only> class SmartRWMutex {
+template <bool mt_only> class LLVM_CLASS_ABI SmartRWMutex {
 #if !defined(LLVM_USE_RW_MUTEX_IMPL)
   std::shared_mutex impl;
 #else

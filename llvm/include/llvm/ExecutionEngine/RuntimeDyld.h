@@ -40,7 +40,7 @@ template <typename T> class OwningBinary;
 
 /// Base class for errors originating in RuntimeDyld, e.g. missing relocation
 /// support.
-class RuntimeDyldError : public ErrorInfo<RuntimeDyldError> {
+class LLVM_CLASS_ABI RuntimeDyldError : public ErrorInfo<RuntimeDyldError> {
 public:
   static char ID;
 
@@ -56,7 +56,7 @@ private:
 
 class RuntimeDyldImpl;
 
-class RuntimeDyld {
+class LLVM_CLASS_ABI RuntimeDyld {
 public:
   // Change the address associated with a section when resolving relocations.
   // Any relocations already associated with the symbol will be re-resolved.
@@ -285,7 +285,7 @@ public:
   void finalizeWithMemoryManagerLocking();
 
 private:
-  friend void jitLinkForORC(
+  friend LLVM_FUNC_ABI void jitLinkForORC(
       object::OwningBinary<object::ObjectFile> O,
       RuntimeDyld::MemoryManager &MemMgr, JITSymbolResolver &Resolver,
       bool ProcessAllSections,
@@ -311,7 +311,7 @@ private:
 // but ORC's RTDyldObjectLinkingLayer2. Internally it constructs a RuntimeDyld
 // instance and uses continuation passing to perform the fix-up and finalize
 // steps asynchronously.
-void jitLinkForORC(
+LLVM_FUNC_ABI void jitLinkForORC(
     object::OwningBinary<object::ObjectFile> O,
     RuntimeDyld::MemoryManager &MemMgr, JITSymbolResolver &Resolver,
     bool ProcessAllSections,

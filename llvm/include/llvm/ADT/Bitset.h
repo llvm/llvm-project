@@ -28,7 +28,7 @@ namespace llvm {
 /// nice to use std::bitset directly, but it doesn't support constant
 /// initialization.
 template <unsigned NumBits>
-class Bitset {
+class LLVM_CLASS_ABI Bitset {
   typedef uintptr_t BitWord;
 
   enum { BITWORD_SIZE = (unsigned)sizeof(BitWord) * CHAR_BIT };

@@ -53,7 +53,7 @@ class ValueSymbolTable;
 /// because it may be useful in the intermediate stage of constructing or
 /// modifying a program. However, the verifier will ensure that basic blocks are
 /// "well formed".
-class BasicBlock final : public Value, // Basic blocks are data objects also
+class LLVM_CLASS_ABI BasicBlock final : public Value, // Basic blocks are data objects also
                          public ilist_node_with_parent<BasicBlock, Function> {
 public:
   using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>>;
@@ -658,7 +658,7 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(BasicBlock, LLVMBasicBlockRef)
 
 /// Advance \p It while it points to a debug instruction and return the result.
 /// This assumes that \p It is not at the end of a block.
-BasicBlock::iterator skipDebugIntrinsics(BasicBlock::iterator It);
+LLVM_FUNC_ABI BasicBlock::iterator skipDebugIntrinsics(BasicBlock::iterator It);
 
 #ifdef NDEBUG
 /// In release builds, this is a no-op. For !NDEBUG builds, the checks are
