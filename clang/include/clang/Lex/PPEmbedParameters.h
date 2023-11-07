@@ -27,7 +27,7 @@ public:
 
   PPEmbedParameterOffset(size_t Offset, SourceLocation Start,
                          SourceLocation End)
-      : Offset(Offset), PPDirectiveParameter(Start, End) {}
+      : PPDirectiveParameter(Start, End), Offset(Offset) {}
 };
 
 /// Preprocessor standard embed parameter "limit"
@@ -37,7 +37,7 @@ public:
   size_t Limit;
 
   PPEmbedParameterLimit(size_t Limit, SourceLocation Start, SourceLocation End)
-      : Limit(Limit), PPDirectiveParameter(Start, End) {}
+      : PPDirectiveParameter(Start, End), Limit(Limit) {}
 };
 
 /// Preprocessor standard embed parameter "prefix"
@@ -48,7 +48,7 @@ public:
 
   PPEmbedParameterPrefix(SmallVector<Token, 2> Tokens, SourceLocation Start,
                          SourceLocation End)
-      : Tokens(std::move(Tokens)), PPDirectiveParameter(Start, End) {}
+      : PPDirectiveParameter(Start, End), Tokens(std::move(Tokens)) {}
 };
 
 /// Preprocessor standard embed parameter "suffix"
@@ -59,7 +59,7 @@ public:
 
   PPEmbedParameterSuffix(SmallVector<Token, 2> Tokens, SourceLocation Start,
                          SourceLocation End)
-      : Tokens(std::move(Tokens)), PPDirectiveParameter(Start, End) {}
+      : PPDirectiveParameter(Start, End), Tokens(std::move(Tokens)) {}
 };
 
 /// Preprocessor standard embed parameter "if_empty"
@@ -70,7 +70,7 @@ public:
 
   PPEmbedParameterIfEmpty(SmallVector<Token, 2> Tokens, SourceLocation Start,
                           SourceLocation End)
-      : Tokens(std::move(Tokens)), PPDirectiveParameter(Start, End) {}
+      : PPDirectiveParameter(Start, End), Tokens(std::move(Tokens)) {}
 };
 
 } // end namespace clang
