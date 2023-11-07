@@ -1102,9 +1102,9 @@ static inline bool shouldRecordVTableAddr(GlobalVariable *GV) {
 
 // FIXME: Does symbollic relocation from 'getFuncAddrForProfData' matter here?
 static inline Constant *getVTableAddrForProfData(GlobalVariable *GV) {
-  // Store a nullptr in __profvt_ if a real address shouldn't be used.
   auto *Int8PtrTy = Type::getInt8PtrTy(GV->getContext());
 
+  // Store a nullptr in __profvt_ if a real address shouldn't be used.
   if (!shouldRecordVTableAddr(GV))
     return ConstantPointerNull::get(Int8PtrTy);
 
@@ -1113,7 +1113,7 @@ static inline Constant *getVTableAddrForProfData(GlobalVariable *GV) {
 
 /// Get the name of a profiling variable for a particular variable.
 static std::string getVarName(GlobalVariable *GV, StringRef Prefix) {
-  StringRef Name = GV->getName();
+  StringRef Name = getPGOName(*GV);
   return (Prefix + Name).str();
 }
 

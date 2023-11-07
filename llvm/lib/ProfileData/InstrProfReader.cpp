@@ -1309,7 +1309,7 @@ Error IndexedInstrProfReader::readHeader() {
                                         "corrupted binary ids");
   }
 
-  if (GET_VERSION(Header->formatVersion()) >= 11) {
+  if (GET_VERSION(Header->formatVersion()) >= 12) {
     uint64_t VTableNamesOffset =
         endian::byte_swap<uint64_t, llvm::endianness::little>(
             Header->VTableNamesOffset);

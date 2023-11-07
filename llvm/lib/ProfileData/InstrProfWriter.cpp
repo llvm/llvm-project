@@ -604,7 +604,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   // if version >= the version with vtable profile metadata.
   uint64_t VTableNamesSectionStart = 0;
-  if (IndexedInstrProf::ProfVersion::CurrentVersion >= 11) {
+  if (IndexedInstrProf::ProfVersion::CurrentVersion >= 12) {
     VTableNamesSectionStart = OS.tell();
 
     std::string CompressedVTableNames;

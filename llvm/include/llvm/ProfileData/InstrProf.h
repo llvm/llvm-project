@@ -251,13 +251,6 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
 Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
                            std::string &Result, bool doCompression);
 
-/// \c NameStrings is a string composed of one of more sub-strings encoded in
-/// the format described above. The substrings are separated by 0 or more zero
-/// bytes. This method decodes the string and calls `NameCallback` for each
-/// substring.
-Error readPGOFuncNameStrings(StringRef NameStrings,
-                             std::function<Error(StringRef)> NameCallback);
-
 /// Check if INSTR_PROF_RAW_VERSION_VAR is defined. This global is only being
 /// set in IR PGO compilation.
 bool isIRPGOFlagSet(const Module *M);
@@ -502,15 +495,20 @@ public:
   /// format.
   inline Error create(StringRef D, uint64_t BaseAddr);
 
-  /// \c NameStrings is a string composed of one of more sub-strings
+  /// \c NameStrings is a string composed of one or more sub-strings
   ///  encoded in the format described in \c collectPGOFuncNameStrings.
-  /// This method is a wrapper to \c readPGOFuncNameStrings method.
-  inline Error create(StringRef NameStrings);
+  /// This method is a wrapper to \c readAndDecodeStrings method.
+  Error create(StringRef NameStrings);
 
-  inline Error create(StringRef FuncNameStrings, StringRef VTableNameStrings);
+  /// \c FuncNameStrings is a string composed of one or more encoded function
+  /// name strings, and \c VTableNameStrings composes of one or more encoded
+  /// vtable names. This function is a wrapper to \c readAndDecodeStrings
+  /// method.
+  Error create(StringRef FuncNameStrings, StringRef VTableNameStrings);
 
-  inline Error
-  initVTableNamesFromCompressedStrings(StringRef CompressedVTableNames);
+  /// Initialize 'this' with the set of vtable names encoded in
+  /// \c CompressedVTableNames.
+  Error initVTableNamesFromCompressedStrings(StringRef CompressedVTableNames);
 
   /// A wrapper interface to populate the PGO symtab with functions
   /// decls from module \c M. This interface is used by transformation
@@ -617,33 +615,6 @@ Error InstrProfSymtab::create(StringRef D, uint64_t BaseAddr) {
   Data = D;
   Address = BaseAddr;
   return Error::success();
-}
-
-// FIXME: Move 'InstrProfSymtab::create' definition into cpp,
-// and move 'readPGOFuncNameStrings' inside cpp.
-Error InstrProfSymtab::create(StringRef NameStrings) {
-  return readPGOFuncNameStrings(
-      NameStrings,
-      std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
-}
-
-Error InstrProfSymtab::create(StringRef FuncNameStrings,
-                              StringRef VTableNameStrings) {
-  if (Error E = readPGOFuncNameStrings(FuncNameStrings,
-                                       std::bind(&InstrProfSymtab::addFuncName,
-                                                 this, std::placeholders::_1)))
-    return E;
-
-  return readPGOFuncNameStrings(
-      VTableNameStrings,
-      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
-}
-
-Error InstrProfSymtab::initVTableNamesFromCompressedStrings(
-    StringRef CompressedVTableStrings) {
-  return readPGOFuncNameStrings(
-      CompressedVTableStrings,
-      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
 }
 
 template <typename NameIterRange>

@@ -18,9 +18,6 @@
  * pointers to the live data in memory.  This function is probably not what you
  * want.  Use __llvm_profile_get_size_for_buffer instead.  Use this function if
  * your program has a custom memory layout.
- * NOTE: The change of function signature requires modifying c source code
- * as demonstrated by the existing tests. If this is causing backward
- * compatible issues, considering adding another function for new use cases.
  */
 uint64_t __llvm_profile_get_size_for_buffer_internal(
     const __llvm_profile_data *DataBegin, const __llvm_profile_data *DataEnd,

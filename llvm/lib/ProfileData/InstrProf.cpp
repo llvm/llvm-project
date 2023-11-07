@@ -487,6 +487,78 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
   return Error::success();
 }
 
+/// \c NameStrings is a string composed of one of more possibly encoded
+/// sub-strings. The substrings are separated by 0 or more zero bytes. This
+/// method decodes the string and calls `NameCallback` for each substring.
+static Error
+readAndDecodeStrings(StringRef NameStrings,
+                     std::function<Error(StringRef)> NameCallback) {
+  const uint8_t *P = NameStrings.bytes_begin();
+  const uint8_t *EndP = NameStrings.bytes_end();
+  while (P < EndP) {
+    uint32_t N;
+    uint64_t UncompressedSize = decodeULEB128(P, &N);
+    P += N;
+    uint64_t CompressedSize = decodeULEB128(P, &N);
+    P += N;
+    bool isCompressed = (CompressedSize != 0);
+    SmallVector<uint8_t, 128> UncompressedNameStrings;
+    StringRef NameStrings;
+    if (isCompressed) {
+      if (!llvm::compression::zlib::isAvailable())
+        return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
+
+      if (Error E = compression::zlib::decompress(ArrayRef(P, CompressedSize),
+                                                  UncompressedNameStrings,
+                                                  UncompressedSize)) {
+        consumeError(std::move(E));
+        return make_error<InstrProfError>(instrprof_error::uncompress_failed);
+      }
+      P += CompressedSize;
+      NameStrings = toStringRef(UncompressedNameStrings);
+    } else {
+      NameStrings =
+          StringRef(reinterpret_cast<const char *>(P), UncompressedSize);
+      P += UncompressedSize;
+    }
+    // Now parse the name strings.
+    SmallVector<StringRef, 0> Names;
+    NameStrings.split(Names, getInstrProfNameSeparator());
+    for (StringRef &Name : Names)
+      if (Error E = NameCallback(Name))
+        return E;
+
+    while (P < EndP && *P == 0)
+      P++;
+  }
+  return Error::success();
+}
+
+Error InstrProfSymtab::create(StringRef NameStrings) {
+  return readAndDecodeStrings(
+      NameStrings,
+      std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
+}
+
+Error InstrProfSymtab::create(StringRef FuncNameStrings,
+                              StringRef VTableNameStrings) {
+  if (Error E = readAndDecodeStrings(FuncNameStrings,
+                                     std::bind(&InstrProfSymtab::addFuncName,
+                                               this, std::placeholders::_1)))
+    return E;
+
+  return readAndDecodeStrings(
+      VTableNameStrings,
+      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+}
+
+Error InstrProfSymtab::initVTableNamesFromCompressedStrings(
+    StringRef CompressedVTableStrings) {
+  return readAndDecodeStrings(
+      CompressedVTableStrings,
+      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+}
+
 Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
   if (Error E = addFuncName(PGOFuncName))
     return E;
@@ -621,75 +693,6 @@ Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
   return collectGlobalObjectNameStrings(
       VTableNameStrs, compression::zlib::isAvailable() && doCompression,
       Result);
-}
-
-instrprof_error decodeAndSplitStrings(
-    const uint8_t *Input, SmallVector<uint8_t, 128> &UncompressedNameStrings,
-    StringRef &NameStrings, uint32_t &Dist, bool &IsCompressed) {
-  Dist = 0;
-  const uint8_t *Start = Input;
-  uint32_t UncompressedSizeLen = 0;
-  uint64_t UncompressedSize = decodeULEB128(Start, &UncompressedSizeLen);
-  Start += UncompressedSizeLen;
-  Dist += UncompressedSizeLen;
-  uint32_t CompressedSizeLen = 0;
-  uint64_t CompressedSize = decodeULEB128(Start, &CompressedSizeLen);
-  Start += CompressedSizeLen;
-  Dist += CompressedSizeLen;
-  IsCompressed = (CompressedSize != 0);
-  if (!IsCompressed) {
-    NameStrings =
-        StringRef(reinterpret_cast<const char *>(Start), UncompressedSize);
-    Dist += UncompressedSize;
-    return instrprof_error::success;
-  }
-
-  if (!llvm::compression::zlib::isAvailable())
-    return instrprof_error::zlib_unavailable;
-
-  if (Error E = compression::zlib::decompress(ArrayRef(Start, CompressedSize),
-                                              UncompressedNameStrings,
-                                              UncompressedSize)) {
-    consumeError(std::move(E));
-    return instrprof_error::uncompress_failed;
-  }
-  Dist += CompressedSize;
-
-  return instrprof_error::success;
-}
-
-Error readPGOFuncNameStrings(StringRef NameStrings,
-                             std::function<Error(StringRef)> NameCallback) {
-  const uint8_t *P = NameStrings.bytes_begin();
-  const uint8_t *EndP = NameStrings.bytes_end();
-  while (P < EndP) {
-    // Now parse the name strings.
-    uint32_t Dist = 0;
-    StringRef NameStrings;
-    SmallVector<uint8_t, 128> UncompressedNameStrings;
-    SmallVector<StringRef, 0> Names;
-    bool IsCompressed = false;
-    instrprof_error E = decodeAndSplitStrings(P, UncompressedNameStrings,
-                                              NameStrings, Dist, IsCompressed);
-    if (E != instrprof_error::success)
-      return make_error<InstrProfError>(E);
-
-    if (IsCompressed) {
-      NameStrings = toStringRef(UncompressedNameStrings);
-    }
-
-    NameStrings.split(Names, getInstrProfNameSeparator());
-    for (StringRef &Name : Names) {
-      if (Error E = NameCallback(Name))
-        return E;
-    }
-
-    P += Dist;
-    // Skip padding?
-    while (P < EndP && *P == 0)
-      P++;
-  }
-  return Error::success();
 }
 
 void InstrProfRecord::accumulateCounts(CountSumOrPercent &Sum) const {
@@ -954,10 +957,8 @@ uint64_t InstrProfRecord::remapValue(uint64_t Value, uint32_t ValueKind,
   if (ValueKind == IPVK_IndirectCallTarget)
     return SymTab->getFunctionHashFromAddress(Value);
 
-  if (ValueKind == IPVK_VTableTarget) {
-    uint64_t VTableHash = SymTab->getVTableHashFromAddress(Value);
-    return VTableHash;
-  }
+  if (ValueKind == IPVK_VTableTarget)
+    return SymTab->getVTableHashFromAddress(Value);
 
   return Value;
 }
@@ -1531,7 +1532,7 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
       strncpy(ProfileKindName, "MemOP", 19);
       break;
     case IPVK_VTableTarget:
-      strncpy(ProfileKindName, "VTable", 19);
+      strncpy(ProfileKindName, "VTable", 6);
       break;
     default:
       snprintf(ProfileKindName, 19, "VP[%d]", I);

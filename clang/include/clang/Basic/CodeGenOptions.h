@@ -488,16 +488,6 @@ public:
     return getProfileInstr() == ProfileClangInstr;
   }
 
-   // Returns true if IR level profile instrumentation or use is on;
-  // returns true for CS IR instrumentation or profile use as well.
-  bool hasProfileIRInstrOrUse() const {
-    // For CS IR PGO, hasProfileIRUse is true for both instrumentation
-    // and profile use. `-fprofile-use` points to IR PGO profiles
-    // in the former case and points to CS IR PGO profiles in the latter
-    // case.
-    return hasProfileIRInstr() || hasProfileIRUse();
-  }
-
   /// Check if IR level profile instrumentation is on.
   bool hasProfileIRInstr() const {
     return getProfileInstr() == ProfileIRInstr;
