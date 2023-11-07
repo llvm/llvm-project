@@ -51,11 +51,6 @@ public:
                               lldb::offset_t &offset,
                               std::vector<Value> &stack) const override;
 
-  void FindGlobalVariables(ConstString name,
-                           const CompilerDeclContext &parent_decl_ctx,
-                           uint32_t max_matches,
-                           VariableList &variables) override;
-
 protected:
   DIEToTypePtr &GetDIEToType() override;
 
