@@ -57,7 +57,6 @@ getBufferizationOptions(bool analysisOnly) {
 
 void mlir::part_tensor::buildSparseCompiler(
     OpPassManager &pm, const SparseCompilerOptions &options) {
-  pm.addPass(createConvertFuncToLLVMPass());
   pm.addPass(createPartTensorConversionPass());
   pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
   pm.addPass(createSparsificationAndBufferizationPass(
@@ -100,6 +99,7 @@ void mlir::part_tensor::buildSparseCompiler(
   pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
   pm.addPass(createConvertComplexToLLVMPass());
   pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
+  pm.addPass(createConvertFuncToLLVMPass());
 
   // Finalize GPU code generation.
   if (gpuCodegen) {
