@@ -374,6 +374,12 @@ private:
   uintptr_t offset_;
 };
 
+LIBC_INLINE void prefetch_for_write(CPtr dst) { __builtin_prefetch(dst, 1, 3); }
+
+LIBC_INLINE void prefetch_to_local_cache(CPtr dst) {
+  __builtin_prefetch(dst, 0, 3);
+}
+
 } // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H

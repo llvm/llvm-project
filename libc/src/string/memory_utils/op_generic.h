@@ -141,19 +141,23 @@ template <typename T> struct Memset {
   static_assert(is_element_type_v<T>);
   static constexpr size_t SIZE = sizeof(T);
 
-  LIBC_INLINE static void block(Ptr dst, uint8_t value) {
+  LIBC_INLINE static void block_offset(Ptr dst, uint8_t value, size_t offset) {
     if constexpr (is_scalar_v<T> || is_vector_v<T>) {
-      store<T>(dst, splat<T>(value));
+      store<T>(dst + offset, splat<T>(value));
     } else if constexpr (is_array_v<T>) {
       using value_type = typename T::value_type;
       const auto Splat = splat<value_type>(value);
       for (size_t I = 0; I < array_size_v<T>; ++I)
-        store<value_type>(dst + (I * sizeof(value_type)), Splat);
+        store<value_type>(dst + offset + (I * sizeof(value_type)), Splat);
     }
   }
 
+  LIBC_INLINE static void block(Ptr dst, uint8_t value) {
+    block_offset(dst, value, 0);
+  }
+
   LIBC_INLINE static void tail(Ptr dst, uint8_t value, size_t count) {
-    block(dst + count - SIZE, value);
+    block_offset(dst, value, count - SIZE);
   }
 
   LIBC_INLINE static void head_tail(Ptr dst, uint8_t value, size_t count) {
@@ -161,32 +165,18 @@ template <typename T> struct Memset {
     tail(dst, value, count);
   }
 
-  LIBC_INLINE static void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
+  LIBC_INLINE static void loop_and_tail_offset(Ptr dst, uint8_t value,
+                                               size_t count, size_t offset) {
     static_assert(SIZE > 1, "a loop of size 1 does not need tail");
-    size_t offset = 0;
     do {
-      block(dst + offset, value);
+      block_offset(dst, value, offset);
       offset += SIZE;
     } while (offset < count - SIZE);
     tail(dst, value, count);
   }
 
-  template <size_t prefetch_distance, size_t prefetch_degree>
-  LIBC_INLINE static void loop_and_tail_prefetch(Ptr dst, uint8_t value,
-                                                 size_t count) {
-    size_t offset = 96;
-    while (offset + prefetch_degree + SIZE <= count) {
-      for (size_t i = 0; i < prefetch_degree / sw_prefetch::kCachelineSize; ++i)
-        sw_prefetch::PrefetchW(dst + offset + prefetch_distance +
-                               sw_prefetch::kCachelineSize * i);
-      for (size_t i = 0; i < prefetch_degree; i += SIZE, offset += SIZE)
-        block(dst + offset, value);
-    }
-    while (offset + SIZE < count) {
-      block(dst + offset, value);
-      offset += SIZE;
-    }
-    tail(dst, value, count);
+  LIBC_INLINE static void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
+    return loop_and_tail_offset(dst, value, count, 0);
   }
 };
 
