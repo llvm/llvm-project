@@ -433,6 +433,74 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
   let hasVerifier = 1;
 }
 
+def GPU_DynamicSharedMemoryOp : GPU_Op<"dynamic.shared.memory", 
+                              [MemoryEffects<[MemWrite]>] > {
+  let summary = "Get the memref for dynamic shared memory";
+  
+  let description = [{
+    This operation returns shared memory, also referred to as workgroup memory,
+    using given offsets.
+
+    It is possible to use both constants and SSA values as offsets. 
+
+    If this operation is used within a `gpu.launch`, the verifier will make an
+    attempt to verify that the offsets fall within bounds by utilizing the 
+    `dynamic_shared_memory_size` argument of `gpu.launch` when the values are
+    compile-time constants. Otherwise, the verifier does not perform offset 
+    checks.
+    
+    Examples: 
+    ```mlir
+    // Constant value, offset = 32 * 64 * sizeof(f32) * 1
+    %0 = gpu.dynamic.shared.memory [1] : memref<32x64xf32, #gpu.address_space<workgroup>>
+
+    // Multi-dimensional constant values, offset = (32 * 64 * 1 + 8) * sizeof(f32)
+    %0 = gpu.dynamic.shared.memory [1, 0, 8] : memref<32x64xf32, #gpu.address_space<workgroup>>
+
+    // Multi-dimensional dynamic values, offset = (32 * 64 * %1) * sizeof(f32)
+    %0 = gpu.dynamic.shared.memory [%1, 0, 0] : (index) -> memref<32x32xf32>
+
+    // Multi-dimensional mixed values, offset = (32 * 64 * %1 + 8) * sizeof(f32)
+    %0 = gpu.dynamic.shared.memory [%1, 0, 8] : (index) -> memref<32x32xf32>
+    ```
+  }];  
+
+  let arguments = (ins 
+    Variadic<Index>:$dynamic_offsets,
+    DenseI64ArrayAttr:$static_offsets
+  );
+
+  let results = (outs Arg<AnyMemRef, "", [MemWriteAt<0, FullEffect>]>:$resultMemref);
+
+  let assemblyFormat = [{    
+    custom<DynamicIndexList>($dynamic_offsets, $static_offsets)
+    attr-dict 
+    `:` type($resultMemref)
+  }];
+
+   let builders = [
+    OpBuilder<(ins "Type":$memref, "int64_t":$offsets)>,
+    OpBuilder<(ins "Type":$memref, "OpFoldResult":$offsets)>,
+    OpBuilder<(ins "Type":$memref, "ArrayRef<int64_t>":$offsets)>,
+    OpBuilder<(ins "Type":$memref, "ArrayRef<OpFoldResult>":$offsets)>,
+  ];
+
+  let extraClassDeclaration = [{
+    /// Return a vector with all the static and dynamic offsets indices.
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      OpBuilder builder(getContext());
+      return getMixedValues(getStaticOffsets(), getDynamicOffsets(), builder);
+    }
+
+    bool hasDynamicOffsets() {
+      auto dynPos = getDynamicOffsets();
+      return std::any_of(dynPos.begin(), dynPos.end(),
+                         [](Value operand) { return operand != nullptr; });
+    }
+  }];
+  let hasVerifier = 1;
+}
+
 def LaunchIndx : AnyTypeOf<[Index, I32, I64]>;
 
 def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
@@ -587,7 +655,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
-               Optional<I32>:$dynamicSharedMemorySize)>,
+               Optional<I32>:$dynamicSharedMemorySize,
+               OptionalAttr<I32Attr>:$guray)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
@@ -693,7 +762,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       CArg<"Type", "nullptr">:$asyncTokenType,
       CArg<"ValueRange", "{}">:$asyncDependencies,
       CArg<"TypeRange", "{}">:$workgroupAttributions,
-      CArg<"TypeRange", "{}">:$privateAttributions)>
+      CArg<"TypeRange", "{}">:$privateAttributions,
+      CArg<"IntegerAttr", "IntegerAttr()">:$guray)>
   ];
 
   let extraClassDeclaration = [{

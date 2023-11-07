@@ -640,3 +640,52 @@ module {
   // expected-error @+1 {{'gpu.binary' op attribute 'offloadingHandler' failed to satisfy constraint: any attribute with the `OffloadingTranslationAttrTrait` trait.}}
   gpu.binary @binary <1> [#gpu.object<#nvvm.target, "">]
 }
+
+// -----
+
+func.func @main() {
+  %shmemSize = arith.constant 10000 : i32
+  %c1 = arith.constant 1 : index
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
+             dynamic_shared_memory_size %shmemSize
+  {
+    // expected-error @+1 {{'gpu.dynamic.shared.memory' op gpu.launch allocates a 10000 bytes of dynamic shared memory, but the Op's access upper bound requires 8192000 bytes, which exceeds the currently allocated memory limit}}
+    %0 = gpu.dynamic.shared.memory [1000, 0, 0] : memref<32x64xf32, #gpu.address_space<workgroup>>  
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @main() {
+  %shmemSize = arith.constant 8192 : i32
+  %c1 = arith.constant 1 : index
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
+             dynamic_shared_memory_size %shmemSize
+  {
+    // expected-error @+1 {{'gpu.dynamic.shared.memory' op gpu.launch allocates a 8192 bytes of dynamic shared memory, but the Op's access upper bound requires 8196 bytes, which exceeds the currently allocated memory limit}}
+    %0 = gpu.dynamic.shared.memory [1, 0, 1] : memref<32x64xf32, #gpu.address_space<workgroup>>  
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @main(%arg0 : index) {
+  %shmemSize = arith.constant 8192 : i32
+  %c1 = arith.constant 1 : index
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
+             dynamic_shared_memory_size %shmemSize
+  {
+    // expected-error @+1 {{'gpu.dynamic.shared.memory' op gpu.launch allocates a 8192 bytes of dynamic shared memory, but the Op's access upper bound requires 262144 bytes, which exceeds the currently allocated memory limit}}
+    %0 = gpu.dynamic.shared.memory [%arg0, 0, 0] : memref<128x512xf32, #gpu.address_space<workgroup>>  
+    gpu.terminator
+  }
+  return
+}
+

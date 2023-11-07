@@ -9,6 +9,7 @@
 #include "GPUOpsLowering.h"
 
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -552,6 +553,108 @@ LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
 
 static IntegerAttr wrapNumericMemorySpace(MLIRContext *ctx, unsigned space) {
   return IntegerAttr::get(IntegerType::get(ctx, 64), space);
+}
+
+/// Generates a symbol with 0-sized array type for dynamic shared memory usage,
+/// or uses existing symbol.
+LLVM::GlobalOp getDynamicSharedMemorySymbol(
+    ConversionPatternRewriter &rewriter, gpu::DynamicSharedMemoryOp op,
+    const LLVMTypeConverter *typeConverter, unsigned alignmentBit) {
+  std::optional<LLVM::GlobalOp> existingGlobalOp;
+
+  MemRefType memrefType = op.getResultMemref().getType();
+  assert(memrefType && memrefType.hasStaticShape() &&
+         "expected static shaped memref type");
+
+  LLVM::LLVMFuncOp funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
+  assert(funcOp && "cannot find llvm.func op");
+
+  gpu::GPUModuleOp moduleOp = funcOp->getParentOfType<gpu::GPUModuleOp>();
+  assert(moduleOp && "cannot find gpu.module op");
+
+  // Use already generated global op if it exists
+  int index = 0;
+  std::string prefix = llvm::formatv("__shmem_{0}", funcOp.getSymName());
+  moduleOp->walk([&](LLVM::GlobalOp globalOp) {
+    if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(globalOp.getType())) {
+      if (arrayType.getNumElements() == 0) {
+        existingGlobalOp = globalOp;
+        return WalkResult::interrupt();
+      }
+    }
+    if (globalOp.getSymName().startswith(prefix))
+      index++;
+    return WalkResult::advance();
+  });
+  if (existingGlobalOp.has_value())
+    return existingGlobalOp.value();
+
+  // Generate a new global op
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(&moduleOp.front());
+
+  auto zeroSizedArrayType = LLVM::LLVMArrayType::get(
+      typeConverter->convertType(memrefType.getElementType()), 0);
+  std::string name = std::string(llvm::formatv("{0}_{1}", prefix, index));
+  // TODO: better alignment calculation
+  uint64_t alignmentByte = alignmentBit / memrefType.getElementTypeBitWidth();
+  return rewriter.create<LLVM::GlobalOp>(
+      funcOp->getLoc(), zeroSizedArrayType, /*isConstant=*/false,
+      LLVM::Linkage::Internal, name, /*value=*/Attribute(), alignmentByte,
+      mlir::gpu::GPUMemorySpace::kSharedMemorySpace);
+}
+
+LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
+    gpu::DynamicSharedMemoryOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Location loc = op.getLoc();
+  MemRefType memrefType = op.getResultMemref().getType();
+  auto elementType = typeConverter->convertType(memrefType.getElementType());
+  assert(memrefType && "memref is not valid");
+
+  // Step 1: Generate a global symbol or existing for the dynamic shared
+  // memory
+  LLVM::GlobalOp shmemOp = getDynamicSharedMemorySymbol(
+      rewriter, op, getTypeConverter(), alignmentBit);
+  assert(shmemOp && "cannot find module op or failed generating global op");
+
+  // Step 2. Get address of the global symbol
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(op);
+  auto basePtr = rewriter.create<LLVM::AddressOfOp>(loc, shmemOp);
+  Type baseType = basePtr->getResultTypes().front();
+
+  // Step 3. Fill mixed dynamic and static offsets
+  SmallVector<LLVM::GEPArg> gepArgs;
+  for (auto [idx, value] : llvm::enumerate(op.getStaticOffsets())) {
+    if (ShapedType::isDynamic(value))
+      gepArgs.push_back(LLVM::GEPArg(adaptor.getDynamicOffsets()[idx]));
+    else
+      gepArgs.push_back(LLVM::GEPArg(value));
+  }
+
+  // Step 4. Generate GEP using offsets
+  Type gepResultType = elementType;
+  if (memrefType.hasStaticShape()) {
+    for (int64_t numElem : llvm::reverse(memrefType.getShape())) {
+      gepResultType = LLVM::LLVMArrayType::get(gepResultType, numElem);
+    }
+  }
+  Value shmemPtr = rewriter.create<LLVM::GEPOp>(loc, baseType, gepResultType,
+                                                basePtr, gepArgs);
+
+  // Step 5. Create a memref descriptor
+  SmallVector<Value> shape, strides;
+  Value sizeBytes;
+  getMemRefDescriptorSizes(loc, memrefType, {}, rewriter, shape, strides,
+                           sizeBytes);
+
+  auto memRefDescriptor = this->createMemRefDescriptor(
+      loc, memrefType, shmemPtr, shmemPtr, shape, strides, rewriter);
+
+  // Step 6. Replace the op with memref descriptor
+  rewriter.replaceOp(op, {memRefDescriptor});
+  return success();
 }
 
 void mlir::populateGpuMemorySpaceAttributeConversions(

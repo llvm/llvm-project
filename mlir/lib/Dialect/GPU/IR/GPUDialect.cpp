@@ -164,17 +164,20 @@ MMAMatrixType::verify(function_ref<InFlightDiagnostic()> emitError,
 // GPUDialect
 //===----------------------------------------------------------------------===//
 
-/// GPU memory space identifiers.
-enum GPUMemorySpace {
-  /// Generic memory space identifier.
-  kGenericMemorySpace = 0,
+bool GPUDialect::isWorkgroupMemoryAddressSpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return false;
+  if (auto intAttr = llvm::dyn_cast<IntegerAttr>(memorySpace))
+    return intAttr.getInt() == GPUMemorySpace::kSharedMemorySpace;
+  if (auto gpuAttr = llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuAttr.getValue() == getWorkgroupAddressSpace();
+  return false;
+}
 
-  /// Global memory space identifier.
-  kGlobalMemorySpace = 1,
-
-  /// Shared memory space identifier.
-  kSharedMemorySpace = 3
-};
+bool GPUDialect::hasWorkgroupMemoryAddressSpace(MemRefType type) {
+  Attribute memorySpace = type.getMemorySpace();
+  return isWorkgroupMemoryAddressSpace(memorySpace);
+}
 
 bool GPUDialect::isKernel(Operation *op) {
   UnitAttr isKernelAttr = op->getAttrOfType<UnitAttr>(getKernelFuncAttrName());
@@ -612,13 +615,16 @@ void gpu::addAsyncDependency(Operation *op, Value token) {
 // LaunchOp
 //===----------------------------------------------------------------------===//
 
+static constexpr int64_t kDynamic = std::numeric_limits<int32_t>::min();
+
 void LaunchOp::build(OpBuilder &builder, OperationState &result,
                      Value gridSizeX, Value gridSizeY, Value gridSizeZ,
                      Value getBlockSizeX, Value getBlockSizeY,
                      Value getBlockSizeZ, Value dynamicSharedMemorySize,
                      Type asyncTokenType, ValueRange asyncDependencies,
                      TypeRange workgroupAttributions,
-                     TypeRange privateAttributions) {
+                     TypeRange privateAttributions,
+                     IntegerAttr dynamicSharedMemorySizeAttr) {
   // Add a WorkGroup attribution attribute. This attribute is required to
   // identify private attributions in the list of block argguments.
   result.addAttribute(getNumWorkgroupAttributionsAttrName(),
@@ -634,7 +640,10 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
                       getBlockSizeY, getBlockSizeZ});
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
-
+  if (!dynamicSharedMemorySizeAttr) 
+    dynamicSharedMemorySizeAttr = builder.getI32IntegerAttr(kDynamic);
+  
+  result.addAttribute("guray", dynamicSharedMemorySizeAttr);
   // Create a kernel body region with kNumConfigRegionAttributes + N memory
   // attributions, where the first kNumConfigRegionAttributes arguments have
   // `index` type and the rest have the same types as the data operands.
@@ -759,6 +768,11 @@ void LaunchOp::print(OpAsmPrinter &p) {
   if (getDynamicSharedMemorySize())
     p << ' ' << getDynamicSharedMemorySizeKeyword() << ' '
       << getDynamicSharedMemorySize();
+  else if(getGurayAttr()) {
+    p << ' ' << getDynamicSharedMemorySizeKeyword() << ' ' << getGurayAttr().getInt();
+    
+  }
+  
 
   printAttributions(p, getWorkgroupKeyword(), getWorkgroupAttributions());
   printAttributions(p, getPrivateKeyword(), getPrivateAttributions());
@@ -768,7 +782,8 @@ void LaunchOp::print(OpAsmPrinter &p) {
   p.printRegion(getBody(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
                               LaunchOp::getOperandSegmentSizeAttr(),
-                              getNumWorkgroupAttributionsAttrName()});
+                              getNumWorkgroupAttributionsAttrName(),
+                              "guray"});
 }
 
 // Parse the size assignment blocks for blocks and threads.  These have the form
@@ -854,12 +869,19 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   bool hasDynamicSharedMemorySize = false;
   if (!parser.parseOptionalKeyword(
           LaunchOp::getDynamicSharedMemorySizeKeyword())) {
-    hasDynamicSharedMemorySize = true;
-    if (parser.parseOperand(dynamicSharedMemorySize) ||
-        parser.resolveOperand(dynamicSharedMemorySize,
-                              parser.getBuilder().getI32Type(),
-                              result.operands))
-      return failure();
+    IntegerAttr shmemAttr;
+    OptionalParseResult shmemAttrResult =
+        parser.parseOptionalAttribute(shmemAttr, parser.getBuilder().getI32Type());
+    if(!shmemAttrResult.has_value()) {
+      hasDynamicSharedMemorySize = true;
+      shmemAttr = parser.getBuilder().getI32IntegerAttr(kDynamic);
+      if (parser.parseOperand(dynamicSharedMemorySize) ||
+          parser.resolveOperand(dynamicSharedMemorySize,
+                                parser.getBuilder().getI32Type(),
+                                result.operands))
+        return failure();
+    }    
+    result.addAttribute("guray", shmemAttr);
   }
 
   // Create the region arguments, it has kNumConfigRegionAttributes arguments
@@ -2021,6 +2043,78 @@ gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
              << "the target attribute must be a GPU Target attribute";
     }
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DynamicSharedMemoryOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult gpu::DynamicSharedMemoryOp::verify() {
+  MemRefType memrefType = getResultMemref().getType();
+  unsigned long rank = memrefType.getRank();
+  unsigned long offset = getStaticOffsets().size();
+
+  // Number of offset can be one dimension larger the memref rank
+  if ((offset + 1) < rank) {
+    return emitOpError("Number of offset must match the rank of the memref");
+  }
+
+  // Check address space
+  if (!GPUDialect::hasWorkgroupMemoryAddressSpace(memrefType)) {
+    return emitOpError() << "Address space must be "
+                         << gpu::AddressSpaceAttr::getMnemonic() << "<"
+                         << stringifyEnum(gpu::AddressSpace::Workgroup)
+                         << "> or " << int(GPUMemorySpace::kSharedMemorySpace)
+                         << ".";
+  }
+
+  if (memrefType.hasStaticShape()) {
+    std::optional<int64_t> shmemUpperBound = std::nullopt;
+
+    // Calculate upper bound of the dynamic shared memory size.
+    if (auto launchOp =
+            this->getOperation()->getParentOfType<gpu::LaunchOp>()) {
+      if (auto constOp = launchOp.getDynamicSharedMemorySize()
+                             .getDefiningOp<mlir::arith::ConstantOp>()) {
+        if (auto dynamicSharedMemSizeAttr =
+                constOp.getValueAttr().dyn_cast<IntegerAttr>()) {
+          shmemUpperBound = dynamicSharedMemSizeAttr.getInt();
+        }
+      }
+    }
+
+    // Check upper bound of memory space and compare it with allocated one
+    if (shmemUpperBound.has_value()) {
+      int64_t requestedUpperBound = 0;
+      // Calculate upper bound when offsets are visible
+      if (!this->hasDynamicOffsets()) {
+        for (auto [idx, offset] : llvm::enumerate(getStaticOffsets())) {
+          if (ShapedType::isDynamic(offset))
+            continue;
+          int64_t memrefSize = memrefType.getElementTypeBitWidth() / 8;
+          for (int64_t j = (rank - 1); j >= int64_t(idx); --j)
+            memrefSize *= memrefType.getShape()[j];
+          requestedUpperBound += memrefSize * offset;
+        }
+      }
+      // Calculate at least the size of memref when offsets are not visible
+      else {
+        requestedUpperBound = memrefType.getNumElements() *
+                              memrefType.getElementTypeBitWidth() / 8;
+      }
+      if (requestedUpperBound > shmemUpperBound.value()) {
+        return emitOpError()
+               << "gpu.launch allocates a " << shmemUpperBound.value()
+               << " bytes of dynamic shared "
+                  "memory, but the Op's access upper bound requires "
+               << requestedUpperBound
+               << " bytes, "
+                  "which exceeds the currently allocated memory limit.";
+      }
+    }
+  }
+
   return success();
 }
 
