@@ -167,6 +167,8 @@ static void ParseArgs(int argc, char **argv) {
     }
     OptimizeArgs |= *Optimization;
   }
+  if (OptimizationFlags.empty())
+    OptimizeArgs = ScanningOptimizations::Default;
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_files_dir_EQ))
     ModuleFilesDir = A->getValue();

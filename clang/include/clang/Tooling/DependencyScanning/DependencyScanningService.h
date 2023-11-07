@@ -52,7 +52,8 @@ enum class ScanningOptimizations {
   HeaderSearch = 1,
 
   LLVM_MARK_AS_BITMASK_ENUM(HeaderSearch),
-  All = HeaderSearch
+  All = HeaderSearch,
+  Default = All
 };
 
 /// The dependency scanning service contains shared configuration and state that
@@ -61,7 +62,7 @@ class DependencyScanningService {
 public:
   DependencyScanningService(
       ScanningMode Mode, ScanningOutputFormat Format,
-      ScanningOptimizations OptimizeArgs = ScanningOptimizations::None,
+      ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default,
       bool EagerLoadModules = false);
 
   ScanningMode getMode() const { return Mode; }
