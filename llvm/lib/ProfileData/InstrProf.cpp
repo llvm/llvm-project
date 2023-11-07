@@ -458,41 +458,6 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
   return Error::success();
 }
 
-static instrprof_error decodeAndSplitStrings(
-    const uint8_t *Input, SmallVector<uint8_t, 128> &UncompressedNameStrings,
-    StringRef &NameStrings, uint32_t &Dist, bool &IsCompressed) {
-  Dist = 0;
-  const uint8_t *Start = Input;
-  uint32_t UncompressedSizeLen = 0;
-  uint64_t UncompressedSize = decodeULEB128(Start, &UncompressedSizeLen);
-  Start += UncompressedSizeLen;
-  Dist += UncompressedSizeLen;
-  uint32_t CompressedSizeLen = 0;
-  uint64_t CompressedSize = decodeULEB128(Start, &CompressedSizeLen);
-  Start += CompressedSizeLen;
-  Dist += CompressedSizeLen;
-  IsCompressed = (CompressedSize != 0);
-  if (!IsCompressed) {
-    NameStrings =
-        StringRef(reinterpret_cast<const char *>(Start), UncompressedSize);
-    Dist += UncompressedSize;
-    return instrprof_error::success;
-  }
-
-  if (!llvm::compression::zlib::isAvailable())
-    return instrprof_error::zlib_unavailable;
-
-  if (Error E = compression::zlib::decompress(ArrayRef(Start, CompressedSize),
-                                              UncompressedNameStrings,
-                                              UncompressedSize)) {
-    consumeError(std::move(E));
-    return instrprof_error::uncompress_failed;
-  }
-  Dist += CompressedSize;
-
-  return instrprof_error::success;
-}
-
 /// \c NameStrings is a string composed of one of more possibly encoded
 /// sub-strings. The substrings are separated by 0 or more zero bytes. This
 /// method decodes the string and calls `NameCallback` for each substring.
