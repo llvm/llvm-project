@@ -7565,8 +7565,64 @@ static void reduceVSXSwap(SDNode *N, SelectionDAG *DAG) {
   DAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), N->getOperand(0));
 }
 
+// For non-TOC-based local-exec access where an addi is feeding into another
+// addi, fold this sequence into a single addi if possible.
+static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
+  const PPCSubtarget &Subtarget =
+      DAG->getMachineFunction().getSubtarget<PPCSubtarget>();
+  // This optimization is only performed for non-TOC-based local-exec accesses.
+  if (!Subtarget.hasAIXSmallLocalExecTLS())
+    return;
+
+  if (N->getMachineOpcode() != PPC::ADDI8)
+    return;
+
+  // InitialADDI is the addi feeding into N (also an addi), and the addi that
+  // we want optimized out.
+  SDValue InitialADDI = N->getOperand(0);
+  if (!InitialADDI.isMachineOpcode())
+    return;
+  if (InitialADDI.getMachineOpcode() != PPC::ADDI8)
+    return;
+
+  // The first operand of the InitialADDI will be the thread pointer.
+  // This transformation is only performed if the first operand of the
+  // addi is the thread pointer.
+  SDValue TPRegNode = InitialADDI.getOperand(0);
+  RegisterSDNode *TPReg =
+      dyn_cast_or_null<RegisterSDNode>(TPRegNode.getNode());
+  if (!TPReg)
+    return;
+  if (TPReg->getReg() != Subtarget.getThreadPointerRegister())
+    return;
+
+  // The second operand of the InitialADDI will be a TargetGlobalTLSAddress,
+  // (the local-exec TLS variable). We only perform the folding if the TLS
+  // variable is the second operand.
+  SDValue TLSVarNode = InitialADDI.getOperand(1);
+  GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(TLSVarNode);
+  if (!GA)
+    return;
+
+  unsigned TargetFlags = GA->getTargetFlags();
+  if ((TargetFlags & PPCII::MO_TPREL_FLAG) == 0)
+    return;
+  // The second operand of the addi that we want to preserve will be an
+  // immediate. We add this immediate together with the address of the TLS
+  // variable found in InitialADDI in order to preserve the correct TLS address
+  // information during assembly printing.
+  int Offset = N->getConstantOperandVal(1);
+  TLSVarNode = DAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(GA), MVT::i64,
+                                           Offset, TargetFlags);
+
+  (void)DAG->UpdateNodeOperands(N, TPRegNode, TLSVarNode);
+  if (InitialADDI.getNode()->use_empty())
+    DAG->RemoveDeadNode(InitialADDI.getNode());
+}
+
 void PPCDAGToDAGISel::PeepholePPC64() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
+  bool HasAIXSmallLocalExecTLS = Subtarget->hasAIXSmallLocalExecTLS();
 
   while (Position != CurDAG->allnodes_begin()) {
     SDNode *N = &*--Position;
@@ -7576,6 +7632,8 @@ void PPCDAGToDAGISel::PeepholePPC64() {
 
     if (isVSXSwap(SDValue(N, 0)))
       reduceVSXSwap(N, CurDAG);
+
+    foldADDIForLocalExecAccesses(N, CurDAG);
 
     unsigned FirstOp;
     unsigned StorageOpcode = N->getMachineOpcode();
@@ -7733,7 +7791,16 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         ImmOpnd = CurDAG->getTargetConstant(Offset, SDLoc(ImmOpnd),
                                             ImmOpnd.getValueType());
       } else if (Offset != 0) {
-        continue;
+        if (!HasAIXSmallLocalExecTLS)
+          continue;
+        // Add the non-zero offset information into the load or store
+        // instruction to be used for non-TOC-based local-exec accesses.
+        GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd);
+        if (!GA)
+          continue;
+        ImmOpnd = CurDAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(GA),
+                                                 MVT::i64, Offset,
+                                                 GA->getTargetFlags());
       }
     }
 

@@ -66,6 +66,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Threading.h"
@@ -155,6 +156,11 @@ protected:
       TOC;
   const PPCSubtarget *Subtarget = nullptr;
 
+  // Keep track of the number of TLS variables and their corresponding
+  // addresses, which is then used for the assembly printing of
+  // non-TOC-based local-exec variables.
+  MapVector<const GlobalValue *, uint64_t> TLSVarsToAddressMapping;
+
 public:
   explicit PPCAsmPrinter(TargetMachine &TM,
                          std::unique_ptr<MCStreamer> Streamer)
@@ -199,6 +205,8 @@ public:
   void LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI);
   void EmitTlsCall(const MachineInstr *MI, MCSymbolRefExpr::VariantKind VK);
   void EmitAIXTlsCallHelper(const MachineInstr *MI);
+  const MCExpr *getAdjustedLocalExecExpr(const MachineOperand &MO,
+                                         int64_t Offset);
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<PPCSubtarget>();
     bool Changed = AsmPrinter::runOnMachineFunction(MF);
@@ -1503,13 +1511,42 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::LWA: {
     // Verify alignment is legal, so we don't create relocations
     // that can't be supported.
-    unsigned OpNum = (MI->getOpcode() == PPC::STD) ? 2 : 1;
+    unsigned OpNum;
+    if (Subtarget->hasAIXSmallLocalExecTLS())
+      OpNum = 1;
+    else
+      OpNum = (MI->getOpcode() == PPC::STD) ? 2 : 1;
     const MachineOperand &MO = MI->getOperand(OpNum);
     if (MO.isGlobal()) {
       const DataLayout &DL = MO.getGlobal()->getParent()->getDataLayout();
       if (MO.getGlobal()->getPointerAlignment(DL) < 4)
         llvm_unreachable("Global must be word-aligned for LD, STD, LWA!");
+
+      // A faster non-TOC-based local-exec sequence is represented by
+      // `lwa`/`ld`/`std` directingly loading or storing off of the thread
+      // pointer and with an immediate operand having the MO_TPREL_FLAG.
+      // Such instructions do not otherwise arise.
+      unsigned Flag = MO.getTargetFlags();
+      if (Flag == PPCII::MO_TPREL_FLAG) {
+        assert(Subtarget->hasAIXSmallLocalExecTLS() &&
+               "lwa/ld/std with thread-pointer only expected with "
+               "local-exec small TLS");
+        int64_t Offset = MO.getOffset();
+        // Non-zero offsets for lwa/ld/std require special handling and are
+        // handled here.
+        if (!Offset)
+          break;
+
+        LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
+        if (Offset) {
+          const MCExpr *Expr = getAdjustedLocalExecExpr(MO, Offset);
+          TmpInst.getOperand(1) = MCOperand::createExpr(Expr);
+        }
+        EmitToStreamer(*OutStreamer, TmpInst);
+        return;
+      }
     }
+
     // Now process the instruction normally.
     break;
   }
@@ -1523,19 +1560,58 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::EnforceIEIO));
     return;
   }
+  case PPC::LBZ:
+  case PPC::LBZ8:
+  case PPC::LHA:
+  case PPC::LHA8:
+  case PPC::LHZ:
+  case PPC::LHZ8:
+  case PPC::LWZ:
+  case PPC::LWZ8:
+  case PPC::STB:
+  case PPC::STB8:
+  case PPC::STH:
+  case PPC::STH8:
+  case PPC::STW:
+  case PPC::STW8:
+  case PPC::LFS:
+  case PPC::STFS:
+  case PPC::LFD:
+  case PPC::STFD:
   case PPC::ADDI8: {
-    // The faster non-TOC-based local-exec sequence is represented by `addi`
-    // with an immediate operand having the MO_TPREL_FLAG. Such an instruction
-    // does not otherwise arise.
-    unsigned Flag = MI->getOperand(2).getTargetFlags();
+    // A faster non-TOC-based local-exec sequence is represented by `addi`
+    // or a load/store instruction (that directly loads or stores off of the
+    // thread pointer) with an immediate operand having the MO_TPREL_FLAG.
+    // Such instructions do not otherwise arise.
+    bool IsMIADDI8 = MI->getOpcode() == PPC::ADDI8;
+    unsigned OpNum = IsMIADDI8 ? 2 : 1;
+    const MachineOperand &MO = MI->getOperand(OpNum);
+    unsigned Flag = MO.getTargetFlags();
     if (Flag == PPCII::MO_TPREL_FLAG ||
         Flag == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
         Flag == PPCII::MO_TPREL_PCREL_FLAG) {
       assert(
           Subtarget->hasAIXSmallLocalExecTLS() &&
-          "addi with thread-pointer only expected with local-exec small TLS");
+          "addi, or load/stores with thread-pointer only expected with "
+          "local-exec small TLS");
+
+      int64_t Offset = MO.getOffset();
+      // Non-zero offsets for loads/stores require special handling and are
+      // handled here. For `addi`, all offsets are handled here.
+      if (!Offset && !IsMIADDI8)
+        break;
+
       LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
-      TmpInst.setOpcode(PPC::LA8);
+
+      if (Offset) {
+        const MCExpr *Expr = getAdjustedLocalExecExpr(MO, Offset);
+        TmpInst.getOperand(OpNum) = MCOperand::createExpr(Expr);
+      }
+
+      // Change the opcode to load address if the original opcode is an `addi`.
+      if (IsMIADDI8)
+        TmpInst.setOpcode(PPC::LA8);
+
       EmitToStreamer(*OutStreamer, TmpInst);
       return;
     }
@@ -1545,6 +1621,69 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
   EmitToStreamer(*OutStreamer, TmpInst);
+}
+
+// For non-TOC-based local-exec variables that have a non-zero offset,
+// we need to create a new MCExpr that adds the non-zero offset to the address
+// of the local-exec variable that will be used in either an addi, load or
+// store. However, the final displacement for these instructions must be
+// between [-32768, 32768), so if the TLS address + it's non-zero offset is
+// greater than 32KB, a new MCExpr is produced to accommodate this situation.
+const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
+                                                      int64_t Offset) {
+  assert(MO.isGlobal() && "Only expecting a global MachineOperand here!");
+  const GlobalValue *GValue = MO.getGlobal();
+  TLSModel::Model Model = TM.getTLSModel(GValue);
+  assert(Model == TLSModel::LocalExec &&
+         "Only local-exec accesses are handled!");
+  MCSymbolRefExpr::VariantKind RefKind = MCSymbolRefExpr::VK_PPC_AIX_TLSLE;
+
+  const MCExpr *Expr = MCSymbolRefExpr::create(getSymbol(GValue), RefKind,
+                                               OutContext);
+
+  bool IsGlobalADeclaration = GValue->isDeclarationForLinker();
+  // Find the GlobalVariable that corresponds to the particular TLS variable
+  // in the TLS variable to address mapping. All TLS variables should exist
+  // within this map, with the exception of TLS variables marked as extern.
+  const auto TLSVarsMapEntryIter = TLSVarsToAddressMapping.find(GValue);
+  if (TLSVarsMapEntryIter == TLSVarsToAddressMapping.end())
+    assert(IsGlobalADeclaration &&
+           "Only expecting to find extern TLS variables not present in the TLS "
+           "variables to address map!");
+
+  unsigned TLSVarAddress = TLSVarsMapEntryIter->second;
+  ptrdiff_t FinalAddress = (TLSVarAddress + Offset);
+  // If the address of the TLS variable + the offset is less than 32KB,
+  // or if the TLS variable is extern, we simply produce an MCExpr to add the
+  // non-zero offset to the TLS variable address.
+  // For when TLS variables are extern, this is safe to do because we can
+  // assume that the address of extern TLS variables are zero.
+  if ((FinalAddress < 32768) || IsGlobalADeclaration)
+    Expr = MCBinaryExpr::createAdd(Expr,
+                                   MCConstantExpr::create(Offset, OutContext),
+                                   OutContext);
+  else {
+    // Handle the written offset for cases where:
+    //   address of the TLS variable + the offset is greater than 32KB.
+
+    // Get the address in the range of 0 to 64KB.
+    FinalAddress = FinalAddress & 0xFFFF;
+    // If the highest bit in the calculated address is set, subtract
+    // additional 64KB to ensure that the final address fits within
+    // [-32768,32768).
+    if (FinalAddress & 0x8000)
+      FinalAddress = FinalAddress - 0x10000;
+    assert((FinalAddress < 32768) || (FinalAddress >= -32768) &&
+           "Expecting the final address for local-exec TLS variables to be "
+           "between [-32768,32768)!");
+    // Get the offset that is actually written out in assembly by adding back
+    // the original address of the TLS variable.
+    ptrdiff_t WrittenOffset = FinalAddress - TLSVarAddress;
+    Expr = MCBinaryExpr::createAdd(
+        Expr, MCConstantExpr::create(WrittenOffset, OutContext), OutContext);
+  }
+
+  return Expr;
 }
 
 void PPCLinuxAsmPrinter::emitGNUAttributes(Module &M) {
@@ -2756,6 +2895,23 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     Align GOAlign = getGVAlignment(GO, GO->getParent()->getDataLayout());
     Csect->ensureMinAlignment(GOAlign);
   };
+
+  // For all TLS variables, calculate their corresponding addresses and store
+  // them into TLSVarsToAddressMapping, which will be used to determine whether
+  // or not local-exec TLS variables require special assembly printing.
+  // This address calculation follows the same method seen within
+  // assignAddressesAndIndices() in XCOFFObjectWriter.cpp.
+  uint64_t Address = 0;
+  uint64_t TLSVarAddress = 0;
+  auto DL = M.getDataLayout();
+  for (const auto &G : M.globals()) {
+    if (G.isThreadLocal() && !G.isDeclaration()) {
+      TLSVarAddress = alignTo(Address, getGVAlignment(&G, DL));
+      unsigned GVSize = DL.getTypeAllocSize(G.getValueType());
+      Address = TLSVarAddress + GVSize;
+      TLSVarsToAddressMapping[&G] = TLSVarAddress;
+    }
+  }
 
   // We need to know, up front, the alignment of csects for the assembly path,
   // because once a .csect directive gets emitted, we could not change the
