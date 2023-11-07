@@ -71,8 +71,7 @@ void HugifyRuntimeLibrary::link(BinaryContext &BC, StringRef ToolPath,
          "We don't currently support linking multiple runtime libraries");
   RuntimeStartAddress = Linker.lookupSymbol("__bolt_hugify_self").value_or(0);
   if (!RuntimeStartAddress) {
-    errs() << "BOLT-ERROR: instrumentation library does not define "
-              "__bolt_hugify_self: "
+    errs() << "BOLT-ERROR: hugify library does not define __bolt_hugify_self: "
            << LibPath << "\n";
     exit(1);
   }
