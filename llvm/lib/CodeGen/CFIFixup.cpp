@@ -12,12 +12,14 @@
 // The pass relies in constraints LLVM imposes on the placement of
 // save/restore points (cf. ShrinkWrap) and has certain preconditions about
 // placement of CFI instructions:
-// * for any two CFI instructions of the function prologue one dominates
-//   and is post-dominated by the other
-// * possibly multiple epilogue blocks, where each epilogue block is
-//   complete and self-contained, i.e. CSR restore instructions (and the
-//   corresponding CFI instructions are not split across two or more blocks.
-// * CFI instructions are not contained in any loops
+// * For any two CFI instructions of the function prologue one dominates
+//   and is post-dominated by the other.
+// * The function possibly contains multiple epilogue blocks, where each
+//   epilogue block is complete and self-contained, i.e. CSR restore
+//   instructions (and the corresponding CFI instructions)
+//   are not split across two or more blocks.
+// * CFI instructions are not contained in any loops.
+
 // Thus, during execution, at the beginning and at the end of each basic block,
 // following the prologue, the function can be in one of two states:
 //  - "has a call frame", if the function has executed the prologue, and
@@ -27,7 +29,7 @@
 // which can be computed by a single RPO traversal.
 
 // The location of the prologue is determined by finding the first block in the
-// post-order traversal which contains CFI instructions.
+// reverse traversal which contains CFI instructions.
 
 // In order to accommodate backends which do not generate unwind info in
 // epilogues we compute an additional property "strong no call frame on entry",
@@ -99,14 +101,16 @@ static bool containsEpilogue(const MachineBasicBlock &MBB) {
 
 static MachineBasicBlock *
 findPrologueEnd(MachineFunction &MF, MachineBasicBlock::iterator &PrologueEnd) {
-  for (auto It = po_begin(&MF.front()), End = po_end(&MF.front()); It != End;
-       ++It) {
-    MachineBasicBlock *MBB = *It;
-    for (MachineInstr &MI : reverse(MBB->instrs())) {
+  // Even though we should theoretically traverse the blocks in post-order, we
+  // can't encode correctly cases where prologue blocks are not laid out in
+  // topological order. Then, assuming topological order, we can just traverse
+  // the function in reverse.
+  for (MachineBasicBlock &MBB : reverse(MF)) {
+    for (MachineInstr &MI : reverse(MBB.instrs())) {
       if (!isPrologueCFIInstruction(MI))
         continue;
       PrologueEnd = std::next(MI.getIterator());
-      return MBB;
+      return &MBB;
     }
   }
   return nullptr;
@@ -123,7 +127,6 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
 
   // Find the prologue and the point where we can issue the first
   // `.cfi_remember_state`.
-
   MachineBasicBlock::iterator PrologueEnd;
   MachineBasicBlock *PrologueBlock = findPrologueEnd(MF, PrologueEnd);
   if (PrologueBlock == nullptr)
