@@ -1953,12 +1953,18 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
         DstSize = TRI->getRegSizeInBits(*DstRC);
     }
 
-    // If this is a copy from physical register to virtual register, and if the
-    // Dst is scalable and the Src is fixed, then the Dst can only hold the Src
-    // if the minimum size Dst can hold is at least as big as Src.
+    // The next two checks allow COPY between physical and virtual registers,
+    // when the virtual register has a scalable size and the physical register
+    // has a fixed size. These checks allow COPY between *potentialy* mismatched
+    // sizes. However, once RegisterBankSelection occurs, MachineVerifier should
+    // be able to resolve a fixed size for the scalable vector, and at that
+    // point this function will know for sure whether the sizes are mismatched
+    // and correctly report a size mismatch.
     if (SrcReg.isPhysical() && DstReg.isVirtual() && DstSize.isScalable() &&
-        !SrcSize.isScalable() &&
-        DstSize.getKnownMinValue() <= SrcSize.getFixedValue())
+        !SrcSize.isScalable())
+      break;
+    if (SrcReg.isVirtual() && DstReg.isPhysical() && SrcSize.isScalable() &&
+        !DstSize.isScalable())
       break;
 
     if (SrcSize.isNonZero() && DstSize.isNonZero() && SrcSize != DstSize) {
