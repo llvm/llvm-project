@@ -205,7 +205,7 @@ In ``apply`` patterns, we also support referring to a matched instruction to
   :caption: Example
 
   ; We match NoNans/NoInfs, but $zext may have more flags.
-  ; Copy them all into the output instruction, but remove Reassoc if present.
+  ; Copy them all into the output instruction, and set Reassoc on the output inst.
   def TestCpyFlags : GICombineRule<
     (defs root:$dst),
     (match (G_FOO $dst, $src, (MIFlags FmNoNans, FmNoInfs)):$zext),
@@ -217,6 +217,8 @@ on a matched instruction, and to remove a flag from a generated instruction.
 .. code-block:: text
   :caption: Example
 
+  ; We match NoInfs but we don't want NoNans/Reassoc to be set. $zext may have more flags.
+  ; Copy them all into the output instruction but remove NoInfs on the output inst.
   def TestNot : GICombineRule<
     (defs root:$dst),
     (match (G_FOO $dst, $src, (MIFlags FmNoInfs, (not FmNoNans, FmReassoc))):$zext),
