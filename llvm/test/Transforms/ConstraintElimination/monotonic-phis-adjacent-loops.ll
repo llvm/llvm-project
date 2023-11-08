@@ -23,7 +23,8 @@ define void @test_loop_add_rec_used_in_adjacent_loop(i8 %len.n, i16 %a) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i16 [[IV_2]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[AND:%.*]] = and i1 true, true
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i16 [[IV_2]], [[A]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[T_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_2_LATCH]], label [[EXIT]]
 ; CHECK:       loop.2.latch:
 ; CHECK-NEXT:    call void @use(i16 [[IV_2]])
@@ -63,3 +64,41 @@ loop.2.latch:
 exit:
   ret void
 }
+
+define void @test_adjacen_loops_pointer_iv_crash() {
+; CHECK-LABEL: @test_adjacen_loops_pointer_iv_crash(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_1:%.*]]
+; CHECK:       loop.1:
+; CHECK-NEXT:    [[IV_1:%.*]] = phi ptr [ null, [[ENTRY:%.*]] ], [ [[IV_1_NEXT:%.*]], [[LOOP_1]] ]
+; CHECK-NEXT:    [[IV_1_NEXT]] = getelementptr ptr, ptr [[IV_1]], i32 1
+; CHECK-NEXT:    br i1 false, label [[LOOP_1]], label [[LOOP_2:%.*]]
+; CHECK:       loop.2:
+; CHECK-NEXT:    [[__FIRST_ADDR_1_LCSSA:%.*]] = phi ptr [ [[IV_1]], [[LOOP_1]] ], [ [[IV_1]], [[LOOP_2_LATCH:%.*]] ]
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp eq ptr [[__FIRST_ADDR_1_LCSSA]], null
+; CHECK-NEXT:    br i1 [[CMP7]], label [[IF_THEN8:%.*]], label [[LOOP_2_LATCH]]
+; CHECK:       if.then8:
+; CHECK-NEXT:    ret void
+; CHECK:       loop.2.latch:
+; CHECK-NEXT:    br label [[LOOP_2]]
+;
+entry:
+  br label %loop.1
+
+loop.1:
+  %iv.1 = phi ptr [ null, %entry ], [ %iv.1.next, %loop.1 ]
+  %iv.1.next = getelementptr ptr, ptr %iv.1, i32 1
+  br i1 false, label %loop.1, label %loop.2
+
+loop.2:
+  %__first.addr.1.lcssa = phi ptr [ %iv.1, %loop.1 ], [ %iv.1, %loop.2.latch ]
+  %cmp7 = icmp eq ptr %__first.addr.1.lcssa, null
+  br i1 %cmp7, label %if.then8, label %loop.2.latch
+
+if.then8:                                         ; preds = %do.body
+  ret void
+
+loop.2.latch:
+  br label %loop.2
+}
+
