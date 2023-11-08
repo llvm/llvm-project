@@ -83,8 +83,8 @@ enum ResourceDirRecipeKind {
 
 static ScanningMode ScanMode = ScanningMode::DependencyDirectivesScan;
 static ScanningOutputFormat Format = ScanningOutputFormat::Make;
+static ScanningOptimizations OptimizeArgs;
 static std::string ModuleFilesDir;
-static bool OptimizeArgs;
 static bool EagerLoadModules;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
@@ -168,10 +168,31 @@ static void ParseArgs(int argc, char **argv) {
     Format = *FormatType;
   }
 
+  std::vector<std::string> OptimizationFlags =
+      Args.getAllArgValues(OPT_optimize_args_EQ);
+  OptimizeArgs = ScanningOptimizations::None;
+  for (const auto &Arg : OptimizationFlags) {
+    auto Optimization =
+        llvm::StringSwitch<std::optional<ScanningOptimizations>>(Arg)
+            .Case("none", ScanningOptimizations::None)
+            .Case("header-search", ScanningOptimizations::HeaderSearch)
+            .Case("all", ScanningOptimizations::All)
+            .Default(std::nullopt);
+    if (!Optimization) {
+      llvm::errs()
+          << ToolName
+          << ": for the --optimize-args option: Cannot find option named '"
+          << Arg << "'\n";
+      std::exit(1);
+    }
+    OptimizeArgs |= *Optimization;
+  }
+  if (OptimizationFlags.empty())
+    OptimizeArgs = ScanningOptimizations::Default;
+
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_files_dir_EQ))
     ModuleFilesDir = A->getValue();
 
-  OptimizeArgs = Args.hasArg(OPT_optimize_args);
   EagerLoadModules = Args.hasArg(OPT_eager_load_pcm);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_j)) {

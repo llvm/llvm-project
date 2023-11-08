@@ -10,7 +10,7 @@
 
 // RUN: clang-scan-deps -cas-path %t/cas -compilation-database %t/cdb.json -j 1 \
 // RUN:   -format experimental-full  -mode=preprocess-dependency-directives \
-// RUN:   -optimize-args -module-files-dir %t/build > %t/deps.json
+// RUN:   -optimize-args=all -module-files-dir %t/build > %t/deps.json
 
 // RUN: %deps-to-rsp %t/deps.json --module-name=Mod > %t/mod.cc1.rsp
 // RUN: %deps-to-rsp %t/deps.json --module-name=Other > %t/other.cc1.rsp

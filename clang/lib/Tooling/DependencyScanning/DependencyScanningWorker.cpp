@@ -255,7 +255,7 @@ public:
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS,
       llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> CacheFS,
-      ScanningOutputFormat Format, bool OptimizeArgs, bool EagerLoadModules,
+      ScanningOutputFormat Format, ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
       bool DisableFree, bool EmitDependencyFile,
       bool DiagGenerationAsCompilation, const CASOptions &CASOpts,
       std::optional<StringRef> ModuleName = std::nullopt,
@@ -518,7 +518,7 @@ private:
   llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
   llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> CacheFS;
   ScanningOutputFormat Format;
-  bool OptimizeArgs;
+  ScanningOptimizations OptimizeArgs;
   bool EagerLoadModules;
   bool DisableFree;
   const CASOptions &CASOpts;
@@ -538,7 +538,7 @@ private:
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()),
+    : Format(Service.getFormat()), OptimizeArgs(Service.getOptimizeArgs()),
       EagerLoadModules(Service.shouldEagerLoadModules()),
       CASOpts(Service.getCASOpts()), CAS(Service.getCAS()) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
@@ -782,7 +782,8 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
   DependencyScanningAction Action(
       WorkingDirectory, DepsConsumer, Controller, DepFS, DepCASFS, CacheFS,
       Format,
-      /*OptimizeArgs=*/false, /*DisableFree=*/false, EagerLoadModules,
+      /*OptimizeArgs=*/ScanningOptimizations::Default, /*DisableFree=*/false,
+      EagerLoadModules,
       /*EmitDependencyFile=*/!DepFile.empty(), DiagGenerationAsCompilation,
       getCASOpts(),
       /*ModuleName=*/std::nullopt, VerboseOS);

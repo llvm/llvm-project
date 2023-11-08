@@ -133,8 +133,7 @@ clang_experimental_DependencyScannerService_create_v0(CXDependencyMode Format) {
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
   return wrap(new DependencyScanningService(
       ScanningMode::DependencyDirectivesScan, unwrap(Format), CASOpts,
-      /*CAS=*/nullptr, /*ActionCache=*/nullptr, FS,
-      /*ReuseFilemanager=*/false));
+      /*CAS=*/nullptr, /*ActionCache=*/nullptr, FS));
 }
 
 ScanningOutputFormat DependencyScannerServiceOptions::getFormat() const {
@@ -172,8 +171,7 @@ clang_experimental_DependencyScannerService_create_v1(
   }
   return wrap(new DependencyScanningService(
       ScanningMode::DependencyDirectivesScan, Format, unwrap(Opts)->CASOpts,
-      std::move(CAS), std::move(Cache), std::move(FS),
-      /*ReuseFilemanager=*/false));
+      std::move(CAS), std::move(Cache), std::move(FS)));
 }
 
 void clang_experimental_DependencyScannerService_dispose_v0(
