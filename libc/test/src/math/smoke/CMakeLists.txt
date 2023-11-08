@@ -1534,3 +1534,15 @@ add_fp_unittest(
     libc.src.math.erff
     libc.src.__support.FPUtil.fp_bits
 )
+
+add_fp_unittest(
+  powf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    powf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.powf
+    libc.src.__support.FPUtil.fp_bits
+)
