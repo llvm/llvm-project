@@ -36,6 +36,7 @@ body:             |
     ; GCN-LABEL: name: preserve_active_lanes_above_args
     ; GCN: liveins: $sgpr0, $vgpr8, $vgpr9, $vgpr10
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr32 = S_MOV_B32 0
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr10, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: renamable $vgpr10 = V_MOV_B32_e32 10, implicit $exec
     ; GCN-NEXT: $vgpr8 = COPY killed renamable $vgpr10
@@ -69,6 +70,7 @@ body:             |
     ; GCN-LABEL: name: preserve_all_lanes_wwm_above_args
     ; GCN: liveins: $sgpr0, $sgpr35, $vgpr8, $vgpr9, $vgpr10
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr32 = S_MOV_B32 0
     ; GCN-NEXT: $sgpr1 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr10, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr11, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
@@ -141,6 +143,7 @@ body:             |
     ; GCN-LABEL: name: preserve_inactive_lanes_wwm_args
     ; GCN: liveins: $sgpr0, $sgpr35, $vgpr8, $vgpr9, $vgpr10
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr32 = S_MOV_B32 0
     ; GCN-NEXT: $sgpr1 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr8, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr9, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)

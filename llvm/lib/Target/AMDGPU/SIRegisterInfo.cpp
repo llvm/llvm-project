@@ -733,12 +733,12 @@ bool SIRegisterInfo::isAsmClobberable(const MachineFunction &MF,
 
 bool SIRegisterInfo::shouldRealignStack(const MachineFunction &MF) const {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  // On entry, the base address is 0, so it can't possibly need any more
-  // alignment.
+  // On entry or in chain functions, the base address is 0, so it can't possibly
+  // need any more alignment.
 
   // FIXME: Should be able to specify the entry frame alignment per calling
   // convention instead.
-  if (Info->isEntryFunction())
+  if (Info->isEntryFunction() || Info->isChainFunction())
     return false;
 
   return TargetRegisterInfo::shouldRealignStack(MF);

@@ -37,6 +37,7 @@ body:             |
     ; GCN-LABEL: name: preserve_inactive_wwm
     ; GCN: liveins: $sgpr0, $sgpr35, $vgpr8, $vgpr9
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr32 = S_MOV_B32 0
     ; GCN-NEXT: $sgpr1 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr8, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr9, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
@@ -71,6 +72,7 @@ body:             |
     ; GCN-LABEL: name: preserve_inactive_detected_wwm
     ; GCN: liveins: $sgpr0, $sgpr35, $vgpr8, $vgpr9
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr32 = S_MOV_B32 0
     ; GCN-NEXT: $sgpr1 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr8, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr9, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
