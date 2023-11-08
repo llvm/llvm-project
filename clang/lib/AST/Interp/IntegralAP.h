@@ -119,8 +119,8 @@ public:
 
   constexpr unsigned bitWidth() const { return V.getBitWidth(); }
 
-  APSInt toAPSInt(unsigned Bits = 0) const { return APSInt(V, Signed); }
-  APValue toAPValue() const { return APValue(APSInt(V, Signed)); }
+  APSInt toAPSInt(unsigned Bits = 0) const { return APSInt(V, !Signed); }
+  APValue toAPValue() const { return APValue(APSInt(V, !Signed)); }
 
   bool isZero() const { return V.isZero(); }
   bool isPositive() const { return V.isNonNegative(); }
