@@ -466,9 +466,6 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
     for (const auto &MI : MBB) {
       if (MI.isDebugValue()) {
         assert(MI.getNumOperands() > 1 && "Invalid DBG_VALUE instruction!");
-        // Use the base variable (without any DW_OP_piece expressions)
-        // as index into History. The full variables including the
-        // piece expressions are attached to the MI.
         const DILocalVariable *RawVar = MI.getDebugVariable();
         assert(RawVar->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
                "Expected inlined-at fields to agree");
@@ -492,8 +489,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
       if (MI.isMetaInstruction())
         continue;
 
-      // Not a DBG_VALUE instruction. It may clobber registers which describe
-      // some variables.
+      // Other instruction may clobber registers which describe some variables.
       for (const MachineOperand &MO : MI.operands()) {
         if (MO.isReg() && MO.isDef() && MO.getReg()) {
           // Ignore call instructions that claim to clobber SP. The AArch64
