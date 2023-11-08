@@ -421,6 +421,7 @@ private:
 
   /// Common section names.
   static StringRef getEHFrameSectionName() { return ".eh_frame"; }
+  static StringRef getRelaDynSectionName() { return ".rela.dyn"; }
 
   /// An instance of the input binary we are processing, externally owned.
   llvm::object::ELFObjectFileBase *InputFile;
