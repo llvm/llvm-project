@@ -213,7 +213,7 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
       {"zvknha", RVV_REQ_Zvknha},
       {"zvksed", RVV_REQ_Zvksed},
       {"zvksh", RVV_REQ_Zvksh},
-      {"zexperimental", RVV_REQ_Zexperimental}};
+      {"experimental", RVV_REQ_Experimental}};
 
   // Construction of RVVIntrinsicRecords need to sync with createRVVIntrinsics
   // in RISCVVEmitter.cpp.

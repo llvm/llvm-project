@@ -493,9 +493,9 @@ enum RVVRequire : uint16_t {
   RVV_REQ_Zvknha = 1 << 8,
   RVV_REQ_Zvksed = 1 << 9,
   RVV_REQ_Zvksh = 1 << 10,
-  RVV_REQ_Zexperimental = 1 << 11,
+  RVV_REQ_Experimental = 1 << 11,
 
-  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Zexperimental)
+  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Experimental)
 };
 
 // Raw RVV intrinsic info, used to expand later.

@@ -651,7 +651,6 @@ R"(All available -march extensions for RISC-V
     zihintntl           1.0
     zihintpause         2.0
     zihpm               2.0
-    zexperimental       1.0
     zmmul               1.0
     zawrs               1.0
     zfa                 1.0

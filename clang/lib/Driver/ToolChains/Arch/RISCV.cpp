@@ -47,7 +47,7 @@ static bool getArchFeatures(const Driver &D, StringRef Arch,
       /*AddAllExtensions=*/true);
 
   if (EnableExperimentalExtensions)
-    Features.push_back(Args.MakeArgString("+zexperimental"));
+    Features.push_back(Args.MakeArgString("+experimental"));
 
   return true;
 }
