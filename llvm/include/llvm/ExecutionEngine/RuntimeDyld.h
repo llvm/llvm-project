@@ -194,6 +194,11 @@ public:
   RuntimeDyld &operator=(const RuntimeDyld &) = delete;
   ~RuntimeDyld();
 
+  /// TODO
+  Error precalculateMemorySize(const object::ObjectFile &Obj,
+    uint64_t &CodeSize, Align &CodeAlign, uint64_t &RODataSize, Align
+    &RODataAlign, uint64_t &RWDataSize, Align &RWDataAlign);
+
   /// Add the referenced object file to the list of objects to be loaded and
   /// relocated.
   std::unique_ptr<LoadedObjectInfo> loadObject(const object::ObjectFile &O);

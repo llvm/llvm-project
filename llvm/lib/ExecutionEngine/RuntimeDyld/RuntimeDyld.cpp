@@ -541,6 +541,8 @@ Error RuntimeDyldImpl::computeTotalAllocSize(
   std::vector<uint64_t> ROSectionSizes;
   std::vector<uint64_t> RWSectionSizes;
 
+  Arch = (Triple::ArchType)Obj.getArch();
+
   // Collect sizes of all sections to be loaded;
   // also determine the max alignment of all sections
   for (section_iterator SI = Obj.section_begin(), SE = Obj.section_end();
@@ -1342,6 +1344,28 @@ createRuntimeDyldMachO(
   Dyld->setNotifyStubEmitted(std::move(NotifyStubEmitted));
   return Dyld;
 }
+
+Error RuntimeDyld::precalculateMemorySize(
+    const ObjectFile &Obj, uint64_t &CodeSize, Align &CodeAlign,
+    uint64_t &RODataSize, Align &RODataAlign, uint64_t &RWDataSize,
+    Align &RWDataAlign) {
+  if (!Dyld) {
+    if (!Obj.isELF())
+      report_fatal_error("Incompatible object format!");
+
+      Dyld =
+          createRuntimeDyldELF(static_cast<Triple::ArchType>(Obj.getArch()),
+                               MemMgr, Resolver, ProcessAllSections,
+                               std::move(NotifyStubEmitted));
+  }
+  if (!Dyld->isCompatibleFile(Obj))
+    report_fatal_error("Incompatible object format!");
+
+  auto Err = Dyld->computeTotalAllocSize(Obj, CodeSize, CodeAlign, RODataSize,
+                                         RODataAlign, RWDataSize, RWDataAlign);
+  return Err;
+}
+
 
 std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
 RuntimeDyld::loadObject(const ObjectFile &Obj) {
