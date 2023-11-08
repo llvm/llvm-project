@@ -312,3 +312,107 @@ define i64 @fabs_v2f32_2() {
 }
 
 declare <2 x float> @llvm.fabs.v2f32(<2 x float> %p)
+
+; PR70947 - TODO remove duplicate xmm/ymm constant loads
+define void @PR70947(ptr %src, ptr %dst) {
+; X86-AVX1-LABEL: PR70947:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX1-NEXT:    vmovups (%ecx), %ymm0
+; X86-AVX1-NEXT:    vmovups 32(%ecx), %xmm1
+; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
+; X86-AVX1-NEXT:    vmovups %ymm0, (%eax)
+; X86-AVX1-NEXT:    vmovups %xmm1, 16(%eax)
+; X86-AVX1-NEXT:    vzeroupper
+; X86-AVX1-NEXT:    retl
+;
+; X86-AVX2-LABEL: PR70947:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX2-NEXT:    vmovups 32(%ecx), %xmm0
+; X86-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN]
+; X86-AVX2-NEXT:    vandps (%ecx), %ymm1, %ymm1
+; X86-AVX2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vmovups %ymm1, (%eax)
+; X86-AVX2-NEXT:    vmovups %xmm0, 16(%eax)
+; X86-AVX2-NEXT:    vzeroupper
+; X86-AVX2-NEXT:    retl
+;
+; X86-AVX512VL-LABEL: PR70947:
+; X86-AVX512VL:       # %bb.0:
+; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512VL-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; X86-AVX512VL-NEXT:    vandps (%ecx), %ymm0, %ymm1
+; X86-AVX512VL-NEXT:    vandps 32(%ecx), %xmm0, %xmm0
+; X86-AVX512VL-NEXT:    vmovups %ymm1, (%eax)
+; X86-AVX512VL-NEXT:    vmovups %xmm0, 16(%eax)
+; X86-AVX512VL-NEXT:    vzeroupper
+; X86-AVX512VL-NEXT:    retl
+;
+; X86-AVX512VLDQ-LABEL: PR70947:
+; X86-AVX512VLDQ:       # %bb.0:
+; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512VLDQ-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; X86-AVX512VLDQ-NEXT:    vandps (%ecx), %ymm0, %ymm1
+; X86-AVX512VLDQ-NEXT:    vandps 32(%ecx), %xmm0, %xmm0
+; X86-AVX512VLDQ-NEXT:    vmovups %ymm1, (%eax)
+; X86-AVX512VLDQ-NEXT:    vmovups %xmm0, 16(%eax)
+; X86-AVX512VLDQ-NEXT:    vzeroupper
+; X86-AVX512VLDQ-NEXT:    retl
+;
+; X64-AVX1-LABEL: PR70947:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vmovups 32(%rdi), %xmm1
+; X64-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; X64-AVX1-NEXT:    vmovups %ymm0, (%rsi)
+; X64-AVX1-NEXT:    vmovups %xmm1, 16(%rsi)
+; X64-AVX1-NEXT:    vzeroupper
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: PR70947:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vmovups 32(%rdi), %xmm0
+; X64-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN]
+; X64-AVX2-NEXT:    vandps (%rdi), %ymm1, %ymm1
+; X64-AVX2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vmovups %ymm1, (%rsi)
+; X64-AVX2-NEXT:    vmovups %xmm0, 16(%rsi)
+; X64-AVX2-NEXT:    vzeroupper
+; X64-AVX2-NEXT:    retq
+;
+; X64-AVX512VL-LABEL: PR70947:
+; X64-AVX512VL:       # %bb.0:
+; X64-AVX512VL-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; X64-AVX512VL-NEXT:    vandps (%rdi), %ymm0, %ymm1
+; X64-AVX512VL-NEXT:    vandps 32(%rdi), %xmm0, %xmm0
+; X64-AVX512VL-NEXT:    vmovups %ymm1, (%rsi)
+; X64-AVX512VL-NEXT:    vmovups %xmm0, 16(%rsi)
+; X64-AVX512VL-NEXT:    vzeroupper
+; X64-AVX512VL-NEXT:    retq
+;
+; X64-AVX512VLDQ-LABEL: PR70947:
+; X64-AVX512VLDQ:       # %bb.0:
+; X64-AVX512VLDQ-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; X64-AVX512VLDQ-NEXT:    vandps (%rdi), %ymm0, %ymm1
+; X64-AVX512VLDQ-NEXT:    vandps 32(%rdi), %xmm0, %xmm0
+; X64-AVX512VLDQ-NEXT:    vmovups %ymm1, (%rsi)
+; X64-AVX512VLDQ-NEXT:    vmovups %xmm0, 16(%rsi)
+; X64-AVX512VLDQ-NEXT:    vzeroupper
+; X64-AVX512VLDQ-NEXT:    retq
+  %src4 = getelementptr inbounds double, ptr %src, i64 4
+  %dst4 = getelementptr inbounds i32, ptr %dst, i64 4
+  %ld0 = load <4 x double>, ptr %src, align 8
+  %ld4 = load <2 x double>, ptr %src4, align 8
+  %fabs0 = tail call <4 x double> @llvm.fabs.v4f64(<4 x double> %ld0)
+  %fabs4 = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> %ld4)
+  store <4 x double> %fabs0, ptr %dst, align 4
+  store <2 x double> %fabs4, ptr %dst4, align 4
+  ret void
+}
