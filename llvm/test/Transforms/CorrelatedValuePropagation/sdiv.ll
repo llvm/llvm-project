@@ -638,10 +638,7 @@ define void @sdiv_zero(ptr %p, i32 %arg) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[ARG:%.*]], 5
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 11
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i32 [[ARG]] to i8
-; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i8 [[DIV_LHS_TRUNC]], 6
-; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sext i8 [[DIV1]] to i32
-; CHECK-NEXT:    store i32 [[DIV_SEXT]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %add = add i32 %arg, 5
@@ -676,10 +673,7 @@ define void @sdiv_pos(ptr %p, i32 %arg) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[ARG:%.*]], -12
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 6
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[DIV1_LHS_TRUNC:%.*]] = trunc i32 [[ARG]] to i8
-; CHECK-NEXT:    [[DIV12:%.*]] = udiv i8 [[DIV1_LHS_TRUNC]], 6
-; CHECK-NEXT:    [[DIV1_ZEXT:%.*]] = zext i8 [[DIV12]] to i32
-; CHECK-NEXT:    store i32 [[DIV1_ZEXT]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 2, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %add = add i32 %arg, -12
@@ -695,12 +689,7 @@ define void @sdiv_neg(ptr %p, i32 %arg) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[ARG:%.*]], 17
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 6
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ARG_NONNEG:%.*]] = sub i32 0, [[ARG]]
-; CHECK-NEXT:    [[DIV1_LHS_TRUNC:%.*]] = trunc i32 [[ARG_NONNEG]] to i8
-; CHECK-NEXT:    [[DIV12:%.*]] = udiv i8 [[DIV1_LHS_TRUNC]], 6
-; CHECK-NEXT:    [[DIV1_ZEXT:%.*]] = zext i8 [[DIV12]] to i32
-; CHECK-NEXT:    [[DIV1_NEG:%.*]] = sub i32 0, [[DIV1_ZEXT]]
-; CHECK-NEXT:    store i32 [[DIV1_NEG]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 -2, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %add = add i32 %arg, 17
