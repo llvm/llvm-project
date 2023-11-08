@@ -4176,7 +4176,7 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
         assert(PrevBB->getOutputAddressRange().first <= BBAddress &&
                "Bad output address for basic block.");
         assert((PrevBB->getOutputAddressRange().first != BBAddress ||
-                !hasInstructions() || PrevBB->empty()) &&
+                !hasInstructions() || !PrevBB->getNumNonPseudos()) &&
                "Bad output address for basic block.");
         PrevBB->setOutputEndAddress(BBAddress);
       }
