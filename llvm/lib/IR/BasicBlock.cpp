@@ -16,15 +16,175 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/CommandLine.h"
+
+#include "LLVMContextImpl.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "ir"
 STATISTIC(NumInstrRenumberings, "Number of renumberings across all blocks");
+
+cl::opt<bool>
+    UseNewDbgInfoFormat("experimental-debuginfo-iterators",
+                        cl::desc("Enable communicating debuginfo positions "
+                                 "through iterators, eliminating intrinsics"),
+                        cl::init(false));
+
+DPMarker *BasicBlock::createMarker(Instruction *I) {
+  assert(IsNewDbgInfoFormat &&
+         "Tried to create a marker in a non new debug-info block!");
+  assert(I->DbgMarker == nullptr &&
+         "Tried to create marker for instuction that already has one!");
+  DPMarker *Marker = new DPMarker();
+  Marker->MarkedInstr = I;
+  I->DbgMarker = Marker;
+  return Marker;
+}
+
+DPMarker *BasicBlock::createMarker(InstListType::iterator It) {
+  assert(IsNewDbgInfoFormat &&
+         "Tried to create a marker in a non new debug-info block!");
+  if (It != end())
+    return createMarker(&*It);
+  DPMarker *DPM = getTrailingDPValues();
+  if (DPM)
+    return DPM;
+  DPM = new DPMarker();
+  setTrailingDPValues(DPM);
+  return DPM;
+}
+
+void BasicBlock::convertToNewDbgValues() {
+  // Is the command line option set?
+  if (!UseNewDbgInfoFormat)
+    return;
+
+  IsNewDbgInfoFormat = true;
+
+  // Iterate over all instructions in the instruction list, collecting dbg.value
+  // instructions and converting them to DPValues. Once we find a "real"
+  // instruction, attach all those DPValues to a DPMarker in that instruction.
+  SmallVector<DPValue *, 4> DPVals;
+  for (Instruction &I : make_early_inc_range(InstList)) {
+    assert(!I.DbgMarker && "DbgMarker already set on old-format instrs?");
+    if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(&I)) {
+      // Convert this dbg.value to a DPValue.
+      DPValue *Value = new DPValue(DVI);
+      DPVals.push_back(Value);
+      DVI->eraseFromParent();
+      continue;
+    }
+
+    // Create a marker to store DPValues in. Technically we don't need to store
+    // one marker per instruction, but that's a future optimisation.
+    createMarker(&I);
+    DPMarker *Marker = I.DbgMarker;
+
+    for (DPValue *DPV : DPVals)
+      Marker->insertDPValue(DPV, false);
+
+    DPVals.clear();
+  }
+}
+
+void BasicBlock::convertFromNewDbgValues() {
+  invalidateOrders();
+  IsNewDbgInfoFormat = false;
+
+  // Iterate over the block, finding instructions annotated with DPMarkers.
+  // Convert any attached DPValues to dbg.values and insert ahead of the
+  // instruction.
+  for (auto &Inst : *this) {
+    if (!Inst.DbgMarker)
+      continue;
+
+    DPMarker &Marker = *Inst.DbgMarker;
+    for (DPValue &DPV : Marker.getDbgValueRange())
+      InstList.insert(Inst.getIterator(),
+                      DPV.createDebugIntrinsic(getModule(), nullptr));
+
+    Marker.eraseFromParent();
+  };
+
+  // Assume no trailing DPValues: we could technically create them at the end
+  // of the block, after a terminator, but this would be non-cannonical and
+  // indicates that something else is broken somewhere.
+  assert(!getTrailingDPValues());
+}
+
+bool BasicBlock::validateDbgValues(bool Assert, bool Msg, raw_ostream *OS) {
+  bool RetVal = false;
+  if (!OS)
+    OS = &errs();
+
+  // Helper lambda for reporting failures: via assertion, printing, and return
+  // value.
+  auto TestFailure = [Assert, Msg, &RetVal, OS](bool Val, const char *Text) {
+    // Did the test fail?
+    if (Val)
+      return;
+
+    // If we're asserting, then fire off an assertion.
+    if (Assert)
+      llvm_unreachable(Text);
+
+    if (Msg)
+      *OS << Text << "\n";
+    RetVal = true;
+  };
+
+  // We should have the same debug-format as the parent function.
+  TestFailure(getParent()->IsNewDbgInfoFormat == IsNewDbgInfoFormat,
+              "Parent function doesn't have the same debug-info format");
+
+  // Only validate if we are using the new format.
+  if (!IsNewDbgInfoFormat)
+    return RetVal;
+
+  // Match every DPMarker to every Instruction and vice versa, and
+  // verify that there are no invalid DPValues.
+  for (auto It = begin(); It != end(); ++It) {
+    if (!It->DbgMarker)
+      continue;
+
+    // Validate DebugProgramMarkers.
+    DPMarker *CurrentDebugMarker = It->DbgMarker;
+
+    // If this is a marker, it should match the instruction and vice versa.
+    TestFailure(CurrentDebugMarker->MarkedInstr == &*It,
+                "Debug Marker points to incorrect instruction?");
+
+    // Now validate any DPValues in the marker.
+    for (DPValue &DPV : CurrentDebugMarker->getDbgValueRange()) {
+      // Validate DebugProgramValues.
+      TestFailure(DPV.getMarker() == CurrentDebugMarker,
+                  "Not pointing at correct next marker!");
+
+      // Verify that no DbgValues appear prior to PHIs.
+      TestFailure(
+          !isa<PHINode>(It),
+          "DebugProgramValues must not appear before PHI nodes in a block!");
+    }
+  }
+
+  // Except transiently when removing + re-inserting the block terminator, there
+  // should be no trailing DPValues.
+  TestFailure(!getTrailingDPValues(), "Trailing DPValues in block");
+  return RetVal;
+}
+
+void BasicBlock::setIsNewDbgInfoFormat(bool NewFlag) {
+  if (NewFlag && !IsNewDbgInfoFormat)
+    convertToNewDbgValues();
+  else if (!NewFlag && IsNewDbgInfoFormat)
+    convertFromNewDbgValues();
+}
 
 ValueSymbolTable *BasicBlock::getValueSymbolTable() {
   if (Function *F = getParent())
@@ -47,7 +207,8 @@ template class llvm::SymbolTableListTraits<Instruction,
 
 BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
                        BasicBlock *InsertBefore)
-  : Value(Type::getLabelTy(C), Value::BasicBlockVal), Parent(nullptr) {
+    : Value(Type::getLabelTy(C), Value::BasicBlockVal),
+      IsNewDbgInfoFormat(false), Parent(nullptr) {
 
   if (NewParent)
     insertInto(NewParent, InsertBefore);
@@ -56,11 +217,15 @@ BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
            "Cannot insert block before another block with no function!");
 
   setName(Name);
+  if (NewParent)
+    setIsNewDbgInfoFormat(NewParent->IsNewDbgInfoFormat);
 }
 
 void BasicBlock::insertInto(Function *NewParent, BasicBlock *InsertBefore) {
   assert(NewParent && "Expected a parent");
   assert(!Parent && "Already has a parent");
+
+  setIsNewDbgInfoFormat(NewParent->IsNewDbgInfoFormat);
 
   if (InsertBefore)
     NewParent->insert(InsertBefore->getIterator(), this);
@@ -91,6 +256,11 @@ BasicBlock::~BasicBlock() {
 
   assert(getParent() == nullptr && "BasicBlock still linked into the program!");
   dropAllReferences();
+  for (auto &Inst : *this) {
+    if (!Inst.DbgMarker)
+      continue;
+    Inst.DbgMarker->eraseFromParent();
+  }
   InstList.clear();
 }
 
@@ -588,3 +758,16 @@ void BasicBlock::validateInstrOrdering() const {
   }
 }
 #endif
+
+void BasicBlock::setTrailingDPValues(DPMarker *foo) {
+  getContext().pImpl->setTrailingDPValues(this, foo);
+}
+
+DPMarker *BasicBlock::getTrailingDPValues() {
+  return getContext().pImpl->getTrailingDPValues(this);
+}
+
+void BasicBlock::deleteTrailingDPValues() {
+  getContext().pImpl->deleteTrailingDPValues(this);
+}
+
