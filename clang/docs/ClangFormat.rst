@@ -325,7 +325,6 @@ output of a unified diff and reformats all contained lines with
                           The name of the predefined style used as a fallback in case clang-format is invoked with-style=file, but can not
                           find the .clang-formatfile to use.
     -binary BINARY        location of binary to use for clang-format
-    -non-zero-exit-code   exit with a non-zero status if formatting changes are necessary
 
 To reformat all the lines in the latest Mercurial/:program:`hg` commit, do:
 
