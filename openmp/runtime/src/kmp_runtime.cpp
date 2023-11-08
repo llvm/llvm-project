@@ -24,6 +24,7 @@
 #include "kmp_wait_release.h"
 #include "kmp_wrapper_getpid.h"
 #include "kmp_dispatch.h"
+#include "kmp_utils.h"
 #if KMP_USE_HIER_SCHED
 #include "kmp_dispatch_hier.h"
 #endif
@@ -1652,7 +1653,7 @@ __kmp_serial_fork_call(ident_t *loc, int gtid, enum fork_context_e call_context,
 /* josh todo: hypothetical question: what do we do for OS X*? */
 #if KMP_OS_LINUX &&                                                            \
     (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
-  void *args[argc];
+  SimpleVLA<void *> args(argc);
 #else
   void **args = (void **)KMP_ALLOCA(argc * sizeof(void *));
 #endif /* KMP_OS_LINUX && ( KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || \
