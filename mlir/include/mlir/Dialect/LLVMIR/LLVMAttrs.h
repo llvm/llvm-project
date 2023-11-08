@@ -74,31 +74,6 @@ public:
   }
 };
 
-/// This struct represents a single LLVM target feature.
-struct TargetFeature {
-  StringRef feature;
-
-  // Support allocating this struct into MLIR storage to ensure the feature
-  // string remains valid.
-  TargetFeature allocateInto(TypeStorageAllocator &alloc) const {
-    return TargetFeature{alloc.copyInto(feature)};
-  }
-
-  operator StringRef() const { return feature; }
-
-  bool operator==(TargetFeature const &other) const {
-    return feature == other.feature;
-  }
-
-  bool operator<(TargetFeature const &other) const {
-    return feature < other.feature;
-  }
-};
-
-inline llvm::hash_code hash_value(const TargetFeature &feature) {
-  return llvm::hash_value(feature.feature);
-}
-
 // Inline the LLVM generated Linkage enum and utility.
 // This is only necessary to isolate the "enum generated code" from the
 // attribute definition itself.

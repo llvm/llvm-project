@@ -938,15 +938,17 @@ def LLVM_VScaleRangeAttr : LLVM_Attr<"VScaleRange", "vscale_range"> {
 // TargetFeaturesAttr
 //===----------------------------------------------------------------------===//
 
-def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features"> {
+def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
+{
   let summary = "LLVM target features attribute";
 
   let description = [{
-    Represents the LLVM target features in a manner that is efficient to query.
+    Represents the LLVM target features as a list that can be checked within
+    passes/rewrites.
 
     Example:
     ```mlir
-    #llvm.target_features<"+sme,+sve,+sme-f64f64">
+    #llvm.target_features<["+sme", "+sve", "+sme-f64f64"]>
     ```
 
     Then within a pass or rewrite the features active at an op can be queried:
@@ -959,19 +961,22 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features"> {
     ```
   }];
 
-  let parameters = (ins
-    ArrayRefOfSelfAllocationParameter<"TargetFeature", "">:$features);
+  let parameters = (ins OptionalArrayRefParameter<"StringAttr">:$features);
 
   let builders = [
-    TypeBuilder<(ins "::llvm::ArrayRef<TargetFeature>":$features)>,
-    TypeBuilder<(ins "::llvm::StringRef":$features)>
+    TypeBuilder<(ins "::llvm::StringRef":$features)>,
+    TypeBuilder<(ins "::llvm::ArrayRef<::llvm::StringRef>":$features)>
   ];
 
   let extraClassDeclaration = [{
     /// Checks if a feature is contained within the features list.
-    bool contains(TargetFeature) const;
-    bool contains(StringRef feature) const {
-      return contains(TargetFeature{feature});
+    /// Note: Using a StringAttr allows doing pointer-comparisons.
+    bool contains(::mlir::StringAttr feature) const;
+    bool contains(::llvm::StringRef feature) const;
+
+    bool nullOrEmpty() const {
+      // Checks if this attribute is fasly, or the features are empty.
+      return !bool(*this) || getFeatures().empty();
     }
 
     /// Returns the list of features as an LLVM-compatible string.
@@ -987,8 +992,8 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features"> {
     }
   }];
 
-  let hasCustomAssemblyFormat = 1;
-  let skipDefaultBuilders = 1;
+  let assemblyFormat = "`<` `[` (`]`) : ($features^ `]`)? `>`";
+  let genVerifyDecl = 1;
 }
 
 #endif // LLVMIR_ATTRDEFS
