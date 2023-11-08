@@ -466,7 +466,7 @@ PPCFrameLowering::findScratchRegister(MachineBasicBlock *MBB,
       RS.enterBasicBlock(*MBB);
     } else {
       RS.enterBasicBlockEnd(*MBB);
-      RS.backward(std::prev(MBBI));
+      RS.backward(MBBI);
     }
   } else {
     // The scratch register will be used at the start of the block.

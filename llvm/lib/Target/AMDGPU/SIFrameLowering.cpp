@@ -1376,7 +1376,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
                                                 TRI->isAGPR(MRI, VReg))) {
             assert(RS != nullptr);
             RS->enterBasicBlockEnd(MBB);
-            RS->backward(MI);
+            RS->backward(std::next(MI.getIterator()));
             TRI->eliminateFrameIndex(MI, 0, FIOp, RS);
             SpillFIs.set(FI);
             continue;
