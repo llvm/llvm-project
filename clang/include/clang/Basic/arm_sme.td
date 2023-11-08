@@ -296,5 +296,25 @@ multiclass ZAAddSub<string n_suffix> {
   }
 }
 
+multiclass MinMaxIntr<string i, string zm, string mul, string t> {
+  def SVS # NAME : SInst<"sv" # i # "[" # zm # "_{d}_" # mul # "]", t, "csil",     MergeNone, "aarch64_sve_s" # i # zm # "_" # mul, [IsStreaming], []>;
+  def SVU # NAME : SInst<"sv" # i # "[" # zm # "_{d}_" # mul # "]", t, "UcUsUiUl", MergeNone, "aarch64_sve_u" # i # zm # "_" # mul, [IsStreaming], []>;
+  def SVF # NAME : SInst<"sv" # i # "[" # zm # "_{d}_" # mul # "]", t, "hfd",      MergeNone, "aarch64_sve_f" # i # zm # "_" # mul, [IsStreaming], []>;
+}
+
+let TargetGuard = "sme2" in {
+  // SMAX / UMAX / FMAX
+  defm MAX_SINGLE_X2 : MinMaxIntr<"max", "_single", "x2", "22d">;
+  defm MAX_MULTI_X2  : MinMaxIntr<"max", "",        "x2", "222">;
+  defm MAX_SINGLE_X4 : MinMaxIntr<"max", "_single", "x4", "44d">;
+  defm MAX_MULTI_X4  : MinMaxIntr<"max", "",        "x4", "444">;
+
+  // SMIN / UMIN / FMIN
+  defm MIN_SINGLE_X2 : MinMaxIntr<"min", "_single", "x2", "22d">;
+  defm MIN_MULTI_X2  : MinMaxIntr<"min", "",        "x2", "222">;
+  defm MIN_SINGLE_X4 : MinMaxIntr<"min", "_single", "x4", "44d">;
+  defm MIN_MULTI_X4  : MinMaxIntr<"min", "",        "x4", "444">;
+}
+
 defm SVADD : ZAAddSub<"add">;
 defm SVSUB : ZAAddSub<"sub">;
