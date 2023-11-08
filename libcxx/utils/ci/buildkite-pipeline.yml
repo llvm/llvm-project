@@ -423,7 +423,7 @@ steps:
     timeout_in_minutes: 120
 
   - label: "Fast hardening mode with ABI breaks"
-    command: "libcxx/utils/ci/run-buildbot generic-hardening-mode-with-abi-breaks"
+    command: "libcxx/utils/ci/run-buildbot generic-hardening-mode-fast-with-abi-breaks"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"

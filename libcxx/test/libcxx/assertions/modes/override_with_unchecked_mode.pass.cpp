@@ -12,8 +12,6 @@
 // UNSUPPORTED: c++03
 // `check_assertion.h` requires Unix headers.
 // REQUIRES: has-unix-headers
-// The ability to set a custom abort message is required to compare the assertion message.
-// XFAIL: availability-verbose_abort-missing
 // ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE
 
 #include <cassert>
