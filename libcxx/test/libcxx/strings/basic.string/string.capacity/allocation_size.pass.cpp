@@ -14,7 +14,7 @@
 #include <cassert>
 #include <cstddef>
 #include <string>
-#include <iostream>
+#include <cstdio>
 
 #include "test_macros.h"
 
@@ -52,7 +52,7 @@ void test_resize_from_small_size() {
     const std::string input(sso_capacity, 'a');
     std::string s;
     s = input.c_str();
-    std::cout << "Have capacity = " << s.capacity() << " and size = " << s.size() << std::endl;
+    std::printf("Have Capacity = %zu and size = %zu\n", s.capacity(), s.size());
     assert(s.capacity() == input.size());
   }
 }
