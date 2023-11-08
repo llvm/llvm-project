@@ -103,7 +103,6 @@ add_llvm_library(omptarget.rtl.amdgpu SHARED
   ${LIBOMPTARGET_DEP_LIBRARIES}
   ${OPENMP_PTHREAD_LIB}
   -Wl,--whole-archive amdgcn_hostexec_services -Wl,--no-whole-archive
-  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
   ${LDFLAGS_UNDEFINED}
 
   NO_INSTALL_RPATH
