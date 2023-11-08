@@ -922,7 +922,9 @@ public:
     }
 
     if (SrcType->isMatrixType() && DstType->isMatrixType())
-      llvm_unreachable("not implemented");
+      llvm_unreachable("NYI: matrix type to matrix type conversion");
+    assert(!SrcType->isMatrixType() && !DstType->isMatrixType() &&
+           "Internal error: conversion between matrix type and scalar type");
 
     // TODO(CIR): Support VectorTypes
 
@@ -1614,52 +1616,40 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *E) {
   llvm_unreachable("destination type for negation unary operator is NYI");
 }
 
+// Conversion from bool, integral, or floating-point to integral or
+// floating-point.  Conversions involving other types are handled elsewhere.
+// Conversion to bool is handled elsewhere because that's a comparison against
+// zero, not a simple cast.
 mlir::Value ScalarExprEmitter::buildScalarCast(
     mlir::Value Src, QualType SrcType, QualType DstType, mlir::Type SrcTy,
     mlir::Type DstTy, ScalarConversionOpts Opts) {
-  // The Element types determine the type of cast to perform.
-  mlir::Type SrcElementTy;
-  mlir::Type DstElementTy;
-  QualType SrcElementType;
-  QualType DstElementType;
-  if (SrcType->isMatrixType() && DstType->isMatrixType()) {
-    llvm_unreachable("NYI");
-  } else {
-    assert(!SrcType->isMatrixType() && !DstType->isMatrixType() &&
-           "cannot cast between matrix and non-matrix types");
-    SrcElementTy = SrcTy;
-    DstElementTy = DstTy;
-    SrcElementType = SrcType;
-    DstElementType = DstType;
-  }
-
-  if (SrcElementTy.isa<mlir::IntegerType>() ||
-      DstElementTy.isa<mlir::IntegerType>())
+  assert(!SrcType->isMatrixType() && !DstType->isMatrixType() &&
+         "Internal error: matrix types not handled by this function.");
+  if (SrcTy.isa<mlir::IntegerType>() || DstTy.isa<mlir::IntegerType>())
     llvm_unreachable("Obsolete code. Don't use mlir::IntegerType with CIR.");
 
-  if (SrcElementType->isBooleanType()) {
+  std::optional<mlir::cir::CastKind> CastKind;
+
+  if (SrcType->isBooleanType()) {
     if (Opts.TreatBooleanAsSigned)
       llvm_unreachable("NYI: signed bool");
-    if (CGF.getBuilder().isInt(DstElementTy)) {
-      return Builder.create<mlir::cir::CastOp>(
-          Src.getLoc(), DstTy, mlir::cir::CastKind::bool_to_int, Src);
+    if (CGF.getBuilder().isInt(DstTy)) {
+      CastKind = mlir::cir::CastKind::bool_to_int;
     } else if (DstTy.isa<mlir::FloatType>()) {
       llvm_unreachable("NYI: bool->float cast");
     } else {
-      llvm_unreachable("Unexpected destination type for scalar cast");
+      llvm_unreachable("Internal error: Cast to unexpected type");
     }
-  } else if (CGF.getBuilder().isInt(SrcElementTy)) {
-    if (CGF.getBuilder().isInt(DstElementTy)) {
-      return Builder.create<mlir::cir::CastOp>(
-          Src.getLoc(), DstTy, mlir::cir::CastKind::integral, Src);
-    } else if (DstElementTy.isa<mlir::FloatType>()) {
-      return Builder.create<mlir::cir::CastOp>(
-          Src.getLoc(), DstTy, mlir::cir::CastKind::int_to_float, Src);
+  } else if (CGF.getBuilder().isInt(SrcTy)) {
+    if (CGF.getBuilder().isInt(DstTy)) {
+      CastKind = mlir::cir::CastKind::integral;
+    } else if (DstTy.isa<mlir::FloatType>()) {
+      CastKind = mlir::cir::CastKind::int_to_float;
     } else {
-      llvm_unreachable("Unexpected destination type for scalar cast");
+      llvm_unreachable("Internal error: Cast to unexpected type");
     }
-  } else if (SrcElementTy.isa<mlir::FloatType>()) {
-    if (CGF.getBuilder().isInt(DstElementTy)) {
+  } else if (SrcTy.isa<mlir::FloatType>()) {
+    if (CGF.getBuilder().isInt(DstTy)) {
       // If we can't recognize overflow as undefined behavior, assume that
       // overflow saturates. This protects against normal optimizations if we
       // are compiling with non-standard FP semantics.
@@ -1667,17 +1657,19 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
         llvm_unreachable("NYI");
       if (Builder.getIsFPConstrained())
         llvm_unreachable("NYI");
-      return Builder.create<mlir::cir::CastOp>(
-          Src.getLoc(), DstTy, mlir::cir::CastKind::float_to_int, Src);
-    } else if (DstElementTy.isa<mlir::FloatType>()) {
+      CastKind = mlir::cir::CastKind::float_to_int;
+    } else if (DstTy.isa<mlir::FloatType>()) {
       // TODO: split this to createFPExt/createFPTrunc
       return Builder.createFloatingCast(Src, DstTy);
     } else {
-      llvm_unreachable("Unexpected destination type for scalar cast");
+      llvm_unreachable("Internal error: Cast to unexpected type");
     }
   } else {
-    llvm_unreachable("Unexpected source type for scalar cast");
+    llvm_unreachable("Internal error: Cast from unexpected type");
   }
+
+  assert(CastKind.has_value() && "Internal error: CastKind not set.");
+  return Builder.create<mlir::cir::CastOp>(Src.getLoc(), DstTy, *CastKind, Src);
 }
 
 LValue
