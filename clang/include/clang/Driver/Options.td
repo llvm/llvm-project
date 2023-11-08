@@ -1018,7 +1018,7 @@ def fcx_limited_range : Joined<["-"], "fcx-limited-range">,
 def fno_cx_limited_range : Joined<["-"], "fno-cx-limited-range">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Basic algebraic expansions of complex arithmetic operations "
-           "involving are enabled.">;
+           "involving are disabled.">;
 
 def fcx_fortran_rules : Joined<["-"], "fcx-fortran-rules">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,

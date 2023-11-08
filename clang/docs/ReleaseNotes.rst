@@ -836,8 +836,6 @@ Floating Point Support in Clang
 - ``#pragma STDC CX_LIMITED_RANGE on-off-switch`` enables the naive mathematical
   formulas for complex division and multiplication with no NaN checking of
   results.
-- Add ``__builtin_iszero``, ``__builtin_issignaling`` and
-  ``__builtin_issubnormal``.
 
 AST Matchers
 ------------
