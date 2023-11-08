@@ -54,7 +54,6 @@ define <32 x i32> @insertelt_v32i32_4(<32 x i32> %a, i32 %y) {
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
 ; CHECK-NEXT:    vmv.s.x v16, a0
 ; CHECK-NEXT:    vslideup.vi v8, v16, 4
-; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    ret
   %b = insertelement <32 x i32> %a, i32 %y, i32 4
   ret <32 x i32> %b

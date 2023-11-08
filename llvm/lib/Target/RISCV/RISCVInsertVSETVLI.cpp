@@ -1477,8 +1477,15 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
         if (!isVLPreservingConfig(*NextMI)) {
           MI.getOperand(0).setReg(NextMI->getOperand(0).getReg());
           MI.getOperand(0).setIsDead(false);
+
+          MachineOperand &AVL = MI.getOperand(1);
+          // If the old AVL was only used by MI, it's dead.
+          if (AVL.isReg() && AVL.getReg().isVirtual() &&
+              MRI->hasOneNonDBGUse(AVL.getReg()))
+            MRI->getVRegDef(AVL.getReg())->eraseFromParent();
+
           if (NextMI->getOperand(1).isImm())
-            MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
+            AVL.ChangeToImmediate(NextMI->getOperand(1).getImm());
           else {
             // NextMI may have an AVL (addi x0, imm) whilst MI might have a
             // different non-zero AVL. But the AVLs may be considered
@@ -1488,8 +1495,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
                     isADDIX0(NextMI->getOperand(1).getReg(), *MRI))
               ADDI->moveBefore(&MI);
 
-            MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(),
-                                              false);
+            AVL.ChangeToRegister(NextMI->getOperand(1).getReg(), false);
           }
           MI.setDesc(NextMI->getDesc());
         }
