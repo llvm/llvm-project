@@ -2050,6 +2050,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                                                   Initializer->getBeginLoc(),
                                                   Initializer->getEndLoc());
     }
+    llvm_unreachable("Unknown initialization kind");
   }();
 
   // C++11 [dcl.spec.auto]p6. Deduce the type which 'auto' stands in for.
