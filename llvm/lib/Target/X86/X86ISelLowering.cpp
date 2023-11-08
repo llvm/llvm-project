@@ -2242,6 +2242,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
+  if (Subtarget.hasAVX())
+    setOperationAction(ISD::FABS, MVT::v8f16, Custom);
+
   if (!Subtarget.useSoftFloat() &&
       (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16())) {
     addRegisterClass(MVT::v8bf16, Subtarget.hasAVX512() ? &X86::VR128XRegClass

@@ -137,6 +137,45 @@ define <4 x double> @fabs_v4f64(<4 x double> %p) {
 }
 declare <4 x double> @llvm.fabs.v4f64(<4 x double> %p)
 
+define <8 x half> @fabs_v8f16(ptr %p) {
+; X86-AVX-LABEL: fabs_v8f16:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    movl 4(%esp), [[ADDRREG:%.*]]
+; X86-AVX-NEXT:    vmovaps ([[ADDRREG]]), %xmm0
+; X86-AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    retl
+
+; X86-AVX2-LABEL: fabs_v8f16:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    movl 4(%esp), [[REG:%.*]]
+; X86-AVX2-NEXT:    vpbroadcastw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-AVX2-NEXT:    vpand ([[REG]]), %xmm0, %xmm0
+; X86-AVX2-NEXT:    retl
+
+; X64-AVX512VL-LABEL: fabs_v8f16:
+; X64-AVX512VL:       # %bb.0:
+; X64-AVX512VL-NEXT:    vpbroadcastw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX512VL-NEXT:    vpand (%rdi), %xmm0, %xmm0
+; X64-AVX512VL-NEXT:    retq
+
+; X64-AVX-LABEL: fabs_v8f16:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    retq
+
+; X64-AVX2-LABEL: fabs_v8f16:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vpbroadcastw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX2-NEXT:    vpand (%rdi), %xmm0, %xmm0
+; X64-AVX2-NEXT:    retq
+
+  %v = load <8 x half>, ptr %p, align 16
+  %nnv = call <8 x half> @llvm.fabs.v8f16(<8 x half> %v)
+  ret <8 x half> %nnv
+}
+declare <8 x half> @llvm.fabs.v8f16(<8 x half> %p)
+
 define <8 x float> @fabs_v8f32(<8 x float> %p) {
 ; X86-AVX1-LABEL: fabs_v8f32:
 ; X86-AVX1:       # %bb.0:
