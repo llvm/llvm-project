@@ -1740,13 +1740,13 @@ void JSONNodeDumper::visitBlockCommandComment(
 void JSONNodeDumper::visitParamCommandComment(
     const comments::ParamCommandComment *C, const comments::FullComment *FC) {
   switch (C->getDirection()) {
-  case comments::ParamCommandComment::In:
+  case comments::ParamCommandPassDirection::In:
     JOS.attribute("direction", "in");
     break;
-  case comments::ParamCommandComment::Out:
+  case comments::ParamCommandPassDirection::Out:
     JOS.attribute("direction", "out");
     break;
-  case comments::ParamCommandComment::InOut:
+  case comments::ParamCommandPassDirection::InOut:
     JOS.attribute("direction", "in,out");
     break;
   }
