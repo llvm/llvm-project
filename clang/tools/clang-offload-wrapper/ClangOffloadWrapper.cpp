@@ -125,7 +125,7 @@ class BinaryWrapper {
 
 private:
   IntegerType *getSizeTTy() {
-    switch (M.getDataLayout().getPointerTypeSize(Type::getInt8PtrTy(C))) {
+    switch (M.getDataLayout().getPointerTypeSize(PointerType::getUnqual(C))) {
     case 4u:
       return Type::getInt32Ty(C);
     case 8u:
@@ -143,8 +143,8 @@ private:
   // };
   StructType *getEntryTy() {
     if (!EntryTy)
-      EntryTy = StructType::create("__tgt_offload_entry", Type::getInt8PtrTy(C),
-                                   Type::getInt8PtrTy(C), getSizeTTy(),
+      EntryTy = StructType::create("__tgt_offload_entry", PointerType::getUnqual(C),
+                                   PointerType::getUnqual(C), getSizeTTy(),
                                    Type::getInt32Ty(C), Type::getInt32Ty(C));
     return EntryTy;
   }
@@ -159,8 +159,8 @@ private:
   // };
   StructType *getDeviceImageTy() {
     if (!ImageTy)
-      ImageTy = StructType::create("__tgt_device_image", Type::getInt8PtrTy(C),
-                                   Type::getInt8PtrTy(C), getEntryPtrTy(),
+      ImageTy = StructType::create("__tgt_device_image", PointerType::getUnqual(C),
+                                   PointerType::getUnqual(C), getEntryPtrTy(),
                                    getEntryPtrTy());
     return ImageTy;
   }
@@ -200,7 +200,7 @@ private:
     if (!ImageInfoTy)
       ImageInfoTy = StructType::create(
           "__tgt_image_info", Type::getInt32Ty(C), Type::getInt32Ty(C),
-          Type::getInt32Ty(C), Type::getInt8PtrTy(C), Type::getInt8PtrTy(C));
+          Type::getInt32Ty(C), PointerType::getUnqual(C), PointerType::getUnqual(C));
     return ImageInfoTy;
   }
 
