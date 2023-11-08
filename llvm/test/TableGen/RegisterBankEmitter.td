@@ -22,3 +22,4 @@ def GPRRegBank : RegisterBank<"GPR", [ClassA]>;
 // CHECK: PMI_ClassA,
 // CHECK: const int BankIDToRegisterClassCount
 // CHECK: 1,
+

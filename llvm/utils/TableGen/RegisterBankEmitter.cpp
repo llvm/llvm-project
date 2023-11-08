@@ -107,15 +107,15 @@ private:
   CodeGenTarget Target;
   RecordKeeper &Records;
 
-  void emitHeader(raw_ostream &OS, const StringRef TargetName,
+  void emitHeader(raw_ostream &OS, StringRef TargetName,
                   const std::vector<RegisterBank> &Banks);
-  void emitBaseClassDefinition(raw_ostream &OS, const StringRef TargetName,
+  void emitBaseClassDefinition(raw_ostream &OS, StringRef TargetName,
                                const std::vector<RegisterBank> &Banks);
-  void emitBaseClassImplementation(raw_ostream &OS, const StringRef TargetName,
+  void emitBaseClassImplementation(raw_ostream &OS, StringRef TargetName,
                                    const std::vector<RegisterBank> &Banks);
-  void emitRBIHeader(raw_ostream &OS, const StringRef TargetName,
+  void emitRBIHeader(raw_ostream &OS, StringRef TargetName,
                      const std::vector<RegisterBank> &Banks);
-  void emitRBIImplementation(raw_ostream &OS, const StringRef TargetName,
+  void emitRBIImplementation(raw_ostream &OS, StringRef TargetName,
                              const std::vector<RegisterBank> &Banks);
 
 public:
@@ -129,7 +129,7 @@ public:
 /// Emit code to declare the ID enumeration and external global instance
 /// variables.
 void RegisterBankEmitter::emitHeader(raw_ostream &OS,
-                                     const StringRef TargetName,
+                                     StringRef TargetName,
                                      const std::vector<RegisterBank> &Banks) {
   // <Target>RegisterBankInfo.h
   OS << "namespace llvm {\n"
@@ -148,7 +148,7 @@ void RegisterBankEmitter::emitHeader(raw_ostream &OS,
 
 /// Emit declarations of the <Target>GenRegisterBankInfo class.
 void RegisterBankEmitter::emitBaseClassDefinition(
-    raw_ostream &OS, const StringRef TargetName,
+    raw_ostream &OS, StringRef TargetName,
     const std::vector<RegisterBank> &Banks) {
   OS << "private:\n"
      << "  static const RegisterBank *RegBanks[];\n"
@@ -295,10 +295,20 @@ void RegisterBankEmitter::emitBaseClassImplementation(
      << "} // end namespace llvm\n";
 }
 
-// RegisterBankInfo tables and enums
-// are discussed in https://discourse.llvm.org/t/74459
+// TableGen already had some RegisterBankInfo support:
+// TargetGenRegisterBankInfo(), RegBankIDs enum, RegBanks and Sizes.
+// This emitter adds support for PartMappings, PartialMappingIdx
+// and BankIDToCopyMapIdx.
+// 
+// The original implementation was supposed to infer RegisterClasses.
+// But since that wasn't finished, backends instead embedded hand crafted
+// tables and enums. This emitter generates them from .td files
+// but requires that the .td files fully describe their RegisterBanks.
+// This still doesn't support ValMappings and ValueMappingIdx.
+//
+// This was discussed in https://discourse.llvm.org/t/74459
 void RegisterBankEmitter::emitRBIHeader(
-    raw_ostream &OS, const StringRef TargetName,
+    raw_ostream &OS, StringRef TargetName,
     const std::vector<RegisterBank> &Banks) {
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
 
@@ -321,7 +331,7 @@ void RegisterBankEmitter::emitRBIHeader(
 }
 
 void RegisterBankEmitter::emitRBIImplementation(
-    raw_ostream &OS, const StringRef TargetName,
+    raw_ostream &OS, StringRef TargetName,
     const std::vector<RegisterBank> &Banks) {
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
 
@@ -331,16 +341,14 @@ void RegisterBankEmitter::emitRBIImplementation(
   for (const auto &Bank : Banks) {
     for (const CodeGenRegisterClass *RC :
          Bank.getExplicitlySpecifiedRegisterClasses(RegisterClassHierarchy)) {
-      if (RC->RSI.isSimple()) {
-        if (RC->getValueTypes()[0].getSimple() != MVT::Untyped) {
-          // StartIdx is currently 0 in all of the in-tree backends
-          OS << "  { 0, " << RC->RSI.getSimple().RegSize << ", "
-             << Bank.getInstanceVarName() << " },\n";
-        } else {
-          OS << "  #error Untyped RegisterClass " << RC->getName() << "\n";
-        }
-      } else {
+      if (!RC->RSI.isSimple()) {
         OS << "  #error non-Simple() RegisterClass " << RC->getName() << "\n";
+      } else if (RC->getValueTypes()[0].getSimple() == MVT::Untyped) {
+        OS << "  #error Untyped RegisterClass " << RC->getName() << "\n";
+      } else {
+        // StartIdx is currently 0 in all of the in-tree backends
+        OS << "  { 0, " << RC->RSI.getSimple().RegSize << ", "
+           << Bank.getInstanceVarName() << " },\n";
       }
     }
   }
