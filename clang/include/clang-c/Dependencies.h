@@ -187,7 +187,7 @@ typedef struct CXOpaqueDependencyScannerServiceOptions
  * clang_experimental_DependencyScannerServiceOptions_dispose.
  */
 CINDEX_LINKAGE CXDependencyScannerServiceOptions
-clang_experimental_DependencyScannerServiceOptions_create();
+clang_experimental_DependencyScannerServiceOptions_create(void);
 
 /**
  * Dispose of a \c CXDependencyScannerServiceOptions object.
@@ -308,7 +308,7 @@ typedef void CXModuleDiscoveredCallback(void *Context,
  * \param ContextHash the context hash of the dependent module.
  *                    See \c CXModuleDependency::ContextHash.
  & \param OutputKind the kind of module output to lookup.
- * \param Output[out] the output path(s) or name, whose total size must be <=
+ * \param[out] Output the output path(s) or name, whose total size must be <=
  *                    \p MaxLen. In the case of multiple outputs of the same
  *                    kind, this can be a null-separated list.
  * \param MaxLen the maximum size of Output.
