@@ -145,6 +145,8 @@
 # PIE-NEXT:  segment  section            address     type
 # PIE-EMPTY:
 
+## Check that an absolute DW_AT_name does not have DW_AT_comp_dir prepended
+## when forming N_SO.
 # RUN: llvm-mc -filetype obj -triple=x86_64-apple-darwin %t/abs-path.s -o %t/abs-path.o
 # RUN: %lld %t/abs-path.o -o %t/test
 # RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | FileCheck %s --check-prefix=ABS-PATH
