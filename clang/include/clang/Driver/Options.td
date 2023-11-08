@@ -6183,9 +6183,6 @@ let Flags = [CC1Option, NoDriverOption] in {
 def sys_header_deps : Flag<["-"], "sys-header-deps">,
   HelpText<"Include system headers in dependency output">,
   MarshallingInfoFlag<DependencyOutputOpts<"IncludeSystemHeaders">>;
-def canonical_system_headers : Flag<["-"], "canonical-system-headers">,
-  HelpText<"Canonicalize system headers in dependency output">,
-  MarshallingInfoFlag<DependencyOutputOpts<"CanonicalSystemHeaders">>;
 def skip_unused_modulemap_file_deps : Flag<["-"], "skip-unused-modulemap-deps">,
   HelpText<"Include module map files only for imported modules in dependency output">,
   MarshallingInfoFlag<DependencyOutputOpts<"SkipUnusedModuleMaps">>;
