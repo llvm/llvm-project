@@ -82,7 +82,6 @@ struct SparsificationPass
   SparsificationPass(const SparsificationPass &pass) = default;
   SparsificationPass(const SparsificationOptions &options) {
     parallelization = options.parallelizationStrategy;
-    gpuDataTransfer = options.gpuDataTransferStrategy;
     enableIndexReduction = options.enableIndexReduction;
     enableGPULibgen = options.enableGPULibgen;
     enableRuntimeLibrary = options.enableRuntimeLibrary;
@@ -91,9 +90,8 @@ struct SparsificationPass
   void runOnOperation() override {
     auto *ctx = &getContext();
     // Translate strategy flags to strategy options.
-    SparsificationOptions options(parallelization, gpuDataTransfer,
-                                  enableIndexReduction, enableGPULibgen,
-                                  enableRuntimeLibrary);
+    SparsificationOptions options(parallelization, enableIndexReduction,
+                                  enableGPULibgen, enableRuntimeLibrary);
     // Apply GPU libgen (if requested), sparsification, and cleanup rewriting.
     RewritePatternSet patterns(ctx);
     if (enableGPULibgen)
