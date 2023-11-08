@@ -419,6 +419,17 @@ DemandedFields getDemanded(const MachineInstr &MI,
   return Res;
 }
 
+static MachineInstr *isADDIX0(Register Reg, const MachineRegisterInfo &MRI) {
+  if (Reg == RISCV::X0)
+    return nullptr;
+  if (MachineInstr *MI = MRI.getVRegDef(Reg);
+      MI && MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
+      MI->getOperand(2).isImm() && MI->getOperand(1).getReg() == RISCV::X0 &&
+      MI->getOperand(2).getImm() != 0)
+    return MI;
+  return nullptr;
+}
+
 /// Defines the abstract state with which the forward dataflow models the
 /// values of the VL and VTYPE registers after insertion.
 class VSETVLIInfo {
@@ -431,6 +442,7 @@ class VSETVLIInfo {
     Uninitialized,
     AVLIsReg,
     AVLIsImm,
+    PreserveVL, // vsetvli x0, x0
     Unknown,
   } State = Uninitialized;
 
@@ -466,6 +478,8 @@ public:
     State = AVLIsImm;
   }
 
+  void setPreserveVL() { State = PreserveVL; }
+
   bool hasAVLImm() const { return State == AVLIsImm; }
   bool hasAVLReg() const { return State == AVLIsReg; }
   Register getAVLReg() const {
@@ -486,11 +500,7 @@ public:
     if (hasAVLReg()) {
       if (getAVLReg() == RISCV::X0)
         return true;
-      if (MachineInstr *MI = MRI.getVRegDef(getAVLReg());
-          MI && MI->getOpcode() == RISCV::ADDI &&
-          MI->getOperand(1).isReg() && MI->getOperand(2).isImm() &&
-          MI->getOperand(1).getReg() == RISCV::X0 &&
-          MI->getOperand(2).getImm() != 0)
+      if (isADDIX0(getAVLReg(), MRI))
         return true;
       return false;
     }
@@ -579,8 +589,11 @@ public:
   // Determine whether the vector instructions requirements represented by
   // Require are compatible with the previous vsetvli instruction represented
   // by this.  MI is the instruction whose requirements we're considering.
+  // The instruction represented by Require should come after this, unless
+  // OrderReversed is true.
   bool isCompatible(const DemandedFields &Used, const VSETVLIInfo &Require,
-                    const MachineRegisterInfo &MRI) const {
+                    const MachineRegisterInfo &MRI,
+                    bool OrderReversed = false) const {
     assert(isValid() && Require.isValid() &&
            "Can't compare invalid VSETVLIInfos");
     assert(!Require.SEWLMULRatioOnly &&
@@ -593,11 +606,15 @@ public:
     if (SEWLMULRatioOnly)
       return false;
 
-    if (Used.VLAny && !hasSameAVL(Require))
-      return false;
+    // If the VL will be preserved, then we don't need to check the AVL.
+    const uint8_t EndState = OrderReversed ? State : Require.State;
+    if (EndState != PreserveVL) {
+      if (Used.VLAny && !hasSameAVL(Require))
+        return false;
 
-    if (Used.VLZeroness && !hasEquallyZeroAVL(Require, MRI))
-      return false;
+      if (Used.VLZeroness && !hasEquallyZeroAVL(Require, MRI))
+        return false;
+    }
 
     return hasCompatibleVTYPE(Used, Require);
   }
@@ -849,9 +866,11 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
     assert(MI.getOpcode() == RISCV::PseudoVSETVLI ||
            MI.getOpcode() == RISCV::PseudoVSETVLIX0);
     Register AVLReg = MI.getOperand(1).getReg();
-    assert((AVLReg != RISCV::X0 || MI.getOperand(0).getReg() != RISCV::X0) &&
-           "Can't handle X0, X0 vsetvli yet");
-    NewInfo.setAVLReg(AVLReg);
+
+    if (AVLReg == RISCV::X0 && MI.getOperand(0).getReg() == RISCV::X0)
+      NewInfo.setPreserveVL();
+    else
+      NewInfo.setAVLReg(AVLReg);
   }
   NewInfo.setVTYPE(MI.getOperand(2).getImm());
 
@@ -1426,52 +1445,9 @@ static void doUnion(DemandedFields &A, DemandedFields B) {
   A.MaskPolicy |= B.MaskPolicy;
 }
 
-static bool isNonZeroAVL(const MachineOperand &MO) {
-  if (MO.isReg())
-    return RISCV::X0 == MO.getReg();
-  assert(MO.isImm());
-  return 0 != MO.getImm();
-}
-
-// Return true if we can mutate PrevMI to match MI without changing any the
-// fields which would be observed.
-static bool canMutatePriorConfig(const MachineInstr &PrevMI,
-                                 const MachineInstr &MI,
-                                 const DemandedFields &Used) {
-  // If the VL values aren't equal, return false if either a) the former is
-  // demanded, or b) we can't rewrite the former to be the later for
-  // implementation reasons.
-  if (!isVLPreservingConfig(MI)) {
-    if (Used.VLAny)
-      return false;
-
-    // We don't bother to handle the equally zero case here as it's largely
-    // uninteresting.
-    if (Used.VLZeroness) {
-      if (isVLPreservingConfig(PrevMI))
-        return false;
-      if (!isNonZeroAVL(MI.getOperand(1)) ||
-          !isNonZeroAVL(PrevMI.getOperand(1)))
-        return false;
-    }
-
-    // TODO: Track whether the register is defined between
-    // PrevMI and MI.
-    if (MI.getOperand(1).isReg() &&
-        RISCV::X0 != MI.getOperand(1).getReg())
-      return false;
-  }
-
-  if (!PrevMI.getOperand(2).isImm() || !MI.getOperand(2).isImm())
-    return false;
-
-  auto PriorVType = PrevMI.getOperand(2).getImm();
-  auto VType = MI.getOperand(2).getImm();
-  return areCompatibleVTYPEs(PriorVType, VType, Used);
-}
-
 void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
   MachineInstr *NextMI = nullptr;
+  VSETVLIInfo NextInfo;
   // We can have arbitrary code in successors, so VL and VTYPE
   // must be considered demanded.
   DemandedFields Used;
@@ -1482,6 +1458,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
 
     if (!isVectorConfigInstr(MI)) {
       doUnion(Used, getDemanded(MI, MRI, ST));
+      transferAfter(NextInfo, MI);
       continue;
     }
 
@@ -1495,14 +1472,25 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
         ToDelete.push_back(&MI);
         // Leave NextMI unchanged
         continue;
-      } else if (canMutatePriorConfig(MI, *NextMI, Used)) {
+      } else if (NextInfo.isCompatible(Used, getInfoForVSETVLI(MI), *MRI,
+                                       true)) {
         if (!isVLPreservingConfig(*NextMI)) {
           MI.getOperand(0).setReg(NextMI->getOperand(0).getReg());
           MI.getOperand(0).setIsDead(false);
           if (NextMI->getOperand(1).isImm())
             MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
-          else
-            MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(), false);
+          else {
+            // NextMI may have an AVL (addi x0, imm) whilst MI might have a
+            // different non-zero AVL. But the AVLs may be considered
+            // compatible. So hoist it up to MI in case it's not already
+            // dominated by it. See hasNonZeroAVL.
+            if (MachineInstr *ADDI =
+                    isADDIX0(NextMI->getOperand(1).getReg(), *MRI))
+              ADDI->moveBefore(&MI);
+
+            MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(),
+                                              false);
+          }
           MI.setDesc(NextMI->getDesc());
         }
         MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());
@@ -1511,6 +1499,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
       }
     }
     NextMI = &MI;
+    NextInfo = getInfoForVSETVLI(MI);
     Used = getDemanded(MI, MRI, ST);
   }
 
