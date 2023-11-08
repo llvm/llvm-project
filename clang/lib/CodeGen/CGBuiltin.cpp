@@ -902,6 +902,7 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
     }
 
     if (const ValueDecl *CountedByFD = FindCountedByField(Base)) {
+      bool IsSigned = CountedByFD->getType()->isSignedIntegerType();
       const RecordDecl *OuterRD =
           CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
       ASTContext &Ctx = getContext();
@@ -912,38 +913,58 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
           EmitAnyExprToTemp(CountedByExpr).getScalarVal();
 
       if (Idx) {
+        // There's an index into the array. Remove it from the count.
         llvm::Value *IdxInst = EmitAnyExprToTemp(Idx).getScalarVal();
-        IdxInst = Builder.CreateSExtOrTrunc(IdxInst, CountedByInst->getType());
-        CountedByInst = Builder.CreateSub(CountedByInst, IdxInst);
+
+        if (Idx->getType()->isSignedIntegerType())
+          IdxInst =
+              Builder.CreateSExtOrTrunc(IdxInst, CountedByInst->getType());
+        else
+          IdxInst =
+              Builder.CreateZExtOrTrunc(IdxInst, CountedByInst->getType());
+
+        CountedByInst =
+            Builder.CreateSub(CountedByInst, IdxInst, "", !IsSigned, IsSigned);
       }
 
       // Get the size of the flexible array member's base type.
       const ValueDecl *FAM = FindFlexibleArrayMemberField(Ctx, OuterRD);
+      assert(FAM && "Can't find the flexible array member field");
+
       const ArrayType *ArrayTy = Ctx.getAsArrayType(FAM->getType());
       CharUnits Size = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
-      llvm::Constant *ElemSize =
-          llvm::ConstantInt::get(CountedByInst->getType(), Size.getQuantity());
+      llvm::Constant *ElemSize = llvm::ConstantInt::get(
+          CountedByInst->getType(), Size.getQuantity(), IsSigned);
 
-      llvm::Value *FAMSize = Builder.CreateMul(CountedByInst, ElemSize);
-      llvm::Value *Res = Builder.CreateSExtOrTrunc(FAMSize, ResType);
+      llvm::Value *FAMSize =
+          Builder.CreateMul(CountedByInst, ElemSize, "", !IsSigned, IsSigned);
+      llvm::Value *Res = IsSigned ? Builder.CreateSExtOrTrunc(FAMSize, ResType)
+                                  : Builder.CreateZExtOrTrunc(FAMSize, ResType);
 
       if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
         // The whole struct is specificed in the __bdos.
-        // Get the full size of the struct.
         const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(OuterRD);
-        llvm::Value *SizeofStruct =
-            ConstantInt::get(ResType, Layout.getSize().getQuantity(), true);
 
         // Get the offset of the FAM.
         CharUnits Offset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FAM));
-        llvm::Value *FAMOffset =
-            ConstantInt::get(ResType, Offset.getQuantity(), true);
+        llvm::Constant *FAMOffset =
+            ConstantInt::get(ResType, Offset.getQuantity(), IsSigned);
 
         // max(sizeof(struct s),
         //     offsetof(struct s, array) + p->count * sizeof(*p->array))
-        llvm::Value *OffsetAndFAMSize = Builder.CreateAdd(FAMOffset, Res);
-        Res = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::smax,
-                                            OffsetAndFAMSize, SizeofStruct);
+        llvm::Value *OffsetAndFAMSize =
+            Builder.CreateAdd(FAMOffset, Res, "", !IsSigned, IsSigned);
+
+        // Get the full size of the struct.
+        llvm::Constant *SizeofStruct =
+            ConstantInt::get(ResType, Layout.getSize().getQuantity(), IsSigned);
+
+        if (IsSigned)
+          Res = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::smax,
+                                              OffsetAndFAMSize, SizeofStruct);
+        else
+          Res = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::umax,
+                                              OffsetAndFAMSize, SizeofStruct);
       }
 
       // PULL THE STRING!!
