@@ -132,12 +132,12 @@ PartTensorStorage<P, I, V> *PartTensorStorage<P, I, V>::newFromCOO(
   using llvm::ArrayRef;
   assert(partData && "Got nullptr for partition shape");
   assert(dimShape && "Got nullptr for dimension shape");
-  assert(partDataLength > 0 && "Got zero for partition rank");
+  assert(partDataLength > 0 && "Got zero for partition data");
   assert(dimRank > 0 && "Got zero for dimension rank");
   std::vector<uint64_t> dimSizes(dimRank);
   auto numPartitions = partDataLength / (dimRank * 2);
   assert(partDataLength % (dimRank * 2) == 0 &&
-         "Partition rank must be a multiple of dimension rank");
+         "Partition data len must be a multiple of dimension rank");
 
   std::vector<unique_ptr<SparseTensorCOO<V>>> parts;
   parts.reserve(numPartitions);
