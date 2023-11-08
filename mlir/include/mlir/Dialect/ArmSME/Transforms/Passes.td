@@ -12,8 +12,7 @@
 include "mlir/Pass/PassBase.td"
 include "mlir/IR/EnumAttr.td"
 
-// Options for Armv9 Streaming SVE mode.
-def ArmStreamingMode : I32EnumAttr<"ArmStreamingMode", "Tosa profile",
+def ArmStreamingMode : I32EnumAttr<"ArmStreamingMode", "Armv9 Streaming SVE mode",
     [
       I32EnumAttrCase<"Disabled", 0, "disabled">,
       // Streaming: Streaming-mode is part of the function interface (ABI).
@@ -26,10 +25,9 @@ def ArmStreamingMode : I32EnumAttr<"ArmStreamingMode", "Tosa profile",
   let genSpecializedAttr = 0;
 }
 
-// Options for Armv9 ZA storage mode.
 // TODO: Add other ZA modes.
 // https://arm-software.github.io/acle/main/acle.html#sme-attributes-relating-to-za
-def ArmZaMode : I32EnumAttr<"ArmZaMode", "Tosa level",
+def ArmZaMode : I32EnumAttr<"ArmZaMode", "Armv9 ZA storage mode",
     [
       I32EnumAttrCase<"Disabled", 0, "disabled">,
       // A function's ZA state is created on entry and destroyed on exit.
