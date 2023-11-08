@@ -245,6 +245,7 @@ option(LIBC_INCLUDE_DOCS "Build the libc documentation." ${LLVM_INCLUDE_DOCS})
 
 include(CMakeParseArguments)
 include(LLVMLibCCheckCpuFeatures)
+include(check_compiler_features)
 include(LLVMLibCRules)
 
 if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/entrypoints.txt")

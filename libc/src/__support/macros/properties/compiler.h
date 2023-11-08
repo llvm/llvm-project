@@ -21,4 +21,23 @@
 #define LIBC_COMPILER_IS_MSC
 #endif
 
+// Check compiler features
+#if defined(FLT128_MANT_DIG)
+// C23 _Float128 type is available.
+#define LIBC_COMPILER_HAS_FLOAT128
+#define LIBC_FLOAT128_IS_C23
+using float128 = _Float128;
+
+#elif defined(__SIZEOF_FLOAT128__)
+// Builtin __float128 is available.
+#define LIBC_COMPILER_HAS_FLOAT128
+#define LIBC_FLOAT128_IS_BUILTIN
+using float128 = __float128;
+
+#endif
+
+#if defined(FLT16_MANT_DIG)
+#define LIBC_COMPILER_HAS_FLOAT16
+#endif
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_COMPILER_H
