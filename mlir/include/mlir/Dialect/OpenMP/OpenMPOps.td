@@ -405,6 +405,170 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
   let hasVerifier = 1;
 }
 
+//===---------------------------------------------------------------------===//
+// OpenMP Canonical Loop Info Type
+//===---------------------------------------------------------------------===//
+
+def CanonicalLoopInfoType : OpenMP_Type<"CanonicalLoopInfo", "cli"> {
+  let summary = "Type for representing a reference to a canonical loop";
+  let description = [{
+    A variable of type CanonicalLoopInfo refers to an OpenMP-compatible
+    canonical loop in the same function. Variables of this type are not
+    available at runtime and therefore cannot be used by the program itself,
+    i.e. an opaque type. It is similar to the transform dialect's
+    `!transform.interface` type, but instead of implementing an interface
+    for each transformation, the OpenMP dialect itself defines possible
+    operations on this type.
+
+    A CanonicalLoopInfo variable can
+
+    1. passed to omp.canonical_loop to assiciate the loop to that variable
+    2. passed to omp operations that take a CanonicalLoopInfo argument,
+       such as `omp.unroll`.
+
+    A CanonicalLoopInfo variable can not
+
+    1. be returned from a function,
+    2. passed to operations that are not specifically designed to take a
+       CanonicalLoopInfo, including AnyType.
+
+    A CanonicalLoopInfo variable directly corresponds to an object of
+    OpenMPIRBuilder's CanonicalLoopInfo struct when lowering to LLVM-IR.
+  }];
+}
+
+//===---------------------------------------------------------------------===//
+// OpenMP Canonical Loop Info Operation
+//===---------------------------------------------------------------------===//
+
+def NewCliOp : OpenMP_Op<"new_cli"> {
+  let summary = "Create a new Canonical Loop Info value.";
+  let description = [{
+    Create a new CLI that can be passed as an argument to a CanonicalLoopOp
+    and to loop transformation operations to handle dependencies between
+    loop transformation operations.
+    }];
+    let results = (outs CanonicalLoopInfoType:$result);
+    let assemblyFormat = [{
+        attr-dict `:` type($result)
+    }];
+}
+
+
+//===---------------------------------------------------------------------===//
+// OpenMP Canonical Loop Operation
+//===---------------------------------------------------------------------===//
+def CanonicalLoopOp : OpenMP_Op<"canonical_loop", [SingleBlockImplicitTerminator<"omp::YieldOp">]> {
+  let summary = "OpenMP Canonical Loop Operation";
+  let description = [{
+    All loops that conform to OpenMP's definition of a canonical loop can be
+    simplified to a CanonicalLoopOp. In particular, there are no loop-carried
+    variables and the number of iterations it will execute is know before the
+    operation. This allows e.g. to determine the number of threads and chunks
+    the iterations space is split into before executing any iteration. More
+    restrictions may apply in cases such as (collapsed) loop nests, doacross
+    loops, etc.
+
+    The induction variable is always of the same type as the tripcount argument.
+    Since it can never be negative, tripcount is always interpreted as an
+    unsigned integer. It is the caller's responsbility to ensure the tripcount
+    is not negative when its interpretation is signed, i.e.
+    `%tripcount = max(0,%tripcount)`.
+
+    In contrast to other loop operations such as `scf.for`, the number of
+    iterations is determined by only a single variable, the trip-count. The
+    induction variable value is the logical iteration number of that iteration,
+    which OpenMP defines to be between 0 and the trip-count (exclusive).
+    Loop representation having lower-bound, upper-bound, and step-size operands,
+    require passes to do more work than necessary, including handling special
+    cases such as upper-bound smaller than lower-bound, upper-bound equal to
+    the integer type's maximal value, negative step size, etc. This complexity
+    is better only handled once by the front-end and can apply its semantics
+    for such cases while still being able to represent any kind of loop, which
+    kind of the point of a mid-end intermediate representation. User-defined
+    types such as random-access iterators in C++ could not directly be
+    represented anyway.
+
+    An optional argument to a omp.canonical_loop that can be passed in
+    is a CanonicalLoopInfo variale that can be used to refer to the canonical
+    loop to apply transformations -- such as tiling, unrolling, or
+    work-sharing -- to the loop, similar to the transform dialect but
+    with OpenMP-specific semantics.
+
+    A CanonicalLoopOp can be lowered to LLVM-IR using OpenMPIRBuilder's
+    createCanonicalLoop method.
+
+    #### Examples
+
+    Translation from lower-bound, upper-bount, step-size to trip-count.
+    ```c
+    for (int i = 3; i < 42; i+=2) {
+      B[i] = A[i];
+    }
+    ```
+
+    ```mlir
+    %lb = arith.constant 3 : i32
+    %ub = arith.constant 42 : i32
+    %step = arith.constant 2 : i32
+    %range = arith.sub %ub, %lb : i32
+    %tc = arith.div %range, %step : i32
+    omp.canonical_loop %iv : i32 in [0, %tc) {
+      %offset = arith.mul %iv, %step : i32
+      %i = arith.add %offset, %lb : i32
+      %a = load %arrA[%i] : memref<?xf32>
+      store %a, %arrB[%i] : memref<?xf32>
+    }
+    ```
+
+    Nested canonical loop with transformation.
+    ```mlir
+    %outer = omp.new_cli : !omp.cli
+    %inner = omp.new_cli : !omp.cli
+    %outer,%inner = omp.canonical_loop %iv1 : i32 in [0, %tripcount), %outer : !omp.cli{
+      %inner = omp.canonical_loop %iv2 : i32 in [0, %tc), %inner : !omp.cli {
+        %a = load %arrA[%iv1, %iv2] : memref<?x?xf32>
+        store %a, %arrB[%iv1, %iv2] : memref<?x?xf32>
+      }
+    }
+    omp.tile(%outer, %inner : !omp.cli, !omp.cli)
+    ```
+
+    Nested canonical loop with other constructs. The `omp.distribute`
+    operation has not been added yet, so this is suggested use with other
+    constructs.
+    ```mlir
+    omp.target {
+      omp.teams {
+        omp.distribute {
+          %outer = omp.new_cli : !omp.cli
+          %inner = omp.new_cli : !omp.cli
+          omp.canonical_loop %iv1 : i32 in [0, %tripcount), %outer : !omp.cli {
+            %inner = omp.canonical_loop %iv2 : i32 in [0, %tc), %inner : !omp.cli {
+              %a = load %arrA[%iv1, %iv2] : memref<?x?xf32>
+              store %a, %arrB[%iv1, %iv2] : memref<?x?xf32>
+            }
+          }
+          omp.collapse(%outer, %inner)
+        }
+      }
+    }
+    ```
+
+  }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+
+  let arguments = (ins IntLikeType:$tripCount,
+                       Optional<CanonicalLoopInfoType>:$cli);
+
+  let regions = (region AnyRegion:$region);
+
+  let extraClassDeclaration = [{
+    ::mlir::Value getInductionVar();
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // 2.9.2 Workshare Loop Construct
 //===----------------------------------------------------------------------===//
@@ -619,7 +783,7 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
 def YieldOp : OpenMP_Op<"yield",
     [Pure, ReturnLike, Terminator,
      ParentOneOf<["WsLoopOp", "ReductionDeclareOp",
-     "AtomicUpdateOp", "SimdLoopOp"]>]> {
+     "AtomicUpdateOp", "SimdLoopOp", "CanonicalLoopOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and

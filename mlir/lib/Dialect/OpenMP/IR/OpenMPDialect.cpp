@@ -1551,6 +1551,88 @@ LogicalResult DataBoundsOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// CanonicaLoopOp
+//===----------------------------------------------------------------------===//
+
+Value mlir::omp::CanonicalLoopOp::getInductionVar() {
+  return getRegion().getArgument(0);
+}
+
+void mlir::omp::CanonicalLoopOp::print(OpAsmPrinter &p) {
+  p << " " << getInductionVar() << " : " << getInductionVar().getType()
+    << " in [0, " << getTripCount() << ")";
+  if (getCli()) {
+    p << ", " << getCli() << " : " << getCli().getType();
+  }
+  p << " ";
+
+  // omp.yield is implicit if no arguments passed to it.
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/false);
+
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+mlir::ParseResult
+mlir::omp::CanonicalLoopOp::parse(::mlir::OpAsmParser &parser,
+                                  ::mlir::OperationState &result) {
+  Builder &builder = parser.getBuilder();
+
+  // We derive the type of tripCount from inductionVariable. Unfortunatelty we
+  // cannot do the other way around because MLIR requires the type of tripCount
+  // to be known when calling resolveOperand.
+  OpAsmParser::Argument inductionVariable;
+  if (parser.parseArgument(inductionVariable, /*allowType*/ true) ||
+      parser.parseKeyword("in") || parser.parseLSquare())
+    return failure();
+
+  int zero = -1;
+  SMLoc zeroLoc = parser.getCurrentLocation();
+  if (parser.parseInteger(zero))
+    return failure();
+  if (zero != 0) {
+    parser.emitError(zeroLoc, "Logical iteration space starts with zero");
+    return failure();
+  }
+
+  OpAsmParser::UnresolvedOperand tripcount;
+  if (parser.parseComma() || parser.parseOperand(tripcount) ||
+      parser.parseRParen() ||
+      parser.resolveOperand(tripcount, inductionVariable.type, result.operands))
+    return failure();
+
+  OpAsmParser::UnresolvedOperand cli;
+  Type type;
+  if (succeeded(parser.parseOptionalComma()))
+    if (parser.parseOperand(cli) || parser.parseColonType(type) ||
+        parser.resolveOperand(cli, type, result.operands))
+      return failure();
+
+  // Parse the loop body.
+  Region *region = result.addRegion();
+  if (parser.parseRegion(*region, {inductionVariable}))
+    return failure();
+  CanonicalLoopOp::ensureTerminator(*region, builder, result.location);
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return mlir::success();
+}
+
+LogicalResult CanonicalLoopOp::verify() {
+  Value indVar = getInductionVar();
+  Value tripCount = getTripCount();
+
+  if (indVar.getType() != tripCount.getType())
+    return emitOpError(
+        "Region argument must be the same type as the trip count");
+
+  return success();
+}
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
 
