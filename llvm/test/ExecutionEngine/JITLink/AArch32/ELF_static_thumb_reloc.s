@@ -100,7 +100,7 @@ data_symbol:
 # CHECK-INSTR: 	00000014 <movw_prel>:
 # CHECK-INSTR: 	      14: f240 0000     movw    r0, #0x0
 # jitlink-check: decode_operand(movw_prel, 1) = \
-# jitlink-check:              ((external_func - next_pc(movw_prel) + 4)&0x0000ffff)
+# jitlink-check:              ((external_func - movw_prel)&0x0000ffff)
 .globl	movw_prel
 .type	movw_prel,%function
 .p2align	1
@@ -114,7 +114,7 @@ movw_prel:
 # CHECK-INSTR: 	00000018 <movt_prel>:
 # CHECK-INSTR: 	      18: f2c0 0000    movt    r0, #0x0
 # jitlink-check: decode_operand(movt_prel, 2) = \
-# jitlink-check:               ((external_func - next_pc(movt_prel) + 4)&0xffff0000>>16)
+# jitlink-check:               ((external_func - movt_prel)&0xffff0000>>16)
 .globl	movt_prel
 .type	movt_prel,%function
 .p2align	1
