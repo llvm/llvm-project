@@ -487,6 +487,27 @@ void ModuleImport::addDebugIntrinsic(llvm::CallInst *intrinsic) {
   debugIntrinsics.insert(intrinsic);
 }
 
+LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
+  for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
+    if (named.getName() != "llvm.linker.options")
+      continue;
+    // llvm.linker.options operands are lists of strings.
+    for (const llvm::MDNode *md : named.operands()) {
+      SmallVector<StringRef> options;
+      for (const llvm::MDOperand &option : md->operands()) {
+        if (auto str = dyn_cast_or_null<llvm::MDString>(option))
+          options.push_back(str->getString());
+        else
+          return emitError(mlirModule.getLoc(),
+                           "argument to llvm.linker.options is not a string");
+      }
+      builder.create<LLVM::LinkerOptionsOp>(mlirModule.getLoc(),
+                                            builder.getStrArrayAttr(options));
+    }
+  }
+  return success();
+}
+
 LogicalResult ModuleImport::convertMetadata() {
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(mlirModule.getBody());
@@ -513,6 +534,8 @@ LogicalResult ModuleImport::convertMetadata() {
           return failure();
     }
   }
+  if (failed(convertLinkerOptionsMetadata()))
+    return failure();
   return success();
 }
 
