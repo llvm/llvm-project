@@ -38,6 +38,7 @@
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -79,6 +80,7 @@ constexpr StringLiteral PatFragClassName = "GICombinePatFrag";
 constexpr StringLiteral BuiltinInstClassName = "GIBuiltinInst";
 constexpr StringLiteral SpecialTyClassName = "GISpecialType";
 constexpr StringLiteral TypeOfClassName = "GITypeOf";
+constexpr StringLiteral MIFlagsEnumClassName = "MIFlagEnum";
 
 std::string getIsEnabledPredicateEnumName(unsigned CombinerRuleID) {
   return "GICXXPred_Simple_IsRule" + to_string(CombinerRuleID) + "Enabled";
@@ -771,6 +773,8 @@ public:
 protected:
   InstructionPattern(unsigned K, StringRef Name) : Pattern(K, Name) {}
 
+  virtual void printExtras(raw_ostream &OS) const {}
+
   SmallVector<InstructionOperand, 4> Operands;
 };
 
@@ -828,6 +832,8 @@ void InstructionPattern::print(raw_ostream &OS, bool PrintName) const {
       Sep = ", ";
     }
     OS << "]";
+
+    printExtras(OS);
   });
 }
 
@@ -919,6 +925,25 @@ private:
 
 //===- CodeGenInstructionPattern ------------------------------------------===//
 
+/// Helper class to contain data associated with a MIFlags operator.
+class MIFlagsInfo {
+public:
+  void addSetFlag(const Record *R) {
+    SetF.insert(R->getValueAsString("EnumName"));
+  }
+  void addUnsetFlag(const Record *R) {
+    UnsetF.insert(R->getValueAsString("EnumName"));
+  }
+  void addCopyFlag(StringRef InstName) { CopyF.insert(insertStrRef(InstName)); }
+
+  const auto &set_flags() const { return SetF; }
+  const auto &unset_flags() const { return UnsetF; }
+  const auto &copy_flags() const { return CopyF; }
+
+private:
+  SetVector<StringRef> SetF, UnsetF, CopyF;
+};
+
 /// Matches an instruction, e.g. `G_ADD $x, $y, $z`.
 class CodeGenInstructionPattern : public InstructionPattern {
 public:
@@ -938,11 +963,17 @@ public:
   unsigned getNumInstDefs() const override;
   unsigned getNumInstOperands() const override;
 
+  MIFlagsInfo &getOrCreateMIFlagsInfo();
+  const MIFlagsInfo *getMIFlagsInfo() const { return FI.get(); }
+
   const CodeGenInstruction &getInst() const { return I; }
   StringRef getInstName() const override { return I.TheDef->getName(); }
 
 private:
+  void printExtras(raw_ostream &OS) const override;
+
   const CodeGenInstruction &I;
+  std::unique_ptr<MIFlagsInfo> FI;
 };
 
 bool CodeGenInstructionPattern::hasVariadicDefs() const {
@@ -974,6 +1005,26 @@ unsigned CodeGenInstructionPattern::getNumInstOperands() const {
   unsigned NumCGIOps = I.Operands.size();
   return isVariadic() ? std::max<unsigned>(NumCGIOps, Operands.size())
                       : NumCGIOps;
+}
+
+MIFlagsInfo &CodeGenInstructionPattern::getOrCreateMIFlagsInfo() {
+  if (!FI)
+    FI = std::make_unique<MIFlagsInfo>();
+  return *FI;
+}
+
+void CodeGenInstructionPattern::printExtras(raw_ostream &OS) const {
+  if (!FI)
+    return;
+
+  OS << " (MIFlags";
+  if (!FI->set_flags().empty())
+    OS << " (set " << join(FI->set_flags(), ", ") << ")";
+  if (!FI->unset_flags().empty())
+    OS << " (unset " << join(FI->unset_flags(), ", ") << ")";
+  if (!FI->copy_flags().empty())
+    OS << " (copy " << join(FI->copy_flags(), ", ") << ")";
+  OS << ')';
 }
 
 //===- OperandTypeChecker -------------------------------------------------===//
@@ -2214,6 +2265,8 @@ private:
   bool parseInstructionPatternOperand(InstructionPattern &IP,
                                       const Init *OpInit,
                                       const StringInit *OpName) const;
+  bool parseInstructionPatternMIFlags(InstructionPattern &IP,
+                                      const DagInit *Op) const;
   std::unique_ptr<PatFrag> parsePatFragImpl(const Record *Def) const;
   bool parsePatFragParamList(
       ArrayRef<SMLoc> DiagLoc, const DagInit &OpsList,
@@ -2660,6 +2713,19 @@ bool CombineRuleBuilder::checkSemantics() {
       continue;
     }
 
+    // MIFlags in match cannot use the following syntax: (MIFlags $mi)
+    if (const auto *CGP = dyn_cast<CodeGenInstructionPattern>(Pat)) {
+      if (auto *FI = CGP->getMIFlagsInfo()) {
+        if (!FI->copy_flags().empty()) {
+          PrintError(
+              "'match' patterns cannot refer to flags from other instructions");
+          PrintNote("MIFlags in '" + CGP->getName() +
+                    "' refer to: " + join(FI->copy_flags(), ", "));
+          return false;
+        }
+      }
+    }
+
     const auto *AOP = dyn_cast<AnyOpcodePattern>(Pat);
     if (!AOP)
       continue;
@@ -2682,6 +2748,28 @@ bool CombineRuleBuilder::checkSemantics() {
       PrintError("cannot use wip_match_opcode in combination with apply "
                  "instruction patterns!");
       return false;
+    }
+
+    // Check that the insts mentioned in copy_flags exist.
+    if (const auto *CGP = dyn_cast<CodeGenInstructionPattern>(IP)) {
+      if (auto *FI = CGP->getMIFlagsInfo()) {
+        for (auto InstName : FI->copy_flags()) {
+          auto It = MatchPats.find(InstName);
+          if (It == MatchPats.end()) {
+            PrintError("unknown instruction '$" + InstName +
+                       "' referenced in MIFlags of '" + CGP->getName() + "'");
+            return false;
+          }
+
+          if (!isa<CodeGenInstructionPattern>(It->second.get())) {
+            PrintError(
+                "'$" + InstName +
+                "' does not refer to a CodeGenInstruction in MIFlags of '" +
+                CGP->getName() + "'");
+            return false;
+          }
+        }
+      }
     }
 
     const auto *BIP = dyn_cast<BuiltinPattern>(IP);
@@ -3022,8 +3110,14 @@ CombineRuleBuilder::parseInstructionPattern(const Init &Arg,
   }
 
   for (unsigned K = 0; K < DagPat->getNumArgs(); ++K) {
-    if (!parseInstructionPatternOperand(*Pat, DagPat->getArg(K),
-                                        DagPat->getArgName(K)))
+    Init *Arg = DagPat->getArg(K);
+    if (auto *DagArg = getDagWithSpecificOperator(*Arg, "MIFlags")) {
+      if (!parseInstructionPatternMIFlags(*Pat, DagArg))
+        return nullptr;
+      continue;
+    }
+
+    if (!parseInstructionPatternOperand(*Pat, Arg, DagPat->getArgName(K)))
       return nullptr;
   }
 
@@ -3129,6 +3223,75 @@ bool CombineRuleBuilder::parseInstructionPatternOperand(
   }
 
   return ParseErr();
+}
+
+bool CombineRuleBuilder::parseInstructionPatternMIFlags(
+    InstructionPattern &IP, const DagInit *Op) const {
+  auto *CGIP = dyn_cast<CodeGenInstructionPattern>(&IP);
+  if (!CGIP) {
+    PrintError("matching/writing MIFlags is only allowed on CodeGenInstruction "
+               "patterns");
+    return false;
+  }
+
+  const auto CheckFlagEnum = [&](const Record *R) {
+    if (!R->isSubClassOf(MIFlagsEnumClassName)) {
+      PrintError("'" + R->getName() + "' is not a subclass of '" +
+                 MIFlagsEnumClassName + "'");
+      return false;
+    }
+
+    return true;
+  };
+
+  if (CGIP->getMIFlagsInfo()) {
+    PrintError("MIFlags can only be present once on an instruction");
+    return false;
+  }
+
+  auto &FI = CGIP->getOrCreateMIFlagsInfo();
+  for (unsigned K = 0; K < Op->getNumArgs(); ++K) {
+    const Init *Arg = Op->getArg(K);
+
+    // Match/set a flag: (MIFlags FmNoNans)
+    if (const auto *Def = dyn_cast<DefInit>(Arg)) {
+      const Record *R = Def->getDef();
+      if (!CheckFlagEnum(R))
+        return false;
+
+      FI.addSetFlag(R);
+      continue;
+    }
+
+    // Do not match a flag/unset a flag: (MIFlags (not FmNoNans))
+    if (const DagInit *NotDag = getDagWithSpecificOperator(*Arg, "not")) {
+      for (const Init *NotArg : NotDag->getArgs()) {
+        const DefInit *DefArg = dyn_cast<DefInit>(NotArg);
+        if (!DefArg) {
+          PrintError("cannot parse '" + NotArg->getAsUnquotedString() +
+                     "': expected a '" + MIFlagsEnumClassName + "'");
+          return false;
+        }
+
+        const Record *R = DefArg->getDef();
+        if (!CheckFlagEnum(R))
+          return false;
+
+        FI.addUnsetFlag(R);
+        continue;
+      }
+
+      continue;
+    }
+
+    // Copy flags from a matched instruction: (MIFlags $mi)
+    if (isa<UnsetInit>(Arg)) {
+      FI.addCopyFlag(Op->getArgName(K)->getAsUnquotedString());
+      continue;
+    }
+  }
+
+  return true;
 }
 
 std::unique_ptr<PatFrag>
@@ -3261,7 +3424,7 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
   auto StackTrace = PrettyStackTraceEmit(RuleDef, &IP);
 
   auto &M = addRuleMatcher(Alts);
-  InstructionMatcher &IM = M.addInstructionMatcher("root");
+  InstructionMatcher &IM = M.addInstructionMatcher(IP.getName());
   declareInstExpansion(CE, IM, IP.getName());
 
   DenseSet<const Pattern *> SeenPats;
@@ -3693,8 +3856,23 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
     DstMI.addRenderer<TempRegRenderer>(TempRegID);
   }
 
-  // TODO: works?
-  DstMI.chooseInsnToMutate(M);
+  // Render MIFlags
+  if (const auto *FI = CGIP.getMIFlagsInfo()) {
+    for (StringRef InstName : FI->copy_flags())
+      DstMI.addCopiedMIFlags(M.getInstructionMatcher(InstName));
+    for (StringRef F : FI->set_flags())
+      DstMI.addSetMIFlags(F);
+    for (StringRef F : FI->unset_flags())
+      DstMI.addUnsetMIFlags(F);
+  }
+
+  // Don't allow mutating opcodes for GISel combiners. We want a more precise
+  // handling of MIFlags so we require them to be explicitly preserved.
+  //
+  // TODO: We don't mutate very often, if at all in combiners, but it'd be nice
+  // to re-enable this. We'd then need to always clear MIFlags when mutating
+  // opcodes, and never mutate an inst that we copy flags from.
+  // DstMI.chooseInsnToMutate(M);
   declareInstExpansion(CE, DstMI, P.getName());
 
   return true;
@@ -3812,6 +3990,17 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
 
   IM.addPredicate<InstructionOpcodeMatcher>(&P.getInst());
   declareInstExpansion(CE, IM, P.getName());
+
+  // Check flags if needed.
+  if (const auto *FI = P.getMIFlagsInfo()) {
+    assert(FI->copy_flags().empty());
+
+    if (const auto &SetF = FI->set_flags(); !SetF.empty())
+      IM.addPredicate<MIFlagsInstructionPredicateMatcher>(SetF.getArrayRef());
+    if (const auto &UnsetF = FI->unset_flags(); !UnsetF.empty())
+      IM.addPredicate<MIFlagsInstructionPredicateMatcher>(UnsetF.getArrayRef(),
+                                                          /*CheckNot=*/true);
+  }
 
   for (const auto &[Idx, OriginalO] : enumerate(P.operands())) {
     // Remap the operand. This is used when emitting InstructionPatterns inside
