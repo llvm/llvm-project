@@ -111,9 +111,14 @@ RUN bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
 RUN rm /tmp/install-cmake.sh
 
 # Install a newer CMake for modules
-# TODO Remove the duplicated installation when all runtimes can be build with CMake 3.27.
+# TODO Remove the duplicated installation when all runtimes can be build with CMake 3.28.
 RUN wget https://github.com/Kitware/CMake/releases/download/v3.27.1/cmake-3.27.1-linux-x86_64.sh -O /tmp/install-cmake.sh
 RUN bash /tmp/install-cmake.sh --prefix=/opt --exclude-subdir --skip-license
+RUN rm /tmp/install-cmake.sh
+
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.28.0-rc4/cmake-3.28.0-rc4-linux-x86_64.sh -O /tmp/install-cmake.sh
+RUN mkdir /opt/cmake-3.28
+RUN bash /tmp/install-cmake.sh --prefix=/opt/cmake-3.28 --exclude-subdir --skip-license
 RUN rm /tmp/install-cmake.sh
 
 # Change the user to a non-root user, since some of the libc++ tests
