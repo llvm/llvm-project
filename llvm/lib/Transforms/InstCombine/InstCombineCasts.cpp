@@ -1221,6 +1221,11 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
     }
   }
 
+  if (!Zext.hasNonNeg() && isKnownNonNegative(Src, DL, 0, &AC, &Zext, &DT)) {
+    Zext.setNonNeg();
+    return &Zext;
+  }
+
   return nullptr;
 }
 

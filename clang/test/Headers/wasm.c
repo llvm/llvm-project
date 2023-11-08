@@ -2183,7 +2183,7 @@ uint32_t test_i64x2_bitmask(v128_t a) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
 // CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], 63
-// CHECK-NEXT:    [[REM_I:%.*]] = zext i32 [[TMP1]] to i64
+// CHECK-NEXT:    [[REM_I:%.*]] = zext nneg i32 [[TMP1]] to i64
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i64> poison, i64 [[REM_I]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i64> [[SPLAT_SPLATINSERT_I]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL_I:%.*]] = shl <2 x i64> [[TMP0]], [[SPLAT_SPLAT_I]]
@@ -2198,7 +2198,7 @@ v128_t test_i64x2_shl(v128_t a, uint32_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
 // CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], 63
-// CHECK-NEXT:    [[REM_I:%.*]] = zext i32 [[TMP1]] to i64
+// CHECK-NEXT:    [[REM_I:%.*]] = zext nneg i32 [[TMP1]] to i64
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i64> poison, i64 [[REM_I]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i64> [[SPLAT_SPLATINSERT_I]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR_I:%.*]] = ashr <2 x i64> [[TMP0]], [[SPLAT_SPLAT_I]]
@@ -2213,7 +2213,7 @@ v128_t test_i64x2_shr(v128_t a, uint32_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
 // CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], 63
-// CHECK-NEXT:    [[REM_I:%.*]] = zext i32 [[TMP1]] to i64
+// CHECK-NEXT:    [[REM_I:%.*]] = zext nneg i32 [[TMP1]] to i64
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i64> poison, i64 [[REM_I]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i64> [[SPLAT_SPLATINSERT_I]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR_I:%.*]] = lshr <2 x i64> [[TMP0]], [[SPLAT_SPLAT_I]]

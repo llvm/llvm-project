@@ -164,7 +164,7 @@ define void @convert(ptr %dst.addr, <2 x i64> %src) {
 define <2 x i65> @foo(<2 x i64> %t) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[A_MASK:%.*]] = and <2 x i64> [[T:%.*]], <i64 4294967295, i64 4294967295>
-; CHECK-NEXT:    [[B:%.*]] = zext <2 x i64> [[A_MASK]] to <2 x i65>
+; CHECK-NEXT:    [[B:%.*]] = zext nneg <2 x i64> [[A_MASK]] to <2 x i65>
 ; CHECK-NEXT:    ret <2 x i65> [[B]]
 ;
   %a = trunc <2 x i64> %t to <2 x i32>
