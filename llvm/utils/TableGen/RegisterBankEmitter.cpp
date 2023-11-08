@@ -46,7 +46,9 @@ public:
   /// Get the human-readable name for the bank.
   StringRef getName() const { return TheDef.getValueAsString("Name"); }
   /// Get the name of the enumerator in the ID enumeration.
-  std::string getEnumeratorName() const { return (TheDef.getName() + "ID").str(); }
+  std::string getEnumeratorName() const {
+    return (TheDef.getName() + "ID").str();
+  }
 
   /// Get the name of the array holding the register class coverage data;
   std::string getCoverageArrayName() const {
@@ -115,8 +117,10 @@ private:
                                    const std::vector<RegisterBank> &Banks);
   void emitRBIHeader(raw_ostream &OS, StringRef TargetName,
                      const std::vector<RegisterBank> &Banks);
-  void emitRBIImplementation(raw_ostream &OS, StringRef TargetName,
-                             const std::vector<RegisterBank> &Banks);
+  void emitRBIPartialMappings(raw_ostream &OS, StringRef TargetName,
+                              const std::vector<RegisterBank> &Banks);
+  void emitRBIValueMappings(raw_ostream &OS, StringRef TargetName,
+                            const std::vector<RegisterBank> &Banks);
 
 public:
   RegisterBankEmitter(RecordKeeper &R) : Target(R), Records(R) {}
@@ -128,8 +132,7 @@ public:
 
 /// Emit code to declare the ID enumeration and external global instance
 /// variables.
-void RegisterBankEmitter::emitHeader(raw_ostream &OS,
-                                     StringRef TargetName,
+void RegisterBankEmitter::emitHeader(raw_ostream &OS, StringRef TargetName,
                                      const std::vector<RegisterBank> &Banks) {
   // <Target>RegisterBankInfo.h
   OS << "namespace llvm {\n"
@@ -233,10 +236,12 @@ void RegisterBankEmitter::emitBaseClassImplementation(
     OS << "const uint32_t " << Bank.getCoverageArrayName() << "[] = {\n";
     unsigned LowestIdxInWord = 0;
     for (const auto &RCs : RCsGroupedByWord) {
-      OS << "    // " << LowestIdxInWord << "-" << (LowestIdxInWord + 31) << "\n";
+      OS << "    // " << LowestIdxInWord << "-" << (LowestIdxInWord + 31)
+         << "\n";
       for (const auto &RC : RCs) {
         std::string QualifiedRegClassID =
-            (Twine(RC->Namespace) + "::" + RC->getName() + "RegClassID").str();
+            (Twine(RC->Namespace) + "::" + RC->getName()
+            + "RegClassID").str();
         OS << "    (1u << (" << QualifiedRegClassID << " - " << LowestIdxInWord
            << ")) |\n";
       }
@@ -297,14 +302,16 @@ void RegisterBankEmitter::emitBaseClassImplementation(
 
 // TableGen already had some RegisterBankInfo support:
 // TargetGenRegisterBankInfo(), RegBankIDs enum, RegBanks and Sizes.
-// This emitter adds support for PartMappings, PartialMappingIdx
+// This emitter adds support for PartialMappings, PartialMappingIdx
 // and BankIDToCopyMapIdx.
-// 
+//
 // The original implementation was supposed to infer RegisterClasses.
 // But since that wasn't finished, backends instead embedded hand crafted
 // tables and enums. This emitter generates them from .td files
 // but requires that the .td files fully describe their RegisterBanks.
-// This still doesn't support ValMappings and ValueMappingIdx.
+//
+// These tables and enums are enabled by GET_REGBANKINFO_DECLARATIONS,
+// GET_REGBANKINFO_PARTIALMAPPINGS and GET_REGBANKINFO_VALUEMAPPINGS
 //
 // This was discussed in https://discourse.llvm.org/t/74459
 void RegisterBankEmitter::emitRBIHeader(
@@ -330,14 +337,14 @@ void RegisterBankEmitter::emitRBIHeader(
      << "} // end namespace llvm\n";
 }
 
-void RegisterBankEmitter::emitRBIImplementation(
+void RegisterBankEmitter::emitRBIPartialMappings(
     raw_ostream &OS, StringRef TargetName,
     const std::vector<RegisterBank> &Banks) {
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
 
   OS << "namespace llvm {\n"
      << "namespace " << TargetName << " {\n"
-     << "const RegisterBankInfo::PartialMapping PartMappings[] = {\n";
+     << "const RegisterBankInfo::PartialMapping PartialMappings[] = {\n";
   for (const auto &Bank : Banks) {
     for (const CodeGenRegisterClass *RC :
          Bank.getExplicitlySpecifiedRegisterClasses(RegisterClassHierarchy)) {
@@ -371,6 +378,56 @@ void RegisterBankEmitter::emitRBIImplementation(
        << Bank.getExplicitlySpecifiedRegisterClasses(RegisterClassHierarchy)
               .size()
        << ",\n";
+  }
+  OS << "};\n\n";
+
+  OS << "} // end namespace " << TargetName << "\n"
+     << "} // end namespace llvm\n";
+}
+
+// This supports ValueMappings for the simple cases.
+// For the complex cases, GET_REGBANKINFO_VALUEMAPPINGS should be left
+// undefined and the ValueMapping tables and enums must be hand crafted.
+void RegisterBankEmitter::emitRBIValueMappings(
+    raw_ostream &OS, StringRef TargetName,
+    const std::vector<RegisterBank> &Banks) {
+  const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
+
+  OS << "namespace llvm {\n"
+     << "namespace " << TargetName << " {\n"
+     << "const RegisterBankInfo::ValueMapping ValueMappings[] = {\n"
+     << "  { nullptr, 0 },\n";
+  for (const auto &Bank : Banks) {
+    for (const CodeGenRegisterClass *RC :
+         Bank.getExplicitlySpecifiedRegisterClasses(RegisterClassHierarchy)) {
+      if (!RC->RSI.isSimple()) {
+        OS << "  #error non-Simple() RegisterClass " << RC->getName() << "\n";
+      } else if (RC->getValueTypes()[0].getSimple() == MVT::Untyped) {
+        OS << "  #error Untyped RegisterClass " << RC->getName() << "\n";
+      } else {
+        OS << "  { &PartialMappings[PMI_" << RC->getName() << "], 1},\n"
+           << "  { &PartialMappings[PMI_" << RC->getName() << "], 1},\n"
+           << "  { &PartialMappings[PMI_" << RC->getName() << "], 1},\n";
+      }
+    }
+  }
+  OS << "};\n\n";
+
+  OS << "enum ValueMappingIdx = {\n"
+     << "  VMI_Invalid = 0,\n";
+  int Offset = 1;
+  for (const auto &Bank : Banks) {
+    for (const CodeGenRegisterClass *RC :
+         Bank.getExplicitlySpecifiedRegisterClasses(RegisterClassHierarchy)) {
+      if (!RC->RSI.isSimple()) {
+        OS << "  #error non-Simple() RegisterClass " << RC->getName() << "\n";
+      } else if (RC->getValueTypes()[0].getSimple() == MVT::Untyped) {
+        OS << "  #error Untyped RegisterClass " << RC->getName() << "\n";
+      } else {
+        OS << "  VMI_" << RC->getName() << " = " << Offset << ",\n";
+        Offset += 3;
+      }
+    }
   }
   OS << "};\n\n";
 
@@ -437,10 +494,14 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
      << "#undef GET_REGBANKINFO_DECLARATIONS\n";
   emitRBIHeader(OS, TargetName, Banks);
   OS << "#endif // GET_REGBANKINFO_DECLARATIONS\n\n"
-     << "#ifdef GET_REGBANKINFO_IMPL\n"
-     << "#undef GET_REGBANKINFO_IMPL\n";
-  emitRBIImplementation(OS, TargetName, Banks);
-  OS << "#endif // GET_REGBANKINFO_IMPL\n";
+     << "#ifdef GET_REGBANKINFO_PARTIALMAPPINGS\n"
+     << "#undef GET_REGBANKINFO_PARTIALMAPPINGS\n";
+  emitRBIPartialMappings(OS, TargetName, Banks);
+  OS << "#endif // GET_REGBANKINFO_PARTIALMAPPINGS\n"
+     << "#ifdef GET_REGBANKINFO_VALUEMAPPINGS\n"
+     << "#undef GET_REGBANKINFO_VALUEMAPPINGS\n";
+  emitRBIValueMappings(OS, TargetName, Banks);
+  OS << "#endif // GET_REGBANKINFO_VALUEMAPPINGS\n";
 }
 
 static TableGen::Emitter::OptClass<RegisterBankEmitter>
