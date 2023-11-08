@@ -14,7 +14,8 @@
 // UNSUPPORTED: c++03, !has-unix-headers
 // The ability to set a custom abort message is required to compare the assertion message.
 // XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_ASSERTIONS=1
+// Note that GCC doesn't support `-Wno-macro-redefined`.
+// ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_HARDENING_MODE -D_LIBCPP_ENABLE_ASSERTIONS=1
 
 #include <cassert>
 #include "check_assertion.h"

@@ -13,12 +13,13 @@
 // UNSUPPORTED: clang-modules-build
 // REQUIRES: verify-support
 
-// RUN: %{verify} -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=42
+// Note that GCC doesn't support `-Wno-macro-redefined`.
+// RUN: %{verify} -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=42
 // Make sure that common cases of misuse produce readable errors. We deliberately disallow setting the hardening mode as
 // if it were a boolean flag.
-// RUN: %{verify} -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=0
-// RUN: %{verify} -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=1
-// RUN: %{verify} -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE
+// RUN: %{verify} -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=0
+// RUN: %{verify} -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=1
+// RUN: %{verify} -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE
 
 #include <cassert>
 

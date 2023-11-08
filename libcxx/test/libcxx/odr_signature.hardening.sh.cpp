@@ -12,11 +12,12 @@
 // Test that we encode the hardening mode in an ABI tag to avoid ODR violations
 // when linking TUs that have different values for it.
 
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU1  -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST      -o %t.tu1.o
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU2  -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE -o %t.tu2.o
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU3  -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG     -o %t.tu3.o
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU4  -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE      -o %t.tu4.o
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DMAIN                                                                                -o %t.main.o
+// Note that GCC doesn't support `-Wno-macro-redefined`.
+// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU1  -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST      -o %t.tu1.o
+// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU2  -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE -o %t.tu2.o
+// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU3  -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG     -o %t.tu3.o
+// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU4  -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE      -o %t.tu4.o
+// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DMAIN                                                                                    -o %t.main.o
 // RUN: %{cxx} %t.tu1.o %t.tu2.o %t.tu3.o %t.tu4.o %t.main.o %{flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
