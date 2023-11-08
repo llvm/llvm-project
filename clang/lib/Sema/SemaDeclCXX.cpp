@@ -18469,9 +18469,22 @@ bool Sema::CheckOverridingFunctionReturnType(const CXXMethodDecl *New,
 
 
   // The new class type must have the same or less qualifiers as the old type.
-  if (NewClassTy.isMoreQualifiedThan(OldClassTy)) {
+  if (!OldClassTy.isAtLeastAsQualifiedAs(NewClassTy)) {
     Diag(New->getLocation(),
          diag::err_covariant_return_type_class_type_more_qualified)
+        << New->getDeclName() << NewTy << OldTy
+        << New->getReturnTypeSourceRange();
+    Diag(Old->getLocation(), diag::note_overridden_virtual_function)
+        << Old->getReturnTypeSourceRange();
+    return true;
+  }
+
+  // Non-class return types should not drop qualifiers in overriden method.
+  if (!OldClassTy->isStructureOrClassType() &&
+      OldClassTy.getLocalCVRQualifiers() !=
+          NewClassTy.getLocalCVRQualifiers()) {
+    Diag(New->getLocation(),
+         diag::err_covariant_return_type_different_qualifications)
         << New->getDeclName() << NewTy << OldTy
         << New->getReturnTypeSourceRange();
     Diag(Old->getLocation(), diag::note_overridden_virtual_function)

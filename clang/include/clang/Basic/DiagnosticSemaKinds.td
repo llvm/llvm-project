@@ -2115,7 +2115,7 @@ def err_covariant_return_type_different_qualifications : Error<
 def err_covariant_return_type_class_type_more_qualified : Error<
   "return type of virtual function %0 is not covariant with the return type of "
   "the function it overrides (class type %1 is more qualified than class "
-  "type %2">;
+  "type %2)">;
 
 // C++ implicit special member functions
 def note_in_declaration_of_implicit_special_member : Note<

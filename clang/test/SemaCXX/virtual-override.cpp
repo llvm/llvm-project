@@ -87,7 +87,7 @@ class A {
 
 class B : A {
   virtual a* f(); 
-  virtual const a* g(); // expected-error{{return type of virtual function 'g' is not covariant with the return type of the function it overrides (class type 'const a *' is more qualified than class type 'a *'}}
+  virtual const a* g(); // expected-error{{return type of virtual function 'g' is not covariant with the return type of the function it overrides (class type 'const a *' is more qualified than class type 'a *')}}
 };
 
 }
@@ -287,5 +287,31 @@ namespace PR8168 {
   class B : public A {
   public:
     static void foo() {} // expected-error{{'static' member function 'foo' overrides a virtual function}}
+  };
+}
+
+namespace T13 {
+  class A {
+  public:
+    virtual const int* foo(); // expected-note{{overridden virtual function is here}}
+  };
+
+  class B: public A {
+  public:
+    virtual int* foo(); // expected-error{{return type of virtual function 'foo' is not covariant with the return type of the function it overrides ('int *' has different qualifiers than 'const int *')}}
+  };
+}
+
+namespace T14 {
+  struct a {};
+
+  class A {
+  public:
+    virtual const a* foo(); // expected-note{{overridden virtual function is here}}
+  };
+
+  class B: public A {
+  public:
+    virtual volatile a* foo(); // expected-error{{return type of virtual function 'foo' is not covariant with the return type of the function it overrides (class type 'volatile a *' is more qualified than class type 'const a *')}}
   };
 }
