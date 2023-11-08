@@ -1758,66 +1758,6 @@ static Value *simplifyAndOfICmpsWithAdd(ICmpInst *Op0, ICmpInst *Op1,
   return nullptr;
 }
 
-/// Try to eliminate compares with signed or unsigned min/max constants.
-static Value *simplifyAndOrOfICmpsWithLimitConst(ICmpInst *Cmp0, ICmpInst *Cmp1,
-                                                 bool IsAnd) {
-  // Canonicalize an equality compare as Cmp0.
-  if (Cmp1->isEquality())
-    std::swap(Cmp0, Cmp1);
-  if (!Cmp0->isEquality())
-    return nullptr;
-
-  // The non-equality compare must include a common operand (X). Canonicalize
-  // the common operand as operand 0 (the predicate is swapped if the common
-  // operand was operand 1).
-  ICmpInst::Predicate Pred0 = Cmp0->getPredicate();
-  Value *X = Cmp0->getOperand(0);
-  ICmpInst::Predicate Pred1;
-  bool HasNotOp = match(Cmp1, m_c_ICmp(Pred1, m_Not(m_Specific(X)), m_Value()));
-  if (!HasNotOp && !match(Cmp1, m_c_ICmp(Pred1, m_Specific(X), m_Value())))
-    return nullptr;
-  if (ICmpInst::isEquality(Pred1))
-    return nullptr;
-
-  // The equality compare must be against a constant. Flip bits if we matched
-  // a bitwise not. Convert a null pointer constant to an integer zero value.
-  APInt MinMaxC;
-  const APInt *C;
-  if (match(Cmp0->getOperand(1), m_APInt(C)))
-    MinMaxC = HasNotOp ? ~*C : *C;
-  else if (isa<ConstantPointerNull>(Cmp0->getOperand(1)))
-    MinMaxC = APInt::getZero(8);
-  else
-    return nullptr;
-
-  // DeMorganize if this is 'or': P0 || P1 --> !P0 && !P1.
-  if (!IsAnd) {
-    Pred0 = ICmpInst::getInversePredicate(Pred0);
-    Pred1 = ICmpInst::getInversePredicate(Pred1);
-  }
-
-  // Normalize to unsigned compare and unsigned min/max value.
-  // Example for 8-bit: -128 + 128 -> 0; 127 + 128 -> 255
-  if (ICmpInst::isSigned(Pred1)) {
-    Pred1 = ICmpInst::getUnsignedPredicate(Pred1);
-    MinMaxC += APInt::getSignedMinValue(MinMaxC.getBitWidth());
-  }
-
-  // (X != MAX) && (X < Y) --> X < Y
-  // (X == MAX) || (X >= Y) --> X >= Y
-  if (MinMaxC.isMaxValue())
-    if (Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_ULT)
-      return Cmp1;
-
-  // (X != MIN) && (X > Y) -->  X > Y
-  // (X == MIN) || (X <= Y) --> X <= Y
-  if (MinMaxC.isMinValue())
-    if (Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_UGT)
-      return Cmp1;
-
-  return nullptr;
-}
-
 /// Try to simplify and/or of icmp with ctpop intrinsic.
 static Value *simplifyAndOrOfICmpsWithCtpop(ICmpInst *Cmp0, ICmpInst *Cmp1,
                                             bool IsAnd) {
@@ -1847,9 +1787,6 @@ static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1,
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, true))
-    return X;
-
-  if (Value *X = simplifyAndOrOfICmpsWithLimitConst(Op0, Op1, true))
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithZero(Op0, Op1, true))
@@ -1923,9 +1860,6 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, false))
-    return X;
-
-  if (Value *X = simplifyAndOrOfICmpsWithLimitConst(Op0, Op1, false))
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithZero(Op0, Op1, false))
