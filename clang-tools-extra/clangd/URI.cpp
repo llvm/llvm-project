@@ -165,8 +165,7 @@ std::string URI::toString() const {
     return Result;
   // If authority if empty, we only print body if it starts with "/"; otherwise,
   // the URI is invalid.
-  if (!Authority.empty() || llvm::StringRef(Body).startswith("/"))
-  {
+  if (!Authority.empty() || llvm::StringRef(Body).startswith("/")) {
     Result.append("//");
     percentEncode(Authority, Result);
   }
@@ -192,6 +191,10 @@ llvm::Expected<URI> URI::parse(llvm::StringRef OrigUri) {
     Uri = Uri.substr(Pos);
   }
   U.Body = percentDecode(Uri);
+  if (clang::clangd::isWindowsPath(U.Body)) {
+    Pos = U.Body.find(":");
+    U.Body.at(Pos - 1) = std::toupper(U.Body.at(Pos - 1));
+  }
   return U;
 }
 
