@@ -727,6 +727,10 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     /// placed in the leading positions of the argument list.
     static constexpr unsigned kNumConfigRegionAttributes = 12;
 
+    /// Dynamic value of the dynamic shared memory size. This is used 
+    /// when dynamic_shared_memory_size is SSA value
+    static constexpr uint32_t kDynamic = std::numeric_limits<uint32_t>::max(); 
+
     /// Returns the keywords used in the custom syntax for this Op.
     static StringRef getWorkgroupKeyword() { return "workgroup"; }
     static StringRef getPrivateKeyword() { return "private"; }
@@ -734,16 +738,9 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       return "dynamicSharedMemorySizeConstant"; 
     }
     
-    /// Returns dynamic value of the dynamic shared memory size. This is used 
-    /// if dynamic_shared_memory_size is SSA value
-    static uint32_t getDynamicSharedMemorySizeDynamicValue() { 
-      return std::numeric_limits<uint32_t>::max(); 
-    }
-    
     /// Returns a value of the dynamic shared memory size. 
     /// If it is a constant, it builds one
     mlir::OpFoldResult getDynamicSharedMemorySizeValue(OpBuilder &b) { 
-      uint32_t kDynamic = getDynamicSharedMemorySizeDynamicValue();
       if (getDynamicSharedMemorySizeConstant().value_or(kDynamic) == kDynamic)
         return getDynamicSharedMemorySize();
       return b.getI32IntegerAttr(getDynamicSharedMemorySizeConstant().value());
@@ -800,6 +797,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasRegionVerifier = 1;
+  let hasVerifier = 1;
 }
 
 def GPU_PrintfOp : GPU_Op<"printf", [MemoryEffects<[MemWrite]>]>,

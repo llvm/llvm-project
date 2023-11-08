@@ -694,6 +694,14 @@ KernelDim3 LaunchOp::getBlockSizeOperandValues() {
   return KernelDim3{operands[3], operands[4], operands[5]};
 }
 
+LogicalResult LaunchOp::verify() {
+  if (getDynamicSharedMemorySize() &&
+      getDynamicSharedMemorySizeConstant().value_or(kDynamic) != kDynamic)
+    return emitOpError() << getDynamicSharedMemorySizeKeyword()
+                         << " operand cannot be both SSA value and constant";
+  return success();
+}
+
 LogicalResult LaunchOp::verifyRegions() {
   // Kernel launch takes kNumConfigOperands leading operands for grid/block
   // sizes and transforms them into kNumConfigRegionAttributes region arguments
@@ -867,8 +875,8 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
         shmemAttr, parser.getBuilder().getIntegerType(32));
     if (!shmemAttrResult.has_value()) {
       hasDynamicSharedMemorySize = true;
-      shmemAttr = parser.getBuilder().getI32IntegerAttr(
-          getDynamicSharedMemorySizeDynamicValue());
+      shmemAttr =
+          parser.getBuilder().getI32IntegerAttr(gpu::LaunchOp::kDynamic);
       if (parser.parseOperand(dynamicSharedMemorySize) ||
           parser.resolveOperand(dynamicSharedMemorySize,
                                 parser.getBuilder().getI32Type(),
