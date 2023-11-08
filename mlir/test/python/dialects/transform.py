@@ -63,7 +63,7 @@ def testSequenceOp(module: Module):
 def testNamedSequenceOp(module: Module):
     module.operation.attributes["transform.with_named_sequence"] = UnitAttr.get()
     named_sequence = transform.NamedSequenceOp(
-        "__transform_main",
+        '__transform_main',
         [transform.AnyOpType.get()],
         [transform.AnyOpType.get()],
     )
