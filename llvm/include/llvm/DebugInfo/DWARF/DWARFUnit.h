@@ -123,21 +123,23 @@ bool isCompileUnit(const std::unique_ptr<DWARFUnit> &U);
 
 /// Describe a collection of units. Intended to hold all units either from
 /// .debug_info and .debug_types, or from .debug_info.dwo and .debug_types.dwo.
-class DWARFUnitVector final
-    : public SmallVector<std::unique_ptr<DWARFUnit>, 1> {
+class DWARFUnitVector final : public SmallVector<std::unique_ptr<DWARFUnit>, 1> {
+  std::function<std::unique_ptr<DWARFUnit>(uint64_t, DWARFSectionKind,
+                                           const DWARFSection *,
+                                           const DWARFUnitIndex::Entry *)>
+      Parser;
   int NumInfoUnits = -1;
 
 public:
   using UnitVector = SmallVectorImpl<std::unique_ptr<DWARFUnit>>;
-  using iterator = typename UnitVector::const_iterator;
-  using iterator_range =
-      llvm::iterator_range<typename UnitVector::const_iterator>;
+  using iterator = typename UnitVector::iterator;
+  using iterator_range = llvm::iterator_range<typename UnitVector::iterator>;
 
   using compile_unit_range =
       decltype(make_filter_range(std::declval<iterator_range>(), isCompileUnit));
 
   DWARFUnit *getUnitForOffset(uint64_t Offset) const;
-  DWARFUnit *getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) const;
+  DWARFUnit *getUnitForIndexEntry(const DWARFUnitIndex::Entry &E);
 
   /// Read units from a .debug_info or .debug_types section.  Calls made
   /// before finishedInfoUnits() are assumed to be for .debug_info sections,
@@ -151,7 +153,11 @@ public:
   /// sections.  Caller must not mix calls to addUnitsForSection and
   /// addUnitsForDWOSection.
   void addUnitsForDWOSection(DWARFContext &C, const DWARFSection &DWOSection,
-                             DWARFSectionKind SectionKind);
+                             DWARFSectionKind SectionKind, bool Lazy = false);
+
+  /// Add an existing DWARFUnit to this UnitVector. This is used by the DWARF
+  /// verifier to process unit separately.
+  DWARFUnit *addUnit(std::unique_ptr<DWARFUnit> Unit);
 
   /// Returns number of all units held by this instance.
   unsigned getNumUnits() const { return size(); }
@@ -171,7 +177,7 @@ private:
                     const DWARFSection *RS, const DWARFSection *LocSection,
                     StringRef SS, const DWARFSection &SOS,
                     const DWARFSection *AOS, const DWARFSection &LS, bool LE,
-                    bool IsDWO, DWARFSectionKind SectionKind);
+                    bool IsDWO, bool Lazy, DWARFSectionKind SectionKind);
 };
 
 /// Represents base address of the CU.

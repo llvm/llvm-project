@@ -55,7 +55,7 @@ public:
     }
 
     // Check CU address ranges for tombstone value.
-    for (const std::unique_ptr<DWARFUnit> &CU : Context.compile_units()) {
+    for (std::unique_ptr<DWARFUnit> &CU : Context.compile_units()) {
       Expected<llvm::DWARFAddressRangesVector> ARanges =
           CU->getUnitDIE().getAddressRanges();
       if (!ARanges) {
