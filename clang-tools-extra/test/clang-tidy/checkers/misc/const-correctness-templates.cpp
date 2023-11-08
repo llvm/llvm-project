@@ -22,12 +22,15 @@ void instantiate_template_cases() {
 }
 
 namespace gh57297{
-struct Stream {};
-// Explicitly not declaring a (templated) stream operator
-// so the `<<` is a `binaryOperator` with a dependent type.
-template <typename T> void f() {
-  T t;
-  Stream stream;
-  stream << t;
-}
+// The expression to check may not be the dependent operand in a dependent
+// operator.
+
+// Explicitly adding the conversion operator to int for `Stream` to make the
+// explicit instantiation (required due to windows' delayed template parsing
+// pre C++20) of `f` work without compile errors. Writing an `operator<<` for
+// `Stream` would make the `x << t` expression a CXXOperatorCallExpr, not a
+// BinaryOperator.
+struct Stream { operator int(); };
+template <typename T> void f() { T t; Stream x; x << t; }
+void foo() { f<int>(); }
 } // namespace gh57297
