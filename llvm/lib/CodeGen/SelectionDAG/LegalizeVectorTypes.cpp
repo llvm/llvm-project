@@ -774,17 +774,15 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_BITCAST(SDNode *N) {
 SDValue DAGTypeLegalizer::ScalarizeVecOp_INSERT_SUBVECTOR(SDNode *N,
                                                           unsigned OpNo) {
   // If the destination vector is unary, we can just return the source vector
-  auto src = GetScalarizedVector(N->getOperand(1));
+  auto Src = GetScalarizedVector(N->getOperand(1));
   if (OpNo == 0) {
-    return src;
+    return Src;
   }
 
   auto dest = N->getOperand(0);
   auto idx = N->getOperand(2);
   return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N), N->getValueType(0), dest,
-                     src, idx);
-
-  return GetScalarizedVector(src);
+                     Src, idx);
 }
 
 /// If the input is a vector that needs to be scalarized, it must be <1 x ty>.
