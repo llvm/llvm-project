@@ -365,7 +365,9 @@ static uint64_t encodeValueAArch64(uint64_t Type, uint64_t Value, uint64_t PC) {
   switch (Type) {
   default:
     llvm_unreachable("unsupported relocation");
+  case ELF::R_AARCH64_ABS16:
   case ELF::R_AARCH64_ABS32:
+  case ELF::R_AARCH64_ABS64:
     break;
   case ELF::R_AARCH64_PREL16:
   case ELF::R_AARCH64_PREL32:
