@@ -62,7 +62,11 @@ struct RegisterInfo {
   /// rax ax, ah, and al.
   uint32_t *invalidate_regs;
   /// If not nullptr, a type defined by XML descriptions.
-  const RegisterFlags *flags_type;
+  /// Register info tables are constructed as const, but this field may need to
+  /// be updated if a specific target OS has a different layout. To enable that,
+  /// this is mutable. The data pointed to is still const, so you must swap a
+  /// whole set of flags for another.
+  mutable const RegisterFlags *flags_type;
 
   llvm::ArrayRef<uint8_t> data(const uint8_t *context_base) const {
     return llvm::ArrayRef<uint8_t>(context_base + byte_offset, byte_size);
