@@ -48,13 +48,6 @@ using generic_v256 = uint8_t __attribute__((__vector_size__(32)));
 using generic_v512 = uint8_t __attribute__((__vector_size__(64)));
 } // namespace LIBC_NAMESPACE
 
-namespace LIBC_NAMESPACE::sw_prefetch {
-// Size of a cacheline for software prefetching
-static constexpr size_t kCachelineSize = 64;
-// prefetch for write
-static inline void PrefetchW(CPtr dst) { __builtin_prefetch(dst, 1, 3); }
-} // namespace LIBC_NAMESPACE::sw_prefetch
-
 namespace LIBC_NAMESPACE::generic {
 
 // We accept three types of values as elements for generic operations:
@@ -141,23 +134,19 @@ template <typename T> struct Memset {
   static_assert(is_element_type_v<T>);
   static constexpr size_t SIZE = sizeof(T);
 
-  LIBC_INLINE static void block_offset(Ptr dst, uint8_t value, size_t offset) {
+  LIBC_INLINE static void block(Ptr dst, uint8_t value) {
     if constexpr (is_scalar_v<T> || is_vector_v<T>) {
-      store<T>(dst + offset, splat<T>(value));
+      store<T>(dst, splat<T>(value));
     } else if constexpr (is_array_v<T>) {
       using value_type = typename T::value_type;
       const auto Splat = splat<value_type>(value);
       for (size_t I = 0; I < array_size_v<T>; ++I)
-        store<value_type>(dst + offset + (I * sizeof(value_type)), Splat);
+        store<value_type>(dst + (I * sizeof(value_type)), Splat);
     }
   }
 
-  LIBC_INLINE static void block(Ptr dst, uint8_t value) {
-    block_offset(dst, value, 0);
-  }
-
   LIBC_INLINE static void tail(Ptr dst, uint8_t value, size_t count) {
-    block_offset(dst, value, count - SIZE);
+    block(dst + count - SIZE, value);
   }
 
   LIBC_INLINE static void head_tail(Ptr dst, uint8_t value, size_t count) {
@@ -169,7 +158,7 @@ template <typename T> struct Memset {
                                                size_t count, size_t offset) {
     static_assert(SIZE > 1, "a loop of size 1 does not need tail");
     do {
-      block_offset(dst, value, offset);
+      block(dst + offset, value);
       offset += SIZE;
     } while (offset < count - SIZE);
     tail(dst, value, count);

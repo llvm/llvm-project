@@ -47,9 +47,9 @@ using uint512_t = cpp::array<uint64_t, 8>;
 
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_x86_gt64_sw_prefetching(Ptr dst, uint8_t value, size_t count) {
-  size_t prefetch_distance = x86::kFiveCachelinesSize;
-  size_t prefetch_degree = x86::kTwoCachelinesSize;
-  size_t SIZE = sizeof(uint256_t);
+  constexpr size_t PREFETCH_DISTANCE = x86::kFiveCachelinesSize;
+  constexpr size_t PREFETCH_DEGREE = x86::kTwoCachelinesSize;
+  constexpr size_t SIZE = sizeof(uint256_t);
   // Prefetch one cache line
   prefetch_for_write(dst + x86::kOneCachelineSize);
   if (count <= 128)
@@ -62,15 +62,13 @@ inline_memset_x86_gt64_sw_prefetching(Ptr dst, uint8_t value, size_t count) {
   if (count <= 192) {
     return generic::Memset<uint256_t>::loop_and_tail(dst, value, count);
   } else {
-    generic::Memset<uint512_t>::block(dst, value);
-    generic::Memset<uint256_t>::block_offset(dst, value, sizeof(uint512_t));
+    generic::MemsetSequence<uint512_t, uint256_t>::block(dst, value);
     size_t offset = 96;
-    while (offset + prefetch_degree + SIZE <= count) {
-      for (size_t i = 0; i < prefetch_degree / x86::kOneCachelineSize; ++i)
-        prefetch_for_write(dst + offset + prefetch_distance +
-                           x86::kOneCachelineSize * i);
-      for (size_t i = 0; i < prefetch_degree; i += SIZE, offset += SIZE)
-        generic::Memset<uint256_t>::block_offset(dst, value, offset);
+    while (offset + PREFETCH_DEGREE + SIZE <= count) {
+      prefetch_for_write(dst + offset + PREFETCH_DISTANCE);
+      prefetch_for_write(dst + offset + PREFETCH_DISTANCE + kOneCachelineSize);
+      for (size_t i = 0; i < PREFETCH_DEGREE; i += SIZE, offset += SIZE)
+        generic::Memset<uint256_t>::block(dst + offset, value);
     }
     generic::Memset<uint256_t>::loop_and_tail_offset(dst, value, count, offset);
   }
