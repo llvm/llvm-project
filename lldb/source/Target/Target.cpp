@@ -750,7 +750,7 @@ void Target::AddBreakpoint(lldb::BreakpointSP bp_sp, bool internal) {
   }
 }
 
-void Target::AddNameToBreakpoint(BreakpointID &id, const char *name,
+void Target::AddNameToBreakpoint(BreakpointID &id, llvm::StringRef name,
                                  Status &error) {
   BreakpointSP bp_sp =
       m_breakpoint_list.FindBreakpointByID(id.GetBreakpointID());
@@ -763,7 +763,7 @@ void Target::AddNameToBreakpoint(BreakpointID &id, const char *name,
   AddNameToBreakpoint(bp_sp, name, error);
 }
 
-void Target::AddNameToBreakpoint(BreakpointSP &bp_sp, const char *name,
+void Target::AddNameToBreakpoint(BreakpointSP &bp_sp, llvm::StringRef name,
                                  Status &error) {
   if (!bp_sp)
     return;
