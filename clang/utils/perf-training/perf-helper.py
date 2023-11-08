@@ -76,8 +76,8 @@ def perf(args):
     )
     parser.add_argument("cmd", nargs=argparse.REMAINDER, help="")
 
-    opts = parser.parse_args()
-    cmd = opts["cmd"][1:]
+    opts = parser.parse_args(args)
+    cmd = opts.cmd[1:]
 
     perf_args = [
         "perf",
