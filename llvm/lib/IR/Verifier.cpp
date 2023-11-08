@@ -5987,6 +5987,30 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "VGPR arguments must not have the `inreg` attribute", &Call);
     break;
   }
+  case Intrinsic::amdgcn_set_inactive_chain_arg: {
+    auto CallerCC = Call.getCaller()->getCallingConv();
+    switch (CallerCC) {
+    case CallingConv::AMDGPU_CS_Chain:
+    case CallingConv::AMDGPU_CS_ChainPreserve:
+      break;
+    default:
+      CheckFailed("Intrinsic can only be used from functions with the "
+                  "amdgpu_cs_chain or amdgpu_cs_chain_preserve "
+                  "calling conventions",
+                  &Call);
+      break;
+    }
+
+    unsigned InactiveIdx = 1;
+    Check(!Call.paramHasAttr(InactiveIdx, Attribute::InReg),
+          "Value for inactive lanes must not have the `inreg` attribute",
+          &Call);
+    Check(isa<Argument>(Call.getArgOperand(InactiveIdx)),
+          "Value for inactive lanes must be a function argument", &Call);
+    Check(!cast<Argument>(Call.getArgOperand(InactiveIdx))->hasInRegAttr(),
+          "Value for inactive lanes must be a VGPR function argument", &Call);
+    break;
+  }
   case Intrinsic::experimental_convergence_entry:
     LLVM_FALLTHROUGH;
   case Intrinsic::experimental_convergence_anchor:
