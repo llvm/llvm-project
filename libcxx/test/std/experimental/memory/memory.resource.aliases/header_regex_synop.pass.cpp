@@ -9,8 +9,6 @@
 // UNSUPPORTED: c++03
 // UNSUPPORTED: no-localization
 
-// XFAIL: availability-aligned_allocation-missing
-
 // <experimental/regex>
 
 // namespace std { namespace experimental { namespace pmr {

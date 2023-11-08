@@ -1740,6 +1740,10 @@ template <unsigned NumLanes, char LaneKind>
 void AArch64InstPrinter::printTypedVectorList(const MCInst *MI, unsigned OpNum,
                                               const MCSubtargetInfo &STI,
                                               raw_ostream &O) {
+  if (LaneKind == 0) {
+    printVectorList(MI, OpNum, STI, O, "");
+    return;
+  }
   std::string Suffix(".");
   if (NumLanes)
     Suffix += itostr(NumLanes) + LaneKind;
@@ -1756,10 +1760,11 @@ void AArch64InstPrinter::printVectorIndex(const MCInst *MI, unsigned OpNum,
   O << "[" << Scale * MI->getOperand(OpNum).getImm() << "]";
 }
 
+template <unsigned Scale>
 void AArch64InstPrinter::printMatrixIndex(const MCInst *MI, unsigned OpNum,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
-  O << MI->getOperand(OpNum).getImm();
+  O << Scale * MI->getOperand(OpNum).getImm();
 }
 
 void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, uint64_t Address,

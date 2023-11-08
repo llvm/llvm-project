@@ -826,7 +826,6 @@ void i();
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "desugaredQualType": "Uy<Ty>",
 // CHECK-NEXT:         "qualType": "Uy<Ty>"
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -Wno-bitfield-constant-conversion -verify %s
 // RUN: %clang_cc1 -verify=ref -Wno-bitfield-constant-conversion %s
+// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -Wno-bitfield-constant-conversion -verify %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref -Wno-bitfield-constant-conversion %s
 
 // expected-no-diagnostics
 // ref-no-diagnostics
@@ -32,7 +34,26 @@ namespace Basic {
   }
   static_assert(storeA2() == 2, "");
 
-  // TODO: +=, -=, etc. operators.
+#if __cplusplus >= 202002
+  struct Init1 {
+    unsigned a : 2 = 1;
+  };
+  constexpr Init1 I1{};
+  static_assert(I1.a == 1, "");
+
+  struct Init2 {
+    unsigned a : 2 = 100;
+  };
+  constexpr Init2 I2{};
+  static_assert(I2.a == 0, "");
+#endif
+
+  struct Init3 {
+    unsigned a : 2;
+    constexpr Init3() : a(100) {}
+  };
+  constexpr Init3 I3{};
+  static_assert(I3.a == 0, "");
 }
 
 namespace Overflow {
@@ -44,4 +65,40 @@ namespace Overflow {
   }
 
   static_assert(f() == 3, "");
+}
+
+namespace Compound {
+  struct A {
+    unsigned int a : 2;
+    constexpr A() : a(0) {}
+    constexpr A(int a) : a(a) {}
+  };
+
+  constexpr unsigned add() {
+    A a;
+    a.a += 10;
+    return a.a;
+  }
+  static_assert(add() == 2, "");
+
+  constexpr unsigned sub() {
+    A a;
+    a.a -= 10;
+    return a.a;
+  }
+  static_assert(sub() == 2, "");
+
+  constexpr unsigned mul() {
+    A a(1);
+    a.a *= 5;
+    return a.a;
+  }
+  static_assert(mul() == 1, "");
+
+  constexpr unsigned div() {
+    A a(2);
+    a.a /= 2;
+    return a.a;
+  }
+  static_assert(div() == 1, "");
 }

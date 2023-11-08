@@ -42,7 +42,7 @@ cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions(
                           "use hfsort algorithm"),
                clEnumValN(bolt::ReorderFunctions::RT_HFSORT_PLUS, "hfsort+",
                           "use hfsort+ algorithm"),
-               clEnumValN(bolt::ReorderFunctions::RT_CDS, "cds",
+               clEnumValN(bolt::ReorderFunctions::RT_CDSORT, "cdsort",
                           "use cache-directed sort"),
                clEnumValN(bolt::ReorderFunctions::RT_PETTIS_HANSEN,
                           "pettis-hansen", "use Pettis-Hansen algorithm"),
@@ -322,7 +322,7 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   case RT_HFSORT_PLUS:
     Clusters = hfsortPlus(Cg);
     break;
-  case RT_CDS: {
+  case RT_CDSORT: {
     // It is required that the sum of incoming arc weights is not greater
     // than the number of samples for every function. Ensuring the call graph
     // obeys the property before running the algorithm.

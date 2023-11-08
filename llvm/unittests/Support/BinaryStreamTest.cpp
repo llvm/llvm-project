@@ -102,7 +102,8 @@ private:
   BumpPtrAllocator Allocator;
 };
 
-constexpr endianness Endians[] = {big, little, native};
+constexpr llvm::endianness Endians[] = {
+    llvm::endianness::big, llvm::endianness::little, llvm::endianness::native};
 constexpr uint32_t NumEndians = std::size(Endians);
 constexpr uint32_t NumStreams = 2 * NumEndians;
 
@@ -266,7 +267,7 @@ TEST_F(BinaryStreamTest, StreamRefBounds) {
 
 TEST_F(BinaryStreamTest, StreamRefDynamicSize) {
   StringRef Strings[] = {"1", "2", "3", "4"};
-  AppendingBinaryByteStream Stream(support::little);
+  AppendingBinaryByteStream Stream(llvm::endianness::little);
 
   BinaryStreamWriter Writer(Stream);
   BinaryStreamReader Reader(Stream);
@@ -320,7 +321,7 @@ TEST_F(BinaryStreamTest, DropOperations) {
   initializeInput(InputData, 1);
 
   ArrayRef<uint8_t> Result;
-  BinaryStreamRef Original(InputData, support::little);
+  BinaryStreamRef Original(InputData, llvm::endianness::little);
   ASSERT_EQ(InputData.size(), Original.getLength());
 
   EXPECT_THAT_ERROR(Original.readBytes(0, InputData.size(), Result),
@@ -835,7 +836,7 @@ TEST_F(BinaryStreamTest, StreamWriterPadToAlignment) {
   // This test may seem excessive but it is checking for past bugs and corner
   // cases by making sure that the stream is allowed to grow and that
   // both multiple pad chunks and single chunk extensions work.
-  AppendingBinaryByteStream Stream(support::little);
+  AppendingBinaryByteStream Stream(llvm::endianness::little);
   BinaryStreamWriter Writer(Stream);
 
   // Offset 0: '0'
@@ -874,7 +875,7 @@ TEST_F(BinaryStreamTest, StreamWriterPadToAlignment) {
 
 TEST_F(BinaryStreamTest, StreamWriterAppend) {
   StringRef Strings[] = {"First", "Second", "Third", "Fourth"};
-  AppendingBinaryByteStream Stream(support::little);
+  AppendingBinaryByteStream Stream(llvm::endianness::little);
   BinaryStreamWriter Writer(Stream);
 
   for (auto &Str : Strings) {
@@ -931,7 +932,7 @@ TEST_F(BinaryStreamTest, BinaryItemStream) {
     Objects.push_back(BinaryItemStreamObject(Buffer));
   }
 
-  BinaryItemStream<BinaryItemStreamObject> ItemStream(big);
+  BinaryItemStream<BinaryItemStreamObject> ItemStream(llvm::endianness::big);
   ItemStream.setItems(Objects);
   BinaryStreamReader Reader(ItemStream);
 

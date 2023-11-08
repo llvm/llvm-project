@@ -24,12 +24,6 @@
 //   memcmp, strlen, etc.
 // Future floating point idioms to recognize in -ffast-math mode:
 //   fpowi
-// Future integer operation idioms to recognize:
-//   ctpop
-//
-// Beware that isel's default lowering for ctpop is highly inefficient for
-// i64 and larger types when i64 is legal and the value has few bits set.  It
-// would be good to enhance isel to emit a loop for ctpop in this case.
 //
 // This could recognize common matrix multiplies and dot product idioms and
 // replace them with calls to BLAS (if linked in??).
@@ -948,9 +942,13 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
   // to be exactly the size of the memset, which is (BECount+1)*StoreSize
   const SCEVConstant *BECst = dyn_cast<SCEVConstant>(BECount);
   const SCEVConstant *ConstSize = dyn_cast<SCEVConstant>(StoreSizeSCEV);
-  if (BECst && ConstSize)
-    AccessSize = LocationSize::precise((BECst->getValue()->getZExtValue() + 1) *
-                                       ConstSize->getValue()->getZExtValue());
+  if (BECst && ConstSize) {
+    std::optional<uint64_t> BEInt = BECst->getAPInt().tryZExtValue();
+    std::optional<uint64_t> SizeInt = ConstSize->getAPInt().tryZExtValue();
+    // FIXME: Should this check for overflow?
+    if (BEInt && SizeInt)
+      AccessSize = LocationSize::precise((*BEInt + 1) * *SizeInt);
+  }
 
   // TODO: For this to be really effective, we have to dive into the pointer
   // operand in the store.  Store to &A[i] of 100 will always return may alias

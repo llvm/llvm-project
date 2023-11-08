@@ -111,6 +111,7 @@ charconv iosfwd
 charconv limits
 charconv new
 charconv type_traits
+charconv version
 chrono bit
 chrono compare
 chrono concepts
@@ -241,6 +242,10 @@ experimental/list experimental/memory_resource
 experimental/list list
 experimental/map experimental/memory_resource
 experimental/map map
+experimental/memory cstddef
+experimental/memory cstdint
+experimental/memory cstring
+experimental/memory limits
 experimental/memory_resource atomic
 experimental/memory_resource climits
 experimental/memory_resource concepts
@@ -532,6 +537,7 @@ mdspan concepts
 mdspan cstddef
 mdspan limits
 mdspan span
+mdspan version
 memory atomic
 memory compare
 memory concepts

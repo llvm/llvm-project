@@ -10,7 +10,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -102,6 +101,7 @@ RVVType::RVVType(BasicType BT, int Log2LMUL,
 // double    | N/A    | N/A      | N/A     | nxv1f64 | nxv2f64  | nxv4f64  | nxv8f64
 // float     | N/A    | N/A      | nxv1f32 | nxv2f32 | nxv4f32  | nxv8f32  | nxv16f32
 // half      | N/A    | nxv1f16  | nxv2f16 | nxv4f16 | nxv8f16  | nxv16f16 | nxv32f16
+// bfloat16  | N/A    | nxv1bf16 | nxv2bf16| nxv4bf16| nxv8bf16 | nxv16bf16| nxv32bf16
 // clang-format on
 
 bool RVVType::verifyType() const {
@@ -112,6 +112,8 @@ bool RVVType::verifyType() const {
   if (!Scale)
     return false;
   if (isFloat() && ElementBitwidth == 8)
+    return false;
+  if (isBFloat() && ElementBitwidth != 16)
     return false;
   if (IsTuple && (NF == 1 || NF > 8))
     return false;
@@ -200,6 +202,9 @@ void RVVType::initBuiltinStr() {
       llvm_unreachable("Unhandled ElementBitwidth!");
     }
     break;
+  case ScalarTypeKind::BFloat:
+    BuiltinStr += "b";
+    break;
   default:
     llvm_unreachable("ScalarType is invalid!");
   }
@@ -234,6 +239,9 @@ void RVVType::initClangBuiltinStr() {
     return;
   case ScalarTypeKind::Float:
     ClangBuiltinStr += "float";
+    break;
+  case ScalarTypeKind::BFloat:
+    ClangBuiltinStr += "bfloat";
     break;
   case ScalarTypeKind::SignedInteger:
     ClangBuiltinStr += "int";
@@ -301,6 +309,15 @@ void RVVType::initTypeStr() {
     } else
       Str += getTypeString("float");
     break;
+  case ScalarTypeKind::BFloat:
+    if (isScalar()) {
+      if (ElementBitwidth == 16)
+        Str += "__bf16";
+      else
+        llvm_unreachable("Unhandled floating type.");
+    } else
+      Str += getTypeString("bfloat");
+    break;
   case ScalarTypeKind::SignedInteger:
     Str += getTypeString("int");
     break;
@@ -322,6 +339,9 @@ void RVVType::initShortStr() {
     return;
   case ScalarTypeKind::Float:
     ShortStr = "f" + utostr(ElementBitwidth);
+    break;
+  case ScalarTypeKind::BFloat:
+    ShortStr = "bf" + utostr(ElementBitwidth);
     break;
   case ScalarTypeKind::SignedInteger:
     ShortStr = "i" + utostr(ElementBitwidth);
@@ -373,6 +393,10 @@ void RVVType::applyBasicType() {
   case BasicType::Float64:
     ElementBitwidth = 64;
     ScalarType = ScalarTypeKind::Float;
+    break;
+  case BasicType::BFloat16:
+    ElementBitwidth = 16;
+    ScalarType = ScalarTypeKind::BFloat;
     break;
   default:
     llvm_unreachable("Unhandled type code!");
@@ -429,6 +453,9 @@ PrototypeDescriptor::parsePrototypeDescriptor(
     break;
   case 'l':
     PT = BaseTypeModifier::SignedLong;
+    break;
+  case 'f':
+    PT = BaseTypeModifier::Float32;
     break;
   default:
     llvm_unreachable("Illegal primitive type transformers!");
@@ -665,6 +692,10 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
     break;
   case BaseTypeModifier::SignedLong:
     ScalarType = ScalarTypeKind::SignedLong;
+    break;
+  case BaseTypeModifier::Float32:
+    ElementBitwidth = 32;
+    ScalarType = ScalarTypeKind::Float;
     break;
   case BaseTypeModifier::Invalid:
     ScalarType = ScalarTypeKind::Invalid;
@@ -1150,7 +1181,7 @@ void RVVIntrinsic::updateNamesAndPolicy(
 
 SmallVector<PrototypeDescriptor> parsePrototypes(StringRef Prototypes) {
   SmallVector<PrototypeDescriptor> PrototypeDescriptors;
-  const StringRef Primaries("evwqom0ztul");
+  const StringRef Primaries("evwqom0ztulf");
   while (!Prototypes.empty()) {
     size_t Idx = 0;
     // Skip over complex prototype because it could contain primitive type

@@ -21,9 +21,12 @@
 ! CHECK-NEXT: -ccc-print-phases       Dump list of actions to perform
 ! CHECK-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! CHECK-NEXT: -c                      Only run preprocess, compile, and assemble steps
+! CHECK-NEXT: -dumpmachine            Display the compiler's target processor
+! CHECK-NEXT: -dumpversion            Display the version of the compiler
 ! CHECK-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! CHECK-NEXT: -emit-llvm              Use the LLVM representation for assembler and object files
 ! CHECK-NEXT: -E                      Only run the preprocessor
+! CHECK-NEXT: -falias-analysis        Pass alias information on to LLVM (default when optimizing for speed)
 ! CHECK-NEXT: -falternative-parameter-statement
 ! CHECK-NEXT:                         Enable the old style PARAMETER statement
 ! CHECK-NEXT: -fapprox-func           Allow certain math function calls to be replaced with an approximately equivalent calculation
@@ -56,6 +59,7 @@
 ! CHECK-NEXT: -flto=jobserver         Enable LTO in 'full' mode
 ! CHECK-NEXT: -flto=<value>           Set LTO mode
 ! CHECK-NEXT: -flto                   Enable LTO in 'full' mode
+! CHECK-NEXT: -fno-alias-analysis     Do not pass alias information on to LLVM (default for unoptimized builds)
 ! CHECK-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! CHECK-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
 ! CHECK-NEXT: -fno-integrated-as      Disable the integrated assembler

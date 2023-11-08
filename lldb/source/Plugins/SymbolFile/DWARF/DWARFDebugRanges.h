@@ -12,21 +12,23 @@
 #include "lldb/Core/dwarf.h"
 #include <map>
 
+namespace lldb_private::plugin {
+namespace dwarf {
 class DWARFUnit;
-namespace lldb_private {
 class DWARFContext;
-}
 
 class DWARFDebugRanges {
 public:
   DWARFDebugRanges();
 
-  void Extract(lldb_private::DWARFContext &context);
+  void Extract(DWARFContext &context);
   DWARFRangeList FindRanges(const DWARFUnit *cu,
                             dw_offset_t debug_ranges_offset) const;
 
 protected:
   std::map<dw_offset_t, DWARFRangeList> m_range_map;
 };
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGRANGES_H

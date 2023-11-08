@@ -15,6 +15,7 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -30,6 +31,33 @@ namespace {
 class RISCVMCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
+
+  bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
+              CompFuncTy Comp) const override {
+    const auto &RISCVExprA = cast<RISCVMCExpr>(A);
+    const auto &RISCVExprB = cast<RISCVMCExpr>(B);
+    if (RISCVExprA.getKind() != RISCVExprB.getKind())
+      return false;
+
+    return MCPlusBuilder::equals(*RISCVExprA.getSubExpr(),
+                                 *RISCVExprB.getSubExpr(), Comp);
+  }
+
+  void getCalleeSavedRegs(BitVector &Regs) const override {
+    Regs |= getAliases(RISCV::X2);
+    Regs |= getAliases(RISCV::X8);
+    Regs |= getAliases(RISCV::X9);
+    Regs |= getAliases(RISCV::X18);
+    Regs |= getAliases(RISCV::X19);
+    Regs |= getAliases(RISCV::X20);
+    Regs |= getAliases(RISCV::X21);
+    Regs |= getAliases(RISCV::X22);
+    Regs |= getAliases(RISCV::X23);
+    Regs |= getAliases(RISCV::X24);
+    Regs |= getAliases(RISCV::X25);
+    Regs |= getAliases(RISCV::X26);
+    Regs |= getAliases(RISCV::X27);
+  }
 
   bool shouldRecordCodeRelocation(uint64_t RelType) const override {
     switch (RelType) {
@@ -461,6 +489,13 @@ public:
 
     assert(Second.getOpcode() == RISCV::JALR);
     return true;
+  }
+
+  uint16_t getMinFunctionAlignment() const override {
+    if (STI->hasFeature(RISCV::FeatureStdExtC) ||
+        STI->hasFeature(RISCV::FeatureStdExtZca))
+      return 2;
+    return 4;
   }
 };
 

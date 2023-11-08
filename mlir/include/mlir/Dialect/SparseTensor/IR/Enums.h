@@ -31,6 +31,7 @@
 // NOTE: Client code will need to include "mlir/ExecutionEngine/Float16bits.h"
 // if they want to use the `MLIR_SPARSETENSOR_FOREVERY_V` macro.
 
+#include <cassert>
 #include <cinttypes>
 #include <complex>
 #include <optional>
@@ -143,35 +144,27 @@ constexpr bool isComplexPrimaryType(PrimaryType valTy) {
 /// The actions performed by @newSparseTensor.
 enum class Action : uint32_t {
   kEmpty = 0,
-  // newSparseTensor no longer handles `kFromFile=1`, so we leave this
-  // number reserved to help catch any code that still needs updating.
+  kEmptyForward = 1,
   kFromCOO = 2,
-  kSparseToSparse = 3,
-  kEmptyCOO = 4,
+  kFromReader = 4,
   kToCOO = 5,
-  kToIterator = 6,
   kPack = 7,
+  kSortCOOInPlace = 8,
 };
 
 /// This enum defines all the sparse representations supportable by
-/// the SparseTensor dialect.  We use a lightweight encoding to encode
-/// both the "format" per se (dense, compressed, singleton) as well as
-/// the "properties" (ordered, unique).  The encoding is chosen for
-/// performance of the runtime library, and thus may change in future
-/// versions; consequently, client code should use the predicate functions
-/// defined below, rather than relying on knowledge about the particular
-/// binary encoding.
+/// the SparseTensor dialect. We use a lightweight encoding to encode
+/// both the "format" per se (dense, compressed, singleton, loose_compressed,
+/// two-out-of-four) as well as the "properties" (ordered, unique). The
+/// encoding is chosen for performance of the runtime library, and thus may
+/// change in future versions; consequently, client code should use the
+/// predicate functions defined below, rather than relying on knowledge
+/// about the particular binary encoding.
 ///
 /// The `Undef` "format" is a special value used internally for cases
 /// where we need to store an undefined or indeterminate `DimLevelType`.
 /// It should not be used externally, since it does not indicate an
 /// actual/representable format.
-///
-// TODO: We should generalize TwoOutOfFour to N out of M and use property to
-// encode the value of N and M.
-// TODO: Update DimLevelType to use lower 8 bits for storage formats and the
-// higher 4 bits to store level properties. Consider LooseCompressed and
-// TwoOutOfFour as properties instead of formats.
 enum class DimLevelType : uint8_t {
   Undef = 0,                // 0b00000_00
   Dense = 4,                // 0b00001_00
@@ -258,19 +251,11 @@ constexpr bool isUndefDLT(DimLevelType dlt) {
   return dlt == DimLevelType::Undef;
 }
 
-/// Check if the `DimLevelType` is dense.
+/// Check if the `DimLevelType` is dense (regardless of properties).
 constexpr bool isDenseDLT(DimLevelType dlt) {
-  return dlt == DimLevelType::Dense;
+  return (static_cast<uint8_t>(dlt) & ~3) ==
+         static_cast<uint8_t>(DimLevelType::Dense);
 }
-
-/// Check if the `DimLevelType` is 2:4
-constexpr bool isTwoOutOfFourDLT(DimLevelType dlt) {
-  return dlt == DimLevelType::TwoOutOfFour;
-}
-
-// We use the idiom `(dlt & ~3) == format` in order to only return true
-// for valid DLTs.  Whereas the `dlt & format` idiom is a bit faster but
-// can return false-positives on invalid DLTs.
 
 /// Check if the `DimLevelType` is compressed (regardless of properties).
 constexpr bool isCompressedDLT(DimLevelType dlt) {
@@ -278,16 +263,33 @@ constexpr bool isCompressedDLT(DimLevelType dlt) {
          static_cast<uint8_t>(DimLevelType::Compressed);
 }
 
-/// Check if the `DimLevelType` is compressed (regardless of properties).
+/// Check if the `DimLevelType` is singleton (regardless of properties).
+constexpr bool isSingletonDLT(DimLevelType dlt) {
+  return (static_cast<uint8_t>(dlt) & ~3) ==
+         static_cast<uint8_t>(DimLevelType::Singleton);
+}
+
+/// Check if the `DimLevelType` is loose compressed (regardless of properties).
 constexpr bool isLooseCompressedDLT(DimLevelType dlt) {
   return (static_cast<uint8_t>(dlt) & ~3) ==
          static_cast<uint8_t>(DimLevelType::LooseCompressed);
 }
 
-/// Check if the `DimLevelType` is singleton (regardless of properties).
-constexpr bool isSingletonDLT(DimLevelType dlt) {
+/// Check if the `DimLevelType` is 2OutOf4 (regardless of properties).
+constexpr bool is2OutOf4DLT(DimLevelType dlt) {
   return (static_cast<uint8_t>(dlt) & ~3) ==
-         static_cast<uint8_t>(DimLevelType::Singleton);
+         static_cast<uint8_t>(DimLevelType::TwoOutOfFour);
+}
+
+/// Check if the `DimLevelType` needs positions array.
+constexpr bool isDLTWithPos(DimLevelType dlt) {
+  return isCompressedDLT(dlt) || isLooseCompressedDLT(dlt);
+}
+
+/// Check if the `DimLevelType` needs coordinates array.
+constexpr bool isDLTWithCrd(DimLevelType dlt) {
+  return isCompressedDLT(dlt) || isSingletonDLT(dlt) ||
+         isLooseCompressedDLT(dlt) || is2OutOf4DLT(dlt);
 }
 
 /// Check if the `DimLevelType` is ordered (regardless of storage format).
@@ -320,7 +322,10 @@ buildLevelType(LevelFormat lf, bool ordered, bool unique) {
   return isValidDLT(dlt) ? std::optional(dlt) : std::nullopt;
 }
 
-/// Ensure the above conversion works as intended.
+//
+// Ensure the above methods work as indended.
+//
+
 static_assert(
     (getLevelFormat(DimLevelType::Undef) == std::nullopt &&
      *getLevelFormat(DimLevelType::Dense) == LevelFormat::Dense &&
@@ -331,7 +336,16 @@ static_assert(
      *getLevelFormat(DimLevelType::Singleton) == LevelFormat::Singleton &&
      *getLevelFormat(DimLevelType::SingletonNu) == LevelFormat::Singleton &&
      *getLevelFormat(DimLevelType::SingletonNo) == LevelFormat::Singleton &&
-     *getLevelFormat(DimLevelType::SingletonNuNo) == LevelFormat::Singleton),
+     *getLevelFormat(DimLevelType::SingletonNuNo) == LevelFormat::Singleton &&
+     *getLevelFormat(DimLevelType::LooseCompressed) ==
+         LevelFormat::LooseCompressed &&
+     *getLevelFormat(DimLevelType::LooseCompressedNu) ==
+         LevelFormat::LooseCompressed &&
+     *getLevelFormat(DimLevelType::LooseCompressedNo) ==
+         LevelFormat::LooseCompressed &&
+     *getLevelFormat(DimLevelType::LooseCompressedNuNo) ==
+         LevelFormat::LooseCompressed &&
+     *getLevelFormat(DimLevelType::TwoOutOfFour) == LevelFormat::TwoOutOfFour),
     "getLevelFormat conversion is broken");
 
 static_assert(
@@ -339,11 +353,6 @@ static_assert(
      buildLevelType(LevelFormat::Dense, true, false) == std::nullopt &&
      buildLevelType(LevelFormat::Dense, false, false) == std::nullopt &&
      *buildLevelType(LevelFormat::Dense, true, true) == DimLevelType::Dense &&
-     buildLevelType(LevelFormat::TwoOutOfFour, false, true) == std::nullopt &&
-     buildLevelType(LevelFormat::TwoOutOfFour, true, false) == std::nullopt &&
-     buildLevelType(LevelFormat::TwoOutOfFour, false, false) == std::nullopt &&
-     *buildLevelType(LevelFormat::TwoOutOfFour, true, true) ==
-         DimLevelType::TwoOutOfFour &&
      *buildLevelType(LevelFormat::Compressed, true, true) ==
          DimLevelType::Compressed &&
      *buildLevelType(LevelFormat::Compressed, true, false) ==
@@ -359,10 +368,22 @@ static_assert(
      *buildLevelType(LevelFormat::Singleton, false, true) ==
          DimLevelType::SingletonNo &&
      *buildLevelType(LevelFormat::Singleton, false, false) ==
-         DimLevelType::SingletonNuNo),
+         DimLevelType::SingletonNuNo &&
+     *buildLevelType(LevelFormat::LooseCompressed, true, true) ==
+         DimLevelType::LooseCompressed &&
+     *buildLevelType(LevelFormat::LooseCompressed, true, false) ==
+         DimLevelType::LooseCompressedNu &&
+     *buildLevelType(LevelFormat::LooseCompressed, false, true) ==
+         DimLevelType::LooseCompressedNo &&
+     *buildLevelType(LevelFormat::LooseCompressed, false, false) ==
+         DimLevelType::LooseCompressedNuNo &&
+     buildLevelType(LevelFormat::TwoOutOfFour, false, true) == std::nullopt &&
+     buildLevelType(LevelFormat::TwoOutOfFour, true, false) == std::nullopt &&
+     buildLevelType(LevelFormat::TwoOutOfFour, false, false) == std::nullopt &&
+     *buildLevelType(LevelFormat::TwoOutOfFour, true, true) ==
+         DimLevelType::TwoOutOfFour),
     "buildLevelType conversion is broken");
 
-// Ensure the above predicates work as intended.
 static_assert((isValidDLT(DimLevelType::Undef) &&
                isValidDLT(DimLevelType::Dense) &&
                isValidDLT(DimLevelType::Compressed) &&
@@ -380,6 +401,22 @@ static_assert((isValidDLT(DimLevelType::Undef) &&
                isValidDLT(DimLevelType::TwoOutOfFour)),
               "isValidDLT definition is broken");
 
+static_assert((isDenseDLT(DimLevelType::Dense) &&
+               !isDenseDLT(DimLevelType::Compressed) &&
+               !isDenseDLT(DimLevelType::CompressedNu) &&
+               !isDenseDLT(DimLevelType::CompressedNo) &&
+               !isDenseDLT(DimLevelType::CompressedNuNo) &&
+               !isDenseDLT(DimLevelType::Singleton) &&
+               !isDenseDLT(DimLevelType::SingletonNu) &&
+               !isDenseDLT(DimLevelType::SingletonNo) &&
+               !isDenseDLT(DimLevelType::SingletonNuNo) &&
+               !isDenseDLT(DimLevelType::LooseCompressed) &&
+               !isDenseDLT(DimLevelType::LooseCompressedNu) &&
+               !isDenseDLT(DimLevelType::LooseCompressedNo) &&
+               !isDenseDLT(DimLevelType::LooseCompressedNuNo) &&
+               !isDenseDLT(DimLevelType::TwoOutOfFour)),
+              "isDenseDLT definition is broken");
+
 static_assert((!isCompressedDLT(DimLevelType::Dense) &&
                isCompressedDLT(DimLevelType::Compressed) &&
                isCompressedDLT(DimLevelType::CompressedNu) &&
@@ -388,19 +425,13 @@ static_assert((!isCompressedDLT(DimLevelType::Dense) &&
                !isCompressedDLT(DimLevelType::Singleton) &&
                !isCompressedDLT(DimLevelType::SingletonNu) &&
                !isCompressedDLT(DimLevelType::SingletonNo) &&
-               !isCompressedDLT(DimLevelType::SingletonNuNo)),
+               !isCompressedDLT(DimLevelType::SingletonNuNo) &&
+               !isCompressedDLT(DimLevelType::LooseCompressed) &&
+               !isCompressedDLT(DimLevelType::LooseCompressedNu) &&
+               !isCompressedDLT(DimLevelType::LooseCompressedNo) &&
+               !isCompressedDLT(DimLevelType::LooseCompressedNuNo) &&
+               !isCompressedDLT(DimLevelType::TwoOutOfFour)),
               "isCompressedDLT definition is broken");
-
-static_assert((!isLooseCompressedDLT(DimLevelType::Dense) &&
-               isLooseCompressedDLT(DimLevelType::LooseCompressed) &&
-               isLooseCompressedDLT(DimLevelType::LooseCompressedNu) &&
-               isLooseCompressedDLT(DimLevelType::LooseCompressedNo) &&
-               isLooseCompressedDLT(DimLevelType::LooseCompressedNuNo) &&
-               !isLooseCompressedDLT(DimLevelType::Singleton) &&
-               !isLooseCompressedDLT(DimLevelType::SingletonNu) &&
-               !isLooseCompressedDLT(DimLevelType::SingletonNo) &&
-               !isLooseCompressedDLT(DimLevelType::SingletonNuNo)),
-              "isLooseCompressedDLT definition is broken");
 
 static_assert((!isSingletonDLT(DimLevelType::Dense) &&
                !isSingletonDLT(DimLevelType::Compressed) &&
@@ -410,11 +441,47 @@ static_assert((!isSingletonDLT(DimLevelType::Dense) &&
                isSingletonDLT(DimLevelType::Singleton) &&
                isSingletonDLT(DimLevelType::SingletonNu) &&
                isSingletonDLT(DimLevelType::SingletonNo) &&
-               isSingletonDLT(DimLevelType::SingletonNuNo)),
+               isSingletonDLT(DimLevelType::SingletonNuNo) &&
+               !isSingletonDLT(DimLevelType::LooseCompressed) &&
+               !isSingletonDLT(DimLevelType::LooseCompressedNu) &&
+               !isSingletonDLT(DimLevelType::LooseCompressedNo) &&
+               !isSingletonDLT(DimLevelType::LooseCompressedNuNo) &&
+               !isSingletonDLT(DimLevelType::TwoOutOfFour)),
               "isSingletonDLT definition is broken");
 
+static_assert((!isLooseCompressedDLT(DimLevelType::Dense) &&
+               !isLooseCompressedDLT(DimLevelType::Compressed) &&
+               !isLooseCompressedDLT(DimLevelType::CompressedNu) &&
+               !isLooseCompressedDLT(DimLevelType::CompressedNo) &&
+               !isLooseCompressedDLT(DimLevelType::CompressedNuNo) &&
+               !isLooseCompressedDLT(DimLevelType::Singleton) &&
+               !isLooseCompressedDLT(DimLevelType::SingletonNu) &&
+               !isLooseCompressedDLT(DimLevelType::SingletonNo) &&
+               !isLooseCompressedDLT(DimLevelType::SingletonNuNo) &&
+               isLooseCompressedDLT(DimLevelType::LooseCompressed) &&
+               isLooseCompressedDLT(DimLevelType::LooseCompressedNu) &&
+               isLooseCompressedDLT(DimLevelType::LooseCompressedNo) &&
+               isLooseCompressedDLT(DimLevelType::LooseCompressedNuNo) &&
+               !isLooseCompressedDLT(DimLevelType::TwoOutOfFour)),
+              "isLooseCompressedDLT definition is broken");
+
+static_assert((!is2OutOf4DLT(DimLevelType::Dense) &&
+               !is2OutOf4DLT(DimLevelType::Compressed) &&
+               !is2OutOf4DLT(DimLevelType::CompressedNu) &&
+               !is2OutOf4DLT(DimLevelType::CompressedNo) &&
+               !is2OutOf4DLT(DimLevelType::CompressedNuNo) &&
+               !is2OutOf4DLT(DimLevelType::Singleton) &&
+               !is2OutOf4DLT(DimLevelType::SingletonNu) &&
+               !is2OutOf4DLT(DimLevelType::SingletonNo) &&
+               !is2OutOf4DLT(DimLevelType::SingletonNuNo) &&
+               !is2OutOf4DLT(DimLevelType::LooseCompressed) &&
+               !is2OutOf4DLT(DimLevelType::LooseCompressedNu) &&
+               !is2OutOf4DLT(DimLevelType::LooseCompressedNo) &&
+               !is2OutOf4DLT(DimLevelType::LooseCompressedNuNo) &&
+               is2OutOf4DLT(DimLevelType::TwoOutOfFour)),
+              "is2OutOf4DLT definition is broken");
+
 static_assert((isOrderedDLT(DimLevelType::Dense) &&
-               isOrderedDLT(DimLevelType::TwoOutOfFour) &&
                isOrderedDLT(DimLevelType::Compressed) &&
                isOrderedDLT(DimLevelType::CompressedNu) &&
                !isOrderedDLT(DimLevelType::CompressedNo) &&
@@ -426,11 +493,11 @@ static_assert((isOrderedDLT(DimLevelType::Dense) &&
                isOrderedDLT(DimLevelType::LooseCompressed) &&
                isOrderedDLT(DimLevelType::LooseCompressedNu) &&
                !isOrderedDLT(DimLevelType::LooseCompressedNo) &&
-               !isOrderedDLT(DimLevelType::LooseCompressedNuNo)),
+               !isOrderedDLT(DimLevelType::LooseCompressedNuNo) &&
+               isOrderedDLT(DimLevelType::TwoOutOfFour)),
               "isOrderedDLT definition is broken");
 
 static_assert((isUniqueDLT(DimLevelType::Dense) &&
-               isUniqueDLT(DimLevelType::TwoOutOfFour) &&
                isUniqueDLT(DimLevelType::Compressed) &&
                !isUniqueDLT(DimLevelType::CompressedNu) &&
                isUniqueDLT(DimLevelType::CompressedNo) &&
@@ -442,8 +509,59 @@ static_assert((isUniqueDLT(DimLevelType::Dense) &&
                isUniqueDLT(DimLevelType::LooseCompressed) &&
                !isUniqueDLT(DimLevelType::LooseCompressedNu) &&
                isUniqueDLT(DimLevelType::LooseCompressedNo) &&
-               !isUniqueDLT(DimLevelType::LooseCompressedNuNo)),
+               !isUniqueDLT(DimLevelType::LooseCompressedNuNo) &&
+               isUniqueDLT(DimLevelType::TwoOutOfFour)),
               "isUniqueDLT definition is broken");
+
+/// Bit manipulations for affine encoding.
+///
+/// Note that because the indices in the mappings refer to dimensions
+/// and levels (and *not* the sizes of these dimensions and levels), the
+/// 64-bit encoding gives ample room for a compact encoding of affine
+/// operations in the higher bits. Pure permutations still allow for
+/// 60-bit indices. But non-permutations reserve 20-bits for the
+/// potential three components (index i, constant, index ii).
+///
+/// The compact encoding is as follows:
+///
+///  0xffffffffffffffff
+/// |0000      |                        60-bit idx| e.g. i
+/// |0001 floor|           20-bit const|20-bit idx| e.g. i floor c
+/// |0010 mod  |           20-bit const|20-bit idx| e.g. i mod c
+/// |0011 mul  |20-bit idx|20-bit const|20-bit idx| e.g. i + c * ii
+///
+/// This encoding provides sufficient generality for currently supported
+/// sparse tensor types. To generalize this more, we will need to provide
+/// a broader encoding scheme for affine functions. Also, the library
+/// encoding may be replaced with pure "direct-IR" code in the future.
+///
+constexpr uint64_t encodeDim(uint64_t i, uint64_t cf, uint64_t cm) {
+  if (cf != 0) {
+    assert(cf <= 0xfffff && cm == 0 && i <= 0xfffff);
+    return (0x01L << 60) | (cf << 20) | i;
+  }
+  if (cm != 0) {
+    assert(cm <= 0xfffff && i <= 0xfffff);
+    return (0x02L << 60) | (cm << 20) | i;
+  }
+  assert(i <= 0x0fffffffffffffffu);
+  return i;
+}
+constexpr uint64_t encodeLvl(uint64_t i, uint64_t c, uint64_t ii) {
+  if (c != 0) {
+    assert(c <= 0xfffff && ii <= 0xfffff && i <= 0xfffff);
+    return (0x03L << 60) | (c << 20) | (ii << 40) | i;
+  }
+  assert(i <= 0x0fffffffffffffffu);
+  return i;
+}
+constexpr bool isEncodedFloor(uint64_t v) { return (v >> 60) == 0x01; }
+constexpr bool isEncodedMod(uint64_t v) { return (v >> 60) == 0x02; }
+constexpr bool isEncodedMul(uint64_t v) { return (v >> 60) == 0x03; }
+constexpr uint64_t decodeIndex(uint64_t v) { return v & 0xfffffu; }
+constexpr uint64_t decodeConst(uint64_t v) { return (v >> 20) & 0xfffffu; }
+constexpr uint64_t decodeMulc(uint64_t v) { return (v >> 20) & 0xfffffu; }
+constexpr uint64_t decodeMuli(uint64_t v) { return (v >> 40) & 0xfffffu; }
 
 } // namespace sparse_tensor
 } // namespace mlir

@@ -1987,8 +1987,9 @@ template <class ELFT> void ELFWriter<ELFT>::writeEhdr() {
   Ehdr.e_ident[EI_MAG2] = 'L';
   Ehdr.e_ident[EI_MAG3] = 'F';
   Ehdr.e_ident[EI_CLASS] = ELFT::Is64Bits ? ELFCLASS64 : ELFCLASS32;
-  Ehdr.e_ident[EI_DATA] =
-      ELFT::TargetEndianness == support::big ? ELFDATA2MSB : ELFDATA2LSB;
+  Ehdr.e_ident[EI_DATA] = ELFT::TargetEndianness == llvm::endianness::big
+                              ? ELFDATA2MSB
+                              : ELFDATA2LSB;
   Ehdr.e_ident[EI_VERSION] = EV_CURRENT;
   Ehdr.e_ident[EI_OSABI] = Obj.OSABI;
   Ehdr.e_ident[EI_ABIVERSION] = Obj.ABIVersion;
@@ -2695,11 +2696,11 @@ uint64_t IHexWriter::writeEntryPointRecord(uint8_t *Buf) {
   if (Obj.Entry <= 0xFFFFFU) {
     Data[0] = ((Obj.Entry & 0xF0000U) >> 12) & 0xFF;
     support::endian::write(&Data[2], static_cast<uint16_t>(Obj.Entry),
-                           support::big);
+                           llvm::endianness::big);
     HexData = IHexRecord::getLine(IHexRecord::StartAddr80x86, 0, Data);
   } else {
     support::endian::write(Data, static_cast<uint32_t>(Obj.Entry),
-                           support::big);
+                           llvm::endianness::big);
     HexData = IHexRecord::getLine(IHexRecord::StartAddr, 0, Data);
   }
   memcpy(Buf, HexData.data(), HexData.size());

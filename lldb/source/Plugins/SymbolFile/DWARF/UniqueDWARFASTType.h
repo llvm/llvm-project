@@ -16,13 +16,15 @@
 #include "DWARFDIE.h"
 #include "lldb/Core/Declaration.h"
 
+namespace lldb_private::plugin {
+namespace dwarf {
 class UniqueDWARFASTType {
 public:
   // Constructors and Destructors
   UniqueDWARFASTType() : m_type_sp(), m_die(), m_declaration() {}
 
   UniqueDWARFASTType(lldb::TypeSP &type_sp, const DWARFDIE &die,
-                     const lldb_private::Declaration &decl, int32_t byte_size)
+                     const Declaration &decl, int32_t byte_size)
       : m_type_sp(type_sp), m_die(die), m_declaration(decl),
         m_byte_size(byte_size) {}
 
@@ -44,7 +46,7 @@ public:
 
   lldb::TypeSP m_type_sp;
   DWARFDIE m_die;
-  lldb_private::Declaration m_declaration;
+  Declaration m_declaration;
   int32_t m_byte_size = -1;
 };
 
@@ -60,7 +62,7 @@ public:
     m_collection.push_back(entry);
   }
 
-  bool Find(const DWARFDIE &die, const lldb_private::Declaration &decl,
+  bool Find(const DWARFDIE &die, const Declaration &decl,
             const int32_t byte_size, UniqueDWARFASTType &entry) const;
 
 protected:
@@ -74,14 +76,12 @@ public:
 
   ~UniqueDWARFASTTypeMap() = default;
 
-  void Insert(lldb_private::ConstString name,
-              const UniqueDWARFASTType &entry) {
+  void Insert(ConstString name, const UniqueDWARFASTType &entry) {
     m_collection[name.GetCString()].Append(entry);
   }
 
-  bool Find(lldb_private::ConstString name, const DWARFDIE &die,
-            const lldb_private::Declaration &decl, const int32_t byte_size,
-            UniqueDWARFASTType &entry) const {
+  bool Find(ConstString name, const DWARFDIE &die, const Declaration &decl,
+            const int32_t byte_size, UniqueDWARFASTType &entry) const {
     const char *unique_name_cstr = name.GetCString();
     collection::const_iterator pos = m_collection.find(unique_name_cstr);
     if (pos != m_collection.end()) {
@@ -95,5 +95,7 @@ protected:
   typedef llvm::DenseMap<const char *, UniqueDWARFASTTypeList> collection;
   collection m_collection;
 };
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_UNIQUEDWARFASTTYPE_H

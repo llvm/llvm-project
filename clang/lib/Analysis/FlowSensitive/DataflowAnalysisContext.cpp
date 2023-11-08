@@ -17,6 +17,7 @@
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Logger.h"
+#include "clang/Analysis/FlowSensitive/SimplifyConstraints.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
@@ -73,7 +74,7 @@ StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
 }
 
 StorageLocation &
-DataflowAnalysisContext::getStableStorageLocation(const VarDecl &D) {
+DataflowAnalysisContext::getStableStorageLocation(const ValueDecl &D) {
   if (auto *Loc = DeclToLoc.lookup(&D))
     return *Loc;
   auto &Loc = createStorageLocation(D.getType().getNonReferenceType());
@@ -141,32 +142,30 @@ DataflowAnalysisContext::joinFlowConditions(Atom FirstToken,
 
 Solver::Result DataflowAnalysisContext::querySolver(
     llvm::SetVector<const Formula *> Constraints) {
-  Constraints.insert(&arena().makeLiteral(true));
-  Constraints.insert(&arena().makeNot(arena().makeLiteral(false)));
   return S->solve(Constraints.getArrayRef());
 }
 
 bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
-                                                   const Formula &Val) {
+                                                   const Formula &F) {
   // Returns true if and only if truth assignment of the flow condition implies
-  // that `Val` is also true. We prove whether or not this property holds by
+  // that `F` is also true. We prove whether or not this property holds by
   // reducing the problem to satisfiability checking. In other words, we attempt
-  // to show that assuming `Val` is false makes the constraints induced by the
+  // to show that assuming `F` is false makes the constraints induced by the
   // flow condition unsatisfiable.
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeAtomRef(Token));
-  Constraints.insert(&arena().makeNot(Val));
+  Constraints.insert(&arena().makeNot(F));
   addTransitiveFlowConditionConstraints(Token, Constraints);
   return isUnsatisfiable(std::move(Constraints));
 }
 
-bool DataflowAnalysisContext::flowConditionIsTautology(Atom Token) {
-  // Returns true if and only if we cannot prove that the flow condition can
-  // ever be false.
+bool DataflowAnalysisContext::flowConditionAllows(Atom Token,
+                                                  const Formula &F) {
   llvm::SetVector<const Formula *> Constraints;
-  Constraints.insert(&arena().makeNot(arena().makeAtomRef(Token)));
+  Constraints.insert(&arena().makeAtomRef(Token));
+  Constraints.insert(&F);
   addTransitiveFlowConditionConstraints(Token, Constraints);
-  return isUnsatisfiable(std::move(Constraints));
+  return isSatisfiable(std::move(Constraints));
 }
 
 bool DataflowAnalysisContext::equivalentFormulas(const Formula &Val1,
@@ -207,19 +206,51 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
   }
 }
 
+static void printAtomList(const llvm::SmallVector<Atom> &Atoms,
+                          llvm::raw_ostream &OS) {
+  OS << "(";
+  for (size_t i = 0; i < Atoms.size(); ++i) {
+    OS << Atoms[i];
+    if (i + 1 < Atoms.size())
+      OS << ", ";
+  }
+  OS << ")\n";
+}
+
 void DataflowAnalysisContext::dumpFlowCondition(Atom Token,
                                                 llvm::raw_ostream &OS) {
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeAtomRef(Token));
   addTransitiveFlowConditionConstraints(Token, Constraints);
 
-  // TODO: have formulas know about true/false directly instead
-  Atom True = arena().makeLiteral(true).getAtom();
-  Atom False = arena().makeLiteral(false).getAtom();
-  Formula::AtomNames Names = {{False, "false"}, {True, "true"}};
+  OS << "Flow condition token: " << Token << "\n";
+  SimplifyConstraintsInfo Info;
+  llvm::SetVector<const Formula *> OriginalConstraints = Constraints;
+  simplifyConstraints(Constraints, arena(), &Info);
+  if (!Constraints.empty()) {
+    OS << "Constraints:\n";
+    for (const auto *Constraint : Constraints) {
+      Constraint->print(OS);
+      OS << "\n";
+    }
+  }
+  if (!Info.TrueAtoms.empty()) {
+    OS << "True atoms: ";
+    printAtomList(Info.TrueAtoms, OS);
+  }
+  if (!Info.FalseAtoms.empty()) {
+    OS << "False atoms: ";
+    printAtomList(Info.FalseAtoms, OS);
+  }
+  if (!Info.EquivalentAtoms.empty()) {
+    OS << "Equivalent atoms:\n";
+    for (const llvm::SmallVector<Atom> &Class : Info.EquivalentAtoms)
+      printAtomList(Class, OS);
+  }
 
-  for (const auto *Constraint : Constraints) {
-    Constraint->print(OS, &Names);
+  OS << "\nFlow condition constraints before simplification:\n";
+  for (const auto *Constraint : OriginalConstraints) {
+    Constraint->print(OS);
     OS << "\n";
   }
 }

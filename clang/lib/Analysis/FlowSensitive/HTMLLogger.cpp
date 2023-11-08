@@ -114,11 +114,10 @@ public:
     // guaranteed true/false here is valuable and hard to determine by hand.
     if (auto *B = llvm::dyn_cast<BoolValue>(&V)) {
       JOS.attribute("formula", llvm::to_string(B->formula()));
-      JOS.attribute(
-          "truth", Env.flowConditionImplies(B->formula()) ? "true"
-                   : Env.flowConditionImplies(Env.arena().makeNot(B->formula()))
-                       ? "false"
-                       : "unknown");
+      JOS.attribute("truth", Env.proves(B->formula()) ? "true"
+                             : Env.proves(Env.arena().makeNot(B->formula()))
+                                 ? "false"
+                                 : "unknown");
     }
   }
   void dump(const StorageLocation &L) {

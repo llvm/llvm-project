@@ -39,7 +39,7 @@ struct __atomic_base  // false
 
     _LIBCPP_HIDE_FROM_ABI
     bool is_lock_free() const volatile _NOEXCEPT
-        {return __cxx_atomic_is_lock_free(sizeof(_Tp));}
+        {return __cxx_atomic_is_lock_free(sizeof(__cxx_atomic_impl<_Tp>));}
     _LIBCPP_HIDE_FROM_ABI
     bool is_lock_free() const _NOEXCEPT
         {return static_cast<__atomic_base const volatile*>(this)->is_lock_free();}

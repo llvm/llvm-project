@@ -64,6 +64,9 @@ MODULE_PASS("forceattrs", ForceFunctionAttrsPass())
 MODULE_PASS("function-import", FunctionImportPass())
 MODULE_PASS("globalopt", GlobalOptPass())
 MODULE_PASS("globalsplit", GlobalSplitPass())
+MODULE_PASS("hipstdpar-select-accelerator-code",
+  HipStdParAcceleratorCodeSelectionPass())
+MODULE_PASS("hipstdpar-interpose-alloc", HipStdParAllocationInterpositionPass())
 MODULE_PASS("hotcoldsplit", HotColdSplittingPass())
 MODULE_PASS("inferattrs", InferFunctionAttrsPass())
 MODULE_PASS("inliner-wrapper", ModuleInlinerWrapperPass())
@@ -421,7 +424,6 @@ FUNCTION_PASS("sccp", SCCPPass())
 FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
-FUNCTION_PASS("speculative-execution", SpeculativeExecutionPass())
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
 FUNCTION_PASS("structurizecfg", StructurizeCFGPass())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
@@ -442,6 +444,8 @@ FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
 FUNCTION_PASS("memprof", MemProfilerPass())
 FUNCTION_PASS("declare-to-assign", llvm::AssignmentTrackingPass())
+FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(TM));
+FUNCTION_PASS("expand-large-fp-convert", ExpandLargeFpConvertPass(TM));
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_PASS_WITH_PARAMS
@@ -583,6 +587,13 @@ FUNCTION_PASS_WITH_PARAMS("print<memoryssa>",
                            },
                           parseMemorySSAPrinterPassOptions,
                           "no-ensure-optimized-uses")
+FUNCTION_PASS_WITH_PARAMS("speculative-execution",
+                          "SpeculativeExecutionPass",
+                          [](bool OnlyIfDivergentTarget) {
+                            return SpeculativeExecutionPass(OnlyIfDivergentTarget);
+                          },
+                          parseSpeculativeExecutionPassOptions,
+                          "only-if-divergent-target")
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS

@@ -51,6 +51,17 @@ struct SCFTilingOptions {
     interchangeVector = llvm::to_vector(interchange);
     return *this;
   }
+
+  /// Specify mapping of loops to devices. This is only respected when the loop
+  /// constructs support such a mapping (like `scf.forall`). Will be ignored
+  /// when using loop constructs that dont support such a mapping (like
+  /// `scf.for`)
+  SmallVector<Attribute> mappingVector = {};
+  SCFTilingOptions &setMapping(ArrayRef<DeviceMappingAttrInterface> mapping) {
+    mappingVector = llvm::map_to_vector(
+        mapping, [](auto attr) -> Attribute { return attr; });
+    return *this;
+  }
 };
 
 /// Transformation information returned after tiling.
@@ -81,6 +92,12 @@ struct SCFTileAndFuseOptions {
     return *this;
   }
 };
+
+/// Method to tile an op that implements the `TilingInterface` using
+/// `scf.forall`.
+FailureOr<SCFTilingResult>
+tileUsingSCFForallOp(RewriterBase &rewriter, TilingInterface op,
+                     const SCFTilingOptions &options);
 
 /// Fuse the producer of the source of `candidateSliceOp` by computing the
 /// required slice of the producer in-place.  Note that the method

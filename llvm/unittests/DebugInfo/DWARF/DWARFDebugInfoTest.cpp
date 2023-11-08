@@ -9,7 +9,6 @@
 #include "DwarfGenerator.h"
 #include "DwarfUtils.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -2170,7 +2169,11 @@ TEST(DWARFDebugInfo, TestDWARF64UnitLength) {
     DWARFDataExtractor Data(Obj, Sec, /* IsLittleEndian = */ true,
                             /* AddressSize = */ 4);
     uint64_t Offset = 0;
-    EXPECT_FALSE(Header.extract(*Context, Data, &Offset, DW_SECT_INFO));
+    ASSERT_THAT_ERROR(
+        Header.extract(*Context, Data, &Offset, DW_SECT_INFO),
+        FailedWithMessage(
+            "DWARF unit from offset 0x00000000 incl. to offset  "
+            "0x1122334455667794 excl. extends past section size 0x00000018"));
     // Header.extract() returns false because there is not enough space
     // in the section for the declared length. Anyway, we can check that
     // the properties are read correctly.

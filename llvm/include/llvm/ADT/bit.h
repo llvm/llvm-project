@@ -28,7 +28,7 @@
 #endif
 
 #if defined(__linux__) || defined(__GNU__) || defined(__HAIKU__) ||            \
-    defined(__Fuchsia__) || defined(__EMSCRIPTEN__)
+    defined(__Fuchsia__) || defined(__EMSCRIPTEN__) || defined(__OpenBSD__)
 #include <endian.h>
 #elif defined(_AIX)
 #include <sys/machine.h>

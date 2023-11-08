@@ -118,7 +118,7 @@ Expected<std::unique_ptr<BinaryContext>>
 BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
                                    std::unique_ptr<DWARFContext> DwCtx) {
   StringRef ArchName = "";
-  StringRef FeaturesStr = "";
+  std::string FeaturesStr = "";
   switch (File->getArch()) {
   case llvm::Triple::x86_64:
     ArchName = "x86-64";
@@ -128,11 +128,20 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
     ArchName = "aarch64";
     FeaturesStr = "+all";
     break;
-  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv64: {
     ArchName = "riscv64";
-    // RV64GC
-    FeaturesStr = "+m,+a,+f,+d,+zicsr,+zifencei,+c,+relax";
+    Expected<SubtargetFeatures> Features = File->getFeatures();
+
+    if (auto E = Features.takeError())
+      return std::move(E);
+
+    // We rely on relaxation for some transformations (e.g., promoting all calls
+    // to PseudoCALL and then making JITLink relax them). Since the relax
+    // feature is not stored in the object file, we manually enable it.
+    Features->AddFeature("relax");
+    FeaturesStr = Features->getString();
     break;
+  }
   default:
     return createStringError(std::errc::not_supported,
                              "BOLT-ERROR: Unrecognized machine in ELF file");
@@ -1803,6 +1812,10 @@ MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
   if (*NameOrError == "$x" || NameOrError->startswith("$x."))
     return MarkerSymType::CODE;
 
+  // $x<ISA>
+  if (isRISCV() && NameOrError->startswith("$x"))
+    return MarkerSymType::CODE;
+
   if (*NameOrError == "$d" || NameOrError->startswith("$d."))
     return MarkerSymType::DATA;
 
@@ -1849,10 +1862,6 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
                                      bool PrintMCInst, bool PrintMemData,
                                      bool PrintRelocations,
                                      StringRef Endl) const {
-  if (MIB->isEHLabel(Instruction)) {
-    OS << "  EH_LABEL: " << *MIB->getTargetSymbol(Instruction) << Endl;
-    return;
-  }
   OS << format("    %08" PRIx64 ": ", Offset);
   if (MIB->isCFI(Instruction)) {
     uint32_t Offset = Instruction.getOperand(0).getImm();
@@ -1888,8 +1897,8 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
   }
   if (std::optional<uint32_t> Offset = MIB->getOffset(Instruction))
     OS << " # Offset: " << *Offset;
-  if (auto Label = MIB->getLabel(Instruction))
-    OS << " # Label: " << **Label;
+  if (MCSymbol *Label = MIB->getLabel(Instruction))
+    OS << " # Label: " << *Label;
 
   MIB->printAnnotations(Instruction, OS);
 

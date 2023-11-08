@@ -40,6 +40,7 @@ class APInt;
 class APFloat;
 class GISelKnownBits;
 class MachineInstr;
+class MachineIRBuilder;
 class MachineInstrBuilder;
 class MachineFunction;
 class MachineOperand;
@@ -265,6 +266,13 @@ enum {
   /// - NewOpIdx
   GIM_CheckCanReplaceReg,
 
+  /// Check that a matched instruction has, or doesn't have a MIFlag.
+  ///
+  /// - InsnID  - Instruction to check.
+  /// - Flag(s) - (can be one or more flags OR'd together)
+  GIM_MIFlags,
+  GIM_MIFlagsNot,
+
   /// Predicates with 'let PredicateCodeUsesOperands = 1' need to examine some
   /// named operands that will be recorded in RecordedOperands. Names of these
   /// operands are referenced in predicate argument list. Emitter determines
@@ -273,6 +281,12 @@ enum {
   /// - OpIdx - Operand index
   /// - StoreIdx - Store location in RecordedOperands.
   GIM_RecordNamedOperand,
+
+  /// Records an operand's register type into the set of temporary types.
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - TempTypeIdx - Temp Type Index, always negative.
+  GIM_RecordRegType,
 
   /// Fail the current try-block, or completely fail to match if there is no
   /// current try-block.
@@ -290,6 +304,11 @@ enum {
   /// - InsnID - Instruction ID to define
   /// - Opcode - The new opcode to use
   GIR_BuildMI,
+
+  /// Builds a constant and stores its result in a TempReg.
+  /// - TempRegID - Temp Register to define.
+  /// - Imm - The immediate to add
+  GIR_BuildConstant,
 
   /// Copy an operand to the specified instruction
   /// - NewInsnID - Instruction ID to modify
@@ -331,6 +350,20 @@ enum {
   ///
   /// OpIdx starts at 0 for the first implicit def.
   GIR_SetImplicitDefDead,
+
+  /// Set or unset a MIFlag on an instruction.
+  ///
+  /// - InsnID  - Instruction to modify.
+  /// - Flag(s) - (can be one or more flags OR'd together)
+  GIR_SetMIFlags,
+  GIR_UnsetMIFlags,
+
+  /// Copy the MIFlags of a matched instruction into an
+  /// output instruction. The flags are OR'd together.
+  ///
+  /// - InsnID     - Instruction to modify.
+  /// - OldInsnID  - Matched instruction to copy flags from.
+  GIR_CopyMIFlags,
 
   /// Add a temporary register to the specified instruction
   /// - InsnID - Instruction ID to modify
@@ -516,6 +549,10 @@ protected:
     /// list. Currently such predicates don't have more then 3 arguments.
     std::array<const MachineOperand *, 3> RecordedOperands;
 
+    /// Types extracted from an instruction's operand.
+    /// Whenever a type index is negative, we look here instead.
+    SmallVector<LLT, 4> RecordedTypes;
+
     MatcherState(unsigned MaxRenderers);
   };
 
@@ -555,15 +592,15 @@ protected:
   /// and false otherwise.
   template <class TgtExecutor, class PredicateBitset, class ComplexMatcherMemFn,
             class CustomRendererFn>
-  bool executeMatchTable(
-      TgtExecutor &Exec, NewMIVector &OutMIs, MatcherState &State,
-      const ExecInfoTy<PredicateBitset, ComplexMatcherMemFn, CustomRendererFn>
-          &ISelInfo,
-      const int64_t *MatchTable, const TargetInstrInfo &TII,
-      MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
-      const RegisterBankInfo &RBI, const PredicateBitset &AvailableFeatures,
-      CodeGenCoverage *CoverageInfo,
-      GISelChangeObserver *Observer = nullptr) const;
+  bool executeMatchTable(TgtExecutor &Exec, MatcherState &State,
+                         const ExecInfoTy<PredicateBitset, ComplexMatcherMemFn,
+                                          CustomRendererFn> &ExecInfo,
+                         MachineIRBuilder &Builder, const int64_t *MatchTable,
+                         const TargetInstrInfo &TII, MachineRegisterInfo &MRI,
+                         const TargetRegisterInfo &TRI,
+                         const RegisterBankInfo &RBI,
+                         const PredicateBitset &AvailableFeatures,
+                         CodeGenCoverage *CoverageInfo) const;
 
   virtual const int64_t *getMatchTable() const {
     llvm_unreachable("Should have been overridden by tablegen if used");

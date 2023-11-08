@@ -37,6 +37,21 @@ public:
   MCInstrAnalysis(const MCInstrInfo *Info) : Info(Info) {}
   virtual ~MCInstrAnalysis() = default;
 
+  /// Clear the internal state. See updateState for more information.
+  virtual void resetState() {}
+
+  /// Update internal state with \p Inst at \p Addr.
+  ///
+  /// For some types of analyses, inspecting a single instruction is not
+  /// sufficient. Some examples are auipc/jalr pairs on RISC-V or adrp/ldr pairs
+  /// on AArch64. To support inspecting multiple instructions, targets may keep
+  /// track of an internal state while analysing instructions. Clients should
+  /// call updateState for every instruction which allows later calls to one of
+  /// the analysis functions to take previous instructions into account.
+  /// Whenever state becomes irrelevant (e.g., when starting to disassemble a
+  /// new function), clients should call resetState to clear it.
+  virtual void updateState(const MCInst &Inst, uint64_t Addr) {}
+
   virtual bool isBranch(const MCInst &Inst) const {
     return Info->get(Inst.getOpcode()).isBranch();
   }

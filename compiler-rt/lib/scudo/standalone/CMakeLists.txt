@@ -62,6 +62,9 @@ set(SCUDO_HEADERS
   bytemap.h
   checksum.h
   chunk.h
+  condition_variable.h
+  condition_variable_base.h
+  condition_variable_linux.h
   combined.h
   common.h
   flags_parser.h
@@ -84,6 +87,7 @@ set(SCUDO_HEADERS
   quarantine.h
   release.h
   report.h
+  report_linux.h
   secondary.h
   size_class_map.h
   stack_depot.h
@@ -103,6 +107,7 @@ set(SCUDO_HEADERS
 set(SCUDO_SOURCES
   checksum.cpp
   common.cpp
+  condition_variable_linux.cpp
   crc32_hw.cpp
   flags_parser.cpp
   flags.cpp
@@ -113,6 +118,7 @@ set(SCUDO_SOURCES
   mem_map_linux.cpp
   release.cpp
   report.cpp
+  report_linux.cpp
   string_utils.cpp
   timing.cpp
   )

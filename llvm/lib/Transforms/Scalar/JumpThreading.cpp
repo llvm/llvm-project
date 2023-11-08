@@ -761,7 +761,10 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     PHINode *PN = dyn_cast<PHINode>(CmpLHS);
     if (!PN)
       PN = dyn_cast<PHINode>(CmpRHS);
-    if (PN && PN->getParent() == BB) {
+    // Do not perform phi translation across a loop header phi, because this
+    // may result in comparison of values from two different loop iterations.
+    // FIXME: This check is broken if LoopHeaders is not populated.
+    if (PN && PN->getParent() == BB && !LoopHeaders.contains(BB)) {
       const DataLayout &DL = PN->getModule()->getDataLayout();
       // We can do this simplification if any comparisons fold to true or false.
       // See if any do.
@@ -1977,11 +1980,9 @@ void JumpThreadingPass::updateSSA(
 
     // Find debug values outside of the block
     findDbgValues(DbgValues, &I);
-    DbgValues.erase(remove_if(DbgValues,
-                              [&](const DbgValueInst *DbgVal) {
-                                return DbgVal->getParent() == BB;
-                              }),
-                    DbgValues.end());
+    llvm::erase_if(DbgValues, [&](const DbgValueInst *DbgVal) {
+      return DbgVal->getParent() == BB;
+    });
 
     // If there are no uses outside the block, we're done with this instruction.
     if (UsesToRename.empty() && DbgValues.empty())

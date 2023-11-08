@@ -1933,6 +1933,13 @@ mlir::Value fir::IterWhileOp::blockArgToSourceOp(unsigned blockArgNum) {
   return {};
 }
 
+llvm::MutableArrayRef<mlir::OpOperand>
+fir::IterWhileOp::getYieldedValuesMutable() {
+  auto *term = getRegion().front().getTerminator();
+  return getFinalValue() ? term->getOpOperands().drop_front()
+                         : term->getOpOperands();
+}
+
 //===----------------------------------------------------------------------===//
 // LenParamIndexOp
 //===----------------------------------------------------------------------===//
@@ -2236,6 +2243,13 @@ mlir::Value fir::DoLoopOp::blockArgToSourceOp(unsigned blockArgNum) {
   if (blockArgNum > 0 && blockArgNum <= getInitArgs().size())
     return getInitArgs()[blockArgNum - 1];
   return {};
+}
+
+llvm::MutableArrayRef<mlir::OpOperand>
+fir::DoLoopOp::getYieldedValuesMutable() {
+  auto *term = getRegion().front().getTerminator();
+  return getFinalValue() ? term->getOpOperands().drop_front()
+                         : term->getOpOperands();
 }
 
 //===----------------------------------------------------------------------===//

@@ -586,6 +586,8 @@ unsigned int _CountLeadingZeros(unsigned long);
 unsigned int _CountLeadingZeros64(unsigned _int64);
 unsigned int _CountOneBits(unsigned long);
 unsigned int _CountOneBits64(unsigned __int64);
+
+void __cdecl __prefetch(void *);
 #endif
 
 /*----------------------------------------------------------------------------*\

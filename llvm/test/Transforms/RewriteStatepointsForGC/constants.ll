@@ -262,3 +262,16 @@ entry:
   ; CHECK-DAG: call {{.*}}gc.relocate{{.*}}(%val.base, %val)
   ret <2 x ptr addrspace(1)> %val
 }
+
+define ptr addrspace(1) @test14() gc "statepoint-example" {
+; CHECK-LABEL: @test14
+; FIXME: this is a extract element of constant vector and as such should not be relocated, but our current code relocates it since the extractelement will conservatively be marked as conflict during the BDV insertion algorithm. In many cases the extra instruction will be identical to the one already present and will be removed by later phases. 
+entry:
+  %val = extractelement <2 x ptr addrspace(1)> <ptr addrspace(1) inttoptr (i64 5 to ptr addrspace(1)),
+                                                ptr addrspace(1) inttoptr (i64 15 to ptr addrspace(1))>, i32 0
+  ; CHECK: gc.statepoint
+  call void @foo() [ "deopt"() ]
+  ; CHECK-DAG: call {{.*}}gc.relocate{{.*}}(%val.base, %val.base)
+  ; CHECK-DAG: call {{.*}}gc.relocate{{.*}}(%val.base, %val)
+  ret ptr addrspace(1) %val
+}

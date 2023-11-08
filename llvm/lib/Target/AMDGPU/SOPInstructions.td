@@ -15,6 +15,7 @@ class SOP_Pseudo<string opName, dag outs, dag ins, string asmOps,
 
   let isPseudo = 1;
   let isCodeGenOnly = 1;
+  let Size = 4;
 
   string Mnemonic = opName;
   string AsmOperands = asmOps;
@@ -36,7 +37,6 @@ class SOP1_Pseudo <string opName, dag outs, dag ins,
   let SALU = 1;
   let SOP1 = 1;
   let SchedRW = [WriteSALU];
-  let Size = 4;
   let UseNamedOperandTable = 1;
 
   bits<1> has_src0 = 1;
@@ -216,8 +216,10 @@ let Defs = [SCC] in {
   def S_NOT_B64 : SOP1_64 <"s_not_b64",
     [(set i64:$sdst, (UniformUnaryFrag<not> i64:$src0))]
   >;
-  def S_WQM_B32 : SOP1_32 <"s_wqm_b32">;
-  def S_WQM_B64 : SOP1_64 <"s_wqm_b64">;
+  def S_WQM_B32 : SOP1_32 <"s_wqm_b32",
+    [(set i32:$sdst, (int_amdgcn_s_wqm i32:$src0))]>;
+  def S_WQM_B64 : SOP1_64 <"s_wqm_b64",
+    [(set i64:$sdst, (int_amdgcn_s_wqm i64:$src0))]>;
 } // End Defs = [SCC]
 
 
@@ -326,8 +328,10 @@ def S_XNOR_SAVEEXEC_B64 : SOP1_64 <"s_xnor_saveexec_b64">;
 
 } // End hasSideEffects = 1, Uses = [EXEC], Defs = [EXEC, SCC]
 
-def S_QUADMASK_B32 : SOP1_32 <"s_quadmask_b32">;
-def S_QUADMASK_B64 : SOP1_64 <"s_quadmask_b64">;
+def S_QUADMASK_B32 : SOP1_32 <"s_quadmask_b32",
+  [(set i32:$sdst, (int_amdgcn_s_quadmask i32:$src0))]>;
+def S_QUADMASK_B64 : SOP1_64 <"s_quadmask_b64",
+  [(set i64:$sdst, (int_amdgcn_s_quadmask i64:$src0))]>;
 
 let Uses = [M0] in {
 def S_MOVRELS_B32 : SOP1_32R <"s_movrels_b32">;
@@ -362,7 +366,8 @@ let SubtargetPredicate = isGFX9Plus in {
   } // End hasSideEffects = 1, Defs = [EXEC, SCC], Uses = [EXEC]
 
   let isReMaterializable = 1 in
-  def S_BITREPLICATE_B64_B32 : SOP1_64_32<"s_bitreplicate_b64_b32">;
+  def S_BITREPLICATE_B64_B32 : SOP1_64_32<"s_bitreplicate_b64_b32",
+  [(set i64:$sdst, (int_amdgcn_s_bitreplicate i32:$src0))]>;
 } // End SubtargetPredicate = isGFX9Plus
 
 let SubtargetPredicate = isGFX10Plus in {
@@ -455,7 +460,6 @@ class SOP2_Pseudo<string opName, dag outs, dag ins,
   // let sdst = xxx in {
   // for multiclasses that include both real and pseudo instructions.
   // field bits<7> sdst = 0;
-  // let Size = 4; // Do we need size here?
 }
 
 class SOP2_Real<SOP_Pseudo ps, string real_name = ps.Mnemonic> :
@@ -1501,7 +1505,10 @@ def S_INCPERFLEVEL : SOPP_Pseudo <"s_incperflevel", (ins i32imm:$simm16), "$simm
 def S_DECPERFLEVEL : SOPP_Pseudo <"s_decperflevel", (ins i32imm:$simm16), "$simm16",
   [(int_amdgcn_s_decperflevel timm:$simm16)]> {
 }
-def S_TTRACEDATA : SOPP_Pseudo <"s_ttracedata", (ins)> {
+
+let Uses = [M0] in
+def S_TTRACEDATA : SOPP_Pseudo <"s_ttracedata", (ins), "",
+                                [(int_amdgcn_s_ttracedata M0)]> {
   let simm16 = 0;
   let fixed_imm = 1;
 }
@@ -1545,8 +1552,10 @@ let SubtargetPredicate = isGFX10Plus in {
       [(SIdenorm_mode (i32 timm:$simm16))]>;
   }
 
+  let hasSideEffects = 1 in
   def S_TTRACEDATA_IMM :
-    SOPP_Pseudo<"s_ttracedata_imm", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_ttracedata_imm", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_ttracedata_imm timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX10Plus
 
 let SubtargetPredicate = isGFX11Plus in {

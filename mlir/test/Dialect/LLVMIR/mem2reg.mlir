@@ -549,7 +549,7 @@ llvm.func @trivial_get_element_ptr() {
   %1 = llvm.mlir.constant(2 : i64) : i64
   %2 = llvm.alloca %0 x i8 {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %3 = llvm.bitcast %2 : !llvm.ptr to !llvm.ptr
-  %4 = llvm.getelementptr %3[0, 0, 0] : (!llvm.ptr) -> !llvm.ptr, i8
+  %4 = llvm.getelementptr %3[0] : (!llvm.ptr) -> !llvm.ptr, i8
   llvm.intr.lifetime.start 2, %3 : !llvm.ptr
   llvm.intr.lifetime.start 2, %4 : !llvm.ptr
   llvm.return
@@ -563,9 +563,8 @@ llvm.func @nontrivial_get_element_ptr() {
   %1 = llvm.mlir.constant(2 : i64) : i64
   // CHECK: = llvm.alloca
   %2 = llvm.alloca %0 x i8 {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  %3 = llvm.bitcast %2 : !llvm.ptr to !llvm.ptr
-  %4 = llvm.getelementptr %3[0, 1, 0] : (!llvm.ptr) -> !llvm.ptr, i8
-  llvm.intr.lifetime.start 2, %3 : !llvm.ptr
+  %4 = llvm.getelementptr %2[1] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.intr.lifetime.start 2, %2 : !llvm.ptr
   llvm.intr.lifetime.start 2, %4 : !llvm.ptr
   llvm.return
 }
@@ -579,7 +578,7 @@ llvm.func @dynamic_get_element_ptr() {
   // CHECK: = llvm.alloca
   %2 = llvm.alloca %0 x i8 {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %3 = llvm.bitcast %2 : !llvm.ptr to !llvm.ptr
-  %4 = llvm.getelementptr %3[0, %0] : (!llvm.ptr, i32) -> !llvm.ptr, i8
+  %4 = llvm.getelementptr %3[%0] : (!llvm.ptr, i32) -> !llvm.ptr, i8
   llvm.intr.lifetime.start 2, %3 : !llvm.ptr
   llvm.intr.lifetime.start 2, %4 : !llvm.ptr
   llvm.return
@@ -682,4 +681,17 @@ llvm.func @no_inner_alloca_promotion(%arg: i64) -> i64 {
   %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i64
   // CHECK: llvm.return %[[RES]] : i64
   llvm.return %2 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @transitive_reaching_def
+llvm.func @transitive_reaching_def() -> !llvm.ptr {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: alloca
+  %1 = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 {alignment = 8 : i64} : !llvm.ptr -> !llvm.ptr
+  llvm.store %2, %1 {alignment = 8 : i64} : !llvm.ptr, !llvm.ptr
+  %3 = llvm.load %1 {alignment = 8 : i64} : !llvm.ptr -> !llvm.ptr
+  llvm.return %3 : !llvm.ptr
 }

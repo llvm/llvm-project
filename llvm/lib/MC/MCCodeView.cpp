@@ -654,7 +654,7 @@ void CodeViewContext::encodeDefRange(MCAsmLayout &Layout,
     }
     unsigned NumGaps = J - I - 1;
 
-    support::endian::Writer LEWriter(OS, support::little);
+    support::endian::Writer LEWriter(OS, llvm::endianness::little);
 
     unsigned Bias = 0;
     // We must split the range into chunks of MaxDefRange, this is a fundamental

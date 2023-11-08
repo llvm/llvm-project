@@ -32,6 +32,7 @@
 #include <utility>
 
 #include "test_macros.h"
+#include "../../types.h"
 
 struct NonMovable {
   NonMovable(NonMovable&&) = delete;
@@ -112,13 +113,28 @@ constexpr bool test() {
     assert(e2.error() == 5);
     assert(!e1.has_value());
   }
+
+  // move TailClobbererNonTrivialMove as value
+  {
+    std::expected<TailClobbererNonTrivialMove<0>, bool> e1;
+    auto e2 = std::move(e1);
+    assert(e2.has_value());
+    assert(e1.has_value());
+  }
+
+  // move TailClobbererNonTrivialMove as error
+  {
+    std::expected<bool, TailClobbererNonTrivialMove<1>> e1(std::unexpect);
+    auto e2 = std::move(e1);
+    assert(!e2.has_value());
+    assert(!e1.has_value());
+  }
+
   return true;
 }
 
 void testException() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-  struct Except {};
-
   struct Throwing {
     Throwing() = default;
     Throwing(Throwing&&) { throw Except{}; }

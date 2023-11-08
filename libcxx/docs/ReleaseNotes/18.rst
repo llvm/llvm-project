@@ -72,6 +72,11 @@ Improvements and New Features
 Deprecations and Removals
 -------------------------
 
+- Availability macros which will never trigger an error have been removed. This includes anything that has been
+  introduced before macOS 10.13, iOS 12, tvOS 12 and watchOS 4. This shouldn't affect anybody, since AppleClang 15
+  doesn't support any older OSes. If you are a vendor and make use of these macros, please inform the libc++ team so we
+  can re-introduce them and consider upstreaming support for your platform.
+
 - The non-conforming constructor ``std::future_error(std::error_code)`` has been removed. Please use the
   ``std::future_error(std::future_errc)`` constructor provided in C++17 instead.
 
@@ -132,6 +137,13 @@ ABI Affecting Changes
 - The name mangling for intantiations of ``std::projected`` has changed in order to implement P2538R1. This technically
   results in an ABI break, however in practice we expect uses of ``std::projected`` in ABI-sensitive places to be
   extremely rare. Any error resulting from this change should result in a link-time error.
+
+- Under the unstable ABI, the internal alignment requirements for heap allocations
+  inside ``std::string`` has decreased from 16 to 8 This save memory since string requests fewer additional
+  bytes than it did previously. However, this also changes the return value of ``std::string::max_size``
+  and can cause code compiled against older libc++ versions but linked at runtime to a new version
+  to throw a different exception when attempting allocations that are too large
+  (``std::bad_alloc`` vs ``std::length_error``).
 
 Build System Changes
 --------------------

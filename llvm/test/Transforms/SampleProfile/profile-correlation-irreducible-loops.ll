@@ -58,19 +58,19 @@ b1:
 b2:
   call void @llvm.pseudoprobe(i64 -7702751003264189226, i64 2, i32 0, i64 -1)
   br i1 %cmp, label %b7, label %b3
-; CHECK: - b2: float = {{.*}}, int = {{.*}}, count = 625
+; CHECK: - b2: float = {{.*}}, int = {{.*}}, count = 586
 
 b3:
   call void @llvm.pseudoprobe(i64 -7702751003264189226, i64 3, i32 0, i64 -1)
   br i1 %cmp, label %b7, label %b4
-; CHECK: - b3: float = {{.*}}, int = {{.*}}, count = 625
+; CHECK: - b3: float = {{.*}}, int = {{.*}}, count = 586
 ; CHECK2: br i1 %cmp, label %b7, label %b4,
 ; CHECK2-SAME: !prof ![[END172_PROF:[0-9]+]]
 
 b4:
   call void @llvm.pseudoprobe(i64 -7702751003264189226, i64 4, i32 0, i64 -1)
   br label %b2
-; CHECK: - b4: float = {{.*}}, int = {{.*}}, count = 624
+; CHECK: - b4: float = {{.*}}, int = {{.*}}, count = 585
 
 b5:
   call void @llvm.pseudoprobe(i64 -7702751003264189226, i64 5, i32 0, i64 -1)

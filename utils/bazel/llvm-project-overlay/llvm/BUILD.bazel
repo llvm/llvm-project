@@ -1382,9 +1382,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/Transforms/Vectorize/*.h",
-    ]) + [
-        "include/llvm/Transforms/Vectorize.h",
-    ],
+    ]),
     copts = llvm_copts,
     deps = [
         ":Analysis",
@@ -1422,6 +1420,23 @@ cc_library(
     deps = [
         ":Core",
         ":Support",
+    ],
+)
+
+cc_library(
+    name = "FrontendOffloading",
+    srcs = glob([
+        "lib/Frontend/Offloading/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/Frontend/Offloading/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":Core",
+        ":Object",
+        ":Support",
+        ":TransformUtils",
     ],
 )
 
@@ -1476,6 +1491,7 @@ cc_library(
         ":Analysis",
         ":BitReader",
         ":Core",
+        ":FrontendOffloading",
         ":MC",
         ":Scalar",
         ":Support",
@@ -1660,6 +1676,23 @@ cc_library(
         ":Core",
         ":Support",
         ":TargetParser",
+    ],
+)
+
+cc_library(
+    name = "HipStdPar",
+    srcs = glob([
+        "lib/Transforms/HipStdPar/*.cpp",
+        "lib/Transforms/HipStdPar/*.h",
+    ]),
+    hdrs = ["include/llvm/Transforms/HipStdPar/HipStdPar.h"],
+    copts = llvm_copts,
+    deps = [
+        ":Analysis",
+        ":Core",
+        ":Support",
+        ":TargetParser",
+        ":TransformUtils",
     ],
 )
 
@@ -2502,22 +2535,23 @@ cc_library(
         ":AggressiveInstCombine",
         ":Analysis",
         ":CodeGen",
+        ":common_transforms",
+        ":config",
         ":Core",
         ":Coroutines",
-        ":IPO",
-        ":IRPrinter",
+        ":HipStdPar",
         ":InstCombine",
         ":Instrumentation",
+        ":IPO",
+        ":IRPrinter",
         ":MLPolicies",
         ":ObjCARC",
+        ":pass_registry_def",
         ":Scalar",
         ":Support",
         ":Target",
         ":TransformUtils",
         ":Vectorize",
-        ":common_transforms",
-        ":config",
-        ":pass_registry_def",
     ],
 )
 

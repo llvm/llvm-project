@@ -8,6 +8,13 @@ let Command = "target modules dump symtab" in {
     Desc<"Do not demangle symbol names before showing them.">;
 }
 
+let Command = "target modules dump separate debug info" in {
+  def tm_json : Option<"json", "j">, Group<1>,
+    Desc<"Output the details in JSON format.">;
+  def tm_errors_only : Option<"errors-only", "e">, Group<1>,
+    Desc<"Filter to show only debug info files with errors.">;
+}
+
 let Command = "help" in {
   def help_hide_aliases : Option<"hide-aliases", "a">,
     Desc<"Hide aliases in the command list.">;

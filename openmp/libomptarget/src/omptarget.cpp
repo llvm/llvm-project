@@ -191,38 +191,50 @@ static int initLibrary(DeviceTy &Device) {
                                *EntryDeviceEnd = TargetTable->EntriesEnd;
            CurrDeviceEntry != EntryDeviceEnd;
            CurrDeviceEntry++, CurrHostEntry++) {
-        if (CurrDeviceEntry->size != 0) {
-          // has data.
-          assert(CurrDeviceEntry->size == CurrHostEntry->size &&
-                 "data size mismatch");
+        if (CurrDeviceEntry->size == 0)
+          continue;
 
-          // Fortran may use multiple weak declarations for the same symbol,
-          // therefore we must allow for multiple weak symbols to be loaded from
-          // the fat binary. Treat these mappings as any other "regular"
-          // mapping. Add entry to map.
-          if (Device.getTgtPtrBegin(HDTTMap, CurrHostEntry->addr,
-                                    CurrHostEntry->size))
-            continue;
+        assert(CurrDeviceEntry->size == CurrHostEntry->size &&
+               "data size mismatch");
 
-          DP("Add mapping from host " DPxMOD " to device " DPxMOD
-             " with size %zu"
-             "\n",
-             DPxPTR(CurrHostEntry->addr), DPxPTR(CurrDeviceEntry->addr),
-             CurrDeviceEntry->size);
-          HDTTMap->emplace(new HostDataToTargetTy(
-              (uintptr_t)CurrHostEntry->addr /*HstPtrBase*/,
-              (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
-              (uintptr_t)CurrHostEntry->addr +
-                  CurrHostEntry->size /*HstPtrEnd*/,
-              (uintptr_t)CurrDeviceEntry->addr /*TgtAllocBegin*/,
-              (uintptr_t)CurrDeviceEntry->addr /*TgtPtrBegin*/,
-              false /*UseHoldRefCount*/, CurrHostEntry->name,
-              true /*IsRefCountINF*/));
+        // Fortran may use multiple weak declarations for the same symbol,
+        // therefore we must allow for multiple weak symbols to be loaded from
+        // the fat binary. Treat these mappings as any other "regular"
+        // mapping. Add entry to map.
+        if (Device.getTgtPtrBegin(HDTTMap, CurrHostEntry->addr,
+                                  CurrHostEntry->size))
+          continue;
 
-          // Notify about the new mapping.
-          if (Device.notifyDataMapped(CurrHostEntry->addr, CurrHostEntry->size))
+        void *CurrDeviceEntryAddr = CurrDeviceEntry->addr;
+
+        // For indirect mapping, follow the indirection and map the actual
+        // target.
+        if (CurrDeviceEntry->flags & OMP_DECLARE_TARGET_INDIRECT) {
+          AsyncInfoTy AsyncInfo(Device);
+          void *DevPtr;
+          Device.retrieveData(&DevPtr, CurrDeviceEntryAddr, sizeof(void *),
+                              AsyncInfo);
+          if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
             return OFFLOAD_FAIL;
+          CurrDeviceEntryAddr = DevPtr;
         }
+
+        DP("Add mapping from host " DPxMOD " to device " DPxMOD " with size %zu"
+           ", name \"%s\"\n",
+           DPxPTR(CurrHostEntry->addr), DPxPTR(CurrDeviceEntry->addr),
+           CurrDeviceEntry->size, CurrDeviceEntry->name);
+        HDTTMap->emplace(new HostDataToTargetTy(
+            (uintptr_t)CurrHostEntry->addr /*HstPtrBase*/,
+            (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
+            (uintptr_t)CurrHostEntry->addr + CurrHostEntry->size /*HstPtrEnd*/,
+            (uintptr_t)CurrDeviceEntryAddr /*TgtAllocBegin*/,
+            (uintptr_t)CurrDeviceEntryAddr /*TgtPtrBegin*/,
+            false /*UseHoldRefCount*/, CurrHostEntry->name,
+            true /*IsRefCountINF*/));
+
+        // Notify about the new mapping.
+        if (Device.notifyDataMapped(CurrHostEntry->addr, CurrHostEntry->size))
+          return OFFLOAD_FAIL;
       }
     }
   }
@@ -827,14 +839,13 @@ postProcessingTargetDataEnd(DeviceTy *Device,
     // remaining shadow pointer entries for this struct.
     const bool HasFrom = ArgType & OMP_TGT_MAPTYPE_FROM;
     if (HasFrom) {
-      Entry->foreachShadowPointerInfo(
-          [&](const ShadowPtrInfoTy &ShadowPtr) {
-            *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;
-            DP("Restoring original host pointer value " DPxMOD " for host "
-               "pointer " DPxMOD "\n",
-               DPxPTR(ShadowPtr.HstPtrVal), DPxPTR(ShadowPtr.HstPtrAddr));
-            return OFFLOAD_SUCCESS;
-          });
+      Entry->foreachShadowPointerInfo([&](const ShadowPtrInfoTy &ShadowPtr) {
+        *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;
+        DP("Restoring original host pointer value " DPxMOD " for host "
+           "pointer " DPxMOD "\n",
+           DPxPTR(ShadowPtr.HstPtrVal), DPxPTR(ShadowPtr.HstPtrAddr));
+        return OFFLOAD_SUCCESS;
+      });
     }
 
     // Give up the lock as we either don't need it anymore (e.g., done with
@@ -1713,9 +1724,9 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 /// Enables the record replay mechanism by pre-allocating MemorySize
 /// and informing the record-replayer of whether to store the output
 /// in some file.
-int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, bool isRecord,
-                       bool SaveOutput) {
-  return Device.RTL->activate_record_replay(Device.DeviceID, MemorySize,
+int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
+                       bool isRecord, bool SaveOutput) {
+  return Device.RTL->activate_record_replay(Device.DeviceID, MemorySize, VAddr,
                                             isRecord, SaveOutput);
 }
 
