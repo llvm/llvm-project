@@ -6764,9 +6764,8 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X,
       Constraints = "$rd = $rs1" in
   def PseudoVMV_S_X: Pseudo<(outs VR:$rd),
-                                         (ins VR:$rs1, GPR:$rs2,
-                                              AVL:$vl, ixlenimm:$sew),
-                                         []>,
+                            (ins VR:$rs1, GPR:$rs2, AVL:$vl, ixlenimm:$sew),
+                            []>,
     Sched<[WriteVIMovXV, ReadVIMovXV, ReadVIMovXX]>,
     RISCVVPseudo;
 }
@@ -7421,15 +7420,15 @@ foreach fvti = AllFloatVectors in {
                (fvti.Scalar fvti.ScalarRegClass:$rs2),
                GPR:$vl, fvti.Log2SEW)>;
 
-    defvar is_group = !isa<GroupVTypeInfo>(fvti);
-    defvar merge = !if(is_group,
+    defvar isGroup = !isa<GroupVTypeInfo>(fvti);
+    defvar merge = !if(isGroup,
                        (!cast<GroupVTypeInfo>(fvti).VectorM1
                           (EXTRACT_SUBREG $rs1, sub_vrm1_0)),
                        (fvti.Vector $rs1));
-    defvar vmv_s_x = (PseudoVMV_S_X merge, (XLenVT X0), GPR:$vl, fvti.Log2SEW);
+    defvar pseudo = (PseudoVMV_S_X merge, (XLenVT X0), GPR:$vl, fvti.Log2SEW);
     def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
                            (fvti.Scalar (fpimm0)), VLOpFrag)),
-              !if(is_group, (INSERT_SUBREG $rs1, vmv_s_x, sub_vrm1_0), vmv_s_x)>;
+              !if(isGroup, (INSERT_SUBREG $rs1, pseudo, sub_vrm1_0), pseudo)>;
   }
 }
 
