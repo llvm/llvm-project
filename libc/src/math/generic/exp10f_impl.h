@@ -19,7 +19,6 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/math/exp10f.h"
 
 #include <errno.h>
 
