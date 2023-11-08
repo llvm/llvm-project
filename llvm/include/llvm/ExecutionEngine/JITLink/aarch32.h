@@ -335,6 +335,19 @@ private:
 template <>
 Symbol &StubsManager<Thumbv7>::createEntry(LinkGraph &G, Symbol &Target);
 
+HalfWords encodeRegMovtT1MovwT3(int64_t Value);
+int64_t decodeRegMovtT1MovwT3(unsigned int, unsigned int);
+uint16_t decodeImmMovtT1MovwT3(uint32_t Hi, uint32_t Lo);
+int64_t decodeImmBT4BlT1BlxT2_J1J2(uint32_t Hi, uint32_t Lo);
+HalfWords encodeImmMovtT1MovwT3(uint16_t Value);
+HalfWords encodeImmBT4BlT1BlxT2_J1J2(int64_t Value);
+int64_t decodeRegMovtA1MovwA2(uint64_t Value);
+uint16_t decodeImmMovtA1MovwA2(uint64_t Value);
+uint32_t encodeImmMovtA1MovwA2(uint16_t Value);
+uint32_t encodeRegMovtA1MovwA2(int64_t Value);
+int64_t decodeImmBA1BlA1BlxA2(int64_t Value);
+uint32_t encodeImmBA1BlA1BlxA2(int64_t Value);
+
 } // namespace aarch32
 } // namespace jitlink
 } // namespace llvm

@@ -8,6 +8,7 @@
 
 #include <llvm/BinaryFormat/ELF.h>
 #include <llvm/ExecutionEngine/JITLink/aarch32.h>
+#include <llvm/ExecutionEngine/JITLink/ELF_aarch32.h>
 
 #include "gtest/gtest.h"
 
@@ -36,14 +37,6 @@ struct MutableWord {
 
   uint32_t Wd;
 };
-namespace llvm {
-namespace jitlink {
-
-Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType);
-Expected<uint32_t> getELFRelocationType(Edge::Kind Kind);
-
-} // namespace jitlink
-} // namespace llvm
 
 TEST(AArch32_ELF, EdgeKinds) {
   // Fails: Invalid ELF type -> JITLink kind
@@ -66,30 +59,6 @@ TEST(AArch32_ELF, EdgeKinds) {
     EXPECT_EQ(*JITLinkKind, K) << "Round-trip value inconsistent?";
   }
 }
-
-namespace llvm {
-namespace jitlink {
-namespace aarch32 {
-
-HalfWords encodeImmBT4BlT1BlxT2(int64_t Value);
-HalfWords encodeImmBT4BlT1BlxT2_J1J2(int64_t Value);
-uint32_t encodeImmBA1BlA1BlxA2(int64_t Value);
-HalfWords encodeImmMovtT1MovwT3(uint16_t Value);
-HalfWords encodeRegMovtT1MovwT3(int64_t Value);
-uint32_t encodeImmMovtA1MovwA2(uint16_t Value);
-uint32_t encodeRegMovtA1MovwA2(int64_t Value);
-
-int64_t decodeImmBT4BlT1BlxT2(uint32_t Hi, uint32_t Lo);
-int64_t decodeImmBT4BlT1BlxT2_J1J2(uint32_t Hi, uint32_t Lo);
-int64_t decodeImmBA1BlA1BlxA2(int64_t Value);
-uint16_t decodeImmMovtT1MovwT3(uint32_t Hi, uint32_t Lo);
-int64_t decodeRegMovtT1MovwT3(uint32_t Hi, uint32_t Lo);
-uint16_t decodeImmMovtA1MovwA2(uint64_t Value);
-int64_t decodeRegMovtA1MovwA2(uint64_t Value);
-
-} // namespace aarch32
-} // namespace jitlink
-} // namespace llvm
 
 // Big-endian for v7 and v8 (and v6 unless in legacy backwards compatible mode
 // be32) have little-endian instructions and big-endian data. In ELF relocatable
