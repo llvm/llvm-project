@@ -265,14 +265,11 @@ let test_constants () =
    * CHECK: @const_nuw_mul = global i64 mul nuw
    * CHECK: @const_xor = global i64 xor
    * CHECK: @const_icmp = global i1 icmp sle
-   * CHECK: @const_fcmp = global i1 fcmp ole
    *)
   let void_ptr = pointer_type context in
   let five = const_int i64_type 5 in
-  let ffive = const_uitofp five double_type in
   let foldbomb_gv = define_global "FoldBomb" (const_null i8_type) m in
   let foldbomb = const_ptrtoint foldbomb_gv i64_type in
-  let ffoldbomb = const_uitofp foldbomb double_type in
   ignore (define_global "const_neg" (const_neg foldbomb) m);
   ignore (define_global "const_nsw_neg" (const_nsw_neg foldbomb) m);
   ignore (define_global "const_nuw_neg" (const_nuw_neg foldbomb) m);
@@ -288,7 +285,6 @@ let test_constants () =
   ignore (define_global "const_nuw_mul" (const_nuw_mul foldbomb five) m);
   ignore (define_global "const_xor" (const_xor foldbomb five) m);
   ignore (define_global "const_icmp" (const_icmp Icmp.Sle foldbomb five) m);
-  ignore (define_global "const_fcmp" (const_fcmp Fcmp.Ole ffoldbomb ffive) m);
 
   group "constant casts";
   (* CHECK: const_trunc{{.*}}trunc
@@ -305,7 +301,7 @@ let test_constants () =
     i32_type) m);
   ignore (define_global "const_inttoptr" (const_inttoptr (const_add foldbomb five)
                                                   void_ptr) m);
-  ignore (define_global "const_bitcast" (const_bitcast ffoldbomb i64_type) m);
+  ignore (define_global "const_bitcast" (const_bitcast foldbomb double_type) m);
 
   group "misc constants";
   (* CHECK: const_size_of{{.*}}getelementptr{{.*}}null
