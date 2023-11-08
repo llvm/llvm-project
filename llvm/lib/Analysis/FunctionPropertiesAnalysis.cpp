@@ -26,6 +26,7 @@
 using namespace llvm;
 
 namespace llvm {
+LLVM_FUNC_ABI // Used by unittests
 cl::opt<bool> EnableDetailedFunctionProperties(
     "enable-detailed-function-properties", cl::Hidden, cl::init(false),
     cl::desc("Whether or not to compute detailed function properties."));
