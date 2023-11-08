@@ -3996,7 +3996,8 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
   // anyone.
   if (X86::VK16RegClass.contains(SrcReg)) {
     if (X86::GR64RegClass.contains(DestReg)) {
-      assert(Subtarget.hasBWI());
+      assert(Subtarget.hasBWI() && Subtarget.hasEVEX512() &&
+             "KMOVQ requires BWI with EVEX512");
       return HasEGPR ? X86::KMOVQrk_EVEX : X86::KMOVQrk;
     }
     if (X86::GR32RegClass.contains(DestReg))
@@ -4011,7 +4012,8 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
   // anyone.
   if (X86::VK16RegClass.contains(DestReg)) {
     if (X86::GR64RegClass.contains(SrcReg)) {
-      assert(Subtarget.hasBWI());
+      assert(Subtarget.hasBWI() && Subtarget.hasEVEX512() &&
+             "KMOVQ requires BWI with EVEX512");
       return HasEGPR ? X86::KMOVQkr_EVEX : X86::KMOVQkr;
     }
     if (X86::GR32RegClass.contains(SrcReg))
@@ -4125,8 +4127,9 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // All KMASK RegClasses hold the same k registers, can be tested against
   // anyone.
   else if (X86::VK16RegClass.contains(DestReg, SrcReg))
-    Opc = Subtarget.hasBWI() ? (HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVQkk)
-                             : (HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVWkk);
+    Opc = Subtarget.hasBWI() && Subtarget.hasEVEX512()
+              ? (HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVQkk)
+              : (HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVWkk);
   if (!Opc)
     Opc = CopyToFromAsymmetricReg(DestReg, SrcReg, Subtarget);
 
@@ -4247,7 +4250,8 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
     if (X86::RFP64RegClass.hasSubClassEq(RC))
       return Load ? X86::LD_Fp64m : X86::ST_Fp64m;
     if (X86::VK64RegClass.hasSubClassEq(RC)) {
-      assert(STI.hasBWI() && "KMOVQ requires BWI");
+      assert(STI.hasBWI() && STI.hasEVEX512() &&
+             "KMOVQ requires BWI with EVEX512");
       return Load ? (HasEGPR ? X86::KMOVQkm_EVEX : X86::KMOVQkm)
                   : (HasEGPR ? X86::KMOVQmk_EVEX : X86::KMOVQmk);
     }
@@ -10523,7 +10527,7 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
       return;
 
     // KXOR is safe to use because it doesn't affect flags.
-    unsigned Op = ST.hasBWI() ? X86::KXORQrr : X86::KXORWrr;
+    unsigned Op = ST.hasBWI() && ST.hasEVEX512() ? X86::KXORQrr : X86::KXORWrr;
     BuildMI(MBB, Iter, DL, get(Op), Reg)
         .addReg(Reg, RegState::Undef)
         .addReg(Reg, RegState::Undef);

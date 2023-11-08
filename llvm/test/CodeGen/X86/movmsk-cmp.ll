@@ -3,8 +3,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefixes=SSE,SSE41
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1OR2,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX1OR2,AVX2
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=AVX,AVX512,KNL
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512dq,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX512,SKX
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=AVX,AVX512,EVEX512,KNL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512dq,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX512,EVEX512,SKX
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx10.1-256 | FileCheck %s --check-prefixes=AVX,AVX512,AVX10-256
 
 define i1 @allones_v16i8_sign(<16 x i8> %arg) {
 ; SSE-LABEL: allones_v16i8_sign:
@@ -176,6 +177,15 @@ define i1 @allones_v64i8_sign(<64 x i8> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v64i8_sign:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX10-256-NEXT:    vpmovb2m %ymm0, %k0
+; AVX10-256-NEXT:    kortestd %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = icmp slt <64 x i8> %arg, zeroinitializer
   %tmp1 = bitcast <64 x i1> %tmp to i64
   %tmp2 = icmp eq i64 %tmp1, -1
@@ -232,6 +242,15 @@ define i1 @allzeros_v64i8_sign(<64 x i8> %arg) {
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v64i8_sign:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX10-256-NEXT:    vpmovb2m %ymm0, %k0
+; AVX10-256-NEXT:    kortestd %k0, %k0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = icmp slt <64 x i8> %arg, zeroinitializer
   %tmp1 = bitcast <64 x i1> %tmp to i64
   %tmp2 = icmp eq i64 %tmp1, 0
@@ -273,6 +292,13 @@ define i1 @allones_v8i16_sign(<8 x i16> %arg) {
 ; SKX-NEXT:    kortestb %k0, %k0
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v8i16_sign:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpmovw2m %xmm0, %k0
+; AVX10-256-NEXT:    kortestb %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    retq
   %tmp = icmp slt <8 x i16> %arg, zeroinitializer
   %tmp1 = bitcast <8 x i1> %tmp to i8
   %tmp2 = icmp eq i8 %tmp1, -1
@@ -311,6 +337,13 @@ define i1 @allzeros_v8i16_sign(<8 x i16> %arg) {
 ; SKX-NEXT:    kortestb %k0, %k0
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v8i16_sign:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpmovw2m %xmm0, %k0
+; AVX10-256-NEXT:    kortestb %k0, %k0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %tmp = icmp slt <8 x i16> %arg, zeroinitializer
   %tmp1 = bitcast <8 x i1> %tmp to i8
   %tmp2 = icmp eq i8 %tmp1, 0
@@ -364,6 +397,14 @@ define i1 @allones_v16i16_sign(<16 x i16> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v16i16_sign:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpmovw2m %ymm0, %k0
+; AVX10-256-NEXT:    kortestw %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = icmp slt <16 x i16> %arg, zeroinitializer
   %tmp1 = bitcast <16 x i1> %tmp to i16
   %tmp2 = icmp eq i16 %tmp1, -1
@@ -415,6 +456,14 @@ define i1 @allzeros_v16i16_sign(<16 x i16> %arg) {
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v16i16_sign:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpmovw2m %ymm0, %k0
+; AVX10-256-NEXT:    kortestw %k0, %k0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = icmp slt <16 x i16> %arg, zeroinitializer
   %tmp1 = bitcast <16 x i1> %tmp to i16
   %tmp2 = icmp eq i16 %tmp1, 0
@@ -479,6 +528,16 @@ define i1 @allones_v32i16_sign(<32 x i16> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v32i16_sign:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpmovw2m %ymm0, %k0
+; AVX10-256-NEXT:    vpmovw2m %ymm1, %k1
+; AVX10-256-NEXT:    kunpckwd %k0, %k1, %k0
+; AVX10-256-NEXT:    kortestd %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = icmp slt <32 x i16> %arg, zeroinitializer
   %tmp1 = bitcast <32 x i1> %tmp to i32
   %tmp2 = icmp eq i32 %tmp1, -1
@@ -539,6 +598,16 @@ define i1 @allzeros_v32i16_sign(<32 x i16> %arg) {
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v32i16_sign:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpmovw2m %ymm0, %k0
+; AVX10-256-NEXT:    vpmovw2m %ymm1, %k1
+; AVX10-256-NEXT:    kunpckwd %k0, %k1, %k0
+; AVX10-256-NEXT:    kortestd %k0, %k0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = icmp slt <32 x i16> %arg, zeroinitializer
   %tmp1 = bitcast <32 x i1> %tmp to i32
   %tmp2 = icmp eq i32 %tmp1, 0
@@ -697,6 +766,16 @@ define i1 @allones_v16i32_sign(<16 x i32> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v16i32_sign:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpmovd2m %ymm0, %k0
+; AVX10-256-NEXT:    vpmovd2m %ymm1, %k1
+; AVX10-256-NEXT:    kunpckbw %k0, %k1, %k0
+; AVX10-256-NEXT:    kortestw %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = icmp slt <16 x i32> %arg, zeroinitializer
   %tmp1 = bitcast <16 x i1> %tmp to i16
   %tmp2 = icmp eq i16 %tmp1, -1
@@ -755,6 +834,16 @@ define i1 @allzeros_v16i32_sign(<16 x i32> %arg) {
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v16i32_sign:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpmovd2m %ymm0, %k0
+; AVX10-256-NEXT:    vpmovd2m %ymm1, %k1
+; AVX10-256-NEXT:    kunpckbw %k0, %k1, %k0
+; AVX10-256-NEXT:    kortestw %k0, %k0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = icmp slt <16 x i32> %arg, zeroinitializer
   %tmp1 = bitcast <16 x i1> %tmp to i16
   %tmp2 = icmp eq i16 %tmp1, 0
@@ -872,6 +961,17 @@ define i1 @allones_v8i64_sign(<8 x i64> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v8i64_sign:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpmovq2m %ymm0, %k0
+; AVX10-256-NEXT:    vpmovq2m %ymm1, %k1
+; AVX10-256-NEXT:    kshiftlb $4, %k1, %k1
+; AVX10-256-NEXT:    korb %k1, %k0, %k0
+; AVX10-256-NEXT:    kortestb %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = icmp slt <8 x i64> %arg, zeroinitializer
   %tmp1 = bitcast <8 x i1> %tmp to i8
   %tmp2 = icmp eq i8 %tmp1, -1
@@ -926,6 +1026,17 @@ define i1 @allzeros_v8i64_sign(<8 x i64> %arg) {
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v8i64_sign:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpmovq2m %ymm0, %k0
+; AVX10-256-NEXT:    vpmovq2m %ymm1, %k1
+; AVX10-256-NEXT:    kshiftlb $4, %k1, %k1
+; AVX10-256-NEXT:    korb %k1, %k0, %k0
+; AVX10-256-NEXT:    kortestb %k0, %k0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = icmp slt <8 x i64> %arg, zeroinitializer
   %tmp1 = bitcast <8 x i1> %tmp to i8
   %tmp2 = icmp eq i8 %tmp1, 0
@@ -963,6 +1074,13 @@ define i1 @allones_v16i8_and1(<16 x i8> %arg) {
 ; SKX-NEXT:    kortestw %k0, %k0
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v16i8_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; AVX10-256-NEXT:    kortestw %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    retq
   %tmp = and <16 x i8> %arg, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %tmp1 = icmp ne <16 x i8> %tmp, zeroinitializer
   %tmp2 = bitcast <16 x i1> %tmp1 to i16
@@ -1092,13 +1210,21 @@ define i1 @allzeros_v8i64_not(<8 x i64> %a0) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v8i64_not:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    setne %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; EVEX512-LABEL: allzeros_v8i64_not:
+; EVEX512:       # %bb.0:
+; EVEX512-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; EVEX512-NEXT:    kortestw %k0, %k0
+; EVEX512-NEXT:    setne %al
+; EVEX512-NEXT:    vzeroupper
+; EVEX512-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v8i64_not:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX10-256-NEXT:    vptest %ymm0, %ymm0
+; AVX10-256-NEXT:    setne %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %1 = icmp eq <8 x i64> %a0, zeroinitializer
   %2 = bitcast <8 x i1> %1 to i8
   %3 = icmp ne i8 %2, -1
@@ -1138,6 +1264,13 @@ define i1 @allzeros_v16i8_and1(<16 x i8> %arg) {
 ; SKX-NEXT:    vptest %xmm1, %xmm0
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v16i8_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [72340172838076673,72340172838076673]
+; AVX10-256-NEXT:    vptest %xmm1, %xmm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %tmp = and <16 x i8> %arg, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %tmp1 = icmp ne <16 x i8> %tmp, zeroinitializer
   %tmp2 = bitcast <16 x i1> %tmp1 to i16
@@ -1191,6 +1324,14 @@ define i1 @allones_v32i8_and1(<32 x i8> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v32i8_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k0
+; AVX10-256-NEXT:    kortestd %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <32 x i8> %arg, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %tmp1 = icmp ne <32 x i8> %tmp, zeroinitializer
   %tmp2 = bitcast <32 x i1> %tmp1 to i32
@@ -1298,6 +1439,16 @@ define i1 @allones_v64i8_and1(<64 x i8> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v64i8_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastb {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX10-256-NEXT:    vptestmb %ymm2, %ymm0, %k1
+; AVX10-256-NEXT:    vptestmb %ymm2, %ymm1, %k0 {%k1}
+; AVX10-256-NEXT:    kortestd %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <64 x i8> %arg, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %tmp1 = icmp ne <64 x i8> %tmp, zeroinitializer
   %tmp2 = bitcast <64 x i1> %tmp1 to i64
@@ -1343,13 +1494,22 @@ define i1 @allzeros_v64i8_and1(<64 x i8> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v64i8_and1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; EVEX512-LABEL: allzeros_v64i8_and1:
+; EVEX512:       # %bb.0:
+; EVEX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
+; EVEX512-NEXT:    kortestw %k0, %k0
+; EVEX512-NEXT:    sete %al
+; EVEX512-NEXT:    vzeroupper
+; EVEX512-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v64i8_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [72340172838076673,72340172838076673,72340172838076673,72340172838076673]
+; AVX10-256-NEXT:    vptest %ymm1, %ymm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <64 x i8> %arg, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %tmp1 = icmp ne <64 x i8> %tmp, zeroinitializer
   %tmp2 = bitcast <64 x i1> %tmp1 to i64
@@ -1394,6 +1554,13 @@ define i1 @allones_v8i16_and1(<8 x i16> %arg) {
 ; SKX-NEXT:    kortestb %k0, %k0
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v8i16_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; AVX10-256-NEXT:    kortestb %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    retq
   %tmp = and <8 x i16> %arg, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %tmp1 = icmp ne <8 x i16> %tmp, zeroinitializer
   %tmp2 = bitcast <8 x i1> %tmp1 to i8
@@ -1434,6 +1601,13 @@ define i1 @allzeros_v8i16_and1(<8 x i16> %arg) {
 ; SKX-NEXT:    vptest %xmm1, %xmm0
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v8i16_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [281479271743489,281479271743489]
+; AVX10-256-NEXT:    vptest %xmm1, %xmm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %tmp = and <8 x i16> %arg, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %tmp1 = icmp ne <8 x i16> %tmp, zeroinitializer
   %tmp2 = bitcast <8 x i1> %tmp1 to i8
@@ -1493,6 +1667,14 @@ define i1 @allones_v16i16_and1(<16 x i16> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v16i16_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k0
+; AVX10-256-NEXT:    kortestw %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <16 x i16> %arg, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %tmp1 = icmp ne <16 x i16> %tmp, zeroinitializer
   %tmp2 = bitcast <16 x i1> %tmp1 to i16
@@ -1565,6 +1747,17 @@ define i1 @allones_v32i16_and1(<32 x i16> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v32i16_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX10-256-NEXT:    vptestmw %ymm2, %ymm0, %k0
+; AVX10-256-NEXT:    vptestmw %ymm2, %ymm1, %k1
+; AVX10-256-NEXT:    kunpckwd %k0, %k1, %k0
+; AVX10-256-NEXT:    kortestd %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <32 x i16> %arg, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %tmp1 = icmp ne <32 x i16> %tmp, zeroinitializer
   %tmp2 = bitcast <32 x i1> %tmp1 to i32
@@ -1610,13 +1803,22 @@ define i1 @allzeros_v32i16_and1(<32 x i16> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v32i16_and1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; EVEX512-LABEL: allzeros_v32i16_and1:
+; EVEX512:       # %bb.0:
+; EVEX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
+; EVEX512-NEXT:    kortestw %k0, %k0
+; EVEX512-NEXT:    sete %al
+; EVEX512-NEXT:    vzeroupper
+; EVEX512-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v32i16_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [281479271743489,281479271743489,281479271743489,281479271743489]
+; AVX10-256-NEXT:    vptest %ymm1, %ymm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <32 x i16> %arg, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %tmp1 = icmp ne <32 x i16> %tmp, zeroinitializer
   %tmp2 = bitcast <32 x i1> %tmp1 to i32
@@ -1704,6 +1906,14 @@ define i1 @allones_v4i32_and1(<4 x i32> %arg) {
 ; SKX-NEXT:    cmpb $15, %al
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v4i32_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k0
+; AVX10-256-NEXT:    kmovd %k0, %eax
+; AVX10-256-NEXT:    cmpb $15, %al
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %tmp = and <4 x i32> %arg, <i32 1, i32 1, i32 1, i32 1>
   %tmp1 = icmp ne <4 x i32> %tmp, zeroinitializer
   %tmp2 = bitcast <4 x i1> %tmp1 to i4
@@ -1744,6 +1954,13 @@ define i1 @allzeros_v4i32_and1(<4 x i32> %arg) {
 ; SKX-NEXT:    vptest %xmm1, %xmm0
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v4i32_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4294967297,4294967297]
+; AVX10-256-NEXT:    vptest %xmm1, %xmm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %tmp = and <4 x i32> %arg, <i32 1, i32 1, i32 1, i32 1>
   %tmp1 = icmp ne <4 x i32> %tmp, zeroinitializer
   %tmp2 = bitcast <4 x i1> %tmp1 to i4
@@ -1800,6 +2017,14 @@ define i1 @allones_v8i32_and1(<8 x i32> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v8i32_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %k0
+; AVX10-256-NEXT:    kortestb %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <8 x i32> %arg, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %tmp1 = icmp ne <8 x i32> %tmp, zeroinitializer
   %tmp2 = bitcast <8 x i1> %tmp1 to i8
@@ -1898,13 +2123,24 @@ define i1 @allones_v16i32_and1(<16 x i32> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allones_v16i32_and1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    setb %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; EVEX512-LABEL: allones_v16i32_and1:
+; EVEX512:       # %bb.0:
+; EVEX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
+; EVEX512-NEXT:    kortestw %k0, %k0
+; EVEX512-NEXT:    setb %al
+; EVEX512-NEXT:    vzeroupper
+; EVEX512-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v16i32_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1]
+; AVX10-256-NEXT:    vptestmd %ymm2, %ymm0, %k0
+; AVX10-256-NEXT:    vptestmd %ymm2, %ymm1, %k1
+; AVX10-256-NEXT:    kunpckbw %k0, %k1, %k0
+; AVX10-256-NEXT:    kortestw %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <16 x i32> %arg, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %tmp1 = icmp ne <16 x i32> %tmp, zeroinitializer
   %tmp2 = bitcast <16 x i1> %tmp1 to i16
@@ -1950,13 +2186,22 @@ define i1 @allzeros_v16i32_and1(<16 x i32> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v16i32_and1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; EVEX512-LABEL: allzeros_v16i32_and1:
+; EVEX512:       # %bb.0:
+; EVEX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
+; EVEX512-NEXT:    kortestw %k0, %k0
+; EVEX512-NEXT:    sete %al
+; EVEX512-NEXT:    vzeroupper
+; EVEX512-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v16i32_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4294967297,4294967297,4294967297,4294967297]
+; AVX10-256-NEXT:    vptest %ymm1, %ymm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <16 x i32> %arg, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %tmp1 = icmp ne <16 x i32> %tmp, zeroinitializer
   %tmp2 = bitcast <16 x i1> %tmp1 to i16
@@ -1999,6 +2244,14 @@ define i1 @allones_v2i64_and1(<2 x i64> %arg) {
 ; SKX-NEXT:    cmpb $3, %al
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v2i64_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k0
+; AVX10-256-NEXT:    kmovd %k0, %eax
+; AVX10-256-NEXT:    cmpb $3, %al
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %tmp = and <2 x i64> %arg, <i64 1, i64 1>
   %tmp1 = icmp ne <2 x i64> %tmp, zeroinitializer
   %tmp2 = bitcast <2 x i1> %tmp1 to i2
@@ -2039,6 +2292,13 @@ define i1 @allzeros_v2i64_and1(<2 x i64> %arg) {
 ; SKX-NEXT:    vptest %xmm1, %xmm0
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v2i64_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [1,1]
+; AVX10-256-NEXT:    vptest %xmm1, %xmm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %tmp = and <2 x i64> %arg, <i64 1, i64 1>
   %tmp1 = icmp ne <2 x i64> %tmp, zeroinitializer
   %tmp2 = bitcast <2 x i1> %tmp1 to i2
@@ -2095,6 +2355,15 @@ define i1 @allones_v4i64_and1(<4 x i64> %arg) {
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v4i64_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k0
+; AVX10-256-NEXT:    kmovd %k0, %eax
+; AVX10-256-NEXT:    cmpb $15, %al
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <4 x i64> %arg, <i64 1, i64 1, i64 1, i64 1>
   %tmp1 = icmp ne <4 x i64> %tmp, zeroinitializer
   %tmp2 = bitcast <4 x i1> %tmp1 to i4
@@ -2208,6 +2477,18 @@ define i1 @allones_v8i64_and1(<8 x i64> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v8i64_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX10-256-NEXT:    vptestmq %ymm2, %ymm0, %k0
+; AVX10-256-NEXT:    vptestmq %ymm2, %ymm1, %k1
+; AVX10-256-NEXT:    kshiftlb $4, %k1, %k1
+; AVX10-256-NEXT:    korb %k1, %k0, %k0
+; AVX10-256-NEXT:    kortestb %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <8 x i64> %arg, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
   %tmp1 = icmp ne <8 x i64> %tmp, zeroinitializer
   %tmp2 = bitcast <8 x i1> %tmp1 to i8
@@ -2253,14 +2534,23 @@ define i1 @allzeros_v8i64_and1(<8 x i64> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v8i64_and1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1]
-; AVX512-NEXT:    vptestmd %zmm1, %zmm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; EVEX512-LABEL: allzeros_v8i64_and1:
+; EVEX512:       # %bb.0:
+; EVEX512-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1]
+; EVEX512-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; EVEX512-NEXT:    kortestw %k0, %k0
+; EVEX512-NEXT:    sete %al
+; EVEX512-NEXT:    vzeroupper
+; EVEX512-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v8i64_and1:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
+; AVX10-256-NEXT:    vptest %ymm1, %ymm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <8 x i64> %arg, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
   %tmp1 = icmp ne <8 x i64> %tmp, zeroinitializer
   %tmp2 = bitcast <8 x i1> %tmp1 to i8
@@ -2299,6 +2589,13 @@ define i1 @allones_v16i8_and4(<16 x i8> %arg) {
 ; SKX-NEXT:    kortestw %k0, %k0
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v16i8_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; AVX10-256-NEXT:    kortestw %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    retq
   %tmp = and <16 x i8> %arg, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %tmp1 = icmp ne <16 x i8> %tmp, zeroinitializer
   %tmp2 = bitcast <16 x i1> %tmp1 to i16
@@ -2339,6 +2636,13 @@ define i1 @allzeros_v16i8_and4(<16 x i8> %arg) {
 ; SKX-NEXT:    vptest %xmm1, %xmm0
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v16i8_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [289360691352306692,289360691352306692]
+; AVX10-256-NEXT:    vptest %xmm1, %xmm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %tmp = and <16 x i8> %arg, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %tmp1 = icmp ne <16 x i8> %tmp, zeroinitializer
   %tmp2 = bitcast <16 x i1> %tmp1 to i16
@@ -2392,6 +2696,14 @@ define i1 @allones_v32i8_and4(<32 x i8> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v32i8_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k0
+; AVX10-256-NEXT:    kortestd %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <32 x i8> %arg, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %tmp1 = icmp ne <32 x i8> %tmp, zeroinitializer
   %tmp2 = bitcast <32 x i1> %tmp1 to i32
@@ -2499,6 +2811,16 @@ define i1 @allones_v64i8_and4(<64 x i8> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v64i8_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastb {{.*#+}} ymm2 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; AVX10-256-NEXT:    vptestmb %ymm2, %ymm0, %k1
+; AVX10-256-NEXT:    vptestmb %ymm2, %ymm1, %k0 {%k1}
+; AVX10-256-NEXT:    kortestd %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <64 x i8> %arg, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %tmp1 = icmp ne <64 x i8> %tmp, zeroinitializer
   %tmp2 = bitcast <64 x i1> %tmp1 to i64
@@ -2544,13 +2866,22 @@ define i1 @allzeros_v64i8_and4(<64 x i8> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v64i8_and4:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; EVEX512-LABEL: allzeros_v64i8_and4:
+; EVEX512:       # %bb.0:
+; EVEX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
+; EVEX512-NEXT:    kortestw %k0, %k0
+; EVEX512-NEXT:    sete %al
+; EVEX512-NEXT:    vzeroupper
+; EVEX512-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v64i8_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [289360691352306692,289360691352306692,289360691352306692,289360691352306692]
+; AVX10-256-NEXT:    vptest %ymm1, %ymm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <64 x i8> %arg, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %tmp1 = icmp ne <64 x i8> %tmp, zeroinitializer
   %tmp2 = bitcast <64 x i1> %tmp1 to i64
@@ -2595,6 +2926,13 @@ define i1 @allones_v8i16_and4(<8 x i16> %arg) {
 ; SKX-NEXT:    kortestb %k0, %k0
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v8i16_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; AVX10-256-NEXT:    kortestb %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    retq
   %tmp = and <8 x i16> %arg, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
   %tmp1 = icmp ne <8 x i16> %tmp, zeroinitializer
   %tmp2 = bitcast <8 x i1> %tmp1 to i8
@@ -2635,6 +2973,13 @@ define i1 @allzeros_v8i16_and4(<8 x i16> %arg) {
 ; SKX-NEXT:    vptest %xmm1, %xmm0
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v8i16_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [1125917086973956,1125917086973956]
+; AVX10-256-NEXT:    vptest %xmm1, %xmm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %tmp = and <8 x i16> %arg, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
   %tmp1 = icmp ne <8 x i16> %tmp, zeroinitializer
   %tmp2 = bitcast <8 x i1> %tmp1 to i8
@@ -2694,6 +3039,14 @@ define i1 @allones_v16i16_and4(<16 x i16> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v16i16_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k0
+; AVX10-256-NEXT:    kortestw %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <16 x i16> %arg, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
   %tmp1 = icmp ne <16 x i16> %tmp, zeroinitializer
   %tmp2 = bitcast <16 x i1> %tmp1 to i16
@@ -2766,6 +3119,17 @@ define i1 @allones_v32i16_and4(<32 x i16> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v32i16_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; AVX10-256-NEXT:    vptestmw %ymm2, %ymm0, %k0
+; AVX10-256-NEXT:    vptestmw %ymm2, %ymm1, %k1
+; AVX10-256-NEXT:    kunpckwd %k0, %k1, %k0
+; AVX10-256-NEXT:    kortestd %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <32 x i16> %arg, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
   %tmp1 = icmp ne <32 x i16> %tmp, zeroinitializer
   %tmp2 = bitcast <32 x i1> %tmp1 to i32
@@ -2811,13 +3175,22 @@ define i1 @allzeros_v32i16_and4(<32 x i16> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v32i16_and4:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; EVEX512-LABEL: allzeros_v32i16_and4:
+; EVEX512:       # %bb.0:
+; EVEX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
+; EVEX512-NEXT:    kortestw %k0, %k0
+; EVEX512-NEXT:    sete %al
+; EVEX512-NEXT:    vzeroupper
+; EVEX512-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v32i16_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1125917086973956,1125917086973956,1125917086973956,1125917086973956]
+; AVX10-256-NEXT:    vptest %ymm1, %ymm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <32 x i16> %arg, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
   %tmp1 = icmp ne <32 x i16> %tmp, zeroinitializer
   %tmp2 = bitcast <32 x i1> %tmp1 to i32
@@ -2905,6 +3278,14 @@ define i1 @allones_v4i32_and4(<4 x i32> %arg) {
 ; SKX-NEXT:    cmpb $15, %al
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v4i32_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k0
+; AVX10-256-NEXT:    kmovd %k0, %eax
+; AVX10-256-NEXT:    cmpb $15, %al
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %tmp = and <4 x i32> %arg, <i32 4, i32 4, i32 4, i32 4>
   %tmp1 = icmp ne <4 x i32> %tmp, zeroinitializer
   %tmp2 = bitcast <4 x i1> %tmp1 to i4
@@ -2945,6 +3326,13 @@ define i1 @allzeros_v4i32_and4(<4 x i32> %arg) {
 ; SKX-NEXT:    vptest %xmm1, %xmm0
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v4i32_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [17179869188,17179869188]
+; AVX10-256-NEXT:    vptest %xmm1, %xmm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %tmp = and <4 x i32> %arg, <i32 4, i32 4, i32 4, i32 4>
   %tmp1 = icmp ne <4 x i32> %tmp, zeroinitializer
   %tmp2 = bitcast <4 x i1> %tmp1 to i4
@@ -3001,6 +3389,14 @@ define i1 @allones_v8i32_and4(<8 x i32> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v8i32_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %k0
+; AVX10-256-NEXT:    kortestb %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <8 x i32> %arg, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
   %tmp1 = icmp ne <8 x i32> %tmp, zeroinitializer
   %tmp2 = bitcast <8 x i1> %tmp1 to i8
@@ -3099,13 +3495,24 @@ define i1 @allones_v16i32_and4(<16 x i32> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allones_v16i32_and4:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    setb %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; EVEX512-LABEL: allones_v16i32_and4:
+; EVEX512:       # %bb.0:
+; EVEX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
+; EVEX512-NEXT:    kortestw %k0, %k0
+; EVEX512-NEXT:    setb %al
+; EVEX512-NEXT:    vzeroupper
+; EVEX512-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v16i32_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [4,4,4,4,4,4,4,4]
+; AVX10-256-NEXT:    vptestmd %ymm2, %ymm0, %k0
+; AVX10-256-NEXT:    vptestmd %ymm2, %ymm1, %k1
+; AVX10-256-NEXT:    kunpckbw %k0, %k1, %k0
+; AVX10-256-NEXT:    kortestw %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <16 x i32> %arg, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
   %tmp1 = icmp ne <16 x i32> %tmp, zeroinitializer
   %tmp2 = bitcast <16 x i1> %tmp1 to i16
@@ -3151,13 +3558,22 @@ define i1 @allzeros_v16i32_and4(<16 x i32> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v16i32_and4:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; EVEX512-LABEL: allzeros_v16i32_and4:
+; EVEX512:       # %bb.0:
+; EVEX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
+; EVEX512-NEXT:    kortestw %k0, %k0
+; EVEX512-NEXT:    sete %al
+; EVEX512-NEXT:    vzeroupper
+; EVEX512-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v16i32_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [17179869188,17179869188,17179869188,17179869188]
+; AVX10-256-NEXT:    vptest %ymm1, %ymm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <16 x i32> %arg, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
   %tmp1 = icmp ne <16 x i32> %tmp, zeroinitializer
   %tmp2 = bitcast <16 x i1> %tmp1 to i16
@@ -3200,6 +3616,14 @@ define i1 @allones_v2i64_and4(<2 x i64> %arg) {
 ; SKX-NEXT:    cmpb $3, %al
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v2i64_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k0
+; AVX10-256-NEXT:    kmovd %k0, %eax
+; AVX10-256-NEXT:    cmpb $3, %al
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %tmp = and <2 x i64> %arg, <i64 4, i64 4>
   %tmp1 = icmp ne <2 x i64> %tmp, zeroinitializer
   %tmp2 = bitcast <2 x i1> %tmp1 to i2
@@ -3240,6 +3664,13 @@ define i1 @allzeros_v2i64_and4(<2 x i64> %arg) {
 ; SKX-NEXT:    vptest %xmm1, %xmm0
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v2i64_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4,4]
+; AVX10-256-NEXT:    vptest %xmm1, %xmm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %tmp = and <2 x i64> %arg, <i64 4, i64 4>
   %tmp1 = icmp ne <2 x i64> %tmp, zeroinitializer
   %tmp2 = bitcast <2 x i1> %tmp1 to i2
@@ -3296,6 +3727,15 @@ define i1 @allones_v4i64_and4(<4 x i64> %arg) {
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v4i64_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k0
+; AVX10-256-NEXT:    kmovd %k0, %eax
+; AVX10-256-NEXT:    cmpb $15, %al
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <4 x i64> %arg, <i64 4, i64 4, i64 4, i64 4>
   %tmp1 = icmp ne <4 x i64> %tmp, zeroinitializer
   %tmp2 = bitcast <4 x i1> %tmp1 to i4
@@ -3409,6 +3849,18 @@ define i1 @allones_v8i64_and4(<8 x i64> %arg) {
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allones_v8i64_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4,4,4,4]
+; AVX10-256-NEXT:    vptestmq %ymm2, %ymm0, %k0
+; AVX10-256-NEXT:    vptestmq %ymm2, %ymm1, %k1
+; AVX10-256-NEXT:    kshiftlb $4, %k1, %k1
+; AVX10-256-NEXT:    korb %k1, %k0, %k0
+; AVX10-256-NEXT:    kortestb %k0, %k0
+; AVX10-256-NEXT:    setb %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <8 x i64> %arg, <i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4>
   %tmp1 = icmp ne <8 x i64> %tmp, zeroinitializer
   %tmp2 = bitcast <8 x i1> %tmp1 to i8
@@ -3454,14 +3906,23 @@ define i1 @allzeros_v8i64_and4(<8 x i64> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v8i64_and4:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4]
-; AVX512-NEXT:    vptestmd %zmm1, %zmm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; EVEX512-LABEL: allzeros_v8i64_and4:
+; EVEX512:       # %bb.0:
+; EVEX512-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4]
+; EVEX512-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; EVEX512-NEXT:    kortestw %k0, %k0
+; EVEX512-NEXT:    sete %al
+; EVEX512-NEXT:    vzeroupper
+; EVEX512-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v8i64_and4:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX10-256-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4,4,4,4]
+; AVX10-256-NEXT:    vptest %ymm1, %ymm0
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %tmp = and <8 x i64> %arg, <i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4>
   %tmp1 = icmp ne <8 x i64> %tmp, zeroinitializer
   %tmp2 = bitcast <8 x i1> %tmp1 to i8
@@ -3510,6 +3971,15 @@ define i1 @allzeros_v8f32_nnan(<8 x float> %a0) {
 ; SKX-NEXT:    setne %al
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: allzeros_v8f32_nnan:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX10-256-NEXT:    vcmpneqps %ymm1, %ymm0, %k0
+; AVX10-256-NEXT:    kortestb %k0, %k0
+; AVX10-256-NEXT:    setne %al
+; AVX10-256-NEXT:    vzeroupper
+; AVX10-256-NEXT:    retq
   %1 = fcmp nnan une <8 x float> %a0, zeroinitializer
   %2 = bitcast <8 x i1> %1 to i8
   %3 = icmp ne i8 %2, 0
@@ -3709,6 +4179,20 @@ define i1 @movmsk_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; SKX-NEXT:    andb %cl, %al
 ; SKX-NEXT:    # kill: def $al killed $al killed $eax
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: movmsk_v16i8:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
+; AVX10-256-NEXT:    kshiftrw $15, %k0, %k1
+; AVX10-256-NEXT:    kmovd %k1, %ecx
+; AVX10-256-NEXT:    kshiftrw $8, %k0, %k1
+; AVX10-256-NEXT:    kmovd %k1, %edx
+; AVX10-256-NEXT:    kshiftrw $3, %k0, %k0
+; AVX10-256-NEXT:    kmovd %k0, %eax
+; AVX10-256-NEXT:    xorb %dl, %al
+; AVX10-256-NEXT:    andb %cl, %al
+; AVX10-256-NEXT:    # kill: def $al killed $al killed $eax
+; AVX10-256-NEXT:    retq
   %cmp = icmp eq <16 x i8> %x, %y
   %e1 = extractelement <16 x i1> %cmp, i32 3
   %e2 = extractelement <16 x i1> %cmp, i32 8
@@ -3758,6 +4242,15 @@ define i1 @movmsk_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; SKX-NEXT:    testb $-109, %al
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: movmsk_v8i16:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpcmpgtw %xmm1, %xmm0, %k0
+; AVX10-256-NEXT:    knotb %k0, %k0
+; AVX10-256-NEXT:    kmovd %k0, %eax
+; AVX10-256-NEXT:    testb $-109, %al
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %cmp = icmp sgt <8 x i16> %x, %y
   %e1 = extractelement <8 x i1> %cmp, i32 0
   %e2 = extractelement <8 x i1> %cmp, i32 1
@@ -3819,6 +4312,17 @@ define i1 @movmsk_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; SKX-NEXT:    xorb %cl, %al
 ; SKX-NEXT:    # kill: def $al killed $al killed $eax
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: movmsk_v4i32:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpcmpgtd %xmm0, %xmm1, %k0
+; AVX10-256-NEXT:    kshiftrb $3, %k0, %k1
+; AVX10-256-NEXT:    kmovd %k1, %ecx
+; AVX10-256-NEXT:    kshiftrb $2, %k0, %k0
+; AVX10-256-NEXT:    kmovd %k0, %eax
+; AVX10-256-NEXT:    xorb %cl, %al
+; AVX10-256-NEXT:    # kill: def $al killed $al killed $eax
+; AVX10-256-NEXT:    retq
   %cmp = icmp slt <4 x i32> %x, %y
   %e1 = extractelement <4 x i1> %cmp, i32 2
   %e2 = extractelement <4 x i1> %cmp, i32 3
@@ -3870,6 +4374,14 @@ define i1 @movmsk_and_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; SKX-NEXT:    cmpb $3, %al
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: movmsk_and_v2i64:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vpcmpneqq %xmm1, %xmm0, %k0
+; AVX10-256-NEXT:    kmovd %k0, %eax
+; AVX10-256-NEXT:    cmpb $3, %al
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %cmp = icmp ne <2 x i64> %x, %y
   %e1 = extractelement <2 x i1> %cmp, i32 0
   %e2 = extractelement <2 x i1> %cmp, i32 1
@@ -3946,6 +4458,14 @@ define i1 @movmsk_v4f32(<4 x float> %x, <4 x float> %y) {
 ; SKX-NEXT:    testb $14, %al
 ; SKX-NEXT:    setne %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: movmsk_v4f32:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vcmpeq_uqps %xmm1, %xmm0, %k0
+; AVX10-256-NEXT:    kmovd %k0, %eax
+; AVX10-256-NEXT:    testb $14, %al
+; AVX10-256-NEXT:    setne %al
+; AVX10-256-NEXT:    retq
   %cmp = fcmp ueq <4 x float> %x, %y
   %e1 = extractelement <4 x i1> %cmp, i32 1
   %e2 = extractelement <4 x i1> %cmp, i32 2
@@ -3991,6 +4511,14 @@ define i1 @movmsk_and_v2f64(<2 x double> %x, <2 x double> %y) {
 ; SKX-NEXT:    cmpb $3, %al
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: movmsk_and_v2f64:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vcmplepd %xmm0, %xmm1, %k0
+; AVX10-256-NEXT:    kmovd %k0, %eax
+; AVX10-256-NEXT:    cmpb $3, %al
+; AVX10-256-NEXT:    sete %al
+; AVX10-256-NEXT:    retq
   %cmp = fcmp oge <2 x double> %x, %y
   %e1 = extractelement <2 x i1> %cmp, i32 0
   %e2 = extractelement <2 x i1> %cmp, i32 1
@@ -4031,6 +4559,13 @@ define i1 @movmsk_or_v2f64(<2 x double> %x, <2 x double> %y) {
 ; SKX-NEXT:    kortestb %k0, %k0
 ; SKX-NEXT:    setne %al
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: movmsk_or_v2f64:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vcmplepd %xmm0, %xmm1, %k0
+; AVX10-256-NEXT:    kortestb %k0, %k0
+; AVX10-256-NEXT:    setne %al
+; AVX10-256-NEXT:    retq
   %cmp = fcmp oge <2 x double> %x, %y
   %e1 = extractelement <2 x i1> %cmp, i32 0
   %e2 = extractelement <2 x i1> %cmp, i32 1
@@ -4074,6 +4609,16 @@ define i1 @movmsk_v16i8_var(<16 x i8> %x, <16 x i8> %y, i32 %z) {
 ; SKX-NEXT:    andl $15, %edi
 ; SKX-NEXT:    movzbl -24(%rsp,%rdi), %eax
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: movmsk_v16i8_var:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    # kill: def $edi killed $edi def $rdi
+; AVX10-256-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
+; AVX10-256-NEXT:    vpmovm2b %k0, %xmm0
+; AVX10-256-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
+; AVX10-256-NEXT:    andl $15, %edi
+; AVX10-256-NEXT:    movzbl -24(%rsp,%rdi), %eax
+; AVX10-256-NEXT:    retq
   %cmp = icmp eq <16 x i8> %x, %y
   %val = extractelement <16 x i1> %cmp, i32 %z
   ret i1 %val
@@ -4121,6 +4666,16 @@ define i1 @movmsk_v8i16_var(<8 x i16> %x, <8 x i16> %y, i32 %z) {
 ; SKX-NEXT:    andl $7, %edi
 ; SKX-NEXT:    movzbl -24(%rsp,%rdi,2), %eax
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: movmsk_v8i16_var:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    # kill: def $edi killed $edi def $rdi
+; AVX10-256-NEXT:    vpcmpgtw %xmm1, %xmm0, %k0
+; AVX10-256-NEXT:    vpmovm2w %k0, %xmm0
+; AVX10-256-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
+; AVX10-256-NEXT:    andl $7, %edi
+; AVX10-256-NEXT:    movzbl -24(%rsp,%rdi,2), %eax
+; AVX10-256-NEXT:    retq
   %cmp = icmp sgt <8 x i16> %x, %y
   %val = extractelement <8 x i1> %cmp, i32 %z
   ret i1 %val
@@ -4165,6 +4720,16 @@ define i1 @movmsk_v4i32_var(<4 x i32> %x, <4 x i32> %y, i32 %z) {
 ; SKX-NEXT:    andl $3, %edi
 ; SKX-NEXT:    movzbl -24(%rsp,%rdi,4), %eax
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: movmsk_v4i32_var:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    # kill: def $edi killed $edi def $rdi
+; AVX10-256-NEXT:    vpcmpgtd %xmm0, %xmm1, %k0
+; AVX10-256-NEXT:    vpmovm2d %k0, %xmm0
+; AVX10-256-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
+; AVX10-256-NEXT:    andl $3, %edi
+; AVX10-256-NEXT:    movzbl -24(%rsp,%rdi,4), %eax
+; AVX10-256-NEXT:    retq
   %cmp = icmp slt <4 x i32> %x, %y
   %val = extractelement <4 x i1> %cmp, i32 %z
   ret i1 %val
@@ -4222,6 +4787,16 @@ define i1 @movmsk_v2i64_var(<2 x i64> %x, <2 x i64> %y, i32 %z) {
 ; SKX-NEXT:    andl $1, %edi
 ; SKX-NEXT:    movzbl -24(%rsp,%rdi,8), %eax
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: movmsk_v2i64_var:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    # kill: def $edi killed $edi def $rdi
+; AVX10-256-NEXT:    vpcmpneqq %xmm1, %xmm0, %k0
+; AVX10-256-NEXT:    vpmovm2q %k0, %xmm0
+; AVX10-256-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
+; AVX10-256-NEXT:    andl $1, %edi
+; AVX10-256-NEXT:    movzbl -24(%rsp,%rdi,8), %eax
+; AVX10-256-NEXT:    retq
   %cmp = icmp ne <2 x i64> %x, %y
   %val = extractelement <2 x i1> %cmp, i32 %z
   ret i1 %val
@@ -4269,6 +4844,16 @@ define i1 @movmsk_v4f32_var(<4 x float> %x, <4 x float> %y, i32 %z) {
 ; SKX-NEXT:    andl $3, %edi
 ; SKX-NEXT:    movzbl -24(%rsp,%rdi,4), %eax
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: movmsk_v4f32_var:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    # kill: def $edi killed $edi def $rdi
+; AVX10-256-NEXT:    vcmpeq_uqps %xmm1, %xmm0, %k0
+; AVX10-256-NEXT:    vpmovm2d %k0, %xmm0
+; AVX10-256-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
+; AVX10-256-NEXT:    andl $3, %edi
+; AVX10-256-NEXT:    movzbl -24(%rsp,%rdi,4), %eax
+; AVX10-256-NEXT:    retq
   %cmp = fcmp ueq <4 x float> %x, %y
   %val = extractelement <4 x i1> %cmp, i32 %z
   ret i1 %val
@@ -4313,6 +4898,16 @@ define i1 @movmsk_v2f64_var(<2 x double> %x, <2 x double> %y, i32 %z) {
 ; SKX-NEXT:    andl $1, %edi
 ; SKX-NEXT:    movzbl -24(%rsp,%rdi,8), %eax
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: movmsk_v2f64_var:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    # kill: def $edi killed $edi def $rdi
+; AVX10-256-NEXT:    vcmplepd %xmm0, %xmm1, %k0
+; AVX10-256-NEXT:    vpmovm2q %k0, %xmm0
+; AVX10-256-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
+; AVX10-256-NEXT:    andl $1, %edi
+; AVX10-256-NEXT:    movzbl -24(%rsp,%rdi,8), %eax
+; AVX10-256-NEXT:    retq
   %cmp = fcmp oge <2 x double> %x, %y
   %val = extractelement <2 x i1> %cmp, i32 %z
   ret i1 %val
@@ -4371,6 +4966,18 @@ define i32 @PR39665_c_ray(<2 x double> %x, <2 x double> %y) {
 ; SKX-NEXT:    testb $1, %cl
 ; SKX-NEXT:    cmovel %edx, %eax
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: PR39665_c_ray:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vcmpltpd %xmm0, %xmm1, %k0
+; AVX10-256-NEXT:    kmovd %k0, %ecx
+; AVX10-256-NEXT:    testb $2, %cl
+; AVX10-256-NEXT:    movl $42, %eax
+; AVX10-256-NEXT:    movl $99, %edx
+; AVX10-256-NEXT:    cmovel %edx, %eax
+; AVX10-256-NEXT:    testb $1, %cl
+; AVX10-256-NEXT:    cmovel %edx, %eax
+; AVX10-256-NEXT:    retq
   %cmp = fcmp ogt <2 x double> %x, %y
   %e1 = extractelement <2 x i1> %cmp, i32 0
   %e2 = extractelement <2 x i1> %cmp, i32 1
@@ -4423,6 +5030,16 @@ define i32 @PR39665_c_ray_opt(<2 x double> %x, <2 x double> %y) {
 ; SKX-NEXT:    movl $99, %eax
 ; SKX-NEXT:    cmovel %ecx, %eax
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: PR39665_c_ray_opt:
+; AVX10-256:       # %bb.0:
+; AVX10-256-NEXT:    vcmpltpd %xmm0, %xmm1, %k0
+; AVX10-256-NEXT:    kmovd %k0, %eax
+; AVX10-256-NEXT:    cmpb $3, %al
+; AVX10-256-NEXT:    movl $42, %ecx
+; AVX10-256-NEXT:    movl $99, %eax
+; AVX10-256-NEXT:    cmovel %ecx, %eax
+; AVX10-256-NEXT:    retq
   %cmp = fcmp ogt <2 x double> %x, %y
   %shift = shufflevector <2 x i1> %cmp, <2 x i1> poison, <2 x i32> <i32 1, i32 undef>
   %1 = and <2 x i1> %cmp, %shift
@@ -4551,6 +5168,25 @@ define i32 @pr67287(<2 x i64> %broadcast.splatinsert25) {
 ; SKX-NEXT:    movw $0, 0
 ; SKX-NEXT:    xorl %eax, %eax
 ; SKX-NEXT:    retq
+;
+; AVX10-256-LABEL: pr67287:
+; AVX10-256:       # %bb.0: # %entry
+; AVX10-256-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX10-256-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX10-256-NEXT:    vptestnmq %xmm0, %xmm0, %k0
+; AVX10-256-NEXT:    kortestb %k0, %k0
+; AVX10-256-NEXT:    jne .LBB97_2
+; AVX10-256-NEXT:  # %bb.1: # %entry
+; AVX10-256-NEXT:    kmovd %k0, %eax
+; AVX10-256-NEXT:    testb $1, %al
+; AVX10-256-NEXT:    jne .LBB97_2
+; AVX10-256-NEXT:  # %bb.3: # %middle.block
+; AVX10-256-NEXT:    xorl %eax, %eax
+; AVX10-256-NEXT:    retq
+; AVX10-256-NEXT:  .LBB97_2:
+; AVX10-256-NEXT:    movw $0, 0
+; AVX10-256-NEXT:    xorl %eax, %eax
+; AVX10-256-NEXT:    retq
 entry:
   %0 = and <2 x i64> %broadcast.splatinsert25, <i64 4294967295, i64 4294967295>
   %1 = icmp eq <2 x i64> %0, zeroinitializer

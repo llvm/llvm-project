@@ -939,7 +939,8 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
       }
       break;
     case 64:
-      if (STI.getFeatureBits()[X86::FeatureBWI]) {
+      if (STI.getFeatureBits()[X86::FeatureBWI] &&
+          STI.getFeatureBits()[X86::FeatureEVEX512]) {
         ConstantInliner CI(Value);
         return CI.loadAndFinalize(Reg, Value.getBitWidth(), X86::KMOVQkm);
       }

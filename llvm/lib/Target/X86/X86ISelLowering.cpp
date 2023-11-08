@@ -2058,9 +2058,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // AVX512BW..
   if (!Subtarget.useSoftFloat() && Subtarget.hasBWI()) {
     addRegisterClass(MVT::v32i1,  &X86::VK32RegClass);
-    addRegisterClass(MVT::v64i1,  &X86::VK64RegClass);
+    if (Subtarget.hasEVEX512())
+      addRegisterClass(MVT::v64i1, &X86::VK64RegClass);
 
     for (auto VT : { MVT::v32i1, MVT::v64i1 }) {
+      if (VT == MVT::v64i1 && !Subtarget.hasEVEX512())
+        continue;
       setOperationAction(ISD::VSELECT,            VT, Expand);
       setOperationAction(ISD::TRUNCATE,           VT, Custom);
       setOperationAction(ISD::SETCC,              VT, Custom);

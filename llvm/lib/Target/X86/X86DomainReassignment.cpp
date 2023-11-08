@@ -662,37 +662,30 @@ void X86DomainReassignment::initConverters() {
 
   if (STI->hasBWI()) {
     createReplacer(X86::MOV32rm, HasEGPR ? X86::KMOVDkm_EVEX : X86::KMOVDkm);
-    createReplacer(X86::MOV64rm, HasEGPR ? X86::KMOVQkm_EVEX : X86::KMOVQkm);
-
     createReplacer(X86::MOV32mr, HasEGPR ? X86::KMOVDmk_EVEX : X86::KMOVDmk);
-    createReplacer(X86::MOV64mr, HasEGPR ? X86::KMOVQmk_EVEX : X86::KMOVQmk);
-
     createReplacer(X86::MOV32rr, HasEGPR ? X86::KMOVDkk_EVEX : X86::KMOVDkk);
-    createReplacer(X86::MOV64rr, HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVQkk);
-
     createReplacer(X86::SHR32ri, X86::KSHIFTRDri);
-    createReplacer(X86::SHR64ri, X86::KSHIFTRQri);
-
     createReplacer(X86::SHL32ri, X86::KSHIFTLDri);
-    createReplacer(X86::SHL64ri, X86::KSHIFTLQri);
-
     createReplacer(X86::ADD32rr, X86::KADDDrr);
-    createReplacer(X86::ADD64rr, X86::KADDQrr);
-
     createReplacer(X86::NOT32r, X86::KNOTDrr);
-    createReplacer(X86::NOT64r, X86::KNOTQrr);
-
     createReplacer(X86::OR32rr, X86::KORDrr);
-    createReplacer(X86::OR64rr, X86::KORQrr);
-
     createReplacer(X86::AND32rr, X86::KANDDrr);
-    createReplacer(X86::AND64rr, X86::KANDQrr);
-
     createReplacer(X86::ANDN32rr, X86::KANDNDrr);
-    createReplacer(X86::ANDN64rr, X86::KANDNQrr);
-
     createReplacer(X86::XOR32rr, X86::KXORDrr);
-    createReplacer(X86::XOR64rr, X86::KXORQrr);
+
+    if (STI->hasEVEX512()) {
+      createReplacer(X86::MOV64rm, HasEGPR ? X86::KMOVQkm_EVEX : X86::KMOVQkm);
+      createReplacer(X86::MOV64mr, HasEGPR ? X86::KMOVQmk_EVEX : X86::KMOVQmk);
+      createReplacer(X86::MOV64rr, HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVQkk);
+      createReplacer(X86::SHR64ri, X86::KSHIFTRQri);
+      createReplacer(X86::SHL64ri, X86::KSHIFTLQri);
+      createReplacer(X86::ADD64rr, X86::KADDQrr);
+      createReplacer(X86::NOT64r, X86::KNOTQrr);
+      createReplacer(X86::OR64rr, X86::KORQrr);
+      createReplacer(X86::AND64rr, X86::KANDQrr);
+      createReplacer(X86::ANDN64rr, X86::KANDNQrr);
+      createReplacer(X86::XOR64rr, X86::KXORQrr);
+    }
 
     // TODO: KTEST is not a replacement for TEST due to flag differences. Need
     // to prove only Z flag is used.
