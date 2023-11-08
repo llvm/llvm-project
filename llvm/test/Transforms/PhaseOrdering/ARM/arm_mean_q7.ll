@@ -9,11 +9,11 @@ target triple = "thumbv6m-none-none-eabi"
 define void @arm_mean_q7(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef %pResult) #0 {
 ; CHECK-LABEL: @arm_mean_q7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[BLOCKSIZE:%.*]], -16
-; CHECK-NEXT:    [[CMP_NOT10:%.*]] = icmp ult i32 [[BLOCKSIZE]], 16
+; CHECK-NEXT:    [[CMP_NOT10:%.*]] = icmp ult i32 [[BLOCKSIZE:%.*]], 16
 ; CHECK-NEXT:    br i1 [[CMP_NOT10]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[BLOCKSIZE]], 4
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[BLOCKSIZE]], -16
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[SUM_013:%.*]] = phi i32 [ [[TMP3:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
@@ -25,23 +25,26 @@ define void @arm_mean_q7(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK-NEXT:    [[DEC]] = add nsw i32 [[BLKCNT_011]], -1
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[PSRC_ADDR_012]], i32 16
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]]
-; CHECK:       while.end:
-; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP3]], [[WHILE_BODY]] ]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[BLOCKSIZE]], 15
-; CHECK-NEXT:    [[CMP2_NOT14:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    br i1 [[CMP2_NOT14]], label [[WHILE_END5:%.*]], label [[WHILE_BODY3_PREHEADER:%.*]]
-; CHECK:       while.body3.preheader:
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
+; CHECK:       while.end.loopexit:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP0]]
+; CHECK-NEXT:    br label [[WHILE_END]]
+; CHECK:       while.end:
+; CHECK-NEXT:    [[PSRC_ADDR_0_LCSSA:%.*]] = phi ptr [ [[PSRC]], [[ENTRY:%.*]] ], [ [[SCEVGEP]], [[WHILE_END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP3]], [[WHILE_END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[BLOCKSIZE]], 15
+; CHECK-NEXT:    [[CMP2_NOT15:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    br i1 [[CMP2_NOT15]], label [[WHILE_END5:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = tail call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 0, i32 [[AND]])
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[SCEVGEP]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[PSRC_ADDR_0_LCSSA]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <16 x i8> [[WIDE_MASKED_LOAD]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i32> [[TMP4]], <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[SUM_0_LCSSA]]
 ; CHECK-NEXT:    br label [[WHILE_END5]]
 ; CHECK:       while.end5:
-; CHECK-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_0_LCSSA]], [[WHILE_END]] ], [ [[TMP7]], [[WHILE_BODY3_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_0_LCSSA]], [[WHILE_END]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUM_1_LCSSA]], [[BLOCKSIZE]]
 ; CHECK-NEXT:    [[CONV6:%.*]] = trunc i32 [[DIV]] to i8
 ; CHECK-NEXT:    store i8 [[CONV6]], ptr [[PRESULT:%.*]], align 1
