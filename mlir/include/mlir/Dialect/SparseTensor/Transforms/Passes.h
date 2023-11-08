@@ -202,6 +202,13 @@ std::unique_ptr<Pass> createSparseGPUCodegenPass();
 std::unique_ptr<Pass> createSparseGPUCodegenPass(unsigned numThreads);
 
 //===----------------------------------------------------------------------===//
+// The SparseKokkos pass.
+//===----------------------------------------------------------------------===//
+//
+void populateSparseKokkosCodegenPatterns(RewritePatternSet &patterns);
+std::unique_ptr<Pass> createSparseKokkosCodegenPass();
+
+//===----------------------------------------------------------------------===//
 // The SparseStorageSpecifierToLLVM pass.
 //===----------------------------------------------------------------------===//
 

@@ -8,15 +8,12 @@
 
 #include "mlir/Dialect/SparseTensor/Pipelines/Passes.h"
 
-#include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
@@ -46,8 +43,7 @@ void mlir::sparse_tensor::buildSparseKokkosCompiler(
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
   pm.addNestedPass<func::FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());
-  pm.addPass(createSparseGPUCodegenPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
+  pm.addPass(createSparseKokkosCodegenPass());
   pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());
   pm.addNestedPass<func::FuncOp>(createConvertVectorToSCFPass());
   pm.addNestedPass<func::FuncOp>(memref::createExpandReallocPass());
@@ -64,7 +60,7 @@ void mlir::sparse_tensor::registerSparseTensorKokkosPipelines() {
   PassPipelineRegistration<SparseCompilerOptions>(
       "sparse-compiler-kokkos",
       "The standard pipeline for taking sparsity-agnostic IR using the"
-      " sparse-tensor type, and lowering it to LLVM IR with concrete"
-      " representations and algorithms for sparse tensors.",
+      " sparse-tensor type, and lowering it to dialects compatible with"
+      " the Kokkos emitter.",
       buildSparseKokkosCompiler);
 }

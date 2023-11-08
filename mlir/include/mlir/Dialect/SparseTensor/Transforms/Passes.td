@@ -349,6 +349,22 @@ def SparseGPUCodegen : Pass<"sparse-gpu-codegen", "ModuleOp"> {
   ];
 }
 
+def SparseKokkosCodegen : Pass<"sparse-kokkos-codegen", "ModuleOp"> {
+  let summary = "Generates Kokkos code during sparsification";
+  let description = [{
+    Enables sparse compiler to generate Kokkos code, which can use non-host backends.
+  }];
+  let constructor = "mlir::createSparseKokkosCodegenPass()";
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "bufferization::BufferizationDialect",
+    "linalg::LinalgDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+}
+
 def StorageSpecifierToLLVM : Pass<"sparse-storage-specifier-to-llvm", "ModuleOp"> {
   let summary = "Lower sparse storage specifer to llvm structure";
   let description = [{

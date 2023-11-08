@@ -5,6 +5,7 @@ add_mlir_dialect_library(MLIRSparseTensorTransforms
   LoopEmitter.cpp
   SparseBufferRewriting.cpp
   SparseGPUCodegen.cpp
+  SparseKokkosCodegen.cpp
   SparseStorageSpecifierToLLVM.cpp
   SparseTensorCodegen.cpp
   SparseTensorConversion.cpp
