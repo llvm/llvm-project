@@ -1,3 +1,4 @@
+// REQUIRES: systemz-registered-target
 // RUN: %clang --target=s390x-linux -O1 -S -o - %s | FileCheck %s
 
 __attribute__((target("backchain")))
