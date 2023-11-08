@@ -3226,7 +3226,7 @@ def : GCNPat <
 
 class SMPrefetchGetPcPat<string type, int cache_type> : GCNPat <
     (prefetch (i64 imm:$offset), timm, timm, (i32 cache_type)),
-    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) (S_ADD_U64_PSEUDO (S_GETPC_B64), $offset),
+    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) (S_ADD_U64_PSEUDO (S_GETPC_B64_PSEUDO), $offset),
                                                    (i32 20), (i32 SGPR_NULL), (i8 0))
     // Offset 20 should roughly adjust getpc sequence length.
   > {
