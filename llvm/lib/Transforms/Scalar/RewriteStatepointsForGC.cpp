@@ -1249,10 +1249,11 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
 
 #ifndef NDEBUG
   VerifyStates();
-  // get the data layout to compare the sizes of base/derived pointer values
-  auto &DL = cast<llvm::Instruction>(Def)->getModule()->getDataLayout();
 #endif
 
+  // get the data layout to compare the sizes of base/derived pointer values
+  [[maybe_unused]]
+  auto &DL = cast<llvm::Instruction>(Def)->getModule()->getDataLayout();
   // Cache all of our results so we can cheaply reuse them
   // NOTE: This is actually two caches: one of the base defining value
   // relation and one of the base pointer relation!  FIXME
