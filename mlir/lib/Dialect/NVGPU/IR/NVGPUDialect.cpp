@@ -394,7 +394,7 @@ LogicalResult TmaAsyncLoadOp::verify() {
                        << " coordinates are supported.";
   }
   if (getCoordinates().size() !=
-      getTensorMapDescriptor().getType().getTensor().getRank()) {
+      size_t(getTensorMapDescriptor().getType().getTensor().getRank())) {
     return emitError() << "number of coordinates do not match with the rank of "
                           "tensor descriptor map.";
   }
