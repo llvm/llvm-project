@@ -22,6 +22,8 @@
   define amdgpu_ps void @global_atomic() { ret void }
   define amdgpu_ps void @image_atomic() { ret void }
   define amdgpu_ps void @global_store_optnone() noinline optnone { ret void }
+  define amdgpu_gfx void @gfx_function() { ret void }
+  define void @ccc_function() { ret void }
 ...
 
 ---
@@ -552,6 +554,30 @@ body:             |
     ; CHECK-NEXT: GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr1, 0, 4, implicit $exec
     ; CHECK-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; CHECK-NEXT: S_ENDPGM 0
+    GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr1, 0, 4, implicit $exec
+    S_WAITCNT_VSCNT undef $sgpr_null, 0
+    S_ENDPGM 0
+...
+
+---
+name:            gfx_function
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: gfx_function
+    ; CHECK-NOT: S_SENDMSG 3
+    ; CHECK: S_ENDPGM 0
+    GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr1, 0, 4, implicit $exec
+    S_WAITCNT_VSCNT undef $sgpr_null, 0
+    S_ENDPGM 0
+...
+
+---
+name:            ccc_function
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: ccc_function
+    ; CHECK-NOT: S_SENDMSG 3
+    ; CHECK: S_ENDPGM 0
     GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr1, 0, 4, implicit $exec
     S_WAITCNT_VSCNT undef $sgpr_null, 0
     S_ENDPGM 0

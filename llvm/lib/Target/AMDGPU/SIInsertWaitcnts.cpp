@@ -1027,6 +1027,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     Wait.VmCnt = 0;
   }
 
+  CallingConv::ID CC = MI.getMF()->getFunction().getCallingConv();
+
   // All waits must be resolved at call return.
   // NOTE: this could be improved with knowledge of all call sites or
   //   with knowledge of the called routines.
@@ -1039,10 +1041,13 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // Identify S_ENDPGM instructions which may have to wait for outstanding VMEM
   // stores. In this case it can be useful to send a message to explicitly
   // release all VGPRs before the stores have completed, but it is only safe to
-  // do this if there are no outstanding scratch stores.
+  // do this if:
+  // * there are no outstanding scratch stores
+  // * this is not a callable function
   else if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
-    if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 && !OptNone &&
+    if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
+        !AMDGPU::isCallableCC(CC) && !OptNone &&
         ScoreBrackets.getScoreRange(VS_CNT) != 0 &&
         !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))
       ReleaseVGPRInsts.insert(&MI);
