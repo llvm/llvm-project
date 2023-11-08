@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_ARMSME_TRANSFORMS_PASSES_H
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Dialect/ArmSME/Transforms/PassesEnums.h.inc"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -20,23 +21,13 @@ namespace arm_sme {
 //===----------------------------------------------------------------------===//
 // The EnableArmStreaming pass.
 //===----------------------------------------------------------------------===//
-// Options for Armv9 Streaming SVE mode. By default, streaming-mode is part of
-// the function interface (ABI) and the caller manages PSTATE.SM on entry/exit.
-// In a locally streaming function PSTATE.SM is kept internal and the callee
-// manages it on entry/exit.
-enum class ArmStreamingMode { Default = 0, Locally = 1 };
-
-// TODO: Add other ZA modes.
-// https://arm-software.github.io/acle/main/acle.html#sme-attributes-relating-to-za
-enum class ArmZaMode { Disabled = 0, New = 1 };
-
 #define GEN_PASS_DECL
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h.inc"
 
 /// Pass to enable Armv9 Streaming SVE mode.
-std::unique_ptr<Pass>
-createEnableArmStreamingPass(const ArmStreamingMode = ArmStreamingMode::Default,
-                             const ArmZaMode = ArmZaMode::Disabled);
+std::unique_ptr<Pass> createEnableArmStreamingPass(
+    const ArmStreamingMode = ArmStreamingMode::Streaming,
+    const ArmZaMode = ArmZaMode::Disabled);
 
 /// Pass that replaces 'arm_sme.get_tile_id' ops with actual tiles.
 std::unique_ptr<Pass> createTileAllocationPass();

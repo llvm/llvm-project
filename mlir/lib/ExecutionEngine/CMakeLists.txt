@@ -2,7 +2,7 @@
 # is a big dependency which most don't need.
 
 set(LLVM_OPTIONAL_SOURCES
-  ArmSMEStub.cpp
+  ArmSMEStubs.cpp
   AsyncRuntime.cpp
   CRunnerUtils.cpp
   CudaRuntimeWrappers.cpp
@@ -180,7 +180,7 @@ if(LLVM_ENABLE_PIC)
 
   add_mlir_library(mlir_arm_sme_abi_stubs
     SHARED
-    ArmSMEStub.cpp)
+    ArmSMEStubs.cpp)
 
   if(MLIR_ENABLE_CUDA_RUNNER)
     # Configure CUDA support. Using check_language first allows us to give a

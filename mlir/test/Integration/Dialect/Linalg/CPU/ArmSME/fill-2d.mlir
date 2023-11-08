@@ -3,7 +3,7 @@
 // RUN:   -test-transform-dialect-erase-schedule \
 // RUN:   -lower-vector-mask \
 // RUN:   -one-shot-bufferize="bufferize-function-boundaries" \
-// RUN:   -enable-arm-streaming="streaming-mode=locally za-mode=new" \
+// RUN:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
 // RUN:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
 // RUN:   -convert-vector-to-llvm="enable-arm-sme" -cse -canonicalize \
 // RUN:   -allocate-arm-sme-tiles -test-lower-to-llvm | \

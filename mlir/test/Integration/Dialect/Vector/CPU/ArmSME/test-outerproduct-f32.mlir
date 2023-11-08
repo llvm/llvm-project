@@ -1,6 +1,6 @@
 // DEFINE: %{entry_point} = test_outerproduct_no_accumulator_4x4xf32
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -enable-arm-streaming="streaming-mode=locally za-mode=new" \
+// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
 // DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
 // DEFINE:   -convert-vector-to-llvm="enable-arm-sme" -cse -canonicalize \
 // DEFINE:   -allocate-arm-sme-tiles -test-lower-to-llvm -o %t

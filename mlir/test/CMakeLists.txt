@@ -141,7 +141,7 @@ if(MLIR_ENABLE_ROCM_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_rocm_runtime)
 endif()
 
-if (MLIR_RUN_ARM_SME_TESTS)
+if (MLIR_RUN_ARM_SME_TESTS AND NOT ARM_SME_ABI_ROUTINES_SHLIB)
   list(APPEND MLIR_TEST_DEPENDS mlir_arm_sme_abi_stubs)
 endif()
 

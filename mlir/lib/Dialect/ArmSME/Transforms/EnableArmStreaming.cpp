@@ -34,6 +34,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
+#include "mlir/Dialect/ArmSME/Transforms/PassesEnums.cpp.inc"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
@@ -48,14 +49,11 @@ namespace arm_sme {
 
 using namespace mlir;
 using namespace mlir::arm_sme;
-
-static constexpr char kArmStreamingAttr[] = "arm_streaming";
-static constexpr char kArmLocallyStreamingAttr[] = "arm_locally_streaming";
-static constexpr char kArmNewZAAttr[] = "arm_new_za";
-static constexpr char kEnableArmStreamingIgnoreAttr[] =
-    "enable_arm_streaming_ignore";
-
 namespace {
+
+constexpr StringLiteral
+    kEnableArmStreamingIgnoreAttr("enable_arm_streaming_ignore");
+
 struct EnableArmStreamingPass
     : public arm_sme::impl::EnableArmStreamingBase<EnableArmStreamingPass> {
   EnableArmStreamingPass(ArmStreamingMode streamingMode, ArmZaMode zaMode) {
@@ -63,25 +61,22 @@ struct EnableArmStreamingPass
     this->zaMode = zaMode;
   }
   void runOnOperation() override {
-    if (getOperation()->getAttr(kEnableArmStreamingIgnoreAttr))
+    auto op = getOperation();
+    if (op->getAttr(kEnableArmStreamingIgnoreAttr))
       return;
-    StringRef attr;
-    switch (streamingMode) {
-    case ArmStreamingMode::Default:
-      attr = kArmStreamingAttr;
-      break;
-    case ArmStreamingMode::Locally:
-      attr = kArmLocallyStreamingAttr;
-      break;
-    }
-    getOperation()->setAttr(attr, UnitAttr::get(&getContext()));
+    auto unitAttr = UnitAttr::get(&getContext());
+
+    if (streamingMode == ArmStreamingMode::Disabled)
+      return;
+
+    op->setAttr(stringifyArmStreamingMode(streamingMode), unitAttr);
 
     // The pass currently only supports enabling ZA when in streaming-mode, but
     // ZA can be accessed by the SME LDR, STR and ZERO instructions when not in
     // streaming-mode (see section B1.1.1, IDGNQM of spec [1]). It may be worth
     // supporting this later.
-    if (zaMode == ArmZaMode::New)
-      getOperation()->setAttr(kArmNewZAAttr, UnitAttr::get(&getContext()));
+    if (zaMode != ArmZaMode::Disabled)
+      op->setAttr(stringifyArmZaMode(zaMode), unitAttr);
   }
 };
 } // namespace
