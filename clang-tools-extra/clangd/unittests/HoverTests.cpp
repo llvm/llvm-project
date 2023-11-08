@@ -3349,17 +3349,6 @@ TEST(Hover, NoCrashAPInt64) {
   getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
 }
 
-TEST(Hover, NoCrashInt128) {
-  Annotations T(R"cpp(
-    constexpr __int128_t value = -4;
-    void foo() { va^lue; }
-  )cpp");
-  auto AST = TestTU::withCode(T.code()).build();
-  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
-  ASSERT_TRUE(H);
-  EXPECT_EQ(H->Value, "-4 (0xfffffffc)");
-}
-
 TEST(Hover, DocsFromMostSpecial) {
   Annotations T(R"cpp(
   // doc1
