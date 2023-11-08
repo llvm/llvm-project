@@ -296,6 +296,9 @@ multiclass ZAAddSub<string n_suffix> {
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// SME2 - MIN, MAX
+
 multiclass MinMaxIntr<string i, string zm, string mul, string t> {
   def SVS # NAME : SInst<"sv" # i # "[" # zm # "_{d}_" # mul # "]", t, "csil",     MergeNone, "aarch64_sve_s" # i # zm # "_" # mul, [IsStreaming], []>;
   def SVU # NAME : SInst<"sv" # i # "[" # zm # "_{d}_" # mul # "]", t, "UcUsUiUl", MergeNone, "aarch64_sve_u" # i # zm # "_" # mul, [IsStreaming], []>;
