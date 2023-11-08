@@ -140,7 +140,10 @@ declare <4 x double> @llvm.fabs.v4f64(<4 x double> %p)
 define <8 x half> @fabs_v8f16(ptr %p) {
 ; X86-AVX-LABEL: fabs_v8f16:
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> f2f313666780 (Enable Custom Lowering for fabs.v8f16 on AVX)
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl 4(%esp), [[ADDRREG:%.*]]
 ; X86-AVX-NEXT:    vmovaps ([[ADDRREG]]), %xmm0
