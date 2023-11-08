@@ -24,8 +24,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
-extern llvm::cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
-
 namespace llvm {
 namespace {
 
