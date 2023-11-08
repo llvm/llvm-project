@@ -151,7 +151,7 @@ def bad_imm_too_many_args : GICombineRule<
   (match (COPY $x, (i32 0, 0)):$d),
   (apply (COPY $x, $b):$d)>;
 
-// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: cannot parse immediate '(COPY 0)', 'COPY' is not a ValueType
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: cannot parse immediate '(COPY 0)': unknown type 'COPY'
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(COPY ?:$x, (COPY 0))
 def bad_imm_not_a_valuetype : GICombineRule<
   (defs root:$a),
@@ -186,7 +186,7 @@ def expected_op_name : GICombineRule<
   (match (G_FNEG $x, i32)),
   (apply (COPY $x, (i32 0)))>;
 
-// CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: invalid operand type: 'not_a_type' is not a ValueType
+// CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: cannot parse operand type: unknown type 'not_a_type'
 // CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_FNEG ?:$x, not_a_type:$y)'
 def not_a_type;
 def bad_mo_type_not_a_valuetype : GICombineRule<
