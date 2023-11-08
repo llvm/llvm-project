@@ -835,9 +835,10 @@ void EmptyOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 /// Try to remove a tensor operation if it would only reshape a constant.
-/// Removes the op and replaces the constant with a new constant of the result shape.
+/// Removes the op and replaces the constant with a new constant of the result
+/// shape.
 static OpFoldResult reshapeConstantSource(DenseElementsAttr source,
-                                  TensorType result) {
+                                          TensorType result) {
   if (source && source.isSplat() && result.hasStaticShape())
     return source.resizeSplat(result);
 
