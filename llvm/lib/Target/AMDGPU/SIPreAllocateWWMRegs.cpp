@@ -220,13 +220,14 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
     bool InWWM = false;
     for (MachineInstr &MI : *MBB) {
       if (MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B32 ||
-          MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B64 ||
-          (PreallocateSGPRSpillVGPRs &&
-           MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR))
+          MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B64)
         RegsAssigned |= processDef(MI.getOperand(0));
 
-      if (MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR)
-        continue;
+      if (MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR) {
+        if (!PreallocateSGPRSpillVGPRs)
+          continue;
+        RegsAssigned |= processDef(MI.getOperand(0));
+      }
 
       if (MI.getOpcode() == AMDGPU::ENTER_STRICT_WWM ||
           MI.getOpcode() == AMDGPU::ENTER_STRICT_WQM ||
