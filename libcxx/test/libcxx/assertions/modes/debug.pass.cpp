@@ -20,9 +20,7 @@
 
 int main(int, char**) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");
-  TEST_LIBCPP_ASSERT_FAILURE([] {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Should fire");
-  }(), "Should fire");
+  TEST_LIBCPP_ASSERT_FAILURE([] { _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Should fire"); }(), "Should fire");
 
   return 0;
 }

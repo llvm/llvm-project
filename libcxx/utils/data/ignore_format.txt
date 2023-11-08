@@ -588,14 +588,6 @@ libcxx/test/libcxx/algorithms/specialized.algorithms/special.mem.concepts/nothro
 libcxx/test/libcxx/assertions/customize_verbose_abort.compile-time.pass.cpp
 libcxx/test/libcxx/assertions/customize_verbose_abort.link-time.pass.cpp
 libcxx/test/libcxx/assertions/deprecated-link-time-custom-handler.pass.cpp
-libcxx/test/libcxx/assertions/modes/debug_mode_enabled_in_tu.pass.cpp
-libcxx/test/libcxx/assertions/modes/debug.pass.cpp
-libcxx/test/libcxx/assertions/modes/enabling_assertions_enables_safe_mode.pass.cpp
-libcxx/test/libcxx/assertions/modes/hardened_mode_enabled_in_tu.pass.cpp
-libcxx/test/libcxx/assertions/modes/hardened.pass.cpp
-libcxx/test/libcxx/assertions/modes/safe_mode_enabled_in_tu.pass.cpp
-libcxx/test/libcxx/assertions/modes/safe.pass.cpp
-libcxx/test/libcxx/assertions/modes/unchecked.pass.cpp
 libcxx/test/libcxx/atomics/atomics.align/align.pass.cpp
 libcxx/test/libcxx/atomics/atomics.flag/init_bool.pass.cpp
 libcxx/test/libcxx/atomics/atomics.order/memory_order.underlying_type.pass.cpp
