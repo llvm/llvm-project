@@ -237,6 +237,8 @@ SwiftLanguageRuntimeImpl::GetMemoryReader() {
         m_process, [&](swift::remote::RemoteAbsolutePointer pointer) {
           ThreadSafeReflectionContext reflection_context =
               GetReflectionContext();
+          if (!reflection_context)
+            return pointer;
           return reflection_context->StripSignedPointer(pointer);
         }));
   }
@@ -651,6 +653,9 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
       return {};
 
     ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+    if (!reflection_ctx)
+      return {};
+
     LLDBTypeInfoProvider tip(*this, *ts);
     auto *cti = reflection_ctx->GetClassInstanceTypeInfo(tr, &tip);
     if (auto *rti =
@@ -724,6 +729,9 @@ SwiftLanguageRuntimeImpl::GetNumFields(CompilerType type,
       return 0;
     case ReferenceKind::Strong:
       ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+      if (!reflection_ctx)
+        return {};
+
       LLDBTypeInfoProvider tip(*this, *ts);
       auto *cti = reflection_ctx->GetClassInstanceTypeInfo(tr, &tip);
       if (auto *rti = llvm::dyn_cast_or_null<RecordTypeInfo>(cti)) {
@@ -856,6 +864,9 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
                                            child_indexes);
     case ReferenceKind::Strong: {
       ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+      if (!reflection_ctx)
+        return {false, {}};
+
       LLDBTypeInfoProvider tip(*this, *ts);
       // `current_tr` iterates the class hierarchy, from the current class, each
       // superclass, and ends on null.
@@ -1553,6 +1564,9 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
     }
   Log *log(GetLog(LLDBLog::Types));
   ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+  if (!reflection_ctx)
+    return false;
+
   const auto *typeref =
       reflection_ctx->ReadTypeFromInstance(instance_ptr, true);
   if (!typeref) {
@@ -1705,6 +1719,9 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
   swift::remote::RemoteAddress remote_existential(existential_address);
 
   ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+  if (!reflection_ctx)
+    return false;
+
   auto pair = reflection_ctx->ProjectExistentialAndUnwrapClass(
       remote_existential, *protocol_typeref);
   if (use_local_buffer)
@@ -2159,22 +2176,23 @@ SwiftLanguageRuntimeImpl::GetValueType(ValueObject &in_value,
       // Read the value witness table and check if the data is inlined in
       // the existential container or not.
       swift::remote::RemoteAddress remote_existential(existential_address);
-      ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
-      llvm::Optional<bool> is_inlined =
-          reflection_ctx->IsValueInlinedInExistentialContainer(
-              remote_existential);
+      if (ThreadSafeReflectionContext reflection_ctx = GetReflectionContext()) {
+        llvm::Optional<bool> is_inlined =
+            reflection_ctx->IsValueInlinedInExistentialContainer(
+                remote_existential);
 
-      if (use_local_buffer)
-        PopLocalBuffer();
+        if (use_local_buffer)
+          PopLocalBuffer();
 
-      // An error has occurred when trying to read value witness table,
-      // default to treating it as pointer.
-      if (!is_inlined.has_value())
-        return Value::ValueType::LoadAddress;
+        // An error has occurred when trying to read value witness table,
+        // default to treating it as pointer.
+        if (!is_inlined.has_value())
+          return Value::ValueType::LoadAddress;
 
-      // Inlined data, same as static data.
-      if (*is_inlined)
-        return static_value_type;
+        // Inlined data, same as static data.
+        if (*is_inlined)
+          return static_value_type;
+      }
 
       // If the data is not inlined, we have a pointer.
       return Value::ValueType::LoadAddress;
