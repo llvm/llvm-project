@@ -260,7 +260,8 @@
 //
 // - `_LIBCPP_ASSERT_NON_NULL` -- checks that the pointer being dereferenced is not null. On most modern platforms zero
 //   address does not refer to an actual location in memory, so a null pointer dereference would not compromize the
-//   memory security of a program.
+//   memory security of a program (however, it is still undefined behavior that can manifest itself via compiler
+//   optimizations).
 //
 // - `_LIBCPP_ASSERT_NON_OVERLAPPING_RANGES` -- for functions that take several ranges as arguments, checks that the
 //   given ranges do not overlap.
