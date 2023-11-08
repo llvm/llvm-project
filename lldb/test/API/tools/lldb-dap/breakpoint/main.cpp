@@ -28,7 +28,7 @@ int main(int argc, char const *argv[]) {
     exit(1);
   }
 
-  const char * message = "Hello from main!";
+  const char *message = "Hello from main!";
   int (*foo)(int) = (int (*)(int))dlsym(handle, "foo");
   if (foo == nullptr) {
     fprintf(stderr, "%s\n", dlerror());
