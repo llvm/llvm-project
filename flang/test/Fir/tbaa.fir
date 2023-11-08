@@ -91,7 +91,7 @@ module {
     %c8_i32 = arith.constant 8 : i32
     %c-1_i32 = arith.constant -1 : i32
     %0 = fir.address_of(@_QFEx) : !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>
-    %1 = fir.address_of(@_QQcl.2E2F64756D6D792E66393000) : !fir.ref<!fir.char<1,12>>
+    %1 = fir.address_of(@_QQclX2E2F64756D6D792E66393000) : !fir.ref<!fir.char<1,12>>
     %2 = fir.convert %1 : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
     %3 = fir.call @_FortranAioBeginExternalListOutput(%c-1_i32, %2, %c8_i32) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
     %4 = fir.load %0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>
@@ -105,7 +105,7 @@ module {
   func.func private @_FortranAioBeginExternalListOutput(i32, !fir.ref<i8>, i32) -> !fir.ref<i8> attributes {fir.io, fir.runtime}
   func.func private @_FortranAioOutputDescriptor(!fir.ref<i8>, !fir.box<none>) -> i1 attributes {fir.io, fir.runtime}
   func.func private @_FortranAioEndIoStatement(!fir.ref<i8>) -> i32 attributes {fir.io, fir.runtime}
-  fir.global linkonce @_QQcl.2E2F64756D6D792E66393000 constant : !fir.char<1,12> {
+  fir.global linkonce @_QQclX2E2F64756D6D792E66393000 constant : !fir.char<1,12> {
     %0 = fir.string_lit "./dummy.f90\00"(12) : !fir.char<1,12>
     fir.has_value %0 : !fir.char<1,12>
   }
@@ -131,7 +131,7 @@ module {
 // CHECK:           %[[VAL_5:.*]] = llvm.mlir.constant(8 : i32) : i32
 // CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(-1 : i32) : i32
 // CHECK:           %[[VAL_7:.*]] = llvm.mlir.addressof @_QFEx : !llvm.ptr
-// CHECK:           %[[VAL_8:.*]] = llvm.mlir.addressof @_QQcl.2E2F64756D6D792E66393000 : !llvm.ptr
+// CHECK:           %[[VAL_8:.*]] = llvm.mlir.addressof @_QQclX2E2F64756D6D792E66393000 : !llvm.ptr
 // CHECK:           %[[VAL_10:.*]] = llvm.call @_FortranAioBeginExternalListOutput(%[[VAL_6]], %[[VAL_8]], %[[VAL_5]]) {fastmathFlags = #llvm.fastmath<contract>} : (i32, !llvm.ptr, i32) -> !llvm.ptr
 // CHECK:           %[[VAL_11:.*]] = llvm.load %[[VAL_7]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           llvm.store %[[VAL_11]], %[[VAL_3]] {tbaa = [#[[$BOXT]]]} : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>, !llvm.ptr
@@ -192,7 +192,7 @@ module {
 // CHECK:         llvm.func @_FortranAioOutputDescriptor(!llvm.ptr, !llvm.ptr) -> i1 attributes {fir.io, fir.runtime, sym_visibility = "private"}
 // CHECK:         llvm.func @_FortranAioEndIoStatement(!llvm.ptr) -> i32 attributes {fir.io, fir.runtime, sym_visibility = "private"}
 
-// CHECK-LABEL:   llvm.mlir.global linkonce constant @_QQcl.2E2F64756D6D792E66393000() comdat(@__llvm_comdat::@_QQcl.2E2F64756D6D792E66393000) {addr_space = 0 : i32} : !llvm.array<12 x i8> {
+// CHECK-LABEL:   llvm.mlir.global linkonce constant @_QQclX2E2F64756D6D792E66393000() comdat(@__llvm_comdat::@_QQclX2E2F64756D6D792E66393000) {addr_space = 0 : i32} : !llvm.array<12 x i8> {
 // CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant("./dummy.f90\00") : !llvm.array<12 x i8>
 // CHECK:           llvm.return %[[VAL_0]] : !llvm.array<12 x i8>
 // CHECK:         }

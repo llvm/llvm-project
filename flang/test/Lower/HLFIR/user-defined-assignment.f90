@@ -317,9 +317,9 @@ end subroutine test_char_get_length
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtest_char_get_lengthEx"}
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFtest_char_get_lengthEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           hlfir.region_assign {
-! CHECK:             %[[VAL_5:.*]] = fir.address_of(@_QQcl.616263) : !fir.ref<!fir.char<1,3>>
+! CHECK:             %[[VAL_5:.*]] = fir.address_of(@_QQclX616263) : !fir.ref<!fir.char<1,3>>
 ! CHECK:             %[[VAL_6:.*]] = arith.constant 3 : index
-! CHECK:             %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_6]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQcl.616263"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
+! CHECK:             %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_6]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX616263"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
 ! CHECK:             %[[VAL_8:.*]] = arith.addi %[[VAL_6]], %[[VAL_1]]#1 : index
 ! CHECK:             %[[VAL_9:.*]] = hlfir.concat %[[VAL_7]]#0, %[[VAL_2]]#0 len %[[VAL_8]] : (!fir.ref<!fir.char<1,3>>, !fir.boxchar<1>, index) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK:             hlfir.yield %[[VAL_9]] : !hlfir.expr<!fir.char<1,?>>

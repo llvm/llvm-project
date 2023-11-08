@@ -109,7 +109,7 @@ end subroutine
 ! CHECK:  hlfir.region_assign {
 ! CHECK:    %[[VAL_6:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,5>>
 ! CHECK:    %[[VAL_7:.*]] = arith.constant 5 : index
-! CHECK:    %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]] typeparams %[[VAL_7]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQcl.68656C6C6F"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:    %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]] typeparams %[[VAL_7]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX68656C6C6F"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:    hlfir.yield %[[VAL_8]]#0 : !fir.ref<!fir.char<1,5>>
 ! CHECK:  } to {
 ! CHECK:    %[[VAL_9:.*]] = arith.constant 10 : index

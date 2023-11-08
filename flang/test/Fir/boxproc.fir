@@ -33,7 +33,7 @@ func.func @_QPtest_proc_dummy() {
   %3 = fir.address_of(@_QFtest_proc_dummyPtest_proc_dummy_a) : (!fir.ref<i32>, !fir.ref<tuple<!fir.ref<i32>>>) -> ()
   %4 = fir.emboxproc %3, %1 : ((!fir.ref<i32>, !fir.ref<tuple<!fir.ref<i32>>>) -> (), !fir.ref<tuple<!fir.ref<i32>>>) -> !fir.boxproc<() -> ()>
   fir.call @_QPtest_proc_dummy_other(%4) : (!fir.boxproc<() -> ()>) -> ()
-  %5 = fir.address_of(@_QQcl.2E2F682E66393000) : !fir.ref<!fir.char<1,8>>
+  %5 = fir.address_of(@_QQclX2E2F682E66393000) : !fir.ref<!fir.char<1,8>>
   %6 = fir.convert %5 : (!fir.ref<!fir.char<1,8>>) -> !fir.ref<i8>
   %7 = fir.call @_FortranAioBeginExternalListOutput(%c-1_i32, %6, %c5_i32) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   %8 = fir.load %0 : !fir.ref<i32>
@@ -163,7 +163,7 @@ func.func @_QPtest_proc_dummy_char() {
   %4 = fir.convert %1 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,?>>
   %5 = fir.emboxchar %4, %c10 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
   fir.store %5 to %3 : !fir.ref<!fir.boxchar<1>>
-  %6 = fir.address_of(@_QQcl.486920746865726521) : !fir.ref<!fir.char<1,9>>
+  %6 = fir.address_of(@_QQclX486920746865726521) : !fir.ref<!fir.char<1,9>>
   %7 = fir.convert %c9 : (index) -> i64
   %8 = fir.convert %1 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
   %9 = fir.convert %6 : (!fir.ref<!fir.char<1,9>>) -> !fir.ref<i8>
@@ -182,7 +182,7 @@ func.func @_QPtest_proc_dummy_char() {
   %18 = arith.subi %13, %c1 : index
   cf.br ^bb1(%17, %18 : index, index)
 ^bb3:  // pred: ^bb1
-  %19 = fir.address_of(@_QQcl.2E2F682E66393000) : !fir.ref<!fir.char<1,8>>
+  %19 = fir.address_of(@_QQclX2E2F682E66393000) : !fir.ref<!fir.char<1,8>>
   %20 = fir.convert %19 : (!fir.ref<!fir.char<1,8>>) -> !fir.ref<i8>
   %21 = fir.call @_FortranAioBeginExternalListOutput(%c-1_i32, %20, %c6_i32) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   %22 = fir.address_of(@_QFtest_proc_dummy_charPgen_message) : (!fir.ref<!fir.char<1,10>>, index, !fir.ref<tuple<!fir.boxchar<1>>>) -> !fir.boxchar<1>
@@ -242,7 +242,7 @@ func.func @_QPget_message(%arg0: !fir.ref<!fir.char<1,40>>, %arg1: index, %arg2:
   %c32_i8 = arith.constant 32 : i8
   %c0 = arith.constant 0 : index
   %0 = fir.convert %arg0 : (!fir.ref<!fir.char<1,40>>) -> !fir.ref<!fir.char<1,?>>
-  %1 = fir.address_of(@_QQcl.6D6573736167652069733A20) : !fir.ref<!fir.char<1,12>>
+  %1 = fir.address_of(@_QQclX6D6573736167652069733A20) : !fir.ref<!fir.char<1,12>>
   %2 = fir.extract_value %arg2, [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> !fir.boxproc<() -> ()>
   %3 = fir.box_addr %2 : (!fir.boxproc<() -> ()>) -> (() -> ())
   %4 = fir.extract_value %arg2, [1 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> i64
@@ -297,18 +297,18 @@ func.func @_QPget_message(%arg0: !fir.ref<!fir.char<1,40>>, %arg1: index, %arg2:
   %40 = fir.emboxchar %0, %c40 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
   return %40 : !fir.boxchar<1>
 }
-fir.global linkonce @_QQcl.486920746865726521 constant : !fir.char<1,9> {
+fir.global linkonce @_QQclX486920746865726521 constant : !fir.char<1,9> {
   %0 = fir.string_lit "Hi there!"(9) : !fir.char<1,9>
   fir.has_value %0 : !fir.char<1,9>
 }
 func.func private @llvm.memmove.p0.p0.i64(!fir.ref<i8>, !fir.ref<i8>, i64, i1)
-fir.global linkonce @_QQcl.2E2F682E66393000 constant : !fir.char<1,8> {
+fir.global linkonce @_QQclX2E2F682E66393000 constant : !fir.char<1,8> {
   %0 = fir.string_lit "./h.f90\00"(8) : !fir.char<1,8>
   fir.has_value %0 : !fir.char<1,8>
 }
 func.func private @llvm.stacksave.p0() -> !fir.ref<i8>
 func.func private @llvm.stackrestore.p0(!fir.ref<i8>)
-fir.global linkonce @_QQcl.6D6573736167652069733A20 constant : !fir.char<1,12> {
+fir.global linkonce @_QQclX6D6573736167652069733A20 constant : !fir.char<1,12> {
   %0 = fir.string_lit "message is: "(12) : !fir.char<1,12>
   fir.has_value %0 : !fir.char<1,12>
 }
