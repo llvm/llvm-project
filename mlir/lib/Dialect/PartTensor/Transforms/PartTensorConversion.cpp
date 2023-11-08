@@ -88,45 +88,6 @@ public:
       callRet = rewriter.create<memref::CastOp>(loc, resType, callRet);
     rewriter.replaceOp(op, callRet);
     return success();
-#if 0
-    llvm::errs() << "Op before transform \n";
-    op->dump();
-
-    //%partition_plan = part_tensor.get_partitions %A:  tensor<?x?xf32> ->
-    // tensor<?xindex>
-    auto module = op->getParentOfType<ModuleOp>();
-    MLIRContext *ctx = module.getContext();
-    FunctionType FT = getElementalFuncTypeForOp(op);
-    // FT => Type(tensor<?xindex> foo(tensor<?x?xf32>))
-
-    auto builder =
-        ImplicitLocOpBuilder::atBlockEnd(module.getLoc(), module.getBody());
-    // build at Block End, at the end of the module
-
-    Type resultType = op->getResultTypes()[0];
-    // tensor<?xindex>
-
-    // inputs: "get_partition_rt", FT
-    auto addFuncDecl = [&](StringRef name, FunctionType type) {
-      // check if the symbol is present
-      if (module.lookupSymbol(name))
-        return;
-      // linkage private
-      builder.create<func::FuncOp>(name, type).setPrivate();
-    };
-
-    // call lambda
-    addFuncDecl("get_partitions_rt", FT);
-
-    rewriter.replaceOpWithNewOp<func::CallOp>(
-        op, "get_partitions_rt", resultType, adaptor.getOperands());
-
-    llvm::errs() << "Op after transform \n";
-    op->dump();
-    assert(false);
-
-    return success();
-#endif
   }
 };
 
