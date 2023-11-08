@@ -6516,10 +6516,6 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
                              IsPostfixUpdate, IsFailOnly, Loc);
     break;
   }
-  case OMPC_fail: {
-    //TODO
-    break;
-  }
   default:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
