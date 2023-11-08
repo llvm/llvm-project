@@ -2807,6 +2807,15 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
     MachineRegisterInfo &MRI) const {
   bool RequiresHighHalf = PtrTy.getSizeInBits() != 32;
 
+  if (RequiresHighHalf && ST.has64BitLiterals()) {
+    if (!MRI.getRegClassOrNull(DstReg))
+      MRI.setRegClass(DstReg, &AMDGPU::SReg_64RegClass);
+    B.buildInstr(AMDGPU::S_MOV_B64)
+        .addDef(DstReg)
+        .addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS64);
+    return;
+  }
+
   LLT S32 = LLT::scalar(32);
 
   // Use the destination directly, if and only if we store the lower address

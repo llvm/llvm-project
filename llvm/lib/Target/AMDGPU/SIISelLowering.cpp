@@ -7062,6 +7062,13 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
   }
 
   if (Subtarget->isAmdPalOS() || Subtarget->isMesa3DOS()) {
+    if (Subtarget->has64BitLiterals()) {
+      SDValue Addr = DAG.getTargetGlobalAddress(
+          GV, DL, MVT::i64, GSD->getOffset(), SIInstrInfo::MO_ABS64);
+      return SDValue(DAG.getMachineNode(AMDGPU::S_MOV_B64, DL, MVT::i64, Addr),
+                     0);
+    }
+
     SDValue AddrLo = DAG.getTargetGlobalAddress(
         GV, DL, MVT::i32, GSD->getOffset(), SIInstrInfo::MO_ABS32_LO);
     AddrLo = {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, AddrLo), 0};

@@ -2196,8 +2196,14 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case AMDGPU::S_MOV_B64_IMM_PSEUDO: {
     const MachineOperand &SrcOp = MI.getOperand(1);
     assert(!SrcOp.isFPImm());
+
+    if (ST.has64BitLiterals()) {
+      MI.setDesc(get(AMDGPU::S_MOV_B64));
+      break;
+    }
+
     APInt Imm(64, SrcOp.getImm());
-    if (Imm.isIntN(32) || isInlineConstant(Imm) || ST.has64BitLiterals()) {
+    if (Imm.isIntN(32) || isInlineConstant(Imm)) {
       MI.setDesc(get(AMDGPU::S_MOV_B64));
       break;
     }
@@ -8643,8 +8649,7 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
               LiteralSize = 8;
             break;
           case AMDGPU::OPERAND_REG_IMM_INT64:
-            if (Op.isMCSymbol() /* S_ADD_PC_I64 */ ||
-              !AMDGPU::isValid32BitLiteral(Op.getImm(), false))
+            if (!Op.isImm() || !AMDGPU::isValid32BitLiteral(Op.getImm(), false))
               LiteralSize = 8;
             break;
           }

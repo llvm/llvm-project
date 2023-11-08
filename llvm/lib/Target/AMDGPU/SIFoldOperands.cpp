@@ -990,7 +990,7 @@ void SIFoldOperands::foldOperand(
   if (UseOp.getSubReg() && AMDGPU::getRegBitWidth(*FoldRC) == 64) {
     Register UseReg = UseOp.getReg();
     const TargetRegisterClass *UseRC = MRI->getRegClass(UseReg);
-    if (AMDGPU::getRegBitWidth(*UseRC) != 64)
+    if (AMDGPU::getRegBitWidth(*UseRC) != 64 || !OpToFold.isImm())
       return;
 
     APInt Imm(64, OpToFold.getImm());
