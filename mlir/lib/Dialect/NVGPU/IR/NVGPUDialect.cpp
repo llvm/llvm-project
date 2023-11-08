@@ -393,6 +393,11 @@ LogicalResult TmaAsyncLoadOp::verify() {
     return emitError() << "Maximum " << kMaxTMATensorDimension
                        << " coordinates are supported.";
   }
+  if (getCoordinates().size() !=
+      getTensorMapDescriptor().getType().getTensor().getRank()) {
+    return emitError() << "number of coordinates do not match with the rank of "
+                          "tensor descriptor map.";
+  }
 
   return success();
 }
