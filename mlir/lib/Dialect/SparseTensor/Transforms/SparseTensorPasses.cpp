@@ -96,13 +96,8 @@ struct SparsificationPass
                                   enableRuntimeLibrary);
     // Apply GPU libgen (if requested), sparsification, and cleanup rewriting.
     RewritePatternSet patterns(ctx);
-    if (enableGPULibgen) {
-      // TODO : Zero copy is disabled due to correctness bugs.Tracker #64316
-      assert(gpuDataTransfer != GPUDataTransferStrategy::kZeroCopy &&
-             "zero-copy transfer not supported with GPU libgen");
-      populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary,
-                                      gpuDataTransfer);
-    }
+    if (enableGPULibgen)
+      populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary);
     populateSparsificationPatterns(patterns, options);
     scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
