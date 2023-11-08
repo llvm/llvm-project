@@ -39,7 +39,7 @@ static func::FuncOp genKokkosFunc(OpBuilder &builder, ModuleOp module,
                                  SmallVectorImpl<Value> &args) {
   static unsigned kernelNumber = 0;
   SmallString<16> kernelName;
-  ("__kokkos_sparse_kernel_" + Twine(kernelNumber++)).toStringRef(kernelName);
+  ("kokkos_sparse_kernel_" + Twine(kernelNumber++)).toStringRef(kernelName);
   // Then we insert a new kernel with given arguments into the module.
   builder.setInsertionPointToStart(&module.getBodyRegion().front());
   SmallVector<Type> argsTp;
@@ -49,13 +49,6 @@ static func::FuncOp genKokkosFunc(OpBuilder &builder, ModuleOp module,
   return builder.create<func::FuncOp>(module.getLoc(), kernelName, type);
 }
 
-static void genCallFunc(OpBuilder &builder, func::FuncOp func,
-                              SmallVectorImpl<Value> &args) {
-  Location loc = func->getLoc();
-  return builder
-      .create<func::CallOp>(loc, gpuFunc, gridSize, blckSize,
-                                 /*dynSharedMemSz*/ none, args,
-                                 builder.getType<gpu::AsyncTokenType>(), tokens);
 }
 
 /// Allocates memory on the device.
@@ -149,14 +142,13 @@ static void genParametersOut(OpBuilder &builder, Location loc,
   }
 }
 
-/// Constructs code for new GPU kernel.
-static void genGPUCode(PatternRewriter &rewriter, gpu::GPUFuncOp gpuFunc,
+static void genKokkosCode(PatternRewriter &rewriter, func::FuncOp func,
                        scf::ParallelOp forallOp,
                        SmallVectorImpl<Value> &constants,
                        SmallVectorImpl<Value> &scalars,
                        SmallVectorImpl<Value> &buffers) {
-  Location loc = gpuFunc->getLoc();
-  Block &block = gpuFunc.getBody().front();
+  Location loc = func->getLoc();
+  Block &block = func.getBody().front();
   rewriter.setInsertionPointToStart(&block);
 
   // Re-generate the constants, recapture all arguments.
@@ -169,32 +161,11 @@ static void genGPUCode(PatternRewriter &rewriter, gpu::GPUFuncOp gpuFunc,
   for (Value b : buffers)
     irMap.map(b, block.getArgument(arg++));
 
-  // Assume 1-dimensional grid/block configuration (only x dimension),
-  // so that:
-  //   row = blockIdx.x * blockDim.x + threadIdx.x
-  //   inc = blockDim.x * gridDim.x
-  Value bid = rewriter.create<gpu::BlockIdOp>(loc, gpu::Dimension::x);
-  Value bsz = rewriter.create<gpu::BlockDimOp>(loc, gpu::Dimension::x);
-  Value tid = rewriter.create<gpu::ThreadIdOp>(loc, gpu::Dimension::x);
-  Value gsz = rewriter.create<gpu::GridDimOp>(loc, gpu::Dimension::x);
-  Value mul = rewriter.create<arith::MulIOp>(loc, bid, bsz);
-  Value row = rewriter.create<arith::AddIOp>(loc, mul, tid);
-  Value inc = rewriter.create<arith::MulIOp>(loc, bsz, gsz);
-
-  // Construct the iteration over the computational space that
-  // accounts for the fact that the total number of threads and
-  // the amount of work to be done usually do not match precisely.
-  //   for (r = row; r < N; r += inc) {
-  //     <loop-body>
-  //   }
-  Value upper = irMap.lookup(forallOp.getUpperBound()[0]);
-  scf::ForOp forOp = rewriter.create<scf::ForOp>(loc, row, upper, inc);
-  rewriter.cloneRegionBefore(forallOp.getLoopBody(), forOp.getLoopBody(),
-                             forOp.getLoopBody().begin(), irMap);
-
-  // Done.
-  rewriter.setInsertionPointAfter(forOp);
-  rewriter.create<gpu::ReturnOp>(gpuFunc->getLoc());
+  // Copy the outer scf.parallel to this function, but redefine
+  // all constants, and replace scalars and buffers with corresponding arguments to func.
+  rewriter.clone(forallOp, irMap);
+  
+  //TODO: if forallOp has at least one reduction at the top level, func should return those result(s)
 }
 
 struct KokkosForallRewriter : public OpRewritePattern<scf::ParallelOp> {
@@ -206,14 +177,16 @@ struct KokkosForallRewriter : public OpRewritePattern<scf::ParallelOp> {
   LogicalResult matchAndRewrite(scf::ParallelOp forallOp,
                                 PatternRewriter &rewriter) const override {
     // Check the forallOp for operations that can't be executed on device
+    // NOTE: Kokkos emitter will have to check for this again, since we have
+    // no way to mark an scf.parallel as executing in a particular place.
     bool canBeOffloaded = true;
-    forallOp->walk([&](func::CallOp op) {
+    forallOp->walk([&](func::CallOp) {
         canBeOffloaded = false;
     });
-    forallOp->walk([&](memref::AllocOp op) {
+    forallOp->walk([&](memref::AllocOp) {
         canBeOffloaded = false;
     });
-    forallOp->walk([&](memref::AllocaOp op) {
+    forallOp->walk([&](memref::AllocaOp) {
         canBeOffloaded = false;
     });
     if(!canBeOffloaded)
@@ -264,8 +237,8 @@ struct KokkosForallRewriter : public OpRewritePattern<scf::ParallelOp> {
 
     rewriter.restoreInsertionPoint(saveIp);
 
-    genBlockingWait(rewriter, loc);
-    genCallFunc(rewriter, gpuFunc, args, numThreads);
+    // Call the Kokkos function, with the 
+    rewriter.create<func::CallOp>(func->getLoc(), func, args);
     // Finalize the outlined arguments.
     genParametersOut(rewriter, loc, scalars, buffers, args);
     rewriter.eraseOp(forallOp);
