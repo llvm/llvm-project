@@ -3940,6 +3940,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   Args.ClaimAllArgs(options::OPT_fmodule_output);
   Args.ClaimAllArgs(options::OPT_fmodule_output_EQ);
 
+  Args.AddLastArg(CmdArgs, options::OPT_fthinBMI_output_EQ);
+
   return HaveModules;
 }
 

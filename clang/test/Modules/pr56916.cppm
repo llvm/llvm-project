@@ -8,6 +8,18 @@
 // RUN:     -fprebuilt-module-path=%t
 // RUN: %clang_cc1 -std=c++20 %t/Use.cpp -fsyntax-only -fprebuilt-module-path=%t -verify
 
+// Test again with thin BMI.
+// RUN: rm -rf %t
+// RUN: mkdir %t
+// RUN: split-file %s %t
+//
+// RUN: %clang_cc1 -std=c++20 %t/A.cppm -emit-thin-module-interface -o %t/M-A.pcm
+// RUN: %clang_cc1 -std=c++20 %t/B.cppm -emit-thin-module-interface -o %t/M-B.pcm
+// RUN: %clang_cc1 -std=c++20 %t/M.cppm -emit-thin-module-interface -o %t/M.pcm \
+// RUN:     -fprebuilt-module-path=%t
+// RUN: %clang_cc1 -std=c++20 %t/Use.cpp -fsyntax-only -fprebuilt-module-path=%t -verify
+
+
 //--- foo.h
 template <typename T>
 class Templ {

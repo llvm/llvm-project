@@ -166,6 +166,10 @@ private:
   /// Indicates that the AST contained compiler errors.
   bool ASTHasCompilerErrors = false;
 
+  /// Indicates that we're going to generate the reduced BMI for C++20
+  /// named modules.
+  bool GeneratingThinBMI = false;
+
   /// Mapping from input file entries to the index into the
   /// offset table where information about that input file is stored.
   llvm::DenseMap<const FileEntry *, uint32_t> InputFileIDs;
@@ -582,7 +586,8 @@ public:
   ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
             InMemoryModuleCache &ModuleCache,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-            bool IncludeTimestamps = true, bool BuildingImplicitModule = false);
+            bool IncludeTimestamps = true, bool BuildingImplicitModule = false,
+            bool GeneratingThinBMI = false);
   ~ASTWriter() override;
 
   ASTContext &getASTContext() const {
@@ -813,6 +818,13 @@ protected:
   const ASTWriter &getWriter() const { return Writer; }
   SmallVectorImpl<char> &getPCH() const { return Buffer->Data; }
 
+  bool isComplete() const { return Buffer->IsComplete; }
+  PCHBuffer *getBufferPtr() { return Buffer.get(); }
+  StringRef getOutputFile() const { return OutputFile; }
+  DiagnosticsEngine &getDiagnostics() const {
+    return SemaPtr->getDiagnostics();
+  }
+
 public:
   PCHGenerator(const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                StringRef OutputFile, StringRef isysroot,
@@ -820,7 +832,8 @@ public:
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
                bool BuildingImplicitModule = false,
-               bool ShouldCacheASTInMemory = false);
+               bool ShouldCacheASTInMemory = false,
+               bool GeneratingThinBMI = false);
   ~PCHGenerator() override;
 
   void InitializeSema(Sema &S) override { SemaPtr = &S; }
@@ -829,6 +842,19 @@ public:
   ASTDeserializationListener *GetASTDeserializationListener() override;
   bool hasEmittedPCH() const { return Buffer->IsComplete; }
 };
+
+class ThinBMIGenerator : public PCHGenerator {
+public:
+  ThinBMIGenerator(const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+                   StringRef OutputFile, std::shared_ptr<PCHBuffer> Buffer,
+                   bool IncludeTimestamps);
+
+  void HandleTranslationUnit(ASTContext &Ctx) override;
+};
+
+/// If the definition may impact the ABI. If yes, we're allowed to eliminate
+/// the definition of D in thin BMI.
+bool MayDefAffectABI(const Decl *D);
 
 /// A simple helper class to pack several bits in order into (a) 32 bit
 /// integer(s).

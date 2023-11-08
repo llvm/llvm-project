@@ -4,6 +4,9 @@
 //
 // RUN: %clang_cc1 -std=c++20 %t/mod.cppm -emit-module-interface -o %t/mod.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -fsyntax-only -verify
+
+// RUN: %clang_cc1 -std=c++20 %t/mod.cppm -emit-thin-module-interface -o %t/mod.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -fsyntax-only -verify
 //
 //--- mod.cppm
 export module mod;

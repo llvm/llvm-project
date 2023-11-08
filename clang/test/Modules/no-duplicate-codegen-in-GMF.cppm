@@ -9,6 +9,14 @@
 // RUN:     -fprebuilt-module-path=%t
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/B.pcm -S -emit-llvm -o - | FileCheck %t/B.cppm
 
+// Test again with thin BMI. Note that we need to generate fat BMI for B.cppm
+// since it is required to generate backend codes.
+// RUN: rm %t/A.pcm %t/B.pcm
+// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/A.cppm -emit-thin-module-interface -o %t/A.pcm
+// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/B.cppm -emit-module-interface -o %t/B.pcm \
+// RUN:     -fprebuilt-module-path=%t
+// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/B.pcm -S -emit-llvm -o - | FileCheck %t/B.cppm
+
 //--- foo.h
 
 template <class T>

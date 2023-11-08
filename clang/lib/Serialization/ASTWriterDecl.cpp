@@ -16,6 +16,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ODRHash.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/SourceManager.h"
@@ -40,11 +41,14 @@ namespace clang {
     serialization::DeclCode Code;
     unsigned AbbrevToUse;
 
+    bool GeneratingThinBMI = false;
+
   public:
     ASTDeclWriter(ASTWriter &Writer, ASTContext &Context,
-                  ASTWriter::RecordDataImpl &Record)
+                  ASTWriter::RecordDataImpl &Record, bool GeneratingThinBMI)
         : Writer(Writer), Context(Context), Record(Writer, Record),
-          Code((serialization::DeclCode)0), AbbrevToUse(0) {}
+          Code((serialization::DeclCode)0), AbbrevToUse(0),
+          GeneratingThinBMI(GeneratingThinBMI) {}
 
     uint64_t Emit(Decl *D) {
       if (!Code)
@@ -270,6 +274,35 @@ namespace clang {
   };
 }
 
+bool clang::MayDefAffectABI(const Decl *D) {
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (FD->isInlined() || FD->isConstexpr())
+      return true;
+
+    // Non-user-provided functions get emitted as weak definitions with every
+    // use, no matter whether they've been explicitly instantiated etc.
+    if (!FD->isUserProvided())
+      return true;
+    
+    if (FD->isDependentContext())
+      return true;
+
+    if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return true;
+  }
+
+  if (auto *VD = dyn_cast<VarDecl>(D)) {
+    if (!VD->getDeclContext()->getRedeclContext()->isFileContext() ||
+        VD->isInline() || VD->isConstexpr() || isa<ParmVarDecl>(VD))
+      return true;
+
+    if (VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return true;
+  }
+
+  return false;
+}
+
 void ASTDeclWriter::Visit(Decl *D) {
   DeclVisitor<ASTDeclWriter>::Visit(D);
 
@@ -285,9 +318,12 @@ void ASTDeclWriter::Visit(Decl *D) {
   // have been written. We want it last because we will not read it back when
   // retrieving it from the AST, we'll just lazily set the offset.
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-    Record.push_back(FD->doesThisDeclarationHaveABody());
-    if (FD->doesThisDeclarationHaveABody())
-      Record.AddFunctionDefinition(FD);
+    if (!GeneratingThinBMI || MayDefAffectABI(FD)) {
+      Record.push_back(FD->doesThisDeclarationHaveABody());
+      if (FD->doesThisDeclarationHaveABody())
+        Record.AddFunctionDefinition(FD);
+    } else
+      Record.push_back(0);
   }
 
   // Similar to FunctionDecls, handle VarDecl's initializer here and write it
@@ -295,7 +331,10 @@ void ASTDeclWriter::Visit(Decl *D) {
   // we have finished recursive deserialization, because it can recursively
   // refer back to the variable.
   if (auto *VD = dyn_cast<VarDecl>(D)) {
-    Record.AddVarDeclInit(VD);
+    if (!GeneratingThinBMI || MayDefAffectABI(VD))
+      Record.AddVarDeclInit(VD);
+    else
+      Record.push_back(0);
   }
 
   // And similarly for FieldDecls. We already serialized whether there is a
@@ -2486,7 +2525,7 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
   assert(ID >= FirstDeclID && "invalid decl ID");
 
   RecordData Record;
-  ASTDeclWriter W(*this, Context, Record);
+  ASTDeclWriter W(*this, Context, Record, GeneratingThinBMI);
 
   // Build a record for this declaration
   W.Visit(D);

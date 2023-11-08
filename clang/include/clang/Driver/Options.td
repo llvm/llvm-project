@@ -2915,6 +2915,11 @@ def fmodule_output : Flag<["-"], "fmodule-output">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Save intermediate module file results when compiling a standard C++ module unit.">;
 
+def fthinBMI_output_EQ : Joined<["-"], "fthinBMI-output=">, Group<f_Group>,
+  HelpText<"Specify the output path for the thin BMI for C++20 Named modules">,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  MarshallingInfoString<FrontendOpts<"ThinBMIPath">>;
+
 def fmodules_prune_interval : Joined<["-"], "fmodules-prune-interval=">, Group<i_Group>,
   Visibility<[ClangOption, CC1Option]>, MetaVarName<"<seconds>">,
   HelpText<"Specify the interval (in seconds) between attempts to prune the module cache">,
@@ -7223,7 +7228,9 @@ def ast_view : Flag<["-"], "ast-view">,
 def emit_module : Flag<["-"], "emit-module">,
   HelpText<"Generate pre-compiled module file from a module map">;
 def emit_module_interface : Flag<["-"], "emit-module-interface">,
-  HelpText<"Generate pre-compiled module file from a C++ module interface">;
+  HelpText<"Generate pre-compiled module file from a standard C++ module interface unit">;
+def emit_thin_module_interface : Flag<["-"], "emit-thin-module-interface">,
+  HelpText<"Generate reduced prebuilt module interface from a standard C++ module interface unit">;
 def emit_header_unit : Flag<["-"], "emit-header-unit">,
   HelpText<"Generate C++20 header units from header files">;
 def emit_pch : Flag<["-"], "emit-pch">,

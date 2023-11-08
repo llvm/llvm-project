@@ -11,6 +11,21 @@
 // RUN:    -o %t/lambdas2.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -fsyntax-only \
 // RUN:    -verify -DUSE_LAMBDA2
+//
+// Test again with thin BMI.
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+// RUN: split-file %s %t
+//
+// RUN: %clang_cc1 -std=c++20 %t/lambdas.cppm -emit-thin-module-interface \
+// RUN:    -o %t/lambdas.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -fsyntax-only \
+// RUN:    -verify
+//
+// RUN: %clang_cc1 -std=c++20 %t/lambdas2.cppm -emit-thin-module-interface \
+// RUN:    -o %t/lambdas2.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -fsyntax-only \
+// RUN:    -verify -DUSE_LAMBDA2
 
 //--- lambdas.h
 auto l1 = []() constexpr -> int {

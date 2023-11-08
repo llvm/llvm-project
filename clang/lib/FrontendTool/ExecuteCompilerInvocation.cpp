@@ -65,6 +65,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return std::make_unique<GenerateModuleFromModuleMapAction>();
   case GenerateModuleInterface:
     return std::make_unique<GenerateModuleInterfaceAction>();
+  case GenerateThinModuleInterface:
+    return std::make_unique<GenerateThinModuleInterfaceAction>();
   case GenerateHeaderUnit:
     return std::make_unique<GenerateHeaderUnitAction>();
   case GeneratePCH:            return std::make_unique<GeneratePCHAction>();

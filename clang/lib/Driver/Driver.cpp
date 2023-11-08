@@ -4086,6 +4086,13 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     }
   }
 
+  // Diagnose misuse of -fthinBMI-output. It should be an error if we specify
+  // -fthinBMI-output with multiple precompilation jobs. Here we didn't check if
+  // there are multiple module units in the inputs.
+  if (C.getArgs().getLastArg(options::OPT_fthinBMI_output_EQ) &&
+      Inputs.size() > 1)
+    Diag(clang::diag::err_drv_thin_bmi_output_argument_with_multiple_files);
+
   handleArguments(C, Args, Inputs, Actions);
 
   bool UseNewOffloadingDriver =

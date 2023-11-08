@@ -158,6 +158,8 @@ def err_drv_invalid_output_with_multiple_archs : Error<
 def err_drv_no_input_files : Error<"no input files">;
 def err_drv_output_argument_with_multiple_files : Error<
   "cannot specify -o when generating multiple output files">;
+def err_drv_thin_bmi_output_argument_with_multiple_files : Error <
+  "cannot specify -fthinBMI-output when generating multiple module files">;
 def err_drv_out_file_argument_with_multiple_sources : Error<
   "cannot specify '%0%1' when compiling multiple source files">;
 def err_no_external_assembler : Error<

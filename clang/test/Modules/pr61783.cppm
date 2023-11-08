@@ -9,6 +9,14 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-pc-windows-msvc19.11.0 -fms-extensions %t/user.cpp -fmodule-file=mod=%t/mod.pcm \
 // RUN:     -S -emit-llvm -o - | FileCheck %t/user.cpp
 
+// Test again with thin BMI
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-pc-windows-msvc19.11.0 -fms-extensions %t/mod.cppm -emit-thin-module-interface \
+// RUN:     -o %t/mod.pcm
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-pc-windows-msvc19.11.0 -fms-extensions %t/mod.pcm -S -emit-llvm -o - | \
+// RUN:     FileCheck %t/mod.cppm
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-pc-windows-msvc19.11.0 -fms-extensions %t/user.cpp -fmodule-file=mod=%t/mod.pcm \
+// RUN:     -S -emit-llvm -o - | FileCheck %t/user.cpp
+
 //--- mod.cppm
 module;
 
