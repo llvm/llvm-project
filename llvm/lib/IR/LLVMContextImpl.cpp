@@ -45,6 +45,14 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
       Int16Ty(C, 16), Int32Ty(C, 32), Int64Ty(C, 64), Int128Ty(C, 128) {}
 
 LLVMContextImpl::~LLVMContextImpl() {
+#ifndef NDEBUG
+  // Check that any variable location records that fell off the end of a block
+  // when it's terminator was removed were eventually replaced. This assertion
+  // firing indicates that DPValues went missing during the lifetime of the
+  // LLVMContext.
+  assert(TrailingDPValues.empty() && "DPValue records in blocks not cleaned");
+#endif
+
   // NOTE: We need to delete the contents of OwnedModules, but Module's dtor
   // will call LLVMContextImpl::removeModule, thus invalidating iterators into
   // the container. Avoid iterators during this operation:
