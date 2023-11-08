@@ -45,7 +45,8 @@ Value *llvm::emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL,
   for (User::op_iterator i = GEP->op_begin() + 1, e = GEP->op_end(); i != e;
        ++i, ++GTI) {
     Value *Op = *i;
-    uint64_t Size = DL.getTypeAllocSize(GTI.getIndexedType()) & PtrSizeMask;
+    TypeSize TSize = DL.getTypeAllocSize(GTI.getIndexedType());
+    uint64_t Size = TSize.getKnownMinValue() & PtrSizeMask;
     if (Constant *OpC = dyn_cast<Constant>(Op)) {
       if (OpC->isZeroValue())
         continue;
@@ -70,10 +71,12 @@ Value *llvm::emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL,
     // Convert to correct type.
     if (Op->getType() != IntIdxTy)
       Op = Builder->CreateIntCast(Op, IntIdxTy, true, Op->getName() + ".c");
-    if (Size != 1) {
+    if (Size != 1 || TSize.isScalable()) {
       // We'll let instcombine(mul) convert this to a shl if possible.
-      Op = Builder->CreateMul(Op, ConstantInt::get(IntIdxTy, Size),
-                              GEP->getName() + ".idx", false /*NUW*/,
+      auto *ScaleC = ConstantInt::get(IntIdxTy, Size);
+      Value *Scale =
+          !TSize.isScalable() ? ScaleC : Builder->CreateVScale(ScaleC);
+      Op = Builder->CreateMul(Op, Scale, GEP->getName() + ".idx", false /*NUW*/,
                               isInBounds /*NSW*/);
     }
     AddOffset(Op);
