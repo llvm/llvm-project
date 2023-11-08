@@ -115,7 +115,7 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
     auto &Expr2 = cast<BoolValue>(Val2).formula();
     auto &A = MergedEnv.arena();
     auto &MergedVal = A.makeAtomRef(A.makeAtom());
-    MergedEnv.addToFlowCondition(
+    MergedEnv.assume(
         A.makeOr(A.makeAnd(A.makeAtomRef(Env1.getFlowConditionToken()),
                            A.makeEquals(MergedVal, Expr1)),
                  A.makeAnd(A.makeAtomRef(Env2.getFlowConditionToken()),
