@@ -397,6 +397,8 @@ const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
   case CallingConv::AMDGPU_Gfx:
     return ST.hasGFX90AInsts() ? CSR_AMDGPU_SI_Gfx_GFX90AInsts_SaveList
                                : CSR_AMDGPU_SI_Gfx_SaveList;
+  case CallingConv::AMDGPU_CS_ChainPreserve:
+    return CSR_AMDGPU_CS_ChainPreserve_SaveList;
   default: {
     // Dummy to not crash RegisterClassInfo.
     static const MCPhysReg NoCalleeSavedReg = AMDGPU::NoRegister;
@@ -433,6 +435,10 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
 
 const uint32_t *SIRegisterInfo::getNoPreservedMask() const {
   return CSR_AMDGPU_NoRegs_RegMask;
+}
+
+bool SIRegisterInfo::isChainScratchRegister(Register VGPR) {
+  return VGPR >= AMDGPU::VGPR0 && VGPR < AMDGPU::VGPR8;
 }
 
 const TargetRegisterClass *
