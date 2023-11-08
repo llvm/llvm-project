@@ -258,6 +258,11 @@
 //   a non-existent element. For iterator checks to work, bounded iterators must be enabled in the ABI. Types like
 //   `optional` and `function` are considered one-element containers for the purposes of this check.
 //
+// - `_LIBCPP_ASSERT_NON_NULL` -- checks that the pointer being dereferenced is not null. On most modern platforms zero
+//   address does not refer to an actual location in memory, so a null pointer dereference would not compromize the
+//   memory security of a program (however, it is still undefined behavior that can result in strange errors due to
+//   compiler optimizations).
+//
 // - `_LIBCPP_ASSERT_NON_OVERLAPPING_RANGES` -- for functions that take several ranges as arguments, checks that the
 //   given ranges do not overlap.
 //
@@ -306,6 +311,8 @@
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)        _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)     _LIBCPP_ASSERT(expression, message)
 // Disabled checks.
+// On most modern platforms, dereferencing a null pointer does not lead to an actual memory access.
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                 _LIBCPP_ASSUME(expression)
 // Overlapping ranges will make algorithms produce incorrect results but don't directly lead to a security
 // vulnerability.
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSUME(expression)
@@ -320,6 +327,7 @@
 // Enabled checks.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)        _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)     _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                 _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSERT(expression, message)
@@ -333,6 +341,7 @@
 // All checks enabled.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)         _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)      _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSERT(expression, message)
@@ -345,6 +354,7 @@
 // All checks disabled.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)         _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)      _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSUME(expression)
