@@ -390,7 +390,7 @@ static cl::opt<cl::boolOrDefault> ForceSafeDivisor(
     cl::desc(
         "Override cost based safe divisor widening for div/rem instructions"));
 
-static cl::opt<bool> UseWiderVFIfVariantsPresent(
+static cl::opt<bool> UseWiderVFIfCallVariantsPresent(
     "vectorizer-maximize-bandwidth-for-vector-calls", cl::init(true),
     cl::Hidden,
     cl::desc("Try wider VFs if they enable the use of vector variants"));
@@ -5159,7 +5159,7 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
   if (MaximizeBandwidth ||
       (MaximizeBandwidth.getNumOccurrences() == 0 &&
        (TTI.shouldMaximizeVectorBandwidth(RegKind) ||
-        (UseWiderVFIfVariantsPresent && Legal->hasVectorCallVariants())))) {
+        (UseWiderVFIfCallVariantsPresent && Legal->hasVectorCallVariants())))) {
     auto MaxVectorElementCountMaxBW = ElementCount::get(
         llvm::bit_floor(WidestRegister.getKnownMinValue() / SmallestType),
         ComputeScalableMaxVF);
