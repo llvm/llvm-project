@@ -9688,18 +9688,7 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
     }
     return C;
   }
-  case scMulExpr: {
-    const SCEVMulExpr *SM = cast<SCEVMulExpr>(V);
-    Constant *C = nullptr;
-    for (const SCEV *Op : SM->operands()) {
-      assert(!Op->getType()->isPointerTy() && "Can't multiply pointers");
-      Constant *OpC = BuildConstantFromSCEV(Op);
-      if (!OpC)
-        return nullptr;
-      C = C ? ConstantExpr::getMul(C, OpC) : OpC;
-    }
-    return C;
-  }
+  case scMulExpr:
   case scSignExtend:
   case scZeroExtend:
   case scUDivExpr:
