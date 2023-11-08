@@ -6,24 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test ensures that we can enable the debug mode on a per-TU basis.
+// TODO(hardening): remove in LLVM 20.
+// This test ensures that enabling assertions with the legacy `_LIBCPP_ENABLE_ASSERTIONS` now enables the extensive
+// hardening mode.
 
-// Other hardening modes would additionally trigger the error that they are mutually exclusive.
-// REQUIRES: libcpp-hardening-mode=unchecked
 // `check_assertion.h` is only available starting from C++11 and requires Unix headers.
 // UNSUPPORTED: c++03, !has-unix-headers
 // The ability to set a custom abort message is required to compare the assertion message.
 // XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_DEBUG_MODE=1
+// Note that GCC doesn't support `-Wno-macro-redefined`.
+// ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_HARDENING_MODE -D_LIBCPP_ENABLE_ASSERTIONS=1
 
 #include <cassert>
 #include "check_assertion.h"
 
 int main(int, char**) {
+  static_assert(_LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_EXTENSIVE,
+                "The extensive hardening mode should be implicitly enabled");
+
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");
-  TEST_LIBCPP_ASSERT_FAILURE([] {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Should fire");
-  }(), "Should fire");
+  TEST_LIBCPP_ASSERT_FAILURE([] { _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Should fire"); }(), "Should fire");
 
   return 0;
 }

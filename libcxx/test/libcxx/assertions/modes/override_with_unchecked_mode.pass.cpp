@@ -6,14 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test ensures that we can disable the hardened mode on a per-TU basis.
+// This test ensures that we can override any hardening mode with the unchecked mode on a per-TU basis.
 
-// Other hardening modes would still make the assertions fire (disabling the hardened mode doesn't disable e.g. the
-// debug mode).
-// REQUIRES: libcpp-hardening-mode=hardened
-// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_HARDENED_MODE=0
+// `check_assertion.h` is only available starting from C++11.
+// UNSUPPORTED: c++03
+// `check_assertion.h` requires Unix headers.
+// REQUIRES: has-unix-headers
+// ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE
 
 #include <cassert>
+#include "check_assertion.h"
 
 int main(int, char**) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");
