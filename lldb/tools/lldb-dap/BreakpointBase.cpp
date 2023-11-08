@@ -295,9 +295,11 @@ bool BreakpointBase::BreakpointHitCallback(
           frame.GetValueForVariablePath(expr, lldb::eDynamicDontRunTarget);
       if (value.GetError().Fail())
         value = frame.EvaluateExpression(expr);
-      const char *expr_val = value.GetValue();
-      if (expr_val)
-        output += expr_val;
+      llvm::StringRef summary_str = value.GetSummary();
+      if (!summary_str.empty())
+        output += summary_str.str();
+      else
+        output += value.GetValue();
     } else {
       output += messagePart.text;
     }
