@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang --offload-arch=gfx906 -S -o - -emit-llvm --cuda-device-only \
+// RUN: %clang --offload-arch=gfx906 -S -o - -emit-llvm --cuda-device-only -nogpuinc -nogpulib \
 // RUN:   %s | FileCheck %s
 
 constexpr static int OpCtrl()
