@@ -576,7 +576,7 @@ struct TestVectorDistribution
       OpBuilder builder(val.getContext());
       SmallVector<AffineExpr, 4> vecDims =
           llvm::map_to_vector(llvm::seq<int64_t>(0, vecRank), [&](int64_t i) {
-            return builder.getAffineDimExpr(vecRank - i - 1);
+            return builder.getAffineDimExpr(i);
           });
       return AffineMap::get(vecRank, /*symbolCount=*/0, vecDims,
                             builder.getContext());
