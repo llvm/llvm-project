@@ -233,6 +233,9 @@ private:
   // Parses a string in the form of "[:<integer>]"
   void parseFunctionPadMin(llvm::opt::Arg *a);
 
+  // Parses a string in the form of "[:<integer>]"
+  void parseDependentLoadFlags(llvm::opt::Arg *a);
+
   // Parses a string in the form of "EMBED[,=<integer>]|NO".
   void parseManifest(StringRef arg);
 

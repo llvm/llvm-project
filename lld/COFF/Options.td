@@ -56,6 +56,9 @@ def filealign : P<"filealign", "Section alignment in the output file">;
 def functionpadmin : F<"functionpadmin">;
 def functionpadmin_opt : P<"functionpadmin",
     "Prepares an image for hotpatching">;
+def dependentloadflag : F<"dependentloadflag">;
+def dependentloadflag_opt : P<"dependentloadflag",
+    "Sets the default load flags used to resolve the statically linked imports of a module">;
 def guard   : P<"guard", "Control flow guard">;
 def heap    : P<"heap", "Size of the heap">;
 def ignore : P<"ignore", "Specify warning codes to ignore">;
