@@ -28,7 +28,7 @@ LogicalResult translateToKokkosCpp(Operation *op, raw_ostream &os,
 
 /// Translates the given operation to Kokkos C++ code, with a Python wrapper module written to py_os.
 LogicalResult translateToKokkosCpp(Operation *op, raw_ostream &os, raw_ostream &py_os,
-                                bool enableSparseSupport = false, bool useHierarchical = false);
+                                bool enableSparseSupport = false, bool useHierarchical = false, bool isLastKernel = true);
 } // namespace emitc
 } // namespace mlir
 
