@@ -166,34 +166,6 @@ class SequenceOp(SequenceOp):
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
-class NamedSequenceOp(NamedSequenceOp):
-    def __init__(
-        self,
-        sym_name,
-        input_types: Sequence[Type],
-        result_types: Sequence[Type],
-    ):
-        function_type = FunctionType.get(input_types, result_types)
-        super().__init__(
-            sym_name=sym_name,
-            function_type=TypeAttr.get(function_type),
-        )
-        self.regions[0].blocks.append(*input_types)
-
-    @property
-    def body(self) -> Block:
-        return self.regions[0].blocks[0]
-
-    @property
-    def bodyTarget(self) -> Value:
-        return self.body.arguments[0]
-
-    @property
-    def bodyExtraArgs(self) -> BlockArgumentList:
-        return self.body.arguments[1:]
-
-
-@_ods_cext.register_operation(_Dialect, replace=True)
 class YieldOp(YieldOp):
     def __init__(
         self,
