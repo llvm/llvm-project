@@ -8,5 +8,4 @@ add_mlir_dialect_library(MLIRPartTensorPipelines
   MLIRSparseTensorPipelines
   MLIRPartTensor
   MLIRPartTensorTransforms
-  MLIRPartTensorToLLVM
 )
