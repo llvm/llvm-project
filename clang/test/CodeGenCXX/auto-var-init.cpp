@@ -134,12 +134,8 @@ struct arraytail { int i; int arr[]; };
 // PATTERN-O1-NOT: @__const.test_bool4_custom.custom
 // ZERO-O1-NOT: @__const.test_bool4_custom.custom
 
-// PATTERN: @__const.test_intptr4_custom.custom = private unnamed_addr constant [4 x ptr] [ptr inttoptr ([[IPTRT]] 572662306 to ptr), ptr inttoptr ([[IPTRT]] 572662306 to ptr), ptr inttoptr ([[IPTRT]] 572662306 to ptr), ptr inttoptr ([[IPTRT]] 572662306 to ptr)], align
-// ZERO: @__const.test_intptr4_custom.custom = private unnamed_addr constant [4 x ptr] [ptr inttoptr (i64 572662306 to ptr), ptr inttoptr (i64 572662306 to ptr), ptr inttoptr (i64 572662306 to ptr), ptr inttoptr (i64 572662306 to ptr)], align 16
 // PATTERN-O0: @__const.test_tailpad4_uninit.uninit = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 [[I16]], i8 [[I8]], [1 x i8] c"\[[IC]]" }, { i16, i8, [1 x i8] } { i16 [[I16]], i8 [[I8]], [1 x i8] c"\[[IC]]" }, { i16, i8, [1 x i8] } { i16 [[I16]], i8 [[I8]], [1 x i8] c"\[[IC]]" }, { i16, i8, [1 x i8] } { i16 [[I16]], i8 [[I8]], [1 x i8] c"\[[IC]]" }], align
 // PATTERN-O1-NOT: @__const.test_tailpad4_uninit.uninit
-// PATTERN:   @__const.test_tailpad4_custom.custom = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }], align
-// ZERO: @__const.test_tailpad4_custom.custom = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }], align 16
 struct tailpad { short s; char c; };
 // PATTERN-O0: @__const.test_atomicnotlockfree_uninit.uninit = private unnamed_addr constant %struct.notlockfree { [4 x i64] {{\[}}i64 [[I64]], i64 [[I64]], i64 [[I64]], i64 [[I64]]] }, align
 // PATTERN-O1-NOT: @__const.test_atomicnotlockfree_uninit.uninit
@@ -1503,7 +1499,11 @@ TEST_CUSTOM(unmatchedreverse, unmatchedreverse, { .c = 42  });
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
 // PATTERN-O1:  store i8 42, ptr {{.*}}, align 4
 // PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 1
-// PATTERN-O1-NEXT:  call void @llvm.memset.{{.*}}({{.*}}, i8 -86, i64 3, {{.*}})
+// PATTERN-O1-NEXT:  store i8 -86, ptr %[[I]], align {{.*}}
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 2
+// PATTERN-O1-NEXT:  store i8 -86, ptr %[[I]], align {{.*}}
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 3
+// PATTERN-O1-NEXT:  store i8 -86, ptr %[[I]], align {{.*}}
 // ZERO-O1:     store i8 42, ptr {{.*}}, align 4
 // ZERO-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 1
 // ZERO-O1-NEXT:  call void @llvm.memset.{{.*}}({{.*}}, i8 0, i64 3, {{.*}})

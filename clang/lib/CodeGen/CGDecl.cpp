@@ -1257,17 +1257,15 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
       }
       return;
     } else if (auto *ATy = dyn_cast<llvm::ArrayType>(Ty)) {
-      // FIXME: handle the case when ATy != Loc.getElementType().
-      if (ATy == Loc.getElementType()) {
-        for (unsigned i = 0; i != ATy->getNumElements(); i++) {
-          Address EltPtr = Builder.CreateConstArrayGEP(Loc, i);
-          emitStoresForConstant(
-              CGM, D, EltPtr, isVolatile, Builder,
-              cast<llvm::Constant>(Builder.CreateExtractValue(constant, i)),
-              IsAutoInit);
-        }
-        return;
+      for (unsigned i = 0; i != ATy->getNumElements(); i++) {
+        Address EltPtr = Builder.CreateConstGEP(
+            Loc.withElementType(ATy->getElementType()), i);
+        emitStoresForConstant(
+            CGM, D, EltPtr, isVolatile, Builder,
+            cast<llvm::Constant>(Builder.CreateExtractValue(constant, i)),
+            IsAutoInit);
       }
+      return;
     }
   }
 
