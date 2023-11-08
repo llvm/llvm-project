@@ -122,6 +122,12 @@ enum MacroUse {
   MU_Undef  = 2
 };
 
+enum class EmbedResult {
+  NotFound = 0, // Corresponds to __STDC_EMBED_NOT_FOUND__
+  Found = 1,    // Corresponds to __STDC_EMBED_FOUND__
+  Empty = 2,    // Corresponds to __STDC_EMBED_EMPTY__
+};
+
 /// Engages in a tight little dance with the lexer to efficiently
 /// preprocess tokens.
 ///
@@ -211,9 +217,6 @@ class Preprocessor {
   enum {
     /// Maximum depth of \#includes.
     MaxAllowedIncludeStackDepth = 200,
-    VALUE__STDC_EMBED_NOT_FOUND__ = 0,
-    VALUE__STDC_EMBED_FOUND__ = 1,
-    VALUE__STDC_EMBED_EMPTY__ = 2,
   };
 
   // State that is set before the preprocessor begins.
@@ -2584,7 +2587,7 @@ private:
   ///
   /// Returns predefined `__STDC_EMBED_*` macro values if
   /// successful.
-  int EvaluateHasEmbed(Token &Tok, IdentifierInfo *II);
+  EmbedResult EvaluateHasEmbed(Token &Tok, IdentifierInfo *II);
 
   /// Process a '__has_include("path")' expression.
   ///

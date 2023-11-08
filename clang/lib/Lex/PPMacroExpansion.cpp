@@ -1272,7 +1272,7 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
 
 /// EvaluateHasEmbed - Process a '__has_embed("foo" params...)' expression.
 /// Returns a filled optional with the value if successful; otherwise, empty.
-int Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
+EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
   // pedwarn for not being on C23
   if (!LangOpts.C23 || !LangOpts.CPlusPlus26) {
     auto EitherDiag = (LangOpts.CPlusPlus ? diag::warn_cxx26_pp_has_embed
@@ -1290,13 +1290,13 @@ int Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
     // Return a valid identifier token.
     assert(Tok.is(tok::identifier));
     Tok.setIdentifierInfo(II);
-    return VALUE__STDC_EMBED_NOT_FOUND__;
+    return EmbedResult::NotFound;
   }
 
   // Get '('. If we don't have a '(', try to form a header-name token.
   do {
     if (this->LexHeaderName(Tok)) {
-      return VALUE__STDC_EMBED_NOT_FOUND__;
+      return EmbedResult::NotFound;
     }
   } while (Tok.getKind() == tok::comment);
 
@@ -1308,19 +1308,19 @@ int Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
     // If the next token looks like a filename or the start of one,
     // assume it is and process it as such.
     if (Tok.isNot(tok::header_name)) {
-      return VALUE__STDC_EMBED_NOT_FOUND__;
+      return EmbedResult::NotFound;
     }
   } else {
     // Save '(' location for possible missing ')' message.
     LParenLoc = Tok.getLocation();
     if (this->LexHeaderName(Tok)) {
-      return VALUE__STDC_EMBED_NOT_FOUND__;
+      return EmbedResult::NotFound;
     }
   }
 
   if (Tok.isNot(tok::header_name)) {
     Diag(Tok.getLocation(), diag::err_pp_expects_filename);
-    return VALUE__STDC_EMBED_NOT_FOUND__;
+    return EmbedResult::NotFound;
   }
 
   SourceLocation FilenameLoc = Tok.getLocation();
@@ -1331,10 +1331,10 @@ int Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
   if (!Params.Successful) {
     if (Tok.isNot(tok::eod))
       this->DiscardUntilEndOfDirective();
-    return VALUE__STDC_EMBED_NOT_FOUND__;
+    return EmbedResult::NotFound;
   }
   if (Params.UnrecognizedParams > 0) {
-    return VALUE__STDC_EMBED_NOT_FOUND__;
+    return EmbedResult::NotFound;
   }
 
   if (!Tok.is(tok::r_paren)) {
@@ -1342,7 +1342,7 @@ int Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
         << II << tok::r_paren;
     Diag(LParenLoc, diag::note_matching) << tok::l_paren;
     DiscardUntilEndOfDirective();
-    return VALUE__STDC_EMBED_NOT_FOUND__;
+    return EmbedResult::NotFound;
   }
 
   SmallString<128> FilenameBuffer;
@@ -1364,7 +1364,7 @@ int Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
     Callbacks->HasEmbed(LParenLoc, Filename, isAngled, MaybeFileEntry);
   }
   if (!MaybeFileEntry) {
-    return VALUE__STDC_EMBED_NOT_FOUND__;
+    return EmbedResult::NotFound;
   }
   size_t FileSize = MaybeFileEntry->getSize();
   if (Params.MaybeLimitParam) {
@@ -1373,12 +1373,12 @@ int Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
     }
   }
   if (FileSize == 0) {
-    return VALUE__STDC_EMBED_EMPTY__;
+    return EmbedResult::Empty;
   }
   if (Params.MaybeOffsetParam && Params.MaybeOffsetParam->Offset >= FileSize) {
-    return VALUE__STDC_EMBED_EMPTY__;
+    return EmbedResult::Empty;
   }
-  return VALUE__STDC_EMBED_FOUND__;
+  return EmbedResult::Found;
 }
 
 bool Preprocessor::EvaluateHasInclude(Token &Tok, IdentifierInfo *II) {
@@ -1923,11 +1923,11 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     // file name string literal using angle brackets (<>) or
     // double-quotes (""), optionally followed by a series of
     // arguments similar to form like attributes.
-    int Value = EvaluateHasEmbed(Tok, II);
+    EmbedResult Value = EvaluateHasEmbed(Tok, II);
 
     if (Tok.isNot(tok::r_paren))
       return;
-    OS << Value;
+    OS << static_cast<int>(Value);
     Tok.setKind(tok::numeric_constant);
   } else if (II == Ident__has_warning) {
     // The argument should be a parenthesized string literal.
