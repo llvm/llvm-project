@@ -6304,16 +6304,16 @@ INTERCEPTOR(int, fclose, __sanitizer_FILE *fp) {
 #endif
 
 #if SANITIZER_INTERCEPT_DLOPEN_DLCLOSE
-// Returns 1 if key is a suffix of str, 0 otherwise
-static int internal_strcmp_suffix(const char *key, const char *str) {
-  if (!key || !str)
+// Returns 1 if 'suffix' matches the end of 'str', 0 otherwise
+static int internal_is_suffix(const char *suffix, const char *str) {
+  if (!suffix || !str)
     return 0;
 
-  if (internal_strlen(key) > internal_strlen(str))
+  if (internal_strlen(suffix) > internal_strlen(str))
     return 0;
 
-  return !internal_strcmp(str + internal_strlen(str) - internal_strlen(key),
-                          key);
+  return internal_strcmp(str + internal_strlen(str) - internal_strlen(suffix),
+                         suffix) == 0;
 }
 
 #  if SANITIZER_GLIBC
@@ -6328,7 +6328,7 @@ INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
     COMMON_INTERCEPTOR_READ_STRING(ctx, filename, 0);
 #  if SANITIZER_GLIBC
     if (common_flags()->test_only_replace_dlopen_main_program &&
-        internal_strcmp_suffix(__progname, filename)) {
+        internal_is_suffix(__progname, filename)) {
       VPrintf(1, "dlopen interceptor: replacing %s because it matches %s\n",
               filename, __progname);
       filename = (char *)0;  // RTLD_DEFAULT
