@@ -911,7 +911,8 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
   assert(!SDI->getType()->isVectorTy());
 
   // Check whether the division folds to a constant.
-  if (const APInt *Elem = LCR.sdiv(RCR).getSingleElement()) {
+  ConstantRange DivCR = LCR.sdiv(RCR);
+  if (const APInt *Elem = DivCR.getSingleElement()) {
     SDI->replaceAllUsesWith(ConstantInt::get(SDI->getType(), *Elem));
     SDI->eraseFromParent();
     return true;
