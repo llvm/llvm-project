@@ -6,27 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(hardening): remove in LLVM 20.
-// This test ensures that enabling assertions now enables the safe mode.
+// This test ensures that we can override any hardening mode with the fast mode on a per-TU basis.
 
-// Other hardening modes would additionally trigger the error that they are mutually exclusive.
-// REQUIRES: libcpp-hardening-mode=unchecked
-// `check_assertion.h` is only available starting from C++11 and requires Unix headers.
-// UNSUPPORTED: c++03, !has-unix-headers
+// `check_assertion.h` is only available starting from C++11.
+// UNSUPPORTED: c++03
+// `check_assertion.h` requires Unix headers.
+// REQUIRES: has-unix-headers
 // The ability to set a custom abort message is required to compare the assertion message.
 // XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
+// ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST
 
 #include <cassert>
 #include "check_assertion.h"
 
 int main(int, char**) {
-  static_assert(_LIBCPP_ENABLE_SAFE_MODE == 1, "Safe mode should be implicitly enabled");
-
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");
-  TEST_LIBCPP_ASSERT_FAILURE([] {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Should fire");
-  }(), "Should fire");
+  TEST_LIBCPP_ASSERT_FAILURE([] { _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Fast-mode assertions should fire"); }(),
+                             "Fast-mode assertions should fire");
+  _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(false, "Extensive-mode assertions should not fire");
 
   return 0;
 }
