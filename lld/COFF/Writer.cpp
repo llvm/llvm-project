@@ -123,14 +123,6 @@ public:
     records.emplace_back(type, c);
   }
 
-  Chunk *getBuildIdChunk() {
-    for (const std::pair<COFF::DebugType, Chunk *> &record : records) {
-      if (record.first == COFF::IMAGE_DEBUG_TYPE_CODEVIEW)
-        return record.second;
-    }
-    return nullptr;
-  }
-
 private:
   void fillEntry(debug_directory *d, COFF::DebugType debugType, size_t size,
                  uint64_t rva, uint64_t offs) const {
@@ -314,6 +306,8 @@ private:
   OutputSection *relocSec;
   OutputSection *ctorsSec;
   OutputSection *dtorsSec;
+  // Either .rdata section or .buildid section.
+  OutputSection *debugInfoSec;
 
   // The first and last .pdata sections in the output file.
   //
@@ -1050,7 +1044,13 @@ void Writer::createMiscChunks() {
 
   // Create Debug Information Chunks
   std::vector<std::pair<COFF::DebugType, Chunk *>> debugRecords;
-  OutputSection *debugInfoSec = config->shouldCreatePDB ? rdataSec : buildidSec;
+  // The default debug info section is .rdata. It set to .buildid section only
+  // when not generating PDB and /build-id flag is given. If .rdata is chosen
+  // and /build-id is given, an extra .buildid section will be generated.
+  debugInfoSec =
+      config->shouldCreatePDB || config->buildIDHash != BuildIDHash::Binary
+          ? rdataSec
+          : buildidSec;
   if (config->buildIDHash != BuildIDHash::None || config->debug ||
       config->repro || config->cetCompat) {
     debugDirectory = make<DebugDirectoryChunk>(ctx, config->repro);
@@ -1081,7 +1081,8 @@ void Writer::createMiscChunks() {
   }
 
   // Create extra .buildid section if build id was stored in .rdata.
-  if (config->buildIDHash == BuildIDHash::PDB) {
+  if (debugInfoSec != buildidSec &&
+      config->buildIDHash == BuildIDHash::Binary) {
     DebugDirectoryChunk *debugDirectory =
         make<DebugDirectoryChunk>(ctx, config->repro);
     debugDirectory->setAlignment(4);
@@ -2082,7 +2083,8 @@ void Writer::writeBuildId() {
   }
 
   // If using PDB hash, build id in .buildid section is not set yet.
-  if (config->buildIDHash == BuildIDHash::PDB) {
+  if (debugInfoSec != buildidSec &&
+      config->buildIDHash == BuildIDHash::Binary) {
     auto *buildIdChunk = buildidSec->chunks.back();
     codeview::DebugInfo *buildIdInfo =
         cast<CVDebugRecordChunk>(buildIdChunk)->buildId;
