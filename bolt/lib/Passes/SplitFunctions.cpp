@@ -109,21 +109,9 @@ static cl::opt<SplitFunctionsStrategy> SplitStrategy(
 } // namespace opts
 
 namespace {
-bool hasFullProfile(const BinaryFunction &BF) {
-  return llvm::all_of(BF.blocks(), [](const BinaryBasicBlock &BB) {
-    return BB.getExecutionCount() != BinaryBasicBlock::COUNT_NO_PROFILE;
-  });
-}
-
-bool allBlocksCold(const BinaryFunction &BF) {
-  return llvm::all_of(BF.blocks(), [](const BinaryBasicBlock &BB) {
-    return BB.getExecutionCount() == 0;
-  });
-}
-
 struct SplitProfile2 final : public SplitStrategy {
   bool canSplit(const BinaryFunction &BF) override {
-    return BF.hasValidProfile() && hasFullProfile(BF) && !allBlocksCold(BF);
+    return BF.hasValidProfile() && BF.hasFullProfile() && !BF.allBlocksCold();
   }
 
   bool keepEmpty() override { return false; }
@@ -434,7 +422,7 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
 }
 
 SplitFunctions::TrampolineSetType
-SplitFunctions::createEHTrampolines(BinaryFunction &BF) const {
+SplitFunctions::createEHTrampolines(BinaryFunction &BF) {
   const auto &MIB = BF.getBinaryContext().MIB;
 
   // Map real landing pads to the corresponding trampolines.
@@ -501,7 +489,7 @@ SplitFunctions::createEHTrampolines(BinaryFunction &BF) const {
 
 SplitFunctions::BasicBlockOrderType SplitFunctions::mergeEHTrampolines(
     BinaryFunction &BF, SplitFunctions::BasicBlockOrderType &Layout,
-    const SplitFunctions::TrampolineSetType &Trampolines) const {
+    const SplitFunctions::TrampolineSetType &Trampolines) {
   DenseMap<const MCSymbol *, SmallVector<const MCSymbol *, 0>>
       IncomingTrampolines;
   for (const auto &Entry : Trampolines) {
