@@ -832,11 +832,11 @@ def L : JoinedOrSeparate<["-"], "L">, Flags<[RenderJoined]>, Group<Link_Group>,
     MetaVarName<"<dir>">, HelpText<"Add directory to library search path">;
 def embed_dir : JoinedOrSeparate<["-"], "embed-dir">,
     Flags<[RenderJoined]>, Group<EmbedPath_Group>,
-    Visibility<[ClangOption, CC1Option, CC1AsOption, FlangOption, FC1Option]>,
+    Visibility<[ClangOption, CC1Option]>,
     MetaVarName<"<dir>">, HelpText<"Add directory to embed search path">;
 def embed_dir_EQ : JoinedOrSeparate<["-"], "embed-dir=">,
     Flags<[RenderJoined]>, Group<EmbedPath_Group>,
-    Visibility<[ClangOption, CC1Option, CC1AsOption, FlangOption, FC1Option]>,
+    Visibility<[ClangOption, CC1Option]>,
     MetaVarName<"<dir>">, HelpText<"Add directory to embed search path">;
 def MD : Flag<["-"], "MD">, Group<M_Group>,
     HelpText<"Write a depfile containing user and system headers">;
