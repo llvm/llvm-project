@@ -50,6 +50,19 @@ private:
   /// Split function body into fragments.
   void splitFunction(BinaryFunction &Function, SplitStrategy &Strategy);
 
+  std::atomic<uint64_t> SplitBytesHot{0ull};
+  std::atomic<uint64_t> SplitBytesCold{0ull};
+
+public:
+  explicit SplitFunctions(const cl::opt<bool> &PrintPass)
+      : BinaryFunctionPass(PrintPass) {}
+
+  bool shouldOptimize(const BinaryFunction &BF) const override;
+
+  const char *getName() const override { return "split-functions"; }
+
+  void runOnFunctions(BinaryContext &BC) override;
+
   struct TrampolineKey {
     FragmentNum SourceFN = FragmentNum::main();
     const MCSymbol *Target = nullptr;
@@ -81,27 +94,14 @@ private:
   /// corresponding thrower block. The trampoline landing pad, when created,
   /// will redirect the execution to the real landing pad in a different
   /// fragment.
-  TrampolineSetType createEHTrampolines(BinaryFunction &Function) const;
+  static TrampolineSetType createEHTrampolines(BinaryFunction &Function);
 
   /// Merge trampolines into \p Layout without trampolines. The merge will place
   /// a trampoline immediately before its destination. Used to revert the effect
   /// of trampolines after createEHTrampolines().
-  BasicBlockOrderType
+  static BasicBlockOrderType
   mergeEHTrampolines(BinaryFunction &BF, BasicBlockOrderType &Layout,
-                     const TrampolineSetType &Trampolines) const;
-
-  std::atomic<uint64_t> SplitBytesHot{0ull};
-  std::atomic<uint64_t> SplitBytesCold{0ull};
-
-public:
-  explicit SplitFunctions(const cl::opt<bool> &PrintPass)
-      : BinaryFunctionPass(PrintPass) {}
-
-  bool shouldOptimize(const BinaryFunction &BF) const override;
-
-  const char *getName() const override { return "split-functions"; }
-
-  void runOnFunctions(BinaryContext &BC) override;
+                     const TrampolineSetType &Trampolines);
 };
 
 } // namespace bolt

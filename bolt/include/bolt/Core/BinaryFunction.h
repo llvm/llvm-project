@@ -1276,6 +1276,20 @@ public:
   /// otherwise processed.
   bool isPseudo() const { return IsPseudo; }
 
+  /// Return true if every block in the function has a valid execution count.
+  bool hasFullProfile() const {
+    return llvm::all_of(blocks(), [](const BinaryBasicBlock &BB) {
+      return BB.getExecutionCount() != BinaryBasicBlock::COUNT_NO_PROFILE;
+    });
+  }
+
+  /// Return true if every block in the function has a zero execution count.
+  bool allBlocksCold() const {
+    return llvm::all_of(blocks(), [](const BinaryBasicBlock &BB) {
+      return BB.getExecutionCount() == 0;
+    });
+  }
+
   /// Return true if the function contains explicit or implicit indirect branch
   /// to its split fragments, e.g., split jump table, landing pad in split
   /// fragment.
