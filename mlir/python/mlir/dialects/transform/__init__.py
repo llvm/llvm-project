@@ -172,11 +172,17 @@ class NamedSequenceOp(NamedSequenceOp):
         sym_name,
         input_types: Sequence[Type],
         result_types: Sequence[Type],
+        sym_visibility=None,
+        arg_attrs=None,
+        res_attrs=None
     ):
         function_type = FunctionType.get(input_types, result_types)
         super().__init__(
             sym_name=sym_name,
             function_type=TypeAttr.get(function_type),
+            sym_visibility=sym_visibility,
+            arg_attrs=arg_attrs,
+            res_attrs=res_attrs
         )
         self.regions[0].blocks.append(*input_types)
 
