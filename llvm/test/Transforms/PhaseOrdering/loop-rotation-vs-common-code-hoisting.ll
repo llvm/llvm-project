@@ -47,11 +47,11 @@ define void @_Z4loopi(i32 %width) {
 ; HOIST-NEXT:    [[CMP:%.*]] = icmp slt i32 [[WIDTH:%.*]], 1
 ; HOIST-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; HOIST:       for.cond.preheader:
-; HOIST-NEXT:    [[TMP0:%.*]] = add nsw i32 [[WIDTH]], -1
+; HOIST-NEXT:    [[SUB:%.*]] = add nsw i32 [[WIDTH]], -1
 ; HOIST-NEXT:    br label [[FOR_COND:%.*]]
 ; HOIST:       for.cond:
 ; HOIST-NEXT:    [[I_0:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY:%.*]] ], [ 0, [[FOR_COND_PREHEADER]] ]
-; HOIST-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[I_0]], [[TMP0]]
+; HOIST-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[I_0]], [[SUB]]
 ; HOIST-NEXT:    tail call void @f0()
 ; HOIST-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; HOIST:       for.cond.cleanup:
@@ -59,7 +59,7 @@ define void @_Z4loopi(i32 %width) {
 ; HOIST-NEXT:    br label [[RETURN]]
 ; HOIST:       for.body:
 ; HOIST-NEXT:    tail call void @f1()
-; HOIST-NEXT:    [[INC]] = add nuw nsw i32 [[I_0]], 1
+; HOIST-NEXT:    [[INC]] = add nuw i32 [[I_0]], 1
 ; HOIST-NEXT:    br label [[FOR_COND]]
 ; HOIST:       return:
 ; HOIST-NEXT:    ret void
@@ -69,19 +69,21 @@ define void @_Z4loopi(i32 %width) {
 ; ROTATE-NEXT:    [[CMP:%.*]] = icmp slt i32 [[WIDTH:%.*]], 1
 ; ROTATE-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; ROTATE:       for.cond.preheader:
-; ROTATE-NEXT:    [[TMP0:%.*]] = add nsw i32 [[WIDTH]], -1
-; ROTATE-NEXT:    [[EXITCOND3_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
-; ROTATE-NEXT:    br i1 [[EXITCOND3_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY:%.*]]
+; ROTATE-NEXT:    [[CMP13_NOT:%.*]] = icmp eq i32 [[WIDTH]], 1
+; ROTATE-NEXT:    br i1 [[CMP13_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
+; ROTATE:       for.body.preheader:
+; ROTATE-NEXT:    [[TMP0:%.*]] = add i32 [[WIDTH]], -2
+; ROTATE-NEXT:    br label [[FOR_BODY:%.*]]
 ; ROTATE:       for.cond.cleanup:
 ; ROTATE-NEXT:    tail call void @f0()
 ; ROTATE-NEXT:    tail call void @f2()
 ; ROTATE-NEXT:    br label [[RETURN]]
 ; ROTATE:       for.body:
-; ROTATE-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_COND_PREHEADER]] ]
+; ROTATE-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; ROTATE-NEXT:    tail call void @f0()
 ; ROTATE-NEXT:    tail call void @f1()
-; ROTATE-NEXT:    [[INC]] = add nuw i32 [[I_04]], 1
-; ROTATE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[TMP0]]
+; ROTATE-NEXT:    [[INC]] = add nuw nsw i32 [[I_04]], 1
+; ROTATE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[I_04]], [[TMP0]]
 ; ROTATE-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ; ROTATE:       return:
 ; ROTATE-NEXT:    ret void
