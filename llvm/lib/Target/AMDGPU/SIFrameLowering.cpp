@@ -1322,7 +1322,11 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
   // Allocate spill slots for WWM reserved VGPRs.
-  if (!FuncInfo->isEntryFunction()) {
+  // For chain functions, we only need to do this if we have calls to
+  // llvm.amdgcn.cs.chain.
+  bool IsChainWithoutCalls =
+      FuncInfo->isChainFunction() && !MF.getFrameInfo().hasTailCall();
+  if (!FuncInfo->isEntryFunction() && !IsChainWithoutCalls) {
     for (Register Reg : FuncInfo->getWWMReservedRegs()) {
       const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
       FuncInfo->allocateWWMSpill(MF, Reg, TRI->getSpillSize(*RC),
@@ -1535,8 +1539,15 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
 void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                            BitVector &SavedVGPRs,
                                            RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedVGPRs, RS);
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  // If this is a function with the amdgpu_cs_chain[_preserve] calling
+  // convention and it doesn't contain any calls to llvm.amdgcn.cs.chain, then
+  // we don't need to save and restore anything.
+  if (MFI->isChainFunction() && !MF.getFrameInfo().hasTailCall())
+    return;
+
+  TargetFrameLowering::determineCalleeSaves(MF, SavedVGPRs, RS);
   if (MFI->isEntryFunction())
     return;
 
@@ -1563,7 +1574,9 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
       else if (TII->isWWMRegSpillOpcode(MI.getOpcode()))
         NeedExecCopyReservedReg = true;
       else if (MI.getOpcode() == AMDGPU::SI_RETURN ||
-               MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG) {
+               MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
+               (MFI->isChainFunction() &&
+                TII->isChainCallOpcode(MI.getOpcode()))) {
         // We expect all return to be the same size.
         assert(!ReturnMI ||
                (count_if(MI.operands(), [](auto Op) { return Op.isReg(); }) ==

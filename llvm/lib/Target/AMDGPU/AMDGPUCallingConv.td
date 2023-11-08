@@ -176,6 +176,10 @@ def CSR_AMDGPU_SI_Gfx_GFX90AInsts : CalleeSavedRegs<
   (add CSR_AMDGPU_SI_Gfx, CSR_AMDGPU_AGPRs)
 >;
 
+def CSR_AMDGPU_CS_ChainPreserve : CalleeSavedRegs<
+  (sequence "VGPR%u", 8, 255)
+>;
+
 def CSR_AMDGPU_NoRegs : CalleeSavedRegs<(add)>;
 
 // Calling convention for leaf functions
