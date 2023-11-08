@@ -20,7 +20,7 @@ define <8 x i8> @mla8xi8(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C) {
 ; NO-FA64-NEXT:    mad z0.b, p0/m, z1.b, z2.b
 ; NO-FA64-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; NO-FA64-NEXT:    ret
-	%tmp1 = mul <8 x i8> %A, %B;
-	%tmp2 = add <8 x i8> %C, %tmp1;
-	ret <8 x i8> %tmp2
+  %tmp1 = mul <8 x i8> %A, %B;
+  %tmp2 = add <8 x i8> %C, %tmp1;
+  ret <8 x i8> %tmp2
 }
