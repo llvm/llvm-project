@@ -20,7 +20,7 @@
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmax.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-// CPP-CHECK-LABEL: @_Z17test_svmax_bf16_mu10__SVBool_tu14__SVBFloat16_tu14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z17test_svmax_bf16_mu10__SVBool_tu14__SVBfloat16_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmax.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]])
@@ -38,7 +38,7 @@ svbfloat16_t test_svmax_bf16_m(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmax.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
 //
-// CPP-CHECK-LABEL: @_Z17test_svmax_bf16_zu10__SVBool_tu14__SVBFloat16_tu14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z17test_svmax_bf16_zu10__SVBool_tu14__SVBfloat16_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> zeroinitializer
@@ -56,7 +56,7 @@ svbfloat16_t test_svmax_bf16_z(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmax.u.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-// CPP-CHECK-LABEL: @_Z17test_svmax_bf16_xu10__SVBool_tu14__SVBFloat16_tu14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z17test_svmax_bf16_xu10__SVBool_tu14__SVBfloat16_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmax.u.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]])
@@ -76,7 +76,7 @@ svbfloat16_t test_svmax_bf16_x(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmax.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[DOTSPLAT]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-// CPP-CHECK-LABEL: @_Z19test_svmax_bf16_n_mu10__SVBool_tu14__SVBFloat16_tu6__bf16(
+// CPP-CHECK-LABEL: @_Z19test_svmax_bf16_n_mu10__SVBool_tu14__SVBfloat16_tu6__bf16(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x bfloat> poison, bfloat [[OP2:%.*]], i64 0
@@ -98,7 +98,7 @@ svbfloat16_t test_svmax_bf16_n_m(svbool_t pg, svbfloat16_t op1, bfloat16_t op2)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmax.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[DOTSPLAT]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
 //
-// CPP-CHECK-LABEL: @_Z19test_svmax_bf16_n_zu10__SVBool_tu14__SVBFloat16_tu6__bf16(
+// CPP-CHECK-LABEL: @_Z19test_svmax_bf16_n_zu10__SVBool_tu14__SVBfloat16_tu6__bf16(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x bfloat> poison, bfloat [[OP2:%.*]], i64 0
@@ -120,7 +120,7 @@ svbfloat16_t test_svmax_bf16_n_z(svbool_t pg, svbfloat16_t op1, bfloat16_t op2)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmax.u.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[DOTSPLAT]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-// CPP-CHECK-LABEL: @_Z19test_svmax_bf16_n_xu10__SVBool_tu14__SVBFloat16_tu6__bf16(
+// CPP-CHECK-LABEL: @_Z19test_svmax_bf16_n_xu10__SVBool_tu14__SVBfloat16_tu6__bf16(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x bfloat> poison, bfloat [[OP2:%.*]], i64 0
