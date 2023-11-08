@@ -17,6 +17,31 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
 )
 
+# Variable naming for instrumented libraries
+function(get_cxx_name_sufix OUT_VAR  USE_SANITIZER)
+  set(USE_SANITIZER "${USE_SANITIZER}")
+  if (USE_SANITIZER STREQUAL "")
+    set(${OUT_VAR} "" PARENT_SCOPE)
+  elseif (USE_SANITIZER STREQUAL "Address")
+    set(${OUT_VAR} "asan" PARENT_SCOPE)
+  elseif (USE_SANITIZER STREQUAL "HWAddress")
+    set(${OUT_VAR} "hwasan" PARENT_SCOPE)
+  elseif (USE_SANITIZER MATCHES "Memory(WithOrigins)?")
+    set(${OUT_VAR} "memory" PARENT_SCOPE)
+  elseif (USE_SANITIZER STREQUAL "Undefined")
+    set(${OUT_VAR} "undefined" PARENT_SCOPE)
+  elseif (USE_SANITIZER STREQUAL "Address;Undefined" OR
+          USE_SANITIZER STREQUAL "Undefined;Address")
+    set(${OUT_VAR} "uasan" PARENT_SCOPE)
+  elseif (USE_SANITIZER STREQUAL "Thread")
+    set(${OUT_VAR} "thread" PARENT_SCOPE)
+  elseif (USE_SANITIZER STREQUAL "DataFlow")
+    set(${OUT_VAR} "dataflow" PARENT_SCOPE)
+  else()
+    message(WARNING "Unsupported value of LLVM_USE_SANITIZER: ${USE_SANITIZER}")
+  endif()
+endfunction()
+
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
 set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp")

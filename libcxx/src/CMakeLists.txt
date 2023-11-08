@@ -191,38 +191,47 @@ endif()
 split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
+get_cxx_name_sufix(target_name_sufix "${LLVM_USE_SANITIZER}")
+
 # Build the shared library.
 if (LIBCXX_ENABLE_SHARED)
-  add_library(cxx_shared SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
-  target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(cxx_shared PUBLIC cxx-headers
+  set(cxx_shared_target_name "cxx_shared")
+  set(cxx_shared_file_name "${LIBCXX_SHARED_OUTPUT_NAME}")
+  if (NOT "${target_name_sufix}" STREQUAL "")
+    set(cxx_shared_target_name "${cxx_shared_target_name}_${target_name_sufix}")
+    set(cxx_shared_file_name "${cxx_shared_file_name}.${target_name_sufix}")
+  endif()
+
+  add_library(${cxx_shared_target_name} SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+  target_include_directories(${cxx_shared_target_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  target_link_libraries(${cxx_shared_target_name} PUBLIC cxx-headers
                                    PRIVATE ${LIBCXX_LIBRARIES})
-  set_target_properties(cxx_shared
+  set_target_properties(${cxx_shared_target_name}
     PROPERTIES
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
-      OUTPUT_NAME   "${LIBCXX_SHARED_OUTPUT_NAME}"
+      OUTPUT_NAME   "${cxx_shared_file_name}"
       VERSION       "${LIBCXX_LIBRARY_VERSION}"
       SOVERSION     "${LIBCXX_ABI_VERSION}"
       DEFINE_SYMBOL ""
   )
-  cxx_add_common_build_flags(cxx_shared)
+  cxx_add_common_build_flags(${cxx_shared_target_name})
 
   if(ZOS)
-    add_custom_command(TARGET cxx_shared POST_BUILD
+    add_custom_command(TARGET ${cxx_shared_target_name} POST_BUILD
       COMMAND
         ${LIBCXX_SOURCE_DIR}/utils/zos_rename_dll_side_deck.sh
-        $<TARGET_LINKER_FILE_NAME:cxx_shared> $<TARGET_FILE_NAME:cxx_shared> "${LIBCXX_DLL_NAME}"
+        $<TARGET_LINKER_FILE_NAME:${cxx_shared_target_name}> $<TARGET_FILE_NAME:${cxx_shared_target_name}> "${LIBCXX_DLL_NAME}"
       COMMENT "Rename dll name inside the side deck file"
-      WORKING_DIRECTORY $<TARGET_FILE_DIR:cxx_shared>
+      WORKING_DIRECTORY $<TARGET_FILE_DIR:${cxx_shared_target_name}>
     )
   endif()
 
   # Link against libc++abi
   if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
-    target_link_libraries(cxx_shared PRIVATE libcxx-abi-shared-objects)
+    target_link_libraries(${cxx_shared_target_name} PRIVATE libcxx-abi-shared-objects)
   else()
-    target_link_libraries(cxx_shared PUBLIC libcxx-abi-shared)
+    target_link_libraries(${cxx_shared_target_name} PUBLIC libcxx-abi-shared)
   endif()
 
   # Maybe re-export symbols from libc++abi
@@ -235,13 +244,13 @@ if (LIBCXX_ENABLE_SHARED)
   endif()
 
   if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
-    target_link_libraries(cxx_shared PRIVATE
+    target_link_libraries(${cxx_shared_target_name} PRIVATE
       "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++unexp.exp"
       "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.exp"
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
       "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
 
-    target_link_libraries(cxx_shared PRIVATE $<TARGET_NAME_IF_EXISTS:cxxabi-reexports>)
+    target_link_libraries(${cxx_shared_target_name} PRIVATE $<TARGET_NAME_IF_EXISTS:cxxabi-reexports>)
   endif()
 
   # Generate a linker script in place of a libc++.so symlink.
@@ -263,21 +272,21 @@ if (LIBCXX_ENABLE_SHARED)
       endif()
     endif()
 
-    set(linker_script "INPUT($<TARGET_SONAME_FILE_NAME:cxx_shared> ${link_libraries})")
-    add_custom_command(TARGET cxx_shared POST_BUILD
-      COMMAND "${CMAKE_COMMAND}" -E remove "$<TARGET_LINKER_FILE:cxx_shared>"
-      COMMAND "${CMAKE_COMMAND}" -E echo "${linker_script}" > "$<TARGET_LINKER_FILE:cxx_shared>"
-      COMMENT "Generating linker script: '${linker_script}' as file $<TARGET_LINKER_FILE:cxx_shared>"
+    set(linker_script "INPUT($<TARGET_SONAME_FILE_NAME:${cxx_shared_target_name}> ${link_libraries})")
+    add_custom_command(TARGET ${cxx_shared_target_name} POST_BUILD
+      COMMAND "${CMAKE_COMMAND}" -E remove "$<TARGET_LINKER_FILE:${cxx_shared_target_name}>"
+      COMMAND "${CMAKE_COMMAND}" -E echo "${linker_script}" > "$<TARGET_LINKER_FILE:${cxx_shared_target_name}>"
+      COMMENT "Generating linker script: '${linker_script}' as file $<TARGET_LINKER_FILE:${cxx_shared_target_name}>"
       VERBATIM
     )
   endif()
 
-  list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
+  list(APPEND LIBCXX_BUILD_TARGETS "${cxx_shared_target_name}")
   if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
     # Since we most likely do not have a mt.exe replacement, disable the
     # manifest bundling.  This allows a normal cmake invocation to pass which
     # will attempt to use the manifest tool to generate the bundled manifest
-    set_target_properties(cxx_shared PROPERTIES
+    set_target_properties(${cxx_shared_target_name} PROPERTIES
                           APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
   endif()
 endif()
@@ -286,18 +295,24 @@ set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 
 # Build the static library.
 if (LIBCXX_ENABLE_STATIC)
-  add_library(cxx_static STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
-  target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(cxx_static PUBLIC cxx-headers
+  set(cxx_static_target_name "cxx_static")
+  set(cxx_static_file_name "${LIBCXX_STATIC_OUTPUT_NAME}")
+  if (NOT "${target_name_sufix}" STREQUAL "")
+    set(cxx_static_target_name "${cxx_shared_target_name}_${target_name_sufix}")
+    set(cxx_static_file_name "${cxx_shared_file_name}.${target_name_sufix}")
+  endif()
+  add_library(${cxx_static_target_name} STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+  target_include_directories(${cxx_static_target_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  target_link_libraries(${cxx_static_target_name} PUBLIC cxx-headers
                                    PRIVATE ${LIBCXX_LIBRARIES}
                                    PRIVATE libcxx-abi-static)
-  set_target_properties(cxx_static
+  set_target_properties(${cxx_static_target_name}
     PROPERTIES
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
-      OUTPUT_NAME   "${LIBCXX_STATIC_OUTPUT_NAME}"
+      OUTPUT_NAME   "${cxx_static_file_name}"
   )
-  cxx_add_common_build_flags(cxx_static)
+  cxx_add_common_build_flags(${cxx_static_target_name})
 
   if (LIBCXX_HERMETIC_STATIC_LIBRARY)
     # If the hermetic library doesn't define the operator new/delete functions
@@ -306,16 +321,16 @@ if (LIBCXX_ENABLE_STATIC)
     if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
       append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
     endif()
-    target_compile_options(cxx_static PRIVATE ${CXX_STATIC_LIBRARY_FLAGS})
+    target_compile_options(${cxx_static_target_name} PRIVATE ${CXX_STATIC_LIBRARY_FLAGS})
     # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in __config_site
     # too. Define it in the same way here, to avoid redefinition conflicts.
-    target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
+    target_compile_definitions(${cxx_static_target_name} PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
   endif()
 
-  list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")
+  list(APPEND LIBCXX_BUILD_TARGETS "${cxx_static_target_name}")
   # Attempt to merge the libc++.a archive and the ABI library archive into one.
   if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
-    target_link_libraries(cxx_static PRIVATE libcxx-abi-static-objects)
+    target_link_libraries(${cxx_static_target_name} PRIVATE libcxx-abi-static-objects)
   endif()
 endif()
 
@@ -342,9 +357,9 @@ endif()
 add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
 target_link_libraries(cxx_experimental PUBLIC cxx-headers)
 if (LIBCXX_ENABLE_SHARED)
-  target_link_libraries(cxx_experimental PRIVATE cxx_shared)
+  target_link_libraries(cxx_experimental PRIVATE ${cxx_shared_target_name})
 else()
-  target_link_libraries(cxx_experimental PRIVATE cxx_static)
+  target_link_libraries(cxx_experimental PRIVATE ${cxx_static_target_name})
 endif()
 
 if (LIBCXX_HERMETIC_STATIC_LIBRARY)
@@ -362,14 +377,14 @@ cxx_add_common_build_flags(cxx_experimental)
 target_compile_options(cxx_experimental PUBLIC -D_LIBCPP_ENABLE_EXPERIMENTAL)
 
 if (LIBCXX_INSTALL_SHARED_LIBRARY)
-  install(TARGETS cxx_shared
+  install(TARGETS ${cxx_shared_target_name}
     ARCHIVE DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
     LIBRARY DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
     RUNTIME DESTINATION ${LIBCXX_INSTALL_RUNTIME_DIR} COMPONENT cxx)
 endif()
 
 if (LIBCXX_INSTALL_STATIC_LIBRARY)
-  install(TARGETS cxx_static
+  install(TARGETS ${cxx_static_target_name}
     ARCHIVE DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
     LIBRARY DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
     RUNTIME DESTINATION ${LIBCXX_INSTALL_RUNTIME_DIR} COMPONENT cxx)
@@ -385,7 +400,7 @@ endif()
 # NOTE: This install command must go after the cxx install command otherwise
 # it will not be executed after the library symlinks are installed.
 if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
-  install(FILES "$<TARGET_LINKER_FILE:cxx_shared>"
+  install(FILES "$<TARGET_LINKER_FILE:${cxx_shared_target_name}>"
     DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR}
     COMPONENT libcxx)
 endif()
