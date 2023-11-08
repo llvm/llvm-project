@@ -61,7 +61,6 @@ namespace {
       if (std::getenv("bar") != (char*) -1)
         return;
 
-      (void) llvm::createAAEvalPass();
       (void) llvm::createBasicAAWrapperPass();
       (void) llvm::createSCEVAAWrapperPass();
       (void) llvm::createTypeBasedAAWrapperPass();
