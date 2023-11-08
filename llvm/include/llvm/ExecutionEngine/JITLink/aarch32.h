@@ -193,13 +193,13 @@ template <> struct FixupInfo<Arm_MovwAbsNC> : public FixupInfo<Arm_MovtAbs> {
 
 template <> struct FixupInfo<Thumb_Jump24> {
   static constexpr HalfWords Opcode{0xf000, 0x9000};
-  static constexpr HalfWords OpcodeMask{0xf800, 0xd000};
+  static constexpr HalfWords OpcodeMask{0xf800, 0x9000};
   static constexpr HalfWords ImmMask{0x07ff, 0x2fff};
 };
 
 template <> struct FixupInfo<Thumb_Call> {
-  static constexpr HalfWords Opcode{0xf000, 0xd000};
-  static constexpr HalfWords OpcodeMask{0xf800, 0xd000};
+  static constexpr HalfWords Opcode{0xf000, 0xc000};
+  static constexpr HalfWords OpcodeMask{0xf800, 0xc000};
   static constexpr HalfWords ImmMask{0x07ff, 0x2fff};
   static constexpr uint16_t LoBitH = 0x0001;
   static constexpr uint16_t LoBitNoBlx = 0x1000;

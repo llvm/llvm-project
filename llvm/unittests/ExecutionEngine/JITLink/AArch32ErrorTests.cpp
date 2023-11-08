@@ -26,43 +26,29 @@ auto &Sec =
 
 auto ArmCfg = getArmConfigForCPUArch(ARMBuildAttrs::v7);
 
-TEST(AArch32_ELF, readAddendErrors) {
+constexpr uint64_t ArmAlignment = 4;
+constexpr uint64_t ThumbAlignment = 2;
+constexpr uint64_t AlignmentOffset = 0;
+
+constexpr orc::ExecutorAddrDiff SymbolOffset = 0;
+constexpr orc::ExecutorAddrDiff SymbolSize = 4;
+
+TEST(AArch32_ELF, readAddendArmErrors) {
 
   constexpr orc::ExecutorAddr B1DummyAddr(0x1000);
-  constexpr orc::ExecutorAddr B2DummyAddr(0x2000);
 
-  // Permanently undefined instruction
-  //    11110:op:imm4:1:op1:imm12
-  //    op  = 1111111 Permanent undefined
-  //    op1 = 010
+  // Permanently undefined instruction in ARM
+  //    udf #0
   uint8_t ArmWord[] = {0xf0, 0x00, 0xf0, 0xe7};
   ArrayRef<char> ArmContent(reinterpret_cast<const char *>(&ArmWord),
                             sizeof(ArmWord));
-  // Permanently undefined instruction in Thumb
-  //    udf #0
-  //
-  //    11110:op:imm4:1:op1:imm12
-  //    op  = 1111111 Permanent undefined
-  //    op1 = 010
-  //
-  constexpr HalfWords ThumbHalfWords{0xf7f0, 0xa000};
-  ArrayRef<char> ThumbContent(reinterpret_cast<const char *>(&ThumbHalfWords),
-                              sizeof(ThumbHalfWords));
-  constexpr uint64_t ArmAlignment = 4;
-  constexpr uint64_t ThumbAlignment = 2;
-  constexpr uint64_t AlignmentOffset = 0;
   auto &BArm = G->createContentBlock(Sec, ArmContent, B1DummyAddr, ArmAlignment,
                                      AlignmentOffset);
-  auto &BThumb = G->createContentBlock(Sec, ThumbContent, B2DummyAddr,
-                                       ThumbAlignment, AlignmentOffset);
-  constexpr orc::ExecutorAddrDiff Offset = 0;
-  constexpr orc::ExecutorAddrDiff Size = 4;
   Symbol &TargetSymbol =
-      G->addAnonymousSymbol(BArm, Offset, Size, false, false);
+      G->addAnonymousSymbol(BArm, SymbolOffset, SymbolSize, false, false);
   Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
                    0 /*Addend*/);
 
-  // Since invalid edge kind case is tested content of block is not significant
   EXPECT_THAT_EXPECTED(readAddendData(*G, BArm, InvalidEdge),
                        FailedWithMessage(testing::HasSubstr(
                            "can not read implicit addend for aarch32 edge kind "
@@ -84,32 +70,12 @@ TEST(AArch32_ELF, readAddendErrors) {
         readAddendArm(*G, BArm, E),
         FailedWithMessage(testing::StartsWith("Invalid opcode")));
   }
-  for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
-    Edge E(K, 0, TargetSymbol, 0);
-    EXPECT_THAT_EXPECTED(
-        readAddendThumb(*G, BThumb, E, ArmCfg),
-        FailedWithMessage(testing::StartsWith("Invalid opcode")));
-  }
 }
 
-TEST(AArch32_ELF, applyFixupErrors) {
+TEST(AArch32_ELF, readAddendThumbErrors) {
 
-  struct MutableHalfWords {
-    constexpr MutableHalfWords(HalfWords Preset)
-        : Hi(Preset.Hi), Lo(Preset.Lo) {}
+  constexpr orc::ExecutorAddr B2DummyAddr(0x2000);
 
-    uint16_t Hi; // First halfword
-    uint16_t Lo; // Second halfword
-  };
-
-  constexpr orc::ExecutorAddr B3DummyAddr(0x5000);
-  constexpr orc::ExecutorAddr B4DummyAddr(0x6000);
-
-  // Permanently undefined instruction in ARM
-  //    udf #0
-  uint8_t ArmWord[] = {0xf0, 0x00, 0xf0, 0xe7};
-  MutableArrayRef<char> MutableArmContent(reinterpret_cast<char *>(ArmWord),
-                                          sizeof(ArmWord));
   // Permanently undefined instruction in Thumb
   //    udf #0
   //
@@ -118,26 +84,54 @@ TEST(AArch32_ELF, applyFixupErrors) {
   //    op1 = 010
   //
   constexpr HalfWords ThumbHalfWords{0xf7f0, 0xa000};
-  MutableHalfWords MutableThumbHalfWords{ThumbHalfWords};
-  MutableArrayRef<char> MutableThumbContent(
-      reinterpret_cast<char *>(&MutableThumbHalfWords),
-      sizeof(MutableThumbHalfWords));
-  constexpr uint64_t ArmAlignment = 4;
-  constexpr uint64_t ThumbAlignment = 2;
-  constexpr uint64_t AlignmentOffset = 0;
-  auto &BArm = G->createMutableContentBlock(Sec, MutableArmContent, B3DummyAddr,
-                                            ArmAlignment, AlignmentOffset);
-  auto &BThumb = G->createMutableContentBlock(
-      Sec, MutableThumbContent, B4DummyAddr, ThumbAlignment, AlignmentOffset);
-
-  constexpr orc::ExecutorAddrDiff Offset = 0;
-  constexpr orc::ExecutorAddrDiff Size = 4;
+  ArrayRef<char> ThumbContent(reinterpret_cast<const char *>(&ThumbHalfWords),
+                              sizeof(ThumbHalfWords));
+  auto &BThumb = G->createContentBlock(Sec, ThumbContent, B2DummyAddr,
+                                       ThumbAlignment, AlignmentOffset);
   Symbol &TargetSymbol =
-      G->addAnonymousSymbol(BArm, Offset, Size, false, false);
+      G->addAnonymousSymbol(BThumb, SymbolOffset, SymbolSize, false, false);
   Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
                    0 /*Addend*/);
 
-  // Since invalid edge kind case is tested content of block is not significant
+  EXPECT_THAT_EXPECTED(readAddendData(*G, BThumb, InvalidEdge),
+                       FailedWithMessage(testing::HasSubstr(
+                           "can not read implicit addend for aarch32 edge kind "
+                           "INVALID RELOCATION")));
+
+  EXPECT_THAT_EXPECTED(readAddendArm(*G, BThumb, InvalidEdge),
+                       FailedWithMessage(testing::HasSubstr(
+                           "can not read implicit addend for aarch32 edge kind "
+                           "INVALID RELOCATION")));
+
+  EXPECT_THAT_EXPECTED(readAddendThumb(*G, BThumb, InvalidEdge, ArmCfg),
+                       FailedWithMessage(testing::HasSubstr(
+                           "can not read implicit addend for aarch32 edge kind "
+                           "INVALID RELOCATION")));
+
+  for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
+    Edge E(K, 0, TargetSymbol, 0);
+    EXPECT_THAT_EXPECTED(
+        readAddendThumb(*G, BThumb, E, ArmCfg),
+        FailedWithMessage(testing::StartsWith("Invalid opcode")));
+  }
+}
+
+TEST(AArch32_ELF, applyFixupArmErrors) {
+
+  constexpr orc::ExecutorAddr B3DummyAddr(0x5000);
+
+  uint8_t ArmWord[] = {0xf0, 0x00, 0xf0, 0xe7};
+  MutableArrayRef<char> MutableArmContent(reinterpret_cast<char *>(ArmWord),
+                                          sizeof(ArmWord));
+
+  auto &BArm = G->createMutableContentBlock(Sec, MutableArmContent, B3DummyAddr,
+                                            ArmAlignment, AlignmentOffset);
+
+  Symbol &TargetSymbol =
+      G->addAnonymousSymbol(BArm, SymbolOffset, SymbolSize, false, false);
+  Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
+                   0 /*Addend*/);
+
   EXPECT_THAT_ERROR(
       applyFixupData(*G, BArm, InvalidEdge),
       FailedWithMessage(testing::HasSubstr(
@@ -158,6 +152,54 @@ TEST(AArch32_ELF, applyFixupErrors) {
                           testing::StartsWith("Invalid opcode"),
                           testing::EndsWith(G->getEdgeKindName(K)))));
   }
+}
+
+TEST(AArch32_ELF, applyFixupThumbErrors) {
+
+  struct MutableHalfWords {
+    constexpr MutableHalfWords(HalfWords Preset)
+        : Hi(Preset.Hi), Lo(Preset.Lo) {}
+
+    uint16_t Hi; // First halfword
+    uint16_t Lo; // Second halfword
+  };
+
+  constexpr orc::ExecutorAddr B4DummyAddr(0x6000);
+
+  // Permanently undefined instruction in Thumb
+  //    udf #0
+  //
+  //    11110:op:imm4:1:op1:imm12
+  //    op  = 1111111 Permanent undefined
+  //    op1 = 010
+  //
+  constexpr HalfWords ThumbHalfWords{0xf7f0, 0xa000};
+  MutableHalfWords MutableThumbHalfWords{ThumbHalfWords};
+  MutableArrayRef<char> MutableThumbContent(
+      reinterpret_cast<char *>(&MutableThumbHalfWords),
+      sizeof(MutableThumbHalfWords));
+
+  auto &BThumb = G->createMutableContentBlock(
+      Sec, MutableThumbContent, B4DummyAddr, ThumbAlignment, AlignmentOffset);
+
+  Symbol &TargetSymbol =
+      G->addAnonymousSymbol(BThumb, SymbolOffset, SymbolSize, false, false);
+  Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
+                   0 /*Addend*/);
+
+  EXPECT_THAT_ERROR(
+      applyFixupData(*G, BThumb, InvalidEdge),
+      FailedWithMessage(testing::HasSubstr(
+          "encountered unfixable aarch32 edge kind INVALID RELOCATION")));
+  EXPECT_THAT_ERROR(
+      applyFixupArm(*G, BThumb, InvalidEdge),
+      FailedWithMessage(testing::HasSubstr(
+          "encountered unfixable aarch32 edge kind INVALID RELOCATION")));
+  EXPECT_THAT_ERROR(
+      applyFixupThumb(*G, BThumb, InvalidEdge, ArmCfg),
+      FailedWithMessage(testing::HasSubstr(
+          "encountered unfixable aarch32 edge kind INVALID RELOCATION")));
+
   for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
     Edge E(K, 0, TargetSymbol, 0);
     EXPECT_THAT_ERROR(applyFixupThumb(*G, BThumb, E, ArmCfg),
