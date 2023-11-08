@@ -1127,8 +1127,6 @@ define bfloat @fcvt_bf16_wu_load(ptr %p) nounwind {
   ret bfloat %1
 }
 
-; TODO: Other than the RV32 zfbfmin case, semantically incorrect double
-; rounding is currently used.
 define bfloat @fcvt_bf16_l(i64 %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_bf16_l:
 ; CHECK32ZFBFMIN:       # %bb.0:
@@ -1143,8 +1141,7 @@ define bfloat @fcvt_bf16_l(i64 %a) nounwind {
 ; RV32ID:       # %bb.0:
 ; RV32ID-NEXT:    addi sp, sp, -16
 ; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32ID-NEXT:    call __floatdisf@plt
-; RV32ID-NEXT:    call __truncsfbf2@plt
+; RV32ID-NEXT:    call __floatdibf@plt
 ; RV32ID-NEXT:    fmv.x.w a0, fa0
 ; RV32ID-NEXT:    lui a1, 1048560
 ; RV32ID-NEXT:    or a0, a0, a1
@@ -1163,8 +1160,7 @@ define bfloat @fcvt_bf16_l(i64 %a) nounwind {
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    addi sp, sp, -16
 ; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64ID-NEXT:    fcvt.s.l fa0, a0
-; RV64ID-NEXT:    call __truncsfbf2@plt
+; RV64ID-NEXT:    call __floatdibf@plt
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-NEXT:    lui a1, 1048560
 ; RV64ID-NEXT:    or a0, a0, a1
@@ -1176,8 +1172,6 @@ define bfloat @fcvt_bf16_l(i64 %a) nounwind {
   ret bfloat %1
 }
 
-; TODO: Other than the RV32 zfbfmin case, semantically incorrect double
-; rounding is currently used.
 define bfloat @fcvt_bf16_lu(i64 %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_bf16_lu:
 ; CHECK32ZFBFMIN:       # %bb.0:
@@ -1192,8 +1186,7 @@ define bfloat @fcvt_bf16_lu(i64 %a) nounwind {
 ; RV32ID:       # %bb.0:
 ; RV32ID-NEXT:    addi sp, sp, -16
 ; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32ID-NEXT:    call __floatundisf@plt
-; RV32ID-NEXT:    call __truncsfbf2@plt
+; RV32ID-NEXT:    call __floatundibf@plt
 ; RV32ID-NEXT:    fmv.x.w a0, fa0
 ; RV32ID-NEXT:    lui a1, 1048560
 ; RV32ID-NEXT:    or a0, a0, a1
@@ -1212,8 +1205,7 @@ define bfloat @fcvt_bf16_lu(i64 %a) nounwind {
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    addi sp, sp, -16
 ; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64ID-NEXT:    fcvt.s.lu fa0, a0
-; RV64ID-NEXT:    call __truncsfbf2@plt
+; RV64ID-NEXT:    call __floatundibf@plt
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-NEXT:    lui a1, 1048560
 ; RV64ID-NEXT:    or a0, a0, a1
@@ -1225,8 +1217,6 @@ define bfloat @fcvt_bf16_lu(i64 %a) nounwind {
   ret bfloat %1
 }
 
-; TODO: Other than the RV32 and RV64 zfbfmin cases, semantically incorrect
-; double rounding is currently used.
 define bfloat @fcvt_bf16_ll(i128 %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_bf16_ll:
 ; CHECK32ZFBFMIN:       # %bb.0:
@@ -1259,8 +1249,7 @@ define bfloat @fcvt_bf16_ll(i128 %a) nounwind {
 ; RV32ID-NEXT:    sw a2, 12(sp)
 ; RV32ID-NEXT:    addi a0, sp, 8
 ; RV32ID-NEXT:    sw a1, 8(sp)
-; RV32ID-NEXT:    call __floattisf@plt
-; RV32ID-NEXT:    call __truncsfbf2@plt
+; RV32ID-NEXT:    call __floattibf@plt
 ; RV32ID-NEXT:    fmv.x.w a0, fa0
 ; RV32ID-NEXT:    lui a1, 1048560
 ; RV32ID-NEXT:    or a0, a0, a1
@@ -1282,8 +1271,7 @@ define bfloat @fcvt_bf16_ll(i128 %a) nounwind {
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    addi sp, sp, -16
 ; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64ID-NEXT:    call __floattisf@plt
-; RV64ID-NEXT:    call __truncsfbf2@plt
+; RV64ID-NEXT:    call __floattibf@plt
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-NEXT:    lui a1, 1048560
 ; RV64ID-NEXT:    or a0, a0, a1
@@ -1295,8 +1283,6 @@ define bfloat @fcvt_bf16_ll(i128 %a) nounwind {
   ret bfloat %1
 }
 
-; TODO: Other than the RV32 and RV64 zfbfmin cases, semantically incorrect
-; double rounding is currently used.
 define bfloat @fcvt_bf16_llu(i128 %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_bf16_llu:
 ; CHECK32ZFBFMIN:       # %bb.0:
@@ -1329,8 +1315,7 @@ define bfloat @fcvt_bf16_llu(i128 %a) nounwind {
 ; RV32ID-NEXT:    sw a2, 12(sp)
 ; RV32ID-NEXT:    addi a0, sp, 8
 ; RV32ID-NEXT:    sw a1, 8(sp)
-; RV32ID-NEXT:    call __floatuntisf@plt
-; RV32ID-NEXT:    call __truncsfbf2@plt
+; RV32ID-NEXT:    call __floatuntibf@plt
 ; RV32ID-NEXT:    fmv.x.w a0, fa0
 ; RV32ID-NEXT:    lui a1, 1048560
 ; RV32ID-NEXT:    or a0, a0, a1
@@ -1352,8 +1337,7 @@ define bfloat @fcvt_bf16_llu(i128 %a) nounwind {
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    addi sp, sp, -16
 ; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64ID-NEXT:    call __floatuntisf@plt
-; RV64ID-NEXT:    call __truncsfbf2@plt
+; RV64ID-NEXT:    call __floatuntibf@plt
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-NEXT:    lui a1, 1048560
 ; RV64ID-NEXT:    or a0, a0, a1

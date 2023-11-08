@@ -2953,7 +2953,42 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_SELECT_CC(SDNode *N) {
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_XINT_TO_FP(SDNode *N) {
   EVT OVT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
+  EVT SVT = N->getOperand(0).getValueType();
   SDLoc dl(N);
+
+  // For bf16, conversion to f32 and then rounding isn't semantically correct
+  // for types larger than i32 (it double rounds), so produce a libcall and
+  // cast the result to i16 in order to match the expected type for a
+  // soft-promoted half/bf16.
+  if (OVT == MVT::bf16 && SVT.bitsGT(MVT::i32)) {
+    assert(!N->isStrictFPOpcode() && "Unexpected strict opcode\n");
+    bool Signed = N->getOpcode() == ISD::SINT_TO_FP;
+    EVT NSVT = EVT();
+    // If the input is not legal, eg: i1 -> fp, then it needs to be promoted to
+    // a larger type, eg: i8 -> fp.  Even if it is legal, no libcall may exactly
+    // match.  Look for an appropriate libcall.
+    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+    for (unsigned t = MVT::FIRST_INTEGER_VALUETYPE;
+         t <= MVT::LAST_INTEGER_VALUETYPE && LC == RTLIB::UNKNOWN_LIBCALL;
+         ++t) {
+      NSVT = (MVT::SimpleValueType)t;
+      // The source needs to big enough to hold the operand.
+      if (NSVT.bitsGE(SVT))
+        LC = Signed ? RTLIB::getSINTTOFP(NSVT, MVT::bf16)
+                    : RTLIB::getUINTTOFP(NSVT, MVT::bf16);
+    }
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported XINT_TO_FP!");
+
+    // Sign/zero extend the argument if the libcall takes a larger type.
+    SDValue Op = DAG.getNode(Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, dl,
+                             NSVT, N->getOperand(0));
+    TargetLowering::MakeLibCallOptions CallOptions;
+    CallOptions.setSExt(Signed);
+    CallOptions.setTypeListBeforeSoften(SVT, MVT::bf16, true);
+    return DAG.getNode(
+        ISD::BITCAST, dl, MVT::i16,
+        TLI.makeLibCall(DAG, LC, MVT::bf16, Op, CallOptions, dl).first);
+  }
 
   SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
 
