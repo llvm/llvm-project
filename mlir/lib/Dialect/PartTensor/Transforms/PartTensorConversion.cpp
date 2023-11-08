@@ -43,8 +43,10 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 /// Maps each part tensor type to an opaque pointer.
-static Type convertPartTensorTypes(Type type) {
-  return LLVM::LLVMPointerType::get(IntegerType::get(type.getContext(), 64));
+static std::optional<Type> convertPartTensorTypes(Type type) {
+  if (mlir::part_tensor::getPartTensorEncoding(type) != nullptr)
+    return LLVM::LLVMPointerType::get(IntegerType::get(type.getContext(), 8));
+  return std::nullopt;
 }
 
 static FunctionType getElementalFuncTypeForOp(Operation *op) {
@@ -135,7 +137,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 mlir::PartTensorTypeToPtrConverter::PartTensorTypeToPtrConverter() {
-  // addConversion([](Type type) { return type; });
+  addConversion([](Type type) { return type; });
   addConversion(convertPartTensorTypes);
 }
 

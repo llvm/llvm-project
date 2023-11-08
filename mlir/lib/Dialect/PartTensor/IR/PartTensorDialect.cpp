@@ -44,6 +44,16 @@ void PartTensorDialect::initialize() {
 
 #include "mlir/Dialect/PartTensor/IR/PartTensorOpsDialect.cpp.inc"
 
+//===----------------------------------------------------------------------===//
+// convenience methods.
+//===----------------------------------------------------------------------===//
+
+PartTensorEncodingAttr mlir::part_tensor::getPartTensorEncoding(Type type) {
+  if (auto ttp = llvm::dyn_cast<RankedTensorType>(type))
+    return llvm::dyn_cast_or_null<PartTensorEncodingAttr>(ttp.getEncoding());
+  return nullptr;
+}
+
 /*
 void PartitionEncodingAttr::print(AsmPrinter &printer) const {
   printer << "<{";

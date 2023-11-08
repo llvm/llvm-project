@@ -30,4 +30,12 @@
 
 #include "mlir/Dialect/PartTensor/IR/PartTensorOpsDialect.h.inc"
 
+namespace mlir {
+namespace part_tensor {
+/// Convenience method to get a sparse encoding attribute from a type.
+/// Returns null-attribute for any type without an encoding.
+PartTensorEncodingAttr getPartTensorEncoding(Type type);
+} // namespace part_tensor
+} // namespace mlir
+
 #endif // MLIR_DIALECT_PARTITION_IR_PARTITION_H

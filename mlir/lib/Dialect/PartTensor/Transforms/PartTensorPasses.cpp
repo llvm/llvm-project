@@ -47,60 +47,21 @@ struct PartTensorConversionPass
     PartTensorTypeToPtrConverter converter;
     ConversionTarget target(*ctx);
     // Everything in the part dialect must go!
-    //  target.addIllegalDialect<PartTensorDialect>();
-    //  // All dynamic rules below accept new function, call, return, and
-    //  various
-    //  // tensor and bufferization operations as legal output of the rewriting
-    //  // provided that all part tensor types have been fully rewritten.
-    //  target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
-    //    return converter.isSignatureLegal(op.getFunctionType());
-    //  });
-    //  target.addDynamicallyLegalOp<func::CallOp>([&](func::CallOp op) {
-    //    return converter.isSignatureLegal(op.getCalleeType());
-    //  });
-    //  target.addDynamicallyLegalOp<func::ReturnOp>([&](func::ReturnOp op) {
-    //    return converter.isLegal(op.getOperandTypes());
-    //  });
-    //  target.addDynamicallyLegalOp<tensor::DimOp>([&](tensor::DimOp op) {
-    //    return converter.isLegal(op.getOperandTypes());
-    //  });
-    //  target.addDynamicallyLegalOp<tensor::CastOp>([&](tensor::CastOp op) {
-    //    return converter.isLegal(op.getSource().getType()) &&
-    //           converter.isLegal(op.getDest().getType());
-    //  });
-    //  target.addDynamicallyLegalOp<tensor::ExpandShapeOp>(
-    //      [&](tensor::ExpandShapeOp op) {
-    //        return converter.isLegal(op.getSrc().getType()) &&
-    //               converter.isLegal(op.getResult().getType());
-    //      });
-    //  target.addDynamicallyLegalOp<tensor::CollapseShapeOp>(
-    //      [&](tensor::CollapseShapeOp op) {
-    //        return converter.isLegal(op.getSrc().getType()) &&
-    //               converter.isLegal(op.getResult().getType());
-    //      });
-    //  target.addDynamicallyLegalOp<bufferization::AllocTensorOp>(
-    //      [&](bufferization::AllocTensorOp op) {
-    //        return converter.isLegal(op.getType());
-    //      });
-    //  target.addDynamicallyLegalOp<bufferization::DeallocTensorOp>(
-    //      [&](bufferization::DeallocTensorOp op) {
-    //        return converter.isLegal(op.getTensor().getType());
-    //      });
-    //  // The following operations and dialects may be introduced by the
-    //  // rewriting rules, and are therefore marked as legal.
-    //  target.addLegalOp<complex::ConstantOp, complex::NotEqualOp,
-    //  linalg::FillOp,
-    //                    linalg::YieldOp, tensor::ExtractOp>();
-    //  target.addLegalDialect<
-    //      arith::ArithDialect, bufferization::BufferizationDialect,
-    //      LLVM::LLVMDialect, memref::MemRefDialect, scf::SCFDialect>();
-    //  // Populate with rules and apply rewriting rules.
-    //  populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
-    //                                                                 converter);
-    //  populateCallOpTypeConversionPattern(patterns, converter);
-    //  scf::populateSCFStructuralTypeConversionsAndLegality(converter,
-    //  patterns,
-    //                                                       target);
+    target.addIllegalDialect<PartTensorDialect>();
+    // Allow func.call
+    target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
+      return converter.isSignatureLegal(op.getFunctionType());
+    });
+    target.addDynamicallyLegalOp<func::CallOp>([&](func::CallOp op) {
+      return converter.isSignatureLegal(op.getCalleeType());
+    });
+    target.addLegalDialect<
+        arith::ArithDialect, bufferization::BufferizationDialect,
+        LLVM::LLVMDialect, memref::MemRefDialect, scf::SCFDialect>();
+    // Populate with rules and apply rewriting rules.
+    populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
+                                                                   converter);
+    populateCallOpTypeConversionPattern(patterns, converter);
     populatePartTensorConversionPatterns(converter, patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))

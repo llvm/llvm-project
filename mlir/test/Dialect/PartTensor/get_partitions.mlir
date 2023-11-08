@@ -10,8 +10,8 @@
   sparseAttributes = #SortedCOO
 }>
 module {
-  func.func @dumpPartitions(%A: tensor<?x?xf32, #partEncoding>) -> tensor<?xindex> {
-    %partition_plan = part_tensor.get_partitions %A: tensor<?x?xf32, #partEncoding> -> tensor<?xindex>
-    return %partition_plan: tensor<?xindex>
+  func.func @dumpPartitions(%A: tensor<?x?xf32, #partEncoding>) -> memref<?xindex> {
+    %partition_plan = part_tensor.get_partitions %A: tensor<?x?xf32, #partEncoding> -> memref<?xindex>
+    return %partition_plan: memref<?xindex>
   }
 }

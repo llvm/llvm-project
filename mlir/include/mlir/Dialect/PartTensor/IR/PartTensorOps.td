@@ -41,7 +41,7 @@ class PartTensor_Op<string mnemonic, list<Trait> traits = []>
 def PartTensor_GetPartitionOp : PartTensor_Op<"get_partitions">,
                                 Arguments<(ins AnyTensor
                                            : $primary)>,
-                                Results<(outs TensorOf<[AnySignlessIntegerOrIndex]> 
+                                Results<(outs AnyStridedMemRefOfRank<1>
                                          : $tuples)> {
   let summary = "get all the partition specs";
   let description = [{
