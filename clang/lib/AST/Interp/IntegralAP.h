@@ -248,7 +248,11 @@ public:
 
   static void shiftRight(const IntegralAP A, const IntegralAP B,
                          unsigned OpBits, IntegralAP *R) {
-    *R = IntegralAP(A.V.ashr(B.V.getZExtValue()));
+    unsigned ShiftAmount = B.V.getZExtValue();
+    if constexpr (Signed)
+      *R = IntegralAP(A.V.ashr(ShiftAmount));
+    else
+      *R = IntegralAP(A.V.lshr(ShiftAmount));
   }
 
 private:
