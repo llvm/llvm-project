@@ -26,3 +26,10 @@ s_mov_b64 s[0:1], sym@abs64
 
 // GFX1210:        s_mov_b64 s[0:1], sym@abs64      ; encoding: [0xfe,0x01,0x80,0xbe,A,A,A,A,A,A,A,A]
 // GFX1210-NEXT:                                    ;   fixup A - offset: 4, value: sym@abs64, kind: FK_Data_8
+
+s_mov_b64 s[0:1], callee@rel64
+// SI: s_mov_b64 s[0:1], callee@rel64               ; encoding: [0xff,0x04,0x80,0xbe,A,A,A,A]
+// SI-NEXT:                                         ;   fixup A - offset: 4, value: callee@rel64, kind: FK_PCRel_4
+
+// GFX1210: s_mov_b64 s[0:1], callee@rel64          ; encoding: [0xfe,0x01,0x80,0xbe,A,A,A,A,A,A,A,A]
+// GFX1210-NEXT:                                    ;   fixup A - offset: 4, value: callee@rel64, kind: FK_PCRel_8

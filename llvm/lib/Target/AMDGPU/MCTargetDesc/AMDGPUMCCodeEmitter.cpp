@@ -613,7 +613,10 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
     auto OpType = Desc.operands()[OpNo].OperandType;
     MCFixupKind Kind;
     if (needsPCRel(MO.getExpr()))
-      Kind = FK_PCRel_4;
+      Kind = (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+              OpType == AMDGPU::OPERAND_REG_IMM_INT64)
+                 ? FK_PCRel_8
+                 : FK_PCRel_4;
     else
       Kind = (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
               OpType == AMDGPU::OPERAND_REG_IMM_INT64)
