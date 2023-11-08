@@ -2242,7 +2242,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (Subtarget.hasAVX())
+  if (!Subtarget.useSoftFloat() && Subtarget.hasAVX())
     setOperationAction(ISD::FABS, MVT::v8f16, Custom);
 
   if (!Subtarget.useSoftFloat() &&
