@@ -504,7 +504,16 @@ func.func @warp_scf_for_multiple_yield(%arg0: index, %arg1: memref<?xf32>, %arg2
 //       CHECK-PROP:     }
 //       CHECK-PROP:   }
 //       CHECK-PROP:   vector.reduction <add>
-//       CHECK-PROP:   gpu.shuffle
+//       CHECK-PROP-COUNT=8:   gpu.shuffle
+//
+//       CHECK-PROP:   scf.for {{.*}} {
+//       CHECK-PROP:     vector.transfer_read
+//       CHECK-PROP:     scf.for {{.*}} {
+//       CHECK-PROP:       vector.warp_execute_on_lane_0
+//       CHECK-PROP:         vector.transfer_read
+//       CHECK-PROP:         vector.transfer_write
+//       CHECK-PROP:       }
+//       CHECK-PROP:     }
 #map = affine_map<(d0, d1) -> (0, 0)>
 func.func @warp_scf_for_multi_reduce(%arg0: memref<2x32x40x384xf32>, %arg1: memref<2x32x40x384xf16>, %arg2: memref<2x32xf32>, %arg3: memref<2x32x40x384xf16>) {
   %cst = arith.constant dense<1.536000e+04> : vector<8x128xf32>

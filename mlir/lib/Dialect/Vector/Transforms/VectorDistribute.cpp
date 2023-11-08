@@ -433,20 +433,31 @@ static vector::TransferWriteOp cloneWriteOp(RewriterBase &rewriter,
 }
 
 /// Return the distributed vector type based on the original type and the
-/// distribution map. The map is expected to have a dimension equal to the
-/// original type rank and should be a projection where the results are the
-/// distributed dimensions. The vector should be completely distributably, i.e.
+/// distribution map. The vector should be completely distributable, i.e.
 /// the linearized shape should be a multiple of the warp size.
-/// Example (single-dim): For a vector<16x32x64> distributed with
-/// a map(d0, d1, d2) -> (d1) and a warp size of 16 would distribute the second
-/// dimension (associated to d1) and return vector<16x2x64>.
-/// Example (multi-dim): For a vector<16x32x64> distributed with a
+///
+/// The distribution map represents in what order the dimensions of the vector
+/// should be distributed. The map is expected to be a projected permutation of
+/// the vector shape dimensions. Examples of distribution maps:
+///  - (d0, d1, d2) -> (d1, d2) : Distribute d1, and then d2
+///  - (d0, d1, d2) -> (d2, d1, d0) : Distribute d2, then d1 and then d0
+/// If all threads are used while distributing the first few dimensions, the
+/// rest dimensions may not be used for distribution.
+///
+/// Example (single-dim): For a vector<16x32x64> distributed with a 
+/// map(d0, d1, d2) -> (d1) and a warp size of 16 would distribute the second
+/// dimension (associated to d1) and return vector<16x2x64>. 
+///
+/// Example (multi-dim): For a vector<16x32x64> distributed with a 
 /// map(d0, d1, d2) -> (d1, d2), and a warp size of 128 would distribute first
 /// the second dimension and then the third dimension, finally returning a
 /// vector <4x1x64>.
 static VectorType getDistributedType(VectorType originalType, AffineMap map,
                                      int64_t warpSize) {
-  assert(map.isProjectedPermutation() && "expected projected permutation map");
+  if (!map.isProjectedPermutation()) {
+    assert(false && "expected projected permutation map");
+    return VectorType();
+  }
 
   SmallVector<int64_t> targetShape(originalType.getShape().begin(),
                                    originalType.getShape().end());
@@ -457,14 +468,14 @@ static VectorType getDistributedType(VectorType originalType, AffineMap map,
     int64_t &dimSize = targetShape[position];
     if (availableThreads > dimSize) {
       // We have more threads available than the size of the dimension, so we
-      // distribute the whole dimension.
+      // distribute the with size 1 along this dimension.
       if (availableThreads % dimSize != 0)
         return VectorType();
       availableThreads = availableThreads / dimSize;
       dimSize = 1;
     } else {
       // We have the dimension is bigger than the number of threads available,
-      // so we distribute a part of the dimension to each thread.
+      // so we distribute with size > 1 along this dimension.
       if (dimSize % availableThreads != 0)
         return VectorType();
       dimSize = dimSize / availableThreads;

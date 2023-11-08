@@ -574,10 +574,10 @@ struct TestVectorDistribution
       VectorType vecType = dyn_cast<VectorType>(val.getType());
       int64_t vecRank = vecType ? vecType.getRank() : 0;
       OpBuilder builder(val.getContext());
-      SmallVector<AffineExpr, 4> vecDims = llvm::to_vector<4>(
-          llvm::map_range(llvm::seq<int64_t>(0, vecRank), [&](int64_t i) {
+      SmallVector<AffineExpr, 4> vecDims =
+          llvm::map_to_vector(llvm::seq<int64_t>(0, vecRank), [&](int64_t i) {
             return builder.getAffineDimExpr(vecRank - i - 1);
-          }));
+          });
       return AffineMap::get(vecRank, /*symbolCount=*/0, vecDims,
                             builder.getContext());
     };
