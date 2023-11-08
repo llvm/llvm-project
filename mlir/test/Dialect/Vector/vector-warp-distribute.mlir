@@ -322,10 +322,11 @@ func.func @extract_scalar_vector_broadcast(%laneid: index) {
 // CHECK-PROP:   %[[INI1:.*]] = "some_def"() : () -> vector<128xf32>
 // CHECK-PROP:   vector.yield %[[INI1]] : vector<128xf32>
 // CHECK-PROP: }
-// CHECK-PROP: %[[F:.*]] = scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[FARG:.*]] = %[[INI]]) -> (vector<4xf32>) {
+// CHECK-PROP: %[[F:.*]] = scf.for %[[IT:.+]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[FARG:.*]] = %[[INI]]) -> (vector<4xf32>) {
+// CHECK-PROP:   %[[A:.*]] = arith.addi %[[IT]], %{{.*}} : index
 // CHECK-PROP:   %[[W:.*]] = vector.warp_execute_on_lane_0(%{{.*}})[32] args(%[[FARG]] : vector<4xf32>) -> (vector<4xf32>) {
 // CHECK-PROP:    ^bb0(%[[ARG:.*]]: vector<128xf32>):
-// CHECK-PROP:      %[[ACC:.*]] = "some_def"(%[[ARG]]) : (vector<128xf32>) -> vector<128xf32>
+// CHECK-PROP:      %[[ACC:.*]] = "some_def"(%[[A]], %[[ARG]]) : (index, vector<128xf32>) -> vector<128xf32>
 // CHECK-PROP:      vector.yield %[[ACC]] : vector<128xf32>
 // CHECK-PROP:   }
 // CHECK-PROP:   scf.yield %[[W]] : vector<4xf32>
@@ -338,7 +339,8 @@ func.func @warp_scf_for(%arg0: index) {
   %0 = vector.warp_execute_on_lane_0(%arg0)[32] -> (vector<4xf32>) {
     %ini = "some_def"() : () -> (vector<128xf32>)
     %3 = scf.for %arg3 = %c0 to %c128 step %c1 iter_args(%arg4 = %ini) -> (vector<128xf32>) {
-      %acc = "some_def"(%arg4) : (vector<128xf32>) -> (vector<128xf32>)
+      %add = arith.addi %arg3, %c1 : index
+      %acc = "some_def"(%add, %arg4) : (index, vector<128xf32>) -> (vector<128xf32>)
       scf.yield %acc : vector<128xf32>
     }
     vector.yield %3 : vector<128xf32>
@@ -1251,3 +1253,31 @@ func.func @warp_propagate_uniform_transfer_read(%laneid: index, %src: memref<409
 //  CHECK-PROP-SAME: (%{{.+}}: index, %[[SRC:.+]]: memref<4096xf32>, %[[INDEX:.+]]: index)
 //       CHECK-PROP:   %[[READ:.+]] = vector.transfer_read %[[SRC]][%[[INDEX]]], %cst {in_bounds = [true]} : memref<4096xf32>, vector<1xf32>
 //       CHECK-PROP:   return %[[READ]] : vector<1xf32>
+
+// -----
+
+func.func @warp_propagate_masked_write(%laneid: index, %dest: memref<4096xf32>) {
+  %c0 = arith.constant 0 : index
+  vector.warp_execute_on_lane_0(%laneid)[32] -> () {
+    %mask = "mask_def_0"() : () -> (vector<4096xi1>)
+    %mask2 = "mask_def_1"() : () -> (vector<32xi1>)
+    %0 = "some_def_0"() : () -> (vector<4096xf32>)
+    %1 = "some_def_1"() : () -> (vector<32xf32>)
+    vector.transfer_write %0, %dest[%c0], %mask : vector<4096xf32>, memref<4096xf32>
+    vector.transfer_write %1, %dest[%c0], %mask2 : vector<32xf32>, memref<4096xf32>
+    vector.yield
+  }
+  return
+}
+
+// CHECK-DIST-AND-PROP-LABEL: func.func @warp_propagate_masked_write(
+//       CHECK-DIST-AND-PROP:   %[[W:.*]]:4 = vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1xf32>, vector<1xi1>, vector<128xf32>, vector<128xi1>) {
+//       CHECK-DIST-AND-PROP:     %[[M0:.*]] = "mask_def_0"
+//       CHECK-DIST-AND-PROP:     %[[M1:.*]] = "mask_def_1"
+//       CHECK-DIST-AND-PROP:     %[[V0:.*]] = "some_def_0"
+//       CHECK-DIST-AND-PROP:     %[[V1:.*]] = "some_def_1"
+//       CHECK-DIST-AND-PROP:     vector.yield %[[V1]], %[[M1]], %[[V0]], %[[M0]]
+//  CHECK-DIST-AND-PROP-SAME:       vector<32xf32>, vector<32xi1>, vector<4096xf32>, vector<4096xi1>
+//       CHECK-DIST-AND-PROP:   }
+//       CHECK-DIST-AND-PROP:   vector.transfer_write %[[W]]#2, {{.*}}, %[[W]]#3 {in_bounds = [true]} : vector<128xf32>, memref<4096xf32>
+//       CHECK-DIST-AND-PROP:   vector.transfer_write %[[W]]#0, {{.*}}, %[[W]]#1 {in_bounds = [true]} : vector<1xf32>, memref<4096xf32>

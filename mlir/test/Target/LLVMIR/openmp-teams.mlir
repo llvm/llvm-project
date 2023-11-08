@@ -45,8 +45,8 @@ llvm.func @omp_teams_shared_simple(%arg0: i32) {
 
 // -----
 
-llvm.func @my_alloca_fn() -> !llvm.ptr<i32>
-llvm.func @foo(i32, f32, !llvm.ptr<i32>, f128, !llvm.ptr<i32>, i32) -> ()
+llvm.func @my_alloca_fn() -> !llvm.ptr
+llvm.func @foo(i32, f32, !llvm.ptr, f128, !llvm.ptr, i32) -> ()
 llvm.func @bar()
 
 // CHECK-LABEL: @omp_teams_branching_shared
@@ -79,15 +79,15 @@ llvm.func @bar()
 // CHECK: br label
 // CHECK: call void @bar()
 // CHECK: ret void
-llvm.func @omp_teams_branching_shared(%condition: i1, %arg0: i32, %arg1: f32, %arg2: !llvm.ptr<i32>, %arg3: f128) {
-    %allocated = llvm.call @my_alloca_fn(): () -> !llvm.ptr<i32>
-    %loaded = llvm.load %allocated : !llvm.ptr<i32>
+llvm.func @omp_teams_branching_shared(%condition: i1, %arg0: i32, %arg1: f32, %arg2: !llvm.ptr, %arg3: f128) {
+    %allocated = llvm.call @my_alloca_fn(): () -> !llvm.ptr
+    %loaded = llvm.load %allocated : !llvm.ptr -> i32
     llvm.br ^codegenBlock
 ^codegenBlock:
     omp.teams {
         llvm.cond_br %condition, ^true_block, ^false_block
     ^true_block:
-        llvm.call @foo(%arg0, %arg1, %arg2, %arg3, %allocated, %loaded) : (i32, f32, !llvm.ptr<i32>, f128, !llvm.ptr<i32>, i32) -> ()
+        llvm.call @foo(%arg0, %arg1, %arg2, %arg3, %allocated, %loaded) : (i32, f32, !llvm.ptr, f128, !llvm.ptr, i32) -> ()
         llvm.br ^exit
     ^false_block:
         llvm.br ^exit
@@ -235,3 +235,54 @@ llvm.func @omp_teams_num_teams_and_thread_limit(%numTeamsLower: i32, %numTeamsUp
 // CHECK: define internal void [[OUTLINED_FN]](ptr {{.+}}, ptr {{.+}})
 // CHECK: call void @duringTeams()
 // CHECK: ret void
+
+// -----
+
+llvm.func @beforeTeams()
+llvm.func @duringTeams()
+llvm.func @afterTeams()
+
+// CHECK-LABEL: @teams_if
+// CHECK-SAME: (i1 [[ARG:.+]])
+llvm.func @teams_if(%arg : i1) {
+    // CHECK-NEXT: call void @beforeTeams()
+    llvm.call @beforeTeams() : () -> ()
+    // If the condition is true, then the value of bounds is zero - which basically means "implementation-defined". 
+    // The runtime sees zero and sets a default value of number of teams. This behavior is according to the standard.
+    // The same is true for `thread_limit`.
+    // CHECK: [[NUM_TEAMS_UPPER:%.+]] = select i1 [[ARG]], i32 0, i32 1
+    // CHECK: [[NUM_TEAMS_LOWER:%.+]] = select i1 [[ARG]], i32 0, i32 1
+    // CHECK: call void @__kmpc_push_num_teams_51(ptr {{.+}}, i32 {{.+}}, i32 [[NUM_TEAMS_LOWER]], i32 [[NUM_TEAMS_UPPER]], i32 0)
+    // CHECK: call void {{.+}} @__kmpc_fork_teams({{.+}})
+    omp.teams if(%arg) {
+        llvm.call @duringTeams() : () -> ()
+        omp.terminator
+    }
+    // CHECK: call void @afterTeams()
+    llvm.call @afterTeams() : () -> ()
+    llvm.return
+}
+
+// -----
+
+llvm.func @beforeTeams()
+llvm.func @duringTeams()
+llvm.func @afterTeams()
+
+// CHECK-LABEL: @teams_if_with_num_teams
+// CHECK-SAME: (i1 [[CONDITION:.+]], i32 [[NUM_TEAMS_LOWER:.+]], i32 [[NUM_TEAMS_UPPER:.+]], i32 [[THREAD_LIMIT:.+]])
+llvm.func @teams_if_with_num_teams(%condition: i1, %numTeamsLower: i32, %numTeamsUpper: i32, %threadLimit: i32) {
+    // CHECK: call void @beforeTeams()
+    llvm.call @beforeTeams() : () -> ()
+    // CHECK: [[NUM_TEAMS_UPPER_NEW:%.+]] = select i1 [[CONDITION]], i32 [[NUM_TEAMS_UPPER]], i32 1
+    // CHECK: [[NUM_TEAMS_LOWER_NEW:%.+]] = select i1 [[CONDITION]], i32 [[NUM_TEAMS_LOWER]], i32 1
+    // CHECK: call void @__kmpc_push_num_teams_51(ptr {{.+}}, i32 {{.+}}, i32 [[NUM_TEAMS_LOWER_NEW]], i32 [[NUM_TEAMS_UPPER_NEW]], i32 [[THREAD_LIMIT]])
+    // CHECK: call void {{.+}} @__kmpc_fork_teams({{.+}})
+    omp.teams if(%condition) num_teams(%numTeamsLower: i32 to %numTeamsUpper: i32) thread_limit(%threadLimit: i32) {
+        llvm.call @duringTeams() : () -> ()
+        omp.terminator
+    }
+    // CHECK: call void @afterTeams()
+    llvm.call @afterTeams() : () -> ()
+    llvm.return
+}

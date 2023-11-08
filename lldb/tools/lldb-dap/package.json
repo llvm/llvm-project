@@ -250,6 +250,11 @@
 								"type": "boolean",
 								"description": "If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating sythetic child plug-ins as it lets you see the actual contents of the variable.",
 								"default": false
+							},
+							"commandEscapePrefix": {
+								"type": "string",
+								"description": "The escape prefix to use for executing regular LLDB commands in the Debug Console, instead of printing variables. Defaults to a back-tick (`). If it's an empty string, then all expression in the Debug Console are treated as regular LLDB commands.",
+								"default": "`"
 							}
 						}
 					},
@@ -339,6 +344,11 @@
 								"type": "boolean",
 								"description": "If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating sythetic child plug-ins as it lets you see the actual contents of the variable.",
 								"default": false
+							},
+							"commandEscapePrefix": {
+								"type": "string",
+								"description": "The escape prefix character to use for executing regular LLDB commands in the Debug Console, instead of printing variables. Defaults to a back-tick (`). If empty, then all expression in the Debug Console are treated as regular LLDB commands.",
+								"default": "`"
 							}
 						}
 					}

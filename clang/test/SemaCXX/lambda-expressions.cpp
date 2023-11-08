@@ -150,9 +150,10 @@ namespace Array {
   int &f(int *p);
   char &f(...);
   void g() {
-    int n = -1;
+    int n = -1;   // expected-note {{declared here}}
     [=] {
-      int arr[n]; // VLA
+      int arr[n]; // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                     expected-note {{read of non-const variable 'n' is not allowed in a constant expression}}
     } ();
 
     const int m = -1;
@@ -379,6 +380,14 @@ namespace PR18128 {
     int c = []{ int k = 0; return [=]{ return k; }(); }(); // ok
     int d = [] { return [=] { return n; }(); }();          // expected-error {{'this' cannot be implicitly captured in this context}} expected-note {{explicitly capture 'this'}}
   };
+}
+
+namespace gh67687 {
+struct S {
+  int n;
+  int a = (4, []() { return n; }());  // expected-error {{'this' cannot be implicitly captured in this context}} \
+                                      // expected-note {{explicitly capture 'this'}}
+};
 }
 
 namespace PR18473 {

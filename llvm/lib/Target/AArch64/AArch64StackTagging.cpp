@@ -12,7 +12,6 @@
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"

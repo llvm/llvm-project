@@ -38,10 +38,10 @@ define void @fcvt_v4f64_v4f128(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    bl __extenddftf2
 ; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr q2, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    stp q1, q0, [x19]
+; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    stp q0, q2, [x19, #32]
+; CHECK-NEXT:    stp q0, q1, [x19, #32]
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload

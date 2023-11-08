@@ -903,6 +903,7 @@ cc_library(
         ":type_nodes_gen",
         "//llvm:BinaryFormat",
         "//llvm:Core",
+        "//llvm:FrontendHLSL",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -1726,6 +1727,7 @@ cc_library(
         "include/clang/Frontend/*.def",
     ]),
     deps = [
+        ":apinotes",
         ":ast",
         ":basic",
         ":config",
@@ -1854,13 +1856,14 @@ cc_library(
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
         "//llvm:FrontendHLSL",
+        "//llvm:FrontendOffloading",
         "//llvm:FrontendOpenMP",
+        "//llvm:HipStdPar",
         "//llvm:IPO",
         "//llvm:IRPrinter",
         "//llvm:IRReader",
         "//llvm:InstCombine",
         "//llvm:Instrumentation",
-        "//llvm:HipStdPar",
         "//llvm:LTO",
         "//llvm:Linker",
         "//llvm:MC",
@@ -2122,6 +2125,22 @@ cc_binary(
         ":serialization",
         "//llvm:Core",
         "//llvm:MC",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "apinotes",
+    srcs = glob([
+        "lib/APINotes/*.cpp",
+        "lib/APINotes/*.h",
+    ]),
+    hdrs = glob(["include/clang/APINotes/*.h"]),
+    deps = [
+        ":basic",
+        "//llvm:BitWriter",
+        "//llvm:BitstreamReader",
+        "//llvm:BitstreamWriter",
         "//llvm:Support",
     ],
 )

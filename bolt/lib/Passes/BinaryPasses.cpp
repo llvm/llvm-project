@@ -610,8 +610,8 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
           if (BF.requiresAddressTranslation() && BC.MIB->getOffset(*II))
             PreservedOffsetAnnotations.emplace_back(&(*II),
                                                     *BC.MIB->getOffset(*II));
-          if (auto Label = BC.MIB->getLabel(*II))
-            PreservedLabelAnnotations.emplace_back(&*II, *Label);
+          if (MCSymbol *Label = BC.MIB->getLabel(*II))
+            PreservedLabelAnnotations.emplace_back(&*II, Label);
           BC.MIB->stripAnnotations(*II);
         }
       }
@@ -620,8 +620,8 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
   for (BinaryFunction *BF : BC.getInjectedBinaryFunctions())
     for (BinaryBasicBlock &BB : *BF)
       for (MCInst &Instruction : BB) {
-        if (auto Label = BC.MIB->getLabel(Instruction))
-          PreservedLabelAnnotations.emplace_back(&Instruction, *Label);
+        if (MCSymbol *Label = BC.MIB->getLabel(Instruction))
+          PreservedLabelAnnotations.emplace_back(&Instruction, Label);
         BC.MIB->stripAnnotations(Instruction);
       }
 

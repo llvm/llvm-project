@@ -17,10 +17,15 @@
 static __inline dst_t __floatXiYf__(src_t a) {
   if (a == 0)
     return 0.0;
-  const int dstMantDig = dstSigBits + 1;
-  const int srcBits = sizeof(src_t) * CHAR_BIT;
-  const int srcIsSigned = ((src_t)-1) < 0;
+
+  enum {
+    dstMantDig = dstSigBits + 1,
+    srcBits = sizeof(src_t) * CHAR_BIT,
+    srcIsSigned = ((src_t)-1) < 0,
+  };
+
   const src_t s = srcIsSigned ? a >> (srcBits - 1) : 0;
+
   a = (usrc_t)(a ^ s) - s;
   int sd = srcBits - clzSrcT(a);         // number of significant digits
   int e = sd - 1;                        // exponent

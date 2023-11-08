@@ -1981,6 +1981,7 @@ def SVCNTP_COUNT : SInst<"svcntp_{d}", "n}i", "QcQsQiQl", MergeNone, "aarch64_sv
 defm SVREVD : SInstZPZ<"svrevd", "csilUcUsUiUl", "aarch64_sve_revd">;
 }
 
+
 let TargetGuard = "sve2p1,b16b16" in {
 defm SVMUL_BF  : SInstZPZZ<"svmul",  "b", "aarch64_sve_fmul",   "aarch64_sve_fmul_u">;
 defm SVADD_BF  : SInstZPZZ<"svadd",  "b", "aarch64_sve_fadd",   "aarch64_sve_fadd_u">;
@@ -1996,3 +1997,15 @@ def SVMLS_LANE_BF  : SInst<"svmls_lane[_{d}]",  "ddddi",  "b", MergeNone, "aarch
 def SVMUL_LANE_BF  : SInst<"svmul_lane[_{d}]", "dddi", "b", MergeNone, "aarch64_sve_fmul_lane", [], [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
 def SVFCLAMP_BF   : SInst<"svclamp[_{d}]", "dddd", "b", MergeNone, "aarch64_sve_fclamp", [], []>;
 } //sve2p1,b16b16
+
+// SME2
+
+// SME intrinsics which operate only on vectors and do not require ZA should be added here,
+// as they could possibly become SVE instructions in the future.
+
+let TargetGuard = "sme2" in {
+// == ADD (vectors) ==
+  def SVADD_SINGLE_X2 : SInst<"svadd[_single_{d}_x2]", "22d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x2", [IsStreaming], []>;
+  def SVADD_SINGLE_X4 : SInst<"svadd[_single_{d}_x4]", "44d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x4", [IsStreaming], []>;
+}
+

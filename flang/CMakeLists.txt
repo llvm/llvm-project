@@ -273,10 +273,13 @@ if (NOT(FLANG_DEFAULT_RTLIB STREQUAL ""))
       "Default runtime library to use (empty for platform default)" FORCE)
 endif()
 
+
+
 set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
 if (NOT PACKAGE_VERSION)
   set(PACKAGE_VERSION ${LLVM_VERSION_MAJOR})
 endif()
+
 
 if (NOT DEFINED FLANG_VERSION_MAJOR)
   set(FLANG_VERSION_MAJOR ${LLVM_VERSION_MAJOR})
@@ -500,7 +503,7 @@ configure_file(
   ${HEADER_BINARY_DIR}/ISO_Fortran_binding.h)
 
 # And also install it into the install area
-get_clang_resource_dir(HEADER_INSTALL_DIR PREFIX ${CMAKE_INSTALL_PREFIX} SUBDIR include)
+get_clang_resource_dir(HEADER_INSTALL_DIR SUBDIR include)
 install(
-  FILES ${CMAKE_INSTALL_PREFIX}/include/flang/ISO_Fortran_binding.h 
-  DESTINATION ${HEADER_INSTALL_DIR})
+  FILES include/flang/ISO_Fortran_binding.h
+  DESTINATION ${HEADER_INSTALL_DIR} )

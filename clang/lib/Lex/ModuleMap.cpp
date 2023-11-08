@@ -348,8 +348,8 @@ bool ModuleMap::resolveAsBuiltinHeader(
   if (!File)
     return false;
 
+  Module::Header H = {Header.FileName, Header.FileName, *File};
   auto Role = headerKindToRole(Header.Kind);
-  Module::Header H = {Header.FileName, std::string(Path.str()), *File};
   addHeader(Mod, H, Role);
   return true;
 }
@@ -415,6 +415,13 @@ static StringRef sanitizeFilenameAsIdentifier(StringRef Name,
 bool ModuleMap::isBuiltinHeader(FileEntryRef File) {
   return File.getDir() == BuiltinIncludeDir && LangOpts.BuiltinHeadersInSystemModules &&
          isBuiltinHeaderName(llvm::sys::path::filename(File.getName()));
+}
+
+bool ModuleMap::shouldImportRelativeToBuiltinIncludeDir(StringRef FileName,
+                                                        Module *Module) const {
+  return LangOpts.BuiltinHeadersInSystemModules && BuiltinIncludeDir &&
+         Module->IsSystem && !Module->isPartOfFramework() &&
+         isBuiltinHeaderName(FileName);
 }
 
 ModuleMap::HeadersMap::iterator ModuleMap::findKnownHeader(FileEntryRef File) {
@@ -1398,16 +1405,17 @@ bool ModuleMap::resolveExports(Module *Mod, bool Complain) {
 }
 
 bool ModuleMap::resolveUses(Module *Mod, bool Complain) {
-  auto Unresolved = std::move(Mod->UnresolvedDirectUses);
-  Mod->UnresolvedDirectUses.clear();
+  auto *Top = Mod->getTopLevelModule();
+  auto Unresolved = std::move(Top->UnresolvedDirectUses);
+  Top->UnresolvedDirectUses.clear();
   for (auto &UDU : Unresolved) {
-    Module *DirectUse = resolveModuleId(UDU, Mod, Complain);
+    Module *DirectUse = resolveModuleId(UDU, Top, Complain);
     if (DirectUse)
-      Mod->DirectUses.push_back(DirectUse);
+      Top->DirectUses.push_back(DirectUse);
     else
-      Mod->UnresolvedDirectUses.push_back(UDU);
+      Top->UnresolvedDirectUses.push_back(UDU);
   }
-  return !Mod->UnresolvedDirectUses.empty();
+  return !Top->UnresolvedDirectUses.empty();
 }
 
 bool ModuleMap::resolveConflicts(Module *Mod, bool Complain) {
@@ -2426,7 +2434,8 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
   Header.Kind = Map.headerRoleToKind(Role);
 
   // Check whether we already have an umbrella.
-  if (Header.IsUmbrella && ActiveModule->Umbrella) {
+  if (Header.IsUmbrella &&
+      !std::holds_alternative<std::monostate>(ActiveModule->Umbrella)) {
     Diags.Report(Header.FileNameLoc, diag::err_mmap_umbrella_clash)
       << ActiveModule->getFullModuleName();
     HadError = true;
@@ -2523,7 +2532,7 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
   SourceLocation DirNameLoc = consumeToken();
 
   // Check whether we already have an umbrella.
-  if (ActiveModule->Umbrella) {
+  if (!std::holds_alternative<std::monostate>(ActiveModule->Umbrella)) {
     Diags.Report(DirNameLoc, diag::err_mmap_umbrella_clash)
       << ActiveModule->getFullModuleName();
     HadError = true;

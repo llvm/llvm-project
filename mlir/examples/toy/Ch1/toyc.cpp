@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "toy/AST.h"
+#include "toy/Lexer.h"
 #include "toy/Parser.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -17,6 +19,9 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <memory>
+#include <string>
+#include <system_error>
 
 using namespace toy;
 namespace cl = llvm::cl;

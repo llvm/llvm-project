@@ -22,7 +22,6 @@
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/ilist_iterator.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"

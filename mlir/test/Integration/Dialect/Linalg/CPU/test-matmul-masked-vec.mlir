@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -test-transform-dialect-erase-schedule -one-shot-bufferize -func-bufferize -lower-vector-mask --test-lower-to-llvm | \
+// RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule -one-shot-bufferize -func-bufferize -lower-vector-mask --test-lower-to-llvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void --shared-libs=%mlir_c_runner_utils,%mlir_runner_utils | \
 // RUN: FileCheck %s
 
@@ -47,12 +47,14 @@ func.func @main() {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %func_op = get_parent_op %0 : (!transform.any_op) -> !transform.op<"func.func">
-  transform.structured.vectorize %0 vector_sizes [4, 4, 2] : !transform.any_op
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerreduction"
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %func_op = transform.get_parent_op %0 : (!transform.any_op) -> !transform.op<"func.func">
+    transform.structured.vectorize %0 vector_sizes [4, 4, 2] : !transform.any_op
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerreduction"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }

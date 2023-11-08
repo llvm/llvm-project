@@ -1,11 +1,13 @@
-// RUN: mlir-opt --test-transform-dialect-interpreter %s -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt --transform-interpreter %s -split-input-file -verify-diagnostics | FileCheck %s
 
 // Test One-Shot Bufferize.
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.bufferization.one_shot_bufferize %0 : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.bufferization.one_shot_bufferize %0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // CHECK-LABEL: func @test_function(
@@ -29,10 +31,12 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
 
 // Emit linalg.copy instead of memref.copy.
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.bufferization.one_shot_bufferize %0 {memcpy_op = "linalg.copy"} : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.bufferization.one_shot_bufferize %0 {memcpy_op = "linalg.copy"} : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // CHECK-LABEL: func @test_function(
@@ -57,11 +61,13 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
 
 // Test analysis of One-Shot Bufferize only.
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.bufferization.one_shot_bufferize %0
-      {test_analysis_only = true} : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.bufferization.one_shot_bufferize %0
+        {test_analysis_only = true} : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // CHECK-LABEL: func @test_function_analysis(
@@ -80,11 +86,13 @@ func.func @test_function_analysis(%A : tensor<?xf32>, %v : vector<4xf32>) -> (te
 // Test One-Shot Bufferize transform failure with an unknown op. This would be
 // allowed with `allow_unknown_ops`.
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-error @+1 {{bufferization failed}}
-  %1 = transform.bufferization.one_shot_bufferize %0 : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @+1 {{bufferization failed}}
+    %1 = transform.bufferization.one_shot_bufferize %0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 func.func @test_unknown_op_failure() -> (tensor<?xf32>) {
@@ -95,10 +103,12 @@ func.func @test_unknown_op_failure() -> (tensor<?xf32>) {
 
 // -----
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  // %arg1 is the module
-  %0 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.consumed}) {
+    // %arg1 is the module
+    %0 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 module {
@@ -124,10 +134,12 @@ module {
 
 // Test we use identity layout at function boundaries.
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-  %0 = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %arg1
-    { bufferize_function_boundaries = true } : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.consumed}) {
+    %0 = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %arg1
+      { bufferize_function_boundaries = true } : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // CHECK: func.func @matmul(
@@ -143,11 +155,13 @@ func.func @matmul(%A: tensor<12x9xf32>, %B: tensor<9x6xf32>, %C: tensor<12x6xf32
 
 // -----
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.empty"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.cast %0 : !transform.any_op to !transform.op<"tensor.empty">
     transform.bufferization.empty_tensor_to_alloc_tensor %1 : (!transform.op<"tensor.empty">) -> !transform.op<"bufferization.alloc_tensor">
+    transform.yield
+  }
 }
 
 // Expect `bufferization.empty_tensor_to_alloc_tensor` to replace the tensor.empty.
@@ -159,10 +173,12 @@ func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
 
 // -----
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.bufferization.eliminate_empty_tensors %0 : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.bufferization.eliminate_empty_tensors %0 : !transform.any_op
+    transform.yield
+  }
 }
 
 // CHECK-LABEL: func @empty_tensor_elimination(
@@ -180,10 +196,12 @@ func.func @empty_tensor_elimination(
 
 // -----
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.bufferization.buffer_loop_hoisting %0 : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.bufferization.buffer_loop_hoisting %0 : !transform.any_op
+    transform.yield
+  }
 }
 
 // CHECK-LABEL: func @buffer_loop_hoisting(
@@ -196,4 +214,27 @@ func.func @buffer_loop_hoisting(%lb: index, %ub: index, %step: index, %f: f32, %
     memref.store %f, %0[%pos] : memref<5xf32>
   }
   return
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %alloc_tensor = transform.structured.match ops{["bufferization.alloc_tensor"]} in %arg1
+      : (!transform.any_op) -> !transform.op<"bufferization.alloc_tensor">
+    %2, %new = transform.structured.bufferize_to_allocation %alloc_tensor 
+      {alloc_op = "memref.alloca"} 
+        : !transform.op<"bufferization.alloc_tensor">
+    transform.yield
+  }
+}
+
+// Expect `bufferization.bufferize_to_allocation` to create an alloc.
+//  CHECK-LABEL: func.func @empty_to_tensor_alloc()
+func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
+  // CHECK-NEXT: %[[alloca:.*]] = memref.alloca() : memref<2x2xf32>
+  // CHECK-NEXT: %[[tensor:.*]] = bufferization.to_tensor %[[alloca]] restrict writable : memref<2x2xf32>
+  // CHECK-NEXT: return %[[tensor]] : tensor<2x2xf32>
+  %0 = bufferization.alloc_tensor() : tensor<2x2xf32>
+  return %0 : tensor<2x2xf32>
 }

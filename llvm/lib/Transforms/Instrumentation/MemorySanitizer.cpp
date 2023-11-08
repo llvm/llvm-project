@@ -152,7 +152,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -4158,7 +4157,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (Function *Func = CB.getCalledFunction()) {
       // __sanitizer_unaligned_{load,store} functions may be called by users
       // and always expects shadows in the TLS. So don't check them.
-      MayCheckCall &= !Func->getName().startswith("__sanitizer_unaligned_");
+      MayCheckCall &= !Func->getName().starts_with("__sanitizer_unaligned_");
     }
 
     unsigned ArgOffset = 0;

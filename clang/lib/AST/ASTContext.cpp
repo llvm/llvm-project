@@ -112,10 +112,10 @@ enum FloatingRank {
   Ibm128Rank
 };
 
-/// \returns location that is relevant when searching for Doc comments related
-/// to \p D.
-static SourceLocation getDeclLocForCommentSearch(const Decl *D,
-                                                 SourceManager &SourceMgr) {
+/// \returns The locations that are relevant when searching for Doc comments
+/// related to \p D.
+static SmallVector<SourceLocation, 2>
+getDeclLocsForCommentSearch(const Decl *D, SourceManager &SourceMgr) {
   assert(D);
 
   // User can not attach documentation to implicit declarations.
@@ -167,115 +167,48 @@ static SourceLocation getDeclLocForCommentSearch(const Decl *D,
       isa<TemplateTemplateParmDecl>(D))
     return {};
 
+  SmallVector<SourceLocation, 2> Locations;
   // Find declaration location.
   // For Objective-C declarations we generally don't expect to have multiple
   // declarators, thus use declaration starting location as the "declaration
   // location".
   // For all other declarations multiple declarators are used quite frequently,
   // so we use the location of the identifier as the "declaration location".
+  SourceLocation BaseLocation;
   if (isa<ObjCMethodDecl>(D) || isa<ObjCContainerDecl>(D) ||
-      isa<ObjCPropertyDecl>(D) ||
-      isa<RedeclarableTemplateDecl>(D) ||
+      isa<ObjCPropertyDecl>(D) || isa<RedeclarableTemplateDecl>(D) ||
       isa<ClassTemplateSpecializationDecl>(D) ||
       // Allow association with Y across {} in `typedef struct X {} Y`.
       isa<TypedefDecl>(D))
-    return D->getBeginLoc();
+    BaseLocation = D->getBeginLoc();
+  else
+    BaseLocation = D->getLocation();
 
-  const SourceLocation DeclLoc = D->getLocation();
-  if (DeclLoc.isMacroID()) {
-    // There are (at least) three types of macros we care about here.
-    //
-    // 1. Macros that are used in the definition of a type outside the macro,
-    //    with a comment attached at the macro call site.
-    //    ```
-    //    #define MAKE_NAME(Foo) Name##Foo
-    //
-    //    /// Comment is here, where we use the macro.
-    //    struct MAKE_NAME(Foo) {
-    //        int a;
-    //        int b;
-    //    };
-    //    ```
-    // 2. Macros that define whole things along with the comment.
-    //    ```
-    //    #define MAKE_METHOD(name) \
-    //      /** Comment is here, inside the macro. */ \
-    //      void name() {}
-    //
-    //    struct S {
-    //      MAKE_METHOD(f)
-    //    }
-    //    ```
-    // 3. Macros that both declare a type and name a decl outside the macro.
-    //    ```
-    //    /// Comment is here, where we use the macro.
-    //    typedef NS_ENUM(NSInteger, Size) {
-    //        SizeWidth,
-    //        SizeHeight
-    //    };
-    //    ```
-    //    In this case NS_ENUM declares am enum type, and uses the same name for
-    //    the typedef declaration that appears outside the macro. The comment
-    //    here should be applied to both declarations inside and outside the
-    //    macro.
-    //
-    // We have found a Decl name that comes from inside a macro, but
-    // Decl::getLocation() returns the place where the macro is being called.
-    // If the declaration (and not just the name) resides inside the macro,
-    // then we want to map Decl::getLocation() into the macro to where the
-    // declaration and its attached comment (if any) were written.
-    //
-    // This mapping into the macro is done by mapping the location to its
-    // spelling location, however even if the declaration is inside a macro,
-    // the name's spelling can come from a macro argument (case 2 above). In
-    // this case mapping the location to the spelling location finds the
-    // argument's position (at `f` in MAKE_METHOD(`f`) above), which is not
-    // where the declaration and its comment are located.
-    //
-    // To avoid this issue, we make use of Decl::getBeginLocation() instead.
-    // While the declaration's position is where the name is written, the
-    // comment is always attached to the begining of the declaration, not to
-    // the name.
-    //
-    // In the first case, the begin location of the decl is outside the macro,
-    // at the location of `typedef`. This is where the comment is found as
-    // well. The begin location is not inside a macro, so it's spelling
-    // location is the same.
-    //
-    // In the second case, the begin location of the decl is the call to the
-    // macro, at `MAKE_METHOD`. However its spelling location is inside the
-    // the macro at the location of `void`. This is where the comment is found
-    // again.
-    //
-    // In the third case, there's no correct single behaviour. We want to use
-    // the comment outside the macro for the definition that's inside the macro.
-    // There is also a definition outside the macro, and we want the comment to
-    // apply to both. The cases we care about here is NS_ENUM() and
-    // NS_OPTIONS(). In general, if an enum is defined inside a macro, we should
-    // try to find the comment there.
+  if (!D->getLocation().isMacroID()) {
+    Locations.emplace_back(BaseLocation);
+  } else {
+    const auto *DeclCtx = D->getDeclContext();
 
-    // This is handling case 3 for NS_ENUM() and NS_OPTIONS(), which define
-    // enum types inside the macro.
-    if (isa<EnumDecl>(D)) {
-      SourceLocation MacroCallLoc = SourceMgr.getExpansionLoc(DeclLoc);
-      if (auto BufferRef =
-              SourceMgr.getBufferOrNone(SourceMgr.getFileID(MacroCallLoc));
-          BufferRef.has_value()) {
-        llvm::StringRef buffer = BufferRef->getBuffer().substr(
-            SourceMgr.getFileOffset(MacroCallLoc));
-        if (buffer.starts_with("NS_ENUM(") ||
-            buffer.starts_with("NS_OPTIONS(")) {
-          // We want to use the comment on the call to NS_ENUM and NS_OPTIONS
-          // macros for the types defined inside the macros, which is at the
-          // expansion location.
-          return MacroCallLoc;
-        }
-      }
+    // When encountering definitions generated from a macro (that are not
+    // contained by another declaration in the macro) we need to try and find
+    // the comment at the location of the expansion but if there is no comment
+    // there we should retry to see if there is a comment inside the macro as
+    // well. To this end we return first BaseLocation to first look at the
+    // expansion site, the second value is the spelling location of the
+    // beginning of the declaration defined inside the macro.
+    if (!(DeclCtx &&
+          Decl::castFromDeclContext(DeclCtx)->getLocation().isMacroID())) {
+      Locations.emplace_back(SourceMgr.getExpansionLoc(BaseLocation));
     }
-    return SourceMgr.getSpellingLoc(D->getBeginLoc());
+
+    // We use Decl::getBeginLoc() and not just BaseLocation here to ensure that
+    // we don't refer to the macro argument location at the expansion site (this
+    // can happen if the name's spelling is provided via macro argument), and
+    // always to the declaration itself.
+    Locations.emplace_back(SourceMgr.getSpellingLoc(D->getBeginLoc()));
   }
 
-  return DeclLoc;
+  return Locations;
 }
 
 RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
@@ -357,30 +290,36 @@ RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
 }
 
 RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
-  const SourceLocation DeclLoc = getDeclLocForCommentSearch(D, SourceMgr);
+  const auto DeclLocs = getDeclLocsForCommentSearch(D, SourceMgr);
 
-  // If the declaration doesn't map directly to a location in a file, we
-  // can't find the comment.
-  if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
-    return nullptr;
+  for (const auto DeclLoc : DeclLocs) {
+    // If the declaration doesn't map directly to a location in a file, we
+    // can't find the comment.
+    if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
+      continue;
 
-  if (ExternalSource && !CommentsLoaded) {
-    ExternalSource->ReadComments();
-    CommentsLoaded = true;
+    if (ExternalSource && !CommentsLoaded) {
+      ExternalSource->ReadComments();
+      CommentsLoaded = true;
+    }
+
+    if (Comments.empty())
+      continue;
+
+    const FileID File = SourceMgr.getDecomposedLoc(DeclLoc).first;
+    if (!File.isValid())
+      continue;
+
+    const auto CommentsInThisFile = Comments.getCommentsInFile(File);
+    if (!CommentsInThisFile || CommentsInThisFile->empty())
+      continue;
+
+    if (RawComment *Comment =
+            getRawCommentForDeclNoCacheImpl(D, DeclLoc, *CommentsInThisFile))
+      return Comment;
   }
 
-  if (Comments.empty())
-    return nullptr;
-
-  const FileID File = SourceMgr.getDecomposedLoc(DeclLoc).first;
-  if (!File.isValid()) {
-    return nullptr;
-  }
-  const auto CommentsInThisFile = Comments.getCommentsInFile(File);
-  if (!CommentsInThisFile || CommentsInThisFile->empty())
-    return nullptr;
-
-  return getRawCommentForDeclNoCacheImpl(D, DeclLoc, *CommentsInThisFile);
+  return nullptr;
 }
 
 void ASTContext::addComment(const RawComment &RC) {
@@ -584,7 +523,6 @@ void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
   // declaration, but also comments that *follow* the declaration -- thanks to
   // the lookahead in the lexer: we've consumed the semicolon and looked
   // ahead through comments.
-
   for (const Decl *D : Decls) {
     assert(D);
     if (D->isInvalidDecl())
@@ -592,19 +530,22 @@ void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
 
     D = &adjustDeclToTemplate(*D);
 
-    const SourceLocation DeclLoc = getDeclLocForCommentSearch(D, SourceMgr);
-
-    if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
-      continue;
-
     if (DeclRawComments.count(D) > 0)
       continue;
 
-    if (RawComment *const DocComment =
-            getRawCommentForDeclNoCacheImpl(D, DeclLoc, *CommentsInThisFile)) {
-      cacheRawCommentForDecl(*D, *DocComment);
-      comments::FullComment *FC = DocComment->parse(*this, PP, D);
-      ParsedComments[D->getCanonicalDecl()] = FC;
+    const auto DeclLocs = getDeclLocsForCommentSearch(D, SourceMgr);
+
+    for (const auto DeclLoc : DeclLocs) {
+      if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
+        continue;
+
+      if (RawComment *const DocComment = getRawCommentForDeclNoCacheImpl(
+              D, DeclLoc, *CommentsInThisFile)) {
+        cacheRawCommentForDecl(*D, *DocComment);
+        comments::FullComment *FC = DocComment->parse(*this, PP, D);
+        ParsedComments[D->getCanonicalDecl()] = FC;
+        break;
+      }
     }
   }
 }
@@ -1081,7 +1022,7 @@ void ASTContext::deduplicateMergedDefinitonsFor(NamedDecl *ND) {
   for (Module *&M : Merged)
     if (!Found.insert(M).second)
       M = nullptr;
-  llvm::erase_value(Merged, nullptr);
+  llvm::erase(Merged, nullptr);
 }
 
 ArrayRef<Module *>
@@ -1994,14 +1935,14 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     uint64_t TargetVectorAlign = Target->getMaxVectorAlign();
     if (TargetVectorAlign && TargetVectorAlign < Align)
       Align = TargetVectorAlign;
-    if (VT->getVectorKind() == VectorType::SveFixedLengthDataVector)
+    if (VT->getVectorKind() == VectorKind::SveFixedLengthData)
       // Adjust the alignment for fixed-length SVE vectors. This is important
       // for non-power-of-2 vector lengths.
       Align = 128;
-    else if (VT->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
+    else if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
       // Adjust the alignment for fixed-length SVE predicates.
       Align = 16;
-    else if (VT->getVectorKind() == VectorType::RVVFixedLengthDataVector)
+    else if (VT->getVectorKind() == VectorKind::RVVFixedLengthData)
       // Adjust the alignment for fixed-length RVV vectors.
       Align = std::min<unsigned>(64, Width);
     break;
@@ -2236,7 +2177,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     break;
 #include "clang/Basic/PPCTypes.def"
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, ElKind, ElBits, NF, IsSigned,   \
-                        IsFP)                                                  \
+                        IsFP, IsBF)                                            \
   case BuiltinType::Id:                                                        \
     Width = 0;                                                                 \
     Align = ElBits;                                                            \
@@ -3556,7 +3497,7 @@ QualType ASTContext::getMemberPointerType(QualType T, const Type *Cls) const {
 QualType ASTContext::getConstantArrayType(QualType EltTy,
                                           const llvm::APInt &ArySizeIn,
                                           const Expr *SizeExpr,
-                                          ArrayType::ArraySizeModifier ASM,
+                                          ArraySizeModifier ASM,
                                           unsigned IndexTypeQuals) const {
   assert((EltTy->isDependentType() ||
           EltTy->isIncompleteType() || EltTy->isConstantSizeType()) &&
@@ -3722,12 +3663,10 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   // Turn incomplete types into [*] types.
   case Type::IncompleteArray: {
     const auto *iat = cast<IncompleteArrayType>(ty);
-    result = getVariableArrayType(
-                 getVariableArrayDecayedType(iat->getElementType()),
-                                  /*size*/ nullptr,
-                                  ArrayType::Normal,
-                                  iat->getIndexTypeCVRQualifiers(),
-                                  SourceRange());
+    result =
+        getVariableArrayType(getVariableArrayDecayedType(iat->getElementType()),
+                             /*size*/ nullptr, ArraySizeModifier::Normal,
+                             iat->getIndexTypeCVRQualifiers(), SourceRange());
     break;
   }
 
@@ -3735,11 +3674,9 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::VariableArray: {
     const auto *vat = cast<VariableArrayType>(ty);
     result = getVariableArrayType(
-                 getVariableArrayDecayedType(vat->getElementType()),
-                                  /*size*/ nullptr,
-                                  ArrayType::Star,
-                                  vat->getIndexTypeCVRQualifiers(),
-                                  vat->getBracketsRange());
+        getVariableArrayDecayedType(vat->getElementType()),
+        /*size*/ nullptr, ArraySizeModifier::Star,
+        vat->getIndexTypeCVRQualifiers(), vat->getBracketsRange());
     break;
   }
   }
@@ -3750,9 +3687,8 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
 
 /// getVariableArrayType - Returns a non-unique reference to the type for a
 /// variable array of the specified element type.
-QualType ASTContext::getVariableArrayType(QualType EltTy,
-                                          Expr *NumElts,
-                                          ArrayType::ArraySizeModifier ASM,
+QualType ASTContext::getVariableArrayType(QualType EltTy, Expr *NumElts,
+                                          ArraySizeModifier ASM,
                                           unsigned IndexTypeQuals,
                                           SourceRange Brackets) const {
   // Since we don't unique expressions, it isn't possible to unique VLA's
@@ -3781,7 +3717,7 @@ QualType ASTContext::getVariableArrayType(QualType EltTy,
 /// type.
 QualType ASTContext::getDependentSizedArrayType(QualType elementType,
                                                 Expr *numElements,
-                                                ArrayType::ArraySizeModifier ASM,
+                                                ArraySizeModifier ASM,
                                                 unsigned elementTypeQuals,
                                                 SourceRange brackets) const {
   assert((!numElements || numElements->isTypeDependent() ||
@@ -3844,7 +3780,7 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
 }
 
 QualType ASTContext::getIncompleteArrayType(QualType elementType,
-                                            ArrayType::ArraySizeModifier ASM,
+                                            ArraySizeModifier ASM,
                                             unsigned elementTypeQuals) const {
   llvm::FoldingSetNodeID ID;
   IncompleteArrayType::Profile(ID, elementType, ASM, elementTypeQuals);
@@ -4003,6 +3939,9 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
   case BuiltinType::Id:                                                        \
     return {ElBits == 16 ? Float16Ty : (ElBits == 32 ? FloatTy : DoubleTy),    \
             llvm::ElementCount::getScalable(NumEls), NF};
+#define RVV_VECTOR_TYPE_BFLOAT(Name, Id, SingletonId, NumEls, ElBits, NF)      \
+  case BuiltinType::Id:                                                        \
+    return {BFloat16Ty, llvm::ElementCount::getScalable(NumEls), NF};
 #define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
   case BuiltinType::Id:                                                        \
     return {BoolTy, llvm::ElementCount::getScalable(NumEls), 1};
@@ -4050,11 +3989,14 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
-                        IsFP)                                                  \
+                        IsFP, IsBF)                                            \
   if (!EltTy->isBooleanType() &&                                               \
       ((EltTy->hasIntegerRepresentation() &&                                   \
         EltTy->hasSignedIntegerRepresentation() == IsSigned) ||                \
-       (EltTy->hasFloatingRepresentation() && IsFP)) &&                        \
+       (EltTy->hasFloatingRepresentation() && !EltTy->isBFloat16Type() &&      \
+        IsFP && !IsBF) ||                                                      \
+       (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&       \
+        IsBF && !IsFP)) &&                                                     \
       EltTySize == ElBits && NumElts == NumEls && NumFields == NF)             \
     return SingletonId;
 #define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
@@ -4068,7 +4010,7 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
 /// getVectorType - Return the unique reference to a vector type of
 /// the specified element type and size. VectorType must be a built-in type.
 QualType ASTContext::getVectorType(QualType vecType, unsigned NumElts,
-                                   VectorType::VectorKind VecKind) const {
+                                   VectorKind VecKind) const {
   assert(vecType->isBuiltinType() ||
          (vecType->isBitIntType() &&
           // Only support _BitInt elements with byte-sized power of 2 NumBits.
@@ -4100,10 +4042,9 @@ QualType ASTContext::getVectorType(QualType vecType, unsigned NumElts,
   return QualType(New, 0);
 }
 
-QualType
-ASTContext::getDependentVectorType(QualType VecType, Expr *SizeExpr,
-                                   SourceLocation AttrLoc,
-                                   VectorType::VectorKind VecKind) const {
+QualType ASTContext::getDependentVectorType(QualType VecType, Expr *SizeExpr,
+                                            SourceLocation AttrLoc,
+                                            VectorKind VecKind) const {
   llvm::FoldingSetNodeID ID;
   DependentVectorType::Profile(ID, *this, getCanonicalType(VecType), SizeExpr,
                                VecKind);
@@ -4152,7 +4093,7 @@ QualType ASTContext::getExtVectorType(QualType vecType,
   // Check if we've already instantiated a vector of this type.
   llvm::FoldingSetNodeID ID;
   VectorType::Profile(ID, vecType, NumElts, Type::ExtVector,
-                      VectorType::GenericVector);
+                      VectorKind::Generic);
   void *InsertPos = nullptr;
   if (VectorType *VTP = VectorTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(VTP, 0);
@@ -5186,7 +5127,8 @@ ASTContext::getDependentTemplateSpecializationType(
   NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
 
   ElaboratedTypeKeyword CanonKeyword = Keyword;
-  if (Keyword == ETK_None) CanonKeyword = ETK_Typename;
+  if (Keyword == ElaboratedTypeKeyword::None)
+    CanonKeyword = ElaboratedTypeKeyword::Typename;
 
   bool AnyNonCanonArgs = false;
   auto CanonArgs =
@@ -6589,12 +6531,12 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
   if (const auto *TagX = dyn_cast<TagDecl>(X)) {
     const auto *TagY = cast<TagDecl>(Y);
     return (TagX->getTagKind() == TagY->getTagKind()) ||
-           ((TagX->getTagKind() == TTK_Struct ||
-             TagX->getTagKind() == TTK_Class ||
-             TagX->getTagKind() == TTK_Interface) &&
-            (TagY->getTagKind() == TTK_Struct ||
-             TagY->getTagKind() == TTK_Class ||
-             TagY->getTagKind() == TTK_Interface));
+           ((TagX->getTagKind() == TagTypeKind::Struct ||
+             TagX->getTagKind() == TagTypeKind::Class ||
+             TagX->getTagKind() == TagTypeKind::Interface) &&
+            (TagY->getTagKind() == TagTypeKind::Struct ||
+             TagY->getTagKind() == TagTypeKind::Class ||
+             TagY->getTagKind() == TagTypeKind::Interface));
   }
 
   // Functions with the same type and linkage match.
@@ -8599,14 +8541,12 @@ void ASTContext::getObjCEncodingForStructureImpl(RecordDecl *RDecl,
     }
   }
 
-  unsigned i = 0;
   for (FieldDecl *Field : RDecl->fields()) {
     if (!Field->isZeroLengthBitField(*this) && Field->isZeroSize(*this))
       continue;
-    uint64_t offs = layout.getFieldOffset(i);
+    uint64_t offs = layout.getFieldOffset(Field->getFieldIndex());
     FieldOrBaseOffsets.insert(FieldOrBaseOffsets.upper_bound(offs),
                               std::make_pair(offs, Field));
-    ++i;
   }
 
   if (CXXRec && includeVBases) {
@@ -8916,9 +8856,8 @@ static TypedefDecl *CreatePowerABIBuiltinVaListDecl(const ASTContext *Context) {
 
   // typedef __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
-  QualType VaListTagArrayType
-    = Context->getConstantArrayType(VaListTagTypedefType,
-                                    Size, nullptr, ArrayType::Normal, 0);
+  QualType VaListTagArrayType = Context->getConstantArrayType(
+      VaListTagTypedefType, Size, nullptr, ArraySizeModifier::Normal, 0);
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
 
@@ -8972,7 +8911,7 @@ CreateX86_64ABIBuiltinVaListDecl(const ASTContext *Context) {
   // typedef struct __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
   QualType VaListTagArrayType = Context->getConstantArrayType(
-      VaListTagType, Size, nullptr, ArrayType::Normal, 0);
+      VaListTagType, Size, nullptr, ArraySizeModifier::Normal, 0);
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
 
@@ -8980,7 +8919,7 @@ static TypedefDecl *CreatePNaClABIBuiltinVaListDecl(const ASTContext *Context) {
   // typedef int __builtin_va_list[4];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 4);
   QualType IntArrayType = Context->getConstantArrayType(
-      Context->IntTy, Size, nullptr, ArrayType::Normal, 0);
+      Context->IntTy, Size, nullptr, ArraySizeModifier::Normal, 0);
   return Context->buildImplicitTypedef(IntArrayType, "__builtin_va_list");
 }
 
@@ -9075,7 +9014,7 @@ CreateSystemZBuiltinVaListDecl(const ASTContext *Context) {
   // typedef __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
   QualType VaListTagArrayType = Context->getConstantArrayType(
-      VaListTagType, Size, nullptr, ArrayType::Normal, 0);
+      VaListTagType, Size, nullptr, ArraySizeModifier::Normal, 0);
 
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
@@ -9126,7 +9065,7 @@ static TypedefDecl *CreateHexagonBuiltinVaListDecl(const ASTContext *Context) {
   // typedef __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
   QualType VaListTagArrayType = Context->getConstantArrayType(
-      VaListTagTypedefType, Size, nullptr, ArrayType::Normal, 0);
+      VaListTagTypedefType, Size, nullptr, ArraySizeModifier::Normal, 0);
 
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
@@ -9460,16 +9399,16 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
   const auto *Second = SecondVec->castAs<VectorType>();
   if (First->getNumElements() == Second->getNumElements() &&
       hasSameType(First->getElementType(), Second->getElementType()) &&
-      First->getVectorKind() != VectorType::AltiVecPixel &&
-      First->getVectorKind() != VectorType::AltiVecBool &&
-      Second->getVectorKind() != VectorType::AltiVecPixel &&
-      Second->getVectorKind() != VectorType::AltiVecBool &&
-      First->getVectorKind() != VectorType::SveFixedLengthDataVector &&
-      First->getVectorKind() != VectorType::SveFixedLengthPredicateVector &&
-      Second->getVectorKind() != VectorType::SveFixedLengthDataVector &&
-      Second->getVectorKind() != VectorType::SveFixedLengthPredicateVector &&
-      First->getVectorKind() != VectorType::RVVFixedLengthDataVector &&
-      Second->getVectorKind() != VectorType::RVVFixedLengthDataVector)
+      First->getVectorKind() != VectorKind::AltiVecPixel &&
+      First->getVectorKind() != VectorKind::AltiVecBool &&
+      Second->getVectorKind() != VectorKind::AltiVecPixel &&
+      Second->getVectorKind() != VectorKind::AltiVecBool &&
+      First->getVectorKind() != VectorKind::SveFixedLengthData &&
+      First->getVectorKind() != VectorKind::SveFixedLengthPredicate &&
+      Second->getVectorKind() != VectorKind::SveFixedLengthData &&
+      Second->getVectorKind() != VectorKind::SveFixedLengthPredicate &&
+      First->getVectorKind() != VectorKind::RVVFixedLengthData &&
+      Second->getVectorKind() != VectorKind::RVVFixedLengthData)
     return true;
 
   return false;
@@ -9496,12 +9435,12 @@ bool ASTContext::areCompatibleSveTypes(QualType FirstType,
       if (const auto *VT = SecondType->getAs<VectorType>()) {
         // Predicates have the same representation as uint8 so we also have to
         // check the kind to make these types incompatible.
-        if (VT->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
+        if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
           return BT->getKind() == BuiltinType::SveBool;
-        else if (VT->getVectorKind() == VectorType::SveFixedLengthDataVector)
+        else if (VT->getVectorKind() == VectorKind::SveFixedLengthData)
           return VT->getElementType().getCanonicalType() ==
                  FirstType->getSveEltType(*this);
-        else if (VT->getVectorKind() == VectorType::GenericVector)
+        else if (VT->getVectorKind() == VectorKind::Generic)
           return getTypeSize(SecondType) == getSVETypeSize(*this, BT) &&
                  hasSameType(VT->getElementType(),
                              getBuiltinVectorTypeInfo(BT).ElementType);
@@ -9527,16 +9466,15 @@ bool ASTContext::areLaxCompatibleSveTypes(QualType FirstType,
       return false;
 
     const auto *VecTy = SecondType->getAs<VectorType>();
-    if (VecTy &&
-        (VecTy->getVectorKind() == VectorType::SveFixedLengthDataVector ||
-         VecTy->getVectorKind() == VectorType::GenericVector)) {
+    if (VecTy && (VecTy->getVectorKind() == VectorKind::SveFixedLengthData ||
+                  VecTy->getVectorKind() == VectorKind::Generic)) {
       const LangOptions::LaxVectorConversionKind LVCKind =
           getLangOpts().getLaxVectorConversions();
 
       // Can not convert between sve predicates and sve vectors because of
       // different size.
       if (BT->getKind() == BuiltinType::SveBool &&
-          VecTy->getVectorKind() == VectorType::SveFixedLengthDataVector)
+          VecTy->getVectorKind() == VectorKind::SveFixedLengthData)
         return false;
 
       // If __ARM_FEATURE_SVE_BITS != N do not allow GNU vector lax conversion.
@@ -9544,7 +9482,7 @@ bool ASTContext::areLaxCompatibleSveTypes(QualType FirstType,
       // converts to VLAT and VLAT implicitly converts to GNUT."
       // ACLE Spec Version 00bet6, 3.7.3.2. Behavior common to vectors and
       // predicates.
-      if (VecTy->getVectorKind() == VectorType::GenericVector &&
+      if (VecTy->getVectorKind() == VectorKind::Generic &&
           getTypeSize(SecondType) != getSVETypeSize(*this, BT))
         return false;
 
@@ -9591,8 +9529,8 @@ bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
   auto IsValidCast = [this](QualType FirstType, QualType SecondType) {
     if (const auto *BT = FirstType->getAs<BuiltinType>()) {
       if (const auto *VT = SecondType->getAs<VectorType>()) {
-        if (VT->getVectorKind() == VectorType::RVVFixedLengthDataVector ||
-            VT->getVectorKind() == VectorType::GenericVector)
+        if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
+            VT->getVectorKind() == VectorKind::Generic)
           return FirstType->isRVVVLSBuiltinType() &&
                  getTypeSize(SecondType) == getRVVTypeSize(*this, BT) &&
                  hasSameType(VT->getElementType(),
@@ -9622,9 +9560,7 @@ bool ASTContext::areLaxCompatibleRVVTypes(QualType FirstType,
       return false;
 
     const auto *VecTy = SecondType->getAs<VectorType>();
-    if (VecTy &&
-        (VecTy->getVectorKind() == VectorType::RVVFixedLengthDataVector ||
-         VecTy->getVectorKind() == VectorType::GenericVector)) {
+    if (VecTy && VecTy->getVectorKind() == VectorKind::Generic) {
       const LangOptions::LaxVectorConversionKind LVCKind =
           getLangOpts().getLaxVectorConversions();
 
@@ -10823,12 +10759,10 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
       return RHS;
     if (LCAT)
       return getConstantArrayType(ResultType, LCAT->getSize(),
-                                  LCAT->getSizeExpr(),
-                                  ArrayType::ArraySizeModifier(), 0);
+                                  LCAT->getSizeExpr(), ArraySizeModifier(), 0);
     if (RCAT)
       return getConstantArrayType(ResultType, RCAT->getSize(),
-                                  RCAT->getSizeExpr(),
-                                  ArrayType::ArraySizeModifier(), 0);
+                                  RCAT->getSizeExpr(), ArraySizeModifier(), 0);
     if (LVAT && getCanonicalType(LHSElem) == getCanonicalType(ResultType))
       return LHS;
     if (RVAT && getCanonicalType(RHSElem) == getCanonicalType(ResultType))
@@ -10847,8 +10781,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     }
     if (getCanonicalType(LHSElem) == getCanonicalType(ResultType)) return LHS;
     if (getCanonicalType(RHSElem) == getCanonicalType(ResultType)) return RHS;
-    return getIncompleteArrayType(ResultType,
-                                  ArrayType::ArraySizeModifier(), 0);
+    return getIncompleteArrayType(ResultType, ArraySizeModifier(), 0);
   }
   case Type::FunctionNoProto:
     return mergeFunctionTypes(LHS, RHS, OfBlockPointer, Unqualified,
@@ -11467,8 +11400,7 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     assert(!RequiresICE && "Can't require vector ICE");
 
     // TODO: No way to make AltiVec vectors in builtins yet.
-    Type = Context.getVectorType(ElementType, NumElements,
-                                 VectorType::GenericVector);
+    Type = Context.getVectorType(ElementType, NumElements, VectorKind::Generic);
     break;
   }
   case 'E': {
@@ -12285,7 +12217,7 @@ QualType ASTContext::getStringLiteralArrayType(QualType EltTy,
   // Get an array type for the string, according to C99 6.4.5. This includes
   // the null terminator character.
   return getConstantArrayType(EltTy, llvm::APInt(32, Length + 1), nullptr,
-                              ArrayType::Normal, /*IndexTypeQuals*/ 0);
+                              ArraySizeModifier::Normal, /*IndexTypeQuals*/ 0);
 }
 
 StringLiteral *
@@ -12293,7 +12225,7 @@ ASTContext::getPredefinedStringLiteralFromCache(StringRef Key) const {
   StringLiteral *&Result = StringLiteralCache[Key];
   if (!Result)
     Result = StringLiteral::Create(
-        *this, Key, StringLiteral::Ordinary,
+        *this, Key, StringLiteralKind::Ordinary,
         /*Pascal*/ false, getStringLiteralArrayType(CharTy, Key.size()),
         SourceLocation());
   return Result;
@@ -12572,7 +12504,7 @@ static auto getCommonTemplateArguments(ASTContext &Ctx,
 template <class T>
 static ElaboratedTypeKeyword getCommonTypeKeyword(const T *X, const T *Y) {
   return X->getKeyword() == Y->getKeyword() ? X->getKeyword()
-                                            : ElaboratedTypeKeyword::ETK_None;
+                                            : ElaboratedTypeKeyword::None;
 }
 
 template <class T>

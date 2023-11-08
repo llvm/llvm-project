@@ -27,6 +27,20 @@ static_assert(BitIntZero2 == 0, "");
 constexpr unsigned _BitInt(1) UBitIntZero1{};
 static_assert(UBitIntZero1 == 0, "");
 
+constexpr unsigned _BitInt(2) BI1 = 3u;
+static_assert(BI1 == 3, "");
+
+namespace APCast {
+  constexpr _BitInt(10) A = 1;
+  constexpr _BitInt(11) B = A;
+  static_assert(B == 1, "");
+  constexpr _BitInt(16) B2 = A;
+  static_assert(B2 == 1, "");
+  constexpr _BitInt(32) B3 = A;
+  static_assert(B3 == 1, "");
+  constexpr unsigned _BitInt(32) B4 = A;
+  static_assert(B4 == 1, "");
+}
 
 #ifdef __SIZEOF_INT128__
 namespace i128 {
@@ -42,6 +56,10 @@ namespace i128 {
 
   static const __uint128_t UINT128_MAX =__uint128_t(__int128_t(-1L));
   static_assert(UINT128_MAX == -1, "");
+  static_assert(UINT128_MAX == 1, ""); // expected-error {{static assertion failed}} \
+                                       // expected-note {{'340282366920938463463374607431768211455 == 1'}} \
+                                       // ref-error {{static assertion failed}} \
+                                       // ref-note {{'340282366920938463463374607431768211455 == 1'}}
 
   static const __int128_t INT128_MAX = UINT128_MAX >> (__int128_t)1;
   static_assert(INT128_MAX != 0, "");
@@ -116,6 +134,22 @@ namespace AddSubOffset {
   static_assert(*P == 2, "");
   constexpr const int *P2 = P - A;
   static_assert(*P2 == 1,"");
+}
+
+namespace Bitfields {
+  struct S1 {
+    unsigned _BitInt(128) a : 2;
+  };
+  constexpr S1 s1{100}; // ref-warning {{changes value from 100 to 0}} \
+                        // expected-warning {{changes value from 100 to 0}}
+  constexpr S1 s12{3};
+  static_assert(s12.a == 3, "");
+
+  struct S2 {
+    unsigned __int128 a : 2;
+  };
+  constexpr S2 s2{100}; // ref-warning {{changes value from 100 to 0}} \
+                        // expected-warning {{changes value from 100 to 0}}
 }
 
 #endif

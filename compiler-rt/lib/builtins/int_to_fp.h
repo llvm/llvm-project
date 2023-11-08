@@ -44,19 +44,28 @@ static __inline int clzSrcT(usrc_t x) { return __clzti2(x); }
 typedef float dst_t;
 typedef uint32_t dst_rep_t;
 #define DST_REP_C UINT32_C
-static const int dstSigBits = 23;
+
+enum {
+  dstSigBits = 23,
+};
 
 #elif defined DST_DOUBLE
 typedef double dst_t;
 typedef uint64_t dst_rep_t;
 #define DST_REP_C UINT64_C
-static const int dstSigBits = 52;
+
+enum {
+  dstSigBits = 52,
+};
 
 #elif defined DST_QUAD
-typedef long double dst_t;
+typedef tf_float dst_t;
 typedef __uint128_t dst_rep_t;
 #define DST_REP_C (__uint128_t)
-static const int dstSigBits = 112;
+
+enum {
+  dstSigBits = 112,
+};
 
 #else
 #error Destination should be a handled floating point type

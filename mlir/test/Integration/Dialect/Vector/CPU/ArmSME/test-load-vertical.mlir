@@ -11,26 +11,6 @@
 
 // RUN: %{compile} | %{run} | FileCheck %s
 
-llvm.func @printCString(!llvm.ptr<i8>)
-
-func.func @printTileBegin() attributes { enable_arm_streaming_ignore } {
-  %0 = llvm.mlir.addressof @str_tile_begin : !llvm.ptr<array<11 x i8>>
-  %1 = llvm.mlir.constant(0 : index) : i64
-  %2 = llvm.getelementptr %0[%1, %1]
-    : (!llvm.ptr<array<11 x i8>>, i64, i64) -> !llvm.ptr<i8>
-  llvm.call @printCString(%2) : (!llvm.ptr<i8>) -> ()
-  return
-}
-
-func.func @printTileEnd() attributes { enable_arm_streaming_ignore } {
-  %0 = llvm.mlir.addressof @str_tile_end : !llvm.ptr<array<9 x i8>>
-  %1 = llvm.mlir.constant(0 : index) : i64
-  %2 = llvm.getelementptr %0[%1, %1]
-    : (!llvm.ptr<array<9 x i8>>, i64, i64) -> !llvm.ptr<i8>
-  llvm.call @printCString(%2) : (!llvm.ptr<i8>) -> ()
-  return
-}
-
 func.func @entry() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -75,12 +55,12 @@ func.func @entry() {
   // CHECK-NEXT: ( 2, 2, 2, 2
   // CHECK-NEXT: ( 3, 3, 3, 3
   // CHECK:      TILE END
-  func.call @printTileBegin() : () -> ()
+  vector.print str "TILE BEGIN"
   scf.for %i = %c0 to %za_s_size step %svl_s {
     %tileslice = vector.load %mem1[%i] : memref<?xi32>, vector<[4]xi32>
     vector.print %tileslice : vector<[4]xi32>
   }
-  func.call @printTileEnd() : () -> ()
+  vector.print str "TILE END"
 
   // 2. VERTICAL LAYOUT
   // Dump "mem2". The smallest SVL is 128-bits so the tile will be at least
@@ -92,12 +72,9 @@ func.func @entry() {
   // CHECK-NEXT: ( 0, 1, 2, 3
   // CHECK-NEXT: ( 0, 1, 2, 3
   // CHECK:      TILE END
-  func.call @printTileBegin() : () -> ()
+  vector.print str "TILE BEGIN"
   vector.print %0 : vector<[4]x[4]xi32>
-  func.call @printTileEnd() : () -> ()
+  vector.print str "TILE END"
 
   return
 }
-
-llvm.mlir.global internal constant @str_tile_begin("TILE BEGIN\0A")
-llvm.mlir.global internal constant @str_tile_end("TILE END\0A")

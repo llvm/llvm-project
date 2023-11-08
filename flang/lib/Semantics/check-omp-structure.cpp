@@ -10,7 +10,6 @@
 #include "definable.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
-#include <algorithm>
 
 namespace Fortran::semantics {
 
@@ -1174,6 +1173,37 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareTargetConstruct &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpDeclareTargetWithList &x) {
+  SymbolSourceMap symbols;
+  GetSymbolsInObjectList(x.v, symbols);
+  for (auto &[symbol, source] : symbols) {
+    const GenericDetails *genericDetails = symbol->detailsIf<GenericDetails>();
+    if (genericDetails) {
+      context_.Say(source,
+          "The procedure '%s' in DECLARE TARGET construct cannot be a generic name."_err_en_US,
+          symbol->name());
+      genericDetails->specific();
+    }
+    if (IsProcedurePointer(*symbol)) {
+      context_.Say(source,
+          "The procedure '%s' in DECLARE TARGET construct cannot be a procedure pointer."_err_en_US,
+          symbol->name());
+    }
+    const SubprogramDetails *entryDetails =
+        symbol->detailsIf<SubprogramDetails>();
+    if (entryDetails && entryDetails->entryScope()) {
+      context_.Say(source,
+          "The procedure '%s' in DECLARE TARGET construct cannot be an entry name."_err_en_US,
+          symbol->name());
+    }
+    if (IsStmtFunction(*symbol)) {
+      context_.Say(source,
+          "The procedure '%s' in DECLARE TARGET construct cannot be a statement function."_err_en_US,
+          symbol->name());
+    }
+  }
+}
+
 void OmpStructureChecker::CheckSymbolNames(
     const parser::CharBlock &source, const parser::OmpObjectList &objList) {
   for (const auto &ompObject : objList.v) {
@@ -1394,6 +1424,36 @@ void OmpStructureChecker::CheckOrderedDependClause(
   }
 }
 
+void OmpStructureChecker::CheckTargetUpdate() {
+  const parser::OmpClause *toClause = FindClause(llvm::omp::Clause::OMPC_to);
+  const parser::OmpClause *fromClause =
+      FindClause(llvm::omp::Clause::OMPC_from);
+  if (!toClause && !fromClause) {
+    context_.Say(GetContext().directiveSource,
+        "At least one motion-clause (TO/FROM) must be specified on TARGET UPDATE construct."_err_en_US);
+  }
+  if (toClause && fromClause) {
+    SymbolSourceMap toSymbols, fromSymbols;
+    GetSymbolsInObjectList(
+        std::get<parser::OmpClause::To>(toClause->u).v, toSymbols);
+    GetSymbolsInObjectList(
+        std::get<parser::OmpClause::From>(fromClause->u).v, fromSymbols);
+    for (auto &[symbol, source] : toSymbols) {
+      auto fromSymbol = fromSymbols.find(symbol);
+      if (fromSymbol != fromSymbols.end()) {
+        context_.Say(source,
+            "A list item ('%s') can only appear in a TO or FROM clause, but not in both."_err_en_US,
+            symbol->name());
+        context_.Say(source, "'%s' appears in the TO clause."_because_en_US,
+            symbol->name());
+        context_.Say(fromSymbol->second,
+            "'%s' appears in the FROM clause."_because_en_US,
+            fromSymbol->first->name());
+      }
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
   const auto &dir{std::get<parser::OmpSimpleStandaloneDirective>(x.t)};
@@ -1402,11 +1462,14 @@ void OmpStructureChecker::Enter(
 }
 
 void OmpStructureChecker::Leave(
-    const parser::OpenMPSimpleStandaloneConstruct &) {
+    const parser::OpenMPSimpleStandaloneConstruct &x) {
   switch (GetContext().directive) {
   case llvm::omp::Directive::OMPD_ordered:
     // [5.1] 2.19.9 Ordered Construct Restriction
     ChecksOnOrderedAsStandalone();
+    break;
+  case llvm::omp::Directive::OMPD_target_update:
+    CheckTargetUpdate();
     break;
   default:
     break;
@@ -2852,18 +2915,21 @@ void OmpStructureChecker::Enter(const parser::OmpClause::IsDevicePtr &x) {
     const auto &isDevicePtrClause{
         std::get<parser::OmpClause::IsDevicePtr>(itr->second->u)};
     const auto &isDevicePtrList{isDevicePtrClause.v};
-    std::list<parser::Name> isDevicePtrNameList;
-    for (const auto &ompObject : isDevicePtrList.v) {
-      if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
-        if (name->symbol) {
-          if (!(IsBuiltinCPtr(*(name->symbol)))) {
-            context_.Say(itr->second->source,
-                "Variable '%s' in IS_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
-                name->ToString());
-          } else {
-            isDevicePtrNameList.push_back(*name);
-          }
-        }
+    SymbolSourceMap currSymbols;
+    GetSymbolsInObjectList(isDevicePtrList, currSymbols);
+    for (auto &[symbol, source] : currSymbols) {
+      if (!(IsBuiltinCPtr(*symbol))) {
+        context_.Say(itr->second->source,
+            "Variable '%s' in IS_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
+            source.ToString());
+      } else if (!(IsDummy(*symbol))) {
+        context_.Say(itr->second->source,
+            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument"_err_en_US,
+            source.ToString());
+      } else if (IsAllocatableOrPointer(*symbol) || IsValue(*symbol)) {
+        context_.Say(itr->second->source,
+            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute."_err_en_US,
+            source.ToString());
       }
     }
   }

@@ -56,10 +56,6 @@
 #  define _LIBCPP_CONCAT_IMPL(_X, _Y) _X##_Y
 #  define _LIBCPP_CONCAT(_X, _Y) _LIBCPP_CONCAT_IMPL(_X, _Y)
 
-// Valid C++ identifier that revs with every libc++ version. This can be used to
-// generate identifiers that must be unique for every released libc++ version.
-#  define _LIBCPP_VERSIONED_IDENTIFIER _LIBCPP_CONCAT(v, _LIBCPP_VERSION)
-
 #  if __STDC_HOSTED__ == 0
 #    define _LIBCPP_FREESTANDING
 #  endif
@@ -262,6 +258,11 @@
 //   a non-existent element. For iterator checks to work, bounded iterators must be enabled in the ABI. Types like
 //   `optional` and `function` are considered one-element containers for the purposes of this check.
 //
+// - `_LIBCPP_ASSERT_NON_NULL` -- checks that the pointer being dereferenced is not null. On most modern platforms zero
+//   address does not refer to an actual location in memory, so a null pointer dereference would not compromize the
+//   memory security of a program (however, it is still undefined behavior that can result in strange errors due to
+//   compiler optimizations).
+//
 // - `_LIBCPP_ASSERT_NON_OVERLAPPING_RANGES` -- for functions that take several ranges as arguments, checks that the
 //   given ranges do not overlap.
 //
@@ -310,6 +311,8 @@
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)        _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)     _LIBCPP_ASSERT(expression, message)
 // Disabled checks.
+// On most modern platforms, dereferencing a null pointer does not lead to an actual memory access.
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                 _LIBCPP_ASSUME(expression)
 // Overlapping ranges will make algorithms produce incorrect results but don't directly lead to a security
 // vulnerability.
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSUME(expression)
@@ -324,6 +327,7 @@
 // Enabled checks.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)        _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)     _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                 _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSERT(expression, message)
@@ -337,6 +341,7 @@
 // All checks enabled.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)         _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)      _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSERT(expression, message)
@@ -349,6 +354,7 @@
 // All checks disabled.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)         _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)      _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSUME(expression)
@@ -734,22 +740,54 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION _LIBCPP_ALWAYS_INLINE
 #  endif
 
+#  if _LIBCPP_ENABLE_HARDENED_MODE
+#    define _LIBCPP_HARDENING_SIG h
+#  elif _LIBCPP_ENABLE_SAFE_MODE
+#    define _LIBCPP_HARDENING_SIG s
+#  elif _LIBCPP_ENABLE_DEBUG_MODE
+#    define _LIBCPP_HARDENING_SIG d
+#  else
+#    define _LIBCPP_HARDENING_SIG u // for unchecked
+#  endif
+
+#  ifdef _LIBCPP_HAS_NO_EXCEPTIONS
+#    define _LIBCPP_EXCEPTIONS_SIG n
+#  else
+#    define _LIBCPP_EXCEPTIONS_SIG e
+#  endif
+
+#  define _LIBCPP_ODR_SIGNATURE                                                                                        \
+    _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_HARDENING_SIG, _LIBCPP_EXCEPTIONS_SIG), _LIBCPP_VERSION)
+
 // This macro marks a symbol as being hidden from libc++'s ABI. This is achieved
 // on two levels:
 // 1. The symbol is given hidden visibility, which ensures that users won't start exporting
 //    symbols from their dynamic library by means of using the libc++ headers. This ensures
 //    that those symbols stay private to the dynamic library in which it is defined.
 //
-// 2. The symbol is given an ABI tag that changes with each version of libc++. This ensures
-//    that no ODR violation can arise from mixing two TUs compiled with different versions
-//    of libc++ where we would have changed the definition of a symbol. If the symbols shared
-//    the same name, the ODR would require that their definitions be token-by-token equivalent,
-//    which basically prevents us from being able to make any change to any function in our
-//    headers. Using this ABI tag ensures that the symbol name is "bumped" artificially at
-//    each release, which lets us change the definition of these symbols at our leisure.
-//    Note that historically, this has been achieved in various ways, including force-inlining
-//    all functions or giving internal linkage to all functions. Both these (previous) solutions
-//    suffer from drawbacks that lead notably to code bloat.
+// 2. The symbol is given an ABI tag that encodes the ODR-relevant properties of the library.
+//    This ensures that no ODR violation can arise from mixing two TUs compiled with different
+//    versions or configurations of libc++ (such as exceptions vs no-exceptions). Indeed, if the
+//    program contains two definitions of a function, the ODR requires them to be token-by-token
+//    equivalent, and the linker is allowed to pick either definition and discard the other one.
+//
+//    For example, if a program contains a copy of `vector::at()` compiled with exceptions enabled
+//    *and* a copy of `vector::at()` compiled with exceptions disabled (by means of having two TUs
+//    compiled with different settings), the two definitions are both visible by the linker and they
+//    have the same name, but they have a meaningfully different implementation (one throws an exception
+//    and the other aborts the program). This violates the ODR and makes the program ill-formed, and in
+//    practice what will happen is that the linker will pick one of the definitions at random and will
+//    discard the other one. This can quite clearly lead to incorrect program behavior.
+//
+//    A similar reasoning holds for many other properties that are ODR-affecting. Essentially any
+//    property that causes the code of a function to differ from the code in another configuration
+//    can be considered ODR-affecting. In practice, we don't encode all such properties in the ABI
+//    tag, but we encode the ones that we think are most important: library version, exceptions, and
+//    hardening mode.
+//
+//    Note that historically, solving this problem has been achieved in various ways, including
+//    force-inlining all functions or giving internal linkage to all functions. Both these previous
+//    solutions suffer from drawbacks that lead notably to code bloat.
 //
 // Note that we use _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION to ensure that we don't depend
 // on _LIBCPP_HIDE_FROM_ABI methods of classes explicitly instantiated in the dynamic library.
@@ -769,7 +807,7 @@ typedef __char32_t char32_t;
 #  ifndef _LIBCPP_NO_ABI_TAG
 #    define _LIBCPP_HIDE_FROM_ABI                                                                                      \
       _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION                                                       \
-          __attribute__((__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_VERSIONED_IDENTIFIER))))
+          __attribute__((__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_ODR_SIGNATURE))))
 #  else
 #    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 #  endif
