@@ -1344,24 +1344,41 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
 
   BinaryFunction *BF = BC->getBinaryFunctionAtAddress(EntryAddress);
   if (BF && BC->isAArch64()) {
-    // Handle IFUNC trampoline
+    // Handle IFUNC trampoline with symbol
     setPLTSymbol(BF, BF->getOneName());
     return;
   }
 
   const Relocation *Rel = BC->getDynamicRelocationAt(TargetAddress);
-  if (!Rel || !Rel->Symbol)
+  if (!Rel)
     return;
+
+  MCSymbol *Symbol = Rel->Symbol;
+  if (!Symbol) {
+    if (!BC->isAArch64() || !Rel->Addend || !Rel->isIRelative())
+      return;
+
+    // IFUNC trampoline without symbol
+    BinaryFunction *TargetBF = BC->getBinaryFunctionAtAddress(Rel->Addend);
+    if (!TargetBF) {
+      errs()
+          << "BOLT-WARNING: Expected BF to be presented as IFUNC resolver at "
+          << Twine::utohexstr(Rel->Addend) << ", skipping\n";
+      return;
+    }
+
+    Symbol = TargetBF->getSymbol();
+  }
 
   ErrorOr<BinarySection &> Section = BC->getSectionForAddress(EntryAddress);
   assert(Section && "cannot get section for address");
   if (!BF)
-    BF = BC->createBinaryFunction(Rel->Symbol->getName().str() + "@PLT",
-                                  *Section, EntryAddress, 0, EntrySize,
+    BF = BC->createBinaryFunction(Symbol->getName().str() + "@PLT", *Section,
+                                  EntryAddress, 0, EntrySize,
                                   Section->getAlignment());
   else
-    BF->addAlternativeName(Rel->Symbol->getName().str() + "@PLT");
-  setPLTSymbol(BF, Rel->Symbol->getName());
+    BF->addAlternativeName(Symbol->getName().str() + "@PLT");
+  setPLTSymbol(BF, Symbol->getName());
 }
 
 void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
