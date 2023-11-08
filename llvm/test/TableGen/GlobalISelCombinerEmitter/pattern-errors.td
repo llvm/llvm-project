@@ -217,6 +217,50 @@ def def_named_imm_apply : GICombineRule<
   (apply (COPY i32:$tmp, $y),
          (COPY $x, (i32 0):$tmp):$foo)>;
 
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: MIFlags can only be present once on an instruction
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_ZEXT ?:$dst, ?:$src, (MIFlags FmArcp), (MIFlags FmArcp))'
+def multi_miflags : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src, (MIFlags FmArcp), (MIFlags FmArcp)):$mi),
+  (apply (G_MUL $dst, $src, $src))>;
+
+def NotAMIFlagEnum;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: 'NotAMIFlagEnum' is not a subclass of 'MIFlagEnum'
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_ZEXT ?:$dst, ?:$src, (MIFlags NotAMIFlagEnum))'
+def not_miflagenum_1 : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src, (MIFlags NotAMIFlagEnum)):$mi),
+  (apply (G_MUL $dst, $src, $src))>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: 'NotAMIFlagEnum' is not a subclass of 'MIFlagEnum'
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_ZEXT ?:$dst, ?:$src, (MIFlags (not NotAMIFlagEnum)))'
+def not_miflagenum_2 : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src, (MIFlags (not NotAMIFlagEnum))):$mi),
+
+  (apply (G_MUL $dst, $src, $src))>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: matching/writing MIFlags is only allowed on CodeGenInstruction patterns
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(GIReplaceReg ?:$x, ?:$y, (MIFlags FmArcp))'
+def miflags_in_builtin : GICombineRule<
+  (defs root:$x),
+  (match (COPY $x, $y)),
+  (apply (GIReplaceReg $x, $y, (MIFlags FmArcp)))>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: 'match' patterns cannot refer to flags from other instructions
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: note: MIFlags in 'mi' refer to: impostor
+def using_flagref_in_match : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src, (MIFlags $impostor)):$mi),
+  (apply (G_MUL $dst, $src, $src))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: unknown instruction '$impostor' referenced in MIFlags of '__badflagref_in_apply_apply_0'
+def badflagref_in_apply : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src):$mi),
+  (apply (G_MUL $dst, $src, $src, (MIFlags $impostor)))>;
+
 // CHECK: error: Failed to parse one or more rules
 
 def MyCombiner: GICombiner<"GenMyCombiner", [
@@ -251,5 +295,11 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   bad_mo_type_not_a_valuetype,
   untyped_new_reg_in_apply,
   def_named_imm_match,
-  def_named_imm_apply
+  def_named_imm_apply,
+  multi_miflags,
+  not_miflagenum_1,
+  not_miflagenum_2,
+  miflags_in_builtin,
+  using_flagref_in_match,
+  badflagref_in_apply
 ]>;
