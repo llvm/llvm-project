@@ -187,8 +187,6 @@ Instruction Flags
 -----------------
 
 MIR Patterns support both matching & writing ``MIFlags``.
-``MIFlags`` are never preserved; output instructions have never have
-any flags unless explicitly set.
 
 .. code-block:: text
   :caption: Example
