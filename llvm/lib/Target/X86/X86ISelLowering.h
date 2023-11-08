@@ -1138,11 +1138,6 @@ namespace llvm {
         unsigned OldShiftOpcode, unsigned NewShiftOpcode,
         SelectionDAG &DAG) const override;
 
-    unsigned preferedOpcodeForCmpEqPiecesOfOperand(
-        EVT VT, unsigned ShiftOpc, bool MayTransformRotate,
-        const APInt &ShiftOrRotateAmt,
-        const std::optional<APInt> &AndMask) const override;
-
     bool preferScalarizeSplat(SDNode *N) const override;
 
     bool shouldFoldConstantShiftPairToMask(const SDNode *N,
