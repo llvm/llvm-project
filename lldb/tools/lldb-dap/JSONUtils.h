@@ -168,7 +168,7 @@ void FillResponse(const llvm::json::Object &request,
                   llvm::json::Object &response);
 
 /// Utility function to convert SBValue \v into a string.
-std::string ValeuToString(lldb::SBValue v);
+std::string ValueToString(lldb::SBValue v);
 
 /// Emplace the string value from an SBValue into the supplied object
 /// using \a key as the key that will contain the value.

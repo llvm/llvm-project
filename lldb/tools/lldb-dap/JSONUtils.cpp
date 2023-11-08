@@ -210,7 +210,7 @@ static std::optional<std::string> TryCreateAutoSummary(lldb::SBValue value) {
   return TryCreateAutoSummaryForContainer(value);
 }
 
-std::string ValeuToString(lldb::SBValue v) {
+std::string ValueToString(lldb::SBValue v) {
   std::string result;
   llvm::raw_string_ostream strm(result);
 
@@ -246,7 +246,7 @@ std::string ValeuToString(lldb::SBValue v) {
 
 void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
                     llvm::StringRef key) {
-  std::string result = ValeuToString(v);
+  std::string result = ValueToString(v);
   EmplaceSafeString(object, key, result);
 }
 
