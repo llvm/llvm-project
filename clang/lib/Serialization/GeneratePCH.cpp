@@ -82,10 +82,11 @@ ASTDeserializationListener *PCHGenerator::GetASTDeserializationListener() {
   return &Writer;
 }
 
-ThinBMIGenerator::ThinBMIGenerator(
-    const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-    StringRef OutputFile, std::shared_ptr<PCHBuffer> Buffer,
-    bool IncludeTimestamps)
+ThinBMIGenerator::ThinBMIGenerator(const Preprocessor &PP,
+                                   InMemoryModuleCache &ModuleCache,
+                                   StringRef OutputFile,
+                                   std::shared_ptr<PCHBuffer> Buffer,
+                                   bool IncludeTimestamps)
     : PCHGenerator(
           PP, ModuleCache, OutputFile, llvm::StringRef(), Buffer,
           /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),

@@ -283,7 +283,7 @@ bool clang::MayDefAffectABI(const Decl *D) {
     // use, no matter whether they've been explicitly instantiated etc.
     if (!FD->isUserProvided())
       return true;
-    
+
     if (FD->isDependentContext())
       return true;
 
