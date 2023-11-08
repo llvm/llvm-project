@@ -37,7 +37,7 @@
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i64 16)
 // CPP-CHECK-NEXT:    ret <vscale x 32 x i8> [[TMP6]]
 //
-svint8x2_t test_svmax_single_s8_x2(svint8x2_t zdn, svint8_t zm) {
+svint8x2_t test_svmax_single_s8_x2(svint8x2_t zdn, svint8_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_s8_x2)(zdn, zm);
 }
 
@@ -63,7 +63,7 @@ svint8x2_t test_svmax_single_s8_x2(svint8x2_t zdn, svint8_t zm) {
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], i64 8)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i16> [[TMP6]]
 //
-svint16x2_t test_svmax_single_s16_x2(svint16x2_t zdn, svint16_t zm) {
+svint16x2_t test_svmax_single_s16_x2(svint16x2_t zdn, svint16_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_s16_x2)(zdn, zm);
 }
 
@@ -89,7 +89,7 @@ svint16x2_t test_svmax_single_s16_x2(svint16x2_t zdn, svint16_t zm) {
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP5]], i64 4)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP6]]
 //
-svint32x2_t test_svmax_single_s32_x2(svint32x2_t zdn, svint32_t zm) {
+svint32x2_t test_svmax_single_s32_x2(svint32x2_t zdn, svint32_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_s32_x2)(zdn, zm);
 }
 
@@ -115,7 +115,7 @@ svint32x2_t test_svmax_single_s32_x2(svint32x2_t zdn, svint32_t zm) {
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]], i64 2)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i64> [[TMP6]]
 //
-svint64x2_t test_svmax_single_s64_x2(svint64x2_t zdn, svint64_t zm) {
+svint64x2_t test_svmax_single_s64_x2(svint64x2_t zdn, svint64_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_s64_x2)(zdn, zm);
 }
 
@@ -141,7 +141,7 @@ svint64x2_t test_svmax_single_s64_x2(svint64x2_t zdn, svint64_t zm) {
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i64 16)
 // CPP-CHECK-NEXT:    ret <vscale x 32 x i8> [[TMP6]]
 //
-svuint8x2_t test_svmax_single_u8_x2(svuint8x2_t zdn, svuint8_t zm) {
+svuint8x2_t test_svmax_single_u8_x2(svuint8x2_t zdn, svuint8_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_u8_x2)(zdn, zm);
 }
 
@@ -167,7 +167,7 @@ svuint8x2_t test_svmax_single_u8_x2(svuint8x2_t zdn, svuint8_t zm) {
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], i64 8)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i16> [[TMP6]]
 //
-svuint16x2_t test_svmax_single_u16_x2(svuint16x2_t zdn, svuint16_t zm) {
+svuint16x2_t test_svmax_single_u16_x2(svuint16x2_t zdn, svuint16_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_u16_x2)(zdn, zm);
 }
 
@@ -193,7 +193,7 @@ svuint16x2_t test_svmax_single_u16_x2(svuint16x2_t zdn, svuint16_t zm) {
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP5]], i64 4)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP6]]
 //
-svuint32x2_t test_svmax_single_u32_x2(svuint32x2_t zdn, svuint32_t zm) {
+svuint32x2_t test_svmax_single_u32_x2(svuint32x2_t zdn, svuint32_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_u32_x2)(zdn, zm);
 }
 
@@ -219,7 +219,7 @@ svuint32x2_t test_svmax_single_u32_x2(svuint32x2_t zdn, svuint32_t zm) {
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]], i64 2)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i64> [[TMP6]]
 //
-svuint64x2_t test_svmax_single_u64_x2(svuint64x2_t zdn, svuint64_t zm) {
+svuint64x2_t test_svmax_single_u64_x2(svuint64x2_t zdn, svuint64_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_u64_x2)(zdn, zm);
 }
 
@@ -245,7 +245,7 @@ svuint64x2_t test_svmax_single_u64_x2(svuint64x2_t zdn, svuint64_t zm) {
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> [[TMP4]], <vscale x 8 x half> [[TMP5]], i64 8)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x half> [[TMP6]]
 //
-svfloat16x2_t test_svmax_single_f16_x2(svfloat16x2_t zdn, svfloat16_t zm) {
+svfloat16x2_t test_svmax_single_f16_x2(svfloat16x2_t zdn, svfloat16_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_f16_x2)(zdn, zm);
 }
 
@@ -271,7 +271,7 @@ svfloat16x2_t test_svmax_single_f16_x2(svfloat16x2_t zdn, svfloat16_t zm) {
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> [[TMP4]], <vscale x 4 x float> [[TMP5]], i64 4)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x float> [[TMP6]]
 //
-svfloat32x2_t test_svmax_single_f32_x2(svfloat32x2_t zdn, svfloat32_t zm) {
+svfloat32x2_t test_svmax_single_f32_x2(svfloat32x2_t zdn, svfloat32_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_f32_x2)(zdn, zm);
 }
 
@@ -297,7 +297,7 @@ svfloat32x2_t test_svmax_single_f32_x2(svfloat32x2_t zdn, svfloat32_t zm) {
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP4]], <vscale x 2 x double> [[TMP5]], i64 2)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x double> [[TMP6]]
 //
-svfloat64x2_t test_svmax_single_f64_x2(svfloat64x2_t zdn, svfloat64_t zm) {
+svfloat64x2_t test_svmax_single_f64_x2(svfloat64x2_t zdn, svfloat64_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_f64_x2)(zdn, zm);
 }
 
@@ -337,7 +337,7 @@ svfloat64x2_t test_svmax_single_f64_x2(svfloat64x2_t zdn, svfloat64_t zm) {
 // CPP-CHECK-NEXT:    [[TMP12:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP10]], <vscale x 16 x i8> [[TMP11]], i64 48)
 // CPP-CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP12]]
 //
-svint8x4_t test_svmax_single_s8_x4(svint8x4_t zdn, svint8_t zm) {
+svint8x4_t test_svmax_single_s8_x4(svint8x4_t zdn, svint8_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_s8_x4)(zdn, zm);
 }
 
@@ -375,7 +375,7 @@ svint8x4_t test_svmax_single_s8_x4(svint8x4_t zdn, svint8_t zm) {
 // CPP-CHECK-NEXT:    [[TMP12:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP10]], <vscale x 8 x i16> [[TMP11]], i64 24)
 // CPP-CHECK-NEXT:    ret <vscale x 32 x i16> [[TMP12]]
 //
-svint16x4_t test_svmax_single_s16_x4(svint16x4_t zdn, svint16_t zm) {
+svint16x4_t test_svmax_single_s16_x4(svint16x4_t zdn, svint16_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_s16_x4)(zdn, zm);
 }
 
@@ -413,7 +413,7 @@ svint16x4_t test_svmax_single_s16_x4(svint16x4_t zdn, svint16_t zm) {
 // CPP-CHECK-NEXT:    [[TMP12:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP10]], <vscale x 4 x i32> [[TMP11]], i64 12)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP12]]
 //
-svint32x4_t test_svmax_single_s32_x4(svint32x4_t zdn, svint32_t zm) {
+svint32x4_t test_svmax_single_s32_x4(svint32x4_t zdn, svint32_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_s32_x4)(zdn, zm);
 }
 
@@ -451,7 +451,7 @@ svint32x4_t test_svmax_single_s32_x4(svint32x4_t zdn, svint32_t zm) {
 // CPP-CHECK-NEXT:    [[TMP12:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP10]], <vscale x 2 x i64> [[TMP11]], i64 6)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i64> [[TMP12]]
 //
-svint64x4_t test_svmax_single_s64_x4(svint64x4_t zdn, svint64_t zm) {
+svint64x4_t test_svmax_single_s64_x4(svint64x4_t zdn, svint64_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_s64_x4)(zdn, zm);
 }
 
@@ -489,7 +489,7 @@ svint64x4_t test_svmax_single_s64_x4(svint64x4_t zdn, svint64_t zm) {
 // CPP-CHECK-NEXT:    [[TMP12:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP10]], <vscale x 16 x i8> [[TMP11]], i64 48)
 // CPP-CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP12]]
 //
-svuint8x4_t test_svmax_single_u8_x4(svuint8x4_t zdn, svuint8_t zm) {
+svuint8x4_t test_svmax_single_u8_x4(svuint8x4_t zdn, svuint8_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_u8_x4)(zdn, zm);
 }
 
@@ -527,7 +527,7 @@ svuint8x4_t test_svmax_single_u8_x4(svuint8x4_t zdn, svuint8_t zm) {
 // CPP-CHECK-NEXT:    [[TMP12:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP10]], <vscale x 8 x i16> [[TMP11]], i64 24)
 // CPP-CHECK-NEXT:    ret <vscale x 32 x i16> [[TMP12]]
 //
-svuint16x4_t test_svmax_single_u16_x4(svuint16x4_t zdn, svuint16_t zm) {
+svuint16x4_t test_svmax_single_u16_x4(svuint16x4_t zdn, svuint16_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_u16_x4)(zdn, zm);
 }
 
@@ -565,7 +565,7 @@ svuint16x4_t test_svmax_single_u16_x4(svuint16x4_t zdn, svuint16_t zm) {
 // CPP-CHECK-NEXT:    [[TMP12:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP10]], <vscale x 4 x i32> [[TMP11]], i64 12)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP12]]
 //
-svuint32x4_t test_svmax_single_u32_x4(svuint32x4_t zdn, svuint32_t zm) {
+svuint32x4_t test_svmax_single_u32_x4(svuint32x4_t zdn, svuint32_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_u32_x4)(zdn, zm);
 }
 
@@ -603,7 +603,7 @@ svuint32x4_t test_svmax_single_u32_x4(svuint32x4_t zdn, svuint32_t zm) {
 // CPP-CHECK-NEXT:    [[TMP12:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP10]], <vscale x 2 x i64> [[TMP11]], i64 6)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i64> [[TMP12]]
 //
-svuint64x4_t test_svmax_single_u64_x4(svuint64x4_t zdn, svuint64_t zm) {
+svuint64x4_t test_svmax_single_u64_x4(svuint64x4_t zdn, svuint64_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_u64_x4)(zdn, zm);
 }
 
@@ -641,7 +641,7 @@ svuint64x4_t test_svmax_single_u64_x4(svuint64x4_t zdn, svuint64_t zm) {
 // CPP-CHECK-NEXT:    [[TMP12:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP10]], <vscale x 8 x half> [[TMP11]], i64 24)
 // CPP-CHECK-NEXT:    ret <vscale x 32 x half> [[TMP12]]
 //
-svfloat16x4_t test_svmax_single_f16_x4(svfloat16x4_t zdn, svfloat16_t zm) {
+svfloat16x4_t test_svmax_single_f16_x4(svfloat16x4_t zdn, svfloat16_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_f16_x4)(zdn, zm);
 }
 
@@ -679,7 +679,7 @@ svfloat16x4_t test_svmax_single_f16_x4(svfloat16x4_t zdn, svfloat16_t zm) {
 // CPP-CHECK-NEXT:    [[TMP12:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP10]], <vscale x 4 x float> [[TMP11]], i64 12)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x float> [[TMP12]]
 //
-svfloat32x4_t test_svmax_single_f32_x4(svfloat32x4_t zdn, svfloat32_t zm) {
+svfloat32x4_t test_svmax_single_f32_x4(svfloat32x4_t zdn, svfloat32_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_f32_x4)(zdn, zm);
 }
 
@@ -717,7 +717,7 @@ svfloat32x4_t test_svmax_single_f32_x4(svfloat32x4_t zdn, svfloat32_t zm) {
 // CPP-CHECK-NEXT:    [[TMP12:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP10]], <vscale x 2 x double> [[TMP11]], i64 6)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x double> [[TMP12]]
 //
-svfloat64x4_t test_svmax_single_f64_x4(svfloat64x4_t zdn, svfloat64_t zm) {
+svfloat64x4_t test_svmax_single_f64_x4(svfloat64x4_t zdn, svfloat64_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_single_f64_x4)(zdn, zm);
 }
 
@@ -749,7 +749,7 @@ svfloat64x4_t test_svmax_single_f64_x4(svfloat64x4_t zdn, svfloat64_t zm) {
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], i64 16)
 // CPP-CHECK-NEXT:    ret <vscale x 32 x i8> [[TMP8]]
 //
-svint8x2_t test_svmax_s8_x2(svint8x2_t zdn, svint8x2_t zm) {
+svint8x2_t test_svmax_s8_x2(svint8x2_t zdn, svint8x2_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_s8_x2)(zdn, zm);
 }
 
@@ -779,7 +779,7 @@ svint8x2_t test_svmax_s8_x2(svint8x2_t zdn, svint8x2_t zm) {
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]], i64 8)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i16> [[TMP8]]
 //
-svint16x2_t test_svmax_s16_x2(svint16x2_t zdn, svint16x2_t zm) {
+svint16x2_t test_svmax_s16_x2(svint16x2_t zdn, svint16x2_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_s16_x2)(zdn, zm);
 }
 
@@ -809,7 +809,7 @@ svint16x2_t test_svmax_s16_x2(svint16x2_t zdn, svint16x2_t zm) {
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP6]], <vscale x 4 x i32> [[TMP7]], i64 4)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP8]]
 //
-svint32x2_t test_svmax_s32_x2(svint32x2_t zdn, svint32x2_t zm) {
+svint32x2_t test_svmax_s32_x2(svint32x2_t zdn, svint32x2_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_s32_x2)(zdn, zm);
 }
 
@@ -839,7 +839,7 @@ svint32x2_t test_svmax_s32_x2(svint32x2_t zdn, svint32x2_t zm) {
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], i64 2)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i64> [[TMP8]]
 //
-svint64x2_t test_svmax_s64_x2(svint64x2_t zdn, svint64x2_t zm) {
+svint64x2_t test_svmax_s64_x2(svint64x2_t zdn, svint64x2_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_s64_x2)(zdn, zm);
 }
 
@@ -869,7 +869,7 @@ svint64x2_t test_svmax_s64_x2(svint64x2_t zdn, svint64x2_t zm) {
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], i64 16)
 // CPP-CHECK-NEXT:    ret <vscale x 32 x i8> [[TMP8]]
 //
-svuint8x2_t test_svmax_u8_x2(svuint8x2_t zdn, svuint8x2_t zm) {
+svuint8x2_t test_svmax_u8_x2(svuint8x2_t zdn, svuint8x2_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_u8_x2)(zdn, zm);
 }
 
@@ -899,7 +899,7 @@ svuint8x2_t test_svmax_u8_x2(svuint8x2_t zdn, svuint8x2_t zm) {
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]], i64 8)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i16> [[TMP8]]
 //
-svuint16x2_t test_svmax_u16_x2(svuint16x2_t zdn, svuint16x2_t zm) {
+svuint16x2_t test_svmax_u16_x2(svuint16x2_t zdn, svuint16x2_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_u16_x2)(zdn, zm);
 }
 
@@ -929,7 +929,7 @@ svuint16x2_t test_svmax_u16_x2(svuint16x2_t zdn, svuint16x2_t zm) {
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP6]], <vscale x 4 x i32> [[TMP7]], i64 4)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP8]]
 //
-svuint32x2_t test_svmax_u32_x2(svuint32x2_t zdn, svuint32x2_t zm) {
+svuint32x2_t test_svmax_u32_x2(svuint32x2_t zdn, svuint32x2_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_u32_x2)(zdn, zm);
 }
 
@@ -959,7 +959,7 @@ svuint32x2_t test_svmax_u32_x2(svuint32x2_t zdn, svuint32x2_t zm) {
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP6]], <vscale x 2 x i64> [[TMP7]], i64 2)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i64> [[TMP8]]
 //
-svuint64x2_t test_svmax_u64_x2(svuint64x2_t zdn, svuint64x2_t zm) {
+svuint64x2_t test_svmax_u64_x2(svuint64x2_t zdn, svuint64x2_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_u64_x2)(zdn, zm);
 }
 
@@ -989,7 +989,7 @@ svuint64x2_t test_svmax_u64_x2(svuint64x2_t zdn, svuint64x2_t zm) {
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> [[TMP6]], <vscale x 8 x half> [[TMP7]], i64 8)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x half> [[TMP8]]
 //
-svfloat16x2_t test_svmax_f16_x2(svfloat16x2_t zdn, svfloat16x2_t zm) {
+svfloat16x2_t test_svmax_f16_x2(svfloat16x2_t zdn, svfloat16x2_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_f16_x2)(zdn, zm);
 }
 
@@ -1019,7 +1019,7 @@ svfloat16x2_t test_svmax_f16_x2(svfloat16x2_t zdn, svfloat16x2_t zm) {
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> [[TMP6]], <vscale x 4 x float> [[TMP7]], i64 4)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x float> [[TMP8]]
 //
-svfloat32x2_t test_svmax_f32_x2(svfloat32x2_t zdn, svfloat32x2_t zm) {
+svfloat32x2_t test_svmax_f32_x2(svfloat32x2_t zdn, svfloat32x2_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_f32_x2)(zdn, zm);
 }
 
@@ -1049,7 +1049,7 @@ svfloat32x2_t test_svmax_f32_x2(svfloat32x2_t zdn, svfloat32x2_t zm) {
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP6]], <vscale x 2 x double> [[TMP7]], i64 2)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x double> [[TMP8]]
 //
-svfloat64x2_t test_svmax_f64_x2(svfloat64x2_t zdn, svfloat64x2_t zm) {
+svfloat64x2_t test_svmax_f64_x2(svfloat64x2_t zdn, svfloat64x2_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_f64_x2)(zdn, zm);
 }
 
@@ -1097,7 +1097,7 @@ svfloat64x2_t test_svmax_f64_x2(svfloat64x2_t zdn, svfloat64x2_t zm) {
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP14]], <vscale x 16 x i8> [[TMP15]], i64 48)
 // CPP-CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP16]]
 //
-svint8x4_t test_svmax_s8_x4(svint8x4_t zdn, svint8x4_t zm) {
+svint8x4_t test_svmax_s8_x4(svint8x4_t zdn, svint8x4_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_s8_x4)(zdn, zm);
 }
 
@@ -1143,7 +1143,7 @@ svint8x4_t test_svmax_s8_x4(svint8x4_t zdn, svint8x4_t zm) {
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP14]], <vscale x 8 x i16> [[TMP15]], i64 24)
 // CPP-CHECK-NEXT:    ret <vscale x 32 x i16> [[TMP16]]
 //
-svint16x4_t test_svmax_s16_x4(svint16x4_t zdn, svint16x4_t zm) {
+svint16x4_t test_svmax_s16_x4(svint16x4_t zdn, svint16x4_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_s16_x4)(zdn, zm);
 }
 
@@ -1189,7 +1189,7 @@ svint16x4_t test_svmax_s16_x4(svint16x4_t zdn, svint16x4_t zm) {
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP14]], <vscale x 4 x i32> [[TMP15]], i64 12)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP16]]
 //
-svint32x4_t test_svmax_s32_x4(svint32x4_t zdn, svint32x4_t zm) {
+svint32x4_t test_svmax_s32_x4(svint32x4_t zdn, svint32x4_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_s32_x4)(zdn, zm);
 }
 
@@ -1235,7 +1235,7 @@ svint32x4_t test_svmax_s32_x4(svint32x4_t zdn, svint32x4_t zm) {
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP14]], <vscale x 2 x i64> [[TMP15]], i64 6)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i64> [[TMP16]]
 //
-svint64x4_t test_svmax_s64_x4(svint64x4_t zdn, svint64x4_t zm) {
+svint64x4_t test_svmax_s64_x4(svint64x4_t zdn, svint64x4_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_s64_x4)(zdn, zm);
 }
 
@@ -1281,7 +1281,7 @@ svint64x4_t test_svmax_s64_x4(svint64x4_t zdn, svint64x4_t zm) {
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP14]], <vscale x 16 x i8> [[TMP15]], i64 48)
 // CPP-CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP16]]
 //
-svuint8x4_t test_svmax_u8_x4(svuint8x4_t zdn, svuint8x4_t zm) {
+svuint8x4_t test_svmax_u8_x4(svuint8x4_t zdn, svuint8x4_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_u8_x4)(zdn, zm);
 }
 
@@ -1327,7 +1327,7 @@ svuint8x4_t test_svmax_u8_x4(svuint8x4_t zdn, svuint8x4_t zm) {
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP14]], <vscale x 8 x i16> [[TMP15]], i64 24)
 // CPP-CHECK-NEXT:    ret <vscale x 32 x i16> [[TMP16]]
 //
-svuint16x4_t test_svmax_u16_x4(svuint16x4_t zdn, svuint16x4_t zm) {
+svuint16x4_t test_svmax_u16_x4(svuint16x4_t zdn, svuint16x4_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_u16_x4)(zdn, zm);
 }
 
@@ -1373,7 +1373,7 @@ svuint16x4_t test_svmax_u16_x4(svuint16x4_t zdn, svuint16x4_t zm) {
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP14]], <vscale x 4 x i32> [[TMP15]], i64 12)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP16]]
 //
-svuint32x4_t test_svmax_u32_x4(svuint32x4_t zdn, svuint32x4_t zm) {
+svuint32x4_t test_svmax_u32_x4(svuint32x4_t zdn, svuint32x4_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_u32_x4)(zdn, zm);
 }
 
@@ -1419,7 +1419,7 @@ svuint32x4_t test_svmax_u32_x4(svuint32x4_t zdn, svuint32x4_t zm) {
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP14]], <vscale x 2 x i64> [[TMP15]], i64 6)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i64> [[TMP16]]
 //
-svuint64x4_t test_svmax_u64_x4(svuint64x4_t zdn, svuint64x4_t zm) {
+svuint64x4_t test_svmax_u64_x4(svuint64x4_t zdn, svuint64x4_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_u64_x4)(zdn, zm);
 }
 
@@ -1465,7 +1465,7 @@ svuint64x4_t test_svmax_u64_x4(svuint64x4_t zdn, svuint64x4_t zm) {
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP14]], <vscale x 8 x half> [[TMP15]], i64 24)
 // CPP-CHECK-NEXT:    ret <vscale x 32 x half> [[TMP16]]
 //
-svfloat16x4_t test_svmax_f16_x4(svfloat16x4_t zdn, svfloat16x4_t zm) {
+svfloat16x4_t test_svmax_f16_x4(svfloat16x4_t zdn, svfloat16x4_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_f16_x4)(zdn, zm);
 }
 
@@ -1511,7 +1511,7 @@ svfloat16x4_t test_svmax_f16_x4(svfloat16x4_t zdn, svfloat16x4_t zm) {
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP14]], <vscale x 4 x float> [[TMP15]], i64 12)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x float> [[TMP16]]
 //
-svfloat32x4_t test_svmax_f32_x4(svfloat32x4_t zdn, svfloat32x4_t zm) {
+svfloat32x4_t test_svmax_f32_x4(svfloat32x4_t zdn, svfloat32x4_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_f32_x4)(zdn, zm);
 }
 
@@ -1557,6 +1557,6 @@ svfloat32x4_t test_svmax_f32_x4(svfloat32x4_t zdn, svfloat32x4_t zm) {
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP14]], <vscale x 2 x double> [[TMP15]], i64 6)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x double> [[TMP16]]
 //
-svfloat64x4_t test_svmax_f64_x4(svfloat64x4_t zdn, svfloat64x4_t zm) {
+svfloat64x4_t test_svmax_f64_x4(svfloat64x4_t zdn, svfloat64x4_t zm) __arm_streaming {
   return SVE_ACLE_FUNC(svmax,_f64_x4)(zdn, zm);
 }
