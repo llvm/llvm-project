@@ -5708,7 +5708,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::FunctionType *FTy = F->getFunctionType();
 
     for (unsigned i = 0, e = E->getNumArgs(); i != e; ++i) {
-      Value *ArgValue = EmitScalarOrConstFoldImmArg(ICEArguments, i, E);
+      Value *ArgValue;
+      // If this is a normal argument, just emit it as a scalar.
+      if ((ICEArguments & (1 << i)) == 0) {
+        ArgValue = EmitScalarExpr(E->getArg(i));
+      } else {
+        // If this is required to be a constant, constant fold it so that we
+        // know that the generated intrinsic gets a ConstantInt.
+        ArgValue = llvm::ConstantInt::get(
+            getLLVMContext(),
+            *E->getArg(i)->getIntegerConstantExpr(getContext()));
+      }
+
       // If the intrinsic arg type is different from the builtin arg type
       // we need to do a bit cast.
       llvm::Type *PTy = FTy->getParamType(i);
@@ -8588,7 +8599,15 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
       }
     }
 
-    Ops.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, i, E));
+    if ((ICEArguments & (1 << i)) == 0) {
+      Ops.push_back(EmitScalarExpr(E->getArg(i)));
+    } else {
+      // If this is required to be a constant, constant fold it so that we know
+      // that the generated intrinsic gets a ConstantInt.
+      Ops.push_back(llvm::ConstantInt::get(
+          getLLVMContext(),
+          *E->getArg(i)->getIntegerConstantExpr(getContext())));
+    }
   }
 
   switch (BuiltinID) {
@@ -11075,7 +11094,15 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         continue;
       }
     }
-    Ops.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, i, E));
+    if ((ICEArguments & (1 << i)) == 0) {
+      Ops.push_back(EmitScalarExpr(E->getArg(i)));
+    } else {
+      // If this is required to be a constant, constant fold it so that we know
+      // that the generated intrinsic gets a ConstantInt.
+      Ops.push_back(llvm::ConstantInt::get(
+          getLLVMContext(),
+          *E->getArg(i)->getIntegerConstantExpr(getContext())));
+    }
   }
 
   auto SISDMap = ArrayRef(AArch64SISDIntrinsicMap);
@@ -13787,7 +13814,16 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   assert(Error == ASTContext::GE_None && "Should not codegen an error");
 
   for (unsigned i = 0, e = E->getNumArgs(); i != e; i++) {
-    Ops.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, i, E));
+    // If this is a normal argument, just emit it as a scalar.
+    if ((ICEArguments & (1 << i)) == 0) {
+      Ops.push_back(EmitScalarExpr(E->getArg(i)));
+      continue;
+    }
+
+    // If this is required to be a constant, constant fold it so that we know
+    // that the generated intrinsic gets a ConstantInt.
+    Ops.push_back(llvm::ConstantInt::get(
+        getLLVMContext(), *E->getArg(i)->getIntegerConstantExpr(getContext())));
   }
 
   // These exist so that the builtin that takes an immediate can be bounds
@@ -17552,23 +17588,6 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
 }
 
-llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
-                                                          unsigned Idx,
-                                                          const CallExpr *E) {
-  llvm::Value *Arg = nullptr;
-  if ((ICEArguments & (1 << Idx)) == 0) {
-    Arg = EmitScalarExpr(E->getArg(Idx));
-  } else {
-    // If this is required to be a constant, constant fold it so that we
-    // know that the generated intrinsic gets a ConstantInt.
-    std::optional<llvm::APSInt> Result =
-        E->getArg(Idx)->getIntegerConstantExpr(getContext());
-    assert(Result && "Expected argument to be a constant");
-    Arg = llvm::ConstantInt::get(getLLVMContext(), *Result);
-  }
-  return Arg;
-}
-
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
@@ -17619,15 +17638,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {
     llvm::SmallVector<llvm::Value *, 6> Args;
-    // Find out if any arguments are required to be integer constant
-    // expressions.
-    unsigned ICEArguments = 0;
-    ASTContext::GetBuiltinTypeError Error;
-    getContext().GetBuiltinType(BuiltinID, Error, &ICEArguments);
-    assert(Error == ASTContext::GE_None && "Should not codegen an error");
-    for (unsigned I = 0; I != E->getNumArgs(); ++I) {
-      Args.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, I, E));
-    }
+    for (unsigned I = 0; I != E->getNumArgs(); ++I)
+      Args.push_back(EmitScalarExpr(E->getArg(I)));
     assert(Args.size() == 5 || Args.size() == 6);
     if (Args.size() == 5)
       Args.insert(Args.begin(), llvm::PoisonValue::get(Args[0]->getType()));
@@ -20603,7 +20615,17 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       Ops.push_back(AggValue);
       continue;
     }
-    Ops.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, i, E));
+
+    // If this is a normal argument, just emit it as a scalar.
+    if ((ICEArguments & (1 << i)) == 0) {
+      Ops.push_back(EmitScalarExpr(E->getArg(i)));
+      continue;
+    }
+
+    // If this is required to be a constant, constant fold it so that we know
+    // that the generated intrinsic gets a ConstantInt.
+    Ops.push_back(llvm::ConstantInt::get(
+        getLLVMContext(), *E->getArg(i)->getIntegerConstantExpr(getContext())));
   }
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
