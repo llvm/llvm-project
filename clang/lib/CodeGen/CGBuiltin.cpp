@@ -890,13 +890,14 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
     const Expr *Idx = nullptr;
     if (const auto *UO = dyn_cast<UnaryOperator>(Base);
         UO && UO->getOpcode() == UO_AddrOf) {
-      if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(UO->getSubExpr())) {
+      if (const auto *ASE =
+              dyn_cast<ArraySubscriptExpr>(UO->getSubExpr()->IgnoreParens())) {
         Base = ASE->getBase();
         Idx = ASE->getIdx()->IgnoreParenImpCasts();
+
         if (const auto *IL = dyn_cast<IntegerLiteral>(Idx);
-            IL && !IL->getValue().getZExtValue()) {
+            IL && !IL->getValue().getSExtValue())
           Idx = nullptr;
-        }
       }
     }
 
@@ -912,7 +913,7 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
 
       if (Idx) {
         llvm::Value *IdxInst = EmitAnyExprToTemp(Idx).getScalarVal();
-        IdxInst = Builder.CreateZExtOrTrunc(IdxInst, CountedByInst->getType());
+        IdxInst = Builder.CreateSExtOrTrunc(IdxInst, CountedByInst->getType());
         CountedByInst = Builder.CreateSub(CountedByInst, IdxInst);
       }
 
@@ -924,7 +925,7 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
           llvm::ConstantInt::get(CountedByInst->getType(), Size.getQuantity());
 
       llvm::Value *FAMSize = Builder.CreateMul(CountedByInst, ElemSize);
-      llvm::Value *Res = Builder.CreateZExtOrTrunc(FAMSize, ResType);
+      llvm::Value *Res = Builder.CreateSExtOrTrunc(FAMSize, ResType);
 
       if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
         // The whole struct is specificed in the __bdos.
