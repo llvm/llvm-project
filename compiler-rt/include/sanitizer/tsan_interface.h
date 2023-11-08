@@ -127,6 +127,10 @@ void SANITIZER_CDECL __tsan_mutex_post_signal(void *addr, unsigned flags);
 void SANITIZER_CDECL __tsan_mutex_pre_divert(void *addr, unsigned flags);
 void SANITIZER_CDECL __tsan_mutex_post_divert(void *addr, unsigned flags);
 
+// Check that the current thread does not hold any mutexes,
+// report a bug report otherwise.
+void SANITIZER_CDECL __tsan_check_no_mutexes_held();
+
 // External race detection API.
 // Can be used by non-instrumented libraries to detect when their objects are
 // being used in an unsafe manner.
