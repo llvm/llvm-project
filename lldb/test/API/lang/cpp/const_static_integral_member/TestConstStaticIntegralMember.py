@@ -102,10 +102,9 @@ class TestCase(TestBase):
         # it does not crash.
         self.expect("image lookup -t A")
 
-    # For debug-info produced by older versions of clang, dsymutil strips the
-    # debug info for classes that only have const static data members without
-    # definitions.
-    @expectedFailureAll(compiler=["clang"], compiler_version=["<", "18.0"])
+    # dsymutil strips the debug info for classes that only have const static
+    # data members without a definition namespace scope.
+    @expectedFailureAll(debug_info=["dsym"])
     def test_class_with_only_const_static(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
