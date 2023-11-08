@@ -567,7 +567,6 @@ body:             |
     ; CHECK-NOT: S_SENDMSG 3
     ; CHECK: S_ENDPGM 0
     GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr1, 0, 4, implicit $exec
-    S_WAITCNT_VSCNT undef $sgpr_null, 0
     S_ENDPGM 0
 ...
 
@@ -579,6 +578,5 @@ body:             |
     ; CHECK-NOT: S_SENDMSG 3
     ; CHECK: S_ENDPGM 0
     GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr1, 0, 4, implicit $exec
-    S_WAITCNT_VSCNT undef $sgpr_null, 0
     S_ENDPGM 0
 ...
