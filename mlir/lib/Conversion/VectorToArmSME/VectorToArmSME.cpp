@@ -171,10 +171,6 @@ struct TransferWriteToArmSMELowering
     if (!arm_sme::isValidSMETileVectorType(vType))
       return failure();
 
-    assert(writeOp.getTransferRank() == 2 &&
-           "expected a permutation_map with result dims of the same rank as "
-           "the vector type");
-
     if (!llvm::isa<MemRefType>(writeOp.getSource().getType()))
       return failure();
 
@@ -183,19 +179,19 @@ struct TransferWriteToArmSMELowering
       return rewriter.notifyMatchFailure(writeOp,
                                          "not inbounds transfer write");
 
-    arm_sme::TileSliceLayout layout;
-
     AffineExpr d0, d1;
     bindDims(writeOp.getContext(), d0, d1);
     AffineMap map = writeOp.getPermutationMap();
-    if (map.isIdentity())
-      layout = arm_sme::TileSliceLayout::Horizontal;
-    else if (map == AffineMap::get(map.getNumDims(), 0, {d1, d0},
-                                   writeOp.getContext()))
-      layout = arm_sme::TileSliceLayout::Vertical;
-    else
+    bool isTranspose = (map == AffineMap::get(map.getNumDims(), 0, {d1, d0},
+                                              writeOp.getContext()));
+
+    if (!map.isIdentity() && !isTranspose)
       return rewriter.notifyMatchFailure(writeOp,
                                          "unsupported permutation map");
+
+    arm_sme::TileSliceLayout layout =
+        isTranspose ? arm_sme::TileSliceLayout::Vertical
+                    : arm_sme::TileSliceLayout::Horizontal;
 
     rewriter.replaceOpWithNewOp<arm_sme::TileStoreOp>(
         writeOp, writeOp.getVector(), writeOp.getSource(), writeOp.getIndices(),

@@ -32,7 +32,7 @@ func.func @transfer_write_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: i
   return
 }
 
-// Vector store + transpose.
+// Vector transpose + store.
 func.func @transfer_write_2d_transposed(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %0 = vector.load %A[%base1, %base2] : memref<?x?xf32>, vector<[4]x[4]xf32>
   vector.transfer_write %0, %A[%base1, %base2] {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds=[true, true]} :
@@ -40,7 +40,7 @@ func.func @transfer_write_2d_transposed(%A : memref<?x?xf32>, %base1: index, %ba
   return
 }
 
-// Masked vector store + transpose.
+// Vector transpose + masked store.
 func.func @transfer_write_2d_mask_transposed(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %c2 = arith.constant 2 : index
   %c4 = arith.constant 4 : index
@@ -135,7 +135,7 @@ func.func @entry() {
   call @transfer_write_2d_mask(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
   call @load_and_print(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
 
-  // 4. Reload 3. + store + transpose.
+  // 4. Reload 3. + transpose + store.
   // CHECK-LABEL: TILE BEGIN:
   // CHECK-NEXT: ( 0, 0, 20, 30
   // CHECK-NEXT: ( 0, 0, 21, 31
@@ -144,8 +144,9 @@ func.func @entry() {
   call @transfer_write_2d_transposed(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
   call @load_and_print(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
 
-  // 5. Reload 4. + store + transpose but with mask (nrows=4, ncols=2).
-  // The mask applies after permutation
+  // 5. Reload 4. + transpose + masked store (nrows=4, ncols=2).
+  // The mask applies after permutation. Columns 2 and 3 (from 4.) are
+  // preserved.
   // CHECK-LABEL: TILE BEGIN:
   // CHECK-NEXT: ( 0, 0, 20, 30
   // CHECK-NEXT: ( 0, 0, 21, 31
