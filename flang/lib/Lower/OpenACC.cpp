@@ -2997,14 +2997,6 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-  mlir::acc::DeclareOp declareOp;
-  auto parentOp = builder.getBlock()->getParentOp();
-  if (mlir::isa<mlir::acc::DeclareOp>(parentOp)) {
-    declareOp = mlir::dyn_cast<mlir::acc::DeclareOp>(
-        *builder.getBlock()->getParentOp());
-    builder.setInsertionPoint(declareOp.getOperation());
-  }
-
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     if (const auto *copyClause =
             std::get_if<Fortran::parser::AccClause::Copy>(&clause.u)) {
@@ -3093,23 +3085,38 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
     }
   }
 
-  if (declareOp) {
-    declareOp.getDataClauseOperandsMutable().append(dataClauseOperands);
-    builder.setInsertionPointToEnd(&declareOp.getRegion().back());
+  mlir::func::FuncOp funcOp = builder.getFunction();
+  auto ops = funcOp.getOps<mlir::acc::DeclareEnterOp>();
+  if (ops.empty()) {
+    builder.create<mlir::acc::DeclareEnterOp>(loc, dataClauseOperands);
   } else {
-    declareOp = builder.create<mlir::acc::DeclareOp>(loc, dataClauseOperands);
-    builder.createBlock(&declareOp.getRegion(), declareOp.getRegion().end(), {},
-                        {});
-    builder.setInsertionPointToEnd(&declareOp.getRegion().back());
+    auto declareOp = *ops.begin();
+    auto newDeclareOp = builder.create<mlir::acc::DeclareEnterOp>(
+        loc, declareOp.getDataClauseOperands());
+    newDeclareOp.getDataClauseOperandsMutable().append(dataClauseOperands);
+    declareOp.erase();
   }
-  openAccCtx.attachCleanup([&builder, declareOp, loc, createEntryOperands,
+
+  openAccCtx.attachCleanup([&builder, loc, createEntryOperands,
                             copyEntryOperands, copyoutEntryOperands,
                             deviceResidentEntryOperands]() {
-    auto parentOp = builder.getBlock()->getParentOp();
-    if (mlir::isa<mlir::acc::DeclareOp>(parentOp)) {
-      builder.create<mlir::acc::TerminatorOp>(loc);
-      builder.setInsertionPointAfter(declareOp);
+    llvm::SmallVector<mlir::Value> operands;
+    operands.append(createEntryOperands);
+    operands.append(deviceResidentEntryOperands);
+    operands.append(copyEntryOperands);
+    operands.append(copyoutEntryOperands);
+
+    if (!operands.empty()) {
+      mlir::func::FuncOp funcOp = builder.getFunction();
+      auto ops = funcOp.getOps<mlir::acc::DeclareExitOp>();
+      if (ops.empty()) {
+        builder.create<mlir::acc::DeclareExitOp>(loc, operands);
+      } else {
+        auto declareOp = *ops.begin();
+        declareOp.getDataClauseOperandsMutable().append(operands);
+      }
     }
+
     genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
         builder, createEntryOperands, /*structured=*/true);
     genDataExitOperations<mlir::acc::DeclareDeviceResidentOp,

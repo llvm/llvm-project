@@ -1427,6 +1427,7 @@ private:
             resultRef = builder->createConvert(loc, resultRefType, resultRef);
           return builder->create<fir::LoadOp>(loc, resultRef);
         });
+    bridge.openAccCtx().finalizeAndPop();
     bridge.fctCtx().finalizeAndPop();
     builder->create<mlir::func::ReturnOp>(loc, resultVal);
   }
@@ -1454,9 +1455,11 @@ private:
     } else if (Fortran::semantics::HasAlternateReturns(symbol)) {
       mlir::Value retval = builder->create<fir::LoadOp>(
           toLocation(), getAltReturnResult(symbol));
+      bridge.openAccCtx().finalizeAndPop();
       bridge.fctCtx().finalizeAndPop();
       builder->create<mlir::func::ReturnOp>(toLocation(), retval);
     } else {
+      bridge.openAccCtx().finalizeAndPop();
       bridge.fctCtx().finalizeAndPop();
       genExitRoutine();
     }
@@ -4441,8 +4444,8 @@ private:
   /// Finish translation of a function.
   void endNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(Fortran::lower::pft::stmtSourceLoc(funit.endStmt));
-    bridge.openAccCtx().finalizeAndPop();
     if (funit.isMainProgram()) {
+      bridge.openAccCtx().finalizeAndPop();
       bridge.fctCtx().finalizeAndPop();
       genExitRoutine();
     } else {
