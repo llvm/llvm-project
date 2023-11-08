@@ -16,7 +16,7 @@
 !CHECK:        %[[C_PVT_BOX:.*]] = fir.embox %[[C_PVT_MEM]] typeparams %{{.*}} : (!fir.heap<!fir.char<1,?>>, index) -> !fir.box<!fir.heap<!fir.char<1,?>>>
 !CHECK:        fir.store %[[C_PVT_BOX]] to %[[C_PVT_BOX_REF]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 !CHECK:      }
-!CHECK:      %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT_BOX_REF]] {uniq_name = "_QFtest_allocatable_stringEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
+!CHECK:      %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT_BOX_REF]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_allocatable_stringEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
 !CHECK:      fir.if %{{.*}} {
 !CHECK:        %[[C_PVT_BOX:.*]] = fir.load %[[C_PVT_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 !CHECK:        %[[C_PVT_BOX_ADDR:.*]] = fir.box_addr %[[C_PVT_BOX]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
@@ -44,7 +44,7 @@ end subroutine
 !CHECK:        %[[C_PVT_BOX:.*]] = fir.embox %[[C_PVT_ALLOC]](%{{.*}}) typeparams %{{.*}} : (!fir.heap<!fir.array<?x!fir.char<1,?>>>, !fir.shapeshift<1>, index) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
 !CHECK:        fir.store %[[C_PVT_BOX]] to %[[C_PVT_BOX_REF]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 !CHECK:      }
-!CHECK:      %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT_BOX_REF]] {uniq_name = "_QFtest_allocatable_string_arrayEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>)
+!CHECK:      %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT_BOX_REF]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_allocatable_string_arrayEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>)
 !CHECK:      %{{.*}} = fir.load %[[C_PVT_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 !CHECK:      fir.if %{{.*}} {
 !CHECK:        %[[C_PVT_BOX:.*]] = fir.load %[[C_PVT_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>

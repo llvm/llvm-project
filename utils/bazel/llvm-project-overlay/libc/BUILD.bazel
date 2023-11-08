@@ -1332,17 +1332,6 @@ libc_math_function(
 )
 
 libc_math_function(
-    name = "powf",
-    additional_deps = [
-        ":__support_fputil_double_double",
-        ":__support_fputil_sqrt",
-        ":exp2f",
-        ":exp10f",
-        ":explogxf",
-    ],
-)
-
-libc_math_function(
     name = "logf",
     additional_deps = [
         ":__support_fputil_fma",
@@ -1570,6 +1559,24 @@ libc_math_function(
         ":__support_macros_optimization",
         ":inv_trigf_utils",
         ":math_utils",
+    ],
+)
+
+libc_math_function(
+    name = "powf",
+    additional_deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_fputil_sqrt",
+        ":__support_fputil_triple_double",
+        ":__support_macros_optimization",
+        ":common_constants",
+        ":explogxf",
+        ":exp2f_impl",
+        ":exp10f_impl",
     ],
 )
 
