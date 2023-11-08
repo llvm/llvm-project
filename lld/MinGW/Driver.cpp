@@ -308,8 +308,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       add("-build-id:no");
     else {
       if (!v.empty())
-        warn("unsupported build id hashing: " + v +
-             ", using default hashing.");
+        warn("unsupported build id hashing: " + v + ", using default hashing.");
       add("-build-id");
     }
   } else
