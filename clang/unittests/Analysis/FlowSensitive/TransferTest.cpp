@@ -3198,7 +3198,7 @@ TEST(TransferTest, AggregateInitialization_NotExplicitlyInitializedField) {
 }
 
 TEST(TransferTest, AggregateInitializationFunctionPointer) {
-  // This is a crash repro.
+  // This is a repro for an assertion failure.
   // nullptr takes on the type of a const function pointer, but its type was
   // asserted to be equal to the *unqualified* type of Field, which no longer
   // included the const.
