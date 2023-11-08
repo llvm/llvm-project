@@ -470,7 +470,7 @@ class ReleaseWorkflow:
     def get_main_commit(self, cherry_pick_sha: str) -> github.Commit.Commit:
         commit = self.repo.get_commit(cherry_pick_sha)
         message = commit.commit.message
-        m = re.search('\(cherry picked from commit ([0-9a-f]+)\)', message)
+        m = re.search("\(cherry picked from commit ([0-9a-f]+)\)", message)
         if not m:
             return None
         return self.repo.get_commit(m.group(1))
@@ -491,7 +491,7 @@ class ReleaseWorkflow:
                 continue
             for pull in main_commit.get_pulls():
                 for review in pull.get_reviews():
-                    if review.state != 'APPROVED':
+                    if review.state != "APPROVED":
                         continue
                 reviewers.append(review.user.login)
         if len(reviewers):
@@ -593,7 +593,7 @@ class ReleaseWorkflow:
                 maintainer_can_modify=False,
             )
 
-            pull.as_issue().edit(milestone = self.issue.milestone)
+            pull.as_issue().edit(milestone=self.issue.milestone)
 
             try:
                 self.pr_request_review(pull)
