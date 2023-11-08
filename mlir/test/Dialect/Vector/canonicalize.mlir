@@ -854,6 +854,29 @@ func.func @canonicalize_broadcast_shapecast_to_shapecast(%arg0: vector<3x4xf32>)
 
 // -----
 
+// CHECK-LABEL: fold_vector_transfer_masks
+func.func @fold_vector_transfer_masks(%A: memref<?x?xf32>) -> (vector<4x8xf32>) {
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[F0:.+]] = arith.constant 0.000000e+00 : f32
+  %f0 = arith.constant 0.0 : f32
+
+  %mask = vector.constant_mask [8, 4] : vector<8x4xi1>
+
+  // CHECK: vector.transfer_read %{{.*}}, %[[F0]] {permutation_map
+  %1 = vector.transfer_read %A[%c0, %c0], %f0, %mask
+      {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : memref<?x?xf32>, vector<4x8xf32>
+
+  // CHECK: vector.transfer_write {{.*}}[%[[C0]], %[[C0]]] {permutation_map
+  vector.transfer_write %1, %A[%c0, %c0], %mask
+      {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : vector<4x8xf32>, memref<?x?xf32>
+
+  // CHECK: return
+  return %1 : vector<4x8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: fold_vector_transfers
 func.func @fold_vector_transfers(%A: memref<?x8xf32>) -> (vector<4x8xf32>, vector<4x9xf32>) {
   %c0 = arith.constant 0 : index
