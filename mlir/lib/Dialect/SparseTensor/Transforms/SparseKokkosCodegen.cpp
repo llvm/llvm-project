@@ -46,14 +46,15 @@ static func::FuncOp genKokkosFunc(OpBuilder &builder, ModuleOp module,
   for (unsigned i = 0, e = args.size(); i < e; i++)
     argsTp.push_back(args[i].getType());
   FunctionType type = FunctionType::get(builder.getContext(), argsTp, {});
-  return builder.create<func::FuncOp>(module.getLoc(), kernelName, type);
-}
-
+  func::FuncOp func = builder.create<func::FuncOp>(module.getLoc(), kernelName, type);
+  func.setPrivate();
+  // Add a body to the function (not done by default)
+  func.addEntryBlock();
+  return func;
 }
 
 /// Allocates memory on the device.
-static gpu::AllocOp genAllocMemRef(OpBuilder &builder, Location loc, Value mem,
-                                   Value token) {
+static gpu::AllocOp genAllocMemRef(OpBuilder &builder, Location loc, Value mem) {
   auto tp = cast<ShapedType>(mem.getType());
   auto elemTp = tp.getElementType();
   auto shape = tp.getShape();
@@ -65,42 +66,26 @@ static gpu::AllocOp genAllocMemRef(OpBuilder &builder, Location loc, Value mem,
       dynamicSizes.push_back(dimOp);
     }
   }
-  return builder.create<gpu::AllocOp>(loc, TypeRange({memTp, token.getType()}),
-                                      token, dynamicSizes, ValueRange());
+  // Create an async alloc with no dependencies
+  return builder.create<gpu::AllocOp>(loc, memTp, builder.getType<gpu::AsyncTokenType>(), ValueRange(), dynamicSizes, ValueRange());
 }
 
 /// Deallocates memory from the device.
-static Value genDeallocMemRef(OpBuilder &builder, Location loc, Value mem,
-                              Value token) {
-  return builder.create<gpu::DeallocOp>(loc, token.getType(), token, mem)
-      .getAsyncToken();
+static void genDeallocMemRef(OpBuilder &builder, Location loc, Value mem) {
+  builder.create<gpu::DeallocOp>(loc, TypeRange(), ValueRange(), mem);
 }
 
 /// Copies memory between host and device (direction is implicit).
-static Value genCopyMemRef(OpBuilder &builder, Location loc, Value dst,
-                           Value src, Value token) {
-  return builder.create<gpu::MemcpyOp>(loc, token.getType(), token, dst, src)
-      .getAsyncToken();
+static void genCopyMemRef(OpBuilder &builder, Location loc, Value dst, Value src) {
+  builder.create<gpu::MemcpyOp>(loc, TypeRange(), ValueRange(), dst, src);
 }
 
 /// Generates an alloc/copy pair.
-static Value genAllocCopy(OpBuilder &builder, Location loc, Value b,
-                          SmallVectorImpl<Value> &tokens) {
-  Value firstToken = genFirstWait(builder, loc);
-  auto alloc = genAllocMemRef(builder, loc, b, firstToken);
+static Value genAllocCopy(OpBuilder &builder, Location loc, Value b) {
+  auto alloc = genAllocMemRef(builder, loc, b);
   Value devMem = alloc.getResult(0);
-  Value depToken = alloc.getAsyncToken(); // copy-after-alloc
-  tokens.push_back(genCopyMemRef(builder, loc, devMem, b, depToken));
+  genCopyMemRef(builder, loc, devMem, b);
   return devMem;
-}
-
-/// Generates a memref from tensor operation.
-static Value genTensorToMemref(PatternRewriter &rewriter, Location loc,
-                               Value tensor) {
-  auto tensorType = llvm::cast<ShapedType>(tensor.getType());
-  auto memrefType =
-      MemRefType::get(tensorType.getShape(), tensorType.getElementType());
-  return rewriter.create<bufferization::ToMemrefOp>(loc, memrefType, tensor);
 }
 
 /// Prepares the outlined arguments, passing scalars and buffers in. Here we
@@ -110,14 +95,13 @@ static Value genTensorToMemref(PatternRewriter &rewriter, Location loc,
 static void genParametersIn(OpBuilder &builder, Location loc,
                              SmallVectorImpl<Value> &scalars,
                              SmallVectorImpl<Value> &buffers,
-                             SmallVectorImpl<Value> &args,
-                             SmallVectorImpl<Value> &tokens) {
+                             SmallVectorImpl<Value> &args) {
   // Scalars are passed by value.
   for (Value s : scalars)
     args.push_back(s);
   // Buffers are need to be made visible on device.
   for (Value b : buffers) {
-    args.push_back(genAllocCopy(builder, loc, b, tokens));
+    args.push_back(genAllocCopy(builder, loc, b));
   }
 }
 
@@ -125,20 +109,17 @@ static void genParametersIn(OpBuilder &builder, Location loc,
 /// on the kernel token and then deallocated. All other buffers are simply
 /// deallocated. Then we wait for all operations to complete.
 static void genParametersOut(OpBuilder &builder, Location loc,
-                             Value kernelToken, SmallVectorImpl<Value> &scalars,
+                             SmallVectorImpl<Value> &scalars,
                              SmallVectorImpl<Value> &buffers,
-                             SmallVectorImpl<Value> &args,
-                             SmallVectorImpl<Value> &tokens) {
+                             SmallVectorImpl<Value> &args) {
   unsigned base = scalars.size();
+  // Go through the buffer (memref-typed) args.
+  // The first one is the output buffer, and must be copied back to host.
+  // The others are inputs and just need to be deallocated.
+  genCopyMemRef(builder, loc, buffers[0], args[base]);
+  // Sequence the output tensor dealloc after it's copied to host.
   for (unsigned i = base, e = args.size(); i < e; i++) {
-    Value firstToken;
-    if (i == base) {
-      firstToken =
-          genCopyMemRef(builder, loc, buffers[0], args[i], kernelToken);
-    } else {
-      firstToken = genFirstWait(builder, loc);
-    }
-    tokens.push_back(genDeallocMemRef(builder, loc, args[i], firstToken));
+    genDeallocMemRef(builder, loc, args[i]);
   }
 }
 
@@ -147,7 +128,6 @@ static void genKokkosCode(PatternRewriter &rewriter, func::FuncOp func,
                        SmallVectorImpl<Value> &constants,
                        SmallVectorImpl<Value> &scalars,
                        SmallVectorImpl<Value> &buffers) {
-  Location loc = func->getLoc();
   Block &block = func.getBody().front();
   rewriter.setInsertionPointToStart(&block);
 
@@ -163,9 +143,10 @@ static void genKokkosCode(PatternRewriter &rewriter, func::FuncOp func,
 
   // Copy the outer scf.parallel to this function, but redefine
   // all constants, and replace scalars and buffers with corresponding arguments to func.
-  rewriter.clone(forallOp, irMap);
+  rewriter.clone(*forallOp, irMap);
   
   //TODO: if forallOp has at least one reduction at the top level, func should return those result(s)
+  rewriter.create<func::ReturnOp>(forallOp.getLoc());
 }
 
 struct KokkosForallRewriter : public OpRewritePattern<scf::ParallelOp> {
@@ -176,6 +157,14 @@ struct KokkosForallRewriter : public OpRewritePattern<scf::ParallelOp> {
 
   LogicalResult matchAndRewrite(scf::ParallelOp forallOp,
                                 PatternRewriter &rewriter) const override {
+    // Only run on outermost ParallelOps
+    if(forallOp->getParentOfType<scf::ParallelOp>()) {
+      return failure();
+    }
+    // Do not run on ParallelOps that are already in 
+    auto enclosingFuncName = forallOp->getParentOfType<func::FuncOp>().getSymName();
+    if(enclosingFuncName.starts_with("kokkos_sparse_kernel_"))
+      return failure();
     // Check the forallOp for operations that can't be executed on device
     // NOTE: Kokkos emitter will have to check for this again, since we have
     // no way to mark an scf.parallel as executing in a particular place.
@@ -234,13 +223,16 @@ struct KokkosForallRewriter : public OpRewritePattern<scf::ParallelOp> {
     ModuleOp module = forallOp->getParentOfType<ModuleOp>();
     auto func = genKokkosFunc(rewriter, module, args);
     genKokkosCode(rewriter, func, forallOp, constants, scalars, buffers);
-
+    // Move the rewriter back to the kernel launch site
     rewriter.restoreInsertionPoint(saveIp);
-
-    // Call the Kokkos function, with the 
-    rewriter.create<func::CallOp>(func->getLoc(), func, args);
+    // Call the Kokkos function
+    rewriter.create<func::CallOp>(loc, func, args);
     // Finalize the outlined arguments.
     genParametersOut(rewriter, loc, scalars, buffers, args);
+    // Lastly, add a Kokkos::fence() to make sure the kernel
+    // and following deep copy have completed
+    rewriter.create<emitc::CallOp>(loc, TypeRange(),
+        "Kokkos::fence", ArrayAttr(), ArrayAttr(), ValueRange());
     rewriter.eraseOp(forallOp);
     return success();
   }
@@ -259,6 +251,6 @@ private:
 } // namespace
 
 void mlir::populateSparseKokkosCodegenPatterns(RewritePatternSet &patterns) {
-  patterns.add<KokkosForallRewriter>(patterns.getContext(), numThreads);
+  patterns.add<KokkosForallRewriter>(patterns.getContext());
 }
 
