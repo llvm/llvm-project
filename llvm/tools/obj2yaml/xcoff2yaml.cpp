@@ -25,6 +25,21 @@ class XCOFFDumper {
   template <typename Shdr, typename Reloc>
   Error dumpSections(ArrayRef<Shdr> Sections);
 
+  // Dump auxiliary symbols.
+  Error dumpFileAuxSym(XCOFFYAML::Symbol &Sym,
+                       const XCOFFSymbolRef &SymbolEntRef);
+  void dumpStatAuxSym(XCOFFYAML::Symbol &Sym,
+                      const XCOFFSymbolRef &SymbolEntRef);
+  void dumpBlockAuxSym(XCOFFYAML::Symbol &Sym,
+                       const XCOFFSymbolRef &SymbolEntRef);
+  void dumpDwarfAuxSym(XCOFFYAML::Symbol &Sym,
+                       const XCOFFSymbolRef &SymbolEntRef);
+  Error dumpAuxSyms(XCOFFYAML::Symbol &Sym, const XCOFFSymbolRef &SymbolEntRef);
+  void dumpFuncAuxSym(XCOFFYAML::Symbol &Sym, const uintptr_t AuxAddress);
+  void dumpExpAuxSym(XCOFFYAML::Symbol &Sym, const uintptr_t AuxAddress);
+  void dumpCscetAuxSym(XCOFFYAML::Symbol &Sym,
+                       const object::XCOFFCsectAuxRef &AuxEntPtr);
+
 public:
   XCOFFDumper(const object::XCOFFObjectFile &obj) : Obj(obj) {}
   Error dump();
@@ -111,67 +126,85 @@ Error XCOFFDumper::dumpSections(ArrayRef<Shdr> Sections) {
   return Error::success();
 }
 
-static void
-dumpFileAuxSym(std::vector<std::unique_ptr<XCOFFYAML::AuxSymbolEnt>> &AuxEntTbl,
-               XCOFF::CFileStringType Type, StringRef FileStr) {
-  XCOFFYAML::FileAuxEnt FileAuxSym;
-  FileAuxSym.FileNameOrString = FileStr;
-  FileAuxSym.FileStringType = Type;
-  AuxEntTbl.push_back(std::make_unique<XCOFFYAML::FileAuxEnt>(FileAuxSym));
+Error XCOFFDumper::dumpFileAuxSym(XCOFFYAML::Symbol &Sym,
+                                  const XCOFFSymbolRef &SymbolEntRef) {
+  for (uint8_t I = 1; I <= Sym.NumberOfAuxEntries; ++I) {
+    uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
+        SymbolEntRef.getEntryAddress(), I);
+    const XCOFFFileAuxEnt *FileAuxEntPtr =
+        getAuxEntPtr<XCOFFFileAuxEnt>(AuxAddress);
+    auto FileNameOrError = Obj.getCFileName(FileAuxEntPtr);
+    if (!FileNameOrError)
+      return FileNameOrError.takeError();
+
+    XCOFFYAML::FileAuxEnt FileAuxSym;
+    FileAuxSym.FileNameOrString = FileNameOrError.get();
+    FileAuxSym.FileStringType = FileAuxEntPtr->Type;
+    Sym.AuxEntries.push_back(
+        std::make_unique<XCOFFYAML::FileAuxEnt>(FileAuxSym));
+  }
+  return Error::success();
 }
 
-static void
-dumpStatAuxSym(std::vector<std::unique_ptr<XCOFFYAML::AuxSymbolEnt>> &AuxEntTbl,
-               const object::XCOFFSectAuxEntForStat &AuxEntPtr) {
+void XCOFFDumper::dumpStatAuxSym(XCOFFYAML::Symbol &Sym,
+                                 const XCOFFSymbolRef &SymbolEntRef) {
+  assert(Sym.NumberOfAuxEntries == 1 &&
+         "expected a single aux symbol for C_STAT!");
+
+  const XCOFFSectAuxEntForStat *AuxEntPtr =
+      getAuxEntPtr<XCOFFSectAuxEntForStat>(
+          XCOFFObjectFile::getAdvancedSymbolEntryAddress(
+              SymbolEntRef.getEntryAddress(), 1));
   XCOFFYAML::SectAuxEntForStat StatAuxSym;
-  StatAuxSym.SectionLength = AuxEntPtr.SectionLength;
-  StatAuxSym.NumberOfLineNum = AuxEntPtr.NumberOfLineNum;
-  StatAuxSym.NumberOfRelocEnt = AuxEntPtr.NumberOfRelocEnt;
-  AuxEntTbl.push_back(
+  StatAuxSym.SectionLength = AuxEntPtr->SectionLength;
+  StatAuxSym.NumberOfLineNum = AuxEntPtr->NumberOfLineNum;
+  StatAuxSym.NumberOfRelocEnt = AuxEntPtr->NumberOfRelocEnt;
+  Sym.AuxEntries.push_back(
       std::make_unique<XCOFFYAML::SectAuxEntForStat>(StatAuxSym));
 }
 
-static void
-dumpFunAuxSym(std::vector<std::unique_ptr<XCOFFYAML::AuxSymbolEnt>> &AuxEntTbl,
-              const object::XCOFFFunctionAuxEnt32 &AuxEntPtr) {
+void XCOFFDumper::dumpFuncAuxSym(XCOFFYAML::Symbol &Sym,
+                                 const uintptr_t AuxAddress) {
   XCOFFYAML::FunctionAuxEnt FunAuxSym;
-  FunAuxSym.OffsetToExceptionTbl = AuxEntPtr.OffsetToExceptionTbl;
-  FunAuxSym.PtrToLineNum = AuxEntPtr.PtrToLineNum;
-  FunAuxSym.SizeOfFunction = AuxEntPtr.SizeOfFunction;
-  FunAuxSym.SymIdxOfNextBeyond = AuxEntPtr.SymIdxOfNextBeyond;
-  AuxEntTbl.push_back(std::make_unique<XCOFFYAML::FunctionAuxEnt>(FunAuxSym));
+  if (Obj.is64Bit()) {
+    const XCOFFFunctionAuxEnt64 *AuxEntPtr =
+        getAuxEntPtr<XCOFFFunctionAuxEnt64>(AuxAddress);
+    FunAuxSym.PtrToLineNum = AuxEntPtr->PtrToLineNum;
+    FunAuxSym.SizeOfFunction = AuxEntPtr->SizeOfFunction;
+    FunAuxSym.SymIdxOfNextBeyond = AuxEntPtr->SymIdxOfNextBeyond;
+  } else {
+    const XCOFFFunctionAuxEnt32 *AuxEntPtr =
+        getAuxEntPtr<XCOFFFunctionAuxEnt32>(AuxAddress);
+    FunAuxSym.OffsetToExceptionTbl = AuxEntPtr->OffsetToExceptionTbl;
+    FunAuxSym.PtrToLineNum = AuxEntPtr->PtrToLineNum;
+    FunAuxSym.SizeOfFunction = AuxEntPtr->SizeOfFunction;
+    FunAuxSym.SymIdxOfNextBeyond = AuxEntPtr->SymIdxOfNextBeyond;
+  }
+  Sym.AuxEntries.push_back(
+      std::make_unique<XCOFFYAML::FunctionAuxEnt>(FunAuxSym));
 }
 
-static void
-dumpFunAuxSym(std::vector<std::unique_ptr<XCOFFYAML::AuxSymbolEnt>> &AuxEntTbl,
-              const object::XCOFFFunctionAuxEnt64 &AuxEntPtr) {
-  XCOFFYAML::FunctionAuxEnt FunAuxSym;
-  FunAuxSym.PtrToLineNum = AuxEntPtr.PtrToLineNum;
-  FunAuxSym.SizeOfFunction = AuxEntPtr.SizeOfFunction;
-  FunAuxSym.SymIdxOfNextBeyond = AuxEntPtr.SymIdxOfNextBeyond;
-  AuxEntTbl.push_back(std::make_unique<XCOFFYAML::FunctionAuxEnt>(FunAuxSym));
-}
-
-static void
-dumpExpAuxSym(std::vector<std::unique_ptr<XCOFFYAML::AuxSymbolEnt>> &AuxEntTbl,
-              const object::XCOFFExceptionAuxEnt &AuxEntPtr) {
+void XCOFFDumper::dumpExpAuxSym(XCOFFYAML::Symbol &Sym,
+                                const uintptr_t AuxAddress) {
+  const XCOFFExceptionAuxEnt *AuxEntPtr =
+      getAuxEntPtr<XCOFFExceptionAuxEnt>(AuxAddress);
   XCOFFYAML::ExcpetionAuxEnt ExceptAuxSym;
-  ExceptAuxSym.OffsetToExceptionTbl = AuxEntPtr.OffsetToExceptionTbl;
-  ExceptAuxSym.SizeOfFunction = AuxEntPtr.SizeOfFunction;
-  ExceptAuxSym.SymIdxOfNextBeyond = AuxEntPtr.SymIdxOfNextBeyond;
-  AuxEntTbl.push_back(
+  ExceptAuxSym.OffsetToExceptionTbl = AuxEntPtr->OffsetToExceptionTbl;
+  ExceptAuxSym.SizeOfFunction = AuxEntPtr->SizeOfFunction;
+  ExceptAuxSym.SymIdxOfNextBeyond = AuxEntPtr->SymIdxOfNextBeyond;
+  Sym.AuxEntries.push_back(
       std::make_unique<XCOFFYAML::ExcpetionAuxEnt>(ExceptAuxSym));
 }
 
-static void dumpCscetAuxSym(
-    std::vector<std::unique_ptr<XCOFFYAML::AuxSymbolEnt>> &AuxEntTbl,
-    const object::XCOFFCsectAuxRef &AuxEntPtr, bool Is64bit) {
+void XCOFFDumper::dumpCscetAuxSym(XCOFFYAML::Symbol &Sym,
+                                  const object::XCOFFCsectAuxRef &AuxEntPtr) {
   XCOFFYAML::CsectAuxEnt CsectAuxSym;
   CsectAuxSym.ParameterHashIndex = AuxEntPtr.getParameterHashIndex();
   CsectAuxSym.TypeChkSectNum = AuxEntPtr.getTypeChkSectNum();
   CsectAuxSym.SymbolAlignmentAndType = AuxEntPtr.getSymbolAlignmentAndType();
   CsectAuxSym.StorageMappingClass = AuxEntPtr.getStorageMappingClass();
-  if (Is64bit) {
+
+  if (Obj.is64Bit()) {
     CsectAuxSym.SectionOrLengthLo =
         static_cast<uint32_t>(AuxEntPtr.getSectionOrLength64());
     CsectAuxSym.SectionOrLengthHi =
@@ -181,7 +214,85 @@ static void dumpCscetAuxSym(
     CsectAuxSym.StabInfoIndex = AuxEntPtr.getStabInfoIndex32();
     CsectAuxSym.StabSectNum = AuxEntPtr.getStabSectNum32();
   }
-  AuxEntTbl.push_back(std::make_unique<XCOFFYAML::CsectAuxEnt>(CsectAuxSym));
+  Sym.AuxEntries.push_back(
+      std::make_unique<XCOFFYAML::CsectAuxEnt>(CsectAuxSym));
+}
+
+Error XCOFFDumper::dumpAuxSyms(XCOFFYAML::Symbol &Sym,
+                               const XCOFFSymbolRef &SymbolEntRef) {
+  for (uint8_t I = 1; I <= Sym.NumberOfAuxEntries; ++I) {
+    if (I == Sym.NumberOfAuxEntries && !Obj.is64Bit())
+      break;
+
+    uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
+        SymbolEntRef.getEntryAddress(), I);
+
+    if (Obj.is64Bit()) {
+      XCOFF::SymbolAuxType Type = *Obj.getSymbolAuxType(AuxAddress);
+      if (Type == XCOFF::SymbolAuxType::AUX_CSECT)
+        continue;
+      if (Type == XCOFF::SymbolAuxType::AUX_FCN)
+        dumpFuncAuxSym(Sym, AuxAddress);
+      else if (Type == XCOFF::SymbolAuxType::AUX_EXCEPT)
+        dumpExpAuxSym(Sym, AuxAddress);
+      else
+        llvm_unreachable("invalid aux symbol entry");
+    } else
+      dumpFuncAuxSym(Sym, AuxAddress);
+  }
+
+  auto ErrOrCsectAuxRef = SymbolEntRef.getXCOFFCsectAuxRef();
+  if (!ErrOrCsectAuxRef)
+    return ErrOrCsectAuxRef.takeError();
+
+  dumpCscetAuxSym(Sym, ErrOrCsectAuxRef.get());
+  return Error::success();
+}
+
+void XCOFFDumper::dumpBlockAuxSym(XCOFFYAML::Symbol &Sym,
+                                  const XCOFFSymbolRef &SymbolEntRef) {
+  assert(Sym.NumberOfAuxEntries == 1 &&
+         "expected a single aux symbol for C_BLOCK or C_FCN!");
+
+  uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
+      SymbolEntRef.getEntryAddress(), 1);
+  XCOFFYAML::BlockAuxEnt BlockAuxSym;
+
+  if (Obj.is64Bit()) {
+    const XCOFFBlockAuxEnt64 *AuxEntPtr =
+        getAuxEntPtr<XCOFFBlockAuxEnt64>(AuxAddress);
+    BlockAuxSym.LineNum = AuxEntPtr->LineNum;
+  } else {
+    const XCOFFBlockAuxEnt32 *AuxEntPtr =
+        getAuxEntPtr<XCOFFBlockAuxEnt32>(AuxAddress);
+    BlockAuxSym.LineNumLo = AuxEntPtr->LineNumLo;
+    BlockAuxSym.LineNumHi = AuxEntPtr->LineNumHi;
+  }
+
+  Sym.AuxEntries.push_back(
+      std::make_unique<XCOFFYAML::BlockAuxEnt>(BlockAuxSym));
+}
+
+void XCOFFDumper::dumpDwarfAuxSym(XCOFFYAML::Symbol &Sym,
+                                  const XCOFFSymbolRef &SymbolEntRef) {
+  assert(Sym.NumberOfAuxEntries == 1 &&
+         "expected a single aux symbol for C_DWARF!");
+  uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
+      SymbolEntRef.getEntryAddress(), 1);
+  XCOFFYAML::SectAuxEntForDWARF DwarfAuxSym;
+  if (Obj.is64Bit()) {
+    const XCOFFSectAuxEntForDWARF64 *AuxEntPtr =
+        getAuxEntPtr<XCOFFSectAuxEntForDWARF64>(AuxAddress);
+    DwarfAuxSym.LengthOfSectionPortion = AuxEntPtr->LengthOfSectionPortion;
+    DwarfAuxSym.NumberOfRelocEnt = AuxEntPtr->NumberOfRelocEnt;
+  } else {
+    const XCOFFSectAuxEntForDWARF32 *AuxEntPtr =
+        getAuxEntPtr<XCOFFSectAuxEntForDWARF32>(AuxAddress);
+    DwarfAuxSym.LengthOfSectionPortion = AuxEntPtr->LengthOfSectionPortion;
+    DwarfAuxSym.NumberOfRelocEnt = AuxEntPtr->NumberOfRelocEnt;
+  }
+  Sym.AuxEntries.push_back(
+      std::make_unique<XCOFFYAML::SectAuxEntForDWARF>(DwarfAuxSym));
 }
 
 Error XCOFFDumper::dumpSymbols() {
@@ -209,118 +320,33 @@ Error XCOFFDumper::dumpSymbols() {
 
     Sym.Type = SymbolEntRef.getSymbolType();
     Sym.StorageClass = SymbolEntRef.getStorageClass();
-    uint8_t NumOfAuxSym = SymbolEntRef.getNumberOfAuxEntries();
-    Sym.NumberOfAuxEntries = NumOfAuxSym;
+    Sym.NumberOfAuxEntries = SymbolEntRef.getNumberOfAuxEntries();
 
-    if (NumOfAuxSym) {
-      std::vector<std::unique_ptr<XCOFFYAML::AuxSymbolEnt>> AuxEntTbl;
+    if (Sym.NumberOfAuxEntries) {
       switch (Sym.StorageClass) {
-      case XCOFF::C_FILE: {
-        for (uint8_t I = 1; I <= NumOfAuxSym; ++I) {
-          uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
-              SymbolEntRef.getEntryAddress(), I);
-          const XCOFFFileAuxEnt *FileAuxEntPtr =
-              getAuxEntPtr<XCOFFFileAuxEnt>(AuxAddress);
-          auto FileNameOrError = Obj.getCFileName(FileAuxEntPtr);
-          if (!FileNameOrError)
-            return FileNameOrError.takeError();
-
-          dumpFileAuxSym(AuxEntTbl, FileAuxEntPtr->Type, FileNameOrError.get());
-        }
+      case XCOFF::C_FILE:
+        if (Error E = dumpFileAuxSym(Sym, SymbolEntRef))
+          return E;
         break;
-      }
-      case XCOFF::C_STAT: {
-        assert(NumOfAuxSym == 1 && "expected a single aux symbol for C_STAT!");
-        const XCOFFSectAuxEntForStat *AuxEntPtr =
-            getAuxEntPtr<XCOFFSectAuxEntForStat>(
-                XCOFFObjectFile::getAdvancedSymbolEntryAddress(
-                    SymbolEntRef.getEntryAddress(), 1));
-        dumpStatAuxSym(AuxEntTbl, *AuxEntPtr);
+      case XCOFF::C_STAT:
+        dumpStatAuxSym(Sym, SymbolEntRef);
         break;
-      }
       case XCOFF::C_EXT:
       case XCOFF::C_WEAKEXT:
-      case XCOFF::C_HIDEXT: {
-        for (uint8_t I = 1; I <= NumOfAuxSym; ++I) {
-          if (I == NumOfAuxSym && !Obj.is64Bit())
-            break;
-
-          uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
-              SymbolEntRef.getEntryAddress(), I);
-          if (!Obj.is64Bit()) {
-            const XCOFFFunctionAuxEnt32 *AuxEntPtr =
-                getAuxEntPtr<XCOFFFunctionAuxEnt32>(AuxAddress);
-            dumpFunAuxSym(AuxEntTbl, *AuxEntPtr);
-          } else {
-            XCOFF::SymbolAuxType Type = *Obj.getSymbolAuxType(AuxAddress);
-            if (Type == XCOFF::SymbolAuxType::AUX_CSECT)
-              continue;
-            if (Type == XCOFF::SymbolAuxType::AUX_FCN) {
-              const XCOFFFunctionAuxEnt64 *AuxEntPtr =
-                  getAuxEntPtr<XCOFFFunctionAuxEnt64>(AuxAddress);
-              dumpFunAuxSym(AuxEntTbl, *AuxEntPtr);
-            } else if (Type == XCOFF::SymbolAuxType::AUX_EXCEPT) {
-              const XCOFFExceptionAuxEnt *AuxEntPtr =
-                  getAuxEntPtr<XCOFFExceptionAuxEnt>(AuxAddress);
-              dumpExpAuxSym(AuxEntTbl, *AuxEntPtr);
-            } else
-              llvm_unreachable("invalid aux symbol entry");
-          }
-        }
-        auto ErrOrCsectAuxRef = SymbolEntRef.getXCOFFCsectAuxRef();
-        if (!ErrOrCsectAuxRef)
-          return ErrOrCsectAuxRef.takeError();
-        dumpCscetAuxSym(AuxEntTbl, ErrOrCsectAuxRef.get(), Obj.is64Bit());
+      case XCOFF::C_HIDEXT:
+        if (Error E = dumpAuxSyms(Sym, SymbolEntRef))
+          return E;
         break;
-      }
       case XCOFF::C_BLOCK:
-      case XCOFF::C_FCN: {
-        assert(NumOfAuxSym == 1 &&
-               "expected a single aux symbol for C_BLOCK or C_FCN!");
-
-        uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
-            SymbolEntRef.getEntryAddress(), 1);
-        XCOFFYAML::BlockAuxEnt BlockAuxSym;
-        if (Obj.is64Bit()) {
-          const XCOFFBlockAuxEnt64 *AuxEntPtr =
-              getAuxEntPtr<XCOFFBlockAuxEnt64>(AuxAddress);
-          BlockAuxSym.LineNum = AuxEntPtr->LineNum;
-        } else {
-          const XCOFFBlockAuxEnt32 *AuxEntPtr =
-              getAuxEntPtr<XCOFFBlockAuxEnt32>(AuxAddress);
-          BlockAuxSym.LineNumLo = AuxEntPtr->LineNumLo;
-          BlockAuxSym.LineNumHi = AuxEntPtr->LineNumHi;
-        }
-        AuxEntTbl.push_back(
-            std::make_unique<XCOFFYAML::BlockAuxEnt>(BlockAuxSym));
+      case XCOFF::C_FCN:
+        dumpBlockAuxSym(Sym, SymbolEntRef);
         break;
-      }
-      case XCOFF::C_DWARF: {
-        assert(NumOfAuxSym == 1 && "expected a single aux symbol for C_DWARF!");
-        uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
-            SymbolEntRef.getEntryAddress(), 1);
-        XCOFFYAML::SectAuxEntForDWARF DwarfAuxSym;
-        if (Obj.is64Bit()) {
-          const XCOFFSectAuxEntForDWARF64 *AuxEntPtr =
-              getAuxEntPtr<XCOFFSectAuxEntForDWARF64>(AuxAddress);
-          DwarfAuxSym.LengthOfSectionPortion =
-              AuxEntPtr->LengthOfSectionPortion;
-          DwarfAuxSym.NumberOfRelocEnt = AuxEntPtr->NumberOfRelocEnt;
-        } else {
-          const XCOFFSectAuxEntForDWARF32 *AuxEntPtr =
-              getAuxEntPtr<XCOFFSectAuxEntForDWARF32>(AuxAddress);
-          DwarfAuxSym.LengthOfSectionPortion =
-              AuxEntPtr->LengthOfSectionPortion;
-          DwarfAuxSym.NumberOfRelocEnt = AuxEntPtr->NumberOfRelocEnt;
-        }
-        AuxEntTbl.push_back(
-            std::make_unique<XCOFFYAML::SectAuxEntForDWARF>(DwarfAuxSym));
+      case XCOFF::C_DWARF:
+        dumpDwarfAuxSym(Sym, SymbolEntRef);
         break;
-      }
       default:
         break;
       }
-      Sym.AuxEntries = std::move(AuxEntTbl);
     }
 
     Symbols.push_back(std::move(Sym));
