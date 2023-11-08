@@ -1106,6 +1106,14 @@ struct WarpOpCreateMask : public OpRewritePattern<WarpExecuteOnLane0Op> {
       return failure();
 
     auto mask = yieldOperand->get().getDefiningOp<vector::CreateMaskOp>();
+
+    // Early exit if any values needed for calculating the new mask indices
+    // are defined inside the warp op.
+    if (!llvm::all_of(mask->getOperands(), [&](Value value) {
+          return warpOp.isDefinedOutsideOfRegion(value);
+        }))
+      return failure();
+
     Location loc = mask.getLoc();
     unsigned operandIndex = yieldOperand->getOperandNumber();
 
@@ -1127,30 +1135,16 @@ struct WarpOpCreateMask : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
     AffineExpr s0, s1;
     bindSymbols(rewriter.getContext(), s0, s1);
-    Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    Value prevIsZero;
     SmallVector<Value> newOperands;
     for (int i = 0, e = distShape.size(); i < e; ++i) {
       // Get `mask_size[i] - lane_id[i] * (seq_sizes[i]/dist_sizes[i])` to find
       // the distance from the largest mask index owned by this lane to the
-      // original mask size.
+      // original mask size. vector.create_mask implicitly clamps mask sizes to
+      // the range [0, mask_vector_size[i]].
       Value maskDimIdx = affine::makeComposedAffineApply(
           rewriter, loc, s1 - s0 * distShape[i],
           {delinearizedIds[i], mask.getOperand(i)});
-      // Clamp to the range [0, dist_sizes[i]].
-      Value clampZero = rewriter.create<arith::MaxSIOp>(loc, zero, maskDimIdx);
-      Value vecSizeVal = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getIndexAttr(distShape[i]));
-      Value clampVecSize =
-          rewriter.create<arith::MinSIOp>(loc, vecSizeVal, clampZero);
-      // If a previous mask size is zero, all trailing sizes must also be zero.
-      if (prevIsZero) {
-        clampVecSize = rewriter.create<arith::SelectOp>(loc, prevIsZero, zero,
-                                                        clampVecSize);
-      }
-      prevIsZero = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
-                                                  clampVecSize, zero);
-      newOperands.push_back(clampVecSize);
+      newOperands.push_back(maskDimIdx);
     }
 
     auto newMask =
