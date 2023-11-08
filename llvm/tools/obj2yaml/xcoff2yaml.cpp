@@ -166,6 +166,7 @@ void XCOFFDumper::dumpStatAuxSym(XCOFFYAML::Symbol &Sym,
 void XCOFFDumper::dumpFuncAuxSym(XCOFFYAML::Symbol &Sym,
                                  const uintptr_t AuxAddress) {
   XCOFFYAML::FunctionAuxEnt FunAuxSym;
+
   if (Obj.is64Bit()) {
     const XCOFFFunctionAuxEnt64 *AuxEntPtr =
         getAuxEntPtr<XCOFFFunctionAuxEnt64>(AuxAddress);
@@ -180,6 +181,7 @@ void XCOFFDumper::dumpFuncAuxSym(XCOFFYAML::Symbol &Sym,
     FunAuxSym.SizeOfFunction = AuxEntPtr->SizeOfFunction;
     FunAuxSym.SymIdxOfNextBeyond = AuxEntPtr->SymIdxOfNextBeyond;
   }
+
   Sym.AuxEntries.push_back(
       std::make_unique<XCOFFYAML::FunctionAuxEnt>(FunAuxSym));
 }
@@ -214,6 +216,7 @@ void XCOFFDumper::dumpCscetAuxSym(XCOFFYAML::Symbol &Sym,
     CsectAuxSym.StabInfoIndex = AuxEntPtr.getStabInfoIndex32();
     CsectAuxSym.StabSectNum = AuxEntPtr.getStabSectNum32();
   }
+
   Sym.AuxEntries.push_back(
       std::make_unique<XCOFFYAML::CsectAuxEnt>(CsectAuxSym));
 }
@@ -277,9 +280,11 @@ void XCOFFDumper::dumpDwarfAuxSym(XCOFFYAML::Symbol &Sym,
                                   const XCOFFSymbolRef &SymbolEntRef) {
   assert(Sym.NumberOfAuxEntries == 1 &&
          "expected a single aux symbol for C_DWARF!");
+
   uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
       SymbolEntRef.getEntryAddress(), 1);
   XCOFFYAML::SectAuxEntForDWARF DwarfAuxSym;
+
   if (Obj.is64Bit()) {
     const XCOFFSectAuxEntForDWARF64 *AuxEntPtr =
         getAuxEntPtr<XCOFFSectAuxEntForDWARF64>(AuxAddress);
@@ -291,6 +296,7 @@ void XCOFFDumper::dumpDwarfAuxSym(XCOFFYAML::Symbol &Sym,
     DwarfAuxSym.LengthOfSectionPortion = AuxEntPtr->LengthOfSectionPortion;
     DwarfAuxSym.NumberOfRelocEnt = AuxEntPtr->NumberOfRelocEnt;
   }
+
   Sym.AuxEntries.push_back(
       std::make_unique<XCOFFYAML::SectAuxEntForDWARF>(DwarfAuxSym));
 }

@@ -282,9 +282,16 @@ static void auxSymMapping(IO &IO, XCOFFYAML::SectAuxEntForStat &AuxSym) {
 
 void MappingTraits<std::unique_ptr<XCOFFYAML::AuxSymbolEnt>>::mapping(
     IO &IO, std::unique_ptr<XCOFFYAML::AuxSymbolEnt> &AuxSym) {
+
+  auto ResetAuxSym = [&](auto *AuxEnt) {
+    if (!IO.outputting())
+      AuxSym.reset(AuxEnt);
+  };
+
   const bool Is64 =
       static_cast<XCOFFYAML::Object *>(IO.getContext())->Header.Magic ==
       (llvm::yaml::Hex16)XCOFF::XCOFF64;
+
   XCOFFYAML::AuxSymbolType AuxType;
   if (IO.outputting())
     AuxType = AuxSym.get()->Type;
@@ -294,41 +301,34 @@ void MappingTraits<std::unique_ptr<XCOFFYAML::AuxSymbolEnt>>::mapping(
     if (!Is64)
       IO.setError("an auxiliary symbol of type AUX_EXCEPT cannot be defined in "
                   "XCOFF32");
-    if (!IO.outputting())
-      AuxSym.reset(new XCOFFYAML::ExcpetionAuxEnt());
+    ResetAuxSym(new XCOFFYAML::ExcpetionAuxEnt());
     auxSymMapping(IO, *cast<XCOFFYAML::ExcpetionAuxEnt>(AuxSym.get()));
     break;
   case XCOFFYAML::AUX_FCN:
-    if (!IO.outputting())
-      AuxSym.reset(new XCOFFYAML::FunctionAuxEnt());
+    ResetAuxSym(new XCOFFYAML::FunctionAuxEnt());
     auxSymMapping(IO, *cast<XCOFFYAML::FunctionAuxEnt>(AuxSym.get()), Is64);
     break;
   case XCOFFYAML::AUX_SYM:
-    if (!IO.outputting())
-      AuxSym.reset(new XCOFFYAML::BlockAuxEnt());
+    ResetAuxSym(new XCOFFYAML::BlockAuxEnt());
     auxSymMapping(IO, *cast<XCOFFYAML::BlockAuxEnt>(AuxSym.get()), Is64);
     break;
   case XCOFFYAML::AUX_FILE:
-    if (!IO.outputting())
-      AuxSym.reset(new XCOFFYAML::FileAuxEnt());
+    ResetAuxSym(new XCOFFYAML::FileAuxEnt());
     auxSymMapping(IO, *cast<XCOFFYAML::FileAuxEnt>(AuxSym.get()));
     break;
   case XCOFFYAML::AUX_CSECT:
-    if (!IO.outputting())
-      AuxSym.reset(new XCOFFYAML::CsectAuxEnt());
+    ResetAuxSym(new XCOFFYAML::CsectAuxEnt());
     auxSymMapping(IO, *cast<XCOFFYAML::CsectAuxEnt>(AuxSym.get()), Is64);
     break;
   case XCOFFYAML::AUX_SECT:
-    if (!IO.outputting())
-      AuxSym.reset(new XCOFFYAML::SectAuxEntForDWARF());
+    ResetAuxSym(new XCOFFYAML::SectAuxEntForDWARF());
     auxSymMapping(IO, *cast<XCOFFYAML::SectAuxEntForDWARF>(AuxSym.get()));
     break;
   case XCOFFYAML::AUX_STAT:
     if (Is64)
       IO.setError(
           "an auxiliary symbol of type AUX_STAT cannot be defined in XCOFF64");
-    if (!IO.outputting())
-      AuxSym.reset(new XCOFFYAML::SectAuxEntForStat());
+    ResetAuxSym(new XCOFFYAML::SectAuxEntForStat());
     auxSymMapping(IO, *cast<XCOFFYAML::SectAuxEntForStat>(AuxSym.get()));
     break;
   }
