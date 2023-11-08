@@ -1,10 +1,6 @@
 include(GNUInstallDirs)
 include(LLVMDistributionSupport)
 
-# Clear out any pre-existing compile_commands file before processing. This
-# allows for generating a clean compile_commands on each configure.
-file(REMOVE ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml)
-
 function(mlir_tablegen ofn)
   tablegen(MLIR ${ARGV})
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
@@ -23,14 +19,6 @@ function(mlir_tablegen ofn)
   else()
     set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${CMAKE_CURRENT_SOURCE_DIR}/${LLVM_TARGET_DEFINITIONS})
   endif()
-
-  # Append the includes used for this file to the tablegen_compile_commands
-  # file.
-  file(APPEND ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml
-      "--- !FileInfo:\n"
-      "  filepath: \"${LLVM_TARGET_DEFINITIONS_ABSOLUTE}\"\n"
-      "  includes: \"${CMAKE_CURRENT_SOURCE_DIR};${tblgen_includes}\"\n"
-  )
 endfunction()
 
 # Clear out any pre-existing compile_commands file before processing. This
