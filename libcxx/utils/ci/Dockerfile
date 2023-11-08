@@ -65,7 +65,7 @@ RUN locale-gen
 # LLVM 15, we still need to have Clang 12 in this Docker image because the LLVM
 # 14 release branch CI uses it. The tip-of-trunk CI will never use Clang 12,
 # though.
-ARG LLVM_HEAD_VERSION
+ARG LLVM_HEAD_VERSION # populated in the docker-compose file
 ENV LLVM_HEAD_VERSION=${LLVM_HEAD_VERSION}
 RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
 RUN wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
