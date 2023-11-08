@@ -49,6 +49,8 @@ TEST(AArch32_ELF, readAddendArmErrors) {
   Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
                    0 /*Addend*/);
 
+  // Edge kind is tested, block itself is not significant here. So it is tested
+  // once in Arm
   EXPECT_THAT_EXPECTED(readAddendData(*G, BArm, InvalidEdge),
                        FailedWithMessage(testing::HasSubstr(
                            "can not read implicit addend for aarch32 edge kind "
@@ -93,21 +95,6 @@ TEST(AArch32_ELF, readAddendThumbErrors) {
   Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
                    0 /*Addend*/);
 
-  EXPECT_THAT_EXPECTED(readAddendData(*G, BThumb, InvalidEdge),
-                       FailedWithMessage(testing::HasSubstr(
-                           "can not read implicit addend for aarch32 edge kind "
-                           "INVALID RELOCATION")));
-
-  EXPECT_THAT_EXPECTED(readAddendArm(*G, BThumb, InvalidEdge),
-                       FailedWithMessage(testing::HasSubstr(
-                           "can not read implicit addend for aarch32 edge kind "
-                           "INVALID RELOCATION")));
-
-  EXPECT_THAT_EXPECTED(readAddendThumb(*G, BThumb, InvalidEdge, ArmCfg),
-                       FailedWithMessage(testing::HasSubstr(
-                           "can not read implicit addend for aarch32 edge kind "
-                           "INVALID RELOCATION")));
-
   for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
     Edge E(K, 0, TargetSymbol, 0);
     EXPECT_THAT_EXPECTED(
@@ -132,6 +119,8 @@ TEST(AArch32_ELF, applyFixupArmErrors) {
   Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
                    0 /*Addend*/);
 
+  // Edge kind is tested, block itself is not significant here. So it is tested
+  // once in Arm
   EXPECT_THAT_ERROR(
       applyFixupData(*G, BArm, InvalidEdge),
       FailedWithMessage(testing::HasSubstr(
@@ -181,24 +170,10 @@ TEST(AArch32_ELF, applyFixupThumbErrors) {
 
   auto &BThumb = G->createMutableContentBlock(
       Sec, MutableThumbContent, B4DummyAddr, ThumbAlignment, AlignmentOffset);
-
   Symbol &TargetSymbol =
       G->addAnonymousSymbol(BThumb, SymbolOffset, SymbolSize, false, false);
   Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
                    0 /*Addend*/);
-
-  EXPECT_THAT_ERROR(
-      applyFixupData(*G, BThumb, InvalidEdge),
-      FailedWithMessage(testing::HasSubstr(
-          "encountered unfixable aarch32 edge kind INVALID RELOCATION")));
-  EXPECT_THAT_ERROR(
-      applyFixupArm(*G, BThumb, InvalidEdge),
-      FailedWithMessage(testing::HasSubstr(
-          "encountered unfixable aarch32 edge kind INVALID RELOCATION")));
-  EXPECT_THAT_ERROR(
-      applyFixupThumb(*G, BThumb, InvalidEdge, ArmCfg),
-      FailedWithMessage(testing::HasSubstr(
-          "encountered unfixable aarch32 edge kind INVALID RELOCATION")));
 
   for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
     Edge E(K, 0, TargetSymbol, 0);
