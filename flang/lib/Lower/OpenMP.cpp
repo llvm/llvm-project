@@ -561,8 +561,7 @@ public:
   bool processDepend(llvm::SmallVectorImpl<mlir::Attribute> &dependTypeOperands,
                      llvm::SmallVectorImpl<mlir::Value> &dependOperands) const;
   bool
-  processIf(Fortran::lower::StatementContext &stmtCtx,
-            Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
+  processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
             mlir::Value &result) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
@@ -1672,9 +1671,9 @@ bool ClauseProcessor::processDepend(
 }
 
 bool ClauseProcessor::processIf(
-    Fortran::lower::StatementContext &stmtCtx,
     Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
     mlir::Value &result) const {
+  Fortran::lower::StatementContext stmtCtx;
   bool found = false;
   findRepeatableClause<ClauseTy::If>(
       [&](const ClauseTy::If *ifClause,
@@ -2305,8 +2304,7 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Parallel,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Parallel,
                ifClauseOperand);
   cp.processNumThreads(stmtCtx, numThreadsClauseOperand);
   cp.processProcBind(procBindKindAttr);
@@ -2359,8 +2357,7 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
       dependOperands;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Task,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Task,
                ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processDefault();
@@ -2417,8 +2414,7 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetData,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetData,
                ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processUseDevicePtr(devicePtrOperands, useDeviceTypes, useDeviceLocs,
@@ -2463,7 +2459,7 @@ genEnterExitDataOp(Fortran::lower::AbstractConverter &converter,
   }
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx, directiveName, ifClauseOperand);
+  cp.processIf(directiveName, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processNowait(nowaitAttr);
   cp.processMap(currentLocation, directive, semanticsContext, stmtCtx,
@@ -2587,8 +2583,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> mapSymbols;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Target,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Target,
                ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processThreadLimit(stmtCtx, threadLimitOperand);
@@ -2742,8 +2737,7 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Teams,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Teams,
                ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processDefault();
@@ -3018,8 +3012,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     llvm::SmallVector<mlir::Value> alignedVars, nontemporalVars;
     mlir::Value ifClauseOperand;
     mlir::IntegerAttr simdlenClauseOperand, safelenClauseOperand;
-    cp.processIf(stmtCtx,
-                 Fortran::parser::OmpIfClause::DirectiveNameModifier::Simd,
+    cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Simd,
                  ifClauseOperand);
     cp.processSimdlen(simdlenClauseOperand);
     cp.processSafelen(safelenClauseOperand);
