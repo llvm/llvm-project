@@ -1079,10 +1079,9 @@ void Writer::createMiscChunks() {
     debugInfoSec->addChunk(r.second);
     debugDirectory->addRecord(r.first, r.second);
   }
-
-  // Create extra .buildid section if build id was stored in .rdata.
-  if (debugInfoSec != buildidSec &&
-      config->buildIDHash == BuildIDHash::Binary) {
+  // Create extra .buildid section if build id was stored in .rdata and
+  // /build-id is given.
+  if (debugInfoSec != buildidSec && config->buildIDHash != BuildIDHash::None) {
     DebugDirectoryChunk *debugDirectory =
         make<DebugDirectoryChunk>(ctx, config->repro);
     debugDirectory->setAlignment(4);
@@ -2083,8 +2082,7 @@ void Writer::writeBuildId() {
   }
 
   // If using PDB hash, build id in .buildid section is not set yet.
-  if (debugInfoSec != buildidSec &&
-      config->buildIDHash == BuildIDHash::Binary) {
+  if (debugInfoSec != buildidSec && config->buildIDHash != BuildIDHash::None) {
     auto *buildIdChunk = buildidSec->chunks.back();
     codeview::DebugInfo *buildIdInfo =
         cast<CVDebugRecordChunk>(buildIdChunk)->buildId;
