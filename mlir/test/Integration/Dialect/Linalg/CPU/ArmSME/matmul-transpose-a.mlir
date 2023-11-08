@@ -69,21 +69,21 @@ module attributes {transform.with_named_sequence} {
     %tiled_linalg_op, %loops:3 = transform.structured.tile_using_for %matmul_transpose_a[[4], [4], 1]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 
-    // Step 2: Vectorize
+    // Step 2: Vectorize.
     transform.structured.vectorize %tiled_linalg_op vector_sizes [[4], [4], 1]
       : !transform.any_op
 
     %func = transform.structured.match ops{["func.func"]} in %module
       : (!transform.any_op) -> !transform.any_op
 
-    // Step 3: Lower vector.multi_reduction to vector.contract (+ some helpful patterns)
+    // Step 3: Lower vector.multi_reduction to vector.contract (+ some helpful patterns).
     transform.apply_patterns to %func {
       transform.apply_patterns.vector.lower_masked_transfers
       transform.apply_patterns.vector.transfer_permutation_patterns
       transform.apply_patterns.vector.reduction_to_contract
     } : !transform.any_op
 
-    // Step 4: Lower vector.contract to vector.outerproduct
+    // Step 4: Lower vector.contract to vector.outerproduct.
     transform.apply_patterns to %func {
       transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
       transform.apply_patterns.vector.lower_masks
