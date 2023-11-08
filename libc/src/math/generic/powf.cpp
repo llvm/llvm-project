@@ -548,15 +548,14 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         // pow(+-0, -Inf) = +inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return FloatBits::inf().get_val();
+        return FloatBits::inf();
       }
       // pow (|x| < 1, -inf) = +inf
       // pow (|x| < 1, +inf) = 0.0f
       // pow (|x| > 1, -inf) = 0.0f
       // pow (|x| > 1, +inf) = +inf
-      return ((x_abs < 0x3f80'0000) == (y_u == 0xff80'0000))
-                 ? FloatBits::inf().get_val()
-                 : 0.0f;
+      return ((x_abs < 0x3f80'0000) == (y_u == 0xff80'0000)) ? FloatBits::inf()
+                                                             : 0.0f;
     }
     default:
       // Speed up for common exponents
@@ -619,7 +618,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         // pow(0, negative number) = inf
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return FloatBits::inf(out_sign).get_val();
+        return FloatBits::inf(out_sign);
       }
       // pow(0, positive number) = 0
       return out_sign ? -0.0f : 0.0f;
@@ -630,7 +629,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
       if (y_u >= FloatProp::SIGN_MASK) {
         return out_sign ? -0.0f : 0.0f;
       }
-      return FloatBits::inf(out_sign).get_val();
+      return FloatBits::inf(out_sign);
     }
     }
 
