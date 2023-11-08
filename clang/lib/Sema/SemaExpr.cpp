@@ -17801,11 +17801,11 @@ bool Sema::DiagnosePPEmbedExpr(Expr *&E, SourceLocation ContextLocation,
                                bool SingleAllowed) {
   PPEmbedExpr *PPEmbed = dyn_cast_if_present<PPEmbedExpr>(E);
   if (!PPEmbed)
-    return true;
+    return false;
 
   if (SingleAllowed && PPEmbed->getDataElementCount(Context) == 1) {
     E = ExpandSinglePPEmbedExpr(PPEmbed);
-    return true;
+    return false;
   }
 
   StringRef LocationName = GetLocationName(PPEmbedContext);
@@ -17816,7 +17816,7 @@ bool Sema::DiagnosePPEmbedExpr(Expr *&E, SourceLocation ContextLocation,
                      : "cannot use a preprocessor embed in ");
   Diag(ContextLocation, diag::err_builtin_pp_embed_invalid_location)
       << DiagnosticMessage << 1 << LocationName;
-  return false;
+  return true;
 }
 
 bool Sema::CheckConversionToObjCLiteral(QualType DstType, Expr *&Exp,
