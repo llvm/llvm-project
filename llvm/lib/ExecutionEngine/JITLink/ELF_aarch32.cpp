@@ -31,6 +31,7 @@ namespace llvm {
 namespace jitlink {
 
 /// Translate from ELF relocation type to JITLink-internal edge kind.
+LLVM_FUNC_ABI // Used by unittests.
 Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType) {
   switch (ELFType) {
   case ELF::R_ARM_ABS32:
@@ -61,6 +62,7 @@ Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType) {
 }
 
 /// Translate from JITLink-internal edge kind back to ELF relocation type.
+LLVM_FUNC_ABI // Used by unittests.
 Expected<uint32_t> getELFRelocationType(Edge::Kind Kind) {
   switch (static_cast<aarch32::EdgeKind_aarch32>(Kind)) {
   case aarch32::Data_Delta32:
