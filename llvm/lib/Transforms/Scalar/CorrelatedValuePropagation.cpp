@@ -910,6 +910,13 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
   assert(SDI->getOpcode() == Instruction::SDiv);
   assert(!SDI->getType()->isVectorTy());
 
+  // Check whether the division folds to a constant.
+  if (const APInt *Elem = LCR.sdiv(RCR).getSingleElement()) {
+    SDI->replaceAllUsesWith(ConstantInt::get(SDI->getType(), *Elem));
+    SDI->eraseFromParent();
+    return true;
+  }
+
   struct Operand {
     Value *V;
     Domain D;
