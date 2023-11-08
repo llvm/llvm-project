@@ -10,34 +10,36 @@ define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %cal
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[TOBOOL9_NOT]], label [[EXIT:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:
-; CHECK-NEXT:    [[CMP40_NOT3:%.*]] = icmp slt i32 [[CALL]], 1
-; CHECK-NEXT:    br i1 [[CMP40_NOT3]], label [[FOR_COND41_PREHEADER_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
-; CHECK:       for.cond41.preheader.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[CALL]] to i64
-; CHECK-NEXT:    br label [[FOR_COND41_PREHEADER:%.*]]
-; CHECK:       for.cond:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nsw i64 [[INDVARS_IV:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[INDVARS_IV_NEXT]], 4294967295
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[TMP1]], 1
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_COND41_PREHEADER]]
+; CHECK-NEXT:    [[SMAX:%.*]] = tail call i32 @llvm.smax.i32(i32 [[CALL]], i32 1)
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[EXITCOND7_NOT:%.*]] = icmp sgt i32 [[CALL]], 0
+; CHECK-NEXT:    br i1 [[EXITCOND7_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND41_PREHEADER:%.*]]
 ; CHECK:       for.cond41.preheader:
-; CHECK-NEXT:    [[INDVARS_IV]] = phi i64 [ [[TMP0]], [[FOR_COND41_PREHEADER_PREHEADER]] ], [ [[INDVARS_IV_NEXT]], [[FOR_COND:%.*]] ]
-; CHECK-NEXT:    [[CALL431:%.*]] = load volatile i32, ptr [[OTHER]], align 4
-; CHECK-NEXT:    [[CMP442:%.*]] = icmp sgt i32 [[CALL431]], 0
-; CHECK-NEXT:    br i1 [[CMP442]], label [[FOR_BODY45_LR_PH:%.*]], label [[FOR_COND]]
+; CHECK-NEXT:    [[INDVARS_IV8:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC57:%.*]] ], [ [[TMP0]], [[FOR_COND_PREHEADER]] ]
+; CHECK-NEXT:    [[CALL433:%.*]] = load volatile i32, ptr [[OTHER]], align 4
+; CHECK-NEXT:    [[CMP444:%.*]] = icmp sgt i32 [[CALL433]], 0
+; CHECK-NEXT:    br i1 [[CMP444]], label [[FOR_BODY45_LR_PH:%.*]], label [[FOR_INC57]]
 ; CHECK:       for.body45.lr.ph:
-; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr ptr, ptr [[OTHER]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr ptr, ptr [[OTHER]], i64 [[INDVARS_IV8]]
 ; CHECK-NEXT:    br label [[FOR_BODY45:%.*]]
 ; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[INDVARS_IV_LCSSA6:%.*]] = phi i64 [ [[TMP0]], [[FOR_COND_PREHEADER]] ], [ [[WIDE_TRIP_COUNT]], [[FOR_INC57]] ]
+; CHECK-NEXT:    [[CMP40_NOT_LE5:%.*]] = icmp slt i64 [[INDVARS_IV_LCSSA6]], 1
 ; CHECK-NEXT:    store i32 0, ptr [[THIS]], align 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       for.body45:
 ; CHECK-NEXT:    [[CALL49:%.*]] = load volatile i1, ptr [[ARRAYIDX_I_I]], align 1
 ; CHECK-NEXT:    [[CALL43:%.*]] = load volatile i32, ptr [[OTHER]], align 4
 ; CHECK-NEXT:    [[CMP44:%.*]] = icmp sgt i32 [[CALL43]], 0
-; CHECK-NEXT:    br i1 [[CMP44]], label [[FOR_BODY45]], label [[FOR_COND]]
+; CHECK-NEXT:    br i1 [[CMP44]], label [[FOR_BODY45]], label [[FOR_INC57]]
+; CHECK:       for.inc57:
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV8]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_COND41_PREHEADER]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[CMP40_NOT_LE5]], [[FOR_COND_CLEANUP]] ]
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
 entry:
   %retval1 = alloca i1, i32 0, align 1
@@ -100,9 +102,9 @@ define void @test2(ptr %this) #0 {
 ; CHECK-NEXT:    [[CALL2_I_I:%.*]] = load i64, ptr inttoptr (i64 8 to ptr), align 8
 ; CHECK-NEXT:    [[COND_I_I:%.*]] = select i1 [[CALL1_I_I]], i64 [[CALL2_I_I]], i64 0
 ; CHECK-NEXT:    switch i64 [[COND_I_I]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i64 11, label [[IF_END_I:%.*]]
-; CHECK-NEXT:    i64 13, label [[TEST2_FN2_EXIT12:%.*]]
-; CHECK-NEXT:    i64 17, label [[IF_END_I31:%.*]]
+; CHECK-NEXT:      i64 11, label [[IF_END_I:%.*]]
+; CHECK-NEXT:      i64 13, label [[TEST2_FN2_EXIT12:%.*]]
+; CHECK-NEXT:      i64 17, label [[IF_END_I31:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.end.i:
 ; CHECK-NEXT:    [[CALL8_I_I:%.*]] = tail call fastcc i32 @test2_fn6()
@@ -125,11 +127,11 @@ define void @test2(ptr %this) #0 {
 ; CHECK-NEXT:    store i8 0, ptr [[THIS]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       if.end.i31:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = tail call fastcc i32 @test2_fn6()
-; CHECK-NEXT:    [[DOTPRE38:%.*]] = trunc i32 [[DOTPRE]] to i8
-; CHECK-NEXT:    [[DOTPRE39:%.*]] = tail call i1 @test2_fn4(i8 [[DOTPRE38]])
-; CHECK-NEXT:    [[DOTPRE40:%.*]] = xor i1 [[DOTPRE39]], true
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[DOTPRE40]])
+; CHECK-NEXT:    [[CALL8_I_I32:%.*]] = tail call fastcc i32 @test2_fn6()
+; CHECK-NEXT:    [[TRUNC_I_I33:%.*]] = trunc i32 [[CALL8_I_I32]] to i8
+; CHECK-NEXT:    [[CALL1_I1_I34:%.*]] = tail call i1 @test2_fn4(i8 [[TRUNC_I_I33]])
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[CALL1_I1_I34]], true
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
