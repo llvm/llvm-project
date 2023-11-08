@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TARGET_LLVMIR_DIALECT_LLVMIR_LLVMIRTONVVMTRANSLATION_H
-#define MLIR_TARGET_LLVMIR_DIALECT_LLVMIR_LLVMIRTONVVMTRANSLATION_H
+#ifndef MLIR_TARGET_LLVMIR_DIALECT_NVVM_LLVMIRTONVVMTRANSLATION_H
+#define MLIR_TARGET_LLVMIR_DIALECT_NVVM_LLVMIRTONVVMTRANSLATION_H
 
 namespace mlir {
 
@@ -28,4 +28,4 @@ void registerNVVMDialectImport(MLIRContext &context);
 
 } // namespace mlir
 
-#endif
+#endif // MLIR_TARGET_LLVMIR_DIALECT_NVVM_LLVMIRTONVVMTRANSLATION_H
