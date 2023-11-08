@@ -3,13 +3,13 @@
 // RUN:            -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 void foo(int * , int *);
 
-void add_assign_test() {
+void add_assign_test(int n) {
   int *p = new int[10];
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
   p += 2;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:9}:"p = p.subspan(<# placeholder #>)"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:9}:"p = p.subspan(2)"
   
   int *r = p;
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> r"
@@ -19,13 +19,13 @@ void add_assign_test() {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:10-[[@LINE-1]]:11}:""
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"[0]"
     r += 2;
-    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:11}:"r = r.subspan(<# placeholder #>)"
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:11}:"r = r.subspan(2)"
   }
   
   if (*p == 0) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:8}:""
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:9-[[@LINE-2]]:9}:"[0]"
-    p += 2;
+    p += n;
     // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:11}:"p = p.subspan(<# placeholder #>)"
   }
   
@@ -33,6 +33,5 @@ void add_assign_test() {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:8}:""
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:9-[[@LINE-2]]:9}:"[0]"
     p += 3;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:11}:"p = p.subspan(<# placeholder #>)"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:11}:"p = p.subspan(3)"
 }
-

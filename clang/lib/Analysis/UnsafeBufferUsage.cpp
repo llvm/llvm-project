@@ -1034,12 +1034,16 @@ class UUCAddAssignGadget : public FixableGadget {
 private:
   static constexpr const char *const UUCAddAssignTag =
     "PointerAddAssignUnderUUC";
+  static constexpr const char *const IntOffsetTag = "IntOffset";
+  
   const BinaryOperator *Node; // the `Ptr += n` node
+  const IntegerLiteral *IntOffset = nullptr;
 
 public:
   UUCAddAssignGadget(const MatchFinder::MatchResult &Result)
     : FixableGadget(Kind::UUCAddAssign),
-      Node(Result.Nodes.getNodeAs<BinaryOperator>(UUCAddAssignTag)) {
+      Node(Result.Nodes.getNodeAs<BinaryOperator>(UUCAddAssignTag)),
+      IntOffset(Result.Nodes.getNodeAs<IntegerLiteral>(IntOffsetTag)) {
     assert(Node != nullptr && "Expecting a non-null matching result");
   }
 
@@ -1051,7 +1055,10 @@ public:
     return stmt(isInUnspecifiedUntypedContext(expr(ignoringImpCasts(
                     binaryOperator(hasOperatorName("+="),
                       hasLHS(declRefExpr(
-                                                    toSupportedVariable()))
+                                                    toSupportedVariable())),
+                      hasRHS(expr(anyOf(
+                                        ignoringImpCasts(declRefExpr()),
+                                        integerLiteral().bind(IntOffsetTag))))
                       ).bind(UUCAddAssignTag)))));
   }
 
@@ -1815,10 +1822,27 @@ std::optional<FixItList> UUCAddAssignGadget::getFixits(const Strategy &S) const 
       const Stmt *AddAssignNode = getBaseStmt();
       StringRef varName = VD->getName();
       const ASTContext &Ctx = VD->getASTContext();
-
-      // To transform UUC(p += n) to UUC((p = p.subspan(1)).data()):
+      
+      std::string SubSpanOffset;
+      if (IntOffset) {
+        auto ConstVal = IntOffset->getIntegerConstantExpr(Ctx);
+        if (ConstVal->isNegative())
+          return std::nullopt;
+        
+        SmallString<256> OffsetStr;
+        ConstVal->toString(OffsetStr);
+        SubSpanOffset = OffsetStr.c_str();
+        // To transform UUC(p += IntegerLiteral) to UUC(p = p.subspan(IntegerLiteral)):
+        SubSpanOffset = OffsetStr.c_str();
+      }
+      else {
+        SubSpanOffset = getUserFillPlaceHolder();
+      }
+      
+      // To transform UUC(p += n) to UUC(p = p.subspan(..)):
       SS << varName.data() << " = " << varName.data()
-         << ".subspan(" << getUserFillPlaceHolder() << ")";
+         << ".subspan(" << SubSpanOffset << ")";
+      
       std::optional<SourceLocation> AddAssignLocation =
           getEndCharLoc(AddAssignNode, Ctx.getSourceManager(), Ctx.getLangOpts());
       if (!AddAssignLocation)
