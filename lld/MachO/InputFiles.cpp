@@ -1523,7 +1523,8 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
 
 std::string ObjFile::sourceFile() const {
   const char *unitName = compileUnit->getUnitDIE().getShortName();
-  if (sys::path::is_absolute(unitName))
+  if (sys::path::is_absolute(unitName, llvm::sys::path::Style::posix) ||
+      sys::path::is_absolute(unitName, llvm::sys::path::Style::windows))
     return unitName;
   SmallString<261> dir(compileUnit->getCompilationDir());
   StringRef sep = sys::path::get_separator();
