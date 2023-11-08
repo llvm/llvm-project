@@ -32,6 +32,26 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     }
   llvm.return
   }
+
+  llvm.func @parallel_if(%arg0: !llvm.ptr {fir.bindc_name = "ifcond"}) {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x i32 {bindc_name = "d"} : (i64) -> !llvm.ptr
+    %2 = omp.map_info var_ptr(%1 : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = "d"}
+    %3 = omp.map_info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "ifcond"}
+    omp.target map_entries(%2 -> %arg1, %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
+    ^bb0(%arg1: !llvm.ptr, %arg2: !llvm.ptr):
+      %4 = llvm.mlir.constant(10 : i32) : i32
+      %5 = llvm.load %arg2 : !llvm.ptr -> i32
+      %6 = llvm.mlir.constant(0 : i64) : i32
+      %7 = llvm.icmp "ne" %5, %6 : i32
+      omp.parallel if(%7 : i1) {
+        llvm.store %4, %arg1 : i32, !llvm.ptr
+        omp.terminator
+      }
+      omp.terminator
+    }
+    llvm.return
+  }
 }
 
 // CHECK: define weak_odr protected amdgpu_kernel void [[FUNC0:@.*]](
@@ -64,3 +84,14 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK-SAME:  ptr addrspace(1) @[[NUM_THREADS_GLOB:[0-9]+]] to ptr),
 // CHECK-SAME:  i32 [[NUM_THREADS_TMP0:%.*]], i32 1, i32 156,
 // CHECK-SAME:  i32 -1,  ptr [[FUNC_NUM_THREADS1:@.*]], ptr null, ptr [[NUM_THREADS_TMP1:%.*]], i64 1)
+
+// CHECK: define weak_odr protected amdgpu_kernel void [[FUNC2:@.*]](
+// CHECK-SAME: ptr [[IFCOND_ARG0:%.*]], ptr [[IFCOND_ARG1:.*]], ptr [[IFCOND_ARG2:.*]]) {
+// CHECK:         store ptr [[IFCOND_ARG2]], ptr [[IFCOND_TMP1:%.]], align 8
+// CHECK:         [[IFCOND_TMP2:%.*]] = load i32, ptr [[IFCOND_TMP1]], align 4
+// CHECK:         [[IFCOND_TMP3:%.*]] = icmp ne i32 [[IFCOND_TMP2]], 0
+// CHECK:         [[IFCOND_TMP4:%.*]] = sext i1 [[IFCOND_TMP3]] to i32
+// CHECK:         call void @__kmpc_parallel_51(ptr addrspacecast (
+// CHECK-SAME:  ptr addrspace(1) @[[IFCOND_GLOB:[0-9]+]] to ptr),
+// CHECK-SAME:  i32 [[IFCOND_THREAD_NUM:%.*]], i32 [[IFCOND_TMP4]], i32 -1,
+// CHECK-SAME:  i32 -1,  ptr [[FUNC1:@.*]], ptr null, ptr [[IFCOND_TMP5:%.*]], i64 1)
