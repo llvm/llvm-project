@@ -359,4 +359,6 @@ void functional_casts() {
   S2 t = T(x); // OK, constructor call
   S2 u = U(x); // NOK, it's a reinterpret_cast in disguise
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: C-style casts are discouraged; use static_cast/const_cast/reinterpret_cast
+
+  throw S2(5.0f);
 }
