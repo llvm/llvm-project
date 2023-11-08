@@ -38,7 +38,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 class PartTensor_Op<string mnemonic, list<Trait> traits = []>
     : Op<PartTensor_Dialect, mnemonic, traits>;
 
-def PartTensor_GetPartitionOp : PartTensor_Op<"get_partitions">,
+def PartTensor_GetPartitionsOp : PartTensor_Op<"get_partitions">,
                                 Arguments<(ins AnyTensor
                                            : $primary)>,
                                 Results<(outs AnyStridedMemRefOfRank<1>
@@ -79,10 +79,10 @@ def PartTensor_GetPartitionOp : PartTensor_Op<"get_partitions">,
          let assemblyFormat = " $Parts `,` $partT `,` $tupleList attr-dict `:` type($Parts) `,` type($partT) `,` type($tupleList)";
          }
 
-def PartTensor_NumPartitionOp : PartTensor_Op<"get_num_partitions">,
+def PartTensor_GetNumPartitionsOp : PartTensor_Op<"get_num_partitions">,
 	Arguments<(ins AnyTensor:$tensor)>,
 	Results<(outs AnySignlessIntegerOrIndex:$res)> {
-		let summary = "get the size of partition";
+		let summary = "get the size of partition plan";
 		let description = [{
 			This operation will represent the dimention
 			}];

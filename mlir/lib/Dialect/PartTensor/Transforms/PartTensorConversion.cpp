@@ -67,11 +67,11 @@ static FunctionType getElementalFuncTypeForOp(Operation *op) {
 
 /// Part conversion rule for position accesses.
 class PartTensorGetPartitionsConverter
-    : public OpConversionPattern<GetPartitionOp> {
+    : public OpConversionPattern<GetPartitionsOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(GetPartitionOp op, OpAdaptor adaptor,
+  matchAndRewrite(GetPartitionsOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
     const Type crdTp = cast<ShapedType>(resType).getElementType();
@@ -90,7 +90,31 @@ public:
     return success();
   }
 };
-
+/// Part conversion rule for position accesses.
+class PartTensorGetNumPartitionsConverter
+    : public OpConversionPattern<GetNumPartitionsOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(GetNumPartitionsOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type resType = op.getType();
+    const Type crdTp = cast<ShapedType>(resType).getElementType();
+    Location loc = op->getLoc();
+    MemRefType callRetType = mlir::sparse_tensor::get1DMemRefType(crdTp, false);
+    SmallVector<Value> operands{adaptor.getOperands()[0]};
+    auto fn = mlir::sparse_tensor::getFunc(
+        op->getParentOfType<ModuleOp>(), "getPartitions", callRetType, operands,
+        mlir::sparse_tensor::EmitCInterface::On);
+    Value callRet =
+        rewriter.create<func::CallOp>(loc, callRetType, fn, operands)
+            .getResult(0);
+    if (resType != callRetType)
+      callRet = rewriter.create<memref::CastOp>(loc, resType, callRet);
+    rewriter.replaceOp(op, callRet);
+    return success();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
