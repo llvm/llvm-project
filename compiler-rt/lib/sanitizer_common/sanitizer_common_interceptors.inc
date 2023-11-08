@@ -6304,10 +6304,38 @@ INTERCEPTOR(int, fclose, __sanitizer_FILE *fp) {
 #endif
 
 #if SANITIZER_INTERCEPT_DLOPEN_DLCLOSE
+// Returns 1 if key is a suffix of str, 0 otherwise
+static int internal_strcmp_suffix(const char *key, const char *str) {
+  if (!key || !str)
+    return 0;
+
+  if (internal_strlen(key) > internal_strlen(str))
+    return 0;
+
+  return !internal_strcmp(str + internal_strlen(str) - internal_strlen(key),
+                          key);
+}
+
+#  if SANITIZER_GLIBC
+extern char *__progname;
+#  endif
+
 INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER_NOIGNORE(ctx, dlopen, filename, flag);
-  if (filename) COMMON_INTERCEPTOR_READ_STRING(ctx, filename, 0);
+
+  if (filename) {
+#  if SANITIZER_GLIBC
+    if (common_flags()->test_only_replace_dlopen_main_program &&
+        internal_strcmp_suffix(__progname, filename)) {
+      VPrintf(1, "dlopen interceptor: replacing %s because it matches %s\n",
+              filename, __progname);
+      filename = (char *)0;  // RTLD_DEFAULT
+    }
+#  endif
+    COMMON_INTERCEPTOR_READ_STRING(ctx, filename, 0);
+  }
+
   void *res = COMMON_INTERCEPTOR_DLOPEN(filename, flag);
   Symbolizer::GetOrInit()->InvalidateModuleList();
   COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, res);
