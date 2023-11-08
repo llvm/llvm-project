@@ -95,12 +95,6 @@ def main():
         default="clang-format",
         help="location of binary to use for clang-format",
     )
-    parser.add_argument(
-        "-non-zero-exit-code",
-        action="store_true",
-        default=False,
-        help="exit with a non-zero status if formatting changes are necessary",
-    )
     args = parser.parse_args()
 
     # Extract changed lines for each file.
