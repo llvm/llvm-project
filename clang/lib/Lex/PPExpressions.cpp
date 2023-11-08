@@ -935,10 +935,8 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
 
     // Restore 'DisableMacroExpansion'.
     DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
-    const bool IsNonZero = ResVal.Val != 0;
     const SourceRange ValRange = ResVal.getRange();
-    return {std::move(ResVal.Val), IsNonZero, DT.IncludedUndefinedIds,
-            ValRange};
+    return {std::move(ResVal.Val), false, DT.IncludedUndefinedIds, ValRange};
   }
 
   if (CheckForEoD) {
