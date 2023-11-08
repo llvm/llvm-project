@@ -12,22 +12,23 @@
 
 #include <algorithm>
 #include <cassert>
+#include <limits>
 #include <vector>
 
-template <class Tp> void test_min_reduction() {
-  const int length = 1000;
-  const int nminimas = 8;
-  std::vector<Tp> a(length, (Tp)3);
-  const int step = length / nminimas;
-  for (int i = 0; i < nminimas; i++) {
-    a[i * step] -= (Tp)1;
+template <class Tp> void test_min_idx_reduction() {
+  const Tp length = 1000;
+  const Tp nminimas = 8;
+  std::vector<float> a(length, 3.0f);
+  const Tp step = length / nminimas;
+  for (Tp i = 0; i < nminimas; i++) {
+    a[i * step] -= 1.0f;
   }
-  for (int i = 0; i < nminimas; i++) {
-    int idx = a.size();
-    Tp *b = a.data();
+  for (Tp i = 0; i < nminimas; i++) {
+    Tp idx = a.size();
+    float *b = a.data();
 #pragma omp target teams distribute parallel for reduction(min : idx)          \
     map(always, to : b[0 : length])
-    for (int j = 0; j < length - 1; j++) {
+    for (Tp j = 0; j < length - 1; j++) {
       if (b[j] < b[j + 1]) {
         idx = std::min(idx, j);
       }
@@ -35,15 +36,38 @@ template <class Tp> void test_min_reduction() {
     assert(idx == i * step &&
            "#pragma omp target teams distribute parallel for "
            "reduction(min:<identifier list>) does not work as intended.");
-    a[idx] += (Tp)1;
+    a[idx] += 1.0f;
   }
 }
 
+template <class Tp> void test_min_val_reduction() {
+  const int length = 1000;
+  const int half = length / 2;
+  std::vector<Tp> a(length, (Tp)3);
+  a[half] -= (Tp)1;
+  Tp min_val = std::numeric_limits<Tp>::max();
+  Tp *b = a.data();
+#pragma omp target teams distribute parallel for reduction(min : min_val)      \
+    map(always, to : b[0 : length])
+  for (int i = 0; i < length; i++) {
+    min_val = std::min(min_val, b[i]);
+  }
+  assert(std::abs(((double)a[half + 1]) - ((double)min_val) - 1.0) < 1e-6 &&
+         "#pragma omp target teams distribute parallel for "
+         "reduction(min:<identifier list>) does not work as intended.");
+}
+
 int main() {
-  test_min_reduction<float>();
-  test_min_reduction<double>();
-  test_min_reduction<int>();
-  test_min_reduction<unsigned int>();
-  test_min_reduction<long>();
+  // Reducing over indices
+  test_min_idx_reduction<int>();
+  test_min_idx_reduction<unsigned int>();
+  test_min_idx_reduction<long>();
+
+  // Reducing over values
+  test_min_val_reduction<int>();
+  test_min_val_reduction<unsigned int>();
+  test_min_val_reduction<long>();
+  test_min_val_reduction<float>();
+  test_min_val_reduction<double>();
   return 0;
 }

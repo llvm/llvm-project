@@ -12,38 +12,62 @@
 
 #include <algorithm>
 #include <cassert>
+#include <limits>
 #include <vector>
 
-template <class Tp> void test_max_reduction() {
-  const int length = 1000;
-  const int nmaximas = 8;
-  std::vector<Tp> a(length, (Tp)3);
-  const int step = length / nmaximas;
-  for (int i = 0; i < nmaximas; i++) {
-    a[i * step] += (Tp)1;
+template <class Tp> void test_max_idx_reduction() {
+  const Tp length = 1000;
+  const Tp nmaximas = 8;
+  std::vector<float> a(length, 3.0f);
+  const Tp step = length / nmaximas;
+  for (Tp i = 0; i < nmaximas; i++) {
+    a[i * step] += 1.0f;
   }
-  for (int i = nmaximas - 1; i >= 0; i--) {
-    int idx = 0;
-    Tp *b = a.data();
+  for (Tp i = nmaximas; i > 0; i--) {
+    Tp idx = 0;
+    float *b = a.data();
 #pragma omp target teams distribute parallel for reduction(max : idx)          \
     map(always, to : b[0 : length])
-    for (int j = 1; j < length; j++) {
-      if (b[j] > b[j - 1]) {
+    for (Tp j = 0; j < length - 1; j++) {
+      if (b[j] > b[j + 1]) {
         idx = std::max(idx, j);
       }
     }
-    assert(idx == i * step &&
+    assert(idx == (i - 1) * step &&
            "#pragma omp target teams distribute parallel for "
            "reduction(max:<identifier list>) does not work as intended.");
-    a[idx] -= (Tp)1;
+    a[idx] -= 1.0f;
   }
 }
 
+template <class Tp> void test_max_val_reduction() {
+  const int length = 1000;
+  const int half = length / 2;
+  std::vector<Tp> a(length, (Tp)3);
+  a[half] += (Tp)1;
+  Tp max_val = std::numeric_limits<Tp>::lowest();
+  Tp *b = a.data();
+#pragma omp target teams distribute parallel for reduction(max : max_val)      \
+    map(always, to : b[0 : length])
+  for (int i = 0; i < length; i++) {
+    max_val = std::max(max_val, b[i]);
+  }
+  assert(std::abs(((double)a[half + 1]) - ((double)max_val) + 1.0) < 1e-6 &&
+         "#pragma omp target teams distribute parallel for "
+         "reduction(max:<identifier list>) does not work as intended.");
+}
+
 int main() {
-  test_max_reduction<float>();
-  test_max_reduction<double>();
-  test_max_reduction<int>();
-  test_max_reduction<unsigned int>();
-  test_max_reduction<long>();
+  // Reducing over indices
+  test_max_idx_reduction<int>();
+  test_max_idx_reduction<unsigned int>();
+  test_max_idx_reduction<long>();
+
+  // Reducing over values
+  test_max_val_reduction<int>();
+  test_max_val_reduction<unsigned int>();
+  test_max_val_reduction<long>();
+  test_max_val_reduction<float>();
+  test_max_val_reduction<double>();
   return 0;
 }
