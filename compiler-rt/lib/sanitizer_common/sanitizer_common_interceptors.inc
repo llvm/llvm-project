@@ -6325,6 +6325,7 @@ INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
   COMMON_INTERCEPTOR_ENTER_NOIGNORE(ctx, dlopen, filename, flag);
 
   if (filename) {
+    COMMON_INTERCEPTOR_READ_STRING(ctx, filename, 0);
 #  if SANITIZER_GLIBC
     if (common_flags()->test_only_replace_dlopen_main_program &&
         internal_strcmp_suffix(__progname, filename)) {
@@ -6333,7 +6334,6 @@ INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
       filename = (char *)0;  // RTLD_DEFAULT
     }
 #  endif
-    COMMON_INTERCEPTOR_READ_STRING(ctx, filename, 0);
   }
 
   void *res = COMMON_INTERCEPTOR_DLOPEN(filename, flag);
