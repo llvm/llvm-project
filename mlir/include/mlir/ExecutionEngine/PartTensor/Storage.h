@@ -75,6 +75,7 @@ class PartTensorStorageBase {
 public:
   virtual ~PartTensorStorageBase() = default;
   virtual void getPartitions(std::vector<index_type> **) = 0;
+  virtual index_type getNumPartitions() = 0;
 };
 
 /// A memory-resident sparse tensor using a storage scheme based on
@@ -105,6 +106,9 @@ public:
   ~PartTensorStorage() = default;
   void getPartitions(std::vector<index_type> **partData) override {
     *partData = &this->partData;
+  }
+  index_type getNumPartitions() override {
+    return parts.size() * std::size(parts[0]->getDimSizes());
   }
 
 protected:

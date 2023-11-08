@@ -317,6 +317,10 @@ void _mlir_ciface_getPartitions( // NOLINT
   static_cast<PartTensorStorageBase *>(tensor)->getPartitions(&parts);
   aliasIntoMemref(parts->size(), parts->data(), *partsMemRef);
 }
+
+index_type _mlir_ciface_getNumPartitions(void *tensor) {
+  return static_cast<PartTensorStorageBase *>(tensor)->getNumPartitions();
+}
 } // extern "C"
 
 #undef MEMREF_GET_PAYLOAD
