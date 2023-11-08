@@ -57,7 +57,7 @@ def err_expected_string_literal : Error<"expected string literal "
           "for optional message in 'availability' attribute|"
           "for %select{language name|source container name|USR}1 in "
           "'external_source_symbol' attribute|"
-          "as argument of '%1' attribute}0">;
+          "as argument of '%1' attribute|as the %ordinal1 argument}0">;
 
 def err_builtin_pp_embed_invalid_argument : Error<
   "invalid argument to '__builtin_pp_embed': %0">;

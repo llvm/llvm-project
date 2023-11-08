@@ -2858,86 +2858,88 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
     break;
   }
   case tok::kw___builtin_pp_embed: {
-    SourceRange DataTyExprSourceRange{};
+    // __builtin_pp_embed( type-name , string-literal , string-literal )
+    SourceRange DataTyExprSourceRange;
     TypeResult DataTyExpr(ParseTypeName(&DataTyExprSourceRange));
 
-    if (ExpectAndConsume(tok::comma)) {
+    if (DataTyExpr.isInvalid()) {
       SkipUntil(tok::r_paren, StopAtSemi);
-      Res = ExprError();
+      return ExprError();
     }
 
-    ExprResult FilenameArgExpr(ParseStringLiteralExpression());
-
     if (ExpectAndConsume(tok::comma)) {
       SkipUntil(tok::r_paren, StopAtSemi);
-      Res = ExprError();
+      return ExprError();
     }
 
-    ExprResult Base64ArgExpr(ParseStringLiteralExpression());
+    if (!tokenIsLikeStringLiteral(Tok, getLangOpts())) {
+      Diag(Tok, diag::err_expected_string_literal)
+          << /*as argument*/ 5 << /*second argument*/ 2;
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
+    }
+    ExprResult FilenameArgExpr(ParseUnevaluatedStringLiteralExpression());
 
-    if (Tok.isNot(tok::r_paren)) {
+    if (FilenameArgExpr.isInvalid() || ExpectAndConsume(tok::comma)) {
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
+    }
+
+    if (!tokenIsLikeStringLiteral(Tok, getLangOpts())) {
+      Diag(Tok, diag::err_expected_string_literal)
+          << /*as argument*/ 5 << /*third argument*/ 3;
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
+    }
+    ExprResult Base64ArgExpr(ParseUnevaluatedStringLiteralExpression());
+
+    if (Base64ArgExpr.isInvalid() || Tok.isNot(tok::r_paren)) {
       Diag(Tok, diag::err_expected) << tok::r_paren;
-      Res = ExprError();
+      return ExprError();
     }
 
     const ASTContext &Context = Actions.getASTContext();
-    QualType DataTy = Context.UnsignedCharTy;
+    QualType DataTy = DataTyExpr.get().get().getCanonicalType();
     size_t TargetWidth = Context.getTypeSize(DataTy);
-    if (DataTyExpr.isInvalid()) {
+    if (DataTy.getUnqualifiedType() != Context.UnsignedCharTy &&
+        DataTy.getUnqualifiedType() != Context.CharTy) {
+      // TODO: check if is exactly the same as unsigned char
+      Diag(DataTyExprSourceRange.getBegin(),
+            diag::err_builtin_pp_embed_invalid_argument)
+          << "only 'char' and 'unsigned char' are supported";
       Res = ExprError();
-    } else {
-      DataTy = DataTyExpr.get().get().getCanonicalType();
-      TargetWidth = Context.getTypeSize(DataTy);
-      if (DataTy.getUnqualifiedType() != Context.UnsignedCharTy &&
-          DataTy.getUnqualifiedType() != Context.CharTy) {
-        // TODO: check if is exactly the same as unsigned char
-        Diag(DataTyExprSourceRange.getBegin(),
-             diag::err_builtin_pp_embed_invalid_argument)
-            << "only 'char' and 'unsigned char' are supported";
-        Res = ExprError();
-      }
-      if ((TargetWidth % CHAR_BIT) != 0) {
-        Diag(DataTyExprSourceRange.getBegin(),
-             diag::err_builtin_pp_embed_invalid_argument)
-            << "width of element type is not a multiple of host platform's "
-               "CHAR_BIT!";
-        Res = ExprError();
-      }
+    }
+    if ((TargetWidth % CHAR_BIT) != 0) {
+      Diag(DataTyExprSourceRange.getBegin(),
+            diag::err_builtin_pp_embed_invalid_argument)
+          << "width of element type is not a multiple of host platform's "
+              "CHAR_BIT!";
+      Res = ExprError();
     }
 
-    StringLiteral *FilenameLiteral = nullptr;
-    if (FilenameArgExpr.isInvalid()) {
-      Res = ExprError();
-    } else {
-      FilenameLiteral = FilenameArgExpr.getAs<StringLiteral>();
+    StringLiteral *FilenameLiteral = FilenameArgExpr.getAs<StringLiteral>();
+    std::vector<char> BinaryData;
+    StringLiteral *Base64Str = Base64ArgExpr.getAs<StringLiteral>();
+    StringRef Base64StrData = Base64Str->getBytes();
+    if (Base64Str->getKind() != StringLiteralKind::Unevaluated) {
+      Diag(Base64Str->getExprLoc(), diag::err_expected_string_literal)
+          << 0
+          << "'__builtin_pp_embed' with valid base64 encoding that is an "
+              "ordinary \"...\" string";
     }
-
-    std::vector<char> BinaryData{};
-    if (Base64ArgExpr.isInvalid()) {
+    const auto OnDecodeError = [&](const llvm::ErrorInfoBase &) {
+      Diag(Base64Str->getExprLoc(),
+            diag::err_builtin_pp_embed_invalid_argument)
+          << "expected a valid base64 encoded string";
+    };
+    llvm::Error Err = llvm::decodeBase64(Base64Str->getBytes(), BinaryData);
+    llvm::handleAllErrors(std::move(Err), OnDecodeError);
+    if (((BinaryData.size() * CHAR_BIT) % TargetWidth) != 0) {
+      Diag(DataTyExprSourceRange.getBegin(),
+            diag::err_builtin_pp_embed_invalid_argument)
+          << "size of data does not split evently into the number of bytes "
+              "requested";
       Res = ExprError();
-    } else {
-      StringLiteral *Base64Str = Base64ArgExpr.getAs<StringLiteral>();
-      StringRef Base64StrData = Base64Str->getBytes();
-      if (Base64Str->getKind() != StringLiteralKind::Ordinary) {
-        Diag(Base64Str->getExprLoc(), diag::err_expected_string_literal)
-            << 0
-            << "'__builtin_pp_embed' with valid base64 encoding that is an "
-               "ordinary \"...\" string";
-      }
-      const auto OnDecodeError = [&](const llvm::ErrorInfoBase &) {
-        Diag(Base64Str->getExprLoc(),
-             diag::err_builtin_pp_embed_invalid_argument)
-            << "expected a valid base64 encoded string";
-      };
-      llvm::Error Err = llvm::decodeBase64(Base64Str->getBytes(), BinaryData);
-      llvm::handleAllErrors(std::move(Err), OnDecodeError);
-      if (((BinaryData.size() * CHAR_BIT) % TargetWidth) != 0) {
-        Diag(DataTyExprSourceRange.getBegin(),
-             diag::err_builtin_pp_embed_invalid_argument)
-            << "size of data does not split evently into the number of bytes "
-               "requested";
-        Res = ExprError();
-      }
     }
 
     if (!Res.isInvalid()) {
