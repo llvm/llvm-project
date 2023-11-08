@@ -1256,7 +1256,9 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI,
       MI.getOperand(1).getReg().isVirtual() &&
       IsLoopInvariantInst(MI, CurLoop) &&
       any_of(MRI->use_nodbg_instructions(MI.getOperand(0).getReg()),
-             [&](MachineInstr &UseMI) { return CurLoop->contains(&UseMI); }))
+             [&CurLoop](MachineInstr &UseMI) {
+               return CurLoop->contains(&UseMI);
+             }))
     return true;
 
   // High register pressure situation, only hoist if the instruction is going
