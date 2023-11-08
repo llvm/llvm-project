@@ -779,10 +779,10 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_INSERT_SUBVECTOR(SDNode *N,
     return Src;
   }
 
-  auto dest = N->getOperand(0);
-  auto idx = N->getOperand(2);
-  return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N), N->getValueType(0), dest,
-                     Src, idx);
+  auto Dest = N->getOperand(0);
+  auto Idx = N->getOperand(2);
+  return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N), N->getValueType(0), Dest,
+                     Src, Idx);
 }
 
 /// If the input is a vector that needs to be scalarized, it must be <1 x ty>.
