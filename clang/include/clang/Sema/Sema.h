@@ -2303,7 +2303,6 @@ private:
   struct ModuleScope {
     SourceLocation BeginLoc;
     clang::Module *Module = nullptr;
-    bool ModuleInterface = false;
     VisibleModuleSet OuterVisibleModules;
   };
   /// The modules we're currently parsing.
@@ -2367,9 +2366,11 @@ public:
     return ModuleScopes.empty() ? nullptr : ModuleScopes.back().Module;
   }
 
-  /// Is the module scope we are an interface?
-  bool currentModuleIsInterface() const {
-    return ModuleScopes.empty() ? false : ModuleScopes.back().ModuleInterface;
+  /// Is the module scope we are an implementation unit?
+  bool currentModuleIsImplementation() const {
+    return ModuleScopes.empty()
+               ? false
+               : ModuleScopes.back().Module->isModuleImplementation();
   }
 
   /// Is the module scope we are in a C++ Header Unit?
