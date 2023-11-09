@@ -59,6 +59,7 @@ set(SANITIZER_NOLIBC_SOURCES
 set(SANITIZER_LIBCDEP_SOURCES
   sanitizer_common_libcdep.cpp
   sanitizer_allocator_checks.cpp
+  sanitizer_dl.cpp
   sanitizer_linux_libcdep.cpp
   sanitizer_mac_libcdep.cpp
   sanitizer_posix_libcdep.cpp
@@ -139,6 +140,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_deadlock_detector_interface.h
   sanitizer_dense_map.h
   sanitizer_dense_map_info.h
+  sanitizer_dl.h
   sanitizer_errno.h
   sanitizer_errno_codes.h
   sanitizer_file.h
