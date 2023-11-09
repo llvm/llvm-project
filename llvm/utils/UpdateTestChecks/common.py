@@ -1173,13 +1173,7 @@ def generalize_check_lines_common(
     lines_with_def = []
     multiple_braces_re = re.compile(r"({{+)|(}}+)")
     def escape_braces(match_obj):
-        s = match_obj.group(0)
-        escaped = ''
-        if s[0] == '{':
-            escaped = s.replace('{', '\\{')
-        else:
-            escaped = s.replace('}', '\\}')
-        return ''.join(['{{', escaped, '}}'])
+        return ''.join(['{{', re.escape(match_obj.group(0)), '}}'])
 
     for i, line in enumerate(lines):
         if not is_asm and not is_analyze:
