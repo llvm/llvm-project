@@ -231,10 +231,9 @@ public:
     OS.close();
   }
 
-  void saveKernelInputInfo(const char *Name, DeviceImageTy &Image,
-                           void **ArgPtrs, ptrdiff_t *ArgOffsets,
-                           int32_t NumArgs, uint64_t NumTeamsClause,
-                           uint32_t ThreadLimitClause, uint64_t LoopTripCount) {
+  void saveKernelDescr(const char *Name, void **ArgPtrs, ptrdiff_t *ArgOffsets,
+                       int32_t NumArgs, uint64_t NumTeamsClause,
+                       uint32_t ThreadLimitClause, uint64_t LoopTripCount) {
     json::Object JsonKernelInfo;
     JsonKernelInfo["Name"] = Name;
     JsonKernelInfo["NumArgs"] = NumArgs;
@@ -255,12 +254,6 @@ public:
       JsonArgOffsets.push_back(ArgOffsets[I]);
     JsonKernelInfo["ArgOffsets"] = json::Value(std::move(JsonArgOffsets));
 
-    SmallString<128> MemoryFilename = {Name, ".memory"};
-    dumpDeviceMemory(MemoryFilename);
-
-    SmallString<128> GlobalsFilename = {Name, ".globals"};
-    dumpGlobals(GlobalsFilename, Image);
-
     SmallString<128> JsonFilename = {Name, ".json"};
     std::error_code EC;
     raw_fd_ostream JsonOS(JsonFilename.str(), EC);
@@ -269,6 +262,14 @@ public:
                          StringRef(EC.message()));
     JsonOS << json::Value(std::move(JsonKernelInfo));
     JsonOS.close();
+  }
+
+  void saveKernelInput(const char *Name, DeviceImageTy &Image) {
+    SmallString<128> GlobalsFilename = {Name, ".globals"};
+    dumpGlobals(GlobalsFilename, Image);
+
+    SmallString<128> MemoryFilename = {Name, ".memory"};
+    dumpDeviceMemory(MemoryFilename);
   }
 
   void saveKernelOutputInfo(const char *Name) {
@@ -503,12 +504,6 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   if (auto Err =
           printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
     return Err;
-
-  if (RecordReplay.isRecording())
-    RecordReplay.saveKernelInputInfo(
-        getName(), getImage(), ArgPtrs, ArgOffsets,
-        KernelArgs.NumArgs - /* KernelLaunchEnvironment */ 1, NumBlocks,
-        NumThreads, KernelArgs.Tripcount);
 
   return launchImpl(GenericDevice, NumThreads, NumBlocks, KernelArgs,
                     KernelArgsPtr, AsyncInfoWrapper);
@@ -1411,11 +1406,20 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
 
-  if (RecordReplay.isRecording())
+  if (RecordReplay.isRecording()) {
     RecordReplay.saveImage(GenericKernel.getName(), GenericKernel.getImage());
+    RecordReplay.saveKernelInput(GenericKernel.getName(),
+                                 GenericKernel.getImage());
+  }
 
   auto Err = GenericKernel.launch(*this, ArgPtrs, ArgOffsets, KernelArgs,
                                   AsyncInfoWrapper);
+
+  if (RecordReplay.isRecording())
+    RecordReplay.saveKernelDescr(GenericKernel.getName(), ArgPtrs, ArgOffsets,
+                                 KernelArgs.NumArgs, KernelArgs.NumTeams[0],
+                                 KernelArgs.ThreadLimit[0],
+                                 KernelArgs.Tripcount);
 
   // 'finalize' here to guarantee next record-replay actions are in-sync
   AsyncInfoWrapper.finalize(Err);
@@ -1845,7 +1849,8 @@ int32_t __tgt_rtl_data_exchange(int32_t SrcDeviceId, void *SrcPtr,
                                 int32_t DstDeviceId, void *DstPtr,
                                 int64_t Size) {
   return __tgt_rtl_data_exchange_async(SrcDeviceId, SrcPtr, DstDeviceId, DstPtr,
-                                       Size, /* AsyncInfoPtr */ nullptr);
+                                       Size,
+                                       /* AsyncInfoPtr */ nullptr);
 }
 
 int32_t __tgt_rtl_data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
