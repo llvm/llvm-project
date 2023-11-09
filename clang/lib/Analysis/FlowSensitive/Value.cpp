@@ -47,6 +47,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Value &Val) {
   case Value::Kind::FormulaBool:
     return OS << "FormulaBool(" << cast<FormulaBoolValue>(Val).formula() << ")";
   }
+  llvm_unreachable("Unknown clang::dataflow::Value::Kind enum");
 }
 
 } // namespace dataflow
