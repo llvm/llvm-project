@@ -177,10 +177,10 @@ int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(IdentTy *Loc,
 }
 
 int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
-    IdentTy *Loc, int32_t TId, void *GlobalBuffer, uint32_t num_of_records,
-    void *reduce_data, ShuffleReductFnTy shflFct, InterWarpCopyFnTy cpyFct,
-    ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct, ListGlobalFnTy glcpyFct,
-    ListGlobalFnTy glredFct) {
+    IdentTy *Loc, void *GlobalBuffer, uint32_t num_of_records,
+    uint64_t reduce_data_size, void *reduce_data, ShuffleReductFnTy shflFct,
+    InterWarpCopyFnTy cpyFct, ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct,
+    ListGlobalFnTy glcpyFct, ListGlobalFnTy glredFct) {
   // Terminate all threads in non-SPMD mode except for the master thread.
   uint32_t ThreadId = mapping::getThreadIdInBlock();
   if (mapping::isGenericMode()) {
