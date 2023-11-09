@@ -33,15 +33,16 @@
 //   COMMON_INTERCEPTOR_STRERROR
 //===----------------------------------------------------------------------===//
 
+#include <stdarg.h>
+
 #include "interception/interception.h"
 #include "sanitizer_addrhashmap.h"
+#include "sanitizer_dl.h"
 #include "sanitizer_errno.h"
 #include "sanitizer_placement_new.h"
 #include "sanitizer_platform_interceptors.h"
 #include "sanitizer_symbolizer.h"
 #include "sanitizer_tls_get_addr.h"
-
-#include <stdarg.h>
 
 #if SANITIZER_INTERCEPTOR_HOOKS
 #define CALL_WEAK_INTERCEPTOR_HOOK(f, ...) f(__VA_ARGS__);
@@ -6304,21 +6305,24 @@ INTERCEPTOR(int, fclose, __sanitizer_FILE *fp) {
 #endif
 
 #if SANITIZER_INTERCEPT_DLOPEN_DLCLOSE
-// Returns 1 if 'suffix' matches the end of 'str', 0 otherwise
-static int internal_is_suffix(const char *suffix, const char *str) {
-  if (!suffix || !str)
-    return 0;
+// Ordinary internal_readlink does not null-terminate strings.
+static int internal_readlink_with_null(const char *path, char *buf,
+                                       uptr bufsize) {
+  if (!buf) {
+    return -1;
+  }
 
-  if (internal_strlen(suffix) > internal_strlen(str))
-    return 0;
+  // Ensure it is a valid string even if internal_readlink fails
+  buf[0] = '\0';
 
-  return internal_strcmp(str + internal_strlen(str) - internal_strlen(suffix),
-                         suffix) == 0;
+  int len = internal_readlink(path, buf, bufsize);
+  if (len >= 0 && len < (int)bufsize)
+    buf[len] = '\0';
+
+  buf[bufsize - 1] = '\0';
+
+  return len;
 }
-
-#  if SANITIZER_GLIBC
-extern char *__progname;
-#  endif
 
 INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
   void *ctx;
@@ -6326,14 +6330,42 @@ INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
 
   if (filename) {
     COMMON_INTERCEPTOR_READ_STRING(ctx, filename, 0);
-#  if SANITIZER_GLIBC
-    if (common_flags()->test_only_replace_dlopen_main_program &&
-        internal_is_suffix(__progname, filename)) {
+
+#  if !SANITIZER_DYNAMIC
+    VPrintf(1, "dlopen interceptor: filename: %s\n", filename);
+
+    char *filename_canonical = (char *)InternalAlloc(sizeof(char) * 640);
+    if (filename_canonical)
+      internal_readlink_with_null(filename, filename_canonical, 640);
+    VPrintf(1, "dlopen interceptor: filename (canonical): %s\n",
+            filename_canonical);
+
+    // We care about dlopen(<main program>,...), which will only happen
+    // for statically linked ASan.
+    const char *self_fname;
+    int ret = dladdr_self_fname(&self_fname);
+    VPrintf(1, "dlopen interceptor: dladdr_self_fname: %p %s\n",
+            (void *)self_fname, self_fname);
+
+    char *self_fname_canonical = (char *)InternalAlloc(sizeof(char) * 640);
+    if (self_fname_canonical)
+      internal_readlink_with_null(self_fname, self_fname_canonical, 640);
+    VPrintf(1, "dlopen interceptor: dladdr_self_fname (canonical): %s\n",
+            self_fname_canonical);
+
+    if (ret && common_flags()->test_only_replace_dlopen_main_program &&
+        (internal_strcmp(self_fname_canonical, filename_canonical) == 0)) {
+      // Our test (replace_dlopen_main_program_test.cpp) does not obtain the
+      // path name from dladdr(). We therefore need to compare string contents,
+      // not just the filename addresses.
       VPrintf(1, "dlopen interceptor: replacing %s because it matches %s\n",
-              filename, __progname);
+              filename, self_fname);
       filename = (char *)0;  // RTLD_DEFAULT
     }
-#  endif
+
+    InternalFree(filename_canonical);
+    InternalFree(self_fname_canonical);
+#  endif  // !SANITIZER_DYNAMIC
   }
 
   void *res = COMMON_INTERCEPTOR_DLOPEN(filename, flag);
