@@ -2283,7 +2283,7 @@ def Vector_ConstantMaskOp :
     }
 
     /// Return whether the mask is a uniform vector of `1`s.
-    bool isFullMask();
+    bool isAllOnesMask();
   }];
 
   let assemblyFormat = "$mask_dim_sizes attr-dict `:` type(results)";
