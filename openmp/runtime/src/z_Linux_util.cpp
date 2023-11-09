@@ -72,7 +72,7 @@ struct kmp_sys_timer {
   struct timespec start;
 };
 
-#ifdef KMP_OS_SOLARIS
+#if KMP_OS_SOLARIS
 // Convert timeval to timespec.
 #define TIMEVAL_TO_TIMESPEC(tv, ts)                                            \
   do {                                                                         \
