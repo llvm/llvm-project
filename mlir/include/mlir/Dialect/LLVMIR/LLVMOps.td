@@ -1826,7 +1826,7 @@ def LLVM_CallIntrinsicOp
 }
 
 def LLVM_LinkerOptionsOp
-    : LLVM_Op<"linker.options"> {
+    : LLVM_Op<"linker_options"> {
   let summary = "Options to pass to the linker when the object file is linked";
   let description = [{
     Pass the given options to the linker when the resulting object file is linked.
@@ -1836,10 +1836,10 @@ def LLVM_LinkerOptionsOp
     Examples:
     ```mlir
     // Link against the MSVC static threaded CRT.
-    llvm.linker.options ["/DEFAULTLIB:", "libcmt"]
+    llvm.linker_options ["/DEFAULTLIB:", "libcmt"]
 
     // Link against aarch64 compiler-rt builtins
-    llvm.linker.options ["-l", "clang_rt.builtins-aarch64"]
+    llvm.linker_options ["-l", "clang_rt.builtins-aarch64"]
     ```
   }];
   let arguments  = (ins StrArrayAttr:$options);
@@ -1848,19 +1848,10 @@ def LLVM_LinkerOptionsOp
   }];
 
   let llvmBuilder = [{
-    llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
-    llvm::LLVMContext &context = llvmModule->getContext();
-    llvm::NamedMDNode *linkerMDNode = llvmModule->getOrInsertNamedMetadata("llvm.linker.options");
-    SmallVector<llvm::Metadata*> MDNodes;
-    for (auto s : $options) {
-      auto str = cast<StringAttr>(s);
-      auto *MDNode = llvm::MDString::get(context, str.getValue());
-      MDNodes.push_back(MDNode);
-    }
-
-    auto *listMDNode = llvm::MDTuple::get(context, MDNodes);
-    linkerMDNode->addOperand(listMDNode);
+    convertLinkerOptionsOp($options, builder, moduleTranslation);
   }];
+
+  let hasVerifier = 1;
 }
 
 #endif // LLVMIR_OPS

@@ -3072,6 +3072,18 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
 };
 } // namespace
 
+
+//===----------------------------------------------------------------------===//
+// LinkerOptionsOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult LinkerOptionsOp::verify() {
+  if (mlir::Operation *parentOp = (*this)->getParentOp();
+      parentOp && !satisfiesLLVMModule(parentOp))
+      return emitOpError("must appear at the module level");
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // LLVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
