@@ -556,7 +556,10 @@ def ConvertGPUToSPIRV : Pass<"convert-gpu-to-spirv", "ModuleOp"> {
     to control the set and binding if wanted.
   }];
   let constructor = "mlir::createConvertGPUToSPIRVPass()";
-  let dependentDialects = ["spirv::SPIRVDialect"];
+  let dependentDialects = [
+    "func::FuncDialect",
+    "spirv::SPIRVDialect",
+  ];
   let options = [
     Option<"use64bitIndex", "use-64bit-index",
            "bool", /*default=*/"false",
@@ -1201,6 +1204,7 @@ def ConvertVectorToSCF : Pass<"convert-vector-to-scf"> {
 def ConvertVectorToArmSME : Pass<"convert-vector-to-arm-sme"> {
   let summary = "Lower the operations from the vector dialect into the ArmSME "
                 "dialect";
+  let constructor = "mlir::createConvertVectorToArmSMEPass()";
   let description = [{
     Pass that converts vector dialect operations into equivalent ArmSME dialect
     operations.

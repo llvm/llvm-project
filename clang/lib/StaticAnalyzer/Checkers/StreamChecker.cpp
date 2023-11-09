@@ -1093,7 +1093,6 @@ ProgramStateRef StreamChecker::ensureStreamOpened(SVal StreamVal,
           N));
       return nullptr;
     }
-    return State;
   }
 
   return State;

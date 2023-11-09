@@ -29,7 +29,6 @@
 #include <ranges>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 // SFINAE tests.
@@ -189,22 +188,6 @@ constexpr bool test() {
     }
   }
 
-  { // The comparator can return any type that's convertible to `bool`.
-    const std::array input = {3, 1, 2};
-    std::array expected = {1, 2, 3};
-    {
-      auto in = input;
-      auto last = std::ranges::sort_heap(in.begin(), in.end(), [](int i, int j) { return BooleanTestable{i < j}; });
-      verify_sorted(in, last, expected);
-    }
-
-    {
-      auto in = input;
-      auto last = std::ranges::sort_heap(in, [](int i, int j) { return BooleanTestable{i < j}; });
-      verify_sorted(in, last, expected);
-    }
-  }
-
   { // `std::ranges::dangling` is returned.
     [[maybe_unused]] std::same_as<std::ranges::dangling> decltype(auto) result =
         std::ranges::sort_heap(std::array{3, 1, 2});
@@ -262,7 +245,7 @@ void test_complexity() {
     std::ranges::sort_heap(first, last, &MyInt::Comp);
     LIBCPP_ASSERT(stats.copied == 0);
     LIBCPP_ASSERT(stats.moved <= 2 * n + n * logn);
-#if !_LIBCPP_ENABLE_DEBUG_MODE
+#if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
     LIBCPP_ASSERT(stats.compared <= n * logn);
     (void)debug_comparisons;
 #else

@@ -26,7 +26,6 @@
 #include "llvm/Support/BalancedPartitioning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
@@ -491,11 +490,7 @@ public:
   /// until before it is used. See also \c create(StringRef) method.
   Error create(object::SectionRef &Section);
 
-  /// This interface is used by reader of CoverageMapping test
-  /// format.
-  inline Error create(StringRef D, uint64_t BaseAddr);
-
-  /// \c NameStrings is a string composed of one or more sub-strings
+  /// \c NameStrings is a string composed of one of more sub-strings
   ///  encoded in the format described in \c collectPGOFuncNameStrings.
   /// This method is a wrapper to \c readAndDecodeStrings method.
   Error create(StringRef NameStrings);
@@ -509,6 +504,10 @@ public:
   /// Initialize 'this' with the set of vtable names encoded in
   /// \c CompressedVTableNames.
   Error initVTableNamesFromCompressedStrings(StringRef CompressedVTableNames);
+
+  /// This interface is used by reader of CoverageMapping test
+  /// format.
+  inline Error create(StringRef D, uint64_t BaseAddr);
 
   /// A wrapper interface to populate the PGO symtab with functions
   /// decls from module \c M. This interface is used by transformation

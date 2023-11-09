@@ -1183,9 +1183,6 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     if (ArgM->getOption().matches(options::OPT_M) ||
         ArgM->getOption().matches(options::OPT_MD))
       CmdArgs.push_back("-sys-header-deps");
-    if (Args.hasFlag(options::OPT_canonical_prefixes,
-                     options::OPT_no_canonical_prefixes, true))
-      CmdArgs.push_back("-canonical-system-headers");
     if ((isa<PrecompileJobAction>(JA) &&
          !Args.hasArg(options::OPT_fno_module_file_deps)) ||
         Args.hasArg(options::OPT_fmodule_file_deps))
@@ -5014,6 +5011,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_fthinlto_index_EQ);
   }
 
+  if (Triple.isPPC())
+    Args.addOptInFlag(CmdArgs, options::OPT_mregnames,
+                      options::OPT_mno_regnames);
+
   if (Args.getLastArg(options::OPT_fthin_link_bitcode_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_fthin_link_bitcode_EQ);
 
@@ -5726,16 +5727,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
     StringRef CM = A->getValue();
     bool Ok = false;
-    if (Triple.isOSAIX() && CM == "medium") {
+    if (Triple.isOSAIX() && CM == "medium")
       CM = "large";
-      Ok = true;
-    }
     if (Triple.isAArch64(64)) {
       Ok = CM == "tiny" || CM == "small" || CM == "large";
       if (CM == "large" && RelocationModel != llvm::Reloc::Static)
         D.Diag(diag::err_drv_argument_only_allowed_with)
             << A->getAsString(Args) << "-fno-pic";
-    } else if (Triple.isPPC64()) {
+    } else if (Triple.isPPC64() || Triple.isOSAIX()) {
       Ok = CM == "small" || CM == "medium" || CM == "large";
     } else if (Triple.isRISCV()) {
       if (CM == "medlow")

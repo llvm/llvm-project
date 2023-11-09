@@ -790,6 +790,7 @@ public:
     IPM_VectorSplatImm,
     IPM_NoUse,
     IPM_GenericPredicate,
+    IPM_MIFlags,
     OPM_SameOperand,
     OPM_ComplexPattern,
     OPM_IntrinsicID,
@@ -1628,6 +1629,28 @@ public:
                             RuleMatcher &Rule) const override;
 };
 
+class MIFlagsInstructionPredicateMatcher : public InstructionPredicateMatcher {
+  SmallVector<StringRef, 2> Flags;
+  bool CheckNot; // false = GIM_MIFlags, true = GIM_MIFlagsNot
+
+public:
+  MIFlagsInstructionPredicateMatcher(unsigned InsnVarID,
+                                     ArrayRef<StringRef> FlagsToCheck,
+                                     bool CheckNot = false)
+      : InstructionPredicateMatcher(IPM_MIFlags, InsnVarID),
+        Flags(FlagsToCheck), CheckNot(CheckNot) {
+    sort(Flags);
+  }
+
+  static bool classof(const InstructionPredicateMatcher *P) {
+    return P->getKind() == IPM_MIFlags;
+  }
+
+  bool isIdentical(const PredicateMatcher &B) const override;
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override;
+};
+
 /// Generates code to check for the absence of use of the result.
 // TODO? Generalize this to support checking for one use.
 class NoUsePredicateMatcher : public InstructionPredicateMatcher {
@@ -2233,6 +2256,10 @@ private:
   std::vector<std::unique_ptr<OperandRenderer>> OperandRenderers;
   SmallPtrSet<Record *, 4> DeadImplicitDefs;
 
+  std::vector<const InstructionMatcher *> CopiedFlags;
+  std::vector<StringRef> SetFlags;
+  std::vector<StringRef> UnsetFlags;
+
   /// True if the instruction can be built solely by mutating the opcode.
   bool canMutate(RuleMatcher &Rule, const InstructionMatcher *Insn) const;
 
@@ -2246,6 +2273,12 @@ public:
 
   unsigned getInsnID() const { return InsnID; }
   const CodeGenInstruction *getCGI() const { return I; }
+
+  void addSetMIFlags(StringRef Flag) { SetFlags.push_back(Flag); }
+  void addUnsetMIFlags(StringRef Flag) { UnsetFlags.push_back(Flag); }
+  void addCopiedMIFlags(const InstructionMatcher &IM) {
+    CopiedFlags.push_back(&IM);
+  }
 
   void chooseInsnToMutate(RuleMatcher &Rule);
 
