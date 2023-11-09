@@ -1171,6 +1171,7 @@ def generalize_check_lines_common(
         return match.group(1) + rv + match.group(match.lastindex)
 
     lines_with_def = []
+    multiple_braces_re = re.compile(r"(({{+)|(}}+))")
 
     for i, line in enumerate(lines):
         if not is_asm and not is_analyze:
@@ -1200,6 +1201,10 @@ def generalize_check_lines_common(
                 (lines[i], changed) = nameless_value_regex.subn(
                     transform_line_vars, lines[i], count=1
                 )
+        if is_analyze:
+            # Escape multiple {{ or }} as {{}} denotes a FileCheck regex.
+            scrubbed_line = multiple_braces_re.sub(r"{{\\\1}}", lines[i])
+            lines[i] = scrubbed_line
     return lines
 
 
