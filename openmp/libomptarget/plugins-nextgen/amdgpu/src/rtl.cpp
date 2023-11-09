@@ -130,7 +130,7 @@ Error iterateAgentMemoryPools(hsa_agent_t Agent, CallbackTy Cb) {
                        "Error in hsa_amd_agent_iterate_memory_pools: %s");
 }
 
-/// Dispatches an asynchronous memory copy
+/// Dispatches an asynchronous memory copy.
 /// Enables different SDMA engines for the dispatch in a round-robin fashion.
 Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
                    const void *Src, hsa_agent_t SrcAgent, size_t Size,
@@ -140,7 +140,7 @@ Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
     hsa_status_t S =
         hsa_amd_memory_async_copy(Dst, DstAgent, Src, SrcAgent, Size,
                                   NumDepSignals, DepSignals, CompletionSignal);
-    return Plugin::check(S, "Error in hsa_amd_memory_async_copy");
+    return Plugin::check(S, "Error in hsa_amd_memory_async_copy: %s");
   }
 
 // This solution is probably not the best
@@ -158,7 +158,7 @@ Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
   // Increment to use one of three SDMA engines: 0x1, 0x2, 0x4
   SdmaEngine = (SdmaEngine << 1) % 7;
 
-  return Plugin::check(S, "Error in hsa_amd_memory_async_copy_on_engine");
+  return Plugin::check(S, "Error in hsa_amd_memory_async_copy_on_engine: %s");
 #endif
 }
 
@@ -2227,7 +2227,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       if (auto Err = Signal.init())
         return Err;
 
-      if (auto Err = utils::asyncMemCopy(getUseMultipleSdmaEngines(), TgtPtr,
+      if (auto Err = utils::asyncMemCopy(useMultipleSdmaEngines(), TgtPtr,
                                          Agent, PinnedPtr, Agent, Size, 0,
                                          nullptr, Signal.get()))
         return Err;
@@ -2287,7 +2287,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       if (auto Err = Signal.init())
         return Err;
 
-      if (auto Err = utils::asyncMemCopy(getUseMultipleSdmaEngines(), PinnedPtr,
+      if (auto Err = utils::asyncMemCopy(useMultipleSdmaEngines(), PinnedPtr,
                                          Agent, TgtPtr, Agent, Size, 0, nullptr,
                                          Signal.get()))
         return Err;
@@ -2652,7 +2652,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         });
   }
 
-  bool getUseMultipleSdmaEngines() { return OMPX_UseMultipleSdmaEngines; }
+  bool useMultipleSdmaEngines() const { return OMPX_UseMultipleSdmaEngines; }
 
 private:
   using AMDGPUEventRef = AMDGPUResourceRef<AMDGPUEventTy>;
@@ -2796,7 +2796,7 @@ AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
       // Initialize the std::deque with some empty positions.
       Slots(32), NextSlot(0), SyncCycle(0), RPCServer(nullptr),
       StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
-      UseMultipleSdmaEngines(Device.getUseMultipleSdmaEngines()) {}
+      UseMultipleSdmaEngines(Device.useMultipleSdmaEngines()) {}
 
 /// Class implementing the AMDGPU-specific functionalities of the global
 /// handler.
