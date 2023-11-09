@@ -57,7 +57,7 @@ module {
 
 func.func @mul(%arg0: tensor<4x6xf64>,
                %arg1: tensor<4x6xf64, #BSR>) -> tensor<4x4xf64> {
-  %out = tensor.empty() : tensor<4x4xf64>
+  %out = arith.constant dense<0.0> : tensor<4x4xf64>
   %0 = linalg.generic #trait_mul
     ins(%arg0, %arg1: tensor<4x6xf64>, tensor<4x6xf64, #BSR>)
     outs(%out: tensor<4x4xf64>) {
@@ -71,7 +71,7 @@ func.func @mul(%arg0: tensor<4x6xf64>,
 
 func.func @mul_dense(%arg0: tensor<4x6xf64>,
                      %arg1: tensor<4x6xf64>) -> tensor<4x4xf64> {
-  %out = tensor.empty() : tensor<4x4xf64>
+  %out = arith.constant dense<0.0> : tensor<4x4xf64>
   %0 = linalg.generic #trait_mul
     ins(%arg0, %arg1: tensor<4x6xf64>, tensor<4x6xf64>)
     outs(%out: tensor<4x4xf64>) {
