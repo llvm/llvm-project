@@ -31,7 +31,6 @@ int main() {
   // CHECK-Darwin: #[[#NEW:]] {{0x.* in .*_Zna}}
   // CHECK-NEXT: #[[#NEW+1]] {{0x.* in main .*use-after-delete.cpp:}}[[@LINE-23]]
 
-
   // CHECK: Shadow byte legend (one shadow byte represents {{[0-9]+}} application bytes):
   // CHECK: Global redzone:
   // CHECK: ASan internal:
