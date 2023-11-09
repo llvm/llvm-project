@@ -3647,7 +3647,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       // found there.
       location_list.SetModule(debug_map_symfile->GetObjectFile()->GetModule());
 
-    if (is_static_lifetime && !location_is_const_value_data) {
+    if (is_static_lifetime) {
       if (is_external)
         scope = eValueTypeVariableGlobal;
       else
