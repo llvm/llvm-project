@@ -155,10 +155,9 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
     std::vector<std::string> names;
     std::vector<FunctionNameType> name_masks;
     for (size_t i = 0; i < num_elem; i++) {
-      llvm::StringRef name;
-
-      success = names_array->GetItemAtIndexAsString(i, name);
-      if (!success) {
+      std::optional<llvm::StringRef> maybe_name =
+          names_array->GetItemAtIndexAsString(i);
+      if (!maybe_name) {
         error.SetErrorString("BRN::CFSD: name entry is not a string.");
         return nullptr;
       }
@@ -168,7 +167,7 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
         error.SetErrorString("BRN::CFSD: name mask entry is not an integer.");
         return nullptr;
       }
-      names.push_back(std::string(name));
+      names.push_back(std::string(*maybe_name));
       name_masks.push_back(static_cast<FunctionNameType>(fnt));
     }
 
