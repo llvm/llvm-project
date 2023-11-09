@@ -638,8 +638,20 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
 
 static LogicalResult printOperation(KokkosCppEmitter &emitter,
                                     emitc::CallOp op) {
-  if (failed(emitter.emitAssignPrefix(*op)))
-    return failure();
+  if (op.getCallee() == "createDeviceMirror")
+  {
+    //Intercept this case - the single result is a memref with MemSpace::Device
+    auto resultType = dyn_cast<MemRefType>(op.getResult(0).getType());
+    if (failed(emitter.emitMemrefType(op.getLoc(), resultType, MemSpace::Device)))
+      return failure();
+    emitter << " " << emitter.getOrCreateName(op.getResult(0)) << " = ";
+  }
+  else
+  {
+    if (failed(emitter.emitAssignPrefix(*op)))
+      return failure();
+  }
+
   emitter << op.getCallee();
 
   auto emitArgs = [&](Attribute attr) -> LogicalResult {
@@ -3520,6 +3532,24 @@ static void emitCppBoilerplate(KokkosCppEmitter &emitter, bool enablePythonWrapp
     emitter << "    }\n";
     emitter << "  }\n";
     emitter << "  return V(&smr.data[smr.offset], layout);\n";
+    emitter << "}\n\n";
+    emitter << "template<typename Vhost>\n";
+    emitter << "Kokkos::View<typename Vhost::data_type, typename Vhost::array_layout, exec_space> createDeviceMirror(const Vhost& v)\n";
+    emitter << "{\n";
+    emitter << "  return Kokkos::create_mirror_view(Kokkos::WithoutInitializing, typename exec_space::memory_space(), v);\n";
+    emitter << "}\n\n";
+    emitter << "template<typename Vdev, typename Vhost>\n";
+    emitter << "void destroyDeviceMirror(Vdev& vmirror, const Vhost& v)\n";
+    emitter << "{\n";
+    emitter << "  if(vmirror.data() != v.data())\n";
+    emitter << "  {\n";
+    emitter << "    vmirror = Vdev();\n";
+    emitter << "  }\n";
+    emitter << "}\n\n";
+    emitter << "template<typename Vdst, typename Vsrc>\n";
+    emitter << "void asyncDeepCopy(const Vdst& dst, const Vsrc& src)\n";
+    emitter << "{\n";
+    emitter << "  Kokkos::deep_copy(exec_space(), dst, src);\n";
     emitter << "}\n\n";
   }
 }

@@ -53,38 +53,30 @@ static func::FuncOp genKokkosFunc(OpBuilder &builder, ModuleOp module,
   return func;
 }
 
-/// Allocates memory on the device.
-static gpu::AllocOp genAllocMemRef(OpBuilder &builder, Location loc, Value mem) {
-  auto tp = cast<ShapedType>(mem.getType());
-  auto elemTp = tp.getElementType();
-  auto shape = tp.getShape();
-  auto memTp = MemRefType::get(shape, elemTp);
-  SmallVector<Value> dynamicSizes;
-  for (unsigned r = 0, rank = tp.getRank(); r < rank; r++) {
-    if (shape[r] == ShapedType::kDynamic) {
-      Value dimOp = linalg::createOrFoldDimOp(builder, loc, mem, r);
-      dynamicSizes.push_back(dimOp);
-    }
-  }
-  // Create an async alloc with no dependencies
-  return builder.create<gpu::AllocOp>(loc, memTp, builder.getType<gpu::AsyncTokenType>(), ValueRange(), dynamicSizes, ValueRange());
+/// Creates an uninitialized mirror of the given host view on device.
+static emitc::CallOp genCreateDeviceMirror(OpBuilder &builder, Location loc, Value mem) {
+  // Function signature:
+  // Kokkos::View<..., DeviceType> createDeviceMirror(Kokkos::View<..., HostType>)
+  // In MLIR, result and arg have the same type though (memrefs, with no explicit memory space)
+  return builder.create<emitc::CallOp>(loc, TypeRange({mem.getType()}), "createDeviceMirror", ArrayAttr(), ArrayAttr(), ValueRange({mem}));
 }
 
 /// Deallocates memory from the device.
-static void genDeallocMemRef(OpBuilder &builder, Location loc, Value mem) {
-  builder.create<gpu::DeallocOp>(loc, TypeRange(), ValueRange(), mem);
+static void genDestroyDeviceMirror(OpBuilder &builder, Location loc, Value devMem, Value hostMem) {
+  // This function will deallocate (assign to empty View) the mirror devMem, if it is a different allocation than hostMem.
+  builder.create<emitc::CallOp>(loc, TypeRange(), "destroyDeviceMirror", ArrayAttr(), ArrayAttr(), ValueRange({devMem, hostMem}));
 }
 
 /// Copies memory between host and device (direction is implicit).
-static void genCopyMemRef(OpBuilder &builder, Location loc, Value dst, Value src) {
-  builder.create<gpu::MemcpyOp>(loc, TypeRange(), ValueRange(), dst, src);
+static void genDeepCopy(OpBuilder &builder, Location loc, Value dst, Value src) {
+  builder.create<emitc::CallOp>(loc, TypeRange(), "asyncDeepCopy", ArrayAttr(), ArrayAttr(), ValueRange({dst, src}));
 }
 
 /// Generates an alloc/copy pair.
-static Value genAllocCopy(OpBuilder &builder, Location loc, Value b) {
-  auto alloc = genAllocMemRef(builder, loc, b);
+static Value genAllocCopy(OpBuilder &builder, Location loc, Value hostMem) {
+  auto alloc = genCreateDeviceMirror(builder, loc, hostMem);
   Value devMem = alloc.getResult(0);
-  genCopyMemRef(builder, loc, devMem, b);
+  genDeepCopy(builder, loc, devMem, hostMem);
   return devMem;
 }
 
@@ -116,10 +108,10 @@ static void genParametersOut(OpBuilder &builder, Location loc,
   // Go through the buffer (memref-typed) args.
   // The first one is the output buffer, and must be copied back to host.
   // The others are inputs and just need to be deallocated.
-  genCopyMemRef(builder, loc, buffers[0], args[base]);
+  genDeepCopy(builder, loc, buffers[0], args[base]);
   // Sequence the output tensor dealloc after it's copied to host.
   for (unsigned i = base, e = args.size(); i < e; i++) {
-    genDeallocMemRef(builder, loc, args[i]);
+    genDestroyDeviceMirror(builder, loc, args[i], buffers[i - base]);
   }
 }
 
