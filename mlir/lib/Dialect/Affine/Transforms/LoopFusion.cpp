@@ -51,12 +51,8 @@ namespace {
 /// Loop fusion pass. This pass currently supports a greedy fusion policy,
 /// which fuses loop nests with single-writer/single-reader memref dependences
 /// with the goal of improving locality.
-
 // TODO: Support fusion of source loop nests which write to multiple
 // memrefs, where each memref can have multiple users (if profitable).
-// TODO: Extend this pass to check for fusion preventing dependences,
-// and add support for more general loop fusion algorithms.
-
 struct LoopFusion : public affine::impl::AffineLoopFusionBase<LoopFusion> {
   LoopFusion() = default;
   LoopFusion(unsigned fastMemorySpace, uint64_t localBufSizeThresholdBytes,
