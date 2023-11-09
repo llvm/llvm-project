@@ -10,4 +10,3 @@ const char data[] = {
 // CHECK: # 1 "<built-in:embed:1>" 1
 // CHECK-NEXT: __builtin_pp_embed(unsigned char,"{{.*}}media{{\\|/}}art.txt","ICAgICAgICAgICBfXyAgXwogICAgICAgLi0uJyAgYDsgYC0uXyAgX18gIF8KICAgICAgKF8sICAgICAgICAgLi06JyAgYDsgYC0uXwogICAgLCdvIiggICAgICAgIChfLCAgICAgICAgICAgKQogICAoX18sLScgICAgICAsJ28iKCAgICAgICAgICAgICk+CiAgICAgICggICAgICAgKF9fLC0nICAgICAgICAgICAgKQogICAgICAgYC0nLl8uLS0uXyggICAgICAgICAgICAgKQogICAgICAgICAgfHx8ICB8fHxgLScuXy4tLS5fLi0nCiAgICAgICAgICAgICAgICAgICAgIHx8fCAgfHx8Cg==")
 // CHECK-NEXT: # 8 "{{.*}}embed_preprocess_to_file.c" 2
-};
