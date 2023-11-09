@@ -542,54 +542,39 @@ TEST(CommandLineTest, SubcommandOptions) {
                                    cl::desc("A top-level option."));
 
   StackSubCommand SC("sc", "Subcommand");
-
   // The positional argument.
   StackOption<std::string> PositionalOpt(
       cl::Positional, cl::desc("positional argument test coverage"),
       cl::sub(SC));
-  // Thel literal argument.
+  // The literal argument.
   StackOption<LiteralOptionEnum> LiteralOpt(
       cl::desc("literal argument test coverage"), cl::sub(SC), cl::init(bar),
       cl::values(clEnumVal(foo, "foo"), clEnumVal(bar, "bar"),
                  clEnumVal(baz, "baz")));
   StackOption<bool> BoolOpt("enable", cl::sub(SC), cl::init(false));
 
-  std::string Errs;
-  raw_string_ostream OS(Errs);
+  const char *positionalOptVal = "input-file";
+  const char *args[] = {"prog", "sc", positionalOptVal, "-enable", "--str=csv"};
 
-  for (const char *literalArg : {"--bar", "--foo", "--baz"}) {
-    const char *args[] = {"prog",     "sc",      "input-file",
-                          literalArg, "-enable", "--str=csv"};
+  // cl::ParseCommandLineOptions returns true on success. Otherwise, it will
+  // print the error message to stderr and exit in this setting (`Errs` ostream
+  // is not set).
+  ASSERT_TRUE(cl::ParseCommandLineOptions(sizeof(args) / sizeof(args[0]), args,
+                                          StringRef()));
+  EXPECT_STREQ(PositionalOpt.getValue().c_str(), positionalOptVal);
+  EXPECT_TRUE(BoolOpt);
+  // Tests that the value of `str` option is `csv` as specified.
+  EXPECT_STREQ(TopLevelOpt.getValue().c_str(), "csv");
 
-    // cl::ParseCommandLineOptions returns true on success. it returns false
-    // and prints errors to caller provided error stream (&OS in this setting).
-    EXPECT_TRUE(cl::ParseCommandLineOptions(6, args, StringRef(), &OS));
+  for (auto &[literalOptVal, wantLiteralOpt] :
+       {std::make_pair("--bar", bar), std::make_pair("--foo", foo),
+        std::make_pair("--baz", baz)}) {
+    const char *args[] = {"prog", "sc", literalOptVal};
+    ASSERT_TRUE(cl::ParseCommandLineOptions(sizeof(args) / sizeof(args[0]),
+                                            args, StringRef()));
 
-    // Tests that the value of `str` option is `csv` as specified.
-    EXPECT_EQ(strcmp(TopLevelOpt.getValue().c_str(), "csv"), 0);
-
-    const char *parsedLiteralOpt;
-    switch (LiteralOpt) {
-    case baz:
-      parsedLiteralOpt = "baz";
-      break;
-    case bar:
-      parsedLiteralOpt = "bar";
-      break;
-    case foo:
-      parsedLiteralOpt = "foo";
-      break;
-    default:
-      llvm_unreachable("unknown option for LiteralOpt");
-    }
-
-    // Tests that literal options are parsed correctly. Skip '--' prefix of
-    // literalArg.
-    EXPECT_EQ(strcmp(parsedLiteralOpt, literalArg + 2), 0);
-
-    // Flush and tests there is no error message.
-    OS.flush();
-    EXPECT_TRUE(Errs.empty());
+    // Tests that literal options are parsed correctly.
+    EXPECT_EQ(LiteralOpt, wantLiteralOpt);
   }
 }
 
