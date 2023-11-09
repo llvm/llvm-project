@@ -997,7 +997,7 @@ CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
 const ValueDecl *
 CodeGenFunction::FindFlexibleArrayMemberField(ASTContext &Ctx,
                                               const RecordDecl *RD) {
-  LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+  const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       getLangOpts().getStrictFlexArraysLevel();
 
   for (const Decl *D : RD->decls()) {
@@ -1016,32 +1016,43 @@ CodeGenFunction::FindFlexibleArrayMemberField(ASTContext &Ctx,
 }
 
 const ValueDecl *CodeGenFunction::FindCountedByField(const Expr *Base) {
+  ASTContext &Ctx = getContext();
   const RecordDecl *OuterRD = nullptr;
+  const FieldDecl *FD = nullptr;
 
   Base = Base->IgnoreParenImpCasts();
 
   // Get the outer-most lexical RecordDecl.
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
     QualType Ty = DRE->getDecl()->getType();
-
     if (Ty->isPointerType())
       Ty = Ty->getPointeeType();
 
     if (const auto *RD = Ty->getAsRecordDecl())
       OuterRD = RD->getOuterLexicalRecordContext();
-  } else {
-    if (const auto *ME = dyn_cast<MemberExpr>(Base))
-      if (const ValueDecl *VD = ME->getMemberDecl())
-        OuterRD = VD->getDeclContext()->getOuterLexicalRecordContext();
+  } else if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
+    if (const ValueDecl *MD = ME->getMemberDecl()) {
+      OuterRD = MD->getDeclContext()->getOuterLexicalRecordContext();
+
+      const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+          getLangOpts().getStrictFlexArraysLevel();
+      if (Decl::isFlexibleArrayMemberLike(
+              Ctx, MD, MD->getType(), StrictFlexArraysLevel,
+              /*IgnoreTemplateOrMacroSubstitution=*/true))
+        // Base is referencing the FAM itself.
+        FD = dyn_cast<FieldDecl>(MD);
+    }
   }
 
   if (!OuterRD)
     return nullptr;
 
-  const ValueDecl *VD = FindFlexibleArrayMemberField(getContext(), OuterRD);
-  const auto *FD = dyn_cast_if_present<FieldDecl>(VD);
-  if (!FD)
-    return nullptr;
+  if (!FD) {
+    const ValueDecl *VD = FindFlexibleArrayMemberField(Ctx, OuterRD);
+    FD = dyn_cast_if_present<FieldDecl>(VD);
+    if (!FD)
+      return nullptr;
+  }
 
   const auto *CBA = FD->getAttr<CountedByAttr>();
   if (!CBA)
