@@ -11,7 +11,6 @@
 #include "flags_parser.h"
 
 #include "scudo/interface.h"
-#include <stdlib.h>
 
 namespace scudo {
 
@@ -69,12 +68,8 @@ void initFlags() {
   Parser.parseString(getCompileDefinitionScudoDefaultOptions());
   Parser.parseString(getScudoDefaultOptions());
   Parser.parseString(getEnv("SCUDO_OPTIONS"));
-  if (const char *V = getEnv("SCUDO_ALLOCATION_RING_BUFFER_SIZE")) {
-    char *End = nullptr;
-    int I = static_cast<int>(strtol(V, &End, 10));
-    if (End && *End == '\0') {
-      F->allocation_ring_buffer_size = I;
-    }
+  if (const char* V = getEnv("SCUDO_ALLOCATION_RING_BUFFER_SIZE")) {
+    Parser.parseStringPair("allocation_ring_buffer_size=", V);
   }
 }
 
