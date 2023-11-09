@@ -132,6 +132,19 @@ void InstallAtForkHandler();
   if (&__asan_on_error) \
   __asan_on_error()
 
+// Depending on the loading thread and when ASAN is loaded on Windows,
+// race conditions can appear causing incorrect states or internal check
+// failures.
+//
+// From a multithreaded managed environment, if an ASAN instrumented dll
+// is loading on a spawned thread, an intercepted function may be called on
+// multiple threads while ASAN is still in the process of initialization. This
+// can also cause the ASAN thread registry to create the "main" thread after
+// another thread, resulting in a TID != 0.
+//
+// Two threads can also race to initialize ASAN, resulting in either incorrect
+// state or internal check failures for init already running.
+//
 bool AsanInited();
 extern bool replace_intrin_cached;
 extern void (*death_callback)(void);
