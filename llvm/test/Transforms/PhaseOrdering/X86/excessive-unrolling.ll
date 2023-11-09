@@ -168,15 +168,14 @@ exit:
 define void @test_runtime_trip_count(i32 %N) {
 ; CHECK-LABEL: @test_runtime_trip_count(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SMAX:%.*]] = tail call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 0)
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
-; CHECK-NEXT:    [[EXITCOND2_NOT:%.*]] = icmp slt i32 [[N]], 1
-; CHECK-NEXT:    br i1 [[EXITCOND2_NOT]], label [[EXIT:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[SMAX]], 4
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY_PREHEADER7:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483644
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 4294967292
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -201,18 +200,18 @@ define void @test_runtime_trip_count(i32 %N) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT]], label [[FOR_BODY_PREHEADER7]]
 ; CHECK:       for.body.preheader7:
-; CHECK-NEXT:    [[INDVARS_IV3_PH:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[N_VEC]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[N_VEC]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV3:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[INDVARS_IV3_PH]], [[FOR_BODY_PREHEADER7]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [58 x double], ptr @b, i64 0, i64 [[INDVARS_IV3]]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[INDVARS_IV_PH]], [[FOR_BODY_PREHEADER7]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [58 x double], ptr @b, i64 0, i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [58 x double], ptr @c, i64 0, i64 [[INDVARS_IV3]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [58 x double], ptr @c, i64 0, i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [58 x double], ptr @a, i64 0, i64 [[INDVARS_IV3]]
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [58 x double], ptr @a, i64 0, i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store double [[ADD]], ptr [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV3]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
