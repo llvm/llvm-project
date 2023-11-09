@@ -26,7 +26,6 @@ void __assert_fail_internal(const char *expr, const char *msg, const char *file,
                             unsigned line, const char *function);
 }
 
-#if !defined(OMPTARGET_DEBUG) || (OMPTARGET_DEBUG != 0)
 #define ASSERT(expr, msg)                                                      \
   {                                                                            \
     if (config::isDebugMode(DeviceDebugKind::Assertion) && !(expr))            \
@@ -44,12 +43,7 @@ void __assert_fail_internal(const char *expr, const char *msg, const char *file,
 
 #define PRINTF(fmt, ...) (void)printf(fmt, ##__VA_ARGS__);
 #define PRINT(str) PRINTF("%s", str)
-#else
-#define ASSERT(expr, msg)
-#define PRINTF(fmt, ...)
-#define PRINT(str) PRINTF("%s", str)
-#define UNREACHABLE(msg)
-#endif
+
 ///}
 
 #endif
