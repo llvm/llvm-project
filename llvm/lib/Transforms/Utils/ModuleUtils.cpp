@@ -133,7 +133,7 @@ llvm::setUsedInitializer(GlobalVariable &V,
   }
 
   // Type of pointer to the array of pointers.
-  PointerType *Int8PtrTy = Type::getInt8PtrTy(V.getContext(), 0);
+  PointerType *Int8PtrTy = PointerType::getUnqual(V.getContext());
 
   SmallVector<Constant *, 8> UsedArray;
   for (GlobalValue *GV : Init) {

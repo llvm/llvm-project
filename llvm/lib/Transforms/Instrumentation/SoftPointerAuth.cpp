@@ -151,7 +151,7 @@ private:
     auto type = value->getType();
     switch (tag) {
     case VoidPtr:
-      return type == Type::getInt8PtrTy(M->getContext());
+      return type == PointerType::getUnqual(M->getContext());
     case Key:
       return type->isIntegerTy(32);
     case IntPtr:
@@ -162,7 +162,7 @@ private:
   /// Fetch an expected type.
   Type *getType(TypeTag tag) {
     switch (tag) {
-    case VoidPtr: return Type::getInt8PtrTy(M->getContext());
+    case VoidPtr: return PointerType::getUnqual(M->getContext());
     case Key: return Type::getInt32Ty(M->getContext());
     case IntPtr: return Type::getIntNTy(M->getContext(),
                                   M->getDataLayout().getPointerSizeInBits(0));
