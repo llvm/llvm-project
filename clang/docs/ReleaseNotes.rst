@@ -296,6 +296,9 @@ Attribute Changes in Clang
   is ignored, changed from the former incorrect suggestion to move it past
   declaration specifiers. (`#58637 <https://github.com/llvm/llvm-project/issues/58637>`_)
 
+- Clang now introduced ``[[clang::coro_only_destroy_when_complete]]`` attribute
+  to reduce the size of the destroy functions for coroutines which are known to
+  be destroyed after having reached the final suspend point.
 
 Improvements to Clang's diagnostics
 -----------------------------------
