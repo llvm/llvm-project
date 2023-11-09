@@ -616,12 +616,8 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   }
 
   // Reserve the extended general purpose registers.
-  if (!Is64Bit || !MF.getSubtarget<X86Subtarget>().hasEGPR()) {
-    for (unsigned n = 0; n != 16; ++n) {
-      for (MCRegAliasIterator AI(X86::R16 + n, this, true); AI.isValid(); ++AI)
-        Reserved.set(*AI);
-    }
-  }
+  if (!Is64Bit || !MF.getSubtarget<X86Subtarget>().hasEGPR())
+    Reserved.set(X86::R16, X86::R31WH + 1);
 
   assert(checkAllSuperRegsMarked(Reserved,
                                  {X86::SIL, X86::DIL, X86::BPL, X86::SPL,
