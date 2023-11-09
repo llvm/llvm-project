@@ -377,12 +377,14 @@ Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, const Edge &E,
                   : decodeImmBT4BlT1BlxT2(R.Hi, R.Lo);
 
   case Thumb_MovwAbsNC:
+  case Thumb_MovwPrelNC:
     if (!checkOpcode<Thumb_MovwAbsNC>(R))
       return makeUnexpectedOpcodeError(G, R, Kind);
     // Initial addend is interpreted as a signed value
     return SignExtend64<16>(decodeImmMovtT1MovwT3(R.Hi, R.Lo));
 
   case Thumb_MovtAbs:
+  case Thumb_MovtPrel:
     if (!checkOpcode<Thumb_MovtAbs>(R))
       return makeUnexpectedOpcodeError(G, R, Kind);
     // Initial addend is interpreted as a signed value
@@ -610,6 +612,20 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
     writeImmediate<Thumb_MovtAbs>(R, encodeImmMovtT1MovwT3(Value));
     return Error::success();
   }
+  case Thumb_MovwPrelNC: {
+    if (!checkOpcode<Thumb_MovwAbsNC>(R))
+      return makeUnexpectedOpcodeError(G, R, Kind);
+    uint16_t Value = ((TargetAddress + Addend - FixupAddress) & 0xffff);
+    writeImmediate<Thumb_MovwAbsNC>(R, encodeImmMovtT1MovwT3(Value));
+    return Error::success();
+  }
+  case Thumb_MovtPrel: {
+    if (!checkOpcode<Thumb_MovtAbs>(R))
+      return makeUnexpectedOpcodeError(G, R, Kind);
+    uint16_t Value = (((TargetAddress + Addend - FixupAddress) >> 16) & 0xffff);
+    writeImmediate<Thumb_MovtAbs>(R, encodeImmMovtT1MovwT3(Value));
+    return Error::success();
+  }
 
   default:
     return make_error<JITLinkError>(
@@ -659,6 +675,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     KIND_NAME_CASE(Thumb_Jump24)
     KIND_NAME_CASE(Thumb_MovwAbsNC)
     KIND_NAME_CASE(Thumb_MovtAbs)
+    KIND_NAME_CASE(Thumb_MovwPrelNC)
+    KIND_NAME_CASE(Thumb_MovtPrel)
   default:
     return getGenericEdgeKindName(K);
   }
