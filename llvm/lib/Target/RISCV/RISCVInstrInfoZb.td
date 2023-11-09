@@ -861,6 +861,8 @@ def : Pat<(i32 (xor (shiftop<shl> 1, (XLenVT GPR:$rs2)), GPR:$rs1)),
           (BINV GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (and (shiftop<srl> GPR:$rs1, (XLenVT GPR:$rs2)), 1)),
           (BEXT GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i64 (and (anyext (i32 (shiftop<srl> GPR:$rs1, (XLenVT GPR:$rs2)))), 1)),
+          (BEXT GPR:$rs1, GPR:$rs2)>;
 
 def : Pat<(i32 (and (srl GPR:$rs1, uimm5:$shamt), (i32 1))),
           (BEXTI GPR:$rs1, uimm5:$shamt)>;

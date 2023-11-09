@@ -12242,7 +12242,7 @@ static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
   // shift amounts larger than 31 would produce poison. If we wait until
   // type legalization, we'll create RISCVISD::SRLW and we can't recover it
   // to use a BEXT instruction.
-  if (Subtarget.is64Bit() && Subtarget.hasStdExtZbs() && VT == MVT::i1 &&
+  if (!RV64LegalI32 && Subtarget.is64Bit() && Subtarget.hasStdExtZbs() && VT == MVT::i1 &&
       N0.getValueType() == MVT::i32 && N0.getOpcode() == ISD::SRL &&
       !isa<ConstantSDNode>(N0.getOperand(1)) && N0.hasOneUse()) {
     SDLoc DL(N0);
