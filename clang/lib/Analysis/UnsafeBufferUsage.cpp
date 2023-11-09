@@ -1841,15 +1841,15 @@ UUCAddAssignGadget::getFixits(const Strategy &S) const {
       
       // To transform UUC(p += n) to UUC(p = p.subspan(..)):
       SS << varName.data() << " = " << varName.data() << ".subspan("
-      << SubSpanOffset << ")";
-      
+         << SubSpanOffset << ")";
+
       std::optional<SourceLocation> AddAssignLocation = getEndCharLoc(
           AddAssignNode, Ctx.getSourceManager(), Ctx.getLangOpts());
       if (!AddAssignLocation)
         return std::nullopt;
 
       Fixes.push_back(FixItHint::CreateReplacement(
-          SourceRange(AddAssignNode->getBeginLoc(), *AddAssignLocation), 
+          SourceRange(AddAssignNode->getBeginLoc(), *AddAssignLocation),
           SS.str()));
       return Fixes;
     }
