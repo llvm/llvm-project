@@ -231,9 +231,11 @@ bool types::isC(ID Id) {
   switch (Id) {
   default:
     return false;
-  
-  case TY_C: case TY_PP_C:
-  case TY_CHeader: case TY_PP_CHeader:
+
+  case TY_C:
+  case TY_PP_C:
+  case TY_CHeader:
+  case TY_PP_CHeader:
     return true;
   }
 }
