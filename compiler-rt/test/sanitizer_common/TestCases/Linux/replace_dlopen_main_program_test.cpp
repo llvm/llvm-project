@@ -44,16 +44,5 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // Check that this is equivalent to dlopen(NULL, ...)
-  test_handle = dlopen(argv[0], RTLD_LAZY);
-  printf("argv[0]: %s\n", argv[0]);
-  printf("dlopen(%s,...): %p\n", argv[0], test_handle);
-  fflush(stdout);
-
-  if (test_handle != correct_handle) {
-    printf("Error: handles do not match\n");
-    return 1;
-  }
-
   return 0;
 }

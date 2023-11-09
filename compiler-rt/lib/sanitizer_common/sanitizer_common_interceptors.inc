@@ -6305,25 +6305,6 @@ INTERCEPTOR(int, fclose, __sanitizer_FILE *fp) {
 #endif
 
 #if SANITIZER_INTERCEPT_DLOPEN_DLCLOSE
-// Ordinary internal_readlink does not null-terminate strings.
-static int internal_readlink_with_null(const char *path, char *buf,
-                                       uptr bufsize) {
-  if (!buf) {
-    return -1;
-  }
-
-  // Ensure it is a valid string even if internal_readlink fails
-  buf[0] = '\0';
-
-  int len = internal_readlink(path, buf, bufsize);
-  if (len >= 0 && len < (int)bufsize)
-    buf[len] = '\0';
-
-  buf[bufsize - 1] = '\0';
-
-  return len;
-}
-
 INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER_NOIGNORE(ctx, dlopen, filename, flag);
@@ -6332,39 +6313,28 @@ INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
     COMMON_INTERCEPTOR_READ_STRING(ctx, filename, 0);
 
 #  if !SANITIZER_DYNAMIC
-    VPrintf(1, "dlopen interceptor: filename: %s\n", filename);
+    // We care about a very specific use-case: dladdr on
+    // statically-linked ASan may return <main program>
+    // instead of the library.
+    // We therefore only take effect if the sanitizer is statically
+    // linked, and we don't bother canonicalizing paths because
+    // dladdr should return the same address both times (we assume
+    // the user did not canonicalize the result from dladdr).
+    if (common_flags()->test_only_replace_dlopen_main_program) {
+      VPrintf(1, "dlopen interceptor: filename: %s\n", filename);
 
-    char *filename_canonical = (char *)InternalAlloc(sizeof(char) * 640);
-    if (filename_canonical)
-      internal_readlink_with_null(filename, filename_canonical, 640);
-    VPrintf(1, "dlopen interceptor: filename (canonical): %s\n",
-            filename_canonical);
+      const char *selfFName = dladdrSelfFName();
+      VPrintf(1, "dlopen interceptor: dladdrSelfFName: %p %s\n",
+              (void *)selfFName, selfFName);
 
-    // We care about dlopen(<main program>,...), which will only happen
-    // for statically linked ASan.
-    const char *self_fname;
-    int ret = dladdr_self_fname(&self_fname);
-    VPrintf(1, "dlopen interceptor: dladdr_self_fname: %p %s\n",
-            (void *)self_fname, self_fname);
-
-    char *self_fname_canonical = (char *)InternalAlloc(sizeof(char) * 640);
-    if (self_fname_canonical)
-      internal_readlink_with_null(self_fname, self_fname_canonical, 640);
-    VPrintf(1, "dlopen interceptor: dladdr_self_fname (canonical): %s\n",
-            self_fname_canonical);
-
-    if (ret && common_flags()->test_only_replace_dlopen_main_program &&
-        (internal_strcmp(self_fname_canonical, filename_canonical) == 0)) {
-      // Our test (replace_dlopen_main_program_test.cpp) does not obtain the
-      // path name from dladdr(). We therefore need to compare string contents,
-      // not just the filename addresses.
-      VPrintf(1, "dlopen interceptor: replacing %s because it matches %s\n",
-              filename, self_fname);
-      filename = (char *)0;  // RTLD_DEFAULT
+      if (internal_strcmp(selfFName, filename) == 0) {
+        // It's possible they copied the string from dladdr, so
+        // we do a string comparison rather than pointer comparison.
+        VPrintf(1, "dlopen interceptor: replacing %s because it matches %s\n",
+                filename, selfFName);
+        filename = (char *)0;  // RTLD_DEFAULT
+      }
     }
-
-    InternalFree(filename_canonical);
-    InternalFree(self_fname_canonical);
 #  endif  // !SANITIZER_DYNAMIC
   }
 

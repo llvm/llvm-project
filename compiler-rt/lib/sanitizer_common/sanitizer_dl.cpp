@@ -20,16 +20,16 @@
 namespace __sanitizer {
 extern const char *SanitizerToolName;
 
-int dladdr_self_fname(const char **fname) {
+const char *dladdrSelfFName(void) {
 #if SANITIZER_GLIBC
   Dl_info info;
   int ret = dladdr((void *)&SanitizerToolName, &info);
-  *fname = info.dli_fname;
-  return ret;
-#else
-  *fname = nullptr;
-  return 0;
+  if (ret) {
+    return info.dli_fname;
+  }
 #endif
+
+  return nullptr;
 }
 
 }  // namespace __sanitizer
