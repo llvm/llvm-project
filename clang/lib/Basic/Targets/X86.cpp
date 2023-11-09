@@ -120,7 +120,8 @@ bool X86TargetInfo::initFeatureMap(
 
   std::vector<std::string> UpdatedFeaturesVec;
   std::vector<std::string> UpdatedAVX10FeaturesVec;
-  int HasEVEX512 = -1;
+  enum { FE_NOSET = -1, FE_FALSE, FE_TRUE };
+  int HasEVEX512 = FE_NOSET;
   bool HasAVX512F = false;
   bool HasAVX10 = false;
   bool HasAVX10_512 = false;
@@ -155,11 +156,11 @@ bool X86TargetInfo::initFeatureMap(
       LastAVX512 = Feature;
     } else if (HasAVX512F && Feature == "-avx512f") {
       HasAVX512F = false;
-    } else if (HasEVEX512 != true && Feature == "+evex512") {
-      HasEVEX512 = true;
+    } else if (HasEVEX512 != FE_TRUE && Feature == "+evex512") {
+      HasEVEX512 = FE_TRUE;
       continue;
-    } else if (HasEVEX512 != false && Feature == "-evex512") {
-      HasEVEX512 = false;
+    } else if (HasEVEX512 != FE_FALSE && Feature == "-evex512") {
+      HasEVEX512 = FE_FALSE;
       continue;
     }
 
@@ -169,14 +170,15 @@ bool X86TargetInfo::initFeatureMap(
   // HasEVEX512 is a three-states flag. We need to turn it into [+-]evex512
   // according to other features.
   if (HasAVX512F) {
-    UpdatedFeaturesVec.push_back(HasEVEX512 == false ? "-evex512" : "+evex512");
-    if (HasAVX10 && !HasAVX10_512 && HasEVEX512 != false)
+    UpdatedFeaturesVec.push_back(HasEVEX512 == FE_FALSE ? "-evex512"
+                                                        : "+evex512");
+    if (HasAVX10 && !HasAVX10_512 && HasEVEX512 != FE_FALSE)
       Diags.Report(diag::warn_invalid_feature_combination)
           << LastAVX512 + " " + LastAVX10 + "; will be promoted to avx10.1-512";
   } else if (HasAVX10) {
-    if (HasEVEX512 != -1)
+    if (HasEVEX512 != FE_NOSET)
       Diags.Report(diag::warn_invalid_feature_combination)
-          << LastAVX10 + (HasEVEX512 ? " +evex512" : " -evex512");
+          << LastAVX10 + (HasEVEX512 == FE_TRUE ? " +evex512" : " -evex512");
     UpdatedFeaturesVec.push_back(HasAVX10_512 ? "+evex512" : "-evex512");
   }
 
