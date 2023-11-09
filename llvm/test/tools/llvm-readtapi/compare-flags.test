@@ -1,0 +1,49 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t  
+; RUN: not llvm-readtapi --compare %t/tbdv4.tbd  %t/tbdv5.tbd 2>&1 | FileCheck %s 
+
+; CHECK: < {{.*}}tbdv4.tbd
+; CHECK: > {{.*}}tbdv5.tbd
+
+CHECK:      Two Level Namespace
+CHECK-NEXT:         < true
+CHECK-NEXT:         > false
+CHECK-NEXT: Shared Cache Ineligible
+CHECK-NEXT:         < true
+CHECK-NEXT:         > false
+
+
+//--- tbdv4.tbd
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ arm64-macos ]
+flags:           [ not_app_extension_safe, not_for_dyld_shared_cache ]
+install-name:    '/usr/lib/libFake.dylib'
+...
+
+//--- tbdv5.tbd
+{
+    "main_library": {
+        "flags": [
+            {
+                "attributes": [
+                    "not_app_extension_safe",
+                    "flat_namespace"
+                ]
+            }
+        ],
+        "install_names": [
+            {
+                "name": "/usr/lib/libFake.dylib"
+            }
+        ],
+        "target_info": [
+            {
+                "min_deployment": "13",
+                "target": "arm64-macos"
+            }
+        ]
+    },
+    "tapi_tbd_version": 5
+}
+

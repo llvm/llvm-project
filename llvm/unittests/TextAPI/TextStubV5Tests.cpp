@@ -218,6 +218,7 @@ TEST(TBDv5, ReadFile) {
   EXPECT_EQ(PackedVersion(1, 1, 0), File->getCompatibilityVersion());
   EXPECT_TRUE(File->isApplicationExtensionSafe());
   EXPECT_FALSE(File->isTwoLevelNamespace());
+  EXPECT_FALSE(File->isOSLibNotForSharedCache());
   EXPECT_EQ(0U, File->documents().size());
 
   InterfaceFileRef ClientA("ClientA", AllTargets);
@@ -1195,6 +1196,38 @@ TEST(TBDv5, SimSupport) {
   EXPECT_TRUE(ReadFile->targets().begin() != ReadFile->targets().end());
   EXPECT_EQ(*ReadFile->targets().begin(), ExpectedTarget);
   EXPECT_TRUE(ReadFile->hasSimulatorSupport());
+}
+
+TEST(TBDv5, NotForSharedCache) {
+  static const char TBDv5File[] = R"({ 
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "arm64-macos",
+      "min_deployment": "11.1" 
+    }
+  ],
+  "install_names":[
+    { "name":"/S/L/F/Foo.framework/Foo" }
+  ],
+  "flags":[ 
+    { "attributes": ["not_for_dyld_shared_cache"] }
+  ] 
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  Target ExpectedTarget = Target(AK_arm64, PLATFORM_MACOS, VersionTuple(11, 1));
+  TBDFile ReadFile = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V5, ReadFile->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"),
+            ReadFile->getInstallName());
+  EXPECT_TRUE(ReadFile->targets().begin() != ReadFile->targets().end());
+  EXPECT_EQ(*ReadFile->targets().begin(), ExpectedTarget);
+  EXPECT_FALSE(ReadFile->hasSimulatorSupport());
+  EXPECT_TRUE(ReadFile->isOSLibNotForSharedCache());
 }
 
 TEST(TBDv5, MergeIF) {
