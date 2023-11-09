@@ -465,6 +465,17 @@ function build_llvmCore() {
     fi
     LitVerbose="-v"
 
+    InstallTarget="install"
+    if [ "$Phase" -lt "3" ]; then
+      BuildTarget="clang"
+      InstallTarget="install-clang install-clang-resource-headers"
+      # compiler-rt builtins is needed on AIX to have a functional Phase 1 clang.
+      if [ "$System" = "AIX" -o "$Phase" != "1" ]; then
+        BuildTarget="$BuildTarget runtimes"
+        InstallTarget="$InstallTarget install-runtimes"
+      fi
+    fi
+
     redir="/dev/stdout"
     if [ $do_silent_log == "yes" ]; then
       echo "# Silencing build logs because of -silent-log flag..."
@@ -474,12 +485,12 @@ function build_llvmCore() {
     cd $ObjDir
     echo "# Compiling llvm $Release-$RC $Flavor"
     echo "# ${MAKE} -j $NumJobs $Verbose"
-    ${MAKE} -j $NumJobs $Verbose \
+    ${MAKE} -j $NumJobs $Verbose $BuildTarget \
         2>&1 | tee $LogDir/llvm.make-Phase$Phase-$Flavor.log > $redir
 
     echo "# Installing llvm $Release-$RC $Flavor"
     echo "# ${MAKE} install"
-    DESTDIR="${DestDir}" ${MAKE} install \
+    DESTDIR="${DestDir}" ${MAKE} $InstallTarget \
         2>&1 | tee $LogDir/llvm.install-Phase$Phase-$Flavor.log > $redir
     cd $BuildDir
 }
