@@ -22,6 +22,6 @@
 
 #if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
 #  pragma clang deprecated(ATOMIC_VAR_INIT)
-#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#endif
 
 #endif // _LIBCPP___ATOMIC_ATOMIC_INIT_H
