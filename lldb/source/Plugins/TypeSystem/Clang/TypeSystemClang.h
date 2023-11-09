@@ -154,10 +154,6 @@ public:
 
   static TypeSystemClang *GetASTContext(clang::ASTContext *ast_ctx);
 
-  // Returns true if the given artificial field name should be ignored when
-  // parsing the DWARF.
-  static bool ShouldIgnoreArtificialField(llvm::StringRef FieldName);
-
   /// Returns the display name of this TypeSystemClang that indicates what
   /// purpose it serves in LLDB. Used for example in logs.
   llvm::StringRef getDisplayName() const { return m_display_name; }

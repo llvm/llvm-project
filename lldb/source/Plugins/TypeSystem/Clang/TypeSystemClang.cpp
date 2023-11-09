@@ -771,12 +771,6 @@ TypeSystemClang *TypeSystemClang::GetASTContext(clang::ASTContext *ast) {
   return clang_ast;
 }
 
-bool TypeSystemClang::ShouldIgnoreArtificialField(llvm::StringRef Name) {
-  return Name.starts_with("_vptr$")
-         // gdb emit vtable pointer as "_vptr.classname"
-         || Name.starts_with("_vptr.");
-}
-
 clang::MangleContext *TypeSystemClang::getMangleContext() {
   if (m_mangle_ctx_up == nullptr)
     m_mangle_ctx_up.reset(getASTContext().createMangleContext());
