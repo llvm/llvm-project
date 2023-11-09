@@ -1490,10 +1490,10 @@ private:
   }
 
   void mapAndInitializeRingBuffer() {
+    if (getFlags()->allocation_ring_buffer_size < 1)
+      return;
     u32 AllocationRingBufferSize =
         static_cast<u32>(getFlags()->allocation_ring_buffer_size);
-    if (AllocationRingBufferSize < 1)
-      return;
     MemMapT MemMap;
     MemMap.map(
         /*Addr=*/0U,
