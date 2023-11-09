@@ -1779,7 +1779,7 @@ Attributes
 ==========
 
 coro_only_destroy_when_complete
----------------------------
+-------------------------------
 
 When the coroutine are marked with coro_only_destroy_when_complete, it indicates
 the coroutine must reach the final suspend point when it get destroyed.
