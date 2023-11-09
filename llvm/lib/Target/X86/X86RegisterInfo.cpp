@@ -634,7 +634,15 @@ unsigned X86RegisterInfo::getNumSupportedRegs(const MachineFunction &MF) const {
          (X86::K6_K7 + 1 == X86::TMMCFG) &&
          (X86::TMM7 + 1 == X86::NUM_TARGET_REGS) &&
          "Register number may be incorrect");
-  return X86::NUM_TARGET_REGS;
+
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  if (ST.hasAMXTILE())
+    return X86::TMM7 + 1;
+  if (ST.hasAVX512())
+    return X86::K6_K7 + 1;
+  if (ST.hasAVX())
+    return X86::YMM15 + 1;
+  return X86::R15WH + 1;
 }
 
 bool X86RegisterInfo::isArgumentRegister(const MachineFunction &MF,
