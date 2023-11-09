@@ -1250,20 +1250,16 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
         CharUnits CurOff = CharUnits::fromQuantity(Layout->getElementOffset(i));
         Address EltPtr = Builder.CreateConstInBoundsByteGEP(
             Loc.withElementType(CGM.Int8Ty), CurOff);
-        emitStoresForConstant(
-            CGM, D, EltPtr, isVolatile, Builder,
-            cast<llvm::Constant>(Builder.CreateExtractValue(constant, i)),
-            IsAutoInit);
+        emitStoresForConstant(CGM, D, EltPtr, isVolatile, Builder,
+                              constant->getAggregateElement(i), IsAutoInit);
       }
       return;
     } else if (auto *ATy = dyn_cast<llvm::ArrayType>(Ty)) {
       for (unsigned i = 0; i != ATy->getNumElements(); i++) {
         Address EltPtr = Builder.CreateConstGEP(
             Loc.withElementType(ATy->getElementType()), i);
-        emitStoresForConstant(
-            CGM, D, EltPtr, isVolatile, Builder,
-            cast<llvm::Constant>(Builder.CreateExtractValue(constant, i)),
-            IsAutoInit);
+        emitStoresForConstant(CGM, D, EltPtr, isVolatile, Builder,
+                              constant->getAggregateElement(i), IsAutoInit);
       }
       return;
     }
