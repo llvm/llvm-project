@@ -939,12 +939,11 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     // For f64 -0.0, we need to insert a fneg.d idiom.
     if (NegZeroF64) {
-      if (Is64Bit)
-        Opc = HasZdinx ? RISCV::FSGNJN_D_INX : RISCV::FSGNJN_D;
-      else
-        Opc = HasZdinx ? RISCV::FSGNJN_D_IN32X : RISCV::FSGNJN_D;
-      Res = CurDAG->getMachineNode(Opc, DL, VT, SDValue(Res, 0),
-                                   SDValue(Res, 0));
+      Opc = RISCV::FSGNJN_D;
+      if (HasZdinx)
+        Opc = Is64Bit ? RISCV::FSGNJN_D_INX : RISCV::FSGNJN_D_IN32X;
+      Res =
+          CurDAG->getMachineNode(Opc, DL, VT, SDValue(Res, 0), SDValue(Res, 0));
     }
 
     ReplaceNode(Node, Res);
