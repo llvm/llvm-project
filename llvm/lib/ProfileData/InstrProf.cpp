@@ -458,6 +458,59 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
   return Error::success();
 }
 
+/// \c NameStrings is a string composed of one of more possibly encoded
+/// sub-strings. The substrings are separated by 0 or more zero bytes. This
+/// method decodes the string and calls `NameCallback` for each substring.
+static Error
+readAndDecodeStrings(StringRef NameStrings,
+                     std::function<Error(StringRef)> NameCallback) {
+  const uint8_t *P = NameStrings.bytes_begin();
+  const uint8_t *EndP = NameStrings.bytes_end();
+  while (P < EndP) {
+    uint32_t N;
+    uint64_t UncompressedSize = decodeULEB128(P, &N);
+    P += N;
+    uint64_t CompressedSize = decodeULEB128(P, &N);
+    P += N;
+    bool isCompressed = (CompressedSize != 0);
+    SmallVector<uint8_t, 128> UncompressedNameStrings;
+    StringRef NameStrings;
+    if (isCompressed) {
+      if (!llvm::compression::zlib::isAvailable())
+        return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
+
+      if (Error E = compression::zlib::decompress(ArrayRef(P, CompressedSize),
+                                                  UncompressedNameStrings,
+                                                  UncompressedSize)) {
+        consumeError(std::move(E));
+        return make_error<InstrProfError>(instrprof_error::uncompress_failed);
+      }
+      P += CompressedSize;
+      NameStrings = toStringRef(UncompressedNameStrings);
+    } else {
+      NameStrings =
+          StringRef(reinterpret_cast<const char *>(P), UncompressedSize);
+      P += UncompressedSize;
+    }
+    // Now parse the name strings.
+    SmallVector<StringRef, 0> Names;
+    NameStrings.split(Names, getInstrProfNameSeparator());
+    for (StringRef &Name : Names)
+      if (Error E = NameCallback(Name))
+        return E;
+
+    while (P < EndP && *P == 0)
+      P++;
+  }
+  return Error::success();
+}
+
+Error InstrProfSymtab::create(StringRef NameStrings) {
+  return readAndDecodeStrings(
+      NameStrings,
+      std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
+}
+
 Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
   if (Error E = addFuncName(PGOFuncName))
     return E;
@@ -564,48 +617,6 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
   }
   return collectGlobalObjectNameStrings(
       NameStrs, compression::zlib::isAvailable() && doCompression, Result);
-}
-
-Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
-  const uint8_t *P = NameStrings.bytes_begin();
-  const uint8_t *EndP = NameStrings.bytes_end();
-  while (P < EndP) {
-    uint32_t N;
-    uint64_t UncompressedSize = decodeULEB128(P, &N);
-    P += N;
-    uint64_t CompressedSize = decodeULEB128(P, &N);
-    P += N;
-    bool isCompressed = (CompressedSize != 0);
-    SmallVector<uint8_t, 128> UncompressedNameStrings;
-    StringRef NameStrings;
-    if (isCompressed) {
-      if (!llvm::compression::zlib::isAvailable())
-        return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
-
-      if (Error E = compression::zlib::decompress(ArrayRef(P, CompressedSize),
-                                                  UncompressedNameStrings,
-                                                  UncompressedSize)) {
-        consumeError(std::move(E));
-        return make_error<InstrProfError>(instrprof_error::uncompress_failed);
-      }
-      P += CompressedSize;
-      NameStrings = toStringRef(UncompressedNameStrings);
-    } else {
-      NameStrings =
-          StringRef(reinterpret_cast<const char *>(P), UncompressedSize);
-      P += UncompressedSize;
-    }
-    // Now parse the name strings.
-    SmallVector<StringRef, 0> Names;
-    NameStrings.split(Names, getInstrProfNameSeparator());
-    for (StringRef &Name : Names)
-      if (Error E = Symtab.addFuncName(Name))
-        return E;
-
-    while (P < EndP && *P == 0)
-      P++;
-  }
-  return Error::success();
 }
 
 void InstrProfRecord::accumulateCounts(CountSumOrPercent &Sum) const {
