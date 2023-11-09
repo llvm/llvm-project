@@ -2906,6 +2906,11 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                 std::stringstream asFortran;
                 asFortran << name->symbol->name().ToString();
 
+                if (builder.getModule()
+                        .lookupSymbol<mlir::acc::GlobalConstructorOp>(
+                            declareGlobalCtorName.str()))
+                  return;
+
                 if (!globalOp) {
                   if (Fortran::semantics::FindEquivalenceSet(*name->symbol)) {
                     for (Fortran::semantics::EquivalenceObject eqObj :
@@ -2959,6 +2964,7 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                 }
                 builder.restoreInsertionPoint(crtPos);
               }
+
             },
             [&](const Fortran::parser::Name &name) {
               TODO(operandLocation, "OpenACC Global Ctor from parser::Name");
