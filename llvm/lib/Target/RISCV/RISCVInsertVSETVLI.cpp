@@ -1349,7 +1349,7 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
     if (!AVLDefMI)
       return;
     // This is an inline dominance check which covers the case of
-    // UnavailablePrede being the preheader of a loop.
+    // UnavailablePred being the preheader of a loop.
     if (AVLDefMI->getParent() != UnavailablePred)
       return;
     for (auto &TermMI : UnavailablePred->terminators())
