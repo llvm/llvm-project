@@ -2312,7 +2312,8 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   cp.processProcBind(procBindKindAttr);
   cp.processDefault();
   cp.processAllocate(allocatorOperands, allocateOperands);
-  cp.processReduction(currentLocation, reductionVars, reductionDeclSymbols);
+  if (!outerCombined)
+    cp.processReduction(currentLocation, reductionVars, reductionDeclSymbols);
 
   return genOpWithBody<mlir::omp::ParallelOp>(
       converter, eval, currentLocation, outerCombined, &clauseList,
