@@ -1115,7 +1115,6 @@ genDependKindAttr(fir::FirOpBuilder &firOpBuilder,
 
 static mlir::Value getIfClauseOperand(
     Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::StatementContext &stmtCtx,
     const Fortran::parser::OmpClause::If *ifClause,
     Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
     mlir::Location clauseLocation) {
@@ -1126,6 +1125,7 @@ static mlir::Value getIfClauseOperand(
   if (directive && directive.value() != directiveName)
     return nullptr;
 
+  Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto &expr = std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
   mlir::Value ifVal = fir::getBase(
@@ -1673,13 +1673,12 @@ bool ClauseProcessor::processDepend(
 bool ClauseProcessor::processIf(
     Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
     mlir::Value &result) const {
-  Fortran::lower::StatementContext stmtCtx;
   bool found = false;
   findRepeatableClause<ClauseTy::If>(
       [&](const ClauseTy::If *ifClause,
           const Fortran::parser::CharBlock &source) {
         mlir::Location clauseLocation = converter.genLocation(source);
-        mlir::Value operand = getIfClauseOperand(converter, stmtCtx, ifClause,
+        mlir::Value operand = getIfClauseOperand(converter, ifClause,
                                                  directiveName, clauseLocation);
         // Assume that, at most, a single 'if' clause will be applicable to the
         // given directive.
