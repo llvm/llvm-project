@@ -2317,14 +2317,9 @@ private:
   clang::Module *TheGlobalModuleFragment = nullptr;
 
   /// The implicit global module fragments of the current translation unit.
-  /// We would only create at most two implicit global module fragments to
-  /// avoid performance penalties when there are many language linkage
-  /// exports.
   ///
-  /// The contents in the implicit global module fragment can't be discarded
-  /// no matter if it is exported or not.
+  /// The contents in the implicit global module fragment can't be discarded.
   clang::Module *TheImplicitGlobalModuleFragment = nullptr;
-  clang::Module *TheExportedImplicitGlobalModuleFragment = nullptr;
 
   /// Namespace definitions that we will export when they finish.
   llvm::SmallPtrSet<const NamespaceDecl*, 8> DeferredExportedNamespaces;
@@ -2336,9 +2331,7 @@ private:
 
   /// Helper function to judge if we are in module purview.
   /// Return false if we are not in a module.
-  bool isCurrentModulePurview() const {
-    return getCurrentModule() ? getCurrentModule()->isModulePurview() : false;
-  }
+  bool isCurrentModulePurview() const;
 
   /// Enter the scope of the explicit global module fragment.
   Module *PushGlobalModuleFragment(SourceLocation BeginLoc);
@@ -2346,8 +2339,7 @@ private:
   void PopGlobalModuleFragment();
 
   /// Enter the scope of an implicit global module fragment.
-  Module *PushImplicitGlobalModuleFragment(SourceLocation BeginLoc,
-                                           bool IsExported);
+  Module *PushImplicitGlobalModuleFragment(SourceLocation BeginLoc);
   /// Leave the scope of an implicit global module fragment.
   void PopImplicitGlobalModuleFragment();
 

@@ -939,22 +939,20 @@ void Sema::PopGlobalModuleFragment() {
   ModuleScopes.pop_back();
 }
 
-Module *Sema::PushImplicitGlobalModuleFragment(SourceLocation BeginLoc,
-                                               bool IsExported) {
-  Module **M = IsExported ? &TheExportedImplicitGlobalModuleFragment
-                          : &TheImplicitGlobalModuleFragment;
-  if (!*M) {
+Module *Sema::PushImplicitGlobalModuleFragment(SourceLocation BeginLoc) {
+  if (!TheImplicitGlobalModuleFragment) {
     ModuleMap &Map = PP.getHeaderSearchInfo().getModuleMap();
-    *M = Map.createImplicitGlobalModuleFragmentForModuleUnit(
-        BeginLoc, IsExported, getCurrentModule());
+    TheImplicitGlobalModuleFragment =
+        Map.createImplicitGlobalModuleFragmentForModuleUnit(BeginLoc,
+                                                            getCurrentModule());
   }
-  assert(*M && "module creation should not fail");
+  assert(TheImplicitGlobalModuleFragment && "module creation should not fail");
 
   // Enter the scope of the global module.
-  ModuleScopes.push_back({BeginLoc, *M,
+  ModuleScopes.push_back({BeginLoc, TheImplicitGlobalModuleFragment,
                           /*OuterVisibleModules=*/{}});
-  VisibleModules.setVisible(*M, BeginLoc);
-  return *M;
+  VisibleModules.setVisible(TheImplicitGlobalModuleFragment, BeginLoc);
+  return TheImplicitGlobalModuleFragment;
 }
 
 void Sema::PopImplicitGlobalModuleFragment() {
@@ -962,4 +960,23 @@ void Sema::PopImplicitGlobalModuleFragment() {
          getCurrentModule()->isImplicitGlobalModule() &&
          "left the wrong module scope, which is not global module fragment");
   ModuleScopes.pop_back();
+}
+
+bool Sema::isCurrentModulePurview() const {
+  if (!getCurrentModule())
+    return false;
+
+  /// Does this Module scope describe part of the purview of a standard named
+  /// C++ module?
+  switch (getCurrentModule()->Kind) {
+  case Module::ModuleInterfaceUnit:
+  case Module::ModuleImplementationUnit:
+  case Module::ModulePartitionInterface:
+  case Module::ModulePartitionImplementation:
+  case Module::PrivateModuleFragment:
+  case Module::ImplicitGlobalModuleFragment:
+    return true;
+  default:
+    return false;
+  }
 }

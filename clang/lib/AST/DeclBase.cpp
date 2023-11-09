@@ -1113,7 +1113,7 @@ bool Decl::isInAnotherModuleUnit() const {
   if (M->isGlobalModule())
     return false;
 
-  assert(M->isModulePurview() && "New module kind?");
+  assert(M->isNamedModule() && "New module kind?");
   return M != getASTContext().getCurrentNamedModule();
 }
 

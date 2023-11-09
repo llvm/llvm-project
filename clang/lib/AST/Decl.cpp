@@ -579,27 +579,6 @@ static bool isSingleLineLanguageLinkage(const Decl &D) {
   return false;
 }
 
-/// Determine whether D is declared in the purview of a named module.
-static bool isInModulePurview(const NamedDecl *D) {
-  if (auto *M = D->getOwningModule())
-    return M->isModulePurview();
-  return false;
-}
-
-static bool isExportedFromModuleInterfaceUnit(const NamedDecl *D) {
-  // FIXME: Handle isModulePrivate.
-  switch (D->getModuleOwnershipKind()) {
-  case Decl::ModuleOwnershipKind::Unowned:
-  case Decl::ModuleOwnershipKind::ReachableWhenImported:
-  case Decl::ModuleOwnershipKind::ModulePrivate:
-    return false;
-  case Decl::ModuleOwnershipKind::Visible:
-  case Decl::ModuleOwnershipKind::VisibleWhenImported:
-    return isInModulePurview(D);
-  }
-  llvm_unreachable("unexpected module ownership kind");
-}
-
 static bool isDeclaredInModuleInterfaceOrPartition(const NamedDecl *D) {
   if (auto *M = D->getOwningModule())
     return M->isInterfaceOrPartition();
@@ -1191,6 +1170,27 @@ Linkage NamedDecl::getLinkageInternal() const {
       .getLinkage();
 }
 
+/// Determine whether D is attached to a named module.
+static bool isInNamedModule(const NamedDecl *D) {
+  if (auto *M = D->getOwningModule())
+    return M->isNamedModule();
+  return false;
+}
+
+static bool isExportedFromModuleInterfaceUnit(const NamedDecl *D) {
+  // FIXME: Handle isModulePrivate.
+  switch (D->getModuleOwnershipKind()) {
+  case Decl::ModuleOwnershipKind::Unowned:
+  case Decl::ModuleOwnershipKind::ReachableWhenImported:
+  case Decl::ModuleOwnershipKind::ModulePrivate:
+    return false;
+  case Decl::ModuleOwnershipKind::Visible:
+  case Decl::ModuleOwnershipKind::VisibleWhenImported:
+    return isInNamedModule(D);
+  }
+  llvm_unreachable("unexpected module ownership kind");
+}
+
 /// Get the linkage from a semantic point of view. Entities in
 /// anonymous namespaces are external (in c++98).
 Linkage NamedDecl::getFormalLinkage() const {
@@ -1204,7 +1204,7 @@ Linkage NamedDecl::getFormalLinkage() const {
   // [basic.namespace.general]/p2
   //   A namespace is never attached to a named module and never has a name with
   //   module linkage.
-  if (isInModulePurview(this) && InternalLinkage == Linkage::External &&
+  if (isInNamedModule(this) && InternalLinkage == Linkage::External &&
       !isExportedFromModuleInterfaceUnit(
           cast<NamedDecl>(this->getCanonicalDecl())) &&
       !isa<NamespaceDecl>(this))
