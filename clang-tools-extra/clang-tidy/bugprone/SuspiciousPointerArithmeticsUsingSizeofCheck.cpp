@@ -15,10 +15,12 @@
 
 using namespace clang::ast_matchers;
 
-namespace {
-  static const char *bin_op_bind = "ptr-sizeof-expression";	
-}
 namespace clang::tidy::bugprone {
+
+//static const char *bin_op_bind = "ptr-sizeof-expression";	
+static constexpr llvm::StringLiteral BinOp{"bin-op"};
+static const auto IgnoredType = qualType(anyOf(asString("char"),asString("unsigned char"),asString("signed char"),asString("int8_t"),asString("uint8_t"),asString("std::byte"),asString("const char"),asString("const unsigned char"),asString("const signed char"),asString("const int8_t"),asString("const uint8_t"),asString("const std::byte")));
+static const auto InterestingPointer = pointerType(unless(pointee(IgnoredType)));
 
 SuspiciousPointerArithmeticsUsingSizeofCheck::SuspiciousPointerArithmeticsUsingSizeofCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -28,7 +30,7 @@ SuspiciousPointerArithmeticsUsingSizeofCheck::SuspiciousPointerArithmeticsUsingS
 void SuspiciousPointerArithmeticsUsingSizeofCheck::registerMatchers(MatchFinder *Finder) {
     Finder->addMatcher(
 	     expr(anyOf(
-                    binaryOperator(hasAnyOperatorName("+","-"),
+/*                    binaryOperator(hasAnyOperatorName("+","-"),
                       hasEitherOperand(hasType(pointerType())),
 		      hasEitherOperand(sizeOfExpr(expr())),
 		      unless(allOf(hasLHS(hasType(pointerType())),
@@ -38,13 +40,20 @@ void SuspiciousPointerArithmeticsUsingSizeofCheck::registerMatchers(MatchFinder 
 	              hasLHS(hasType(pointerType())),
 		      hasRHS(sizeOfExpr(expr()))
 		      ).bind(bin_op_bind)
+*/
+		    binaryOperator(hasAnyOperatorName("+=","-=","+","-" ),
+	              hasLHS(hasType(InterestingPointer)),
+		      hasRHS(sizeOfExpr(expr()))).bind(BinOp),
+		    binaryOperator(hasAnyOperatorName("+","-" ),
+	              hasRHS(hasType(InterestingPointer)),
+		      hasLHS(sizeOfExpr(expr()))).bind(BinOp)
             )),
         this);
 }
 
 void SuspiciousPointerArithmeticsUsingSizeofCheck::check(const MatchFinder::MatchResult &Result) {
     static const char *diag_msg	= "Suspicious pointer arithmetics using sizeof() operator";
-    auto Matched = Result.Nodes.getNodeAs<BinaryOperator>(bin_op_bind);
+    auto Matched = Result.Nodes.getNodeAs<BinaryOperator>(BinOp);
     diag(Matched->getExprLoc(),diag_msg)<< Matched->getSourceRange();
 }
 
