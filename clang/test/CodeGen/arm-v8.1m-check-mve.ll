@@ -4,9 +4,7 @@
 ; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m85 -mfloat-abi=hard -O2 -c -mthumb -save-temps=obj %s
 ; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m55 -mfloat-abi=hard -O2 -c -mthumb -save-temps=obj %s
 ; CHECK: .fpu   fpv5-d16
-; CHECK  .arch_extension mve.fp
-target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-target triple = "thumbv8.1m.main-none-unknown-eabihf"
+; CHECK-NEXT  .arch_extension mve.fp
 
 %struct.dummy_t = type { float, float, float, float }
 
