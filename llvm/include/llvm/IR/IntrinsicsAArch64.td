@@ -2679,10 +2679,10 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_st1q_vert  : SME_Load_Store_Intrinsic<llvm_nxv1i1_ty>;
 
   // Spill + fill
-  def int_aarch64_sme_ldr : DefaultAttrsIntrinsic<
-    [], [llvm_i32_ty, llvm_ptr_ty]>;
-  def int_aarch64_sme_str : DefaultAttrsIntrinsic<
-    [], [llvm_i32_ty, llvm_ptr_ty]>;
+  class SME_LDR_STR_Intrinsic
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty]>;
+  def int_aarch64_sme_ldr : SME_LDR_STR_Intrinsic;
+  def int_aarch64_sme_str : SME_LDR_STR_Intrinsic;
 
   class SME_TileToVector_Intrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -3453,5 +3453,8 @@ let TargetPrefix = "aarch64" in {
   // 2-way and 4-way vector selects
   def int_aarch64_sve_sel_x2  : SVE2_VG2_Sel_Intrinsic;
   def int_aarch64_sve_sel_x4  : SVE2_VG4_Sel_Intrinsic;
+
+  def int_aarch64_sme_ldr_zt : SME_LDR_STR_Intrinsic;
+  def int_aarch64_sme_str_zt : SME_LDR_STR_Intrinsic;
 
 }
