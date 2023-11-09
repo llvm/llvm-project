@@ -1,0 +1,11 @@
+on:
+  pull_request:
+  merge_group:
+
+# This is required to silence emails about the workflow having no jobs.
+# We simply define a dummy job that does nothing much.
+jobs:
+  dummy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: /usr/bin/true
