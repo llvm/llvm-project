@@ -2057,12 +2057,6 @@ def SVDOT_X2_F : SInst<"svdot[_{d}_{2}_{3}]", "ddhh", "f",  MergeNone, "aarch64_
 def SVDOT_LANE_X2_S : SInst<"svdot_lane[_{d}_{2}_{3}]", "ddhhi", "i",  MergeNone, "aarch64_sve_sdot_lane_x2", [], [ImmCheck<3, ImmCheck0_3>]>;
 def SVDOT_LANE_X2_U : SInst<"svdot_lane[_{d}_{2}_{3}]", "ddhhi", "Ui", MergeNone, "aarch64_sve_udot_lane_x2", [], [ImmCheck<3, ImmCheck0_3>]>;
 def SVDOT_LANE_X2_F : SInst<"svdot_lane[_{d}_{2}_{3}]", "ddhhi", "f",  MergeNone, "aarch64_sve_fdot_lane_x2", [], [ImmCheck<3, ImmCheck0_3>]>;
-
-def SVBFMLSLB : SInst<"svbfmlslb[_{d}]", "dd$$", "f", MergeNone, "aarch64_sve_bfmlslb", [IsOverloadNone], []>;
-def SVBFMLSLT : SInst<"svbfmlslt[_{d}]", "dd$$", "f", MergeNone, "aarch64_sve_bfmlslt", [IsOverloadNone], []>;
-
-def SVBFMLSLB_LANE : SInst<"svbfmlslb_lane[_{d}]", "dd$$i", "f", MergeNone, "aarch64_sve_bfmlslb_lane", [IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
-def SVBFMLSLT_LANE : SInst<"svbfmlslt_lane[_{d}]", "dd$$i", "f", MergeNone, "aarch64_sve_bfmlslt_lane", [IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
 }
 
 let TargetGuard = "sve2p1" in {
@@ -2305,4 +2299,13 @@ let TargetGuard = "sme2" in {
   def SVUUNPK_X2 : SInst<"svunpk_{d}[_{1}_x2]", "2h",   "UsUiUl", MergeNone, "aarch64_sve_uunpk_x2", [IsStreaming], []>;
   def SVSUNPK_X4 : SInst<"svunpk_{d}[_{3}_x4]", "42.h", "sil",    MergeNone, "aarch64_sve_sunpk_x4", [IsStreaming], []>;
   def SVUUNPK_X4 : SInst<"svunpk_{d}[_{3}_x4]", "42.h", "UsUiUl", MergeNone, "aarch64_sve_uunpk_x4", [IsStreaming], []>;
+}
+
+let TargetGuard = "sve2p1|sme" in {
+// == BFloat16 multiply-subtract ==
+  def SVBFMLSLB : SInst<"svbfmlslb[_{d}]", "dd$$", "f", MergeNone, "aarch64_sve_bfmlslb", [IsOverloadNone], []>;
+  def SVBFMLSLT : SInst<"svbfmlslt[_{d}]", "dd$$", "f", MergeNone, "aarch64_sve_bfmlslt", [IsOverloadNone], []>;
+
+  def SVBFMLSLB_LANE : SInst<"svbfmlslb_lane[_{d}]", "dd$$i", "f", MergeNone, "aarch64_sve_bfmlslb_lane", [IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVBFMLSLT_LANE : SInst<"svbfmlslt_lane[_{d}]", "dd$$i", "f", MergeNone, "aarch64_sve_bfmlslt_lane", [IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
 }
