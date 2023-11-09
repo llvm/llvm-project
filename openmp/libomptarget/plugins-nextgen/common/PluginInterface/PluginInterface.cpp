@@ -504,12 +504,6 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
           printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
     return Err;
 
-  if (RecordReplay.isRecording())
-    RecordReplay.saveKernelInputInfo(
-        getName(), getImage(), ArgPtrs, ArgOffsets,
-        KernelArgs.NumArgs - /* KernelLaunchEnvironment */ 1, NumBlocks,
-        NumThreads, KernelArgs.Tripcount);
-
   return launchImpl(GenericDevice, NumThreads, NumBlocks, KernelArgs,
                     KernelArgsPtr, AsyncInfoWrapper);
 }
@@ -1410,6 +1404,12 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
 
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
+
+  if (RecordReplay.isRecording())
+    RecordReplay.saveKernelInputInfo(
+        GenericKernel.getName(), GenericKernel.getImage(), ArgPtrs, ArgOffsets,
+        KernelArgs.NumArgs, KernelArgs.NumTeams[0], KernelArgs.ThreadLimit[0],
+        KernelArgs.Tripcount);
 
   if (RecordReplay.isRecording())
     RecordReplay.saveImage(GenericKernel.getName(), GenericKernel.getImage());
