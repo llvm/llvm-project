@@ -672,6 +672,30 @@ func.func @fold_extract_insert(%input : tensor<?x?x?xf32>, %slice: tensor<4x?x8x
 
 // -----
 
+// CHECK-LABEL: func @fold_gather_constant_splat
+//   CHECK-NOT: tensor.gather
+//       CHECK: arith.constant dense<1.000000e-01> : tensor<1x2x1x1x1xf32>
+func.func @fold_gather_constant_splat(%indices : tensor<1x2x3xindex>) -> tensor<1x2x1x1x1xf32> {
+  %cst = arith.constant dense<1.000000e-01> : tensor<4x4x4xf32>
+  %0 = tensor.gather %cst[%indices] gather_dims([0, 1, 2]) :
+    (tensor<4x4x4xf32>, tensor<1x2x 3xindex>) -> tensor<1x2x 1x1x1xf32>
+  return %0 : tensor<1x2x 1x1x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_reshape_constant_splat
+//   CHECK-NOT: tensor.reshape
+//       CHECK: arith.constant dense<1.000000e-01> : tensor<4xf32>
+func.func @fold_reshape_constant_splat(%shape : tensor<1xi32>) -> tensor<4xf32> {
+  %cst = arith.constant dense<1.000000e-01> : tensor<4x1xf32>
+  %0 = tensor.reshape %cst(%shape)
+             : (tensor<4x1xf32>, tensor<1xi32>) -> tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_extract_constant_splat
 //   CHECK-NOT: tensor.extract_slice
 //       CHECK: arith.constant dense<42> : tensor<4x4xi32>
@@ -679,6 +703,30 @@ func.func @fold_extract_constant_splat() -> (tensor<4x4xi32>) {
   %cst = arith.constant dense<42> : tensor<1024x1024xi32>
   %1 = tensor.extract_slice %cst[0,0] [4,4] [1, 1] : tensor<1024x1024xi32> to tensor<4x4xi32>
   return %1 : tensor<4x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_pack_constant_splat
+//   CHECK-NOT: tensor.pack
+//       CHECK: arith.constant dense<1.000000e-01> : tensor<8x16x8x32xf32>
+func.func @fold_pack_constant_splat(%dest : tensor<8x16x8x32xf32>) -> tensor<8x16x8x32xf32> {
+  %cst = arith.constant dense<1.000000e-01> : tensor<64x128xf32>
+  %0 = tensor.pack %cst outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
+    inner_tiles = [8, 32] into %dest : tensor<64x128xf32> -> tensor<8x16x8x32xf32>
+  return %0 : tensor<8x16x8x32xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_unpack_constant_splat
+//   CHECK-NOT: tensor.unpack
+//       CHECK: arith.constant dense<1.000000e-01> : tensor<128x256xf32>
+func.func @fold_unpack_constant_splat(%dest : tensor<128x256xf32>) -> tensor<128x256xf32> {
+  %cst = arith.constant dense<1.000000e-01> : tensor<16x8x8x32xf32>
+  %0 = tensor.unpack %cst inner_dims_pos = [0, 1]
+    inner_tiles = [8, 32] into %dest : tensor<16x8x8x32xf32> -> tensor<128x256xf32>
+  return %0 : tensor<128x256xf32>
 }
 
 // -----
