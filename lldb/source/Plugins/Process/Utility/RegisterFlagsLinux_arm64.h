@@ -56,6 +56,8 @@ private:
   using DetectorFn = std::function<Fields(uint64_t, uint64_t)>;
 
   static Fields DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2);
+  static Fields DetectFPSRFields(uint64_t hwcap, uint64_t hwcap2);
+  static Fields DetectFPCRFields(uint64_t hwcap, uint64_t hwcap2);
 
   struct RegisterEntry {
     RegisterEntry(llvm::StringRef name, unsigned size, DetectorFn detector)
@@ -65,8 +67,10 @@ private:
     llvm::StringRef m_name;
     RegisterFlags m_flags;
     DetectorFn m_detector;
-  } m_registers[1] = {
+  } m_registers[3] = {
       RegisterEntry("cpsr", 4, DetectCPSRFields),
+      RegisterEntry("fpsr", 4, DetectFPSRFields),
+      RegisterEntry("fpcr", 4, DetectFPCRFields),
   };
 
   // Becomes true once field detection has been run for all registers.
