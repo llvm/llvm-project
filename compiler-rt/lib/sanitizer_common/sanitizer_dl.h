@@ -19,7 +19,7 @@ namespace __sanitizer {
 // Returns the path to the shared object or - in the case of statically linked
 // sanitizers
 // - the main program itself, that contains the sanitizer.
-const char* dladdrSelfFName(void);
+const char* DladdrSelfFName(void);
 
 }  // namespace __sanitizer
 

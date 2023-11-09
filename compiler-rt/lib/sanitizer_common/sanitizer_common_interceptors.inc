@@ -6323,15 +6323,15 @@ INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
     if (common_flags()->test_only_replace_dlopen_main_program) {
       VPrintf(1, "dlopen interceptor: filename: %s\n", filename);
 
-      const char *selfFName = dladdrSelfFName();
-      VPrintf(1, "dlopen interceptor: dladdrSelfFName: %p %s\n",
-              (void *)selfFName, selfFName);
+      const char *SelfFName = DladdrSelfFName();
+      VPrintf(1, "dlopen interceptor: DladdrSelfFName: %p %s\n",
+              (void *)SelfFName, SelfFName);
 
-      if (internal_strcmp(selfFName, filename) == 0) {
+      if (internal_strcmp(SelfFName, filename) == 0) {
         // It's possible they copied the string from dladdr, so
         // we do a string comparison rather than pointer comparison.
         VPrintf(1, "dlopen interceptor: replacing %s because it matches %s\n",
-                filename, selfFName);
+                filename, SelfFName);
         filename = (char *)0;  // RTLD_DEFAULT
       }
     }

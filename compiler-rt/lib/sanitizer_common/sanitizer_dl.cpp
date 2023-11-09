@@ -20,7 +20,7 @@
 namespace __sanitizer {
 extern const char *SanitizerToolName;
 
-const char *dladdrSelfFName(void) {
+const char *DladdrSelfFName(void) {
 #if SANITIZER_GLIBC
   Dl_info info;
   int ret = dladdr((void *)&SanitizerToolName, &info);
