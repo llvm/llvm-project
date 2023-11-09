@@ -21,6 +21,26 @@
 using namespace lldb_private;
 
 LinuxArm64RegisterFlags::Fields
+LinuxArm64RegisterFlags::DetectFPSRFields(uint64_t hwcap, uint64_t hwcap2) {
+  // fpsr's contents are constant.
+  (void)hwcap;
+  (void)hwcap2;
+
+  return {
+      // Bits 31-28 are N/Z/C/V, only used by AArch32.
+      {"QC", 27},
+      // Bits 26-8 reserved.
+      {"IDC", 7},
+      // Bits 6-5 reserved.
+      {"IXC", 4},
+      {"UFC", 3},
+      {"OFC", 2},
+      {"DZC", 1},
+      {"IOC", 0},
+  };
+}
+
+LinuxArm64RegisterFlags::Fields
 LinuxArm64RegisterFlags::DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2) {
   // The fields here are a combination of the Arm manual's SPSR_EL1,
   // plus a few changes where Linux has decided not to make use of them at all,
