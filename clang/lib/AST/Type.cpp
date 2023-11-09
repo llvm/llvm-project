@@ -43,6 +43,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -2381,6 +2382,7 @@ bool Type::isSizelessBuiltinType() const {
       return false;
     }
   }
+
   return false;
 }
 
@@ -2400,7 +2402,66 @@ bool Type::isWebAssemblyTableType() const {
   return false;
 }
 
-bool Type::isSizelessType() const { return isSizelessBuiltinType(); }
+bool Type::isSizelessType() const {
+  // Check if this type or any of its constituents are sizeless, due to
+  // being a builtin type or individually having the user attribute.
+  // As structs can be recursive, we iterate through without repeats.
+  SmallVector<const Type *, 1> Todo = {this};
+  llvm::SmallPtrSet<const Type *, 1> Done;
+
+  while (Todo.size()) {
+    auto current = Todo.pop_back_val();
+    if (Done.count(current))
+      continue;
+    Done.insert(current);
+
+    // If either this is a known sizeless type from being a builtin
+    // or as marked by the user, this is a sizeless type.
+    if (current->isSizelessBuiltinType())
+      return true;
+    if (current->hasAttr(attr::SizelessType))
+      return true;
+
+    // Otherwise return true if any inner types are sizeless.
+    switch (current->CanonicalType->getTypeClass()) {
+    default:
+      break;
+    case Record: {
+      // A struct with sizeless types is itself sizeless.
+      const auto *Rec = cast<RecordType>(current->CanonicalType)->getDecl();
+
+      // skip incomplete structs
+      if (!Rec->isCompleteDefinition())
+        break;
+
+      // a struct marked sizeless explicitly is sizeless
+      if (Rec->hasAttr<clang::SizelessTypeAttr>())
+        return true;
+
+      // A struct is sizeless if it contains a sizeless field
+      for (auto field : Rec->fields())
+        Todo.push_back(field->getType().getTypePtr());
+
+      // A class is sizeless if it contains a sizeless base
+      if (const auto *CXXRec = dyn_cast<CXXRecordDecl>(Rec))
+        for (auto base : CXXRec->bases())
+          Todo.push_back(base.getType().getTypePtr());
+      break;
+    }
+    case ConstantArray:
+    case VariableArray:
+      // An array is sizeless if its element type is sizeless
+      Todo.push_back(cast<ArrayType>(current->CanonicalType)
+                         ->getElementType()
+                         .getTypePtr());
+      break;
+    case IncompleteArray:
+      // skip incomplete arrays
+      break;
+    }
+  }
+  return false;
+}
 
 bool Type::isSizelessVectorType() const {
   return isSVESizelessBuiltinType() || isRVVSizelessBuiltinType();

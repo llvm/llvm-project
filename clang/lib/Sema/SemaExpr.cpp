@@ -4491,13 +4491,13 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
   // be complete (and will attempt to complete it if it's an array of unknown
   // bound).
   if (ExprKind == UETT_AlignOf || ExprKind == UETT_PreferredAlignOf) {
-    if (RequireCompleteSizedType(
+    if (RequireCompleteSizeofType(
             E->getExprLoc(), Context.getBaseElementType(E->getType()),
             diag::err_sizeof_alignof_incomplete_or_sizeless_type,
             getTraitSpelling(ExprKind), E->getSourceRange()))
       return true;
   } else {
-    if (RequireCompleteSizedExprType(
+    if (RequireCompleteSizeofExprType(
             E, diag::err_sizeof_alignof_incomplete_or_sizeless_type,
             getTraitSpelling(ExprKind), E->getSourceRange()))
       return true;
@@ -4772,22 +4772,22 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
                                       ExprKind))
     return false;
 
-  if (RequireCompleteSizedType(
-          OpLoc, ExprType, diag::err_sizeof_alignof_incomplete_or_sizeless_type,
-          KWName, ExprRange))
-    return true;
-
-  if (ExprType->isFunctionType()) {
-    Diag(OpLoc, diag::err_sizeof_alignof_function_type) << KWName << ExprRange;
-    return true;
-  }
-
   // WebAssembly tables are always illegal operands to unary expressions and
   // type traits.
   if (Context.getTargetInfo().getTriple().isWasm() &&
       ExprType->isWebAssemblyTableType()) {
     Diag(OpLoc, diag::err_wasm_table_invalid_uett_operand)
         << getTraitSpelling(ExprKind);
+    return true;
+  }
+
+  if (RequireCompleteSizeofType(
+          OpLoc, ExprType, diag::err_sizeof_alignof_incomplete_or_sizeless_type,
+          KWName, ExprRange))
+    return true;
+
+  if (ExprType->isFunctionType()) {
+    Diag(OpLoc, diag::err_sizeof_alignof_function_type) << KWName << ExprRange;
     return true;
   }
 

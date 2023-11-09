@@ -2275,8 +2275,12 @@ public:
     Normal,
 
     /// Relax the normal rules for complete types so that they include
-    /// sizeless built-in types.
+    /// sizeless built-in or sizeless user types.
     AcceptSizeless,
+
+    /// Relax the normal rules for complete types so that they include
+    /// sizeless user types, but not sizeless builtin types.
+    AcceptUserSizeless,
 
     // FIXME: Eventually we should flip the default to Normal and opt in
     // to AcceptSizeless rather than opt out of it.
@@ -2539,6 +2543,14 @@ public:
   bool RequireCompleteSizedType(SourceLocation Loc, QualType T, unsigned DiagID,
                                 const Ts &... Args) {
     SizelessTypeDiagnoser<Ts...> Diagnoser(DiagID, Args...);
+    return RequireCompleteType(Loc, T, CompleteTypeKind::AcceptUserSizeless,
+                               Diagnoser);
+  }
+
+  template <typename... Ts>
+  bool RequireCompleteSizeofType(SourceLocation Loc, QualType T,
+                                 unsigned DiagID, const Ts &...Args) {
+    SizelessTypeDiagnoser<Ts...> Diagnoser(DiagID, Args...);
     return RequireCompleteType(Loc, T, CompleteTypeKind::Normal, Diagnoser);
   }
 
@@ -2566,6 +2578,14 @@ public:
   template <typename... Ts>
   bool RequireCompleteSizedExprType(Expr *E, unsigned DiagID,
                                     const Ts &... Args) {
+    SizelessTypeDiagnoser<Ts...> Diagnoser(DiagID, Args...);
+    return RequireCompleteExprType(E, CompleteTypeKind::AcceptUserSizeless,
+                                   Diagnoser);
+  }
+
+  template <typename... Ts>
+  bool RequireCompleteSizeofExprType(Expr *E, unsigned DiagID,
+                                     const Ts &...Args) {
     SizelessTypeDiagnoser<Ts...> Diagnoser(DiagID, Args...);
     return RequireCompleteExprType(E, CompleteTypeKind::Normal, Diagnoser);
   }

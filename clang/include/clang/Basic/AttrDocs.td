@@ -7095,6 +7095,37 @@ neither type checking rules, nor runtime semantics. In particular:
   }];
 }
 
+def SizelessTypeDocs : Documentation {
+  let Category = DocCatType;
+  let Heading = "sizeless";
+  let Content = [{
+This attribute is used to on types to forbid the use of the sizeof operation.
+This may be useful for code with scalable vectors, which may forbid the use
+of sizeof on that platform already. This attribute enables more consistent
+behavior by forbidding sizeof on all platforms.
+
+The attribute takes no arguments.
+
+For example:
+
+.. code-block:: c++
+
+  int* [[clang::sizeless]] f();
+
+The attribute does not have any effect on the semantics of the type system,
+neither type checking rules, nor runtime semantics. In particular:
+
+- ``std::is_same<T, T [[clang::sizeless]]>`` is true for all types
+  ``T``.
+
+- It is not permissible for overloaded functions or template specializations
+  to differ merely by an ``sizeless`` attribute.
+
+- The presence of an ``sizeless`` attribute will not affect name
+  mangling.
+  }];
+}
+
 def WeakDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{

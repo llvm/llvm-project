@@ -8651,6 +8651,14 @@ static void HandleAnnotateTypeAttr(TypeProcessingState &State,
   CurType = State.getAttributedType(AnnotateTypeAttr, CurType, CurType);
 }
 
+static void HandleSizelessTypeAttr(TypeProcessingState &State,
+                                   QualType &CurType, const ParsedAttr &PA) {
+  Sema &S = State.getSema();
+
+  auto *SizelessTypeAttr = SizelessTypeAttr::Create(S.Context, PA);
+  CurType = State.getAttributedType(SizelessTypeAttr, CurType, CurType);
+}
+
 static void HandleLifetimeBoundAttr(TypeProcessingState &State,
                                     QualType &CurType,
                                     ParsedAttr &Attr) {
@@ -8944,6 +8952,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     }
     case ParsedAttr::AT_AnnotateType: {
       HandleAnnotateTypeAttr(state, type, attr);
+      attr.setUsedAsTypeAttr();
+      break;
+    }
+    case ParsedAttr::AT_SizelessType: {
+      HandleSizelessTypeAttr(state, type, attr);
       attr.setUsedAsTypeAttr();
       break;
     }
@@ -9274,9 +9287,18 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   }
 
   NamedDecl *Def = nullptr;
-  bool AcceptSizeless = (Kind == CompleteTypeKind::AcceptSizeless);
-  bool Incomplete = (T->isIncompleteType(&Def) ||
-                     (!AcceptSizeless && T->isSizelessBuiltinType()));
+  bool Incomplete = T->isIncompleteType(&Def);
+  if (!Incomplete)
+    switch (Kind) {
+    case CompleteTypeKind::Normal:
+      Incomplete |= T->isSizelessType();
+      break;
+    case CompleteTypeKind::AcceptUserSizeless:
+      Incomplete |= T->isSizelessBuiltinType();
+      break;
+    case CompleteTypeKind::AcceptSizeless:
+      break;
+    }
 
   // Check that any necessary explicit specializations are visible. For an
   // enum, we just need the declaration, so don't check this.

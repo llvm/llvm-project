@@ -4285,3 +4285,10 @@ def PreferredType: InheritableAttr {
   let Args = [TypeArgument<"Type", 1>];
   let Documentation = [PreferredTypeDocumentation];
 }
+
+def SizelessType : DeclOrTypeAttr {
+  let Spellings = [Clang<"sizeless">];
+  let Documentation = [SizelessTypeDocs];
+  let HasCustomParsing = 1;
+}
+
