@@ -3859,7 +3859,7 @@ bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
   // We don't import function bodies from other named module units since that
   // behavior may break ABI compatibility of the current unit.
   if (const Module *M = F->getOwningModule();
-      M && M->isModulePurview() &&
+      M && M->getTopLevelModule()->isNamedModule() &&
       getContext().getCurrentNamedModule() != M->getTopLevelModule() &&
       !F->hasAttr<AlwaysInlineAttr>())
     return false;
