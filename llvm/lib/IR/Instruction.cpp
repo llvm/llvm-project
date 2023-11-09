@@ -244,6 +244,8 @@ iterator_range<DPValue::self_iterator>
 Instruction::getDbgValueRange() const {
   BasicBlock *Parent = const_cast<BasicBlock *>(getParent());
   assert(Parent && "Instruction must be inserted to have DPValues");
+  (void)Parent;
+
   if (!DbgMarker)
     return DPMarker::getEmptyDPValueRange();
 
