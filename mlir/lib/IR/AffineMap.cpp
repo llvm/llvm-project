@@ -540,6 +540,27 @@ SmallVector<int64_t, 4> AffineMap::compose(ArrayRef<int64_t> values) const {
   return res;
 }
 
+bool AffineMap::isProjection() const {
+  if (getNumSymbols() > 0)
+    return false;
+
+  // A projection cannot have more results than inputs.
+  if (getNumResults() > getNumInputs())
+    return false;
+
+  int64_t current = -1;
+  // A projection must always have dim position > current.
+  for (auto expr : getResults()) {
+    if (auto dim = expr.dyn_cast<AffineDimExpr>()) {
+      if (dim.getPosition() <= current)
+        return false;
+      current = dim.getPosition();
+    }
+  }
+
+  return true;
+}
+
 bool AffineMap::isProjectedPermutation(bool allowZeroInResults) const {
   if (getNumSymbols() > 0)
     return false;

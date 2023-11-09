@@ -569,15 +569,17 @@ struct TestVectorDistribution
     });
     MLIRContext *ctx = &getContext();
     auto distributionFn = [](Value val) {
-      // Create a map (d0, d1) -> (d1) to distribute along the inner
-      // dimension. Once we support n-d distribution we can add more
-      // complex cases.
+      // Create a map (d0, d1) -> (d1, d0) to distribute starting from the inner
+      // dimensions.
       VectorType vecType = dyn_cast<VectorType>(val.getType());
       int64_t vecRank = vecType ? vecType.getRank() : 0;
       OpBuilder builder(val.getContext());
-      if (vecRank == 0)
-        return AffineMap::get(val.getContext());
-      return AffineMap::get(vecRank, 0, builder.getAffineDimExpr(vecRank - 1));
+      SmallVector<AffineExpr, 4> vecDims =
+          llvm::map_to_vector(llvm::seq<int64_t>(0, vecRank), [&](int64_t i) {
+            return builder.getAffineDimExpr(i);
+          });
+      return AffineMap::get(vecRank, /*symbolCount=*/0, vecDims,
+                            builder.getContext());
     };
     auto shuffleFn = [](Location loc, OpBuilder &builder, Value val,
                         Value srcIdx, int64_t warpSz) {
