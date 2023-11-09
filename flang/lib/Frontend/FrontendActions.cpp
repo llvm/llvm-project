@@ -843,44 +843,6 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
   llvm_unreachable("Invalid action!");
 }
 
-static std::unique_ptr<llvm::TargetLibraryInfoImpl>
-createTLII(llvm::Triple &targetTriple, const CodeGenOptions &codeGenOpts) {
-  auto tlii = std::make_unique<llvm::TargetLibraryInfoImpl>(targetTriple);
-  assert(tlii && "Failed to create TargetLibraryInfo");
-
-  using VecLib = llvm::TargetLibraryInfoImpl::VectorLibrary;
-  VecLib vecLib = VecLib::NoLibrary;
-  switch (codeGenOpts.getVecLib()) {
-  case CodeGenOptions::VectorLibrary::Accelerate:
-    vecLib = VecLib::Accelerate;
-    break;
-  case CodeGenOptions::VectorLibrary::LIBMVEC:
-    vecLib = VecLib::LIBMVEC_X86;
-    break;
-  case CodeGenOptions::VectorLibrary::MASSV:
-    vecLib = VecLib::MASSV;
-    break;
-  case CodeGenOptions::VectorLibrary::SVML:
-    vecLib = VecLib::SVML;
-    break;
-  case CodeGenOptions::VectorLibrary::SLEEF:
-    vecLib = VecLib::SLEEFGNUABI;
-    break;
-  case CodeGenOptions::VectorLibrary::Darwin_libsystem_m:
-    vecLib = VecLib::DarwinLibSystemM;
-    break;
-  case CodeGenOptions::VectorLibrary::ArmPL:
-    vecLib = VecLib::ArmPL;
-    break;
-  case CodeGenOptions::VectorLibrary::NoLibrary:
-    vecLib = VecLib::NoLibrary;
-    break;
-  }
-
-  tlii->addVectorizableFunctionsFromVecLib(vecLib, targetTriple);
-  return tlii;
-}
-
 /// Generate target-specific machine-code or assembly file from the input LLVM
 /// module.
 ///
@@ -905,8 +867,8 @@ static void generateMachineCodeOrAssemblyImpl(
       createTargetTransformInfoWrapperPass(tm.getTargetIRAnalysis()));
 
   llvm::Triple triple(llvmModule.getTargetTriple());
-  std::unique_ptr<llvm::TargetLibraryInfoImpl> tlii =
-      createTLII(triple, codeGenOpts);
+  llvm::TargetLibraryInfoImpl *tlii =
+      llvm::driver::createTLII(triple, codeGenOpts.getVecLib());
   codeGenPasses.add(new llvm::TargetLibraryInfoWrapperPass(*tlii));
 
   llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
@@ -962,7 +924,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   // Register the target library analysis directly and give it a customized
   // preset TLI depending on -fveclib
   llvm::Triple triple(llvmModule->getTargetTriple());
-  std::unique_ptr<llvm::TargetLibraryInfoImpl> tlii = createTLII(triple, opts);
+  llvm::TargetLibraryInfoImpl *tlii =
+      llvm::driver::createTLII(triple, opts.getVecLib());
   fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
 
   // Register all the basic analyses with the managers.

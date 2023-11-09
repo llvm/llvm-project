@@ -9,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
   Coverage
   Demangle
   Extensions
+  FrontendDriver
   FrontendHLSL
   FrontendOpenMP
   FrontendOffloading

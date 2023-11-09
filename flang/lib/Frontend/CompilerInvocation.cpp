@@ -160,7 +160,7 @@ static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
   if (!arg)
     return true;
 
-  using VectorLibrary = Fortran::frontend::CodeGenOptions::VectorLibrary;
+  using VectorLibrary = llvm::driver::VectorLibrary;
   std::optional<VectorLibrary> val =
       llvm::StringSwitch<std::optional<VectorLibrary>>(arg->getValue())
           .Case("Accelerate", VectorLibrary::Accelerate)
