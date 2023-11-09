@@ -6372,8 +6372,6 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   switch (CC) {
   default:
     report_fatal_error("Unsupported calling convention.");
-  case CallingConv::WebKit_JS:
-    return CC_AArch64_WebKit_JS;
   case CallingConv::GHC:
     return CC_AArch64_GHC;
   case CallingConv::C:
@@ -6417,8 +6415,7 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
 
 CCAssignFn *
 AArch64TargetLowering::CCAssignFnForReturn(CallingConv::ID CC) const {
-  return CC == CallingConv::WebKit_JS ? RetCC_AArch64_WebKit_JS
-                                      : RetCC_AArch64_AAPCS;
+  return RetCC_AArch64_AAPCS;
 }
 
 
