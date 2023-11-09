@@ -1033,7 +1033,7 @@ public:
 class UUCAddAssignGadget : public FixableGadget {
 private:
   static constexpr const char *const UUCAddAssignTag =
-    "PointerAddAssignUnderUUC";
+      "PointerAddAssignUnderUUC";
   static constexpr const char *const IntOffsetTag = "IntOffset";
   static constexpr const char *const OffsetTag = "Offset";
   
@@ -1043,10 +1043,10 @@ private:
 
 public:
   UUCAddAssignGadget(const MatchFinder::MatchResult &Result)
-    : FixableGadget(Kind::UUCAddAssign),
-      Node(Result.Nodes.getNodeAs<BinaryOperator>(UUCAddAssignTag)),
-      IntOffset(Result.Nodes.getNodeAs<IntegerLiteral>(IntOffsetTag)),
-      Offset(Result.Nodes.getNodeAs<DeclRefExpr>(OffsetTag)) {
+      : FixableGadget(Kind::UUCAddAssign),
+        Node(Result.Nodes.getNodeAs<BinaryOperator>(UUCAddAssignTag)),
+        IntOffset(Result.Nodes.getNodeAs<IntegerLiteral>(IntOffsetTag)),
+        Offset(Result.Nodes.getNodeAs<DeclRefExpr>(OffsetTag)) {
     assert(Node != nullptr && "Expecting a non-null matching result");
   }
 
@@ -1056,13 +1056,11 @@ public:
 
   static Matcher matcher() {
     return stmt(isInUnspecifiedUntypedContext(expr(ignoringImpCasts(
-                    binaryOperator(hasOperatorName("+="),
-                      hasLHS(declRefExpr(
-                                                    toSupportedVariable())),
-                      hasRHS(expr(anyOf(
-                                        ignoringImpCasts(declRefExpr().bind(OffsetTag)),
-                                        integerLiteral().bind(IntOffsetTag))))
-                      ).bind(UUCAddAssignTag)))));
+        binaryOperator(
+            hasOperatorName("+="), hasLHS(declRefExpr(toSupportedVariable())),
+            hasRHS(expr(anyOf(ignoringImpCasts(declRefExpr().bind(OffsetTag)),
+                              integerLiteral().bind(IntOffsetTag)))))
+            .bind(UUCAddAssignTag)))));
   }
 
   virtual std::optional<FixItList> getFixits(const Strategy &S) const override;
@@ -1812,7 +1810,8 @@ fixUPCAddressofArraySubscriptWithSpan(const UnaryOperator *Node) {
       FixItHint::CreateReplacement(Node->getSourceRange(), SS.str())};
 }
 
-std::optional<FixItList> UUCAddAssignGadget::getFixits(const Strategy &S) const {
+std::optional<FixItList>
+UUCAddAssignGadget::getFixits(const Strategy &S) const {
   DeclUseList DREs = getClaimedVarUseSites();
 
   if (DREs.size() != 1)
@@ -1825,34 +1824,33 @@ std::optional<FixItList> UUCAddAssignGadget::getFixits(const Strategy &S) const 
       const Stmt *AddAssignNode = getBaseStmt();
       StringRef varName = VD->getName();
       const ASTContext &Ctx = VD->getASTContext();
-      
+
       std::string SubSpanOffset;
       if (IntOffset) {
         auto ConstVal = IntOffset->getIntegerConstantExpr(Ctx);
         if (ConstVal->isNegative())
           return std::nullopt;
-        
+
         SmallString<256> OffsetStr;
         ConstVal->toString(OffsetStr);
         SubSpanOffset = OffsetStr.c_str();
-        // To transform UUC(p += IntegerLiteral) to UUC(p = p.subspan(IntegerLiteral)):
         SubSpanOffset = OffsetStr.c_str();
-      }
-      else {
+      } else {
         SubSpanOffset = Offset->getDecl()->getName().str();
       }
       
       // To transform UUC(p += n) to UUC(p = p.subspan(..)):
-      SS << varName.data() << " = " << varName.data()
-         << ".subspan(" << SubSpanOffset << ")";
+      SS << varName.data() << " = " << varName.data() << ".subspan("
+      << SubSpanOffset << ")";
       
-      std::optional<SourceLocation> AddAssignLocation =
-          getEndCharLoc(AddAssignNode, Ctx.getSourceManager(), Ctx.getLangOpts());
+      std::optional<SourceLocation> AddAssignLocation = getEndCharLoc(
+          AddAssignNode, Ctx.getSourceManager(), Ctx.getLangOpts());
       if (!AddAssignLocation)
         return std::nullopt;
 
       Fixes.push_back(FixItHint::CreateReplacement(
-          SourceRange(AddAssignNode->getBeginLoc(), *AddAssignLocation), SS.str()));
+          SourceRange(AddAssignNode->getBeginLoc(), *AddAssignLocation), 
+          SS.str()));
       return Fixes;
     }
   }
