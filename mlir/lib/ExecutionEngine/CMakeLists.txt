@@ -59,6 +59,7 @@ add_mlir_library(MLIRExecutionEngine
   ExecutionEngine.cpp
 
   EXCLUDE_FROM_LIBMLIR
+  INSTALL_OBJECT_LIB
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/ExecutionEngine
@@ -93,13 +94,14 @@ add_mlir_library(MLIRExecutionEngine
   MLIRLLVMToLLVMIRTranslation
   MLIROpenMPToLLVMIRTranslation
   MLIRTargetLLVMIRExport
-  )
+)
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 add_mlir_library(MLIRJitRunner
   JitRunner.cpp
 
   EXCLUDE_FROM_LIBMLIR
+  INSTALL_OBJECT_LIB
 
   DEPENDS
   intrinsics_gen
@@ -130,7 +132,8 @@ if(LLVM_ENABLE_PIC)
     Float16bits.cpp
 
     EXCLUDE_FROM_LIBMLIR
-    )
+    INSTALL_OBJECT_LIB
+  )
   set_property(TARGET mlir_float16_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_float16_utils PRIVATE mlir_float16_utils_EXPORTS)
 
@@ -142,12 +145,13 @@ if(LLVM_ENABLE_PIC)
     SparseTensorRuntime.cpp
 
     EXCLUDE_FROM_LIBMLIR
+    INSTALL_OBJECT_LIB
 
     LINK_LIBS PUBLIC
     mlir_float16_utils
     MLIRSparseTensorEnums
     MLIRSparseTensorRuntime
-    )
+  )
   set_property(TARGET mlir_c_runner_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_c_runner_utils PRIVATE mlir_c_runner_utils_EXPORTS)
 
@@ -156,6 +160,7 @@ if(LLVM_ENABLE_PIC)
     RunnerUtils.cpp
 
     EXCLUDE_FROM_LIBMLIR
+    INSTALL_OBJECT_LIB
   )
   target_compile_definitions(mlir_runner_utils PRIVATE mlir_runner_utils_EXPORTS)
 
@@ -164,6 +169,7 @@ if(LLVM_ENABLE_PIC)
     AsyncRuntime.cpp
 
     EXCLUDE_FROM_LIBMLIR
+    INSTALL_OBJECT_LIB
 
     LINK_LIBS PUBLIC
     ${LLVM_PTHREAD_LIB}
@@ -197,6 +203,7 @@ if(LLVM_ENABLE_PIC)
       CudaRuntimeWrappers.cpp
 
       EXCLUDE_FROM_LIBMLIR
+      INSTALL_OBJECT_LIB
     )
     set_property(TARGET mlir_cuda_runtime PROPERTY CXX_STANDARD 14)
 
@@ -293,6 +300,7 @@ if(LLVM_ENABLE_PIC)
       RocmRuntimeWrappers.cpp
 
       EXCLUDE_FROM_LIBMLIR
+      INSTALL_OBJECT_LIB
     )
 
     # Supress compiler warnings from HIP headers
@@ -348,6 +356,7 @@ if(LLVM_ENABLE_PIC)
       SyclRuntimeWrappers.cpp
 
       EXCLUDE_FROM_LIBMLIR
+      INSTALL_OBJECT_LIB
     )
 
     check_cxx_compiler_flag("-frtti" CXX_HAS_FRTTI_FLAG)

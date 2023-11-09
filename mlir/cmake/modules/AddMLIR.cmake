@@ -301,7 +301,7 @@ endfunction()
 #   are compatible with building an object library.
 function(add_mlir_library name)
   cmake_parse_arguments(ARG
-    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION"
+    "SHARED;INSTALL_WITH_TOOLCHAIN;INSTALL_OBJECT_LIB;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION"
     ""
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS"
     ${ARGN})
@@ -309,7 +309,7 @@ function(add_mlir_library name)
 
   # Is an object library needed.
   set(NEEDS_OBJECT_LIB OFF)
-  if(ARG_ENABLE_AGGREGATION)
+  if(ARG_ENABLE_AGGREGATION OR ARG_INSTALL_OBJECT_LIB)
     set(NEEDS_OBJECT_LIB ON)
   endif()
 
@@ -375,7 +375,7 @@ function(add_mlir_library name)
     # For each declared dependency, transform it into a generator expression
     # which excludes it if the ultimate link target is excluding the library.
     set(NEW_LINK_LIBRARIES)
-    get_target_property(CURRENT_LINK_LIBRARIES  ${name} LINK_LIBRARIES)
+    get_target_property(CURRENT_LINK_LIBRARIES ${name} LINK_LIBRARIES)
     get_mlir_filtered_link_libraries(NEW_LINK_LIBRARIES ${CURRENT_LINK_LIBRARIES})
     set_target_properties(${name} PROPERTIES LINK_LIBRARIES "${NEW_LINK_LIBRARIES}")
     list(APPEND AGGREGATE_DEPS ${NEW_LINK_LIBRARIES})
@@ -390,6 +390,12 @@ function(add_mlir_library name)
     # In order for out-of-tree projects to build aggregates of this library,
     # we need to install the OBJECT library.
     if(MLIR_INSTALL_AGGREGATE_OBJECTS AND NOT ARG_DISABLE_INSTALL)
+      add_mlir_library_install(obj.${name})
+    endif()
+  endif()
+  if(ARG_INSTALL_OBJECT_LIB)
+    if(TARGET install-obj.${name})
+    else ()
       add_mlir_library_install(obj.${name})
     endif()
   endif()
