@@ -683,11 +683,11 @@ public:
       assert(
           // The types are same, or
           Field->getType().getCanonicalType().getUnqualifiedType() ==
-              Init->getType().getCanonicalType() ||
+              Init->getType().getCanonicalType().getUnqualifiedType() ||
           // The field's type is T&, and initializer is T
           (Field->getType()->isReferenceType() &&
-              Field->getType().getCanonicalType()->getPointeeType() ==
-              Init->getType().getCanonicalType()));
+           Field->getType().getCanonicalType()->getPointeeType() ==
+               Init->getType().getCanonicalType()));
       auto& Loc = Env.createObject(Field->getType(), Init);
       FieldLocs.insert({Field, &Loc});
     }
