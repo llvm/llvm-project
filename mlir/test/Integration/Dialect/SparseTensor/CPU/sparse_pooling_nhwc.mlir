@@ -17,11 +17,11 @@
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
 
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=true enable-index-reduction=true
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true enable-index-reduction=true
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true
 // RUN: %{compile} | %{run} | FileCheck %s
 
 #CCCC = #sparse_tensor.encoding<{  map = (d0, d1, d2, d3) -> (d0 : compressed, d1 : compressed, d2 : compressed, d3 : compressed), posWidth = 32, crdWidth = 32 }>
