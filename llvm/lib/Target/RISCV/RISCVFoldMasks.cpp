@@ -120,19 +120,6 @@ static unsigned getVMSetForLMul(RISCVII::VLMUL LMUL) {
   llvm_unreachable("Unknown VLMUL enum");
 }
 
-/// Inserts an operand at Idx in MI, pushing back any operands.
-static void insertOperand(MachineInstr &MI, MachineOperand MO, unsigned Idx) {
-  SmallVector<MachineOperand> OpsToAddBack;
-  unsigned NumTailOps = MI.getNumOperands() - Idx;
-  for (unsigned I = 0; I < NumTailOps; I++) {
-    OpsToAddBack.push_back(MI.getOperand(Idx));
-    MI.removeOperand(Idx);
-  }
-  MI.addOperand(MO);
-  for (MachineOperand &TailOp : OpsToAddBack)
-    MI.addOperand(TailOp);
-}
-
 // Try to sink From to before To, also sinking any instructions between From and
 // To where there is a write-after-read dependency on a physical register.
 static bool sinkInstructionAndDeps(MachineInstr &From, MachineInstr &To) {
@@ -370,8 +357,8 @@ bool RISCVFoldMasks::foldVMergeIntoOps(MachineInstr &MI,
 
     // TODO: Increment MaskOpIdx by number of explicit defs in tablegen?
     unsigned MaskOpIdx = Info->MaskOpIdx + TrueMI.getNumExplicitDefs();
-    insertOperand(TrueMI, MachineOperand::CreateReg(RISCV::V0, false),
-                  MaskOpIdx);
+    TrueMI.insert(&TrueMI.getOperand(MaskOpIdx),
+                  MachineOperand::CreateReg(RISCV::V0, false));
   }
 
   // Update the AVL.
