@@ -240,8 +240,7 @@ void RegisterBankEmitter::emitBaseClassImplementation(
          << "\n";
       for (const auto &RC : RCs) {
         std::string QualifiedRegClassID =
-            (Twine(RC->Namespace) + "::" + RC->getName()
-            + "RegClassID").str();
+            (Twine(RC->Namespace) + "::" + RC->getName() + "RegClassID").str();
         OS << "    (1u << (" << QualifiedRegClassID << " - " << LowestIdxInWord
            << ")) |\n";
       }
