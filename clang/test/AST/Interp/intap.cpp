@@ -63,11 +63,16 @@ namespace i128 {
 
   static const __int128_t INT128_MAX = UINT128_MAX >> (__int128_t)1;
   static_assert(INT128_MAX != 0, "");
+  static_assert(INT128_MAX == 0, ""); // expected-error {{failed}} \
+                                      // expected-note {{evaluates to '170141183460469231731687303715884105727 == 0'}} \
+                                      // ref-error {{failed}} \
+                                      // ref-note {{evaluates to '170141183460469231731687303715884105727 == 0'}}
+
   static const __int128_t INT128_MIN = -INT128_MAX - 1;
   constexpr __int128 A = INT128_MAX + 1; // expected-error {{must be initialized by a constant expression}} \
-                                         // expected-note {{outside the range}} \
+                                         // expected-note {{value 170141183460469231731687303715884105728 is outside the range}} \
                                          // ref-error {{must be initialized by a constant expression}} \
-                                         // ref-note {{outside the range}}
+                                         // ref-note {{value 170141183460469231731687303715884105728 is outside the range}}
   constexpr int128_t Two = (int128_t)1 << 1ul;
   static_assert(Two == 2, "");
   static_assert(Two, "");

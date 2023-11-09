@@ -89,7 +89,15 @@ enum EdgeKind_aarch32 : Edge::Kind {
   /// Write immediate value to the top halfword of the destination register
   Thumb_MovtAbs,
 
-  LastThumbRelocation = Thumb_MovtAbs,
+  /// Write PC-relative immediate value to the lower halfword of the destination
+  /// register
+  Thumb_MovwPrelNC,
+
+  /// Write PC-relative immediate value to the top halfword of the destination
+  /// register
+  Thumb_MovtPrel,
+
+  LastThumbRelocation = Thumb_MovtPrel,
 };
 
 /// Flags enum for AArch32-specific symbol properties
@@ -192,8 +200,8 @@ template <> struct FixupInfo<Arm_MovwAbsNC> : public FixupInfo<Arm_MovtAbs> {
 };
 
 template <> struct FixupInfo<Thumb_Jump24> {
-  static constexpr HalfWords Opcode{0xf000, 0x8000};
-  static constexpr HalfWords OpcodeMask{0xf800, 0x8000};
+  static constexpr HalfWords Opcode{0xf000, 0x9000};
+  static constexpr HalfWords OpcodeMask{0xf800, 0x9000};
   static constexpr HalfWords ImmMask{0x07ff, 0x2fff};
 };
 

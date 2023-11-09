@@ -363,7 +363,12 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
 void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
     CodeGen::CodeGenModule &CGM) const {
   StringRef Name = "__oclc_ABI_version";
-  if (CGM.getModule().getNamedGlobal(Name) || CGM.getTarget().getTargetOpts().CodeObjectVersion == clang::TargetOptions::COV_None)
+  llvm::GlobalVariable *OriginalGV = CGM.getModule().getNamedGlobal(Name);
+  if (OriginalGV && !llvm::GlobalVariable::isExternalLinkage(OriginalGV->getLinkage()))
+    return;
+
+  if (CGM.getTarget().getTargetOpts().CodeObjectVersion ==
+      clang::TargetOptions::COV_None)
     return;
 
   auto *Type = llvm::IntegerType::getIntNTy(CGM.getModule().getContext(), 32);
