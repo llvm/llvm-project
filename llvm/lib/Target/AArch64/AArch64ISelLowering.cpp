@@ -2753,17 +2753,19 @@ AArch64TargetLowering::EmitFill(MachineInstr &MI, MachineBasicBlock *BB) const {
   return BB;
 }
 
-MachineBasicBlock *AArch64TargetLowering::EmitZTSpillFill(MachineInstr &MI,
-                                                          MachineBasicBlock *BB,
-                                                          bool IsSpill) const {
+MachineBasicBlock *AArch64TargetLowering::EmitZTInstr(MachineInstr &MI,
+                                                      MachineBasicBlock *BB,
+                                                      unsigned Opcode,
+                                                      bool Op0IsDef) const {
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   MachineInstrBuilder MIB;
-  unsigned Opc = IsSpill ? AArch64::STR_TX : AArch64::LDR_TX;
-  auto Rs = IsSpill ? RegState::Kill : RegState::Define;
-  MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Opc));
-  MIB.addReg(MI.getOperand(0).getReg(), Rs);
-  MIB.add(MI.getOperand(1)); // Base
-  MI.eraseFromParent();      // The pseudo is gone now.
+
+  MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Opcode))
+            .addReg(MI.getOperand(0).getReg(), IsZTDest ? RegState::Define : 0);
+  for (unsigned I = 1; I < MI.getNumOperands(); ++I)
+    MIB.add(MI.getOperand(I));
+
+  MI.eraseFromParent(); // The pseudo is gone now.
   return BB;
 }
 
@@ -2884,11 +2886,13 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case AArch64::LDR_ZA_PSEUDO:
     return EmitFill(MI, BB);
   case AArch64::LDR_TX_PSEUDO:
-    return EmitZTSpillFill(MI, BB, /*IsSpill=*/false);
+    return EmitZTInstr(MI, BB, AArch64::LDR_TX, /*IsZTDest=*/true);
   case AArch64::STR_TX_PSEUDO:
-    return EmitZTSpillFill(MI, BB, /*IsSpill=*/true);
+    return EmitZTInstr(MI, BB, AArch64::STR_TX, /*IsZTDest=*/false);
   case AArch64::ZERO_M_PSEUDO:
     return EmitZero(MI, BB);
+  case AArch64::ZERO_T_PSEUDO:
+    return EmitZTInstr(MI, BB, AArch64::ZERO_T, /*IsZTDest=*/true);
   }
 }
 
