@@ -17,8 +17,6 @@
 #include <errno.h>
 #include <stdint.h>
 
-#include <initializer_list>
-
 using LlvmLibcAtanfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
@@ -55,8 +53,9 @@ TEST_F(LlvmLibcAtanfTest, InFloatRange) {
 
 // For small values, tanh(x) is x.
 TEST_F(LlvmLibcAtanfTest, SpecialValues) {
-  for (uint32_t v : {0x3d8d6b23U, 0x3feefcfbU, 0xbd8d6b23U, 0xbfeefcfbU,
-                     0x7F800000U, 0xFF800000U}) {
+  uint32_t val_arr[] = {0x3d8d6b23U, 0x3feefcfbU, 0xbd8d6b23U,
+                        0xbfeefcfbU, 0x7F800000U, 0xFF800000U};
+  for (uint32_t v : val_arr) {
     float x = float(FPBits(v));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan, x,
                                    LIBC_NAMESPACE::atanf(x), 0.5);
