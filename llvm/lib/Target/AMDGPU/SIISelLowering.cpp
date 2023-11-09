@@ -2665,6 +2665,11 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   if (!IsKernel) {
     CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, isVarArg);
+    if (!IsGraphics && !Subtarget->enableFlatScratch()) {
+      CCInfo.AllocateRegBlock(ArrayRef<MCPhysReg>{AMDGPU::SGPR0, AMDGPU::SGPR1,
+                                                  AMDGPU::SGPR2, AMDGPU::SGPR3},
+                              4);
+    }
     CCInfo.AnalyzeFormalArguments(Splits, AssignFn);
   }
 
@@ -6078,11 +6083,6 @@ SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
   if (!Subtarget->isTrapHandlerEnabled() ||
       Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return lowerTrapEndpgm(Op, DAG);
-
-  const Module *M = DAG.getMachineFunction().getFunction().getParent();
-  unsigned CodeObjectVersion = AMDGPU::getCodeObjectVersion(*M);
-  if (CodeObjectVersion <= AMDGPU::AMDHSA_COV3)
-    return lowerTrapHsaQueuePtr(Op, DAG);
 
   return Subtarget->supportsGetDoorbellID() ? lowerTrapHsa(Op, DAG) :
          lowerTrapHsaQueuePtr(Op, DAG);

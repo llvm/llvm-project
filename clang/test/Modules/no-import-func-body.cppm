@@ -38,8 +38,8 @@ export int c() {
     return 43 + b() + a() + b_noinline() + a_noinline();
 }
 
-// CHECK: define{{.*}}available_externally{{.*}}@_ZW1b1bv(
-// CHECK: define{{.*}}available_externally{{.*}}@_ZW1a1av(
+// CHECK: declare{{.*}}@_ZW1b1bv(
+// CHECK: declare{{.*}}@_ZW1a1av(
 
 // CHECK: declare{{.*}}@_ZW1b10b_noinlinev()
 // CHECK: declare{{.*}}@_ZW1a10a_noinlinev()

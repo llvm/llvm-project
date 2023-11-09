@@ -1427,6 +1427,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
   setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
   setLibcallName(RTLIB::FMA_F128, "fmaf128");
+  setLibcallName(RTLIB::FREXP_F128, "frexpf128");
 
   if (Subtarget.isAIXABI()) {
     setLibcallName(RTLIB::MEMCPY, isPPC64 ? "___memmove64" : "___memmove");
@@ -17501,7 +17502,7 @@ bool PPCTargetLowering::useLoadStackGuardNode() const {
 void PPCTargetLowering::insertSSPDeclarations(Module &M) const {
   if (Subtarget.isAIXABI()) {
     M.getOrInsertGlobal(AIXSSPCanaryWordName,
-                        Type::getInt8PtrTy(M.getContext()));
+                        PointerType::getUnqual(M.getContext()));
     return;
   }
   if (!Subtarget.isTargetLinux())

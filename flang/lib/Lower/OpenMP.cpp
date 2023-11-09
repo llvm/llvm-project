@@ -29,6 +29,12 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/CommandLine.h"
+
+static llvm::cl::opt<bool> treatIndexAsSection(
+    "openmp-treat-index-as-section",
+    llvm::cl::desc("In the OpenMP data clauses treat `a(N)` as `a(N:N)`."),
+    llvm::cl::init(true));
 
 using DeclareTargetCapturePair =
     std::pair<mlir::omp::DeclareTargetCaptureClause,
@@ -555,8 +561,7 @@ public:
   bool processDepend(llvm::SmallVectorImpl<mlir::Attribute> &dependTypeOperands,
                      llvm::SmallVectorImpl<mlir::Value> &dependOperands) const;
   bool
-  processIf(Fortran::lower::StatementContext &stmtCtx,
-            Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
+  processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
             mlir::Value &result) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
@@ -1110,7 +1115,6 @@ genDependKindAttr(fir::FirOpBuilder &firOpBuilder,
 
 static mlir::Value getIfClauseOperand(
     Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::StatementContext &stmtCtx,
     const Fortran::parser::OmpClause::If *ifClause,
     Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
     mlir::Location clauseLocation) {
@@ -1121,6 +1125,7 @@ static mlir::Value getIfClauseOperand(
   if (directive && directive.value() != directiveName)
     return nullptr;
 
+  Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto &expr = std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
   mlir::Value ifVal = fir::getBase(
@@ -1666,7 +1671,6 @@ bool ClauseProcessor::processDepend(
 }
 
 bool ClauseProcessor::processIf(
-    Fortran::lower::StatementContext &stmtCtx,
     Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
     mlir::Value &result) const {
   bool found = false;
@@ -1674,7 +1678,7 @@ bool ClauseProcessor::processIf(
       [&](const ClauseTy::If *ifClause,
           const Fortran::parser::CharBlock &source) {
         mlir::Location clauseLocation = converter.genLocation(source);
-        mlir::Value operand = getIfClauseOperand(converter, stmtCtx, ifClause,
+        mlir::Value operand = getIfClauseOperand(converter, ifClause,
                                                  directiveName, clauseLocation);
         // Assume that, at most, a single 'if' clause will be applicable to the
         // given directive.
@@ -1788,9 +1792,9 @@ bool ClauseProcessor::processMap(
           std::stringstream asFortran;
           mlir::Value baseAddr = Fortran::lower::gatherDataOperandAddrAndBounds<
               Fortran::parser::OmpObject, mlir::omp::DataBoundsType,
-              mlir::omp::DataBoundsOp>(converter, firOpBuilder,
-                                       semanticsContext, stmtCtx, ompObject,
-                                       clauseLocation, asFortran, bounds);
+              mlir::omp::DataBoundsOp>(
+              converter, firOpBuilder, semanticsContext, stmtCtx, ompObject,
+              clauseLocation, asFortran, bounds, treatIndexAsSection);
 
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
@@ -2299,14 +2303,14 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Parallel,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Parallel,
                ifClauseOperand);
   cp.processNumThreads(stmtCtx, numThreadsClauseOperand);
   cp.processProcBind(procBindKindAttr);
   cp.processDefault();
   cp.processAllocate(allocatorOperands, allocateOperands);
-  cp.processReduction(currentLocation, reductionVars, reductionDeclSymbols);
+  if (!outerCombined)
+    cp.processReduction(currentLocation, reductionVars, reductionDeclSymbols);
 
   return genOpWithBody<mlir::omp::ParallelOp>(
       converter, eval, currentLocation, outerCombined, &clauseList,
@@ -2353,8 +2357,7 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
       dependOperands;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Task,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Task,
                ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processDefault();
@@ -2411,8 +2414,7 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetData,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetData,
                ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processUseDevicePtr(devicePtrOperands, useDeviceTypes, useDeviceLocs,
@@ -2457,7 +2459,7 @@ genEnterExitDataOp(Fortran::lower::AbstractConverter &converter,
   }
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx, directiveName, ifClauseOperand);
+  cp.processIf(directiveName, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processNowait(nowaitAttr);
   cp.processMap(currentLocation, directive, semanticsContext, stmtCtx,
@@ -2527,12 +2529,13 @@ static void genBodyOfTargetOp(
         [&](const fir::CharArrayBoxValue &v) {
           converter.bindSymbol(
               *sym,
-              fir::CharArrayBoxValue(arg, v.getLen(),
+              fir::CharArrayBoxValue(arg, extractBoundArgs(1).front(),
                                      extractBoundArgs(v.getExtents().size()),
                                      extractBoundArgs(v.getLBounds().size())));
         },
         [&](const fir::CharBoxValue &v) {
-          converter.bindSymbol(*sym, fir::CharBoxValue(arg, v.getLen()));
+          converter.bindSymbol(
+              *sym, fir::CharBoxValue(arg, extractBoundArgs(1).front()));
         },
         [&](const fir::UnboxedValue &v) { converter.bindSymbol(*sym, arg); },
         [&](const auto &) {
@@ -2580,8 +2583,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> mapSymbols;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Target,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Target,
                ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processThreadLimit(stmtCtx, threadLimitOperand);
@@ -2696,8 +2698,16 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
           addMapInfoForBounds(v.getLBounds());
         },
         [&](const fir::CharArrayBoxValue &v) {
+          llvm::SmallVector<mlir::Value> len;
+          len.push_back(v.getLen());
+          addMapInfoForBounds(len);
           addMapInfoForBounds(v.getExtents());
           addMapInfoForBounds(v.getLBounds());
+        },
+        [&](const fir::CharBoxValue &v) {
+          llvm::SmallVector<mlir::Value> len;
+          len.push_back(v.getLen());
+          addMapInfoForBounds(len);
         },
         [&](const auto &) {
           // Nothing to do for non-box values.
@@ -2727,8 +2737,7 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Teams,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Teams,
                ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processDefault();
@@ -3003,8 +3012,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     llvm::SmallVector<mlir::Value> alignedVars, nontemporalVars;
     mlir::Value ifClauseOperand;
     mlir::IntegerAttr simdlenClauseOperand, safelenClauseOperand;
-    cp.processIf(stmtCtx,
-                 Fortran::parser::OmpIfClause::DirectiveNameModifier::Simd,
+    cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Simd,
                  ifClauseOperand);
     cp.processSimdlen(simdlenClauseOperand);
     cp.processSafelen(safelenClauseOperand);

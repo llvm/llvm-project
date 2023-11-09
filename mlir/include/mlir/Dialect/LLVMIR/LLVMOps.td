@@ -521,7 +521,8 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                    Variadic<LLVM_Type>:$callee_operands,
                    Variadic<LLVM_Type>:$normalDestOperands,
                    Variadic<LLVM_Type>:$unwindDestOperands,
-                   OptionalAttr<DenseI32ArrayAttr>:$branch_weights);
+                   OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
+                   DefaultValuedAttr<CConv, "CConv::C">:$CConv);
   let results = (outs Variadic<LLVM_Type>);
   let successors = (successor AnySuccessor:$normalDest,
                               AnySuccessor:$unwindDest);
@@ -571,11 +572,12 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     The `call` instruction supports both direct and indirect calls. Direct calls
     start with a function name (`@`-prefixed) and indirect calls start with an
     SSA value (`%`-prefixed). The direct callee, if present, is stored as a
-    function attribute `callee`. If the callee is a variadic function, then the
-    `callee_type` attribute must carry the function type. The trailing type list
-    contains the optional indirect callee type and the MLIR function type, which
-    differs from the LLVM function type that uses a explicit void type to model
-    functions that do not return a value.
+    function attribute `callee`. For indirect calls, the callee is of `!llvm.ptr` type
+    and is stored as the first value in `callee_operands`. If the callee is a variadic
+    function, then the `callee_type` attribute must carry the function type. The
+    trailing type list contains the optional indirect callee type and the MLIR
+    function type, which differs from the LLVM function type that uses a explicit
+    void type to model functions that do not return a value.
 
     Examples:
 
@@ -587,6 +589,7 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     llvm.call @bar(%0) : (f32) -> ()
 
     // Indirect call with an argument and without a result.
+    %1 = llvm.mlir.addressof @foo : !llvm.ptr
     llvm.call %1(%0) : !llvm.ptr, (f32) -> ()
 
     // Direct variadic call.
@@ -602,7 +605,8 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                   Variadic<LLVM_Type>:$callee_operands,
                   DefaultValuedAttr<LLVM_FastmathFlagsAttr,
                                    "{}">:$fastmathFlags,
-                  OptionalAttr<DenseI32ArrayAttr>:$branch_weights);
+                  OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
+                  DefaultValuedAttr<CConv, "CConv::C">:$CConv);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);

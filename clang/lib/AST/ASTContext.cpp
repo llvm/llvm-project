@@ -1096,7 +1096,7 @@ ArrayRef<Decl *> ASTContext::getModuleInitializers(Module *M) {
 }
 
 void ASTContext::setCurrentNamedModule(Module *M) {
-  assert(M->isModulePurview());
+  assert(M->isNamedModule());
   assert(!CurrentCXXNamedModule &&
          "We should set named module for ASTContext for only once");
   CurrentCXXNamedModule = M;
@@ -8541,14 +8541,12 @@ void ASTContext::getObjCEncodingForStructureImpl(RecordDecl *RDecl,
     }
   }
 
-  unsigned i = 0;
   for (FieldDecl *Field : RDecl->fields()) {
     if (!Field->isZeroLengthBitField(*this) && Field->isZeroSize(*this))
       continue;
-    uint64_t offs = layout.getFieldOffset(i);
+    uint64_t offs = layout.getFieldOffset(Field->getFieldIndex());
     FieldOrBaseOffsets.insert(FieldOrBaseOffsets.upper_bound(offs),
                               std::make_pair(offs, Field));
-    ++i;
   }
 
   if (CXXRec && includeVBases) {
