@@ -299,18 +299,15 @@ void RegisterBankEmitter::emitBaseClassImplementation(
      << "} // end namespace llvm\n";
 }
 
-// TableGen already had some RegisterBankInfo support:
-// TargetGenRegisterBankInfo(), RegBankIDs enum, RegBanks and Sizes.
-// This emitter adds support for PartialMappings, PartialMappingIdx
-// and BankIDToCopyMapIdx.
-//
-// The original implementation was supposed to infer RegisterClasses.
-// But since that wasn't finished, backends instead embedded hand crafted
-// tables and enums. This emitter generates them from .td files
-// but requires that the .td files fully describe their RegisterBanks.
+// This emitter generates PartialMappings, PartialMappingIdx,
+// BankIDToCopyMapIdx and BankIDToRegisterClassCount from the .td files.
+// However it requires that the .td files fully describe their RegisterBanks
+// and otherwise emits #error lines for the offending Registers.
 //
 // These tables and enums are enabled by GET_REGBANKINFO_DECLARATIONS,
 // GET_REGBANKINFO_PARTIALMAPPINGS and GET_REGBANKINFO_VALUEMAPPINGS
+// So a backend which doesn't fully describe its RegisterBanks
+// will not break if it doesn't define these macros.
 //
 // This was discussed in https://discourse.llvm.org/t/74459
 void RegisterBankEmitter::emitRBIHeader(
