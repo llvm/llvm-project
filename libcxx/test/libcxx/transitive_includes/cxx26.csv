@@ -564,6 +564,7 @@ stop_token ctime
 stop_token limits
 stop_token ratio
 stop_token version
+streambuf climits
 streambuf ios
 streambuf iosfwd
 streambuf version
@@ -597,6 +598,13 @@ string_view version
 strstream istream
 strstream ostream
 strstream version
+syncstream cstddef
+syncstream iosfwd
+syncstream map
+syncstream mutex
+syncstream ostream
+syncstream shared_mutex
+syncstream string
 system_error cerrno
 system_error compare
 system_error cstddef
