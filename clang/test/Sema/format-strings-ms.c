@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fms-compatibility -triple=i386-pc-win32 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -fms-compatibility -triple=i386-pc-win32 -Wformat-non-iso -DNON_ISO_WARNING %s
 
+#include <stdint.h>
 int printf(const char *format, ...) __attribute__((format(printf, 1, 2)));
 int scanf(const char * restrict, ...) ;
 typedef unsigned short wchar_t;
@@ -83,6 +84,33 @@ void z_test(void *p) {
   printf("%wZ", p);
   printf("%hhZ", p); // expected-warning{{length modifier 'hh' results in undefined behavior or no effect with 'Z' conversion specifier}}
   scanf("%Z", p); // expected-warning{{invalid conversion specifier 'Z'}}
+}
+
+void w_int_test(void) {
+  int8_t a = 0b101;
+  int16_t b = 2;
+  uint32_t c = 123;
+  int64_t d = 0x3b;
+
+  // for %w
+  printf("%w8b", a); // expected-warning{{format specifies type 'char' but the argument has type 'int8_t' (aka 'signed char')}}
+  printf("%w16i", b);
+  printf("%w32u", c);
+  printf("%w64x", d);
+
+}
+
+void wf_test(void) {
+  int_fast8_t a = 0b101;
+  uint_fast16_t b = 2;
+  int_fast32_t c = 021;
+  int_fast64_t d = 0x3a;
+
+  // for %wf
+  printf("%wf8b", a); // expected-warning{{format specifies type 'char' but the argument has type 'int_fast8_t' (aka 'signed char')}}
+  printf("%wf16u", b);
+  printf("%wf32o", c);
+  printf("%wf64X", d);
 }
 
 #endif

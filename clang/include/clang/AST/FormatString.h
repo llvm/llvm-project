@@ -81,8 +81,10 @@ public:
     AsLongDouble, // 'L'
     AsAllocate,   // for '%as', GNU extension to C90 scanf
     AsMAllocate,  // for '%ms', GNU extension to scanf
-    AsWide,       // 'w' (MSVCRT, like l but only for c, C, s, S, or Z
-    AsWideChar = AsLong // for '%ls', only makes sense for printf
+    AsWide,       // 'w' (1. MSVCRT, like l but only for c, C, s, S, or Z on windows
+                  // 2. for b, d, i, o, u, x, or X when a size followed(like 8, 16, 32 or 64)
+    AsWideFast,   // 'wf' (for b, d, i, o, u, x, or X)
+    AsWideChar = AsLong, // for '%ls', only makes sense for printf
   };
 
   LengthModifier()
@@ -417,6 +419,7 @@ protected:
   ///  http://www.opengroup.org/onlinepubs/009695399/functions/printf.html
   bool UsesPositionalArg;
   unsigned argIndex;
+  unsigned size;
 public:
   FormatSpecifier(bool isPrintf)
     : CS(isPrintf), VectorNumElts(false),
@@ -459,6 +462,15 @@ public:
   void setFieldWidth(const OptionalAmount &Amt) {
     FieldWidth = Amt;
   }
+
+  void setSize(unsigned s) {
+    size = s;
+  }
+
+  unsigned getSize() const {
+    return size;
+  }
+
 
   bool usesPositionalArg() const { return UsesPositionalArg; }
 

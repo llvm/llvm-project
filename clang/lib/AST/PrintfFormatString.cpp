@@ -537,7 +537,16 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
             ArgType(Ctx.getPointerDiffType(), "ptrdiff_t"));
       case LengthModifier::AsAllocate:
       case LengthModifier::AsMAllocate:
+        return ArgType::Invalid();
       case LengthModifier::AsWide:
+      case LengthModifier::AsWideFast:
+        int s = getSize();
+        bool fast = LM.getKind() == LengthModifier::AsWideFast ? true : false;
+        ArgType fastType = Ctx.getTargetInfo().getTriple().isArch64Bit() ? Ctx.LongLongTy : Ctx.IntTy;
+        if (s == 8) return Ctx.CharTy;
+        if (s == 16) return fast? fastType : Ctx.ShortTy;
+        if (s == 32) return fast? fastType : Ctx.IntTy;
+        if (s == 64) return Ctx.LongLongTy;
         return ArgType::Invalid();
     }
 
@@ -572,7 +581,16 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
             ArgType(Ctx.getUnsignedPointerDiffType(), "unsigned ptrdiff_t"));
       case LengthModifier::AsAllocate:
       case LengthModifier::AsMAllocate:
+        return ArgType::Invalid();
       case LengthModifier::AsWide:
+      case LengthModifier::AsWideFast:
+        int s = getSize();
+        bool fast = LM.getKind() == LengthModifier::AsWideFast ? true : false;
+        ArgType fastType = Ctx.getTargetInfo().getTriple().isArch64Bit() ? Ctx.UnsignedLongLongTy : Ctx.UnsignedIntTy;
+        if (s == 8) return Ctx.UnsignedCharTy;
+        if (s == 16) return fast? fastType : Ctx.UnsignedShortTy;
+        if (s == 32) return fast? fastType : Ctx.UnsignedIntTy;
+        if (s == 64) return Ctx.UnsignedLongLongTy;
         return ArgType::Invalid();
     }
 
@@ -621,6 +639,7 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
       case LengthModifier::AsInt3264:
       case LengthModifier::AsInt64:
       case LengthModifier::AsWide:
+      case LengthModifier::AsWideFast:
         return ArgType::Invalid();
       case LengthModifier::AsShortLong:
         llvm_unreachable("only used for OpenCL which doesn not handle nArg");
