@@ -4,4 +4,4 @@
 // RUN: not %clang_cc1 -fexperimental-bounds-safety -x cuda -nocudalib -nocudainc %s 2>&1 | FileCheck -check-prefix ERR %s
 // RUN: not %clang_cc1 -fexperimental-bounds-safety -x renderscript %s 2>&1 | FileCheck -check-prefix ERR %s
 
-// ERR: error: bounds safety is only supported for C
+// ERR: error: '-fexperimental-bounds-safety' is only supported for C

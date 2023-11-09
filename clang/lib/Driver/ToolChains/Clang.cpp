@@ -6689,8 +6689,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptOutFlag(CmdArgs, options::OPT_fassume_sane_operator_new,
                      options::OPT_fno_assume_sane_operator_new);
 
-  Args.addOptInFlag(CmdArgs, options::OPT_fbounds_safety,
-                    options::OPT_fno_bounds_safety);
+  // -fexperimental-bounds-safety is only supported for C. The option is
+  // silently ignored for Asm and LLVM inputs. Report an error for the rest of
+  // unsupported languages.
+  if (Args.hasFlag(options::OPT_fbounds_safety, options::OPT_fno_bounds_safety,
+                   false)) {
+    if (llvm::any_of(Inputs, [](const InputInfo &Input) {
+          auto InputType = Input.getType();
+          return !isC(InputType) && !isAsm(InputType) && !isLLVMIR(InputType);
+        })) {
+      D.Diag(diag::err_drv_bounds_safety_lang_not_supported);
+    }
+    CmdArgs.push_back("-fexperimental-bounds-safety");
+  }
 
   // -fblocks=0 is default.
   if (Args.hasFlag(options::OPT_fblocks, options::OPT_fno_blocks,

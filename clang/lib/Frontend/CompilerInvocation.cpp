@@ -3631,7 +3631,7 @@ static void CheckBoundsSafetyLang(InputKind IK, DiagnosticsEngine &Diags) {
     break;
 
   default:
-    Diags.Report(diag::err_bounds_safety_lang_not_supported);
+    Diags.Report(diag::err_drv_bounds_safety_lang_not_supported);
     break;
   }
 }

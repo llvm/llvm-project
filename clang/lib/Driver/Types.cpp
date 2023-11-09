@@ -227,6 +227,19 @@ bool types::isObjC(ID Id) {
 
 bool types::isOpenCL(ID Id) { return Id == TY_CL || Id == TY_CLCXX; }
 
+bool types::isC(ID Id) {
+  switch (Id) {
+  default:
+    return false;
+  
+  case TY_C: case TY_PP_C:
+  case TY_CHeader: case TY_PP_CHeader:
+    return true;
+  }
+}
+
+bool types::isAsm(ID Id) { return Id == TY_Asm || Id == TY_PP_Asm; }
+
 bool types::isCXX(ID Id) {
   switch (Id) {
   default:

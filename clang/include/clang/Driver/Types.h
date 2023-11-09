@@ -80,6 +80,12 @@ namespace types {
   /// isCXX - Is this a "C++" input (C++ and Obj-C++ sources and headers).
   bool isCXX(ID Id);
 
+  /// isC - Is this a C input (C sources and headers).
+  bool isC(ID Id);
+
+  /// isAsm - Is this an assembler input.
+  bool isAsm(ID Id);
+
   /// Is this LLVM IR.
   bool isLLVMIR(ID Id);
 

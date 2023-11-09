@@ -330,11 +330,6 @@ def warn_alias_with_section : Warning<
   "as the %select{aliasee|resolver}2">,
   InGroup<IgnoredAttributes>;
 
-let CategoryName = "Bounds Safety Issue" in {
-def err_bounds_safety_lang_not_supported : Error<
-  "bounds safety is only supported for C">;
-} // end of bounds safety issue category
-
 let CategoryName = "Instrumentation Issue" in {
 def warn_profile_data_out_of_date : Warning<
   "profile data may be out of date: of %0 function%s0, %1 %plural{1:has|:have}1"

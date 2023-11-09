@@ -255,6 +255,11 @@ def err_drv_cannot_read_config_file : Error<
 def err_drv_arg_requires_bitcode_input: Error<
   "option '%0' requires input to be LLVM bitcode">;
 
+let CategoryName = "Bounds Safety Issue" in {
+def err_drv_bounds_safety_lang_not_supported : Error<
+  "'-fexperimental-bounds-safety' is only supported for C">;
+} // end of bounds safety issue category
+
 def err_target_unsupported_arch
   : Error<"the target architecture '%0' is not supported by the target '%1'">;
 def err_cpu_unsupported_isa
