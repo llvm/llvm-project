@@ -648,7 +648,7 @@ ifeq "$(SWIFT_EMBEDDED_MODE)" "1"
 	SWIFTFLAGS += -gdwarf-types -enable-experimental-feature Embedded -Xfrontend -disable-objc-interop -runtime-compatibility-version none
 	SWIFT_WMO = 1
 endif
-
+	
 #----------------------------------------------------------------------
 # Set up variables to run the Swift frontend directly.
 #----------------------------------------------------------------------
@@ -738,6 +738,22 @@ ifneq "$(OS)" "Darwin"
 	$(SWIFT) -modulewrap $(BUILDDIR)/$(MODULENAME).swiftmodule \
 	  -o $(BUILDDIR)/$(MODULENAME).o
 endif
+# Whole module optimization and primary file directives are at direct odds with each other. 
+# Either pick one or the other.
+ifeq "$(SWIFT_WMO)" "1"
+SWIFT_COMPILE_MODE_DIRECTIVE = "-wmo"
+else
+SWIFT_COMPILE_DIRECTIVE = "-primary-file"
+endif
+
+%.o: %.swift $(SWIFT_BRIDGING_PCH) $(SWIFT_OBJC_HEADER)
+	@echo "### Compiling" $<
+	$(SWIFT_FE) -c $(SWIFT_COMPILE_DIRECTIVE) $< \
+	  $(filter-out $(VPATH)/$<,$(filter-out $<,$(VPATHSOURCES))) \
+	  $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) $(PARSE_AS_LIBRARY) \
+	  -module-name $(MODULENAME)  -emit-module-path \
+	  $(patsubst %.o,$(BUILDDIR)/%.partial.swiftmodule,$@) \
+	  -o $(BUILDDIR)/$@
 
 ifeq "$(OS)" "Darwin"
 ifeq "$(HIDE_SWIFTMODULE)" ""
