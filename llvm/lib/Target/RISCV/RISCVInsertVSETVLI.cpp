@@ -1308,29 +1308,6 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
   }
 }
 
-/// Return true if the VL value configured by a vset(i)vli with the
-/// provided Info must be equal to the requested AVL.  That is, that
-/// AVL <= VLMAX.
-static bool willVLBeAVL(const VSETVLIInfo &Info, const RISCVSubtarget &ST) {
-  if (!Info.hasAVLImm())
-    // VLMAX is always the same value.
-    // TODO: Could extend to other registers by looking at the associated vreg
-    // def placement.
-    return RISCV::X0 == Info.getAVLReg();
-
-  unsigned AVL = Info.getAVLImm();
-  unsigned SEW = Info.getSEW();
-  unsigned AVLInBits = AVL * SEW;
-
-  unsigned LMul;
-  bool Fractional;
-  std::tie(LMul, Fractional) = RISCVVType::decodeVLMUL(Info.getVLMUL());
-
-  if (Fractional)
-    return ST.getRealMinVLen() / LMul >= AVLInBits;
-  return ST.getRealMinVLen() * LMul >= AVLInBits;
-}
-
 /// Perform simple partial redundancy elimination of the VSETVLI instructions
 /// we're about to insert by looking for cases where we can PRE from the
 /// beginning of one block to the end of one of its predecessors.  Specifically,
@@ -1364,9 +1341,21 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
   if (UnavailablePred->succ_size() != 1)
     return;
 
-  // If VL can be less than AVL, then we can't reduce the frequency of exec.
-  if (!willVLBeAVL(AvailableInfo, *ST))
-    return;
+  // If the AVL value is a register (other than our VLMAX sentinel),
+  // we need to prove the value is available at the point we're going
+  // to insert the vsetvli at.
+  if (AvailableInfo.hasAVLReg() && RISCV::X0 != AvailableInfo.getAVLReg()) {
+    MachineInstr *AVLDefMI = MRI->getVRegDef(AvailableInfo.getAVLReg());
+    if (!AVLDefMI)
+      return;
+    // This is an inline dominance check which covers the case of
+    // UnavailablePred being the preheader of a loop.
+    if (AVLDefMI->getParent() != UnavailablePred)
+      return;
+    for (auto &TermMI : UnavailablePred->terminators())
+      if (&TermMI == AVLDefMI)
+        return;
+  }
 
   // Model the effect of changing the input state of the block MBB to
   // AvailableInfo.  We're looking for two issues here; one legality,
