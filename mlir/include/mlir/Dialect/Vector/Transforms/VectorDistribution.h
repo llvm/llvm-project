@@ -61,7 +61,7 @@ using DistributionMapFn = std::function<AffineMap(Value)>;
 /// vector.transfer_write %v, %A[%id] : vector<1xf32>, memref<128xf32>
 void populateDistributeTransferWriteOpPatterns(
     RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn,
-    PatternBenefit benefit = 1);
+    PatternBenefit benefit = 2);
 
 /// Move scalar operations with no dependency on the warp op outside of the
 /// region.
@@ -75,10 +75,18 @@ using WarpShuffleFromIdxFn =
 /// Collect patterns to propagate warp distribution. `distributionMapFn` is used
 /// to decide how a value should be distributed when this cannot be inferred
 /// from its uses.
+///
+/// Added control over the pattern benefit for propagating
+/// `vector.transfer_read` ops is given to ensure the order of reads/writes
+/// before and after distribution is consistent. Writes are expected to have
+/// the highest priority for distribution, but is only ever distributed if it
+/// is adjacent to the yield. By making reads the lowest priority pattern, it
+/// will be the last pure vector operation to distribute, meaning writes should
+/// propagate first.
 void populatePropagateWarpVectorDistributionPatterns(
     RewritePatternSet &pattern, const DistributionMapFn &distributionMapFn,
     const WarpShuffleFromIdxFn &warpShuffleFromIdxFn,
-    PatternBenefit benefit = 1);
+    PatternBenefit benefit = 1, PatternBenefit readBenefit = 0);
 
 /// Lambda signature to compute a reduction of a distributed value for the given
 /// reduction kind and size.
