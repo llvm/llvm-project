@@ -16,10 +16,16 @@ def GPRRegBank : RegisterBank<"GPR", [ClassA]>;
 
 // CHECK: enum PartialMappingIdx
 // CHECK: PMI_ClassA = 0,
-// CHECK: const RegisterBankInfo::PartialMapping PartMappings
+// CHECK: const RegisterBankInfo::PartialMapping PartialMappings
 // CHECK: { 0, 32, GPRRegBank },
 // CHECK: const PartialMappingIdx BankIDToFirstRegisterClassIdx
 // CHECK: PMI_ClassA,
 // CHECK: const int BankIDToRegisterClassCount
 // CHECK: 1,
+// CHECK: const RegisterBankInfo::ValueMapping ValueMappings
+// CHECK: PMI_ClassA
+// CHECK: PMI_ClassA
+// CHECK: PMI_ClassA
+// CHECK: enum ValueMappingIdx
+// CHECK: VMI_ClassA
 
