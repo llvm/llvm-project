@@ -1,72 +1,44 @@
-; RUN: llc -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; REQUIRES: spirv-tools
+; RUN: llc -O0 -mtriple=spirv-unknown-unknown %s -o - --filetype=obj | spirv-dis | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - --filetype=obj | spirv-dis | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - --filetype=obj | spirv-dis | FileCheck %s
 
 define void @main() {
 entry:
-; CHECK-DAG:   %[[#short:]] = OpTypeInt 16 0
-; CHECK-DAG:     %[[#int:]] = OpTypeInt 32 0
-; CHECK-DAG:    %[[#long:]] = OpTypeInt 64 0
-
-; CHECK-DAG: %[[#v2short:]] = OpTypeVector %[[#short]] 2
-; CHECK-DAG: %[[#v3short:]] = OpTypeVector %[[#short]] 3
-; CHECK-DAG: %[[#v4short:]] = OpTypeVector %[[#short]] 4
-
-; CHECK-DAG:   %[[#v2int:]] = OpTypeVector %[[#int]] 2
-; CHECK-DAG:   %[[#v3int:]] = OpTypeVector %[[#int]] 3
-; CHECK-DAG:   %[[#v4int:]] = OpTypeVector %[[#int]] 4
-
-; CHECK-DAG:  %[[#v2long:]] = OpTypeVector %[[#long]] 2
-; CHECK-DAG:  %[[#v3long:]] = OpTypeVector %[[#long]] 3
-; CHECK-DAG:  %[[#v4long:]] = OpTypeVector %[[#long]] 4
-
-; CHECK-DAG:   %[[#ptr_Function_short:]] = OpTypePointer Function %[[#short]]
-; CHECK-DAG:     %[[#ptr_Function_int:]] = OpTypePointer Function %[[#int]]
-; CHECK-DAG:    %[[#ptr_Function_long:]] = OpTypePointer Function %[[#long]]
-; CHECK-DAG: %[[#ptr_Function_v2short:]] = OpTypePointer Function %[[#v2short]]
-; CHECK-DAG: %[[#ptr_Function_v3short:]] = OpTypePointer Function %[[#v3short]]
-; CHECK-DAG: %[[#ptr_Function_v4short:]] = OpTypePointer Function %[[#v4short]]
-; CHECK-DAG:   %[[#ptr_Function_v2int:]] = OpTypePointer Function %[[#v2int]]
-; CHECK-DAG:   %[[#ptr_Function_v3int:]] = OpTypePointer Function %[[#v3int]]
-; CHECK-DAG:   %[[#ptr_Function_v4int:]] = OpTypePointer Function %[[#v4int]]
-; CHECK-DAG:  %[[#ptr_Function_v2long:]] = OpTypePointer Function %[[#v2long]]
-; CHECK-DAG:  %[[#ptr_Function_v3long:]] = OpTypePointer Function %[[#v3long]]
-; CHECK-DAG:  %[[#ptr_Function_v4long:]] = OpTypePointer Function %[[#v4long]]
-
-; CHECK: %[[#]] = OpVariable %[[#ptr_Function_short]] Function
+; CHECK: %int16_t_Val = OpVariable %_ptr_Function_ushort Function
   %int16_t_Val = alloca i16, align 2
 
-; CHECK: %[[#]] = OpVariable %[[#ptr_Function_int]] Function
+; CHECK: %int_Val = OpVariable %_ptr_Function_uint Function
   %int_Val = alloca i32, align 4
 
-; CHECK: %[[#]] = OpVariable %[[#ptr_Function_long]] Function
+; CHECK: %int64_t_Val = OpVariable %_ptr_Function_ulong Function
   %int64_t_Val = alloca i64, align 8
 
-; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v2short]] Function
+; CHECK: %int16_t2_Val = OpVariable %_ptr_Function_v2ushort Function
   %int16_t2_Val = alloca <2 x i16>, align 4
 
-; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v3short]] Function
+; CHECK: %int16_t3_Val = OpVariable %_ptr_Function_v3ushort Function
   %int16_t3_Val = alloca <3 x i16>, align 8
 
-; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v4short]] Function
+; CHECK: %int16_t4_Val = OpVariable %_ptr_Function_v4ushort Function
   %int16_t4_Val = alloca <4 x i16>, align 8
 
-; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v2int]] Function
+; CHECK: %int2_Val = OpVariable %_ptr_Function_v2uint Function
   %int2_Val = alloca <2 x i32>, align 8
 
-; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v3int]] Function
+; CHECK: %int3_Val = OpVariable %_ptr_Function_v3uint Function
   %int3_Val = alloca <3 x i32>, align 16
 
-; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v4int]] Function
+; CHECK: %int4_Val = OpVariable %_ptr_Function_v4uint Function
   %int4_Val = alloca <4 x i32>, align 16
 
-; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v2long]] Function
+; CHECK: %int64_t2_Val = OpVariable %_ptr_Function_v2ulong Function
   %int64_t2_Val = alloca <2 x i64>, align 16
 
-; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v3long]] Function
+; CHECK: %int64_t3_Val = OpVariable %_ptr_Function_v3ulong Function
   %int64_t3_Val = alloca <3 x i64>, align 32
 
-; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v4long]] Function
+; CHECK: %int64_t4_Val = OpVariable %_ptr_Function_v4ulong Function
   %int64_t4_Val = alloca <4 x i64>, align 32
 
   ret void

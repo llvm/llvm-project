@@ -222,6 +222,11 @@ if(LLVM_ENABLE_HTTPLIB)
   list(APPEND LLVM_TEST_DEPENDS llvm-debuginfod)
 endif()
 
+if (LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+  list(APPEND LLVM_TEST_DEPENDS spirv-dis)
+  list(APPEND LLVM_TEST_DEPENDS spirv-val)
+endif()
+
 add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS})
 set_target_properties(llvm-test-depends PROPERTIES FOLDER "Tests")
 
