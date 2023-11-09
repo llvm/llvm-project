@@ -227,7 +227,8 @@ LogicalResult OpaqueType::verify(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
                                  ArrayRef<int64_t> shape, Type elementType,
-                                 ArrayRef<bool> scalableDims) {
+                                 ArrayRef<bool> scalableDims,
+                                 VectorLayoutAttrInterface layout) {
   if (!isValidElementType(elementType))
     return emitError()
            << "vector elements must be int/index/float type but got "
@@ -241,6 +242,11 @@ LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
   if (scalableDims.size() != shape.size())
     return emitError() << "number of dims must match, got "
                        << scalableDims.size() << " and " << shape.size();
+
+  if (layout) {
+    if (failed(layout.verifyLayout(shape, elementType, emitError)))
+      return emitError() << "layout does not match underlying vector shape";
+  }
 
   return success();
 }

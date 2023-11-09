@@ -495,4 +495,28 @@ def MemRefLayoutAttrInterface : AttrInterface<"MemRefLayoutAttrInterface"> {
   ];
 }
 
+//===----------------------------------------------------------------------===//
+// VectorLayoutAttrInterface
+//===----------------------------------------------------------------------===//
+
+def VectorLayoutAttrInterface : AttrInterface<"VectorLayoutAttrInterface"> {
+  let cppNamespace = "::mlir";
+
+  let description = [{
+    This interface is used for attributes that can represent the Vector type's
+    layout semantics, such as being able to map the vector indices to those
+    of the vector fragments held by individiual threads.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      "Check if the current layout is applicable to the provided shape",
+      "::mlir::LogicalResult", "verifyLayout",
+      (ins "::llvm::ArrayRef<int64_t>":$shape,
+           "::mlir::Type":$elementType,
+           "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
+    >
+  ];
+}
+
 #endif // MLIR_IR_BUILTINATTRIBUTEINTERFACES_TD_
