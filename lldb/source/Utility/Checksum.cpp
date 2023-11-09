@@ -40,5 +40,5 @@ std::string Checksum::digest() const {
   return std::string(m_checksum.digest());
 }
 
-llvm::MD5::MD5Result Checksum::g_sentinel = {0, 0, 0, 0, 0, 0, 0, 0,
-                                             0, 0, 0, 0, 0, 0, 0, 0};
+llvm::MD5::MD5Result Checksum::g_sentinel = {
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
