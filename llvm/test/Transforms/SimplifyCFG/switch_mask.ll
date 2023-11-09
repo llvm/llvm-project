@@ -180,8 +180,17 @@ define void @switch_lookup_with_nonconst_range(i32 %x, i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_PREHEADER:%.*]]
 ; CHECK:       for.preheader:
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[FOR_PREHEADER]], label [[LOR_END:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[X:%.*]], 1
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[FOR_PREHEADER]], label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[ADD]], 6
+; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[LOR_END:%.*]]
+; CHECK:       switch.lookup:
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [6 x i32], ptr @switch.table.switch_lookup_with_nonconst_range, i32 0, i32 [[ADD]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
+; CHECK-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 1, [[FOR_END]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -202,6 +211,6 @@ default:                                          ; preds = %for.end
   br label %lor.end
 
 lor.end:                                          ; preds = %default, %for.end, %for.end, %for.end
-  %retval.0.i.i = phi i32 [ 0, %default ], [ 0, %for.end ], [ 0, %for.end ], [ 0, %for.end ]
+  %retval.0.i.i = phi i32 [ 1, %default ], [ 0, %for.end ], [ 0, %for.end ], [ 0, %for.end ]
   ret void
 }
