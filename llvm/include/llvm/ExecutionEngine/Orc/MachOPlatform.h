@@ -281,12 +281,6 @@ private:
   std::atomic<BootstrapInfo *> Bootstrap;
 };
 
-namespace shared {
-
-using SPSNamedExecutorAddrRangeSequence =
-    SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRange>>;
-
-} // end namespace shared
 } // end namespace orc
 } // end namespace llvm
 
