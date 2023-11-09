@@ -49,6 +49,19 @@ static_assert(FromString == 1633837824); // ref-error {{is not an integral const
                                          // ref-note {{initializer of 'FromString' is not a constant expression}}
 #endif
 
+
+struct S {
+  int i, j, k;
+};
+constexpr S func() {
+  constexpr int array[] = { 12, 42, 128 };
+  return __builtin_bit_cast(S, array);
+}
+constexpr S s = func();
+static_assert(s.i == 12, "");
+static_assert(s.j == 42, "");
+static_assert(s.k == 128, "");
+
 template <class Intermediate, class Init>
 constexpr bool round_trip(const Init &init) {
   return bit_cast<Init>(bit_cast<Intermediate>(init)) == init;

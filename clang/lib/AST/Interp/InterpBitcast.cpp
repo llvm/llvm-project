@@ -17,8 +17,6 @@
 namespace clang {
 namespace interp {
 
-// TODO: Try to e-duplicate the primitive and composite versions.
-
 /// Used to iterate over pointer fields.
 using DataFunc =
     llvm::function_ref<bool(const Pointer &P, PrimType Ty, size_t BitOffset)>;
@@ -383,7 +381,6 @@ bool DoBitCastToPtr(InterpState &S, const Pointer &P, Pointer &DestPtr,
         if (T == PT_Float) {
           const QualType FloatType = P.getFieldDesc()->getType();
           const auto &Sem = ASTCtx.getFloatTypeSemantics(FloatType);
-          size_t ValueReprBits = ASTCtx.getTypeSize(FloatType);
 
           CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(P.getType());
           const std::byte *M = Bytes.getBytes(BitOffset, 1234);
