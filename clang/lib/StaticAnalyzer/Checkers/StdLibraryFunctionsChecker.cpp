@@ -625,7 +625,7 @@ class StdLibraryFunctionsChecker
     }
 
     const std::string describe(CheckerContext &C) const {
-      return "This function indicates failure only by setting 'errno'";
+      return "reading 'errno' is required to find out if the call has failed";
     }
   };
 
@@ -1395,19 +1395,26 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
     // StdLibraryFunctionsChecker.
 
     ExplodedNode *Pred = Node;
+    DeclarationName FunctionName =
+        cast<NamedDecl>(Call.getDecl())->getDeclName();
 
     std::string ErrnoNote = Case.getErrnoConstraint().describe(C);
-    std::string Note =
-        llvm::formatv(Case.getNote().str().c_str(),
-                      cast<NamedDecl>(Call.getDecl())->getDeclName());
+    std::string CaseNote;
+    if (Case.getNote().empty()) {
+      if (!ErrnoNote.empty())
+        ErrnoNote =
+            llvm::formatv("After calling '{0}' {1}", FunctionName, ErrnoNote);
+    } else {
+      CaseNote = llvm::formatv(Case.getNote().str().c_str(), FunctionName);
+    }
     const SVal RV = Call.getReturnValue();
 
     if (Summary.getInvalidationKd() == EvalCallAsPure) {
       // Do not expect that errno is interesting (the "pure" functions do not
       // affect it).
-      if (!Note.empty()) {
+      if (!CaseNote.empty()) {
         const NoteTag *Tag = C.getNoteTag(
-            [Node, Note, RV](PathSensitiveBugReport &BR) -> std::string {
+            [Node, CaseNote, RV](PathSensitiveBugReport &BR) -> std::string {
               // Try to omit the note if we know in advance which branch is
               // taken (this means, only one branch exists).
               // This check is performed inside the lambda, after other
@@ -1419,15 +1426,16 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
               // the successors). This is why this check is only used in the
               // EvalCallAsPure case.
               if (BR.isInteresting(RV) && Node->succ_size() > 1)
-                return Note;
+                return CaseNote;
               return "";
             });
         Pred = C.addTransition(NewState, Pred, Tag);
       }
     } else {
-      if (!Note.empty() || !ErrnoNote.empty()) {
-        const NoteTag *Tag = C.getNoteTag(
-            [Note, ErrnoNote, RV](PathSensitiveBugReport &BR) -> std::string {
+      if (!CaseNote.empty() || !ErrnoNote.empty()) {
+        const NoteTag *Tag =
+            C.getNoteTag([CaseNote, ErrnoNote,
+                          RV](PathSensitiveBugReport &BR) -> std::string {
               // If 'errno' is interesting, show the user a note about the case
               // (what happened at the function call) and about how 'errno'
               // causes the problem. ErrnoChecker sets the errno (but not RV) to
@@ -1440,12 +1448,12 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
                                     BR.isInteresting(ErrnoLoc->getAsRegion());
               if (ErrnoImportant) {
                 BR.markNotInteresting(ErrnoLoc->getAsRegion());
-                if (Note.empty())
+                if (CaseNote.empty())
                   return ErrnoNote;
-                return llvm::formatv("{0}; {1}", Note, ErrnoNote);
+                return llvm::formatv("{0}; {1}", CaseNote, ErrnoNote);
               } else {
                 if (BR.isInteresting(RV))
-                  return Note;
+                  return CaseNote;
               }
               return "";
             });
@@ -1453,14 +1461,7 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
       }
     }
 
-    // Pred may be:
-    //  - a nullpointer, if we reach an already existing node (theoretically);
-    //  - a sink, when NewState is posteriorly overconstrained.
-    // In these situations we cannot add the errno note tag.
-    if (!Pred || Pred->isSink())
-      continue;
-
-    // Add the transition if no note tag could be added.
+    // Add the transition if no note tag was added.
     if (Pred == Node && NewState != State)
       C.addTransition(NewState);
   }

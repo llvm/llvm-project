@@ -135,7 +135,7 @@ void check_rewind_errnocheck(void) {
   if (!F)
     return;
   errno = 0;
-  rewind(F); // expected-note{{This function indicates failure only by setting 'errno'}}
+  rewind(F); // expected-note{{After calling 'rewind' reading 'errno' is required to find out if the call has failed}}
   fclose(F); // expected-warning{{Value of 'errno' was not checked and may be overwritten by function 'fclose' [alpha.unix.Errno]}}
   // expected-note@-1{{Value of 'errno' was not checked and may be overwritten by function 'fclose'}}
 }
