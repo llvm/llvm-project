@@ -7425,10 +7425,11 @@ foreach fvti = AllFloatVectors in {
                        (!cast<GroupVTypeInfo>(fvti).VectorM1
                           (EXTRACT_SUBREG $rs1, sub_vrm1_0)),
                        (fvti.Vector $rs1));
-    defvar pseudo = (PseudoVMV_S_X merge, (XLenVT X0), GPR:$vl, fvti.Log2SEW);
+    defvar pseudoVMV = (PseudoVMV_S_X merge, (XLenVT X0), GPR:$vl, fvti.Log2SEW);
     def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
                            (fvti.Scalar (fpimm0)), VLOpFrag)),
-              !if(isGroup, (INSERT_SUBREG $rs1, pseudo, sub_vrm1_0), pseudo)>;
+              !if(isGroup, (INSERT_SUBREG $rs1, pseudoVMV, sub_vrm1_0),
+                           pseudoVMV)>;
   }
 }
 
