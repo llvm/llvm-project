@@ -567,8 +567,7 @@ TEST(CommandLineTest, SubcommandOptions) {
   EXPECT_STREQ(TopLevelOpt.getValue().c_str(), "csv");
 
   for (auto &[LiteralOptVal, WantLiteralOpt] :
-       {std::pair{"--bar", bar}, std::pair{"--foo", foo},
-        std::pair{"--baz", baz}}) {
+       {std::pair{"--bar", bar}, {"--foo", foo}, {"--baz", baz}}) {
     const char *args[] = {"prog", "sc", LiteralOptVal};
     ASSERT_TRUE(cl::ParseCommandLineOptions(sizeof(args) / sizeof(args[0]),
                                             args, StringRef()));
