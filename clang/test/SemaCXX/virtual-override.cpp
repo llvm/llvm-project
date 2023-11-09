@@ -87,7 +87,7 @@ class A {
 
 class B : A {
   virtual a* f(); 
-  virtual const a* g(); // expected-error{{return type of virtual function 'g' is not covariant with the return type of the function it overrides (class type 'const a *' is more qualified than class type 'a *')}}
+  virtual const a* g(); // expected-error{{return type of virtual function 'g' is not covariant with the return type of the function it overrides ('const a *' has different qualifiers than 'a *')}}
 };
 
 }
@@ -312,6 +312,6 @@ namespace T14 {
 
   class B: public A {
   public:
-    virtual volatile a* foo(); // expected-error{{return type of virtual function 'foo' is not covariant with the return type of the function it overrides (class type 'volatile a *' is more qualified than class type 'const a *')}}
+    virtual volatile a* foo(); // expected-error{{return type of virtual function 'foo' is not covariant with the return type of the function it overrides ('volatile a *' has different qualifiers than 'const a *')}}
   };
 }
