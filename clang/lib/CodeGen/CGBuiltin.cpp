@@ -5708,18 +5708,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::FunctionType *FTy = F->getFunctionType();
 
     for (unsigned i = 0, e = E->getNumArgs(); i != e; ++i) {
-      Value *ArgValue;
-      // If this is a normal argument, just emit it as a scalar.
-      if ((ICEArguments & (1 << i)) == 0) {
-        ArgValue = EmitScalarExpr(E->getArg(i));
-      } else {
-        // If this is required to be a constant, constant fold it so that we
-        // know that the generated intrinsic gets a ConstantInt.
-        ArgValue = llvm::ConstantInt::get(
-            getLLVMContext(),
-            *E->getArg(i)->getIntegerConstantExpr(getContext()));
-      }
-
+      Value *ArgValue = EmitScalarOrConstFoldImmArg(ICEArguments, i, E);
       // If the intrinsic arg type is different from the builtin arg type
       // we need to do a bit cast.
       llvm::Type *PTy = FTy->getParamType(i);
@@ -8599,15 +8588,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
       }
     }
 
-    if ((ICEArguments & (1 << i)) == 0) {
-      Ops.push_back(EmitScalarExpr(E->getArg(i)));
-    } else {
-      // If this is required to be a constant, constant fold it so that we know
-      // that the generated intrinsic gets a ConstantInt.
-      Ops.push_back(llvm::ConstantInt::get(
-          getLLVMContext(),
-          *E->getArg(i)->getIntegerConstantExpr(getContext())));
-    }
+    Ops.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, i, E));
   }
 
   switch (BuiltinID) {
@@ -11094,15 +11075,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         continue;
       }
     }
-    if ((ICEArguments & (1 << i)) == 0) {
-      Ops.push_back(EmitScalarExpr(E->getArg(i)));
-    } else {
-      // If this is required to be a constant, constant fold it so that we know
-      // that the generated intrinsic gets a ConstantInt.
-      Ops.push_back(llvm::ConstantInt::get(
-          getLLVMContext(),
-          *E->getArg(i)->getIntegerConstantExpr(getContext())));
-    }
+    Ops.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, i, E));
   }
 
   auto SISDMap = ArrayRef(AArch64SISDIntrinsicMap);
@@ -13814,16 +13787,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   assert(Error == ASTContext::GE_None && "Should not codegen an error");
 
   for (unsigned i = 0, e = E->getNumArgs(); i != e; i++) {
-    // If this is a normal argument, just emit it as a scalar.
-    if ((ICEArguments & (1 << i)) == 0) {
-      Ops.push_back(EmitScalarExpr(E->getArg(i)));
-      continue;
-    }
-
-    // If this is required to be a constant, constant fold it so that we know
-    // that the generated intrinsic gets a ConstantInt.
-    Ops.push_back(llvm::ConstantInt::get(
-        getLLVMContext(), *E->getArg(i)->getIntegerConstantExpr(getContext())));
+    Ops.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, i, E));
   }
 
   // These exist so that the builtin that takes an immediate can be bounds
@@ -17468,11 +17432,11 @@ Value *EmitAMDGPUImplicitArgPtr(CodeGenFunction &CGF) {
 /// Emit code based on Code Object ABI version.
 /// COV_4    : Emit code to use dispatch ptr
 /// COV_5    : Emit code to use implicitarg ptr
-/// COV_NONE : Emit code to load a global variable "llvm.amdgcn.abi.version"
+/// COV_NONE : Emit code to load a global variable "__oclc_ABI_version"
 ///            and use its value for COV_4 or COV_5 approach. It is used for
 ///            compiling device libraries in an ABI-agnostic way.
 ///
-/// Note: "llvm.amdgcn.abi.version" is supposed to be emitted and intialized by
+/// Note: "__oclc_ABI_version" is supposed to be emitted and intialized by
 ///       clang during compilation of user code.
 Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
   llvm::LoadInst *LD;
@@ -17480,7 +17444,7 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
   auto Cov = CGF.getTarget().getTargetOpts().CodeObjectVersion;
 
   if (Cov == clang::TargetOptions::COV_None) {
-    StringRef Name = "llvm.amdgcn.abi.version";
+    StringRef Name = "__oclc_ABI_version";
     auto *ABIVersionC = CGF.CGM.getModule().getNamedGlobal(Name);
     if (!ABIVersionC)
       ABIVersionC = new llvm::GlobalVariable(
@@ -17588,6 +17552,23 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
 }
 
+llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
+                                                          unsigned Idx,
+                                                          const CallExpr *E) {
+  llvm::Value *Arg = nullptr;
+  if ((ICEArguments & (1 << Idx)) == 0) {
+    Arg = EmitScalarExpr(E->getArg(Idx));
+  } else {
+    // If this is required to be a constant, constant fold it so that we
+    // know that the generated intrinsic gets a ConstantInt.
+    std::optional<llvm::APSInt> Result =
+        E->getArg(Idx)->getIntegerConstantExpr(getContext());
+    assert(Result && "Expected argument to be a constant");
+    Arg = llvm::ConstantInt::get(getLLVMContext(), *Result);
+  }
+  return Arg;
+}
+
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
@@ -17638,8 +17619,15 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {
     llvm::SmallVector<llvm::Value *, 6> Args;
-    for (unsigned I = 0; I != E->getNumArgs(); ++I)
-      Args.push_back(EmitScalarExpr(E->getArg(I)));
+    // Find out if any arguments are required to be integer constant
+    // expressions.
+    unsigned ICEArguments = 0;
+    ASTContext::GetBuiltinTypeError Error;
+    getContext().GetBuiltinType(BuiltinID, Error, &ICEArguments);
+    assert(Error == ASTContext::GE_None && "Should not codegen an error");
+    for (unsigned I = 0; I != E->getNumArgs(); ++I) {
+      Args.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, I, E));
+    }
     assert(Args.size() == 5 || Args.size() == 6);
     if (Args.size() == 5)
       Args.insert(Args.begin(), llvm::PoisonValue::get(Args[0]->getType()));
@@ -20615,17 +20603,7 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       Ops.push_back(AggValue);
       continue;
     }
-
-    // If this is a normal argument, just emit it as a scalar.
-    if ((ICEArguments & (1 << i)) == 0) {
-      Ops.push_back(EmitScalarExpr(E->getArg(i)));
-      continue;
-    }
-
-    // If this is required to be a constant, constant fold it so that we know
-    // that the generated intrinsic gets a ConstantInt.
-    Ops.push_back(llvm::ConstantInt::get(
-        getLLVMContext(), *E->getArg(i)->getIntegerConstantExpr(getContext())));
+    Ops.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, i, E));
   }
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;

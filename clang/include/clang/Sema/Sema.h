@@ -2303,7 +2303,6 @@ private:
   struct ModuleScope {
     SourceLocation BeginLoc;
     clang::Module *Module = nullptr;
-    bool ModuleInterface = false;
     VisibleModuleSet OuterVisibleModules;
   };
   /// The modules we're currently parsing.
@@ -2367,9 +2366,11 @@ public:
     return ModuleScopes.empty() ? nullptr : ModuleScopes.back().Module;
   }
 
-  /// Is the module scope we are an interface?
-  bool currentModuleIsInterface() const {
-    return ModuleScopes.empty() ? false : ModuleScopes.back().ModuleInterface;
+  /// Is the module scope we are an implementation unit?
+  bool currentModuleIsImplementation() const {
+    return ModuleScopes.empty()
+               ? false
+               : ModuleScopes.back().Module->isModuleImplementation();
   }
 
   /// Is the module scope we are in a C++ Header Unit?
@@ -12186,13 +12187,6 @@ public:
   /// Called on well-formed 'compare' clause.
   OMPClause *ActOnOpenMPCompareClause(SourceLocation StartLoc,
                                       SourceLocation EndLoc);
-  /// Called on well-formed 'fail' clause.
-  OMPClause *ActOnOpenMPFailClause(SourceLocation StartLoc,
-                                   SourceLocation EndLoc);
-  OMPClause *ActOnOpenMPFailClause(
-      OpenMPClauseKind Kind, SourceLocation KindLoc,
-      SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc);
-
   /// Called on well-formed 'seq_cst' clause.
   OMPClause *ActOnOpenMPSeqCstClause(SourceLocation StartLoc,
                                      SourceLocation EndLoc);
