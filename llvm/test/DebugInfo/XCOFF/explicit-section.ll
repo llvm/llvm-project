@@ -42,8 +42,8 @@ entry:
 !15 = !DILocation(line: 3, column: 10, scope: !14)
 !16 = !DILocation(line: 3, column: 3, scope: !14)
 
-; CHECK:               .csect [PR],5
-; CHECK-NEXT:          .file   "2.c"
+; CHECK:               .file   "2.c"
+; CHECK-NEXT:          .csect [PR],5
 ; CHECK-NEXT:          .globl  bar[DS]                         # -- Begin function bar
 ; CHECK-NEXT:          .globl  .bar
 ; CHECK-NEXT:          .align  2
