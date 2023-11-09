@@ -2920,7 +2920,6 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
     StringLiteral *FilenameLiteral = FilenameArgExpr.getAs<StringLiteral>();
     std::vector<char> BinaryData;
     StringLiteral *Base64Str = Base64ArgExpr.getAs<StringLiteral>();
-    StringRef Base64StrData = Base64Str->getBytes();
     if (Base64Str->getKind() != StringLiteralKind::Unevaluated) {
       Diag(Base64Str->getExprLoc(), diag::err_expected_string_literal)
           << 0
