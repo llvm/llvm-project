@@ -34,7 +34,7 @@
 
 
 // RUN: %clang --target=powerpc-unknown-aix  -save-stats -flto -o obj/dir/save-stats %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-AIX-LTO
-// RUN: %clang --target=powerpc-unknown-aix  -save-stats -flto -o obj/dir/save-stats -Wl,-plugin-opt:-dummy %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-AIX-LTO
+// RUN: %clang --target=powerpc-unknown-aix  -save-stats -flto -o obj/dir/save-stats -Wl,-bplugin-opt:-dummy %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-AIX-LTO
 
 // CHECK-AIX-LTO: "-stats-file=save-stats.stats"
 // CHECK-AIX-LTO: "-o" "obj/dir{{/|\\\\}}save-stats"
