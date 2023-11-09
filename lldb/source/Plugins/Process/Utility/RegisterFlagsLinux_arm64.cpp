@@ -12,15 +12,15 @@
 // This file is built on all systems because it is used by native processes and
 // core files, so we manually define the needed HWCAP values here.
 
-#define HWCAP_FPHP (1UL << 9)
-#define HWCAP_ASIMDHP (1UL << 10)
-#define HWCAP_DIT (1UL << 24)
-#define HWCAP_SSBS (1UL << 28)
+#define HWCAP_FPHP (1ULL << 9)
+#define HWCAP_ASIMDHP (1ULL << 10)
+#define HWCAP_DIT (1ULL << 24)
+#define HWCAP_SSBS (1ULL << 28)
 
-#define HWCAP2_BTI (1UL << 17)
-#define HWCAP2_MTE (1UL << 18)
-#define HWCAP2_AFP (1UL << 20)
-#define HWCAP2_EBF16 (1UL << 32)
+#define HWCAP2_BTI (1ULL << 17)
+#define HWCAP2_MTE (1ULL << 18)
+#define HWCAP2_AFP (1ULL << 20)
+#define HWCAP2_EBF16 (1ULL << 32)
 
 using namespace lldb_private;
 
