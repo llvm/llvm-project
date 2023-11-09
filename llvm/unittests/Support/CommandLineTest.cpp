@@ -525,6 +525,74 @@ TEST(CommandLineTest, LookupFailsInWrongSubCommand) {
   EXPECT_FALSE(Errs.empty());
 }
 
+TEST(CommandLineTest, SubcommandOptions) {
+  enum LiteralOptionEnum {
+    foo,
+    bar,
+    baz,
+  };
+
+  cl::ResetCommandLineParser();
+
+  // This is a top-level option and not associated with a subcommand.
+  // A command line using subcommand should parse both subcommand options and
+  // top-level options.  A valid use case is that users of llvm command line
+  // tools should be able to specify top-level options defined in any library.
+  cl::opt<std::string> TopLevelOpt("str", cl::init("txt"),
+                                   cl::desc("A top-level option."));
+
+  StackSubCommand SC("sc", "Subcommand");
+
+  // The positional argument.
+  StackOption<std::string> PositionalOpt(
+      cl::Positional, cl::desc("positional argument test coverage"),
+      cl::sub(SC));
+  // Thel literal argument.
+  StackOption<LiteralOptionEnum> LiteralOpt(
+      cl::desc("literal argument test coverage"), cl::sub(SC), cl::init(bar),
+      cl::values(clEnumVal(foo, "foo"), clEnumVal(bar, "bar"),
+                 clEnumVal(baz, "baz")));
+  StackOption<bool> BoolOpt("enable", cl::sub(SC), cl::init(false));
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  for (const char *literalArg : {"--bar", "--foo", "--baz"}) {
+    const char *args[] = {"prog",     "sc",      "input-file",
+                          literalArg, "-enable", "--str=csv"};
+
+    // cl::ParseCommandLineOptions returns true on success. it returns false
+    // and prints errors to caller provided error stream (&OS in this setting).
+    EXPECT_TRUE(cl::ParseCommandLineOptions(6, args, StringRef(), &OS));
+
+    // Tests that the value of `str` option is `csv` as specified.
+    EXPECT_EQ(strcmp(TopLevelOpt.getValue().c_str(), "csv"), 0);
+
+    const char *parsedLiteralOpt;
+    switch (LiteralOpt) {
+    case baz:
+      parsedLiteralOpt = "baz";
+      break;
+    case bar:
+      parsedLiteralOpt = "bar";
+      break;
+    case foo:
+      parsedLiteralOpt = "foo";
+      break;
+    default:
+      llvm_unreachable("unknown option for LiteralOpt");
+    }
+
+    // Tests that literal options are parsed correctly. Skip '--' prefix of
+    // literalArg.
+    EXPECT_EQ(strcmp(parsedLiteralOpt, literalArg + 2), 0);
+
+    // Flush and tests there is no error message.
+    OS.flush();
+    EXPECT_TRUE(Errs.empty());
+  }
+}
+
 TEST(CommandLineTest, AddToAllSubCommands) {
   cl::ResetCommandLineParser();
 
