@@ -27,8 +27,7 @@ namespace sparse_tensor {
 /// a subset of the options that can be set for the underlying passes,
 /// because it must be manually kept in sync with the tablegen files
 /// for those passes.
-struct SparsifierOptions
-    : public PassPipelineOptions<SparsifierOptions> {
+struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
   // These options must be kept in sync with `SparsificationBase`.
   // TODO(57514): These options are duplicated in Passes.td.
   PassOptions::Option<mlir::SparseParallelizationStrategy> parallelization{
@@ -168,8 +167,7 @@ struct SparsifierOptions
 /// is the standard pipeline for taking sparsity-agnostic IR using
 /// the sparse-tensor type and lowering it to LLVM IR with concrete
 /// representations and algorithms for sparse tensors.
-void buildSparsifier(OpPassManager &pm,
-                         const SparsifierOptions &options);
+void buildSparsifier(OpPassManager &pm, const SparsifierOptions &options);
 
 /// Registers all pipelines for the `sparse_tensor` dialect.  At present,
 /// this includes only "sparsifier".
