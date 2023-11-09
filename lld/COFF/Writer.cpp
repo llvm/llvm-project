@@ -1044,9 +1044,9 @@ void Writer::createMiscChunks() {
 
   // Create Debug Information Chunks
   std::vector<std::pair<COFF::DebugType, Chunk *>> debugRecords;
-  // The default debug info section is .rdata. It set to .buildid section only
-  // when not generating PDB and /build-id flag is given. If .rdata is chosen
-  // and /build-id is given, an extra .buildid section will be generated.
+  // The default debug info section is .rdata. It is set to .buildid section
+  // only when not generating PDB and /build-id flag is given. If .rdata is
+  // chosen and /build-id is given, an extra .buildid section will be generated.
   debugInfoSec =
       config->shouldCreatePDB || config->buildIDHash != BuildIDHash::Binary
           ? rdataSec
