@@ -2964,7 +2964,6 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                 }
                 builder.restoreInsertionPoint(crtPos);
               }
-
             },
             [&](const Fortran::parser::Name &name) {
               TODO(operandLocation, "OpenACC Global Ctor from parser::Name");
