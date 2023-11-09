@@ -43,7 +43,7 @@ Expected<GlobalPtrAuthInfo> GlobalPtrAuthInfo::tryAnalyze(const Value *V) {
 
   auto *I64Ty = Type::getInt64Ty(Ctx);
   auto *I32Ty = Type::getInt32Ty(Ctx);
-  auto *P0I8Ty = Type::getInt8PtrTy(Ctx);
+  auto *P0I8Ty = llvm::PointerType::getUnqual(Ctx);
   // Check that the struct matches its expected shape:
   //   { i8*, i32, i64, i64 }
   if (!Ty->isLayoutIdentical(
@@ -133,8 +133,8 @@ Constant *GlobalPtrAuthInfo::create(Module &M, Constant *Pointer,
                                     ConstantInt *Key,
                                     Constant *AddrDiscriminator,
                                     ConstantInt *Discriminator) {
-  auto CastPointer =
-    ConstantExpr::getBitCast(Pointer, Type::getInt8PtrTy(M.getContext()));
+  auto CastPointer = ConstantExpr::getBitCast(
+      Pointer, llvm::PointerType::getUnqual(M.getContext()));
 
   auto Init = ConstantStruct::getAnon({CastPointer, Key, AddrDiscriminator,
                                        Discriminator}, /*packed*/ false);

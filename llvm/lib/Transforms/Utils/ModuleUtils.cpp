@@ -96,7 +96,7 @@ static void appendToUsedList(Module &M, StringRef Name, ArrayRef<GlobalValue *> 
   if (GV)
     GV->eraseFromParent();
 
-  Type *ArrayEltTy = llvm::Type::getInt8PtrTy(M.getContext());
+  Type *ArrayEltTy = llvm::PointerType::getUnqual(M.getContext());
   for (auto *V : Values)
     Init.insert(ConstantExpr::getPointerBitCastOrAddrSpaceCast(V, ArrayEltTy));
 
@@ -133,7 +133,7 @@ llvm::setUsedInitializer(GlobalVariable &V,
   }
 
   // Type of pointer to the array of pointers.
-  PointerType *Int8PtrTy = Type::getInt8PtrTy(V.getContext(), 0);
+  PointerType *Int8PtrTy = PointerType::getUnqual(V.getContext());
 
   SmallVector<Constant *, 8> UsedArray;
   for (GlobalValue *GV : Init) {
