@@ -3899,11 +3899,6 @@ void Preprocessor::HandleEmbedDirectiveNaive(
   // particular.
   EmbedBuffers.push_back("");
   size_t EmbedBufferNumber = EmbedBuffers.size();
-  std::string EmbedBufferNumberVal = std::to_string(EmbedBufferNumber);
-  llvm::Twine EmbedBufferName = [](const std::string &Number) {
-    llvm::Twine PrefixNumber = ("<built-in:embed:", Number);
-    return PrefixNumber.concat(">");
-  }(EmbedBufferNumberVal);
   std::string &TargetEmbedBuffer = EmbedBuffers.back();
   const size_t TotalSize = BinaryContents.size();
   // In the future, this might change/improve.
@@ -3956,7 +3951,9 @@ void Preprocessor::HandleEmbedDirectiveNaive(
 
   // Create faux-file and its ID, backed by a memory buffer.
   std::unique_ptr<llvm::MemoryBuffer> EmbedMemBuffer =
-      llvm::MemoryBuffer::getMemBufferCopy(TargetEmbedBuffer, EmbedBufferName);
+      llvm::MemoryBuffer::getMemBufferCopy(
+          TargetEmbedBuffer,
+          "<built-in:embed:" + Twine(EmbedBufferNumber) + ">");
   assert(EmbedMemBuffer && "Cannot create predefined source buffer");
   FileID EmbedBufferFID = SourceMgr.createFileID(std::move(EmbedMemBuffer));
   assert(EmbedBufferFID.isValid() &&
@@ -4113,11 +4110,6 @@ void Preprocessor::HandleEmbedDirectiveBuiltin(
   // particular.
   EmbedBuffers.push_back("");
   size_t EmbedBufferNumber = EmbedBuffers.size();
-  std::string EmbedBufferNumberVal = std::to_string(EmbedBufferNumber);
-  llvm::Twine EmbedBufferName = [](const std::string &Number) {
-    llvm::Twine PrefixNumber = ("<built-in:embed:", Number);
-    return PrefixNumber.concat(">");
-  }(EmbedBufferNumberVal);
   std::string &TargetEmbedBuffer = EmbedBuffers.back();
   StringRef TypeName = "unsigned char";
   const size_t TotalSize =
@@ -4147,7 +4139,9 @@ void Preprocessor::HandleEmbedDirectiveBuiltin(
   TargetEmbedBuffer.append("\")");
   // Create faux-file and its ID, backed by a memory buffer.
   std::unique_ptr<llvm::MemoryBuffer> EmbedMemBuffer =
-      llvm::MemoryBuffer::getMemBufferCopy(TargetEmbedBuffer, EmbedBufferName);
+      llvm::MemoryBuffer::getMemBufferCopy(
+          TargetEmbedBuffer,
+          "<built-in:embed:" + Twine(EmbedBufferNumber) + ">");
   assert(EmbedMemBuffer && "Cannot create predefined source buffer");
   FileID EmbedBufferFID = SourceMgr.createFileID(std::move(EmbedMemBuffer));
   assert(EmbedBufferFID.isValid() &&
