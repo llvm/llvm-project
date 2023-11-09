@@ -41,10 +41,7 @@ CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     : LanguageRuntime(process) {}
 
 bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
-  // FIXME: use a list when the list grows more.
-  return name == g_this ||
-         name == ConstString("__promise") ||
-         name == ConstString("__coro_frame");
+  return name == g_this;
 }
 
 bool CPPLanguageRuntime::GetObjectDescription(Stream &str,
