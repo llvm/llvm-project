@@ -89,7 +89,15 @@ enum EdgeKind_aarch32 : Edge::Kind {
   /// Write immediate value to the top halfword of the destination register
   Thumb_MovtAbs,
 
-  LastThumbRelocation = Thumb_MovtAbs,
+  /// Write PC-relative immediate value to the lower halfword of the destination
+  /// register
+  Thumb_MovwPrelNC,
+
+  /// Write PC-relative immediate value to the top halfword of the destination
+  /// register
+  Thumb_MovtPrel,
+
+  LastThumbRelocation = Thumb_MovtPrel,
 };
 
 /// Flags enum for AArch32-specific symbol properties
