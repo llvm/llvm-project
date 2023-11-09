@@ -36,15 +36,14 @@ def Tensor_Dialect : Dialect {
     in the future, the `tensor` dialect’s scope may be broadened through a
     careful discussion of the tradeoffs.
 
-    One exception to the above is the `tensor` type itself, which is actually a
-    builtin type (it lives in the builtin dialect), and does not live in this
-    dialect.
-
-    Finally, many ops in the the dialect use the `dest` operand. This is an
-    operand that is used to encode information for bufferization via the
-    `DestinationStyleOpInterface`, see the [Destination Passing Style](
+    On the `tensor` type itself, note that it is actually a builtin type (it
+    lives in the builtin dialect), and does not live in this dialect. Furthermore,
+    a `tensor` is an immutable object. For example, this means that the `dest`
+    operand used by some ops in this dialect does not mean that the `tensor` is
+    mutated in place, but rather that the operand can be used as bufferization
+    hint. For more information, see the [Destination Passing Style](
     https://mlir.llvm.org/docs/Bufferization/#destination-passing-style)
-    documentation for more information.
+    documentation.
   }];
 
   let hasCanonicalizer = 1;
