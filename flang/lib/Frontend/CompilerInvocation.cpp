@@ -1073,6 +1073,12 @@ bool CompilerInvocation::createFromArgs(
     res.loweringOpts.setLowerToHighLevelFIR(true);
   }
 
+  // -flang-deprecated-no-hlfir
+  if (args.hasArg(clang::driver::options::OPT_flang_deprecated_no_hlfir) &&
+      !args.hasArg(clang::driver::options::OPT_emit_hlfir)) {
+    res.loweringOpts.setLowerToHighLevelFIR(false);
+  }
+
   if (args.hasArg(clang::driver::options::OPT_flang_experimental_polymorphism)) {
     res.loweringOpts.setPolymorphicTypeImpl(true);
   }
