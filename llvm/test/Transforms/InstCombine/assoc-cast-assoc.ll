@@ -75,3 +75,13 @@ define <2 x i32> @AndZextAndVec(<2 x i8> %a) {
   ret <2 x i32> %op2
 }
 
+define i24 @zext_nneg(i16 %a) {
+; CHECK-LABEL: @zext_nneg(
+; CHECK-NEXT:    [[RESIZE:%.*]] = zext nneg i16 [[A:%.*]] to i24
+; CHECK-NEXT:    ret i24 [[RESIZE]]
+;
+  %and1 = and i16 %a, 32767
+  %resize = zext nneg i16 %and1 to i24
+  %and2 = and i24 %resize, 8388607
+  ret i24 %and2
+}
