@@ -179,6 +179,18 @@ bool BasicBlock::validateDbgValues(bool Assert, bool Msg, raw_ostream *OS) {
   return RetVal;
 }
 
+#ifndef NDEBUG
+void BasicBlock::dumpDbgValues() const {
+  for (auto &Inst : *this) {
+    if (!Inst.DbgMarker)
+      continue;
+
+    dbgs() << "@ " << Inst.DbgMarker << " ";
+    Inst.DbgMarker->dump();
+  };
+}
+#endif
+
 void BasicBlock::setIsNewDbgInfoFormat(bool NewFlag) {
   if (NewFlag && !IsNewDbgInfoFormat)
     convertToNewDbgValues();
