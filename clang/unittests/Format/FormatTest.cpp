@@ -18933,8 +18933,8 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "using RFn  = int (A::*)() &;\n"
                "using RRFn = int (A::*)() &&;",
                Alignment);
-  verifyFormat("using Fn   = int    (A::*)();\n"
-               "using RFn  = int   *(A::*)() &;\n"
+  verifyFormat("using Fn   = int (A::*)();\n"
+               "using RFn  = int *(A::*)() &;\n"
                "using RRFn = double (A::*)() &&;",
                Alignment);
 
