@@ -1969,6 +1969,9 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
         SrcSize = TRI->getRegSizeInBits(*SrcRC);
     }
 
+    if (SrcSize.isZero())
+      SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
+
     if (DstReg.isPhysical() && SrcTy.isValid()) {
       const TargetRegisterClass *DstRC =
           TRI->getMinimalPhysRegClassLLT(DstReg, SrcTy);
@@ -1988,6 +1991,11 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       break;
     if (SrcReg.isVirtual() && DstReg.isPhysical() && SrcSize.isScalable() &&
         !DstSize.isScalable())
+      break;
+    // If the Src is scalable and the Dst is fixed, then Dest can only hold
+    // the Src is known to fit in Dest
+    if (SrcSize.isScalable() && !DstSize.isScalable() &&
+        TypeSize::isKnownLE(DstSize, SrcSize))
       break;
 
     if (SrcSize.isNonZero() && DstSize.isNonZero() && SrcSize != DstSize) {
