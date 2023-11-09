@@ -152,28 +152,28 @@ bool MemRefDependenceGraph::init() {
       auto memref = cast<AffineWriteOpInterface>(op).getMemRef();
       memrefAccesses[memref].insert(node.id);
       nodes.insert({node.id, node});
-    } else if (op.getNumRegions() != 0) {
-      // Return false if another region is found (not currently supported).
-      return false;
     } else if (op.getNumResults() > 0 && !op.use_empty()) {
       // Create graph node for top-level producer of SSA values, which
       // could be used by loop nest nodes.
       Node node(nextNodeId++, &op);
       nodes.insert({node.id, node});
-    } else if (isa<CallOpInterface>(op)) {
-      // Create graph node for top-level Call Op that takes any argument of
-      // memref type. Call Op that returns one or more memref type results
-      // is already taken care of, by the previous conditions.
-      if (llvm::any_of(op.getOperandTypes(),
-                       [&](Type t) { return isa<MemRefType>(t); })) {
-        Node node(nextNodeId++, &op);
-        nodes.insert({node.id, node});
-      }
-    } else if (hasEffect<MemoryEffects::Write, MemoryEffects::Free>(&op)) {
-      // Create graph node for top-level op, which could have a memory write
-      // side effect.
+    } else if (!isMemoryEffectFree(&op) &&
+               (op.getNumRegions() == 0 || isa<RegionBranchOpInterface>(op))) {
+      // Create graph node for top-level op unless it is known to be
+      // memory-effect free. This covers all unknown/unregistered ops,
+      // non-affine ops with memory effects, and region-holding ops with a
+      // well-defined control flow. During the fusion validity checks, we look
+      // for non-affine ops on the path from source to destination, at which
+      // point we check which memrefs if any are used in the region.
       Node node(nextNodeId++, &op);
       nodes.insert({node.id, node});
+    } else if (op.getNumRegions() != 0) {
+      // Return false if non-handled/unknown region-holding ops are found. We
+      // won't know what such ops do or what its regions mean; for e.g., it may
+      // not be an imperative op.
+      LLVM_DEBUG(llvm::dbgs()
+                 << "MDG init failed; unknown region-holding op found!\n");
+      return false;
     }
   }
 
