@@ -851,6 +851,20 @@ def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
 }
 
 let Predicates = [HasStdExtZbs, IsRV64] in {
+def : Pat<(i32 (and (not (shiftop<shl> 1, (XLenVT GPR:$rs2))), GPR:$rs1)),
+          (BCLR GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (and (rotl -2, (XLenVT GPR:$rs2)), GPR:$rs1)),
+          (BCLR GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (or (shiftop<shl> 1, (XLenVT GPR:$rs2)), GPR:$rs1)),
+          (BSET GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (xor (shiftop<shl> 1, (XLenVT GPR:$rs2)), GPR:$rs1)),
+          (BINV GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (and (shiftop<srl> GPR:$rs1, (XLenVT GPR:$rs2)), 1)),
+          (BEXT GPR:$rs1, GPR:$rs2)>;
+
+def : Pat<(i32 (and (srl GPR:$rs1, uimm5:$shamt), (i32 1))),
+          (BEXTI GPR:$rs1, uimm5:$shamt)>;
+
 def : Pat<(i32 (and GPR:$rs1, BCLRMaski32:$mask)),
           (BCLRI GPR:$rs1, (i64 (BCLRXForm $mask)))>;
 def : Pat<(i32 (or GPR:$rs1, SingleBitSetMaski32:$mask)),
