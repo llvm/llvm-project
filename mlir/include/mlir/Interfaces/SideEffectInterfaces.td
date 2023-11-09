@@ -35,8 +35,8 @@ def MemoryEffectsOpInterface
 
 // The base class for defining specific memory effects.
 class MemoryEffect<string effectName, Resource resource, int stage,
-                   EffectRange range>
-  : SideEffect<MemoryEffectsOpInterface, effectName, resource, stage, range>;
+                   EffectRange range, bits<1> async>
+  : SideEffect<MemoryEffectsOpInterface, effectName, resource, stage, range, async>;
 
 // This class represents the trait for memory effects that may be placed on
 // operations.
@@ -51,7 +51,7 @@ class MemoryEffects<list<MemoryEffect> effects = []>
 // not any visible mutation or dereference.
 class MemAlloc<Resource resource, int stage = 0,
                EffectRange range = PartialEffect>
-  : MemoryEffect<"::mlir::MemoryEffects::Allocate", resource, stage, range>;
+  : MemoryEffect<"::mlir::MemoryEffects::Allocate", resource, stage, range, 0>;
 def MemAlloc : MemAlloc<DefaultResource, 0, PartialEffect>;
 class MemAllocAt<int stage, EffectRange range = PartialEffect>
   : MemAlloc<DefaultResource, stage, range>;
@@ -61,7 +61,7 @@ class MemAllocAt<int stage, EffectRange range = PartialEffect>
 // resource, and not any visible allocation, mutation or dereference.
 class MemFree<Resource resource, int stage = 0,
               EffectRange range = PartialEffect>
-  : MemoryEffect<"::mlir::MemoryEffects::Free", resource, stage, range>;
+  : MemoryEffect<"::mlir::MemoryEffects::Free", resource, stage, range, 0>;
 def MemFree : MemFree<DefaultResource, 0, PartialEffect>;
 class MemFreeAt<int stage, EffectRange range = PartialEffect>
   : MemFree<DefaultResource, stage, range>;
@@ -70,21 +70,21 @@ class MemFreeAt<int stage, EffectRange range = PartialEffect>
 // resource. A 'read' effect implies only dereferencing of the resource, and
 // not any visible mutation.
 class MemRead<Resource resource, int stage = 0,
-              EffectRange range = PartialEffect>
-  : MemoryEffect<"::mlir::MemoryEffects::Read", resource, stage, range>;
+              EffectRange range = PartialEffect, bits<1> async = 0>
+  : MemoryEffect<"::mlir::MemoryEffects::Read", resource, stage, range, async>;
 def MemRead : MemRead<DefaultResource, 0, PartialEffect>;
-class MemReadAt<int stage, EffectRange range = PartialEffect>
-  : MemRead<DefaultResource, stage, range>;
+class MemReadAt<int stage, EffectRange range = PartialEffect, bits<1> async = 0>
+  : MemRead<DefaultResource, stage, range, async>;
 
 // The following effect indicates that the operation writes to some
 // resource. A 'write' effect implies only mutating a resource, and not any
 // visible dereference or read.
 class MemWrite<Resource resource, int stage = 0,
-               EffectRange range = PartialEffect>
-  : MemoryEffect<"::mlir::MemoryEffects::Write", resource, stage, range>;
+               EffectRange range = PartialEffect, bits<1> async = 0>
+  : MemoryEffect<"::mlir::MemoryEffects::Write", resource, stage, range, async>;
 def MemWrite : MemWrite<DefaultResource, 0, PartialEffect>;
-class MemWriteAt<int stage, EffectRange range = PartialEffect>
-  : MemWrite<DefaultResource, stage, range>;
+class MemWriteAt<int stage, EffectRange range = PartialEffect, bits<1> async = 0>
+  : MemWrite<DefaultResource, stage, range, async>;
 
 //===----------------------------------------------------------------------===//
 // Effect Traits

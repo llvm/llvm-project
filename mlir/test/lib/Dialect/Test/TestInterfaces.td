@@ -128,7 +128,7 @@ def TestEffectOpInterface
 
 class TestEffect<string effectName>
     : SideEffect<TestEffectOpInterface, effectName, DefaultResource, 0,
-                 PartialEffect>;
+                 PartialEffect, 0>;
 
 class TestEffects<list<TestEffect> effects = []>
    : SideEffectsTraitBase<TestEffectOpInterface, effects>;

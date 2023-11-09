@@ -41,6 +41,9 @@ public:
   // Return if this side effect act on every single value of resource.
   bool getEffectOnfullRegion() const;
 
+  // Return if the side effect occurs after op exit.
+  bool getAsynchronous() const;
+
   static bool classof(const Operator::VariableDecorator *var);
 };
 

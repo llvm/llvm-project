@@ -182,3 +182,23 @@ attributes {__parallel_region_boundary_for_test} {
   %4 = memref.load %C[] : memref<f32>
   return %0, %1, %2, %3, %4 : f32, f32, f32, f32, f32
 }
+
+// CHECK-LABEL: @async_copy
+func.func @async_copy() -> ()
+attributes {__parallel_region_boundary_for_test} {
+  // CHECK: %[[A:.+]] = memref.alloc
+  // CHECK: %[[B:.+]] = memref.alloc
+  %A = memref.alloc() : memref<f32>
+  %B = memref.alloc() : memref<f32, #gpu.address_space<workgroup>>
+  gpu.barrier
+  // CHECK: %[[T:.+]] = nvgpu.device_async_copy %[[A]][], %[[B]][], 1
+  %token = nvgpu.device_async_copy %A[], %B[], 1 : memref<f32> to memref<f32, #gpu.address_space<workgroup>>
+  // This needs to be erased because it can't synchronize the effects on %B.
+  gpu.barrier
+  // This does synchronize the effects on %B.
+  // CHECK-NEXT: nvgpu.device_async_wait %[[T]]
+  nvgpu.device_async_wait %token
+  // CHECK-NEXT: linalg.abs ins(%[[B]] : memref<f32, #gpu.address_space<workgroup>>) outs(%[[A]] : memref<f32>)
+  linalg.abs ins(%B: memref<f32, #gpu.address_space<workgroup>>) outs(%A: memref<f32>)
+  return
+}
