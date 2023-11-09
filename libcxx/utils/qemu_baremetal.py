@@ -28,9 +28,8 @@ def main():
     parser.add_argument(
         "--qemu-arg", dest="qemu_args", type=str, action="append", default=[]
     )
-    parser.add_argument(
-        "--semihosting", type=argparse.BooleanOptionalAction, default=True
-    )
+    parser.add_argument("--semihosting", action="store_true", default=True)
+    parser.add_argument("--no-semihosting", dest="semihosting", action="store_false")
     parser.add_argument("--execdir", type=str, required=True)
     parser.add_argument("test_binary")
     parser.add_argument("test_args", nargs=argparse.ZERO_OR_MORE, default=[])
