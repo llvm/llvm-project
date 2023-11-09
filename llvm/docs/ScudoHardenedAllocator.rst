@@ -250,6 +250,16 @@ The following "string" options are available:
 |                                 |                |                | can be attempted (a negative value disables     |
 |                                 |                |                | reclaiming).                                    |
 +---------------------------------+----------------+----------------+-------------------------------------------------+
+| allocation_ring_buffer_size     | 32768          | n/a            | When MTE is enabled, how many allocations to    |
+|                                 |                |                | keep in the allocation ring buffer. This buffer |
+|                                 |                |                | is used to provide allocation and deallocation  |
+|                                 |                |                | stack traces for MTE fault reports. The larger  |
+|                                 |                |                | the buffer, the more unrelated allocations can  |
+|                                 |                |                | happen between (de)allocation and the fault.    |
+|                                 |                |                | If your sync-mode MTE faults do not have        |
+|                                 |                |                | (de)allocation stack traces, try increasing the |
+|                                 |                |                | buffer size.                                    |
++---------------------------------+----------------+----------------+-------------------------------------------------+
 
 Additional flags can be specified, for example if Scudo if compiled with
 `GWP-ASan <https://llvm.org/docs/GwpAsan.html>`_ support.
