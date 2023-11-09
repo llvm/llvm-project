@@ -14,6 +14,8 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/Visitors.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -562,8 +564,6 @@ getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
                              gpu::DynamicSharedMemoryOp op,
                              const LLVMTypeConverter *typeConverter,
                              MemRefType memrefType, unsigned alignmentBit) {
-  LLVM::GlobalOp existingGlobalOp;
-
   LLVM::LLVMFuncOp funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
   assert(funcOp && "cannot find llvm.func op");
 
@@ -571,19 +571,31 @@ getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
   assert(moduleOp && "cannot find gpu.module op");
 
   uint64_t alignmentByte = alignmentBit / memrefType.getElementTypeBitWidth();
-  // Use already generated global op if it exists.
+
+  LLVM::GlobalOp existingGlobalOp;
   moduleOp->walk([&](LLVM::GlobalOp globalOp) {
     if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(globalOp.getType())) {
       if (arrayType.getNumElements() == 0 &&
           globalOp.getAlignment().value_or(0) == alignmentByte) {
         existingGlobalOp = globalOp;
-        return WalkResult::interrupt();
       }
     }
-    return WalkResult::advance();
   });
   if (existingGlobalOp)
     return existingGlobalOp;
+
+  // Find unique name
+  int index = 0;
+  std::string symName, name = llvm::formatv("__shmem_{0}", funcOp.getSymName());
+  WalkResult walkResult;
+  do {
+    symName = llvm::formatv("{0}_{1}", name, index++);
+    walkResult = moduleOp->walk([&](LLVM::GlobalOp globalOp) {
+      if (globalOp.getSymName() == symName)
+        return WalkResult::interrupt();
+      return WalkResult::advance();
+    });
+  } while (walkResult.wasInterrupted());
 
   // Generate a new global op
   OpBuilder::InsertionGuard guard(rewriter);
@@ -591,11 +603,10 @@ getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
 
   auto zeroSizedArrayType = LLVM::LLVMArrayType::get(
       typeConverter->convertType(memrefType.getElementType()), 0);
-  std::string name = llvm::formatv("__shmem_{0}", funcOp.getSymName());
 
   return rewriter.create<LLVM::GlobalOp>(
       funcOp->getLoc(), zeroSizedArrayType, /*isConstant=*/false,
-      LLVM::Linkage::Internal, name, /*value=*/Attribute(), alignmentByte,
+      LLVM::Linkage::Internal, symName, /*value=*/Attribute(), alignmentByte,
       mlir::gpu::GPUMemorySpace::kSharedMemorySpace);
 }
 
