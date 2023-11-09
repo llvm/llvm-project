@@ -123,11 +123,12 @@ inline bool parseBool(const char *Value, bool *b) {
 }
 
 void FlagParser::parseStringPair(const char *Name, const char *Value) {
-    if (!runHandler(Name, Value, '\0'))
-      reportError("flag parsing failed.");
+  if (!runHandler(Name, Value, '\0'))
+    reportError("flag parsing failed.");
 }
 
-bool FlagParser::runHandler(const char *Name, const char *Value, const char Sep) {
+bool FlagParser::runHandler(const char *Name, const char *Value,
+                            const char Sep) {
   for (u32 I = 0; I < NumberOfFlags; ++I) {
     const uptr Len = strlen(Flags[I].Name);
     if (strncmp(Name, Flags[I].Name, Len) != 0 || Name[Len] != Sep)
