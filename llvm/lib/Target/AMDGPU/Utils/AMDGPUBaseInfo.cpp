@@ -1107,10 +1107,12 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   return IsWave32 ? 1024 : 512;
 }
 
+unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
+
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
-  return 256;
+  return getAddressableNumArchVGPRs(STI);
 }
 
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
