@@ -1185,9 +1185,12 @@ class DropInnerMostUnitDims : public OpRewritePattern<vector::TransferReadOp> {
       return failure();
 
     size_t dimsToDrop = 0;
-    for (size_t i = 1; i < srcStrides.size(); ++i) {
-      int dim = srcType.getRank() - i - 1;
-      if (srcStrides[dim] == 1) {
+    int rankDiff = srcType.getRank() - readOp.getVectorType().getRank();
+    for (int64_t i = 0; i < targetType.getRank(); ++i) {
+      int dim = targetType.getRank() - i - 1;
+      if (srcStrides[dim + rankDiff] == 1 &&
+          srcType.getDimSize(dim + rankDiff) == 1 &&
+          targetType.getDimSize(dim) == 1) {
         dimsToDrop++;
       } else {
         break;
