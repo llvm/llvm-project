@@ -6598,9 +6598,8 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   // If the default destination is unreachable, or if the lookup table covers
   // all values of the conditional variable, branch directly to the lookup table
   // BB. Otherwise, check that the condition is within the case range.
-  const bool DefaultIsReachable =
+  bool DefaultIsReachable =
       !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
-  const bool GeneratingCoveredLookupTable = (MaxTableSize == TableSize);
 
   // Create the BB that does the lookups.
   Module &Mod = *CommonDest->getParent()->getParent();
@@ -6631,6 +6630,28 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
   BranchInst *RangeCheckBranch = nullptr;
 
+  // Grow the table to cover all possible index values to avoid the range check.
+  // It will use the default result to fill in the table hole later, so make
+  // sure it exist.
+  if (UseSwitchConditionAsTableIndex && HasDefaultResults) {
+    ConstantRange CR = computeConstantRange(TableIndex, /* ForSigned */ false);
+    // Grow the table shouldn't have any size impact by checking
+    // WouldFitInRegister.
+    // TODO: Consider growing the table also when it doesn't fit in a register
+    // if no optsize is specified.
+    const uint64_t UpperBound = CR.getUpper().getLimitedValue();
+    if (!CR.isUpperWrapped() && all_of(ResultTypes, [&](const auto &KV) {
+          return SwitchLookupTable::WouldFitInRegister(
+              DL, UpperBound, KV.second /* ResultType */);
+        })) {
+      // The default branch is unreachable after we enlarge the lookup table.
+      // Adjust DefaultIsReachable to reuse code path.
+      TableSize = UpperBound;
+      DefaultIsReachable = false;
+    }
+  }
+
+  const bool GeneratingCoveredLookupTable = (MaxTableSize == TableSize);
   if (!DefaultIsReachable || GeneratingCoveredLookupTable) {
     Builder.CreateBr(LookupBB);
     if (DTU)
