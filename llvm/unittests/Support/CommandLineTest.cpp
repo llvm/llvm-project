@@ -553,28 +553,28 @@ TEST(CommandLineTest, SubcommandOptions) {
                  clEnumVal(baz, "baz")));
   StackOption<bool> BoolOpt("enable", cl::sub(SC), cl::init(false));
 
-  const char *positionalOptVal = "input-file";
-  const char *args[] = {"prog", "sc", positionalOptVal, "-enable", "--str=csv"};
+  const char *PositionalOptVal = "input-file";
+  const char *args[] = {"prog", "sc", PositionalOptVal, "-enable", "--str=csv"};
 
   // cl::ParseCommandLineOptions returns true on success. Otherwise, it will
   // print the error message to stderr and exit in this setting (`Errs` ostream
   // is not set).
   ASSERT_TRUE(cl::ParseCommandLineOptions(sizeof(args) / sizeof(args[0]), args,
                                           StringRef()));
-  EXPECT_STREQ(PositionalOpt.getValue().c_str(), positionalOptVal);
+  EXPECT_STREQ(PositionalOpt.getValue().c_str(), PositionalOptVal);
   EXPECT_TRUE(BoolOpt);
   // Tests that the value of `str` option is `csv` as specified.
   EXPECT_STREQ(TopLevelOpt.getValue().c_str(), "csv");
 
-  for (auto &[literalOptVal, wantLiteralOpt] :
-       {std::make_pair("--bar", bar), std::make_pair("--foo", foo),
-        std::make_pair("--baz", baz)}) {
-    const char *args[] = {"prog", "sc", literalOptVal};
+  for (auto &[LiteralOptVal, WantLiteralOpt] :
+       {std::pair{"--bar", bar}, std::pair{"--foo", foo},
+        std::pair{"--baz", baz}}) {
+    const char *args[] = {"prog", "sc", LiteralOptVal};
     ASSERT_TRUE(cl::ParseCommandLineOptions(sizeof(args) / sizeof(args[0]),
                                             args, StringRef()));
 
     // Tests that literal options are parsed correctly.
-    EXPECT_EQ(LiteralOpt, wantLiteralOpt);
+    EXPECT_EQ(LiteralOpt, WantLiteralOpt);
   }
 }
 
