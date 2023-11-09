@@ -506,6 +506,13 @@ public:
   void setPresplitCoroutine() { addFnAttr(Attribute::PresplitCoroutine); }
   void setSplittedCoroutine() { removeFnAttr(Attribute::PresplitCoroutine); }
 
+  bool isCoroOnlyDestroyWhenComplete() const {
+    return hasFnAttribute(Attribute::CoroDestroyOnlyWhenComplete);
+  }
+  void setCoroDestroyOnlyWhenComplete() {
+    addFnAttr(Attribute::CoroDestroyOnlyWhenComplete);
+  }
+
   MemoryEffects getMemoryEffects() const;
   void setMemoryEffects(MemoryEffects ME);
 
