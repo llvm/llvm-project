@@ -40,10 +40,10 @@
 # CHECK-GNU-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_breg14 R14+3)
 
 # CHECK-DWARF5: DW_TAG_call_site
-# CHECK-DWARF5:   DW_AT_call_origin ([[getValue_SP:.*]])
+# CHECK-DWARF5:   DW_AT_call_origin ([[getValue_SP:.*]] "getVal")
 #
 # CHECK-DWARF5: DW_TAG_call_site
-# CHECK-DWARF5:   DW_AT_call_origin ([[foo_SP:.*]])
+# CHECK-DWARF5:   DW_AT_call_origin ([[foo_SP:.*]] "foo")
 # CHECK-DWARF5:   DW_AT_call_return_pc {{.*}}
 # CHECK-DWARF5-EMPTY:
 # CHECK-DWARF5:         DW_TAG_call_site_parameter
