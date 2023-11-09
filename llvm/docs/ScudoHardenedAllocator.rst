@@ -251,8 +251,8 @@ The following "string" options are available:
 |                                 |                |                | reclaiming).                                    |
 +---------------------------------+----------------+----------------+-------------------------------------------------+
 | allocation_ring_buffer_size     | 32768          | n/a            | If stack trace collection is requested, how     |
-|                                 |                |                | many allocations to keep in the allocation ring |
-|                                 |                |                | buffer.                                         |
+|                                 |                |                | many previous allocations to keep in the        |
+|                                 |                |                | allocation ring buffer.                         |
 |                                 |                |                |                                                 |
 |                                 |                |                | This buffer is used to provide allocation and   |
 |                                 |                |                | deallocation stack traces for MTE fault         |
