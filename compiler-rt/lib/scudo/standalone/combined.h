@@ -1281,7 +1281,8 @@ private:
 
   void storeSecondaryAllocationStackMaybe(const Options &Options, void *Ptr,
                                           uptr Size) {
-    if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)))
+    if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)) ||
+        RawRingBuffer == nullptr)
       return;
 
     u32 Trace = collectStackTrace();
@@ -1296,7 +1297,8 @@ private:
 
   void storeDeallocationStackMaybe(const Options &Options, void *Ptr,
                                    u8 PrevTag, uptr Size) {
-    if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)))
+    if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)) ||
+        RawRingBuffer == nullptr)
       return;
 
     auto *Ptr32 = reinterpret_cast<u32 *>(Ptr);
@@ -1501,6 +1503,11 @@ private:
                 getPageSizeCached()),
         "scudo:ring_buffer");
     RawRingBuffer = reinterpret_cast<char *>(MemMap.getBase());
+    if (RawRingBuffer == nullptr) {
+      Printf("Failed to allocate allocation ring buffer of size %d",
+             getFlags()->allocation_ring_buffer_size);
+      return;
+    }
     auto *RingBuffer = reinterpret_cast<AllocationRingBuffer *>(RawRingBuffer);
     RingBuffer->MemMap = MemMap;
     RingBuffer->Size = AllocationRingBufferSize;
