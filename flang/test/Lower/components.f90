@@ -1,4 +1,4 @@
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 
 module components_test
   type t1

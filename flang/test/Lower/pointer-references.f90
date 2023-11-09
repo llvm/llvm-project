@@ -1,5 +1,5 @@
 ! Test lowering of references to pointers
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Assigning/reading to scalar pointer target.
 ! CHECK-LABEL: func @_QPscal_ptr(
