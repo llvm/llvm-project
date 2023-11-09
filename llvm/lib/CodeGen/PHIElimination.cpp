@@ -404,8 +404,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
 
     SlotIndex NewStart = DestCopyIndex.getRegSlot();
 
-    SmallVector<LiveRange *> ToUpdate;
-    ToUpdate.push_back(&DestLI);
+    SmallVector<LiveRange *> ToUpdate({&DestLI});
     for (auto &SR : DestLI.subranges())
       ToUpdate.push_back(&SR);
 
