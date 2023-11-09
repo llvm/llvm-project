@@ -495,11 +495,7 @@ LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
     for (const llvm::MDNode *md : named.operands()) {
       SmallVector<StringRef> options;
       for (const llvm::MDOperand &option : md->operands()) {
-        if (auto str = dyn_cast_or_null<llvm::MDString>(option))
-          options.push_back(str->getString());
-        else
-          return emitError(mlirModule.getLoc(),
-                           "argument to llvm.linker.options is not a string");
+        options.push_back(cast<llvm::MDString>(option)->getString());
       }
       builder.create<LLVM::LinkerOptionsOp>(mlirModule.getLoc(),
                                             builder.getStrArrayAttr(options));
