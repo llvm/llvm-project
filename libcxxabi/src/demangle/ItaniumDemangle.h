@@ -2610,7 +2610,8 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
       Parser->TemplateParams.push_back(&Params);
     }
     ~ScopedTemplateParamList() {
-      DEMANGLE_ASSERT(Parser->TemplateParams.size() >= OldNumTemplateParamLists, "");
+      DEMANGLE_ASSERT(Parser->TemplateParams.size() >= OldNumTemplateParamLists,
+                      "");
       Parser->TemplateParams.shrinkToSize(OldNumTemplateParamLists);
     }
     TemplateParamList *params() { return &Params; }
@@ -2859,7 +2860,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
       std::string_view Res = Name;
       if (Kind < Unnameable) {
         DEMANGLE_ASSERT(starts_with(Res, "operator"),
-               "operator name does not start with 'operator'");
+                        "operator name does not start with 'operator'");
         Res.remove_prefix(sizeof("operator") - 1);
         if (starts_with(Res, ' '))
           Res.remove_prefix(1);
@@ -5634,7 +5635,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseTemplateParam() {
     Node *ForwardRef = make<ForwardTemplateReference>(Index);
     if (!ForwardRef)
       return nullptr;
-    DEMANGLE_ASSERT(ForwardRef->getKind() == Node::KForwardTemplateReference, "");
+    DEMANGLE_ASSERT(ForwardRef->getKind() == Node::KForwardTemplateReference,
+                    "");
     ForwardTemplateRefs.push_back(
         static_cast<ForwardTemplateReference *>(ForwardRef));
     return ForwardRef;
