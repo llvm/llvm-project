@@ -21,9 +21,10 @@
 using namespace clang;
 using namespace CodeGen;
 
-static llvm::Function *GetVprintfDeclaration(llvm::Module &M) {
-  llvm::Type *ArgTypes[] = {llvm::Type::getInt8PtrTy(M.getContext()),
-                            llvm::Type::getInt8PtrTy(M.getContext())};
+namespace {
+llvm::Function *GetVprintfDeclaration(llvm::Module &M) {
+  llvm::Type *ArgTypes[] = {llvm::PointerType::getUnqual(M.getContext()),
+                            llvm::PointerType::getUnqual(M.getContext())};
   llvm::FunctionType *VprintfFuncType = llvm::FunctionType::get(
       llvm::Type::getInt32Ty(M.getContext()), ArgTypes, false);
 
@@ -39,6 +40,28 @@ static llvm::Function *GetVprintfDeclaration(llvm::Module &M) {
   // module.
   return llvm::Function::Create(
       VprintfFuncType, llvm::GlobalVariable::ExternalLinkage, "vprintf", &M);
+}
+
+llvm::Function *GetOpenMPVprintfDeclaration(CodeGenModule &CGM) {
+  const char *Name = "__llvm_omp_vprintf";
+  llvm::Module &M = CGM.getModule();
+  llvm::Type *ArgTypes[] = {llvm::PointerType::getUnqual(M.getContext()),
+                            llvm::PointerType::getUnqual(M.getContext()),
+                            llvm::Type::getInt32Ty(M.getContext())};
+  llvm::FunctionType *VprintfFuncType = llvm::FunctionType::get(
+      llvm::Type::getInt32Ty(M.getContext()), ArgTypes, false);
+
+  if (auto *F = M.getFunction(Name)) {
+    if (F->getFunctionType() != VprintfFuncType) {
+      CGM.Error(SourceLocation(),
+                "Invalid type declaration for __llvm_omp_vprintf");
+      return nullptr;
+    }
+    return F;
+  }
+
+  return llvm::Function::Create(
+      VprintfFuncType, llvm::GlobalVariable::ExternalLinkage, Name, &M);
 }
 
 // Transforms a call to printf into a call to the NVPTX vprintf syscall (which
@@ -67,17 +90,19 @@ static llvm::Function *GetVprintfDeclaration(llvm::Module &M) {
 // Note that by the time this function runs, E's args have already undergone the
 // standard C vararg promotion (short -> int, float -> double, etc.).
 
-namespace {
-llvm::Value *packArgsIntoNVPTXFormatBuffer(CodeGenFunction *CGF,
-                                           const CallArgList &Args) {
+
+std::pair<llvm::Value *, llvm::TypeSize>
+packArgsIntoNVPTXFormatBuffer(CodeGenFunction *CGF, const CallArgList &Args) {
   const llvm::DataLayout &DL = CGF->CGM.getDataLayout();
   llvm::LLVMContext &Ctx = CGF->CGM.getLLVMContext();
   CGBuilderTy &Builder = CGF->Builder;
 
   // Construct and fill the args buffer that we'll pass to vprintf.
   if (Args.size() <= 1) {
-    // If there are no args, pass a null pointer to vprintf.
-    return llvm::ConstantPointerNull::get(llvm::Type::getInt8PtrTy(Ctx));
+    // If there are no args, pass a null pointer and size 0
+    llvm::Value *BufferPtr =
+        llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx));
+    return {BufferPtr, llvm::TypeSize::Fixed(0)};
   } else {
     llvm::SmallVector<llvm::Type *, 8> ArgTypes;
     for (unsigned I = 1, NumArgs = Args.size(); I < NumArgs; ++I)
@@ -96,7 +121,9 @@ llvm::Value *packArgsIntoNVPTXFormatBuffer(CodeGenFunction *CGF,
       llvm::Value *Arg = Args[I].getRValue(*CGF).getScalarVal();
       Builder.CreateAlignedStore(Arg, P, DL.getPrefTypeAlign(Arg->getType()));
     }
-    return Builder.CreatePointerCast(Alloca, llvm::Type::getInt8PtrTy(Ctx));
+    llvm::Value *BufferPtr =
+        Builder.CreatePointerCast(Alloca, llvm::PointerType::getUnqual(Ctx));
+    return {BufferPtr, DL.getTypeAllocSize(AllocaTy)};
   }
 }
 } // namespace
@@ -122,7 +149,8 @@ CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E,
     return RValue::get(llvm::ConstantInt::get(IntTy, 0));
   }
 
-  llvm::Value *BufferPtr = packArgsIntoNVPTXFormatBuffer(this, Args);
+  auto r = packArgsIntoNVPTXFormatBuffer(this, Args);
+  llvm::Value *BufferPtr = r.first;
 
   // Invoke vprintf and return.
   llvm::Function* VprintfFunc = GetVprintfDeclaration(CGM.getModule());

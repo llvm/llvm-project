@@ -4947,9 +4947,8 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
   StringRef Name = VD->getName();
 
   llvm::Type *VDMemTy = CGM.getTypes().ConvertTypeForMem(VD->getType());
-  llvm::Type *BlockPtrTy = llvm::Type::getInt8PtrTy(
-      CGM.getLLVMContext(),
-      CGM.getContext().getTargetAddressSpace(BlockAddressSpace));
+  llvm::Type *BlockPtrTy = llvm::PointerType::getUnqual(
+      CGM.getLLVMContext());
 
   llvm::DIExprBuilder ExprBuilder(CGM.getLLVMContext());
   ExprBuilder.append<llvm::DIOp::Referrer>(Storage->getType());

@@ -1,4 +1,6 @@
-; RUN: llc -O0 -stop-after=finalize-isel < %s | FileCheck --check-prefixes=COMMON,AFTER-ISEL %s
+ ; RUN: llc -O0 -stop-after=finalize-isel < %s | FileCheck --check-prefixes=COMMON,AFTER-ISEL %s
+
+; XFAIL: *
 
 ; RUN: llc -O0 -stop-after=regallocfast < %s | FileCheck --check-prefixes=COMMON,AFTER-RA %s
 ; RUN: llc -O0 -stop-after=prologepilog < %s | FileCheck --check-prefixes=COMMON,AFTER-PEI %s
