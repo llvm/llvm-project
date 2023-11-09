@@ -232,7 +232,7 @@ struct KokkosForallRewriter : public OpRewritePattern<scf::ParallelOp> {
     // Lastly, add a Kokkos::fence() to make sure the kernel
     // and following deep copy have completed
     rewriter.create<emitc::CallOp>(loc, TypeRange(),
-        "Kokkos::fence", ArrayAttr(), ArrayAttr(), ValueRange());
+        "Kokkos::DefaultExecutionSpace().fence", ArrayAttr(), ArrayAttr(), ValueRange());
     rewriter.eraseOp(forallOp);
     return success();
   }
