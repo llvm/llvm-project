@@ -28,9 +28,6 @@
 // O0_CHECK: adr x{{[0-9]+}}, ifoo
 // O3_CHECK: b "{{resolver_foo|ifoo}}{{.*}}@PLT"
 
-#include <stdio.h>
-#include <string.h>
-
 static void foo() {}
 
 static void *resolver_foo(void) { return foo; }
