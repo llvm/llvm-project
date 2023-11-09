@@ -28,14 +28,8 @@
 
 #include "RISCV.h"
 #include "RISCVISelDAGToDAG.h"
-#include "RISCVInstrInfo.h"
 #include "RISCVSubtarget.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 using namespace llvm;
 
