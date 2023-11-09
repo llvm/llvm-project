@@ -153,6 +153,7 @@ def testTransformPDLOps(module: Module):
   # CHECK:   }
   # CHECK: }
 
+
 @run
 def testNamedSequenceOp(module: Module):
     module.operation.attributes["transform.with_named_sequence"] = UnitAttr.get()
@@ -160,12 +161,12 @@ def testNamedSequenceOp(module: Module):
         "__transform_main",
         [transform.AnyOpType.get()],
         [transform.AnyOpType.get()],
-    )
+        arg_attrs = [{"transform.consumed": UnitAttr.get()}])
     with InsertionPoint(named_sequence.body):
         transform.YieldOp([named_sequence.bodyTarget])
     # CHECK-LABEL: TEST: testNamedSequenceOp
     # CHECK: module attributes {transform.with_named_sequence} {
-    # CHECK: transform.named_sequence @__transform_main(%[[ARG0:.+]]: !transform.any_op) -> !transform.any_op {
+    # CHECK: transform.named_sequence @__transform_main(%[[ARG0:.+]]: !transform.any_op {transform.consumed}) -> !transform.any_op {
     # CHECK:   yield %[[ARG0]] : !transform.any_op
 
 
