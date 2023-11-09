@@ -15,10 +15,22 @@
 
 #include "DWARFASTParser.h"
 #include "DWARFDIE.h"
+#include "swift/RemoteInspection/DescriptorFinder.h"
+#include "swift/RemoteInspection/TypeRef.h"
+
+namespace swift {
+namespace reflection {
+class TypeInfo;
+} // namespace reflection
+namespace remote {
+struct TypeInfoProvider;
+} // namespace remote
+} // namespace swift
 
 namespace lldb_private { class TypeSystemSwiftTypeRef; }
 
-class DWARFASTParserSwift : public lldb_private::plugin::dwarf::DWARFASTParser {
+class DWARFASTParserSwift : public lldb_private::plugin::dwarf::DWARFASTParser,
+                            public swift::reflection::DescriptorFinder {
 public:
   using DWARFDIE = lldb_private::plugin::dwarf::DWARFDIE;
   DWARFASTParserSwift(lldb_private::TypeSystemSwiftTypeRef &swift_typesystem);
@@ -68,6 +80,14 @@ public:
   static bool classof(const DWARFASTParser *Parser) {
     return Parser->GetKind() == Kind::DWARFASTParserSwift;
   }
+
+  /// Returns a field descriptor constructed from DWARF info.
+  std::unique_ptr<swift::reflection::FieldDescriptorBase>
+  getFieldDescriptor(const swift::reflection::TypeRef *TR) override;
+
+  /// Returns a builtin descriptor constructed from DWARF info.
+  std::unique_ptr<swift::reflection::BuiltinTypeDescriptorBase>
+  getBuiltinTypeDescriptor(const swift::reflection::TypeRef *TR) override;
 
 protected:
   lldb_private::TypeSystemSwiftTypeRef &m_swift_typesystem;

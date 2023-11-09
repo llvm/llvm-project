@@ -15,18 +15,52 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "swift/Demangling/Demangle.h"
+#include "swift/RemoteInspection/DescriptorFinder.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 namespace {
 
+/// The descriptor finder needs to be an instance variable of the
+/// TypeRefBuilder, but we would still want to swap out the descriptor finder,
+/// as they are tied to each type system typeref's symbol file. This class's
+/// only purpose is to allow this swapping.
+struct DescriptorFinderForwarder : public swift::reflection::DescriptorFinder {
+  DescriptorFinderForwarder() = default;
+  ~DescriptorFinderForwarder() override = default;
+
+  std::unique_ptr<swift::reflection::BuiltinTypeDescriptorBase>
+  getBuiltinTypeDescriptor(const swift::reflection::TypeRef *TR) override {
+    if (m_descriptor_finder)
+      return m_descriptor_finder->getBuiltinTypeDescriptor(TR);
+    return nullptr;
+  }
+
+  std::unique_ptr<swift::reflection::FieldDescriptorBase>
+  getFieldDescriptor(const swift::reflection::TypeRef *TR) override {
+    if (m_descriptor_finder)
+      return m_descriptor_finder->getFieldDescriptor(TR);
+    return nullptr;
+  }
+
+  void SetExternalDescriptorFinder(
+      swift::reflection::DescriptorFinder *desciptor_finder) {
+    m_descriptor_finder = desciptor_finder;
+  }
+
+  void ClearExternalDescriptorFinder() { m_descriptor_finder = nullptr; }
+
+private:
+  swift::reflection::DescriptorFinder *m_descriptor_finder = nullptr;
+};
+
 /// An implementation of the generic ReflectionContextInterface that
 /// is templatized on target pointer width and specialized to either
 /// 32-bit or 64-bit pointers, with and without ObjC interoperability.
 template <typename ReflectionContext>
-class TargetReflectionContext
-    : public ReflectionContextInterface {
+class TargetReflectionContext : public ReflectionContextInterface {
+  DescriptorFinderForwarder m_forwader;
   ReflectionContext m_reflection_ctx;
   swift::reflection::TypeConverter m_type_converter;
 
@@ -34,7 +68,7 @@ public:
   TargetReflectionContext(
       std::shared_ptr<swift::reflection::MemoryReader> reader,
       SwiftMetadataCache *swift_metadata_cache)
-      : m_reflection_ctx(reader, swift_metadata_cache),
+      : m_reflection_ctx(reader, swift_metadata_cache, &m_forwader),
         m_type_converter(m_reflection_ctx.getBuilder()) {}
 
   llvm::Optional<uint32_t> AddImage(
@@ -59,20 +93,31 @@ public:
                                     likely_module_names);
   }
 
-  const swift::reflection::TypeRef *
-  GetTypeRefOrNull(StringRef mangled_type_name) override {
+  const swift::reflection::TypeRef *GetTypeRefOrNull(
+      StringRef mangled_type_name,
+      swift::reflection::DescriptorFinder *descriptor_finder) override {
     swift::Demangle::Demangler dem;
     swift::Demangle::NodePointer node = dem.demangleSymbol(mangled_type_name);
-    const swift::reflection::TypeRef *type_ref = GetTypeRefOrNull(dem, node);
+    const swift::reflection::TypeRef *type_ref =
+        GetTypeRefOrNull(dem, node, descriptor_finder);
     if (!type_ref)
       LLDB_LOG(GetLog(LLDBLog::Types), "Could not find typeref for type: {0}",
                mangled_type_name);
     return type_ref;
   }
 
-  virtual const swift::reflection::TypeRef *
-  GetTypeRefOrNull(swift::Demangle::Demangler &dem,
-                   swift::Demangle::NodePointer node) override {
+  /// Sets the descriptor finder, and on scope exit clears it out.
+  auto SetDescriptorFinderAndClearOnExit(
+      swift::reflection::DescriptorFinder *descriptor_finder) {
+    m_forwader.SetExternalDescriptorFinder(descriptor_finder);
+    return llvm::make_scope_exit(
+        [&]() { m_forwader.ClearExternalDescriptorFinder(); });
+  }
+
+  const swift::reflection::TypeRef *GetTypeRefOrNull(
+      swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
+      swift::reflection::DescriptorFinder *descriptor_finder) override {
+    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
     auto type_ref_or_err =
         swift::Demangle::decodeMangledType(m_reflection_ctx.getBuilder(), node);
     if (type_ref_or_err.isError()) {
@@ -84,9 +129,11 @@ public:
     return type_ref_or_err.getType();
   }
 
-  const swift::reflection::TypeInfo *
-  GetClassInstanceTypeInfo(const swift::reflection::TypeRef *type_ref,
-                           swift::remote::TypeInfoProvider *provider) override {
+  const swift::reflection::TypeInfo *GetClassInstanceTypeInfo(
+      const swift::reflection::TypeRef *type_ref,
+      swift::remote::TypeInfoProvider *provider,
+      swift::reflection::DescriptorFinder *descriptor_finder) override {
+    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
     if (!type_ref)
       return nullptr;
     return m_type_converter.getClassInstanceTypeInfo(type_ref, 0, provider);
@@ -94,7 +141,9 @@ public:
 
   const swift::reflection::TypeInfo *
   GetTypeInfo(const swift::reflection::TypeRef *type_ref,
-              swift::remote::TypeInfoProvider *provider) override {
+              swift::remote::TypeInfoProvider *provider,
+              swift::reflection::DescriptorFinder *descriptor_finder) override {
+    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
     if (!type_ref)
       return nullptr;
 
@@ -128,9 +177,10 @@ public:
     return type_info;
   }
 
-  const swift::reflection::TypeInfo *
-  GetTypeInfoFromInstance(lldb::addr_t instance,
-                          swift::remote::TypeInfoProvider *provider) override {
+  const swift::reflection::TypeInfo *GetTypeInfoFromInstance(
+      lldb::addr_t instance, swift::remote::TypeInfoProvider *provider,
+      swift::reflection::DescriptorFinder *descriptor_finder) override {
+    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
     return m_reflection_ctx.getInstanceTypeInfo(instance, provider);
   }
 
@@ -138,14 +188,19 @@ public:
     return m_reflection_ctx.getReader();
   }
 
-  const swift::reflection::TypeRef *
-  LookupSuperclass(const swift::reflection::TypeRef *tr) override {
+  const swift::reflection::TypeRef *LookupSuperclass(
+      const swift::reflection::TypeRef *tr,
+      swift::reflection::DescriptorFinder *descriptor_finder) override {
+    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
     return m_reflection_ctx.getBuilder().lookupSuperclass(tr);
   }
 
-  bool ForEachSuperClassType(swift::remote::TypeInfoProvider *tip,
-                             lldb::addr_t pointer,
-                             std::function<bool(SuperClassType)> fn) override {
+  bool
+  ForEachSuperClassType(swift::remote::TypeInfoProvider *tip,
+                        swift::reflection::DescriptorFinder *descriptor_finder,
+                        lldb::addr_t pointer,
+                        std::function<bool(SuperClassType)> fn) override {
+    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
     // Guard against faulty self-referential metadata.
     unsigned limit = 256;
     auto md_ptr = m_reflection_ctx.readMetadataFromInstance(pointer);
@@ -175,10 +230,12 @@ public:
     return false;
   }
 
-  llvm::Optional<int32_t>
-  ProjectEnumValue(swift::remote::RemoteAddress enum_addr,
-                   const swift::reflection::TypeRef *enum_type_ref,
-                   swift::remote::TypeInfoProvider *provider) override {
+  llvm::Optional<int32_t> ProjectEnumValue(
+      swift::remote::RemoteAddress enum_addr,
+      const swift::reflection::TypeRef *enum_type_ref,
+      swift::remote::TypeInfoProvider *provider,
+      swift::reflection::DescriptorFinder *descriptor_finder) override {
+    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
     int32_t case_idx;
     if (m_reflection_ctx.projectEnumValue(enum_addr, enum_type_ref, &case_idx,
                                           provider))
@@ -190,21 +247,27 @@ public:
                            swift::reflection::RemoteAddress>>
   ProjectExistentialAndUnwrapClass(
       swift::reflection::RemoteAddress existential_address,
-      const swift::reflection::TypeRef &existential_tr) override {
+      const swift::reflection::TypeRef &existential_tr,
+      swift::reflection::DescriptorFinder *descriptor_finder) override {
+    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
     return m_reflection_ctx.projectExistentialAndUnwrapClass(
         existential_address, existential_tr);
   }
 
   const swift::reflection::TypeRef *
   ReadTypeFromMetadata(lldb::addr_t metadata_address,
+                       swift::reflection::DescriptorFinder *descriptor_finder,
                        bool skip_artificial_subclasses) override {
+    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
     return m_reflection_ctx.readTypeFromMetadata(metadata_address,
                                                  skip_artificial_subclasses);
   }
 
   const swift::reflection::TypeRef *
   ReadTypeFromInstance(lldb::addr_t instance_address,
+                       swift::reflection::DescriptorFinder *descriptor_finder,
                        bool skip_artificial_subclasses) override {
+    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
     auto metadata_address =
         m_reflection_ctx.readMetadataFromInstance(instance_address);
     if (!metadata_address) {
@@ -226,12 +289,14 @@ public:
 
   const swift::reflection::TypeRef *ApplySubstitutions(
       const swift::reflection::TypeRef *type_ref,
-      swift::reflection::GenericArgumentMap substitutions) override{
+      swift::reflection::GenericArgumentMap substitutions,
+      swift::reflection::DescriptorFinder *descriptor_finder) override {
+    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
     return type_ref->subst(m_reflection_ctx.getBuilder(), substitutions);
   }
 
-  swift::remote::RemoteAbsolutePointer StripSignedPointer(
-      swift::remote::RemoteAbsolutePointer pointer) override {
+  swift::remote::RemoteAbsolutePointer
+  StripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) override {
     return m_reflection_ctx.stripSignedPointer(pointer);
   }
 };

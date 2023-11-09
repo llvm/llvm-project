@@ -405,13 +405,7 @@ GetNominal(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node) {
   case Node::Kind::ProtocolList:
   case Node::Kind::ProtocolListWithClass:
   case Node::Kind::ProtocolListWithAnyObject:
-  case Node::Kind::TypeAlias:
-  case Node::Kind::BoundGenericClass:
-  case Node::Kind::BoundGenericEnum:
-  case Node::Kind::BoundGenericStructure:
-  case Node::Kind::BoundGenericProtocol:
-  case Node::Kind::BoundGenericOtherNominalType:
-  case Node::Kind::BoundGenericTypeAlias: {
+  case Node::Kind::TypeAlias: {
     if (node->getNumChildren() != 2)
       return {};
     auto *m = node->getChild(0);
@@ -422,12 +416,37 @@ GetNominal(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node) {
       return {};
     return {{m->getText(), n->getText()}};
   }
+  case Node::Kind::BoundGenericClass:
+  case Node::Kind::BoundGenericEnum:
+  case Node::Kind::BoundGenericStructure:
+  case Node::Kind::BoundGenericProtocol:
+  case Node::Kind::BoundGenericOtherNominalType:
+  case Node::Kind::BoundGenericTypeAlias: {
+    if (node->getNumChildren() != 2)
+      return {};
+    auto *type = node->getChild(0);
+    if (!type || type->getKind() != Node::Kind::Type || !type->hasChildren())
+      return {};
+    return GetNominal(dem, type->getFirstChild());
+  }
   default:
     break;
   }
   return {};
 }
 
+/// Return a pair of module name and type name, given a mangled name.
+static llvm::Optional<std::pair<StringRef, StringRef>>
+GetNominal(llvm::StringRef mangled_name) {
+  swift::Demangle::Demangler dem;
+  auto *node = GetDemangledType(dem, mangled_name);
+  /// Builtin names belong to the builtin module, and are stored only with their
+  /// mangled name.
+  if (node->getKind() == Node::Kind::BuiltinTypeName) 
+    return {{"Builtin", mangled_name}};
+
+  return GetNominal(dem, node);
+}
 /// Detect the AnyObject type alias.
 static bool IsAnyObjectTypeAlias(swift::Demangle::NodePointer node) {
   using namespace swift::Demangle;
@@ -1767,9 +1786,7 @@ TypeSystemSwiftTypeRef::FindTypeInModule(opaque_compiler_type_t opaque_type) {
   auto *M = GetModule();
   if (!M)
     return {};
-  swift::Demangle::Demangler dem;
-  auto *node = GetDemangledType(dem, AsMangledName(opaque_type));
-  auto module_type = GetNominal(dem, node);
+  auto module_type = GetNominal(AsMangledName(opaque_type));
   if (!module_type)
     return {};
   // DW_AT_linkage_name is not part of the accelerator table, so
@@ -3047,6 +3064,11 @@ CompilerType TypeSystemSwiftTypeRef::GetFieldAtIndex(
         ReconstructType(type), idx, name, bit_offset_ptr, bitfield_bit_size_ptr,
         is_bitfield_ptr);
   return {};
+}
+
+swift::reflection::DescriptorFinder *
+TypeSystemSwiftTypeRef::GetDescriptorFinder() {
+  return llvm::cast<DWARFASTParserSwift>(GetDWARFParser());
 }
 
 swift::Demangle::NodePointer

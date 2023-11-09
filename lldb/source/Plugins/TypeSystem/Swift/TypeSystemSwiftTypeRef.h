@@ -30,6 +30,13 @@ class Node;
 using NodePointer = Node *;
 class Demangler;
 } // namespace Demangle
+namespace reflection {
+struct DescriptorFinder;
+class TypeInfo;
+} // namespace reflection
+namespace remote {
+struct TypeInfoProvider;
+} // namespace remote
 } // namespace swift
 
 namespace lldb_private {
@@ -373,6 +380,12 @@ public:
   /// For example, int is converted to Int32.
   CompilerType ConvertClangTypeToSwiftType(CompilerType clang_type) override;
 
+  /// Gets the descriptor finder belonging to this instance's
+  /// module.
+  swift::reflection::DescriptorFinder *GetDescriptorFinder();
+
+  /// Lookup a type in the debug info.
+  lldb::TypeSP FindTypeInModule(lldb::opaque_compiler_type_t type);
 protected:
   /// Helper that creates an AST type from \p type.
   void *ReconstructType(lldb::opaque_compiler_type_t type,
@@ -382,8 +395,6 @@ protected:
   /// Cast \p opaque_type as a mangled name.
   static const char *AsMangledName(lldb::opaque_compiler_type_t type);
 
-  /// Lookup a type in the debug info.
-  lldb::TypeSP FindTypeInModule(lldb::opaque_compiler_type_t type);
 
   /// Demangle the mangled name of the canonical type of \p type and
   /// drill into the Global(TypeMangling(Type())).
