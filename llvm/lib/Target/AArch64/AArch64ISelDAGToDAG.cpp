@@ -326,7 +326,8 @@ public:
     return false;
   }
 
-  template <unsigned BaseReg, unsigned Max> bool ImmToTile(SDValue N, SDValue &Imm) {
+  template <unsigned BaseReg, unsigned Max>
+  bool ImmToTile(SDValue N, SDValue &Imm) {
     if (auto *CI = dyn_cast<ConstantSDNode>(N)) {
       uint64_t C = CI->getZExtValue();
 

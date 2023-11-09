@@ -2754,12 +2754,11 @@ MachineBasicBlock *AArch64TargetLowering::EmitZTSpillFill(MachineInstr &MI,
   if (IsSpill) {
     MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STR_TX));
     MIB.addReg(MI.getOperand(0).getReg());
-  }
-  else
+  } else
     MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::LDR_TX),
                   MI.getOperand(0).getReg());
   MIB.add(MI.getOperand(1)); // Base
-  MI.eraseFromParent(); // The pseudo is gone now.
+  MI.eraseFromParent();      // The pseudo is gone now.
   return BB;
 }
 
