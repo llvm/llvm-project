@@ -1035,15 +1035,18 @@ private:
   static constexpr const char *const UUCAddAssignTag =
     "PointerAddAssignUnderUUC";
   static constexpr const char *const IntOffsetTag = "IntOffset";
+  static constexpr const char *const OffsetTag = "Offset";
   
   const BinaryOperator *Node; // the `Ptr += n` node
   const IntegerLiteral *IntOffset = nullptr;
+  const DeclRefExpr *Offset = nullptr;
 
 public:
   UUCAddAssignGadget(const MatchFinder::MatchResult &Result)
     : FixableGadget(Kind::UUCAddAssign),
       Node(Result.Nodes.getNodeAs<BinaryOperator>(UUCAddAssignTag)),
-      IntOffset(Result.Nodes.getNodeAs<IntegerLiteral>(IntOffsetTag)) {
+      IntOffset(Result.Nodes.getNodeAs<IntegerLiteral>(IntOffsetTag)),
+      Offset(Result.Nodes.getNodeAs<DeclRefExpr>(OffsetTag)) {
     assert(Node != nullptr && "Expecting a non-null matching result");
   }
 
@@ -1057,7 +1060,7 @@ public:
                       hasLHS(declRefExpr(
                                                     toSupportedVariable())),
                       hasRHS(expr(anyOf(
-                                        ignoringImpCasts(declRefExpr()),
+                                        ignoringImpCasts(declRefExpr().bind(OffsetTag)),
                                         integerLiteral().bind(IntOffsetTag))))
                       ).bind(UUCAddAssignTag)))));
   }
@@ -1836,7 +1839,7 @@ std::optional<FixItList> UUCAddAssignGadget::getFixits(const Strategy &S) const 
         SubSpanOffset = OffsetStr.c_str();
       }
       else {
-        SubSpanOffset = getUserFillPlaceHolder();
+        SubSpanOffset = Offset->getDecl()->getName().str();
       }
       
       // To transform UUC(p += n) to UUC(p = p.subspan(..)):

@@ -3,7 +3,7 @@
 // RUN:            -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 void foo(int * , int *);
 
-void add_assign_test(int n) {
+void add_assign_test(int n, int *a) {
   int *p = new int[10];
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
@@ -26,7 +26,7 @@ void add_assign_test(int n) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:8}:""
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:9-[[@LINE-2]]:9}:"[0]"
     p += n;
-    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:11}:"p = p.subspan(<# placeholder #>)"
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:11}:"p = p.subspan(n)"
   }
   
   if (*p == 1)
@@ -34,4 +34,7 @@ void add_assign_test(int n) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:9-[[@LINE-2]]:9}:"[0]"
     p += 3;
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:11}:"p = p.subspan(3)"
+  
+  a += -9;
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:11}:"p = p.subspan(-9)"
 }
