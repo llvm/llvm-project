@@ -260,14 +260,22 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
   opToErase.push_back(read.getOperation());
 }
 
+/// Returns a copy of `shape` without unit dims.
+static SmallVector<int64_t> getReducedShape(ArrayRef<int64_t> shape) {
+  SmallVector<int64_t> reducedShape;
+  llvm::copy_if(shape, std::back_inserter(reducedShape),
+                [](int64_t dimSize) { return dimSize != 1; });
+  return reducedShape;
+}
+
 /// Drops unit dimensions from the input MemRefType.
-static MemRefType dropUnitDims(MemRefType inputType, ArrayRef<int64_t> offsets,
-                               ArrayRef<int64_t> sizes,
-                               ArrayRef<int64_t> strides) {
-  SmallVector<int64_t> targetShape = llvm::to_vector(
-      llvm::make_filter_range(sizes, [](int64_t sz) { return sz != 1; }));
+static MemRefType dropUnitDims(MemRefType inputType,
+                               ArrayRef<OpFoldResult> offsets,
+                               ArrayRef<OpFoldResult> sizes,
+                               ArrayRef<OpFoldResult> strides) {
   Type rankReducedType = memref::SubViewOp::inferRankReducedResultType(
-      targetShape, inputType, offsets, sizes, strides);
+      getReducedShape(inputType.getShape()), inputType, offsets, sizes,
+      strides);
   return canonicalizeStridedLayout(cast<MemRefType>(rankReducedType));
 }
 
@@ -277,17 +285,18 @@ static Value rankReducingSubviewDroppingUnitDims(PatternRewriter &rewriter,
                                                  mlir::Location loc,
                                                  Value input) {
   MemRefType inputType = cast<MemRefType>(input.getType());
-  assert(inputType.hasStaticShape());
-  SmallVector<int64_t> subViewOffsets(inputType.getRank(), 0);
-  SmallVector<int64_t> subViewStrides(inputType.getRank(), 1);
-  ArrayRef<int64_t> subViewSizes = inputType.getShape();
-  MemRefType resultType =
-      dropUnitDims(inputType, subViewOffsets, subViewSizes, subViewStrides);
+  SmallVector<OpFoldResult> offsets(inputType.getRank(),
+                                    rewriter.getIndexAttr(0));
+  SmallVector<OpFoldResult> sizes = memref::getMixedSizes(rewriter, loc, input);
+  SmallVector<OpFoldResult> strides(inputType.getRank(),
+                                    rewriter.getIndexAttr(1));
+  MemRefType resultType = dropUnitDims(inputType, offsets, sizes, strides);
+
   if (canonicalizeStridedLayout(resultType) ==
       canonicalizeStridedLayout(inputType))
     return input;
-  return rewriter.create<memref::SubViewOp>(
-      loc, resultType, input, subViewOffsets, subViewSizes, subViewStrides);
+  return rewriter.create<memref::SubViewOp>(loc, resultType, input, offsets,
+                                            sizes, strides);
 }
 
 /// Returns the number of dims that aren't unit dims.
@@ -295,12 +304,18 @@ static int getReducedRank(ArrayRef<int64_t> shape) {
   return llvm::count_if(shape, [](int64_t dimSize) { return dimSize != 1; });
 }
 
-/// Returns a copy of `shape` without unit dims.
-static SmallVector<int64_t> getReducedShape(ArrayRef<int64_t> shape) {
-  SmallVector<int64_t> reducedShape;
-  llvm::copy_if(shape, std::back_inserter(reducedShape),
-                [](int64_t dimSize) { return dimSize != 1; });
-  return reducedShape;
+/// Trims non-scalable one dimensions from `oldType` and returns the result
+/// type.
+static VectorType trimUnitDims(VectorType oldType) {
+  SmallVector<int64_t> newShape;
+  SmallVector<bool> newScalableDims;
+  for (auto [dimIdx, dimSize] : llvm::enumerate(oldType.getShape())) {
+    if (dimSize == 1 && !oldType.getScalableDims()[dimIdx])
+      continue;
+    newShape.push_back(dimSize);
+    newScalableDims.push_back(oldType.getScalableDims()[dimIdx]);
+  }
+  return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
 }
 
 namespace {
@@ -320,9 +335,7 @@ class TransferReadDropUnitDimsPattern
     Value source = transferReadOp.getSource();
     MemRefType sourceType = dyn_cast<MemRefType>(source.getType());
     // TODO: support tensor types.
-    if (!sourceType || !sourceType.hasStaticShape())
-      return failure();
-    if (sourceType.getNumElements() != vectorType.getNumElements())
+    if (!sourceType)
       return failure();
     // TODO: generalize this pattern, relax the requirements here.
     if (transferReadOp.hasOutOfBoundsDim())
@@ -335,23 +348,50 @@ class TransferReadDropUnitDimsPattern
       return failure();
     // Check if the reduced vector shape matches the reduced source shape.
     // Otherwise, this case is not supported yet.
-    int vectorReducedRank = getReducedRank(vectorType.getShape());
-    if (reducedRank != vectorReducedRank)
+    auto reducedVectorType = trimUnitDims(vectorType);
+    if (reducedRank != reducedVectorType.getRank())
       return failure();
     if (llvm::any_of(transferReadOp.getIndices(), [](Value v) {
           return getConstantIntValue(v) != static_cast<int64_t>(0);
         }))
       return failure();
+
+    auto maskOp = transferReadOp.getMask();
+    if (maskOp) {
+      auto createMaskOp = maskOp.getDefiningOp<vector::CreateMaskOp>();
+      if (!createMaskOp)
+        return failure();
+      auto maskType = maskOp.getType();
+      auto reducedMaskType = trimUnitDims(maskType);
+      if (reducedMaskType.getRank() == maskType.getRank())
+        return failure();
+      SmallVector<Value> maskOperands;
+      for (auto [dim, dimIsScalable, maskOperand] :
+           llvm::zip(maskType.getShape(), maskType.getScalableDims(),
+                     createMaskOp.getOperands())) {
+        if (dim == 1 && !dimIsScalable) {
+          // If the mask for the unit dim is not a constant of 1, do nothing.
+          auto constant = maskOperand.getDefiningOp<arith::ConstantIndexOp>();
+          if (!constant || (constant.value() != 1))
+            return failure();
+          continue;
+        }
+        maskOperands.push_back(maskOperand);
+      }
+      maskOp = rewriter.create<vector::CreateMaskOp>(loc, reducedMaskType,
+                                                     maskOperands);
+    }
+
     Value reducedShapeSource =
         rankReducingSubviewDroppingUnitDims(rewriter, loc, source);
     Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     SmallVector<Value> zeros(reducedRank, c0);
     auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
-    auto reducedVectorType = VectorType::get(
-        getReducedShape(vectorType.getShape()), vectorType.getElementType());
-
+    SmallVector<bool> inBounds(reducedVectorType.getRank(), true);
     auto newTransferReadOp = rewriter.create<vector::TransferReadOp>(
-        loc, reducedVectorType, reducedShapeSource, zeros, identityMap);
+        loc, reducedVectorType, reducedShapeSource, zeros, identityMap,
+        transferReadOp.getPadding(), maskOp,
+        rewriter.getBoolArrayAttr(inBounds));
     auto shapeCast = rewriter.createOrFold<vector::ShapeCastOp>(
         loc, vectorType, newTransferReadOp);
     rewriter.replaceOp(transferReadOp, shapeCast);
