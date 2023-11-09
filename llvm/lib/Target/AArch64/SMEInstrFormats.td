@@ -15,7 +15,7 @@ def imm_to_tile16  : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAH0, 1>",  []>;
 def imm_to_tile32  : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAS0, 3>",  []>;
 def imm_to_tile64  : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAD0, 7>",  []>;
 def imm_to_tile128 : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAQ0, 15>", []>;
-def imm_to_tile_zt : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZT0,  0>",  []>;
+def imm_to_zt      : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZT0,  0>",  []>;
 
 def tileslice8   : ComplexPattern<i32 , 2, "SelectSMETileSlice<15, 1>", []>;
 def tileslice16  : ComplexPattern<i32 , 2, "SelectSMETileSlice<7,  1>", []>;
@@ -3141,7 +3141,7 @@ multiclass sme2_spill_fill_vector<string mnemonic, bits<8> opc, SDPatternOperato
     // Translated to actual instruction in AArch64ISelLowering.cpp
     let usesCustomInserter = 1;
   }
-  def : Pat<(op (imm_to_tile_zt untyped:$tile), GPR64sp:$base),
+  def : Pat<(op (imm_to_zt untyped:$tile), GPR64sp:$base),
             (!cast<Instruction>(NAME # _PSEUDO) $tile, $base)>;
 }
 
