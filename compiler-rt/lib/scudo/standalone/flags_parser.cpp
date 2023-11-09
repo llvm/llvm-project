@@ -10,6 +10,7 @@
 #include "common.h"
 #include "report.h"
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -142,8 +143,17 @@ bool FlagParser::runHandler(const char *Name, const char *Value,
       break;
     case FlagType::FT_int:
       char *ValueEnd;
-      *reinterpret_cast<int *>(Flags[I].Var) =
-          static_cast<int>(strtol(Value, &ValueEnd, 10));
+      long V = strtol(Value, &ValueEnd, 10);
+      static_assert(INT_MAX <= LONG_MAX);
+      static_assert(INT_MIN >= LONG_MIN);
+      // strtol returns LONG_MAX on overflow and LONG_MIN on underflow.
+      // This is why we compare-equal here (and lose INT_MIN and INT_MAX as a
+      // value, but that's okay)
+      if (V >= INT_MAX || V <= INT_MIN) {
+        reportInvalidFlag("int", Value);
+        return false;
+      }
+      *reinterpret_cast<int *>(Flags[I].Var) = static_cast<int>(V);
       Ok =
           *ValueEnd == '"' || *ValueEnd == '\'' || isSeparatorOrNull(*ValueEnd);
       if (!Ok)
