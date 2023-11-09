@@ -79,16 +79,13 @@ INITIALIZE_PASS(RISCVFoldMasks, DEBUG_TYPE, "RISC-V Fold Masks", false, false)
 bool RISCVFoldMasks::isAllOnesMask(MachineInstr *MaskDef) {
   if (!MaskDef)
     return false;
-  if (MaskDef->isCopy()) {
-    assert(MaskDef->getOperand(0).getReg() == RISCV::V0);
-    Register SrcReg =
-        TRI->lookThruCopyLike(MaskDef->getOperand(1).getReg(), MRI);
-    if (!SrcReg.isVirtual())
-      return false;
-    MaskDef = MRI->getVRegDef(SrcReg);
-    if (!MaskDef)
-      return false;
-  }
+  assert(MaskDef->isCopy() && MaskDef->getOperand(0).getReg() == RISCV::V0);
+  Register SrcReg = TRI->lookThruCopyLike(MaskDef->getOperand(1).getReg(), MRI);
+  if (!SrcReg.isVirtual())
+    return false;
+  MaskDef = MRI->getVRegDef(SrcReg);
+  if (!MaskDef)
+    return false;
 
   // TODO: Check that the VMSET is the expected bitwidth? The pseudo has
   // undefined behaviour if it's the wrong bitwidth, so we could choose to
@@ -365,10 +362,14 @@ bool RISCVFoldMasks::foldVMergeIntoOps(MachineInstr &MI,
       // mask just before True.
       unsigned VMSetOpc =
           getVMSetForLMul(RISCVII::getLMul(MI.getDesc().TSFlags));
-      BuildMI(*MI.getParent(), TrueMI, MI.getDebugLoc(), TII->get(VMSetOpc))
-          .addDef(RISCV::V0)
+      Register Dest = MRI->createVirtualRegister(&RISCV::VRRegClass);
+      BuildMI(*MI.getParent(), TrueMI, MI.getDebugLoc(), TII->get(VMSetOpc),
+              Dest)
           .add(VL)
           .add(TrueMI.getOperand(RISCVII::getSEWOpNum(TrueMCID)));
+      BuildMI(*MI.getParent(), TrueMI, MI.getDebugLoc(), TII->get(RISCV::COPY),
+              RISCV::V0)
+          .addReg(Dest);
     }
 
     TrueMI.setDesc(MaskedMCID);
