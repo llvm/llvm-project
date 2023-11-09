@@ -360,6 +360,8 @@ template <> struct ScalarBitSetTraits<TBDFlags> {
     IO.bitSetCase(Flags, "not_app_extension_safe",
                   TBDFlags::NotApplicationExtensionSafe);
     IO.bitSetCase(Flags, "installapi", TBDFlags::InstallAPI);
+    IO.bitSetCase(Flags, "not_for_dyld_shared_cache",
+                  TBDFlags::OSLibNotForSharedCache);
   }
 };
 
@@ -809,6 +811,9 @@ template <> struct MappingTraits<const InterfaceFile *> {
       if (!File->isTwoLevelNamespace())
         Flags |= TBDFlags::FlatNamespace;
 
+      if (File->isOSLibNotForSharedCache())
+        Flags |= TBDFlags::OSLibNotForSharedCache;
+
       {
         std::map<std::string, TargetList> valueToTargetList;
         for (const auto &it : File->umbrellas())
@@ -899,6 +904,8 @@ template <> struct MappingTraits<const InterfaceFile *> {
       File->setTwoLevelNamespace(!(Flags & TBDFlags::FlatNamespace));
       File->setApplicationExtensionSafe(
           !(Flags & TBDFlags::NotApplicationExtensionSafe));
+      File->setOSLibNotForSharedCache(
+          (Flags & TBDFlags::OSLibNotForSharedCache));
 
       for (const auto &CurrentSection : AllowableClients) {
         for (const auto &lib : CurrentSection.Values)
