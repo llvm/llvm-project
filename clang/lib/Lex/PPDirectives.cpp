@@ -1386,7 +1386,7 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandleEmbedDirective(SavedHash.getLocation(), Result,
                                   getCurrentFileLexer()
                                       ? getCurrentFileLexer()->getFileEntry()
-                                      : nullptr);
+                                      : static_cast<FileEntry *>(nullptr));
     case tok::pp_assert:
       //isExtension = true;  // FIXME: implement #assert
       break;
