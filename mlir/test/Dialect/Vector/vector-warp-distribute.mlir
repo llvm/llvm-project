@@ -561,6 +561,52 @@ func.func @warp_scf_for_multi_reduce(%arg0: memref<2x32x40x384xf32>, %arg1: memr
 
 // -----
 
+//   CHECK-PROP-LABEL:   func @warp_multi_reduce_3d(
+//     CHECK-PROP-NOT:   vector.warp_execute_on_lane_0
+//         CHECK-PROP:   vector.transfer_read {{.*}} : memref<128x4x64xf32>, vector<1x2x64xf32>
+//         CHECK-PROP:   vector.shape_cast {{.*}} : vector<1x2x64xf32> to vector<128xf32>
+//         CHECK-PROP:   vector.reduction <add>, {{.*}} : vector<128xf32> into f32
+// CHECK-PROP-COUNT=8:   gpu.shuffle
+func.func @warp_multi_reduce_3d(%arg0 : memref<128x4x64xf32>) -> f32 {
+    %0 = gpu.thread_id x
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant 0.000000e+00 : f32
+    %ret = vector.warp_execute_on_lane_0(%0)[256] -> f32 {
+      %read = vector.transfer_read %arg0[%c0, %c0, %c0], %cst { in_bounds = [true, true, true] } : memref<128x4x64xf32>, vector<128x4x64xf32>
+      %cast = vector.shape_cast %read : vector<128x4x64xf32> to vector<32768xf32>
+      %out = vector.reduction <add>, %cast, %cst : vector<32768xf32> into f32
+      vector.yield %out : f32
+    }
+    func.return %ret : f32
+}
+
+// -----
+
+//   CHECK-PROP-LABEL:   func @warp_multi_dim_diff_read_cast(
+//     CHECK-PROP-NOT:   vector.warp_execute_on_lane_0
+//         CHECK-PROP:   vector.transfer_read {{.*}} : memref<2x4x16xf32>, vector<1x2x16xf32>
+//         CHECK-PROP:   vector.transfer_read {{.*}} : memref<128xf32>, vector<32xf32>
+//         CHECK-PROP:   vector.shape_cast {{.*}} : vector<1x2x16xf32> to vector<32xf32>
+//         CHECK-PROP:   arith.addf {{.*}} : vector<32xf32>
+//         CHECK-PROP:   vector.reduction <add>, {{.*}} : vector<32xf32> into f32
+// CHECK-PROP-COUNT=2:   gpu.shuffle
+func.func @warp_multi_dim_diff_read_cast(%arg0 : memref<2x4x16xf32>, %arg1 : memref<128xf32>) -> f32 {
+    %0 = gpu.thread_id x
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant 0.000000e+00 : f32
+    %ret = vector.warp_execute_on_lane_0(%0)[4] -> f32 {
+      %read = vector.transfer_read %arg0[%c0, %c0, %c0], %cst { in_bounds = [true, true, true] } : memref<2x4x16xf32>, vector<2x4x16xf32>
+      %read1 = vector.transfer_read %arg1[%c0], %cst { in_bounds = [true] } : memref<128xf32>, vector<128xf32>
+      %cast = vector.shape_cast %read : vector<2x4x16xf32> to vector<128xf32>
+      %added = arith.addf %cast, %read1 : vector<128xf32>
+      %reduced = vector.reduction <add>, %added : vector<128xf32> into f32
+      vector.yield %reduced : f32
+    }
+    func.return %ret : f32
+}
+
+// -----
+
 // CHECK-PROP-LABEL: func @vector_reduction(
 //  CHECK-PROP-SAME:     %[[laneid:.*]]: index)
 //   CHECK-PROP-DAG:   %[[c1:.*]] = arith.constant 1 : i32

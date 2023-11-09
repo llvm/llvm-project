@@ -568,19 +568,6 @@ struct TestVectorDistribution
       }
     });
     MLIRContext *ctx = &getContext();
-    auto distributionFn = [](Value val) {
-      // Create a map (d0, d1) -> (d1, d0) to distribute starting from the inner
-      // dimensions.
-      VectorType vecType = dyn_cast<VectorType>(val.getType());
-      int64_t vecRank = vecType ? vecType.getRank() : 0;
-      OpBuilder builder(val.getContext());
-      SmallVector<AffineExpr, 4> vecDims =
-          llvm::map_to_vector(llvm::seq<int64_t>(0, vecRank), [&](int64_t i) {
-            return builder.getAffineDimExpr(vecRank - i - 1);
-          });
-      return AffineMap::get(vecRank, /*symbolCount=*/0, vecDims,
-                            builder.getContext());
-    };
     auto shuffleFn = [](Location loc, OpBuilder &builder, Value val,
                         Value srcIdx, int64_t warpSz) {
       assert((val.getType().isF32() || val.getType().isInteger(32)) &&
@@ -598,13 +585,13 @@ struct TestVectorDistribution
     };
     if (distributeTransferWriteOps) {
       RewritePatternSet patterns(ctx);
-      populateDistributeTransferWriteOpPatterns(patterns, distributionFn);
+      populateDistributeTransferWriteOpPatterns(patterns);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     }
     if (propagateDistribution) {
       RewritePatternSet patterns(ctx);
-      vector::populatePropagateWarpVectorDistributionPatterns(
-          patterns, distributionFn, shuffleFn);
+      vector::populatePropagateWarpVectorDistributionPatterns(patterns,
+                                                              shuffleFn);
       vector::populateDistributeReduction(patterns, warpReduction);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     }

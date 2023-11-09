@@ -40,8 +40,8 @@ void populateWarpExecuteOnLane0OpToScfForPattern(
     const WarpExecuteOnLane0LoweringOptions &options,
     PatternBenefit benefit = 1);
 
-/// Distribute transfer_write ops based on the affine map returned by
-/// `distributionMapFn`.
+/// Distribute transfer_write ops based.
+/// TODO: Add documentation here how the distribution is done.
 /// Example:
 /// ```
 /// %0 = vector.warp_execute_on_lane_0(%id){
@@ -73,7 +73,7 @@ using WarpShuffleFromIdxFn =
 /// to decide how a value should be distributed when this cannot be inferred
 /// from its uses.
 void populatePropagateWarpVectorDistributionPatterns(
-    RewritePatternSet &pattern, const DistributionMapFn &distributionMapFn,
+    RewritePatternSet &pattern,
     const WarpShuffleFromIdxFn &warpShuffleFromIdxFn,
     PatternBenefit benefit = 1);
 

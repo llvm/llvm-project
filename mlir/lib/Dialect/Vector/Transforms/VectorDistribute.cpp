@@ -22,33 +22,6 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-/// Currently the distribution map is implicit based on the vector shape. In the
-/// future it will be part of the op.
-/// Example:
-/// ```
-/// %0 = vector.warp_execute_on_lane_0(%arg0) -> (vector<1x16x2xf32>) {
-///   ...
-///   vector.yield %3 : vector<32x16x64xf32>
-/// }
-/// ```
-/// Would have an implicit map of:
-/// `(d0, d1, d2) -> (d0, d2)`
-static AffineMap calculateImplicitMap(VectorType sequentialType,
-                                      VectorType distributedType) {
-  SmallVector<AffineExpr> perm;
-  perm.reserve(1);
-  // Check which dimensions of the sequential type are different than the
-  // dimensions of the distributed type to know the distributed dimensions. Then
-  // associate each distributed dimension to an ID in order.
-  for (unsigned i = 0, e = sequentialType.getRank(); i < e; i++) {
-    if (sequentialType.getDimSize(i) != distributedType.getDimSize(i))
-      perm.push_back(getAffineDimExpr(i, distributedType.getContext()));
-  }
-  auto map = AffineMap::get(sequentialType.getRank(), 0, perm,
-                            distributedType.getContext());
-  return map;
-}
-
 namespace {
 
 /// Helper struct to create the load / store operations that permit transit
@@ -63,9 +36,6 @@ struct DistributedLoadStoreHelper {
         laneId(laneId), zero(zero) {
     sequentialVectorType = dyn_cast<VectorType>(sequentialVal.getType());
     distributedVectorType = dyn_cast<VectorType>(distributedVal.getType());
-    if (sequentialVectorType && distributedVectorType)
-      distributionMap =
-          calculateImplicitMap(sequentialVectorType, distributedVectorType);
   }
 
   Value buildDistributedOffset(RewriterBase &b, Location loc, int64_t index) {
@@ -96,10 +66,8 @@ struct DistributedLoadStoreHelper {
     int64_t rank = sequentialVectorType.getRank();
     SmallVector<Value> indices(rank, zero);
     if (val == distributedVal) {
-      for (auto dimExpr : distributionMap.getResults()) {
-        int64_t index = dimExpr.cast<AffineDimExpr>().getPosition();
+      for (auto index : llvm::seq<int64_t>(0, rank))
         indices[index] = buildDistributedOffset(b, loc, index);
-      }
     }
     SmallVector<bool> inBounds(indices.size(), true);
     return b.create<vector::TransferWriteOp>(
@@ -139,12 +107,11 @@ struct DistributedLoadStoreHelper {
     assert((type == distributedVectorType || type == sequentialVectorType) &&
            "Must store either the preregistered distributed or the "
            "preregistered sequential type.");
-    SmallVector<Value> indices(sequentialVectorType.getRank(), zero);
+    int64_t rank = sequentialVectorType.getRank();
+    SmallVector<Value> indices(rank, zero);
     if (type == distributedVectorType) {
-      for (auto dimExpr : distributionMap.getResults()) {
-        int64_t index = dimExpr.cast<AffineDimExpr>().getPosition();
+      for (auto index : llvm::seq<int64_t>(0, rank))
         indices[index] = buildDistributedOffset(b, loc, index);
-      }
     }
     SmallVector<bool> inBounds(indices.size(), true);
     return b.create<vector::TransferReadOp>(
@@ -154,7 +121,6 @@ struct DistributedLoadStoreHelper {
 
   Value sequentialVal, distributedVal, laneId, zero;
   VectorType sequentialVectorType, distributedVectorType;
-  AffineMap distributionMap;
 };
 
 } // namespace
@@ -446,20 +412,13 @@ static vector::TransferWriteOp cloneWriteOp(RewriterBase &rewriter,
 /// map(d0, d1, d2) -> (d1, d2), and a warp size of 128 would distribute first
 /// the second dimension and then the third dimension, finally returning a
 /// vector <4x1x64>.
-static VectorType getDistributedType(VectorType originalType, AffineMap map,
+static VectorType getDistributedType(VectorType originalType,
                                      int64_t warpSize) {
-  if (!map.isProjectedPermutation()) {
-    assert(false && "expected projected permutation map");
-    return VectorType();
-  }
-
   SmallVector<int64_t> targetShape(originalType.getShape().begin(),
                                    originalType.getShape().end());
   // Distribute the vector based on the order of dimensions in the affine map.
   int64_t availableThreads = warpSize;
-  for (unsigned i = 0, e = map.getNumResults(); i < e; i++) {
-    unsigned position = map.getDimPosition(i);
-    int64_t &dimSize = targetShape[position];
+  for (int64_t &dimSize : targetShape) {
     if (availableThreads > dimSize) {
       // We have more threads available than the size of the dimension, so we
       // distribute the with size 1 along this dimension.
@@ -505,16 +464,22 @@ static VectorType getDistributedType(VectorType originalType, AffineMap map,
 /// }
 /// vector.transfer_write %v, %A[%id] : vector<1xf32>, memref<128xf32>
 struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
-  WarpOpTransferWrite(MLIRContext *ctx, DistributionMapFn fn,
-                      PatternBenefit b = 1)
-      : OpRewritePattern<vector::TransferWriteOp>(ctx, b),
-        distributionMapFn(std::move(fn)) {}
+  WarpOpTransferWrite(MLIRContext *ctx, PatternBenefit b = 1)
+      : OpRewritePattern<vector::TransferWriteOp>(ctx, b) {}
 
   /// Distribute the TransferWriteOp. Only 1D distributions and vector dims that
   /// are multiples of the distribution ratio are supported at the moment.
   LogicalResult tryDistributeOp(RewriterBase &rewriter,
                                 vector::TransferWriteOp writeOp,
                                 WarpExecuteOnLane0Op warpOp) const {
+
+    // TODO: Distribution of non-trivial projected permutation maps
+    // breaks the implicit assumption that the we distribute the outer most
+    // vector dimensions. To allow for this, we need a global layout analysis
+    // over warp_execute_on_lane_0 instead of the current local analysis.
+    if (!writeOp.getPermutationMap().isMinorIdentityWithBroadcasting())
+      return failure();
+
     VectorType writtenVectorType = writeOp.getVectorType();
 
     // 1. If the write is 0-D, we just clone it into a new WarpExecuteOnLane0Op
@@ -523,9 +488,8 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
       return failure();
 
     // 2. Compute the distributed type.
-    AffineMap map = distributionMapFn(writeOp.getVector());
     VectorType targetType =
-        getDistributedType(writtenVectorType, map, warpOp.getWarpSize());
+        getDistributedType(writtenVectorType, warpOp.getWarpSize());
     if (!targetType)
       return failure();
 
@@ -541,7 +505,7 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
       if (!writeOp.getPermutationMap().isMinorIdentity())
         return failure();
       maskType =
-          getDistributedType(writeOp.getMaskType(), map, warpOp.getWarpSize());
+          getDistributedType(writeOp.getMaskType(), warpOp.getWarpSize());
     }
 
     // 3. clone the write into a new WarpExecuteOnLane0Op to separate it from
@@ -553,20 +517,19 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
     auto newWarpOp =
         newWriteOp.getVector().getDefiningOp<WarpExecuteOnLane0Op>();
     rewriter.setInsertionPoint(newWriteOp);
-    AffineMap indexMap = map.compose(newWriteOp.getPermutationMap());
+    AffineMap indexMap = newWriteOp.getPermutationMap();
     Location loc = newWriteOp.getLoc();
     SmallVector<Value> indices(newWriteOp.getIndices().begin(),
                                newWriteOp.getIndices().end());
-    for (auto it : llvm::zip(indexMap.getResults(), map.getResults())) {
+    for (AffineExpr it : indexMap.getResults()) {
       AffineExpr d0, d1;
       bindDims(newWarpOp.getContext(), d0, d1);
-      auto indexExpr = std::get<0>(it).dyn_cast<AffineDimExpr>();
+      auto indexExpr = it.dyn_cast<AffineDimExpr>();
       if (!indexExpr)
         continue;
       unsigned indexPos = indexExpr.getPosition();
-      unsigned vectorPos = std::get<1>(it).cast<AffineDimExpr>().getPosition();
       auto scale =
-          rewriter.getAffineConstantExpr(targetType.getDimSize(vectorPos));
+          rewriter.getAffineConstantExpr(targetType.getDimSize(indexPos));
       indices[indexPos] = affine::makeComposedAffineApply(
           rewriter, loc, d0 + scale * d1,
           {indices[indexPos], newWarpOp.getLaneid()});
@@ -646,9 +609,6 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
 
     return failure();
   }
-
-private:
-  DistributionMapFn distributionMapFn;
 };
 
 /// Sink out elementwise op feeding into a warp op yield.
@@ -837,18 +797,23 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
     if (!operand)
       return failure();
     auto read = operand->get().getDefiningOp<vector::TransferReadOp>();
+
+    // TODO: Distribution of non-trivial projected permutation maps
+    // breaks the implicit assumption that the we distribute the outer most
+    // vector dimensions. To allow for this, we need a global layout analysis
+    // over warp_execute_on_lane_0 instead of the current local analysis.
+    if (!read.getPermutationMap().isMinorIdentityWithBroadcasting())
+      return failure();
+
     // Don't duplicate transfer_read ops when distributing.
     if (!read.getResult().hasOneUse())
       return failure();
     unsigned operandIndex = operand->getOperandNumber();
     Value distributedVal = warpOp.getResult(operandIndex);
 
-    SmallVector<Value, 4> indices(read.getIndices().begin(),
-                                  read.getIndices().end());
     auto sequentialType = cast<VectorType>(read.getResult().getType());
     auto distributedType = cast<VectorType>(distributedVal.getType());
-    AffineMap map = calculateImplicitMap(sequentialType, distributedType);
-    AffineMap indexMap = map.compose(read.getPermutationMap());
+    AffineMap indexMap = read.getPermutationMap();
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointAfter(warpOp);
 
@@ -860,20 +825,21 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
                            warpOp.getLaneid(), delinearizedIds))
       return rewriter.notifyMatchFailure(
           read, "cannot delinearize lane ID for distribution");
-    assert(!delinearizedIds.empty() || map.getNumResults() == 0);
+    assert(!delinearizedIds.empty());
 
-    for (auto it : llvm::zip_equal(indexMap.getResults(), map.getResults())) {
+    SmallVector<Value, 4> indices(read.getIndices().begin(),
+                                  read.getIndices().end());
+    for (AffineExpr it : indexMap.getResults()) {
       AffineExpr d0, d1;
       bindDims(read.getContext(), d0, d1);
-      auto indexExpr = std::get<0>(it).dyn_cast<AffineDimExpr>();
+      auto indexExpr = it.dyn_cast<AffineDimExpr>();
       if (!indexExpr)
         continue;
       unsigned indexPos = indexExpr.getPosition();
-      unsigned vectorPos = std::get<1>(it).cast<AffineDimExpr>().getPosition();
-      int64_t scale = distributedType.getDimSize(vectorPos);
+      auto scale = distributedType.getDimSize(indexPos);
       indices[indexPos] = affine::makeComposedAffineApply(
           rewriter, read.getLoc(), d0 + scale * d1,
-          {indices[indexPos], delinearizedIds[vectorPos]});
+          {indices[indexPos], delinearizedIds[indexPos]});
     }
     auto newRead = rewriter.create<vector::TransferReadOp>(
         read.getLoc(), distributedVal.getType(), read.getSource(), indices,
@@ -1055,7 +1021,7 @@ struct WarpOpShapeCast : public OpRewritePattern<WarpExecuteOnLane0Op> {
     VectorType castResultType = castDistributedType;
 
     // We expect the distributed type to have a smaller rank than the original
-    // type. Prepend with size-one dimensions to make them the same.
+    // type. We distribute the original type according to standard distribution.
     unsigned castDistributedRank = castDistributedType.getRank();
     unsigned castOriginalRank = castOriginalType.getRank();
     if (castDistributedRank < castOriginalRank) {
@@ -1064,6 +1030,8 @@ struct WarpOpShapeCast : public OpRewritePattern<WarpExecuteOnLane0Op> {
       castDistributedType =
           VectorType::get(shape, castDistributedType.getElementType());
     }
+    castDistributedType =
+        getDistributedType(castOriginalType, warpOp.getWarpSize());
 
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
@@ -1508,9 +1476,8 @@ struct WarpOpInsert : public OpRewritePattern<WarpExecuteOnLane0Op> {
 /// ```
 struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
-  WarpOpScfForOp(MLIRContext *ctx, DistributionMapFn fn, PatternBenefit b = 1)
-      : OpRewritePattern<WarpExecuteOnLane0Op>(ctx, b),
-        distributionMapFn(std::move(fn)) {}
+  WarpOpScfForOp(MLIRContext *ctx, PatternBenefit b = 1)
+      : OpRewritePattern<WarpExecuteOnLane0Op>(ctx, b) {}
   using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -1535,8 +1502,7 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
               return;
             Type distType = operand->get().getType();
             if (auto vecType = dyn_cast<VectorType>(distType)) {
-              AffineMap map = distributionMapFn(operand->get());
-              distType = getDistributedType(vecType, map, warpOp.getWarpSize());
+              distType = getDistributedType(vecType, warpOp.getWarpSize());
             }
             inputTypes.push_back(operand->get().getType());
             distTypes.push_back(distType);
@@ -1627,9 +1593,6 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
     mlir::vector::moveScalarUniformCode(innerWarp);
     return success();
   }
-
-private:
-  DistributionMapFn distributionMapFn;
 };
 
 /// A pattern that extracts vector.reduction ops from a WarpExecuteOnLane0Op.
@@ -1724,14 +1687,12 @@ void mlir::vector::populateWarpExecuteOnLane0OpToScfForPattern(
 }
 
 void mlir::vector::populateDistributeTransferWriteOpPatterns(
-    RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn,
-    PatternBenefit benefit) {
-  patterns.add<WarpOpTransferWrite>(patterns.getContext(), distributionMapFn,
-                                    benefit);
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<WarpOpTransferWrite>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
-    RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn,
+    RewritePatternSet &patterns,
     const WarpShuffleFromIdxFn &warpShuffleFromIdxFn, PatternBenefit benefit) {
   patterns.add<WarpOpElementwise, WarpOpTransferRead, WarpOpDeadResult,
                WarpOpBroadcast, WarpOpShapeCast, WarpOpExtract,
@@ -1739,8 +1700,7 @@ void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
                WarpOpInsert>(patterns.getContext(), benefit);
   patterns.add<WarpOpExtractElement>(patterns.getContext(),
                                      warpShuffleFromIdxFn, benefit);
-  patterns.add<WarpOpScfForOp>(patterns.getContext(), distributionMapFn,
-                               benefit);
+  patterns.add<WarpOpScfForOp>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateDistributeReduction(
