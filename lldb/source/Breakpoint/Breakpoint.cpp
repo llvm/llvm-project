@@ -841,9 +841,8 @@ bool Breakpoint::HasResolvedLocations() const {
 
 size_t Breakpoint::GetNumLocations() const { return m_locations.GetSize(); }
 
-bool Breakpoint::AddName(llvm::StringRef new_name) {
+void Breakpoint::AddName(llvm::StringRef new_name) {
   m_name_list.insert(new_name.str());
-  return true;
 }
 
 void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
