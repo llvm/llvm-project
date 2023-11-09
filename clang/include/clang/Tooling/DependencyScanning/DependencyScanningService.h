@@ -12,6 +12,7 @@
 #include "clang/CAS/CASOptions.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningCASFilesystem.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/CAS/ActionCache.h"
 
 namespace clang {
@@ -60,6 +61,17 @@ enum class ScanningOutputFormat {
   P1689,
 };
 
+enum class ScanningOptimizations {
+  None = 0,
+
+  /// Remove unused header search paths including header maps.
+  HeaderSearch = 1,
+
+  LLVM_MARK_AS_BITMASK_ENUM(HeaderSearch),
+  All = HeaderSearch,
+  Default = All
+};
+
 /// The dependency scanning service contains shared configuration and state that
 /// is used by the individual dependency scanning workers.
 class DependencyScanningService {
@@ -69,13 +81,14 @@ public:
       std::shared_ptr<llvm::cas::ObjectStore> CAS,
       std::shared_ptr<llvm::cas::ActionCache> Cache,
       IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS,
-      bool OptimizeArgs = false, bool EagerLoadModules = false);
+      ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default,
+      bool EagerLoadModules = false);
 
   ScanningMode getMode() const { return Mode; }
 
   ScanningOutputFormat getFormat() const { return Format; }
 
-  bool canOptimizeArgs() const { return OptimizeArgs; }
+  ScanningOptimizations getOptimizeArgs() const { return OptimizeArgs; }
 
   bool shouldEagerLoadModules() const { return EagerLoadModules; }
 
@@ -101,7 +114,7 @@ private:
   std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::shared_ptr<llvm::cas::ActionCache> Cache;
   /// Whether to optimize the modules' command-line arguments.
-  const bool OptimizeArgs;
+  const ScanningOptimizations OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
   const bool EagerLoadModules;
   /// Shared CachingOnDiskFileSystem. Set to nullptr to not use CAS dependency

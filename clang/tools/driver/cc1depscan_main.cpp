@@ -853,7 +853,7 @@ int ScanServer::listen() {
           ? tooling::dependencies::ScanningOutputFormat::IncludeTree
           : tooling::dependencies::ScanningOutputFormat::Tree,
       CASOpts, CAS, Cache, FS,
-      /*ReuseFileManager=*/false,
+      clang::tooling::dependencies::ScanningOptimizations::None,
       /*SkipExcludedPPRanges=*/true);
 
   std::atomic<int> NumRunning(0);
@@ -1078,7 +1078,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
           ? tooling::dependencies::ScanningOutputFormat::IncludeTree
           : tooling::dependencies::ScanningOutputFormat::Tree,
       CASOpts, DB, Cache, FS,
-      /*ReuseFileManager=*/false,
+      clang::tooling::dependencies::ScanningOptimizations::None,
       /*SkipExcludedPPRanges=*/true);
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> UnderlyingFS =
       llvm::vfs::createPhysicalFileSystem();

@@ -256,18 +256,17 @@ public:
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS,
       llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> CacheFS,
-      ScanningOutputFormat Format, bool OptimizeArgs, bool EagerLoadModules,
-      bool DisableFree, bool EmitDependencyFile,
+      ScanningOutputFormat Format, ScanningOptimizations OptimizeArgs,
+      bool EagerLoadModules, bool DisableFree, bool EmitDependencyFile,
       bool DiagGenerationAsCompilation, const CASOptions &CASOpts,
       std::optional<StringRef> ModuleName = std::nullopt,
       raw_ostream *VerboseOS = nullptr)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
-        Controller(Controller),
-        DepFS(std::move(DepFS)), DepCASFS(std::move(DepCASFS)),
-        CacheFS(std::move(CacheFS)), Format(Format), OptimizeArgs(OptimizeArgs),
+        Controller(Controller), DepFS(std::move(DepFS)),
+        DepCASFS(std::move(DepCASFS)), CacheFS(std::move(CacheFS)),
+        Format(Format), OptimizeArgs(OptimizeArgs),
         EagerLoadModules(EagerLoadModules), DisableFree(DisableFree),
-        CASOpts(CASOpts),
-        EmitDependencyFile(EmitDependencyFile),
+        CASOpts(CASOpts), EmitDependencyFile(EmitDependencyFile),
         DiagGenerationAsCompilation(DiagGenerationAsCompilation),
         ModuleName(ModuleName), VerboseOS(VerboseOS) {}
 
@@ -517,7 +516,7 @@ private:
   llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
   llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> CacheFS;
   ScanningOutputFormat Format;
-  bool OptimizeArgs;
+  ScanningOptimizations OptimizeArgs;
   bool EagerLoadModules;
   bool DisableFree;
   const CASOptions &CASOpts;
@@ -537,7 +536,7 @@ private:
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()),
+    : Format(Service.getFormat()), OptimizeArgs(Service.getOptimizeArgs()),
       EagerLoadModules(Service.shouldEagerLoadModules()),
       CASOpts(Service.getCASOpts()), CAS(Service.getCAS()) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
@@ -803,7 +802,7 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
   DependencyScanningAction Action(
       WorkingDirectory, DepsConsumer, Controller, DepFS, DepCASFS, CacheFS,
       Format,
-      /*OptimizeArgs=*/false, /*DisableFree=*/false, EagerLoadModules,
+      ScanningOptimizations::None, /*DisableFree=*/false, EagerLoadModules,
       /*EmitDependencyFile=*/!DepFile.empty(), DiagGenerationAsCompilation,
       getCASOpts(),
       /*ModuleName=*/std::nullopt, VerboseOS);

@@ -134,7 +134,7 @@ clang_experimental_DependencyScannerService_create_v0(CXDependencyMode Format) {
   return wrap(new DependencyScanningService(
       ScanningMode::DependencyDirectivesScan, unwrap(Format), CASOpts,
       /*CAS=*/nullptr, /*ActionCache=*/nullptr, FS,
-      /*ReuseFilemanager=*/false));
+      ScanningOptimizations::None));
 }
 
 ScanningOutputFormat DependencyScannerServiceOptions::getFormat() const {
@@ -173,7 +173,7 @@ clang_experimental_DependencyScannerService_create_v1(
   return wrap(new DependencyScanningService(
       ScanningMode::DependencyDirectivesScan, Format, unwrap(Opts)->CASOpts,
       std::move(CAS), std::move(Cache), std::move(FS),
-      /*ReuseFilemanager=*/false));
+      ScanningOptimizations::None));
 }
 
 void clang_experimental_DependencyScannerService_dispose_v0(

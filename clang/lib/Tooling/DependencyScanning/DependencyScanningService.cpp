@@ -21,7 +21,7 @@ DependencyScanningService::DependencyScanningService(
     std::shared_ptr<llvm::cas::ObjectStore> CAS,
     std::shared_ptr<llvm::cas::ActionCache> Cache,
     IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS,
-    bool OptimizeArgs, bool EagerLoadModules)
+    ScanningOptimizations OptimizeArgs, bool EagerLoadModules)
     : Mode(Mode), Format(Format), CASOpts(std::move(CASOpts)), CAS(std::move(CAS)), Cache(std::move(Cache)),
       OptimizeArgs(OptimizeArgs), EagerLoadModules(EagerLoadModules),
       SharedFS(std::move(SharedFS)) {
