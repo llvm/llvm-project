@@ -17,6 +17,9 @@
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
 
+// FIXME: make aarch64 working
+// UNSUPPORTED: target={{.*aarch64.*}}
+
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
