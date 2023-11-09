@@ -127,7 +127,7 @@ class BinarySection {
     return *ContentsOrErr;
   }
 
-  /// Get the set of relocations refering to data in this section that
+  /// Get the set of relocations referring to data in this section that
   /// has been reordered.  The relocation offsets will be modified to
   /// reflect the new data locations.
   RelocationSetType reorderRelocations(bool Inplace) const;
