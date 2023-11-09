@@ -1,15 +1,26 @@
 # REQUIRES: x86-registered-target
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: llvm-addr2line --no-use-symbol-table -fe %t.o 0x1 | FileCheck %s
-# CHECK: foo
-# CHECK: relocatable.c
-# The above addr2line command prints "b" if --use-symbol-table
+# RUN: llvm-addr2line --no-use-symbol-table -f -e %t.o 0x1 | FileCheck %s --check-prefix=OFF
+# OFF: foo
+# OFF-NEXT: relocatable.c
 
-# Produced from the following program, compiled with clang -g -S
-# char a;
-# char b;
-# void foo() {}
+## Produced from the following program, compiled with clang -g -S
+## (clang 14.0.6 / Debian 12).
+## char a;
+## char b;
+## void foo() {}
+
+## nm use-symbol-table.s
+## 0000000000000000 B a
+## 0000000000000001 B b
+## 0000000000000000 T foo
+
+## With --use-symbol-table (default), the symbolizer tries to use the symbol
+## table to override the function name from DWARF. In this case, "b" is returned.
+# RUN: llvm-addr2line --use-symbol-table -f -e %t.o 0x1 | FileCheck %s --check-prefix=ON
+# ON: b
+# ON-NEXT: relocatable.c
 
 	.text
 	.file	"relocatable.c"
