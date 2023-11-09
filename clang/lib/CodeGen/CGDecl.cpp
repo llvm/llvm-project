@@ -1244,8 +1244,8 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
   // If the initializer is small, use a handful of stores.
   if (shouldSplitConstantStore(CGM, ConstantSize)) {
     if (auto *STy = dyn_cast<llvm::StructType>(Ty)) {
-      const llvm::StructLayout *Layout = CGM.getDataLayout().getStructLayout(
-          cast<llvm::StructType>(constant->getType()));
+      const llvm::StructLayout *Layout =
+          CGM.getDataLayout().getStructLayout(STy);
       for (unsigned i = 0; i != constant->getNumOperands(); i++) {
         CharUnits CurOff = CharUnits::fromQuantity(Layout->getElementOffset(i));
         Address EltPtr = Builder.CreateConstInBoundsByteGEP(
