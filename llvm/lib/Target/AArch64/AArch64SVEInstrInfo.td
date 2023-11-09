@@ -2423,14 +2423,6 @@ let Predicates = [HasSVEorSME] in {
   }
 
   let AddedComplexity = 5 in {
-    def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
-              (ADDVL_XXI GPR64:$op, $imm)>;
-
-    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_rdvl_imm i32:$imm))))),
-              (i32 (EXTRACT_SUBREG (ADDVL_XXI (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
-                                             GPR32:$op, sub_32), $imm),
-                                   sub_32))>;
-
     def : Pat<(nxv8i16 (add ZPR:$op, (nxv8i16 (splat_vector (i32 (trunc (vscale (sve_cnth_imm i32:$imm)))))))),
               (INCH_ZPiI ZPR:$op, 31, $imm)>;
     def : Pat<(nxv4i32 (add ZPR:$op, (nxv4i32 (splat_vector (i32 (trunc (vscale (sve_cntw_imm i32:$imm)))))))),
@@ -2447,6 +2439,14 @@ let Predicates = [HasSVEorSME] in {
   }
 
   let Predicates = [HasSVEorSME, UseScalarIncVL], AddedComplexity = 5 in {
+    def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
+              (ADDVL_XXI GPR64:$op, $imm)>;
+
+    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_rdvl_imm i32:$imm))))),
+              (i32 (EXTRACT_SUBREG (ADDVL_XXI (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+                                             GPR32:$op, sub_32), $imm),
+                                   sub_32))>;
+
     def : Pat<(add GPR64:$op, (vscale (sve_cnth_imm i32:$imm))),
               (INCH_XPiI GPR64:$op, 31, $imm)>;
     def : Pat<(add GPR64:$op, (vscale (sve_cntw_imm i32:$imm))),
@@ -2487,9 +2487,6 @@ let Predicates = [HasSVEorSME] in {
                                                GPR32:$op, sub_32), 31, $imm),
                                     sub_32))>;
   }
-
-  def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
-            (ADDVL_XXI GPR64:$op, $imm)>;
 
   // FIXME: BigEndian requires an additional REV instruction to satisfy the
   // constraint that none of the bits change when stored to memory as one

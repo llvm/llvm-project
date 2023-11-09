@@ -232,16 +232,20 @@ private:
   /// The set of attributes that can be attached to a module.
   struct Attributes {
     /// Whether this is a system module.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsSystem : 1;
 
     /// Whether this is an extern "C" module.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsExternC : 1;
 
     /// Whether this is an exhaustive set of configuration macros.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsExhaustive : 1;
 
     /// Whether files in this module can only include non-modular headers
     /// and headers from used modules.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned NoUndeclaredIncludes : 1;
 
     Attributes()
@@ -252,6 +256,7 @@ private:
   /// A directory for which framework modules can be inferred.
   struct InferredDirectory {
     /// Whether to infer modules from this directory.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned InferModules : 1;
 
     /// The attributes to use for inferred modules.
@@ -551,8 +556,8 @@ public:
   /// parent.
   Module *createGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
                                                   Module *Parent = nullptr);
-  Module *createImplicitGlobalModuleFragmentForModuleUnit(
-      SourceLocation Loc, bool IsExported, Module *Parent = nullptr);
+  Module *createImplicitGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
+                                                          Module *Parent);
 
   /// Create a global module fragment for a C++ module interface unit.
   Module *createPrivateModuleFragmentForInterfaceUnit(Module *Parent,

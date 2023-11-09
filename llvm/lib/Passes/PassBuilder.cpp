@@ -73,6 +73,7 @@
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
+#include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/HardwareLoops.h"
 #include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/IR/DebugInfo.h"
@@ -1079,6 +1080,11 @@ parseFunctionSimplificationPipelineOptions(StringRef Params) {
 Expected<bool> parseMemorySSAPrinterPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "no-ensure-optimized-uses",
                                "MemorySSAPrinterPass");
+}
+
+Expected<bool> parseSpeculativeExecutionPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "only-if-divergent-target",
+                               "SpeculativeExecutionPass");
 }
 
 Expected<std::string> parseMemProfUsePassOptions(StringRef Params) {

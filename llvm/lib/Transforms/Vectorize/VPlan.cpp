@@ -1120,6 +1120,26 @@ void VPValue::replaceAllUsesWith(VPValue *New) {
   }
 }
 
+void VPValue::replaceUsesWithIf(
+    VPValue *New,
+    llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace) {
+  for (unsigned J = 0; J < getNumUsers();) {
+    VPUser *User = Users[J];
+    unsigned NumUsers = getNumUsers();
+    for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I) {
+      if (User->getOperand(I) != this || !ShouldReplace(*User, I))
+        continue;
+
+      User->setOperand(I, New);
+    }
+    // If a user got removed after updating the current user, the next user to
+    // update will be moved to the current position, so we only need to
+    // increment the index if the number of users did not change.
+    if (NumUsers == getNumUsers())
+      J++;
+  }
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::printAsOperand(raw_ostream &OS, VPSlotTracker &Tracker) const {
   if (const Value *UV = getUnderlyingValue()) {

@@ -4657,42 +4657,6 @@ The following is the syntax for constant expressions:
 
 ``trunc (CST to TYPE)``
     Perform the :ref:`trunc operation <i_trunc>` on constants.
-``zext (CST to TYPE)``
-    Perform the :ref:`zext operation <i_zext>` on constants.
-``sext (CST to TYPE)``
-    Perform the :ref:`sext operation <i_sext>` on constants.
-``fptrunc (CST to TYPE)``
-    Truncate a floating-point constant to another floating-point type.
-    The size of CST must be larger than the size of TYPE. Both types
-    must be floating-point.
-``fpext (CST to TYPE)``
-    Floating-point extend a constant to another type. The size of CST
-    must be smaller or equal to the size of TYPE. Both types must be
-    floating-point.
-``fptoui (CST to TYPE)``
-    Convert a floating-point constant to the corresponding unsigned
-    integer constant. TYPE must be a scalar or vector integer type. CST
-    must be of scalar or vector floating-point type. Both CST and TYPE
-    must be scalars, or vectors of the same number of elements. If the
-    value won't fit in the integer type, the result is a
-    :ref:`poison value <poisonvalues>`.
-``fptosi (CST to TYPE)``
-    Convert a floating-point constant to the corresponding signed
-    integer constant. TYPE must be a scalar or vector integer type. CST
-    must be of scalar or vector floating-point type. Both CST and TYPE
-    must be scalars, or vectors of the same number of elements. If the
-    value won't fit in the integer type, the result is a
-    :ref:`poison value <poisonvalues>`.
-``uitofp (CST to TYPE)``
-    Convert an unsigned integer constant to the corresponding
-    floating-point constant. TYPE must be a scalar or vector floating-point
-    type.  CST must be of scalar or vector integer type. Both CST and TYPE must
-    be scalars, or vectors of the same number of elements.
-``sitofp (CST to TYPE)``
-    Convert a signed integer constant to the corresponding floating-point
-    constant. TYPE must be a scalar or vector floating-point type.
-    CST must be of scalar or vector integer type. Both CST and TYPE must
-    be scalars, or vectors of the same number of elements.
 ``ptrtoint (CST to TYPE)``
     Perform the :ref:`ptrtoint operation <i_ptrtoint>` on constants.
 ``inttoptr (CST to TYPE)``
@@ -5098,6 +5062,8 @@ AArch64:
   offsets). (However, LLVM currently does this for the ``m`` constraint as
   well.)
 - ``r``: A 32 or 64-bit integer register (W* or X*).
+- ``Uci``: Like r, but restricted to registers 8 to 11 inclusive.
+- ``Ucj``: Like r, but restricted to registers 12 to 15 inclusive.
 - ``w``: A 32, 64, or 128-bit floating-point, SIMD or SVE vector register.
 - ``x``: Like w, but restricted to registers 0 to 15 inclusive.
 - ``y``: Like w, but restricted to SVE vector registers Z0 to Z7 inclusive.
@@ -6137,7 +6103,7 @@ The current supported opcode vocabulary is limited:
   instruction.
 
   Because ``DW_OP_LLVM_entry_value`` is defined in terms of registers, it is
-  usually used in MIR, but it is also allowed in LLVM IR when targetting a
+  usually used in MIR, but it is also allowed in LLVM IR when targeting a
   :ref:`swiftasync <swiftasync>` argument. The operation is introduced by:
 
     - ``LiveDebugValues`` pass, which applies it to function parameters that
@@ -21757,6 +21723,42 @@ Examples:
  llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, 1, 2, 3);  ==> <B, E, F, poison> index
  llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, -2, 3, 2); ==> <B, C, poison, poison> trailing elements
 
+
+.. _int_experimental_vp_reverse:
+
+
+'``llvm.experimental.vp.reverse``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <2 x double> @llvm.experimental.vp.reverse.v2f64(<2 x double> %vec, <2 x i1> %mask, i32 %evl)
+      declare <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask, i32 %evl)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.vp.reverse.*``' intrinsic is the vector length
+predicated version of the '``llvm.experimental.vector.reverse.*``' intrinsic.
+
+Arguments:
+""""""""""
+
+The result and the first argument ``vec`` are vectors with the same type.
+The second argument ``mask`` is a vector mask and has the same number of
+elements as the result. The third argument is the explicit vector length of
+the operation.
+
+Semantics:
+""""""""""
+
+This intrinsic reverses the order of the first ``evl`` elements in a vector.
+The lanes in the result vector disabled by ``mask`` are ``poison``. The
+elements past ``evl`` are poison.
 
 .. _int_vp_load:
 

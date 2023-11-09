@@ -15,11 +15,13 @@ define i32 @main() {
   ; RV32I-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
   ; RV32I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; RV32I-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %ir.retval)
+  ; RV32I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32I-NEXT:   $x10 = COPY [[C]](s32)
   ; RV32I-NEXT:   $x11 = COPY [[C1]](s32)
   ; RV32I-NEXT:   $x12 = COPY [[C2]](s32)
   ; RV32I-NEXT:   $x13 = COPY [[C3]](s32)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @foo, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @foo, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10
+  ; RV32I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32I-NEXT:   $x10 = COPY [[COPY]](s32)
   ; RV32I-NEXT:   PseudoRET implicit $x10
@@ -29,6 +31,7 @@ define i32 @main() {
   ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV64I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; RV64I-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %ir.retval)
+  ; RV64I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64I-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; RV64I-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
@@ -37,7 +40,8 @@ define i32 @main() {
   ; RV64I-NEXT:   $x11 = COPY [[C2]](s64)
   ; RV64I-NEXT:   $x12 = COPY [[C3]](s64)
   ; RV64I-NEXT:   $x13 = COPY [[C4]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @foo, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @foo, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10
+  ; RV64I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 32
   ; RV64I-NEXT:   $x10 = COPY [[ASSERT_SEXT]](s64)

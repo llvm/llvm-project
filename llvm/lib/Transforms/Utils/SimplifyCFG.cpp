@@ -6648,13 +6648,14 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     // WouldFitInRegister.
     // TODO: Consider growing the table also when it doesn't fit in a register
     // if no optsize is specified.
-    if (all_of(ResultTypes, [&](const auto &KV) {
+    const uint64_t UpperBound = CR.getUpper().getLimitedValue();
+    if (!CR.isUpperWrapped() && all_of(ResultTypes, [&](const auto &KV) {
           return SwitchLookupTable::WouldFitInRegister(
-              DL, CR.getUpper().getLimitedValue(), KV.second /* ResultType */);
+              DL, UpperBound, KV.second /* ResultType */);
         })) {
       // The default branch is unreachable after we enlarge the lookup table.
       // Adjust DefaultIsReachable to reuse code path.
-      TableSize = CR.getUpper().getZExtValue();
+      TableSize = UpperBound;
       DefaultIsReachable = false;
     }
   }

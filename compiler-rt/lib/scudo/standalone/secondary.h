@@ -223,7 +223,7 @@ public:
                                          MAP_NOACCESS);
       }
     } else if (Interval == 0) {
-      Entry.MemMap.releasePagesToOS(Entry.CommitBase, Entry.CommitSize);
+      Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase, Entry.CommitSize);
       Entry.Time = 0;
     }
     do {
@@ -441,7 +441,7 @@ private:
         OldestTime = Entry.Time;
       return;
     }
-    Entry.MemMap.releasePagesToOS(Entry.CommitBase, Entry.CommitSize);
+    Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase, Entry.CommitSize);
     Entry.Time = 0;
   }
 

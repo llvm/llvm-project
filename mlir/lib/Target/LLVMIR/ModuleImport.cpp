@@ -1529,7 +1529,7 @@ FlatSymbolRefAttr ModuleImport::getPersonalityAsAttr(llvm::Function *f) {
   // bitcast to i8* are parsed.
   if (auto *ce = dyn_cast<llvm::ConstantExpr>(pf)) {
     if (ce->getOpcode() == llvm::Instruction::BitCast &&
-        ce->getType() == llvm::Type::getInt8PtrTy(f->getContext())) {
+        ce->getType() == llvm::PointerType::getUnqual(f->getContext())) {
       if (auto *func = dyn_cast<llvm::Function>(ce->getOperand(0)))
         return SymbolRefAttr::get(builder.getContext(), func->getName());
     }

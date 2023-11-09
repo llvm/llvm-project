@@ -241,9 +241,9 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
   rewriter.setListener(&newOpsListener);
 
   linalg::BufferizeToAllocationOptions options;
-  if (getMemcpyOp() == "memref.tensor_store") {
-    options.memcpyOp =
-        linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefTensorStore;
+  if (getMemcpyOp() == "bufferization.materialize_in_destination") {
+    options.memcpyOp = linalg::BufferizeToAllocationOptions::MemcpyOp::
+        MaterializeInDestination;
   } else if (getMemcpyOp() == "memref.copy") {
     options.memcpyOp =
         linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefCopy;
@@ -296,7 +296,7 @@ void transform::BufferizeToAllocationOp::getEffects(
 }
 
 LogicalResult transform::BufferizeToAllocationOp::verify() {
-  if (getMemcpyOp() != "memref.tensor_store" &&
+  if (getMemcpyOp() != "bufferization.materialize_in_destination" &&
       getMemcpyOp() != "memref.copy" && getMemcpyOp() != "linalg.copy")
     return emitOpError() << "unsupported memcpy op";
   if (getAllocOp() != "memref.alloc" && getAllocOp() != "memref.alloca")
@@ -3161,35 +3161,6 @@ DiagnosedSilenceableFailure transform::ConvertConv2DToImg2ColOp::applyToOne(
   // Handle to the operation that replaces the original convolution.
   results.push_back(maybeTransformed->second);
   return DiagnosedSilenceableFailure::success();
-}
-
-//===----------------------------------------------------------------------===//
-// HoistRedundantTensorSubsetsOp
-//===----------------------------------------------------------------------===//
-
-DiagnosedSilenceableFailure
-transform::HoistRedundantTensorSubsetsOp::applyToOne(
-    transform::TransformRewriter &rewriter, Operation *target,
-    transform::ApplyToEachResultList &results,
-    transform::TransformState &state) {
-  auto forOp = dyn_cast<scf::ForOp>(target);
-  if (forOp) {
-    linalg::hoistRedundantSubsetExtractInsert(rewriter, forOp);
-    return DiagnosedSilenceableFailure::success();
-  }
-
-  // TODO: walking in some reverse / inside-out order would be more efficient
-  // and would capture more cases.
-  target->walk([&](scf::ForOp forOp) {
-    hoistRedundantSubsetExtractInsert(rewriter, forOp);
-  });
-  return DiagnosedSilenceableFailure::success();
-}
-
-void transform::HoistRedundantTensorSubsetsOp::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTarget(), effects);
-  transform::modifiesPayload(effects);
 }
 
 //===----------------------------------------------------------------------===//

@@ -1893,7 +1893,7 @@ llvm::Function *CodeGenFunction::generateBuiltinOSLogHelperFunction(
   FunctionArgList Args;
   Args.push_back(ImplicitParamDecl::Create(
       Ctx, nullptr, SourceLocation(), &Ctx.Idents.get("buffer"), Ctx.VoidPtrTy,
-      ImplicitParamDecl::Other));
+      ImplicitParamKind::Other));
   ArgTys.emplace_back(Ctx.VoidPtrTy);
 
   for (unsigned int I = 0, E = Layout.Items.size(); I < E; ++I) {
@@ -1905,7 +1905,7 @@ llvm::Function *CodeGenFunction::generateBuiltinOSLogHelperFunction(
     Args.push_back(ImplicitParamDecl::Create(
         Ctx, nullptr, SourceLocation(),
         &Ctx.Idents.get(std::string("arg") + llvm::to_string(I)), ArgTy,
-        ImplicitParamDecl::Other));
+        ImplicitParamKind::Other));
     ArgTys.emplace_back(ArgTy);
   }
 
@@ -5708,18 +5708,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::FunctionType *FTy = F->getFunctionType();
 
     for (unsigned i = 0, e = E->getNumArgs(); i != e; ++i) {
-      Value *ArgValue;
-      // If this is a normal argument, just emit it as a scalar.
-      if ((ICEArguments & (1 << i)) == 0) {
-        ArgValue = EmitScalarExpr(E->getArg(i));
-      } else {
-        // If this is required to be a constant, constant fold it so that we
-        // know that the generated intrinsic gets a ConstantInt.
-        ArgValue = llvm::ConstantInt::get(
-            getLLVMContext(),
-            *E->getArg(i)->getIntegerConstantExpr(getContext()));
-      }
-
+      Value *ArgValue = EmitScalarOrConstFoldImmArg(ICEArguments, i, E);
       // If the intrinsic arg type is different from the builtin arg type
       // we need to do a bit cast.
       llvm::Type *PTy = FTy->getParamType(i);
@@ -8599,15 +8588,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
       }
     }
 
-    if ((ICEArguments & (1 << i)) == 0) {
-      Ops.push_back(EmitScalarExpr(E->getArg(i)));
-    } else {
-      // If this is required to be a constant, constant fold it so that we know
-      // that the generated intrinsic gets a ConstantInt.
-      Ops.push_back(llvm::ConstantInt::get(
-          getLLVMContext(),
-          *E->getArg(i)->getIntegerConstantExpr(getContext())));
-    }
+    Ops.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, i, E));
   }
 
   switch (BuiltinID) {
@@ -9994,7 +9975,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
                                                   const CallExpr *E) {
   llvm::Type *Ty = ConvertType(E->getType());
   if (BuiltinID >= SVE::BI__builtin_sve_reinterpret_s8_s8 &&
-      BuiltinID <= SVE::BI__builtin_sve_reinterpret_f64_f64) {
+      BuiltinID <= SVE::BI__builtin_sve_reinterpret_f64_f64_x4) {
     Value *Val = EmitScalarExpr(E->getArg(0));
     return EmitSVEReinterpret(Val, Ty);
   }
@@ -11094,15 +11075,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         continue;
       }
     }
-    if ((ICEArguments & (1 << i)) == 0) {
-      Ops.push_back(EmitScalarExpr(E->getArg(i)));
-    } else {
-      // If this is required to be a constant, constant fold it so that we know
-      // that the generated intrinsic gets a ConstantInt.
-      Ops.push_back(llvm::ConstantInt::get(
-          getLLVMContext(),
-          *E->getArg(i)->getIntegerConstantExpr(getContext())));
-    }
+    Ops.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, i, E));
   }
 
   auto SISDMap = ArrayRef(AArch64SISDIntrinsicMap);
@@ -13814,16 +13787,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   assert(Error == ASTContext::GE_None && "Should not codegen an error");
 
   for (unsigned i = 0, e = E->getNumArgs(); i != e; i++) {
-    // If this is a normal argument, just emit it as a scalar.
-    if ((ICEArguments & (1 << i)) == 0) {
-      Ops.push_back(EmitScalarExpr(E->getArg(i)));
-      continue;
-    }
-
-    // If this is required to be a constant, constant fold it so that we know
-    // that the generated intrinsic gets a ConstantInt.
-    Ops.push_back(llvm::ConstantInt::get(
-        getLLVMContext(), *E->getArg(i)->getIntegerConstantExpr(getContext())));
+    Ops.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, i, E));
   }
 
   // These exist so that the builtin that takes an immediate can be bounds
@@ -17468,11 +17432,11 @@ Value *EmitAMDGPUImplicitArgPtr(CodeGenFunction &CGF) {
 /// Emit code based on Code Object ABI version.
 /// COV_4    : Emit code to use dispatch ptr
 /// COV_5    : Emit code to use implicitarg ptr
-/// COV_NONE : Emit code to load a global variable "llvm.amdgcn.abi.version"
+/// COV_NONE : Emit code to load a global variable "__oclc_ABI_version"
 ///            and use its value for COV_4 or COV_5 approach. It is used for
 ///            compiling device libraries in an ABI-agnostic way.
 ///
-/// Note: "llvm.amdgcn.abi.version" is supposed to be emitted and intialized by
+/// Note: "__oclc_ABI_version" is supposed to be emitted and intialized by
 ///       clang during compilation of user code.
 Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
   llvm::LoadInst *LD;
@@ -17480,7 +17444,7 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
   auto Cov = CGF.getTarget().getTargetOpts().CodeObjectVersion;
 
   if (Cov == clang::TargetOptions::COV_None) {
-    StringRef Name = "llvm.amdgcn.abi.version";
+    StringRef Name = "__oclc_ABI_version";
     auto *ABIVersionC = CGF.CGM.getModule().getNamedGlobal(Name);
     if (!ABIVersionC)
       ABIVersionC = new llvm::GlobalVariable(
@@ -17588,6 +17552,23 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
 }
 
+llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
+                                                          unsigned Idx,
+                                                          const CallExpr *E) {
+  llvm::Value *Arg = nullptr;
+  if ((ICEArguments & (1 << Idx)) == 0) {
+    Arg = EmitScalarExpr(E->getArg(Idx));
+  } else {
+    // If this is required to be a constant, constant fold it so that we
+    // know that the generated intrinsic gets a ConstantInt.
+    std::optional<llvm::APSInt> Result =
+        E->getArg(Idx)->getIntegerConstantExpr(getContext());
+    assert(Result && "Expected argument to be a constant");
+    Arg = llvm::ConstantInt::get(getLLVMContext(), *Result);
+  }
+  return Arg;
+}
+
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
@@ -17638,8 +17619,15 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {
     llvm::SmallVector<llvm::Value *, 6> Args;
-    for (unsigned I = 0; I != E->getNumArgs(); ++I)
-      Args.push_back(EmitScalarExpr(E->getArg(I)));
+    // Find out if any arguments are required to be integer constant
+    // expressions.
+    unsigned ICEArguments = 0;
+    ASTContext::GetBuiltinTypeError Error;
+    getContext().GetBuiltinType(BuiltinID, Error, &ICEArguments);
+    assert(Error == ASTContext::GE_None && "Should not codegen an error");
+    for (unsigned I = 0; I != E->getNumArgs(); ++I) {
+      Args.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, I, E));
+    }
     assert(Args.size() == 5 || Args.size() == 6);
     if (Args.size() == 5)
       Args.insert(Args.begin(), llvm::PoisonValue::get(Args[0]->getType()));
@@ -19668,44 +19656,36 @@ RValue CodeGenFunction::EmitBuiltinIsAligned(const CallExpr *E) {
 /// Generate (x & ~(y-1)) to align down or ((x+(y-1)) & ~(y-1)) to align up.
 /// Note: For pointer types we can avoid ptrtoint/inttoptr pairs by using the
 /// llvm.ptrmask intrinsic (with a GEP before in the align_up case).
-/// TODO: actually use ptrmask once most optimization passes know about it.
 RValue CodeGenFunction::EmitBuiltinAlignTo(const CallExpr *E, bool AlignUp) {
   BuiltinAlignArgs Args(E, *this);
-  llvm::Value *SrcAddr = Args.Src;
-  if (Args.Src->getType()->isPointerTy())
-    SrcAddr = Builder.CreatePtrToInt(Args.Src, Args.IntType, "intptr");
-  llvm::Value *SrcForMask = SrcAddr;
+  llvm::Value *SrcForMask = Args.Src;
   if (AlignUp) {
     // When aligning up we have to first add the mask to ensure we go over the
     // next alignment value and then align down to the next valid multiple.
     // By adding the mask, we ensure that align_up on an already aligned
     // value will not change the value.
-    SrcForMask = Builder.CreateAdd(SrcForMask, Args.Mask, "over_boundary");
+    if (Args.Src->getType()->isPointerTy()) {
+      if (getLangOpts().isSignedOverflowDefined())
+        SrcForMask =
+            Builder.CreateGEP(Int8Ty, SrcForMask, Args.Mask, "over_boundary");
+      else
+        SrcForMask = EmitCheckedInBoundsGEP(Int8Ty, SrcForMask, Args.Mask,
+                                            /*SignedIndices=*/true,
+                                            /*isSubtraction=*/false,
+                                            E->getExprLoc(), "over_boundary");
+    } else {
+      SrcForMask = Builder.CreateAdd(SrcForMask, Args.Mask, "over_boundary");
+    }
   }
   // Invert the mask to only clear the lower bits.
   llvm::Value *InvertedMask = Builder.CreateNot(Args.Mask, "inverted_mask");
-  llvm::Value *Result =
-      Builder.CreateAnd(SrcForMask, InvertedMask, "aligned_result");
+  llvm::Value *Result = nullptr;
   if (Args.Src->getType()->isPointerTy()) {
-    /// TODO: Use ptrmask instead of ptrtoint+gep once it is optimized well.
-    // Result = Builder.CreateIntrinsic(
-    //  Intrinsic::ptrmask, {Args.SrcType, SrcForMask->getType(), Args.IntType},
-    //  {SrcForMask, NegatedMask}, nullptr, "aligned_result");
-    Result->setName("aligned_intptr");
-    llvm::Value *Difference = Builder.CreateSub(Result, SrcAddr, "diff");
-    // The result must point to the same underlying allocation. This means we
-    // can use an inbounds GEP to enable better optimization.
-    if (getLangOpts().isSignedOverflowDefined())
-      Result =
-          Builder.CreateGEP(Int8Ty, Args.Src, Difference, "aligned_result");
-    else
-      Result = EmitCheckedInBoundsGEP(Int8Ty, Args.Src, Difference,
-                                      /*SignedIndices=*/true,
-                                      /*isSubtraction=*/!AlignUp,
-                                      E->getExprLoc(), "aligned_result");
-    // Emit an alignment assumption to ensure that the new alignment is
-    // propagated to loads/stores, etc.
-    emitAlignmentAssumption(Result, E, E->getExprLoc(), Args.Alignment);
+    Result = Builder.CreateIntrinsic(
+        Intrinsic::ptrmask, {Args.SrcType, Args.IntType},
+        {SrcForMask, InvertedMask}, nullptr, "aligned_result");
+  } else {
+    Result = Builder.CreateAnd(SrcForMask, InvertedMask, "aligned_result");
   }
   assert(Result->getType() == Args.SrcType);
   return RValue::get(Result);
@@ -20623,17 +20603,7 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       Ops.push_back(AggValue);
       continue;
     }
-
-    // If this is a normal argument, just emit it as a scalar.
-    if ((ICEArguments & (1 << i)) == 0) {
-      Ops.push_back(EmitScalarExpr(E->getArg(i)));
-      continue;
-    }
-
-    // If this is required to be a constant, constant fold it so that we know
-    // that the generated intrinsic gets a ConstantInt.
-    Ops.push_back(llvm::ConstantInt::get(
-        getLLVMContext(), *E->getArg(i)->getIntegerConstantExpr(getContext())));
+    Ops.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, i, E));
   }
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
