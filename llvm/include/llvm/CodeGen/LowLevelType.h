@@ -163,6 +163,14 @@ public:
                      : getFieldValue(VectorScalableFieldInfo);
   }
 
+  /// Returns true if the LLT is a fixed vector. Returns false otherwise, even
+  /// if the LLT is not a vector type.
+  constexpr bool isFixedVector() const { return isVector() && !isScalable(); }
+
+  /// Returns true if the LLT is a scalable vector. Returns false otherwise,
+  /// even if the LLT is not a vector type.
+  constexpr bool isScalableVector() const { return isVector() && isScalable(); }
+
   constexpr ElementCount getElementCount() const {
     assert(IsVector && "cannot get number of elements on scalar/aggregate");
     return ElementCount::get(IsPointer
