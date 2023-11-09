@@ -1016,42 +1016,39 @@ CodeGenFunction::FindFlexibleArrayMemberField(ASTContext &Ctx,
 }
 
 const ValueDecl *CodeGenFunction::FindCountedByField(const Expr *Base) {
-  const ValueDecl *VD = nullptr;
+  const RecordDecl *OuterRD = nullptr;
 
   Base = Base->IgnoreParenImpCasts();
 
-  if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
-    VD = dyn_cast<ValueDecl>(ME->getMemberDecl());
-  } else if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
-    // Pointing to the full structure.
-    VD = dyn_cast<ValueDecl>(DRE->getDecl());
+  // Get the outer-most lexical RecordDecl.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
+    QualType Ty = DRE->getDecl()->getType();
 
-    QualType Ty = VD->getType();
     if (Ty->isPointerType())
       Ty = Ty->getPointeeType();
 
     if (const auto *RD = Ty->getAsRecordDecl())
-      VD = FindFlexibleArrayMemberField(getContext(), RD);
-  } else if (const auto *CE = dyn_cast<CastExpr>(Base)) {
-    if (const auto *ME = dyn_cast<MemberExpr>(CE->getSubExpr()))
-      VD = dyn_cast<ValueDecl>(ME->getMemberDecl());
+      OuterRD = RD->getOuterLexicalRecordContext();
+  } else {
+    if (const auto *ME = dyn_cast<MemberExpr>(Base))
+      if (const ValueDecl *VD = ME->getMemberDecl())
+        OuterRD = VD->getDeclContext()->getOuterLexicalRecordContext();
   }
 
-  LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-      getLangOpts().getStrictFlexArraysLevel();
+  if (!OuterRD)
+    return nullptr;
+
+  const ValueDecl *VD = FindFlexibleArrayMemberField(getContext(), OuterRD);
   const auto *FD = dyn_cast_if_present<FieldDecl>(VD);
-  if (!FD || !FD->getParent() ||
-      !Decl::isFlexibleArrayMemberLike(getContext(), FD, FD->getType(),
-                                       StrictFlexArraysLevel, true))
+  if (!FD)
     return nullptr;
 
   const auto *CBA = FD->getAttr<CountedByAttr>();
   if (!CBA)
     return nullptr;
 
-  const RecordDecl *RD = FD->getDeclContext()->getOuterLexicalRecordContext();
   DeclarationName DName(CBA->getCountedByField());
-  DeclContext::lookup_result Lookup = RD->lookup(DName);
+  DeclContext::lookup_result Lookup = OuterRD->lookup(DName);
 
   if (Lookup.empty())
     return nullptr;
