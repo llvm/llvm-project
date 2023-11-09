@@ -22,9 +22,10 @@ struct GPUDynamicSharedMemoryOpLowering
   using ConvertOpToLLVMPattern<
       gpu::DynamicSharedMemoryOp>::ConvertOpToLLVMPattern;
   GPUDynamicSharedMemoryOpLowering(const LLVMTypeConverter &converter,
+                                   unsigned addressSpace,
                                    unsigned alignmentBit = 0)
       : ConvertOpToLLVMPattern<gpu::DynamicSharedMemoryOp>(converter),
-        alignmentBit(alignmentBit) {}
+        alignmentBit(alignmentBit), addressSpace(addressSpace) {}
 
   LogicalResult
   matchAndRewrite(gpu::DynamicSharedMemoryOp op, OpAdaptor adaptor,
@@ -33,6 +34,8 @@ struct GPUDynamicSharedMemoryOpLowering
 private:
   // Alignment bit
   unsigned alignmentBit;
+  // Address space of the shared memory
+  unsigned addressSpace;
 };
 
 struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {

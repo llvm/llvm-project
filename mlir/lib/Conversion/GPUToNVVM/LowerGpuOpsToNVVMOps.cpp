@@ -326,7 +326,8 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
           converter);
 
   patterns.add<GPUDynamicSharedMemoryOpLowering>(
-      converter, NVVM::kSharedMemoryAlignmentBit);
+      converter, NVVM::NVVMMemorySpace::kSharedMemorySpace,
+      NVVM::kSharedMemoryAlignmentBit);
 
   // Explicitly drop memory space when lowering private memory
   // attributions since NVVM models it as `alloca`s in the default

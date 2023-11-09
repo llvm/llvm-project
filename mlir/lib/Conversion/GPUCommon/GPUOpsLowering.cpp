@@ -559,45 +559,47 @@ static IntegerAttr wrapNumericMemorySpace(MLIRContext *ctx, unsigned space) {
 
 /// Generates a symbol with 0-sized array type for dynamic shared memory usage,
 /// or uses existing symbol.
-LLVM::GlobalOp
-getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
-                             gpu::DynamicSharedMemoryOp op,
-                             const LLVMTypeConverter *typeConverter,
-                             MemRefType memrefType, unsigned alignmentBit) {
+LLVM::GlobalOp getDynamicSharedMemorySymbol(
+    ConversionPatternRewriter &rewriter, gpu::DynamicSharedMemoryOp op,
+    const LLVMTypeConverter *typeConverter, MemRefType memrefType,
+    unsigned alignmentBit, unsigned addressSpace) {
   LLVM::LLVMFuncOp funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
   assert(funcOp && "cannot find llvm.func op");
 
   gpu::GPUModuleOp moduleOp = funcOp->getParentOfType<gpu::GPUModuleOp>();
   assert(moduleOp && "cannot find gpu.module op");
 
+  // Step 1. Return existing global op if it exists
   uint64_t alignmentByte = alignmentBit / memrefType.getElementTypeBitWidth();
-
-  LLVM::GlobalOp existingGlobalOp;
-  moduleOp->walk([&](LLVM::GlobalOp globalOp) {
-    if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(globalOp.getType())) {
-      if (arrayType.getNumElements() == 0 &&
-          globalOp.getAlignment().value_or(0) == alignmentByte) {
-        existingGlobalOp = globalOp;
+  for (auto &innerOp : moduleOp->getRegions().front().front().getOperations()) {
+    if (auto globalOp = dyn_cast<LLVM::GlobalOp>(innerOp)) {
+      if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(globalOp.getType())) {
+        if (globalOp.getAddrSpace() == addressSpace &&
+            arrayType.getNumElements() == 0 &&
+            globalOp.getAlignment().value_or(0) == alignmentByte) {
+          return globalOp;
+        }
       }
     }
-  });
-  if (existingGlobalOp)
-    return existingGlobalOp;
+  }
 
-  // Find unique name
+  // Step 2. Find a unique symbol name
   int index = 0;
   std::string symName, name = llvm::formatv("__shmem_{0}", funcOp.getSymName());
-  WalkResult walkResult;
+  bool nameExist;
   do {
+    nameExist = false;
     symName = llvm::formatv("{0}_{1}", name, index++);
-    walkResult = moduleOp->walk([&](LLVM::GlobalOp globalOp) {
-      if (globalOp.getSymName() == symName)
-        return WalkResult::interrupt();
-      return WalkResult::advance();
-    });
-  } while (walkResult.wasInterrupted());
+    for (auto &innerOp :
+         moduleOp->getRegions().front().front().getOperations()) {
+      if (auto globalOp = dyn_cast<LLVM::GlobalOp>(innerOp)) {
+        if (globalOp.getSymName() == symName)
+          nameExist = true;
+      }
+    }
+  } while (nameExist);
 
-  // Generate a new global op
+  // Step 3. Generate a global op
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(&moduleOp.front());
 
@@ -615,8 +617,8 @@ LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
   MemRefType memrefType = op.getResultMemref().getType();
-  Type elementType = typeConverter->convertType(memrefType.getElementType());
   assert(memrefType && "memref is not valid");
+  Type elementType = typeConverter->convertType(memrefType.getElementType());
 
   // Step 1: Generate a memref<0xi8> type
   MemRefLayoutAttrInterface layout = {};
@@ -625,8 +627,9 @@ LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
 
   // Step 2: Generate a global symbol or existing for the dynamic shared
   // memory with memref<0xi8> type
-  LLVM::GlobalOp shmemOp = getDynamicSharedMemorySymbol(
-      rewriter, op, getTypeConverter(), memrefType0sz, alignmentBit);
+  LLVM::GlobalOp shmemOp =
+      getDynamicSharedMemorySymbol(rewriter, op, getTypeConverter(),
+                                   memrefType0sz, alignmentBit, addressSpace);
   assert(shmemOp && "cannot find module op or failed generating global op");
 
   // Step 3. Get address of the global symbol
