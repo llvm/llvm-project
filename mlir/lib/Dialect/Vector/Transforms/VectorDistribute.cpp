@@ -433,22 +433,16 @@ static vector::TransferWriteOp cloneWriteOp(RewriterBase &rewriter,
 }
 
 /// Return the distributed vector type based on the original type and the
-/// distribution map. The vector should be completely distributable, i.e.
-/// the linearized shape should be a multiple of the warp size.
+/// distribution map. The vector should be completely distributable, i.e. the
+/// linearized shape should be a multiple of the warp size. If all threads are
+/// used while distributing the first few dimensions, the rest dimensions may
+/// not be used for distribution.
 ///
-/// The distribution map represents in what order the dimensions of the vector
-/// should be distributed. The map is expected to be a projected permutation of
-/// the vector shape dimensions. Examples of distribution maps:
-///  - (d0, d1, d2) -> (d1, d2) : Distribute d1, and then d2
-///  - (d0, d1, d2) -> (d2, d1, d0) : Distribute d2, then d1 and then d0
-/// If all threads are used while distributing the first few dimensions, the
-/// rest dimensions may not be used for distribution.
-///
-/// Example (single-dim): For a vector<16x32x64> distributed with a 
+/// Example (single-dim): For a vector<16x32x64> distributed with a
 /// map(d0, d1, d2) -> (d1) and a warp size of 16 would distribute the second
-/// dimension (associated to d1) and return vector<16x2x64>. 
+/// dimension (associated to d1) and return vector<16x2x64>.
 ///
-/// Example (multi-dim): For a vector<16x32x64> distributed with a 
+/// Example (multi-dim): For a vector<16x32x64> distributed with a
 /// map(d0, d1, d2) -> (d1, d2), and a warp size of 128 would distribute first
 /// the second dimension and then the third dimension, finally returning a
 /// vector <4x1x64>.
@@ -773,6 +767,7 @@ bool delinearizeLaneId(OpBuilder &builder, Location loc,
                        ArrayRef<int64_t> originalShape,
                        ArrayRef<int64_t> distributedShape, int64_t warpSize,
                        Value laneId, SmallVectorImpl<Value> &delinearizedIds) {
+
   // If the original shape and the distributed shape is the same, we don't
   // distribute at all--every thread is handling the whole. For such case, we
   // should not rely on lane IDs later. So just return an empty lane ID vector.

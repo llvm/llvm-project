@@ -40,18 +40,6 @@ void populateWarpExecuteOnLane0OpToScfForPattern(
     const WarpExecuteOnLane0LoweringOptions &options,
     PatternBenefit benefit = 1);
 
-///  Given a value having a shaped type, returns the distribution map for that
-///  value. The distribution map represents the order of dimensions in which
-///  the shape should be distributed. The map is expected to be a projected
-///  permutation of the shape dimensions. Examples of distribution maps that
-///  can be returned:
-///
-///  - Type: vector<16x32x64xf32>, 
-///    Map: (d0, d1, d2) -> (d1, d2) : Distribute d1, and then d2
-///  - Type: vector<16x32x64xf32>
-///    Map: (d0, d1, d2) -> (d2, d1, d0) : Distribute d2, then d1 and then d0
-using DistributionMapFn = std::function<AffineMap(Value)>;
-
 /// Distribute transfer_write ops based on the affine map returned by
 /// `distributionMapFn`.
 /// Example:
@@ -69,9 +57,8 @@ using DistributionMapFn = std::function<AffineMap(Value)>;
 ///   vector.yield %v : vector<32xf32>
 /// }
 /// vector.transfer_write %v, %A[%id] : vector<1xf32>, memref<128xf32>
-void populateDistributeTransferWriteOpPatterns(
-    RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn,
-    PatternBenefit benefit = 1);
+void populateDistributeTransferWriteOpPatterns(RewritePatternSet &patterns,
+                                               PatternBenefit benefit = 1);
 
 /// Move scalar operations with no dependency on the warp op outside of the
 /// region.
