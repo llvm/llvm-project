@@ -40,7 +40,7 @@ void populateWarpExecuteOnLane0OpToScfForPattern(
     const WarpExecuteOnLane0LoweringOptions &options,
     PatternBenefit benefit = 1);
 
-/// Distribute transfer_write ops based.
+/// Distribute transfer_write ops.
 /// TODO: Add documentation here how the distribution is done.
 /// Example:
 /// ```

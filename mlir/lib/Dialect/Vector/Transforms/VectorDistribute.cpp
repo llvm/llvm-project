@@ -66,8 +66,12 @@ struct DistributedLoadStoreHelper {
     int64_t rank = sequentialVectorType.getRank();
     SmallVector<Value> indices(rank, zero);
     if (val == distributedVal) {
-      for (auto index : llvm::seq<int64_t>(0, rank))
+      for (auto index : llvm::seq<int64_t>(0, rank)) {
+        if (sequentialVectorType.getDimSize(index) ==
+            distributedVectorType.getDimSize(index))
+          continue;
         indices[index] = buildDistributedOffset(b, loc, index);
+      }
     }
     SmallVector<bool> inBounds(indices.size(), true);
     return b.create<vector::TransferWriteOp>(
@@ -110,8 +114,12 @@ struct DistributedLoadStoreHelper {
     int64_t rank = sequentialVectorType.getRank();
     SmallVector<Value> indices(rank, zero);
     if (type == distributedVectorType) {
-      for (auto index : llvm::seq<int64_t>(0, rank))
+      for (auto index : llvm::seq<int64_t>(0, rank)) {
+        if (sequentialVectorType.getDimSize(index) ==
+            distributedVectorType.getDimSize(index))
+          continue;
         indices[index] = buildDistributedOffset(b, loc, index);
+      }
     }
     SmallVector<bool> inBounds(indices.size(), true);
     return b.create<vector::TransferReadOp>(
@@ -521,18 +529,16 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
     Location loc = newWriteOp.getLoc();
     SmallVector<Value> indices(newWriteOp.getIndices().begin(),
                                newWriteOp.getIndices().end());
-    for (AffineExpr it : indexMap.getResults()) {
+    for (auto [index, it] : llvm::enumerate(indexMap.getResults())) {
       AffineExpr d0, d1;
       bindDims(newWarpOp.getContext(), d0, d1);
       auto indexExpr = it.dyn_cast<AffineDimExpr>();
       if (!indexExpr)
         continue;
-      unsigned indexPos = indexExpr.getPosition();
-      auto scale =
-          rewriter.getAffineConstantExpr(targetType.getDimSize(indexPos));
-      indices[indexPos] = affine::makeComposedAffineApply(
+      auto scale = rewriter.getAffineConstantExpr(targetType.getDimSize(index));
+      indices[index] = affine::makeComposedAffineApply(
           rewriter, loc, d0 + scale * d1,
-          {indices[indexPos], newWarpOp.getLaneid()});
+          {indices[index], newWarpOp.getLaneid()});
     }
     newWriteOp.getIndicesMutable().assign(indices);
 
@@ -746,8 +752,8 @@ bool delinearizeLaneId(OpBuilder &builder, Location loc,
                       std::multiplies<int64_t>()) != warpSize)
     return false;
 
-  AffineExpr s0, s1;
-  bindSymbols(builder.getContext(), s0, s1);
+  AffineExpr s0;
+  bindSymbols(builder.getContext(), s0);
 
   int64_t usedThreads = 1;
 
@@ -825,21 +831,24 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
                            warpOp.getLaneid(), delinearizedIds))
       return rewriter.notifyMatchFailure(
           read, "cannot delinearize lane ID for distribution");
-    assert(!delinearizedIds.empty());
 
     SmallVector<Value, 4> indices(read.getIndices().begin(),
                                   read.getIndices().end());
-    for (AffineExpr it : indexMap.getResults()) {
+    indexMap.dump();
+    distributedType.dump();
+    for (auto [index, it] : llvm::enumerate(indexMap.getResults())) {
       AffineExpr d0, d1;
       bindDims(read.getContext(), d0, d1);
       auto indexExpr = it.dyn_cast<AffineDimExpr>();
       if (!indexExpr)
         continue;
-      unsigned indexPos = indexExpr.getPosition();
-      auto scale = distributedType.getDimSize(indexPos);
-      indices[indexPos] = affine::makeComposedAffineApply(
+      // If the dimension is not distributed, we don't need to change indexing.
+      if (sequentialType.getDimSize(index) == distributedType.getDimSize(index))
+        continue;
+      auto scale = distributedType.getDimSize(index);
+      indices[index] = affine::makeComposedAffineApply(
           rewriter, read.getLoc(), d0 + scale * d1,
-          {indices[indexPos], delinearizedIds[indexPos]});
+          {indices[index], delinearizedIds[index]});
     }
     auto newRead = rewriter.create<vector::TransferReadOp>(
         read.getLoc(), distributedVal.getType(), read.getSource(), indices,
