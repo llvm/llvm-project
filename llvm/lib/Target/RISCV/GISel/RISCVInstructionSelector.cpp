@@ -538,8 +538,7 @@ bool RISCVInstructionSelector::materializeImm(Register DstReg, int64_t Imm,
     return true;
   }
 
-  RISCVMatInt::InstSeq Seq =
-      RISCVMatInt::generateInstSeq(Imm, Subtarget->getFeatureBits());
+  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, *Subtarget);
   unsigned NumInsts = Seq.size();
   Register SrcReg = RISCV::X0;
 
