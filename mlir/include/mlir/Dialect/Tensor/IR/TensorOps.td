@@ -659,6 +659,7 @@ def Tensor_GatherOp : Tensor_Op<"gather", [
     }
   }];
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -986,6 +987,7 @@ def Tensor_ReshapeOp: Tensor_Op<"reshape", [
     $source `(` $shape `)` attr-dict `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1867,6 +1869,8 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
   }];
 
   let hasCanonicalizeMethod = 1;
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1948,6 +1952,8 @@ def Tensor_UnPackOp : Tensor_RelayoutOp<"unpack"> {
   }];
 
   let hasCanonicalizeMethod = 1;
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
