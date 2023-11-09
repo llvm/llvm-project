@@ -13,9 +13,11 @@
 
 #include "sanitizer_dl.h"
 
-#include <dlfcn.h>
-
 #include "sanitizer_common/sanitizer_platform.h"
+
+#if SANITIZER_GLIBC
+#  include <dlfcn.h>
+#endif
 
 namespace __sanitizer {
 extern const char *SanitizerToolName;
