@@ -33,22 +33,22 @@ enum {
   Rec_Continuation = 1 << (8 - 6 - 1),
 };
 
-template <typename value_type> struct BinaryBeImpl {
-  value_type Value;
-  BinaryBeImpl(value_type V) : Value(V) {}
+template <typename ValueType> struct BinaryBeImpl {
+  ValueType Value;
+  BinaryBeImpl(ValueType V) : Value(V) {}
 };
 
-template <typename value_type>
-raw_ostream &operator<<(raw_ostream &OS, const BinaryBeImpl<value_type> &BBE) {
+template <typename ValueType>
+raw_ostream &operator<<(raw_ostream &OS, const BinaryBeImpl<ValueType> &BBE) {
   char Buffer[sizeof(BBE.Value)];
-  support::endian::write<value_type, llvm::endianness::big, support::unaligned>(
+  support::endian::write<ValueType, llvm::endianness::big, support::unaligned>(
       Buffer, BBE.Value);
   OS.write(Buffer, sizeof(BBE.Value));
   return OS;
 }
 
-template <typename value_type> BinaryBeImpl<value_type> binaryBe(value_type V) {
-  return BinaryBeImpl<value_type>(V);
+template <typename ValueType> BinaryBeImpl<ValueType> binaryBe(ValueType V) {
+  return BinaryBeImpl<ValueType>(V);
 }
 
 struct ZerosImpl {
@@ -68,7 +68,7 @@ raw_ostream &operator<<(raw_ostream &OS, const yaml::BinaryRef &Data) {
 }
 
 // The GOFFOstream is responsible to write the data into the fixed physical
-// records of the format. A user of this class announces the the begin of a new
+// records of the format. A user of this class announces the start of a new
 // logical record and the size of its payload. While writing the payload, the
 // physical records are created for the data. Possible fill bytes at the end of
 // a physical record are written automatically.
@@ -76,7 +76,7 @@ class GOFFOstream : public raw_ostream {
   /// The underlying raw_ostream.
   raw_ostream &OS;
 
-  /// The number of logical records emitted to far.
+  /// The number of logical records emitted so far.
   uint32_t LogicalRecords;
 
   /// The remaining size of this logical record, including fill
@@ -86,11 +86,11 @@ class GOFFOstream : public raw_ostream {
   /// The type of the current (logical) record.
   GOFF::RecordType CurrentType;
 
-  /// Signals begin of new record.
+  /// Signals start of new record.
   bool NewLogicalRecord;
 
   // Return the number of bytes left to write until next physical record.
-  // Please note that we maintain the total numbers of byte left, not the
+  // Please note that we maintain the total number of bytes left, not the
   // written size.
   size_t bytesToNextPhysicalRecord() {
     size_t Bytes = RemainingSize % GOFF::PayloadLength;
@@ -154,7 +154,7 @@ void GOFFOstream::fillRecord() {
   size_t Remains = RemainingSize - GetNumBytesInBuffer();
   if (Remains) {
     assert((Remains < GOFF::RecordLength) &&
-           "Attempt to fill more than one physical record");
+           "Attempting to fill more than one physical record");
     raw_ostream::write_zeros(Remains);
   }
   flush();
@@ -249,7 +249,7 @@ void GOFFState::writeHeader(GOFFYAML::FileHeader &FileHdr) {
      << LangProd                                // LanguageProductIdentifier
      << zeros(16 - LangProd.size())             // Fill bytes
      << binaryBe(FileHdr.ArchitectureLevel);    // ArchitectureLevel
-  // The module propties are optional. Figure out if we need to write them
+  // The module propties are optional. Figure out if we need to write them.
   uint16_t ModPropLen = 0;
   if (FileHdr.TargetSoftwareEnvironment)
     ModPropLen = 3;
@@ -268,17 +268,17 @@ void GOFFState::writeHeader(GOFFYAML::FileHeader &FileHdr) {
 
 void GOFFState::writeSymbol(GOFFYAML::Symbol Sym) {
   if (Sym.ID != SymbolID + 1)
-    reportError("Symbol IDs not monoton " + Sym.Name);
+    reportError("symbol IDs not monotonic " + Sym.Name);
   else
     ++SymbolID;
   if (Sym.OwnerID >= SymbolID)
-    reportError("Owner ID not defined " + Sym.Name);
+    reportError("owner ID not defined " + Sym.Name);
   SmallString<80> SymName;
   if (std::error_code EC = ConverterEBCDIC::convertToEBCDIC(Sym.Name, SymName))
-    reportError("Conversion error on " + Sym.Name);
+    reportError("conversion error on " + Sym.Name);
   size_t SymLength = SymName.size();
   if (SymLength > GOFF::MaxDataLength)
-    reportError("Symbol name is too long: " + Twine(SymLength));
+    reportError("symbol name is too long: " + Twine(SymLength));
 
   GW.newRecord(GOFF::RT_ESD, 69 + SymLength);
   GW << binaryBe(Sym.Type)          // Symbol type
@@ -319,13 +319,13 @@ void GOFFState::writeSymbol(GOFFYAML::Symbol Sym) {
 
 void GOFFState::writeSection(GOFFYAML::Section Sec) {
   if (Sec.SymbolID == 0 || Sec.SymbolID > SymbolID)
-    reportError("Section symbol not defined: " + Twine(Sec.SymbolID));
+    reportError("section symbol not defined: " + Twine(Sec.SymbolID));
 
   size_t Size = 0;
   if (Sec.Data) {
     Size = Sec.Data->binary_size();
     if (Size > GOFF::MaxDataLength) {
-      reportError("Section content is too long: " + Twine(Size));
+      reportError("section content is too long: " + Twine(Size));
       return;
     }
     if (Sec.DataLength && Sec.DataLength != Size) {
