@@ -496,7 +496,8 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // TODO: Support tail calls.
   Info.IsTailCall = false;
 
-  // If the callee is a GlobalAddress or ExternalSymbol, then use MO_PLT.
+  // If the callee is a GlobalAddress or ExternalSymbol and cannot be assumed as
+  // DSOLocal, then use MO_PLT. Otherwise use MO_CALL.
   if (Info.Callee.isGlobal()) {
     const GlobalValue *GV = Info.Callee.getGlobal();
     unsigned OpFlags = RISCVII::MO_CALL;
