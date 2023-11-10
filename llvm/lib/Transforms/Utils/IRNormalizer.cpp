@@ -106,7 +106,7 @@ cl::opt<bool> IRNormalizer::ReorderOperands(
 
 /// Entry method to the IRNormalizer.
 ///
-/// \param M Module to normalize.
+/// \param F Function to normalize.
 bool IRNormalizer::runOnFunction(Function &F) {
   nameFunctionArguments(F);
   nameBasicBlocks(F);
