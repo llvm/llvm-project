@@ -50,7 +50,6 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
       DepCollector.maybeAddDependency(
           llvm::sys::path::remove_leading_dotslash(*Filename),
           /*FromModule*/ false, isSystem(FileType), /*IsModuleFile*/ false,
-          &PP.getFileManager(),
           /*IsMissing*/ false);
   }
 
@@ -58,11 +57,9 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                    SrcMgr::CharacteristicKind FileType) override {
     StringRef Filename =
         llvm::sys::path::remove_leading_dotslash(SkippedFile.getName());
-    DepCollector.maybeAddDependency(Filename,
-                                    /*FromModule=*/false,
+    DepCollector.maybeAddDependency(Filename, /*FromModule=*/false,
                                     /*IsSystem=*/isSystem(FileType),
                                     /*IsModuleFile=*/false,
-                                    &PP.getFileManager(),
                                     /*IsMissing=*/false);
   }
 
@@ -73,11 +70,9 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                           StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
     if (!File)
-      DepCollector.maybeAddDependency(FileName,
-                                      /*FromModule*/ false,
+      DepCollector.maybeAddDependency(FileName, /*FromModule*/ false,
                                       /*IsSystem*/ false,
                                       /*IsModuleFile*/ false,
-                                      &PP.getFileManager(),
                                       /*IsMissing*/ true);
     // Files that actually exist are handled by FileChanged.
   }
@@ -89,11 +84,9 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
       return;
     StringRef Filename =
         llvm::sys::path::remove_leading_dotslash(File->getName());
-    DepCollector.maybeAddDependency(Filename,
-                                    /*FromModule=*/false,
+    DepCollector.maybeAddDependency(Filename, /*FromModule=*/false,
                                     /*IsSystem=*/isSystem(FileType),
                                     /*IsModuleFile=*/false,
-                                    &PP.getFileManager(),
                                     /*IsMissing=*/false);
   }
 
@@ -109,11 +102,9 @@ struct DepCollectorMMCallbacks : public ModuleMapCallbacks {
   void moduleMapFileRead(SourceLocation Loc, FileEntryRef Entry,
                          bool IsSystem) override {
     StringRef Filename = Entry.getName();
-    DepCollector.maybeAddDependency(Filename,
-                                    /*FromModule*/ false,
+    DepCollector.maybeAddDependency(Filename, /*FromModule*/ false,
                                     /*IsSystem*/ IsSystem,
                                     /*IsModuleFile*/ false,
-                                    /*FileMgr*/ nullptr,
                                     /*IsMissing*/ false);
   }
 };
@@ -134,7 +125,6 @@ struct DFGMMCallback : public ModuleMapCallbacks {
     DepCollector.maybeAddDependency(Filename, /*FromModule*/ false,
                                     /*IsSystem*/ IsSystem,
                                     /*IsModuleFile*/ false,
-                                    /*FileMgr*/nullptr,
                                     /*IsMissing*/ false);
   }
 
@@ -145,7 +135,6 @@ struct DFGMMCallback : public ModuleMapCallbacks {
     DepCollector.maybeAddDependency(Entry.getName(), /*FromModule*/ false,
                                     /*IsSystem*/ IsSystem,
                                     /*IsModuleFile*/ false,
-                                    /*FileMgr*/nullptr,
                                     /*IsMissing*/ false);
   }
 };
@@ -161,10 +150,8 @@ struct DepCollectorASTListener : public ASTReaderListener {
   }
   void visitModuleFile(StringRef Filename,
                        serialization::ModuleKind Kind) override {
-    DepCollector.maybeAddDependency(Filename,
-                                    /*FromModule*/ true,
+    DepCollector.maybeAddDependency(Filename, /*FromModule*/ true,
                                     /*IsSystem*/ false, /*IsModuleFile*/ true,
-                                    /*FileMgr*/ nullptr,
                                     /*IsMissing*/ false);
   }
   bool visitInputFile(StringRef Filename, bool IsSystem,
@@ -178,7 +165,7 @@ struct DepCollectorASTListener : public ASTReaderListener {
       Filename = FE->getName();
 
     DepCollector.maybeAddDependency(Filename, /*FromModule*/ true, IsSystem,
-                                    /*IsModuleFile*/ false, /*FileMgr*/ nullptr,
+                                    /*IsModuleFile*/ false,
                                     /*IsMissing*/ false);
     return true;
   }
@@ -188,15 +175,9 @@ struct DepCollectorASTListener : public ASTReaderListener {
 void DependencyCollector::maybeAddDependency(StringRef Filename,
                                              bool FromModule, bool IsSystem,
                                              bool IsModuleFile,
-                                             FileManager *FileMgr,
                                              bool IsMissing) {
-  if (sawDependency(Filename, FromModule, IsSystem, IsModuleFile, IsMissing)) {
-    if (IsSystem && FileMgr && shouldCanonicalizeSystemDependencies()) {
-      if (auto F = FileMgr->getOptionalFileRef(Filename))
-        Filename = FileMgr->getCanonicalName(*F);
-    }
+  if (sawDependency(Filename, FromModule, IsSystem, IsModuleFile, IsMissing))
     addDependency(Filename);
-  }
 }
 
 bool DependencyCollector::addDependency(StringRef Filename) {
@@ -245,7 +226,6 @@ DependencyFileGenerator::DependencyFileGenerator(
     IntrusiveRefCntPtr<llvm::vfs::OutputBackend> OB)
     : OutputBackend(std::move(OB)), OutputFile(Opts.OutputFile),
       Targets(Opts.Targets), IncludeSystemHeaders(Opts.IncludeSystemHeaders),
-      CanonicalSystemHeaders(Opts.CanonicalSystemHeaders),
       PhonyTarget(Opts.UsePhonyTargets),
       AddMissingHeaderDeps(Opts.AddMissingHeaderDeps), SeenMissingHeader(false),
       IncludeModuleFiles(Opts.IncludeModuleFiles),
