@@ -26199,8 +26199,6 @@ TEST_F(FormatTest, RemoveSemicolon) {
 }
 
 TEST_F(FormatTest, BreakAfterAttributes) {
-  FormatStyle Style = getLLVMStyle();
-
   constexpr StringRef Code("[[maybe_unused]] const int i;\n"
                            "[[foo([[]])]] [[maybe_unused]]\n"
                            "int j;\n"
@@ -26217,6 +26215,7 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                            "  return 1;\n"
                            "}");
 
+  FormatStyle Style = getLLVMStyle();
   EXPECT_EQ(Style.BreakAfterAttributes, FormatStyle::ABS_Leave);
   verifyNoChange(Code, Style);
 

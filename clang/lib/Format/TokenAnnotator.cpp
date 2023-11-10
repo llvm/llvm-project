@@ -3456,12 +3456,13 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
       LineIsFunctionDeclaration = true;
       Tok->setFinalizedType(TT_FunctionDeclarationName);
     }
-    if (Tok->isOneOf(TT_FunctionDeclarationName, TT_CtorDtorDeclName,
-                     TT_StartOfName)) {
-      if (AfterLastAttribute &&
+    if (LineIsFunctionDeclaration ||
+        Tok->isOneOf(TT_CtorDtorDeclName, TT_StartOfName)) {
+      if (IsCpp && AfterLastAttribute &&
           mustBreakAfterAttributes(*AfterLastAttribute, Style)) {
         AfterLastAttribute->MustBreakBefore = true;
-        Line.ReturnTypeWrapped = true;
+        if (LineIsFunctionDeclaration)
+          Line.ReturnTypeWrapped = true;
       }
       break;
     }
