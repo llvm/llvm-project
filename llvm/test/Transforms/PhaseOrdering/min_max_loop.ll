@@ -1,126 +1,145 @@
 ; RUN: opt < %s --O3 -S | FileCheck %s
+; See issue #55013 and PR #70845 for more details.
+; This test comes from the following C program, compiled with : 
+;   > clang -O0 -S -emit-llvm -fno-discard-value-names
+; 
+;; short vecreduce_smin_v2i16(int n, short* v)
+;; {
+;;   short p = 0;
+;;   for (int i = 0; i < n; ++i)
+;;     p = p > v[i] ? v[i] : p;
+;;   return p;
+;; }
+;
+;; short vecreduce_smax_v2i16(int n, short* v)
+;; {
+;;   short p = 0;
+;;   for (int i = 0; i < n; ++i)
+;;     p = p < v[i] ? v[i] : p;
+;;   return p;
+;; }
 
-define signext i16 @vecreduce_smax_v2i16(i32 noundef %0, ptr noundef %1) #0 {
-   ;; CHECK: @llvm.smax
-   %3 = alloca i32, align 4
-   %4 = alloca ptr, align 8
-   %5 = alloca i16, align 2
-   %6 = alloca i32, align 4
-   store i32 %0, ptr %3, align 4
-   store ptr %1, ptr %4, align 8
-   store i16 0, ptr %5, align 2
-   store i32 0, ptr %6, align 4
-   br label %7
- 
- 7:                                                ; preds = %34, %2
-   %8 = load i32, ptr %6, align 4
-   %9 = load i32, ptr %3, align 4
-   %10 = icmp slt i32 %8, %9
-   br i1 %10, label %11, label %37
- 
- 11:                                               ; preds = %7
-   %12 = load i16, ptr %5, align 2
-   %13 = sext i16 %12 to i32
-   %14 = load ptr, ptr %4, align 8
-   %15 = load i32, ptr %6, align 4
-   %16 = sext i32 %15 to i64
-   %17 = getelementptr inbounds i16, ptr %14, i64 %16
-   %18 = load i16, ptr %17, align 2
-   %19 = sext i16 %18 to i32
-   %20 = icmp slt i32 %13, %19
-   br i1 %20, label %21, label %28
- 
- 21:                                               ; preds = %11
-   %22 = load ptr, ptr %4, align 8
-   %23 = load i32, ptr %6, align 4
-   %24 = sext i32 %23 to i64
-   %25 = getelementptr inbounds i16, ptr %22, i64 %24
-   %26 = load i16, ptr %25, align 2
-   %27 = sext i16 %26 to i32
-   br label %31
- 
- 28:                                               ; preds = %11
-   %29 = load i16, ptr %5, align 2
-   %30 = sext i16 %29 to i32
-   br label %31
- 
- 31:                                               ; preds = %28, %21
-   %32 = phi i32 [ %27, %21 ], [ %30, %28 ]
-   %33 = trunc i32 %32 to i16
-   store i16 %33, ptr %5, align 2
-   br label %34
- 
- 34:                                               ; preds = %31
-   %35 = load i32, ptr %6, align 4
-   %36 = add nsw i32 %35, 1
-   store i32 %36, ptr %6, align 4
-   br label %7
- 
- 37:                                               ; preds = %7
-   %38 = load i16, ptr %5, align 2
-   ret i16 %38
- }
+define signext i16 @vecreduce_smin_v2i16(i32 noundef %n, ptr noundef %v) {
+  ;; CHECK: @llvm.smin
+entry:
+  %n.addr = alloca i32, align 4
+  %v.addr = alloca ptr, align 8
+  %p = alloca i16, align 2
+  %i = alloca i32, align 4
+  store i32 %n, ptr %n.addr, align 4
+  store ptr %v, ptr %v.addr, align 8
+  store i16 0, ptr %p, align 2
+  store i32 0, ptr %i, align 4
+  br label %for.cond
 
-define signext i16 @vecreduce_smin_v2i16(i32 noundef %0, ptr noundef %1) #0 {
-; CHECK: @llvm.smin
-  %3 = alloca i32, align 4
-  %4 = alloca ptr, align 8
-  %5 = alloca i16, align 2
-  %6 = alloca i32, align 4
-  store i32 %0, ptr %3, align 4
-  store ptr %1, ptr %4, align 8
-  store i16 0, ptr %5, align 2
-  store i32 0, ptr %6, align 4
-  br label %7
+for.cond:                                         ; preds = %for.inc, %entry
+  %0 = load i32, ptr %i, align 4
+  %1 = load i32, ptr %n.addr, align 4
+  %cmp = icmp slt i32 %0, %1
+  br i1 %cmp, label %for.body, label %for.end
 
-7:                                                ; preds = %34, %2
-  %8 = load i32, ptr %6, align 4
-  %9 = load i32, ptr %3, align 4
-  %10 = icmp slt i32 %8, %9
-  br i1 %10, label %11, label %37
+for.body:                                         ; preds = %for.cond
+  %2 = load i16, ptr %p, align 2
+  %conv = sext i16 %2 to i32
+  %3 = load ptr, ptr %v.addr, align 8
+  %4 = load i32, ptr %i, align 4
+  %idxprom = sext i32 %4 to i64
+  %arrayidx = getelementptr inbounds i16, ptr %3, i64 %idxprom
+  %5 = load i16, ptr %arrayidx, align 2
+  %conv1 = sext i16 %5 to i32
+  %cmp2 = icmp sgt i32 %conv, %conv1
+  br i1 %cmp2, label %cond.true, label %cond.false
 
-11:                                               ; preds = %7
-  %12 = load i16, ptr %5, align 2
-  %13 = sext i16 %12 to i32
-  %14 = load ptr, ptr %4, align 8
-  %15 = load i32, ptr %6, align 4
-  %16 = sext i32 %15 to i64
-  %17 = getelementptr inbounds i16, ptr %14, i64 %16
-  %18 = load i16, ptr %17, align 2
-  %19 = sext i16 %18 to i32
-  %20 = icmp sgt i32 %13, %19
-  br i1 %20, label %21, label %28
+cond.true:                                        ; preds = %for.body
+  %6 = load ptr, ptr %v.addr, align 8
+  %7 = load i32, ptr %i, align 4
+  %idxprom4 = sext i32 %7 to i64
+  %arrayidx5 = getelementptr inbounds i16, ptr %6, i64 %idxprom4
+  %8 = load i16, ptr %arrayidx5, align 2
+  %conv6 = sext i16 %8 to i32
+  br label %cond.end
 
-21:                                               ; preds = %11
-  %22 = load ptr, ptr %4, align 8
-  %23 = load i32, ptr %6, align 4
-  %24 = sext i32 %23 to i64
-  %25 = getelementptr inbounds i16, ptr %22, i64 %24
-  %26 = load i16, ptr %25, align 2
-  %27 = sext i16 %26 to i32
-  br label %31
+cond.false:                                       ; preds = %for.body
+  %9 = load i16, ptr %p, align 2
+  %conv7 = sext i16 %9 to i32
+  br label %cond.end
 
-28:                                               ; preds = %11
-  %29 = load i16, ptr %5, align 2
-  %30 = sext i16 %29 to i32
-  br label %31
+cond.end:                                         ; preds = %cond.false, %cond.true
+  %cond = phi i32 [ %conv6, %cond.true ], [ %conv7, %cond.false ]
+  %conv8 = trunc i32 %cond to i16
+  store i16 %conv8, ptr %p, align 2
+  br label %for.inc
 
-31:                                               ; preds = %28, %21
-  %32 = phi i32 [ %27, %21 ], [ %30, %28 ]
-  %33 = trunc i32 %32 to i16
-  store i16 %33, ptr %5, align 2
-  br label %34
+for.inc:                                          ; preds = %cond.end
+  %10 = load i32, ptr %i, align 4
+  %inc = add nsw i32 %10, 1
+  store i32 %inc, ptr %i, align 4
+  br label %for.cond
 
-34:                                               ; preds = %31
-  %35 = load i32, ptr %6, align 4
-  %36 = add nsw i32 %35, 1
-  store i32 %36, ptr %6, align 4
-  br label %7 
-
-37:                                               ; preds = %7
-  %38 = load i16, ptr %5, align 2
-  ret i16 %38
+for.end:                                          ; preds = %for.cond
+  %11 = load i16, ptr %p, align 2
+  ret i16 %11
 }
 
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define signext i16 @vecreduce_smax_v2i16(i32 noundef %n, ptr noundef %v) {
+  ;; CHECK: @llvm.smax
+entry:
+  %n.addr = alloca i32, align 4
+  %v.addr = alloca ptr, align 8
+  %p = alloca i16, align 2
+  %i = alloca i32, align 4
+  store i32 %n, ptr %n.addr, align 4
+  store ptr %v, ptr %v.addr, align 8
+  store i16 0, ptr %p, align 2
+  store i32 0, ptr %i, align 4
+  br label %for.cond
 
+for.cond:                                         ; preds = %for.inc, %entry
+  %0 = load i32, ptr %i, align 4
+  %1 = load i32, ptr %n.addr, align 4
+  %cmp = icmp slt i32 %0, %1
+  br i1 %cmp, label %for.body, label %for.end
 
+for.body:                                         ; preds = %for.cond
+  %2 = load i16, ptr %p, align 2
+  %conv = sext i16 %2 to i32
+  %3 = load ptr, ptr %v.addr, align 8
+  %4 = load i32, ptr %i, align 4
+  %idxprom = sext i32 %4 to i64
+  %arrayidx = getelementptr inbounds i16, ptr %3, i64 %idxprom
+  %5 = load i16, ptr %arrayidx, align 2
+  %conv1 = sext i16 %5 to i32
+  %cmp2 = icmp slt i32 %conv, %conv1
+  br i1 %cmp2, label %cond.true, label %cond.false
+
+cond.true:                                        ; preds = %for.body
+  %6 = load ptr, ptr %v.addr, align 8
+  %7 = load i32, ptr %i, align 4
+  %idxprom4 = sext i32 %7 to i64
+  %arrayidx5 = getelementptr inbounds i16, ptr %6, i64 %idxprom4
+  %8 = load i16, ptr %arrayidx5, align 2
+  %conv6 = sext i16 %8 to i32
+  br label %cond.end
+
+cond.false:                                       ; preds = %for.body
+  %9 = load i16, ptr %p, align 2
+  %conv7 = sext i16 %9 to i32
+  br label %cond.end
+
+cond.end:                                         ; preds = %cond.false, %cond.true
+  %cond = phi i32 [ %conv6, %cond.true ], [ %conv7, %cond.false ]
+  %conv8 = trunc i32 %cond to i16
+  store i16 %conv8, ptr %p, align 2
+  br label %for.inc
+
+for.inc:                                          ; preds = %cond.end
+  %10 = load i32, ptr %i, align 4
+  %inc = add nsw i32 %10, 1
+  store i32 %inc, ptr %i, align 4
+  br label %for.cond
+
+for.end:                                          ; preds = %for.cond
+  %11 = load i16, ptr %p, align 2
+  ret i16 %11
+}
