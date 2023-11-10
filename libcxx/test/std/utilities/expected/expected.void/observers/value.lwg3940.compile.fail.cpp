@@ -22,6 +22,4 @@ void test() {
   std::move(e).value();
 }
 
-int main(int, char**) {
-  test();
-}
+int main(int, char**) { test(); }
