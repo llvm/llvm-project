@@ -9,7 +9,7 @@
 // This test verifies that you can make string reductions with parallel
 // algorithms
 
-// UNSUPPORTED: c++03, c++11, c++14, libcpp-has-no-incomplete-pstl
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <algorithm>
 #include <cassert>
