@@ -33,7 +33,7 @@ struct int_generator {
   ~int_generator() { hdl.destroy(); }
 };
 
-int_generator my_generator_func() { co_yield 42; }
+int_generator my_generator_func() { co_yield 42; } // Break at co_yield
 
 // This is an empty function which we call just so the debugger has
 // a place to reliably set a breakpoint on.
