@@ -638,7 +638,6 @@ void X86MCCodeEmitter::emitMemModRMByte(
         // TODO: Support new relocation for REX2.
         return (Kind == REX || Kind == REX2) ? X86::reloc_riprel_4byte_relax_rex
                                              : X86::reloc_riprel_4byte_relax;
-
       }
     }();
 
