@@ -1351,6 +1351,26 @@ func.func @warp_propagate_masked_transfer_read(%laneid: index, %src: memref<4096
 
 // -----
 
+func.func @warp_propagate_masked_transfer_read_shared_mask(%laneid: index, %src: memref<4096x4096xf32>, %index: index, %index2: index, %mask_ub: index) -> (vector<2xf32>, vector<2xf32>) {
+  %f0 = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %r:2 = vector.warp_execute_on_lane_0(%laneid)[64] -> (vector<2xf32>, vector<2xf32>) {
+    %mask = vector.create_mask %mask_ub: vector<128xi1>
+    %0 = vector.transfer_read %src[%c0, %index], %f0, %mask {in_bounds = [true]} : memref<4096x4096xf32>, vector<128xf32>
+    %1 = vector.transfer_read %src[%c0, %index2], %f0, %mask {in_bounds = [true]} : memref<4096x4096xf32>, vector<128xf32>
+    vector.yield %0, %1 : vector<128xf32>, vector<128xf32>
+  }
+  return %r#0, %r#1 : vector<2xf32>, vector<2xf32>
+}
+
+// CHECK-PROP-LABEL: func.func @warp_propagate_masked_transfer_read_shared_mask
+//       CHECK-PROP:   vector.create_mask %{{.*}} : vector<2xi1>
+//       CHECK-PROP:   vector.transfer_read %{{.*}} : memref<4096x4096xf32>, vector<2xf32>
+//       CHECK-PROP:   vector.create_mask %{{.*}} : vector<2xi1>
+//       CHECK-PROP:   vector.transfer_read %{{.*}} : memref<4096x4096xf32>, vector<2xf32>
+
+// -----
+
 func.func @warp_propagate_unconnected_read_write(%laneid: index, %buffer: memref<128xf32>, %f1: f32) -> (vector<2xf32>, vector<4xf32>) {
   %f0 = arith.constant 0.000000e+00 : f32
   %c0 = arith.constant 0 : index
