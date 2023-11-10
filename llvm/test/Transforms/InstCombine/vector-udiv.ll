@@ -75,7 +75,7 @@ define <4 x i32> @test_v4i32_shl_const_pow2(<4 x i32> %a0, <4 x i32> %a1) {
 define <4 x i32> @test_v4i32_zext_shl_splatconst_pow2(<4 x i32> %a0, <4 x i16> %a1) {
 ; CHECK-LABEL: @test_v4i32_zext_shl_splatconst_pow2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i16> [[A1:%.*]], <i16 2, i16 2, i16 2, i16 2>
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg <4 x i16> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr <4 x i32> [[A0:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 ;
@@ -88,7 +88,7 @@ define <4 x i32> @test_v4i32_zext_shl_splatconst_pow2(<4 x i32> %a0, <4 x i16> %
 define <4 x i32> @test_v4i32_zext_shl_const_pow2(<4 x i32> %a0, <4 x i16> %a1) {
 ; CHECK-LABEL: @test_v4i32_zext_shl_const_pow2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i16> [[A1:%.*]], <i16 2, i16 3, i16 4, i16 5>
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg <4 x i16> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr <4 x i32> [[A0:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 ;
