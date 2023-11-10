@@ -490,7 +490,7 @@ BitVector Merger::simplifyCond(LatSetId s0, LatPointId p0) {
     if (simple[b] && !isSparseLvlWithNonTrivialIdxExp(b)) {
       const auto dlt = getLvlType(b);
       if (!isCompressedDLT(dlt) && !isSingletonDLT(dlt) &&
-          !isLooseCompressedDLT(dlt)) {
+          !isLooseCompressedDLT(dlt) && !is2OutOf4DLT(dlt)) {
         if (reset)
           simple.reset(b);
         reset = true;
@@ -671,7 +671,7 @@ bool Merger::hasAnySparse(const BitVector &bits) const {
   for (TensorLoopId b : bits.set_bits()) {
     const auto dlt = getLvlType(b);
     if (isCompressedDLT(dlt) || isSingletonDLT(dlt) ||
-        isLooseCompressedDLT(dlt))
+        isLooseCompressedDLT(dlt) || is2OutOf4DLT(dlt))
       return true;
   }
   return hasSparseIdxReduction(bits);
