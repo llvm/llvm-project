@@ -6311,7 +6311,7 @@ static void GetCoreFileSaveRangesFull(Process &process,
                                       Process::CoreFileMemoryRanges &ranges) {
 
   // Don't add only dirty pages, add full regions.
-  const bool try_dirty_pages = false;
+const bool try_dirty_pages = false;
   for (const auto &region : regions)
     AddRegion(region, try_dirty_pages, ranges);
 }
@@ -6319,8 +6319,8 @@ static void GetCoreFileSaveRangesFull(Process &process,
 // Save only the dirty pages to the core file. Make sure the process has at
 // least some dirty pages, as some OS versions don't support reporting what
 // pages are dirty within an memory region. If no memory regions have dirty
-// page information, return an error.
-static Status
+// page information fall back to saving out all ranges with write permissions.
+static void
 GetCoreFileSaveRangesDirtyOnly(Process &process,
                                const MemoryRegionInfos &regions,
                                Process::CoreFileMemoryRanges &ranges) {
@@ -6331,10 +6331,14 @@ GetCoreFileSaveRangesDirtyOnly(Process &process,
       have_dirty_page_info = true;
   }
 
-  if (!have_dirty_page_info)
-    return Status("no process memory regions have dirty page information");
-
-  return Status();
+  if (!have_dirty_page_info) {
+    // We didn't find support for reporting dirty pages from the process
+    // plug-in so fall back to any region with write access permissions.
+    const bool try_dirty_pages = false;
+    for (const auto &region : regions)
+      if (region.GetWritable() == MemoryRegionInfo::eYes)
+        AddRegion(region, try_dirty_pages, ranges);
+  }
 }
 
 // Save all thread stacks to the core file. Some OS versions support reporting
@@ -6405,7 +6409,7 @@ Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
     break;
 
   case eSaveCoreDirtyOnly:
-    err = GetCoreFileSaveRangesDirtyOnly(*this, regions, ranges);
+    GetCoreFileSaveRangesDirtyOnly(*this, regions, ranges);
     break;
 
   case eSaveCoreStackOnly:
