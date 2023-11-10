@@ -43,9 +43,9 @@ protected:
     PMI_Min = PMI_FirstFPR,
   };
 
-  static RegisterBankInfo::PartialMapping PartMappings[];
-  static RegisterBankInfo::ValueMapping ValMappings[];
-  static PartialMappingIdx BankIDToCopyMapIdx[];
+  static const RegisterBankInfo::PartialMapping PartMappings[];
+  static const RegisterBankInfo::ValueMapping ValMappings[];
+  static const PartialMappingIdx BankIDToCopyMapIdx[];
 
   enum ValueMappingIdx {
     InvalidIdx = 0,
