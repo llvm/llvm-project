@@ -2471,8 +2471,8 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
     // On Darwin, libc++ can be installed in one of the following places:
-    // 1. Alongside the compiler in         <install>/include/c++/v1
-    // 2. Alongside the compiler in         <clang-executable-location>/../include/c++/v1
+    // 1. Alongside the compiler in <install>/include/c++/v1
+    // 2. Alongside the compiler in <clang-executable-folder>/../include/c++/v1
     // 3. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
     //
     // The precedence of paths is as listed above, i.e. we take the first path
@@ -2512,7 +2512,7 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
       }
     }
 
-    // Otherwise, check for (2)
+    // Otherwise, check for (3)
     llvm::SmallString<128> SysrootUsr = Sysroot;
     llvm::sys::path::append(SysrootUsr, "usr", "include", "c++", "v1");
     if (getVFS().exists(SysrootUsr)) {
