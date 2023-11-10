@@ -65,5 +65,5 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
 }
 
 std::unique_ptr<ScheduleDAGMutation> llvm::createRISCVMacroFusionDAGMutation() {
-  return createMacroFusionDAGMutation(shouldScheduleAdjacent);
+  return createMacroFusionDAGMutation({shouldScheduleAdjacent});
 }
