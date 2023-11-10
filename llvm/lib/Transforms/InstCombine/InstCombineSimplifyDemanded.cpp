@@ -620,8 +620,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       if (DemandedMask.countr_zero() >= ShiftAmt &&
           match(I->getOperand(0), m_LShr(m_ImmConstant(C), m_Value(X)))) {
         Constant *LeftShiftAmtC = ConstantInt::get(VTy, ShiftAmt);
-        Constant *NewC = ConstantExpr::getShl(C, LeftShiftAmtC);
-        if (ConstantExpr::getLShr(NewC, LeftShiftAmtC) == C) {
+        Constant *NewC = ConstantFoldBinaryOpOperands(Instruction::Shl, C,
+                                                      LeftShiftAmtC, DL);
+        if (ConstantFoldBinaryOpOperands(Instruction::LShr, NewC, LeftShiftAmtC,
+                                         DL) == C) {
           Instruction *Lshr = BinaryOperator::CreateLShr(NewC, X);
           return InsertNewInstWith(Lshr, I->getIterator());
         }
@@ -684,8 +686,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         Constant *C;
         if (match(I->getOperand(0), m_Shl(m_ImmConstant(C), m_Value(X)))) {
           Constant *RightShiftAmtC = ConstantInt::get(VTy, ShiftAmt);
-          Constant *NewC = ConstantExpr::getLShr(C, RightShiftAmtC);
-          if (ConstantExpr::getShl(NewC, RightShiftAmtC) == C) {
+          Constant *NewC = ConstantFoldBinaryOpOperands(Instruction::LShr, C,
+                                                        RightShiftAmtC, DL);
+          if (ConstantFoldBinaryOpOperands(Instruction::Shl, NewC,
+                                           RightShiftAmtC, DL) == C) {
             Instruction *Shl = BinaryOperator::CreateShl(NewC, X);
             return InsertNewInstWith(Shl, I->getIterator());
           }
