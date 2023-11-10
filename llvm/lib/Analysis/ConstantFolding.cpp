@@ -273,12 +273,11 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     for (unsigned j = 0; j != Ratio; ++j) {
       // Shift the piece of the value into the right place, depending on
       // endianness.
-      Constant *Elt = ConstantExpr::getLShr(Src,
-                                  ConstantInt::get(Src->getType(), ShiftAmt));
+      APInt Elt = Src->getValue().lshr(ShiftAmt);
       ShiftAmt += isLittleEndian ? DstBitSize : -DstBitSize;
 
       // Truncate and remember this piece.
-      Result.push_back(ConstantExpr::getTrunc(Elt, DstEltTy));
+      Result.push_back(ConstantInt::get(DstEltTy, Elt.trunc(DstBitSize)));
     }
   }
 
