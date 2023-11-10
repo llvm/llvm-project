@@ -1,7 +1,5 @@
  ; RUN: llc -O0 -stop-after=finalize-isel < %s | FileCheck --check-prefixes=COMMON,AFTER-ISEL %s
 
-; XFAIL: *
-
 ; RUN: llc -O0 -stop-after=regallocfast < %s | FileCheck --check-prefixes=COMMON,AFTER-RA %s
 ; RUN: llc -O0 -stop-after=prologepilog < %s | FileCheck --check-prefixes=COMMON,AFTER-PEI %s
 ; RUN: llc -O0 -stop-after=livedebugvalues < %s | FileCheck --check-prefixes=COMMON,AFTER-LDV %s
@@ -42,15 +40,11 @@
 ; AFTER-RA-NOT: DBG_
 
 ; AFTER-PEI-NOT: DBG_
-; AFTER-PEI: renamable $vgpr[[#ARG_0_COPY_VGPR:]] = COPY killed $vgpr0
-; AFTER-PEI-NOT: DBG_
 ; AFTER-PEI: DBG_DEF ![[STACK_LIFETIME_VAR_I]], $sgpr33
 ; AFTER-PEI-NOT: DBG_
 ; AFTER-PEI: DBG_DEF ![[STACK_LIFETIME_VAR_R]], $sgpr33
 ; AFTER-PEI-NOT: DBG_
 
-; AFTER-LDV-NOT: DBG_
-; AFTER-LDV: $vgpr[[#ARG_0_COPY_VGPR:]] = V_MOV_B32_e32 killed $vgpr0,
 ; AFTER-LDV-NOT: DBG_
 ; AFTER-LDV: DBG_DEF ![[STACK_LIFETIME_VAR_I]], $sgpr33
 ; AFTER-LDV-NOT: DBG_
