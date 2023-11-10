@@ -24,26 +24,30 @@
 #include <lmcons.h> // UNLEN=256
 #include <wchar.h> // wchar_t cast to LPWSTR
 #pragma comment(lib, "Advapi32.lib") // Link Advapi32.lib for GetUserName
+#define LOGIN_NAME_MAX UNLEN
 
-static inline char *getlogin() {
-  static char username[UNLEN + 1];
+inline int getlogin_r(char *buf, size_t bufSize) {
   wchar_t w_username[UNLEN + 1];
   DWORD namelen = sizeof(w_username) / sizeof(w_username[0]);
 
   if (GetUserName(w_username, &namelen)) {
     // Convert the wchar_t string to a regular C string
-    if (wcstombs(username, w_username, UNLEN + 1) == -1) {
+    if (wcstombs(buf, w_username, UNLEN + 1) == -1) {
       // Conversion failed
-      return NULL;
+      return -1;
     }
-    return (username[0] == 0 ? NULL : username);
+    return (buf[0] == 0 ? -1 : 0);
   } else {
-    return NULL;
+    return -1;
   }
-  return nullptr;
+  return -1;
 }
-#else
+#elif _REENTRANT || _POSIX_C_SOURCE >= 199506L
+// System is posix-compliant and has getlogin_r
 #include <unistd.h>
+#else
+// System is not posix-compliant
+inline int getlogin_r(char *buf, size_t bufsize) { return -1; }
 #endif
 
 namespace Fortran::runtime {
@@ -253,17 +257,33 @@ std::int32_t RTNAME(GetCommand)(const Descriptor *value,
   return stat;
 }
 
+// Trim space from right/end
+char *RTrim(char *str) {
+  int i = strlen(str);
+  while (' ' == str[--i]) {
+    str[i] = 0;
+  }
+  return str;
+}
+
 std::int32_t RTNAME(GetLog)(const Descriptor *value, const Descriptor *errmsg) {
   FillWithSpaces(*value);
 
-  const char *arg = getlogin();
-  std::int64_t argLen{StringLength(arg)};
-  if (argLen <= 0) {
+  std::array<char, LOGIN_NAME_MAX + 1> str;
+  int err = getlogin_r(str.data(), str.size());
+  if (err != 0) {
+    return ToErrmsg(errmsg, StatMissingArgument);
+  }
+
+  RTrim(str.data());
+  std::int64_t strLen{StringLength(str.data())};
+
+  if (strLen <= 0) {
     return ToErrmsg(errmsg, StatMissingArgument);
   }
 
   if (value) {
-    return CopyToDescriptor(*value, arg, argLen, errmsg);
+    return CopyToDescriptor(*value, str.data(), strLen, errmsg);
   }
 
   return StatOk;
