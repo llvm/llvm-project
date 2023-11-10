@@ -49,8 +49,49 @@ void foo() {
   auto coro_lambda = []() -> Gen<int> {
     co_return 1;
   };
-  auto wrapper_lambda = [&]() -> Gen<int> {
-    return coro_lambda();
-  }
+  // expected-error@+1 {{neither a coroutine nor a coroutine wrapper}}
+  auto wrapper_lambda = []() -> Gen<int> {
+    return foo_coro(1);
+  };
 }
+}
+
+namespace std {
+template <typename> class function;
+
+template <typename ReturnValue, typename... Args>
+class function<ReturnValue(Args...)> {
+public:
+  template <typename T> function &operator=(T) {}
+  template <typename T> function(T) {}
+  // expected-error@+1 {{neither a coroutine nor a coroutine wrapper}}
+  ReturnValue operator()(Args... args) const {
+    return callable_->Invoke(args...);  // expected-note {{in instantiation of member}}
+  }
+
+private:
+  class Callable {
+  public:
+    // expected-error@+1 {{neither a coroutine nor a coroutine wrapper}}
+    ReturnValue Invoke(Args...) const { return {}; }
+  };
+  Callable* callable_;
+};
+} // namespace std
+
+void use_std_function() {
+  std::function<int(bool)> foo = [](bool b) { return b ? 1 : 2; };
+  // expected-error@+1 {{neither a coroutine nor a coroutine wrapper}}
+  std::function<Gen<int>(bool)> test1 = [](bool b) {
+    return foo_coro(b);
+  };
+  std::function<Gen<int>(bool)> test2 = [](bool) -> Gen<int> {
+    co_return 1;
+  };
+  std::function<Gen<int>(bool)> test3 = foo_coro;
+
+  foo(true);   // Fine.
+  test1(true); // expected-note 2 {{in instantiation of member}}
+  test2(true);
+  test3(true);
 }

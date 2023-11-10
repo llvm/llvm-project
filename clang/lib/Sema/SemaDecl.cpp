@@ -27,6 +27,7 @@
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/StmtCXX.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -15812,6 +15813,19 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
           << FixItHint::CreateInsertion(P.first, "self->");
 }
 
+// Return whether FD is `promise_type::get_return_object`.
+bool isGetReturnObject(FunctionDecl *FD) {
+  if (!FD->getDeclName().isIdentifier() ||
+      !FD->getName().equals("get_return_object") || !FD->param_empty())
+    return false;
+  CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
+  if (!MD || !MD->isCXXInstanceMember())
+    return false;
+  RecordDecl *PromiseType = MD->getParent();
+  return PromiseType && PromiseType->getDeclName().isIdentifier() &&
+         PromiseType->getName().equals("promise_type");
+}
+
 void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
   if (!getLangOpts().Coroutines || !FD || getCurFunction()->isCoroutine())
     return;
@@ -15819,12 +15833,8 @@ void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
   if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
     return;
   // Allow `promise_type::get_return_object`.
-  if (FD->getName() == "get_return_object") {
-    if (auto *GRT = dyn_cast<CXXMethodDecl>(FD)) {
-      if (auto *PT = GRT->getParent(); PT && PT->getName() == "promise_type")
-        return;
-    }
-  }
+  if (isGetReturnObject(FD))
+    return;
   if (!FD->hasAttr<CoroWrapperAttr>())
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
 }
