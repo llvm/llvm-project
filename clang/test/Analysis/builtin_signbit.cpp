@@ -12,60 +12,72 @@ long double ld = -1.0L;
 // CHECK-BE32-LABEL: define dso_local void @_Z12test_signbitv(
 // CHECK-BE32-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-BE32-NEXT:  entry:
-// CHECK-BE32-NEXT:    [[FROMBOOL:%.*]] = zext i1 icmp slt (i64 trunc (i128 lshr (i128 bitcast (ppc_fp128 0xM3FF00000000000000000000000000000 to i128), i128 64) to i64), i64 0) to i8
+// CHECK-BE32-NEXT:    [[TMP0:%.*]] = lshr i128 bitcast (ppc_fp128 0xM3FF00000000000000000000000000000 to i128), 64
+// CHECK-BE32-NEXT:    [[TMP1:%.*]] = trunc i128 [[TMP0]] to i64
+// CHECK-BE32-NEXT:    [[TMP2:%.*]] = icmp slt i64 [[TMP1]], 0
+// CHECK-BE32-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TMP2]] to i8
 // CHECK-BE32-NEXT:    store i8 [[FROMBOOL]], ptr @b, align 1
-// CHECK-BE32-NEXT:    [[TMP0:%.*]] = load ppc_fp128, ptr @ld, align 16
-// CHECK-BE32-NEXT:    [[TMP1:%.*]] = bitcast ppc_fp128 [[TMP0]] to i128
-// CHECK-BE32-NEXT:    [[TMP2:%.*]] = lshr i128 [[TMP1]], 64
-// CHECK-BE32-NEXT:    [[TMP3:%.*]] = trunc i128 [[TMP2]] to i64
-// CHECK-BE32-NEXT:    [[TMP4:%.*]] = icmp slt i64 [[TMP3]], 0
-// CHECK-BE32-NEXT:    [[FROMBOOL1:%.*]] = zext i1 [[TMP4]] to i8
+// CHECK-BE32-NEXT:    [[TMP3:%.*]] = load ppc_fp128, ptr @ld, align 16
+// CHECK-BE32-NEXT:    [[TMP4:%.*]] = bitcast ppc_fp128 [[TMP3]] to i128
+// CHECK-BE32-NEXT:    [[TMP5:%.*]] = lshr i128 [[TMP4]], 64
+// CHECK-BE32-NEXT:    [[TMP6:%.*]] = trunc i128 [[TMP5]] to i64
+// CHECK-BE32-NEXT:    [[TMP7:%.*]] = icmp slt i64 [[TMP6]], 0
+// CHECK-BE32-NEXT:    [[FROMBOOL1:%.*]] = zext i1 [[TMP7]] to i8
 // CHECK-BE32-NEXT:    store i8 [[FROMBOOL1]], ptr @b, align 1
 // CHECK-BE32-NEXT:    store i8 0, ptr @b, align 1
-// CHECK-BE32-NEXT:    [[TMP5:%.*]] = load double, ptr @d, align 8
-// CHECK-BE32-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP5]] to float
-// CHECK-BE32-NEXT:    [[TMP6:%.*]] = bitcast float [[CONV]] to i32
-// CHECK-BE32-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[TMP6]], 0
-// CHECK-BE32-NEXT:    [[FROMBOOL2:%.*]] = zext i1 [[TMP7]] to i8
+// CHECK-BE32-NEXT:    [[TMP8:%.*]] = load double, ptr @d, align 8
+// CHECK-BE32-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP8]] to float
+// CHECK-BE32-NEXT:    [[TMP9:%.*]] = bitcast float [[CONV]] to i32
+// CHECK-BE32-NEXT:    [[TMP10:%.*]] = icmp slt i32 [[TMP9]], 0
+// CHECK-BE32-NEXT:    [[FROMBOOL2:%.*]] = zext i1 [[TMP10]] to i8
 // CHECK-BE32-NEXT:    store i8 [[FROMBOOL2]], ptr @b, align 1
-// CHECK-BE32-NEXT:    [[FROMBOOL3:%.*]] = zext i1 icmp slt (i64 trunc (i128 lshr (i128 bitcast (ppc_fp128 0xM3FF00000000000000000000000000000 to i128), i128 64) to i64), i64 0) to i8
+// CHECK-BE32-NEXT:    [[TMP11:%.*]] = lshr i128 bitcast (ppc_fp128 0xM3FF00000000000000000000000000000 to i128), 64
+// CHECK-BE32-NEXT:    [[TMP12:%.*]] = trunc i128 [[TMP11]] to i64
+// CHECK-BE32-NEXT:    [[TMP13:%.*]] = icmp slt i64 [[TMP12]], 0
+// CHECK-BE32-NEXT:    [[FROMBOOL3:%.*]] = zext i1 [[TMP13]] to i8
 // CHECK-BE32-NEXT:    store i8 [[FROMBOOL3]], ptr @b, align 1
-// CHECK-BE32-NEXT:    [[TMP8:%.*]] = load ppc_fp128, ptr @ld, align 16
-// CHECK-BE32-NEXT:    [[TMP9:%.*]] = bitcast ppc_fp128 [[TMP8]] to i128
-// CHECK-BE32-NEXT:    [[TMP10:%.*]] = lshr i128 [[TMP9]], 64
-// CHECK-BE32-NEXT:    [[TMP11:%.*]] = trunc i128 [[TMP10]] to i64
-// CHECK-BE32-NEXT:    [[TMP12:%.*]] = icmp slt i64 [[TMP11]], 0
-// CHECK-BE32-NEXT:    [[FROMBOOL4:%.*]] = zext i1 [[TMP12]] to i8
+// CHECK-BE32-NEXT:    [[TMP14:%.*]] = load ppc_fp128, ptr @ld, align 16
+// CHECK-BE32-NEXT:    [[TMP15:%.*]] = bitcast ppc_fp128 [[TMP14]] to i128
+// CHECK-BE32-NEXT:    [[TMP16:%.*]] = lshr i128 [[TMP15]], 64
+// CHECK-BE32-NEXT:    [[TMP17:%.*]] = trunc i128 [[TMP16]] to i64
+// CHECK-BE32-NEXT:    [[TMP18:%.*]] = icmp slt i64 [[TMP17]], 0
+// CHECK-BE32-NEXT:    [[FROMBOOL4:%.*]] = zext i1 [[TMP18]] to i8
 // CHECK-BE32-NEXT:    store i8 [[FROMBOOL4]], ptr @b, align 1
 // CHECK-BE32-NEXT:    ret void
 //
 // CHECK-BE64-LABEL: define dso_local void @_Z12test_signbitv(
 // CHECK-BE64-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-BE64-NEXT:  entry:
-// CHECK-BE64-NEXT:    [[FROMBOOL:%.*]] = zext i1 icmp slt (i64 trunc (i128 lshr (i128 bitcast (ppc_fp128 0xM3FF00000000000000000000000000000 to i128), i128 64) to i64), i64 0) to i8
+// CHECK-BE64-NEXT:    [[TMP0:%.*]] = lshr i128 bitcast (ppc_fp128 0xM3FF00000000000000000000000000000 to i128), 64
+// CHECK-BE64-NEXT:    [[TMP1:%.*]] = trunc i128 [[TMP0]] to i64
+// CHECK-BE64-NEXT:    [[TMP2:%.*]] = icmp slt i64 [[TMP1]], 0
+// CHECK-BE64-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TMP2]] to i8
 // CHECK-BE64-NEXT:    store i8 [[FROMBOOL]], ptr @b, align 1
-// CHECK-BE64-NEXT:    [[TMP0:%.*]] = load ppc_fp128, ptr @ld, align 16
-// CHECK-BE64-NEXT:    [[TMP1:%.*]] = bitcast ppc_fp128 [[TMP0]] to i128
-// CHECK-BE64-NEXT:    [[TMP2:%.*]] = lshr i128 [[TMP1]], 64
-// CHECK-BE64-NEXT:    [[TMP3:%.*]] = trunc i128 [[TMP2]] to i64
-// CHECK-BE64-NEXT:    [[TMP4:%.*]] = icmp slt i64 [[TMP3]], 0
-// CHECK-BE64-NEXT:    [[FROMBOOL1:%.*]] = zext i1 [[TMP4]] to i8
+// CHECK-BE64-NEXT:    [[TMP3:%.*]] = load ppc_fp128, ptr @ld, align 16
+// CHECK-BE64-NEXT:    [[TMP4:%.*]] = bitcast ppc_fp128 [[TMP3]] to i128
+// CHECK-BE64-NEXT:    [[TMP5:%.*]] = lshr i128 [[TMP4]], 64
+// CHECK-BE64-NEXT:    [[TMP6:%.*]] = trunc i128 [[TMP5]] to i64
+// CHECK-BE64-NEXT:    [[TMP7:%.*]] = icmp slt i64 [[TMP6]], 0
+// CHECK-BE64-NEXT:    [[FROMBOOL1:%.*]] = zext i1 [[TMP7]] to i8
 // CHECK-BE64-NEXT:    store i8 [[FROMBOOL1]], ptr @b, align 1
 // CHECK-BE64-NEXT:    store i8 0, ptr @b, align 1
-// CHECK-BE64-NEXT:    [[TMP5:%.*]] = load double, ptr @d, align 8
-// CHECK-BE64-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP5]] to float
-// CHECK-BE64-NEXT:    [[TMP6:%.*]] = bitcast float [[CONV]] to i32
-// CHECK-BE64-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[TMP6]], 0
-// CHECK-BE64-NEXT:    [[FROMBOOL2:%.*]] = zext i1 [[TMP7]] to i8
+// CHECK-BE64-NEXT:    [[TMP8:%.*]] = load double, ptr @d, align 8
+// CHECK-BE64-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP8]] to float
+// CHECK-BE64-NEXT:    [[TMP9:%.*]] = bitcast float [[CONV]] to i32
+// CHECK-BE64-NEXT:    [[TMP10:%.*]] = icmp slt i32 [[TMP9]], 0
+// CHECK-BE64-NEXT:    [[FROMBOOL2:%.*]] = zext i1 [[TMP10]] to i8
 // CHECK-BE64-NEXT:    store i8 [[FROMBOOL2]], ptr @b, align 1
-// CHECK-BE64-NEXT:    [[FROMBOOL3:%.*]] = zext i1 icmp slt (i64 trunc (i128 lshr (i128 bitcast (ppc_fp128 0xM3FF00000000000000000000000000000 to i128), i128 64) to i64), i64 0) to i8
+// CHECK-BE64-NEXT:    [[TMP11:%.*]] = lshr i128 bitcast (ppc_fp128 0xM3FF00000000000000000000000000000 to i128), 64
+// CHECK-BE64-NEXT:    [[TMP12:%.*]] = trunc i128 [[TMP11]] to i64
+// CHECK-BE64-NEXT:    [[TMP13:%.*]] = icmp slt i64 [[TMP12]], 0
+// CHECK-BE64-NEXT:    [[FROMBOOL3:%.*]] = zext i1 [[TMP13]] to i8
 // CHECK-BE64-NEXT:    store i8 [[FROMBOOL3]], ptr @b, align 1
-// CHECK-BE64-NEXT:    [[TMP8:%.*]] = load ppc_fp128, ptr @ld, align 16
-// CHECK-BE64-NEXT:    [[TMP9:%.*]] = bitcast ppc_fp128 [[TMP8]] to i128
-// CHECK-BE64-NEXT:    [[TMP10:%.*]] = lshr i128 [[TMP9]], 64
-// CHECK-BE64-NEXT:    [[TMP11:%.*]] = trunc i128 [[TMP10]] to i64
-// CHECK-BE64-NEXT:    [[TMP12:%.*]] = icmp slt i64 [[TMP11]], 0
-// CHECK-BE64-NEXT:    [[FROMBOOL4:%.*]] = zext i1 [[TMP12]] to i8
+// CHECK-BE64-NEXT:    [[TMP14:%.*]] = load ppc_fp128, ptr @ld, align 16
+// CHECK-BE64-NEXT:    [[TMP15:%.*]] = bitcast ppc_fp128 [[TMP14]] to i128
+// CHECK-BE64-NEXT:    [[TMP16:%.*]] = lshr i128 [[TMP15]], 64
+// CHECK-BE64-NEXT:    [[TMP17:%.*]] = trunc i128 [[TMP16]] to i64
+// CHECK-BE64-NEXT:    [[TMP18:%.*]] = icmp slt i64 [[TMP17]], 0
+// CHECK-BE64-NEXT:    [[FROMBOOL4:%.*]] = zext i1 [[TMP18]] to i8
 // CHECK-BE64-NEXT:    store i8 [[FROMBOOL4]], ptr @b, align 1
 // CHECK-BE64-NEXT:    ret void
 //
