@@ -5688,14 +5688,16 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(std::vector<tid_t> &tids) {
       }
       const size_t num_threads = threads->GetSize();
       for (size_t i = 0; i < num_threads; i++) {
-        StructuredData::Dictionary *thread;
-        if (!threads->GetItemAtIndexAsDictionary(i, thread) || !thread) {
+        std::optional<StructuredData::Dictionary *> maybe_thread =
+            threads->GetItemAtIndexAsDictionary(i);
+        if (!maybe_thread) {
           LLDB_LOGF(log,
                     "Unable to read 'process metadata' LC_NOTE, threads "
                     "array does not have a dictionary at index %zu.",
                     i);
           return false;
         }
+        StructuredData::Dictionary *thread = *maybe_thread;
         tid_t tid = LLDB_INVALID_THREAD_ID;
         if (thread->GetValueForKeyAsInteger<tid_t>("thread_id", tid))
           if (tid == 0)
