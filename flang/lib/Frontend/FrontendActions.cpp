@@ -850,11 +850,14 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
 /// \param [in] tm Target machine to aid the code-gen pipeline set-up
 /// \param [in] act Backend act to run (assembly vs machine-code generation)
 /// \param [in] llvmModule LLVM module to lower to assembly/machine-code
+/// \param [in] codeGenOpts options configuring codegen pipeline
 /// \param [out] os Output stream to emit the generated code to
-static void generateMachineCodeOrAssemblyImpl(
-    clang::DiagnosticsEngine &diags, llvm::TargetMachine &tm,
-    BackendActionTy act, llvm::Module &llvmModule, llvm::raw_pwrite_stream &os,
-    const CodeGenOptions &codeGenOpts) {
+static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
+                                              llvm::TargetMachine &tm,
+                                              BackendActionTy act,
+                                              llvm::Module &llvmModule,
+                                              const CodeGenOptions &codeGenOpts,
+                                              llvm::raw_pwrite_stream &os) {
   assert(((act == BackendActionTy::Backend_EmitObj) ||
           (act == BackendActionTy::Backend_EmitAssembly)) &&
          "Unsupported action");
@@ -1232,8 +1235,8 @@ void CodeGenAction::executeAction() {
   if (action == BackendActionTy::Backend_EmitAssembly ||
       action == BackendActionTy::Backend_EmitObj) {
     generateMachineCodeOrAssemblyImpl(
-        diags, *tm, action, *llvmModule,
-        ci.isOutputStreamNull() ? *os : ci.getOutputStream(), codeGenOpts);
+        diags, *tm, action, *llvmModule, codeGenOpts,
+        ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
   }
 }
