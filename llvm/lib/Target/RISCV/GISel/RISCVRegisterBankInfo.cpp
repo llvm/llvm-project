@@ -124,6 +124,8 @@ static bool onlyUsesFP(const MachineInstr &MI) {
   case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC:
   case TargetOpcode::G_FCMP:
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
     return true;
   default:
     break;
@@ -146,6 +148,9 @@ static bool onlyDefinesFP(const MachineInstr &MI) {
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP:
+  case TargetOpcode::G_FCONSTANT:
     return true;
   default:
     break;
