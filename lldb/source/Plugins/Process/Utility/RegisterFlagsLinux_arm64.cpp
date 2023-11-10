@@ -25,6 +25,19 @@
 using namespace lldb_private;
 
 LinuxArm64RegisterFlags::Fields
+LinuxArm64RegisterFlags::DetectSVCRFields(uint64_t hwcap, uint64_t hwcap2) {
+  (void)hwcap;
+  (void)hwcap2;
+  // Represents the pseudo register that lldb-server builds, which itself
+  // matches the architectural register SCVR. The fields match SVCR in the Arm
+  // manual.
+  return {
+      {"ZA", 1},
+      {"SM", 0},
+  };
+}
+
+LinuxArm64RegisterFlags::Fields
 LinuxArm64RegisterFlags::DetectMTECtrlFields(uint64_t hwcap, uint64_t hwcap2) {
   (void)hwcap;
   (void)hwcap2;
