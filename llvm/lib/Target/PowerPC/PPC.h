@@ -103,9 +103,9 @@ class ModulePass;
     MO_NO_FLAG,
 
     /// On PPC, the 12 bits are not enough for all target operand flags.
-    /// Treat all PPC target flags as direct flags. This also means we can not
-    /// use a bitmask flag, so if one operand has two or more flags, a fake
-    /// combination flag must be created. See example MO_GOT_TPREL_PCREL_FLAG.
+    /// Treat all PPC target flags as direct flags. To define new flag, add new
+    /// enum entry instead of combining existing flags. See example
+    /// MO_GOT_TPREL_PCREL_FLAG.
 
     /// On a symbol operand "FOO", this indicates that the reference is actually
     /// to "FOO@plt".  This is used for calls and jumps to external functions

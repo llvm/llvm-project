@@ -816,9 +816,10 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // For TLS initial-exec and local-exec accesses on AIX, we have one TOC
     // entry for the symbol (with the variable offset), which is differentiated
     // by MO_TPREL_FLAG.
-    if (MO.getTargetFlags() == PPCII::MO_TPREL_FLAG ||
-        MO.getTargetFlags() == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
-        MO.getTargetFlags() == PPCII::MO_TPREL_PCREL_FLAG) {
+    unsigned Flag = MO.getTargetFlags();
+    if (Flag == PPCII::MO_TPREL_FLAG ||
+        Flag == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
+        Flag == PPCII::MO_TPREL_PCREL_FLAG) {
       assert(MO.isGlobal() && "Only expecting a global MachineOperand here!\n");
       TLSModel::Model Model = TM.getTLSModel(MO.getGlobal());
       if (Model == TLSModel::LocalExec)
@@ -830,10 +831,9 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // For GD TLS access on AIX, we have two TOC entries for the symbol (one for
     // the variable offset and the other for the region handle). They are
     // differentiated by MO_TLSGD_FLAG and MO_TLSGDM_FLAG.
-    if (MO.getTargetFlags() == PPCII::MO_TLSGDM_FLAG)
+    if (Flag == PPCII::MO_TLSGDM_FLAG)
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM;
-    if (MO.getTargetFlags() == PPCII::MO_TLSGD_FLAG ||
-        MO.getTargetFlags() == PPCII::MO_GOT_TLSGD_PCREL_FLAG)
+    if (Flag == PPCII::MO_TLSGD_FLAG || Flag == PPCII::MO_GOT_TLSGD_PCREL_FLAG)
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD;
     return MCSymbolRefExpr::VariantKind::VK_None;
   };
@@ -1527,10 +1527,10 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // The faster non-TOC-based local-exec sequence is represented by `addi`
     // with an immediate operand having the MO_TPREL_FLAG. Such an instruction
     // does not otherwise arise.
-    const MachineOperand &MO = MI->getOperand(2);
-    if (MO.getTargetFlags() == PPCII::MO_TPREL_FLAG ||
-        MO.getTargetFlags() == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
-        MO.getTargetFlags() == PPCII::MO_TPREL_PCREL_FLAG) {
+    unsigned Flag = MI->getOperand(2).getTargetFlags();
+    if (Flag == PPCII::MO_TPREL_FLAG ||
+        Flag == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
+        Flag == PPCII::MO_TPREL_PCREL_FLAG) {
       assert(
           Subtarget->hasAIXSmallLocalExecTLS() &&
           "addi with thread-pointer only expected with local-exec small TLS");
