@@ -1826,11 +1826,9 @@ bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
 // functions may need to set up a stack pointer in some situations.
 bool SIFrameLowering::requiresStackPointerReference(
     const MachineFunction &MF) const {
-  bool IsChainFunction = MF.getInfo<SIMachineFunctionInfo>()->isChainFunction();
-
   // Callable functions always require a stack pointer reference.
   assert((MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction() ||
-          IsChainFunction) &&
+          MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) &&
          "only expected to call this for entry points and chain functions");
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
