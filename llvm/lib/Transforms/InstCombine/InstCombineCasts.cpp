@@ -1159,7 +1159,9 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
       APInt AndValue(APInt::getLowBitsSet(SrcSize, MidSize));
       Constant *AndConst = ConstantInt::get(A->getType(), AndValue);
       Value *And = Builder.CreateAnd(A, AndConst, CSrc->getName() + ".mask");
-      return new ZExtInst(And, DestTy);
+      auto *ZExt = new ZExtInst(And, DestTy);
+      ZExt->setNonNeg();
+      return ZExt;
     }
 
     if (SrcSize == DstSize) {

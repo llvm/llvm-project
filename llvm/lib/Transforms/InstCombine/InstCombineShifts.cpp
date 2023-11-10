@@ -408,7 +408,8 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   // If the shift amount is a one-use `sext`, we can demote it to `zext`.
   Value *Y;
   if (match(Op1, m_OneUse(m_SExt(m_Value(Y))))) {
-    Value *NewExt = Builder.CreateZExt(Y, Ty, Op1->getName());
+    Value *NewExt =
+        Builder.CreateZExt(Y, Ty, Op1->getName(), /*IsNonNeg*/ true);
     return BinaryOperator::Create(I.getOpcode(), Op0, NewExt);
   }
 
@@ -1331,7 +1332,10 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
              "Big shift not simplified to zero?");
       // lshr (zext iM X to iN), C --> zext (lshr X, C) to iN
       Value *NewLShr = Builder.CreateLShr(X, ShAmtC);
-      return new ZExtInst(NewLShr, Ty);
+      auto *Zext = new ZExtInst(NewLShr, Ty);
+      if (ShAmtC)
+        Zext->setNonNeg();
+      return Zext;
     }
 
     if (match(Op0, m_SExt(m_Value(X)))) {
@@ -1349,7 +1353,9 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
         // zeros? lshr (sext iM X to iN), N-1 --> zext (lshr X, M-1) to iN
         if (ShAmtC == BitWidth - 1) {
           Value *NewLShr = Builder.CreateLShr(X, SrcTyBitWidth - 1);
-          return new ZExtInst(NewLShr, Ty);
+          auto *Zext = new ZExtInst(NewLShr, Ty);
+          Zext->setNonNeg();
+          return Zext;
         }
 
         // lshr (sext iM X to iN), N-M --> zext (ashr X, min(N-M, M-1)) to iN

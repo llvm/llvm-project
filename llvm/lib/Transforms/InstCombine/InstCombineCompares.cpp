@@ -5913,7 +5913,9 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
         ConstantInt *CI = cast<ConstantInt>(BO->getOperand(1));
         APInt ShortMask = CI->getValue().trunc(MulWidth);
         Value *ShortAnd = Builder.CreateAnd(Mul, ShortMask);
-        Value *Zext = Builder.CreateZExt(ShortAnd, BO->getType());
+        Value *Zext =
+            Builder.CreateZExt(ShortAnd, BO->getType(), /*Name*/ "",
+                               /*IsNonNeg*/ ShortMask.isNonNegative());
         IC.replaceInstUsesWith(*BO, Zext);
       } else {
         llvm_unreachable("Unexpected Binary operation");

@@ -481,6 +481,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         DemandedMask.getActiveBits() <= SrcBitWidth) {
       // Convert to ZExt cast.
       CastInst *NewCast = new ZExtInst(I->getOperand(0), VTy, I->getName());
+      if (InputKnown.isNonNegative())
+        NewCast->setNonNeg();
       return InsertNewInstWith(NewCast, I->getIterator());
      }
 

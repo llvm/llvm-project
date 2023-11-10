@@ -1243,7 +1243,10 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
   Value *X, *Y;
   if (match(Op, m_ZExt(m_Value(X))))
     if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
-      return IfFold([&]() { return Builder.CreateZExt(LogX, Op->getType()); });
+      return IfFold([&]() {
+        return Builder.CreateZExt(LogX, Op->getType(), /*Name*/ "",
+                                  /*IsNonNeg*/ true);
+      });
 
   // log2(X << Y) -> log2(X) + Y
   // FIXME: Require one use unless X is 1?

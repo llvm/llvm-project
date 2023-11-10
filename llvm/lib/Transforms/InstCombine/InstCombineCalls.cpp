@@ -542,7 +542,8 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     if (match(Op0, m_OneUse(m_ZExt(m_Value(X)))) && match(Op1, m_One())) {
       auto *Cttz = IC.Builder.CreateBinaryIntrinsic(Intrinsic::cttz, X,
                                                     IC.Builder.getTrue());
-      auto *ZextCttz = IC.Builder.CreateZExt(Cttz, II.getType());
+      auto *ZextCttz = IC.Builder.CreateZExt(Cttz, II.getType(), /*Name*/ "",
+                                             /*IsNonNeg*/ true);
       return IC.replaceInstUsesWith(II, ZextCttz);
     }
 
@@ -639,7 +640,10 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   // ctpop (zext X) --> zext (ctpop X)
   if (match(Op0, m_OneUse(m_ZExt(m_Value(X))))) {
     Value *NarrowPop = IC.Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, X);
-    return CastInst::Create(Instruction::ZExt, NarrowPop, Ty);
+    Instruction *Zext = CastInst::Create(Instruction::ZExt, NarrowPop, Ty);
+    if (X->getType()->getScalarSizeInBits() > 2)
+      Zext->setNonNeg();
+    return Zext;
   }
 
   KnownBits Known(BitWidth);

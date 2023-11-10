@@ -6,7 +6,7 @@
 
 define i32 @t0_shl(i32 %x, i8 %shamt) {
 ; CHECK-LABEL: @t0_shl(
-; CHECK-NEXT:    [[SHAMT_WIDE1:%.*]] = zext i8 [[SHAMT:%.*]] to i32
+; CHECK-NEXT:    [[SHAMT_WIDE1:%.*]] = zext nneg i8 [[SHAMT:%.*]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = shl i32 [[X:%.*]], [[SHAMT_WIDE1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -16,7 +16,7 @@ define i32 @t0_shl(i32 %x, i8 %shamt) {
 }
 define i32 @t1_lshr(i32 %x, i8 %shamt) {
 ; CHECK-LABEL: @t1_lshr(
-; CHECK-NEXT:    [[SHAMT_WIDE1:%.*]] = zext i8 [[SHAMT:%.*]] to i32
+; CHECK-NEXT:    [[SHAMT_WIDE1:%.*]] = zext nneg i8 [[SHAMT:%.*]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[X:%.*]], [[SHAMT_WIDE1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -26,7 +26,7 @@ define i32 @t1_lshr(i32 %x, i8 %shamt) {
 }
 define i32 @t2_ashr(i32 %x, i8 %shamt) {
 ; CHECK-LABEL: @t2_ashr(
-; CHECK-NEXT:    [[SHAMT_WIDE1:%.*]] = zext i8 [[SHAMT:%.*]] to i32
+; CHECK-NEXT:    [[SHAMT_WIDE1:%.*]] = zext nneg i8 [[SHAMT:%.*]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[X:%.*]], [[SHAMT_WIDE1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -37,7 +37,7 @@ define i32 @t2_ashr(i32 %x, i8 %shamt) {
 
 define <2 x i32> @t3_vec_shl(<2 x i32> %x, <2 x i8> %shamt) {
 ; CHECK-LABEL: @t3_vec_shl(
-; CHECK-NEXT:    [[SHAMT_WIDE1:%.*]] = zext <2 x i8> [[SHAMT:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SHAMT_WIDE1:%.*]] = zext nneg <2 x i8> [[SHAMT:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[R:%.*]] = shl <2 x i32> [[X:%.*]], [[SHAMT_WIDE1]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -47,7 +47,7 @@ define <2 x i32> @t3_vec_shl(<2 x i32> %x, <2 x i8> %shamt) {
 }
 define <2 x i32> @t4_vec_lshr(<2 x i32> %x, <2 x i8> %shamt) {
 ; CHECK-LABEL: @t4_vec_lshr(
-; CHECK-NEXT:    [[SHAMT_WIDE1:%.*]] = zext <2 x i8> [[SHAMT:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SHAMT_WIDE1:%.*]] = zext nneg <2 x i8> [[SHAMT:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i32> [[X:%.*]], [[SHAMT_WIDE1]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -57,7 +57,7 @@ define <2 x i32> @t4_vec_lshr(<2 x i32> %x, <2 x i8> %shamt) {
 }
 define <2 x i32> @t5_vec_ashr(<2 x i32> %x, <2 x i8> %shamt) {
 ; CHECK-LABEL: @t5_vec_ashr(
-; CHECK-NEXT:    [[SHAMT_WIDE1:%.*]] = zext <2 x i8> [[SHAMT:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SHAMT_WIDE1:%.*]] = zext nneg <2 x i8> [[SHAMT:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[R:%.*]] = ashr <2 x i32> [[X:%.*]], [[SHAMT_WIDE1]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
