@@ -1348,3 +1348,24 @@ func.func @warp_propagate_masked_transfer_read(%laneid: index, %src: memref<4096
 //       CHECK-PROP:   vector.transfer_read {{.*}}[%[[DIST_READ_IDX0]], %[[ARG2]]], {{.*}}, %[[R]]#1 {{.*}} vector<2x2xf32>
 //       CHECK-PROP:   %[[DIST_READ_IDX1:.+]] = affine.apply #[[$MAP1]]()[%[[ARG2]], %[[ARG0]]]
 //       CHECK-PROP:   vector.transfer_read {{.*}}[%[[C0]], %[[DIST_READ_IDX1]]], {{.*}}, %[[R]]#0 {{.*}} vector<2xf32>
+
+// -----
+
+func.func @warp_propagate_unconnected_read_write(%laneid: index, %buffer: memref<128xf32>, %f1: f32) -> (vector<2xf32>, vector<4xf32>) {
+  %f0 = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %r:2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<2xf32>, vector<4xf32>) {
+    %cst = arith.constant dense<2.0> : vector<128xf32>
+    %0 = vector.transfer_read %buffer[%c0], %f0 {in_bounds = [true]} : memref<128xf32>, vector<128xf32>
+    vector.transfer_write %cst, %buffer[%c0] : vector<128xf32>, memref<128xf32>
+    %1 = vector.broadcast %f1 : f32 to vector<64xf32>
+    vector.yield %1, %0 : vector<64xf32>, vector<128xf32>
+  }
+  return %r#0, %r#1 : vector<2xf32>, vector<4xf32>
+}
+
+// Verify that the write comes after the read
+// CHECK-DIST-AND-PROP-LABEL: func.func @warp_propagate_unconnected_read_write(
+//       CHECK-DIST-AND-PROP:   %[[CST:.+]] = arith.constant dense<2.000000e+00> : vector<4xf32>
+//       CHECK-DIST-AND-PROP:   vector.transfer_read {{.*}} : memref<128xf32>, vector<4xf32>
+//       CHECK-DIST-AND-PROP:   vector.transfer_write %[[CST]], {{.*}} : vector<4xf32>, memref<128xf32>
