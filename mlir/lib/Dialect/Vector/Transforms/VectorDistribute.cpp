@@ -850,6 +850,9 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
           newRetIndices);
       newMask = newWarpOp.getResult(newRetIndices[0]);
       distributedVal = newWarpOp.getResult(operandIndex);
+    } else {
+      // Notify the rewriter that the warp op is changing.
+      rewriter.startRootUpdate(warpOp);
     }
 
     rewriter.setInsertionPointAfter(newWarpOp);
@@ -859,9 +862,12 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
     SmallVector<Value> delinearizedIds;
     if (!delinearizeLaneId(rewriter, read.getLoc(), sequentialType.getShape(),
                            distributedType.getShape(), newWarpOp.getWarpSize(),
-                           newWarpOp.getLaneid(), delinearizedIds))
+                           newWarpOp.getLaneid(), delinearizedIds)) {
+      if (!hasMask)
+        rewriter.cancelRootUpdate(warpOp);
       return rewriter.notifyMatchFailure(
           read, "cannot delinearize lane ID for distribution");
+    }
     assert(!delinearizedIds.empty() || map.getNumResults() == 0);
 
     for (auto it : llvm::zip_equal(indexMap.getResults(), map.getResults())) {
@@ -900,15 +906,15 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
     if (!llvm::all_of(newRead->getOperands(), [&](Value value) {
           return (newRead.getMask() && value == newRead.getMask()) ||
                  newWarpOp.isDefinedOutsideOfRegion(value);
-        }))
+        })) {
+      if (!hasMask)
+        rewriter.cancelRootUpdate(warpOp);
       return failure();
+    }
 
     rewriter.replaceAllUsesWith(distributedVal, newRead);
-    if (hasMask) {
-      // Notify the rewriter that the warp op is changing.
-      rewriter.startRootUpdate(warpOp);
+    if (!hasMask)
       rewriter.finalizeRootUpdate(warpOp);
-    }
     return success();
   }
 };
@@ -1068,9 +1074,6 @@ struct WarpOpShapeCast : public OpRewritePattern<WarpExecuteOnLane0Op> {
     if (!operand)
       return failure();
 
-    // Notify the rewriter that the warp op is changing.
-    rewriter.startRootUpdate(warpOp);
-
     auto oldCastOp = operand->get().getDefiningOp<vector::ShapeCastOp>();
 
     unsigned int operandNumber = operand->getOperandNumber();
@@ -1099,7 +1102,6 @@ struct WarpOpShapeCast : public OpRewritePattern<WarpExecuteOnLane0Op> {
         oldCastOp.getLoc(), castResultType,
         newWarpOp->getResult(newRetIndices[0]));
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber), newCast);
-    rewriter.finalizeRootUpdate(warpOp);
     return success();
   }
 };
