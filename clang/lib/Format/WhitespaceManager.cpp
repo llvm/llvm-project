@@ -470,8 +470,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
            Previous >= 0 &&
            Changes[Previous].Tok->getType() == TT_PointerOrReference;
            --Previous) {
-        assert(
-            Changes[Previous].Tok->isOneOf(tok::star, tok::amp, tok::ampamp));
+        assert(Changes[Previous].Tok->isPointerOrReference());
         if (Changes[Previous].Tok->isNot(tok::star)) {
           if (ReferenceNotRightAligned)
             continue;

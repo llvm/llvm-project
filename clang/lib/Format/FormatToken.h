@@ -692,6 +692,10 @@ public:
                     TT_LeadingJavaAnnotation);
   }
 
+  bool isPointerOrReference() const {
+    return isOneOf(tok::star, tok::amp, tok::ampamp);
+  }
+
   bool isUnaryOperator() const {
     switch (Tok.getKind()) {
     case tok::plus:

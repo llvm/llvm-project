@@ -380,7 +380,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
 
   // For left qualifiers preceeded by nothing, a template declaration, or *,&,&&
   // we only perform sorting.
-  if (!TypeToken || TypeToken->isOneOf(tok::star, tok::amp, tok::ampamp) ||
+  if (!TypeToken || TypeToken->isPointerOrReference() ||
       TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration) {
 
     // Don't sort past a non-configured qualifier token.
