@@ -740,16 +740,11 @@ func.func @cannot_lower_transfer_read_with_leading_scalable(%arg0: memref<?x4xf3
 //  -----
 
 // FULL-UNROLL-LABEL: @cannot_fully_unroll_transfer_write_of_nd_scalable_vector
-func.func @cannot_fully_unroll_transfer_write_of_nd_scalable_vector(%arg0: memref<?x?xf32>) {
-  // FULL-UNROLL-NOT: vector.extract {{.*}} : vector<[4]xf32> from vector<[4]x[4]xf32>
-  // FULL-UNROLL-NOT: vector.extract {{.*}} : vector<[4]xi1> from vector<[4]x[4]xi1>
+func.func @cannot_fully_unroll_transfer_write_of_nd_scalable_vector(%vec: vector<[4]x[4]xf32>, %memref: memref<?x?xf32>) {
+  // FULL-UNROLL-NOT: vector.extract
   // FULL-UNROLL: vector.transfer_write {{.*}} : vector<[4]x[4]xf32>, memref<?x?xf32>
+  // FULL-UNROLL-NOT: vector.extract
   %c0 = arith.constant 0 : index
-  %c1 = arith.constant 1 : index
-  %v = arith.constant dense<10.0> : vector<[4]x[4]xf32>
-  %dim_a = memref.dim %arg0, %c0 : memref<?x?xf32>
-  %dim_b = memref.dim %arg0, %c1 : memref<?x?xf32>
-  %mask = vector.create_mask %dim_a, %dim_b : vector<[4]x[4]xi1>
-  vector.transfer_write %v, %arg0[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[4]x[4]xf32>, memref<?x?xf32>
+  vector.transfer_write %vec, %memref[%c0, %c0] {in_bounds = [true, true]} : vector<[4]x[4]xf32>, memref<?x?xf32>
   return
 }
