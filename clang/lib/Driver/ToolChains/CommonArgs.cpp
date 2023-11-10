@@ -611,7 +611,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const Driver &D = ToolChain.getDriver();
   bool ClosedNeeded =
     checkForAMDProprietaryOptOptions(ToolChain, D, Args, CmdArgs,
-		                     false /*isLLD*/, true /*checkOnly*/);
+                                     false /*isLLD*/, true /*checkOnly*/);
 
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
       llvm::sys::path::stem(Linker) != "ld.lld" && !ClosedNeeded &&
