@@ -21,6 +21,10 @@
 #if defined(BUILTIN) && !defined(TARGET_BUILTIN)
 #   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
+
+#if defined(BUILTIN) && !defined(LANGBUILTIN)
+#define LANGBUILTIN(ID, TYPE, ATTRS, BUILTIN_LANG) BUILTIN(ID, TYPE, ATTRS)
+#endif
 //===----------------------------------------------------------------------===//
 // SI+ only builtins.
 //===----------------------------------------------------------------------===//
@@ -498,6 +502,9 @@ TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_fp8_fp8_w64, "V4fiV2iV4fs", 
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_fp8_bf8_w64, "V4fiV2iV4fs", "nc", "gfx12-insts,wavefrontsize64")
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_bf8_fp8_w64, "V4fiV2iV4fs", "nc", "gfx12-insts,wavefrontsize64")
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w64, "V4fiV2iV4fs", "nc", "gfx12-insts,wavefrontsize64")
+// OpenCL
+LANGBUILTIN(printf, "icC*4.", "fp:0:", ALL_OCL_LANGUAGES)
 
 #undef BUILTIN
 #undef TARGET_BUILTIN
+#undef LANGBUILTIN
