@@ -925,6 +925,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
     break;
   case options::OT_ASM_ONLY:
     Conf.CGFileType = CodeGenFileType::AssemblyFile;
+    Conf.Options.MCOptions.AsmVerbose = true;
     break;
   }
 
