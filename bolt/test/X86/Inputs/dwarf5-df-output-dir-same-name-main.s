@@ -1,3 +1,7 @@
+# clang++ main.cpp -g2 -gsplit-dwarf -S -fdebug-compilation-dir=.
+# Modified assembly so that DW_AT_dwo_name has a partial path.
+# int main() { return 0; }
+
 	.text
 	.file	"main.cpp"
 	.globl	main                            # -- Begin function main
@@ -78,7 +82,7 @@ main:                                   # @main
 .Lskel_string0:
 	.asciz	"."                             # string offset=0
 .Lskel_string1:
-	.asciz	"objects/o1/split.dwo"                      # string offset=2
+	.asciz	"objects/o1/split.dwo"                      # string offset=2 <--- Manually modified.
 	.section	.debug_str_offsets,"",@progbits
 	.long	.Lskel_string0
 	.long	.Lskel_string1
@@ -96,7 +100,7 @@ main:                                   # @main
 .Linfo_string3:
 	.asciz	"main.cpp"                      # string offset=30
 .Linfo_string4:
-	.asciz	"objects/o1/split.dwo"                      # string offset=39
+	.asciz	"objects/o1/split.dwo"                      # string offset=39 <--- Manually modified.
 	.section	.debug_str_offsets.dwo,"e",@progbits
 	.long	0
 	.long	5

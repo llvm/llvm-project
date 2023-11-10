@@ -1,3 +1,6 @@
+# clang++ helper.cpp -g2 -gsplit-dwarf -S -fdebug-compilation-dir=.
+# Modified assembly so that DW_AT_dwo_name has a partial path.
+# int foo() { return 0; }
 	.text
 	.file	"helper.cpp"
 	.globl	_Z3foov                         # -- Begin function _Z3foov
