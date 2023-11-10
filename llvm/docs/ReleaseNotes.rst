@@ -241,6 +241,19 @@ Changes to LLDB
   files. For details refer to the
   `AArch64 Linux documentation <https://lldb.llvm.org/use/aarch64-linux.html>`_.
 
+* When running on AArch64 Linux, ``lldb-server`` now provides register
+  field information for the following registers: ``cpsr``, ``fpcr``,
+  ``fpsr``, ``svcr`` and ``mte_ctrl``. ::
+
+    (lldb) register read cpsr
+          cpsr = 0x80001000
+               = (N = 1, Z = 0, C = 0, V = 0, SS = 0, IL = 0, <...>
+
+  This is only available when ``lldb`` is built with XML support.
+  Where possible the CPU's capabilities are used to decide which
+  fields are present, however this is not always possible or entirely
+  accurate. If in doubt, refer to the numerical value.
+
 Changes to Sanitizers
 ---------------------
 * HWASan now defaults to detecting use-after-scope bugs.
