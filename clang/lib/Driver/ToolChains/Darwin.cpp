@@ -678,7 +678,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // to generate executables.
   if (getToolChain().getDriver().IsFlangMode()) {
     addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
-    addFortranRuntimeLibs(getToolChain(), CmdArgs);
+    addFortranRuntimeLibs(getToolChain(), Args, CmdArgs);
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
