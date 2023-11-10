@@ -448,8 +448,7 @@ bool SIFoldOperands::tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
 
     int Op32 = -1;
     if (!TII->isOperandLegal(*MI, CommuteOpNo, OpToFold)) {
-      if ((Opc != AMDGPU::V_ADD_CO_U32_e64 &&
-           Opc != AMDGPU::V_SUB_CO_U32_e64 &&
+      if ((Opc != AMDGPU::V_ADD_CO_U32_e64 && Opc != AMDGPU::V_SUB_CO_U32_e64 &&
            Opc != AMDGPU::V_SUBREV_CO_U32_e64) || // FIXME
           (!OpToFold->isImm() && !OpToFold->isFI() && !OpToFold->isGlobal())) {
         TII->commuteInstruction(*MI, false, OpNo, CommuteOpNo);
