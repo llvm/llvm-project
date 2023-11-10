@@ -424,10 +424,12 @@ void IRNormalizer::reorderInstructions(
   SmallPtrSet<const Instruction *, 32> Visited;
 
   // Walk up the tree.
-  for (auto &I : Outputs)
+  for (auto &I : Outputs) {
+    LLVM_DEBUG(dbgs() << "Reordering operands of: "; I->dump());
     for (auto &OP : I->operands())
       if (auto *IOP = dyn_cast<Instruction>(OP))
         reorderInstruction(IOP, I, Visited);
+  }
 }
 
 /// Reduces def-use distance or places instruction at the end of the basic
@@ -449,9 +451,12 @@ void IRNormalizer::reorderInstruction(
 
   if (Used->getParent() == User->getParent()) {
     // If Used and User share the same basic block move Used just before User.
+    LLVM_DEBUG(dbgs() << "\tMoved " << *Used << " before " << *User << "\n");
     Used->moveBefore(User);
   } else {
     // Otherwise move Used to the very end of its basic block.
+    LLVM_DEBUG(dbgs() << "\tMoved " << *Used << " to end of block " << 
+               Used->getParent()->getName() << "\n");
     Used->moveBefore(&Used->getParent()->back());
   }
 
