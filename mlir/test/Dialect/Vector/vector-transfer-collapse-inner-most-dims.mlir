@@ -69,6 +69,8 @@ func.func @contiguous_inner_most_dim_out_of_bounds_2d(%arg0: memref<1x1xf32>) ->
   %0 = vector.transfer_read %arg0[%c0, %c0], %cst : memref<1x1xf32>, vector<4x8xf32>
   return %0 : vector<4x8xf32>
 }
+// The inner most unit dim can not be dropped. In this context, we do not
+// generate rank-reduced memref.subview ops.
 //      CHECK: func.func @contiguous_inner_most_dim_out_of_bounds_2d
 // CHECK-SAME:   %[[SRC:[a-zA-Z0-9]+]]
 //  CHECK-NOT:   memref.subview
