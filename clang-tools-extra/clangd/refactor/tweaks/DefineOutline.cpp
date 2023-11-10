@@ -13,6 +13,7 @@
 #include "ParsedAST.h"
 #include "Selection.h"
 #include "SourceCode.h"
+#include "XRefs.h"
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
 #include "support/Path.h"
@@ -164,6 +165,14 @@ getFunctionSourceAfterReplacements(const FunctionDecl *FD,
     Source.insert(0, "inline ");
   if (!TemplatePrefix.empty())
     Source.insert(0, TemplatePrefix);
+  if (!FD->hasBody() && !FD->isExplicitlyDefaulted()) {
+    Source.pop_back(); // The semicolon finishing the declaration.
+    Source += " {";
+    if (!FD->getReturnType()->isVoidType())
+      Source += " return {}; ";
+    Source += "}";
+  }
+
   return Source;
 }
 
@@ -375,6 +384,30 @@ struct InsertionAnchor {
 // initializers.
 SourceRange getDeletionRange(const FunctionDecl *FD,
                              const syntax::TokenBuffer &TokBuf) {
+  if (!FD->hasBody()) {
+    if (!FD->isExplicitlyDefaulted())
+      return {};
+
+    auto tokens = TokBuf.expandedTokens(FD->getSourceRange());
+    for (auto It = std::rbegin(tokens); It != std::rend(tokens); ++It) {
+      if (It->kind() == tok::kw_default) {
+        const auto nextIt = std::next(It);
+        if (nextIt == std::rend(tokens))
+          return {};
+        const auto &ExpandedEquals = *nextIt;
+        if (ExpandedEquals.kind() != tok::equal)
+          return {};
+        auto SpelledEquals =
+            TokBuf.spelledForExpanded(llvm::ArrayRef(ExpandedEquals));
+        if (!SpelledEquals)
+          return {};
+        return {SpelledEquals->front().location(),
+                FD->getDefaultLoc().getLocWithOffset(1)};
+      }
+    }
+    return {};
+  }
+
   auto DeletionRange = FD->getBody()->getSourceRange();
   if (auto *CD = llvm::dyn_cast<CXXConstructorDecl>(FD)) {
     // AST doesn't contain the location for ":" in ctor initializers. Therefore
@@ -432,19 +465,32 @@ public:
     return CodeAction::REFACTOR_KIND;
   }
   std::string title() const override {
-    return "Move function body to out-of-line";
+    if (Source->doesThisDeclarationHaveABody())
+      return "Move function body to out-of-line";
+    return "Create function body out-of-line";
   }
 
   bool prepare(const Selection &Sel) override {
     SameFile = !isHeaderFile(Sel.AST->tuPath(), Sel.AST->getLangOpts());
     Source = getSelectedFunction(Sel.ASTSelection.commonAncestor());
 
-    // Bail out if the selection is not a in-line function definition.
-    if (!Source || !Source->doesThisDeclarationHaveABody() ||
-        Source->isOutOfLine())
+    // Bail out if the selection is not a function declaration.
+    if (!Source || Source->isDeleted() || Source->isOutOfLine())
       return false;
 
-    // Bail out if this is a function template specialization, as their
+    // Bail out if a definition exists somewhere else.
+    if (!Source->hasBody() && !Source->isExplicitlyDefaulted() && Sel.Index) {
+      bool HasDefinition = false;
+      Sel.Index->lookup({{getSymbolID(Source)}},
+                        [&HasDefinition](const Symbol &S) {
+                          if (S.Definition)
+                            HasDefinition = true;
+                        });
+      if (HasDefinition)
+        return false;
+    }
+
+    // Bail out if this is a function template or specialization, as their
     // definitions need to be visible in all including translation units.
     if (Source->getTemplateSpecializationInfo())
       return false;
@@ -574,12 +620,17 @@ public:
     if (!Effect)
       return Effect.takeError();
 
-    tooling::Replacements HeaderUpdates(tooling::Replacement(
-        Sel.AST->getSourceManager(),
-        CharSourceRange::getTokenRange(*toHalfOpenFileRange(
-            SM, Sel.AST->getLangOpts(),
-            getDeletionRange(Source, Sel.AST->getTokens()))),
-        ";"));
+    tooling::Replacements HeaderUpdates;
+    auto DeletionRange = getDeletionRange(Source, Sel.AST->getTokens());
+    if (DeletionRange.isValid()) {
+      if (auto Error = HeaderUpdates.add(tooling::Replacement(
+              Sel.AST->getSourceManager(),
+              CharSourceRange::getTokenRange(*toHalfOpenFileRange(
+                  SM, Sel.AST->getLangOpts(), DeletionRange)),
+              ";"))) {
+        return Error;
+      }
+    }
 
     if (Source->isInlineSpecified()) {
       auto DelInline =
