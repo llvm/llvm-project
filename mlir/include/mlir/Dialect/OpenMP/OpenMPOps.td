@@ -544,7 +544,7 @@ def CanonicalLoopOp : OpenMP_Op<"canonical_loop", [SingleBlockImplicitTerminator
           %outer = omp.new_cli : !omp.cli
           %inner = omp.new_cli : !omp.cli
           omp.canonical_loop %iv1 : i32 in [0, %tripcount), %outer : !omp.cli {
-            %inner = omp.canonical_loop %iv2 : i32 in [0, %tc), %inner : !omp.cli {
+            omp.canonical_loop %iv2 : i32 in [0, %tc), %inner : !omp.cli {
               %a = load %arrA[%iv1, %iv2] : memref<?x?xf32>
               store %a, %arrB[%iv1, %iv2] : memref<?x?xf32>
             }
