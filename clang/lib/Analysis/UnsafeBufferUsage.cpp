@@ -1036,7 +1036,7 @@ private:
       "PointerAddAssignUnderUUC";
   static constexpr const char *const IntOffsetTag = "IntOffset";
   static constexpr const char *const OffsetTag = "Offset";
-  
+
   const BinaryOperator *Node; // the `Ptr += n` node
   const IntegerLiteral *IntOffset = nullptr;
   const DeclRefExpr *Offset = nullptr;
@@ -1838,7 +1838,7 @@ UUCAddAssignGadget::getFixits(const Strategy &S) const {
       } else {
         SubSpanOffset = Offset->getDecl()->getName().str();
       }
-      
+
       // To transform UUC(p += n) to UUC(p = p.subspan(..)):
       SS << varName.data() << " = " << varName.data() << ".subspan("
          << SubSpanOffset << ")";
