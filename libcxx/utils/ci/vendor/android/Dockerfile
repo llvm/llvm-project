@@ -7,13 +7,13 @@
 #===----------------------------------------------------------------------===##
 
 #
-# This Dockerfile extends ldionne/libcxx-builder with Android support, including
+# This Dockerfile extends ghcr.io/libcxx/libcxx-builder with Android support, including
 # Android Clang and sysroot, Android platform-tools, and the Docker client.
 #
 #   $ docker build -t libcxx-builder-android libcxx/utils/ci/vendor/android
 #
 
-FROM ldionne/libcxx-builder
+FROM ghcr.io/libcxx/libcxx-builder
 
 # Switch back to the root user to install things into /opt and /usr.
 USER root
