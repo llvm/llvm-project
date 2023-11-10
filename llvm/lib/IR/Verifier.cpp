@@ -1016,6 +1016,9 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
   }
 
   // Check these last, so we diagnose problems in operands first.
+  if (isa<DIArgList>(&MD))
+    // These remain tracked throughout compilation.
+    return;
   Check(!MD.isTemporary(), "Expected no forward declarations!", &MD);
   Check(MD.isResolved(), "All nodes should be resolved!", &MD);
 }

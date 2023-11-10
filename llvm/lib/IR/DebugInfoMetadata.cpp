@@ -2110,6 +2110,8 @@ DIMacroFile *DIMacroFile::getImpl(LLVMContext &Context, unsigned MIType,
 DIArgList *DIArgList::getImpl(LLVMContext &Context,
                               ArrayRef<ValueAsMetadata *> Args,
                               StorageType Storage, bool ShouldCreate) {
+  if (Storage == Uniqued)
+    Storage = Temporary;
   DEFINE_GETIMPL_LOOKUP(DIArgList, (Args));
   DEFINE_GETIMPL_STORE_NO_OPS(DIArgList, (Args));
 }
