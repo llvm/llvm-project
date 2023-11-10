@@ -89,7 +89,6 @@ libcxx/include/array
 libcxx/include/__atomic/atomic_base.h
 libcxx/include/__atomic/atomic_flag.h
 libcxx/include/__atomic/atomic.h
-libcxx/include/__atomic/atomic_init.h
 libcxx/include/__atomic/atomic_lock_free.h
 libcxx/include/__atomic/atomic_sync.h
 libcxx/include/__atomic/check_memory_order.h

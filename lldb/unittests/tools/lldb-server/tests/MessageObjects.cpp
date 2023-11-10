@@ -76,8 +76,12 @@ JThreadsInfo::parseRegisters(const StructuredData::Dictionary &Dict,
   auto KeysObj = Dict.GetKeys();
   auto Keys = KeysObj->GetAsArray();
   for (size_t i = 0; i < Keys->GetSize(); i++) {
-    StringRef KeyStr, ValueStr;
-    Keys->GetItemAtIndexAsString(i, KeyStr);
+    std::optional<StringRef> MaybeKeyStr = Keys->GetItemAtIndexAsString(i);
+    if (!MaybeKeyStr)
+      return make_parsing_error("JThreadsInfo: Invalid Key at index {0}", i);
+
+    StringRef KeyStr = *MaybeKeyStr;
+    StringRef ValueStr;
     Dict.GetValueForKeyAsString(KeyStr, ValueStr);
     unsigned int Register;
     if (!llvm::to_integer(KeyStr, Register, 10))

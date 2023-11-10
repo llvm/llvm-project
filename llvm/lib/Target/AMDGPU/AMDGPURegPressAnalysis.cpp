@@ -51,7 +51,7 @@ bool AMDGPURegPressAnalysis::runOnMachineFunction(MachineFunction &MF) {
       for (auto &MI : reverse(MBB))
         RPT.recede(MI);
 
-      BBMaxPressure = RPT.moveMaxPressure();
+      BBMaxPressure = RPT.getMaxPressureAndReset();
     }
 
     BlockPressure[&MBB] = BBMaxPressure;
