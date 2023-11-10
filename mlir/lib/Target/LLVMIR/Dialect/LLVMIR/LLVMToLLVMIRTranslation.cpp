@@ -180,9 +180,9 @@ static void convertLinkerOptionsOp(ArrayAttr options,
   llvm::NamedMDNode *linkerMDNode =
       llvmModule->getOrInsertNamedMetadata("llvm.linker.options");
   SmallVector<llvm::Metadata *> MDNodes;
-  for (auto s : options) {
-    auto str = cast<StringAttr>(s);
-    auto *MDNode = llvm::MDString::get(context, str.getValue());
+  MDNodes.reserve(options.size());
+  for (auto s : options.getAsRange<StringAttr>()) {
+    auto *MDNode = llvm::MDString::get(context, s.getValue());
     MDNodes.push_back(MDNode);
   }
 

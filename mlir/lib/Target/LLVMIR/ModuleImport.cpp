@@ -494,9 +494,9 @@ LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
     // llvm.linker.options operands are lists of strings.
     for (const llvm::MDNode *md : named.operands()) {
       SmallVector<StringRef> options;
-      for (const llvm::MDOperand &option : md->operands()) {
+      options.reserve(md->getNumOperands());
+      for (const llvm::MDOperand &option : md->operands())
         options.push_back(cast<llvm::MDString>(option)->getString());
-      }
       builder.create<LLVM::LinkerOptionsOp>(mlirModule.getLoc(),
                                             builder.getStrArrayAttr(options));
     }
