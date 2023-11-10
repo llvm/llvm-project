@@ -18,6 +18,7 @@
 #include "flang/Lower/ConvertConstant.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
+#include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
@@ -479,21 +480,6 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   if (global && globalIsInitialized(global))
     return global;
 
-  if (Fortran::semantics::IsProcedurePointer(sym)) {
-    auto boxProcTy{Fortran::lower::getUntypedBoxProcType(builder.getContext())};
-    global = builder.createGlobal(loc, boxProcTy, globalName, linkage,
-                                  mlir::Attribute{}, isConst, var.isTarget());
-    Fortran::lower::createGlobalInitialization(
-        builder, global, [&](fir::FirOpBuilder &builder) {
-          mlir::Value initVal{builder.create<fir::ZeroOp>(loc, symTy)};
-          auto emBoxVal{
-              builder.create<fir::EmboxProcOp>(loc, boxProcTy, initVal)};
-          builder.create<fir::HasValueOp>(loc, emBoxVal);
-        });
-    global.setVisibility(mlir::SymbolTable::Visibility::Public);
-    return global;
-  }
-
   // If this is an array, check to see if we can use a dense attribute
   // with a tensor mlir type. This optimization currently only supports
   // Fortran arrays of integer, real, complex, or logical. The tensor
@@ -516,10 +502,19 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
       }
     }
   }
-  if (!global)
-    global = builder.createGlobal(loc, symTy, globalName, linkage,
-                                  mlir::Attribute{}, isConst, var.isTarget());
-  if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
+  if (!global) {
+    if (Fortran::semantics::IsProcedurePointer(sym)) {
+      auto nullBoxProcTy{
+          Fortran::lower::getUntypedBoxProcType(builder.getContext())};
+      global = builder.createGlobal(loc, nullBoxProcTy, globalName, linkage,
+                                    mlir::Attribute{}, isConst, var.isTarget());
+    } else {
+      global = builder.createGlobal(loc, symTy, globalName, linkage,
+                                    mlir::Attribute{}, isConst, var.isTarget());
+    }
+  }
+  if (Fortran::semantics::IsAllocatableOrPointer(sym) &&
+      !Fortran::semantics::IsProcedure(sym)) {
     const auto *details =
         sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
     if (details && details->init()) {
@@ -539,7 +534,6 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
             b.create<fir::HasValueOp>(loc, box);
           });
     }
-
   } else if (const auto *details =
                  sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
     if (details->init()) {
@@ -564,10 +558,38 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
             builder.create<fir::HasValueOp>(loc, castTo);
           });
     }
+  } else if (Fortran::semantics::IsProcedurePointer(sym)) {
+    const auto *details{sym.detailsIf<Fortran::semantics::ProcEntityDetails>()};
+    if (details && details->init()) {
+      auto sym{*details->init()};
+      if (sym) // Has a procedure target.
+        Fortran::lower::createGlobalInitialization(
+            builder, global, [&](fir::FirOpBuilder &b) {
+              Fortran::lower::StatementContext stmtCtx(
+                  /*cleanupProhibited=*/true);
+              auto box{Fortran::lower::convertProcedureDesignatorToAddress(
+                  converter, loc, symTy, stmtCtx, sym)};
+              b.create<fir::HasValueOp>(loc, box);
+            });
+      else { // Has NULL() target.
+        Fortran::lower::createGlobalInitialization(
+            builder, global, [&](fir::FirOpBuilder &b) {
+              auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
+              b.create<fir::HasValueOp>(loc, box);
+            });
+      }
+    } else {
+      // No initialization.
+      Fortran::lower::createGlobalInitialization(
+          builder, global, [&](fir::FirOpBuilder &b) {
+            auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
+            b.create<fir::HasValueOp>(loc, box);
+          });
+    }
   } else if (sym.has<Fortran::semantics::CommonBlockDetails>()) {
     mlir::emitError(loc, "COMMON symbol processed elsewhere");
   } else {
-    TODO(loc, "global"); // Procedure pointer or something else
+    TODO(loc, "global"); // Something else
   }
   // Creates zero initializer for globals without initializers, this is a common
   // and expected behavior (although not required by the standard)
@@ -663,12 +685,9 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
     return builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg);
 
   // Local procedure pointer.
-  auto boxProcTy{Fortran::lower::getUntypedBoxProcType(builder.getContext())};
-  auto res{builder.allocateLocal(loc, boxProcTy, nm, symNm, shape, lenParams,
-                                 isTarg)};
-  mlir::Value initVal{builder.create<fir::ZeroOp>(loc, ty)};
-  auto emBoxVal{builder.create<fir::EmboxProcOp>(loc, boxProcTy, initVal)};
-  builder.create<fir::StoreOp>(loc, emBoxVal, res);
+  auto res{builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg)};
+  auto box{fir::factory::createNullBoxProc(builder, loc, ty)};
+  builder.create<fir::StoreOp>(loc, box, res);
   return res;
 }
 

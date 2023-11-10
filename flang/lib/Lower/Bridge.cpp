@@ -3242,10 +3242,20 @@ private:
       const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
     Fortran::lower::StatementContext stmtCtx;
 
-    if (Fortran::evaluate::IsProcedure(assign.rhs)) {
-      auto lhs{fir::getBase(genExprAddr(assign.lhs, stmtCtx, &loc))};
-      auto rhs{fir::getBase(genExprAddr(assign.rhs, stmtCtx, &loc))};
-      builder->create<fir::StoreOp>(loc, rhs, lhs);
+    if (Fortran::evaluate::IsProcedurePointerTarget(assign.rhs)) {
+      hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
+          loc, *this, assign.lhs, localSymbols, stmtCtx);
+      if (Fortran::evaluate::IsNullProcedurePointer(assign.rhs)) {
+        auto boxTy{Fortran::lower::getUntypedBoxProcType(&getMLIRContext())};
+        hlfir::Entity rhs(
+            fir::factory::createNullBoxProc(*builder, loc, boxTy));
+        builder->createStoreWithConvert(loc, rhs, lhs);
+        return;
+      }
+      hlfir::Entity rhs(getBase(Fortran::lower::convertExprToAddress(
+          loc, *this, assign.rhs, localSymbols, stmtCtx)));
+      rhs = hlfir::derefPointersAndAllocatables(loc, *builder, rhs);
+      builder->createStoreWithConvert(loc, rhs, lhs);
       return;
     }
 

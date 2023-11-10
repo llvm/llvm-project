@@ -11,6 +11,7 @@
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ConvertCall.h"
+#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
@@ -128,4 +129,16 @@ hlfir::EntityWithAttributes Fortran::lower::convertProcedureDesignatorToHLFIR(
       },
       [funcAddr](const auto &) { return funcAddr; });
   return hlfir::EntityWithAttributes{res};
+}
+
+mlir::Value Fortran::lower::convertProcedureDesignatorToAddress(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    mlir::Type boxType, Fortran::lower::StatementContext &stmtCtx,
+    const Fortran::semantics::Symbol *sym) {
+  Fortran::lower::SymMap globalOpSymMap;
+  Fortran::evaluate::ProcedureDesignator proc(*sym);
+  auto procVal{Fortran::lower::convertProcedureDesignatorToHLFIR(
+      loc, converter, proc, globalOpSymMap, stmtCtx)};
+  return fir::getBase(Fortran::lower::convertToAddress(
+      loc, converter, procVal, stmtCtx, procVal.getType()));
 }

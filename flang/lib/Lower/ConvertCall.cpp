@@ -165,10 +165,8 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   // will be used only if there is no explicit length in the local interface).
   mlir::Value funcPointer;
   mlir::Value charFuncPointerLength;
-  bool isProcPtr = false;
   if (const Fortran::semantics::Symbol *sym =
           caller.getIfIndirectCallSymbol()) {
-    isProcPtr = Fortran::semantics::IsProcedurePointer(sym);
     funcPointer = fir::getBase(converter.getSymbolExtendedValue(*sym, &symMap));
     if (!funcPointer)
       fir::emitFatalError(loc, "failed to find indirect call symbol address");
@@ -177,6 +175,9 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
       std::tie(funcPointer, charFuncPointerLength) =
           fir::factory::extractCharacterProcedureTuple(builder, loc,
                                                        funcPointer);
+    // RHS is a procedure pointer. Load its value.
+    if (Fortran::semantics::IsProcedurePointer(sym))
+      funcPointer = builder.create<fir::LoadOp>(loc, funcPointer);
   }
 
   mlir::IndexType idxTy = builder.getIndexType();
@@ -327,16 +328,10 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   // compatible interface in Fortran, but that have different signatures in
   // FIR.
   if (funcPointer) {
-    if (isProcPtr) {
-      funcPointer = builder.create<fir::LoadOp>(loc, funcPointer);
-      auto boxProcTy{fir::BoxProcType::get(builder.getContext(), funcType)};
-      auto func{builder.createConvert(loc, boxProcTy, funcPointer)};
-      operands.push_back(builder.create<fir::BoxAddrOp>(loc, funcType, func));
-    } else
-      operands.push_back(
-          funcPointer.getType().isa<fir::BoxProcType>()
-              ? builder.create<fir::BoxAddrOp>(loc, funcType, funcPointer)
-              : builder.createConvert(loc, funcType, funcPointer));
+    operands.push_back(
+        funcPointer.getType().isa<fir::BoxProcType>()
+            ? builder.create<fir::BoxAddrOp>(loc, funcType, funcPointer)
+            : builder.createConvert(loc, funcType, funcPointer));
   }
 
   // Deal with potential mismatches in arguments types. Passing an array to a
@@ -879,19 +874,9 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   hlfir::Entity actual = preparedActual.getActual(loc, builder);
 
   // Handles the procedure pointer actual/dummy arguments.
-  // It could have a combination of
-  //     acutal             dummy
-  // 2.  procedure pointer  procedure pointer
-  // 3.  procedure pointer  procedure
-  // 4.  procedure          procedure pointer
-  if (hlfir::isBoxProcAddressType(actual.getType()) ||
-      hlfir::isBoxProcAddressType(dummyType)) {
-    if (actual.getType() != dummyType &&
-        hlfir::isBoxProcAddressType(actual.getType())) {
-      auto baseAddr{actual.getFirBase()};
-      actual = hlfir::Entity{builder.create<fir::LoadOp>(loc, baseAddr)};
-    }
+  if (actual.isProcedurePointer() || hlfir::isBoxProcAddressType(dummyType)) {
     return PreparedDummyArgument{actual, /*cleanups=*/{}};
+    // TODO {loc, "procedure to procedure pointer argument passing");
   }
 
   // Do nothing if this is a procedure argument. It is already a

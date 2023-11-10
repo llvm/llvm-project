@@ -251,7 +251,8 @@ struct TypeBuilderImpl {
 
     if (Fortran::semantics::IsProcedurePointer(ultimate)) {
       Fortran::evaluate::ProcedureDesignator proc(ultimate);
-      return Fortran::lower::translateSignature(proc, converter);
+      auto procTy{Fortran::lower::translateSignature(proc, converter)};
+      return fir::BoxProcType::get(context, procTy);
     }
 
     if (const Fortran::semantics::DeclTypeSpec *type = ultimate.GetType()) {

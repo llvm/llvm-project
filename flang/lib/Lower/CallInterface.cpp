@@ -23,6 +23,10 @@
 #include "flang/Semantics/tools.h"
 #include <optional>
 
+static mlir::FunctionType
+getProcedureType(const Fortran::evaluate::characteristics::Procedure &proc,
+                 Fortran::lower::AbstractConverter &converter);
+
 mlir::Type Fortran::lower::getUntypedBoxProcType(mlir::MLIRContext *context) {
   llvm::SmallVector<mlir::Type> resultTys;
   llvm::SmallVector<mlir::Type> inputTys;
@@ -1059,10 +1063,10 @@ private:
         proc.procedure.value();
     mlir::Type funcType =
         getProcedureDesignatorType(&procedure, interface.converter);
-    if (proc.attrs.test(Fortran::evaluate::characteristics::DummyProcedure::
-                            Attr::Pointer)) {
+    if (proc.attrs.test(
+            Fortran::evaluate::characteristics::DummyProcedure::Attr::Pointer))
       funcType = fir::ReferenceType::get(funcType);
-    } else { // Otherwise, it is a dummy procedure.
+    else { // Otherwise, it is a dummy procedure.
       std::optional<Fortran::evaluate::DynamicType> resultTy =
           getResultDynamicType(procedure);
       if (resultTy && mustPassLengthWithDummyProcedure(procedure)) {
@@ -1089,37 +1093,40 @@ private:
   void handleExplicitResult(
       const Fortran::evaluate::characteristics::FunctionResult &result) {
     using Attr = Fortran::evaluate::characteristics::FunctionResult::Attr;
+    mlir::Type mlirType;
+    if (auto proc{result.IsProcedurePointer()})
+      mlirType = fir::BoxProcType::get(
+          &mlirContext, getProcedureType(*proc, interface.converter));
+    else {
+      const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
+          result.GetTypeAndShape();
+      assert(typeAndShape && "expect type for non proc pointer result");
+      mlirType = translateDynamicType(typeAndShape->type());
+      fir::SequenceType::Shape bounds = getBounds(typeAndShape->shape());
+      const auto *resTypeAndShape{result.GetTypeAndShape()};
+      bool resIsPolymorphic =
+          resTypeAndShape && resTypeAndShape->type().IsPolymorphic();
+      bool resIsAssumedType =
+          resTypeAndShape && resTypeAndShape->type().IsAssumedType();
+      if (!bounds.empty())
+        mlirType = fir::SequenceType::get(bounds, mlirType);
+      if (result.attrs.test(Attr::Allocatable))
+        mlirType = fir::wrapInClassOrBoxType(
+            fir::HeapType::get(mlirType), resIsPolymorphic, resIsAssumedType);
+      if (result.attrs.test(Attr::Pointer))
+        mlirType =
+            fir::wrapInClassOrBoxType(fir::PointerType::get(mlirType),
+                                      resIsPolymorphic, resIsAssumedType);
 
-    if (result.IsProcedurePointer())
-      TODO(interface.converter.getCurrentLocation(),
-           "procedure pointer results");
-    const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
-        result.GetTypeAndShape();
-    assert(typeAndShape && "expect type for non proc pointer result");
-    mlir::Type mlirType = translateDynamicType(typeAndShape->type());
-    fir::SequenceType::Shape bounds = getBounds(typeAndShape->shape());
-    const auto *resTypeAndShape{result.GetTypeAndShape()};
-    bool resIsPolymorphic =
-        resTypeAndShape && resTypeAndShape->type().IsPolymorphic();
-    bool resIsAssumedType =
-        resTypeAndShape && resTypeAndShape->type().IsAssumedType();
-    if (!bounds.empty())
-      mlirType = fir::SequenceType::get(bounds, mlirType);
-    if (result.attrs.test(Attr::Allocatable))
-      mlirType = fir::wrapInClassOrBoxType(fir::HeapType::get(mlirType),
-                                           resIsPolymorphic, resIsAssumedType);
-    if (result.attrs.test(Attr::Pointer))
-      mlirType = fir::wrapInClassOrBoxType(fir::PointerType::get(mlirType),
-                                           resIsPolymorphic, resIsAssumedType);
-
-    if (fir::isa_char(mlirType)) {
-      // Character scalar results must be passed as arguments in lowering so
-      // that an assumed length character function callee can access the result
-      // length. A function with a result requiring an explicit interface does
-      // not have to be compatible with assumed length function, but most
-      // compilers supports it.
-      handleImplicitCharacterResult(typeAndShape->type());
-      return;
+      if (fir::isa_char(mlirType)) {
+        // Character scalar results must be passed as arguments in lowering so
+        // that an assumed length character function callee can access the
+        // result length. A function with a result requiring an explicit
+        // interface does not have to be compatible with assumed length
+        // function, but most compilers supports it.
+        handleImplicitCharacterResult(typeAndShape->type());
+        return;
+      }
     }
 
     addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
@@ -1535,4 +1542,11 @@ mlir::Type Fortran::lower::getDummyProcedureType(
 bool Fortran::lower::isCPtrArgByValueType(mlir::Type ty) {
   return ty.isa<fir::ReferenceType>() &&
          fir::isa_integer(fir::unwrapRefType(ty));
+}
+
+// Return the mlir::FunctionType of a procedure
+static mlir::FunctionType
+getProcedureType(const Fortran::evaluate::characteristics::Procedure &proc,
+                 Fortran::lower::AbstractConverter &converter) {
+  return SignatureBuilder{proc, converter, false}.genFunctionType();
 }
