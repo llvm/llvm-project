@@ -230,6 +230,10 @@ what to add to your calendar invite.
      - Every 2nd Tuesday of the month
      - `gcal <https://calendar.google.com/calendar/u/0?cid=ZDcyMjc0ZjZiZjNhMzFlYmE3NTNkMWM2MGM2NjM5ZWU3ZDE2MjM4MGFlZDc2ZjViY2UyYzMwNzVhZjk4MzQ4ZEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1Ry8O4-Tm5BFj9AMjr8qTQFU80z-ptiNQ62687NaIvLs/edit?usp=sharing>`__
+   * - Floating Point Working Group
+     - Every 3rd Wednesday of the month
+     - `gcal <https://www.google.com/calendar/event?eid=XzYwcTMwYzFnNjBvMzBlMWk2MG80YWMxZzYwcmo4Z3BsODhyajJjMWg4NHMzNGg5ZzYwczMwYzFnNjBvMzBjMWc3MG8zMmgxZzZsMzNlY2kyNjRwazhnOWc2NG8zMGMxZzYwbzMwYzFnNjBvMzBjMWc2MG8zMmMxZzYwbzMwYzFnNnAyajRkOWk4Z3BqNmNwaTc1MmpjY2hrNjRzazRoMjU2MTBqYWQyMThrbzMyZGk2OGNzMF8yMDIzMTExNVQyMTAwMDBaIGNhbGVuZGFyQGxsdm0ub3Jn&ctz=UTC>`__
+     - `Meeting details/agenda: TBD
 
 .. _office-hours:
 
