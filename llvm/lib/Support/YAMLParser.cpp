@@ -2107,14 +2107,13 @@ StringRef ScalarNode::unescapeDoubleQuoted( StringRef UnquotedValue
           return "";
         }
       case '\r':
+        // Shrink the Windows-style EOL.
+        if (UnquotedValue.size() >= 2 && UnquotedValue[1] == '\n')
+          UnquotedValue = UnquotedValue.drop_front(1);
+        [[fallthrough]];
       case '\n':
-        // Remove the new line.
-        if (   UnquotedValue.size() > 1
-            && (UnquotedValue[1] == '\r' || UnquotedValue[1] == '\n'))
-          UnquotedValue = UnquotedValue.substr(1);
-        // If this was just a single byte newline, it will get skipped
-        // below.
-        break;
+        UnquotedValue = UnquotedValue.drop_front(1).ltrim(" \t");
+        continue;
       case '0':
         Storage.push_back(0x00);
         break;
