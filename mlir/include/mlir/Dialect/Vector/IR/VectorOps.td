@@ -2276,6 +2276,16 @@ def Vector_ConstantMaskOp :
     ```
   }];
 
+  let extraClassDeclaration = [{
+    /// Return the result type of this op.
+    VectorType getVectorType() {
+      return cast<VectorType>(getOperation()->getResultTypes()[0]);
+    }
+
+    /// Return whether the mask is a uniform vector of `1`s.
+    bool isFullMask();
+  }];
+
   let assemblyFormat = "$mask_dim_sizes attr-dict `:` type(results)";
   let hasVerifier = 1;
 }
