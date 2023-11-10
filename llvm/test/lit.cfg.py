@@ -607,34 +607,6 @@ if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add("use_msan_with_origins")
 
 
-def exclude_unsupported_files_for_aix(dirname):
-    for filename in os.listdir(dirname):
-        source_path = os.path.join(dirname, filename)
-        if os.path.isdir(source_path):
-            continue
-        f = open(source_path, "r")
-        try:
-            data = f.read()
-            # 64-bit object files are not supported on AIX, so exclude the tests.
-            if (
-                "-emit-obj" in data or "-filetype=obj" in data
-            ) and "64" in config.target_triple:
-                config.excludes += [filename]
-        finally:
-            f.close()
-
-
-if "aix" in config.target_triple:
-    for directory in (
-        "/CodeGen/X86",
-        "/DebugInfo",
-        "/DebugInfo/X86",
-        "/DebugInfo/Generic",
-        "/LTO/X86",
-        "/Linker",
-    ):
-        exclude_unsupported_files_for_aix(config.test_source_root + directory)
-
 # Restrict the size of the on-disk CAS for tests. This allows testing in
 # constrained environments (e.g. small TMPDIR). It also prevents leaving
 # behind large files on file systems that do not support sparse files if a test
