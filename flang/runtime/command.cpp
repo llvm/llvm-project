@@ -13,8 +13,24 @@
 #include "tools.h"
 #include "flang/Runtime/descriptor.h"
 #include <cstdlib>
+#include <ctime>
 #include <limits>
-#include <time.h>
+
+#ifdef _WIN32
+inline const char *ctime_alloc(
+    char *buffer, size_t bufsize, const time_t cur_time) {
+  int error = ctime_s(buffer, bufsize, &cur_time);
+  assert(error == 0 && "ctime_s returned an error");
+  return buffer;
+}
+#else
+inline const char *ctime_alloc(
+    char *buffer, size_t bufsize, const time_t cur_time) {
+  const char *res = ctime_r(&cur_time, buffer);
+  assert(res != nullptr && "ctime_s returned an error");
+  return res;
+}
+#endif
 
 namespace Fortran::runtime {
 std::int32_t RTNAME(ArgumentCount)() {
@@ -127,8 +143,8 @@ static bool FitsInDescriptor(
 }
 
 void removeNewLine(char *str) {
-  char *newlinePos = strchr(str, '\n');
-  if (newlinePos != NULL) {
+  char *newlinePos = std::strchr(str, '\n');
+  if (newlinePos) {
     *newlinePos = '\0'; // Replace with null terminator
   }
 }
@@ -136,18 +152,21 @@ void removeNewLine(char *str) {
 std::int32_t RTNAME(FDate)(const Descriptor *value, const Descriptor *errmsg) {
   FillWithSpaces(*value);
 
-  time_t current_time;
-  time(&current_time);
+  std::time_t current_time;
+  std::time(&current_time);
+  std::array<char, 26> str;
+  // Day Mon dd hh:mm:ss yyyy\n is 26 character,
+  // e.g. Tue May 26 21:51:03 2015\n\0
 
-  char *time_string = ctime(&current_time);
-  removeNewLine(time_string);
-  std::int64_t stringLen{StringLength(time_string)};
+  ctime_alloc(str.data(), str.size(), current_time);
+  removeNewLine(str.data());
+  std::int64_t stringLen{StringLength(str.data())};
   if (stringLen <= 0) {
     return ToErrmsg(errmsg, StatMissingArgument);
   }
 
   if (value) {
-    return CopyToDescriptor(*value, time_string, stringLen, errmsg);
+    return CopyToDescriptor(*value, str.data(), stringLen, errmsg);
   }
 
   return StatOk;
