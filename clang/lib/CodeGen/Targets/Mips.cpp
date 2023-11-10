@@ -105,6 +105,23 @@ public:
     return SizeOfUnwindException;
   }
 };
+
+class WindowsMIPSTargetCodeGenInfo : public MIPSTargetCodeGenInfo {
+public:
+  WindowsMIPSTargetCodeGenInfo(CodeGenTypes &CGT, bool IsO32)
+      : MIPSTargetCodeGenInfo(CGT, IsO32) {}
+
+  void getDependentLibraryOption(llvm::StringRef Lib,
+                                 llvm::SmallString<24> &Opt) const override {
+    Opt = "/DEFAULTLIB:";
+    Opt += qualifyWindowsLibrary(Lib);
+  }
+
+  void getDetectMismatchOption(llvm::StringRef Name, llvm::StringRef Value,
+                               llvm::SmallString<32> &Opt) const override {
+    Opt = "/FAILIFMISMATCH:\"" + Name.str() + "=" + Value.str() + "\"";
+  }
+};
 }
 
 void MipsABIInfo::CoerceToIntArgs(
@@ -435,4 +452,9 @@ MIPSTargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createMIPSTargetCodeGenInfo(CodeGenModule &CGM, bool IsOS32) {
   return std::make_unique<MIPSTargetCodeGenInfo>(CGM.getTypes(), IsOS32);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createWindowsMIPSTargetCodeGenInfo(CodeGenModule &CGM, bool IsOS32) {
+  return std::make_unique<WindowsMIPSTargetCodeGenInfo>(CGM.getTypes(), IsOS32);
 }
