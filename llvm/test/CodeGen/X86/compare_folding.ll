@@ -5,7 +5,7 @@ declare i1 @llvm.isunordered.f64(double, double)
 define i1 @test1(double %X, double %Y) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; CHECK-NEXT:    setp %al
 ; CHECK-NEXT:    retl

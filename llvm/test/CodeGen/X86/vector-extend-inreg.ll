@@ -13,7 +13,7 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X86-SSE-NEXT:    subl $272, %esp # imm = 0x110
 ; X86-SSE-NEXT:    movl 88(%ebp), %ecx
 ; X86-SSE-NEXT:    movdqa 72(%ebp), %xmm0
-; X86-SSE-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; X86-SSE-NEXT:    psrldq {{[^#]+#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-SSE-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
@@ -45,7 +45,7 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    pushq %rax
 ; X64-SSE-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-SSE-NEXT:    psrldq {{.*#+}} xmm7 = xmm7[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; X64-SSE-NEXT:    psrldq {{[^#]+#+}} xmm7 = xmm7[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
 ; X64-SSE-NEXT:    xorps %xmm0, %xmm0
 ; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
@@ -67,7 +67,7 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X86-AVX-NEXT:    andl $-32, %esp
 ; X86-AVX-NEXT:    subl $288, %esp # imm = 0x120
 ; X86-AVX-NEXT:    movl 40(%ebp), %ecx
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
@@ -95,8 +95,8 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X64-AVX-NEXT:    andq $-32, %rsp
 ; X64-AVX-NEXT:    subq $160, %rsp
 ; X64-AVX-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-AVX-NEXT:    vpermq {{.*#+}} ymm0 = ymm3[3,3,3,3]
-; X64-AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X64-AVX-NEXT:    vpermq {{[^#]+#+}} ymm0 = ymm3[3,3,3,3]
+; X64-AVX-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)

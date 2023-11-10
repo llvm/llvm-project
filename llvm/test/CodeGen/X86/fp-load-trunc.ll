@@ -7,7 +7,7 @@ define <1 x float> @test1(ptr %p) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    cvtsd2ss %xmm0, %xmm0
 ; CHECK-NEXT:    movss %xmm0, (%esp)
 ; CHECK-NEXT:    flds (%esp)
@@ -18,7 +18,7 @@ define <1 x float> @test1(ptr %p) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    pushl %eax
 ; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-NEXT:    flds (%esp)
@@ -52,7 +52,7 @@ define <4 x float> @test3(ptr %p) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cvtpd2ps 16(%eax), %xmm1
 ; CHECK-NEXT:    cvtpd2ps (%eax), %xmm0
-; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    unpcklpd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retl
 ;
 ; AVX-LABEL: test3:
@@ -73,8 +73,8 @@ define <8 x float> @test4(ptr %p) nounwind {
 ; CHECK-NEXT:    cvtpd2ps (%eax), %xmm0
 ; CHECK-NEXT:    cvtpd2ps 48(%eax), %xmm3
 ; CHECK-NEXT:    cvtpd2ps 32(%eax), %xmm1
-; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; CHECK-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; CHECK-NEXT:    unpcklpd {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    unpcklpd {{[^#]+#+}} xmm1 = xmm1[0],xmm3[0]
 ; CHECK-NEXT:    retl
 ;
 ; AVX-LABEL: test4:

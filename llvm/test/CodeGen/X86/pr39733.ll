@@ -13,7 +13,7 @@ define void @test55() {
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    subq $96, %rsp
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm0 = [26680,34632,63774,2423,35015,60307,6240,1951]
+; CHECK-NEXT:    vmovdqa {{[^#]+#+}} xmm0 = [26680,34632,63774,2423,35015,60307,6240,1951]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovdqa {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
@@ -21,7 +21,7 @@ define void @test55() {
 ; CHECK-NEXT:    vpmovsxwd %xmm1, %xmm2
 ; CHECK-NEXT:    # implicit-def: $ymm0
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm1 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    vpmovsxwd %xmm1, %xmm1
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovdqa %ymm0, (%rsp)

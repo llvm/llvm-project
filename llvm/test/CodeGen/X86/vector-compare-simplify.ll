@@ -66,7 +66,7 @@ define <4 x i32> @sle_max(<4 x i32> %x) {
 define <4 x i32> @slt_max(<4 x i32> %x) {
 ; CHECK-LABEL: slt_max:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
 ; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -121,7 +121,7 @@ define <4 x i32> @ugt_min(<4 x i32> %x) {
 define <4 x i32> @ule_min(<4 x i32> %x) {
 ; CHECK-LABEL: ule_min:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
 ; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
@@ -169,7 +169,7 @@ define <4 x i32> @uge_max(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
 ; CHECK-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
 ; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
 ; CHECK-NEXT:    pxor %xmm2, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
@@ -212,7 +212,7 @@ define <4 x i32> @sgt_max_minus1(<4 x i32> %x) {
 define <4 x i32> @sle_max_minus1(<4 x i32> %x) {
 ; CHECK-LABEL: sle_max_minus1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
 ; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -236,7 +236,7 @@ define <4 x i32> @uge_one(<4 x i32> %x) {
 ; CHECK-LABEL: uge_one:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483649,2147483649,2147483649,2147483649]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = [2147483649,2147483649,2147483649,2147483649]
 ; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm0
@@ -334,7 +334,7 @@ define <4 x i32> @ne_smin(<4 x i32> %x) {
 define <4 x i32> @ne_smax(<4 x i32> %x) {
 ; CHECK-LABEL: ne_smax:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
 ; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq

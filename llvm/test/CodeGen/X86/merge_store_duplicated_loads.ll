@@ -7,8 +7,8 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @merge_double(ptr noalias nocapture %st, ptr noalias nocapture readonly %ld) #0 {
 ; CHECK-LABEL: merge_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    movsd %xmm0, (%rdi)
 ; CHECK-NEXT:    movsd %xmm1, 8(%rdi)
 ; CHECK-NEXT:    movsd %xmm0, 16(%rdi)

@@ -6,7 +6,7 @@ define void @trunc_shl_7_v4i32_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; SSE2-LABEL: trunc_shl_7_v4i32_v4i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rsi), %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],mem[0,2]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,2],mem[0,2]
 ; SSE2-NEXT:    pslld $7, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
@@ -14,7 +14,7 @@ define void @trunc_shl_7_v4i32_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; AVX2-LABEL: trunc_shl_7_v4i32_v4i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovaps (%rsi), %xmm0
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],mem[0,2]
+; AVX2-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,2],mem[0,2]
 ; AVX2-NEXT:    vpslld $7, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX2-NEXT:    retq
@@ -38,8 +38,8 @@ define <8 x i16> @trunc_shl_15_v8i16_v8i32(<8 x i32> %a) {
 ;
 ; AVX2-LABEL: trunc_shl_15_v8i16_v8i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    vpshufb {{[^#]+#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpermq {{[^#]+#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

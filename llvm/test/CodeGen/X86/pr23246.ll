@@ -10,7 +10,7 @@ define <2 x i64> @test(x86_mmx %a) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq2dq %mm0, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,1,0,1]
 ; CHECK-NEXT:    retq
 entry:
   %b = bitcast x86_mmx %a to <1 x i64>

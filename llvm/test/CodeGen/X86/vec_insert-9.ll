@@ -5,7 +5,7 @@
 define <4 x i32> @var_insert2(<4 x i32> %x, i32 %val, i32 %idx) nounwind  {
 ; X86-LABEL: var_insert2:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    pinsrd $3, {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    retl
 ;

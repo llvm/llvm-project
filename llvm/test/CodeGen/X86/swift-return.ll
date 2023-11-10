@@ -209,7 +209,7 @@ define dso_local float @test4(float %key) #0 {
 ; CHECK-O0-NEXT:    pushq %rax
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-O0-NEXT:    movss %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-O0-NEXT:    callq gen4@PLT
 ; CHECK-O0-NEXT:    addss %xmm1, %xmm0
 ; CHECK-O0-NEXT:    addss %xmm2, %xmm0

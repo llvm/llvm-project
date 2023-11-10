@@ -204,7 +204,7 @@ define <1 x i32> @test_v1i32(<1 x i32> %a, <1 x i32> %b) nounwind {
 define <2 x i32> @test_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; SSE-LABEL: test_v2i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    pxor %xmm2, %xmm3
 ; SSE-NEXT:    pxor %xmm1, %xmm2
@@ -239,7 +239,7 @@ define <2 x i32> @test_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 define <3 x i32> @test_v3i32(<3 x i32> %a, <3 x i32> %b) nounwind {
 ; SSE-LABEL: test_v3i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    pxor %xmm2, %xmm3
 ; SSE-NEXT:    pxor %xmm1, %xmm2
@@ -282,7 +282,7 @@ define <3 x i32> @test_v3i32(<3 x i32> %a, <3 x i32> %b) nounwind {
 define <4 x i32> @test_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; SSE-LABEL: test_v4i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    pxor %xmm2, %xmm3
 ; SSE-NEXT:    pxor %xmm1, %xmm2
@@ -332,7 +332,7 @@ define <4 x i32> @test_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 define <8 x i32> @test_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; SSE-LABEL: test_v8i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,2147483648,2147483648,2147483648]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm4 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE-NEXT:    movdqa %xmm0, %xmm5
 ; SSE-NEXT:    pxor %xmm4, %xmm5
 ; SSE-NEXT:    movdqa %xmm2, %xmm6

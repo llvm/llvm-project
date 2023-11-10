@@ -9,7 +9,7 @@ define <4 x i64> @broadcast128(<2 x i64> %src) {
 ; CHECK-LABEL: broadcast128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; CHECK-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; CHECK-NEXT:    retq
   %1 = alloca <2 x i64>, align 16
   store <2 x i64> %src, ptr %1, align 16

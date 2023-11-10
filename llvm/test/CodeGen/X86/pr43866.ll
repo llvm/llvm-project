@@ -13,10 +13,10 @@ define dso_local void @test()  {
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    subq $64, %rsp
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[1,0],xmm0[1,0]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm2[2,0],xmm0[0,0]
+; CHECK-NEXT:    vshufps {{[^#]+#+}} xmm2 = xmm1[1,0],xmm0[1,0]
+; CHECK-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm2[2,0],xmm0[0,0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    movq %rbp, %rsp

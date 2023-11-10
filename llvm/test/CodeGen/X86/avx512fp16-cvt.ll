@@ -10,7 +10,7 @@ define half @f32tof16(float %b) nounwind {
 ;
 ; X86-LABEL: f32tof16:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    retl
   %a = fptrunc float %b to half
@@ -25,7 +25,7 @@ define half @f64tof16(double %b) nounwind {
 ;
 ; X86-LABEL: f64tof16:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vcvtsd2sh %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    retl
   %a = fptrunc double %b to half
@@ -607,7 +607,7 @@ define half @s64_to_half(i64 %x) {
 ;
 ; X86-LABEL: s64_to_half:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vcvtqq2ph %xmm0, %xmm0
 ; X86-NEXT:    retl
   %a = sitofp i64 %x to half
@@ -692,7 +692,7 @@ define half @u64_to_half(i64 %x) {
 ;
 ; X86-LABEL: u64_to_half:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vcvtuqq2ph %xmm0, %xmm0
 ; X86-NEXT:    retl
   %a = uitofp i64 %x to half
@@ -1033,7 +1033,7 @@ define <8 x half> @s64tof16(<8 x i64> %a) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtqq2ph %ymm1, %xmm1
 ; CHECK-NEXT:    vcvtqq2ph %ymm0, %xmm0
-; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vmovlhps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = sitofp <8 x i64> %a to <8 x half>
@@ -1045,7 +1045,7 @@ define <8 x half> @u64tof16(<8 x i64> %a) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtuqq2ph %ymm1, %xmm1
 ; CHECK-NEXT:    vcvtuqq2ph %ymm0, %xmm0
-; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vmovlhps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = uitofp <8 x i64> %a to <8 x half>

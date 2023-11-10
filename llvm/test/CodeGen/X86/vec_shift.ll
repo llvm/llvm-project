@@ -18,7 +18,7 @@ entry:
 define <2 x i64> @t3(<2 x i64> %b1, i32 %c) nounwind  {
 ; X86-LABEL: t3:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    psraw %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;

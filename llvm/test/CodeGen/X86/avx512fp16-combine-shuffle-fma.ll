@@ -37,7 +37,7 @@ define <2 x half> @foo(<2 x half> %0) "unsafe-fp-math"="true" nounwind {
 ; F16C-NEXT:    vcvtps2ph $4, %ymm2, %xmm2
 ; F16C-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; F16C-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
-; F16C-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2,3,4,5,6,7]
+; F16C-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2,3,4,5,6,7]
 ; F16C-NEXT:    vzeroupper
 ; F16C-NEXT:    retq
 ;

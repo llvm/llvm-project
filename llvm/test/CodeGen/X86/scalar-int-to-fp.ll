@@ -32,7 +32,7 @@ define float @u32_to_f(i32 %a) nounwind {
 ; SSE2_32-LABEL: u32_to_f:
 ; SSE2_32:       # %bb.0:
 ; SSE2_32-NEXT:    pushl %eax
-; SSE2_32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2_32-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2_32-NEXT:    orpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE2_32-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE2_32-NEXT:    cvtsd2ss %xmm0, %xmm0
@@ -146,7 +146,7 @@ define double @u32_to_d(i32 %a) nounwind {
 ; SSE2_32-NEXT:    movl %esp, %ebp
 ; SSE2_32-NEXT:    andl $-8, %esp
 ; SSE2_32-NEXT:    subl $8, %esp
-; SSE2_32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2_32-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2_32-NEXT:    orpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE2_32-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE2_32-NEXT:    movsd %xmm0, (%esp)
@@ -298,7 +298,7 @@ define float @u64_to_f(i64 %a) nounwind {
 ; AVX512DQVL_32-LABEL: u64_to_f:
 ; AVX512DQVL_32:       # %bb.0:
 ; AVX512DQVL_32-NEXT:    pushl %eax
-; AVX512DQVL_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQVL_32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX512DQVL_32-NEXT:    vcvtuqq2ps %ymm0, %xmm0
 ; AVX512DQVL_32-NEXT:    vmovss %xmm0, (%esp)
 ; AVX512DQVL_32-NEXT:    flds (%esp)
@@ -314,7 +314,7 @@ define float @u64_to_f(i64 %a) nounwind {
 ; AVX512DQ_32-LABEL: u64_to_f:
 ; AVX512DQ_32:       # %bb.0:
 ; AVX512DQ_32-NEXT:    pushl %eax
-; AVX512DQ_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQ_32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX512DQ_32-NEXT:    vcvtuqq2ps %zmm0, %ymm0
 ; AVX512DQ_32-NEXT:    vmovss %xmm0, (%esp)
 ; AVX512DQ_32-NEXT:    flds (%esp)
@@ -329,13 +329,13 @@ define float @u64_to_f(i64 %a) nounwind {
 ; AVX512F_32-NEXT:    andl $-8, %esp
 ; AVX512F_32-NEXT:    subl $16, %esp
 ; AVX512F_32-NEXT:    movl 12(%ebp), %eax
-; AVX512F_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512F_32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX512F_32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
 ; AVX512F_32-NEXT:    shrl $31, %eax
 ; AVX512F_32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; AVX512F_32-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; AVX512F_32-NEXT:    fstps {{[0-9]+}}(%esp)
-; AVX512F_32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512F_32-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512F_32-NEXT:    vmovss %xmm0, (%esp)
 ; AVX512F_32-NEXT:    flds (%esp)
 ; AVX512F_32-NEXT:    movl %ebp, %esp
@@ -349,13 +349,13 @@ define float @u64_to_f(i64 %a) nounwind {
 ; SSE2_32-NEXT:    andl $-8, %esp
 ; SSE2_32-NEXT:    subl $16, %esp
 ; SSE2_32-NEXT:    movl 12(%ebp), %eax
-; SSE2_32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2_32-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE2_32-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
 ; SSE2_32-NEXT:    shrl $31, %eax
 ; SSE2_32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; SSE2_32-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; SSE2_32-NEXT:    fstps {{[0-9]+}}(%esp)
-; SSE2_32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2_32-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2_32-NEXT:    movss %xmm0, (%esp)
 ; SSE2_32-NEXT:    flds (%esp)
 ; SSE2_32-NEXT:    movl %ebp, %esp
@@ -394,7 +394,7 @@ define float @u64_to_f(i64 %a) nounwind {
 ; SSE1_32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%ecx,4)
 ; SSE1_32-NEXT:    fstps {{[0-9]+}}(%esp)
-; SSE1_32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE1_32-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE1_32-NEXT:    movss %xmm0, (%esp)
 ; SSE1_32-NEXT:    flds (%esp)
 ; SSE1_32-NEXT:    movl %ebp, %esp
@@ -427,7 +427,7 @@ define float @s64_to_f(i64 %a) nounwind {
 ; AVX512DQVL_32-LABEL: s64_to_f:
 ; AVX512DQVL_32:       # %bb.0:
 ; AVX512DQVL_32-NEXT:    pushl %eax
-; AVX512DQVL_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQVL_32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX512DQVL_32-NEXT:    vcvtqq2ps %ymm0, %xmm0
 ; AVX512DQVL_32-NEXT:    vmovss %xmm0, (%esp)
 ; AVX512DQVL_32-NEXT:    flds (%esp)
@@ -443,7 +443,7 @@ define float @s64_to_f(i64 %a) nounwind {
 ; AVX512DQ_32-LABEL: s64_to_f:
 ; AVX512DQ_32:       # %bb.0:
 ; AVX512DQ_32-NEXT:    pushl %eax
-; AVX512DQ_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQ_32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX512DQ_32-NEXT:    vcvtqq2ps %zmm0, %ymm0
 ; AVX512DQ_32-NEXT:    vmovss %xmm0, (%esp)
 ; AVX512DQ_32-NEXT:    flds (%esp)
@@ -553,7 +553,7 @@ define float @s64_to_f_2(i64 %a) nounwind {
 ; SSE2_32-NEXT:    adcl $0, %ecx
 ; SSE2_32-NEXT:    movd %ecx, %xmm0
 ; SSE2_32-NEXT:    movd %eax, %xmm1
-; SSE2_32-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2_32-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; SSE2_32-NEXT:    movq %xmm1, {{[0-9]+}}(%esp)
 ; SSE2_32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; SSE2_32-NEXT:    fstps {{[0-9]+}}(%esp)
@@ -615,7 +615,7 @@ define double @u64_to_d(i64 %a) nounwind {
 ; AVX512DQVL_32-NEXT:    movl %esp, %ebp
 ; AVX512DQVL_32-NEXT:    andl $-8, %esp
 ; AVX512DQVL_32-NEXT:    subl $8, %esp
-; AVX512DQVL_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQVL_32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX512DQVL_32-NEXT:    vcvtuqq2pd %ymm0, %ymm0
 ; AVX512DQVL_32-NEXT:    vmovlps %xmm0, (%esp)
 ; AVX512DQVL_32-NEXT:    fldl (%esp)
@@ -635,7 +635,7 @@ define double @u64_to_d(i64 %a) nounwind {
 ; AVX512DQ_32-NEXT:    movl %esp, %ebp
 ; AVX512DQ_32-NEXT:    andl $-8, %esp
 ; AVX512DQ_32-NEXT:    subl $8, %esp
-; AVX512DQ_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQ_32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX512DQ_32-NEXT:    vcvtuqq2pd %zmm0, %zmm0
 ; AVX512DQ_32-NEXT:    vmovlps %xmm0, (%esp)
 ; AVX512DQ_32-NEXT:    fldl (%esp)
@@ -650,10 +650,10 @@ define double @u64_to_d(i64 %a) nounwind {
 ; AVX512F_32-NEXT:    movl %esp, %ebp
 ; AVX512F_32-NEXT:    andl $-8, %esp
 ; AVX512F_32-NEXT:    subl $8, %esp
-; AVX512F_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512F_32-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; AVX512F_32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
+; AVX512F_32-NEXT:    vunpcklps {{[^#]+#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; AVX512F_32-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; AVX512F_32-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512F_32-NEXT:    vshufpd {{[^#]+#+}} xmm1 = xmm0[1,0]
 ; AVX512F_32-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
 ; AVX512F_32-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX512F_32-NEXT:    fldl (%esp)
@@ -667,11 +667,11 @@ define double @u64_to_d(i64 %a) nounwind {
 ; SSE2_32-NEXT:    movl %esp, %ebp
 ; SSE2_32-NEXT:    andl $-8, %esp
 ; SSE2_32-NEXT:    subl $8, %esp
-; SSE2_32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2_32-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; SSE2_32-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE2_32-NEXT:    unpcklps {{[^#]+#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; SSE2_32-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE2_32-NEXT:    movapd %xmm0, %xmm1
-; SSE2_32-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE2_32-NEXT:    unpckhpd {{[^#]+#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE2_32-NEXT:    addsd %xmm0, %xmm1
 ; SSE2_32-NEXT:    movsd %xmm1, (%esp)
 ; SSE2_32-NEXT:    fldl (%esp)
@@ -682,10 +682,10 @@ define double @u64_to_d(i64 %a) nounwind {
 ; SSE2_64-LABEL: u64_to_d:
 ; SSE2_64:       # %bb.0:
 ; SSE2_64-NEXT:    movq %rdi, %xmm1
-; SSE2_64-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
+; SSE2_64-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
 ; SSE2_64-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2_64-NEXT:    movapd %xmm1, %xmm0
-; SSE2_64-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSE2_64-NEXT:    unpckhpd {{[^#]+#+}} xmm0 = xmm0[1],xmm1[1]
 ; SSE2_64-NEXT:    addsd %xmm1, %xmm0
 ; SSE2_64-NEXT:    retq
 ;
@@ -737,7 +737,7 @@ define double @u64_to_d_optsize(i64 %a) nounwind optsize {
 ; AVX512DQVL_32-NEXT:    movl %esp, %ebp
 ; AVX512DQVL_32-NEXT:    andl $-8, %esp
 ; AVX512DQVL_32-NEXT:    subl $8, %esp
-; AVX512DQVL_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQVL_32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX512DQVL_32-NEXT:    vcvtuqq2pd %ymm0, %ymm0
 ; AVX512DQVL_32-NEXT:    vmovlps %xmm0, (%esp)
 ; AVX512DQVL_32-NEXT:    fldl (%esp)
@@ -757,7 +757,7 @@ define double @u64_to_d_optsize(i64 %a) nounwind optsize {
 ; AVX512DQ_32-NEXT:    movl %esp, %ebp
 ; AVX512DQ_32-NEXT:    andl $-8, %esp
 ; AVX512DQ_32-NEXT:    subl $8, %esp
-; AVX512DQ_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQ_32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX512DQ_32-NEXT:    vcvtuqq2pd %zmm0, %zmm0
 ; AVX512DQ_32-NEXT:    vmovlps %xmm0, (%esp)
 ; AVX512DQ_32-NEXT:    fldl (%esp)
@@ -772,8 +772,8 @@ define double @u64_to_d_optsize(i64 %a) nounwind optsize {
 ; AVX512F_32-NEXT:    movl %esp, %ebp
 ; AVX512F_32-NEXT:    andl $-8, %esp
 ; AVX512F_32-NEXT:    subl $8, %esp
-; AVX512F_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512F_32-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; AVX512F_32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
+; AVX512F_32-NEXT:    vunpcklps {{[^#]+#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; AVX512F_32-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; AVX512F_32-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; AVX512F_32-NEXT:    vmovlpd %xmm0, (%esp)
@@ -788,11 +788,11 @@ define double @u64_to_d_optsize(i64 %a) nounwind optsize {
 ; SSE2_32-NEXT:    movl %esp, %ebp
 ; SSE2_32-NEXT:    andl $-8, %esp
 ; SSE2_32-NEXT:    subl $8, %esp
-; SSE2_32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2_32-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; SSE2_32-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE2_32-NEXT:    unpcklps {{[^#]+#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; SSE2_32-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE2_32-NEXT:    movapd %xmm0, %xmm1
-; SSE2_32-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE2_32-NEXT:    unpckhpd {{[^#]+#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE2_32-NEXT:    addsd %xmm0, %xmm1
 ; SSE2_32-NEXT:    movsd %xmm1, (%esp)
 ; SSE2_32-NEXT:    fldl (%esp)
@@ -803,10 +803,10 @@ define double @u64_to_d_optsize(i64 %a) nounwind optsize {
 ; SSE2_64-LABEL: u64_to_d_optsize:
 ; SSE2_64:       # %bb.0:
 ; SSE2_64-NEXT:    movq %rdi, %xmm1
-; SSE2_64-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
+; SSE2_64-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
 ; SSE2_64-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2_64-NEXT:    movapd %xmm1, %xmm0
-; SSE2_64-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSE2_64-NEXT:    unpckhpd {{[^#]+#+}} xmm0 = xmm0[1],xmm1[1]
 ; SSE2_64-NEXT:    addsd %xmm1, %xmm0
 ; SSE2_64-NEXT:    retq
 ;
@@ -858,7 +858,7 @@ define double @s64_to_d(i64 %a) nounwind {
 ; AVX512DQVL_32-NEXT:    movl %esp, %ebp
 ; AVX512DQVL_32-NEXT:    andl $-8, %esp
 ; AVX512DQVL_32-NEXT:    subl $8, %esp
-; AVX512DQVL_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQVL_32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX512DQVL_32-NEXT:    vcvtqq2pd %ymm0, %ymm0
 ; AVX512DQVL_32-NEXT:    vmovlps %xmm0, (%esp)
 ; AVX512DQVL_32-NEXT:    fldl (%esp)
@@ -878,7 +878,7 @@ define double @s64_to_d(i64 %a) nounwind {
 ; AVX512DQ_32-NEXT:    movl %esp, %ebp
 ; AVX512DQ_32-NEXT:    andl $-8, %esp
 ; AVX512DQ_32-NEXT:    subl $8, %esp
-; AVX512DQ_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQ_32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX512DQ_32-NEXT:    vcvtqq2pd %zmm0, %zmm0
 ; AVX512DQ_32-NEXT:    vmovlps %xmm0, (%esp)
 ; AVX512DQ_32-NEXT:    fldl (%esp)
@@ -1010,7 +1010,7 @@ define double @s64_to_d_2(i64 %a) nounwind {
 ; SSE2_32-NEXT:    adcl $0, %ecx
 ; SSE2_32-NEXT:    movd %ecx, %xmm0
 ; SSE2_32-NEXT:    movd %eax, %xmm1
-; SSE2_32-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2_32-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; SSE2_32-NEXT:    movq %xmm1, {{[0-9]+}}(%esp)
 ; SSE2_32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; SSE2_32-NEXT:    fstpl (%esp)

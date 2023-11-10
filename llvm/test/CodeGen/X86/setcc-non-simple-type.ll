@@ -45,10 +45,10 @@ define void @failing(ptr %0, ptr %1) nounwind {
 ; CHECK-NEXT:    movq 8(%rdi), %rax
 ; CHECK-NEXT:    movq 24(%rsi), %rcx
 ; CHECK-NEXT:    movq 32(%rsi), %rdx
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm0 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
 ; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [1,1]
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [2,2]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = [1,1]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm2 = [2,2]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %vector.ph
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
@@ -62,9 +62,9 @@ define void @failing(ptr %0, ptr %1) nounwind {
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    movdqu 1024(%rdx,%rdi), %xmm5
 ; CHECK-NEXT:    movdqu 1040(%rdx,%rdi), %xmm6
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[2,3,2,3]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm5 = xmm5[2,3,2,3]
 ; CHECK-NEXT:    movq %xmm5, %r8
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm6[2,3,2,3]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm5 = xmm6[2,3,2,3]
 ; CHECK-NEXT:    movq %xmm5, %r9
 ; CHECK-NEXT:    cmpq 1040(%rdx,%rdi), %rsi
 ; CHECK-NEXT:    movq %rcx, %r10
@@ -82,13 +82,13 @@ define void @failing(ptr %0, ptr %1) nounwind {
 ; CHECK-NEXT:    andl $1, %r8d
 ; CHECK-NEXT:    negq %r8
 ; CHECK-NEXT:    movq %r8, %xmm6
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm6 = xmm6[0],xmm5[0]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm6 = xmm6[0],xmm5[0]
 ; CHECK-NEXT:    movdqa %xmm1, %xmm5
 ; CHECK-NEXT:    psllq %xmm4, %xmm5
-; CHECK-NEXT:    pshufd {{.*#+}} xmm7 = xmm4[2,3,2,3]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm7 = xmm4[2,3,2,3]
 ; CHECK-NEXT:    movdqa %xmm1, %xmm8
 ; CHECK-NEXT:    psllq %xmm7, %xmm8
-; CHECK-NEXT:    movsd {{.*#+}} xmm8 = xmm5[0],xmm8[1]
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm8 = xmm5[0],xmm8[1]
 ; CHECK-NEXT:    andpd %xmm6, %xmm8
 ; CHECK-NEXT:    orpd %xmm8, %xmm3
 ; CHECK-NEXT:    paddq %xmm2, %xmm4
@@ -96,7 +96,7 @@ define void @failing(ptr %0, ptr %1) nounwind {
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %middle.block
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[2,3,2,3]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm3[2,3,2,3]
 ; CHECK-NEXT:    por %xmm3, %xmm4
 ; CHECK-NEXT:    movq %xmm4, (%rax)
 ; CHECK-NEXT:    jmp .LBB0_1
@@ -106,10 +106,10 @@ define void @failing(ptr %0, ptr %1) nounwind {
 ; CHECK-AVX2-NEXT:    movq 8(%rdi), %rax
 ; CHECK-AVX2-NEXT:    movq 24(%rsi), %rcx
 ; CHECK-AVX2-NEXT:    movq 32(%rsi), %rdx
-; CHECK-AVX2-NEXT:    vmovdqa {{.*#+}} xmm0 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
+; CHECK-AVX2-NEXT:    vmovdqa {{[^#]+#+}} xmm0 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
 ; CHECK-AVX2-NEXT:    xorl %esi, %esi
-; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [1,1]
-; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [2,2]
+; CHECK-AVX2-NEXT:    vpbroadcastq {{[^#]+#+}} xmm1 = [1,1]
+; CHECK-AVX2-NEXT:    vpbroadcastq {{[^#]+#+}} xmm2 = [2,2]
 ; CHECK-AVX2-NEXT:    .p2align 4, 0x90
 ; CHECK-AVX2-NEXT:  .LBB0_1: # %vector.ph
 ; CHECK-AVX2-NEXT:    # =>This Loop Header: Depth=1
@@ -137,7 +137,7 @@ define void @failing(ptr %0, ptr %1) nounwind {
 ; CHECK-AVX2-NEXT:    andl $1, %r8d
 ; CHECK-AVX2-NEXT:    negq %r8
 ; CHECK-AVX2-NEXT:    vmovq %r8, %xmm6
-; CHECK-AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm5 = xmm5[0],xmm6[0]
+; CHECK-AVX2-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm5 = xmm5[0],xmm6[0]
 ; CHECK-AVX2-NEXT:    vpsllvq %xmm4, %xmm1, %xmm6
 ; CHECK-AVX2-NEXT:    vpand %xmm6, %xmm5, %xmm5
 ; CHECK-AVX2-NEXT:    vpor %xmm3, %xmm5, %xmm3
@@ -146,7 +146,7 @@ define void @failing(ptr %0, ptr %1) nounwind {
 ; CHECK-AVX2-NEXT:    jne .LBB0_2
 ; CHECK-AVX2-NEXT:  # %bb.3: # %middle.block
 ; CHECK-AVX2-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[2,3,2,3]
+; CHECK-AVX2-NEXT:    vpshufd {{[^#]+#+}} xmm4 = xmm3[2,3,2,3]
 ; CHECK-AVX2-NEXT:    vpor %xmm4, %xmm3, %xmm3
 ; CHECK-AVX2-NEXT:    vmovq %xmm3, (%rax)
 ; CHECK-AVX2-NEXT:    jmp .LBB0_1

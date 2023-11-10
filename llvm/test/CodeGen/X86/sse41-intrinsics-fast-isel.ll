@@ -11,12 +11,12 @@
 define <2 x i64> @test_mm_blend_epi16(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE-LABEL: test_mm_blend_epi16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6,7]
+; SSE-NEXT:    pblendw {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6,7]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_blend_epi16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6,7]
+; AVX-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6,7]
 ; AVX-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
@@ -28,12 +28,12 @@ define <2 x i64> @test_mm_blend_epi16(<2 x i64> %a0, <2 x i64> %a1) {
 define <2 x double> @test_mm_blend_pd(<2 x double> %a0, <2 x double> %a1) {
 ; SSE-LABEL: test_mm_blend_pd:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; SSE-NEXT:    blendps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_blend_pd:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %res = shufflevector <2 x double> %a0, <2 x double> %a1, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %res
@@ -42,12 +42,12 @@ define <2 x double> @test_mm_blend_pd(<2 x double> %a0, <2 x double> %a1) {
 define <4 x float> @test_mm_blend_ps(<4 x float> %a0, <4 x float> %a1) {
 ; SSE-LABEL: test_mm_blend_ps:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3]
+; SSE-NEXT:    blendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_blend_ps:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3]
+; AVX-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %res = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
   ret <4 x float> %res
@@ -294,12 +294,12 @@ define <2 x i64> @test_mm_cvtepi32_epi64(<2 x i64> %a0) {
 define <2 x i64> @test_mm_cvtepu8_epi16(<2 x i64> %a0) {
 ; SSE-LABEL: test_mm_cvtepu8_epi16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; SSE-NEXT:    pmovzxbw {{[^#]+#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_cvtepu8_epi16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX-NEXT:    vpmovzxbw {{[^#]+#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %ext0 = shufflevector <16 x i8> %arg0, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -311,12 +311,12 @@ define <2 x i64> @test_mm_cvtepu8_epi16(<2 x i64> %a0) {
 define <2 x i64> @test_mm_cvtepu8_epi32(<2 x i64> %a0) {
 ; SSE-LABEL: test_mm_cvtepu8_epi32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; SSE-NEXT:    pmovzxbd {{[^#]+#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_cvtepu8_epi32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX-NEXT:    vpmovzxbd {{[^#]+#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; AVX-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %ext0 = shufflevector <16 x i8> %arg0, <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -328,12 +328,12 @@ define <2 x i64> @test_mm_cvtepu8_epi32(<2 x i64> %a0) {
 define <2 x i64> @test_mm_cvtepu8_epi64(<2 x i64> %a0) {
 ; SSE-LABEL: test_mm_cvtepu8_epi64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    pmovzxbq {{[^#]+#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_cvtepu8_epi64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    vpmovzxbq {{[^#]+#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %ext0 = shufflevector <16 x i8> %arg0, <16 x i8> undef, <2 x i32> <i32 0, i32 1>
@@ -344,12 +344,12 @@ define <2 x i64> @test_mm_cvtepu8_epi64(<2 x i64> %a0) {
 define <2 x i64> @test_mm_cvtepu16_epi32(<2 x i64> %a0) {
 ; SSE-LABEL: test_mm_cvtepu16_epi32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; SSE-NEXT:    pmovzxwd {{[^#]+#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_cvtepu16_epi32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX-NEXT:    vpmovzxwd {{[^#]+#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %ext0 = shufflevector <8 x i16> %arg0, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -361,12 +361,12 @@ define <2 x i64> @test_mm_cvtepu16_epi32(<2 x i64> %a0) {
 define <2 x i64> @test_mm_cvtepu16_epi64(<2 x i64> %a0) {
 ; SSE-LABEL: test_mm_cvtepu16_epi64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; SSE-NEXT:    pmovzxwq {{[^#]+#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_cvtepu16_epi64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; AVX-NEXT:    vpmovzxwq {{[^#]+#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %ext0 = shufflevector <8 x i16> %arg0, <8 x i16> undef, <2 x i32> <i32 0, i32 1>
@@ -377,12 +377,12 @@ define <2 x i64> @test_mm_cvtepu16_epi64(<2 x i64> %a0) {
 define <2 x i64> @test_mm_cvtepu32_epi64(<2 x i64> %a0) {
 ; SSE-LABEL: test_mm_cvtepu32_epi64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; SSE-NEXT:    pmovzxdq {{[^#]+#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_cvtepu32_epi64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX-NEXT:    vpmovzxdq {{[^#]+#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
   %ext0 = shufflevector <4 x i32> %arg0, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
@@ -483,13 +483,13 @@ define i64 @test_mm_extract_epi64(<2 x i64> %a0) {
 define i32 @test_mm_extract_ps(<4 x float> %a0) {
 ; SSE-LABEL: test_mm_extract_ps:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE-NEXT:    movshdup {{[^#]+#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE-NEXT:    movd %xmm0, %eax
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_extract_ps:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX-NEXT:    vmovshdup {{[^#]+#+}} xmm0 = xmm0[1,1,3,3]
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    ret{{[l|q]}}
   %ext = extractelement <4 x float> %a0, i32 1
@@ -637,12 +637,12 @@ define <2 x i64> @test_mm_insert_epi64(<2 x i64> %a0, i64 %a1) {
 define <4 x float> @test_mm_insert_ps(<4 x float> %a0, <4 x float> %a1) {
 ; SSE-LABEL: test_mm_insert_ps:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm1[0],xmm0[1],zero,xmm0[3]
+; SSE-NEXT:    insertps {{[^#]+#+}} xmm0 = xmm1[0],xmm0[1],zero,xmm0[3]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_insert_ps:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[1],zero,xmm0[3]
+; AVX-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm1[0],xmm0[1],zero,xmm0[3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 4)
   ret <4 x float> %res

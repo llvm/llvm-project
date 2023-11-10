@@ -350,7 +350,7 @@ define <4 x i1> @shr_to_ror_eq_4xi32_s4(<4 x i32> %x) {
 ; CHECK-AVX2-LABEL: shr_to_ror_eq_4xi32_s4:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vpsrld $4, %xmm0, %xmm1
-; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [268435455,268435455,268435455,268435455]
+; CHECK-AVX2-NEXT:    vpbroadcastd {{[^#]+#+}} xmm2 = [268435455,268435455,268435455,268435455]
 ; CHECK-AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vpcmpeqd %xmm0, %xmm1, %xmm0
 ; CHECK-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
@@ -437,7 +437,7 @@ define <4 x i1> @shl_to_ror_eq_4xi32_s7_fail_no_p2(<4 x i32> %x) {
 ; CHECK-AVX2-LABEL: shl_to_ror_eq_4xi32_s7_fail_no_p2:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vpslld $7, %xmm0, %xmm1
-; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [4294967168,4294967168,4294967168,4294967168]
+; CHECK-AVX2-NEXT:    vpbroadcastd {{[^#]+#+}} xmm2 = [4294967168,4294967168,4294967168,4294967168]
 ; CHECK-AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vpcmpeqd %xmm0, %xmm1, %xmm0
 ; CHECK-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
@@ -464,8 +464,8 @@ define <4 x i1> @shr_to_ror_eq_4xi32_s4_fail_no_splat(<4 x i32> %x) {
 ; CHECK-NOBMI-NEXT:    psrld $4, %xmm1
 ; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-NOBMI-NEXT:    psrld $8, %xmm2
-; CHECK-NOBMI-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,0],xmm1[2,0]
-; CHECK-NOBMI-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,0]
+; CHECK-NOBMI-NEXT:    shufps {{[^#]+#+}} xmm2 = xmm2[3,0],xmm1[2,0]
+; CHECK-NOBMI-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[0,1],xmm2[2,0]
 ; CHECK-NOBMI-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm1
@@ -478,8 +478,8 @@ define <4 x i1> @shr_to_ror_eq_4xi32_s4_fail_no_splat(<4 x i32> %x) {
 ; CHECK-BMI2-SSE2-NEXT:    psrld $4, %xmm1
 ; CHECK-BMI2-SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-BMI2-SSE2-NEXT:    psrld $8, %xmm2
-; CHECK-BMI2-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,0],xmm1[2,0]
-; CHECK-BMI2-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,0]
+; CHECK-BMI2-SSE2-NEXT:    shufps {{[^#]+#+}} xmm2 = xmm2[3,0],xmm1[2,0]
+; CHECK-BMI2-SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[0,1],xmm2[2,0]
 ; CHECK-BMI2-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-BMI2-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-BMI2-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
@@ -489,7 +489,7 @@ define <4 x i1> @shr_to_ror_eq_4xi32_s4_fail_no_splat(<4 x i32> %x) {
 ; CHECK-AVX2-LABEL: shr_to_ror_eq_4xi32_s4_fail_no_splat:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [268435455,268435455,268435455,268435455]
+; CHECK-AVX2-NEXT:    vpbroadcastd {{[^#]+#+}} xmm2 = [268435455,268435455,268435455,268435455]
 ; CHECK-AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vpcmpeqd %xmm0, %xmm1, %xmm0
 ; CHECK-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
@@ -516,7 +516,7 @@ define <16 x i1> @shl_to_ror_eq_16xi16_s8_fail_preserve_i16(<16 x i16> %x) {
 ; CHECK-NOBMI-NEXT:    psllw $8, %xmm2
 ; CHECK-NOBMI-NEXT:    movdqa %xmm1, %xmm3
 ; CHECK-NOBMI-NEXT:    psllw $8, %xmm3
-; CHECK-NOBMI-NEXT:    movdqa {{.*#+}} xmm4 = [0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255]
+; CHECK-NOBMI-NEXT:    movdqa {{[^#]+#+}} xmm4 = [0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255]
 ; CHECK-NOBMI-NEXT:    pand %xmm4, %xmm0
 ; CHECK-NOBMI-NEXT:    pcmpeqw %xmm2, %xmm0
 ; CHECK-NOBMI-NEXT:    pand %xmm4, %xmm1
@@ -532,7 +532,7 @@ define <16 x i1> @shl_to_ror_eq_16xi16_s8_fail_preserve_i16(<16 x i16> %x) {
 ; CHECK-BMI2-SSE2-NEXT:    psllw $8, %xmm2
 ; CHECK-BMI2-SSE2-NEXT:    movdqa %xmm1, %xmm3
 ; CHECK-BMI2-SSE2-NEXT:    psllw $8, %xmm3
-; CHECK-BMI2-SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255]
+; CHECK-BMI2-SSE2-NEXT:    movdqa {{[^#]+#+}} xmm4 = [0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255]
 ; CHECK-BMI2-SSE2-NEXT:    pand %xmm4, %xmm0
 ; CHECK-BMI2-SSE2-NEXT:    pcmpeqw %xmm2, %xmm0
 ; CHECK-BMI2-SSE2-NEXT:    pand %xmm4, %xmm1
@@ -559,7 +559,7 @@ define <16 x i1> @shl_to_ror_eq_16xi16_s8_fail_preserve_i16(<16 x i16> %x) {
 ; CHECK-AVX512-NEXT:    vpsllw $8, %ymm0, %ymm1
 ; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    vpcmpeqw %ymm0, %ymm1, %ymm0
-; CHECK-AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; CHECK-AVX512-NEXT:    vpmovzxwd {{[^#]+#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; CHECK-AVX512-NEXT:    vpmovdb %zmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vzeroupper

@@ -67,10 +67,10 @@ define <8 x i32> @test_mul_v8i32_add_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8 x i3
 define <4 x i64> @test_mulx_v4i32_add_v4i64(<4 x i32> %a0, <4 x i32> %a1, <4 x i64> %a2) {
 ; XOP-AVX1-LABEL: test_mulx_v4i32_add_v4i64:
 ; XOP-AVX1:       # %bb.0:
-; XOP-AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm1[0],zero,xmm1[1],zero
-; XOP-AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm4 = xmm0[0],zero,xmm0[1],zero
-; XOP-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,2,3,3]
-; XOP-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; XOP-AVX1-NEXT:    vpmovzxdq {{[^#]+#+}} xmm3 = xmm1[0],zero,xmm1[1],zero
+; XOP-AVX1-NEXT:    vpmovzxdq {{[^#]+#+}} xmm4 = xmm0[0],zero,xmm0[1],zero
+; XOP-AVX1-NEXT:    vpshufd {{[^#]+#+}} xmm1 = xmm1[2,2,3,3]
+; XOP-AVX1-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[2,2,3,3]
 ; XOP-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
 ; XOP-AVX1-NEXT:    vpmacsdql %xmm5, %xmm1, %xmm0, %xmm0
 ; XOP-AVX1-NEXT:    vpmacsdql %xmm2, %xmm3, %xmm4, %xmm1
@@ -79,8 +79,8 @@ define <4 x i64> @test_mulx_v4i32_add_v4i64(<4 x i32> %a0, <4 x i32> %a1, <4 x i
 ;
 ; XOP-AVX2-LABEL: test_mulx_v4i32_add_v4i64:
 ; XOP-AVX2:       # %bb.0:
-; XOP-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; XOP-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; XOP-AVX2-NEXT:    vpmovzxdq {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; XOP-AVX2-NEXT:    vpmovzxdq {{[^#]+#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
 ; XOP-AVX2-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0
 ; XOP-AVX2-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; XOP-AVX2-NEXT:    retq

@@ -14,7 +14,7 @@ define void @convert(ptr %dst.addr, <3 x double> %src)  {
 ;
 ; X64-LABEL: convert:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    movlhps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    retq
 entry:

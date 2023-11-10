@@ -19,10 +19,10 @@ define void @FFT(ptr noalias nocapture %destination, ptr noalias %re, ptr noalia
 ; X86-NEXT:    pextrd $1, %xmm0, %esi
 ; X86-NEXT:    pextrd $2, %xmm0, %edi
 ; X86-NEXT:    pextrd $3, %xmm0, %ebx
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X86-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
 ; X86-NEXT:    movss %xmm0, 128(%eax)
 ; X86-NEXT:    movss %xmm1, 164(%eax)
 ; X86-NEXT:    movss %xmm2, 200(%eax)
@@ -44,10 +44,10 @@ define void @FFT(ptr noalias nocapture %destination, ptr noalias %re, ptr noalia
 ; X64-NEXT:    movslq %edx, %rdx
 ; X64-NEXT:    pextrd $3, %xmm0, %r8d
 ; X64-NEXT:    movslq %r8d, %r8
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
 ; X64-NEXT:    movss %xmm0, 128(%rdi)
 ; X64-NEXT:    movss %xmm1, 164(%rdi)
 ; X64-NEXT:    movss %xmm2, 200(%rdi)

@@ -7,7 +7,7 @@
 define internal void @a() nounwind {
 ; CHECK-LABEL: a:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    rsqrtss %xmm0, %xmm0
 ; CHECK-NEXT:    movss %xmm0, __unnamed_1
 ; CHECK-NEXT:    retl
@@ -21,8 +21,8 @@ define internal void @a() nounwind {
 define internal void @b() nounwind {
 ; CHECK-LABEL: b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movsldup {{[^#]+#+}} xmm0 = xmm0[0,0,2,2]
 ; CHECK-NEXT:    rsqrtss %xmm0, %xmm0
 ; CHECK-NEXT:    extractps $1, %xmm0, __unnamed_1
 ; CHECK-NEXT:    retl

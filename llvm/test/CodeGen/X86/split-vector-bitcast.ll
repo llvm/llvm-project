@@ -11,10 +11,10 @@ define void @a(ptr %a, ptr %b) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; CHECK-NEXT:    movlps {{[^#]+#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; CHECK-NEXT:    addps %xmm0, %xmm0
 ; CHECK-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movss %xmm0, (%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl (%esp), %edx

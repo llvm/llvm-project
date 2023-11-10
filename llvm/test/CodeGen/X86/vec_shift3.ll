@@ -5,7 +5,7 @@
 define <2 x i64> @t1(<2 x i64> %x1, i32 %bits) nounwind  {
 ; X86-LABEL: t1:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    psllq %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
@@ -32,7 +32,7 @@ entry:
 define <2 x i64> @t3(<2 x i64> %x1, i32 %bits) nounwind  {
 ; X86-LABEL: t3:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    psraw %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;

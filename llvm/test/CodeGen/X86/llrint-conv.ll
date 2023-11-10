@@ -35,7 +35,7 @@ define i64 @testmsxs(float %x) {
 ; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    andl $-8, %esp
 ; X86-SSE2-NEXT:    subl $8, %esp
-; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE2-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE2-NEXT:    flds (%esp)
 ; X86-SSE2-NEXT:    fistpll (%esp)
@@ -55,7 +55,7 @@ define i64 @testmsxs(float %x) {
 ; X86-AVX-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX-NEXT:    andl $-8, %esp
 ; X86-AVX-NEXT:    subl $8, %esp
-; X86-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-AVX-NEXT:    vmovss %xmm0, (%esp)
 ; X86-AVX-NEXT:    flds (%esp)
 ; X86-AVX-NEXT:    fistpll (%esp)
@@ -108,7 +108,7 @@ define i64 @testmsxd(double %x) {
 ; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    andl $-8, %esp
 ; X86-SSE2-NEXT:    subl $8, %esp
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
 ; X86-SSE2-NEXT:    fldl (%esp)
 ; X86-SSE2-NEXT:    fistpll (%esp)
@@ -128,7 +128,7 @@ define i64 @testmsxd(double %x) {
 ; X86-AVX-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX-NEXT:    andl $-8, %esp
 ; X86-AVX-NEXT:    subl $8, %esp
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-AVX-NEXT:    fldl (%esp)
 ; X86-AVX-NEXT:    fistpll (%esp)

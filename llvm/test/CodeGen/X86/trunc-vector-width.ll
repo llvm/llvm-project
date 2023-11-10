@@ -5,9 +5,9 @@ define void @test(ptr %a0) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqu (%rdi), %xmm0
-; CHECK-NEXT:    vpblendd {{.*#+}} xmm0 = mem[0],xmm0[1,2,3]
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,4,5,5,0,0,1,1,u,u,u,u,u,u,u,u]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} xmm0 = mem[0],xmm0[1,2,3]
+; CHECK-NEXT:    vpshufb {{[^#]+#+}} xmm0 = xmm0[4,4,5,5,0,0,1,1,u,u,u,u,u,u,u,u]
+; CHECK-NEXT:    vpunpckldq {{[^#]+#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpextrb $1, %xmm0, (%rax)
 ; CHECK-NEXT:    vpextrb $4, %xmm0, (%rax)

@@ -10,13 +10,13 @@ define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 ; X86-SLOW-LABEL: trunc4:
 ; X86-SLOW:       # %bb.0:
 ; X86-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X86-SLOW-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; X86-SLOW-NEXT:    vzeroupper
 ; X86-SLOW-NEXT:    retl
 ;
 ; X86-FAST-ALL-LABEL: trunc4:
 ; X86-FAST-ALL:       # %bb.0:
-; X86-FAST-ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [0,2,4,6,0,2,4,6]
+; X86-FAST-ALL-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm1 = [0,2,4,6,0,2,4,6]
 ; X86-FAST-ALL-NEXT:    # ymm1 = mem[0,1,0,1]
 ; X86-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X86-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
@@ -26,20 +26,20 @@ define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 ; X86-FAST-PERLANE-LABEL: trunc4:
 ; X86-FAST-PERLANE:       # %bb.0:
 ; X86-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X86-FAST-PERLANE-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; X86-FAST-PERLANE-NEXT:    vzeroupper
 ; X86-FAST-PERLANE-NEXT:    retl
 ;
 ; X64-SLOW-LABEL: trunc4:
 ; X64-SLOW:       # %bb.0:
 ; X64-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X64-SLOW-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; X64-SLOW-NEXT:    vzeroupper
 ; X64-SLOW-NEXT:    retq
 ;
 ; X64-FAST-ALL-LABEL: trunc4:
 ; X64-FAST-ALL:       # %bb.0:
-; X64-FAST-ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [0,2,4,6,0,2,4,6]
+; X64-FAST-ALL-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm1 = [0,2,4,6,0,2,4,6]
 ; X64-FAST-ALL-NEXT:    # ymm1 = mem[0,1,0,1]
 ; X64-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X64-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
@@ -49,7 +49,7 @@ define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 ; X64-FAST-PERLANE-LABEL: trunc4:
 ; X64-FAST-PERLANE:       # %bb.0:
 ; X64-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X64-FAST-PERLANE-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; X64-FAST-PERLANE-NEXT:    vzeroupper
 ; X64-FAST-PERLANE-NEXT:    retq
   %B = trunc <4 x i64> %A to <4 x i32>
@@ -59,8 +59,8 @@ define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 define <8 x i16> @trunc8(<8 x i32> %A) nounwind {
 ; CHECK-LABEL: trunc8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; CHECK-NEXT:    vpshufb {{[^#]+#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm0 = ymm0[0,2,2,3]
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
@@ -89,7 +89,7 @@ define <8 x i32> @sext8(<8 x i16> %A) nounwind {
 define <4 x i64> @zext4(<4 x i32> %A) nounwind {
 ; CHECK-LABEL: zext4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; CHECK-NEXT:    vpmovzxdq {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %B = zext <4 x i32> %A to <4 x i64>
   ret <4 x i64>%B
@@ -98,7 +98,7 @@ define <4 x i64> @zext4(<4 x i32> %A) nounwind {
 define <8 x i32> @zext8(<8 x i16> %A) nounwind {
 ; CHECK-LABEL: zext8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-NEXT:    vpmovzxwd {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %B = zext <8 x i16> %A to <8 x i32>
   ret <8 x i32>%B
@@ -107,7 +107,7 @@ define <8 x i32> @zext8(<8 x i16> %A) nounwind {
 define <8 x i32> @zext_8i8_8i32(<8 x i8> %A) nounwind {
 ; CHECK-LABEL: zext_8i8_8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; CHECK-NEXT:    vpmovzxbd {{[^#]+#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %B = zext <8 x i8> %A to <8 x i32>
   ret <8 x i32>%B
@@ -116,7 +116,7 @@ define <8 x i32> @zext_8i8_8i32(<8 x i8> %A) nounwind {
 define <16 x i16> @zext_16i8_16i16(<16 x i8> %z) {
 ; CHECK-LABEL: zext_16i8_16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; CHECK-NEXT:    vpmovzxbw {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %t = zext <16 x i8> %z to <16 x i16>
   ret <16 x i16> %t

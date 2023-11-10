@@ -1060,12 +1060,12 @@ define i32 @test13_crash(i32 %x, i32 %y)  {
 define <4 x i1> @test14()  {
 ; CHECK-LABEL: test14:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,0,1]
+; CHECK-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [1,1,0,1]
 ; CHECK-NEXT:    retq
 ;
 ; X86-LABEL: test14:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,0,1]
+; X86-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [1,1,0,1]
 ; X86-NEXT:    retl
   %a = bitcast i16 21845 to <16 x i1>
   %b = extractelement <16 x i1> %a, i32 2
@@ -1484,8 +1484,8 @@ define <32 x i16> @test21(<32 x i16> %x , <32 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: test21:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
-; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; KNL-NEXT:    vpmovzxbw {{[^#]+#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
+; KNL-NEXT:    vpmovzxbw {{[^#]+#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
 ; KNL-NEXT:    vpsllw $15, %ymm1, %ymm1
 ; KNL-NEXT:    vpsraw $15, %ymm1, %ymm1
 ; KNL-NEXT:    vpsllw $15, %ymm2, %ymm2
@@ -1511,8 +1511,8 @@ define <32 x i16> @test21(<32 x i16> %x , <32 x i1> %mask) nounwind readnone {
 ; AVX512DQ-LABEL: test21:
 ; AVX512DQ:       ## %bb.0:
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX512DQ-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
-; AVX512DQ-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; AVX512DQ-NEXT:    vpmovzxbw {{[^#]+#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
+; AVX512DQ-NEXT:    vpmovzxbw {{[^#]+#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
 ; AVX512DQ-NEXT:    vpsllw $15, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpsraw $15, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpsllw $15, %ymm2, %ymm2
@@ -4213,7 +4213,7 @@ entry:
 define void @store_v128i1_constant(ptr %R) {
 ; KNL-LABEL: store_v128i1_constant:
 ; KNL:       ## %bb.0: ## %entry
-; KNL-NEXT:    vmovaps {{.*#+}} xmm0 = [61437,65535,65403,57343,57341,65535,65467,49151]
+; KNL-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [61437,65535,65403,57343,57341,65535,65467,49151]
 ; KNL-NEXT:    vmovaps %xmm0, (%rdi)
 ; KNL-NEXT:    retq
 ;
@@ -4235,14 +4235,14 @@ define void @store_v128i1_constant(ptr %R) {
 ;
 ; AVX512DQ-LABEL: store_v128i1_constant:
 ; AVX512DQ:       ## %bb.0: ## %entry
-; AVX512DQ-NEXT:    vmovaps {{.*#+}} xmm0 = [61437,65535,65403,57343,57341,65535,65467,49151]
+; AVX512DQ-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [61437,65535,65403,57343,57341,65535,65467,49151]
 ; AVX512DQ-NEXT:    vmovaps %xmm0, (%rdi)
 ; AVX512DQ-NEXT:    retq
 ;
 ; X86-LABEL: store_v128i1_constant:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [4294963197,3758096251,4294959101,3221225403]
+; X86-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [4294963197,3758096251,4294959101,3221225403]
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 entry:

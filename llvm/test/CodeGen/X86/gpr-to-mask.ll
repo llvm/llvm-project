@@ -19,17 +19,17 @@ define void @test_fcmp_storefloat(i1 %cond, ptr %fptr, float %f1, float %f2, flo
 ;
 ; X86-32-LABEL: test_fcmp_storefloat:
 ; X86-32:       # %bb.0: # %entry
-; X86-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-32-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-32-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-32-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X86-32-NEXT:    je .LBB0_2
 ; X86-32-NEXT:  # %bb.1: # %if
-; X86-32-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-32-NEXT:    vmovss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X86-32-NEXT:    vcmpeqss {{[0-9]+}}(%esp), %xmm2, %k1
 ; X86-32-NEXT:    jmp .LBB0_3
 ; X86-32-NEXT:  .LBB0_2: # %else
-; X86-32-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-32-NEXT:    vmovss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X86-32-NEXT:    vcmpeqss {{[0-9]+}}(%esp), %xmm2, %k1
 ; X86-32-NEXT:  .LBB0_3: # %exit
 ; X86-32-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
@@ -73,12 +73,12 @@ define void @test_fcmp_storei1(i1 %cond, ptr %fptr, ptr %iptr, float %f1, float 
 ; X86-32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X86-32-NEXT:    je .LBB1_2
 ; X86-32-NEXT:  # %bb.1: # %if
-; X86-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-32-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-32-NEXT:    vcmpeqss {{[0-9]+}}(%esp), %xmm0, %k0
 ; X86-32-NEXT:    kmovb %k0, (%eax)
 ; X86-32-NEXT:    retl
 ; X86-32-NEXT:  .LBB1_2: # %else
-; X86-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-32-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-32-NEXT:    vcmpeqss {{[0-9]+}}(%esp), %xmm0, %k0
 ; X86-32-NEXT:    kmovb %k0, (%eax)
 ; X86-32-NEXT:    retl
@@ -118,8 +118,8 @@ define void @test_load_add(i1 %cond, ptr %fptr, ptr %iptr1, ptr %iptr2, float %f
 ;
 ; X86-32-LABEL: test_load_add:
 ; X86-32:       # %bb.0: # %entry
-; X86-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-32-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-32-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-32-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-32-NEXT:    testb $1, {{[0-9]+}}(%esp)
@@ -173,8 +173,8 @@ define void @test_load_i1(i1 %cond, ptr %fptr, ptr %iptr1, ptr %iptr2, float %f1
 ;
 ; X86-32-LABEL: test_load_i1:
 ; X86-32:       # %bb.0: # %entry
-; X86-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-32-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-32-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-32-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X86-32-NEXT:    je .LBB3_2

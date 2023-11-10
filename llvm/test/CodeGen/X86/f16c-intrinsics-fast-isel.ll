@@ -40,9 +40,9 @@ define float @test_cvtsh_ss(i16 %a0) nounwind {
 define i16 @test_cvtss_sh(float %a0) nounwind {
 ; X86-LABEL: test_cvtss_sh:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X86-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X86-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
 ; X86-NEXT:    vmovd %xmm0, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -51,7 +51,7 @@ define i16 @test_cvtss_sh(float %a0) nounwind {
 ; X64-LABEL: test_cvtss_sh:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X64-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
 ; X64-NEXT:    vmovd %xmm0, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax

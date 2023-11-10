@@ -7,8 +7,8 @@ define float @fneg_strict_fsub_to_strict_fadd(float %x, float %y) nounwind {
 ; X86-LABEL: fneg_strict_fsub_to_strict_fadd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    subss %xmm1, %xmm0
 ; X86-NEXT:    movss %xmm0, (%esp)
@@ -34,8 +34,8 @@ define double @fneg_strict_fsub_to_strict_fadd_d(double %x, double %y) nounwind 
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    xorpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    subsd %xmm1, %xmm0
 ; X86-NEXT:    movsd %xmm0, (%esp)
@@ -59,7 +59,7 @@ define float @strict_fsub_fneg_to_strict_fsub(float %x, float %y) nounwind {
 ; X86-LABEL: strict_fsub_fneg_to_strict_fsub:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    subss {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movss %xmm0, (%esp)
@@ -85,7 +85,7 @@ define double @strict_fsub_fneg_to_strict_fsub_d(double %x, double %y) nounwind 
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    subsd 16(%ebp), %xmm0
 ; X86-NEXT:    xorpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movlpd %xmm0, (%esp)

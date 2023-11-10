@@ -174,7 +174,7 @@ define void @float_to_half(float %0) strictfp {
 ;
 ; X32-F16C-LABEL: float_to_half:
 ; X32-F16C:       # %bb.0:
-; X32-F16C-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-F16C-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; X32-F16C-NEXT:    vmovd %xmm0, %eax
 ; X32-F16C-NEXT:    movw %ax, a
@@ -195,7 +195,7 @@ define void @float_to_half(float %0) strictfp {
 ; X64-F16C-LABEL: float_to_half:
 ; X64-F16C:       # %bb.0:
 ; X64-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X64-F16C-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; X64-F16C-NEXT:    vmovd %xmm0, %eax
 ; X64-F16C-NEXT:    movq a@GOTPCREL(%rip), %rcx
@@ -224,7 +224,7 @@ define void @double_to_half(double %0) strictfp {
 ; X32-F16C:       # %bb.0:
 ; X32-F16C-NEXT:    subl $12, %esp
 ; X32-F16C-NEXT:    .cfi_def_cfa_offset 16
-; X32-F16C-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; X32-F16C-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
 ; X32-F16C-NEXT:    vmovq %xmm0, (%esp)
 ; X32-F16C-NEXT:    calll __truncdfhf2
 ; X32-F16C-NEXT:    vpextrw $0, %xmm0, a
@@ -352,7 +352,7 @@ define void @add() strictfp {
 ; X32-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X32-F16C-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; X32-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X32-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X32-F16C-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X32-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; X32-F16C-NEXT:    vmovd %xmm0, %eax
 ; X32-F16C-NEXT:    movw %ax, c
@@ -390,7 +390,7 @@ define void @add() strictfp {
 ; X64-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X64-F16C-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; X64-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X64-F16C-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; X64-F16C-NEXT:    vmovd %xmm0, %eax
 ; X64-F16C-NEXT:    movq c@GOTPCREL(%rip), %rcx

@@ -9,11 +9,11 @@
 define i16 @test1(float %f) nounwind {
 ; X86-LABEL: test1:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    xorps %xmm1, %xmm1
-; X86-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X86-NEXT:    blendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X86-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    maxss %xmm1, %xmm0
 ; X86-NEXT:    cvttss2si %xmm0, %eax
@@ -25,7 +25,7 @@ define i16 @test1(float %f) nounwind {
 ; X64-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    xorps %xmm1, %xmm1
-; X64-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X64-NEXT:    blendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    maxss %xmm1, %xmm0
 ; X64-NEXT:    cvttss2si %xmm0, %eax
@@ -34,11 +34,11 @@ define i16 @test1(float %f) nounwind {
 ;
 ; X86_AVX1-LABEL: test1:
 ; X86_AVX1:       ## %bb.0:
-; X86_AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86_AVX1-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86_AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86_AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86_AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86_AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X86_AVX1-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X86_AVX1-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86_AVX1-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X86_AVX1-NEXT:    vcvttss2si %xmm0, %eax
@@ -50,7 +50,7 @@ define i16 @test1(float %f) nounwind {
 ; X64_AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64_AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X64_AVX1-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64_AVX1-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX1-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X64_AVX1-NEXT:    vcvttss2si %xmm0, %eax
@@ -59,11 +59,11 @@ define i16 @test1(float %f) nounwind {
 ;
 ; X86_AVX512-LABEL: test1:
 ; X86_AVX512:       ## %bb.0:
-; X86_AVX512-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86_AVX512-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86_AVX512-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86_AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86_AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X86_AVX512-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X86_AVX512-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86_AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
@@ -76,7 +76,7 @@ define i16 @test1(float %f) nounwind {
 ; X64_AVX512-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64_AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X64_AVX512-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64_AVX512-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64_AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
@@ -99,7 +99,7 @@ define i16 @test1(float %f) nounwind {
 define i16 @test2(float %f) nounwind {
 ; X86-LABEL: test2:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
@@ -122,7 +122,7 @@ define i16 @test2(float %f) nounwind {
 ;
 ; X86_AVX-LABEL: test2:
 ; X86_AVX:       ## %bb.0:
-; X86_AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86_AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86_AVX-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86_AVX-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86_AVX-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
@@ -199,7 +199,7 @@ define <4 x float> @test4(<4 x float> %A, ptr%b, i32 %C) nounwind {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    subl $28, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    movaps %xmm0, (%esp) ## 16-byte Spill
 ; X86-NEXT:    calll _f
 ; X86-NEXT:    roundss $4, (%esp), %xmm0 ## 16-byte Folded Reload
@@ -209,7 +209,7 @@ define <4 x float> @test4(<4 x float> %A, ptr%b, i32 %C) nounwind {
 ; X64-LABEL: test4:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
 ; X64-NEXT:    callq _f
 ; X64-NEXT:    roundss $4, (%rsp), %xmm0 ## 16-byte Folded Reload
@@ -220,7 +220,7 @@ define <4 x float> @test4(<4 x float> %A, ptr%b, i32 %C) nounwind {
 ; X86_AVX:       ## %bb.0:
 ; X86_AVX-NEXT:    subl $28, %esp
 ; X86_AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86_AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86_AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86_AVX-NEXT:    vmovaps %xmm0, (%esp) ## 16-byte Spill
 ; X86_AVX-NEXT:    calll _f
 ; X86_AVX-NEXT:    vroundss $4, (%esp), %xmm0, %xmm0 ## 16-byte Folded Reload
@@ -230,7 +230,7 @@ define <4 x float> @test4(<4 x float> %A, ptr%b, i32 %C) nounwind {
 ; X64_AVX-LABEL: test4:
 ; X64_AVX:       ## %bb.0:
 ; X64_AVX-NEXT:    subq $24, %rsp
-; X64_AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64_AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64_AVX-NEXT:    vmovaps %xmm0, (%rsp) ## 16-byte Spill
 ; X64_AVX-NEXT:    callq _f
 ; X64_AVX-NEXT:    vroundss $4, (%rsp), %xmm0, %xmm0 ## 16-byte Folded Reload
@@ -247,22 +247,22 @@ define <4 x float> @test4(<4 x float> %A, ptr%b, i32 %C) nounwind {
 define  <2 x double> @test5() nounwind uwtable readnone noinline {
 ; X86-LABEL: test5:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movaps {{.*#+}} xmm0 = [1.28E+2,1.23321E+2]
+; X86-NEXT:    movaps {{[^#]+#+}} xmm0 = [1.28E+2,1.23321E+2]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test5:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    movaps {{.*#+}} xmm0 = [1.28E+2,1.23321E+2]
+; X64-NEXT:    movaps {{[^#]+#+}} xmm0 = [1.28E+2,1.23321E+2]
 ; X64-NEXT:    retq
 ;
 ; X86_AVX-LABEL: test5:
 ; X86_AVX:       ## %bb.0: ## %entry
-; X86_AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [1.28E+2,1.23321E+2]
+; X86_AVX-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [1.28E+2,1.23321E+2]
 ; X86_AVX-NEXT:    retl
 ;
 ; X64_AVX-LABEL: test5:
 ; X64_AVX:       ## %bb.0: ## %entry
-; X64_AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [1.28E+2,1.23321E+2]
+; X64_AVX-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [1.28E+2,1.23321E+2]
 ; X64_AVX-NEXT:    retq
 entry:
   %0 = tail call <2 x double> @llvm.x86.sse2.cvtsi2sd(<2 x double> <double 4.569870e+02, double 1.233210e+02>, i32 128) nounwind readnone
@@ -373,7 +373,7 @@ define <4 x float> @double_fold(ptr %x, <4 x float> %y) {
 ; X86-LABEL: double_fold:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    movaps %xmm0, %xmm2
 ; X86-NEXT:    minss %xmm1, %xmm2
 ; X86-NEXT:    maxss %xmm1, %xmm0
@@ -382,7 +382,7 @@ define <4 x float> @double_fold(ptr %x, <4 x float> %y) {
 ;
 ; X64-LABEL: double_fold:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    movaps %xmm0, %xmm2
 ; X64-NEXT:    minss %xmm1, %xmm2
 ; X64-NEXT:    maxss %xmm1, %xmm0
@@ -392,7 +392,7 @@ define <4 x float> @double_fold(ptr %x, <4 x float> %y) {
 ; X86_AVX-LABEL: double_fold:
 ; X86_AVX:       ## %bb.0: ## %entry
 ; X86_AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86_AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86_AVX-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86_AVX-NEXT:    vminss %xmm1, %xmm0, %xmm2
 ; X86_AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X86_AVX-NEXT:    vaddps %xmm0, %xmm2, %xmm0
@@ -400,7 +400,7 @@ define <4 x float> @double_fold(ptr %x, <4 x float> %y) {
 ;
 ; X64_AVX-LABEL: double_fold:
 ; X64_AVX:       ## %bb.0: ## %entry
-; X64_AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64_AVX-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X64_AVX-NEXT:    vminss %xmm1, %xmm0, %xmm2
 ; X64_AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X64_AVX-NEXT:    vaddps %xmm0, %xmm2, %xmm0

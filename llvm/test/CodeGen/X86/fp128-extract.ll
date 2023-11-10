@@ -11,7 +11,7 @@ define fp128 @TestExtract(<2 x double> %x) nounwind {
 ; CHECK-NEXT:    callq __extenddftf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq __extenddftf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload

@@ -219,12 +219,12 @@ define void @trycpy(ptr nocapture %x, ptr nocapture readonly %y) {
 ; X86SSE2:       # %bb.0:
 ; X86SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86SSE2-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86SSE2-NEXT:    movsd %xmm0, 24(%eax)
-; X86SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86SSE2-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86SSE2-NEXT:    movsd %xmm0, 16(%eax)
-; X86SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86SSE2-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86SSE2-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X86SSE2-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86SSE2-NEXT:    movsd %xmm1, 8(%eax)
 ; X86SSE2-NEXT:    movsd %xmm0, (%eax)
 ; X86SSE2-NEXT:    retl

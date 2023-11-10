@@ -524,7 +524,7 @@ define <16 x i32> @test_abs_le_16i32(<16 x i32> %a) nounwind {
 define <2 x i64> @test_abs_ge_v2i64(<2 x i64> %a) nounwind {
 ; SSE2-LABEL: test_abs_ge_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm1
 ; SSE2-NEXT:    pxor %xmm1, %xmm0
 ; SSE2-NEXT:    psubq %xmm1, %xmm0
@@ -532,7 +532,7 @@ define <2 x i64> @test_abs_ge_v2i64(<2 x i64> %a) nounwind {
 ;
 ; SSSE3-LABEL: test_abs_ge_v2i64:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[1,1,3,3]
 ; SSSE3-NEXT:    psrad $31, %xmm1
 ; SSSE3-NEXT:    pxor %xmm1, %xmm0
 ; SSSE3-NEXT:    psubq %xmm1, %xmm0
@@ -572,11 +572,11 @@ define <2 x i64> @test_abs_ge_v2i64(<2 x i64> %a) nounwind {
 define <4 x i64> @test_abs_gt_v4i64(<4 x i64> %a) nounwind {
 ; SSE2-LABEL: test_abs_gt_v4i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm2
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    psubq %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm1[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm2
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    psubq %xmm2, %xmm1
@@ -584,11 +584,11 @@ define <4 x i64> @test_abs_gt_v4i64(<4 x i64> %a) nounwind {
 ;
 ; SSSE3-LABEL: test_abs_gt_v4i64:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm0[1,1,3,3]
 ; SSSE3-NEXT:    psrad $31, %xmm2
 ; SSSE3-NEXT:    pxor %xmm2, %xmm0
 ; SSSE3-NEXT:    psubq %xmm2, %xmm0
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm1[1,1,3,3]
 ; SSSE3-NEXT:    psrad $31, %xmm2
 ; SSSE3-NEXT:    pxor %xmm2, %xmm1
 ; SSSE3-NEXT:    psubq %xmm2, %xmm1
@@ -637,19 +637,19 @@ define <4 x i64> @test_abs_gt_v4i64(<4 x i64> %a) nounwind {
 define <8 x i64> @test_abs_le_v8i64(<8 x i64> %a) nounwind {
 ; SSE2-LABEL: test_abs_le_v8i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm4
 ; SSE2-NEXT:    pxor %xmm4, %xmm0
 ; SSE2-NEXT:    psubq %xmm4, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm1[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm4
 ; SSE2-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-NEXT:    psubq %xmm4, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[1,1,3,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm4
 ; SSE2-NEXT:    pxor %xmm4, %xmm2
 ; SSE2-NEXT:    psubq %xmm4, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm3[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm4
 ; SSE2-NEXT:    pxor %xmm4, %xmm3
 ; SSE2-NEXT:    psubq %xmm4, %xmm3
@@ -657,19 +657,19 @@ define <8 x i64> @test_abs_le_v8i64(<8 x i64> %a) nounwind {
 ;
 ; SSSE3-LABEL: test_abs_le_v8i64:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
+; SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm0[1,1,3,3]
 ; SSSE3-NEXT:    psrad $31, %xmm4
 ; SSSE3-NEXT:    pxor %xmm4, %xmm0
 ; SSSE3-NEXT:    psubq %xmm4, %xmm0
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[1,1,3,3]
+; SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm1[1,1,3,3]
 ; SSSE3-NEXT:    psrad $31, %xmm4
 ; SSSE3-NEXT:    pxor %xmm4, %xmm1
 ; SSSE3-NEXT:    psubq %xmm4, %xmm1
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[1,1,3,3]
+; SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm2[1,1,3,3]
 ; SSSE3-NEXT:    psrad $31, %xmm4
 ; SSSE3-NEXT:    pxor %xmm4, %xmm2
 ; SSSE3-NEXT:    psubq %xmm4, %xmm2
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
+; SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm3[1,1,3,3]
 ; SSSE3-NEXT:    psrad $31, %xmm4
 ; SSSE3-NEXT:    pxor %xmm4, %xmm3
 ; SSSE3-NEXT:    psubq %xmm4, %xmm3
@@ -737,19 +737,19 @@ define <8 x i64> @test_abs_le_v8i64_fold(ptr %a.ptr) nounwind {
 ; SSE2-NEXT:    movdqu 16(%rdi), %xmm1
 ; SSE2-NEXT:    movdqu 32(%rdi), %xmm2
 ; SSE2-NEXT:    movdqu 48(%rdi), %xmm3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm4
 ; SSE2-NEXT:    pxor %xmm4, %xmm0
 ; SSE2-NEXT:    psubq %xmm4, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm1[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm4
 ; SSE2-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-NEXT:    psubq %xmm4, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[1,1,3,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm4
 ; SSE2-NEXT:    pxor %xmm4, %xmm2
 ; SSE2-NEXT:    psubq %xmm4, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm3[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm4
 ; SSE2-NEXT:    pxor %xmm4, %xmm3
 ; SSE2-NEXT:    psubq %xmm4, %xmm3
@@ -761,19 +761,19 @@ define <8 x i64> @test_abs_le_v8i64_fold(ptr %a.ptr) nounwind {
 ; SSSE3-NEXT:    movdqu 16(%rdi), %xmm1
 ; SSSE3-NEXT:    movdqu 32(%rdi), %xmm2
 ; SSSE3-NEXT:    movdqu 48(%rdi), %xmm3
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
+; SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm0[1,1,3,3]
 ; SSSE3-NEXT:    psrad $31, %xmm4
 ; SSSE3-NEXT:    pxor %xmm4, %xmm0
 ; SSSE3-NEXT:    psubq %xmm4, %xmm0
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[1,1,3,3]
+; SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm1[1,1,3,3]
 ; SSSE3-NEXT:    psrad $31, %xmm4
 ; SSSE3-NEXT:    pxor %xmm4, %xmm1
 ; SSSE3-NEXT:    psubq %xmm4, %xmm1
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[1,1,3,3]
+; SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm2[1,1,3,3]
 ; SSSE3-NEXT:    psrad $31, %xmm4
 ; SSSE3-NEXT:    pxor %xmm4, %xmm2
 ; SSSE3-NEXT:    psubq %xmm4, %xmm2
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
+; SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm3[1,1,3,3]
 ; SSSE3-NEXT:    psrad $31, %xmm4
 ; SSSE3-NEXT:    pxor %xmm4, %xmm3
 ; SSSE3-NEXT:    psubq %xmm4, %xmm3

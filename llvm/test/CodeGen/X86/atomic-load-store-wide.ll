@@ -9,7 +9,7 @@ define void @test1(ptr %ptr, i64 %val1) {
 ; SSE42-LABEL: test1:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE42-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE42-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE42-NEXT:    movlps %xmm0, (%eax)
 ; SSE42-NEXT:    lock orl $0, (%esp)
 ; SSE42-NEXT:    retl
@@ -43,7 +43,7 @@ define i64 @test2(ptr %ptr) {
 ; SSE42-LABEL: test2:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE42-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE42-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE42-NEXT:    movd %xmm0, %eax
 ; SSE42-NEXT:    pextrd $1, %xmm0, %edx
 ; SSE42-NEXT:    retl
@@ -99,7 +99,7 @@ define i64 @test4(ptr %ptr) {
 ; SSE42-LABEL: test4:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE42-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE42-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE42-NEXT:    movd %xmm0, %eax
 ; SSE42-NEXT:    pextrd $1, %xmm0, %edx
 ; SSE42-NEXT:    retl

@@ -341,8 +341,8 @@ define ptr @t13(ptr %yy) nounwind ssp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl 16(%eax), %ecx
 ; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    movsd %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movsd %xmm0, (%esp)
 ; X86-NEXT:    xorl %ecx, %ecx
@@ -582,7 +582,7 @@ define dso_local double @t20(double %x) nounwind {
 ; X86-LABEL: t20:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    calll foo20
 ; X86-NEXT:    movsd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)

@@ -4,7 +4,7 @@
 define fastcc void @fht(ptr %fz, i16 signext  %n) {
 ; CHECK-LABEL: fht:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    subss %xmm3, %xmm1

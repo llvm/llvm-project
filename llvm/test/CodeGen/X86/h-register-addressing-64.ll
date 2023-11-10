@@ -8,7 +8,7 @@ define double @foo8(ptr nocapture inreg %p, i64 inreg %x) nounwind readonly {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    movzbl %ah, %eax
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retq
   %t0 = lshr i64 %x, 8
   %t1 = and i64 %t0, 255
@@ -22,7 +22,7 @@ define float @foo4(ptr nocapture inreg %p, i64 inreg %x) nounwind readonly {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    movzbl %ah, %eax
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retq
   %t0 = lshr i64 %x, 8
   %t1 = and i64 %t0, 255
@@ -106,7 +106,7 @@ define double @ext8(ptr nocapture inreg %p, i32 inreg %x) nounwind readonly {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    movzbl %ah, %eax
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retq
   %t0 = lshr i32 %x, 5
   %t1 = and i32 %t0, 2040
@@ -121,7 +121,7 @@ define float @ext4(ptr nocapture inreg %p, i32 inreg %x) nounwind readonly {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    movzbl %ah, %eax
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retq
   %t0 = lshr i32 %x, 6
   %t1 = and i32 %t0, 1020

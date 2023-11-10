@@ -9,14 +9,14 @@ define void @shift5a(<4 x i32> %val, ptr %dst, ptr %pamt) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    pslld %xmm1, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shift5a:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    pslld %xmm1, %xmm0
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -35,14 +35,14 @@ define void @shift5b(<4 x i32> %val, ptr %dst, ptr %pamt) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    psrad %xmm1, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shift5b:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    psrad %xmm1, %xmm0
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -60,7 +60,7 @@ define void @shift5c(<4 x i32> %val, ptr %dst, i32 %amt) nounwind {
 ; X86-LABEL: shift5c:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    pslld %xmm1, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
@@ -84,7 +84,7 @@ define void @shift5d(<4 x i32> %val, ptr %dst, i32 %amt) nounwind {
 ; X86-LABEL: shift5d:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    psrad %xmm1, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl

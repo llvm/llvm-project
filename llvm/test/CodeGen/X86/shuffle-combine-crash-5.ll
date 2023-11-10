@@ -4,7 +4,7 @@
 define i1 @test(ptr %q) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; CHECK-NEXT:    vptest %ymm0, %ymm0

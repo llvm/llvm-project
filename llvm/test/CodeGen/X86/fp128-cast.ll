@@ -25,7 +25,7 @@ define dso_local void @TestFPExtF32_F128() nounwind {
 ; X64-SSE-LABEL: TestFPExtF32_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-SSE-NEXT:    callq __extendsftf2@PLT
 ; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
@@ -56,7 +56,7 @@ define dso_local void @TestFPExtF32_F128() nounwind {
 ; X64-AVX-LABEL: TestFPExtF32_F128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-AVX-NEXT:    callq __extendsftf2@PLT
 ; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    popq %rax
@@ -72,7 +72,7 @@ define dso_local void @TestFPExtF64_F128() nounwind {
 ; X64-SSE-LABEL: TestFPExtF64_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-SSE-NEXT:    callq __extenddftf2@PLT
 ; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
@@ -103,7 +103,7 @@ define dso_local void @TestFPExtF64_F128() nounwind {
 ; X64-AVX-LABEL: TestFPExtF64_F128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-AVX-NEXT:    callq __extenddftf2@PLT
 ; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    popq %rax
@@ -1324,7 +1324,7 @@ define fp128 @TestTruncCopysign(fp128 %x, i32 %n) nounwind {
 ; X64-AVX-NEXT:    pushq %rax
 ; X64-AVX-NEXT:    callq __trunctfdf2@PLT
 ; X64-AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [+Inf,+Inf]
+; X64-AVX-NEXT:    vmovddup {{[^#]+#+}} xmm1 = [+Inf,+Inf]
 ; X64-AVX-NEXT:    # xmm1 = mem[0,0]
 ; X64-AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    callq __extenddftf2@PLT

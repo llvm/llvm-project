@@ -200,8 +200,8 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    jb .LBB1_8
 ; CHECK-NEXT:  # %bb.9: # %vector.body.prol.preheader
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; CHECK-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,1,0,1]
 ; CHECK-NEXT:    movdqu %xmm0, (%r12,%r13,8)
 ; CHECK-NEXT:    movdqu %xmm0, 16(%r12,%r13,8)
 ; CHECK-NEXT:    movl $4, %r10d
@@ -214,8 +214,8 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    je .LBB1_13
 ; CHECK-NEXT:  .LBB1_11: # %vector.body.preheader.new
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; CHECK-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,1,0,1]
 ; CHECK-NEXT:    movq %r10, %rax
 ; CHECK-NEXT:    subq %rdx, %rax
 ; CHECK-NEXT:    addq %r13, %r10

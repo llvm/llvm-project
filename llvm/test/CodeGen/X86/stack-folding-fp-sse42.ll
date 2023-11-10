@@ -990,7 +990,7 @@ define <2 x double> @stack_fold_cvtss2sd_int(<4 x float> %a0) optsize {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    cvtss2sd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; CHECK-NEXT:    movq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = extractelement <4 x float> %a0, i64 0

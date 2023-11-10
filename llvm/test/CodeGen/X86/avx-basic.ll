@@ -87,7 +87,7 @@ define <8 x i32> @VMOVZQI2PQI(ptr nocapture %aFOO) nounwind {
 define <16 x float> @fneg(<16 x float> %a) nounwind {
 ; CHECK-LABEL: fneg:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vbroadcastss {{[^#]+#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    vxorps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vxorps %ymm2, %ymm1, %ymm1
 ; CHECK-NEXT:    retq
@@ -121,7 +121,7 @@ define i64 @VMOVPQIto64rr(<2 x i64> %a) {
 define <8 x float> @mov00_8f32(ptr %ptr) {
 ; CHECK-LABEL: mov00_8f32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retq
   %val = load float, ptr %ptr
   %vec = insertelement <8 x float> zeroinitializer, float %val, i32 0

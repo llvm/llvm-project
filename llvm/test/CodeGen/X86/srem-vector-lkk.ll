@@ -111,7 +111,7 @@ define <4 x i16> @fold_srem_vec_1(<4 x i16> %x) {
 define <4 x i16> @fold_srem_vec_2(<4 x i16> %x) {
 ; SSE-LABEL: fold_srem_vec_2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [44151,44151,44151,44151,44151,44151,44151,44151]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm1 = [44151,44151,44151,44151,44151,44151,44151,44151]
 ; SSE-NEXT:    pmulhw %xmm0, %xmm1
 ; SSE-NEXT:    paddw %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
@@ -141,14 +141,14 @@ define <4 x i16> @fold_srem_vec_2(<4 x i16> %x) {
 define <4 x i16> @combine_srem_sdiv(<4 x i16> %x) {
 ; SSE-LABEL: combine_srem_sdiv:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [44151,44151,44151,44151,44151,44151,44151,44151]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm1 = [44151,44151,44151,44151,44151,44151,44151,44151]
 ; SSE-NEXT:    pmulhw %xmm0, %xmm1
 ; SSE-NEXT:    paddw %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
 ; SSE-NEXT:    psrlw $15, %xmm2
 ; SSE-NEXT:    psraw $6, %xmm1
 ; SSE-NEXT:    paddw %xmm2, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [95,95,95,95,95,95,95,95]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm2 = [95,95,95,95,95,95,95,95]
 ; SSE-NEXT:    pmullw %xmm1, %xmm2
 ; SSE-NEXT:    psubw %xmm2, %xmm0
 ; SSE-NEXT:    paddw %xmm1, %xmm0
@@ -449,7 +449,7 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) {
 ; SSE-NEXT:    imulq $5423, %rdx, %rax # imm = 0x152F
 ; SSE-NEXT:    subq %rax, %rcx
 ; SSE-NEXT:    movq %rcx, %xmm2
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE-NEXT:    pextrq $1, %xmm0, %rcx
 ; SSE-NEXT:    movabsq $7220743857598845893, %rdx # imm = 0x64353C48064353C5
 ; SSE-NEXT:    movq %rcx, %rax
@@ -461,7 +461,7 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) {
 ; SSE-NEXT:    imulq $654, %rdx, %rax # imm = 0x28E
 ; SSE-NEXT:    subq %rax, %rcx
 ; SSE-NEXT:    movq %rcx, %xmm0
-; SSE-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; SSE-NEXT:    pslldq {{[^#]+#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: dont_fold_srem_i64:
@@ -492,7 +492,7 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) {
 ; AVX1-NEXT:    imulq $5423, %rdx, %rax # imm = 0x152F
 ; AVX1-NEXT:    subq %rax, %rcx
 ; AVX1-NEXT:    vmovq %rcx, %xmm1
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX1-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX1-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX1-NEXT:    movabsq $7220743857598845893, %rdx # imm = 0x64353C48064353C5
 ; AVX1-NEXT:    movq %rcx, %rax
@@ -504,7 +504,7 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) {
 ; AVX1-NEXT:    imulq $654, %rdx, %rax # imm = 0x28E
 ; AVX1-NEXT:    subq %rax, %rcx
 ; AVX1-NEXT:    vmovq %rcx, %xmm0
-; AVX1-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; AVX1-NEXT:    vpslldq {{[^#]+#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -536,7 +536,7 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) {
 ; AVX2-NEXT:    imulq $5423, %rdx, %rax # imm = 0x152F
 ; AVX2-NEXT:    subq %rax, %rcx
 ; AVX2-NEXT:    vmovq %rcx, %xmm1
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX2-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX2-NEXT:    movabsq $7220743857598845893, %rdx # imm = 0x64353C48064353C5
 ; AVX2-NEXT:    movq %rcx, %rax
@@ -548,7 +548,7 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) {
 ; AVX2-NEXT:    imulq $654, %rdx, %rax # imm = 0x28E
 ; AVX2-NEXT:    subq %rax, %rcx
 ; AVX2-NEXT:    vmovq %rcx, %xmm0
-; AVX2-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; AVX2-NEXT:    vpslldq {{[^#]+#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %1 = srem <4 x i64> %x, <i64 1, i64 654, i64 23, i64 5423>

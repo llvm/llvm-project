@@ -45,16 +45,16 @@ define <4 x float> @pow_v4f32_one_fourth_fmf(<4 x float> %x) nounwind {
 ; CHECK-NEXT:    rsqrtps %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm0, %xmm2
 ; CHECK-NEXT:    mulps %xmm1, %xmm2
-; CHECK-NEXT:    movaps {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; CHECK-NEXT:    movaps %xmm2, %xmm4
 ; CHECK-NEXT:    mulps %xmm3, %xmm4
 ; CHECK-NEXT:    mulps %xmm1, %xmm2
-; CHECK-NEXT:    movaps {{.*#+}} xmm5 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm5 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
 ; CHECK-NEXT:    addps %xmm5, %xmm2
 ; CHECK-NEXT:    mulps %xmm4, %xmm2
-; CHECK-NEXT:    movaps {{.*#+}} xmm4 = [NaN,NaN,NaN,NaN]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm4 = [NaN,NaN,NaN,NaN]
 ; CHECK-NEXT:    andps %xmm4, %xmm0
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm1 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; CHECK-NEXT:    movaps %xmm1, %xmm6
 ; CHECK-NEXT:    cmpleps %xmm0, %xmm6
 ; CHECK-NEXT:    andps %xmm2, %xmm6
@@ -87,7 +87,7 @@ define <2 x double> @pow_v2f64_one_fourth_fmf(<2 x double> %x) nounwind {
 define float @pow_f32_one_fourth_not_enough_fmf(float %x) nounwind {
 ; CHECK-LABEL: pow_f32_one_fourth_not_enough_fmf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    jmp powf@PLT # TAILCALL
   %r = call afn ninf float @llvm.pow.f32(float %x, float 2.5e-01)
   ret float %r
@@ -96,7 +96,7 @@ define float @pow_f32_one_fourth_not_enough_fmf(float %x) nounwind {
 define double @pow_f64_one_fourth_not_enough_fmf(double %x) nounwind {
 ; CHECK-LABEL: pow_f64_one_fourth_not_enough_fmf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    jmp pow@PLT # TAILCALL
   %r = call nsz ninf double @llvm.pow.f64(double %x, double 2.5e-01)
   ret double %r
@@ -107,27 +107,27 @@ define <4 x float> @pow_v4f32_one_fourth_not_enough_fmf(<4 x float> %x) nounwind
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq powf@PLT
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq powf@PLT
 ; CHECK-NEXT:    unpcklps (%rsp), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq powf@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq powf@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    unpcklps {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; CHECK-NEXT:    unpcklpd (%rsp), %xmm1 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm1 = xmm1[0],mem[0]
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
@@ -142,15 +142,15 @@ define <2 x double> @pow_v2f64_one_fourth_not_enough_fmf(<2 x double> %x) nounwi
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    movlhps {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    retq
@@ -205,7 +205,7 @@ define x86_fp80 @pow_f80_one_third_fmf(x86_fp80 %x) nounwind {
 define double @pow_f64_not_exactly_one_third_fmf(double %x) nounwind {
 ; CHECK-LABEL: pow_f64_not_exactly_one_third_fmf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    jmp pow@PLT # TAILCALL
   %r = call nsz nnan ninf afn double @llvm.pow.f64(double %x, double 0x3fd5555555555556)
   ret double %r
@@ -216,7 +216,7 @@ define double @pow_f64_not_exactly_one_third_fmf(double %x) nounwind {
 define double @pow_f64_not_enough_fmf(double %x) nounwind {
 ; CHECK-LABEL: pow_f64_not_enough_fmf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    jmp pow@PLT # TAILCALL
   %r = call nsz ninf afn double @llvm.pow.f64(double %x, double 0x3fd5555555555555)
   ret double %r

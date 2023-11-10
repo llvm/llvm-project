@@ -16,7 +16,7 @@ define void @a(ptr %arg, i32 %arg1) {
 ; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    ## InlineAsm Start
 ; SSE2-NEXT:    ## InlineAsm End
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 4-byte Folded Reload
 ; SSE2-NEXT:    movss %xmm0, (%rdi)
 ; SSE2-NEXT:    addq $4, %rdi
@@ -82,7 +82,7 @@ define void @b(ptr %arg, i64 %arg1) {
 ; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    ## InlineAsm Start
 ; SSE2-NEXT:    ## InlineAsm End
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    addsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 8-byte Folded Reload
 ; SSE2-NEXT:    movsd %xmm0, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
@@ -147,7 +147,7 @@ define void @c(ptr %arg, ptr %arg1, i32 %arg2) {
 ; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    ## InlineAsm Start
 ; SSE2-NEXT:    ## InlineAsm End
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 4-byte Folded Reload
 ; SSE2-NEXT:    movss %xmm0, (%rdi)
 ; SSE2-NEXT:    addq $16, %rdi
@@ -215,7 +215,7 @@ define void @d(ptr %arg, ptr %arg1, i64 %arg2) {
 ; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    ## InlineAsm Start
 ; SSE2-NEXT:    ## InlineAsm End
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    addsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 8-byte Folded Reload
 ; SSE2-NEXT:    movsd %xmm0, (%rdi)
 ; SSE2-NEXT:    addq $16, %rdi

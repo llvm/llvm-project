@@ -5,7 +5,7 @@ define void @foo(<16 x float> %x) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vshuff64x2 {{[^#]+#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vmovupd %zmm0, (%rax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

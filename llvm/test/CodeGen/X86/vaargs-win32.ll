@@ -71,9 +71,9 @@ define <4 x i32> @bar() nounwind {
 ; MSVC-LABEL: bar:
 ; MSVC:       # %bb.0:
 ; MSVC-NEXT:    subl $32, %esp
-; MSVC-NEXT:    movaps {{.*#+}} xmm0 = [5.0E+0,6.0E+0,7.0E+0,8.0E+0]
+; MSVC-NEXT:    movaps {{[^#]+#+}} xmm0 = [5.0E+0,6.0E+0,7.0E+0,8.0E+0]
 ; MSVC-NEXT:    movups %xmm0, 16(%esp)
-; MSVC-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
+; MSVC-NEXT:    movaps {{[^#]+#+}} xmm0 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
 ; MSVC-NEXT:    movups %xmm0, (%esp)
 ; MSVC-NEXT:    calll _foo
 ; MSVC-NEXT:    addl $32, %esp
@@ -85,9 +85,9 @@ define <4 x i32> @bar() nounwind {
 ; MINGW-NEXT:    movl %esp, %ebp
 ; MINGW-NEXT:    andl $-16, %esp
 ; MINGW-NEXT:    subl $48, %esp
-; MINGW-NEXT:    movaps {{.*#+}} xmm0 = [5.0E+0,6.0E+0,7.0E+0,8.0E+0]
+; MINGW-NEXT:    movaps {{[^#]+#+}} xmm0 = [5.0E+0,6.0E+0,7.0E+0,8.0E+0]
 ; MINGW-NEXT:    movaps %xmm0, 16(%esp)
-; MINGW-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
+; MINGW-NEXT:    movaps {{[^#]+#+}} xmm0 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
 ; MINGW-NEXT:    movaps %xmm0, (%esp)
 ; MINGW-NEXT:    calll _foo
 ; MINGW-NEXT:    movl %ebp, %esp

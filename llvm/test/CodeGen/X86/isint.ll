@@ -17,7 +17,7 @@ define i32 @isint_return(double %d) nounwind {
 ;
 ; CHECK32-LABEL: isint_return:
 ; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK32-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK32-NEXT:    cvttpd2dq %xmm0, %xmm1
 ; CHECK32-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; CHECK32-NEXT:    cmpeqsd %xmm0, %xmm1
@@ -43,7 +43,7 @@ define i32 @isint_float_return(float %f) nounwind {
 ;
 ; CHECK32-LABEL: isint_float_return:
 ; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK32-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK32-NEXT:    cvttps2dq %xmm0, %xmm1
 ; CHECK32-NEXT:    cvtdq2ps %xmm1, %xmm1
 ; CHECK32-NEXT:    cmpeqss %xmm0, %xmm1
@@ -76,7 +76,7 @@ define void @isint_branch(double %d) nounwind {
 ;
 ; CHECK32-LABEL: isint_branch:
 ; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK32-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK32-NEXT:    cvttpd2dq %xmm0, %xmm1
 ; CHECK32-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; CHECK32-NEXT:    ucomisd %xmm1, %xmm0

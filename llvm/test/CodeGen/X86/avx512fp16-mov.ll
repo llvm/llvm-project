@@ -1220,7 +1220,7 @@ define <8 x half> @movrrkz8f16(<8 x half> %a, i8 %msk) {
 define <8 x half> @movsh(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: movsh:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[0,1,14,15,0,1,2,3,4,5,6,7,14,15,10,11]
+; CHECK-NEXT:    vpshufb {{[^#]+#+}} xmm2 = xmm0[0,1,14,15,0,1,2,3,4,5,6,7,14,15,10,11]
 ; CHECK-NEXT:    vmovsh %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vaddph %xmm0, %xmm2, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
@@ -1298,7 +1298,7 @@ define half @extract_f16_1(<8 x half> %x) {
 define half @extract_f16_2(<8 x half> %x) {
 ; CHECK-LABEL: extract_f16_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{[^#]+#+}} xmm0 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
    %res = extractelement <8 x half> %x, i32 2
    ret half %res
@@ -1316,7 +1316,7 @@ define half @extract_f16_3(<8 x half> %x) {
 define half @extract_f16_4(<8 x half> %x) {
 ; CHECK-LABEL: extract_f16_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; CHECK-NEXT:    vshufpd {{[^#]+#+}} xmm0 = xmm0[1,0]
 ; CHECK-NEXT:    ret{{[l|q]}}
    %res = extractelement <8 x half> %x, i32 4
    ret half %res
@@ -1325,7 +1325,7 @@ define half @extract_f16_4(<8 x half> %x) {
 define half @extract_f16_5(<8 x half> %x) {
 ; CHECK-LABEL: extract_f16_5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{[^#]+#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    ret{{[l|q]}}
    %res = extractelement <8 x half> %x, i32 5
    ret half %res
@@ -1334,7 +1334,7 @@ define half @extract_f16_5(<8 x half> %x) {
 define half @extract_f16_6(<8 x half> %x) {
 ; CHECK-LABEL: extract_f16_6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
    %res = extractelement <8 x half> %x, i32 6
    ret half %res
@@ -1343,7 +1343,7 @@ define half @extract_f16_6(<8 x half> %x) {
 define half @extract_f16_7(<8 x half> %x) {
 ; CHECK-LABEL: extract_f16_7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{[^#]+#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    ret{{[l|q]}}
    %res = extractelement <8 x half> %x, i32 7
    ret half %res
@@ -1534,14 +1534,14 @@ define void @extract_store_f16_1(<8 x half> %x, ptr %y) {
 define void @extract_store_f16_2(<8 x half> %x, ptr %y) {
 ; X64-LABEL: extract_store_f16_2:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; X64-NEXT:    vmovshdup {{[^#]+#+}} xmm0 = xmm0[1,1,3,3]
 ; X64-NEXT:    vmovsh %xmm0, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: extract_store_f16_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; X86-NEXT:    vmovshdup {{[^#]+#+}} xmm0 = xmm0[1,1,3,3]
 ; X86-NEXT:    vmovsh %xmm0, (%eax)
 ; X86-NEXT:    retl
    %res = extractelement <8 x half> %x, i32 2
@@ -1570,14 +1570,14 @@ define void @extract_store_f16_3(<8 x half> %x, ptr %y) {
 define void @extract_store_f16_4(<8 x half> %x, ptr %y) {
 ; X64-LABEL: extract_store_f16_4:
 ; X64:       # %bb.0:
-; X64-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-NEXT:    vshufpd {{[^#]+#+}} xmm0 = xmm0[1,0]
 ; X64-NEXT:    vmovsh %xmm0, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: extract_store_f16_4:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X86-NEXT:    vshufpd {{[^#]+#+}} xmm0 = xmm0[1,0]
 ; X86-NEXT:    vmovsh %xmm0, (%eax)
 ; X86-NEXT:    retl
    %res = extractelement <8 x half> %x, i32 4
@@ -1588,14 +1588,14 @@ define void @extract_store_f16_4(<8 x half> %x, ptr %y) {
 define void @extract_store_f16_5(<8 x half> %x, ptr %y) {
 ; X64-LABEL: extract_store_f16_5:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X64-NEXT:    vpsrldq {{[^#]+#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    vmovsh %xmm0, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: extract_store_f16_5:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vpsrldq {{[^#]+#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vmovsh %xmm0, (%eax)
 ; X86-NEXT:    retl
    %res = extractelement <8 x half> %x, i32 5
@@ -1606,14 +1606,14 @@ define void @extract_store_f16_5(<8 x half> %x, ptr %y) {
 define void @extract_store_f16_6(<8 x half> %x, ptr %y) {
 ; X64-LABEL: extract_store_f16_6:
 ; X64:       # %bb.0:
-; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X64-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; X64-NEXT:    vmovsh %xmm0, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: extract_store_f16_6:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X86-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; X86-NEXT:    vmovsh %xmm0, (%eax)
 ; X86-NEXT:    retl
    %res = extractelement <8 x half> %x, i32 6
@@ -1624,14 +1624,14 @@ define void @extract_store_f16_6(<8 x half> %x, ptr %y) {
 define void @extract_store_f16_7(<8 x half> %x, ptr %y) {
 ; X64-LABEL: extract_store_f16_7:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X64-NEXT:    vpsrldq {{[^#]+#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    vmovsh %xmm0, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: extract_store_f16_7:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vpsrldq {{[^#]+#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vmovsh %xmm0, (%eax)
 ; X86-NEXT:    retl
    %res = extractelement <8 x half> %x, i32 7
@@ -1790,20 +1790,20 @@ define i32 @extract_zext_i16_1(<8 x i16> %x) {
 define <8 x half> @build_vector_xxxxuuuu(half %a0, half %a1, half %a2, half %a3) {
 ; X64-LABEL: build_vector_xxxxuuuu:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
-; X64-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],zero,zero
+; X64-NEXT:    vpunpcklwd {{[^#]+#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
+; X64-NEXT:    vpunpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X64-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],zero,zero
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: build_vector_xxxxuuuu:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X86-NEXT:    vpunpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm2
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
+; X86-NEXT:    vpunpcklwd {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; X86-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; X86-NEXT:    retl
   %a = insertelement <8 x half> undef, half %a0, i32 0
   %b = insertelement <8 x half> %a, half %a1, i32 1
@@ -1815,9 +1815,9 @@ define <8 x half> @build_vector_xxxxuuuu(half %a0, half %a1, half %a2, half %a3)
 define <8 x half> @build_vector_uuuuxxxx(half %a0, half %a1, half %a2, half %a3) {
 ; X64-LABEL: build_vector_uuuuxxxx:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
-; X64-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; X64-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; X64-NEXT:    vpunpcklwd {{[^#]+#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
+; X64-NEXT:    vpunpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X64-NEXT:    vpunpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; X64-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; X64-NEXT:    retq
 ;
@@ -1825,11 +1825,11 @@ define <8 x half> @build_vector_uuuuxxxx(half %a0, half %a1, half %a2, half %a3)
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X86-NEXT:    vpunpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm2
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; X86-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    vpunpcklwd {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; X86-NEXT:    vpunpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; X86-NEXT:    retl
   %a = insertelement <8 x half> undef, half %a0, i32 4
@@ -1842,32 +1842,32 @@ define <8 x half> @build_vector_uuuuxxxx(half %a0, half %a1, half %a2, half %a3)
 define <8 x half> @build_vector_xxxxxxxx(half %a0, half %a1, half %a2, half %a3, half %a4, half %a5, half %a6, half %a7) {
 ; X64-LABEL: build_vector_xxxxxxxx:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpunpcklwd {{.*#+}} xmm6 = xmm6[0],xmm7[0],xmm6[1],xmm7[1],xmm6[2],xmm7[2],xmm6[3],xmm7[3]
-; X64-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3]
-; X64-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm4[0],xmm6[0],xmm4[1],xmm6[1]
-; X64-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
-; X64-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; X64-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm4[0]
+; X64-NEXT:    vpunpcklwd {{[^#]+#+}} xmm6 = xmm6[0],xmm7[0],xmm6[1],xmm7[1],xmm6[2],xmm7[2],xmm6[3],xmm7[3]
+; X64-NEXT:    vpunpcklwd {{[^#]+#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3]
+; X64-NEXT:    vpunpckldq {{[^#]+#+}} xmm4 = xmm4[0],xmm6[0],xmm4[1],xmm6[1]
+; X64-NEXT:    vpunpcklwd {{[^#]+#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
+; X64-NEXT:    vpunpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X64-NEXT:    vpunpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; X64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm4[0]
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: build_vector_xxxxxxxx:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X86-NEXT:    vpunpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm2
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; X86-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    vpunpcklwd {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; X86-NEXT:    vpunpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm2
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; X86-NEXT:    vpunpcklwd {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm2
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm3
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
-; X86-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-NEXT:    vpunpcklwd {{[^#]+#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
+; X86-NEXT:    vpunpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; X86-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; X86-NEXT:    retl
   %a = insertelement <8 x half> undef, half %a0, i32 0
   %b = insertelement <8 x half> %a, half %a1, i32 1
@@ -1883,12 +1883,12 @@ define <8 x half> @build_vector_xxxxxxxx(half %a0, half %a1, half %a2, half %a3,
 define <16 x half> @build_vector_xxxxuuuuuuuuxxxx(half %a0, half %a1, half %a2, half %a3, half %a4, half %a5, half %a6, half %a7) {
 ; X64-LABEL: build_vector_xxxxuuuuuuuuxxxx:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
-; X64-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],zero,zero
-; X64-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm6[0],xmm7[0],xmm6[1],xmm7[1],xmm6[2],xmm7[2],xmm6[3],xmm7[3]
-; X64-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3]
-; X64-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X64-NEXT:    vpunpcklwd {{[^#]+#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
+; X64-NEXT:    vpunpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X64-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],zero,zero
+; X64-NEXT:    vpunpcklwd {{[^#]+#+}} xmm1 = xmm6[0],xmm7[0],xmm6[1],xmm7[1],xmm6[2],xmm7[2],xmm6[3],xmm7[3]
+; X64-NEXT:    vpunpcklwd {{[^#]+#+}} xmm2 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3]
+; X64-NEXT:    vpunpckldq {{[^#]+#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; X64-NEXT:    vpbroadcastq %xmm1, %xmm1
 ; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
@@ -1897,18 +1897,18 @@ define <16 x half> @build_vector_xxxxuuuuuuuuxxxx(half %a0, half %a1, half %a2, 
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X86-NEXT:    vpunpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm2
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; X86-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    vpunpcklwd {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; X86-NEXT:    vpunpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm2
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; X86-NEXT:    vpunpcklwd {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm2
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm3
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
-; X86-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],zero,zero
+; X86-NEXT:    vpunpcklwd {{[^#]+#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
+; X86-NEXT:    vinsertps {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0],zero,zero
 ; X86-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X86-NEXT:    retl
@@ -1926,7 +1926,7 @@ define <16 x half> @build_vector_xxxxuuuuuuuuxxxx(half %a0, half %a1, half %a2, 
 define <8 x half> @regression1(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: regression1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,14,15,0,1,2,3,4,5,6,7,14,15,10,11]
+; CHECK-NEXT:    vpshufb {{[^#]+#+}} xmm0 = xmm0[0,1,14,15,0,1,2,3,4,5,6,7,14,15,10,11]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 7, i32 0, i32 1, i32 2, i32 3, i32 7, i32 5>
   ret <8 x half> %res
@@ -1936,9 +1936,9 @@ define <4 x float> @regression2(ptr addrspace(1) %0, <4 x i32> %1, <4 x i32> %2,
 ; X64-LABEL: regression2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovw (%rsi), %xmm0
-; X64-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; X64-NEXT:    vpmovzxbd {{[^#]+#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; X64-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[2,3]
 ; X64-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; X64-NEXT:    retq
 ;
@@ -1946,9 +1946,9 @@ define <4 x float> @regression2(ptr addrspace(1) %0, <4 x i32> %1, <4 x i32> %2,
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovw (%eax), %xmm0
-; X86-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; X86-NEXT:    vpmovzxbd {{[^#]+#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; X86-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; X86-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[2,3]
 ; X86-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
 ; X86-NEXT:    retl
   %6 = load i8, ptr %4, align 1
@@ -1969,8 +1969,8 @@ define <4 x float> @regression2(ptr addrspace(1) %0, <4 x i32> %1, <4 x i32> %2,
 define void @load_store_v4f16(ptr %x, ptr %y, ptr %z) {
 ; X64-LABEL: load_store_v4f16:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X64-NEXT:    vmovsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X64-NEXT:    vaddph %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovlps %xmm0, (%rdx)
 ; X64-NEXT:    retq
@@ -1980,8 +1980,8 @@ define void @load_store_v4f16(ptr %x, ptr %y, ptr %z) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    vaddph %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovlps %xmm0, (%eax)
 ; X86-NEXT:    retl
@@ -1997,23 +1997,23 @@ define <8 x half> @test21(half %a, half %b, half %c) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; X64-NEXT:    vmovsh %xmm2, %xmm3, %xmm2
-; X64-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; X64-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; X64-NEXT:    vpunpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X64-NEXT:    vpunpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpbroadcastw %xmm1, %xmm1
-; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,0]
+; X64-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[0,0]
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test21:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X86-NEXT:    vpunpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    vpunpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vpbroadcastw %xmm1, %xmm1
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,0]
+; X86-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[0,0]
 ; X86-NEXT:    retl
   %1 = insertelement <8 x half> <half poison, half poison, half poison, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000>, half %a, i32 0
   %2 = insertelement <8 x half> %1, half %b, i32 1
@@ -2096,7 +2096,7 @@ define <16 x i32> @pr52561(<16 x i32> %a, <16 x i32> %b) "min-legal-vector-width
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
 ; X64-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
-; X64-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [112,112,112,112,112,112,112,112]
+; X64-NEXT:    vpbroadcastd {{[^#]+#+}} ymm2 = [112,112,112,112,112,112,112,112]
 ; X64-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    vpaddd %ymm2, %ymm1, %ymm1
 ; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
@@ -2112,7 +2112,7 @@ define <16 x i32> @pr52561(<16 x i32> %a, <16 x i32> %b) "min-legal-vector-width
 ; X86-NEXT:    subl $32, %esp
 ; X86-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; X86-NEXT:    vpaddd 8(%ebp), %ymm1, %ymm1
-; X86-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [112,112,112,112,112,112,112,112]
+; X86-NEXT:    vpbroadcastd {{[^#]+#+}} ymm2 = [112,112,112,112,112,112,112,112]
 ; X86-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; X86-NEXT:    vpaddd %ymm2, %ymm1, %ymm1
 ; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm1

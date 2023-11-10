@@ -18,10 +18,10 @@ define i32 @pr34088() local_unnamed_addr {
 ; CHECK-NEXT:    andl $-16, %esp
 ; CHECK-NEXT:    subl $32, %esp
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [205,205,205,205,205,205,205,205,205,205,205,205,205,205,205,205]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm1 = [205,205,205,205,205,205,205,205,205,205,205,205,205,205,205,205]
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movaps %xmm0, (%esp)
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movl $-842150451, {{[0-9]+}}(%esp) # imm = 0xCDCDCDCD
 ; CHECK-NEXT:    movaps %xmm1, (%esp)
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)

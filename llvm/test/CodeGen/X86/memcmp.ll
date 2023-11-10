@@ -875,7 +875,7 @@ define i1 @length16_eq_const(ptr %X) nounwind {
 ; X64-MIC-AVX-LABEL: length16_eq_const:
 ; X64-MIC-AVX:       # %bb.0:
 ; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [858927408,926299444,825243960,892613426]
+; X64-MIC-AVX-NEXT:    vmovdqa {{[^#]+#+}} xmm1 = [858927408,926299444,825243960,892613426]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; X64-MIC-AVX-NEXT:    kortestw %k0, %k0
 ; X64-MIC-AVX-NEXT:    sete %al
@@ -903,8 +903,8 @@ define i1 @length24_eq(ptr %x, ptr %y) nounwind {
 ; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
 ; X64-SSE2-NEXT:    movdqu (%rsi), %xmm1
 ; X64-SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; X64-SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-SSE2-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; X64-SSE2-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; X64-SSE2-NEXT:    movq {{[^#]+#+}} xmm2 = mem[0],zero
 ; X64-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
 ; X64-SSE2-NEXT:    pand %xmm1, %xmm2
 ; X64-SSE2-NEXT:    pmovmskb %xmm2, %eax
@@ -917,8 +917,8 @@ define i1 @length24_eq(ptr %x, ptr %y) nounwind {
 ; X64-SSE41-NEXT:    movdqu (%rdi), %xmm0
 ; X64-SSE41-NEXT:    movdqu (%rsi), %xmm1
 ; X64-SSE41-NEXT:    pxor %xmm0, %xmm1
-; X64-SSE41-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-SSE41-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; X64-SSE41-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; X64-SSE41-NEXT:    movq {{[^#]+#+}} xmm2 = mem[0],zero
 ; X64-SSE41-NEXT:    pxor %xmm0, %xmm2
 ; X64-SSE41-NEXT:    por %xmm1, %xmm2
 ; X64-SSE41-NEXT:    ptest %xmm2, %xmm2
@@ -928,8 +928,8 @@ define i1 @length24_eq(ptr %x, ptr %y) nounwind {
 ; X64-AVX-LABEL: length24_eq:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X64-AVX-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; X64-AVX-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
+; X64-AVX-NEXT:    vmovq {{[^#]+#+}} xmm2 = mem[0],zero
 ; X64-AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; X64-AVX-NEXT:    vpxor (%rsi), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpor %xmm0, %xmm1, %xmm0
@@ -941,8 +941,8 @@ define i1 @length24_eq(ptr %x, ptr %y) nounwind {
 ; X64-MIC-AVX:       # %bb.0:
 ; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
 ; X64-MIC-AVX-NEXT:    vmovdqu (%rsi), %xmm1
-; X64-MIC-AVX-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; X64-MIC-AVX-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
+; X64-MIC-AVX-NEXT:    vmovq {{[^#]+#+}} xmm2 = mem[0],zero
+; X64-MIC-AVX-NEXT:    vmovq {{[^#]+#+}} xmm3 = mem[0],zero
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm3, %zmm2, %k0
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
 ; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
@@ -988,7 +988,7 @@ define i1 @length24_eq_const(ptr %X) nounwind {
 ; X64-SSE2-LABEL: length24_eq_const:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
-; X64-SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X64-SSE2-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X64-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    pand %xmm1, %xmm0
@@ -1000,7 +1000,7 @@ define i1 @length24_eq_const(ptr %X) nounwind {
 ; X64-SSE41-LABEL: length24_eq_const:
 ; X64-SSE41:       # %bb.0:
 ; X64-SSE41-NEXT:    movdqu (%rdi), %xmm0
-; X64-SSE41-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X64-SSE41-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X64-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE41-NEXT:    por %xmm1, %xmm0
@@ -1011,7 +1011,7 @@ define i1 @length24_eq_const(ptr %X) nounwind {
 ; X64-AVX-LABEL: length24_eq_const:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X64-AVX-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X64-AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; X64-AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
@@ -1022,10 +1022,10 @@ define i1 @length24_eq_const(ptr %X) nounwind {
 ; X64-MIC-AVX-LABEL: length24_eq_const:
 ; X64-MIC-AVX:       # %bb.0:
 ; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-MIC-AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [959985462,858927408,0,0]
+; X64-MIC-AVX-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
+; X64-MIC-AVX-NEXT:    vmovdqa {{[^#]+#+}} xmm2 = [959985462,858927408,0,0]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [858927408,926299444,825243960,892613426]
+; X64-MIC-AVX-NEXT:    vmovdqa {{[^#]+#+}} xmm1 = [858927408,926299444,825243960,892613426]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
 ; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
 ; X64-MIC-AVX-NEXT:    setne %al
@@ -1226,9 +1226,9 @@ define i1 @length31_eq_const(ptr %X) nounwind {
 ; X64-MIC-AVX:       # %bb.0:
 ; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
 ; X64-MIC-AVX-NEXT:    vmovdqu 15(%rdi), %xmm1
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [943142453,842084409,909456435,809056311]
+; X64-MIC-AVX-NEXT:    vmovdqa {{[^#]+#+}} xmm2 = [943142453,842084409,909456435,809056311]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [858927408,926299444,825243960,892613426]
+; X64-MIC-AVX-NEXT:    vmovdqa {{[^#]+#+}} xmm1 = [858927408,926299444,825243960,892613426]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
 ; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
 ; X64-MIC-AVX-NEXT:    setne %al
@@ -1459,7 +1459,7 @@ define i1 @length32_eq_const(ptr %X) nounwind {
 ; X64-MIC-AVX-LABEL: length32_eq_const:
 ; X64-MIC-AVX:       # %bb.0:
 ; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %ymm0
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [858927408,926299444,825243960,892613426,959985462,858927408,926299444,825243960]
+; X64-MIC-AVX-NEXT:    vmovdqa {{[^#]+#+}} ymm1 = [858927408,926299444,825243960,892613426,959985462,858927408,926299444,825243960]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; X64-MIC-AVX-NEXT:    kortestw %k0, %k0
 ; X64-MIC-AVX-NEXT:    setne %al
@@ -1643,9 +1643,9 @@ define i1 @length48_eq_const(ptr %X) nounwind {
 ; X64-MIC-AVX:       # %bb.0:
 ; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %ymm0
 ; X64-MIC-AVX-NEXT:    vmovdqu 32(%rdi), %xmm1
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} ymm2 = [892613426,959985462,858927408,926299444,0,0,0,0]
+; X64-MIC-AVX-NEXT:    vmovdqa {{[^#]+#+}} ymm2 = [892613426,959985462,858927408,926299444,0,0,0,0]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [858927408,926299444,825243960,892613426,959985462,858927408,926299444,825243960]
+; X64-MIC-AVX-NEXT:    vmovdqa {{[^#]+#+}} ymm1 = [858927408,926299444,825243960,892613426,959985462,858927408,926299444,825243960]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
 ; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
 ; X64-MIC-AVX-NEXT:    setne %al
@@ -1811,9 +1811,9 @@ define i1 @length63_eq_const(ptr %X) nounwind {
 ; X64-MIC-AVX:       # %bb.0:
 ; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %ymm0
 ; X64-MIC-AVX-NEXT:    vmovdqu 31(%rdi), %ymm1
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} ymm2 = [875770417,943142453,842084409,909456435,809056311,875770417,943142453,842084409]
+; X64-MIC-AVX-NEXT:    vmovdqa {{[^#]+#+}} ymm2 = [875770417,943142453,842084409,909456435,809056311,875770417,943142453,842084409]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [858927408,926299444,825243960,892613426,959985462,858927408,926299444,825243960]
+; X64-MIC-AVX-NEXT:    vmovdqa {{[^#]+#+}} ymm1 = [858927408,926299444,825243960,892613426,959985462,858927408,926299444,825243960]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
 ; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
 ; X64-MIC-AVX-NEXT:    sete %al
@@ -1982,9 +1982,9 @@ define i1 @length64_eq_const(ptr %X) nounwind {
 ; X64-MIC-AVX2:       # %bb.0:
 ; X64-MIC-AVX2-NEXT:    vmovdqu (%rdi), %ymm0
 ; X64-MIC-AVX2-NEXT:    vmovdqu 32(%rdi), %ymm1
-; X64-MIC-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [892613426,959985462,858927408,926299444,825243960,892613426,959985462,858927408]
+; X64-MIC-AVX2-NEXT:    vmovdqa {{[^#]+#+}} ymm2 = [892613426,959985462,858927408,926299444,825243960,892613426,959985462,858927408]
 ; X64-MIC-AVX2-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
-; X64-MIC-AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [858927408,926299444,825243960,892613426,959985462,858927408,926299444,825243960]
+; X64-MIC-AVX2-NEXT:    vmovdqa {{[^#]+#+}} ymm1 = [858927408,926299444,825243960,892613426,959985462,858927408,926299444,825243960]
 ; X64-MIC-AVX2-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
 ; X64-MIC-AVX2-NEXT:    kortestw %k0, %k1
 ; X64-MIC-AVX2-NEXT:    sete %al

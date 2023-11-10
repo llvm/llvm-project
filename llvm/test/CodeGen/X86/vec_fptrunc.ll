@@ -46,7 +46,7 @@ define void @fptrunc_frommem4(ptr %in, ptr %out) {
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-SSE-NEXT:    cvtpd2ps 16(%ecx), %xmm0
 ; X32-SSE-NEXT:    cvtpd2ps (%ecx), %xmm1
-; X32-SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X32-SSE-NEXT:    unpcklpd {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0]
 ; X32-SSE-NEXT:    movupd %xmm1, (%eax)
 ; X32-SSE-NEXT:    retl
 ;
@@ -62,7 +62,7 @@ define void @fptrunc_frommem4(ptr %in, ptr %out) {
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    cvtpd2ps 16(%rdi), %xmm0
 ; X64-SSE-NEXT:    cvtpd2ps (%rdi), %xmm1
-; X64-SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X64-SSE-NEXT:    unpcklpd {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0]
 ; X64-SSE-NEXT:    movupd %xmm1, (%rsi)
 ; X64-SSE-NEXT:    retq
 ;
@@ -85,10 +85,10 @@ define void @fptrunc_frommem8(ptr %in, ptr %out) {
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-SSE-NEXT:    cvtpd2ps 16(%ecx), %xmm0
 ; X32-SSE-NEXT:    cvtpd2ps (%ecx), %xmm1
-; X32-SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X32-SSE-NEXT:    unpcklpd {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0]
 ; X32-SSE-NEXT:    cvtpd2ps 48(%ecx), %xmm0
 ; X32-SSE-NEXT:    cvtpd2ps 32(%ecx), %xmm2
-; X32-SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; X32-SSE-NEXT:    unpcklpd {{[^#]+#+}} xmm2 = xmm2[0],xmm0[0]
 ; X32-SSE-NEXT:    movupd %xmm2, 16(%eax)
 ; X32-SSE-NEXT:    movupd %xmm1, (%eax)
 ; X32-SSE-NEXT:    retl
@@ -107,10 +107,10 @@ define void @fptrunc_frommem8(ptr %in, ptr %out) {
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    cvtpd2ps 16(%rdi), %xmm0
 ; X64-SSE-NEXT:    cvtpd2ps (%rdi), %xmm1
-; X64-SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X64-SSE-NEXT:    unpcklpd {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0]
 ; X64-SSE-NEXT:    cvtpd2ps 48(%rdi), %xmm0
 ; X64-SSE-NEXT:    cvtpd2ps 32(%rdi), %xmm2
-; X64-SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; X64-SSE-NEXT:    unpcklpd {{[^#]+#+}} xmm2 = xmm2[0],xmm0[0]
 ; X64-SSE-NEXT:    movupd %xmm2, 16(%rsi)
 ; X64-SSE-NEXT:    movupd %xmm1, (%rsi)
 ; X64-SSE-NEXT:    retq
@@ -188,7 +188,7 @@ define <4 x float> @fptrunc_fromconst() {
 ; X32-SSE:       # %bb.0: # %entry
 ; X32-SSE-NEXT:    cvtpd2ps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-SSE-NEXT:    cvtpd2ps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X32-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-SSE-NEXT:    unpcklpd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: fptrunc_fromconst:
@@ -200,7 +200,7 @@ define <4 x float> @fptrunc_fromconst() {
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    cvtpd2ps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-SSE-NEXT:    cvtpd2ps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-SSE-NEXT:    unpcklpd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: fptrunc_fromconst:

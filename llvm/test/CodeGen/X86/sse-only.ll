@@ -9,7 +9,7 @@ define void @test1(ptr %r, ptr %A, double %B) nounwind  {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movaps (%ecx), %xmm0
-; CHECK-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; CHECK-NEXT:    movlps {{[^#]+#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; CHECK-NEXT:    movaps %xmm0, (%eax)
 ; CHECK-NEXT:    retl
 	%tmp3 = load <2 x double>, ptr %A, align 16

@@ -5,8 +5,8 @@ define float @test_x86_fma_intersection_fmf(float %a, float %b) nounwind {
 ; CHECK-LABEL: test_x86_fma_intersection_fmf:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm0
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vfmadd132ss {{[^#]+#+}} xmm0 = (xmm0 * mem) + xmm0
 ; CHECK-NEXT:    vmovss %xmm0, (%esp)
 ; CHECK-NEXT:    flds (%esp)
 ; CHECK-NEXT:    popl %eax

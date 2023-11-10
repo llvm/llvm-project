@@ -8,8 +8,8 @@
 define <2 x double> @prefer_f32_v2f64(ptr %p) nounwind {
 ; SSE-LABEL: prefer_f32_v2f64:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -34,8 +34,8 @@ entry:
 define <4 x double> @prefer_f32_v4f64(ptr %p) nounwind {
 ; SSE-LABEL: prefer_f32_v4f64:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm0
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    retq
@@ -64,7 +64,7 @@ define <4 x float> @prefer_f16_v4f32(ptr %p) nounwind {
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    pinsrw $0, (%rdi), %xmm0
 ; SSE-NEXT:    callq __extendhfsf2@PLT
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    retq
 ;
@@ -73,7 +73,7 @@ define <4 x float> @prefer_f16_v4f32(ptr %p) nounwind {
 ; AVX1-NEXT:    pushq %rax
 ; AVX1-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    callq __extendhfsf2@PLT
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    popq %rax
 ; AVX1-NEXT:    retq
 ;
@@ -110,7 +110,7 @@ define <8 x float> @prefer_f16_v8f32(ptr %p) nounwind {
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    pinsrw $0, (%rdi), %xmm0
 ; SSE-NEXT:    callq __extendhfsf2@PLT
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    retq
@@ -120,7 +120,7 @@ define <8 x float> @prefer_f16_v8f32(ptr %p) nounwind {
 ; AVX1-NEXT:    pushq %rax
 ; AVX1-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    callq __extendhfsf2@PLT
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    popq %rax
 ; AVX1-NEXT:    retq
@@ -159,7 +159,7 @@ define <2 x double> @prefer_f16_v2f64(ptr %p) nounwind {
 ; SSE-NEXT:    pinsrw $0, (%rdi), %xmm0
 ; SSE-NEXT:    callq __extendhfsf2@PLT
 ; SSE-NEXT:    cvtss2sd %xmm0, %xmm0
-; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
+; SSE-NEXT:    movlhps {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    retq
 ;
@@ -169,7 +169,7 @@ define <2 x double> @prefer_f16_v2f64(ptr %p) nounwind {
 ; AVX-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX-NEXT:    vmovddup {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    retq
 ;
@@ -177,7 +177,7 @@ define <2 x double> @prefer_f16_v2f64(ptr %p) nounwind {
 ; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vpbroadcastw (%rdi), %xmm0
 ; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512F-NEXT:    vpblendd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
@@ -201,7 +201,7 @@ define <4 x double> @prefer_f16_v4f64(ptr %p) nounwind {
 ; SSE-NEXT:    pinsrw $0, (%rdi), %xmm0
 ; SSE-NEXT:    callq __extendhfsf2@PLT
 ; SSE-NEXT:    cvtss2sd %xmm0, %xmm0
-; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
+; SSE-NEXT:    movlhps {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    retq
@@ -212,7 +212,7 @@ define <4 x double> @prefer_f16_v4f64(ptr %p) nounwind {
 ; AVX1-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    callq __extendhfsf2@PLT
 ; AVX1-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX1-NEXT:    vmovddup {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    popq %rax
 ; AVX1-NEXT:    retq

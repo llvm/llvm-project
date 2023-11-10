@@ -33,16 +33,16 @@ define <4 x float> @load_float4_float3(ptr nocapture readonly dereferenceable(16
 define <4 x float> @load_float4_float3_0122(ptr nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float4_float3_0122:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movups (%rdi), %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,0]
+; SSE-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_float4_float3_0122:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vmovups (%rdi), %xmm1
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0,0]
+; AVX-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm1[0,1],xmm0[0,0]
 ; AVX-NEXT:    retq
   %p1 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 1
   %p2 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
@@ -80,16 +80,16 @@ define <8 x float> @load_float8_float3(ptr nocapture readonly dereferenceable(16
 define <8 x float> @load_float8_float3_0122(ptr nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float8_float3_0122:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movups (%rdi), %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,0]
+; SSE-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_float8_float3_0122:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vmovups (%rdi), %xmm1
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0,0]
+; AVX-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm1[0,1],xmm0[0,0]
 ; AVX-NEXT:    retq
   %p1 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 1
   %p2 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
@@ -127,16 +127,16 @@ define <4 x float> @load_float4_float3_as_float2_float(ptr nocapture readonly de
 define <4 x float> @load_float4_float3_as_float2_float_0122(ptr nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float4_float3_as_float2_float_0122:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,0]
+; SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_float4_float3_as_float2_float_0122:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,0]
+; AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[0,0]
 ; AVX-NEXT:    retq
   %2 = load <2 x float>, ptr %0, align 4
   %3 = extractelement <2 x float> %2, i32 0
@@ -179,16 +179,16 @@ define <4 x float> @load_float4_float3_trunc(ptr nocapture readonly dereferencea
 define <4 x float> @load_float4_float3_trunc_0122(ptr nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float4_float3_trunc_0122:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movaps (%rdi), %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,0]
+; SSE-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_float4_float3_trunc_0122:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vmovaps (%rdi), %xmm1
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0,0]
+; AVX-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm1[0,1],xmm0[0,0]
 ; AVX-NEXT:    retq
   %2 = load i64, ptr %0, align 16
   %3 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
@@ -211,27 +211,27 @@ define <4 x float> @load_float4_float3_trunc_0123(ptr nocapture readonly derefer
 ; SSE2-LABEL: load_float4_float3_trunc_0123:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
-; SSE2-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; SSE2-NEXT:    movhps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: load_float4_float3_trunc_0123:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movaps (%rdi), %xmm0
-; SSSE3-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; SSSE3-NEXT:    movhps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: load_float4_float3_trunc_0123:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movaps (%rdi), %xmm0
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; SSE41-NEXT:    insertps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; SSE41-NEXT:    insertps {{[^#]+#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: load_float4_float3_trunc_0123:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; AVX-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; AVX-NEXT:    retq
   %2 = load i64, ptr %0, align 16
   %3 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
@@ -257,27 +257,27 @@ define <4 x float> @load_float4_float3_trunc_0123_unaligned(ptr nocapture readon
 ; SSE2-LABEL: load_float4_float3_trunc_0123_unaligned:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movups (%rdi), %xmm0
-; SSE2-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; SSE2-NEXT:    movhps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: load_float4_float3_trunc_0123_unaligned:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movups (%rdi), %xmm0
-; SSSE3-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; SSSE3-NEXT:    movhps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: load_float4_float3_trunc_0123_unaligned:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movups (%rdi), %xmm0
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; SSE41-NEXT:    insertps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; SSE41-NEXT:    insertps {{[^#]+#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: load_float4_float3_trunc_0123_unaligned:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %xmm0
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; AVX-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; AVX-NEXT:    retq
   %2 = load i64, ptr %0, align 1
   %3 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
@@ -303,27 +303,27 @@ define <4 x float> @load_float4_float3_trunc_0123_unaligned(ptr nocapture readon
 define <4 x double> @load_double4_0u2u(ptr nocapture readonly dereferenceable(32)) nofree nosync {
 ; SSE2-LABEL: load_double4_0u2u:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
-; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0,0]
+; SSE2-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    movlhps {{[^#]+#+}} xmm0 = xmm0[0,0]
+; SSE2-NEXT:    movlhps {{[^#]+#+}} xmm1 = xmm1[0,0]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: load_double4_0u2u:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
-; SSSE3-NEXT:    movddup {{.*#+}} xmm1 = mem[0,0]
+; SSSE3-NEXT:    movddup {{[^#]+#+}} xmm0 = mem[0,0]
+; SSSE3-NEXT:    movddup {{[^#]+#+}} xmm1 = mem[0,0]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: load_double4_0u2u:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
-; SSE41-NEXT:    movddup {{.*#+}} xmm1 = mem[0,0]
+; SSE41-NEXT:    movddup {{[^#]+#+}} xmm0 = mem[0,0]
+; SSE41-NEXT:    movddup {{[^#]+#+}} xmm1 = mem[0,0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: load_double4_0u2u:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovddup {{.*#+}} ymm0 = mem[0,0,2,2]
+; AVX-NEXT:    vmovddup {{[^#]+#+}} ymm0 = mem[0,0,2,2]
 ; AVX-NEXT:    retq
   %2 = load double, ptr %0, align 8
   %3 = insertelement <4 x double> undef, double %2, i32 0
@@ -350,7 +350,7 @@ define dso_local i32 @load_partial_illegal_type()  {
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movzwl h(%rip), %eax
 ; SSSE3-NEXT:    movd %eax, %xmm0
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,xmm0[3,u,u,u,u,u,u,u,u,u,u,u,u]
+; SSSE3-NEXT:    pshufb {{[^#]+#+}} xmm0 = xmm0[0,1],zero,xmm0[3,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSSE3-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    movd %xmm0, %eax
 ; SSSE3-NEXT:    retq
@@ -382,10 +382,10 @@ define dso_local i32 @load_partial_illegal_type()  {
 define dso_local void @PR43227(ptr %explicit_0, ptr %explicit_1) {
 ; SSE-LABEL: PR43227:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE-NEXT:    psrlq $32, %xmm0
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    punpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, 672(%rsi)
 ; SSE-NEXT:    movdqa %xmm0, 688(%rsi)
@@ -393,10 +393,10 @@ define dso_local void @PR43227(ptr %explicit_0, ptr %explicit_1) {
 ;
 ; AVX1-LABEL: PR43227:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, 672(%rsi)
@@ -405,10 +405,10 @@ define dso_local void @PR43227(ptr %explicit_0, ptr %explicit_1) {
 ;
 ; AVX2-LABEL: PR43227:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
+; AVX2-NEXT:    vmovd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vmovdqa %ymm0, 672(%rsi)

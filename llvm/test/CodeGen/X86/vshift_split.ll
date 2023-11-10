@@ -8,7 +8,7 @@ define <2 x i64> @update(<2 x i64> %val) nounwind readnone {
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-NEXT:    psrlq $2, %xmm1
 ; CHECK-NEXT:    psrlq $3, %xmm0
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = xmm1[0],xmm0[1]
 ; CHECK-NEXT:    retl
 entry:
 	%shr = lshr <2 x i64> %val, < i64 2, i64 3 >

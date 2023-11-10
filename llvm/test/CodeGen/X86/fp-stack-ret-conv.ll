@@ -15,7 +15,7 @@ define void @test(ptr%b) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    calll _foo
 ; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    cvtss2sd %xmm0, %xmm0
 ; CHECK-NEXT:    movsd %xmm0, (%esi)
 ; CHECK-NEXT:    addl $8, %esp

@@ -8,16 +8,16 @@
 define i32 @sad8_32bit_icmp_sge(ptr nocapture readonly %cur, ptr nocapture readonly %ref, i32 %stride) local_unnamed_addr #0 {
 ; SSE2-LABEL: sad8_32bit_icmp_sge:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: sad8_32bit_icmp_sge:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
@@ -48,16 +48,16 @@ for.body:                                         ; preds = %entry
 define i32 @sad8_32bit_icmp_sgt(ptr nocapture readonly %cur, ptr nocapture readonly %ref, i32 %stride) local_unnamed_addr #1 {
 ; SSE2-LABEL: sad8_32bit_icmp_sgt:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: sad8_32bit_icmp_sgt:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
@@ -87,16 +87,16 @@ for.body:                                         ; preds = %entry
 define i32 @sad8_32bit_icmp_sle(ptr nocapture readonly %cur, ptr nocapture readonly %ref, i32 %stride) local_unnamed_addr #2 {
 ; SSE2-LABEL: sad8_32bit_icmp_sle:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: sad8_32bit_icmp_sle:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
@@ -126,16 +126,16 @@ for.body:                                         ; preds = %entry
 define i32 @sad8_32bit_icmp_slt(ptr nocapture readonly %cur, ptr nocapture readonly %ref, i32 %stride) local_unnamed_addr #3 {
 ; SSE2-LABEL: sad8_32bit_icmp_slt:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: sad8_32bit_icmp_slt:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
@@ -165,16 +165,16 @@ for.body:                                         ; preds = %entry
 define i64 @sad8_64bit_icmp_sext_slt(ptr nocapture readonly %cur, ptr nocapture readonly %ref, i64 %stride) local_unnamed_addr #4 {
 ; SSE2-LABEL: sad8_64bit_icmp_sext_slt:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
 ; SSE2-NEXT:    movq %xmm1, %rax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: sad8_64bit_icmp_sext_slt:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    retq
@@ -204,16 +204,16 @@ for.body:                                         ; preds = %entry
 define i64 @sad8_64bit_icmp_zext_slt(ptr nocapture readonly %cur, ptr nocapture readonly %ref, i64 %stride) local_unnamed_addr #4 {
 ; SSE2-LABEL: sad8_64bit_icmp_zext_slt:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
 ; SSE2-NEXT:    movq %xmm1, %rax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: sad8_64bit_icmp_zext_slt:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    retq
@@ -243,16 +243,16 @@ for.body:                                         ; preds = %entry
 define i64 @sad8_early_64bit_icmp_zext_slt(ptr nocapture readonly %cur, ptr nocapture readonly %ref, i64 %stride) local_unnamed_addr #4 {
 ; SSE2-LABEL: sad8_early_64bit_icmp_zext_slt:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
 ; SSE2-NEXT:    movq %xmm1, %rax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: sad8_early_64bit_icmp_zext_slt:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    retq

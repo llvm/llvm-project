@@ -22,13 +22,13 @@ define void @memset_16_nonzero_bytes(ptr %x) {
 ;
 ; SSE2FAST-LABEL: memset_16_nonzero_bytes:
 ; SSE2FAST:       # %bb.0:
-; SSE2FAST-NEXT:    movaps {{.*#+}} xmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; SSE2FAST-NEXT:    movaps {{[^#]+#+}} xmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; SSE2FAST-NEXT:    movups %xmm0, (%rdi)
 ; SSE2FAST-NEXT:    retq
 ;
 ; AVX-LABEL: memset_16_nonzero_bytes:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; AVX-NEXT:    vbroadcastss {{[^#]+#+}} xmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; AVX-NEXT:    vmovups %xmm0, (%rdi)
 ; AVX-NEXT:    retq
   %call = tail call ptr @__memset_chk(ptr %x, i32 42, i64 16, i64 -1)
@@ -47,14 +47,14 @@ define void @memset_32_nonzero_bytes(ptr %x) {
 ;
 ; SSE2FAST-LABEL: memset_32_nonzero_bytes:
 ; SSE2FAST:       # %bb.0:
-; SSE2FAST-NEXT:    movaps {{.*#+}} xmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; SSE2FAST-NEXT:    movaps {{[^#]+#+}} xmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; SSE2FAST-NEXT:    movups %xmm0, 16(%rdi)
 ; SSE2FAST-NEXT:    movups %xmm0, (%rdi)
 ; SSE2FAST-NEXT:    retq
 ;
 ; AVX-LABEL: memset_32_nonzero_bytes:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; AVX-NEXT:    vbroadcastss {{[^#]+#+}} ymm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; AVX-NEXT:    vmovups %ymm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -78,7 +78,7 @@ define void @memset_64_nonzero_bytes(ptr %x) {
 ;
 ; SSE2FAST-LABEL: memset_64_nonzero_bytes:
 ; SSE2FAST:       # %bb.0:
-; SSE2FAST-NEXT:    movaps {{.*#+}} xmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; SSE2FAST-NEXT:    movaps {{[^#]+#+}} xmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; SSE2FAST-NEXT:    movups %xmm0, 48(%rdi)
 ; SSE2FAST-NEXT:    movups %xmm0, 32(%rdi)
 ; SSE2FAST-NEXT:    movups %xmm0, 16(%rdi)
@@ -87,7 +87,7 @@ define void @memset_64_nonzero_bytes(ptr %x) {
 ;
 ; AVX1-LABEL: memset_64_nonzero_bytes:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} ymm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; AVX1-NEXT:    vmovups %ymm0, 32(%rdi)
 ; AVX1-NEXT:    vmovups %ymm0, (%rdi)
 ; AVX1-NEXT:    vzeroupper
@@ -95,7 +95,7 @@ define void @memset_64_nonzero_bytes(ptr %x) {
 ;
 ; AVX2-LABEL: memset_64_nonzero_bytes:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; AVX2-NEXT:    vbroadcastss {{[^#]+#+}} ymm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; AVX2-NEXT:    vmovups %ymm0, 32(%rdi)
 ; AVX2-NEXT:    vmovups %ymm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
@@ -103,14 +103,14 @@ define void @memset_64_nonzero_bytes(ptr %x) {
 ;
 ; AVX512F-LABEL: memset_64_nonzero_bytes:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vbroadcastss {{.*#+}} zmm0 = [707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378]
+; AVX512F-NEXT:    vbroadcastss {{[^#]+#+}} zmm0 = [707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378]
 ; AVX512F-NEXT:    vmovups %zmm0, (%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: memset_64_nonzero_bytes:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vbroadcastss {{.*#+}} zmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; AVX512BW-NEXT:    vbroadcastss {{[^#]+#+}} zmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; AVX512BW-NEXT:    vmovups %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -143,7 +143,7 @@ define void @memset_128_nonzero_bytes(ptr %x) {
 ;
 ; SSE2FAST-LABEL: memset_128_nonzero_bytes:
 ; SSE2FAST:       # %bb.0:
-; SSE2FAST-NEXT:    movaps {{.*#+}} xmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; SSE2FAST-NEXT:    movaps {{[^#]+#+}} xmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; SSE2FAST-NEXT:    movups %xmm0, 112(%rdi)
 ; SSE2FAST-NEXT:    movups %xmm0, 96(%rdi)
 ; SSE2FAST-NEXT:    movups %xmm0, 80(%rdi)
@@ -156,7 +156,7 @@ define void @memset_128_nonzero_bytes(ptr %x) {
 ;
 ; AVX1-LABEL: memset_128_nonzero_bytes:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} ymm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; AVX1-NEXT:    vmovups %ymm0, 96(%rdi)
 ; AVX1-NEXT:    vmovups %ymm0, 64(%rdi)
 ; AVX1-NEXT:    vmovups %ymm0, 32(%rdi)
@@ -166,7 +166,7 @@ define void @memset_128_nonzero_bytes(ptr %x) {
 ;
 ; AVX2-LABEL: memset_128_nonzero_bytes:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; AVX2-NEXT:    vbroadcastss {{[^#]+#+}} ymm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; AVX2-NEXT:    vmovups %ymm0, 96(%rdi)
 ; AVX2-NEXT:    vmovups %ymm0, 64(%rdi)
 ; AVX2-NEXT:    vmovups %ymm0, 32(%rdi)
@@ -176,7 +176,7 @@ define void @memset_128_nonzero_bytes(ptr %x) {
 ;
 ; AVX512F-LABEL: memset_128_nonzero_bytes:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vbroadcastss {{.*#+}} zmm0 = [707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378]
+; AVX512F-NEXT:    vbroadcastss {{[^#]+#+}} zmm0 = [707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378]
 ; AVX512F-NEXT:    vmovups %zmm0, 64(%rdi)
 ; AVX512F-NEXT:    vmovups %zmm0, (%rdi)
 ; AVX512F-NEXT:    vzeroupper
@@ -184,7 +184,7 @@ define void @memset_128_nonzero_bytes(ptr %x) {
 ;
 ; AVX512BW-LABEL: memset_128_nonzero_bytes:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vbroadcastss {{.*#+}} zmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; AVX512BW-NEXT:    vbroadcastss {{[^#]+#+}} zmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; AVX512BW-NEXT:    vmovups %zmm0, 64(%rdi)
 ; AVX512BW-NEXT:    vmovups %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
@@ -202,7 +202,7 @@ define void @memset_256_nonzero_bytes(ptr %x) {
 ;
 ; SSE2FAST-LABEL: memset_256_nonzero_bytes:
 ; SSE2FAST:       # %bb.0:
-; SSE2FAST-NEXT:    movaps {{.*#+}} xmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; SSE2FAST-NEXT:    movaps {{[^#]+#+}} xmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; SSE2FAST-NEXT:    movups %xmm0, 240(%rdi)
 ; SSE2FAST-NEXT:    movups %xmm0, 224(%rdi)
 ; SSE2FAST-NEXT:    movups %xmm0, 208(%rdi)
@@ -223,7 +223,7 @@ define void @memset_256_nonzero_bytes(ptr %x) {
 ;
 ; AVX1-LABEL: memset_256_nonzero_bytes:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} ymm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; AVX1-NEXT:    vmovups %ymm0, 224(%rdi)
 ; AVX1-NEXT:    vmovups %ymm0, 192(%rdi)
 ; AVX1-NEXT:    vmovups %ymm0, 160(%rdi)
@@ -237,7 +237,7 @@ define void @memset_256_nonzero_bytes(ptr %x) {
 ;
 ; AVX2-LABEL: memset_256_nonzero_bytes:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; AVX2-NEXT:    vbroadcastss {{[^#]+#+}} ymm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; AVX2-NEXT:    vmovups %ymm0, 224(%rdi)
 ; AVX2-NEXT:    vmovups %ymm0, 192(%rdi)
 ; AVX2-NEXT:    vmovups %ymm0, 160(%rdi)
@@ -251,7 +251,7 @@ define void @memset_256_nonzero_bytes(ptr %x) {
 ;
 ; AVX512F-LABEL: memset_256_nonzero_bytes:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vbroadcastss {{.*#+}} zmm0 = [707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378]
+; AVX512F-NEXT:    vbroadcastss {{[^#]+#+}} zmm0 = [707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378,707406378]
 ; AVX512F-NEXT:    vmovups %zmm0, 192(%rdi)
 ; AVX512F-NEXT:    vmovups %zmm0, 128(%rdi)
 ; AVX512F-NEXT:    vmovups %zmm0, 64(%rdi)
@@ -261,7 +261,7 @@ define void @memset_256_nonzero_bytes(ptr %x) {
 ;
 ; AVX512BW-LABEL: memset_256_nonzero_bytes:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vbroadcastss {{.*#+}} zmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; AVX512BW-NEXT:    vbroadcastss {{[^#]+#+}} zmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; AVX512BW-NEXT:    vmovups %zmm0, 192(%rdi)
 ; AVX512BW-NEXT:    vmovups %zmm0, 128(%rdi)
 ; AVX512BW-NEXT:    vmovups %zmm0, 64(%rdi)
@@ -289,9 +289,9 @@ define void @memset_16_nonconst_bytes(ptr %x, i8 %c) {
 ; SSE2FAST-LABEL: memset_16_nonconst_bytes:
 ; SSE2FAST:       # %bb.0:
 ; SSE2FAST-NEXT:    movd %esi, %xmm0
-; SSE2FAST-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2FAST-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE2FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2FAST-NEXT:    punpcklbw {{[^#]+#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2FAST-NEXT:    pshuflw {{[^#]+#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2FAST-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE2FAST-NEXT:    movdqu %xmm0, (%rdi)
 ; SSE2FAST-NEXT:    retq
 ;
@@ -335,9 +335,9 @@ define void @memset_32_nonconst_bytes(ptr %x, i8 %c) {
 ; SSE2FAST-LABEL: memset_32_nonconst_bytes:
 ; SSE2FAST:       # %bb.0:
 ; SSE2FAST-NEXT:    movd %esi, %xmm0
-; SSE2FAST-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2FAST-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE2FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2FAST-NEXT:    punpcklbw {{[^#]+#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2FAST-NEXT:    pshuflw {{[^#]+#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2FAST-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE2FAST-NEXT:    movdqu %xmm0, 16(%rdi)
 ; SSE2FAST-NEXT:    movdqu %xmm0, (%rdi)
 ; SSE2FAST-NEXT:    retq
@@ -389,9 +389,9 @@ define void @memset_64_nonconst_bytes(ptr %x, i8 %c) {
 ; SSE2FAST-LABEL: memset_64_nonconst_bytes:
 ; SSE2FAST:       # %bb.0:
 ; SSE2FAST-NEXT:    movd %esi, %xmm0
-; SSE2FAST-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2FAST-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE2FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2FAST-NEXT:    punpcklbw {{[^#]+#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2FAST-NEXT:    pshuflw {{[^#]+#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2FAST-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE2FAST-NEXT:    movdqu %xmm0, 48(%rdi)
 ; SSE2FAST-NEXT:    movdqu %xmm0, 32(%rdi)
 ; SSE2FAST-NEXT:    movdqu %xmm0, 16(%rdi)
@@ -464,9 +464,9 @@ define void @memset_128_nonconst_bytes(ptr %x, i8 %c) {
 ; SSE2FAST-LABEL: memset_128_nonconst_bytes:
 ; SSE2FAST:       # %bb.0:
 ; SSE2FAST-NEXT:    movd %esi, %xmm0
-; SSE2FAST-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2FAST-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE2FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2FAST-NEXT:    punpcklbw {{[^#]+#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2FAST-NEXT:    pshuflw {{[^#]+#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2FAST-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE2FAST-NEXT:    movdqu %xmm0, 112(%rdi)
 ; SSE2FAST-NEXT:    movdqu %xmm0, 96(%rdi)
 ; SSE2FAST-NEXT:    movdqu %xmm0, 80(%rdi)
@@ -531,9 +531,9 @@ define void @memset_256_nonconst_bytes(ptr %x, i8 %c) {
 ; SSE2FAST-LABEL: memset_256_nonconst_bytes:
 ; SSE2FAST:       # %bb.0:
 ; SSE2FAST-NEXT:    movd %esi, %xmm0
-; SSE2FAST-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2FAST-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE2FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2FAST-NEXT:    punpcklbw {{[^#]+#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2FAST-NEXT:    pshuflw {{[^#]+#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2FAST-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE2FAST-NEXT:    movdqu %xmm0, 240(%rdi)
 ; SSE2FAST-NEXT:    movdqu %xmm0, 224(%rdi)
 ; SSE2FAST-NEXT:    movdqu %xmm0, 208(%rdi)

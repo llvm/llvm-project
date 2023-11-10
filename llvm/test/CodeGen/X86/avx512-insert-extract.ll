@@ -6,7 +6,7 @@
 define <16 x float> @test1(<16 x float> %x, ptr %br, float %y) nounwind {
 ; KNL-LABEL: test1:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],mem[0],xmm0[2,3]
+; KNL-NEXT:    vinsertps {{[^#]+#+}} xmm2 = xmm0[0],mem[0],xmm0[2,3]
 ; KNL-NEXT:    vinsertf32x4 $0, %xmm2, %zmm0, %zmm0
 ; KNL-NEXT:    movw $16384, %ax ## imm = 0x4000
 ; KNL-NEXT:    kmovw %eax, %k1
@@ -15,7 +15,7 @@ define <16 x float> @test1(<16 x float> %x, ptr %br, float %y) nounwind {
 ;
 ; SKX-LABEL: test1:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],mem[0],xmm0[2,3]
+; SKX-NEXT:    vinsertps {{[^#]+#+}} xmm2 = xmm0[0],mem[0],xmm0[2,3]
 ; SKX-NEXT:    vinsertf32x4 $0, %xmm2, %zmm0, %zmm0
 ; SKX-NEXT:    movw $16384, %ax ## imm = 0x4000
 ; SKX-NEXT:    kmovd %eax, %k1
@@ -30,7 +30,7 @@ define <16 x float> @test1(<16 x float> %x, ptr %br, float %y) nounwind {
 define <8 x double> @test2(<8 x double> %x, ptr %br, double %y) nounwind {
 ; KNL-LABEL: test2:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vmovhpd {{.*#+}} xmm2 = xmm0[0],mem[0]
+; KNL-NEXT:    vmovhpd {{[^#]+#+}} xmm2 = xmm0[0],mem[0]
 ; KNL-NEXT:    vinsertf32x4 $0, %xmm2, %zmm0, %zmm0
 ; KNL-NEXT:    movb $64, %al
 ; KNL-NEXT:    kmovw %eax, %k1
@@ -39,7 +39,7 @@ define <8 x double> @test2(<8 x double> %x, ptr %br, double %y) nounwind {
 ;
 ; SKX-LABEL: test2:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vmovhpd {{.*#+}} xmm2 = xmm0[0],mem[0]
+; SKX-NEXT:    vmovhpd {{[^#]+#+}} xmm2 = xmm0[0],mem[0]
 ; SKX-NEXT:    vinsertf32x4 $0, %xmm2, %zmm0, %zmm0
 ; SKX-NEXT:    movb $64, %al
 ; SKX-NEXT:    kmovd %eax, %k1
@@ -55,7 +55,7 @@ define <16 x float> @test3(<16 x float> %x) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[2,3]
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm1 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    vinsertf32x4 $0, %xmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %eee = extractelement <16 x float> %x, i32 4
@@ -67,7 +67,7 @@ define <8 x i64> @test4(<8 x i64> %x) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf32x4 $2, %zmm0, %xmm1
-; CHECK-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vmovlhps {{[^#]+#+}} xmm1 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vinsertf32x4 $0, %xmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %eee = extractelement <8 x i64> %x, i32 4
@@ -105,7 +105,7 @@ define float @test7(<16 x float> %x, i32 %ind) nounwind {
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $15, %edi
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    vzeroupper
@@ -124,7 +124,7 @@ define double @test8(<8 x double> %x, i32 %ind) nounwind {
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $7, %edi
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    vzeroupper
@@ -143,7 +143,7 @@ define float @test9(<8 x float> %x, i32 %ind) nounwind {
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    andl $7, %edi
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    vzeroupper
@@ -576,18 +576,18 @@ define <4 x i64> @insert_v4i64(<4 x i64> %x, i64 %y , ptr %ptr) nounwind {
 ; KNL-LABEL: insert_v4i64:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpinsrq $1, (%rsi), %xmm0, %xmm1
-; KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; KNL-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; KNL-NEXT:    vmovq %rdi, %xmm1
 ; KNL-NEXT:    vpbroadcastq %xmm1, %ymm1
-; KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; KNL-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_v4i64:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpinsrq $1, (%rsi), %xmm0, %xmm1
-; SKX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; SKX-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; SKX-NEXT:    vpbroadcastq %rdi, %ymm1
-; SKX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; SKX-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
 ; SKX-NEXT:    retq
   %val = load i64, ptr %ptr
   %r1 = insertelement <4 x i64> %x, i64 %val, i32 1
@@ -598,9 +598,9 @@ define <4 x i64> @insert_v4i64(<4 x i64> %x, i64 %y , ptr %ptr) nounwind {
 define <2 x i64> @insert_v2i64(<2 x i64> %x, i64 %y , ptr %ptr) nounwind {
 ; CHECK-LABEL: insert_v2i64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vmovq %rdi, %xmm1
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    retq
   %val = load i64, ptr %ptr
   %r1 = insertelement <2 x i64> %x, i64 %val, i32 1
@@ -636,18 +636,18 @@ define <8 x i32> @insert_v8i32(<8 x i32> %x, i32 %y, ptr %ptr) nounwind {
 ; KNL-LABEL: insert_v8i32:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpinsrd $1, (%rsi), %xmm0, %xmm1
-; KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; KNL-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; KNL-NEXT:    vmovd %edi, %xmm1
 ; KNL-NEXT:    vpbroadcastd %xmm1, %ymm1
-; KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4],ymm1[5],ymm0[6,7]
+; KNL-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4],ymm1[5],ymm0[6,7]
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_v8i32:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpinsrd $1, (%rsi), %xmm0, %xmm1
-; SKX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; SKX-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; SKX-NEXT:    vpbroadcastd %edi, %ymm1
-; SKX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4],ymm1[5],ymm0[6,7]
+; SKX-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4],ymm1[5],ymm0[6,7]
 ; SKX-NEXT:    retq
   %val = load i32, ptr %ptr
   %r1 = insertelement <8 x i32> %x, i32 %val, i32 1
@@ -695,20 +695,20 @@ define <16 x i16> @insert_v16i16(<16 x i16> %x, i16 %y, ptr %ptr) nounwind {
 ; KNL-LABEL: insert_v16i16:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpinsrw $1, (%rsi), %xmm0, %xmm1
-; KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; KNL-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; KNL-NEXT:    vmovd %edi, %xmm1
 ; KNL-NEXT:    vpbroadcastw %xmm1, %ymm1
-; KNL-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7,8],ymm1[9],ymm0[10,11,12,13,14,15]
-; KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; KNL-NEXT:    vpblendw {{[^#]+#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7,8],ymm1[9],ymm0[10,11,12,13,14,15]
+; KNL-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_v16i16:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpinsrw $1, (%rsi), %xmm0, %xmm1
-; SKX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; SKX-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; SKX-NEXT:    vpbroadcastw %edi, %ymm1
-; SKX-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7,8],ymm1[9],ymm0[10,11,12,13,14,15]
-; SKX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; SKX-NEXT:    vpblendw {{[^#]+#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7,8],ymm1[9],ymm0[10,11,12,13,14,15]
+; SKX-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; SKX-NEXT:    retq
   %val = load i16, ptr %ptr
   %r1 = insertelement <16 x i16> %x, i16 %val, i32 1
@@ -792,7 +792,7 @@ define <16 x i32> @test_insert_128_v16i32(<16 x i32> %x, i32 %y) nounwind {
 define <8 x double> @test_insert_128_v8f64(<8 x double> %x, double %y) nounwind {
 ; CHECK-LABEL: test_insert_128_v8f64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vmovlhps {{[^#]+#+}} xmm1 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vinsertf32x4 $0, %xmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %r = insertelement <8 x double> %x, double %y, i32 1
@@ -802,7 +802,7 @@ define <8 x double> @test_insert_128_v8f64(<8 x double> %x, double %y) nounwind 
 define <16 x float> @test_insert_128_v16f32(<16 x float> %x, float %y) nounwind {
 ; CHECK-LABEL: test_insert_128_v16f32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[2,3]
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm1 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    vinsertf32x4 $0, %xmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %r = insertelement <16 x float> %x, float %y, i32 1
@@ -814,15 +814,15 @@ define <16 x i16> @test_insert_128_v16i16(<16 x i16> %x, i16 %y) nounwind {
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vmovd %edi, %xmm1
 ; KNL-NEXT:    vpbroadcastw %xmm1, %ymm1
-; KNL-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1],ymm1[2],ymm0[3,4,5,6,7,8,9],ymm1[10],ymm0[11,12,13,14,15]
-; KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; KNL-NEXT:    vpblendw {{[^#]+#+}} ymm1 = ymm0[0,1],ymm1[2],ymm0[3,4,5,6,7,8,9],ymm1[10],ymm0[11,12,13,14,15]
+; KNL-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_insert_128_v16i16:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpbroadcastw %edi, %ymm1
-; SKX-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1],ymm1[2],ymm0[3,4,5,6,7,8,9],ymm1[10],ymm0[11,12,13,14,15]
-; SKX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; SKX-NEXT:    vpblendw {{[^#]+#+}} ymm1 = ymm0[0,1],ymm1[2],ymm0[3,4,5,6,7,8,9],ymm1[10],ymm0[11,12,13,14,15]
+; SKX-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; SKX-NEXT:    retq
   %r = insertelement <16 x i16> %x, i16 %y, i32 10
   ret <16 x i16> %r
@@ -1204,7 +1204,7 @@ define double @test_extractelement_variable_v2f64(<2 x double> %t1, i32 %index) 
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retq
   %t2 = extractelement <2 x double> %t1, i32 %index
   ret double %t2
@@ -1220,7 +1220,7 @@ define double @test_extractelement_variable_v4f64(<4 x double> %t1, i32 %index) 
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    andl $3, %edi
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    vzeroupper
@@ -1239,7 +1239,7 @@ define double @test_extractelement_variable_v8f64(<8 x double> %t1, i32 %index) 
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $7, %edi
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    vzeroupper
@@ -1304,7 +1304,7 @@ define float @test_extractelement_variable_v4f32(<4 x float> %t1, i32 %index) no
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $3, %edi
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retq
   %t2 = extractelement <4 x float> %t1, i32 %index
   ret float %t2
@@ -1320,7 +1320,7 @@ define float @test_extractelement_variable_v8f32(<8 x float> %t1, i32 %index) no
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    andl $7, %edi
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    vzeroupper
@@ -1339,7 +1339,7 @@ define float @test_extractelement_variable_v16f32(<16 x float> %t1, i32 %index) 
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $15, %edi
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    vzeroupper
@@ -1770,7 +1770,7 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) n
 ; KNL-NEXT:    subq $192, %rsp
 ; KNL-NEXT:    movl 744(%rbp), %eax
 ; KNL-NEXT:    andl $127, %eax
-; KNL-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; KNL-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; KNL-NEXT:    vpinsrb $1, 232(%rbp), %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrb $2, 240(%rbp), %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrb $3, 248(%rbp), %xmm0, %xmm0
@@ -1786,7 +1786,7 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) n
 ; KNL-NEXT:    vpinsrb $13, 328(%rbp), %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrb $14, 336(%rbp), %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrb $15, 344(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; KNL-NEXT:    vmovd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; KNL-NEXT:    vpinsrb $1, 360(%rbp), %xmm1, %xmm1
 ; KNL-NEXT:    vpinsrb $2, 368(%rbp), %xmm1, %xmm1
 ; KNL-NEXT:    vpinsrb $3, 376(%rbp), %xmm1, %xmm1
@@ -1821,7 +1821,7 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) n
 ; KNL-NEXT:    vpinsrb $13, 72(%rbp), %xmm2, %xmm2
 ; KNL-NEXT:    vpinsrb $14, 80(%rbp), %xmm2, %xmm2
 ; KNL-NEXT:    vpinsrb $15, 88(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; KNL-NEXT:    vmovd {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
 ; KNL-NEXT:    vpinsrb $1, 104(%rbp), %xmm3, %xmm3
 ; KNL-NEXT:    vpinsrb $2, 112(%rbp), %xmm3, %xmm3
 ; KNL-NEXT:    vpinsrb $3, 120(%rbp), %xmm3, %xmm3
@@ -1841,7 +1841,7 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) n
 ; KNL-NEXT:    vpcmpeqb %ymm0, %ymm2, %ymm2
 ; KNL-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
 ; KNL-NEXT:    vpternlogq $15, %zmm1, %zmm1, %zmm1
-; KNL-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; KNL-NEXT:    vmovd {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; KNL-NEXT:    vpinsrb $1, 488(%rbp), %xmm2, %xmm2
 ; KNL-NEXT:    vpinsrb $2, 496(%rbp), %xmm2, %xmm2
 ; KNL-NEXT:    vpinsrb $3, 504(%rbp), %xmm2, %xmm2
@@ -1857,7 +1857,7 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) n
 ; KNL-NEXT:    vpinsrb $13, 584(%rbp), %xmm2, %xmm2
 ; KNL-NEXT:    vpinsrb $14, 592(%rbp), %xmm2, %xmm2
 ; KNL-NEXT:    vpinsrb $15, 600(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; KNL-NEXT:    vmovd {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
 ; KNL-NEXT:    vpinsrb $1, 616(%rbp), %xmm3, %xmm3
 ; KNL-NEXT:    vpinsrb $2, 624(%rbp), %xmm3, %xmm3
 ; KNL-NEXT:    vpinsrb $3, 632(%rbp), %xmm3, %xmm3
@@ -1936,7 +1936,7 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) n
 ; SKX-NEXT:    movq %rsp, %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $192, %rsp
-; SKX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SKX-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SKX-NEXT:    vpinsrb $1, 232(%rbp), %xmm0, %xmm0
 ; SKX-NEXT:    vpinsrb $2, 240(%rbp), %xmm0, %xmm0
 ; SKX-NEXT:    vpinsrb $3, 248(%rbp), %xmm0, %xmm0
@@ -1952,7 +1952,7 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) n
 ; SKX-NEXT:    vpinsrb $13, 328(%rbp), %xmm0, %xmm0
 ; SKX-NEXT:    vpinsrb $14, 336(%rbp), %xmm0, %xmm0
 ; SKX-NEXT:    vpinsrb $15, 344(%rbp), %xmm0, %xmm0
-; SKX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SKX-NEXT:    vmovd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; SKX-NEXT:    vpinsrb $1, 360(%rbp), %xmm1, %xmm1
 ; SKX-NEXT:    vpinsrb $2, 368(%rbp), %xmm1, %xmm1
 ; SKX-NEXT:    vpinsrb $3, 376(%rbp), %xmm1, %xmm1
@@ -1985,7 +1985,7 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) n
 ; SKX-NEXT:    vpinsrb $13, 72(%rbp), %xmm1, %xmm1
 ; SKX-NEXT:    vpinsrb $14, 80(%rbp), %xmm1, %xmm1
 ; SKX-NEXT:    vpinsrb $15, 88(%rbp), %xmm1, %xmm1
-; SKX-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SKX-NEXT:    vmovd {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; SKX-NEXT:    vpinsrb $1, 104(%rbp), %xmm2, %xmm2
 ; SKX-NEXT:    vpinsrb $2, 112(%rbp), %xmm2, %xmm2
 ; SKX-NEXT:    vpinsrb $3, 120(%rbp), %xmm2, %xmm2
@@ -2003,7 +2003,7 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) n
 ; SKX-NEXT:    vpinsrb $15, 216(%rbp), %xmm2, %xmm2
 ; SKX-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; SKX-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; SKX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SKX-NEXT:    vmovd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; SKX-NEXT:    vpinsrb $1, 488(%rbp), %xmm1, %xmm1
 ; SKX-NEXT:    vpinsrb $2, 496(%rbp), %xmm1, %xmm1
 ; SKX-NEXT:    vpinsrb $3, 504(%rbp), %xmm1, %xmm1
@@ -2019,7 +2019,7 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) n
 ; SKX-NEXT:    vpinsrb $13, 584(%rbp), %xmm1, %xmm1
 ; SKX-NEXT:    vpinsrb $14, 592(%rbp), %xmm1, %xmm1
 ; SKX-NEXT:    vpinsrb $15, 600(%rbp), %xmm1, %xmm1
-; SKX-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SKX-NEXT:    vmovd {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; SKX-NEXT:    vpinsrb $1, 616(%rbp), %xmm2, %xmm2
 ; SKX-NEXT:    vpinsrb $2, 624(%rbp), %xmm2, %xmm2
 ; SKX-NEXT:    vpinsrb $3, 632(%rbp), %xmm2, %xmm2
@@ -2172,12 +2172,12 @@ define i128 @test_insertelement_variable_v128i1(<128 x i8> %a, i8 %b, i32 %index
 define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; KNL-LABEL: test_concat_v2i1:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; KNL-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
 ; KNL-NEXT:    vpextrw $0, %xmm0, %eax
 ; KNL-NEXT:    movzwl %ax, %eax
 ; KNL-NEXT:    vmovd %eax, %xmm1
 ; KNL-NEXT:    vcvtph2ps %xmm1, %xmm1
-; KNL-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; KNL-NEXT:    vmovss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; KNL-NEXT:    vucomiss %xmm2, %xmm1
 ; KNL-NEXT:    setb %al
 ; KNL-NEXT:    andl $1, %eax
@@ -2203,7 +2203,7 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; KNL-NEXT:    kshiftlw $1, %k2, %k2
 ; KNL-NEXT:    korw %k2, %k1, %k1
 ; KNL-NEXT:    kandw %k1, %k0, %k1
-; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; KNL-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
 ; KNL-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
 ; KNL-NEXT:    vpmovdw %zmm1, %ymm1
 ; KNL-NEXT:    vpand %xmm0, %xmm1, %xmm0
@@ -2213,13 +2213,13 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ;
 ; SKX-LABEL: test_concat_v2i1:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; SKX-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
 ; SKX-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; SKX-NEXT:    vpextrw $0, %xmm1, %eax
 ; SKX-NEXT:    movzwl %ax, %eax
 ; SKX-NEXT:    vmovd %eax, %xmm1
 ; SKX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; SKX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SKX-NEXT:    vmovss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; SKX-NEXT:    vucomiss %xmm2, %xmm1
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    kmovd %eax, %k0
@@ -2246,7 +2246,7 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; SKX-NEXT:    kshiftrb $7, %k2, %k2
 ; SKX-NEXT:    korw %k1, %k2, %k1
 ; SKX-NEXT:    kandw %k1, %k0, %k1
-; SKX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; SKX-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
 ; SKX-NEXT:    vmovdqu16 %xmm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    vmovd %xmm0, (%rdx)
 ; SKX-NEXT:    retq

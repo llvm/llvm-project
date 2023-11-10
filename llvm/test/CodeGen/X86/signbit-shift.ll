@@ -33,7 +33,7 @@ define <4 x i32> @add_zext_ifpos_vec_splat(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [42,42,42,42]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = [42,42,42,42]
 ; CHECK-NEXT:    psubd %xmm0, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -48,7 +48,7 @@ define <4 x i32> @add_zext_ifpos_vec_nonsplat(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [42,43,44,45]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = [42,43,44,45]
 ; CHECK-NEXT:    psubd %xmm0, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq

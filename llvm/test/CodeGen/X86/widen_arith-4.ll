@@ -14,8 +14,8 @@ define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; SSE2-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movw $0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movl $0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = <271,271,271,271,271,u,u,u>
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = <2,4,2,2,2,u,u,u>
+; SSE2-NEXT:    movdqa {{[^#]+#+}} xmm0 = <271,271,271,271,271,u,u,u>
+; SSE2-NEXT:    movdqa {{[^#]+#+}} xmm1 = <2,4,2,2,2,u,u,u>
 ; SSE2-NEXT:    .p2align 4, 0x90
 ; SSE2-NEXT:  .LBB0_1: # %forcond
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -48,7 +48,7 @@ define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; SSE41-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movw $0, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movl $0, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = <271,271,271,271,271,u,u,u>
+; SSE41-NEXT:    movdqa {{[^#]+#+}} xmm0 = <271,271,271,271,271,u,u,u>
 ; SSE41-NEXT:    .p2align 4, 0x90
 ; SSE41-NEXT:  .LBB0_1: # %forcond
 ; SSE41-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -66,7 +66,7 @@ define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; SSE41-NEXT:    movdqa %xmm1, %xmm2
 ; SSE41-NEXT:    psllw $2, %xmm2
 ; SSE41-NEXT:    psllw $1, %xmm1
-; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0],xmm2[1],xmm1[2,3,4,5,6,7]
+; SSE41-NEXT:    pblendw {{[^#]+#+}} xmm2 = xmm1[0],xmm2[1],xmm1[2,3,4,5,6,7]
 ; SSE41-NEXT:    pextrw $4, %xmm1, 8(%rcx,%rax)
 ; SSE41-NEXT:    movq %xmm2, (%rcx,%rax)
 ; SSE41-NEXT:    incl -{{[0-9]+}}(%rsp)

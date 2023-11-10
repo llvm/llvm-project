@@ -45,14 +45,14 @@ define <8 x i16> @test_v8i16_nosignbit(<8 x i16> %a, <8 x i16> %b) {
 define <16 x i8> @test_v16i8_reassociation(<16 x i8> %a) {
 ; SSE-LABEL: test_v16i8_reassociation:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 ; SSE-NEXT:    pmaxub %xmm1, %xmm0
 ; SSE-NEXT:    pmaxub %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v16i8_reassociation:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; AVX-NEXT:    vmovdqa {{[^#]+#+}} xmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 ; AVX-NEXT:    vpmaxub %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpmaxub %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq

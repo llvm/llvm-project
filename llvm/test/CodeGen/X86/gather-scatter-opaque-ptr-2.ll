@@ -5,7 +5,7 @@ define <2 x float> @gather_v2f32_scale_512(ptr %result, <2 x i64> %idx, <2 x i1>
 ; CHECK-LABEL: gather_v2f32_scale_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllq $9, %xmm0, %xmm2
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm1[0,2,2,3]
 ; CHECK-NEXT:    vpslld $31, %xmm0, %xmm1
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vgatherqps %xmm1, (%rdi,%xmm2), %xmm0
@@ -19,7 +19,7 @@ define <2 x float> @gather_v2f32_scale_16(ptr %result, <2 x i64> %idx, <2 x i1> 
 ; CHECK-LABEL: gather_v2f32_scale_16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllq $4, %xmm0, %xmm2
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm1[0,2,2,3]
 ; CHECK-NEXT:    vpslld $31, %xmm0, %xmm1
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vgatherqps %xmm1, (%rdi,%xmm2), %xmm0
@@ -32,7 +32,7 @@ define <2 x float> @gather_v2f32_scale_16(ptr %result, <2 x i64> %idx, <2 x i1> 
 define <2 x float> @gather_v2f32_scale_8(ptr %result, <2 x i64> %idx, <2 x i1> %mask) {
 ; CHECK-LABEL: gather_v2f32_scale_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm1 = xmm1[0,2,2,3]
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm2
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vgatherqps %xmm2, (%rdi,%xmm0,8), %xmm1
@@ -46,7 +46,7 @@ define <2 x float> @gather_v2f32_scale_8(ptr %result, <2 x i64> %idx, <2 x i1> %
 define <2 x float> @gather_v2f32_scale_4(ptr %result, <2 x i64> %idx, <2 x i1> %mask) {
 ; CHECK-LABEL: gather_v2f32_scale_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm1 = xmm1[0,2,2,3]
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm2
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vgatherqps %xmm2, (%rdi,%xmm0,4), %xmm1
@@ -62,7 +62,7 @@ define <2 x float> @gather_v2f32_scale_3(ptr %result, <2 x i64> %idx, <2 x i1> %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpaddq %xmm0, %xmm0, %xmm2
 ; CHECK-NEXT:    vpaddq %xmm0, %xmm2, %xmm2
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm1[0,2,2,3]
 ; CHECK-NEXT:    vpslld $31, %xmm0, %xmm1
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vgatherqps %xmm1, (%rdi,%xmm2), %xmm0
@@ -75,7 +75,7 @@ define <2 x float> @gather_v2f32_scale_3(ptr %result, <2 x i64> %idx, <2 x i1> %
 define <2 x float> @gather_v2f32_scale_1(ptr %result, <2 x i64> %idx, <2 x i1> %mask) {
 ; CHECK-LABEL: gather_v2f32_scale_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm1 = xmm1[0,2,2,3]
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm2
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vgatherqps %xmm2, (%rdi,%xmm0), %xmm1

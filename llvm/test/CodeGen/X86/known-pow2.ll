@@ -24,22 +24,22 @@ define <4 x i32> @pow2_non_splat_vec(<4 x i32> %x) {
 define <4 x i32> @pow2_non_splat_vec_fail0(<4 x i32> %x) {
 ; CHECK-LABEL: pow2_non_splat_vec_fail0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [954437177,1073741824,268435456,67108864]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = [954437177,1073741824,268435456,67108864]
 ; CHECK-NEXT:    pmuludq %xmm0, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm1[1,3,2,3]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,3,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm3 = xmm2[1,3,2,3]
+; CHECK-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; CHECK-NEXT:    movdqa %xmm1, %xmm3
 ; CHECK-NEXT:    psrld $1, %xmm3
-; CHECK-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm1[2,3]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm3 = xmm3[0,1],xmm1[2,3]
 ; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[0,2,2,3]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm3[0,2,2,3]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm2[1,1,3,3]
 ; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm2[0,2,2,3]
+; CHECK-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; CHECK-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %r = urem <4 x i32> %x, <i32 9, i32 4, i32 16, i32 64>
@@ -600,22 +600,22 @@ define <4 x i1> @pow2_vselect_eq(<4 x i1> %c, <4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-NEXT:    pslld $23, %xmm2
 ; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
-; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm6
 ; CHECK-NEXT:    psrld %xmm4, %xmm6
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[0,1,1,1,4,5,6,7]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm4 = xmm3[0,1,1,1,4,5,6,7]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm7
 ; CHECK-NEXT:    psrld %xmm4, %xmm7
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm7 = xmm7[0],xmm6[0]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm7 = xmm7[0],xmm6[0]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm3 = xmm3[2,3,2,3]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm6
 ; CHECK-NEXT:    psrld %xmm4, %xmm6
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[0,1,1,1,4,5,6,7]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm3 = xmm3[0,1,1,1,4,5,6,7]
 ; CHECK-NEXT:    psrld %xmm3, %xmm5
-; CHECK-NEXT:    punpckhqdq {{.*#+}} xmm5 = xmm5[1],xmm6[1]
-; CHECK-NEXT:    shufps {{.*#+}} xmm7 = xmm7[0,3],xmm5[0,3]
+; CHECK-NEXT:    punpckhqdq {{[^#]+#+}} xmm5 = xmm5[1],xmm6[1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm7 = xmm7[0,3],xmm5[0,3]
 ; CHECK-NEXT:    pand %xmm0, %xmm2
 ; CHECK-NEXT:    pandn %xmm7, %xmm0
 ; CHECK-NEXT:    por %xmm2, %xmm0
@@ -638,22 +638,22 @@ define <4 x i1> @pow2_vselect_ne(<4 x i1> %c, <4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-NEXT:    pslld $23, %xmm2
 ; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
-; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm6
 ; CHECK-NEXT:    psrld %xmm4, %xmm6
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[0,1,1,1,4,5,6,7]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm4 = xmm3[0,1,1,1,4,5,6,7]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm7
 ; CHECK-NEXT:    psrld %xmm4, %xmm7
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm7 = xmm7[0],xmm6[0]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm7 = xmm7[0],xmm6[0]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm3 = xmm3[2,3,2,3]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm6
 ; CHECK-NEXT:    psrld %xmm4, %xmm6
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[0,1,1,1,4,5,6,7]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm3 = xmm3[0,1,1,1,4,5,6,7]
 ; CHECK-NEXT:    psrld %xmm3, %xmm5
-; CHECK-NEXT:    punpckhqdq {{.*#+}} xmm5 = xmm5[1],xmm6[1]
-; CHECK-NEXT:    shufps {{.*#+}} xmm7 = xmm7[0,3],xmm5[0,3]
+; CHECK-NEXT:    punpckhqdq {{[^#]+#+}} xmm5 = xmm5[1],xmm6[1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm7 = xmm7[0,3],xmm5[0,3]
 ; CHECK-NEXT:    pand %xmm0, %xmm2
 ; CHECK-NEXT:    pandn %xmm7, %xmm0
 ; CHECK-NEXT:    por %xmm2, %xmm0
@@ -677,22 +677,22 @@ define <4 x i1> @pow2_vselect_fail0_ne(<4 x i1> %c, <4 x i32> %x, <4 x i32> %y, 
 ; CHECK-NEXT:    pslld $23, %xmm2
 ; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
-; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [1073741824,1073741824,1073741824,1073741824]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm5 = [1073741824,1073741824,1073741824,1073741824]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm6
 ; CHECK-NEXT:    psrld %xmm4, %xmm6
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[0,1,1,1,4,5,6,7]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm4 = xmm3[0,1,1,1,4,5,6,7]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm7
 ; CHECK-NEXT:    psrld %xmm4, %xmm7
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm7 = xmm7[0],xmm6[0]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm7 = xmm7[0],xmm6[0]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm3 = xmm3[2,3,2,3]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm6
 ; CHECK-NEXT:    psrld %xmm4, %xmm6
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[0,1,1,1,4,5,6,7]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm3 = xmm3[0,1,1,1,4,5,6,7]
 ; CHECK-NEXT:    psrld %xmm3, %xmm5
-; CHECK-NEXT:    punpckhqdq {{.*#+}} xmm5 = xmm5[1],xmm6[1]
-; CHECK-NEXT:    shufps {{.*#+}} xmm7 = xmm7[0,3],xmm5[0,3]
+; CHECK-NEXT:    punpckhqdq {{[^#]+#+}} xmm5 = xmm5[1],xmm6[1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm7 = xmm7[0,3],xmm5[0,3]
 ; CHECK-NEXT:    pand %xmm0, %xmm2
 ; CHECK-NEXT:    pandn %xmm7, %xmm0
 ; CHECK-NEXT:    por %xmm2, %xmm0
@@ -717,29 +717,29 @@ define <4 x i1> @pow2_vselect_fail2_ne(<4 x i1> %c, <4 x i32> %x, <4 x i32> %y, 
 ; CHECK-NEXT:    pslld $23, %xmm2
 ; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
-; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [4,4,4,4]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm2[1,1,3,3]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm4 = [4,4,4,4]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm5 = xmm2[1,1,3,3]
 ; CHECK-NEXT:    pmuludq %xmm4, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm2[0,2,2,3]
 ; CHECK-NEXT:    pmuludq %xmm4, %xmm5
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[0,2,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
-; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm5[0,2,2,3]
+; CHECK-NEXT:    punpckldq {{[^#]+#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm6
 ; CHECK-NEXT:    psrld %xmm4, %xmm6
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[0,1,1,1,4,5,6,7]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm4 = xmm3[0,1,1,1,4,5,6,7]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm7
 ; CHECK-NEXT:    psrld %xmm4, %xmm7
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm7 = xmm7[0],xmm6[0]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm7 = xmm7[0],xmm6[0]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm3 = xmm3[2,3,2,3]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm6
 ; CHECK-NEXT:    psrld %xmm4, %xmm6
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[0,1,1,1,4,5,6,7]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm3 = xmm3[0,1,1,1,4,5,6,7]
 ; CHECK-NEXT:    psrld %xmm3, %xmm5
-; CHECK-NEXT:    punpckhqdq {{.*#+}} xmm5 = xmm5[1],xmm6[1]
-; CHECK-NEXT:    shufps {{.*#+}} xmm7 = xmm7[0,3],xmm5[0,3]
+; CHECK-NEXT:    punpckhqdq {{[^#]+#+}} xmm5 = xmm5[1],xmm6[1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm7 = xmm7[0,3],xmm5[0,3]
 ; CHECK-NEXT:    pand %xmm0, %xmm2
 ; CHECK-NEXT:    pandn %xmm7, %xmm0
 ; CHECK-NEXT:    por %xmm2, %xmm0

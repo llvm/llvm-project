@@ -9,8 +9,8 @@ declare <2 x double> @llvm.x86.fma4.vfmadd.sd(<2 x double>, <2 x double>, <2 x d
 define void @fmadd_aab_ss(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmadd_aab_ss:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vfmaddss {{.*#+}} xmm0 = (xmm0 * xmm0) + mem
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vfmaddss {{[^#]+#+}} xmm0 = (xmm0 * xmm0) + mem
 ; CHECK-NEXT:    vmovss %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %a.val = load float, ptr %a
@@ -35,8 +35,8 @@ define void @fmadd_aab_ss(ptr %a, ptr %b) {
 define void @fmadd_aba_ss(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmadd_aba_ss:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vfmaddss {{.*#+}} xmm0 = (xmm0 * mem) + xmm0
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vfmaddss {{[^#]+#+}} xmm0 = (xmm0 * mem) + xmm0
 ; CHECK-NEXT:    vmovss %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %a.val = load float, ptr %a
@@ -61,8 +61,8 @@ define void @fmadd_aba_ss(ptr %a, ptr %b) {
 define void @fmadd_aab_sd(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmadd_aab_sd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    vfmaddsd {{.*#+}} xmm0 = (xmm0 * xmm0) + mem
+; CHECK-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vfmaddsd {{[^#]+#+}} xmm0 = (xmm0 * xmm0) + mem
 ; CHECK-NEXT:    vmovsd %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %a.val = load double, ptr %a
@@ -83,8 +83,8 @@ define void @fmadd_aab_sd(ptr %a, ptr %b) {
 define void @fmadd_aba_sd(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmadd_aba_sd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    vfmaddsd {{.*#+}} xmm0 = (xmm0 * mem) + xmm0
+; CHECK-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vfmaddsd {{[^#]+#+}} xmm0 = (xmm0 * mem) + xmm0
 ; CHECK-NEXT:    vmovsd %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %a.val = load double, ptr %a

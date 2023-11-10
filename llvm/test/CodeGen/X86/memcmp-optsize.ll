@@ -359,8 +359,8 @@ define i1 @length24_eq(ptr %x, ptr %y) nounwind optsize {
 ; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
 ; X64-SSE2-NEXT:    movdqu (%rsi), %xmm1
 ; X64-SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; X64-SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-SSE2-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; X64-SSE2-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; X64-SSE2-NEXT:    movq {{[^#]+#+}} xmm2 = mem[0],zero
 ; X64-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
 ; X64-SSE2-NEXT:    pand %xmm1, %xmm2
 ; X64-SSE2-NEXT:    pmovmskb %xmm2, %eax
@@ -371,8 +371,8 @@ define i1 @length24_eq(ptr %x, ptr %y) nounwind optsize {
 ; X64-AVX-LABEL: length24_eq:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X64-AVX-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; X64-AVX-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
+; X64-AVX-NEXT:    vmovq {{[^#]+#+}} xmm2 = mem[0],zero
 ; X64-AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; X64-AVX-NEXT:    vpxor (%rsi), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpor %xmm0, %xmm1, %xmm0
@@ -388,7 +388,7 @@ define i1 @length24_eq_const(ptr %X) nounwind optsize {
 ; X64-SSE2-LABEL: length24_eq_const:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
-; X64-SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X64-SSE2-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X64-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    pand %xmm1, %xmm0
@@ -400,7 +400,7 @@ define i1 @length24_eq_const(ptr %X) nounwind optsize {
 ; X64-AVX-LABEL: length24_eq_const:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X64-AVX-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X64-AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; X64-AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0

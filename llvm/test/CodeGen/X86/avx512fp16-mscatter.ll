@@ -17,25 +17,25 @@ define void @test_mscatter_v16f16(ptr %base, <16 x i32> %index, <16 x half> %val
 ; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm3
 ; CHECK-NEXT:    vpextrq $1, %xmm0, %rax
 ; CHECK-NEXT:    vmovsh %xmm3, (%rax)
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{[^#]+#+}} xmm3 = xmm1[1,1,3,3]
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm4
 ; CHECK-NEXT:    vmovq %xmm4, %rax
 ; CHECK-NEXT:    vmovsh %xmm3, (%rax)
 ; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm3
 ; CHECK-NEXT:    vpextrq $1, %xmm4, %rax
 ; CHECK-NEXT:    vmovsh %xmm3, (%rax)
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
+; CHECK-NEXT:    vshufpd {{[^#]+#+}} xmm3 = xmm1[1,0]
 ; CHECK-NEXT:    vextracti32x4 $2, %zmm0, %xmm4
 ; CHECK-NEXT:    vmovq %xmm4, %rax
 ; CHECK-NEXT:    vmovsh %xmm3, (%rax)
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{[^#]+#+}} xmm3 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpextrq $1, %xmm4, %rax
 ; CHECK-NEXT:    vmovsh %xmm3, (%rax)
-; CHECK-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[3,3,3,3]
+; CHECK-NEXT:    vshufps {{[^#]+#+}} xmm3 = xmm1[3,3,3,3]
 ; CHECK-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
 ; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    vmovsh %xmm3, (%rax)
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{[^#]+#+}} xmm3 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpextrq $1, %xmm0, %rax
 ; CHECK-NEXT:    vmovsh %xmm3, (%rax)
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm0
@@ -44,25 +44,25 @@ define void @test_mscatter_v16f16(ptr %base, <16 x i32> %index, <16 x half> %val
 ; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; CHECK-NEXT:    vpextrq $1, %xmm2, %rax
 ; CHECK-NEXT:    vmovsh %xmm1, (%rax)
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{[^#]+#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; CHECK-NEXT:    vmovq %xmm3, %rax
 ; CHECK-NEXT:    vmovsh %xmm1, (%rax)
 ; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm1
 ; CHECK-NEXT:    vpextrq $1, %xmm3, %rax
 ; CHECK-NEXT:    vmovsh %xmm1, (%rax)
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; CHECK-NEXT:    vshufpd {{[^#]+#+}} xmm1 = xmm0[1,0]
 ; CHECK-NEXT:    vextracti32x4 $2, %zmm2, %xmm3
 ; CHECK-NEXT:    vmovq %xmm3, %rax
 ; CHECK-NEXT:    vmovsh %xmm1, (%rax)
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{[^#]+#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpextrq $1, %xmm3, %rax
 ; CHECK-NEXT:    vmovsh %xmm1, (%rax)
-; CHECK-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vshufps {{[^#]+#+}} xmm1 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    vextracti32x4 $3, %zmm2, %xmm2
 ; CHECK-NEXT:    vmovq %xmm2, %rax
 ; CHECK-NEXT:    vmovsh %xmm1, (%rax)
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{[^#]+#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpextrq $1, %xmm2, %rax
 ; CHECK-NEXT:    vmovsh %xmm0, (%rax)
 ; CHECK-NEXT:    vzeroupper

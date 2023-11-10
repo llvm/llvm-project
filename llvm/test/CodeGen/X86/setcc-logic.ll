@@ -526,7 +526,7 @@ define i1 @or_icmps_const_1bit_diff(i8 %x) {
 define <4 x i32> @or_icmps_const_1bit_diff_vec(<4 x i32> %x) {
 ; CHECK-LABEL: or_icmps_const_1bit_diff_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [43,45,43,45]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = [43,45,43,45]
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm1
 ; CHECK-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    por %xmm1, %xmm0
@@ -554,7 +554,7 @@ define i1 @and_icmps_const_1bit_diff(i32 %x) {
 define <4 x i32> @and_icmps_const_1bit_diff_vec(<4 x i32> %x) {
 ; CHECK-LABEL: and_icmps_const_1bit_diff_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [44,60,44,60]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = [44,60,44,60]
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm1
 ; CHECK-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    por %xmm1, %xmm0

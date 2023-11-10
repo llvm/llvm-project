@@ -17,7 +17,7 @@ define void @bad_cast() {
 define void @bad_insert(i32 %t) {
 ; CHECK-LABEL: bad_insert:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vmovaps %ymm0, (%eax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl

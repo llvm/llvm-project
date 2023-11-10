@@ -33,7 +33,7 @@ define <8 x float> @sitofp02(<8 x i16> %a) {
 ; AVX-LABEL: sitofp02:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovsxwd %xmm0, %xmm1
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; AVX-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX-NEXT:    vcvtdq2ps %ymm0, %ymm0
@@ -148,7 +148,7 @@ define float @funcD(ptr nocapture %e) nounwind uwtable readonly ssp {
 define void @fpext() nounwind uwtable {
 ; CHECK-LABEL: fpext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovsd %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    retq

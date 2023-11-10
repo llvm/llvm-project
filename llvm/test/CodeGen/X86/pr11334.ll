@@ -21,11 +21,11 @@ define <3 x double> @v3f2d_ext_vec(<3 x float> %v1) nounwind {
 ; SSE-LABEL: v3f2d_ext_vec:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm2
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm0
 ; SSE-NEXT:    movlps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps %xmm2, %xmm1
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm2[1]
+; SSE-NEXT:    unpckhpd {{[^#]+#+}} xmm1 = xmm1[1],xmm2[1]
 ; SSE-NEXT:    fldl -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    retq
@@ -43,7 +43,7 @@ define <4 x double> @v4f2d_ext_vec(<4 x float> %v1) nounwind {
 ; SSE-LABEL: v4f2d_ext_vec:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm2
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    retq
@@ -62,9 +62,9 @@ define <8 x double> @v8f2d_ext_vec(<8 x float> %v1) nounwind {
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm5
 ; SSE-NEXT:    cvtps2pd %xmm1, %xmm2
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm4
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    movhlps {{[^#]+#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    cvtps2pd %xmm1, %xmm3
 ; SSE-NEXT:    movaps %xmm5, %xmm0
 ; SSE-NEXT:    movaps %xmm4, %xmm1
@@ -86,14 +86,14 @@ define void @test_vector_creation() nounwind {
 ; SSE-LABEL: test_vector_creation:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; SSE-NEXT:    movhps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE-NEXT:    movaps %xmm0, (%rax)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_vector_creation:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; AVX-NEXT:    vmovhps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; AVX-NEXT:    vmovaps %xmm0, (%rax)
 ; AVX-NEXT:    retq
   %1 = insertelement <4 x double> undef, double 0.000000e+00, i32 2

@@ -9,12 +9,12 @@
 define <4 x i32> @combine_v4i32_abs_constant() {
 ; SSE-LABEL: combine_v4i32_abs_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,1,3,2147483648]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,1,3,2147483648]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_v4i32_abs_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [0,1,3,2147483648]
+; AVX-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [0,1,3,2147483648]
 ; AVX-NEXT:    retq
   %1 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> <i32 0, i32 -1, i32 3, i32 -2147483648>, i1 false)
   ret <4 x i32> %1
@@ -23,13 +23,13 @@ define <4 x i32> @combine_v4i32_abs_constant() {
 define <16 x i16> @combine_v16i16_abs_constant() {
 ; SSE-LABEL: combine_v16i16_abs_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,1,1,3,3,7,7,255]
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [255,4096,4096,32767,32767,32768,32768,0]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,1,1,3,3,7,7,255]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm1 = [255,4096,4096,32767,32767,32768,32768,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_v16i16_abs_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [0,1,1,3,3,7,7,255,255,4096,4096,32767,32767,32768,32768,0]
+; AVX-NEXT:    vmovaps {{[^#]+#+}} ymm0 = [0,1,1,3,3,7,7,255,255,4096,4096,32767,32767,32768,32768,0]
 ; AVX-NEXT:    retq
   %1 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> <i16 0, i16 1, i16 -1, i16 3, i16 -3, i16 7, i16 -7, i16 255, i16 -255, i16 4096, i16 -4096, i16 32767, i16 -32767, i16 -32768, i16 32768, i16 65536>, i1 false)
   ret <16 x i16> %1
@@ -107,11 +107,11 @@ define <32 x i8> @combine_v32i8_abs_abs(<32 x i8> %a) {
 define <4 x i64> @combine_v4i64_abs_abs(<4 x i64> %a) {
 ; SSE2-LABEL: combine_v4i64_abs_abs:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm2
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    psubq %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm1[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm2
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    psubq %xmm2, %xmm1

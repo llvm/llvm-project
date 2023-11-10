@@ -33,17 +33,17 @@ define <4 x i32> @zero_vector() {
 define <4 x i32> @const_vector() {
 ; SSE-LABEL: const_vector:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [42,42,42,42]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm0 = [42,42,42,42]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: const_vector:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [42,42,42,42]
+; AVX-NEXT:    vbroadcastss {{[^#]+#+}} xmm0 = [42,42,42,42]
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: const_vector:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [42,42,42,42]
+; AVX2-NEXT:    vbroadcastss {{[^#]+#+}} xmm0 = [42,42,42,42]
 ; AVX2-NEXT:    retq
   %const = insertelement <4 x i32> undef, i32 42, i32 0
   %splat = shufflevector <4 x i32> %const, <4 x i32> undef, <4 x i32> zeroinitializer

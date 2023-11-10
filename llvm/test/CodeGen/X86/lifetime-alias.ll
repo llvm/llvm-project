@@ -28,7 +28,7 @@ define i8 @main() local_unnamed_addr #0 personality ptr @__gxx_personality_v0 {
 ; CHECK:       # %bb.0: # %_ZNSt3__312basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED2Ev.exit50
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [97,97,97,97,97,97,97,97,97,97,97,97,97,97,97,97]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm0 = [97,97,97,97,97,97,97,97,97,97,97,97,97,97,97,97]
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movabsq $7016996765293437281, %rax # imm = 0x6161616161616161
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)

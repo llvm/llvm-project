@@ -5,7 +5,7 @@ define <4 x i32> @mask_shuffle_v4i32_1234(<4 x i32> %a, <4 x i32> %b, <4 x i32> 
 ; CHECK-LABEL: mask_shuffle_v4i32_1234:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    valignd {{.*#+}} xmm2 {%k1} = xmm0[1,2,3],xmm1[0]
+; CHECK-NEXT:    valignd {{[^#]+#+}} xmm2 {%k1} = xmm0[1,2,3],xmm1[0]
 ; CHECK-NEXT:    vmovdqa %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
@@ -19,7 +19,7 @@ define <4 x i32> @maskz_shuffle_v4i32_1234(<4 x i32> %a, <4 x i32> %b, i8 %mask)
 ; CHECK-LABEL: maskz_shuffle_v4i32_1234:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    valignd {{.*#+}} xmm0 {%k1} {z} = xmm0[1,2,3],xmm1[0]
+; CHECK-NEXT:    valignd {{[^#]+#+}} xmm0 {%k1} {z} = xmm0[1,2,3],xmm1[0]
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
   %mask.cast = bitcast i8 %mask to <8 x i1>
@@ -32,7 +32,7 @@ define <4 x i32> @mask_shuffle_v4i32_2345(<4 x i32> %a, <4 x i32> %b, <4 x i32> 
 ; CHECK-LABEL: mask_shuffle_v4i32_2345:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    valignd {{.*#+}} xmm2 {%k1} = xmm0[2,3],xmm1[0,1]
+; CHECK-NEXT:    valignd {{[^#]+#+}} xmm2 {%k1} = xmm0[2,3],xmm1[0,1]
 ; CHECK-NEXT:    vmovdqa %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
@@ -46,7 +46,7 @@ define <4 x i32> @maskz_shuffle_v4i32_2345(<4 x i32> %a, <4 x i32> %b, i8 %mask)
 ; CHECK-LABEL: maskz_shuffle_v4i32_2345:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    valignd {{.*#+}} xmm0 {%k1} {z} = xmm0[2,3],xmm1[0,1]
+; CHECK-NEXT:    valignd {{[^#]+#+}} xmm0 {%k1} {z} = xmm0[2,3],xmm1[0,1]
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
   %mask.cast = bitcast i8 %mask to <8 x i1>
@@ -59,7 +59,7 @@ define <2 x i64> @mask_shuffle_v2i64_12(<2 x i64> %a, <2 x i64> %b, <2 x i64> %p
 ; CHECK-LABEL: mask_shuffle_v2i64_12:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    valignq {{.*#+}} xmm2 {%k1} = xmm0[1],xmm1[0]
+; CHECK-NEXT:    valignq {{[^#]+#+}} xmm2 {%k1} = xmm0[1],xmm1[0]
 ; CHECK-NEXT:    vmovdqa %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 1, i32 2>
@@ -73,7 +73,7 @@ define <2 x i64> @maskz_shuffle_v2i64_12(<2 x i64> %a, <2 x i64> %b, i8 %mask) {
 ; CHECK-LABEL: maskz_shuffle_v2i64_12:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    valignq {{.*#+}} xmm0 {%k1} {z} = xmm0[1],xmm1[0]
+; CHECK-NEXT:    valignq {{[^#]+#+}} xmm0 {%k1} {z} = xmm0[1],xmm1[0]
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 1, i32 2>
   %mask.cast = bitcast i8 %mask to <8 x i1>
@@ -86,7 +86,7 @@ define <4 x i64> @mask_shuffle_v4i64_1234(<4 x i64> %a, <4 x i64> %b, <4 x i64> 
 ; CHECK-LABEL: mask_shuffle_v4i64_1234:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    valignq {{.*#+}} ymm2 {%k1} = ymm0[1,2,3],ymm1[0]
+; CHECK-NEXT:    valignq {{[^#]+#+}} ymm2 {%k1} = ymm0[1,2,3],ymm1[0]
 ; CHECK-NEXT:    vmovdqa %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
@@ -100,7 +100,7 @@ define <4 x i64> @maskz_shuffle_v4i64_1234(<4 x i64> %a, <4 x i64> %b, i8 %mask)
 ; CHECK-LABEL: maskz_shuffle_v4i64_1234:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    valignq {{.*#+}} ymm0 {%k1} {z} = ymm0[1,2,3],ymm1[0]
+; CHECK-NEXT:    valignq {{[^#]+#+}} ymm0 {%k1} {z} = ymm0[1,2,3],ymm1[0]
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
   %mask.cast = bitcast i8 %mask to <8 x i1>
@@ -113,7 +113,7 @@ define <4 x i64> @mask_shuffle_v4i64_1230(<4 x i64> %a, <4 x i64> %passthru, i8 
 ; CHECK-LABEL: mask_shuffle_v4i64_1230:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpermq {{.*#+}} ymm1 {%k1} = ymm0[1,2,3,0]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm1 {%k1} = ymm0[1,2,3,0]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <4 x i64> %a, <4 x i64> undef, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
@@ -127,7 +127,7 @@ define <4 x i64> @maskz_shuffle_v4i64_1230(<4 x i64> %a, i8 %mask) {
 ; CHECK-LABEL: maskz_shuffle_v4i64_1230:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[1,2,3,0]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm0 {%k1} {z} = ymm0[1,2,3,0]
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <4 x i64> %a, <4 x i64> undef, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
   %mask.cast = bitcast i8 %mask to <8 x i1>
@@ -140,7 +140,7 @@ define <8 x i32> @mask_shuffle_v8i32_12345678(<8 x i32> %a, <8 x i32> %b, <8 x i
 ; CHECK-LABEL: mask_shuffle_v8i32_12345678:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    valignd {{.*#+}} ymm2 {%k1} = ymm0[1,2,3,4,5,6,7],ymm1[0]
+; CHECK-NEXT:    valignd {{[^#]+#+}} ymm2 {%k1} = ymm0[1,2,3,4,5,6,7],ymm1[0]
 ; CHECK-NEXT:    vmovdqa %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
@@ -153,7 +153,7 @@ define <8 x i32> @maskz_shuffle_v8i32_12345678(<8 x i32> %a, <8 x i32> %b, i8 %m
 ; CHECK-LABEL: maskz_shuffle_v8i32_12345678:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    valignd {{.*#+}} ymm0 {%k1} {z} = ymm0[1,2,3,4,5,6,7],ymm1[0]
+; CHECK-NEXT:    valignd {{[^#]+#+}} ymm0 {%k1} {z} = ymm0[1,2,3,4,5,6,7],ymm1[0]
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
   %mask.cast = bitcast i8 %mask to <8 x i1>
@@ -165,7 +165,7 @@ define <8 x i32> @mask_shuffle_v8i32_23456789(<8 x i32> %a, <8 x i32> %b, <8 x i
 ; CHECK-LABEL: mask_shuffle_v8i32_23456789:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    valignd {{.*#+}} ymm2 {%k1} = ymm0[2,3,4,5,6,7],ymm1[0,1]
+; CHECK-NEXT:    valignd {{[^#]+#+}} ymm2 {%k1} = ymm0[2,3,4,5,6,7],ymm1[0,1]
 ; CHECK-NEXT:    vmovdqa %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9>
@@ -178,7 +178,7 @@ define <8 x i32> @maskz_shuffle_v8i32_23456789(<8 x i32> %a, <8 x i32> %b, i8 %m
 ; CHECK-LABEL: maskz_shuffle_v8i32_23456789:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    valignd {{.*#+}} ymm0 {%k1} {z} = ymm0[2,3,4,5,6,7],ymm1[0,1]
+; CHECK-NEXT:    valignd {{[^#]+#+}} ymm0 {%k1} {z} = ymm0[2,3,4,5,6,7],ymm1[0,1]
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9>
   %mask.cast = bitcast i8 %mask to <8 x i1>
@@ -190,7 +190,7 @@ define <8 x i32> @mask_shuffle_v8i32_12345670(<8 x i32> %a, <8 x i32> %passthru,
 ; CHECK-LABEL: mask_shuffle_v8i32_12345670:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    valignd {{.*#+}} ymm1 {%k1} = ymm0[1,2,3,4,5,6,7,0]
+; CHECK-NEXT:    valignd {{[^#]+#+}} ymm1 {%k1} = ymm0[1,2,3,4,5,6,7,0]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> undef, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
@@ -203,7 +203,7 @@ define <8 x i32> @maskz_shuffle_v8i32_12345670(<8 x i32> %a, i8 %mask) {
 ; CHECK-LABEL: maskz_shuffle_v8i32_12345670:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    valignd {{.*#+}} ymm0 {%k1} {z} = ymm0[1,2,3,4,5,6,7,0]
+; CHECK-NEXT:    valignd {{[^#]+#+}} ymm0 {%k1} {z} = ymm0[1,2,3,4,5,6,7,0]
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> undef, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
   %mask.cast = bitcast i8 %mask to <8 x i1>
@@ -214,7 +214,7 @@ define <8 x i32> @maskz_shuffle_v8i32_12345670(<8 x i32> %a, i8 %mask) {
 define <8 x i32> @mask_shuffle_v8i32_23456701(<8 x i32> %a, <8 x i32> %passthru, i8 %mask) {
 ; CHECK-LABEL: mask_shuffle_v8i32_23456701:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,2,3,0]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm0 = ymm0[1,2,3,0]
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -227,7 +227,7 @@ define <8 x i32> @mask_shuffle_v8i32_23456701(<8 x i32> %a, <8 x i32> %passthru,
 define <8 x i32> @maskz_shuffle_v8i32_23456701(<8 x i32> %a, i8 %mask) {
 ; CHECK-LABEL: maskz_shuffle_v8i32_23456701:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,2,3,0]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm0 = ymm0[1,2,3,0]
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -1485,7 +1485,7 @@ define <2 x double> @broadcast_v4f32_0101_from_v2f32_mask(ptr %x, <2 x double> %
 ; CHECK-LABEL: broadcast_v4f32_0101_from_v2f32_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 {%k1} = mem[0,0]
+; CHECK-NEXT:    vmovddup {{[^#]+#+}} xmm0 {%k1} = mem[0,0]
 ; CHECK-NEXT:    retq
   %q = load double, ptr %x, align 1
   %vecinit.i = insertelement <2 x double> undef, double %q, i32 0
@@ -1500,7 +1500,7 @@ define <2 x double> @broadcast_v4f32_0101_from_v2f32_maskz(ptr %x, i8 %mask) {
 ; CHECK-LABEL: broadcast_v4f32_0101_from_v2f32_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 {%k1} {z} = mem[0,0]
+; CHECK-NEXT:    vmovddup {{[^#]+#+}} xmm0 {%k1} {z} = mem[0,0]
 ; CHECK-NEXT:    retq
   %q = load double, ptr %x, align 1
   %vecinit.i = insertelement <2 x double> undef, double %q, i32 0
@@ -1515,7 +1515,7 @@ define <8 x float> @test_broadcast_2f64_8f32_mask(ptr%p, i8 %mask, <8 x float> %
 ; CHECK-LABEL: test_broadcast_2f64_8f32_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcastf32x4 {{.*#+}} ymm0 {%k1} = mem[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vbroadcastf32x4 {{[^#]+#+}} ymm0 {%k1} = mem[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    retq
  %1 = load <2 x double>, ptr%p
  %2 = shufflevector <2 x double> %1, <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -1529,7 +1529,7 @@ define <8 x float> @test_broadcast_2f64_8f32_maskz(ptr%p, i8 %mask) nounwind {
 ; CHECK-LABEL: test_broadcast_2f64_8f32_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcastf32x4 {{.*#+}} ymm0 {%k1} {z} = mem[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vbroadcastf32x4 {{[^#]+#+}} ymm0 {%k1} {z} = mem[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    retq
  %1 = load <2 x double>, ptr%p
  %2 = shufflevector <2 x double> %1, <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -1543,7 +1543,7 @@ define <8 x i32> @test_broadcast_2i64_8i32_mask(ptr%p, i8 %mask, <8 x i32> %pass
 ; CHECK-LABEL: test_broadcast_2i64_8i32_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcasti32x4 {{.*#+}} ymm0 {%k1} = mem[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vbroadcasti32x4 {{[^#]+#+}} ymm0 {%k1} = mem[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    retq
  %1 = load <2 x i64>, ptr%p
  %2 = shufflevector <2 x i64> %1, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -1557,7 +1557,7 @@ define <8 x i32> @test_broadcast_2i64_8i32_maskz(ptr%p, i8 %mask) nounwind {
 ; CHECK-LABEL: test_broadcast_2i64_8i32_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcasti32x4 {{.*#+}} ymm0 {%k1} {z} = mem[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vbroadcasti32x4 {{[^#]+#+}} ymm0 {%k1} {z} = mem[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    retq
  %1 = load <2 x i64>, ptr%p
  %2 = shufflevector <2 x i64> %1, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -1571,7 +1571,7 @@ define <16 x float> @test_broadcast_2f64_16f32_mask(ptr%p, i16 %mask, <16 x floa
 ; CHECK-LABEL: test_broadcast_2f64_16f32_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 {%k1} = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vbroadcastf32x4 {{[^#]+#+}} zmm0 {%k1} = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    retq
  %1 = load <2 x double>, ptr%p
  %2 = shufflevector <2 x double> %1, <2 x double> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
@@ -1585,7 +1585,7 @@ define <16 x float> @test_broadcast_2f64_16f32_maskz(ptr%p, i16 %mask) nounwind 
 ; CHECK-LABEL: test_broadcast_2f64_16f32_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 {%k1} {z} = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vbroadcastf32x4 {{[^#]+#+}} zmm0 {%k1} {z} = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    retq
  %1 = load <2 x double>, ptr%p
  %2 = shufflevector <2 x double> %1, <2 x double> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
@@ -1599,7 +1599,7 @@ define <16 x i32> @test_broadcast_2i64_16i32_mask(ptr%p, i16 %mask, <16 x i32> %
 ; CHECK-LABEL: test_broadcast_2i64_16i32_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 {%k1} = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vbroadcasti32x4 {{[^#]+#+}} zmm0 {%k1} = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    retq
  %1 = load <2 x i64>, ptr%p
  %2 = shufflevector <2 x i64> %1, <2 x i64> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
@@ -1613,7 +1613,7 @@ define <16 x i32> @test_broadcast_2i64_16i32_maskz(ptr%p, i16 %mask) nounwind {
 ; CHECK-LABEL: test_broadcast_2i64_16i32_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 {%k1} {z} = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vbroadcasti32x4 {{[^#]+#+}} zmm0 {%k1} {z} = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    retq
  %1 = load <2 x i64>, ptr%p
  %2 = shufflevector <2 x i64> %1, <2 x i64> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
@@ -1627,7 +1627,7 @@ define <16 x float> @test_broadcast_4f64_16f32_mask(ptr%p, i16 %mask, <16 x floa
 ; CHECK-LABEL: test_broadcast_4f64_16f32_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcastf32x8 {{.*#+}} zmm0 {%k1} = mem[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vbroadcastf32x8 {{[^#]+#+}} zmm0 {%k1} = mem[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    retq
  %1 = load <4 x double>, ptr%p
  %2 = shufflevector <4 x double> %1, <4 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -1641,7 +1641,7 @@ define <16 x float> @test_broadcast_4f64_16f32_maskz(ptr%p, i16 %mask) nounwind 
 ; CHECK-LABEL: test_broadcast_4f64_16f32_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcastf32x8 {{.*#+}} zmm0 {%k1} {z} = mem[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vbroadcastf32x8 {{[^#]+#+}} zmm0 {%k1} {z} = mem[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    retq
  %1 = load <4 x double>, ptr%p
  %2 = shufflevector <4 x double> %1, <4 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -1655,7 +1655,7 @@ define <16 x i32> @test_broadcast_4i64_16i32_mask(ptr%p, i16 %mask, <16 x i32> %
 ; CHECK-LABEL: test_broadcast_4i64_16i32_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcasti32x8 {{.*#+}} zmm0 {%k1} = mem[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vbroadcasti32x8 {{[^#]+#+}} zmm0 {%k1} = mem[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    retq
  %1 = load <4 x i64>, ptr%p
  %2 = shufflevector <4 x i64> %1, <4 x i64> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -1669,7 +1669,7 @@ define <16 x i32> @test_broadcast_4i64_16i32_maskz(ptr%p, i16 %mask) nounwind {
 ; CHECK-LABEL: test_broadcast_4i64_16i32_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcasti32x8 {{.*#+}} zmm0 {%k1} {z} = mem[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vbroadcasti32x8 {{[^#]+#+}} zmm0 {%k1} {z} = mem[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    retq
  %1 = load <4 x i64>, ptr%p
  %2 = shufflevector <4 x i64> %1, <4 x i64> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -1683,7 +1683,7 @@ define <4 x double> @test_broadcast_4f32_4f64_mask(ptr%p, i8 %mask, <4 x double>
 ; CHECK-LABEL: test_broadcast_4f32_4f64_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcastf64x2 {{.*#+}} ymm0 {%k1} = mem[0,1,0,1]
+; CHECK-NEXT:    vbroadcastf64x2 {{[^#]+#+}} ymm0 {%k1} = mem[0,1,0,1]
 ; CHECK-NEXT:    retq
  %1 = load <4 x float>, ptr%p
  %2 = shufflevector <4 x float> %1, <4 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -1698,7 +1698,7 @@ define <4 x double> @test_broadcast_4f32_4f64_maskz(ptr%p, i8 %mask) nounwind {
 ; CHECK-LABEL: test_broadcast_4f32_4f64_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcastf64x2 {{.*#+}} ymm0 {%k1} {z} = mem[0,1,0,1]
+; CHECK-NEXT:    vbroadcastf64x2 {{[^#]+#+}} ymm0 {%k1} {z} = mem[0,1,0,1]
 ; CHECK-NEXT:    retq
  %1 = load <4 x float>, ptr%p
  %2 = shufflevector <4 x float> %1, <4 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -1713,7 +1713,7 @@ define <4 x i64> @test_broadcast_4i32_4i64_mask(ptr%p, i8 %mask, <4 x i64> %pass
 ; CHECK-LABEL: test_broadcast_4i32_4i64_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcasti64x2 {{.*#+}} ymm0 {%k1} = mem[0,1,0,1]
+; CHECK-NEXT:    vbroadcasti64x2 {{[^#]+#+}} ymm0 {%k1} = mem[0,1,0,1]
 ; CHECK-NEXT:    retq
  %1 = load <4 x i32>, ptr%p
  %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -1728,7 +1728,7 @@ define <4 x i64> @test_broadcast_4i32_4i64_maskz(ptr%p, i8 %mask) nounwind {
 ; CHECK-LABEL: test_broadcast_4i32_4i64_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcasti64x2 {{.*#+}} ymm0 {%k1} {z} = mem[0,1,0,1]
+; CHECK-NEXT:    vbroadcasti64x2 {{[^#]+#+}} ymm0 {%k1} {z} = mem[0,1,0,1]
 ; CHECK-NEXT:    retq
  %1 = load <4 x i32>, ptr%p
  %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -1743,7 +1743,7 @@ define <8 x double> @test_broadcast_4f32_8f64_mask(ptr%p, i8 %mask, <8 x double>
 ; CHECK-LABEL: test_broadcast_4f32_8f64_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcastf64x2 {{.*#+}} zmm0 {%k1} = mem[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vbroadcastf64x2 {{[^#]+#+}} zmm0 {%k1} = mem[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    retq
  %1 = load <4 x float>, ptr%p
  %2 = shufflevector <4 x float> %1, <4 x float> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -1757,7 +1757,7 @@ define <8 x double> @test_broadcast_4f32_8f64_maskz(ptr%p, i8 %mask) nounwind {
 ; CHECK-LABEL: test_broadcast_4f32_8f64_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcastf64x2 {{.*#+}} zmm0 {%k1} {z} = mem[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vbroadcastf64x2 {{[^#]+#+}} zmm0 {%k1} {z} = mem[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    retq
  %1 = load <4 x float>, ptr%p
  %2 = shufflevector <4 x float> %1, <4 x float> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -1771,7 +1771,7 @@ define <8 x i64> @test_broadcast_4i32_8i64_mask(ptr%p, i8 %mask, <8 x i64> %pass
 ; CHECK-LABEL: test_broadcast_4i32_8i64_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcasti64x2 {{.*#+}} zmm0 {%k1} = mem[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vbroadcasti64x2 {{[^#]+#+}} zmm0 {%k1} = mem[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    retq
  %1 = load <4 x i32>, ptr%p
  %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -1785,7 +1785,7 @@ define <8 x i64> @test_broadcast_4i32_8i64_maskz(ptr%p, i8 %mask) nounwind {
 ; CHECK-LABEL: test_broadcast_4i32_8i64_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcasti64x2 {{.*#+}} zmm0 {%k1} {z} = mem[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vbroadcasti64x2 {{[^#]+#+}} zmm0 {%k1} {z} = mem[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    retq
  %1 = load <4 x i32>, ptr%p
  %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -1799,7 +1799,7 @@ define <8 x double> @test_broadcast_8f32_8f64_mask(ptr%p, i8 %mask, <8 x double>
 ; CHECK-LABEL: test_broadcast_8f32_8f64_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcastf64x4 {{.*#+}} zmm0 {%k1} = mem[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vbroadcastf64x4 {{[^#]+#+}} zmm0 {%k1} = mem[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    retq
  %1 = load <8 x float>, ptr%p
  %2 = shufflevector <8 x float> %1, <8 x float> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -1813,7 +1813,7 @@ define <8 x double> @test_broadcast_8f32_8f64_maskz(ptr%p, i8 %mask) nounwind {
 ; CHECK-LABEL: test_broadcast_8f32_8f64_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcastf64x4 {{.*#+}} zmm0 {%k1} {z} = mem[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vbroadcastf64x4 {{[^#]+#+}} zmm0 {%k1} {z} = mem[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    retq
  %1 = load <8 x float>, ptr%p
  %2 = shufflevector <8 x float> %1, <8 x float> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -1827,7 +1827,7 @@ define <8 x i64> @test_broadcast_8i32_8i64_mask(ptr%p, i8 %mask, <8 x i64> %pass
 ; CHECK-LABEL: test_broadcast_8i32_8i64_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcasti64x4 {{.*#+}} zmm0 {%k1} = mem[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vbroadcasti64x4 {{[^#]+#+}} zmm0 {%k1} = mem[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    retq
  %1 = load <8 x i32>, ptr%p
  %2 = shufflevector <8 x i32> %1, <8 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -1841,7 +1841,7 @@ define <8 x i64> @test_broadcast_8i32_8i64_maskz(ptr%p, i8 %mask) nounwind {
 ; CHECK-LABEL: test_broadcast_8i32_8i64_maskz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vbroadcasti64x4 {{.*#+}} zmm0 {%k1} {z} = mem[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vbroadcasti64x4 {{[^#]+#+}} zmm0 {%k1} {z} = mem[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    retq
  %1 = load <8 x i32>, ptr%p
  %2 = shufflevector <8 x i32> %1, <8 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -1854,7 +1854,7 @@ define <8 x i64> @test_broadcast_8i32_8i64_maskz(ptr%p, i8 %mask) nounwind {
 define <4 x float> @test_broadcastf32x2_v4f32(<4 x float> %vec, <4 x float> %passthru, i8 %mask) {
 ; CHECK-LABEL: test_broadcastf32x2_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; CHECK-NEXT:    vmovddup {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vblendmps %xmm0, %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -1868,7 +1868,7 @@ define <4 x float> @test_broadcastf32x2_v4f32(<4 x float> %vec, <4 x float> %pas
 define <4 x float> @test_broadcastf32x2_v4f32_z(<4 x float> %vec, i8 %mask) {
 ; CHECK-LABEL: test_broadcastf32x2_v4f32_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; CHECK-NEXT:    vmovddup {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vmovaps %xmm0, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -1883,7 +1883,7 @@ define <4 x i32> @test_broadcasti32x2_v4i32(<4 x i32> %vec, <4 x i32> %passthru,
 ; CHECK-LABEL: test_broadcasti32x2_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} xmm1 {%k1} = xmm0[0,1,0,1]
+; CHECK-NEXT:    vbroadcasti32x2 {{[^#]+#+}} xmm1 {%k1} = xmm0[0,1,0,1]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -1897,7 +1897,7 @@ define <4 x i32> @test_broadcasti32x2_v4i32_z(<4 x i32> %vec, i8 %mask) {
 ; CHECK-LABEL: test_broadcasti32x2_v4i32_z:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} xmm0 {%k1} {z} = xmm0[0,1,0,1]
+; CHECK-NEXT:    vbroadcasti32x2 {{[^#]+#+}} xmm0 {%k1} {z} = xmm0[0,1,0,1]
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   %mask.cast = bitcast i8 %mask to <8 x i1>
@@ -1910,7 +1910,7 @@ define <8 x float> @test_broadcastf32x2_v8f32(<8 x float> %vec, <8 x float> %pas
 ; CHECK-LABEL: test_broadcastf32x2_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} ymm1 {%k1} = xmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vbroadcastf32x2 {{[^#]+#+}} ymm1 {%k1} = xmm0[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
@@ -1923,7 +1923,7 @@ define <8 x float> @test_broadcastf32x2_v8f32_z(<8 x float> %vec, i8 %mask) {
 ; CHECK-LABEL: test_broadcastf32x2_v8f32_z:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} ymm0 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vbroadcastf32x2 {{[^#]+#+}} ymm0 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
   %mask.cast = bitcast i8 %mask to <8 x i1>
@@ -1935,7 +1935,7 @@ define <8 x i32> @test_broadcasti32x2_v8i32(<8 x i32> %vec, <8 x i32> %passthru,
 ; CHECK-LABEL: test_broadcasti32x2_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} ymm1 {%k1} = xmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vbroadcasti32x2 {{[^#]+#+}} ymm1 {%k1} = xmm0[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
@@ -1948,7 +1948,7 @@ define <8 x i32> @test_broadcasti32x2_v8i32_z(<8 x i32> %vec, i8 %mask) {
 ; CHECK-LABEL: test_broadcasti32x2_v8i32_z:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} ymm0 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vbroadcasti32x2 {{[^#]+#+}} ymm0 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
   %mask.cast = bitcast i8 %mask to <8 x i1>
@@ -1960,7 +1960,7 @@ define <16 x float> @test_broadcastf32x2_v16f32_z(<16 x float> %vec, i16 %mask) 
 ; CHECK-LABEL: test_broadcastf32x2_v16f32_z:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} zmm0 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vbroadcastf32x2 {{[^#]+#+}} zmm0 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
   %mask.cast = bitcast i16 %mask to <16 x i1>
@@ -1972,7 +1972,7 @@ define <16 x i32> @test_broadcasti32x2_v16i32(<16 x i32> %vec, <16 x i32> %passt
 ; CHECK-LABEL: test_broadcasti32x2_v16i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} zmm1 {%k1} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vbroadcasti32x2 {{[^#]+#+}} zmm1 {%k1} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
@@ -1985,7 +1985,7 @@ define <16 x float> @test_broadcastf32x2_v16f32(<16 x float> %vec, <16 x float> 
 ; CHECK-LABEL: test_broadcastf32x2_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} zmm1 {%k1} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vbroadcastf32x2 {{[^#]+#+}} zmm1 {%k1} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
@@ -1998,7 +1998,7 @@ define <16 x i32> @test_broadcasti32x2_v16i32_z(<16 x i32> %vec, i16 %mask) {
 ; CHECK-LABEL: test_broadcasti32x2_v16i32_z:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} zmm0 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vbroadcasti32x2 {{[^#]+#+}} zmm0 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
   %mask.cast = bitcast i16 %mask to <16 x i1>
@@ -2010,7 +2010,7 @@ define <16 x i8> @mask_shuffle_v16i8_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16(<16 
 ; CHECK-LABEL: mask_shuffle_v16i8_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpalignr {{.*#+}} xmm2 {%k1} = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0]
+; CHECK-NEXT:    vpalignr {{[^#]+#+}} xmm2 {%k1} = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0]
 ; CHECK-NEXT:    vmovdqa %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>
@@ -2023,7 +2023,7 @@ define <16 x i8> @maskz_shuffle_v16i8_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16(<16
 ; CHECK-LABEL: maskz_shuffle_v16i8_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpalignr {{.*#+}} xmm0 {%k1} {z} = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0]
+; CHECK-NEXT:    vpalignr {{[^#]+#+}} xmm0 {%k1} {z} = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0]
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>
   %mask.cast = bitcast i16 %mask to <16 x i1>
@@ -2035,7 +2035,7 @@ define <16 x i8> @mask_shuffle_v16i8_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19(<
 ; CHECK-LABEL: mask_shuffle_v16i8_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpalignr {{.*#+}} xmm2 {%k1} = xmm0[4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0,1,2,3]
+; CHECK-NEXT:    vpalignr {{[^#]+#+}} xmm2 {%k1} = xmm0[4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0,1,2,3]
 ; CHECK-NEXT:    vmovdqa %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
@@ -2048,7 +2048,7 @@ define <16 x i8> @maskz_shuffle_v16i8_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19(
 ; CHECK-LABEL: maskz_shuffle_v16i8_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpalignr {{.*#+}} xmm0 {%k1} {z} = xmm0[4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0,1,2,3]
+; CHECK-NEXT:    vpalignr {{[^#]+#+}} xmm0 {%k1} {z} = xmm0[4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0,1,2,3]
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
   %mask.cast = bitcast i16 %mask to <16 x i1>
@@ -2060,7 +2060,7 @@ define <16 x i8> @mask_shuffle_v16i8_8_9_10_11_12_13_14_15_16_17_18_19_20_21_22_
 ; CHECK-LABEL: mask_shuffle_v16i8_8_9_10_11_12_13_14_15_16_17_18_19_20_21_22_23:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpalignr {{.*#+}} xmm2 {%k1} = xmm0[8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vpalignr {{[^#]+#+}} xmm2 {%k1} = xmm0[8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    vmovdqa %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
@@ -2073,7 +2073,7 @@ define <16 x i8> @maskz_shuffle_v16i8_8_9_10_11_12_13_14_15_16_17_18_19_20_21_22
 ; CHECK-LABEL: maskz_shuffle_v16i8_8_9_10_11_12_13_14_15_16_17_18_19_20_21_22_23:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpalignr {{.*#+}} xmm0 {%k1} {z} = xmm0[8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vpalignr {{[^#]+#+}} xmm0 {%k1} {z} = xmm0[8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
   %mask.cast = bitcast i16 %mask to <16 x i1>

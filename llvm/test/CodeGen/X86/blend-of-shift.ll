@@ -11,7 +11,7 @@ define <4 x i32> @shuffle_i32_of_shl_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psllw $15, %xmm0
 ; SSE2-NEXT:    psllw $15, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,2],xmm0[1,0]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[3,2],xmm0[1,0]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -19,7 +19,7 @@ define <4 x i32> @shuffle_i32_of_shl_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsllw $15, %xmm1, %xmm1
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[3,2],xmm0[1,0]
+; AVX2-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm1[3,2],xmm0[1,0]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16> %x, i32 15)
   %i2 = tail call <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16> %y, i32 15)
@@ -33,7 +33,7 @@ define <4 x i32> @shuffle_i32_of_lshr_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psrlw $15, %xmm0
 ; SSE2-NEXT:    psrlw $15, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,2],xmm0[1,0]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[3,2],xmm0[1,0]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -41,7 +41,7 @@ define <4 x i32> @shuffle_i32_of_lshr_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrlw $15, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlw $15, %xmm1, %xmm1
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[3,2],xmm0[1,0]
+; AVX2-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm1[3,2],xmm0[1,0]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> %x, i32 15)
   %i2 = tail call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> %y, i32 15)
@@ -55,7 +55,7 @@ define <4 x i32> @shuffle_i32_of_ashr_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psraw $15, %xmm0
 ; SSE2-NEXT:    psraw $15, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,2],xmm0[1,0]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[3,2],xmm0[1,0]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -63,7 +63,7 @@ define <4 x i32> @shuffle_i32_of_ashr_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsraw $15, %xmm1, %xmm1
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[3,2],xmm0[1,0]
+; AVX2-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm1[3,2],xmm0[1,0]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16> %x, i32 15)
   %i2 = tail call <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16> %y, i32 15)
@@ -78,7 +78,7 @@ define <4 x i32> @shuffle_i32_of_shl_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pslld $31, %xmm0
 ; SSE2-NEXT:    pslld $31, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,2],xmm0[1,0]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[3,2],xmm0[1,0]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -86,7 +86,7 @@ define <4 x i32> @shuffle_i32_of_shl_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[3,2],xmm0[1,0]
+; AVX2-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm1[3,2],xmm0[1,0]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %x, i32 31)
   %i2 = tail call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %y, i32 31)
@@ -98,7 +98,7 @@ define <4 x i32> @shuffle_i32_of_lshr_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psrld $31, %xmm0
 ; SSE2-NEXT:    psrld $31, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,2],xmm0[1,0]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[3,2],xmm0[1,0]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -106,7 +106,7 @@ define <4 x i32> @shuffle_i32_of_lshr_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrld $31, %xmm1, %xmm1
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[3,2],xmm0[1,0]
+; AVX2-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm1[3,2],xmm0[1,0]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <4 x i32> @llvm.x86.sse2.psrli.d(<4 x i32> %x, i32 31)
   %i2 = tail call <4 x i32> @llvm.x86.sse2.psrli.d(<4 x i32> %y, i32 31)
@@ -118,7 +118,7 @@ define <4 x i32> @shuffle_i32_of_ashr_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    psrad $31, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,2],xmm0[1,0]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[3,2],xmm0[1,0]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -126,7 +126,7 @@ define <4 x i32> @shuffle_i32_of_ashr_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[3,2],xmm0[1,0]
+; AVX2-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm1[3,2],xmm0[1,0]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <4 x i32> @llvm.x86.sse2.psrai.d(<4 x i32> %x, i32 31)
   %i2 = tail call <4 x i32> @llvm.x86.sse2.psrai.d(<4 x i32> %y, i32 31)
@@ -139,7 +139,7 @@ define <4 x i32> @shuffle_i32_of_shl_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psllq $63, %xmm0
 ; SSE2-NEXT:    psllq $63, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,2],xmm0[1,0]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[3,2],xmm0[1,0]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -147,7 +147,7 @@ define <4 x i32> @shuffle_i32_of_shl_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsllq $63, %xmm1, %xmm1
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[3,2],xmm0[1,0]
+; AVX2-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm1[3,2],xmm0[1,0]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64> %x, i32 63)
   %i2 = tail call <2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64> %y, i32 63)
@@ -161,7 +161,7 @@ define <4 x i32> @shuffle_i32_of_lshr_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psrlq $63, %xmm0
 ; SSE2-NEXT:    psrlq $63, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,2],xmm0[1,0]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[3,2],xmm0[1,0]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -169,7 +169,7 @@ define <4 x i32> @shuffle_i32_of_lshr_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrlq $63, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlq $63, %xmm1, %xmm1
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[3,2],xmm0[1,0]
+; AVX2-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm1[3,2],xmm0[1,0]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <2 x i64> @llvm.x86.sse2.psrli.q(<2 x i64> %x, i32 63)
   %i2 = tail call <2 x i64> @llvm.x86.sse2.psrli.q(<2 x i64> %y, i32 63)
@@ -222,7 +222,7 @@ define <4 x i32> @shuffle_i32_of_ashr_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; X86-SSE2-NEXT:    calll llvm.x86.sse2.psrai.q@PLT
 ; X86-SSE2-NEXT:    addl $4, %esp
 ; X86-SSE2-NEXT:    movups (%esp), %xmm1 # 16-byte Reload
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,2],xmm1[1,0]
+; X86-SSE2-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,2],xmm1[1,0]
 ; X86-SSE2-NEXT:    addl $32, %esp
 ; X86-SSE2-NEXT:    retl
 ;
@@ -257,7 +257,7 @@ define <2 x i64> @shuffle_i64_of_shl_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psllw $15, %xmm0
 ; SSE2-NEXT:    psllw $15, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,3],xmm0[0,1]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[2,3],xmm0[0,1]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -265,7 +265,7 @@ define <2 x i64> @shuffle_i64_of_shl_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsllw $15, %xmm1, %xmm1
-; AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
+; AVX2-NEXT:    vpalignr {{[^#]+#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16> %x, i32 15)
   %i2 = tail call <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16> %y, i32 15)
@@ -279,7 +279,7 @@ define <2 x i64> @shuffle_i64_of_lshr_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psrlw $15, %xmm0
 ; SSE2-NEXT:    psrlw $15, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,3],xmm0[0,1]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[2,3],xmm0[0,1]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -287,7 +287,7 @@ define <2 x i64> @shuffle_i64_of_lshr_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrlw $15, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlw $15, %xmm1, %xmm1
-; AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
+; AVX2-NEXT:    vpalignr {{[^#]+#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> %x, i32 15)
   %i2 = tail call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> %y, i32 15)
@@ -301,7 +301,7 @@ define <2 x i64> @shuffle_i64_of_ashr_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psraw $15, %xmm0
 ; SSE2-NEXT:    psraw $15, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,3],xmm0[0,1]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[2,3],xmm0[0,1]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -309,7 +309,7 @@ define <2 x i64> @shuffle_i64_of_ashr_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsraw $15, %xmm1, %xmm1
-; AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
+; AVX2-NEXT:    vpalignr {{[^#]+#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16> %x, i32 15)
   %i2 = tail call <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16> %y, i32 15)
@@ -324,7 +324,7 @@ define <2 x i64> @shuffle_i64_of_shl_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pslld $31, %xmm0
 ; SSE2-NEXT:    pslld $31, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,3],xmm0[0,1]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[2,3],xmm0[0,1]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -332,7 +332,7 @@ define <2 x i64> @shuffle_i64_of_shl_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
+; AVX2-NEXT:    vpalignr {{[^#]+#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %x, i32 31)
   %i2 = tail call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %y, i32 31)
@@ -346,7 +346,7 @@ define <2 x i64> @shuffle_i64_of_lshr_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psrld $31, %xmm0
 ; SSE2-NEXT:    psrld $31, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,3],xmm0[0,1]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[2,3],xmm0[0,1]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -354,7 +354,7 @@ define <2 x i64> @shuffle_i64_of_lshr_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrld $31, %xmm1, %xmm1
-; AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
+; AVX2-NEXT:    vpalignr {{[^#]+#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <4 x i32> @llvm.x86.sse2.psrli.d(<4 x i32> %x, i32 31)
   %i2 = tail call <4 x i32> @llvm.x86.sse2.psrli.d(<4 x i32> %y, i32 31)
@@ -368,7 +368,7 @@ define <2 x i64> @shuffle_i64_of_ashr_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    psrad $31, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,3],xmm0[0,1]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[2,3],xmm0[0,1]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -376,7 +376,7 @@ define <2 x i64> @shuffle_i64_of_ashr_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
-; AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
+; AVX2-NEXT:    vpalignr {{[^#]+#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <4 x i32> @llvm.x86.sse2.psrai.d(<4 x i32> %x, i32 31)
   %i2 = tail call <4 x i32> @llvm.x86.sse2.psrai.d(<4 x i32> %y, i32 31)
@@ -391,7 +391,7 @@ define <2 x i64> @shuffle_i64_of_shl_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psllq $63, %xmm0
 ; SSE2-NEXT:    psllq $63, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,3],xmm0[0,1]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[2,3],xmm0[0,1]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -399,7 +399,7 @@ define <2 x i64> @shuffle_i64_of_shl_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsllq $63, %xmm1, %xmm1
-; AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
+; AVX2-NEXT:    vpalignr {{[^#]+#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64> %x, i32 63)
   %i2 = tail call <2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64> %y, i32 63)
@@ -413,7 +413,7 @@ define <2 x i64> @shuffle_i64_of_lshr_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psrlq $63, %xmm0
 ; SSE2-NEXT:    psrlq $63, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,3],xmm0[0,1]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[2,3],xmm0[0,1]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -421,7 +421,7 @@ define <2 x i64> @shuffle_i64_of_lshr_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrlq $63, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlq $63, %xmm1, %xmm1
-; AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
+; AVX2-NEXT:    vpalignr {{[^#]+#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <2 x i64> @llvm.x86.sse2.psrli.q(<2 x i64> %x, i32 63)
   %i2 = tail call <2 x i64> @llvm.x86.sse2.psrli.q(<2 x i64> %y, i32 63)
@@ -457,7 +457,7 @@ define <2 x i64> @shuffle_i64_of_ashr_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; X64-AVX2-NEXT:    movl $63, %edi
 ; X64-AVX2-NEXT:    callq llvm.x86.sse2.psrai.q@PLT
 ; X64-AVX2-NEXT:    vmovdqa (%rsp), %xmm1 # 16-byte Reload
-; X64-AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7]
+; X64-AVX2-NEXT:    vpalignr {{[^#]+#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7]
 ; X64-AVX2-NEXT:    addq $40, %rsp
 ; X64-AVX2-NEXT:    retq
 ;
@@ -474,7 +474,7 @@ define <2 x i64> @shuffle_i64_of_ashr_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; X86-SSE2-NEXT:    calll llvm.x86.sse2.psrai.q@PLT
 ; X86-SSE2-NEXT:    addl $4, %esp
 ; X86-SSE2-NEXT:    movups (%esp), %xmm1 # 16-byte Reload
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,3],xmm1[0,1]
+; X86-SSE2-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[2,3],xmm1[0,1]
 ; X86-SSE2-NEXT:    addl $32, %esp
 ; X86-SSE2-NEXT:    retl
 ;
@@ -491,7 +491,7 @@ define <2 x i64> @shuffle_i64_of_ashr_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; X86-AVX2-NEXT:    calll llvm.x86.sse2.psrai.q@PLT
 ; X86-AVX2-NEXT:    addl $4, %esp
 ; X86-AVX2-NEXT:    vmovdqu (%esp), %xmm1 # 16-byte Reload
-; X86-AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7]
+; X86-AVX2-NEXT:    vpalignr {{[^#]+#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7]
 ; X86-AVX2-NEXT:    addl $32, %esp
 ; X86-AVX2-NEXT:    retl
   %i1 = tail call <2 x i64> @llvm.x86.sse2.psrai.q(<2 x i64> %x, i32 63)

@@ -85,21 +85,21 @@ define void @store_double(ptr %fptr, double %v) {
 ; X86-SSE1:       # %bb.0:
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movlps {{[^#]+#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movlps %xmm0, (%eax)
 ; X86-SSE1-NEXT:    retl
 ;
 ; X86-SSE2-LABEL: store_double:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: store_double:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vmovlps %xmm0, (%eax)
 ; X86-AVX-NEXT:    retl
 ;
@@ -280,7 +280,7 @@ define float @load_float(ptr %fptr) {
 ; X86-SSE2-NEXT:    pushl %eax
 ; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE2-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE2-NEXT:    flds (%esp)
 ; X86-SSE2-NEXT:    popl %eax
@@ -292,7 +292,7 @@ define float @load_float(ptr %fptr) {
 ; X86-AVX-NEXT:    pushl %eax
 ; X86-AVX-NEXT:    .cfi_def_cfa_offset 8
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-AVX-NEXT:    vmovss %xmm0, (%esp)
 ; X86-AVX-NEXT:    flds (%esp)
 ; X86-AVX-NEXT:    popl %eax
@@ -313,12 +313,12 @@ define float @load_float(ptr %fptr) {
 ;
 ; X64-SSE-LABEL: load_float:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: load_float:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-AVX-NEXT:    retq
   %v = load atomic float, ptr %fptr unordered, align 4
   ret float %v
@@ -331,9 +331,9 @@ define double @load_double(ptr %fptr) {
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movlps {{[^#]+#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movss %xmm0, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    addl $12, %esp
@@ -345,7 +345,7 @@ define double @load_double(ptr %fptr) {
 ; X86-SSE2-NEXT:    subl $12, %esp
 ; X86-SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    movlps %xmm0, (%esp)
 ; X86-SSE2-NEXT:    fldl (%esp)
 ; X86-SSE2-NEXT:    addl $12, %esp
@@ -357,7 +357,7 @@ define double @load_double(ptr %fptr) {
 ; X86-AVX-NEXT:    subl $12, %esp
 ; X86-AVX-NEXT:    .cfi_def_cfa_offset 16
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vmovlps %xmm0, (%esp)
 ; X86-AVX-NEXT:    fldl (%esp)
 ; X86-AVX-NEXT:    addl $12, %esp
@@ -382,12 +382,12 @@ define double @load_double(ptr %fptr) {
 ;
 ; X64-SSE-LABEL: load_double:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: load_double:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-AVX-NEXT:    retq
   %v = load atomic double, ptr %fptr unordered, align 8
   ret double %v
@@ -641,7 +641,7 @@ define void @store_double_seq_cst(ptr %fptr, double %v) {
 ; X86-SSE1:       # %bb.0:
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movlps {{[^#]+#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movlps %xmm0, (%eax)
 ; X86-SSE1-NEXT:    lock orl $0, (%esp)
 ; X86-SSE1-NEXT:    retl
@@ -649,7 +649,7 @@ define void @store_double_seq_cst(ptr %fptr, double %v) {
 ; X86-SSE2-LABEL: store_double_seq_cst:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
 ; X86-SSE2-NEXT:    lock orl $0, (%esp)
 ; X86-SSE2-NEXT:    retl
@@ -657,7 +657,7 @@ define void @store_double_seq_cst(ptr %fptr, double %v) {
 ; X86-AVX-LABEL: store_double_seq_cst:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vmovlps %xmm0, (%eax)
 ; X86-AVX-NEXT:    lock orl $0, (%esp)
 ; X86-AVX-NEXT:    retl
@@ -711,7 +711,7 @@ define float @load_float_seq_cst(ptr %fptr) {
 ; X86-SSE2-NEXT:    pushl %eax
 ; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE2-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE2-NEXT:    flds (%esp)
 ; X86-SSE2-NEXT:    popl %eax
@@ -723,7 +723,7 @@ define float @load_float_seq_cst(ptr %fptr) {
 ; X86-AVX-NEXT:    pushl %eax
 ; X86-AVX-NEXT:    .cfi_def_cfa_offset 8
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-AVX-NEXT:    vmovss %xmm0, (%esp)
 ; X86-AVX-NEXT:    flds (%esp)
 ; X86-AVX-NEXT:    popl %eax
@@ -744,12 +744,12 @@ define float @load_float_seq_cst(ptr %fptr) {
 ;
 ; X64-SSE-LABEL: load_float_seq_cst:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: load_float_seq_cst:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-AVX-NEXT:    retq
   %v = load atomic float, ptr %fptr seq_cst, align 4
   ret float %v
@@ -762,9 +762,9 @@ define double @load_double_seq_cst(ptr %fptr) {
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movlps {{[^#]+#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movss %xmm0, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    addl $12, %esp
@@ -776,7 +776,7 @@ define double @load_double_seq_cst(ptr %fptr) {
 ; X86-SSE2-NEXT:    subl $12, %esp
 ; X86-SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    movlps %xmm0, (%esp)
 ; X86-SSE2-NEXT:    fldl (%esp)
 ; X86-SSE2-NEXT:    addl $12, %esp
@@ -788,7 +788,7 @@ define double @load_double_seq_cst(ptr %fptr) {
 ; X86-AVX-NEXT:    subl $12, %esp
 ; X86-AVX-NEXT:    .cfi_def_cfa_offset 16
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vmovlps %xmm0, (%esp)
 ; X86-AVX-NEXT:    fldl (%esp)
 ; X86-AVX-NEXT:    addl $12, %esp
@@ -813,12 +813,12 @@ define double @load_double_seq_cst(ptr %fptr) {
 ;
 ; X64-SSE-LABEL: load_double_seq_cst:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: load_double_seq_cst:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-AVX-NEXT:    retq
   %v = load atomic double, ptr %fptr seq_cst, align 8
   ret double %v

@@ -10,10 +10,10 @@ define void @foo(ptr %p, ptr %q, float %s, float %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    xorps %xmm1, %xmm0
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    xorps %xmm1, %xmm2
 ; CHECK-NEXT:    movss %xmm0, (%ecx)
 ; CHECK-NEXT:    movss %xmm2, (%eax)

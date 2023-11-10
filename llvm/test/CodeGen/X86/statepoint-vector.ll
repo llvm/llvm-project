@@ -30,7 +30,7 @@ define <2 x ptr addrspace(1)> @test2(<2 x ptr addrspace(1)> %obj, i64 %offset) g
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    movq %rdi, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm1[0,1,0,1]
 ; CHECK-NEXT:    paddq %xmm0, %xmm1
 ; CHECK-NEXT:    movdqa %xmm0, (%rsp)
 ; CHECK-NEXT:    movdqa %xmm1, {{[0-9]+}}(%rsp)

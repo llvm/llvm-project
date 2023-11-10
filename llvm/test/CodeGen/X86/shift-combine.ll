@@ -495,7 +495,7 @@ define <4 x i32> @ashr_add_neg_shl_v4i8(<4 x i32> %r) nounwind {
 ; X64-LABEL: ashr_add_neg_shl_v4i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pslld $24, %xmm0
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [16777216,16777216,16777216,16777216]
+; X64-NEXT:    movdqa {{[^#]+#+}} xmm1 = [16777216,16777216,16777216,16777216]
 ; X64-NEXT:    psubd %xmm0, %xmm1
 ; X64-NEXT:    psrad $24, %xmm1
 ; X64-NEXT:    movdqa %xmm1, %xmm0

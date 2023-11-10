@@ -142,7 +142,7 @@ define <4 x float> @test_shufps_packss_128(<4 x i32> %a0, <4 x i32> %a1, <4 x i3
 ; CHECK-LABEL: test_shufps_packss_128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,2,2]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[0,1,2,2]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a0, <4 x i32> %a1)
   %2 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a2, <4 x i32> %a3)
@@ -156,7 +156,7 @@ define <4 x float> @test_shufps_packus_128(<8 x i16> %a0, <8 x i16> %a1, <8 x i1
 ; CHECK-LABEL: test_shufps_packus_128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,2,2]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[1,0,2,2]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %a0, <8 x i16> %a1)
   %2 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %a2, <8 x i16> %a3)
@@ -306,7 +306,7 @@ define <8 x float> @test_shufps_packss_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i3
 ; CHECK-LABEL: test_shufps_packss_256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpackssdw %ymm3, %ymm0, %ymm0
-; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,1,2,2,4,5,6,6]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} ymm0 = ymm0[0,1,2,2,4,5,6,6]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a0, <8 x i32> %a1)
   %2 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a2, <8 x i32> %a3)
@@ -320,7 +320,7 @@ define <8 x float> @test_shufps_packus_256(<16 x i16> %a0, <16 x i16> %a1, <16 x
 ; CHECK-LABEL: test_shufps_packus_256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
-; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,0,2,2,5,4,6,6]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} ymm0 = ymm0[1,0,2,2,5,4,6,6]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16> %a0, <16 x i16> %a1)
   %2 = call <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16> %a2, <16 x i16> %a3)

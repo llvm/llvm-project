@@ -9,7 +9,7 @@
 define <16 x i8> @vpperm_shuffle_unary(<16 x i8> %a0) {
 ; CHECK-LABEL: vpperm_shuffle_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; CHECK-NEXT:    vpperm {{[^#]+#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a0, <16 x i8> <i8 31, i8 14, i8 29, i8 12, i8 27, i8 10, i8 25, i8 8, i8 23, i8 6, i8 21, i8 4, i8 19, i8 2, i8 17, i8 0>)
   ret <16 x i8> %1
@@ -18,7 +18,7 @@ define <16 x i8> @vpperm_shuffle_unary(<16 x i8> %a0) {
 define <16 x i8> @vpperm_shuffle_unary_undef(<16 x i8> %a0) {
 ; CHECK-LABEL: vpperm_shuffle_unary_undef:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; CHECK-NEXT:    vpperm {{[^#]+#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> undef, <16 x i8> <i8 31, i8 14, i8 29, i8 12, i8 27, i8 10, i8 25, i8 8, i8 23, i8 6, i8 21, i8 4, i8 19, i8 2, i8 17, i8 0>)
   ret <16 x i8> %1
@@ -27,7 +27,7 @@ define <16 x i8> @vpperm_shuffle_unary_undef(<16 x i8> %a0) {
 define <16 x i8> @vpperm_shuffle_unary_zero(<16 x i8> %a0) {
 ; CHECK-LABEL: vpperm_shuffle_unary_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3],zero,xmm0[1],zero
+; CHECK-NEXT:    vpperm {{[^#]+#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3],zero,xmm0[1],zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a0, <16 x i8> <i8 31, i8 14, i8 29, i8 12, i8 27, i8 10, i8 25, i8 8, i8 23, i8 6, i8 21, i8 4, i8 19, i8 130, i8 17, i8 128>)
   ret <16 x i8> %1
@@ -36,7 +36,7 @@ define <16 x i8> @vpperm_shuffle_unary_zero(<16 x i8> %a0) {
 define <16 x i8> @vpperm_shuffle_binary(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: vpperm_shuffle_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm1[15],xmm0[14],xmm1[13],xmm0[12],xmm1[11],xmm0[10],xmm1[9],xmm0[8],xmm1[7],xmm0[6],xmm1[5],xmm0[4],xmm1[3],xmm0[2],xmm1[1],xmm0[0]
+; CHECK-NEXT:    vpperm {{[^#]+#+}} xmm0 = xmm1[15],xmm0[14],xmm1[13],xmm0[12],xmm1[11],xmm0[10],xmm1[9],xmm0[8],xmm1[7],xmm0[6],xmm1[5],xmm0[4],xmm1[3],xmm0[2],xmm1[1],xmm0[0]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> <i8 31, i8 14, i8 29, i8 12, i8 27, i8 10, i8 25, i8 8, i8 23, i8 6, i8 21, i8 4, i8 19, i8 2, i8 17, i8 0>)
   ret <16 x i8> %1
@@ -45,7 +45,7 @@ define <16 x i8> @vpperm_shuffle_binary(<16 x i8> %a0, <16 x i8> %a1) {
 define <16 x i8> @vpperm_shuffle_binary_zero(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: vpperm_shuffle_binary_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm1[15],xmm0[14],xmm1[13],xmm0[12],xmm1[11],xmm0[10],xmm1[9],xmm0[8],xmm1[7],xmm0[6],xmm1[5],xmm0[4],zero,zero,zero,zero
+; CHECK-NEXT:    vpperm {{[^#]+#+}} xmm0 = xmm1[15],xmm0[14],xmm1[13],xmm0[12],xmm1[11],xmm0[10],xmm1[9],xmm0[8],xmm1[7],xmm0[6],xmm1[5],xmm0[4],zero,zero,zero,zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> <i8 31, i8 14, i8 29, i8 12, i8 27, i8 10, i8 25, i8 8, i8 23, i8 6, i8 21, i8 4, i8 147, i8 130, i8 145, i8 128>)
   ret <16 x i8> %1
@@ -76,7 +76,7 @@ define <2 x double> @vpermil2pd_21(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: vpermil2pd_21:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    vmovlhps {{[^#]+#+}} xmm0 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double> %a0, <2 x double> %a1, <2 x i64> <i64 10, i64 1>, i8 2)
   ret <2 x double> %1
@@ -85,7 +85,7 @@ define <2 x double> @vpermil2pd_21(<2 x double> %a0, <2 x double> %a1) {
 define <4 x double> @vpermil2pd256_0062(<4 x double> %a0, <4 x double> %a1) {
 ; CHECK-LABEL: vpermil2pd256_0062:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermil2pd {{.*#+}} ymm0 = ymm0[0,0],ymm1[2],ymm0[2]
+; CHECK-NEXT:    vpermil2pd {{[^#]+#+}} ymm0 = ymm0[0,0],ymm1[2],ymm0[2]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> %a0, <4 x double> %a1, <4 x i64> <i64 0, i64 0, i64 4, i64 0>, i8 0)
   ret <4 x double> %1
@@ -94,7 +94,7 @@ define <4 x double> @vpermil2pd256_0062(<4 x double> %a0, <4 x double> %a1) {
 define <4 x double> @vpermil2pd256_zz73(<4 x double> %a0, <4 x double> %a1) {
 ; CHECK-LABEL: vpermil2pd256_zz73:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermil2pd {{.*#+}} ymm0 = zero,zero,ymm1[3],ymm0[3]
+; CHECK-NEXT:    vpermil2pd {{[^#]+#+}} ymm0 = zero,zero,ymm1[3],ymm0[3]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> %a0, <4 x double> %a1, <4 x i64> <i64 0, i64 0, i64 14, i64 10>, i8 3)
   ret <4 x double> %1
@@ -103,7 +103,7 @@ define <4 x double> @vpermil2pd256_zz73(<4 x double> %a0, <4 x double> %a1) {
 define <4 x float> @vpermil2ps_0561(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: vpermil2ps_0561:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[1]
+; CHECK-NEXT:    vpermil2ps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[1]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 0, i32 5, i32 6, i32 1>, i8 0)
   ret <4 x float> %1
@@ -112,7 +112,7 @@ define <4 x float> @vpermil2ps_0561(<4 x float> %a0, <4 x float> %a1) {
 define <8 x float> @vpermil2ps256_098144FE(<8 x float> %a0, <8 x float> %a1) {
 ; CHECK-LABEL: vpermil2ps256_098144FE:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermil2ps {{.*#+}} ymm0 = ymm0[0],ymm1[1,0],ymm0[1,4,4],ymm1[7,6]
+; CHECK-NEXT:    vpermil2ps {{[^#]+#+}} ymm0 = ymm0[0],ymm1[1,0],ymm0[1,4,4],ymm1[7,6]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float> %a0, <8 x float> %a1, <8 x i32> <i32 0, i32 5, i32 4, i32 1, i32 0, i32 0, i32 7, i32 6>, i8 0)
   ret <8 x float> %1
@@ -121,7 +121,7 @@ define <8 x float> @vpermil2ps256_098144FE(<8 x float> %a0, <8 x float> %a1) {
 define <8 x float> @vpermil2ps256_0zz8BzzA(<8 x float> %a0, <8 x float> %a1) {
 ; CHECK-LABEL: vpermil2ps256_0zz8BzzA:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermil2ps {{.*#+}} ymm0 = ymm0[0],zero,zero,ymm1[0,7],zero,zero,ymm1[6]
+; CHECK-NEXT:    vpermil2ps {{[^#]+#+}} ymm0 = ymm0[0],zero,zero,ymm1[0,7],zero,zero,ymm1[6]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float> %a0, <8 x float> %a1, <8 x i32> <i32 0, i32 8, i32 8, i32 4, i32 7, i32 8, i32 8, i32 6>, i8 2)
   ret <8 x float> %1

@@ -11,7 +11,7 @@
 define <8 x float> @transform_VPERMILPSYrr(<8 x float> %a) nounwind {
 ; CHECK-LABEL: transform_VPERMILPSYrr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
+; CHECK-NEXT:    vshufps {{[^#]+#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
 ; CHECK-NEXT:    retq
   %shufp = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
   ret <8 x float> %shufp
@@ -20,7 +20,7 @@ define <8 x float> @transform_VPERMILPSYrr(<8 x float> %a) nounwind {
 define <4 x float> @transform_VPERMILPSrr(<4 x float> %a) nounwind {
 ; CHECK-LABEL: transform_VPERMILPSrr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,2,1,0]
+; CHECK-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[3,2,1,0]
 ; CHECK-NEXT:    retq
   %shufp = shufflevector <4 x float> %a, <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x float> %shufp
@@ -29,37 +29,37 @@ define <4 x float> @transform_VPERMILPSrr(<4 x float> %a) nounwind {
 define <8 x float> @transform_VPERMILPSYrm(ptr %ap) nounwind {
 ; CHECK-AVX1-LABEL: transform_VPERMILPSYrm:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = mem[3,2,1,0,7,6,5,4]
+; CHECK-AVX1-NEXT:    vpermilps {{[^#]+#+}} ymm0 = mem[3,2,1,0,7,6,5,4]
 ; CHECK-AVX1-NEXT:    retq
 ;
 ; CHECK-AVX1-DELAY-LABEL: transform_VPERMILPSYrm:
 ; CHECK-AVX1-DELAY:       # %bb.0:
-; CHECK-AVX1-DELAY-NEXT:    vpermilps {{.*#+}} ymm0 = mem[3,2,1,0,7,6,5,4]
+; CHECK-AVX1-DELAY-NEXT:    vpermilps {{[^#]+#+}} ymm0 = mem[3,2,1,0,7,6,5,4]
 ; CHECK-AVX1-DELAY-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: transform_VPERMILPSYrm:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpermilps {{.*#+}} ymm0 = mem[3,2,1,0,7,6,5,4]
+; CHECK-AVX2-NEXT:    vpermilps {{[^#]+#+}} ymm0 = mem[3,2,1,0,7,6,5,4]
 ; CHECK-AVX2-NEXT:    retq
 ;
 ; CHECK-AVX2-DELAY-LABEL: transform_VPERMILPSYrm:
 ; CHECK-AVX2-DELAY:       # %bb.0:
-; CHECK-AVX2-DELAY-NEXT:    vpermilps {{.*#+}} ymm0 = mem[3,2,1,0,7,6,5,4]
+; CHECK-AVX2-DELAY-NEXT:    vpermilps {{[^#]+#+}} ymm0 = mem[3,2,1,0,7,6,5,4]
 ; CHECK-AVX2-DELAY-NEXT:    retq
 ;
 ; CHECK-ICX-NO-BYPASS-DELAY-LABEL: transform_VPERMILPSYrm:
 ; CHECK-ICX-NO-BYPASS-DELAY:       # %bb.0:
-; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    vpshufd {{.*#+}} ymm0 = mem[3,2,1,0,7,6,5,4]
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    vpshufd {{[^#]+#+}} ymm0 = mem[3,2,1,0,7,6,5,4]
 ; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    retq
 ;
 ; CHECK-ICX-BYPASS-DELAY-LABEL: transform_VPERMILPSYrm:
 ; CHECK-ICX-BYPASS-DELAY:       # %bb.0:
-; CHECK-ICX-BYPASS-DELAY-NEXT:    vpermilps {{.*#+}} ymm0 = mem[3,2,1,0,7,6,5,4]
+; CHECK-ICX-BYPASS-DELAY-NEXT:    vpermilps {{[^#]+#+}} ymm0 = mem[3,2,1,0,7,6,5,4]
 ; CHECK-ICX-BYPASS-DELAY-NEXT:    retq
 ;
 ; CHECK-SNB-LABEL: transform_VPERMILPSYrm:
 ; CHECK-SNB:       # %bb.0:
-; CHECK-SNB-NEXT:    vpermilps {{.*#+}} ymm0 = mem[3,2,1,0,7,6,5,4]
+; CHECK-SNB-NEXT:    vpermilps {{[^#]+#+}} ymm0 = mem[3,2,1,0,7,6,5,4]
 ; CHECK-SNB-NEXT:    retq
   %a = load <8 x float>, ptr %ap
   %shufp = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
@@ -69,42 +69,42 @@ define <8 x float> @transform_VPERMILPSYrm(ptr %ap) nounwind {
 define <4 x float> @transform_VPERMILPSrm(ptr %ap) nounwind {
 ; CHECK-AVX1-LABEL: transform_VPERMILPSrm:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = mem[3,2,1,0]
+; CHECK-AVX1-NEXT:    vpermilps {{[^#]+#+}} xmm0 = mem[3,2,1,0]
 ; CHECK-AVX1-NEXT:    retq
 ;
 ; CHECK-AVX1-DELAY-LABEL: transform_VPERMILPSrm:
 ; CHECK-AVX1-DELAY:       # %bb.0:
-; CHECK-AVX1-DELAY-NEXT:    vpermilps {{.*#+}} xmm0 = mem[3,2,1,0]
+; CHECK-AVX1-DELAY-NEXT:    vpermilps {{[^#]+#+}} xmm0 = mem[3,2,1,0]
 ; CHECK-AVX1-DELAY-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: transform_VPERMILPSrm:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpermilps {{.*#+}} xmm0 = mem[3,2,1,0]
+; CHECK-AVX2-NEXT:    vpermilps {{[^#]+#+}} xmm0 = mem[3,2,1,0]
 ; CHECK-AVX2-NEXT:    retq
 ;
 ; CHECK-AVX2-DELAY-LABEL: transform_VPERMILPSrm:
 ; CHECK-AVX2-DELAY:       # %bb.0:
-; CHECK-AVX2-DELAY-NEXT:    vpermilps {{.*#+}} xmm0 = mem[3,2,1,0]
+; CHECK-AVX2-DELAY-NEXT:    vpermilps {{[^#]+#+}} xmm0 = mem[3,2,1,0]
 ; CHECK-AVX2-DELAY-NEXT:    retq
 ;
 ; CHECK-ICX-NO-BYPASS-DELAY-LABEL: transform_VPERMILPSrm:
 ; CHECK-ICX-NO-BYPASS-DELAY:       # %bb.0:
-; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    vpshufd {{.*#+}} xmm0 = mem[3,2,1,0]
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    vpshufd {{[^#]+#+}} xmm0 = mem[3,2,1,0]
 ; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    retq
 ;
 ; CHECK-ICX-BYPASS-DELAY-LABEL: transform_VPERMILPSrm:
 ; CHECK-ICX-BYPASS-DELAY:       # %bb.0:
-; CHECK-ICX-BYPASS-DELAY-NEXT:    vpermilps {{.*#+}} xmm0 = mem[3,2,1,0]
+; CHECK-ICX-BYPASS-DELAY-NEXT:    vpermilps {{[^#]+#+}} xmm0 = mem[3,2,1,0]
 ; CHECK-ICX-BYPASS-DELAY-NEXT:    retq
 ;
 ; CHECK-SNB-NO-BYPASS-DELAY-LABEL: transform_VPERMILPSrm:
 ; CHECK-SNB-NO-BYPASS-DELAY:       # %bb.0:
-; CHECK-SNB-NO-BYPASS-DELAY-NEXT:    vpshufd {{.*#+}} xmm0 = mem[3,2,1,0]
+; CHECK-SNB-NO-BYPASS-DELAY-NEXT:    vpshufd {{[^#]+#+}} xmm0 = mem[3,2,1,0]
 ; CHECK-SNB-NO-BYPASS-DELAY-NEXT:    retq
 ;
 ; CHECK-SNB-BYPASS-DELAY-LABEL: transform_VPERMILPSrm:
 ; CHECK-SNB-BYPASS-DELAY:       # %bb.0:
-; CHECK-SNB-BYPASS-DELAY-NEXT:    vpermilps {{.*#+}} xmm0 = mem[3,2,1,0]
+; CHECK-SNB-BYPASS-DELAY-NEXT:    vpermilps {{[^#]+#+}} xmm0 = mem[3,2,1,0]
 ; CHECK-SNB-BYPASS-DELAY-NEXT:    retq
   %a = load <4 x float>, ptr %ap
   %shufp = shufflevector <4 x float> %a, <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>

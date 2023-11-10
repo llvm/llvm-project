@@ -14,21 +14,21 @@ define <8 x i16> @test1(<8 x i16> %a) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrlw $3, %xmm1
 ; SSE-NEXT:    psrlw $2, %xmm0
-; SSE-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test1:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrlw $3, %xmm0, %xmm1
 ; AVX1-NEXT:    vpsrlw $2, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3,4,5,6,7]
+; AVX1-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm1[0,1],xmm0[2,3,4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test1:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrlw $3, %xmm0, %xmm1
 ; AVX2-NEXT:    vpsrlw $2, %xmm0, %xmm0
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX2-NEXT:    vpblendd {{[^#]+#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX2-NEXT:    retq
   %lshr = lshr <8 x i16> %a, <i16 3, i16 3, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
   ret <8 x i16> %lshr
@@ -40,21 +40,21 @@ define <8 x i16> @test2(<8 x i16> %a) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrlw $3, %xmm1
 ; SSE-NEXT:    psrlw $2, %xmm0
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test2:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrlw $2, %xmm0, %xmm1
 ; AVX1-NEXT:    vpsrlw $3, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; AVX1-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test2:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrlw $2, %xmm0, %xmm1
 ; AVX2-NEXT:    vpsrlw $3, %xmm0, %xmm0
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX2-NEXT:    vpblendd {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX2-NEXT:    retq
   %lshr = lshr <8 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 2, i16 2, i16 2, i16 2>
   ret <8 x i16> %lshr
@@ -66,14 +66,14 @@ define <4 x i32> @test3(<4 x i32> %a) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrld $3, %xmm1
 ; SSE-NEXT:    psrld $2, %xmm0
-; SSE-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test3:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrld $3, %xmm0, %xmm1
 ; AVX1-NEXT:    vpsrld $2, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3,4,5,6,7]
+; AVX1-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm1[0,1],xmm0[2,3,4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test3:
@@ -90,14 +90,14 @@ define <4 x i32> @test4(<4 x i32> %a) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrld $3, %xmm1
 ; SSE-NEXT:    psrld $2, %xmm0
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test4:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrld $2, %xmm0, %xmm1
 ; AVX1-NEXT:    vpsrld $3, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; AVX1-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test4:
@@ -114,21 +114,21 @@ define <8 x i16> @test5(<8 x i16> %a) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psraw $3, %xmm1
 ; SSE-NEXT:    psraw $2, %xmm0
-; SSE-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test5:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsraw $3, %xmm0, %xmm1
 ; AVX1-NEXT:    vpsraw $2, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3,4,5,6,7]
+; AVX1-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm1[0,1],xmm0[2,3,4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test5:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsraw $3, %xmm0, %xmm1
 ; AVX2-NEXT:    vpsraw $2, %xmm0, %xmm0
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX2-NEXT:    vpblendd {{[^#]+#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX2-NEXT:    retq
   %lshr = ashr <8 x i16> %a, <i16 3, i16 3, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
   ret <8 x i16> %lshr
@@ -140,21 +140,21 @@ define <8 x i16> @test6(<8 x i16> %a) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psraw $3, %xmm1
 ; SSE-NEXT:    psraw $2, %xmm0
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test6:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsraw $2, %xmm0, %xmm1
 ; AVX1-NEXT:    vpsraw $3, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; AVX1-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test6:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsraw $2, %xmm0, %xmm1
 ; AVX2-NEXT:    vpsraw $3, %xmm0, %xmm0
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX2-NEXT:    vpblendd {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX2-NEXT:    retq
   %lshr = ashr <8 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 2, i16 2, i16 2, i16 2>
   ret <8 x i16> %lshr
@@ -166,14 +166,14 @@ define <4 x i32> @test7(<4 x i32> %a) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrad $3, %xmm1
 ; SSE-NEXT:    psrad $2, %xmm0
-; SSE-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test7:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrad $3, %xmm0, %xmm1
 ; AVX1-NEXT:    vpsrad $2, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3,4,5,6,7]
+; AVX1-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm1[0,1],xmm0[2,3,4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test7:
@@ -190,14 +190,14 @@ define <4 x i32> @test8(<4 x i32> %a) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrad $3, %xmm1
 ; SSE-NEXT:    psrad $2, %xmm0
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrad $2, %xmm0, %xmm1
 ; AVX1-NEXT:    vpsrad $3, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; AVX1-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test8:
@@ -213,7 +213,7 @@ define <8 x i16> @test9(<8 x i16> %a) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psraw $3, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [65535,0,65535,65535,65535,0,0,0]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm2 = [65535,0,65535,65535,65535,0,0,0]
 ; SSE-NEXT:    psraw $1, %xmm0
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    pandn %xmm1, %xmm2
@@ -224,7 +224,7 @@ define <8 x i16> @test9(<8 x i16> %a) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsraw $3, %xmm0, %xmm1
 ; AVX-NEXT:    vpsraw $1, %xmm0, %xmm0
-; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3,4],xmm1[5,6,7]
+; AVX-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3,4],xmm1[5,6,7]
 ; AVX-NEXT:    retq
   %lshr = ashr <8 x i16> %a, <i16 1, i16 3, i16 1, i16 1, i16 1, i16 3, i16 3, i16 3>
   ret <8 x i16> %lshr
@@ -267,10 +267,10 @@ define <16 x i16> @test11(<16 x i16> %a) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpsllw $1, %xmm1, %xmm2
 ; AVX1-NEXT:    vpsllw $3, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[3,4,5],xmm1[6],xmm2[7]
+; AVX1-NEXT:    vpblendw {{[^#]+#+}} xmm1 = xmm1[0,1,2],xmm2[3,4,5],xmm1[6],xmm2[7]
 ; AVX1-NEXT:    vpsllw $3, %xmm0, %xmm2
 ; AVX1-NEXT:    vpsllw $1, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2,3,4],xmm2[5,6,7]
+; AVX1-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2,3,4],xmm2[5,6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -285,7 +285,7 @@ define <16 x i16> @test11(<16 x i16> %a) {
 define <16 x i16> @test12(<16 x i16> %a) {
 ; SSE-LABEL: test12:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2,8,2,2,2,8,8,8]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm2 = [2,8,2,2,2,8,8,8]
 ; SSE-NEXT:    pmullw %xmm2, %xmm0
 ; SSE-NEXT:    pmullw %xmm2, %xmm1
 ; SSE-NEXT:    retq
@@ -295,10 +295,10 @@ define <16 x i16> @test12(<16 x i16> %a) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpsllw $3, %xmm1, %xmm2
 ; AVX1-NEXT:    vpsllw $1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2,3,4],xmm2[5,6,7]
+; AVX1-NEXT:    vpblendw {{[^#]+#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2,3,4],xmm2[5,6,7]
 ; AVX1-NEXT:    vpsllw $3, %xmm0, %xmm2
 ; AVX1-NEXT:    vpsllw $1, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2,3,4],xmm2[5,6,7]
+; AVX1-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2,3,4],xmm2[5,6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -306,7 +306,7 @@ define <16 x i16> @test12(<16 x i16> %a) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllw $3, %ymm0, %ymm1
 ; AVX2-NEXT:    vpsllw $1, %ymm0, %ymm0
-; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2,3,4],ymm1[5,6,7],ymm0[8],ymm1[9],ymm0[10,11,12],ymm1[13,14,15]
+; AVX2-NEXT:    vpblendw {{[^#]+#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2,3,4],ymm1[5,6,7],ymm0[8],ymm1[9],ymm0[10,11,12],ymm1[13,14,15]
 ; AVX2-NEXT:    retq
   %lshr = shl <16 x i16> %a, <i16 1, i16 3, i16 1, i16 1, i16 1, i16 3, i16 3, i16 3, i16 1, i16 3, i16 1, i16 1, i16 1, i16 3, i16 3, i16 3>
   ret <16 x i16> %lshr

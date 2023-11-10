@@ -6,13 +6,13 @@ define <4 x double> @test_broadcast_2f64_4f64(ptr%p) nounwind {
 ; X86-LABEL: test_broadcast_2f64_4f64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; X86-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_2f64_4f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
  %1 = load <2 x double>, ptr%p
@@ -25,13 +25,13 @@ define <4 x i64> @test_broadcast_2i64_4i64(ptr%p) nounwind {
 ; X86-LABEL: test_broadcast_2i64_4i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; X86-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_2i64_4i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
  %1 = load <2 x i64>, ptr%p
@@ -44,13 +44,13 @@ define <8 x float> @test_broadcast_4f32_8f32(ptr%p) nounwind {
 ; X86-LABEL: test_broadcast_4f32_8f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; X86-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_4f32_8f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
  %1 = load <4 x float>, ptr%p
@@ -63,13 +63,13 @@ define <8 x i32> @test_broadcast_4i32_8i32(ptr%p) nounwind {
 ; X86-LABEL: test_broadcast_4i32_8i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_4i32_8i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
  %1 = load <4 x i32>, ptr%p
@@ -82,13 +82,13 @@ define <16 x i16> @test_broadcast_8i16_16i16(ptr%p) nounwind {
 ; X86-LABEL: test_broadcast_8i16_16i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; X86-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_8i16_16i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
  %1 = load <8 x i16>, ptr%p
@@ -101,13 +101,13 @@ define <32 x i8> @test_broadcast_16i8_32i8(ptr%p) nounwind {
 ; X86-LABEL: test_broadcast_16i8_32i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; X86-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_16i8_32i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
  %1 = load <16 x i8>, ptr%p
@@ -121,14 +121,14 @@ define <4 x double> @test_broadcast_2f64_4f64_reuse(ptr %p0, ptr %p1) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X86-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm1 = mem[0,1,0,1]
 ; X86-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm0
 ; X86-NEXT:    vmovapd %xmm1, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_2f64_4f64_reuse:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X64-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm1 = mem[0,1,0,1]
 ; X64-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; X64-NEXT:    vmovapd %xmm1, (%rsi)
 ; X64-NEXT:    retq
@@ -144,14 +144,14 @@ define <4 x i64> @test_broadcast_2i64_4i64_reuse(ptr %p0, ptr %p1) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X86-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm1 = mem[0,1,0,1]
 ; X86-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm0
 ; X86-NEXT:    vmovdqa %xmm1, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_2i64_4i64_reuse:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X64-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm1 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; X64-NEXT:    vmovdqa %xmm1, (%rsi)
 ; X64-NEXT:    retq
@@ -167,14 +167,14 @@ define <8 x float> @test_broadcast_4f32_8f32_reuse(ptr %p0, ptr %p1) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X86-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm1 = mem[0,1,0,1]
 ; X86-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm0
 ; X86-NEXT:    vmovaps %xmm1, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_4f32_8f32_reuse:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X64-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm1 = mem[0,1,0,1]
 ; X64-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; X64-NEXT:    vmovaps %xmm1, (%rsi)
 ; X64-NEXT:    retq
@@ -190,14 +190,14 @@ define <8 x i32> @test_broadcast_4i32_8i32_reuse(ptr %p0, ptr %p1) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X86-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm1 = mem[0,1,0,1]
 ; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm0
 ; X86-NEXT:    vmovdqa %xmm1, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_4i32_8i32_reuse:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X64-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm1 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; X64-NEXT:    vmovdqa %xmm1, (%rsi)
 ; X64-NEXT:    retq
@@ -213,14 +213,14 @@ define <16 x i16> @test_broadcast_8i16_16i16_reuse(ptr%p0, ptr%p1) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X86-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm1 = mem[0,1,0,1]
 ; X86-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm0
 ; X86-NEXT:    vmovdqa %xmm1, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_8i16_16i16_reuse:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X64-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm1 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; X64-NEXT:    vmovdqa %xmm1, (%rsi)
 ; X64-NEXT:    retq
@@ -236,14 +236,14 @@ define <32 x i8> @test_broadcast_16i8_32i8_reuse(ptr%p0, ptr%p1) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X86-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm1 = mem[0,1,0,1]
 ; X86-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm0
 ; X86-NEXT:    vmovdqa %xmm1, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_16i8_32i8_reuse:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X64-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm1 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; X64-NEXT:    vmovdqa %xmm1, (%rsi)
 ; X64-NEXT:    retq
@@ -260,14 +260,14 @@ define <8 x i32> @PR29088(ptr %p0, ptr %p1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; X86-NEXT:    vmovaps %ymm1, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR29088:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vmovaps %ymm1, (%rsi)
 ; X64-NEXT:    retq
   %ld = load <4 x i32>, ptr %p0

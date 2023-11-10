@@ -366,7 +366,7 @@ define <32 x i16> @stack_fold_pavgw_maskz_commuted(<32 x i16> %a0, <32 x i16> %a
 define <4 x i32> @stack_fold_extracti32x4(<16 x i16> %a0, <16 x i32> %a1) {
 ; CHECK-LABEL: stack_fold_extracti32x4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; CHECK-NEXT:    vpmovzxwd {{[^#]+#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; CHECK-NEXT:    vextracti32x4 $3, %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Folded Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
@@ -384,7 +384,7 @@ define <4 x i32> @stack_fold_extracti32x4(<16 x i16> %a0, <16 x i32> %a1) {
 define <2 x i64> @stack_fold_extracti64x2(<8 x i32> %a0, <8 x i64> %a1) {
 ; CHECK-LABEL: stack_fold_extracti64x2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
+; CHECK-NEXT:    vpmovzxdq {{[^#]+#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
 ; CHECK-NEXT:    vextracti32x4 $3, %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Folded Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
@@ -402,7 +402,7 @@ define <2 x i64> @stack_fold_extracti64x2(<8 x i32> %a0, <8 x i64> %a1) {
 define <8 x i32> @stack_fold_extracti32x8(<16 x i16> %a0, <16 x i32> %a1) {
 ; CHECK-LABEL: stack_fold_extracti32x8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; CHECK-NEXT:    vpmovzxwd {{[^#]+#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; CHECK-NEXT:    vextracti64x4 $1, %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Folded Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
@@ -419,7 +419,7 @@ define <8 x i32> @stack_fold_extracti32x8(<16 x i16> %a0, <16 x i32> %a1) {
 define <4 x i64> @stack_fold_extracti64x4(<8 x i32> %a0, <8 x i64> %a1) {
 ; CHECK-LABEL: stack_fold_extracti64x4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
+; CHECK-NEXT:    vpmovzxdq {{[^#]+#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
 ; CHECK-NEXT:    vextracti64x4 $1, %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Folded Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop

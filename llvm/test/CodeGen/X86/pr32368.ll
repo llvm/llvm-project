@@ -21,19 +21,19 @@ define <4 x float> @PR32368_128(<4 x float>) {
 ;
 ; AVX2-LABEL: PR32368_128:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [4294967004,4294967004,4294967004,4294967004]
+; AVX2-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [4294967004,4294967004,4294967004,4294967004]
 ; AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vaddps %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [291,291,291,291]
+; AVX2-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [291,291,291,291]
 ; AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: PR32368_128:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [4294967004,4294967004,4294967004,4294967004]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [4294967004,4294967004,4294967004,4294967004]
 ; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vaddps %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [291,291,291,291]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [291,291,291,291]
 ; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %2 = bitcast <4 x float> %0 to <4 x i32>
@@ -49,12 +49,12 @@ define <4 x float> @PR32368_128(<4 x float>) {
 define <8 x float> @PR32368_256(<8 x float>) {
 ; SSE-LABEL: PR32368_256:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm2 = [4294967004,4294967004,4294967004,4294967004]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm2 = [4294967004,4294967004,4294967004,4294967004]
 ; SSE-NEXT:    andps %xmm2, %xmm0
 ; SSE-NEXT:    andps %xmm2, %xmm1
 ; SSE-NEXT:    addps %xmm1, %xmm1
 ; SSE-NEXT:    addps %xmm0, %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm2 = [291,291,291,291]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm2 = [291,291,291,291]
 ; SSE-NEXT:    andps %xmm2, %xmm0
 ; SSE-NEXT:    andps %xmm2, %xmm1
 ; SSE-NEXT:    retq
@@ -68,19 +68,19 @@ define <8 x float> @PR32368_256(<8 x float>) {
 ;
 ; AVX2-LABEL: PR32368_256:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004]
+; AVX2-NEXT:    vbroadcastss {{[^#]+#+}} ymm1 = [4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004]
 ; AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vaddps %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [291,291,291,291,291,291,291,291]
+; AVX2-NEXT:    vbroadcastss {{[^#]+#+}} ymm1 = [291,291,291,291,291,291,291,291]
 ; AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: PR32368_256:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm1 = [4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} ymm1 = [4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004]
 ; AVX512-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vaddps %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm1 = [291,291,291,291,291,291,291,291]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} ymm1 = [291,291,291,291,291,291,291,291]
 ; AVX512-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %2 = bitcast <8 x float> %0 to <8 x i32>
@@ -96,7 +96,7 @@ define <8 x float> @PR32368_256(<8 x float>) {
 define <16 x float> @PR32368_512(<16 x float>) {
 ; SSE-LABEL: PR32368_512:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm4 = [4294967004,4294967004,4294967004,4294967004]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm4 = [4294967004,4294967004,4294967004,4294967004]
 ; SSE-NEXT:    andps %xmm4, %xmm0
 ; SSE-NEXT:    andps %xmm4, %xmm1
 ; SSE-NEXT:    andps %xmm4, %xmm2
@@ -105,7 +105,7 @@ define <16 x float> @PR32368_512(<16 x float>) {
 ; SSE-NEXT:    addps %xmm2, %xmm2
 ; SSE-NEXT:    addps %xmm1, %xmm1
 ; SSE-NEXT:    addps %xmm0, %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm4 = [291,291,291,291]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm4 = [291,291,291,291]
 ; SSE-NEXT:    andps %xmm4, %xmm0
 ; SSE-NEXT:    andps %xmm4, %xmm1
 ; SSE-NEXT:    andps %xmm4, %xmm2
@@ -114,24 +114,24 @@ define <16 x float> @PR32368_512(<16 x float>) {
 ;
 ; AVX1-LABEL: PR32368_512:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm2 = [4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} ymm2 = [4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004]
 ; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX1-NEXT:    vaddps %ymm1, %ymm1, %ymm1
 ; AVX1-NEXT:    vaddps %ymm0, %ymm0, %ymm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm2 = [291,291,291,291,291,291,291,291]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} ymm2 = [291,291,291,291,291,291,291,291]
 ; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR32368_512:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004]
+; AVX2-NEXT:    vbroadcastss {{[^#]+#+}} ymm2 = [4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004]
 ; AVX2-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vaddps %ymm1, %ymm1, %ymm1
 ; AVX2-NEXT:    vaddps %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [291,291,291,291,291,291,291,291]
+; AVX2-NEXT:    vbroadcastss {{[^#]+#+}} ymm2 = [291,291,291,291,291,291,291,291]
 ; AVX2-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    retq

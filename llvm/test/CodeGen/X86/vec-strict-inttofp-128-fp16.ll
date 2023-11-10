@@ -103,7 +103,7 @@ define <8 x half> @sitofp_v8i8_v8f16(<8 x i8> %x) #0 {
 define <8 x half> @uitofp_v8i8_v8f16(<8 x i8> %x) #0 {
 ; CHECK-LABEL: uitofp_v8i8_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-NEXT:    vpmovzxbw {{[^#]+#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; CHECK-NEXT:    vcvtuw2ph %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
  %result = call <8 x half> @llvm.experimental.constrained.uitofp.v8f16.v8i8(<8 x i8> %x,

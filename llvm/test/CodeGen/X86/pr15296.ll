@@ -6,7 +6,7 @@ define <8 x i32> @shiftInput___vyuunu(<8 x i32> %input, i32 %shiftval, <8 x i32>
 ; X86-LABEL: shiftInput___vyuunu:
 ; X86:       # %bb.0: # %allocas
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovd {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpsrld %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vpsrld %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -37,7 +37,7 @@ define <8 x i32> @shiftInput___canonical(<8 x i32> %input, i32 %shiftval, <8 x i
 ; X86-LABEL: shiftInput___canonical:
 ; X86:       # %bb.0: # %allocas
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovd {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpsrld %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vpsrld %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -62,7 +62,7 @@ define <4 x i64> @shiftInput___64in32bitmode(<4 x i64> %input, i64 %shiftval) no
 ; X86-LABEL: shiftInput___64in32bitmode:
 ; X86:       # %bb.0: # %allocas
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    vmovq {{[^#]+#+}} xmm2 = mem[0],zero
 ; X86-NEXT:    vpsrlq %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vpsrlq %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -87,7 +87,7 @@ define <4 x i64> @shiftInput___2x32bitcast(<4 x i64> %input, i32 %shiftval) noun
 ; X86-LABEL: shiftInput___2x32bitcast:
 ; X86:       # %bb.0: # %allocas
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovd {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpsrlq %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vpsrlq %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0

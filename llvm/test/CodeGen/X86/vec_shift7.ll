@@ -8,7 +8,7 @@ define i64 @test1(<2 x i64> %a) {
 ; X86-LABEL: test1:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-NEXT:    movd %xmm0, %edx
 ; X86-NEXT:    retl
 ;

@@ -5,7 +5,7 @@
 define <16 x float> @PR45443() {
 ; CHECK-LABEL: PR45443:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    vfmadd231ps {{.*#+}} zmm0 = (zmm0 * mem) + zmm0
+; CHECK-NEXT:    vfmadd231ps {{[^#]+#+}} zmm0 = (zmm0 * mem) + zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 bb:
   %tmp = tail call <16 x i32> @llvm.x86.avx512.psll.d.512(<16 x i32> <i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040>, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>)

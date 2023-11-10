@@ -41,7 +41,7 @@
 define i64 @f_to_u64(float %a) nounwind {
 ; X86-AVX512DQVL-LABEL: f_to_u64:
 ; X86-AVX512DQVL:       # %bb.0:
-; X86-AVX512DQVL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX512DQVL-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-AVX512DQVL-NEXT:    vcvttps2uqq %xmm0, %xmm0
 ; X86-AVX512DQVL-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX512DQVL-NEXT:    vpextrd $1, %xmm0, %edx
@@ -54,7 +54,7 @@ define i64 @f_to_u64(float %a) nounwind {
 ;
 ; X86-AVX512DQ-LABEL: f_to_u64:
 ; X86-AVX512DQ:       # %bb.0:
-; X86-AVX512DQ-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX512DQ-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-AVX512DQ-NEXT:    vcvttps2uqq %ymm0, %zmm0
 ; X86-AVX512DQ-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX512DQ-NEXT:    vpextrd $1, %xmm0, %edx
@@ -67,8 +67,8 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X86-AVX512F-WIN-NEXT:    movl %esp, %ebp
 ; X86-AVX512F-WIN-NEXT:    andl $-8, %esp
 ; X86-AVX512F-WIN-NEXT:    subl $8, %esp
-; X86-AVX512F-WIN-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-AVX512F-WIN-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-AVX512F-WIN-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX512F-WIN-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-AVX512F-WIN-NEXT:    xorl %edx, %edx
 ; X86-AVX512F-WIN-NEXT:    vucomiss %xmm0, %xmm1
 ; X86-AVX512F-WIN-NEXT:    setbe %dl
@@ -88,8 +88,8 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X86-AVX512F-LIN-LABEL: f_to_u64:
 ; X86-AVX512F-LIN:       # %bb.0:
 ; X86-AVX512F-LIN-NEXT:    subl $12, %esp
-; X86-AVX512F-LIN-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-AVX512F-LIN-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-AVX512F-LIN-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX512F-LIN-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-AVX512F-LIN-NEXT:    xorl %edx, %edx
 ; X86-AVX512F-LIN-NEXT:    vucomiss %xmm0, %xmm1
 ; X86-AVX512F-LIN-NEXT:    setbe %dl
@@ -111,8 +111,8 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X86-SSE3-WIN-NEXT:    movl %esp, %ebp
 ; X86-SSE3-WIN-NEXT:    andl $-8, %esp
 ; X86-SSE3-WIN-NEXT:    subl $8, %esp
-; X86-SSE3-WIN-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE3-WIN-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE3-WIN-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE3-WIN-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE3-WIN-NEXT:    ucomiss %xmm0, %xmm1
 ; X86-SSE3-WIN-NEXT:    jbe LBB0_2
 ; X86-SSE3-WIN-NEXT:  # %bb.1:
@@ -134,8 +134,8 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X86-SSE3-LIN-LABEL: f_to_u64:
 ; X86-SSE3-LIN:       # %bb.0:
 ; X86-SSE3-LIN-NEXT:    subl $12, %esp
-; X86-SSE3-LIN-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE3-LIN-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE3-LIN-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE3-LIN-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE3-LIN-NEXT:    ucomiss %xmm0, %xmm1
 ; X86-SSE3-LIN-NEXT:    jbe .LBB0_2
 ; X86-SSE3-LIN-NEXT:  # %bb.1:
@@ -181,8 +181,8 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X86-SSE2-WIN-NEXT:    movl %esp, %ebp
 ; X86-SSE2-WIN-NEXT:    andl $-8, %esp
 ; X86-SSE2-WIN-NEXT:    subl $16, %esp
-; X86-SSE2-WIN-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE2-WIN-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE2-WIN-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-WIN-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE2-WIN-NEXT:    ucomiss %xmm0, %xmm1
 ; X86-SSE2-WIN-NEXT:    jbe LBB0_2
 ; X86-SSE2-WIN-NEXT:  # %bb.1:
@@ -210,8 +210,8 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X86-SSE2-LIN-LABEL: f_to_u64:
 ; X86-SSE2-LIN:       # %bb.0:
 ; X86-SSE2-LIN-NEXT:    subl $20, %esp
-; X86-SSE2-LIN-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE2-LIN-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE2-LIN-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-LIN-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE2-LIN-NEXT:    ucomiss %xmm0, %xmm1
 ; X86-SSE2-LIN-NEXT:    jbe .LBB0_2
 ; X86-SSE2-LIN-NEXT:  # %bb.1:
@@ -311,7 +311,7 @@ define i64 @f_to_u64(float %a) nounwind {
 define i64 @f_to_s64(float %a) nounwind {
 ; X86-AVX512DQVL-LABEL: f_to_s64:
 ; X86-AVX512DQVL:       # %bb.0:
-; X86-AVX512DQVL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX512DQVL-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-AVX512DQVL-NEXT:    vcvttps2qq %xmm0, %xmm0
 ; X86-AVX512DQVL-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX512DQVL-NEXT:    vpextrd $1, %xmm0, %edx
@@ -324,7 +324,7 @@ define i64 @f_to_s64(float %a) nounwind {
 ;
 ; X86-AVX512DQ-LABEL: f_to_s64:
 ; X86-AVX512DQ:       # %bb.0:
-; X86-AVX512DQ-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX512DQ-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-AVX512DQ-NEXT:    vcvttps2qq %ymm0, %zmm0
 ; X86-AVX512DQ-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX512DQ-NEXT:    vpextrd $1, %xmm0, %edx
@@ -337,7 +337,7 @@ define i64 @f_to_s64(float %a) nounwind {
 ; X86-AVX512F-WIN-NEXT:    movl %esp, %ebp
 ; X86-AVX512F-WIN-NEXT:    andl $-8, %esp
 ; X86-AVX512F-WIN-NEXT:    subl $8, %esp
-; X86-AVX512F-WIN-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX512F-WIN-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-AVX512F-WIN-NEXT:    vmovss %xmm0, (%esp)
 ; X86-AVX512F-WIN-NEXT:    flds (%esp)
 ; X86-AVX512F-WIN-NEXT:    fisttpll (%esp)
@@ -350,7 +350,7 @@ define i64 @f_to_s64(float %a) nounwind {
 ; X86-AVX512F-LIN-LABEL: f_to_s64:
 ; X86-AVX512F-LIN:       # %bb.0:
 ; X86-AVX512F-LIN-NEXT:    subl $12, %esp
-; X86-AVX512F-LIN-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX512F-LIN-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-AVX512F-LIN-NEXT:    vmovss %xmm0, (%esp)
 ; X86-AVX512F-LIN-NEXT:    flds (%esp)
 ; X86-AVX512F-LIN-NEXT:    fisttpll (%esp)
@@ -365,7 +365,7 @@ define i64 @f_to_s64(float %a) nounwind {
 ; X86-SSE3-WIN-NEXT:    movl %esp, %ebp
 ; X86-SSE3-WIN-NEXT:    andl $-8, %esp
 ; X86-SSE3-WIN-NEXT:    subl $8, %esp
-; X86-SSE3-WIN-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE3-WIN-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE3-WIN-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE3-WIN-NEXT:    flds (%esp)
 ; X86-SSE3-WIN-NEXT:    fisttpll (%esp)
@@ -378,7 +378,7 @@ define i64 @f_to_s64(float %a) nounwind {
 ; X86-SSE3-LIN-LABEL: f_to_s64:
 ; X86-SSE3-LIN:       # %bb.0:
 ; X86-SSE3-LIN-NEXT:    subl $12, %esp
-; X86-SSE3-LIN-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE3-LIN-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE3-LIN-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE3-LIN-NEXT:    flds (%esp)
 ; X86-SSE3-LIN-NEXT:    fisttpll (%esp)
@@ -398,7 +398,7 @@ define i64 @f_to_s64(float %a) nounwind {
 ; X86-SSE2-WIN-NEXT:    movl %esp, %ebp
 ; X86-SSE2-WIN-NEXT:    andl $-8, %esp
 ; X86-SSE2-WIN-NEXT:    subl $16, %esp
-; X86-SSE2-WIN-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-WIN-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE2-WIN-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE2-WIN-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-SSE2-WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
@@ -417,7 +417,7 @@ define i64 @f_to_s64(float %a) nounwind {
 ; X86-SSE2-LIN-LABEL: f_to_s64:
 ; X86-SSE2-LIN:       # %bb.0:
 ; X86-SSE2-LIN-NEXT:    subl $20, %esp
-; X86-SSE2-LIN-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-LIN-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE2-LIN-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE2-LIN-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-SSE2-LIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
@@ -474,7 +474,7 @@ define i64 @f_to_s64(float %a) nounwind {
 define i64 @d_to_u64(double %a) nounwind {
 ; X86-AVX512DQVL-LABEL: d_to_u64:
 ; X86-AVX512DQVL:       # %bb.0:
-; X86-AVX512DQVL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX512DQVL-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-AVX512DQVL-NEXT:    vcvttpd2uqq %xmm0, %xmm0
 ; X86-AVX512DQVL-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX512DQVL-NEXT:    vpextrd $1, %xmm0, %edx
@@ -487,7 +487,7 @@ define i64 @d_to_u64(double %a) nounwind {
 ;
 ; X86-AVX512DQ-LABEL: d_to_u64:
 ; X86-AVX512DQ:       # %bb.0:
-; X86-AVX512DQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX512DQ-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-AVX512DQ-NEXT:    vcvttpd2uqq %zmm0, %zmm0
 ; X86-AVX512DQ-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX512DQ-NEXT:    vpextrd $1, %xmm0, %edx
@@ -500,8 +500,8 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X86-AVX512F-WIN-NEXT:    movl %esp, %ebp
 ; X86-AVX512F-WIN-NEXT:    andl $-8, %esp
 ; X86-AVX512F-WIN-NEXT:    subl $8, %esp
-; X86-AVX512F-WIN-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX512F-WIN-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-AVX512F-WIN-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X86-AVX512F-WIN-NEXT:    vmovsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-AVX512F-WIN-NEXT:    xorl %edx, %edx
 ; X86-AVX512F-WIN-NEXT:    vucomisd %xmm0, %xmm1
 ; X86-AVX512F-WIN-NEXT:    setbe %dl
@@ -521,8 +521,8 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X86-AVX512F-LIN-LABEL: d_to_u64:
 ; X86-AVX512F-LIN:       # %bb.0:
 ; X86-AVX512F-LIN-NEXT:    subl $12, %esp
-; X86-AVX512F-LIN-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX512F-LIN-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-AVX512F-LIN-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X86-AVX512F-LIN-NEXT:    vmovsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-AVX512F-LIN-NEXT:    xorl %edx, %edx
 ; X86-AVX512F-LIN-NEXT:    vucomisd %xmm0, %xmm1
 ; X86-AVX512F-LIN-NEXT:    setbe %dl
@@ -544,8 +544,8 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X86-SSE3-WIN-NEXT:    movl %esp, %ebp
 ; X86-SSE3-WIN-NEXT:    andl $-8, %esp
 ; X86-SSE3-WIN-NEXT:    subl $8, %esp
-; X86-SSE3-WIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE3-WIN-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE3-WIN-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X86-SSE3-WIN-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-SSE3-WIN-NEXT:    ucomisd %xmm0, %xmm1
 ; X86-SSE3-WIN-NEXT:    jbe LBB2_2
 ; X86-SSE3-WIN-NEXT:  # %bb.1:
@@ -567,8 +567,8 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X86-SSE3-LIN-LABEL: d_to_u64:
 ; X86-SSE3-LIN:       # %bb.0:
 ; X86-SSE3-LIN-NEXT:    subl $12, %esp
-; X86-SSE3-LIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE3-LIN-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE3-LIN-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X86-SSE3-LIN-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-SSE3-LIN-NEXT:    ucomisd %xmm0, %xmm1
 ; X86-SSE3-LIN-NEXT:    jbe .LBB2_2
 ; X86-SSE3-LIN-NEXT:  # %bb.1:
@@ -614,8 +614,8 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X86-SSE2-WIN-NEXT:    movl %esp, %ebp
 ; X86-SSE2-WIN-NEXT:    andl $-8, %esp
 ; X86-SSE2-WIN-NEXT:    subl $16, %esp
-; X86-SSE2-WIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-WIN-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE2-WIN-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X86-SSE2-WIN-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-SSE2-WIN-NEXT:    ucomisd %xmm0, %xmm1
 ; X86-SSE2-WIN-NEXT:    jbe LBB2_2
 ; X86-SSE2-WIN-NEXT:  # %bb.1:
@@ -643,8 +643,8 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X86-SSE2-LIN-LABEL: d_to_u64:
 ; X86-SSE2-LIN:       # %bb.0:
 ; X86-SSE2-LIN-NEXT:    subl $20, %esp
-; X86-SSE2-LIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-LIN-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE2-LIN-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X86-SSE2-LIN-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-SSE2-LIN-NEXT:    ucomisd %xmm0, %xmm1
 ; X86-SSE2-LIN-NEXT:    jbe .LBB2_2
 ; X86-SSE2-LIN-NEXT:  # %bb.1:
@@ -744,7 +744,7 @@ define i64 @d_to_u64(double %a) nounwind {
 define i64 @d_to_s64(double %a) nounwind {
 ; X86-AVX512DQVL-LABEL: d_to_s64:
 ; X86-AVX512DQVL:       # %bb.0:
-; X86-AVX512DQVL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX512DQVL-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-AVX512DQVL-NEXT:    vcvttpd2qq %xmm0, %xmm0
 ; X86-AVX512DQVL-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX512DQVL-NEXT:    vpextrd $1, %xmm0, %edx
@@ -757,7 +757,7 @@ define i64 @d_to_s64(double %a) nounwind {
 ;
 ; X86-AVX512DQ-LABEL: d_to_s64:
 ; X86-AVX512DQ:       # %bb.0:
-; X86-AVX512DQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX512DQ-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-AVX512DQ-NEXT:    vcvttpd2qq %zmm0, %zmm0
 ; X86-AVX512DQ-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX512DQ-NEXT:    vpextrd $1, %xmm0, %edx
@@ -770,7 +770,7 @@ define i64 @d_to_s64(double %a) nounwind {
 ; X86-AVX512F-WIN-NEXT:    movl %esp, %ebp
 ; X86-AVX512F-WIN-NEXT:    andl $-8, %esp
 ; X86-AVX512F-WIN-NEXT:    subl $8, %esp
-; X86-AVX512F-WIN-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX512F-WIN-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-AVX512F-WIN-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-AVX512F-WIN-NEXT:    fldl (%esp)
 ; X86-AVX512F-WIN-NEXT:    fisttpll (%esp)
@@ -783,7 +783,7 @@ define i64 @d_to_s64(double %a) nounwind {
 ; X86-AVX512F-LIN-LABEL: d_to_s64:
 ; X86-AVX512F-LIN:       # %bb.0:
 ; X86-AVX512F-LIN-NEXT:    subl $12, %esp
-; X86-AVX512F-LIN-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX512F-LIN-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-AVX512F-LIN-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-AVX512F-LIN-NEXT:    fldl (%esp)
 ; X86-AVX512F-LIN-NEXT:    fisttpll (%esp)
@@ -798,7 +798,7 @@ define i64 @d_to_s64(double %a) nounwind {
 ; X86-SSE3-WIN-NEXT:    movl %esp, %ebp
 ; X86-SSE3-WIN-NEXT:    andl $-8, %esp
 ; X86-SSE3-WIN-NEXT:    subl $8, %esp
-; X86-SSE3-WIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE3-WIN-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE3-WIN-NEXT:    movsd %xmm0, (%esp)
 ; X86-SSE3-WIN-NEXT:    fldl (%esp)
 ; X86-SSE3-WIN-NEXT:    fisttpll (%esp)
@@ -811,7 +811,7 @@ define i64 @d_to_s64(double %a) nounwind {
 ; X86-SSE3-LIN-LABEL: d_to_s64:
 ; X86-SSE3-LIN:       # %bb.0:
 ; X86-SSE3-LIN-NEXT:    subl $12, %esp
-; X86-SSE3-LIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE3-LIN-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE3-LIN-NEXT:    movsd %xmm0, (%esp)
 ; X86-SSE3-LIN-NEXT:    fldl (%esp)
 ; X86-SSE3-LIN-NEXT:    fisttpll (%esp)
@@ -831,7 +831,7 @@ define i64 @d_to_s64(double %a) nounwind {
 ; X86-SSE2-WIN-NEXT:    movl %esp, %ebp
 ; X86-SSE2-WIN-NEXT:    andl $-8, %esp
 ; X86-SSE2-WIN-NEXT:    subl $16, %esp
-; X86-SSE2-WIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-WIN-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE2-WIN-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE2-WIN-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-SSE2-WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
@@ -850,7 +850,7 @@ define i64 @d_to_s64(double %a) nounwind {
 ; X86-SSE2-LIN-LABEL: d_to_s64:
 ; X86-SSE2-LIN:       # %bb.0:
 ; X86-SSE2-LIN-NEXT:    subl $20, %esp
-; X86-SSE2-LIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-LIN-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE2-LIN-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE2-LIN-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-SSE2-LIN-NEXT:    fnstcw {{[0-9]+}}(%esp)

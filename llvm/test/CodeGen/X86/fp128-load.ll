@@ -23,7 +23,7 @@ define fp128 @TestLoadExtend(fp128 %x, i32 %n) {
 ; CHECK-LABEL: TestLoadExtend:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    jmp __extendsftf2@PLT # TAILCALL
 entry:
   %idxprom = sext i32 %n to i64

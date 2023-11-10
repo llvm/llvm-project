@@ -5,15 +5,15 @@
 define <4 x float> @t1(float %s, <4 x float> %tmp) nounwind {
 ; X86-LABEL: t1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
-; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
+; X86-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[0,1],xmm0[2,3]
+; X86-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[2,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t1:
 ; X64:       # %bb.0:
-; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
-; X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,0]
+; X64-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; X64-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[0,1],xmm0[2,0]
 ; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %tmp1 = insertelement <4 x float> %tmp, float %s, i32 3
@@ -23,16 +23,16 @@ define <4 x float> @t1(float %s, <4 x float> %tmp) nounwind {
 define <4 x i32> @t2(i32 %s, <4 x i32> %tmp) nounwind {
 ; X86-LABEL: t2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
-; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
+; X86-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[0,1],xmm0[2,3]
+; X86-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[2,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movd %edi, %xmm1
-; X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
-; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
+; X64-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[0,1],xmm0[2,3]
+; X64-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[2,0]
 ; X64-NEXT:    retq
   %tmp1 = insertelement <4 x i32> %tmp, i32 %s, i32 3
   ret <4 x i32> %tmp1
@@ -41,12 +41,12 @@ define <4 x i32> @t2(i32 %s, <4 x i32> %tmp) nounwind {
 define <2 x double> @t3(double %s, <2 x double> %tmp) nounwind {
 ; X86-LABEL: t3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; X86-NEXT:    movhps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t3:
 ; X64:       # %bb.0:
-; X64-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X64-NEXT:    movlhps {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0]
 ; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %tmp1 = insertelement <2 x double> %tmp, double %s, i32 1

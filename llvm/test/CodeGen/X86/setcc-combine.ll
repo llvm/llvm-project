@@ -6,7 +6,7 @@ define i32 @test_eq_1(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_eq_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    retq
@@ -29,7 +29,7 @@ define i32 @test_ne_1(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_ne_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -63,7 +63,7 @@ define i32 @test_ge_1(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_ge_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    retq
@@ -86,7 +86,7 @@ define i32 @test_lt_1(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_lt_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -120,7 +120,7 @@ define i32 @test_eq_2(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_eq_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    retq
@@ -143,7 +143,7 @@ define i32 @test_ne_2(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_ne_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -164,7 +164,7 @@ define i32 @test_le_2(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_le_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    retq
@@ -200,7 +200,7 @@ define i32 @test_lt_2(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_lt_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -221,7 +221,7 @@ define i32 @test_gt_2(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_gt_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -357,7 +357,7 @@ define i64 @sub_constant_to_shift_to_add(i32 %x, i64 %s1, i64 %s2) {
 define float @olt(float %x) {
 ; CHECK-LABEL: olt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    xorps %xmm0, %xmm1
 ; CHECK-NEXT:    minss %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -370,7 +370,7 @@ define float @olt(float %x) {
 define double @ogt(double %x) {
 ; CHECK-LABEL: ogt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    movapd {{[^#]+#+}} xmm1 = [-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    xorpd %xmm0, %xmm1
 ; CHECK-NEXT:    maxsd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -383,7 +383,7 @@ define double @ogt(double %x) {
 define <4 x float> @olt_swap(<4 x float> %x) {
 ; CHECK-LABEL: olt_swap:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    xorps %xmm0, %xmm1
 ; CHECK-NEXT:    maxps %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
@@ -397,7 +397,7 @@ define <4 x float> @olt_swap(<4 x float> %x) {
 define <2 x double> @ogt_swap(<2 x double> %x) {
 ; CHECK-LABEL: ogt_swap:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    movapd {{[^#]+#+}} xmm1 = [-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    xorpd %xmm0, %xmm1
 ; CHECK-NEXT:    minpd %xmm0, %xmm1
 ; CHECK-NEXT:    movapd %xmm1, %xmm0
@@ -411,7 +411,7 @@ define <2 x double> @ogt_swap(<2 x double> %x) {
 define <4 x float> @ole(<4 x float> %x) {
 ; SSE2-LABEL: ole:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; SSE2-NEXT:    movaps {{[^#]+#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; SSE2-NEXT:    xorps %xmm0, %xmm2
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    cmpleps %xmm2, %xmm1
@@ -424,7 +424,7 @@ define <4 x float> @ole(<4 x float> %x) {
 ; SSE41-LABEL: ole:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movaps %xmm0, %xmm1
-; SSE41-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; SSE41-NEXT:    movaps {{[^#]+#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; SSE41-NEXT:    xorps %xmm0, %xmm2
 ; SSE41-NEXT:    cmpleps %xmm2, %xmm0
 ; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm1
@@ -439,7 +439,7 @@ define <4 x float> @ole(<4 x float> %x) {
 define <2 x double> @oge(<2 x double> %x) {
 ; SSE2-LABEL: oge:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; SSE2-NEXT:    movapd {{[^#]+#+}} xmm2 = [-0.0E+0,-0.0E+0]
 ; SSE2-NEXT:    xorpd %xmm0, %xmm2
 ; SSE2-NEXT:    movapd %xmm2, %xmm1
 ; SSE2-NEXT:    cmplepd %xmm0, %xmm1
@@ -452,7 +452,7 @@ define <2 x double> @oge(<2 x double> %x) {
 ; SSE41-LABEL: oge:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movapd %xmm0, %xmm1
-; SSE41-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; SSE41-NEXT:    movapd {{[^#]+#+}} xmm2 = [-0.0E+0,-0.0E+0]
 ; SSE41-NEXT:    xorpd %xmm0, %xmm2
 ; SSE41-NEXT:    movapd %xmm2, %xmm0
 ; SSE41-NEXT:    cmplepd %xmm1, %xmm0
@@ -486,9 +486,9 @@ define double @ogt_no_fneg(double %x, double %y) {
 define double @ogt_no_zero(double %x) {
 ; CHECK-LABEL: ogt_no_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    movapd {{[^#]+#+}} xmm1 = [-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    xorpd %xmm0, %xmm1
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm2 = mem[0],zero
 ; CHECK-NEXT:    cmpltsd %xmm0, %xmm2
 ; CHECK-NEXT:    andpd %xmm2, %xmm0
 ; CHECK-NEXT:    andnpd %xmm1, %xmm2
@@ -573,7 +573,7 @@ define i64 @cmp_ugt_not_with_constant(i64 %a) {
 define <4 x i32> @cmp_ugt_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
 ; SSE2-LABEL: cmp_ugt_not_with_vec:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{[^#]+#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm2
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
@@ -626,7 +626,7 @@ define i64 @cmp_sge_not_with_constant(i64 %a) {
 define <4 x i32> @cmp_sge_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
 ; SSE2-LABEL: cmp_sge_not_with_vec:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{[^#]+#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
@@ -676,7 +676,7 @@ define i64 @cmp_uge_not_with_constant(i64 %a) {
 define <4 x i32> @cmp_uge_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
 ; SSE2-LABEL: cmp_uge_not_with_vec:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{[^#]+#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
@@ -812,7 +812,7 @@ define i64 @cmp_ult_not_with_constant(i64 %a) {
 define <4 x i32> @cmp_ult_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
 ; SSE2-LABEL: cmp_ult_not_with_vec:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{[^#]+#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
@@ -862,7 +862,7 @@ define i64 @cmp_ule_not_with_constant(i64 %a) {
 define <4 x i32> @cmp_ule_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
 ; SSE2-LABEL: cmp_ule_not_with_vec:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{[^#]+#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm2
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
@@ -995,16 +995,16 @@ define i64 @cmp_ult_not_with_constant_commute(i64 %a) {
 define <2 x i64> @cmp_uge_not_with_vec2xi64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: cmp_uge_not_with_vec2xi64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; CHECK-NEXT:    pxor %xmm2, %xmm1
 ; CHECK-NEXT:    pxor %xmm2, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-NEXT:    pcmpgtd %xmm1, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,2,2]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm3 = xmm2[0,0,2,2]
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    pand %xmm3, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm2[1,1,3,3]
 ; CHECK-NEXT:    por %xmm0, %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm0

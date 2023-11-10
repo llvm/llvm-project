@@ -325,17 +325,17 @@ define i128 @test_i128_1(i128 %a) nounwind {
 define <2 x i64> @test_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE-LABEL: test_v2i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSE-NEXT:    movdqa %xmm1, %xmm3
 ; SSE-NEXT:    pxor %xmm2, %xmm3
 ; SSE-NEXT:    pxor %xmm0, %xmm2
 ; SSE-NEXT:    movdqa %xmm2, %xmm4
 ; SSE-NEXT:    pcmpgtd %xmm3, %xmm4
-; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm5 = xmm4[0,0,2,2]
 ; SSE-NEXT:    pcmpeqd %xmm3, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE-NEXT:    pand %xmm5, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm3 = xmm4[1,1,3,3]
 ; SSE-NEXT:    por %xmm2, %xmm3
 ; SSE-NEXT:    pand %xmm3, %xmm0
 ; SSE-NEXT:    pandn %xmm1, %xmm3
@@ -344,7 +344,7 @@ define <2 x i64> @test_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX1-LABEL: test_v2i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vmovddup {{[^#]+#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; AVX1-NEXT:    # xmm2 = mem[0,0]
 ; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm2
@@ -354,7 +354,7 @@ define <2 x i64> @test_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX2-LABEL: test_v2i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{[^#]+#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm3
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm2
 ; AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -404,7 +404,7 @@ define <2 x i64> @test_v2i64_1(<2 x i64> %a) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,3,2]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm1[1,0,3,2]
 ; SSE-NEXT:    pand %xmm1, %xmm2
 ; SSE-NEXT:    psubq %xmm2, %xmm0
 ; SSE-NEXT:    retq
@@ -475,7 +475,7 @@ define <1 x i32> @test_v1i32(<1 x i32> %a, <1 x i32> %b) nounwind {
 define <2 x i32> @test_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; SSE-LABEL: test_v2i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE-NEXT:    movdqa %xmm1, %xmm3
 ; SSE-NEXT:    pxor %xmm2, %xmm3
 ; SSE-NEXT:    pxor %xmm0, %xmm2
@@ -510,7 +510,7 @@ define <2 x i32> @test_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 define <3 x i32> @test_v3i32(<3 x i32> %a, <3 x i32> %b) nounwind {
 ; SSE-LABEL: test_v3i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE-NEXT:    movdqa %xmm1, %xmm3
 ; SSE-NEXT:    pxor %xmm2, %xmm3
 ; SSE-NEXT:    pxor %xmm0, %xmm2
@@ -553,7 +553,7 @@ define <3 x i32> @test_v3i32(<3 x i32> %a, <3 x i32> %b) nounwind {
 define <4 x i32> @test_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; SSE-LABEL: test_v4i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE-NEXT:    movdqa %xmm1, %xmm3
 ; SSE-NEXT:    pxor %xmm2, %xmm3
 ; SSE-NEXT:    pxor %xmm0, %xmm2
@@ -615,7 +615,7 @@ define <4 x i32> @test_v4i32_1(<4 x i32> %a) nounwind {
 ;
 ; AVX2-LABEL: test_v4i32_1:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
+; AVX2-NEXT:    vpbroadcastd {{[^#]+#+}} xmm1 = [1,1,1,1]
 ; AVX2-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
@@ -650,7 +650,7 @@ define <4 x i32> @test_v4i32_1(<4 x i32> %a) nounwind {
 define <8 x i32> @test_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; SSE-LABEL: test_v8i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,2147483648,2147483648,2147483648]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm4 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE-NEXT:    movdqa %xmm2, %xmm5
 ; SSE-NEXT:    pxor %xmm4, %xmm5
 ; SSE-NEXT:    movdqa %xmm0, %xmm6
@@ -759,7 +759,7 @@ define <8 x i32> @test_v8i32_1(<8 x i32> %a) nounwind {
 ; AVX1-LABEL: test_v8i32_1:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [1,1,1,1]
 ; AVX1-NEXT:    vpmaxud %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmaxud %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -767,7 +767,7 @@ define <8 x i32> @test_v8i32_1(<8 x i32> %a) nounwind {
 ;
 ; AVX2-LABEL: test_v8i32_1:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
+; AVX2-NEXT:    vpbroadcastd {{[^#]+#+}} ymm1 = [1,1,1,1,1,1,1,1]
 ; AVX2-NEXT:    vpmaxud %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;

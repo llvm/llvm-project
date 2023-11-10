@@ -5,7 +5,7 @@
 define <2 x i64> @test(i64 %i) nounwind  {
 ; X86-LABEL: test:
 ; X86:       # %bb.0:
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:

@@ -6,12 +6,12 @@ define <2 x i64> @test(ptr %p) nounwind {
 ; X86-LABEL: test:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:
 ; X64:       # %bb.0:
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    retq
   %tmp.upgrd.1 = load double, ptr %p
   %tmp.upgrd.2 = insertelement <2 x double> undef, double %tmp.upgrd.1, i32 0

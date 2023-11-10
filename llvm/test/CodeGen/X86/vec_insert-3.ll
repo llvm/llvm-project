@@ -5,16 +5,16 @@
 define <2 x i64> @t1(i64 %s, <2 x i64> %tmp) nounwind {
 ; X86-LABEL: t1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X86-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm1[0]
-; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,0]
+; X86-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    movlhps {{[^#]+#+}} xmm2 = xmm2[0],xmm1[0]
+; X86-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm2[2,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %xmm1
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    punpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    retq
   %tmp1 = insertelement <2 x i64> %tmp, i64 %s, i32 1
   ret <2 x i64> %tmp1

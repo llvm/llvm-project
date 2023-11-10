@@ -31,7 +31,7 @@ define <2 x i64> @strict_vector_fptosi_v2f16_to_v2i64(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v2f16_to_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2qq %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f16(<2 x half> %a,
@@ -43,7 +43,7 @@ define <2 x i64> @strict_vector_fptoui_v2f16_to_v2i64(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v2f16_to_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2uqq %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f16(<2 x half> %a,
@@ -55,7 +55,7 @@ define <2 x i32> @strict_vector_fptosi_v2f16_to_v2i32(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v2f16_to_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2dq %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <2 x i32> @llvm.experimental.constrained.fptosi.v2i32.v2f16(<2 x half> %a,
@@ -67,7 +67,7 @@ define <2 x i32> @strict_vector_fptoui_v2f16_to_v2i32(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v2f16_to_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2udq %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <2 x i32> @llvm.experimental.constrained.fptoui.v2i32.v2f16(<2 x half> %a,
@@ -79,7 +79,7 @@ define <2 x i16> @strict_vector_fptosi_v2f16_to_v2i16(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v2f16_to_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2w %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <2 x i16> @llvm.experimental.constrained.fptosi.v2i16.v2f16(<2 x half> %a,
@@ -91,7 +91,7 @@ define <2 x i16> @strict_vector_fptoui_v2f16_to_v2i16(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v2f16_to_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2uw %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <2 x i16> @llvm.experimental.constrained.fptoui.v2i16.v2f16(<2 x half> %a,
@@ -103,7 +103,7 @@ define <2 x i8> @strict_vector_fptosi_v2f16_to_v2i8(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v2f16_to_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2w %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovwb %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
@@ -116,7 +116,7 @@ define <2 x i8> @strict_vector_fptoui_v2f16_to_v2i8(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v2f16_to_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2uw %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovwb %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
@@ -129,7 +129,7 @@ define <2 x i1> @strict_vector_fptosi_v2f16_to_v2i1(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v2f16_to_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2w %xmm0, %xmm0
 ; CHECK-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovw2m %xmm0, %k0
@@ -144,7 +144,7 @@ define <2 x i1> @strict_vector_fptoui_v2f16_to_v2i1(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v2f16_to_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2uw %xmm0, %xmm0
 ; CHECK-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovw2m %xmm0, %k0
@@ -158,7 +158,7 @@ define <2 x i1> @strict_vector_fptoui_v2f16_to_v2i1(<2 x half> %a) #0 {
 define <4 x i32> @strict_vector_fptosi_v4f16_to_v4i32(<4 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v4f16_to_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; CHECK-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    vcvttph2dq %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f16(<4 x half> %a,
@@ -169,7 +169,7 @@ define <4 x i32> @strict_vector_fptosi_v4f16_to_v4i32(<4 x half> %a) #0 {
 define <4 x i32> @strict_vector_fptoui_v4f16_to_v4i32(<4 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v4f16_to_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; CHECK-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    vcvttph2udq %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f16(<4 x half> %a,
@@ -180,7 +180,7 @@ define <4 x i32> @strict_vector_fptoui_v4f16_to_v4i32(<4 x half> %a) #0 {
 define <4 x i16> @strict_vector_fptosi_v4f16_to_v4i16(<4 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v4f16_to_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; CHECK-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    vcvttph2w %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i16> @llvm.experimental.constrained.fptosi.v4i16.v4f16(<4 x half> %a,
@@ -191,7 +191,7 @@ define <4 x i16> @strict_vector_fptosi_v4f16_to_v4i16(<4 x half> %a) #0 {
 define <4 x i16> @strict_vector_fptoui_v4f16_to_v4i16(<4 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v4f16_to_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; CHECK-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    vcvttph2uw %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i16> @llvm.experimental.constrained.fptoui.v4i16.v4f16(<4 x half> %a,
@@ -202,7 +202,7 @@ define <4 x i16> @strict_vector_fptoui_v4f16_to_v4i16(<4 x half> %a) #0 {
 define <4 x i8> @strict_vector_fptosi_v4f16_to_v4i8(<4 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v4f16_to_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; CHECK-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    vcvttph2w %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovwb %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
@@ -214,7 +214,7 @@ define <4 x i8> @strict_vector_fptosi_v4f16_to_v4i8(<4 x half> %a) #0 {
 define <4 x i8> @strict_vector_fptoui_v4f16_to_v4i8(<4 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v4f16_to_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; CHECK-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    vcvttph2uw %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovwb %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
@@ -226,7 +226,7 @@ define <4 x i8> @strict_vector_fptoui_v4f16_to_v4i8(<4 x half> %a) #0 {
 define <4 x i1> @strict_vector_fptosi_v4f16_to_v4i1(<4 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v4f16_to_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; CHECK-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    vcvttph2w %xmm0, %xmm0
 ; CHECK-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovw2m %xmm0, %k0
@@ -240,7 +240,7 @@ define <4 x i1> @strict_vector_fptosi_v4f16_to_v4i1(<4 x half> %a) #0 {
 define <4 x i1> @strict_vector_fptoui_v4f16_to_v4i1(<4 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v4f16_to_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; CHECK-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    vcvttph2uw %xmm0, %xmm0
 ; CHECK-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovw2m %xmm0, %k0

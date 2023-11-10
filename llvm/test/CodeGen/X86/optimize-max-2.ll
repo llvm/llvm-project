@@ -17,7 +17,7 @@ define void @foo(ptr nocapture %p, i64 %x, i64 %y) nounwind {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %bb4
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    addsd %xmm0, %xmm0
 ; CHECK-NEXT:    movsd %xmm0, (%rdi)
 ; CHECK-NEXT:    addq $8, %rdi

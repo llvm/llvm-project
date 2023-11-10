@@ -2324,7 +2324,7 @@ define <16 x i32> @test_masked_z_i32_to_16_mem_mask3(ptr %p, <16 x i32> %mask) {
 define <2 x i64> @test_i64_to_2_mem(ptr %p) {
 ; CHECK-LABEL: test_i64_to_2_mem:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; CHECK-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; CHECK-NEXT:    retq
   %s = load i64, ptr %p
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0

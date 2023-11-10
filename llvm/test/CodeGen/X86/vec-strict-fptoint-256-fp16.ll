@@ -17,7 +17,7 @@ declare <16 x i1> @llvm.experimental.constrained.fptoui.v16i1.v16f16(<16 x half>
 define <4 x i64> @strict_vector_fptosi_v4f16_to_v4i64(<4 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v4f16_to_v4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; CHECK-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    vcvttph2qq %xmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f16(<4 x half> %a,
@@ -28,7 +28,7 @@ define <4 x i64> @strict_vector_fptosi_v4f16_to_v4i64(<4 x half> %a) #0 {
 define <4 x i64> @strict_vector_fptoui_v4f16_to_v4i64(<4 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v4f16_to_v4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; CHECK-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    vcvttph2uqq %xmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i64> @llvm.experimental.constrained.fptoui.v4i64.v4f16(<4 x half> %a,

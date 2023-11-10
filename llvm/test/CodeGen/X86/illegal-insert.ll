@@ -4,7 +4,7 @@
 define <4 x double> @foo0(<4 x double> %t) {
 ; CHECK-LABEL: foo0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; CHECK-NEXT:    movlps {{[^#]+#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; CHECK-NEXT:    retq
   %r = insertelement <4 x double> %t, double 2.3, i32 0
   ret <4 x double> %r
@@ -12,7 +12,7 @@ define <4 x double> @foo0(<4 x double> %t) {
 define <4 x double> @foo1(<4 x double> %t) {
 ; CHECK-LABEL: foo1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; CHECK-NEXT:    movhps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; CHECK-NEXT:    retq
   %r = insertelement <4 x double> %t, double 2.3, i32 1
   ret <4 x double> %r
@@ -20,7 +20,7 @@ define <4 x double> @foo1(<4 x double> %t) {
 define <4 x double> @foo2(<4 x double> %t) {
 ; CHECK-LABEL: foo2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
+; CHECK-NEXT:    movlps {{[^#]+#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; CHECK-NEXT:    retq
   %r = insertelement <4 x double> %t, double 2.3, i32 2
   ret <4 x double> %r
@@ -28,7 +28,7 @@ define <4 x double> @foo2(<4 x double> %t) {
 define <4 x double> @foo3(<4 x double> %t) {
 ; CHECK-LABEL: foo3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
+; CHECK-NEXT:    movhps {{[^#]+#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; CHECK-NEXT:    retq
   %r = insertelement <4 x double> %t, double 2.3, i32 3
   ret <4 x double> %r

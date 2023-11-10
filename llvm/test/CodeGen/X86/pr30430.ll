@@ -11,14 +11,14 @@ define <16 x float> @makefloat(float %f1, float %f2, float %f3, float %f4, float
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
 ; CHECK-NEXT:    subq $256, %rsp # imm = 0x100
-; CHECK-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm8 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm8 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm8 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm8 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm8 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm8 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm8 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm8 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vmovss %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovss %xmm1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovss %xmm2, {{[0-9]+}}(%rsp)
@@ -27,22 +27,22 @@ define <16 x float> @makefloat(float %f1, float %f2, float %f3, float %f4, float
 ; CHECK-NEXT:    vmovss %xmm5, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovss %xmm6, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovss %xmm7, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vmovss {{.*#+}} xmm15 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm14 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm13 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm12 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm11 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm10 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm9 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm7 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm6 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm5 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm4 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm15 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm14 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm13 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm12 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm11 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm10 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm9 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm8 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm7 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm6 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm5 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm4 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vmovss %xmm15, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovss %xmm14, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovss %xmm13, {{[0-9]+}}(%rsp)
@@ -59,37 +59,37 @@ define <16 x float> @makefloat(float %f1, float %f2, float %f3, float %f4, float
 ; CHECK-NEXT:    vmovss %xmm2, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovss %xmm1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovss %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0,1,2],xmm1[0]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0,1,2],xmm2[0]
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm1 = xmm0[0,1,2],xmm1[0]
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm2 = xmm0[0,1,2],xmm2[0]
 ; CHECK-NEXT:    # implicit-def: $ymm0
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0,1,2],xmm2[0]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[2,3]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm3[0],xmm0[3]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm3 = xmm0[0,1,2],xmm3[0]
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm2 = xmm0[0,1,2],xmm2[0]
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0],xmm3[0],xmm0[2,3]
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm3[0],xmm0[3]
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm3 = xmm0[0,1,2],xmm3[0]
 ; CHECK-NEXT:    # implicit-def: $ymm0
 ; CHECK-NEXT:    vmovaps %xmm3, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm2

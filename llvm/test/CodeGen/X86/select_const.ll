@@ -846,10 +846,10 @@ define <4 x i32> @sel_constants_add_constant_vec(i1 %cond) {
 ; X64-NEXT:    testb $1, %dil
 ; X64-NEXT:    jne .LBB37_1
 ; X64-NEXT:  # %bb.2:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = [12,13,14,15]
+; X64-NEXT:    movaps {{[^#]+#+}} xmm0 = [12,13,14,15]
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB37_1:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = [4294967293,14,4,4]
+; X64-NEXT:    movaps {{[^#]+#+}} xmm0 = [4294967293,14,4,4]
 ; X64-NEXT:    retq
   %sel = select i1 %cond, <4 x i32> <i32 -4, i32 12, i32 1, i32 0>, <4 x i32> <i32 11, i32 11, i32 11, i32 11>
   %bo = add <4 x i32> %sel, <i32 1, i32 2, i32 3, i32 4>
@@ -883,10 +883,10 @@ define <2 x double> @sel_constants_fmul_constant_vec(i1 %cond) {
 ; X64-NEXT:    testb $1, %dil
 ; X64-NEXT:    jne .LBB38_1
 ; X64-NEXT:  # %bb.2:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = [1.1883E+2,3.4539999999999999E+1]
+; X64-NEXT:    movaps {{[^#]+#+}} xmm0 = [1.1883E+2,3.4539999999999999E+1]
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB38_1:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = [-2.0399999999999999E+1,3.768E+1]
+; X64-NEXT:    movaps {{[^#]+#+}} xmm0 = [-2.0399999999999999E+1,3.768E+1]
 ; X64-NEXT:    retq
   %sel = select i1 %cond, <2 x double> <double -4.0, double 12.0>, <2 x double> <double 23.3, double 11.0>
   %bo = fmul <2 x double> %sel, <double 5.1, double 3.14>
@@ -958,7 +958,7 @@ define float @select_undef_fp(float %x) {
 ;
 ; X64-LABEL: select_undef_fp:
 ; X64:       # %bb.0:
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    retq
   %f = select i1 undef, float 4.0, float %x
   ret float %f

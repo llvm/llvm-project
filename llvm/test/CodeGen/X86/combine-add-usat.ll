@@ -48,12 +48,12 @@ define i32 @combine_constfold_i32() {
 define <8 x i16> @combine_constfold_v8i16() {
 ; SSE-LABEL: combine_constfold_v8i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,65535,256,65535,65535,65535,2,65535]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm0 = [1,65535,256,65535,65535,65535,2,65535]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_constfold_v8i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [1,65535,256,65535,65535,65535,2,65535]
+; AVX-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [1,65535,256,65535,65535,65535,2,65535]
 ; AVX-NEXT:    retq
   %res = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> <i16 0, i16 1, i16 255, i16 65535, i16 -1, i16 -255, i16 -65535, i16 1>, <8 x i16> <i16 1, i16 65535, i16 1, i16 65535, i16 1, i16 65535, i16 1, i16 65535>)
   ret <8 x i16> %res
@@ -62,12 +62,12 @@ define <8 x i16> @combine_constfold_v8i16() {
 define <8 x i16> @combine_constfold_undef_v8i16() {
 ; SSE-LABEL: combine_constfold_undef_v8i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [65535,65535,65535,65535,65535,65535,2,65535]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm0 = [65535,65535,65535,65535,65535,65535,2,65535]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_constfold_undef_v8i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [65535,65535,65535,65535,65535,65535,2,65535]
+; AVX-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [65535,65535,65535,65535,65535,65535,2,65535]
 ; AVX-NEXT:    retq
   %res = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> <i16 undef, i16 1, i16 undef, i16 65535, i16 -1, i16 -255, i16 -65535, i16 1>, <8 x i16> <i16 1, i16 undef, i16 undef, i16 65535, i16 1, i16 65535, i16 1, i16 65535>)
   ret <8 x i16> %res
@@ -158,13 +158,13 @@ define <8 x i16> @combine_shuffle_shuffle_v8i16(<8 x i16> %x0, <8 x i16> %y0) {
 ; SSE-LABEL: combine_shuffle_shuffle_v8i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    paddusw %xmm1, %xmm0
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; SSE-NEXT:    pshuflw {{[^#]+#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_shuffle_shuffle_v8i16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpaddusw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; AVX-NEXT:    vpshuflw {{[^#]+#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
 ; AVX-NEXT:    retq
   %x1= shufflevector <8 x i16> %x0, <8 x i16> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7>
   %y1 = shufflevector <8 x i16> %y0, <8 x i16> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7>

@@ -9,7 +9,7 @@
 define i4 @v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i64> %d) {
 ; SSE2-SSSE3-LABEL: v4i64:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm9 = [2147483648,2147483648]
+; SSE2-SSSE3-NEXT:    movdqa {{[^#]+#+}} xmm9 = [2147483648,2147483648]
 ; SSE2-SSSE3-NEXT:    pxor %xmm9, %xmm3
 ; SSE2-SSSE3-NEXT:    pxor %xmm9, %xmm1
 ; SSE2-SSSE3-NEXT:    movdqa %xmm1, %xmm10
@@ -19,12 +19,12 @@ define i4 @v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i64> %d) {
 ; SSE2-SSSE3-NEXT:    movdqa %xmm0, %xmm8
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm8
 ; SSE2-SSSE3-NEXT:    movdqa %xmm8, %xmm11
-; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm11 = xmm11[0,2],xmm10[0,2]
+; SSE2-SSSE3-NEXT:    shufps {{[^#]+#+}} xmm11 = xmm11[0,2],xmm10[0,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
+; SSE2-SSSE3-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; SSE2-SSSE3-NEXT:    andps %xmm11, %xmm0
-; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm8 = xmm8[1,3],xmm10[1,3]
+; SSE2-SSSE3-NEXT:    shufps {{[^#]+#+}} xmm8 = xmm8[1,3],xmm10[1,3]
 ; SSE2-SSSE3-NEXT:    orps %xmm0, %xmm8
 ; SSE2-SSSE3-NEXT:    pxor %xmm9, %xmm7
 ; SSE2-SSSE3-NEXT:    pxor %xmm9, %xmm5
@@ -35,12 +35,12 @@ define i4 @v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i64> %d) {
 ; SSE2-SSSE3-NEXT:    movdqa %xmm4, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm6, %xmm1
 ; SSE2-SSSE3-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm0[0,2]
+; SSE2-SSSE3-NEXT:    shufps {{[^#]+#+}} xmm2 = xmm2[0,2],xmm0[0,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm7, %xmm5
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm6, %xmm4
-; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,3],xmm5[1,3]
+; SSE2-SSSE3-NEXT:    shufps {{[^#]+#+}} xmm4 = xmm4[1,3],xmm5[1,3]
 ; SSE2-SSSE3-NEXT:    andps %xmm2, %xmm4
-; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm0[1,3]
+; SSE2-SSSE3-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[1,3],xmm0[1,3]
 ; SSE2-SSSE3-NEXT:    orps %xmm4, %xmm1
 ; SSE2-SSSE3-NEXT:    andps %xmm8, %xmm1
 ; SSE2-SSSE3-NEXT:    movmskps %xmm1, %eax
@@ -104,10 +104,10 @@ define i4 @v4f64(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double>
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
+; SSE2-SSSE3-NEXT:    shufps {{[^#]+#+}} xmm2 = xmm2[0,2],xmm3[0,2]
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm5, %xmm7
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm4, %xmm6
-; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,2],xmm7[0,2]
+; SSE2-SSSE3-NEXT:    shufps {{[^#]+#+}} xmm6 = xmm6[0,2],xmm7[0,2]
 ; SSE2-SSSE3-NEXT:    andps %xmm2, %xmm6
 ; SSE2-SSSE3-NEXT:    movmskps %xmm6, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
@@ -910,7 +910,7 @@ define i8 @v2i64_concat_undef(<2 x i64> %vec) {
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,0,3,2]
+; SSE2-SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm1[1,0,3,2]
 ; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    movmskpd %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
@@ -950,7 +950,7 @@ define i8 @v4f64_concat_undef(<4 x double> %vec) {
 ; SSE2-SSSE3-NEXT:    xorpd %xmm3, %xmm3
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
+; SSE2-SSSE3-NEXT:    shufps {{[^#]+#+}} xmm2 = xmm2[0,2],xmm3[0,2]
 ; SSE2-SSSE3-NEXT:    movmskps %xmm2, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq

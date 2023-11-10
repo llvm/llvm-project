@@ -5,9 +5,9 @@
 define <8 x i32> @a(<8 x i16> %a) nounwind {
 ; CHECK-LIN-LABEL: a:
 ; CHECK-LIN:       # %bb.0:
-; CHECK-LIN-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; CHECK-LIN-NEXT:    punpcklwd {{[^#]+#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
 ; CHECK-LIN-NEXT:    psrad $16, %xmm2
-; CHECK-LIN-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; CHECK-LIN-NEXT:    punpckhwd {{[^#]+#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; CHECK-LIN-NEXT:    psrad $16, %xmm1
 ; CHECK-LIN-NEXT:    movdqa %xmm2, %xmm0
 ; CHECK-LIN-NEXT:    retq
@@ -15,9 +15,9 @@ define <8 x i32> @a(<8 x i16> %a) nounwind {
 ; CHECK-WIN-LABEL: a:
 ; CHECK-WIN:       # %bb.0:
 ; CHECK-WIN-NEXT:    movdqa (%rcx), %xmm1
-; CHECK-WIN-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-WIN-NEXT:    punpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; CHECK-WIN-NEXT:    psrad $16, %xmm0
-; CHECK-WIN-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; CHECK-WIN-NEXT:    punpckhwd {{[^#]+#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
 ; CHECK-WIN-NEXT:    psrad $16, %xmm1
 ; CHECK-WIN-NEXT:    retq
   %c = sext <8 x i16> %a to <8 x i32>
@@ -68,8 +68,8 @@ define <8 x i32> @d(<8 x i16> %a) nounwind {
 ; CHECK-LIN:       # %bb.0:
 ; CHECK-LIN-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-LIN-NEXT:    pxor %xmm2, %xmm2
-; CHECK-LIN-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
-; CHECK-LIN-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; CHECK-LIN-NEXT:    punpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; CHECK-LIN-NEXT:    punpckhwd {{[^#]+#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
 ; CHECK-LIN-NEXT:    retq
 ;
 ; CHECK-WIN-LABEL: d:
@@ -77,8 +77,8 @@ define <8 x i32> @d(<8 x i16> %a) nounwind {
 ; CHECK-WIN-NEXT:    movdqa (%rcx), %xmm1
 ; CHECK-WIN-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-WIN-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-WIN-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
-; CHECK-WIN-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; CHECK-WIN-NEXT:    punpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; CHECK-WIN-NEXT:    punpckhwd {{[^#]+#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
 ; CHECK-WIN-NEXT:    retq
   %c = zext <8 x i16> %a to <8 x i32>
   ret <8 x i32> %c
@@ -123,20 +123,20 @@ define <1 x i32> @f(<1 x i16> %a) nounwind {
 define <8 x i16> @g(<8 x i32> %a) nounwind {
 ; CHECK-LIN-LABEL: g:
 ; CHECK-LIN:       # %bb.0:
-; CHECK-LIN-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; CHECK-LIN-NEXT:    movdqa {{[^#]+#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; CHECK-LIN-NEXT:    pshufb %xmm2, %xmm1
 ; CHECK-LIN-NEXT:    pshufb %xmm2, %xmm0
-; CHECK-LIN-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-LIN-NEXT:    punpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-LIN-NEXT:    retq
 ;
 ; CHECK-WIN-LABEL: g:
 ; CHECK-WIN:       # %bb.0:
 ; CHECK-WIN-NEXT:    movdqa (%rcx), %xmm0
 ; CHECK-WIN-NEXT:    movdqa (%rdx), %xmm1
-; CHECK-WIN-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; CHECK-WIN-NEXT:    movdqa {{[^#]+#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; CHECK-WIN-NEXT:    pshufb %xmm2, %xmm1
 ; CHECK-WIN-NEXT:    pshufb %xmm2, %xmm0
-; CHECK-WIN-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-WIN-NEXT:    punpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-WIN-NEXT:    retq
   %c = trunc <8 x i32> %a to <8 x i16>
   ret <8 x i16> %c

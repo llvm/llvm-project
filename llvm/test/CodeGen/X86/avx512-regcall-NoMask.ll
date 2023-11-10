@@ -340,7 +340,7 @@ define dso_local x86_regcallcc float @test_CallargRetFloat(float %a)  {
 ; X32:       # %bb.0:
 ; X32-NEXT:    subl $28, %esp
 ; X32-NEXT:    vmovups %xmm4, (%esp) # 16-byte Spill
-; X32-NEXT:    vmovss {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; X32-NEXT:    vmovss {{[^#]+#+}} xmm4 = mem[0],zero,zero,zero
 ; X32-NEXT:    vaddss %xmm4, %xmm0, %xmm0
 ; X32-NEXT:    calll _test_argRetFloat
 ; X32-NEXT:    vaddss %xmm4, %xmm0, %xmm0
@@ -355,7 +355,7 @@ define dso_local x86_regcallcc float @test_CallargRetFloat(float %a)  {
 ; WIN64-NEXT:    vmovaps %xmm8, (%rsp) # 16-byte Spill
 ; WIN64-NEXT:    .seh_savexmm %xmm8, 0
 ; WIN64-NEXT:    .seh_endprologue
-; WIN64-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
+; WIN64-NEXT:    vmovss {{[^#]+#+}} xmm8 = mem[0],zero,zero,zero
 ; WIN64-NEXT:    vaddss %xmm0, %xmm8, %xmm0
 ; WIN64-NEXT:    callq test_argRetFloat
 ; WIN64-NEXT:    vaddss %xmm0, %xmm8, %xmm0
@@ -370,7 +370,7 @@ define dso_local x86_regcallcc float @test_CallargRetFloat(float %a)  {
 ; LINUXOSX64-NEXT:    vmovaps %xmm8, (%rsp) # 16-byte Spill
 ; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 32
 ; LINUXOSX64-NEXT:    .cfi_offset %xmm8, -32
-; LINUXOSX64-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
+; LINUXOSX64-NEXT:    vmovss {{[^#]+#+}} xmm8 = mem[0],zero,zero,zero
 ; LINUXOSX64-NEXT:    vaddss %xmm0, %xmm8, %xmm0
 ; LINUXOSX64-NEXT:    callq test_argRetFloat
 ; LINUXOSX64-NEXT:    vaddss %xmm0, %xmm8, %xmm0
@@ -410,7 +410,7 @@ define dso_local x86_regcallcc double @test_CallargRetDouble(double %a)  {
 ; X32:       # %bb.0:
 ; X32-NEXT:    subl $28, %esp
 ; X32-NEXT:    vmovups %xmm4, (%esp) # 16-byte Spill
-; X32-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
+; X32-NEXT:    vmovsd {{[^#]+#+}} xmm4 = mem[0],zero
 ; X32-NEXT:    vaddsd %xmm4, %xmm0, %xmm0
 ; X32-NEXT:    calll _test_argRetDouble
 ; X32-NEXT:    vaddsd %xmm4, %xmm0, %xmm0
@@ -425,7 +425,7 @@ define dso_local x86_regcallcc double @test_CallargRetDouble(double %a)  {
 ; WIN64-NEXT:    vmovaps %xmm8, (%rsp) # 16-byte Spill
 ; WIN64-NEXT:    .seh_savexmm %xmm8, 0
 ; WIN64-NEXT:    .seh_endprologue
-; WIN64-NEXT:    vmovsd {{.*#+}} xmm8 = mem[0],zero
+; WIN64-NEXT:    vmovsd {{[^#]+#+}} xmm8 = mem[0],zero
 ; WIN64-NEXT:    vaddsd %xmm0, %xmm8, %xmm0
 ; WIN64-NEXT:    callq test_argRetDouble
 ; WIN64-NEXT:    vaddsd %xmm0, %xmm8, %xmm0
@@ -440,7 +440,7 @@ define dso_local x86_regcallcc double @test_CallargRetDouble(double %a)  {
 ; LINUXOSX64-NEXT:    vmovaps %xmm8, (%rsp) # 16-byte Spill
 ; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 32
 ; LINUXOSX64-NEXT:    .cfi_offset %xmm8, -32
-; LINUXOSX64-NEXT:    vmovsd {{.*#+}} xmm8 = mem[0],zero
+; LINUXOSX64-NEXT:    vmovsd {{[^#]+#+}} xmm8 = mem[0],zero
 ; LINUXOSX64-NEXT:    vaddsd %xmm0, %xmm8, %xmm0
 ; LINUXOSX64-NEXT:    callq test_argRetDouble
 ; LINUXOSX64-NEXT:    vaddsd %xmm0, %xmm8, %xmm0
@@ -483,7 +483,7 @@ define dso_local x86_regcallcc double @test_argParamf80(x86_fp80 %a0) nounwind {
 ; X32-NEXT:    andl $-8, %esp
 ; X32-NEXT:    subl $8, %esp
 ; X32-NEXT:    fstpl (%esp)
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
@@ -492,14 +492,14 @@ define dso_local x86_regcallcc double @test_argParamf80(x86_fp80 %a0) nounwind {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rax
 ; WIN64-NEXT:    fstpl (%rsp)
-; WIN64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; WIN64-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; WIN64-NEXT:    popq %rax
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX64-LABEL: test_argParamf80:
 ; LINUXOSX64:       # %bb.0:
 ; LINUXOSX64-NEXT:    fstpl -{{[0-9]+}}(%rsp)
-; LINUXOSX64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; LINUXOSX64-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; LINUXOSX64-NEXT:    retq
   %r0 = fptrunc x86_fp80 %a0 to double
   ret double %r0

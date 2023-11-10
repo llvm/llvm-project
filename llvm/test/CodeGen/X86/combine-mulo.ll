@@ -115,9 +115,9 @@ define { <4 x i32>, <4 x i1> } @combine_vec_smul_nsw(<4 x i32> %a, <4 x i32> %b)
 ;
 ; AVX-LABEL: combine_vec_smul_nsw:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [4095,4095,4095,4095]
+; AVX-NEXT:    vpbroadcastd {{[^#]+#+}} xmm2 = [4095,4095,4095,4095]
 ; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [524287,524287,524287,524287]
+; AVX-NEXT:    vpbroadcastd {{[^#]+#+}} xmm2 = [524287,524287,524287,524287]
 ; AVX-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1

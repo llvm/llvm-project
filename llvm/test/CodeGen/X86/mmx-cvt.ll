@@ -326,7 +326,7 @@ define <4 x float> @cvt_v2i32_v2f32(ptr) nounwind {
 ; X86-NEXT:    movq (%eax), %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp

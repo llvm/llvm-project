@@ -1035,7 +1035,7 @@ define <2 x double> @stack_fold_cvtsi2sd_int(i32 %a0) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vcvtsi2sdl {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 4-byte Folded Reload
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; CHECK-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -1125,7 +1125,7 @@ define <2 x double> @stack_fold_cvtsi642sd_int(i64 %a0) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vcvtsi2sdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 8-byte Folded Reload
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; CHECK-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -1216,7 +1216,7 @@ define <4 x float> @stack_fold_cvtsi2ss_int(i32 %a0) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vcvtsi2ssl {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -1307,7 +1307,7 @@ define <4 x float> @stack_fold_cvtsi642ss_int(i64 %a0) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vcvtsi2ssq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12

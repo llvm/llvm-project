@@ -4,13 +4,13 @@
 define void @foo(ptr %p, <16 x i1> %x) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
-; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; CHECK-NEXT:    pmovzxbd {{[^#]+#+}} xmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm0[3,3,3,3]
+; CHECK-NEXT:    pmovzxbd {{[^#]+#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm3 = xmm0[2,3,2,3]
+; CHECK-NEXT:    pmovzxbd {{[^#]+#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-NEXT:    pmovzxbd {{[^#]+#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pslld $31, %xmm3

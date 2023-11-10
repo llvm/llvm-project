@@ -8,15 +8,15 @@ define void @test0(ptr %x) {
 ; X32-LABEL: test0:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X32-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X32-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X32-NEXT:    movlps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test0:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X64-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; X64-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    movq %xmm0, (%rdi)
 ; X64-NEXT:    retq
 entry:
@@ -66,16 +66,16 @@ define void @test2() nounwind {
 ; X32-LABEL: test2:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl L_tmp_V2i$non_lazy_ptr, %eax
-; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; X32-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X32-NEXT:    unpcklps {{[^#]+#+}} xmm0 = xmm0[0,0,1,1]
 ; X32-NEXT:    movlps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test2:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    movq _tmp_V2i@GOTPCREL(%rip), %rax
-; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X64-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-NEXT:    movq %xmm0, (%rax)
 ; X64-NEXT:    retq
 entry:
@@ -97,7 +97,7 @@ define <4 x float> @pr35869() nounwind {
 ; X32-NEXT:    punpckhwd %mm1, %mm2 ## mm2 = mm2[2],mm1[2],mm2[3],mm1[3]
 ; X32-NEXT:    xorps %xmm0, %xmm0
 ; X32-NEXT:    cvtpi2ps %mm2, %xmm0
-; X32-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
+; X32-NEXT:    movlhps {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; X32-NEXT:    punpcklwd %mm1, %mm0 ## mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
 ; X32-NEXT:    cvtpi2ps %mm0, %xmm0
 ; X32-NEXT:    retl
@@ -113,7 +113,7 @@ define <4 x float> @pr35869() nounwind {
 ; X64-NEXT:    punpckhwd %mm1, %mm2 ## mm2 = mm2[2],mm1[2],mm2[3],mm1[3]
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    cvtpi2ps %mm2, %xmm0
-; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
+; X64-NEXT:    movlhps {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; X64-NEXT:    punpcklwd %mm1, %mm0 ## mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
 ; X64-NEXT:    cvtpi2ps %mm0, %xmm0
 ; X64-NEXT:    retq

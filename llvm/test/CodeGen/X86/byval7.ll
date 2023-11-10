@@ -14,7 +14,7 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    andl $-16, %esp
 ; CHECK-NEXT:    subl $304, %esp # imm = 0x130
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [3,2,1,0]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm0 = [3,2,1,0]
 ; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %edi
 ; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %esi

@@ -280,7 +280,7 @@ define <4 x i32> @and_xor_splat1_v4i32(<4 x i32> %x) nounwind {
 ;
 ; INT256-LABEL: and_xor_splat1_v4i32:
 ; INT256:       # %bb.0:
-; INT256-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
+; INT256-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [1,1,1,1]
 ; INT256-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; INT256-NEXT:    retq
   %xor = xor <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
@@ -296,7 +296,7 @@ define <4 x i64> @and_xor_splat1_v4i64(<4 x i64> %x) nounwind {
 ;
 ; INT256-LABEL: and_xor_splat1_v4i64:
 ; INT256:       # %bb.0:
-; INT256-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1,1,1,1]
+; INT256-NEXT:    vbroadcastsd {{[^#]+#+}} ymm1 = [1,1,1,1]
 ; INT256-NEXT:    vandnps %ymm1, %ymm0, %ymm0
 ; INT256-NEXT:    retq
   %xor = xor <4 x i64> %x, <i64 1, i64 1, i64 1, i64 1>
@@ -314,7 +314,7 @@ define <8 x i32> @and_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
@@ -342,7 +342,7 @@ define <8 x i32> @andn_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [255,255,255,255]
 ; AVX1-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
@@ -450,7 +450,7 @@ define <8 x i32> @or_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z)
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [255,255,255,255]
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
@@ -462,7 +462,7 @@ define <8 x i32> @or_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z)
 ; INT256-LABEL: or_disguised_i8_elts:
 ; INT256:       # %bb.0:
 ; INT256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; INT256-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [255,255,255,255,255,255,255,255]
+; INT256-NEXT:    vpbroadcastd {{[^#]+#+}} ymm1 = [255,255,255,255,255,255,255,255]
 ; INT256-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; INT256-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; INT256-NEXT:    retq
@@ -479,7 +479,7 @@ define <8 x i32> @xor_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [255,255,255,255]
 ; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
@@ -491,7 +491,7 @@ define <8 x i32> @xor_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z
 ; INT256-LABEL: xor_disguised_i8_elts:
 ; INT256:       # %bb.0:
 ; INT256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; INT256-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [255,255,255,255,255,255,255,255]
+; INT256-NEXT:    vpbroadcastd {{[^#]+#+}} ymm1 = [255,255,255,255,255,255,255,255]
 ; INT256-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; INT256-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; INT256-NEXT:    retq
@@ -509,10 +509,10 @@ define <8 x i32> @and_disguised_i16_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; AVX1-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm3[0],xmm1[1],xmm3[2],xmm1[3],xmm3[4],xmm1[5],xmm3[6],xmm1[7]
+; AVX1-NEXT:    vpblendw {{[^#]+#+}} xmm1 = xmm3[0],xmm1[1],xmm3[2],xmm1[3],xmm3[4],xmm1[5],xmm3[6],xmm1[7]
 ; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
@@ -521,7 +521,7 @@ define <8 x i32> @and_disguised_i16_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %
 ; INT256:       # %bb.0:
 ; INT256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; INT256-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; INT256-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
+; INT256-NEXT:    vpblendw {{[^#]+#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
 ; INT256-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; INT256-NEXT:    retq
   %a = add <8 x i32> %x, %y
@@ -537,7 +537,7 @@ define <8 x i32> @or_disguised_i16_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [65535,65535,65535,65535]
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
@@ -549,7 +549,7 @@ define <8 x i32> @or_disguised_i16_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z
 ; INT256-LABEL: or_disguised_i16_elts:
 ; INT256:       # %bb.0:
 ; INT256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; INT256-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [65535,65535,65535,65535,65535,65535,65535,65535]
+; INT256-NEXT:    vpbroadcastd {{[^#]+#+}} ymm1 = [65535,65535,65535,65535,65535,65535,65535,65535]
 ; INT256-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; INT256-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; INT256-NEXT:    retq
@@ -566,7 +566,7 @@ define <8 x i32> @xor_disguised_i16_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [65535,65535,65535,65535]
 ; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
@@ -578,7 +578,7 @@ define <8 x i32> @xor_disguised_i16_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %
 ; INT256-LABEL: xor_disguised_i16_elts:
 ; INT256:       # %bb.0:
 ; INT256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; INT256-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [65535,65535,65535,65535,65535,65535,65535,65535]
+; INT256-NEXT:    vpbroadcastd {{[^#]+#+}} ymm1 = [65535,65535,65535,65535,65535,65535,65535,65535]
 ; INT256-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; INT256-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; INT256-NEXT:    retq

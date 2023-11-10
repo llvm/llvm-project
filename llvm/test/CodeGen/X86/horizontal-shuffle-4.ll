@@ -12,7 +12,7 @@ define <16 x i8> @permute_packss_packss_128(<4 x i32> %a0, <4 x i32> %a1, <4 x i
 ; CHECK-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpackssdw %xmm3, %xmm2, %xmm1
 ; CHECK-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,2,3,0]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[1,2,3,0]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a0, <4 x i32> %a1)
   %2 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a2, <4 x i32> %a3)
@@ -27,7 +27,7 @@ define <16 x i8> @permute_packss_packus_128(<4 x i32> %a0, <4 x i32> %a1, <4 x i
 ; CHECK-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpackusdw %xmm3, %xmm2, %xmm1
 ; CHECK-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,2,3,0]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[1,2,3,0]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %a0, <4 x i32> %a1)
   %2 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %a2, <4 x i32> %a3)
@@ -42,7 +42,7 @@ define <8 x i16> @permute_phadd_phadd_128(<8 x i16> %a0, <8 x i16> %a1, <8 x i16
 ; CHECK-NEXT:    vphaddw %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vphaddw %xmm3, %xmm2, %xmm1
 ; CHECK-NEXT:    vphaddw %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,2,3,0]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[1,2,3,0]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <8 x i16> @llvm.x86.ssse3.phadd.w.128(<8 x i16> %a0, <8 x i16> %a1)
   %2 = call <8 x i16> @llvm.x86.ssse3.phadd.w.128(<8 x i16> %a2, <8 x i16> %a3)
@@ -61,7 +61,7 @@ define <8 x float> @permute_hadd_hadd_256(<8 x float> %a0, <8 x float> %a1, <8 x
 ; CHECK-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vhaddps %ymm3, %ymm2, %ymm1
 ; CHECK-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,2,3,0,5,6,7,4]
+; CHECK-NEXT:    vshufps {{[^#]+#+}} ymm0 = ymm0[1,2,3,0,5,6,7,4]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %a0, <8 x float> %a1)
   %2 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %a2, <8 x float> %a3)
@@ -76,7 +76,7 @@ define <16 x i16> @permute_phadd_phadd_256(<16 x i16> %a0, <16 x i16> %a1, <16 x
 ; CHECK-NEXT:    vphaddw %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vphaddw %ymm3, %ymm2, %ymm1
 ; CHECK-NEXT:    vphaddw %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,2,3,0,5,6,7,4]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} ymm0 = ymm0[1,2,3,0,5,6,7,4]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <16 x i16> @llvm.x86.avx2.phadd.w(<16 x i16> %a0, <16 x i16> %a1)
   %2 = call <16 x i16> @llvm.x86.avx2.phadd.w(<16 x i16> %a2, <16 x i16> %a3)

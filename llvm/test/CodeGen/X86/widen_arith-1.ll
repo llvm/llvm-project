@@ -18,7 +18,7 @@ define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; CHECK-NEXT:    movl (%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    psubb %xmm0, %xmm1
 ; CHECK-NEXT:    pextrb $2, %xmm1, 2(%ecx,%eax,4)
 ; CHECK-NEXT:    pextrw $0, %xmm1, (%ecx,%eax,4)

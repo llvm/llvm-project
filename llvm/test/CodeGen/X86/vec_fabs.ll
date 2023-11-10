@@ -51,7 +51,7 @@ define <4 x float> @fabs_v4f32(<4 x float> %p) {
 ;
 ; X86-AVX2-LABEL: fabs_v4f32:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; X86-AVX2-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [NaN,NaN,NaN,NaN]
 ; X86-AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    retl
 ;
@@ -72,7 +72,7 @@ define <4 x float> @fabs_v4f32(<4 x float> %p) {
 ;
 ; X64-AVX2-LABEL: fabs_v4f32:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; X64-AVX2-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [NaN,NaN,NaN,NaN]
 ; X64-AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq
 ;
@@ -98,7 +98,7 @@ define <4 x double> @fabs_v4f64(<4 x double> %p) {
 ;
 ; X86-AVX2-LABEL: fabs_v4f64:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN]
+; X86-AVX2-NEXT:    vbroadcastsd {{[^#]+#+}} ymm1 = [NaN,NaN,NaN,NaN]
 ; X86-AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    retl
 ;
@@ -119,7 +119,7 @@ define <4 x double> @fabs_v4f64(<4 x double> %p) {
 ;
 ; X64-AVX2-LABEL: fabs_v4f64:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN]
+; X64-AVX2-NEXT:    vbroadcastsd {{[^#]+#+}} ymm1 = [NaN,NaN,NaN,NaN]
 ; X64-AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    retq
 ;
@@ -145,7 +145,7 @@ define <8 x float> @fabs_v8f32(<8 x float> %p) {
 ;
 ; X86-AVX2-LABEL: fabs_v8f32:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; X86-AVX2-NEXT:    vbroadcastss {{[^#]+#+}} ymm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
 ; X86-AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    retl
 ;
@@ -166,7 +166,7 @@ define <8 x float> @fabs_v8f32(<8 x float> %p) {
 ;
 ; X64-AVX2-LABEL: fabs_v8f32:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; X64-AVX2-NEXT:    vbroadcastss {{[^#]+#+}} ymm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
 ; X64-AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    retq
 ;
@@ -187,7 +187,7 @@ declare <8 x float> @llvm.fabs.v8f32(<8 x float> %p)
 define <8 x double> @fabs_v8f64(<8 x double> %p) {
 ; X86-AVX-LABEL: fabs_v8f64:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN]
+; X86-AVX-NEXT:    vbroadcastsd {{[^#]+#+}} ymm2 = [NaN,NaN,NaN,NaN]
 ; X86-AVX-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; X86-AVX-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; X86-AVX-NEXT:    retl
@@ -204,7 +204,7 @@ define <8 x double> @fabs_v8f64(<8 x double> %p) {
 ;
 ; X64-AVX-LABEL: fabs_v8f64:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN]
+; X64-AVX-NEXT:    vbroadcastsd {{[^#]+#+}} ymm2 = [NaN,NaN,NaN,NaN]
 ; X64-AVX-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; X64-AVX-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; X64-AVX-NEXT:    retq
@@ -226,7 +226,7 @@ declare <8 x double> @llvm.fabs.v8f64(<8 x double> %p)
 define <16 x float> @fabs_v16f32(<16 x float> %p) {
 ; X86-AVX-LABEL: fabs_v16f32:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vbroadcastss {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; X86-AVX-NEXT:    vbroadcastss {{[^#]+#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
 ; X86-AVX-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; X86-AVX-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; X86-AVX-NEXT:    retl
@@ -243,7 +243,7 @@ define <16 x float> @fabs_v16f32(<16 x float> %p) {
 ;
 ; X64-AVX-LABEL: fabs_v16f32:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vbroadcastss {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; X64-AVX-NEXT:    vbroadcastss {{[^#]+#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
 ; X64-AVX-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; X64-AVX-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; X64-AVX-NEXT:    retq
@@ -333,7 +333,7 @@ define void @PR70947(ptr %src, ptr %dst) {
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX2-NEXT:    vmovups 32(%ecx), %xmm0
-; X86-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN]
+; X86-AVX2-NEXT:    vbroadcastsd {{[^#]+#+}} ymm1 = [NaN,NaN,NaN,NaN]
 ; X86-AVX2-NEXT:    vandps (%ecx), %ymm1, %ymm1
 ; X86-AVX2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vmovups %ymm1, (%eax)
@@ -345,7 +345,7 @@ define void @PR70947(ptr %src, ptr %dst) {
 ; X86-AVX512VL:       # %bb.0:
 ; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX512VL-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; X86-AVX512VL-NEXT:    vbroadcastsd {{[^#]+#+}} ymm0 = [NaN,NaN,NaN,NaN]
 ; X86-AVX512VL-NEXT:    vandps (%ecx), %ymm0, %ymm1
 ; X86-AVX512VL-NEXT:    vandps 32(%ecx), %xmm0, %xmm0
 ; X86-AVX512VL-NEXT:    vmovups %ymm1, (%eax)
@@ -357,7 +357,7 @@ define void @PR70947(ptr %src, ptr %dst) {
 ; X86-AVX512VLDQ:       # %bb.0:
 ; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX512VLDQ-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; X86-AVX512VLDQ-NEXT:    vbroadcastsd {{[^#]+#+}} ymm0 = [NaN,NaN,NaN,NaN]
 ; X86-AVX512VLDQ-NEXT:    vandps (%ecx), %ymm0, %ymm1
 ; X86-AVX512VLDQ-NEXT:    vandps 32(%ecx), %xmm0, %xmm0
 ; X86-AVX512VLDQ-NEXT:    vmovups %ymm1, (%eax)
@@ -379,7 +379,7 @@ define void @PR70947(ptr %src, ptr %dst) {
 ; X64-AVX2-LABEL: PR70947:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vmovups 32(%rdi), %xmm0
-; X64-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN]
+; X64-AVX2-NEXT:    vbroadcastsd {{[^#]+#+}} ymm1 = [NaN,NaN,NaN,NaN]
 ; X64-AVX2-NEXT:    vandps (%rdi), %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vmovups %ymm1, (%rsi)
@@ -389,7 +389,7 @@ define void @PR70947(ptr %src, ptr %dst) {
 ;
 ; X64-AVX512VL-LABEL: PR70947:
 ; X64-AVX512VL:       # %bb.0:
-; X64-AVX512VL-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; X64-AVX512VL-NEXT:    vbroadcastsd {{[^#]+#+}} ymm0 = [NaN,NaN,NaN,NaN]
 ; X64-AVX512VL-NEXT:    vandps (%rdi), %ymm0, %ymm1
 ; X64-AVX512VL-NEXT:    vandps 32(%rdi), %xmm0, %xmm0
 ; X64-AVX512VL-NEXT:    vmovups %ymm1, (%rsi)
@@ -399,7 +399,7 @@ define void @PR70947(ptr %src, ptr %dst) {
 ;
 ; X64-AVX512VLDQ-LABEL: PR70947:
 ; X64-AVX512VLDQ:       # %bb.0:
-; X64-AVX512VLDQ-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; X64-AVX512VLDQ-NEXT:    vbroadcastsd {{[^#]+#+}} ymm0 = [NaN,NaN,NaN,NaN]
 ; X64-AVX512VLDQ-NEXT:    vandps (%rdi), %ymm0, %ymm1
 ; X64-AVX512VLDQ-NEXT:    vandps 32(%rdi), %xmm0, %xmm0
 ; X64-AVX512VLDQ-NEXT:    vmovups %ymm1, (%rsi)

@@ -7,7 +7,7 @@
 define dso_local i32 @_Z3foov() {
 ; CHECK-LABEL: _Z3foov:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vmovaps %xmm0, out(%rip)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq

@@ -18,9 +18,9 @@ define <8 x float> @expand(<4 x float> %a) {
 ;
 ; AVX512F-LABEL: expand:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; AVX512F-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,1,1,3]
 ; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3,4,5,6,7]
+; AVX512F-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3,4,5,6,7]
 ; AVX512F-NEXT:    ret{{[l|q]}}
    %res = shufflevector <4 x float> %a, <4 x float> zeroinitializer, <8 x i32> <i32 0, i32 5, i32 1, i32 5, i32 5, i32 5, i32 5, i32 5>
    ret <8 x float> %res
@@ -38,7 +38,7 @@ define <8 x float> @expand1(<4 x float> %a ) {
 ; AVX512F-LABEL: expand1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vmovaps {{.*#+}} ymm1 = [16,0,18,1,20,2,22,3]
+; AVX512F-NEXT:    vmovaps {{[^#]+#+}} ymm1 = [16,0,18,1,20,2,22,3]
 ; AVX512F-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
@@ -52,9 +52,9 @@ define <4 x double> @expand2(<2 x double> %a) {
 ; CHECK-LABEL: expand2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm1 = zero,zero,ymm0[0,1]
+; CHECK-NEXT:    vperm2f128 {{[^#]+#+}} ymm1 = zero,zero,ymm0[0,1]
 ; CHECK-NEXT:    vmovaps %xmm0, %xmm0
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
    %res = shufflevector <2 x double> %a, <2 x double> zeroinitializer, <4 x i32> <i32 0, i32 2, i32 2, i32 1>
    ret <4 x double> %res
@@ -74,7 +74,7 @@ define <8 x i32> @expand3(<4 x i32> %a ) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6],ymm0[7]
+; AVX512F-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6],ymm0[7]
 ; AVX512F-NEXT:    ret{{[l|q]}}
    %res = shufflevector <4 x i32> zeroinitializer, <4 x i32> %a, <8 x i32> <i32 4, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0,i32 5>
    ret <8 x i32> %res
@@ -93,9 +93,9 @@ define <4 x i64> @expand4(<2 x i64> %a ) {
 ; AVX512F-LABEL: expand4:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512F-NEXT:    vperm2f128 {{.*#+}} ymm1 = zero,zero,ymm0[0,1]
+; AVX512F-NEXT:    vperm2f128 {{[^#]+#+}} ymm1 = zero,zero,ymm0[0,1]
 ; AVX512F-NEXT:    vmovaps %xmm0, %xmm0
-; AVX512F-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
+; AVX512F-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; AVX512F-NEXT:    ret{{[l|q]}}
    %res = shufflevector <2 x i64> zeroinitializer, <2 x i64> %a, <4 x i32> <i32 2, i32 0, i32 0, i32 3>
    ret <4 x i64> %res
@@ -107,14 +107,14 @@ define <8 x float> @expand5(<4 x float> %a ) {
 ; AVX512-SLOW:       # %bb.0:
 ; AVX512-SLOW-NEXT:    vbroadcastss %xmm0, %ymm0
 ; AVX512-SLOW-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
+; AVX512-SLOW-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
 ; AVX512-SLOW-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512-FAST-LABEL: expand5:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512-FAST-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-FAST-NEXT:    vmovaps {{.*#+}} ymm2 = [8,0,10,0,12,0,14,0]
+; AVX512-FAST-NEXT:    vmovaps {{[^#]+#+}} ymm2 = [8,0,10,0,12,0,14,0]
 ; AVX512-FAST-NEXT:    vpermt2ps %ymm1, %ymm2, %ymm0
 ; AVX512-FAST-NEXT:    ret{{[l|q]}}
 ;
@@ -122,7 +122,7 @@ define <8 x float> @expand5(<4 x float> %a ) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vbroadcastss %xmm0, %ymm0
 ; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
+; AVX512F-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
 ; AVX512F-NEXT:    ret{{[l|q]}}
    %res = shufflevector <4 x float> zeroinitializer, <4 x float> %a, <8 x i32> <i32 0, i32 4, i32 1, i32 4, i32 2, i32 4, i32 3, i32 4>
    ret <8 x float> %res
@@ -245,7 +245,7 @@ define <16 x float> @expand12(<8 x float> %a) {
 ; CHECK-LABEL: expand12:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [0,16,2,16,4,16,6,16,0,16,1,16,2,16,3,16]
+; CHECK-NEXT:    vmovaps {{[^#]+#+}} zmm2 = [0,16,2,16,4,16,6,16,0,16,1,16,2,16,3,16]
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
@@ -278,7 +278,7 @@ define <8 x float> @expand14(<4 x float> %a) {
 ; AVX512F-LABEL: expand14:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vmovaps {{.*#+}} ymm1 = [16,17,0,19,1,21,22,23]
+; AVX512F-NEXT:    vmovaps {{[^#]+#+}} ymm1 = [16,17,0,19,1,21,22,23]
 ; AVX512F-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
@@ -292,25 +292,25 @@ define <8 x float> @expand14(<4 x float> %a) {
 define <8 x float> @expand15(<4 x float> %a) {
 ; AVX512-SLOW-LABEL: expand15:
 ; AVX512-SLOW:       # %bb.0:
-; AVX512-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; AVX512-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
-; AVX512-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
+; AVX512-SLOW-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,1,1,3]
+; AVX512-SLOW-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,0,1,3]
+; AVX512-SLOW-NEXT:    vblendps {{[^#]+#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
 ; AVX512-SLOW-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512-FAST-LABEL: expand15:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512-FAST-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [1,0,0,0,1,0,0,0]
+; AVX512-FAST-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm1 = [1,0,0,0,1,0,0,0]
 ; AVX512-FAST-NEXT:    # ymm1 = mem[0,1,0,1]
 ; AVX512-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; AVX512-FAST-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
+; AVX512-FAST-NEXT:    vblendps {{[^#]+#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
 ; AVX512-FAST-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512F-LABEL: expand15:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
-; AVX512F-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
+; AVX512F-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,1,1,3]
+; AVX512F-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,0,1,3]
+; AVX512F-NEXT:    vblendps {{[^#]+#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
 ; AVX512F-NEXT:    ret{{[l|q]}}
    %addV = fadd <4 x float> <float 0.0,float 1.0,float 2.0,float 0.0> , <float 0.0,float 1.0,float 2.0,float 0.0>
    %res = shufflevector <4 x float> %addV, <4 x float> %a, <8 x i32> <i32 0, i32 1, i32 4, i32 0, i32 5, i32 0, i32 0, i32 0>
@@ -337,7 +337,7 @@ define <64 x i8> @test_mm512_mask_blend_epi8(<64 x i8> %A, <64 x i8> %W){
 ;
 ; AVX512F-LABEL: test_mm512_mask_blend_epi8:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX512F-NEXT:    vpbroadcastw {{[^#]+#+}} ymm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm2, %zmm2
 ; AVX512F-NEXT:    vpternlogq $216, %zmm2, %zmm1, %zmm0
 ; AVX512F-NEXT:    ret{{[l|q]}}
@@ -455,7 +455,7 @@ define <32 x i8> @test_mm256_mask_blend_epi8(<32 x i8> %A, <32 x i8> %W){
 ;
 ; AVX512F-LABEL: test_mm256_mask_blend_epi8:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX512F-NEXT:    vpbroadcastw {{[^#]+#+}} ymm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; AVX512F-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    ret{{[l|q]}}
 entry:
@@ -473,7 +473,7 @@ define <16 x i8> @test_mm_mask_blend_epi8(<16 x i8> %A, <16 x i8> %W){
 ;
 ; AVX512F-LABEL: test_mm_mask_blend_epi8:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX512F-NEXT:    vpbroadcastw {{[^#]+#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; AVX512F-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    ret{{[l|q]}}
 entry:
@@ -487,7 +487,7 @@ define <8 x float> @test_masked_permps_v8f32(ptr %vp, <8 x float> %vec2) {
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovaps (%eax), %ymm2
-; X86-AVX512-NEXT:    vmovaps {{.*#+}} ymm1 = [7,6,3,11,7,6,14,15]
+; X86-AVX512-NEXT:    vmovaps {{[^#]+#+}} ymm1 = [7,6,3,11,7,6,14,15]
 ; X86-AVX512-NEXT:    vpermi2ps %ymm0, %ymm2, %ymm1
 ; X86-AVX512-NEXT:    vmovaps %ymm1, %ymm0
 ; X86-AVX512-NEXT:    retl
@@ -495,7 +495,7 @@ define <8 x float> @test_masked_permps_v8f32(ptr %vp, <8 x float> %vec2) {
 ; X64-AVX512-LABEL: test_masked_permps_v8f32:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovaps (%rdi), %ymm2
-; X64-AVX512-NEXT:    vmovaps {{.*#+}} ymm1 = [7,6,3,11,7,6,14,15]
+; X64-AVX512-NEXT:    vmovaps {{[^#]+#+}} ymm1 = [7,6,3,11,7,6,14,15]
 ; X64-AVX512-NEXT:    vpermi2ps %ymm0, %ymm2, %ymm1
 ; X64-AVX512-NEXT:    vmovaps %ymm1, %ymm0
 ; X64-AVX512-NEXT:    retq
@@ -505,7 +505,7 @@ define <8 x float> @test_masked_permps_v8f32(ptr %vp, <8 x float> %vec2) {
 ; X86-AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    vmovaps (%eax), %ymm1
-; X86-AVX512F-NEXT:    vmovaps {{.*#+}} ymm2 = [7,6,3,19,7,6,22,23]
+; X86-AVX512F-NEXT:    vmovaps {{[^#]+#+}} ymm2 = [7,6,3,19,7,6,22,23]
 ; X86-AVX512F-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
 ; X86-AVX512F-NEXT:    vmovaps %ymm1, %ymm0
 ; X86-AVX512F-NEXT:    retl
@@ -514,7 +514,7 @@ define <8 x float> @test_masked_permps_v8f32(ptr %vp, <8 x float> %vec2) {
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; X64-AVX512F-NEXT:    vmovaps (%rdi), %ymm1
-; X64-AVX512F-NEXT:    vmovaps {{.*#+}} ymm2 = [7,6,3,19,7,6,22,23]
+; X64-AVX512F-NEXT:    vmovaps {{[^#]+#+}} ymm2 = [7,6,3,19,7,6,22,23]
 ; X64-AVX512F-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
 ; X64-AVX512F-NEXT:    vmovaps %ymm1, %ymm0
 ; X64-AVX512F-NEXT:    retq
@@ -529,7 +529,7 @@ define <16 x float> @test_masked_permps_v16f32(ptr %vp, <16 x float> %vec2) {
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovaps (%eax), %zmm2
-; X86-AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = [15,13,11,19,14,12,22,23,7,6,3,27,7,29,3,31]
+; X86-AVX512-NEXT:    vmovaps {{[^#]+#+}} zmm1 = [15,13,11,19,14,12,22,23,7,6,3,27,7,29,3,31]
 ; X86-AVX512-NEXT:    vpermi2ps %zmm0, %zmm2, %zmm1
 ; X86-AVX512-NEXT:    vmovaps %zmm1, %zmm0
 ; X86-AVX512-NEXT:    retl
@@ -537,7 +537,7 @@ define <16 x float> @test_masked_permps_v16f32(ptr %vp, <16 x float> %vec2) {
 ; X64-AVX512-LABEL: test_masked_permps_v16f32:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovaps (%rdi), %zmm2
-; X64-AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = [15,13,11,19,14,12,22,23,7,6,3,27,7,29,3,31]
+; X64-AVX512-NEXT:    vmovaps {{[^#]+#+}} zmm1 = [15,13,11,19,14,12,22,23,7,6,3,27,7,29,3,31]
 ; X64-AVX512-NEXT:    vpermi2ps %zmm0, %zmm2, %zmm1
 ; X64-AVX512-NEXT:    vmovaps %zmm1, %zmm0
 ; X64-AVX512-NEXT:    retq
@@ -546,7 +546,7 @@ define <16 x float> @test_masked_permps_v16f32(ptr %vp, <16 x float> %vec2) {
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    vmovaps (%eax), %zmm2
-; X86-AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [15,13,11,19,14,12,22,23,7,6,3,27,7,29,3,31]
+; X86-AVX512F-NEXT:    vmovaps {{[^#]+#+}} zmm1 = [15,13,11,19,14,12,22,23,7,6,3,27,7,29,3,31]
 ; X86-AVX512F-NEXT:    vpermi2ps %zmm0, %zmm2, %zmm1
 ; X86-AVX512F-NEXT:    vmovaps %zmm1, %zmm0
 ; X86-AVX512F-NEXT:    retl
@@ -554,7 +554,7 @@ define <16 x float> @test_masked_permps_v16f32(ptr %vp, <16 x float> %vec2) {
 ; X64-AVX512F-LABEL: test_masked_permps_v16f32:
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    vmovaps (%rdi), %zmm2
-; X64-AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [15,13,11,19,14,12,22,23,7,6,3,27,7,29,3,31]
+; X64-AVX512F-NEXT:    vmovaps {{[^#]+#+}} zmm1 = [15,13,11,19,14,12,22,23,7,6,3,27,7,29,3,31]
 ; X64-AVX512F-NEXT:    vpermi2ps %zmm0, %zmm2, %zmm1
 ; X64-AVX512F-NEXT:    vmovaps %zmm1, %zmm0
 ; X64-AVX512F-NEXT:    retq
@@ -570,10 +570,10 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X86-AVX512-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512-SLOW-NEXT:    vpbroadcastd 44(%ecx), %xmm0
-; X86-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X86-AVX512-SLOW-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X86-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 672(%eax)
-; X86-AVX512-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,0,2,3]
-; X86-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X86-AVX512-SLOW-NEXT:    vpshufd {{[^#]+#+}} xmm0 = mem[1,0,2,3]
+; X86-AVX512-SLOW-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X86-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 832(%eax)
 ; X86-AVX512-SLOW-NEXT:    vzeroupper
 ; X86-AVX512-SLOW-NEXT:    retl
@@ -581,10 +581,10 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X64-AVX512-SLOW-LABEL: test_demandedelts_pshufb_v32i8_v16i8:
 ; X64-AVX512-SLOW:       # %bb.0:
 ; X64-AVX512-SLOW-NEXT:    vpbroadcastd 44(%rdi), %xmm0
-; X64-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X64-AVX512-SLOW-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X64-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 672(%rsi)
-; X64-AVX512-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,0,2,3]
-; X64-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X64-AVX512-SLOW-NEXT:    vpshufd {{[^#]+#+}} xmm0 = mem[1,0,2,3]
+; X64-AVX512-SLOW-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X64-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 832(%rsi)
 ; X64-AVX512-SLOW-NEXT:    vzeroupper
 ; X64-AVX512-SLOW-NEXT:    retq
@@ -594,10 +594,10 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X86-AVX512-FAST-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-FAST-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512-FAST-NEXT:    vpbroadcastd 44(%ecx), %xmm0
-; X86-AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X86-AVX512-FAST-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X86-AVX512-FAST-NEXT:    vmovdqa %ymm0, 672(%eax)
 ; X86-AVX512-FAST-NEXT:    vmovdqa 208(%ecx), %xmm0
-; X86-AVX512-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
+; X86-AVX512-FAST-NEXT:    vpshufb {{[^#]+#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-AVX512-FAST-NEXT:    vmovdqa %ymm0, 832(%eax)
 ; X86-AVX512-FAST-NEXT:    vzeroupper
 ; X86-AVX512-FAST-NEXT:    retl
@@ -605,10 +605,10 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X64-AVX512-FAST-LABEL: test_demandedelts_pshufb_v32i8_v16i8:
 ; X64-AVX512-FAST:       # %bb.0:
 ; X64-AVX512-FAST-NEXT:    vpbroadcastd 44(%rdi), %xmm0
-; X64-AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X64-AVX512-FAST-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X64-AVX512-FAST-NEXT:    vmovdqa %ymm0, 672(%rsi)
 ; X64-AVX512-FAST-NEXT:    vmovdqa 208(%rdi), %xmm0
-; X64-AVX512-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
+; X64-AVX512-FAST-NEXT:    vpshufb {{[^#]+#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
 ; X64-AVX512-FAST-NEXT:    vmovdqa %ymm0, 832(%rsi)
 ; X64-AVX512-FAST-NEXT:    vzeroupper
 ; X64-AVX512-FAST-NEXT:    retq
@@ -618,10 +618,10 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512F-NEXT:    vpbroadcastd 44(%ecx), %xmm0
-; X86-AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X86-AVX512F-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X86-AVX512F-NEXT:    vmovdqa %ymm0, 672(%eax)
-; X86-AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,0,2,3]
-; X86-AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X86-AVX512F-NEXT:    vpshufd {{[^#]+#+}} xmm0 = mem[1,0,2,3]
+; X86-AVX512F-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X86-AVX512F-NEXT:    vmovdqa %ymm0, 832(%eax)
 ; X86-AVX512F-NEXT:    vzeroupper
 ; X86-AVX512F-NEXT:    retl
@@ -629,10 +629,10 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X64-AVX512F-LABEL: test_demandedelts_pshufb_v32i8_v16i8:
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    vpbroadcastd 44(%rdi), %xmm0
-; X64-AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X64-AVX512F-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X64-AVX512F-NEXT:    vmovdqa %ymm0, 672(%rsi)
-; X64-AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,0,2,3]
-; X64-AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X64-AVX512F-NEXT:    vpshufd {{[^#]+#+}} xmm0 = mem[1,0,2,3]
+; X64-AVX512F-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X64-AVX512F-NEXT:    vmovdqa %ymm0, 832(%rsi)
 ; X64-AVX512F-NEXT:    vzeroupper
 ; X64-AVX512F-NEXT:    retq
@@ -658,7 +658,7 @@ define <32 x float> @PR47534(<8 x float> %tmp) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [7,25,26,27,7,29,30,31,7,25,26,27,7,29,30,31]
+; CHECK-NEXT:    vbroadcasti64x4 {{[^#]+#+}} zmm1 = [7,25,26,27,7,29,30,31,7,25,26,27,7,29,30,31]
 ; CHECK-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vpermi2ps %zmm2, %zmm0, %zmm1
 ; CHECK-NEXT:    ret{{[l|q]}}

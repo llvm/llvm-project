@@ -169,7 +169,7 @@ define <4 x float> @f12(<4 x double> %a) #0 {
 define <8 x float> @f13(<8 x float> %a, <8 x float> %b, <8 x float> %c) #0 {
 ; CHECK-LABEL: f13:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
+; CHECK-NEXT:    vfmadd213ps {{[^#]+#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <8 x float> @llvm.experimental.constrained.fma.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c,
                                                                    metadata !"round.dynamic",
@@ -180,7 +180,7 @@ define <8 x float> @f13(<8 x float> %a, <8 x float> %b, <8 x float> %c) #0 {
 define <4 x double> @f14(<4 x double> %a, <4 x double> %b, <4 x double> %c) #0 {
 ; CHECK-LABEL: f14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
+; CHECK-NEXT:    vfmadd213pd {{[^#]+#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <4 x double> @llvm.experimental.constrained.fma.v4f64(<4 x double> %a, <4 x double> %b, <4 x double> %c,
                                                                     metadata !"round.dynamic",

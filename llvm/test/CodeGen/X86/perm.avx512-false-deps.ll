@@ -9,7 +9,7 @@ define <4 x i64> @permq_ri_256(<4 x i64> %a0) {
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ENABLE-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[1,2,1,0]
+; ENABLE-NEXT:    vpermq {{[^#]+#+}} ymm1 = ymm0[1,2,1,0]
 ; ENABLE-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; ENABLE-NEXT:    retq
 ;
@@ -18,7 +18,7 @@ define <4 x i64> @permq_ri_256(<4 x i64> %a0) {
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
-; DISABLE-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[1,2,1,0]
+; DISABLE-NEXT:    vpermq {{[^#]+#+}} ymm1 = ymm0[1,2,1,0]
 ; DISABLE-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -92,7 +92,7 @@ define <4 x i64> @permq_mi_256(ptr %p0) {
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; ENABLE-NEXT:    vpermpd {{.*#+}} ymm0 = mem[3,2,2,0]
+; ENABLE-NEXT:    vpermpd {{[^#]+#+}} ymm0 = mem[3,2,2,0]
 ; ENABLE-NEXT:    retq
 ;
 ; DISABLE-LABEL: permq_mi_256:
@@ -100,7 +100,7 @@ define <4 x i64> @permq_mi_256(ptr %p0) {
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
-; DISABLE-NEXT:    vpermpd {{.*#+}} ymm0 = mem[3,2,2,0]
+; DISABLE-NEXT:    vpermpd {{[^#]+#+}} ymm0 = mem[3,2,2,0]
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %a0 = load <4 x i64>, ptr %p0, align 64
@@ -551,7 +551,7 @@ define <4 x double> @permpd_ri_256(<4 x double> %a0) {
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ENABLE-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[1,2,1,0]
+; ENABLE-NEXT:    vpermpd {{[^#]+#+}} ymm1 = ymm0[1,2,1,0]
 ; ENABLE-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
 ; ENABLE-NEXT:    retq
 ;
@@ -560,7 +560,7 @@ define <4 x double> @permpd_ri_256(<4 x double> %a0) {
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
-; DISABLE-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[1,2,1,0]
+; DISABLE-NEXT:    vpermpd {{[^#]+#+}} ymm1 = ymm0[1,2,1,0]
 ; DISABLE-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -646,7 +646,7 @@ define <4 x double> @permpd_mi_256(ptr %p0) {
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; ENABLE-NEXT:    vpermpd {{.*#+}} ymm0 = mem[3,2,2,0]
+; ENABLE-NEXT:    vpermpd {{[^#]+#+}} ymm0 = mem[3,2,2,0]
 ; ENABLE-NEXT:    retq
 ;
 ; DISABLE-LABEL: permpd_mi_256:
@@ -654,7 +654,7 @@ define <4 x double> @permpd_mi_256(ptr %p0) {
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
-; DISABLE-NEXT:    vpermpd {{.*#+}} ymm0 = mem[3,2,2,0]
+; DISABLE-NEXT:    vpermpd {{[^#]+#+}} ymm0 = mem[3,2,2,0]
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %a0 = load <4 x double>, ptr %p0, align 64

@@ -10,7 +10,7 @@ define void @foo(ptr %Out, ptr %In, <8 x i32> %__mask) {
 ; CHECK:       # %bb.0: # %allocas
 ; CHECK-NEXT:    vmovups (%rsi), %xmm0
 ; CHECK-NEXT:    vhaddps 32(%rsi), %xmm0, %xmm0
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,1]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,0,1,1]
 ; CHECK-NEXT:    vhaddps %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vaddss %xmm1, %xmm0, %xmm0

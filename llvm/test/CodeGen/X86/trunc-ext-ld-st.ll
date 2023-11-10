@@ -30,7 +30,7 @@ define void @load_2_i8(ptr %A)  {
 define void @load_2_i16(ptr %A)  {
 ; CHECK-LABEL: load_2_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movd %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
@@ -43,7 +43,7 @@ define void @load_2_i16(ptr %A)  {
 define void @load_2_i32(ptr %A)  {
 ; CHECK-LABEL: load_2_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movq %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
@@ -56,7 +56,7 @@ define void @load_2_i32(ptr %A)  {
 define void @load_4_i8(ptr %A)  {
 ; CHECK-LABEL: load_4_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movd %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
@@ -69,7 +69,7 @@ define void @load_4_i8(ptr %A)  {
 define void @load_4_i16(ptr %A)  {
 ; CHECK-LABEL: load_4_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movq %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
@@ -82,7 +82,7 @@ define void @load_4_i16(ptr %A)  {
 define void @load_8_i8(ptr %A)  {
 ; CHECK-LABEL: load_8_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    paddb %xmm0, %xmm0
 ; CHECK-NEXT:    movq %xmm0, (%rdi)
 ; CHECK-NEXT:    retq

@@ -719,7 +719,7 @@ define <2 x half> @test_s16tofp2(<2 x i16> %arg0) {
 define <4 x half> @test_u8tofp4(<4 x i8> %arg0) {
 ; CHECK-LABEL: test_u8tofp4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-NEXT:    vpmovzxbw {{[^#]+#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; CHECK-NEXT:    vcvtuw2ph %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = uitofp <4 x i8> %arg0 to <4 x half>

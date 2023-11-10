@@ -11,13 +11,13 @@ define <2 x i64> @unpckh_unary_extracted_v4i64(<4 x i64> %x) {
 ; AVX1-LABEL: unpckh_unary_extracted_v4i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX1-NEXT:    vunpckhpd {{[^#]+#+}} xmm0 = xmm0[1],xmm1[1]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: unpckh_unary_extracted_v4i64:
 ; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,2,3]
+; AVX2OR512VL-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[1,3,2,3]
 ; AVX2OR512VL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2OR512VL-NEXT:    vzeroupper
 ; AVX2OR512VL-NEXT:    retq
@@ -31,13 +31,13 @@ define <2 x double> @unpckh_unary_extracted_v8f64(<4 x double> %x) {
 ; AVX1-LABEL: unpckh_unary_extracted_v8f64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX1-NEXT:    vunpckhpd {{[^#]+#+}} xmm0 = xmm0[1],xmm1[1]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: unpckh_unary_extracted_v8f64:
 ; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,2,3]
+; AVX2OR512VL-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[1,3,2,3]
 ; AVX2OR512VL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2OR512VL-NEXT:    vzeroupper
 ; AVX2OR512VL-NEXT:    retq
@@ -53,7 +53,7 @@ define <4 x i32> @unpckh_unary_extracted_v8i32(<8 x i32> %x) {
 ; ALL-LABEL: unpckh_unary_extracted_v8i32:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; ALL-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; ALL-NEXT:    vunpckhps {{[^#]+#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %extrl = shufflevector <8 x i32> %x, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -66,7 +66,7 @@ define <4 x float> @unpckh_unary_extracted_v8f32(<8 x float> %x) {
 ; ALL-LABEL: unpckh_unary_extracted_v8f32:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; ALL-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; ALL-NEXT:    vunpckhps {{[^#]+#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %extrl = shufflevector <8 x float> %x, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -79,14 +79,14 @@ define <8 x i16> @unpckh_unary_extracted_v16i16(<16 x i16> %x) {
 ; AVX1-LABEL: unpckh_unary_extracted_v16i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX1-NEXT:    vpunpckhwd {{[^#]+#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: unpckh_unary_extracted_v16i16:
 ; AVX2OR512VL:       # %bb.0:
 ; AVX2OR512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2OR512VL-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX2OR512VL-NEXT:    vpunpckhwd {{[^#]+#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; AVX2OR512VL-NEXT:    vzeroupper
 ; AVX2OR512VL-NEXT:    retq
   %extrl = shufflevector <16 x i16> %x, <16 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -99,14 +99,14 @@ define <16 x i8> @unpckh_unary_extracted_v32i8(<32 x i8> %x) {
 ; AVX1-LABEL: unpckh_unary_extracted_v32i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
+; AVX1-NEXT:    vpunpckhbw {{[^#]+#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: unpckh_unary_extracted_v32i8:
 ; AVX2OR512VL:       # %bb.0:
 ; AVX2OR512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2OR512VL-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
+; AVX2OR512VL-NEXT:    vpunpckhbw {{[^#]+#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
 ; AVX2OR512VL-NEXT:    vzeroupper
 ; AVX2OR512VL-NEXT:    retq
   %extrl = shufflevector <32 x i8> %x, <32 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -119,13 +119,13 @@ define <2 x i64> @unpckl_unary_extracted_v4i64(<4 x i64> %x) {
 ; AVX1-LABEL: unpckl_unary_extracted_v4i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vmovlhps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: unpckl_unary_extracted_v4i64:
 ; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2OR512VL-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2OR512VL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2OR512VL-NEXT:    vzeroupper
 ; AVX2OR512VL-NEXT:    retq
@@ -139,13 +139,13 @@ define <2 x double> @unpckl_unary_extracted_v8f64(<4 x double> %x) {
 ; AVX1-LABEL: unpckl_unary_extracted_v8f64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vmovlhps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: unpckl_unary_extracted_v8f64:
 ; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2OR512VL-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2OR512VL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2OR512VL-NEXT:    vzeroupper
 ; AVX2OR512VL-NEXT:    retq
@@ -161,7 +161,7 @@ define <4 x i32> @unpckl_unary_extracted_v8i32(<8 x i32> %x) {
 ; ALL-LABEL: unpckl_unary_extracted_v8i32:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; ALL-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; ALL-NEXT:    vunpcklps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %extrl = shufflevector <8 x i32> %x, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -174,7 +174,7 @@ define <4 x float> @unpckl_unary_extracted_v8f32(<8 x float> %x) {
 ; ALL-LABEL: unpckl_unary_extracted_v8f32:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; ALL-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; ALL-NEXT:    vunpcklps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %extrl = shufflevector <8 x float> %x, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -187,14 +187,14 @@ define <8 x i16> @unpckl_unary_extracted_v16i16(<16 x i16> %x) {
 ; AVX1-LABEL: unpckl_unary_extracted_v16i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX1-NEXT:    vpunpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: unpckl_unary_extracted_v16i16:
 ; AVX2OR512VL:       # %bb.0:
 ; AVX2OR512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2OR512VL-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX2OR512VL-NEXT:    vpunpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX2OR512VL-NEXT:    vzeroupper
 ; AVX2OR512VL-NEXT:    retq
   %extrl = shufflevector <16 x i16> %x, <16 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -207,14 +207,14 @@ define <16 x i8> @unpckl_unary_extracted_v32i8(<32 x i8> %x) {
 ; AVX1-LABEL: unpckl_unary_extracted_v32i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX1-NEXT:    vpunpcklbw {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: unpckl_unary_extracted_v32i8:
 ; AVX2OR512VL:       # %bb.0:
 ; AVX2OR512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2OR512VL-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX2OR512VL-NEXT:    vpunpcklbw {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; AVX2OR512VL-NEXT:    vzeroupper
 ; AVX2OR512VL-NEXT:    retq
   %extrl = shufflevector <32 x i8> %x, <32 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -229,7 +229,7 @@ define <8 x i32> @extract_unpckl_v8i32(<8 x i32> %a) {
 ; ALL-LABEL: extract_unpckl_v8i32:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; ALL-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; ALL-NEXT:    vunpcklps {{[^#]+#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; ALL-NEXT:    retq
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> undef, <8 x i32> <i32 4, i32 undef, i32 5, i32 1, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x i32> %shuffle
