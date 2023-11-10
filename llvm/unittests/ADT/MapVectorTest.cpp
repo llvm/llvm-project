@@ -182,6 +182,7 @@ TEST(MapVectorTest, insert_or_assign) {
   EXPECT_EQ(2, try3.first->second.move);
 
   EXPECT_EQ(try2.first, try3.first);
+  EXPECT_EQ(0, try3.first->first.copy);
   EXPECT_EQ(1, try3.first->first.move);
 }
 
