@@ -26,4 +26,3 @@ define void @f2() {
 
 ; Check if comments are emitted into assembly.
 ; CHECK: -- End function
-
