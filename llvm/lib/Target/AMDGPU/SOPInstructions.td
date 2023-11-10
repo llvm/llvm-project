@@ -216,8 +216,10 @@ let Defs = [SCC] in {
   def S_NOT_B64 : SOP1_64 <"s_not_b64",
     [(set i64:$sdst, (UniformUnaryFrag<not> i64:$src0))]
   >;
-  def S_WQM_B32 : SOP1_32 <"s_wqm_b32">;
-  def S_WQM_B64 : SOP1_64 <"s_wqm_b64">;
+  def S_WQM_B32 : SOP1_32 <"s_wqm_b32",
+    [(set i32:$sdst, (int_amdgcn_s_wqm i32:$src0))]>;
+  def S_WQM_B64 : SOP1_64 <"s_wqm_b64",
+    [(set i64:$sdst, (int_amdgcn_s_wqm i64:$src0))]>;
 } // End Defs = [SCC]
 
 

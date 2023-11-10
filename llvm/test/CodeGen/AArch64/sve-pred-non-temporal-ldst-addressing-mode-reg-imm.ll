@@ -9,9 +9,11 @@
 define void @imm_out_of_range(<vscale x 2 x i64> * %base, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: imm_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    addvl x8, x0, #8
+; CHECK-NEXT:    rdvl x8, #8
+; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    ldnt1d { z0.d }, p0/z, [x8]
-; CHECK-NEXT:    addvl x8, x0, #-9
+; CHECK-NEXT:    rdvl x8, #-9
+; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    stnt1d { z0.d }, p0, [x8]
 ; CHECK-NEXT:    ret
   %base_load = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %base, i64 8

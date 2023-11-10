@@ -8,7 +8,6 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; Function Attrs: norecurse nounwind
 define void @fn2() #0 {
 ; CHECK-LABEL: @fn2
-
   br i1 undef, label %1, label %10
 
 1:                                                ; preds = %0
@@ -22,16 +21,27 @@ define void @fn2() #0 {
 
 4:                                                ; preds = %4, %3
   %5 = phi i64 [ %6, %4 ], [ undef, %3 ]
-  %constexpr = select i1 icmp slt (i16 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i16), i16 0), i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 lshr (i32 zext (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @d, i64 0, i64 1), ptr @c) to i32), i32 6)
-  %constexpr1 = sext i32 %constexpr to i64
-  %constexpr2 = and i64 %constexpr1, %constexpr1
-  %constexpr3 = and i64 %constexpr2, %constexpr1
-  %constexpr4 = and i64 %constexpr3, %constexpr1
-  %constexpr5 = and i64 %constexpr4, %constexpr1
-  %constexpr6 = and i64 %constexpr5, %constexpr1
-  %constexpr7 = and i64 %constexpr6, %constexpr1
-  %constexpr8 = and i64 %constexpr7, %constexpr1
-  %6 = and i64 %5, %constexpr8
+  %constexpr = getelementptr inbounds [2 x i32], ptr @d, i64 0, i64 1
+  %constexpr1 = icmp eq ptr %constexpr, @c
+  %constexpr2 = zext i1 %constexpr1 to i32
+  %constexpr3 = getelementptr inbounds [2 x i32], ptr @d, i64 0, i64 1
+  %constexpr4 = icmp eq ptr %constexpr3, @c
+  %constexpr5 = zext i1 %constexpr4 to i32
+  %constexpr6 = lshr i32 %constexpr5, 6
+  %constexpr7 = getelementptr inbounds [2 x i32], ptr @d, i64 0, i64 1
+  %constexpr8 = icmp eq ptr %constexpr7, @c
+  %constexpr9 = zext i1 %constexpr8 to i16
+  %constexpr10 = icmp slt i16 %constexpr9, 0
+  %constexpr11 = select i1 %constexpr10, i32 %constexpr2, i32 %constexpr6
+  %constexpr112 = sext i32 %constexpr11 to i64
+  %constexpr213 = and i64 %constexpr112, %constexpr112
+  %constexpr314 = and i64 %constexpr213, %constexpr112
+  %constexpr415 = and i64 %constexpr314, %constexpr112
+  %constexpr516 = and i64 %constexpr415, %constexpr112
+  %constexpr617 = and i64 %constexpr516, %constexpr112
+  %constexpr718 = and i64 %constexpr617, %constexpr112
+  %constexpr819 = and i64 %constexpr718, %constexpr112
+  %6 = and i64 %5, %constexpr819
   %7 = icmp slt i32 undef, 6
   br i1 %7, label %4, label %8
 

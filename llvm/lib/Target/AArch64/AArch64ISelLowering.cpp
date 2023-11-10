@@ -10163,14 +10163,15 @@ const char *AArch64TargetLowering::LowerXConstraint(EVT ConstraintVT) const {
   return "r";
 }
 
-enum PredicateConstraint { Uph, Upl, Upa, Invalid };
+enum class PredicateConstraint { Uph, Upl, Upa };
 
-static PredicateConstraint parsePredicateConstraint(StringRef Constraint) {
-  return StringSwitch<PredicateConstraint>(Constraint)
+static std::optional<PredicateConstraint>
+parsePredicateConstraint(StringRef Constraint) {
+  return StringSwitch<std::optional<PredicateConstraint>>(Constraint)
       .Case("Uph", PredicateConstraint::Uph)
       .Case("Upl", PredicateConstraint::Upl)
       .Case("Upa", PredicateConstraint::Upa)
-      .Default(PredicateConstraint::Invalid);
+      .Default(std::nullopt);
 }
 
 static const TargetRegisterClass *
@@ -10180,8 +10181,6 @@ getPredicateRegisterClass(PredicateConstraint Constraint, EVT VT) {
     return nullptr;
 
   switch (Constraint) {
-  default:
-    return nullptr;
   case PredicateConstraint::Uph:
     return VT == MVT::aarch64svcount ? &AArch64::PNR_p8to15RegClass
                                      : &AArch64::PPR_p8to15RegClass;
@@ -10192,6 +10191,33 @@ getPredicateRegisterClass(PredicateConstraint Constraint, EVT VT) {
     return VT == MVT::aarch64svcount ? &AArch64::PNRRegClass
                                      : &AArch64::PPRRegClass;
   }
+
+  llvm_unreachable("Missing PredicateConstraint!");
+}
+
+enum class ReducedGprConstraint { Uci, Ucj };
+
+static std::optional<ReducedGprConstraint>
+parseReducedGprConstraint(StringRef Constraint) {
+  return StringSwitch<std::optional<ReducedGprConstraint>>(Constraint)
+      .Case("Uci", ReducedGprConstraint::Uci)
+      .Case("Ucj", ReducedGprConstraint::Ucj)
+      .Default(std::nullopt);
+}
+
+static const TargetRegisterClass *
+getReducedGprRegisterClass(ReducedGprConstraint Constraint, EVT VT) {
+  if (!VT.isScalarInteger() || VT.getFixedSizeInBits() > 64)
+    return nullptr;
+
+  switch (Constraint) {
+  case ReducedGprConstraint::Uci:
+    return &AArch64::MatrixIndexGPR32_8_11RegClass;
+  case ReducedGprConstraint::Ucj:
+    return &AArch64::MatrixIndexGPR32_12_15RegClass;
+  }
+
+  llvm_unreachable("Missing ReducedGprConstraint!");
 }
 
 // The set of cc code supported is from
@@ -10289,9 +10315,10 @@ AArch64TargetLowering::getConstraintType(StringRef Constraint) const {
     case 'S': // A symbolic address
       return C_Other;
     }
-  } else if (parsePredicateConstraint(Constraint) !=
-             PredicateConstraint::Invalid)
-      return C_RegisterClass;
+  } else if (parsePredicateConstraint(Constraint))
+    return C_RegisterClass;
+  else if (parseReducedGprConstraint(Constraint))
+    return C_RegisterClass;
   else if (parseConstraintCode(Constraint) != AArch64CC::Invalid)
     return C_Other;
   return TargetLowering::getConstraintType(Constraint);
@@ -10325,7 +10352,8 @@ AArch64TargetLowering::getSingleConstraintMatchWeight(
     weight = CW_Constant;
     break;
   case 'U':
-    if (parsePredicateConstraint(constraint) != PredicateConstraint::Invalid)
+    if (parsePredicateConstraint(constraint) ||
+        parseReducedGprConstraint(constraint))
       weight = CW_Register;
     break;
   }
@@ -10382,9 +10410,13 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
       break;
     }
   } else {
-    PredicateConstraint PC = parsePredicateConstraint(Constraint);
-    if (const TargetRegisterClass *RegClass = getPredicateRegisterClass(PC, VT))
-      return std::make_pair(0U, RegClass);
+    if (const auto PC = parsePredicateConstraint(Constraint))
+      if (const auto *RegClass = getPredicateRegisterClass(*PC, VT))
+        return std::make_pair(0U, RegClass);
+
+    if (const auto RGC = parseReducedGprConstraint(Constraint))
+      if (const auto *RegClass = getReducedGprRegisterClass(*RGC, VT))
+        return std::make_pair(0U, RegClass);
   }
   if (StringRef("{cc}").equals_insensitive(Constraint) ||
       parseConstraintCode(Constraint) != AArch64CC::Invalid)
@@ -14520,6 +14552,19 @@ static bool shouldSinkVectorOfPtrs(Value *Ptrs, SmallVectorImpl<Use *> &Ops) {
   return true;
 }
 
+/// We want to sink following cases:
+/// (add|sub|gep) A, ((mul|shl) vscale, imm); (add|sub|gep) A, vscale
+static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
+  if (match(Op, m_VScale()))
+    return true;
+  if (match(Op, m_Shl(m_VScale(), m_ConstantInt())) ||
+      match(Op, m_Mul(m_VScale(), m_ConstantInt()))) {
+    Ops.push_back(&cast<Instruction>(Op)->getOperandUse(0));
+    return true;
+  }
+  return false;
+}
+
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// shufflevectors extracts and/or sext/zext can be folded into (u,s)subl(2).
@@ -14634,6 +14679,22 @@ bool AArch64TargetLowering::shouldSinkOperands(
     default:
       return false;
     }
+  }
+
+  // Sink vscales closer to uses for better isel
+  switch (I->getOpcode()) {
+  case Instruction::GetElementPtr:
+  case Instruction::Add:
+  case Instruction::Sub:
+    for (unsigned Op = 0; Op < I->getNumOperands(); ++Op) {
+      if (shouldSinkVScale(I->getOperand(Op), Ops)) {
+        Ops.push_back(&I->getOperandUse(Op));
+        return true;
+      }
+    }
+    break;
+  default:
+    break;
   }
 
   if (!I->getType()->isVectorTy())
@@ -24838,12 +24899,13 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
   if (Subtarget->getTargetTriple().isWindowsMSVCEnvironment()) {
     // MSVC CRT has a global variable holding security cookie.
     M.getOrInsertGlobal("__security_cookie",
-                        Type::getInt8PtrTy(M.getContext()));
+                        PointerType::getUnqual(M.getContext()));
 
     // MSVC CRT has a function to validate security cookie.
-    FunctionCallee SecurityCheckCookie = M.getOrInsertFunction(
-        Subtarget->getSecurityCheckCookieName(),
-        Type::getVoidTy(M.getContext()), Type::getInt8PtrTy(M.getContext()));
+    FunctionCallee SecurityCheckCookie =
+        M.getOrInsertFunction(Subtarget->getSecurityCheckCookieName(),
+                              Type::getVoidTy(M.getContext()),
+                              PointerType::getUnqual(M.getContext()));
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::Win64);
       F->addParamAttr(0, Attribute::AttrKind::InReg);
@@ -26062,6 +26124,9 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   bool IsSingleOp =
       ShuffleVectorInst::isSingleSourceMask(ShuffleMask, ShuffleMask.size());
 
+  if (!Subtarget.isNeonAvailable() && !MinSVESize)
+    MinSVESize = 128;
+
   // Ignore two operands if no SVE2 or all index numbers couldn't
   // be represented.
   if (!IsSingleOp && (!Subtarget.hasSVE2() || MinSVESize != MaxSVESize))
@@ -26071,11 +26136,9 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   unsigned BitsPerElt = VTOp1.getVectorElementType().getSizeInBits();
   unsigned IndexLen = MinSVESize / BitsPerElt;
   unsigned ElementsPerVectorReg = VTOp1.getVectorNumElements();
-  unsigned MaskSize = ShuffleMask.size();
   uint64_t MaxOffset = APInt(BitsPerElt, -1, false).getZExtValue();
-  assert(ElementsPerVectorReg <= IndexLen && MaskSize <= IndexLen &&
+  assert(ElementsPerVectorReg <= IndexLen && ShuffleMask.size() <= IndexLen &&
          "Incorrectly legalised shuffle operation");
-  (void)MaskSize;
 
   SmallVector<SDValue, 8> TBLMask;
   for (int Index : ShuffleMask) {
@@ -26271,8 +26334,10 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     }
   }
 
-  // Avoid producing TBL instruction if we don't know SVE register minimal size.
-  if (MinSVESize)
+  // Avoid producing TBL instruction if we don't know SVE register minimal size,
+  // unless NEON is not available and we can assume minimal SVE register size is
+  // 128-bits.
+  if (MinSVESize || !Subtarget->isNeonAvailable())
     return GenerateFixedLengthSVETBL(Op, Op1, Op2, ShuffleMask, VT, ContainerVT,
                                      DAG);
 

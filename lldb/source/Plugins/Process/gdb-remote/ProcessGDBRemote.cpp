@@ -48,7 +48,6 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Interpreter/Property.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -1668,27 +1667,14 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
   ParseExpeditedRegisters(expedited_register_map, thread_sp);
 
-  // AArch64 SVE/SME specific code below updates SVE and ZA register sizes and
-  // offsets if value of VG or SVG registers has changed since last stop.
-  const ArchSpec &arch = GetTarget().GetArchitecture();
-  if (arch.IsValid() && arch.GetTriple().isAArch64()) {
-    GDBRemoteRegisterContext *reg_ctx_sp =
-        static_cast<GDBRemoteRegisterContext *>(
-            gdb_thread->GetRegisterContext().get());
-
-    if (reg_ctx_sp) {
-      reg_ctx_sp->AArch64Reconfigure();
-      // Now we have changed the offsets of all the registers, so the values
-      // will be corrupted.
-      reg_ctx_sp->InvalidateAllRegisters();
-
-      // Expedited registers values will never contain registers that would be
-      // resized by AArch64Reconfigure. So we are safe to continue using these
-      // values. These values include vg, svg and useful general purpose
-      // registers so this saves a few read packets each time we make use of
-      // them.
-      ParseExpeditedRegisters(expedited_register_map, thread_sp);
-    }
+  if (reg_ctx_sp->ReconfigureRegisterInfo()) {
+    // Now we have changed the offsets of all the registers, so the values
+    // will be corrupted.
+    reg_ctx_sp->InvalidateAllRegisters();
+    // Expedited registers values will never contain registers that would be
+    // resized by a reconfigure. So we are safe to continue using these
+    // values.
+    ParseExpeditedRegisters(expedited_register_map, thread_sp);
   }
 
   thread_sp->SetName(thread_name.empty() ? nullptr : thread_name.c_str());

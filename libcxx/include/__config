@@ -217,33 +217,37 @@
 
 // TODO(hardening): deprecate this in LLVM 19.
 // This is for backward compatibility -- make enabling `_LIBCPP_ENABLE_ASSERTIONS` (which predates hardening modes)
-// equivalent to setting the safe mode.
+// equivalent to setting the extensive mode.
 #  ifdef _LIBCPP_ENABLE_ASSERTIONS
 #    if _LIBCPP_ENABLE_ASSERTIONS != 0 && _LIBCPP_ENABLE_ASSERTIONS != 1
 #      error "_LIBCPP_ENABLE_ASSERTIONS must be set to 0 or 1"
 #    endif
 #    if _LIBCPP_ENABLE_ASSERTIONS
-#      define _LIBCPP_ENABLE_SAFE_MODE 1
+#      define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_EXTENSIVE
 #    endif
 #  endif
 
-// Enables the hardened mode which consists of all checks intended to be used in production. Hardened mode prioritizes
-// security-critical checks that can be done with relatively little overhead in constant time. Mutually exclusive with
-// `_LIBCPP_ENABLE_SAFE_MODE` and `_LIBCPP_ENABLE_DEBUG_MODE`.
+// The library provides the macro `_LIBCPP_HARDENING_MODE` which can be set to one of the following values:
 //
-// #define _LIBCPP_ENABLE_HARDENED_MODE 1
-
-// Enables the safe mode which extends the hardened mode with checks that are relatively cheap and prevent common types
-// of errors but are not security-critical. Mutually exclusive with `_LIBCPP_ENABLE_HARDENED_MODE` and
-// `_LIBCPP_ENABLE_DEBUG_MODE`.
+// - `_LIBCPP_HARDENING_MODE_NONE`;
+// - `_LIBCPP_HARDENING_MODE_FAST`;
+// - `_LIBCPP_HARDENING_MODE_EXTENSIVE`;
+// - `_LIBCPP_HARDENING_MODE_DEBUG`.
 //
-// #define _LIBCPP_ENABLE_SAFE_MODE 1
-
-// Enables the debug mode which contains all the checks from the hardened mode and additionally more expensive checks
-// that may affect the complexity of algorithms. The debug mode is intended to be used for testing, not in production.
-// Mutually exclusive with `_LIBCPP_ENABLE_HARDENED_MODE` and `_LIBCPP_ENABLE_SAFE_MODE`.
+// These values have the following effects:
 //
-// #define _LIBCPP_ENABLE_DEBUG_MODE 1
+// - `_LIBCPP_HARDENING_MODE_NONE` -- sets the hardening mode to "none" which disables all runtime hardening checks;
+//
+// - `_LIBCPP_HARDENING_MODE_FAST` -- sets that hardening mode to "fast". The fast mode enables security-critical checks
+//   that can be done with relatively little runtime overhead in constant time;
+//
+// - `_LIBCPP_HARDENING_MODE_EXTENSIVE` -- sets the hardening mode to "extensive". The extensive mode is a superset of
+//   the fast mode that additionally enables checks that are relatively cheap and prevent common types of logic errors
+//   but are not necessarily security-critical;
+//
+// - `_LIBCPP_HARDENING_MODE_DEBUG` -- sets the hardening mode to "debug". The debug mode is a superset of the extensive
+//   mode and enables all checks available in the library, including internal assertions. Checks that are part of the
+//   debug mode can be very expensive and thus the debug mode is intended to be used for testing, not in production.
 
 // Inside the library, assertions are categorized so they can be cherry-picked based on the chosen hardening mode. These
 // macros are only for internal use -- users should only pick one of the high-level hardening modes described above.
@@ -258,6 +262,11 @@
 //   a non-existent element. For iterator checks to work, bounded iterators must be enabled in the ABI. Types like
 //   `optional` and `function` are considered one-element containers for the purposes of this check.
 //
+// - `_LIBCPP_ASSERT_NON_NULL` -- checks that the pointer being dereferenced is not null. On most modern platforms zero
+//   address does not refer to an actual location in memory, so a null pointer dereference would not compromize the
+//   memory security of a program (however, it is still undefined behavior that can result in strange errors due to
+//   compiler optimizations).
+//
 // - `_LIBCPP_ASSERT_NON_OVERLAPPING_RANGES` -- for functions that take several ranges as arguments, checks that the
 //   given ranges do not overlap.
 //
@@ -269,43 +278,39 @@
 //
 // - `_LIBCPP_ASSERT_UNCATEGORIZED` -- for assertions that haven't been properly classified yet.
 
-#  ifndef _LIBCPP_ENABLE_HARDENED_MODE
-#    define _LIBCPP_ENABLE_HARDENED_MODE _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT
-#  endif
-#  if _LIBCPP_ENABLE_HARDENED_MODE != 0 && _LIBCPP_ENABLE_HARDENED_MODE != 1
-#    error "_LIBCPP_ENABLE_HARDENED_MODE must be set to 0 or 1."
+// clang-format off
+#  define _LIBCPP_HARDENING_MODE_NONE      (1 << 1)
+#  define _LIBCPP_HARDENING_MODE_FAST      (1 << 2)
+#  define _LIBCPP_HARDENING_MODE_EXTENSIVE (1 << 4) // Deliberately not ordered.
+#  define _LIBCPP_HARDENING_MODE_DEBUG     (1 << 3)
+// clang-format on
+
+#  ifndef _LIBCPP_HARDENING_MODE
+#    define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_DEFAULT
 #  endif
 
-#  ifndef _LIBCPP_ENABLE_SAFE_MODE
-#    define _LIBCPP_ENABLE_SAFE_MODE _LIBCPP_ENABLE_SAFE_MODE_DEFAULT
-#  endif
-#  if _LIBCPP_ENABLE_SAFE_MODE != 0 && _LIBCPP_ENABLE_SAFE_MODE != 1
-#    error "_LIBCPP_ENABLE_SAFE_MODE must be set to 0 or 1."
-#  endif
-
-#  ifndef _LIBCPP_ENABLE_DEBUG_MODE
-#    define _LIBCPP_ENABLE_DEBUG_MODE _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT
-#  endif
-#  if _LIBCPP_ENABLE_DEBUG_MODE != 0 && _LIBCPP_ENABLE_DEBUG_MODE != 1
-#    error "_LIBCPP_ENABLE_DEBUG_MODE must be set to 0 or 1."
-#  endif
-
-#  if (_LIBCPP_ENABLE_HARDENED_MODE && _LIBCPP_ENABLE_SAFE_MODE) ||                                                    \
-      (_LIBCPP_ENABLE_HARDENED_MODE && _LIBCPP_ENABLE_DEBUG_MODE) ||                                                   \
-      (_LIBCPP_ENABLE_SAFE_MODE && _LIBCPP_ENABLE_DEBUG_MODE)
-#    error                                                                                                             \
-        "Only one of _LIBCPP_ENABLE_HARDENED_MODE, _LIBCPP_ENABLE_SAFE_MODE and _LIBCPP_ENABLE_DEBUG_MODE can be enabled."
+#  if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_NONE &&                                                         \
+      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_FAST &&                                                         \
+      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_EXTENSIVE &&                                                    \
+      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
+#    error _LIBCPP_HARDENING_MODE must be set to one of the following values: \
+_LIBCPP_HARDENING_MODE_NONE, \
+_LIBCPP_HARDENING_MODE_FAST, \
+_LIBCPP_HARDENING_MODE_EXTENSIVE, \
+_LIBCPP_HARDENING_MODE_DEBUG
 #  endif
 
 // clang-format off
-// Hardened mode checks.
+// Fast hardening mode checks.
 
-#  if _LIBCPP_ENABLE_HARDENED_MODE
+#  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
 
 // Enabled checks.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)        _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)     _LIBCPP_ASSERT(expression, message)
 // Disabled checks.
+// On most modern platforms, dereferencing a null pointer does not lead to an actual memory access.
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                 _LIBCPP_ASSUME(expression)
 // Overlapping ranges will make algorithms produce incorrect results but don't directly lead to a security
 // vulnerability.
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSUME(expression)
@@ -313,26 +318,28 @@
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSUME(expression)
 
-// Safe mode checks.
+// Extensive hardening mode checks.
 
-#  elif _LIBCPP_ENABLE_SAFE_MODE
+#  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_EXTENSIVE
 
 // Enabled checks.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)        _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)     _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                 _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSERT(expression, message)
 // Disabled checks.
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 
-// Debug mode checks.
+// Debug hardening mode checks.
 
-#  elif _LIBCPP_ENABLE_DEBUG_MODE
+#  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 
 // All checks enabled.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)         _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)      _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSERT(expression, message)
@@ -345,12 +352,13 @@
 // All checks disabled.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)         _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)      _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSUME(expression)
 
-#  endif // _LIBCPP_ENABLE_HARDENED_MODE
+#  endif // _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
 // clang-format on
 
 // } HARDENING
@@ -442,6 +450,7 @@
 #    define _LIBCPP_HAS_NO_INCOMPLETE_PSTL
 #    define _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
 #    define _LIBCPP_HAS_NO_INCOMPLETE_TZDB
+#    define _LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM
 #  endif
 
 // Need to detect which libc we're using if we're on Linux.
@@ -730,14 +739,14 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION _LIBCPP_ALWAYS_INLINE
 #  endif
 
-#  if _LIBCPP_ENABLE_HARDENED_MODE
-#    define _LIBCPP_HARDENING_SIG h
-#  elif _LIBCPP_ENABLE_SAFE_MODE
+#  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
+#    define _LIBCPP_HARDENING_SIG f
+#  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_EXTENSIVE
 #    define _LIBCPP_HARDENING_SIG s
-#  elif _LIBCPP_ENABLE_DEBUG_MODE
+#  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_HARDENING_SIG d
 #  else
-#    define _LIBCPP_HARDENING_SIG u // for unchecked
+#    define _LIBCPP_HARDENING_SIG n // "none"
 #  endif
 
 #  ifdef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -1063,12 +1072,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #  ifndef _LIBCPP_HAS_NO_ASAN
     extern "C" _LIBCPP_EXPORTED_FROM_ABI void
     __sanitizer_annotate_contiguous_container(const void*, const void*, const void*, const void*);
-#    if _LIBCPP_CLANG_VER >= 1600
 extern "C" _LIBCPP_EXPORTED_FROM_ABI void __sanitizer_annotate_double_ended_contiguous_container(
     const void*, const void*, const void*, const void*, const void*, const void*);
 extern "C" _LIBCPP_EXPORTED_FROM_ABI int
 __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, const void*, const void*);
-#    endif
 #  endif
 
 // Try to find out if RTTI is disabled.
