@@ -56,9 +56,14 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
           continue;
       }
 
-      BinaryFunction *TargetBF = BC.getFunctionForSymbol(Symbol);
-      if (TargetBF && TargetBF == &BF)
-        continue;
+      // Don't relax adr if it points to the same function and it is not split
+      // and BF initial size is < 1MB.
+      const unsigned OneMB = 0x100000;
+      if (!BF.isSplit() && BF.getSize() < OneMB) {
+        BinaryFunction *TargetBF = BC.getFunctionForSymbol(Symbol);
+        if (TargetBF && TargetBF == &BF)
+          continue;
+      }
 
       MCPhysReg Reg;
       BC.MIB->getADRReg(Inst, Reg);
