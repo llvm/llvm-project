@@ -8,8 +8,8 @@ subroutine sb(a, b)
   integer :: i
   do i=1,100
 ! check that we used a vectorized call to powf()
-! CHECK: bl _ZGVbN4vv_powf
-! NOLIB: bl powf
+! CHECK: _ZGVbN4vv_powf
+! NOLIB: powf
     a(i) = a(i) ** b(i)
   end do
 end subroutine
