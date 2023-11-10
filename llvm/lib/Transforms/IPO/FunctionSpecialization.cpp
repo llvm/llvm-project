@@ -965,16 +965,17 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
         // Minimum codesize savings.
         if (B.CodeSize < MinCodeSizeSavings * FuncSize / 100) {
           LLVM_DEBUG(dbgs()
-                     << "FnSpecialization: Insufficinet CodeSize Saving ("
-                     << B.CodeSize << " > "
+                     << "FnSpecialization: Insufficient CodeSize Savings ("
+                     << B.CodeSize << " < "
                      << MinCodeSizeSavings * FuncSize / 100 << ")\n");
           return false;
         }
         // Minimum latency savings.
         if (B.Latency < MinLatencySavings * FuncSize / 100) {
-          LLVM_DEBUG(dbgs() << "FnSpecialization: Insufficinet Latency Saving ("
-                            << B.Latency << " > "
-                            << MinLatencySavings * FuncSize / 100 << ")\n");
+          LLVM_DEBUG(dbgs()
+                     << "FnSpecialization: Insufficient Latency Savings ("
+                     << B.Latency << " < " << MinLatencySavings * FuncSize / 100
+                     << ")\n");
           return false;
         }
         // Maximum codesize growth.
