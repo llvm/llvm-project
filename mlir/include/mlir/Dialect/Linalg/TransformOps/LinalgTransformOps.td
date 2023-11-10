@@ -535,7 +535,8 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
       - attribute: the matched op must have all specified attributes (with their
         specified values).
       - filter_result_type: the matched op must return exactly this one type.
-      - filter_operand_type: all the operands of the matched op must must be of this type.
+      - filter_operand_type: all the operands of the matched op must must be of
+        this type.
 
     Note: Only ops that satisfy all specified constraints are matched.
 

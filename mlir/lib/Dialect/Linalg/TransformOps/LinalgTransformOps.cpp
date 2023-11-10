@@ -1182,11 +1182,10 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
 
     if (getFilterOperandType().has_value()) {
       Type t = getFilterOperandType().value();
-      for (auto type : op->getOperandTypes()) {
-        if (type != t) {
-          return;
-        }
-      }
+      if (!llvm::all_of(op->getOperandTypes(), [&](Type operandType) {
+        return operandType == t;
+      }))
+        return;
     }
 
     // All constraints are satisfied.
