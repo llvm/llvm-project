@@ -1,14 +1,17 @@
-# RUN: yaml-bench -canonical %s 2>&1 | FileCheck %s
+# RUN: yaml-bench -canonical %s 2>&1 | FileCheck %s --strict-whitespace
+# CHECK: "as space\n trimmed \n specific\L\n escaped\t \n none"
+
+## Note: The example was originally taken from Spec 1.1, but the parsing rules
+## have been changed since then.
+## * The paragraph-separator character '\u2029' is excluded from line-break
+##   characters, so the original sequence "escaped\t\\\u2029" is no longer
+##   considered valid. This is replaced by "escaped\t\\\n" in the test source.
+## See https://yaml.org/spec/1.2.2/ext/changes/ for details.
 
  "as space
- trimmed
+ trimmed 
 
- specific
-
+ specific 
  escaped	\
+ 
  none"
-
-# FIXME: The string below should actually be
-#   "as space trimmed\nspecific\nescaped\tnone", but the parser currently has
-#   a bug when parsing multiline quoted strings.
-# CHECK: !!str "as space\n trimmed\n specific\n escaped\t none"
