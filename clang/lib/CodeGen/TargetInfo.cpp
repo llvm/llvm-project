@@ -67,7 +67,9 @@ LLVM_DUMP_METHOD void ABIArgInfo::dump() const {
 }
 
 TargetCodeGenInfo::TargetCodeGenInfo(std::unique_ptr<ABIInfo> Info)
-    : Info(std::move(Info)) {}
+    : Info(std::move(Info)),
+      SwiftInfo(std::make_unique<SwiftABIInfo>(
+          this->Info->getCodeGenTypes(), /*SwiftErrorInRegister*/ false)) {}
 
 TargetCodeGenInfo::~TargetCodeGenInfo() = default;
 
