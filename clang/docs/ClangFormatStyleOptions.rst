@@ -2049,8 +2049,8 @@ the configuration (without a prefix: ``Auto``).
 .. _BreakAfterAttributes:
 
 **BreakAfterAttributes** (``AttributeBreakingStyle``) :versionbadge:`clang-format 16` :ref:`¶ <BreakAfterAttributes>`
-  Break after a group of C++11 attributes before a variable/function
-  (including constructor/destructor) declaration/definition name.
+  Break after a group of C++11 attributes before a function
+  declaration/definition name.
 
   Possible values:
 
@@ -2059,10 +2059,6 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      [[maybe_unused]]
-      const int i;
-      [[gnu::const]] [[maybe_unused]]
-      int j;
       [[nodiscard]]
       inline int f();
       [[gnu::const]] [[nodiscard]]
@@ -2073,9 +2069,6 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      [[maybe_unused]] const int i;
-      [[gnu::const]] [[maybe_unused]]
-      int j;
       [[nodiscard]] inline int f();
       [[gnu::const]] [[nodiscard]]
       int g();
@@ -2085,8 +2078,6 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      [[maybe_unused]] const int i;
-      [[gnu::const]] [[maybe_unused]] int j;
       [[nodiscard]] inline int f();
       [[gnu::const]] [[nodiscard]] int g();
 
