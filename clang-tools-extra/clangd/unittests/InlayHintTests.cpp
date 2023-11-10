@@ -843,6 +843,34 @@ TEST(ParameterHints, FunctionCallOperator) {
                        ExpectedHint{"a: ", "11"}, ExpectedHint{"b: ", "12"});
 }
 
+TEST(ParameterHints, DeducingThis) {
+  assertParameterHints(R"cpp(
+    struct S {
+      template <typename This>
+      auto operator()(this This &&Self, int Param) {
+        return 42;
+      }
+
+      auto function(this auto &Self, int Param) {
+        return Param;
+      }
+    };
+    void work() {
+      S s;
+      s($1[[42]]);
+      s.function($2[[42]]);
+      S()($3[[42]]);
+      auto lambda = [](this auto &Self, char C) -> void {
+        return Self(C);
+      };
+      lambda($4[['A']]);
+    }
+  )cpp",
+                       ExpectedHint{"Param: ", "1"},
+                       ExpectedHint{"Param: ", "2"},
+                       ExpectedHint{"Param: ", "3"}, ExpectedHint{"C: ", "4"});
+}
+
 TEST(ParameterHints, Macros) {
   // Handling of macros depends on where the call's argument list comes from.
 

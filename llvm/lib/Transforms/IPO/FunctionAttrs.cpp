@@ -285,6 +285,10 @@ static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
     if (NewME != OldME) {
       ++NumMemoryAttr;
       F->setMemoryEffects(NewME);
+      // Remove conflicting writable attributes.
+      if (!isModSet(NewME.getModRef(IRMemLocation::ArgMem)))
+        for (Argument &A : F->args())
+          A.removeAttr(Attribute::Writable);
       Changed.insert(F);
     }
   }
@@ -654,7 +658,15 @@ determinePointerAccessAttrs(Argument *A,
       // must be a data operand (e.g. argument or operand bundle)
       const unsigned UseIndex = CB.getDataOperandNo(U);
 
-      if (!CB.doesNotCapture(UseIndex)) {
+      // Some intrinsics (for instance ptrmask) do not capture their results,
+      // but return results thas alias their pointer argument, and thus should
+      // be handled like GEP or addrspacecast above.
+      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
+              &CB, /*MustPreserveNullness=*/false)) {
+        for (Use &UU : CB.uses())
+          if (Visited.insert(&UU).second)
+            Worklist.push_back(&UU);
+      } else if (!CB.doesNotCapture(UseIndex)) {
         if (!CB.onlyReadsMemory())
           // If the callee can save a copy into other memory, then simply
           // scanning uses of the call is insufficient.  We have no way
@@ -840,6 +852,9 @@ static bool addAccessAttr(Argument *A, Attribute::AttrKind R) {
   A->removeAttr(Attribute::WriteOnly);
   A->removeAttr(Attribute::ReadOnly);
   A->removeAttr(Attribute::ReadNone);
+  // Remove conflicting writable attribute.
+  if (R == Attribute::ReadNone || R == Attribute::ReadOnly)
+    A->removeAttr(Attribute::Writable);
   A->addAttr(R);
   if (R == Attribute::ReadOnly)
     ++NumReadOnlyArg;

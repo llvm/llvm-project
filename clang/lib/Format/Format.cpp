@@ -938,6 +938,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowShortBlocksOnASingleLine);
     IO.mapOptional("AllowShortCaseLabelsOnASingleLine",
                    Style.AllowShortCaseLabelsOnASingleLine);
+    IO.mapOptional("AllowShortCompoundRequirementOnASingleLine",
+                   Style.AllowShortCompoundRequirementOnASingleLine);
     IO.mapOptional("AllowShortEnumsOnASingleLine",
                    Style.AllowShortEnumsOnASingleLine);
     IO.mapOptional("AllowShortFunctionsOnASingleLine",
@@ -1441,6 +1443,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowAllParametersOfDeclarationOnNextLine = true;
   LLVMStyle.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
   LLVMStyle.AllowShortCaseLabelsOnASingleLine = false;
+  LLVMStyle.AllowShortCompoundRequirementOnASingleLine = true;
   LLVMStyle.AllowShortEnumsOnASingleLine = true;
   LLVMStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
   LLVMStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
@@ -1473,7 +1476,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*SplitEmptyFunction=*/true,
                              /*SplitEmptyRecord=*/true,
                              /*SplitEmptyNamespace=*/true};
-  LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Never;
+  LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Leave;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
   LLVMStyle.BreakArrays = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;

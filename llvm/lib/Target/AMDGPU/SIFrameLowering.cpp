@@ -274,7 +274,8 @@ class PrologEpilogSGPRSpillBuilder {
       Register SubReg = NumSubRegs == 1
                             ? SuperReg
                             : Register(TRI.getSubReg(SuperReg, SplitParts[I]));
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_WRITELANE_B32), Spill[I].VGPR)
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::SI_SPILL_S32_TO_VGPR),
+              Spill[I].VGPR)
           .addReg(SubReg)
           .addImm(Spill[I].Lane)
           .addReg(Spill[I].VGPR, RegState::Undef);
@@ -319,7 +320,7 @@ class PrologEpilogSGPRSpillBuilder {
       Register SubReg = NumSubRegs == 1
                             ? SuperReg
                             : Register(TRI.getSubReg(SuperReg, SplitParts[I]));
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_READLANE_B32), SubReg)
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::SI_RESTORE_S32_FROM_VGPR), SubReg)
           .addReg(Spill[I].VGPR)
           .addImm(Spill[I].Lane);
     }
@@ -1089,6 +1090,20 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   // to determine the end of the prologue.
   DebugLoc DL;
 
+  if (FuncInfo->isChainFunction()) {
+    // Functions with the amdgpu_cs_chain[_preserve] CC don't receive a SP, but
+    // are free to set one up if they need it.
+    // FIXME: We shouldn't need to set SP just for the stack objects (we should
+    // use 0 as an immediate offset instead).
+    bool UseSP = requiresStackPointerReference(MF) || MFI.hasStackObjects();
+    if (UseSP) {
+      assert(StackPtrReg != AMDGPU::SP_REG);
+
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_MOV_B32), StackPtrReg)
+          .addImm(0);
+    }
+  }
+
   bool HasFP = false;
   bool HasBP = false;
   uint32_t NumBytes = MFI.getStackSize();
@@ -1321,7 +1336,11 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
   // Allocate spill slots for WWM reserved VGPRs.
-  if (!FuncInfo->isEntryFunction()) {
+  // For chain functions, we only need to do this if we have calls to
+  // llvm.amdgcn.cs.chain.
+  bool IsChainWithoutCalls =
+      FuncInfo->isChainFunction() && !MF.getFrameInfo().hasTailCall();
+  if (!FuncInfo->isEntryFunction() && !IsChainWithoutCalls) {
     for (Register Reg : FuncInfo->getWWMReservedRegs()) {
       const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
       FuncInfo->allocateWWMSpill(MF, Reg, TRI->getSpillSize(*RC),
@@ -1357,7 +1376,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
                                                 TRI->isAGPR(MRI, VReg))) {
             assert(RS != nullptr);
             RS->enterBasicBlockEnd(MBB);
-            RS->backward(MI);
+            RS->backward(std::next(MI.getIterator()));
             TRI->eliminateFrameIndex(MI, 0, FIOp, RS);
             SpillFIs.set(FI);
             continue;
@@ -1534,8 +1553,15 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
 void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                            BitVector &SavedVGPRs,
                                            RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedVGPRs, RS);
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  // If this is a function with the amdgpu_cs_chain[_preserve] calling
+  // convention and it doesn't contain any calls to llvm.amdgcn.cs.chain, then
+  // we don't need to save and restore anything.
+  if (MFI->isChainFunction() && !MF.getFrameInfo().hasTailCall())
+    return;
+
+  TargetFrameLowering::determineCalleeSaves(MF, SavedVGPRs, RS);
   if (MFI->isEntryFunction())
     return;
 
@@ -1554,17 +1580,17 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
       // TODO: Handle this elsewhere at an early point. Walking through all MBBs
       // here would be a bad heuristic. A better way should be by calling
       // allocateWWMSpill during the regalloc pipeline whenever a physical
-      // register is allocated for the intended virtual registers. That will
-      // also help excluding the general use of WRITELANE/READLANE intrinsics
-      // that won't really need any such special handling.
-      if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32)
+      // register is allocated for the intended virtual registers.
+      if (MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR)
         MFI->allocateWWMSpill(MF, MI.getOperand(0).getReg());
-      else if (MI.getOpcode() == AMDGPU::V_READLANE_B32)
+      else if (MI.getOpcode() == AMDGPU::SI_RESTORE_S32_FROM_VGPR)
         MFI->allocateWWMSpill(MF, MI.getOperand(1).getReg());
       else if (TII->isWWMRegSpillOpcode(MI.getOpcode()))
         NeedExecCopyReservedReg = true;
       else if (MI.getOpcode() == AMDGPU::SI_RETURN ||
-               MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG) {
+               MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
+               (MFI->isChainFunction() &&
+                TII->isChainCallOpcode(MI.getOpcode()))) {
         // We expect all return to be the same size.
         assert(!ReturnMI ||
                (count_if(MI.operands(), [](auto Op) { return Op.isReg(); }) ==
@@ -1796,11 +1822,14 @@ bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
 // register. We may need to initialize the stack pointer depending on the frame
 // properties, which logically overlaps many of the cases where an ordinary
 // function would require an FP.
+// Also used for chain functions. While not technically entry functions, chain
+// functions may need to set up a stack pointer in some situations.
 bool SIFrameLowering::requiresStackPointerReference(
     const MachineFunction &MF) const {
   // Callable functions always require a stack pointer reference.
-  assert(MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction() &&
-         "only expected to call this for entry points");
+  assert((MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction() ||
+          MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) &&
+         "only expected to call this for entry points and chain functions");
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 

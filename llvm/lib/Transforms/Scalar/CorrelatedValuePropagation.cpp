@@ -294,8 +294,9 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
 
   ICmpInst::Predicate UnsignedPred =
       ConstantRange::getEquivalentPredWithFlippedSignedness(
-          Cmp->getPredicate(), LVI->getConstantRange(Cmp->getOperand(0), Cmp),
-          LVI->getConstantRange(Cmp->getOperand(1), Cmp));
+          Cmp->getPredicate(),
+          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0)),
+          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1)));
 
   if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
     return false;
@@ -909,6 +910,14 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
   assert(SDI->getOpcode() == Instruction::SDiv);
   assert(!SDI->getType()->isVectorTy());
 
+  // Check whether the division folds to a constant.
+  ConstantRange DivCR = LCR.sdiv(RCR);
+  if (const APInt *Elem = DivCR.getSingleElement()) {
+    SDI->replaceAllUsesWith(ConstantInt::get(SDI->getType(), *Elem));
+    SDI->eraseFromParent();
+    return true;
+  }
+
   struct Operand {
     Value *V;
     Domain D;
@@ -1016,6 +1025,7 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
   auto *ZExt = CastInst::CreateZExtOrBitCast(Base, SDI->getType(), "", SDI);
   ZExt->takeName(SDI);
   ZExt->setDebugLoc(SDI->getDebugLoc());
+  ZExt->setNonNeg();
   SDI->replaceAllUsesWith(ZExt);
   SDI->eraseFromParent();
 

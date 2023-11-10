@@ -159,14 +159,14 @@ class CrashLogScriptedThread(ScriptedThread):
         return frames
 
     def create_stackframes(self):
-        if not (self.scripted_process.load_all_images or self.has_crashed):
+        if not (self.originating_process.load_all_images or self.has_crashed):
             return None
 
         if not self.backing_thread or not len(self.backing_thread.frames):
             return None
 
         self.frames = CrashLogScriptedThread.resolve_stackframes(
-            self.backing_thread, self.scripted_process.addr_mask, self.target
+            self.backing_thread, self.originating_process.addr_mask, self.target
         )
 
         return self.frames
@@ -182,7 +182,7 @@ class CrashLogScriptedThread(ScriptedThread):
         else:
             self.name = self.backing_thread.name
         self.queue = self.backing_thread.queue
-        self.has_crashed = self.scripted_process.crashed_thread_idx == self.idx
+        self.has_crashed = self.originating_process.crashed_thread_idx == self.idx
         self.create_stackframes()
 
     def get_state(self):
@@ -195,8 +195,8 @@ class CrashLogScriptedThread(ScriptedThread):
             return {"type": lldb.eStopReasonNone}
         # TODO: Investigate what stop reason should be reported when crashed
         stop_reason = {"type": lldb.eStopReasonException, "data": {}}
-        if self.scripted_process.exception:
-            stop_reason["data"]["mach_exception"] = self.scripted_process.exception
+        if self.originating_process.exception:
+            stop_reason["data"]["mach_exception"] = self.originating_process.exception
         return stop_reason
 
     def get_register_context(self) -> str:
@@ -209,5 +209,5 @@ class CrashLogScriptedThread(ScriptedThread):
 
     def get_extended_info(self):
         if self.has_crashed:
-            self.extended_info = self.scripted_process.extended_thread_info
+            self.extended_info = self.originating_process.extended_thread_info
         return self.extended_info

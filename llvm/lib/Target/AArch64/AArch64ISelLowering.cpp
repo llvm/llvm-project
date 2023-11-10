@@ -37,6 +37,8 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -1642,6 +1644,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
 
+  if (Subtarget->hasSVE()) {
+    setOperationAction(ISD::FLDEXP, MVT::f64, Custom);
+    setOperationAction(ISD::FLDEXP, MVT::f32, Custom);
+    setOperationAction(ISD::FLDEXP, MVT::f16, Custom);
+  }
+
   PredictableSelectIsExpensive = Subtarget->predictableSelectIsExpensive();
 
   IsStrictFPEnabled = true;
@@ -1781,6 +1789,10 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
     return true;
 
   return false;
+}
+
+bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
+  return !Subtarget->hasSVEorSME() || VT != MVT::nxv16i1;
 }
 
 void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT,
@@ -2626,6 +2638,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::MRRS)
     MAKE_CASE(AArch64ISD::MSRR)
     MAKE_CASE(AArch64ISD::RSHRNB_I)
+    MAKE_CASE(AArch64ISD::CTTZ_ELTS)
   }
 #undef MAKE_CASE
   return nullptr;
@@ -5330,6 +5343,12 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
     return SDValue();
   }
+  case Intrinsic::experimental_cttz_elts: {
+    SDValue NewCttzElts =
+        DAG.getNode(AArch64ISD::CTTZ_ELTS, dl, MVT::i64, Op.getOperand(1));
+
+    return DAG.getZExtOrTrunc(NewCttzElts, dl, Op.getValueType());
+  }
   }
 }
 
@@ -5895,6 +5914,49 @@ static SDValue LowerFunnelShift(SDValue Op, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
+  SDValue X = Op.getOperand(0);
+  EVT XScalarTy = X.getValueType();
+  SDValue Exp = Op.getOperand(1);
+
+  SDLoc DL(Op);
+  EVT XVT, ExpVT;
+  switch (Op.getSimpleValueType().SimpleTy) {
+  default:
+    return SDValue();
+  case MVT::f16:
+    X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X);
+    [[fallthrough]];
+  case MVT::f32:
+    XVT = MVT::nxv4f32;
+    ExpVT = MVT::nxv4i32;
+    break;
+  case MVT::f64:
+    XVT = MVT::nxv2f64;
+    ExpVT = MVT::nxv2i64;
+    Exp = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Exp);
+    break;
+  }
+
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  SDValue VX =
+      DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, XVT, DAG.getUNDEF(XVT), X, Zero);
+  SDValue VExp = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ExpVT,
+                             DAG.getUNDEF(ExpVT), Exp, Zero);
+  SDValue VPg = getPTrue(DAG, DL, XVT.changeVectorElementType(MVT::i1),
+                         AArch64SVEPredPattern::all);
+  SDValue FScale =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, XVT,
+                  DAG.getConstant(Intrinsic::aarch64_sve_fscale, DL, MVT::i64),
+                  VPg, VX, VExp);
+  SDValue Final =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, X.getValueType(), FScale, Zero);
+  if (X.getValueType() != XScalarTy)
+    Final = DAG.getNode(ISD::FP_ROUND, DL, XScalarTy, Final,
+                        DAG.getIntPtrConstant(1, SDLoc(Op)));
+  return Final;
+}
+
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -6215,6 +6277,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::FSHL:
   case ISD::FSHR:
     return LowerFunnelShift(Op, DAG);
+  case ISD::FLDEXP:
+    return LowerFLDEXP(Op, DAG);
   }
 }
 
@@ -6308,8 +6372,6 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   switch (CC) {
   default:
     report_fatal_error("Unsupported calling convention.");
-  case CallingConv::WebKit_JS:
-    return CC_AArch64_WebKit_JS;
   case CallingConv::GHC:
     return CC_AArch64_GHC;
   case CallingConv::C:
@@ -6353,8 +6415,7 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
 
 CCAssignFn *
 AArch64TargetLowering::CCAssignFnForReturn(CallingConv::ID CC) const {
-  return CC == CallingConv::WebKit_JS ? RetCC_AArch64_WebKit_JS
-                                      : RetCC_AArch64_AAPCS;
+  return RetCC_AArch64_AAPCS;
 }
 
 
@@ -8139,7 +8200,8 @@ SDValue AArch64TargetLowering::LowerGlobalAddress(SDValue Op,
   }
 
   SDValue Result;
-  if (getTargetMachine().getCodeModel() == CodeModel::Large) {
+  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
+      !getTargetMachine().isPositionIndependent()) {
     Result = getAddrLarge(GN, DAG, OpFlags);
   } else if (getTargetMachine().getCodeModel() == CodeModel::Tiny) {
     Result = getAddrTiny(GN, DAG, OpFlags);
@@ -9504,12 +9566,12 @@ SDValue AArch64TargetLowering::LowerJumpTable(SDValue Op,
   // is necessary here. Just get the address of the jump table.
   JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
 
-  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-      !Subtarget->isTargetMachO()) {
+  CodeModel::Model CM = getTargetMachine().getCodeModel();
+  if (CM == CodeModel::Large && !getTargetMachine().isPositionIndependent() &&
+      !Subtarget->isTargetMachO())
     return getAddrLarge(JT, DAG);
-  } else if (getTargetMachine().getCodeModel() == CodeModel::Tiny) {
+  if (CM == CodeModel::Tiny)
     return getAddrTiny(JT, DAG);
-  }
   return getAddr(JT, DAG);
 }
 
@@ -9535,27 +9597,28 @@ SDValue AArch64TargetLowering::LowerBR_JT(SDValue Op,
 SDValue AArch64TargetLowering::LowerConstantPool(SDValue Op,
                                                  SelectionDAG &DAG) const {
   ConstantPoolSDNode *CP = cast<ConstantPoolSDNode>(Op);
-
-  if (getTargetMachine().getCodeModel() == CodeModel::Large) {
+  CodeModel::Model CM = getTargetMachine().getCodeModel();
+  if (CM == CodeModel::Large) {
     // Use the GOT for the large code model on iOS.
     if (Subtarget->isTargetMachO()) {
       return getGOT(CP, DAG);
     }
-    return getAddrLarge(CP, DAG);
-  } else if (getTargetMachine().getCodeModel() == CodeModel::Tiny) {
+    if (!getTargetMachine().isPositionIndependent())
+      return getAddrLarge(CP, DAG);
+  } else if (CM == CodeModel::Tiny) {
     return getAddrTiny(CP, DAG);
-  } else {
-    return getAddr(CP, DAG);
   }
+  return getAddr(CP, DAG);
 }
 
 SDValue AArch64TargetLowering::LowerBlockAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
   BlockAddressSDNode *BA = cast<BlockAddressSDNode>(Op);
-  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-      !Subtarget->isTargetMachO()) {
-    return getAddrLarge(BA, DAG);
-  } else if (getTargetMachine().getCodeModel() == CodeModel::Tiny) {
+  CodeModel::Model CM = getTargetMachine().getCodeModel();
+  if (CM == CodeModel::Large && !Subtarget->isTargetMachO()) {
+    if (!getTargetMachine().isPositionIndependent())
+      return getAddrLarge(BA, DAG);
+  } else if (CM == CodeModel::Tiny) {
     return getAddrTiny(BA, DAG);
   }
   return getAddr(BA, DAG);
@@ -10097,14 +10160,15 @@ const char *AArch64TargetLowering::LowerXConstraint(EVT ConstraintVT) const {
   return "r";
 }
 
-enum PredicateConstraint { Uph, Upl, Upa, Invalid };
+enum class PredicateConstraint { Uph, Upl, Upa };
 
-static PredicateConstraint parsePredicateConstraint(StringRef Constraint) {
-  return StringSwitch<PredicateConstraint>(Constraint)
+static std::optional<PredicateConstraint>
+parsePredicateConstraint(StringRef Constraint) {
+  return StringSwitch<std::optional<PredicateConstraint>>(Constraint)
       .Case("Uph", PredicateConstraint::Uph)
       .Case("Upl", PredicateConstraint::Upl)
       .Case("Upa", PredicateConstraint::Upa)
-      .Default(PredicateConstraint::Invalid);
+      .Default(std::nullopt);
 }
 
 static const TargetRegisterClass *
@@ -10114,8 +10178,6 @@ getPredicateRegisterClass(PredicateConstraint Constraint, EVT VT) {
     return nullptr;
 
   switch (Constraint) {
-  default:
-    return nullptr;
   case PredicateConstraint::Uph:
     return VT == MVT::aarch64svcount ? &AArch64::PNR_p8to15RegClass
                                      : &AArch64::PPR_p8to15RegClass;
@@ -10126,6 +10188,33 @@ getPredicateRegisterClass(PredicateConstraint Constraint, EVT VT) {
     return VT == MVT::aarch64svcount ? &AArch64::PNRRegClass
                                      : &AArch64::PPRRegClass;
   }
+
+  llvm_unreachable("Missing PredicateConstraint!");
+}
+
+enum class ReducedGprConstraint { Uci, Ucj };
+
+static std::optional<ReducedGprConstraint>
+parseReducedGprConstraint(StringRef Constraint) {
+  return StringSwitch<std::optional<ReducedGprConstraint>>(Constraint)
+      .Case("Uci", ReducedGprConstraint::Uci)
+      .Case("Ucj", ReducedGprConstraint::Ucj)
+      .Default(std::nullopt);
+}
+
+static const TargetRegisterClass *
+getReducedGprRegisterClass(ReducedGprConstraint Constraint, EVT VT) {
+  if (!VT.isScalarInteger() || VT.getFixedSizeInBits() > 64)
+    return nullptr;
+
+  switch (Constraint) {
+  case ReducedGprConstraint::Uci:
+    return &AArch64::MatrixIndexGPR32_8_11RegClass;
+  case ReducedGprConstraint::Ucj:
+    return &AArch64::MatrixIndexGPR32_12_15RegClass;
+  }
+
+  llvm_unreachable("Missing ReducedGprConstraint!");
 }
 
 // The set of cc code supported is from
@@ -10223,9 +10312,10 @@ AArch64TargetLowering::getConstraintType(StringRef Constraint) const {
     case 'S': // A symbolic address
       return C_Other;
     }
-  } else if (parsePredicateConstraint(Constraint) !=
-             PredicateConstraint::Invalid)
-      return C_RegisterClass;
+  } else if (parsePredicateConstraint(Constraint))
+    return C_RegisterClass;
+  else if (parseReducedGprConstraint(Constraint))
+    return C_RegisterClass;
   else if (parseConstraintCode(Constraint) != AArch64CC::Invalid)
     return C_Other;
   return TargetLowering::getConstraintType(Constraint);
@@ -10259,7 +10349,8 @@ AArch64TargetLowering::getSingleConstraintMatchWeight(
     weight = CW_Constant;
     break;
   case 'U':
-    if (parsePredicateConstraint(constraint) != PredicateConstraint::Invalid)
+    if (parsePredicateConstraint(constraint) ||
+        parseReducedGprConstraint(constraint))
       weight = CW_Register;
     break;
   }
@@ -10316,9 +10407,13 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
       break;
     }
   } else {
-    PredicateConstraint PC = parsePredicateConstraint(Constraint);
-    if (const TargetRegisterClass *RegClass = getPredicateRegisterClass(PC, VT))
-      return std::make_pair(0U, RegClass);
+    if (const auto PC = parsePredicateConstraint(Constraint))
+      if (const auto *RegClass = getPredicateRegisterClass(*PC, VT))
+        return std::make_pair(0U, RegClass);
+
+    if (const auto RGC = parseReducedGprConstraint(Constraint))
+      if (const auto *RegClass = getReducedGprRegisterClass(*RGC, VT))
+        return std::make_pair(0U, RegClass);
   }
   if (StringRef("{cc}").equals_insensitive(Constraint) ||
       parseConstraintCode(Constraint) != AArch64CC::Invalid)
@@ -14454,6 +14549,19 @@ static bool shouldSinkVectorOfPtrs(Value *Ptrs, SmallVectorImpl<Use *> &Ops) {
   return true;
 }
 
+/// We want to sink following cases:
+/// (add|sub|gep) A, ((mul|shl) vscale, imm); (add|sub|gep) A, vscale
+static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
+  if (match(Op, m_VScale()))
+    return true;
+  if (match(Op, m_Shl(m_VScale(), m_ConstantInt())) ||
+      match(Op, m_Mul(m_VScale(), m_ConstantInt()))) {
+    Ops.push_back(&cast<Instruction>(Op)->getOperandUse(0));
+    return true;
+  }
+  return false;
+}
+
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// shufflevectors extracts and/or sext/zext can be folded into (u,s)subl(2).
@@ -14568,6 +14676,22 @@ bool AArch64TargetLowering::shouldSinkOperands(
     default:
       return false;
     }
+  }
+
+  // Sink vscales closer to uses for better isel
+  switch (I->getOpcode()) {
+  case Instruction::GetElementPtr:
+  case Instruction::Add:
+  case Instruction::Sub:
+    for (unsigned Op = 0; Op < I->getNumOperands(); ++Op) {
+      if (shouldSinkVScale(I->getOperand(Op), Ops)) {
+        Ops.push_back(&I->getOperandUse(Op));
+        return true;
+      }
+    }
+    break;
+  default:
+    break;
   }
 
   if (!I->getType()->isVectorTy())
@@ -15242,7 +15366,11 @@ bool hasNearbyPairedStore(Iter It, Iter End, Value *Ptr, const DataLayout &DL) {
   const Value *PtrA1 =
       Ptr->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
 
-  while (++It != End && !It->isDebugOrPseudoInst() && MaxLookupDist-- > 0) {
+  while (++It != End) {
+    if (It->isDebugOrPseudoInst())
+      continue;
+    if (MaxLookupDist-- == 0)
+      break;
     if (const auto *SI = dyn_cast<StoreInst>(&*It)) {
       const Value *PtrB1 =
           SI->getPointerOperand()->stripAndAccumulateInBoundsConstantOffsets(
@@ -20949,6 +21077,12 @@ static SDValue combineBoolVectorAndTruncateStore(SelectionDAG &DAG,
                       Store->getMemOperand());
 }
 
+bool isHalvingTruncateOfLegalScalableType(EVT SrcVT, EVT DstVT) {
+  return (SrcVT == MVT::nxv8i16 && DstVT == MVT::nxv8i8) ||
+         (SrcVT == MVT::nxv4i32 && DstVT == MVT::nxv4i16) ||
+         (SrcVT == MVT::nxv2i64 && DstVT == MVT::nxv2i32);
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -20990,16 +21124,16 @@ static SDValue performSTORECombine(SDNode *N,
   if (SDValue Store = combineBoolVectorAndTruncateStore(DAG, ST))
     return Store;
 
-  if (ST->isTruncatingStore())
+  if (ST->isTruncatingStore()) {
+    EVT StoreVT = ST->getMemoryVT();
+    if (!isHalvingTruncateOfLegalScalableType(ValueVT, StoreVT))
+      return SDValue();
     if (SDValue Rshrnb =
             trySimplifySrlAddToRshrnb(ST->getOperand(1), DAG, Subtarget)) {
-      EVT StoreVT = ST->getMemoryVT();
-      if ((ValueVT == MVT::nxv8i16 && StoreVT == MVT::nxv8i8) ||
-          (ValueVT == MVT::nxv4i32 && StoreVT == MVT::nxv4i16) ||
-          (ValueVT == MVT::nxv2i64 && StoreVT == MVT::nxv2i32))
-        return DAG.getTruncStore(ST->getChain(), ST, Rshrnb, ST->getBasePtr(),
-                                 StoreVT, ST->getMemOperand());
+      return DAG.getTruncStore(ST->getChain(), ST, Rshrnb, ST->getBasePtr(),
+                               StoreVT, ST->getMemOperand());
     }
+  }
 
   return SDValue();
 }
@@ -21042,6 +21176,19 @@ static SDValue performMSTORECombine(SDNode *N,
                                     /*IsTruncating=*/true);
         }
       }
+    }
+  }
+
+  if (MST->isTruncatingStore()) {
+    EVT ValueVT = Value->getValueType(0);
+    EVT MemVT = MST->getMemoryVT();
+    if (!isHalvingTruncateOfLegalScalableType(ValueVT, MemVT))
+      return SDValue();
+    if (SDValue Rshrnb = trySimplifySrlAddToRshrnb(Value, DAG, Subtarget)) {
+      return DAG.getMaskedStore(MST->getChain(), DL, Rshrnb, MST->getBasePtr(),
+                                MST->getOffset(), MST->getMask(),
+                                MST->getMemoryVT(), MST->getMemOperand(),
+                                MST->getAddressingMode(), true);
     }
   }
 
@@ -23643,6 +23790,19 @@ bool AArch64TargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return CI->isTailCall();
 }
 
+bool AArch64TargetLowering::isIndexingLegal(MachineInstr &MI, Register Base,
+                                            Register Offset, bool IsPre,
+                                            MachineRegisterInfo &MRI) const {
+  auto CstOffset = getIConstantVRegVal(Offset, MRI);
+  if (!CstOffset || CstOffset->isZero())
+    return false;
+
+  // All of the indexed addressing mode instructions take a signed 9 bit
+  // immediate offset. Our CstOffset is a G_PTR_ADD offset so it already
+  // encodes the sign/indexing direction.
+  return isInt<9>(CstOffset->getSExtValue());
+}
+
 bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
                                                    SDValue &Base,
                                                    SDValue &Offset,
@@ -24736,12 +24896,13 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
   if (Subtarget->getTargetTriple().isWindowsMSVCEnvironment()) {
     // MSVC CRT has a global variable holding security cookie.
     M.getOrInsertGlobal("__security_cookie",
-                        Type::getInt8PtrTy(M.getContext()));
+                        PointerType::getUnqual(M.getContext()));
 
     // MSVC CRT has a function to validate security cookie.
-    FunctionCallee SecurityCheckCookie = M.getOrInsertFunction(
-        Subtarget->getSecurityCheckCookieName(),
-        Type::getVoidTy(M.getContext()), Type::getInt8PtrTy(M.getContext()));
+    FunctionCallee SecurityCheckCookie =
+        M.getOrInsertFunction(Subtarget->getSecurityCheckCookieName(),
+                              Type::getVoidTy(M.getContext()),
+                              PointerType::getUnqual(M.getContext()));
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::Win64);
       F->addParamAttr(0, Attribute::AttrKind::InReg);
@@ -25960,6 +26121,9 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   bool IsSingleOp =
       ShuffleVectorInst::isSingleSourceMask(ShuffleMask, ShuffleMask.size());
 
+  if (!Subtarget.isNeonAvailable() && !MinSVESize)
+    MinSVESize = 128;
+
   // Ignore two operands if no SVE2 or all index numbers couldn't
   // be represented.
   if (!IsSingleOp && (!Subtarget.hasSVE2() || MinSVESize != MaxSVESize))
@@ -25969,11 +26133,9 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   unsigned BitsPerElt = VTOp1.getVectorElementType().getSizeInBits();
   unsigned IndexLen = MinSVESize / BitsPerElt;
   unsigned ElementsPerVectorReg = VTOp1.getVectorNumElements();
-  unsigned MaskSize = ShuffleMask.size();
   uint64_t MaxOffset = APInt(BitsPerElt, -1, false).getZExtValue();
-  assert(ElementsPerVectorReg <= IndexLen && MaskSize <= IndexLen &&
+  assert(ElementsPerVectorReg <= IndexLen && ShuffleMask.size() <= IndexLen &&
          "Incorrectly legalised shuffle operation");
-  (void)MaskSize;
 
   SmallVector<SDValue, 8> TBLMask;
   for (int Index : ShuffleMask) {
@@ -26169,8 +26331,10 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     }
   }
 
-  // Avoid producing TBL instruction if we don't know SVE register minimal size.
-  if (MinSVESize)
+  // Avoid producing TBL instruction if we don't know SVE register minimal size,
+  // unless NEON is not available and we can assume minimal SVE register size is
+  // 128-bits.
+  if (MinSVESize || !Subtarget->isNeonAvailable())
     return GenerateFixedLengthSVETBL(Op, Op1, Op2, ShuffleMask, VT, ContainerVT,
                                      DAG);
 

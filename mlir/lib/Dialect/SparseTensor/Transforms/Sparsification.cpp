@@ -124,7 +124,7 @@ struct AffineDimCollector : public AffineExprVisitor<AffineDimCollector> {
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// Sparse compiler analysis methods.
+// Sparsifier analysis methods.
 //===----------------------------------------------------------------------===//
 
 // TODO: the "idx"-vs-"ldx" naming convention is not self-explanatory,
@@ -840,7 +840,7 @@ static bool computeIterationGraph(CodegenEnv &env, SortMask mask,
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse compiler synthesis methods (statements and expressions).
+// Sparsifier synthesis methods (statements and expressions).
 //===----------------------------------------------------------------------===//
 
 /// Local bufferization of all dense and sparse data structures.
@@ -1139,7 +1139,7 @@ inline static Value genInvariantValue(CodegenEnv &env, ExprId exp) {
   return env.exp(exp).val;
 }
 
-/// Semi-ring branches are simply inlined by the sparse compiler. Prior
+/// Semi-ring branches are simply inlined by the sparsifier. Prior
 /// analysis has verified that all computations are "local" to the inlined
 /// branch or otherwise invariantly defined outside the loop nest, with the
 /// exception of index computations, which need to be relinked to actual
@@ -1562,7 +1562,7 @@ static void endIf(CodegenEnv &env, OpBuilder &builder, scf::IfOp ifOp,
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse compiler synthesis methods (loop sequence).
+// Sparsifier synthesis methods (loop sequence).
 //===----------------------------------------------------------------------===//
 
 /// Starts a loop sequence at given level. Returns true if
@@ -1926,7 +1926,7 @@ static void genResult(CodegenEnv &env, RewriterBase &rewriter) {
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse compiler rewriting methods.
+// Sparsifier rewriting methods.
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -1939,9 +1939,12 @@ public:
 
   LogicalResult matchAndRewrite(linalg::GenericOp op,
                                 PatternRewriter &rewriter) const override {
-    // Only accept single output operations without affine index on sparse
-    // output.
-    if (op.getNumDpsInits() != 1 || hasNonTrivialAffineOnSparseOut(op))
+    // Only accept single output operations with pure tensor semantics.
+    if (op.getNumDpsInits() != 1 || !op.hasTensorSemantics())
+      return failure();
+
+    // Only accept trivial affine indices.
+    if (hasNonTrivialAffineOnSparseOut(op))
       return failure();
 
     // Sets up a code generation environment.
@@ -1951,7 +1954,6 @@ public:
     // TODO: we should probably always use slice-based codegen whenever
     // possible, we can even intermix slice-based and filter-loop based codegen.
     bool idxReducBased = options.enableIndexReduction && numFilterLoops != 0;
-
     // If we have indexing map like (d0) -> (0, d0), there might be more
     // levels then loops because of the constant index, that means we can not
     // use numLoops as the upper bound for ranks of all tensors.
@@ -1964,9 +1966,7 @@ public:
         maxLvlRank = std::max(maxLvlRank, SparseTensorType(rtp).getLvlRank());
       }
     }
-
-    // If we uses slice based algorithm for affine index, we do not need filter
-    // loop.
+    // A slice based algorithm for affine indices does not need filter loops.
     CodegenEnv env(op, options, numTensors, numLoops,
                    /*numFilterLoops=*/idxReducBased ? 0 : numFilterLoops,
                    maxLvlRank);
@@ -2006,7 +2006,6 @@ public:
     // to resolve cycles by inserting a conversion.
     bool isAdmissible = false;
     bool hasCycle = true;
-
     // A const list of all masks that we used for iteration graph
     // computation. Must be ordered from more strict to less strict.
     // Ideally (though might not be guaranteed), the earlier a constraint mask
@@ -2030,7 +2029,6 @@ public:
                  ? failure() // TODO: should cycle be resolved differently?
                  : resolveCycle(env, rewriter); // one last shot
     }
-
     if (!isAdmissible)
       return failure(); // inadmissible expression, reject
 

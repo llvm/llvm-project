@@ -30,8 +30,6 @@ define amdgpu_kernel void @test_amdgpu_kernel(ptr addrspace(4) byref([4 x <16 x 
 ; CHECK: DIVERGENT:
 ; CHECK: DIVERGENT:
 ; CHECK: DIVERGENT:
-; CHECK: DIVERGENT:
-; CHECK: DIVERGENT:
 define void @test_c(ptr addrspace(5) byval([4 x <16 x i8>]) %arg0, float inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <3 x i32> %arg4, float %arg5, i32 %arg6) #0 {
   ret void
 }

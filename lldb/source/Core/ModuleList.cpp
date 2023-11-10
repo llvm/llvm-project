@@ -9,12 +9,12 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/OptionValueFileSpec.h"
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeList.h"
@@ -906,7 +906,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   // Fixup the incoming path in case the path points to a valid file, yet the
   // arch or UUID (if one was passed in) don't match.
   ModuleSpec located_binary_modulespec =
-      Symbols::LocateExecutableObjectFile(module_spec);
+      PluginManager::LocateExecutableObjectFile(module_spec);
 
   // Don't look for the file if it appears to be the same one we already
   // checked for above...

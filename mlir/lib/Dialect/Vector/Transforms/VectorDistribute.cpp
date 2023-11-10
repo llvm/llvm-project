@@ -406,19 +406,29 @@ private:
 static vector::TransferWriteOp cloneWriteOp(RewriterBase &rewriter,
                                             WarpExecuteOnLane0Op warpOp,
                                             vector::TransferWriteOp writeOp,
-                                            VectorType targetType) {
+                                            VectorType targetType,
+                                            VectorType maybeMaskType) {
   assert(writeOp->getParentOp() == warpOp &&
          "write must be nested immediately under warp");
   OpBuilder::InsertionGuard g(rewriter);
   SmallVector<size_t> newRetIndices;
-  WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-      rewriter, warpOp, ValueRange{{writeOp.getVector()}},
-      TypeRange{targetType}, newRetIndices);
+  WarpExecuteOnLane0Op newWarpOp;
+  if (maybeMaskType) {
+    newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, ValueRange{writeOp.getVector(), writeOp.getMask()},
+        TypeRange{targetType, maybeMaskType}, newRetIndices);
+  } else {
+    newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, ValueRange{{writeOp.getVector()}},
+        TypeRange{targetType}, newRetIndices);
+  }
   rewriter.setInsertionPointAfter(newWarpOp);
   auto newWriteOp =
       cast<vector::TransferWriteOp>(rewriter.clone(*writeOp.getOperation()));
   rewriter.eraseOp(writeOp);
   newWriteOp.getVectorMutable().assign(newWarpOp.getResult(newRetIndices[0]));
+  if (maybeMaskType)
+    newWriteOp.getMaskMutable().assign(newWarpOp.getResult(newRetIndices[1]));
   return newWriteOp;
 }
 
@@ -489,10 +499,25 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
     if (!targetType)
       return failure();
 
+    // 2.5 Compute the distributed type for the new mask;
+    VectorType maskType;
+    if (writeOp.getMask()) {
+      // TODO: Distribution of masked writes with non-trivial permutation maps
+      // requires the distribution of the mask to elementwise match the
+      // distribution of the permuted written vector. Currently the details
+      // of which lane is responsible for which element is captured strictly
+      // by shape information on the warp op, and thus requires materializing
+      // the permutation in IR.
+      if (!writeOp.getPermutationMap().isMinorIdentity())
+        return failure();
+      maskType =
+          getDistributedType(writeOp.getMaskType(), map, warpOp.getWarpSize());
+    }
+
     // 3. clone the write into a new WarpExecuteOnLane0Op to separate it from
     // the rest.
     vector::TransferWriteOp newWriteOp =
-        cloneWriteOp(rewriter, warpOp, writeOp, targetType);
+        cloneWriteOp(rewriter, warpOp, writeOp, targetType, maskType);
 
     // 4. Reindex the write using the distribution map.
     auto newWarpOp =
@@ -561,10 +586,6 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
-    // Ops with mask not supported yet.
-    if (writeOp.getMask())
-      return failure();
-
     auto warpOp = dyn_cast<WarpExecuteOnLane0Op>(writeOp->getParentOp());
     if (!warpOp)
       return failure();
@@ -575,14 +596,20 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
       if (!isMemoryEffectFree(nextOp))
         return failure();
 
+    Value maybeMask = writeOp.getMask();
     if (!llvm::all_of(writeOp->getOperands(), [&](Value value) {
           return writeOp.getVector() == value ||
+                 (maybeMask && maybeMask == value) ||
                  warpOp.isDefinedOutsideOfRegion(value);
         }))
       return failure();
 
     if (succeeded(tryDistributeOp(rewriter, writeOp, warpOp)))
       return success();
+
+    // Masked writes not supported for extraction.
+    if (writeOp.getMask())
+      return failure();
 
     if (succeeded(tryExtractOp(rewriter, writeOp, warpOp)))
       return success();
@@ -774,14 +801,17 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
   using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *operand = getWarpResult(
-        warpOp, [](Operation *op) { return isa<vector::TransferReadOp>(op); });
+    // Try to find a distributable yielded read. Note that this pattern can
+    // still fail at the end after distribution, in which case this might have
+    // missed another distributable read.
+    OpOperand *operand = getWarpResult(warpOp, [](Operation *op) {
+      // Don't duplicate transfer_read ops when distributing.
+      return isa<vector::TransferReadOp>(op) && op->hasOneUse();
+    });
     if (!operand)
       return failure();
     auto read = operand->get().getDefiningOp<vector::TransferReadOp>();
-    // Don't duplicate transfer_read ops when distributing.
-    if (!read.getResult().hasOneUse())
-      return failure();
+
     unsigned operandIndex = operand->getOperandNumber();
     Value distributedVal = warpOp.getResult(operandIndex);
 
@@ -791,15 +821,38 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
     auto distributedType = cast<VectorType>(distributedVal.getType());
     AffineMap map = calculateImplicitMap(sequentialType, distributedType);
     AffineMap indexMap = map.compose(read.getPermutationMap());
+
+    // Distribute the mask if present.
     OpBuilder::InsertionGuard g(rewriter);
-    rewriter.setInsertionPointAfter(warpOp);
+    WarpExecuteOnLane0Op newWarpOp = warpOp;
+    Value newMask = read.getMask();
+    if (read.getMask()) {
+      // TODO: Distribution of masked reads with non-trivial permutation maps
+      // requires the distribution of the mask to elementwise match the
+      // distribution of the permuted written vector. Currently the details
+      // of which lane is responsible for which element is captured strictly
+      // by shape information on the warp op, and thus requires materializing
+      // the permutation in IR.
+      if (!read.getPermutationMap().isMinorIdentity())
+        return failure();
+      VectorType maskType =
+          getDistributedType(read.getMaskType(), map, warpOp.getWarpSize());
+      SmallVector<size_t> newRetIndices;
+      newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+          rewriter, warpOp, ValueRange{read.getMask()}, TypeRange{maskType},
+          newRetIndices);
+      newMask = newWarpOp.getResult(newRetIndices[0]);
+      distributedVal = newWarpOp.getResult(operandIndex);
+    }
+
+    rewriter.setInsertionPointAfter(newWarpOp);
 
     // Try to delinearize the lane ID to match the rank expected for
     // distribution.
     SmallVector<Value> delinearizedIds;
     if (!delinearizeLaneId(rewriter, read.getLoc(), sequentialType.getShape(),
-                           distributedType.getShape(), warpOp.getWarpSize(),
-                           warpOp.getLaneid(), delinearizedIds))
+                           distributedType.getShape(), newWarpOp.getWarpSize(),
+                           newWarpOp.getLaneid(), delinearizedIds))
       return rewriter.notifyMatchFailure(
           read, "cannot delinearize lane ID for distribution");
     assert(!delinearizedIds.empty() || map.getNumResults() == 0);
@@ -819,7 +872,7 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
     }
     auto newRead = rewriter.create<vector::TransferReadOp>(
         read.getLoc(), distributedVal.getType(), read.getSource(), indices,
-        read.getPermutationMapAttr(), read.getPadding(), read.getMask(),
+        read.getPermutationMapAttr(), read.getPadding(), newMask,
         read.getInBoundsAttr());
 
     // Check that the produced operation is legal.
@@ -827,18 +880,19 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
     // warpOp's body, which is illegal.
     // We do the check late because incdices may be changed by
     // makeComposeAffineApply. This rewrite may remove dependencies from
-    // warOp's body.
-    // E.g., warop {
+    // warpOp's body.
+    // E.g., warpop {
     //   %idx = affine.apply...[%outsideDef]
     //   ... = transfer_read ...[%idx]
     // }
     // will be rewritten in:
-    // warop {
+    // warpop {
     // }
     //  %new_idx = affine.apply...[%outsideDef]
     //   ... = transfer_read ...[%new_idx]
     if (!llvm::all_of(newRead->getOperands(), [&](Value value) {
-          return warpOp.isDefinedOutsideOfRegion(value);
+          return (newRead.getMask() && value == newRead.getMask()) ||
+                 newWarpOp.isDefinedOutsideOfRegion(value);
         }))
       return failure();
 
@@ -886,6 +940,13 @@ struct WarpOpDeadResult : public OpRewritePattern<WarpExecuteOnLane0Op> {
     // Move the body of the old warpOp to a new warpOp.
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
         rewriter, warpOp, newYieldValues, newResultTypes);
+
+    // Simplify the new warp op after dropping dead results.
+    newWarpOp.getBody()->walk([&](Operation *op) {
+      if (isOpTriviallyDead(op))
+        rewriter.eraseOp(op);
+    });
+
     // Replace results of the old warpOp by the new, deduplicated results.
     SmallVector<Value> newValues;
     newValues.reserve(warpOp->getNumResults());
@@ -1560,6 +1621,9 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
         operand.set(innerWarp.getBodyRegion().getArgument(it->second));
       }
     });
+
+    // Finally, hoist out any now uniform code from the inner warp op.
+    mlir::vector::moveScalarUniformCode(innerWarp);
     return success();
   }
 

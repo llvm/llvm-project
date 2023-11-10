@@ -428,12 +428,13 @@ void LoopEmitter::initializeLoopEmit(
     const auto enc = getSparseTensorEncoding(rtp);
     const Level cooStart = enc ? getCOOStart(enc) : lvlRank;
 
-    SmallVector<Value> dimSz;
-    for (Dimension d = 0; d < stt.getDimRank(); d++)
-      dimSz.push_back(linalg::createOrFoldDimOp(builder, loc, tensor, d));
-
-    ValueRange lvlSzs =
-        enc.translateCrds(builder, loc, dimSz, CrdTransDirectionKind::dim2lvl);
+    SmallVector<Value> lvlSzs;
+    for (Level l = 0; l < stt.getLvlRank(); l++) {
+      if (stt.hasEncoding())
+        lvlSzs.push_back(builder.create<LvlOp>(loc, tensor, l));
+      else
+        lvlSzs.push_back(builder.create<tensor::DimOp>(loc, tensor, l));
+    }
 
     // Scan all levels of current tensor.
     for (Level l = 0; l < lvlRank; l++) {
@@ -489,7 +490,8 @@ void LoopEmitter::initializeLoopEmit(
       valBuffer[t] = denseVal;
     } else {
       // Annotated sparse tensors.
-      // We also need the value buffer for all-dense annotated "sparse" tensors.
+      // We also need the value buffer for all-dense annotated "sparse"
+      // tensors.
       valBuffer[t] = genToValues(builder, loc, tensor);
     }
     // NOTE: we can also prepare for 0 lvl here in advance, this will hoist

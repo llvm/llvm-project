@@ -30,6 +30,7 @@ header_restrictions = {
     "sstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "streambuf": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "strstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
+    "syncstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
 
     # headers with #error directives
     "barrier": "!defined(_LIBCPP_HAS_NO_THREADS)",
@@ -92,6 +93,7 @@ lit_header_restrictions = {
     "stop_token": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "streambuf": "// UNSUPPORTED: no-localization",
     "strstream": "// UNSUPPORTED: no-localization",
+    "syncstream": "// UNSUPPORTED: no-localization",
     "thread": "// UNSUPPORTED: no-threads, c++03",
     "wchar.h": "// UNSUPPORTED: no-wide-characters",
     "wctype.h": "// UNSUPPORTED: no-wide-characters",
@@ -127,7 +129,7 @@ mandatory_inclusions = {
     "stack": ["compare", "initializer_list"],
     "string_view": ["compare"],
     "string": ["compare", "initializer_list"],
-    # TODO "syncstream": ["ostream"],
+    "syncstream": ["ostream"],
     "system_error": ["compare"],
     "tgmath.h": ["cmath", "complex"],
     "thread": ["compare"],
@@ -156,7 +158,6 @@ headers_not_available = [
     "spanstream",
     "stacktrace",
     "stdfloat",
-    "syncstream",
     "text_encoding",
 ]
 

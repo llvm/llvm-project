@@ -1,0 +1,14 @@
+REQUIRES: x86
+
+RUN: echo -e 'LIBRARY test.dll\nEXPORTS\nimpfunc\n' > %t.imp.def
+RUN: llvm-dlltool -m i386:x86-64 -d %t.imp.def -l %t.imp.lib
+RUN: lld-link -machine:amd64 -out:%t.dll -dll -noentry -lldmingw %t.imp.lib -export:impfunc -output-def:%t.def
+
+Check that the synthetic import thunk is exported as a function, not data.
+
+RUN: cat %t.def | FileCheck %s
+CHECK: EXPORTS
+CHECK-NEXT: impfunc @1
+
+RUN: cat %t.def | FileCheck -check-prefix=CHECK-NO-DATA %s
+CHECK-NO-DATA-NOT: DATA

@@ -23,11 +23,16 @@ class ScriptedProcessPythonInterface : public ScriptedProcessInterface,
 public:
   ScriptedProcessPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
-  StructuredData::GenericSP
+  llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(const llvm::StringRef class_name,
                      ExecutionContext &exe_ctx,
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) override;
+
+  llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const override {
+    return llvm::SmallVector<llvm::StringLiteral>(
+        {"read_memory_at_address", "is_alive", "get_scripted_thread_plugin"});
+  }
 
   StructuredData::DictionarySP GetCapabilities() override;
 
