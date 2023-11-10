@@ -2,7 +2,7 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#  This file contains the sparse compiler class.
+#  This file contains the SparseCompiler class.
 
 from mlir import execution_engine
 from mlir import ir
@@ -24,7 +24,7 @@ class SparseCompiler:
         self.compile(module)
 
     def compile(self, module: ir.Module):
-        """Compiles the module by invoking the sparse compiler pipeline."""
+        """Compiles the module by invoking the sparsifier pipeline."""
         passmanager.PassManager.parse(self.pipeline).run(module.operation)
 
     def jit(self, module: ir.Module) -> execution_engine.ExecutionEngine:

@@ -1,4 +1,4 @@
-//===- SparseTensorDescriptor.h ------------------------------*- C++ -*-===//
+//===- SparseTensorDescriptor.h ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,13 +20,6 @@
 
 namespace mlir {
 namespace sparse_tensor {
-
-//===----------------------------------------------------------------------===//
-// SparseTensorDescriptor and helpers that manage the sparse tensor memory
-// layout scheme during "direct code generation" (i.e. when sparsification
-// generates the buffers as part of actual IR, in constrast with the library
-// approach where data structures are hidden behind opaque pointers).
-//===----------------------------------------------------------------------===//
 
 class SparseTensorSpecifier {
 public:
@@ -57,9 +50,6 @@ private:
 template <typename ValueArrayRef>
 class SparseTensorDescriptorImpl {
 protected:
-  // TODO: Functions/methods marked with [NUMFIELDS] might should use
-  // `FieldIndex` for their return type, via the same reasoning for why
-  // `Dimension`/`Level` are used both for identifiers and ranks.
   SparseTensorDescriptorImpl(SparseTensorType stt, ValueArrayRef fields)
       : rType(stt), fields(fields), layout(stt) {
     assert(layout.getNumFields() == getNumFields());
@@ -76,7 +66,6 @@ public:
     return layout.getMemRefFieldIndex(kind, lvl);
   }
 
-  // TODO: See note [NUMFIELDS].
   unsigned getNumFields() const { return fields.size(); }
 
   ///
@@ -140,8 +129,7 @@ public:
   }
 
   ValueRange getMemRefFields() const {
-    // Drop the last metadata fields.
-    return fields.drop_back();
+    return fields.drop_back(); // drop the last metadata fields
   }
 
   std::pair<FieldIndex, unsigned> getCrdMemRefIndexAndStride(Level lvl) const {
@@ -173,7 +161,6 @@ public:
   Value getCrdMemRefOrView(OpBuilder &builder, Location loc, Level lvl) const;
 };
 
-/// Uses SmallVectorImpl<Value> & for mutable descriptors.
 /// Using SmallVector for mutable descriptor allows users to reuse it as a
 /// tmp buffers to append value for some special cases, though users should
 /// be responsible to restore the buffer to legal states after their use. It

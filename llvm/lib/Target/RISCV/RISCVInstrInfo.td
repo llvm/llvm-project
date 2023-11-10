@@ -2042,6 +2042,10 @@ def : Pat<(i32 (xor GPR:$rs1, simm12i32:$imm)),
 def : PatGprImm<shl, SLLIW, uimm5, i32>;
 def : PatGprImm<srl, SRLIW, uimm5, i32>;
 def : PatGprImm<sra, SRAIW, uimm5, i32>;
+
+def : Pat<(i32 (and GPR:$rs, TrailingOnesMask:$mask)),
+          (SRLI (SLLI $rs, (i64 (XLenSubTrailingOnes $mask))),
+                (i64 (XLenSubTrailingOnes $mask)))>;
 }
 
 let Predicates = [IsRV64, NotHasStdExtZba] in {

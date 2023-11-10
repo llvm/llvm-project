@@ -881,17 +881,17 @@ Module *ModuleMap::createGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
   return Result;
 }
 
-Module *ModuleMap::createImplicitGlobalModuleFragmentForModuleUnit(
-    SourceLocation Loc, bool IsExported, Module *Parent) {
+Module *
+ModuleMap::createImplicitGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
+                                                           Module *Parent) {
   assert(Parent && "We should only create an implicit global module fragment "
                    "in a module purview");
   // Note: Here the `IsExplicit` parameter refers to the semantics in clang
   // modules. All the non-explicit submodules in clang modules will be exported
   // too. Here we simplify the implementation by using the concept.
-  auto *Result = new Module(IsExported ? "<exported implicit global>"
-                                       : "<implicit global>",
-                            Loc, Parent, /*IsFramework*/ false,
-                            /*IsExplicit*/ !IsExported, NumCreatedModules++);
+  auto *Result =
+      new Module("<implicit global>", Loc, Parent, /*IsFramework=*/false,
+                 /*IsExplicit=*/false, NumCreatedModules++);
   Result->Kind = Module::ImplicitGlobalModuleFragment;
   return Result;
 }

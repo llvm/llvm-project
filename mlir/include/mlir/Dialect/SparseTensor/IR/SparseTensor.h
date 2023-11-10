@@ -162,12 +162,10 @@ bool isBlockSparsity(AffineMap dimToLvl);
 /// [deprecated] Convenience method to translate the given level to the
 /// corresponding dimension. Requires: `0 <= l < lvlRank`.
 Dimension toOrigDim(SparseTensorEncodingAttr enc, Level l);
-Dimension toOrigDim(RankedTensorType type, Level l);
 
 /// [deprecated] Convenience method to translate the given dimension to
 /// the corresponding level. Requires: `0 <= d < dimRank`.
 Level toStoredDim(SparseTensorEncodingAttr enc, Dimension d);
-Level toStoredDim(RankedTensorType type, Dimension d);
 
 } // namespace sparse_tensor
 } // namespace mlir

@@ -57,6 +57,14 @@ Changes to the LLVM IR
 
   * ``and``
   * ``or``
+  * ``zext``
+  * ``sext``
+  * ``fptrunc``
+  * ``fpext``
+  * ``fptoui``
+  * ``fptosi``
+  * ``uitofp``
+  * ``sitofp``
 
 * Added `llvm.exp10` intrinsic.
 
@@ -166,6 +174,18 @@ Changes to the C API
 
   * ``LLVMConstAnd``
   * ``LLVMConstOr``
+  * ``LLVMConstZExt``
+  * ``LLVMConstSExt``
+  * ``LLVMConstZExtOrBitCast``
+  * ``LLVMConstSExtOrBitCast``
+  * ``LLVMConstIntCast``
+  * ``LLVMConstFPTrunc``
+  * ``LLVMConstFPExt``
+  * ``LLVMConstFPToUI``
+  * ``LLVMConstFPToSI``
+  * ``LLVMConstUIToFP``
+  * ``LLVMConstSIToFP``
+  * ``LLVMConstFPCast``
 
 * Added ``LLVMCreateTargetMachineWithOptions``, along with helper functions for
   an opaque option structure, as an alternative to ``LLVMCreateTargetMachine``.
@@ -216,10 +236,23 @@ Changes to LLDB
   instructions have been updated to reflect this. The underlying functionality
   remains unchanged.
 * The ``mte_ctrl`` register can now be read from AArch64 Linux core files.
-
-* LLDB now supports debugging the Scalable Matrix Extension (SME) on AArch64
-  Linux for both running processes and core files. For details refer to the
+* LLDB on AArch64 Linux now supports debugging the Scalable Matrix Extension
+  (SME) and Scalable Matrix Extension 2 (SME2) for both live processes and core
+  files. For details refer to the
   `AArch64 Linux documentation <https://lldb.llvm.org/use/aarch64-linux.html>`_.
+
+* When running on AArch64 Linux, ``lldb-server`` now provides register
+  field information for the following registers: ``cpsr``, ``fpcr``,
+  ``fpsr``, ``svcr`` and ``mte_ctrl``. ::
+
+    (lldb) register read cpsr
+          cpsr = 0x80001000
+               = (N = 1, Z = 0, C = 0, V = 0, SS = 0, IL = 0, <...>
+
+  This is only available when ``lldb`` is built with XML support.
+  Where possible the CPU's capabilities are used to decide which
+  fields are present, however this is not always possible or entirely
+  accurate. If in doubt, refer to the numerical value.
 
 Changes to Sanitizers
 ---------------------

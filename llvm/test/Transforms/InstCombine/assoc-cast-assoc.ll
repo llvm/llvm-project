@@ -54,7 +54,7 @@ define <2 x i32> @OrZextOrVec(<2 x i2> %a) {
 define i5 @AndZextAnd(i3 %a) {
 ; CHECK-LABEL: @AndZextAnd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i3 [[A:%.*]], 2
-; CHECK-NEXT:    [[OP2:%.*]] = zext i3 [[TMP1]] to i5
+; CHECK-NEXT:    [[OP2:%.*]] = zext nneg i3 [[TMP1]] to i5
 ; CHECK-NEXT:    ret i5 [[OP2]]
 ;
   %op1 = and i3 %a, 3
@@ -66,7 +66,7 @@ define i5 @AndZextAnd(i3 %a) {
 define <2 x i32> @AndZextAndVec(<2 x i8> %a) {
 ; CHECK-LABEL: @AndZextAndVec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[A:%.*]], <i8 5, i8 0>
-; CHECK-NEXT:    [[OP2:%.*]] = zext <2 x i8> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[OP2:%.*]] = zext nneg <2 x i8> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[OP2]]
 ;
   %op1 = and <2 x i8> %a, <i8 7, i8 0>
@@ -75,3 +75,14 @@ define <2 x i32> @AndZextAndVec(<2 x i8> %a) {
   ret <2 x i32> %op2
 }
 
+define i24 @zext_nneg(i16 %a) {
+; CHECK-LABEL: @zext_nneg(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[A:%.*]], 32767
+; CHECK-NEXT:    [[AND2:%.*]] = zext nneg i16 [[TMP1]] to i24
+; CHECK-NEXT:    ret i24 [[AND2]]
+;
+  %and1 = and i16 %a, 32767
+  %resize = zext nneg i16 %and1 to i24
+  %and2 = and i24 %resize, 8388607
+  ret i24 %and2
+}

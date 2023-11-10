@@ -8,7 +8,8 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK: i32.const $push0=, 0
 define hidden i32 @a() #0 {
 entry:
-  ret i32 zext (i1 icmp eq (ptr inttoptr (i32 10 to ptr), ptr null) to i32)
+  %ext = zext i1 icmp eq (ptr inttoptr (i32 10 to ptr), ptr null) to i32
+  ret i32 %ext
 }
 
 ; CHECK: i32.const $push0=, 1
@@ -27,7 +28,8 @@ b:
 ; CHECK: i32.store 0($pop1), $pop2
 define hidden i32 @c() #0 {
 entry:
-  store i32 zext (i1 icmp eq (ptr inttoptr (i32 10 to ptr), ptr null) to i32), ptr inttoptr (i32 0 to ptr)
+  %ext = zext i1 icmp eq (ptr inttoptr (i32 10 to ptr), ptr null) to i32
+  store i32 %ext, ptr inttoptr (i32 0 to ptr)
   ret i32 0
 }
 

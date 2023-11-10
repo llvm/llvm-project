@@ -142,7 +142,7 @@ define void @test6_memcpy(ptr %src, ptr %dest) nounwind {
 
 @x = external global %0
 
-define void @test3(ptr noalias sret(%0) %agg.result) nounwind  {
+define void @test3(ptr noalias writable sret(%0) %agg.result) nounwind  {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[X_0:%.*]] = alloca [[TMP0:%.*]], align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[AGG_RESULT:%.*]], ptr align 16 @x, i32 32, i1 false)
@@ -720,6 +720,15 @@ define void @byval_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
   store i32 1, ptr %ptr, !noalias !2
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %tmp, ptr align 4 %ptr, i64 4, i1 false)
   call void @f_byval(ptr align 4 byval(i32) %tmp), !alias.scope !2
+  ret void
+}
+
+define void @memcpy_memory_none(ptr %p, ptr %p2, i64 %size) {
+; CHECK-LABEL: @memcpy_memory_none(
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[P2:%.*]], i64 [[SIZE:%.*]], i1 false) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %p2, i64 %size, i1 false) memory(none)
   ret void
 }
 

@@ -43,25 +43,21 @@ LLVM::LLVMFuncOp lookupOrCreatePrintF64Fn(ModuleOp moduleOp);
 /// If a custom runtime function is defined via `runtimeFunctionName`, it must
 /// have the signature void(char const*). The default function is `printString`.
 LLVM::LLVMFuncOp
-lookupOrCreatePrintStringFn(ModuleOp moduleOp, bool opaquePointers,
+lookupOrCreatePrintStringFn(ModuleOp moduleOp,
                             std::optional<StringRef> runtimeFunctionName = {});
 LLVM::LLVMFuncOp lookupOrCreatePrintOpenFn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintCloseFn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintCommaFn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintNewlineFn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreateMallocFn(ModuleOp moduleOp, Type indexType,
-                                        bool opaquePointers);
-LLVM::LLVMFuncOp lookupOrCreateAlignedAllocFn(ModuleOp moduleOp, Type indexType,
-                                              bool opaquePointers = true);
-LLVM::LLVMFuncOp lookupOrCreateFreeFn(ModuleOp moduleOp,
-                                      bool opaquePointers = true);
-LLVM::LLVMFuncOp lookupOrCreateGenericAllocFn(ModuleOp moduleOp, Type indexType,
-                                              bool opaquePointers);
+LLVM::LLVMFuncOp lookupOrCreateMallocFn(ModuleOp moduleOp, Type indexType);
+LLVM::LLVMFuncOp lookupOrCreateAlignedAllocFn(ModuleOp moduleOp,
+                                              Type indexType);
+LLVM::LLVMFuncOp lookupOrCreateFreeFn(ModuleOp moduleOp);
+LLVM::LLVMFuncOp lookupOrCreateGenericAllocFn(ModuleOp moduleOp,
+                                              Type indexType);
 LLVM::LLVMFuncOp lookupOrCreateGenericAlignedAllocFn(ModuleOp moduleOp,
-                                                     Type indexType,
-                                                     bool opaquePointers);
-LLVM::LLVMFuncOp lookupOrCreateGenericFreeFn(ModuleOp moduleOp,
-                                             bool opaquePointers = true);
+                                                     Type indexType);
+LLVM::LLVMFuncOp lookupOrCreateGenericFreeFn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreateMemRefCopyFn(ModuleOp moduleOp, Type indexType,
                                             Type unrankedDescriptorType);
 

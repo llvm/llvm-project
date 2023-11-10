@@ -383,6 +383,11 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override;
 
+    MachineFunctionProperties getClearedProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::IsSSA);
+    }
+
     void releaseMemory() override;
 
     /// This is the pass entry point.

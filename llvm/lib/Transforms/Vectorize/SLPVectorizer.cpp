@@ -10079,14 +10079,21 @@ public:
       }
       if (!Vec) {
         Vec = SubVec;
+        assert((Part == 0 || all_of(seq<unsigned>(0, Part),
+                                    [&](unsigned P) {
+                                      ArrayRef<int> SubMask =
+                                          Mask.slice(P * SliceSize, SliceSize);
+                                      return all_of(SubMask, [](int Idx) {
+                                        return Idx == PoisonMaskElem;
+                                      });
+                                    })) &&
+               "Expected first part or all previous parts masked.");
         copy(SubMask, VecMask.begin());
       } else {
         unsigned VF = cast<FixedVectorType>(Vec->getType())->getNumElements();
         if (Vec->getType() != SubVec->getType()) {
           unsigned SubVecVF =
               cast<FixedVectorType>(SubVec->getType())->getNumElements();
-          if (VF < SubVecVF)
-            TransformToIdentity(VecMask);
           VF = std::max(VF, SubVecVF);
         }
         // Adjust SubMask.

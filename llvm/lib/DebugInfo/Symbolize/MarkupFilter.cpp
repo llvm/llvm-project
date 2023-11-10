@@ -552,7 +552,7 @@ std::optional<uint64_t> MarkupFilter::parseAddr(StringRef Str) const {
   }
   if (all_of(Str, [](char C) { return C == '0'; }))
     return 0;
-  if (!Str.startswith("0x")) {
+  if (!Str.starts_with("0x")) {
     reportTypeError(Str, "address");
     return std::nullopt;
   }
@@ -741,7 +741,7 @@ uint64_t MarkupFilter::adjustAddr(uint64_t Addr, PCType Type) const {
 }
 
 StringRef MarkupFilter::lineEnding() const {
-  return Line.endswith("\r\n") ? "\r\n" : "\n";
+  return Line.ends_with("\r\n") ? "\r\n" : "\n";
 }
 
 bool MarkupFilter::MMap::contains(uint64_t Addr) const {
