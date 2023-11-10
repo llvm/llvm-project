@@ -1904,7 +1904,7 @@ public:
   virtual bool isSafeMemOpType(MVT /*VT*/) const { return true; }
 
   /// Return lower limit for number of blocks in a jump table.
-  virtual unsigned getMinimumJumpTableEntries() const;
+  virtual unsigned getMinimumJumpTableEntries(const Function *F) const;
 
   /// Return lower limit of the density in a jump table.
   unsigned getMinimumJumpTableDensity(bool OptForSize) const;

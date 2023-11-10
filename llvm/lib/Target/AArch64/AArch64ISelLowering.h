@@ -853,6 +853,8 @@ public:
   bool isComplexDeinterleavingOperationSupported(
       ComplexDeinterleavingOperation Operation, Type *Ty) const override;
 
+  unsigned getMinimumJumpTableEntries(const Function *F) const override;
+
   Value *createComplexDeinterleavingIR(
       IRBuilderBase &B, ComplexDeinterleavingOperation OperationType,
       ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,

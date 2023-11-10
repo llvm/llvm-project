@@ -326,7 +326,7 @@ public:
   /// Target Optimization {
 
   // Return lower limit for number of blocks in a jump table.
-  unsigned getMinimumJumpTableEntries() const override;
+  unsigned getMinimumJumpTableEntries(const Function *F) const override;
 
   // SX-Aurora VE's s/udiv is 5-9 times slower than multiply.
   bool isIntDivCheap(EVT, AttributeList) const override { return false; }

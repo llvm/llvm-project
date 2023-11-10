@@ -2035,7 +2035,8 @@ Function *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {
   return nullptr;
 }
 
-unsigned TargetLoweringBase::getMinimumJumpTableEntries() const {
+unsigned
+TargetLoweringBase::getMinimumJumpTableEntries(const Function *F) const {
   return MinimumJumpTableEntries;
 }
 

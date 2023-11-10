@@ -1657,8 +1657,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   PredictableSelectIsExpensive = Subtarget->predictableSelectIsExpensive();
 
   IsStrictFPEnabled = true;
-
-  setMinimumJumpTableEntries(AArch64MinimumJumpTableEntries);
 }
 
 void AArch64TargetLowering::addTypeForNEON(MVT VT) {
@@ -26549,4 +26547,13 @@ bool AArch64TargetLowering::preferScalarizeSplat(SDNode *N) const {
       return false;
   }
   return true;
+}
+
+unsigned
+AArch64TargetLowering::getMinimumJumpTableEntries(const Function *F) const {
+  if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 ||
+      !F->hasMinSize())
+    return AArch64MinimumJumpTableEntries;
+
+  return TargetLoweringBase::getMinimumJumpTableEntries(F);
 }
