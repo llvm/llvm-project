@@ -1191,6 +1191,7 @@ libc_support_library(
     name = "exp10f_impl",
     hdrs = ["src/math/generic/exp10f_impl.h"],
     deps = [
+        ":__support_fputil_basic_operations",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
@@ -1206,6 +1207,7 @@ libc_support_library(
     name = "exp2f_impl",
     hdrs = ["src/math/generic/exp2f_impl.h"],
     deps = [
+        ":__support_fputil_except_value_utils",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
