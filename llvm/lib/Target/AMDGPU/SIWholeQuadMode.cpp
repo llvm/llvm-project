@@ -1318,7 +1318,8 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
   auto II = MBB.getFirstNonPHI(), IE = MBB.end();
   if (IsEntry) {
     // Skip the instruction that saves LiveMask
-    if (II != IE && II->getOpcode() == AMDGPU::COPY)
+    if (II != IE && II->getOpcode() == AMDGPU::COPY &&
+        II->getOperand(1).getReg() == TRI->getExec())
       ++II;
   }
 
