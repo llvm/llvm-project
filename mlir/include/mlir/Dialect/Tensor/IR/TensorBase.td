@@ -18,10 +18,10 @@ def Tensor_Dialect : Dialect {
   let description = [{
     The `tensor` dialect is intended to hold core tensor creation and
     manipulation ops, which are not strongly associated with any particular
-    other dialect or domain abstraction. The primary inclusion criteria for ops
-    in this dialect is that they make sense for any tensor element type. When
-    this is not the case, the op is left to live in other dialects. Examples of
-    element types that could be supported by the `tensor` dialect include:
+    other dialect or domain abstraction. The aim for ops in this dialect is
+    that they make sense for any tensor element type. When this is not the
+    case, the op is left to live in other dialects. Examples of element types
+    that could be supported by the `tensor` dialect include:
 
     - representing large, dense aggregations of primitive types, suitable for
       high-performance numerical computing.
@@ -31,19 +31,21 @@ def Tensor_Dialect : Dialect {
     - representing large, sparse aggregations of primitive types, suitable for
       high-performance numerical computing.
 
-    Because of this broad element type support, we prefer for now to keep the
-    `tensor` dialect as small as possible. The expectation is that at some point
-    in the future, the `tensor` dialect’s scope may be broadened through a
-    careful discussion of the tradeoffs.
+    Because of this broad element type support and because of the existence of
+    more dedicated dialects, such as the `sparse_tensor` and `linalg` dialects,
+    we prefer for now to keep the `tensor` dialect as small as possible. The
+    expectation is that at some point in the future, the `tensor` dialect’s
+    scope may be broadened through a careful discussion of the tradeoffs.
 
     On the `tensor` type itself, note that it is actually a builtin type (it
-    lives in the builtin dialect), and does not live in this dialect. Furthermore,
-    a `tensor` is an immutable object. For example, this means that the `dest`
-    operand used by some ops in this dialect does not mean that the `tensor` is
-    mutated in place, but rather that the operand can be used as bufferization
-    hint. For more information, see the [Destination Passing Style](
+    lives in the builtin dialect), and does not live in this dialect.
+    Furthermore, a `tensor` is an immutable object. For example, this means
+    that a copy will always be made of the `tensor` object when it is passed to
+    the `dest` operand of used by some ops in this dialect. Note that the
+    underlying storage to which the `tensor` object refers may be mutated, see
+    see the [Destination-Passing Style](
     https://mlir.llvm.org/docs/Bufferization/#destination-passing-style)
-    documentation.
+    documentation for more information.
   }];
 
   let hasCanonicalizer = 1;
