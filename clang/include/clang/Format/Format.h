@@ -1428,10 +1428,6 @@ struct FormatStyle {
   enum AttributeBreakingStyle : int8_t {
     /// Always break after attributes.
     /// \code
-    ///   [[maybe_unused]]
-    ///   const int i;
-    ///   [[gnu::const]] [[maybe_unused]]
-    ///   int j;
     ///   [[nodiscard]]
     ///   inline int f();
     ///   [[gnu::const]] [[nodiscard]]
@@ -1440,9 +1436,6 @@ struct FormatStyle {
     ABS_Always,
     /// Leave the line breaking after attributes as is.
     /// \code
-    ///   [[maybe_unused]] const int i;
-    ///   [[gnu::const]] [[maybe_unused]]
-    ///   int j;
     ///   [[nodiscard]] inline int f();
     ///   [[gnu::const]] [[nodiscard]]
     ///   int g();
@@ -1450,16 +1443,14 @@ struct FormatStyle {
     ABS_Leave,
     /// Never break after attributes.
     /// \code
-    ///   [[maybe_unused]] const int i;
-    ///   [[gnu::const]] [[maybe_unused]] int j;
     ///   [[nodiscard]] inline int f();
     ///   [[gnu::const]] [[nodiscard]] int g();
     /// \endcode
     ABS_Never,
   };
 
-  /// Break after a group of C++11 attributes before a variable/function
-  /// (including constructor/destructor) declaration/definition name.
+  /// Break after a group of C++11 attributes before a function
+  /// declaration/definition name.
   /// \version 16
   AttributeBreakingStyle BreakAfterAttributes;
 
