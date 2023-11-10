@@ -3046,7 +3046,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
       auto TargetAS = getContext().getTargetAddressSpace(T.getAddressSpace());
       auto PtrTy = ATPO.getElementType()->getPointerTo(TargetAS);
       auto ASC = getTargetHooks().performAddrSpaceCast(
-        CGM, ATPO.getPointer(), AS, T.getAddressSpace(), PtrTy);
+          CGM, ATPO.getPointer(), AS, T.getAddressSpace(), PtrTy);
       ATPO = ConstantAddress(ASC, ATPO.getElementType(), ATPO.getAlignment());
     }
 
