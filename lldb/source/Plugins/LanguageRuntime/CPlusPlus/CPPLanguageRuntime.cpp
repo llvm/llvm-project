@@ -41,9 +41,8 @@ CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     : LanguageRuntime(process) {}
 
 bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
-  // FIXME: use a list when the list grows more.
   return name == g_this ||
-  // Artificial coroutine-related variables emitted by clang.
+         // Artificial coroutine-related variables emitted by clang.
          name == ConstString("__promise") ||
          name == ConstString("__coro_frame");
 }
