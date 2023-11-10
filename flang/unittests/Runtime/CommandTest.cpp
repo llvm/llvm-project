@@ -297,7 +297,6 @@ TEST_F(SeveralArguments, ArgValueTooShort) {
   ASSERT_NE(tooShort, nullptr);
   EXPECT_EQ(RTNAME(GetCommandArgument)(1, tooShort.get()), -1);
   CheckDescriptorEqStr(tooShort.get(), severalArgsArgv[1]);
-  EXPECT_EQ(RTNAME(FDate)(tooShort.get()), -1);
 
   OwningPtr<Descriptor> length{EmptyIntDescriptor()};
   ASSERT_NE(length, nullptr);

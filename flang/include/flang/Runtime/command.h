@@ -23,11 +23,6 @@ extern "C" {
 // integer kind.
 std::int32_t RTNAME(ArgumentCount)();
 
-// Try to get the the current date (same format as CTIME: convert to a string)
-// Return a STATUS as described in the standard.
-std::int32_t RTNAME(FDate)(
-    const Descriptor *argument = nullptr, const Descriptor *errmsg = nullptr);
-
 // 16.9.82 GET_COMMAND
 // Try to get the value of the whole command. All of the parameters are
 // optional.
