@@ -1,10 +1,10 @@
 // RUN: mlir-opt %s -convert-gpu-to-nvvm -cse -canonicalize | FileCheck %s
 
 gpu.module @modules {
-  // CHECK: llvm.mlir.global internal @__shmem_dynamic_shared_memory_kernel_2() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<0 x i8>
-  llvm.mlir.global internal @__shmem_dynamic_shared_memory_kernel() {addr_space = 3 : i32, alignment = 4 : i64} : !llvm.array<0 x i8>
-  llvm.mlir.global internal @__shmem_dynamic_shared_memory_kernel_0() {addr_space = 3 : i32, alignment = 4 : i64} : !llvm.array<0 x i8>  
-  llvm.mlir.global internal @__shmem_dynamic_shared_memory_kernel_1() {alignment = 16 : i64} : !llvm.array<0 x i8>  
+  // CHECK: llvm.mlir.global internal @__dynamic_shmem__3() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<0 x i8>
+  llvm.mlir.global internal @__dynamic_shmem__0() {addr_space = 3 : i32, alignment = 4 : i64} : !llvm.array<0 x i8>
+  llvm.mlir.global internal @__dynamic_shmem__1() {addr_space = 3 : i32, alignment = 4 : i64} : !llvm.array<0 x i8>  
+  llvm.mlir.global internal @__dynamic_shmem__2() {alignment = 16 : i64} : !llvm.array<0 x i8>  
   // CHECK-LABEL: llvm.func @dynamic_shared_memory_kernel(
   // CHECK-SAME: %[[arg0:.+]]: i64)
   gpu.func @dynamic_shared_memory_kernel(%d : index) kernel attributes {gpu.known_block_size = array<i32: 1, 1, 1>, gpu.known_grid_size = array<i32: 1, 1, 1>} {    
@@ -24,7 +24,7 @@ gpu.module @modules {
 // CHECK: %[[S1:.+]] = llvm.mlir.constant(64 : index) : i64
 // CHECK: %[[S2:.+]] = llvm.mlir.constant(1 : index) : i64
 // CHECK: %[[S3:.+]] = llvm.mlir.constant(0 : index) : i64
-// CHECK: %[[S4:.+]] = llvm.mlir.addressof @__shmem_dynamic_shared_memory_kernel_2 : !llvm.ptr<3>
+// CHECK: %[[S4:.+]] = llvm.mlir.addressof @__dynamic_shmem__3 : !llvm.ptr<3>
 // CHECK: %[[S5:.+]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[S6:.+]] = llvm.insertvalue %[[S4]], %[[S5]][0] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)> 
 // CHECK: %[[S7:.+]] = llvm.getelementptr %[[S4]][8192] : (!llvm.ptr<3>) -> !llvm.ptr<3>, i8
@@ -58,7 +58,7 @@ gpu.module @modules {
 // CHECK: %[[S1:.+]] = llvm.mlir.constant(64 : index) : i64
 // CHECK: %[[S2:.+]] = llvm.mlir.constant(1 : index) : i64
 // CHECK: %[[S3:.+]] = llvm.mlir.constant(0 : index) : i64
-// CHECK: %[[S4:.+]] = llvm.mlir.addressof @__shmem_dynamic_shared_memory_kernel_2 : !llvm.ptr<3>
+// CHECK: %[[S4:.+]] = llvm.mlir.addressof @__dynamic_shmem__3 : !llvm.ptr<3>
 // CHECK: %[[S5:.+]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[S6:.+]] = llvm.insertvalue %[[S4]], %[[S5]][0] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)> 
 // CHECK: %[[S7:.+]] = llvm.getelementptr %[[S4]][8192] : (!llvm.ptr<3>) -> !llvm.ptr<3>, i8
@@ -84,7 +84,7 @@ gpu.module @modules {
 // CHECK: %[[S1:.+]] = llvm.mlir.constant(64 : index) : i64
 // CHECK: %[[S2:.+]] = llvm.mlir.constant(1 : index) : i64
 // CHECK: %[[S3:.+]] = llvm.mlir.constant(0 : index) : i64
-// CHECK: %[[S4:.+]] = llvm.mlir.addressof @__shmem_dynamic_shared_memory_kernel_2 : !llvm.ptr<3>
+// CHECK: %[[S4:.+]] = llvm.mlir.addressof @__dynamic_shmem__3 : !llvm.ptr<3>
 // CHECK: %[[S5:.+]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[S6:.+]] = llvm.insertvalue %[[S4]], %[[S5]][0] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)> 
 // CHECK: %[[S7:.+]] = llvm.getelementptr %[[S4]][8192] : (!llvm.ptr<3>) -> !llvm.ptr<3>, i8

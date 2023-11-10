@@ -17,6 +17,7 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Visitors.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
@@ -569,10 +570,14 @@ LLVM::GlobalOp getDynamicSharedMemorySymbol(
   gpu::GPUModuleOp moduleOp = funcOp->getParentOfType<gpu::GPUModuleOp>();
   assert(moduleOp && "cannot find gpu.module op");
 
-  // Step 1. Return existing global op if it exists
   uint64_t alignmentByte = alignmentBit / memrefType.getElementTypeBitWidth();
+
+  // Step 1. Collect symbol names of LLVM::GlobalOp Ops. Also if any of
+  // LLVM::GlobalOp is suitable for shared memory, return it.
+  llvm::StringSet<> existingGlobalNames;
   for (auto &innerOp : moduleOp->getRegions().front().front().getOperations()) {
     if (auto globalOp = dyn_cast<LLVM::GlobalOp>(innerOp)) {
+      existingGlobalNames.insert(globalOp.getSymName());
       if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(globalOp.getType())) {
         if (globalOp.getAddrSpace() == addressSpace &&
             arrayType.getNumElements() == 0 &&
@@ -584,20 +589,13 @@ LLVM::GlobalOp getDynamicSharedMemorySymbol(
   }
 
   // Step 2. Find a unique symbol name
-  int index = 0;
-  std::string symName, name = llvm::formatv("__shmem_{0}", funcOp.getSymName());
-  bool nameExist;
-  do {
-    nameExist = false;
-    symName = llvm::formatv("{0}_{1}", name, index++);
-    for (auto &innerOp :
-         moduleOp->getRegions().front().front().getOperations()) {
-      if (auto globalOp = dyn_cast<LLVM::GlobalOp>(innerOp)) {
-        if (globalOp.getSymName() == symName)
-          nameExist = true;
-      }
-    }
-  } while (nameExist);
+  unsigned uniquingCounter = 0;
+  SmallString<128> symName = SymbolTable::generateSymbolName<128>(
+      "__dynamic_shmem_",
+      [&](StringRef candidate) {
+        return existingGlobalNames.contains(candidate);
+      },
+      uniquingCounter);
 
   // Step 3. Generate a global op
   OpBuilder::InsertionGuard guard(rewriter);
