@@ -17,6 +17,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CommentDiagnostic.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -15811,6 +15812,23 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
           << FixItHint::CreateInsertion(P.first, "self->");
 }
 
+void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
+  if (!getLangOpts().Coroutines || !FD || getCurFunction()->isCoroutine())
+    return;
+  RecordDecl *RD = FD->getReturnType()->getAsRecordDecl();
+  if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
+    return;
+  // Allow `promise_type::get_return_object`.
+  if (FD->getName() == "get_return_object") {
+    if (auto *GRT = dyn_cast<CXXMethodDecl>(FD)) {
+      if (auto *PT = GRT->getParent(); PT && PT->getName() == "promise_type")
+        return;
+    }
+  }
+  if (!FD->hasAttr<CoroWrapperAttr>())
+    Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
+}
+
 Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
                                     bool IsInstantiation) {
   FunctionScopeInfo *FSI = getCurFunction();
@@ -15822,8 +15840,11 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   sema::AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
 
-  if (getLangOpts().Coroutines && FSI->isCoroutine())
-    CheckCompletedCoroutineBody(FD, Body);
+  if (getLangOpts().Coroutines) {
+    if (FSI->isCoroutine())
+      CheckCompletedCoroutineBody(FD, Body);
+    CheckCoroutineWrapper(FD);
+  }
 
   {
     // Do not call PopExpressionEvaluationContext() if it is a lambda because

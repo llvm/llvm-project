@@ -11183,6 +11183,7 @@ public:
   bool buildCoroutineParameterMoves(SourceLocation Loc);
   VarDecl *buildCoroutinePromise(SourceLocation Loc);
   void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
+  void CheckCoroutineWrapper(FunctionDecl *FD);
   /// Lookup 'coroutine_traits' in std namespace and std::experimental
   /// namespace. The namespace found is recorded in Namespace.
   ClassTemplateDecl *lookupCoroutineTraits(SourceLocation KwLoc,
