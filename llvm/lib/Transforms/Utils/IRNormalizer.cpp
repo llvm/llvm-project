@@ -47,7 +47,7 @@ public:
   /// Renames all instructions (including user-named).
   static cl::opt<bool> RenameAll;
   /// Folds all regular instructions (including pre-outputs).
-  static cl::opt<bool> FoldPreoutputs;
+  static cl::opt<bool> FoldPreOutputs;
   /// Sorts and reorders operands in commutative instructions.
   static cl::opt<bool> ReorderOperands;
   /// @}
@@ -97,7 +97,7 @@ cl::opt<bool> IRNormalizer::PreserveOrder(
 cl::opt<bool> IRNormalizer::RenameAll(
     "rename-all", cl::Hidden,
     cl::desc("Renames all instructions (including user-named)"));
-cl::opt<bool> IRNormalizer::FoldPreoutputs(
+cl::opt<bool> IRNormalizer::FoldPreOutputs(
     "fold-all", cl::Hidden,
     cl::desc("Folds all regular instructions (including pre-outputs)"));
 cl::opt<bool> IRNormalizer::ReorderOperands(
@@ -362,7 +362,7 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
 void IRNormalizer::foldInstructionName(Instruction *I) {
   // If this flag is raised, fold all regular
   // instructions (including pre-outputs).
-  if (!FoldPreoutputs) {
+  if (!FoldPreOutputs) {
     // Don't fold if one of the users is an output instruction.
     for (auto *U : I->users())
       if (auto *IU = dyn_cast<Instruction>(U))
