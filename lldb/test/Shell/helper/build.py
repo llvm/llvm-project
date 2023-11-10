@@ -747,10 +747,7 @@ class GccBuilder(Builder):
         args = []
 
         args.append(self.compiler)
-
-        uname = platform.uname().machine.lower()
-        if not "arm" in uname and not "aarch64" in uname:
-            args.append("-m" + self.arch)
+        args.append("-m" + self.arch)
 
         args.append("-g")
         if self.opt == "none":
@@ -787,11 +784,7 @@ class GccBuilder(Builder):
     def _get_link_command(self):
         args = []
         args.append(self.compiler)
-
-        uname = platform.uname().machine.lower()
-        if not "arm" in uname and not "aarch64" in uname:
-            args.append("-m" + self.arch)
-
+        args.append("-m" + self.arch)
         if self.nodefaultlib:
             args.append("-nostdlib")
             args.append("-static")
