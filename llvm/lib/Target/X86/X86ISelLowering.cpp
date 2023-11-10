@@ -22648,38 +22648,12 @@ X86TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
       !(Subtarget.is64Bit() && VT == MVT::i64))
     return SDValue();
 
-  unsigned Lg2 = Divisor.countr_zero();
-
   // If the divisor is 2 or -2, the default expansion is better.
-  if (Lg2 == 1)
+  if (Divisor == 2 ||
+      Divisor == APInt(Divisor.getBitWidth(), -2, /*isSigned*/ true))
     return SDValue();
 
-  SDLoc DL(N);
-  SDValue N0 = N->getOperand(0);
-  SDValue Zero = DAG.getConstant(0, DL, VT);
-  APInt Lg2Mask = APInt::getLowBitsSet(VT.getSizeInBits(), Lg2);
-  SDValue Pow2MinusOne = DAG.getConstant(Lg2Mask, DL, VT);
-
-  // If N0 is negative, we need to add (Pow2 - 1) to it before shifting right.
-  SDValue Cmp = DAG.getSetCC(DL, MVT::i8, N0, Zero, ISD::SETLT);
-  SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, Pow2MinusOne);
-  SDValue CMov = DAG.getNode(ISD::SELECT, DL, VT, Cmp, Add, N0);
-
-  Created.push_back(Cmp.getNode());
-  Created.push_back(Add.getNode());
-  Created.push_back(CMov.getNode());
-
-  // Divide by pow2.
-  SDValue SRA =
-      DAG.getNode(ISD::SRA, DL, VT, CMov, DAG.getConstant(Lg2, DL, MVT::i8));
-
-  // If we're dividing by a positive value, we're done.  Otherwise, we must
-  // negate the result.
-  if (Divisor.isNonNegative())
-    return SRA;
-
-  Created.push_back(SRA.getNode());
-  return DAG.getNode(ISD::SUB, DL, VT, Zero, SRA);
+  return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);
 }
 
 /// Result of 'and' is compared against zero. Change to a BT node if possible.
