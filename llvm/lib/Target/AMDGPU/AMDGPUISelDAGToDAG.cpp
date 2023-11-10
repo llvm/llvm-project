@@ -1859,7 +1859,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
       std::tie(SplitImmOffset, RemainderOffset)
         = TII->splitFlatOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, true);
 
-      if (isUInt<32>(RemainderOffset)) {
+      if (RemainderOffset > 0 && isInt<32>(RemainderOffset)) {
         SDNode *VMov = CurDAG->getMachineNode(
           AMDGPU::V_MOV_B32_e32, SL, MVT::i32,
           CurDAG->getTargetConstant(RemainderOffset, SDLoc(), MVT::i32));
