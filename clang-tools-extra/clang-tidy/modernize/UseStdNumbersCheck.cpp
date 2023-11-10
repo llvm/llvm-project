@@ -27,6 +27,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
 #include <cstdint>
@@ -363,16 +364,16 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
 
     const auto Range = Match->getSourceRange();
 
-    if (Range.getBegin().isMacroID() &&
-        !isRangeOfCompleteMacro(Range, SM, LO)) {
+    const auto IsMacro = Range.getBegin().isMacroID();
+    if (IsMacro && !isRangeOfCompleteMacro(Range, SM, LO)) {
       continue;
     }
 
     const auto PatternBindString = (ConstantName + "_pattern").str();
     if (Result.Nodes.getNodeAs<Expr>(PatternBindString) != nullptr) {
       const auto Code = getCode(ConstantName, IsFloat, IsLongDouble);
-      diag(Range.getBegin(), "prefer '%0' math constant")
-          << Code << FixItHint::CreateReplacement(Range, Code);
+      diag(Range.getBegin(), "prefer '%0' to this %select{formula|macro}1")
+          << Code << IsMacro << FixItHint::CreateReplacement(Range, Code);
       return;
     }
 
@@ -396,16 +397,19 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
     return std::get<1>(LHS) < std::get<1>(RHS);
   });
 
-  const auto &[Constant, _, Node] = MatchedLiterals.front();
+  const auto &[Constant, Diff, Node] = MatchedLiterals.front();
 
   const auto Range = Node->getSourceRange();
-  if (Range.getBegin().isMacroID() && !isRangeOfCompleteMacro(Range, SM, LO)) {
+  const auto IsMacro = Range.getBegin().isMacroID();
+  if (IsMacro && !isRangeOfCompleteMacro(Range, SM, LO)) {
     return;
   }
 
   const auto Code = getCode(Constant, IsFloat, IsLongDouble);
-  diag(Range.getBegin(), "prefer '%0' math constant")
-      << Code << FixItHint::CreateReplacement(Range, Code)
+  diag(Range.getBegin(),
+       "prefer '%0' to this %select{literal|macro}1, differs by '%2'")
+      << Code << IsMacro << llvm::formatv("{0:e2}", Diff).str()
+      << FixItHint::CreateReplacement(Range, Code)
       << IncludeInserter.createIncludeInsertion(
              Result.SourceManager->getFileID(Range.getBegin()), "<numbers>");
 }
