@@ -56,14 +56,14 @@ BreakpointResolverSP BreakpointResolverFileRegex::CreateFromStructuredData(
   if (success && names_array) {
     size_t num_names = names_array->GetSize();
     for (size_t i = 0; i < num_names; i++) {
-      llvm::StringRef name;
-      success = names_array->GetItemAtIndexAsString(i, name);
-      if (!success) {
+      std::optional<llvm::StringRef> maybe_name =
+          names_array->GetItemAtIndexAsString(i);
+      if (!maybe_name) {
         error.SetErrorStringWithFormat(
             "BRFR::CFSD: Malformed element %zu in the names array.", i);
         return nullptr;
       }
-      names_set.insert(std::string(name));
+      names_set.insert(std::string(*maybe_name));
     }
   }
 
