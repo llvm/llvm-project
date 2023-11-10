@@ -2501,7 +2501,7 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
 
     // (2) Check for the folder where the executable is located, if different.
     if (getDriver().getInstalledDir() != getDriver().Dir) {
-      InstallBin = llvm::StringRef(getDriver().Dir.c_str());
+      InstallBin = llvm::StringRef(getDriver().Dir);
       llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
       if (getVFS().exists(InstallBin)) {
         addSystemInclude(DriverArgs, CC1Args, InstallBin);
