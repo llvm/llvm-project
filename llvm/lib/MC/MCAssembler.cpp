@@ -918,6 +918,12 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
         Contents = DF.getContents();
         break;
       }
+      case MCFragment::FT_LEB: {
+        auto &LF = cast<MCLEBFragment>(Frag);
+        Fixups = LF.getFixups();
+        Contents = LF.getContents();
+        break;
+      }
       case MCFragment::FT_PseudoProbe: {
         MCPseudoProbeAddrFragment &PF = cast<MCPseudoProbeAddrFragment>(Frag);
         Fixups = PF.getFixups();
@@ -1006,15 +1012,27 @@ bool MCAssembler::relaxInstruction(MCAsmLayout &Layout,
 }
 
 bool MCAssembler::relaxLEB(MCAsmLayout &Layout, MCLEBFragment &LF) {
-  uint64_t OldSize = LF.getContents().size();
+  const unsigned OldSize = static_cast<unsigned>(LF.getContents().size());
+  unsigned PadTo = OldSize;
   int64_t Value;
-  bool Abs = LF.getValue().evaluateKnownAbsolute(Value, Layout);
+  SmallVectorImpl<char> &Data = LF.getContents();
+  LF.getFixups().clear();
+  // Use evaluateKnownAbsolute for Mach-O as a hack: .subsections_via_symbols
+  // requires that .uleb128 A-B is foldable where A and B reside in different
+  // fragments. This is used by __gcc_except_table.
+  bool Abs = getSubsectionsViaSymbols()
+                 ? LF.getValue().evaluateKnownAbsolute(Value, Layout)
+                 : LF.getValue().evaluateAsAbsolute(Value, Layout);
   if (!Abs) {
-    getContext().reportError(LF.getValue().getLoc(),
-                             Twine(LF.isSigned() ? ".s" : ".u") +
-                                 "leb128 expression is not absolute");
+    if (!getBackend().relaxLEB128(LF, Layout, Value)) {
+      getContext().reportError(LF.getValue().getLoc(),
+                               Twine(LF.isSigned() ? ".s" : ".u") +
+                                   "leb128 expression is not absolute");
+      LF.setValue(MCConstantExpr::create(0, Context));
+    }
+    uint8_t Tmp[10]; // maximum size: ceil(64/7)
+    PadTo = std::max(PadTo, encodeULEB128(uint64_t(Value), Tmp));
   }
-  SmallString<8> &Data = LF.getContents();
   Data.clear();
   raw_svector_ostream OSE(Data);
   // The compiler can generate EH table assembly that is impossible to assemble
@@ -1022,9 +1040,9 @@ bool MCAssembler::relaxLEB(MCAsmLayout &Layout, MCLEBFragment &LF) {
   // to a later alignment fragment. To accommodate such tables, relaxation can
   // only increase an LEB fragment size here, not decrease it. See PR35809.
   if (LF.isSigned())
-    encodeSLEB128(Value, OSE, OldSize);
+    encodeSLEB128(Value, OSE, PadTo);
   else
-    encodeULEB128(Value, OSE, OldSize);
+    encodeULEB128(Value, OSE, PadTo);
   return OldSize != LF.getContents().size();
 }
 

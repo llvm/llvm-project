@@ -236,7 +236,7 @@ void TailDuplication::constantAndCopyPropagate(
         break;
     }
 
-    // If the register was replaced everwhere and it was overwritten in either
+    // If the register was replaced everywhere and it was overwritten in either
     // one of the iterated through blocks or one of the successor blocks, delete
     // the original move instruction
     if (ReplacedEverywhere &&
@@ -276,7 +276,7 @@ TailDuplication::moderateDuplicate(BinaryBasicBlock &BB,
   // The block must be hot
   if (BB.getKnownExecutionCount() == 0)
     return BlocksToDuplicate;
-  // and its sucessor is not already in the same cache line
+  // and its successor is not already in the same cache line
   if (isInCacheLine(BB, Tail))
     return BlocksToDuplicate;
   // and its size do not exceed the maximum allowed size
@@ -299,7 +299,7 @@ TailDuplication::aggressiveDuplicate(BinaryBasicBlock &BB,
   // The block must be hot
   if (BB.getKnownExecutionCount() == 0)
     return BlocksToDuplicate;
-  // and its sucessor is not already in the same cache line
+  // and its successor is not already in the same cache line
   if (isInCacheLine(BB, Tail))
     return BlocksToDuplicate;
 

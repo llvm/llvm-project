@@ -322,7 +322,8 @@ void BinaryFunction::markUnreachableBlocks() {
 
 // Any unnecessary fallthrough jumps revealed after calling eraseInvalidBBs
 // will be cleaned up by fixBranches().
-std::pair<unsigned, uint64_t> BinaryFunction::eraseInvalidBBs() {
+std::pair<unsigned, uint64_t>
+BinaryFunction::eraseInvalidBBs(const MCCodeEmitter *Emitter) {
   DenseSet<const BinaryBasicBlock *> InvalidBBs;
   unsigned Count = 0;
   uint64_t Bytes = 0;
@@ -331,7 +332,7 @@ std::pair<unsigned, uint64_t> BinaryFunction::eraseInvalidBBs() {
       assert(!isEntryPoint(*BB) && "all entry blocks must be valid");
       InvalidBBs.insert(BB);
       ++Count;
-      Bytes += BC.computeCodeSize(BB->begin(), BB->end());
+      Bytes += BC.computeCodeSize(BB->begin(), BB->end(), Emitter);
     }
   }
 
@@ -4306,7 +4307,7 @@ BinaryFunction::translateInputToOutputRange(DebugAddressRange InRange) const {
     // block boundaries.
     auto translateBlockOffset = [&](const uint64_t Offset) {
       const uint64_t OutAddress = BB.getOutputAddressRange().first + Offset;
-      return OutAddress;
+      return std::min(OutAddress, BB.getOutputAddressRange().second);
     };
 
     uint64_t OutLowPC = BB.getOutputAddressRange().first;

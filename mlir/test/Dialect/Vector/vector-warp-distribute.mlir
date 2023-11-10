@@ -1256,6 +1256,43 @@ func.func @warp_propagate_uniform_transfer_read(%laneid: index, %src: memref<409
 
 // -----
 
+func.func @warp_propagate_multi_transfer_read(%laneid: index, %src: memref<4096xf32>, %index: index, %index1: index) -> (vector<1xf32>, vector<1xf32>) {
+  %f0 = arith.constant 0.000000e+00 : f32
+  %r:2 = vector.warp_execute_on_lane_0(%laneid)[64] -> (vector<1xf32>, vector<1xf32>) {
+    %0 = vector.transfer_read %src[%index], %f0 {in_bounds = [true]} : memref<4096xf32>, vector<1xf32>
+    "some_use"(%0) : (vector<1xf32>) -> ()
+    %1 = vector.transfer_read %src[%index1], %f0 {in_bounds = [true]} : memref<4096xf32>, vector<1xf32>
+    vector.yield %0, %1 : vector<1xf32>, vector<1xf32>
+  }
+  return %r#0, %r#1 : vector<1xf32>, vector<1xf32>
+}
+
+// CHECK-PROP-LABEL: func.func @warp_propagate_multi_transfer_read
+//       CHECK-PROP:   vector.warp_execute_on_lane_0{{.*}} -> (vector<1xf32>)
+//       CHECK-PROP:     %[[INNER_READ:.+]] = vector.transfer_read
+//       CHECK-PROP:     "some_use"(%[[INNER_READ]])
+//       CHECK-PROP:     vector.yield %[[INNER_READ]] : vector<1xf32>
+//       CHECK-PROP:   vector.transfer_read
+
+// -----
+
+func.func @warp_propagate_dead_user_multi_read(%laneid: index, %src: memref<4096xf32>, %index: index, %index1: index) -> (vector<1xf32>) {
+  %f0 = arith.constant 0.000000e+00 : f32
+  %r = vector.warp_execute_on_lane_0(%laneid)[64] -> (vector<1xf32>) {
+    %0 = vector.transfer_read %src[%index], %f0 {in_bounds = [true]} : memref<4096xf32>, vector<64xf32>
+    %1 = vector.transfer_read %src[%index1], %f0 {in_bounds = [true]} : memref<4096xf32>, vector<64xf32>
+    %max = arith.maximumf %0, %1 : vector<64xf32>
+    vector.yield %max : vector<64xf32>
+  }
+  return %r : vector<1xf32>
+}
+
+//   CHECK-PROP-LABEL: func.func @warp_propagate_dead_user_multi_read
+// CHECK-PROP-COUNT-2:   vector.transfer_read {{.*}} vector<1xf32>
+//         CHECK-PROP:   arith.maximumf {{.*}} : vector<1xf32>
+
+// -----
+
 func.func @warp_propagate_masked_write(%laneid: index, %dest: memref<4096xf32>) {
   %c0 = arith.constant 0 : index
   vector.warp_execute_on_lane_0(%laneid)[32] -> () {

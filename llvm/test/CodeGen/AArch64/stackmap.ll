@@ -9,11 +9,11 @@
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .hword 0
 ; Num Functions
-; CHECK-NEXT:   .word 15
+; CHECK-NEXT:   .word 14
 ; Num LargeConstants
 ; CHECK-NEXT:   .word 4
 ; Num Callsites
-; CHECK-NEXT:   .word 19
+; CHECK-NEXT:   .word 18
 
 ; Functions and stack size
 ; CHECK-NEXT:   .xword constantargs
@@ -39,9 +39,6 @@
 ; CHECK-NEXT:   .xword 1
 ; CHECK-NEXT:   .xword spilledValue
 ; CHECK-NEXT:   .xword 160
-; CHECK-NEXT:   .xword 1
-; CHECK-NEXT:   .xword spilledStackMapValue
-; CHECK-NEXT:   .xword 128
 ; CHECK-NEXT:   .xword 1
 ; CHECK-NEXT:   .xword liveConstant
 ; CHECK-NEXT:   .xword 16
@@ -358,28 +355,6 @@ entry:
 define void @spilledValue(i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16, i64 %l17, i64 %l18, i64 %l19, i64 %l20, i64 %l21, i64 %l22, i64 %l23, i64 %l24, i64 %l25, i64 %l26, i64 %l27) {
 entry:
   call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 11, i32 20, ptr null, i32 5, i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16, i64 %l17, i64 %l18, i64 %l19, i64 %l20, i64 %l21, i64 %l22, i64 %l23, i64 %l24, i64 %l25, i64 %l26, i64 %l27)
-  ret void
-}
-
-; Spilled stack map values.
-;
-; Verify 30 stack map entries.
-;
-; CHECK-LABEL:  .word .L{{.*}}-spilledStackMapValue
-; CHECK-NEXT:   .hword 0
-; CHECK-NEXT:   .hword 30
-;
-; Check that at least one is a spilled entry from RBP.
-; Location: Indirect RBP + ...
-; CHECK:        .byte 3
-; CHECK-NEXT:   .byte   0
-; CHECK-NEXT:   .hword 8
-; CHECK-NEXT:   .hword 29
-; CHECK-NEXT:   .hword  0
-; CHECK-NEXT:   .word
-define webkit_jscc void @spilledStackMapValue(i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16, i64 %l17, i64 %l18, i64 %l19, i64 %l20, i64 %l21, i64 %l22, i64 %l23, i64 %l24, i64 %l25, i64 %l26, i64 %l27, i64 %l28, i64 %l29) {
-entry:
-  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 12, i32 16, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16, i64 %l17, i64 %l18, i64 %l19, i64 %l20, i64 %l21, i64 %l22, i64 %l23, i64 %l24, i64 %l25, i64 %l26, i64 %l27, i64 %l28, i64 %l29)
   ret void
 }
 

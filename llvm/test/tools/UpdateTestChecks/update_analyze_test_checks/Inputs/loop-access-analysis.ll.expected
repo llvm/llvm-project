@@ -81,7 +81,7 @@ define void @test_brace_escapes(ptr noundef %arr) {
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP4]]:
 ; CHECK-NEXT:          (Low: {(64 + %arr),+,64}<%loop.1> High: {(8064 + %arr),+,64}<%loop.1>)
-; CHECK-NEXT:            Member: {{(64 + %arr),+,64}<%loop.1>,+,8}<%loop.2>
+; CHECK-NEXT:            Member: {{\{\{}}(64 + %arr),+,64}<%loop.1>,+,8}<%loop.2>
 ; CHECK-NEXT:        Group [[GRP5]]:
 ; CHECK-NEXT:          (Low: %arr High: (8000 + %arr))
 ; CHECK-NEXT:            Member: {%arr,+,8}<nuw><%loop.2>

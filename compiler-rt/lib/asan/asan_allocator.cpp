@@ -532,7 +532,7 @@ struct Allocator {
   void *Allocate(uptr size, uptr alignment, BufferedStackTrace *stack,
                  AllocType alloc_type, bool can_fill,
                  DeviceAllocationInfo *da_info = nullptr) {
-    if (UNLIKELY(!asan_inited))
+    if (UNLIKELY(!AsanInited()))
       AsanInitFromRtl();
     if (UNLIKELY(IsRssLimitExceeded())) {
       if (AllocatorMayReturnNull())
