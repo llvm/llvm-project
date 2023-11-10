@@ -1610,13 +1610,10 @@ void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
 }
 
 void Instruction::addAnnotationMetadata(SmallVector<StringRef> Annotations) {
-  SmallSetVector<StringRef, 2> AnnotationsSet(Annotations.begin(),
-                                              Annotations.end());
-  MDBuilder MDB(getContext());
-
-  auto *Existing = getMetadata(LLVMContext::MD_annotation);
   SmallVector<Metadata *, 4> Names;
-  if (Existing) {
+  if (auto *Existing = getMetadata(LLVMContext::MD_annotation)) {
+    SmallSetVector<StringRef, 2> AnnotationsSet(Annotations.begin(),
+                                                Annotations.end());
     auto *Tuple = cast<MDTuple>(Existing);
     for (auto &N : Tuple->operands()) {
       if (isa<MDString>(N.get())) {
@@ -1632,6 +1629,7 @@ void Instruction::addAnnotationMetadata(SmallVector<StringRef> Annotations) {
     }
   }
 
+  MDBuilder MDB(getContext());
   SmallVector<Metadata *> MDAnnotationStrings;
   for (StringRef Annotation : Annotations)
     MDAnnotationStrings.push_back(MDB.createString(Annotation));
@@ -1642,11 +1640,8 @@ void Instruction::addAnnotationMetadata(SmallVector<StringRef> Annotations) {
 }
 
 void Instruction::addAnnotationMetadata(StringRef Name) {
-  MDBuilder MDB(getContext());
-
-  auto *Existing = getMetadata(LLVMContext::MD_annotation);
   SmallVector<Metadata *, 4> Names;
-  if (Existing) {
+  if (auto *Existing = getMetadata(LLVMContext::MD_annotation)) {
     auto *Tuple = cast<MDTuple>(Existing);
     for (auto &N : Tuple->operands()) {
       if (isa<MDString>(N.get()) &&
@@ -1656,6 +1651,7 @@ void Instruction::addAnnotationMetadata(StringRef Name) {
     }
   }
 
+  MDBuilder MDB(getContext());
   Names.push_back(MDB.createString(Name));
   MDNode *MD = MDTuple::get(getContext(), Names);
   setMetadata(LLVMContext::MD_annotation, MD);

@@ -25,6 +25,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/OSLog.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -858,62 +859,154 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
     }
   }
 
-  if (IsDynamic) {
-    LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-        getLangOpts().getStrictFlexArraysLevel();
-    const Expr *Base = E->IgnoreParenImpCasts();
-
-    if (FieldDecl *FD = FindCountedByField(Base, StrictFlexArraysLevel)) {
-      const auto *ME = dyn_cast<MemberExpr>(Base);
-      llvm::Value *ObjectSize = nullptr;
-
-      if (!ME) {
-        const auto *DRE = dyn_cast<DeclRefExpr>(Base);
-        ValueDecl *VD = nullptr;
-
-        ObjectSize = ConstantInt::get(
-            ResType,
-            getContext().getTypeSize(DRE->getType()->getPointeeType()) / 8,
-            true);
-
-        if (auto *RD = DRE->getType()->getPointeeType()->getAsRecordDecl())
-          VD = RD->getLastField();
-
-        Expr *ICE = ImplicitCastExpr::Create(
-            getContext(), DRE->getType(), CK_LValueToRValue,
-            const_cast<Expr *>(cast<Expr>(DRE)), nullptr, VK_PRValue,
-            FPOptionsOverride());
-        ME = MemberExpr::CreateImplicit(getContext(), ICE, true, VD,
-                                        VD->getType(), VK_LValue, OK_Ordinary);
-      }
-
-      // At this point, we know that \p ME is a flexible array member.
-      const auto *ArrayTy = getContext().getAsArrayType(ME->getType());
-      unsigned Size = getContext().getTypeSize(ArrayTy->getElementType());
-
-      llvm::Value *CountField =
-          EmitAnyExprToTemp(MemberExpr::CreateImplicit(
-                                getContext(), const_cast<Expr *>(ME->getBase()),
-                                ME->isArrow(), FD, FD->getType(), VK_LValue,
-                                OK_Ordinary))
-              .getScalarVal();
-
-      llvm::Value *Mul = Builder.CreateMul(
-          CountField, llvm::ConstantInt::get(CountField->getType(), Size / 8));
-      Mul = Builder.CreateZExtOrTrunc(Mul, ResType);
-
-      if (ObjectSize)
-        return Builder.CreateAdd(ObjectSize, Mul);
-
-      return Mul;
-    }
-  }
-
   // LLVM can't handle Type=3 appropriately, and __builtin_object_size shouldn't
   // evaluate E for side-effects. In either case, we shouldn't lower to
   // @llvm.objectsize.
   if (Type == 3 || (!EmittedE && E->HasSideEffects(getContext())))
     return getDefaultBuiltinObjectSizeResult(Type, ResType);
+
+  if (IsDynamic) {
+    // The code generated here calculates the size of a struct with a flexible
+    // array member that uses the counted_by attribute. There are two instances
+    // we handle:
+    //
+    //       struct s {
+    //         unsigned long flags;
+    //         int count;
+    //         int array[] __attribute__((counted_by(count)));
+    //       }
+    //
+    //   1) bdos of the flexible array itself:
+    //
+    //     __builtin_dynamic_object_size(p->array, 1) ==
+    //         p->count * sizeof(*p->array)
+    //
+    //   2) bdos of a pointer into the flexible array:
+    //
+    //     __builtin_dynamic_object_size(&p->array[42], 1) ==
+    //         (p->count - 42) * sizeof(*p->array)
+    //
+    //   2) bdos of the whole struct, including the flexible array:
+    //
+    //     __builtin_dynamic_object_size(p, 1) ==
+    //        max(sizeof(struct s),
+    //            offsetof(struct s, array) + p->count * sizeof(*p->array))
+    //
+    const Expr *Base = E->IgnoreParenImpCasts();
+    const Expr *Idx = nullptr;
+    if (const auto *UO = dyn_cast<UnaryOperator>(Base);
+        UO && UO->getOpcode() == UO_AddrOf) {
+      if (const auto *ASE =
+              dyn_cast<ArraySubscriptExpr>(UO->getSubExpr()->IgnoreParens())) {
+        Base = ASE->getBase();
+        Idx = ASE->getIdx()->IgnoreParenImpCasts();
+
+        if (const auto *IL = dyn_cast<IntegerLiteral>(Idx);
+            IL && !IL->getValue().getSExtValue())
+          Idx = nullptr;
+      }
+    }
+
+    if (const ValueDecl *CountedByFD = FindCountedByField(Base)) {
+      bool IsSigned = CountedByFD->getType()->isSignedIntegerType();
+      const RecordDecl *OuterRD =
+          CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
+      ASTContext &Ctx = getContext();
+
+      // Load the counted_by field.
+      const Expr *CountedByExpr = BuildCountedByFieldExpr(Base, CountedByFD);
+      Value *CountedByInst = EmitAnyExprToTemp(CountedByExpr).getScalarVal();
+      llvm::Type *CountedByTy = CountedByInst->getType();
+
+      if (Idx) {
+        // There's an index into the array. Remove it from the count.
+        bool IdxSigned = Idx->getType()->isSignedIntegerType();
+        Value *IdxInst = EmitAnyExprToTemp(Idx).getScalarVal();
+        IdxInst = IdxSigned ? Builder.CreateSExtOrTrunc(IdxInst, CountedByTy)
+                            : Builder.CreateZExtOrTrunc(IdxInst, CountedByTy);
+
+        // If the index is negative, don't subtract it from the counted_by
+        // value. The pointer is pointing to something before the FAM.
+        IdxInst = Builder.CreateNeg(IdxInst, "", !IdxSigned, IdxSigned);
+        CountedByInst =
+            Builder.CreateAdd(CountedByInst, IdxInst, "", !IsSigned, IsSigned);
+      }
+
+      // Get the size of the flexible array member's base type.
+      const ValueDecl *FAMDecl = nullptr;
+      if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
+        const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+            getLangOpts().getStrictFlexArraysLevel();
+        if (const ValueDecl *MD = ME->getMemberDecl();
+            MD && Decl::isFlexibleArrayMemberLike(
+                      Ctx, MD, MD->getType(), StrictFlexArraysLevel,
+                      /*IgnoreTemplateOrMacroSubstitution=*/true))
+          // Base is referencing the FAM itself.
+          FAMDecl = MD;
+      }
+
+      if (!FAMDecl)
+        FAMDecl = FindFlexibleArrayMemberField(Ctx, OuterRD);
+
+      assert(FAMDecl && "Can't find the flexible array member field");
+
+      const ArrayType *ArrayTy = Ctx.getAsArrayType(FAMDecl->getType());
+      CharUnits Size = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
+      llvm::Constant *ElemSize =
+          llvm::ConstantInt::get(CountedByTy, Size.getQuantity(), IsSigned);
+
+      // Calculate how large the flexible array member is in bytes.
+      Value *FAMSize =
+          Builder.CreateMul(CountedByInst, ElemSize, "", !IsSigned, IsSigned);
+      FAMSize = IsSigned ? Builder.CreateSExtOrTrunc(FAMSize, ResType)
+                         : Builder.CreateZExtOrTrunc(FAMSize, ResType);
+      Value *Res = FAMSize;
+
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
+        // The whole struct is specificed in the __bdos.
+        const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(OuterRD);
+
+        // Get the offset of the FAM.
+        CharUnits Offset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FAMDecl));
+        llvm::Constant *FAMOffset =
+            ConstantInt::get(ResType, Offset.getQuantity(), IsSigned);
+
+        // max(sizeof(struct s),
+        //     offsetof(struct s, array) + p->count * sizeof(*p->array))
+        Value *OffsetAndFAMSize =
+            Builder.CreateAdd(FAMOffset, Res, "", !IsSigned, IsSigned);
+
+        // Get the full size of the struct.
+        llvm::Constant *SizeofStruct =
+            ConstantInt::get(ResType, Layout.getSize().getQuantity(), IsSigned);
+
+        Res = IsSigned
+                  ? Builder.CreateBinaryIntrinsic(
+                        llvm::Intrinsic::smax, OffsetAndFAMSize, SizeofStruct)
+                  : Builder.CreateBinaryIntrinsic(
+                        llvm::Intrinsic::umax, OffsetAndFAMSize, SizeofStruct);
+      } else if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
+        // Pointing to a place before the FAM. Add the difference to the FAM's
+        // size.
+        if (const ValueDecl *MD = ME->getMemberDecl(); MD != FAMDecl) {
+          CharUnits Offset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(MD));
+          CharUnits FAMOffset =
+              Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FAMDecl));
+
+          Res = Builder.CreateAdd(
+              Res, ConstantInt::get(ResType, FAMOffset.getQuantity() -
+                                                 Offset.getQuantity()));
+        }
+      }
+
+      // A negative 'FAMSize' means that the index was greater than the count,
+      // or an improperly set count field. Return -1 (for types 0 and 1) or 0
+      // (for types 2 and 3).
+      return Builder.CreateSelect(
+          Builder.CreateIsNeg(FAMSize),
+          getDefaultBuiltinObjectSizeResult(Type, ResType), Res);
+    }
+  }
 
   Value *Ptr = EmittedE ? EmittedE : EmitScalarExpr(E);
   assert(Ptr->getType()->isPointerTy() &&
