@@ -1182,9 +1182,8 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
 
     if (getFilterOperandType().has_value()) {
       Type t = getFilterOperandType().value();
-      if (!llvm::all_of(op->getOperandTypes(), [&](Type operandType) {
-        return operandType == t;
-      }))
+      if (!llvm::all_of(op->getOperandTypes(),
+                        [&](Type operandType) { return operandType == t; }))
         return;
     }
 
