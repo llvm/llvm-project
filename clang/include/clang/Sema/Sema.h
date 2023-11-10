@@ -13477,6 +13477,10 @@ public:
   /// host or device attribute.
   void CUDASetLambdaAttrs(CXXMethodDecl *Method);
 
+  /// Record \p FD if it is a CUDA/HIP implicit host device function used on
+  /// device side in device compilation.
+  void CUDARecordImplicitHostDeviceFuncUsedByDevice(const FunctionDecl *FD);
+
   /// Finds a function in \p Matches with highest calling priority
   /// from \p Caller context and erases all functions with lower
   /// calling priority.
