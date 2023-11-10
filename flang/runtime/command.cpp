@@ -16,7 +16,10 @@
 #include <limits>
 
 #ifdef _WIN32
-inline uid_t getuid() { return 0; }
+inline uid_t getuid() {
+  assert(false && "Unimplemented on Windows OS");
+  return 0;
+}
 #else
 #include <unistd.h>
 #endif
