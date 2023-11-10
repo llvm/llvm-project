@@ -72,6 +72,8 @@ private:
                     MachineRegisterInfo &MRI) const;
   bool selectFPCompare(MachineInstr &MI, MachineIRBuilder &MIB,
                        MachineRegisterInfo &MRI) const;
+  bool selectIsFPClass(MachineInstr &MI, MachineIRBuilder &MIB,
+                       MachineRegisterInfo &MRI) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
@@ -564,6 +566,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectSelect(MI, MIB, MRI);
   case TargetOpcode::G_FCMP:
     return selectFPCompare(MI, MIB, MRI);
+  case TargetOpcode::G_IS_FPCLASS:
+    return selectIsFPClass(MI, MIB, MRI);
   default:
     return false;
   }
@@ -1094,6 +1098,30 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
     if (!Xor.constrainAllUses(TII, TRI, RBI))
       return false;
   }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool RISCVInstructionSelector::selectIsFPClass(MachineInstr &MI,
+                                               MachineIRBuilder &MIB,
+                                               MachineRegisterInfo &MRI) const {
+  Register CheckResult = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  int64_t MaskImm = MI.getOperand(2).getImm();
+  unsigned NewOpc = MRI.getType(Src).getSizeInBits() == 32 ? RISCV::FCLASS_S
+                                                           : RISCV::FCLASS_D;
+
+  Register FClassResult = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  // Insert FCLASS_S/D.
+  auto FClass = MIB.buildInstr(NewOpc, {FClassResult}, {Src});
+  if (!FClass.constrainAllUses(TII, TRI, RBI))
+    return false;
+  // Insert AND to check Src aginst the mask.
+  auto And = MIB.buildInstr(RISCV::ANDI, {CheckResult}, {FClassResult})
+                 .addImm(MaskImm);
+  if (!And.constrainAllUses(TII, TRI, RBI))
+    return false;
 
   MI.eraseFromParent();
   return true;

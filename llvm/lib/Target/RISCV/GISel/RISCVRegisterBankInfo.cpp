@@ -353,6 +353,12 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[2] = OpdsMapping[3] = getFPValueMapping(Size);
     break;
   }
+  case TargetOpcode::G_IS_FPCLASS: {
+    LLT FPTy = MRI.getType(MI.getOperand(1).getReg());
+    OperandsMapping = getOperandsMapping(
+        {GPRValueMapping, getFPValueMapping(FPTy.getSizeInBits()), nullptr});
+    break;
+  }
   default:
     // By default map all scalars to GPR.
     for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
