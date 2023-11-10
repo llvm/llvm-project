@@ -87,7 +87,8 @@ static void ReportGlobal(const Global &g, const char *prefix) {
       "dyn_init=%zu "
       "odr_indicator=%p\n",
       prefix, (void *)&g, (void *)g.beg, g.size, g.size_with_redzone, g.name,
-      g.module_name, info.module, g.has_dynamic_init, (void *)g.odr_indicator);
+      g.module_name, (symbolized ? info.module : ""), g.has_dynamic_init,
+      (void *)g.odr_indicator);
 
   if (symbolized && info.line != 0) {
     Report("  location: name=%s, %d\n", info.file, static_cast<int>(info.line));
