@@ -47,7 +47,7 @@ Value *llvm::emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL,
       // Handle a struct index, which adds its field offset to the pointer.
       if (StructType *STy = GTI.getStructTypeOrNull()) {
         uint64_t OpValue = OpC->getUniqueInteger().getZExtValue();
-        unsigned Size = DL.getStructLayout(STy)->getElementOffset(OpValue);
+        uint64_t Size = DL.getStructLayout(STy)->getElementOffset(OpValue);
         if (!Size)
           continue;
 
