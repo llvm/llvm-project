@@ -189,6 +189,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
+  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
+
+  getActionDefinitionsBuilder(G_DYN_STACKALLOC).lower();
+
   // FP Operations
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FNEG,
@@ -208,6 +212,30 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
         return (ST.hasStdExtD() && typeIs(0, s64)(Query) &&
                 typeIs(1, s32)(Query));
       });
+
+  getActionDefinitionsBuilder(G_FCONSTANT)
+      .legalIf([=, &ST](const LegalityQuery &Query) -> bool {
+        return (ST.hasStdExtF() && typeIs(0, s32)(Query)) ||
+               (ST.hasStdExtD() && typeIs(0, s64)(Query));
+      });
+
+  getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
+      .legalIf([=, &ST](const LegalityQuery &Query) -> bool {
+        return typeInSet(0, {s32, sXLen})(Query) &&
+               ((ST.hasStdExtF() && typeIs(1, s32)(Query)) ||
+                (ST.hasStdExtD() && typeIs(1, s64)(Query)));
+      })
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s32, sXLen);
+
+  getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
+      .legalIf([=, &ST](const LegalityQuery &Query) -> bool {
+        return ((ST.hasStdExtF() && typeIs(0, s32)(Query)) ||
+                (ST.hasStdExtD() && typeIs(0, s64)(Query))) &&
+               typeInSet(1, {s32, sXLen})(Query);
+      })
+      .widenScalarToNextPow2(1)
+      .clampScalar(1, s32, sXLen);
 
   getLegacyLegalizerInfo().computeTables();
 }

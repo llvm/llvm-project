@@ -117,11 +117,10 @@ llvm.mlir.global internal protected unnamed_addr @protected(42 : i32) : i32
 
 // -----
 
-// expected-error @+1 {{expects type to be a valid element type for an LLVM pointer}}
+// expected-error @+1 {{expects type to be a valid element type for an LLVM global}}
 llvm.mlir.global internal constant @constant(37.0) : !llvm.label
 
 // -----
-
 // expected-error @+1 {{'addr_space' failed to satisfy constraint: 32-bit signless integer attribute whose value is non-negative}}
 "llvm.mlir.global"() ({}) {sym_name = "foo", global_type = i64, value = 42 : i64, addr_space = -1 : i32, linkage = #llvm.linkage<private>} : () -> ()
 
