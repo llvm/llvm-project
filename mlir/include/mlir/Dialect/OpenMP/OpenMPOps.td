@@ -490,7 +490,7 @@ def CanonicalLoopOp : OpenMP_Op<"canonical_loop", [SingleBlockImplicitTerminator
     represented anyway.
 
     An optional argument to a omp.canonical_loop that can be passed in
-    is a CanonicalLoopInfo variale that can be used to refer to the canonical
+    is a CanonicalLoopInfo variable that can be used to refer to the canonical
     loop to apply transformations -- such as tiling, unrolling, or
     work-sharing -- to the loop, similar to the transform dialect but
     with OpenMP-specific semantics.
