@@ -896,12 +896,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     // TODO: support more ops.
     static const unsigned ZvfhminPromoteOps[] = {
-        ISD::FMINNUM,    ISD::FMAXNUM,    ISD::FADD,       ISD::FSUB,
-        ISD::FMUL,       ISD::FMA,        ISD::FDIV,       ISD::FSQRT,
-        ISD::FABS,       ISD::FNEG,       ISD::FCOPYSIGN,  ISD::FCEIL,
-        ISD::FFLOOR,     ISD::FROUND,     ISD::FROUNDEVEN, ISD::FRINT,
-        ISD::FNEARBYINT, ISD::IS_FPCLASS, ISD::SETCC,      ISD::FMAXIMUM,
-        ISD::FMINIMUM};
+        ISD::FMINNUM,     ISD::FMAXNUM,      ISD::FADD,        ISD::FSUB,
+        ISD::FMUL,        ISD::FMA,          ISD::FDIV,        ISD::FSQRT,
+        ISD::FABS,        ISD::FNEG,         ISD::FCOPYSIGN,   ISD::FCEIL,
+        ISD::FFLOOR,      ISD::FROUND,       ISD::FROUNDEVEN,  ISD::FRINT,
+        ISD::FNEARBYINT,  ISD::IS_FPCLASS,   ISD::SETCC,       ISD::FMAXIMUM,
+        ISD::FMINIMUM,    ISD::STRICT_FADD,  ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+        ISD::STRICT_FDIV, ISD::STRICT_FSQRT, ISD::STRICT_FMA};
 
     // TODO: support more vp ops.
     static const unsigned ZvfhminPromoteVPOps[] = {
@@ -5597,6 +5598,41 @@ static SDValue SplitVectorReductionOp(SDValue Op, SelectionDAG &DAG) {
                      {ResLo, Hi, MaskHi, EVLHi}, Op->getFlags());
 }
 
+static SDValue SplitStrictFPVectorOp(SDValue Op, SelectionDAG &DAG) {
+
+  assert(Op->isStrictFPOpcode());
+
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(Op->getValueType(0));
+
+  SDVTList LoVTs = DAG.getVTList(LoVT, Op->getValueType(1));
+  SDVTList HiVTs = DAG.getVTList(HiVT, Op->getValueType(1));
+
+  SDLoc DL(Op);
+
+  SmallVector<SDValue, 4> LoOperands(Op.getNumOperands());
+  SmallVector<SDValue, 4> HiOperands(Op.getNumOperands());
+
+  for (unsigned j = 0; j != Op.getNumOperands(); ++j) {
+    if (!Op.getOperand(j).getValueType().isVector()) {
+      LoOperands[j] = Op.getOperand(j);
+      HiOperands[j] = Op.getOperand(j);
+      continue;
+    }
+    std::tie(LoOperands[j], HiOperands[j]) =
+        DAG.SplitVector(Op.getOperand(j), DL);
+  }
+
+  SDValue LoRes =
+      DAG.getNode(Op.getOpcode(), DL, LoVTs, LoOperands, Op->getFlags());
+  HiOperands[0] = LoRes.getValue(1);
+  SDValue HiRes =
+      DAG.getNode(Op.getOpcode(), DL, HiVTs, HiOperands, Op->getFlags());
+
+  SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, Op->getValueType(0),
+                          LoRes.getValue(0), HiRes.getValue(0));
+  return DAG.getMergeValues({V, HiRes.getValue(1)}, DL);
+}
+
 SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                             SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -6374,6 +6410,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::STRICT_FDIV:
   case ISD::STRICT_FSQRT:
   case ISD::STRICT_FMA:
+    if (Op.getValueType() == MVT::nxv32f16 &&
+        (Subtarget.hasVInstructionsF16Minimal() &&
+         !Subtarget.hasVInstructionsF16()))
+      return SplitStrictFPVectorOp(Op, DAG);
     return lowerToScalableOp(Op, DAG);
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
