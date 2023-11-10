@@ -159,6 +159,10 @@ uint64_t elf::getLoongArchPageDelta(uint64_t dest, uint64_t pc) {
   bool negativeA = lo12(dest) > 0x7ff;
   bool negativeB = (result & 0x8000'0000) != 0;
 
+  // A corner case; directly return the expected result.
+  if (result == 0xfff'fffff'fffff'000 && negativeA)
+    return 0xfff'fffff'00000'000;
+
   if (negativeA)
     result += 0x1000;
   if (negativeA && !negativeB)
