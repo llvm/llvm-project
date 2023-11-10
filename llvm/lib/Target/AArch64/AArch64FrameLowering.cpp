@@ -3767,19 +3767,19 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
   // flag is live at the point where we are trying to insert. Otherwise
   // the nzcv flag might get clobbered if any stg loops are present.
 
-  // FIXME : This approach of bailing out from merge is also conservative
-  // in some ways like even if stg loops are not present after merge in
-  // the insert list, this liveness check is done (which is not needed).
-  LivePhysRegs LR(*(MBB->getParent()->getSubtarget().getRegisterInfo()));
-  LR.addLiveOuts(*MBB);
+  // FIXME : This approach of bailing out from merge is conservative in
+  // some ways like even if stg loops are not present after merge the
+  // insert list, this liveness check is done (which is not needed).
+  LivePhysRegs LiveRegs(*(MBB->getParent()->getSubtarget().getRegisterInfo()));
+  LiveRegs.addLiveOuts(*MBB);
   for (auto I = MBB->rbegin();; ++I) {
-    MachineInstr &MIns = *I;
-    if (MIns == InsertI)
+    MachineInstr &MI = *I;
+    if (MI == InsertI)
       break;
-    LR.stepBackward(*I);
+    LiveRegs.stepBackward(*I);
   }
   InsertI++;
-  if (LR.contains(AArch64::NZCV))
+  if (LiveRegs.contains(AArch64::NZCV))
     return InsertI;
 
   llvm::stable_sort(Instrs,
