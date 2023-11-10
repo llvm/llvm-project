@@ -389,10 +389,8 @@
 // AVX10_1_256: "-target-feature" "+avx10.1-256"
 // AVX10_1_512: "-target-feature" "+avx10.1-512"
 // BAD-AVX10: error: unknown argument{{:?}} '-mavx10.{{.*}}'
-// AVX10-AVX512: warning: argument unused during compilation: '{{.*}}avx512f'
-// AVX10-AVX512-NOT: "avx512f"
-// AVX10-EVEX512: warning: argument unused during compilation: '{{.*}}evex512'
-// AVX10-EVEX512-NOT: "evex512"
+// AVX10-AVX512: "-target-feature" "+avx10.1-256" "-target-feature" "{{.}}avx512f"
+// AVX10-EVEX512: "-target-feature" "+avx10.1-256" "-target-feature" "{{.}}evex512"
 
 // RUN: %clang --target=i386 -musermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=USERMSR %s
 // RUN: %clang --target=i386 -mno-usermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-USERMSR %s

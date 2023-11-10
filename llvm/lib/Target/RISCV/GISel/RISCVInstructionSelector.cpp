@@ -67,6 +67,8 @@ private:
   bool selectSExtInreg(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool selectSelect(MachineInstr &MI, MachineIRBuilder &MIB,
                     MachineRegisterInfo &MRI) const;
+  bool selectFPCompare(MachineInstr &MI, MachineIRBuilder &MIB,
+                       MachineRegisterInfo &MRI) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
@@ -415,6 +417,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_SELECT:
     return selectSelect(MI, MIB, MRI);
+  case TargetOpcode::G_FCMP:
+    return selectFPCompare(MI, MIB, MRI);
   default:
     return false;
   }
@@ -818,6 +822,130 @@ bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
                              .addReg(SelectMI.getFalseReg());
   MI.eraseFromParent();
   return constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
+}
+
+// Convert an FCMP predicate to one of the supported F or D instructions.
+static unsigned getFCmpOpcode(CmpInst::Predicate Pred, unsigned Size) {
+  assert((Size == 32 || Size == 64) && "Unsupported size");
+  switch (Pred) {
+  default:
+    llvm_unreachable("Unsupported predicate");
+  case CmpInst::FCMP_OLT:
+    return Size == 32 ? RISCV::FLT_S : RISCV::FLT_D;
+  case CmpInst::FCMP_OLE:
+    return Size == 32 ? RISCV::FLE_S : RISCV::FLE_D;
+  case CmpInst::FCMP_OEQ:
+    return Size == 32 ? RISCV::FEQ_S : RISCV::FEQ_D;
+  }
+}
+
+// Try legalizing an FCMP by swapping or inverting the predicate to one that
+// is supported.
+static bool legalizeFCmpPredicate(Register &LHS, Register &RHS,
+                                  CmpInst::Predicate &Pred, bool &NeedInvert) {
+  auto isLegalFCmpPredicate = [](CmpInst::Predicate Pred) {
+    return Pred == CmpInst::FCMP_OLT || Pred == CmpInst::FCMP_OLE ||
+           Pred == CmpInst::FCMP_OEQ;
+  };
+
+  assert(!isLegalFCmpPredicate(Pred) && "Predicate already legal?");
+
+  CmpInst::Predicate InvPred = CmpInst::getSwappedPredicate(Pred);
+  if (isLegalFCmpPredicate(InvPred)) {
+    Pred = InvPred;
+    std::swap(LHS, RHS);
+    return true;
+  }
+
+  InvPred = CmpInst::getInversePredicate(Pred);
+  NeedInvert = true;
+  if (isLegalFCmpPredicate(InvPred)) {
+    Pred = InvPred;
+    return true;
+  }
+  InvPred = CmpInst::getSwappedPredicate(InvPred);
+  if (isLegalFCmpPredicate(InvPred)) {
+    Pred = InvPred;
+    std::swap(LHS, RHS);
+    return true;
+  }
+
+  return false;
+}
+
+// Emit a sequence of instructions to compare LHS and RHS using Pred. Return
+// the result in DstReg.
+// FIXME: Maybe we should expand this earlier.
+bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
+                                               MachineIRBuilder &MIB,
+                                               MachineRegisterInfo &MRI) const {
+  auto &CmpMI = cast<GFCmp>(MI);
+  CmpInst::Predicate Pred = CmpMI.getCond();
+
+  Register DstReg = CmpMI.getReg(0);
+  Register LHS = CmpMI.getLHSReg();
+  Register RHS = CmpMI.getRHSReg();
+
+  unsigned Size = MRI.getType(LHS).getSizeInBits();
+  assert((Size == 32 || Size == 64) && "Unexpected size");
+
+  Register TmpReg = DstReg;
+
+  bool NeedInvert = false;
+  // First try swapping operands or inverting.
+  if (legalizeFCmpPredicate(LHS, RHS, Pred, NeedInvert)) {
+    if (NeedInvert)
+      TmpReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    auto Cmp = MIB.buildInstr(getFCmpOpcode(Pred, Size), {TmpReg}, {LHS, RHS});
+    if (!Cmp.constrainAllUses(TII, TRI, RBI))
+      return false;
+  } else if (Pred == CmpInst::FCMP_ONE || Pred == CmpInst::FCMP_UEQ) {
+    // fcmp one LHS, RHS => (OR (FLT LHS, RHS), (FLT RHS, LHS))
+    NeedInvert = Pred == CmpInst::FCMP_UEQ;
+    auto Cmp1 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OLT, Size),
+                               {&RISCV::GPRRegClass}, {LHS, RHS});
+    if (!Cmp1.constrainAllUses(TII, TRI, RBI))
+      return false;
+    auto Cmp2 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OLT, Size),
+                               {&RISCV::GPRRegClass}, {RHS, LHS});
+    if (!Cmp2.constrainAllUses(TII, TRI, RBI))
+      return false;
+    if (NeedInvert)
+      TmpReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    auto Or =
+        MIB.buildInstr(RISCV::OR, {TmpReg}, {Cmp1.getReg(0), Cmp2.getReg(0)});
+    if (!Or.constrainAllUses(TII, TRI, RBI))
+      return false;
+  } else if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
+    // fcmp ord LHS, RHS => (AND (FEQ LHS, LHS), (FEQ RHS, RHS))
+    // FIXME: If LHS and RHS are the same we can use a single FEQ.
+    NeedInvert = Pred == CmpInst::FCMP_UNO;
+    auto Cmp1 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OEQ, Size),
+                               {&RISCV::GPRRegClass}, {LHS, LHS});
+    if (!Cmp1.constrainAllUses(TII, TRI, RBI))
+      return false;
+    auto Cmp2 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OEQ, Size),
+                               {&RISCV::GPRRegClass}, {RHS, RHS});
+    if (!Cmp2.constrainAllUses(TII, TRI, RBI))
+      return false;
+    if (NeedInvert)
+      TmpReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    auto And =
+        MIB.buildInstr(RISCV::AND, {TmpReg}, {Cmp1.getReg(0), Cmp2.getReg(0)});
+    if (!And.constrainAllUses(TII, TRI, RBI))
+      return false;
+  } else
+    llvm_unreachable("Unhandled predicate");
+
+  // Emit an XORI to invert the result if needed.
+  if (NeedInvert) {
+    auto Xor = MIB.buildInstr(RISCV::XORI, {DstReg}, {TmpReg}).addImm(1);
+    if (!Xor.constrainAllUses(TII, TRI, RBI))
+      return false;
+  }
+
+  MI.eraseFromParent();
+  return true;
 }
 
 namespace llvm {
