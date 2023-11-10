@@ -226,6 +226,7 @@ void IRNormalizer::sortCommutativeOperands(T &Operands, Compare Comp) const {
 void IRNormalizer::nameAsInitialInstruction(Instruction *I) {
   if (I->getType()->isVoidTy() || (!I->getName().empty() && !RenameAll))
     return;
+  LLVM_DEBUG(dbgs() << "Naming initial instruction: " << *I << "\n");
 
   // Instruction operands for further sorting.
   SmallVector<SmallString<64>, 4> Operands;
@@ -299,6 +300,8 @@ void IRNormalizer::nameAsInitialInstruction(Instruction *I) {
 /// \see getOutputFootprint()
 /// \param I Instruction to be renamed.
 void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
+  LLVM_DEBUG(dbgs() << "Naming regular instruction: " << *I << "\n");
+  
   // Instruction operands for further sorting.
   SmallVector<SmallString<128>, 4> Operands;
 
