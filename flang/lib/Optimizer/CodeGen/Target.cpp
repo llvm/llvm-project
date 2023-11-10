@@ -622,6 +622,33 @@ struct TargetAMDGPU : public GenericTarget<TargetAMDGPU> {
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// NVPTX linux target specifics.
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct TargetNVPTX : public GenericTarget<TargetNVPTX> {
+  using GenericTarget::GenericTarget;
+
+  // Default size (in bits) of the index type for strings.
+  static constexpr int defaultWidth = 64;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    TODO(loc, "handle complex argument types");
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Location loc, mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    TODO(loc, "handle complex return types");
+    return marshal;
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // LoongArch64 linux target specifics.
 //===----------------------------------------------------------------------===//
 
@@ -708,6 +735,9 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
   case llvm::Triple::ArchType::amdgcn:
     return std::make_unique<TargetAMDGPU>(ctx, std::move(trp),
                                           std::move(kindMap));
+  case llvm::Triple::ArchType::nvptx64:
+    return std::make_unique<TargetNVPTX>(ctx, std::move(trp),
+                                         std::move(kindMap));
   case llvm::Triple::ArchType::loongarch64:
     return std::make_unique<TargetLoongArch64>(ctx, std::move(trp),
                                                std::move(kindMap));
