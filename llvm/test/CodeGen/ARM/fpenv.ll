@@ -79,6 +79,16 @@ entry:
   ret i32 %fpenv
 }
 
+define i32 @get_fpenv_02() nounwind {
+; CHECK-LABEL: get_fpenv_02:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmrs r0, fpscr
+; CHECK-NEXT:    mov pc, lr
+entry:
+  %fpenv = call i32 @llvm.get.fpenv.i32()
+  ret i32 %fpenv
+}
+
 define void @set_fpenv_01(i32 %fpenv) #0 {
 ; CHECK-LABEL: set_fpenv_01:
 ; CHECK:       @ %bb.0: @ %entry
@@ -97,6 +107,16 @@ entry:
   ret void
 }
 
+define void @set_fpenv_02(i32 %fpenv) nounwind {
+; CHECK-LABEL: set_fpenv_02:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr fpscr, r0
+; CHECK-NEXT:    mov pc, lr
+entry:
+  call void @llvm.set.fpenv.i32(i32 %fpenv)
+  ret void
+}
+
 define void @reset_fpenv_01() #0 {
 ; CHECK-LABEL: reset_fpenv_01:
 ; CHECK:       @ %bb.0: @ %entry
@@ -105,6 +125,16 @@ define void @reset_fpenv_01() #0 {
 ; CHECK-NEXT:    mvn r0, #0
 ; CHECK-NEXT:    bl fesetenv
 ; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    mov pc, lr
+entry:
+  call void @llvm.reset.fpenv()
+  ret void
+}
+
+define void @reset_fpenv_02() nounwind {
+; CHECK-LABEL: reset_fpenv_02:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr fpscr, #0
 ; CHECK-NEXT:    mov pc, lr
 entry:
   call void @llvm.reset.fpenv()
