@@ -8479,18 +8479,25 @@ TEST_F(FormatTest, BreaksFunctionDeclarationsWithTrailingTokens) {
       "                   aaaaaaaaaaaaaaaaaaaaaaaaa));");
   verifyFormat("bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "    __attribute__((unused));");
-  verifyGoogleFormat(
+
+  Style = getGoogleStyle();
+  Style.AttributeMacros.push_back("GUARDED_BY");
+  verifyFormat(
       "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-      "    GUARDED_BY(aaaaaaaaaaaa);");
-  verifyGoogleFormat(
+      "    GUARDED_BY(aaaaaaaaaaaa);",
+      Style);
+  verifyFormat(
       "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-      "    GUARDED_BY(aaaaaaaaaaaa);");
-  verifyGoogleFormat(
+      "    GUARDED_BY(aaaaaaaaaaaa);",
+      Style);
+  verifyFormat(
       "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa GUARDED_BY(aaaaaaaaaaaa) =\n"
-      "    aaaaaaaa::aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;");
-  verifyGoogleFormat(
+      "    aaaaaaaa::aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;",
+      Style);
+  verifyFormat(
       "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa GUARDED_BY(aaaaaaaaaaaa) =\n"
-      "    aaaaaaaaaaaaaaaaaaaaaaaaa;");
+      "    aaaaaaaaaaaaaaaaaaaaaaaaa;",
+      Style);
 }
 
 TEST_F(FormatTest, FunctionAnnotations) {
@@ -26192,9 +26199,10 @@ TEST_F(FormatTest, RemoveSemicolon) {
 }
 
 TEST_F(FormatTest, BreakAfterAttributes) {
-  FormatStyle Style = getLLVMStyle();
-
-  constexpr StringRef Code("[[nodiscard]] inline int f(int &i);\n"
+  constexpr StringRef Code("[[maybe_unused]] const int i;\n"
+                           "[[foo([[]])]] [[maybe_unused]]\n"
+                           "int j;\n"
+                           "[[nodiscard]] inline int f(int &i);\n"
                            "[[foo([[]])]] [[nodiscard]]\n"
                            "int g(int &i);\n"
                            "[[nodiscard]]\n"
@@ -26207,11 +26215,14 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                            "  return 1;\n"
                            "}");
 
+  FormatStyle Style = getLLVMStyle();
   EXPECT_EQ(Style.BreakAfterAttributes, FormatStyle::ABS_Leave);
   verifyNoChange(Code, Style);
 
   Style.BreakAfterAttributes = FormatStyle::ABS_Never;
-  verifyFormat("[[nodiscard]] inline int f(int &i);\n"
+  verifyFormat("[[maybe_unused]] const int i;\n"
+               "[[foo([[]])]] [[maybe_unused]] int j;\n"
+               "[[nodiscard]] inline int f(int &i);\n"
                "[[foo([[]])]] [[nodiscard]] int g(int &i);\n"
                "[[nodiscard]] inline int f(int &i) {\n"
                "  i = 1;\n"
@@ -26224,7 +26235,11 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                Code, Style);
 
   Style.BreakAfterAttributes = FormatStyle::ABS_Always;
-  verifyFormat("[[nodiscard]]\n"
+  verifyFormat("[[maybe_unused]]\n"
+               "const int i;\n"
+               "[[foo([[]])]] [[maybe_unused]]\n"
+               "int j;\n"
+               "[[nodiscard]]\n"
                "inline int f(int &i);\n"
                "[[foo([[]])]] [[nodiscard]]\n"
                "int g(int &i);\n"
