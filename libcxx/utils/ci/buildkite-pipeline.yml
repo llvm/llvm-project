@@ -93,7 +93,7 @@ environment_definitions:
       CXX: clang++-${LLVM_HEAD_VERSION}
       CMAKE: /opt/bin/cmake
 
-  _versioned_clang: &versioned_clang
+  _absolute_path_clang: &absolute_path_clang
     # Note modules require and absolute path for clang-scan-deps
     # https://github.com/llvm/llvm-project/issues/61006
     CC: /usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang
@@ -116,7 +116,7 @@ steps:
   command: libcxx/utils/ci/run-buildbot generic-cxx26
   env:
     <<: *common_env
-    <<: *versioned_clang
+    <<: *absolute_path_clang
   <<: *linux_agent
   <<: *common
 
@@ -150,7 +150,7 @@ steps:
   command: libcxx/utils/ci/run-buildbot generic-cxx23
   env:
     <<: *common_env
-    <<: *versioned_clang
+    <<: *absolute_path_clang
     ENABLE_STD_MODULES: 'On'
   <<: *linux_agent
   <<: *common
@@ -159,7 +159,7 @@ steps:
   command: libcxx/utils/ci/run-buildbot generic-cxx20
   env:
     <<: *common_env
-    <<: *versioned_clang
+    <<: *absolute_path_clang
     ENABLE_STD_MODULES: 'On'
   <<: *linux_agent
   <<: *common
@@ -276,7 +276,7 @@ steps:
   command: libcxx/utils/ci/run-buildbot generic-hardening-mode-extensive
   env:
     <<: *common_env
-    <<: *versioned_clang
+    <<: *absolute_path_clang
   <<: *linux_agent
   <<: *common
 
@@ -307,7 +307,7 @@ steps:
     command: libcxx/utils/ci/run-buildbot generic-no-threads
     env:
       <<: *common_env
-      <<: *versioned_clang
+      <<: *absolute_path_clang
     <<: *linux_agent
     <<: *common
 
@@ -316,7 +316,7 @@ steps:
     command: libcxx/utils/ci/run-buildbot generic-no-filesystem
     env:
       <<: *common_env
-      <<: *versioned_clang
+      <<: *absolute_path_clang
     <<: *linux_agent
     <<: *common
 
@@ -324,48 +324,53 @@ steps:
     command: libcxx/utils/ci/run-buildbot generic-no-random_device
     env:
       <<: *common_env
-      <<: *versioned_clang
+      <<: *absolute_path_clang
     <<: *linux_agent
     <<: *common
+
   - label: No locale
     command: libcxx/utils/ci/run-buildbot generic-no-localization
     env:
       <<: *common_env
-      <<: *versioned_clang
+      <<: *absolute_path_clang
     <<: *linux_agent
     <<: *common
+
   - label: No Unicode
     command: libcxx/utils/ci/run-buildbot generic-no-unicode
     env:
       <<: *common_env
-      <<: *versioned_clang
+      <<: *absolute_path_clang
     <<: *linux_agent
     <<: *common
+
   - label: No wide characters
     command: libcxx/utils/ci/run-buildbot generic-no-wide-characters
     env:
       <<: *common_env
-      <<: *versioned_clang
+      <<: *absolute_path_clang
     <<: *linux_agent
     <<: *common
+
   - label: No time zone database
     command: libcxx/utils/ci/run-buildbot generic-no-tzdb
     env:
       <<: *common_env
     <<: *linux_agent
     <<: *common
+
   - label: No experimental features
     command: libcxx/utils/ci/run-buildbot generic-no-experimental
     env:
       <<: *common_env
-      <<: *versioned_clang
+      <<: *absolute_path_clang
     <<: *linux_agent
     <<: *common
   - label: No exceptions
     command: libcxx/utils/ci/run-buildbot generic-no-exceptions
     env:
       <<: *common_env
-      <<: *versioned_clang
+      <<: *absolute_path_clang
     <<: *linux_agent
     <<: *common
 
