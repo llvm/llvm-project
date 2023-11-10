@@ -477,9 +477,8 @@ VectorType Parser::parseVectorType() {
     return success();
   };
 
-  // Parse a list of mappings and address space if present.
+  // Parse the vector layout
   if (!consumeIf(Token::greater)) {
-    // Parse comma separated list of affine maps, followed by memory space.
     if (parseToken(Token::comma, "expected ',' or '>' in vector type") ||
         parseCommaSeparatedListUntil(Token::greater, parseElt,
                                      /*allowEmptyList=*/false)) {

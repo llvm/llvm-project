@@ -245,7 +245,7 @@ LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
 
   if (layout) {
     if (failed(layout.verifyLayout(shape, elementType, emitError)))
-      return emitError() << "layout does not match underlying vector shape";
+      return emitError() << "Layout verification failed!";
   }
 
   return success();

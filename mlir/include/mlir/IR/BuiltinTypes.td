@@ -1054,11 +1054,13 @@ def Builtin_Vector : Builtin_Type<"Vector", [ShapedTypeInterface], "Type"> {
 
     ##### Layout
 
-    A vector may optionally have a layout that indicates how indices of
-    the vector are transformed to indices of the vector fragments that
-    are held by individual threads in a SIMT execution model. Such layouts
-    are common in a wide variety of GPU matrix multiplication instructions.
-    The layout can be any attribute that implements `VectorLayoutAttrInterface`.
+    A vector may optionally have a layout that can be used to capture
+    the mapping of the vector indices to a an arbitrary coordinate sytem.
+    An example of such a mapping is the mapping of vector indices to
+    indices of the vector fragments that are held by individual threads
+    in a SIMT execution model. Such layouts are common in a wide variety of
+    GPU matrix multiplication instructions. The layout can be any attribute
+    that implements `VectorLayoutAttrInterface`.
 
     Examples:
 

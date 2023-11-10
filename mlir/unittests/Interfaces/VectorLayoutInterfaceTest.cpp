@@ -82,6 +82,37 @@ struct VLTestDialect : Dialect {
   }
   static StringRef getDialectNamespace() { return "vltest"; }
 
+  void printAttribute(Attribute attr,
+                      DialectAsmPrinter &printer) const override {
+    auto layoutAttr = llvm::cast<NamedStridedLayoutAttr>(attr);
+    SmallVector<int64_t> mutableVectorShape(layoutAttr.getVectorShape());
+    size_t i{0}, j{0};
+    auto addCommaIf = [&](bool condition) {
+      if (condition)
+        printer << ", ";
+    };
+    auto addLParenIf = [&](bool condition) {
+      if (condition)
+        printer << "[";
+    };
+    auto addRParenIf = [&](bool condition) {
+      if (condition)
+        printer << "]";
+    };
+    for (const auto &[name, stride] :
+         llvm::zip(layoutAttr.getNames(), layoutAttr.getStrides())) {
+      addLParenIf(j == 0);
+      printer << name << " : " << stride;
+      mutableVectorShape[i] /= stride;
+      addCommaIf(mutableVectorShape[i] > 1);
+      bool finishedParsingList = mutableVectorShape[i] == 1;
+      addRParenIf(finishedParsingList);
+      addCommaIf(finishedParsingList && (i < mutableVectorShape.size() - 1));
+      j = finishedParsingList ? 0 : j + 1;
+      i = finishedParsingList ? i + 1 : i;
+    }
+  }
+
   Attribute parseAttribute(DialectAsmParser &parser, Type type) const override {
     SmallVector<int64_t> strides, vectorShape;
     SmallVector<std::string> names;
@@ -124,7 +155,7 @@ TEST(VectorLayoutAttrInterface, NamedStridedLayout) {
   )MLIR";
 
   DialectRegistry registry;
-  registry.insert<VLTestDialect, func::FuncDialect, arith::ArithDialect>();
+  registry.insert<VLTestDialect, arith::ArithDialect>();
   MLIRContext ctx(registry);
   OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
 
@@ -155,4 +186,28 @@ TEST(VectorLayoutAttrInterface, NamedStridedLayout) {
     EXPECT_EQ(names[4], "LaneY");
     EXPECT_EQ(names[5], "VectorY");
   }
+}
+
+TEST(VectorLayoutAttrInterface, RoundTripTest) {
+  const char *ir = R"MLIR(
+    #layout = #vltest.named_strided_layout<["BatchX" : 2, "LaneX" : 4, "VectorX" : 2],
+                                           ["BatchY" : 1, "LaneY" : 8, "VectorY" : 2]>
+    %lhs = "arith.constant"() {value = dense<0.0> : vector<16x16xf16, #layout>}
+        : () -> (vector<16x16xf16, #layout>)
+  )MLIR";
+
+  DialectRegistry registry;
+  registry.insert<VLTestDialect, arith::ArithDialect>();
+  MLIRContext ctx(registry);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
+  std::string moduleStr;
+  llvm::raw_string_ostream stream(moduleStr);
+  stream << *module;
+  stream.flush();
+  const std::string expectedResult =
+      "module {\n"
+      "  %cst = arith.constant dense<0.000000e+00> :"
+      " vector<16x16xf16, #vltest<[BatchX : 2, LaneX : 4, VectorX : 2],"
+      " [BatchY : 1, LaneY : 8, VectorY : 2]>>\n}";
+  EXPECT_EQ(moduleStr, expectedResult);
 }
