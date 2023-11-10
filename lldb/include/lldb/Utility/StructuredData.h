@@ -23,6 +23,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -247,23 +248,12 @@ public:
       return success;
     }
 
-    bool GetItemAtIndexAsString(size_t idx, llvm::StringRef &result) const {
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
-        if (auto string_value = value_sp->GetAsString()) {
-          result = string_value->GetValue();
-          return true;
-        }
+    std::optional<llvm::StringRef> GetItemAtIndexAsString(size_t idx) const {
+      if (auto item_sp = GetItemAtIndex(idx)) {
+        if (auto *string_value = item_sp->GetAsString())
+          return string_value->GetValue();
       }
-      return false;
-    }
-
-    bool GetItemAtIndexAsString(size_t idx, llvm::StringRef &result,
-                                llvm::StringRef default_val) const {
-      bool success = GetItemAtIndexAsString(idx, result);
-      if (!success)
-        result = default_val;
-      return success;
+      return {};
     }
 
     bool GetItemAtIndexAsDictionary(size_t idx, Dictionary *&result) const {

@@ -1146,6 +1146,14 @@ defm gpu_rdc : BoolFOption<"gpu-rdc",
           "Generate relocatable device code, also known as separate compilation mode">,
   NegFlag<SetFalse>>;
 
+defm offload_implicit_host_device_templates :
+  BoolFOption<"offload-implicit-host-device-templates",
+  LangOpts<"OffloadImplicitHostDeviceTemplates">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Template functions or specializations without host, device and "
+          "global attributes have implicit host device attributes (CUDA/HIP only)">,
+  NegFlag<SetFalse>>;
+
 def fgpu_default_stream_EQ : Joined<["-"], "fgpu-default-stream=">,
   HelpText<"Specify default stream. The default value is 'legacy'. (CUDA/HIP only)">,
   Visibility<[ClangOption, CC1Option]>,
@@ -6209,6 +6217,10 @@ def fno_sycl : Flag<["-"], "fno-sycl">,
 def flang_experimental_hlfir : Flag<["-"], "flang-experimental-hlfir">,
   Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Use HLFIR lowering (experimental)">;
+
+def flang_deprecated_no_hlfir : Flag<["-"], "flang-deprecated-no-hlfir">,
+  Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Do not use HLFIR lowering (deprecated)">;
 
 def flang_experimental_polymorphism : Flag<["-"], "flang-experimental-polymorphism">,
   Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,

@@ -136,13 +136,31 @@ struct TransferReadToArmSMELowering
 
 /// Conversion pattern for vector.transfer_write.
 ///
-///   vector.transfer_write %vector, %source[%c0, %c0] : vector<[16]x[16]xi8>,
-///                                                      memref<?x?xi8>
+/// ---
+///
+/// Example 1: op with identity permutation map to horizontal
+///            arm_sme.tile_store:
+///
+///   vector.transfer_write %vector, %source[%c0, %c0]
+///     {in_bounds = [true, true]} : vector<[16]x[16]xi8>, memref<?x?xi8>
 ///
 /// is converted to:
 ///
 ///   arm_sme.tile_store %vector, %source[%c0, %c0] : memref<?x?xi8>,
 ///                                                   vector<[16]x[16]xi8>
+/// ---
+///
+/// Example 2: op with transpose permutation map to vertical arm_sme.tile_store
+///            (in-flight transpose):
+///
+///   vector.transfer_write %vector, %source[%c0, %c0]
+///     {permutation_map = affine_map<(d0, d1) -> (d1, d0)>,
+///      in_bounds = [true, true]} : vector<[16]x[16]xi8>, memref<?x?xi8>
+///
+/// is converted to:
+///
+///   arm_sme.tile_store %vector, %source[%c0, %c0] layout<vertical>
+///     : memref<?x?xi8>, vector<[16]x[16]xi8>
 struct TransferWriteToArmSMELowering
     : public OpRewritePattern<vector::TransferWriteOp> {
   using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
@@ -156,9 +174,28 @@ struct TransferWriteToArmSMELowering
     if (!llvm::isa<MemRefType>(writeOp.getSource().getType()))
       return failure();
 
+    // Out-of-bounds dims are not supported.
+    if (writeOp.hasOutOfBoundsDim())
+      return rewriter.notifyMatchFailure(writeOp,
+                                         "not inbounds transfer write");
+
+    AffineExpr d0, d1;
+    bindDims(writeOp.getContext(), d0, d1);
+    AffineMap map = writeOp.getPermutationMap();
+    bool isTranspose = (map == AffineMap::get(map.getNumDims(), 0, {d1, d0},
+                                              writeOp.getContext()));
+
+    if (!map.isIdentity() && !isTranspose)
+      return rewriter.notifyMatchFailure(writeOp,
+                                         "unsupported permutation map");
+
+    arm_sme::TileSliceLayout layout =
+        isTranspose ? arm_sme::TileSliceLayout::Vertical
+                    : arm_sme::TileSliceLayout::Horizontal;
+
     rewriter.replaceOpWithNewOp<arm_sme::TileStoreOp>(
         writeOp, writeOp.getVector(), writeOp.getSource(), writeOp.getIndices(),
-        writeOp.getMask());
+        writeOp.getMask(), layout);
     return success();
   }
 };
