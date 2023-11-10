@@ -343,7 +343,7 @@ DIDerivedType *DIBuilder::createTypedef(DIType *Ty, StringRef Name,
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_typedef, Name, File,
                             LineNo, getNonCompileUnitScope(Context), Ty, 0,
                             AlignInBits, 0, std::nullopt, dwarf::DW_MSPACE_LLVM_none,
-			    Flags, nullptr,
+                            Flags, nullptr,
                             Annotations);
 }
 

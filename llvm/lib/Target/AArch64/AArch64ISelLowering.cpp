@@ -16356,33 +16356,7 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
       !(Divisor.isPowerOf2() || Divisor.isNegatedPowerOf2()))
     return SDValue();
 
-  SDLoc DL(N);
-  SDValue N0 = N->getOperand(0);
-  unsigned Lg2 = Divisor.countr_zero();
-  SDValue Zero = DAG.getConstant(0, DL, VT);
-  SDValue Pow2MinusOne = DAG.getConstant((1ULL << Lg2) - 1, DL, VT);
-
-  // Add (N0 < 0) ? Pow2 - 1 : 0;
-  SDValue CCVal;
-  SDValue Cmp = getAArch64Cmp(N0, Zero, ISD::SETLT, CCVal, DAG, DL);
-  SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, Pow2MinusOne);
-  SDValue CSel = DAG.getNode(AArch64ISD::CSEL, DL, VT, Add, N0, CCVal, Cmp);
-
-  Created.push_back(Cmp.getNode());
-  Created.push_back(Add.getNode());
-  Created.push_back(CSel.getNode());
-
-  // Divide by pow2.
-  SDValue SRA =
-      DAG.getNode(ISD::SRA, DL, VT, CSel, DAG.getConstant(Lg2, DL, MVT::i64));
-
-  // If we're dividing by a positive value, we're done.  Otherwise, we must
-  // negate the result.
-  if (Divisor.isNonNegative())
-    return SRA;
-
-  Created.push_back(SRA.getNode());
-  return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), SRA);
+  return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);
 }
 
 SDValue

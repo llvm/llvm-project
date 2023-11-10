@@ -21021,6 +21021,8 @@ Sema::ActOnOpenMPDependClause(const OMPDependClause::DependDataTy &Data,
           if (OASE) {
             QualType BaseType =
                 OMPArraySectionExpr::getBaseOriginalType(OASE->getBase());
+            if (BaseType.isNull())
+              return nullptr;
             if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
               ExprTy = ATy->getElementType();
             else

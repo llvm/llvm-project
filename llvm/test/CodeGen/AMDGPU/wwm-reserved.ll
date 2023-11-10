@@ -336,10 +336,10 @@ define amdgpu_kernel void @call(ptr addrspace(8) inreg %tmp14, i32 inreg %arg) {
 ; GFX9-O0-NEXT:    s_add_u32 s24, s24, s9
 ; GFX9-O0-NEXT:    s_addc_u32 s25, s25, 0
 ; GFX9-O0-NEXT:    ; implicit-def: $vgpr7 : SGPR spill to VGPR lane
+; GFX9-O0-NEXT:    s_or_saveexec_b64 s[10:11], -1
+; GFX9-O0-NEXT:    v_writelane_b32 v7, s10, 0
+; GFX9-O0-NEXT:    v_writelane_b32 v7, s11, 1
 ; GFX9-O0-NEXT:    s_mov_b32 s14, s8
-; GFX9-O0-NEXT:    s_or_saveexec_b64 s[8:9], -1
-; GFX9-O0-NEXT:    v_writelane_b32 v7, s8, 0
-; GFX9-O0-NEXT:    v_writelane_b32 v7, s9, 1
 ; GFX9-O0-NEXT:    s_mov_b32 s13, s7
 ; GFX9-O0-NEXT:    s_mov_b32 s12, s6
 ; GFX9-O0-NEXT:    s_mov_b64 s[10:11], s[4:5]
@@ -571,10 +571,10 @@ define amdgpu_kernel void @call_i64(ptr addrspace(8) inreg %tmp14, i64 inreg %ar
 ; GFX9-O0-NEXT:    s_add_u32 s24, s24, s9
 ; GFX9-O0-NEXT:    s_addc_u32 s25, s25, 0
 ; GFX9-O0-NEXT:    ; implicit-def: $vgpr12 : SGPR spill to VGPR lane
+; GFX9-O0-NEXT:    s_or_saveexec_b64 s[10:11], -1
+; GFX9-O0-NEXT:    v_writelane_b32 v12, s10, 0
+; GFX9-O0-NEXT:    v_writelane_b32 v12, s11, 1
 ; GFX9-O0-NEXT:    s_mov_b32 s14, s8
-; GFX9-O0-NEXT:    s_or_saveexec_b64 s[8:9], -1
-; GFX9-O0-NEXT:    v_writelane_b32 v12, s8, 0
-; GFX9-O0-NEXT:    v_writelane_b32 v12, s9, 1
 ; GFX9-O0-NEXT:    s_mov_b32 s13, s7
 ; GFX9-O0-NEXT:    s_mov_b32 s12, s6
 ; GFX9-O0-NEXT:    s_mov_b64 s[10:11], s[4:5]
@@ -1206,10 +1206,10 @@ define amdgpu_kernel void @strict_wwm_call(ptr addrspace(8) inreg %tmp14, i32 in
 ; GFX9-O0-NEXT:    s_add_u32 s24, s24, s9
 ; GFX9-O0-NEXT:    s_addc_u32 s25, s25, 0
 ; GFX9-O0-NEXT:    ; implicit-def: $vgpr7 : SGPR spill to VGPR lane
+; GFX9-O0-NEXT:    s_or_saveexec_b64 s[10:11], -1
+; GFX9-O0-NEXT:    v_writelane_b32 v7, s10, 0
+; GFX9-O0-NEXT:    v_writelane_b32 v7, s11, 1
 ; GFX9-O0-NEXT:    s_mov_b32 s14, s8
-; GFX9-O0-NEXT:    s_or_saveexec_b64 s[8:9], -1
-; GFX9-O0-NEXT:    v_writelane_b32 v7, s8, 0
-; GFX9-O0-NEXT:    v_writelane_b32 v7, s9, 1
 ; GFX9-O0-NEXT:    s_mov_b32 s13, s7
 ; GFX9-O0-NEXT:    s_mov_b32 s12, s6
 ; GFX9-O0-NEXT:    s_mov_b64 s[10:11], s[4:5]
@@ -1441,10 +1441,10 @@ define amdgpu_kernel void @strict_wwm_call_i64(ptr addrspace(8) inreg %tmp14, i6
 ; GFX9-O0-NEXT:    s_add_u32 s24, s24, s9
 ; GFX9-O0-NEXT:    s_addc_u32 s25, s25, 0
 ; GFX9-O0-NEXT:    ; implicit-def: $vgpr12 : SGPR spill to VGPR lane
+; GFX9-O0-NEXT:    s_or_saveexec_b64 s[10:11], -1
+; GFX9-O0-NEXT:    v_writelane_b32 v12, s10, 0
+; GFX9-O0-NEXT:    v_writelane_b32 v12, s11, 1
 ; GFX9-O0-NEXT:    s_mov_b32 s14, s8
-; GFX9-O0-NEXT:    s_or_saveexec_b64 s[8:9], -1
-; GFX9-O0-NEXT:    v_writelane_b32 v12, s8, 0
-; GFX9-O0-NEXT:    v_writelane_b32 v12, s9, 1
 ; GFX9-O0-NEXT:    s_mov_b32 s13, s7
 ; GFX9-O0-NEXT:    s_mov_b32 s12, s6
 ; GFX9-O0-NEXT:    s_mov_b64 s[10:11], s[4:5]
