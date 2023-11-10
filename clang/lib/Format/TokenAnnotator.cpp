@@ -2000,6 +2000,10 @@ private:
                (!Line.MightBeFunctionDecl || Current.NestingLevel != 0)) {
       Contexts.back().FirstStartOfName = &Current;
       Current.setType(TT_StartOfName);
+      if (auto *PrevNonComment = Current.getPreviousNonComment();
+          PrevNonComment && PrevNonComment->is(TT_StartOfName)) {
+        PrevNonComment->setType(TT_Unknown);
+      }
     } else if (Current.is(tok::semi)) {
       // Reset FirstStartOfName after finding a semicolon so that a for loop
       // with multiple increment statements is not confused with a for loop
@@ -3258,7 +3262,7 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
   if (Current.is(TT_FunctionDeclarationName))
     return true;
 
-  if (!Current.Tok.getIdentifierInfo())
+  if (!Current.Tok.getIdentifierInfo() || Current.is(TT_CtorDtorDeclName))
     return false;
 
   auto skipOperatorName = [](const FormatToken *Next) -> const FormatToken * {
@@ -3441,29 +3445,30 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   if (AlignArrayOfStructures)
     calculateArrayInitializerColumnList(Line);
 
+  const bool IsCpp = Style.isCpp();
   bool LineIsFunctionDeclaration = false;
   FormatToken *ClosingParen = nullptr;
   for (FormatToken *Tok = Current, *AfterLastAttribute = nullptr; Tok;
        Tok = Tok->Next) {
     if (Tok->Previous->EndsCppAttributeGroup)
       AfterLastAttribute = Tok;
-    if (const bool IsCtorOrDtor = Tok->is(TT_CtorDtorDeclName);
-        IsCtorOrDtor ||
-        isFunctionDeclarationName(Style.isCpp(), *Tok, Line, ClosingParen)) {
-      if (!IsCtorOrDtor) {
-        LineIsFunctionDeclaration = true;
-        Tok->setFinalizedType(TT_FunctionDeclarationName);
-      }
-      if (AfterLastAttribute &&
+    if (isFunctionDeclarationName(IsCpp, *Tok, Line, ClosingParen)) {
+      LineIsFunctionDeclaration = true;
+      Tok->setFinalizedType(TT_FunctionDeclarationName);
+    }
+    if (LineIsFunctionDeclaration ||
+        Tok->isOneOf(TT_CtorDtorDeclName, TT_StartOfName)) {
+      if (IsCpp && AfterLastAttribute &&
           mustBreakAfterAttributes(*AfterLastAttribute, Style)) {
         AfterLastAttribute->MustBreakBefore = true;
-        Line.ReturnTypeWrapped = true;
+        if (LineIsFunctionDeclaration)
+          Line.ReturnTypeWrapped = true;
       }
       break;
     }
   }
 
-  if (Style.isCpp()) {
+  if (IsCpp) {
     if (!LineIsFunctionDeclaration) {
       // Annotate */&/&& in `operator` function calls as binary operators.
       for (const auto *Tok = Line.First; Tok; Tok = Tok->Next) {
