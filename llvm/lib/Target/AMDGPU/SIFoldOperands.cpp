@@ -429,63 +429,47 @@ bool SIFoldOperands::tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
     if (isUseMIInFoldList(FoldList, MI))
       return false;
 
-    unsigned CommuteOpNo = OpNo;
-
     // Operand is not legal, so try to commute the instruction to
     // see if this makes it possible to fold.
-    unsigned CommuteIdx0 = TargetInstrInfo::CommuteAnyOperandIndex;
-    unsigned CommuteIdx1 = TargetInstrInfo::CommuteAnyOperandIndex;
-    bool CanCommute = TII->findCommutedOpIndices(*MI, CommuteIdx0, CommuteIdx1);
-
-    if (CanCommute) {
-      if (CommuteIdx0 == OpNo)
-        CommuteOpNo = CommuteIdx1;
-      else if (CommuteIdx1 == OpNo)
-        CommuteOpNo = CommuteIdx0;
-    }
-
+    unsigned CommuteOpNo = TargetInstrInfo::CommuteAnyOperandIndex;
+    bool CanCommute = TII->findCommutedOpIndices(*MI, OpNo, CommuteOpNo);
+    if (!CanCommute)
+      return false;
 
     // One of operands might be an Imm operand, and OpNo may refer to it after
     // the call of commuteInstruction() below. Such situations are avoided
     // here explicitly as OpNo must be a register operand to be a candidate
     // for memory folding.
-    if (CanCommute && (!MI->getOperand(CommuteIdx0).isReg() ||
-                       !MI->getOperand(CommuteIdx1).isReg()))
+    if (!MI->getOperand(OpNo).isReg() || !MI->getOperand(CommuteOpNo).isReg())
       return false;
 
-    if (!CanCommute ||
-        !TII->commuteInstruction(*MI, false, CommuteIdx0, CommuteIdx1))
+    if (!TII->commuteInstruction(*MI, false, OpNo, CommuteOpNo))
       return false;
 
+    int Op32 = -1;
     if (!TII->isOperandLegal(*MI, CommuteOpNo, OpToFold)) {
-      if ((Opc == AMDGPU::V_ADD_CO_U32_e64 ||
-           Opc == AMDGPU::V_SUB_CO_U32_e64 ||
-           Opc == AMDGPU::V_SUBREV_CO_U32_e64) && // FIXME
-          (OpToFold->isImm() || OpToFold->isFI() || OpToFold->isGlobal())) {
-
-        // Verify the other operand is a VGPR, otherwise we would violate the
-        // constant bus restriction.
-        unsigned OtherIdx = CommuteOpNo == CommuteIdx0 ? CommuteIdx1 : CommuteIdx0;
-        MachineOperand &OtherOp = MI->getOperand(OtherIdx);
-        if (!OtherOp.isReg() ||
-            !TII->getRegisterInfo().isVGPR(*MRI, OtherOp.getReg()))
-          return false;
-
-        assert(MI->getOperand(1).isDef());
-
-        // Make sure to get the 32-bit version of the commuted opcode.
-        unsigned MaybeCommutedOpc = MI->getOpcode();
-        int Op32 = AMDGPU::getVOPe32(MaybeCommutedOpc);
-
-        appendFoldCandidate(FoldList, MI, CommuteOpNo, OpToFold, true, Op32);
-        return true;
+      if ((Opc != AMDGPU::V_ADD_CO_U32_e64 && Opc != AMDGPU::V_SUB_CO_U32_e64 &&
+           Opc != AMDGPU::V_SUBREV_CO_U32_e64) || // FIXME
+          (!OpToFold->isImm() && !OpToFold->isFI() && !OpToFold->isGlobal())) {
+        TII->commuteInstruction(*MI, false, OpNo, CommuteOpNo);
+        return false;
       }
 
-      TII->commuteInstruction(*MI, false, CommuteIdx0, CommuteIdx1);
-      return false;
+      // Verify the other operand is a VGPR, otherwise we would violate the
+      // constant bus restriction.
+      MachineOperand &OtherOp = MI->getOperand(OpNo);
+      if (!OtherOp.isReg() ||
+          !TII->getRegisterInfo().isVGPR(*MRI, OtherOp.getReg()))
+        return false;
+
+      assert(MI->getOperand(1).isDef());
+
+      // Make sure to get the 32-bit version of the commuted opcode.
+      unsigned MaybeCommutedOpc = MI->getOpcode();
+      Op32 = AMDGPU::getVOPe32(MaybeCommutedOpc);
     }
 
-    appendFoldCandidate(FoldList, MI, CommuteOpNo, OpToFold, true);
+    appendFoldCandidate(FoldList, MI, CommuteOpNo, OpToFold, true, Op32);
     return true;
   }
 
