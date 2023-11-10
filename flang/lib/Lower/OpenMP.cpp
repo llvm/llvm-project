@@ -481,7 +481,10 @@ void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
 
 void DataSharingProcessor::defaultPrivatize() {
   for (const Fortran::semantics::Symbol *sym : defaultSymbols) {
-    if (!symbolsInNestedRegions.contains(sym) &&
+    if (!Fortran::semantics::IsProcedure(*sym) &&
+        !sym->GetUltimate().has<Fortran::semantics::DerivedTypeDetails>() &&
+        !sym->GetUltimate().has<Fortran::semantics::NamelistDetails>() &&
+        !symbolsInNestedRegions.contains(sym) &&
         !symbolsInParentRegions.contains(sym) &&
         !privatizedSymbols.contains(sym)) {
       cloneSymbol(sym);
