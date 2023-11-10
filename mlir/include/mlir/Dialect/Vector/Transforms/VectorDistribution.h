@@ -59,6 +59,12 @@ using DistributionMapFn = std::function<AffineMap(Value)>;
 ///   vector.yield %v : vector<32xf32>
 /// }
 /// vector.transfer_write %v, %A[%id] : vector<1xf32>, memref<128xf32>
+///
+/// When applied at the same time as the vector propagation patterns,
+/// distribution of `vector.transfer_write` is expected to have the highest
+/// priority (pattern benefit). By making propagation of `vector.transfer_read`
+/// be the lowest priority pattern, it will be the last vector operation to
+/// distribute, meaning writes should propagate first.
 void populateDistributeTransferWriteOpPatterns(
     RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn,
     PatternBenefit benefit = 2);
@@ -76,13 +82,14 @@ using WarpShuffleFromIdxFn =
 /// to decide how a value should be distributed when this cannot be inferred
 /// from its uses.
 ///
-/// Added control over the pattern benefit for propagating
-/// `vector.transfer_read` ops is given to ensure the order of reads/writes
-/// before and after distribution is consistent. Writes are expected to have
-/// the highest priority for distribution, but is only ever distributed if it
-/// is adjacent to the yield. By making reads the lowest priority pattern, it
-/// will be the last pure vector operation to distribute, meaning writes should
-/// propagate first.
+/// The separate control over the `vector.transfer_read` op pattern benefit
+/// is given to ensure the order of reads/writes before and after distribution
+/// is consistent. As noted above, writes are expected to have the highest
+/// priority for distribution, but are only ever distributed if adjacent to the
+/// yield. By making reads the lowest priority pattern, it will be the last
+/// vector operation to distribute, meaning writes should propagate first. This
+/// is relatively brittle when ops fail to distribute, but that is a limitation
+/// of these propagation patterns when there is a dependency not modeled by SSA.
 void populatePropagateWarpVectorDistributionPatterns(
     RewritePatternSet &pattern, const DistributionMapFn &distributionMapFn,
     const WarpShuffleFromIdxFn &warpShuffleFromIdxFn,
