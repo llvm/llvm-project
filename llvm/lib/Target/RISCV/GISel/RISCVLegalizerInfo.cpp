@@ -255,7 +255,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   getActionDefinitionsBuilder(G_JUMP_TABLE).legalFor({p0});
 
   getActionDefinitionsBuilder(G_BRJT).legalIf([=](const LegalityQuery &Query) {
-    return Query.Types[0] == p0 && typeInSet(1, {s32, sXLen});
+    return typeIs(0, p0) && typeInSet(1, {s32, sXLen});
   });
 
   getLegacyLegalizerInfo().computeTables();
