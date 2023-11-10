@@ -180,9 +180,7 @@ void IRNormalizer::nameInstruction(Instruction *I) {
   if (NamedInstructions.contains(I))
     return;
   NamedInstructions.insert(I);
-  // Determine the type of instruction to name.
   if (isInitialInstruction(I)) {
-    // This is an initial instruction.
     nameAsInitialInstruction(I);
   } else {
     // This must be a regular instruction.
@@ -245,9 +243,8 @@ void IRNormalizer::nameAsInitialInstruction(Instruction *I) {
   if (const auto *CI = dyn_cast<CallInst>(I)) {
     Function *F = CI->getCalledFunction();
 
-    if (F != nullptr) {
+    if (F != nullptr)
       Name.append(F->getName());
-    }
   }
 
   Name.append("(");
@@ -294,7 +291,7 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
       // Walk down the use-def chain.
       nameInstruction(IOP);
       Operands.push_back(IOP->getName());
-    } else if (isa<Value>(OP) && !isa<Function>(OP)) {
+    } else if (!isa<Function>(OP)) {
       // This must be an immediate value.
       std::string TextRepresentation;
       raw_string_ostream Stream(TextRepresentation);
