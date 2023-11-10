@@ -5593,8 +5593,8 @@ void CGDebugInfo::EmitGlobalVariable(const VarDecl *VD) {
   if (VD->hasAttr<NoDebugAttr>())
     return;
 
-  auto &GV = DeclCache[VD];
-  if (GV)
+  const auto CacheIt = DeclCache.find(VD);
+  if (CacheIt != DeclCache.end())
     return;
 
   auto const *InitVal = VD->evaluateValue();
@@ -5614,7 +5614,7 @@ void CGDebugInfo::EmitGlobalVariable(const VarDecl *VD) {
   llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(VD);
   llvm::DIExpression *InitExpr = createConstantValueExpression(VD, *InitVal);
 
-  GV.reset(DBuilder.createGlobalVariableExpression(
+  DeclCache[VD].reset(DBuilder.createGlobalVariableExpression(
       TheCU, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
       true, true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VD),
       TemplateParameters, Align, Annotations));
