@@ -388,7 +388,7 @@ private:
   // message.
   DenseSet<MachineInstr *> ReleaseVGPRInsts;
 
-  bool insertWaitcntAfterMemOp(MachineFunction &MF);
+  // bool insertWaitcntAfterMemOp(MachineFunction &MF);
 
 public:
   static char ID;
@@ -1710,6 +1710,13 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     }
 
     ++Iter;
+    if (ST->isPreciseMemoryEnabled() && Inst.mayLoadOrStore()) {
+      auto builder =
+          BuildMI(Block, Iter, DebugLoc(), TII->get(AMDGPU::S_WAITCNT))
+              .addImm(0);
+      OldWaitcntInstr = builder.getInstr();
+      Modified = true;
+    }
   }
 
   if (Block.getFirstTerminator() == Block.end() &&
@@ -1811,6 +1818,7 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
   return HasVMemLoad && UsesVgprLoadedOutside;
 }
 
+#if 0
 bool SIInsertWaitcnts::insertWaitcntAfterMemOp(MachineFunction &MF) {
   bool Modified = false;
 
@@ -1827,6 +1835,7 @@ bool SIInsertWaitcnts::insertWaitcntAfterMemOp(MachineFunction &MF) {
 
   return Modified;
 }
+#endif
 
 bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
@@ -1838,11 +1847,11 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   MLI = &getAnalysis<MachineLoopInfo>();
   PDT = &getAnalysis<MachinePostDominatorTree>();
 
-  bool Modified = false;
-
+#if 0
   if (ST->isPreciseMemoryEnabled()) {
     Modified |= insertWaitcntAfterMemOp(MF);
   }
+#endif
 
   ForceEmitZeroWaitcnts = ForceEmitZeroFlag;
   for (auto T : inst_counter_types())
@@ -1872,6 +1881,8 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
   TrackedWaitcntSet.clear();
   BlockInfos.clear();
+
+  bool Modified = false;
 
   if (!MFI->isEntryFunction()) {
     // Wait for any outstanding memory operations that the input registers may
