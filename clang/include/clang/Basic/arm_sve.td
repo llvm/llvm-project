@@ -1813,15 +1813,6 @@ def SVWHILERW_H_BF16 : SInst<"svwhilerw[_{1}]", "Pcc", "b", MergeNone, "aarch64_
 def SVWHILEWR_H_BF16 : SInst<"svwhilewr[_{1}]", "Pcc", "b", MergeNone, "aarch64_sve_whilewr_h", [IsOverloadWhileRW]>;
 }
 
-// //
-// // Spill and fill of ZT0
-// //
-
-// let TargetGuard = "sme2" in {
-//   def SVLDR_ZT : Inst<"svldr_zt", "viQ", "", "aarch64_sme_ldr_zt", [IsOverloadNone, IsStreamingCompatible, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>]>;
-//   def SVSTR_ZT : Inst<"svstr_zt", "vi%", "", "aarch64_sme_str_zt", [IsOverloadNone, IsStreamingCompatible, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>]>;
-// }
-
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Extended table lookup/permute
 let TargetGuard = "sve2" in {
