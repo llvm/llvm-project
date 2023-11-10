@@ -1717,6 +1717,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   std::pair<Value *, Value *>
   getShadowOriginPtrUserspace(Value *Addr, IRBuilder<> &IRB, Type *ShadowTy,
                               MaybeAlign Alignment) {
+    VectorType *VectTy = dyn_cast<VectorType>(Addr->getType());
+    if (!VectTy) {
+      assert(Addr->getType()->isPointerTy());
+    } else {
+      assert(VectTy->getElementType()->isPointerTy());
+    }
     Type *IntptrTy = ptrToIntPtrType(Addr->getType());
     Value *ShadowOffset = getShadowPtrOffset(Addr, IRB);
     Value *ShadowLong = ShadowOffset;
@@ -5258,21 +5264,25 @@ struct VarArgAArch64Helper : public VarArgHelper {
       // we need to adjust the offset for both GR and VR fields based on
       // the __{gr,vr}_offs value (since they are stores based on incoming
       // named arguments).
+      Type *RegSaveAreaPtrTy = IRB.getInt8PtrTy();
 
       // Read the stack pointer from the va_list.
-      Value *StackSaveAreaPtr = getVAField64(IRB, VAListTag, 0);
+      Value *StackSaveAreaPtr =
+          IRB.CreateIntToPtr(getVAField64(IRB, VAListTag, 0), RegSaveAreaPtrTy);
 
       // Read both the __gr_top and __gr_off and add them up.
       Value *GrTopSaveAreaPtr = getVAField64(IRB, VAListTag, 8);
       Value *GrOffSaveArea = getVAField32(IRB, VAListTag, 24);
 
-      Value *GrRegSaveAreaPtr = IRB.CreateAdd(GrTopSaveAreaPtr, GrOffSaveArea);
+      Value *GrRegSaveAreaPtr = IRB.CreateIntToPtr(
+          IRB.CreateAdd(GrTopSaveAreaPtr, GrOffSaveArea), RegSaveAreaPtrTy);
 
       // Read both the __vr_top and __vr_off and add them up.
       Value *VrTopSaveAreaPtr = getVAField64(IRB, VAListTag, 16);
       Value *VrOffSaveArea = getVAField32(IRB, VAListTag, 28);
 
-      Value *VrRegSaveAreaPtr = IRB.CreateAdd(VrTopSaveAreaPtr, VrOffSaveArea);
+      Value *VrRegSaveAreaPtr = IRB.CreateIntToPtr(
+          IRB.CreateAdd(VrTopSaveAreaPtr, VrOffSaveArea), RegSaveAreaPtrTy);
 
       // It does not know how many named arguments is being used and, on the
       // callsite all the arguments were saved.  Since __gr_off is defined as
