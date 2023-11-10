@@ -646,10 +646,6 @@ struct WarpOpElementwise : public OpRewritePattern<WarpExecuteOnLane0Op> {
     if (!yieldOperand)
       return failure();
 
-    // Notify the rewriter that the warp op is changing (see the comment on
-    // the WarpOpTransferRead pattern).
-    rewriter.startRootUpdate(warpOp);
-
     Operation *elementWise = yieldOperand->get().getDefiningOp();
     unsigned operandIndex = yieldOperand->getOperandNumber();
     Value distributedVal = warpOp.getResult(operandIndex);
@@ -688,7 +684,6 @@ struct WarpOpElementwise : public OpRewritePattern<WarpExecuteOnLane0Op> {
         {newWarpOp.getResult(operandIndex).getType()});
     rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIndex),
                                 newOp->getResult(0));
-    rewriter.finalizeRootUpdate(warpOp);
     return success();
   }
 };
@@ -1058,9 +1053,6 @@ struct WarpOpBroadcast : public OpRewritePattern<WarpExecuteOnLane0Op> {
     if (vector::isBroadcastableTo(broadcastSrcType, destVecType) !=
         vector::BroadcastableToResult::Success)
       return failure();
-    // Notify the rewriter that the warp op is changing (see the comment on
-    // the WarpOpTransferRead pattern).
-    rewriter.startRootUpdate(warpOp);
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, {broadcastSrc}, {broadcastSrcType}, newRetIndices);
@@ -1069,7 +1061,6 @@ struct WarpOpBroadcast : public OpRewritePattern<WarpExecuteOnLane0Op> {
         loc, destVecType, newWarpOp->getResult(newRetIndices[0]));
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
                                 broadcasted);
-    rewriter.finalizeRootUpdate(warpOp);
     return success();
   }
 };
