@@ -575,15 +575,14 @@ LLVM::GlobalOp getDynamicSharedMemorySymbol(
   // Step 1. Collect symbol names of LLVM::GlobalOp Ops. Also if any of
   // LLVM::GlobalOp is suitable for shared memory, return it.
   llvm::StringSet<> existingGlobalNames;
-  for (auto &innerOp : moduleOp->getRegions().front().front().getOperations()) {
-    if (auto globalOp = dyn_cast<LLVM::GlobalOp>(innerOp)) {
-      existingGlobalNames.insert(globalOp.getSymName());
-      if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(globalOp.getType())) {
-        if (globalOp.getAddrSpace() == addressSpace &&
-            arrayType.getNumElements() == 0 &&
-            globalOp.getAlignment().value_or(0) == alignmentByte) {
-          return globalOp;
-        }
+  for (auto globalOp :
+       moduleOp->getRegion(0).front().getOps<LLVM::GlobalOp>()) {
+    existingGlobalNames.insert(globalOp.getSymName());
+    if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(globalOp.getType())) {
+      if (globalOp.getAddrSpace() == addressSpace &&
+          arrayType.getNumElements() == 0 &&
+          globalOp.getAlignment().value_or(0) == alignmentByte) {
+        return globalOp;
       }
     }
   }
