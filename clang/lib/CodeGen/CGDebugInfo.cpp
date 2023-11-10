@@ -5588,9 +5588,11 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
 }
 
 void CGDebugInfo::EmitGlobalVariable(const VarDecl *VD) {
-  assert(VD->hasInit());
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   if (VD->hasAttr<NoDebugAttr>())
+    return;
+
+  if (!VD->hasInit())
     return;
 
   const auto CacheIt = DeclCache.find(VD);
@@ -5828,9 +5830,6 @@ void CGDebugInfo::finalize() {
     assert(VD->isStaticDataMember());
 
     if (DeclCache.contains(VD))
-      continue;
-
-    if (!VD->hasInit())
       continue;
 
     EmitGlobalVariable(VD);
