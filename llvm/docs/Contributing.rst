@@ -110,7 +110,7 @@ access, please let people know during the review and someone should commit it
 on your behalf.
 
 If you have received no comments on your patch for a week, you can request a
-review by 'ping'ing the GitHub PR with "Ping." The common courtesy 'ping' rate
+review by 'ping'ing the GitHub PR with "Ping". The common courtesy 'ping' rate
 is once a week. Please remember that you are asking for valuable time from other
 professional developers.
 
