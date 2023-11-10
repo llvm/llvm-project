@@ -128,7 +128,7 @@ public:
 
   void clearMaxPressure() { MaxPressure.clear(); }
 
-  const GCNRegPressure &getPressure() const { return CurPressure; }
+  GCNRegPressure getPressure() const { return CurPressure; }
 
   decltype(LiveRegs) moveLiveRegs() {
     return std::move(LiveRegs);
@@ -191,7 +191,7 @@ public:
   MachineBasicBlock::const_iterator getNext() const { return NextMI; }
 
   // Return MaxPressure and clear it.
-  decltype(MaxPressure) moveMaxPressure() {
+  GCNRegPressure moveMaxPressure() {
     auto Res = MaxPressure;
     MaxPressure.clear();
     return Res;
