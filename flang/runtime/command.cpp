@@ -16,7 +16,10 @@
 #include <limits>
 
 #ifdef _WIN32
-inline gid_t getgid() { return 0; }
+inline gid_t getgid() {
+  assert(false && "Unimplemented on Windows OS");
+  return 0;
+}
 #else
 #include <unistd.h>
 #endif
