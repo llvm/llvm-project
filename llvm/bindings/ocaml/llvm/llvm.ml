@@ -654,8 +654,6 @@ external const_icmp : Icmp.t -> llvalue -> llvalue -> llvalue
 external const_fcmp : Fcmp.t -> llvalue -> llvalue -> llvalue
                     = "llvm_const_fcmp"
 external const_shl : llvalue -> llvalue -> llvalue = "llvm_const_shl"
-external const_lshr : llvalue -> llvalue -> llvalue = "llvm_const_lshr"
-external const_ashr : llvalue -> llvalue -> llvalue = "llvm_const_ashr"
 external const_gep : lltype -> llvalue -> llvalue array -> llvalue
                    = "llvm_const_gep"
 external const_in_bounds_gep : lltype -> llvalue -> llvalue array -> llvalue
