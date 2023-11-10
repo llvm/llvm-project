@@ -224,6 +224,10 @@ public:
   /// Primarily used to speed up deserialization during dependency scanning.
   unsigned ModulesSkipHeaderSearchPaths : 1;
 
+  /// Whether to entirely skip writing pragma diagnostic mappings.
+  /// Primarily used to speed up deserialization during dependency scanning.
+  unsigned ModulesSkipPragmaDiagnosticMappings : 1;
+
   unsigned ModulesHashContent : 1;
 
   /// Whether we should include all things that could impact the module in the
@@ -244,7 +248,8 @@ public:
         ValidateASTInputFilesContent(false), UseDebugInfo(false),
         ModulesValidateDiagnosticOptions(true),
         ModulesSkipDiagnosticOptions(false),
-        ModulesSkipHeaderSearchPaths(false), ModulesHashContent(false),
+        ModulesSkipHeaderSearchPaths(false),
+        ModulesSkipPragmaDiagnosticMappings(false), ModulesHashContent(false),
         ModulesStrictContextHash(false) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.
