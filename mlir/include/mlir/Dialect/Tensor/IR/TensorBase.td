@@ -41,9 +41,9 @@ def Tensor_Dialect : Dialect {
     lives in the builtin dialect), and does not live in this dialect.
     Furthermore, a `tensor` is an immutable object. For example, this means
     that a copy will always be made of the `tensor` object when it is passed to
-    the `dest` operand of used by some ops in this dialect. Note that the
-    underlying storage to which the `tensor` object refers may be mutated, see
-    see the [Destination-Passing Style](
+    the `dest` operand used by some ops in this dialect. The storage to which
+    the `tensor` object refers may be mutated, see the [Destination-Passing
+    Style](
     https://mlir.llvm.org/docs/Bufferization/#destination-passing-style)
     documentation for more information.
   }];
