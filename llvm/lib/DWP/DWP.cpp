@@ -693,7 +693,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
         uint32_t SectionIndex = 0;
         for (auto &Section : Obj.sections()) {
           if (SectionIndex == Index) {
-            if (Error Err sectionOverflowErrorOrWarning(
+            if (Error Err = sectionOverflowErrorOrWarning(
                 OldOffset, ContributionOffsets[Index], *Section.getName(),
                 ContinueOnCuIndexOverflow))
               return Err;
