@@ -109,7 +109,7 @@ multiclass RVVVFWMACCBuiltinSet<list<list<string>> suffixes_prototypes> {
       Name = NAME,
       HasMasked = false,
       Log2LMUL = [-2, -1, 0, 1, 2] in
-    defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "x", suffixes_prototypes>;
+    defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "b", suffixes_prototypes>;
 }
 
 multiclass RVVVQMACCBuiltinSet<list<list<string>> suffixes_prototypes> {
@@ -146,7 +146,7 @@ let UnMaskedPolicyScheme = HasPolicyOperand in
 
 let UnMaskedPolicyScheme = HasPolicyOperand in
   let RequiredFeatures = ["Xsfvfwmaccqqq"] in
-    defm sf_vfwmacc_4x4x4 : RVVVFWMACCBuiltinSet<[["", "w", "wwSvv"]]>;
+    defm sf_vfwmacc_4x4x4 : RVVVFWMACCBuiltinSet<[["", "Fw", "FwFwSvv"]]>;
 
 let UnMaskedPolicyScheme = HasPassthruOperand, RequiredFeatures = ["Xsfvfnrclipxfqf"] in {
 let ManualCodegen = [{

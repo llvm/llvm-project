@@ -143,14 +143,15 @@ exit:
 define void @sext_add_nuw(ptr %A, i32 %offset, i32 %M) {
 ; CHECK-LABEL: @sext_add_nuw(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[OFFSET:%.*]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[M:%.*]], i32 1)
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[ADD_US:%.*]] = add nuw i32 [[TMP0]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[ADD_US]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[INDVARS_IV]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -215,14 +216,15 @@ exit:
 define void @zext_add_nsw(ptr %A, i32 %offset, i32 %M) {
 ; CHECK-LABEL: @zext_add_nsw(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[OFFSET:%.*]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[M:%.*]], i32 1)
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[TMP0]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext i32 [[ADD_US]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -322,14 +324,15 @@ exit:
 define void @zext_nneg_add_nsw(ptr %A, i32 %offset, i32 %M) {
 ; CHECK-LABEL: @zext_nneg_add_nsw(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[OFFSET:%.*]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[M:%.*]], i32 1)
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[TMP0]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext nneg i32 [[ADD_US]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -467,14 +470,15 @@ exit:
 define void @sext_mul_nuw(ptr %A, i32 %multiple, i32 %M) {
 ; CHECK-LABEL: @sext_mul_nuw(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[MULTIPLE:%.*]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[M:%.*]], i32 1)
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[MUL_US:%.*]] = mul nuw i32 [[TMP0]], [[MULTIPLE:%.*]]
-; CHECK-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[MUL_US]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i64 [[INDVARS_IV]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -539,14 +543,15 @@ exit:
 define void @zext_mul_nsw(ptr %A, i32 %multiple, i32 %M) {
 ; CHECK-LABEL: @zext_mul_nsw(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[MULTIPLE:%.*]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[M:%.*]], i32 1)
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[MUL_US:%.*]] = mul nsw i32 [[TMP0]], [[MULTIPLE:%.*]]
-; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext i32 [[MUL_US]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[INDVARS_IV]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -646,14 +651,15 @@ exit:
 define void @zext_nneg_mul_nsw(ptr %A, i32 %multiple, i32 %M) {
 ; CHECK-LABEL: @zext_nneg_mul_nsw(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[MULTIPLE:%.*]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[M:%.*]], i32 1)
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[MUL_US:%.*]] = mul nsw i32 [[TMP0]], [[MULTIPLE:%.*]]
-; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext nneg i32 [[MUL_US]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[INDVARS_IV]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1

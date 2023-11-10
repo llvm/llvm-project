@@ -533,6 +533,10 @@ module std_experimental [system] {
     header "experimental/map"
     export *
   }
+  module memory {
+    header "experimental/memory"
+    export *
+  }
   module memory_resource {
     header "experimental/memory_resource"
     export *
