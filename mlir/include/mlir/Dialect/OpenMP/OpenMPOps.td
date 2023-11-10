@@ -458,7 +458,7 @@ def NewCliOp : OpenMP_Op<"new_cli"> {
 //===---------------------------------------------------------------------===//
 // OpenMP Canonical Loop Operation
 //===---------------------------------------------------------------------===//
-def CanonicalLoopOp : OpenMP_Op<"canonical_loop", [SingleBlockImplicitTerminator<"omp::YieldOp">]> {
+def CanonicalLoopOp : OpenMP_Op<"canonical_loop", []> {
   let summary = "OpenMP Canonical Loop Operation";
   let description = [{
     All loops that conform to OpenMP's definition of a canonical loop can be

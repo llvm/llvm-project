@@ -1569,7 +1569,7 @@ void mlir::omp::CanonicalLoopOp::print(OpAsmPrinter &p) {
 
   // omp.yield is implicit if no arguments passed to it.
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/false);
+                /*printBlockTerminators=*/true);
 
   p.printOptionalAttrDict((*this)->getAttrs());
 }
@@ -1613,7 +1613,6 @@ mlir::omp::CanonicalLoopOp::parse(::mlir::OpAsmParser &parser,
   Region *region = result.addRegion();
   if (parser.parseRegion(*region, {inductionVariable}))
     return failure();
-  CanonicalLoopOp::ensureTerminator(*region, builder, result.location);
 
   // Parse the optional attribute list.
   if (parser.parseOptionalAttrDict(result.attributes))
