@@ -886,7 +886,7 @@ public:
 
   void setTrackAllocationStacks(bool Track) {
     initThreadMaybe();
-    if (getFlags()->allocation_ring_buffer_size < 1) {
+    if (getFlags()->allocation_ring_buffer_size <= 0) {
       DCHECK(!Primary.Options.load().get(OptionBit::TrackAllocationStacks));
       return;
     }
@@ -1490,7 +1490,7 @@ private:
   }
 
   void mapAndInitializeRingBuffer() {
-    if (getFlags()->allocation_ring_buffer_size < 1)
+    if (getFlags()->allocation_ring_buffer_size <= 0)
       return;
     u32 AllocationRingBufferSize =
         static_cast<u32>(getFlags()->allocation_ring_buffer_size);
