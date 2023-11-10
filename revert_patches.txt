@@ -8,4 +8,3 @@ Revert: waiting on pip install myst-parser
 Revert : [X86][AVX10] Permit AVX512 options/features used together with AVX10 (#71318)
   breaks build of pgmath
 
-Revert : [OpenMP] Rework handling of global ctor/dtors in OpenMP 

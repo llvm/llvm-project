@@ -38,7 +38,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 
 
 #pragma omp end declare target
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_constexpr_fabsf_f32_l14_ctor
+// CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
@@ -52,7 +52,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_constexpr_fabs_f32_l15_ctor
+// CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I_I:%.*]] = alloca float, align 4, addrspace(5)
@@ -72,7 +72,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_constexpr_sinf_f32_l17_ctor
+// CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.2
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
@@ -86,7 +86,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_constexpr_sin_f32_l18_ctor
+// CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.3
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I_I:%.*]] = alloca float, align 4, addrspace(5)
@@ -106,7 +106,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_constexpr_cosf_f32_l20_ctor
+// CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.4
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
@@ -120,7 +120,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_constexpr_cos_f32_l21_ctor
+// CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.5
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I_I:%.*]] = alloca float, align 4, addrspace(5)
@@ -140,7 +140,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_constexpr_fmaf_f32_l23_ctor
+// CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.6
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
@@ -162,7 +162,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_constexpr_fma_f32_l24_ctor
+// CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.7
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I_I:%.*]] = alloca float, align 4, addrspace(5)
@@ -198,7 +198,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_constexpr_min_f32_l27_ctor
+// CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.8
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
@@ -216,7 +216,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_constexpr_max_f32_l28_ctor
+// CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.9
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
@@ -234,7 +234,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_constexpr_fmin_f32_l30_ctor
+// CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.10
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef float @_Z4fminff(float noundef 2.000000e+00, float noundef -4.000000e+00) #[[ATTR4:[0-9]+]]
@@ -242,7 +242,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_constexpr_fmax_f32_l31_ctor
+// CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.11
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef float @_Z4fmaxff(float noundef 2.000000e+00, float noundef -4.000000e+00) #[[ATTR4]]
@@ -250,7 +250,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_constexpr_fminf_f32_l33_ctor
+// CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.12
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
@@ -268,7 +268,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_constexpr_fmaxf_f32_l34_ctor
+// CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.13
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
@@ -283,5 +283,25 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[__Y_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call noundef float @llvm.maxnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NEXT:    store float [[TMP2]], ptr addrspacecast (ptr addrspace(1) @_ZL19constexpr_fmaxf_f32 to ptr), align 4
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_amdgcn_openmp_device_math_constexpr.cpp
+// CHECK-SAME: () #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @__cxx_global_var_init()
+// CHECK-NEXT:    call void @__cxx_global_var_init.1()
+// CHECK-NEXT:    call void @__cxx_global_var_init.2()
+// CHECK-NEXT:    call void @__cxx_global_var_init.3()
+// CHECK-NEXT:    call void @__cxx_global_var_init.4()
+// CHECK-NEXT:    call void @__cxx_global_var_init.5()
+// CHECK-NEXT:    call void @__cxx_global_var_init.6()
+// CHECK-NEXT:    call void @__cxx_global_var_init.7()
+// CHECK-NEXT:    call void @__cxx_global_var_init.8()
+// CHECK-NEXT:    call void @__cxx_global_var_init.9()
+// CHECK-NEXT:    call void @__cxx_global_var_init.10()
+// CHECK-NEXT:    call void @__cxx_global_var_init.11()
+// CHECK-NEXT:    call void @__cxx_global_var_init.12()
+// CHECK-NEXT:    call void @__cxx_global_var_init.13()
 // CHECK-NEXT:    ret void
 //

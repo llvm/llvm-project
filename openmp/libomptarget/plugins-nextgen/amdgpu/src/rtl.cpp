@@ -2522,6 +2522,16 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
+                                       DeviceImageTy &Image) override {
+    return callGlobalCtorDtorCommon(Plugin, Image, "amdgcn.device.init");
+  }
+
+  virtual Error callGlobalDestructors(GenericPluginTy &Plugin,
+                                      DeviceImageTy &Image) override {
+    return callGlobalCtorDtorCommon(Plugin, Image, "amdgcn.device.fini");
+  }
+
   const uint64_t getStreamBusyWaitMicroseconds() const {
     return OMPX_StreamBusyWait;
   }
@@ -3352,6 +3362,43 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 private:
   using AMDGPUEventRef = AMDGPUResourceRef<AMDGPUEventTy>;
   using AMDGPUEventManagerTy = GenericDeviceResourceManagerTy<AMDGPUEventRef>;
+
+  /// Common method to invoke a single threaded constructor or destructor
+  /// kernel by name.
+  Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
+                                 const char *Name) {
+    // Perform a quick check for the named kernel in the image. The kernel
+    // should be created by the 'amdgpu-lower-ctor-dtor' pass.
+    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
+    GlobalTy Global(Name, sizeof(void *));
+    if (auto Err = Handler.getGlobalMetadataFromImage(*this, Image, Global)) {
+      consumeError(std::move(Err));
+      return Plugin::success();
+    }
+
+     // Retrieve the execution mode.
+     auto ExecModeOrErr = getExecutionModeForKernel(Name, Image);
+     if (!ExecModeOrErr)
+       return ExecModeOrErr.takeError();
+
+    // Allocate and construct the AMDGPU kernel.
+    AMDGPUKernelTy AMDGPUKernel(Name, *ExecModeOrErr);
+    if (auto Err = AMDGPUKernel.init(*this, Image))
+      return std::move(Err);
+
+    AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
+
+    KernelArgsTy KernelArgs = {};
+    if (auto Err = AMDGPUKernel.launchImpl(*this, /*NumThread=*/1u,
+                                           /*NumBlocks=*/1ul, KernelArgs,
+                                           /*Args=*/nullptr, AsyncInfoWrapper))
+      return std::move(Err);
+
+    Error Err = Plugin::success();
+    AsyncInfoWrapper.finalize(Err);
+
+    return std::move(Err);
+  }
 
   /// Envar for controlling the number of HSA queues per device. High number of
   /// queues may degrade performance.
