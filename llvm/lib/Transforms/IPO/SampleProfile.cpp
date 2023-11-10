@@ -1630,7 +1630,7 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
         // separate map so that it does not rehash the original profile.
         if (!OutlineFS)
           OutlineFS = &OutlineFunctionSamples[
-              FunctionSamples::getCanonicalFnName(Callee->getName())];
+              FunctionId(FunctionSamples::getCanonicalFnName(Callee->getName()))];
         OutlineFS->merge(*FS, 1);
         // Set outlined profile to be synthetic to not bias the inliner.
         OutlineFS->SetContextSynthetic();
@@ -2675,12 +2675,12 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
     // into base.
     if (!Samples) {
       StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
-      auto It = OutlineFunctionSamples.find(CanonName);
+      auto It = OutlineFunctionSamples.find(FunctionId(CanonName));
       if (It != OutlineFunctionSamples.end()) {
         Samples = &It->second;
       } else if (auto Remapper = Reader->getRemapper()) {
         if (auto RemppedName = Remapper->lookUpNameInProfile(CanonName)) {
-          It = OutlineFunctionSamples.find(*RemppedName);
+          It = OutlineFunctionSamples.find(FunctionId(*RemppedName));
           if (It != OutlineFunctionSamples.end())
             Samples = &It->second;
         }
