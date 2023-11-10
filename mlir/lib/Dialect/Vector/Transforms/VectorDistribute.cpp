@@ -1097,7 +1097,7 @@ struct WarpOpShapeCast : public OpRewritePattern<WarpExecuteOnLane0Op> {
 /// %ub = arith.select %cmp, %c0, %c1
 /// %1 = vector.create_mask %ub : vector<1xi1>
 struct WarpOpCreateMask : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *yieldOperand = getWarpResult(
@@ -1119,8 +1119,8 @@ struct WarpOpCreateMask : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
     auto distType = cast<VectorType>(warpOp.getResult(operandIndex).getType());
     VectorType seqType = mask.getVectorType();
-    auto seqShape = seqType.getShape();
-    auto distShape = distType.getShape();
+    ArrayRef<int64_t> seqShape = seqType.getShape();
+    ArrayRef<int64_t> distShape = distType.getShape();
 
     rewriter.setInsertionPointAfter(warpOp);
 
