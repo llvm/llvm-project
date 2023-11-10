@@ -169,8 +169,8 @@ unsigned int cpucfg(unsigned int a) {
 
 // LA32-LABEL: @rdtime(
 // LA32-NEXT:  entry:
-// LA32-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimeh.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1:[0-9]+]], !srcloc !2
-// LA32-NEXT:    [[TMP1:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimel.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc !3
+// LA32-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimeh.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1:[0-9]+]], !srcloc !3
+// LA32-NEXT:    [[TMP1:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimel.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc !4
 // LA32-NEXT:    ret void
 //
 void rdtime() {
@@ -206,6 +206,11 @@ void loongarch_movgr2fcsr(int a) {
 // CHECK-NEXT:    tail call void @llvm.loongarch.cacop.w(i32 1, i32 [[A:%.*]], i32 1024)
 // CHECK-NEXT:    tail call void @llvm.loongarch.cacop.w(i32 1, i32 [[A]], i32 1024)
 // CHECK-NEXT:    ret void
+// LA32-LABEL: @cacop_w(
+// LA32-NEXT:  entry:
+// LA32-NEXT:    tail call void @llvm.loongarch.cacop.w(i32 1, i32 [[A:%.*]], i32 1024)
+// LA32-NEXT:    tail call void @llvm.loongarch.cacop.w(i32 1, i32 [[A]], i32 1024)
+// LA32-NEXT:    ret void
 //
 void cacop_w(unsigned long int a) {
   __cacop_w(1, a, 1024);

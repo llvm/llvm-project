@@ -5660,12 +5660,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Non-PIC code defaults to -fdirect-access-external-data while PIC code
-  // defaults to -fno-direct-access-external-data. Pass the option if different
-  // from the default.
+  // defaults to -fno-direct-access-external-data.
+  // LoongArch does not and will not support copy relocation, so non-PIC code
+  // defaults to -fno-direct-access-external-data.
+  // Pass the option if different from the default.
   if (Arg *A = Args.getLastArg(options::OPT_fdirect_access_external_data,
                                options::OPT_fno_direct_access_external_data))
-    if (A->getOption().matches(options::OPT_fdirect_access_external_data) !=
-        (PICLevel == 0))
+    if (A->getOption().matches(options::OPT_fdirect_access_external_data) ==
+        (PICLevel != 0 || Triple.isLoongArch()))
       A->render(Args, CmdArgs);
 
   if (Args.hasFlag(options::OPT_fno_plt, options::OPT_fplt, false)) {

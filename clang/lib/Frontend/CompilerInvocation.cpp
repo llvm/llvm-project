@@ -1745,10 +1745,12 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
   // PIC defaults to -fno-direct-access-external-data while non-PIC defaults to
   // -fdirect-access-external-data.
+  // LoongArch does not and will not support copy relocation, so non-PIC code
+  // defaults to -fno-direct-access-external-data.
   Opts.DirectAccessExternalData =
       Args.hasArg(OPT_fdirect_access_external_data) ||
       (!Args.hasArg(OPT_fno_direct_access_external_data) &&
-       LangOpts->PICLevel == 0);
+       LangOpts->PICLevel == 0 && !T.isLoongArch());
 
   if (Arg *A = Args.getLastArg(OPT_debug_info_kind_EQ)) {
     unsigned Val =

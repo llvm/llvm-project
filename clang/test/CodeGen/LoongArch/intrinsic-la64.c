@@ -387,7 +387,7 @@ unsigned int cpucfg(unsigned int a) {
 
 // CHECK-LABEL: @rdtime_d(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i64, i64 } asm sideeffect "rdtime.d $0, $1\0A\09", "=&r,=&r"() #[[ATTR1:[0-9]+]], !srcloc !2
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i64, i64 } asm sideeffect "rdtime.d $0, $1\0A\09", "=&r,=&r"() #[[ATTR1:[0-9]+]], !srcloc !3
 // CHECK-NEXT:    ret void
 //
 void rdtime_d() {
@@ -396,8 +396,8 @@ void rdtime_d() {
 
 // CHECK-LABEL: @rdtime(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimeh.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc !3
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimel.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc !4
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimeh.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc !4
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimel.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc !5
 // CHECK-NEXT:    ret void
 //
 void rdtime() {
