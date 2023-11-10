@@ -1252,39 +1252,30 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
       CsectAuxRef.getSymbolType() == XCOFF::XTY_ER)
     return false;
 
-  // If the next symbol is a XTY_LD type symbol with same address, this XTY_SD
+  // If the next symbol is an XTY_LD type symbol with same address, this XTY_SD
   // symbol is not a function. Otherwise this is a function symbol for
   // -ffunction-sections.
   if (CsectAuxRef.getSymbolType() == XCOFF::XTY_SD) {
     // If this is a csect with size 0, it won't be a function definition.
     // This is used to hack situation that llvm always generates below symbol
     // for -ffunction-sections:
+    // FIXME: remove or replace this meaningless symbol.
     // m   0x00000000     .text     1  unamex                    **No Symbol**
     // a4  0x00000000       0    0     SD       PR    0    0
     if (getSize() == 0)
       return false;
 
-    uint8_t NumberOfAuxEntries = getNumberOfAuxEntries();
-
-    // If this is the last main symbol table entry, there won't be XTY_LD type
-    // symbol below.
-    if (getEntryAddress() == getObject()->getSymbolEntryAddressByIndex(
-                                 getObject()->getNumberOfSymbolTableEntries() -
-                                 NumberOfAuxEntries - 1))
+    xcoff_symbol_iterator NextIt(this);
+    // If this is the last main symbol table entry, there won't be an XTY_LD
+    // type symbol below.
+    if (++NextIt == getObject()->symbol_end())
       return true;
 
-    DataRefImpl Ref;
-    Ref.p = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
-        getEntryAddress(), NumberOfAuxEntries + 1);
-    XCOFFSymbolRef NextSym = getObject()->toSymbolRef(Ref);
-    if (!NextSym.isCsectSymbol())
-      return true;
-
-    if (cantFail(getAddress()) != cantFail(NextSym.getAddress()))
+    if (cantFail(getAddress()) != cantFail(NextIt->getAddress()))
       return true;
 
     // Check next symbol is XTY_LD. If so, this symbol is not a function.
-    Expected<XCOFFCsectAuxRef> NextCsectAuxEnt = NextSym.getXCOFFCsectAuxRef();
+    Expected<XCOFFCsectAuxRef> NextCsectAuxEnt = NextIt->getXCOFFCsectAuxRef();
     if (!NextCsectAuxEnt) {
       // If the next symbol has no aux entries, won't be a XTY_LD symbol.
       consumeError(NextCsectAuxEnt.takeError());
@@ -1300,12 +1291,7 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
   if (CsectAuxRef.getSymbolType() == XCOFF::XTY_LD)
     return true;
 
-  const int16_t SectNum = getSectionNumber();
-  Expected<DataRefImpl> SI = getObject()->getSectionByNum(SectNum);
-  if (!SI)
-    return SI.takeError();
-
-  return (getObject()->getSectionFlags(SI.get()) & XCOFF::STYP_TEXT);
+  return false;
 }
 
 bool XCOFFSymbolRef::isCsectSymbol() const {
