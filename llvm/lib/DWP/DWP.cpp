@@ -197,12 +197,13 @@ static Error sectionOverflowErrorOrWarning(uint32_t PrevOffset,
   return make_error<DWPError>(Msg);
 }
 
-static Error addAllTypesFromDWP(
-    MCStreamer &Out, MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
-    const DWARFUnitIndex &TUIndex, MCSection *OutputTypes, StringRef Types,
-    const UnitIndexEntry &TUEntry, uint32_t &TypesOffset,
-    unsigned TypesContributionIndex, bool ContinueOnCuIndexOverflow,
-    bool &SeeOverflowFlag) {
+static Error
+addAllTypesFromDWP(MCStreamer &Out,
+                   MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
+                   const DWARFUnitIndex &TUIndex, MCSection *OutputTypes,
+                   StringRef Types, const UnitIndexEntry &TUEntry,
+                   uint32_t &TypesOffset, unsigned TypesContributionIndex,
+                   bool ContinueOnCuIndexOverflow, bool &SeeOverflowFlag) {
   Out.switchSection(OutputTypes);
   for (const DWARFUnitIndex::Entry &E : TUIndex.getRows()) {
     auto *I = E.getContributions();
@@ -694,8 +695,8 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
         for (auto &Section : Obj.sections()) {
           if (SectionIndex == Index) {
             if (Error Err = sectionOverflowErrorOrWarning(
-                OldOffset, ContributionOffsets[Index], *Section.getName(),
-                ContinueOnCuIndexOverflow))
+                    OldOffset, ContributionOffsets[Index], *Section.getName(),
+                    ContinueOnCuIndexOverflow))
               return Err;
           }
           ++SectionIndex;
@@ -873,7 +874,8 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
       if (Error Err = addAllTypesFromDWP(
               Out, TypeIndexEntries, TUIndex, OutSection, TypeInputSection,
               CurEntry, ContributionOffsets[TypesContributionIndex],
-              TypesContributionIndex, ContinueOnCuIndexOverflow, SeeOverflowFlag))
+              TypesContributionIndex, ContinueOnCuIndexOverflow,
+              SeeOverflowFlag))
         return Err;
     }
     if (SeeOverflowFlag)
