@@ -9913,7 +9913,7 @@ multiclass sve2p1_dupq<string mnemonic> {
 
 // SVE Permute Vector - Quadwords (EXTQ)
 class sve2p1_extq<string mnemonic>
-    : I<(outs ZPR8:$Zdn), (ins ZPR8:$_Zdn, ZPR8:$Zm, imm0_15:$imm4),
+    : I<(outs ZPR8:$Zdn), (ins ZPR8:$_Zdn, ZPR8:$Zm, timm32_0_15:$imm4),
         mnemonic, "\t$Zdn, $_Zdn, $Zm, $imm4",
         "", []>, Sched<[]> {
   bits<5> Zdn;
@@ -9931,6 +9931,19 @@ class sve2p1_extq<string mnemonic>
   let hasSideEffects = 0;
 }
 
+multiclass sve2p1_extq<string mnemonic, SDPatternOperator Op> {
+  def NAME : sve2p1_extq<mnemonic>;
+  def : SVE_3_Op_Imm_Pat<nxv16i8, Op, nxv16i8, nxv16i8, i32, timm32_0_15, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Imm_Pat<nxv8i16, Op, nxv8i16, nxv8i16, i32, timm32_0_15, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Imm_Pat<nxv4i32, Op, nxv4i32, nxv4i32, i32, timm32_0_15, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Imm_Pat<nxv2i64, Op, nxv2i64, nxv2i64, i32, timm32_0_15, !cast<Instruction>(NAME)>;
+
+  def : SVE_3_Op_Imm_Pat<nxv8f16, Op, nxv8f16, nxv8f16, i32, timm32_0_15, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Imm_Pat<nxv4f32, Op, nxv4f32, nxv4f32, i32, timm32_0_15, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Imm_Pat<nxv2f64, Op, nxv2f64, nxv2f64, i32, timm32_0_15, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Imm_Pat<nxv8bf16, Op, nxv8bf16, nxv8bf16, i32, timm32_0_15, !cast<Instruction>(NAME
+)>;
+}
 
 // SVE move predicate from vector
 class sve2p1_vector_to_pred<bits<4> opc, string mnemonic,
@@ -9952,8 +9965,8 @@ class sve2p1_vector_to_pred<bits<4> opc, string mnemonic,
   let hasSideEffects = 0;
 }
 
-multiclass sve2p1_vector_to_pred<string mnemonic> {
-  def _B : sve2p1_vector_to_pred<{0, 0, 0, 1}, mnemonic, PPR8,  VectorIndex0>;
+multiclass sve2p1_vector_to_pred<string mnemonic, SDPatternOperator Op_lane, SDPatternOperator Op> {
+  def _B : sve2p1_vector_to_pred<{0, 0, 0, 1}, mnemonic, PPR8,  VectorIndex032b>;
   def _H : sve2p1_vector_to_pred<{0, 0, 1, ?}, mnemonic, PPR16, VectorIndexD32b> {
     bits<1> index;
     let Inst{17} = index;
@@ -9970,6 +9983,25 @@ multiclass sve2p1_vector_to_pred<string mnemonic> {
 
   def : InstAlias<mnemonic # "\t$Pd, $Zn",
                  (!cast<Instruction>(NAME # _B) PPR8:$Pd, ZPRAny:$Zn, 0), 1>;
+
+  // any_lane
+  def : Pat<(nxv16i1 (Op_lane (nxv16i8 ZPRAny:$Zn), (i32 timm32_0_0:$Idx))),
+            (!cast<Instruction>(NAME # _B) ZPRAny:$Zn, timm32_0_0:$Idx)>;
+  def : Pat<(nxv8i1 (Op_lane (nxv8i16 ZPRAny:$Zn), (i32 timm32_0_1:$Idx))),
+            (!cast<Instruction>(NAME # _H) ZPRAny:$Zn, timm32_0_1:$Idx)>;
+  def : Pat<(nxv4i1 (Op_lane (nxv4i32 ZPRAny:$Zn), (i32 timm32_0_3:$Idx))),
+            (!cast<Instruction>(NAME # _S) ZPRAny:$Zn, timm32_0_3:$Idx)>;
+  def : Pat<(nxv2i1 (Op_lane (nxv2i64 ZPRAny:$Zn), (i32 timm32_0_7:$Idx))),
+            (!cast<Instruction>(NAME # _D) ZPRAny:$Zn, timm32_0_7:$Idx)>;
+ // lane_0
+ def : Pat<(nxv16i1 (Op (nxv16i8 ZPRAny:$Zn))),
+            (!cast<Instruction>(NAME # _B) ZPRAny:$Zn, 0)>;
+  def : Pat<(nxv8i1 (Op (nxv8i16 ZPRAny:$Zn))),
+            (!cast<Instruction>(NAME # _H) ZPRAny:$Zn, 0)>;
+  def : Pat<(nxv4i1 (Op (nxv4i32 ZPRAny:$Zn))),
+            (!cast<Instruction>(NAME # _S) ZPRAny:$Zn, 0)>;
+  def : Pat<(nxv2i1 (Op (nxv2i64 ZPRAny:$Zn))),
+            (!cast<Instruction>(NAME # _D) ZPRAny:$Zn, 0)>;
 }
 
 
@@ -9993,7 +10025,8 @@ class sve2p1_pred_to_vector<bits<4> opc, string mnemonic,
   let hasSideEffects = 0;
 }
 
-multiclass sve2p1_pred_to_vector<string mnemonic> {
+multiclass sve2p1_pred_to_vector<string mnemonic, SDPatternOperator MergeOp,
+                                 SDPatternOperator ZeroOp> {
   def _B : sve2p1_pred_to_vector<{0, 0, 0, 1}, mnemonic, PPR8,  VectorIndex0>;
   def _H : sve2p1_pred_to_vector<{0, 0, 1, ?}, mnemonic, PPR16, VectorIndexD32b> {
     bits<1> index;
@@ -10011,6 +10044,24 @@ multiclass sve2p1_pred_to_vector<string mnemonic> {
 
   def : InstAlias<mnemonic # "\t$Zd, $Pn",
                  (!cast<Instruction>(NAME # _B) ZPRAny:$Zd, 0, PPR8:$Pn), 1>;
+
+  // Merge
+  def : Pat<(nxv8i16 (MergeOp (nxv8i16 ZPRAny:$Zd), (nxv8i1 PPR16:$Pn), (i32 timm32_1_1:$Idx))),
+            (!cast<Instruction>(NAME # _H) ZPRAny:$Zd, timm32_1_1:$Idx, PPR16:$Pn)>;
+  def : Pat<(nxv4i32 (MergeOp (nxv4i32 ZPRAny:$Zd), (nxv4i1 PPR32:$Pn), (i32 timm32_1_3:$Idx))),
+            (!cast<Instruction>(NAME # _S) ZPRAny:$Zd, timm32_1_3:$Idx, PPR32:$Pn)>;
+  def : Pat<(nxv2i64 (MergeOp (nxv2i64 ZPRAny:$Zd), (nxv2i1 PPR64:$Pn), (i32 timm32_1_7:$Idx))),
+            (!cast<Instruction>(NAME # _D) ZPRAny:$Zd, timm32_1_7:$Idx, PPR64:$Pn)>;
+
+  // Zero
+  def : Pat<(nxv16i8 (ZeroOp (nxv16i1 PPR8:$Pn))),
+           (!cast<Instruction>(NAME # _B) (IMPLICIT_DEF), 0, PPR8:$Pn)>;
+  def : Pat<(nxv8i16 (ZeroOp (nxv8i1 PPR16:$Pn))),
+            (!cast<Instruction>(NAME # _H) (IMPLICIT_DEF), 0, PPR16:$Pn)>;
+  def : Pat<(nxv4i32 (ZeroOp (nxv4i1 PPR32:$Pn))),
+            (!cast<Instruction>(NAME # _S) (IMPLICIT_DEF), 0, PPR32:$Pn)>;
+  def : Pat<(nxv2i64 (ZeroOp (nxv2i1 PPR64:$Pn))),
+            (!cast<Instruction>(NAME # _D) (IMPLICIT_DEF), 0, PPR64:$Pn)>;
 }
 
 
@@ -10066,18 +10117,41 @@ class sve2p1_permute_vec_elems_q<bits<2> sz, bits<3> opc, string mnemonic,
   let hasSideEffects = 0;
 }
 
-multiclass sve2p1_permute_vec_elems_q<bits<3> opc, string mnemonic> {
+multiclass sve2p1_permute_vec_elems_q<bits<3> opc, string mnemonic,
+                                      SDPatternOperator op> {
   def _B : sve2p1_permute_vec_elems_q<0b00, opc, mnemonic, ZPR8,  ZPR8>;
   def _H : sve2p1_permute_vec_elems_q<0b01, opc, mnemonic, ZPR16, ZPR16>;
   def _S : sve2p1_permute_vec_elems_q<0b10, opc, mnemonic, ZPR32, ZPR32>;
   def _D : sve2p1_permute_vec_elems_q<0b11, opc, mnemonic, ZPR64, ZPR64>;
+
+  def : SVE_2_Op_Pat<nxv16i8, op, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Pat<nxv8i16, op, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv4i32, op, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv2i64, op, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
+
+  def : SVE_2_Op_Pat<nxv8f16, op, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv4f32, op, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv2f64, op, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
+
+  def : SVE_2_Op_Pat<nxv8bf16, op, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME # _H)>;
 }
 
-multiclass sve2p1_tblq<string mnemonic> {
+multiclass sve2p1_tblq<string mnemonic, SDPatternOperator op> {
   def _B : sve2p1_permute_vec_elems_q<0b00, 0b110, mnemonic, ZPR8,  Z_b>;
   def _H : sve2p1_permute_vec_elems_q<0b01, 0b110, mnemonic, ZPR16, Z_h>;
   def _S : sve2p1_permute_vec_elems_q<0b10, 0b110, mnemonic, ZPR32, Z_s>;
   def _D : sve2p1_permute_vec_elems_q<0b11, 0b110, mnemonic, ZPR64, Z_d>;
+
+  def : SVE_2_Op_Pat<nxv16i8, op, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Pat<nxv8i16, op, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv4i32, op, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv2i64, op, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
+
+  def : SVE_2_Op_Pat<nxv8f16, op, nxv8f16, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv4f32, op, nxv4f32, nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv2f64, op, nxv2f64, nxv2i64, !cast<Instruction>(NAME # _D)>;
+
+  def : SVE_2_Op_Pat<nxv8bf16, op, nxv8bf16, nxv8i16, !cast<Instruction>(NAME # _H)>;
 }
 
 //===----------------------------------------------------------------------===//
