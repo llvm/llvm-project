@@ -298,6 +298,12 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       byte_size = form_value.Unsigned();
       break;
 
+    case DW_AT_bit_size:
+      // Convert the bit size to byte size, and round it up to the minimum
+      // amount of bytes that will fit the bits.
+      byte_size = (form_value.Unsigned() + 7) / 8;
+      break;
+
     case DW_AT_byte_stride:
       byte_stride = form_value.Unsigned();
       break;
@@ -2134,6 +2140,16 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
          template_param_infos.hasParameterPack();
 }
 
+/// Reads the bit size from a die, by trying both the byte size and bit size
+/// attributes.
+static uint64_t GetSizeInBitsFromDie(const DWARFDIE &die) {
+  const uint64_t byte_size =
+      die.GetAttributeValueAsUnsigned(DW_AT_byte_size, UINT64_MAX);
+  if (byte_size != UINT64_MAX)
+    return byte_size * 8;
+  return die.GetAttributeValueAsUnsigned(DW_AT_bit_size, UINT64_MAX);
+}
+
 bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
                                              lldb_private::Type *type,
                                              CompilerType &clang_type) {
@@ -2211,8 +2227,7 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     if (type)
       layout_info.bit_size = type->GetByteSize(nullptr).value_or(0) * 8;
     if (layout_info.bit_size == 0)
-      layout_info.bit_size =
-          die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
+      layout_info.bit_size = GetSizeInBitsFromDie(die);
 
     clang::CXXRecordDecl *record_decl =
         m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
@@ -2864,10 +2879,8 @@ void DWARFASTParserClang::ParseSingleMember(
   ModuleSP module_sp = parent_die.GetDWARF()->GetObjectFile()->GetModule();
   const dw_tag_t tag = die.Tag();
   // Get the parent byte size so we can verify any members will fit
-  const uint64_t parent_byte_size =
-      parent_die.GetAttributeValueAsUnsigned(DW_AT_byte_size, UINT64_MAX);
-  const uint64_t parent_bit_size =
-      parent_byte_size == UINT64_MAX ? UINT64_MAX : parent_byte_size * 8;
+  uint64_t parent_bit_size = GetSizeInBitsFromDie(parent_die);
+  ;
 
   // FIXME: Remove the workarounds below and make this const.
   MemberAttributes attrs(die, parent_die, module_sp);

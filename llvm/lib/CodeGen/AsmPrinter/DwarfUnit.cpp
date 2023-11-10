@@ -687,6 +687,16 @@ std::string DwarfUnit::getParentContextString(const DIScope *Context) const {
   return CS;
 }
 
+/// Returns the most appropriate dwarf size attribute (bits or bytes) and size
+/// to be used with it, given the input size in bits.
+static std::pair<dwarf::Attribute, uint64_t>
+getMostAppropriateRepresentationAndSize(uint64_t SizeInBits) {
+  if (SizeInBits % 8 == 0) {
+    return {dwarf::DW_AT_byte_size, SizeInBits / 8};
+  }
+  return {dwarf::DW_AT_bit_size, SizeInBits};
+}
+
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIBasicType *BTy) {
   // Get core information.
   StringRef Name = BTy->getName();
@@ -702,8 +712,9 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIBasicType *BTy) {
     addUInt(Buffer, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1,
             BTy->getEncoding());
 
-  uint64_t Size = BTy->getSizeInBits() >> 3;
-  addUInt(Buffer, dwarf::DW_AT_byte_size, std::nullopt, Size);
+  auto [SizeAttribute, Size] =
+      getMostAppropriateRepresentationAndSize(BTy->getSizeInBits());
+  addUInt(Buffer, SizeAttribute, std::nullopt, Size);
 
   if (BTy->isBigEndian())
     addUInt(Buffer, dwarf::DW_AT_endianity, std::nullopt, dwarf::DW_END_big);
@@ -731,8 +742,9 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIStringType *STy) {
     DwarfExpr.addExpression(Expr);
     addBlock(Buffer, dwarf::DW_AT_string_length, DwarfExpr.finalize());
   } else {
-    uint64_t Size = STy->getSizeInBits() >> 3;
-    addUInt(Buffer, dwarf::DW_AT_byte_size, std::nullopt, Size);
+    auto [SizeAttributte, Size] =
+        getMostAppropriateRepresentationAndSize(STy->getSizeInBits());
+    addUInt(Buffer, SizeAttributte, std::nullopt, Size);
   }
 
   if (DIExpression *Expr = STy->getStringLocationExp()) {
@@ -755,7 +767,8 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIStringType *STy) {
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   // Get core information.
   StringRef Name = DTy->getName();
-  uint64_t Size = DTy->getSizeInBits() >> 3;
+  auto [SizeAttribute, Size] =
+      getMostAppropriateRepresentationAndSize(DTy->getSizeInBits());
   uint16_t Tag = Buffer.getTag();
 
   // Map to main type, void will not have a type.
@@ -783,7 +796,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
            && Tag != dwarf::DW_TAG_ptr_to_member_type
            && Tag != dwarf::DW_TAG_reference_type
            && Tag != dwarf::DW_TAG_rvalue_reference_type)
-    addUInt(Buffer, dwarf::DW_AT_byte_size, std::nullopt, Size);
+    addUInt(Buffer, SizeAttribute, std::nullopt, Size);
 
   if (Tag == dwarf::DW_TAG_ptr_to_member_type)
     addDIEEntry(Buffer, dwarf::DW_AT_containing_type,
@@ -873,7 +886,8 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   // Add name if not anonymous or intermediate type.
   StringRef Name = CTy->getName();
 
-  uint64_t Size = CTy->getSizeInBits() >> 3;
+  auto [SizeAttribute, Size] =
+      getMostAppropriateRepresentationAndSize(CTy->getSizeInBits());
   uint16_t Tag = Buffer.getTag();
 
   switch (Tag) {
@@ -1017,7 +1031,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     // TODO: Do we care about size for enum forward declarations?
     if (Size &&
         (!CTy->isForwardDecl() || Tag == dwarf::DW_TAG_enumeration_type))
-      addUInt(Buffer, dwarf::DW_AT_byte_size, std::nullopt, Size);
+      addUInt(Buffer, SizeAttribute, std::nullopt, Size);
     else if (!CTy->isForwardDecl())
       // Add zero size if it is not a forward declaration.
       addUInt(Buffer, dwarf::DW_AT_byte_size, std::nullopt, 0);
