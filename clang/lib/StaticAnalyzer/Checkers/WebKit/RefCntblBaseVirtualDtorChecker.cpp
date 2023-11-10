@@ -77,14 +77,53 @@ public:
               (AccSpec == AS_none && RD->isClass()))
             return false;
 
-          std::optional<const CXXRecordDecl*> RefCntblBaseRD = isRefCountable(Base);
-          if (!RefCntblBaseRD || !(*RefCntblBaseRD))
+          auto hasRefInBase = clang::hasPublicMethodInBase(Base, "ref");
+          auto hasDerefInBase = clang::hasPublicMethodInBase(Base, "deref");
+
+          bool hasRef = hasRefInBase && *hasRefInBase != nullptr;
+          bool hasDeref = hasDerefInBase && *hasDerefInBase != nullptr;
+
+          QualType T = Base->getType();
+          if (T.isNull())
             return false;
 
-          const auto *Dtor = (*RefCntblBaseRD)->getDestructor();
+          const CXXRecordDecl *C = T->getAsCXXRecordDecl();
+          if (!C)
+            return false;
+          bool AnyInconclusiveBase = false;
+          const auto hasPublicRefInBase =
+              [&AnyInconclusiveBase](const CXXBaseSpecifier *Base,
+                                     CXXBasePath &) {
+                auto hasRefInBase = clang::hasPublicMethodInBase(Base, "ref");
+                if (!hasRefInBase) {
+                  AnyInconclusiveBase = true;
+                  return false;
+                }
+                return (*hasRefInBase) != nullptr;
+              };
+          const auto hasPublicDerefInBase = [&AnyInconclusiveBase](
+                                                const CXXBaseSpecifier *Base,
+                                                CXXBasePath &) {
+            auto hasDerefInBase = clang::hasPublicMethodInBase(Base, "deref");
+            if (!hasDerefInBase) {
+              AnyInconclusiveBase = true;
+              return false;
+            }
+            return (*hasDerefInBase) != nullptr;
+          };
+          CXXBasePaths Paths;
+          Paths.setOrigin(C);
+          hasRef = hasRef || C->lookupInBases(hasPublicRefInBase, Paths,
+                                              /*LookupInDependent =*/true);
+          hasDeref = hasDeref || C->lookupInBases(hasPublicDerefInBase, Paths,
+                                                  /*LookupInDependent =*/true);
+          if (AnyInconclusiveBase || !hasRef || !hasDeref)
+            return false;
+
+          const auto *Dtor = C->getDestructor();
           if (!Dtor || !Dtor->isVirtual()) {
             ProblematicBaseSpecifier = Base;
-            ProblematicBaseClass = *RefCntblBaseRD;
+            ProblematicBaseClass = C;
             return true;
           }
 
