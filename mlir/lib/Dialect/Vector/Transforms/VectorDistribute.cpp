@@ -646,7 +646,8 @@ struct WarpOpElementwise : public OpRewritePattern<WarpExecuteOnLane0Op> {
     if (!yieldOperand)
       return failure();
 
-    // Notify the rewriter that the warp op is changing.
+    // Notify the rewriter that the warp op is changing (see the comment on
+    // the WarpOpTransferRead pattern).
     rewriter.startRootUpdate(warpOp);
 
     Operation *elementWise = yieldOperand->get().getDefiningOp();
@@ -718,7 +719,8 @@ struct WarpOpConstant : public OpRewritePattern<WarpExecuteOnLane0Op> {
     auto dense = dyn_cast<SplatElementsAttr>(constantOp.getValue());
     if (!dense)
       return failure();
-    // Notify the rewriter that the warp op is changing.
+    // Notify the rewriter that the warp op is changing (see the comment on
+    // the WarpOpTransferRead pattern).
     rewriter.startRootUpdate(warpOp);
     unsigned operandIndex = yieldOperand->getOperandNumber();
     Attribute scalarAttr = dense.getSplatValue<Attribute>();
@@ -851,7 +853,14 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
       newMask = newWarpOp.getResult(newRetIndices[0]);
       distributedVal = newWarpOp.getResult(operandIndex);
     } else {
-      // Notify the rewriter that the warp op is changing.
+      // This pattern does not actually change the warp op directly. Instead it
+      // just rewrites a new transfer read (when not masked) outside of the warp
+      // op and replaces the correponding result. There are then follow up
+      // patterns to erase now dead results of the warp op. This erasure allows
+      // propagation to continue, but this pattern on its own never actually
+      // tells the pattern rewriter that the warp op "changed." Notify the
+      // rewriter here that the warp op is changing. Similar situations are
+      // noted in following patterns.
       rewriter.startRootUpdate(warpOp);
     }
 
@@ -1017,7 +1026,8 @@ struct WarpOpForwardOperand : public OpRewritePattern<WarpExecuteOnLane0Op> {
     }
     if (!valForwarded)
       return failure();
-    // Notify the rewriter that the warp op is changing.
+    // Notify the rewriter that the warp op is changing (see the comment on
+    // the WarpOpTransferRead pattern).
     rewriter.startRootUpdate(warpOp);
     rewriter.replaceAllUsesWith(warpOp.getResult(resultIndex), valForwarded);
     rewriter.finalizeRootUpdate(warpOp);
@@ -1048,7 +1058,8 @@ struct WarpOpBroadcast : public OpRewritePattern<WarpExecuteOnLane0Op> {
     if (vector::isBroadcastableTo(broadcastSrcType, destVecType) !=
         vector::BroadcastableToResult::Success)
       return failure();
-    // Notify the rewriter that the warp op is changing.
+    // Notify the rewriter that the warp op is changing (see the comment on
+    // the WarpOpTransferRead pattern).
     rewriter.startRootUpdate(warpOp);
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
@@ -1161,7 +1172,8 @@ struct WarpOpCreateMask : public OpRewritePattern<WarpExecuteOnLane0Op> {
           mask, "cannot delinearize lane ID for distribution");
     assert(!delinearizedIds.empty());
 
-    // Notify the rewriter that the warp op is changing.
+    // Notify the rewriter that the warp op is changing (see the comment on
+    // the WarpOpTransferRead pattern).
     rewriter.startRootUpdate(warpOp);
 
     AffineExpr s0, s1;
