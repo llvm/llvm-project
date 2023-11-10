@@ -1184,10 +1184,19 @@ class DropInnerMostUnitDims : public OpRewritePattern<vector::TransferReadOp> {
     if (failed(getStridesAndOffset(srcType, srcStrides, srcOffset)))
       return failure();
 
+    // According to vector.transfer_read semantics, the result can be a slice.
+    // It pads the indices with `1` starting from beginning. Thus, we have to
+    // offset the check index with `rankDiff` in `srcStrides` and source dim
+    // sizes.
     size_t dimsToDrop = 0;
-    for (size_t i = 1; i < srcStrides.size(); ++i) {
-      int dim = srcType.getRank() - i - 1;
-      if (srcStrides[dim] == 1) {
+    int rankDiff = srcType.getRank() - targetType.getRank();
+    for (int64_t i = 0, e = targetType.getRank(); i < e; ++i) {
+      // Check that the inner dim size is 1 for both memref/tensor type and
+      // vector slice. It can be folded only if they are 1 and the stride is 1.
+      int dim = targetType.getRank() - i - 1;
+      if (srcStrides[dim + rankDiff] == 1 &&
+          srcType.getDimSize(dim + rankDiff) == 1 &&
+          targetType.getDimSize(dim) == 1) {
         dimsToDrop++;
       } else {
         break;
