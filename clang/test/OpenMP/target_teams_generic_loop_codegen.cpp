@@ -1809,9 +1809,9 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTADDR1_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP3]], i64 0, i64 0
 // IR-GPU-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// IR-GPU-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 0, i32 0
-// IR-GPU-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x [10 x [10 x i32]]], ptr [[SUM]], i32 0, i32 [[TMP5]]
-// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP8]], ptr align 4 [[TMP7]], i64 400, i1 false)
+// IR-GPU-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 [[TMP5]]
+// IR-GPU-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP8]], i32 0, i32 0
+// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[SUM]], ptr align 4 [[TMP7]], i64 400, i1 false)
 // IR-GPU-NEXT:    ret void
 //
 //
@@ -1832,9 +1832,9 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTADDR1_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], i64 0, i64 0
-// IR-GPU-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP3]], i32 0, i32 0
-// IR-GPU-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x [10 x [10 x i32]]], ptr [[SUM]], i32 0, i32 [[TMP4]]
-// IR-GPU-NEXT:    store ptr [[TMP6]], ptr [[TMP5]], align 8
+// IR-GPU-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP3]], i32 [[TMP4]]
+// IR-GPU-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP6]], i32 0, i32 0
+// IR-GPU-NEXT:    store ptr [[SUM]], ptr [[TMP5]], align 8
 // IR-GPU-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
 // IR-GPU-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_omp_outlined_omp$reduction$reduction_func"(ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], ptr [[TMP7]]) #[[ATTR2]]
 // IR-GPU-NEXT:    ret void
@@ -1857,9 +1857,9 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTADDR1_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP3]], i64 0, i64 0
 // IR-GPU-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// IR-GPU-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 0, i32 0
-// IR-GPU-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x [10 x [10 x i32]]], ptr [[SUM]], i32 0, i32 [[TMP5]]
-// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP7]], ptr align 4 [[TMP8]], i64 400, i1 false)
+// IR-GPU-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 [[TMP5]]
+// IR-GPU-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP8]], i32 0, i32 0
+// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP7]], ptr align 4 [[SUM]], i64 400, i1 false)
 // IR-GPU-NEXT:    ret void
 //
 //
@@ -1880,9 +1880,9 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTADDR1_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], i64 0, i64 0
-// IR-GPU-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP3]], i32 0, i32 0
-// IR-GPU-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x [10 x [10 x i32]]], ptr [[SUM]], i32 0, i32 [[TMP4]]
-// IR-GPU-NEXT:    store ptr [[TMP6]], ptr [[TMP5]], align 8
+// IR-GPU-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP3]], i32 [[TMP4]]
+// IR-GPU-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP6]], i32 0, i32 0
+// IR-GPU-NEXT:    store ptr [[SUM]], ptr [[TMP5]], align 8
 // IR-GPU-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
 // IR-GPU-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP7]], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]]) #[[ATTR2]]
 // IR-GPU-NEXT:    ret void
