@@ -1455,10 +1455,6 @@ def Vector_TransferWriteOp :
     any permutation. Elements whose corresponding mask element is `0` are
     masked out.
 
-    An optional SSA value `mask` of the same shape as the vector type may be
-    specified to mask out elements. Elements whose corresponding mask element
-    is `0` are masked out.
-
     An optional boolean array attribute `in_bounds` specifies for every vector
     dimension if the transfer is guaranteed to be within the source bounds. If
     specified, the `in_bounds` array length has to be equal to the vector rank.
@@ -2278,6 +2274,16 @@ def Vector_ConstantMaskOp :
             2 | 1    1    0
             3 | 0    0    0
     ```
+  }];
+
+  let extraClassDeclaration = [{
+    /// Return the result type of this op.
+    VectorType getVectorType() {
+      return cast<VectorType>(getOperation()->getResultTypes()[0]);
+    }
+
+    /// Return whether the mask is a uniform vector of `1`s.
+    bool isFullMask();
   }];
 
   let assemblyFormat = "$mask_dim_sizes attr-dict `:` type(results)";

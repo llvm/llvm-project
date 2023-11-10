@@ -11,6 +11,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -910,8 +911,11 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
     ++ItCount;
   }
 
-  // Those trailing DPValues would dangle and cause an assertion failure if
-  // they lived until the end of the LLVMContext,
+  // Cleanup the trailing DPValue records and marker.
+  EndMarker->eraseFromParent();
+
+  // The record of those trailing DPValues would dangle and cause an assertion
+  // failure if it lived until the end of the LLVMContext.
   ExitBlock->deleteTrailingDPValues();
 }
 

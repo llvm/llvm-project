@@ -70,6 +70,7 @@ Code actions
 ^^^^^^^^^^^^
 
 - The extract variable tweak gained support for extracting lambda expressions to a variable.
+- A new tweak was added for turning unscoped into scoped enums.
 
 Signature help
 ^^^^^^^^^^^^^^
@@ -304,6 +305,10 @@ Changes in existing checks
   customizable namespace. This further allows for testing the libc when the
   system-libc is also LLVM's libc.
 
+- Improved :doc:`llvmlibc-inline-function-decl
+  <clang-tidy/checks/llvmlibc/inline-function-decl>` to properly ignore implicit
+  functions, such as struct constructors, and explicitly deleted functions.
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check to avoid false positive when
   using pointer to member function.
@@ -330,6 +335,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``
   and avoid crash for array of dependent array.
+
+- Improved :doc:`modernize-make-shared
+  <clang-tidy/checks/modernize/make-shared>` check to support
+  ``std::shared_ptr`` implementations that inherit the ``reset`` method from a
+  base class.
 
 - Improved :doc:`modernize-return-braced-init-list
   <clang-tidy/checks/modernize/return-braced-init-list>` check to ignore
@@ -390,6 +400,7 @@ Changes in existing checks
   ``Leading_upper_snake_case`` naming convention. The handling of ``typedef``
   has been enhanced, particularly within complex types like function pointers
   and cases where style checks were omitted when functions started with macros.
+  Added support for C++20 ``concept`` declarations.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take

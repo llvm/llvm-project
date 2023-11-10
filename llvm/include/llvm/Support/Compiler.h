@@ -569,4 +569,12 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_NO_PROFILE_INSTRUMENT_FUNCTION
 #endif
 
+/// \macro LLVM_PREFERRED_TYPE
+/// Adjust type of bit-field in debug info.
+#if __has_attribute(preferred_type)
+#define LLVM_PREFERRED_TYPE(T) __attribute__((preferred_type(T)))
+#else
+#define LLVM_PREFERRED_TYPE(T)
+#endif
+
 #endif

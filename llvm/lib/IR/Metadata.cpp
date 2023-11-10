@@ -32,6 +32,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -408,26 +409,34 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
   }
 }
 
+// Special handing of DIArgList is required in the RemoveDIs project, see
+// commentry in DIArgList::handleChangedOperand for details. Hidden behind
+// conditional compilation to avoid a compile time regression.
 ReplaceableMetadataImpl *ReplaceableMetadataImpl::getOrCreate(Metadata &MD) {
-  if (auto ArgList = dyn_cast<DIArgList>(&MD))
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  if (auto *ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList->Context.getOrCreateReplaceableUses();
+#endif
   if (auto *N = dyn_cast<MDNode>(&MD))
     return N->isResolved() ? nullptr : N->Context.getOrCreateReplaceableUses();
   return dyn_cast<ValueAsMetadata>(&MD);
 }
 
 ReplaceableMetadataImpl *ReplaceableMetadataImpl::getIfExists(Metadata &MD) {
-  if (auto ArgList = dyn_cast<DIArgList>(&MD)) {
-    return ArgList->Context.getOrCreateReplaceableUses();
-  }
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  if (auto *ArgList = dyn_cast<DIArgList>(&MD))
+    return ArgList->Context.getReplaceableUses();
+#endif
   if (auto *N = dyn_cast<MDNode>(&MD))
     return N->isResolved() ? nullptr : N->Context.getReplaceableUses();
   return dyn_cast<ValueAsMetadata>(&MD);
 }
 
 bool ReplaceableMetadataImpl::isReplaceable(const Metadata &MD) {
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
   if (isa<DIArgList>(&MD))
     return true;
+#endif
   if (auto *N = dyn_cast<MDNode>(&MD))
     return !N->isResolved();
   return isa<ValueAsMetadata>(&MD);
@@ -1601,13 +1610,10 @@ void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
 }
 
 void Instruction::addAnnotationMetadata(SmallVector<StringRef> Annotations) {
-  SmallSetVector<StringRef, 2> AnnotationsSet(Annotations.begin(),
-                                              Annotations.end());
-  MDBuilder MDB(getContext());
-
-  auto *Existing = getMetadata(LLVMContext::MD_annotation);
   SmallVector<Metadata *, 4> Names;
-  if (Existing) {
+  if (auto *Existing = getMetadata(LLVMContext::MD_annotation)) {
+    SmallSetVector<StringRef, 2> AnnotationsSet(Annotations.begin(),
+                                                Annotations.end());
     auto *Tuple = cast<MDTuple>(Existing);
     for (auto &N : Tuple->operands()) {
       if (isa<MDString>(N.get())) {
@@ -1623,6 +1629,7 @@ void Instruction::addAnnotationMetadata(SmallVector<StringRef> Annotations) {
     }
   }
 
+  MDBuilder MDB(getContext());
   SmallVector<Metadata *> MDAnnotationStrings;
   for (StringRef Annotation : Annotations)
     MDAnnotationStrings.push_back(MDB.createString(Annotation));
@@ -1633,11 +1640,8 @@ void Instruction::addAnnotationMetadata(SmallVector<StringRef> Annotations) {
 }
 
 void Instruction::addAnnotationMetadata(StringRef Name) {
-  MDBuilder MDB(getContext());
-
-  auto *Existing = getMetadata(LLVMContext::MD_annotation);
   SmallVector<Metadata *, 4> Names;
-  if (Existing) {
+  if (auto *Existing = getMetadata(LLVMContext::MD_annotation)) {
     auto *Tuple = cast<MDTuple>(Existing);
     for (auto &N : Tuple->operands()) {
       if (isa<MDString>(N.get()) &&
@@ -1647,6 +1651,7 @@ void Instruction::addAnnotationMetadata(StringRef Name) {
     }
   }
 
+  MDBuilder MDB(getContext());
   Names.push_back(MDB.createString(Name));
   MDNode *MD = MDTuple::get(getContext(), Names);
   setMetadata(LLVMContext::MD_annotation, MD);

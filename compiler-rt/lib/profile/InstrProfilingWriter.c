@@ -262,7 +262,7 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
                    const char *BitmapBegin, const char *BitmapEnd,
                    VPDataReaderType *VPDataReader, const char *NamesBegin,
                    const char *NamesEnd, int SkipNameDataWrite) {
-  int ProfileCorrelation = hasCorrelation();
+  int ProfileCorrelation = __llvm_profile_has_correlation();
 
   /* Calculate size of sections. */
   const uint64_t DataSectionSize =

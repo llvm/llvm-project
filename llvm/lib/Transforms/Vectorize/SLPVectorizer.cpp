@@ -10079,14 +10079,21 @@ public:
       }
       if (!Vec) {
         Vec = SubVec;
+        assert((Part == 0 || all_of(seq<unsigned>(0, Part),
+                                    [&](unsigned P) {
+                                      ArrayRef<int> SubMask =
+                                          Mask.slice(P * SliceSize, SliceSize);
+                                      return all_of(SubMask, [](int Idx) {
+                                        return Idx == PoisonMaskElem;
+                                      });
+                                    })) &&
+               "Expected first part or all previous parts masked.");
         copy(SubMask, VecMask.begin());
       } else {
         unsigned VF = cast<FixedVectorType>(Vec->getType())->getNumElements();
         if (Vec->getType() != SubVec->getType()) {
           unsigned SubVecVF =
               cast<FixedVectorType>(SubVec->getType())->getNumElements();
-          if (VF < SubVecVF)
-            TransformToIdentity(VecMask);
           VF = std::max(VF, SubVecVF);
         }
         // Adjust SubMask.
@@ -10903,13 +10910,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           continue;
         }
 
-        // if (any_of(E->getOperand(i), [&](Value *V) {
-        //       auto *I = dyn_cast<Instruction>(V);
-        //       return I && I->getParent() == IBB;
-        //     }))
-          Builder.SetInsertPoint(IBB->getTerminator());
-        // else
-        //   Builder.SetInsertPoint(IBB->getFirstNonPHIOrDbgOrLifetime());
+        Builder.SetInsertPoint(IBB->getTerminator());
         Builder.SetCurrentDebugLocation(PH->getDebugLoc());
         Value *Vec = vectorizeOperand(E, i, /*PostponedPHIs=*/true);
         NewPhi->addIncoming(Vec, IBB);
@@ -14616,15 +14617,15 @@ public:
                                                    Instruction *RedOp1,
                                                    Instruction *RedOp2,
                                                    bool InitStep) {
-        if (!isBoolLogicOp(RedOp1))
+        if (!AnyBoolLogicOp)
           return;
-        if ((!InitStep && LHS == VectorizedTree) ||
-            getRdxOperand(RedOp1, 0) == LHS || isGuaranteedNotToBePoison(LHS))
+        if (isBoolLogicOp(RedOp1) &&
+            ((!InitStep && LHS == VectorizedTree) ||
+             getRdxOperand(RedOp1, 0) == LHS || isGuaranteedNotToBePoison(LHS)))
           return;
-        if (!isBoolLogicOp(RedOp2))
-          return;
-        if ((!InitStep && RHS == VectorizedTree) ||
-            getRdxOperand(RedOp2, 0) == RHS || isGuaranteedNotToBePoison(RHS)) {
+        if (isBoolLogicOp(RedOp2) && ((!InitStep && RHS == VectorizedTree) ||
+                                      getRdxOperand(RedOp2, 0) == RHS ||
+                                      isGuaranteedNotToBePoison(RHS))) {
           std::swap(LHS, RHS);
           return;
         }
