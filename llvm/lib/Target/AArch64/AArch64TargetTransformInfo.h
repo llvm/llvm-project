@@ -77,6 +77,12 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
+  bool areTypesABICompatible(const Function *Caller, const Function *Callee,
+                             const ArrayRef<Type *> &Types) const;
+
+  unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
+                                unsigned DefaultCallPenalty) const;
+
   /// \name Scalar TTI Implementations
   /// @{
 

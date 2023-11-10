@@ -22,7 +22,7 @@ public:
   ~CommandObjectQuit() override;
 
 protected:
-  bool DoExecute(Args &args, CommandReturnObject &result) override;
+  void DoExecute(Args &args, CommandReturnObject &result) override;
 
   bool ShouldAskForConfirmation(bool &is_a_detach);
 };

@@ -1224,6 +1224,17 @@ class Base(unittest2.TestCase):
     # (enables reading of the current test configuration)
     # ====================================================
 
+    def hasXMLSupport(self):
+        """Returns True if lldb was built with XML support. Use this check to
+        enable parts of tests, if you want to skip a whole test use skipIfXmlSupportMissing
+        instead."""
+        return (
+            lldb.SBDebugger.GetBuildConfiguration()
+            .GetValueForKey("xml")
+            .GetValueForKey("value")
+            .GetBooleanValue(False)
+        )
+
     def isMIPS(self):
         """Returns true if the architecture is MIPS."""
         arch = self.getArchitecture()
@@ -1270,6 +1281,17 @@ class Base(unittest2.TestCase):
 
     def isAArch64SME(self):
         return self.isAArch64() and "sme" in self.getCPUInfo()
+
+    def isAArch64SME2(self):
+        # If you have sme2, you also have sme.
+        return self.isAArch64() and "sme2" in self.getCPUInfo()
+
+    def isAArch64SMEFA64(self):
+        # smefa64 allows the use of the full A64 instruction set in streaming
+        # mode. This is required by certain test programs to setup register
+        # state.
+        cpuinfo = self.getCPUInfo()
+        return self.isAArch64() and "sme" in cpuinfo and "smefa64" in cpuinfo
 
     def isAArch64MTE(self):
         return self.isAArch64() and "mte" in self.getCPUInfo()

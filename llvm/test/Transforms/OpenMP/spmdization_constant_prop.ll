@@ -2,7 +2,7 @@
 ;
 ; Verify we change it to SPMD mode but also avoid propagating the old mode (=generic) into the __kmpc_target_init function.
 ;
-; CHECK: @__omp_offloading_20_11e3950_main_l12_kernel_environment = local_unnamed_addr addrspace(1) constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3 }, ptr addrspacecast (ptr addrspace(1) @1 to ptr), ptr null }
+; CHECK: @__omp_offloading_20_11e3950_main_l12_kernel_environment = local_unnamed_addr addrspace(1) constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr addrspacecast (ptr addrspace(1) @1 to ptr), ptr null }
 ; CHECK-NOT: store i32 0, ptr addrspace(3) @IsSPMDMode
 ; CHECK-NOT: store i32 0, ptr addrspace(3) @IsSPMDMode
 ; CHECK: store i32 1, ptr addrspace(3) @IsSPMDMode
@@ -14,7 +14,7 @@ target triple = "amdgcn-amd-amdhsa"
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
 %struct.DeviceEnvironmentTy = type { i32, i32, i32, i32 }
 %struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32, i32, i32 }
 %"struct.(anonymous namespace)::SharedMemorySmartStackTy" = type { [512 x i8], [1024 x i8] }
 %"struct.(anonymous namespace)::TeamStateTy" = type { %"struct.(anonymous namespace)::ICVStateTy", i32, ptr }
 %"struct.(anonymous namespace)::ICVStateTy" = type { i32, i32, i32, i32, i32, i32 }
@@ -27,7 +27,7 @@ target triple = "amdgcn-amd-amdhsa"
 @__omp_rtl_debug_kind = weak_odr hidden local_unnamed_addr addrspace(1) constant i32 0
 @__omp_rtl_assume_no_thread_state = weak_odr hidden local_unnamed_addr addrspace(1) constant i32 0
 @omptarget_device_environment = weak protected addrspace(4) global %struct.DeviceEnvironmentTy undef, align 4
-@__omp_offloading_20_11e3950_main_l12_kernel_environment = local_unnamed_addr addrspace(1) constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1 }, ptr addrspacecast (ptr addrspace(1) @1 to ptr), ptr null }
+@__omp_offloading_20_11e3950_main_l12_kernel_environment = local_unnamed_addr addrspace(1) constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr addrspacecast (ptr addrspace(1) @1 to ptr), ptr null }
 @IsSPMDMode = weak hidden addrspace(3) global i32 undef, align 4
 @.str.12 = private unnamed_addr addrspace(4) constant [47 x i8] c"ValueRAII initialization with wrong old value!\00", align 1
 @_ZN12_GLOBAL__N_122SharedMemorySmartStackE = internal addrspace(3) global %"struct.(anonymous namespace)::SharedMemorySmartStackTy" undef, align 16
@@ -40,11 +40,11 @@ target triple = "amdgcn-amd-amdhsa"
 @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @__omp_offloading_20_11e3950_main_l12_exec_mode to ptr)], section "llvm.metadata"
 
 ; Function Attrs: alwaysinline convergent norecurse nounwind
-define weak_odr amdgpu_kernel void @__omp_offloading_20_11e3950_main_l12(i64 noundef %nxyz, i64 noundef %ng, ptr noundef nonnull align 8 dereferenceable(8) %aa) local_unnamed_addr #0 {
+define weak_odr amdgpu_kernel void @__omp_offloading_20_11e3950_main_l12(ptr %dyn, i64 noundef %nxyz, i64 noundef %ng, ptr noundef nonnull align 8 dereferenceable(8) %aa) local_unnamed_addr #0 {
 entry:
   %ng1 = alloca i32, align 4
   %captured_vars_addrs = alloca [2 x ptr], align 8, addrspace(5)
-  %0 = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @__omp_offloading_20_11e3950_main_l12_kernel_environment to ptr))
+  %0 = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @__omp_offloading_20_11e3950_main_l12_kernel_environment to ptr), ptr %dyn)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
 
@@ -108,7 +108,7 @@ entry:
 
 ; Function Attrs: convergent nounwind
 ; define internal i32 @__kmpc_target_init(ptr nocapture noundef readnone %Ident, i8 noundef signext %Mode, i1 noundef zeroext %UseGenericStateMachine) local_unnamed_addr #9 {
-define internal i32 @__kmpc_target_init(ptr nofree noundef nonnull align 8 dereferenceable(24) %KernelEnvironment) local_unnamed_addr #9 {
+define internal i32 @__kmpc_target_init(ptr nofree noundef nonnull align 8 dereferenceable(24) %KernelEnvironment, ptr %dyn) local_unnamed_addr #9 {
 entry:
   %0 = and i32 undef, undef
   %ExecMode = getelementptr inbounds %struct.ConfigurationEnvironmentTy, ptr %KernelEnvironment, i64 0, i32 2

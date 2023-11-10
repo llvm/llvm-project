@@ -54,7 +54,6 @@ def BitFieldConstantConversion : DiagGroup<"bitfield-constant-conversion",
                                            [SingleBitBitFieldConstantConversion]>;
 def BitFieldEnumConversion : DiagGroup<"bitfield-enum-conversion">;
 def BitFieldWidth : DiagGroup<"bitfield-width">;
-def BitFieldType : DiagGroup<"bitfield-type">;
 def CompoundTokenSplitByMacro : DiagGroup<"compound-token-split-by-macro">;
 def CompoundTokenSplitBySpace : DiagGroup<"compound-token-split-by-space">;
 def CompoundTokenSplit : DiagGroup<"compound-token-split",
@@ -210,7 +209,6 @@ def DeprecatedWritableStr : DiagGroup<"deprecated-writable-strings",
                                       [CXX11CompatDeprecatedWritableStr]>;
 def DeprecatedPragma : DiagGroup<"deprecated-pragma">;
 def DeprecatedType : DiagGroup<"deprecated-type">;
-def DeprecatedIncludeGch : DiagGroup<"deprecated-include-gch">;
 // FIXME: Why is DeprecatedImplementations not in this group?
 def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedArrayCompare,
@@ -233,8 +231,7 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedType,
                                           DeprecatedVolatile,
                                           DeprecatedWritableStr,
-                                          DeprecatedRedundantConstexprStaticDef,
-                                          DeprecatedIncludeGch
+                                          DeprecatedRedundantConstexprStaticDef
                                           ]>,
                  DiagCategory<"Deprecations">;
 
@@ -417,7 +414,11 @@ def : DiagGroup<"c++2a-compat-pedantic", [CXX20CompatPedantic]>;
 def ExitTimeDestructors : DiagGroup<"exit-time-destructors">;
 def FlexibleArrayExtensions : DiagGroup<"flexible-array-extensions">;
 def FourByteMultiChar : DiagGroup<"four-char-constants">;
-def GlobalConstructors : DiagGroup<"global-constructors">;
+def GlobalConstructors : DiagGroup<"global-constructors"> {
+ code Documentation = [{
+Emit a warning for each variable declaration that generates code run at startup.
+ }];
+}
 def BitwiseConditionalParentheses: DiagGroup<"bitwise-conditional-parentheses">;
 def BitwiseOpParentheses: DiagGroup<"bitwise-op-parentheses">;
 def LogicalOpParentheses: DiagGroup<"logical-op-parentheses">;
@@ -444,6 +445,7 @@ def IncrementBool : DiagGroup<"increment-bool", [DeprecatedIncrementBool]>;
 def InfiniteRecursion : DiagGroup<"infinite-recursion">;
 def PureVirtualCallFromCtorDtor: DiagGroup<"call-to-pure-virtual-from-ctor-dtor">;
 def GNUImaginaryConstant : DiagGroup<"gnu-imaginary-constant">;
+def IgnoredGCH : DiagGroup<"ignored-gch">;
 def IgnoredReferenceQualifiers : DiagGroup<"ignored-reference-qualifiers">;
 def IgnoredQualifiers : DiagGroup<"ignored-qualifiers", [IgnoredReferenceQualifiers]>;
 def : DiagGroup<"import">;
@@ -583,7 +585,8 @@ def ExplicitInitializeCall : DiagGroup<"explicit-initialize-call">;
 def OrderedCompareFunctionPointers : DiagGroup<"ordered-compare-function-pointers">;
 def PackedNonPod : DiagGroup<"packed-non-pod">;
 def Packed : DiagGroup<"packed", [PackedNonPod]>;
-def Padded : DiagGroup<"padded">;
+def PaddedBitField : DiagGroup<"padded-bitfield">;
+def Padded : DiagGroup<"padded", [PaddedBitField]>;
 def UnalignedAccess : DiagGroup<"unaligned-access">;
 
 def PessimizingMove : DiagGroup<"pessimizing-move">;

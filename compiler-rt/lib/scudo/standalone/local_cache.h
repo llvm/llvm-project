@@ -28,6 +28,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     if (LIKELY(S))
       S->link(&Stats);
     Allocator = A;
+    initCache();
   }
 
   void destroy(GlobalStats *S) {
@@ -40,7 +41,9 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     DCHECK_LT(ClassId, NumClasses);
     PerClass *C = &PerClassArray[ClassId];
     if (C->Count == 0) {
-      if (UNLIKELY(!refill(C, ClassId)))
+      // Refill half of the number of max cached.
+      DCHECK_GT(C->MaxCount / 2, 0U);
+      if (UNLIKELY(!refill(C, ClassId, C->MaxCount / 2)))
         return nullptr;
       DCHECK_GT(C->Count, 0);
     }
@@ -57,9 +60,6 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
   bool deallocate(uptr ClassId, void *P) {
     CHECK_LT(ClassId, NumClasses);
     PerClass *C = &PerClassArray[ClassId];
-    // We still have to initialize the cache in the event that the first heap
-    // operation in a thread is a deallocation.
-    initCacheMaybe(C);
 
     // If the cache is full, drain half of blocks back to the main allocator.
     const bool NeedToDrainCache = C->Count == C->MaxCount;
@@ -146,13 +146,6 @@ private:
   LocalStats Stats;
   SizeClassAllocator *Allocator = nullptr;
 
-  ALWAYS_INLINE void initCacheMaybe(PerClass *C) {
-    if (LIKELY(C->MaxCount))
-      return;
-    initCache();
-    DCHECK_NE(C->MaxCount, 0U);
-  }
-
   NOINLINE void initCache() {
     for (uptr I = 0; I < NumClasses; I++) {
       PerClass *P = &PerClassArray[I];
@@ -173,14 +166,10 @@ private:
       deallocate(BatchClassId, B);
   }
 
-  NOINLINE bool refill(PerClass *C, uptr ClassId) {
-    initCacheMaybe(C);
-
-    // TODO(chiahungduan): Pass the max number cached for each size class.
+  NOINLINE bool refill(PerClass *C, uptr ClassId, u16 MaxRefill) {
     const u16 NumBlocksRefilled =
-        Allocator->popBlocks(this, ClassId, C->Chunks);
-    DCHECK_LE(NumBlocksRefilled,
-              getMaxCached(SizeClassAllocator::getSizeByClassId(ClassId)));
+        Allocator->popBlocks(this, ClassId, C->Chunks, MaxRefill);
+    DCHECK_LE(NumBlocksRefilled, MaxRefill);
     C->Count = static_cast<u16>(C->Count + NumBlocksRefilled);
     return NumBlocksRefilled != 0;
   }

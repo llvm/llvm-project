@@ -13,12 +13,20 @@
 class RISCVTuneInfo {
   bits<8> PrefFunctionAlignment = 1;
   bits<8> PrefLoopAlignment = 1;
+
+  // Information needed by LoopDataPrefetch.
+  bits<16> CacheLineSize = 0;
+  bits<16> PrefetchDistance = 0;
+  bits<16> MinPrefetchStride = 1;
+  bits<32> MaxPrefetchIterationsAhead = -1;
 }
 
 def RISCVTuneInfoTable : GenericTable {
   let FilterClass = "RISCVTuneInfo";
   let CppTypeName = "RISCVTuneInfo";
-  let Fields = ["Name", "PrefFunctionAlignment", "PrefLoopAlignment"];
+  let Fields = ["Name", "PrefFunctionAlignment", "PrefLoopAlignment",
+                "CacheLineSize", "PrefetchDistance",
+                "MinPrefetchStride", "MaxPrefetchIterationsAhead"];
 }
 
 def getRISCVTuneInfo : SearchIndex {
@@ -242,4 +250,26 @@ def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
                                              FeatureStdExtZicbom,
                                              FeatureStdExtZicbop,
                                              FeatureStdExtZicboz,
-                                             FeatureVendorXVentanaCondOps]>;
+                                             FeatureVendorXVentanaCondOps],
+                                             [TuneVentanaVeyron]>;
+
+def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
+                                          NoSchedModel,
+                                          [Feature64Bit,
+                                           FeatureStdExtZicsr,
+                                           FeatureStdExtZifencei,
+                                           FeatureStdExtM,
+                                           FeatureStdExtA,
+                                           FeatureStdExtF,
+                                           FeatureStdExtD,
+                                           FeatureStdExtC,
+                                           FeatureStdExtZba,
+                                           FeatureStdExtZbb,
+                                           FeatureStdExtZbc,
+                                           FeatureStdExtZbs,
+                                           FeatureStdExtZkn,
+                                           FeatureStdExtZksed,
+                                           FeatureStdExtZksh,
+                                           FeatureStdExtSvinval,
+                                           FeatureStdExtZicbom,
+                                           FeatureStdExtZicboz]>;

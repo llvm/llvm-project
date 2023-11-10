@@ -870,7 +870,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
 
   auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
   BasicBlock *LoopPred = L->getLoopPredecessor();
-  if (!AR || !LoopPred)
+  if (!AR || AR->getLoop() != L || !LoopPred)
     return;
 
   const SCEV *StartSCEV = AR->getStart();
@@ -897,6 +897,10 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (auto *C = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE)))
     StepOffset = C->getAPInt();
   else
+    return;
+
+  // Make sure the bound B is loop-invariant.
+  if (!L->isLoopInvariant(B))
     return;
 
   // Handle negative steps.

@@ -405,7 +405,7 @@ private:
     // void (^ObjCBlock)(void);
     bool MightBeFunctionType = !Contexts[Contexts.size() - 2].IsExpression;
     bool ProbablyFunctionType =
-        CurrentToken->isOneOf(tok::star, tok::amp, tok::ampamp, tok::caret);
+        CurrentToken->isPointerOrReference() || CurrentToken->is(tok::caret);
     bool HasMultipleLines = false;
     bool HasMultipleParametersOnALine = false;
     bool MightBeObjCForRangeLoop =
@@ -422,8 +422,7 @@ private:
           FormatToken *PrevPrev = Prev->getPreviousNonComment();
           FormatToken *Next = CurrentToken->Next;
           if (PrevPrev && PrevPrev->is(tok::identifier) &&
-              PrevPrev->isNot(TT_TypeName) &&
-              Prev->isOneOf(tok::star, tok::amp, tok::ampamp) &&
+              PrevPrev->isNot(TT_TypeName) && Prev->isPointerOrReference() &&
               CurrentToken->is(tok::identifier) && Next->isNot(tok::equal)) {
             Prev->setType(TT_BinaryOperator);
             LookForDecls = false;
@@ -460,10 +459,8 @@ private:
           //   auto my_lambda = MACRO((Type *type, int i) { .. body .. });
           for (FormatToken *Tok = &OpeningParen; Tok != CurrentToken;
                Tok = Tok->Next) {
-            if (Tok->is(TT_BinaryOperator) &&
-                Tok->isOneOf(tok::star, tok::amp, tok::ampamp)) {
+            if (Tok->is(TT_BinaryOperator) && Tok->isPointerOrReference())
               Tok->setType(TT_PointerOrReference);
-            }
           }
         }
 
@@ -766,7 +763,8 @@ private:
         }
         // An arrow after an ObjC method expression is not a lambda arrow.
         if (CurrentToken->getType() == TT_ObjCMethodExpr &&
-            CurrentToken->Next && CurrentToken->Next->is(TT_LambdaArrow)) {
+            CurrentToken->Next &&
+            CurrentToken->Next->is(TT_TrailingReturnArrow)) {
           CurrentToken->Next->overwriteFixedType(TT_Unknown);
         }
         Left->MatchingParen = CurrentToken;
@@ -1409,10 +1407,8 @@ private:
       }
       break;
     case tok::arrow:
-      if (Tok->isNot(TT_LambdaArrow) && Tok->Previous &&
-          Tok->Previous->is(tok::kw_noexcept)) {
+      if (Tok->Previous && Tok->Previous->is(tok::kw_noexcept))
         Tok->setType(TT_TrailingReturnArrow);
-      }
       break;
     default:
       break;
@@ -1689,11 +1685,11 @@ private:
             TT_LambdaLSquare, TT_LambdaLBrace, TT_AttributeMacro, TT_IfMacro,
             TT_ForEachMacro, TT_TypenameMacro, TT_FunctionLBrace,
             TT_ImplicitStringLiteral, TT_InlineASMBrace, TT_FatArrow,
-            TT_LambdaArrow, TT_NamespaceMacro, TT_OverloadedOperator,
-            TT_RegexLiteral, TT_TemplateString, TT_ObjCStringLiteral,
-            TT_UntouchableMacroFunc, TT_StatementAttributeLikeMacro,
-            TT_FunctionLikeOrFreestandingMacro, TT_ClassLBrace, TT_EnumLBrace,
-            TT_RecordLBrace, TT_StructLBrace, TT_UnionLBrace, TT_RequiresClause,
+            TT_NamespaceMacro, TT_OverloadedOperator, TT_RegexLiteral,
+            TT_TemplateString, TT_ObjCStringLiteral, TT_UntouchableMacroFunc,
+            TT_StatementAttributeLikeMacro, TT_FunctionLikeOrFreestandingMacro,
+            TT_ClassLBrace, TT_EnumLBrace, TT_RecordLBrace, TT_StructLBrace,
+            TT_UnionLBrace, TT_RequiresClause,
             TT_RequiresClauseInARequiresExpression, TT_RequiresExpression,
             TT_RequiresExpressionLParen, TT_RequiresExpressionLBrace,
             TT_BracedListLBrace)) {
@@ -1862,8 +1858,8 @@ private:
           if (Previous->opensScope())
             break;
           if (Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator) &&
-              Previous->isOneOf(tok::star, tok::amp, tok::ampamp) &&
-              Previous->Previous && Previous->Previous->isNot(tok::equal)) {
+              Previous->isPointerOrReference() && Previous->Previous &&
+              Previous->Previous->isNot(tok::equal)) {
             Previous->setType(TT_PointerOrReference);
           }
         }
@@ -1876,7 +1872,7 @@ private:
       Contexts.back().IsExpression = true;
     } else if (Current.is(TT_TrailingReturnArrow)) {
       Contexts.back().IsExpression = false;
-    } else if (Current.is(TT_LambdaArrow) || Current.is(Keywords.kw_assert)) {
+    } else if (Current.is(Keywords.kw_assert)) {
       Contexts.back().IsExpression = Style.Language == FormatStyle::LK_Java;
     } else if (Current.Previous &&
                Current.Previous->is(TT_CtorInitializerColon)) {
@@ -2010,7 +2006,7 @@ private:
       AutoFound = true;
     } else if (Current.is(tok::arrow) &&
                Style.Language == FormatStyle::LK_Java) {
-      Current.setType(TT_LambdaArrow);
+      Current.setType(TT_TrailingReturnArrow);
     } else if (Current.is(tok::arrow) && AutoFound &&
                Line.MightBeFunctionDecl && Current.NestingLevel == 0 &&
                !Current.Previous->isOneOf(tok::kw_operator, tok::identifier)) {
@@ -2024,7 +2020,7 @@ private:
     } else if (isDeductionGuide(Current)) {
       // Deduction guides trailing arrow " A(...) -> A<T>;".
       Current.setType(TT_TrailingReturnArrow);
-    } else if (Current.isOneOf(tok::star, tok::amp, tok::ampamp)) {
+    } else if (Current.isPointerOrReference()) {
       Current.setType(determineStarAmpUsage(
           Current,
           Contexts.back().CanBeExpression && Contexts.back().IsExpression,
@@ -2094,18 +2090,17 @@ private:
           !Current.Next->isOneOf(tok::semi, tok::colon, tok::l_brace,
                                  tok::comma, tok::period, tok::arrow,
                                  tok::coloncolon, tok::kw_noexcept)) {
-        if (FormatToken *AfterParen = Current.MatchingParen->Next) {
-          // Make sure this isn't the return type of an Obj-C block declaration
-          if (AfterParen->isNot(tok::caret)) {
-            if (FormatToken *BeforeParen = Current.MatchingParen->Previous) {
-              if (BeforeParen->is(tok::identifier) &&
-                  BeforeParen->isNot(TT_TypenameMacro) &&
-                  BeforeParen->TokenText == BeforeParen->TokenText.upper() &&
-                  (!BeforeParen->Previous ||
-                   BeforeParen->Previous->ClosesTemplateDeclaration)) {
-                Current.setType(TT_FunctionAnnotationRParen);
-              }
-            }
+        if (FormatToken *AfterParen = Current.MatchingParen->Next;
+            AfterParen && AfterParen->isNot(tok::caret)) {
+          // Make sure this isn't the return type of an Obj-C block declaration.
+          if (FormatToken *BeforeParen = Current.MatchingParen->Previous;
+              BeforeParen && BeforeParen->is(tok::identifier) &&
+              BeforeParen->isNot(TT_TypenameMacro) &&
+              BeforeParen->TokenText == BeforeParen->TokenText.upper() &&
+              (!BeforeParen->Previous ||
+               BeforeParen->Previous->ClosesTemplateDeclaration ||
+               BeforeParen->Previous->ClosesRequiresClause)) {
+            Current.setType(TT_FunctionAnnotationRParen);
           }
         }
       }
@@ -2857,7 +2852,7 @@ private:
       }
       if (Current->is(TT_JsComputedPropertyName))
         return prec::Assignment;
-      if (Current->is(TT_LambdaArrow))
+      if (Current->is(TT_TrailingReturnArrow))
         return prec::Comma;
       if (Current->is(TT_FatArrow))
         return prec::Assignment;
@@ -3283,7 +3278,7 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
         continue;
       }
       if ((Next->isSimpleTypeSpecifier() || Next->is(tok::identifier)) &&
-          Next->Next && Next->Next->isOneOf(tok::star, tok::amp, tok::ampamp)) {
+          Next->Next && Next->Next->isPointerOrReference()) {
         // For operator void*(), operator char*(), operator Foo*().
         Next = Next->Next;
         continue;
@@ -3312,7 +3307,7 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
       assert(Previous->MatchingParen->is(TT_TypeDeclarationParen));
       return true;
     }
-    if (!Previous->isOneOf(tok::star, tok::amp, tok::ampamp, TT_TemplateCloser))
+    if (!Previous->isPointerOrReference() && Previous->isNot(TT_TemplateCloser))
       return false;
     Next = skipOperatorName(Next);
   } else {
@@ -3483,8 +3478,8 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
             continue;
           auto *Next = Tok->Next;
           const bool NextIsBinaryOperator =
-              Next && Next->isOneOf(tok::star, tok::amp, tok::ampamp) &&
-              Next->Next && Next->Next->is(tok::identifier);
+              Next && Next->isPointerOrReference() && Next->Next &&
+              Next->Next->is(tok::identifier);
           if (!NextIsBinaryOperator)
             continue;
           Next->setType(TT_BinaryOperator);
@@ -3742,7 +3737,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   }
   if (Right.is(TT_PointerOrReference))
     return 190;
-  if (Right.is(TT_LambdaArrow))
+  if (Right.is(TT_TrailingReturnArrow))
     return 110;
   if (Left.is(tok::equal) && Right.is(tok::l_brace))
     return 160;
@@ -4107,15 +4102,15 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   }
   // Ensure right pointer alignment with ellipsis e.g. int *...P
   if (Left.is(tok::ellipsis) && Left.Previous &&
-      Left.Previous->isOneOf(tok::star, tok::amp, tok::ampamp)) {
+      Left.Previous->isPointerOrReference()) {
     return Style.PointerAlignment != FormatStyle::PAS_Right;
   }
 
   if (Right.is(tok::star) && Left.is(tok::l_paren))
     return false;
-  if (Left.is(tok::star) && Right.isOneOf(tok::star, tok::amp, tok::ampamp))
+  if (Left.is(tok::star) && Right.isPointerOrReference())
     return false;
-  if (Right.isOneOf(tok::star, tok::amp, tok::ampamp)) {
+  if (Right.isPointerOrReference()) {
     const FormatToken *Previous = &Left;
     while (Previous && Previous->isNot(tok::kw_operator)) {
       if (Previous->is(tok::identifier) || Previous->isSimpleTypeSpecifier()) {
@@ -4744,10 +4739,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return false;
   }
 
-  if (Right.isOneOf(TT_TrailingReturnArrow, TT_LambdaArrow) ||
-      Left.isOneOf(TT_TrailingReturnArrow, TT_LambdaArrow)) {
+  if (Right.is(TT_TrailingReturnArrow) || Left.is(TT_TrailingReturnArrow))
     return true;
-  }
+
   if (Left.is(tok::comma) && Right.isNot(TT_OverloadedOperatorLParen) &&
       // In an unexpanded macro call we only find the parentheses and commas
       // in a line; the commas and closing parenthesis do not require a space.
@@ -5117,10 +5111,6 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
   if (Left.IsUnterminatedLiteral)
     return true;
-  if (Right.is(tok::lessless) && Right.Next && Left.is(tok::string_literal) &&
-      Right.Next->is(tok::string_literal)) {
-    return true;
-  }
   if (Right.is(TT_RequiresClause)) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:
@@ -5265,7 +5255,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   }
 
   if (Style.BraceWrapping.BeforeLambdaBody && Right.is(TT_LambdaLBrace) &&
-      Left.isOneOf(tok::star, tok::amp, tok::ampamp, TT_TemplateCloser)) {
+      (Left.isPointerOrReference() || Left.is(TT_TemplateCloser))) {
     return true;
   }
 
@@ -5728,8 +5718,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   return Left.isOneOf(tok::comma, tok::coloncolon, tok::semi, tok::l_brace,
                       tok::kw_class, tok::kw_struct, tok::comment) ||
          Right.isMemberAccess() ||
-         Right.isOneOf(TT_TrailingReturnArrow, TT_LambdaArrow, tok::lessless,
-                       tok::colon, tok::l_square, tok::at) ||
+         Right.isOneOf(TT_TrailingReturnArrow, tok::lessless, tok::colon,
+                       tok::l_square, tok::at) ||
          (Left.is(tok::r_paren) &&
           Right.isOneOf(tok::identifier, tok::kw_const)) ||
          (Left.is(tok::l_paren) && Right.isNot(tok::r_paren)) ||

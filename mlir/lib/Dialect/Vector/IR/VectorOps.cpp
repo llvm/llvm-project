@@ -33,6 +33,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -348,6 +349,19 @@ struct BitmaskEnumStorage : public AttributeStorage {
 // VectorDialect
 //===----------------------------------------------------------------------===//
 
+namespace {
+/// This class defines the interface for handling inlining with vector dialect
+/// operations.
+struct VectorInlinerInterface : public DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+
+  /// All vector dialect ops can be inlined.
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
+
 void VectorDialect::initialize() {
   addAttributes<
 #define GET_ATTRDEF_LIST
@@ -358,6 +372,8 @@ void VectorDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Vector/IR/VectorOps.cpp.inc"
       >();
+
+  addInterfaces<VectorInlinerInterface>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
@@ -1172,9 +1188,6 @@ OpFoldResult vector::ExtractElementOp::fold(FoldAdaptor adaptor) {
   if (!adaptor.getPosition())
     return {};
 
-  Attribute src = adaptor.getVector();
-  Attribute pos = adaptor.getPosition();
-
   // Fold extractelement (splat X) -> X.
   if (auto splat = getVector().getDefiningOp<vector::SplatOp>())
     return splat.getInput();
@@ -1184,13 +1197,16 @@ OpFoldResult vector::ExtractElementOp::fold(FoldAdaptor adaptor) {
     if (!llvm::isa<VectorType>(broadcast.getSource().getType()))
       return broadcast.getSource();
 
+  auto src = dyn_cast_or_null<DenseElementsAttr>(adaptor.getVector());
+  auto pos = dyn_cast_or_null<IntegerAttr>(adaptor.getPosition());
   if (!pos || !src)
     return {};
 
-  auto srcElements = llvm::cast<DenseElementsAttr>(src).getValues<Attribute>();
+  auto srcElements = src.getValues<Attribute>();
 
-  auto attr = llvm::dyn_cast<IntegerAttr>(pos);
-  uint64_t posIdx = attr.getInt();
+  uint64_t posIdx = pos.getInt();
+  if (posIdx >= srcElements.size())
+    return {};
 
   return srcElements[posIdx];
 }
@@ -2495,19 +2511,22 @@ OpFoldResult vector::InsertElementOp::fold(FoldAdaptor adaptor) {
   if (!adaptor.getPosition())
     return {};
 
-  Attribute src = adaptor.getSource();
-  Attribute dst = adaptor.getDest();
-  Attribute pos = adaptor.getPosition();
+  auto src = dyn_cast_or_null<TypedAttr>(adaptor.getSource());
+  auto dst = dyn_cast_or_null<DenseElementsAttr>(adaptor.getDest());
+  auto pos = dyn_cast_or_null<IntegerAttr>(adaptor.getPosition());
   if (!src || !dst || !pos)
     return {};
 
-  auto dstElements = llvm::cast<DenseElementsAttr>(dst).getValues<Attribute>();
+  if (src.getType() != getDestVectorType().getElementType())
+    return {};
+
+  auto dstElements = dst.getValues<Attribute>();
 
   SmallVector<Attribute> results(dstElements);
 
-  auto attr = llvm::dyn_cast<IntegerAttr>(pos);
-  uint64_t posIdx = attr.getInt();
-
+  uint64_t posIdx = pos.getInt();
+  if (posIdx >= results.size())
+    return {};
   results[posIdx] = src;
 
   return DenseElementsAttr::get(getDestVectorType(), results);
@@ -3067,9 +3086,12 @@ LogicalResult OuterProductOp::verify() {
       return emitOpError("expected #1 operand dim to match result dim #1");
     if (vRHS.getDimSize(0) != vRES.getDimSize(1))
       return emitOpError("expected #2 operand dim to match result dim #2");
-    if (vRHS.isScalable() != vLHS.isScalable())
-      return emitOpError("expected either all or none of vector operands #1 "
-                         "and #2 to be scalable");
+    if (vLHS.isScalable() && !vRHS.isScalable()) {
+      // This restriction reflects what's currently supported in terms of
+      // scalable vectors. However, we could relax this if there's a use case.
+      return emitOpError(
+          "expected either both or only #2 operand dim to be scalable");
+    }
   } else {
     // An AXPY operation.
     if (vRES.getRank() != 1)
@@ -3915,6 +3937,23 @@ static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
   return success();
 }
 
+template <typename TransferOp>
+static LogicalResult foldTransferFullMask(TransferOp op) {
+  auto mask = op.getMask();
+  if (!mask)
+    return failure();
+
+  auto constantMask = mask.template getDefiningOp<vector::ConstantMaskOp>();
+  if (!constantMask)
+    return failure();
+
+  if (!constantMask.isFullMask())
+    return failure();
+
+  op.getMaskMutable().clear();
+  return success();
+}
+
 ///  ```
 ///  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]}
 ///    : vector<1x4xf32>, tensor<4x4xf32>
@@ -3946,6 +3985,8 @@ OpFoldResult TransferReadOp::fold(FoldAdaptor) {
     return vec;
   /// transfer_read(memrefcast) -> transfer_read
   if (succeeded(foldTransferInBoundsAttribute(*this)))
+    return getResult();
+  if (succeeded(foldTransferFullMask(*this)))
     return getResult();
   if (succeeded(memref::foldMemRefCast(*this)))
     return getResult();
@@ -4001,35 +4042,36 @@ struct TransferReadAfterWriteToBroadcast
     auto defWrite = readOp.getSource().getDefiningOp<vector::TransferWriteOp>();
     if (!defWrite)
       return failure();
-
-    SmallVector<int64_t> readDims = readOp.getTransferChunkAccessed();
-    Value vec;
-    if (readOp.getIndices() == defWrite.getIndices() &&
-        readOp.getMask() == defWrite.getMask()) {
-      SmallVector<int64_t> writeDims = defWrite.getTransferChunkAccessed();
-      // TODO: If the writeDim is a superset of the read dims we could do an
-      // extract_strided_slice.
-      if (writeDims == readDims)
-        vec = defWrite.getVector();
-    }
+    // TODO: If the written transfer chunk is a superset of the read transfer
+    // chunk we could do an extract_strided_slice.
+    if (readOp.getTransferChunkAccessed() !=
+        defWrite.getTransferChunkAccessed())
+      return failure();
+    // TODO: Support cases where a dim is explicitly written but implicitly
+    // read (i.e., a unit dim that is rank reduced).
+    if (getUnusedDimsBitVector({readOp.getPermutationMap()}) !=
+        getUnusedDimsBitVector({defWrite.getPermutationMap()}))
+      return failure();
+    if (readOp.getIndices() != defWrite.getIndices() ||
+        readOp.getMask() != defWrite.getMask())
+      return failure();
+    Value vec = defWrite.getVector();
     // TODO: loop through the chain of transfer_write if we can prove that they
     // don't overlap with the transfer_read. This requires improving
     // `isDisjointTransferIndices` helper.
-    if (!vec)
-      return failure();
-    SmallVector<unsigned> permutation;
     AffineMap readMap = compressUnusedDims(readOp.getPermutationMap());
     AffineMap writeMap = compressUnusedDims(defWrite.getPermutationMap());
     AffineMap map = readMap.compose(writeMap);
     if (map.getNumResults() == 0)
       return failure();
-    // Calculate the permuation to apply to go from the vector stored to the
+    // Calculate the permutation to apply to go from the vector stored to the
     // vector read.
+    SmallVector<unsigned> permutation;
     if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
       return failure();
 
     Location loc = readOp.getLoc();
-    // Calculate the broadcast shape by applying the reverse permuation to the
+    // Calculate the broadcast shape by applying the reverse permutation to the
     // final shape we want.
     ArrayRef<int64_t> destShape = readOp.getVectorType().getShape();
     SmallVector<int64_t> broadcastShape(destShape.size());
@@ -4310,6 +4352,8 @@ LogicalResult TransferWriteOp::fold(FoldAdaptor adaptor,
   if (succeeded(foldWAR(*this, results)))
     return success();
   if (succeeded(foldTransferInBoundsAttribute(*this)))
+    return success();
+  if (succeeded(foldTransferFullMask(*this)))
     return success();
   return memref::foldMemRefCast(*this);
 }
@@ -5576,6 +5620,22 @@ LogicalResult ConstantMaskOp::verify() {
     return emitOpError("expected all mask dim sizes to be zeros, "
                        "as a result of conjunction with zero mask dim");
   return success();
+}
+
+bool ConstantMaskOp::isFullMask() {
+  auto resultType = getVectorType();
+  // Check the corner case of 0-D vectors first.
+  if (resultType.getRank() == 0) {
+    assert(getMaskDimSizes().size() == 1 && "invalid sizes for zero rank mask");
+    return llvm::cast<IntegerAttr>(getMaskDimSizes()[0]).getInt() == 1;
+  }
+  for (const auto [resultSize, intAttr] :
+       llvm::zip_equal(resultType.getShape(), getMaskDimSizes())) {
+    int64_t maskDimSize = llvm::cast<IntegerAttr>(intAttr).getInt();
+    if (maskDimSize < resultSize)
+      return false;
+  }
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

@@ -46,15 +46,17 @@ llvm::StringRef GetAsString(const llvm::json::Value &value) {
 }
 
 // Gets a string from a JSON object using the key, or returns an empty string.
-llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key) {
+llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key,
+                          llvm::StringRef defaultValue) {
   if (std::optional<llvm::StringRef> value = obj.getString(key))
     return *value;
-  return llvm::StringRef();
+  return defaultValue;
 }
 
-llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key) {
+llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
+                          llvm::StringRef defaultValue) {
   if (obj == nullptr)
-    return llvm::StringRef();
+    return defaultValue;
   return GetString(*obj, key);
 }
 
@@ -208,8 +210,7 @@ static std::optional<std::string> TryCreateAutoSummary(lldb::SBValue value) {
   return TryCreateAutoSummaryForContainer(value);
 }
 
-void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
-                    llvm::StringRef key) {
+std::string ValueToString(lldb::SBValue v) {
   std::string result;
   llvm::raw_string_ostream strm(result);
 
@@ -240,6 +241,12 @@ void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
       }
     }
   }
+  return result;
+}
+
+void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
+                    llvm::StringRef key) {
+  std::string result = ValueToString(v);
   EmplaceSafeString(object, key, result);
 }
 

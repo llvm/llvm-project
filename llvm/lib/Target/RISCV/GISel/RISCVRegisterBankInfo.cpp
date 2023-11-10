@@ -24,17 +24,21 @@
 namespace llvm {
 namespace RISCV {
 
-RegisterBankInfo::PartialMapping PartMappings[] = {
+const RegisterBankInfo::PartialMapping PartMappings[] = {
     {0, 32, GPRRegBank},
-    {0, 64, GPRRegBank}
+    {0, 64, GPRRegBank},
+    {0, 32, FPRRegBank},
+    {0, 64, FPRRegBank},
 };
 
 enum PartialMappingIdx {
   PMI_GPR32 = 0,
-  PMI_GPR64 = 1
+  PMI_GPR64 = 1,
+  PMI_FPR32 = 2,
+  PMI_FPR64 = 3,
 };
 
-RegisterBankInfo::ValueMapping ValueMappings[] = {
+const RegisterBankInfo::ValueMapping ValueMappings[] = {
     // Invalid value mapping.
     {nullptr, 0},
     // Maximum 3 GPR operands; 32 bit.
@@ -44,13 +48,23 @@ RegisterBankInfo::ValueMapping ValueMappings[] = {
     // Maximum 3 GPR operands; 64 bit.
     {&PartMappings[PMI_GPR64], 1},
     {&PartMappings[PMI_GPR64], 1},
-    {&PartMappings[PMI_GPR64], 1}
+    {&PartMappings[PMI_GPR64], 1},
+    // Maximum 3 FPR operands; 32 bit.
+    {&PartMappings[PMI_FPR32], 1},
+    {&PartMappings[PMI_FPR32], 1},
+    {&PartMappings[PMI_FPR32], 1},
+    // Maximum 3 FPR operands; 64 bit.
+    {&PartMappings[PMI_FPR64], 1},
+    {&PartMappings[PMI_FPR64], 1},
+    {&PartMappings[PMI_FPR64], 1},
 };
 
 enum ValueMappingsIdx {
   InvalidIdx = 0,
   GPR32Idx = 1,
-  GPR64Idx = 4
+  GPR64Idx = 4,
+  FPR32Idx = 7,
+  FPR64Idx = 10,
 };
 } // namespace RISCV
 } // namespace llvm
@@ -89,6 +103,12 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   }
 }
 
+static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
+  assert(Size == 32 || Size == 64);
+  unsigned Idx = Size == 64 ? RISCV::FPR64Idx : RISCV::FPR32Idx;
+  return &RISCV::ValueMappings[Idx];
+}
+
 const RegisterBankInfo::InstructionMapping &
 RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
@@ -101,6 +121,9 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       return Mapping;
   }
 
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
   unsigned GPRSize = getMaximumSize(RISCV::GPRRegBankID);
   assert((GPRSize == 32 || GPRSize == 64) && "Unexpected GPR size");
 
@@ -110,6 +133,9 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const ValueMapping *OperandsMapping = GPRValueMapping;
 
   switch (Opc) {
+  case TargetOpcode::G_INVOKE_REGION_START:
+    OperandsMapping = getOperandsMapping({});
+    break;
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_SHL:
@@ -133,6 +159,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
   case TargetOpcode::G_STORE:
     break;
@@ -157,6 +184,68 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OperandsMapping = getOperandsMapping(
         {GPRValueMapping, GPRValueMapping, GPRValueMapping, GPRValueMapping});
     break;
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OperandsMapping = getFPValueMapping(Ty.getSizeInBits());
+    break;
+  }
+  case TargetOpcode::G_FMA: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    const RegisterBankInfo::ValueMapping *FPValueMapping =
+        getFPValueMapping(Ty.getSizeInBits());
+    OperandsMapping = getOperandsMapping(
+        {FPValueMapping, FPValueMapping, FPValueMapping, FPValueMapping});
+    break;
+  }
+  case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPTRUNC: {
+    LLT ToTy = MRI.getType(MI.getOperand(0).getReg());
+    LLT FromTy = MRI.getType(MI.getOperand(1).getReg());
+    OperandsMapping =
+        getOperandsMapping({getFPValueMapping(ToTy.getSizeInBits()),
+                            getFPValueMapping(FromTy.getSizeInBits())});
+    break;
+  }
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI: {
+    LLT Ty = MRI.getType(MI.getOperand(1).getReg());
+    OperandsMapping =
+        getOperandsMapping({GPRValueMapping,
+                            getFPValueMapping(Ty.getSizeInBits())});
+    break;
+  }
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OperandsMapping = getOperandsMapping(
+        {getFPValueMapping(Ty.getSizeInBits()), GPRValueMapping});
+    break;
+  }
+  case TargetOpcode::G_FCONSTANT: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OperandsMapping =
+        getOperandsMapping({getFPValueMapping(Ty.getSizeInBits()), nullptr});
+    break;
+  }
+  case TargetOpcode::G_FCMP: {
+    LLT Ty = MRI.getType(MI.getOperand(2).getReg());
+
+    unsigned Size = Ty.getSizeInBits();
+    assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
+
+    auto *FPRValueMapping = getFPValueMapping(Size);
+    OperandsMapping = getOperandsMapping(
+        {GPRValueMapping, nullptr, FPRValueMapping, FPRValueMapping});
+    break;
+  }
   default:
     return getInvalidInstructionMapping();
   }

@@ -200,6 +200,10 @@ ProgramTree ProgramTree::Build(const parser::CompilerDirective &) {
   DIE("ProgramTree::Build() called for CompilerDirective");
 }
 
+ProgramTree ProgramTree::Build(const parser::OpenACCRoutineConstruct &) {
+  DIE("ProgramTree::Build() called for OpenACCRoutineConstruct");
+}
+
 const parser::ParentIdentifier &ProgramTree::GetParentId() const {
   const auto *stmt{
       std::get<const parser::Statement<parser::SubmoduleStmt> *>(stmt_)};

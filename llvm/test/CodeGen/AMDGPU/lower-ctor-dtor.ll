@@ -51,7 +51,7 @@ define internal void @bar() {
 ; CHECK: @[[__INIT_ARRAY_END:[a-zA-Z0-9_$"\\.-]+]] = external addrspace(1) constant [0 x ptr addrspace(1)]
 ; CHECK: @[[__FINI_ARRAY_START:[a-zA-Z0-9_$"\\.-]+]] = external addrspace(1) constant [0 x ptr addrspace(1)]
 ; CHECK: @[[__FINI_ARRAY_END:[a-zA-Z0-9_$"\\.-]+]] = external addrspace(1) constant [0 x ptr addrspace(1)]
-; CHECK: @[[LLVM_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [2 x ptr] [ptr @amdgcn.device.init, ptr @amdgcn.device.fini], section "llvm.metadata"
+; CHECK: @[[LLVM_USED:[a-zA-Z0-9_$"\\.-]+]] = appending addrspace(1) global [2 x ptr] [ptr @amdgcn.device.init, ptr @amdgcn.device.fini], section "llvm.metadata"
 ;.
 ; CHECK-LABEL: define internal void @foo() {
 ; CHECK-NEXT:    ret void

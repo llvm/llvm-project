@@ -101,7 +101,6 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestElaboratedType2",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "desugaredQualType": "NS::S",
 // CHECK-NEXT:   "qualType": "NS::S"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [

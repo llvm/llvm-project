@@ -2546,7 +2546,8 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
   }
 
   std::optional<MemoryLocation> Loc = MemoryLocation::getOrNone(I);
-  if (!Loc || Loc->Ptr != UseV || !Loc->Size.isPrecise() || I->isVolatile())
+  if (!Loc || Loc->Ptr != UseV || !Loc->Size.isPrecise() ||
+      Loc->Size.isScalable() || I->isVolatile())
     return 0;
 
   int64_t Offset;
@@ -7844,6 +7845,9 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
 
     // Clear existing attributes.
     A.removeAttrs(IRP, AttrKinds);
+    // Clear conflicting writable attribute.
+    if (isAssumedReadOnly())
+      A.removeAttrs(IRP, Attribute::Writable);
 
     // Use the generic manifest method.
     return IRAttribute::manifest(A);
@@ -8031,6 +8035,10 @@ struct AAMemoryBehaviorFunction final : public AAMemoryBehaviorImpl {
       ME = MemoryEffects::writeOnly();
 
     A.removeAttrs(getIRPosition(), AttrKinds);
+    // Clear conflicting writable attribute.
+    if (ME.onlyReadsMemory())
+      for (Argument &Arg : F.args())
+        A.removeAttrs(IRPosition::argument(Arg), Attribute::Writable);
     return A.manifestAttrs(getIRPosition(),
                            Attribute::getWithMemoryEffects(F.getContext(), ME));
   }
@@ -8065,6 +8073,11 @@ struct AAMemoryBehaviorCallSite final
       ME = MemoryEffects::writeOnly();
 
     A.removeAttrs(getIRPosition(), AttrKinds);
+    // Clear conflicting writable attribute.
+    if (ME.onlyReadsMemory())
+      for (Use &U : CB.args())
+        A.removeAttrs(IRPosition::callsite_argument(CB, U.getOperandNo()),
+                      Attribute::Writable);
     return A.manifestAttrs(
         getIRPosition(), Attribute::getWithMemoryEffects(CB.getContext(), ME));
   }
@@ -12392,11 +12405,14 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       Instruction *ThenTI =
           SplitBlockAndInsertIfThen(LastCmp, IP, /* Unreachable */ false);
       BasicBlock *CBBB = CB->getParent();
+      A.registerManifestAddedBasicBlock(*ThenTI->getParent());
+      A.registerManifestAddedBasicBlock(*CBBB);
       auto *SplitTI = cast<BranchInst>(LastCmp->getNextNode());
       BasicBlock *ElseBB;
       if (IP == CB) {
         ElseBB = BasicBlock::Create(ThenTI->getContext(), "",
                                     ThenTI->getFunction(), CBBB);
+        A.registerManifestAddedBasicBlock(*ElseBB);
         IP = BranchInst::Create(CBBB, ElseBB);
         SplitTI->replaceUsesOfWith(CBBB, ElseBB);
       } else {

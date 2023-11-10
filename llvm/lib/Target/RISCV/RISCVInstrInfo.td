@@ -84,17 +84,11 @@ def riscv_read_cycle_wide : SDNode<"RISCVISD::READ_CYCLE_WIDE",
 def riscv_add_lo : SDNode<"RISCVISD::ADD_LO", SDTIntBinOp>;
 def riscv_hi : SDNode<"RISCVISD::HI", SDTIntUnaryOp>;
 def riscv_lla : SDNode<"RISCVISD::LLA", SDTIntUnaryOp>;
-def riscv_lga : SDNode<"RISCVISD::LGA", SDTLoad,
-                       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def riscv_add_tprel : SDNode<"RISCVISD::ADD_TPREL",
                              SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                                   SDTCisSameAs<0, 2>,
                                                   SDTCisSameAs<0, 3>,
                                                   SDTCisInt<0>]>>;
-
-def riscv_la_tls_ie : SDNode<"RISCVISD::LA_TLS_IE", SDTLoad,
-                             [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def riscv_la_tls_gd : SDNode<"RISCVISD::LA_TLS_GD", SDTIntUnaryOp>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -1189,11 +1183,13 @@ def : InstAlias<".insn_s $opcode, $funct3, $rs2, ${imm12}(${rs1})",
 
 class PatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
     : Pat<(vt (OpNode (vt GPR:$rs1))), (Inst GPR:$rs1)>;
-class PatGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
-    : Pat<(vt (OpNode (vt GPR:$rs1), (vt GPR:$rs2))), (Inst GPR:$rs1, GPR:$rs2)>;
+class PatGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt1 = XLenVT,
+                ValueType vt2 = XLenVT>
+    : Pat<(vt1 (OpNode (vt1 GPR:$rs1), (vt2 GPR:$rs2))), (Inst GPR:$rs1, GPR:$rs2)>;
 
-class PatGprImm<SDPatternOperator OpNode, RVInst Inst, ImmLeaf ImmType>
-    : Pat<(XLenVT (OpNode (XLenVT GPR:$rs1), ImmType:$imm)),
+class PatGprImm<SDPatternOperator OpNode, RVInst Inst, ImmLeaf ImmType,
+                ValueType vt = XLenVT>
+    : Pat<(vt (OpNode (vt GPR:$rs1), ImmType:$imm)),
           (Inst GPR:$rs1, ImmType:$imm)>;
 class PatGprSimm12<SDPatternOperator OpNode, RVInstI Inst>
     : PatGprImm<OpNode, Inst, simm12>;
@@ -1670,6 +1666,16 @@ def PseudoJump : Pseudo<(outs GPR:$rd), (ins pseudo_jump_symbol:$target), [],
                         "jump", "$target, $rd">,
                  Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 
+// Pseudo for a rematerializable constant materialization sequence.
+// This is an experimental feature enabled by
+// -riscv-use-rematerializable-movimm in RISCVISelDAGToDAG.cpp
+// It will be expanded after register allocation.
+// FIXME: The scheduling information does not reflect the multiple instructions.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 1,
+    isPseudo = 1, isReMaterializable = 1, IsSignExtendingOpW = 1 in
+def PseudoMovImm : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
+                   Sched<[WriteIALU]>;
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
 def PseudoLLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
@@ -1690,8 +1696,6 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
 def PseudoLGA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                        "lga", "$dst, $src">;
 
-def : Pat<(iPTR (riscv_lga tglobaladdr:$in)), (PseudoLGA tglobaladdr:$in)>;
-
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
 def PseudoLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
@@ -1708,16 +1712,11 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
 def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.ie", "$dst, $src">;
 
-def : Pat<(iPTR (riscv_la_tls_ie tglobaltlsaddr:$in)),
-          (PseudoLA_TLS_IE  tglobaltlsaddr:$in)>;
-
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
 def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
 
-def : Pat<(riscv_la_tls_gd tglobaltlsaddr:$in),
-          (PseudoLA_TLS_GD  tglobaltlsaddr:$in)>;
 
 /// Sign/Zero Extends
 
@@ -1747,7 +1746,7 @@ def : LdPat<sextloadi8, LB>;
 def : LdPat<extloadi8, LBU>; // Prefer unsigned due to no c.lb in Zcb.
 def : LdPat<sextloadi16, LH>;
 def : LdPat<extloadi16, LH>;
-def : LdPat<load, LW, i32>, Requires<[IsRV32]>;
+def : LdPat<load, LW, i32>;
 def : LdPat<zextloadi8, LBU>;
 def : LdPat<zextloadi16, LHU>;
 
@@ -1761,7 +1760,7 @@ class StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
 
 def : StPat<truncstorei8, SB, GPR, XLenVT>;
 def : StPat<truncstorei16, SH, GPR, XLenVT>;
-def : StPat<store, SW, GPR, i32>, Requires<[IsRV32]>;
+def : StPat<store, SW, GPR, i32>;
 
 /// Fences
 
@@ -1993,6 +1992,64 @@ let Predicates = [IsRV64] in {
 def : Pat<(binop_allwusers<add> GPR:$rs1, (AddiPair:$rs2)),
           (ADDIW (ADDIW GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2)),
                  (AddiPairImmSmall AddiPair:$rs2))>;
+}
+
+//===----------------------------------------------------------------------===//
+// Experimental RV64 i32 legalization patterns.
+//===----------------------------------------------------------------------===//
+
+def simm12i32 : ImmLeaf<i32, [{return isInt<12>(Imm);}]>;
+
+// Convert from i32 immediate to i64 target immediate to make SelectionDAG type
+// checking happy so we can use ADDIW which expects an XLen immediate.
+def as_i64imm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
+}]>;
+
+let Predicates = [IsRV64] in {
+def : LdPat<sextloadi8, LB, i32>;
+def : LdPat<extloadi8, LBU, i32>; // Prefer unsigned due to no c.lb in Zcb.
+def : LdPat<sextloadi16, LH, i32>;
+def : LdPat<extloadi16, LH, i32>;
+def : LdPat<zextloadi8, LBU, i32>;
+def : LdPat<zextloadi16, LHU, i32>;
+
+def : StPat<truncstorei8, SB, GPR, i32>;
+def : StPat<truncstorei16, SH, GPR, i32>;
+
+def : Pat<(anyext GPR:$src), (COPY GPR:$src)>;
+def : Pat<(sext GPR:$src), (ADDIW GPR:$src, 0)>;
+def : Pat<(trunc GPR:$src), (COPY GPR:$src)>;
+
+def : PatGprGpr<add, ADDW, i32, i32>;
+def : PatGprGpr<sub, SUBW, i32, i32>;
+def : PatGprGpr<and, AND, i32, i32>;
+def : PatGprGpr<or, OR, i32, i32>;
+def : PatGprGpr<xor, XOR, i32, i32>;
+def : PatGprGpr<shiftopw<shl>, SLLW, i32, i64>;
+def : PatGprGpr<shiftopw<srl>, SRLW, i32, i64>;
+def : PatGprGpr<shiftopw<sra>, SRAW, i32, i64>;
+
+def : Pat<(i32 (add GPR:$rs1, simm12i32:$imm)),
+          (ADDIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
+def : Pat<(i32 (and GPR:$rs1, simm12i32:$imm)),
+          (ANDI GPR:$rs1, (i64 (as_i64imm $imm)))>;
+def : Pat<(i32 (or GPR:$rs1, simm12i32:$imm)),
+          (ORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
+def : Pat<(i32 (xor GPR:$rs1, simm12i32:$imm)),
+          (XORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
+
+def : PatGprImm<shl, SLLIW, uimm5, i32>;
+def : PatGprImm<srl, SRLIW, uimm5, i32>;
+def : PatGprImm<sra, SRAIW, uimm5, i32>;
+
+def : Pat<(i32 (and GPR:$rs, TrailingOnesMask:$mask)),
+          (SRLI (SLLI $rs, (i64 (XLenSubTrailingOnes $mask))),
+                (i64 (XLenSubTrailingOnes $mask)))>;
+}
+
+let Predicates = [IsRV64, NotHasStdExtZba] in {
+def : Pat<(zext GPR:$src), (SRLI (SLLI GPR:$src, 32), 32)>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -32,6 +32,7 @@ using namespace mlir::linalg;
 //===----------------------------------------------------------------------===//
 // Interface utility functions
 //===----------------------------------------------------------------------===//
+
 bool linalg::detail::canOpOperandsBeDroppedImpl(
     linalg::LinalgOp linalgOp, ArrayRef<OpOperand *> droppedOperands) {
   SmallVector<AffineMap> indexingMaps;
@@ -46,6 +47,27 @@ bool linalg::detail::canOpOperandsBeDroppedImpl(
     return linalgOp.getNumLoops() == 0;
   }
   return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
+}
+
+//===----------------------------------------------------------------------===//
+// CopyOpInterface implementation
+//===----------------------------------------------------------------------===//
+
+bool linalg::isaCopyOpInterface(LinalgOp linalgOp) {
+  // Structural.
+  if (linalgOp.getNumParallelLoops() != linalgOp.getNumLoops())
+    return false;
+
+  // Operands and maps.
+  if (linalgOp.getNumDpsInputs() != 1 || linalgOp.getNumDpsInits() != 1)
+    return false;
+  auto mapRange = linalgOp.getIndexingMapsArray();
+  if (mapRange.size() != 2 || !mapRange.front().isIdentity() ||
+      !mapRange.back().isIdentity()) {
+    return false;
+  }
+  // Region.
+  return llvm::hasSingleElement(linalgOp.getBlock()->getOperations());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1108,7 +1130,9 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
                            "arguments as the number of input/output operands");
 
   for (OpOperand *opOperand : linalgOp.getOpOperandsMatchingBBargs()) {
-    Type elementType = getElementTypeOrSelf(opOperand->get());
+    Type elementType = opOperand->get().getType();
+    if (isa<MemRefType, RankedTensorType>(elementType))
+      elementType = getElementTypeOrSelf(opOperand->get().getType());
     Type argType = block.getArgument(opOperand->getOperandNumber()).getType();
     if (elementType != argType)
       return op->emitOpError("expected type of bb argument #")

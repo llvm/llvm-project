@@ -1,4 +1,4 @@
-# RUN: yaml-bench -canonical %s
+# RUN: yaml-bench -canonical %s | FileCheck %s
 
 unicode: "Sosa did fine.\u263A"
 control: "\b1998\t1999\t2000\n"

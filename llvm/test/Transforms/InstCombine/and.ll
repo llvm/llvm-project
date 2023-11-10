@@ -525,7 +525,7 @@ define <2 x i32> @and_demanded_bits_splat_vec(<2 x i32> %x) {
 define i32 @and_zext_demanded(i16 %x, i32 %y) {
 ; CHECK-LABEL: @and_zext_demanded(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i16 [[X:%.*]], 8
-; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[S]] to i32
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i16 [[S]] to i32
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %s = lshr i16 %x, 8
@@ -618,7 +618,7 @@ define i64 @test35(i32 %X) {
 ; CHECK-LABEL: @test35(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 240
-; CHECK-NEXT:    [[RES:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %zext = zext i32 %X to i64
@@ -631,7 +631,7 @@ define <2 x i64> @test35_uniform(<2 x i32> %X) {
 ; CHECK-LABEL: @test35_uniform(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> zeroinitializer, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 240, i32 240>
-; CHECK-NEXT:    [[RES:%.*]] = zext <2 x i32> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %zext = zext <2 x i32> %X to <2 x i64>
@@ -644,7 +644,7 @@ define i64 @test36(i32 %X) {
 ; CHECK-LABEL: @test36(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 7
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 240
-; CHECK-NEXT:    [[RES:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %zext = zext i32 %X to i64
@@ -657,7 +657,7 @@ define <2 x i64> @test36_uniform(<2 x i32> %X) {
 ; CHECK-LABEL: @test36_uniform(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 7, i32 7>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 240, i32 240>
-; CHECK-NEXT:    [[RES:%.*]] = zext <2 x i32> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %zext = zext <2 x i32> %X to <2 x i64>
@@ -683,7 +683,7 @@ define i64 @test37(i32 %X) {
 ; CHECK-LABEL: @test37(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X:%.*]], 7
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 240
-; CHECK-NEXT:    [[RES:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %zext = zext i32 %X to i64
@@ -696,7 +696,7 @@ define <2 x i64> @test37_uniform(<2 x i32> %X) {
 ; CHECK-LABEL: @test37_uniform(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i32> [[X:%.*]], <i32 7, i32 7>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 240, i32 240>
-; CHECK-NEXT:    [[RES:%.*]] = zext <2 x i32> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %zext = zext <2 x i32> %X to <2 x i64>
@@ -721,7 +721,7 @@ define <2 x i64> @test37_nonuniform(<2 x i32> %X) {
 define i64 @test38(i32 %X) {
 ; CHECK-LABEL: @test38(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 240
-; CHECK-NEXT:    [[RES:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %zext = zext i32 %X to i64
@@ -733,7 +733,7 @@ define i64 @test38(i32 %X) {
 define i64 @test39(i32 %X) {
 ; CHECK-LABEL: @test39(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 240
-; CHECK-NEXT:    [[RES:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %zext = zext i32 %X to i64

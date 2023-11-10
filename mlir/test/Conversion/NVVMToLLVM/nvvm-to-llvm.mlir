@@ -497,9 +497,9 @@ func.func @elect_one_leader_sync() {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "{
   // CHECK-SAME: .reg .u32 rx;
   // CHECK-SAME: .reg .pred px;
-  // CHECK-SAME: mov.u32 $0, 0;
+  // CHECK-SAME: mov.pred $0, 0;
   // CHECK-SAME: elect.sync rx | px, 0xFFFFFFFF;
-  // CHECK-SAME: @px mov.u32 $0, 1;
+  // CHECK-SAME: @px mov.pred $0, 1;
   // CHECK-SAME: "=b"  : () -> i1
   %cnd = nvvm.elect.sync -> i1 
   return 
