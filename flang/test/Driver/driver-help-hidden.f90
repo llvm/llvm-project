@@ -49,6 +49,8 @@
 ! CHECK-NEXT: -fintegrated-as         Enable the integrated assembler
 ! CHECK-NEXT: -fintrinsic-modules-path <dir>
 ! CHECK-NEXT:                         Specify where to find the compiled intrinsic modules
+! CHECK-NEXT: -flang-deprecated-no-hlfir
+! CHECK-NEXT:                         Do not use HLFIR lowering (deprecated)
 ! CHECK-NEXT: -flang-experimental-hlfir
 ! CHECK-NEXT:                         Use HLFIR lowering (experimental)
 ! CHECK-NEXT: -flang-experimental-polymorphism
