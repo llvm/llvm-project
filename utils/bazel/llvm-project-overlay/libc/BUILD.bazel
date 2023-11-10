@@ -308,6 +308,7 @@ libc_support_library(
     deps = [
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_properties_compiler",
     ],
 )
 
@@ -1820,6 +1821,8 @@ libc_math_function(name = "copysign")
 libc_math_function(name = "copysignf")
 
 libc_math_function(name = "copysignl")
+
+libc_math_function(name = "copysignf128")
 
 libc_math_function(name = "ilogb")
 
