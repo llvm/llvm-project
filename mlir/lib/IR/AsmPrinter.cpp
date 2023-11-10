@@ -226,6 +226,12 @@ OpPrintingFlags::elideLargeElementsAttrs(int64_t largeElementLimit) {
   return *this;
 }
 
+OpPrintingFlags &
+OpPrintingFlags::elideLargeResourceString(int64_t largeResourceLimit) {
+  resourceStringCharLimit = largeResourceLimit;
+  return *this;
+}
+
 /// Enable printing of debug information. If 'prettyForm' is set to true,
 /// debug information is printed in a more readable 'pretty' form.
 OpPrintingFlags &OpPrintingFlags::enableDebugInfo(bool enable,
