@@ -9,7 +9,8 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USESTDNUMBERSCHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USESTDNUMBERSCHECK_H
 
-#include "../utils/TransformerClangTidyCheck.h"
+#include "../ClangTidyCheck.h"
+#include "../utils/IncludeInserter.h"
 
 namespace clang::tidy::modernize {
 
@@ -21,13 +22,23 @@ namespace clang::tidy::modernize {
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-std-numbers.html
-class UseStdNumbersCheck : public utils::TransformerClangTidyCheck {
+class UseStdNumbersCheck : public ClangTidyCheck {
 public:
   UseStdNumbersCheck(StringRef Name, ClangTidyContext *Context);
 
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus20;
   }
+  void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override {
+    Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
+  }
+
+private:
+  utils::IncludeInserter IncludeInserter;
 };
 
 } // namespace clang::tidy::modernize
