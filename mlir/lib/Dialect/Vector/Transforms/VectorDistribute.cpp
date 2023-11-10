@@ -1137,10 +1137,11 @@ struct WarpOpCreateMask : public OpRewritePattern<WarpExecuteOnLane0Op> {
     bindSymbols(rewriter.getContext(), s0, s1);
     SmallVector<Value> newOperands;
     for (int i = 0, e = distShape.size(); i < e; ++i) {
-      // Get `mask_size[i] - lane_id[i] * (seq_sizes[i]/dist_sizes[i])` to find
-      // the distance from the largest mask index owned by this lane to the
-      // original mask size. vector.create_mask implicitly clamps mask sizes to
-      // the range [0, mask_vector_size[i]].
+      // Get `mask_dim_range_upper_limit[i] - lane_id[i] * dist_sizes[i]` to
+      // find the distance from the largest mask index owned by this lane to the
+      // original mask size. `vector.create_mask` implicitly clamps mask
+      // operands to the range [0, mask_vector_size[i]], or in other words, the
+      // mask sizes are always in the range [0, mask_vector_size[i]).
       Value maskDimIdx = affine::makeComposedAffineApply(
           rewriter, loc, s1 - s0 * distShape[i],
           {delinearizedIds[i], mask.getOperand(i)});
@@ -1807,10 +1808,11 @@ void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
     const WarpShuffleFromIdxFn &warpShuffleFromIdxFn, PatternBenefit benefit,
     PatternBenefit readBenefit) {
   patterns.add<WarpOpTransferRead>(patterns.getContext(), readBenefit);
-  patterns.add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast,
-               WarpOpShapeCast, WarpOpExtract, WarpOpForwardOperand,
-               WarpOpConstant, WarpOpInsertElement, WarpOpInsert, WarpOpCreateMask>(
-      patterns.getContext(), benefit);
+  patterns
+      .add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast,
+           WarpOpShapeCast, WarpOpExtract, WarpOpForwardOperand, WarpOpConstant,
+           WarpOpInsertElement, WarpOpInsert, WarpOpCreateMask>(
+          patterns.getContext(), benefit);
   patterns.add<WarpOpExtractElement>(patterns.getContext(),
                                      warpShuffleFromIdxFn, benefit);
   patterns.add<WarpOpScfForOp>(patterns.getContext(), distributionMapFn,
