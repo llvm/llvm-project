@@ -238,8 +238,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned Size = Ty.getSizeInBits();
     assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
 
-    auto *FPRValueMapping = Size == 32 ? &RISCV::ValueMappings[RISCV::FPR32Idx]
-                                       : &RISCV::ValueMappings[RISCV::FPR64Idx];
+    auto *FPRValueMapping = getFPValueMapping(Size);
     OperandsMapping = getOperandsMapping(
         {GPRValueMapping, nullptr, FPRValueMapping, FPRValueMapping});
     break;
