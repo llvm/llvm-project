@@ -7,15 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "ParsedAST.h"
+#include "Protocol.h"
+#include "Selection.h"
+#include "SourceCode.h"
 #include "XRefs.h"
 #include "refactor/Tweak.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 
+#include <cstddef>
 #include <functional>
+#include <memory>
+#include <string>
+#include <utility>
 
 namespace clang::clangd {
 namespace {
@@ -87,9 +100,9 @@ Expected<Tweak::Effect> ScopifyEnum::apply(const Selection &Inputs) {
                                        SM->getBufferData(SM->getMainFileID())));
 
   if (auto Err = addClassKeywordToDeclarations())
-    return Err;
+    return std::move(Err);
   if (auto Err = scopifyEnumValues())
-    return Err;
+    return std::move(Err);
 
   return E;
 }
