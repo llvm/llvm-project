@@ -1261,8 +1261,8 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
     Stream.EmitRecord(HEADER_SEARCH_PATHS, Record);
   }
 
-  // Write out the diagnostic/pragma mappings.
-  WritePragmaDiagnosticMappings(Diags, /* isModule = */ WritingModule);
+  if (!HSOpts.ModulesSkipPragmaDiagnosticMappings)
+    WritePragmaDiagnosticMappings(Diags, /* isModule = */ WritingModule);
 
   // Header search entry usage.
   auto HSEntryUsage = PP.getHeaderSearchInfo().computeUserEntryUsage();
