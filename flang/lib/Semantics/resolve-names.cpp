@@ -1452,6 +1452,20 @@ public:
   void Post(const parser::OmpEndSectionsDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+  bool Pre(const parser::OmpCriticalDirective &x) {
+    AddOmpSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::OmpCriticalDirective &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
+  bool Pre(const parser::OmpEndCriticalDirective &x) {
+    AddOmpSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::OmpEndCriticalDirective &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
