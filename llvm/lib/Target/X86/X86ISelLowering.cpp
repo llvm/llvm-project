@@ -3257,73 +3257,6 @@ bool X86TargetLowering::
   return NewShiftOpcode == ISD::SHL;
 }
 
-unsigned X86TargetLowering::preferedOpcodeForCmpEqPiecesOfOperand(
-    EVT VT, unsigned ShiftOpc, bool MayTransformRotate,
-    const APInt &ShiftOrRotateAmt, const std::optional<APInt> &AndMask) const {
-  if (!VT.isInteger())
-    return ShiftOpc;
-
-  bool PreferRotate = false;
-  if (VT.isVector()) {
-    // For vectors, if we have rotate instruction support, then its definetly
-    // best. Otherwise its not clear what the best so just don't make changed.
-    PreferRotate = Subtarget.hasAVX512() && (VT.getScalarType() == MVT::i32 ||
-                                             VT.getScalarType() == MVT::i64);
-  } else {
-    // For scalar, if we have bmi prefer rotate for rorx. Otherwise prefer
-    // rotate unless we have a zext mask+shr.
-    PreferRotate = Subtarget.hasBMI2();
-    if (!PreferRotate) {
-      unsigned MaskBits =
-          VT.getScalarSizeInBits() - ShiftOrRotateAmt.getZExtValue();
-      PreferRotate = (MaskBits != 8) && (MaskBits != 16) && (MaskBits != 32);
-    }
-  }
-
-  if (ShiftOpc == ISD::SHL || ShiftOpc == ISD::SRL) {
-    assert(AndMask.has_value() && "Null andmask when querying about shift+and");
-
-    if (PreferRotate && MayTransformRotate)
-      return ISD::ROTL;
-
-    // If vector we don't really get much benefit swapping around constants.
-    // Maybe we could check if the DAG has the flipped node already in the
-    // future.
-    if (VT.isVector())
-      return ShiftOpc;
-
-    // See if the beneficial to swap shift type.
-    if (ShiftOpc == ISD::SHL) {
-      // If the current setup has imm64 mask, then inverse will have
-      // at least imm32 mask (or be zext i32 -> i64).
-      if (VT == MVT::i64)
-        return AndMask->getSignificantBits() > 32 ? (unsigned)ISD::SRL
-                                                  : ShiftOpc;
-
-      // We can only benefit if req at least 7-bit for the mask. We
-      // don't want to replace shl of 1,2,3 as they can be implemented
-      // with lea/add.
-      return ShiftOrRotateAmt.uge(7) ? (unsigned)ISD::SRL : ShiftOpc;
-    }
-
-    if (VT == MVT::i64)
-      // Keep exactly 32-bit imm64, this is zext i32 -> i64 which is
-      // extremely efficient.
-      return AndMask->getSignificantBits() > 33 ? (unsigned)ISD::SHL : ShiftOpc;
-
-    // Keep small shifts as shl so we can generate add/lea.
-    return ShiftOrRotateAmt.ult(7) ? (unsigned)ISD::SHL : ShiftOpc;
-  }
-
-  // We prefer rotate for vectors of if we won't get a zext mask with SRL
-  // (PreferRotate will be set in the latter case).
-  if (PreferRotate || VT.isVector())
-    return ShiftOpc;
-
-  // Non-vector type and we have a zext mask with SRL.
-  return ISD::SRL;
-}
-
 bool X86TargetLowering::preferScalarizeSplat(SDNode *N) const {
   return N->getOpcode() != ISD::FP_EXTEND;
 }
@@ -22715,38 +22648,12 @@ X86TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
       !(Subtarget.is64Bit() && VT == MVT::i64))
     return SDValue();
 
-  unsigned Lg2 = Divisor.countr_zero();
-
   // If the divisor is 2 or -2, the default expansion is better.
-  if (Lg2 == 1)
+  if (Divisor == 2 ||
+      Divisor == APInt(Divisor.getBitWidth(), -2, /*isSigned*/ true))
     return SDValue();
 
-  SDLoc DL(N);
-  SDValue N0 = N->getOperand(0);
-  SDValue Zero = DAG.getConstant(0, DL, VT);
-  APInt Lg2Mask = APInt::getLowBitsSet(VT.getSizeInBits(), Lg2);
-  SDValue Pow2MinusOne = DAG.getConstant(Lg2Mask, DL, VT);
-
-  // If N0 is negative, we need to add (Pow2 - 1) to it before shifting right.
-  SDValue Cmp = DAG.getSetCC(DL, MVT::i8, N0, Zero, ISD::SETLT);
-  SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, Pow2MinusOne);
-  SDValue CMov = DAG.getNode(ISD::SELECT, DL, VT, Cmp, Add, N0);
-
-  Created.push_back(Cmp.getNode());
-  Created.push_back(Add.getNode());
-  Created.push_back(CMov.getNode());
-
-  // Divide by pow2.
-  SDValue SRA =
-      DAG.getNode(ISD::SRA, DL, VT, CMov, DAG.getConstant(Lg2, DL, MVT::i8));
-
-  // If we're dividing by a positive value, we're done.  Otherwise, we must
-  // negate the result.
-  if (Divisor.isNonNegative())
-    return SRA;
-
-  Created.push_back(SRA.getNode());
-  return DAG.getNode(ISD::SUB, DL, VT, Zero, SRA);
+  return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);
 }
 
 /// Result of 'and' is compared against zero. Change to a BT node if possible.
@@ -28180,10 +28087,8 @@ static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
       // abds(lhs, rhs) -> trunc(abs(sub(sext(lhs), sext(rhs))))
       // abdu(lhs, rhs) -> trunc(abs(sub(zext(lhs), zext(rhs))))
       unsigned ExtOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-      SDValue LHS = DAG.getFreeze(Op.getOperand(0));
-      SDValue RHS = DAG.getFreeze(Op.getOperand(1));
-      LHS = DAG.getNode(ExtOpc, dl, WideVT, LHS);
-      RHS = DAG.getNode(ExtOpc, dl, WideVT, RHS);
+      SDValue LHS = DAG.getNode(ExtOpc, dl, WideVT, Op.getOperand(0));
+      SDValue RHS = DAG.getNode(ExtOpc, dl, WideVT, Op.getOperand(1));
       SDValue Diff = DAG.getNode(ISD::SUB, dl, WideVT, LHS, RHS);
       SDValue AbsDiff = DAG.getNode(ISD::ABS, dl, WideVT, Diff);
       return DAG.getNode(ISD::TRUNCATE, dl, VT, AbsDiff);

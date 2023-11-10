@@ -95,6 +95,15 @@ private:
   /// from meta data in the file.
   void discoverFileObjects();
 
+  /// Check whether we should use DT_FINI or DT_FINI_ARRAY for instrumentation.
+  /// DT_FINI is preferred; DT_FINI_ARRAY is only used when no DT_FINI entry was
+  /// found.
+  Error discoverRtFiniAddress();
+
+  /// If DT_FINI_ARRAY is used for instrumentation, update the relocation of its
+  /// first entry to point to the instrumentation library's fini address.
+  void updateRtFiniReloc();
+
   /// Create and initialize metadata rewriters for this instance.
   void initializeMetadataManager();
 
@@ -421,6 +430,7 @@ private:
 
   /// Common section names.
   static StringRef getEHFrameSectionName() { return ".eh_frame"; }
+  static StringRef getRelaDynSectionName() { return ".rela.dyn"; }
 
   /// An instance of the input binary we are processing, externally owned.
   llvm::object::ELFObjectFileBase *InputFile;

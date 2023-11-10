@@ -2305,7 +2305,6 @@ private:
   struct ModuleScope {
     SourceLocation BeginLoc;
     clang::Module *Module = nullptr;
-    bool ModuleInterface = false;
     VisibleModuleSet OuterVisibleModules;
   };
   /// The modules we're currently parsing.
@@ -2320,14 +2319,9 @@ private:
   clang::Module *TheGlobalModuleFragment = nullptr;
 
   /// The implicit global module fragments of the current translation unit.
-  /// We would only create at most two implicit global module fragments to
-  /// avoid performance penalties when there are many language linkage
-  /// exports.
   ///
-  /// The contents in the implicit global module fragment can't be discarded
-  /// no matter if it is exported or not.
+  /// The contents in the implicit global module fragment can't be discarded.
   clang::Module *TheImplicitGlobalModuleFragment = nullptr;
-  clang::Module *TheExportedImplicitGlobalModuleFragment = nullptr;
 
   /// Namespace definitions that we will export when they finish.
   llvm::SmallPtrSet<const NamespaceDecl*, 8> DeferredExportedNamespaces;
@@ -2339,9 +2333,7 @@ private:
 
   /// Helper function to judge if we are in module purview.
   /// Return false if we are not in a module.
-  bool isCurrentModulePurview() const {
-    return getCurrentModule() ? getCurrentModule()->isModulePurview() : false;
-  }
+  bool isCurrentModulePurview() const;
 
   /// Enter the scope of the explicit global module fragment.
   Module *PushGlobalModuleFragment(SourceLocation BeginLoc);
@@ -2349,8 +2341,7 @@ private:
   void PopGlobalModuleFragment();
 
   /// Enter the scope of an implicit global module fragment.
-  Module *PushImplicitGlobalModuleFragment(SourceLocation BeginLoc,
-                                           bool IsExported);
+  Module *PushImplicitGlobalModuleFragment(SourceLocation BeginLoc);
   /// Leave the scope of an implicit global module fragment.
   void PopImplicitGlobalModuleFragment();
 
@@ -2369,9 +2360,11 @@ public:
     return ModuleScopes.empty() ? nullptr : ModuleScopes.back().Module;
   }
 
-  /// Is the module scope we are an interface?
-  bool currentModuleIsInterface() const {
-    return ModuleScopes.empty() ? false : ModuleScopes.back().ModuleInterface;
+  /// Is the module scope we are an implementation unit?
+  bool currentModuleIsImplementation() const {
+    return ModuleScopes.empty()
+               ? false
+               : ModuleScopes.back().Module->isModuleImplementation();
   }
 
   /// Is the module scope we are in a C++ Header Unit?
@@ -13485,6 +13478,10 @@ public:
   /// CUDA lambdas by default is host device function unless it has explicit
   /// host or device attribute.
   void CUDASetLambdaAttrs(CXXMethodDecl *Method);
+
+  /// Record \p FD if it is a CUDA/HIP implicit host device function used on
+  /// device side in device compilation.
+  void CUDARecordImplicitHostDeviceFuncUsedByDevice(const FunctionDecl *FD);
 
   /// Finds a function in \p Matches with highest calling priority
   /// from \p Caller context and erases all functions with lower

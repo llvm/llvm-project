@@ -507,14 +507,7 @@ Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
   // - Truncate if ShAmt is wider, discarding non-significant high-order bits.
   // This prepares ShAmt for llvm.fshl.i8(trunc(ShVal), trunc(ShVal),
   // zext/trunc(ShAmt)).
-  Value *NarrowShAmt;
-  if (ShAmt->getType()->getScalarSizeInBits() < NarrowWidth) {
-    // If ShAmt is narrower than the destination type, zero-extend it.
-    NarrowShAmt = Builder.CreateZExt(ShAmt, DestTy, "shamt.zext");
-  } else {
-    // If ShAmt is wider than the destination type, truncate it.
-    NarrowShAmt = Builder.CreateTrunc(ShAmt, DestTy, "shamt.trunc");
-  }
+  Value *NarrowShAmt = Builder.CreateZExtOrTrunc(ShAmt, DestTy);
 
   Value *X, *Y;
   X = Y = Builder.CreateTrunc(ShVal0, DestTy);
@@ -1226,6 +1219,11 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
         }
       }
     }
+  }
+
+  if (!Zext.hasNonNeg() && isKnownNonNegative(Src, DL, 0, &AC, &Zext, &DT)) {
+    Zext.setNonNeg();
+    return &Zext;
   }
 
   return nullptr;
@@ -2134,9 +2132,12 @@ static bool collectInsertionElements(Value *V, unsigned Shift,
     Type *ElementIntTy = IntegerType::get(C->getContext(), ElementSize);
 
     for (unsigned i = 0; i != NumElts; ++i) {
-      unsigned ShiftI = Shift+i*ElementSize;
-      Constant *Piece = ConstantExpr::getLShr(C, ConstantInt::get(C->getType(),
-                                                                  ShiftI));
+      unsigned ShiftI = Shift + i * ElementSize;
+      Constant *Piece = ConstantFoldBinaryInstruction(
+          Instruction::LShr, C, ConstantInt::get(C->getType(), ShiftI));
+      if (!Piece)
+        return false;
+
       Piece = ConstantExpr::getTrunc(Piece, ElementIntTy);
       if (!collectInsertionElements(Piece, ShiftI, Elements, VecEltTy,
                                     isBigEndian))

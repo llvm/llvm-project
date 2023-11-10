@@ -296,6 +296,10 @@ Attribute Changes in Clang
   is ignored, changed from the former incorrect suggestion to move it past
   declaration specifiers. (`#58637 <https://github.com/llvm/llvm-project/issues/58637>`_)
 
+- Clang now introduced ``[[clang::coro_only_destroy_when_complete]]`` attribute
+  to reduce the size of the destroy functions for coroutines which are known to
+  be destroyed after having reached the final suspend point.
+
 - Clang now supports ``[[clang::code_align(N)]]`` as an attribute which can be
   applied to a loop and specifies the byte alignment for a loop. This attribute
   accepts a positive integer constant initialization expression indicating the
