@@ -5554,8 +5554,8 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
         return new ICmpInst(ICmp.getPredicate(), Builder.CreateOr(X, Y),
                             Constant::getNullValue(X->getType()));
 
-      // If we have mismatched casts and zext has the nneg flag, we can 
-      //  treat the "zext nneg" as "sext". Otherwise, we cannot fold and quit. 
+      // If we have mismatched casts and zext has the nneg flag, we can
+      //  treat the "zext nneg" as "sext". Otherwise, we cannot fold and quit.
 
       auto *NonNegInst0 = dyn_cast<PossiblyNonNegInst>(ICmp.getOperand(0));
       auto *NonNegInst1 = dyn_cast<PossiblyNonNegInst>(ICmp.getOperand(1));
