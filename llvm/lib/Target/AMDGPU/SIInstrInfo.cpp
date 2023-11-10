@@ -2692,6 +2692,9 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   if (CommutedOpcode == -1)
     return nullptr;
 
+  if (Src0Idx > Src1Idx)
+    std::swap(Src0Idx, Src1Idx);
+
   assert(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0) ==
            static_cast<int>(Src0Idx) &&
          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1) ==
