@@ -1,5 +1,5 @@
 # RUN: yaml-bench -canonical %s | FileCheck %s --strict-whitespace
-# CHECK: "first\n \tinner\t\n last"
+# CHECK: "first inner last"
 
  'first
  	inner	

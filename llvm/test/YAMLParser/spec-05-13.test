@@ -1,5 +1,5 @@
 # RUN: yaml-bench -canonical %s | FileCheck %s --strict-whitespace
-# CHECK: "Text containing   \n  both space and\t\n  \ttab\tcharacters"
+# CHECK: "Text containing both space and tab\tcharacters"
 
   "Text containing   
   both space and	

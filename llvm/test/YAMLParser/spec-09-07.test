@@ -4,8 +4,8 @@
 # CHECK-NEXT:   : !!map {
 # CHECK-NEXT:     ? !!str "also simple"
 # CHECK-NEXT:     : !!str "value",
-# CHECK-NEXT:     ? !!str "not a\n  simple key"
-# CHECK-NEXT:     : !!str "any\n  value",
+# CHECK-NEXT:     ? !!str "not a simple key"
+# CHECK-NEXT:     : !!str "any value",
 # CHECK-NEXT:   },
 # CHECK-NEXT: }
 
