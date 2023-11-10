@@ -745,7 +745,7 @@ public:
   ASTReader *getChain() const { return Chain; }
 
   bool isWritingStdCXXNamedModules() const {
-    return WritingModule && WritingModule->isModulePurview();
+    return WritingModule && WritingModule->isNamedModule();
   }
 
 private:
