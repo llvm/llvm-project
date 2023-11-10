@@ -1413,7 +1413,7 @@ bool X86AsmParser::MatchRegisterByName(MCRegister &RegNo, StringRef RegName,
     }
   }
 
- if (X86II::isApxExtendedReg(RegNo))
+  if (X86II::isApxExtendedReg(RegNo))
     UseApxExtendedReg = true;
 
   // If this is "db[0-15]", match it as an alias

@@ -633,7 +633,8 @@ void X86MCCodeEmitter::emitMemModRMByte(
       case X86::SBB64rm:
       case X86::SUB64rm:
       case X86::XOR64rm:
-        // We haven't support relocation for REX2 prefix, so temporarily use REX relocation
+        // We haven't support relocation for REX2 prefix, so temporarily use REX
+        // relocation.
         // TODO: Support new relocation for REX2.
         return (Kind == REX || Kind == REX2) ? X86::reloc_riprel_4byte_relax_rex
                                              : X86::reloc_riprel_4byte_relax;

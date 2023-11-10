@@ -1223,7 +1223,7 @@ namespace X86II {
         (RegNo >= X86::ZMM8 && RegNo <= X86::ZMM31))
       return true;
 
-   if (isApxExtendedReg(RegNo))
+    if (isApxExtendedReg(RegNo))
       return true;
 
     switch (RegNo) {
