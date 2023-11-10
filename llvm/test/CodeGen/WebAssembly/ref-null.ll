@@ -2,7 +2,7 @@
 ; RUN: llc --mtriple=wasm32-unknown-unknown -mattr=+reference-types < %s | FileCheck %s
 
 %externref = type target("wasm.externref")
-%funcref = type ptr addrspace(20)   ;; addrspace 20 is nonintegral
+%funcref = type target("wasm.funcref")
 
 declare %externref @llvm.wasm.ref.null.extern() nounwind
 declare %funcref @llvm.wasm.ref.null.func() nounwind

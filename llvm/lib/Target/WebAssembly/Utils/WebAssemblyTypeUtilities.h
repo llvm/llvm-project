@@ -34,9 +34,8 @@ inline bool isWebAssemblyExternrefType(const Type *Ty) {
 
 /// Return true if this is a WebAssembly Funcref Type.
 inline bool isWebAssemblyFuncrefType(const Type *Ty) {
-  return Ty->isPointerTy() &&
-         Ty->getPointerAddressSpace() ==
-             WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF;
+  const TargetExtType *TargetTy = dyn_cast<TargetExtType>(Ty);
+  return TargetTy && TargetTy->getName() == "wasm.funcref";
 }
 
 /// Return true if this is a WebAssembly Reference Type.

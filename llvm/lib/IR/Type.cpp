@@ -262,8 +262,7 @@ Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
 }
 
 Type *Type::getWasm_FuncrefTy(LLVMContext &C) {
-  // opaque pointer in addrspace(20)
-  static PointerType *Ty = PointerType::get(C, 20);
+  static TargetExtType *Ty = TargetExtType::get(C, "wasm.funcref", {}, {});
   return Ty;
 }
 
@@ -840,7 +839,7 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
                           TargetExtType::HasZeroInit);
 
   // Opaque types in the WebAssembly name space.
-  if (Name == "wasm.externref")
+  if (Name.startswith("wasm."))
     return TargetTypeInfo(PointerType::getUnqual(C), TargetExtType::HasZeroInit, TargetExtType::CanBeGlobal);
 
   return TargetTypeInfo(Type::getVoidTy(C));
