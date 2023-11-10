@@ -55,7 +55,6 @@
 !rhsTensorMap = !nvgpu.tensormap.descriptor<tensor = memref<64x64xf16, 3>, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>
 
 func.func private @printMemrefF32(memref<*xf32>)
-llvm.func @printf(!llvm.ptr<i8>, ...) -> i32
 
 memref.global "private" @dynamicShmem : memref<0xf16, 3> {alignment = 16 : i64}
 memref.global "private" @accShmem : memref<0xf32, 3> {alignment = 16 : i64}
