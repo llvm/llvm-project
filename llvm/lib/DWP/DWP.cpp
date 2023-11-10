@@ -201,7 +201,8 @@ static Error addAllTypesFromDWP(
     MCStreamer &Out, MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
     const DWARFUnitIndex &TUIndex, MCSection *OutputTypes, StringRef Types,
     const UnitIndexEntry &TUEntry, uint32_t &TypesOffset,
-    unsigned TypesContributionIndex, bool ContinueOnCuIndexOverflow) {
+    unsigned TypesContributionIndex, bool ContinueOnCuIndexOverflow,
+    bool &SeeOverflowFlag) {
   Out.switchSection(OutputTypes);
   for (const DWARFUnitIndex::Entry &E : TUIndex.getRows()) {
     auto *I = E.getContributions();
@@ -235,6 +236,8 @@ static Error addAllTypesFromDWP(
       if (Error Err = sectionOverflowErrorOrWarning(
               OldOffset, TypesOffset, "Types", ContinueOnCuIndexOverflow))
         return Err;
+      SeeOverflowFlag = true;
+      return Error::success();
     }
   }
   return Error::success();
@@ -244,7 +247,7 @@ static Error addAllTypesFromTypesSection(
     MCStreamer &Out, MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
     MCSection *OutputTypes, const std::vector<StringRef> &TypesSections,
     const UnitIndexEntry &CUEntry, uint32_t &TypesOffset,
-    bool ContinueOnCuIndexOverflow) {
+    bool ContinueOnCuIndexOverflow, bool &SeeOverflowFlag) {
   for (StringRef Types : TypesSections) {
     Out.switchSection(OutputTypes);
     uint64_t Offset = 0;
@@ -276,6 +279,8 @@ static Error addAllTypesFromTypesSection(
         if (Error Err = sectionOverflowErrorOrWarning(
                 OldOffset, TypesOffset, "types", ContinueOnCuIndexOverflow))
           return Err;
+        SeeOverflowFlag = true;
+        return Error::success();
       }
     }
   }
@@ -613,6 +618,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
   uint32_t ContributionOffsets[8] = {};
   uint16_t Version = 0;
   uint32_t IndexVersion = 0;
+  bool SeeOverflowFlag = false;
 
   DWPStringPool Strings(Out, StrSection);
 
@@ -687,12 +693,15 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
         uint32_t SectionIndex = 0;
         for (auto &Section : Obj.sections()) {
           if (SectionIndex == Index) {
-            return sectionOverflowErrorOrWarning(
+            if (Error Err sectionOverflowErrorOrWarning(
                 OldOffset, ContributionOffsets[Index], *Section.getName(),
-                ContinueOnCuIndexOverflow);
+                ContinueOnCuIndexOverflow))
+              return Err;
           }
           ++SectionIndex;
         }
+        SeeOverflowFlag = true;
+        break;
       }
     }
 
@@ -722,6 +731,8 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
                     InfoSectionOffset, InfoSectionOffset + C.getLength32(),
                     "debug_info", ContinueOnCuIndexOverflow))
               return Err;
+            SeeOverflowFlag = true;
+            break;
           }
 
           UnitOffset += C.getLength32();
@@ -752,6 +763,8 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
               Info.substr(UnitOffset - C.getLength32(), C.getLength32()));
           InfoSectionOffset += C.getLength32();
         }
+        if (SeeOverflowFlag)
+          break;
       }
 
       if (!FoundCUUnit)
@@ -762,7 +775,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
         if (Error Err = addAllTypesFromTypesSection(
                 Out, TypeIndexEntries, TypesSection, CurTypesSection, CurEntry,
                 ContributionOffsets[getContributionIndex(DW_SECT_EXT_TYPES, 2)],
-                ContinueOnCuIndexOverflow))
+                ContinueOnCuIndexOverflow, SeeOverflowFlag))
           return Err;
       }
       continue;
@@ -860,9 +873,11 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
       if (Error Err = addAllTypesFromDWP(
               Out, TypeIndexEntries, TUIndex, OutSection, TypeInputSection,
               CurEntry, ContributionOffsets[TypesContributionIndex],
-              TypesContributionIndex, ContinueOnCuIndexOverflow))
+              TypesContributionIndex, ContinueOnCuIndexOverflow, SeeOverflowFlag))
         return Err;
     }
+    if (SeeOverflowFlag)
+      break;
   }
 
   if (Version < 5) {
