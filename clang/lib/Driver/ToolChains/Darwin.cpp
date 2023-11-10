@@ -2470,14 +2470,19 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
 
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
-    // On Darwin, libc++ can be installed in one of the following two places:
+    // On Darwin, libc++ can be installed in one of the following places:
     // 1. Alongside the compiler in         <install>/include/c++/v1
-    // 2. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
+    // 2. Alongside the compiler in         <clang-executable-location>/../include/c++/v1
+    // 3. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
     //
-    // The precendence of paths is as listed above, i.e. we take the first path
-    // that exists. Also note that we never include libc++ twice -- we take the
-    // first path that exists and don't send the other paths to CC1 (otherwise
+    // The precedence of paths is as listed above, i.e. we take the first path
+    // that exists. Note that we never include libc++ twice -- we take the first
+    // path that exists and don't send the other paths to CC1 (otherwise
     // include_next could break).
+    //
+    // Also note that in most cases, (1) and (2) are exactly the same path.
+    // Those two paths will differ only when the `clang` program being run
+    // is actually a symlink to the real executable.
 
     // Check for (1)
     // Get from '<install>/bin' to '<install>/include/c++/v1'.
@@ -2494,7 +2499,7 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
                    << "\"\n";
     }
 
-    // Check for the folder where the executable is located, if different.
+    // (2) Check for the folder where the executable is located, if different.
     if (getDriver().getInstalledDir() != getDriver().Dir) {
       InstallBin = llvm::StringRef(getDriver().Dir.c_str());
       llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
