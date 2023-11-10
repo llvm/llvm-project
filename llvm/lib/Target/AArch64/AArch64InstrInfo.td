@@ -94,7 +94,7 @@ def HasTLB_RMI          : Predicate<"Subtarget->hasTLB_RMI()">,
 def HasFlagM         : Predicate<"Subtarget->hasFlagM()">,
                        AssemblerPredicateWithAll<(all_of FeatureFlagM), "flagm">;
 
-def HasRCPC_IMMO      : Predicate<"Subtarget->hasRCPCImm()">,
+def HasRCPC_IMMO      : Predicate<"Subtarget->hasRCPC_IMMO()">,
                        AssemblerPredicateWithAll<(all_of FeatureRCPC_IMMO), "rcpc-immo">;
 
 def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,
@@ -166,6 +166,35 @@ def HasFP8           : Predicate<"Subtarget->hasFP8()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFP8), "fp8">;
 def HasFAMINMAX      : Predicate<"Subtarget->hasFAMINMAX()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFAMINMAX), "faminmax">;
+def HasFP8FMA        : Predicate<"Subtarget->hasFP8FMA()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFP8FMA), "fp8fma">;
+def HasSSVE_FP8FMA   : Predicate<"Subtarget->SSVE_FP8FMA() || "
+                                 "(Subtarget->hasSVE2() && Subtarget->hasFP8FMA())">,
+                                 AssemblerPredicateWithAll<(any_of FeatureSSVE_FP8FMA,
+                                                           (all_of FeatureSVE2, FeatureFP8FMA)),
+                                                           "ssve-fp8fma or (sve2 and fp8fma)">;
+def HasFP8DOT2       : Predicate<"Subtarget->hasFP8DOT2()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFP8DOT2), "fp8dot2">;
+def HasSSVE_FP8DOT2  : Predicate<"Subtarget->hasSSVE_FP8DOT2() || "
+                                 "(Subtarget->hasSVE2() && Subtarget->hasFP8DOT2())">,
+                                 AssemblerPredicateWithAll<(any_of FeatureSSVE_FP8DOT2,
+                                                           (all_of FeatureSVE2, FeatureFP8DOT2)),
+                                "ssve-fp8dot2 or (sve2 and fp8dot2)">;
+def HasFP8DOT4       : Predicate<"Subtarget->hasFP8DOT4()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFP8DOT4), "fp8dot4">;
+def HasSSVE_FP8DOT4  : Predicate<"Subtarget->hasSSVE_FP8DOT4() || "
+                                 "(Subtarget->hasSVE2() && Subtarget->hasFP8DOT4())">,
+                                 AssemblerPredicateWithAll<(any_of FeatureSSVE_FP8DOT4,
+                                                           (all_of FeatureSVE2, FeatureFP8DOT4)),
+                                 "ssve-fp8dot4 or (sve2 and fp8dot4)">;
+def HasLUT          : Predicate<"Subtarget->hasLUT()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureLUT), "lut">;
+def HasSME_LUTv2     : Predicate<"Subtarget->hasSME_LUTv2()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSME_LUTv2), "sme-lutv2">;
+def HasSMEF8F16     : Predicate<"Subtarget->hasSMEF8F16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF8F16), "sme-f8f16">;
+def HasSMEF8F32     : Predicate<"Subtarget->hasSMEF8F32()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF8F32), "sme-f8f32">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -841,6 +870,9 @@ def AArch64rshrnb : SDNode<"AArch64ISD::RSHRNB_I", SD_AArch64rshrnb>;
 def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
                             [(AArch64rshrnb node:$rs, node:$i),
                             (int_aarch64_sve_rshrnb node:$rs, node:$i)]>;
+
+def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 1,
+                             [SDTCisInt<0>, SDTCisVec<1>]>, []>;
 
 // Match add node and also treat an 'or' node is as an 'add' if the or'ed operands
 // have no common bits.
@@ -5896,6 +5928,17 @@ def : Pat<(v8i16 (concat_vectors (v4i16 (trunc (v4i32 V128:$Vn))),
 def : Pat<(v4i32 (concat_vectors (v2i32 (trunc (v2i64 V128:$Vn))),
                                  (v2i32 (trunc (v2i64 V128:$Vm))))),
           (UZP1v4i32 V128:$Vn, V128:$Vm)>;
+// These are the same as above, with an optional assertzext node that can be
+// generated from fptoi lowering.
+def : Pat<(v16i8 (concat_vectors (v8i8 (assertzext (trunc (v8i16 V128:$Vn)))),
+                                 (v8i8 (assertzext (trunc (v8i16 V128:$Vm)))))),
+          (UZP1v16i8 V128:$Vn, V128:$Vm)>;
+def : Pat<(v8i16 (concat_vectors (v4i16 (assertzext (trunc (v4i32 V128:$Vn)))),
+                                 (v4i16 (assertzext (trunc (v4i32 V128:$Vm)))))),
+          (UZP1v8i16 V128:$Vn, V128:$Vm)>;
+def : Pat<(v4i32 (concat_vectors (v2i32 (assertzext (trunc (v2i64 V128:$Vn)))),
+                                 (v2i32 (assertzext (trunc (v2i64 V128:$Vm)))))),
+          (UZP1v4i32 V128:$Vn, V128:$Vm)>;
 
 def : Pat<(v16i8 (concat_vectors
                  (v8i8 (trunc (AArch64vlshr (v8i16 V128:$Vn), (i32 8)))),
@@ -5929,6 +5972,13 @@ def : Pat<(v16i8 (int_aarch64_neon_tbx1 (v16i8 V128:$Rd),
                    (v16i8 V128:$Ri), (v16i8 V128:$Rn))),
           (TBXv16i8One V128:$Rd, V128:$Ri, V128:$Rn)>;
 
+//----------------------------------------------------------------------------
+// AdvSIMD LUT instructions
+//----------------------------------------------------------------------------
+let Predicates = [HasLUT] in {
+  defm LUT2 : BaseSIMDTableLookupIndexed2<"luti2">;
+  defm LUT4 : BaseSIMDTableLookupIndexed4<"luti4">;
+}
 
 //----------------------------------------------------------------------------
 // AdvSIMD scalar DUP instruction
@@ -6651,6 +6701,43 @@ def : Pat<(v2i32 (AArch64umaxv (v2i32 V64:$Rn))),
 defm : SIMDAcrossLanesUnsignedIntrinsic<"UMINV", AArch64uminv>;
 def : Pat<(v2i32 (AArch64uminv (v2i32 V64:$Rn))),
           (UMINPv2i32 V64:$Rn, V64:$Rn)>;
+
+// For vecreduce_{opc} used by GlobalISel, not SDAG at the moment
+// because GlobalISel allows us to specify the return register to be a FPR
+multiclass SIMDAcrossLanesVecReductionIntrinsic<string baseOpc,
+                                               SDPatternOperator opNode> {
+def : Pat<(i8 (opNode (v8i8 FPR64:$Rn))),
+          (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) FPR64:$Rn)>;
+
+def : Pat<(i8 (opNode (v16i8 FPR128:$Rn))),
+          (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) FPR128:$Rn)>;
+
+def : Pat<(i16 (opNode (v4i16 FPR64:$Rn))),
+          (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) FPR64:$Rn)>;
+
+def : Pat<(i16 (opNode (v8i16 FPR128:$Rn))),
+          (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) FPR128:$Rn)>;
+
+def : Pat<(i32 (opNode (v4i32 V128:$Rn))), 
+          (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn)>;
+}
+
+// For v2i32 source type, the pairwise instruction can be used instead
+defm : SIMDAcrossLanesVecReductionIntrinsic<"UMINV", vecreduce_umin>;
+def : Pat<(i32 (vecreduce_umin (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (UMINPv2i32 V64:$Rn, V64:$Rn), ssub))>;
+
+defm : SIMDAcrossLanesVecReductionIntrinsic<"UMAXV", vecreduce_umax>;
+def : Pat<(i32 (vecreduce_umax (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (UMAXPv2i32 V64:$Rn, V64:$Rn), ssub))>;
+
+defm : SIMDAcrossLanesVecReductionIntrinsic<"SMINV", vecreduce_smin>;
+def : Pat<(i32 (vecreduce_smin (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (SMINPv2i32 V64:$Rn, V64:$Rn), ssub))>;
+
+defm : SIMDAcrossLanesVecReductionIntrinsic<"SMAXV", vecreduce_smax>;
+def : Pat<(i32 (vecreduce_smax (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (SMAXPv2i32 V64:$Rn, V64:$Rn), ssub))>;
 
 multiclass SIMDAcrossLanesSignedLongIntrinsic<string baseOpc, Intrinsic intOp> {
   def : Pat<(i32 (intOp (v8i8 V64:$Rn))),
@@ -9272,6 +9359,31 @@ let Predicates = [HasFAMINMAX] in {
  defm FAMIN : SIMDThreeSameVectorFP<0b1, 0b1, 0b011, "famin", null_frag>;
 } // End let Predicates = [HasFAMAXMIN]
 
+let Predicates = [HasFP8FMA] in {
+ defm FMLALBlane : SIMDThreeSameVectorMLAIndex<0b0, "fmlalb">;
+ defm FMLALTlane : SIMDThreeSameVectorMLAIndex<0b1, "fmlalt">;
+ defm FMLALLBBlane : SIMDThreeSameVectorMLALIndex<0b0, 0b00, "fmlallbb">;
+ defm FMLALLBTlane : SIMDThreeSameVectorMLALIndex<0b0, 0b01, "fmlallbt">;
+ defm FMLALLTBlane : SIMDThreeSameVectorMLALIndex<0b1, 0b00, "fmlalltb">;
+ defm FMLALLTTlane : SIMDThreeSameVectorMLALIndex<0b1, 0b01, "fmlalltt">;
+
+ defm FMLALB : SIMDThreeSameVectorMLA<0b0, "fmlalb">;
+ defm FMLALT : SIMDThreeSameVectorMLA<0b1, "fmlalt">;
+ defm FMLALLBB : SIMDThreeSameVectorMLAL<0b0, 0b00, "fmlallbb">;
+ defm FMLALLBT : SIMDThreeSameVectorMLAL<0b0, 0b01, "fmlallbt">;
+ defm FMLALLTB : SIMDThreeSameVectorMLAL<0b1, 0b00, "fmlalltb">;
+ defm FMLALLTT : SIMDThreeSameVectorMLAL<0b1, 0b01, "fmlalltt">;
+} // End let Predicates = [HasFP8FMA]
+
+let Predicates = [HasFP8DOT2] in {
+ defm FDOTlane : SIMDThreeSameVectorFP8DOT2Index<"fdot">;
+ defm FDOT : SIMDThreeSameVectorDOT2<"fdot">;
+} // End let Predicates = [HasFP8DOT2]
+
+let Predicates = [HasFP8DOT4] in {
+ defm FDOTlane : SIMDThreeSameVectorFP8DOT4Index<"fdot">;
+ defm FDOT : SIMDThreeSameVectorDOT4<"fdot">;
+} // End let Predicates = [HasFP8DOT4]
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

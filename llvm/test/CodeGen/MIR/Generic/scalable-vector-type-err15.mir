@@ -1,0 +1,10 @@
+# RUN: not llc -run-pass none -o - %s 2>&1 | FileCheck %s
+
+---
+name: err_after_vscale0
+body: |
+  bb.0:
+    %0:_(notatype) = IMPLICIT_DEF
+...
+
+# CHECK: expected sN, pA, <M x sN>, <M x pA>, <vscale x M x sN>, or <vscale x M x pA> for GlobalISel type

@@ -470,6 +470,9 @@ private:
   void DidForkSwitchSoftwareBreakpoints(bool enable);
   void DidForkSwitchHardwareTraps(bool enable);
 
+  void ParseExpeditedRegisters(ExpeditedRegisterMap &expedited_register_map,
+                               lldb::ThreadSP thread_sp);
+
   // Lists of register fields generated from the remote's target XML.
   // Pointers to these RegisterFlags will be set in the register info passed
   // back to the upper levels of lldb. Doing so is safe because this class will

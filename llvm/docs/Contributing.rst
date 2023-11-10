@@ -98,7 +98,10 @@ To make sure the right people see your patch, please select suitable reviewers
 and add them to your patch when requesting a review. Suitable reviewers are the
 code owner (see CODE_OWNERS.txt) and other people doing work in the area your
 patch touches. Github will normally suggest some reviewers based on rules or
-people that have worked on the code before.
+people that have worked on the code before. If you are a new contributor, you
+will not be able to select reviewers in such a way, in which case you can still
+get the attention of potential reviewers by CC'ing them in a comment -- just
+@name them.
 
 A reviewer may request changes or ask questions during the review. If you are
 uncertain on how to provide test cases, documentation, etc., feel free to ask
@@ -110,7 +113,7 @@ access, please let people know during the review and someone should commit it
 on your behalf.
 
 If you have received no comments on your patch for a week, you can request a
-review by 'ping'ing the GitHub PR with "Ping." The common courtesy 'ping' rate
+review by 'ping'ing the GitHub PR with "Ping". The common courtesy 'ping' rate
 is once a week. Please remember that you are asking for valuable time from other
 professional developers.
 

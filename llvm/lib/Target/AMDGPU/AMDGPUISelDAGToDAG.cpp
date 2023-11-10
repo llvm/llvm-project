@@ -19,6 +19,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600RegisterInfo.h"
+#include "SIISelLowering.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -595,11 +596,15 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
       break;
 
     uint64_t Imm;
-    if (ConstantFPSDNode *FP = dyn_cast<ConstantFPSDNode>(N))
+    if (ConstantFPSDNode *FP = dyn_cast<ConstantFPSDNode>(N)) {
       Imm = FP->getValueAPF().bitcastToAPInt().getZExtValue();
-    else {
+      if (AMDGPU::isValid32BitLiteral(Imm, true))
+        break;
+    } else {
       ConstantSDNode *C = cast<ConstantSDNode>(N);
       Imm = C->getZExtValue();
+      if (AMDGPU::isValid32BitLiteral(Imm, false))
+        break;
     }
 
     SDLoc DL(N);
@@ -2259,6 +2264,34 @@ bool AMDGPUDAGToDAGISel::isCBranchSCC(const SDNode *N) const {
   return false;
 }
 
+static SDValue combineBallotPattern(SDValue VCMP, bool &Negate) {
+  assert(VCMP->getOpcode() == AMDGPUISD::SETCC);
+  // Special case for amdgcn.ballot:
+  // %Cond = i1 (and/or combination of i1 ISD::SETCCs)
+  // %VCMP = i(WaveSize) AMDGPUISD::SETCC (ext %Cond), 0, setne/seteq
+  // =>
+  // Use i1 %Cond value instead of i(WaveSize) %VCMP.
+  // This is possible because divergent ISD::SETCC is selected as V_CMP and
+  // Cond becomes a i(WaveSize) full mask value.
+  // Note that ballot doesn't use SETEQ condition but its easy to support it
+  // here for completeness, so in this case Negate is set true on return.
+  auto VCMP_CC = cast<CondCodeSDNode>(VCMP.getOperand(2))->get();
+  auto *VCMP_CRHS = dyn_cast<ConstantSDNode>(VCMP.getOperand(1));
+  if ((VCMP_CC == ISD::SETEQ || VCMP_CC == ISD::SETNE) && VCMP_CRHS &&
+      VCMP_CRHS->isZero()) {
+
+    auto Cond = VCMP.getOperand(0);
+    if (ISD::isExtOpcode(Cond->getOpcode())) // Skip extension.
+      Cond = Cond.getOperand(0);
+
+    if (isBoolSGPR(Cond)) {
+      Negate = VCMP_CC == ISD::SETEQ;
+      return Cond;
+    }
+  }
+  return SDValue();
+}
+
 void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
   SDValue Cond = N->getOperand(1);
 
@@ -2272,11 +2305,50 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
   const SIRegisterInfo *TRI = ST->getRegisterInfo();
 
   bool UseSCCBr = isCBranchSCC(N) && isUniformBr(N);
-  unsigned BrOp = UseSCCBr ? AMDGPU::S_CBRANCH_SCC1 : AMDGPU::S_CBRANCH_VCCNZ;
+  bool AndExec = !UseSCCBr;
+  bool Negate = false;
+
+  if (Cond.getOpcode() == ISD::SETCC &&
+      Cond->getOperand(0)->getOpcode() == AMDGPUISD::SETCC) {
+    SDValue VCMP = Cond->getOperand(0);
+    auto CC = cast<CondCodeSDNode>(Cond->getOperand(2))->get();
+    auto *CRHS = dyn_cast<ConstantSDNode>(Cond->getOperand(1));
+    if ((CC == ISD::SETEQ || CC == ISD::SETNE) && CRHS && CRHS->isZero() &&
+        // TODO: make condition below an assert after fixing ballot bitwidth.
+        VCMP.getValueType().getSizeInBits() == ST->getWavefrontSize()) {
+      // %VCMP = i(WaveSize) AMDGPUISD::SETCC ...
+      // %C = i1 ISD::SETCC %VCMP, 0, setne/seteq
+      // BRCOND i1 %C, %BB
+      // =>
+      // %VCMP = i(WaveSize) AMDGPUISD::SETCC ...
+      // VCC = COPY i(WaveSize) %VCMP
+      // S_CBRANCH_VCCNZ/VCCZ %BB
+      Negate = CC == ISD::SETEQ;
+      bool NegatedBallot = false;
+      if (auto BallotCond = combineBallotPattern(VCMP, NegatedBallot)) {
+        Cond = BallotCond;
+        UseSCCBr = !BallotCond->isDivergent();
+        Negate = Negate ^ NegatedBallot;
+      } else {
+        // TODO: don't use SCC here assuming that AMDGPUISD::SETCC is always
+        // selected as V_CMP, but this may change for uniform condition.
+        Cond = VCMP;
+        UseSCCBr = false;
+      }
+    }
+    // Cond is either V_CMP resulted from AMDGPUISD::SETCC or a combination of
+    // V_CMPs resulted from ballot or ballot has uniform condition and SCC is
+    // used.
+    AndExec = false;
+  }
+
+  unsigned BrOp =
+      UseSCCBr ? (Negate ? AMDGPU::S_CBRANCH_SCC0 : AMDGPU::S_CBRANCH_SCC1)
+               : (Negate ? AMDGPU::S_CBRANCH_VCCZ : AMDGPU::S_CBRANCH_VCCNZ);
   Register CondReg = UseSCCBr ? AMDGPU::SCC : TRI->getVCC();
   SDLoc SL(N);
 
-  if (!UseSCCBr) {
+  if (AndExec) {
     // This is the case that we are selecting to S_CBRANCH_VCCNZ.  We have not
     // analyzed what generates the vcc value, so we do not know whether vcc
     // bits for disabled lanes are 0.  Thus we need to mask out bits for
@@ -3014,7 +3086,7 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
     if (!RC || SIRI->isSGPRClass(RC))
       return false;
 
-    if (RC != &AMDGPU::VS_32RegClass) {
+    if (RC != &AMDGPU::VS_32RegClass && RC != &AMDGPU::VS_64RegClass) {
       AllUsesAcceptSReg = false;
       SDNode * User = *U;
       if (User->isMachineOpcode()) {
@@ -3026,7 +3098,8 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
           if (SII->findCommutedOpIndices(Desc, OpIdx, CommuteIdx1)) {
             unsigned CommutedOpNo = CommuteIdx1 - Desc.getNumDefs();
             const TargetRegisterClass *CommutedRC = getOperandRegClass(*U, CommutedOpNo);
-            if (CommutedRC == &AMDGPU::VS_32RegClass)
+            if (CommutedRC == &AMDGPU::VS_32RegClass ||
+                CommutedRC == &AMDGPU::VS_64RegClass)
               AllUsesAcceptSReg = true;
           }
         }

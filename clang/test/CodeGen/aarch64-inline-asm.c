@@ -80,3 +80,18 @@ void test_tied_earlyclobber(void) {
   asm("" : "+&r"(a));
   // CHECK: call i32 asm "", "=&{x1},0"(i32 %0)
 }
+
+void test_reduced_gpr_constraints(int var32, long var64) {
+  asm("add w0, w0, %0" : : "Uci"(var32) : "w0");
+// CHECK: [[ARG1:%.+]] = load i32, ptr
+// CHECK: call void asm sideeffect "add w0, w0, $0", "@3Uci,~{w0}"(i32 [[ARG1]])
+  asm("add x0, x0, %0" : : "Uci"(var64) : "x0");
+// CHECK: [[ARG1:%.+]] = load i64, ptr
+// CHECK: call void asm sideeffect "add x0, x0, $0", "@3Uci,~{x0}"(i64 [[ARG1]])
+  asm("add w0, w0, %0" : : "Ucj"(var32) : "w0");
+// CHECK: [[ARG2:%.+]] = load i32, ptr
+// CHECK: call void asm sideeffect "add w0, w0, $0", "@3Ucj,~{w0}"(i32 [[ARG2]])
+  asm("add x0, x0, %0" : : "Ucj"(var64) : "x0");
+// CHECK: [[ARG2:%.+]] = load i64, ptr
+// CHECK: call void asm sideeffect "add x0, x0, $0", "@3Ucj,~{x0}"(i64 [[ARG2]])
+}

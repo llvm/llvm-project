@@ -12,6 +12,7 @@
 #include "Var.h"
 
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "llvm/ADT/STLForwardCompat.h"
 
 namespace mlir {
 namespace sparse_tensor {
@@ -22,7 +23,7 @@ enum class ExprKind : bool { Dimension = false, Level = true };
 
 constexpr VarKind getVarKindAllowedInExpr(ExprKind ek) {
   using VK = std::underlying_type_t<VarKind>;
-  return VarKind{2 * static_cast<VK>(!to_underlying(ek))};
+  return VarKind{2 * static_cast<VK>(!llvm::to_underlying(ek))};
 }
 static_assert(getVarKindAllowedInExpr(ExprKind::Dimension) == VarKind::Level &&
               getVarKindAllowedInExpr(ExprKind::Level) == VarKind::Dimension);

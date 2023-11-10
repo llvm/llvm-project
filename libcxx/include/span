@@ -146,7 +146,6 @@ template<class R>
 #include <__utility/forward.h>
 #include <array>        // for array
 #include <cstddef>      // for byte
-#include <limits>
 #include <version>
 
 // standard-mandated includes

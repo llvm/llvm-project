@@ -1818,6 +1818,37 @@ bool TargetLowering::SimplifyDemandedBits(
       if ((ShAmt < DemandedBits.getActiveBits()) &&
           ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO))
         return true;
+
+      // Narrow shift to lower half - similar to ShrinkDemandedOp.
+      // (shl i64:x, K) -> (i64 zero_extend (shl (i32 (trunc i64:x)), K))
+      // Only do this if we demand the upper half so the knownbits are correct.
+      unsigned HalfWidth = BitWidth / 2;
+      if ((BitWidth % 2) == 0 && !VT.isVector() && ShAmt < HalfWidth &&
+          DemandedBits.countLeadingOnes() >= HalfWidth) {
+        EVT HalfVT = EVT::getIntegerVT(*TLO.DAG.getContext(), HalfWidth);
+        if (isNarrowingProfitable(VT, HalfVT) &&
+            isTypeDesirableForOp(ISD::SHL, HalfVT) &&
+            isTruncateFree(VT, HalfVT) && isZExtFree(HalfVT, VT) &&
+            (!TLO.LegalOperations() || isOperationLegal(ISD::SHL, HalfVT))) {
+          // If we're demanding the upper bits at all, we must ensure
+          // that the upper bits of the shift result are known to be zero,
+          // which is equivalent to the narrow shift being NUW.
+          if (bool IsNUW = (Known.countMinLeadingZeros() >= HalfWidth)) {
+            bool IsNSW = Known.countMinSignBits() > HalfWidth;
+            SDNodeFlags Flags;
+            Flags.setNoSignedWrap(IsNSW);
+            Flags.setNoUnsignedWrap(IsNUW);
+            SDValue NewOp = TLO.DAG.getNode(ISD::TRUNCATE, dl, HalfVT, Op0);
+            SDValue NewShiftAmt = TLO.DAG.getShiftAmountConstant(
+                ShAmt, HalfVT, dl, TLO.LegalTypes());
+            SDValue NewShift = TLO.DAG.getNode(ISD::SHL, dl, HalfVT, NewOp,
+                                               NewShiftAmt, Flags);
+            SDValue NewExt =
+                TLO.DAG.getNode(ISD::ZERO_EXTEND, dl, VT, NewShift);
+            return TLO.CombineTo(Op, NewExt);
+          }
+        }
+      }
     } else {
       // This is a variable shift, so we can't shift the demand mask by a known
       // amount. But if we are not demanding high bits, then we are not
@@ -2371,11 +2402,17 @@ bool TargetLowering::SimplifyDemandedBits(
         return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, dl, VT, Src));
     }
 
+    SDNodeFlags Flags = Op->getFlags();
     APInt InDemandedBits = DemandedBits.trunc(InBits);
     APInt InDemandedElts = DemandedElts.zext(InElts);
     if (SimplifyDemandedBits(Src, InDemandedBits, InDemandedElts, Known, TLO,
-                             Depth + 1))
+                             Depth + 1)) {
+      if (Flags.hasNonNeg()) {
+        Flags.setNonNeg(false);
+        Op->setFlags(Flags);
+      }
       return true;
+    }
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     assert(Known.getBitWidth() == InBits && "Src width has changed?");
     Known = Known.zext(BitWidth);
@@ -5073,6 +5110,21 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       }
     }
 
+    // setueq/setoeq X, (fabs Inf) -> is_fpclass X, fcInf
+    if (isOperationLegalOrCustom(ISD::IS_FPCLASS, N0.getValueType()) &&
+        !isFPImmLegal(CFP->getValueAPF(), CFP->getValueType(0))) {
+      bool IsFabs = N0.getOpcode() == ISD::FABS;
+      SDValue Op = IsFabs ? N0.getOperand(0) : N0;
+      if ((Cond == ISD::SETOEQ || Cond == ISD::SETUEQ) && CFP->isInfinity()) {
+        FPClassTest Flag = CFP->isNegative() ? (IsFabs ? fcNone : fcNegInf)
+                                             : (IsFabs ? fcInf : fcPosInf);
+        if (Cond == ISD::SETUEQ)
+          Flag |= fcNan;
+        return DAG.getNode(ISD::IS_FPCLASS, dl, VT, Op,
+                           DAG.getTargetConstant(Flag, dl, MVT::i32));
+      }
+    }
+
     // If the condition is not legal, see if we can find an equivalent one
     // which is legal.
     if (!isCondCodeLegal(Cond, N0.getSimpleValueType())) {
@@ -6027,6 +6079,49 @@ TargetLowering::BuildSREMPow2(SDNode *N, const APInt &Divisor,
   if (TLI.isIntDivCheap(N->getValueType(0), Attr))
     return SDValue(N, 0); // Lower SREM as SREM
   return SDValue();
+}
+
+/// Build sdiv by power-of-2 with conditional move instructions
+/// Ref: "Hacker's Delight" by Henry Warren 10-1
+/// If conditional move/branch is preferred, we lower sdiv x, +/-2**k into:
+///   bgez x, label
+///   add x, x, 2**k-1
+/// label:
+///   sra res, x, k
+///   neg res, res (when the divisor is negative)
+SDValue TargetLowering::buildSDIVPow2WithCMov(
+    SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
+    SmallVectorImpl<SDNode *> &Created) const {
+  unsigned Lg2 = Divisor.countr_zero();
+  EVT VT = N->getValueType(0);
+
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  APInt Lg2Mask = APInt::getLowBitsSet(VT.getSizeInBits(), Lg2);
+  SDValue Pow2MinusOne = DAG.getConstant(Lg2Mask, DL, VT);
+
+  // If N0 is negative, we need to add (Pow2 - 1) to it before shifting right.
+  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue Cmp = DAG.getSetCC(DL, CCVT, N0, Zero, ISD::SETLT);
+  SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, Pow2MinusOne);
+  SDValue CMov = DAG.getNode(ISD::SELECT, DL, VT, Cmp, Add, N0);
+
+  Created.push_back(Cmp.getNode());
+  Created.push_back(Add.getNode());
+  Created.push_back(CMov.getNode());
+
+  // Divide by pow2.
+  SDValue SRA =
+      DAG.getNode(ISD::SRA, DL, VT, CMov, DAG.getConstant(Lg2, DL, VT));
+
+  // If we're dividing by a positive value, we're done.  Otherwise, we must
+  // negate the result.
+  if (Divisor.isNonNegative())
+    return SRA;
+
+  Created.push_back(SRA.getNode());
+  return DAG.getNode(ISD::SUB, DL, VT, Zero, SRA);
 }
 
 /// Given an ISD::SDIV node expressing a divide by constant,

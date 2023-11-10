@@ -25,12 +25,13 @@ using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 
-static void inititializeRuntime(bool IsSPMD,
-                                KernelEnvironmentTy &KernelEnvironment) {
+static void
+inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
+                    KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
   // Order is important here.
   synchronize::init(IsSPMD);
   mapping::init(IsSPMD);
-  state::init(IsSPMD, KernelEnvironment);
+  state::init(IsSPMD, KernelEnvironment, KernelLaunchEnvironment);
   allocator::init(IsSPMD, KernelEnvironment);
 }
 
@@ -69,16 +70,19 @@ extern "C" {
 ///
 /// \param Ident               Source location identification, can be NULL.
 ///
-int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment) {
+int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
+                           KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
   ConfigurationEnvironmentTy &Configuration = KernelEnvironment.Configuration;
   bool IsSPMD = Configuration.ExecMode &
                 llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
   bool UseGenericStateMachine = Configuration.UseGenericStateMachine;
   if (IsSPMD) {
-    inititializeRuntime(/* IsSPMD */ true, KernelEnvironment);
+    inititializeRuntime(/* IsSPMD */ true, KernelEnvironment,
+                        KernelLaunchEnvironment);
     synchronize::threadsAligned(atomic::relaxed);
   } else {
-    inititializeRuntime(/* IsSPMD */ false, KernelEnvironment);
+    inititializeRuntime(/* IsSPMD */ false, KernelEnvironment,
+                        KernelLaunchEnvironment);
     // No need to wait since only the main threads will execute user
     // code and workers will run into a barrier right away.
   }

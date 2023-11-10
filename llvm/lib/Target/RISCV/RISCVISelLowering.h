@@ -464,7 +464,7 @@ public:
                           SmallVectorImpl<Use *> &Ops) const override;
   bool shouldScalarizeBinop(SDValue VecOp) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
-  int getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
+  std::pair<int, bool> getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
@@ -486,6 +486,12 @@ public:
   unsigned getNumRegistersForCallingConv(LLVMContext &Context,
                                          CallingConv::ID CC,
                                          EVT VT) const override;
+
+  unsigned getVectorTypeBreakdownForCallingConv(LLVMContext &Context,
+                                                CallingConv::ID CC, EVT VT,
+                                                EVT &IntermediateVT,
+                                                unsigned &NumIntermediates,
+                                                MVT &RegisterVT) const override;
 
   bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
                                             EVT VT) const override;
@@ -895,6 +901,7 @@ private:
   SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPExtMaskOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSetCCMaskOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVPReverseExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedStore(SDValue Op, SelectionDAG &DAG) const;
@@ -949,6 +956,9 @@ private:
   /// For available scheduling models FDIV + two independent FMULs are much
   /// faster than two FDIVs.
   unsigned combineRepeatedFPDivisors() const override;
+
+  SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
+                        SmallVectorImpl<SDNode *> &Created) const override;
 };
 
 namespace RISCV {

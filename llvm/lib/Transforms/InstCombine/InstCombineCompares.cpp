@@ -441,20 +441,10 @@ static bool canRewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
         continue;
       }
 
-      if (!isa<IntToPtrInst>(V) && !isa<PtrToIntInst>(V) &&
-          !isa<GetElementPtrInst>(V) && !isa<PHINode>(V))
+      if (!isa<GetElementPtrInst>(V) && !isa<PHINode>(V))
         // We've found some value that we can't explore which is different from
         // the base. Therefore we can't do this transformation.
         return false;
-
-      if (isa<IntToPtrInst>(V) || isa<PtrToIntInst>(V)) {
-        auto *CI = cast<CastInst>(V);
-        if (!CI->isNoopCast(DL))
-          return false;
-
-        if (!Explored.contains(CI->getOperand(0)))
-          WorkList.push_back(CI->getOperand(0));
-      }
 
       if (auto *GEP = dyn_cast<GEPOperator>(V)) {
         // We're limiting the GEP to having one index. This will preserve
@@ -573,13 +563,6 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
     if (NewInsts.contains(Val))
       continue;
 
-    if (auto *CI = dyn_cast<CastInst>(Val)) {
-      // Don't get rid of the intermediate variable here; the store can grow
-      // the map which will invalidate the reference to the input value.
-      Value *V = NewInsts[CI->getOperand(0)];
-      NewInsts[CI] = V;
-      continue;
-    }
     if (auto *GEP = dyn_cast<GEPOperator>(Val)) {
       Value *Index = NewInsts[GEP->getOperand(1)] ? NewInsts[GEP->getOperand(1)]
                                                   : GEP->getOperand(1);
@@ -652,41 +635,25 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
   return NewInsts[Start];
 }
 
-/// Looks through GEPs, IntToPtrInsts and PtrToIntInsts in order to express
-/// the input Value as a constant indexed GEP. Returns a pair containing
-/// the GEPs Pointer and Index.
+/// Looks through GEPs in order to express the input Value as a constant
+/// indexed GEP. Returns a pair containing the GEPs Pointer and Index.
 static std::pair<Value *, Value *>
 getAsConstantIndexedAddress(Type *ElemTy, Value *V, const DataLayout &DL) {
   Type *IndexType = IntegerType::get(V->getContext(),
                                      DL.getIndexTypeSizeInBits(V->getType()));
 
   Constant *Index = ConstantInt::getNullValue(IndexType);
-  while (true) {
-    if (GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
-      // We accept only inbouds GEPs here to exclude the possibility of
-      // overflow.
-      if (!GEP->isInBounds())
-        break;
-      if (GEP->hasAllConstantIndices() && GEP->getNumIndices() == 1 &&
-          GEP->getSourceElementType() == ElemTy) {
-        V = GEP->getOperand(0);
-        Constant *GEPIndex = static_cast<Constant *>(GEP->getOperand(1));
-        Index = ConstantExpr::getAdd(
-            Index, ConstantExpr::getSExtOrTrunc(GEPIndex, IndexType));
-        continue;
-      }
+  while (GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
+    // We accept only inbouds GEPs here to exclude the possibility of
+    // overflow.
+    if (!GEP->isInBounds())
       break;
-    }
-    if (auto *CI = dyn_cast<IntToPtrInst>(V)) {
-      if (!CI->isNoopCast(DL))
-        break;
-      V = CI->getOperand(0);
-      continue;
-    }
-    if (auto *CI = dyn_cast<PtrToIntInst>(V)) {
-      if (!CI->isNoopCast(DL))
-        break;
-      V = CI->getOperand(0);
+    if (GEP->hasAllConstantIndices() && GEP->getNumIndices() == 1 &&
+        GEP->getSourceElementType() == ElemTy &&
+        GEP->getOperand(1)->getType() == IndexType) {
+      V = GEP->getOperand(0);
+      Constant *GEPIndex = static_cast<Constant *>(GEP->getOperand(1));
+      Index = ConstantExpr::getAdd(Index, GEPIndex);
       continue;
     }
     break;
@@ -845,17 +812,6 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       // PHIs/casts.
       return transformToIndexedCompare(GEPLHS, RHS, Cond, DL, *this);
     }
-
-    // If one of the GEPs has all zero indices, recurse.
-    // FIXME: Handle vector of pointers.
-    if (!GEPLHS->getType()->isVectorTy() && GEPLHS->hasAllZeroIndices())
-      return foldGEPICmp(GEPRHS, GEPLHS->getOperand(0),
-                         ICmpInst::getSwappedPredicate(Cond), I);
-
-    // If the other GEP has all zero indices, recurse.
-    // FIXME: Handle vector of pointers.
-    if (!GEPRHS->getType()->isVectorTy() && GEPRHS->hasAllZeroIndices())
-      return foldGEPICmp(GEPLHS, GEPRHS->getOperand(0), Cond, I);
 
     bool GEPsInBounds = GEPLHS->isInBounds() && GEPRHS->isInBounds();
     if (GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
@@ -2451,7 +2407,7 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
   // constant-value-based preconditions in the folds below, then we could assert
   // those conditions rather than checking them. This is difficult because of
   // undef/poison (PR34838).
-  if (IsAShr) {
+  if (IsAShr && Shr->hasOneUse()) {
     if (IsExact || Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_ULT) {
       // When ShAmtC can be shifted losslessly:
       // icmp PRED (ashr exact X, ShAmtC), C --> icmp PRED X, (C << ShAmtC)
@@ -2491,7 +2447,7 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
                             ConstantInt::getAllOnesValue(ShrTy));
       }
     }
-  } else {
+  } else if (!IsAShr) {
     if (Pred == CmpInst::ICMP_ULT || (Pred == CmpInst::ICMP_UGT && IsExact)) {
       // icmp ult (lshr X, ShAmtC), C --> icmp ult X, (C << ShAmtC)
       // icmp ugt (lshr exact X, ShAmtC), C --> icmp ugt X, (C << ShAmtC)
@@ -5585,8 +5541,8 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
   // icmp Pred (ext X), (ext Y)
   Value *Y;
   if (match(ICmp.getOperand(1), m_ZExtOrSExt(m_Value(Y)))) {
-    bool IsZext0 = isa<ZExtOperator>(ICmp.getOperand(0));
-    bool IsZext1 = isa<ZExtOperator>(ICmp.getOperand(1));
+    bool IsZext0 = isa<ZExtInst>(ICmp.getOperand(0));
+    bool IsZext1 = isa<ZExtInst>(ICmp.getOperand(1));
 
     if (IsZext0 != IsZext1) {
         // If X and Y and both i1
@@ -5845,8 +5801,8 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
     return nullptr;
   assert(MulInstr->getOpcode() == Instruction::Mul);
 
-  auto *LHS = cast<ZExtOperator>(MulInstr->getOperand(0)),
-       *RHS = cast<ZExtOperator>(MulInstr->getOperand(1));
+  auto *LHS = cast<ZExtInst>(MulInstr->getOperand(0)),
+       *RHS = cast<ZExtInst>(MulInstr->getOperand(1));
   assert(LHS->getOpcode() == Instruction::ZExt);
   assert(RHS->getOpcode() == Instruction::ZExt);
   Value *A = LHS->getOperand(0), *B = RHS->getOperand(0);
@@ -7335,17 +7291,14 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
   }
 
   // Okay, now we know that the FP constant fits in the range [SMIN, SMAX] or
-  // [0, UMAX], but it may still be fractional.  See if it is fractional by
-  // casting the FP value to the integer value and back, checking for equality.
+  // [0, UMAX], but it may still be fractional. Check whether this is the case
+  // using the IsExact flag.
   // Don't do this for zero, because -0.0 is not fractional.
-  Constant *RHSInt = LHSUnsigned
-    ? ConstantExpr::getFPToUI(RHSC, IntTy)
-    : ConstantExpr::getFPToSI(RHSC, IntTy);
+  APSInt RHSInt(IntWidth, LHSUnsigned);
+  bool IsExact;
+  RHS.convertToInteger(RHSInt, APFloat::rmTowardZero, &IsExact);
   if (!RHS.isZero()) {
-    bool Equal = LHSUnsigned
-      ? ConstantExpr::getUIToFP(RHSInt, RHSC->getType()) == RHSC
-      : ConstantExpr::getSIToFP(RHSInt, RHSC->getType()) == RHSC;
-    if (!Equal) {
+    if (!IsExact) {
       // If we had a comparison against a fractional value, we have to adjust
       // the compare predicate and sometimes the value.  RHSC is rounded towards
       // zero at this point.
@@ -7411,7 +7364,7 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
 
   // Lower this FP comparison into an appropriate integer version of the
   // comparison.
-  return new ICmpInst(Pred, LHSI->getOperand(0), RHSInt);
+  return new ICmpInst(Pred, LHSI->getOperand(0), Builder.getInt(RHSInt));
 }
 
 /// Fold (C / X) < 0.0 --> X < 0.0 if possible. Swap predicate if necessary.

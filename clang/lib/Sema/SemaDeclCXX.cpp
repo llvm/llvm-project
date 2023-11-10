@@ -1781,9 +1781,12 @@ static bool CheckConstexprReturnType(Sema &SemaRef, const FunctionDecl *FD,
 /// \returns diagnostic %select index.
 static unsigned getRecordDiagFromTagKind(TagTypeKind Tag) {
   switch (Tag) {
-  case TTK_Struct: return 0;
-  case TTK_Interface: return 1;
-  case TTK_Class:  return 2;
+  case TagTypeKind::Struct:
+    return 0;
+  case TagTypeKind::Interface:
+    return 1;
+  case TagTypeKind::Class:
+    return 2;
   default: llvm_unreachable("Invalid tag kind for record diagnostic!");
   }
 }
@@ -2680,7 +2683,7 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
                          TypeSourceInfo *TInfo,
                          SourceLocation EllipsisLoc) {
   // In HLSL, unspecified class access is public rather than private.
-  if (getLangOpts().HLSL && Class->getTagKind() == TTK_Class &&
+  if (getLangOpts().HLSL && Class->getTagKind() == TagTypeKind::Class &&
       Access == AS_none)
     Access = AS_public;
 
@@ -2733,9 +2736,9 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     // emitted.
     if (!Class->getTypeForDecl()->isDependentType())
       Class->setInvalidDecl();
-    return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual,
-                                          Class->getTagKind() == TTK_Class,
-                                          Access, TInfo, EllipsisLoc);
+    return new (Context) CXXBaseSpecifier(
+        SpecifierRange, Virtual, Class->getTagKind() == TagTypeKind::Class,
+        Access, TInfo, EllipsisLoc);
   }
 
   // Base specifiers must be record types.
@@ -2821,9 +2824,9 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     Class->setInvalidDecl();
 
   // Create the base specifier.
-  return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual,
-                                        Class->getTagKind() == TTK_Class,
-                                        Access, TInfo, EllipsisLoc);
+  return new (Context) CXXBaseSpecifier(
+      SpecifierRange, Virtual, Class->getTagKind() == TagTypeKind::Class,
+      Access, TInfo, EllipsisLoc);
 }
 
 /// ActOnBaseSpecifier - Parsed a base specifier. A base specifier is
@@ -4511,9 +4514,9 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
         if (!NotUnknownSpecialization) {
           // When the scope specifier can refer to a member of an unknown
           // specialization, we take it as a type name.
-          BaseType = CheckTypenameType(ETK_None, SourceLocation(),
-                                       SS.getWithLocInContext(Context),
-                                       *MemberOrBase, IdLoc);
+          BaseType = CheckTypenameType(
+              ElaboratedTypeKeyword::None, SourceLocation(),
+              SS.getWithLocInContext(Context), *MemberOrBase, IdLoc);
           if (BaseType.isNull())
             return true;
 
@@ -4596,7 +4599,8 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
     }
 
     if (BaseType.isNull()) {
-      BaseType = getElaboratedType(ETK_None, SS, Context.getTypeDeclType(TyD));
+      BaseType = getElaboratedType(ElaboratedTypeKeyword::None, SS,
+                                   Context.getTypeDeclType(TyD));
       MarkAnyDeclReferenced(TyD->getLocation(), TyD, /*OdrUse=*/false);
       TInfo = Context.CreateTypeSourceInfo(BaseType);
       ElaboratedTypeLoc TL = TInfo->getTypeLoc().castAs<ElaboratedTypeLoc>();
@@ -7009,7 +7013,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
           (F->getType().isConstQualified() && F->getType()->isScalarType())) {
         if (!Complained) {
           Diag(Record->getLocation(), diag::warn_no_constructor_for_refconst)
-            << Record->getTagKind() << Record;
+              << llvm::to_underlying(Record->getTagKind()) << Record;
           Complained = true;
         }
 
@@ -7279,11 +7283,12 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   bool CanPass = canPassInRegisters(*this, Record, CCK);
 
   // Do not change ArgPassingRestrictions if it has already been set to
-  // APK_CanNeverPassInRegs.
-  if (Record->getArgPassingRestrictions() != RecordDecl::APK_CanNeverPassInRegs)
-    Record->setArgPassingRestrictions(CanPass
-                                          ? RecordDecl::APK_CanPassInRegs
-                                          : RecordDecl::APK_CannotPassInRegs);
+  // ArgPassingKind::CanNeverPassInRegs.
+  if (Record->getArgPassingRestrictions() !=
+      RecordArgPassingKind::CanNeverPassInRegs)
+    Record->setArgPassingRestrictions(
+        CanPass ? RecordArgPassingKind::CanPassInRegs
+                : RecordArgPassingKind::CannotPassInRegs);
 
   // If canPassInRegisters returns true despite the record having a non-trivial
   // destructor, the record is destructed in the callee. This happens only when
@@ -7727,7 +7732,8 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
     QualType ThisType = MD->getFunctionObjectParameterType();
 
     QualType DeclType = Context.getTypeDeclType(RD);
-    DeclType = Context.getElaboratedType(ETK_None, nullptr, DeclType, nullptr);
+    DeclType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
+                                         DeclType, nullptr);
     DeclType = Context.getAddrSpaceQualType(
         DeclType, ThisType.getQualifiers().getAddressSpace());
     QualType ExpectedReturnType = Context.getLValueReferenceType(DeclType);
@@ -7745,6 +7751,24 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
       else {
         Diag(MD->getLocation(), diag::err_defaulted_special_member_quals)
           << (CSM == CXXMoveAssignment) << getLangOpts().CPlusPlus14;
+        HadError = true;
+      }
+    }
+    // [C++23][dcl.fct.def.default]/p2.2
+    // if F2 has an implicit object parameter of type “reference to C”,
+    // F1 may be an explicit object member function whose explicit object
+    // parameter is of (possibly different) type “reference to C”,
+    // in which case the type of F1 would differ from the type of F2
+    // in that the type of F1 has an additional parameter;
+    if (!Context.hasSameType(
+            ThisType.getNonReferenceType().getUnqualifiedType(),
+            Context.getRecordType(RD))) {
+      if (DeleteOnTypeMismatch)
+        ShouldDeleteForTypeMismatch = true;
+      else {
+        Diag(MD->getLocation(),
+             diag::err_defaulted_special_member_explicit_object_mismatch)
+            << (CSM == CXXMoveAssignment) << RD << MD->getSourceRange();
         HadError = true;
       }
     }
@@ -11818,7 +11842,8 @@ QualType Sema::CheckComparisonCategoryType(ComparisonCategoryType Kind,
   auto TyForDiags = [&](ComparisonCategoryInfo *Info) {
     auto *NNS =
         NestedNameSpecifier::Create(Context, nullptr, getStdNamespace());
-    return Context.getElaboratedType(ETK_None, NNS, Info->getType());
+    return Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS,
+                                     Info->getType());
   };
 
   // Check if we've already successfully checked the comparison category type
@@ -12037,7 +12062,7 @@ QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
                                        Context.getTrivialTypeSourceInfo(Element,
                                                                         Loc)));
   return Context.getElaboratedType(
-      ElaboratedTypeKeyword::ETK_None,
+      ElaboratedTypeKeyword::None,
       NestedNameSpecifier::Create(Context, nullptr, getStdNamespace()),
       CheckTemplateIdType(TemplateName(StdInitializerList), Loc, Args));
 }
@@ -14819,7 +14844,8 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
     return nullptr;
 
   QualType ArgType = Context.getTypeDeclType(ClassDecl);
-  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
+  ArgType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
+                                      ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ArgType, AS);
@@ -15172,7 +15198,8 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
   // constructor rules.
 
   QualType ArgType = Context.getTypeDeclType(ClassDecl);
-  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
+  ArgType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
+                                      ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ArgType, AS);
@@ -15561,7 +15588,8 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
 
   QualType ClassType = Context.getTypeDeclType(ClassDecl);
   QualType ArgType = ClassType;
-  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
+  ArgType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
+                                      ArgType, nullptr);
   bool Const = ClassDecl->implicitCopyConstructorHasConstParam();
   if (Const)
     ArgType = ArgType.withConst();
@@ -15706,7 +15734,8 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
   QualType ClassType = Context.getTypeDeclType(ClassDecl);
 
   QualType ArgType = ClassType;
-  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
+  ArgType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
+                                      ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ClassType, AS);
@@ -15965,17 +15994,12 @@ static bool hasOneRealArgument(MultiExprArg Args) {
   return false;
 }
 
-ExprResult
-Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                            NamedDecl *FoundDecl,
-                            CXXConstructorDecl *Constructor,
-                            MultiExprArg ExprArgs,
-                            bool HadMultipleCandidates,
-                            bool IsListInitialization,
-                            bool IsStdInitListInitialization,
-                            bool RequiresZeroInit,
-                            unsigned ConstructKind,
-                            SourceRange ParenRange) {
+ExprResult Sema::BuildCXXConstructExpr(
+    SourceLocation ConstructLoc, QualType DeclInitType, NamedDecl *FoundDecl,
+    CXXConstructorDecl *Constructor, MultiExprArg ExprArgs,
+    bool HadMultipleCandidates, bool IsListInitialization,
+    bool IsStdInitListInitialization, bool RequiresZeroInit,
+    CXXConstructionKind ConstructKind, SourceRange ParenRange) {
   bool Elidable = false;
 
   // C++0x [class.copy]p34:
@@ -15988,7 +16012,7 @@ Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
   //       with the same cv-unqualified type, the copy/move operation
   //       can be omitted by constructing the temporary object
   //       directly into the target of the omitted copy/move
-  if (ConstructKind == CXXConstructExpr::CK_Complete && Constructor &&
+  if (ConstructKind == CXXConstructionKind::Complete && Constructor &&
       // FIXME: Converting constructors should also be accepted.
       // But to fix this, the logic that digs down into a CXXConstructExpr
       // to find the source object needs to handle it.
@@ -16012,18 +16036,12 @@ Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
                                ConstructKind, ParenRange);
 }
 
-ExprResult
-Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                            NamedDecl *FoundDecl,
-                            CXXConstructorDecl *Constructor,
-                            bool Elidable,
-                            MultiExprArg ExprArgs,
-                            bool HadMultipleCandidates,
-                            bool IsListInitialization,
-                            bool IsStdInitListInitialization,
-                            bool RequiresZeroInit,
-                            unsigned ConstructKind,
-                            SourceRange ParenRange) {
+ExprResult Sema::BuildCXXConstructExpr(
+    SourceLocation ConstructLoc, QualType DeclInitType, NamedDecl *FoundDecl,
+    CXXConstructorDecl *Constructor, bool Elidable, MultiExprArg ExprArgs,
+    bool HadMultipleCandidates, bool IsListInitialization,
+    bool IsStdInitListInitialization, bool RequiresZeroInit,
+    CXXConstructionKind ConstructKind, SourceRange ParenRange) {
   if (auto *Shadow = dyn_cast<ConstructorUsingShadowDecl>(FoundDecl)) {
     Constructor = findInheritingConstructor(ConstructLoc, Constructor, Shadow);
     // The only way to get here is if we did overlaod resolution to find the
@@ -16041,17 +16059,12 @@ Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
 
 /// BuildCXXConstructExpr - Creates a complete call to a constructor,
 /// including handling of its default argument expressions.
-ExprResult
-Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                            CXXConstructorDecl *Constructor,
-                            bool Elidable,
-                            MultiExprArg ExprArgs,
-                            bool HadMultipleCandidates,
-                            bool IsListInitialization,
-                            bool IsStdInitListInitialization,
-                            bool RequiresZeroInit,
-                            unsigned ConstructKind,
-                            SourceRange ParenRange) {
+ExprResult Sema::BuildCXXConstructExpr(
+    SourceLocation ConstructLoc, QualType DeclInitType,
+    CXXConstructorDecl *Constructor, bool Elidable, MultiExprArg ExprArgs,
+    bool HadMultipleCandidates, bool IsListInitialization,
+    bool IsStdInitListInitialization, bool RequiresZeroInit,
+    CXXConstructionKind ConstructKind, SourceRange ParenRange) {
   assert(declaresSameEntity(
              Constructor->getParent(),
              DeclInitType->getBaseElementTypeUnsafe()->getAsCXXRecordDecl()) &&
@@ -16065,8 +16078,7 @@ Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
           Context, DeclInitType, ConstructLoc, Constructor, Elidable, ExprArgs,
           HadMultipleCandidates, IsListInitialization,
           IsStdInitListInitialization, RequiresZeroInit,
-          static_cast<CXXConstructExpr::ConstructionKind>(ConstructKind),
-          ParenRange),
+          static_cast<CXXConstructionKind>(ConstructKind), ParenRange),
       Constructor);
 }
 
@@ -16759,11 +16771,11 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
   assert(Lit->isUnevaluated() && "Unexpected string literal kind");
 
   StringRef Lang = Lit->getString();
-  LinkageSpecDecl::LanguageIDs Language;
+  LinkageSpecLanguageIDs Language;
   if (Lang == "C")
-    Language = LinkageSpecDecl::lang_c;
+    Language = LinkageSpecLanguageIDs::C;
   else if (Lang == "C++")
-    Language = LinkageSpecDecl::lang_cxx;
+    Language = LinkageSpecLanguageIDs::CXX;
   else {
     Diag(LangStr->getExprLoc(), diag::err_language_linkage_spec_unknown)
       << LangStr->getSourceRange();
@@ -16786,8 +16798,7 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
   /// If the declaration is already in global module fragment, we don't
   /// need to attach it again.
   if (getLangOpts().CPlusPlusModules && isCurrentModulePurview()) {
-    Module *GlobalModule = PushImplicitGlobalModuleFragment(
-        ExternLoc, /*IsExported=*/D->isInExportDeclContext());
+    Module *GlobalModule = PushImplicitGlobalModuleFragment(ExternLoc);
     D->setLocalOwningModule(GlobalModule);
   }
 

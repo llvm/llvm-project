@@ -343,6 +343,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <cstdlib>
 #  include <cstring>
 #  include <initializer_list>
+#  include <iosfwd>
 #  include <new>
 #  include <stdexcept>
 #  include <system_error>

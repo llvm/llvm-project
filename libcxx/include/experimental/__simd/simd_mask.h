@@ -38,6 +38,8 @@ public:
 
   static _LIBCPP_HIDE_FROM_ABI constexpr size_t size() noexcept { return simd_type::size(); }
 
+  _LIBCPP_HIDE_FROM_ABI simd_mask() noexcept = default;
+
   // broadcast constructor
   _LIBCPP_HIDE_FROM_ABI explicit simd_mask(value_type __v) noexcept : __s_(_Impl::__broadcast(__v)) {}
 
