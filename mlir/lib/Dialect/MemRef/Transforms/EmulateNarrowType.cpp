@@ -17,6 +17,9 @@
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -28,6 +31,26 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 // Utility functions
 //===----------------------------------------------------------------------===//
+
+/// Replaces the memref::StoreOp with two new memref::AtomicRMWOps. The first
+/// memref::AtomicRMWOp sets the destination bits to all zero to prepare the
+/// destination byte to be written to. The second memref::AtomicRMWOp does the
+/// writing of the value to store, using an `ori` type operation. The value
+/// to store and the write mask should both have the destination type bitwidth,
+/// and the bits of the value to store should be all zero except for the bits
+/// aligned with the store destination.
+static void replaceStoreWithAtomics(ConversionPatternRewriter &rewriter,
+                                    memref::StoreOp op, Value writeMask,
+                                    Value storeVal, Value memref,
+                                    ValueRange storeIndices) {
+  // Clear destination bits
+  rewriter.create<memref::AtomicRMWOp>(op.getLoc(), arith::AtomicRMWKind::andi,
+                                       writeMask, memref, storeIndices);
+  // Write srcs bits to destination
+  rewriter.create<memref::AtomicRMWOp>(op->getLoc(), arith::AtomicRMWKind::ori,
+                                       storeVal, memref, storeIndices);
+  rewriter.eraseOp(op);
+}
 
 /// When data is loaded/stored in `targetBits` granularity, but is used in
 /// `sourceBits` granularity (`sourceBits` < `targetBits`), the `targetBits` is
@@ -43,11 +66,65 @@ static Value getOffsetForBitwidth(Location loc, OpFoldResult srcIdx,
   AffineExpr s0;
   bindSymbols(builder.getContext(), s0);
   int scaleFactor = targetBits / sourceBits;
-  OpFoldResult offsetVal = affine::makeComposedFoldedAffineApply(
-      builder, loc, (s0 % scaleFactor) * sourceBits, {srcIdx});
+  AffineExpr offsetExpr = (s0 % scaleFactor) * sourceBits;
+  OpFoldResult offsetVal =
+      affine::makeComposedFoldedAffineApply(builder, loc, offsetExpr, {srcIdx});
   Value bitOffset = getValueOrCreateConstantIndexOp(builder, loc, offsetVal);
   IntegerType dstType = builder.getIntegerType(targetBits);
   return builder.create<arith::IndexCastOp>(loc, dstType, bitOffset);
+}
+
+/// When writing a subbyte size, writing needs to happen atomically in case of
+/// another write happening on the same byte at the same time. To do the write,
+/// we first must clear `dstBits` at the `linearizedIndices` of the subbyte
+/// store. This function returns the appropriate mask for clearing these bits.
+static Value getAtomicWriteMask(Location loc, OpFoldResult linearizedIndices,
+                                int64_t srcBits, int64_t dstBits,
+                                Value bitwidthOffset, OpBuilder &builder) {
+  auto dstIntegerType = builder.getIntegerType(dstBits);
+  auto maskRightAlignedAttr =
+      builder.getIntegerAttr(dstIntegerType, (1 << srcBits) - 1);
+  Value maskRightAligned =
+      builder
+          .create<arith::ConstantOp>(loc, dstIntegerType, maskRightAlignedAttr)
+          .getResult();
+  Value writeMaskInverse =
+      builder.create<arith::ShLIOp>(loc, maskRightAligned, bitwidthOffset);
+  auto flipValAttr = builder.getIntegerAttr(dstIntegerType, -1);
+  Value flipVal =
+      builder.create<arith::ConstantOp>(loc, dstIntegerType, flipValAttr)
+          .getResult();
+  return builder.create<arith::XOrIOp>(loc, writeMaskInverse, flipVal);
+}
+
+/// Returns the scaled linearized index based on the `srcBits` and `dstBits`
+/// sizes. The input `linearizedIndex` has the grandularity of `srcBits`, and
+/// the returned index has the granularity of `dstBits`
+static Value getIndicesForLoadOrStore(OpBuilder &builder, Location loc,
+                                      OpFoldResult linearizedIndex,
+                                      int64_t srcBits, int64_t dstBits) {
+  AffineExpr s0;
+  bindSymbols(builder.getContext(), s0);
+  int64_t scaler = dstBits / srcBits;
+  OpFoldResult scaledLinearizedIndices = affine::makeComposedFoldedAffineApply(
+      builder, loc, s0.floorDiv(scaler), {linearizedIndex});
+  return getValueOrCreateConstantIndexOp(builder, loc, scaledLinearizedIndices);
+}
+
+static OpFoldResult
+getLinearizedSrcIndices(OpBuilder &builder, Location loc, int64_t srcBits,
+                        const SmallVector<OpFoldResult> &indices,
+                        Value memref) {
+  auto stridedMetadata =
+      builder.create<memref::ExtractStridedMetadataOp>(loc, memref);
+  OpFoldResult linearizedIndices;
+  std::tie(std::ignore, linearizedIndices) =
+      memref::getLinearizedMemRefOffsetAndSize(
+          builder, loc, srcBits, srcBits,
+          stridedMetadata.getConstifiedMixedOffset(),
+          stridedMetadata.getConstifiedMixedSizes(),
+          stridedMetadata.getConstifiedMixedStrides(), indices);
+  return linearizedIndices;
 }
 
 namespace {
@@ -155,32 +232,15 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
       bitsLoad = rewriter.create<memref::LoadOp>(loc, adaptor.getMemref(),
                                                  ValueRange{});
     } else {
-      SmallVector<OpFoldResult> indices =
-          getAsOpFoldResult(adaptor.getIndices());
-
-      auto stridedMetadata = rewriter.create<memref::ExtractStridedMetadataOp>(
-          loc, op.getMemRef());
-
       // Linearize the indices of the original load instruction. Do not account
       // for the scaling yet. This will be accounted for later.
-      OpFoldResult linearizedIndices;
-      std::tie(std::ignore, linearizedIndices) =
-          memref::getLinearizedMemRefOffsetAndSize(
-              rewriter, loc, srcBits, srcBits,
-              stridedMetadata.getConstifiedMixedOffset(),
-              stridedMetadata.getConstifiedMixedSizes(),
-              stridedMetadata.getConstifiedMixedStrides(), indices);
+      OpFoldResult linearizedIndices = getLinearizedSrcIndices(
+          rewriter, loc, srcBits, adaptor.getIndices(), op.getMemRef());
 
-      AffineExpr s0;
-      bindSymbols(rewriter.getContext(), s0);
-      int64_t scaler = dstBits / srcBits;
-      OpFoldResult scaledLinearizedIndices =
-          affine::makeComposedFoldedAffineApply(
-              rewriter, loc, s0.floorDiv(scaler), {linearizedIndices});
       Value newLoad = rewriter.create<memref::LoadOp>(
           loc, adaptor.getMemref(),
-          getValueOrCreateConstantIndexOp(rewriter, loc,
-                                          scaledLinearizedIndices));
+          getIndicesForLoadOrStore(rewriter, loc, linearizedIndices, srcBits,
+                                   dstBits));
 
       // Get the offset and shift the bits to the rightmost.
       // Note, currently only the big-endian is supported.
@@ -207,6 +267,60 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
     }
 
     rewriter.replaceOp(op, result->getResult(0));
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// ConvertMemrefStore
+//===----------------------------------------------------------------------===//
+
+struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::StoreOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto convertedType = adaptor.getMemref().getType().cast<MemRefType>();
+    int srcBits = op.getMemRefType().getElementTypeBitWidth();
+    int dstBits = convertedType.getElementTypeBitWidth();
+    auto dstIntegerType = rewriter.getIntegerType(dstBits);
+    if (dstBits % srcBits != 0) {
+      return rewriter.notifyMatchFailure(
+          op, "only dstBits % srcBits == 0 supported");
+    }
+
+    Location loc = op.getLoc();
+    Value extendedInput = rewriter.create<arith::ExtUIOp>(loc, dstIntegerType,
+                                                          adaptor.getValue());
+
+    // Special case 0-rank memref stores. We can compute the mask at compile
+    // time.
+    if (convertedType.getRank() == 0) {
+      // Create mask to clear destination bits
+      auto writeMaskValAttr =
+          rewriter.getIntegerAttr(dstIntegerType, ~(1 << (srcBits)) - 1);
+      Value writeMask = rewriter.create<arith::ConstantOp>(loc, dstIntegerType,
+                                                           writeMaskValAttr);
+
+      replaceStoreWithAtomics(rewriter, op, writeMask, extendedInput,
+                              adaptor.getMemref(), ValueRange{});
+      return success();
+    }
+
+    OpFoldResult linearizedIndices = getLinearizedSrcIndices(
+        rewriter, loc, srcBits, adaptor.getIndices(), op.getMemRef());
+    Value storeIndices = getIndicesForLoadOrStore(
+        rewriter, loc, linearizedIndices, srcBits, dstBits);
+    Value bitwidthOffset = getOffsetForBitwidth(loc, linearizedIndices, srcBits,
+                                                dstBits, rewriter);
+    Value writeMask = getAtomicWriteMask(loc, linearizedIndices, srcBits,
+                                         dstBits, bitwidthOffset, rewriter);
+    // Align the value to write with the destination bits
+    Value alignedVal =
+        rewriter.create<arith::ShLIOp>(loc, extendedInput, bitwidthOffset);
+    replaceStoreWithAtomics(rewriter, op, writeMask, alignedVal,
+                            adaptor.getMemref(), storeIndices);
     return success();
   }
 };
@@ -292,7 +406,7 @@ void memref::populateMemRefNarrowTypeEmulationPatterns(
 
   // Populate `memref.*` conversion patterns.
   patterns.add<ConvertMemRefAlloc, ConvertMemRefLoad,
-               ConvertMemRefAssumeAlignment, ConvertMemRefSubview>(
+               ConvertMemRefAssumeAlignment, ConvertMemRefSubview, ConvertMemrefStore>(
       typeConverter, patterns.getContext());
   memref::populateResolveExtractStridedMetadataPatterns(patterns);
 }
