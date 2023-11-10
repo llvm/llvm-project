@@ -7579,6 +7579,7 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
 
   if (ObjectArg && implicitObjectParamIsLifetimeBound(Callee))
     VisitLifetimeBoundArg(Callee, ObjectArg);
+
   bool checkCoroCall = false;
   if (const auto *RD = Callee->getReturnType()->getAsRecordDecl()) {
     for (const auto &attr :
