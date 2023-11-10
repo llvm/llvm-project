@@ -91,11 +91,6 @@ class GenericGlobalHandlerTy {
   /// Map to store the ELF object files that have been loaded.
   llvm::DenseMap<int32_t, ELF64LEObjectFile> ELFObjectFiles;
 
-  /// Get the cached ELF64LEObjectFile previosuly created for a specific
-  /// device image or create it if did not exist.
-  const ELF64LEObjectFile *
-  getOrCreateELFObjectFile(const GenericDeviceTy &Device, DeviceImageTy &Image);
-
   /// Extract the global's information from the ELF image, section, and symbol.
   virtual Error getGlobalMetadataFromELF(const DeviceImageTy &Image,
                                          const ELF64LE::Sym &Symbol,
@@ -118,6 +113,11 @@ class GenericGlobalHandlerTy {
 
 public:
   virtual ~GenericGlobalHandlerTy() {}
+
+  /// Get the cached ELF64LEObjectFile previosuly created for a specific
+  /// device image or create it if did not exist.
+  const ELF64LEObjectFile *
+  getOrCreateELFObjectFile(const GenericDeviceTy &Device, DeviceImageTy &Image);
 
   /// Get the address and size of a global in the image. Address and size are
   /// return in \p ImageGlobal, the global name is passed in \p ImageGlobal.
