@@ -1,5 +1,5 @@
 # RUN: yaml-bench -canonical %s 2>&1 | FileCheck %s --strict-whitespace
-# CHECK: "as space\n trimmed \n specific\L\n escaped\t \n none"
+# CHECK: "as space\n trimmed \n specific\L\n escaped\t\n none"
 
 ## Note: The example was originally taken from Spec 1.1, but the parsing rules
 ## have been changed since then.
