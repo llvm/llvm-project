@@ -72,6 +72,7 @@ add_tablegen(llvm-tblgen LLVM
   PredicateExpander.cpp
   PseudoLoweringEmitter.cpp
   CompressInstEmitter.cpp
+  MacroFusionPredicatorEmitter.cpp
   RegisterBankEmitter.cpp
   RegisterInfoEmitter.cpp
   SearchableTableEmitter.cpp

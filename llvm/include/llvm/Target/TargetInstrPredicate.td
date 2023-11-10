@@ -95,6 +95,12 @@ class MCOperandPredicate<int Index> : MCInstPredicate {
 // Return true if machine operand at position `Index` is a register operand.
 class CheckIsRegOperand<int Index> : MCOperandPredicate<Index>;
 
+// Return true if machine operand at position `Index` is a virtual register operand.
+class CheckIsVRegOperand<int Index> : MCOperandPredicate<Index>;
+
+// Return true if machine operand at position `Index` is not a virtual register operand.
+class CheckIsNotVRegOperand<int Index> : CheckNot<CheckIsVRegOperand<Index>>;
+
 // Return true if machine operand at position `Index` is an immediate operand.
 class CheckIsImmOperand<int Index> : MCOperandPredicate<Index>;
 
