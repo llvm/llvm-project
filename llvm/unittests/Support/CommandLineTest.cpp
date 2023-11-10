@@ -538,7 +538,7 @@ TEST(CommandLineTest, TopLevelOptInSubcommand) {
   // A command line using subcommand should parse both subcommand options and
   // top-level options.  A valid use case is that users of llvm command line
   // tools should be able to specify top-level options defined in any library.
-  cl::opt<std::string> TopLevelOpt("str", cl::init("txt"),
+  StackOption<std::string> TopLevelOpt("str", cl::init("txt"),
                                    cl::desc("A top-level option."));
 
   StackSubCommand SC("sc", "Subcommand");
