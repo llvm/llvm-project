@@ -99,7 +99,7 @@ and add them to your patch when requesting a review. Suitable reviewers are the
 code owner (see CODE_OWNERS.txt) and other people doing work in the area your
 patch touches. Github will normally suggest some reviewers based on rules or
 people that have worked on the code before. If you are a new contributor, you
-will not be able to select reviewers in such way, in which case you can still
+will not be able to select reviewers in such a way, in which case you can still
 get the attention of potential reviewers by CC'ing them in a comment -- just
 @name them.
 
