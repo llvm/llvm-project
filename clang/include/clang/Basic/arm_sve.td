@@ -1994,10 +1994,6 @@ multiclass MinMaxIntr<string i, string zm, string mul, string t> {
 }
 
 let TargetGuard = "sme2" in {
-// == ADD (vectors) ==
-  def SVADD_SINGLE_X2 : SInst<"svadd[_single_{d}_x2]", "22d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x2", [IsStreaming], []>;
-  def SVADD_SINGLE_X4 : SInst<"svadd[_single_{d}_x4]", "44d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x4", [IsStreaming], []>;
-
 // == SMAX / UMAX / FMAX ==
   defm MAX_SINGLE_X2 : MinMaxIntr<"max", "_single", "x2", "22d">;
   defm MAX_MULTI_X2  : MinMaxIntr<"max", "",        "x2", "222">;
@@ -2009,4 +2005,10 @@ let TargetGuard = "sme2" in {
   defm MIN_MULTI_X2  : MinMaxIntr<"min", "",        "x2", "222">;
   defm MIN_SINGLE_X4 : MinMaxIntr<"min", "_single", "x4", "44d">;
   defm MIN_MULTI_X4  : MinMaxIntr<"min", "",        "x4", "444">;
+}
+
+let TargetGuard = "sme2" in {
+// == ADD (vectors) ==
+  def SVADD_SINGLE_X2 : SInst<"svadd[_single_{d}_x2]", "22d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x2", [IsStreaming], []>;
+  def SVADD_SINGLE_X4 : SInst<"svadd[_single_{d}_x4]", "44d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x4", [IsStreaming], []>;
 }
