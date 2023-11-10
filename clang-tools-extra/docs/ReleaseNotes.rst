@@ -70,6 +70,7 @@ Code actions
 ^^^^^^^^^^^^
 
 - The extract variable tweak gained support for extracting lambda expressions to a variable.
+- A new tweak was added for turning unscoped into scoped enums.
 
 Signature help
 ^^^^^^^^^^^^^^
@@ -399,6 +400,7 @@ Changes in existing checks
   ``Leading_upper_snake_case`` naming convention. The handling of ``typedef``
   has been enhanced, particularly within complex types like function pointers
   and cases where style checks were omitted when functions started with macros.
+  Added support for C++20 ``concept`` declarations.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take

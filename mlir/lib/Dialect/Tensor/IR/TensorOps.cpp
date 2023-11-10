@@ -834,6 +834,17 @@ void EmptyOp::getCanonicalizationPatterns(RewritePatternSet &results,
               ReplaceEmptyTensorStaticShapeDims>(context);
 }
 
+/// Try to remove a tensor operation if it would only reshape a constant.
+/// Removes the op and replaces the constant with a new constant of the result
+/// shape.
+static OpFoldResult reshapeConstantSource(DenseElementsAttr source,
+                                          TensorType result) {
+  if (source && source.isSplat() && result.hasStaticShape())
+    return source.resizeSplat(result);
+
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // ExtractOp
 //===----------------------------------------------------------------------===//
@@ -1087,6 +1098,14 @@ LogicalResult GatherOp::verify() {
   }
 
   return success();
+}
+
+OpFoldResult GatherOp::fold(FoldAdaptor adaptor) {
+  if (OpFoldResult reshapedSource = reshapeConstantSource(
+          llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
+          getResult().getType()))
+    return reshapedSource;
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -1365,6 +1384,14 @@ LogicalResult ReshapeOp::verify() {
           "length of shape operand differs from the result's tensor rank");
   }
   return success();
+}
+
+OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
+  if (OpFoldResult reshapedSource = reshapeConstantSource(
+          llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
+          getResult().getType()))
+    return reshapedSource;
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -2153,12 +2180,10 @@ static Value foldExtractAfterInsertSlice(ExtractSliceOp extractOp) {
 }
 
 OpFoldResult ExtractSliceOp::fold(FoldAdaptor adaptor) {
-  if (auto splat =
-          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource())) {
-    auto resultType = llvm::cast<ShapedType>(getResult().getType());
-    if (resultType.hasStaticShape())
-      return splat.resizeSplat(resultType);
-  }
+  if (OpFoldResult reshapedSource = reshapeConstantSource(
+          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource()),
+          getResult().getType()))
+    return reshapedSource;
   if (getSourceType() == getType() &&
       succeeded(foldIdentityOffsetSizeAndStrideOpInterface(*this, getType())))
     return this->getSource();
@@ -3823,6 +3848,14 @@ bool PackOp::isLikePad() {
   return isLikePadUnPad(*this, packedTensorType);
 }
 
+OpFoldResult PackOp::fold(FoldAdaptor adaptor) {
+  if (OpFoldResult reshapedSource = reshapeConstantSource(
+          llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
+          getResult().getType()))
+    return reshapedSource;
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // UnPackOp
 //===----------------------------------------------------------------------===//
@@ -3951,6 +3984,15 @@ bool UnPackOp::isLikeUnPad() {
   RankedTensorType packedTensorType = getSourceType();
   return isLikePadUnPad(*this, packedTensorType);
 }
+
+OpFoldResult UnPackOp::fold(FoldAdaptor adaptor) {
+  if (OpFoldResult reshapedSource = reshapeConstantSource(
+          llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
+          getResult().getType()))
+    return reshapedSource;
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // Common Canonicalizers and Folders.
 //===----------------------------------------------------------------------===//

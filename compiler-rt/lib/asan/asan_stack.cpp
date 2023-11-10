@@ -57,7 +57,7 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
     uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
   using namespace __asan;
   size = 0;
-  if (UNLIKELY(!asan_inited))
+  if (UNLIKELY(!AsanInited()))
     return;
   request_fast = StackTrace::WillUseFastUnwind(request_fast);
   AsanThread *t = GetCurrentThread();
