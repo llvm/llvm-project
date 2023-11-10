@@ -42,9 +42,8 @@ using namespace clang::ast_matchers;
 using clang::ast_matchers::internal::Matcher;
 using llvm::StringRef;
 
-constexpr auto DiffThreshold = 0.001;
-
-AST_MATCHER_P(clang::FloatingLiteral, near, double, Value) {
+AST_MATCHER_P2(clang::FloatingLiteral, near, double, Value, double,
+               DiffThreshold) {
   return std::abs(Node.getValueAsApproximateDouble() - Value) < DiffThreshold;
 }
 
@@ -75,176 +74,190 @@ AST_MATCHER_P(clang::Expr, anyOfExhaustive,
   return FoundMatch;
 }
 
-auto ignoreImplicitAndArithmeticCasting(const Matcher<clang::Expr> Matcher) {
-  return expr(
-      ignoringImplicit(expr(hasType(qualType(isArithmetic())),
-                            ignoringParenCasts(ignoringImplicit(Matcher)))));
-}
+// Using this struct to store the 'DiffThreshold' config value to create the
+// matchers without the need to pass 'DiffThreshold' into every matcher.
+// 'DiffThreshold' is needed in the 'near' matcher, which is used for matching
+// the literal of every constant and for formulas' subexpressions that look at
+// literals.
+struct MatchBuilder {
+  auto
+  ignoreImplicitAndArithmeticCasting(const Matcher<clang::Expr> Matcher) const {
+    return expr(
+        ignoringImplicit(expr(hasType(qualType(isArithmetic())),
+                              ignoringParenCasts(ignoringImplicit(Matcher)))));
+  }
 
-auto ignoreImplicitAndFloatingCasting(const Matcher<clang::Expr> Matcher) {
-  return expr(
-      ignoringImplicit(expr(hasType(qualType(isFloating())),
-                            ignoringParenCasts(ignoringImplicit(Matcher)))));
-}
+  auto
+  ignoreImplicitAndFloatingCasting(const Matcher<clang::Expr> Matcher) const {
+    return expr(
+        ignoringImplicit(expr(hasType(qualType(isFloating())),
+                              ignoringParenCasts(ignoringImplicit(Matcher)))));
+  }
 
-auto matchMathCall(const StringRef FunctionName,
-                   const Matcher<clang::Expr> ArgumentMatcher) {
-  return expr(ignoreImplicitAndFloatingCasting(
-      callExpr(callee(functionDecl(hasName(FunctionName),
-                                   hasParameter(0, hasType(isArithmetic())))),
-               hasArgument(0, ArgumentMatcher))));
-}
+  auto matchMathCall(const StringRef FunctionName,
+                     const Matcher<clang::Expr> ArgumentMatcher) const {
+    return expr(ignoreImplicitAndFloatingCasting(
+        callExpr(callee(functionDecl(hasName(FunctionName),
+                                     hasParameter(0, hasType(isArithmetic())))),
+                 hasArgument(0, ArgumentMatcher))));
+  }
 
-auto matchSqrt(const Matcher<clang::Expr> ArgumentMatcher) {
-  return matchMathCall("sqrt", ArgumentMatcher);
-}
+  auto matchSqrt(const Matcher<clang::Expr> ArgumentMatcher) const {
+    return matchMathCall("sqrt", ArgumentMatcher);
+  }
 
-// Used for top-level matchers (i.e. the match that replaces Val with its
-// constant).
-//
-// E.g. The matcher of `std::numbers::pi` uses this matcher to look to
-// floatLiterals that have the value of pi.
-//
-// If the match is for a top-level match, we only care about the literal.
-auto matchFloatLiteralNear(const StringRef Constant, const double Val) {
-  return expr(
-      ignoreImplicitAndFloatingCasting(floatLiteral(near(Val)).bind(Constant)));
-}
+  // Used for top-level matchers (i.e. the match that replaces Val with its
+  // constant).
+  //
+  // E.g. The matcher of `std::numbers::pi` uses this matcher to look to
+  // floatLiterals that have the value of pi.
+  //
+  // If the match is for a top-level match, we only care about the literal.
+  auto matchFloatLiteralNear(const StringRef Constant, const double Val) const {
+    return expr(ignoreImplicitAndFloatingCasting(
+        floatLiteral(near(Val, DiffThreshold)).bind(Constant)));
+  }
 
-// Used for non-top-level matchers (i.e. matchers that are used as inner
-// matchers for top-level matchers).
-//
-// E.g.: The matcher of `std::numbers::log2e` uses this matcher to check if `e`
-// of `log2(e)` is declared constant and initialized with the value for eulers
-// number.
-//
-// Here, we do care about literals and about DeclRefExprs to variable
-// declarations that are constant and initialized with `Val`. This allows
-// top-level matchers to see through declared constants for their inner matches
-// like the `std::numbers::log2e` matcher.
-auto matchFloatValueNear(const double Val) {
-  const auto Float = floatLiteral(near(Val));
+  // Used for non-top-level matchers (i.e. matchers that are used as inner
+  // matchers for top-level matchers).
+  //
+  // E.g.: The matcher of `std::numbers::log2e` uses this matcher to check if
+  // `e` of `log2(e)` is declared constant and initialized with the value for
+  // eulers number.
+  //
+  // Here, we do care about literals and about DeclRefExprs to variable
+  // declarations that are constant and initialized with `Val`. This allows
+  // top-level matchers to see through declared constants for their inner
+  // matches like the `std::numbers::log2e` matcher.
+  auto matchFloatValueNear(const double Val) const {
+    const auto Float = floatLiteral(near(Val, DiffThreshold));
 
-  const auto Dref = declRefExpr(
-      to(varDecl(hasType(qualType(isConstQualified(), isFloating())),
-                 hasInitializer(ignoreImplicitAndFloatingCasting(Float)))));
-  return expr(ignoreImplicitAndFloatingCasting(anyOf(Float, Dref)));
-}
+    const auto Dref = declRefExpr(
+        to(varDecl(hasType(qualType(isConstQualified(), isFloating())),
+                   hasInitializer(ignoreImplicitAndFloatingCasting(Float)))));
+    return expr(ignoreImplicitAndFloatingCasting(anyOf(Float, Dref)));
+  }
 
-auto matchValue(const int64_t ValInt) {
-  const auto Int =
-      expr(ignoreImplicitAndArithmeticCasting(integerLiteral(equals(ValInt))));
-  const auto Float = expr(ignoreImplicitAndFloatingCasting(
-      matchFloatValueNear(static_cast<double>(ValInt))));
-  const auto Dref = declRefExpr(to(varDecl(
-      hasType(qualType(isConstQualified(), isArithmetic())),
-      hasInitializer(expr(anyOf(ignoringImplicit(Int),
-                                ignoreImplicitAndFloatingCasting(Float)))))));
-  return expr(anyOf(Int, Float, Dref));
-}
+  auto matchValue(const int64_t ValInt) const {
+    const auto Int = expr(
+        ignoreImplicitAndArithmeticCasting(integerLiteral(equals(ValInt))));
+    const auto Float = expr(ignoreImplicitAndFloatingCasting(
+        matchFloatValueNear(static_cast<double>(ValInt))));
+    const auto Dref = declRefExpr(to(varDecl(
+        hasType(qualType(isConstQualified(), isArithmetic())),
+        hasInitializer(expr(anyOf(ignoringImplicit(Int),
+                                  ignoreImplicitAndFloatingCasting(Float)))))));
+    return expr(anyOf(Int, Float, Dref));
+  }
 
-auto match1Div(const Matcher<clang::Expr> Match) {
-  return binaryOperator(hasOperatorName("/"), hasLHS(matchValue(1)),
-                        hasRHS(ignoringImplicit(Match)));
-}
+  auto match1Div(const Matcher<clang::Expr> Match) const {
+    return binaryOperator(hasOperatorName("/"), hasLHS(matchValue(1)),
+                          hasRHS(ignoringImplicit(Match)));
+  }
 
-auto matchEuler() {
-  return expr(anyOf(matchFloatValueNear(llvm::numbers::e),
-                    matchMathCall("exp", matchValue(1))));
-}
-auto matchEulerTopLevel() {
-  return expr(anyOf(matchFloatLiteralNear("e_literal", llvm::numbers::e),
-                    matchMathCall("exp", matchValue(1)).bind("e_pattern")))
-      .bind("e");
-}
+  auto matchEuler() const {
+    return expr(anyOf(matchFloatValueNear(llvm::numbers::e),
+                      matchMathCall("exp", matchValue(1))));
+  }
+  auto matchEulerTopLevel() const {
+    return expr(anyOf(matchFloatLiteralNear("e_literal", llvm::numbers::e),
+                      matchMathCall("exp", matchValue(1)).bind("e_pattern")))
+        .bind("e");
+  }
 
-auto matchLog2Euler() {
-  return expr(
-             anyOf(matchFloatLiteralNear("log2e_literal", llvm::numbers::log2e),
+  auto matchLog2Euler() const {
+    return expr(
+               anyOf(
+                   matchFloatLiteralNear("log2e_literal", llvm::numbers::log2e),
                    matchMathCall("log2", matchEuler()).bind("log2e_pattern")))
-      .bind("log2e");
-}
+        .bind("log2e");
+  }
 
-auto matchLog10Euler() {
-  return expr(
-             anyOf(
-                 matchFloatLiteralNear("log10e_literal", llvm::numbers::log10e),
-                 matchMathCall("log10", matchEuler()).bind("log10e_pattern")))
-      .bind("log10e");
-}
+  auto matchLog10Euler() const {
+    return expr(
+               anyOf(
+                   matchFloatLiteralNear("log10e_literal",
+                                         llvm::numbers::log10e),
+                   matchMathCall("log10", matchEuler()).bind("log10e_pattern")))
+        .bind("log10e");
+  }
 
-auto matchPi() { return matchFloatValueNear(llvm::numbers::pi); }
-auto matchPiTopLevel() {
-  return matchFloatLiteralNear("pi_literal", llvm::numbers::pi).bind("pi");
-}
+  auto matchPi() const { return matchFloatValueNear(llvm::numbers::pi); }
+  auto matchPiTopLevel() const {
+    return matchFloatLiteralNear("pi_literal", llvm::numbers::pi).bind("pi");
+  }
 
-auto matchEgamma() {
-  return matchFloatLiteralNear("egamma_literal", llvm::numbers::egamma)
-      .bind("egamma");
-}
+  auto matchEgamma() const {
+    return matchFloatLiteralNear("egamma_literal", llvm::numbers::egamma)
+        .bind("egamma");
+  }
 
-auto matchInvPi() {
-  return expr(anyOf(matchFloatLiteralNear("inv_pi_literal",
-                                          llvm::numbers::inv_pi),
-                    match1Div(matchPi()).bind("inv_pi_pattern")))
-      .bind("inv_pi");
-}
+  auto matchInvPi() const {
+    return expr(anyOf(matchFloatLiteralNear("inv_pi_literal",
+                                            llvm::numbers::inv_pi),
+                      match1Div(matchPi()).bind("inv_pi_pattern")))
+        .bind("inv_pi");
+  }
 
-auto matchInvSqrtPi() {
-  return expr(anyOf(matchFloatLiteralNear("inv_sqrtpi_literal",
+  auto matchInvSqrtPi() const {
+    return expr(anyOf(
+                    matchFloatLiteralNear("inv_sqrtpi_literal",
                                           llvm::numbers::inv_sqrtpi),
                     match1Div(matchSqrt(matchPi())).bind("inv_sqrtpi_pattern")))
-      .bind("inv_sqrtpi");
-}
+        .bind("inv_sqrtpi");
+  }
 
-auto matchLn2() {
-  return expr(anyOf(matchFloatLiteralNear("ln2_literal", llvm::numbers::ln2),
-                    matchMathCall("log", ignoringImplicit(matchValue(2)))
-                        .bind("ln2_pattern")))
-      .bind("ln2");
-}
+  auto matchLn2() const {
+    return expr(anyOf(matchFloatLiteralNear("ln2_literal", llvm::numbers::ln2),
+                      matchMathCall("log", ignoringImplicit(matchValue(2)))
+                          .bind("ln2_pattern")))
+        .bind("ln2");
+  }
 
-auto machterLn10() {
-  return expr(anyOf(matchFloatLiteralNear("ln10_literal", llvm::numbers::ln10),
-                    matchMathCall("log", ignoringImplicit(matchValue(10)))
-                        .bind("ln10_pattern")))
-      .bind("ln10");
-}
+  auto machterLn10() const {
+    return expr(
+               anyOf(matchFloatLiteralNear("ln10_literal", llvm::numbers::ln10),
+                     matchMathCall("log", ignoringImplicit(matchValue(10)))
+                         .bind("ln10_pattern")))
+        .bind("ln10");
+  }
 
-auto matchSqrt2() {
-  return expr(
-             anyOf(matchFloatLiteralNear("sqrt2_literal", llvm::numbers::sqrt2),
-                   matchSqrt(matchValue(2)).bind("sqrt2_pattern")))
-      .bind("sqrt2");
-}
+  auto matchSqrt2() const {
+    return expr(anyOf(matchFloatLiteralNear("sqrt2_literal",
+                                            llvm::numbers::sqrt2),
+                      matchSqrt(matchValue(2)).bind("sqrt2_pattern")))
+        .bind("sqrt2");
+  }
 
-auto matchSqrt3() {
-  return expr(
-             anyOf(matchFloatLiteralNear("sqrt3_literal", llvm::numbers::sqrt3),
-                   matchSqrt(matchValue(3)).bind("sqrt3_pattern")))
-      .bind("sqrt3");
-}
+  auto matchSqrt3() const {
+    return expr(anyOf(matchFloatLiteralNear("sqrt3_literal",
+                                            llvm::numbers::sqrt3),
+                      matchSqrt(matchValue(3)).bind("sqrt3_pattern")))
+        .bind("sqrt3");
+  }
 
-auto matchInvSqrt3() {
-  return expr(
-             anyOf(
-                 matchFloatLiteralNear("inv_sqrt3_literal",
-                                       llvm::numbers::inv_sqrt3),
-                 match1Div(matchSqrt(matchValue(3))).bind("inv_sqrt3_pattern")))
-      .bind("inv_sqrt3");
-}
+  auto matchInvSqrt3() const {
+    return expr(anyOf(matchFloatLiteralNear("inv_sqrt3_literal",
+                                            llvm::numbers::inv_sqrt3),
+                      match1Div(matchSqrt(matchValue(3)))
+                          .bind("inv_sqrt3_pattern")))
+        .bind("inv_sqrt3");
+  }
 
-auto matchPhi() {
-  const auto PhiFormula = binaryOperator(
-      hasOperatorName("/"),
-      hasLHS(parenExpr(has(binaryOperator(
-          hasOperatorName("+"), hasEitherOperand(matchValue(1)),
-          hasEitherOperand(matchMathCall("sqrt", matchValue(5))))))),
-      hasRHS(matchValue(2)));
-  return expr(anyOf(PhiFormula.bind("phi_pattern"),
-                    matchFloatLiteralNear("phi_literal", llvm::numbers::phi)))
-      .bind("phi");
-}
+  auto matchPhi() const {
+    const auto PhiFormula = binaryOperator(
+        hasOperatorName("/"),
+        hasLHS(parenExpr(has(binaryOperator(
+            hasOperatorName("+"), hasEitherOperand(matchValue(1)),
+            hasEitherOperand(matchMathCall("sqrt", matchValue(5))))))),
+        hasRHS(matchValue(2)));
+    return expr(anyOf(PhiFormula.bind("phi_pattern"),
+                      matchFloatLiteralNear("phi_literal", llvm::numbers::phi)))
+        .bind("phi");
+  }
+
+  double DiffThreshold;
+};
 
 std::string getCode(const StringRef Constant, const bool IsFloat,
                     const bool IsLongDouble) {
@@ -286,14 +299,26 @@ UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,
     : ClangTidyCheck(Name, Context),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()) {}
+                      areDiagsSelfContained()) {
+  DiffThresholdString = Options.get("DiffThreshold", "0.001");
+  if (DiffThresholdString.getAsDouble(DiffThreshold)) {
+    configurationDiag(
+        "Invalid DiffThreshold config value: '%0', expected a double")
+        << DiffThresholdString;
+    DiffThreshold = 0.001;
+  }
+}
 
 void UseStdNumbersCheck::registerMatchers(MatchFinder *Finder) {
+  const auto Matches = MatchBuilder{DiffThreshold};
   static const auto ConstantMatchers = {
-      matchLog2Euler(), matchLog10Euler(), matchEulerTopLevel(), matchEgamma(),
-      matchInvSqrtPi(), matchInvPi(),      matchPiTopLevel(),    matchLn2(),
-      machterLn10(),    matchSqrt2(),      matchInvSqrt3(),      matchSqrt3(),
-      matchPhi(),
+      Matches.matchLog2Euler(),     Matches.matchLog10Euler(),
+      Matches.matchEulerTopLevel(), Matches.matchEgamma(),
+      Matches.matchInvSqrtPi(),     Matches.matchInvPi(),
+      Matches.matchPiTopLevel(),    Matches.matchLn2(),
+      Matches.machterLn10(),        Matches.matchSqrt2(),
+      Matches.matchInvSqrt3(),      Matches.matchSqrt3(),
+      Matches.matchPhi(),
   };
 
   Finder->addMatcher(

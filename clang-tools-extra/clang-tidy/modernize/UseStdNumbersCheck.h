@@ -35,10 +35,13 @@ public:
                            Preprocessor *ModuleExpanderPP) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override {
     Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
+    Options.store(Opts, "DiffThreshold", DiffThresholdString);
   }
 
 private:
   utils::IncludeInserter IncludeInserter;
+  StringRef DiffThresholdString;
+  double DiffThreshold;
 };
 
 } // namespace clang::tidy::modernize
