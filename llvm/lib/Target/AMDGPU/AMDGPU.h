@@ -86,6 +86,7 @@ void initializeAMDGPUMachineCFGStructurizerPass(PassRegistry&);
 extern char &AMDGPUMachineCFGStructurizerID;
 
 void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
+void initializeAMDGPUAsanInstrumentLDSPass(PassRegistry &);
 
 Pass *createAMDGPUAnnotateKernelFeaturesPass();
 Pass *createAMDGPUAttributorLegacyPass();
@@ -248,6 +249,13 @@ struct AMDGPUAlwaysInlinePass : PassInfoMixin<AMDGPUAlwaysInlinePass> {
 
 private:
   bool GlobalOpt;
+};
+
+ModulePass *createAMDGPUAsanInstrumentLDSPass();
+struct AMDGPUAsanInstrumentLDSPass
+    : PassInfoMixin<AMDGPUAsanInstrumentLDSPass> {
+  AMDGPUAsanInstrumentLDSPass() {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 class AMDGPUCodeGenPreparePass

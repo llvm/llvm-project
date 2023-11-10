@@ -330,6 +330,12 @@ static cl::opt<bool, true> EnableLowerModuleLDS(
     cl::location(AMDGPUTargetMachine::EnableLowerModuleLDS), cl::init(true),
     cl::Hidden);
 
+static cl::opt<bool, true> EnableAsanInstrumentLDS(
+    "amdgpu-enable-asan-instrument-lds",
+    cl::desc("Enable asan instrument lds pass"),
+    cl::location(AMDGPUTargetMachine::EnableAsanInstrumentLDS), cl::init(true),
+    cl::Hidden);
+
 static cl::opt<bool> EnablePreRAOptimizations(
     "amdgpu-enable-pre-ra-optimizations",
     cl::desc("Enable Pre-RA optimizations pass"), cl::init(true),
@@ -394,6 +400,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILoadStoreOptimizerPass(*PR);
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
+  initializeAMDGPUAsanInstrumentLDSPass(*PR);
   initializeAMDGPUAttributorLegacyPass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
   initializeAMDGPUAnnotateUniformValuesPass(*PR);
@@ -591,6 +598,7 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
 bool AMDGPUTargetMachine::EnableLateStructurizeCFG = false;
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
+bool AMDGPUTargetMachine::EnableAsanInstrumentLDS = true;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
 
@@ -644,6 +652,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(
         }
         if (PassName == "amdgpu-lower-module-lds") {
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
+          return true;
+        }
+        if (PassName == "amdgpu-asan-instrument-lds") {
+          PM.addPass(AMDGPUAsanInstrumentLDSPass());
           return true;
         }
         if (PassName == "amdgpu-lower-ctor-dtor") {
@@ -1038,6 +1050,11 @@ void AMDGPUPassConfig::addIRPasses() {
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS) {
     addPass(createAMDGPULowerModuleLDSLegacyPass(&TM));
+  }
+
+  // Add this pass only if asan is enabled
+  if (EnableAsanInstrumentLDS) {
+    addPass(createAMDGPUAsanInstrumentLDSPass());
   }
 
   // AMDGPUAttributor infers lack of llvm.amdgcn.lds.kernel.id calls, so run
