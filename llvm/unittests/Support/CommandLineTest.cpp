@@ -539,7 +539,7 @@ TEST(CommandLineTest, TopLevelOptInSubcommand) {
   // top-level options.  A valid use case is that users of llvm command line
   // tools should be able to specify top-level options defined in any library.
   StackOption<std::string> TopLevelOpt("str", cl::init("txt"),
-                                   cl::desc("A top-level option."));
+                                       cl::desc("A top-level option."));
 
   StackSubCommand SC("sc", "Subcommand");
   StackOption<std::string> PositionalOpt(
