@@ -148,15 +148,22 @@ Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
       HSA_AMD_INTERFACE_VERSION_MINOR >= 2)
   return Plugin::error("Async copy on selected SDMA requires ROCm 5.7");
 #else
-  static int SdmaEngine = 1;
+  static std::atomic<int> SdmaEngine{1};
 
+  // This atomics solution is probably not the best, but should be sufficient
+  // for now.
+  // In a worst case scenario, in which threads read the same value, they will
+  // dispatch to the same SDMA engine. This may result in sub-optimal
+  // performance. However, I think the possibility to be fairly low.
+  int LocalSdmaEngine = SdmaEngine.load(std::memory_order_acquire);
   // This call is only avail in ROCm >= 5.7
   hsa_status_t S = hsa_amd_memory_async_copy_on_engine(
       Dst, DstAgent, Src, SrcAgent, Size, NumDepSignals, DepSignals,
-      CompletionSignal, (hsa_amd_sdma_engine_id_t)SdmaEngine,
+      CompletionSignal, (hsa_amd_sdma_engine_id_t)LocalSdmaEngine,
       /*force_copy_on_sdma=*/true);
   // Increment to use one of three SDMA engines: 0x1, 0x2, 0x4
-  SdmaEngine = (SdmaEngine << 1) % 7;
+  LocalSdmaEngine = (LocalSdmaEngine << 1) % 7;
+  SdmaEngine.store(LocalSdmaEngine, std::memory_order_relaxed);
 
   return Plugin::check(S, "Error in hsa_amd_memory_async_copy_on_engine: %s");
 #endif
