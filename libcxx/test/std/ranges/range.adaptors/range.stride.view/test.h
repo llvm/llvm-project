@@ -12,6 +12,7 @@
 #include "__concepts/equality_comparable.h"
 #include "__concepts/movable.h"
 #include "__concepts/semiregular.h"
+#include "__iterator/concepts.h"
 #include "__iterator/default_sentinel.h"
 #include "__ranges/access.h"
 #include "__ranges/concepts.h"
@@ -207,6 +208,17 @@ struct InputArrayView : std::ranges::view_base {
 static_assert(std::ranges::view<InputArrayView<int>>);
 static_assert(std::ranges::input_range<InputArrayView<int>>);
 static_assert(std::copyable<InputArrayView<int>>);
+
+template <std::input_iterator T, std::sentinel_for<T> S = sentinel_wrapper<T>>
+struct InputArrayViewNp : std::ranges::view_base {
+  T begin_;
+  T end_;
+
+  constexpr InputArrayViewNp(T b, T e) : begin_(b), end_(e) {}
+
+  constexpr T begin() { return begin_; }
+  constexpr sentinel_wrapper<T> end() { return sentinel_wrapper<T>{end_}; }
+};
 
 struct ForwardTracedMoveIter : ForwardIterBase<ForwardTracedMoveIter> {
   bool moved = false;
