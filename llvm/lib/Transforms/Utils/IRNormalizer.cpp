@@ -80,6 +80,10 @@ private:
 
   /// \name Utility methods.
   /// @{
+  template<typename T>
+  void sortCommutativeOperands(T &Operands) const; 
+  template<typename T, typename Compare>
+  void sortCommutativeOperands(T &Operands, Compare Comp) const; 
   SmallVector<Instruction *, 16> collectOutputInstructions(Function &F);
   bool isOutput(const Instruction *I);
   bool isInitialInstruction(const Instruction *I);
@@ -188,6 +192,24 @@ void IRNormalizer::nameInstruction(Instruction *I) {
   }
 }
 
+template<typename T>
+void IRNormalizer::sortCommutativeOperands(T &Operands) const {
+  if (Operands.size() < 2)
+    return;
+  auto CommutativeEnd = Operands.begin();
+  std::advance(CommutativeEnd, 2);
+  llvm::sort(Operands.begin(), CommutativeEnd);
+}
+
+template<typename T, typename Compare>
+void IRNormalizer::sortCommutativeOperands(T &Operands, Compare Comp) const {
+  if (Operands.size() < 2)
+    return;
+  auto CommutativeEnd = Operands.begin();
+  std::advance(CommutativeEnd, 2);
+  llvm::sort(Operands.begin(), CommutativeEnd, Comp);
+}
+
 /// Names instruction following the scheme:
 /// vl00000Callee(Operands)
 ///
@@ -219,7 +241,7 @@ void IRNormalizer::nameAsInitialInstruction(Instruction *I) {
   }
 
   if (I->isCommutative())
-    llvm::sort(Operands);
+    sortCommutativeOperands(Operands);
 
   // Initialize to a magic constant, so the state isn't zero.
   uint64_t Hash = MagicHashConstant;
@@ -301,7 +323,7 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
   }
 
   if (I->isCommutative())
-    llvm::sort(Operands.begin(), Operands.end());
+    sortCommutativeOperands(Operands);
 
   // Initialize to a magic constant, so the state isn't zero.
   uint64_t Hash = MagicHashConstant;
@@ -318,7 +340,7 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
       OperandsOpcodes.push_back(IOP->getOpcode());
 
   if (I->isCommutative())
-    llvm::sort(OperandsOpcodes.begin(), OperandsOpcodes.end());
+    sortCommutativeOperands(OperandsOpcodes);
 
   // Consider operand opcodes in the hash.
   for (const int Code : OperandsOpcodes)
@@ -388,7 +410,7 @@ void IRNormalizer::foldInstructionName(Instruction *I) {
   }
 
   if (I->isCommutative())
-    llvm::sort(Operands.begin(), Operands.end());
+    sortCommutativeOperands(Operands);
 
   SmallString<256> Name;
   Name.append(I->getName().substr(0, 7));
@@ -495,7 +517,7 @@ void IRNormalizer::reorderInstructionOperandsByNames(Instruction *I) {
   }
 
   // Sort operands.
-  llvm::sort(Operands.begin(), Operands.end(), llvm::less_first());
+  sortCommutativeOperands(Operands, llvm::less_first());
 
   // Reorder operands.
   unsigned Position = 0;
