@@ -12,11 +12,13 @@
 ! RUN: %flang -### --target=x86_64-unknown-haiku %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,HAIKU
 ! RUN: %flang -### --target=x86_64-windows-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MINGW
 
-! NOTE: Clang's driver library, clangDriver, usually adds 'libcmt' and
-!       'oldnames' on Windows, but they are not needed when compiling
-!       Fortran code and they might bring in additional dependencies.
-!       Make sure they're not added.
-! RUN: %flang -### --target=aarch64-windows-msvc -fuse-ld= %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC --implicit-check-not libcmt --implicit-check-not oldnames
+! NOTE: Clang's driver library, clangDriver, usually adds 'oldnames' on Windows,
+!       but it is not needed when compiling Fortran code and they might bring in
+!       additional dependencies. Make sure its not added.
+! RUN: %flang -### --target=aarch64-windows-msvc -fuse-ld= %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC --implicit-check-not oldnames
+! RUN: %flang -### --target=aarch64-windows-msvc -fms-runtime-lib=static_dbg -fuse-ld= %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC-DEBUG --implicit-check-not oldnames
+! RUN: %flang -### --target=aarch64-windows-msvc -fms-runtime-lib=dll -fuse-ld= %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC-DLL --implicit-check-not oldnames
+! RUN: %flang -### --target=aarch64-windows-msvc -fms-runtime-lib=dll_dbg -fuse-ld= %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC-DLL-DEBUG --implicit-check-not oldnames
 
 ! Compiler invocation to generate the object file
 ! CHECK-LABEL: {{.*}} "-emit-obj"
@@ -52,8 +54,37 @@
 !       (lld-)link.exe on Windows platforms. The suffix may not be added
 !       when the executable is not found or on non-Windows platforms.
 ! MSVC-LABEL: link
-! MSVC-SAME: Fortran_main.lib
-! MSVC-SAME: FortranRuntime.lib
-! MSVC-SAME: FortranDecimal.lib
+! MSVC-SAME: /DEFAULTLIB:clang_rt.builtins-aarch64.lib
+! MSVC-SAME: /DEFAULTLIB:libcmt
+! MSVC-SAME: Fortran_main.static.lib
+! MSVC-SAME: FortranRuntime.static.lib
+! MSVC-SAME: FortranDecimal.static.lib
 ! MSVC-SAME: /subsystem:console
 ! MSVC-SAME: "[[object_file]]"
+
+! MSVC-DEBUG-LABEL: link
+! MSVC-DEBUG-SAME: /DEFAULTLIB:clang_rt.builtins-aarch64.lib
+! MSVC-DEBUG-SAME: /DEFAULTLIB:libcmtd
+! MSVC-DEBUG-SAME: Fortran_main.static_dbg.lib
+! MSVC-DEBUG-SAME: FortranRuntime.static_dbg.lib
+! MSVC-DEBUG-SAME: FortranDecimal.static_dbg.lib
+! MSVC-DEBUG-SAME: /subsystem:console
+! MSVC-DEBUG-SAME: "[[object_file]]"
+
+! MSVC-DLL-LABEL: link
+! MSVC-DLL-SAME: /DEFAULTLIB:clang_rt.builtins-aarch64.lib
+! MSVC-DLL-SAME: /DEFAULTLIB:msvcrt
+! MSVC-DLL-SAME: Fortran_main.dynamic.lib
+! MSVC-DLL-SAME: FortranRuntime.dynamic.lib
+! MSVC-DLL-SAME: FortranDecimal.dynamic.lib
+! MSVC-DLL-SAME: /subsystem:console
+! MSVC-DLL-SAME: "[[object_file]]"
+
+! MSVC-DLL-DEBUG-LABEL: link
+! MSVC-DLL-DEBUG-SAME: /DEFAULTLIB:clang_rt.builtins-aarch64.lib
+! MSVC-DLL-DEBUG-SAME: /DEFAULTLIB:msvcrtd
+! MSVC-DLL-DEBUG-SAME: Fortran_main.dynamic_dbg.lib
+! MSVC-DLL-DEBUG-SAME: FortranRuntime.dynamic_dbg.lib
+! MSVC-DLL-DEBUG-SAME: FortranDecimal.dynamic_dbg.lib
+! MSVC-DLL-DEBUG-SAME: /subsystem:console
+! MSVC-DLL-DEBUG-SAME: "[[object_file]]"
