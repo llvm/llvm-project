@@ -142,31 +142,19 @@ static bool FitsInDescriptor(
       kind, terminator, value);
 }
 
-void removeNewLine(char *str) {
-  char *newlinePos = std::strchr(str, '\n');
-  if (newlinePos) {
-    *newlinePos = '\0'; // Replace with null terminator
-  }
-}
-
 std::int32_t RTNAME(FDate)(const Descriptor *value, const Descriptor *errmsg) {
   FillWithSpaces(*value);
-
   std::time_t current_time;
   std::time(&current_time);
   std::array<char, 26> str;
-  // Day Mon dd hh:mm:ss yyyy\n is 26 character,
-  // e.g. Tue May 26 21:51:03 2015\n\0
+  // Day Mon dd hh:mm:ss yyyy\n\0 is 26 characters, e.g.
+  // Tue May 26 21:51:03 2015\n\0
 
   ctime_alloc(str.data(), str.size(), current_time);
-  removeNewLine(str.data());
-  std::int64_t stringLen{StringLength(str.data())};
-  if (stringLen <= 0) {
-    return ToErrmsg(errmsg, StatMissingArgument);
-  }
+  str[24] = '\0'; // remove new line
 
   if (value) {
-    return CopyToDescriptor(*value, str.data(), stringLen, errmsg);
+    return CopyToDescriptor(*value, str.data(), 24, errmsg);
   }
 
   return StatOk;
