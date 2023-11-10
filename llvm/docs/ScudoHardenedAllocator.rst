@@ -264,7 +264,8 @@ The following "string" options are available:
 |                                 |                |                | buffer size.                                    |
 |                                 |                |                |                                                 |
 |                                 |                |                | Stack trace collection can be requested using   |
-|                                 |                |                | scudo_malloc_set_track_allocation_stacks        |
+|                                 |                |                | the scudo_malloc_set_track_allocation_stacks    |
+|                                 |                |                | function.                                       |
 +---------------------------------+----------------+----------------+-------------------------------------------------+
 
 Additional flags can be specified, for example if Scudo if compiled with
