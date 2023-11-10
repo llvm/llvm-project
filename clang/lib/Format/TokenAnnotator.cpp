@@ -2188,6 +2188,11 @@ private:
     if (Tok.isNot(tok::identifier) || !Tok.Previous)
       return false;
 
+    if (const auto *NextNonComment = Tok.getNextNonComment();
+        !NextNonComment || NextNonComment->isPointerOrReference()) {
+      return false;
+    }
+
     if (Tok.Previous->isOneOf(TT_LeadingJavaAnnotation, Keywords.kw_instanceof,
                               Keywords.kw_as)) {
       return false;
@@ -3259,7 +3264,7 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
   if (Current.is(TT_FunctionDeclarationName))
     return true;
 
-  if (!Current.Tok.getIdentifierInfo() || Current.is(TT_CtorDtorDeclName))
+  if (!Current.Tok.getIdentifierInfo())
     return false;
 
   auto skipOperatorName = [](const FormatToken *Next) -> const FormatToken * {
@@ -3443,26 +3448,33 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     calculateArrayInitializerColumnList(Line);
 
   const bool IsCpp = Style.isCpp();
+  bool SeenName = false;
   bool LineIsFunctionDeclaration = false;
   FormatToken *ClosingParen = nullptr;
-  for (FormatToken *Tok = Current, *AfterLastAttribute = nullptr; Tok;
-       Tok = Tok->Next) {
+  FormatToken *AfterLastAttribute = nullptr;
+
+  for (auto *Tok = Current; Tok; Tok = Tok->Next) {
+    if (Tok->is(TT_StartOfName))
+      SeenName = true;
     if (Tok->Previous->EndsCppAttributeGroup)
       AfterLastAttribute = Tok;
-    if (isFunctionDeclarationName(IsCpp, *Tok, Line, ClosingParen)) {
-      LineIsFunctionDeclaration = true;
-      Tok->setFinalizedType(TT_FunctionDeclarationName);
-    }
-    if (LineIsFunctionDeclaration ||
-        Tok->isOneOf(TT_CtorDtorDeclName, TT_StartOfName)) {
-      if (IsCpp && AfterLastAttribute &&
-          mustBreakAfterAttributes(*AfterLastAttribute, Style)) {
-        AfterLastAttribute->MustBreakBefore = true;
-        if (LineIsFunctionDeclaration)
-          Line.ReturnTypeWrapped = true;
+    if (const bool IsCtorOrDtor = Tok->is(TT_CtorDtorDeclName);
+        IsCtorOrDtor ||
+        isFunctionDeclarationName(Style.isCpp(), *Tok, Line, ClosingParen)) {
+      if (!IsCtorOrDtor) {
+        LineIsFunctionDeclaration = true;
+        Tok->setFinalizedType(TT_FunctionDeclarationName);
       }
+      SeenName = true;
       break;
     }
+  }
+
+  if (IsCpp && SeenName && AfterLastAttribute &&
+      mustBreakAfterAttributes(*AfterLastAttribute, Style)) {
+    AfterLastAttribute->MustBreakBefore = true;
+    if (LineIsFunctionDeclaration)
+      Line.ReturnTypeWrapped = true;
   }
 
   if (IsCpp) {
