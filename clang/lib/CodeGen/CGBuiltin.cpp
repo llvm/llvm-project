@@ -9779,8 +9779,8 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
   case Intrinsic::aarch64_sve_ld1uwq:
   case Intrinsic::aarch64_sve_ld1udq:
     MemoryTy = llvm::ScalableVectorType::get(MemEltTy, 1);
-    PredTy =
-        llvm::ScalableVectorType::get(IntegerType::get(getLLVMContext(), 1), 1);
+    PredTy = llvm::ScalableVectorType::get(
+        llvm::Type::getInt1Ty(getLLVMContext()), 1);
     IsQuadLoad = true;
     break;
   default:
