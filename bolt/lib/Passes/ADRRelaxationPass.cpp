@@ -72,14 +72,17 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
 
       if (It != BB.begin() && BC.MIB->isNoop(*std::prev(It))) {
         It = BB.eraseInstruction(std::prev(It));
-      } else if (opts::StrictMode && !BF.isSimple()) {
+      } else if (std::next(It) != BB.end() && BC.MIB->isNoop(*std::next(It))) {
+        BB.eraseInstruction(std::next(It));
+      } else if (!opts::StrictMode && !BF.isSimple()) {
         // If the function is not simple, it may contain a jump table undetected
         // by us. This jump table may use an offset from the branch instruction
         // to land in the desired place. If we add new instructions, we
         // invalidate this offset, so we have to rely on linker-inserted NOP to
         // replace it with ADRP, and abort if it is not present.
+        auto L = BC.scopeLock();
         errs() << formatv("BOLT-ERROR: Cannot relax adr in non-simple function "
-                          "{0}. Can't proceed in current mode.\n",
+                          "{0}. Use --strict option to override\n",
                           BF.getOneName());
         PassFailed = true;
         return;
