@@ -166,11 +166,16 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FRAME_INDEX:
   case TargetOpcode::G_GLOBAL_VALUE:
+  case TargetOpcode::G_JUMP_TABLE:
   case TargetOpcode::G_BRCOND:
     OperandsMapping = getOperandsMapping({GPRValueMapping, nullptr});
     break;
   case TargetOpcode::G_BR:
     OperandsMapping = getOperandsMapping({nullptr});
+    break;
+  case TargetOpcode::G_BRJT:
+    OperandsMapping =
+        getOperandsMapping({GPRValueMapping, nullptr, GPRValueMapping});
     break;
   case TargetOpcode::G_ICMP:
     OperandsMapping = getOperandsMapping(

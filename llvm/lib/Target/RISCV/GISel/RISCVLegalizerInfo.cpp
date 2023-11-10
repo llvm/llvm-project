@@ -131,13 +131,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({sXLen}).minScalar(0, sXLen);
 
+  getActionDefinitionsBuilder(G_BRJT).legalFor({{p0, sXLen}});
+
   getActionDefinitionsBuilder(G_PHI)
       .legalFor({p0, sXLen})
       .widenScalarToNextPow2(0)
       .clampScalar(0, sXLen, sXLen);
 
-  getActionDefinitionsBuilder(G_GLOBAL_VALUE)
-      .legalFor({p0});
+  getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_JUMP_TABLE}).legalFor({p0});
 
   if (ST.hasStdExtM() || ST.hasStdExtZmmul()) {
     getActionDefinitionsBuilder(G_MUL)
