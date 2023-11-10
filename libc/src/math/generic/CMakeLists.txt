@@ -806,7 +806,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -818,7 +818,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -830,7 +830,19 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
-    -O2
+    -O3
+)
+
+add_entrypoint_object(
+  copysignf128
+  SRCS
+    copysignf128.cpp
+  HDRS
+    ../copysignf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_entrypoint_object(
