@@ -1,5 +1,5 @@
 # RUN: yaml-bench -canonical %s | FileCheck %s --strict-whitespace
-# CHECK: "folded \nto a space,\t\n \nto a line feed, or \t \tnon-content"
+# CHECK: "folded to a space,\nto a line feed, or \t \tnon-content"
 
 "folded 
 to a space,	
