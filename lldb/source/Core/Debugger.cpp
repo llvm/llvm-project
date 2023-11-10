@@ -61,8 +61,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/Debuginfod/Debuginfod.h"
-#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Process.h"
@@ -596,9 +594,6 @@ lldb::DWIMPrintVerbosity Debugger::GetDWIMPrintVerbosity() const {
 void Debugger::Initialize(LoadPluginCallbackType load_plugin_callback) {
   assert(g_debugger_list_ptr == nullptr &&
          "Debugger::Initialize called more than once!");
-  // We might be using the Debuginfod service, so we have to initialize the
-  // HTTPClient *before* any new threads start.
-  llvm::HTTPClient::initialize();
   g_debugger_list_mutex_ptr = new std::recursive_mutex();
   g_debugger_list_ptr = new DebuggerList();
   g_thread_pool = new llvm::ThreadPool(llvm::optimal_concurrency());

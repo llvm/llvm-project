@@ -65,7 +65,6 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Debuginfod/Debuginfod.h"
 
 #include <memory>
 #include <mutex>
@@ -4189,8 +4188,6 @@ TargetProperties::TargetProperties(Target *target)
     m_collection_sp->SetValueChangedCallback(
         ePropertyDisableSTDIO, [this] { DisableSTDIOValueChangedCallback(); });
     m_collection_sp->SetValueChangedCallback(
-        ePropertyDebuginfodURLs, [this] { DebuginfodURLsChangedCallback(); });
-    m_collection_sp->SetValueChangedCallback(
         ePropertySaveObjectsDir, [this] { CheckJITObjectsDir(); });
     m_experimental_properties_up =
         std::make_unique<TargetExperimentalProperties>();
@@ -4900,21 +4897,6 @@ void TargetProperties::SetDebugUtilityExpression(bool debug) {
   const uint32_t idx = ePropertyDebugUtilityExpression;
   SetPropertyAtIndex(idx, debug);
 }
-
-Args TargetProperties::GetDebuginfodURLs() const {
-  Args urls;
-  m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyDebuginfodURLs, urls);
-  return urls;
-}
-
-void TargetProperties::DebuginfodURLsChangedCallback() {
-  Args urls = GetDebuginfodURLs();
-  llvm::SmallVector<llvm::StringRef> dbginfod_urls;
-  llvm::transform(urls, dbginfod_urls.end(),
-                 [](const auto &obj) { return obj.ref(); });
-  llvm::setDefaultDebuginfodUrls(dbginfod_urls);
-}
-
 
 // Target::TargetEventData
 

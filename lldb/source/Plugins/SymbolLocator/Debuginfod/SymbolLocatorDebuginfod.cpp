@@ -149,6 +149,6 @@ bool SymbolLocatorDebuginfod::DownloadObjectAndSymbolFile(ModuleSpec &module_spe
                                                        Status &error,
                                                        bool force_lookup,
                                                        bool copy_executable) {
-  // TODO: Fill this with the appropriate Debuginfod stuff
+  // TODO: Continue to add more Debuginfod capabilities
   return false;
 }

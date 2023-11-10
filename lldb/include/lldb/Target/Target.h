@@ -258,8 +258,6 @@ public:
 
   bool GetDebugUtilityExpression() const;
 
-  Args GetDebuginfodURLs() const;
-
 private:
   // Callbacks for m_launch_info.
   void Arg0ValueChangedCallback();
@@ -272,7 +270,6 @@ private:
   void DisableASLRValueChangedCallback();
   void InheritTCCValueChangedCallback();
   void DisableSTDIOValueChangedCallback();
-  void DebuginfodURLsChangedCallback();
 
   // Settings checker for target.jit-save-objects-dir:
   void CheckJITObjectsDir();
