@@ -80,7 +80,7 @@ _Z3foov:                                # @_Z3foov
 .Lskel_string0:
 	.asciz	"."                             # string offset=0
 .Lskel_string1:
-	.asciz	"objects/o2/split.dwo"                    # string offset=2
+	.asciz	"objects/o2/split.dwo"                    # string offset=2 <-- Manutally modified.
 	.section	.debug_str_offsets,"",@progbits
 	.long	.Lskel_string0
 	.long	.Lskel_string1
@@ -100,7 +100,7 @@ _Z3foov:                                # @_Z3foov
 .Linfo_string4:
 	.asciz	"helper.cpp"                    # string offset=37
 .Linfo_string5:
-	.asciz	"objects/o2/split.dwo"                    # string offset=48
+	.asciz	"objects/o2/split.dwo"                    # string offset=48 <-- Manutally modified.
 	.section	.debug_str_offsets.dwo,"e",@progbits
 	.long	0
 	.long	8
