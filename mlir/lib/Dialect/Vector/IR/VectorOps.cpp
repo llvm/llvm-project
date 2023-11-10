@@ -3947,7 +3947,7 @@ static LogicalResult foldTransferFullMask(TransferOp op) {
   if (!constantMask)
     return failure();
 
-  if (!constantMask.isFullMask())
+  if (!constantMask.isAllOnesMask())
     return failure();
 
   op.getMaskMutable().clear();
@@ -5622,7 +5622,7 @@ LogicalResult ConstantMaskOp::verify() {
   return success();
 }
 
-bool ConstantMaskOp::isFullMask() {
+bool ConstantMaskOp::isAllOnesMask() {
   auto resultType = getVectorType();
   // Check the corner case of 0-D vectors first.
   if (resultType.getRank() == 0) {
