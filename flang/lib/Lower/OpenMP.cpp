@@ -1592,7 +1592,8 @@ bool ClauseProcessor::processCopyin() const {
           mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) {
         assert(sym->has<Fortran::semantics::HostAssocDetails>() &&
                "No host-association found");
-        converter.copyHostAssociateVar(*sym, copyAssignIP);
+        if (converter.isPresentShallowLookup(*sym))
+          converter.copyHostAssociateVar(*sym, copyAssignIP);
       };
   bool hasCopyin = findRepeatableClause<ClauseTy::Copyin>(
       [&](const ClauseTy::Copyin *copyinClause,
