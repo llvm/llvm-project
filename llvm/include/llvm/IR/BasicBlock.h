@@ -20,6 +20,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
 #include <cassert>
