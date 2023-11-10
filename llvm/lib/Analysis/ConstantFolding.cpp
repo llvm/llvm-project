@@ -277,15 +277,6 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
                                   ConstantInt::get(Src->getType(), ShiftAmt));
       ShiftAmt += isLittleEndian ? DstBitSize : -DstBitSize;
 
-      // Truncate the element to an integer with the same pointer size and
-      // convert the element back to a pointer using a inttoptr.
-      if (DstEltTy->isPointerTy()) {
-        IntegerType *DstIntTy = Type::getIntNTy(C->getContext(), DstBitSize);
-        Constant *CE = ConstantExpr::getTrunc(Elt, DstIntTy);
-        Result.push_back(ConstantExpr::getIntToPtr(CE, DstEltTy));
-        continue;
-      }
-
       // Truncate and remember this piece.
       Result.push_back(ConstantExpr::getTrunc(Elt, DstEltTy));
     }
