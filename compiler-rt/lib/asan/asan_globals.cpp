@@ -199,7 +199,7 @@ static inline bool UseODRIndicator(const Global *g) {
 // This function may be called more than once for every global
 // so we store the globals in a map.
 static void RegisterGlobal(const Global *g) {
-  CHECK(asan_inited);
+  CHECK(AsanInited());
   if (flags()->report_globals >= 2)
     ReportGlobal(*g, "Added");
   CHECK(flags()->report_globals);
@@ -240,7 +240,7 @@ static void RegisterGlobal(const Global *g) {
 }
 
 static void UnregisterGlobal(const Global *g) {
-  CHECK(asan_inited);
+  CHECK(AsanInited());
   if (flags()->report_globals >= 2)
     ReportGlobal(*g, "Removed");
   CHECK(flags()->report_globals);
@@ -433,7 +433,7 @@ void __asan_before_dynamic_init(const char *module_name) {
     return;
   bool strict_init_order = flags()->strict_init_order;
   CHECK(module_name);
-  CHECK(asan_inited);
+  CHECK(AsanInited());
   Lock lock(&mu_for_globals);
   if (flags()->report_globals >= 3)
     Printf("DynInitPoison module: %s\n", module_name);
@@ -457,7 +457,7 @@ void __asan_after_dynamic_init() {
       !CanPoisonMemory() ||
       !dynamic_init_globals)
     return;
-  CHECK(asan_inited);
+  CHECK(AsanInited());
   Lock lock(&mu_for_globals);
   // FIXME: Optionally report that we're unpoisoning globals from a module.
   for (uptr i = 0, n = dynamic_init_globals->size(); i < n; ++i) {

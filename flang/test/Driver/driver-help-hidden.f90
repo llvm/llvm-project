@@ -49,6 +49,8 @@
 ! CHECK-NEXT: -fintegrated-as         Enable the integrated assembler
 ! CHECK-NEXT: -fintrinsic-modules-path <dir>
 ! CHECK-NEXT:                         Specify where to find the compiled intrinsic modules
+! CHECK-NEXT: -flang-deprecated-no-hlfir
+! CHECK-NEXT:                         Do not use HLFIR lowering (deprecated)
 ! CHECK-NEXT: -flang-experimental-hlfir
 ! CHECK-NEXT:                         Use HLFIR lowering (experimental)
 ! CHECK-NEXT: -flang-experimental-polymorphism
@@ -59,6 +61,8 @@
 ! CHECK-NEXT: -flto=jobserver         Enable LTO in 'full' mode
 ! CHECK-NEXT: -flto=<value>           Set LTO mode
 ! CHECK-NEXT: -flto                   Enable LTO in 'full' mode
+! CHECK-NEXT: -fms-runtime-lib=<value>
+! CHECK-NEXT:                         Select Windows run-time library
 ! CHECK-NEXT: -fno-alias-analysis     Do not pass alias information on to LLVM (default for unoptimized builds)
 ! CHECK-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! CHECK-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
