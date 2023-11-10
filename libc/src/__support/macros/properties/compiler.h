@@ -34,10 +34,12 @@ using float128 = _Float128;
 #define LIBC_FLOAT128_IS_BUILTIN
 using float128 = __float128;
 
-#endif
+#elif (defined(__linux__) && defined(__aarch64__))
+// long double on Linux aarch64 is 128-bit floating point.
+#define LIBC_COMPILER_HAS_FLOAT128
+#define LIBC_FLOAT128_IS_LONG_DOUBLE
+using float128 = long double;
 
-#if defined(FLT16_MANT_DIG)
-#define LIBC_COMPILER_HAS_FLOAT16
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_COMPILER_H

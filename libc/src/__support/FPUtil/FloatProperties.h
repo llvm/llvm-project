@@ -175,7 +175,8 @@ template <> struct FloatProperties<long double> {
 };
 #endif
 
-#if defined(LIBC_COMPILER_HAS_FLOAT128)
+#if (defined(LIBC_COMPILER_HAS_FLOAT128) &&                                    \
+     !defined(LIBC_FLOAT128_IS_LONG_DOUBLE))
 // Properties for numbers represented in 128 bits long double on non x86
 // platform.
 template <> struct FloatProperties<float128> {

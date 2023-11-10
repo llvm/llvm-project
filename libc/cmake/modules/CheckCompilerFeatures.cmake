@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 
 # Initialize ALL_COMPILER_FEATURES as empty list.
-set(ALL_COMPILER_FEATURES "float16;float128")
+set(ALL_COMPILER_FEATURES "float128")
 
 # Making sure ALL_COMPILER_FEATURES is sorted.
 list(SORT ALL_COMPILER_FEATURES)
