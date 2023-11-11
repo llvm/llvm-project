@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitReaderTestCode.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/AsmParser/Parser.h"
