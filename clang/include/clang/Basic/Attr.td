@@ -2718,6 +2718,14 @@ def PragmaClangTextSection : InheritableAttr {
   let Documentation = [InternalOnly];
 }
 
+def CodeModel : InheritableAttr {
+  let Spellings = [GCC<"model">];
+  let Args = [StringArgument<"Model">];
+  let Subjects =
+      SubjectList<[ GlobalVar ], ErrorDiag>;
+  let Documentation = [CodeModelDocs];
+}
+
 def Sentinel : InheritableAttr {
   let Spellings = [GCC<"sentinel">];
   let Args = [DefaultIntArgument<"Sentinel", 0>,

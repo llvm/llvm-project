@@ -57,6 +57,15 @@ global variable or function should be in after translation.
   let Heading = "section, __declspec(allocate)";
 }
 
+def CodeModelDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``model`` attribute allows you to specify a specific code model a
+global variable should be in after translation.
+  }];
+  let Heading = "model";
+}
+
 def UsedDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

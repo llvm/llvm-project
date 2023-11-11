@@ -3369,6 +3369,33 @@ static void handleSectionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 }
 
+static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef CM;
+  StringRef Str;
+  SourceLocation LiteralLoc;
+  bool Ok = false;
+  // Check that it is a string.
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc))
+    return;
+
+  CM = Str;
+  if (S.getASTContext().getTargetInfo().getTriple().isLoongArch()) {
+    Ok = CM == "normal" || CM == "medium" || CM == "extreme";
+    CM = llvm::StringSwitch<StringRef>(CM)
+             .Case("normal", "small")
+             .Case("extreme", "large")
+             .Default(CM);
+  }
+
+  // Check that the value.
+  if (!Ok) {
+    S.Diag(LiteralLoc, diag::err_attr_codemodel_arg) << Str;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) CodeModelAttr(S.Context, AL, CM));
+}
+
 // This is used for `__declspec(code_seg("segname"))` on a decl.
 // `#pragma code_seg("segname")` uses checkSectionName() instead.
 static bool checkCodeSegName(Sema &S, SourceLocation LiteralLoc,
@@ -9308,6 +9335,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Section:
     handleSectionAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_CodeModel:
+    handleCodeModelAttr(S, D, AL);
     break;
   case ParsedAttr::AT_RandomizeLayout:
     handleRandomizeLayoutAttr(S, D, AL);
