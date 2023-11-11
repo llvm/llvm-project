@@ -13,6 +13,8 @@
 #include "RISCVLegalizerInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -44,7 +46,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, sXLen).lower();
 
   getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
-      .legalFor({{s32, s32}, {sXLen, sXLen}})
+      .customIf([=, &ST](const LegalityQuery &Query) {
+        return ST.is64Bit() && typeIs(0, s32)(Query) && typeIs(1, s32)(Query);
+      })
+      .legalFor({{s32, s32}, {s32, sXLen}, {sXLen, sXLen}})
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, sXLen)
       .clampScalar(0, s32, sXLen)
@@ -256,12 +261,42 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   getLegacyLegalizerInfo().computeTables();
 }
 
+bool RISCVLegalizerInfo::legalizeShlAshrLshr(
+    MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+    GISelChangeObserver &Observer) const {
+  assert(MI.getOpcode() == TargetOpcode::G_ASHR ||
+         MI.getOpcode() == TargetOpcode::G_LSHR ||
+         MI.getOpcode() == TargetOpcode::G_SHL);
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  // If the shift amount is a G_CONSTANT, promote it to a 64 bit type so the
+  // imported patterns can select it later. Either way, it will be legal.
+  Register AmtReg = MI.getOperand(2).getReg();
+  auto VRegAndVal = getIConstantVRegValWithLookThrough(AmtReg, MRI);
+  if (!VRegAndVal)
+    return true;
+  // Check the shift amount is in range for an immediate form.
+  uint64_t Amount = VRegAndVal->Value.getZExtValue();
+  if (Amount > 31)
+    return true; // This will have to remain a register variant.
+  auto ExtCst = MIRBuilder.buildConstant(LLT::scalar(64), Amount);
+  Observer.changingInstr(MI);
+  MI.getOperand(2).setReg(ExtCst.getReg(0));
+  Observer.changedInstr(MI);
+  return true;
+}
+
 bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
                                         MachineInstr &MI) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  GISelChangeObserver &Observer = Helper.Observer;
   switch (MI.getOpcode()) {
   default:
     // No idea what to do.
     return false;
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_LSHR:
+    return legalizeShlAshrLshr(MI, MIRBuilder, Observer);
   case TargetOpcode::G_SEXT_INREG: {
     // Source size of 32 is sext.w.
     int64_t SizeInBits = MI.getOperand(2).getImm();
