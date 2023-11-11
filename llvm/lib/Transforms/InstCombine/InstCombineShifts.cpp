@@ -299,8 +299,10 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
 
     // And compute the mask as usual: (-1 l>> (NumHighBitsToClear))
     auto *ExtendedAllOnes = ConstantExpr::getAllOnesValue(ExtendedTy);
-    NewMask =
-        ConstantExpr::getLShr(ExtendedAllOnes, ExtendedNumHighBitsToClear);
+    NewMask = ConstantFoldBinaryOpOperands(Instruction::LShr, ExtendedAllOnes,
+                                           ExtendedNumHighBitsToClear, Q.DL);
+    if (!NewMask)
+      return nullptr;
   } else
     return nullptr; // Don't know anything about this pattern.
 
