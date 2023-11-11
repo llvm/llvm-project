@@ -437,29 +437,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     break;
   }
-  case Instruction::BitCast:
-    if (!I->getOperand(0)->getType()->isIntOrIntVectorTy())
-      return nullptr;  // vector->int or fp->int?
-
-    if (auto *DstVTy = dyn_cast<VectorType>(VTy)) {
-      if (auto *SrcVTy = dyn_cast<VectorType>(I->getOperand(0)->getType())) {
-        if (isa<ScalableVectorType>(DstVTy) ||
-            isa<ScalableVectorType>(SrcVTy) ||
-            cast<FixedVectorType>(DstVTy)->getNumElements() !=
-            cast<FixedVectorType>(SrcVTy)->getNumElements())
-          // Don't touch a bitcast between vectors of different element counts.
-          return nullptr;
-      } else
-        // Don't touch a scalar-to-vector bitcast.
-        return nullptr;
-    } else if (I->getOperand(0)->getType()->isVectorTy())
-      // Don't touch a vector-to-scalar bitcast.
-      return nullptr;
-
-    if (SimplifyDemandedBits(I, 0, DemandedMask, Known, Depth + 1))
-      return I;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-    break;
   case Instruction::SExt: {
     // Compute the bits in the result that are not present in the input.
     unsigned SrcBitWidth = I->getOperand(0)->getType()->getScalarSizeInBits();
