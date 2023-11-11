@@ -78,7 +78,7 @@ SmallVector<StringRef> getDefaultDebuginfodUrls() {
   return DebuginfodUrls;
 }
 
-// Override the default debuginfod URL list.
+// Set the default debuginfod URL list, override the environment variable
 void setDefaultDebuginfodUrls(SmallVector<StringRef> URLs) {
   DebuginfodUrls.clear();
   DebuginfodUrls.insert(DebuginfodUrls.begin(), URLs.begin(), URLs.end());

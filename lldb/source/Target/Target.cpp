@@ -4187,6 +4187,7 @@ TargetProperties::TargetProperties(Target *target)
         ePropertyInheritTCC, [this] { InheritTCCValueChangedCallback(); });
     m_collection_sp->SetValueChangedCallback(
         ePropertyDisableSTDIO, [this] { DisableSTDIOValueChangedCallback(); });
+
     m_collection_sp->SetValueChangedCallback(
         ePropertySaveObjectsDir, [this] { CheckJITObjectsDir(); });
     m_experimental_properties_up =

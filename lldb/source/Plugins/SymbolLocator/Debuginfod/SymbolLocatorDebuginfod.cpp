@@ -1,4 +1,4 @@
-//===-- SymbolLocatorDebuginfod.cpp ------------------------------------------===//
+//===-- SymbolLocatorDebuginfod.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,35 +8,11 @@
 
 #include "SymbolLocatorDebuginfod.h"
 
-#include <cstring>
-#include <optional>
-
-#include "Plugins/ObjectFile/wasm/ObjectFileWasm.h"
-#include "lldb/Core/Debugger.h"
-#include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleList.h"
-#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Progress.h"
-#include "lldb/Core/Section.h"
-#include "lldb/Host/FileSystem.h"
-#include "lldb/Host/Host.h"
-#include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Target/Target.h"
-#include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/DataBuffer.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/Timer.h"
-#include "lldb/Utility/UUID.h"
+#include "lldb/Utility/Args.h"
 
-#include "llvm/ADT/SmallSet.h"
-#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Debuginfod/Debuginfod.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/ThreadPool.h"
+#include "llvm/Debuginfod/HTTPClient.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -62,19 +38,24 @@ public:
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
     m_collection_sp->Initialize(g_symbollocatordebuginfod_properties);
+
+    // We need to read the default value first to read the environment variable.
+    llvm::SmallVector<llvm::StringRef> urls = llvm::getDefaultDebuginfodUrls();
+    Args arg_urls{urls};
+    m_collection_sp->SetPropertyAtIndexFromArgs(ePropertyServerURLs, arg_urls);
+
     m_collection_sp->SetValueChangedCallback(
-        ePropertyURLs, [this] { URLsChangedCallback(); }
-    );
+        ePropertyServerURLs, [this] { ServerURLsChangedCallback(); });
   }
 
   Args GetDebugInfoDURLs() const {
     Args urls;
-    m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyURLs, urls);
+    m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyServerURLs, urls);
     return urls;
   }
 
 private:
-  void URLsChangedCallback() {
+  void ServerURLsChangedCallback() {
     Args urls = GetDebugInfoDURLs();
     llvm::SmallVector<llvm::StringRef> dbginfod_urls;
     llvm::transform(urls, dbginfod_urls.end(),
@@ -85,23 +66,38 @@ private:
 
 } // namespace
 
+static PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
+}
 
 SymbolLocatorDebuginfod::SymbolLocatorDebuginfod() : SymbolLocator() {}
 
 void SymbolLocatorDebuginfod::Initialize() {
-  PluginManager::RegisterPlugin(
-      GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
-      LocateExecutableObjectFile, LocateExecutableSymbolFile,
-      DownloadObjectAndSymbolFile);
-  // There's a "safety" concern on this:
-  // Does plugin initialization occur while things are still single threaded?
-  llvm::HTTPClient::initialize();
+  static llvm::once_flag g_once_flag;
+
+  llvm::call_once(g_once_flag, []() {
+    PluginManager::RegisterPlugin(
+        GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
+        LocateExecutableObjectFile, LocateExecutableSymbolFile, nullptr,
+        nullptr, SymbolLocatorDebuginfod::DebuggerInitialize);
+    llvm::HTTPClient::initialize();
+  });
+}
+
+void SymbolLocatorDebuginfod::DebuggerInitialize(Debugger &debugger) {
+  if (!PluginManager::GetSettingForSymbolLocatorPlugin(
+          debugger, PluginProperties::GetSettingName())) {
+    const bool is_global_setting = true;
+    PluginManager::CreateSettingForSymbolLocatorPlugin(
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
+        "Properties for the Debuginfod Symbol Locator plug-in.",
+        is_global_setting);
+  }
 }
 
 void SymbolLocatorDebuginfod::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
-  // There's a "safety" concern on this:
-  // Does plugin termination occur while things are still single threaded?
   llvm::HTTPClient::cleanup();
 }
 
@@ -143,12 +139,4 @@ std::optional<FileSpec> SymbolLocatorDebuginfod::LocateExecutableSymbolFile(
     consumeError(result.takeError());
   }
   return {};
-}
-
-bool SymbolLocatorDebuginfod::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
-                                                       Status &error,
-                                                       bool force_lookup,
-                                                       bool copy_executable) {
-  // TODO: Continue to add more Debuginfod capabilities
-  return false;
 }
