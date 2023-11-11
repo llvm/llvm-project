@@ -767,7 +767,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
     const uint64_t *dim2lvl, const uint64_t *lvl2dim, const intptr_t *lvlBufs)
     : SparseTensorStorage(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
                           dim2lvl, lvl2dim) {
-  // Note that none of the buffers cany be reused because ownership
+  // Note that none of the buffers can be reused because ownership
   // of the memory passed from clients is not necessarily transferred.
   // Therefore, all data is copied over into a new SparseTensorStorage.
   //
@@ -788,12 +788,12 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
     if (isCompressedLvl(l) || isLooseCompressedLvl(l)) {
       P *posPtr = reinterpret_cast<P *>(lvlBufs[bufIdx++]);
       C *crdPtr = reinterpret_cast<C *>(lvlBufs[bufIdx++]);
-      if (!isLooseCompressedLvl(l)) {
-        positions[l].assign(posPtr, posPtr + parentSz + 1);
-        coordinates[l].assign(crdPtr, crdPtr + positions[l][parentSz]);
-      } else {
+      if (isLooseCompressedLvl(l)) {
         positions[l].assign(posPtr, posPtr + 2 * parentSz);
         coordinates[l].assign(crdPtr, crdPtr + positions[l][2 * parentSz - 1]);
+      } else {
+        positions[l].assign(posPtr, posPtr + parentSz + 1);
+        coordinates[l].assign(crdPtr, crdPtr + positions[l][parentSz]);
       }
     } else if (isSingletonLvl(l)) {
       assert(0 && "general singleton not supported yet");
@@ -813,12 +813,12 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
     P *posPtr = reinterpret_cast<P *>(lvlBufs[bufIdx++]);
     C *aosCrdPtr = reinterpret_cast<C *>(lvlBufs[bufIdx++]);
     P crdLen;
-    if (!isLooseCompressedLvl(cooStartLvl)) {
-      positions[cooStartLvl].assign(posPtr, posPtr + parentSz + 1);
-      crdLen = positions[cooStartLvl][parentSz];
-    } else {
+    if (isLooseCompressedLvl(cooStartLvl)) {
       positions[cooStartLvl].assign(posPtr, posPtr + 2 * parentSz);
       crdLen = positions[cooStartLvl][2 * parentSz - 1];
+    } else {
+      positions[cooStartLvl].assign(posPtr, posPtr + parentSz + 1);
+      crdLen = positions[cooStartLvl][parentSz];
     }
     for (uint64_t l = cooStartLvl; l < lvlRank; l++) {
       coordinates[l].resize(crdLen);
