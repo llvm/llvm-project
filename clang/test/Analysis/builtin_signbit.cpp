@@ -5,6 +5,7 @@
 // RUN:   -O0 %s -o - | FileCheck %s --check-prefixes=CHECK-BE64
 // RUN: %clang -target powerpc64le-linux-gnu -emit-llvm -S -mabi=ibmlongdouble \
 // RUN:   -O0 %s -o - | FileCheck %s --check-prefixes=CHECK-LE
+// REQUIRES: asserts
 
 bool b;
 double d = -1.0;
