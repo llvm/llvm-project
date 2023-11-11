@@ -2512,6 +2512,10 @@ struct FormatStyle {
   /// <https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#maybes>`_
   /// \version 13
   std::vector<std::string> IfMacros;
+      
+  /// Ignore formatting in preprocessor definitions.
+  /// \version 18
+  bool IgnorePPDefinitions;
 
   /// Specify whether access modifiers should have their own indentation level.
   ///
@@ -4790,6 +4794,7 @@ struct FormatStyle {
                R.IncludeStyle.IncludeIsMainRegex &&
            IncludeStyle.IncludeIsMainSourceRegex ==
                R.IncludeStyle.IncludeIsMainSourceRegex &&
+           IgnorePPDefinitions == R.IgnorePPDefinitions &&
            IndentAccessModifiers == R.IndentAccessModifiers &&
            IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentCaseLabels == R.IndentCaseLabels &&

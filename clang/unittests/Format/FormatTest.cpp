@@ -24219,6 +24219,22 @@ TEST_F(FormatTest, WhitespaceSensitiveMacros) {
   verifyNoChange("FOO(String-ized&Messy+But: :Still=Intentional);", Style);
 }
 
+TEST_F(FormatTest, IgnorePPDefinitions) {
+  FormatStyle Style = getLLVMStyle();
+  Style.IgnorePPDefinitions = true;
+
+  verifyNoChange("#define  A", Style);
+  verifyNoChange("#define A   b", Style);
+  verifyNoChange("#define A  (  args   )", Style);
+  verifyNoChange("#define A  (  args   )  =  func  (  args  )", Style);
+  verifyNoChange("#define TEXT Text . With periods.", Style);
+  verifyNoChange("#define TEXT \\\nLine  number  one .  \\\nNumber  two .",
+                 Style);
+
+  // TODO
+  // verifyNoChange("/* comment */ #define A  (  args   )", Style);
+}
+
 TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {
   // These tests are not in NamespaceEndCommentsFixerTest because that doesn't
   // test its interaction with line wrapping
