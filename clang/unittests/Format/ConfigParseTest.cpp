@@ -200,7 +200,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpaceBeforeRangeBasedForLoopColon);
   CHECK_PARSE_BOOL(SpaceBeforeSquareBrackets);
   CHECK_PARSE_BOOL(VerilogBreakBetweenInstancePorts);
-  
+
   CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements, Enabled);
   CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements,
                           AcrossEmptyLines);

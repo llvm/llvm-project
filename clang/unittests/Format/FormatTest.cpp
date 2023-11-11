@@ -24227,13 +24227,43 @@ TEST_F(FormatTest, IgnorePPDefinitions) {
   verifyNoChange("#define A   b", Style);
   verifyNoChange("#define A  (  args   )", Style);
   verifyNoChange("#define A  (  args   )  =  func  (  args  )", Style);
-  verifyNoChange("#define TEXT \\\nLine  number  one .  \\\nNumber  two .",
-                 Style);
+
   verifyNoChange("#define A x:", Style);
   verifyNoChange("#define A a. b", Style);
-
-  // TODO
-  // verifyNoChange("/* comment */ #define A  (  args   )", Style);
+    
+  // Surrounded with formatted code
+  verifyFormat("int a;\n"
+               "#define  A  a\n"
+               "int a;",
+               "int  a ;\n"
+               "#define  A  a\n"
+               "int  a ;",
+               Style);
+    
+  // Columns are not broken when a limit is set
+  Style.ColumnLimit = 10;
+  verifyNoChange("#define A a a a a", Style);
+  Style.ColumnLimit = 0;
+    
+  // Multiline definition
+  verifyNoChange("#define A \\\n"
+                 "Line one with spaces  .  \\\n"
+                 " Line two.",
+                   Style);
+  verifyNoChange("#define A \\\n"
+                 "a a \\\n"
+                 "a        \\\na",
+                 Style);
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
+  verifyNoChange("#define A \\\n"
+                 "a a \\\n"
+                 "a        \\\na",
+                 Style);
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_Right;
+  verifyNoChange("#define A \\\n"
+                 "a a \\\n"
+                 "a        \\\na", 
+                 Style);
 }
 
 TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {
