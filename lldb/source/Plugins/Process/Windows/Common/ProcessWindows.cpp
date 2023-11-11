@@ -405,10 +405,6 @@ void ProcessWindows::RefreshStateAfterStop() {
                "{1:x} with watchpoint {2}",
                m_session_data->m_debugger->GetProcess().GetProcessId(), pc, id);
 
-      if (lldb::WatchpointSP wp_sp =
-              GetTarget().GetWatchpointList().FindByID(id))
-        wp_sp->SetHardwareIndex(slot_id);
-
       stop_info = StopInfo::CreateStopReasonWithWatchpointID(
           *stop_thread, id, m_watchpoints[id].address);
       stop_thread->SetStopInfo(stop_info);
