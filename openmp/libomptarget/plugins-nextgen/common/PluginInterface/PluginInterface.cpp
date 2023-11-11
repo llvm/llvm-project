@@ -719,7 +719,7 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
 Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
   for (DeviceImageTy *Image : LoadedImages)
     if (auto Err = callGlobalDestructors(Plugin, *Image))
-      return std::move(Err);
+      return Err;
 
   if (OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::AllocationTracker)) {
     GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
