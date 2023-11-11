@@ -873,15 +873,23 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // element if this is an array in an elemental call.
   hlfir::Entity actual = preparedActual.getActual(loc, builder);
 
-  // Handles the procedure pointer actual/dummy arguments.
-  if (actual.isProcedurePointer() || hlfir::isBoxProcAddressType(dummyType)) {
-    return PreparedDummyArgument{actual, /*cleanups=*/{}};
-    // TODO {loc, "procedure to procedure pointer argument passing");
+  // Handles the procedure pointer actual arguments.
+  if (actual.isProcedurePointer()) {
+    if (hlfir::isBoxProcAddressType(dummyType))
+      // Procedure pointer actual to procedure pointer dummy.
+      return PreparedDummyArgument{actual, /*cleanups=*/{}};
+    if (hlfir::isFortranProcedureValue(dummyType)) {
+      // Procedure pointer actual to procedure dummy.
+      actual = hlfir::derefPointersAndAllocatables(loc, builder, actual);
+      return PreparedDummyArgument{actual, /*cleanups=*/{}};
+    }
   }
 
   // Do nothing if this is a procedure argument. It is already a
   // fir.boxproc/fir.tuple<fir.boxproc, len> as it should.
   if (actual.isProcedure()) {
+    if (hlfir::isBoxProcAddressType(dummyType))
+      TODO(loc, "procedure to procedure pointer argument passing");
     if (actual.getType() != dummyType)
       actual = fixProcedureDummyMismatch(loc, builder, actual, dummyType);
     return PreparedDummyArgument{actual, /*cleanups=*/{}};
@@ -1183,6 +1191,8 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       break;
     case PassBy::CharProcTuple: {
       hlfir::Entity actual = preparedActual->getActual(loc, builder);
+      if (actual.isProcedurePointer())
+        actual = hlfir::derefPointersAndAllocatables(loc, builder, actual);
       if (!fir::isCharacterProcedureTuple(actual.getType()))
         actual = fixProcedureDummyMismatch(loc, builder, actual, argTy);
       caller.placeInput(arg, actual);
