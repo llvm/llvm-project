@@ -1270,8 +1270,8 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
   AddString(FSOpts.WorkingDir, Record);
   Stream.EmitRecord(FILE_SYSTEM_OPTIONS, Record);
 
-  // Write out the diagnostic/pragma mappings.
-  WritePragmaDiagnosticMappings(Diags, /* isModule = */ WritingModule);
+  if (!HSOpts.ModulesSkipPragmaDiagnosticMappings)
+    WritePragmaDiagnosticMappings(Diags, /* isModule = */ WritingModule);
 
   // Header search entry usage.
   auto HSEntryUsage = PP.getHeaderSearchInfo().computeUserEntryUsage();
