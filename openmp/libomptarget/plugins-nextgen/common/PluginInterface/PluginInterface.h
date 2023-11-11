@@ -671,6 +671,20 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error synchronize(__tgt_async_info *AsyncInfo);
   virtual Error synchronizeImpl(__tgt_async_info &AsyncInfo) = 0;
 
+  /// Invokes any global constructors on the device if present and is required
+  /// by the target.
+  virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
+                                       DeviceImageTy &Image) {
+    return Error::success();
+  }
+
+  /// Invokes any global destructors on the device if present and is required
+  /// by the target.
+  virtual Error callGlobalDestructors(GenericPluginTy &Plugin,
+                                      DeviceImageTy &Image) {
+    return Error::success();
+  }
+
   /// Query for the completion of the pending operations on the __tgt_async_info
   /// structure in a non-blocking manner.
   Error queryAsync(__tgt_async_info *AsyncInfo);
