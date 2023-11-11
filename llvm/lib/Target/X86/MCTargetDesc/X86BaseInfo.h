@@ -1210,6 +1210,7 @@ namespace X86II {
 
   /// \returns true if \p RegNo is an apx extended register.
   inline bool isApxExtendedReg(unsigned RegNo) {
+    assert(X86::R31WH - X86::R16 == 95 && "EGPRs are not continuous");
     return RegNo >= X86::R16 && RegNo <= X86::R31WH;
   }
 

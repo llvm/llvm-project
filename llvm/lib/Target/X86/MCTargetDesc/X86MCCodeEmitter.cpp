@@ -46,7 +46,7 @@ class X86OpcodePrefixHelper {
   // | 40H | | WRXB |
   // +-----+ +------+
 
-  // REX2 (2 byte)
+  // REX2 (2 bytes)
   // +-----+ +-------------------+
   // | D5H | | M | R'X'B' | WRXB |
   // +-----+ +-------------------+
@@ -1415,7 +1415,7 @@ PrefixKind X86MCCodeEmitter::emitOpcodePrefix(int MemOperand, const MCInst &MI,
     // Encoded by M bit in REX2
     if (Kind == REX2)
       break;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case X86II::T8:        // 0F 38
   case X86II::TA:        // 0F 3A
   case X86II::ThreeDNow: // 0F 0F, second 0F emitted by caller.
