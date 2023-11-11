@@ -848,6 +848,8 @@ def : Pat<(i32 (rotl GPR:$rs1, uimm5:$rs2)),
 
 let Predicates = [HasStdExtZba, IsRV64] in {
 def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
+def : Pat<(i64 (add_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
+          (ADD_UW GPR:$rs1, GPR:$rs2)>;
 }
 
 let Predicates = [HasStdExtZbs, IsRV64] in {
