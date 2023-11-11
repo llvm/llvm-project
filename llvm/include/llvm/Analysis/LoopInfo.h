@@ -14,7 +14,6 @@
 #define LLVM_ANALYSIS_LOOPINFO_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/CFG.h"
