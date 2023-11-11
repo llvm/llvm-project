@@ -72,6 +72,7 @@ if (LIBCXX_ENABLE_THREADS)
     mutex_destructor.cpp
     mutex.cpp
     shared_mutex.cpp
+    shared_resource.cpp
     thread.cpp
     )
 endif()
