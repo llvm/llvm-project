@@ -481,7 +481,7 @@ struct sub {
 
   sub(SubCommand &S) : Sub(S) {}
 
-  void apply(Option &O) const { O.addSubCommand(Sub); }
+  template <class Opt> void apply(Opt &O) const { O.addSubCommand(Sub); }
 };
 
 // Specify a callback function to be called when an option is seen.
