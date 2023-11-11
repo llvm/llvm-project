@@ -1,5 +1,5 @@
-; RUN: opt -passes=normalize -preserve-order=true < %s
-; RUN: opt -passes=normalize -preserve-order=false < %s
+; RUN: opt -passes=normalize -norm-preserve-order=true < %s
+; RUN: opt -passes=normalize -norm-preserve-order=false < %s
 
 define void @test(ptr, i32) {
 bb:
