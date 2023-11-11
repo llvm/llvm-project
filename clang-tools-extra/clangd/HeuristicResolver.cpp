@@ -56,7 +56,8 @@ const Type *resolveDeclsToType(const std::vector<const NamedDecl *> &Decls,
 // dependent one. Its associated type will then be extracted.
 struct InstantiatedDeclVisitor : RecursiveASTVisitor<InstantiatedDeclVisitor> {
 
-  InstantiatedDeclVisitor(NamedDecl *DependentDecl) : DependentDecl(DependentDecl) {}
+  InstantiatedDeclVisitor(NamedDecl *DependentDecl)
+      : DependentDecl(DependentDecl) {}
 
   bool shouldVisitTemplateInstantiations() const { return true; }
 
@@ -64,8 +65,7 @@ struct InstantiatedDeclVisitor : RecursiveASTVisitor<InstantiatedDeclVisitor> {
 
   bool shouldVisitImplicitCode() const { return true; }
 
-  template <typename D>
-  bool onDeclVisited(D *MaybeInstantiated) {
+  template <typename D> bool onDeclVisited(D *MaybeInstantiated) {
     if (MaybeInstantiated->getDeclContext()->isDependentContext())
       return true;
     auto *Dependent = dyn_cast<D>(DependentDecl);
@@ -82,13 +82,9 @@ struct InstantiatedDeclVisitor : RecursiveASTVisitor<InstantiatedDeclVisitor> {
     return false;
   }
 
-  bool VisitFieldDecl(FieldDecl *FD) {
-    return onDeclVisited(FD);
-  }
+  bool VisitFieldDecl(FieldDecl *FD) { return onDeclVisited(FD); }
 
-  bool VisitVarDecl(VarDecl *VD) {
-    return onDeclVisited(VD);
-  }
+  bool VisitVarDecl(VarDecl *VD) { return onDeclVisited(VD); }
 
   NamedDecl *DependentDecl;
   QualType DeducedType;
