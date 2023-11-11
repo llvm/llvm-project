@@ -1121,11 +1121,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         Address(&*AI, ConvertType(RetTy),
                 CurFnInfo->getReturnInfo().getIndirectAlign(), KnownNonNull);
     if (!CurFnInfo->getReturnInfo().getIndirectByVal()) {
-      ReturnValuePointer =
-          CreateDefaultAlignTempAlloca(Int8PtrTy, "result.ptr");
-      Builder.CreateStore(Builder.CreatePointerBitCastOrAddrSpaceCast(
-                              ReturnValue.getPointer(), Int8PtrTy),
-                          ReturnValuePointer);
+      ReturnValuePointer = CreateDefaultAlignTempAlloca(
+          ReturnValue.getPointer()->getType(), "result.ptr");
+      Builder.CreateStore(ReturnValue.getPointer(), ReturnValuePointer);
     }
   } else if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::InAlloca &&
              !hasScalarEvaluationKind(CurFnInfo->getReturnType())) {
