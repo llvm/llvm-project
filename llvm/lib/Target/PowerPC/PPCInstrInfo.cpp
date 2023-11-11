@@ -17,7 +17,6 @@
 #include "PPCInstrBuilder.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
