@@ -29,7 +29,7 @@ for.end:
   ret void
 }
 
-; TODO: For a loop with known trip count of 17, when we force VF 8, it should use
+; For a loop with known trip count of 17, when we force VF 8, it should use
 ; IC 1 since there may be a remainder loop that needs to run after the vector loop.
 ; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 8, interleaved count: 1)
 define void @loop_with_tc_17(ptr noalias %p, ptr noalias %q) {
@@ -78,7 +78,7 @@ for.end:
   ret void
 }
 
-; TODO: For a loop with unknown trip count but a profile showing an approx TC estimate of 17, 
+; For a loop with unknown trip count but a profile showing an approx TC estimate of 17, 
 ; when we force VF 8, it should use IC 1 since chances are high that the remainder loop
 ; will need to run
 ; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 8, interleaved count: 1)
