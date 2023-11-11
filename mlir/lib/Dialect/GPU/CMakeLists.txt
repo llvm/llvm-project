@@ -101,6 +101,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRSupport
   MLIRROCDLTarget
   MLIRTransformUtils
+  MLIRVectorDialect
   )
 
 add_subdirectory(TransformOps)
