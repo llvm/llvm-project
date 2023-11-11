@@ -5,7 +5,7 @@
 
 namespace llvm {
 
-/// IRNormalizer aims to transform LLVM IR into canonical form.
+/// IRNormalizer aims to transform LLVM IR into normal form.
 struct IRNormalizerPass : public PassInfoMixin<IRNormalizerPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
