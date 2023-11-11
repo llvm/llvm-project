@@ -104,9 +104,11 @@ int main() {
 // CHECK-SAME:                  isLocal: true, isDefinition: true, declaration: ![[IENUM_DECL]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[EMPTY_TEMPLATED_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 1, DW_OP_stack_value))
-// CHECK:      ![[EMPTY_TEMPLATED_VAR]] = distinct !DIGlobalVariable(name: "empty_templated", linkageName:
+// CHECK:      ![[EMPTY_TEMPLATED_VAR]] = distinct !DIGlobalVariable(name: "empty_templated"
+// CHECK-NOT:                             linkageName:
 // CHECK-SAME:                            isLocal: true, isDefinition: true, declaration: ![[EMPTY_TEMPLATED_DECL]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[TEMPLATE_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 5, DW_OP_stack_value))
-// CHECK:      ![[TEMPLATE_VAR]] = distinct !DIGlobalVariable(name: "cexpr_template", linkageName:
+// CHECK:      ![[TEMPLATE_VAR]] = distinct !DIGlobalVariable(name: "cexpr_template"
+// CHECK-NOT:                      linkageName:
 // CHECK-SAME:                     isLocal: true, isDefinition: true, declaration: ![[TEMPLATE_DECL]], templateParams: ![[TEMPLATE_PARMS_2:[0-9]+]])
