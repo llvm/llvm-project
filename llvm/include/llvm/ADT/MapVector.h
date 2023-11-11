@@ -134,7 +134,7 @@ public:
     auto &I = Result.first->second;
     if (Result.second) {
       Vector.emplace_back(std::piecewise_construct,
-                          std::forward_as_tuple(static_cast<KeyT &&>(Key)),
+                          std::forward_as_tuple(std::move(Key)),
                           std::forward_as_tuple(std::forward<Ts>(Args)...));
       I = Vector.size() - 1;
       return std::make_pair(std::prev(end()), true);
