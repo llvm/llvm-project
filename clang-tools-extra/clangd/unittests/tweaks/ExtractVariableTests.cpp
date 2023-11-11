@@ -64,6 +64,14 @@ TEST_F(ExtractVariableTest, Test) {
       int x = [[1]];
     })cpp";
   EXPECT_AVAILABLE(AvailableC);
+
+  ExtraArgs = {"-xc"};
+  const char *NoCrashCasesC = R"cpp(
+    // error-ok: broken code, but shouldn't crash
+    int x = [[foo()]];
+    )cpp";
+  EXPECT_UNAVAILABLE(NoCrashCasesC);
+
   ExtraArgs = {"-xobjective-c"};
   const char *AvailableObjC = R"cpp(
     __attribute__((objc_root_class))
