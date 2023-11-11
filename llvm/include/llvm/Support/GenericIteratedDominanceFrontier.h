@@ -23,7 +23,6 @@
 #ifndef LLVM_SUPPORT_GENERICITERATEDDOMINANCEFRONTIER_H
 #define LLVM_SUPPORT_GENERICITERATEDDOMINANCEFRONTIER_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/GenericDomTree.h"

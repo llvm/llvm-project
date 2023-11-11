@@ -15,7 +15,6 @@
 #ifndef LLVM_TRANSFORMS_IPO_SAMPLEPROFILEPROBE_H
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEPROBE_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/SampleProf.h"
