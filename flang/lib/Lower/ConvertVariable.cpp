@@ -502,10 +502,9 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
       }
     }
   }
-  if (!global) {
+  if (!global)
     global = builder.createGlobal(loc, symTy, globalName, linkage,
                                   mlir::Attribute{}, isConst, var.isTarget());
-  }
   if (Fortran::semantics::IsAllocatableOrPointer(sym) &&
       !Fortran::semantics::IsProcedure(sym)) {
     const auto *details =
