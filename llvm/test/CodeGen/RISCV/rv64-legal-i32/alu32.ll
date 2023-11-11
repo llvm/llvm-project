@@ -137,8 +137,6 @@ define i32 @sll_shamt_zext(i32 %a, i32 %b) nounwind {
 ; RV64I-LABEL: sll_shamt_zext:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi a1, a1, 1
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    srli a1, a1, 32
 ; RV64I-NEXT:    sllw a0, a0, a1
 ; RV64I-NEXT:    ret
   %shamt = add i32 %b, 1
@@ -206,8 +204,6 @@ define i32 @srl_shamt_zext(i32 %a, i32 %b) nounwind {
 ; RV64I-LABEL: srl_shamt_zext:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi a1, a1, 1
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    srli a1, a1, 32
 ; RV64I-NEXT:    srlw a0, a0, a1
 ; RV64I-NEXT:    ret
   %shamt = add i32 %b, 1
@@ -241,8 +237,6 @@ define i32 @sra_shamt_zext(i32 %a, i32 %b) nounwind {
 ; RV64I-LABEL: sra_shamt_zext:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi a1, a1, 1
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    srli a1, a1, 32
 ; RV64I-NEXT:    sraw a0, a0, a1
 ; RV64I-NEXT:    ret
   %shamt = add i32 %b, 1

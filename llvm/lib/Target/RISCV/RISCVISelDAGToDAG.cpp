@@ -2541,10 +2541,15 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
                                         SDValue &ShAmt) {
   ShAmt = N;
 
+  // Peek through zext.
+  if (ShAmt->getOpcode() == ISD::ZERO_EXTEND)
+    ShAmt = ShAmt.getOperand(0);
+
   // Shift instructions on RISC-V only read the lower 5 or 6 bits of the shift
   // amount. If there is an AND on the shift amount, we can bypass it if it
   // doesn't affect any of those bits.
-  if (ShAmt.getOpcode() == ISD::AND && isa<ConstantSDNode>(ShAmt.getOperand(1))) {
+  if (ShAmt.getOpcode() == ISD::AND &&
+      isa<ConstantSDNode>(ShAmt.getOperand(1))) {
     const APInt &AndMask = ShAmt.getConstantOperandAPInt(1);
 
     // Since the max shift amount is a power of 2 we can subtract 1 to make a
