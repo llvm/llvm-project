@@ -404,7 +404,7 @@ void IRNormalizer::foldInstructionName(Instruction *I) {
   for (auto &OP : I->operands()) {
     if (const auto *IOP = dyn_cast<Instruction>(OP)) {
       bool HasNormalName = I->getName().substr(0, 2) == "op" ||
-                              I->getName().substr(0, 2) == "vl";
+                           I->getName().substr(0, 2) == "vl";
 
       Operands.push_back(HasNormalName ? IOP->getName().substr(0, 7)
                                        : IOP->getName());
