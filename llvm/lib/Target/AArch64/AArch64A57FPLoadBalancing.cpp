@@ -30,7 +30,6 @@
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
