@@ -80,9 +80,9 @@ private:
 
   /// \name Utility methods.
   /// @{
-  template <typename T> void sortCommutativeOperands(T &Operands) const; 
+  template <typename T> void sortCommutativeOperands(T &Operands) const;
   template <typename T, typename Compare>
-  void sortCommutativeOperands(T &Operands, Compare Comp) const; 
+  void sortCommutativeOperands(T &Operands, Compare Comp) const;
   SmallVector<Instruction *, 16> collectOutputInstructions(Function &F);
   bool isOutput(const Instruction *I);
   bool isInitialInstruction(const Instruction *I);
@@ -407,7 +407,7 @@ void IRNormalizer::foldInstructionName(Instruction *I) {
                               I->getName().substr(0, 2) == "vl";
 
       Operands.push_back(HasNormalName ? IOP->getName().substr(0, 7)
-                                          : IOP->getName());
+                                       : IOP->getName());
     }
   }
 
@@ -476,7 +476,7 @@ void IRNormalizer::reorderInstruction(
     Used->moveBefore(User);
   } else {
     // Otherwise move Used to the very end of its basic block.
-    LLVM_DEBUG(dbgs() << "\tMoved " << *Used << " to end of block " 
+    LLVM_DEBUG(dbgs() << "\tMoved " << *Used << " to end of block "
                       << Used->getParent()->getName() << "\n");
     Used->moveBefore(&Used->getParent()->back());
   }
