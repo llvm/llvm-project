@@ -9,6 +9,7 @@
 #include "UseStdNumbersCheck.h"
 #include "../ClangTidyDiagnosticConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
@@ -81,22 +82,18 @@ AST_MATCHER_P(clang::Expr, anyOfExhaustive,
 // literals.
 struct MatchBuilder {
   auto
-  ignoreImplicitAndArithmeticCasting(const Matcher<clang::Expr> Matcher) const {
-    return expr(
-        ignoringImplicit(expr(hasType(qualType(isArithmetic())),
-                              ignoringParenCasts(ignoringImplicit(Matcher)))));
+  ignoreParenAndArithmeticCasting(const Matcher<clang::Expr> Matcher) const {
+    return expr(hasType(qualType(isArithmetic())),
+                ignoringParenCasts((Matcher)));
   }
 
-  auto
-  ignoreImplicitAndFloatingCasting(const Matcher<clang::Expr> Matcher) const {
-    return expr(
-        ignoringImplicit(expr(hasType(qualType(isFloating())),
-                              ignoringParenCasts(ignoringImplicit(Matcher)))));
+  auto ignoreParenAndFloatingCasting(const Matcher<clang::Expr> Matcher) const {
+    return expr(hasType(qualType(isFloating())), ignoringParenCasts((Matcher)));
   }
 
   auto matchMathCall(const StringRef FunctionName,
                      const Matcher<clang::Expr> ArgumentMatcher) const {
-    return expr(ignoreImplicitAndFloatingCasting(
+    return expr(ignoreParenAndFloatingCasting(
         callExpr(callee(functionDecl(hasName(FunctionName),
                                      hasParameter(0, hasType(isArithmetic())))),
                  hasArgument(0, ArgumentMatcher))));
@@ -114,7 +111,7 @@ struct MatchBuilder {
   //
   // If the match is for a top-level match, we only care about the literal.
   auto matchFloatLiteralNear(const StringRef Constant, const double Val) const {
-    return expr(ignoreImplicitAndFloatingCasting(
+    return expr(ignoreParenAndFloatingCasting(
         floatLiteral(near(Val, DiffThreshold)).bind(Constant)));
   }
 
@@ -134,25 +131,25 @@ struct MatchBuilder {
 
     const auto Dref = declRefExpr(
         to(varDecl(hasType(qualType(isConstQualified(), isFloating())),
-                   hasInitializer(ignoreImplicitAndFloatingCasting(Float)))));
-    return expr(ignoreImplicitAndFloatingCasting(anyOf(Float, Dref)));
+                   hasInitializer(ignoreParenAndFloatingCasting(Float)))));
+    return expr(ignoreParenAndFloatingCasting(anyOf(Float, Dref)));
   }
 
   auto matchValue(const int64_t ValInt) const {
-    const auto Int = expr(
-        ignoreImplicitAndArithmeticCasting(integerLiteral(equals(ValInt))));
-    const auto Float = expr(ignoreImplicitAndFloatingCasting(
+    const auto Int =
+        expr(ignoreParenAndArithmeticCasting(integerLiteral(equals(ValInt))));
+    const auto Float = expr(ignoreParenAndFloatingCasting(
         matchFloatValueNear(static_cast<double>(ValInt))));
     const auto Dref = declRefExpr(to(varDecl(
         hasType(qualType(isConstQualified(), isArithmetic())),
         hasInitializer(expr(anyOf(ignoringImplicit(Int),
-                                  ignoreImplicitAndFloatingCasting(Float)))))));
+                                  ignoreParenAndFloatingCasting(Float)))))));
     return expr(anyOf(Int, Float, Dref));
   }
 
   auto match1Div(const Matcher<clang::Expr> Match) const {
     return binaryOperator(hasOperatorName("/"), hasLHS(matchValue(1)),
-                          hasRHS(ignoringImplicit(Match)));
+                          hasRHS(Match));
   }
 
   auto matchEuler() const {
@@ -209,16 +206,14 @@ struct MatchBuilder {
 
   auto matchLn2() const {
     return expr(anyOf(matchFloatLiteralNear("ln2_literal", llvm::numbers::ln2),
-                      matchMathCall("log", ignoringImplicit(matchValue(2)))
-                          .bind("ln2_pattern")))
+                      matchMathCall("log", matchValue(2)).bind("ln2_pattern")))
         .bind("ln2");
   }
 
   auto machterLn10() const {
     return expr(
                anyOf(matchFloatLiteralNear("ln10_literal", llvm::numbers::ln10),
-                     matchMathCall("log", ignoringImplicit(matchValue(10)))
-                         .bind("ln10_pattern")))
+                     matchMathCall("log", matchValue(10)).bind("ln10_pattern")))
         .bind("ln10");
   }
 
@@ -247,9 +242,9 @@ struct MatchBuilder {
   auto matchPhi() const {
     const auto PhiFormula = binaryOperator(
         hasOperatorName("/"),
-        hasLHS(parenExpr(has(binaryOperator(
+        hasLHS(binaryOperator(
             hasOperatorName("+"), hasEitherOperand(matchValue(1)),
-            hasEitherOperand(matchMathCall("sqrt", matchValue(5))))))),
+            hasEitherOperand(matchMathCall("sqrt", matchValue(5))))),
         hasRHS(matchValue(2)));
     return expr(anyOf(PhiFormula.bind("phi_pattern"),
                       matchFloatLiteralNear("phi_literal", llvm::numbers::phi)))
@@ -321,8 +316,11 @@ void UseStdNumbersCheck::registerMatchers(MatchFinder *Finder) {
       Matches.matchPhi(),
   };
 
+  // Using 'TK_IgnoreUnlessSpelledInSource' here instead of at the check level
+  // to figure out what the type is that the matched constants are used as.
   Finder->addMatcher(
-      expr(anyOfExhaustive(ConstantMatchers),
+      expr(traverse(TK_IgnoreUnlessSpelledInSource,
+                    expr(anyOfExhaustive(ConstantMatchers))),
            unless(isInTemplateInstantiation()),
            unless(hasParent(expr(
                anyOf(implicitCastExpr(hasImplicitDestinationType(isFloating())),
