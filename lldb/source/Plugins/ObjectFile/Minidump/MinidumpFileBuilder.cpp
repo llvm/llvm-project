@@ -557,43 +557,24 @@ Status MinidumpFileBuilder::AddException(const lldb::ProcessSP &process_sp) {
 }
 
 lldb_private::Status
-MinidumpFileBuilder::AddMemoryList(const lldb::ProcessSP &process_sp) {
+MinidumpFileBuilder::AddMemoryList(const lldb::ProcessSP &process_sp,
+                                   lldb::SaveCoreStyle core_style) {
   Status error;
-
+  Process::CoreFileMemoryRanges core_ranges;
+  error = process_sp->CalculateCoreFileSaveRanges(core_style, core_ranges);
   if (error.Fail()) {
     error.SetErrorString("Process doesn't support getting memory region info.");
     return error;
   }
 
-  // Get interesting addresses
-  std::vector<size_t> interesting_addresses;
-  auto thread_list = process_sp->GetThreadList();
-  for (size_t i = 0; i < thread_list.GetSize(); ++i) {
-    ThreadSP thread_sp(thread_list.GetThreadAtIndex(i));
-    RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
-    RegisterContext *reg_ctx = reg_ctx_sp.get();
-
-    interesting_addresses.push_back(read_register_u64(reg_ctx, "rsp"));
-    interesting_addresses.push_back(read_register_u64(reg_ctx, "rip"));
-  }
-
   DataBufferHeap helper_data;
   std::vector<MemoryDescriptor> mem_descriptors;
-
-  std::set<addr_t> visited_region_base_addresses;
-  for (size_t interesting_address : interesting_addresses) {
-    MemoryRegionInfo range_info;
-    error = process_sp->GetMemoryRegionInfo(interesting_address, range_info);
-    // Skip failed memory region requests or any regions with no permissions.
-    if (error.Fail() || range_info.GetLLDBPermissions() == 0)
+  for (const auto &core_range : core_ranges) {
+    // Skip empty memory regions or any regions with no permissions.
+    if (core_range.range.empty() || core_range.lldb_permissions == 0)
       continue;
-    const addr_t addr = range_info.GetRange().GetRangeBase();
-    // Skip any regions we have already saved out.
-    if (visited_region_base_addresses.insert(addr).second == false)
-      continue;
-    const addr_t size = range_info.GetRange().GetByteSize();
-    if (size == 0)
-      continue;
+    const addr_t addr = core_range.range.start();
+    const addr_t size = core_range.range.size();
     auto data_up = std::make_unique<DataBufferHeap>(size, 0);
     const size_t bytes_read =
         process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
