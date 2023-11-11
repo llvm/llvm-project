@@ -2050,6 +2050,11 @@ def : Pat<(i32 (and GPR:$rs, TrailingOnesMask:$mask)),
 
 let Predicates = [IsRV64, NotHasStdExtZba] in {
 def : Pat<(zext GPR:$src), (SRLI (SLLI GPR:$src, 32), 32)>;
+
+// If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
+// shifts instead of 3. This can occur when unsigned is used to index an array.
+def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
+          (SRLI (SLLI GPR:$rs, 32), (ImmSubFrom32 uimm5:$shamt))>;
 }
 
 //===----------------------------------------------------------------------===//
