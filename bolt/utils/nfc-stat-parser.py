@@ -82,8 +82,8 @@ def main():
                     [x > args.check_longer_than for x in [time_a, time_b]]
                 )
                 # Compute B/A ratios (for % delta and geomean)
-                time_ratio = time_b / time_a
-                mem_ratio = mem_b / mem_a
+                time_ratio = time_b / time_a if time_a else float('nan')
+                mem_ratio = mem_b / mem_a if mem_a else float('nan')
                 # Keep ratios for geomean
                 if time_above_bound and time_ratio > 0:  # must be >0 for gmean
                     time_ratios += [time_ratio]
