@@ -5,6 +5,7 @@
 # RUN: llvm-ar rc a.a a.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux ref.s -o ref.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux ref2.s -o ref2.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux weakref2.s -o weakref2.o
 # RUN: ld.lld a.a b.so ref.o -shared -o 1.so
 # RUN: llvm-readelf --dyn-syms 1.so | FileCheck %s
 # RUN: ld.lld a.so a.a ref.o -shared -o 1.so
@@ -25,12 +26,25 @@
 # CHECK2:      {{.*}}               0 NOTYPE  GLOBAL DEFAULT [[#]] x1
 # CHECK2-NEXT: {{.*}}               0 NOTYPE  WEAK   DEFAULT [[#]] x2
 
-## The extracted x2 is defined as STB_WEAK. x1 is not referenced by any relocatable object file. Undef x1 is unneeded.
-# RUN: ld.lld a.a ref2.o b.so -o 3.so -shared
-# RUN: llvm-readelf --dyn-symbols 3.so | FileCheck %s --check-prefix=CHECK2
+## The extracted x2 is defined as STB_WEAK. x1 is not referenced by any relocatable object file.
+# RUN: ld.lld a.a ref2.o b.so -o 2.so -shared
+# RUN: llvm-readelf --dyn-syms 2.so | FileCheck %s --check-prefix=CHECK2
+# RUN: ld.lld a.a a.so ref2.o -o 3.so -shared
+# RUN: llvm-readelf --dyn-syms 3.so | FileCheck %s --check-prefix=CHECK3
+# RUN: ld.lld a.so a.a ref2.o -o 3.so -shared
+# RUN: llvm-readelf --dyn-syms 3.so | FileCheck %s --check-prefix=CHECK3
 
-# RUN: ld.lld a.a --as-needed a.so -o 4.so -shared
-# RUN: llvm-readelf -d 4.so | FileCheck %s --check-prefix=NONEEDED
+# CHECK3:       1: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT UND x2
+# CHECK3-EMPTY:
+
+# RUN: ld.lld a.a weakref2.o a.so -o 4.so -shared
+# RUN: llvm-readelf --dyn-syms 4.so | FileCheck %s --check-prefix=CHECK4
+
+# CHECK4:       1: 0000000000000000     0 NOTYPE  WEAK   DEFAULT UND x2
+# CHECK4-EMPTY:
+
+# RUN: ld.lld a.a --as-needed a.so -o noneeded.so -shared
+# RUN: llvm-readelf -d noneeded.so | FileCheck %s --check-prefix=NONEEDED
 
 # NONEEDED-NOT: NEEDED
 
@@ -51,3 +65,5 @@ x2:
 .globl x2
 #--- ref2.s
 .globl x2
+#--- weakref2.s
+.weak x2
