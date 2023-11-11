@@ -503,15 +503,8 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
     }
   }
   if (!global) {
-    if (Fortran::semantics::IsProcedurePointer(sym)) {
-      auto nullBoxProcTy{
-          Fortran::lower::getUntypedBoxProcType(builder.getContext())};
-      global = builder.createGlobal(loc, nullBoxProcTy, globalName, linkage,
-                                    mlir::Attribute{}, isConst, var.isTarget());
-    } else {
-      global = builder.createGlobal(loc, symTy, globalName, linkage,
-                                    mlir::Attribute{}, isConst, var.isTarget());
-    }
+    global = builder.createGlobal(loc, symTy, globalName, linkage,
+                                  mlir::Attribute{}, isConst, var.isTarget());
   }
   if (Fortran::semantics::IsAllocatableOrPointer(sym) &&
       !Fortran::semantics::IsProcedure(sym)) {
