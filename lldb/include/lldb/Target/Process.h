@@ -54,6 +54,7 @@
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/lldb-private.h"
 
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
@@ -357,12 +358,10 @@ public:
   };
   // This is all the event bits the public process broadcaster broadcasts.
   // The process shadow listener signs up for all these bits...
-  static constexpr int g_all_event_bits = eBroadcastBitStateChanged 
-                                        | eBroadcastBitInterrupt
-                                        | eBroadcastBitSTDOUT 
-                                        | eBroadcastBitSTDERR
-                                        | eBroadcastBitProfileData 
-                                        | eBroadcastBitStructuredData;
+  static constexpr int g_all_event_bits =
+      eBroadcastBitStateChanged | eBroadcastBitInterrupt | eBroadcastBitSTDOUT |
+      eBroadcastBitSTDERR | eBroadcastBitProfileData |
+      eBroadcastBitStructuredData;
 
   enum {
     eBroadcastInternalStateControlStop = (1 << 0),
@@ -393,7 +392,7 @@ public:
   ConstString &GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
   }
-  
+
 /// A notification structure that can be used by clients to listen
 /// for changes in a process's lifetime.
 ///
@@ -582,7 +581,7 @@ public:
   ///     of CommandObject like CommandObjectRaw, CommandObjectParsed,
   ///     or CommandObjectMultiword.
   virtual CommandObject *GetPluginCommandObject() { return nullptr; }
-  
+
   /// The underlying plugin might store the low-level communication history for
   /// this session.  Dump it into the provided stream.
   virtual void DumpPluginHistory(Stream &s) { return; }
@@ -617,7 +616,7 @@ public:
     return error;
   }
 
-  /// The "ShadowListener" for a process is just an ordinary Listener that 
+  /// The "ShadowListener" for a process is just an ordinary Listener that
   /// listens for all the Process event bits.  It's convenient because you can
   /// specify it in the LaunchInfo or AttachInfo, so it will get events from
   /// the very start of the process.
@@ -706,6 +705,35 @@ public:
   ///     true if saved successfully, false if saving the core dump
   ///     is not supported by the plugin, error otherwise.
   virtual llvm::Expected<bool> SaveCore(llvm::StringRef outfile);
+
+  struct CoreFileMemoryRange {
+    llvm::AddressRange range;  /// The address range to save into the core file.
+    uint32_t lldb_permissions; /// A bit set of lldb::Permissions bits.
+
+    bool operator==(const CoreFileMemoryRange &rhs) const {
+      return range == rhs.range && lldb_permissions == rhs.lldb_permissions;
+    }
+
+    bool operator!=(const CoreFileMemoryRange &rhs) const {
+      return !(*this == rhs);
+    }
+
+    bool operator<(const CoreFileMemoryRange &rhs) const {
+      if (range < rhs.range)
+        return true;
+      if (range == rhs.range)
+        return lldb_permissions < rhs.lldb_permissions;
+      return false;
+    }
+  };
+
+  using CoreFileMemoryRanges = std::vector<CoreFileMemoryRange>;
+
+  /// Helper function for Process::SaveCore(...) that calculates the address
+  /// ranges that should be saved. This allows all core file plug-ins to save
+  /// consistent memory ranges given a \a core_style.
+  Status CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
+                                     CoreFileMemoryRanges &ranges);
 
 protected:
   virtual JITLoaderList &GetJITLoaders();
