@@ -433,7 +433,10 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
   let hasVerifier = 1;
 }
 
-def GPU_DynamicSharedMemoryOp : GPU_Op<"dynamic_shared_memory", [] > {
+def GPU_DynamicSharedMemoryOp : GPU_Op<"dynamic_shared_memory", 
+  [ParentOneOf<["GPUFuncOp", "LaunchOp", 
+                "mlir::LLVM::LLVMFuncOp", "mlir::func::FuncOp"]>]>
+{
   let summary = "Get the memref for dynamic shared memory";
   
   let description = [{

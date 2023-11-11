@@ -689,3 +689,8 @@ func.func @main(%arg0 : index) {
   }
   return
 }
+
+// -----
+
+// expected-error @below {{op expects parent op to be one of 'gpu.func, gpu.launch, llvm.func, func.func'}}
+%0 = gpu.dynamic_shared_memory : memref<?xi8,3>  
