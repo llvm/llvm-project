@@ -247,12 +247,13 @@ std::vector<const NamedDecl *> HeuristicResolver::resolveMemberExpr(
     BaseType = getPointeeType(BaseType);
   }
 
+  if (!BaseType)
+    return {};
+
   if (BaseType->isDependentType())
     if (auto *MaybeResolved = resolveTypeFromInstantiatedTemplate(ME))
       BaseType = MaybeResolved;
 
-  if (!BaseType)
-    return {};
   if (const auto *BT = BaseType->getAs<BuiltinType>()) {
     // If BaseType is the type of a dependent expression, it's just
     // represented as BuiltinType::Dependent which gives us no information. We
