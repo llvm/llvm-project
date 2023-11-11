@@ -854,6 +854,9 @@ def : Pat<(i64 (add_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
           (ADD_UW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
 
+def : Pat<(i64 (or_is_add_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
+          (ADD_UW GPR:$rs1, GPR:$rs2)>;
+
 foreach i = {1,2,3} in {
   defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
   def : Pat<(i32 (add_non_imm12 (shl GPR:$rs1, (i64 i)), GPR:$rs2)),
