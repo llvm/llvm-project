@@ -35,7 +35,8 @@ int GetGlobalsForAddress(uptr addr, __asan_global *globals, u32 *reg_sites,
 
 const char *MaybeDemangleGlobalName(const char *name);
 void PrintGlobalNameIfASCII(InternalScopedString *str, const __asan_global &g);
-void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g);
+void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g,
+                         bool print_module_name);
 
 void PrintMemoryByte(InternalScopedString *str, const char *before, u8 byte,
                      bool in_shadow, const char *after = "\n");

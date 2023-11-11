@@ -10,3 +10,5 @@ Johannes: break 552.pep and 452.ep and above 4 sollve tests
 
 Revert : [X86][AVX10] Permit AVX512 options/features used together with AVX10 (#71318)
   breaks build of pgmath
+
+Revert : [OpenMP] Rework handling of global ctor/dtors in OpenMP 
