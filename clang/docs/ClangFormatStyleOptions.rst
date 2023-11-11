@@ -2052,7 +2052,7 @@ the configuration (without a prefix: ``Auto``).
   Break after a group of C++11 attributes before variable or function
   (including constructor/destructor) declaration/definition names or before
   control statements, i.e. ``if``, ``switch`` (including ``case`` and
-  ``default``labels), ``for``, and ``while`` statements.
+  ``default`` labels), ``for``, and ``while`` statements.
 
   Possible values:
 
