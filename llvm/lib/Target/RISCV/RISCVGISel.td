@@ -21,8 +21,6 @@ def simm12Plus1 : ImmLeaf<XLenVT, [{
 def simm12Plus1i32 : ImmLeaf<i32, [{
     return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
 
-def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
-
 // FIXME: This doesn't check that the G_CONSTANT we're deriving the immediate
 // from is only used once
 def simm12Minus1Nonzero : ImmLeaf<XLenVT, [{
@@ -87,13 +85,6 @@ def : Pat<(i32 (sub GPR:$rs1, simm12Plus1i32:$imm)),
 def : Pat<(i32 (shl GPR:$rs1, (i32 GPR:$rs2))), (SLLW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (sra GPR:$rs1, (i32 GPR:$rs2))), (SRAW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (srl GPR:$rs1, (i32 GPR:$rs2))), (SRLW GPR:$rs1, GPR:$rs2)>;
-
-def : Pat<(i32 (shl GPR:$rs1, uimm5i32:$imm)),
-          (SLLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (sra GPR:$rs1, uimm5i32:$imm)),
-          (SRAIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (srl GPR:$rs1, uimm5i32:$imm)),
-          (SRLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
 }
 
 let Predicates = [HasStdExtZba, IsRV64] in {
@@ -101,12 +92,6 @@ let Predicates = [HasStdExtZba, IsRV64] in {
 // in SDISel for RV64, which is not the case in GISel.
 def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
           (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
-
-foreach i = {1,2,3} in {
-  defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
-  def : Pat<(i32 (add_non_imm12 (shl GPR:$rs1, (i32 i)), GPR:$rs2)),
-            (shxadd GPR:$rs1, GPR:$rs2)>;
-}
 } // Predicates = [HasStdExtZba, IsRV64]
 
 // Ptr type used in patterns with GlobalISelEmitter
