@@ -13,7 +13,6 @@
 #define TOOLS_LLVM_REMARKCOUNTER_H
 #include "RemarkUtilHelpers.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Regex.h"
 #include <list>
 
