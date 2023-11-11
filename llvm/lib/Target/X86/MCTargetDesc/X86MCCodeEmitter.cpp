@@ -1175,12 +1175,12 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
   }
   case X86II::MRMSrcRegOp4: {
     //  dst(ModR/M.reg), src1(VEX_4V), src2(Imm[7:4]), src3(ModR/M),
-    Prefix.setRR2(MI, CurOp++);
+    Prefix.setR(MI, CurOp++);
     Prefix.set4V(MI, CurOp++);
     // Skip second register source (encoded in Imm[7:4])
     ++CurOp;
 
-    Prefix.setBB2(MI, CurOp);
+    Prefix.setB(MI, CurOp);
     Prefix.setX(MI, CurOp, 4);
     ++CurOp;
     break;
