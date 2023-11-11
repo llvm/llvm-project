@@ -64,8 +64,8 @@ for.end:                                          ; preds = %for.cond
   ret i16 %p.0
 }
 
-define signext i16 @vecreduce_smax_v2i16(i32 noundef %n, ptr noundef %v) {
-; CHECK-LABEL: define signext i16 @vecreduce_smax_v2i16(
+define i16 @vecreduce_smax_v2i16(i32 %n, ptr %v) {
+; CHECK-LABEL: define i16 @vecreduce_smax_v2i16(
 ; CHECK:  @llvm.smax.v2i16
 
 entry:
