@@ -843,6 +843,8 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
 
   Value *ScalarOp0 = getSplatValue(Op0);
   Value *ScalarOp1 = getSplatValue(Op1);
+  if (!ScalarOp0 || !ScalarOp1)
+    return false;
   Value *ScalarVal =
       ScalarIntrID
           ? Builder.CreateIntrinsic(VecTy->getScalarType(), *ScalarIntrID,
