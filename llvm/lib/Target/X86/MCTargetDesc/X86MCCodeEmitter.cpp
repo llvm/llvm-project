@@ -121,6 +121,19 @@ class X86OpcodePrefixHelper {
   //  0 1: 256-bit vector
   //  1 0: 512-bit vector
 
+  // 32-Register Support in 64-bit Mode Using EVEX with Embedded REX/REX2 Bits:
+  // +--------------+----------+----------+------------+--------------+------------------------+
+  // |              |    4     |    3     |   [2:0]    |   Reg.Type   |      Common Usages     |
+  // +--------------+----------+----------+------------+--------------+------------------------+
+  // | REG          | EVEX_R'  | EVEX_R   | modrm.reg  | GPR, Vector  | Destination or Source  |
+  // | VVVV         | EVEX_v'  |       EVEX.vvvv       | GPR, Vector  | Destination or Source  |
+  // | RM (Vector)  | EVEX_X   | EVEX_B   | modrm.r/m  | Vector       | Destination or Source  |
+  // | RM (GPR)     | EVEX_B'  | EVEX_B   | modrm.r/m  | GPR          | Destination or Source  |
+  // | BASE         | EVEX_B'  | EVEX_B   | modrm.r/m  | GPR          | Memory addressing      |
+  // | INDEX        | EVEX_X'  | EVEX_X   | sib.index  | GPR          | Memory addressing      |
+  // | VIDX         | EVEX_v'  | EVEX_X   | sib.index  | Vector       | VSIB memory addressing |
+  // +--------------+----------+----------+------------+--------------+------------------------+
+
 private:
   unsigned W : 1;
   unsigned R : 1;
