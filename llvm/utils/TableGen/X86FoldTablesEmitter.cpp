@@ -19,6 +19,7 @@
 #include "llvm/Support/X86FoldTablesUtils.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <set>
 
 using namespace llvm;
 using namespace X86Disassembler;
