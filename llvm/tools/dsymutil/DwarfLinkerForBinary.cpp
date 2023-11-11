@@ -12,7 +12,6 @@
 #include "MachOUtils.h"
 #include "dsymutil.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
