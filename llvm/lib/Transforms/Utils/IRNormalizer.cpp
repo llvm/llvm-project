@@ -80,9 +80,8 @@ private:
 
   /// \name Utility methods.
   /// @{
-  template<typename T>
-  void sortCommutativeOperands(T &Operands) const; 
-  template<typename T, typename Compare>
+  template <typename T> void sortCommutativeOperands(T &Operands) const; 
+  template <typename T, typename Compare>
   void sortCommutativeOperands(T &Operands, Compare Comp) const; 
   SmallVector<Instruction *, 16> collectOutputInstructions(Function &F);
   bool isOutput(const Instruction *I);
@@ -192,7 +191,7 @@ void IRNormalizer::nameInstruction(Instruction *I) {
   }
 }
 
-template<typename T>
+template <typename T>
 void IRNormalizer::sortCommutativeOperands(T &Operands) const {
   if (Operands.size() < 2)
     return;
@@ -201,7 +200,7 @@ void IRNormalizer::sortCommutativeOperands(T &Operands) const {
   llvm::sort(Operands.begin(), CommutativeEnd);
 }
 
-template<typename T, typename Compare>
+template <typename T, typename Compare>
 void IRNormalizer::sortCommutativeOperands(T &Operands, Compare Comp) const {
   if (Operands.size() < 2)
     return;
@@ -477,8 +476,8 @@ void IRNormalizer::reorderInstruction(
     Used->moveBefore(User);
   } else {
     // Otherwise move Used to the very end of its basic block.
-    LLVM_DEBUG(dbgs() << "\tMoved " << *Used << " to end of block " << 
-               Used->getParent()->getName() << "\n");
+    LLVM_DEBUG(dbgs() << "\tMoved " << *Used << " to end of block " 
+                      << Used->getParent()->getName() << "\n");
     Used->moveBefore(&Used->getParent()->back());
   }
 
