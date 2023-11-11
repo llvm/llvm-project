@@ -139,6 +139,8 @@ void GlobalObject::copyAttributesFrom(const GlobalObject *Src) {
   GlobalValue::copyAttributesFrom(Src);
   setAlignment(Src->getAlign());
   setSection(Src->getSection());
+  if (auto CM = Src->getCodeModel())
+    setCodeModel(*CM);
 }
 
 std::string GlobalValue::getGlobalIdentifier(StringRef Name,
@@ -261,6 +263,15 @@ void GlobalObject::setSection(StringRef S) {
   // Update the HasSectionHashEntryBit. Setting the section to the empty string
   // means this global no longer has a section.
   setGlobalObjectFlag(HasSectionHashEntryBit, !S.empty());
+}
+
+void GlobalObject::setCodeModel(CodeModel::Model CM) {
+  unsigned CodeModelData = static_cast<unsigned>(CM) + 1;
+  unsigned OldData = getGlobalValueSubClassData();
+  unsigned NewData = (OldData & ~(CodeModelMask << CodeModelShift)) |
+                     (CodeModelData << CodeModelShift);
+  setGlobalValueSubClassData(NewData);
+  assert(getCodeModel() == CM && "Code model representation error!");
 }
 
 bool GlobalValue::isNobuiltinFnDef() const {
