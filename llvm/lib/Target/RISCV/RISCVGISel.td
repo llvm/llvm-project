@@ -101,6 +101,12 @@ let Predicates = [HasStdExtZba, IsRV64] in {
 // in SDISel for RV64, which is not the case in GISel.
 def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
           (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
+
+foreach i = {1,2,3} in {
+  defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
+  def : Pat<(i32 (add_non_imm12 (shl GPR:$rs1, (i32 i)), GPR:$rs2)),
+            (shxadd GPR:$rs1, GPR:$rs2)>;
+}
 } // Predicates = [HasStdExtZba, IsRV64]
 
 // Ptr type used in patterns with GlobalISelEmitter
