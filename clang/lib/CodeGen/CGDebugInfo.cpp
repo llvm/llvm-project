@@ -5616,10 +5616,13 @@ void CGDebugInfo::EmitGlobalVariable(const VarDecl *VD) {
   llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(VD);
   llvm::DIExpression *InitExpr = createConstantValueExpression(VD, *InitVal);
 
+  // Omit linkage name for variable definitions that represent constants.
+  // There hasn't been a need from consumers yet to have it attached.
   DeclCache[VD].reset(DBuilder.createGlobalVariableExpression(
-      TheCU, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
-      true, true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VD),
-      TemplateParameters, Align, Annotations));
+      TheCU, DeclName, /* LinkageName */ {}, Unit, LineNo,
+      getOrCreateType(T, Unit), true, true, InitExpr,
+      getOrCreateStaticDataMemberDeclarationOrNull(VD), TemplateParameters,
+      Align, Annotations));
 }
 
 void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,

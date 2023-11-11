@@ -84,19 +84,23 @@ int main() {
 // CHECK-SAME:                  isLocal: false, isDefinition: true, declaration: ![[EMPTY_DECL]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[INT_VAR2:[0-9]+]], expr: !DIExpression(DW_OP_constu, 26, DW_OP_stack_value))
-// CHECK:      ![[INT_VAR2]] = distinct !DIGlobalVariable(name: "cexpr_int2", linkageName:
+// CHECK:      ![[INT_VAR2]] = distinct !DIGlobalVariable(name: "cexpr_int2"
+// CHECK-NOT:                  linkageName:
 // CHECK-SAME:                 isLocal: true, isDefinition: true, declaration: ![[INT_DECL2]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[FLOAT_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, {{.*}}, DW_OP_stack_value))
-// CHECK:      ![[FLOAT_VAR]] = distinct !DIGlobalVariable(name: "cexpr_float", linkageName:
+// CHECK:      ![[FLOAT_VAR]] = distinct !DIGlobalVariable(name: "cexpr_float"
+// CHECK-NOT:                   linkageName:
 // CHECK-SAME:                  isLocal: true, isDefinition: true, declaration: ![[FLOAT_DECL]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[ENUM_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, {{.*}}, DW_OP_stack_value))
-// CHECK:      ![[ENUM_VAR]] = distinct !DIGlobalVariable(name: "cexpr_enum", linkageName:
+// CHECK:      ![[ENUM_VAR]] = distinct !DIGlobalVariable(name: "cexpr_enum"
+// CHECK-NOT:                  linkageName:
 // CHECK-SAME:                 isLocal: true, isDefinition: true, declaration: ![[ENUM_DECL]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[IENUM_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, {{.*}}, DW_OP_stack_value))
-// CHECK:      ![[IENUM_VAR]] = distinct !DIGlobalVariable(name: "inline_enum", linkageName:
+// CHECK:      ![[IENUM_VAR]] = distinct !DIGlobalVariable(name: "inline_enum"
+// CHECK-NOT:                   linkageName:
 // CHECK-SAME:                  isLocal: true, isDefinition: true, declaration: ![[IENUM_DECL]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[EMPTY_TEMPLATED_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 1, DW_OP_stack_value))
