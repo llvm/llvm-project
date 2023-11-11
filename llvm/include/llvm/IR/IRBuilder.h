@@ -2146,6 +2146,9 @@ public:
     return Insert(CastInst::CreatePointerCast(V, DestTy), Name);
   }
 
+  // With opaque pointers enabled, this can be substituted with
+  // CreateAddrSpaceCast.
+  // TODO: Replace uses of this method and remove the method itself.
   Value *CreatePointerBitCastOrAddrSpaceCast(Value *V, Type *DestTy,
                                              const Twine &Name = "") {
     if (V->getType() == DestTy)
