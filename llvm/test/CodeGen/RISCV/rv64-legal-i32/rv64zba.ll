@@ -45,6 +45,33 @@ define i128 @slliuw_2(i32 signext %0, ptr %1) {
   ret i128 %5
 }
 
+define i128 @slliuw_3(i32 signext %0, ptr %1) {
+; RV64I-LABEL: slliuw_3:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    slli a0, a0, 4
+; RV64I-NEXT:    add a1, a1, a0
+; RV64I-NEXT:    ld a0, 0(a1)
+; RV64I-NEXT:    ld a1, 8(a1)
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: slliuw_3:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    addi a0, a0, 1
+; RV64ZBA-NEXT:    slli.uw a0, a0, 4
+; RV64ZBA-NEXT:    add a1, a1, a0
+; RV64ZBA-NEXT:    ld a0, 0(a1)
+; RV64ZBA-NEXT:    ld a1, 8(a1)
+; RV64ZBA-NEXT:    ret
+  %add = add i32 %0, 1
+  %3 = zext i32 %add to i64
+  %4 = getelementptr inbounds i128, ptr %1, i64 %3
+  %5 = load i128, ptr %4
+  ret i128 %5
+}
+
 define i64 @adduw(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: adduw:
 ; RV64I:       # %bb.0:
