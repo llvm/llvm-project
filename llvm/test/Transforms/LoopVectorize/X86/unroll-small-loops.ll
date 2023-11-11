@@ -41,7 +41,7 @@ for.end:                                       ; preds = %for.body
   ret void
 }
 
-; TODO: We unroll this loop 4 times since TC being a multiple of VF means
+; TODO: We should unroll this loop 4 times since TC being a multiple of VF means
 ; that the epilogue loop may not need to run, making it profitable for
 ; the vector loop to run even once
 ;
@@ -77,7 +77,7 @@ for.end:                                       ; preds = %for.body
   ret void
 }
 
-; TODO: We unroll this loop twice since TC not being a multiple of VF may require
+; TODO: We should unroll this loop twice since TC not being a multiple of VF may require
 ; the epilogue loop to run, making it profitable when the vector loop runs
 ; at least twice.
 ;
@@ -113,7 +113,7 @@ for.end:                                       ; preds = %for.body
   ret void
 }
 
-; TODO: We unroll this loop 4 times since TC being a multiple of VF means
+; TODO: We should unroll this loop 4 times since TC being a multiple of VF means
 ; that the epilogue loop may not need to run, making it profitable for
 ; the vector loop to run even once. The IC is restricted to 4 since 
 ; that is the maximum supported for the target.
@@ -150,7 +150,7 @@ for.end:                                       ; preds = %for.body
   ret void
 }
 
-; TODO: We unroll this loop twice since TC not being a multiple of VF may require
+; TODO: We should unroll this loop twice since TC not being a multiple of VF may require
 ; the epilogue loop to run, making it profitable when the vector loop runs
 ; at least twice.
 ;
@@ -186,7 +186,7 @@ for.end:                                       ; preds = %for.body
   ret void
 }
 
-; TODO: We unroll this loop 4 times since TC not being a multiple of VF may require
+; TODO: We should unroll this loop 4 times since TC not being a multiple of VF may require
 ; the epilogue loop to run, making it profitable when the vector loop runs
 ; at least twice.
 ;
@@ -222,7 +222,7 @@ for.end:                                       ; preds = %for.body
   ret void
 }
 
-; TODO: We unroll this loop 4 times since TC not being a multiple of VF may require
+; TODO: We should unroll this loop 4 times since TC not being a multiple of VF may require
 ; the epilogue loop to run, making it profitable when the vector loop runs
 ; at least twice. The IC is restricted to 4 since that is the maximum supported 
 ; for the target.
