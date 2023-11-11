@@ -2842,8 +2842,18 @@ static LogicalResult produceSubViewErrorMsg(SliceVerificationResult result,
   llvm_unreachable("unexpected subview verification result");
 }
 
-/// Verifier for SubViewOp.
 LogicalResult SubViewOp::verify() {
+  for (int64_t offset : getStaticOffsets()) {
+    if (offset < 0 && !ShapedType::isDynamic(offset))
+      return emitError("expected subview offsets to be non-negative, but got ")
+             << offset;
+  }
+  for (int64_t size : getStaticSizes()) {
+    if (size < 1 && !ShapedType::isDynamic(size))
+      return emitError("expected subview sizes to be positive, but got ")
+             << size;
+  }
+
   MemRefType baseType = getSourceType();
   MemRefType subViewType = getType();
 
