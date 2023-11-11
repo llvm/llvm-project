@@ -847,9 +847,12 @@ def : Pat<(i32 (rotl GPR:$rs1, uimm5:$rs2)),
 } // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZba, IsRV64] in {
-def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
+def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
+          (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
+
 def : Pat<(i64 (add_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
           (ADD_UW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
 
 foreach i = {1,2,3} in {
   defvar shxadd = !cast<Instruction>("SH"#i#"ADD");

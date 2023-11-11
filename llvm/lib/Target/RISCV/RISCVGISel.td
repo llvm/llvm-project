@@ -87,13 +87,6 @@ def : Pat<(i32 (sra GPR:$rs1, (i32 GPR:$rs2))), (SRAW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (srl GPR:$rs1, (i32 GPR:$rs2))), (SRLW GPR:$rs1, GPR:$rs2)>;
 }
 
-let Predicates = [HasStdExtZba, IsRV64] in {
-// This pattern is put here due to the fact that i32 is not a legal type
-// in SDISel for RV64, which is not the case in GISel.
-def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
-          (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
-} // Predicates = [HasStdExtZba, IsRV64]
-
 // Ptr type used in patterns with GlobalISelEmitter
 def PtrVT : PtrValueTypeByHwMode<XLenVT, 0>;
 
