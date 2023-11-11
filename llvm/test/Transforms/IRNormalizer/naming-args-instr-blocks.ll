@@ -1,5 +1,4 @@
-; RUN: opt -S -passes=normalize --rename-all --preserve-order < %s | FileCheck %s
-
+; RUN: opt -S -passes=normalize -norm-rename-all -norm-preserve-order < %s | FileCheck %s
 
 ; CHECK: @foo(i32 %a0)
 define i32 @foo(i32) {
