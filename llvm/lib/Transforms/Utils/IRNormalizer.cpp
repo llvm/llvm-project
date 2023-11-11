@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 /// This file implements the IRNormalizer class which aims to transform LLVM
-/// Modules into a canonical form by reordering and renaming instructions while
+/// Modules into a normal form by reordering and renaming instructions while
 /// preserving the same semantics. The normalizer makes it easier to spot
 /// semantic differences while diffing two modules which have undergone
 /// different passes.
@@ -37,7 +37,7 @@
 using namespace llvm;
 
 namespace {
-/// IRNormalizer aims to transform LLVM IR into canonical form.
+/// IRNormalizer aims to transform LLVM IR into normal form.
 class IRNormalizer {
 public:
   /// \name Normalizer flags.
@@ -301,7 +301,7 @@ void IRNormalizer::nameAsInitialInstruction(Instruction *I) {
 /// \param I Instruction to be renamed.
 void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
   LLVM_DEBUG(dbgs() << "Naming regular instruction: " << *I << "\n");
-  
+
   // Instruction operands for further sorting.
   SmallVector<SmallString<128>, 4> Operands;
 
@@ -404,10 +404,10 @@ void IRNormalizer::foldInstructionName(Instruction *I) {
 
   for (auto &OP : I->operands()) {
     if (const auto *IOP = dyn_cast<Instruction>(OP)) {
-      bool HasCanonicalName = I->getName().substr(0, 2) == "op" ||
+      bool HasNormalName = I->getName().substr(0, 2) == "op" ||
                               I->getName().substr(0, 2) == "vl";
 
-      Operands.push_back(HasCanonicalName ? IOP->getName().substr(0, 7)
+      Operands.push_back(HasNormalName ? IOP->getName().substr(0, 7)
                                           : IOP->getName());
     }
   }
@@ -533,7 +533,7 @@ void IRNormalizer::reorderInstructionOperandsByNames(Instruction *I) {
 /// Reorders PHI node's values according to the names of corresponding basic
 /// blocks.
 ///
-/// \param PN PHI node to canonicalize.
+/// \param PN PHI node to normalize.
 void IRNormalizer::reorderPHIIncomingValues(PHINode *PN) {
   // Values for further sorting.
   SmallVector<std::pair<Value *, BasicBlock *>, 2> Values;
