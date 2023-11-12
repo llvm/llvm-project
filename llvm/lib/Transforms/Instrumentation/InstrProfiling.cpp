@@ -1252,6 +1252,10 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
   GlobalVariable *NamePtr = Inc->getName();
   auto &PD = ProfileDataMap[NamePtr];
 
+  // Return if data variable was already created.
+  if (PD.DataVar)
+    return;
+
   LLVMContext &Ctx = M->getContext();
 
   Function *Fn = Inc->getParent()->getParent();

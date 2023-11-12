@@ -1208,7 +1208,9 @@ def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
 }]>;
 def zexti32 : ComplexPattern<i64, 1, "selectZExtBits<32>">;
 def zexti16 : ComplexPattern<XLenVT, 1, "selectZExtBits<16>">;
+def zexti16i32 : ComplexPattern<i32, 1, "selectZExtBits<16>">;
 def zexti8 : ComplexPattern<XLenVT, 1, "selectZExtBits<8>">;
+def zexti8i32 : ComplexPattern<i32, 1, "selectZExtBits<8>">;
 
 def ext : PatFrags<(ops node:$A), [(sext node:$A), (zext node:$A)]>;
 
@@ -1861,6 +1863,12 @@ def : Pat<(i64 (and GPR:$rs1, 0xffffffff)), (SRLI (SLLI GPR:$rs1, 32), 32)>;
 def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
           (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
 }
+
+class binop_allhusers<SDPatternOperator operator>
+    : PatFrag<(ops node:$lhs, node:$rhs),
+              (XLenVT (operator node:$lhs, node:$rhs)), [{
+  return hasAllHUsers(Node);
+}]>;
 
 // PatFrag to allow ADDW/SUBW/MULW/SLLW to be selected from i64 add/sub/mul/shl
 // if only the lower 32 bits of their result is used.
