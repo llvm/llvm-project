@@ -11,13 +11,13 @@ jobs:
       - name: Fetch LLVM sources
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Checkout through merge base
         uses: rmacklin/fetch-through-merge-base@v0
         with:
           base_ref: ${{ github.event.pull_request.base.ref }}
-          head_ref: ${{ github.event.pull_request.head.ref }}
+          head_ref: ${{ github.event.pull_request.head.sha }}
           deepen_length: 500
 
       - name: Get changed files
