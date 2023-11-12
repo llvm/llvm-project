@@ -26255,6 +26255,70 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                "}",
                Code, Style);
 
+  constexpr StringRef CtrlStmtCode("[[likely]] if (a)\n"
+                                   "  f();\n"
+                                   "else\n"
+                                   "  g();\n"
+                                   "[[foo([[]])]]\n"
+                                   "switch (b) {\n"
+                                   "[[unlikely]] case 1:\n"
+                                   "  ++b;\n"
+                                   "  break;\n"
+                                   "[[likely]]\n"
+                                   "default:\n"
+                                   "  return;\n"
+                                   "}\n"
+                                   "[[unlikely]] for (; c > 0; --c)\n"
+                                   "  h();\n"
+                                   "[[likely]]\n"
+                                   "while (d > 0)\n"
+                                   "  --d;");
+
+  Style.BreakAfterAttributes = FormatStyle::ABS_Leave;
+  verifyNoChange(CtrlStmtCode, Style);
+
+  Style.BreakAfterAttributes = FormatStyle::ABS_Never;
+  verifyFormat("[[likely]] if (a)\n"
+               "  f();\n"
+               "else\n"
+               "  g();\n"
+               "[[foo([[]])]] switch (b) {\n"
+               "[[unlikely]] case 1:\n"
+               "  ++b;\n"
+               "  break;\n"
+               "[[likely]] default:\n"
+               "  return;\n"
+               "}\n"
+               "[[unlikely]] for (; c > 0; --c)\n"
+               "  h();\n"
+               "[[likely]] while (d > 0)\n"
+               "  --d;",
+               CtrlStmtCode, Style);
+
+  Style.BreakAfterAttributes = FormatStyle::ABS_Always;
+  verifyFormat("[[likely]]\n"
+               "if (a)\n"
+               "  f();\n"
+               "else\n"
+               "  g();\n"
+               "[[foo([[]])]]\n"
+               "switch (b) {\n"
+               "[[unlikely]]\n"
+               "case 1:\n"
+               "  ++b;\n"
+               "  break;\n"
+               "[[likely]]\n"
+               "default:\n"
+               "  return;\n"
+               "}\n"
+               "[[unlikely]]\n"
+               "for (; c > 0; --c)\n"
+               "  h();\n"
+               "[[likely]]\n"
+               "while (d > 0)\n"
+               "  --d;",
+               CtrlStmtCode, Style);
+
   constexpr StringRef CtorDtorCode("struct Foo {\n"
                                    "  [[deprecated]] Foo();\n"
                                    "  [[deprecated]] Foo() {}\n"

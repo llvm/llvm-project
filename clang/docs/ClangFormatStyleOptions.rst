@@ -2049,8 +2049,10 @@ the configuration (without a prefix: ``Auto``).
 .. _BreakAfterAttributes:
 
 **BreakAfterAttributes** (``AttributeBreakingStyle``) :versionbadge:`clang-format 16` :ref:`¶ <BreakAfterAttributes>`
-  Break after a group of C++11 attributes before a variable/function
-  (including constructor/destructor) declaration/definition name.
+  Break after a group of C++11 attributes before variable or function
+  (including constructor/destructor) declaration/definition names or before
+  control statements, i.e. ``if``, ``switch`` (including ``case`` and
+  ``default`` labels), ``for``, and ``while`` statements.
 
   Possible values:
 
@@ -2063,10 +2065,27 @@ the configuration (without a prefix: ``Auto``).
       const int i;
       [[gnu::const]] [[maybe_unused]]
       int j;
+
       [[nodiscard]]
       inline int f();
       [[gnu::const]] [[nodiscard]]
       int g();
+
+      [[likely]]
+      if (a)
+        f();
+      else
+        g();
+
+      switch (b) {
+      [[unlikely]]
+      case 1:
+        ++b;
+        break;
+      [[likely]]
+      default:
+        return;
+      }
 
   * ``ABS_Leave`` (in configuration: ``Leave``)
     Leave the line breaking after attributes as is.
@@ -2076,9 +2095,24 @@ the configuration (without a prefix: ``Auto``).
       [[maybe_unused]] const int i;
       [[gnu::const]] [[maybe_unused]]
       int j;
+
       [[nodiscard]] inline int f();
       [[gnu::const]] [[nodiscard]]
       int g();
+
+      [[likely]] if (a)
+        f();
+      else
+        g();
+
+      switch (b) {
+      [[unlikely]] case 1:
+        ++b;
+        break;
+      [[likely]]
+      default:
+        return;
+      }
 
   * ``ABS_Never`` (in configuration: ``Never``)
     Never break after attributes.
@@ -2087,8 +2121,22 @@ the configuration (without a prefix: ``Auto``).
 
       [[maybe_unused]] const int i;
       [[gnu::const]] [[maybe_unused]] int j;
+
       [[nodiscard]] inline int f();
       [[gnu::const]] [[nodiscard]] int g();
+
+      [[likely]] if (a)
+        f();
+      else
+        g();
+
+      switch (b) {
+      [[unlikely]] case 1:
+        ++b;
+        break;
+      [[likely]] default:
+        return;
+      }
 
 
 
