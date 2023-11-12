@@ -290,6 +290,10 @@ bool llvm::isKnownNonNegative(const Value *V, const DataLayout &DL,
                               unsigned Depth, AssumptionCache *AC,
                               const Instruction *CxtI, const DominatorTree *DT,
                               bool UseInstrInfo) {
+  if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, V,
+                              Constant::getNullValue(V->getType()), CxtI, DL)
+          .value_or(false))
+    return true;
   KnownBits Known = computeKnownBits(V, DL, Depth, AC, CxtI, DT, UseInstrInfo);
   return Known.isNonNegative();
 }
@@ -300,6 +304,10 @@ bool llvm::isKnownPositive(const Value *V, const DataLayout &DL, unsigned Depth,
   if (auto *CI = dyn_cast<ConstantInt>(V))
     return CI->getValue().isStrictlyPositive();
 
+  if (isImpliedByDomCondition(ICmpInst::ICMP_SGT, V,
+                              Constant::getNullValue(V->getType()), CxtI, DL)
+          .value_or(false))
+    return true;
   // TODO: We'd doing two recursive queries here.  We should factor this such
   // that only a single query is needed.
   return isKnownNonNegative(V, DL, Depth, AC, CxtI, DT, UseInstrInfo) &&
@@ -309,6 +317,10 @@ bool llvm::isKnownPositive(const Value *V, const DataLayout &DL, unsigned Depth,
 bool llvm::isKnownNegative(const Value *V, const DataLayout &DL, unsigned Depth,
                            AssumptionCache *AC, const Instruction *CxtI,
                            const DominatorTree *DT, bool UseInstrInfo) {
+  if (isImpliedByDomCondition(ICmpInst::ICMP_SLT, V,
+                              Constant::getNullValue(V->getType()), CxtI, DL)
+          .value_or(false))
+    return true;
   KnownBits Known = computeKnownBits(V, DL, Depth, AC, CxtI, DT, UseInstrInfo);
   return Known.isNegative();
 }
@@ -3195,6 +3207,10 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
   }
 
   if (isNonEqualSelect(V1, V2, Depth, Q) || isNonEqualSelect(V2, V1, Depth, Q))
+    return true;
+
+  if (isImpliedByDomCondition(ICmpInst::ICMP_NE, V1, V2, Q.CxtI, Q.DL)
+          .value_or(false))
     return true;
 
   return false;

@@ -9,7 +9,7 @@ define i32 @foo(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK-NEXT:    [[CMP26:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP26]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
@@ -17,14 +17,14 @@ define i32 @foo(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 4
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP4]]
-; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[TMP4]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[UGLYGEP1]], [[A]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[UGLYGEP]], [[B]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[A]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP]], [[B]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 4294967292
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 2147483644
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

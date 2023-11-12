@@ -2,7 +2,7 @@
 ; RUN: opt -S -passes=loop-vectorize,instcombine -force-vector-interleave=2 -force-vector-width=4 -force-target-supports-scalable-vectors=true -scalable-vectorization=on < %s | FileCheck %s --check-prefix=CHECKUF2
 
 ; CHECKUF1: for.body.preheader:
-; CHECKUF1-DAG: %wide.trip.count = zext i32 %N to i64
+; CHECKUF1-DAG: %wide.trip.count = zext nneg i32 %N to i64
 ; CHECKUF1-DAG: %[[VSCALE:.*]] = call i64 @llvm.vscale.i64()
 ; CHECKUF1-DAG: %[[VSCALEX4:.*]] = shl i64 %[[VSCALE]], 2
 ; CHECKUF1-DAG: %min.iters.check = icmp ugt i64 %[[VSCALEX4]], %wide.trip.count
@@ -31,7 +31,7 @@
 ; There is also the increment for the next iteration, e.g. instead of indexing IDXB, it indexes at IDXB + vscale * 4.
 
 ; CHECKUF2: for.body.preheader:
-; CHECKUF2-DAG: %wide.trip.count = zext i32 %N to i64
+; CHECKUF2-DAG: %wide.trip.count = zext nneg i32 %N to i64
 ; CHECKUF2-DAG: %[[VSCALE:.*]] = call i64 @llvm.vscale.i64()
 ; CHECKUF2-DAG: %[[VSCALEX8:.*]] = shl i64 %[[VSCALE]], 3
 ; CHECKUF2-DAG: %min.iters.check = icmp ugt i64 %[[VSCALEX8]], %wide.trip.count
