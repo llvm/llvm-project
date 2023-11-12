@@ -19,7 +19,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
-#include <_types/_uint64_t.h>
 
 namespace mlir {
 
