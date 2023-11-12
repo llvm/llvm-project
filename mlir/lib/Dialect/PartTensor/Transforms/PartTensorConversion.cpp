@@ -90,31 +90,6 @@ public:
     return success();
   }
 };
-/// Part conversion rule for position accesses.
-class PartTensorGetNumPartitionsConverter
-    : public OpConversionPattern<GetNumPartitionsOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(GetNumPartitionsOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Type resType = op.getType();
-    const Type crdTp = cast<ShapedType>(resType).getElementType();
-    Location loc = op->getLoc();
-    MemRefType callRetType = mlir::sparse_tensor::get1DMemRefType(crdTp, false);
-    SmallVector<Value> operands{adaptor.getOperands()[0]};
-    auto fn = mlir::sparse_tensor::getFunc(
-        op->getParentOfType<ModuleOp>(), "getPartitions", callRetType, operands,
-        mlir::sparse_tensor::EmitCInterface::On);
-    Value callRet =
-        rewriter.create<func::CallOp>(loc, callRetType, fn, operands)
-            .getResult(0);
-    if (resType != callRetType)
-      callRet = rewriter.create<memref::CastOp>(loc, resType, callRet);
-    rewriter.replaceOp(op, callRet);
-    return success();
-  }
-};
 
 class PartTensorGetSliceConverter
     : public OpConversionPattern<GetSliceOp> {
@@ -128,6 +103,26 @@ public:
     SmallVector<Value> operands{adaptor.getOperands()[0]};
     auto fn = mlir::sparse_tensor::getFunc(
         op->getParentOfType<ModuleOp>(), "getSlice", resType, adaptor.getOperands(),
+        mlir::sparse_tensor::EmitCInterface::On);
+    Value callRet =
+        rewriter.create<func::CallOp>(loc, resType, fn, adaptor.getOperands())
+            .getResult(0);
+    rewriter.replaceOp(op, callRet);
+    return success();
+  }
+};
+
+class PartTensorGetNumPartitionsConverter
+    : public OpConversionPattern<GetNumPartitionsOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(GetNumPartitionsOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type resType = op.getType();
+    Location loc = op->getLoc();
+    auto fn = mlir::sparse_tensor::getFunc(
+        op->getParentOfType<ModuleOp>(), "getNumPartitions", resType, adaptor.getOperands(),
         mlir::sparse_tensor::EmitCInterface::On);
     Value callRet =
         rewriter.create<func::CallOp>(loc, resType, fn, adaptor.getOperands())
@@ -160,5 +155,8 @@ void mlir::populatePartTensorConversionPatterns(TypeConverter &typeConverter,
                                                  patterns.getContext());
 
   patterns.add<PartTensorGetSliceConverter>(typeConverter,
+                                                 patterns.getContext());
+
+  patterns.add<PartTensorGetNumPartitionsConverter>(typeConverter,
                                                  patterns.getContext());
 }
