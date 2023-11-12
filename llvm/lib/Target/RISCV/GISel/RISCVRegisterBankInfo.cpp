@@ -25,10 +25,10 @@ namespace llvm {
 namespace RISCV {
 
 const RegisterBankInfo::PartialMapping PartMappings[] = {
-    {0, 32, GPRRegBank},
-    {0, 64, GPRRegBank},
-    {0, 32, FPRRegBank},
-    {0, 64, FPRRegBank},
+    {0, 32, GPRBRegBank},
+    {0, 64, GPRBRegBank},
+    {0, 32, FPRBRegBank},
+    {0, 64, FPRBRegBank},
 };
 
 enum PartialMappingIdx {
@@ -93,13 +93,13 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case RISCV::SR07RegClassID:
   case RISCV::SPRegClassID:
   case RISCV::GPRX0RegClassID:
-    return getRegBank(RISCV::GPRRegBankID);
+    return getRegBank(RISCV::GPRBRegBankID);
   case RISCV::FPR64RegClassID:
   case RISCV::FPR16RegClassID:
   case RISCV::FPR32RegClassID:
   case RISCV::FPR64CRegClassID:
   case RISCV::FPR32CRegClassID:
-    return getRegBank(RISCV::FPRRegBankID);
+    return getRegBank(RISCV::FPRBRegBankID);
   }
 }
 
@@ -124,7 +124,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  unsigned GPRSize = getMaximumSize(RISCV::GPRRegBankID);
+  unsigned GPRSize = getMaximumSize(RISCV::GPRBRegBankID);
   assert((GPRSize == 32 || GPRSize == 64) && "Unexpected GPR size");
 
   unsigned NumOperands = MI.getNumOperands();
