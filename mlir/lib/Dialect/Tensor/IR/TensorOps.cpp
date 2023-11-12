@@ -1163,6 +1163,8 @@ static void operandsAndShape(TensorType resultType,
 }
 
 LogicalResult GenerateOp::verify() {
+  llvm::outs() << "GenerateOp::verify()\n";
+
   // Ensure that the tensor type has as many dynamic dimensions as are
   // specified by the operands.
   RankedTensorType resultType = llvm::cast<RankedTensorType>(getType());
@@ -1173,6 +1175,7 @@ LogicalResult GenerateOp::verify() {
   SmallVector<Value> newOperands;
   SmallVector<int64_t> newShape;
   operandsAndShape(resultType, getDynamicExtents(), newOperands, newShape);
+
   for (int64_t newdim : newShape) {
     if (newdim < 0 && !ShapedType::isDynamic(newdim))
       return emitError("tensor dimensions must be non-negative");
@@ -1242,7 +1245,7 @@ struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
 
     for (int64_t newdim : newShape) {
       // This check also occurs in the verifier, but we need it here too
-      // since intermediate passes may have some replaced dynamic dimensions
+      // since intermediate passes may have replaced some dynamic dimensions
       // by constants.
       if (newdim < 0 && !ShapedType::isDynamic(newdim))
         return failure();

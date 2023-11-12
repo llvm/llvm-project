@@ -2843,6 +2843,8 @@ static LogicalResult produceSubViewErrorMsg(SliceVerificationResult result,
 }
 
 LogicalResult SubViewOp::verify() {
+  llvm::outs() << "SubViewOp::verify\n";
+
   for (int64_t offset : getStaticOffsets()) {
     if (offset < 0 && !ShapedType::isDynamic(offset))
       return emitError("expected subview offsets to be non-negative, but got ")
@@ -3103,6 +3105,19 @@ struct SubViewReturnTypeCanonicalizer {
   MemRefType operator()(SubViewOp op, ArrayRef<OpFoldResult> mixedOffsets,
                         ArrayRef<OpFoldResult> mixedSizes,
                         ArrayRef<OpFoldResult> mixedStrides) {
+    SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
+    SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
+    dispatchIndexOpFoldResults(mixedOffsets, dynamicOffsets, staticOffsets);
+    dispatchIndexOpFoldResults(mixedSizes, dynamicSizes, staticSizes);
+    dispatchIndexOpFoldResults(mixedStrides, dynamicStrides, staticStrides);
+
+    for (int64_t size : staticSizes) {
+      if (size < 0 && !ShapedType::isDynamic(size)) {
+        llvm::dbgs() << "expected subview sizes to be non-negative, but got "
+                     << size << "\n";
+        return {};
+      }
+    }
 
     // Infer a memref type without taking into account any rank reductions.
     MemRefType nonReducedType = cast<MemRefType>(SubViewOp::inferResultType(

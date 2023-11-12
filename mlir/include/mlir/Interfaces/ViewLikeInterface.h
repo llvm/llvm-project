@@ -19,6 +19,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include <_types/_uint64_t.h>
 
 namespace mlir {
 
@@ -71,6 +72,19 @@ public:
         failed(foldDynamicIndexList(mixedSizes)) &&
         failed(foldDynamicIndexList(mixedStrides)))
       return failure();
+
+    SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
+    SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
+    dispatchIndexOpFoldResults(mixedOffsets, dynamicOffsets, staticOffsets);
+    dispatchIndexOpFoldResults(mixedSizes, dynamicSizes, staticSizes);
+    dispatchIndexOpFoldResults(mixedStrides, dynamicStrides, staticStrides);
+
+    for (int64_t size : staticSizes) {
+      if (size < 0 && !ShapedType::isDynamic(size)) {
+        return op.emitError("expected non-negative size, but got ")
+               << size;;
+      }
+    }
 
     // Create the new op in canonical form.
     auto resultType =
