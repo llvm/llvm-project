@@ -2073,9 +2073,10 @@ define i32 @pr67843(i8 %0) {
 ; CHECK-LABEL: @pr67843(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub nsw i8 [[TMP0:%.*]], -1
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i32], ptr @switch.table.pr67843, i32 0, i8 [[SWITCH_TABLEIDX]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = zext i8 [[SWITCH_TABLEIDX]] to i32
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i32 [[SWITCH_IDX_CAST]], 255
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = and i32 [[SWITCH_OFFSET]], 255
+; CHECK-NEXT:    ret i32 [[SWITCH_MASKED]]
 ;
 start:
   switch i8 %0, label %bb2 [
@@ -2102,9 +2103,11 @@ define i32 @linearmap_masked_with_common_highbits(i8 %0) {
 ; CHECK-LABEL: @linearmap_masked_with_common_highbits(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub nsw i8 [[TMP0:%.*]], -1
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i32], ptr @switch.table.linearmap_masked_with_common_highbits, i32 0, i8 [[SWITCH_TABLEIDX]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = zext i8 [[SWITCH_TABLEIDX]] to i32
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i32 [[SWITCH_IDX_CAST]], 511
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = and i32 [[SWITCH_OFFSET]], 255
+; CHECK-NEXT:    [[SWITCH_WITH_HIGH_BITS:%.*]] = or i32 [[SWITCH_MASKED]], 256
+; CHECK-NEXT:    ret i32 [[SWITCH_WITH_HIGH_BITS]]
 ;
 start:
   switch i8 %0, label %bb2 [
