@@ -556,7 +556,6 @@ bool InstrProfiling::run(
   // target value sites to enter it as field in the profile data variable.
   for (Function &F : M) {
     InstrProfCntrInstBase *FirstProfInst = nullptr;
-    InstrProfMCDCBitmapParameters *FirstProfMCDCParams = nullptr;
     for (BasicBlock &BB : F) {
       for (auto I = BB.begin(), E = BB.end(); I != E; I++) {
         if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(I))
@@ -565,22 +564,17 @@ bool InstrProfiling::run(
           if (FirstProfInst == nullptr &&
               (isa<InstrProfIncrementInst>(I) || isa<InstrProfCoverInst>(I)))
             FirstProfInst = dyn_cast<InstrProfCntrInstBase>(I);
-          if (FirstProfMCDCParams == nullptr)
-            FirstProfMCDCParams = dyn_cast<InstrProfMCDCBitmapParameters>(I);
+          // If the MCDCBitmapParameters intrinsic seen, create the bitmaps.
+          if (const auto &Params = dyn_cast<InstrProfMCDCBitmapParameters>(I))
+            static_cast<void>(getOrCreateRegionBitmaps(Params));
         }
       }
-    }
-
-    // If the MCDCBitmapParameters intrinsic was seen, create the bitmaps.
-    if (FirstProfMCDCParams != nullptr) {
-      static_cast<void>(getOrCreateRegionBitmaps(FirstProfMCDCParams));
     }
 
     // Use a profile intrinsic to create the region counters and data variable.
     // Also create the data variable based on the MCDCParams.
     if (FirstProfInst != nullptr) {
       static_cast<void>(getOrCreateRegionCounters(FirstProfInst));
-      createDataVariable(FirstProfInst, FirstProfMCDCParams);
     }
   }
 
@@ -1162,6 +1156,7 @@ InstrProfiling::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
   // the corresponding profile section.
   auto *BitmapPtr = setupProfileSection(Inc, IPSK_bitmap);
   PD.RegionBitmaps = BitmapPtr;
+  PD.NumBitmapBytes = Inc->getNumBitmapBytes()->getZExtValue();
   return PD.RegionBitmaps;
 }
 
@@ -1238,11 +1233,13 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
     CompilerUsedVars.push_back(PD.RegionCounters);
   }
 
+  // Create the data variable (if it doesn't already exist).
+  createDataVariable(Inc);
+
   return PD.RegionCounters;
 }
 
-void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
-                                        InstrProfMCDCBitmapParameters *Params) {
+void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc) {
   // When debug information is correlated to profile data, a data variable
   // is not needed.
   if (DebugInfoCorrelate)
@@ -1305,9 +1302,7 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
   auto *CounterPtr = PD.RegionCounters;
 
-  uint64_t NumBitmapBytes = 0;
-  if (Params != nullptr)
-    NumBitmapBytes = Params->getNumBitmapBytes()->getZExtValue();
+  uint64_t NumBitmapBytes = PD.NumBitmapBytes;
 
   // Create data variable.
   auto *IntPtrTy = M->getDataLayout().getIntPtrType(M->getContext());

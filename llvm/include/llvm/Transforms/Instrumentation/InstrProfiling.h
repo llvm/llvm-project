@@ -51,6 +51,7 @@ private:
     GlobalVariable *RegionCounters = nullptr;
     GlobalVariable *DataVar = nullptr;
     GlobalVariable *RegionBitmaps = nullptr;
+    uint32_t NumBitmapBytes = 0;
 
     PerFunctionProfileData() {
       memset(NumValueSites, 0, sizeof(uint32_t) * (IPVK_Last + 1));
@@ -156,8 +157,7 @@ private:
                                       InstrProfSectKind IPSK);
 
   /// Create INSTR_PROF_DATA variable for counters and bitmaps.
-  void createDataVariable(InstrProfCntrInstBase *Inc,
-                          InstrProfMCDCBitmapParameters *Update);
+  void createDataVariable(InstrProfCntrInstBase *Inc);
 
   /// Emit the section with compressed function names.
   void emitNameData();
