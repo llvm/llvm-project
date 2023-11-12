@@ -2622,9 +2622,7 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
 
-  // Double-check the offsets, sizes, and strides after constant folding.
-  // This allows throwing a more informative assertion message than
-  // what would be thrown at a later point.
+  // TODO: Handle these situations gracefully in the canonicalizer.
   for (int64_t offset : staticOffsets) {
     if (!ShapedType::isDynamic(offset))
       assert(offset >= 0 && "expected subview offsets to be non-negative");
@@ -2633,7 +2631,6 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
     if (!ShapedType::isDynamic(size))
       assert(size >= 0 && "expected subview sizes to be non-negative");
   }
-
   return SubViewOp::inferResultType(sourceMemRefType, staticOffsets,
                                     staticSizes, staticStrides);
 }
