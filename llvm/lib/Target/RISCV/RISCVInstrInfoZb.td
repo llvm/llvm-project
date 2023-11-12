@@ -846,6 +846,18 @@ def : Pat<(i32 (rotl GPR:$rs1, uimm5:$rs2)),
           (RORIW GPR:$rs1, (ImmSubFrom32 uimm5:$rs2))>;
 } // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
+let Predicates = [HasStdExtZbkb, IsRV64] in {
+def : Pat<(or (and (shl GPR:$rs2, (i64 8)), 0xFFFF),
+              (zexti8i32 (i32 GPR:$rs1))),
+          (PACKH GPR:$rs1, GPR:$rs2)>;
+def : Pat<(or (shl (zexti8i32 (i32 GPR:$rs2)), (i64 8)),
+              (zexti8i32 (i32 GPR:$rs1))),
+          (PACKH GPR:$rs1, GPR:$rs2)>;
+
+def : Pat<(i32 (or (shl GPR:$rs2, (i64 16)), (zexti16i32 (i32 GPR:$rs1)))),
+          (PACKW GPR:$rs1, GPR:$rs2)>;
+} // Predicates = [HasStdExtZbkb, IsRV64]
+
 let Predicates = [HasStdExtZba, IsRV64] in {
 def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
           (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
