@@ -725,6 +725,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_frexp:
   case LibFunc_frexpf:
   case LibFunc_frexpl:
+  case LibFunc_fmod:
+  case LibFunc_fmodf:
+  case LibFunc_fmodl:
     Changed |= setDoesNotThrow(F);
     Changed |= setWillReturn(F);
     Changed |= setOnlyAccessesArgMemory(F);
@@ -1164,9 +1167,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fmin:
   case LibFunc_fminf:
   case LibFunc_fminl:
-  case LibFunc_fmod:
-  case LibFunc_fmodf:
-  case LibFunc_fmodl:
   case LibFunc_isascii:
   case LibFunc_isdigit:
   case LibFunc_labs:

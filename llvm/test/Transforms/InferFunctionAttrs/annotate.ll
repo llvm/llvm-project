@@ -473,13 +473,13 @@ declare float @fminf(float, float)
 ; CHECK: declare x86_fp80 @fminl(x86_fp80, x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @fminl(x86_fp80, x86_fp80)
 
-; CHECK: declare double @fmod(double, double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+; CHECK: declare double @fmod(double, double) [[NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare double @fmod(double, double)
 
-; CHECK: declare float @fmodf(float, float) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+; CHECK: declare float @fmodf(float, float) [[NOFREE_NOUNWIND_WILLRETURN]]
 declare float @fmodf(float, float)
 
-; CHECK: declare x86_fp80 @fmodl(x86_fp80, x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+; CHECK: declare x86_fp80 @fmodl(x86_fp80, x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @fmodl(x86_fp80, x86_fp80)
 
 ; CHECK: declare noalias noundef ptr @fopen(ptr nocapture noundef readonly, ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
