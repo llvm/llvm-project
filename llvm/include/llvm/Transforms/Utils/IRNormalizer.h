@@ -7,7 +7,7 @@ namespace llvm {
 
 /// IRNormalizer aims to transform LLVM IR into normal form.
 struct IRNormalizerPass : public PassInfoMixin<IRNormalizerPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) const;
 };
 
 } // namespace llvm
