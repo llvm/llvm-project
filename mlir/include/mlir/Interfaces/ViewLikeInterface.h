@@ -73,19 +73,6 @@ public:
         failed(foldDynamicIndexList(mixedStrides)))
       return failure();
 
-    SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
-    SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
-    dispatchIndexOpFoldResults(mixedOffsets, dynamicOffsets, staticOffsets);
-    dispatchIndexOpFoldResults(mixedSizes, dynamicSizes, staticSizes);
-    dispatchIndexOpFoldResults(mixedStrides, dynamicStrides, staticStrides);
-
-    for (int64_t size : staticSizes) {
-      if (size < 0 && !ShapedType::isDynamic(size)) {
-        return op.emitError("expected non-negative size, but got ")
-               << size;;
-      }
-    }
-
     // Create the new op in canonical form.
     auto resultType =
         ResultTypeFn()(op, mixedOffsets, mixedSizes, mixedStrides);

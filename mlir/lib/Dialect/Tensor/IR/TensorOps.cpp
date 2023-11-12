@@ -1163,8 +1163,6 @@ static void operandsAndShape(TensorType resultType,
 }
 
 LogicalResult GenerateOp::verify() {
-  llvm::outs() << "GenerateOp::verify()\n";
-
   // Ensure that the tensor type has as many dynamic dimensions as are
   // specified by the operands.
   RankedTensorType resultType = llvm::cast<RankedTensorType>(getType());

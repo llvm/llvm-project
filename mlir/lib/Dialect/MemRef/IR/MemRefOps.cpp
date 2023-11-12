@@ -2621,6 +2621,19 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+
+  // Double-check the offsets, sizes, and strides after constant folding.
+  // This allows throwing a more informative assertion message than
+  // what would be thrown at a later point.
+  for (int64_t offset : staticOffsets) {
+    if (!ShapedType::isDynamic(offset))
+      assert(offset >= 0 && "expected subview offsets to be non-negative");
+  }
+  for (int64_t size : staticSizes) {
+    if (!ShapedType::isDynamic(size))
+      assert(size >= 0 && "expected subview sizes to be non-negative");
+  }
+
   return SubViewOp::inferResultType(sourceMemRefType, staticOffsets,
                                     staticSizes, staticStrides);
 }
@@ -2843,8 +2856,6 @@ static LogicalResult produceSubViewErrorMsg(SliceVerificationResult result,
 }
 
 LogicalResult SubViewOp::verify() {
-  llvm::outs() << "SubViewOp::verify\n";
-
   for (int64_t offset : getStaticOffsets()) {
     if (offset < 0 && !ShapedType::isDynamic(offset))
       return emitError("expected subview offsets to be non-negative, but got ")
@@ -3105,20 +3116,6 @@ struct SubViewReturnTypeCanonicalizer {
   MemRefType operator()(SubViewOp op, ArrayRef<OpFoldResult> mixedOffsets,
                         ArrayRef<OpFoldResult> mixedSizes,
                         ArrayRef<OpFoldResult> mixedStrides) {
-    SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
-    SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
-    dispatchIndexOpFoldResults(mixedOffsets, dynamicOffsets, staticOffsets);
-    dispatchIndexOpFoldResults(mixedSizes, dynamicSizes, staticSizes);
-    dispatchIndexOpFoldResults(mixedStrides, dynamicStrides, staticStrides);
-
-    for (int64_t size : staticSizes) {
-      if (size < 0 && !ShapedType::isDynamic(size)) {
-        llvm::dbgs() << "expected subview sizes to be non-negative, but got "
-                     << size << "\n";
-        return {};
-      }
-    }
-
     // Infer a memref type without taking into account any rank reductions.
     MemRefType nonReducedType = cast<MemRefType>(SubViewOp::inferResultType(
         op.getSourceType(), mixedOffsets, mixedSizes, mixedStrides));
