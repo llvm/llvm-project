@@ -740,19 +740,24 @@ static RISCVCC::CondCode getRISCVCCFromICMP(CmpInst::Predicate CC) {
   }
 }
 
-static void getICMPOperandsForBranch(MachineInstr &MI, MachineIRBuilder &MIB,
-                                     MachineRegisterInfo &MRI,
-                                     RISCVCC::CondCode &CC, Register &LHS,
-                                     Register &RHS) {
-  assert(MI.getOpcode() == TargetOpcode::G_ICMP);
-  CmpInst::Predicate ICMPCC =
-      static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
-  LHS = MI.getOperand(2).getReg();
-  RHS = MI.getOperand(3).getReg();
+static void getOperandsForBranch(Register CondReg, MachineIRBuilder &MIB,
+                                 MachineRegisterInfo &MRI,
+                                 RISCVCC::CondCode &CC, Register &LHS,
+                                 Register &RHS) {
+  // Try to fold an ICmp. If that fails, use a NE compare with X0.
+  CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+  if (!mi_match(CondReg, MRI, m_GICmp(m_Pred(Pred), m_Reg(LHS), m_Reg(RHS)))) {
+    LHS = CondReg;
+    RHS = RISCV::X0;
+    CC = RISCVCC::COND_NE;
+    return;
+  }
+
+  // We found an ICmp, do some canonicalizations.
 
   // Adjust comparisons to use comparison with 0 if possible.
   if (auto Constant = getIConstantVRegSExtVal(RHS, MRI)) {
-    switch (ICMPCC) {
+    switch (Pred) {
     case CmpInst::Predicate::ICMP_SGT:
       // Convert X > -1 to X >= 0
       if (*Constant == -1) {
@@ -775,7 +780,7 @@ static void getICMPOperandsForBranch(MachineInstr &MI, MachineIRBuilder &MIB,
     }
   }
 
-  switch (ICMPCC) {
+  switch (Pred) {
   default:
     llvm_unreachable("Expected ICMP CmpInst::Predicate.");
   case CmpInst::Predicate::ICMP_EQ:
@@ -785,18 +790,20 @@ static void getICMPOperandsForBranch(MachineInstr &MI, MachineIRBuilder &MIB,
   case CmpInst::Predicate::ICMP_UGE:
   case CmpInst::Predicate::ICMP_SGE:
     // These CCs are supported directly by RISC-V branches.
-    CC = getRISCVCCFromICMP(ICMPCC);
-    return;
+    break;
   case CmpInst::Predicate::ICMP_SGT:
   case CmpInst::Predicate::ICMP_SLE:
   case CmpInst::Predicate::ICMP_UGT:
   case CmpInst::Predicate::ICMP_ULE:
     // These CCs are not supported directly by RISC-V branches, but changing the
     // direction of the CC and swapping LHS and RHS are.
-    CC = getRISCVCCFromICMP(CmpInst::getSwappedPredicate(ICMPCC));
+    Pred = CmpInst::getSwappedPredicate(Pred);
     std::swap(LHS, RHS);
-    return;
+    break;
   }
+
+  CC = getRISCVCCFromICMP(Pred);
+  return;
 }
 
 bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
@@ -804,14 +811,9 @@ bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
                                             MachineRegisterInfo &MRI) const {
   auto &SelectMI = cast<GSelect>(MI);
 
-  // If MI is a G_SELECT(G_ICMP(tst, A, B), C, D) then we can use (A, B, tst)
-  // as the (LHS, RHS, CC) of the Select_GPR_Using_CC_GPR.
-  Register LHS = SelectMI.getCondReg();
-  Register RHS = RISCV::X0;
-  RISCVCC::CondCode CC = RISCVCC::COND_NE;
-
-  if (mi_match(LHS, MRI, m_GICmp(m_Pred(), m_Reg(), m_Reg())))
-    getICMPOperandsForBranch(*MRI.getVRegDef(LHS), MIB, MRI, CC, LHS, RHS);
+  Register LHS, RHS;
+  RISCVCC::CondCode CC;
+  getOperandsForBranch(SelectMI.getCondReg(), MIB, MRI, CC, LHS, RHS);
 
   MachineInstr *Result = MIB.buildInstr(RISCV::Select_GPR_Using_CC_GPR)
                              .addDef(SelectMI.getReg(0))
