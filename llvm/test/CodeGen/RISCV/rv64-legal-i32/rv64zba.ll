@@ -45,6 +45,33 @@ define i128 @slliuw_2(i32 signext %0, ptr %1) {
   ret i128 %5
 }
 
+define i128 @slliuw_3(i32 signext %0, ptr %1) {
+; RV64I-LABEL: slliuw_3:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    slli a0, a0, 4
+; RV64I-NEXT:    add a1, a1, a0
+; RV64I-NEXT:    ld a0, 0(a1)
+; RV64I-NEXT:    ld a1, 8(a1)
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: slliuw_3:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    addi a0, a0, 1
+; RV64ZBA-NEXT:    slli.uw a0, a0, 4
+; RV64ZBA-NEXT:    add a1, a1, a0
+; RV64ZBA-NEXT:    ld a0, 0(a1)
+; RV64ZBA-NEXT:    ld a1, 8(a1)
+; RV64ZBA-NEXT:    ret
+  %add = add i32 %0, 1
+  %3 = zext i32 %add to i64
+  %4 = getelementptr inbounds i128, ptr %1, i64 %3
+  %5 = load i128, ptr %4
+  ret i128 %5
+}
+
 define i64 @adduw(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: adduw:
 ; RV64I:       # %bb.0:
@@ -77,6 +104,29 @@ define signext i8 @adduw_2(i32 signext %0, ptr %1) {
 ; RV64ZBA-NEXT:    lb a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %3 = zext i32 %0 to i64
+  %4 = getelementptr inbounds i8, ptr %1, i64 %3
+  %5 = load i8, ptr %4
+  ret i8 %5
+}
+
+define signext i8 @adduw_3(i32 signext %0, ptr %1) {
+; RV64I-LABEL: adduw_3:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    lb a0, 0(a0)
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: adduw_3:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    addi a0, a0, 1
+; RV64ZBA-NEXT:    add.uw a0, a0, a1
+; RV64ZBA-NEXT:    lb a0, 0(a0)
+; RV64ZBA-NEXT:    ret
+  %add = add i32 %0, 1
+  %3 = zext i32 %add to i64
   %4 = getelementptr inbounds i8, ptr %1, i64 %3
   %5 = load i8, ptr %4
   ret i8 %5
@@ -295,19 +345,15 @@ define i64 @sh2add_extra_sext(i32 %x, i32 %y, i32 %z) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    slli a1, a0, 32
-; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    sllw a1, a2, a1
+; RV64I-NEXT:    sllw a1, a2, a0
 ; RV64I-NEXT:    sraiw a0, a0, 2
 ; RV64I-NEXT:    mul a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: sh2add_extra_sext:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a0, a0, 2
-; RV64ZBA-NEXT:    add a0, a0, a1
-; RV64ZBA-NEXT:    zext.w a1, a0
-; RV64ZBA-NEXT:    sllw a1, a2, a1
+; RV64ZBA-NEXT:    sh2add a0, a0, a1
+; RV64ZBA-NEXT:    sllw a1, a2, a0
 ; RV64ZBA-NEXT:    sraiw a0, a0, 2
 ; RV64ZBA-NEXT:    mul a0, a1, a0
 ; RV64ZBA-NEXT:    ret
@@ -1134,8 +1180,7 @@ define signext i32 @addshl32_5_6(i32 signext %a, i32 signext %b) {
 ;
 ; RV64ZBA-LABEL: addshl32_5_6:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a1, a1, 1
-; RV64ZBA-NEXT:    add a0, a1, a0
+; RV64ZBA-NEXT:    sh1add a0, a1, a0
 ; RV64ZBA-NEXT:    slliw a0, a0, 5
 ; RV64ZBA-NEXT:    ret
   %c = shl i32 %a, 5
@@ -1173,8 +1218,7 @@ define signext i32 @addshl32_5_7(i32 signext %a, i32 signext %b) {
 ;
 ; RV64ZBA-LABEL: addshl32_5_7:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a1, a1, 2
-; RV64ZBA-NEXT:    add a0, a1, a0
+; RV64ZBA-NEXT:    sh2add a0, a1, a0
 ; RV64ZBA-NEXT:    slliw a0, a0, 5
 ; RV64ZBA-NEXT:    ret
   %c = shl i32 %a, 5
@@ -1212,8 +1256,7 @@ define signext i32 @addshl32_5_8(i32 signext %a, i32 signext %b) {
 ;
 ; RV64ZBA-LABEL: addshl32_5_8:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a1, a1, 3
-; RV64ZBA-NEXT:    add a0, a1, a0
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
 ; RV64ZBA-NEXT:    slliw a0, a0, 5
 ; RV64ZBA-NEXT:    ret
   %c = shl i32 %a, 5
