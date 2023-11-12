@@ -32,7 +32,9 @@
 #include "mlir/IR/IRMapping.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <iostream>
 #include <optional>
+using namespace std;
 
 #define DEBUG_TYPE "flang-lower-expr"
 
@@ -888,8 +890,13 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // Do nothing if this is a procedure argument. It is already a
   // fir.boxproc/fir.tuple<fir.boxproc, len> as it should.
   if (actual.isProcedure()) {
-    if (hlfir::isBoxProcAddressType(dummyType))
-      TODO(loc, "procedure to procedure pointer argument passing");
+    if (hlfir::isBoxProcAddressType(dummyType)) {
+      // Procedure actual to procedure pointer dummy.
+      auto proc{fir::getBase(actual)};
+      auto tempBoxProc{builder.createTemporary(loc, proc.getType())};
+      builder.create<fir::StoreOp>(loc, actual, tempBoxProc);
+      return PreparedDummyArgument{tempBoxProc, /*cleanups=*/{}};
+    }
     if (actual.getType() != dummyType)
       actual = fixProcedureDummyMismatch(loc, builder, actual, dummyType);
     return PreparedDummyArgument{actual, /*cleanups=*/{}};
