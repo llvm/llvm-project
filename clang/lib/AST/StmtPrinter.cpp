@@ -2271,7 +2271,10 @@ void StmtPrinter::VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *Node) {
 void StmtPrinter::VisitCXXNewExpr(CXXNewExpr *E) {
   if (E->isGlobalNew())
     OS << "::";
-  OS << "new ";
+  if (E->isPlacementNewExpr())
+    OS << "_placement_new ";
+  else
+    OS << "new ";
   unsigned NumPlace = E->getNumPlacementArgs();
   if (NumPlace > 0 && !isa<CXXDefaultArgExpr>(E->getPlacementArg(0))) {
     OS << "(";

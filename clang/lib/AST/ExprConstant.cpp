@@ -9740,7 +9740,7 @@ static bool EvaluateArrayNewConstructExpr(EvalInfo &Info, LValue &This,
                                           QualType AllocType);
 
 bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
-  if (!Info.getLangOpts().CPlusPlus20)
+  if (!Info.getLangOpts().CPlusPlus20 && !E->isPlacementNewExpr())
     Info.CCEDiag(E, diag::note_constexpr_new);
 
   // We cannot speculatively evaluate a delete expression.
@@ -9751,8 +9751,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 
   bool IsNothrow = false;
   bool IsPlacement = false;
-  if (OperatorNew->isReservedGlobalPlacementOperator() &&
-      Info.CurrentCall->isStdFunction() && !E->isArray()) {
+  if (E->isReservedPlacementNew() && Info.CurrentCall->isStdFunction() && !E->isArray()) {
     // FIXME Support array placement new.
     assert(E->getNumPlacementArgs() == 1);
     if (!EvaluatePointer(E->getPlacementArg(0), Result, Info))
@@ -9760,7 +9759,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
     if (Result.Designator.Invalid)
       return false;
     IsPlacement = true;
-  } else if (!OperatorNew->isReplaceableGlobalAllocationFunction()) {
+  } else if (E->isPlacementNewExpr() || !OperatorNew->isReplaceableGlobalAllocationFunction()) {
     Info.FFDiag(E, diag::note_constexpr_new_non_replaceable)
         << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
     return false;

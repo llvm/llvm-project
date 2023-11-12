@@ -6810,14 +6810,14 @@ public:
                                        bool ListInitialization);
 
   /// ActOnCXXNew - Parsed a C++ 'new' expression.
-  ExprResult ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
+  ExprResult ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal, bool IsPlacementNewExpr,
                          SourceLocation PlacementLParen,
                          MultiExprArg PlacementArgs,
                          SourceLocation PlacementRParen,
                          SourceRange TypeIdParens, Declarator &D,
                          Expr *Initializer);
   ExprResult
-  BuildCXXNew(SourceRange Range, bool UseGlobal, SourceLocation PlacementLParen,
+  BuildCXXNew(SourceRange Range, bool UseGlobal, bool IsPlacementNewExpr, SourceLocation PlacementLParen,
               MultiExprArg PlacementArgs, SourceLocation PlacementRParen,
               SourceRange TypeIdParens, QualType AllocType,
               TypeSourceInfo *AllocTypeInfo, std::optional<Expr *> ArraySize,

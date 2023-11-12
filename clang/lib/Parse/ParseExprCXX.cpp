@@ -186,7 +186,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
   if (Tok.is(tok::coloncolon)) {
     // ::new and ::delete aren't nested-name-specifiers.
     tok::TokenKind NextKind = NextToken().getKind();
-    if (NextKind == tok::kw_new || NextKind == tok::kw_delete)
+    if (NextKind == tok::kw_new || NextKind == tok::kw_delete || NextKind == tok::kw__placement_new)
       return false;
 
     if (NextKind == tok::l_brace) {
@@ -3171,7 +3171,8 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
 ///
 ExprResult
 Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
-  assert(Tok.is(tok::kw_new) && "expected 'new' token");
+  assert((Tok.is(tok::kw_new) || Tok.is(tok::kw__placement_new)) && "expected 'new' token");
+  const bool IsPlacementNewExpr = Tok.is(tok::kw__placement_new);
   ConsumeToken();   // Consume 'new'
 
   // A '(' now can be a new-placement or the '(' wrapping the type-id in the
@@ -3201,6 +3202,14 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
       return ExprError();
     }
 
+    if (IsPlacementNewExpr) {
+      if (PlacementArgs.size() != 1) {
+        Diag(PlacementLParen, diag::err_placement_new_expected_one_argument);
+        SkipUntil(tok::semi, StopAtSemi | StopBeforeMatch);
+        return ExprError();
+      }
+    }
+
     if (PlacementArgs.empty()) {
       // Reset the placement locations. There was no placement.
       TypeIdParens = T.getRange();
@@ -3227,6 +3236,10 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
         }
       }
     }
+  } else if (IsPlacementNewExpr) {
+    Diag(Tok, diag::err_expected_lparen_after) << "::_placement_new";
+    SkipUntil(tok::semi, StopAtSemi | StopBeforeMatch);
+    return ExprError();
   } else {
     // A new-type-id is a simplified type-id, where essentially the
     // direct-declarator is replaced by a direct-new-declarator.
@@ -3295,7 +3308,7 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
   if (Initializer.isInvalid())
     return Initializer;
 
-  return Actions.ActOnCXXNew(Start, UseGlobal, PlacementLParen,
+  return Actions.ActOnCXXNew(Start, UseGlobal, IsPlacementNewExpr, PlacementLParen,
                              PlacementArgs, PlacementRParen,
                              TypeIdParens, DeclaratorInfo, Initializer.get());
 }

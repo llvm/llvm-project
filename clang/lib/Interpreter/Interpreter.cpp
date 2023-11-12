@@ -606,8 +606,8 @@ public:
       Expr *Args[] = {AllocCall.get()};
       ExprResult CXXNewCall = S.BuildCXXNew(
           E->getSourceRange(),
-          /*UseGlobal=*/true, /*PlacementLParen=*/SourceLocation(), Args,
-          /*PlacementRParen=*/SourceLocation(),
+          /*UseGlobal=*/true, /*IsPlacementNewExpr=*/false,
+          /*PlacementLParen=*/SourceLocation(), Args, /*PlacementRParen=*/SourceLocation(),
           /*TypeIdParens=*/SourceRange(), TSI->getType(), TSI, std::nullopt,
           E->getSourceRange(), E);
 

@@ -295,7 +295,7 @@ bool PlacementNewChecker::checkPlaceIsAlignedProperly(const CXXNewExpr *NE,
 void PlacementNewChecker::checkPreStmt(const CXXNewExpr *NE,
                                        CheckerContext &C) const {
   // Check only the default placement new.
-  if (!NE->getOperatorNew()->isReservedGlobalPlacementOperator())
+  if (!NE->isReservedPlacementNew())
     return;
 
   if (NE->getNumPlacementArgs() == 0)

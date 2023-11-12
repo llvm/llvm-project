@@ -8102,12 +8102,18 @@ ExpectedStmt ASTNodeImporter::VisitCXXNewExpr(CXXNewExpr *E) {
       ImportContainerChecked(E->placement_arguments(), ToPlacementArgs))
     return std::move(Err);
 
-  return CXXNewExpr::Create(
-      Importer.getToContext(), E->isGlobalNew(), ToOperatorNew,
-      ToOperatorDelete, E->passAlignment(), E->doesUsualArrayDeleteWantSize(),
-      ToPlacementArgs, ToTypeIdParens, ToArraySize, E->getInitializationStyle(),
-      ToInitializer, ToType, ToAllocatedTypeSourceInfo, ToSourceRange,
-      ToDirectInitRange);
+  if (E->isPlacementNewExpr())
+    return CXXNewExpr::CreatePlacementNew(
+        Importer.getToContext(), ToPlacementArgs[0], ToTypeIdParens, ToArraySize,
+        E->getInitializationStyle(), ToInitializer, ToType, ToAllocatedTypeSourceInfo,
+        ToSourceRange, ToDirectInitRange);
+  else
+    return CXXNewExpr::Create(
+        Importer.getToContext(), E->isGlobalNew(), ToOperatorNew,
+        ToOperatorDelete, E->passAlignment(), E->doesUsualArrayDeleteWantSize(),
+        ToPlacementArgs, ToTypeIdParens, ToArraySize, E->getInitializationStyle(),
+        ToInitializer, ToType, ToAllocatedTypeSourceInfo, ToSourceRange,
+        ToDirectInitRange);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXDeleteExpr(CXXDeleteExpr *E) {

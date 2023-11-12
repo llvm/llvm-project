@@ -693,7 +693,7 @@ static CharUnits CalculateCookiePadding(CodeGenFunction &CGF,
 
   // No cookie is required if the operator new[] being used is the
   // reserved placement operator new[].
-  if (E->getOperatorNew()->isReservedGlobalPlacementOperator())
+  if (E->isReservedPlacementNew())
     return CharUnits::Zero();
 
   return CGF.CGM.getCXXABI().GetArrayCookieSize(E);
@@ -1584,7 +1584,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // operator, just "inline" it directly.
   Address allocation = Address::invalid();
   CallArgList allocatorArgs;
-  if (allocator->isReservedGlobalPlacementOperator()) {
+  if (E->isReservedPlacementNew()) {
     assert(E->getNumPlacementArgs() == 1);
     const Expr *arg = *E->placement_arguments().begin();
 
@@ -1599,6 +1599,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
 
     // Set up allocatorArgs for the call to operator delete if it's not
     // the reserved global operator.
+    assert(!E->isPlacementNewExpr() || !E->getOperatorDelete());
     if (E->getOperatorDelete() &&
         !E->getOperatorDelete()->isReservedGlobalPlacementOperator()) {
       allocatorArgs.add(RValue::get(allocSize), getContext().getSizeType());
@@ -1724,8 +1725,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // vptrs information which may be included in previous type.
   // To not break LTO with different optimizations levels, we do it regardless
   // of optimization level.
-  if (CGM.getCodeGenOpts().StrictVTablePointers &&
-      allocator->isReservedGlobalPlacementOperator())
+  if (CGM.getCodeGenOpts().StrictVTablePointers && E->isReservedPlacementNew())
     result = Builder.CreateLaunderInvariantGroup(result);
 
   // Emit sanitizer checks for pointer value now, so that in the case of an

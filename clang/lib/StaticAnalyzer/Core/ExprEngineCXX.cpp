@@ -1004,8 +1004,9 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   SVal symVal = UnknownVal();
   FunctionDecl *FD = CNE->getOperatorNew();
 
-  bool IsStandardGlobalOpNewFunction =
-      FD->isReplaceableGlobalAllocationFunction();
+  bool IsStandardGlobalOpNewFunction = false;
+  if (FD)
+    IsStandardGlobalOpNewFunction = FD->isReplaceableGlobalAllocationFunction();
 
   ProgramStateRef State = Pred->getState();
 
@@ -1046,7 +1047,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
     // where new can return NULL. If we end up supporting that option, we can
     // consider adding a check for it here.
     // C++11 [basic.stc.dynamic.allocation]p3.
-    if (const auto *ProtoType = FD->getType()->getAs<FunctionProtoType>())
+    if (const auto *ProtoType = FD ? FD->getType()->getAs<FunctionProtoType>() : nullptr)
       if (!ProtoType->isNothrow())
         if (auto dSymVal = symVal.getAs<DefinedOrUnknownSVal>())
           State = State->assume(*dSymVal, true);
@@ -1099,7 +1100,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   // CXXNewExpr, we need to make sure that the constructed object is not
   // immediately invalidated here. (The placement call should happen before
   // the constructor call anyway.)
-  if (FD->isReservedGlobalPlacementOperator()) {
+  if (CNE->isReservedPlacementNew()) {
     // Non-array placement new should always return the placement location.
     SVal PlacementLoc = State->getSVal(CNE->getPlacementArg(0), LCtx);
     Result = svalBuilder.evalCast(PlacementLoc, CNE->getType(),

@@ -207,6 +207,7 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
   bool IsParenTypeId = TypeIdParens.isValid();
   CXXNewExprBits.IsParenTypeId = IsParenTypeId;
   CXXNewExprBits.NumPlacementArgs = PlacementArgs.size();
+  CXXNewExprBits.IsPlacementNewExpr = false;
 
   if (ArraySize)
     getTrailingObjects<Stmt *>()[arraySizeOffset()] = *ArraySize;
@@ -232,6 +233,18 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
   }
 
   setDependence(computeDependence(this));
+}
+
+CXXNewExpr::CXXNewExpr(Expr *PlacementArg,
+                       SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
+                       CXXNewInitializationStyle InitializationStyle, Expr *Initializer,
+                       QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
+                       SourceRange DirectInitRange)
+    : CXXNewExpr(true, nullptr, nullptr, false, false,
+                 ArrayRef<Expr *>(&PlacementArg, 1), TypeIdParens, ArraySize,
+                 InitializationStyle, Initializer, Ty,
+                 AllocatedTypeInfo, Range, DirectInitRange) {
+    CXXNewExprBits.IsPlacementNewExpr = true;
 }
 
 CXXNewExpr::CXXNewExpr(EmptyShell Empty, bool IsArray,
@@ -265,6 +278,25 @@ CXXNewExpr *CXXNewExpr::Create(
                  AllocatedTypeInfo, Range, DirectInitRange);
 }
 
+CXXNewExpr *CXXNewExpr::CreatePlacementNew(
+    const ASTContext &Ctx, Expr *PlacementArg,
+    SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
+    CXXNewInitializationStyle InitializationStyle, Expr *Initializer,
+    QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
+    SourceRange DirectInitRange) {
+  bool IsArray = ArraySize.has_value();
+  bool HasInit = Initializer != nullptr;
+  bool IsParenTypeId = TypeIdParens.isValid();
+  void *Mem =
+      Ctx.Allocate(totalSizeToAlloc<Stmt *, SourceRange>(
+                       IsArray + HasInit + 1, IsParenTypeId),
+                   alignof(CXXNewExpr));
+  return new (Mem)
+      CXXNewExpr(PlacementArg, TypeIdParens,
+                 ArraySize, InitializationStyle, Initializer, Ty,
+                 AllocatedTypeInfo, Range, DirectInitRange);
+}
+
 CXXNewExpr *CXXNewExpr::CreateEmpty(const ASTContext &Ctx, bool IsArray,
                                     bool HasInit, unsigned NumPlacementArgs,
                                     bool IsParenTypeId) {
@@ -277,6 +309,8 @@ CXXNewExpr *CXXNewExpr::CreateEmpty(const ASTContext &Ctx, bool IsArray,
 }
 
 bool CXXNewExpr::shouldNullCheckAllocation() const {
+  if (isPlacementNewExpr())
+    return false;
   if (getOperatorNew()->getLangOpts().CheckNew)
     return true;
   return !getOperatorNew()->hasAttr<ReturnsNonNullAttr>() &&

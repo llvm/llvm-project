@@ -2282,6 +2282,13 @@ class CXXNewExpr final
              QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
              SourceRange DirectInitRange);
 
+  /// Build a c++ builtin placement new expression
+  CXXNewExpr(Expr *PlacementArg,
+             SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
+             CXXNewInitializationStyle InitializationStyle, Expr *Initializer,
+             QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
+             SourceRange DirectInitRange);
+
   /// Build an empty c++ new expression.
   CXXNewExpr(EmptyShell Empty, bool IsArray, unsigned NumPlacementArgs,
              bool IsParenTypeId);
@@ -2296,6 +2303,14 @@ public:
          CXXNewInitializationStyle InitializationStyle, Expr *Initializer,
          QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
          SourceRange DirectInitRange);
+
+  /// Create a c++ builtin placement new expression.
+  static CXXNewExpr *
+  CreatePlacementNew(const ASTContext &Ctx, Expr *PlacementArg,
+                     SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
+                     CXXNewInitializationStyle InitializationStyle, Expr *Initializer,
+                     QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
+                     SourceRange DirectInitRange);
 
   /// Create an empty c++ new expression.
   static CXXNewExpr *CreateEmpty(const ASTContext &Ctx, bool IsArray,
@@ -2331,6 +2346,12 @@ public:
   void setOperatorNew(FunctionDecl *D) { OperatorNew = D; }
   FunctionDecl *getOperatorDelete() const { return OperatorDelete; }
   void setOperatorDelete(FunctionDecl *D) { OperatorDelete = D; }
+
+  bool isReservedPlacementNew() const {
+    if (CXXNewExprBits.IsPlacementNewExpr)
+      return true;
+    return OperatorNew->isReservedGlobalPlacementOperator();
+  }
 
   bool isArray() const { return CXXNewExprBits.IsArray; }
 
@@ -2386,6 +2407,8 @@ public:
   }
 
   bool isGlobalNew() const { return CXXNewExprBits.IsGlobalNew; }
+
+  bool isPlacementNewExpr() const { return CXXNewExprBits.IsPlacementNewExpr; }
 
   /// Whether this new-expression has any initializer at all.
   bool hasInitializer() const {

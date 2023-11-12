@@ -3343,7 +3343,7 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildCXXNewExpr(SourceLocation StartLoc, bool UseGlobal,
+  ExprResult RebuildCXXNewExpr(SourceLocation StartLoc, bool UseGlobal, bool IsPlacementNewExpr,
                                SourceLocation PlacementLParen,
                                MultiExprArg PlacementArgs,
                                SourceLocation PlacementRParen,
@@ -3351,7 +3351,7 @@ public:
                                TypeSourceInfo *AllocatedTypeInfo,
                                std::optional<Expr *> ArraySize,
                                SourceRange DirectInitRange, Expr *Initializer) {
-    return getSema().BuildCXXNew(StartLoc, UseGlobal,
+    return getSema().BuildCXXNew(StartLoc, UseGlobal, IsPlacementNewExpr,
                                  PlacementLParen,
                                  PlacementArgs,
                                  PlacementRParen,
@@ -12539,7 +12539,7 @@ TreeTransform<Derived>::TransformCXXNewExpr(CXXNewExpr *E) {
   }
 
   return getDerived().RebuildCXXNewExpr(
-      E->getBeginLoc(), E->isGlobalNew(),
+      E->getBeginLoc(), E->isGlobalNew(), E->isPlacementNewExpr(),
       /*FIXME:*/ E->getBeginLoc(), PlacementArgs,
       /*FIXME:*/ E->getBeginLoc(), E->getTypeIdParens(), AllocType,
       AllocTypeInfo, ArraySize, E->getDirectInitRange(), NewInit.get());

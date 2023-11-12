@@ -1120,6 +1120,7 @@ IdentifierInfo *Parser::ParseObjCSelectorPiece(SourceLocation &SelectorLoc) {
   case tok::kw_mutable:
   case tok::kw_namespace:
   case tok::kw_new:
+  case tok::kw__placement_new:
   case tok::kw_operator:
   case tok::kw_private:
   case tok::kw_protected:

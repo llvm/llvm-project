@@ -365,6 +365,7 @@ KEYWORD(typeid                      , KEYCXX)
 KEYWORD(using                       , KEYCXX)
 KEYWORD(virtual                     , KEYCXX)
 KEYWORD(wchar_t                     , WCHARSUPPORT)
+KEYWORD(_placement_new              , KEYCXX)
 
 // C++ 2.5p2: Alternative Representations.
 CXX_KEYWORD_OPERATOR(and     , ampamp)

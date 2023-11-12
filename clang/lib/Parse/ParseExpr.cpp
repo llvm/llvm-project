@@ -1682,7 +1682,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     // ::new -> [C++] new-expression
     // ::delete -> [C++] delete-expression
     SourceLocation CCLoc = ConsumeToken();
-    if (Tok.is(tok::kw_new)) {
+    if (Tok.is(tok::kw_new) || Tok.is(tok::kw__placement_new)) {
       if (NotPrimaryExpression)
         *NotPrimaryExpression = true;
       Res = ParseCXXNewExpression(true, CCLoc);

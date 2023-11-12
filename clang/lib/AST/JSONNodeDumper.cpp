@@ -1350,6 +1350,7 @@ void JSONNodeDumper::VisitCXXNewExpr(const CXXNewExpr *NE) {
   attributeOnlyIfTrue("isGlobal", NE->isGlobalNew());
   attributeOnlyIfTrue("isArray", NE->isArray());
   attributeOnlyIfTrue("isPlacement", NE->getNumPlacementArgs() != 0);
+  attributeOnlyIfTrue("isPlacementNewExpr", NE->isPlacementNewExpr());
   switch (NE->getInitializationStyle()) {
   case CXXNewInitializationStyle::None:
   case CXXNewInitializationStyle::Implicit:
