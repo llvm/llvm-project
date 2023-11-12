@@ -44,32 +44,28 @@ TEST(AArch32_ELF, readAddendArmErrors) {
                             sizeof(ArmWord));
   auto &BArm = G->createContentBlock(Sec, ArmContent, B1DummyAddr, ArmAlignment,
                                      AlignmentOffset);
-  Symbol &TargetSymbol =
-      G->addAnonymousSymbol(BArm, SymbolOffset, SymbolSize, false, false);
-  Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
-                   0 /*Addend*/);
+  Edge::Kind Invalid = Edge::GenericEdgeKind::Invalid;
 
   // Edge kind is tested, block itself is not significant here. So it is tested
   // once in Arm
-  EXPECT_THAT_EXPECTED(readAddendData(*G, BArm, InvalidEdge),
+  EXPECT_THAT_EXPECTED(readAddendData(*G, BArm, SymbolOffset, Invalid),
                        FailedWithMessage(testing::HasSubstr(
                            "can not read implicit addend for aarch32 edge kind "
                            "INVALID RELOCATION")));
 
-  EXPECT_THAT_EXPECTED(readAddendArm(*G, BArm, InvalidEdge),
+  EXPECT_THAT_EXPECTED(readAddendArm(*G, BArm, SymbolOffset, Invalid),
                        FailedWithMessage(testing::HasSubstr(
                            "can not read implicit addend for aarch32 edge kind "
                            "INVALID RELOCATION")));
 
-  EXPECT_THAT_EXPECTED(readAddendThumb(*G, BArm, InvalidEdge, ArmCfg),
+  EXPECT_THAT_EXPECTED(readAddendThumb(*G, BArm, SymbolOffset, Invalid, ArmCfg),
                        FailedWithMessage(testing::HasSubstr(
                            "can not read implicit addend for aarch32 edge kind "
                            "INVALID RELOCATION")));
 
   for (Edge::Kind K = FirstArmRelocation; K < LastArmRelocation; K += 1) {
-    Edge E(K, 0, TargetSymbol, 0);
     EXPECT_THAT_EXPECTED(
-        readAddendArm(*G, BArm, E),
+        readAddendArm(*G, BArm, SymbolOffset, K),
         FailedWithMessage(testing::StartsWith("Invalid opcode")));
   }
 }
@@ -90,15 +86,10 @@ TEST(AArch32_ELF, readAddendThumbErrors) {
                               sizeof(ThumbHalfWords));
   auto &BThumb = G->createContentBlock(Sec, ThumbContent, B2DummyAddr,
                                        ThumbAlignment, AlignmentOffset);
-  Symbol &TargetSymbol =
-      G->addAnonymousSymbol(BThumb, SymbolOffset, SymbolSize, false, false);
-  Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
-                   0 /*Addend*/);
 
   for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
-    Edge E(K, 0, TargetSymbol, 0);
     EXPECT_THAT_EXPECTED(
-        readAddendThumb(*G, BThumb, E, ArmCfg),
+        readAddendThumb(*G, BThumb, SymbolOffset, K, ArmCfg),
         FailedWithMessage(testing::StartsWith("Invalid opcode")));
   }
 }

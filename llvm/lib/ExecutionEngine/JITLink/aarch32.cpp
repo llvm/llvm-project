@@ -304,12 +304,11 @@ void writeImmediate(WritableArmRelocation &R, uint32_t Imm) {
   R.Wd = (R.Wd & ~Mask) | Imm;
 }
 
-Expected<int64_t> readAddendData(LinkGraph &G, Block &B, const Edge &E) {
+Expected<int64_t> readAddendData(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                 Edge::Kind Kind) {
   llvm::endianness Endian = G.getEndianness();
-
-  Edge::Kind Kind = E.getKind();
   const char *BlockWorkingMem = B.getContent().data();
-  const char *FixupPtr = BlockWorkingMem + E.getOffset();
+  const char *FixupPtr = BlockWorkingMem + Offset;
 
   switch (Kind) {
   case Data_Delta32:
@@ -319,13 +318,13 @@ Expected<int64_t> readAddendData(LinkGraph &G, Block &B, const Edge &E) {
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
         " can not read implicit addend for aarch32 edge kind " +
-        G.getEdgeKindName(E.getKind()));
+        G.getEdgeKindName(Kind));
   }
 }
 
-Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, const Edge &E) {
-  ArmRelocation R(B.getContent().data() + E.getOffset());
-  Edge::Kind Kind = E.getKind();
+Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                Edge::Kind Kind) {
+  ArmRelocation R(B.getContent().data() + Offset);
 
   switch (Kind) {
   case Arm_Call:
@@ -352,14 +351,13 @@ Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, const Edge &E) {
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
         " can not read implicit addend for aarch32 edge kind " +
-        G.getEdgeKindName(E.getKind()));
+        G.getEdgeKindName(Kind));
   }
 }
 
-Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, const Edge &E,
-                                  const ArmConfig &ArmCfg) {
-  ThumbRelocation R(B.getContent().data() + E.getOffset());
-  Edge::Kind Kind = E.getKind();
+Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                  Edge::Kind Kind, const ArmConfig &ArmCfg) {
+  ThumbRelocation R(B.getContent().data() + Offset);
 
   switch (Kind) {
   case Thumb_Call:
@@ -394,7 +392,7 @@ Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, const Edge &E,
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
         " can not read implicit addend for aarch32 edge kind " +
-        G.getEdgeKindName(E.getKind()));
+        G.getEdgeKindName(Kind));
   }
 }
 
