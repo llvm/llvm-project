@@ -22,7 +22,6 @@
 #include "clang/Format/Format.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Regex.h"
 #include <list>
 #include <stack>
