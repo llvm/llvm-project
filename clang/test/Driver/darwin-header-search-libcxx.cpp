@@ -172,3 +172,14 @@
 // RUN:               --check-prefix=CHECK-LIBCXX-STDLIB-UNSPECIFIED %s
 // CHECK-LIBCXX-STDLIB-UNSPECIFIED: "-cc1"
 // CHECK-LIBCXX-STDLIB-UNSPECIFIED: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
+
+// Make sure the target folder has no toolchain structure.
+// RUN: rm -rf %t/xpacks
+// RUN: mkdir -pv %t/xpacks/.bin
+// RUN: ln -s %clang++ %t/xpacks/.bin/clang++
+
+// RUN: %t/xpacks/.bin/clang++ -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-apple-darwin \
+// RUN:   | FileCheck -DRESOURCE=%S/Inputs/resource_dir \
+// RUN:               --check-prefix=CHECK-SAME %s
+// CHECK-SAME: "-internal-isystem" "[[RESOURCE]]/bin/../include/c++/v1"
