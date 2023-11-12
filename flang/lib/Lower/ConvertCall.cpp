@@ -1181,6 +1181,7 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
     case PassBy::CharBoxValueAttribute:
     case PassBy::Box:
     case PassBy::BaseAddress:
+    case PassBy::BoxProcRef:
     case PassBy::BoxChar: {
       PreparedDummyArgument preparedDummy =
           prepareUserCallActualArgument(loc, builder, *preparedActual, argTy,

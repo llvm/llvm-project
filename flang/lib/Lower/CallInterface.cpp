@@ -1063,28 +1063,30 @@ private:
         proc.procedure.value();
     mlir::Type funcType =
         getProcedureDesignatorType(&procedure, interface.converter);
-    if (proc.attrs.test(
-            Fortran::evaluate::characteristics::DummyProcedure::Attr::Pointer))
+    if (proc.attrs.test(Fortran::evaluate::characteristics::DummyProcedure::
+                            Attr::Pointer)) {
+      // Prodecure pointer dummy argument.
       funcType = fir::ReferenceType::get(funcType);
-    else { // Otherwise, it is a dummy procedure.
-      std::optional<Fortran::evaluate::DynamicType> resultTy =
-          getResultDynamicType(procedure);
-      if (resultTy && mustPassLengthWithDummyProcedure(procedure)) {
-        // The result length of dummy procedures that are character functions
-        // must be passed so that the dummy procedure can be called if it has
-        // assumed length on the callee side.
-        mlir::Type tupleType =
-            fir::factory::getCharacterProcedureTupleType(funcType);
-        llvm::StringRef charProcAttr =
-            fir::getCharacterProcedureDummyAttrName();
-        addFirOperand(tupleType, nextPassedArgPosition(),
-                      Property::CharProcTuple,
-                      {mlir::NamedAttribute{
-                          mlir::StringAttr::get(&mlirContext, charProcAttr),
-                          mlir::UnitAttr::get(&mlirContext)}});
-        addPassedArg(PassEntityBy::CharProcTuple, entity, characteristics);
-        return;
-      }
+      addFirOperand(funcType, nextPassedArgPosition(), Property::BoxProcRef);
+      addPassedArg(PassEntityBy::BoxProcRef, entity, characteristics);
+      return;
+    }
+    // Otherwise, it is a dummy procedure.
+    std::optional<Fortran::evaluate::DynamicType> resultTy =
+        getResultDynamicType(procedure);
+    if (resultTy && mustPassLengthWithDummyProcedure(procedure)) {
+      // The result length of dummy procedures that are character functions
+      // must be passed so that the dummy procedure can be called if it has
+      // assumed length on the callee side.
+      mlir::Type tupleType =
+          fir::factory::getCharacterProcedureTupleType(funcType);
+      llvm::StringRef charProcAttr = fir::getCharacterProcedureDummyAttrName();
+      addFirOperand(tupleType, nextPassedArgPosition(), Property::CharProcTuple,
+                    {mlir::NamedAttribute{
+                        mlir::StringAttr::get(&mlirContext, charProcAttr),
+                        mlir::UnitAttr::get(&mlirContext)}});
+      addPassedArg(PassEntityBy::CharProcTuple, entity, characteristics);
+      return;
     }
     addFirOperand(funcType, nextPassedArgPosition(), Property::BaseAddress);
     addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
