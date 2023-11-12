@@ -32,9 +32,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include <iostream>
 #include <optional>
-using namespace std;
 
 #define DEBUG_TYPE "flang-lower-expr"
 
@@ -177,7 +175,8 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
       std::tie(funcPointer, charFuncPointerLength) =
           fir::factory::extractCharacterProcedureTuple(builder, loc,
                                                        funcPointer);
-    // RHS is a procedure pointer. Load its value.
+    // Reference to a procedure pointer. Load its value, the address of the
+    // procedure it poiints to.
     if (Fortran::semantics::IsProcedurePointer(sym))
       funcPointer = builder.create<fir::LoadOp>(loc, funcPointer);
   }
