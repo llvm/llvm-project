@@ -264,9 +264,9 @@ template <EdgeKind_aarch32 K> constexpr bool isThumb() {
 
 template <EdgeKind_aarch32 K> constexpr bool hasOpcode(...) { return false; }
 template <EdgeKind_aarch32 K, auto _ = FixupInfo<K>::Opcode>
-constexpr bool hasOpcode(int) {
-  return true;
-}
+constexpr bool hasOpcode(int) { return true; }
+template <EdgeKind_aarch32 K, auto _ = FixupInfo<K>::Opcode.Lo>
+constexpr bool hasOpcode(unsigned) { return true; }
 
 template <EdgeKind_aarch32 K> static bool checkOpcodeArm(uint32_t Wd) {
   return (Wd & FixupInfo<K>::OpcodeMask) == FixupInfo<K>::Opcode;
@@ -282,12 +282,11 @@ template <EdgeKind_aarch32 K>
 static std::unique_ptr<FixupInfoBase> initFixupInfo() {
   auto Entry = std::make_unique<FixupInfo<K>>();
   if constexpr (hasOpcode<K>(0)) {
+    static_assert(isArm<K>() != isThumb<K>(), "Classes are mutually exclusive");
     if constexpr (isArm<K>())
       Entry->checkOpcode = checkOpcodeArm<K>;
-    else if constexpr (isThumb<K>())
+    if constexpr (isThumb<K>())
       Entry->checkOpcode = checkOpcodeThumb<K>;
-    else
-      llvm_unreachable("Visited edge kinds must either be Arm or Thumb");
   }
   return Entry;
 }
