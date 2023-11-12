@@ -180,7 +180,6 @@
 
 // RUN: %t/xpacks/.bin/clang++ -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
-// RUN:   | FileCheck -DRESOURCE=%S/Inputs/resource_dir \
-// RUN:               --check-prefix=CHECK-LIBCXX-TOOLCHAIN-3 %s
-// CHECK-LIBCXX-TOOLCHAIN-3: "-internal-isystem" "{{.+}}/bin/../include/c++/v1"
-// CHECK-LIBCXX-TOOLCHAIN-3-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
+// RUN:   | FileCheck --check-prefix=CHECK-TOOLCHAIN-INCLUDE-CXX-V1 %s
+// CHECK-TOOLCHAIN-INCLUDE-CXX-V1: "-internal-isystem" "{{.*}}/bin/../include/c++/v1"
+// CHECK-TOOLCHAIN-INCLUDE-CXX-V1-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
