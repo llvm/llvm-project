@@ -59,23 +59,26 @@ private:
   const uint64_t MagicHashConstant = 0x6acaa36bef8325c5ULL;
   DenseSet<const Instruction *> NamedInstructions;
 
+  SmallVector<Instruction *, 16> Outputs;
+
   /// \name Naming.
   /// @{
-  void nameFunctionArguments(Function &F);
-  void nameBasicBlocks(Function &F);
+  void nameFunctionArguments(Function &F) const;
+  void nameBasicBlocks(Function &F) const;
   void nameInstruction(Instruction *I);
-  void nameAsInitialInstruction(Instruction *I);
+  void nameAsInitialInstruction(Instruction *I) const;
   void nameAsRegularInstruction(Instruction *I);
-  void foldInstructionName(Instruction *I);
+  void foldInstructionName(Instruction *I) const;
   /// @}
 
   /// \name Reordering.
   /// @{
-  void reorderInstructions(SmallVector<Instruction *, 16> &Outputs);
+  void reorderInstructions(Function &F) const;
+  void reorderInstructionsInBasicBlock(BasicBlock &BB) const;
   void reorderInstruction(Instruction *Used, Instruction *User,
-                          SmallPtrSet<const Instruction *, 32> &Visited);
-  void reorderInstructionOperandsByNames(Instruction *I);
-  void reorderPHIIncomingValues(PHINode *PN);
+                          SmallPtrSet<const Instruction *, 32> &Visited) const;
+  void reorderInstructionOperandsByNames(Instruction *I) const;
+  void reorderPHIIncomingValues(PHINode *PN) const;
   /// @}
 
   /// \name Utility methods.
@@ -83,13 +86,13 @@ private:
   template <typename T> void sortCommutativeOperands(T &Operands) const;
   template <typename T, typename Compare>
   void sortCommutativeOperands(T &Operands, Compare Comp) const;
-  SmallVector<Instruction *, 16> collectOutputInstructions(Function &F);
-  bool isOutput(const Instruction *I);
-  bool isInitialInstruction(const Instruction *I);
-  bool hasOnlyImmediateOperands(const Instruction *I);
+  SmallVector<Instruction *, 16> collectOutputInstructions(Function &F) const;
+  bool isOutput(const Instruction *I) const;
+  bool isInitialInstruction(const Instruction *I) const;
+  bool hasOnlyImmediateOperands(const Instruction *I) const;
   SetVector<int>
   getOutputFootprint(Instruction *I,
-                     SmallPtrSet<const Instruction *, 32> &Visited);
+                     SmallPtrSet<const Instruction *, 32> &Visited) const;
   /// @}
 };
 } // namespace
@@ -114,10 +117,10 @@ bool IRNormalizer::runOnFunction(Function &F) {
   nameFunctionArguments(F);
   nameBasicBlocks(F);
 
-  SmallVector<Instruction *, 16> Outputs = collectOutputInstructions(F);
+  Outputs = collectOutputInstructions(F);
 
   if (!PreserveOrder)
-    reorderInstructions(Outputs);
+    reorderInstructions(F);
 
   for (auto &I : Outputs)
     nameInstruction(I);
@@ -140,7 +143,7 @@ bool IRNormalizer::runOnFunction(Function &F) {
 /// Numbers arguments.
 ///
 /// \param F Function whose arguments will be renamed.
-void IRNormalizer::nameFunctionArguments(Function &F) {
+void IRNormalizer::nameFunctionArguments(Function &F) const {
   int ArgumentCounter = 0;
   for (auto &A : F.args()) {
     if (RenameAll || A.getName().empty()) {
@@ -154,7 +157,7 @@ void IRNormalizer::nameFunctionArguments(Function &F) {
 /// a function considering the opcode and the order of output instructions.
 ///
 /// \param F Function containing basic blocks to rename.
-void IRNormalizer::nameBasicBlocks(Function &F) {
+void IRNormalizer::nameBasicBlocks(Function &F) const {
   for (auto &B : F) {
     // Initialize to a magic constant, so the state isn't zero.
     uint64_t Hash = MagicHashConstant;
@@ -222,7 +225,7 @@ void IRNormalizer::sortCommutativeOperands(T &Operands, Compare Comp) const {
 ///
 /// \see getOutputFootprint()
 /// \param I Instruction to be renamed.
-void IRNormalizer::nameAsInitialInstruction(Instruction *I) {
+void IRNormalizer::nameAsInitialInstruction(Instruction *I) const {
   if (I->getType()->isVoidTy() || (!I->getName().empty() && !RenameAll))
     return;
   LLVM_DEBUG(dbgs() << "Naming initial instruction: " << *I << "\n");
@@ -383,7 +386,7 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
 /// does not affect user named instructions.
 ///
 /// \param I Instruction whose name will be folded.
-void IRNormalizer::foldInstructionName(Instruction *I) {
+void IRNormalizer::foldInstructionName(Instruction *I) const {
   // If this flag is raised, fold all regular
   // instructions (including pre-outputs).
   if (!FoldPreOutputs) {
@@ -436,21 +439,17 @@ void IRNormalizer::foldInstructionName(Instruction *I) {
 /// This method is a wrapper for recursive reorderInstruction().
 ///
 /// \see reorderInstruction()
-/// \param Outputs Vector of pointers to output instructions collected top-down.
-void IRNormalizer::reorderInstructions(
-    SmallVector<Instruction *, 16> &Outputs) {
-  // This method assumes output instructions were collected top-down,
-  // otherwise the def-use chain may be broken.
-
-  SmallPtrSet<const Instruction *, 32> Visited;
-
-  // Walk up the tree.
-  for (auto &I : Outputs) {
-    LLVM_DEBUG(dbgs() << "Reordering operands of: "; I->dump());
-    for (auto &OP : I->operands())
-      if (auto *IOP = dyn_cast<Instruction>(OP))
-        reorderInstruction(IOP, I, Visited);
+void IRNormalizer::reorderInstructions(Function &F) const {
+  SmallPtrSet<const Instruction *, 32> UsedInFunction;
+  for (auto &BB : F) {
+    LLVM_DEBUG(dbgs() << "Reordering instructions of basic block: " 
+                      << BB.getName());
+    reorderInstructionsInBasicBlock(BB);
   }
+}
+
+void IRNormalizer::reorderInstructionsInBasicBlock(BasicBlock &BB) const {
+
 }
 
 /// Reduces def-use distance or places instruction at the end of the basic
@@ -463,7 +462,7 @@ void IRNormalizer::reorderInstructions(
 /// \param Visited Set of visited instructions.
 void IRNormalizer::reorderInstruction(
     Instruction *Used, Instruction *User,
-    SmallPtrSet<const Instruction *, 32> &Visited) {
+    SmallPtrSet<const Instruction *, 32> &Visited) const {
   if (isa<PHINode>(Used))
     return;
   if (Visited.contains(Used))
@@ -494,7 +493,7 @@ void IRNormalizer::reorderInstruction(
 /// in other instructions may change the semantics.
 ///
 /// \param I Instruction whose operands will be reordered.
-void IRNormalizer::reorderInstructionOperandsByNames(Instruction *I) {
+void IRNormalizer::reorderInstructionOperandsByNames(Instruction *I) const {
   // This method assumes that passed I is commutative,
   // changing the order of operands in other instructions
   // may change the semantics.
@@ -533,7 +532,7 @@ void IRNormalizer::reorderInstructionOperandsByNames(Instruction *I) {
 /// blocks.
 ///
 /// \param PN PHI node to normalize.
-void IRNormalizer::reorderPHIIncomingValues(PHINode *PN) {
+void IRNormalizer::reorderPHIIncomingValues(PHINode *PN) const {
   // Values for further sorting.
   SmallVector<std::pair<Value *, BasicBlock *>, 2> Values;
 
@@ -562,7 +561,7 @@ void IRNormalizer::reorderPHIIncomingValues(PHINode *PN) {
 /// \see isOutput()
 /// \param F Function to collect outputs from.
 SmallVector<Instruction *, 16>
-IRNormalizer::collectOutputInstructions(Function &F) {
+IRNormalizer::collectOutputInstructions(Function &F) const {
   // Output instructions are collected top-down in each function,
   // any change may break the def-use chain in reordering methods.
   SmallVector<Instruction *, 16> Outputs;
@@ -578,7 +577,7 @@ IRNormalizer::collectOutputInstructions(Function &F) {
 /// ReturnInst.
 ///
 /// \param I Considered instruction.
-bool IRNormalizer::isOutput(const Instruction *I) {
+bool IRNormalizer::isOutput(const Instruction *I) const {
   // Outputs are such instructions which may have side effects or is ReturnInst.
   if (I->mayHaveSideEffects() || isa<ReturnInst>(I))
     return true;
@@ -590,7 +589,7 @@ bool IRNormalizer::isOutput(const Instruction *I) {
 /// immediate operands.
 ///
 /// \param I Considered instruction.
-bool IRNormalizer::isInitialInstruction(const Instruction *I) {
+bool IRNormalizer::isInitialInstruction(const Instruction *I) const {
   // Initial instructions are such instructions whose values are used by
   // other instructions, yet they only depend on immediate values.
   return !I->user_empty() && hasOnlyImmediateOperands(I);
@@ -599,7 +598,7 @@ bool IRNormalizer::isInitialInstruction(const Instruction *I) {
 /// Helper method checking whether the instruction has only immediate operands.
 ///
 /// \param I Considered instruction.
-bool IRNormalizer::hasOnlyImmediateOperands(const Instruction *I) {
+bool IRNormalizer::hasOnlyImmediateOperands(const Instruction *I) const {
   for (const auto &OP : I->operands())
     if (isa<Instruction>(OP))
       return false; // Found non-immediate operand (instruction).
@@ -614,7 +613,7 @@ bool IRNormalizer::hasOnlyImmediateOperands(const Instruction *I) {
 /// \param I Considered instruction.
 /// \param Visited Set of visited instructions.
 SetVector<int> IRNormalizer::getOutputFootprint(
-    Instruction *I, SmallPtrSet<const Instruction *, 32> &Visited) {
+    Instruction *I, SmallPtrSet<const Instruction *, 32> &Visited) const {
 
   // Vector containing indexes of outputs (no repetitions),
   // which use I in the order of walking down the def-use tree.
@@ -657,7 +656,7 @@ SetVector<int> IRNormalizer::getOutputFootprint(
 }
 
 PreservedAnalyses IRNormalizerPass::run(Function &F,
-                                        FunctionAnalysisManager &AM) {
+                                        FunctionAnalysisManager &AM) const {
   IRNormalizer{}.runOnFunction(F);
   return PreservedAnalyses::all();
 }
