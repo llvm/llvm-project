@@ -1173,7 +1173,6 @@ LogicalResult GenerateOp::verify() {
   SmallVector<Value> newOperands;
   SmallVector<int64_t> newShape;
   operandsAndShape(resultType, getDynamicExtents(), newOperands, newShape);
-
   for (int64_t newdim : newShape) {
     if (newdim < 0 && !ShapedType::isDynamic(newdim))
       return emitError("tensor dimensions must be non-negative");
@@ -1240,6 +1239,7 @@ struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
     SmallVector<Value> newOperands;
     SmallVector<int64_t> newShape;
     operandsAndShape(resultType, dynamicExtents, newOperands, newShape);
+
     for (int64_t newdim : newShape) {
       // This check also occurs in the verifier, but we need it here too
       // since intermediate passes may have replaced some dynamic dimensions
