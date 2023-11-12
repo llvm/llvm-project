@@ -14,7 +14,6 @@
 #ifndef LLVM_UNITTESTS_CFG_BUILDER_H
 #define LLVM_UNITTESTS_CFG_BUILDER_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
