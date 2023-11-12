@@ -2622,7 +2622,6 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
 
-  // TODO: Handle these situations gracefully in the canonicalizer.
   for (int64_t offset : staticOffsets) {
     if (!ShapedType::isDynamic(offset))
       assert(offset >= 0 && "expected subview offsets to be non-negative");
