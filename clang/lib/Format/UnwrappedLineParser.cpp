@@ -2017,7 +2017,7 @@ void UnwrappedLineParser::parseStructuralElement(
       } else if (Style.Language == FormatStyle::LK_Proto &&
                  FormatTok->is(tok::less)) {
         nextToken();
-        parseBracedList();
+        parseBracedList(/*IsAngleBracket=*/true);
       }
       break;
     case tok::l_square:
@@ -2378,10 +2378,7 @@ bool UnwrappedLineParser::tryToParseChildBlock() {
   return true;
 }
 
-bool UnwrappedLineParser::parseBracedList(bool IsEnum) {
-  const auto *OpeningBrace = FormatTok->getPreviousNonComment();
-  const bool IsAngleBracket = OpeningBrace && OpeningBrace->is(tok::less);
-
+bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
   bool HasError = false;
 
   // FIXME: Once we have an expression parser in the UnwrappedLineParser,
@@ -2436,7 +2433,7 @@ bool UnwrappedLineParser::parseBracedList(bool IsEnum) {
     case tok::less:
       nextToken();
       if (IsAngleBracket)
-        parseBracedList();
+        parseBracedList(/*IsAngleBracket=*/true);
       break;
     case tok::semi:
       // JavaScript (or more precisely TypeScript) can have semicolons in braced
@@ -3613,7 +3610,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
         return;
 
       nextToken();
-      parseBracedList();
+      parseBracedList(/*IsAngleBracket=*/true);
       break;
 
     default:
@@ -3644,7 +3641,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
       nextToken();
       if (FormatTok->is(tok::less)) {
         nextToken();
-        parseBracedList();
+        parseBracedList(/*IsAngleBracket=*/true);
       }
       TopLevelParensAllowed = false;
       break;
@@ -3725,7 +3722,7 @@ bool UnwrappedLineParser::parseEnum() {
     addUnwrappedLine();
     Line->Level += 1;
   }
-  bool HasError = !parseBracedList(/*IsEnum=*/true);
+  bool HasError = !parseBracedList(/*IsAngleBracket=*/false, /*IsEnum=*/true);
   if (!Style.AllowShortEnumsOnASingleLine)
     Line->Level -= 1;
   if (HasError) {

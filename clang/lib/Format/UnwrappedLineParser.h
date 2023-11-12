@@ -151,7 +151,7 @@ private:
                               bool *HasDoWhile = nullptr,
                               bool *HasLabel = nullptr);
   bool tryToParseBracedList();
-  bool parseBracedList(bool IsEnum = false);
+  bool parseBracedList(bool IsAngleBracket = false, bool IsEnum = false);
   bool parseParens(TokenType AmpAmpTokenType = TT_Unknown);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();
