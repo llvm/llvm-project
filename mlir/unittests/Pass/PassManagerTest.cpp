@@ -11,6 +11,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "gtest/gtest.h"
 
@@ -179,6 +180,50 @@ TEST(PassManagerTest, PassInitialization) {
   // Adding a second copy of the pass, we should also initialize it!
   pm.addPass(std::make_unique<InitializeCheckingPass>());
   EXPECT_TRUE(succeeded(pm.run(module.get())));
+}
+
+struct ReRegisterPass
+    : public PassWrapper<ReRegisterPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReRegisterPass)
+
+  ReRegisterPass(std::string annotation) : annotation(annotation) {}
+
+  std::string annotation;
+
+  void runOnOperation() override {
+    ModuleOp op = this->getOperation();
+    Builder builder(op);
+    op->walk([this, &builder](Operation *op) {
+      op->setAttr(annotation, builder.getUnitAttr());
+    });
+  }
+};
+
+TEST(PassManagerTest, PassReRegistration) {
+  MLIRContext context;
+  context.allowUnregisteredDialects();
+
+  std::string moduleStr = R"mlir(
+    module {
+      "custom.op1"() : () -> ()
+      "custom.op2"() : () -> ()
+    }
+  )mlir";
+
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+
+  // Instantiate and run pass in first configuration.
+  auto pm = PassManager::on<ModuleOp>(&context);
+  pm.addPass(std::make_unique<ReRegisterPass>("custom.first"));
+  EXPECT_TRUE(succeeded(pm.run(module.get())));
+  module->walk([](Operation *op) { EXPECT_TRUE(op->hasAttr("custom.first")); });
+
+  // Adding a "reconfiguration" of the pass, i.e., with a different annotation.
+  pm.addPass(std::make_unique<ReRegisterPass>("custom.second"));
+  EXPECT_TRUE(succeeded(pm.run(module.get())));
+  module->walk(
+      [](Operation *op) { EXPECT_TRUE(op->hasAttr("custom.second")); });
 }
 
 } // namespace
