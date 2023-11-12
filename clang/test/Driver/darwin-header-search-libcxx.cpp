@@ -176,10 +176,11 @@
 // Make sure the target folder has no toolchain structure.
 // RUN: rm -rf %t/xpacks
 // RUN: mkdir -pv %t/xpacks/.bin
-// RUN: ln -s %clang++ %t/xpacks/.bin/clang++
+// RUN: ln -s %clang_cpp %t/xpacks/.bin/clang++
 
 // RUN: %t/xpacks/.bin/clang++ -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:   | FileCheck -DRESOURCE=%S/Inputs/resource_dir \
-// RUN:               --check-prefix=CHECK-SAME %s
-// CHECK-SAME: "-internal-isystem" "[[RESOURCE]]/bin/../include/c++/v1"
+// RUN:               --check-prefix=CHECK-LIBCXX-TOOLCHAIN-3 %s
+// CHECK-LIBCXX-TOOLCHAIN-3: "-internal-isystem" "{{.+}}/bin/../include/c++/v1"
+// CHECK-LIBCXX-TOOLCHAIN-3-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
