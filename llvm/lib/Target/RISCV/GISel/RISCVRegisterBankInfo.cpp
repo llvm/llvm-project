@@ -59,7 +59,7 @@ const RegisterBankInfo::ValueMapping ValueMappings[] = {
     {&PartMappings[PMI_FPRB64], 1},
 };
 
-enum ValueMappingsIdx {
+enum ValueMappingIdx {
   InvalidIdx = 0,
   GPRB32Idx = 1,
   GPRB64Idx = 4,
