@@ -643,6 +643,10 @@ def : Pat<(or (shl (zexti8 (XLenVT GPR:$rs2)), (XLenVT 8)),
 def : Pat<(and (or (shl GPR:$rs2, (XLenVT 8)),
                    (zexti8 (XLenVT GPR:$rs1))), 0xFFFF),
           (PACKH GPR:$rs1, GPR:$rs2)>;
+
+def : Pat<(binop_allhusers<or> (shl GPR:$rs2, (XLenVT 8)),
+                               (zexti8 (XLenVT GPR:$rs1))),
+          (PACKH GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbkb]
 
 let Predicates = [HasStdExtZbkb, IsRV32] in
@@ -852,6 +856,9 @@ def : Pat<(or (and (shl GPR:$rs2, (i64 8)), 0xFFFF),
           (PACKH GPR:$rs1, GPR:$rs2)>;
 def : Pat<(or (shl (zexti8i32 (i32 GPR:$rs2)), (i64 8)),
               (zexti8i32 (i32 GPR:$rs1))),
+          (PACKH GPR:$rs1, GPR:$rs2)>;
+def : Pat<(and (anyext (or (shl GPR:$rs2, (XLenVT 8)),
+                           (zexti8i32 (i32 GPR:$rs1)))), 0xFFFF),
           (PACKH GPR:$rs1, GPR:$rs2)>;
 
 def : Pat<(i32 (or (shl GPR:$rs2, (i64 16)), (zexti16i32 (i32 GPR:$rs1)))),
