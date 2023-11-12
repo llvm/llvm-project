@@ -432,7 +432,7 @@ bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
 
   const LLT sXLen = LLT::scalar(STI.getXLen());
   auto PtrToInt = MIB.buildPtrToInt(sXLen, PtrReg);
-  MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRRegBankID));
+  MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRBRegBankID));
   Op.setReg(PtrToInt.getReg(0));
   return select(*PtrToInt);
 }
@@ -491,12 +491,12 @@ void RISCVInstructionSelector::renderTrailingZeros(MachineInstrBuilder &MIB,
 
 const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
     LLT Ty, const RegisterBank &RB) const {
-  if (RB.getID() == RISCV::GPRRegBankID) {
+  if (RB.getID() == RISCV::GPRBRegBankID) {
     if (Ty.getSizeInBits() <= 32 || (STI.is64Bit() && Ty.getSizeInBits() == 64))
       return &RISCV::GPRRegClass;
   }
 
-  if (RB.getID() == RISCV::FPRRegBankID) {
+  if (RB.getID() == RISCV::FPRBRegBankID) {
     if (Ty.getSizeInBits() == 32)
       return &RISCV::FPR32RegClass;
     if (Ty.getSizeInBits() == 64)
