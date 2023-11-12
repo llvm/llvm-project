@@ -59,7 +59,7 @@ def PartTensor_GetPartitionsOp : PartTensor_Op<"get_partitions">,
       "$primary attr-dict `:` type($primary) `->` type($tuples)";
 }
  def PartTensor_GetSliceOp : PartTensor_Op<"get_slice">,
- 	Arguments<(ins AnyTensor:$Parts, TensorOf<[AnySignlessIntegerOrIndex]>:$tupleList)>,
+ 	Arguments<(ins AnyTensor:$Parts, AnyStridedMemRefOfRank<1>:$tupleList)>,
 	Results<(outs AnyTensor:$result)> {
 		let summary = "get slice";
 		let description = [{

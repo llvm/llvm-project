@@ -115,6 +115,28 @@ public:
     return success();
   }
 };
+
+class PartTensorGetSliceConverter
+    : public OpConversionPattern<GetSliceOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(GetSliceOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type resType = op.getType();
+    Location loc = op->getLoc();
+    SmallVector<Value> operands{adaptor.getOperands()[0]};
+    auto fn = mlir::sparse_tensor::getFunc(
+        op->getParentOfType<ModuleOp>(), "getSlice", resType, adaptor.getOperands(),
+        mlir::sparse_tensor::EmitCInterface::On);
+    Value callRet =
+        rewriter.create<func::CallOp>(loc, resType, fn, adaptor.getOperands())
+            .getResult(0);
+    rewriter.replaceOp(op, callRet);
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -135,5 +157,8 @@ mlir::PartTensorTypeToPtrConverter::PartTensorTypeToPtrConverter() {
 void mlir::populatePartTensorConversionPatterns(TypeConverter &typeConverter,
                                                 RewritePatternSet &patterns) {
   patterns.add<PartTensorGetPartitionsConverter>(typeConverter,
+                                                 patterns.getContext());
+
+  patterns.add<PartTensorGetSliceConverter>(typeConverter,
                                                  patterns.getContext());
 }
