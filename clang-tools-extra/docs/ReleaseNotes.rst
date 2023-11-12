@@ -412,6 +412,10 @@ Changes in existing checks
   do-while loops into account for the `AllowIntegerConditions` and
   `AllowPointerConditions` options.
 
+- Improved :doc:`readability-implicit-bool-conversion
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
+  consistent suggestions when parentheses are added to the return value. 
+
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check to ignore
   false-positives in initializer list of record.
