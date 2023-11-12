@@ -494,7 +494,7 @@ define i64 @zext_abs32(i32 %x) {
 ; RV64ZBB-NEXT:    max a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
-  %zext = zext i32 %abs to i64
+  %zext = zext nneg i32 %abs to i64
   ret i64 %zext
 }
 
