@@ -16,6 +16,7 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <deque>
+#include <set>
 
 using namespace llvm;
 
