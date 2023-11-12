@@ -23,6 +23,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
+#include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -124,6 +125,25 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
         Worklist.push_back(Operand);
     }
   }
+
+  const auto *I = dyn_cast<Instruction>(CurUser);
+  if (I) {
+    auto MD = mayHaveValueProfileOfKind(*I, IPVK_VTableTarget);
+    if (MD) {
+      auto ValueDataArray = std::make_unique<InstrProfValueData[]>(24);
+
+      uint32_t ActualNumValues = 0;
+      uint64_t TotalCount = 0;
+      if (getValueProfDataFromInst(MD, 24, ValueDataArray.get(),
+                                   ActualNumValues, TotalCount)) {
+        for (uint32_t j = 0; j < ActualNumValues; j++) {
+          RefEdges.insert(Index.getOrInsertValueInfo(
+              ValueDataArray[j].Value /* VTableGUID */));
+        }
+      }
+    }
+  }
+
   return HasBlockAddress;
 }
 

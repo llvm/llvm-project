@@ -1278,36 +1278,38 @@ void annotateValueSite(Module &M, Instruction &Inst,
   Inst.setMetadata(LLVMContext::MD_prof, MDNode::get(Ctx, Vals));
 }
 
-bool getValueProfDataFromInst(const Instruction &Inst,
-                              InstrProfValueKind ValueKind,
-                              uint32_t MaxNumValueData,
-                              InstrProfValueData ValueData[],
-                              uint32_t &ActualNumValueData, uint64_t &TotalC,
-                              bool GetNoICPValue) {
+/// Returns true if 'Inst' may have value profiles of kind 'ValueKind', and
+/// false otherwise. A convenient function to allow lazily allocate space for
+/// the actual profiled value data array after a preliminary check of metadata.
+MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
+                                  InstrProfValueKind ValueKind) {
   MDNode *MD = Inst.getMetadata(LLVMContext::MD_prof);
   if (!MD)
-    return false;
+    return nullptr;
 
-  unsigned NOps = MD->getNumOperands();
+  if (MD->getNumOperands() < 5)
+    return nullptr;
 
-  if (NOps < 5)
-    return false;
-
-  // Operand 0 is a string tag "VP":
   MDString *Tag = cast<MDString>(MD->getOperand(0));
-  if (!Tag)
-    return false;
-
-  if (!Tag->getString().equals("VP"))
-    return false;
+  if (!Tag || !Tag->getString().equals("VP"))
+    return nullptr;
 
   // Now check kind:
   ConstantInt *KindInt = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1));
   if (!KindInt)
-    return false;
+    return nullptr;
   if (KindInt->getZExtValue() != ValueKind)
-    return false;
+    return nullptr;
 
+  return MD;
+}
+
+bool getValueProfDataFromInst(const MDNode *const MD,
+                              const uint32_t MaxNumDataWant,
+                              InstrProfValueData ValueData[],
+                              uint32_t &ActualNumValueData, uint64_t &TotalC,
+                              bool GetNoICPValue) {
+  const unsigned NOps = MD->getNumOperands();
   // Get total count
   ConstantInt *TotalCInt = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2));
   if (!TotalCInt)
@@ -1317,7 +1319,7 @@ bool getValueProfDataFromInst(const Instruction &Inst,
   ActualNumValueData = 0;
 
   for (unsigned I = 3; I < NOps; I += 2) {
-    if (ActualNumValueData >= MaxNumValueData)
+    if (ActualNumValueData >= MaxNumDataWant)
       break;
     ConstantInt *Value = mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
     ConstantInt *Count =
@@ -1332,6 +1334,19 @@ bool getValueProfDataFromInst(const Instruction &Inst,
     ActualNumValueData++;
   }
   return true;
+}
+
+bool getValueProfDataFromInst(const Instruction &Inst,
+                              InstrProfValueKind ValueKind,
+                              uint32_t MaxNumValueData,
+                              InstrProfValueData ValueData[],
+                              uint32_t &ActualNumValueData, uint64_t &TotalC,
+                              bool GetNoICPValue) {
+  MDNode *MD = mayHaveValueProfileOfKind(Inst, ValueKind);
+  if (!MD)
+    return false;
+  return getValueProfDataFromInst(MD, MaxNumValueData, ValueData,
+                                  ActualNumValueData, TotalC, GetNoICPValue);
 }
 
 MDNode *getPGOFuncNameMetadata(const Function &F) {

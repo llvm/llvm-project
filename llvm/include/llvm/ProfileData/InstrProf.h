@@ -278,6 +278,17 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        ArrayRef<InstrProfValueData> VDs, uint64_t Sum,
                        InstrProfValueKind ValueKind, uint32_t MaxMDCount);
 
+/// Returns true if 'Inst' may have value profiles of kind 'ValueKind', and
+/// false otherwise. A convenient function to allow lazily allocate space for
+/// the actual profiled value data array after a preliminary check of metadata.
+MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
+                                  InstrProfValueKind ValueKind);
+
+bool getValueProfDataFromInst(const MDNode *const MD, uint32_t MaxNumDataWant,
+                              InstrProfValueData ValueData[],
+                              uint32_t &ActualNumValueData, uint64_t &TotalC,
+                              bool GetNoICPValue = false);
+
 /// Extract the value profile data from \p Inst which is annotated with
 /// value profile meta data. Return false if there is no value data annotated,
 /// otherwise  return true.
