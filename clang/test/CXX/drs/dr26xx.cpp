@@ -211,7 +211,7 @@ void f(...);
 
 template <class T>
 void bar(T) requires requires {
-   decltype([]() -> T {})::foo();
+   []() -> decltype(T::foo()) {};
 };
 void bar(...);
 
