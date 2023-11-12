@@ -180,6 +180,8 @@
 
 // RUN: %t/xpacks/.bin/clang++ -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
-// RUN:   | FileCheck --check-prefix=CHECK-TOOLCHAIN-INCLUDE-CXX-V1 %s
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
+// RUN:               --check-prefix=CHECK-TOOLCHAIN-INCLUDE-CXX-V1 %s
 // CHECK-TOOLCHAIN-INCLUDE-CXX-V1: "-internal-isystem" "{{.*}}/bin/../include/c++/v1"
-// CHECK-TOOLCHAIN-INCLUDE-CXX-V1-NOT: "-internal-isystem" "{{.*}}/SDKs/MacOSX.sdk/usr/include/c++/v1"
+// CHECK-TOOLCHAIN-INCLUDE-CXX-V1-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
