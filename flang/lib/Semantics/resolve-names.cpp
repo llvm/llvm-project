@@ -3496,6 +3496,7 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
   if (auto *symbol{FindSymbol(name)}) {
     Symbol &ultimate{symbol->GetUltimate()};
     if (ultimate.has<ObjectEntityDetails>() ||
+        ultimate.has<AssocEntityDetails>() ||
         CouldBeDataPointerValuedFunction(&ultimate)) {
       misparsedStmtFuncFound_ = true;
       return false;
