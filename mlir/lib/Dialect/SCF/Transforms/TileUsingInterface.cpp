@@ -197,6 +197,77 @@ static SmallVector<scf::ForOp> generateTileLoopNest(
   return loops;
 }
 
+/// Method to add new init values to a loop nest. Updates `loops` in-place with
+/// new loops that use the `newInitValues`.
+/// The outer-loops are updated to yield the new result values of the inner
+/// loop. For the innermost loop, the call back `getNewYields` is invoked to get
+/// the additional values to yield form the innermost loop.
+static void addInitOperandsToLoopNest(
+    RewriterBase &rewriter, MutableArrayRef<scf::ForOp> loops,
+    ValueRange newInitValues,
+    llvm::function_ref<SmallVector<Value>(RewriterBase &rewriter, Value iv,
+                                          ValueRange newRegionIterArgs)>
+        getNewYieldValsFn) {
+  SmallVector<scf::ForOp> newLoops;
+  if (loops.empty()) {
+    return;
+  }
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(loops.front());
+  for (auto &loop : loops) {
+    rewriter.setInsertionPoint(loop);
+
+    // Create a new loop with the new init values for this loop.
+    SmallVector<Value> newInits = llvm::to_vector(loop.getInitArgs());
+    newInits.append(newInitValues.begin(), newInitValues.end());
+    auto newLoop = rewriter.create<scf::ForOp>(
+        loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(),
+        loop.getStep(), newInits,
+        [&](OpBuilder &b, Location loc, Value iv, ValueRange iterArgs) {});
+
+    // Merge the body of the new loop with the body of the old loops.
+    SmallVector<Value> sourceBlockArgs;
+    sourceBlockArgs.push_back(newLoop.getInductionVar());
+    auto newRegionIterArgs = newLoop.getRegionIterArgs();
+    sourceBlockArgs.append(
+        newRegionIterArgs.begin(),
+        std::next(newRegionIterArgs.begin(), loop.getNumResults()));
+    rewriter.mergeBlocks(loop.getBody(), newLoop.getBody(), sourceBlockArgs);
+    rewriter.replaceOp(loop,
+                       newLoop.getResults().take_front(loop.getNumResults()));
+    loop = newLoop;
+    newInitValues = newLoop.getRegionIterArgs().take_back(newInitValues.size());
+  }
+
+  // Update the loop body of the innermost loop to get new yield values.
+  scf::ForOp innerMostLoop = loops.back();
+  auto innerMostYieldOp =
+      cast<scf::YieldOp>(innerMostLoop.getBody()->getTerminator());
+  rewriter.setInsertionPoint(innerMostYieldOp);
+  SmallVector<Value> newYieldVals =
+      getNewYieldValsFn(rewriter, innerMostLoop.getInductionVar(),
+                        innerMostLoop.getRegionIterArgs());
+  SmallVector<Value> newYieldOperands =
+      llvm::to_vector(innerMostYieldOp->getOperands());
+  newYieldOperands.append(newYieldVals);
+  rewriter.replaceOpWithNewOp<scf::YieldOp>(innerMostYieldOp, newYieldOperands);
+
+  // Make all other loops except the innermost loops yield the values returned
+  // by the inner loop.
+  for (auto [outerLoop, innerLoop] :
+       llvm::zip(loops.drop_back(), loops.drop_front())) {
+    auto outerLoopYield =
+        cast<scf::YieldOp>(outerLoop.getBody()->getTerminator());
+    SmallVector<Value> newYields =
+        llvm::to_vector(outerLoopYield.getOperands());
+    ValueRange additionalYields =
+        innerLoop.getResults().take_back(newInitValues.size());
+    newYields.append(additionalYields.begin(), additionalYields.end());
+    rewriter.setInsertionPoint(outerLoopYield);
+    rewriter.replaceOpWithNewOp<scf::YieldOp>(outerLoopYield, newYields);
+  }
+}
+
 /// For a value to be yielded (`yieldedValue`) from within a loop nest `loops`,
 /// construct the destructive update pattern that inserts the yielded
 /// value into a destination tensor provided by `initValue` at offset
@@ -644,6 +715,8 @@ mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
           clonedProducerOp->getResult(resultNumber));
   if (failed(tileAndFuseResult))
     return std::nullopt;
+  // Note: Do not delete the candidateSliceOp, since its passed in from the
+  // caller.
   rewriter.replaceAllUsesWith(candidateSliceOp,
                               tileAndFuseResult->tiledValues[0]);
   rewriter.eraseOp(clonedCandidateSliceOp);
@@ -708,28 +781,46 @@ void mlir::scf::yieldReplacementForFusedProducer(
     RewriterBase &rewriter, tensor::ExtractSliceOp sliceOp,
     scf::SCFFuseProducerOfSliceResult fusedProducerInfo,
     MutableArrayRef<scf::ForOp> loops) {
-  auto [fusableProducer, fusedProducerValue, tileAndFusedOps] =
-      fusedProducerInfo;
-  SmallVector<Value> initValues;
+  if (loops.empty()) {
+    return;
+  }
+  OpResult fusableProducer = fusedProducerInfo.origProducer;
+  Value tiledAndFusedProducer = fusedProducerInfo.tiledAndFusedProducer;
   FailureOr<Value> initValue = tensor::getOrCreateDestination(
       rewriter, fusableProducer.getOwner()->getLoc(), fusableProducer);
   if (succeeded(initValue)) {
-    SmallVector<OpFoldResult> resultOffsets = sliceOp.getMixedOffsets();
-    SmallVector<OpFoldResult> resultSizes = sliceOp.getMixedSizes();
-    SmallVector<Value> yieldedVals =
-        yieldTiledValues(rewriter, initValue.value(), fusedProducerValue,
-                         resultOffsets, resultSizes, loops);
-  }
-  for (auto tileAndFusedOp : tileAndFusedOps) {
-    auto dstStyleProducer =
-        dyn_cast<DestinationStyleOpInterface>(tileAndFusedOp);
-    if (!dstStyleProducer)
-      continue;
-    Value dstValue =
-        dstStyleProducer.getDpsInitOperand(fusableProducer.getResultNumber())
-            ->get();
-    updateDestinationOperandsForTiledOp(
-        rewriter, dstValue, loops.back().getRegionIterArgs().back());
+
+    auto newYieldValuesFn =
+        [&](RewriterBase &innerRewriter, Value iv,
+            ValueRange newRegionIterArgs) -> SmallVector<Value> {
+      OpBuilder::InsertionGuard g(innerRewriter);
+      if (auto tiledDestStyleOp =
+              tiledAndFusedProducer
+                  .getDefiningOp<DestinationStyleOpInterface>()) {
+        rewriter.setInsertionPoint(tiledDestStyleOp);
+        BlockArgument newRegionArg = loops.back().getRegionIterArgs().back();
+        auto destSlice = rewriter.create<tensor::ExtractSliceOp>(
+            sliceOp.getLoc(), newRegionArg, sliceOp.getMixedOffsets(),
+            sliceOp.getMixedSizes(), sliceOp.getMixedStrides());
+        unsigned resultNumber = fusableProducer.getResultNumber();
+        rewriter.updateRootInPlace(tiledDestStyleOp, [&]() {
+          tiledDestStyleOp.getDpsInitsMutable()[resultNumber].set(destSlice);
+        });
+
+        Block *block = rewriter.getInsertionPoint()->getBlock();
+        rewriter.setInsertionPoint(block->getTerminator());
+        Value replacement = rewriter.create<tensor::InsertSliceOp>(
+            fusedProducerInfo.origProducer.getLoc(),
+            fusedProducerInfo.tiledAndFusedProducer,
+            loops.back().getRegionIterArgs().back(), sliceOp.getMixedOffsets(),
+            sliceOp.getMixedSizes(), sliceOp.getMixedStrides());
+        return {replacement};
+      }
+    };
+
+    addInitOperandsToLoopNest(rewriter, loops,
+                              SmallVector<Value>{initValue.value()},
+                              newYieldValuesFn);
   }
 }
 
