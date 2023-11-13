@@ -102,7 +102,7 @@ mlir::Attribute mlir::polynomial::PolynomialAttr::parse(AsmParser &parser,
     }
     monomials.push_back(parsedMonomial);
 
-    if (exponents.count(parsedMonomial.exponent) > 0) {
+    if (llvm::is_contained(exponents, parsedMonomial.exponent)) {
       llvm::SmallString<16> coeffString;
       parsedMonomial.exponent.toStringSigned(coeffString);
       parser.emitError(parser.getCurrentLocation(),
