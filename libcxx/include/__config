@@ -1344,13 +1344,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_FOPEN_CLOEXEC_MODE
 #  endif
 
-// Support for _FILE_OFFSET_BITS=64 landed gradually in Android, so the full set
-// of functions used in cstdio may not be available for low API levels when
-// using 64-bit file offsets on LP32.
-#  if defined(__BIONIC__) && defined(__USE_FILE_OFFSET64) && __ANDROID_API__ < 24
-#    define _LIBCPP_HAS_NO_FGETPOS_FSETPOS
-#  endif
-
 #  if __has_attribute(__init_priority__)
 #    define _LIBCPP_INIT_PRIORITY_MAX __attribute__((__init_priority__(100)))
 #  else
