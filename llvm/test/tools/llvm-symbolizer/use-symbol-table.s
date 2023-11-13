@@ -5,22 +5,17 @@
 # OFF: foo
 # OFF-NEXT: relocatable.c
 
-## Produced from the following program, compiled with clang -g -S
-## (clang 14.0.6 / Debian 12).
-## char a;
-## char b;
-## void foo() {}
-
-## nm use-symbol-table.s
-## 0000000000000000 B a
-## 0000000000000001 B b
-## 0000000000000000 T foo
-
 ## With --use-symbol-table (default), the symbolizer tries to use the symbol
 ## table to override the function name from DWARF. In this case, "b" is returned.
 # RUN: llvm-addr2line --use-symbol-table -f -e %t.o 0x1 | FileCheck %s --check-prefix=ON
+# RUN: llvm-addr2line -f -e %t.o 0x1 | FileCheck %s --check-prefix=ON
 # ON: b
 # ON-NEXT: relocatable.c
+
+## Produced from the following program, compiled with clang -g -S (clang 14.0.6 / Debian 12).
+## char a;
+## char b;
+## void foo() {}
 
 	.text
 	.file	"relocatable.c"
