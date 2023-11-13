@@ -1439,7 +1439,7 @@ template <class ELFT> void SharedFile::parse() {
       uint64_t val = dyn.getVal();
       if (val >= this->stringTable.size())
         fatal(toString(this) + ": invalid DT_NEEDED entry");
-      dtNeeded.push_back(this->stringTable.data() + val);
+      dtNeeded.push_back(path::filename(this->stringTable.data() + val));
     } else if (dyn.d_tag == DT_SONAME) {
       uint64_t val = dyn.getVal();
       if (val >= this->stringTable.size())
@@ -1451,8 +1451,8 @@ template <class ELFT> void SharedFile::parse() {
   // DSOs are uniquified not by filename but by soname.
   DenseMap<CachedHashStringRef, SharedFile *>::iterator it;
   bool wasInserted;
-  std::tie(it, wasInserted) =
-      symtab.soNames.try_emplace(CachedHashStringRef(soName), this);
+  std::tie(it, wasInserted) = symtab.soNames.try_emplace(
+      CachedHashStringRef(path::filename(soName)), this);
 
   // If a DSO appears more than once on the command line with and without
   // --as-needed, --no-as-needed takes precedence over --as-needed because a
