@@ -233,6 +233,40 @@ void Flang::addTargetOptions(const ArgList &Args,
     break;
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_fveclib)) {
+    StringRef Name = A->getValue();
+    if (Name == "SVML") {
+      if (Triple.getArch() != llvm::Triple::x86 &&
+          Triple.getArch() != llvm::Triple::x86_64)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    } else if (Name == "LIBMVEC-X86") {
+      if (Triple.getArch() != llvm::Triple::x86 &&
+          Triple.getArch() != llvm::Triple::x86_64)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    } else if (Name == "SLEEF" || Name == "ArmPL") {
+      if (Triple.getArch() != llvm::Triple::aarch64 &&
+          Triple.getArch() != llvm::Triple::aarch64_be)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    }
+
+    if (Triple.isOSDarwin()) {
+      // flang doesn't currently suport nostdlib, nodefaultlibs. Adding these
+      // here incase they are added someday
+      if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+        if (A->getValue() == StringRef{"Accelerate"}) {
+          CmdArgs.push_back("-framework");
+          CmdArgs.push_back("Accelerate");
+          A->render(Args, CmdArgs);
+        }
+      }
+    } else {
+      A->render(Args, CmdArgs);
+    }
+  }
+
   // TODO: Add target specific flags, ABI, mtune option etc.
 }
 
