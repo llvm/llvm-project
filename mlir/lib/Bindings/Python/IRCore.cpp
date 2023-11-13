@@ -1207,7 +1207,7 @@ void PyOperationBase::print(std::optional<int64_t> largeElementsLimit,
   mlirOpPrintingFlagsDestroy(flags);
 }
 
-void PyOperationBase::print(PyAsmState &state, pybind11::object fileObject,
+void PyOperationBase::print(PyAsmState &state, py::object fileObject,
                             bool binary) {
   PyOperation &operation = getOperation();
   operation.checkValid();
