@@ -110,6 +110,15 @@ Args:
     invalid, behavior is undefined.
 )";
 
+static const char kOperationPrintStateDocstring[] =
+    R"(Prints the assembly form of the operation to a file like object.
+
+Args:
+  file: The file like object to write to. Defaults to sys.stdout.
+  binary: Whether to write bytes (True) or str (False). Defaults to False.
+  state: AsmState capturing the operation numbering and flags.
+)";
+
 static const char kOperationGetAsmDocstring[] =
     R"(Gets the assembly form of the operation with all options available.
 
@@ -1169,11 +1178,11 @@ void PyOperation::checkValid() const {
   }
 }
 
-void PyOperationBase::print(py::object fileObject, bool binary,
-                            std::optional<int64_t> largeElementsLimit,
+void PyOperationBase::print(std::optional<int64_t> largeElementsLimit,
                             bool enableDebugInfo, bool prettyDebugInfo,
                             bool printGenericOpForm, bool useLocalScope,
-                            bool assumeVerified) {
+                            bool assumeVerified, py::object fileObject,
+                            bool binary) {
   PyOperation &operation = getOperation();
   operation.checkValid();
   if (fileObject.is_none())
@@ -1196,6 +1205,17 @@ void PyOperationBase::print(py::object fileObject, bool binary,
   mlirOperationPrintWithFlags(operation, flags, accum.getCallback(),
                               accum.getUserData());
   mlirOpPrintingFlagsDestroy(flags);
+}
+
+void PyOperationBase::print(PyAsmState &state, py::object fileObject,
+                            bool binary) {
+  PyOperation &operation = getOperation();
+  operation.checkValid();
+  if (fileObject.is_none())
+    fileObject = py::module::import("sys").attr("stdout");
+  PyFileAccumulator accum(fileObject, binary);
+  mlirOperationPrintWithState(operation, state.get(), accum.getCallback(),
+                              accum.getUserData());
 }
 
 void PyOperationBase::writeBytecode(const py::object &fileObject,
@@ -1230,13 +1250,14 @@ py::object PyOperationBase::getAsm(bool binary,
   } else {
     fileObject = py::module::import("io").attr("StringIO")();
   }
-  print(fileObject, /*binary=*/binary,
-        /*largeElementsLimit=*/largeElementsLimit,
+  print(/*largeElementsLimit=*/largeElementsLimit,
         /*enableDebugInfo=*/enableDebugInfo,
         /*prettyDebugInfo=*/prettyDebugInfo,
         /*printGenericOpForm=*/printGenericOpForm,
         /*useLocalScope=*/useLocalScope,
-        /*assumeVerified=*/assumeVerified);
+        /*assumeVerified=*/assumeVerified,
+        /*fileObject=*/fileObject,
+        /*binary=*/binary);
 
   return fileObject.attr("getvalue")();
 }
@@ -2946,15 +2967,23 @@ void mlir::python::populateIRCore(py::module &m) {
                                /*assumeVerified=*/false);
           },
           "Returns the assembly form of the operation.")
-      .def("print", &PyOperationBase::print,
+      .def("print",
+           py::overload_cast<PyAsmState &, pybind11::object, bool>(
+               &PyOperationBase::print),
+           py::arg("state"), py::arg("file") = py::none(),
+           py::arg("binary") = false, kOperationPrintStateDocstring)
+      .def("print",
+           py::overload_cast<std::optional<int64_t>, bool, bool, bool, bool,
+                             bool, py::object, bool>(
+               &PyOperationBase::print),
            // Careful: Lots of arguments must match up with print method.
-           py::arg("file") = py::none(), py::arg("binary") = false,
            py::arg("large_elements_limit") = py::none(),
            py::arg("enable_debug_info") = false,
            py::arg("pretty_debug_info") = false,
            py::arg("print_generic_op_form") = false,
            py::arg("use_local_scope") = false,
-           py::arg("assume_verified") = false, kOperationPrintDocstring)
+           py::arg("assume_verified") = false, py::arg("file") = py::none(),
+           py::arg("binary") = false, kOperationPrintDocstring)
       .def("write_bytecode", &PyOperationBase::writeBytecode, py::arg("file"),
            py::arg("desired_version") = py::none(),
            kOperationPrintBytecodeDocstring)
