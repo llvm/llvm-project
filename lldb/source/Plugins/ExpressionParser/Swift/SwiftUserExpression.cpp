@@ -667,7 +667,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   auto error = [&](const char *error_msg, const char *detail = nullptr) {
     if (detail)
-      LLDB_LOG(log, "%s: %s", error_msg, detail);
+      LLDB_LOG(log, "{0}: {1}", error_msg, detail);
     else
       LLDB_LOG(log, error_msg);
 
