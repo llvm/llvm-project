@@ -29,8 +29,7 @@ Polynomial Polynomial::fromMonomials(ArrayRef<Monomial> monomials,
   };
 
   // A polynomial's terms are canonically stored in order of increasing degree.
-  llvm::OwningArrayRef<Monomial> monomialsCopy =
-      llvm::OwningArrayRef<Monomial>(monomials);
+  auto monomialsCopy = llvm::OwningArrayRef<Monomial>(monomials);
   std::sort(monomialsCopy.begin(), monomialsCopy.end());
 
   StorageUniquer &uniquer = context->getAttributeUniquer();
