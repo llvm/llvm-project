@@ -553,6 +553,8 @@ Bug Fixes in This Version
   Fixes (`#67687 <https://github.com/llvm/llvm-project/issues/67687>`_)
 - Fix crash from constexpr evaluator evaluating uninitialized arrays as rvalue.
   Fixes (`#67317 <https://github.com/llvm/llvm-project/issues/67317>`_)
+- Fixed an issue that a benign assertion might hit when instantiating a pack expansion
+  inside a lambda. (`#61460 <https://github.com/llvm/llvm-project/issues/61460>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
