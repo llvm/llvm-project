@@ -24230,7 +24230,7 @@ TEST_F(FormatTest, IgnorePPDefinitions) {
 
   verifyNoChange("#define A x:", Style);
   verifyNoChange("#define A a. b", Style);
-    
+
   // Surrounded with formatted code
   verifyFormat("int a;\n"
                "#define  A  a\n"
@@ -24239,17 +24239,17 @@ TEST_F(FormatTest, IgnorePPDefinitions) {
                "#define  A  a\n"
                "int  a ;",
                Style);
-    
+
   // Columns are not broken when a limit is set
   Style.ColumnLimit = 10;
   verifyNoChange("#define A a a a a", Style);
   Style.ColumnLimit = 0;
-    
+
   // Multiline definition
   verifyNoChange("#define A \\\n"
                  "Line one with spaces  .  \\\n"
                  " Line two.",
-                   Style);
+                 Style);
   verifyNoChange("#define A \\\n"
                  "a a \\\n"
                  "a        \\\na",
@@ -24262,7 +24262,7 @@ TEST_F(FormatTest, IgnorePPDefinitions) {
   Style.AlignEscapedNewlines = FormatStyle::ENAS_Right;
   verifyNoChange("#define A \\\n"
                  "a a \\\n"
-                 "a        \\\na", 
+                 "a        \\\na",
                  Style);
 }
 
