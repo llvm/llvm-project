@@ -433,6 +433,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(ROCM_VERSION_FOR_PACKAGE "99999")
   endif()
 
+  # Archive package specific variable
+  set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
+
   # Debian package specific variables
   set(CPACK_DEB_COMPONENT_INSTALL ON)
   set(CPACK_DEBIAN_AMD-COMGR_PACKAGE_NAME comgr)
