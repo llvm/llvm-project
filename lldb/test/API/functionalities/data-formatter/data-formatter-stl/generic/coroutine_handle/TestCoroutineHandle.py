@@ -82,8 +82,10 @@ class TestCoroutineHandle(TestBase):
 
         # Break at a coroutine body
         lldbutil.continue_to_source_breakpoint(
-          self, process, "// Break at co_yield", lldb.SBFileSpec("main.cpp", False)
+          self, process, "int_generator my_generator_func",
+          lldb.SBFileSpec("main.cpp", False)
         )
+
         # Expect artificial variables to be displayed
         self.expect(
           "frame variable",
