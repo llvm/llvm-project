@@ -21,17 +21,19 @@
 #include <windows.h>
 
 #include <lmcons.h> // UNLEN=256
+#include <stdlib.h> // wcstombs_s
 #include <wchar.h> // wchar_t cast to LPWSTR
 #pragma comment(lib, "Advapi32.lib") // Link Advapi32.lib for GetUserName
 #define LOGIN_NAME_MAX UNLEN
 
 inline int getlogin_r(char *buf, size_t bufSize) {
   wchar_t w_username[UNLEN + 1];
-  DWORD namelen = sizeof(w_username) / sizeof(w_username[0]);
+  DWORD nameLen = UNLEN + 1;
 
-  if (GetUserName(w_username, &namelen)) {
-    // Convert the wchar_t string to a regular C string
-    if (wcstombs(buf, w_username, UNLEN + 1) == -1) {
+  if (GetUserNameW(w_username, &nameLen)) {
+    // Convert the wchar_t string to a regular C string using wcstombs_s
+    if (wcstombs_s(nullptr, buf, sizeof(w_username), w_username, _TRUNCATE) !=
+        0) {
       // Conversion failed
       return -1;
     }
@@ -41,6 +43,7 @@ inline int getlogin_r(char *buf, size_t bufSize) {
   }
   return -1;
 }
+
 #elif _REENTRANT || _POSIX_C_SOURCE >= 199506L
 // System is posix-compliant and has getlogin_r
 #include <unistd.h>
