@@ -27,7 +27,7 @@ void PolynomialAttr::print(AsmPrinter &p) const {
 /// `monomial` with the results, and the `variable` outparam with the parsed
 /// variable name.
 ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
-                          llvm::StringRef *variable, bool *isConstantTerm) {
+                          llvm::StringRef &variable, bool *isConstantTerm) {
   APInt parsedCoeff(apintBitWidth, 1);
   auto result = parser.parseOptionalInteger(parsedCoeff);
   if (result.has_value()) {
@@ -39,7 +39,7 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
   }
 
   // Variable name
-  result = parser.parseOptionalKeyword(variable);
+  result = parser.parseOptionalKeyword(&variable);
   if (!result.has_value() || failed(*result)) {
     // We allow "failed" because it triggers when the next token is a +,
     // which is allowed when the input is the constant term.
@@ -91,7 +91,7 @@ mlir::Attribute mlir::polynomial::PolynomialAttr::parse(AsmParser &parser,
     Monomial parsedMonomial;
     llvm::StringRef parsedVariableRef;
     bool isConstantTerm = false;
-    if (failed(parseMonomial(parser, parsedMonomial, &parsedVariableRef,
+    if (failed(parseMonomial(parser, parsedMonomial, parsedVariableRef,
                              &isConstantTerm))) {
       return {};
     }
