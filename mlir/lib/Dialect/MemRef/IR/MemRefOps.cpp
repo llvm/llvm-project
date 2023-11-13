@@ -3099,7 +3099,7 @@ struct SubViewReturnTypeCanonicalizer {
 
     // Directly return the non-rank reduced type if there are no dropped dims.
     llvm::SmallBitVector droppedDims = op.getDroppedDims();
-    if (droppedDims.empty())
+    if (droppedDims.none())
       return nonReducedType;
 
     // Take the strides and offset from the non-rank reduced type.

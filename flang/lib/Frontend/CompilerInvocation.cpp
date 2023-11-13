@@ -153,6 +153,34 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
   return true;
 }
 
+static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
+                              llvm::opt::ArgList &args,
+                              clang::DiagnosticsEngine &diags) {
+  llvm::opt::Arg *arg = args.getLastArg(clang::driver::options::OPT_fveclib);
+  if (!arg)
+    return true;
+
+  using VectorLibrary = llvm::driver::VectorLibrary;
+  std::optional<VectorLibrary> val =
+      llvm::StringSwitch<std::optional<VectorLibrary>>(arg->getValue())
+          .Case("Accelerate", VectorLibrary::Accelerate)
+          .Case("LIBMVEC", VectorLibrary::LIBMVEC)
+          .Case("MASSV", VectorLibrary::MASSV)
+          .Case("SVML", VectorLibrary::SVML)
+          .Case("SLEEF", VectorLibrary::SLEEF)
+          .Case("Darwin_libsystem_m", VectorLibrary::Darwin_libsystem_m)
+          .Case("ArmPL", VectorLibrary::ArmPL)
+          .Case("NoLibrary", VectorLibrary::NoLibrary)
+          .Default(std::nullopt);
+  if (!val.has_value()) {
+    diags.Report(clang::diag::err_drv_invalid_value)
+        << arg->getAsString(args) << arg->getValue();
+    return false;
+  }
+  opts.setVecLib(val.value());
+  return true;
+}
+
 // Generate an OptRemark object containing info on if the -Rgroup
 // specified is enabled or not.
 static CodeGenOptions::OptRemark
@@ -1073,6 +1101,19 @@ bool CompilerInvocation::createFromArgs(
     res.loweringOpts.setLowerToHighLevelFIR(true);
   }
 
+  // -flang-deprecated-no-hlfir
+  if (args.hasArg(clang::driver::options::OPT_flang_deprecated_no_hlfir) &&
+      !args.hasArg(clang::driver::options::OPT_emit_hlfir)) {
+    if (args.hasArg(clang::driver::options::OPT_flang_experimental_hlfir)) {
+      const unsigned diagID = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Error,
+          "Options '-flang-experimental-hlfir' and "
+          "'-flang-deprecated-no-hlfir' cannot be both specified");
+      diags.Report(diagID);
+    }
+    res.loweringOpts.setLowerToHighLevelFIR(false);
+  }
+
   if (args.hasArg(clang::driver::options::OPT_flang_experimental_polymorphism)) {
     res.loweringOpts.setPolymorphicTypeImpl(true);
   }
@@ -1103,6 +1144,7 @@ bool CompilerInvocation::createFromArgs(
   parsePreprocessorArgs(res.getPreprocessorOpts(), args);
   parseCodeGenArgs(res.getCodeGenOpts(), args, diags);
   success &= parseDebugArgs(res.getCodeGenOpts(), args, diags);
+  success &= parseVectorLibArg(res.getCodeGenOpts(), args, diags);
   success &= parseSemaArgs(res, args, diags);
   success &= parseDialectArgs(res, args, diags);
   success &= parseDiagArgs(res, args, diags);

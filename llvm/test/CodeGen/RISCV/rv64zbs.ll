@@ -3,6 +3,8 @@
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I
 ; RUN: llc -mtriple=riscv64 -mattr=+zbs -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64ZBS
+; RUN: llc -mtriple=riscv64 -mattr=+zbs,+zbb -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64ZBS
 
 define signext i32 @bclr_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: bclr_i32:

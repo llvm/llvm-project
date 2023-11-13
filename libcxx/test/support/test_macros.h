@@ -213,8 +213,6 @@
 
 #if TEST_STD_VER > 17
 #define TEST_CONSTINIT constinit
-#elif defined(_LIBCPP_CONSTINIT)
-#define TEST_CONSTINIT _LIBCPP_CONSTINIT
 #else
 #define TEST_CONSTINIT
 #endif
@@ -388,10 +386,6 @@ inline void DoNotOptimize(Tp const& value) {
 
 #if defined(_LIBCPP_HAS_NO_FILESYSTEM)
 #  define TEST_HAS_NO_FILESYSTEM
-#endif
-
-#if defined(_LIBCPP_HAS_NO_FGETPOS_FSETPOS)
-#  define TEST_HAS_NO_FGETPOS_FSETPOS
 #endif
 
 #if defined(_LIBCPP_HAS_NO_C8RTOMB_MBRTOC8)

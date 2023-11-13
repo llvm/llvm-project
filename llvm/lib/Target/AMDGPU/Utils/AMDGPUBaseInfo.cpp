@@ -2239,8 +2239,10 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
   unsigned OpType = Desc.operands()[OpNo].OperandType;
-  return OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
-         OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST;
+  return (OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
+          OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST) ||
+         (OpType >= AMDGPU::OPERAND_REG_INLINE_AC_FIRST &&
+          OpType <= AMDGPU::OPERAND_REG_INLINE_AC_LAST);
 }
 
 // Avoid using MCRegisterClass::getSize, since that function will go away
@@ -2529,8 +2531,8 @@ bool isArgPassedInSGPR(const Argument *A) {
     return A->hasAttribute(Attribute::InReg) ||
            A->hasAttribute(Attribute::ByVal);
   default:
-    // TODO: Should calls support inreg for SGPR inputs?
-    return false;
+    // TODO: treat i1 as divergent?
+    return A->hasAttribute(Attribute::InReg);
   }
 }
 
@@ -2556,8 +2558,7 @@ bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
     return CB->paramHasAttr(ArgNo, Attribute::InReg) ||
            CB->paramHasAttr(ArgNo, Attribute::ByVal);
   default:
-    // TODO: Should calls support inreg for SGPR inputs?
-    return false;
+    return CB->paramHasAttr(ArgNo, Attribute::InReg);
   }
 }
 
