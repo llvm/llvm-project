@@ -61,7 +61,7 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
     %0 = ... : polynomial.polynomial<#ring>
     ```
 
-    In this case, the value of a polynomial is always ``converted'' to a
+    In this case, the value of a polynomial is always "converted" to a
     canonical form by applying repeated reductions by setting `x**1024 = 1`
     and simplifying.
 
