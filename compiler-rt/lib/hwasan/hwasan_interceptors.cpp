@@ -19,6 +19,7 @@
 #include "hwasan.h"
 #include "hwasan_allocator.h"
 #include "hwasan_checks.h"
+#include "hwasan_mapping.h"
 #include "hwasan_platform_interceptors.h"
 #include "hwasan_thread.h"
 #include "hwasan_thread_list.h"
@@ -146,13 +147,16 @@ struct HWAsanInterceptorContext {
         (void)(name);                           \
       } while (false)
 
-#    define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size) \
-      do {                                                      \
-        (void)(ctx);                                            \
-        (void)(block);                                          \
-        (void)(c);                                              \
-        (void)(size);                                           \
-      } while (false)
+#    define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size)   \
+      {                                                         \
+        if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)          \
+          return internal_memset(dst, v, size);                 \
+        COMMON_INTERCEPTOR_ENTER(ctx, memset, dst, v, size);    \
+        if (MemIsApp(UntagAddr(reinterpret_cast<uptr>(dst))) && \
+            common_flags()->intercept_intrin)                   \
+          COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, size);       \
+        return REAL(memset)(dst, v, size);                      \
+      }
 
 #    define COMMON_INTERCEPTOR_STRERROR() \
       do {                                \

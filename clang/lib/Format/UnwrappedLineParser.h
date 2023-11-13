@@ -22,7 +22,6 @@
 #include "clang/Format/Format.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Regex.h"
 #include <list>
 #include <stack>
@@ -151,8 +150,7 @@ private:
                               bool *HasDoWhile = nullptr,
                               bool *HasLabel = nullptr);
   bool tryToParseBracedList();
-  bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
-                       tok::TokenKind ClosingBraceKind = tok::r_brace);
+  bool parseBracedList(bool IsAngleBracket = false, bool IsEnum = false);
   bool parseParens(TokenType AmpAmpTokenType = TT_Unknown);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();

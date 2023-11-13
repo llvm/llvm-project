@@ -1078,6 +1078,8 @@ def highmod : NamedBitOperand<"high", "High">;
 def CPol : CustomOperand<i32, 1>;
 def CPol_0 : DefaultOperand<CPol, 0>;
 def CPol_GLC1 : DefaultOperand<CPol, 1>;
+def CPol_GLC : ValuePredicatedOperand<CPol, "Op.getImm() & CPol::GLC">;
+def CPol_NonGLC : ValuePredicatedOperand<CPol, "!(Op.getImm() & CPol::GLC)", 1>;
 
 def TFE : NamedBitOperand<"tfe">;
 def UNorm : NamedBitOperand<"unorm">;

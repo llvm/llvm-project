@@ -23,6 +23,9 @@ void TextAPIError::log(raw_ostream &OS) const {
   case TextAPIErrorCode::NoSuchArchitecture:
     OS << "no such architecture\n";
     return;
+  case TextAPIErrorCode::InvalidInputFormat:
+    OS << "invalid input format\n";
+    return;
   default:
     llvm_unreachable("unhandled TextAPIErrorCode");
   }

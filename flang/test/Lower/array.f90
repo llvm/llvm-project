@@ -1,4 +1,4 @@
-! RUN: bbc -o - %s | FileCheck %s
+! RUN: bbc -hlfir=false -o - %s | FileCheck %s
 
 ! CHECK-LABEL: fir.global @block_
 ! CHECK-DAG: %[[VAL_1:.*]] = arith.constant 1.000000e+00 : f32

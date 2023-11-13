@@ -195,11 +195,6 @@ void CFGuard::insertCFGuardDispatch(CallBase *CB) {
   Value *CalledOperand = CB->getCalledOperand();
   Type *CalledOperandType = CalledOperand->getType();
 
-  // Cast the guard dispatch global to the type of the called operand.
-  PointerType *PTy = PointerType::get(CalledOperandType, 0);
-  if (GuardFnGlobal->getType() != PTy)
-    GuardFnGlobal = ConstantExpr::getBitCast(GuardFnGlobal, PTy);
-
   // Load the global as a pointer to a function of the same type.
   LoadInst *GuardDispatchLoad = B.CreateLoad(CalledOperandType, GuardFnGlobal);
 
@@ -235,8 +230,9 @@ bool CFGuard::doInitialization(Module &M) {
     return false;
 
   // Set up prototypes for the guard check and dispatch functions.
-  GuardFnType = FunctionType::get(Type::getVoidTy(M.getContext()),
-                                  {Type::getInt8PtrTy(M.getContext())}, false);
+  GuardFnType =
+      FunctionType::get(Type::getVoidTy(M.getContext()),
+                        {PointerType::getUnqual(M.getContext())}, false);
   GuardFnPtrType = PointerType::get(GuardFnType, 0);
 
   // Get or insert the guard check or dispatch global symbols.

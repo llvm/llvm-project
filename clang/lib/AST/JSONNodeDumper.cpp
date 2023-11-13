@@ -1680,19 +1680,19 @@ void JSONNodeDumper::visitInlineCommandComment(
   JOS.attribute("name", getCommentCommandName(C->getCommandID()));
 
   switch (C->getRenderKind()) {
-  case comments::InlineCommandComment::RenderNormal:
+  case comments::InlineCommandRenderKind::Normal:
     JOS.attribute("renderKind", "normal");
     break;
-  case comments::InlineCommandComment::RenderBold:
+  case comments::InlineCommandRenderKind::Bold:
     JOS.attribute("renderKind", "bold");
     break;
-  case comments::InlineCommandComment::RenderEmphasized:
+  case comments::InlineCommandRenderKind::Emphasized:
     JOS.attribute("renderKind", "emphasized");
     break;
-  case comments::InlineCommandComment::RenderMonospaced:
+  case comments::InlineCommandRenderKind::Monospaced:
     JOS.attribute("renderKind", "monospaced");
     break;
-  case comments::InlineCommandComment::RenderAnchor:
+  case comments::InlineCommandRenderKind::Anchor:
     JOS.attribute("renderKind", "anchor");
     break;
   }
@@ -1740,13 +1740,13 @@ void JSONNodeDumper::visitBlockCommandComment(
 void JSONNodeDumper::visitParamCommandComment(
     const comments::ParamCommandComment *C, const comments::FullComment *FC) {
   switch (C->getDirection()) {
-  case comments::ParamCommandComment::In:
+  case comments::ParamCommandPassDirection::In:
     JOS.attribute("direction", "in");
     break;
-  case comments::ParamCommandComment::Out:
+  case comments::ParamCommandPassDirection::Out:
     JOS.attribute("direction", "out");
     break;
-  case comments::ParamCommandComment::InOut:
+  case comments::ParamCommandPassDirection::InOut:
     JOS.attribute("direction", "in,out");
     break;
   }

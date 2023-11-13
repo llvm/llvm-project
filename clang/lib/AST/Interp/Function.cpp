@@ -48,9 +48,3 @@ bool Function::isVirtual() const {
     return M->isVirtual();
   return false;
 }
-
-bool Function::needsRuntimeArgPop(const ASTContext &Ctx) const {
-  if (!isBuiltin())
-    return false;
-  return Ctx.BuiltinInfo.hasCustomTypechecking(getBuiltinID());
-}

@@ -97,6 +97,52 @@ static Type getI1SameShape(Type type) {
   return i1Type;
 }
 
+// Parses one of the keywords provided in the list `keywords` and returns the
+// position of the parsed keyword in the list. If none of the keywords from the
+// list is parsed, returns -1.
+static int parseOptionalKeywordAlternative(OpAsmParser &parser,
+                                           ArrayRef<StringRef> keywords) {
+  for (const auto &en : llvm::enumerate(keywords)) {
+    if (succeeded(parser.parseOptionalKeyword(en.value())))
+      return en.index();
+  }
+  return -1;
+}
+
+namespace {
+template <typename Ty>
+struct EnumTraits {};
+
+#define REGISTER_ENUM_TYPE(Ty)                                                 \
+  template <>                                                                  \
+  struct EnumTraits<Ty> {                                                      \
+    static StringRef stringify(Ty value) { return stringify##Ty(value); }      \
+    static unsigned getMaxEnumVal() { return getMaxEnumValFor##Ty(); }         \
+  }
+
+REGISTER_ENUM_TYPE(Linkage);
+REGISTER_ENUM_TYPE(UnnamedAddr);
+REGISTER_ENUM_TYPE(CConv);
+REGISTER_ENUM_TYPE(Visibility);
+} // namespace
+
+/// Parse an enum from the keyword, or default to the provided default value.
+/// The return type is the enum type by default, unless overridden with the
+/// second template argument.
+template <typename EnumTy, typename RetTy = EnumTy>
+static RetTy parseOptionalLLVMKeyword(OpAsmParser &parser,
+                                      OperationState &result,
+                                      EnumTy defaultValue) {
+  SmallVector<StringRef, 10> names;
+  for (unsigned i = 0, e = EnumTraits<EnumTy>::getMaxEnumVal(); i <= e; ++i)
+    names.push_back(EnumTraits<EnumTy>::stringify(static_cast<EnumTy>(i)));
+
+  int index = parseOptionalKeywordAlternative(parser, names);
+  if (index == -1)
+    return static_cast<RetTy>(defaultValue);
+  return static_cast<RetTy>(index);
+}
+
 //===----------------------------------------------------------------------===//
 // Printing, parsing, folding and builder for LLVM::CmpOp.
 //===----------------------------------------------------------------------===//
@@ -859,6 +905,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
   build(builder, state, results,
         TypeAttr::get(getLLVMFuncType(builder.getContext(), results, args)),
         callee, args, /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
+        /*CConv=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -880,7 +927,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
                    ValueRange args) {
   build(builder, state, getCallOpResultTypes(calleeType),
         TypeAttr::get(calleeType), callee, args, /*fastmathFlags=*/nullptr,
-        /*branch_weights=*/nullptr, /*access_groups=*/nullptr,
+        /*branch_weights=*/nullptr, /*CConv=*/nullptr,
+        /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
@@ -889,6 +937,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, getCallOpResultTypes(calleeType),
         TypeAttr::get(calleeType), /*callee=*/nullptr, args,
         /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
+        /*CConv=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -899,9 +948,11 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   build(builder, state, getCallOpResultTypes(calleeType),
         TypeAttr::get(calleeType), SymbolRefAttr::get(func), args,
         /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
+        /*CConv=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
+
 CallInterfaceCallable CallOp::getCallableForCallee() {
   // Direct call.
   if (FlatSymbolRefAttr calleeAttr = getCalleeAttr())
@@ -1054,9 +1105,14 @@ void CallOp::print(OpAsmPrinter &p) {
     isVarArg = calleeType.isVarArg();
   }
 
+  p << ' ';
+
+  // Print calling convention.
+  if (getCConv() != LLVM::CConv::C)
+    p << stringifyCConv(getCConv()) << ' ';
+
   // Print the direct callee if present as a function attribute, or an indirect
   // callee (first operand) otherwise.
-  p << ' ';
   if (isDirect)
     p.printSymbolName(callee.value());
   else
@@ -1069,7 +1125,7 @@ void CallOp::print(OpAsmPrinter &p) {
     p << " vararg(" << calleeType << ")";
 
   p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
-                          {"callee", "callee_type"});
+                          {getCConvAttrName(), "callee", "callee_type"});
 
   p << " : ";
   if (!isDirect)
@@ -1137,7 +1193,7 @@ static ParseResult parseOptionalCallFuncPtr(
   return success();
 }
 
-// <operation> ::= `llvm.call` (function-id | ssa-use)
+// <operation> ::= `llvm.call` (cconv)? (function-id | ssa-use)
 //                             `(` ssa-use-list `)`
 //                             ( `vararg(` var-arg-func-type `)` )?
 //                             attribute-dict? `:` (type `,`)? function-type
@@ -1145,6 +1201,12 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
   SymbolRefAttr funcAttr;
   TypeAttr calleeType;
   SmallVector<OpAsmParser::UnresolvedOperand> operands;
+
+  // Default to C Calling Convention if no keyword is provided.
+  result.addAttribute(
+      getCConvAttrName(result.name),
+      CConvAttr::get(parser.getContext(), parseOptionalLLVMKeyword<CConv>(
+                                              parser, result, LLVM::CConv::C)));
 
   // Parse a function pointer for indirect calls.
   if (parseOptionalCallFuncPtr(parser, operands))
@@ -1191,7 +1253,7 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   auto calleeType = func.getFunctionType();
   build(builder, state, getCallOpResultTypes(calleeType),
         TypeAttr::get(calleeType), SymbolRefAttr::get(func), ops, normalOps,
-        unwindOps, nullptr, normal, unwind);
+        unwindOps, nullptr, nullptr, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
@@ -1200,7 +1262,7 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
                      ValueRange unwindOps) {
   build(builder, state, tys,
         TypeAttr::get(getLLVMFuncType(builder.getContext(), tys, ops)), callee,
-        ops, normalOps, unwindOps, nullptr, normal, unwind);
+        ops, normalOps, unwindOps, nullptr, nullptr, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state,
@@ -1209,7 +1271,7 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state,
                      Block *unwind, ValueRange unwindOps) {
   build(builder, state, getCallOpResultTypes(calleeType),
         TypeAttr::get(calleeType), callee, ops, normalOps, unwindOps, nullptr,
-        normal, unwind);
+        nullptr, normal, unwind);
 }
 
 SuccessorOperands InvokeOp::getSuccessorOperands(unsigned index) {
@@ -1275,6 +1337,10 @@ void InvokeOp::print(OpAsmPrinter &p) {
 
   p << ' ';
 
+  // Print calling convention.
+  if (getCConv() != LLVM::CConv::C)
+    p << stringifyCConv(getCConv()) << ' ';
+
   // Either function name or pointer
   if (isDirect)
     p.printSymbolName(callee.value());
@@ -1290,9 +1356,9 @@ void InvokeOp::print(OpAsmPrinter &p) {
   if (isVarArg)
     p << " vararg(" << calleeType << ")";
 
-  p.printOptionalAttrDict(
-      (*this)->getAttrs(),
-      {InvokeOp::getOperandSegmentSizeAttr(), "callee", "callee_type"});
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          {InvokeOp::getOperandSegmentSizeAttr(), "callee",
+                           "callee_type", InvokeOp::getCConvAttrName()});
 
   p << " : ";
   if (!isDirect)
@@ -1301,7 +1367,7 @@ void InvokeOp::print(OpAsmPrinter &p) {
                         getResultTypes());
 }
 
-// <operation> ::= `llvm.invoke` (function-id | ssa-use)
+// <operation> ::= `llvm.invoke` (cconv)? (function-id | ssa-use)
 //                  `(` ssa-use-list `)`
 //                  `to` bb-id (`[` ssa-use-and-type-list `]`)?
 //                  `unwind` bb-id (`[` ssa-use-and-type-list `]`)?
@@ -1314,6 +1380,12 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
   Block *normalDest, *unwindDest;
   SmallVector<Value, 4> normalOperands, unwindOperands;
   Builder &builder = parser.getBuilder();
+
+  // Default to C Calling Convention if no keyword is provided.
+  result.addAttribute(
+      getCConvAttrName(result.name),
+      CConvAttr::get(parser.getContext(), parseOptionalLLVMKeyword<CConv>(
+                                              parser, result, LLVM::CConv::C)));
 
   // Parse a function pointer for indirect calls.
   if (parseOptionalCallFuncPtr(parser, operands))
@@ -1786,52 +1858,6 @@ void GlobalOp::print(OpAsmPrinter &p) {
     p << ' ';
     p.printRegion(initializer, /*printEntryBlockArgs=*/false);
   }
-}
-
-// Parses one of the keywords provided in the list `keywords` and returns the
-// position of the parsed keyword in the list. If none of the keywords from the
-// list is parsed, returns -1.
-static int parseOptionalKeywordAlternative(OpAsmParser &parser,
-                                           ArrayRef<StringRef> keywords) {
-  for (const auto &en : llvm::enumerate(keywords)) {
-    if (succeeded(parser.parseOptionalKeyword(en.value())))
-      return en.index();
-  }
-  return -1;
-}
-
-namespace {
-template <typename Ty>
-struct EnumTraits {};
-
-#define REGISTER_ENUM_TYPE(Ty)                                                 \
-  template <>                                                                  \
-  struct EnumTraits<Ty> {                                                      \
-    static StringRef stringify(Ty value) { return stringify##Ty(value); }      \
-    static unsigned getMaxEnumVal() { return getMaxEnumValFor##Ty(); }         \
-  }
-
-REGISTER_ENUM_TYPE(Linkage);
-REGISTER_ENUM_TYPE(UnnamedAddr);
-REGISTER_ENUM_TYPE(CConv);
-REGISTER_ENUM_TYPE(Visibility);
-} // namespace
-
-/// Parse an enum from the keyword, or default to the provided default value.
-/// The return type is the enum type by default, unless overriden with the
-/// second template argument.
-template <typename EnumTy, typename RetTy = EnumTy>
-static RetTy parseOptionalLLVMKeyword(OpAsmParser &parser,
-                                      OperationState &result,
-                                      EnumTy defaultValue) {
-  SmallVector<StringRef, 10> names;
-  for (unsigned i = 0, e = EnumTraits<EnumTy>::getMaxEnumVal(); i <= e; ++i)
-    names.push_back(EnumTraits<EnumTy>::stringify(static_cast<EnumTy>(i)));
-
-  int index = parseOptionalKeywordAlternative(parser, names);
-  if (index == -1)
-    return static_cast<RetTy>(defaultValue);
-  return static_cast<RetTy>(index);
 }
 
 static LogicalResult verifyComdat(Operation *op,
@@ -2885,6 +2911,17 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
   }
 };
 } // namespace
+
+//===----------------------------------------------------------------------===//
+// LinkerOptionsOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult LinkerOptionsOp::verify() {
+  if (mlir::Operation *parentOp = (*this)->getParentOp();
+      parentOp && !satisfiesLLVMModule(parentOp))
+    return emitOpError("must appear at the module level");
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // LLVMDialect initialization, type parsing, and registration.

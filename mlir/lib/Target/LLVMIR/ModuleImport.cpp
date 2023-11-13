@@ -487,6 +487,23 @@ void ModuleImport::addDebugIntrinsic(llvm::CallInst *intrinsic) {
   debugIntrinsics.insert(intrinsic);
 }
 
+LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
+  for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
+    if (named.getName() != "llvm.linker.options")
+      continue;
+    // llvm.linker.options operands are lists of strings.
+    for (const llvm::MDNode *md : named.operands()) {
+      SmallVector<StringRef> options;
+      options.reserve(md->getNumOperands());
+      for (const llvm::MDOperand &option : md->operands())
+        options.push_back(cast<llvm::MDString>(option)->getString());
+      builder.create<LLVM::LinkerOptionsOp>(mlirModule.getLoc(),
+                                            builder.getStrArrayAttr(options));
+    }
+  }
+  return success();
+}
+
 LogicalResult ModuleImport::convertMetadata() {
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(mlirModule.getBody());
@@ -513,6 +530,8 @@ LogicalResult ModuleImport::convertMetadata() {
           return failure();
     }
   }
+  if (failed(convertLinkerOptionsMetadata()))
+    return failure();
   return success();
 }
 
@@ -1529,7 +1548,7 @@ FlatSymbolRefAttr ModuleImport::getPersonalityAsAttr(llvm::Function *f) {
   // bitcast to i8* are parsed.
   if (auto *ce = dyn_cast<llvm::ConstantExpr>(pf)) {
     if (ce->getOpcode() == llvm::Instruction::BitCast &&
-        ce->getType() == llvm::Type::getInt8PtrTy(f->getContext())) {
+        ce->getType() == llvm::PointerType::getUnqual(f->getContext())) {
       if (auto *func = dyn_cast<llvm::Function>(ce->getOperand(0)))
         return SymbolRefAttr::get(builder.getContext(), func->getName());
     }

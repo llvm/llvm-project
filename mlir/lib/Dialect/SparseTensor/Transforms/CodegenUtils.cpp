@@ -163,6 +163,17 @@ Value sparse_tensor::genCast(OpBuilder &builder, Location loc, Value value,
   return mlir::convertScalarToDtype(builder, loc, value, dstTp, isUnsignedCast);
 }
 
+Value sparse_tensor::genScalarToTensor(OpBuilder &builder, Location loc,
+                                       Value elem, Type dstTp) {
+  if (auto rtp = dstTp.dyn_cast<RankedTensorType>()) {
+    // Scalars can only be converted to 0-ranked tensors.
+    assert(rtp.getRank() == 0);
+    elem = sparse_tensor::genCast(builder, loc, elem, rtp.getElementType());
+    return builder.create<tensor::FromElementsOp>(loc, rtp, elem);
+  }
+  return sparse_tensor::genCast(builder, loc, elem, dstTp);
+}
+
 Value sparse_tensor::genIndexLoad(OpBuilder &builder, Location loc, Value mem,
                                   Value s) {
   Value load = builder.create<memref::LoadOp>(loc, mem, s);
@@ -633,8 +644,8 @@ void sparse_tensor::fillDimShape(OpBuilder &builder, Location loc,
                                  SmallVectorImpl<Value> &out) {
   out.clear();
   out.reserve(stt.getDimRank());
-  for (const Size sh : stt.getDimShape()) {
-    const auto s = ShapedType::isDynamic(sh) ? 0 : sh;
+  for (const Size sz : stt.getDimShape()) {
+    const auto s = ShapedType::isDynamic(sz) ? 0 : sz;
     out.push_back(constantIndex(builder, loc, s));
   }
 }
