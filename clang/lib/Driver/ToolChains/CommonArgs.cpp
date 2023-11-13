@@ -598,7 +598,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
-      llvm::sys::path::stem(Linker) != "ld.lld") {
+      llvm::sys::path::stem(Linker) != "ld.lld" &&
+      !ToolChain.getTriple().isOSOpenBSD()) {
     // Tell the linker to load the plugin. This has to come before
     // AddLinkerInputs as gold requires -plugin and AIX ld requires -bplugin to
     // come before any -plugin-opt/-bplugin_opt that -Wl might forward.

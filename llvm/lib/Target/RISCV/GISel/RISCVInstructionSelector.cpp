@@ -296,6 +296,92 @@ RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
            [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
 }
 
+/// Returns the RISCVCC::CondCode that corresponds to the CmpInst::Predicate CC.
+/// CC Must be an ICMP Predicate.
+static RISCVCC::CondCode getRISCVCCFromICmp(CmpInst::Predicate CC) {
+  switch (CC) {
+  default:
+    llvm_unreachable("Expected ICMP CmpInst::Predicate.");
+  case CmpInst::Predicate::ICMP_EQ:
+    return RISCVCC::COND_EQ;
+  case CmpInst::Predicate::ICMP_NE:
+    return RISCVCC::COND_NE;
+  case CmpInst::Predicate::ICMP_ULT:
+    return RISCVCC::COND_LTU;
+  case CmpInst::Predicate::ICMP_SLT:
+    return RISCVCC::COND_LT;
+  case CmpInst::Predicate::ICMP_UGE:
+    return RISCVCC::COND_GEU;
+  case CmpInst::Predicate::ICMP_SGE:
+    return RISCVCC::COND_GE;
+  }
+}
+
+static void getOperandsForBranch(Register CondReg, MachineRegisterInfo &MRI,
+                                 RISCVCC::CondCode &CC, Register &LHS,
+                                 Register &RHS) {
+  // Try to fold an ICmp. If that fails, use a NE compare with X0.
+  CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+  if (!mi_match(CondReg, MRI, m_GICmp(m_Pred(Pred), m_Reg(LHS), m_Reg(RHS)))) {
+    LHS = CondReg;
+    RHS = RISCV::X0;
+    CC = RISCVCC::COND_NE;
+    return;
+  }
+
+  // We found an ICmp, do some canonicalizations.
+
+  // Adjust comparisons to use comparison with 0 if possible.
+  if (auto Constant = getIConstantVRegSExtVal(RHS, MRI)) {
+    switch (Pred) {
+    case CmpInst::Predicate::ICMP_SGT:
+      // Convert X > -1 to X >= 0
+      if (*Constant == -1) {
+        CC = RISCVCC::COND_GE;
+        RHS = RISCV::X0;
+        return;
+      }
+      break;
+    case CmpInst::Predicate::ICMP_SLT:
+      // Convert X < 1 to 0 >= X
+      if (*Constant == 1) {
+        CC = RISCVCC::COND_GE;
+        RHS = LHS;
+        LHS = RISCV::X0;
+        return;
+      }
+      break;
+    default:
+      break;
+    }
+  }
+
+  switch (Pred) {
+  default:
+    llvm_unreachable("Expected ICMP CmpInst::Predicate.");
+  case CmpInst::Predicate::ICMP_EQ:
+  case CmpInst::Predicate::ICMP_NE:
+  case CmpInst::Predicate::ICMP_ULT:
+  case CmpInst::Predicate::ICMP_SLT:
+  case CmpInst::Predicate::ICMP_UGE:
+  case CmpInst::Predicate::ICMP_SGE:
+    // These CCs are supported directly by RISC-V branches.
+    break;
+  case CmpInst::Predicate::ICMP_SGT:
+  case CmpInst::Predicate::ICMP_SLE:
+  case CmpInst::Predicate::ICMP_UGT:
+  case CmpInst::Predicate::ICMP_ULE:
+    // These CCs are not supported directly by RISC-V branches, but changing the
+    // direction of the CC and swapping LHS and RHS are.
+    Pred = CmpInst::getSwappedPredicate(Pred);
+    std::swap(LHS, RHS);
+    break;
+  }
+
+  CC = getRISCVCCFromICmp(Pred);
+  return;
+}
+
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -398,10 +484,12 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   case TargetOpcode::G_GLOBAL_VALUE:
     return selectGlobalValue(MI, MIB, MRI);
   case TargetOpcode::G_BRCOND: {
-    // TODO: Fold with G_ICMP.
-    auto Bcc =
-        MIB.buildInstr(RISCV::BNE, {}, {MI.getOperand(0), Register(RISCV::X0)})
-            .addMBB(MI.getOperand(1).getMBB());
+    Register LHS, RHS;
+    RISCVCC::CondCode CC;
+    getOperandsForBranch(MI.getOperand(0).getReg(), MRI, CC, LHS, RHS);
+
+    auto Bcc = MIB.buildInstr(RISCVCC::getBrCond(CC), {}, {LHS, RHS})
+                   .addMBB(MI.getOperand(1).getMBB());
     MI.eraseFromParent();
     return constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
   }
@@ -432,7 +520,7 @@ bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
 
   const LLT sXLen = LLT::scalar(STI.getXLen());
   auto PtrToInt = MIB.buildPtrToInt(sXLen, PtrReg);
-  MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRRegBankID));
+  MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRBRegBankID));
   Op.setReg(PtrToInt.getReg(0));
   return select(*PtrToInt);
 }
@@ -491,12 +579,12 @@ void RISCVInstructionSelector::renderTrailingZeros(MachineInstrBuilder &MIB,
 
 const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
     LLT Ty, const RegisterBank &RB) const {
-  if (RB.getID() == RISCV::GPRRegBankID) {
+  if (RB.getID() == RISCV::GPRBRegBankID) {
     if (Ty.getSizeInBits() <= 32 || (STI.is64Bit() && Ty.getSizeInBits() == 64))
       return &RISCV::GPRRegClass;
   }
 
-  if (RB.getID() == RISCV::FPRRegBankID) {
+  if (RB.getID() == RISCV::FPRBRegBankID) {
     if (Ty.getSizeInBits() == 32)
       return &RISCV::FPR32RegClass;
     if (Ty.getSizeInBits() == 64)
@@ -719,99 +807,14 @@ bool RISCVInstructionSelector::selectSExtInreg(MachineInstr &MI,
   return true;
 }
 
-/// Returns the RISCVCC::CondCode that corresponds to the CmpInst::Predicate CC.
-/// CC Must be an ICMP Predicate.
-static RISCVCC::CondCode getRISCVCCFromICMP(CmpInst::Predicate CC) {
-  switch (CC) {
-  default:
-    llvm_unreachable("Expected ICMP CmpInst::Predicate.");
-  case CmpInst::Predicate::ICMP_EQ:
-    return RISCVCC::COND_EQ;
-  case CmpInst::Predicate::ICMP_NE:
-    return RISCVCC::COND_NE;
-  case CmpInst::Predicate::ICMP_ULT:
-    return RISCVCC::COND_LTU;
-  case CmpInst::Predicate::ICMP_SLT:
-    return RISCVCC::COND_LT;
-  case CmpInst::Predicate::ICMP_UGE:
-    return RISCVCC::COND_GEU;
-  case CmpInst::Predicate::ICMP_SGE:
-    return RISCVCC::COND_GE;
-  }
-}
-
-static void getICMPOperandsForBranch(MachineInstr &MI, MachineIRBuilder &MIB,
-                                     MachineRegisterInfo &MRI,
-                                     RISCVCC::CondCode &CC, Register &LHS,
-                                     Register &RHS) {
-  assert(MI.getOpcode() == TargetOpcode::G_ICMP);
-  CmpInst::Predicate ICMPCC =
-      static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
-  LHS = MI.getOperand(2).getReg();
-  RHS = MI.getOperand(3).getReg();
-
-  // Adjust comparisons to use comparison with 0 if possible.
-  if (auto Constant = getIConstantVRegSExtVal(RHS, MRI)) {
-    switch (ICMPCC) {
-    case CmpInst::Predicate::ICMP_SGT:
-      // Convert X > -1 to X >= 0
-      if (*Constant == -1) {
-        CC = RISCVCC::COND_GE;
-        RHS = RISCV::X0;
-        return;
-      }
-      break;
-    case CmpInst::Predicate::ICMP_SLT:
-      // Convert X < 1 to 0 >= X
-      if (*Constant == 1) {
-        CC = RISCVCC::COND_GE;
-        RHS = LHS;
-        LHS = RISCV::X0;
-        return;
-      }
-      break;
-    default:
-      break;
-    }
-  }
-
-  switch (ICMPCC) {
-  default:
-    llvm_unreachable("Expected ICMP CmpInst::Predicate.");
-  case CmpInst::Predicate::ICMP_EQ:
-  case CmpInst::Predicate::ICMP_NE:
-  case CmpInst::Predicate::ICMP_ULT:
-  case CmpInst::Predicate::ICMP_SLT:
-  case CmpInst::Predicate::ICMP_UGE:
-  case CmpInst::Predicate::ICMP_SGE:
-    // These CCs are supported directly by RISC-V branches.
-    CC = getRISCVCCFromICMP(ICMPCC);
-    return;
-  case CmpInst::Predicate::ICMP_SGT:
-  case CmpInst::Predicate::ICMP_SLE:
-  case CmpInst::Predicate::ICMP_UGT:
-  case CmpInst::Predicate::ICMP_ULE:
-    // These CCs are not supported directly by RISC-V branches, but changing the
-    // direction of the CC and swapping LHS and RHS are.
-    CC = getRISCVCCFromICMP(CmpInst::getSwappedPredicate(ICMPCC));
-    std::swap(LHS, RHS);
-    return;
-  }
-}
-
 bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
                                             MachineIRBuilder &MIB,
                                             MachineRegisterInfo &MRI) const {
   auto &SelectMI = cast<GSelect>(MI);
 
-  // If MI is a G_SELECT(G_ICMP(tst, A, B), C, D) then we can use (A, B, tst)
-  // as the (LHS, RHS, CC) of the Select_GPR_Using_CC_GPR.
-  Register LHS = SelectMI.getCondReg();
-  Register RHS = RISCV::X0;
-  RISCVCC::CondCode CC = RISCVCC::COND_NE;
-
-  if (mi_match(LHS, MRI, m_GICmp(m_Pred(), m_Reg(), m_Reg())))
-    getICMPOperandsForBranch(*MRI.getVRegDef(LHS), MIB, MRI, CC, LHS, RHS);
+  Register LHS, RHS;
+  RISCVCC::CondCode CC;
+  getOperandsForBranch(SelectMI.getCondReg(), MRI, CC, LHS, RHS);
 
   MachineInstr *Result = MIB.buildInstr(RISCV::Select_GPR_Using_CC_GPR)
                              .addDef(SelectMI.getReg(0))

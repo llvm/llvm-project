@@ -15,7 +15,6 @@
 #define LLVM_TEXTAPI_INTERFACEFILE_H
 
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"

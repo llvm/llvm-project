@@ -67,11 +67,6 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
 
-static llvm::cl::opt<bool> ClSanitizeAlignmentBuiltin(
-    "sanitize-alignment-builtin", llvm::cl::Hidden,
-    llvm::cl::desc("Instrument builtin functions for -fsanitize=alignment"),
-    llvm::cl::init(true));
-
 static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
                              Align AlignmentInBytes) {
   ConstantInt *Byte;
@@ -2899,7 +2894,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitNonNullArgCheck(RValue::get(Val), Arg->getType(), Arg->getExprLoc(), FD,
                         ParmNum);
 
-    if (SanOpts.has(SanitizerKind::Alignment) && ClSanitizeAlignmentBuiltin) {
+    if (SanOpts.has(SanitizerKind::Alignment)) {
       SanitizerSet SkippedChecks;
       SkippedChecks.set(SanitizerKind::All);
       SkippedChecks.clear(SanitizerKind::Alignment);
@@ -9487,13 +9482,6 @@ Value *CodeGenFunction::EmitSVEGatherLoad(const SVETypeFlags &TypeFlags,
   auto *OverloadedTy =
       llvm::ScalableVectorType::get(SVEBuiltinMemEltTy(TypeFlags), ResultTy);
 
-  // At the ACLE level there's only one predicate type, svbool_t, which is
-  // mapped to <n x 16 x i1>. However, this might be incompatible with the
-  // actual type being loaded. For example, when loading doubles (i64) the
-  // predicated should be <n x 2 x i1> instead. At the IR level the type of
-  // the predicate and the data being loaded must match. Cast accordingly.
-  Ops[0] = EmitSVEPredicateCast(Ops[0], OverloadedTy);
-
   Function *F = nullptr;
   if (Ops[1]->getType()->isVectorTy())
     // This is the "vector base, scalar offset" case. In order to uniquely
@@ -9506,6 +9494,16 @@ Value *CodeGenFunction::EmitSVEGatherLoad(const SVETypeFlags &TypeFlags,
     // return type in order to uniquely map this built-in to an LLVM IR
     // intrinsic.
     F = CGM.getIntrinsic(IntID, OverloadedTy);
+
+  // At the ACLE level there's only one predicate type, svbool_t, which is
+  // mapped to <n x 16 x i1>. However, this might be incompatible with the
+  // actual type being loaded. For example, when loading doubles (i64) the
+  // predicate should be <n x 2 x i1> instead. At the IR level the type of
+  // the predicate and the data being loaded must match. Cast to the type
+  // expected by the intrinsic. The intrinsic itself should be defined in
+  // a way than enforces relations between parameter types.
+  Ops[0] = EmitSVEPredicateCast(
+      Ops[0], cast<llvm::ScalableVectorType>(F->getArg(0)->getType()));
 
   // Pass 0 when the offset is missing. This can only be applied when using
   // the "vector base" addressing mode for which ACLE allows no offset. The
@@ -9571,8 +9569,11 @@ Value *CodeGenFunction::EmitSVEScatterStore(const SVETypeFlags &TypeFlags,
   // mapped to <n x 16 x i1>. However, this might be incompatible with the
   // actual type being stored. For example, when storing doubles (i64) the
   // predicated should be <n x 2 x i1> instead. At the IR level the type of
-  // the predicate and the data being stored must match. Cast accordingly.
-  Ops[1] = EmitSVEPredicateCast(Ops[1], OverloadedTy);
+  // the predicate and the data being stored must match. Cast to the type
+  // expected by the intrinsic. The intrinsic itself should be defined in
+  // a way that enforces relations between parameter types.
+  Ops[1] = EmitSVEPredicateCast(
+      Ops[1], cast<llvm::ScalableVectorType>(F->getArg(1)->getType()));
 
   // For "vector base, scalar index" scale the index so that it becomes a
   // scalar offset.
@@ -18029,9 +18030,13 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   }
 
   case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32:
+  case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w32:
   case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
+  case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64:
   case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32:
+  case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w32:
   case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64:
+  case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w64:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf16_w64:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_f16_w32:
@@ -18068,6 +18073,16 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
       ArgForMatchingRetType = 2;
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w32:
+    case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w64:
+      ArgForMatchingRetType = 2;
+      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f16_16x16x16_f16_tied;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w32:
+    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64:
+      ArgForMatchingRetType = 2;
+      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16_tied;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32:
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu8_w64:

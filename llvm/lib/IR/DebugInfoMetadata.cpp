@@ -14,7 +14,6 @@
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Function.h"

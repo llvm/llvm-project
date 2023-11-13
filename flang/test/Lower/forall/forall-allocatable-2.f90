@@ -1,6 +1,6 @@
 ! Test forall lowering
 
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 subroutine forall_with_allocatable2(a1)
   real :: a1(:)

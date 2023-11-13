@@ -25,46 +25,46 @@ namespace llvm {
 namespace RISCV {
 
 const RegisterBankInfo::PartialMapping PartMappings[] = {
-    {0, 32, GPRRegBank},
-    {0, 64, GPRRegBank},
-    {0, 32, FPRRegBank},
-    {0, 64, FPRRegBank},
+    {0, 32, GPRBRegBank},
+    {0, 64, GPRBRegBank},
+    {0, 32, FPRBRegBank},
+    {0, 64, FPRBRegBank},
 };
 
 enum PartialMappingIdx {
-  PMI_GPR32 = 0,
-  PMI_GPR64 = 1,
-  PMI_FPR32 = 2,
-  PMI_FPR64 = 3,
+  PMI_GPRB32 = 0,
+  PMI_GPRB64 = 1,
+  PMI_FPRB32 = 2,
+  PMI_FPRB64 = 3,
 };
 
 const RegisterBankInfo::ValueMapping ValueMappings[] = {
     // Invalid value mapping.
     {nullptr, 0},
     // Maximum 3 GPR operands; 32 bit.
-    {&PartMappings[PMI_GPR32], 1},
-    {&PartMappings[PMI_GPR32], 1},
-    {&PartMappings[PMI_GPR32], 1},
+    {&PartMappings[PMI_GPRB32], 1},
+    {&PartMappings[PMI_GPRB32], 1},
+    {&PartMappings[PMI_GPRB32], 1},
     // Maximum 3 GPR operands; 64 bit.
-    {&PartMappings[PMI_GPR64], 1},
-    {&PartMappings[PMI_GPR64], 1},
-    {&PartMappings[PMI_GPR64], 1},
+    {&PartMappings[PMI_GPRB64], 1},
+    {&PartMappings[PMI_GPRB64], 1},
+    {&PartMappings[PMI_GPRB64], 1},
     // Maximum 3 FPR operands; 32 bit.
-    {&PartMappings[PMI_FPR32], 1},
-    {&PartMappings[PMI_FPR32], 1},
-    {&PartMappings[PMI_FPR32], 1},
+    {&PartMappings[PMI_FPRB32], 1},
+    {&PartMappings[PMI_FPRB32], 1},
+    {&PartMappings[PMI_FPRB32], 1},
     // Maximum 3 FPR operands; 64 bit.
-    {&PartMappings[PMI_FPR64], 1},
-    {&PartMappings[PMI_FPR64], 1},
-    {&PartMappings[PMI_FPR64], 1},
+    {&PartMappings[PMI_FPRB64], 1},
+    {&PartMappings[PMI_FPRB64], 1},
+    {&PartMappings[PMI_FPRB64], 1},
 };
 
-enum ValueMappingsIdx {
+enum ValueMappingIdx {
   InvalidIdx = 0,
-  GPR32Idx = 1,
-  GPR64Idx = 4,
-  FPR32Idx = 7,
-  FPR64Idx = 10,
+  GPRB32Idx = 1,
+  GPRB64Idx = 4,
+  FPRB32Idx = 7,
+  FPRB64Idx = 10,
 };
 } // namespace RISCV
 } // namespace llvm
@@ -93,19 +93,19 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case RISCV::SR07RegClassID:
   case RISCV::SPRegClassID:
   case RISCV::GPRX0RegClassID:
-    return getRegBank(RISCV::GPRRegBankID);
+    return getRegBank(RISCV::GPRBRegBankID);
   case RISCV::FPR64RegClassID:
   case RISCV::FPR16RegClassID:
   case RISCV::FPR32RegClassID:
   case RISCV::FPR64CRegClassID:
   case RISCV::FPR32CRegClassID:
-    return getRegBank(RISCV::FPRRegBankID);
+    return getRegBank(RISCV::FPRBRegBankID);
   }
 }
 
 static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
   assert(Size == 32 || Size == 64);
-  unsigned Idx = Size == 64 ? RISCV::FPR64Idx : RISCV::FPR32Idx;
+  unsigned Idx = Size == 64 ? RISCV::FPRB64Idx : RISCV::FPRB32Idx;
   return &RISCV::ValueMappings[Idx];
 }
 
@@ -124,12 +124,13 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  unsigned GPRSize = getMaximumSize(RISCV::GPRRegBankID);
+  unsigned GPRSize = getMaximumSize(RISCV::GPRBRegBankID);
   assert((GPRSize == 32 || GPRSize == 64) && "Unexpected GPR size");
 
   unsigned NumOperands = MI.getNumOperands();
   const ValueMapping *GPRValueMapping =
-      &RISCV::ValueMappings[GPRSize == 64 ? RISCV::GPR64Idx : RISCV::GPR32Idx];
+      &RISCV::ValueMappings[GPRSize == 64 ? RISCV::GPRB64Idx
+                                          : RISCV::GPRB32Idx];
   const ValueMapping *OperandsMapping = GPRValueMapping;
 
   switch (Opc) {

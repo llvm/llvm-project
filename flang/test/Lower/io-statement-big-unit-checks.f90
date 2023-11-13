@@ -2,7 +2,7 @@
 ! unit number that may turn out at runtime to be too large to fit in a default
 ! integer. Unit numbers must fit on default integers. This file tests that the
 ! related generated runtime checks and error recovery code.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 
 ! -----------------------------------------------------------------------------

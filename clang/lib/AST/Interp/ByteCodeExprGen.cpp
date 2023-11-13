@@ -1624,6 +1624,11 @@ bool ByteCodeExprGen<Emitter>::VisitCXXScalarValueInitExpr(
   return this->visitZeroInitializer(classifyPrim(Ty), Ty, E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitSizeOfPackExpr(const SizeOfPackExpr *E) {
+  return this->emitConst(E->getPackLength(), E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
