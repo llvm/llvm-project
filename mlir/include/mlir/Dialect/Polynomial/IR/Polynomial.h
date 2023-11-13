@@ -95,8 +95,8 @@ public:
 
   // Prints polynomial to 'os'.
   void print(raw_ostream &os) const;
-  void print(raw_ostream &os, const std::string &separator,
-             const std::string &exponentiation) const;
+  void print(raw_ostream &os, ::llvm::StringRef separator,
+             ::llvm::StringRef exponentiation) const;
   void dump() const;
 
   // Prints polynomial so that it can be used as a valid identifier

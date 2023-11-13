@@ -48,8 +48,8 @@ Polynomial Polynomial::fromCoefficients(ArrayRef<int64_t> coeffs,
   return Polynomial::fromMonomials(monomials, context);
 }
 
-void Polynomial::print(raw_ostream &os, const std::string &separator,
-                       const std::string &exponentiation) const {
+void Polynomial::print(raw_ostream &os, ::llvm::StringRef separator,
+                       ::llvm::StringRef exponentiation) const {
   bool first = true;
   for (const auto &term : terms->terms()) {
     if (first) {
