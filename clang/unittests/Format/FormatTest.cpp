@@ -21076,6 +21076,11 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
                "    {7,  5,                  \"!!\"   }\n"
                "};",
                Style);
+  verifyFormat("Foo foo = {\n"
+               "    // comment\n"
+               "    {1, 2}\n"
+               "};",
+               Style);
 
   Style.ColumnLimit = 20;
   // FIXME: unstable test case
