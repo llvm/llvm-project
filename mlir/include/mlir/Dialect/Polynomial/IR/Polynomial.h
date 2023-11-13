@@ -58,7 +58,7 @@ public:
   // Prints polynomial to 'os'.
   void print(raw_ostream &os) const;
 
-  friend ::llvm::hash_code hash_value(Monomial arg);
+  friend ::llvm::hash_code hash_value(const Monomial& arg);
 
 public:
   APInt coefficient;
@@ -118,7 +118,7 @@ inline ::llvm::hash_code hash_value(Polynomial arg) {
   return ::llvm::hash_value(arg.terms);
 }
 
-inline ::llvm::hash_code hash_value(Monomial arg) {
+inline ::llvm::hash_code hash_value(const Monomial& arg) {
   return ::llvm::hash_value(arg.coefficient) ^ ::llvm::hash_value(arg.exponent);
 }
 
