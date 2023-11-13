@@ -83,7 +83,7 @@ mlir::Attribute mlir::polynomial::PolynomialAttr::parse(AsmParser &parser,
   if (failed(parser.parseLess()))
     return {};
 
-  std::vector<Monomial> monomials;
+  llvm::SmallVector<Monomial> monomials;
   llvm::SmallSet<std::string, 2> variables;
   llvm::DenseSet<APInt> exponents;
 
