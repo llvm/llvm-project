@@ -2925,7 +2925,7 @@ void DWARFASTParserClang::CreateStaticMemberVariable(
   }
 
   llvm::Expected<llvm::APInt> const_value_or_err =
-      ExtractIntFromFormValue(ct, *attrs.const_value_form);
+      ExtractIntFromFormValue(ct, *maybe_const_form_value);
   if (!const_value_or_err) {
     LLDB_LOG_ERROR(log, const_value_or_err.takeError(),
                    "Failed to add const value to variable {1}: {0}",
