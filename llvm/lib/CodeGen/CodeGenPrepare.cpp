@@ -4886,6 +4886,10 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     if (!Ext)
       return false;
 
+    // TODO: add comments.
+    if (Ext->hasNonNeg())
+      return false;
+
     // Try to move this ext out of the way of the addressing mode.
     // Ask for a method for doing so.
     TypePromotionHelper::Action TPH =
