@@ -7,6 +7,15 @@
 typedef unsigned int uint;
 typedef unsigned short int ushort;
 
+// CHECK-LABEL: @test_setprio_inc_wg(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.amdgcn.s.setprio.inc.wg(i16 10)
+// CHECK-NEXT:    ret void
+//
+void test_setprio_inc_wg() {
+  __builtin_amdgcn_s_setprio_inc_wg(10);
+}
+
 // CHECK-LABEL: @test_bitop3_b32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
