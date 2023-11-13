@@ -7487,11 +7487,47 @@ generation of the other destruction cases, optimizing the above `foo.destroy` to
 def CoroReturnTypeAndWrapperDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
-The `coro_only_destroy_when_complete` attribute should be marked on a C++ class. The coroutines
-whose return type is marked with the attribute are assumed to be destroyed only after the coroutine has
-reached the final suspend point.
+The ``coro_return_type`` attribute should be marked on a C++ class to mark it as
+a **coroutine return type (CRT)**. 
 
-This is helpful for the optimizers to reduce the size of the destroy function for the coroutines.
+A function ``R func(P1, .., PN)`` has a coroutine return type (CRT) ``R`` if ``R``
+is marked by ``[[clang::coro_return_type]]`` and  ``R`` has a promise type associated to it
+(i.e., std​::​coroutine_traits<R, P1, .., PN>​::​promise_type is a valid promise type).
+
+If the return type of a function is a ``CRT`` then the function must be a coroutine.
+Otherwise it is invalid. It is allowed for a non-coroutine to return a ``CRT``
+if the function is marked with ``[[clang::coro_wrapper]]``.
+
+The ``coro_wrapper`` attribute should be marked on a C++ function to mark it as 
+a **coroutine wrapper**. A coroutine wrapper is a function which returns a ``CRT``, 
+is not a coroutine itself and is marked with ``[[clang::coro_wrapper]]``.
+
+From a language perspective, it is not possible to differentiate between a coroutine and a
+function returning a CRT by merely looking at the function signature.
+These two annotations allows implementations to enforce that only coroutines and explicitly marked
+coroutine wrappers are allowed to return a ``CRT``.
+
+For example,
+
+.. code-block:: c++
+
+  // This is a CRT.
+  template <typename T> struct [[clang::coro_return_type]] Task {
+    using promise_type = some_promise_type;
+  };
+
+  Task<int> increment(int a) { co_return a + 1; } // Fine. This is a coroutine.
+  Task<int> foo() { return increment(1); } // Error. foo is not a coroutine.
+
+  // Fine for a coroutine wrapper to return a CRT.
+  Task<int> [[clang::coro_wrapper]] foo() { return increment(1); }
+
+  void bar() {
+    // Invalid. This intantiates a function which returns a CRT but is not marked as
+    // a coroutine wrapper.
+    std::function<Task<int>(int)> f = increment;
+  }
+
 
 For example,
 
@@ -7507,45 +7543,6 @@ For example,
   }
 
 The compiler may generate the following pseudocode:
-
-.. code-block:: c++
-
-  void foo.destroy(foo.Frame *frame) {
-    switch(frame->suspend_index()) {
-      case 1:
-        frame->d.~dtor();
-        break;
-      case 2:
-        frame->d.~dtor();
-        frame->d1.~dtor();
-        break;
-      case 3:
-        frame->d.~dtor();
-        frame->d1.~dtor();
-        frame->d2.~dtor();
-        break;
-      default: // coroutine completed or haven't started
-        break;
-    }
-
-    frame->promise.~promise_type();
-    delete frame;
-  }
-
-The `foo.destroy()` function's purpose is to release all of the resources
-initialized for the coroutine when it is destroyed in a suspended state.
-However, if the coroutine is only ever destroyed at the final suspend state,
-the rest of the conditions are superfluous.
-
-The user can use the `coro_only_destroy_when_complete` attributo suppress
-generation of the other destruction cases, optimizing the above `foo.destroy` to:
-
-.. code-block:: c++
-
-  void foo.destroy(foo.Frame *frame) {
-    frame->promise.~promise_type();
-    delete frame;
-  }
 
   }];
 }

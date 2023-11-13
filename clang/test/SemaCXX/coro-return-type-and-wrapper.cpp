@@ -56,6 +56,7 @@ void foo() {
 }
 }
 
+namespace std_function {
 namespace std {
 template <typename> class function;
 
@@ -95,3 +96,4 @@ void use_std_function() {
   test2(true);
   test3(true);
 }
+} // namespace std_function
