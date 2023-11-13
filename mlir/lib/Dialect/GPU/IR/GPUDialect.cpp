@@ -23,6 +23,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -2032,6 +2033,9 @@ gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 LogicalResult gpu::DynamicSharedMemoryOp::verify() {
+  if (!getOperation()->getParentWithTrait<OpTrait::SymbolTable>())
+    return emitOpError() << "must be inside an op with symbol table";
+
   MemRefType memrefType = getResultMemref().getType();
   // Check address space
   if (!GPUDialect::hasWorkgroupMemoryAddressSpace(memrefType)) {

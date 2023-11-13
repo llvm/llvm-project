@@ -560,9 +560,8 @@ static IntegerAttr wrapNumericMemorySpace(MLIRContext *ctx, unsigned space) {
 
 /// Generates a symbol with 0-sized array type for dynamic shared memory usage,
 /// or uses existing symbol.
-template <typename ModuleTy>
 LLVM::GlobalOp getDynamicSharedMemorySymbol(
-    ConversionPatternRewriter &rewriter, ModuleTy moduleOp,
+    ConversionPatternRewriter &rewriter, Operation *moduleOp,
     gpu::DynamicSharedMemoryOp op, const LLVMTypeConverter *typeConverter,
     MemRefType memrefType, unsigned alignmentBit, unsigned addressSpace) {
 
@@ -594,7 +593,7 @@ LLVM::GlobalOp getDynamicSharedMemorySymbol(
 
   // Step 3. Generate a global op
   OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPoint(&moduleOp.front());
+  rewriter.setInsertionPoint(&moduleOp->getRegion(0).front().front());
 
   auto zeroSizedArrayType = LLVM::LLVMArrayType::get(
       typeConverter->convertType(memrefType.getElementType()), 0);
@@ -621,18 +620,10 @@ LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
   // memory with memref<0xi8> type
   LLVM::LLVMFuncOp funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
   LLVM::GlobalOp shmemOp = {};
-  if (gpu::GPUModuleOp moduleOp = funcOp->getParentOfType<gpu::GPUModuleOp>()) {
-    shmemOp =
-        getDynamicSharedMemorySymbol(rewriter, moduleOp, op, getTypeConverter(),
-                                     memrefType0sz, alignmentBit, addressSpace);
-  } else if (ModuleOp moduleOp = funcOp->getParentOfType<ModuleOp>()) {
-    shmemOp =
-        getDynamicSharedMemorySymbol(rewriter, moduleOp, op, getTypeConverter(),
-                                     memrefType0sz, alignmentBit, addressSpace);
-  }
-  if (!shmemOp) {
-    return rewriter.notifyMatchFailure(op, "failed generating global op");
-  }
+  Operation *moduleOp = funcOp->getParentWithTrait<OpTrait::SymbolTable>();
+  shmemOp =
+      getDynamicSharedMemorySymbol(rewriter, moduleOp, op, getTypeConverter(),
+                                   memrefType0sz, alignmentBit, addressSpace);
 
   // Step 3. Get address of the global symbol
   OpBuilder::InsertionGuard guard(rewriter);
