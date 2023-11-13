@@ -31,6 +31,8 @@ namespace detail {
 struct PolynomialStorage;
 } // namespace detail
 
+/// A class representing a monomial of a single-variable polynomial with integer
+/// coefficients.
 class Monomial {
 public:
   Monomial(int64_t coeff, uint64_t expo)
