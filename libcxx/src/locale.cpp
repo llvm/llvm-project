@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <algorithm>
+#include <atomic>
 #include <clocale>
 #include <codecvt>
 #include <cstddef>
@@ -81,7 +82,7 @@ locale_t __cloc() {
 
 namespace {
 
-struct release
+struct releaser
 {
     void operator()(locale::facet* p) {p->__release_shared();}
 };
@@ -155,10 +156,13 @@ public:
         {return static_cast<size_t>(id) < facets_.size() && facets_[static_cast<size_t>(id)];}
     const locale::facet* use_facet(long id) const;
 
+    void acquire();
+    void release();
 private:
     void install(facet* f, long id);
     template <class F> void install(F* f) {install(f, f->id.__get());}
     template <class F> void install_from(const __imp& other);
+    static std::atomic<__imp*> classic_;
 };
 
 locale::__imp::__imp(size_t refs)
@@ -500,7 +504,7 @@ locale::__imp::__imp(const __imp& other, facet* f, long id)
       name_("*")
 {
     f->__add_shared();
-    unique_ptr<facet, release> hold(f);
+    unique_ptr<facet, releaser> hold(f);
     facets_ = other.facets_;
     for (unsigned i = 0; i < other.facets_.size(); ++i)
         if (facets_[i])
@@ -519,7 +523,7 @@ void
 locale::__imp::install(facet* f, long id)
 {
     f->__add_shared();
-    unique_ptr<facet, release> hold(f);
+    unique_ptr<facet, releaser> hold(f);
     if (static_cast<size_t>(id) >= facets_.size())
         facets_.resize(static_cast<size_t>(id+1));
     if (facets_[static_cast<size_t>(id)])
@@ -554,38 +558,53 @@ struct __no_destroy {
     alignas(T) byte buf[sizeof(T)];
 };
 
+std::atomic<locale::__imp*> locale::__imp::classic_;
+
 const locale& locale::classic() {
     static const __no_destroy<locale> c(__private_tag{}, &make<__imp>(1u));
+    // TODO:
+    classic_.store(c->__locale_, std::memory_order_relaxed);
     return c.get();
 }
 
 locale& locale::__global() {
     static __no_destroy<locale> g(locale::classic());
     return g.get();
+
+void locale::__imp::acquire()
+{
+    if (this != classic_.load(std::memory_order_relaxed))
+        __add_shared();
+}
+
+void locale::__imp::release()
+{
+    if (this != classic_.load(std::memory_order_relaxed))
+        __release_shared();
 }
 
 locale::locale() noexcept
     : __locale_(__global().__locale_)
 {
-    __locale_->__add_shared();
+    __locale_->acquire();
 }
 
 locale::locale(const locale& l) noexcept
     : __locale_(l.__locale_)
 {
-    __locale_->__add_shared();
+    __locale_->acquire();
 }
 
 locale::~locale()
 {
-    __locale_->__release_shared();
+    __locale_->release();
 }
 
 const locale&
 locale::operator=(const locale& other) noexcept
 {
-    other.__locale_->__add_shared();
-    __locale_->__release_shared();
+    other.__locale_->acquire();
+    __locale_->release();
     __locale_ = other.__locale_;
     return *this;
 }
@@ -594,32 +613,32 @@ locale::locale(const char* name)
     : __locale_(name ? new __imp(name)
                      : (__throw_runtime_error("locale constructed with null"), nullptr))
 {
-    __locale_->__add_shared();
+    __locale_->acquire();
 }
 
 locale::locale(const string& name)
     : __locale_(new __imp(name))
 {
-    __locale_->__add_shared();
+    __locale_->acquire();
 }
 
 locale::locale(const locale& other, const char* name, category c)
     : __locale_(name ? new __imp(*other.__locale_, name, c)
                      : (__throw_runtime_error("locale constructed with null"), nullptr))
 {
-    __locale_->__add_shared();
+    __locale_->acquire();
 }
 
 locale::locale(const locale& other, const string& name, category c)
     : __locale_(new __imp(*other.__locale_, name, c))
 {
-    __locale_->__add_shared();
+    __locale_->acquire();
 }
 
 locale::locale(const locale& other, const locale& one, category c)
     : __locale_(new __imp(*other.__locale_, *one.__locale_, c))
 {
-    __locale_->__add_shared();
+    __locale_->acquire();
 }
 
 string
@@ -635,7 +654,7 @@ locale::__install_ctor(const locale& other, facet* f, long id)
         __locale_ = new __imp(*other.__locale_, f, id);
     else
         __locale_ = other.__locale_;
-    __locale_->__add_shared();
+    __locale_->acquire();
 }
 
 locale
