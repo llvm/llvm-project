@@ -32,9 +32,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include <iostream>
 #include <optional>
-using namespace std;
 
 #define DEBUG_TYPE "flang-lower-expr"
 
@@ -892,9 +890,6 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // fir.boxproc/fir.tuple<fir.boxproc, len> as it should.
   if (actual.isProcedure()) {
     if (hlfir::isBoxProcAddressType(dummyType)) {
-      if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(expr)) {
-        cout << " AAA" << endl;
-      }
       // Procedure actual to procedure pointer dummy.
       auto tempBoxProc{builder.createTemporary(loc, actual.getType())};
       builder.create<fir::StoreOp>(loc, actual, tempBoxProc);
