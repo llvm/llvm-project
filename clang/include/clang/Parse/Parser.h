@@ -230,9 +230,6 @@ class Parser : public CodeCompletionHandler {
   /// Parsing OpenMP directive mode.
   bool OpenMPDirectiveParsing = false;
 
-  /// Parsing OpenACC directive mode.
-  bool OpenACCDirectiveParsing = false;
-
   /// When true, we are directly inside an Objective-C message
   /// send expression.
   ///

@@ -319,8 +319,8 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
       break;
     case tok::annot_pragma_openacc:
     case tok::annot_pragma_openacc_end:
-      if (OpenACCDirectiveParsing)
-        return false;
+      // FIXME: Like OpenMP above, we should not be doing this if we're parsing
+      // an OpenACC Directive.
       ConsumeAnnotationToken();
       break;
     case tok::annot_module_begin:
