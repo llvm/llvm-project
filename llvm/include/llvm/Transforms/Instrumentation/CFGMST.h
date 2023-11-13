@@ -94,6 +94,39 @@ public:
     return It->second.get();
   }
 
+  void handleCoroSuspendEdge(Edge *E) {
+    // We must not add instrumentation to the BB representing the
+    // "suspend" path, else CoroSplit won't be able to lower
+    // llvm.coro.suspend to a tail call. We do want profiling info for
+    // the other branches (resume/destroy). So we do 2 things:
+    // 1. we prefer instrumenting those other edges by setting the weight
+    //    of the "suspend" edge to max, and
+    // 2. we mark the edge as "Removed" to guarantee it is not considered
+    //    for instrumentation. That could technically happen:
+    //    (from test/Transforms/Coroutines/coro-split-musttail.ll)
+    //
+    // %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
+    // switch i8 %suspend, label %exit [
+    //   i8 0, label %await.ready
+    //   i8 1, label %exit
+    // ]
+    const BasicBlock *EdgeTarget = E->DestBB;
+    if (!EdgeTarget)
+      return;
+    assert(E->SrcBB);
+    const Function *F = EdgeTarget->getParent();
+    if (!F->isPresplitCoroutine())
+      return;
+
+    const Instruction *TI = E->SrcBB->getTerminator();
+    if (auto *SWInst = dyn_cast<SwitchInst>(TI))
+      if (auto *Intrinsic = dyn_cast<IntrinsicInst>(SWInst->getCondition()))
+        if (Intrinsic->getIntrinsicID() == Intrinsic::coro_suspend &&
+            SWInst->getDefaultDest() == EdgeTarget) {
+          E->Weight = UINT64_MAX;
+          E->Removed = true;
+        }
+  }
   // Traverse the CFG using a stack. Find all the edges and assign the weight.
   // Edges with large weight will be put into MST first so they are less likely
   // to be instrumented.
@@ -123,70 +156,32 @@ public:
 
     static const uint32_t CriticalEdgeMultiplier = 1000;
 
-    auto GetCoroSuspendSwitch =
-        [&](const Instruction *TI) -> const SwitchInst * {
-      if (!F.isPresplitCoroutine())
-        return nullptr;
-      if (auto *SWInst = dyn_cast<SwitchInst>(TI))
-        if (auto *Intrinsic = dyn_cast<IntrinsicInst>(SWInst->getCondition()))
-          if (Intrinsic->getIntrinsicID() == Intrinsic::coro_suspend)
-            return SWInst;
-      return nullptr;
-    };
-
     for (BasicBlock &BB : F) {
       Instruction *TI = BB.getTerminator();
-      const SwitchInst *CoroSuspendSwitch = GetCoroSuspendSwitch(TI);
       uint64_t BBWeight =
           (BFI != nullptr ? BFI->getBlockFreq(&BB).getFrequency() : 2);
       uint64_t Weight = 2;
       if (int successors = TI->getNumSuccessors()) {
         for (int i = 0; i != successors; ++i) {
           BasicBlock *TargetBB = TI->getSuccessor(i);
-          const bool Critical = isCriticalEdge(TI, i);
-          const bool IsCoroSuspendTarget =
-              CoroSuspendSwitch &&
-              CoroSuspendSwitch->getDefaultDest() == TargetBB;
-          // We must not add instrumentation to the BB representing the
-          // "suspend" path, else CoroSplit won't be able to lower
-          // llvm.coro.suspend to a tail call. We do want profiling info for
-          // the other branches (resume/destroy). So we do 2 things:
-          // 1. we prefer instrumenting those other edges by setting the weight
-          //    of the "suspend" edge to max, and
-          // 2. we mark the edge as "Removed" to guarantee it is not considered
-          //    for instrumentation. That could technically happen:
-          //    (from test/Transforms/Coroutines/coro-split-musttail.ll)
-          //
-          // %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
-          // switch i8 %suspend, label %exit [
-          //   i8 0, label %await.ready
-          //   i8 1, label %exit
-          // ]
-          if (IsCoroSuspendTarget) {
-            Weight = UINT64_MAX;
-          } else {
-            bool Critical = isCriticalEdge(TI, i);
-            uint64_t scaleFactor = BBWeight;
-            if (Critical) {
-              if (scaleFactor < UINT64_MAX / CriticalEdgeMultiplier)
-                scaleFactor *= CriticalEdgeMultiplier;
-              else
-                scaleFactor = UINT64_MAX;
-            }
-            if (BPI != nullptr)
-              Weight =
-                  BPI->getEdgeProbability(&BB, TargetBB).scale(scaleFactor);
-            if (Weight == 0)
-              Weight++;
+          bool Critical = isCriticalEdge(TI, i);
+          uint64_t scaleFactor = BBWeight;
+          if (Critical) {
+            if (scaleFactor < UINT64_MAX / CriticalEdgeMultiplier)
+              scaleFactor *= CriticalEdgeMultiplier;
+            else
+              scaleFactor = UINT64_MAX;
           }
+          if (BPI != nullptr)
+            Weight = BPI->getEdgeProbability(&BB, TargetBB).scale(scaleFactor);
+          if (Weight == 0)
+            Weight++;
           auto *E = &addEdge(&BB, TargetBB, Weight);
           E->IsCritical = Critical;
-          // See comment above - we must guarantee the coro suspend BB isn't
-          // instrumented.
-          if (IsCoroSuspendTarget)
-            E->Removed = true;
+          handleCoroSuspendEdge(E);
           LLVM_DEBUG(dbgs() << "  Edge: from " << BB.getName() << " to "
                             << TargetBB->getName() << "  w=" << Weight << "\n");
+
           // Keep track of entry/exit edges:
           if (&BB == Entry) {
             if (Weight > MaxEntryOutWeight) {
