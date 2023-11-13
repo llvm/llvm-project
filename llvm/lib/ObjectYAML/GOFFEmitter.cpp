@@ -27,7 +27,7 @@ static const uint8_t TXTMaxDataLength = 56;
 // Common flag values on records.
 enum {
   // Flag: This record is continued.
-  Rec_Continued = 1 << (8 - 7 - 1),
+  Rec_Continued = 1,
 
   // Flag: This record is a continuation.
   Rec_Continuation = 1 << (8 - 6 - 1),
@@ -73,6 +73,22 @@ raw_ostream &operator<<(raw_ostream &OS, const yaml::BinaryRef &Data) {
 // physical records are created for the data. Possible fill bytes at the end of
 // a physical record are written automatically.
 class GOFFOstream : public raw_ostream {
+
+public:
+  explicit GOFFOstream(raw_ostream &OS)
+      : OS(OS), LogicalRecords(0), RemainingSize(0), NewLogicalRecord(false) {
+    SetBufferSize(GOFF::PayloadLength);
+  }
+
+  ~GOFFOstream() { finalize(); }
+
+  void newRecord(GOFF::RecordType Type, size_t Size);
+
+  void finalize() { fillRecord(); }
+
+  uint32_t logicalRecords() { return LogicalRecords; }
+
+private:
   /// The underlying raw_ostream.
   raw_ostream &OS;
 
@@ -112,20 +128,6 @@ class GOFFOstream : public raw_ostream {
   /// Return the current position within the stream, not counting the bytes
   /// currently in the buffer.
   uint64_t current_pos() const override { return OS.tell(); }
-
-public:
-  explicit GOFFOstream(raw_ostream &OS)
-      : OS(OS), LogicalRecords(0), RemainingSize(0), NewLogicalRecord(false) {
-    SetBufferSize(GOFF::PayloadLength);
-  }
-
-  ~GOFFOstream() { finalize(); }
-
-  void newRecord(GOFF::RecordType Type, size_t Size);
-
-  void finalize() { fillRecord(); }
-
-  uint32_t logicalRecords() { return LogicalRecords; }
 };
 
 void GOFFOstream::writeRecordPrefix(raw_ostream &OS, GOFF::RecordType Type,
@@ -352,7 +354,7 @@ void GOFFState::writeSection(GOFFYAML::Section Sec) {
 
 void GOFFState::writeRelocationDirectory(GOFFYAML::Relocations Rels) {
   size_t Size = 0;
-  for (auto &Rel : Rels.Relocs) {
+  for (const llvm::GOFFYAML::Relocation &Rel : Rels.Relocs) {
     Size += 8;
     if (!(Rel.Flags & GOFF::RLD_Same_RID))
       Size += 4;
@@ -375,7 +377,7 @@ void GOFFState::writeRelocationDirectory(GOFFYAML::Relocations Rels) {
   GW.newRecord(GOFF::RT_RLD, Size + 3);
   GW << binaryBe(uint8_t(0))      // Reserved
      << binaryBe(uint16_t(Size)); // Length of relocation data
-  for (auto &Rel : Rels.Relocs) {
+  for (const llvm::GOFFYAML::Relocation &Rel : Rels.Relocs) {
     GW << binaryBe(uint8_t(Rel.Flags)) // Flags, byte 1
        << binaryBe(uint8_t(Rel.ReferenceType << 4 | Rel.ReferentType)) //
        << binaryBe(uint8_t(Rel.Action << 1 | (Rel.Flags >> 8)))        //
