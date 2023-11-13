@@ -11,6 +11,7 @@
 // RUN:     readability-identifier-naming.ClassConstantPrefix: 'k', \
 // RUN:     readability-identifier-naming.ClassMemberCase: CamelCase, \
 // RUN:     readability-identifier-naming.ClassMethodCase: camelBack, \
+// RUN:     readability-identifier-naming.ConceptCase: CamelCase, \
 // RUN:     readability-identifier-naming.ConstantCase: UPPER_CASE, \
 // RUN:     readability-identifier-naming.ConstantSuffix: '_CST', \
 // RUN:     readability-identifier-naming.ConstexprFunctionCase: lower_case, \
@@ -250,6 +251,15 @@ class my_derived_class : public virtual my_class {};
 
 class CMyWellNamedClass {};
 // No warning expected as this class is well named.
+
+template<typename t_t>
+concept MyConcept = requires (t_t a_t) { {a_t++}; };
+// No warning expected as this concept is well named.
+
+template<typename t_t>
+concept my_concept_2 = requires (t_t a_t) { {a_t++}; };
+// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for concept 'my_concept_2'
+// CHECK-FIXES: {{^}}concept MyConcept2 = requires (t_t a_t) { {a_t++}; };{{$}}
 
 template <typename t_t>
 class CMyWellNamedClass2 : public my_class {

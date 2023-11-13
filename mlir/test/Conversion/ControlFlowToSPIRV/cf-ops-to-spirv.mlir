@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -convert-cf-to-spirv -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt --split-input-file --convert-cf-to-spirv --verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // cf.br, cf.cond_br
@@ -35,4 +35,25 @@ func.func @simple_loop(%begin: i32, %end: i32, %step: i32) {
   return
 }
 
+}
+
+// -----
+
+// Handle blocks whose arguments require type conversion.
+
+// CHECK-LABEL: func.func @main_graph
+func.func @main_graph(%arg0: index) {
+  %c3 = arith.constant 1 : index
+// CHECK:  spirv.Branch ^bb1({{.*}} : i32)
+  cf.br ^bb1(%arg0 : index)
+// CHECK:      ^bb1({{.*}}: i32):       // 2 preds: ^bb0, ^bb2
+^bb1(%0: index):  // 2 preds: ^bb0, ^bb2
+  %1 = arith.cmpi slt, %0, %c3 : index
+// CHECK:        spirv.BranchConditional {{.*}}, ^bb2, ^bb3
+  cf.cond_br %1, ^bb2, ^bb3
+^bb2:  // pred: ^bb1
+// CHECK:  spirv.Branch ^bb1({{.*}} : i32)
+  cf.br ^bb1(%c3 : index)
+^bb3:  // pred: ^bb1
+  return
 }

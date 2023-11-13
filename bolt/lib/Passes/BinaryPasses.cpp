@@ -317,38 +317,46 @@ void NormalizeCFG::runOnFunctions(BinaryContext &BC) {
 }
 
 void EliminateUnreachableBlocks::runOnFunction(BinaryFunction &Function) {
-  if (!Function.getLayout().block_empty()) {
-    unsigned Count;
-    uint64_t Bytes;
-    Function.markUnreachableBlocks();
-    LLVM_DEBUG({
-      for (BinaryBasicBlock &BB : Function) {
-        if (!BB.isValid()) {
-          dbgs() << "BOLT-INFO: UCE found unreachable block " << BB.getName()
-                 << " in function " << Function << "\n";
-          Function.dump();
-        }
+  BinaryContext &BC = Function.getBinaryContext();
+  unsigned Count;
+  uint64_t Bytes;
+  Function.markUnreachableBlocks();
+  LLVM_DEBUG({
+    for (BinaryBasicBlock &BB : Function) {
+      if (!BB.isValid()) {
+        dbgs() << "BOLT-INFO: UCE found unreachable block " << BB.getName()
+               << " in function " << Function << "\n";
+        Function.dump();
       }
-    });
-    std::tie(Count, Bytes) = Function.eraseInvalidBBs();
-    DeletedBlocks += Count;
-    DeletedBytes += Bytes;
-    if (Count) {
-      Modified.insert(&Function);
-      if (opts::Verbosity > 0)
-        outs() << "BOLT-INFO: removed " << Count
-               << " dead basic block(s) accounting for " << Bytes
-               << " bytes in function " << Function << '\n';
     }
+  });
+  BinaryContext::IndependentCodeEmitter Emitter =
+      BC.createIndependentMCCodeEmitter();
+  std::tie(Count, Bytes) = Function.eraseInvalidBBs(Emitter.MCE.get());
+  DeletedBlocks += Count;
+  DeletedBytes += Bytes;
+  if (Count) {
+    auto L = BC.scopeLock();
+    Modified.insert(&Function);
+    if (opts::Verbosity > 0)
+      outs() << "BOLT-INFO: removed " << Count
+             << " dead basic block(s) accounting for " << Bytes
+             << " bytes in function " << Function << '\n';
   }
 }
 
 void EliminateUnreachableBlocks::runOnFunctions(BinaryContext &BC) {
-  for (auto &It : BC.getBinaryFunctions()) {
-    BinaryFunction &Function = It.second;
-    if (shouldOptimize(Function))
-      runOnFunction(Function);
-  }
+  ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
+    runOnFunction(BF);
+  };
+
+  ParallelUtilities::PredicateTy SkipPredicate = [&](const BinaryFunction &BF) {
+    return !shouldOptimize(BF) || BF.getLayout().block_empty();
+  };
+
+  ParallelUtilities::runOnEachFunction(
+      BC, ParallelUtilities::SchedulingPolicy::SP_CONSTANT, WorkFun,
+      SkipPredicate, "elimininate-unreachable");
 
   if (DeletedBlocks)
     outs() << "BOLT-INFO: UCE removed " << DeletedBlocks << " blocks and "
@@ -610,8 +618,8 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
           if (BF.requiresAddressTranslation() && BC.MIB->getOffset(*II))
             PreservedOffsetAnnotations.emplace_back(&(*II),
                                                     *BC.MIB->getOffset(*II));
-          if (auto Label = BC.MIB->getLabel(*II))
-            PreservedLabelAnnotations.emplace_back(&*II, *Label);
+          if (MCSymbol *Label = BC.MIB->getLabel(*II))
+            PreservedLabelAnnotations.emplace_back(&*II, Label);
           BC.MIB->stripAnnotations(*II);
         }
       }
@@ -620,8 +628,8 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
   for (BinaryFunction *BF : BC.getInjectedBinaryFunctions())
     for (BinaryBasicBlock &BB : *BF)
       for (MCInst &Instruction : BB) {
-        if (auto Label = BC.MIB->getLabel(Instruction))
-          PreservedLabelAnnotations.emplace_back(&Instruction, *Label);
+        if (MCSymbol *Label = BC.MIB->getLabel(Instruction))
+          PreservedLabelAnnotations.emplace_back(&Instruction, Label);
         BC.MIB->stripAnnotations(Instruction);
       }
 

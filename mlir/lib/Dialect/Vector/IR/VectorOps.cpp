@@ -1188,9 +1188,6 @@ OpFoldResult vector::ExtractElementOp::fold(FoldAdaptor adaptor) {
   if (!adaptor.getPosition())
     return {};
 
-  Attribute src = adaptor.getVector();
-  Attribute pos = adaptor.getPosition();
-
   // Fold extractelement (splat X) -> X.
   if (auto splat = getVector().getDefiningOp<vector::SplatOp>())
     return splat.getInput();
@@ -1200,13 +1197,16 @@ OpFoldResult vector::ExtractElementOp::fold(FoldAdaptor adaptor) {
     if (!llvm::isa<VectorType>(broadcast.getSource().getType()))
       return broadcast.getSource();
 
+  auto src = dyn_cast_or_null<DenseElementsAttr>(adaptor.getVector());
+  auto pos = dyn_cast_or_null<IntegerAttr>(adaptor.getPosition());
   if (!pos || !src)
     return {};
 
-  auto srcElements = llvm::cast<DenseElementsAttr>(src).getValues<Attribute>();
+  auto srcElements = src.getValues<Attribute>();
 
-  auto attr = llvm::dyn_cast<IntegerAttr>(pos);
-  uint64_t posIdx = attr.getInt();
+  uint64_t posIdx = pos.getInt();
+  if (posIdx >= srcElements.size())
+    return {};
 
   return srcElements[posIdx];
 }
@@ -2511,18 +2511,20 @@ OpFoldResult vector::InsertElementOp::fold(FoldAdaptor adaptor) {
   if (!adaptor.getPosition())
     return {};
 
-  Attribute src = adaptor.getSource();
-  Attribute dst = adaptor.getDest();
-  Attribute pos = adaptor.getPosition();
+  auto src = dyn_cast_or_null<TypedAttr>(adaptor.getSource());
+  auto dst = dyn_cast_or_null<DenseElementsAttr>(adaptor.getDest());
+  auto pos = dyn_cast_or_null<IntegerAttr>(adaptor.getPosition());
   if (!src || !dst || !pos)
     return {};
 
-  auto dstElements = llvm::cast<DenseElementsAttr>(dst).getValues<Attribute>();
+  if (src.getType() != getDestVectorType().getElementType())
+    return {};
+
+  auto dstElements = dst.getValues<Attribute>();
 
   SmallVector<Attribute> results(dstElements);
 
-  auto attr = llvm::dyn_cast<IntegerAttr>(pos);
-  uint64_t posIdx = attr.getInt();
+  uint64_t posIdx = pos.getInt();
   if (posIdx >= results.size())
     return {};
   results[posIdx] = src;
@@ -3935,6 +3937,23 @@ static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
   return success();
 }
 
+template <typename TransferOp>
+static LogicalResult foldTransferFullMask(TransferOp op) {
+  auto mask = op.getMask();
+  if (!mask)
+    return failure();
+
+  auto constantMask = mask.template getDefiningOp<vector::ConstantMaskOp>();
+  if (!constantMask)
+    return failure();
+
+  if (!constantMask.isAllOnesMask())
+    return failure();
+
+  op.getMaskMutable().clear();
+  return success();
+}
+
 ///  ```
 ///  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]}
 ///    : vector<1x4xf32>, tensor<4x4xf32>
@@ -3966,6 +3985,8 @@ OpFoldResult TransferReadOp::fold(FoldAdaptor) {
     return vec;
   /// transfer_read(memrefcast) -> transfer_read
   if (succeeded(foldTransferInBoundsAttribute(*this)))
+    return getResult();
+  if (succeeded(foldTransferFullMask(*this)))
     return getResult();
   if (succeeded(memref::foldMemRefCast(*this)))
     return getResult();
@@ -4331,6 +4352,8 @@ LogicalResult TransferWriteOp::fold(FoldAdaptor adaptor,
   if (succeeded(foldWAR(*this, results)))
     return success();
   if (succeeded(foldTransferInBoundsAttribute(*this)))
+    return success();
+  if (succeeded(foldTransferFullMask(*this)))
     return success();
   return memref::foldMemRefCast(*this);
 }
@@ -5597,6 +5620,22 @@ LogicalResult ConstantMaskOp::verify() {
     return emitOpError("expected all mask dim sizes to be zeros, "
                        "as a result of conjunction with zero mask dim");
   return success();
+}
+
+bool ConstantMaskOp::isAllOnesMask() {
+  auto resultType = getVectorType();
+  // Check the corner case of 0-D vectors first.
+  if (resultType.getRank() == 0) {
+    assert(getMaskDimSizes().size() == 1 && "invalid sizes for zero rank mask");
+    return llvm::cast<IntegerAttr>(getMaskDimSizes()[0]).getInt() == 1;
+  }
+  for (const auto [resultSize, intAttr] :
+       llvm::zip_equal(resultType.getShape(), getMaskDimSizes())) {
+    int64_t maskDimSize = llvm::cast<IntegerAttr>(intAttr).getInt();
+    if (maskDimSize < resultSize)
+      return false;
+  }
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

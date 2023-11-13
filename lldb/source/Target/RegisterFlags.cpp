@@ -53,9 +53,7 @@ unsigned RegisterFlags::Field::PaddingDistance(const Field &other) const {
   return lhs_start - rhs_end - 1;
 }
 
-RegisterFlags::RegisterFlags(std::string id, unsigned size,
-                             const std::vector<Field> &fields)
-    : m_id(std::move(id)), m_size(size) {
+void RegisterFlags::SetFields(const std::vector<Field> &fields) {
   // We expect that the XML processor will discard anything describing flags but
   // with no fields.
   assert(fields.size() && "Some fields must be provided.");
@@ -63,6 +61,8 @@ RegisterFlags::RegisterFlags(std::string id, unsigned size,
   // We expect that these are unsorted but do not overlap.
   // They could fill the register but may have gaps.
   std::vector<Field> provided_fields = fields;
+
+  m_fields.clear();
   m_fields.reserve(provided_fields.size());
 
   // ProcessGDBRemote should have sorted these in descending order already.
@@ -71,7 +71,7 @@ RegisterFlags::RegisterFlags(std::string id, unsigned size,
   // Build a new list of fields that includes anonymous (empty name) fields
   // wherever there is a gap. This will simplify processing later.
   std::optional<Field> previous_field;
-  unsigned register_msb = (size * 8) - 1;
+  unsigned register_msb = (m_size * 8) - 1;
   for (auto field : provided_fields) {
     if (previous_field) {
       unsigned padding = previous_field->PaddingDistance(field);
@@ -94,6 +94,12 @@ RegisterFlags::RegisterFlags(std::string id, unsigned size,
   // The last field may not extend all the way to bit 0.
   if (previous_field && previous_field->GetStart() != 0)
     m_fields.push_back(Field("", 0, previous_field->GetStart() - 1));
+}
+
+RegisterFlags::RegisterFlags(std::string id, unsigned size,
+                             const std::vector<Field> &fields)
+    : m_id(std::move(id)), m_size(size) {
+  SetFields(fields);
 }
 
 void RegisterFlags::log(Log *log) const {

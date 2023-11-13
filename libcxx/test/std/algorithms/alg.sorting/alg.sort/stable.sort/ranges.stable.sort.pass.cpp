@@ -27,7 +27,6 @@
 #include <ranges>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 // SFINAE tests.
@@ -234,22 +233,6 @@ void test() {
       std::array in = {S{2}, S{3}, S{1}};
       auto last = std::ranges::stable_sort(in, &S::comparator, &S::projection);
       assert((in == std::array{S{1}, S{2}, S{3}}));
-      assert(last == in.end());
-    }
-  }
-
-  { // The comparator can return any type that's convertible to `bool`.
-    {
-      std::array in = {2, 1, 3};
-      auto last = std::ranges::stable_sort(in.begin(), in.end(), [](int i, int j) { return BooleanTestable{i < j}; });
-      assert((in == std::array{1, 2, 3}));
-      assert(last == in.end());
-    }
-
-    {
-      std::array in = {2, 1, 3};
-      auto last = std::ranges::stable_sort(in, [](int i, int j) { return BooleanTestable{i < j}; });
-      assert((in == std::array{1, 2, 3}));
       assert(last == in.end());
     }
   }

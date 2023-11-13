@@ -264,7 +264,8 @@ private:
 
   uint32_t getSizeOfInitializedData();
 
-  void checkLoadConfig();
+  void prepareLoadConfig();
+  template <typename T> void prepareLoadConfig(T *loadConfig);
   template <typename T> void checkLoadConfigGuardData(const T *loadConfig);
 
   std::unique_ptr<FileOutputBuffer> &buffer;
@@ -696,7 +697,7 @@ void Writer::run() {
       writeHeader<pe32_header>();
     }
     writeSections();
-    checkLoadConfig();
+    prepareLoadConfig();
     sortExceptionTable();
 
     // Fix up the alignment in the TLS Directory's characteristic field,
@@ -1423,8 +1424,17 @@ void Writer::assignAddresses() {
     // If /FUNCTIONPADMIN is used, functions are padded in order to create a
     // hotpatchable image.
     uint32_t padding = sec->isCodeSection() ? config->functionPadMin : 0;
+    std::optional<chpe_range_type> prevECRange;
 
     for (Chunk *c : sec->chunks) {
+      // Alignment EC code range baudaries.
+      if (isArm64EC(ctx.config.machine) && sec->isCodeSection()) {
+        std::optional<chpe_range_type> rangeType = c->getArm64ECRangeType();
+        if (rangeType != prevECRange) {
+          virtualSize = alignTo(virtualSize, 4096);
+          prevECRange = rangeType;
+        }
+      }
       if (padding && c->isHotPatchable())
         virtualSize += padding;
       virtualSize = alignTo(virtualSize, c->getAlignment());
@@ -2247,7 +2257,7 @@ void Writer::fixTlsAlignment() {
   }
 }
 
-void Writer::checkLoadConfig() {
+void Writer::prepareLoadConfig() {
   Symbol *sym = ctx.symtab.findUnderscore("_load_config_used");
   auto *b = cast_if_present<DefinedRegular>(sym);
   if (!b) {
@@ -2271,11 +2281,16 @@ void Writer::checkLoadConfig() {
          Twine(expectedAlign) + " bytes)");
 
   if (ctx.config.is64())
-    checkLoadConfigGuardData(
-        reinterpret_cast<const coff_load_configuration64 *>(symBuf));
+    prepareLoadConfig(reinterpret_cast<coff_load_configuration64 *>(symBuf));
   else
-    checkLoadConfigGuardData(
-        reinterpret_cast<const coff_load_configuration32 *>(symBuf));
+    prepareLoadConfig(reinterpret_cast<coff_load_configuration32 *>(symBuf));
+}
+
+template <typename T> void Writer::prepareLoadConfig(T *loadConfig) {
+  if (ctx.config.dependentLoadFlags)
+    loadConfig->DependentLoadFlags = ctx.config.dependentLoadFlags;
+
+  checkLoadConfigGuardData(loadConfig);
 }
 
 template <typename T>

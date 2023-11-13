@@ -51,6 +51,8 @@
 ! HELP-NEXT: -flto=jobserver         Enable LTO in 'full' mode
 ! HELP-NEXT: -flto=<value>           Set LTO mode
 ! HELP-NEXT: -flto                   Enable LTO in 'full' mode
+! HELP-NEXT: -fms-runtime-lib=<value>
+! HELP-NEXT:                         Select Windows run-time library
 ! HELP-NEXT: -fno-alias-analysis     Do not pass alias information on to LLVM (default for unoptimized builds)
 ! HELP-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! HELP-NEXT: -fno-color-diagnostics  Disable colors in diagnostics

@@ -24,47 +24,47 @@
 namespace llvm {
 namespace RISCV {
 
-RegisterBankInfo::PartialMapping PartMappings[] = {
-    {0, 32, GPRRegBank},
-    {0, 64, GPRRegBank},
-    {0, 32, FPRRegBank},
-    {0, 64, FPRRegBank},
+const RegisterBankInfo::PartialMapping PartMappings[] = {
+    {0, 32, GPRBRegBank},
+    {0, 64, GPRBRegBank},
+    {0, 32, FPRBRegBank},
+    {0, 64, FPRBRegBank},
 };
 
 enum PartialMappingIdx {
-  PMI_GPR32 = 0,
-  PMI_GPR64 = 1,
-  PMI_FPR32 = 2,
-  PMI_FPR64 = 3,
+  PMI_GPRB32 = 0,
+  PMI_GPRB64 = 1,
+  PMI_FPRB32 = 2,
+  PMI_FPRB64 = 3,
 };
 
-RegisterBankInfo::ValueMapping ValueMappings[] = {
+const RegisterBankInfo::ValueMapping ValueMappings[] = {
     // Invalid value mapping.
     {nullptr, 0},
     // Maximum 3 GPR operands; 32 bit.
-    {&PartMappings[PMI_GPR32], 1},
-    {&PartMappings[PMI_GPR32], 1},
-    {&PartMappings[PMI_GPR32], 1},
+    {&PartMappings[PMI_GPRB32], 1},
+    {&PartMappings[PMI_GPRB32], 1},
+    {&PartMappings[PMI_GPRB32], 1},
     // Maximum 3 GPR operands; 64 bit.
-    {&PartMappings[PMI_GPR64], 1},
-    {&PartMappings[PMI_GPR64], 1},
-    {&PartMappings[PMI_GPR64], 1},
+    {&PartMappings[PMI_GPRB64], 1},
+    {&PartMappings[PMI_GPRB64], 1},
+    {&PartMappings[PMI_GPRB64], 1},
     // Maximum 3 FPR operands; 32 bit.
-    {&PartMappings[PMI_FPR32], 1},
-    {&PartMappings[PMI_FPR32], 1},
-    {&PartMappings[PMI_FPR32], 1},
+    {&PartMappings[PMI_FPRB32], 1},
+    {&PartMappings[PMI_FPRB32], 1},
+    {&PartMappings[PMI_FPRB32], 1},
     // Maximum 3 FPR operands; 64 bit.
-    {&PartMappings[PMI_FPR64], 1},
-    {&PartMappings[PMI_FPR64], 1},
-    {&PartMappings[PMI_FPR64], 1},
+    {&PartMappings[PMI_FPRB64], 1},
+    {&PartMappings[PMI_FPRB64], 1},
+    {&PartMappings[PMI_FPRB64], 1},
 };
 
-enum ValueMappingsIdx {
+enum ValueMappingIdx {
   InvalidIdx = 0,
-  GPR32Idx = 1,
-  GPR64Idx = 4,
-  FPR32Idx = 7,
-  FPR64Idx = 10,
+  GPRB32Idx = 1,
+  GPRB64Idx = 4,
+  FPRB32Idx = 7,
+  FPRB64Idx = 10,
 };
 } // namespace RISCV
 } // namespace llvm
@@ -93,14 +93,20 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case RISCV::SR07RegClassID:
   case RISCV::SPRegClassID:
   case RISCV::GPRX0RegClassID:
-    return getRegBank(RISCV::GPRRegBankID);
+    return getRegBank(RISCV::GPRBRegBankID);
   case RISCV::FPR64RegClassID:
   case RISCV::FPR16RegClassID:
   case RISCV::FPR32RegClassID:
   case RISCV::FPR64CRegClassID:
   case RISCV::FPR32CRegClassID:
-    return getRegBank(RISCV::FPRRegBankID);
+    return getRegBank(RISCV::FPRBRegBankID);
   }
+}
+
+static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
+  assert(Size == 32 || Size == 64);
+  unsigned Idx = Size == 64 ? RISCV::FPRB64Idx : RISCV::FPRB32Idx;
+  return &RISCV::ValueMappings[Idx];
 }
 
 const RegisterBankInfo::InstructionMapping &
@@ -118,15 +124,19 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  unsigned GPRSize = getMaximumSize(RISCV::GPRRegBankID);
+  unsigned GPRSize = getMaximumSize(RISCV::GPRBRegBankID);
   assert((GPRSize == 32 || GPRSize == 64) && "Unexpected GPR size");
 
   unsigned NumOperands = MI.getNumOperands();
   const ValueMapping *GPRValueMapping =
-      &RISCV::ValueMappings[GPRSize == 64 ? RISCV::GPR64Idx : RISCV::GPR32Idx];
+      &RISCV::ValueMappings[GPRSize == 64 ? RISCV::GPRB64Idx
+                                          : RISCV::GPRB32Idx];
   const ValueMapping *OperandsMapping = GPRValueMapping;
 
   switch (Opc) {
+  case TargetOpcode::G_INVOKE_REGION_START:
+    OperandsMapping = getOperandsMapping({});
+    break;
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_SHL:
@@ -157,11 +167,16 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FRAME_INDEX:
   case TargetOpcode::G_GLOBAL_VALUE:
+  case TargetOpcode::G_JUMP_TABLE:
   case TargetOpcode::G_BRCOND:
     OperandsMapping = getOperandsMapping({GPRValueMapping, nullptr});
     break;
   case TargetOpcode::G_BR:
     OperandsMapping = getOperandsMapping({nullptr});
+    break;
+  case TargetOpcode::G_BRJT:
+    OperandsMapping =
+        getOperandsMapping({GPRValueMapping, nullptr, GPRValueMapping});
     break;
   case TargetOpcode::G_ICMP:
     OperandsMapping = getOperandsMapping(
@@ -185,47 +200,56 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINNUM: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OperandsMapping = Ty.getSizeInBits() == 64
-                          ? &RISCV::ValueMappings[RISCV::FPR64Idx]
-                          : &RISCV::ValueMappings[RISCV::FPR32Idx];
+    OperandsMapping = getFPValueMapping(Ty.getSizeInBits());
     break;
   }
   case TargetOpcode::G_FMA: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OperandsMapping =
-        Ty.getSizeInBits() == 64
-            ? getOperandsMapping({&RISCV::ValueMappings[RISCV::FPR64Idx],
-                                  &RISCV::ValueMappings[RISCV::FPR64Idx],
-                                  &RISCV::ValueMappings[RISCV::FPR64Idx],
-                                  &RISCV::ValueMappings[RISCV::FPR64Idx]})
-            : getOperandsMapping({&RISCV::ValueMappings[RISCV::FPR32Idx],
-                                  &RISCV::ValueMappings[RISCV::FPR32Idx],
-                                  &RISCV::ValueMappings[RISCV::FPR32Idx],
-                                  &RISCV::ValueMappings[RISCV::FPR32Idx]});
+    const RegisterBankInfo::ValueMapping *FPValueMapping =
+        getFPValueMapping(Ty.getSizeInBits());
+    OperandsMapping = getOperandsMapping(
+        {FPValueMapping, FPValueMapping, FPValueMapping, FPValueMapping});
     break;
   }
-  case TargetOpcode::G_FPEXT: {
-    LLT ToTy = MRI.getType(MI.getOperand(0).getReg());
-    (void)ToTy;
-    LLT FromTy = MRI.getType(MI.getOperand(1).getReg());
-    (void)FromTy;
-    assert(ToTy.getSizeInBits() == 64 && FromTy.getSizeInBits() == 32 &&
-           "Unsupported size for G_FPEXT");
-    OperandsMapping =
-        getOperandsMapping({&RISCV::ValueMappings[RISCV::FPR64Idx],
-                            &RISCV::ValueMappings[RISCV::FPR32Idx]});
-    break;
-  }
+  case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC: {
     LLT ToTy = MRI.getType(MI.getOperand(0).getReg());
-    (void)ToTy;
     LLT FromTy = MRI.getType(MI.getOperand(1).getReg());
-    (void)FromTy;
-    assert(ToTy.getSizeInBits() == 32 && FromTy.getSizeInBits() == 64 &&
-           "Unsupported size for G_FPTRUNC");
     OperandsMapping =
-        getOperandsMapping({&RISCV::ValueMappings[RISCV::FPR32Idx],
-                            &RISCV::ValueMappings[RISCV::FPR64Idx]});
+        getOperandsMapping({getFPValueMapping(ToTy.getSizeInBits()),
+                            getFPValueMapping(FromTy.getSizeInBits())});
+    break;
+  }
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI: {
+    LLT Ty = MRI.getType(MI.getOperand(1).getReg());
+    OperandsMapping =
+        getOperandsMapping({GPRValueMapping,
+                            getFPValueMapping(Ty.getSizeInBits())});
+    break;
+  }
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OperandsMapping = getOperandsMapping(
+        {getFPValueMapping(Ty.getSizeInBits()), GPRValueMapping});
+    break;
+  }
+  case TargetOpcode::G_FCONSTANT: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OperandsMapping =
+        getOperandsMapping({getFPValueMapping(Ty.getSizeInBits()), nullptr});
+    break;
+  }
+  case TargetOpcode::G_FCMP: {
+    LLT Ty = MRI.getType(MI.getOperand(2).getReg());
+
+    unsigned Size = Ty.getSizeInBits();
+    assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
+
+    auto *FPRValueMapping = getFPValueMapping(Size);
+    OperandsMapping = getOperandsMapping(
+        {GPRValueMapping, nullptr, FPRValueMapping, FPRValueMapping});
     break;
   }
   default:

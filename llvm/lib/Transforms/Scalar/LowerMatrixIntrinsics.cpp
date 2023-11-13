@@ -19,6 +19,7 @@
 
 #include "llvm/Transforms/Scalar/LowerMatrixIntrinsics.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -2174,7 +2175,7 @@ public:
         write("<no called fn>");
       else {
         StringRef Name = CI->getCalledFunction()->getName();
-        if (!Name.startswith("llvm.matrix")) {
+        if (!Name.starts_with("llvm.matrix")) {
           write(Name);
           return;
         }

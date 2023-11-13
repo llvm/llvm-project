@@ -32,6 +32,11 @@ def FeatureSoftFloat : SystemZFeature<
   "Use software emulation for floating point"
 >;
 
+def FeatureBackChain : SystemZFeature<
+  "backchain", "BackChain", (all_of FeatureBackChain),
+  "Store the address of the caller's frame into the callee's stack frame"
+>;
+
 //===----------------------------------------------------------------------===//
 //
 // New features added in the Ninth Edition of the z/Architecture

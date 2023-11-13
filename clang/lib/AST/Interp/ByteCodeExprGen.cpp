@@ -200,16 +200,13 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
-    if (FromT == ToT) {
-      assert(ToT != PT_IntAP && ToT != PT_IntAPS);
-      return true;
-    }
-
     if (ToT == PT_IntAP)
       return this->emitCastAP(*FromT, Ctx.getBitWidth(CE->getType()), CE);
     if (ToT == PT_IntAPS)
       return this->emitCastAPS(*FromT, Ctx.getBitWidth(CE->getType()), CE);
 
+    if (FromT == ToT)
+      return true;
     return this->emitCast(*FromT, *ToT, CE);
   }
 
@@ -1627,6 +1624,11 @@ bool ByteCodeExprGen<Emitter>::VisitCXXScalarValueInitExpr(
   return this->visitZeroInitializer(classifyPrim(Ty), Ty, E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitSizeOfPackExpr(const SizeOfPackExpr *E) {
+  return this->emitConst(E->getPackLength(), E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
@@ -2122,27 +2124,33 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
   if (!this->visitVarDecl(VD))
     return false;
 
+  std::optional<PrimType> VarT = classify(VD->getType());
   // Get a pointer to the variable
   if (Context::shouldBeGloballyIndexed(VD)) {
     auto GlobalIndex = P.getGlobal(VD);
     assert(GlobalIndex); // visitVarDecl() didn't return false.
-    if (!this->emitGetPtrGlobal(*GlobalIndex, VD))
-      return false;
+    if (VarT) {
+      if (!this->emitGetGlobal(*VarT, *GlobalIndex, VD))
+        return false;
+    } else {
+      if (!this->emitGetPtrGlobal(*GlobalIndex, VD))
+        return false;
+    }
   } else {
     auto Local = Locals.find(VD);
     assert(Local != Locals.end()); // Same here.
-    if (!this->emitGetPtrLocal(Local->second.Offset, VD))
-      return false;
+    if (VarT) {
+      if (!this->emitGetLocal(*VarT, Local->second.Offset, VD))
+        return false;
+    } else {
+      if (!this->emitGetPtrLocal(Local->second.Offset, VD))
+        return false;
+    }
   }
 
   // Return the value
-  if (std::optional<PrimType> VarT = classify(VD->getType())) {
-    if (!this->emitLoadPop(*VarT, VD))
-      return false;
-
+  if (VarT)
     return this->emitRet(*VarT, VD);
-  }
-
   return this->emitRetValue(VD);
 }
 

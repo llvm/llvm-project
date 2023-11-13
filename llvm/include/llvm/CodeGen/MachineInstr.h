@@ -1364,6 +1364,10 @@ public:
     return getOpcode() == TargetOpcode::INLINEASM ||
            getOpcode() == TargetOpcode::INLINEASM_BR;
   }
+  /// Returns true if the register operand can be folded with a load or store
+  /// into a frame index. Does so by checking the InlineAsm::Flag immediate
+  /// operand at OpId - 1.
+  bool mayFoldInlineAsmRegOp(unsigned OpId) const;
 
   bool isStackAligningInlineAsm() const;
   InlineAsm::AsmDialect getInlineAsmDialect() const;

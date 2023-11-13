@@ -56,3 +56,70 @@ loop:
 exit:
   ret void
 }
+
+define void @test_brace_escapes(ptr noundef %arr) {
+; CHECK-LABEL: 'test_brace_escapes'
+; CHECK-NEXT:    loop.1:
+; CHECK-NEXT:      Report: could not determine number of loop iterations
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:    loop.2:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds ptr, ptr %arr, i64 %iv.2
+; CHECK-NEXT:        Against group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.iv.1 = getelementptr inbounds ptr, ptr %arr, i64 %iv.1
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:          (Low: {(64 + %arr),+,64}<%loop.1> High: {(8064 + %arr),+,64}<%loop.1>)
+; CHECK-NEXT:            Member: {{\{\{}}(64 + %arr),+,64}<%loop.1>,+,8}<%loop.2>
+; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:          (Low: %arr High: (8000 + %arr))
+; CHECK-NEXT:            Member: {%arr,+,8}<nuw><%loop.2>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop.1
+
+loop.1:
+  %iv = phi i64 [ %iv.next, %loop.1 ], [ 8, %entry ]
+  %arr.addr.0.i = phi ptr [ %incdec.ptr.i, %loop.1 ], [ %arr, %entry ]
+  %incdec.ptr.i = getelementptr inbounds ptr, ptr %arr.addr.0.i, i64 1
+  %0 = load ptr, ptr %arr.addr.0.i, align 8
+  %tobool.not.i = icmp eq ptr %0, null
+  %iv.next = add i64 %iv, 8
+  br i1 %tobool.not.i, label %loop.1.exit, label %loop.1
+
+loop.1.exit:
+  %iv.lcssa = phi i64 [ %iv, %loop.1 ]
+  br label %loop.2
+
+loop.2:
+  %iv.1 = phi i64 [ 0, %loop.1.exit ], [ %iv.1.next, %loop.2 ]
+  %iv.2 = phi i64 [ %iv.lcssa, %loop.1.exit ], [ %iv.2.next, %loop.2 ]
+  %gep.iv.1 = getelementptr inbounds ptr, ptr %arr, i64 %iv.1
+  %l.1 = load ptr, ptr %gep.iv.1, align 8
+  %iv.2.next = add nsw i64 %iv.2, 1
+  %gep.iv.2 = getelementptr inbounds ptr, ptr %arr, i64 %iv.2
+  store ptr %l.1, ptr %gep.iv.2, align 8
+  %iv.1.next = add nuw nsw i64 %iv.1, 1
+  %cmp = icmp ult i64 %iv.1.next, 1000
+  br i1 %cmp, label %loop.2, label %exit
+
+exit:
+  ret void
+}
+

@@ -262,7 +262,7 @@ uint64_t __llvm_profile_get_magic(void);
 uint64_t __llvm_profile_get_version(void);
 
 /*! \brief If the binary is compiled with profile correlation. */
-int hasCorrelation();
+int __llvm_profile_has_correlation();
 
 /*! \brief Get the number of entries in the profile data section. */
 uint64_t __llvm_profile_get_num_data(const __llvm_profile_data *Begin,

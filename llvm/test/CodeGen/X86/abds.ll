@@ -36,6 +36,39 @@ define i8 @abd_ext_i8(i8 %a, i8 %b) nounwind {
   ret i8 %trunc
 }
 
+define i8 @abd_ext_i8_i16(i8 %a, i16 %b) nounwind {
+; X86-LABEL: abd_ext_i8_i16:
+; X86:       # %bb.0:
+; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    subl %eax, %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmovsl %ecx, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: abd_ext_i8_i16:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    movsbq %dil, %rax
+; X64-NEXT:    movswq %si, %rcx
+; X64-NEXT:    movq %rax, %rdx
+; X64-NEXT:    subq %rcx, %rdx
+; X64-NEXT:    negq %rdx
+; X64-NEXT:    subq %rcx, %rax
+; X64-NEXT:    cmovleq %rdx, %rax
+; X64-NEXT:    # kill: def $al killed $al killed $rax
+; X64-NEXT:    retq
+  %aext = sext i8 %a to i64
+  %bext = sext i16 %b to i64
+  %sub = sub i64 %aext, %bext
+  %abs = call i64 @llvm.abs.i64(i64 %sub, i1 false)
+  %trunc = trunc i64 %abs to i8
+  ret i8 %trunc
+}
+
 define i8 @abd_ext_i8_undef(i8 %a, i8 %b) nounwind {
 ; X86-LABEL: abd_ext_i8_undef:
 ; X86:       # %bb.0:
@@ -96,6 +129,45 @@ define i16 @abd_ext_i16(i16 %a, i16 %b) nounwind {
   ret i16 %trunc
 }
 
+define i16 @abd_ext_i16_i32(i16 %a, i32 %b) nounwind {
+; X86-LABEL: abd_ext_i16_i32:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    sbbl %edx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    xorl %esi, %eax
+; X86-NEXT:    subl %esi, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: abd_ext_i16_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    movswq %di, %rax
+; X64-NEXT:    movslq %esi, %rcx
+; X64-NEXT:    movq %rax, %rdx
+; X64-NEXT:    subq %rcx, %rdx
+; X64-NEXT:    negq %rdx
+; X64-NEXT:    subq %rcx, %rax
+; X64-NEXT:    cmovleq %rdx, %rax
+; X64-NEXT:    # kill: def $ax killed $ax killed $rax
+; X64-NEXT:    retq
+  %aext = sext i16 %a to i64
+  %bext = sext i32 %b to i64
+  %sub = sub i64 %aext, %bext
+  %abs = call i64 @llvm.abs.i64(i64 %sub, i1 false)
+  %trunc = trunc i64 %abs to i16
+  ret i16 %trunc
+}
+
 define i16 @abd_ext_i16_undef(i16 %a, i16 %b) nounwind {
 ; X86-LABEL: abd_ext_i16_undef:
 ; X86:       # %bb.0:
@@ -150,6 +222,44 @@ define i32 @abd_ext_i32(i32 %a, i32 %b) nounwind {
 ; X64-NEXT:    retq
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64
+  %sub = sub i64 %aext, %bext
+  %abs = call i64 @llvm.abs.i64(i64 %sub, i1 false)
+  %trunc = trunc i64 %abs to i32
+  ret i32 %trunc
+}
+
+define i32 @abd_ext_i32_i16(i32 %a, i16 %b) nounwind {
+; X86-LABEL: abd_ext_i32_i16:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movswl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    sbbl %edx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    xorl %esi, %eax
+; X86-NEXT:    subl %esi, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: abd_ext_i32_i16:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    movslq %edi, %rax
+; X64-NEXT:    movswq %si, %rcx
+; X64-NEXT:    movq %rax, %rdx
+; X64-NEXT:    subq %rcx, %rdx
+; X64-NEXT:    negq %rdx
+; X64-NEXT:    subq %rcx, %rax
+; X64-NEXT:    cmovleq %rdx, %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    retq
+  %aext = sext i32 %a to i64
+  %bext = sext i16 %b to i64
   %sub = sub i64 %aext, %bext
   %abs = call i64 @llvm.abs.i64(i64 %sub, i1 false)
   %trunc = trunc i64 %abs to i32

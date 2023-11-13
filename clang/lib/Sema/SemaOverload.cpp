@@ -6795,7 +6795,7 @@ void Sema::AddOverloadCandidate(
     if (auto *SpecInfo = Function->getTemplateSpecializationInfo())
       ND = SpecInfo->getTemplate();
 
-    if (ND->getFormalLinkage() == Linkage::InternalLinkage) {
+    if (ND->getFormalLinkage() == Linkage::Internal) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_module_mismatched;
       return;
@@ -12107,9 +12107,12 @@ struct CompareOverloadCandidatesForDisplay {
         if (RFailureKind != ovl_fail_bad_deduction)
           return true;
 
-        if (L->DeductionFailure.Result != R->DeductionFailure.Result)
-          return RankDeductionFailure(L->DeductionFailure)
-               < RankDeductionFailure(R->DeductionFailure);
+        if (L->DeductionFailure.Result != R->DeductionFailure.Result) {
+          unsigned LRank = RankDeductionFailure(L->DeductionFailure);
+          unsigned RRank = RankDeductionFailure(R->DeductionFailure);
+          if (LRank != RRank)
+            return LRank < RRank;
+        }
       } else if (RFailureKind == ovl_fail_bad_deduction)
         return false;
 

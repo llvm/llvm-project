@@ -3257,73 +3257,6 @@ bool X86TargetLowering::
   return NewShiftOpcode == ISD::SHL;
 }
 
-unsigned X86TargetLowering::preferedOpcodeForCmpEqPiecesOfOperand(
-    EVT VT, unsigned ShiftOpc, bool MayTransformRotate,
-    const APInt &ShiftOrRotateAmt, const std::optional<APInt> &AndMask) const {
-  if (!VT.isInteger())
-    return ShiftOpc;
-
-  bool PreferRotate = false;
-  if (VT.isVector()) {
-    // For vectors, if we have rotate instruction support, then its definetly
-    // best. Otherwise its not clear what the best so just don't make changed.
-    PreferRotate = Subtarget.hasAVX512() && (VT.getScalarType() == MVT::i32 ||
-                                             VT.getScalarType() == MVT::i64);
-  } else {
-    // For scalar, if we have bmi prefer rotate for rorx. Otherwise prefer
-    // rotate unless we have a zext mask+shr.
-    PreferRotate = Subtarget.hasBMI2();
-    if (!PreferRotate) {
-      unsigned MaskBits =
-          VT.getScalarSizeInBits() - ShiftOrRotateAmt.getZExtValue();
-      PreferRotate = (MaskBits != 8) && (MaskBits != 16) && (MaskBits != 32);
-    }
-  }
-
-  if (ShiftOpc == ISD::SHL || ShiftOpc == ISD::SRL) {
-    assert(AndMask.has_value() && "Null andmask when querying about shift+and");
-
-    if (PreferRotate && MayTransformRotate)
-      return ISD::ROTL;
-
-    // If vector we don't really get much benefit swapping around constants.
-    // Maybe we could check if the DAG has the flipped node already in the
-    // future.
-    if (VT.isVector())
-      return ShiftOpc;
-
-    // See if the beneficial to swap shift type.
-    if (ShiftOpc == ISD::SHL) {
-      // If the current setup has imm64 mask, then inverse will have
-      // at least imm32 mask (or be zext i32 -> i64).
-      if (VT == MVT::i64)
-        return AndMask->getSignificantBits() > 32 ? (unsigned)ISD::SRL
-                                                  : ShiftOpc;
-
-      // We can only benefit if req at least 7-bit for the mask. We
-      // don't want to replace shl of 1,2,3 as they can be implemented
-      // with lea/add.
-      return ShiftOrRotateAmt.uge(7) ? (unsigned)ISD::SRL : ShiftOpc;
-    }
-
-    if (VT == MVT::i64)
-      // Keep exactly 32-bit imm64, this is zext i32 -> i64 which is
-      // extremely efficient.
-      return AndMask->getSignificantBits() > 33 ? (unsigned)ISD::SHL : ShiftOpc;
-
-    // Keep small shifts as shl so we can generate add/lea.
-    return ShiftOrRotateAmt.ult(7) ? (unsigned)ISD::SHL : ShiftOpc;
-  }
-
-  // We prefer rotate for vectors of if we won't get a zext mask with SRL
-  // (PreferRotate will be set in the latter case).
-  if (PreferRotate || VT.isVector())
-    return ShiftOpc;
-
-  // Non-vector type and we have a zext mask with SRL.
-  return ISD::SRL;
-}
-
 bool X86TargetLowering::preferScalarizeSplat(SDNode *N) const {
   return N->getOpcode() != ISD::FP_EXTEND;
 }
@@ -22715,38 +22648,12 @@ X86TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
       !(Subtarget.is64Bit() && VT == MVT::i64))
     return SDValue();
 
-  unsigned Lg2 = Divisor.countr_zero();
-
   // If the divisor is 2 or -2, the default expansion is better.
-  if (Lg2 == 1)
+  if (Divisor == 2 ||
+      Divisor == APInt(Divisor.getBitWidth(), -2, /*isSigned*/ true))
     return SDValue();
 
-  SDLoc DL(N);
-  SDValue N0 = N->getOperand(0);
-  SDValue Zero = DAG.getConstant(0, DL, VT);
-  APInt Lg2Mask = APInt::getLowBitsSet(VT.getSizeInBits(), Lg2);
-  SDValue Pow2MinusOne = DAG.getConstant(Lg2Mask, DL, VT);
-
-  // If N0 is negative, we need to add (Pow2 - 1) to it before shifting right.
-  SDValue Cmp = DAG.getSetCC(DL, MVT::i8, N0, Zero, ISD::SETLT);
-  SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, Pow2MinusOne);
-  SDValue CMov = DAG.getNode(ISD::SELECT, DL, VT, Cmp, Add, N0);
-
-  Created.push_back(Cmp.getNode());
-  Created.push_back(Add.getNode());
-  Created.push_back(CMov.getNode());
-
-  // Divide by pow2.
-  SDValue SRA =
-      DAG.getNode(ISD::SRA, DL, VT, CMov, DAG.getConstant(Lg2, DL, MVT::i8));
-
-  // If we're dividing by a positive value, we're done.  Otherwise, we must
-  // negate the result.
-  if (Divisor.isNonNegative())
-    return SRA;
-
-  Created.push_back(SRA.getNode());
-  return DAG.getNode(ISD::SUB, DL, VT, Zero, SRA);
+  return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);
 }
 
 /// Result of 'and' is compared against zero. Change to a BT node if possible.
@@ -28180,10 +28087,8 @@ static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
       // abds(lhs, rhs) -> trunc(abs(sub(sext(lhs), sext(rhs))))
       // abdu(lhs, rhs) -> trunc(abs(sub(zext(lhs), zext(rhs))))
       unsigned ExtOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-      SDValue LHS = DAG.getFreeze(Op.getOperand(0));
-      SDValue RHS = DAG.getFreeze(Op.getOperand(1));
-      LHS = DAG.getNode(ExtOpc, dl, WideVT, LHS);
-      RHS = DAG.getNode(ExtOpc, dl, WideVT, RHS);
+      SDValue LHS = DAG.getNode(ExtOpc, dl, WideVT, Op.getOperand(0));
+      SDValue RHS = DAG.getNode(ExtOpc, dl, WideVT, Op.getOperand(1));
       SDValue Diff = DAG.getNode(ISD::SUB, dl, WideVT, LHS, RHS);
       SDValue AbsDiff = DAG.getNode(ISD::ABS, dl, WideVT, Diff);
       return DAG.getNode(ISD::TRUNCATE, dl, VT, AbsDiff);
@@ -30310,7 +30215,7 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   Instruction *I = AI->user_back();
   LLVMContext &Ctx = AI->getContext();
   Value *Addr = Builder.CreatePointerCast(AI->getPointerOperand(),
-                                          Type::getInt8PtrTy(Ctx));
+                                          PointerType::getUnqual(Ctx));
   Function *BitTest = nullptr;
   Value *Result = nullptr;
   auto BitTested = FindSingleBitChange(AI->getValOperand());
@@ -30479,7 +30384,7 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
   Function *CmpArith =
       Intrinsic::getDeclaration(AI->getModule(), IID, AI->getType());
   Value *Addr = Builder.CreatePointerCast(AI->getPointerOperand(),
-                                          Type::getInt8PtrTy(Ctx));
+                                          PointerType::getUnqual(Ctx));
   Value *Call = Builder.CreateCall(
       CmpArith, {Addr, AI->getValOperand(), Builder.getInt32((unsigned)CC)});
   Value *Result = Builder.CreateTrunc(Call, Type::getInt1Ty(Ctx));
@@ -31782,7 +31687,7 @@ static StringRef getInstrStrFromOpNo(const SmallVectorImpl<StringRef> &AsmStrs,
   for (auto &AsmStr : AsmStrs) {
     // Match the OpNo string. We should match exactly to exclude match
     // sub-string, e.g. "$12" contain "$1"
-    if (AsmStr.endswith(OpNoStr1))
+    if (AsmStr.ends_with(OpNoStr1))
       I = AsmStr.size() - OpNoStr1.size();
 
     // Get the index of operand in AsmStr.
@@ -53388,19 +53293,26 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   EVT InVT = Op0.getValueType();
 
-  // UINT_TO_FP(vXi1~15)  -> UINT_TO_FP(ZEXT(vXi1~15  to vXi16))
-  // UINT_TO_FP(vXi17~31) -> UINT_TO_FP(ZEXT(vXi17~31 to vXi32))
+  // Using i16 as an intermediate type is a bad idea, unless we have HW support
+  // for it. Therefore for type sizes equal or smaller than 32 just go with i32.
+  // if hasFP16 support:
+  //   UINT_TO_FP(vXi1~15)  -> UINT_TO_FP(ZEXT(vXi1~15  to vXi16))
+  //   UINT_TO_FP(vXi17~31) -> UINT_TO_FP(ZEXT(vXi17~31 to vXi32))
+  // else
+  //   UINT_TO_FP(vXi1~31) -> UINT_TO_FP(ZEXT(vXi1~31 to vXi32))
   // UINT_TO_FP(vXi33~63) -> UINT_TO_FP(ZEXT(vXi33~63 to vXi64))
   if (InVT.isVector() && VT.getVectorElementType() == MVT::f16) {
     unsigned ScalarSize = InVT.getScalarSizeInBits();
-    if (ScalarSize == 16 || ScalarSize == 32 || ScalarSize >= 64)
+    if ((ScalarSize == 16 && Subtarget.hasFP16()) || ScalarSize == 32 ||
+        ScalarSize >= 64)
       return SDValue();
     SDLoc dl(N);
-    EVT DstVT = EVT::getVectorVT(*DAG.getContext(),
-                                 ScalarSize < 16   ? MVT::i16
-                                 : ScalarSize < 32 ? MVT::i32
-                                                   : MVT::i64,
-                                 InVT.getVectorNumElements());
+    EVT DstVT =
+        EVT::getVectorVT(*DAG.getContext(),
+                         (Subtarget.hasFP16() && ScalarSize < 16) ? MVT::i16
+                         : ScalarSize < 32                        ? MVT::i32
+                                                                  : MVT::i64,
+                         InVT.getVectorNumElements());
     SDValue P = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Op0);
     if (IsStrict)
       return DAG.getNode(ISD::STRICT_UINT_TO_FP, dl, {VT, MVT::Other},
@@ -53451,19 +53363,26 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   EVT InVT = Op0.getValueType();
 
-  // SINT_TO_FP(vXi1~15)  -> SINT_TO_FP(SEXT(vXi1~15  to vXi16))
-  // SINT_TO_FP(vXi17~31) -> SINT_TO_FP(SEXT(vXi17~31 to vXi32))
+  // Using i16 as an intermediate type is a bad idea, unless we have HW support
+  // for it. Therefore for type sizes equal or smaller than 32 just go with i32.
+  // if hasFP16 support:
+  //   SINT_TO_FP(vXi1~15)  -> SINT_TO_FP(SEXT(vXi1~15  to vXi16))
+  //   SINT_TO_FP(vXi17~31) -> SINT_TO_FP(SEXT(vXi17~31 to vXi32))
+  // else
+  //   SINT_TO_FP(vXi1~31) -> SINT_TO_FP(ZEXT(vXi1~31 to vXi32))
   // SINT_TO_FP(vXi33~63) -> SINT_TO_FP(SEXT(vXi33~63 to vXi64))
   if (InVT.isVector() && VT.getVectorElementType() == MVT::f16) {
     unsigned ScalarSize = InVT.getScalarSizeInBits();
-    if (ScalarSize == 16 || ScalarSize == 32 || ScalarSize >= 64)
+    if ((ScalarSize == 16 && Subtarget.hasFP16()) || ScalarSize == 32 ||
+        ScalarSize >= 64)
       return SDValue();
     SDLoc dl(N);
-    EVT DstVT = EVT::getVectorVT(*DAG.getContext(),
-                                 ScalarSize < 16   ? MVT::i16
-                                 : ScalarSize < 32 ? MVT::i32
-                                                   : MVT::i64,
-                                 InVT.getVectorNumElements());
+    EVT DstVT =
+        EVT::getVectorVT(*DAG.getContext(),
+                         (Subtarget.hasFP16() && ScalarSize < 16) ? MVT::i16
+                         : ScalarSize < 32                        ? MVT::i32
+                                                                  : MVT::i64,
+                         InVT.getVectorNumElements());
     SDValue P = DAG.getNode(ISD::SIGN_EXTEND, dl, DstVT, Op0);
     if (IsStrict)
       return DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {VT, MVT::Other},
@@ -56303,7 +56222,7 @@ static bool matchAsm(StringRef S, ArrayRef<const char *> Pieces) {
   S = S.substr(S.find_first_not_of(" \t")); // Skip leading whitespace.
 
   for (StringRef Piece : Pieces) {
-    if (!S.startswith(Piece)) // Check if the piece matches.
+    if (!S.starts_with(Piece)) // Check if the piece matches.
       return false;
 
     S = S.substr(Piece.size());
@@ -57442,7 +57361,7 @@ X86TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
     assert(Target.isSymbol() && "Unexpected target operand for a direct call");
     // X86TargetLowering::EmitLoweredIndirectThunk always uses r11 for
     // 64-bit indirect thunk calls.
-    assert(StringRef(Target.getSymbolName()).endswith("_r11") &&
+    assert(StringRef(Target.getSymbolName()).ends_with("_r11") &&
            "Unexpected register for an indirect thunk call");
     TargetReg = X86::R11;
     break;

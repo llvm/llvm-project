@@ -1073,6 +1073,19 @@ bool CompilerInvocation::createFromArgs(
     res.loweringOpts.setLowerToHighLevelFIR(true);
   }
 
+  // -flang-deprecated-no-hlfir
+  if (args.hasArg(clang::driver::options::OPT_flang_deprecated_no_hlfir) &&
+      !args.hasArg(clang::driver::options::OPT_emit_hlfir)) {
+    if (args.hasArg(clang::driver::options::OPT_flang_experimental_hlfir)) {
+      const unsigned diagID = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Error,
+          "Options '-flang-experimental-hlfir' and "
+          "'-flang-deprecated-no-hlfir' cannot be both specified");
+      diags.Report(diagID);
+    }
+    res.loweringOpts.setLowerToHighLevelFIR(false);
+  }
+
   if (args.hasArg(clang::driver::options::OPT_flang_experimental_polymorphism)) {
     res.loweringOpts.setPolymorphicTypeImpl(true);
   }
