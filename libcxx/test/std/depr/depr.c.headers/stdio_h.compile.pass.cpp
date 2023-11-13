@@ -161,13 +161,9 @@ ASSERT_SAME_TYPE(int,    decltype(puts("")));
 ASSERT_SAME_TYPE(int,    decltype(ungetc(0,fp)));
 ASSERT_SAME_TYPE(size_t, decltype(fread((void*)0,0,0,fp)));
 ASSERT_SAME_TYPE(size_t, decltype(fwrite((const void*)arr,1,0,fp)));
-#ifndef TEST_HAS_NO_FGETPOS_FSETPOS
 ASSERT_SAME_TYPE(int,    decltype(fgetpos(fp, &fpos)));
-#endif
 ASSERT_SAME_TYPE(int,    decltype(fseek(fp, 0,0)));
-#ifndef TEST_HAS_NO_FGETPOS_FSETPOS
 ASSERT_SAME_TYPE(int,    decltype(fsetpos(fp, &fpos)));
-#endif
 ASSERT_SAME_TYPE(long,   decltype(ftell(fp)));
 ASSERT_SAME_TYPE(void,   decltype(rewind(fp)));
 ASSERT_SAME_TYPE(void,   decltype(clearerr(fp)));
