@@ -240,21 +240,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
                 typeIs(1, s32)(Query));
       });
 
-  // Predicates shared by G_FCMP and G_IS_FPCLASS.
-  auto isScalarAndFP = [=, &ST](const LegalityQuery &Query) -> bool {
-    return typeIs(0, sXLen)(Query) &&
-           ((ST.hasStdExtF() && typeIs(1, s32)(Query)) ||
-            (ST.hasStdExtD() && typeIs(1, s64)(Query)));
-  };
-  getActionDefinitionsBuilder(G_FCMP)
-      .legalIf(all(typeIs(0, sXLen), typeIsScalarFPArith(1, ST)))
-      .clampScalar(0, sXLen, sXLen);
-
   // TODO: Support vector version of G_IS_FPCLASS.
-  getActionDefinitionsBuilder(G_IS_FPCLASS)
-      // This line basically equals to `legalIf(isScalarAndFP)` + post
-      // processing depicted in legalizeCustom.
-      .customIf(all(typeIs(0, sXLen), typeIsScalarFPArith(1, ST)))
+  getActionDefinitionsBuilder({G_FCMP, G_IS_FPCLASS})
+      .legalIf(all(typeIs(0, sXLen), typeIsScalarFPArith(1, ST)))
       .clampScalar(0, sXLen, sXLen);
 
   getActionDefinitionsBuilder(G_FCONSTANT).legalIf(typeIsScalarFPArith(0, ST));
@@ -321,17 +309,6 @@ bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
 
     return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
            LegalizerHelper::Legalized;
-  }
-  case TargetOpcode::G_IS_FPCLASS: {
-    // Turn LLVM IR's floating point classes to that in RISCV,
-    // which is simply rotating the 10-bit immediate right by two bits.
-    MachineOperand &ImmOp = MI.getOperand(2);
-    APInt ClassImm(10, static_cast<uint64_t>(ImmOp.getImm()));
-    ImmOp.setImm(ClassImm.rotr(2).getLimitedValue());
-    // Note that we do NOT want to notify Observer as it will
-    // send this instruction back to the legalizer chain and eventually
-    // falls into an infinite loop.
-    return true;
   }
   }
 

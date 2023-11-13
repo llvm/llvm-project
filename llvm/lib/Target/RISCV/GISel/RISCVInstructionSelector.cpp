@@ -1106,11 +1106,16 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
 bool RISCVInstructionSelector::selectIsFPClass(MachineInstr &MI,
                                                MachineIRBuilder &MIB,
                                                MachineRegisterInfo &MRI) const {
-  Register CheckResult = MI.getOperand(0).getReg();
+  Register GISFPCLASS = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
-  int64_t MaskImm = MI.getOperand(2).getImm();
+  const MachineOperand &ImmOp = MI.getOperand(2);
   unsigned NewOpc = MRI.getType(Src).getSizeInBits() == 32 ? RISCV::FCLASS_S
                                                            : RISCV::FCLASS_D;
+
+  // Turn LLVM IR's floating point classes to that in RISCV,
+  // by simply rotating the 10-bit immediate right by two bits.
+  APInt GFpClassImm(10, static_cast<uint64_t>(ImmOp.getImm()));
+  APInt FClassMask = GFpClassImm.rotr(2);
 
   Register FClassResult = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   // Insert FCLASS_S/D.
@@ -1118,8 +1123,8 @@ bool RISCVInstructionSelector::selectIsFPClass(MachineInstr &MI,
   if (!FClass.constrainAllUses(TII, TRI, RBI))
     return false;
   // Insert AND to check Src aginst the mask.
-  auto And = MIB.buildInstr(RISCV::ANDI, {CheckResult}, {FClassResult})
-                 .addImm(MaskImm);
+  auto And = MIB.buildInstr(RISCV::ANDI, {GISFPCLASS}, {FClassResult})
+                 .addImm(FClassMask.getLimitedValue());
   if (!And.constrainAllUses(TII, TRI, RBI))
     return false;
 
