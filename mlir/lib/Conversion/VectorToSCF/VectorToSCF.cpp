@@ -1218,6 +1218,11 @@ struct UnrollTransferWriteConversion
 
     auto vec = getDataVector(xferOp);
     auto xferVecType = xferOp.getVectorType();
+    if (xferVecType.getScalableDims()[0]) {
+      // Cannot unroll a scalable dimension at compile time.
+      return failure();
+    }
+
     int64_t dimSize = xferVecType.getShape()[0];
     Value source = xferOp.getSource(); // memref or tensor to be written to.
     auto sourceType = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
