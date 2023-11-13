@@ -4304,12 +4304,4 @@ def CodeAlign: StmtAttr {
                               ErrorDiag, "'for', 'while', and 'do' statements">;
   let Args = [ExprArgument<"Alignment">];
   let Documentation = [CodeAlignAttrDocs];
-  let AdditionalMembers = [{
-    static int getMinValue() {
-      return 1;
-    }
-    static int getMaxValue() {
-      return 4096;
-    }
-  }];
 }

@@ -334,11 +334,12 @@ CodeAlignAttr *Sema::BuildCodeAlignAttr(const AttributeCommonInfo &CI,
     // This attribute requires an integer argument which is a constant power of
     // two between 1 and 4096 inclusive.
     int AlignValue = ArgVal.getSExtValue();
-    if (AlignValue < CodeAlignAttr::getMinValue() ||
-        AlignValue > CodeAlignAttr::getMaxValue() || !ArgVal.isPowerOf2()) {
+    static int MaximumAlignment = 4096;
+    static int MinimumAlignment = 1;
+    if (AlignValue < MinimumAlignment ||
+        AlignValue > MaximumAlignment || !ArgVal.isPowerOf2()) {
       Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
-          << CI << CodeAlignAttr::getMinValue() << CodeAlignAttr::getMaxValue()
-          << AlignValue;
+          << CI << MinimumAlignment << MaximumAlignment << AlignValue;
       return nullptr;
     }
   }
