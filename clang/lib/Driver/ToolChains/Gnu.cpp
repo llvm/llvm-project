@@ -417,9 +417,6 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("text");
   }
 
-  if (Args.hasArg(options::OPT_rdynamic))
-    CmdArgs.push_back("-export-dynamic");
-
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("-s");
 
