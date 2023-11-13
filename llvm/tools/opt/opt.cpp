@@ -444,19 +444,6 @@ int main(int argc, char **argv) {
   initializeReplaceWithVeclibLegacyPass(Registry);
   initializeJMCInstrumenterPass(Registry);
 
-  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format, if it's built in.
-  if (TryUseNewDbgInfoFormat) {
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
-    // If LLVM was built with support for this, turn the new debug-info format
-    // on.
-    UseNewDbgInfoFormat = true;
-#else
-    // It it wasn't, do nothing.
-    ;
-#endif
-  }
-
   SmallVector<PassPlugin, 1> PluginList;
   PassPlugins.setCallback([&](const std::string &PluginPath) {
     auto Plugin = PassPlugin::Load(PluginPath);
@@ -470,6 +457,19 @@ int main(int argc, char **argv) {
 
   cl::ParseCommandLineOptions(argc, argv,
     "llvm .bc -> .bc modular optimizer and analysis printer\n");
+
+  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
+  // new debug-info format, if it's built in.
+  if (TryUseNewDbgInfoFormat) {
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+    // If LLVM was built with support for this, turn the new debug-info format
+    // on.
+    UseNewDbgInfoFormat = true;
+#else
+    // It it wasn't, do nothing.
+    ;
+#endif
+  }
 
   LLVMContext Context;
 
