@@ -188,7 +188,7 @@ define i64 @t3_notrunc_redundant_sext(i64 %data, i64 %nbits) {
 define <2 x i32> @t4_vec(<2 x i64> %data, <2 x i32> %nbits) {
 ; CHECK-LABEL: @t4_vec(
 ; CHECK-NEXT:    [[SKIP_HIGH:%.*]] = sub <2 x i32> <i32 64, i32 64>, [[NBITS:%.*]]
-; CHECK-NEXT:    [[SKIP_HIGH_WIDE:%.*]] = zext <2 x i32> [[SKIP_HIGH]] to <2 x i64>
+; CHECK-NEXT:    [[SKIP_HIGH_WIDE:%.*]] = zext nneg <2 x i32> [[SKIP_HIGH]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i64> [[DATA:%.*]], [[SKIP_HIGH_WIDE]]
 ; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[SIGNEXTENDED]]
@@ -206,7 +206,7 @@ define <2 x i32> @t4_vec(<2 x i64> %data, <2 x i32> %nbits) {
 define <3 x i32> @t5_vec_undef(<3 x i64> %data, <3 x i32> %nbits) {
 ; CHECK-LABEL: @t5_vec_undef(
 ; CHECK-NEXT:    [[SKIP_HIGH:%.*]] = sub <3 x i32> <i32 64, i32 64, i32 undef>, [[NBITS:%.*]]
-; CHECK-NEXT:    [[SKIP_HIGH_WIDE:%.*]] = zext <3 x i32> [[SKIP_HIGH]] to <3 x i64>
+; CHECK-NEXT:    [[SKIP_HIGH_WIDE:%.*]] = zext nneg <3 x i32> [[SKIP_HIGH]] to <3 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr <3 x i64> [[DATA:%.*]], [[SKIP_HIGH_WIDE]]
 ; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = trunc <3 x i64> [[TMP1]] to <3 x i32>
 ; CHECK-NEXT:    ret <3 x i32> [[SIGNEXTENDED]]
