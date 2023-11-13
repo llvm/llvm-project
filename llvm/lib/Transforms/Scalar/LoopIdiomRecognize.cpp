@@ -1105,7 +1105,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
                                             PatternValue, ".memset_pattern");
     GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global); // Ok to merge these.
     GV->setAlignment(Align(16));
-    Value *PatternPtr = ConstantExpr::getBitCast(GV, Int8PtrTy);
+    Value *PatternPtr = GV;
     NewCall = Builder.CreateCall(MSP, {BasePtr, PatternPtr, NumBytes});
     
     // Set the TBAA info if present.

@@ -185,9 +185,7 @@ public:
   void setCoroutineSelf() {
     assert(isa<ConstantPointerNull>(getArgOperand(CoroutineArg)) &&
            "Coroutine argument is already assigned");
-    auto *const Int8PtrTy = PointerType::getUnqual(getContext());
-    setArgOperand(CoroutineArg,
-                  ConstantExpr::getBitCast(getFunction(), Int8PtrTy));
+    setArgOperand(CoroutineArg, getFunction());
   }
 
   // Methods to support type inquiry through isa, cast, and dyn_cast:
