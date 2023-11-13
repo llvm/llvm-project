@@ -93,6 +93,7 @@ STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
 STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
+STATISTIC(NumZExt, "Number of non-negative deductions");
 
 static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
   if (S->getType()->isVectorTy() || isa<Constant>(S->getCondition()))
@@ -1032,6 +1033,24 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
   return true;
 }
 
+static bool processZExt(ZExtInst *ZExt, LazyValueInfo *LVI) {
+  if (ZExt->getType()->isVectorTy())
+    return false;
+
+  if (ZExt->hasNonNeg())
+    return false;
+
+  const Use &Base = ZExt->getOperandUse(0);
+  if (!LVI->getConstantRangeAtUse(Base, /*UndefAllowed*/ false)
+           .isAllNonNegative())
+    return false;
+
+  ++NumZExt;
+  ZExt->setNonNeg();
+
+  return true;
+}
+
 static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   using OBO = OverflowingBinaryOperator;
 
@@ -1161,6 +1180,9 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         break;
       case Instruction::SExt:
         BBChanged |= processSExt(cast<SExtInst>(&II), LVI);
+        break;
+      case Instruction::ZExt:
+        BBChanged |= processZExt(cast<ZExtInst>(&II), LVI);
         break;
       case Instruction::Add:
       case Instruction::Sub:
