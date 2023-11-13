@@ -380,6 +380,10 @@ public:
     return MaskedOp.contains(I);
   }
 
+  /// Returns true if there is at least one function call in the loop which
+  /// has a vectorized variant available.
+  bool hasVectorCallVariants() const { return VecCallVariantsFound; }
+
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
 
@@ -538,6 +542,12 @@ private:
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;
   ProfileSummaryInfo *PSI;
+
+  /// If we discover function calls within the loop which have a valid
+  /// vectorized variant, record that fact so that LoopVectorize can
+  /// (potentially) make a better decision on the maximum VF and enable
+  /// the use of those function variants.
+  bool VecCallVariantsFound = false;
 };
 
 } // namespace llvm
