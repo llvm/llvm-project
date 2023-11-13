@@ -28,7 +28,7 @@
 // the apple condition here should be removed.
 #elif defined(LIBC_TARGET_ARCH_IS_X86) && !defined(__APPLE__)
 #include "x86_64/FEnvImpl.h"
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
+#elif defined(LIBC_TARGET_ARCH_IS_ARM) && __has_builtin(__builtin_arm_get_fpscr)
 #include "arm/FEnvImpl.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "riscv/FEnvImpl.h"
