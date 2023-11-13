@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenACC declare directive in subroutine and
 ! function specification parts.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenacc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module acc_declare
   contains
