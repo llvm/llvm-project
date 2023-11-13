@@ -565,13 +565,10 @@ bool SIFoldOperands::tryToFoldACImm(
   if (UseOpIdx >= Desc.getNumOperands())
     return false;
 
-  uint8_t OpTy = Desc.operands()[UseOpIdx].OperandType;
-  if ((OpTy < AMDGPU::OPERAND_REG_INLINE_AC_FIRST ||
-       OpTy > AMDGPU::OPERAND_REG_INLINE_AC_LAST) &&
-      (OpTy < AMDGPU::OPERAND_REG_INLINE_C_FIRST ||
-       OpTy > AMDGPU::OPERAND_REG_INLINE_C_LAST))
+  if (!AMDGPU::isSISrcInlinableOperand(Desc, UseOpIdx))
     return false;
 
+  uint8_t OpTy = Desc.operands()[UseOpIdx].OperandType;
   if (OpToFold.isImm() && TII->isInlineConstant(OpToFold, OpTy) &&
       TII->isOperandLegal(*UseMI, UseOpIdx, &OpToFold)) {
     UseMI->getOperand(UseOpIdx).ChangeToImmediate(OpToFold.getImm());
