@@ -1226,6 +1226,14 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_THREAD_SAFETY_ANNOTATION(x)
 #  endif
 
+#  if _LIBCPP_STD_VER >= 20
+#    define _LIBCPP_CONSTINIT constinit
+#  elif __has_attribute(__require_constant_initialization__)
+#    define _LIBCPP_CONSTINIT __attribute__((__require_constant_initialization__))
+#  else
+#    define _LIBCPP_CONSTINIT
+#  endif
+
 #  if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
 #    define _LIBCPP_DIAGNOSE_WARNING(...) __attribute__((__diagnose_if__(__VA_ARGS__, "warning")))
 #  else
