@@ -33,7 +33,7 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
   if (result.has_value()) {
     if (failed(*result)) {
       parser.emitError(parser.getCurrentLocation(),
-                       "Invalid integer coefficient.");
+                       "invalid integer coefficient");
       return failure();
     }
   }
@@ -61,7 +61,7 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
   // If there's one * there must be two
   if (failed(parser.parseStar())) {
     parser.emitError(parser.getCurrentLocation(),
-                     "Exponents must be specified as a double-asterisk `**`.");
+                     "exponents must be specified as a double-asterisk `**`");
     return failure();
   }
 
@@ -69,7 +69,7 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
   APInt parsedExponent(apintBitWidth, 0);
   if (failed(parser.parseInteger(parsedExponent))) {
     parser.emitError(parser.getCurrentLocation(),
-                     "Found invalid integer exponent.");
+                     "found invalid integer exponent");
     return failure();
   }
 
@@ -106,8 +106,8 @@ mlir::Attribute mlir::polynomial::PolynomialAttr::parse(AsmParser &parser,
       llvm::SmallString<512> coeff_string;
       parsedMonomial.exponent.toStringSigned(coeff_string);
       parser.emitError(parser.getCurrentLocation(),
-                       "At most one monomial may have exponent " +
-                           coeff_string + ", but found multiple.");
+                       "at most one monomial may have exponent " +
+                           coeff_string + ", but found multiple");
       return {};
     }
     exponents.insert(parsedMonomial.exponent);
@@ -122,13 +122,13 @@ mlir::Attribute mlir::polynomial::PolynomialAttr::parse(AsmParser &parser,
       } else {
         parser.emitError(
             parser.getCurrentLocation(),
-            "Expected + and more monomials, or > to end polynomial attribute.");
+            "expected + and more monomials, or > to end polynomial attribute");
         return {};
       }
     } else if (succeeded(parser.parseOptionalGreater())) {
       parser.emitError(
           parser.getCurrentLocation(),
-          "Expected another monomial after +, but found > ending attribute.");
+          "expected another monomial after +, but found > ending attribute");
       return {};
     }
   }
@@ -138,7 +138,7 @@ mlir::Attribute mlir::polynomial::PolynomialAttr::parse(AsmParser &parser,
     std::string vars = llvm::join(variables.begin(), variables.end(), ", ");
     parser.emitError(
         parser.getCurrentLocation(),
-        "Polynomials must have one indeterminate, but there were multiple: " +
+        "polynomials must have one indeterminate, but there were multiple: " +
             vars);
   }
 
@@ -179,14 +179,14 @@ mlir::Attribute mlir::polynomial::RingAttr::parse(AsmParser &parser,
     if (!iType) {
       parser.emitError(
           parser.getCurrentLocation(),
-          "Invalid coefficient modulus, ctype must specify an integer type.");
+          "invalid coefficient modulus, ctype must specify an integer type");
       return {};
     }
     APInt cmod(iType.getWidth(), 0);
     auto result = parser.parseInteger(cmod);
     if (failed(result)) {
       parser.emitError(parser.getCurrentLocation(),
-                       "Invalid coefficient modulus.");
+                       "invalid coefficient modulus");
       return {};
     }
     cmodAttr = IntegerAttr::get(iType, cmod);
