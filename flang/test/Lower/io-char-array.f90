@@ -1,5 +1,5 @@
 ! Check that a box is created instead of a temp to write to a char array.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 subroutine io_char_array
   character(12) :: r(2) = 'badbadbadbad'
