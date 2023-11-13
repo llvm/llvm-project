@@ -78,8 +78,7 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
   return success();
 }
 
-mlir::Attribute mlir::polynomial::PolynomialAttr::parse(AsmParser &parser,
-                                                        Type type) {
+Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
 
@@ -151,8 +150,7 @@ void RingAttr::print(AsmPrinter &p) const {
     << ", polynomialModulus=" << getPolynomialModulus() << '>';
 }
 
-mlir::Attribute mlir::polynomial::RingAttr::parse(AsmParser &parser,
-                                                  Type type) {
+Attribute RingAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
 
@@ -174,7 +172,7 @@ mlir::Attribute mlir::polynomial::RingAttr::parse(AsmParser &parser,
     if (failed(parser.parseEqual()))
       return {};
 
-    IntegerType iType = dyn_cast<IntegerType>(typeAttr.getValue());
+    IntegerType iType = llvm::dyn_cast<IntegerType>(typeAttr.getValue());
     if (!iType) {
       parser.emitError(parser.getCurrentLocation(),
                        "invalid coefficient modulus, coefficientType must "
