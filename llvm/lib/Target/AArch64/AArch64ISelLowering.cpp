@@ -22389,13 +22389,14 @@ static SDValue performVSelectCombine(SDNode *N, SelectionDAG &DAG) {
     }
   }
 
+  EVT CmpVT = N0.getOperand(0).getValueType();
   if (N0.getOpcode() != ISD::SETCC ||
       CCVT.getVectorElementCount() != ElementCount::getFixed(1) ||
-      CCVT.getVectorElementType() != MVT::i1)
+      CCVT.getVectorElementType() != MVT::i1 ||
+      CmpVT.getVectorElementType().isFloatingPoint())
     return SDValue();
 
   EVT ResVT = N->getValueType(0);
-  EVT CmpVT = N0.getOperand(0).getValueType();
   // Only combine when the result type is of the same size as the compared
   // operands.
   if (ResVT.getSizeInBits() != CmpVT.getSizeInBits())
@@ -22438,8 +22439,10 @@ static SDValue performSelectCombine(SDNode *N,
   EVT SrcVT = N0.getOperand(0).getValueType();
 
   // Don't try to do this optimization when the setcc itself has i1 operands.
-  // There are no legal vectors of i1, so this would be pointless.
-  if (SrcVT == MVT::i1)
+  // There are no legal vectors of i1, so this would be pointless. v1f16 is
+  // ruled out to prevent the creation of setcc that need to be scalarized.
+  if (SrcVT == MVT::i1 ||
+      (SrcVT.isFloatingPoint() && SrcVT.getSizeInBits() <= 16))
     return SDValue();
 
   int NumMaskElts = ResVT.getSizeInBits() / SrcVT.getSizeInBits();
