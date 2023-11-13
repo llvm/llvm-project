@@ -31,12 +31,14 @@ struct A : CountCopyAndMove {
 };
 } // namespace
 
+namespace llvm {
 template <> struct DenseMapInfo<A> {
   static inline A getEmptyKey() { return 0x7fffffff; }
   static inline A getTombstoneKey() { return -0x7fffffff - 1; }
   static unsigned getHashValue(const A &Val) { return (unsigned)(Val.v * 37U); }
   static bool isEqual(const A &LHS, const A &RHS) { return LHS.v == RHS.v; }
 };
+} // namespace llvm
 
 namespace {
 TEST(MapVectorTest, swap) {
@@ -131,13 +133,13 @@ TEST(MapVectorTest, try_emplace) {
   EXPECT_EQ(0, try1.first->first.move);
 
   A two(2);
-  auto try2 = mv.try_emplace(2, (A &&)two, std::make_unique<int>(2));
+  auto try2 = mv.try_emplace(2, std::move(two), std::make_unique<int>(2));
   EXPECT_TRUE(try2.second);
   EXPECT_EQ(2, try2.first->second.a.v);
   EXPECT_EQ(0, try2.first->second.a.move);
 
   std::unique_ptr<int> p(new int(3));
-  auto try3 = mv.try_emplace((A &&)two, 3, std::move(p));
+  auto try3 = mv.try_emplace(std::move(two), 3, std::move(p));
   EXPECT_FALSE(try3.second);
   EXPECT_EQ(2, try3.first->second.a.v);
   EXPECT_EQ(1, try3.first->second.a.copy);
@@ -170,12 +172,12 @@ TEST(MapVectorTest, insert_or_assign) {
   EXPECT_EQ(0, try1.first->first.move);
 
   A two(2);
-  auto try2 = mv.try_emplace(2, (A &&)two);
+  auto try2 = mv.try_emplace(2, std::move(two));
   EXPECT_TRUE(try2.second);
   EXPECT_EQ(2, try2.first->second.v);
   EXPECT_EQ(1, try2.first->second.move);
 
-  auto try3 = mv.insert_or_assign((A &&)two, 3);
+  auto try3 = mv.insert_or_assign(std::move(two), 3);
   EXPECT_FALSE(try3.second);
   EXPECT_EQ(3, try3.first->second.v);
   EXPECT_EQ(0, try3.first->second.copy);

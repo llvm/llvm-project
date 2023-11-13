@@ -116,30 +116,26 @@ public:
 
   template <typename... Ts>
   std::pair<iterator, bool> try_emplace(const KeyT &Key, Ts &&...Args) {
-    std::pair<typename MapType::iterator, bool> Result =
-        Map.insert(std::make_pair(Key, 0));
-    auto &I = Result.first->second;
-    if (Result.second) {
+    auto [It, Inserted] = Map.insert(std::make_pair(Key, 0));
+    if (Inserted) {
+      It->second = Vector.size();
       Vector.emplace_back(std::piecewise_construct, std::forward_as_tuple(Key),
                           std::forward_as_tuple(std::forward<Ts>(Args)...));
-      I = Vector.size() - 1;
       return std::make_pair(std::prev(end()), true);
     }
-    return std::make_pair(begin() + I, false);
+    return std::make_pair(begin() + It->second, false);
   }
   template <typename... Ts>
   std::pair<iterator, bool> try_emplace(KeyT &&Key, Ts &&...Args) {
-    std::pair<typename MapType::iterator, bool> Result =
-        Map.insert(std::make_pair(Key, 0));
-    auto &I = Result.first->second;
-    if (Result.second) {
+    auto [It, Inserted] = Map.insert(std::make_pair(Key, 0));
+    if (Inserted) {
+      It->second = Vector.size();
       Vector.emplace_back(std::piecewise_construct,
                           std::forward_as_tuple(std::move(Key)),
                           std::forward_as_tuple(std::forward<Ts>(Args)...));
-      I = Vector.size() - 1;
       return std::make_pair(std::prev(end()), true);
     }
-    return std::make_pair(begin() + I, false);
+    return std::make_pair(begin() + It->second, false);
   }
 
   std::pair<iterator, bool> insert(const std::pair<KeyT, ValueT> &KV) {
