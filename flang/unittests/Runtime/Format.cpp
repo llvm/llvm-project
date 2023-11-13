@@ -107,6 +107,10 @@ TEST(FormatTests, FormatStringTraversal) {
           ResultsTy{"'PI='", "F9.7", "'PI='", "F9.7"}, 1},
       {2, "(*('PI=',F9.7,:))", ResultsTy{"'PI='", "F9.7", "'PI='", "F9.7"}, 1},
       {1, "(3F9.7)", ResultsTy{"2*F9.7"}, 2},
+      {9, "((I4,2(E10.1)))",
+          ResultsTy{"I4", "E10.1", "E10.1", "/", "I4", "E10.1", "E10.1", "/",
+              "I4", "E10.1", "E10.1"},
+          1},
   };
 
   for (const auto &[n, format, expect, repeat] : params) {
