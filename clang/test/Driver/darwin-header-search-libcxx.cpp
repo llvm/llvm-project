@@ -173,16 +173,13 @@
 // CHECK-LIBCXX-STDLIB-UNSPECIFIED: "-cc1"
 // CHECK-LIBCXX-STDLIB-UNSPECIFIED: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 
-// Make sure the target folder has no toolchain structure.
+// Reproduce the xPack use case; there must be no include here,
+// to select the executable folder.
 // RUN: rm -rf %t/xpacks
 // RUN: mkdir -pv %t/xpacks/.bin
-// RUN: ln -s %clang %t/xpacks/.bin/clang
+// RUN: ln -svf %clang %t/xpacks/.bin/clang
+// The build folders do not include this include; create it.
 // RUN: mkdir -pv $(dirname $(which %clang))/../include/c++/v1
-
-// RUN: %t/xpacks/.bin/clang -### %s -fsyntax-only 2>&1 \
-// RUN:     --target=x86_64-apple-darwin \
-// RUN:     -stdlib=libc++ \
-// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 -v
 
 // RUN: %t/xpacks/.bin/clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
