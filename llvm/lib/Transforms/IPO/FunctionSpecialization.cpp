@@ -290,14 +290,12 @@ Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
 // A depth limit is used to avoid extreme recurusion.
 // A max number of incoming phi values ensures that expensive searches
 // are avoided.
-//
-// Returns false if the discovery was aborted due to the above conditions.
-bool InstCostVisitor::discoverTransitivelyIncomngValues(
+void InstCostVisitor::discoverTransitivelyIncomngValues(
     DenseSet<PHINode *> &PHINodes, PHINode *PN, unsigned Depth) {
   if (Depth > MaxDiscoveryDepth) {
     LLVM_DEBUG(dbgs() << "FnSpecialization: Discover PHI nodes too deep ("
                       << Depth << ">" << MaxDiscoveryDepth << ")\n");
-    return false;
+    return;
   }
 
   if (PN->getNumIncomingValues() > MaxIncomingPhiValues) {
@@ -305,23 +303,21 @@ bool InstCostVisitor::discoverTransitivelyIncomngValues(
         dbgs() << "FnSpecialization: Discover PHI nodes has too many values  ("
                << PN->getNumIncomingValues() << ">" << MaxIncomingPhiValues
                << ")\n");
-    return false;
+    return;
   }
 
   // Already seen this, no more processing needed.
   if (!PHINodes.insert(PN).second)
-    return true;
+    return;
 
   for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
     Value *V = PN->getIncomingValue(I);
     if (auto *Phi = dyn_cast<PHINode>(V)) {
       if (Phi == PN || DeadBlocks.contains(PN->getIncomingBlock(I)))
         continue;
-      if (!discoverTransitivelyIncomngValues(PHINodes, Phi, Depth + 1))
-        return false;
+      discoverTransitivelyIncomngValues(PHINodes, Phi, Depth + 1);
     }
   }
-  return true;
 }
 
 Constant *InstCostVisitor::visitPHINode(PHINode &I) {
@@ -378,8 +374,8 @@ Constant *InstCostVisitor::visitPHINode(PHINode &I) {
   // Try to see if we can collect a nest of transitive phis. Bail if
   // it's too complex.
   for (PHINode *Phi : UnknownIncomingValues)
-    if (!discoverTransitivelyIncomngValues(TransitivePHIs, Phi, 1))
-      return nullptr;
+    discoverTransitivelyIncomngValues(TransitivePHIs, Phi, 1);
+
 
   // A nested set of PHINodes can be constantfolded if:
   // - It has a constant input.

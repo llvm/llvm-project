@@ -217,7 +217,7 @@ private:
   Cost estimateSwitchInst(SwitchInst &I);
   Cost estimateBranchInst(BranchInst &I);
 
-  bool discoverTransitivelyIncomngValues(DenseSet<PHINode *> &PhiNodes,
+  void discoverTransitivelyIncomngValues(DenseSet<PHINode *> &PhiNodes,
                                          PHINode *PN, unsigned Depth);
 
   Constant *visitInstruction(Instruction &I) { return nullptr; }
