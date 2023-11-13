@@ -79,13 +79,6 @@ typedef struct {
   uintptr_t value;
 } omp_alloctrait_t;
 
-// Attribute to keep alive certain definition for the bitcode library.
-#ifdef LIBOMPTARGET_BC_TARGET
-#define KEEP_ALIVE __attribute__((used, retain))
-#else
-#define KEEP_ALIVE
-#endif
-
 ///}
 
 #endif // OPENMP_LIBOMPTARGET_DEVICERTL_INCLUDE_DEVRTLEXTRAS_H

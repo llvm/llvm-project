@@ -43,7 +43,6 @@ void __assert_fail_internal(const char *expr, const char *msg, const char *file,
 
 #define PRINTF(fmt, ...) (void)printf(fmt, ##__VA_ARGS__);
 #define PRINT(str) PRINTF("%s", str)
-
 ///}
 
 #endif

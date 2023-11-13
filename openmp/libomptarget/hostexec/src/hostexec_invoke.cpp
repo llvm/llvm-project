@@ -19,6 +19,8 @@ extern "C" __inl uint32_t oclAtomic64CAS_RX(GLOB_ATTR uint64_t *Address,
 // headers for cuda nvptx atomics
 extern "C" __attribute__((nothrow)) unsigned long long
 __ullAtomicAdd_system(unsigned long long *address, unsigned long long val);
+extern "C" __attribute__((nothrow)) unsigned __uAtomicAdd(unsigned *address,
+                                                          unsigned val);
 extern "C" __attribute__((nothrow)) unsigned long long
 __ullAtomicCAS_system(unsigned long long int *address,
                       unsigned long long int compare,
