@@ -101,6 +101,11 @@ environment_definitions:
 
 
 steps:
+  #
+  # General testing with the default configuration, under all the supported
+  # Standard modes, with Clang and GCC. This catches most issues upfront.
+  # The goal of this step is to catch most issues while being very fast.
+  #
 - label: GCC ${GCC_STABLE_VERSION} / C++latest
   command: libcxx/utils/ci/run-buildbot generic-gcc
   env:
