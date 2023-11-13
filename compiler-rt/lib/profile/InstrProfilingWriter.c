@@ -286,7 +286,6 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
       __llvm_profile_get_num_vtable(VTableBegin, VTableEnd);
   const uint64_t VTableSectionSize =
       __llvm_profile_get_vtable_section_size(VTableBegin, VTableEnd);
-  // Value profiling is not supported when DebugInfoCorrelate is true.
   const uint64_t VNamesSize =
       __llvm_profile_get_name_size(VNamesBegin, VNamesEnd);
 
@@ -298,12 +297,13 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
       PaddingBytesAfterBitmapBytes, PaddingBytesAfterNames,
       PaddingBytesAfterVTable, PaddingBytesAfterVNames;
-  __llvm_profile_get_padding_sizes_for_counters(
+  if (__llvm_profile_get_padding_sizes_for_counters(
       DataSectionSize, CountersSectionSize, NumBitmapBytes, NamesSize,
       VTableSectionSize, VNamesSize, &PaddingBytesBeforeCounters,
       &PaddingBytesAfterCounters, &PaddingBytesAfterBitmapBytes,
       &PaddingBytesAfterNames, &PaddingBytesAfterVTable,
-      &PaddingBytesAfterVNames);
+      &PaddingBytesAfterVNames) == -1)
+      return -1;
 
   {
 /* Initialize header structure.  */

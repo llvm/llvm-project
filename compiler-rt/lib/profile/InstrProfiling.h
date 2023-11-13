@@ -305,16 +305,18 @@ uint64_t __llvm_profile_get_num_vtable(const VTableProfData *Begin,
 uint64_t __llvm_profile_get_vtable_section_size(const VTableProfData *Begin,
                                                 const VTableProfData *End);
 
-/* ! \brief Given the sizes of the data and counter information, return the
- * number of padding bytes before and after the counters, and after the names,
- * in the raw profile.
+/* ! \brief Given the sizes of the data and counter information, computes the
+ * number of padding bytes before and after the counter section, as well as the
+ * number of padding bytes after other setions in the raw profile.
+ * Returns -1 upon errors and 0 upon success. Output parameters should be used
+ * iff return value is 0.
  *
  * Note: When mmap() mode is disabled, no padding bytes before/after counters
  * are needed. However, in mmap() mode, the counter section in the raw profile
  * must be page-aligned: this API computes the number of padding bytes
  * needed to achieve that.
  */
-void __llvm_profile_get_padding_sizes_for_counters(
+int __llvm_profile_get_padding_sizes_for_counters(
     uint64_t DataSize, uint64_t CountersSize, uint64_t NumBitmapBytes,
     uint64_t NamesSize, uint64_t VTableSize, uint64_t VNameSize,
     uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,

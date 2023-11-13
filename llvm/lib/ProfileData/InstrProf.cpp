@@ -596,7 +596,12 @@ uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
   auto It = lower_bound(
       VTableAddrRangeToMD5Map, Address,
       [](std::pair<std::pair<uint64_t, uint64_t>, uint64_t> VTableRangeAddr,
-         uint64_t Addr) { return VTableRangeAddr.first.second < Addr; });
+         uint64_t Addr) {
+        // Find the first address range of which end address is larger than
+        // `Addr`. Smaller-than-or-equal-to is used because the profiled address
+        // within a vtable should be [start-address, end-address).
+        return VTableRangeAddr.first.second <= Addr;
+      });
 
   // Returns the MD5 hash if Address is within the address range of an entry.
   if (It != VTableAddrRangeToMD5Map.end() && It->first.first <= Address) {
@@ -1523,7 +1528,7 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
   for (unsigned I = 0; I < IPVK_Last - IPVK_First + 1; I++) {
     if (Base.ValueCounts[I] < 1.0f && Test.ValueCounts[I] < 1.0f)
       continue;
-    char ProfileKindName[20];
+    char ProfileKindName[20] = {0};
     switch (I) {
     case IPVK_IndirectCallTarget:
       strncpy(ProfileKindName, "IndirectCall", 19);
@@ -1532,7 +1537,7 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
       strncpy(ProfileKindName, "MemOP", 19);
       break;
     case IPVK_VTableTarget:
-      strncpy(ProfileKindName, "VTable", 6);
+      strncpy(ProfileKindName, "VTable", 19);
       break;
     default:
       snprintf(ProfileKindName, 19, "VP[%d]", I);

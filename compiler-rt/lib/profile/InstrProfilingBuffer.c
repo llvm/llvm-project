@@ -9,8 +9,6 @@
 // Note: This is linked into the Darwin kernel, and must remain compatible
 // with freestanding compilation. See `darwin_add_builtin_libraries`.
 
-#include <assert.h>
-
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
 #include "InstrProfilingPort.h"
@@ -135,7 +133,7 @@ static int needsCounterPadding(void) {
 }
 
 COMPILER_RT_VISIBILITY
-void __llvm_profile_get_padding_sizes_for_counters(
+int __llvm_profile_get_padding_sizes_for_counters(
     uint64_t DataSize, uint64_t CountersSize, uint64_t NumBitmapBytes,
     uint64_t NamesSize, uint64_t VTableSize, uint64_t VNameSize,
     uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,
@@ -154,12 +152,14 @@ void __llvm_profile_get_padding_sizes_for_counters(
           __llvm_profile_get_num_padding_bytes(VTableSize);
     if (PaddingBytesAfterVName != NULL)
       *PaddingBytesAfterVName = __llvm_profile_get_num_padding_bytes(VNameSize);
-    return;
+    return 0;
   }
 
   // Value profiling not supported in continuous mode at profile-write time.
-  assert(VTableSize == 0 && VNameSize == 0 &&
-         "Value profile not supported for continuous mode");
+  // Return -1 to alert the incompatibility.
+  if (VTableSize != 0 || VNameSize != 0)
+    return -1;
+
   // In continuous mode, the file offsets for headers and for the start of
   // counter sections need to be page-aligned.
   *PaddingBytesBeforeCounters =
@@ -169,11 +169,12 @@ void __llvm_profile_get_padding_sizes_for_counters(
       calculateBytesNeededToPageAlign(NumBitmapBytes);
   *PaddingBytesAfterNames = calculateBytesNeededToPageAlign(NamesSize);
   // Set these two variables to zero to avoid uninitialized variables
-  // even if VTableSize and VNameSize are asserted to be zero.
+  // even if VTableSize and VNameSize are known to be zero.
   if (PaddingBytesAfterVTable != NULL)
     *PaddingBytesAfterVTable = 0;
   if (PaddingBytesAfterVName != NULL)
     *PaddingBytesAfterVName = 0;
+  return 0;
 }
 
 COMPILER_RT_VISIBILITY

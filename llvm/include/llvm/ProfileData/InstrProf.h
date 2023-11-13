@@ -566,8 +566,9 @@ public:
     AddrToMD5Map.push_back(std::make_pair(Addr, MD5Val));
   }
 
-  /// Map the address range (i.e., [start_address, end_address]) of a variable to
-  /// its names' MD5 hash. This interface is only used by the raw profile header.
+  /// Map the address range (i.e., [start_address, end_address]) of a variable
+  /// to  its names' MD5 hash. This interface is only used by the raw profile
+  /// reader.
   void mapVTableAddress(uint64_t StartAddr, uint64_t EndAddr, uint64_t MD5Val) {
     VTableAddrRangeToMD5Map.push_back(
         std::make_pair(std::make_pair(StartAddr, EndAddr), MD5Val));

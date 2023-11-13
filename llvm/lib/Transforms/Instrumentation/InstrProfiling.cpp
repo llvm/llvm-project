@@ -1100,7 +1100,7 @@ static inline bool shouldRecordVTableAddr(GlobalVariable *GV) {
   return true;
 }
 
-// FIXME: Does symbollic relocation from 'getFuncAddrForProfData' matter here?
+// FIXME: Does symbolic relocation from 'getFuncAddrForProfData' matter here?
 static inline Constant *getVTableAddrForProfData(GlobalVariable *GV) {
   auto *Int8PtrTy = PointerType::getUnqual(GV->getContext());
 
@@ -1153,7 +1153,6 @@ void InstrProfiling::getOrCreateVTableProfData(GlobalVariable *GV) {
 
   // Used by INSTR_PROF_VTABLE_DATA MACRO
   Constant *VTableAddr = getVTableAddrForProfData(GV);
-  StringRef VTableName = GV->getName();
   StringRef PGOVTableName = getPGOName(*GV);
   // Record the length of the vtable. This is needed since vtable pointers
   // loaded from C++ objects might be from the middle of a vtable definition.
@@ -1188,7 +1187,7 @@ void InstrProfiling::getOrCreateVTableProfData(GlobalVariable *GV) {
       Comdat *C = M->getOrInsertComdat(GroupName);
       // For ELF, when not using COMDAT, put the vtable profile data into a
       // nodeduplicate COMDAT which is lowered to a zero-flag zero group.
-      // This allows -z -start-top-gc to discard the entire group when the
+      // This allows -z -start-stop-gc to discard the entire group when the
       // vtable def is discarded.
       if (!NeedComdat)
         C->setSelectionKind(Comdat::NoDeduplicate);
