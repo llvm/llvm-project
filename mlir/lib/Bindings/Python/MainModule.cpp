@@ -12,8 +12,6 @@
 #include "IRModule.h"
 #include "Pass.h"
 
-#include <tuple>
-
 namespace py = pybind11;
 using namespace mlir;
 using namespace py::literals;
@@ -46,7 +44,8 @@ PYBIND11_MODULE(_mlir, m) {
            "dialect_namespace"_a, "dialect_class"_a,
            "Testing hook for directly registering a dialect")
       .def("_register_operation_impl", &PyGlobals::registerOperationImpl,
-           "operation_name"_a, "operation_class"_a, "replace"_a = false,
+           "operation_name"_a, "operation_class"_a, py::kw_only(),
+           "replace"_a = false,
            "Testing hook for directly registering an operation");
 
   // Aside from making the globals accessible to python, having python manage
@@ -82,17 +81,32 @@ PYBIND11_MODULE(_mlir, m) {
               return opClass;
             });
       },
-      "dialect_class"_a, "replace"_a = false,
+      "dialect_class"_a, py::kw_only(), "replace"_a = false,
       "Produce a class decorator for registering an Operation class as part of "
       "a dialect");
   m.def(
       MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR,
-      [](MlirTypeID mlirTypeID, py::function typeCaster, bool replace) {
-        PyGlobals::get().registerTypeCaster(mlirTypeID, std::move(typeCaster),
-                                            replace);
+      [](MlirTypeID mlirTypeID, bool replace) -> py::cpp_function {
+        return py::cpp_function([mlirTypeID,
+                                 replace](py::object typeCaster) -> py::object {
+          PyGlobals::get().registerTypeCaster(mlirTypeID, typeCaster, replace);
+          return typeCaster;
+        });
       },
-      "typeid"_a, "type_caster"_a, "replace"_a = false,
+      "typeid"_a, py::kw_only(), "replace"_a = false,
       "Register a type caster for casting MLIR types to custom user types.");
+  m.def(
+      MLIR_PYTHON_CAPI_VALUE_CASTER_REGISTER_ATTR,
+      [](MlirTypeID mlirTypeID, bool replace) -> py::cpp_function {
+        return py::cpp_function(
+            [mlirTypeID, replace](py::object valueCaster) -> py::object {
+              PyGlobals::get().registerValueCaster(mlirTypeID, valueCaster,
+                                                   replace);
+              return valueCaster;
+            });
+      },
+      "typeid"_a, py::kw_only(), "replace"_a = false,
+      "Register a value caster for casting MLIR values to custom user values.");
 
   // Define and populate IR submodule.
   auto irModule = m.def_submodule("ir", "MLIR IR Bindings");

@@ -2296,7 +2296,11 @@ createAlteredByCaptureMap(MapInfoData &mapData,
       } break;
       case mlir::omp::VariableCaptureKind::ByCopy: {
         llvm::Type *type = mapData.BaseType[i];
-        llvm::Value *newV = builder.CreateLoad(type, mapData.Pointers[i]);
+        llvm::Value *newV;
+        if (mapData.Pointers[i]->getType()->isPointerTy())
+          newV = builder.CreateLoad(type, mapData.Pointers[i]);
+        else
+          newV = mapData.Pointers[i];
 
         if (!type->isPointerTy()) {
           auto curInsert = builder.saveIP();

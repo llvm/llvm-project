@@ -1,4 +1,9 @@
-# RUN: yaml-bench -canonical %s
+# RUN: yaml-bench -canonical %s | FileCheck %s --strict-whitespace
+# CHECK:      !!seq [
+# CHECK-NEXT:   !!str " last",
+# CHECK-NEXT:   !!str " last",
+# CHECK-NEXT:   !!str " \tfirst last",
+# CHECK-NEXT: ]
 
 - '
   last'
