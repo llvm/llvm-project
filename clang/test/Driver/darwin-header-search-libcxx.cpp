@@ -176,9 +176,9 @@
 // Make sure the target folder has no toolchain structure.
 // RUN: rm -rf %t/xpacks
 // RUN: mkdir -pv %t/xpacks/.bin
-// RUN: ln -s %clang_cpp %t/xpacks/.bin/clang++
+// RUN: ln -s %clang %t/xpacks/.bin/clang
 
-// RUN: %t/xpacks/.bin/clang++ -### %s -fsyntax-only 2>&1 \
+// RUN: %t/xpacks/.bin/clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
 // RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
