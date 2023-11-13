@@ -3558,8 +3558,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return selectConcatVectors(I, MRI);
   case TargetOpcode::G_JUMP_TABLE:
     return selectJumpTable(I, MRI);
-  case TargetOpcode::G_VECREDUCE_ADD:
-    return selectReduction(I, MRI);
   case TargetOpcode::G_MEMCPY:
   case TargetOpcode::G_MEMCPY_INLINE:
   case TargetOpcode::G_MEMMOVE:
@@ -3576,49 +3574,6 @@ bool AArch64InstructionSelector::selectAndRestoreState(MachineInstr &I) {
   bool Success = select(I);
   MIB.setState(OldMIBState);
   return Success;
-}
-
-bool AArch64InstructionSelector::selectReduction(MachineInstr &I,
-                                                 MachineRegisterInfo &MRI) {
-  Register VecReg = I.getOperand(1).getReg();
-  LLT VecTy = MRI.getType(VecReg);
-  if (I.getOpcode() == TargetOpcode::G_VECREDUCE_ADD) {
-    // For <2 x i32> ADDPv2i32 generates an FPR64 value, so we need to emit
-    // a subregister copy afterwards.
-    if (VecTy == LLT::fixed_vector(2, 32)) {
-      Register DstReg = I.getOperand(0).getReg();
-      auto AddP = MIB.buildInstr(AArch64::ADDPv2i32, {&AArch64::FPR64RegClass},
-                                 {VecReg, VecReg});
-      auto Copy = MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {})
-                      .addReg(AddP.getReg(0), 0, AArch64::ssub)
-                      .getReg(0);
-      RBI.constrainGenericRegister(Copy, AArch64::FPR32RegClass, MRI);
-      I.eraseFromParent();
-      return constrainSelectedInstRegOperands(*AddP, TII, TRI, RBI);
-    }
-
-    unsigned Opc = 0;
-    if (VecTy == LLT::fixed_vector(16, 8))
-      Opc = AArch64::ADDVv16i8v;
-    else if (VecTy == LLT::fixed_vector(8, 8))
-      Opc = AArch64::ADDVv8i8v;
-    else if (VecTy == LLT::fixed_vector(8, 16))
-      Opc = AArch64::ADDVv8i16v;
-    else if (VecTy == LLT::fixed_vector(4, 16))
-      Opc = AArch64::ADDVv4i16v;
-    else if (VecTy == LLT::fixed_vector(4, 32))
-      Opc = AArch64::ADDVv4i32v;
-    else if (VecTy == LLT::fixed_vector(2, 64))
-      Opc = AArch64::ADDPv2i64p;
-    else {
-      LLVM_DEBUG(dbgs() << "Unhandled type for add reduction");
-      return false;
-    }
-    I.setDesc(TII.get(Opc));
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  }
-
-  return false;
 }
 
 bool AArch64InstructionSelector::selectMOPS(MachineInstr &GI,
