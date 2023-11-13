@@ -1,0 +1,16 @@
+name: PR Subscriber
+
+on:
+  pull_request_target: opened
+
+permissions:
+  contents: write
+
+jobs:
+  auto-subscribe:
+    runs-on: ubuntu-latest
+    if: github.repository == 'DavidSpickett/llvm-project'
+    steps:
+      - name: Setup Automation Script
+        run: |
+          echo "Hello actions"
