@@ -1,4 +1,4 @@
-//===- PolynomialTypes.td - Type definitions for polynomial dialect ------*- tablegen -*-==//
+//===- PolynomialTypes.td - Types for polynomial dialect ---*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
