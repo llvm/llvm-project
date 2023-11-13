@@ -2621,15 +2621,6 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
-
-  for (int64_t offset : staticOffsets) {
-    if (!ShapedType::isDynamic(offset))
-      assert(offset >= 0 && "expected subview offsets to be non-negative");
-  }
-  for (int64_t size : staticSizes) {
-    if (!ShapedType::isDynamic(size))
-      assert(size >= 0 && "expected subview sizes to be non-negative");
-  }
   return SubViewOp::inferResultType(sourceMemRefType, staticOffsets,
                                     staticSizes, staticStrides);
 }
