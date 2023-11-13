@@ -231,10 +231,9 @@ public:
     OS.close();
   }
 
-  void saveKernelInputInfo(const char *Name, DeviceImageTy &Image,
-                           void **ArgPtrs, ptrdiff_t *ArgOffsets,
-                           int32_t NumArgs, uint64_t NumTeamsClause,
-                           uint32_t ThreadLimitClause, uint64_t LoopTripCount) {
+  void saveKernelDescr(const char *Name, void **ArgPtrs, ptrdiff_t *ArgOffsets,
+                       int32_t NumArgs, uint64_t NumTeamsClause,
+                       uint32_t ThreadLimitClause, uint64_t LoopTripCount) {
     json::Object JsonKernelInfo;
     JsonKernelInfo["Name"] = Name;
     JsonKernelInfo["NumArgs"] = NumArgs;
@@ -255,12 +254,6 @@ public:
       JsonArgOffsets.push_back(ArgOffsets[I]);
     JsonKernelInfo["ArgOffsets"] = json::Value(std::move(JsonArgOffsets));
 
-    SmallString<128> MemoryFilename = {Name, ".memory"};
-    dumpDeviceMemory(MemoryFilename);
-
-    SmallString<128> GlobalsFilename = {Name, ".globals"};
-    dumpGlobals(GlobalsFilename, Image);
-
     SmallString<128> JsonFilename = {Name, ".json"};
     std::error_code EC;
     raw_fd_ostream JsonOS(JsonFilename.str(), EC);
@@ -269,6 +262,14 @@ public:
                          StringRef(EC.message()));
     JsonOS << json::Value(std::move(JsonKernelInfo));
     JsonOS.close();
+  }
+
+  void saveKernelInput(const char *Name, DeviceImageTy &Image) {
+    SmallString<128> GlobalsFilename = {Name, ".globals"};
+    dumpGlobals(GlobalsFilename, Image);
+
+    SmallString<128> MemoryFilename = {Name, ".memory"};
+    dumpDeviceMemory(MemoryFilename);
   }
 
   void saveKernelOutputInfo(const char *Name) {
@@ -402,7 +403,7 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
     DP("Failed to read kernel environment for '%s': %s\n"
        "Using default SPMD (2) execution mode\n",
        Name, ErrStr.data());
-    assert(KernelEnvironment.Configuration.ReductionBufferSize == 0 &&
+    assert(KernelEnvironment.Configuration.ReductionDataSize == 0 &&
            "Default initialization failed.");
   }
 
@@ -440,9 +441,11 @@ GenericKernelTy::getKernelLaunchEnvironment(
   /// async data transfer.
   auto &LocalKLE = (*AsyncInfoWrapper).KernelLaunchEnvironment;
   LocalKLE = KernelLaunchEnvironment;
-  if (KernelEnvironment.Configuration.ReductionBufferSize) {
+  if (KernelEnvironment.Configuration.ReductionDataSize &&
+      KernelEnvironment.Configuration.ReductionBufferLength) {
     auto AllocOrErr = GenericDevice.dataAlloc(
-        KernelEnvironment.Configuration.ReductionBufferSize,
+        KernelEnvironment.Configuration.ReductionDataSize *
+            KernelEnvironment.Configuration.ReductionBufferLength,
         /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
     if (!AllocOrErr)
       return AllocOrErr.takeError();
@@ -714,6 +717,9 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
 }
 
 Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
+  for (DeviceImageTy *Image : LoadedImages)
+    if (auto Err = callGlobalDestructors(Plugin, *Image))
+      return std::move(Err);
 
   if (OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::AllocationTracker)) {
     GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
@@ -835,6 +841,10 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                         /* FIXME: ModuleId */ 0);
   }
 #endif
+
+  // Call any global constructors present on the device.
+  if (auto Err = callGlobalConstructors(Plugin, *Image))
+    return std::move(Err);
 
   // Return the pointer to the table of entries.
   return Image->getOffloadEntryTable();
@@ -1403,17 +1413,20 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
 
-  if (RecordReplay.isRecording())
-    RecordReplay.saveKernelInputInfo(
-        GenericKernel.getName(), GenericKernel.getImage(), ArgPtrs, ArgOffsets,
-        KernelArgs.NumArgs, KernelArgs.NumTeams[0], KernelArgs.ThreadLimit[0],
-        KernelArgs.Tripcount);
-
-  if (RecordReplay.isRecording())
+  if (RecordReplay.isRecording()) {
     RecordReplay.saveImage(GenericKernel.getName(), GenericKernel.getImage());
+    RecordReplay.saveKernelInput(GenericKernel.getName(),
+                                 GenericKernel.getImage());
+  }
 
   auto Err = GenericKernel.launch(*this, ArgPtrs, ArgOffsets, KernelArgs,
                                   AsyncInfoWrapper);
+
+  if (RecordReplay.isRecording())
+    RecordReplay.saveKernelDescr(GenericKernel.getName(), ArgPtrs, ArgOffsets,
+                                 KernelArgs.NumArgs, KernelArgs.NumTeams[0],
+                                 KernelArgs.ThreadLimit[0],
+                                 KernelArgs.Tripcount);
 
   // 'finalize' here to guarantee next record-replay actions are in-sync
   AsyncInfoWrapper.finalize(Err);
@@ -1843,7 +1856,8 @@ int32_t __tgt_rtl_data_exchange(int32_t SrcDeviceId, void *SrcPtr,
                                 int32_t DstDeviceId, void *DstPtr,
                                 int64_t Size) {
   return __tgt_rtl_data_exchange_async(SrcDeviceId, SrcPtr, DstDeviceId, DstPtr,
-                                       Size, /* AsyncInfoPtr */ nullptr);
+                                       Size,
+                                       /* AsyncInfoPtr */ nullptr);
 }
 
 int32_t __tgt_rtl_data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,

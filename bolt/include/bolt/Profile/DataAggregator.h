@@ -301,7 +301,7 @@ private:
   ErrorOr<AggregatedLBREntry> parseAggregatedLBREntry();
 
   /// Parse either buildid:offset or just offset, representing a location in the
-  /// binary. Used exclusevely for pre-aggregated LBR samples.
+  /// binary. Used exclusively for pre-aggregated LBR samples.
   ErrorOr<Location> parseLocationOrOffset();
 
   /// Check if a field separator is the next char to parse and, if yes, consume

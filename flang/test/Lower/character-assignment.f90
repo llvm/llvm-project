@@ -1,4 +1,4 @@
-! RUN: bbc --use-desc-for-alloc=false %s -o - -emit-fir | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false %s -o - -emit-fir -hlfir=false | FileCheck %s
 
 ! Simple character assignment tests
 ! CHECK-LABEL: _QPassign1
@@ -102,7 +102,7 @@ end subroutine
     ! CHECK:   return
   end subroutine
 
-! CHECK-LABEL: fir.global linkonce @_QQcl.48656C6C6F20576F726C64
+! CHECK-LABEL: fir.global linkonce @_QQclX48656C6C6F20576F726C64
 ! CHECK: %[[lit:.*]] = fir.string_lit "Hello World"(11) : !fir.char<1,11>
 ! CHECK: fir.has_value %[[lit]] : !fir.char<1,11>
 ! CHECK: }

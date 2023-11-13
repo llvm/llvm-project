@@ -71,11 +71,6 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   let Inst{31-23} = 0x17d; //encoding;
 }
 
-// 16-bit input, 32-bit output
-class SOP1_32_16 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
-  opName, (outs SReg_32:$sdst), (ins SSrc_b16:$src0),
-  "$sdst, $src0", pattern>;
-
 class SOP1_32 <string opName, list<dag> pattern=[], bit tied_in = 0> : SOP1_Pseudo <
   opName, (outs SReg_32:$sdst),
   !if(tied_in, (ins SSrc_b32:$src0, SReg_32:$sdst_in),
@@ -225,8 +220,10 @@ let Defs = [SCC] in {
   def S_NOT_B64 : SOP1_64 <"s_not_b64",
     [(set i64:$sdst, (UniformUnaryFrag<not> i64:$src0))]
   >;
-  def S_WQM_B32 : SOP1_32 <"s_wqm_b32">;
-  def S_WQM_B64 : SOP1_64 <"s_wqm_b64">;
+  def S_WQM_B32 : SOP1_32 <"s_wqm_b32",
+    [(set i32:$sdst, (int_amdgcn_s_wqm i32:$src0))]>;
+  def S_WQM_B64 : SOP1_64 <"s_wqm_b64",
+    [(set i64:$sdst, (int_amdgcn_s_wqm i64:$src0))]>;
 } // End Defs = [SCC]
 
 

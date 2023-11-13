@@ -9,27 +9,9 @@ define float @raw_buffer_atomic_cond_sub_return(<4 x i32> inreg %rsrc, i32 inreg
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX12-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, off, s[0:3], null th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v4, off, s[4:7], null th:TH_ATOMIC_RETURN
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB0_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 main_body:
   %orig = call i32 @llvm.amdgcn.raw.buffer.atomic.cond.sub.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0)
@@ -45,26 +27,8 @@ define void @raw_buffer_atomic_cond_sub_no_return(<4 x i32> inreg %rsrc, i32 inr
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v4, off, s[4:7], null th:TH_ATOMIC_RETURN
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB1_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, off, s[0:3], null th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 main_body:
@@ -80,25 +44,8 @@ define void @raw_buffer_atomic_cond_sub_no_return_forced(<4 x i32> inreg %rsrc, 
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v4, off, s[4:7], null
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB2_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, off, s[0:3], null
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 main_body:
   %unused = call i32 @llvm.amdgcn.raw.buffer.atomic.cond.sub.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0)
@@ -113,28 +60,10 @@ define float @raw_buffer_atomic_cond_sub_imm_soff_return(<4 x i32> inreg %rsrc, 
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s2, 4
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB3_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX12-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-NEXT:    s_mov_b32 s4, 4
+; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, off, s[0:3], s4 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v4, off, s[4:7], s2 th:TH_ATOMIC_RETURN
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB3_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 main_body:
   %orig = call i32 @llvm.amdgcn.raw.buffer.atomic.cond.sub.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 4, i32 0)
@@ -150,27 +79,9 @@ define void @raw_buffer_atomic_cond_sub_imm_soff_no_return(<4 x i32> inreg %rsrc
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s2, 4
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB4_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v4, off, s[4:7], s2 th:TH_ATOMIC_RETURN
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB4_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-NEXT:    s_mov_b32 s4, 4
+; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, off, s[0:3], s4 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 main_body:
@@ -186,26 +97,9 @@ define void @raw_buffer_atomic_cond_sub_imm_soff_no_return_forced(<4 x i32> inre
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s2, 4
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB5_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v4, off, s[4:7], s2
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB5_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-NEXT:    s_mov_b32 s4, 4
+; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, off, s[0:3], s4
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 main_body:
   %unused = call i32 @llvm.amdgcn.raw.buffer.atomic.cond.sub.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 4, i32 0)
@@ -220,29 +114,9 @@ define float @struct_buffer_atomic_cond_sub_return(<4 x i32> inreg %rsrc, i32 in
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v5, 0
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB6_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s4
+; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, v1, s[0:3], null idxen th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v4, v5, s[4:7], null idxen th:TH_ATOMIC_RETURN
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX12-NEXT:    ; implicit-def: $vgpr5
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB6_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 main_body:
   %orig = call i32 @llvm.amdgcn.struct.buffer.atomic.cond.sub.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
@@ -258,28 +132,8 @@ define void @struct_buffer_atomic_cond_sub_no_return(<4 x i32> inreg %rsrc, i32 
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v5, 0
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB7_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v4, v5, s[4:7], null idxen th:TH_ATOMIC_RETURN
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr5
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB7_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
+; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v1, v0, s[0:3], null idxen th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 main_body:
@@ -295,27 +149,8 @@ define void @struct_buffer_atomic_cond_sub_no_return_forced(<4 x i32> inreg %rsr
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v5, 0
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v4, v5, s[4:7], null idxen
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr5
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB8_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
+; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v1, v0, s[0:3], null idxen
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 main_body:
   %unused = call i32 @llvm.amdgcn.struct.buffer.atomic.cond.sub.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
@@ -330,30 +165,10 @@ define float @struct_buffer_atomic_cond_sub_imm_soff_return(<4 x i32> inreg %rsr
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v5, 0
-; GFX12-NEXT:    s_mov_b32 s2, 4
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s4
+; GFX12-NEXT:    s_mov_b32 s4, 4
+; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, v1, s[0:3], s4 idxen th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v4, v5, s[4:7], s2 idxen th:TH_ATOMIC_RETURN
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX12-NEXT:    ; implicit-def: $vgpr5
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB9_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 main_body:
   %orig = call i32 @llvm.amdgcn.struct.buffer.atomic.cond.sub.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 4, i32 0)
@@ -369,29 +184,9 @@ define void @struct_buffer_atomic_cond_sub_imm_soff_no_return(<4 x i32> inreg %r
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v5, 0
-; GFX12-NEXT:    s_mov_b32 s2, 4
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB10_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v4, v5, s[4:7], s2 idxen th:TH_ATOMIC_RETURN
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr5
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB10_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
+; GFX12-NEXT:    s_mov_b32 s4, 4
+; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v1, v0, s[0:3], s4 idxen th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 main_body:
@@ -407,28 +202,9 @@ define void @struct_buffer_atomic_cond_sub_imm_soff_no_return_forced(<4 x i32> i
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v5, 0
-; GFX12-NEXT:    s_mov_b32 s2, 4
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB11_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v4, v5, s[4:7], s2 idxen
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr5
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB11_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
+; GFX12-NEXT:    s_mov_b32 s4, 4
+; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v1, v0, s[0:3], s4 idxen
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 main_body:
   %unused = call i32 @llvm.amdgcn.struct.buffer.atomic.cond.sub.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 4, i32 0)

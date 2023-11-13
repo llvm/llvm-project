@@ -46,6 +46,7 @@ The following options are described below:
  - :option:`ClassConstantCase`, :option:`ClassConstantPrefix`, :option:`ClassConstantSuffix`, :option:`ClassConstantIgnoredRegexp`, :option:`ClassConstantHungarianPrefix`
  - :option:`ClassMemberCase`, :option:`ClassMemberPrefix`, :option:`ClassMemberSuffix`, :option:`ClassMemberIgnoredRegexp`, :option:`ClassMemberHungarianPrefix`
  - :option:`ClassMethodCase`, :option:`ClassMethodPrefix`, :option:`ClassMethodSuffix`, :option:`ClassMethodIgnoredRegexp`
+ - :option:`ConceptCase`, :option:`ConceptPrefix`, :option:`ConceptSuffix`, :option:`ConceptIgnoredRegexp`
  - :option:`ConstantCase`, :option:`ConstantPrefix`, :option:`ConstantSuffix`, :option:`ConstantIgnoredRegexp`, :option:`ConstantHungarianPrefix`
  - :option:`ConstantMemberCase`, :option:`ConstantMemberPrefix`, :option:`ConstantMemberSuffix`, :option:`ConstantMemberIgnoredRegexp`, :option:`ConstantMemberHungarianPrefix`
  - :option:`ConstantParameterCase`, :option:`ConstantParameterPrefix`, :option:`ConstantParameterSuffix`, :option:`ConstantParameterIgnoredRegexp`, :option:`ConstantParameterHungarianPrefix`
@@ -409,6 +410,46 @@ After:
     public:
       int pre_class_member_post();
     };
+
+.. option:: ConceptCase
+
+    When defined, the check will ensure concept names conform to the
+    selected casing.
+
+.. option:: ConceptPrefix
+
+    When defined, the check will ensure concept names will add the
+    prefixed with the given value (regardless of casing).
+
+.. option:: ConceptIgnoredRegexp
+
+    Identifier naming checks won't be enforced for concept names
+    matching this regular expression.
+
+.. option:: ConceptSuffix
+
+    When defined, the check will ensure concept names will add the
+    suffix with the given value (regardless of casing).
+
+For example using values of:
+
+   - ConceptCase of ``CamelCase``
+   - ConceptPrefix of ``Pre``
+   - ConceptSuffix of ``Post``
+
+Identifies and/or transforms concept names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    template<typename T> concept my_concept = requires (T t) { {t++}; };
+
+After:
+
+.. code-block:: c++
+
+    template<typename T> concept PreMyConceptPost = requires (T t) { {t++}; };
 
 .. option:: ConstantCase
 

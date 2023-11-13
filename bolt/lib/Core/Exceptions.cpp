@@ -373,12 +373,12 @@ void BinaryFunction::updateEHRanges() {
     const MCSymbol *StartRange = nullptr;
 
     for (BinaryBasicBlock *const BB : FF) {
-      for (auto II = BB->begin(); II != BB->end(); ++II) {
-        if (!BC.MIB->isCall(*II))
+      for (MCInst &Instr : *BB) {
+        if (!BC.MIB->isCall(Instr))
           continue;
 
         // Instruction can throw an exception that should be handled.
-        const bool Throws = BC.MIB->isInvoke(*II);
+        const bool Throws = BC.MIB->isInvoke(Instr);
 
         // Ignore the call if it's a continuation of a no-throw gap.
         if (!Throws && !StartRange)
@@ -388,7 +388,7 @@ void BinaryFunction::updateEHRanges() {
         const MCSymbol *LP = nullptr;
         uint64_t Action = 0;
         if (const std::optional<MCPlus::MCLandingPad> EHInfo =
-                BC.MIB->getEHInfo(*II))
+                BC.MIB->getEHInfo(Instr))
           std::tie(LP, Action) = *EHInfo;
 
         // No action if the exception handler has not changed.
@@ -397,15 +397,14 @@ void BinaryFunction::updateEHRanges() {
           continue;
 
         // Same symbol is used for the beginning and the end of the range.
-        const MCSymbol *EHSymbol;
-        MCInst EHLabel;
-        {
+        MCSymbol *EHSymbol;
+        if (MCSymbol *InstrLabel = BC.MIB->getLabel(Instr)) {
+          EHSymbol = InstrLabel;
+        } else {
           std::unique_lock<llvm::sys::RWMutex> Lock(BC.CtxMutex);
           EHSymbol = BC.Ctx->createNamedTempSymbol("EH");
-          BC.MIB->createEHLabel(EHLabel, EHSymbol, BC.Ctx.get());
+          BC.MIB->setLabel(Instr, EHSymbol);
         }
-
-        II = std::next(BB->insertPseudoInstr(II, EHLabel));
 
         // At this point we could be in one of the following states:
         //

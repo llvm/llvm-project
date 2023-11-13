@@ -37,11 +37,6 @@ func.func @vector_copy_i128(%src: memref<?x?xi128>, %dst: memref<?x?xi128>) {
 }
 
 func.func @test_load_store_zaq0() {
-  %init_a_str = llvm.mlir.addressof @init_tile_a : !llvm.ptr<array<17 x i8>>
-  %init_b_str = llvm.mlir.addressof @init_tile_b : !llvm.ptr<array<17 x i8>>
-  %final_a_str = llvm.mlir.addressof @final_tile_a : !llvm.ptr<array<17 x i8>>
-  %final_b_str = llvm.mlir.addressof @final_tile_b : !llvm.ptr<array<17 x i8>>
-
   %c0 = arith.constant 0 : index
   %min_elts_q = arith.constant 1 : index
   %bytes_per_128_bit = arith.constant 16 : index
