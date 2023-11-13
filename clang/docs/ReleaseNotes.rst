@@ -726,6 +726,8 @@ Miscellaneous Clang Crashes Fixed
   (`#68001 <https://github.com/llvm/llvm-project/pull/68001>`_)
 - Fixed a crash in C when redefined struct is another nested redefinition.
   `Issue 41302 <https://github.com/llvm/llvm-project/issues/41302>`_
+- Fixed a crash when ``-ast-dump=json`` was used for code using class
+  template deduction guides.
 
 Target Specific Changes
 -----------------------

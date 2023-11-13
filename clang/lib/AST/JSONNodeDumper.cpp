@@ -823,6 +823,10 @@ void JSONNodeDumper::VisitNamedDecl(const NamedDecl *ND) {
     if (VD && VD->hasLocalStorage())
       return;
 
+    // Do not mangle template deduction guides.
+    if (isa<CXXDeductionGuideDecl>(ND))
+      return;
+
     std::string MangledName = ASTNameGen.getName(ND);
     if (!MangledName.empty())
       JOS.attribute("mangledName", MangledName);
