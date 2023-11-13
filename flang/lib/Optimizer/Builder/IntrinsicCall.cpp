@@ -253,6 +253,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"trim_name", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"getpid", &I::genGetPID},
     {"iachar", &I::genIchar},
     {"iall",
      &I::genIall,
@@ -2942,6 +2943,14 @@ void IntrinsicLibrary::genGetCommand(llvm::ArrayRef<fir::ExtendedValue> args) {
         .genThen([&]() { builder.createStoreWithConvert(loc, stat, statAddr); })
         .end();
   }
+}
+
+// GETPID
+mlir::Value IntrinsicLibrary::genGetPID(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0 && "getpid takes no input");
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genGetPID(builder, loc));
 }
 
 // GET_COMMAND_ARGUMENT
