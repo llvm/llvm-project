@@ -1,5 +1,5 @@
-! RUN: bbc --use-desc-for-alloc=false -emit-fir -o - %s | FileCheck %s
-! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir -o - %s | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false -o - %s | FileCheck %s
+! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir -flang-deprecated-no-hlfir -o - %s | FileCheck %s
 
 ! Simple tests for structured ordered loops with loop-control.
 ! Tests the structure of the loop, storage to index variable and return and 
