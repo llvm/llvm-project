@@ -2534,28 +2534,6 @@ DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
 }
 
 namespace {
-/// Parsed form of all attributes that are relevant for parsing type members.
-struct MemberAttributes {
-  explicit MemberAttributes(const DWARFDIE &die, const DWARFDIE &parent_die,
-                            ModuleSP module_sp);
-  const char *name = nullptr;
-  /// Indicates how many bits into the word (according to the host endianness)
-  /// the low-order bit of the field starts. Can be negative.
-  int64_t bit_offset = 0;
-  /// Indicates the size of the field in bits.
-  size_t bit_size = 0;
-  uint64_t data_bit_offset = UINT64_MAX;
-  AccessType accessibility = eAccessNone;
-  std::optional<uint64_t> byte_size;
-  std::optional<DWARFFormValue> const_value_form;
-  DWARFFormValue encoding_form;
-  /// Indicates the byte offset of the word from the base address of the
-  /// structure.
-  uint32_t member_byte_offset = UINT32_MAX;
-  bool is_artificial = false;
-  bool is_declaration = false;
-};
-
 /// Parsed form of all attributes that are relevant for parsing Objective-C
 /// properties.
 struct PropertyAttributes {
@@ -2684,9 +2662,8 @@ std::vector<VariantMember> &VariantPart::members() { return this->_members; }
 
 DiscriminantValue &VariantPart::discriminant() { return this->_discriminant; }
 
-MemberAttributes::MemberAttributes(const DWARFDIE &die,
-                                   const DWARFDIE &parent_die,
-                                   ModuleSP module_sp) {
+DWARFASTParserClang::MemberAttributes::MemberAttributes(
+    const DWARFDIE &die, const DWARFDIE &parent_die, ModuleSP module_sp) {
   DWARFAttributes attributes = die.GetAttributes();
   for (size_t i = 0; i < attributes.Size(); ++i) {
     const dw_attr_t attr = attributes.AttributeAtIndex(i);
@@ -2908,13 +2885,63 @@ llvm::Expected<llvm::APInt> DWARFASTParserClang::ExtractIntFromFormValue(
   return result;
 }
 
+void DWARFASTParserClang::CreateStaticMemberVariable(
+    const DWARFDIE &die, const MemberAttributes &attrs,
+    const lldb_private::CompilerType &class_clang_type) {
+  Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
+  assert(die.Tag() == DW_TAG_member);
+
+  Type *var_type = die.ResolveTypeUID(attrs.encoding_form.Reference());
+
+  if (!var_type)
+    return;
+
+  auto accessibility =
+      attrs.accessibility == eAccessNone ? eAccessPublic : attrs.accessibility;
+
+  CompilerType ct = var_type->GetForwardCompilerType();
+  clang::VarDecl *v = TypeSystemClang::AddVariableToRecordType(
+      class_clang_type, attrs.name, ct, accessibility);
+  if (!v) {
+    LLDB_LOG(log, "Failed to add variable to the record type");
+    return;
+  }
+
+  bool unused;
+  // TODO: Support float/double static members as well.
+  if (!ct.IsIntegerOrEnumerationType(unused))
+    return;
+
+  auto maybe_const_form_value = attrs.const_value_form;
+
+  // Newer versions of Clang don't emit the DW_AT_const_value
+  // on the declaration of an inline static data member. Instead
+  // it's attached to the definition DIE. If that's the case,
+  // try and fetch it.
+  if (!maybe_const_form_value) {
+    maybe_const_form_value = FindConstantOnVariableDefinition(die);
+    if (!maybe_const_form_value)
+      return;
+  }
+
+  llvm::Expected<llvm::APInt> const_value_or_err =
+      ExtractIntFromFormValue(ct, *maybe_const_form_value);
+  if (!const_value_or_err) {
+    LLDB_LOG_ERROR(log, const_value_or_err.takeError(),
+                   "Failed to add const value to variable {1}: {0}",
+                   v->getQualifiedNameAsString());
+    return;
+  }
+
+  TypeSystemClang::SetIntegerInitializerForVariable(v, *const_value_or_err);
+}
+
 void DWARFASTParserClang::ParseSingleMember(
     const DWARFDIE &die, const DWARFDIE &parent_die,
     const lldb_private::CompilerType &class_clang_type,
     lldb::AccessType default_accessibility,
     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
     FieldInfo &last_field_info) {
-  Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
   // This function can only parse DW_TAG_member.
   assert(die.Tag() == DW_TAG_member);
 
@@ -2940,47 +2967,7 @@ void DWARFASTParserClang::ParseSingleMember(
   // can consistently detect them on both GCC and Clang without below heuristic.
   if (attrs.member_byte_offset == UINT32_MAX &&
       attrs.data_bit_offset == UINT64_MAX && attrs.is_declaration) {
-    Type *var_type = die.ResolveTypeUID(attrs.encoding_form.Reference());
-    if (var_type) {
-      const auto accessibility = attrs.accessibility == eAccessNone
-                                     ? eAccessPublic
-                                     : attrs.accessibility;
-      CompilerType ct = var_type->GetForwardCompilerType();
-      clang::VarDecl *v = TypeSystemClang::AddVariableToRecordType(
-          class_clang_type, attrs.name, ct, accessibility);
-      if (!v) {
-        LLDB_LOG(log, "Failed to add variable to the record type");
-        return;
-      }
-
-      bool unused;
-      // TODO: Support float/double static members as well.
-      if (!ct.IsIntegerOrEnumerationType(unused))
-        return;
-
-      auto maybe_const_form_value = attrs.const_value_form;
-
-      // Newer versions of Clang don't emit the DW_AT_const_value
-      // on the declaration of an inline static data member. Instead
-      // it's attached to the definition DIE. If that's the case,
-      // try and fetch it.
-      if (!maybe_const_form_value) {
-        maybe_const_form_value = FindConstantOnVariableDefinition(die);
-        if (!maybe_const_form_value)
-          return;
-      }
-
-      llvm::Expected<llvm::APInt> const_value_or_err =
-          ExtractIntFromFormValue(ct, *maybe_const_form_value);
-      if (!const_value_or_err) {
-        LLDB_LOG_ERROR(log, const_value_or_err.takeError(),
-                       "Failed to add const value to variable {1}: {0}",
-                       v->getQualifiedNameAsString());
-        return;
-      }
-
-      TypeSystemClang::SetIntegerInitializerForVariable(v, *const_value_or_err);
-    }
+    CreateStaticMemberVariable(die, attrs, class_clang_type);
     return;
   }
 
