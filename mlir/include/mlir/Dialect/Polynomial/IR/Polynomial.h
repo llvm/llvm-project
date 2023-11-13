@@ -22,9 +22,9 @@ class MLIRContext;
 
 namespace polynomial {
 
-// This restricts statically defined polynomials to have at most 64-bit
-// coefficients. This may be relaxed in the future, but it seems unlikely one
-// would want to specify 128-bit polynomials statically in the source code.
+/// This restricts statically defined polynomials to have at most 64-bit
+/// coefficients. This may be relaxed in the future, but it seems unlikely one
+/// would want to specify 128-bit polynomials statically in the source code.
 constexpr unsigned apintBitWidth = 64;
 
 namespace detail {
