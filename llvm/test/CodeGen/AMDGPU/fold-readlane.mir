@@ -27,8 +27,7 @@ body:             |
 ...
 
 # GCN-LABEL: name: fold-imm-readfirstlane-readfirstlane{{$}}
-# GCN: %1:sreg_32_xm0 = S_MOV_B32 123
-# GCN: %3:sreg_32_xm0 = COPY %1
+# GCN: %3:sreg_32_xm0 = S_MOV_B32 123
 
 ---
 name: fold-imm-readfirstlane-readfirstlane

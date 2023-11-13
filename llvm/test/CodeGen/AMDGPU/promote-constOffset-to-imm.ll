@@ -2465,8 +2465,7 @@ define hidden amdgpu_kernel void @negativeoffset(ptr addrspace(1) nocapture %buf
 ; GFX9-NEXT:    v_lshlrev_b32_sdwa v0, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
-; GFX9-NEXT:    s_movk_i32 s0, 0x1000
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v2
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x1000, v2
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v3, vcc
 ; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, 0, v2
 ; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc

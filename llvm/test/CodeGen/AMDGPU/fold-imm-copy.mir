@@ -1,8 +1,7 @@
 # RUN: llc -march=amdgcn -run-pass si-fold-operands -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL:       name: fold-imm-copy
-# GCN:             [[SREG:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 65535
-# GCN:             V_AND_B32_e32 [[SREG]]
+# GCN:             V_AND_B32_e32 65535
 
 ---
 name: fold-imm-copy

@@ -999,7 +999,6 @@ define <4 x float> @v_sext_inreg_v8i16_11(<8 x i16> %value) {
 ; GFX8-NEXT:    v_or_b32_e32 v1, v4, v1
 ; GFX8-NEXT:    v_ashrrev_i16_e32 v4, 11, v7
 ; GFX8-NEXT:    v_ashrrev_i16_sdwa v2, v5, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-NEXT:    v_mov_b32_e32 v5, 11
 ; GFX8-NEXT:    v_or_b32_e32 v2, v4, v2
 ; GFX8-NEXT:    v_ashrrev_i16_e32 v4, 11, v8
 ; GFX8-NEXT:    v_ashrrev_i16_sdwa v3, v5, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
