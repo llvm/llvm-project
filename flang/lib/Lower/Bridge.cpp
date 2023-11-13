@@ -3242,6 +3242,8 @@ private:
       const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
     Fortran::lower::StatementContext stmtCtx;
 
+    if (!lowerToHighLevelFIR() && Fortran::evaluate::IsProcedure(assign.rhs))
+      TODO(loc, "procedure pointer assignment");
     if (Fortran::evaluate::IsProcedurePointer(assign.lhs)) {
       hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
           loc, *this, assign.lhs, localSymbols, stmtCtx);
@@ -3254,7 +3256,6 @@ private:
       }
       hlfir::Entity rhs(getBase(Fortran::lower::convertExprToAddress(
           loc, *this, assign.rhs, localSymbols, stmtCtx)));
-      rhs = hlfir::derefPointersAndAllocatables(loc, *builder, rhs);
       builder->createStoreWithConvert(loc, rhs, lhs);
       return;
     }

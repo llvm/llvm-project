@@ -32,7 +32,9 @@
 #include "mlir/IR/IRMapping.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <iostream>
 #include <optional>
+using namespace std;
 
 #define DEBUG_TYPE "flang-lower-expr"
 
@@ -176,7 +178,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
           fir::factory::extractCharacterProcedureTuple(builder, loc,
                                                        funcPointer);
     // Reference to a procedure pointer. Load its value, the address of the
-    // procedure it poiints to.
+    // procedure it points to.
     if (Fortran::semantics::IsProcedurePointer(sym))
       funcPointer = builder.create<fir::LoadOp>(loc, funcPointer);
   }
@@ -890,9 +892,11 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // fir.boxproc/fir.tuple<fir.boxproc, len> as it should.
   if (actual.isProcedure()) {
     if (hlfir::isBoxProcAddressType(dummyType)) {
+      if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(expr)) {
+        cout << " AAA" << endl;
+      }
       // Procedure actual to procedure pointer dummy.
-      auto proc{fir::getBase(actual)};
-      auto tempBoxProc{builder.createTemporary(loc, proc.getType())};
+      auto tempBoxProc{builder.createTemporary(loc, actual.getType())};
       builder.create<fir::StoreOp>(loc, actual, tempBoxProc);
       return PreparedDummyArgument{tempBoxProc, /*cleanups=*/{}};
     }
@@ -2175,8 +2179,10 @@ genProcedureRef(CallContext &callContext) {
         TODO(loc, "assumed type actual argument");
       if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
               *expr)) {
-        if (arg.passBy !=
-            Fortran::lower::CallerInterface::PassEntityBy::MutableBox) {
+        if ((arg.passBy !=
+             Fortran::lower::CallerInterface::PassEntityBy::MutableBox) &&
+            (arg.passBy !=
+             Fortran::lower::CallerInterface::PassEntityBy::BoxProcRef)) {
           assert(
               arg.isOptional() &&
               "NULL must be passed only to pointer, allocatable, or OPTIONAL");

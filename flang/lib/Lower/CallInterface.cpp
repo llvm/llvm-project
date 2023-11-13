@@ -1059,6 +1059,11 @@ private:
       const DummyCharacteristics *characteristics,
       const Fortran::evaluate::characteristics::DummyProcedure &proc,
       const FortranEntity &entity) {
+    if (!interface.converter.getLoweringOptions().getLowerToHighLevelFIR() &&
+        proc.attrs.test(
+            Fortran::evaluate::characteristics::DummyProcedure::Attr::Pointer))
+      TODO(interface.converter.getCurrentLocation(),
+           "procedure pointer arguments");
     const Fortran::evaluate::characteristics::Procedure &procedure =
         proc.procedure.value();
     mlir::Type funcType =
@@ -1075,9 +1080,9 @@ private:
     std::optional<Fortran::evaluate::DynamicType> resultTy =
         getResultDynamicType(procedure);
     if (resultTy && mustPassLengthWithDummyProcedure(procedure)) {
-      // The result length of dummy procedures that are character functions
-      // must be passed so that the dummy procedure can be called if it has
-      // assumed length on the callee side.
+      // The result length of dummy procedures that are character functions must
+      // be passed so that the dummy procedure can be called if it has assumed
+      // length on the callee side.
       mlir::Type tupleType =
           fir::factory::getCharacterProcedureTupleType(funcType);
       llvm::StringRef charProcAttr = fir::getCharacterProcedureDummyAttrName();

@@ -480,6 +480,10 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   if (global && globalIsInitialized(global))
     return global;
 
+  if (!converter.getLoweringOptions().getLowerToHighLevelFIR() &&
+      Fortran::semantics::IsProcedurePointer(sym))
+    TODO(loc, "procedure pointer globals");
+
   // If this is an array, check to see if we can use a dense attribute
   // with a tensor mlir type. This optimization currently only supports
   // Fortran arrays of integer, real, complex, or logical. The tensor
@@ -559,8 +563,8 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
             builder, global, [&](fir::FirOpBuilder &b) {
               Fortran::lower::StatementContext stmtCtx(
                   /*cleanupProhibited=*/true);
-              auto box{Fortran::lower::convertProcedureDesignatorToAddress(
-                  converter, loc, symTy, stmtCtx, sym)};
+              auto box{Fortran::lower::convertProcedureDesignatorInitialTarget(
+                  converter, loc, *sym)};
               b.create<fir::HasValueOp>(loc, box);
             });
       else { // Has NULL() target.

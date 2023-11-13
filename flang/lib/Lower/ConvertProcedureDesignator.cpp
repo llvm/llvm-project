@@ -131,12 +131,12 @@ hlfir::EntityWithAttributes Fortran::lower::convertProcedureDesignatorToHLFIR(
   return hlfir::EntityWithAttributes{res};
 }
 
-mlir::Value Fortran::lower::convertProcedureDesignatorToAddress(
+mlir::Value Fortran::lower::convertProcedureDesignatorInitialTarget(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    mlir::Type boxType, Fortran::lower::StatementContext &stmtCtx,
-    const Fortran::semantics::Symbol *sym) {
+    const Fortran::semantics::Symbol &sym) {
   Fortran::lower::SymMap globalOpSymMap;
-  Fortran::evaluate::ProcedureDesignator proc(*sym);
+  Fortran::lower::StatementContext stmtCtx;
+  Fortran::evaluate::ProcedureDesignator proc(sym);
   auto procVal{Fortran::lower::convertProcedureDesignatorToHLFIR(
       loc, converter, proc, globalOpSymMap, stmtCtx)};
   return fir::getBase(Fortran::lower::convertToAddress(

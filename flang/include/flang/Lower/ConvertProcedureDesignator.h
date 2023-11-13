@@ -57,9 +57,8 @@ hlfir::EntityWithAttributes convertProcedureDesignatorToHLFIR(
 
 /// Generate initialization for procedure pointer to procedure target.
 mlir::Value
-convertProcedureDesignatorToAddress(Fortran::lower::AbstractConverter &,
-                                    mlir::Location, mlir::Type boxType,
-                                    Fortran::lower::StatementContext &stmtCtx,
-                                    const Fortran::semantics::Symbol *sym);
+convertProcedureDesignatorInitialTarget(Fortran::lower::AbstractConverter &,
+                                        mlir::Location,
+                                        const Fortran::semantics::Symbol &sym);
 } // namespace Fortran::lower
 #endif // FORTRAN_LOWER_CONVERT_PROCEDURE_DESIGNATOR_H
