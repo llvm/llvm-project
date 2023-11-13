@@ -9,6 +9,14 @@ void arrayUnderflow(void) {
   // expected-note@-2 {{Access of 'array' at negative byte offset -12}}
 }
 
+int underflowWithDeref(void) {
+  int *p = array;
+  --p;
+  return *p;
+  // expected-warning@-1 {{Out of bound access to memory preceding 'array'}}
+  // expected-note@-2 {{Access of 'array' at negative byte offset -4}}
+}
+
 int scanf(const char *restrict fmt, ...);
 
 void taintedIndex(void) {
@@ -17,6 +25,17 @@ void taintedIndex(void) {
   // expected-note@-1 {{Taint originated here}}
   // expected-note@-2 {{Taint propagated to the 2nd argument}}
   array[index] = 5;
+  // expected-warning@-1 {{Potential out of bound access to 'array' with tainted index}}
+  // expected-note@-2 {{Access of 'array' with a tainted index that may be too large}}
+}
+
+void taintedOffset(void) {
+  int index;
+  scanf("%d", &index);
+  // expected-note@-1 {{Taint originated here}}
+  // expected-note@-2 {{Taint propagated to the 2nd argument}}
+  int *p = array + index;
+  p[0] = 5;
   // expected-warning@-1 {{Potential out of bound access to 'array' with tainted offset}}
   // expected-note@-2 {{Access of 'array' with a tainted offset that may be too large}}
 }
@@ -25,6 +44,29 @@ void arrayOverflow(void) {
   array[12] = 5;
   // expected-warning@-1 {{Out of bound access to memory after the end of 'array'}}
   // expected-note@-2 {{Access of 'array' at index 12, while it holds only 10 'int' elements}}
+}
+
+void flippedOverflow(void) {
+  12[array] = 5;
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'array'}}
+  // expected-note@-2 {{Access of 'array' at index 12, while it holds only 10 'int' elements}}
+}
+
+int *afterTheEndPtr(void) {
+  // FIXME: this is an unusual but standard-compliant way of writing (array + 10).
+  // I think people who rely on this confusing corner case deserve a warning,
+  // but if this is widespread, then we could introduce a special case for it
+  // in the checker.
+  return &array[10];
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'array'}}
+  // expected-note@-2 {{Access of 'array' at index 10, while it holds only 10 'int' elements}}
+}
+
+int *afterAfterTheEndPtr(void) {
+  // This is UB, it's invalid to form an after-after-the-end pointer.
+  return &array[11];
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'array'}}
+  // expected-note@-2 {{Access of 'array' at index 11, while it holds only 10 'int' elements}}
 }
 
 int scalar;
@@ -39,12 +81,6 @@ int oneElementArrayOverflow(void) {
   return oneElementArray[1];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'oneElementArray'}}
   // expected-note@-2 {{Access of 'oneElementArray' at index 1, while it holds only a single 'int' element}}
-}
-
-short convertedArray(void) {
-  return ((short*)array)[47];
-  // expected-warning@-1 {{Out of bound access to memory after the end of 'array'}}
-  // expected-note@-2 {{Access of 'array' at index 47, while it holds only 20 'short' elements}}
 }
 
 struct vec {
@@ -62,6 +98,28 @@ double arrayInStructPtr(struct vec *pv) {
   return pv->elems[64];
   // expected-warning@-1 {{Out of bound access to memory after the end of the field 'elems'}}
   // expected-note@-2 {{Access of the field 'elems' at index 64, while it holds only 64 'double' elements}}
+}
+
+struct item {
+  int a, b;
+} itemArray[20] = {0};
+
+int structOfArrays(void) {
+  return itemArray[35].a;
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'itemArray'}}
+  // expected-note@-2 {{Access of 'itemArray' at index 35, while it holds only 20 'struct item' elements}}
+}
+
+int structOfArraysArrow(void) {
+  return (itemArray + 35)->b;
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'itemArray'}}
+  // expected-note@-2 {{Access of 'itemArray' at index 35, while it holds only 20 'struct item' elements}}
+}
+
+short convertedArray(void) {
+  return ((short*)array)[47];
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'array'}}
+  // expected-note@-2 {{Access of 'array' at index 47, while it holds only 20 'short' elements}}
 }
 
 struct two_bytes {
@@ -85,7 +143,9 @@ int intFromString(void) {
 }
 
 int intFromStringDivisible(void) {
-  // However, this is reported with indices/elements, because the extent happens to be a multiple of 4.
+  // However, this is reported with indices/elements, because the extent
+  // (of the string that consists of 'a', 'b', 'c' and '\0') happens to be a
+  // multiple of 4 bytes (= sizeof(int)).
   return ((const int*)"abc")[20];
   // expected-warning@-1 {{Out of bound access to memory after the end of the string literal}}
   // expected-note@-2 {{Access of the string literal at index 20, while it holds only a single 'int' element}}

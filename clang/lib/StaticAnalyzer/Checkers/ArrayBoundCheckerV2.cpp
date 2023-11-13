@@ -34,20 +34,37 @@ using llvm::formatv;
 namespace {
 enum OOB_Kind { OOB_Precedes, OOB_Exceeds, OOB_Taint };
 
-class ArrayBoundCheckerV2 :
-    public Checker<check::Location> {
+struct Messages {
+  std::string Short, Full;
+};
+
+class ArrayBoundCheckerV2 : public Checker<check::PostStmt<ArraySubscriptExpr>,
+                                           check::PostStmt<UnaryOperator>,
+                                           check::PostStmt<MemberExpr>> {
   BugType BT{this, "Out-of-bound access"};
   BugType TaintBT{this, "Out-of-bound access", categories::TaintedData};
 
+  void performCheck(const Expr *E, CheckerContext &C) const;
+
   void reportOOB(CheckerContext &C, ProgramStateRef ErrorState, OOB_Kind Kind,
-                 NonLoc Offset, std::string RegName, std::string Msg) const;
+                 NonLoc Offset, Messages Msgs) const;
 
   static bool isFromCtypeMacro(const Stmt *S, ASTContext &AC);
 
 public:
-  void checkLocation(SVal l, bool isLoad, const Stmt *S,
-                     CheckerContext &C) const;
+  void checkPostStmt(const ArraySubscriptExpr *E, CheckerContext &C) const {
+    performCheck(E, C);
+  }
+  void checkPostStmt(const UnaryOperator *E, CheckerContext &C) const {
+    if (E->getOpcode() == UO_Deref)
+      performCheck(E, C);
+  }
+  void checkPostStmt(const MemberExpr *E, CheckerContext &C) const {
+    if (E->isArrow())
+      performCheck(E->getBase(), C);
+  }
 };
+
 } // anonymous namespace
 
 /// For a given Location that can be represented as a symbolic expression
@@ -217,16 +234,19 @@ static std::string getShortMsg(OOB_Kind Kind, std::string RegName) {
   return formatv(ShortMsgTemplates[Kind], RegName);
 }
 
-static std::string getPrecedesMsg(std::string RegName, NonLoc Offset) {
+static Messages getPrecedesMsgs(const SubRegion *Region, NonLoc Offset) {
+  std::string RegName = getRegionName(Region);
   SmallString<128> Buf;
   llvm::raw_svector_ostream Out(Buf);
   Out << "Access of " << RegName << " at negative byte offset";
   if (auto ConcreteIdx = Offset.getAs<nonloc::ConcreteInt>())
     Out << ' ' << ConcreteIdx->getValue();
-  return std::string(Buf);
+  return {getShortMsg(OOB_Precedes, RegName), std::string(Buf)};
 }
-static std::string getExceedsMsg(ASTContext &ACtx, std::string RegName,
-                                 NonLoc Offset, NonLoc Extent, SVal Location) {
+
+static Messages getExceedsMsgs(ASTContext &ACtx, const SubRegion *Region,
+                               NonLoc Offset, NonLoc Extent, SVal Location) {
+  std::string RegName = getRegionName(Region);
   const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
   assert(EReg && "this checker only handles element access");
   QualType ElemType = EReg->getElementType();
@@ -273,20 +293,18 @@ static std::string getExceedsMsg(ASTContext &ACtx, std::string RegName,
       Out << "s";
   }
 
-  return std::string(Buf);
-}
-static std::string getTaintMsg(std::string RegName) {
-  SmallString<128> Buf;
-  llvm::raw_svector_ostream Out(Buf);
-  Out << "Access of " << RegName
-      << " with a tainted offset that may be too large";
-  return std::string(Buf);
+  return {getShortMsg(OOB_Exceeds, RegName), std::string(Buf)};
 }
 
-void ArrayBoundCheckerV2::checkLocation(SVal Location, bool IsLoad,
-                                        const Stmt *LoadS,
-                                        CheckerContext &C) const {
+static Messages getTaintMsgs(const SubRegion *Region, const char *OffsetName) {
+  std::string RegName = getRegionName(Region);
+  return {formatv("Potential out of bound access to {0} with tainted {1}",
+                  RegName, OffsetName),
+          formatv("Access of {0} with a tainted {1} that may be too large",
+                  RegName, OffsetName)};
+}
 
+void ArrayBoundCheckerV2::performCheck(const Expr *E, CheckerContext &C) const {
   // NOTE: Instead of using ProgramState::assumeInBound(), we are prototyping
   // some new logic here that reasons directly about memory region extents.
   // Once that logic is more mature, we can bring it back to assumeInBound()
@@ -297,12 +315,14 @@ void ArrayBoundCheckerV2::checkLocation(SVal Location, bool IsLoad,
   // have some flexibility in defining the base region, we can achieve
   // various levels of conservatism in our buffer overflow checking.
 
+  const SVal Location = C.getSVal(E);
+
   // The header ctype.h (from e.g. glibc) implements the isXXXXX() macros as
   //   #define isXXXXX(arg) (LOOKUP_TABLE[arg] & BITMASK_FOR_XXXXX)
   // and incomplete analysis of these leads to false positives. As even
   // accurate reports would be confusing for the users, just disable reports
   // from these macros:
-  if (isFromCtypeMacro(LoadS, C.getASTContext()))
+  if (isFromCtypeMacro(E, C.getASTContext()))
     return;
 
   ProgramStateRef State = C.getState();
@@ -331,9 +351,8 @@ void ArrayBoundCheckerV2::checkLocation(SVal Location, bool IsLoad,
 
     if (PrecedesLowerBound && !WithinLowerBound) {
       // We know that the index definitely precedes the lower bound.
-      std::string RegName = getRegionName(Reg);
-      std::string Msg = getPrecedesMsg(RegName, ByteOffset);
-      reportOOB(C, PrecedesLowerBound, OOB_Precedes, ByteOffset, RegName, Msg);
+      Messages Msgs = getPrecedesMsgs(Reg, ByteOffset);
+      reportOOB(C, PrecedesLowerBound, OOB_Precedes, ByteOffset, Msgs);
       return;
     }
 
@@ -350,17 +369,25 @@ void ArrayBoundCheckerV2::checkLocation(SVal Location, bool IsLoad,
     if (ExceedsUpperBound) {
       if (!WithinUpperBound) {
         // We know that the index definitely exceeds the upper bound.
-        std::string RegName = getRegionName(Reg);
-        std::string Msg = getExceedsMsg(C.getASTContext(), RegName, ByteOffset,
-                                        *KnownSize, Location);
-        reportOOB(C, ExceedsUpperBound, OOB_Exceeds, ByteOffset, RegName, Msg);
+        Messages Msgs = getExceedsMsgs(C.getASTContext(), Reg, ByteOffset,
+                                       *KnownSize, Location);
+        reportOOB(C, ExceedsUpperBound, OOB_Exceeds, ByteOffset, Msgs);
         return;
       }
       if (isTainted(State, ByteOffset)) {
-        // Both cases are possible, but the index is tainted, so report.
+        // Both cases are possible, but the offset is tainted, so report.
         std::string RegName = getRegionName(Reg);
-        std::string Msg = getTaintMsg(RegName);
-        reportOOB(C, ExceedsUpperBound, OOB_Taint, ByteOffset, RegName, Msg);
+
+        // Diagnostic detail: "tainted offset" is always correct, but the
+        // common case is that 'idx' is tainted in 'arr[idx]' and then it's
+        // nicer to say "tainted index".
+        const char *OffsetName = "offset";
+        if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+          if (isTainted(State, ASE->getIdx(), C.getLocationContext()))
+            OffsetName = "index";
+
+        Messages Msgs = getTaintMsgs(Reg, OffsetName);
+        reportOOB(C, ExceedsUpperBound, OOB_Taint, ByteOffset, Msgs);
         return;
       }
     }
@@ -374,17 +401,14 @@ void ArrayBoundCheckerV2::checkLocation(SVal Location, bool IsLoad,
 
 void ArrayBoundCheckerV2::reportOOB(CheckerContext &C,
                                     ProgramStateRef ErrorState, OOB_Kind Kind,
-                                    NonLoc Offset, std::string RegName,
-                                    std::string Msg) const {
+                                    NonLoc Offset, Messages Msgs) const {
 
   ExplodedNode *ErrorNode = C.generateErrorNode(ErrorState);
   if (!ErrorNode)
     return;
 
-  std::string ShortMsg = getShortMsg(Kind, RegName);
-
   auto BR = std::make_unique<PathSensitiveBugReport>(
-      Kind == OOB_Taint ? TaintBT : BT, ShortMsg, Msg, ErrorNode);
+      Kind == OOB_Taint ? TaintBT : BT, Msgs.Short, Msgs.Full, ErrorNode);
 
   // Track back the propagation of taintedness.
   if (Kind == OOB_Taint)
