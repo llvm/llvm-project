@@ -1422,9 +1422,18 @@ void DwarfCompileUnit::finishEntityDefinition(const DbgEntity *Entity) {
       llvm_unreachable("DbgEntity must be DbgVariable or DbgLabel.");
   }
 
-  if (Label)
-    if (const auto *Sym = Label->getSymbol())
-      addLabelAddress(*Die, dwarf::DW_AT_low_pc, Sym);
+  if (!Label)
+    return;
+
+  const auto *Sym = Label->getSymbol();
+  if (!Sym)
+    return;
+
+  addLabelAddress(*Die, dwarf::DW_AT_low_pc, Sym);
+
+  // A TAG_label with a name and an AT_low_pc must be placed in debug_names.
+  if (StringRef Name = Label->getName(); !Name.empty())
+    getDwarfDebug().addAccelName(*CUNode, Name, *Die);
 }
 
 DbgEntity *DwarfCompileUnit::getExistingAbstractEntity(const DINode *Node) {
