@@ -46,3 +46,23 @@ body:             |
     $x10 = COPY %1(s64)
     PseudoRET implicit $x10
 ...
+---
+name:            is_fpclass_f64_one
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    liveins: $f10_d
+
+    ; CHECK-LABEL: name: is_fpclass_f64_one
+    ; CHECK: liveins: $f10_d
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
+    ; CHECK-NEXT: [[FCLASS_D:%[0-9]+]]:gpr = FCLASS_D [[COPY]]
+    ; CHECK-NEXT: $x10 = COPY [[FCLASS_D]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:fprb(s64) = COPY $f10_d
+    %1:gprb(s64) = G_IS_FPCLASS %0(s64), 4
+    $x10 = COPY %1(s64)
+    PseudoRET implicit $x10
+...

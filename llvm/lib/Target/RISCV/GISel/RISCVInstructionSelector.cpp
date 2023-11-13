@@ -1113,7 +1113,7 @@ bool RISCVInstructionSelector::selectIsFPClass(MachineInstr &MI,
   unsigned NewOpc = MRI.getType(Src).getSizeInBits() == 32 ? RISCV::FCLASS_S
                                                            : RISCV::FCLASS_D;
 
-  // Turn LLVM IR's floating point classes to that in RISCV,
+  // Turn LLVM IR's floating point classes to that in RISC-V,
   // by simply rotating the 10-bit immediate right by two bits.
   APInt GFpClassImm(10, static_cast<uint64_t>(ImmOp.getImm()));
   APInt FClassMask = GFpClassImm.rotr(2).zext(XLen);
@@ -1124,27 +1124,32 @@ bool RISCVInstructionSelector::selectIsFPClass(MachineInstr &MI,
   if (!FClass.constrainAllUses(TII, TRI, RBI))
     return false;
 
-  // If there is only a single bit set in the mask, lower to SLLI + SRLI.
-  if (FClassMask.popcount() == 1) {
-    Register SLResult = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    auto SLLI = MIB.buildInstr(RISCV::SLLI, {SLResult}, {FClassResult})
-                    .addImm(FClassMask.countl_zero());
+  if (FClassMask == 1) {
+    // We don't need to generate additional instructions if Mask is 1, as the
+    // `ANDI rs, 1` that follows will suffice.
+    MRI.replaceRegWith(GISFPCLASS, FClassResult);
+  } else if (FClassMask.popcount() == 1) {
+    // If there is only a single bit set in the mask, lower to SLLI + SRLI.
+    auto SLLI =
+        MIB.buildInstr(RISCV::SLLI, {&RISCV::GPRRegClass}, {FClassResult})
+            .addImm(FClassMask.countl_zero());
     if (!SLLI.constrainAllUses(TII, TRI, RBI))
       return false;
-    auto SRLI =
-        MIB.buildInstr(RISCV::SRLI, {GISFPCLASS}, {SLResult}).addImm(XLen - 1);
+    auto SRLI = MIB.buildInstr(RISCV::SRLI, {GISFPCLASS}, {SLLI.getReg(0)})
+                    .addImm(XLen - 1);
     if (!SRLI.constrainAllUses(TII, TRI, RBI))
       return false;
   } else {
     // Otherwise, lower to AND + SNEZ.
-    Register AndResult = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    auto And = MIB.buildInstr(RISCV::ANDI, {AndResult}, {FClassResult})
-                   .addImm(FClassMask.getLimitedValue());
+    auto And =
+        MIB.buildInstr(RISCV::ANDI, {&RISCV::GPRRegClass}, {FClassResult})
+            .addImm(FClassMask.getLimitedValue());
     if (!And.constrainAllUses(TII, TRI, RBI))
       return false;
 
     Register Zero = RISCV::X0;
-    auto SNEZ = MIB.buildInstr(RISCV::SLTU, {GISFPCLASS}, {Zero, AndResult});
+    auto SNEZ =
+        MIB.buildInstr(RISCV::SLTU, {GISFPCLASS}, {Zero, And.getReg(0)});
     if (!SNEZ.constrainAllUses(TII, TRI, RBI))
       return false;
   }
