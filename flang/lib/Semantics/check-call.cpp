@@ -38,14 +38,14 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
   if (auto type{arg.GetType()}) {
     if (type->IsAssumedType()) {
       messages.Say(
-          "Assumed type argument requires an explicit interface"_err_en_US);
-    } else if (type->IsPolymorphic()) {
+          "Assumed type actual argument requires an explicit interface"_err_en_US);
+    } else if (type->IsUnlimitedPolymorphic()) {
       messages.Say(
-          "Polymorphic argument requires an explicit interface"_err_en_US);
+          "Unlimited polymorphic actual argument requires an explicit interface"_err_en_US);
     } else if (const DerivedTypeSpec * derived{GetDerivedTypeSpec(type)}) {
       if (!derived->parameters().empty()) {
         messages.Say(
-            "Parameterized derived type argument requires an explicit interface"_err_en_US);
+            "Parameterized derived type actual argument requires an explicit interface"_err_en_US);
       }
     }
   }
@@ -76,7 +76,8 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
             "VOLATILE argument requires an explicit interface"_err_en_US);
       }
     } else if (auto argChars{characteristics::DummyArgument::FromActual(
-                   "actual argument", *expr, context)}) {
+                   "actual argument", *expr, context,
+                   /*forImplicitInterface=*/true)}) {
       const auto *argProcDesignator{
           std::get_if<evaluate::ProcedureDesignator>(&expr->u)};
       if (const auto *argProcSymbol{
@@ -913,7 +914,8 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
       }
     }
     if (auto argChars{characteristics::DummyArgument::FromActual(
-            "actual argument", *expr, foldingContext)}) {
+            "actual argument", *expr, foldingContext,
+            /*forImplicitInterface=*/true)}) {
       if (!argChars->IsTypelessIntrinsicDummy()) {
         if (auto *argProc{
                 std::get_if<characteristics::DummyProcedure>(&argChars->u)}) {
