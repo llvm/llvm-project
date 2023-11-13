@@ -24231,7 +24231,7 @@ TEST_F(FormatTest, IgnorePPDefinitions) {
   verifyNoChange("#define A x:", Style);
   verifyNoChange("#define A a. b", Style);
 
-  // Surrounded with formatted code
+  // Surrounded with formatted code.
   verifyFormat("int a;\n"
                "#define  A  a\n"
                "int a;",
@@ -24240,29 +24240,61 @@ TEST_F(FormatTest, IgnorePPDefinitions) {
                "int  a ;",
                Style);
 
-  // Columns are not broken when a limit is set
+  // Columns are not broken when a limit is set.
   Style.ColumnLimit = 10;
   verifyNoChange("#define A a a a a", Style);
   Style.ColumnLimit = 0;
 
-  // Multiline definition
+  // Multiline definition.
   verifyNoChange("#define A \\\n"
                  "Line one with spaces  .  \\\n"
                  " Line two.",
                  Style);
   verifyNoChange("#define A \\\n"
                  "a a \\\n"
-                 "a        \\\na",
+                 "a        \\\n"
+                 "a",
                  Style);
   Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
   verifyNoChange("#define A \\\n"
                  "a a \\\n"
-                 "a        \\\na",
+                 "a        \\\n"
+                 "a",
                  Style);
   Style.AlignEscapedNewlines = FormatStyle::ENAS_Right;
   verifyNoChange("#define A \\\n"
                  "a a \\\n"
-                 "a        \\\na",
+                 "a        \\\n"
+                 "a",
+                 Style);
+
+  // Adjust indendations but don't change the definition.
+  Style.IndentPPDirectives = FormatStyle::PPDIS_None;
+  verifyNoChange("#if A\n"
+                 "#define A  a\n"
+                 "#endif",
+                 Style);
+  verifyNoChange("#if A\n"
+                 "#define A  a\\\n"
+                 "  a  a\n"
+                 "#endif",
+                 Style);
+  verifyFormat("#if A\n"
+               "#define A  a\n"
+               "#endif",
+               "#if A\n"
+               "  #define A  a\n"
+               "#endif",
+               Style);
+  Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
+  verifyNoChange("#if A\n"
+                 "#  define A  a\n"
+                 "#endif",
+                 Style);
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
+  verifyNoChange("#if A\n"
+                 "  #define A  a\n"
+                 "#endif",
                  Style);
 }
 
