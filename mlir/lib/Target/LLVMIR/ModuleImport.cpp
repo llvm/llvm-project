@@ -1602,7 +1602,9 @@ static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
     // explicit attribute.
     // Also skip the vscale_range, it is also an explicit attribute.
     if (attrName == "aarch64_pstate_sm_enabled" ||
-        attrName == "aarch64_pstate_sm_body" || attrName == "vscale_range")
+        attrName == "aarch64_pstate_sm_body" || 
+        attrName == "vscale_range" || 
+        attrName == "frame-pointer")
       continue;
 
     if (attr.isStringAttribute()) {
@@ -1649,6 +1651,13 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setVscaleRangeAttr(LLVM::VScaleRangeAttr::get(
         context, IntegerAttr::get(intTy, attr.getVScaleRangeMin()),
         IntegerAttr::get(intTy, attr.getVScaleRangeMax().value_or(0))));
+  }
+
+  // Process frame-pointer attribute
+  if (func->hasFnAttribute("frame-pointer")) {
+    llvm::StringRef stringRefFramePointerKind = func->getFnAttribute("frame-pointer").getValueAsString();
+    funcOp.setFramePointerAttr(LLVM::FramePointerKindAttr::get(funcOp.getContext(),
+                                  symbolizeFramePointerKind(stringRefFramePointerKind).value()));
   }
 }
 

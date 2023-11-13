@@ -207,6 +207,7 @@
 ! HELP-FC1-NEXT: -fno-stack-arrays       Allocate array temporaries on the heap (default)
 ! HELP-FC1-NEXT: -fno-version-loops-for-stride
 ! HELP-FC1-NEXT:                         Do not create unit-strided loops (default)
+! HELP-FC1-NEXT: -fomit-frame-pointer    Omit the frame pointer from functions that don't need it. Some stack unwinding cases, such as profilers and sanitizers, may prefer specifying -fno-omit-frame-pointer. On many targets, -O1 and higher omit the frame pointer by default. -m[no-]omit-leaf-frame-pointer takes precedence for leaf functions
 ! HELP-FC1-NEXT: -fopenacc               Enable OpenACC
 ! HELP-FC1-NEXT: -fopenmp-host-ir-file-path <value>
 ! HELP-FC1-NEXT:                         Path to the IR file produced by the frontend for the host.
@@ -233,6 +234,7 @@
 ! HELP-FC1-NEXT: -load <dsopath>         Load the named plugin (dynamic shared object)
 ! HELP-FC1-NEXT: -menable-no-infs        Allow optimization to assume there are no infinities.
 ! HELP-FC1-NEXT: -menable-no-nans        Allow optimization to assume there are no NaNs.
+! HELP-FC1-NEXT: -mframe-pointer=<value> Specify which frame pointers to retain.
 ! HELP-FC1-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! HELP-FC1-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
 ! HELP-FC1-NEXT: -module-dir <dir>       Put MODULE files in <dir>

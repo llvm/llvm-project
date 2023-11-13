@@ -249,6 +249,12 @@ module {
     // CHECK-SAME: vscale_range(1, 2)
     llvm.return
   }
+
+  llvm.func @frame_pointer_roundtrip() frame_pointer="non-leaf" {
+    // CHECK: @frame_pointer_roundtrip()
+    // CHECK-SAME: frame_pointer="non-leaf"
+    llvm.return
+  }
 }
 
 // -----
