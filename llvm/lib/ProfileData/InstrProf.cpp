@@ -136,6 +136,9 @@ static std::string getInstrProfErrString(instrprof_error Err,
   case instrprof_error::count_mismatch:
     OS << "function basic block count change detected (counter mismatch)";
     break;
+  case instrprof_error::bitmap_mismatch:
+    OS << "function bitmap size change detected (bitmap size mismatch)";
+    break;
   case instrprof_error::counter_overflow:
     OS << "counter overflow";
     break;
@@ -157,6 +160,9 @@ static std::string getInstrProfErrString(instrprof_error Err,
     break;
   case instrprof_error::raw_profile_version_mismatch:
     OS << "raw profile version mismatch";
+    break;
+  case instrprof_error::counter_value_too_large:
+    OS << "excessively large counter value suggests corrupted profile data";
     break;
   }
 
@@ -452,6 +458,59 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
   return Error::success();
 }
 
+/// \c NameStrings is a string composed of one of more possibly encoded
+/// sub-strings. The substrings are separated by 0 or more zero bytes. This
+/// method decodes the string and calls `NameCallback` for each substring.
+static Error
+readAndDecodeStrings(StringRef NameStrings,
+                     std::function<Error(StringRef)> NameCallback) {
+  const uint8_t *P = NameStrings.bytes_begin();
+  const uint8_t *EndP = NameStrings.bytes_end();
+  while (P < EndP) {
+    uint32_t N;
+    uint64_t UncompressedSize = decodeULEB128(P, &N);
+    P += N;
+    uint64_t CompressedSize = decodeULEB128(P, &N);
+    P += N;
+    bool isCompressed = (CompressedSize != 0);
+    SmallVector<uint8_t, 128> UncompressedNameStrings;
+    StringRef NameStrings;
+    if (isCompressed) {
+      if (!llvm::compression::zlib::isAvailable())
+        return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
+
+      if (Error E = compression::zlib::decompress(ArrayRef(P, CompressedSize),
+                                                  UncompressedNameStrings,
+                                                  UncompressedSize)) {
+        consumeError(std::move(E));
+        return make_error<InstrProfError>(instrprof_error::uncompress_failed);
+      }
+      P += CompressedSize;
+      NameStrings = toStringRef(UncompressedNameStrings);
+    } else {
+      NameStrings =
+          StringRef(reinterpret_cast<const char *>(P), UncompressedSize);
+      P += UncompressedSize;
+    }
+    // Now parse the name strings.
+    SmallVector<StringRef, 0> Names;
+    NameStrings.split(Names, getInstrProfNameSeparator());
+    for (StringRef &Name : Names)
+      if (Error E = NameCallback(Name))
+        return E;
+
+    while (P < EndP && *P == 0)
+      P++;
+  }
+  return Error::success();
+}
+
+Error InstrProfSymtab::create(StringRef NameStrings) {
+  return readAndDecodeStrings(
+      NameStrings,
+      std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
+}
+
 Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
   if (Error E = addFuncName(PGOFuncName))
     return E;
@@ -558,48 +617,6 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
   }
   return collectGlobalObjectNameStrings(
       NameStrs, compression::zlib::isAvailable() && doCompression, Result);
-}
-
-Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
-  const uint8_t *P = NameStrings.bytes_begin();
-  const uint8_t *EndP = NameStrings.bytes_end();
-  while (P < EndP) {
-    uint32_t N;
-    uint64_t UncompressedSize = decodeULEB128(P, &N);
-    P += N;
-    uint64_t CompressedSize = decodeULEB128(P, &N);
-    P += N;
-    bool isCompressed = (CompressedSize != 0);
-    SmallVector<uint8_t, 128> UncompressedNameStrings;
-    StringRef NameStrings;
-    if (isCompressed) {
-      if (!llvm::compression::zlib::isAvailable())
-        return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
-
-      if (Error E = compression::zlib::decompress(ArrayRef(P, CompressedSize),
-                                                  UncompressedNameStrings,
-                                                  UncompressedSize)) {
-        consumeError(std::move(E));
-        return make_error<InstrProfError>(instrprof_error::uncompress_failed);
-      }
-      P += CompressedSize;
-      NameStrings = toStringRef(UncompressedNameStrings);
-    } else {
-      NameStrings =
-          StringRef(reinterpret_cast<const char *>(P), UncompressedSize);
-      P += UncompressedSize;
-    }
-    // Now parse the name strings.
-    SmallVector<StringRef, 0> Names;
-    NameStrings.split(Names, getInstrProfNameSeparator());
-    for (StringRef &Name : Names)
-      if (Error E = Symtab.addFuncName(Name))
-        return E;
-
-    while (P < EndP && *P == 0)
-      P++;
-  }
-  return Error::success();
 }
 
 void InstrProfRecord::accumulateCounts(CountSumOrPercent &Sum) const {
@@ -813,6 +830,18 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
     Counts[I] = Value;
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
+  }
+
+  // If the number of bitmap bytes doesn't match we either have bad data
+  // or a hash collision.
+  if (BitmapBytes.size() != Other.BitmapBytes.size()) {
+    Warn(instrprof_error::bitmap_mismatch);
+    return;
+  }
+
+  // Bitmap bytes are merged by simply ORing them together.
+  for (size_t I = 0, E = Other.BitmapBytes.size(); I < E; ++I) {
+    BitmapBytes[I] = Other.BitmapBytes[I] | BitmapBytes[I];
   }
 
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
@@ -1487,9 +1516,11 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version10,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
+  case 11ull:
+    [[fallthrough]];
   case 10ull:
     H.TemporalProfTracesOffset =
         read(Buffer, offsetOf(&Header::TemporalProfTracesOffset));
@@ -1513,10 +1544,12 @@ size_t Header::size() const {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version10,
+    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
                   "Please update the size computation below if a new field has "
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
+  case 11ull:
+    [[fallthrough]];
   case 10ull:
     return offsetOf(&Header::TemporalProfTracesOffset) +
            sizeof(Header::TemporalProfTracesOffset);

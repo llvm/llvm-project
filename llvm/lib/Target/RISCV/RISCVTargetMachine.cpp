@@ -34,6 +34,7 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Scalar.h"
 #include <optional>
 using namespace llvm;
 
@@ -83,6 +84,11 @@ static cl::opt<bool>
                    cl::desc("Enable sinking and folding of instruction copies"),
                    cl::init(false), cl::Hidden);
 
+static cl::opt<bool>
+    EnableLoopDataPrefetch("riscv-enable-loop-data-prefetch", cl::Hidden,
+                           cl::desc("Enable the loop data prefetch pass"),
+                           cl::init(true));
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -101,8 +107,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVOptWInstrsPass(*PR);
   initializeRISCVPreRAExpandPseudoPass(*PR);
   initializeRISCVExpandPseudoPass(*PR);
+  initializeRISCVFoldMasksPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
+  initializeRISCVInsertWriteVXRMPass(*PR);
   initializeRISCVDAGToDAGISelPass(*PR);
   initializeRISCVInitUndefPass(*PR);
   initializeRISCVMoveMergePass(*PR);
@@ -308,6 +316,9 @@ void RISCVPassConfig::addIRPasses() {
   addPass(createAtomicExpandPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
+    if (EnableLoopDataPrefetch)
+      addPass(createLoopDataPrefetchPass());
+
     addPass(createRISCVGatherScatterLoweringPass());
     addPass(createInterleavedAccessPass());
     addPass(createRISCVCodeGenPreparePass());
@@ -414,7 +425,10 @@ void RISCVPassConfig::addPreEmitPass2() {
 }
 
 void RISCVPassConfig::addMachineSSAOptimization() {
+  addPass(createRISCVFoldMasksPass());
+
   TargetPassConfig::addMachineSSAOptimization();
+
   if (EnableMachineCombiner)
     addPass(&MachineCombinerID);
 
@@ -432,6 +446,7 @@ void RISCVPassConfig::addPreRegAlloc() {
       EnableRISCVDeadRegisterElimination)
     addPass(createRISCVDeadRegisterDefinitionsPass());
   addPass(createRISCVInsertReadWriteCSRPass());
+  addPass(createRISCVInsertWriteVXRMPass());
 }
 
 void RISCVPassConfig::addOptimizedRegAlloc() {

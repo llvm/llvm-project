@@ -55,11 +55,7 @@ static inline bool checkForSingleVariableOnRHS(
   const Fortran::common::Indirection<Fortran::parser::Designator> *designator =
       std::get_if<Fortran::common::Indirection<Fortran::parser::Designator>>(
           &expr.u);
-  const Fortran::parser::Name *name =
-      designator
-          ? Fortran::semantics::getDesignatorNameIfDataRef(designator->value())
-          : nullptr;
-  return name != nullptr;
+  return designator != nullptr;
 }
 
 /// Checks if the symbol on the LHS of the assignment statement is present in
@@ -132,10 +128,9 @@ static inline void genOmpAccAtomicCaptureStatement(
     mlir::Value toAddress,
     [[maybe_unused]] const AtomicListT *leftHandClauseList,
     [[maybe_unused]] const AtomicListT *rightHandClauseList,
-    mlir::Type elementType) {
+    mlir::Type elementType, mlir::Location loc) {
   // Generate `atomic.read` operation for atomic assigment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  mlir::Location currentLocation = converter.getCurrentLocation();
 
   if constexpr (std::is_same<AtomicListT,
                              Fortran::parser::OmpAtomicClauseList>()) {
@@ -151,12 +146,11 @@ static inline void genOmpAccAtomicCaptureStatement(
       genOmpAtomicHintAndMemoryOrderClauses(converter, *rightHandClauseList,
                                             hint, memoryOrder);
     firOpBuilder.create<mlir::omp::AtomicReadOp>(
-        currentLocation, fromAddress, toAddress,
-        mlir::TypeAttr::get(elementType), hint, memoryOrder);
+        loc, fromAddress, toAddress, mlir::TypeAttr::get(elementType), hint,
+        memoryOrder);
   } else {
     firOpBuilder.create<mlir::acc::AtomicReadOp>(
-        currentLocation, fromAddress, toAddress,
-        mlir::TypeAttr::get(elementType));
+        loc, fromAddress, toAddress, mlir::TypeAttr::get(elementType));
   }
 }
 
@@ -166,11 +160,10 @@ template <typename AtomicListT>
 static inline void genOmpAccAtomicWriteStatement(
     Fortran::lower::AbstractConverter &converter, mlir::Value lhsAddr,
     mlir::Value rhsExpr, [[maybe_unused]] const AtomicListT *leftHandClauseList,
-    [[maybe_unused]] const AtomicListT *rightHandClauseList,
+    [[maybe_unused]] const AtomicListT *rightHandClauseList, mlir::Location loc,
     mlir::Value *evaluatedExprValue = nullptr) {
   // Generate `atomic.write` operation for atomic assignment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  mlir::Location currentLocation = converter.getCurrentLocation();
 
   if constexpr (std::is_same<AtomicListT,
                              Fortran::parser::OmpAtomicClauseList>()) {
@@ -184,11 +177,10 @@ static inline void genOmpAccAtomicWriteStatement(
     if (rightHandClauseList)
       genOmpAtomicHintAndMemoryOrderClauses(converter, *rightHandClauseList,
                                             hint, memoryOrder);
-    firOpBuilder.create<mlir::omp::AtomicWriteOp>(currentLocation, lhsAddr,
-                                                  rhsExpr, hint, memoryOrder);
+    firOpBuilder.create<mlir::omp::AtomicWriteOp>(loc, lhsAddr, rhsExpr, hint,
+                                                  memoryOrder);
   } else {
-    firOpBuilder.create<mlir::acc::AtomicWriteOp>(currentLocation, lhsAddr,
-                                                  rhsExpr);
+    firOpBuilder.create<mlir::acc::AtomicWriteOp>(loc, lhsAddr, rhsExpr);
   }
 }
 
@@ -200,7 +192,7 @@ static inline void genOmpAccAtomicUpdateStatement(
     mlir::Type varType, const Fortran::parser::Variable &assignmentStmtVariable,
     const Fortran::parser::Expr &assignmentStmtExpr,
     [[maybe_unused]] const AtomicListT *leftHandClauseList,
-    [[maybe_unused]] const AtomicListT *rightHandClauseList,
+    [[maybe_unused]] const AtomicListT *rightHandClauseList, mlir::Location loc,
     mlir::Operation *atomicCaptureOp = nullptr) {
   // Generate `atomic.update` operation for atomic assignment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -302,7 +294,7 @@ static inline void genOmpAccAtomicUpdateStatement(
 /// Processes an atomic construct with write clause.
 template <typename AtomicT, typename AtomicListT>
 void genOmpAccAtomicWrite(Fortran::lower::AbstractConverter &converter,
-                          const AtomicT &atomicWrite) {
+                          const AtomicT &atomicWrite, mlir::Location loc) {
   const AtomicListT *rightHandClauseList = nullptr;
   const AtomicListT *leftHandClauseList = nullptr;
   if constexpr (std::is_same<AtomicListT,
@@ -324,13 +316,13 @@ void genOmpAccAtomicWrite(Fortran::lower::AbstractConverter &converter,
   mlir::Value lhsAddr =
       fir::getBase(converter.genExprAddr(assign.lhs, stmtCtx));
   genOmpAccAtomicWriteStatement(converter, lhsAddr, rhsExpr, leftHandClauseList,
-                                rightHandClauseList);
+                                rightHandClauseList, loc);
 }
 
 /// Processes an atomic construct with read clause.
 template <typename AtomicT, typename AtomicListT>
 void genOmpAccAtomicRead(Fortran::lower::AbstractConverter &converter,
-                         const AtomicT &atomicRead) {
+                         const AtomicT &atomicRead, mlir::Location loc) {
   const AtomicListT *rightHandClauseList = nullptr;
   const AtomicListT *leftHandClauseList = nullptr;
   if constexpr (std::is_same<AtomicListT,
@@ -357,20 +349,19 @@ void genOmpAccAtomicRead(Fortran::lower::AbstractConverter &converter,
       fir::getBase(converter.genExprAddr(fromExpr, stmtCtx));
   mlir::Value toAddress = fir::getBase(converter.genExprAddr(
       *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
-  mlir::Location loc = converter.getCurrentLocation();
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (fromAddress.getType() != toAddress.getType())
     fromAddress =
         builder.create<fir::ConvertOp>(loc, toAddress.getType(), fromAddress);
   genOmpAccAtomicCaptureStatement(converter, fromAddress, toAddress,
                                   leftHandClauseList, rightHandClauseList,
-                                  elementType);
+                                  elementType, loc);
 }
 
 /// Processes an atomic construct with update clause.
 template <typename AtomicT, typename AtomicListT>
 void genOmpAccAtomicUpdate(Fortran::lower::AbstractConverter &converter,
-                           const AtomicT &atomicUpdate) {
+                           const AtomicT &atomicUpdate, mlir::Location loc) {
   const AtomicListT *rightHandClauseList = nullptr;
   const AtomicListT *leftHandClauseList = nullptr;
   if constexpr (std::is_same<AtomicListT,
@@ -395,13 +386,13 @@ void genOmpAccAtomicUpdate(Fortran::lower::AbstractConverter &converter,
   mlir::Type varType = fir::unwrapRefType(lhsAddr.getType());
   genOmpAccAtomicUpdateStatement<AtomicListT>(
       converter, lhsAddr, varType, assignmentStmtVariable, assignmentStmtExpr,
-      leftHandClauseList, rightHandClauseList);
+      leftHandClauseList, rightHandClauseList, loc);
 }
 
 /// Processes an atomic construct with no clause - which implies update clause.
 template <typename AtomicT, typename AtomicListT>
 void genOmpAtomic(Fortran::lower::AbstractConverter &converter,
-                  const AtomicT &atomicConstruct) {
+                  const AtomicT &atomicConstruct, mlir::Location loc) {
   const AtomicListT &atomicClauseList =
       std::get<AtomicListT>(atomicConstruct.t);
   const auto &assignmentStmtExpr = std::get<Fortran::parser::Expr>(
@@ -420,15 +411,14 @@ void genOmpAtomic(Fortran::lower::AbstractConverter &converter,
   // the update clause is specified (for both OpenMP and OpenACC).
   genOmpAccAtomicUpdateStatement<AtomicListT>(
       converter, lhsAddr, varType, assignmentStmtVariable, assignmentStmtExpr,
-      &atomicClauseList, nullptr);
+      &atomicClauseList, nullptr, loc);
 }
 
 /// Processes an atomic construct with capture clause.
 template <typename AtomicT, typename AtomicListT>
 void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
-                            const AtomicT &atomicCapture) {
+                            const AtomicT &atomicCapture, mlir::Location loc) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  mlir::Location currentLocation = converter.getCurrentLocation();
 
   const Fortran::parser::AssignmentStmt &stmt1 =
       std::get<typename AtomicT::Stmt1>(atomicCapture.t).v.statement;
@@ -480,11 +470,10 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
                                           memoryOrder);
     genOmpAtomicHintAndMemoryOrderClauses(converter, rightHandClauseList, hint,
                                           memoryOrder);
-    atomicCaptureOp = firOpBuilder.create<mlir::omp::AtomicCaptureOp>(
-        currentLocation, hint, memoryOrder);
-  } else {
     atomicCaptureOp =
-        firOpBuilder.create<mlir::acc::AtomicCaptureOp>(currentLocation);
+        firOpBuilder.create<mlir::omp::AtomicCaptureOp>(loc, hint, memoryOrder);
+  } else {
+    atomicCaptureOp = firOpBuilder.create<mlir::acc::AtomicCaptureOp>(loc);
   }
 
   firOpBuilder.createBlock(&(atomicCaptureOp->getRegion(0)));
@@ -499,11 +488,11 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
       genOmpAccAtomicCaptureStatement<AtomicListT>(
           converter, stmt1RHSArg, stmt1LHSArg,
           /*leftHandClauseList=*/nullptr,
-          /*rightHandClauseList=*/nullptr, elementType);
+          /*rightHandClauseList=*/nullptr, elementType, loc);
       genOmpAccAtomicUpdateStatement<AtomicListT>(
           converter, stmt1RHSArg, stmt2VarType, stmt2Var, stmt2Expr,
           /*leftHandClauseList=*/nullptr,
-          /*rightHandClauseList=*/nullptr, atomicCaptureOp);
+          /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp);
     } else {
       // Atomic capture construct is of the form [capture-stmt, write-stmt]
       const Fortran::semantics::SomeExpr &fromExpr =
@@ -512,11 +501,11 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
       genOmpAccAtomicCaptureStatement<AtomicListT>(
           converter, stmt1RHSArg, stmt1LHSArg,
           /*leftHandClauseList=*/nullptr,
-          /*rightHandClauseList=*/nullptr, elementType);
+          /*rightHandClauseList=*/nullptr, elementType, loc);
       genOmpAccAtomicWriteStatement<AtomicListT>(
           converter, stmt1RHSArg, stmt2RHSArg,
           /*leftHandClauseList=*/nullptr,
-          /*rightHandClauseList=*/nullptr);
+          /*rightHandClauseList=*/nullptr, loc);
     }
   } else {
     // Atomic capture construct is of the form [update-stmt, capture-stmt]
@@ -527,19 +516,19 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
     genOmpAccAtomicCaptureStatement<AtomicListT>(
         converter, stmt1LHSArg, stmt2LHSArg,
         /*leftHandClauseList=*/nullptr,
-        /*rightHandClauseList=*/nullptr, elementType);
+        /*rightHandClauseList=*/nullptr, elementType, loc);
     firOpBuilder.setInsertionPointToStart(&block);
     genOmpAccAtomicUpdateStatement<AtomicListT>(
         converter, stmt1LHSArg, stmt1VarType, stmt1Var, stmt1Expr,
         /*leftHandClauseList=*/nullptr,
-        /*rightHandClauseList=*/nullptr, atomicCaptureOp);
+        /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp);
   }
   firOpBuilder.setInsertionPointToEnd(&block);
   if constexpr (std::is_same<AtomicListT,
                              Fortran::parser::OmpAtomicClauseList>()) {
-    firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
+    firOpBuilder.create<mlir::omp::TerminatorOp>(loc);
   } else {
-    firOpBuilder.create<mlir::acc::TerminatorOp>(currentLocation);
+    firOpBuilder.create<mlir::acc::TerminatorOp>(loc);
   }
   firOpBuilder.setInsertionPointToStart(&block);
 }
@@ -643,11 +632,18 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
   for (std::size_t dim = 0; dim < dataExv.rank(); ++dim) {
     mlir::Value baseLb =
         fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
+    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+    mlir::Value ub;
+    mlir::Value lb = zero;
     mlir::Value ext = fir::factory::readExtent(builder, loc, dataExv, dim);
-    mlir::Value lb = builder.createIntegerConstant(loc, idxTy, 0);
+    if (mlir::isa<fir::UndefOp>(ext.getDefiningOp())) {
+      ext = zero;
+      ub = lb;
+    } else {
+      // ub = extent - 1
+      ub = builder.create<mlir::arith::SubIOp>(loc, ext, one);
+    }
 
-    // ub = extent - 1
-    mlir::Value ub = builder.create<mlir::arith::SubIOp>(loc, ext, one);
     mlir::Value bound =
         builder.create<BoundsOp>(loc, boundTy, lb, ub, ext, one, false, baseLb);
     bounds.push_back(bound);
@@ -664,7 +660,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
              Fortran::lower::StatementContext &stmtCtx,
              const std::list<Fortran::parser::SectionSubscript> &subscripts,
              std::stringstream &asFortran, fir::ExtendedValue &dataExv,
-             mlir::Value baseAddr) {
+             mlir::Value baseAddr, bool treatIndexAsSection = false) {
   int dimension = 0;
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<BoundsType>();
@@ -673,8 +669,9 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
   for (const auto &subscript : subscripts) {
-    if (const auto *triplet{
-            std::get_if<Fortran::parser::SubscriptTriplet>(&subscript.u)}) {
+    const auto *triplet{
+        std::get_if<Fortran::parser::SubscriptTriplet>(&subscript.u)};
+    if (triplet || treatIndexAsSection) {
       if (dimension != 0)
         asFortran << ',';
       mlir::Value lbound, ubound, extent;
@@ -693,9 +690,21 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
         strideInBytes = true;
       }
 
-      const auto &lower{std::get<0>(triplet->t)};
+      const Fortran::lower::SomeExpr *lower{nullptr};
+      if (triplet) {
+        if (const auto &tripletLb{std::get<0>(triplet->t)})
+          lower = Fortran::semantics::GetExpr(*tripletLb);
+      } else {
+        const auto &index{std::get<Fortran::parser::IntExpr>(subscript.u)};
+        lower = Fortran::semantics::GetExpr(index);
+        if (lower->Rank() > 0) {
+          mlir::emitError(
+              loc, "vector subscript cannot be used for an array section");
+          break;
+        }
+      }
       if (lower) {
-        lval = Fortran::semantics::GetIntValue(lower);
+        lval = Fortran::evaluate::ToInt64(*lower);
         if (lval) {
           if (defaultLb) {
             lbound = builder.createIntegerConstant(loc, idxTy, *lval - 1);
@@ -705,62 +714,65 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           }
           asFortran << *lval;
         } else {
-          const Fortran::lower::SomeExpr *lexpr =
-              Fortran::semantics::GetExpr(*lower);
           mlir::Value lb =
-              fir::getBase(converter.genExprValue(loc, *lexpr, stmtCtx));
+              fir::getBase(converter.genExprValue(loc, *lower, stmtCtx));
           lb = builder.createConvert(loc, baseLb.getType(), lb);
           lbound = builder.create<mlir::arith::SubIOp>(loc, lb, baseLb);
-          asFortran << lexpr->AsFortran();
+          asFortran << lower->AsFortran();
         }
       } else {
-        lbound = defaultLb ? zero : baseLb;
+        // If the lower bound is not specified, then the section
+        // starts from offset 0 of the dimension.
+        // Note that the lowerbound in the BoundsOp is always 0-based.
+        lbound = zero;
       }
-      asFortran << ':';
-      const auto &upper{std::get<1>(triplet->t)};
-      if (upper) {
-        uval = Fortran::semantics::GetIntValue(upper);
-        if (uval) {
-          if (defaultLb) {
-            ubound = builder.createIntegerConstant(loc, idxTy, *uval - 1);
+
+      if (!triplet) {
+        // If it is a scalar subscript, then the upper bound
+        // is equal to the lower bound, and the extent is one.
+        ubound = lbound;
+        extent = one;
+      } else {
+        asFortran << ':';
+        const auto &upper{std::get<1>(triplet->t)};
+
+        if (upper) {
+          uval = Fortran::semantics::GetIntValue(upper);
+          if (uval) {
+            if (defaultLb) {
+              ubound = builder.createIntegerConstant(loc, idxTy, *uval - 1);
+            } else {
+              mlir::Value ub = builder.createIntegerConstant(loc, idxTy, *uval);
+              ubound = builder.create<mlir::arith::SubIOp>(loc, ub, baseLb);
+            }
+            asFortran << *uval;
           } else {
-            mlir::Value ub = builder.createIntegerConstant(loc, idxTy, *uval);
+            const Fortran::lower::SomeExpr *uexpr =
+                Fortran::semantics::GetExpr(*upper);
+            mlir::Value ub =
+                fir::getBase(converter.genExprValue(loc, *uexpr, stmtCtx));
+            ub = builder.createConvert(loc, baseLb.getType(), ub);
             ubound = builder.create<mlir::arith::SubIOp>(loc, ub, baseLb);
+            asFortran << uexpr->AsFortran();
           }
-          asFortran << *uval;
-        } else {
-          const Fortran::lower::SomeExpr *uexpr =
-              Fortran::semantics::GetExpr(*upper);
-          mlir::Value ub =
-              fir::getBase(converter.genExprValue(loc, *uexpr, stmtCtx));
-          ub = builder.createConvert(loc, baseLb.getType(), ub);
-          ubound = builder.create<mlir::arith::SubIOp>(loc, ub, baseLb);
-          asFortran << uexpr->AsFortran();
         }
-      }
-      if (lower && upper) {
-        if (lval && uval && *uval < *lval) {
-          mlir::emitError(loc, "zero sized array section");
-          break;
-        } else if (std::get<2>(triplet->t)) {
-          const auto &strideExpr{std::get<2>(triplet->t)};
-          if (strideExpr) {
-            mlir::emitError(loc, "stride cannot be specified on "
-                                 "an OpenMP array section");
+        if (lower && upper) {
+          if (lval && uval && *uval < *lval) {
+            mlir::emitError(loc, "zero sized array section");
             break;
+          } else if (std::get<2>(triplet->t)) {
+            const auto &strideExpr{std::get<2>(triplet->t)};
+            if (strideExpr) {
+              mlir::emitError(loc, "stride cannot be specified on "
+                                   "an array section");
+              break;
+            }
           }
         }
-      }
-      if (!ubound) {
-        extent = fir::factory::readExtent(builder, loc, dataExv, dimension);
-        if (defaultLb) {
+        if (!ubound) {
           // ub = extent - 1
+          extent = fir::factory::readExtent(builder, loc, dataExv, dimension);
           ubound = builder.create<mlir::arith::SubIOp>(loc, extent, one);
-        } else {
-          // ub = baseLb + extent - 1
-          mlir::Value lbExt =
-              builder.create<mlir::arith::AddIOp>(loc, extent, baseLb);
-          ubound = builder.create<mlir::arith::SubIOp>(loc, lbExt, one);
         }
       }
       mlir::Value bound = builder.create<BoundsOp>(
@@ -778,7 +790,7 @@ mlir::Value gatherDataOperandAddrAndBounds(
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::StatementContext &stmtCtx, const ObjectType &object,
     mlir::Location operandLocation, std::stringstream &asFortran,
-    llvm::SmallVector<mlir::Value> &bounds) {
+    llvm::SmallVector<mlir::Value> &bounds, bool treatIndexAsSection = false) {
   mlir::Value baseAddr;
 
   std::visit(
@@ -786,7 +798,7 @@ mlir::Value gatherDataOperandAddrAndBounds(
           [&](const Fortran::parser::Designator &designator) {
             if (auto expr{Fortran::semantics::AnalyzeExpr(semanticsContext,
                                                           designator)}) {
-              if ((*expr).Rank() > 0 &&
+              if (((*expr).Rank() > 0 || treatIndexAsSection) &&
                   Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(
                       designator)) {
                 const auto *arrayElement =
@@ -817,7 +829,8 @@ mlir::Value gatherDataOperandAddrAndBounds(
                   asFortran << '(';
                   bounds = genBoundsOps<BoundsType, BoundsOp>(
                       builder, operandLocation, converter, stmtCtx,
-                      arrayElement->subscripts, asFortran, dataExv, baseAddr);
+                      arrayElement->subscripts, asFortran, dataExv, baseAddr,
+                      treatIndexAsSection);
                 }
                 asFortran << ')';
               } else if (Fortran::parser::Unwrap<
@@ -853,6 +866,10 @@ mlir::Value gatherDataOperandAddrAndBounds(
                 if (Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(
                         designator)) {
                   // Single array element.
+                  const auto *arrayElement =
+                      Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(
+                          designator);
+                  (void)arrayElement;
                   fir::ExtendedValue compExv =
                       converter.genExprAddr(operandLocation, *expr, stmtCtx);
                   baseAddr = fir::getBase(compExv);

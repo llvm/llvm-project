@@ -143,7 +143,7 @@
 "`2441 <https://wg21.link/LWG2441>`__","Exact-width atomic typedefs should be provided","Oulu","|Complete|",""
 "`2451 <https://wg21.link/LWG2451>`__","[fund.ts.v2] optional should 'forward' T's implicit conversions","Oulu","|Nothing To Do|",""
 "`2509 <https://wg21.link/LWG2509>`__","[fund.ts.v2] any_cast doesn't work with rvalue reference targets and cannot move with a value target","Oulu","|Complete|",""
-"`2516 <https://wg21.link/LWG2516>`__","[fund.ts.v2] Public ""exposition only"" members in observer_ptr","Oulu","",""
+"`2516 <https://wg21.link/LWG2516>`__","[fund.ts.v2] Public ""exposition only"" members in observer_ptr","Oulu","|Complete|","18.0"
 "`2542 <https://wg21.link/LWG2542>`__","Missing const requirements for associative containers","Oulu","",""
 "`2549 <https://wg21.link/LWG2549>`__","Tuple EXPLICIT constructor templates that take tuple parameters end up taking references to temporaries and will create dangling references","Oulu","|Complete|",""
 "`2550 <https://wg21.link/LWG2550>`__","Wording of unordered container's clear() method complexity","Oulu","|Complete|",""

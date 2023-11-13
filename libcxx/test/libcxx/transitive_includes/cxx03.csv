@@ -241,6 +241,10 @@ experimental/list experimental/memory_resource
 experimental/list list
 experimental/map experimental/memory_resource
 experimental/map map
+experimental/memory cstddef
+experimental/memory cstdint
+experimental/memory cstring
+experimental/memory limits
 experimental/memory_resource atomic
 experimental/memory_resource climits
 experimental/memory_resource concepts
@@ -809,6 +813,7 @@ stop_token limits
 stop_token ratio
 stop_token type_traits
 stop_token version
+streambuf climits
 streambuf cstdint
 streambuf ios
 streambuf iosfwd
@@ -855,6 +860,13 @@ string_view version
 strstream istream
 strstream ostream
 strstream version
+syncstream cstddef
+syncstream iosfwd
+syncstream map
+syncstream mutex
+syncstream ostream
+syncstream shared_mutex
+syncstream string
 system_error cerrno
 system_error compare
 system_error cstddef

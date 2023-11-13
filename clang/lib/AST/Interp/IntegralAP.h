@@ -35,10 +35,18 @@ private:
   friend IntegralAP<!Signed>;
   APInt V;
 
-  template <typename T> static T truncateCast(const APInt &V) {
+  template <typename T, bool InputSigned>
+  static T truncateCast(const APInt &V) {
     constexpr unsigned BitSize = sizeof(T) * 8;
-    if (BitSize >= V.getBitWidth())
-      return std::is_signed_v<T> ? V.getSExtValue() : V.getZExtValue();
+    if (BitSize >= V.getBitWidth()) {
+      APInt Extended;
+      if constexpr (InputSigned)
+        Extended = V.sext(BitSize);
+      else
+        Extended = V.zext(BitSize);
+      return std::is_signed_v<T> ? Extended.getSExtValue()
+                                 : Extended.getZExtValue();
+    }
 
     return std::is_signed_v<T> ? V.trunc(BitSize).getSExtValue()
                                : V.trunc(BitSize).getZExtValue();
@@ -80,15 +88,10 @@ public:
     return V.ult(RHS.V);
   }
 
-  explicit operator bool() const { return !V.isZero(); }
-  explicit operator int8_t() const { return truncateCast<int8_t>(V); }
-  explicit operator uint8_t() const { return truncateCast<uint8_t>(V); }
-  explicit operator int16_t() const { return truncateCast<int16_t>(V); }
-  explicit operator uint16_t() const { return truncateCast<uint16_t>(V); }
-  explicit operator int32_t() const { return truncateCast<int32_t>(V); }
-  explicit operator uint32_t() const { return truncateCast<uint32_t>(V); }
-  explicit operator int64_t() const { return truncateCast<int64_t>(V); }
-  explicit operator uint64_t() const { return truncateCast<uint64_t>(V); }
+  template <typename Ty, typename = std::enable_if_t<std::is_integral_v<Ty>>>
+  explicit operator Ty() const {
+    return truncateCast<Ty, Signed>(V);
+  }
 
   template <typename T> static IntegralAP from(T Value, unsigned NumBits = 0) {
     assert(NumBits > 0);
@@ -116,8 +119,16 @@ public:
 
   constexpr unsigned bitWidth() const { return V.getBitWidth(); }
 
-  APSInt toAPSInt(unsigned Bits = 0) const { return APSInt(V, Signed); }
-  APValue toAPValue() const { return APValue(APSInt(V, Signed)); }
+  APSInt toAPSInt(unsigned Bits = 0) const {
+    if (Bits == 0)
+      Bits = bitWidth();
+
+    if constexpr (Signed)
+      return APSInt(V.sext(Bits), !Signed);
+    else
+      return APSInt(V.zext(Bits), !Signed);
+  }
+  APValue toAPValue() const { return APValue(toAPSInt()); }
 
   bool isZero() const { return V.isZero(); }
   bool isPositive() const { return V.isNonNegative(); }
@@ -137,9 +148,8 @@ public:
     return NameStr;
   }
 
-  IntegralAP truncate(unsigned bitWidth) const {
-    assert(false);
-    return V;
+  IntegralAP truncate(unsigned BitWidth) const {
+    return IntegralAP(V.trunc(BitWidth));
   }
 
   IntegralAP<false> toUnsigned() const {
@@ -246,7 +256,11 @@ public:
 
   static void shiftRight(const IntegralAP A, const IntegralAP B,
                          unsigned OpBits, IntegralAP *R) {
-    *R = IntegralAP(A.V.ashr(B.V.getZExtValue()));
+    unsigned ShiftAmount = B.V.getZExtValue();
+    if constexpr (Signed)
+      *R = IntegralAP(A.V.ashr(ShiftAmount));
+    else
+      *R = IntegralAP(A.V.lshr(ShiftAmount));
   }
 
 private:

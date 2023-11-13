@@ -208,6 +208,8 @@ def m_riscv_Features_Group : OptionGroup<"<riscv features group>">,
                              Group<m_Group>, DocName<"RISC-V">;
 def m_ve_Features_Group : OptionGroup<"<ve features group>">,
                           Group<m_Group>, DocName<"VE">;
+def m_loongarch_Features_Group : OptionGroup<"<loongarch features group>">,
+                                 Group<m_Group>, DocName<"LoongArch">;
 
 def m_libc_Group : OptionGroup<"<m libc group>">, Group<m_mips_Features_Group>,
                    Flags<[HelpHidden]>;
@@ -1144,6 +1146,14 @@ defm gpu_rdc : BoolFOption<"gpu-rdc",
           "Generate relocatable device code, also known as separate compilation mode">,
   NegFlag<SetFalse>>;
 
+defm offload_implicit_host_device_templates :
+  BoolFOption<"offload-implicit-host-device-templates",
+  LangOpts<"OffloadImplicitHostDeviceTemplates">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Template functions or specializations without host, device and "
+          "global attributes have implicit host device attributes (CUDA/HIP only)">,
+  NegFlag<SetFalse>>;
+
 def fgpu_default_stream_EQ : Joined<["-"], "fgpu-default-stream=">,
   HelpText<"Specify default stream. The default value is 'legacy'. (CUDA/HIP only)">,
   Visibility<[ClangOption, CC1Option]>,
@@ -1731,6 +1741,10 @@ def fswift_async_fp_EQ : Joined<["-"], "fswift-async-fp=">,
     NormalizedValuesScope<"CodeGenOptions::SwiftAsyncFramePointerKind">,
     NormalizedValues<["Auto", "Always", "Never"]>,
     MarshallingInfoEnum<CodeGenOpts<"SwiftAsyncFramePointer">, "Always">;
+def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
+  Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
+  MetaVarName<"<version>">,
+  HelpText<"Specify the Swift version to use when filtering API notes">;
 
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
@@ -1991,6 +2005,10 @@ def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable support for ignoring exception handling constructs">,
   MarshallingInfoFlag<LangOpts<"IgnoreExceptions">>;
+defm assume_nothrow_exception_dtor: BoolFOption<"assume-nothrow-exception-dtor",
+  LangOpts<"AssumeNothrowExceptionDtor">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume that exception objects' destructors are non-throwing">,
+  NegFlag<SetFalse>>;
 def fexcess_precision_EQ : Joined<["-"], "fexcess-precision=">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>,
   HelpText<"Allows control over excess precision on targets where native "
@@ -2840,7 +2858,7 @@ def fms_compatibility_version
                "version number to report in _MSC_VER (0 = don't define it "
                "(default))">;
 def fms_runtime_lib_EQ : Joined<["-"], "fms-runtime-lib=">, Group<f_Group>,
-  Flags<[]>, Visibility<[ClangOption, CLOption]>,
+  Flags<[]>, Visibility<[ClangOption, CLOption, FlangOption]>,
   Values<"static,static_dbg,dll,dll_dbg">,
   HelpText<"Select Windows run-time library">,
   DocBrief<[{
@@ -2941,6 +2959,14 @@ def fno_modules_validate_textual_header_includes :
   MarshallingInfoNegativeFlag<LangOpts<"ModulesValidateTextualHeaderIncludes">>,
   HelpText<"Do not enforce -fmodules-decluse and private header restrictions for textual headers. "
            "This flag will be removed in a future Clang release.">;
+defm modules_skip_diagnostic_options : BoolFOption<"modules-skip-diagnostic-options",
+    HeaderSearchOpts<"ModulesSkipDiagnosticOptions">, DefaultFalse,
+    PosFlag<SetTrue, [], [], "Disable writing diagnostic options">,
+    NegFlag<SetFalse>, BothFlags<[], [CC1Option]>>;
+defm modules_skip_header_search_paths : BoolFOption<"modules-skip-header-search-paths",
+    HeaderSearchOpts<"ModulesSkipHeaderSearchPaths">, DefaultFalse,
+    PosFlag<SetTrue, [], [], "Disable writing header search paths">,
+    NegFlag<SetFalse>, BothFlags<[], [CC1Option]>>;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
@@ -3100,10 +3126,10 @@ def fno_global_isel : Flag<["-"], "fno-global-isel">, Group<f_clang_Group>,
 def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_clang_Group>,
   Alias<fno_global_isel>;
 def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
     HelpText<"Use the given vector functions library">,
     Values<"Accelerate,libmvec,MASSV,SVML,SLEEF,Darwin_libsystem_m,ArmPL,none">,
-    NormalizedValuesScope<"CodeGenOptions">,
+    NormalizedValuesScope<"llvm::driver::VectorLibrary">,
     NormalizedValues<["Accelerate", "LIBMVEC", "MASSV", "SVML", "SLEEF",
                       "Darwin_libsystem_m", "ArmPL", "NoLibrary"]>,
     MarshallingInfoEnum<CodeGenOpts<"VecLib">, "NoLibrary">;
@@ -4127,6 +4153,9 @@ def ibuiltininc : Flag<["-"], "ibuiltininc">, Group<clang_i_Group>,
 def index_header_map : Flag<["-"], "index-header-map">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Make the next included directory (-I or -F) an indexer header map">;
+def iapinotes_modules : JoinedOrSeparate<["-"], "iapinotes-modules">, Group<clang_i_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Add directory to the API notes search path referenced by module name">, MetaVarName<"<directory>">;
 def idirafter : JoinedOrSeparate<["-"], "idirafter">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to AFTER include search path">;
@@ -4660,9 +4689,9 @@ defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 4. (AMDGPU only)">,
   Visibility<[ClangOption, CC1Option]>,
-  Values<"none,3,4,5">,
+  Values<"none,4,5">,
   NormalizedValuesScope<"TargetOptions">,
-  NormalizedValues<["COV_None", "COV_3", "COV_4", "COV_5"]>,
+  NormalizedValues<["COV_None", "COV_4", "COV_5"]>,
   MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_4">;
 
 defm cumode : SimpleMFlag<"cumode",
@@ -4768,6 +4797,12 @@ def mrop_protect : Flag<["-"], "mrop-protect">,
     Group<m_ppc_Features_Group>;
 def mprivileged : Flag<["-"], "mprivileged">,
     Group<m_ppc_Features_Group>;
+
+defm regnames : BoolOption<"m", "regnames",
+  CodeGenOpts<"PPCUseFullRegisterNames">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use full register names when writing assembly output">,
+  NegFlag<SetFalse, [], [ClangOption], "Use only register numbers when writing assembly output">>,
+  Group<m_Group>;
 } // let Flags = [TargetSpecific]
 def maix_small_local_exec_tls : Flag<["-"], "maix-small-local-exec-tls">,
   Group<m_ppc_Features_Group>,
@@ -4886,6 +4921,14 @@ def mstack_protector_guard_reg_EQ : Joined<["-"], "mstack-protector-guard-reg=">
 def mfentry : Flag<["-"], "mfentry">, HelpText<"Insert calls to fentry at function entry (x86/SystemZ only)">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"CallFEntry">>;
+def mlsx : Flag<["-"], "mlsx">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable Loongson SIMD Extension (LSX).">;
+def mno_lsx : Flag<["-"], "mno-lsx">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable Loongson SIMD Extension (LSX).">;
+def mlasx : Flag<["-"], "mlasx">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable Loongson Advanced SIMD Extension (LASX).">;
+def mno_lasx : Flag<["-"], "mno-lasx">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable Loongson Advanced SIMD Extension (LASX).">;
 def mnop_mcount : Flag<["-"], "mnop-mcount">, HelpText<"Generate mcount/__fentry__ calls as nops. To activate they need to be patched in.">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"MNopMCount">>;
@@ -6175,6 +6218,10 @@ def flang_experimental_hlfir : Flag<["-"], "flang-experimental-hlfir">,
   Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Use HLFIR lowering (experimental)">;
 
+def flang_deprecated_no_hlfir : Flag<["-"], "flang-deprecated-no-hlfir">,
+  Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Do not use HLFIR lowering (deprecated)">;
+
 def flang_experimental_polymorphism : Flag<["-"], "flang-experimental-polymorphism">,
   Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Enable Fortran 2003 polymorphism (experimental)">;
@@ -6919,9 +6966,6 @@ let Visibility = [CC1Option] in {
 def sys_header_deps : Flag<["-"], "sys-header-deps">,
   HelpText<"Include system headers in dependency output">,
   MarshallingInfoFlag<DependencyOutputOpts<"IncludeSystemHeaders">>;
-def canonical_system_headers : Flag<["-"], "canonical-system-headers">,
-  HelpText<"Canonicalize system headers in dependency output">,
-  MarshallingInfoFlag<DependencyOutputOpts<"CanonicalSystemHeaders">>;
 def module_file_deps : Flag<["-"], "module-file-deps">,
   HelpText<"Include module files in dependency output">,
   MarshallingInfoFlag<DependencyOutputOpts<"IncludeModuleFiles">>;
@@ -8316,3 +8360,5 @@ def dxc_disable_validation : DXCFlag<"Vd">,
 def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   Flags<[Ignored]>, Visibility<[DXCOption]>,
   HelpText<"Embed PDB in shader container (ignored)">;
+def spirv : DXCFlag<"spirv">,
+  HelpText<"Generate SPIR-V code">;

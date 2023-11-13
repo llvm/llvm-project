@@ -11,6 +11,7 @@
 #define _LIBCPP_SSO_ALLOCATOR_H
 
 #include <__config>
+#include <cstddef>
 #include <memory>
 #include <new>
 #include <type_traits>
@@ -34,7 +35,7 @@ public:
 template <class _Tp, size_t _Np>
 class _LIBCPP_HIDDEN __sso_allocator
 {
-    typename aligned_storage<sizeof(_Tp) * _Np>::type buf_;
+    alignas(_Tp) std::byte buf_[sizeof(_Tp) * _Np];
     bool __allocated_;
 public:
     typedef size_t            size_type;

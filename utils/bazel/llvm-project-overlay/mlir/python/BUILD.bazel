@@ -413,7 +413,7 @@ gentbl_filegroup(
     deps = [
         ":BufferizationOpsPyTdFiles",
         "//mlir:DestinationStyleOpInterfaceTdFiles",
-        "//mlir:SubsetInsertionOpInterfaceTdFiles",
+        "//mlir:SubsetOpInterfaceTdFiles",
     ],
 )
 

@@ -93,6 +93,12 @@ struct AsyncInfoWrapperTy {
   /// object and only once.
   void finalize(Error &Err);
 
+  /// Register \p Ptr as an associated alloction that is freed after
+  /// finalization.
+  void freeAllocationAfterSynchronization(void *Ptr) {
+    AsyncInfoPtr->AssociatedAllocations.push_back(Ptr);
+  }
+
 private:
   GenericDeviceTy &Device;
   __tgt_async_info LocalAsyncInfo;
@@ -278,6 +284,12 @@ struct GenericKernelTy {
   /// Get the kernel name.
   const char *getName() const { return Name; }
 
+  /// Return true if this kernel is a constructor or destructor.
+  bool isCtorOrDtor() const {
+    // TODO: This is not a great solution and should be revisited.
+    return StringRef(Name).endswith("tor");
+  }
+
   /// Get the kernel image.
   DeviceImageTy &getImage() const {
     assert(ImagePtr && "Kernel is not initialized!");
@@ -288,6 +300,11 @@ struct GenericKernelTy {
   const KernelEnvironmentTy &getKernelEnvironmentForKernel() {
     return KernelEnvironment;
   }
+
+  /// Return a device pointer to a new kernel launch environment.
+  Expected<KernelLaunchEnvironmentTy *>
+  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice,
+                             AsyncInfoWrapperTy &AsyncInfo) const;
 
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
@@ -329,9 +346,10 @@ protected:
 private:
   /// Prepare the arguments before launching the kernel.
   void *prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-                    ptrdiff_t *ArgOffsets, int32_t NumArgs,
+                    ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
                     llvm::SmallVectorImpl<void *> &Args,
-                    llvm::SmallVectorImpl<void *> &Ptrs) const;
+                    llvm::SmallVectorImpl<void *> &Ptrs,
+                    KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
 
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
@@ -373,6 +391,9 @@ protected:
 
   /// The kernel environment, including execution flags.
   KernelEnvironmentTy KernelEnvironment;
+
+  /// The prototype kernel launch environment.
+  KernelLaunchEnvironmentTy KernelLaunchEnvironment;
 };
 
 /// Class representing a map of host pinned allocations. We track these pinned
@@ -649,6 +670,20 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// __tgt_async_info structure.
   Error synchronize(__tgt_async_info *AsyncInfo);
   virtual Error synchronizeImpl(__tgt_async_info &AsyncInfo) = 0;
+
+  /// Invokes any global constructors on the device if present and is required
+  /// by the target.
+  virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
+                                       DeviceImageTy &Image) {
+    return Error::success();
+  }
+
+  /// Invokes any global destructors on the device if present and is required
+  /// by the target.
+  virtual Error callGlobalDestructors(GenericPluginTy &Plugin,
+                                      DeviceImageTy &Image) {
+    return Error::success();
+  }
 
   /// Query for the completion of the pending operations on the __tgt_async_info
   /// structure in a non-blocking manner.

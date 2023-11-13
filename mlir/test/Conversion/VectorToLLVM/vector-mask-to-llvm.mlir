@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s --convert-vector-to-llvm='force-32bit-vector-indices=1 use-opaque-pointers=1' | FileCheck %s --check-prefix=CMP32
-// RUN: mlir-opt %s --convert-vector-to-llvm='force-32bit-vector-indices=0 use-opaque-pointers=1' | FileCheck %s --check-prefix=CMP64
+// RUN: mlir-opt %s --convert-vector-to-llvm='force-32bit-vector-indices=1' | FileCheck %s --check-prefix=CMP32
+// RUN: mlir-opt %s --convert-vector-to-llvm='force-32bit-vector-indices=0' | FileCheck %s --check-prefix=CMP64
 
 // CMP32-LABEL: @genbool_var_1d(
 // CMP32-SAME: %[[ARG:.*]]: index)

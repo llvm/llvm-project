@@ -345,6 +345,32 @@ class VString<int nf, bit signed> {
                    !eq(nf, 8): !if(signed, "vvvvvvvv", "UvUvUvUvUvUvUvUv"));
 }
 
+
+class FixedVString<int fixed_lmul, int num, string vec> {
+  string V = "(LFixedLog2LMUL:" # fixed_lmul # ")" # vec;
+  string S = !interleave(!listsplat(V, num), "");
+}
+
+multiclass RVVNonTupleVCreateBuiltin<int dst_lmul, list<int> src_lmul_list> {
+  defvar dst_v = FixedVString<dst_lmul, 1, "v">.V;
+  defvar dst_uv = FixedVString<dst_lmul, 1, "Uv">.V;
+  foreach src_lmul = src_lmul_list in {
+    defvar num = !shl(1, !sub(dst_lmul, src_lmul));
+
+    defvar src_v = FixedVString<src_lmul, num, "v">.V;
+    defvar src_s = FixedVString<src_lmul, num, "v">.S;
+    def vcreate # src_v # dst_v : RVVBuiltin<src_v # dst_v,
+                                             dst_v # src_s,
+                                             "csilxfd", dst_v>;
+
+    defvar src_uv = FixedVString<src_lmul, num, "Uv">.V;
+    defvar src_us = FixedVString<src_lmul, num, "Uv">.S;
+    def vcreate_u # src_uv # dst_uv : RVVBuiltin<src_uv # dst_uv,
+                                                 dst_uv # src_us,
+                                                 "csil", dst_uv>;
+  }
+}
+
 multiclass RVVPseudoUnaryBuiltin<string IR, string type_range> {
   let Name = NAME,
       IRName = IR,
@@ -2320,6 +2346,15 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       }] in {
     def vundefined : RVVBuiltin<"v", "v", "csilxfd">;
     def vundefined_u : RVVBuiltin<"Uv", "Uv", "csil">;
+
+    foreach nf = NFList in {
+      let NF = nf in {
+        defvar T = "(Tuple:" # nf # ")";
+        def : RVVBuiltin<T # "v", T # "v", "csilxfd">;
+        def : RVVBuiltin<T # "Uv", T # "Uv", "csil">;
+      }
+    }
+
   }
 
   // LMUL truncation
@@ -2429,15 +2464,31 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       SupportOverloading = false,
       ManualCodegen = [{
       {
-        assert(isa<StructType>(ResultType));
-        unsigned NF = cast<StructType>(ResultType)->getNumElements();
-        llvm::Value *ReturnTuple = llvm::PoisonValue::get(ResultType);
-        for (unsigned I = 0; I < NF; ++I) {
-          ReturnTuple = Builder.CreateInsertValue(ReturnTuple, Ops[I], {I});
+        if (isa<StructType>(ResultType)) {
+          unsigned NF = cast<StructType>(ResultType)->getNumElements();
+          llvm::Value *ReturnTuple = llvm::PoisonValue::get(ResultType);
+          for (unsigned I = 0; I < NF; ++I) {
+            ReturnTuple = Builder.CreateInsertValue(ReturnTuple, Ops[I], {I});
+          }
+          return ReturnTuple;
         }
-        return ReturnTuple;
+        llvm::Value *ReturnVector = llvm::PoisonValue::get(ResultType);
+        auto *VecTy = cast<ScalableVectorType>(Ops[0]->getType());
+        for (unsigned I = 0, N = Ops.size(); I < N; ++I) {
+          llvm::Value *Idx =
+            ConstantInt::get(Builder.getInt64Ty(),
+                              VecTy->getMinNumElements() * I);
+          ReturnVector =
+            Builder.CreateInsertVector(ResultType, ReturnVector, Ops[I], Idx);
+        }
+        return ReturnVector;
       }
       }] in {
+
+    defm : RVVNonTupleVCreateBuiltin<1, [0]>;
+    defm : RVVNonTupleVCreateBuiltin<2, [0, 1]>;
+    defm : RVVNonTupleVCreateBuiltin<3, [0, 1, 2]>;
+
     foreach nf = NFList in {
       let NF = nf in {
         defvar T = "(Tuple:" # nf # ")";
@@ -2537,8 +2588,15 @@ let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
     defm vaesz   : RVVOutBuiltinSetZvk<HasVV=0>;
   }
 
-  // zvknha or zvknhb
+  // zvknha
   let RequiredFeatures = ["Zvknha"] in {
+    defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"i">;
+    defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"i">;
+    defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"i">;
+  }
+
+  // zvknhb
+  let RequiredFeatures = ["Zvknhb"] in {
     defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"il">;
     defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"il">;
     defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"il">;

@@ -469,16 +469,16 @@ def LLVM_ThreadlocalAddressOp : LLVM_OneResultIntrOp<"threadlocal.address", [],
 
 def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [], 1> {
   let arguments = (ins I32:$align,
-                       LLVM_i8Ptr:$promise,
-                       LLVM_i8Ptr:$coroaddr,
-                       LLVM_i8Ptr:$fnaddrs);
+                       LLVM_AnyPointer:$promise,
+                       LLVM_AnyPointer:$coroaddr,
+                       LLVM_AnyPointer:$fnaddrs);
   let assemblyFormat = "$align `,` $promise `,` $coroaddr `,` $fnaddrs"
     " attr-dict `:` functional-type(operands, results)";
 }
 
 def LLVM_CoroBeginOp : LLVM_IntrOp<"coro.begin", [], [], [], 1> {
   let arguments = (ins LLVM_TokenType:$token,
-                       LLVM_i8Ptr:$mem);
+                       LLVM_AnyPointer:$mem);
   let assemblyFormat = "$token `,` $mem attr-dict `:` functional-type(operands, results)";
 }
 
@@ -491,7 +491,7 @@ def LLVM_CoroAlignOp : LLVM_IntrOp<"coro.align", [0], [], [], 1> {
 }
 
 def LLVM_CoroSaveOp : LLVM_IntrOp<"coro.save", [], [], [], 1> {
-  let arguments = (ins LLVM_i8Ptr:$handle);
+  let arguments = (ins LLVM_AnyPointer:$handle);
   let assemblyFormat = "$handle attr-dict `:` functional-type(operands, results)";
 }
 
@@ -502,7 +502,7 @@ def LLVM_CoroSuspendOp : LLVM_IntrOp<"coro.suspend", [], [], [], 1> {
 }
 
 def LLVM_CoroEndOp : LLVM_IntrOp<"coro.end", [], [], [], 1> {
-  let arguments = (ins LLVM_i8Ptr:$handle,
+  let arguments = (ins LLVM_AnyPointer:$handle,
                        I1:$unwind,
                        LLVM_TokenType:$retvals);
   let assemblyFormat = "$handle `,` $unwind `,` $retvals attr-dict `:` functional-type(operands, results)";
@@ -510,12 +510,12 @@ def LLVM_CoroEndOp : LLVM_IntrOp<"coro.end", [], [], [], 1> {
 
 def LLVM_CoroFreeOp : LLVM_IntrOp<"coro.free", [], [], [], 1> {
   let arguments = (ins LLVM_TokenType:$id,
-                       LLVM_i8Ptr:$handle);
+                       LLVM_AnyPointer:$handle);
   let assemblyFormat = "$id `,` $handle attr-dict `:` functional-type(operands, results)";
 }
 
 def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
-  let arguments = (ins LLVM_i8Ptr:$handle);
+  let arguments = (ins LLVM_AnyPointer:$handle);
   let assemblyFormat = "$handle attr-dict `:` qualified(type($handle))";
 }
 
@@ -526,6 +526,9 @@ def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
 class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
     : LLVM_IntrOp<name, [], [], traits, 0> {
   let llvmBuilder = [{
+    // Debug intrinsics without debug locations are invalid.
+    if(!builder.getCurrentDebugLocation())
+      return success();
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::LLVMContext &ctx = module->getContext();
     llvm::Function *fn =
@@ -566,6 +569,9 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
   let summary = "Relates the program to a debug information label.";
   let arguments = (ins LLVM_DILabelAttr:$label);
   let llvmBuilder = [{
+    // Debug intrinsics without debug locations are invalid.
+    if(!builder.getCurrentDebugLocation())
+      return success();
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::LLVMContext &ctx = module->getContext();
     llvm::Function *fn =
@@ -585,19 +591,19 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
 //
 
 def LLVM_VaStartOp : LLVM_ZeroResultIntrOp<"vastart">,
-                     Arguments<(ins LLVM_i8Ptr:$arg_list)> {
+                     Arguments<(ins LLVM_AnyPointer:$arg_list)> {
   let assemblyFormat = "$arg_list attr-dict `:` qualified(type($arg_list))";
   let summary = "Initializes `arg_list` for subsequent variadic argument extractions.";
 }
 
 def LLVM_VaCopyOp : LLVM_ZeroResultIntrOp<"vacopy">,
-                    Arguments<(ins LLVM_i8Ptr:$dest_list, LLVM_i8Ptr:$src_list)> {
+                    Arguments<(ins LLVM_AnyPointer:$dest_list, LLVM_AnyPointer:$src_list)> {
   let assemblyFormat = "$src_list `to` $dest_list attr-dict `:` type(operands)";
   let summary = "Copies the current argument position from `src_list` to `dest_list`.";
 }
 
 def LLVM_VaEndOp : LLVM_ZeroResultIntrOp<"vaend">,
-                   Arguments<(ins LLVM_i8Ptr:$arg_list)> {
+                   Arguments<(ins LLVM_AnyPointer:$arg_list)> {
   let assemblyFormat = "$arg_list attr-dict `:` qualified(type($arg_list))";
   let summary = "Destroys `arg_list`, which has been initialized by `intr.vastart` or `intr.vacopy`.";
 }
@@ -607,7 +613,7 @@ def LLVM_VaEndOp : LLVM_ZeroResultIntrOp<"vaend">,
 //
 
 def LLVM_EhTypeidForOp : LLVM_OneResultIntrOp<"eh.typeid.for"> {
-    let arguments = (ins LLVM_i8Ptr:$type_info);
+    let arguments = (ins LLVM_AnyPointer:$type_info);
     let assemblyFormat = "$type_info attr-dict `:` functional-type(operands, results)";
 }
 
@@ -921,12 +927,12 @@ def LLVM_PtrAnnotation
     : LLVM_OneResultIntrOp<"ptr.annotation", [0], [2],
         [AllTypesMatch<["res", "ptr"]>,
          AllTypesMatch<["annotation", "fileName", "attr"]>]> {
-  let arguments = (ins LLVM_PointerTo<AnySignlessInteger>:$ptr,
+  let arguments = (ins LLVM_AnyPointer:$ptr,
                        LLVM_AnyPointer:$annotation,
                        LLVM_AnyPointer:$fileName,
                        I32:$line,
                        LLVM_AnyPointer:$attr);
-  let results = (outs LLVM_PointerTo<AnySignlessInteger>:$res);
+  let results = (outs LLVM_AnyPointer:$res);
 }
 
 def LLVM_Annotation
