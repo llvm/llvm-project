@@ -1011,7 +1011,7 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
   // If we can't use an alias, we must use the public symbol, even though this
   // may require a symbolic relocation.
   if (shouldUsePublicSymbol(Fn))
-    return ConstantExpr::getBitCast(Fn, Int8PtrTy);
+    return Fn;
 
   // When possible use a private alias to avoid symbolic relocations.
   auto *GA = GlobalAlias::create(GlobalValue::LinkageTypes::PrivateLinkage,
@@ -1034,7 +1034,7 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
 
   // appendToCompilerUsed(*Fn->getParent(), {GA});
 
-  return ConstantExpr::getBitCast(GA, Int8PtrTy);
+  return GA;
 }
 
 static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
@@ -1300,8 +1300,7 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
         getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
     ValuesVar->setAlignment(Align(8));
     maybeSetComdat(ValuesVar, Fn, CntsVarName);
-    ValuesPtrExpr =
-        ConstantExpr::getBitCast(ValuesVar, PointerType::getUnqual(Ctx));
+    ValuesPtrExpr = ValuesVar;
   }
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
