@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIALDIALECT_H_
-#define INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIALDIALECT_H_
+#ifndef MLIR_INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIALDIALECT_H_
+#define MLIR_INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIALDIALECT_H_
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -16,4 +16,4 @@
 // Generated headers (block clang-format from messing up order)
 #include "mlir/Dialect/Polynomial/IR/PolynomialDialect.h.inc"
 
-#endif // INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIALDIALECT_H_
+#endif // MLIR_INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIALDIALECT_H_

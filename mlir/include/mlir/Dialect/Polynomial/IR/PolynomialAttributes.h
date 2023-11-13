@@ -6,8 +6,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIALATTRIBUTES_H_
-#define INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIALATTRIBUTES_H_
+#ifndef MLIR_INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIALATTRIBUTES_H_
+#define MLIR_INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIALATTRIBUTES_H_
 
 #include "Polynomial.h"
 #include "PolynomialDialect.h"
@@ -15,4 +15,4 @@
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.h.inc"
 
-#endif // INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIALATTRIBUTES_H_
+#endif // MLIR_INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIALATTRIBUTES_H_

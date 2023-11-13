@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
-#define INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
+#ifndef MLIR_INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
+#define MLIR_INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
 
 #include <utility>
 
@@ -154,4 +154,4 @@ struct DenseMapInfo<mlir::polynomial::Polynomial> {
 
 } // namespace llvm
 
-#endif // INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
+#endif // MLIR_INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
