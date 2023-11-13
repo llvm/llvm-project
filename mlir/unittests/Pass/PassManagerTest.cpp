@@ -186,6 +186,9 @@ struct ReRegisterPass
     : public PassWrapper<ReRegisterPass, OperationPass<ModuleOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReRegisterPass)
 
+  StringRef getArgument() const final {
+    return "test-pass-reregistration-pass";
+  }
   ReRegisterPass(std::string annotation) : annotation(annotation) {}
 
   std::string annotation;
@@ -213,14 +216,25 @@ TEST(PassManagerTest, PassReRegistration) {
   OwningOpRef<ModuleOp> module =
       parseSourceString<ModuleOp>(moduleStr, &context);
 
-  // Instantiate and run pass in first configuration.
+  // Register in first configuration.
+  registerPass([]() -> std::unique_ptr<mlir::Pass> {
+    return std::make_unique<ReRegisterPass>("custom.first");
+  });
+
+  // Run pass to verify first configuration is effective.
   auto pm = PassManager::on<ModuleOp>(&context);
-  pm.addPass(std::make_unique<ReRegisterPass>("custom.first"));
+  (void)parsePassPipeline("test-pass-reregistration-pass", pm, llvm::errs());
   EXPECT_TRUE(succeeded(pm.run(module.get())));
   module->walk([](Operation *op) { EXPECT_TRUE(op->hasAttr("custom.first")); });
 
-  // Adding a "reconfiguration" of the pass, i.e., with a different annotation.
-  pm.addPass(std::make_unique<ReRegisterPass>("custom.second"));
+  // Register a "reconfiguration" of the pass, i.e., with a different
+  // annotation.
+  registerPass([]() -> std::unique_ptr<mlir::Pass> {
+    return std::make_unique<ReRegisterPass>("custom.second");
+  });
+
+  // Run pass to verify second configuration is effective.
+  (void)parsePassPipeline("test-pass-reregistration-pass", pm, llvm::errs());
   EXPECT_TRUE(succeeded(pm.run(module.get())));
   module->walk(
       [](Operation *op) { EXPECT_TRUE(op->hasAttr("custom.second")); });
