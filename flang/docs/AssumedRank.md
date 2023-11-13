@@ -7,11 +7,12 @@
 -->
 # Assumed-Rank Objects
 
-An assumed-rank is a data object that takes its rank from its effective
-argument. It is a dummy, or the associated entity of a SELECT RANK in the `RANK
-DEFAULT` or `RANK(*)` blocks. Its rank is not known at compile time. The rank
-can be anything from 0 (scalar) to the maximum allowed rank in Fortran
-(currently 15 according to Fortran 2018 standard section 5.4.6 point 1).
+An assumed-rank dummy data object is a dummy argument that takes its rank from
+its effective argument. It is a dummy argument, or the associated entity of a
+SELECT RANK in the `RANK DEFAULT` block. Its rank is not known at compile
+time. The rank can be anything from 0 (scalar) to the maximum allowed rank in
+Fortran (currently 15 according to Fortran 2018 standard section 5.4.6 point
+1).
 
 This document summarizes the contexts where assumed-rank objects can appear,
 and then describes how they are implemented and lowered to HLFIR and FIR. All
@@ -19,7 +20,7 @@ section references are made to the Fortran 2018 standard.
 
 ## Fortran Standard References
 
-Here is a list of  sections and constraints from the Fortran standard involving
+Here is a list of sections and constraints from the Fortran standard involving
 assumed-ranks.
 
 - 7.3.2.2 TYPE
@@ -55,8 +56,9 @@ Assumed-rank can:
   inquiry functions listed in table 16.1 are detailed in the "Assumed-rank
   features" section below.
 - appear in BIND(C) and non BIND(C interface (18.1 point 3)
-- be finalized on entry as INTENT(OUT) under some conditions (C839)
-- be associated with any kind of scalars and arrays, including assumed size.
+- be finalized on entry as INTENT(OUT) under some conditions that prevents the
+  assumed-rank to be associated with an assumed-size.
+- be associated with any kind of scalars and arrays, including assumed-size.
 
 Assumed-rank cannot:
 - be coarrays (C837)
@@ -65,9 +67,10 @@ Assumed-rank cannot:
   function or a component reference)
 - appear in a designator other than the case listed above (C838). Notably, they
   cannot be directly addressed, they cannot be used in elemental operations or
-  transformational intrinsics, they cannot be used in IO, they cannot be assigned
-  to....
-- be finalized on entry as INTENT(OUT) under certain weird conditions (C839).
+  transformational intrinsics, they cannot be used in IO, they cannot be
+  assigned to....
+- be finalized on entry as INTENT(OUT) if it could be associated with an
+  assumed-size (C839).
 - be used in a reference to a procedure without an explicit interface
   (15.4.2.2. point 3 (c)).
 
@@ -85,12 +88,12 @@ dummies).
 ### Representation in Semantics
 In semantics (there is no concept of assumed-rank expression needed in
 `evaluate::Expr`). Such symbols have either `semantics::ObjectEntityDetails` (
-dummy data objects) with a  `semantics::ArraySpec` that encodes the
+dummy data objects) with a `semantics::ArraySpec` that encodes the
 "assumed-rank-shape" (can be tested with IsAssumedRank()), or they have
 `semantics::AssocEntityDetails` (associated entity in the RANK DEFAULT case).
 
 Inside a select rank, a `semantics::Symbol` is created for the associated
-entity  with `semantics::AssocEntityDetails` that points to the the selector
+entity with `semantics::AssocEntityDetails` that points to the the selector
 and holds the rank outside of the RANK DEFAULT case.
 
 Assumed-rank dummies are also represented in the
@@ -98,7 +101,7 @@ Assumed-rank dummies are also represented in the
 represent assumed-rank in procedure characteristics.
 
 ### Runtime Representation of Assumed-Ranks
-Assumed-ranks are implemented as CFI_cdesct_t (18.5.3) with the addition of an
+Assumed-ranks are implemented as CFI_cdesc_t (18.5.3) with the addition of an
 f18 specific addendum when required for the type. This is the usual f18
 descriptor, and no changes is required to represent assumed-ranks in this data
 structure. In fact, there is no difference between the runtime descriptor
@@ -146,7 +149,7 @@ Examples:
 `REAL, ALLOCATABLE :: x(..)`  -> `!fir.ref<!fir.box<!fir.heap<!fir.array<* x f32>>>>`
 `TYPE(t), POINTER :: x(..)`  -> `!fir.ref<!fir.box<!fir.ptr<!fir.array<* x !fir.type<t>>>>>` 
 
-All these FIR types are implemented as the address of a CFI_cdesct_t in code
+All these FIR types are implemented as the address of a CFI_cdesc_t in code
 generation.
 
 There is no need to allow assumed-rank "expression" in HLFIR (hlfir.expr) since
@@ -178,9 +181,9 @@ FIR/HLFIR operation where assumed-rank may appear:
 
 FIR/HLFIR Operations that should not need to accept assumed-ranks but where it
 could still be relevant:
-- `fir.box_tdesc` and `fir.box_typecode`  (polymorphic assumed-rank cannot
+- `fir.box_tdesc` and `fir.box_typecode` (polymorphic assumed-rank cannot
   appear in a SELECT TYPE directly without using a SELECT RANK). Given the
-  CFI_cdesct_t structure, no change would be needed for `fir.box_typecode` to
+  CFI_cdesc_t structure, no change would be needed for `fir.box_typecode` to
   support assumed-ranks, but `fir.box_tdesc` would require change since the
   position of the type descriptor pointer depends on the rank.
 - as `fir.allocmem` / `fir.global` result (assumed-ranks are never local/global
@@ -197,7 +200,9 @@ One new operation is needed, `fir.rebox_assumed_rank`, the rational being that
 fir.rebox codegen is already quite complex and not all the aspects of fir.rebox
 matters for assumed-ranks (only simple field changes are required with
 assumed-ranks). Also, this operation will be allowed to take an operand in
-memory to avoid expensive fir.load of pointer/allocatable inputs.
+memory to avoid expensive fir.load of pointer/allocatable inputs. The operation
+will also allow creating rank-one assumed-size descriptor from an input
+assumed-rank descriptor to cover the SELECT RANK `RANK(*)` case.
 
 It is proposed that the FIR descriptor inquiry operation (fir.box_addr,
 fir.box_rank, fir.box_dim, fir.box_elesize at least) be allowed to take
@@ -215,7 +220,7 @@ special handling for assumed-ranks.
 
 ### Representation in LLVM IR
 
-Assumed-rank descriptor types are lowered to the LLVM type of a CFI_cdesct_t
+Assumed-rank descriptor types are lowered to the LLVM type of a CFI_cdesc_t
 descriptor with no dimension array field and no addendum. That way, any inline
 code attempt to directly access dimensions and addendum with constant offset
 will be invalid for more safety, but it will still be easy to generate LLVM GEP
@@ -230,18 +235,19 @@ This section list the different Fortran features where assumed-rank objects are
 involved and describes the related implementation design.
 
 ### Assumed-rank in procedure references
-Assumed-rank arguments are implemented as being the address of a CFI_cdesct_t.
+Assumed-rank arguments are implemented as being the address of a CFI_cdesc_t.
 
 When passing an actual argument to an assumed-rank dummy, the following points
 need special attention and are further described below:
 - Copy-in/copy-out when required
-- Creation of forwarding of the assumed-rank dummy descriptor
+- Creation of forwarding of the assumed-rank dummy descriptor (including when
+  the actual is an assumed-size).
 - Finalization, deallocation, and initialization of INTENT(OUT) assumed-rank
   dummy.
 
 OPTIONAL assumed-ranks are implemented like other non assumed-rank OPTIONAL
-objects passed by descriptor :  an absent assumed-rank is represented by a null
-pointer to a CFI_cdesct_t.
+objects passed by descriptor: an absent assumed-rank is represented by a null
+pointer to a CFI_cdesc_t.
 
 The passing interface for assumed-rank described above and below is compliant
 by default with the BIND(C) case, except for the assumed-rank dummy descriptor
@@ -318,6 +324,11 @@ For the first case, a descriptor will be created for the dummy with `fir.embox`
 has if it has the rank of the actual argument. This is the same logic as when
 dealing with assumed shape or INTENT(IN) POINTER dummy arguments, except that
 an extra cast to the assumed-rank descriptor type is added (no-op at runtime).
+Care must be taken to set the final dimension extent to -1 in the descriptor
+created for an assumed-size actual argument. Note that the descriptor created
+for an assumed-size still has the rank of the assumed-size, a rank-one
+descriptor will be created for it if needed in a RANK(*) block (nothing says
+that an assumed-size should be passed as a rank-one array in 15.5.2.4 point 17).
 
 For the second case, a cast is added to assumed-rank descriptor type if it is
 not one already and the descriptor is forwarded.
@@ -328,7 +339,7 @@ done when passing to an assume shape dummy, and a cast to the assumed-rank
 descriptor is added .
 
 The last case is the same as the third one, except the that the descriptor
-manipulation is more complex  since the storage size of the descriptor is
+manipulation is more complex since the storage size of the descriptor is
 unknown. `fir.rebox` codegen is already quite complex since it deals with
 creating descriptor for descriptor based array sections and pointer remapping.
 Both of those are meaningless in this case where the output descriptor is the
@@ -347,24 +358,24 @@ assumed-rank to assumed-ranks, the cost of this extra copy is higher.
 
 #### Intent(out) assumed-rank finalization, deallocation, initialization
 
-C839 is limiting the cases where assumed-rank may be finalizable, but I do not
-understand how that helps. An assumed-rank allocatable or pointer actual can
-still be passed to an INTENT(OUT) dummy with a type requiring
-finalization/initialization, and nothing prevents passing allocatable
-assumed-rank to INTENT(OUT) allocatables, which require conditional
-deallocation which may trigger finalization.  Flang therefore needs to
-implement finalization, deallocation and initialization of INTENT(OUT) as
-usual.  Non pointer non allocatable INTENT(OUT) finalization is done via a call
-to `Destroy` runtime API that takes a descriptor and can be directly used with
-an assumed-rank descriptor with no change. The initialization is done via a
-call to the `Initialize` runtime API that takes a descriptor and can also
-directly be used with an assumed descriptor.  Conditional deallocation of
-INTENT(OUT) allocatable is done via an inline allocation status check and
-either an inline deallocate for intrinsic types, or a runtime call to
-`Deallocate` for the other cases. For assumed-ranks, the runtime call is always
-used regardless of the type to avoid inline descriptor manipulations.
-`Deallocate` runtime API also works with assumed-rank descriptor with no
-changes (like any runtime API taking descriptors of any rank).
+The standard prevents INTENT(OUT) assumed-rank requiring finalization to be
+associated with assumed-size arrays (C839) because there would be no way to
+finalize such entities. But INTENT(OUT) finalization is still possible if the
+actual is not an assumed-size and not a nonpointer nonallocatable assumed-rank.
+
+Flang therefore needs to implement finalization, deallocation and
+initialization of INTENT(OUT) as usual. Non pointer non allocatable INTENT(OUT)
+finalization is done via a call to `Destroy` runtime API that takes a
+descriptor and can be directly used with an assumed-rank descriptor with no
+change. The initialization is done via a call to the `Initialize` runtime API
+that takes a descriptor and can also directly be used with an assumed
+descriptor. Conditional deallocation of INTENT(OUT) allocatable is done via an
+inline allocation status check and either an inline deallocate for intrinsic
+types, or a runtime call to `Deallocate` for the other cases. For
+assumed-ranks, the runtime call is always used regardless of the type to avoid
+inline descriptor manipulations. `Deallocate` runtime API also works with
+assumed-rank descriptors with no changes (like any runtime API taking
+descriptors of any rank).
 
 ```Fortran
 subroutine foo(x)
@@ -385,17 +396,20 @@ end subroutine
 
 Select rank is implemented with a rank inquiry (and last extent for `RANK(*)`),
 followed by a jump in the related block where the selector descriptor is cast
-to a descriptor with the associated entity rank for the current block (or kept
-as-is for the `RANK DEFAULT` and `RANK(*)` case). The cast values are mapped to
-the associated entity symbol and lowering precede as usual. This is very
-similar to how Select Type is implemented. The `RANK(*)` is a bit odd, it
-detects assumed-ranks associated with an assumed-size arrays regardless of the
-rank, and takes precedence over any rank based matching.
+to a descriptor with the associated entity rank for the current block for the
+`RANK(cst)` cases. In the `RANK DEFAULT`, the input descriptor is kept with no
+cast, and in the RANK(*), a rank-one descriptor is created with the same
+dynamic type as the input.
+These new descriptor values are mapped to the associated entity symbol and
+lowering precede as usual. This is very similar to how Select Type is
+implemented. The `RANK(*)` is a bit odd, it detects assumed-ranks associated
+with an assumed-size arrays regardless of the rank, and takes precedence over
+any rank based matching.
 
-Note that `-1` is a magic extent number that encodes that a descriptor describe
-an entity that is an assumed size (user specified extents of explicit shape
+Note that `-1` is a magic extent number that encodes that a descriptor describes
+an entity that is an assumed-size (user specified extents of explicit shape
 arrays are always normalized to zero when negative, so `-1` is a safe value to
-identify a descriptor created for an assumed size). It is actually well
+identify a descriptor created for an assumed-size). It is actually well
 specified for the BIND(C) (18.5.2 point 1.) and is always used as such in flang
 descriptors.
 
@@ -423,7 +437,7 @@ Example:
 subroutine test(x)
   interface
     subroutine assumed_size(x)
-      real :: x(..)
+      real :: x(*)
     end subroutine
     subroutine scalar(x)
       real :: x
@@ -460,7 +474,9 @@ func.func @_QPtest(%arg0: !fir.box<!fir.array<?xf32>>) {
   %is_assumed_size = arith.cmpi eq %last_extent, %c-1: (i64, i64) -> i1
   cf.cond_br %is_assumed_size, ^bb_assumed_size, ^bb_not_assumed_size
 ^bb_assumed_size:
-  fir.call @_QPassumed_size(%x#1) (!fir.box<!fir.array<*xf32>>) -> ()
+  %r1_box = fir.rebox_assumed_rank %x#0 : (!fir.box<!fir.array<*xf32>>) -> !fir.box<!fir.array<?xf32>>
+  %addr = fir.box_addr %addr, !fir.box<!fir.array<?xf32>> -> !fir.ref<!fir.array<?xf32>>
+  fir.call @_QPassumed_size(%addr) (!fir.ref<!fir.array<?xf32>>) -> ()
   cf.br ^bb_end
 ^bb_not_assumed_size:
   fir.select_case %3 : i32 [#fir.point, %c0, ^bb_scalar, #fir.point, %c1, ^bb_rank1, unit, ^bb_default]
@@ -545,27 +561,27 @@ print *, len(x)
 #### SIZE
 Using the runtime can be queried as it is done for assumed shapes. When DIM is
 present and is constant, `fir.box_dim` can also be used with the option to add
-a runtime check that RANK <= DIM.  Pointers and allocatables are dereferenced,
-which in FIR currently creates a descriptor copy that cannot  be simplified
+a runtime check that RANK <= DIM. Pointers and allocatables are dereferenced,
+which in FIR currently creates a descriptor copy that cannot be simplified
 like for the previous inquiries by inserting a cast before the fir.load (the
 dimension info must be correctly copied). 
 
 #### LBOUND, SHAPE, and UBOUND
 When DIM is present an is present, the runtime can be used as it is currently
-with assumed shapes.  When DIM is absent, the result is a rank-one array whose
+with assumed shapes. When DIM is absent, the result is a rank-one array whose
 extent is the rank. The runtime has an entry for UBOUND that takes a descriptor
 and allocate the result as needed, so the same logic as for assumed shape can
 be used.
 
 There is no such entry for LBOUND/SHAPE currently, it would likely be best to
-add one rather than to jungle with inline code.  Pointers and allocatables
+add one rather than to jungle with inline code. Pointers and allocatables
 dereference is similar as with SIZE.
 
 #### EXTENDS_TYPE_OF, SAME_TYPE_AS, and IS_CONTIGUOUS
 Using the runtime as it is done currently with assumed shapes. Pointers and
 allocatables dereference is similar as with SIZE.
 
-#### C_LOC from  ISO_C_BINDING
+#### C_LOC from ISO_C_BINDING
 Implemented with `fir.box_addr` as with other C_LOC cases for entities that
 have descriptors.
 
@@ -574,7 +590,7 @@ Implemented as STORAGE_SIZE * SIZE.
 
 #### Floating point inquiries and NEW_LINE
 BIT_SIZE, DIGITS, EPSILON, HUGE, KIND, MAXEXPONENT, MINEXPONENT, NEW_LINE,
-PRECISION,  RADIX, RANGE, TINY all accept assumed-rank, but are always constant
+PRECISION, RADIX, RANGE, TINY all accept assumed-rank, but are always constant
 folded by semantics based on the type and lowering does not need to deal with
 them.
 
