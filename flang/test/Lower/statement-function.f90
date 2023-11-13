@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -outline-intrinsics %s -o - | FileCheck %s
 
 ! Test statement function lowering
 

@@ -1,4 +1,4 @@
-! RUN: bbc -o - %s | FileCheck %s
+! RUN: bbc -hlfir=false -o - %s | FileCheck %s
 
 ! CHECK-LABEL: _QPzero1
 subroutine zero1(z)

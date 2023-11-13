@@ -1,7 +1,7 @@
 ! This test checks lowering of `LASTPRIVATE` clause for scalar types.
 
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
-! RUN: flang-new -fc1 -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 !CHECK: func @_QPlastprivate_character(%[[ARG1:.*]]: !fir.boxchar<1>{{.*}}) {
 !CHECK-DAG: %[[ARG1_UNBOX:.*]]:2 = fir.unboxchar
