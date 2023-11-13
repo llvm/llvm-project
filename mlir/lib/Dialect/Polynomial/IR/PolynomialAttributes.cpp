@@ -103,11 +103,11 @@ mlir::Attribute mlir::polynomial::PolynomialAttr::parse(AsmParser &parser,
     monomials.push_back(parsedMonomial);
 
     if (exponents.count(parsedMonomial.exponent) > 0) {
-      llvm::SmallString<512> coeff_string;
-      parsedMonomial.exponent.toStringSigned(coeff_string);
+      llvm::SmallString<16> coeffString;
+      parsedMonomial.exponent.toStringSigned(coeffString);
       parser.emitError(parser.getCurrentLocation(),
                        "at most one monomial may have exponent " +
-                           coeff_string + ", but found multiple");
+                           coeffString + ", but found multiple");
       return {};
     }
     exponents.insert(parsedMonomial.exponent);
