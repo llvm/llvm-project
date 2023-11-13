@@ -349,7 +349,7 @@ public:
           !resType.getScalableDims().front()) ||
          (resType.getShape().back() == 1 &&
           !resType.getScalableDims().back())) &&
-        transp[0] == 1 && transp[1] == 0) {
+        transp == ArrayRef<int64_t>({1, 0})) {
       rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, resType, input);
       return success();
     }
