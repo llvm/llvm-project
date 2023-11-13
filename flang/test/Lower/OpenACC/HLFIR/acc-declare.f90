@@ -304,3 +304,12 @@ end module
 ! ALL:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<40xi8>>) {dataClause = #acc<data_clause acc_create>, name = "v2", structured = false}
 ! ALL:         acc.terminator
 ! ALL:       }
+
+module acc_declare_allocatable_test2
+  integer, allocatable :: data1(:)
+  integer, allocatable :: data2(:)
+  !$acc declare create(data1, data2, data1)
+end module
+
+! ALL-LABEL: acc.global_ctor @_QMacc_declare_allocatable_test2Edata1_acc_ctor
+! ALL-LABEL: acc.global_ctor @_QMacc_declare_allocatable_test2Edata2_acc_ctor

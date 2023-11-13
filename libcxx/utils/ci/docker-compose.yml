@@ -1,0 +1,11 @@
+version: '3.7'
+services:
+  libcxx-builder:
+    image: ghcr.io/libcxx/libcxx-builder
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GCC_LATEST_VERSION: 13
+        # LLVM POST-BRANCH bump version
+        LLVM_HEAD_VERSION: 18

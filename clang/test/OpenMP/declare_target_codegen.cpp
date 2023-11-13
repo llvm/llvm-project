@@ -52,7 +52,6 @@
 // CHECK-DAG: define {{.*}}i32 @{{.*}}{{foo|bar|baz2|baz3|FA|f_method}}{{.*}}()
 // CHECK-DAG: define {{.*}}void @{{.*}}TemplateClass{{.*}}(ptr {{[^,]*}} %{{.*}})
 // CHECK-DAG: define {{.*}}i32 @{{.*}}TemplateClass{{.*}}f_method{{.*}}(ptr {{[^,]*}} %{{.*}})
-// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}_globals_l[[@LINE+89]]_ctor()
 
 #ifndef HEADER
 #define HEADER
