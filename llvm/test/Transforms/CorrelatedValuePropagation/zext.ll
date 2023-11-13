@@ -18,7 +18,7 @@ define void @test1(i32 %n) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[EXT_WIDE:%.*]] = zext i32 [[A]] to i64
+; CHECK-NEXT:    [[EXT_WIDE:%.*]] = zext nneg i32 [[A]] to i64
 ; CHECK-NEXT:    call void @use64(i64 [[EXT_WIDE]])
 ; CHECK-NEXT:    [[EXT]] = trunc i64 [[EXT_WIDE]] to i32
 ; CHECK-NEXT:    br label [[FOR_COND]]
@@ -85,7 +85,7 @@ define void @test3(i32 %n) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N:%.*]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[EXT_WIDE:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[EXT_WIDE:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    call void @use64(i64 [[EXT_WIDE]])
 ; CHECK-NEXT:    [[EXT:%.*]] = trunc i64 [[EXT_WIDE]] to i32
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -168,7 +168,7 @@ exit:
 define i64 @test_infer_at_use(i32 noundef %n) {
 ; CHECK-LABEL: @test_infer_at_use(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N:%.*]], -1
-; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i64 [[EXT]], i64 0
 ; CHECK-NEXT:    ret i64 [[SELECT]]
 ;
