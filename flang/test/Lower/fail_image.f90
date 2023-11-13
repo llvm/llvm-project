@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPfail_image_test
 subroutine fail_image_test(fail)

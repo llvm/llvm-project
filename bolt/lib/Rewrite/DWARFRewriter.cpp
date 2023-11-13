@@ -440,6 +440,7 @@ getDWOName(llvm::DWARFUnit &CU,
   assert(!DWOName.empty() &&
          "DW_AT_dwo_name/DW_AT_GNU_dwo_name does not exists.");
   if (!opts::DwarfOutputPath.empty()) {
+    DWOName = std::string(sys::path::filename(DWOName));
     auto Iter = NameToIndexMap.find(DWOName);
     if (Iter == NameToIndexMap.end())
       Iter = NameToIndexMap.insert({DWOName, 0}).first;
@@ -1396,7 +1397,7 @@ void DWARFRewriter::updateLineTableOffsets(const MCAsmLayout &Layout) {
     std::optional<DWARFFormValue> StmtList =
         Unit->getUnitDIE().find(dwarf::DW_AT_stmt_list);
     std::optional<uint64_t> Offset = dwarf::toSectionOffset(StmtList);
-    assert(Offset && "Was not able to retreive value of DW_AT_stmt_list.");
+    assert(Offset && "Was not able to retrieve value of DW_AT_stmt_list.");
     return *Offset;
   };
 
@@ -1725,7 +1726,7 @@ std::optional<StringRef> updateDebugData(
   case DWARFSectionKind::DW_SECT_LOCLISTS: {
     OutputBuffer = LocWriter.getBuffer();
     // Creating explicit StringRef here, otherwise
-    // with impicit conversion it will take null byte as end of
+    // with implicit conversion it will take null byte as end of
     // string.
     return StringRef(reinterpret_cast<const char *>(OutputBuffer->data()),
                      OutputBuffer->size());
@@ -1994,7 +1995,7 @@ void DWARFRewriter::writeDWOFiles(
            "No RangeListsWriter for DWO ID.");
     RangeListssWriter = RangeListsWritersByCU[DWOId].get();
 
-    // Handling .debug_rnglists.dwo seperatly. The original .o/.dwo might not
+    // Handling .debug_rnglists.dwo separately. The original .o/.dwo might not
     // have .debug_rnglists so won't be part of the loop below.
     if (!RangeListssWriter->empty()) {
       std::unique_ptr<DebugBufferVector> OutputData;

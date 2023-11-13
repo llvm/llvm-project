@@ -131,3 +131,8 @@
 // RUN: %clang --target=riscv64-unknown-openbsd -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-RISCV64-FLAGS %s
 // CHECK-RISCV64-FLAGS: "-X"
+
+// Check passing LTO flags to the linker
+// RUN: %clang --target=amd64-unknown-openbsd -flto -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-LTO-FLAGS %s
+// CHECK-LTO-FLAGS: "-plugin-opt=mcpu=x86-64"

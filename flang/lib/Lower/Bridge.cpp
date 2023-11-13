@@ -603,6 +603,10 @@ public:
         std::nullopt);
   }
 
+  bool isPresentShallowLookup(Fortran::semantics::Symbol &sym) override final {
+    return bool(shallowLookupSymbol(sym));
+  }
+
   bool createHostAssociateVarClone(
       const Fortran::semantics::Symbol &sym) override final {
     mlir::Location loc = genLocation(sym.name());

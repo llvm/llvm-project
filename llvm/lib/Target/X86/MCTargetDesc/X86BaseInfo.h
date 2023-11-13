@@ -1208,6 +1208,12 @@ namespace X86II {
     return RegNo >= X86::ZMM0 && RegNo <= X86::ZMM31;
   }
 
+  /// \returns true if \p RegNo is an apx extended register.
+  inline bool isApxExtendedReg(unsigned RegNo) {
+    assert(X86::R31WH - X86::R16 == 95 && "EGPRs are not continuous");
+    return RegNo >= X86::R16 && RegNo <= X86::R31WH;
+  }
+
   /// \returns true if the MachineOperand is a x86-64 extended (r8 or
   /// higher) register,  e.g. r8, xmm8, xmm13, etc.
   inline bool isX86_64ExtendedReg(unsigned RegNo) {
@@ -1216,6 +1222,9 @@ namespace X86II {
         (RegNo >= X86::YMM8 && RegNo <= X86::YMM15) ||
         (RegNo >= X86::YMM16 && RegNo <= X86::YMM31) ||
         (RegNo >= X86::ZMM8 && RegNo <= X86::ZMM31))
+      return true;
+
+    if (isApxExtendedReg(RegNo))
       return true;
 
     switch (RegNo) {

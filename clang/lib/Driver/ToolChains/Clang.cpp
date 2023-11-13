@@ -7397,6 +7397,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_foffload_uniform_block,
                   options::OPT_fno_offload_uniform_block);
 
+  Args.AddLastArg(CmdArgs, options::OPT_foffload_implicit_host_device_templates,
+                  options::OPT_fno_offload_implicit_host_device_templates);
+
   if (IsCudaDevice || IsHIPDevice) {
     StringRef InlineThresh =
         Args.getLastArgValue(options::OPT_fgpu_inline_threshold_EQ);

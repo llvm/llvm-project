@@ -7,9 +7,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/AsmParser/AsmParserState.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/Types.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/iterator.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cctype>
+#include <memory>
+#include <utility>
 
 using namespace mlir;
 
