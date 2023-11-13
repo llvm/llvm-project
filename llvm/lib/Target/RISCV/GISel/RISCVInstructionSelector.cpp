@@ -500,10 +500,15 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_BRJT: {
     // FIXME: Move to legalization?
-    unsigned EntrySize =
-        MF.getJumpTableInfo()->getEntrySize(MF.getDataLayout());
+    const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
+    unsigned EntrySize = MJTI->getEntrySize(MF.getDataLayout());
     assert((EntrySize == 4 || (Subtarget->is64Bit() && EntrySize == 8)) &&
            "Unsupported jump-table entry size");
+    assert(
+        (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
+         MJTI->getEntryKind() == MachineJumpTableInfo::EK_Custom32 ||
+         MJTI->getEntryKind() == MachineJumpTableInfo::EK_BlockAddress) &&
+        "Unexpected jump-table entry kind");
 
     auto SLL =
         MIB.buildInstr(RISCV::SLLI, {&RISCV::GPRRegClass}, {MI.getOperand(2)})
@@ -523,11 +528,11 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
             .addImm(0)
             .addMemOperand(MF.getMachineMemOperand(
                 MachinePointerInfo::getJumpTable(MF), MachineMemOperand::MOLoad,
-                EntrySize, Align(EntrySize)));
+                EntrySize, Align(MJTI->getEntryAlignment(MF.getDataLayout()))));
     if (!Dest.constrainAllUses(TII, TRI, RBI))
       return false;
 
-    if (MF.getTarget().isPositionIndependent()) {
+    if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32) {
       Dest = MIB.buildInstr(RISCV::ADD, {&RISCV::GPRRegClass},
                             {Dest.getReg(0), MI.getOperand(0)});
       if (!Dest.constrainAllUses(TII, TRI, RBI))
