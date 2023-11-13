@@ -109,7 +109,7 @@ on support follow.
      ``Zcd``          Supported
      ``Zcf``          Supported
      ``Zcmp``         Supported
-     ``Zcmt``         Assembly Support
+     ``Zcmt``         Supported
      ``Zdinx``        Supported
      ``Zfa``          Supported
      ``Zfh``          Supported
