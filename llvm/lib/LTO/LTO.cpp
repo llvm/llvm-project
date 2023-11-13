@@ -1260,7 +1260,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
                                   ConstantAggregateZero::get(Ty), "");
     GV->setAlignment(I.second.Alignment);
     if (OldGV) {
-      OldGV->replaceAllUsesWith(ConstantExpr::getBitCast(GV, OldGV->getType()));
+      OldGV->replaceAllUsesWith(GV);
       GV->takeName(OldGV);
       OldGV->eraseFromParent();
     } else {
