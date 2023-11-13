@@ -45,6 +45,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
+static cl::opt<bool>
+    EnableLoopIVHeuristic("enable-split-loopiv-heuristic",
+                          cl::desc("Enable loop iv regalloc heuristic"),
+                          cl::init(true));
+
 STATISTIC(NumFinished, "Number of splits finished");
 STATISTIC(NumSimple,   "Number of splits that were simple");
 STATISTIC(NumCopies,   "Number of copies inserted for splitting");
@@ -292,6 +297,13 @@ void SplitAnalysis::calcLiveBlockInfo() {
     else
       MFI = LIS.getMBBFromIndex(LVI->start)->getIterator();
   }
+
+  LooksLikeLoopIV = EnableLoopIVHeuristic && UseBlocks.size() == 2 &&
+                    any_of(UseBlocks, [this](BlockInfo &BI) {
+                      MachineLoop *L = Loops.getLoopFor(BI.MBB);
+                      return BI.LiveIn && BI.LiveOut && BI.FirstDef && L &&
+                             L->isLoopLatch(BI.MBB);
+                    });
 
   assert(getNumLiveBlocks() == countLiveBlocks(CurLI) && "Bad block count");
 }
