@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fsyntax-only %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -verify -fsyntax-only %s
 // REQUIRES: x86-registered-target
 // expected-no-diagnostics
 
