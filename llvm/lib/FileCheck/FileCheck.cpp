@@ -832,12 +832,16 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
       // capturing the result for any purpose.  This is required in case the
       // expression contains an alternation like: CHECK:  abc{{x|z}}def.  We
       // want this to turn into: "abc(x|z)def" not "abcx|zdef".
-      RegExStr += '(';
-      ++CurParen;
+      bool HasAlternation = PatternStr.contains('|');
+      if (HasAlternation) {
+        RegExStr += '(';
+        ++CurParen;
+      }
 
       if (AddRegExToRegEx(PatternStr.substr(2, End - 2), CurParen, SM))
         return true;
-      RegExStr += ')';
+      if (HasAlternation)
+        RegExStr += ')';
 
       PatternStr = PatternStr.substr(End + 2);
       continue;
