@@ -1,6 +1,6 @@
 ! This test checks lowering of complex OpenACC data operands.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
+! RUN: bbc -fopenacc -emit-fir -hlfir=false %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,HLFIR
 
 module acc_data_operand

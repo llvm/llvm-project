@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: bbc %s -o - | FileCheck --check-prefix=POSTOPT %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck --check-prefix=POSTOPT %s
 
 ! CHECK-LABEL: func @_QPimplied_iters_allocatable(
 ! CHECK-SAME: %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.type<_QFimplied_iters_allocatableTt{oui:!fir.logical<4>,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>{{.*}}, %[[VAL_1:.*]]: !fir.box<!fir.array<?xf32>>{{.*}}) {

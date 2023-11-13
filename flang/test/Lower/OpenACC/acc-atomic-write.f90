@@ -1,4 +1,4 @@
-! RUN: bbc --use-desc-for-alloc=false -fopenacc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -fopenacc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! This test checks the lowering of atomic write
 

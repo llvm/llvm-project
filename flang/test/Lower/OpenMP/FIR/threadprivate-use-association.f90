@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenMP Threadprivate Directive.
 ! Test for threadprivate variable in use association.
 
-!RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
 
 !CHECK-DAG: fir.global common @blk_(dense<0> : vector<24xi8>) : !fir.array<24xi8>
 !CHECK-DAG: fir.global @_QMtestEy : f32 {

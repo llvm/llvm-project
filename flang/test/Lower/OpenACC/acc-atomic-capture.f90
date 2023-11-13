@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -I nowhere -emit-fir -fopenacc %s -o - | FileCheck %s
+! RUN: %flang_fc1 -I nowhere -emit-fir -flang-deprecated-no-hlfir -fopenacc %s -o - | FileCheck %s
 
 ! This test checks the lowering of atomic capture
 

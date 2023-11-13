@@ -2,7 +2,7 @@
 ! `PRIVATE` clause present.
 
 ! REQUIRES: shell
-! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-fir %s -o - | \
+! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-fir -hlfir=false %s -o - | \
 ! RUN:   FileCheck %s --check-prefix=FIRDialect
 
 !FIRDialect: func @_QPprivate_clause(%[[ARG1:.*]]: !fir.ref<i32>{{.*}}, %[[ARG2:.*]]: !fir.ref<!fir.array<10xi32>>{{.*}}, %[[ARG3:.*]]: !fir.boxchar<1>{{.*}}, %[[ARG4:.*]]: !fir.boxchar<1>{{.*}}) {

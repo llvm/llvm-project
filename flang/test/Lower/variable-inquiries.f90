@@ -1,5 +1,5 @@
 ! Test property inquiries on variables
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module inquired
   real(8), allocatable :: a(:)

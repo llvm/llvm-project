@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: flang-new -fc1 -fdefault-integer-8 -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fdefault-integer-8 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 ! Test OPTIONAL lowering on caller/callee and PRESENT intrinsic.
 module opt

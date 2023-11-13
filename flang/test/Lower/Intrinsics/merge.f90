@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPmerge_test(
 ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.char<1>>{{.*}}, %[[arg1:.*]]: index{{.*}},  %[[arg2:[^:]+]]: !fir.boxchar<1>{{.*}}, %[[arg3:[^:]+]]: !fir.boxchar<1>{{.*}}, %[[arg4:.*]]: !fir.ref<!fir.logical<4>>{{.*}}) -> !fir.boxchar<1> {

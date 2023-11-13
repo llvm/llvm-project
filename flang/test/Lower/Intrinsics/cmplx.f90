@@ -3,7 +3,7 @@
 ! a disassociated pointer, or an optional argument.
 ! CMPLX without such argument is re-written by the front-end as a
 ! complex constructor that is tested elsewhere.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPcmplx_test_scalar_ptr(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<f32>

@@ -1,4 +1,4 @@
-! RUN: bbc --emit-fir %s -o - | FileCheck %s
+! RUN: bbc --emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPtest1a(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<!fir.array<10xi32>>{{.*}}, %[[VAL_2:.*]]: !fir.ref<!fir.array<20xi32>>{{.*}}) {

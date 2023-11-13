@@ -1,4 +1,4 @@
-! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: system_clock_test
 subroutine system_clock_test()

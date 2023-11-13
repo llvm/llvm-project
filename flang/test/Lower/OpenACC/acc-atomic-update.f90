@@ -1,6 +1,6 @@
 ! This test checks lowering of atomic and atomic update constructs
-! RUN: bbc --use-desc-for-alloc=false -fopenacc -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir -fopenacc %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -fopenacc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir -flang-deprecated-no-hlfir -fopenacc %s -o - | FileCheck %s
 
 program acc_atomic_update_test
     integer :: x, y, z

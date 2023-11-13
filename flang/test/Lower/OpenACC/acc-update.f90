@@ -1,6 +1,6 @@
 ! This test checks lowering of OpenACC update directive.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
+! RUN: bbc -fopenacc -emit-fir -hlfir=false %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,HLFIR
 
 subroutine acc_update

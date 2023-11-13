@@ -1,5 +1,5 @@
 ! Test lowering of OPEN statment options
-! RUN: bbc %s -emit-fir -o - | FileCheck %s
+! RUN: bbc %s -emit-fir -hlfir=false -o - | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPtest_convert_specifier(
 subroutine test_convert_specifier(unit)
