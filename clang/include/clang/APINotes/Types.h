@@ -784,7 +784,7 @@ struct Context {
 /// data they contain; it is up to the user to ensure that the data
 /// referenced by the identifier list persists.
 struct ObjCSelectorRef {
-  unsigned NumPieces;
+  unsigned NumArgs;
   llvm::ArrayRef<llvm::StringRef> Identifiers;
 };
 

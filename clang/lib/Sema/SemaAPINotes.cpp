@@ -1022,7 +1022,7 @@ void Sema::ProcessAPINotes(Decl *D) {
           }
 
           api_notes::ObjCSelectorRef SelectorRef;
-          SelectorRef.NumPieces = Sel.getNumArgs();
+          SelectorRef.NumArgs = Sel.getNumArgs();
           SelectorRef.Identifiers = SelPieces;
 
           auto Info = Reader->lookupObjCMethod(*Context, SelectorRef,
