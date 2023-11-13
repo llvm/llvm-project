@@ -614,7 +614,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
 		                     false /*isLLD*/, true /*checkOnly*/);
 
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
-      llvm::sys::path::stem(Linker) != "ld.lld" && !ClosedNeeded) {
+      llvm::sys::path::stem(Linker) != "ld.lld" && !ClosedNeeded &&
+      !ToolChain.getTriple().isOSOpenBSD()) {
     // Tell the linker to load the plugin. This has to come before
     // AddLinkerInputs as gold requires -plugin and AIX ld requires -bplugin to
     // come before any -plugin-opt/-bplugin_opt that -Wl might forward.
