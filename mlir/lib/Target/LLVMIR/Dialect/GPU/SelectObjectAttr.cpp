@@ -379,9 +379,6 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
   if (!binary)
     return op.emitError() << "Couldn't find the binary: " << binaryIdentifier;
 
-  llvm::Constant *paramsCount =
-      llvm::ConstantInt::get(i64Ty, op.getNumKernelOperands());
-
   auto binaryVar = dyn_cast<llvm::GlobalVariable>(binary);
   llvm::Constant *binaryInit = binaryVar->getInitializer();
   auto binaryDataSeq = dyn_cast<llvm::ConstantDataSequential>(binaryInit);
@@ -410,6 +407,9 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
     handleStream = true;
     stream = builder.CreateCall(getStreamCreateFn(), {});
   }
+
+  llvm::Constant *paramsCount =
+      llvm::ConstantInt::get(i64Ty, op.getNumKernelOperands());
 
   // Create the launch call.
   Value *nullPtr = ConstantPointerNull::get(ptrTy);
