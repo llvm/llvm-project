@@ -1,4 +1,4 @@
-//===- SPIRVToLLVMIRTranslation.h - SPIRV to LLVM IR ------------*- C++ -*-===//
+//===- SPIRVToLLVMIRTranslation.h - SPIR-V to LLVM IR -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This provides registration calls for SPIRV dialect to LLVM IR translation.
+// This provides registration calls for SPIR-V dialect to LLVM IR translation.
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,11 +18,11 @@ namespace mlir {
 class DialectRegistry;
 class MLIRContext;
 
-/// Register the SPIRV dialect and the translation from it to the LLVM IR in the
-/// given registry;
+/// Register the SPIR-V dialect and the translation from it to the LLVM IR in
+/// the given registry;
 void registerSPIRVDialectTranslation(DialectRegistry &registry);
 
-/// Register the SPIRV dialect and the translation from it in the registry
+/// Register the SPIR-V dialect and the translation from it in the registry
 /// associated with the given context.
 void registerSPIRVDialectTranslation(MLIRContext &context);
 

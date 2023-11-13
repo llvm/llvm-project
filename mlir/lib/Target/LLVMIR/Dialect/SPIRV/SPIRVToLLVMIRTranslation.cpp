@@ -1,4 +1,4 @@
-//===- SPIRVToLLVMIRTranslation.cpp - Translate SPIRV to LLVM IR ----------===//
+//===- SPIRVToLLVMIRTranslation.cpp - Translate SPIR-V to LLVM IR ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a translation between the MLIR SPIRV dialect and
+// This file implements a translation between the MLIR SPIR-V dialect and
 // LLVM IR.
 //
 //===----------------------------------------------------------------------===//

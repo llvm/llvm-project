@@ -52,10 +52,6 @@ public:
 std::string getBinaryIdentifier(StringRef binaryName) {
   return binaryName.str() + "_bin_cst";
 }
-// Returns an identifier for the global int64 holding the binary size.
-std::string getBinarySizeIdentifier(StringRef binaryName) {
-  return binaryName.str() + "_bin_size_cst";
-}
 } // namespace
 
 void mlir::gpu::registerOffloadingLLVMTranslationInterfaceExternalModels(
@@ -128,17 +124,6 @@ LogicalResult SelectObjectAttrImpl::embedBinary(
   serializedObj->setLinkage(llvm::GlobalValue::LinkageTypes::InternalLinkage);
   serializedObj->setAlignment(llvm::MaybeAlign(8));
   serializedObj->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::None);
-
-  // Embed the object size as a global constant.
-  llvm::Constant *binarySize =
-      llvm::ConstantInt::get(builder.getInt64Ty(), object.getObject().size());
-  llvm::GlobalVariable *serializedSize = new llvm::GlobalVariable(
-      *module, binarySize->getType(), true,
-      llvm::GlobalValue::LinkageTypes::InternalLinkage, binarySize,
-      getBinarySizeIdentifier(op.getName()));
-  serializedSize->setLinkage(llvm::GlobalValue::LinkageTypes::InternalLinkage);
-  serializedSize->setAlignment(llvm::MaybeAlign(8));
-  serializedSize->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::None);
   return success();
 }
 
@@ -397,13 +382,12 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
   llvm::Constant *paramsCount =
       llvm::ConstantInt::get(i64Ty, op.getNumKernelOperands());
 
-  std::string binarySizeIdentifier = getBinarySizeIdentifier(moduleName);
-  Value *binarySizeVar = module.getGlobalVariable(binarySizeIdentifier, true);
-  if (!binarySizeVar)
-    return op.emitError() << "Couldn't find the binary size: "
-                          << binarySizeIdentifier;
-  Value *binarySize =
-      dyn_cast<llvm::GlobalVariable>(binarySizeVar)->getInitializer();
+  auto binaryVar = dyn_cast<llvm::GlobalVariable>(binary);
+  llvm::Constant *binaryInit = binaryVar->getInitializer();
+  auto binaryDataSeq = dyn_cast<llvm::ConstantDataSequential>(binaryInit);
+  llvm::Constant *binarySize =
+      llvm::ConstantInt::get(i64Ty, binaryDataSeq->getNumElements() *
+                                        binaryDataSeq->getElementByteSize());
 
   Value *moduleObject =
       object.getFormat() == gpu::CompilationTarget::Assembly
