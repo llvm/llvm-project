@@ -15,6 +15,6 @@ def GPRBRegBank : RegisterBank<"GPRB", [GPR]>;
 /// Floating Point Registers: F.
 def FPRBRegBank : RegisterBank<"FPRB", [FPR64]>;
 
-/// Vector Regististers: V.
-def VRRegBank : RegisterBank<"VRB", [VR]>;
+/// Vector Registers : V.
+def VRBRegBank : RegisterBank<"VRB", [VRM8]>;
 

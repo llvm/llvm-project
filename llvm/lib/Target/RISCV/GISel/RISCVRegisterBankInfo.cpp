@@ -110,7 +110,7 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case RISCV::VRM8NoV0RegClassID:
   case RISCV::VMRegClassID:
   case RISCV::VMV0RegClassID:
-    return getRegBank(RISCV::VRRegBankID);
+    return getRegBank(RISCV::VRBRegBankID);
   }
 }
 
