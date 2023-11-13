@@ -41,7 +41,7 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
   // Variable name
   result = parser.parseOptionalKeyword(variable);
   if (!result.has_value() || failed(*result)) {
-    // we allow "failed" because it triggers when the next token is a +,
+    // We allow "failed" because it triggers when the next token is a +,
     // which is allowed when the input is the constant term.
     monomial.coefficient = parsedCoeff;
     monomial.exponent = APInt(apintBitWidth, 0);
@@ -133,7 +133,7 @@ mlir::Attribute mlir::polynomial::PolynomialAttr::parse(AsmParser &parser,
     }
   }
 
-  // insert necessary constant ops to give as input to extract_slice.
+  // Insert necessary constant ops to give as input to extract_slice.
   if (variables.size() > 1) {
     std::string vars = llvm::join(variables.begin(), variables.end(), ", ");
     parser.emitError(
