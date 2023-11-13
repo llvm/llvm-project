@@ -2241,8 +2241,8 @@ bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   unsigned OpType = Desc.operands()[OpNo].OperandType;
   return (OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
           OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST) ||
-      (OpType >= AMDGPU::OPERAND_REG_INLINE_AC_FIRST &&
-       OpType <= AMDGPU::OPERAND_REG_INLINE_AC_LAST);
+         (OpType >= AMDGPU::OPERAND_REG_INLINE_AC_FIRST &&
+          OpType <= AMDGPU::OPERAND_REG_INLINE_AC_LAST);
 }
 
 // Avoid using MCRegisterClass::getSize, since that function will go away
