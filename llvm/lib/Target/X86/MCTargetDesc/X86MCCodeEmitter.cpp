@@ -1184,14 +1184,8 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
   case X86II::MRMSrcReg4VOp3: {
     // Instruction format for 4VOp3:
     //   src1(ModR/M), src2(ModR/M), src3(VEX_4V)
-    if ((TSFlags & X86II::EncodingMask) == X86II::EVEX) {
-      Prefix.setRR2(MI, CurOp++);
-      Prefix.setBB2(MI, CurOp++);
-      Prefix.set4V(MI, CurOp++);
-      break;
-    }
-    Prefix.setR(MI, CurOp++);
-    Prefix.setB(MI, CurOp++);
+    Prefix.setRR2(MI, CurOp++);
+    Prefix.setBB2(MI, CurOp++);
     Prefix.set4V(MI, CurOp++);
     break;
   }
