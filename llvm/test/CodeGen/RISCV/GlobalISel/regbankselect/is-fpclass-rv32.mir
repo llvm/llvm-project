@@ -13,11 +13,11 @@ body:             |
     ; CHECK: liveins: $f10_f
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fprb(s32) = COPY $f10_f
-    ; CHECK-NEXT: [[IS_FPCLASS:%[0-9]+]]:gprb(s32) = G_IS_FPCLASS [[COPY]](s32), 152
+    ; CHECK-NEXT: [[IS_FPCLASS:%[0-9]+]]:gprb(s32) = G_IS_FPCLASS [[COPY]](s32), 608
     ; CHECK-NEXT: $x10 = COPY [[IS_FPCLASS]](s32)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $f10_f
-    %3:_(s32) = G_IS_FPCLASS %0(s32), 152
+    %3:_(s32) = G_IS_FPCLASS %0(s32), 608
     $x10 = COPY %3(s32)
     PseudoRET implicit $x10
 ...
