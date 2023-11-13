@@ -560,8 +560,8 @@ public:
   /// Implements the bound 'print' method and helps with others.
   void print(std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
              bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
-             bool assumeVerified, pybind11::object fileObject, bool binary);
-  void print(PyAsmState &state, pybind11::object fileObject, bool binary);
+             bool assumeVerified, py::object fileObject, bool binary);
+  void print(PyAsmState &state, py::object fileObject, bool binary);
 
   pybind11::object getAsm(bool binary,
                           std::optional<int64_t> largeElementsLimit,
