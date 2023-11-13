@@ -5,7 +5,7 @@
 
 #include <arm_sme_draft_spec_subject_to_change.h>
 
-void test_multivector_read(uint32_t base) {
+void test_multivector_read(uint32_t base) __arm_streaming __arm_shared_za __arm_preserves_za {
 
   // Test Tile Range
   svread_hor_za8_u8_vg2(1, base); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
@@ -32,7 +32,7 @@ void test_multivector_read(uint32_t base) {
 void test_multivector_write(uint32_t base, svuint8x2_t v8x2, svuint8x4_t v8x4,
                             svuint16x2_t v16x2, svuint16x4_t v16x4,
                             svuint32x2_t v32x2, svuint32x4_t v32x4,
-                            svuint64x2_t v64x2, svuint64x4_t v64x4) {
+                            svuint64x2_t v64x2, svuint64x4_t v64x4) __arm_streaming __arm_shared_za {
 
   // Test Tile Range
   svwrite_hor_za8_u8_vg2(1, base, v8x2); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
