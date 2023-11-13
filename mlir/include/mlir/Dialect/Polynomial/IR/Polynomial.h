@@ -112,7 +112,7 @@ public:
   friend ::llvm::hash_code hash_value(Polynomial arg);
 
 private:
-  ImplType *terms{nullptr};
+  ImplType *terms = nullptr;
 };
 
 // Make Polynomial hashable.
