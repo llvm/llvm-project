@@ -1084,6 +1084,10 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
                     evaluate::IsNullObjectPointer(*expr)) {
                   // ok, ASSOCIATED(NULL(without MOLD=))
+                } else if (object.type.attrs().test(characteristics::
+                                   TypeAndShape::Attr::AssumedRank)) {
+                  messages.Say(
+                      "NULL() without MOLD= must not be associated with an assumed-rank dummy argument"_err_en_US);
                 } else if ((object.attrs.test(characteristics::DummyDataObject::
                                     Attr::Pointer) ||
                                object.attrs.test(characteristics::

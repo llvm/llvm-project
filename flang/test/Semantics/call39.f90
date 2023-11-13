@@ -23,5 +23,9 @@ module m
     call s1(null(a1)) ! ok
     call sa(null(a0)) ! ok
     call sa(null(a1)) ! ok
+    !ERROR: NULL() without MOLD= must not be associated with an assumed-rank dummy argument
+    call sa(null())
+    !ERROR: NULL() without MOLD= must not be associated with an assumed-rank dummy argument
+    call sa(null())
   end
 end
