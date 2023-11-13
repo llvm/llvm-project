@@ -910,6 +910,10 @@ def TuneNoOptimizedZeroStrideLoad
                       "false", "Hasn't optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
 
+def Experimental
+   : SubtargetFeature<"experimental", "HasExperimental",
+                      "true", "Experimental intrinsics">;
+
 // Some vector hardware implementations do not process all VLEN bits in parallel
 // and instead split over multiple cycles. DLEN refers to the datapath width
 // that can be done in parallel.
