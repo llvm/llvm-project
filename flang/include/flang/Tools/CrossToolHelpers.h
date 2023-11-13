@@ -44,6 +44,8 @@ struct MLIRToLLVMPassPipelineConfig {
   bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR
   llvm::codegenoptions::DebugInfoKind DebugInfo =
       llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
+  llvm::FramePointerKind FramePointer =
+      llvm::FramePointerKind::None; ///< FramePointerInfo
   unsigned VScaleMin = 0; ///< SVE vector range minimum.
   unsigned VScaleMax = 0; ///< SVE vector range maximum.
 };

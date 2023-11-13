@@ -49,6 +49,29 @@ protected:
 class CodeGenOptions : public CodeGenOptionsBase {
 
 public:
+  //Added
+  ///*
+  enum class FramePointerKind {
+    None,        // Omit all frame pointers.
+    NonLeaf,     // Keep non-leaf frame pointers.
+    All,         // Keep all frame pointers.
+  };
+
+  static llvm::StringRef getFramePointerKindName(FramePointerKind Kind) {
+    switch (Kind) {
+    case FramePointerKind::None:
+      return "none";
+    case FramePointerKind::NonLeaf:
+      return "non-leaf";
+    case FramePointerKind::All:
+      return "all";
+    }
+
+    llvm_unreachable("invalid FramePointerKind");
+  };
+  //
+  //*/
+
   /// The paths to the pass plugins that were registered using -fpass-plugin.
   std::vector<std::string> LLVMPassPlugins;
 
