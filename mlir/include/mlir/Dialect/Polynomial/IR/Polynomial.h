@@ -83,7 +83,9 @@ public:
 
   static Polynomial fromMonomials(ArrayRef<Monomial> monomials,
                                   MLIRContext *context);
-  /// Returns a polynomial with coefficients given by `coeffs`
+
+  /// Returns a polynomial with coefficients given by `coeffs`. The value
+  /// coeffs[i] is converted to a monomial with exponent i.
   static Polynomial fromCoefficients(ArrayRef<int64_t> coeffs,
                                      MLIRContext *context);
 

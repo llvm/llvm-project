@@ -12,6 +12,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -39,7 +40,8 @@ Polynomial Polynomial::fromMonomials(ArrayRef<Monomial> monomials,
 
 Polynomial Polynomial::fromCoefficients(ArrayRef<int64_t> coeffs,
                                         MLIRContext *context) {
-  std::vector<Monomial> monomials;
+  llvm::SmallVector<Monomial> monomials;
+  monomials.reserve(coeffs.size());
   for (size_t i = 0; i < coeffs.size(); i++) {
     monomials.emplace_back(coeffs[i], i);
   }
