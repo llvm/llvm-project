@@ -4,52 +4,99 @@
 typedef int * Int_ptr_t;
 typedef int Int_t;
 
-#define DEFINE_PTR(X) int* ptr = (X);
-
 void local_array_subscript_simple() {
   int tmp;
   int *p = new int[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
   const int *q = new int[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:17}:"std::span<const int> q"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:18-[[@LINE-2]]:18}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:29-[[@LINE-3]]:29}:", 10}"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:17}:"std::span<int const> q"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:18-[[@LINE-2]]:18}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:29-[[@LINE-3]]:29}:", 10}"
   tmp = p[5];
   tmp = q[5];
 
+  // We do not fix the following declaration. Because if the
+  // definition of `Int_ptr_t` gets changed, the fixed code becomes
+  // incorrect and may NOT be noticed.
+  // FIXME: Fix with std::span<std::remove_pointer_t<Int_ptr_t>>?
   Int_ptr_t x = new int[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:16}:"std::span<int> x"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:17}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:28-[[@LINE-3]]:28}:", 10}"
-  Int_ptr_t y = new int;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:16}:"std::span<int> y"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:17}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 1}"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
   Int_t * z = new int[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::span<Int_t> z"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:26-[[@LINE-3]]:26}:", 10}"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::span<Int_t> z"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:26-[[@LINE-3]]:26}:", 10}"
   Int_t * w = new Int_t[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::span<Int_t> w"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:28-[[@LINE-3]]:28}:", 10}"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::span<Int_t> w"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:28-[[@LINE-3]]:28}:", 10}"
 
   tmp = x[5];
-  tmp = y[5]; // y[5] will crash after being span
   tmp = z[5];
   tmp = w[5];
 }
 
 void local_array_subscript_auto() {
   int tmp;
+  // We do not fix the following declaration because
+  // that'd cause us to hardcode the element type.
+  // FIXME: Can we use the C++17 class template argument deduction
+  // to avoid spelling out the element type?
   auto p = new int[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
   tmp = p[5];
 }
+
+void local_variable_qualifiers_specifiers() {
+  int a[10];
+  const int * p = a;
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:18}:"std::span<int const> p"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:19-[[@LINE-2]]:19}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:20-[[@LINE-3]]:20}:", 10}"
+  const int * const q = a;
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:24}:"std::span<int const> const q"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:25-[[@LINE-2]]:25}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:26-[[@LINE-3]]:26}:", 10}"
+  [[deprecated]] const int * x = a;
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:18-[[@LINE-1]]:33}:"std::span<int const> x"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:34-[[@LINE-2]]:34}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:35-[[@LINE-3]]:35}:", 10}"
+  const int * y [[deprecated]];
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:16}:"std::span<int const> y"
+
+  int tmp;
+
+  tmp = p[5];
+  tmp = q[5];
+  tmp = x[5];
+  tmp = y[5];
+}
+
+
+void local_variable_unsupported_specifiers() {
+  int a[10];
+  const int * p [[deprecated]] = a; //  not supported because the attribute overlaps the source range of the declaration
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
+
+  static const int * q = a; //  storage specifier not supported yet
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
+
+  extern int * x; //  storage specifier not supported yet
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
+
+  constexpr int * y = 0; //  `constexpr` specifier not supported yet
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
+
+  int tmp;
+
+  tmp = p[5];
+  tmp = q[5];
+  tmp = x[5];
+  tmp = y[5];
+}
+
+
 
 void local_array_subscript_variable_extent() {
   int n = 10;
@@ -102,8 +149,8 @@ void decl_without_init() {
   int * p;
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:10}:"std::span<int> p"
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:{{^3}}
-  Int_ptr_t q;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::span<int> q"
+  Int_t * q;
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<Int_t> q"
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:{{^3}}
   tmp = p[5];
   tmp = q[5];
@@ -168,15 +215,42 @@ void null_init() {
 
 void unsupported_multi_decl(int * x) {
   int * p = x, * q = new int[10];
-  // CHECK-NOT: fix-it:"{{.*}}":[[@LINE-1]]
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
   *p = q[5];
+}
+
+void macroVariableIdentifier() {
+#define MY_NAME p
+#define MY_NAME_ARG(x) q
+
+  // Although fix-its include macros, the macros do not overlap with
+  // the bounds of the source range of these fix-its. So these fix-its
+  // are valid.
+
+  int * MY_NAME = new int[10];
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:18}:"std::span<int> MY_NAME"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:19-[[@LINE-2]]:19}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:30-[[@LINE-3]]:30}:", 10}"
+  int * MY_NAME_ARG( 'x' ) = new int[10];
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:29}:"std::span<int> MY_NAME_ARG( 'x' )"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:30-[[@LINE-2]]:30}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:41-[[@LINE-3]]:41}:", 10}"
+  p[5] = 5;
+  q[5] = 5;
+#undef MY_NAME
+#undef MY_NAME_ARG
 }
 
 void unsupported_fixit_overlapping_macro(int * x) {
   int tmp;
   // In the case below, a tentative fix-it replaces `MY_INT * p =` with `std::span<MY_INT> p `.
-  // It overlaps with the use of the macro `MY_INT`.  The fix-it is
-  // discarded then.
+  // The bounds of the source range of the fix-it overlap with the use of the macro
+  // `MY_INT`.  The fix-it is discarded then.
+
+  // FIXME: we do not have to discard a fix-it if its begin location
+  // overlaps with the begin location of a macro. Similar for end
+  // locations.
+
 #define MY_INT int
   MY_INT * p = new int[10];
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
@@ -227,6 +301,8 @@ void unsupported_subscript_negative(int i, unsigned j, unsigned long k) {
   tmp = r[(unsigned int)-1]; // a cast-to-unsigned-expression is also non-negative
 }
 
+#define DEFINE_PTR(X) int* ptr = (X);
+
 void all_vars_in_macro() {
   int* local;
   DEFINE_PTR(local)
@@ -239,10 +315,10 @@ void few_vars_in_macro() {
   ptr[1] = 0;
   int tmp;
   ptr[2] = 30;
-  auto p = new int[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
+  int * p = new int[10];
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> p"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 10}"
   tmp = p[5];
   int val = *p;
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:13-[[@LINE-1]]:14}:""

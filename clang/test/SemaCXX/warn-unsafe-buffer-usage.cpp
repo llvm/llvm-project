@@ -36,7 +36,7 @@ void testIncrement(char *p) { // expected-warning{{'p' is an unsafe pointer used
 void * voidPtrCall(void);
 char * charPtrCall(void);
 
-void testArraySubscripts(int *p, int **pp) { // expected-note{{change type of 'pp' to 'std::span' to preserve bounds information}}
+void testArraySubscripts(int *p, int **pp) {
 // expected-warning@-1{{'p' is an unsafe pointer used for buffer access}}
 // expected-warning@-2{{'pp' is an unsafe pointer used for buffer access}}
   foo(p[1],             // expected-note{{used in buffer access here}}
@@ -80,28 +80,16 @@ void testArraySubscripts(int *p, int **pp) { // expected-note{{change type of 'p
       );
 }
 
-void testArraySubscriptsWithAuto(int *p, int **pp) {
+void testArraySubscriptsWithAuto() {
   int a[10];
-  auto ap1 = a;   // expected-warning{{'ap1' is an unsafe pointer used for buffer access}} \
-		     expected-note{{change type of 'ap1' to 'std::span' to preserve bounds information}}
-
+  // We do not fix a declaration if the type is `auto`. Because the actual type may change later.
+  auto ap1 = a;   // expected-warning{{'ap1' is an unsafe pointer used for buffer access}}
   foo(ap1[1]);    // expected-note{{used in buffer access here}}
 
-  auto ap2 = p;   // expected-warning{{'ap2' is an unsafe pointer used for buffer access}} \
-  		     expected-note{{change type of 'ap2' to 'std::span' to preserve bounds information}}
-
+  // In case the type is `auto *`, we know it must be a pointer. We can fix it.
+  auto * ap2 = a; // expected-warning{{'ap2' is an unsafe pointer used for buffer access}} \
+                     expected-note{{change type of 'ap2' to 'std::span' to preserve bounds information}}
   foo(ap2[1]);    // expected-note{{used in buffer access here}}
-
-  auto ap3 = pp;  // expected-warning{{'ap3' is an unsafe pointer used for buffer access}} \
-		     expected-note{{change type of 'ap3' to 'std::span' to preserve bounds information}}
-
-  foo(ap3[1][1]); // expected-note{{used in buffer access here}}
-                  // expected-warning@-1{{unsafe buffer access}}
-
-  auto ap4 = *pp; // expected-warning{{'ap4' is an unsafe pointer used for buffer access}} \
-  		     expected-note{{change type of 'ap4' to 'std::span' to preserve bounds information}}
-
-  foo(ap4[1]);    // expected-note{{used in buffer access here}}
 }
 
 void testUnevaluatedContext(int * p) {// no-warning
@@ -109,7 +97,6 @@ void testUnevaluatedContext(int * p) {// no-warning
       sizeof(decltype(p[1])));  // no-warning
 }
 
-// expected-note@+1{{change type of 'a' to 'std::span' to preserve bounds information}}
 void testQualifiedParameters(const int * p, const int * const q, const int a[10], const int b[10][10]) {
   // expected-warning@-1{{'p' is an unsafe pointer used for buffer access}}
   // expected-warning@-2{{'q' is an unsafe pointer used for buffer access}}
@@ -395,8 +382,9 @@ void testArrayPtrArithmetic(int x[]) { // expected-warning{{'x' is an unsafe poi
 }
 
 void testMultiLineDeclStmt(int * p) {
-  auto
+  int
 
+  *
 
   ap1 = p;      // expected-warning{{'ap1' is an unsafe pointer used for buffer access}} \
          	   expected-note{{change type of 'ap1' to 'std::span' to preserve bounds information}}

@@ -15,7 +15,7 @@ void foo(...);
 int bar(int *ptr);
 
 void uneval_context_fix_pointer_dereference() {
-  auto p = new int[10];
+  int* p = new int[10];
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
@@ -30,7 +30,7 @@ void uneval_context_fix_pointer_dereference() {
 }
 
 void uneval_context_fix_pointer_array_access() {
-  auto p = new int[10];
+  int* p = new int[10];
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
@@ -41,7 +41,7 @@ void uneval_context_fix_pointer_array_access() {
 }
 
 void uneval_context_fix_pointer_reference() {
-  auto p = new int[10];
+  int* p = new int[10];
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
@@ -63,7 +63,7 @@ void uneval_context_fix_pointer_reference() {
 
 // FIXME: Emit fixits for each of the below use.
 void uneval_context_fix_pointer_dereference_not_handled() {
-  auto p = new int[10];
+  int* p = new int[10];
   int tmp = p[5];
 
   foo(sizeof(*p), sizeof(decltype(*p)));
