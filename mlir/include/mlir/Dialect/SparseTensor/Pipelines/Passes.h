@@ -53,13 +53,6 @@ struct SparseCompilerOptions
               "any-storage-any-loop",
               "Enable sparse parallelization for any storage and loop."))};
 
-  PassOptions::Option<bool> enableIndexReduction{
-      *this, "enable-index-reduction",
-      desc("Enable dependent index reduction based algorithm to handle "
-           "non-trivial index expressions on sparse inputs (experimental "
-           "features)"),
-      init(false)};
-
   PassOptions::Option<bool> enableRuntimeLibrary{
       *this, "enable-runtime-library",
       desc("Enable runtime library for manipulating sparse tensors"),
@@ -151,8 +144,8 @@ struct SparseCompilerOptions
 
   /// Projects out the options for `createSparsificationPass`.
   SparsificationOptions sparsificationOptions() const {
-    return SparsificationOptions(parallelization, enableIndexReduction,
-                                 enableGPULibgen, enableRuntimeLibrary);
+    return SparsificationOptions(parallelization, enableGPULibgen,
+                                 enableRuntimeLibrary);
   }
 
   /// Projects out the options for `createConvertVectorToLLVMPass`.
