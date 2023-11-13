@@ -150,8 +150,7 @@ private:
                               bool *HasDoWhile = nullptr,
                               bool *HasLabel = nullptr);
   bool tryToParseBracedList();
-  bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
-                       tok::TokenKind ClosingBraceKind = tok::r_brace);
+  bool parseBracedList(bool IsAngleBracket = false, bool IsEnum = false);
   bool parseParens(TokenType AmpAmpTokenType = TT_Unknown);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();
