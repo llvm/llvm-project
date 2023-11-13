@@ -29,12 +29,17 @@
 
 #ifdef __OPENMP_AMDGCN__
 #if defined(__cplusplus)
+#ifdef __BUILD_MATH_BUILTINS_LIB__
+#define __DEVICE__ extern "C" __attribute__((always_inline, nothrow))
+#define __DEVICE_NOCE__ __DEVICE__
+#else
 #define __DEVICE__ static constexpr __attribute__((always_inline, nothrow))
 #define __DEVICE_NOCE__ static __attribute__((always_inline, nothrow))
+#endif
 #else // !defined(__cplusplus), c openmp compilation
 // Special case to build c-only device function lib for FORTRAN.
 #ifdef __BUILD_MATH_BUILTINS_LIB__
-#define __DEVICE__ extern __attribute__((always_inline, nothrow, cold, weak))
+#define __DEVICE__ extern __attribute__((always_inline, nothrow))
 #define __DEVICE_NOCE__ __DEVICE__
 #else
 #define __DEVICE__ static __attribute__((always_inline, nothrow))
@@ -1280,7 +1285,7 @@ double __fma_rn(double __x, double __y, double __z) {
   _Generic((__x), float : __signbitf, double : __signbit)(__x)
 #endif // !defined(__cplusplus) && __STDC_VERSION__ >= 201112L
 
-#if defined(__cplusplus)
+#if defined(__cplusplus) && !defined(__BUILD_MATH_BUILTINS_LIB__)
 #ifndef __OPENMP_AMDGCN__
 template <class T> __DEVICE__ T min(T __arg1, T __arg2) {
   return (__arg1 < __arg2) ? __arg1 : __arg2;

@@ -142,7 +142,7 @@ foreach(archname ${HOSTRPC_ARCHS})
    if (${archname} STREQUAL "amdgcn")
       set(opencl_cmd ${CLANG_TOOL}
        -fvisibility=default
-       -c -emit-llvm -nogpulib
+       -c -emit-llvm -nogpulib -nogpuinc
        -DCL_VERSION_2_0=200 -D__OPENCL_C_VERSION__=200
        -Dcl_khr_fp64 -Dcl_khr_fp16
        -Dcl_khr_subgroups -Dcl_khr_int64_base_atomics -Dcl_khr_int64_extended_atomics
@@ -158,22 +158,33 @@ foreach(archname ${HOSTRPC_ARCHS})
 
    foreach(mcpu ${mcpus})
       if (${archname} STREQUAL "amdgcn")
+        find_package(AMDDeviceLibs REQUIRED CONFIG
+                     HINTS ${CMAKE_INSTALL_PREFIX}
+                           ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs
+                     PATHS /opt/rocm
+        )
+        get_target_property(ocml_path ocml IMPORTED_LOCATION)
+        get_target_property(ockl_path ockl IMPORTED_LOCATION)
+
+        set(openmp_device_args
+            -I../../runtime/src  # to pickup omp.h, we may need a dependency
+            -I${CMAKE_CURRENT_SOURCE_DIR}/../DeviceRTL/include # pickup Platform.h
+            -O${optimization_level}
+            -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable
+            -std=c++17 -fvisibility=hidden -nogpuinc
+            -fopenmp-targets=${triple} -Xopenmp-target=${triple} -march=${mcpu}
+            -Xclang -mcode-object-version=none
+            -Xclang -mlink-builtin-bitcode -Xclang ${ocml_path}
+            -Xclang -mlink-builtin-bitcode -Xclang ${ockl_path}
+            -Wno-linker-warnings # Silence the empty host compilation.
+            -c -emit-llvm --offload-device-only -nogpulib)
+      elseif(${archname} STREQUAL "nvptx")
          set(openmp_device_args 
 	      -I../../runtime/src  # to pickup omp.h, we may need a dependency
-	      -O${optimization_level}
 	      -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable 
 	      -std=c++17 -fvisibility=hidden 
 	      -fopenmp-targets=${triple} -Xopenmp-target=${triple} -march=${mcpu}
-         -Xclang -mcode-object-version=none
-	      -c -emit-llvm --offload-device-only -nogpulib)
-      endif()
-      if (${archname} STREQUAL "nvptx")
-         set(openmp_device_args 
-	      -I../../runtime/src  # to pickup omp.h, we may need a dependency
-	      -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable 
-	      -std=c++17 -fvisibility=hidden 
-	      -fopenmp-targets=${triple} -Xopenmp-target=${triple} -march=${mcpu}
-	      --cuda-feature=+ptx61,+${mcpu}
+	      --cuda-feature=+ptx61,+${mcpu} -nogpuinc
 	      -c -emit-llvm --offload-device-only -nocudalib -nogpulib 
 	      -Wno-unknown-cuda-version)
       endif()
@@ -198,12 +209,21 @@ foreach(archname ${HOSTRPC_ARCHS})
       endif()
 
       set(libhostexec-bc "libhostexec-${mcpu}.bc")
-      add_custom_target(${libhostexec-bc}
-         COMMAND ${LINK_TOOL} ${stubs_bc_filename} ${hostexec_invoke_cpp_bc} ${ocl_atomics_cl_bc} -o ${libhostexec-bc}
+      set(libhostexec-bc-preprep "libhostexec-${mcpu}-preprep.bc")
+      add_custom_target(${libhostexec-bc-preprep}
+         COMMAND ${LINK_TOOL} ${stubs_bc_filename} ${hostexec_invoke_cpp_bc} ${ocl_atomics_cl_bc} -o ${libhostexec-bc-preprep}
 	 DEPENDS ${stubs_bc_filename} ${hostexec_invoke_cpp_bc}
-         COMMENT "Building hostexec file ${libhostexec-bc}")
-      add_dependencies(${libhostexec-bc} ${stubs_bc_filename})
-      add_dependencies(${libhostexec-bc} ${hostexec_invoke_cpp_bc})
+         COMMENT "Building hostexec file ${libhostexec-bc-preprep}")
+      add_dependencies(${libhostexec-bc-preprep} ${stubs_bc_filename})
+      add_dependencies(${libhostexec-bc-preprep} ${hostexec_invoke_cpp_bc})
+
+      # Run the prep tool on the library to replace internal attribute with linkonce_odr for dm_alloc only.
+      add_custom_target(${libhostexec-bc}
+        COMMAND ${PREP_TOOL} -dm ${libhostexec-bc-preprep}
+                      -o ${libhostexec-bc}
+        DEPENDS ${libhostexec-bc-preprep}
+        COMMENT "Running ${PREP_TOOL} for ${libhostexec-bc}")
+      add_dependencies(${libhostexec-bc} prep-libomptarget-bc)
       if (${archname} STREQUAL "amdgcn")
          add_dependencies(${libhostexec-bc} ${ocl_atomics_cl_bc})
       endif()
@@ -214,6 +234,7 @@ foreach(archname ${HOSTRPC_ARCHS})
       if (${archname} STREQUAL "nvptx")
          add_dependencies(nvptx_hostexec_services ${libhostexec-bc})
       endif()
+
       install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${libhostexec-bc} DESTINATION ${DEVEL_PACKAGE}${OPENMP_INSTALL_LIBDIR}/libdevice)
    endforeach() # end for each mcpu
 endforeach() # end foreach archs

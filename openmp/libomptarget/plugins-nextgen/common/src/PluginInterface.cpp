@@ -726,7 +726,7 @@ GenericDeviceTy::GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
       OMPX_InitialNumEvents("LIBOMPTARGET_NUM_INITIAL_EVENTS", 1),
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
-      PinnedAllocs(*this), RPCHandle(nullptr) {
+      PinnedAllocs(*this), RPCServer(nullptr) {
 #ifdef OMPT_SUPPORT
   OmptInitialized.store(false);
   // Bind the callbacks to this device's member functions
@@ -855,8 +855,8 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
   if (RecordReplay.isRecordingOrReplaying())
     RecordReplay.deinit();
 
-  if (RPCHandle)
-    if (auto Err = RPCHandle->deinitDevice())
+  if (RPCServer)
+    if (auto Err = RPCServer->deinitDevice(*this))
       return Err;
 
 #ifdef OMPT_SUPPORT
@@ -1050,10 +1050,7 @@ Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
   if (auto Err = Server.initDevice(*this, Plugin.getGlobalHandler(), Image))
     return Err;
 
-  auto DeviceOrErr = Server.getDevice(*this);
-  if (!DeviceOrErr)
-    return DeviceOrErr.takeError();
-  RPCHandle = *DeviceOrErr;
+  RPCServer = &Server;
   DP("Running an RPC server on device %d\n", getDeviceId());
   return Plugin::success();
 }
@@ -1687,11 +1684,9 @@ Error GenericPluginTy::init() {
   GlobalHandler = Plugin::createGlobalHandler();
   assert(GlobalHandler && "Invalid global handler");
 
-  RPCServer = nullptr;
-#if RPC_FIXME
   RPCServer = new RPCServerTy(NumDevices);
   assert(RPCServer && "Invalid RPC server");
-#endif
+
   return Plugin::success();
 }
 
@@ -1749,7 +1744,6 @@ Error GenericPluginTy::deinitDevice(int32_t DeviceId) {
 
 const bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
 #ifdef LIBOMPTARGET_RPC_SUPPORT
-	assert(0);
   return true;
 #else
   return false;

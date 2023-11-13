@@ -324,10 +324,8 @@ struct GenericKernelTy {
     case OMP_TGT_EXEC_MODE_XTEAM_RED:
       DP("AMD-only execution mode\n");
       return true;
-    default:
-      llvm_unreachable("ExecutionMode not supported yet.");
-      return false;
     }
+    llvm_unreachable("Unknown execution mode!");
   }
 
 protected:
@@ -918,7 +916,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual uint64_t getHardwareParallelism() const { return 0; }
 
   /// Get the RPC server running on this device.
-  RPCHandleTy *getRPCHandle() const { return RPCHandle; }
+  RPCServerTy *getRPCServer() const { return RPCServer; }
 
   /// The number of parallel RPC ports to use on the device. In general, this
   /// should be roughly equivalent to the amount of hardware parallelism the
@@ -1025,7 +1023,7 @@ protected:
 
   /// A pointer to an RPC server instance attached to this device if present.
   /// This is used to run the RPC server during task synchronization.
-  RPCHandleTy *RPCHandle;
+  RPCServerTy *RPCServer;
 
 private:
 #ifdef OMPT_SUPPORT
@@ -1058,7 +1056,8 @@ struct GenericPluginTy {
 
   /// Construct a plugin instance.
   GenericPluginTy(Triple::ArchType TA)
-      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr), JIT(TA) {}
+      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr), JIT(TA),
+        RPCServer(nullptr) {}
 
   virtual ~GenericPluginTy() {}
 

@@ -15,6 +15,7 @@
 #include "hostexec_internal.h"
 #include <stdint.h>
 #include <stdio.h>
+#include "Platform.h"
 
 #pragma omp declare target
 
