@@ -1,6 +1,6 @@
 ! This test checks lowering of OpenACC kernels loop combined directive.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
+! RUN: bbc -fopenacc -emit-fir -hlfir=false %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,HLFIR
 
 subroutine acc_kernels_loop

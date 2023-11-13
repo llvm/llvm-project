@@ -760,7 +760,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
   // (C2 >> X) >> C1 --> (C2 >> C1) >> X
   Constant *C2;
   Value *X;
-  if (match(Op0, m_BinOp(I.getOpcode(), m_Constant(C2), m_Value(X))))
+  if (match(Op0, m_BinOp(I.getOpcode(), m_ImmConstant(C2), m_Value(X))))
     return BinaryOperator::Create(
         I.getOpcode(), Builder.CreateBinOp(I.getOpcode(), C2, C1), X);
 

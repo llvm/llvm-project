@@ -565,13 +565,10 @@ bool SIFoldOperands::tryToFoldACImm(
   if (UseOpIdx >= Desc.getNumOperands())
     return false;
 
-  uint8_t OpTy = Desc.operands()[UseOpIdx].OperandType;
-  if ((OpTy < AMDGPU::OPERAND_REG_INLINE_AC_FIRST ||
-       OpTy > AMDGPU::OPERAND_REG_INLINE_AC_LAST) &&
-      (OpTy < AMDGPU::OPERAND_REG_INLINE_C_FIRST ||
-       OpTy > AMDGPU::OPERAND_REG_INLINE_C_LAST))
+  if (!AMDGPU::isSISrcInlinableOperand(Desc, UseOpIdx))
     return false;
 
+  uint8_t OpTy = Desc.operands()[UseOpIdx].OperandType;
   if (OpToFold.isImm() && TII->isInlineConstant(OpToFold, OpTy) &&
       TII->isOperandLegal(*UseMI, UseOpIdx, &OpToFold)) {
     UseMI->getOperand(UseOpIdx).ChangeToImmediate(OpToFold.getImm());
@@ -720,24 +717,6 @@ void SIFoldOperands::foldOperand(
 
     const TargetRegisterClass *DestRC = TRI->getRegClassForReg(*MRI, DestReg);
     if (!DestReg.isPhysical()) {
-      if (TRI->isSGPRClass(SrcRC) && TRI->hasVectorRegisters(DestRC)) {
-        SmallVector<FoldCandidate, 4> CopyUses;
-        for (auto &Use : MRI->use_nodbg_operands(DestReg)) {
-          // There's no point trying to fold into an implicit operand.
-          if (Use.isImplicit())
-            continue;
-
-          CopyUses.emplace_back(Use.getParent(),
-                                Use.getParent()->getOperandNo(&Use),
-                                &UseMI->getOperand(1));
-        }
-
-        for (auto &F : CopyUses) {
-          foldOperand(*F.OpToFold, F.UseMI, F.UseOpNo, FoldList,
-                      CopiesToReplace);
-        }
-      }
-
       if (DestRC == &AMDGPU::AGPR_32RegClass &&
           TII->isInlineConstant(OpToFold, AMDGPU::OPERAND_REG_INLINE_C_INT32)) {
         UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_WRITE_B32_e64));
