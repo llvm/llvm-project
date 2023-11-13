@@ -198,7 +198,8 @@ struct SparseTensorConversionPass
     // The following operations and dialects may be introduced by the
     // rewriting rules, and are therefore marked as legal.
     target.addLegalOp<complex::ConstantOp, complex::NotEqualOp, linalg::FillOp,
-                      linalg::YieldOp, tensor::ExtractOp>();
+                      linalg::YieldOp, tensor::ExtractOp,
+                      tensor::FromElementsOp>();
     target.addLegalDialect<
         arith::ArithDialect, bufferization::BufferizationDialect,
         LLVM::LLVMDialect, memref::MemRefDialect, scf::SCFDialect>();
