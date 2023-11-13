@@ -2926,7 +2926,15 @@ void DWARFASTParserClang::ParseSingleMember(
   const uint64_t parent_bit_size =
       parent_byte_size == UINT64_MAX ? UINT64_MAX : parent_byte_size * 8;
 
-  const MemberAttributes attrs(die, parent_die, module_sp);
+  // FIXME: Remove the workarounds below and make this const.
+  MemberAttributes attrs(die, parent_die, module_sp);
+
+  const bool class_is_objc_object_or_interface =
+      TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type);
+
+  // FIXME: Make Clang ignore Objective-C accessibility for expressions
+  if (class_is_objc_object_or_interface)
+    attrs.accessibility = eAccessNone;
 
   // Handle static members, which are typically members without
   // locations. However, GCC doesn't emit DW_AT_data_member_location
@@ -2941,13 +2949,13 @@ void DWARFASTParserClang::ParseSingleMember(
   if (attrs.member_byte_offset == UINT32_MAX &&
       attrs.data_bit_offset == UINT64_MAX && attrs.is_declaration) {
     Type *var_type = die.ResolveTypeUID(attrs.encoding_form.Reference());
+
     if (var_type) {
-      const auto accessibility = attrs.accessibility == eAccessNone
-                                     ? eAccessPublic
-                                     : attrs.accessibility;
+      if (attrs.accessibility == eAccessNone)
+        attrs.accessibility = eAccessPublic;
       CompilerType ct = var_type->GetForwardCompilerType();
       clang::VarDecl *v = TypeSystemClang::AddVariableToRecordType(
-          class_clang_type, attrs.name, ct, accessibility);
+          class_clang_type, attrs.name, ct, attrs.accessibility);
       if (!v) {
         LLDB_LOG(log, "Failed to add variable to the record type");
         return;
@@ -3003,9 +3011,8 @@ void DWARFASTParserClang::ParseSingleMember(
   const uint64_t word_width = 32;
   CompilerType member_clang_type = member_type->GetLayoutCompilerType();
 
-  const auto accessibility = attrs.accessibility == eAccessNone
-                                 ? default_accessibility
-                                 : attrs.accessibility;
+  if (attrs.accessibility == eAccessNone)
+    attrs.accessibility = default_accessibility;
 
   uint64_t field_bit_offset = (attrs.member_byte_offset == UINT32_MAX
                                    ? 0
@@ -3019,13 +3026,12 @@ void DWARFASTParserClang::ParseSingleMember(
     if (attrs.data_bit_offset != UINT64_MAX) {
       this_field_info.bit_offset = attrs.data_bit_offset;
     } else {
-      auto byte_size = attrs.byte_size;
-      if (!byte_size)
-        byte_size = member_type->GetByteSize(nullptr);
+      if (!attrs.byte_size)
+        attrs.byte_size = member_type->GetByteSize(nullptr);
 
       ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
       if (objfile->GetByteOrder() == eByteOrderLittle) {
-        this_field_info.bit_offset += byte_size.value_or(0) * 8;
+        this_field_info.bit_offset += attrs.byte_size.value_or(0) * 8;
         this_field_info.bit_offset -= (attrs.bit_offset + attrs.bit_size);
       } else {
         this_field_info.bit_offset += attrs.bit_offset;
@@ -3064,7 +3070,7 @@ void DWARFASTParserClang::ParseSingleMember(
     // unnamed bitfields if we have a new enough clang.
     bool detect_unnamed_bitfields = true;
 
-    if (TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type))
+    if (class_is_objc_object_or_interface)
       detect_unnamed_bitfields =
           die.GetCU()->Supports_unnamed_objc_bitfields();
 
@@ -3096,7 +3102,7 @@ void DWARFASTParserClang::ParseSingleMember(
                 class_clang_type, llvm::StringRef(),
                 m_ast.GetBuiltinTypeForEncodingAndBitSize(eEncodingSint,
                                                           word_width),
-                accessibility, unnamed_field_info->bit_size);
+                attrs.accessibility, unnamed_field_info->bit_size);
 
         layout_info.field_offsets.insert(std::make_pair(
             unnamed_bitfield_decl, unnamed_field_info->bit_offset));
@@ -3166,7 +3172,7 @@ void DWARFASTParserClang::ParseSingleMember(
   TypeSystemClang::RequireCompleteType(member_clang_type);
 
   clang::FieldDecl *field_decl = TypeSystemClang::AddFieldToRecordType(
-      class_clang_type, attrs.name, member_clang_type, accessibility,
+      class_clang_type, attrs.name, member_clang_type, attrs.accessibility,
       attrs.bit_size);
 
   m_ast.SetMetadataAsUserID(field_decl, die.GetID());
