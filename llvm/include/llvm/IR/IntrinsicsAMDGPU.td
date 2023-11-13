@@ -565,9 +565,18 @@ def int_amdgcn_tanh : DefaultAttrsIntrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
 >;
 
-def int_amdgcn_tanh_bf16 : DefaultAttrsIntrinsic<
+class AMDGPUBF16UnaryIntrinsic<string name> : DefaultAttrsIntrinsic<
   [llvm_i16_ty], [llvm_i16_ty], [IntrNoMem, IntrSpeculatable]
->, ClangBuiltin<"__builtin_amdgcn_tanh_bf16">;
+>, ClangBuiltin<"__builtin_amdgcn_" # name # "_bf16">;
+
+def int_amdgcn_tanh_bf16 : AMDGPUBF16UnaryIntrinsic<"tanh">;
+def int_amdgcn_rcp_bf16  : AMDGPUBF16UnaryIntrinsic<"rcp">;
+def int_amdgcn_sqrt_bf16 : AMDGPUBF16UnaryIntrinsic<"sqrt">;
+def int_amdgcn_rsq_bf16  : AMDGPUBF16UnaryIntrinsic<"rsq">;
+def int_amdgcn_log_bf16  : AMDGPUBF16UnaryIntrinsic<"log">;
+def int_amdgcn_exp_bf16  : AMDGPUBF16UnaryIntrinsic<"exp">;
+def int_amdgcn_sin_bf16  : AMDGPUBF16UnaryIntrinsic<"sin">;
+def int_amdgcn_cos_bf16  : AMDGPUBF16UnaryIntrinsic<"cos">;
 
 def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
   [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]

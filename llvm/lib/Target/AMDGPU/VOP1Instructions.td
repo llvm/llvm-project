@@ -516,6 +516,16 @@ let SubtargetPredicate = HasTanhInsts in {
 defm V_TANH_F16  : VOP1Inst_t16 <"v_tanh_f16",  VOP_F16_F16, int_amdgcn_tanh>;
 defm V_TANH_BF16 : VOP1Inst_t16 <"v_tanh_bf16", VOP_F16_F16>;
 }
+
+let SubtargetPredicate = HasBF16TransInsts in {
+defm V_RCP_BF16 : VOP1Inst_t16 <"v_rcp_bf16", VOP_F16_F16>;
+defm V_SQRT_BF16 : VOP1Inst_t16 <"v_sqrt_bf16", VOP_F16_F16>;
+defm V_RSQ_BF16 : VOP1Inst_t16 <"v_rsq_bf16", VOP_F16_F16>;
+defm V_LOG_BF16 : VOP1Inst_t16 <"v_log_bf16", VOP_F16_F16>;
+defm V_EXP_BF16 : VOP1Inst_t16 <"v_exp_bf16", VOP_F16_F16>;
+defm V_SIN_BF16 : VOP1Inst_t16 <"v_sin_bf16", VOP_F16_F16>;
+defm V_COS_BF16 : VOP1Inst_t16 <"v_cos_bf16", VOP_F16_F16>;
+}
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 defm V_FREXP_MANT_F16 : VOP1Inst_t16 <"v_frexp_mant_f16", VOP_F16_F16, int_amdgcn_frexp_mant>;
 let OtherPredicates = [Has16BitInsts, NotHasTrue16BitInsts] in {
@@ -535,6 +545,23 @@ defm V_FRACT_F16 : VOP1Inst_t16 <"v_fract_f16", VOP_F16_F16, AMDGPUfract>;
 let SubtargetPredicate = HasTanhInsts in
 def : GCNPat<(i16 (int_amdgcn_tanh_bf16 i16:$src)),
              (V_TANH_BF16_t16_e32 $src)>;
+
+let SubtargetPredicate = HasBF16TransInsts in {
+def : GCNPat<(i16 (int_amdgcn_rcp_bf16 i16:$src)),
+             (V_RCP_BF16_t16_e32 $src)>;
+def : GCNPat<(i16 (int_amdgcn_sqrt_bf16 i16:$src)),
+             (V_SQRT_BF16_t16_e32 $src)>;
+def : GCNPat<(i16 (int_amdgcn_rsq_bf16 i16:$src)),
+             (V_RSQ_BF16_t16_e32 $src)>;
+def : GCNPat<(i16 (int_amdgcn_log_bf16 i16:$src)),
+             (V_LOG_BF16_t16_e32 $src)>;
+def : GCNPat<(i16 (int_amdgcn_exp_bf16 i16:$src)),
+             (V_EXP_BF16_t16_e32 $src)>;
+def : GCNPat<(i16 (int_amdgcn_sin_bf16 i16:$src)),
+             (V_SIN_BF16_t16_e32 $src)>;
+def : GCNPat<(i16 (int_amdgcn_cos_bf16 i16:$src)),
+             (V_COS_BF16_t16_e32 $src)>;
+} // End SubtargetPredicate = HasBF16TransInsts
 
 let OtherPredicates = [Has16BitInsts, NotHasTrue16BitInsts] in {
 def : GCNPat<
@@ -948,6 +975,10 @@ multiclass VOP1_Real_NO_DPP_OP_SEL_with_name<GFXGen Gen, bits<9> op,
   VOP1_Real_e32_with_name<Gen, op, opName, asmName>,
   VOP3_Real_with_name<Gen, {0, 1, 1, op{6-0}}, opName, asmName>;
 
+multiclass VOP1_Real_FULL_t16_gfx1210<bits<9> op> :
+  VOP1_Real_FULL_with_name<GFX12_10Gen, op, NAME,
+                           !cast<VOP1_Pseudo>(!subst("_t16", "", NAME)#"_e32").Mnemonic>;
+
 // Define VOP1 instructions using the pseudo instruction with its old profile and
 // VOP3 using the OpSel profile for the pseudo instruction.
 defm V_CVT_F32_FP8      : VOP1_Real_NO_VOP3_with_name_gfx12<0x06c, "V_CVT_F32_FP8", "v_cvt_f32_fp8">;
@@ -1005,8 +1036,15 @@ defm V_CVT_F16_F32_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x00a, "v_cvt_f16_
 defm V_CVT_F32_F16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x00b, "v_cvt_f32_f16">;
 
 defm V_TANH_F32              : VOP1_Real_FULL<GFX12_10Gen, 0x01e>;
-defm V_TANH_F16_t16          : VOP1_Real_FULL_with_name<GFX12_10Gen, 0x01f, "V_TANH_F16_t16",  "v_tanh_f16">;
-defm V_TANH_BF16_t16         : VOP1_Real_FULL_with_name<GFX12_10Gen, 0x04a, "V_TANH_BF16_t16", "v_tanh_bf16">;
+defm V_TANH_F16_t16          : VOP1_Real_FULL_t16_gfx1210<0x01f>;
+defm V_TANH_BF16_t16         : VOP1_Real_FULL_t16_gfx1210<0x04a>;
+defm V_RCP_BF16_t16          : VOP1_Real_FULL_t16_gfx1210<0x079>;
+defm V_SQRT_BF16_t16         : VOP1_Real_FULL_t16_gfx1210<0x07a>;
+defm V_RSQ_BF16_t16          : VOP1_Real_FULL_t16_gfx1210<0x07b>;
+defm V_LOG_BF16_t16          : VOP1_Real_FULL_t16_gfx1210<0x07c>;
+defm V_EXP_BF16_t16          : VOP1_Real_FULL_t16_gfx1210<0x07d>;
+defm V_SIN_BF16_t16          : VOP1_Real_FULL_t16_gfx1210<0x07e>;
+defm V_COS_BF16_t16          : VOP1_Real_FULL_t16_gfx1210<0x07f>;
 defm V_PRNG_B32              : VOP1_Real_FULL<GFX12_10Gen, 0x04b>;
 
 //===----------------------------------------------------------------------===//

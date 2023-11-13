@@ -512,6 +512,13 @@ TARGET_BUILTIN(__builtin_amdgcn_prng_b32, "ii", "nc", "prng-inst")
 TARGET_BUILTIN(__builtin_amdgcn_tanhf, "ff", "nc", "tanh-insts")
 TARGET_BUILTIN(__builtin_amdgcn_tanhh, "hh", "nc", "tanh-insts")
 TARGET_BUILTIN(__builtin_amdgcn_tanh_bf16, "ss", "nc", "tanh-insts")
+TARGET_BUILTIN(__builtin_amdgcn_rcp_bf16, "ss", "nc", "bf16-trans-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sqrt_bf16, "ss", "nc", "bf16-trans-insts")
+TARGET_BUILTIN(__builtin_amdgcn_rsq_bf16, "ss", "nc", "bf16-trans-insts")
+TARGET_BUILTIN(__builtin_amdgcn_log_bf16, "ss", "nc", "bf16-trans-insts")
+TARGET_BUILTIN(__builtin_amdgcn_exp_bf16, "ss", "nc", "bf16-trans-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sin_bf16, "ss", "nc", "bf16-trans-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cos_bf16, "ss", "nc", "bf16-trans-insts")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

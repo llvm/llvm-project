@@ -399,6 +399,12 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
   "Use true 16-bit registers"
 >;
 
+def FeatureBF16TransInsts : SubtargetFeature<"bf16-trans-insts",
+  "HasBF16TransInsts",
+  "true",
+  "Has bf16 transcendental instructions"
+>;
+
 def FeatureVOP3P : SubtargetFeature<"vop3p",
   "HasVOP3PInsts",
   "true",
@@ -1585,6 +1591,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureDPPSrc1SGPR,
    FeatureBitOp3Insts,
    FeatureTanhInsts,
+   FeatureBF16TransInsts,
    FeaturePrngInst,
    FeatureSupportsSRAMECC]>;
 
@@ -1951,6 +1958,9 @@ def UseRealTrue16Insts : Predicate<"Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
 def UseFakeTrue16Insts : Predicate<"Subtarget->hasTrue16BitInsts() && "
                                    "!Subtarget->useRealTrue16Insts()">;
+
+def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
+  AssemblerPredicate<(all_of FeatureBF16TransInsts)>;
 
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
