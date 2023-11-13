@@ -155,8 +155,8 @@ bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
     // machinefunction equivalent. These may not exist as the (codegen) passes
     // prior to this one are run in CGSCC order which will bypass any local
     // functions that aren't called.
-    assert((MF || !TPC->requiresCodeGenSCCOrder()) &&
-            "function must have been generated already");
+    assert((MF || TPC->requiresCodeGenSCCOrder()) &&
+           "function must have been generated already");
     if (MF) {
       Info = analyzeResourceUsage(*MF, TM);
       HasIndirectCall |= Info.HasIndirectCall;
