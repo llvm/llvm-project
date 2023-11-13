@@ -1221,9 +1221,18 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
     }
   }
 
-  if (!Zext.hasNonNeg() && isKnownNonNegative(Src, DL, 0, &AC, &Zext, &DT)) {
-    Zext.setNonNeg();
-    return &Zext;
+  if (!Zext.hasNonNeg()) {
+    // If this zero extend is only used by a shift, add nneg flag.
+    if (Zext.hasOneUse() && SrcTy->getScalarSizeInBits() > 2 &&
+        match(Zext.user_back(), m_Shift(m_Value(), m_Specific(&Zext)))) {
+      Zext.setNonNeg();
+      return &Zext;
+    }
+
+    if (isKnownNonNegative(Src, DL, 0, &AC, &Zext, &DT)) {
+      Zext.setNonNeg();
+      return &Zext;
+    }
   }
 
   return nullptr;
