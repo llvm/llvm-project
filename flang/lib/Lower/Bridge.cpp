@@ -3242,7 +3242,7 @@ private:
       const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
     Fortran::lower::StatementContext stmtCtx;
 
-    if (Fortran::evaluate::IsProcedurePointerTarget(assign.rhs)) {
+    if (Fortran::evaluate::IsProcedurePointer(assign.lhs)) {
       hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
           loc, *this, assign.lhs, localSymbols, stmtCtx);
       if (Fortran::evaluate::IsNullProcedurePointer(assign.rhs)) {
