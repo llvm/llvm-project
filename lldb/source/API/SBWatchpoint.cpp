@@ -98,7 +98,7 @@ int32_t SBWatchpoint::GetHardwareIndex() {
   // we cannot determine the hardware breakpoint
   // index reliably; providing possibly correct
   // guesses is not useful to anyone.
-  return UINT32_MAX;
+  return -1;
 }
 
 addr_t SBWatchpoint::GetWatchAddress() {
