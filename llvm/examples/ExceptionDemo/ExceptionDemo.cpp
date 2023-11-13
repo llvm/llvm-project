@@ -1908,14 +1908,6 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<llvm::orc::LLJIT> JIT =
       ExitOnErr(llvm::orc::LLJITBuilder().create());
 
-  // Add automatic dynamic symbol search
-  auto &DyLib = JIT->getMainJITDylib();
-  auto JTMB = ExitOnErr(llvm::orc::JITTargetMachineBuilder::detectHost());
-  auto DL = ExitOnErr(JTMB.getDefaultDataLayoutForTarget());
-  DyLib.addGenerator(llvm::cantFail(
-      llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-          DL.getGlobalPrefix())));
-
   // Set up the optimizer pipeline.
   llvm::legacy::FunctionPassManager fpm(module);
 
