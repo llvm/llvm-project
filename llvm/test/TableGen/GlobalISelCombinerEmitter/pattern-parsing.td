@@ -297,6 +297,50 @@ def VariadicsOutTest : GICombineRule<
   (apply (COPY $a, (i32 0)),
          (COPY $b, (i32 0)))>;
 
+// CHECK:      (CombineRule name:TypeOfTest id:10 root:dst
+// CHECK-NEXT:   (MatchPats
+// CHECK-NEXT:     <match_root>__TypeOfTest_match_0:(CodeGenInstructionPattern COPY operands:[<def>$dst, $tmp])
+// CHECK-NEXT:     __TypeOfTest_match_1:(CodeGenInstructionPattern G_ZEXT operands:[<def>$tmp, $src])
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (ApplyPats
+// CHECK-NEXT:     <apply_root>__TypeOfTest_apply_0:(CodeGenInstructionPattern G_MUL operands:[<def>$dst, (GITypeOf<$src> 0), (GITypeOf<$dst> -1)])
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable MatchPats
+// CHECK-NEXT:     dst -> __TypeOfTest_match_0
+// CHECK-NEXT:     src -> <live-in>
+// CHECK-NEXT:     tmp -> __TypeOfTest_match_1
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable ApplyPats
+// CHECK-NEXT:     dst -> __TypeOfTest_apply_0
+// CHECK-NEXT:   )
+// CHECK-NEXT: )
+def TypeOfTest : GICombineRule<
+  (defs root:$dst),
+  (match (COPY $dst, $tmp),
+         (G_ZEXT $tmp, $src)),
+  (apply (G_MUL $dst, (GITypeOf<"$src"> 0), (GITypeOf<"$dst"> -1)))>;
+
+
+// CHECK:      (CombineRule name:MIFlagsTest id:11 root:dst
+// CHECK-NEXT:   (MatchPats
+// CHECK-NEXT:     <match_root>mi:(CodeGenInstructionPattern G_ZEXT operands:[<def>$dst, $src] (MIFlags (set MachineInstr::FmReassoc) (unset MachineInstr::FmNoNans, MachineInstr::FmArcp)))
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (ApplyPats
+// CHECK-NEXT:     <apply_root>__MIFlagsTest_apply_0:(CodeGenInstructionPattern G_MUL operands:[<def>$dst, $src, $src] (MIFlags (set MachineInstr::FmReassoc) (unset MachineInstr::FmNsz, MachineInstr::FmArcp) (copy mi)))
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable MatchPats
+// CHECK-NEXT:     dst -> mi
+// CHECK-NEXT:     src -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable ApplyPats
+// CHECK-NEXT:     dst -> __MIFlagsTest_apply_0
+// CHECK-NEXT:     src -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT: )
+def MIFlagsTest : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src, (MIFlags FmReassoc, (not FmNoNans, FmArcp))):$mi),
+  (apply (G_MUL $dst, $src, $src, (MIFlags $mi, FmReassoc, (not FmNsz, FmArcp))))>;
 
 def MyCombiner: GICombiner<"GenMyCombiner", [
   WipOpcodeTest0,
@@ -308,5 +352,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   PatFragTest0,
   PatFragTest1,
   VariadicsInTest,
-  VariadicsOutTest
+  VariadicsOutTest,
+  TypeOfTest,
+  MIFlagsTest
 ]>;

@@ -183,6 +183,8 @@ private:
 // Python 3.13. It has been returning `true` always since Python 3.7.
 #if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9) || (PY_MAJOR_VERSION < 3)
     if (PyEval_ThreadsInitialized()) {
+#else
+    if (true) {
 #endif
       Log *log = GetLog(LLDBLog::Script);
 
@@ -199,6 +201,8 @@ private:
 
     // InitThreads acquires the GIL if it hasn't been called before.
     PyEval_InitThreads();
+#else
+    }
 #endif
   }
 
@@ -423,8 +427,6 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
       m_active_io_handler(eIOHandlerNone), m_session_is_active(false),
       m_pty_secondary_is_open(false), m_valid_session(true), m_lock_count(0),
       m_command_thread_state(nullptr) {
-  m_scripted_platform_interface_up =
-      std::make_unique<ScriptedPlatformPythonInterface>(*this);
 
   m_dictionary_name.append("_dict");
   StreamString run_string;

@@ -817,7 +817,7 @@ void InstrProfiling::lowerMCDCTestVectorBitmapUpdate(
     InstrProfMCDCTVBitmapUpdate *Update) {
   IRBuilder<> Builder(Update);
   auto *Int8Ty = Type::getInt8Ty(M->getContext());
-  auto *Int8PtrTy = Type::getInt8PtrTy(M->getContext());
+  auto *Int8PtrTy = PointerType::getUnqual(M->getContext());
   auto *Int32Ty = Type::getInt32Ty(M->getContext());
   auto *Int64Ty = Type::getInt64Ty(M->getContext());
   auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
@@ -908,7 +908,7 @@ static std::string getVarName(InstrProfInstBase *Inc, StringRef Prefix,
   Renamed = true;
   uint64_t FuncHash = Inc->getHash()->getZExtValue();
   SmallVector<char, 24> HashPostfix;
-  if (Name.endswith((Twine(".") + Twine(FuncHash)).toStringRef(HashPostfix)))
+  if (Name.ends_with((Twine(".") + Twine(FuncHash)).toStringRef(HashPostfix)))
     return (Prefix + Name).str();
   return (Prefix + Name + "." + Twine(FuncHash)).str();
 }
@@ -1002,7 +1002,7 @@ static inline bool shouldUsePublicSymbol(Function *Fn) {
 }
 
 static inline Constant *getFuncAddrForProfData(Function *Fn) {
-  auto *Int8PtrTy = Type::getInt8PtrTy(Fn->getContext());
+  auto *Int8PtrTy = PointerType::getUnqual(Fn->getContext());
   // Store a nullptr in __llvm_profd, if we shouldn't use a real address
   if (!shouldRecordFunctionAddr(Fn))
     return ConstantPointerNull::get(Int8PtrTy);
@@ -1010,7 +1010,7 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
   // If we can't use an alias, we must use the public symbol, even though this
   // may require a symbolic relocation.
   if (shouldUsePublicSymbol(Fn))
-    return ConstantExpr::getBitCast(Fn, Int8PtrTy);
+    return Fn;
 
   // When possible use a private alias to avoid symbolic relocations.
   auto *GA = GlobalAlias::create(GlobalValue::LinkageTypes::PrivateLinkage,
@@ -1033,7 +1033,7 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
 
   // appendToCompilerUsed(*Fn->getParent(), {GA});
 
-  return ConstantExpr::getBitCast(GA, Int8PtrTy);
+  return GA;
 }
 
 static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
@@ -1251,6 +1251,10 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
   GlobalVariable *NamePtr = Inc->getName();
   auto &PD = ProfileDataMap[NamePtr];
 
+  // Return if data variable was already created.
+  if (PD.DataVar)
+    return;
+
   LLVMContext &Ctx = M->getContext();
 
   Function *Fn = Inc->getParent()->getParent();
@@ -1277,7 +1281,7 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
   std::string DataVarName =
       getVarName(Inc, getInstrProfDataVarPrefix(), Renamed);
 
-  auto *Int8PtrTy = Type::getInt8PtrTy(Ctx);
+  auto *Int8PtrTy = PointerType::getUnqual(Ctx);
   // Allocate statically the array of pointers to value profile nodes for
   // the current function.
   Constant *ValuesPtrExpr = ConstantPointerNull::get(Int8PtrTy);
@@ -1295,8 +1299,7 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
         getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
     ValuesVar->setAlignment(Align(8));
     maybeSetComdat(ValuesVar, Fn, CntsVarName);
-    ValuesPtrExpr =
-        ConstantExpr::getBitCast(ValuesVar, Type::getInt8PtrTy(Ctx));
+    ValuesPtrExpr = ValuesVar;
   }
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
@@ -1469,7 +1472,7 @@ void InstrProfiling::emitRegistration() {
 
   // Construct the function.
   auto *VoidTy = Type::getVoidTy(M->getContext());
-  auto *VoidPtrTy = Type::getInt8PtrTy(M->getContext());
+  auto *VoidPtrTy = PointerType::getUnqual(M->getContext());
   auto *Int64Ty = Type::getInt64Ty(M->getContext());
   auto *RegisterFTy = FunctionType::get(VoidTy, false);
   auto *RegisterF = Function::Create(RegisterFTy, GlobalValue::InternalLinkage,

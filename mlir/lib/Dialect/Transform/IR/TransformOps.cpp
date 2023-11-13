@@ -1232,27 +1232,30 @@ transform::GetParentOp::apply(transform::TransformRewriter &rewriter,
   SmallVector<Operation *> parents;
   DenseSet<Operation *> resultSet;
   for (Operation *target : state.getPayloadOps(getTarget())) {
-    Operation *parent = target->getParentOp();
-    while (parent) {
-      bool checkIsolatedFromAbove =
-          !getIsolatedFromAbove() ||
-          parent->hasTrait<OpTrait::IsIsolatedFromAbove>();
-      bool checkOpName = !getOpName().has_value() ||
-                         parent->getName().getStringRef() == *getOpName();
-      if (checkIsolatedFromAbove && checkOpName)
-        break;
+    Operation *parent = target;
+    for (int64_t i = 0, e = getNthParent(); i < e; ++i) {
       parent = parent->getParentOp();
-    }
-    if (!parent) {
-      if (getAllowEmptyResults()) {
-        results.set(llvm::cast<OpResult>(getResult()), parents);
-        return DiagnosedSilenceableFailure::success();
+      while (parent) {
+        bool checkIsolatedFromAbove =
+            !getIsolatedFromAbove() ||
+            parent->hasTrait<OpTrait::IsIsolatedFromAbove>();
+        bool checkOpName = !getOpName().has_value() ||
+                           parent->getName().getStringRef() == *getOpName();
+        if (checkIsolatedFromAbove && checkOpName)
+          break;
+        parent = parent->getParentOp();
       }
-      DiagnosedSilenceableFailure diag =
-          emitSilenceableError()
-          << "could not find a parent op that matches all requirements";
-      diag.attachNote(target->getLoc()) << "target op";
-      return diag;
+      if (!parent) {
+        if (getAllowEmptyResults()) {
+          results.set(llvm::cast<OpResult>(getResult()), parents);
+          return DiagnosedSilenceableFailure::success();
+        }
+        DiagnosedSilenceableFailure diag =
+            emitSilenceableError()
+            << "could not find a parent op that matches all requirements";
+        diag.attachNote(target->getLoc()) << "target op";
+        return diag;
+      }
     }
     if (getDeduplicate()) {
       if (!resultSet.contains(parent)) {

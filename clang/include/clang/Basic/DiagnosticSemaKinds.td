@@ -3167,9 +3167,6 @@ def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
-def warn_attribute_underlying_type_mismatch : Warning<
-  "underlying type %0 of enumeration %1 doesn't match bit-field type %2">,
-  InGroup<BitFieldType>;
 
 def warn_unsupported_target_attribute
     : Warning<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
@@ -7980,6 +7977,8 @@ def err_return_in_constructor_handler : Error<
 def warn_cdtor_function_try_handler_mem_expr : Warning<
   "cannot refer to a non-static member from the handler of a "
   "%select{constructor|destructor}0 function try block">, InGroup<Exceptions>;
+def err_throw_object_throwing_dtor : Error<
+  "cannot throw object of type %0 with a potentially-throwing destructor">;
 
 let CategoryName = "Lambda Issue" in {
   def err_capture_more_than_once : Error<

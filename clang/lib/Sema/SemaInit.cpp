@@ -93,7 +93,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
   };
 
   switch (SL->getKind()) {
-  case StringLiteral::UTF8:
+  case StringLiteralKind::UTF8:
     // char8_t array can be initialized with a UTF-8 string.
     // - C++20 [dcl.init.string] (DR)
     //   Additionally, an array of char or unsigned char may be initialized
@@ -103,11 +103,11 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
          IsCharOrUnsignedChar(ElemTy.getCanonicalType())))
       return SIF_None;
     [[fallthrough]];
-  case StringLiteral::Ordinary:
+  case StringLiteralKind::Ordinary:
     // char array can be initialized with a narrow string.
     // Only allow char x[] = "foo";  not char x[] = L"foo";
     if (ElemTy->isCharType())
-      return (SL->getKind() == StringLiteral::UTF8 &&
+      return (SL->getKind() == StringLiteralKind::UTF8 &&
               Context.getLangOpts().Char8)
                  ? SIF_UTF8StringIntoPlainChar
                  : SIF_None;
@@ -121,7 +121,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
   // version of wchar_t, char16_t, or char32_t may be initialized by a wide
   // string literal with the corresponding encoding prefix (L, u, or U,
   // respectively), optionally enclosed in braces.
-  case StringLiteral::UTF16:
+  case StringLiteralKind::UTF16:
     if (Context.typesAreCompatible(Context.Char16Ty, ElemTy))
       return SIF_None;
     if (ElemTy->isCharType() || ElemTy->isChar8Type())
@@ -129,7 +129,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_IncompatWideStringIntoWideChar;
     return SIF_Other;
-  case StringLiteral::UTF32:
+  case StringLiteralKind::UTF32:
     if (Context.typesAreCompatible(Context.Char32Ty, ElemTy))
       return SIF_None;
     if (ElemTy->isCharType() || ElemTy->isChar8Type())
@@ -137,7 +137,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_IncompatWideStringIntoWideChar;
     return SIF_Other;
-  case StringLiteral::Wide:
+  case StringLiteralKind::Wide:
     if (Context.typesAreCompatible(Context.getWideCharType(), ElemTy))
       return SIF_None;
     if (ElemTy->isCharType() || ElemTy->isChar8Type())
@@ -145,7 +145,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_IncompatWideStringIntoWideChar;
     return SIF_Other;
-  case StringLiteral::Unevaluated:
+  case StringLiteralKind::Unevaluated:
     assert(false && "Unevaluated string literal in initialization");
     break;
   }
@@ -200,9 +200,8 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
     // being initialized to a string literal.
     llvm::APInt ConstVal(32, StrLength);
     // Return a new array type (C99 6.7.8p22).
-    DeclT = S.Context.getConstantArrayType(IAT->getElementType(),
-                                           ConstVal, nullptr,
-                                           ArrayType::Normal, 0);
+    DeclT = S.Context.getConstantArrayType(
+        IAT->getElementType(), ConstVal, nullptr, ArraySizeModifier::Normal, 0);
     updateStringLiteralType(Str, DeclT);
     return;
   }
@@ -1809,8 +1808,8 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
 
     bool isBigEndian = SemaRef.Context.getTargetInfo().isBigEndian();
     const VectorType *T = Entity.getType()->castAs<VectorType>();
-    if (isBigEndian && (T->getVectorKind() == VectorType::NeonVector ||
-                        T->getVectorKind() == VectorType::NeonPolyVector)) {
+    if (isBigEndian && (T->getVectorKind() == VectorKind::Neon ||
+                        T->getVectorKind() == VectorKind::NeonPoly)) {
       // The ability to use vector initializer lists is a GNU vector extension
       // and is unrelated to the NEON intrinsics in arm_neon.h. On little
       // endian machines it works fine, however on big endian machines it
@@ -2053,7 +2052,7 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     }
 
     DeclType = SemaRef.Context.getConstantArrayType(
-        elementType, maxElements, nullptr, ArrayType::Normal, 0);
+        elementType, maxElements, nullptr, ArraySizeModifier::Normal, 0);
   }
   if (!hadError) {
     // If there are any members of the array that get value-initialized, check
@@ -4057,7 +4056,7 @@ static bool TryInitializerListConstruction(Sema &S,
       E.withConst(),
       llvm::APInt(S.Context.getTypeSize(S.Context.getSizeType()),
                   List->getNumInits()),
-      nullptr, clang::ArrayType::Normal, 0);
+      nullptr, clang::ArraySizeModifier::Normal, 0);
   InitializedEntity HiddenArray =
       InitializedEntity::InitializeTemporary(ArrayType);
   InitializationKind Kind = InitializationKind::CreateDirectList(
@@ -5513,7 +5512,7 @@ static void TryOrBuildParenListInitialization(
     if (ResultType.isNull()) {
       ResultType = S.Context.getConstantArrayType(
           AT->getElementType(), llvm::APInt(/*numBits=*/32, ArrayLength),
-          /*SizeExpr=*/nullptr, ArrayType::Normal, 0);
+          /*SizeExpr=*/nullptr, ArraySizeModifier::Normal, 0);
     }
   } else if (auto *RT = Entity.getType()->getAs<RecordType>()) {
     bool IsUnion = RT->isUnionType();
@@ -6881,15 +6880,12 @@ static ExprResult CopyObject(Sema &S,
           CurInitExpr->getType());
 
   // Actually perform the constructor call.
-  CurInit = S.BuildCXXConstructExpr(Loc, T, Best->FoundDecl, Constructor,
-                                    Elidable,
-                                    ConstructorArgs,
-                                    HadMultipleCandidates,
-                                    /*ListInit*/ false,
-                                    /*StdInitListInit*/ false,
-                                    /*ZeroInit*/ false,
-                                    CXXConstructExpr::CK_Complete,
-                                    SourceRange());
+  CurInit = S.BuildCXXConstructExpr(
+      Loc, T, Best->FoundDecl, Constructor, Elidable, ConstructorArgs,
+      HadMultipleCandidates,
+      /*ListInit*/ false,
+      /*StdInitListInit*/ false,
+      /*ZeroInit*/ false, CXXConstructionKind::Complete, SourceRange());
 
   // If we're supposed to bind temporaries, do so.
   if (!CurInit.isInvalid() && shouldBindAsTemporary(Entity))
@@ -7083,15 +7079,14 @@ PerformConstructorInitialization(Sema &S,
             ConstructorInitRequiresZeroInit),
         CalleeDecl);
   } else {
-    CXXConstructExpr::ConstructionKind ConstructKind =
-      CXXConstructExpr::CK_Complete;
+    CXXConstructionKind ConstructKind = CXXConstructionKind::Complete;
 
     if (Entity.getKind() == InitializedEntity::EK_Base) {
-      ConstructKind = Entity.getBaseSpecifier()->isVirtual() ?
-        CXXConstructExpr::CK_VirtualBase :
-        CXXConstructExpr::CK_NonVirtualBase;
+      ConstructKind = Entity.getBaseSpecifier()->isVirtual()
+                          ? CXXConstructionKind::VirtualBase
+                          : CXXConstructionKind::NonVirtualBase;
     } else if (Entity.getKind() == InitializedEntity::EK_Delegating) {
-      ConstructKind = CXXConstructExpr::CK_Delegating;
+      ConstructKind = CXXConstructionKind::Delegating;
     }
 
     // Only get the parenthesis or brace range if it is a list initialization or
@@ -8872,15 +8867,12 @@ ExprResult InitializationSequence::Perform(Sema &S,
           return ExprError();
 
         // Build an expression that constructs a temporary.
-        CurInit = S.BuildCXXConstructExpr(Loc, Step->Type,
-                                          FoundFn, Constructor,
-                                          ConstructorArgs,
-                                          HadMultipleCandidates,
-                                          /*ListInit*/ false,
-                                          /*StdInitListInit*/ false,
-                                          /*ZeroInit*/ false,
-                                          CXXConstructExpr::CK_Complete,
-                                          SourceRange());
+        CurInit = S.BuildCXXConstructExpr(
+            Loc, Step->Type, FoundFn, Constructor, ConstructorArgs,
+            HadMultipleCandidates,
+            /*ListInit*/ false,
+            /*StdInitListInit*/ false,
+            /*ZeroInit*/ false, CXXConstructionKind::Complete, SourceRange());
         if (CurInit.isInvalid())
           return ExprError();
 
@@ -9237,10 +9229,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
           if (const ConstantArrayType *ConstantSource
                  = S.Context.getAsConstantArrayType(CurInit.get()->getType())) {
             *ResultType = S.Context.getConstantArrayType(
-                                             IncompleteDest->getElementType(),
-                                             ConstantSource->getSize(),
-                                             ConstantSource->getSizeExpr(),
-                                             ArrayType::Normal, 0);
+                IncompleteDest->getElementType(), ConstantSource->getSize(),
+                ConstantSource->getSizeExpr(), ArraySizeModifier::Normal, 0);
           }
         }
       }
@@ -9508,7 +9498,7 @@ static void diagnoseListInit(Sema &S, const InitializedEntity &Entity,
         E.withConst(),
         llvm::APInt(S.Context.getTypeSize(S.Context.getSizeType()),
                     InitList->getNumInits()),
-        nullptr, clang::ArrayType::Normal, 0);
+        nullptr, clang::ArraySizeModifier::Normal, 0);
     InitializedEntity HiddenArray =
         InitializedEntity::InitializeTemporary(ArrayType);
     return diagnoseListInit(S, HiddenArray, InitList);

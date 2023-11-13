@@ -101,7 +101,7 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
   Brief->Children.back()->Text = "Value of the thing.";
   I.Members.back().Description.push_back(std::move(TopComment));
 
-  I.TagType = TagTypeKind::TTK_Class;
+  I.TagType = TagTypeKind::Class;
   I.Bases.emplace_back(EmptySID, "F", "path/to/F", true,
                        AccessSpecifier::AS_public, true);
   I.Bases.back().Children.Functions.emplace_back();

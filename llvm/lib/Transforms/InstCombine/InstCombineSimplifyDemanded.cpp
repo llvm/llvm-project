@@ -48,21 +48,33 @@ static bool ShrinkDemandedConstant(Instruction *I, unsigned OpNo,
   return true;
 }
 
+/// Returns the bitwidth of the given scalar or pointer type. For vector types,
+/// returns the element type's bitwidth.
+static unsigned getBitWidth(Type *Ty, const DataLayout &DL) {
+  if (unsigned BitWidth = Ty->getScalarSizeInBits())
+    return BitWidth;
 
+  return DL.getPointerTypeSizeInBits(Ty);
+}
 
 /// Inst is an integer instruction that SimplifyDemandedBits knows about. See if
 /// the instruction has any properties that allow us to simplify its operands.
-bool InstCombinerImpl::SimplifyDemandedInstructionBits(Instruction &Inst) {
-  unsigned BitWidth = Inst.getType()->getScalarSizeInBits();
-  KnownBits Known(BitWidth);
-  APInt DemandedMask(APInt::getAllOnes(BitWidth));
-
+bool InstCombinerImpl::SimplifyDemandedInstructionBits(Instruction &Inst,
+                                                       KnownBits &Known) {
+  APInt DemandedMask(APInt::getAllOnes(Known.getBitWidth()));
   Value *V = SimplifyDemandedUseBits(&Inst, DemandedMask, Known,
                                      0, &Inst);
   if (!V) return false;
   if (V == &Inst) return true;
   replaceInstUsesWith(Inst, V);
   return true;
+}
+
+/// Inst is an integer instruction that SimplifyDemandedBits knows about. See if
+/// the instruction has any properties that allow us to simplify its operands.
+bool InstCombinerImpl::SimplifyDemandedInstructionBits(Instruction &Inst) {
+  KnownBits Known(getBitWidth(Inst.getType(), DL));
+  return SimplifyDemandedInstructionBits(Inst, Known);
 }
 
 /// This form of SimplifyDemandedBits simplifies the specified instruction
@@ -143,7 +155,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     return SimplifyMultipleUseDemandedBits(I, DemandedMask, Known, Depth, CxtI);
 
   KnownBits LHSKnown(BitWidth), RHSKnown(BitWidth);
-
   // If this is the root being simplified, allow it to have multiple uses,
   // just set the DemandedMask to all bits so that we can try to simplify the
   // operands.  This allows visitTruncInst (for example) to simplify the
@@ -411,36 +422,21 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
     APInt InputDemandedMask = DemandedMask.zextOrTrunc(SrcBitWidth);
     KnownBits InputKnown(SrcBitWidth);
-    if (SimplifyDemandedBits(I, 0, InputDemandedMask, InputKnown, Depth + 1))
+    if (SimplifyDemandedBits(I, 0, InputDemandedMask, InputKnown, Depth + 1)) {
+      // For zext nneg, we may have dropped the instruction which made the
+      // input non-negative.
+      I->dropPoisonGeneratingFlags();
       return I;
+    }
     assert(InputKnown.getBitWidth() == SrcBitWidth && "Src width changed?");
+    if (I->getOpcode() == Instruction::ZExt && I->hasNonNeg() &&
+        !InputKnown.isNegative())
+      InputKnown.makeNonNegative();
     Known = InputKnown.zextOrTrunc(BitWidth);
+
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     break;
   }
-  case Instruction::BitCast:
-    if (!I->getOperand(0)->getType()->isIntOrIntVectorTy())
-      return nullptr;  // vector->int or fp->int?
-
-    if (auto *DstVTy = dyn_cast<VectorType>(VTy)) {
-      if (auto *SrcVTy = dyn_cast<VectorType>(I->getOperand(0)->getType())) {
-        if (isa<ScalableVectorType>(DstVTy) ||
-            isa<ScalableVectorType>(SrcVTy) ||
-            cast<FixedVectorType>(DstVTy)->getNumElements() !=
-            cast<FixedVectorType>(SrcVTy)->getNumElements())
-          // Don't touch a bitcast between vectors of different element counts.
-          return nullptr;
-      } else
-        // Don't touch a scalar-to-vector bitcast.
-        return nullptr;
-    } else if (I->getOperand(0)->getType()->isVectorTy())
-      // Don't touch a vector-to-scalar bitcast.
-      return nullptr;
-
-    if (SimplifyDemandedBits(I, 0, DemandedMask, Known, Depth + 1))
-      return I;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-    break;
   case Instruction::SExt: {
     // Compute the bits in the result that are not present in the input.
     unsigned SrcBitWidth = I->getOperand(0)->getType()->getScalarSizeInBits();
@@ -624,8 +620,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       if (DemandedMask.countr_zero() >= ShiftAmt &&
           match(I->getOperand(0), m_LShr(m_ImmConstant(C), m_Value(X)))) {
         Constant *LeftShiftAmtC = ConstantInt::get(VTy, ShiftAmt);
-        Constant *NewC = ConstantExpr::getShl(C, LeftShiftAmtC);
-        if (ConstantExpr::getLShr(NewC, LeftShiftAmtC) == C) {
+        Constant *NewC = ConstantFoldBinaryOpOperands(Instruction::Shl, C,
+                                                      LeftShiftAmtC, DL);
+        if (ConstantFoldBinaryOpOperands(Instruction::LShr, NewC, LeftShiftAmtC,
+                                         DL) == C) {
           Instruction *Lshr = BinaryOperator::CreateLShr(NewC, X);
           return InsertNewInstWith(Lshr, I->getIterator());
         }
@@ -688,8 +686,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         Constant *C;
         if (match(I->getOperand(0), m_Shl(m_ImmConstant(C), m_Value(X)))) {
           Constant *RightShiftAmtC = ConstantInt::get(VTy, ShiftAmt);
-          Constant *NewC = ConstantExpr::getLShr(C, RightShiftAmtC);
-          if (ConstantExpr::getShl(NewC, RightShiftAmtC) == C) {
+          Constant *NewC = ConstantFoldBinaryOpOperands(Instruction::LShr, C,
+                                                        RightShiftAmtC, DL);
+          if (ConstantFoldBinaryOpOperands(Instruction::Shl, NewC,
+                                           RightShiftAmtC, DL) == C) {
             Instruction *Shl = BinaryOperator::CreateShl(NewC, X);
             return InsertNewInstWith(Shl, I->getIterator());
           }
@@ -893,6 +893,48 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         }
         break;
       }
+      case Intrinsic::ptrmask: {
+        unsigned MaskWidth = I->getOperand(1)->getType()->getScalarSizeInBits();
+        RHSKnown = KnownBits(MaskWidth);
+        // If either the LHS or the RHS are Zero, the result is zero.
+        if (SimplifyDemandedBits(I, 0, DemandedMask, LHSKnown, Depth + 1) ||
+            SimplifyDemandedBits(
+                I, 1, (DemandedMask & ~LHSKnown.Zero).zextOrTrunc(MaskWidth),
+                RHSKnown, Depth + 1))
+          return I;
+
+        // TODO: Should be 1-extend
+        RHSKnown = RHSKnown.anyextOrTrunc(BitWidth);
+        assert(!RHSKnown.hasConflict() && "Bits known to be one AND zero?");
+        assert(!LHSKnown.hasConflict() && "Bits known to be one AND zero?");
+
+        Known = LHSKnown & RHSKnown;
+        KnownBitsComputed = true;
+
+        // If the client is only demanding bits we know to be zero, return
+        // `llvm.ptrmask(p, 0)`. We can't return `null` here due to pointer
+        // provenance, but making the mask zero will be easily optimizable in
+        // the backend.
+        if (DemandedMask.isSubsetOf(Known.Zero) &&
+            !match(I->getOperand(1), m_Zero()))
+          return replaceOperand(
+              *I, 1, Constant::getNullValue(I->getOperand(1)->getType()));
+
+        // Mask in demanded space does nothing.
+        // NOTE: We may have attributes associated with the return value of the
+        // llvm.ptrmask intrinsic that will be lost when we just return the
+        // operand. We should try to preserve them.
+        if (DemandedMask.isSubsetOf(RHSKnown.One | LHSKnown.Zero))
+          return I->getOperand(0);
+
+        // If the RHS is a constant, see if we can simplify it.
+        if (ShrinkDemandedConstant(
+                I, 1, (DemandedMask & ~LHSKnown.Zero).zextOrTrunc(MaskWidth)))
+          return I;
+
+        break;
+      }
+
       case Intrinsic::fshr:
       case Intrinsic::fshl: {
         const APInt *SA;
@@ -978,8 +1020,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   }
 
   // If the client is only demanding bits that we know, return the known
-  // constant.
-  if (DemandedMask.isSubsetOf(Known.Zero|Known.One))
+  // constant. We can't directly simplify pointers as a constant because of
+  // pointer provenance.
+  // TODO: We could return `(inttoptr const)` for pointers.
+  if (!V->getType()->isPointerTy() && DemandedMask.isSubsetOf(Known.Zero | Known.One))
     return Constant::getIntegerValue(VTy, Known.One);
   return nullptr;
 }

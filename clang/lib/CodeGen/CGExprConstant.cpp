@@ -1630,13 +1630,8 @@ namespace {
         IndexValues[i] = llvm::ConstantInt::get(CGM.Int32Ty, Indices[i]);
       }
 
-      // Form a GEP and then bitcast to the placeholder type so that the
-      // replacement will succeed.
-      llvm::Constant *location =
-        llvm::ConstantExpr::getInBoundsGetElementPtr(BaseValueTy,
-                                                     Base, IndexValues);
-      location = llvm::ConstantExpr::getBitCast(location,
-                                                placeholder->getType());
+      llvm::Constant *location = llvm::ConstantExpr::getInBoundsGetElementPtr(
+          BaseValueTy, Base, IndexValues);
 
       Locations.insert({placeholder, location});
     }
@@ -1930,8 +1925,9 @@ ConstantLValueEmitter::tryEmitAbsolute(llvm::Type *destTy) {
   // FIXME: signedness depends on the original integer type.
   auto intptrTy = CGM.getDataLayout().getIntPtrType(destPtrTy);
   llvm::Constant *C;
-  C = llvm::ConstantExpr::getIntegerCast(getOffset(), intptrTy,
-                                         /*isSigned*/ false);
+  C = llvm::ConstantFoldIntegerCast(getOffset(), intptrTy, /*isSigned*/ false,
+                                    CGM.getDataLayout());
+  assert(C && "Must have folded, as Offset is a ConstantInt");
   C = llvm::ConstantExpr::getIntToPtr(C, destPtrTy);
   return C;
 }
@@ -2036,8 +2032,6 @@ ConstantLValue
 ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *E) {
   assert(Emitter.CGF && "Invalid address of label expression outside function");
   llvm::Constant *Ptr = Emitter.CGF->GetAddrOfLabel(E->getLabel());
-  Ptr = llvm::ConstantExpr::getBitCast(Ptr,
-                                   CGM.getTypes().ConvertType(E->getType()));
   return Ptr;
 }
 

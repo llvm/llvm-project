@@ -367,8 +367,6 @@ class LShrOperator
   : public ConcreteOperator<PossiblyExactOperator, Instruction::LShr> {
 };
 
-class ZExtOperator : public ConcreteOperator<Operator, Instruction::ZExt> {};
-
 class GEPOperator
   : public ConcreteOperator<Operator, Instruction::GetElementPtr> {
   friend class GetElementPtrInst;

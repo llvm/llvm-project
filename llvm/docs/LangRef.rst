@@ -343,11 +343,6 @@ added in the future:
     accessed runtime components pinned to specific hardware registers.
     At the moment only X86 supports this convention (both 32 and 64
     bit).
-"``webkit_jscc``" - WebKit's JavaScript calling convention
-    This calling convention has been implemented for `WebKit FTL JIT
-    <https://trac.webkit.org/wiki/FTLJIT>`_. It passes arguments on the
-    stack right to left (as cdecl does), and returns a value in the
-    platform's customary return register.
 "``anyregcc``" - Dynamic calling convention for code patching
     This is a special convention that supports patching an arbitrary code
     sequence in place of a call site. This convention forces the call
@@ -1531,6 +1526,30 @@ Currently, only the following parameter attributes are defined:
 
     If a function reads from a writeonly pointer argument, the behavior is
     undefined.
+
+``writable``
+    This attribute is only meaningful in conjunction with ``dereferenceable(N)``
+    or another attribute that implies the first ``N`` bytes of the pointer
+    argument are dereferenceable.
+
+    In that case, the attribute indicates that the first ``N`` bytes will be
+    (non-atomically) loaded and stored back on entry to the function.
+
+    This implies that it's possible to introduce spurious stores on entry to
+    the function without introducing traps or data races. This does not
+    necessarily hold throughout the whole function, as the pointer may escape
+    to a different thread during the execution of the function. See also the
+    :ref:`atomic optimization guide <Optimization outside atomic>`
+
+    The "other attributes" that imply dereferenceability are
+    ``dereferenceable_or_null`` (if the pointer is non-null) and the
+    ``sret``, ``byval``, ``byref``, ``inalloca``, ``preallocated`` family of
+    attributes. Note that not all of these combinations are useful, e.g.
+    ``byval`` arguments are known to be writable even without this attribute.
+
+    The ``writable`` attribute cannot be combined with ``readnone``,
+    ``readonly`` or a ``memory`` attribute that does not contain
+    ``argmem: write``.
 
 .. _gc:
 
@@ -4633,42 +4652,6 @@ The following is the syntax for constant expressions:
 
 ``trunc (CST to TYPE)``
     Perform the :ref:`trunc operation <i_trunc>` on constants.
-``zext (CST to TYPE)``
-    Perform the :ref:`zext operation <i_zext>` on constants.
-``sext (CST to TYPE)``
-    Perform the :ref:`sext operation <i_sext>` on constants.
-``fptrunc (CST to TYPE)``
-    Truncate a floating-point constant to another floating-point type.
-    The size of CST must be larger than the size of TYPE. Both types
-    must be floating-point.
-``fpext (CST to TYPE)``
-    Floating-point extend a constant to another type. The size of CST
-    must be smaller or equal to the size of TYPE. Both types must be
-    floating-point.
-``fptoui (CST to TYPE)``
-    Convert a floating-point constant to the corresponding unsigned
-    integer constant. TYPE must be a scalar or vector integer type. CST
-    must be of scalar or vector floating-point type. Both CST and TYPE
-    must be scalars, or vectors of the same number of elements. If the
-    value won't fit in the integer type, the result is a
-    :ref:`poison value <poisonvalues>`.
-``fptosi (CST to TYPE)``
-    Convert a floating-point constant to the corresponding signed
-    integer constant. TYPE must be a scalar or vector integer type. CST
-    must be of scalar or vector floating-point type. Both CST and TYPE
-    must be scalars, or vectors of the same number of elements. If the
-    value won't fit in the integer type, the result is a
-    :ref:`poison value <poisonvalues>`.
-``uitofp (CST to TYPE)``
-    Convert an unsigned integer constant to the corresponding
-    floating-point constant. TYPE must be a scalar or vector floating-point
-    type.  CST must be of scalar or vector integer type. Both CST and TYPE must
-    be scalars, or vectors of the same number of elements.
-``sitofp (CST to TYPE)``
-    Convert a signed integer constant to the corresponding floating-point
-    constant. TYPE must be a scalar or vector floating-point type.
-    CST must be of scalar or vector integer type. Both CST and TYPE must
-    be scalars, or vectors of the same number of elements.
 ``ptrtoint (CST to TYPE)``
     Perform the :ref:`ptrtoint operation <i_ptrtoint>` on constants.
 ``inttoptr (CST to TYPE)``
@@ -5074,6 +5057,8 @@ AArch64:
   offsets). (However, LLVM currently does this for the ``m`` constraint as
   well.)
 - ``r``: A 32 or 64-bit integer register (W* or X*).
+- ``Uci``: Like r, but restricted to registers 8 to 11 inclusive.
+- ``Ucj``: Like r, but restricted to registers 12 to 15 inclusive.
 - ``w``: A 32, 64, or 128-bit floating-point, SIMD or SVE vector register.
 - ``x``: Like w, but restricted to registers 0 to 15 inclusive.
 - ``y``: Like w, but restricted to SVE vector registers Z0 to Z7 inclusive.
@@ -6113,7 +6098,7 @@ The current supported opcode vocabulary is limited:
   instruction.
 
   Because ``DW_OP_LLVM_entry_value`` is defined in terms of registers, it is
-  usually used in MIR, but it is also allowed in LLVM IR when targetting a
+  usually used in MIR, but it is also allowed in LLVM IR when targeting a
   :ref:`swiftasync <swiftasync>` argument. The operation is introduced by:
 
     - ``LiveDebugValues`` pass, which applies it to function parameters that
@@ -18497,6 +18482,45 @@ Arguments:
 Both arguments must be vectors of the same type whereby their logical
 concatenation matches the result type.
 
+'``llvm.experimental.cttz.elts``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ```llvm.experimental.cttz.elts```
+on any vector of integer elements, both fixed width and scalable.
+
+::
+
+      declare i8 @llvm.experimental.cttz.elts.i8.v8i1(<8 x i1> <src>, i1 <is_zero_poison>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.cttz.elts``' intrinsic counts the number of trailing
+zero elements of a vector.
+
+Arguments:
+""""""""""
+
+The first argument is the vector to be counted. This argument must be a vector
+with integer element type. The return type must also be an integer type which is
+wide enough to hold the maximum number of elements of the source vector. The
+behaviour of this intrinsic is undefined if the return type is not wide enough
+for the number of elements in the input vector.
+
+The second argument is a constant flag that indicates whether the intrinsic
+returns a valid result if the first argument is all zero. If the first argument
+is all zero and the second argument is true, the result is poison.
+
+Semantics:
+""""""""""
+
+The '``llvm.experimental.cttz.elts``' intrinsic counts the trailing (least
+significant) zero elements in a vector. If ``src == 0`` the result is the
+number of elements in the input vector.
+
 '``llvm.experimental.vector.splice``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -21694,6 +21718,42 @@ Examples:
  llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, 1, 2, 3);  ==> <B, E, F, poison> index
  llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, -2, 3, 2); ==> <B, C, poison, poison> trailing elements
 
+
+.. _int_experimental_vp_reverse:
+
+
+'``llvm.experimental.vp.reverse``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <2 x double> @llvm.experimental.vp.reverse.v2f64(<2 x double> %vec, <2 x i1> %mask, i32 %evl)
+      declare <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask, i32 %evl)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.vp.reverse.*``' intrinsic is the vector length
+predicated version of the '``llvm.experimental.vector.reverse.*``' intrinsic.
+
+Arguments:
+""""""""""
+
+The result and the first argument ``vec`` are vectors with the same type.
+The second argument ``mask`` is a vector mask and has the same number of
+elements as the result. The third argument is the explicit vector length of
+the operation.
+
+Semantics:
+""""""""""
+
+This intrinsic reverses the order of the first ``evl`` elements in a vector.
+The lanes in the result vector disabled by ``mask`` are ``poison``. The
+elements past ``evl`` are poison.
 
 .. _int_vp_load:
 

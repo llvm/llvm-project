@@ -46,6 +46,13 @@ def get_include_dirs() -> Sequence[str]:
 #   c. If the module has a 'context_init_hook', it will be added to a list
 #     of callbacks that are invoked as the last step of Context
 #     initialization (and passed the Context under construction).
+#   d. If the module has a 'disable_multithreading' attribute, it will be
+#     taken as a boolean. If it is True for any initializer, then the
+#     default behavior of enabling multithreading on the context
+#     will be suppressed. This complies with the original behavior of all
+#     contexts being created with multithreading enabled while allowing
+#     this behavior to be changed if needed (i.e. if a context_init_hook
+#     explicitly sets up multithreading).
 #
 # This facility allows downstreams to customize Context creation to their
 # needs.
@@ -58,8 +65,10 @@ def _site_initialize():
     logger = logging.getLogger(__name__)
     registry = ir.DialectRegistry()
     post_init_hooks = []
+    disable_multithreading = False
 
     def process_initializer_module(module_name):
+        nonlocal disable_multithreading
         try:
             m = importlib.import_module(f".{module_name}", __name__)
         except ModuleNotFoundError:
@@ -79,11 +88,17 @@ def _site_initialize():
         if hasattr(m, "context_init_hook"):
             logger.debug("Adding context init hook from %r", m)
             post_init_hooks.append(m.context_init_hook)
+        if hasattr(m, "disable_multithreading"):
+            if bool(m.disable_multithreading):
+                logger.debug("Disabling multi-threading for context")
+                disable_multithreading = True
         return True
 
     # If _mlirRegisterEverything is built, then include it as an initializer
     # module.
-    process_initializer_module("_mlirRegisterEverything")
+    init_module = None
+    if process_initializer_module("_mlirRegisterEverything"):
+        init_module = importlib.import_module(f"._mlirRegisterEverything", __name__)
 
     # Load all _site_initialize_{i} modules, where 'i' is a number starting
     # at 0.
@@ -98,10 +113,17 @@ def _site_initialize():
             self.append_dialect_registry(registry)
             for hook in post_init_hooks:
                 hook(self)
+            if not disable_multithreading:
+                self.enable_multithreading(True)
             # TODO: There is some debate about whether we should eagerly load
             # all dialects. It is being done here in order to preserve existing
             # behavior. See: https://github.com/llvm/llvm-project/issues/56037
             self.load_all_available_dialects()
+            if init_module:
+                logger.debug(
+                    "Registering translations from initializer %r", init_module
+                )
+                init_module.register_llvm_translations(self)
 
     ir.Context = Context
 

@@ -1810,10 +1810,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
     GridValues.GV_Warp_Size = WavefrontSize;
 
-    // Get the frequency of the steady clock.
-    if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY,
-                                 ClockFrequency))
-      return Err;
+    // Get the frequency of the steady clock. If the attribute is missing
+    // assume running on an older libhsa and default to 0, omp_get_wtime
+    // will be inaccurate but otherwise programs can still run.
+    if (auto Err = getDeviceAttrRaw(HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY,
+                                    ClockFrequency))
+      ClockFrequency = 0;
 
     // Load the grid values dependending on the wavefront.
     if (WavefrontSize == 32)
@@ -1910,6 +1912,16 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     Agent = {0};
 
     return Plugin::success();
+  }
+
+  virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
+                                       DeviceImageTy &Image) override {
+    return callGlobalCtorDtorCommon(Plugin, Image, "amdgcn.device.init");
+  }
+
+  virtual Error callGlobalDestructors(GenericPluginTy &Plugin,
+                                      DeviceImageTy &Image) override {
+    return callGlobalCtorDtorCommon(Plugin, Image, "amdgcn.device.fini");
   }
 
   const uint64_t getStreamBusyWaitMicroseconds() const {
@@ -2625,6 +2637,38 @@ private:
   using AMDGPUEventRef = AMDGPUResourceRef<AMDGPUEventTy>;
   using AMDGPUEventManagerTy = GenericDeviceResourceManagerTy<AMDGPUEventRef>;
 
+  /// Common method to invoke a single threaded constructor or destructor
+  /// kernel by name.
+  Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
+                                 const char *Name) {
+    // Perform a quick check for the named kernel in the image. The kernel
+    // should be created by the 'amdgpu-lower-ctor-dtor' pass.
+    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
+    GlobalTy Global(Name, sizeof(void *));
+    if (auto Err = Handler.getGlobalMetadataFromImage(*this, Image, Global)) {
+      consumeError(std::move(Err));
+      return Plugin::success();
+    }
+
+    // Allocate and construct the AMDGPU kernel.
+    AMDGPUKernelTy AMDGPUKernel(Name);
+    if (auto Err = AMDGPUKernel.init(*this, Image))
+      return std::move(Err);
+
+    AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
+
+    KernelArgsTy KernelArgs = {};
+    if (auto Err = AMDGPUKernel.launchImpl(*this, /*NumThread=*/1u,
+                                           /*NumBlocks=*/1ul, KernelArgs,
+                                           /*Args=*/nullptr, AsyncInfoWrapper))
+      return std::move(Err);
+
+    Error Err = Plugin::success();
+    AsyncInfoWrapper.finalize(Err);
+
+    return std::move(Err);
+  }
+
   /// Envar for controlling the number of HSA queues per device. High number of
   /// queues may degrade performance.
   UInt32Envar OMPX_NumQueues;
@@ -3084,6 +3128,8 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   // Only COV5 implicitargs needs to be set. COV4 implicitargs are not used.
   if (getImplicitArgsSize() == sizeof(utils::AMDGPUImplicitArgsTy)) {
     ImplArgs->BlockCountX = NumBlocks;
+    ImplArgs->BlockCountY = 1;
+    ImplArgs->BlockCountZ = 1;
     ImplArgs->GroupSizeX = NumThreads;
     ImplArgs->GroupSizeY = 1;
     ImplArgs->GroupSizeZ = 1;

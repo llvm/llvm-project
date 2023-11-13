@@ -3184,9 +3184,14 @@ static bool HandleLValueIndirectMember(EvalInfo &Info, const Expr *E,
   return true;
 }
 
+enum class SizeOfType {
+  SizeOf,
+  DataSizeOf,
+};
+
 /// Get the size of the given type in char units.
-static bool HandleSizeof(EvalInfo &Info, SourceLocation Loc,
-                         QualType Type, CharUnits &Size) {
+static bool HandleSizeof(EvalInfo &Info, SourceLocation Loc, QualType Type,
+                         CharUnits &Size, SizeOfType SOT = SizeOfType::SizeOf) {
   // sizeof(void), __alignof__(void), sizeof(function) = 1 as a gcc
   // extension.
   if (Type->isVoidType() || Type->isFunctionType()) {
@@ -3206,7 +3211,10 @@ static bool HandleSizeof(EvalInfo &Info, SourceLocation Loc,
     return false;
   }
 
-  Size = Info.Ctx.getTypeSizeInChars(Type);
+  if (SOT == SizeOfType::SizeOf)
+    Size = Info.Ctx.getTypeSizeInChars(Type);
+  else
+    Size = Info.Ctx.getTypeInfoDataSizeInChars(Type).Width;
   return true;
 }
 
@@ -6776,8 +6784,8 @@ static bool HandleOperatorNewCall(EvalInfo &Info, const CallExpr *E,
     return false;
   }
 
-  QualType AllocType = Info.Ctx.getConstantArrayType(ElemType, Size, nullptr,
-                                                     ArrayType::Normal, 0);
+  QualType AllocType = Info.Ctx.getConstantArrayType(
+      ElemType, Size, nullptr, ArraySizeModifier::Normal, 0);
   APValue *Val = Info.createHeapAlloc(E, AllocType, Result);
   *Val = APValue(APValue::UninitArray(), 0, Size.getZExtValue());
   Result.addArray(Info, E, cast<ConstantArrayType>(AllocType));
@@ -9039,11 +9047,11 @@ public:
     QualType CharTy = Info.Ctx.CharTy.withConst();
     APInt Size(Info.Ctx.getTypeSize(Info.Ctx.getSizeType()),
                ResultStr.size() + 1);
-    QualType ArrayTy = Info.Ctx.getConstantArrayType(CharTy, Size, nullptr,
-                                                     ArrayType::Normal, 0);
+    QualType ArrayTy = Info.Ctx.getConstantArrayType(
+        CharTy, Size, nullptr, ArraySizeModifier::Normal, 0);
 
     StringLiteral *SL =
-        StringLiteral::Create(Info.Ctx, ResultStr, StringLiteral::Ordinary,
+        StringLiteral::Create(Info.Ctx, ResultStr, StringLiteralKind::Ordinary,
                               /*Pascal*/ false, ArrayTy, E->getLocation());
 
     evaluateLValue(SL, Result);
@@ -9863,7 +9871,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
     }
 
     AllocType = Info.Ctx.getConstantArrayType(AllocType, ArrayBound, nullptr,
-                                              ArrayType::Normal, 0);
+                                              ArraySizeModifier::Normal, 0);
   } else {
     assert(!AllocType->isArrayType() &&
            "array allocation with non-array new");
@@ -12398,6 +12406,24 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
            Success(Val.isNormal() ? 1 : 0, E);
   }
 
+  case Builtin::BI__builtin_issubnormal: {
+    APFloat Val(0.0);
+    return EvaluateFloat(E->getArg(0), Val, Info) &&
+           Success(Val.isDenormal() ? 1 : 0, E);
+  }
+
+  case Builtin::BI__builtin_iszero: {
+    APFloat Val(0.0);
+    return EvaluateFloat(E->getArg(0), Val, Info) &&
+           Success(Val.isZero() ? 1 : 0, E);
+  }
+
+  case Builtin::BI__builtin_issignaling: {
+    APFloat Val(0.0);
+    return EvaluateFloat(E->getArg(0), Val, Info) &&
+           Success(Val.isSignaling() ? 1 : 0, E);
+  }
+
   case Builtin::BI__builtin_isfpclass: {
     APSInt MaskVal;
     if (!EvaluateInteger(E->getArg(1), MaskVal, Info))
@@ -13671,6 +13697,7 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
       return Success(1, E);
   }
 
+  case UETT_DataSizeOf:
   case UETT_SizeOf: {
     QualType SrcTy = E->getTypeOfArgument();
     // C++ [expr.sizeof]p2: "When applied to a reference or a reference type,
@@ -13679,8 +13706,11 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
       SrcTy = Ref->getPointeeType();
 
     CharUnits Sizeof;
-    if (!HandleSizeof(Info, E->getExprLoc(), SrcTy, Sizeof))
+    if (!HandleSizeof(Info, E->getExprLoc(), SrcTy, Sizeof,
+                      E->getKind() == UETT_DataSizeOf ? SizeOfType::DataSizeOf
+                                                      : SizeOfType::SizeOf)) {
       return false;
+    }
     return Success(Sizeof, E);
   }
   case UETT_OpenMPRequiredSimdAlign:
