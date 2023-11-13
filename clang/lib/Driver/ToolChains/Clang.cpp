@@ -3642,7 +3642,8 @@ static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
 
   if (Arg *A = Args.getLastArg(options::OPT_openacc_macro_override)) {
     StringRef Value = A->getValue();
-    if (llvm::find_if_not(Value, isdigit) == Value.end())
+    int Version;
+    if (!Value.getAsInteger(10, Version))
       A->renderAsInput(Args, CmdArgs);
     else
       D.Diag(diag::err_drv_clang_unsupported) << Value;
