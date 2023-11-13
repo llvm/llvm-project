@@ -901,6 +901,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       Imm = selectImm(CurDAG, DL, XLenVT, APF.bitcastToAPInt().getSExtValue(),
                       *Subtarget);
 
+    bool HasZdinx = Subtarget->hasStdExtZdinx();
+    bool Is64Bit = Subtarget->is64Bit();
     unsigned Opc;
     switch (VT.SimpleTy) {
     default:
@@ -920,8 +922,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // For RV32, we can't move from a GPR, we need to convert instead. This
       // should only happen for +0.0 and -0.0.
       assert((Subtarget->is64Bit() || APF.isZero()) && "Unexpected constant");
-      bool HasZdinx = Subtarget->hasStdExtZdinx();
-      if (Subtarget->is64Bit())
+      if (Is64Bit)
         Opc = HasZdinx ? RISCV::COPY : RISCV::FMV_D_X;
       else
         Opc = HasZdinx ? RISCV::FCVT_D_W_IN32X : RISCV::FCVT_D_W;
@@ -937,9 +938,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       Res = CurDAG->getMachineNode(Opc, DL, VT, Imm);
 
     // For f64 -0.0, we need to insert a fneg.d idiom.
-    if (NegZeroF64)
-      Res = CurDAG->getMachineNode(RISCV::FSGNJN_D, DL, VT, SDValue(Res, 0),
-                                   SDValue(Res, 0));
+    if (NegZeroF64) {
+      Opc = RISCV::FSGNJN_D;
+      if (HasZdinx)
+        Opc = Is64Bit ? RISCV::FSGNJN_D_INX : RISCV::FSGNJN_D_IN32X;
+      Res =
+          CurDAG->getMachineNode(Opc, DL, VT, SDValue(Res, 0), SDValue(Res, 0));
+    }
 
     ReplaceNode(Node, Res);
     return;
