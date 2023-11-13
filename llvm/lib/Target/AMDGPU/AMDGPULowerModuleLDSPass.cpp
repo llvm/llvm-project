@@ -1037,6 +1037,9 @@ public:
     if (!Tmp.back())
       return;
 
+    SmallPtrSet<Function *, 8> Visited;
+    bool SeenUnknownCall = false;
+
     do {
       Function *F = Tmp.pop_back_val();
 
@@ -1046,19 +1049,25 @@ public:
 
         Function *Callee = N.second->getFunction();
         if (!Callee) {
-          // If we see any indirect calls, assume nothing about potential
-          // targets.
-          // TODO: This could be refined to possible LDS global users.
-          for (auto &N : *CG.getCallsExternalNode()) {
-            Function *PotentialCallee = N.second->getFunction();
-            Tmp.push_back(PotentialCallee);
-          }
+          if (!SeenUnknownCall) {
+            SeenUnknownCall = true;
 
-          continue;
+            // If we see any indirect calls, assume nothing about potential
+            // targets.
+            // TODO: This could be refined to possible LDS global users.
+            for (auto &N : *CG.getExternalCallingNode()) {
+              Function *PotentialCallee = N.second->getFunction();
+              if (!isKernelLDS(PotentialCallee))
+                PotentialCallee->removeFnAttr("amdgpu-no-lds-kernel-id");
+            }
+
+            continue;
+          }
         }
 
         Callee->removeFnAttr("amdgpu-no-lds-kernel-id");
-        Tmp.push_back(Callee);
+        if (Visited.insert(Callee).second)
+          Tmp.push_back(Callee);
       }
     } while (!Tmp.empty());
   }
