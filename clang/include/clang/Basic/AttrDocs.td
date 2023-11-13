@@ -7488,7 +7488,7 @@ def CoroReturnTypeAndWrapperDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 The ``coro_return_type`` attribute should be marked on a C++ class to mark it as
-a **coroutine return type (CRT)**. 
+a **coroutine return type (CRT)**.
 
 A function ``R func(P1, .., PN)`` has a coroutine return type (CRT) ``R`` if ``R``
 is marked by ``[[clang::coro_return_type]]`` and  ``R`` has a promise type associated to it
@@ -7498,8 +7498,8 @@ If the return type of a function is a ``CRT`` then the function must be a corout
 Otherwise it is invalid. It is allowed for a non-coroutine to return a ``CRT``
 if the function is marked with ``[[clang::coro_wrapper]]``.
 
-The ``coro_wrapper`` attribute should be marked on a C++ function to mark it as 
-a **coroutine wrapper**. A coroutine wrapper is a function which returns a ``CRT``, 
+The ``coro_wrapper`` attribute should be marked on a C++ function to mark it as
+a **coroutine wrapper**. A coroutine wrapper is a function which returns a ``CRT``,
 is not a coroutine itself and is marked with ``[[clang::coro_wrapper]]``.
 
 From a language perspective, it is not possible to differentiate between a coroutine and a
@@ -7527,6 +7527,6 @@ For example,
     // a coroutine wrapper.
     std::function<Task<int>(int)> f = increment;
   }
-  
+
 }];
 }
