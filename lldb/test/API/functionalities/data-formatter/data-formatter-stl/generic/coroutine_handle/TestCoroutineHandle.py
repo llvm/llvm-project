@@ -83,7 +83,7 @@ class TestCoroutineHandle(TestBase):
         lldbutil.continue_to_source_breakpoint(
             self, process, "// Break after co_yield", lldb.SBFileSpec("main.cpp", False)
         )
-        # We correctly show the updated value inside `prommise.current_value`.
+        # We correctly show the updated value inside `promise.current_value`.
         self.expect_expr(
             "gen.hdl",
             result_children=[
