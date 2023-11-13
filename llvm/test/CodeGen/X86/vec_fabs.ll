@@ -332,10 +332,9 @@ define void @PR70947(ptr %src, ptr %dst) {
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vmovups 32(%ecx), %xmm0
-; X86-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN]
-; X86-AVX2-NEXT:    vandps (%ecx), %ymm1, %ymm1
-; X86-AVX2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; X86-AVX2-NEXT:    vandps (%ecx), %ymm0, %ymm1
+; X86-AVX2-NEXT:    vandps 32(%ecx), %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vmovups %ymm1, (%eax)
 ; X86-AVX2-NEXT:    vmovups %xmm0, 16(%eax)
 ; X86-AVX2-NEXT:    vzeroupper
@@ -378,10 +377,9 @@ define void @PR70947(ptr %src, ptr %dst) {
 ;
 ; X64-AVX2-LABEL: PR70947:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vmovups 32(%rdi), %xmm0
-; X64-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN]
-; X64-AVX2-NEXT:    vandps (%rdi), %ymm1, %ymm1
-; X64-AVX2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; X64-AVX2-NEXT:    vandps (%rdi), %ymm0, %ymm1
+; X64-AVX2-NEXT:    vandps 32(%rdi), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vmovups %ymm1, (%rsi)
 ; X64-AVX2-NEXT:    vmovups %xmm0, 16(%rsi)
 ; X64-AVX2-NEXT:    vzeroupper
