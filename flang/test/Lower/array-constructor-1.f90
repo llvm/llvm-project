@@ -1,4 +1,4 @@
-! RUN: bbc -o - %s | FileCheck %s
+! RUN: bbc -hlfir=false -o - %s | FileCheck %s
 
 module units
   integer, parameter :: preconnected_unit(3) = [0, 5, 6]

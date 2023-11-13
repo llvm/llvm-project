@@ -1,5 +1,5 @@
-!RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s --check-prefixes=HOST,ALL
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefixes=DEVICE,ALL
+!RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s --check-prefixes=HOST,ALL
+!RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefixes=DEVICE,ALL
 
 !ALL-LABEL: func.func @_QPread_write_section(
 !ALL:  %[[ITER:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFread_write_sectionEi"}

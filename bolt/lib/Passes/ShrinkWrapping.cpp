@@ -903,7 +903,7 @@ bool ShrinkWrapping::isBestSavePosCold(unsigned CSR, MCInst *&BestPosSave,
   return true;
 }
 
-/// Auxiliar function used to create basic blocks for critical edges and update
+/// Auxiliary function used to create basic blocks for critical edges and update
 /// the dominance frontier with these new locations
 void ShrinkWrapping::splitFrontierCritEdges(
     BinaryFunction *Func, SmallVector<ProgramPoint, 4> &Frontier,

@@ -70,6 +70,7 @@ Code actions
 ^^^^^^^^^^^^
 
 - The extract variable tweak gained support for extracting lambda expressions to a variable.
+- A new tweak was added for turning unscoped into scoped enums.
 
 Signature help
 ^^^^^^^^^^^^^^
@@ -224,6 +225,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/reserved-identifier>` check, so that it does not
   warn on macros starting with underscore and lowercase letter.
 
+- Improved :doc:`bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/sizeof-expression>` check diagnostics to precisely
+  highlight specific locations, providing more accurate guidance.
+
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check, so that it does
   not crash during handling of optional values.
@@ -328,7 +333,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-avoid-bind
   <clang-tidy/checks/modernize/avoid-bind>` check to
-  not emit a ``return`` for fixes when the function returns ``void``.
+  not emit a ``return`` for fixes when the function returns ``void`` and to
+  provide valid fixes for cases involving bound C++ operators.
 
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
@@ -399,6 +405,7 @@ Changes in existing checks
   ``Leading_upper_snake_case`` naming convention. The handling of ``typedef``
   has been enhanced, particularly within complex types like function pointers
   and cases where style checks were omitted when functions started with macros.
+  Added support for C++20 ``concept`` declarations.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take

@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 
 
 ! CHECK-LABEL: func @_QPcompare1(
@@ -261,7 +261,7 @@ function f1(n1) result(res1)
   ! CHECK:   fir.store %[[V_6]] to %[[V_5]] : !fir.ref<!fir.boxchar<1>>
   ! CHECK:   br ^bb1
   ! CHECK: ^bb1:  // pred: ^bb0
-  ! CHECK:   %[[V_7:[0-9]+]] = fir.address_of(@_QQcl.6120612061) : !fir.ref<!fir.char<1,5>>
+  ! CHECK:   %[[V_7:[0-9]+]] = fir.address_of(@_QQclX6120612061) : !fir.ref<!fir.char<1,5>>
   ! CHECK:   %[[V_10:[0-9]+]] = fir.convert %c5{{.*}} : (index) -> i64
   ! CHECK:   %[[V_11:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_10]] : i64
   ! CHECK:   %[[V_12:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
@@ -280,7 +280,7 @@ function f1(n1) result(res1)
   ! CHECK: ^bb4:  // pred: ^bb3
   ! CHECK:   cf.br ^bb6
   ! CHECK: ^bb5:  // pred: ^bb3
-  ! CHECK:   %[[V_21:[0-9]+]] = fir.address_of(@_QQcl.4320432043) : !fir.ref<!fir.char<1,5>>
+  ! CHECK:   %[[V_21:[0-9]+]] = fir.address_of(@_QQclX4320432043) : !fir.ref<!fir.char<1,5>>
   ! CHECK:   %[[V_24:[0-9]+]] = fir.convert %c5{{.*}} : (index) -> i64
   ! CHECK:   %[[V_25:[0-9]+]] = arith.muli %c1{{.*}}, %[[V_24]] : i64
   ! CHECK:   %[[V_26:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
@@ -316,7 +316,7 @@ entry f2(n2)
   ! CHECK: ^bb2:  // pred: ^bb1
   ! CHECK:   br ^bb4
   ! CHECK: ^bb3:  // pred: ^bb1
-  ! CHECK:   %[[V_9:[0-9]+]] = fir.address_of(@_QQcl.4320432043) : !fir.ref<!fir.char<1,5>>
+  ! CHECK:   %[[V_9:[0-9]+]] = fir.address_of(@_QQclX4320432043) : !fir.ref<!fir.char<1,5>>
   ! CHECK:   %[[V_12:[0-9]+]] = fir.convert %c5{{.*}} : (index) -> i64
   ! CHECK:   %[[V_13:[0-9]+]] = arith.muli %c1{{.*}}, %[[V_12]] : i64
   ! CHECK:   %[[V_14:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
@@ -345,7 +345,7 @@ entry f3
   ! CHECK:   fir.store %[[V_7]] to %[[V_6]] : !fir.ref<!fir.boxchar<1>>
   ! CHECK:   br ^bb1
   ! CHECK: ^bb1:  // pred: ^bb0
-  ! CHECK:   %[[V_8:[0-9]+]] = fir.address_of(@_QQcl.4320432043) : !fir.ref<!fir.char<1,5>>
+  ! CHECK:   %[[V_8:[0-9]+]] = fir.address_of(@_QQclX4320432043) : !fir.ref<!fir.char<1,5>>
   ! CHECK:   %[[V_11:[0-9]+]] = fir.convert %c5{{.*}} : (index) -> i64
   ! CHECK:   %[[V_12:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_11]] : i64
   ! CHECK:   %[[V_13:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
@@ -365,7 +365,7 @@ contains
     ! CHECK:   %[[V_0:[0-9]+]] = fir.coordinate_of %arg0, %c0{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
     ! CHECK:   %[[V_1:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<!fir.boxchar<1>>
     ! CHECK:   %[[V_2:[0-9]+]]:2 = fir.unboxchar %[[V_1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    ! CHECK:   %[[V_3:[0-9]+]] = fir.address_of(@_QQcl.6220622062) : !fir.ref<!fir.char<1,5>>
+    ! CHECK:   %[[V_3:[0-9]+]] = fir.address_of(@_QQclX6220622062) : !fir.ref<!fir.char<1,5>>
     ! CHECK:   %[[V_4:[0-9]+]] = arith.cmpi slt, %[[V_2]]#1, %c5{{.*}} : index
     ! CHECK:   %[[V_5:[0-9]+]] = arith.select %[[V_4]], %[[V_2]]#1, %c5{{.*}} : index
     ! CHECK:   %[[V_6:[0-9]+]] = fir.convert %[[V_5]] : (index) -> i64
@@ -391,7 +391,7 @@ contains
     ! CHECK:   %[[V_0:[0-9]+]] = fir.coordinate_of %arg0, %c1{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
     ! CHECK:   %[[V_1:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<!fir.boxchar<1>>
     ! CHECK:   %[[V_2:[0-9]+]]:2 = fir.unboxchar %[[V_1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    ! CHECK:   %[[V_3:[0-9]+]] = fir.address_of(@_QQcl.6320632063) : !fir.ref<!fir.char<1,5>>
+    ! CHECK:   %[[V_3:[0-9]+]] = fir.address_of(@_QQclX6320632063) : !fir.ref<!fir.char<1,5>>
     ! CHECK:   %[[V_4:[0-9]+]] = arith.cmpi slt, %[[V_2]]#1, %c5{{.*}} : index
     ! CHECK:   %[[V_5:[0-9]+]] = arith.select %[[V_4]], %[[V_2]]#1, %c5{{.*}} : index
     ! CHECK:   %[[V_6:[0-9]+]] = fir.convert %[[V_5]] : (index) -> i64

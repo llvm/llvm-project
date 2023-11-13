@@ -1,5 +1,5 @@
 ! Test lowering of elemental subroutine calls with array arguments
-! RUN: bbc -o - -emit-fir %s | FileCheck %s
+! RUN: bbc -o - -emit-fir -hlfir=false %s | FileCheck %s
 
 ! CHECK-LABEL: func @_QPtest_elem_sub(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>>{{.*}}, %[[VAL_1:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>>{{.*}}, %[[VAL_2:.*]]: !fir.ref<i32>{{.*}}, %[[VAL_3:.*]]: !fir.ref<!fir.complex<4>>{{.*}}) {

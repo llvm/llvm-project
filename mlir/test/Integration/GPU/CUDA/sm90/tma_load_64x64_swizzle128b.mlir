@@ -35,7 +35,7 @@
 
 !rhs = memref<64x128xf16>
 !shmemrhs = memref<64x128xf16, 3>
-!rhsTensorMap = !nvgpu.tensormap.descriptor<tensor = !shmemrhs, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>
+!rhsTensorMap = !nvgpu.tensormap.descriptor<tensor = memref<64x64xf16, 3>, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>
 
 module @mymod {
   func.func private @printMemrefF32(memref<*xf32>)
@@ -99,7 +99,8 @@ module @mymod {
       %6 = gpu.thread_id  x
       %lhsShmem = memref.get_global @bufferLhsGlobal : !shmemlhs
       %rhsShmem = memref.get_global @bufferRhsGlobal : !shmemrhs
-      %rhsShmem2 = memref.subview %rhsShmem[32, 0][128, 64][1, 1] : !shmemrhs to memref<128x64xf16, strided<[128, 1], offset: 4096>, 3>
+      %rhsShmem1 = memref.subview %rhsShmem[0, 0][64, 64][1, 1] : !shmemrhs to memref<64x64xf16, strided<[128, 1]>, 3>
+      %rhsShmem2 = memref.subview %rhsShmem[32, 0][64, 64][1, 1] : !shmemrhs to memref<64x64xf16, strided<[128, 1], offset: 4096>, 3>
     
       // Step 5. Initialize the mbarrier
       %9 = nvgpu.mbarrier.create -> !barrierType
@@ -110,8 +111,8 @@ module @mymod {
       scf.if %10 {
         gpu.printf "[GPU] TMA SIZE %d\0A" %c32768 : index
         nvgpu.tma.async.load %d_lhsTensorMap[%c0, %c0], %9[%c0] to %lhsShmem : !lhsTensorMap, !barrierType -> !shmemlhs
-        nvgpu.tma.async.load %d_rhsTensorMap[%c0, %c0], %9[%c0] to %rhsShmem : !rhsTensorMap, !barrierType -> !shmemrhs
-        nvgpu.tma.async.load %d_rhsTensorMap[%c64, %c0], %9[%c0] to %rhsShmem2 : !rhsTensorMap, !barrierType -> memref<128x64xf16, strided<[128, 1], offset: 4096>, 3>
+        nvgpu.tma.async.load %d_rhsTensorMap[%c0, %c0], %9[%c0] to %rhsShmem1 : !rhsTensorMap, !barrierType -> memref<64x64xf16, strided<[128, 1]>, 3>
+        nvgpu.tma.async.load %d_rhsTensorMap[%c64, %c0], %9[%c0] to %rhsShmem2 : !rhsTensorMap, !barrierType -> memref<64x64xf16, strided<[128, 1], offset: 4096>, 3>
         nvgpu.mbarrier.arrive.expect_tx %9[%c0], %c32768 : !barrierType
       } else {
         nvgpu.mbarrier.arrive.expect_tx %9[%c0], %c0 : !barrierType

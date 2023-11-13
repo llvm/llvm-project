@@ -597,6 +597,9 @@ public:
     return !requiresStrictPrototypes() && !OpenCL;
   }
 
+  /// Returns true if the language supports calling the 'atexit' function.
+  bool hasAtExit() const { return !(OpenMP && OpenMPIsTargetDevice); }
+
   /// Returns true if implicit int is part of the language requirements.
   bool isImplicitIntRequired() const { return !CPlusPlus && !C99; }
 
