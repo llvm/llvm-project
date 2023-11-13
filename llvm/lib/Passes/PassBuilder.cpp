@@ -759,26 +759,6 @@ Expected<HWAddressSanitizerOptions> parseHWASanPassOptions(StringRef Params) {
   return Result;
 }
 
-Expected<EmbedBitcodeOptions> parseEmbedBitcodePassOptions(StringRef Params) {
-  EmbedBitcodeOptions Result;
-  while (!Params.empty()) {
-    StringRef ParamName;
-    std::tie(ParamName, Params) = Params.split(';');
-
-    if (ParamName == "thinlto") {
-      Result.IsThinLTO = true;
-    } else if (ParamName == "emit-summary") {
-      Result.EmitLTOSummary = true;
-    } else {
-      return make_error<StringError>(
-          formatv("invalid EmbedBitcode pass parameter '{0}' ", ParamName)
-              .str(),
-          inconvertibleErrorCode());
-    }
-  }
-  return Result;
-}
-
 Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
   MemorySanitizerOptions Result;
   while (!Params.empty()) {

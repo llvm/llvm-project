@@ -1530,14 +1530,11 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 }
 
 ModulePassManager
-PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
-                                        bool EmitSummary) {
+PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level) {
   ModulePassManager MPM;
-  MPM.addPass(EmbedBitcodePass(ThinLTO, EmitSummary,
-                               ThinLTO
-                                   ? buildThinLTOPreLinkDefaultPipeline(Level)
-                                   : buildLTOPreLinkDefaultPipeline(Level)));
-  MPM.addPass(buildPerModuleDefaultPipeline(Level));
+  MPM.addPass(buildThinLTOPreLinkDefaultPipeline(Level));
+  MPM.addPass(EmbedBitcodePass());
+  MPM.addPass(buildThinLTODefaultPipeline(Level, /*ImportSummary=*/nullptr));
   return MPM;
 }
 

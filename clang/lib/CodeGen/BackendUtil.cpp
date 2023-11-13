@@ -810,7 +810,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   // Only enable CGProfilePass when using integrated assembler, since
   // non-integrated assemblers don't recognize .cgprofile section.
   PTO.CallGraphProfile = !CodeGenOpts.DisableIntegratedAS;
-  PTO.UnifiedLTO = CodeGenOpts.UnifiedLTO;
+  PTO.UnifiedLTO = CodeGenOpts.UnifiedLTO || CodeGenOpts.FatLTO;
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -996,9 +996,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     }
 
     if (CodeGenOpts.FatLTO) {
-      MPM.addPass(PB.buildFatLTODefaultPipeline(
-          Level, PrepareForThinLTO,
-          PrepareForThinLTO || shouldEmitRegularLTOSummary()));
+      MPM.addPass(PB.buildFatLTODefaultPipeline(Level));
     } else if (PrepareForThinLTO) {
       MPM.addPass(PB.buildThinLTOPreLinkDefaultPipeline(Level));
     } else if (PrepareForLTO) {
@@ -1073,7 +1071,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (!TheModule->getModuleFlag("EnableSplitLTOUnit"))
       TheModule->addModuleFlag(llvm::Module::Error, "EnableSplitLTOUnit",
                                uint32_t(CodeGenOpts.EnableSplitLTOUnit));
-    if (CodeGenOpts.UnifiedLTO && !TheModule->getModuleFlag("UnifiedLTO"))
+    // FatLTO always means UnifiedLTO
+    if (!TheModule->getModuleFlag("UnifiedLTO"))
       TheModule->addModuleFlag(llvm::Module::Error, "UnifiedLTO", uint32_t(1));
   }
 
