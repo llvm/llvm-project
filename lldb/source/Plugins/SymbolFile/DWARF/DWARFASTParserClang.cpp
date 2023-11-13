@@ -2926,15 +2926,7 @@ void DWARFASTParserClang::ParseSingleMember(
   const uint64_t parent_bit_size =
       parent_byte_size == UINT64_MAX ? UINT64_MAX : parent_byte_size * 8;
 
-  // FIXME: Remove the workarounds below and make this const.
-  MemberAttributes attrs(die, parent_die, module_sp);
-
-  const bool class_is_objc_object_or_interface =
-      TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type);
-
-  // FIXME: Make Clang ignore Objective-C accessibility for expressions
-  if (class_is_objc_object_or_interface)
-    attrs.accessibility = eAccessNone;
+  const MemberAttributes attrs(die, parent_die, module_sp);
 
   // Handle static members, which are typically members without
   // locations. However, GCC doesn't emit DW_AT_data_member_location
@@ -2949,13 +2941,13 @@ void DWARFASTParserClang::ParseSingleMember(
   if (attrs.member_byte_offset == UINT32_MAX &&
       attrs.data_bit_offset == UINT64_MAX && attrs.is_declaration) {
     Type *var_type = die.ResolveTypeUID(attrs.encoding_form.Reference());
-
     if (var_type) {
-      if (attrs.accessibility == eAccessNone)
-        attrs.accessibility = eAccessPublic;
+      const auto accessibility = attrs.accessibility == eAccessNone
+                                     ? eAccessPublic
+                                     : attrs.accessibility;
       CompilerType ct = var_type->GetForwardCompilerType();
       clang::VarDecl *v = TypeSystemClang::AddVariableToRecordType(
-          class_clang_type, attrs.name, ct, attrs.accessibility);
+          class_clang_type, attrs.name, ct, accessibility);
       if (!v) {
         LLDB_LOG(log, "Failed to add variable to the record type");
         return;
@@ -2966,20 +2958,20 @@ void DWARFASTParserClang::ParseSingleMember(
       if (!ct.IsIntegerOrEnumerationType(unused))
         return;
 
+      auto maybe_const_form_value = attrs.const_value_form;
+
       // Newer versions of Clang don't emit the DW_AT_const_value
       // on the declaration of an inline static data member. Instead
       // it's attached to the definition DIE. If that's the case,
       // try and fetch it.
-      if (!attrs.const_value_form) {
-        auto maybe_form_value = FindConstantOnVariableDefinition(die);
-        if (!maybe_form_value)
+      if (!maybe_const_form_value) {
+        maybe_const_form_value = FindConstantOnVariableDefinition(die);
+        if (!maybe_const_form_value)
           return;
-
-        attrs.const_value_form = *maybe_form_value;
       }
 
       llvm::Expected<llvm::APInt> const_value_or_err =
-          ExtractIntFromFormValue(ct, *attrs.const_value_form);
+          ExtractIntFromFormValue(ct, *maybe_const_form_value);
       if (!const_value_or_err) {
         LLDB_LOG_ERROR(log, const_value_or_err.takeError(),
                        "Failed to add const value to variable {1}: {0}",
@@ -3011,8 +3003,9 @@ void DWARFASTParserClang::ParseSingleMember(
   const uint64_t word_width = 32;
   CompilerType member_clang_type = member_type->GetLayoutCompilerType();
 
-  if (attrs.accessibility == eAccessNone)
-    attrs.accessibility = default_accessibility;
+  const auto accessibility = attrs.accessibility == eAccessNone
+                                 ? default_accessibility
+                                 : attrs.accessibility;
 
   uint64_t field_bit_offset = (attrs.member_byte_offset == UINT32_MAX
                                    ? 0
@@ -3026,12 +3019,13 @@ void DWARFASTParserClang::ParseSingleMember(
     if (attrs.data_bit_offset != UINT64_MAX) {
       this_field_info.bit_offset = attrs.data_bit_offset;
     } else {
-      if (!attrs.byte_size)
-        attrs.byte_size = member_type->GetByteSize(nullptr);
+      auto byte_size = attrs.byte_size;
+      if (!byte_size)
+        byte_size = member_type->GetByteSize(nullptr);
 
       ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
       if (objfile->GetByteOrder() == eByteOrderLittle) {
-        this_field_info.bit_offset += attrs.byte_size.value_or(0) * 8;
+        this_field_info.bit_offset += byte_size.value_or(0) * 8;
         this_field_info.bit_offset -= (attrs.bit_offset + attrs.bit_size);
       } else {
         this_field_info.bit_offset += attrs.bit_offset;
@@ -3070,7 +3064,7 @@ void DWARFASTParserClang::ParseSingleMember(
     // unnamed bitfields if we have a new enough clang.
     bool detect_unnamed_bitfields = true;
 
-    if (class_is_objc_object_or_interface)
+    if (TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type))
       detect_unnamed_bitfields =
           die.GetCU()->Supports_unnamed_objc_bitfields();
 
@@ -3102,7 +3096,7 @@ void DWARFASTParserClang::ParseSingleMember(
                 class_clang_type, llvm::StringRef(),
                 m_ast.GetBuiltinTypeForEncodingAndBitSize(eEncodingSint,
                                                           word_width),
-                attrs.accessibility, unnamed_field_info->bit_size);
+                accessibility, unnamed_field_info->bit_size);
 
         layout_info.field_offsets.insert(std::make_pair(
             unnamed_bitfield_decl, unnamed_field_info->bit_offset));
@@ -3172,7 +3166,7 @@ void DWARFASTParserClang::ParseSingleMember(
   TypeSystemClang::RequireCompleteType(member_clang_type);
 
   clang::FieldDecl *field_decl = TypeSystemClang::AddFieldToRecordType(
-      class_clang_type, attrs.name, member_clang_type, attrs.accessibility,
+      class_clang_type, attrs.name, member_clang_type, accessibility,
       attrs.bit_size);
 
   m_ast.SetMetadataAsUserID(field_decl, die.GetID());
