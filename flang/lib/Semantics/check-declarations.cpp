@@ -564,6 +564,10 @@ void CheckHelper::CheckValue(
           "VALUE attribute may not apply to a type with a coarray ultimate component"_err_en_US);
     }
   }
+  if (evaluate::IsAssumedRank(symbol)) {
+    messages_.Say(
+        "VALUE attribute may not apply to an assumed-rank array"_err_en_US);
+  }
 }
 
 void CheckHelper::CheckAssumedTypeEntity( // C709
@@ -655,6 +659,10 @@ void CheckHelper::CheckObjectEntity(
     if (IsBadCoarrayType(derived)) { // C747 & C824
       messages_.Say(
           "Coarray '%s' may not have type TEAM_TYPE, C_PTR, or C_FUNPTR"_err_en_US,
+          symbol.name());
+    }
+    if (evaluate::IsAssumedRank(symbol)) {
+      messages_.Say("Coarray '%s' may not be an assumed-rank array"_err_en_US,
           symbol.name());
     }
   }
