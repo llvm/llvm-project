@@ -177,6 +177,7 @@ def : GINodeEquiv<G_VECREDUCE_UMIN, vecreduce_umin>;
 def : GINodeEquiv<G_VECREDUCE_UMAX, vecreduce_umax>;
 def : GINodeEquiv<G_VECREDUCE_SMIN, vecreduce_smin>;
 def : GINodeEquiv<G_VECREDUCE_SMAX, vecreduce_smax>;
+def : GINodeEquiv<G_VECREDUCE_ADD, vecreduce_add>;
 
 def : GINodeEquiv<G_STRICT_FADD, strict_fadd>;
 def : GINodeEquiv<G_STRICT_FSUB, strict_fsub>;

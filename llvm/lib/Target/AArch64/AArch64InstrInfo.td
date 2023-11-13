@@ -6676,6 +6676,22 @@ def : Pat<(i32 (and (i32 (vector_extract (opNode (v8i16 V128:$Rn)), (i64 0))),
           ssub))>;
 }
 
+// For vecreduce_add, used by GlobalISel not SDAG
+def : Pat<(i8 (vecreduce_add (v8i8 V64:$Rn))), 
+          (i8 (ADDVv8i8v V64:$Rn))>;
+def : Pat<(i8 (vecreduce_add (v16i8 V128:$Rn))), 
+          (i8 (ADDVv16i8v V128:$Rn))>;
+def : Pat<(i16 (vecreduce_add (v4i16 V64:$Rn))), 
+          (i16 (ADDVv4i16v V64:$Rn))>;
+def : Pat<(i16 (vecreduce_add (v8i16 V128:$Rn))), 
+          (i16 (ADDVv8i16v V128:$Rn))>;
+def : Pat<(i32 (vecreduce_add (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (ADDPv2i32 V64:$Rn, V64:$Rn), ssub))>;
+def : Pat<(i32 (vecreduce_add (v4i32 V128:$Rn))), 
+          (i32 (ADDVv4i32v V128:$Rn))>;
+def : Pat<(i64 (vecreduce_add (v2i64 V128:$Rn))), 
+          (i64 (ADDPv2i64p V128:$Rn))>;
+
 defm : SIMDAcrossLanesSignedIntrinsic<"ADDV",  AArch64saddv>;
 // vaddv_[su]32 is special; -> ADDP Vd.2S,Vn.2S,Vm.2S; return Vd.s[0];Vn==Vm
 def : Pat<(v2i32 (AArch64saddv (v2i32 V64:$Rn))),
