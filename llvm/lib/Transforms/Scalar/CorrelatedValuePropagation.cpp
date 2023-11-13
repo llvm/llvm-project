@@ -1033,20 +1033,20 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
   return true;
 }
 
-static bool processZExt(ZExtInst *SDI, LazyValueInfo *LVI) {
-  if (SDI->getType()->isVectorTy())
+static bool processZExt(ZExtInst *ZExt, LazyValueInfo *LVI) {
+  if (ZExt->getType()->isVectorTy())
     return false;
 
-  if (SDI->hasNonNeg())
+  if (ZExt->hasNonNeg())
     return false;
 
-  const Use &Base = SDI->getOperandUse(0);
+  const Use &Base = ZExt->getOperandUse(0);
   if (!LVI->getConstantRangeAtUse(Base, /*UndefAllowed*/ false)
            .isAllNonNegative())
     return false;
 
   ++NumZExt;
-  SDI->setNonNeg();
+  ZExt->setNonNeg();
 
   return true;
 }
