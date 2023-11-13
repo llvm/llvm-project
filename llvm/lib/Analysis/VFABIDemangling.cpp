@@ -66,16 +66,18 @@ ParseRet tryParseMask(StringRef &MangledName, bool &IsMasked) {
 /// vector length. On success, the `<vlen>` token is removed from
 /// the input string `ParseString`.
 ///
-ParseRet tryParseVLEN(StringRef &ParseString, unsigned &VF, bool &IsScalable) {
+ParseRet tryParseVLEN(StringRef &ParseString,
+                      std::optional<unsigned> &ParsedVF) {
   if (ParseString.consume_front("x")) {
-    // Set VF to 0, to be later adjusted to a value grater than zero
-    // by looking at the signature of the vector function with
-    // `getECFromSignature`.
-    VF = 0;
-    IsScalable = true;
+    // We can't determine the VF of a scalable vector by looking at the vlen
+    // string (just 'x'), so say we successfully parsed it but return a nullopt
+    // so that the caller knows it must look at the arguments to determine
+    // the minimum VF based on types.
+    ParsedVF = std::nullopt;
     return ParseRet::OK;
   }
 
+  unsigned VF = 0;
   if (ParseString.consumeInteger(10, VF))
     return ParseRet::Error;
 
@@ -83,7 +85,7 @@ ParseRet tryParseVLEN(StringRef &ParseString, unsigned &VF, bool &IsScalable) {
   if (VF == 0)
     return ParseRet::Error;
 
-  IsScalable = false;
+  ParsedVF = VF;
   return ParseRet::OK;
 }
 
@@ -273,49 +275,88 @@ ParseRet tryParseAlign(StringRef &ParseString, Align &Alignment) {
   return ParseRet::None;
 }
 
-#ifndef NDEBUG
-// Verify the assumtion that all vectors in the signature of a vector
-// function have the same number of elements.
-bool verifyAllVectorsHaveSameWidth(FunctionType *Signature) {
-  SmallVector<VectorType *, 2> VecTys;
-  if (auto *RetTy = dyn_cast<VectorType>(Signature->getReturnType()))
-    VecTys.push_back(RetTy);
-  for (auto *Ty : Signature->params())
-    if (auto *VTy = dyn_cast<VectorType>(Ty))
-      VecTys.push_back(VTy);
+// Given a type, return the size in bits if it is a supported element type
+// for vectorized function calls, or nullopt if not.
+std::optional<unsigned> getSizeFromScalarType(Type *Ty) {
+  // The scalar function should only take scalar arguments.
+  if (!Ty->isIntegerTy() && !Ty->isFloatingPointTy() && !Ty->isPointerTy())
+    return std::nullopt;
 
-  if (VecTys.size() <= 1)
-    return true;
+  unsigned SizeInBits = Ty->getPrimitiveSizeInBits();
+  switch (SizeInBits) {
+  // Legal power-of-two scalars are supported.
+  case 64:
+  case 32:
+  case 16:
+  case 8:
+    return SizeInBits;
+  case 0:
+    // We're assuming a 64b pointer size here for SVE; if another non-64b
+    // target adds support for scalable vectors, we may need DataLayout to
+    // determine the size.
+    if (Ty->isPointerTy())
+      return 64;
+    break;
+  default:
+    break;
+  }
 
-  assert(VecTys.size() > 1 && "Invalid number of elements.");
-  const ElementCount EC = VecTys[0]->getElementCount();
-  return llvm::all_of(llvm::drop_begin(VecTys), [&EC](VectorType *VTy) {
-    return (EC == VTy->getElementCount());
-  });
+  return std::nullopt;
 }
-#endif // NDEBUG
 
-// Extract the VectorizationFactor from a given function signature,
-// under the assumtion that all vectors have the same number of
-// elements, i.e. same ElementCount.Min.
-ElementCount getECFromSignature(FunctionType *Signature) {
-  assert(verifyAllVectorsHaveSameWidth(Signature) &&
-         "Invalid vector signature.");
+// Extract the VectorizationFactor from a given function signature, based
+// on the widest scalar element types that will become vector parameters.
+std::optional<ElementCount>
+getScalableECFromSignature(FunctionType *Signature, const VFISAKind ISA,
+                           const SmallVectorImpl<VFParameter> &Params) {
+  // Look up the minimum known register size in order to calculate minimum VF.
+  // Only AArch64 SVE is supported at present.
+  unsigned MinRegSizeInBits;
+  switch (ISA) {
+  case VFISAKind::SVE:
+    MinRegSizeInBits = 128;
+    break;
+  default:
+    return std::nullopt;
+  }
 
-  if (auto *RetTy = dyn_cast<VectorType>(Signature->getReturnType()))
-    return RetTy->getElementCount();
-  for (auto *Ty : Signature->params())
-    if (auto *VTy = dyn_cast<VectorType>(Ty))
-      return VTy->getElementCount();
+  unsigned WidestTypeInBits = 0;
+  for (auto &Param : Params) {
+    // Check any parameters that will be widened to vectors. Uniform or linear
+    // parameters may be misleading for determining the VF of a given function.
+    if (Param.ParamKind == VFParamKind::Vector) {
+      // If the scalar function doesn't actually have a corresponding argument,
+      // reject the mapping.
+      if (Param.ParamPos + 1 > Signature->getNumParams())
+        return std::nullopt;
+      Type *PTy = Signature->getParamType(Param.ParamPos);
 
-  return ElementCount::getFixed(/*Min=*/1);
+      std::optional<unsigned> SizeInBits = getSizeFromScalarType(PTy);
+      if (SizeInBits)
+        WidestTypeInBits = std::max(WidestTypeInBits, *SizeInBits);
+    }
+  }
+
+  // Also check the return type.
+  std::optional<unsigned> ReturnSizeInBits =
+      getSizeFromScalarType(Signature->getReturnType());
+  if (ReturnSizeInBits)
+    WidestTypeInBits = std::max(WidestTypeInBits, *ReturnSizeInBits);
+
+  // SVE bases the VF on the widest element types present, and vector arguments
+  // containing types of that width are always considered to be packed.
+  // Arguments with narrower elements are considered to be unpacked.
+  if (WidestTypeInBits)
+    return ElementCount::getScalable(MinRegSizeInBits / WidestTypeInBits);
+
+  return std::nullopt;
 }
 } // namespace
 
 // Format of the ABI name:
 // _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)]
 std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
-                                                 const Module &M) {
+                                                 const CallInst &CI) {
   const StringRef OriginalName = MangledName;
   // Assume there is no custom name <redirection>, and therefore the
   // vector name consists of
@@ -338,9 +379,8 @@ std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
     return std::nullopt;
 
   // Parse the variable size, starting from <vlen>.
-  unsigned VF;
-  bool IsScalable;
-  if (tryParseVLEN(MangledName, VF, IsScalable) != ParseRet::OK)
+  std::optional<unsigned> ParsedVF;
+  if (tryParseVLEN(MangledName, ParsedVF) != ParseRet::OK)
     return std::nullopt;
 
   // Parse the <parameters>.
@@ -373,6 +413,24 @@ std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
   // <parameters>.
   if (Parameters.empty())
     return std::nullopt;
+
+  // Figure out the number of lanes in vectors for this function variant. This
+  // is easy for fixed length, as the vlen encoding just gives us the value
+  // directly. However, if the vlen mangling indicated that this function
+  // variant expects scalable vectors, then we need to figure out the minimum
+  // based on the widest scalar types in vector arguments.
+  std::optional<ElementCount> EC;
+  if (ParsedVF) {
+    // Fixed length VF
+    EC = ElementCount::getFixed(*ParsedVF);
+  } else {
+    // Scalable VF, need to work out the minimum from the element types
+    // in the scalar function arguments.
+    EC = getScalableECFromSignature(CI.getFunctionType(), ISA, Parameters);
+
+    if (!EC)
+      return std::nullopt;
+  }
 
   // Check for the <scalarname> and the optional <redirection>, which
   // are separated from the prefix with "_"
@@ -426,32 +484,7 @@ std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
     assert(Parameters.back().ParamKind == VFParamKind::GlobalPredicate &&
            "The global predicate must be the last parameter");
 
-  // Adjust the VF for scalable signatures. The EC.Min is not encoded
-  // in the name of the function, but it is encoded in the IR
-  // signature of the function. We need to extract this information
-  // because it is needed by the loop vectorizer, which reasons in
-  // terms of VectorizationFactor or ElementCount. In particular, we
-  // need to make sure that the VF field of the VFShape class is never
-  // set to 0.
-  if (IsScalable) {
-    const Function *F = M.getFunction(VectorName);
-    // The declaration of the function must be present in the module
-    // to be able to retrieve its signature.
-    if (!F)
-      return std::nullopt;
-    const ElementCount EC = getECFromSignature(F->getFunctionType());
-    VF = EC.getKnownMinValue();
-  }
-
-  // 1. We don't accept a zero lanes vectorization factor.
-  // 2. We don't accept the demangling if the vector function is not
-  // present in the module.
-  if (VF == 0)
-    return std::nullopt;
-  if (!M.getFunction(VectorName))
-    return std::nullopt;
-
-  const VFShape Shape({ElementCount::get(VF, IsScalable), Parameters});
+  const VFShape Shape({*EC, Parameters});
   return VFInfo({Shape, std::string(ScalarName), std::string(VectorName), ISA});
 }
 
