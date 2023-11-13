@@ -2743,13 +2743,13 @@ private:
                                  const LexEmbedParametersResult &Params,
                                  StringRef BinaryContents,
                                  const size_t TargetCharWidth);
-  void HandleEmbedDirectiveBuiltin(SourceLocation HashLoc,
-                                   const Token &FilenameTok,
-                                   StringRef ResolvedFilename,
-                                   StringRef SearchPath, StringRef RelativePath,
-                                   const LexEmbedParametersResult &Params,
-                                   StringRef BinaryContents,
-                                   const size_t TargetCharWidth);
+  void HandleEmbedDirectiveImpl(SourceLocation HashLoc,
+                                const Token &FilenameTok,
+                                StringRef ResolvedFilename,
+                                StringRef SearchPath, StringRef RelativePath,
+                                const LexEmbedParametersResult &Params,
+                                StringRef BinaryContents,
+                                const size_t TargetCharWidth);
 
   // File inclusion.
   void HandleIncludeDirective(SourceLocation HashLoc, Token &Tok,
