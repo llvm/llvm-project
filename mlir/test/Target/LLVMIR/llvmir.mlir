@@ -2324,3 +2324,9 @@ llvm.func @zeroinit_complex_local_aggregate() {
 
   llvm.return
 }
+
+//CHECK: !llvm.linker.options = !{![[MD0:[0-9]+]], ![[MD1:[0-9]+]]}
+//CHECK: ![[MD0]] = !{!"/DEFAULTLIB:", !"libcmt"}
+llvm.linker_options ["/DEFAULTLIB:", "libcmt"]
+//CHECK: ![[MD1]] = !{!"/DEFAULTLIB:", !"libcmtd"}
+llvm.linker_options ["/DEFAULTLIB:", "libcmtd"]
