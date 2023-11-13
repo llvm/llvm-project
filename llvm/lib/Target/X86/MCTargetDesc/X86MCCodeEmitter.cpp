@@ -191,7 +191,7 @@ public:
   }
   void setX(const MCInst &MI, unsigned OpNum, unsigned Shift = 3) {
     unsigned Reg = MI.getOperand(OpNum).getReg();
-    // X is used to extend vector register only when shift is not 3
+    // X is used to extend vector register only when shift is not 3.
     if (Shift != 3 && X86II::isApxExtendedReg(Reg))
       return;
     unsigned Encoding = MRI.getEncodingValue(Reg);
@@ -219,7 +219,7 @@ public:
     unsigned Reg = MI.getOperand(OpNum).getReg();
     unsigned Encoding = MRI.getEncodingValue(Reg);
     setX(Encoding);
-    // Index can be a vector register while X2 is used to extend GPR only
+    // Index can be a vector register while X2 is used to extend GPR only.
     if (Kind <= REX2 || X86II::isApxExtendedReg(Reg))
       setX2(Encoding);
   }
@@ -269,6 +269,7 @@ public:
       break;
     case REX:
       Kind = (R2 | X2 | B2) ? REX2 : REX;
+      break;
     case REX2:
     case XOP:
     case VEX3:
@@ -629,6 +630,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
         // movq loads is a subset of reloc_riprel_4byte_relax_rex. It is a
         // special case because COFF and Mach-O don't support ELF's more
         // flexible R_X86_64_REX_GOTPCRELX relaxation.
+        // TODO: Support new relocation for REX2.
         assert(Kind == REX || Kind == REX2);
         return X86::reloc_riprel_4byte_movq_load;
       case X86::ADC32rm:
