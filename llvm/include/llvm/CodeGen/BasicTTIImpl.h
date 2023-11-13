@@ -470,8 +470,7 @@ public:
 
     // Check if suitable for a jump table.
     if (IsJTAllowed) {
-      if (N < 2 ||
-          N < TLI->getMinimumJumpTableEntries(SI.getParent()->getParent()))
+      if (N < 2 || N < TLI->getMinimumJumpTableEntries())
         return N;
       uint64_t Range =
           (MaxCaseVal - MinCaseVal)

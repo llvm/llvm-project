@@ -853,8 +853,6 @@ public:
   bool isComplexDeinterleavingOperationSupported(
       ComplexDeinterleavingOperation Operation, Type *Ty) const override;
 
-  unsigned getMinimumJumpTableEntries(const Function *F) const override;
-
   Value *createComplexDeinterleavingIR(
       IRBuilderBase &B, ComplexDeinterleavingOperation OperationType,
       ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
@@ -1252,6 +1250,8 @@ private:
                       SDLoc DL, EVT VT) const;
 
   bool preferScalarizeSplat(SDNode *N) const override;
+
+  unsigned getMinimumJumpTableEntries() const override;
 };
 
 namespace AArch64 {

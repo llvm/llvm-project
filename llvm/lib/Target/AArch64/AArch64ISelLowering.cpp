@@ -144,10 +144,6 @@ static cl::opt<bool> EnableExtToTBL("aarch64-enable-ext-to-tbl", cl::Hidden,
 static cl::opt<unsigned> MaxXors("aarch64-max-xors", cl::init(16), cl::Hidden,
                                  cl::desc("Maximum of xors"));
 
-static cl::opt<unsigned> AArch64MinimumJumpTableEntries(
-    "aarch64-min-jump-table-entries", cl::init(13), cl::Hidden,
-    cl::desc("Set minimum number of entries to use a jump table on AArch64"));
-
 /// Value type used for condition codes.
 static const MVT MVT_CC = MVT::i32;
 
@@ -26549,11 +26545,6 @@ bool AArch64TargetLowering::preferScalarizeSplat(SDNode *N) const {
   return true;
 }
 
-unsigned
-AArch64TargetLowering::getMinimumJumpTableEntries(const Function *F) const {
-  if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 ||
-      !F->hasMinSize())
-    return AArch64MinimumJumpTableEntries;
-
-  return TargetLoweringBase::getMinimumJumpTableEntries(F);
+unsigned AArch64TargetLowering::getMinimumJumpTableEntries() const {
+  return Subtarget->getMinimumJumpTableEntries();
 }

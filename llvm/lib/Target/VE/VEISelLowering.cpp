@@ -3085,12 +3085,12 @@ VETargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 // VE Target Optimization Support
 //===----------------------------------------------------------------------===//
 
-unsigned VETargetLowering::getMinimumJumpTableEntries(const Function *F) const {
+unsigned VETargetLowering::getMinimumJumpTableEntries() const {
   // Specify 8 for PIC model to relieve the impact of PIC load instructions.
   if (isJumpTableRelative())
     return 8;
 
-  return TargetLowering::getMinimumJumpTableEntries(F);
+  return TargetLowering::getMinimumJumpTableEntries();
 }
 
 bool VETargetLowering::hasAndNot(SDValue Y) const {

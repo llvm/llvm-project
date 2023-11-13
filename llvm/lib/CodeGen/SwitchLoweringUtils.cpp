@@ -58,11 +58,10 @@ void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
 #endif
 
   assert(TLI && "TLI not set!");
-  const Function *F = SI->getParent()->getParent();
-  if (!TLI->areJTsAllowed(F))
+  if (!TLI->areJTsAllowed(SI->getParent()->getParent()))
     return;
 
-  const unsigned MinJumpTableEntries = TLI->getMinimumJumpTableEntries(F);
+  const unsigned MinJumpTableEntries = TLI->getMinimumJumpTableEntries();
   const unsigned SmallNumberOfEntries = MinJumpTableEntries / 2;
 
   // Bail if not enough cases.
