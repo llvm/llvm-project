@@ -710,9 +710,13 @@ public:
     return result;
   }
 
+  // Saves the current floating-point pragma stack and clear it in this Sema.
   class FpPragmaStackSaveRAII {
   public:
-    FpPragmaStackSaveRAII(Sema &S) : S(S), SavedStack(S.FpPragmaStack) {}
+    FpPragmaStackSaveRAII(Sema &S)
+        : S(S), SavedStack(std::move(S.FpPragmaStack)) {
+      S.FpPragmaStack.Stack.clear();
+    }
     ~FpPragmaStackSaveRAII() { S.FpPragmaStack = std::move(SavedStack); }
 
   private:
@@ -722,7 +726,6 @@ public:
 
   void resetFPOptions(FPOptions FPO) {
     CurFPFeatures = FPO;
-    FpPragmaStack.Stack.clear();
     FpPragmaStack.CurrentValue = FPO.getChangesFrom(FPOptions(LangOpts));
   }
 
