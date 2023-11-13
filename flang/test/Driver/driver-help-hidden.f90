@@ -102,6 +102,7 @@
 ! CHECK-NEXT: -fstack-arrays          Attempt to allocate array temporaries on the stack, no matter their size
 ! CHECK-NEXT: -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
 ! CHECK-NEXT: -funderscoring          Appends one trailing underscore to external names
+! CHECK-NEXT: -fveclib=<value>        Use the given vector functions library
 ! CHECK-NEXT: -fversion-loops-for-stride
 ! CHECK-NEXT:                         Create unit-strided versions of loops
 ! CHECK-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.

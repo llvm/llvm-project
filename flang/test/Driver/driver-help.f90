@@ -88,6 +88,7 @@
 ! HELP-NEXT: -fstack-arrays          Attempt to allocate array temporaries on the stack, no matter their size
 ! HELP-NEXT: -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
 ! HELP-NEXT: -funderscoring          Appends one trailing underscore to external names
+! HELP-NEXT: -fveclib=<value>        Use the given vector functions library
 ! HELP-NEXT: -fversion-loops-for-stride
 ! HELP-NEXT:                         Create unit-strided versions of loops
 ! HELP-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
@@ -222,6 +223,7 @@
 ! HELP-FC1-NEXT: -fstack-arrays          Attempt to allocate array temporaries on the stack, no matter their size
 ! HELP-FC1-NEXT: -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
 ! HELP-FC1-NEXT: -funderscoring          Appends one trailing underscore to external names
+! HELP-FC1-NEXT: -fveclib=<value>        Use the given vector functions library
 ! HELP-FC1-NEXT: -fversion-loops-for-stride
 ! HELP-FC1-NEXT:                         Create unit-strided versions of loops
 ! HELP-FC1-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.

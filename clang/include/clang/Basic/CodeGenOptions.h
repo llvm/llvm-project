@@ -17,6 +17,7 @@
 #include "clang/Basic/XRayInstr.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Frontend/Debug/Options.h"
+#include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
@@ -56,17 +57,6 @@ public:
     NormalInlining,     // Use the standard function inlining pass.
     OnlyHintInlining,   // Inline only (implicitly) hinted functions.
     OnlyAlwaysInlining  // Only run the always inlining pass.
-  };
-
-  enum VectorLibrary {
-    NoLibrary,  // Don't use any vector library.
-    Accelerate, // Use the Accelerate framework.
-    LIBMVEC,    // GLIBC vector math library.
-    MASSV,      // IBM MASS vector library.
-    SVML,       // Intel short vector math library.
-    SLEEF,      // SLEEF SIMD Library for Evaluating Elementary Functions.
-    Darwin_libsystem_m, // Use Darwin's libsytem_m vector functions.
-    ArmPL               // Arm Performance Libraries.
   };
 
   enum ObjCDispatchMethodKind {
