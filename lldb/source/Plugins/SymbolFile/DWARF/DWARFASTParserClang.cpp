@@ -140,6 +140,7 @@ static bool ShouldIgnoreArtificialField(llvm::StringRef FieldName) {
   return FieldName.starts_with("_vptr$")
          // gdb emit vtable pointer as "_vptr.classname"
          || FieldName.starts_with("_vptr.");
+}
 
 std::optional<DWARFFormValue>
 DWARFASTParserClang::FindConstantOnVariableDefinition(DWARFDIE die) {
