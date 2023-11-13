@@ -1,0 +1,29 @@
+name: PR Greeter
+
+on:
+  pull_request_target:
+   types: [ opened ]
+
+permissions:
+  content: read
+
+jobs:
+  greet:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    if: github.repository == 'llvm/llvm-project' && (github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' || github.event.pull_request.author_association == 'FIRST_TIMER')
+    steps:
+      - name: Setup Automation Script
+        run: |
+          curl -O -L --fail https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/github-automation.py
+          curl -O -L --fail https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/requirements.txt
+          chmod a+x github-automation.py
+          pip install -r requirements.txt
+
+      - name: Greet Author
+        run: |
+          ./github-automation.py \
+            --token '${{ secrets.GITHUB_TOKEN }}' \
+            pr-greeter \
+            --issue-number "${{ github.event.pull_request.number }}"
