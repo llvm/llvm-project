@@ -11,6 +11,9 @@ endif()
 cmake_minimum_required(VERSION 3.22)
 project(omptest LANGUAGES CXX)
 
+# Use LLVM-bundled GoogleTest
+include(GoogleTest)
+
 set(OMPTEST_HEADERS
   ./include/AssertMacros.h
   ./include/InternalEvent.h
@@ -20,6 +23,8 @@ set(OMPTEST_HEADERS
   ./include/OmptAssertEvent.h
   ./include/OmptCallbackHandler.h
   ./include/OmptTester.h
+  ./include/OmptTesterGoogleTest.h
+  ./include/OmptTesterStandalone.h
 )
 
 add_llvm_library(omptest
@@ -46,7 +51,15 @@ add_llvm_library(omptest
   NO_INSTALL_RPATH
 )
 
+# Include local include directory, so we do not need relative paths
+include_directories(./include)
 target_compile_features(omptest PRIVATE cxx_std_17)
+
+# Link against gtest and gtest_main (disabled for now)
+# TODO: Look into the "real" effects of PUBLIC in this scenario
+#       Tests still need to link to gtest / gtest_main (otherwise: compile fail)
+#       Those projects should not need to do this with PUBLIC or INTERFACE
+# target_link_libraries(omptest INTERFACE gtest gtest_main)
 
 # Create and install package configuration files.
 configure_file(

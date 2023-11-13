@@ -1,9 +1,6 @@
 #ifndef OPENMP_LIBOMPTARGET_TEST_OMPTEST_ASSERTMACROS_H
 #define OPENMP_LIBOMPTARGET_TEST_OMPTEST_ASSERTMACROS_H
 
-#define XQUOTE(str) QUOTE(str)
-#define QUOTE(str) #str
-
 #define OMPTEST_EXCLUDE_EVENT omptest::ObserveState::never
 #define OMPTEST_REQUIRE_EVENT omptest::ObserveState::always
 
@@ -95,25 +92,5 @@
   OMPT_ASSERTER_SUPPRESS_EVENT(SetAsserter, EventTy);                          \
   OMPT_ASSERTER_SUPPRESS_EVENT(EventReporter, EventTy);                        \
   OMPT_ASSERTER_SUPPRESS_EVENT(SequenceAsserter, EventTy);
-
-/// MACROS TO DEFINE A TESTSUITE + TESTCASE (like GoogleTest does)
-#define OMPTTESTCASE(SuiteName, CaseName)                                      \
-  struct SuiteName##_##CaseName : public TestCase {                            \
-    SuiteName##_##CaseName() : TestCase(XQUOTE(CaseName)) {}                   \
-    virtual void execImpl() override;                                          \
-  };                                                                           \
-  static Registerer R_##SuiteName##CaseName(new SuiteName##_##CaseName(),      \
-                                            #SuiteName);                       \
-  void SuiteName##_##CaseName::execImpl()
-
-#define OMPTTESTCASE_XFAIL(SuiteName, CaseName)                                \
-  struct SuiteName##_##CaseName : public TestCase {                            \
-    SuiteName##_##CaseName()                                                   \
-        : TestCase(XQUOTE(CaseName), omptest::AssertState::fail) {}            \
-    virtual void execImpl() override;                                          \
-  };                                                                           \
-  static Registerer R_##SuiteName##CaseName(new SuiteName##_##CaseName(),      \
-                                            #SuiteName);                       \
-  void SuiteName##_##CaseName::execImpl()
 
 #endif // include guard

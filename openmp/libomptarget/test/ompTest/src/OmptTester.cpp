@@ -1,4 +1,4 @@
-#include "../include/OmptTester.h"
+#include "OmptTester.h"
 
 #include <atomic>
 #include <cassert>
@@ -17,7 +17,10 @@
 
 #define OMPT_BUFFER_REQUEST_SIZE 256
 
+#ifndef LIBOMPTARGET_LIBOMPTEST_USE_GTEST
 std::unordered_map<std::string, TestSuite> TestRegistrar::Tests;
+#endif
+
 static std::atomic<ompt_id_t> NextOpId{0x8000000000000001};
 static bool UseEMICallbacks = false;
 static bool UseTracing = false;

@@ -1,6 +1,4 @@
-#include "../include/OmptAsserter.h"
-
-// #include <type_traits>
+#include "OmptAsserter.h"
 
 using namespace omptest;
 using namespace internal;

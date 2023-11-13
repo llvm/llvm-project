@@ -1,4 +1,4 @@
-#include "../include/OmptAssertEvent.h"
+#include "OmptAssertEvent.h"
 
 using namespace omptest;
 

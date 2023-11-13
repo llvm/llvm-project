@@ -1,4 +1,4 @@
-#include "../include/OmptCallbackHandler.h"
+#include "OmptCallbackHandler.h"
 
 using namespace omptest;
 

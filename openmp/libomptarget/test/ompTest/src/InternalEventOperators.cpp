@@ -1,4 +1,4 @@
-#include "../include/InternalEvent.h"
+#include "InternalEvent.h"
 
 #include <cstring>
 #include <limits>
