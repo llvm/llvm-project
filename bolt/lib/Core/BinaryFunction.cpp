@@ -322,7 +322,8 @@ void BinaryFunction::markUnreachableBlocks() {
 
 // Any unnecessary fallthrough jumps revealed after calling eraseInvalidBBs
 // will be cleaned up by fixBranches().
-std::pair<unsigned, uint64_t> BinaryFunction::eraseInvalidBBs() {
+std::pair<unsigned, uint64_t>
+BinaryFunction::eraseInvalidBBs(const MCCodeEmitter *Emitter) {
   DenseSet<const BinaryBasicBlock *> InvalidBBs;
   unsigned Count = 0;
   uint64_t Bytes = 0;
@@ -331,7 +332,7 @@ std::pair<unsigned, uint64_t> BinaryFunction::eraseInvalidBBs() {
       assert(!isEntryPoint(*BB) && "all entry blocks must be valid");
       InvalidBBs.insert(BB);
       ++Count;
-      Bytes += BC.computeCodeSize(BB->begin(), BB->end());
+      Bytes += BC.computeCodeSize(BB->begin(), BB->end(), Emitter);
     }
   }
 
@@ -1379,7 +1380,7 @@ add_instruction:
       // NOTE: disassembly loses the correct size information for noops on x86.
       //       E.g. nopw 0x0(%rax,%rax,1) is 9 bytes, but re-encoded it's only
       //       5 bytes. Preserve the size info using annotations.
-      MIB->addAnnotation(Instruction, "Size", static_cast<uint32_t>(Size));
+      MIB->setSize(Instruction, Size);
     }
 
     addInstruction(Offset, std::move(Instruction));
@@ -4176,7 +4177,7 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
         assert(PrevBB->getOutputAddressRange().first <= BBAddress &&
                "Bad output address for basic block.");
         assert((PrevBB->getOutputAddressRange().first != BBAddress ||
-                !hasInstructions() || PrevBB->empty()) &&
+                !hasInstructions() || !PrevBB->getNumNonPseudos()) &&
                "Bad output address for basic block.");
         PrevBB->setOutputEndAddress(BBAddress);
       }
@@ -4306,7 +4307,7 @@ BinaryFunction::translateInputToOutputRange(DebugAddressRange InRange) const {
     // block boundaries.
     auto translateBlockOffset = [&](const uint64_t Offset) {
       const uint64_t OutAddress = BB.getOutputAddressRange().first + Offset;
-      return OutAddress;
+      return std::min(OutAddress, BB.getOutputAddressRange().second);
     };
 
     uint64_t OutLowPC = BB.getOutputAddressRange().first;
@@ -4352,10 +4353,11 @@ MCInst *BinaryFunction::getInstructionAtOffset(uint64_t Offset) {
     }
 
     if (MCInst *LastInstr = BB->getLastNonPseudoInstr()) {
-      const uint32_t Size =
-          BC.MIB->getAnnotationWithDefault<uint32_t>(*LastInstr, "Size");
-      if (BB->getEndOffset() - Offset == Size)
-        return LastInstr;
+      if (std::optional<uint32_t> Size = BC.MIB->getSize(*LastInstr)) {
+        if (BB->getEndOffset() - Offset == Size) {
+          return LastInstr;
+        }
+      }
     }
 
     return nullptr;

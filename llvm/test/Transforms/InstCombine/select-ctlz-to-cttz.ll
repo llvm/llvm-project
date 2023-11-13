@@ -244,7 +244,7 @@ define i32 @select_clz_to_ctz_wrong_constant_for_zero(i32 %a) {
 define i4 @PR45762(i3 %x4) {
 ; CHECK-LABEL: @PR45762(
 ; CHECK-NEXT:    [[T4:%.*]] = call i3 @llvm.cttz.i3(i3 [[X4:%.*]], i1 false), !range [[RNG2:![0-9]+]]
-; CHECK-NEXT:    [[T7:%.*]] = zext i3 [[T4]] to i4
+; CHECK-NEXT:    [[T7:%.*]] = zext nneg i3 [[T4]] to i4
 ; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl nuw i4 1, [[T7]]
 ; CHECK-NEXT:    [[OR_69_NOT:%.*]] = icmp eq i3 [[X4]], 0
 ; CHECK-NEXT:    [[UMUL_231:%.*]] = shl i4 [[ONE_HOT_16]], [[T7]]
@@ -273,7 +273,7 @@ define i4 @PR45762(i3 %x4) {
 define i4 @PR45762_logical(i3 %x4) {
 ; CHECK-LABEL: @PR45762_logical(
 ; CHECK-NEXT:    [[T4:%.*]] = call i3 @llvm.cttz.i3(i3 [[X4:%.*]], i1 false), !range [[RNG2]]
-; CHECK-NEXT:    [[T7:%.*]] = zext i3 [[T4]] to i4
+; CHECK-NEXT:    [[T7:%.*]] = zext nneg i3 [[T4]] to i4
 ; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl nuw i4 1, [[T7]]
 ; CHECK-NEXT:    [[OR_69_NOT:%.*]] = icmp eq i3 [[X4]], 0
 ; CHECK-NEXT:    [[UMUL_231:%.*]] = shl i4 [[ONE_HOT_16]], [[T7]]

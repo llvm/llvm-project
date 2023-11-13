@@ -1491,6 +1491,46 @@ FuzzyFindRequest speculativeFuzzyFindRequestForCompletion(
   return CachedReq;
 }
 
+// This function is similar to Lexer::findNextToken(), but assumes
+// that the input SourceLocation is the completion point (which is
+// a case findNextToken() does not handle).
+std::optional<Token>
+findTokenAfterCompletionPoint(SourceLocation CompletionPoint,
+                              const SourceManager &SM,
+                              const LangOptions &LangOpts) {
+  SourceLocation Loc = CompletionPoint;
+  if (Loc.isMacroID()) {
+    if (!Lexer::isAtEndOfMacroExpansion(Loc, SM, LangOpts, &Loc))
+      return std::nullopt;
+  }
+
+  // Advance to the next SourceLocation after the completion point.
+  // Lexer::findNextToken() would call MeasureTokenLength() here,
+  // which does not handle the completion point (and can't, because
+  // the Lexer instance it constructs internally doesn't have a
+  // Preprocessor and so doesn't know about the completion point).
+  Loc = Loc.getLocWithOffset(1);
+
+  // Break down the source location.
+  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+
+  // Try to load the file buffer.
+  bool InvalidTemp = false;
+  StringRef File = SM.getBufferData(LocInfo.first, &InvalidTemp);
+  if (InvalidTemp)
+    return std::nullopt;
+
+  const char *TokenBegin = File.data() + LocInfo.second;
+
+  // Lex from the start of the given location.
+  Lexer TheLexer(SM.getLocForStartOfFile(LocInfo.first), LangOpts, File.begin(),
+                 TokenBegin, File.end());
+  // Find the token.
+  Token Tok;
+  TheLexer.LexFromRawLexer(Tok);
+  return Tok;
+}
+
 // Runs Sema-based (AST) and Index-based completion, returns merged results.
 //
 // There are a few tricky considerations:
@@ -1589,7 +1629,7 @@ public:
       auto Style = getFormatStyleForFile(SemaCCInput.FileName,
                                          SemaCCInput.ParseInput.Contents,
                                          *SemaCCInput.ParseInput.TFS);
-      const auto NextToken = Lexer::findNextToken(
+      const auto NextToken = findTokenAfterCompletionPoint(
           Recorder->CCSema->getPreprocessor().getCodeCompletionLoc(),
           Recorder->CCSema->getSourceManager(), Recorder->CCSema->LangOpts);
       if (NextToken)
