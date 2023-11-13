@@ -1063,12 +1063,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_NODISCARD_AFTER_CXX17
 #  endif
 
-#  if __has_attribute(__no_destroy__)
-#    define _LIBCPP_NO_DESTROY __attribute__((__no_destroy__))
-#  else
-#    define _LIBCPP_NO_DESTROY
-#  endif
-
 #  ifndef _LIBCPP_HAS_NO_ASAN
     extern "C" _LIBCPP_EXPORTED_FROM_ABI void
     __sanitizer_annotate_contiguous_container(const void*, const void*, const void*, const void*);
@@ -1232,14 +1226,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_THREAD_SAFETY_ANNOTATION(x)
 #  endif
 
-#  if _LIBCPP_STD_VER >= 20
-#    define _LIBCPP_CONSTINIT constinit
-#  elif __has_attribute(__require_constant_initialization__)
-#    define _LIBCPP_CONSTINIT __attribute__((__require_constant_initialization__))
-#  else
-#    define _LIBCPP_CONSTINIT
-#  endif
-
 #  if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
 #    define _LIBCPP_DIAGNOSE_WARNING(...) __attribute__((__diagnose_if__(__VA_ARGS__, "warning")))
 #  else
@@ -1396,14 +1382,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_DIAGNOSTIC_POP
 #    define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED(str)
 #    define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str)
-#  endif
-
-#  if defined(_AIX) && !defined(_LIBCPP_COMPILER_GCC)
-#    define _LIBCPP_PACKED_BYTE_FOR_AIX _Pragma("pack(1)")
-#    define _LIBCPP_PACKED_BYTE_FOR_AIX_END _Pragma("pack(pop)")
-#  else
-#    define _LIBCPP_PACKED_BYTE_FOR_AIX     /* empty */
-#    define _LIBCPP_PACKED_BYTE_FOR_AIX_END /* empty */
 #  endif
 
 #  if __has_attribute(__packed__)
