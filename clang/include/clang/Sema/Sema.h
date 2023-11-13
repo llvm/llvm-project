@@ -714,7 +714,7 @@ public:
   class FpPragmaStackSaveRAII {
   public:
     FpPragmaStackSaveRAII(Sema &S)
-      : S(S), SavedStack(std::move(S.FpPragmaStack)) {
+        : S(S), SavedStack(std::move(S.FpPragmaStack)) {
       S.FpPragmaStack.Stack.clear();
     }
     ~FpPragmaStackSaveRAII() { S.FpPragmaStack = std::move(SavedStack); }
