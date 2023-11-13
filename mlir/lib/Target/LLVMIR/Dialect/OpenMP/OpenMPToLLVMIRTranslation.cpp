@@ -1560,10 +1560,10 @@ convertToCaptureClauseKind(
   switch (captureClasue) {
   case mlir::omp::DeclareTargetCaptureClause::to:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo;
-    break;
   case mlir::omp::DeclareTargetCaptureClause::link:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink;
-    break;
+  case mlir::omp::DeclareTargetCaptureClause::enter:
+    return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryEnter;
   }
   llvm_unreachable("unhandled capture clause");
 }
