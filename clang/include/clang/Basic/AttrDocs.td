@@ -7527,22 +7527,6 @@ For example,
     // a coroutine wrapper.
     std::function<Task<int>(int)> f = increment;
   }
-
-
-For example,
-
-.. code-block:: c++
-
-  A foo() {
-    dtor d;
-    co_await something();
-    dtor d1;
-    co_await something();
-    dtor d2;
-    co_return 43;
-  }
-
-The compiler may generate the following pseudocode:
-
-  }];
+  
+}];
 }
