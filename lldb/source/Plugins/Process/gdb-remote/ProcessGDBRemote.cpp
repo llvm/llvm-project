@@ -1829,11 +1829,13 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           if (!wp_resource_sp) {
             Log *log(GetLog(GDBRLog::Watchpoints));
             LLDB_LOGF(log, "failed to find watchpoint");
+            abort(); // LWP_TODO FIXME don't continue executing this block if
+                     // we don't get a resource.
           }
           // LWP_TODO: This is hardcoding a single Watchpoint in a
           // Resource, need to add
           // StopInfo::CreateStopReasonWithWatchpointResource
-          watch_id = wp_resource_sp->GetOwnerAtIndex(0)->GetID();
+          watch_id = wp_resource_sp->GetConstituentAtIndex(0)->GetID();
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithWatchpointID(
               *thread_sp, watch_id, silently_continue));
           handled = true;
@@ -3211,7 +3213,7 @@ Status ProcessGDBRemote::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
   bool set_all_resources = true;
   std::vector<WatchpointResourceSP> succesfully_set_resources;
   for (const auto &wp_res_sp : resources) {
-    addr_t addr = wp_res_sp->GetAddress();
+    addr_t addr = wp_res_sp->GetLoadAddress();
     size_t size = wp_res_sp->GetByteSize();
     GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
     if (!m_gdb_comm.SupportsGDBStoppointPacket(type) ||
@@ -3228,7 +3230,7 @@ Status ProcessGDBRemote::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
     for (const auto &wp_res_sp : resources) {
       // LWP_TODO: If we expanded/reused an existing Resource,
       // it's already in the WatchpointResourceList.
-      wp_res_sp->AddOwner(wp_sp);
+      wp_res_sp->AddConstituent(wp_sp);
       m_watchpoint_resource_list.Add(wp_res_sp);
     }
     return error;
@@ -3237,7 +3239,7 @@ Status ProcessGDBRemote::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
     // of the new resources we did successfully set in the
     // process.
     for (const auto &wp_res_sp : succesfully_set_resources) {
-      addr_t addr = wp_res_sp->GetAddress();
+      addr_t addr = wp_res_sp->GetLoadAddress();
       size_t size = wp_res_sp->GetByteSize();
       GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
       m_gdb_comm.SendGDBStoppointTypePacket(type, false, addr, size,
@@ -3281,23 +3283,23 @@ Status ProcessGDBRemote::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
   if (wp_sp->IsHardware()) {
     bool disabled_all = true;
 
-    std::vector<WatchpointResourceSP> unused_resouces;
-    for (const auto &wp_res_sp : m_watchpoint_resource_list.Resources()) {
-      if (wp_res_sp->OwnersContains(wp_sp)) {
+    std::vector<WatchpointResourceSP> unused_resources;
+    for (const auto &wp_res_sp : m_watchpoint_resource_list.Sites()) {
+      if (wp_res_sp->ConstituentsContains(wp_sp)) {
         GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
-        addr_t addr = wp_res_sp->GetAddress();
+        addr_t addr = wp_res_sp->GetLoadAddress();
         size_t size = wp_res_sp->GetByteSize();
         if (m_gdb_comm.SendGDBStoppointTypePacket(type, false, addr, size,
                                                   GetInterruptTimeout())) {
           disabled_all = false;
         } else {
-          wp_res_sp->RemoveOwner(wp_sp);
-          if (wp_res_sp->GetNumberOfOwners() == 0)
-            unused_resouces.push_back(wp_res_sp);
+          wp_res_sp->RemoveConstituent(wp_sp);
+          if (wp_res_sp->GetNumberOfConstituents() == 0)
+            unused_resources.push_back(wp_res_sp);
         }
       }
     }
-    for (auto &wp_res_sp : unused_resouces)
+    for (auto &wp_res_sp : unused_resources)
       m_watchpoint_resource_list.Remove(wp_res_sp->GetID());
 
     wp_sp->SetEnabled(false, notify);
@@ -5555,8 +5557,8 @@ void ProcessGDBRemote::DidForkSwitchHardwareTraps(bool enable) {
     });
   }
 
-  for (const auto &wp_res_sp : m_watchpoint_resource_list.Resources()) {
-    addr_t addr = wp_res_sp->GetAddress();
+  for (const auto &wp_res_sp : m_watchpoint_resource_list.Sites()) {
+    addr_t addr = wp_res_sp->GetLoadAddress();
     size_t size = wp_res_sp->GetByteSize();
     GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
     m_gdb_comm.SendGDBStoppointTypePacket(type, true, addr, size,

@@ -25,7 +25,10 @@ public:
 
   ~WatchpointResource();
 
-  lldb::addr_t GetAddress() const;
+  typedef lldb::wp_resource_id_t SiteID;
+  typedef lldb::watch_id_t ConstituentID;
+
+  lldb::addr_t GetLoadAddress() const;
 
   size_t GetByteSize() const;
 
@@ -40,69 +43,83 @@ public:
                                  vector_adapter, std::mutex>
       WatchpointIterable;
 
-  /// Iterate over the watchpoint owners for this resource
+  /// Iterate over the watchpoint constituents for this resource
   ///
   /// \return
   ///     An Iterable object which can be used to loop over the watchpoints
-  ///     that are owners of this resource.
-  WatchpointIterable Owners() {
-    return WatchpointIterable(m_owners, m_owners_mutex);
+  ///     that are constituents of this resource.
+  WatchpointIterable Constituents() {
+    return WatchpointIterable(m_constituents, m_constituents_mutex);
   }
 
-  /// The "Owners" are the watchpoints that share this resource.
-  /// The method adds the \a owner to this resource's owner list.
+  /// Enquires of the atchpoints that produced this watchpoint resource
+  /// whether we should stop at this location.
   ///
-  /// \param[in] owner
-  ///    \a owner is the Wachpoint to add.
-  void AddOwner(const lldb::WatchpointSP &owner);
+  /// \param[in] context
+  ///    This contains the information about this stop.
+  ///
+  /// \return
+  ///    \b true if we should stop, \b false otherwise.
+  bool ShouldStop(StoppointCallbackContext *context);
 
-  /// The method removes the owner at \a owner from this watchpoint
+  /// Standard Dump method
+  void Dump(Stream *s) const;
+
+  /// The "Constituents" are the watchpoints that share this resource.
+  /// The method adds the \a constituent to this resource's constituent list.
+  ///
+  /// \param[in] constituent
+  ///    \a constituent is the Wachpoint to add.
+  void AddConstituent(const lldb::WatchpointSP &constituent);
+
+  /// The method removes the constituent at \a constituent from this watchpoint
   /// resource.
-  void RemoveOwner(lldb::WatchpointSP &owner);
+  void RemoveConstituent(lldb::WatchpointSP &constituent);
 
   /// This method returns the number of Watchpoints currently using
   /// watchpoint resource.
   ///
   /// \return
-  ///    The number of owners.
-  size_t GetNumberOfOwners();
+  ///    The number of constituents.
+  size_t GetNumberOfConstituents();
 
   /// This method returns the Watchpoint at index \a index using this
-  /// Resource.  The owners are listed ordinally from 0 to
-  /// GetNumberOfOwners() - 1 so you can use this method to iterate over the
-  /// owners.
+  /// Resource.  The constituents are listed ordinally from 0 to
+  /// GetNumberOfConstituents() - 1 so you can use this method to iterate over
+  /// the constituents.
   ///
   /// \param[in] idx
-  ///     The index in the list of owners for which you wish the owner location.
+  ///     The index in the list of constituents for which you wish the
+  ///     constituent location.
   ///
   /// \return
   ///    The Watchpoint at that index.
-  lldb::WatchpointSP GetOwnerAtIndex(size_t idx);
+  lldb::WatchpointSP GetConstituentAtIndex(size_t idx);
 
-  /// Check if the owners includes a watchpoint.
+  /// Check if the constituents includes a watchpoint.
   ///
   /// \param[in] wp_sp
   ///     The WatchpointSP to search for.
   ///
   /// \result
-  ///     true if this resource's owners includes the watchpoint.
-  bool OwnersContains(const lldb::WatchpointSP &wp_sp);
+  ///     true if this resource's constituents includes the watchpoint.
+  bool ConstituentsContains(const lldb::WatchpointSP &wp_sp);
 
-  /// Check if the owners includes a watchpoint.
+  /// Check if the constituents includes a watchpoint.
   ///
   /// \param[in] wp
   ///     The Watchpoint to search for.
   ///
   /// \result
-  ///     true if this resource's owners includes the watchpoint.
-  bool OwnersContains(const lldb_private::Watchpoint *wp);
+  ///     true if this resource's constituents includes the watchpoint.
+  bool ConstituentsContains(const lldb_private::Watchpoint *wp);
 
-  /// This method copies the watchpoint resource's owners into a new collection.
-  /// It does this while the owners mutex is locked.
+  /// This method copies the watchpoint resource's constituents into a new
+  /// collection. It does this while the constituents mutex is locked.
   ///
   /// \return
   ///    A copy of the Watchpoints which own this resource.
-  WatchpointCollection CopyOwnersList();
+  WatchpointCollection CopyConstituentsList();
 
   // The ID of the WatchpointResource is set by the WatchpointResourceList
   // when the Resource has been set in the inferior and is being added
@@ -136,10 +153,10 @@ private:
   bool m_watch_write;
 
   /// The Watchpoints which own this resource.
-  WatchpointCollection m_owners;
+  WatchpointCollection m_constituents;
 
-  /// This mutex protects the owners collection.
-  std::mutex m_owners_mutex;
+  /// This mutex protects the constituents collection.
+  std::mutex m_constituents_mutex;
 
   WatchpointResource(const WatchpointResource &) = delete;
   const WatchpointResource &operator=(const WatchpointResource &) = delete;

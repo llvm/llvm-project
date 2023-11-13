@@ -24,7 +24,7 @@ WatchpointResourceList::Add(const WatchpointResourceSP &wp_res_sp) {
   std::lock_guard<std::mutex> guard(m_mutex);
 
   LLDB_LOGF(log, "WatchpointResourceList::Add(addr 0x%" PRIx64 " size %zu)",
-            wp_res_sp->GetAddress(), wp_res_sp->GetByteSize());
+            wp_res_sp->GetLoadAddress(), wp_res_sp->GetByteSize());
 
   // The goal is to have the wp_resource_id_t match the actual hardware
   // watchpoint register number.  If we assume that the remote stub is
@@ -69,7 +69,7 @@ bool WatchpointResourceList::Remove(wp_resource_id_t id) {
     if ((*pos)->GetID() == id) {
       LLDB_LOGF(log,
                 "WatchpointResourceList::Remove(addr 0x%" PRIx64 " size %zu)",
-                (*pos)->GetAddress(), (*pos)->GetByteSize());
+                (*pos)->GetLoadAddress(), (*pos)->GetByteSize());
       m_resources.erase(pos);
       return true;
     }
@@ -86,7 +86,7 @@ bool WatchpointResourceList::RemoveByAddress(addr_t addr) {
       LLDB_LOGF(log,
                 "WatchpointResourceList::RemoveByAddress(addr 0x%" PRIx64
                 " size %zu)",
-                (*pos)->GetAddress(), (*pos)->GetByteSize());
+                (*pos)->GetLoadAddress(), (*pos)->GetByteSize());
       m_resources.erase(pos);
       return true;
     }
@@ -111,7 +111,7 @@ WatchpointResourceSP
 WatchpointResourceList::FindByWatchpoint(const Watchpoint *wp) {
   std::lock_guard<std::mutex> guard(m_mutex);
   for (WatchpointResourceSP wp_res_sp : m_resources)
-    if (wp_res_sp->OwnersContains(wp))
+    if (wp_res_sp->ConstituentsContains(wp))
       return wp_res_sp;
   return {};
 }

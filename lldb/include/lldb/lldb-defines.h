@@ -49,6 +49,9 @@
   ((type & LLDB_WATCH_TYPE_READ) || (type & LLDB_WATCH_TYPE_WRITE) ||          \
    (type & LLDB_WATCH_TYPE_MODIFY))
 
+// StopPointSites
+#define LLDB_INVALID_SITE_ID UINT32_MAX
+
 // Generic Register Numbers
 #define LLDB_REGNUM_GENERIC_PC 0    // Program Counter
 #define LLDB_REGNUM_GENERIC_SP 1    // Stack Pointer

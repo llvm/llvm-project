@@ -369,15 +369,6 @@ void Watchpoint::DumpWithLevel(Stream *s,
 
 bool Watchpoint::IsEnabled() const { return m_enabled; }
 
-uint32_t Watchpoint::GetHardwareIndex() const {
-  if (IsEnabled())
-    return m_target.GetProcessSP()
-        ->GetWatchpointResourceList()
-        .FindByWatchpoint(this)
-        ->GetID();
-  return UINT32_MAX;
-}
-
 // Within StopInfo.cpp, we purposely turn on the ephemeral mode right before
 // temporarily disable the watchpoint in order to perform possible watchpoint
 // actions without triggering further watchpoint events. After the temporary
