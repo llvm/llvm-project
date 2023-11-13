@@ -16,10 +16,33 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
     ; CHECK-NEXT: [[FCLASS_S:%[0-9]+]]:gpr = FCLASS_S [[COPY]]
     ; CHECK-NEXT: [[ANDI:%[0-9]+]]:gpr = ANDI [[FCLASS_S]], 152
-    ; CHECK-NEXT: $x10 = COPY [[ANDI]]
+    ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU $x0, [[ANDI]]
+    ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:fprb(s32) = COPY $f10_f
     %1:gprb(s32) = G_IS_FPCLASS %0(s32), 608
+    $x10 = COPY %1(s32)
+    PseudoRET implicit $x10
+...
+---
+name:            is_fpclass_f32_onehot
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    liveins: $f10_f
+
+    ; CHECK-LABEL: name: is_fpclass_f32_onehot
+    ; CHECK: liveins: $f10_f
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
+    ; CHECK-NEXT: [[FCLASS_S:%[0-9]+]]:gpr = FCLASS_S [[COPY]]
+    ; CHECK-NEXT: [[SLLI:%[0-9]+]]:gpr = SLLI [[FCLASS_S]], 23
+    ; CHECK-NEXT: [[SRLI:%[0-9]+]]:gpr = SRLI [[SLLI]], 31
+    ; CHECK-NEXT: $x10 = COPY [[SRLI]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:fprb(s32) = COPY $f10_f
+    %1:gprb(s32) = G_IS_FPCLASS %0(s32), 1
     $x10 = COPY %1(s32)
     PseudoRET implicit $x10
 ...
