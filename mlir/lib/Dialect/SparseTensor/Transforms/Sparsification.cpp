@@ -323,12 +323,16 @@ static bool findDepIdxSet(Merger &merger, TensorId tensor, Level lvl,
     return true;
   }
   case AffineExprKind::Constant:
-    // TODO: Support Constant AffineExp for slice-based codegen
   case AffineExprKind::Mul: {
     // TODO: Support index expression like `2 * d0`, we now only support more
     // complicated cases like `2 * d0 + d1`.
     if (!isSubExp)
       return false;
+
+    // TODO: Support Constant AffineExp for slice-based codegen
+    if (a.isa<AffineConstantExpr>())
+      llvm_unreachable("Not yet implemented");
+
     auto binOp = a.cast<AffineBinaryOpExpr>();
     auto lhs = binOp.getLHS(), rhs = binOp.getRHS();
     if (rhs.isa<AffineConstantExpr>())
@@ -816,7 +820,7 @@ static bool computeIterationGraph(CodegenEnv &env, SortMask mask,
       for (LoopId i = 0; i < numLoops; i++) {
         const auto dltI = env.dlt(tid, i);
         if (isCompressedDLT(dltI) || isLooseCompressedDLT(dltI) ||
-            isSingletonDLT(dltI)) {
+            isSingletonDLT(dltI) || is2OutOf4DLT(dltI)) {
           for (LoopId j = 0; j < numLoops; j++)
             if (isUndefDLT(env.dlt(tid, j))) {
               addIterOrdering(i, j, adjM, inDegree);
@@ -1508,7 +1512,7 @@ static scf::IfOp genIf(CodegenEnv &env, OpBuilder &builder, LoopId ldx,
         assert(ldx == env.merger().loop(b));
         Value clause;
         if (isCompressedDLT(dlt) || isSingletonDLT(dlt) ||
-            isLooseCompressedDLT(dlt)) {
+            isLooseCompressedDLT(dlt) || is2OutOf4DLT(dlt)) {
           assert(lvl.has_value());
           const Value crd = env.emitter().getCoords()[tid][*lvl];
           const Value lvar = env.getLoopVar(ldx);
@@ -1593,7 +1597,7 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
       needsUniv = true;
     }
     if (isCompressedDLT(dlt) || isSingletonDLT(dlt) ||
-        isLooseCompressedDLT(dlt) || isIdxReduc) {
+        isLooseCompressedDLT(dlt) || is2OutOf4DLT(dlt) || isIdxReduc) {
       // Only when this is a index reduction loop, can the dlt be undefined.
       assert(!isUndefDLT(dlt) || isIdxReduc);
       // sparse/singleton levels, or a dense/sparse index reduction loop.
@@ -1953,7 +1957,7 @@ public:
     const unsigned numFilterLoops = getNumNonTrivialIdxExpOnSparseLvls(op);
     // TODO: we should probably always use slice-based codegen whenever
     // possible, we can even intermix slice-based and filter-loop based codegen.
-    bool idxReducBased = options.enableIndexReduction && numFilterLoops != 0;
+    bool idxReducBased = numFilterLoops != 0;
     // If we have indexing map like (d0) -> (0, d0), there might be more
     // levels then loops because of the constant index, that means we can not
     // use numLoops as the upper bound for ranks of all tensors.

@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 
 ! CHECK-LABEL: func @_QQmain
 program p
@@ -83,6 +83,6 @@ subroutine global_pointer
   write(10, nml=mygroup)
 end
 
-  ! CHECK-DAG: fir.global linkonce @_QQcl.6A6A6A00 constant : !fir.char<1,4>
-  ! CHECK-DAG: fir.global linkonce @_QQcl.63636300 constant : !fir.char<1,4>
-  ! CHECK-DAG: fir.global linkonce @_QQcl.6E6E6E00 constant : !fir.char<1,4>
+  ! CHECK-DAG: fir.global linkonce @_QQclX6A6A6A00 constant : !fir.char<1,4>
+  ! CHECK-DAG: fir.global linkonce @_QQclX63636300 constant : !fir.char<1,4>
+  ! CHECK-DAG: fir.global linkonce @_QQclX6E6E6E00 constant : !fir.char<1,4>

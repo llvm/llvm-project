@@ -1575,7 +1575,7 @@ bool DataFlowSanitizer::runImpl(
       // below will take care of instrumenting it.
       Function *NewF =
           buildWrapperFunction(F, "", GA.getLinkage(), F->getFunctionType());
-      GA.replaceAllUsesWith(ConstantExpr::getBitCast(NewF, GA.getType()));
+      GA.replaceAllUsesWith(NewF);
       NewF->takeName(&GA);
       GA.eraseFromParent();
       FnsToInstrument.push_back(NewF);
@@ -1622,9 +1622,6 @@ bool DataFlowSanitizer::runImpl(
           WrapperLinkage, FT);
       NewF->removeFnAttrs(ReadOnlyNoneAttrs);
 
-      Value *WrappedFnCst =
-          ConstantExpr::getBitCast(NewF, PointerType::getUnqual(FT));
-
       // Extern weak functions can sometimes be null at execution time.
       // Code will sometimes check if an extern weak function is null.
       // This could look something like:
@@ -1657,9 +1654,9 @@ bool DataFlowSanitizer::runImpl(
         }
         return true;
       };
-      F.replaceUsesWithIf(WrappedFnCst, IsNotCmpUse);
+      F.replaceUsesWithIf(NewF, IsNotCmpUse);
 
-      UnwrappedFnMap[WrappedFnCst] = &F;
+      UnwrappedFnMap[NewF] = &F;
       *FI = NewF;
 
       if (!F.isDeclaration()) {
