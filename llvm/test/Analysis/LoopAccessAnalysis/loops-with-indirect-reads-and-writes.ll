@@ -79,8 +79,6 @@ exit:
   ret void
 }
 
-; FIXME: Not safe with runtime checks due to the indirect pointers are modified
-;        in the loop.
 define void @test_indirect_read_loop_also_modifies_pointer_array(ptr noundef %arr) {
 ; CHECK-LABEL: 'test_indirect_read_loop_also_modifies_pointer_array'
 ; CHECK-NEXT:    loop.1:
@@ -149,8 +147,6 @@ exit:
   ret void
 }
 
-; FIXME: Not safe with runtime checks due to the indirect pointers are modified
-;        in the loop.
 define void @test_indirect_write_loop_also_modifies_pointer_array(ptr noundef %arr) {
 ; CHECK-LABEL: 'test_indirect_write_loop_also_modifies_pointer_array'
 ; CHECK-NEXT:    loop.1:
@@ -206,8 +202,7 @@ loop.2:
   %iv.2 = phi i64 [ %iv.lcssa, %loop.1.exit ], [ %iv.2.next, %loop.2 ]
   %gep.iv.1 = getelementptr inbounds ptr, ptr %arr, i64 %iv.1
   %l.1 = load ptr, ptr %gep.iv.1, align 8, !tbaa !6
-  %l.2 = load i64, ptr %l.1, align 8, !tbaa !13
-  %inc = add i64 %l.2, 1
+  %inc = add i64 %iv.1, 1
   store i64 %inc, ptr %l.1, align 8, !tbaa !13
   %iv.2.next = add nsw i64 %iv.2, 1
   %gep.iv.2 = getelementptr inbounds ptr, ptr %arr, i64 %iv.2
@@ -220,7 +215,9 @@ exit:
   ret void
 }
 
-define void @test_indirect_read_write_loop_does_not_modify_pointer_array(ptr noundef %arr) {
+; FIXME: Not safe with runtime checks due to the indirect pointers are modified
+;        in the loop.
+define void @test_indirect_read_write_loop_does_not_modify_pointer_array(ptr noundef %arr, ptr noundef noalias %arr2) {
 ; CHECK-LABEL: 'test_indirect_read_write_loop_does_not_modify_pointer_array'
 ; CHECK-NEXT:    loop.1:
 ; CHECK-NEXT:      Report: could not determine number of loop iterations
@@ -238,16 +235,16 @@ define void @test_indirect_read_write_loop_does_not_modify_pointer_array(ptr nou
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group ([[GRP7:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds ptr, ptr %arr, i64 %iv.2
+; CHECK-NEXT:          %gep.arr2.iv.2 = getelementptr inbounds i64, ptr %arr2, i64 %iv.2
 ; CHECK-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.iv.1 = getelementptr inbounds ptr, ptr %arr, i64 %iv.1
+; CHECK-NEXT:          %gep.arr2.iv.1 = getelementptr inbounds i64, ptr %arr2, i64 %iv.1
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP7]]:
-; CHECK-NEXT:          (Low: {(64 + %arr),+,64}<%loop.1> High: {(8064 + %arr),+,64}<%loop.1>)
-; CHECK-NEXT:            Member: {{\{\{}}(64 + %arr),+,64}<%loop.1>,+,8}<%loop.2>
+; CHECK-NEXT:          (Low: {(64 + %arr2),+,64}<%loop.1> High: {(8064 + %arr2),+,64}<%loop.1>)
+; CHECK-NEXT:            Member: {{\{\{}}(64 + %arr2),+,64}<%loop.1>,+,8}<%loop.2>
 ; CHECK-NEXT:        Group [[GRP8]]:
-; CHECK-NEXT:          (Low: %arr High: (8000 + %arr))
-; CHECK-NEXT:            Member: {%arr,+,8}<nuw><%loop.2>
+; CHECK-NEXT:          (Low: %arr2 High: (8000 + %arr2))
+; CHECK-NEXT:            Member: {%arr2,+,8}<nuw><%loop.2>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -279,8 +276,11 @@ loop.2:
   %inc = add i64 %l.2, 1
   store i64 %inc, ptr %l.1, align 8, !tbaa !13
   %iv.2.next = add nsw i64 %iv.2, 1
-  %gep.iv.2 = getelementptr inbounds ptr, ptr %arr, i64 %iv.2
-  store ptr %l.1, ptr %gep.iv.2, align 8, !tbaa !6
+  %gep.arr2.iv.1 = getelementptr inbounds i64 , ptr %arr2, i64 %iv.1
+  %gep.arr2.iv.2 = getelementptr inbounds i64 , ptr %arr2, i64 %iv.2
+  %l.3 = load i64, ptr %gep.arr2.iv.1
+  %inc.2 = add i64 %l.3, 5
+  store i64 %inc.2, ptr %gep.arr2.iv.2, align 8, !tbaa !6
   %iv.1.next = add nuw nsw i64 %iv.1, 1
   %cmp = icmp ult i64 %iv.1.next, 1000
   br i1 %cmp, label %loop.2, label %exit
