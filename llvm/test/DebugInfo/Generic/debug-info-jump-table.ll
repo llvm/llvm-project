@@ -1,9 +1,5 @@
 ; RUN: llc -debug-only=isel %s -o /dev/null 2>&1 | FileCheck --match-full-lines %s
 
-source_filename = "jump_table.c"
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
-
 @str = private unnamed_addr constant [2 x i8] c"1\00", align 1
 @str.12 = private unnamed_addr constant [2 x i8] c"2\00", align 1
 @str.13 = private unnamed_addr constant [2 x i8] c"3\00", align 1
@@ -102,7 +98,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 ; Function Attrs: nofree nounwind
 declare noundef i32 @puts(ptr nocapture noundef readonly) local_unnamed_addr #2
 
-attributes #0 = { nofree nounwind uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #0 = { nofree nounwind uwtable }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #2 = { nofree nounwind }
 
