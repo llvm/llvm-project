@@ -2842,6 +2842,7 @@ static LogicalResult produceSubViewErrorMsg(SliceVerificationResult result,
   llvm_unreachable("unexpected subview verification result");
 }
 
+/// Verifier for SubViewOp.
 LogicalResult SubViewOp::verify() {
   MemRefType baseType = getSourceType();
   MemRefType subViewType = getType();
