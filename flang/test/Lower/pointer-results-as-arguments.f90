@@ -1,5 +1,5 @@
 ! Test passing pointers results to pointer dummy arguments
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 
 module presults
   interface

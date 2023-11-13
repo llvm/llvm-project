@@ -1,7 +1,7 @@
 ! This test checks the lowering of parallel do
 
-! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! The string "EXPECTED" denotes the expected FIR
 
