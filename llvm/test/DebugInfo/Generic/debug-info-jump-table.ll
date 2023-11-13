@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llc -debug-only=isel %s -o /dev/null 2>&1 | FileCheck --match-full-lines %s
 
 @str = private unnamed_addr constant [2 x i8] c"1\00", align 1
