@@ -106,8 +106,8 @@ mlir::Attribute mlir::polynomial::PolynomialAttr::parse(AsmParser &parser,
       llvm::SmallString<16> coeffString;
       parsedMonomial.exponent.toStringSigned(coeffString);
       parser.emitError(parser.getCurrentLocation(),
-                       "at most one monomial may have exponent " +
-                           coeffString + ", but found multiple");
+                       "at most one monomial may have exponent " + coeffString +
+                           ", but found multiple");
       return {};
     }
     exponents.insert(parsedMonomial.exponent);
@@ -147,9 +147,9 @@ mlir::Attribute mlir::polynomial::PolynomialAttr::parse(AsmParser &parser,
 }
 
 void RingAttr::print(AsmPrinter &p) const {
-  p << "#polynomial.ring<ctype=" << getCoefficientType()
-    << ", cmod=" << getCoefficientModulus()
-    << ", ideal=" << getPolynomialModulus() << '>';
+  p << "#polynomial.ring<coefficientType=" << getCoefficientType()
+    << ", coefficientModulus=" << getCoefficientModulus()
+    << ", polynomialModulus=" << getPolynomialModulus() << '>';
 }
 
 mlir::Attribute mlir::polynomial::RingAttr::parse(AsmParser &parser,
@@ -157,7 +157,7 @@ mlir::Attribute mlir::polynomial::RingAttr::parse(AsmParser &parser,
   if (failed(parser.parseLess()))
     return {};
 
-  if (failed(parser.parseKeyword("ctype")))
+  if (failed(parser.parseKeyword("coefficientType")))
     return {};
 
   if (failed(parser.parseEqual()))
@@ -170,33 +170,33 @@ mlir::Attribute mlir::polynomial::RingAttr::parse(AsmParser &parser,
   if (failed(parser.parseComma()))
     return {};
 
-  std::optional<IntegerAttr> cmodAttr = std::nullopt;
-  if (succeeded(parser.parseKeyword("cmod"))) {
+  std::optional<IntegerAttr> coefficientModulusAttr = std::nullopt;
+  if (succeeded(parser.parseKeyword("coefficientModulus"))) {
     if (failed(parser.parseEqual()))
       return {};
 
     IntegerType iType = llvm::dyn_cast<IntegerType>(typeAttr.getValue());
     if (!iType) {
-      parser.emitError(
-          parser.getCurrentLocation(),
-          "invalid coefficient modulus, ctype must specify an integer type");
+      parser.emitError(parser.getCurrentLocation(),
+                       "invalid coefficient modulus, coefficientType must "
+                       "specify an integer type");
       return {};
     }
-    APInt cmod(iType.getWidth(), 0);
-    auto result = parser.parseInteger(cmod);
+    APInt coefficientModulus(iType.getWidth(), 0);
+    auto result = parser.parseInteger(coefficientModulus);
     if (failed(result)) {
       parser.emitError(parser.getCurrentLocation(),
                        "invalid coefficient modulus");
       return {};
     }
-    cmodAttr = IntegerAttr::get(iType, cmod);
+    coefficientModulusAttr = IntegerAttr::get(iType, coefficientModulus);
 
     if (failed(parser.parseComma()))
       return {};
   }
 
   std::optional<PolynomialAttr> polyAttr = std::nullopt;
-  if (succeeded(parser.parseKeyword("ideal"))) {
+  if (succeeded(parser.parseKeyword("polynomialModulus"))) {
     if (failed(parser.parseEqual()))
       return {};
 
@@ -209,7 +209,8 @@ mlir::Attribute mlir::polynomial::RingAttr::parse(AsmParser &parser,
   if (failed(parser.parseGreater()))
     return {};
 
-  return RingAttr::get(parser.getContext(), typeAttr, cmodAttr, polyAttr);
+  return RingAttr::get(parser.getContext(), typeAttr, coefficientModulusAttr,
+                       polyAttr);
 }
 
 } // namespace polynomial

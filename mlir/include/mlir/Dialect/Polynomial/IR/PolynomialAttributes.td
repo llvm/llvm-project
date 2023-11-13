@@ -41,8 +41,9 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
     A ring describes the domain in which polynomial arithmetic occurs. The ring
     attribute in `polynomial` represents the more specific case of polynomials
     with a single indeterminate; whose coefficients can be represented by
-    another MLIR type (`ctype`); and, if the coefficient type is integral,
-    whose coefficients are taken modulo some statically known modulus (`cmod`).
+    another MLIR type (`coefficientType`); and, if the coefficient type is
+    integral, whose coefficients are taken modulo some statically known modulus
+    (`coefficientModulus`).
 
     Additionally, a polynomial ring can specify an _ideal_, which converts
     polynomial arithmetic to the analogue of modular integer arithmetic, where
@@ -54,9 +55,11 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
     coefficients are taken modulo `2**32 - 5`, with a polynomial modulus of
     `x**1024 - 1`.
 
-    ```
+    ```mlir
     #poly_mod = #polynomial.polynomial<-1 + x**1024>
-    #ring = #polynomial.ring<ctype=i32, cmod=4294967291, ideal=#poly_mod>
+    #ring = #polynomial.ring<coefficientType=i32,
+                             coefficientModulus=4294967291,
+                             polynomialModulus=#poly_mod>
 
     %0 = ... : polynomial.polynomial<#ring>
     ```
