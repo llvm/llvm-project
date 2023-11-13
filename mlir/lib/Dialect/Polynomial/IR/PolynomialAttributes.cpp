@@ -105,9 +105,9 @@ mlir::Attribute mlir::polynomial::PolynomialAttr::parse(AsmParser &parser,
     if (llvm::is_contained(exponents, parsedMonomial.exponent)) {
       llvm::SmallString<16> coeffString;
       parsedMonomial.exponent.toStringSigned(coeffString);
-      parser.emitError(parser.getCurrentLocation(),
-                       "at most one monomial may have exponent " + coeffString +
-                           ", but found multiple");
+      parser.emitError(parser.getCurrentLocation())
+          << "at most one monomial may have exponent " << coeffString
+          << ", but found multiple";
       return {};
     }
     exponents.insert(parsedMonomial.exponent);
