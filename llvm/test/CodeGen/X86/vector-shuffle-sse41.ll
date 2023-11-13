@@ -39,14 +39,14 @@ define <8 x i16> @blend_packusdw_packuswb(<4 x i32> %a0, <4 x i32> %a1, <8 x i16
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    packusdw %xmm0, %xmm0
 ; SSE-NEXT:    packuswb %xmm2, %xmm2
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; SSE-NEXT:    punpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: blend_packusdw_packuswb:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vpackuswb %xmm2, %xmm2, %xmm1
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX-NEXT:    retq
   %p0 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %a0, <4 x i32> %a1)
   %p1 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %a2, <8 x i16> %a3)

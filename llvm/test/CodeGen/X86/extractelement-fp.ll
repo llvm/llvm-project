@@ -5,14 +5,14 @@
 define float @fneg_v4f32(<4 x float> %x) nounwind {
 ; X64-LABEL: fneg_v4f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X64-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: fneg_v4f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X86-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
@@ -26,7 +26,7 @@ define float @fneg_v4f32(<4 x float> %x) nounwind {
 define double @fneg_v4f64(<4 x double> %x) nounwind {
 ; X64-LABEL: fneg_v4f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovddup {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; X64-NEXT:    vmovddup {{[^#]+#+}} xmm1 = [-0.0E+0,-0.0E+0]
 ; X64-NEXT:    # xmm1 = mem[0,0]
 ; X64-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
@@ -38,7 +38,7 @@ define double @fneg_v4f64(<4 x double> %x) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vmovddup {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; X86-NEXT:    vmovddup {{[^#]+#+}} xmm1 = [-0.0E+0,-0.0E+0]
 ; X86-NEXT:    # xmm1 = mem[0,0]
 ; X86-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovlps %xmm0, (%esp)
@@ -257,7 +257,7 @@ define double @frem_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 ; X86-LABEL: frem_v4f64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-NEXT:    vmovlhps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; X86-NEXT:    vmovups %xmm0, (%esp)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    calll fmod
@@ -320,19 +320,19 @@ define <3 x double> @extvselectsetcc_crash(<2 x double> %x) {
 ; X64-LABEL: extvselectsetcc_crash:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcmpeqpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; X64-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; X64-NEXT:    vmovsd {{[^#]+#+}} xmm2 = mem[0],zero
 ; X64-NEXT:    vandpd %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; X64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,3,3]
+; X64-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,2,3,3]
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: extvselectsetcc_crash:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vcmpeqpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
-; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm2 = mem[0],zero
 ; X86-NEXT:    vandpd %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; X86-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,3,3]
+; X86-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,2,3,3]
 ; X86-NEXT:    retl
   %cmp = fcmp oeq <2 x double> %x, <double 5.0, double 5.0>
   %s = select <2 x i1> %cmp, <2 x double> <double 1.0, double undef>, <2 x double> <double 0.0, double undef>
@@ -382,7 +382,7 @@ define double @select_fcmp_v4f64(<4 x double> %x, <4 x double> %y, <4 x double> 
 ; X86-NEXT:    andl $-32, %esp
 ; X86-NEXT:    subl $32, %esp
 ; X86-NEXT:    vcmpnltsd %xmm0, %xmm1, %xmm0
-; X86-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    vblendvpd %xmm0, %xmm2, %xmm1, %xmm0
 ; X86-NEXT:    vmovlpd %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldl {{[0-9]+}}(%esp)
@@ -480,13 +480,13 @@ define double @fsin_v4f64(<4 x double> %x) nounwind {
 define float @fma_v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z) nounwind {
 ; X64-LABEL: fma_v4f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
+; X64-NEXT:    vfmadd213ss {{[^#]+#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: fma_v4f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
+; X86-NEXT:    vfmadd213ss {{[^#]+#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
@@ -499,7 +499,7 @@ define float @fma_v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z) nounwind
 define double @fma_v4f64(<4 x double> %x, <4 x double> %y, <4 x double> %z) nounwind {
 ; X64-LABEL: fma_v4f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
+; X64-NEXT:    vfmadd213sd {{[^#]+#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; X64-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
@@ -510,7 +510,7 @@ define double @fma_v4f64(<4 x double> %x, <4 x double> %y, <4 x double> %z) noun
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vfmadd213sd {{.*#+}} xmm1 = (xmm0 * xmm1) + xmm2
+; X86-NEXT:    vfmadd213sd {{[^#]+#+}} xmm1 = (xmm0 * xmm1) + xmm2
 ; X86-NEXT:    vmovsd %xmm1, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -525,14 +525,14 @@ define double @fma_v4f64(<4 x double> %x, <4 x double> %y, <4 x double> %z) noun
 define float @fabs_v4f32(<4 x float> %x) nounwind {
 ; X64-LABEL: fabs_v4f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; X64-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [NaN,NaN,NaN,NaN]
 ; X64-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: fabs_v4f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; X86-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [NaN,NaN,NaN,NaN]
 ; X86-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
@@ -951,9 +951,9 @@ define double @minpd_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 define float @copysign_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; X64-LABEL: copysign_v4f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X64-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
+; X64-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [NaN,NaN,NaN,NaN]
 ; X64-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
@@ -961,9 +961,9 @@ define float @copysign_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; X86-LABEL: copysign_v4f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X86-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
+; X86-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [NaN,NaN,NaN,NaN]
 ; X86-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
@@ -1227,9 +1227,9 @@ define double @nearbyint_v4f64(<4 x double> %x) nounwind {
 define float @round_v4f32(<4 x float> %x) nounwind {
 ; X64-LABEL: round_v4f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X64-NEXT:    vandps %xmm1, %xmm0, %xmm1
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
+; X64-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
 ; X64-NEXT:    vorps %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
@@ -1238,9 +1238,9 @@ define float @round_v4f32(<4 x float> %x) nounwind {
 ; X86-LABEL: round_v4f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X86-NEXT:    vandps %xmm1, %xmm0, %xmm1
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
+; X86-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
 ; X86-NEXT:    vorps %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
@@ -1257,7 +1257,7 @@ define double @round_v4f64(<4 x double> %x) nounwind {
 ; X64-LABEL: round_v4f64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; X64-NEXT:    vmovddup {{.*#+}} xmm2 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; X64-NEXT:    vmovddup {{[^#]+#+}} xmm2 = [4.9999999999999994E-1,4.9999999999999994E-1]
 ; X64-NEXT:    # xmm2 = mem[0,0]
 ; X64-NEXT:    vorpd %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
@@ -1272,7 +1272,7 @@ define double @round_v4f64(<4 x double> %x) nounwind {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
-; X86-NEXT:    vmovddup {{.*#+}} xmm2 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; X86-NEXT:    vmovddup {{[^#]+#+}} xmm2 = [4.9999999999999994E-1,4.9999999999999994E-1]
 ; X86-NEXT:    # xmm2 = mem[0,0]
 ; X86-NEXT:    vorpd %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vaddsd %xmm1, %xmm0, %xmm0

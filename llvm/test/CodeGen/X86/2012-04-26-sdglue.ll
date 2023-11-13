@@ -8,7 +8,7 @@ define void @func(<4 x float> %a, <16 x i8> %b, <16 x i8> %c, <8 x float> %d, <8
 ; CHECK-LABEL: func:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovdqu 0, %xmm0
-; CHECK-NEXT:    vpalignr {{.*#+}} xmm1 = xmm0[4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0,1,2,3]
+; CHECK-NEXT:    vpalignr {{[^#]+#+}} xmm1 = xmm0[4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0,1,2,3]
 ; CHECK-NEXT:    vmulps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vmulps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vaddps %xmm1, %xmm0, %xmm0

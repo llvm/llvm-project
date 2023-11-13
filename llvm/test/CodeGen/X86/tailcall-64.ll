@@ -282,7 +282,7 @@ define x86_fp80 @trunc_fp80(x86_fp80 %x) nounwind  {
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    callq _trunc
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)

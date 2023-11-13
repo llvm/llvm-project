@@ -10,7 +10,7 @@ define void @SHA256_Compress_Generic(ptr noundef %ctx) #1 {
 ; CHECK-NEXT:    movbel 0, %eax
 ; CHECK-NEXT:    movbel 12(%rdi), %ecx
 ; CHECK-NEXT:    vmovd %eax, %xmm0
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [128,128,128,128,0,1,2,3,128,128,128,128,128,128,128,128]
+; CHECK-NEXT:    vmovdqa {{[^#]+#+}} xmm1 = [128,128,128,128,0,1,2,3,128,128,128,128,128,128,128,128]
 ; CHECK-NEXT:    vpshufb %xmm1, %xmm0, %xmm2
 ; CHECK-NEXT:    vpsrld $17, %xmm2, %xmm0
 ; CHECK-NEXT:    vpslld $15, %xmm2, %xmm3
@@ -51,8 +51,8 @@ define void @SHA256_Compress_Generic(ptr noundef %ctx) #1 {
 ; CHECK-NEXT:    vpxor %xmm4, %xmm3, %xmm3
 ; CHECK-NEXT:    vpsrld $10, %xmm0, %xmm4
 ; CHECK-NEXT:    vpxor %xmm4, %xmm3, %xmm3
-; CHECK-NEXT:    vpblendd {{.*#+}} xmm2 = xmm1[0],xmm2[1],xmm1[2,3]
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,0,2,3]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} xmm2 = xmm1[0],xmm2[1],xmm1[2,3]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm2 = xmm2[1,0,2,3]
 ; CHECK-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
 ; CHECK-NEXT:    vpsrld $17, %xmm2, %xmm3
 ; CHECK-NEXT:    vpslld $15, %xmm2, %xmm4
@@ -97,8 +97,8 @@ define void @SHA256_Compress_Generic(ptr noundef %ctx) #1 {
 ; CHECK-NEXT:    vpsllq $32, %xmm1, %xmm3
 ; CHECK-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
 ; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; CHECK-NEXT:    vpunpcklqdq {{[^#]+#+}} ymm0 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm0 = ymm0[0,2,1,3]
 ; CHECK-NEXT:    vmovdqu %ymm0, 132(%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

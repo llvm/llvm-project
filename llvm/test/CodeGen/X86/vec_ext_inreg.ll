@@ -62,7 +62,7 @@ define <1 x i32> @c(<1 x i32> %a) nounwind {
 define <8 x i32> @d(<8 x i32> %a) nounwind {
 ; SSE-LABEL: d:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm2 = [65535,0,65535,0,65535,0,65535,0]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm2 = [65535,0,65535,0,65535,0,65535,0]
 ; SSE-NEXT:    andps %xmm2, %xmm0
 ; SSE-NEXT:    andps %xmm2, %xmm1
 ; SSE-NEXT:    retq
@@ -75,7 +75,7 @@ define <8 x i32> @d(<8 x i32> %a) nounwind {
 ; AVX2-LABEL: d:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
+; AVX2-NEXT:    vpblendw {{[^#]+#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
 ; AVX2-NEXT:    retq
   %b = trunc <8 x i32> %a to <8 x i16>
   %c = zext <8 x i16> %b to <8 x i32>
@@ -91,7 +91,7 @@ define <3 x i32> @e(<3 x i32> %a) nounwind {
 ; AVX-LABEL: e:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6,7]
+; AVX-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6,7]
 ; AVX-NEXT:    retq
   %b = trunc <3 x i32> %a to <3 x i16>
   %c = zext <3 x i16> %b to <3 x i32>

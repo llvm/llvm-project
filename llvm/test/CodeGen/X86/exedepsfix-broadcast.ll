@@ -7,7 +7,7 @@
 define <4 x float> @ExeDepsFix_broadcastss(<4 x float> %arg, <4 x float> %arg2) {
 ; CHECK-LABEL: ExeDepsFix_broadcastss:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
+; CHECK-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [NaN,NaN,NaN,NaN]
 ; CHECK-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -22,7 +22,7 @@ define <4 x float> @ExeDepsFix_broadcastss(<4 x float> %arg, <4 x float> %arg2) 
 define <8 x float> @ExeDepsFix_broadcastss256(<8 x float> %arg, <8 x float> %arg2) {
 ; CHECK-LABEL: ExeDepsFix_broadcastss256:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; CHECK-NEXT:    vbroadcastss {{[^#]+#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
 ; CHECK-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vmaxps %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -88,7 +88,7 @@ define <2 x double> @ExeDepsFix_broadcastsd(<2 x double> %arg, <2 x double> %arg
 define <4 x double> @ExeDepsFix_broadcastsd256(<4 x double> %arg, <4 x double> %arg2) {
 ; CHECK-LABEL: ExeDepsFix_broadcastsd256:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [2147483647,2147483647,2147483647,2147483647]
+; CHECK-NEXT:    vbroadcastsd {{[^#]+#+}} ymm2 = [2147483647,2147483647,2147483647,2147483647]
 ; CHECK-NEXT:    vandpd %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq

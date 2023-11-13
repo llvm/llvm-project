@@ -9,7 +9,7 @@ define void @foo(i1 %c, <2 x i64> %x) {
 ; CHECK-NEXT:    movb %dil, %al
 ; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    movq %xmm0, %rax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    movq %xmm0, %rax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:  .LBB0_1: # %for.body

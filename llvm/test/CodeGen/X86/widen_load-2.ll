@@ -40,10 +40,10 @@ define void @add3i32_2(ptr sret(%i32vec3) %ret, ptr %ap, ptr %bp)  {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    pinsrd $1, 4(%edx), %xmm0
 ; X86-NEXT:    pinsrd $2, 8(%edx), %xmm0
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    pinsrd $1, 4(%ecx), %xmm1
 ; X86-NEXT:    pinsrd $2, 8(%ecx), %xmm1
 ; X86-NEXT:    paddd %xmm0, %xmm1
@@ -55,9 +55,9 @@ define void @add3i32_2(ptr sret(%i32vec3) %ret, ptr %ap, ptr %bp)  {
 ; X64-LABEL: add3i32_2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    pinsrd $2, 8(%rsi), %xmm0
-; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X64-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X64-NEXT:    pinsrd $2, 8(%rdx), %xmm1
 ; X64-NEXT:    paddd %xmm0, %xmm1
 ; X64-NEXT:    pextrd $2, %xmm1, 8(%rdi)
@@ -151,9 +151,9 @@ define void @add3i16(ptr nocapture sret(%i16vec3) %ret, ptr %ap, ptr %bp) nounwi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    pinsrw $2, 4(%edx), %xmm0
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    pinsrw $2, 4(%ecx), %xmm1
 ; X86-NEXT:    paddw %xmm0, %xmm1
 ; X86-NEXT:    pextrw $2, %xmm1, 4(%eax)
@@ -163,8 +163,8 @@ define void @add3i16(ptr nocapture sret(%i16vec3) %ret, ptr %ap, ptr %bp) nounwi
 ; X64-LABEL: add3i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X64-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X64-NEXT:    paddw %xmm0, %xmm1
 ; X64-NEXT:    pextrw $2, %xmm1, 4(%rdi)
 ; X64-NEXT:    movd %xmm1, (%rdi)
@@ -183,8 +183,8 @@ define void @add4i16(ptr nocapture sret(%i16vec4) %ret, ptr %ap, ptr %bp) nounwi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    paddw %xmm0, %xmm1
 ; X86-NEXT:    movq %xmm1, (%eax)
 ; X86-NEXT:    retl $4
@@ -192,8 +192,8 @@ define void @add4i16(ptr nocapture sret(%i16vec4) %ret, ptr %ap, ptr %bp) nounwi
 ; X64-LABEL: add4i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X64-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X64-NEXT:    paddw %xmm0, %xmm1
 ; X64-NEXT:    movq %xmm1, (%rdi)
 ; X64-NEXT:    retq
@@ -283,8 +283,8 @@ define void @add3i8(ptr nocapture sret(%i8vec3) %ret, ptr %ap, ptr %bp) nounwind
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    paddb %xmm0, %xmm1
 ; X86-NEXT:    pextrb $2, %xmm1, 2(%eax)
 ; X86-NEXT:    pextrw $0, %xmm1, (%eax)
@@ -293,8 +293,8 @@ define void @add3i8(ptr nocapture sret(%i8vec3) %ret, ptr %ap, ptr %bp) nounwind
 ; X64-LABEL: add3i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    paddb %xmm0, %xmm1
 ; X64-NEXT:    pextrb $2, %xmm1, 2(%rdi)
 ; X64-NEXT:    pextrw $0, %xmm1, (%rdi)
@@ -357,7 +357,7 @@ define void @rot(ptr nocapture sret(%i8vec3pack) %result, ptr %X, ptr %rot) noun
 ; X86-NEXT:    movw $-24930, (%edx) # imm = 0x9E9E
 ; X86-NEXT:    movb $1, 2(%ecx)
 ; X86-NEXT:    movw $257, (%ecx) # imm = 0x101
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    psrlw $1, %xmm0
 ; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    pextrb $2, %xmm0, 2(%eax)
@@ -371,7 +371,7 @@ define void @rot(ptr nocapture sret(%i8vec3pack) %result, ptr %X, ptr %rot) noun
 ; X64-NEXT:    movw $-24930, (%rsi) # imm = 0x9E9E
 ; X64-NEXT:    movb $1, 2(%rdx)
 ; X64-NEXT:    movw $257, (%rdx) # imm = 0x101
-; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    psrlw $1, %xmm0
 ; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    pextrb $2, %xmm0, 2(%rdi)

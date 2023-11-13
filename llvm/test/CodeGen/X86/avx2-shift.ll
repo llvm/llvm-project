@@ -377,7 +377,7 @@ define <32 x i8> @sra_v32i8(<32 x i8> %A) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    vpsrlw $3, %ymm0, %ymm0
 ; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
-; X86-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
+; X86-NEXT:    vpbroadcastb {{[^#]+#+}} ymm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; X86-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    retl
@@ -386,7 +386,7 @@ define <32 x i8> @sra_v32i8(<32 x i8> %A) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsrlw $3, %ymm0, %ymm0
 ; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; X64-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
+; X64-NEXT:    vpbroadcastb {{[^#]+#+}} ymm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; X64-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
@@ -419,11 +419,11 @@ define <8 x i32> @sext_v8i32(<8 x i32> %a) nounwind {
 define <8 x i16> @variable_shl16(<8 x i16> %lhs, <8  x i16> %rhs) {
 ; CHECK-LABEL: variable_shl16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-NEXT:    vpmovzxwd {{[^#]+#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; CHECK-NEXT:    vpmovzxwd {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; CHECK-NEXT:    vpsllvd %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; CHECK-NEXT:    vpshufb {{[^#]+#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm0 = ymm0[0,2,2,3]
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
@@ -434,7 +434,7 @@ define <8 x i16> @variable_shl16(<8 x i16> %lhs, <8  x i16> %rhs) {
 define <8 x i16> @variable_ashr16(<8 x i16> %lhs, <8  x i16> %rhs) {
 ; CHECK-LABEL: variable_ashr16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; CHECK-NEXT:    vpmovzxwd {{[^#]+#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; CHECK-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; CHECK-NEXT:    vpsravd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
@@ -448,8 +448,8 @@ define <8 x i16> @variable_ashr16(<8 x i16> %lhs, <8  x i16> %rhs) {
 define <8 x i16> @variable_lshr16(<8 x i16> %lhs, <8  x i16> %rhs) {
 ; CHECK-LABEL: variable_lshr16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-NEXT:    vpmovzxwd {{[^#]+#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; CHECK-NEXT:    vpmovzxwd {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; CHECK-NEXT:    vpsrlvd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0

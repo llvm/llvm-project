@@ -122,7 +122,7 @@ define void @func(...) nounwind {
 ; CHECK-X64-NEXT:    addq $8, %rcx
 ; CHECK-X64-NEXT:    movq %rcx, 32(%rsp)
 ; CHECK-X64-NEXT:  LBB0_15: ## %entry
-; CHECK-X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-X64-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-X64-NEXT:    movl (%rsp), %ecx
 ; CHECK-X64-NEXT:    cmpl $48, %ecx
 ; CHECK-X64-NEXT:    jae LBB0_17
@@ -234,7 +234,7 @@ define void @func(...) nounwind {
 ; CHECK-X64-NEXT:    addq $8, %rsi
 ; CHECK-X64-NEXT:    movq %rsi, 32(%rsp)
 ; CHECK-X64-NEXT:  LBB0_39: ## %entry
-; CHECK-X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-X64-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-X64-NEXT:    movl (%rsp), %esi
 ; CHECK-X64-NEXT:    cmpl $48, %esi
 ; CHECK-X64-NEXT:    jae LBB0_41
@@ -379,7 +379,7 @@ define void @func(...) nounwind {
 ; CHECK-X32-NEXT:    addl $8, %ecx
 ; CHECK-X32-NEXT:    movl %ecx, 24(%esp)
 ; CHECK-X32-NEXT:  .LBB0_15: # %entry
-; CHECK-X32-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-X32-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-X32-NEXT:    movl (%esp), %ecx
 ; CHECK-X32-NEXT:    cmpl $48, %ecx
 ; CHECK-X32-NEXT:    jae .LBB0_17
@@ -491,7 +491,7 @@ define void @func(...) nounwind {
 ; CHECK-X32-NEXT:    addl $8, %esi
 ; CHECK-X32-NEXT:    movl %esi, 24(%esp)
 ; CHECK-X32-NEXT:  .LBB0_39: # %entry
-; CHECK-X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-X32-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-X32-NEXT:    movl (%esp), %esi
 ; CHECK-X32-NEXT:    cmpl $48, %esi
 ; CHECK-X32-NEXT:    jae .LBB0_41
@@ -560,9 +560,9 @@ define i32 @main() nounwind {
 ; CHECK-X64-NEXT:    movl $12, (%rsp)
 ; CHECK-X64-NEXT:    movabsq $_func, %r10
 ; CHECK-X64-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; CHECK-X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-X64-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-X64-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; CHECK-X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-X64-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-X64-NEXT:    movabsq $123456677890, %r8 ## imm = 0x1CBE976802
 ; CHECK-X64-NEXT:    movl $1, %edi
 ; CHECK-X64-NEXT:    movl $2, %esi
@@ -579,9 +579,9 @@ define i32 @main() nounwind {
 ; CHECK-X32:       # %bb.0: # %entry
 ; CHECK-X32-NEXT:    pushq %rax
 ; CHECK-X32-NEXT:    movl $12, (%esp)
-; CHECK-X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-X32-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-X32-NEXT:    movabsq $123456677890, %r8 # imm = 0x1CBE976802
-; CHECK-X32-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-X32-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-X32-NEXT:    movl $1, %edi
 ; CHECK-X32-NEXT:    movl $2, %esi
 ; CHECK-X32-NEXT:    movl $3, %edx

@@ -31,7 +31,7 @@ define half @fceil32(half %f) #0 {
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
@@ -69,7 +69,7 @@ define half @ffloor32(half %f) #0 {
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
@@ -107,7 +107,7 @@ define half @ftrunc32(half %f) #0 {
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
@@ -145,7 +145,7 @@ define half @frint32(half %f) #0 {
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
@@ -184,7 +184,7 @@ define half @fnearbyint32(half %f) #0 {
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
@@ -223,7 +223,7 @@ define half @froundeven16(half %f) #0 {
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vroundss $8, %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
@@ -263,7 +263,7 @@ define half @fround16(half %f) #0 {
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    callq roundf@PLT
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
@@ -279,7 +279,7 @@ define half @fround16(half %f) #0 {
 ; X86-NEXT:    calll roundf
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    wait
-; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl

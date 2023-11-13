@@ -5,9 +5,9 @@
 define <4 x i64> @autogen_SD88863() {
 ; CHECK-LABEL: autogen_SD88863:
 ; CHECK:       # %bb.0: # %BB
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[0,1]
+; CHECK-NEXT:    vperm2f128 {{[^#]+#+}} ymm0 = zero,zero,ymm0[0,1]
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[3],ymm1[3]
+; CHECK-NEXT:    vshufpd {{[^#]+#+}} ymm0 = ymm0[0],ymm1[1],ymm0[3],ymm1[3]
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %CF

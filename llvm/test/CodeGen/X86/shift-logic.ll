@@ -91,12 +91,12 @@ define <16 x i8> @ashr_and(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrlw $2, %xmm1
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
 ; CHECK-NEXT:    pxor %xmm2, %xmm1
 ; CHECK-NEXT:    psubb %xmm2, %xmm1
 ; CHECK-NEXT:    psrlw $5, %xmm0
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm2 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; CHECK-NEXT:    pxor %xmm2, %xmm0
 ; CHECK-NEXT:    psubb %xmm2, %xmm0
 ; CHECK-NEXT:    pand %xmm1, %xmm0
@@ -110,16 +110,16 @@ define <16 x i8> @ashr_and(<16 x i8> %x, <16 x i8> %y) nounwind {
 define <2 x i64> @ashr_or(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; CHECK-LABEL: ashr_or:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,3,2,3]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm1[1,3,2,3]
 ; CHECK-NEXT:    psrad $7, %xmm2
 ; CHECK-NEXT:    psrlq $7, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,3,2,3]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm1[0,2,2,3]
+; CHECK-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm0[1,3,2,3]
 ; CHECK-NEXT:    psrad $12, %xmm2
 ; CHECK-NEXT:    psrlq $12, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,2,2,3]
+; CHECK-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; CHECK-NEXT:    por %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %sh0 = ashr <2 x i64> %x, <i64 5, i64 5>

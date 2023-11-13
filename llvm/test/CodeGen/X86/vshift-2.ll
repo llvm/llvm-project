@@ -28,7 +28,7 @@ define void @shift1b(<2 x i64> %val, ptr %dst, i64 %amt) nounwind {
 ; X86-LABEL: shift1b:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    psrlq %xmm1, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
@@ -70,7 +70,7 @@ define void @shift2b(<4 x i32> %val, ptr %dst, i32 %amt) nounwind {
 ; X86-LABEL: shift2b:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    psrld %xmm1, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl

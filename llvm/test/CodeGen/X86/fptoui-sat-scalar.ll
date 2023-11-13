@@ -62,7 +62,7 @@ define i1 @test_unsigned_i1_f32(float %f) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE-NEXT:    maxss {{[0-9]+}}(%esp), %xmm0
-; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    minss %xmm0, %xmm1
 ; X86-SSE-NEXT:    cvttss2si %xmm1, %eax
 ; X86-SSE-NEXT:    # kill: def $al killed $al killed $eax
@@ -72,7 +72,7 @@ define i1 @test_unsigned_i1_f32(float %f) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    maxss %xmm0, %xmm1
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    minss %xmm1, %xmm0
 ; X64-NEXT:    cvttss2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
@@ -125,7 +125,7 @@ define i8 @test_unsigned_i8_f32(float %f) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE-NEXT:    maxss {{[0-9]+}}(%esp), %xmm0
-; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    minss %xmm0, %xmm1
 ; X86-SSE-NEXT:    cvttss2si %xmm1, %eax
 ; X86-SSE-NEXT:    # kill: def $al killed $al killed $eax
@@ -135,7 +135,7 @@ define i8 @test_unsigned_i8_f32(float %f) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    maxss %xmm0, %xmm1
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    minss %xmm1, %xmm0
 ; X64-NEXT:    cvttss2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
@@ -187,7 +187,7 @@ define i13 @test_unsigned_i13_f32(float %f) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE-NEXT:    maxss {{[0-9]+}}(%esp), %xmm0
-; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    minss %xmm0, %xmm1
 ; X86-SSE-NEXT:    cvttss2si %xmm1, %eax
 ; X86-SSE-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -197,7 +197,7 @@ define i13 @test_unsigned_i13_f32(float %f) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    maxss %xmm0, %xmm1
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    minss %xmm1, %xmm0
 ; X64-NEXT:    cvttss2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -249,7 +249,7 @@ define i16 @test_unsigned_i16_f32(float %f) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE-NEXT:    maxss {{[0-9]+}}(%esp), %xmm0
-; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    minss %xmm0, %xmm1
 ; X86-SSE-NEXT:    cvttss2si %xmm1, %eax
 ; X86-SSE-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -259,7 +259,7 @@ define i16 @test_unsigned_i16_f32(float %f) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    maxss %xmm0, %xmm1
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    minss %xmm1, %xmm0
 ; X64-NEXT:    cvttss2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -309,7 +309,7 @@ define i19 @test_unsigned_i19_f32(float %f) nounwind {
 ;
 ; X86-SSE-LABEL: test_unsigned_i19_f32:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE-NEXT:    maxss %xmm1, %xmm0
 ; X86-SSE-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
@@ -368,7 +368,7 @@ define i32 @test_unsigned_i32_f32(float %f) nounwind {
 ;
 ; X86-SSE-LABEL: test_unsigned_i32_f32:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
 ; X86-SSE-NEXT:    movl %eax, %ecx
 ; X86-SSE-NEXT:    sarl $31, %ecx
@@ -473,8 +473,8 @@ define i50 @test_unsigned_i50_f32(float %f) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    subl $16, %esp
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm2
 ; X86-SSE-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE-NEXT:    jbe .LBB6_2
@@ -597,8 +597,8 @@ define i64 @test_unsigned_i64_f32(float %f) nounwind {
 ; X86-SSE-LABEL: test_unsigned_i64_f32:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    subl $20, %esp
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm2
 ; X86-SSE-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE-NEXT:    jbe .LBB7_2
@@ -737,7 +737,7 @@ define i100 @test_unsigned_i100_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    subl $32, %esp
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl %eax, (%esp)
@@ -745,7 +745,7 @@ define i100 @test_unsigned_i100_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    subl $4, %esp
 ; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm1
 ; X86-SSE-NEXT:    movaps %xmm1, %xmm0
 ; X86-SSE-NEXT:    movl $0, %ecx
@@ -878,7 +878,7 @@ define i128 @test_unsigned_i128_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    subl $32, %esp
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl %eax, (%esp)
@@ -886,7 +886,7 @@ define i128 @test_unsigned_i128_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    subl $4, %esp
 ; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm1
 ; X86-SSE-NEXT:    movaps %xmm1, %xmm0
 ; X86-SSE-NEXT:    movl $0, %ecx
@@ -997,7 +997,7 @@ define i1 @test_unsigned_i1_f64(double %f) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    xorpd %xmm0, %xmm0
 ; X86-SSE-NEXT:    maxsd {{[0-9]+}}(%esp), %xmm0
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-SSE-NEXT:    minsd %xmm0, %xmm1
 ; X86-SSE-NEXT:    cvttsd2si %xmm1, %eax
 ; X86-SSE-NEXT:    # kill: def $al killed $al killed $eax
@@ -1007,7 +1007,7 @@ define i1 @test_unsigned_i1_f64(double %f) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorpd %xmm1, %xmm1
 ; X64-NEXT:    maxsd %xmm0, %xmm1
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    minsd %xmm1, %xmm0
 ; X64-NEXT:    cvttsd2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
@@ -1060,7 +1060,7 @@ define i8 @test_unsigned_i8_f64(double %f) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    xorpd %xmm0, %xmm0
 ; X86-SSE-NEXT:    maxsd {{[0-9]+}}(%esp), %xmm0
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-SSE-NEXT:    minsd %xmm0, %xmm1
 ; X86-SSE-NEXT:    cvttsd2si %xmm1, %eax
 ; X86-SSE-NEXT:    # kill: def $al killed $al killed $eax
@@ -1070,7 +1070,7 @@ define i8 @test_unsigned_i8_f64(double %f) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorpd %xmm1, %xmm1
 ; X64-NEXT:    maxsd %xmm0, %xmm1
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    minsd %xmm1, %xmm0
 ; X64-NEXT:    cvttsd2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
@@ -1122,7 +1122,7 @@ define i13 @test_unsigned_i13_f64(double %f) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    xorpd %xmm0, %xmm0
 ; X86-SSE-NEXT:    maxsd {{[0-9]+}}(%esp), %xmm0
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-SSE-NEXT:    minsd %xmm0, %xmm1
 ; X86-SSE-NEXT:    cvttsd2si %xmm1, %eax
 ; X86-SSE-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -1132,7 +1132,7 @@ define i13 @test_unsigned_i13_f64(double %f) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorpd %xmm1, %xmm1
 ; X64-NEXT:    maxsd %xmm0, %xmm1
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    minsd %xmm1, %xmm0
 ; X64-NEXT:    cvttsd2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -1184,7 +1184,7 @@ define i16 @test_unsigned_i16_f64(double %f) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    xorpd %xmm0, %xmm0
 ; X86-SSE-NEXT:    maxsd {{[0-9]+}}(%esp), %xmm0
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-SSE-NEXT:    minsd %xmm0, %xmm1
 ; X86-SSE-NEXT:    cvttsd2si %xmm1, %eax
 ; X86-SSE-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -1194,7 +1194,7 @@ define i16 @test_unsigned_i16_f64(double %f) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorpd %xmm1, %xmm1
 ; X64-NEXT:    maxsd %xmm0, %xmm1
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    minsd %xmm1, %xmm0
 ; X64-NEXT:    cvttsd2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -1244,7 +1244,7 @@ define i19 @test_unsigned_i19_f64(double %f) nounwind {
 ;
 ; X86-SSE-LABEL: test_unsigned_i19_f64:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    xorpd %xmm1, %xmm1
 ; X86-SSE-NEXT:    maxsd %xmm1, %xmm0
 ; X86-SSE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
@@ -1303,7 +1303,7 @@ define i32 @test_unsigned_i32_f64(double %f) nounwind {
 ;
 ; X86-SSE-LABEL: test_unsigned_i32_f64:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    xorpd %xmm1, %xmm1
 ; X86-SSE-NEXT:    maxsd %xmm1, %xmm0
 ; X86-SSE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
@@ -1320,7 +1320,7 @@ define i32 @test_unsigned_i32_f64(double %f) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorpd %xmm1, %xmm1
 ; X64-NEXT:    maxsd %xmm0, %xmm1
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    minsd %xmm1, %xmm0
 ; X64-NEXT:    cvttsd2si %xmm0, %rax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
@@ -1401,8 +1401,8 @@ define i50 @test_unsigned_i50_f64(double %f) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    subl $16, %esp
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm2 = mem[0],zero
 ; X86-SSE-NEXT:    ucomisd %xmm0, %xmm2
 ; X86-SSE-NEXT:    xorpd %xmm1, %xmm1
 ; X86-SSE-NEXT:    jbe .LBB16_2
@@ -1521,8 +1521,8 @@ define i64 @test_unsigned_i64_f64(double %f) nounwind {
 ; X86-SSE-LABEL: test_unsigned_i64_f64:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    subl $20, %esp
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm2 = mem[0],zero
 ; X86-SSE-NEXT:    ucomisd %xmm0, %xmm2
 ; X86-SSE-NEXT:    xorpd %xmm1, %xmm1
 ; X86-SSE-NEXT:    jbe .LBB17_2
@@ -1661,7 +1661,7 @@ define i100 @test_unsigned_i100_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    subl $32, %esp
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl %eax, (%esp)
@@ -1669,7 +1669,7 @@ define i100 @test_unsigned_i100_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    subl $4, %esp
 ; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    xorpd %xmm0, %xmm0
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-SSE-NEXT:    ucomisd %xmm0, %xmm1
 ; X86-SSE-NEXT:    movapd %xmm1, %xmm0
 ; X86-SSE-NEXT:    movl $0, %ecx
@@ -1802,7 +1802,7 @@ define i128 @test_unsigned_i128_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    subl $32, %esp
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl %eax, (%esp)
@@ -1810,7 +1810,7 @@ define i128 @test_unsigned_i128_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    subl $4, %esp
 ; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    xorpd %xmm0, %xmm0
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-SSE-NEXT:    ucomisd %xmm0, %xmm1
 ; X86-SSE-NEXT:    movapd %xmm1, %xmm0
 ; X86-SSE-NEXT:    movl $0, %ecx
@@ -1927,7 +1927,7 @@ define i1 @test_unsigned_i1_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    movw %ax, (%esp)
 ; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
 ; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    xorps %xmm1, %xmm1
@@ -2009,7 +2009,7 @@ define i8 @test_unsigned_i8_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    movw %ax, (%esp)
 ; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
 ; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    xorps %xmm1, %xmm1
@@ -2090,7 +2090,7 @@ define i13 @test_unsigned_i13_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    movw %ax, (%esp)
 ; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
 ; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    xorps %xmm1, %xmm1
@@ -2171,7 +2171,7 @@ define i16 @test_unsigned_i16_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    movw %ax, (%esp)
 ; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
 ; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    xorps %xmm1, %xmm1
@@ -2252,7 +2252,7 @@ define i19 @test_unsigned_i19_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    movw %ax, (%esp)
 ; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
 ; X86-SSE-NEXT:    movl %eax, %ecx
 ; X86-SSE-NEXT:    sarl $31, %ecx
@@ -2338,7 +2338,7 @@ define i32 @test_unsigned_i32_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    movw %ax, (%esp)
 ; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
 ; X86-SSE-NEXT:    movl %eax, %ecx
 ; X86-SSE-NEXT:    sarl $31, %ecx
@@ -2454,8 +2454,8 @@ define i50 @test_unsigned_i50_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    movw %ax, (%esp)
 ; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    ucomiss %xmm2, %xmm0
 ; X86-SSE-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE-NEXT:    jae .LBB26_2
@@ -2595,8 +2595,8 @@ define i64 @test_unsigned_i64_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    movw %ax, (%esp)
 ; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    ucomiss %xmm2, %xmm0
 ; X86-SSE-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE-NEXT:    jae .LBB27_2
@@ -2747,7 +2747,7 @@ define i100 @test_unsigned_i100_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl %eax, (%esp)
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    calll __fixunssfti
@@ -2898,7 +2898,7 @@ define i128 @test_unsigned_i128_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl %eax, (%esp)
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    calll __fixunssfti

@@ -105,7 +105,7 @@ define <8 x i32> @test5(<8 x i32>%a, <8 x i32>%b) {
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0
 ; KNL-NEXT:    callq _func8xi1
-; KNL-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; KNL-NEXT:    vpmovzxwd {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; KNL-NEXT:    vpslld $31, %ymm0, %ymm0
 ; KNL-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; KNL-NEXT:    popq %rax
@@ -119,7 +119,7 @@ define <8 x i32> @test5(<8 x i32>%a, <8 x i32>%b) {
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    callq _func8xi1
-; SKX-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; SKX-NEXT:    vpmovzxwd {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SKX-NEXT:    vpslld $31, %ymm0, %ymm0
 ; SKX-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; SKX-NEXT:    popq %rax
@@ -133,7 +133,7 @@ define <8 x i32> @test5(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL_X32-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0
 ; KNL_X32-NEXT:    calll _func8xi1
-; KNL_X32-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; KNL_X32-NEXT:    vpmovzxwd {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; KNL_X32-NEXT:    vpslld $31, %ymm0, %ymm0
 ; KNL_X32-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; KNL_X32-NEXT:    addl $12, %esp
@@ -169,7 +169,7 @@ define <16 x i32> @test6(<16 x i32>%a, <16 x i32>%b) {
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovdb %zmm0, %xmm0
 ; KNL-NEXT:    callq _func16xi1
-; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; KNL-NEXT:    vpmovzxbd {{[^#]+#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-NEXT:    vpsrad $31, %zmm0, %zmm0
 ; KNL-NEXT:    popq %rax
@@ -183,7 +183,7 @@ define <16 x i32> @test6(<16 x i32>%a, <16 x i32>%b) {
 ; SKX-NEXT:    vpmovm2b %k0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    callq _func16xi1
-; SKX-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; SKX-NEXT:    vpmovzxbd {{[^#]+#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; SKX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; SKX-NEXT:    vpsrad $31, %zmm0, %zmm0
 ; SKX-NEXT:    popq %rax
@@ -197,7 +197,7 @@ define <16 x i32> @test6(<16 x i32>%a, <16 x i32>%b) {
 ; KNL_X32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL_X32-NEXT:    vpmovdb %zmm0, %xmm0
 ; KNL_X32-NEXT:    calll _func16xi1
-; KNL_X32-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; KNL_X32-NEXT:    vpmovzxbd {{[^#]+#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; KNL_X32-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL_X32-NEXT:    vpsrad $31, %zmm0, %zmm0
 ; KNL_X32-NEXT:    addl $12, %esp
@@ -359,7 +359,7 @@ define i1 @test9(double %a, double %b) {
 ;
 ; KNL_X32-LABEL: test9:
 ; KNL_X32:       ## %bb.0:
-; KNL_X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; KNL_X32-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; KNL_X32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; KNL_X32-NEXT:    setb %al
 ; KNL_X32-NEXT:    retl

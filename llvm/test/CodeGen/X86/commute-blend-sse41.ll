@@ -4,7 +4,7 @@
 define <8 x i16> @commute_fold_pblendw(<8 x i16> %a, ptr %b) {
 ; CHECK-LABEL: commute_fold_pblendw:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],mem[1,2,3],xmm0[4],mem[5,6,7]
+; CHECK-NEXT:    pblendw {{[^#]+#+}} xmm0 = xmm0[0],mem[1,2,3],xmm0[4],mem[5,6,7]
 ; CHECK-NEXT:    retq
   %1 = load <8 x i16>, ptr %b
   %2 = call <8 x i16> @llvm.x86.sse41.pblendw(<8 x i16> %1, <8 x i16> %a, i8 17)
@@ -15,7 +15,7 @@ declare <8 x i16> @llvm.x86.sse41.pblendw(<8 x i16>, <8 x i16>, i8) nounwind rea
 define <4 x float> @commute_fold_blendps(<4 x float> %a, ptr %b) {
 ; CHECK-LABEL: commute_fold_blendps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3]
+; CHECK-NEXT:    blendps {{[^#]+#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3]
 ; CHECK-NEXT:    retq
   %1 = load <4 x float>, ptr %b
   %2 = call <4 x float> @llvm.x86.sse41.blendps(<4 x float> %1, <4 x float> %a, i8 5)
@@ -26,7 +26,7 @@ declare <4 x float> @llvm.x86.sse41.blendps(<4 x float>, <4 x float>, i8) nounwi
 define <2 x double> @commute_fold_blendpd(<2 x double> %a, ptr %b) {
 ; CHECK-LABEL: commute_fold_blendpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; CHECK-NEXT:    blendps {{[^#]+#+}} xmm0 = xmm0[0,1],mem[2,3]
 ; CHECK-NEXT:    retq
   %1 = load <2 x double>, ptr %b
   %2 = call <2 x double> @llvm.x86.sse41.blendpd(<2 x double> %1, <2 x double> %a, i8 1)
@@ -38,7 +38,7 @@ define <4 x i32> @commute_fold_blend_v4i32(ptr %a, <4 x i32> %b) {
 ; CHECK-LABEL: commute_fold_blend_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    paddd %xmm0, %xmm0
-; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = mem[0,1,2,3,4,5],xmm0[6,7]
+; CHECK-NEXT:    pblendw {{[^#]+#+}} xmm0 = mem[0,1,2,3,4,5],xmm0[6,7]
 ; CHECK-NEXT:    retq
   %1 = load <4 x i32>, ptr %a
   %2 = add <4 x i32> %b, %b ; force integer domain
@@ -55,9 +55,9 @@ define void @baz(ptr %arg, ptr %arg1) optsize {
 ; CHECK-LABEL: baz:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movaps (%rdi), %xmm0
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [3,3]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm1 = [3,3]
 ; CHECK-NEXT:    andps %xmm0, %xmm1
-; CHECK-NEXT:    blendps {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3]
+; CHECK-NEXT:    blendps {{[^#]+#+}} xmm1 = xmm0[0,1],xmm1[2,3]
 ; CHECK-NEXT:    movups %xmm1, (%rsi)
 ; CHECK-NEXT:    retq
 bb:

@@ -62,14 +62,14 @@ define <4 x i64> @select01(i32 %a, <4 x i64> %b) nounwind {
 define void @fold_blendv_mask(<4 x i32> %a0) {
 ; X86-LABEL: fold_blendv_mask:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vmovaps {{.*#+}} ymm0 = [4294942349,7802,29242,15858,29361,4294951202,4294964216,4294941010]
+; X86-NEXT:    vmovaps {{[^#]+#+}} ymm0 = [4294942349,7802,29242,15858,29361,4294951202,4294964216,4294941010]
 ; X86-NEXT:    vmovaps %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fold_blendv_mask:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [4294942349,7802,29242,15858,29361,4294951202,4294964216,4294941010]
+; X64-NEXT:    vmovaps {{[^#]+#+}} ymm0 = [4294942349,7802,29242,15858,29361,4294951202,4294964216,4294941010]
 ; X64-NEXT:    vmovaps %ymm0, (%rax)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq

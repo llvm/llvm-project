@@ -237,7 +237,7 @@ define <4 x float> @reassociate_adds_v4f32(<4 x float> %x0, <4 x float> %x1, <4 
 ;
 ; AVX512-LABEL: reassociate_adds_v4f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
+; AVX512-NEXT:    vfmadd213ps {{[^#]+#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; AVX512-NEXT:    vaddps %xmm0, %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %t0 = fmul contract reassoc nsz <4 x float> %x0, %x1
@@ -265,7 +265,7 @@ define <2 x double> @reassociate_adds_v2f64(<2 x double> %x0, <2 x double> %x1, 
 ;
 ; AVX512-LABEL: reassociate_adds_v2f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
+; AVX512-NEXT:    vfmadd213pd {{[^#]+#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; AVX512-NEXT:    vaddpd %xmm0, %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %t0 = fmul contract reassoc nsz <2 x double> %x0, %x1
@@ -340,7 +340,7 @@ define <8 x float> @reassociate_adds_v8f32(<8 x float> %x0, <8 x float> %x1, <8 
 ;
 ; AVX512-LABEL: reassociate_adds_v8f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
+; AVX512-NEXT:    vfmadd213ps {{[^#]+#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; AVX512-NEXT:    vaddps %ymm0, %ymm3, %ymm0
 ; AVX512-NEXT:    retq
   %t0 = fmul contract reassoc nsz <8 x float> %x0, %x1
@@ -371,7 +371,7 @@ define <4 x double> @reassociate_adds_v4f64(<4 x double> %x0, <4 x double> %x1, 
 ;
 ; AVX512-LABEL: reassociate_adds_v4f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
+; AVX512-NEXT:    vfmadd213pd {{[^#]+#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; AVX512-NEXT:    vaddpd %ymm0, %ymm3, %ymm0
 ; AVX512-NEXT:    retq
   %t0 = fmul contract reassoc nsz <4 x double> %x0, %x1
@@ -461,7 +461,7 @@ define <16 x float> @reassociate_adds_v16f32(<16 x float> %x0, <16 x float> %x1,
 ;
 ; AVX512-LABEL: reassociate_adds_v16f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
+; AVX512-NEXT:    vfmadd213ps {{[^#]+#+}} zmm0 = (zmm1 * zmm0) + zmm2
 ; AVX512-NEXT:    vaddps %zmm0, %zmm3, %zmm0
 ; AVX512-NEXT:    retq
   %t0 = fmul contract reassoc nsz <16 x float> %x0, %x1
@@ -501,7 +501,7 @@ define <8 x double> @reassociate_adds_v8f64(<8 x double> %x0, <8 x double> %x1, 
 ;
 ; AVX512-LABEL: reassociate_adds_v8f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vfmadd213pd {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
+; AVX512-NEXT:    vfmadd213pd {{[^#]+#+}} zmm0 = (zmm1 * zmm0) + zmm2
 ; AVX512-NEXT:    vaddpd %zmm0, %zmm3, %zmm0
 ; AVX512-NEXT:    retq
   %t0 = fmul contract reassoc nsz <8 x double> %x0, %x1

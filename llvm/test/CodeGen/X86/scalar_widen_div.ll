@@ -364,7 +364,7 @@ define <5 x i64> @test_ulong_rem(<5 x i64> %num, <5 x i64> %rem) {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divq {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rdx, %xmm1
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movq %r8, %rax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divq {{[0-9]+}}(%rsp)
@@ -373,7 +373,7 @@ define <5 x i64> @test_ulong_rem(<5 x i64> %num, <5 x i64> %rem) {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divq {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rdx, %xmm2
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm2 = xmm2[0],xmm0[0]
 ; CHECK-NEXT:    movq %r9, %rax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divq {{[0-9]+}}(%rsp)

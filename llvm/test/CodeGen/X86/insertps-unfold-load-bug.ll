@@ -9,17 +9,17 @@ define <4 x float> @insertps_unfold(ptr %v0, ptr %v1) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    movaps (%eax), %xmm0
-; X32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; X32-NEXT:    insertps {{[^#]+#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; X32-NEXT:    addps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: insertps_unfold:
 ; X64:       # %bb.0:
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    movaps (%rdi), %xmm0
-; X64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; X64-NEXT:    insertps {{[^#]+#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; X64-NEXT:    addps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %a = getelementptr inbounds <4 x float>, ptr %v1, i64 0, i64 1

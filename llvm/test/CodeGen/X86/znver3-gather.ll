@@ -16,7 +16,7 @@ define <8 x i32> @simple(ptr %base, <8 x i32> %offsets) {
 ; X64-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; X64-NEXT:    vpsllq $2, %ymm2, %ymm2
 ; X64-NEXT:    vpaddq %ymm2, %ymm1, %ymm2
-; X64-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    vmovd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    vpextrq $1, %xmm0, %rdx
 ; X64-NEXT:    vmovq %xmm0, %rsi
 ; X64-NEXT:    vextracti128 $1, %ymm2, %xmm0
@@ -25,7 +25,7 @@ define <8 x i32> @simple(ptr %base, <8 x i32> %offsets) {
 ; X64-NEXT:    vpinsrd $1, (%rcx), %xmm1, %xmm1
 ; X64-NEXT:    vmovq %xmm0, %r9
 ; X64-NEXT:    vpextrq $1, %xmm0, %r10
-; X64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    vpinsrd $2, (%rsi), %xmm1, %xmm1
 ; X64-NEXT:    vpinsrd $1, (%r8), %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $3, (%rdx), %xmm1, %xmm1
@@ -53,7 +53,7 @@ define <8 x i32> @optsize(ptr %base, <8 x i32> %offsets) optsize {
 ; X64-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; X64-NEXT:    vpsllq $2, %ymm2, %ymm2
 ; X64-NEXT:    vpaddq %ymm2, %ymm1, %ymm2
-; X64-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    vmovd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    vpextrq $1, %xmm0, %rdx
 ; X64-NEXT:    vmovq %xmm0, %rsi
 ; X64-NEXT:    vextracti128 $1, %ymm2, %xmm0
@@ -62,7 +62,7 @@ define <8 x i32> @optsize(ptr %base, <8 x i32> %offsets) optsize {
 ; X64-NEXT:    vpinsrd $1, (%rcx), %xmm1, %xmm1
 ; X64-NEXT:    vmovq %xmm0, %r9
 ; X64-NEXT:    vpextrq $1, %xmm0, %r10
-; X64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    vpinsrd $2, (%rsi), %xmm1, %xmm1
 ; X64-NEXT:    vpinsrd $1, (%r8), %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $3, (%rdx), %xmm1, %xmm1
@@ -90,7 +90,7 @@ define <8 x i32> @minsize(ptr %base, <8 x i32> %offsets) minsize {
 ; X64-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; X64-NEXT:    vpsllq $2, %ymm2, %ymm2
 ; X64-NEXT:    vpaddq %ymm2, %ymm1, %ymm2
-; X64-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    vmovd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    vpextrq $1, %xmm0, %rdx
 ; X64-NEXT:    vmovq %xmm0, %rsi
 ; X64-NEXT:    vextracti128 $1, %ymm2, %xmm0
@@ -99,7 +99,7 @@ define <8 x i32> @minsize(ptr %base, <8 x i32> %offsets) minsize {
 ; X64-NEXT:    vpinsrd $1, (%rcx), %xmm1, %xmm1
 ; X64-NEXT:    vmovq %xmm0, %r9
 ; X64-NEXT:    vpextrq $1, %xmm0, %r10
-; X64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    vpinsrd $2, (%rsi), %xmm1, %xmm1
 ; X64-NEXT:    vpinsrd $1, (%r8), %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $3, (%rdx), %xmm1, %xmm1

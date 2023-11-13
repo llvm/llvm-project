@@ -32,7 +32,7 @@ define void @shuf2(ptr %dst.addr, <3 x float> %src1,<3 x float> %src2) nounwind 
 ; X86-LABEL: shuf2:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
+; X86-NEXT:    blendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
 ; X86-NEXT:    addps %xmm1, %xmm0
 ; X86-NEXT:    extractps $2, %xmm0, 8(%eax)
 ; X86-NEXT:    extractps $1, %xmm0, 4(%eax)
@@ -41,7 +41,7 @@ define void @shuf2(ptr %dst.addr, <3 x float> %src1,<3 x float> %src2) nounwind 
 ;
 ; X64-LABEL: shuf2:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
+; X64-NEXT:    blendps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
 ; X64-NEXT:    addps %xmm1, %xmm0
 ; X64-NEXT:    extractps $2, %xmm0, 8(%rdi)
 ; X64-NEXT:    movlps %xmm0, (%rdi)
@@ -60,13 +60,13 @@ define void @shuf3(<4 x float> %tmp10, <4 x float> %vecinit15, ptr %dst) nounwin
 ; X86-LABEL: shuf3:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; X86-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[0,0,0,0]
 ; X86-NEXT:    movaps %xmm1, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shuf3:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; X64-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[0,0,0,0]
 ; X64-NEXT:    movaps %xmm1, (%rdi)
 ; X64-NEXT:    retq
 entry:
@@ -89,12 +89,12 @@ entry:
 define <8 x i8> @shuf4(<4 x i8> %a, <4 x i8> %b) nounwind readnone {
 ; X86-LABEL: shuf4:
 ; X86:       # %bb.0:
-; X86-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    unpcklps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shuf4:
 ; X64:       # %bb.0:
-; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X64-NEXT:    unpcklps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-NEXT:    retq
   %vshuf = shufflevector <4 x i8> %a, <4 x i8> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i8> %vshuf
@@ -105,7 +105,7 @@ define void @shuf5(ptr %p) nounwind {
 ; X86-LABEL: shuf5:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    movsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;

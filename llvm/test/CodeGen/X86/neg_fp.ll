@@ -8,7 +8,7 @@ define float @negfp(float %a, float %b) nounwind {
 ; CHECK-LABEL: negfp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    subss {{[0-9]+}}(%esp), %xmm0
 ; CHECK-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    movss %xmm0, (%esp)
@@ -30,9 +30,9 @@ define double @negation_propagation(ptr %arg, double %arg1, double %arg2) nounwi
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-8, %esp
 ; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    divsd 12(%ebp), %xmm0
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm0, %xmm1
 ; CHECK-NEXT:    movapd %xmm0, %xmm2
 ; CHECK-NEXT:    mulsd %xmm0, %xmm2
@@ -62,8 +62,8 @@ define float @fdiv_extra_use_changes_cost(float %a0, float %a1, float %a2) nounw
 ; CHECK-LABEL: fdiv_extra_use_changes_cost:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    subss {{[0-9]+}}(%esp), %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm2
 ; CHECK-NEXT:    mulss %xmm0, %xmm2

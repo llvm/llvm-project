@@ -12,9 +12,9 @@ define void @foo() nounwind  {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq qux@PLT
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq

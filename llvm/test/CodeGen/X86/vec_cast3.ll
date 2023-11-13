@@ -33,7 +33,7 @@ define <2 x float> @cvt_v2i32_v2f32(<2 x i32> %src) {
 define <2 x float> @cvt_v2u8_v2f32(<2 x i8> %src) {
 ; CHECK-LABEL: cvt_v2u8_v2f32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; CHECK-NEXT:    vpmovzxbd {{[^#]+#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; CHECK-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %res = uitofp <2 x i8> %src to <2 x float>
@@ -43,7 +43,7 @@ define <2 x float> @cvt_v2u8_v2f32(<2 x i8> %src) {
 define <2 x float> @cvt_v2u16_v2f32(<2 x i16> %src) {
 ; CHECK-LABEL: cvt_v2u16_v2f32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; CHECK-NEXT:    vpmovzxwd {{[^#]+#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; CHECK-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %res = uitofp <2 x i16> %src to <2 x float>
@@ -53,8 +53,8 @@ define <2 x float> @cvt_v2u16_v2f32(<2 x i16> %src) {
 define <2 x float> @cvt_v2u32_v2f32(<2 x i32> %src) {
 ; CHECK-LABEL: cvt_v2u32_v2f32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; CHECK-NEXT:    vpmovzxdq {{[^#]+#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; CHECK-NEXT:    vmovddup {{[^#]+#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
 ; CHECK-NEXT:    ## xmm1 = mem[0,0]
 ; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
@@ -133,8 +133,8 @@ define <32 x i8> @PR40146(<4 x i64> %x) {
 ; CHECK-LABEL: PR40146:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpunpckhbw {{.*#+}} xmm1 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
-; CHECK-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-NEXT:    vpunpckhbw {{[^#]+#+}} xmm1 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
+; CHECK-NEXT:    vpmovzxbw {{[^#]+#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retl
   %perm = shufflevector <4 x i64> %x, <4 x i64> undef, <4 x i32> <i32 0, i32 undef, i32 1, i32 undef>

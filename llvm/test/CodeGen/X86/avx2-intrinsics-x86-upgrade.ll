@@ -7,7 +7,7 @@
 define <16 x i16> @test_x86_avx2_pblendw(<16 x i16> %a0, <16 x i16> %a1) {
 ; CHECK-LABEL: test_x86_avx2_pblendw:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpblendw {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3,4,5,6,7],ymm1[8,9,10],ymm0[11,12,13,14,15]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} ymm0 = ymm1[0,1,2],ymm0[3,4,5,6,7],ymm1[8,9,10],ymm0[11,12,13,14,15]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <16 x i16> @llvm.x86.avx2.pblendw(<16 x i16> %a0, <16 x i16> %a1, i32 7) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -18,7 +18,7 @@ declare <16 x i16> @llvm.x86.avx2.pblendw(<16 x i16>, <16 x i16>, i32) nounwind 
 define <4 x i32> @test_x86_avx2_pblendd_128(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: test_x86_avx2_pblendd_128:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm1[0,1,2],xmm0[3]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <4 x i32> @llvm.x86.avx2.pblendd.128(<4 x i32> %a0, <4 x i32> %a1, i32 7) ; <<4 x i32>> [#uses=1]
   ret <4 x i32> %res
@@ -29,7 +29,7 @@ declare <4 x i32> @llvm.x86.avx2.pblendd.128(<4 x i32>, <4 x i32>, i32) nounwind
 define <8 x i32> @test_x86_avx2_pblendd_256(<8 x i32> %a0, <8 x i32> %a1) {
 ; CHECK-LABEL: test_x86_avx2_pblendd_256:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3,4,5,6,7]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm1[0,1,2],ymm0[3,4,5,6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <8 x i32> @llvm.x86.avx2.pblendd.256(<8 x i32> %a0, <8 x i32> %a1, i32 7) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -68,7 +68,7 @@ declare <16 x i16> @llvm.x86.avx2.mpsadbw(<32 x i8>, <32 x i8>, i32) nounwind re
 define <4 x i64> @test_x86_avx2_psll_dq_bs(<4 x i64> %a0) {
 ; CHECK-LABEL: test_x86_avx2_psll_dq_bs:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpslldq {{.*#+}} ymm0 = zero,zero,zero,zero,zero,zero,zero,ymm0[0,1,2,3,4,5,6,7,8],zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,18,19,20,21,22,23,24]
+; CHECK-NEXT:    vpslldq {{[^#]+#+}} ymm0 = zero,zero,zero,zero,zero,zero,zero,ymm0[0,1,2,3,4,5,6,7,8],zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,18,19,20,21,22,23,24]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <4 x i64> @llvm.x86.avx2.psll.dq.bs(<4 x i64> %a0, i32 7) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -79,7 +79,7 @@ declare <4 x i64> @llvm.x86.avx2.psll.dq.bs(<4 x i64>, i32) nounwind readnone
 define <4 x i64> @test_x86_avx2_psrl_dq_bs(<4 x i64> %a0) {
 ; CHECK-LABEL: test_x86_avx2_psrl_dq_bs:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpsrldq {{.*#+}} ymm0 = ymm0[7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,ymm0[23,24,25,26,27,28,29,30,31],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{[^#]+#+}} ymm0 = ymm0[7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,ymm0[23,24,25,26,27,28,29,30,31],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <4 x i64> @llvm.x86.avx2.psrl.dq.bs(<4 x i64> %a0, i32 7) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -90,7 +90,7 @@ declare <4 x i64> @llvm.x86.avx2.psrl.dq.bs(<4 x i64>, i32) nounwind readnone
 define <4 x i64> @test_x86_avx2_psll_dq(<4 x i64> %a0) {
 ; CHECK-LABEL: test_x86_avx2_psll_dq:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpslldq {{.*#+}} ymm0 = zero,ymm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14],zero,ymm0[16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]
+; CHECK-NEXT:    vpslldq {{[^#]+#+}} ymm0 = zero,ymm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14],zero,ymm0[16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <4 x i64> @llvm.x86.avx2.psll.dq(<4 x i64> %a0, i32 8) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -101,7 +101,7 @@ declare <4 x i64> @llvm.x86.avx2.psll.dq(<4 x i64>, i32) nounwind readnone
 define <4 x i64> @test_x86_avx2_psrl_dq(<4 x i64> %a0) {
 ; CHECK-LABEL: test_x86_avx2_psrl_dq:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpsrldq {{.*#+}} ymm0 = ymm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero,ymm0[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],zero
+; CHECK-NEXT:    vpsrldq {{[^#]+#+}} ymm0 = ymm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero,ymm0[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <4 x i64> @llvm.x86.avx2.psrl.dq(<4 x i64> %a0, i32 8) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -234,7 +234,7 @@ declare <8 x i32> @llvm.x86.avx2.pbroadcastd.256(<4 x i32>) nounwind readonly
 define <2 x i64> @test_x86_avx2_pbroadcastq_128(<2 x i64> %a0) {
 ; CHECK-LABEL: test_x86_avx2_pbroadcastq_128:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; CHECK-NEXT:    vmovddup {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <2 x i64> @llvm.x86.avx2.pbroadcastq.128(<2 x i64> %a0)
   ret <2 x i64> %res
@@ -322,7 +322,7 @@ declare <4 x i64> @llvm.x86.avx2.pmovsxwq(<8 x i16>) nounwind readnone
 define <8 x i32> @test_x86_avx2_pmovzxbd(<16 x i8> %a0) {
 ; CHECK-LABEL: test_x86_avx2_pmovzxbd:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; CHECK-NEXT:    vpmovzxbd {{[^#]+#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <8 x i32> @llvm.x86.avx2.pmovzxbd(<16 x i8> %a0) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -333,7 +333,7 @@ declare <8 x i32> @llvm.x86.avx2.pmovzxbd(<16 x i8>) nounwind readnone
 define <4 x i64> @test_x86_avx2_pmovzxbq(<16 x i8> %a0) {
 ; CHECK-LABEL: test_x86_avx2_pmovzxbq:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpmovzxbq {{[^#]+#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <4 x i64> @llvm.x86.avx2.pmovzxbq(<16 x i8> %a0) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -344,7 +344,7 @@ declare <4 x i64> @llvm.x86.avx2.pmovzxbq(<16 x i8>) nounwind readnone
 define <16 x i16> @test_x86_avx2_pmovzxbw(<16 x i8> %a0) {
 ; CHECK-LABEL: test_x86_avx2_pmovzxbw:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; CHECK-NEXT:    vpmovzxbw {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <16 x i16> @llvm.x86.avx2.pmovzxbw(<16 x i8> %a0) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -355,7 +355,7 @@ declare <16 x i16> @llvm.x86.avx2.pmovzxbw(<16 x i8>) nounwind readnone
 define <4 x i64> @test_x86_avx2_pmovzxdq(<4 x i32> %a0) {
 ; CHECK-LABEL: test_x86_avx2_pmovzxdq:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; CHECK-NEXT:    vpmovzxdq {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <4 x i64> @llvm.x86.avx2.pmovzxdq(<4 x i32> %a0) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -366,7 +366,7 @@ declare <4 x i64> @llvm.x86.avx2.pmovzxdq(<4 x i32>) nounwind readnone
 define <8 x i32> @test_x86_avx2_pmovzxwd(<8 x i16> %a0) {
 ; CHECK-LABEL: test_x86_avx2_pmovzxwd:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-NEXT:    vpmovzxwd {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <8 x i32> @llvm.x86.avx2.pmovzxwd(<8 x i16> %a0) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -377,7 +377,7 @@ declare <8 x i32> @llvm.x86.avx2.pmovzxwd(<8 x i16>) nounwind readnone
 define <4 x i64> @test_x86_avx2_pmovzxwq(<8 x i16> %a0) {
 ; CHECK-LABEL: test_x86_avx2_pmovzxwq:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; CHECK-NEXT:    vpmovzxwq {{[^#]+#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <4 x i64> @llvm.x86.avx2.pmovzxwq(<8 x i16> %a0) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -564,7 +564,7 @@ declare <16 x i16> @llvm.x86.avx2.pabs.w(<16 x i16>) nounwind readnone
 define <4 x i64> @test_x86_avx2_vperm2i128(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_x86_avx2_vperm2i128:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,3,0,1]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[2,3,0,1]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <4 x i64> @llvm.x86.avx2.vperm2i128(<4 x i64> %a0, <4 x i64> %a1, i8 1) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res

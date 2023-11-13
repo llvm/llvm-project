@@ -35,13 +35,13 @@ define void @eggs(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, ptr %arg
 ; CHECK-NEXT:    vmovupd (%rax,%r13,8), %zmm7
 ; CHECK-NEXT:    vmovupd (%rax,%rbx,8), %zmm8
 ; CHECK-NEXT:    vbroadcastsd (%r15,%r12,8), %zmm9
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm0 = (zmm6 * zmm9) + zmm0
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm1 = (zmm7 * zmm9) + zmm1
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm2 = (zmm8 * zmm9) + zmm2
+; CHECK-NEXT:    vfmadd231pd {{[^#]+#+}} zmm0 = (zmm6 * zmm9) + zmm0
+; CHECK-NEXT:    vfmadd231pd {{[^#]+#+}} zmm1 = (zmm7 * zmm9) + zmm1
+; CHECK-NEXT:    vfmadd231pd {{[^#]+#+}} zmm2 = (zmm8 * zmm9) + zmm2
 ; CHECK-NEXT:    vbroadcastsd (%r14,%r12,8), %zmm9
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm3 = (zmm9 * zmm6) + zmm3
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm4 = (zmm9 * zmm7) + zmm4
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm5 = (zmm8 * zmm9) + zmm5
+; CHECK-NEXT:    vfmadd231pd {{[^#]+#+}} zmm3 = (zmm9 * zmm6) + zmm3
+; CHECK-NEXT:    vfmadd231pd {{[^#]+#+}} zmm4 = (zmm9 * zmm7) + zmm4
+; CHECK-NEXT:    vfmadd231pd {{[^#]+#+}} zmm5 = (zmm8 * zmm9) + zmm5
 ; CHECK-NEXT:    incq %r12
 ; CHECK-NEXT:    cmpq %r12, %r10
 ; CHECK-NEXT:    jne LBB0_1

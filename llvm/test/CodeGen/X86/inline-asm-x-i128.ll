@@ -11,12 +11,12 @@ define { i64, i64 } @foo(i64 %0, i64 %1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rsi, %xmm0
 ; CHECK-NEXT:    movq %rdi, %xmm1
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    movq %xmm0, %rax
-; CHECK-NEXT:    punpckhqdq {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    punpckhqdq {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movq %xmm0, %rdx
 ; CHECK-NEXT:    retq
   %3 = zext i64 %1 to i128

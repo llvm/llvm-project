@@ -150,7 +150,7 @@ define <8 x double> @test6(<8 x double> %A, <8 x double> %B) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vaddpd %zmm1, %zmm0, %zmm2
 ; AVX512-NEXT:    vsubpd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[0],zmm2[1],zmm0[2],zmm2[3],zmm0[4],zmm2[5],zmm0[6],zmm2[7]
+; AVX512-NEXT:    vshufpd {{[^#]+#+}} zmm0 = zmm0[0],zmm2[1],zmm0[2],zmm2[3],zmm0[4],zmm2[5],zmm0[6],zmm2[7]
 ; AVX512-NEXT:    retq
   %add = fadd <8 x double> %A, %B
   %sub = fsub <8 x double> %A, %B

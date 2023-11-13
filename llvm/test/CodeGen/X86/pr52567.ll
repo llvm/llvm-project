@@ -7,7 +7,7 @@
 define i32 @foo(<4 x float> %arg) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [1.00000005E-3,1.00000005E-3,1.00000005E-3,1.00000005E-3]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm1 = [1.00000005E-3,1.00000005E-3,1.00000005E-3,1.00000005E-3]
 ; CHECK-NEXT:    cmpltps %xmm0, %xmm1
 ; CHECK-NEXT:    pmovmskb %xmm1, %ecx
 ; CHECK-NEXT:    xorl %eax, %eax

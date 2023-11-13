@@ -788,7 +788,7 @@ define void @atomic_fetch_swapf32(float %x) nounwind {
 ;
 ; X86-CMOV-LABEL: atomic_fetch_swapf32:
 ; X86-CMOV:       # %bb.0:
-; X86-CMOV-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-CMOV-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-CMOV-NEXT:    movd %xmm0, %eax
 ; X86-CMOV-NEXT:    xchgl %eax, fsc32
 ; X86-CMOV-NEXT:    retl

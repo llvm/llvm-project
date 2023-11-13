@@ -7,13 +7,13 @@ define void @t1(ptr %R, ptr %P1) nounwind {
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    movss %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t1:
 ; X64:       # %bb.0:
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    movss %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %X = load <4 x float>, ptr %P1
@@ -31,7 +31,7 @@ define float @t2(ptr %P1) nounwind {
 ;
 ; X64-LABEL: t2:
 ; X64:       # %bb.0:
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    retq
   %X = load <4 x float>, ptr %P1
   %tmp = extractelement <4 x float> %X, i32 2

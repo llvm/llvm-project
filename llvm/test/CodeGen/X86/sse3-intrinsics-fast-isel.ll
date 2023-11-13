@@ -130,23 +130,23 @@ define <2 x double> @test_mm_loaddup_pd(ptr %a0) {
 ; X86-SSE-LABEL: test_mm_loaddup_pd:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
+; X86-SSE-NEXT:    movddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_mm_loaddup_pd:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-AVX-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test_mm_loaddup_pd:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
+; X64-SSE-NEXT:    movddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_mm_loaddup_pd:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-AVX-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X64-AVX-NEXT:    retq
   %ld = load double, ptr %a0
   %res0 = insertelement <2 x double> undef, double %ld, i32 0
@@ -157,12 +157,12 @@ define <2 x double> @test_mm_loaddup_pd(ptr %a0) {
 define <2 x double> @test_mm_movedup_pd(<2 x double> %a0) {
 ; SSE-LABEL: test_mm_movedup_pd:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movddup {{.*#+}} xmm0 = xmm0[0,0]
+; SSE-NEXT:    movddup {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_movedup_pd:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX-NEXT:    vmovddup {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; AVX-NEXT:    ret{{[l|q]}}
   %res = shufflevector <2 x double> %a0, <2 x double> %a0, <2 x i32> zeroinitializer
   ret <2 x double> %res
@@ -171,12 +171,12 @@ define <2 x double> @test_mm_movedup_pd(<2 x double> %a0) {
 define <4 x float> @test_mm_movehdup_ps(<4 x float> %a0) {
 ; SSE-LABEL: test_mm_movehdup_ps:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE-NEXT:    movshdup {{[^#]+#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_movehdup_ps:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX-NEXT:    vmovshdup {{[^#]+#+}} xmm0 = xmm0[1,1,3,3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %res = shufflevector <4 x float> %a0, <4 x float> %a0, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
   ret <4 x float> %res
@@ -185,12 +185,12 @@ define <4 x float> @test_mm_movehdup_ps(<4 x float> %a0) {
 define <4 x float> @test_mm_moveldup_ps(<4 x float> %a0) {
 ; SSE-LABEL: test_mm_moveldup_ps:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
+; SSE-NEXT:    movsldup {{[^#]+#+}} xmm0 = xmm0[0,0,2,2]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_moveldup_ps:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
+; AVX-NEXT:    vmovsldup {{[^#]+#+}} xmm0 = xmm0[0,0,2,2]
 ; AVX-NEXT:    ret{{[l|q]}}
   %res = shufflevector <4 x float> %a0, <4 x float> %a0, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
   ret <4 x float> %res

@@ -49,13 +49,13 @@ define <2 x float> @test_strict_ldexp_v2f32_v2i32(ptr addrspace(1) %out, <2 x fl
 ; X64-NEXT:    callq ldexpf@PLT
 ; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X64-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    pshufd $85, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
 ; X64-NEXT:    # xmm1 = mem[1,1,1,1]
 ; X64-NEXT:    movd %xmm1, %edi
 ; X64-NEXT:    callq ldexpf@PLT
 ; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X64-NEXT:    unpcklps {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    addq $56, %rsp
 ; X64-NEXT:    .cfi_def_cfa_offset 8

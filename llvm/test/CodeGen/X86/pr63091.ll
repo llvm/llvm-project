@@ -12,7 +12,7 @@ define <4 x i32> @dont_merge_pcmpgt(<16 x i8> %0, <4 x i32> %1) {
 ; SSE-NEXT:    pxor %xmm2, %xmm2
 ; SSE-NEXT:    pcmpgtb %xmm2, %xmm0
 ; SSE-NEXT:    pcmpgtd %xmm2, %xmm1
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
+; SSE-NEXT:    pblendw {{[^#]+#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: dont_merge_pcmpgt:
@@ -20,7 +20,7 @@ define <4 x i32> @dont_merge_pcmpgt(<16 x i8> %0, <4 x i32> %1) {
 ; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpcmpgtb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
+; AVX-NEXT:    vpblendd {{[^#]+#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX-NEXT:    retq
   %3 = icmp sgt <16 x i8> %0, zeroinitializer
   %4 = sext <16 x i1> %3 to <16 x i8>
@@ -37,22 +37,22 @@ define <4 x i32> @merge_and(<16 x i8> %0, <4 x i32> %1) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
+; SSE-NEXT:    blendps {{[^#]+#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: merge_and:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1]
+; AVX2-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [1,1,1,1]
 ; AVX2-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
+; AVX2-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: merge_and:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
-; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
+; AVX512-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX512-NEXT:    retq
   %3 = and <16 x i8> %0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %4 = bitcast <16 x i8> %3 to <4 x i32>

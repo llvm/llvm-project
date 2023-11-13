@@ -58,7 +58,7 @@ define <4 x i32> @fcmp_oeq_v4f32_undef() {
 define <4 x i32> @fcmp_oeq_v4f32_undef_elt() {
 ; CHECK-LABEL: fcmp_oeq_v4f32_undef_elt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [0,4294967295,4294967295,0]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,4294967295,4294967295,0]
 ; CHECK-NEXT:    retq
   %1 = fcmp oeq <4 x float> <float -0.0, float 1.0, float -1.0, float undef>, <float undef, float 1.0, float -1.0, float +2.0>
   %2 = sext <4 x i1> %1 to <4 x i32>
@@ -92,7 +92,7 @@ define <2 x i64> @fcmp_ueq_v2f64_undef() {
 define <2 x i64> @fcmp_ueq_v2f64_undef_elt() {
 ; CHECK-LABEL: fcmp_ueq_v2f64_undef_elt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [18446744073709551615,0]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm0 = [18446744073709551615,0]
 ; CHECK-NEXT:    retq
   %1 = fcmp ueq <2 x double> <double 0x3FF0000000000000, double 0xFFEFFFFFFFFFFFFF>, <double undef, double 0x3FF0000000000000>
   %2 = sext <2 x i1> %1 to <2 x i64>

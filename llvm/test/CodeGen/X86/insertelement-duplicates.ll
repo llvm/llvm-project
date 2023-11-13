@@ -11,8 +11,8 @@ define void @PR15298(ptr nocapture %source, ptr nocapture %dest) nounwind noinli
 ; SSE-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE-32-NEXT:    xorps %xmm0, %xmm0
 ; SSE-32-NEXT:    xorps %xmm1, %xmm1
-; SSE-32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],mem[0,0]
-; SSE-32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2,3,1]
+; SSE-32-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[0,3],mem[0,0]
+; SSE-32-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[0,2,3,1]
 ; SSE-32-NEXT:    movups %xmm0, 624(%eax)
 ; SSE-32-NEXT:    movups %xmm1, 608(%eax)
 ; SSE-32-NEXT:    retl
@@ -21,8 +21,8 @@ define void @PR15298(ptr nocapture %source, ptr nocapture %dest) nounwind noinli
 ; SSE-64:       # %bb.0: # %L.entry
 ; SSE-64-NEXT:    xorps %xmm0, %xmm0
 ; SSE-64-NEXT:    xorps %xmm1, %xmm1
-; SSE-64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],mem[0,0]
-; SSE-64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2,3,1]
+; SSE-64-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[0,3],mem[0,0]
+; SSE-64-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[0,2,3,1]
 ; SSE-64-NEXT:    movups %xmm0, 624(%rsi)
 ; SSE-64-NEXT:    movups %xmm1, 608(%rsi)
 ; SSE-64-NEXT:    retq
@@ -33,7 +33,7 @@ define void @PR15298(ptr nocapture %source, ptr nocapture %dest) nounwind noinli
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX-32-NEXT:    vbroadcastss 304(%ecx), %xmm0
 ; AVX-32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2],ymm1[3,4,5,6,7]
+; AVX-32-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm1[0],ymm0[1,2],ymm1[3,4,5,6,7]
 ; AVX-32-NEXT:    vmovups %ymm0, 608(%eax)
 ; AVX-32-NEXT:    vzeroupper
 ; AVX-32-NEXT:    retl
@@ -42,7 +42,7 @@ define void @PR15298(ptr nocapture %source, ptr nocapture %dest) nounwind noinli
 ; AVX-64:       # %bb.0: # %L.entry
 ; AVX-64-NEXT:    vbroadcastss 304(%rdi), %xmm0
 ; AVX-64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2],ymm1[3,4,5,6,7]
+; AVX-64-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm1[0],ymm0[1,2],ymm1[3,4,5,6,7]
 ; AVX-64-NEXT:    vmovups %ymm0, 608(%rsi)
 ; AVX-64-NEXT:    vzeroupper
 ; AVX-64-NEXT:    retq

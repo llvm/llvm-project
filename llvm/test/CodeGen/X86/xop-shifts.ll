@@ -22,7 +22,7 @@ define <4 x i32> @demandedelts_vpshld(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: demandedelts_vpshld:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpshld %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <4 x i32> %a1, <4 x i32> undef, <4 x i32> zeroinitializer
   %shift = call <4 x i32> @llvm.x86.xop.vpshld(<4 x i32> %a0, <4 x i32> %shuffle)
@@ -50,10 +50,10 @@ define <8 x i16> @binop_shuffle_vpshaw(<8 x i16> %a0, <8 x i16> %a1) {
 define <2 x i64> @binop_shuffle_vpshlq(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: binop_shuffle_vpshlq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm1 = xmm1[0,1,0,1]
 ; CHECK-NEXT:    vpshlq %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[2,3,0,1]
 ; CHECK-NEXT:    retq
   %shuffle0 = shufflevector <2 x i64> %a0, <2 x i64> undef, <2 x i32> <i32 1, i32 0>
   %shuffle1 = shufflevector <2 x i64> %a1, <2 x i64> undef, <2 x i32> <i32 0, i32 0>

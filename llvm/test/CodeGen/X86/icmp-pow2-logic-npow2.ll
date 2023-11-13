@@ -253,12 +253,12 @@ define <2 x i1> @abs_ne_vec(<2 x i64> %0) nounwind {
 ;
 ; X64-LABEL: abs_ne_vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; X64-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[1,1,3,3]
 ; X64-NEXT:    psrad $31, %xmm1
 ; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    psubq %xmm1, %xmm0
 ; X64-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
+; X64-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[1,0,3,2]
 ; X64-NEXT:    pand %xmm1, %xmm0
 ; X64-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X64-NEXT:    pxor %xmm1, %xmm0

@@ -4,7 +4,7 @@
 define dso_local void @test_v8f16_v32f16(ptr %x_addr, ptr %y_addr) {
 ; CHECK-LABEL: test_v8f16_v32f16:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vbroadcastf32x4 {{[^#]+#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vmovdqa64 %zmm0, (%rsi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -18,7 +18,7 @@ entry:
 define dso_local void @test_v8f16_v16f16(ptr %x_addr, ptr %y_addr) {
 ; CHECK-LABEL: test_v8f16_v16f16:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; CHECK-NEXT:    vbroadcastf128 {{[^#]+#+}} ymm0 = mem[0,1,0,1]
 ; CHECK-NEXT:    vmovdqa %ymm0, (%rsi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -32,7 +32,7 @@ entry:
 define dso_local void @test_v16f16_v32f16(ptr %x_addr, ptr %y_addr) {
 ; CHECK-LABEL: test_v16f16_v32f16:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vbroadcastf64x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vbroadcastf64x4 {{[^#]+#+}} zmm0 = mem[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vmovdqa64 %zmm0, (%rsi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

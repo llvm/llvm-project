@@ -7,13 +7,13 @@
 define dso_local double @t1(ptr nocapture %x) nounwind readonly ssp {
 ; SSE-LABEL: t1:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    cvtss2sd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: t1:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
@@ -47,13 +47,13 @@ entry:
 define dso_local float @squirtf(ptr %x) nounwind {
 ; SSE-LABEL: squirtf:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    sqrtss %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: squirtf:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
@@ -65,13 +65,13 @@ entry:
 define dso_local double @squirt(ptr %x) nounwind {
 ; SSE-LABEL: squirt:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    sqrtsd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: squirt:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
@@ -1342,8 +1342,8 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; SSE-WIN-NEXT:    .seh_savexmm %xmm7, 0
 ; SSE-WIN-NEXT:    .seh_endprologue
 ; SSE-WIN-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE-WIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-WIN-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-WIN-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE-WIN-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; SSE-WIN-NEXT:    #APP
 ; SSE-WIN-NEXT:    #NO_APP
 ; SSE-WIN-NEXT:    #APP
@@ -1425,8 +1425,8 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; AVX1-NEXT:    .seh_savexmm %xmm7, 0
 ; AVX1-NEXT:    .seh_endprologue
 ; AVX1-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX1-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; AVX1-NEXT:    #APP
 ; AVX1-NEXT:    #NO_APP
 ; AVX1-NEXT:    #APP
@@ -1504,9 +1504,9 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; AVX512VL-NEXT:    vmovaps %xmm7, (%rsp) # 16-byte Spill
 ; AVX512VL-NEXT:    .seh_savexmm %xmm7, 0
 ; AVX512VL-NEXT:    .seh_endprologue
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512VL-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX512VL-NEXT:    vmovsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; AVX512VL-NEXT:    #APP
 ; AVX512VL-NEXT:    #NO_APP
 ; AVX512VL-NEXT:    #APP

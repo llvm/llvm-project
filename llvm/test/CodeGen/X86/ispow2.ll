@@ -77,7 +77,7 @@ define i1 @neither_pow2_non_zero(i32 %xin) {
 define <4 x i1> @is_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-NOBMI-LABEL: is_pow2_non_zero_4xv64:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    movdqa {{.*#+}} xmm2 = [256,256]
+; CHECK-NOBMI-NEXT:    movdqa {{[^#]+#+}} xmm2 = [256,256]
 ; CHECK-NOBMI-NEXT:    por %xmm2, %xmm0
 ; CHECK-NOBMI-NEXT:    por %xmm2, %xmm1
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm2, %xmm2
@@ -90,14 +90,14 @@ define <4 x i1> @is_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-NOBMI-NEXT:    pand %xmm2, %xmm0
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NOBMI-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm3[1,3]
-; CHECK-NOBMI-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm3[0,2]
+; CHECK-NOBMI-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[1,3],xmm3[1,3]
+; CHECK-NOBMI-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,2],xmm3[0,2]
 ; CHECK-NOBMI-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: is_pow2_non_zero_4xv64:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [256,256,256,256]
+; CHECK-AVX2-NEXT:    vpbroadcastq {{[^#]+#+}} ymm1 = [256,256,256,256]
 ; CHECK-AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; CHECK-AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; CHECK-AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
@@ -127,7 +127,7 @@ define <4 x i1> @is_pow2_non_zero_4xv64(<4 x i64> %xin) {
 define <4 x i1> @neither_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-NOBMI-LABEL: neither_pow2_non_zero_4xv64:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    movdqa {{.*#+}} xmm2 = [256,256]
+; CHECK-NOBMI-NEXT:    movdqa {{[^#]+#+}} xmm2 = [256,256]
 ; CHECK-NOBMI-NEXT:    por %xmm2, %xmm0
 ; CHECK-NOBMI-NEXT:    por %xmm2, %xmm1
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm2, %xmm2
@@ -141,15 +141,15 @@ define <4 x i1> @neither_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-NOBMI-NEXT:    pand %xmm4, %xmm0
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NOBMI-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm3[1,3]
-; CHECK-NOBMI-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm3[0,2]
+; CHECK-NOBMI-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[1,3],xmm3[1,3]
+; CHECK-NOBMI-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,2],xmm3[0,2]
 ; CHECK-NOBMI-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NOBMI-NEXT:    xorps %xmm2, %xmm0
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: neither_pow2_non_zero_4xv64:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [256,256,256,256]
+; CHECK-AVX2-NEXT:    vpbroadcastq {{[^#]+#+}} ymm1 = [256,256,256,256]
 ; CHECK-AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; CHECK-AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; CHECK-AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm2
@@ -186,26 +186,26 @@ define <4 x i1> @neither_pow2_non_zero_4xv64_x_maybe_z(<4 x i64> %x) {
 ; CHECK-NOBMI-NEXT:    paddq %xmm3, %xmm4
 ; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm4
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm2, %xmm1
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,0,3,2]
+; CHECK-NOBMI-NEXT:    pshufd {{[^#]+#+}} xmm5 = xmm1[1,0,3,2]
 ; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm5
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm2, %xmm4
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[1,0,3,2]
+; CHECK-NOBMI-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm4[1,0,3,2]
 ; CHECK-NOBMI-NEXT:    pand %xmm4, %xmm1
 ; CHECK-NOBMI-NEXT:    pxor %xmm3, %xmm1
 ; CHECK-NOBMI-NEXT:    por %xmm5, %xmm1
 ; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm4
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm2, %xmm4
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[1,0,3,2]
+; CHECK-NOBMI-NEXT:    pshufd {{[^#]+#+}} xmm5 = xmm4[1,0,3,2]
 ; CHECK-NOBMI-NEXT:    pand %xmm4, %xmm5
 ; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm4
 ; CHECK-NOBMI-NEXT:    paddq %xmm3, %xmm4
 ; CHECK-NOBMI-NEXT:    pand %xmm4, %xmm0
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm2, %xmm0
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,0,3,2]
+; CHECK-NOBMI-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm0[1,0,3,2]
 ; CHECK-NOBMI-NEXT:    pand %xmm2, %xmm0
 ; CHECK-NOBMI-NEXT:    pxor %xmm3, %xmm0
 ; CHECK-NOBMI-NEXT:    por %xmm5, %xmm0
-; CHECK-NOBMI-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; CHECK-NOBMI-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: neither_pow2_non_zero_4xv64_x_maybe_z:

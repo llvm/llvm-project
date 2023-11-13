@@ -20,7 +20,7 @@ define void @convert(ptr %dst, ptr %src) nounwind {
 ; CHECK-NEXT:    movl (%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    psubw %xmm0, %xmm1
 ; CHECK-NEXT:    movq %xmm1, (%ecx,%eax,8)
 ; CHECK-NEXT:    incl (%esp)
@@ -42,7 +42,7 @@ define void @convert(ptr %dst, ptr %src) nounwind {
 ; ATOM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ATOM-NEXT:    movl (%esp), %eax
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; ATOM-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; ATOM-NEXT:    movq {{[^#]+#+}} xmm1 = mem[0],zero
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; ATOM-NEXT:    psubw %xmm0, %xmm1
 ; ATOM-NEXT:    movq %xmm1, (%ecx,%eax,8)

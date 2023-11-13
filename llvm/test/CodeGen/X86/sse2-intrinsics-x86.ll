@@ -766,14 +766,14 @@ declare <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32>, <4 x i32>) nounwind rea
 define <8 x i16> @test_x86_sse2_packssdw_128_fold() {
 ; X86-SSE-LABEL: test_x86_sse2_packssdw_128_fold:
 ; X86-SSE:       ## %bb.0:
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,32767,32767,65535,32768]
+; X86-SSE-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,0,0,0,32767,32767,65535,32768]
 ; X86-SSE-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
 ; X86-SSE-NEXT:    ## fixup A - offset: 3, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-SSE-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X86-AVX1-LABEL: test_x86_sse2_packssdw_128_fold:
 ; X86-AVX1:       ## %bb.0:
-; X86-AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,32767,32767,65535,32768]
+; X86-AVX1-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [0,0,0,0,32767,32767,65535,32768]
 ; X86-AVX1-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
 ; X86-AVX1-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
@@ -787,14 +787,14 @@ define <8 x i16> @test_x86_sse2_packssdw_128_fold() {
 ;
 ; X64-SSE-LABEL: test_x86_sse2_packssdw_128_fold:
 ; X64-SSE:       ## %bb.0:
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,32767,32767,65535,32768]
+; X64-SSE-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,0,0,0,32767,32767,65535,32768]
 ; X64-SSE-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
 ; X64-SSE-NEXT:    ## fixup A - offset: 3, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-SSE-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: test_x86_sse2_packssdw_128_fold:
 ; X64-AVX1:       ## %bb.0:
-; X64-AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,32767,32767,65535,32768]
+; X64-AVX1-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [0,0,0,0,32767,32767,65535,32768]
 ; X64-AVX1-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
 ; X64-AVX1-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
@@ -834,14 +834,14 @@ declare <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16>, <8 x i16>) nounwind rea
 define <16 x i8> @test_x86_sse2_packsswb_128_fold() {
 ; X86-SSE-LABEL: test_x86_sse2_packsswb_128_fold:
 ; X86-SSE:       ## %bb.0:
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,127,127,255,255,128,128,128,0,0,0,0,0,0,0,0]
+; X86-SSE-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,127,127,255,255,128,128,128,0,0,0,0,0,0,0,0]
 ; X86-SSE-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
 ; X86-SSE-NEXT:    ## fixup A - offset: 3, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-SSE-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X86-AVX1-LABEL: test_x86_sse2_packsswb_128_fold:
 ; X86-AVX1:       ## %bb.0:
-; X86-AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [0,127,127,255,255,128,128,128,0,0,0,0,0,0,0,0]
+; X86-AVX1-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [0,127,127,255,255,128,128,128,0,0,0,0,0,0,0,0]
 ; X86-AVX1-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
 ; X86-AVX1-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
@@ -855,14 +855,14 @@ define <16 x i8> @test_x86_sse2_packsswb_128_fold() {
 ;
 ; X64-SSE-LABEL: test_x86_sse2_packsswb_128_fold:
 ; X64-SSE:       ## %bb.0:
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,127,127,255,255,128,128,128,0,0,0,0,0,0,0,0]
+; X64-SSE-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,127,127,255,255,128,128,128,0,0,0,0,0,0,0,0]
 ; X64-SSE-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
 ; X64-SSE-NEXT:    ## fixup A - offset: 3, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-SSE-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: test_x86_sse2_packsswb_128_fold:
 ; X64-AVX1:       ## %bb.0:
-; X64-AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [0,127,127,255,255,128,128,128,0,0,0,0,0,0,0,0]
+; X64-AVX1-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [0,127,127,255,255,128,128,128,0,0,0,0,0,0,0,0]
 ; X64-AVX1-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
 ; X64-AVX1-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
@@ -902,14 +902,14 @@ declare <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16>, <8 x i16>) nounwind rea
 define <16 x i8> @test_x86_sse2_packuswb_128_fold() {
 ; X86-SSE-LABEL: test_x86_sse2_packuswb_128_fold:
 ; X86-SSE:       ## %bb.0:
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0]
+; X86-SSE-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; X86-SSE-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
 ; X86-SSE-NEXT:    ## fixup A - offset: 3, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-SSE-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X86-AVX1-LABEL: test_x86_sse2_packuswb_128_fold:
 ; X86-AVX1:       ## %bb.0:
-; X86-AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [0,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0]
+; X86-AVX1-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [0,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; X86-AVX1-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
 ; X86-AVX1-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
@@ -923,14 +923,14 @@ define <16 x i8> @test_x86_sse2_packuswb_128_fold() {
 ;
 ; X64-SSE-LABEL: test_x86_sse2_packuswb_128_fold:
 ; X64-SSE:       ## %bb.0:
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0]
+; X64-SSE-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; X64-SSE-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
 ; X64-SSE-NEXT:    ## fixup A - offset: 3, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-SSE-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: test_x86_sse2_packuswb_128_fold:
 ; X64-AVX1:       ## %bb.0:
-; X64-AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [0,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0]
+; X64-AVX1-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [0,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; X64-AVX1-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
 ; X64-AVX1-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-AVX1-NEXT:    retq ## encoding: [0xc3]

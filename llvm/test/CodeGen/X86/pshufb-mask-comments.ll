@@ -6,7 +6,7 @@
 define <16 x i8> @test1(<16 x i8> %V) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[1,0,0,0,0,2,0,0,0,0,3,0,0,0,0,4]
+; CHECK-NEXT:    pshufb {{[^#]+#+}} xmm0 = xmm0[1,0,0,0,0,2,0,0,0,0,3,0,0,0,0,4]
 ; CHECK-NEXT:    retq
   %1 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %V, <16 x i8> <i8 1, i8 0, i8 0, i8 0, i8 0, i8 2, i8 0, i8 0, i8 0, i8 0, i8 3, i8 0, i8 0, i8 0, i8 0, i8 4>)
   ret <16 x i8> %1
@@ -17,7 +17,7 @@ define <16 x i8> @test1(<16 x i8> %V) {
 define <16 x i8> @test2(<16 x i8> %V) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[15,0,0,0,0,0,0,0,0,0,1,0,0,0,0,2]
+; CHECK-NEXT:    pshufb {{[^#]+#+}} xmm0 = xmm0[15,0,0,0,0,0,0,0,0,0,1,0,0,0,0,2]
 ; CHECK-NEXT:    retq
   %1 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %V, <16 x i8> <i8 15, i8 0, i8 0, i8 0, i8 0, i8 16, i8 0, i8 0, i8 0, i8 0, i8 17, i8 0, i8 0, i8 0, i8 0, i8 50>)
   ret <16 x i8> %1
@@ -28,7 +28,7 @@ define <16 x i8> @test2(<16 x i8> %V) {
 define <16 x i8> @test3(<16 x i8> %V) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[1,0,0,15,0,2,0,0],zero,xmm0[0,3,0,0],zero,xmm0[0,4]
+; CHECK-NEXT:    pshufb {{[^#]+#+}} xmm0 = xmm0[1,0,0,15,0,2,0,0],zero,xmm0[0,3,0,0],zero,xmm0[0,4]
 ; CHECK-NEXT:    retq
   %1 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %V, <16 x i8> <i8 1, i8 0, i8 0, i8 127, i8 0, i8 2, i8 0, i8 0, i8 128, i8 0, i8 3, i8 0, i8 0, i8 255, i8 0, i8 4>)
   ret <16 x i8> %1
@@ -39,9 +39,9 @@ define <16 x i8> @test3(<16 x i8> %V) {
 define <16 x i8> @test4(<16 x i8> %V, ptr %P) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [1084818905618843912,506097522914230528]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm1 = [1084818905618843912,506097522914230528]
 ; CHECK-NEXT:    movaps %xmm1, (%rdi)
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[2,3,0,1]
 ; CHECK-NEXT:    retq
   %1 = insertelement <2 x i64> undef, i64 1084818905618843912, i32 0
   %2 = insertelement <2 x i64>    %1, i64  506097522914230528, i32 1
@@ -54,9 +54,9 @@ define <16 x i8> @test4(<16 x i8> %V, ptr %P) {
 define <16 x i8> @test5(<16 x i8> %V) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [1,0,0,0]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm1 = [1,0,0,0]
 ; CHECK-NEXT:    movaps %xmm1, (%rax)
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [1,1]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm1 = [1,1]
 ; CHECK-NEXT:    movaps %xmm1, (%rax)
 ; CHECK-NEXT:    pshufb (%rax), %xmm0
 ; CHECK-NEXT:    retq
@@ -74,9 +74,9 @@ define <16 x i8> @test5(<16 x i8> %V) {
 define <16 x i8> @test6(<16 x i8> %V, ptr %P) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [217019414673948672,506380106026255364]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm1 = [217019414673948672,506380106026255364]
 ; CHECK-NEXT:    movaps %xmm1, (%rdi)
-; CHECK-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; CHECK-NEXT:    punpcklbw {{[^#]+#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    retq
   %1 = insertelement <2 x i64> undef, i64 217019414673948672, i32 0
   %2 = insertelement <2 x i64>    %1, i64 506380106026255364, i32 1

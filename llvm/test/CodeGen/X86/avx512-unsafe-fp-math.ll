@@ -81,7 +81,7 @@ define float @test_min_f32(float %a, ptr %ptr) {
 ;
 ; CHECK-LABEL: test_min_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vminss %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -99,7 +99,7 @@ define double @test_max_f64(double %a, ptr %ptr) {
 ;
 ; CHECK-LABEL: test_max_f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    vmaxsd %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 entry:

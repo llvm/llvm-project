@@ -69,12 +69,12 @@ define void @full_test() {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $60, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 64
-; X86-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm2 = mem[0],zero
 ; X86-NEXT:    cvttps2dq %xmm2, %xmm0
 ; X86-NEXT:    cvtdq2ps %xmm0, %xmm1
 ; X86-NEXT:    xorps %xmm0, %xmm0
 ; X86-NEXT:    cmpltps %xmm2, %xmm0
-; X86-NEXT:    movaps {{.*#+}} xmm3 = <1.0E+0,1.0E+0,u,u>
+; X86-NEXT:    movaps {{[^#]+#+}} xmm3 = <1.0E+0,1.0E+0,u,u>
 ; X86-NEXT:    addps %xmm1, %xmm3
 ; X86-NEXT:    movaps %xmm1, %xmm4
 ; X86-NEXT:    blendvps %xmm0, %xmm3, %xmm4
@@ -89,12 +89,12 @@ define void @full_test() {
 ;
 ; X64-LABEL: full_test:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; X64-NEXT:    movsd {{[^#]+#+}} xmm2 = mem[0],zero
 ; X64-NEXT:    cvttps2dq %xmm2, %xmm0
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm1
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    cmpltps %xmm2, %xmm0
-; X64-NEXT:    movaps {{.*#+}} xmm3 = <1.0E+0,1.0E+0,u,u>
+; X64-NEXT:    movaps {{[^#]+#+}} xmm3 = <1.0E+0,1.0E+0,u,u>
 ; X64-NEXT:    addps %xmm1, %xmm3
 ; X64-NEXT:    movaps %xmm1, %xmm4
 ; X64-NEXT:    blendvps %xmm0, %xmm3, %xmm4

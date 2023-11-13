@@ -12,7 +12,7 @@ define i32 @f(<4 x float> %A, ptr %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $16, %esp
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
+; X86-SSE-NEXT:    movsd {{[^#]+#+}} xmm3 = mem[0],zero
 ; X86-SSE-NEXT:    movl 12(%ebp), %ecx
 ; X86-SSE-NEXT:    movdqa 56(%ebp), %xmm4
 ; X86-SSE-NEXT:    movdqa 40(%ebp), %xmm5
@@ -54,7 +54,7 @@ define i32 @f(<4 x float> %A, ptr %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 
 ; X86-AVX-NEXT:    pushl %esi
 ; X86-AVX-NEXT:    andl $-16, %esp
 ; X86-AVX-NEXT:    subl $16, %esp
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
+; X86-AVX-NEXT:    vmovsd {{[^#]+#+}} xmm3 = mem[0],zero
 ; X86-AVX-NEXT:    movl 12(%ebp), %ecx
 ; X86-AVX-NEXT:    vmovdqa 56(%ebp), %xmm4
 ; X86-AVX-NEXT:    vmovdqa 40(%ebp), %xmm5

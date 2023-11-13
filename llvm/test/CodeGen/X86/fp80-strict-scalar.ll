@@ -172,7 +172,7 @@ define float @fptrunc_fp80_to_f32(x86_fp80 %a) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    retq
   %ret = call float @llvm.experimental.constrained.fptrunc.f32.f80(x86_fp80 %a,
                                                                         metadata !"round.dynamic",
@@ -200,7 +200,7 @@ define double @fptrunc_fp80_to_f64(x86_fp80 %a) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpl -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    retq
   %ret = call double @llvm.experimental.constrained.fptrunc.f64.f80(x86_fp80 %a,
                                                                          metadata !"round.dynamic",

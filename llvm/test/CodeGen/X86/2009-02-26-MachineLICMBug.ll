@@ -46,8 +46,8 @@ define ptr @t(ptr %desc, i64 %p) nounwind ssp {
 ; CHECK-NEXT:    movl 8, %eax
 ; CHECK-NEXT:    xorps %xmm2, %xmm2
 ; CHECK-NEXT:    cvtsi2ss %rax, %xmm2
-; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
+; CHECK-NEXT:    insertps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; CHECK-NEXT:    insertps {{[^#]+#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; CHECK-NEXT:    movaps %xmm0, 0
 ; CHECK-NEXT:    jmp LBB0_1
 entry:

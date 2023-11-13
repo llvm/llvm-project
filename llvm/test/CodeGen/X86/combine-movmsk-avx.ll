@@ -82,7 +82,7 @@ define i32 @movmskpd_cmpgt_v4i64(<4 x i64> %a0) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm1
-; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
+; AVX1-NEXT:    vblendpd {{[^#]+#+}} ymm0 = ymm1[0,1],ymm0[2,3]
 ; AVX1-NEXT:    vmovmskpd %ymm0, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -109,7 +109,7 @@ define i32 @movmskps_ashr_v8i32(<8 x i32> %a0)  {
 ; AVX1-LABEL: movmskps_ashr_v8i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; AVX1-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; AVX1-NEXT:    vmovmskps %ymm0, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -135,7 +135,7 @@ define i32 @movmskps_sext_v4i64(<4 x i32> %a0)  {
 ; AVX1-LABEL: movmskps_sext_v4i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; AVX1-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vmovmskpd %ymm0, %eax
@@ -165,7 +165,7 @@ define i32 @movmskps_sext_v8i32(<8 x i16> %a0)  {
 ; AVX1-LABEL: movmskps_sext_v8i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; AVX1-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vmovmskps %ymm0, %eax

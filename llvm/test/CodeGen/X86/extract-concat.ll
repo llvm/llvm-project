@@ -24,7 +24,7 @@ define void @foo(<4 x float> %in, ptr %out) {
 ; SSE42-LABEL: foo:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE42-NEXT:    pshufb {{[^#]+#+}} xmm0 = xmm0[0,4,8],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE42-NEXT:    movl $255, %eax
 ; SSE42-NEXT:    pinsrb $3, %eax, %xmm0
 ; SSE42-NEXT:    movd %xmm0, (%rdi)
@@ -33,7 +33,7 @@ define void @foo(<4 x float> %in, ptr %out) {
 ; AVX-LABEL: foo:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttps2dq %xmm0, %xmm0
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpshufb {{[^#]+#+}} xmm0 = xmm0[0,4,8],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX-NEXT:    movl $255, %eax
 ; AVX-NEXT:    vpinsrb $3, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdi)
@@ -52,10 +52,10 @@ define <16 x i64> @catcat(<4 x i64> %x) {
 ; SSE-LABEL: catcat:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %rax
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,1,0,1]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[0,1,0,1]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm0[0,1,0,1]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[2,3,2,3]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm3 = xmm1[0,1,0,1]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm1[2,3,2,3]
 ; SSE-NEXT:    movdqa %xmm1, 112(%rdi)
 ; SSE-NEXT:    movdqa %xmm1, 96(%rdi)
 ; SSE-NEXT:    movdqa %xmm3, 80(%rdi)
@@ -68,30 +68,30 @@ define <16 x i64> @catcat(<4 x i64> %x) {
 ;
 ; AVX1-LABEL: catcat:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vshufps {{[^#]+#+}} xmm1 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm4
-; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-NEXT:    vshufps {{[^#]+#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
-; AVX1-NEXT:    vmovddup {{.*#+}} ymm2 = ymm0[0,0,2,2]
-; AVX1-NEXT:    vshufpd {{.*#+}} ymm3 = ymm0[1,1,3,3]
+; AVX1-NEXT:    vperm2f128 {{[^#]+#+}} ymm0 = ymm0[2,3,2,3]
+; AVX1-NEXT:    vmovddup {{[^#]+#+}} ymm2 = ymm0[0,0,2,2]
+; AVX1-NEXT:    vshufpd {{[^#]+#+}} ymm3 = ymm0[1,1,3,3]
 ; AVX1-NEXT:    vmovaps %ymm4, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: catcat:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[1,1,1,1]
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm0[2,2,2,2]
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm0[3,3,3,3]
+; AVX2-NEXT:    vpermpd {{[^#]+#+}} ymm1 = ymm0[1,1,1,1]
+; AVX2-NEXT:    vpermpd {{[^#]+#+}} ymm2 = ymm0[2,2,2,2]
+; AVX2-NEXT:    vpermpd {{[^#]+#+}} ymm3 = ymm0[3,3,3,3]
 ; AVX2-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: catcat:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,0,0,1,1,1,1]
+; AVX512F-NEXT:    vmovaps {{[^#]+#+}} zmm1 = [0,0,0,0,1,1,1,1]
 ; AVX512F-NEXT:    vpermpd %zmm0, %zmm1, %zmm2
-; AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [2,2,2,2,3,3,3,3]
+; AVX512F-NEXT:    vmovaps {{[^#]+#+}} zmm1 = [2,2,2,2,3,3,3,3]
 ; AVX512F-NEXT:    vpermpd %zmm0, %zmm1, %zmm1
 ; AVX512F-NEXT:    vmovaps %zmm2, %zmm0
 ; AVX512F-NEXT:    retq
@@ -107,10 +107,10 @@ define <16 x i64> @load_catcat(ptr %p) {
 ; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    movdqa (%rsi), %xmm0
 ; SSE-NEXT:    movdqa 16(%rsi), %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,1,0,1]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[0,1,0,1]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm0[0,1,0,1]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[2,3,2,3]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm3 = xmm1[0,1,0,1]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm1[2,3,2,3]
 ; SSE-NEXT:    movdqa %xmm1, 112(%rdi)
 ; SSE-NEXT:    movdqa %xmm1, 96(%rdi)
 ; SSE-NEXT:    movdqa %xmm3, 80(%rdi)
@@ -139,10 +139,10 @@ define <16 x i64> @load_catcat(ptr %p) {
 ;
 ; AVX512F-LABEL: load_catcat:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = mem[0,1,2,3,0,1,2,3]
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,4,0,4,1,5,1,5]
+; AVX512F-NEXT:    vbroadcasti64x4 {{[^#]+#+}} zmm1 = mem[0,1,2,3,0,1,2,3]
+; AVX512F-NEXT:    vmovdqa64 {{[^#]+#+}} zmm0 = [0,4,0,4,1,5,1,5]
 ; AVX512F-NEXT:    vpermq %zmm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [2,6,2,6,3,7,3,7]
+; AVX512F-NEXT:    vmovdqa64 {{[^#]+#+}} zmm2 = [2,6,2,6,3,7,3,7]
 ; AVX512F-NEXT:    vpermq %zmm1, %zmm2, %zmm1
 ; AVX512F-NEXT:    retq
   %x = load <4 x i64>, ptr %p
@@ -159,13 +159,13 @@ define <4 x i32> @cat_ext_straddle(ptr %px, ptr %py) {
 ; SSE-LABEL: cat_ext_straddle:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps 16(%rdi), %xmm0
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; SSE-NEXT:    unpcklpd {{[^#]+#+}} xmm0 = xmm0[0],mem[0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: cat_ext_straddle:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps 16(%rdi), %xmm0
-; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; AVX-NEXT:    vunpcklpd {{[^#]+#+}} xmm0 = xmm0[0],mem[0]
 ; AVX-NEXT:    retq
   %x = load <6 x i32>, ptr %px
   %y = load <6 x i32>, ptr %py

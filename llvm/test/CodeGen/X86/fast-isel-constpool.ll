@@ -16,7 +16,7 @@
 define float @constpool_float(float %x) {
 ; CHECK-LABEL: constpool_float:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
@@ -38,7 +38,7 @@ define float @constpool_float(float %x) {
 ;
 ; AVX-LABEL: constpool_float:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -68,7 +68,7 @@ define float @constpool_float(float %x) {
 define double @constpool_double(double %x) nounwind {
 ; CHECK-LABEL: constpool_double:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    addsd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
@@ -90,7 +90,7 @@ define double @constpool_double(double %x) nounwind {
 ;
 ; AVX-LABEL: constpool_double:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -119,7 +119,7 @@ define double @constpool_double(double %x) nounwind {
 define void @constpool_float_no_fp_args(ptr %x) nounwind {
 ; CHECK-LABEL: constpool_float_no_fp_args:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    addss (%rdi), %xmm0
 ; CHECK-NEXT:    movss %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
@@ -127,7 +127,7 @@ define void @constpool_float_no_fp_args(ptr %x) nounwind {
 ; LARGE-LABEL: constpool_float_no_fp_args:
 ; LARGE:       ## %bb.0:
 ; LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; LARGE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; LARGE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; LARGE-NEXT:    addss (%rdi), %xmm0
 ; LARGE-NEXT:    movss %xmm0, (%rdi)
 ; LARGE-NEXT:    retq
@@ -139,14 +139,14 @@ define void @constpool_float_no_fp_args(ptr %x) nounwind {
 ; LARGE_PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L2$pb, %rcx
 ; LARGE_PIC-NEXT:    addq %rax, %rcx
 ; LARGE_PIC-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}@GOTOFF, %rax
-; LARGE_PIC-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; LARGE_PIC-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; LARGE_PIC-NEXT:    addss (%rdi), %xmm0
 ; LARGE_PIC-NEXT:    movss %xmm0, (%rdi)
 ; LARGE_PIC-NEXT:    retq
 ;
 ; AVX-LABEL: constpool_float_no_fp_args:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vaddss (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovss %xmm0, (%rdi)
 ; AVX-NEXT:    retq
@@ -154,7 +154,7 @@ define void @constpool_float_no_fp_args(ptr %x) nounwind {
 ; LARGE_AVX-LABEL: constpool_float_no_fp_args:
 ; LARGE_AVX:       ## %bb.0:
 ; LARGE_AVX-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; LARGE_AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; LARGE_AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; LARGE_AVX-NEXT:    vaddss (%rdi), %xmm0, %xmm0
 ; LARGE_AVX-NEXT:    vmovss %xmm0, (%rdi)
 ; LARGE_AVX-NEXT:    retq
@@ -177,7 +177,7 @@ define void @constpool_float_no_fp_args(ptr %x) nounwind {
 define void @constpool_double_no_fp_args(ptr %x) nounwind {
 ; CHECK-LABEL: constpool_double_no_fp_args:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    addsd (%rdi), %xmm0
 ; CHECK-NEXT:    movsd %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
@@ -185,7 +185,7 @@ define void @constpool_double_no_fp_args(ptr %x) nounwind {
 ; LARGE-LABEL: constpool_double_no_fp_args:
 ; LARGE:       ## %bb.0:
 ; LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; LARGE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; LARGE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; LARGE-NEXT:    addsd (%rdi), %xmm0
 ; LARGE-NEXT:    movsd %xmm0, (%rdi)
 ; LARGE-NEXT:    retq
@@ -197,14 +197,14 @@ define void @constpool_double_no_fp_args(ptr %x) nounwind {
 ; LARGE_PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L3$pb, %rcx
 ; LARGE_PIC-NEXT:    addq %rax, %rcx
 ; LARGE_PIC-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}@GOTOFF, %rax
-; LARGE_PIC-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; LARGE_PIC-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; LARGE_PIC-NEXT:    addsd (%rdi), %xmm0
 ; LARGE_PIC-NEXT:    movsd %xmm0, (%rdi)
 ; LARGE_PIC-NEXT:    retq
 ;
 ; AVX-LABEL: constpool_double_no_fp_args:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vaddsd (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovsd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
@@ -212,7 +212,7 @@ define void @constpool_double_no_fp_args(ptr %x) nounwind {
 ; LARGE_AVX-LABEL: constpool_double_no_fp_args:
 ; LARGE_AVX:       ## %bb.0:
 ; LARGE_AVX-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; LARGE_AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; LARGE_AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; LARGE_AVX-NEXT:    vaddsd (%rdi), %xmm0, %xmm0
 ; LARGE_AVX-NEXT:    vmovsd %xmm0, (%rdi)
 ; LARGE_AVX-NEXT:    retq

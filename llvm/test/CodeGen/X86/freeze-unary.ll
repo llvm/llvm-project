@@ -21,8 +21,8 @@ define i32 @freeze_sext(i8 %a0) nounwind {
 define <4 x i32> @freeze_sext_vec(<4 x i8> %a0) nounwind {
 ; X86-LABEL: freeze_sext_vec:
 ; X86:       # %bb.0:
-; X86-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; X86-NEXT:    punpcklbw {{[^#]+#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; X86-NEXT:    punpcklwd {{[^#]+#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; X86-NEXT:    psrad $24, %xmm0
 ; X86-NEXT:    retl
 ;
@@ -56,13 +56,13 @@ define <2 x i64> @freeze_zext_vec(<2 x i16> %a0) nounwind {
 ; X86-LABEL: freeze_zext_vec:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pxor %xmm1, %xmm1
-; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    punpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X86-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_zext_vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; X64-NEXT:    pmovzxwq {{[^#]+#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; X64-NEXT:    retq
   %x = zext <2 x i16> %a0 to <2 x i32>
   %y = freeze <2 x i32> %x
@@ -153,7 +153,7 @@ define <16 x i8> @freeze_ctpop_vec(<16 x i8> %a0) nounwind {
 ; X86-NEXT:    psrlw $1, %xmm1
 ; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    psubb %xmm1, %xmm0
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; X86-NEXT:    movdqa {{[^#]+#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; X86-NEXT:    movdqa %xmm0, %xmm2
 ; X86-NEXT:    pand %xmm1, %xmm2
 ; X86-NEXT:    psrlw $2, %xmm0
@@ -167,10 +167,10 @@ define <16 x i8> @freeze_ctpop_vec(<16 x i8> %a0) nounwind {
 ;
 ; X64-LABEL: freeze_ctpop_vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X64-NEXT:    movdqa {{[^#]+#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; X64-NEXT:    movdqa %xmm0, %xmm3
 ; X64-NEXT:    pand %xmm2, %xmm3
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; X64-NEXT:    movdqa {{[^#]+#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; X64-NEXT:    movdqa %xmm1, %xmm4
 ; X64-NEXT:    pshufb %xmm3, %xmm4
 ; X64-NEXT:    psrlw $4, %xmm0
@@ -214,7 +214,7 @@ define <16 x i8> @freeze_parity_vec(<16 x i8> %a0) nounwind {
 ; X86-NEXT:    psrlw $1, %xmm1
 ; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    psubb %xmm1, %xmm0
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; X86-NEXT:    movdqa {{[^#]+#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; X86-NEXT:    movdqa %xmm0, %xmm2
 ; X86-NEXT:    pand %xmm1, %xmm2
 ; X86-NEXT:    psrlw $2, %xmm0
@@ -228,10 +228,10 @@ define <16 x i8> @freeze_parity_vec(<16 x i8> %a0) nounwind {
 ;
 ; X64-LABEL: freeze_parity_vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X64-NEXT:    movdqa {{[^#]+#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; X64-NEXT:    movdqa %xmm0, %xmm3
 ; X64-NEXT:    pand %xmm2, %xmm3
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; X64-NEXT:    movdqa {{[^#]+#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; X64-NEXT:    movdqa %xmm1, %xmm4
 ; X64-NEXT:    pshufb %xmm3, %xmm4
 ; X64-NEXT:    psrlw $4, %xmm0

@@ -63,7 +63,7 @@ define <8 x i64> @select01(i32 %a, <8 x i64> %b) nounwind {
 define float @select02(float %a, float %b, float %c, float %eps) {
 ; X86-LABEL: select02:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
@@ -85,7 +85,7 @@ define float @select02(float %a, float %b, float %c, float %eps) {
 define double @select03(double %a, double %b, double %c, double %eps) {
 ; X86-LABEL: select03:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
@@ -408,7 +408,7 @@ define <16 x i16> @pr31515(<16 x i1> %a, <16 x i1> %b, <16 x i16> %c) nounwind {
 ; X86-AVX512F-LABEL: pr31515:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; X86-AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; X86-AVX512F-NEXT:    vpmovzxbw {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; X86-AVX512F-NEXT:    vpsllw $15, %ymm0, %ymm0
 ; X86-AVX512F-NEXT:    vpsraw $15, %ymm0, %ymm0
 ; X86-AVX512F-NEXT:    vpandn %ymm2, %ymm0, %ymm0
@@ -417,7 +417,7 @@ define <16 x i16> @pr31515(<16 x i1> %a, <16 x i1> %b, <16 x i16> %c) nounwind {
 ; X64-AVX512F-LABEL: pr31515:
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; X64-AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; X64-AVX512F-NEXT:    vpmovzxbw {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; X64-AVX512F-NEXT:    vpsllw $15, %ymm0, %ymm0
 ; X64-AVX512F-NEXT:    vpsraw $15, %ymm0, %ymm0
 ; X64-AVX512F-NEXT:    vpandn %ymm2, %ymm0, %ymm0
@@ -505,9 +505,9 @@ define <16 x i64> @narrowExtractedVectorSelect_crash(<16 x i64> %arg, <16 x i16>
 ; X86-AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; X86-AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
 ; X86-AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm1
-; X86-AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X86-AVX512F-NEXT:    vpmovzxwq {{[^#]+#+}} zmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; X86-AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; X86-AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X86-AVX512F-NEXT:    vpmovzxwq {{[^#]+#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; X86-AVX512F-NEXT:    retl
 ;
 ; X64-AVX512F-LABEL: narrowExtractedVectorSelect_crash:
@@ -518,9 +518,9 @@ define <16 x i64> @narrowExtractedVectorSelect_crash(<16 x i64> %arg, <16 x i16>
 ; X64-AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; X64-AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
 ; X64-AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm1
-; X64-AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X64-AVX512F-NEXT:    vpmovzxwq {{[^#]+#+}} zmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; X64-AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; X64-AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X64-AVX512F-NEXT:    vpmovzxwq {{[^#]+#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; X64-AVX512F-NEXT:    retq
 ;
 ; X86-AVX512BW-LABEL: narrowExtractedVectorSelect_crash:
@@ -530,9 +530,9 @@ define <16 x i64> @narrowExtractedVectorSelect_crash(<16 x i64> %arg, <16 x i16>
 ; X86-AVX512BW-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; X86-AVX512BW-NEXT:    kunpckbw %k0, %k1, %k1
 ; X86-AVX512BW-NEXT:    vmovdqu16 %zmm2, %zmm1 {%k1} {z}
-; X86-AVX512BW-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X86-AVX512BW-NEXT:    vpmovzxwq {{[^#]+#+}} zmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; X86-AVX512BW-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; X86-AVX512BW-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X86-AVX512BW-NEXT:    vpmovzxwq {{[^#]+#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; X86-AVX512BW-NEXT:    retl
 ;
 ; X64-AVX512BW-LABEL: narrowExtractedVectorSelect_crash:
@@ -542,9 +542,9 @@ define <16 x i64> @narrowExtractedVectorSelect_crash(<16 x i64> %arg, <16 x i16>
 ; X64-AVX512BW-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; X64-AVX512BW-NEXT:    kunpckbw %k0, %k1, %k1
 ; X64-AVX512BW-NEXT:    vmovdqu16 %zmm2, %zmm1 {%k1} {z}
-; X64-AVX512BW-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X64-AVX512BW-NEXT:    vpmovzxwq {{[^#]+#+}} zmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; X64-AVX512BW-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; X64-AVX512BW-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X64-AVX512BW-NEXT:    vpmovzxwq {{[^#]+#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; X64-AVX512BW-NEXT:    retq
   %tmp = icmp ne <16 x i64> %arg, zeroinitializer
   %tmp2 = select <16 x i1> %tmp, <16 x i16> %arg1, <16 x i16> zeroinitializer

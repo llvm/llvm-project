@@ -40,7 +40,7 @@ define i32 @f_to_u32(float %a) nounwind {
 ;
 ; X86-SSE-WIN-LABEL: f_to_u32:
 ; X86-SSE-WIN:       # %bb.0:
-; X86-SSE-WIN-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-WIN-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-WIN-NEXT:    cvttss2si %xmm0, %ecx
 ; X86-SSE-WIN-NEXT:    movl %ecx, %edx
 ; X86-SSE-WIN-NEXT:    sarl $31, %edx
@@ -52,7 +52,7 @@ define i32 @f_to_u32(float %a) nounwind {
 ;
 ; X86-SSE-LIN-LABEL: f_to_u32:
 ; X86-SSE-LIN:       # %bb.0:
-; X86-SSE-LIN-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-LIN-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-LIN-NEXT:    cvttss2si %xmm0, %ecx
 ; X86-SSE-LIN-NEXT:    movl %ecx, %edx
 ; X86-SSE-LIN-NEXT:    sarl $31, %edx
@@ -157,7 +157,7 @@ define i32 @d_to_u32(double %a) nounwind {
 ;
 ; X86-SSE3-WIN-LABEL: d_to_u32:
 ; X86-SSE3-WIN:       # %bb.0:
-; X86-SSE3-WIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE3-WIN-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE3-WIN-NEXT:    cvttsd2si %xmm0, %ecx
 ; X86-SSE3-WIN-NEXT:    movl %ecx, %edx
 ; X86-SSE3-WIN-NEXT:    sarl $31, %edx
@@ -169,7 +169,7 @@ define i32 @d_to_u32(double %a) nounwind {
 ;
 ; X86-SSE3-LIN-LABEL: d_to_u32:
 ; X86-SSE3-LIN:       # %bb.0:
-; X86-SSE3-LIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE3-LIN-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE3-LIN-NEXT:    cvttsd2si %xmm0, %ecx
 ; X86-SSE3-LIN-NEXT:    movl %ecx, %edx
 ; X86-SSE3-LIN-NEXT:    sarl $31, %edx
@@ -187,7 +187,7 @@ define i32 @d_to_u32(double %a) nounwind {
 ;
 ; X86-SSE2-WIN-LABEL: d_to_u32:
 ; X86-SSE2-WIN:       # %bb.0:
-; X86-SSE2-WIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-WIN-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE2-WIN-NEXT:    cvttsd2si %xmm0, %ecx
 ; X86-SSE2-WIN-NEXT:    movl %ecx, %edx
 ; X86-SSE2-WIN-NEXT:    sarl $31, %edx
@@ -199,7 +199,7 @@ define i32 @d_to_u32(double %a) nounwind {
 ;
 ; X86-SSE2-LIN-LABEL: d_to_u32:
 ; X86-SSE2-LIN:       # %bb.0:
-; X86-SSE2-LIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-LIN-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE2-LIN-NEXT:    cvttsd2si %xmm0, %ecx
 ; X86-SSE2-LIN-NEXT:    movl %ecx, %edx
 ; X86-SSE2-LIN-NEXT:    sarl $31, %edx

@@ -27,7 +27,7 @@ define <2 x i32> @illegal_ctlz(<2 x i32> %v1) {
 ; CHECK-NEXT:    psrlw $1, %xmm1
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    psubb %xmm1, %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; CHECK-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-NEXT:    pand %xmm1, %xmm2
 ; CHECK-NEXT:    psrlw $2, %xmm0
@@ -39,9 +39,9 @@ define <2 x i32> @illegal_ctlz(<2 x i32> %v1) {
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-NEXT:    punpckhdq {{.*#+}} xmm2 = xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; CHECK-NEXT:    punpckhdq {{[^#]+#+}} xmm2 = xmm2[2],xmm1[2],xmm2[3],xmm1[3]
 ; CHECK-NEXT:    psadbw %xmm1, %xmm2
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; CHECK-NEXT:    psadbw %xmm1, %xmm0
 ; CHECK-NEXT:    packuswb %xmm2, %xmm0
 ; CHECK-NEXT:    retq
@@ -61,7 +61,7 @@ define <2 x i32> @illegal_cttz(<2 x i32> %v1) {
 ; CHECK-NEXT:    psrlw $1, %xmm1
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    psubb %xmm1, %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; CHECK-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-NEXT:    pand %xmm1, %xmm2
 ; CHECK-NEXT:    psrlw $2, %xmm0
@@ -73,9 +73,9 @@ define <2 x i32> @illegal_cttz(<2 x i32> %v1) {
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-NEXT:    punpckhdq {{.*#+}} xmm2 = xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; CHECK-NEXT:    punpckhdq {{[^#]+#+}} xmm2 = xmm2[2],xmm1[2],xmm2[3],xmm1[3]
 ; CHECK-NEXT:    psadbw %xmm1, %xmm2
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; CHECK-NEXT:    psadbw %xmm1, %xmm0
 ; CHECK-NEXT:    packuswb %xmm2, %xmm0
 ; CHECK-NEXT:    retq

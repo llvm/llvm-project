@@ -34,13 +34,13 @@ define float @uint8ToFloat(i8 %int8) {
 define <16 x float> @vector_uint8ToFloat(<16 x i8> %int8) {
 ; CHECK-NO_FP16-LABEL: vector_uint8ToFloat:
 ; CHECK-NO_FP16:       # %bb.0:
-; CHECK-NO_FP16-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; CHECK-NO_FP16-NEXT:    vpmovzxbd {{[^#]+#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; CHECK-NO_FP16-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: vector_uint8ToFloat:
 ; CHECK-WITH_FP16:       # %bb.0:
-; CHECK-WITH_FP16-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; CHECK-WITH_FP16-NEXT:    vpmovzxbd {{[^#]+#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; CHECK-WITH_FP16-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; CHECK-WITH_FP16-NEXT:    retq
     %fp32 = uitofp <16 x i8> %int8 to <16 x float>
@@ -93,14 +93,14 @@ define half @uint8ToHalf(i8 %int8) {
 define <16 x half> @vector_uint8ToHalf(<16 x i8> %int8) {
 ; CHECK-NO_FP16-LABEL: vector_uint8ToHalf:
 ; CHECK-NO_FP16:       # %bb.0:
-; CHECK-NO_FP16-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; CHECK-NO_FP16-NEXT:    vpmovzxbd {{[^#]+#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; CHECK-NO_FP16-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; CHECK-NO_FP16-NEXT:    vcvtps2ph $4, %zmm0, %ymm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: vector_uint8ToHalf:
 ; CHECK-WITH_FP16:       # %bb.0:
-; CHECK-WITH_FP16-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; CHECK-WITH_FP16-NEXT:    vpmovzxbw {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; CHECK-WITH_FP16-NEXT:    vcvtuw2ph %ymm0, %ymm0
 ; CHECK-WITH_FP16-NEXT:    retq
     %fp32 = uitofp <16 x i8> %int8 to <16 x half>
@@ -203,13 +203,13 @@ define float @uint16ToFloat(i16 %int16) {
 define <16 x float> @vector_uint16ToFloat(<16 x i16> %int16) {
 ; CHECK-NO_FP16-LABEL: vector_uint16ToFloat:
 ; CHECK-NO_FP16:       # %bb.0:
-; CHECK-NO_FP16-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; CHECK-NO_FP16-NEXT:    vpmovzxwd {{[^#]+#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; CHECK-NO_FP16-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: vector_uint16ToFloat:
 ; CHECK-WITH_FP16:       # %bb.0:
-; CHECK-WITH_FP16-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; CHECK-WITH_FP16-NEXT:    vpmovzxwd {{[^#]+#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; CHECK-WITH_FP16-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; CHECK-WITH_FP16-NEXT:    retq
     %fp32 = uitofp <16 x i16> %int16 to <16 x float>
@@ -238,7 +238,7 @@ define half @uint16ToHalf(i16 %int16) {
 define <16 x half> @vector_uint16ToHalf(<16 x i16> %int16) {
 ; CHECK-NO_FP16-LABEL: vector_uint16ToHalf:
 ; CHECK-NO_FP16:       # %bb.0:
-; CHECK-NO_FP16-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; CHECK-NO_FP16-NEXT:    vpmovzxwd {{[^#]+#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; CHECK-NO_FP16-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; CHECK-NO_FP16-NEXT:    vcvtps2ph $4, %zmm0, %ymm0
 ; CHECK-NO_FP16-NEXT:    retq

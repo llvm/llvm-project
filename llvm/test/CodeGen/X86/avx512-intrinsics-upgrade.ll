@@ -5271,14 +5271,14 @@ define <16 x float>@test_int_x86_avx512_mask_vpermilvar_ps_512_constant_pool(<16
 ; X86-LABEL: test_int_x86_avx512_mask_vpermilvar_ps_512_constant_pool:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vpermilps {{.*#+}} zmm2 {%k1} = zmm0[2,3,0,1,7,6,5,4,9,8,11,10,12,13,14,15]
+; X86-NEXT:    vpermilps {{[^#]+#+}} zmm2 {%k1} = zmm0[2,3,0,1,7,6,5,4,9,8,11,10,12,13,14,15]
 ; X86-NEXT:    ## encoding: [0x62,0xf2,0x7d,0x49,0x0c,0x15,A,A,A,A]
 ; X86-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
-; X86-NEXT:    vpermilps {{.*#+}} zmm1 {%k1} {z} = zmm0[1,0,3,2,4,5,6,7,9,8,11,10,12,13,14,15]
+; X86-NEXT:    vpermilps {{[^#]+#+}} zmm1 {%k1} {z} = zmm0[1,0,3,2,4,5,6,7,9,8,11,10,12,13,14,15]
 ; X86-NEXT:    ## encoding: [0x62,0xf2,0x7d,0xc9,0x0c,0x0d,A,A,A,A]
 ; X86-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-NEXT:    vaddps %zmm1, %zmm2, %zmm1 ## encoding: [0x62,0xf1,0x6c,0x48,0x58,0xc9]
-; X86-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[1,0,3,2,4,5,6,7,10,11,8,9,14,15,13,12]
+; X86-NEXT:    vpermilps {{[^#]+#+}} zmm0 = zmm0[1,0,3,2,4,5,6,7,10,11,8,9,14,15,13,12]
 ; X86-NEXT:    ## encoding: [0x62,0xf2,0x7d,0x48,0x0c,0x05,A,A,A,A]
 ; X86-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-NEXT:    vaddps %zmm1, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0x7c,0x48,0x58,0xc1]
@@ -5287,14 +5287,14 @@ define <16 x float>@test_int_x86_avx512_mask_vpermilvar_ps_512_constant_pool(<16
 ; X64-LABEL: test_int_x86_avx512_mask_vpermilvar_ps_512_constant_pool:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vpermilps {{.*#+}} zmm2 {%k1} = zmm0[2,3,0,1,7,6,5,4,9,8,11,10,12,13,14,15]
+; X64-NEXT:    vpermilps {{[^#]+#+}} zmm2 {%k1} = zmm0[2,3,0,1,7,6,5,4,9,8,11,10,12,13,14,15]
 ; X64-NEXT:    ## encoding: [0x62,0xf2,0x7d,0x49,0x0c,0x15,A,A,A,A]
 ; X64-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
-; X64-NEXT:    vpermilps {{.*#+}} zmm1 {%k1} {z} = zmm0[1,0,3,2,4,5,6,7,9,8,11,10,12,13,14,15]
+; X64-NEXT:    vpermilps {{[^#]+#+}} zmm1 {%k1} {z} = zmm0[1,0,3,2,4,5,6,7,9,8,11,10,12,13,14,15]
 ; X64-NEXT:    ## encoding: [0x62,0xf2,0x7d,0xc9,0x0c,0x0d,A,A,A,A]
 ; X64-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-NEXT:    vaddps %zmm1, %zmm2, %zmm1 ## encoding: [0x62,0xf1,0x6c,0x48,0x58,0xc9]
-; X64-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[1,0,3,2,4,5,6,7,10,11,8,9,14,15,13,12]
+; X64-NEXT:    vpermilps {{[^#]+#+}} zmm0 = zmm0[1,0,3,2,4,5,6,7,10,11,8,9,14,15,13,12]
 ; X64-NEXT:    ## encoding: [0x62,0xf2,0x7d,0x48,0x0c,0x05,A,A,A,A]
 ; X64-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-NEXT:    vaddps %zmm1, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0x7c,0x48,0x58,0xc1]

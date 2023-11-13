@@ -8,14 +8,14 @@
 define void @goo(ptr %r, ptr %p, ptr %q) nounwind {
 ; none-LABEL: goo:
 ; none:       # %bb.0: # %entry
-; none-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; none-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; none-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; none-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; none-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; none-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; none-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; none-NEXT:    cvttsd2si %xmm0, %eax
-; none-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; none-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; none-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; none-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; none-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -32,8 +32,8 @@ define void @goo(ptr %r, ptr %p, ptr %q) nounwind {
 ;
 ; critical-LABEL: goo:
 ; critical:       # %bb.0: # %entry
-; critical-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; critical-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; critical-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; critical-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; critical-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; critical-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; critical-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0

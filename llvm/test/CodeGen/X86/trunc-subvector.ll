@@ -73,13 +73,13 @@ define <2 x i32> @test4(<8 x i32> %v) {
 define <2 x i32> @test5(<8 x i32> %v) {
 ; SSE2-LABEL: test5:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
+; SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: test5:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovaps {{.*#+}} xmm1 = [3,4,4,4]
+; AVX2-NEXT:    vmovaps {{[^#]+#+}} xmm1 = [3,4,4,4]
 ; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
@@ -171,13 +171,13 @@ define <2 x i32> @test9(<8 x i32> %v) {
 define <2 x i32> @test10(<8 x i32> %v) {
 ; SSE2-LABEL: test10:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
+; SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: test10:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovaps {{.*#+}} xmm1 = [3,4,4,4]
+; AVX2-NEXT:    vmovaps {{[^#]+#+}} xmm1 = [3,4,4,4]
 ; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
@@ -185,7 +185,7 @@ define <2 x i32> @test10(<8 x i32> %v) {
 ;
 ; AVX512-LABEL: test10:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
+; AVX512-NEXT:    vpmovzxdq {{[^#]+#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rax
 ; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm0

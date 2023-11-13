@@ -66,7 +66,7 @@ define void @func_aligned() nounwind ssp {
 ; I386-LABEL: func_aligned:
 ; I386:       ## %bb.0: ## %entry
 ; I386-NEXT:    subl $44, %esp
-; I386-NEXT:    movaps {{.*#+}} xmm0 = [1498564676,1313821779,1380982853,1095911247]
+; I386-NEXT:    movaps {{[^#]+#+}} xmm0 = [1498564676,1313821779,1380982853,1095911247]
 ; I386-NEXT:    .p2align 4, 0x90
 ; I386-NEXT:  LBB1_1: ## %bb
 ; I386-NEXT:    ## =>This Inner Loop Header: Depth=1

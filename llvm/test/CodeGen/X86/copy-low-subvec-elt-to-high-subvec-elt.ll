@@ -11,7 +11,7 @@
 define <2 x double> @vec128_eltty_double_source_subvec_0_target_subvec_mask_1_unary(<2 x double> %x) nounwind {
 ; CHECK-LABEL: vec128_eltty_double_source_subvec_0_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; CHECK-NEXT:    vmovddup {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; CHECK-NEXT:    retq
   %r = shufflevector <2 x double> %x, <2 x double> poison, <2 x i32> zeroinitializer
   ret <2 x double> %r
@@ -20,7 +20,7 @@ define <2 x double> @vec128_eltty_double_source_subvec_0_target_subvec_mask_1_un
 define <2 x double> @vec128_eltty_double_source_subvec_0_target_subvec_mask_1_binary(<2 x double> %x, <2 x double> %y) nounwind {
 ; CHECK-LABEL: vec128_eltty_double_source_subvec_0_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vmovlhps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retq
   %r = shufflevector <2 x double> %x, <2 x double> %y, <2 x i32> <i32 0, i32 2>
   ret <2 x double> %r
@@ -29,7 +29,7 @@ define <2 x double> @vec128_eltty_double_source_subvec_0_target_subvec_mask_1_bi
 define <2 x i64> @vec128_eltty_i64_source_subvec_0_target_subvec_mask_1_unary(<2 x i64> %x) nounwind {
 ; CHECK-LABEL: vec128_eltty_i64_source_subvec_0_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; CHECK-NEXT:    vmovddup {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; CHECK-NEXT:    retq
   %r = shufflevector <2 x i64> %x, <2 x i64> poison, <2 x i32> zeroinitializer
   ret <2 x i64> %r
@@ -38,7 +38,7 @@ define <2 x i64> @vec128_eltty_i64_source_subvec_0_target_subvec_mask_1_unary(<2
 define <2 x i64> @vec128_eltty_i64_source_subvec_0_target_subvec_mask_1_binary(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; CHECK-LABEL: vec128_eltty_i64_source_subvec_0_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vmovlhps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retq
   %r = shufflevector <2 x i64> %x, <2 x i64> %y, <2 x i32> <i32 0, i32 2>
   ret <2 x i64> %r
@@ -47,7 +47,7 @@ define <2 x i64> @vec128_eltty_i64_source_subvec_0_target_subvec_mask_1_binary(<
 define <4 x float> @vec128_eltty_float_source_subvec_0_target_subvec_mask_1_unary(<4 x float> %x) nounwind {
 ; CHECK-LABEL: vec128_eltty_float_source_subvec_0_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,2,0]
+; CHECK-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,1,2,0]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x float> %x, <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 0>
   ret <4 x float> %r
@@ -56,7 +56,7 @@ define <4 x float> @vec128_eltty_float_source_subvec_0_target_subvec_mask_1_unar
 define <4 x float> @vec128_eltty_float_source_subvec_0_target_subvec_mask_1_binary(<4 x float> %x, <4 x float> %y) nounwind {
 ; CHECK-LABEL: vec128_eltty_float_source_subvec_0_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; CHECK-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0,1,2],xmm1[0]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x float> %x, <4 x float> %y, <4 x i32> <i32 0, i32 1, i32 2, i32 4>
   ret <4 x float> %r
@@ -65,7 +65,7 @@ define <4 x float> @vec128_eltty_float_source_subvec_0_target_subvec_mask_1_bina
 define <4 x i32> @vec128_eltty_i32_source_subvec_0_target_subvec_mask_1_unary(<4 x i32> %x) nounwind {
 ; CHECK-LABEL: vec128_eltty_i32_source_subvec_0_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,2,0]
+; CHECK-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,1,2,0]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 0>
   ret <4 x i32> %r
@@ -75,7 +75,7 @@ define <4 x i32> @vec128_eltty_i32_source_subvec_0_target_subvec_mask_1_binary(<
 ; CHECK-LABEL: vec128_eltty_i32_source_subvec_0_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 0, i32 1, i32 2, i32 4>
   ret <4 x i32> %r
@@ -84,7 +84,7 @@ define <4 x i32> @vec128_eltty_i32_source_subvec_0_target_subvec_mask_1_binary(<
 define <8 x i16> @vec128_eltty_i16_source_subvec_0_target_subvec_mask_1_unary(<8 x i16> %x) nounwind {
 ; CHECK-LABEL: vec128_eltty_i16_source_subvec_0_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,0,1]
+; CHECK-NEXT:    vpshufb {{[^#]+#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,0,1]
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 0>
   ret <8 x i16> %r
@@ -94,7 +94,7 @@ define <8 x i16> @vec128_eltty_i16_source_subvec_0_target_subvec_mask_1_binary(<
 ; CHECK-LABEL: vec128_eltty_i16_source_subvec_0_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastw %xmm1, %xmm1
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6],xmm1[7]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0,1,2,3,4,5,6],xmm1[7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x i16> %x, <8 x i16> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 8>
   ret <8 x i16> %r
@@ -103,7 +103,7 @@ define <8 x i16> @vec128_eltty_i16_source_subvec_0_target_subvec_mask_1_binary(<
 define <16 x i8> @vec128_eltty_i8_source_subvec_0_target_subvec_mask_1_unary(<16 x i8> %x) nounwind {
 ; CHECK-LABEL: vec128_eltty_i8_source_subvec_0_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,0]
+; CHECK-NEXT:    vpshufb {{[^#]+#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,0]
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i8> %x, <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 0>
   ret <16 x i8> %r
@@ -112,8 +112,8 @@ define <16 x i8> @vec128_eltty_i8_source_subvec_0_target_subvec_mask_1_unary(<16
 define <16 x i8> @vec128_eltty_i8_source_subvec_0_target_subvec_mask_1_binary(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; CHECK-LABEL: vec128_eltty_i8_source_subvec_0_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14],zero
+; CHECK-NEXT:    vpslldq {{[^#]+#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
+; CHECK-NEXT:    vpshufb {{[^#]+#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14],zero
 ; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i8> %x, <16 x i8> %y, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 16>
@@ -123,7 +123,7 @@ define <16 x i8> @vec128_eltty_i8_source_subvec_0_target_subvec_mask_1_binary(<1
 define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_1_unary(<4 x double> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_0_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0,0,2,3]
+; CHECK-NEXT:    vshufpd {{[^#]+#+}} ymm0 = ymm0[0,0,2,3]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
   ret <4 x double> %r
@@ -132,8 +132,8 @@ define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_1_un
 define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_1_binary(<4 x double> %x, <4 x double> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_0_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
+; CHECK-NEXT:    vmovddup {{[^#]+#+}} xmm1 = xmm1[0,0]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> %y, <4 x i32> <i32 0, i32 4, i32 2, i32 3>
   ret <4 x double> %r
@@ -142,7 +142,7 @@ define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_1_bi
 define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_2_unary(<4 x double> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_0_target_subvec_mask_2_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,0]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,1,2,0]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 0>
   ret <4 x double> %r
@@ -152,7 +152,7 @@ define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_2_bi
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_0_target_subvec_mask_2_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; CHECK-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[2]
+; CHECK-NEXT:    vshufpd {{[^#]+#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[2]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> %y, <4 x i32> <i32 0, i32 1, i32 2, i32 4>
   ret <4 x double> %r
@@ -161,7 +161,7 @@ define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_2_bi
 define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_3_unary(<4 x double> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_0_target_subvec_mask_3_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,2,0]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,0,2,0]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 0>
   ret <4 x double> %r
@@ -171,7 +171,7 @@ define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_3_bi
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_0_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastsd %xmm1, %ymm1
-; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; CHECK-NEXT:    vunpcklpd {{[^#]+#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> %y, <4 x i32> <i32 0, i32 4, i32 2, i32 4>
   ret <4 x double> %r
@@ -180,7 +180,7 @@ define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_3_bi
 define <4 x double> @vec256_eltty_double_source_subvec_1_target_subvec_mask_1_unary(<4 x double> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_1_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,2,2,3]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 2, i32 3>
   ret <4 x double> %r
@@ -189,8 +189,8 @@ define <4 x double> @vec256_eltty_double_source_subvec_1_target_subvec_mask_1_un
 define <4 x double> @vec256_eltty_double_source_subvec_1_target_subvec_mask_1_binary(<4 x double> %x, <4 x double> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_1_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3],ymm0[2,3]
-; CHECK-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[3]
+; CHECK-NEXT:    vperm2f128 {{[^#]+#+}} ymm1 = ymm1[2,3],ymm0[2,3]
+; CHECK-NEXT:    vshufpd {{[^#]+#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[3]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> %y, <4 x i32> <i32 0, i32 6, i32 2, i32 3>
   ret <4 x double> %r
@@ -199,7 +199,7 @@ define <4 x double> @vec256_eltty_double_source_subvec_1_target_subvec_mask_1_bi
 define <4 x double> @vec256_eltty_double_source_subvec_1_target_subvec_mask_2_unary(<4 x double> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_1_target_subvec_mask_2_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0,1,2,2]
+; CHECK-NEXT:    vshufpd {{[^#]+#+}} ymm0 = ymm0[0,1,2,2]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
   ret <4 x double> %r
@@ -208,8 +208,8 @@ define <4 x double> @vec256_eltty_double_source_subvec_1_target_subvec_mask_2_un
 define <4 x double> @vec256_eltty_double_source_subvec_1_target_subvec_mask_2_binary(<4 x double> %x, <4 x double> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_1_target_subvec_mask_2_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovddup {{.*#+}} ymm1 = ymm1[0,0,2,2]
-; CHECK-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1,2],ymm1[3]
+; CHECK-NEXT:    vmovddup {{[^#]+#+}} ymm1 = ymm1[0,0,2,2]
+; CHECK-NEXT:    vblendpd {{[^#]+#+}} ymm0 = ymm0[0,1,2],ymm1[3]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> %y, <4 x i32> <i32 0, i32 1, i32 2, i32 6>
   ret <4 x double> %r
@@ -218,7 +218,7 @@ define <4 x double> @vec256_eltty_double_source_subvec_1_target_subvec_mask_2_bi
 define <4 x double> @vec256_eltty_double_source_subvec_1_target_subvec_mask_3_unary(<4 x double> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_1_target_subvec_mask_3_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,2]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,2,2,2]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 2, i32 2>
   ret <4 x double> %r
@@ -227,8 +227,8 @@ define <4 x double> @vec256_eltty_double_source_subvec_1_target_subvec_mask_3_un
 define <4 x double> @vec256_eltty_double_source_subvec_1_target_subvec_mask_3_binary(<4 x double> %x, <4 x double> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_1_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,2,2,2]
-; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm1 = ymm1[2,2,2,2]
+; CHECK-NEXT:    vunpcklpd {{[^#]+#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> %y, <4 x i32> <i32 0, i32 6, i32 2, i32 6>
   ret <4 x double> %r
@@ -237,7 +237,7 @@ define <4 x double> @vec256_eltty_double_source_subvec_1_target_subvec_mask_3_bi
 define <4 x i64> @vec256_eltty_i64_source_subvec_0_target_subvec_mask_1_unary(<4 x i64> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_0_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,2,3]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,0,2,3]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
   ret <4 x i64> %r
@@ -246,8 +246,8 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_0_target_subvec_mask_1_unary(<4
 define <4 x i64> @vec256_eltty_i64_source_subvec_0_target_subvec_mask_1_binary(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_0_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
+; CHECK-NEXT:    vmovddup {{[^#]+#+}} xmm1 = xmm1[0,0]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> %y, <4 x i32> <i32 0, i32 4, i32 2, i32 3>
   ret <4 x i64> %r
@@ -256,7 +256,7 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_0_target_subvec_mask_1_binary(<
 define <4 x i64> @vec256_eltty_i64_source_subvec_0_target_subvec_mask_2_unary(<4 x i64> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_0_target_subvec_mask_2_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,0]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,1,2,0]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 0>
   ret <4 x i64> %r
@@ -266,7 +266,7 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_0_target_subvec_mask_2_binary(<
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_0_target_subvec_mask_2_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastsd %xmm1, %ymm1
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> %y, <4 x i32> <i32 0, i32 1, i32 2, i32 4>
   ret <4 x i64> %r
@@ -275,7 +275,7 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_0_target_subvec_mask_2_binary(<
 define <4 x i64> @vec256_eltty_i64_source_subvec_0_target_subvec_mask_3_unary(<4 x i64> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_0_target_subvec_mask_3_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,2,0]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,0,2,0]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 0>
   ret <4 x i64> %r
@@ -285,7 +285,7 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_0_target_subvec_mask_3_binary(<
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_0_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastsd %xmm1, %ymm1
-; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; CHECK-NEXT:    vunpcklpd {{[^#]+#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> %y, <4 x i32> <i32 0, i32 4, i32 2, i32 4>
   ret <4 x i64> %r
@@ -294,7 +294,7 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_0_target_subvec_mask_3_binary(<
 define <4 x i64> @vec256_eltty_i64_source_subvec_1_target_subvec_mask_1_unary(<4 x i64> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_1_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,2,2,3]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 2, i32 3>
   ret <4 x i64> %r
@@ -303,8 +303,8 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_1_target_subvec_mask_1_unary(<4
 define <4 x i64> @vec256_eltty_i64_source_subvec_1_target_subvec_mask_1_binary(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_1_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,2,2,2]
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm1 = ymm1[2,2,2,2]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> %y, <4 x i32> <i32 0, i32 6, i32 2, i32 3>
   ret <4 x i64> %r
@@ -313,7 +313,7 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_1_target_subvec_mask_1_binary(<
 define <4 x i64> @vec256_eltty_i64_source_subvec_1_target_subvec_mask_2_unary(<4 x i64> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_1_target_subvec_mask_2_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,2]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,1,2,2]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
   ret <4 x i64> %r
@@ -322,8 +322,8 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_1_target_subvec_mask_2_unary(<4
 define <4 x i64> @vec256_eltty_i64_source_subvec_1_target_subvec_mask_2_binary(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_1_target_subvec_mask_2_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,1,0,1,4,5,4,5]
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; CHECK-NEXT:    vshufps {{[^#]+#+}} ymm1 = ymm1[0,1,0,1,4,5,4,5]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> %y, <4 x i32> <i32 0, i32 1, i32 2, i32 6>
   ret <4 x i64> %r
@@ -332,7 +332,7 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_1_target_subvec_mask_2_binary(<
 define <4 x i64> @vec256_eltty_i64_source_subvec_1_target_subvec_mask_3_unary(<4 x i64> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_1_target_subvec_mask_3_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,2]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm0 = ymm0[0,2,2,2]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 2, i32 2>
   ret <4 x i64> %r
@@ -341,8 +341,8 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_1_target_subvec_mask_3_unary(<4
 define <4 x i64> @vec256_eltty_i64_source_subvec_1_target_subvec_mask_3_binary(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_1_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,2,2,2]
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm1 = ymm1[2,2,2,2]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> %y, <4 x i32> <i32 0, i32 6, i32 2, i32 6>
   ret <4 x i64> %r
@@ -351,7 +351,7 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_1_target_subvec_mask_3_binary(<
 define <8 x float> @vec256_eltty_float_source_subvec_0_target_subvec_mask_1_unary(<8 x float> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_float_source_subvec_0_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,1,2,0,4,5,6,7]
+; CHECK-NEXT:    vpermilps {{[^#]+#+}} ymm0 = ymm0[0,1,2,0,4,5,6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 0, i32 4, i32 5, i32 6, i32 7>
   ret <8 x float> %r
@@ -361,7 +361,7 @@ define <8 x float> @vec256_eltty_float_source_subvec_0_target_subvec_mask_1_bina
 ; CHECK-LABEL: vec256_eltty_float_source_subvec_0_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6,7]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 8, i32 4, i32 5, i32 6, i32 7>
   ret <8 x float> %r
@@ -370,7 +370,7 @@ define <8 x float> @vec256_eltty_float_source_subvec_0_target_subvec_mask_1_bina
 define <8 x float> @vec256_eltty_float_source_subvec_0_target_subvec_mask_2_unary(<8 x float> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_float_source_subvec_0_target_subvec_mask_2_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [0,1,2,3,4,5,6,0]
+; CHECK-NEXT:    vmovaps {{[^#]+#+}} ymm1 = [0,1,2,3,4,5,6,0]
 ; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 0>
@@ -381,7 +381,7 @@ define <8 x float> @vec256_eltty_float_source_subvec_0_target_subvec_mask_2_bina
 ; CHECK-LABEL: vec256_eltty_float_source_subvec_0_target_subvec_mask_2_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss %xmm1, %ymm1
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 8>
   ret <8 x float> %r
@@ -390,7 +390,7 @@ define <8 x float> @vec256_eltty_float_source_subvec_0_target_subvec_mask_2_bina
 define <8 x float> @vec256_eltty_float_source_subvec_0_target_subvec_mask_3_unary(<8 x float> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_float_source_subvec_0_target_subvec_mask_3_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [0,1,2,0,4,5,6,0]
+; CHECK-NEXT:    vmovaps {{[^#]+#+}} ymm1 = [0,1,2,0,4,5,6,0]
 ; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 0, i32 4, i32 5, i32 6, i32 0>
@@ -400,9 +400,9 @@ define <8 x float> @vec256_eltty_float_source_subvec_0_target_subvec_mask_3_unar
 define <8 x float> @vec256_eltty_float_source_subvec_0_target_subvec_mask_3_binary(<8 x float> %x, <8 x float> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_float_source_subvec_0_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,1,0,1]
-; CHECK-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
-; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,0],ymm0[4,5],ymm1[6,4]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm1 = ymm1[0,1,0,1]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm1 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
+; CHECK-NEXT:    vshufps {{[^#]+#+}} ymm0 = ymm0[0,1],ymm1[2,0],ymm0[4,5],ymm1[6,4]
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 8, i32 4, i32 5, i32 6, i32 8>
   ret <8 x float> %r
@@ -411,7 +411,7 @@ define <8 x float> @vec256_eltty_float_source_subvec_0_target_subvec_mask_3_bina
 define <8 x float> @vec256_eltty_float_source_subvec_1_target_subvec_mask_1_unary(<8 x float> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_float_source_subvec_1_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [0,1,2,4,4,5,6,7]
+; CHECK-NEXT:    vmovaps {{[^#]+#+}} ymm1 = [0,1,2,4,4,5,6,7]
 ; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 4, i32 4, i32 5, i32 6, i32 7>
@@ -423,7 +423,7 @@ define <8 x float> @vec256_eltty_float_source_subvec_1_target_subvec_mask_1_bina
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; CHECK-NEXT:    vbroadcastss %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6,7]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 12, i32 4, i32 5, i32 6, i32 7>
   ret <8 x float> %r
@@ -432,7 +432,7 @@ define <8 x float> @vec256_eltty_float_source_subvec_1_target_subvec_mask_1_bina
 define <8 x float> @vec256_eltty_float_source_subvec_1_target_subvec_mask_2_unary(<8 x float> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_float_source_subvec_1_target_subvec_mask_2_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6,4]
+; CHECK-NEXT:    vpermilps {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6,4]
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 4>
   ret <8 x float> %r
@@ -443,13 +443,13 @@ define <8 x float> @vec256_eltty_float_source_subvec_1_target_subvec_mask_2_bina
 ; CHECK-SLOW:       # %bb.0:
 ; CHECK-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; CHECK-SLOW-NEXT:    vbroadcastss %xmm1, %ymm1
-; CHECK-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7]
+; CHECK-SLOW-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7]
 ; CHECK-SLOW-NEXT:    retq
 ;
 ; CHECK-FAST-LABEL: vec256_eltty_float_source_subvec_1_target_subvec_mask_2_binary:
 ; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,0,0,0,4,4,4,4]
-; CHECK-FAST-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7]
+; CHECK-FAST-NEXT:    vshufps {{[^#]+#+}} ymm1 = ymm1[0,0,0,0,4,4,4,4]
+; CHECK-FAST-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7]
 ; CHECK-FAST-NEXT:    retq
   %r = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 12>
   ret <8 x float> %r
@@ -458,7 +458,7 @@ define <8 x float> @vec256_eltty_float_source_subvec_1_target_subvec_mask_2_bina
 define <8 x float> @vec256_eltty_float_source_subvec_1_target_subvec_mask_3_unary(<8 x float> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_float_source_subvec_1_target_subvec_mask_3_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [0,1,2,4,4,5,6,4]
+; CHECK-NEXT:    vmovaps {{[^#]+#+}} ymm1 = [0,1,2,4,4,5,6,4]
 ; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 4, i32 4, i32 5, i32 6, i32 4>
@@ -468,9 +468,9 @@ define <8 x float> @vec256_eltty_float_source_subvec_1_target_subvec_mask_3_unar
 define <8 x float> @vec256_eltty_float_source_subvec_1_target_subvec_mask_3_binary(<8 x float> %x, <8 x float> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_float_source_subvec_1_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,3,2,3]
-; CHECK-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
-; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,0],ymm0[4,5],ymm1[6,4]
+; CHECK-NEXT:    vpermpd {{[^#]+#+}} ymm1 = ymm1[2,3,2,3]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm1 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
+; CHECK-NEXT:    vshufps {{[^#]+#+}} ymm0 = ymm0[0,1],ymm1[2,0],ymm0[4,5],ymm1[6,4]
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 12, i32 4, i32 5, i32 6, i32 12>
   ret <8 x float> %r
@@ -479,7 +479,7 @@ define <8 x float> @vec256_eltty_float_source_subvec_1_target_subvec_mask_3_bina
 define <8 x i32> @vec256_eltty_i32_source_subvec_0_target_subvec_mask_1_unary(<8 x i32> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i32_source_subvec_0_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [0,1,2,0,4,5,6,7]
+; CHECK-NEXT:    vmovaps {{[^#]+#+}} ymm1 = [0,1,2,0,4,5,6,7]
 ; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x i32> %x, <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 0, i32 4, i32 5, i32 6, i32 7>
@@ -490,7 +490,7 @@ define <8 x i32> @vec256_eltty_i32_source_subvec_0_target_subvec_mask_1_binary(<
 ; CHECK-LABEL: vec256_eltty_i32_source_subvec_0_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6,7]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 8, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i32> %r
@@ -499,7 +499,7 @@ define <8 x i32> @vec256_eltty_i32_source_subvec_0_target_subvec_mask_1_binary(<
 define <8 x i32> @vec256_eltty_i32_source_subvec_0_target_subvec_mask_2_unary(<8 x i32> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i32_source_subvec_0_target_subvec_mask_2_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [0,1,2,3,4,5,6,0]
+; CHECK-NEXT:    vmovaps {{[^#]+#+}} ymm1 = [0,1,2,3,4,5,6,0]
 ; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x i32> %x, <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 0>
@@ -510,7 +510,7 @@ define <8 x i32> @vec256_eltty_i32_source_subvec_0_target_subvec_mask_2_binary(<
 ; CHECK-LABEL: vec256_eltty_i32_source_subvec_0_target_subvec_mask_2_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss %xmm1, %ymm1
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 8>
   ret <8 x i32> %r
@@ -519,7 +519,7 @@ define <8 x i32> @vec256_eltty_i32_source_subvec_0_target_subvec_mask_2_binary(<
 define <8 x i32> @vec256_eltty_i32_source_subvec_0_target_subvec_mask_3_unary(<8 x i32> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i32_source_subvec_0_target_subvec_mask_3_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [0,1,2,0,4,5,6,0]
+; CHECK-NEXT:    vmovaps {{[^#]+#+}} ymm1 = [0,1,2,0,4,5,6,0]
 ; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x i32> %x, <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 0, i32 4, i32 5, i32 6, i32 0>
@@ -530,7 +530,7 @@ define <8 x i32> @vec256_eltty_i32_source_subvec_0_target_subvec_mask_3_binary(<
 ; CHECK-LABEL: vec256_eltty_i32_source_subvec_0_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss %xmm1, %ymm1
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6],ymm1[7]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6],ymm1[7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 8, i32 4, i32 5, i32 6, i32 8>
   ret <8 x i32> %r
@@ -539,7 +539,7 @@ define <8 x i32> @vec256_eltty_i32_source_subvec_0_target_subvec_mask_3_binary(<
 define <8 x i32> @vec256_eltty_i32_source_subvec_1_target_subvec_mask_1_unary(<8 x i32> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i32_source_subvec_1_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [0,1,2,4,4,5,6,7]
+; CHECK-NEXT:    vmovaps {{[^#]+#+}} ymm1 = [0,1,2,4,4,5,6,7]
 ; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x i32> %x, <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 4, i32 4, i32 5, i32 6, i32 7>
@@ -551,7 +551,7 @@ define <8 x i32> @vec256_eltty_i32_source_subvec_1_target_subvec_mask_1_binary(<
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; CHECK-NEXT:    vbroadcastss %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6,7]
+; CHECK-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 12, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i32> %r
@@ -560,7 +560,7 @@ define <8 x i32> @vec256_eltty_i32_source_subvec_1_target_subvec_mask_1_binary(<
 define <8 x i32> @vec256_eltty_i32_source_subvec_1_target_subvec_mask_2_unary(<8 x i32> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i32_source_subvec_1_target_subvec_mask_2_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [0,1,2,3,4,5,6,4]
+; CHECK-NEXT:    vmovaps {{[^#]+#+}} ymm1 = [0,1,2,3,4,5,6,4]
 ; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x i32> %x, <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 4>
@@ -572,13 +572,13 @@ define <8 x i32> @vec256_eltty_i32_source_subvec_1_target_subvec_mask_2_binary(<
 ; CHECK-SLOW:       # %bb.0:
 ; CHECK-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; CHECK-SLOW-NEXT:    vbroadcastss %xmm1, %ymm1
-; CHECK-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7]
+; CHECK-SLOW-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7]
 ; CHECK-SLOW-NEXT:    retq
 ;
 ; CHECK-FAST-LABEL: vec256_eltty_i32_source_subvec_1_target_subvec_mask_2_binary:
 ; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,0,0,0,4,4,4,4]
-; CHECK-FAST-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7]
+; CHECK-FAST-NEXT:    vshufps {{[^#]+#+}} ymm1 = ymm1[0,0,0,0,4,4,4,4]
+; CHECK-FAST-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7]
 ; CHECK-FAST-NEXT:    retq
   %r = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 12>
   ret <8 x i32> %r
@@ -587,7 +587,7 @@ define <8 x i32> @vec256_eltty_i32_source_subvec_1_target_subvec_mask_2_binary(<
 define <8 x i32> @vec256_eltty_i32_source_subvec_1_target_subvec_mask_3_unary(<8 x i32> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i32_source_subvec_1_target_subvec_mask_3_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [0,1,2,4,4,5,6,4]
+; CHECK-NEXT:    vmovaps {{[^#]+#+}} ymm1 = [0,1,2,4,4,5,6,4]
 ; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <8 x i32> %x, <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 4, i32 4, i32 5, i32 6, i32 4>
@@ -597,16 +597,16 @@ define <8 x i32> @vec256_eltty_i32_source_subvec_1_target_subvec_mask_3_unary(<8
 define <8 x i32> @vec256_eltty_i32_source_subvec_1_target_subvec_mask_3_binary(<8 x i32> %x, <8 x i32> %y) nounwind {
 ; CHECK-SLOW-LABEL: vec256_eltty_i32_source_subvec_1_target_subvec_mask_3_binary:
 ; CHECK-SLOW:       # %bb.0:
-; CHECK-SLOW-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,3,2,3]
-; CHECK-SLOW-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,0,0,0,4,4,4,4]
-; CHECK-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6],ymm1[7]
+; CHECK-SLOW-NEXT:    vpermpd {{[^#]+#+}} ymm1 = ymm1[2,3,2,3]
+; CHECK-SLOW-NEXT:    vshufps {{[^#]+#+}} ymm1 = ymm1[0,0,0,0,4,4,4,4]
+; CHECK-SLOW-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6],ymm1[7]
 ; CHECK-SLOW-NEXT:    retq
 ;
 ; CHECK-FAST-LABEL: vec256_eltty_i32_source_subvec_1_target_subvec_mask_3_binary:
 ; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vbroadcastss {{.*#+}} ymm2 = [4,4,4,4,4,4,4,4]
+; CHECK-FAST-NEXT:    vbroadcastss {{[^#]+#+}} ymm2 = [4,4,4,4,4,4,4,4]
 ; CHECK-FAST-NEXT:    vpermps %ymm1, %ymm2, %ymm1
-; CHECK-FAST-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6],ymm1[7]
+; CHECK-FAST-NEXT:    vblendps {{[^#]+#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6],ymm1[7]
 ; CHECK-FAST-NEXT:    retq
   %r = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 12, i32 4, i32 5, i32 6, i32 12>
   ret <8 x i32> %r
@@ -615,7 +615,7 @@ define <8 x i32> @vec256_eltty_i32_source_subvec_1_target_subvec_mask_3_binary(<
 define <16 x i16> @vec256_eltty_i16_source_subvec_0_target_subvec_mask_1_unary(<16 x i16> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i16_source_subvec_0_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,0,1,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]
+; CHECK-NEXT:    vpshufb {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,0,1,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i16> %x, <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 0, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i16> %r
@@ -625,8 +625,8 @@ define <16 x i16> @vec256_eltty_i16_source_subvec_0_target_subvec_mask_1_binary(
 ; CHECK-LABEL: vec256_eltty_i16_source_subvec_0_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastw %xmm1, %xmm1
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,5,6],xmm1[7]
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} xmm1 = xmm0[0,1,2,3,4,5,6],xmm1[7]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i16> %x, <16 x i16> %y, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 16, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i16> %r
@@ -636,8 +636,8 @@ define <16 x i16> @vec256_eltty_i16_source_subvec_0_target_subvec_mask_2_unary(<
 ; CHECK-LABEL: vec256_eltty_i16_source_subvec_0_target_subvec_mask_2_unary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastw %xmm0, %ymm1
-; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} ymm1 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i16> %x, <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 0>
   ret <16 x i16> %r
@@ -647,8 +647,8 @@ define <16 x i16> @vec256_eltty_i16_source_subvec_0_target_subvec_mask_2_binary(
 ; CHECK-LABEL: vec256_eltty_i16_source_subvec_0_target_subvec_mask_2_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastw %xmm1, %ymm1
-; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} ymm1 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i16> %x, <16 x i16> %y, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 16>
   ret <16 x i16> %r
@@ -658,7 +658,7 @@ define <16 x i16> @vec256_eltty_i16_source_subvec_0_target_subvec_mask_3_unary(<
 ; CHECK-LABEL: vec256_eltty_i16_source_subvec_0_target_subvec_mask_3_unary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastw %xmm0, %ymm1
-; CHECK-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i16> %x, <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 0, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 0>
   ret <16 x i16> %r
@@ -668,7 +668,7 @@ define <16 x i16> @vec256_eltty_i16_source_subvec_0_target_subvec_mask_3_binary(
 ; CHECK-LABEL: vec256_eltty_i16_source_subvec_0_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastw %xmm1, %ymm1
-; CHECK-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i16> %x, <16 x i16> %y, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 16, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 16>
   ret <16 x i16> %r
@@ -679,8 +679,8 @@ define <16 x i16> @vec256_eltty_i16_source_subvec_1_target_subvec_mask_1_unary(<
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpbroadcastw %xmm1, %xmm1
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,5,6],xmm1[7]
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} xmm1 = xmm0[0,1,2,3,4,5,6],xmm1[7]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i16> %x, <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 8, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i16> %r
@@ -691,8 +691,8 @@ define <16 x i16> @vec256_eltty_i16_source_subvec_1_target_subvec_mask_1_binary(
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; CHECK-NEXT:    vpbroadcastw %xmm1, %xmm1
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,5,6],xmm1[7]
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} xmm1 = xmm0[0,1,2,3,4,5,6],xmm1[7]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i16> %x, <16 x i16> %y, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 24, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i16> %r
@@ -701,7 +701,7 @@ define <16 x i16> @vec256_eltty_i16_source_subvec_1_target_subvec_mask_1_binary(
 define <16 x i16> @vec256_eltty_i16_source_subvec_1_target_subvec_mask_2_unary(<16 x i16> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i16_source_subvec_1_target_subvec_mask_2_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,16,17]
+; CHECK-NEXT:    vpshufb {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,16,17]
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i16> %x, <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 8>
   ret <16 x i16> %r
@@ -712,8 +712,8 @@ define <16 x i16> @vec256_eltty_i16_source_subvec_1_target_subvec_mask_2_binary(
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; CHECK-NEXT:    vpbroadcastw %xmm1, %ymm1
-; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} ymm1 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i16> %x, <16 x i16> %y, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 24>
   ret <16 x i16> %r
@@ -722,9 +722,9 @@ define <16 x i16> @vec256_eltty_i16_source_subvec_1_target_subvec_mask_2_binary(
 define <16 x i16> @vec256_eltty_i16_source_subvec_1_target_subvec_mask_3_unary(<16 x i16> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i16_source_subvec_1_target_subvec_mask_3_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[2,3,2,3]
-; CHECK-NEXT:    vpslldq {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0,1],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16,17]
-; CHECK-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm1 = ymm0[2,3,2,3]
+; CHECK-NEXT:    vpslldq {{[^#]+#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0,1],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16,17]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i16> %x, <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 8, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 8>
   ret <16 x i16> %r
@@ -733,9 +733,9 @@ define <16 x i16> @vec256_eltty_i16_source_subvec_1_target_subvec_mask_3_unary(<
 define <16 x i16> @vec256_eltty_i16_source_subvec_1_target_subvec_mask_3_binary(<16 x i16> %x, <16 x i16> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_i16_source_subvec_1_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,2,3]
-; CHECK-NEXT:    vpslldq {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0,1],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16,17]
-; CHECK-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm1 = ymm1[2,3,2,3]
+; CHECK-NEXT:    vpslldq {{[^#]+#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0,1],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16,17]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i16> %x, <16 x i16> %y, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 24, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 24>
   ret <16 x i16> %r
@@ -744,7 +744,7 @@ define <16 x i16> @vec256_eltty_i16_source_subvec_1_target_subvec_mask_3_binary(
 define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_1_unary(<32 x i8> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_0_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]
+; CHECK-NEXT:    vpshufb {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]
 ; CHECK-NEXT:    retq
   %r = shufflevector <32 x i8> %x, <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <32 x i8> %r
@@ -754,7 +754,7 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_1_binary(<3
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_0_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastb %xmm1, %ymm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; CHECK-NEXT:    vmovdqa {{[^#]+#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <32 x i8> %x, <32 x i8> %y, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -765,7 +765,7 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_2_unary(<32
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_0_target_subvec_mask_2_unary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastb %xmm0, %ymm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    vmovdqa {{[^#]+#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <32 x i8> %x, <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 0>
@@ -776,7 +776,7 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_2_binary(<3
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_0_target_subvec_mask_2_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastb %xmm1, %ymm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    vmovdqa {{[^#]+#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <32 x i8> %x, <32 x i8> %y, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 32>
@@ -786,9 +786,9 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_2_binary(<3
 define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_3_unary(<32 x i8> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_0_target_subvec_mask_3_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[0,1,0,1]
-; CHECK-NEXT:    vpslldq {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16]
-; CHECK-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm1 = ymm0[0,1,0,1]
+; CHECK-NEXT:    vpslldq {{[^#]+#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16]
+; CHECK-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
 ; CHECK-NEXT:    # ymm2 = mem[0,1,0,1]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
@@ -799,9 +799,9 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_3_unary(<32
 define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_3_binary(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_0_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,1,0,1]
-; CHECK-NEXT:    vpslldq {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16]
-; CHECK-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm1 = ymm1[0,1,0,1]
+; CHECK-NEXT:    vpslldq {{[^#]+#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16]
+; CHECK-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
 ; CHECK-NEXT:    # ymm2 = mem[0,1,0,1]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
@@ -814,7 +814,7 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_1_target_subvec_mask_1_unary(<32
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpbroadcastb %xmm1, %ymm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; CHECK-NEXT:    vmovdqa {{[^#]+#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <32 x i8> %x, <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 16, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -825,8 +825,8 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_1_target_subvec_mask_1_binary(<3
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_1_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; CHECK-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; CHECK-NEXT:    vpslldq {{[^#]+#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
+; CHECK-NEXT:    vmovdqa {{[^#]+#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <32 x i8> %x, <32 x i8> %y, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 48, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -836,7 +836,7 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_1_target_subvec_mask_1_binary(<3
 define <32 x i8> @vec256_eltty_i8_source_subvec_1_target_subvec_mask_2_unary(<32 x i8> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_1_target_subvec_mask_2_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,16]
+; CHECK-NEXT:    vpshufb {{[^#]+#+}} ymm0 = ymm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,16]
 ; CHECK-NEXT:    retq
   %r = shufflevector <32 x i8> %x, <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 16>
   ret <32 x i8> %r
@@ -847,7 +847,7 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_1_target_subvec_mask_2_binary(<3
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; CHECK-NEXT:    vpbroadcastb %xmm1, %ymm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    vmovdqa {{[^#]+#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <32 x i8> %x, <32 x i8> %y, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 48>
@@ -857,9 +857,9 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_1_target_subvec_mask_2_binary(<3
 define <32 x i8> @vec256_eltty_i8_source_subvec_1_target_subvec_mask_3_unary(<32 x i8> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_1_target_subvec_mask_3_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[2,3,2,3]
-; CHECK-NEXT:    vpslldq {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16]
-; CHECK-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm1 = ymm0[2,3,2,3]
+; CHECK-NEXT:    vpslldq {{[^#]+#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16]
+; CHECK-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
 ; CHECK-NEXT:    # ymm2 = mem[0,1,0,1]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
@@ -870,9 +870,9 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_1_target_subvec_mask_3_unary(<32
 define <32 x i8> @vec256_eltty_i8_source_subvec_1_target_subvec_mask_3_binary(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_1_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,2,3]
-; CHECK-NEXT:    vpslldq {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16]
-; CHECK-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm1 = ymm1[2,3,2,3]
+; CHECK-NEXT:    vpslldq {{[^#]+#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16]
+; CHECK-NEXT:    vbroadcasti128 {{[^#]+#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
 ; CHECK-NEXT:    # ymm2 = mem[0,1,0,1]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq

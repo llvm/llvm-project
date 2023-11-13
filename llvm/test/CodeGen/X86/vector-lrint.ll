@@ -36,50 +36,50 @@ define <2 x iXLen> @lrint_v2f32(<2 x float> %x) {
 ; X86-SSE2-LABEL: lrint_v2f32:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movaps %xmm0, %xmm1
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
+; X86-SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[3,3],xmm0[3,3]
 ; X86-SSE2-NEXT:    cvtss2si %xmm1, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm1
 ; X86-SSE2-NEXT:    movaps %xmm0, %xmm2
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
+; X86-SSE2-NEXT:    unpckhpd {{[^#]+#+}} xmm2 = xmm2[1],xmm0[1]
 ; X86-SSE2-NEXT:    cvtss2si %xmm2, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm2
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; X86-SSE2-NEXT:    cvtss2si %xmm0, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE2-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-SSE2-NEXT:    cvtss2si %xmm0, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0]
 ; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: lrint_v2f32:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; X86-AVX-NEXT:    vmovshdup {{[^#]+#+}} xmm1 = xmm0[1,1,3,3]
 ; X86-AVX-NEXT:    vcvtss2si %xmm1, %eax
 ; X86-AVX-NEXT:    vcvtss2si %xmm0, %ecx
 ; X86-AVX-NEXT:    vmovd %ecx, %xmm1
 ; X86-AVX-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; X86-AVX-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; X86-AVX-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm0[1,0]
 ; X86-AVX-NEXT:    vcvtss2si %xmm2, %eax
 ; X86-AVX-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X86-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X86-AVX-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; X86-AVX-NEXT:    vcvtss2si %xmm0, %eax
 ; X86-AVX-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-AVX-i32-LABEL: lrint_v2f32:
 ; X64-AVX-i32:       # %bb.0:
-; X64-AVX-i32-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; X64-AVX-i32-NEXT:    vmovshdup {{[^#]+#+}} xmm1 = xmm0[1,1,3,3]
 ; X64-AVX-i32-NEXT:    vcvtss2si %xmm1, %eax
 ; X64-AVX-i32-NEXT:    vcvtss2si %xmm0, %ecx
 ; X64-AVX-i32-NEXT:    vmovd %ecx, %xmm1
 ; X64-AVX-i32-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; X64-AVX-i32-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; X64-AVX-i32-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm0[1,0]
 ; X64-AVX-i32-NEXT:    vcvtss2si %xmm2, %eax
 ; X64-AVX-i32-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X64-AVX-i32-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X64-AVX-i32-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; X64-AVX-i32-NEXT:    vcvtss2si %xmm0, %eax
 ; X64-AVX-i32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
 ; X64-AVX-i32-NEXT:    retq
@@ -88,10 +88,10 @@ define <2 x iXLen> @lrint_v2f32(<2 x float> %x) {
 ; X64-AVX-i64:       # %bb.0:
 ; X64-AVX-i64-NEXT:    vcvtss2si %xmm0, %rax
 ; X64-AVX-i64-NEXT:    vmovq %rax, %xmm1
-; X64-AVX-i64-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; X64-AVX-i64-NEXT:    vmovshdup {{[^#]+#+}} xmm0 = xmm0[1,1,3,3]
 ; X64-AVX-i64-NEXT:    vcvtss2si %xmm0, %rax
 ; X64-AVX-i64-NEXT:    vmovq %rax, %xmm0
-; X64-AVX-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64-AVX-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm1[0],xmm0[0]
 ; X64-AVX-i64-NEXT:    retq
   %a = call <2 x iXLen> @llvm.lrint.v2iXLen.v2f32(<2 x float> %x)
   ret <2 x iXLen> %a
@@ -102,87 +102,87 @@ define <4 x iXLen> @lrint_v4f32(<4 x float> %x) {
 ; X86-SSE2-LABEL: lrint_v4f32:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movaps %xmm0, %xmm1
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
+; X86-SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[3,3],xmm0[3,3]
 ; X86-SSE2-NEXT:    cvtss2si %xmm1, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm1
 ; X86-SSE2-NEXT:    movaps %xmm0, %xmm2
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
+; X86-SSE2-NEXT:    unpckhpd {{[^#]+#+}} xmm2 = xmm2[1],xmm0[1]
 ; X86-SSE2-NEXT:    cvtss2si %xmm2, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm2
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; X86-SSE2-NEXT:    cvtss2si %xmm0, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE2-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-SSE2-NEXT:    cvtss2si %xmm0, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0]
 ; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: lrint_v4f32:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; X86-AVX-NEXT:    vmovshdup {{[^#]+#+}} xmm1 = xmm0[1,1,3,3]
 ; X86-AVX-NEXT:    vcvtss2si %xmm1, %eax
 ; X86-AVX-NEXT:    vcvtss2si %xmm0, %ecx
 ; X86-AVX-NEXT:    vmovd %ecx, %xmm1
 ; X86-AVX-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; X86-AVX-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; X86-AVX-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm0[1,0]
 ; X86-AVX-NEXT:    vcvtss2si %xmm2, %eax
 ; X86-AVX-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X86-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X86-AVX-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; X86-AVX-NEXT:    vcvtss2si %xmm0, %eax
 ; X86-AVX-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-AVX-i32-LABEL: lrint_v4f32:
 ; X64-AVX-i32:       # %bb.0:
-; X64-AVX-i32-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; X64-AVX-i32-NEXT:    vmovshdup {{[^#]+#+}} xmm1 = xmm0[1,1,3,3]
 ; X64-AVX-i32-NEXT:    vcvtss2si %xmm1, %eax
 ; X64-AVX-i32-NEXT:    vcvtss2si %xmm0, %ecx
 ; X64-AVX-i32-NEXT:    vmovd %ecx, %xmm1
 ; X64-AVX-i32-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; X64-AVX-i32-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; X64-AVX-i32-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm0[1,0]
 ; X64-AVX-i32-NEXT:    vcvtss2si %xmm2, %eax
 ; X64-AVX-i32-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X64-AVX-i32-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X64-AVX-i32-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; X64-AVX-i32-NEXT:    vcvtss2si %xmm0, %eax
 ; X64-AVX-i32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
 ; X64-AVX-i32-NEXT:    retq
 ;
 ; X64-AVX1-i64-LABEL: lrint_v4f32:
 ; X64-AVX1-i64:       # %bb.0:
-; X64-AVX1-i64-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; X64-AVX1-i64-NEXT:    vshufps {{[^#]+#+}} xmm1 = xmm0[3,3,3,3]
 ; X64-AVX1-i64-NEXT:    vcvtss2si %xmm1, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm1
-; X64-AVX1-i64-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; X64-AVX1-i64-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm0[1,0]
 ; X64-AVX1-i64-NEXT:    vcvtss2si %xmm2, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX1-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm1 = xmm2[0],xmm1[0]
 ; X64-AVX1-i64-NEXT:    vcvtss2si %xmm0, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX1-i64-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; X64-AVX1-i64-NEXT:    vmovshdup {{[^#]+#+}} xmm0 = xmm0[1,1,3,3]
 ; X64-AVX1-i64-NEXT:    vcvtss2si %xmm0, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
-; X64-AVX1-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm2[0],xmm0[0]
 ; X64-AVX1-i64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X64-AVX1-i64-NEXT:    retq
 ;
 ; X64-AVX512-i64-LABEL: lrint_v4f32:
 ; X64-AVX512-i64:       # %bb.0:
-; X64-AVX512-i64-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; X64-AVX512-i64-NEXT:    vshufps {{[^#]+#+}} xmm1 = xmm0[3,3,3,3]
 ; X64-AVX512-i64-NEXT:    vcvtss2si %xmm1, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm1
-; X64-AVX512-i64-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; X64-AVX512-i64-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm0[1,0]
 ; X64-AVX512-i64-NEXT:    vcvtss2si %xmm2, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X64-AVX512-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm1 = xmm2[0],xmm1[0]
 ; X64-AVX512-i64-NEXT:    vcvtss2si %xmm0, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX512-i64-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; X64-AVX512-i64-NEXT:    vmovshdup {{[^#]+#+}} xmm0 = xmm0[1,1,3,3]
 ; X64-AVX512-i64-NEXT:    vcvtss2si %xmm0, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm0
-; X64-AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; X64-AVX512-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm2[0],xmm0[0]
 ; X64-AVX512-i64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; X64-AVX512-i64-NEXT:    retq
   %a = call <4 x iXLen> @llvm.lrint.v4iXLen.v4f32(<4 x float> %x)
@@ -194,63 +194,63 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 ; X86-SSE2-LABEL: lrint_v8f32:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movaps %xmm0, %xmm2
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X86-SSE2-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; X86-SSE2-NEXT:    cvtss2si %xmm0, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm0
 ; X86-SSE2-NEXT:    movaps %xmm2, %xmm3
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm2[1]
+; X86-SSE2-NEXT:    unpckhpd {{[^#]+#+}} xmm3 = xmm3[1],xmm2[1]
 ; X86-SSE2-NEXT:    cvtss2si %xmm3, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm3
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
 ; X86-SSE2-NEXT:    cvtss2si %xmm2, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
+; X86-SSE2-NEXT:    shufps {{[^#]+#+}} xmm2 = xmm2[1,1,1,1]
 ; X86-SSE2-NEXT:    cvtss2si %xmm2, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm2
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; X86-SSE2-NEXT:    punpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm3[0]
 ; X86-SSE2-NEXT:    movaps %xmm1, %xmm2
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3],xmm1[3,3]
+; X86-SSE2-NEXT:    shufps {{[^#]+#+}} xmm2 = xmm2[3,3],xmm1[3,3]
 ; X86-SSE2-NEXT:    cvtss2si %xmm2, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm2
 ; X86-SSE2-NEXT:    movaps %xmm1, %xmm3
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm1[1]
+; X86-SSE2-NEXT:    unpckhpd {{[^#]+#+}} xmm3 = xmm3[1],xmm1[1]
 ; X86-SSE2-NEXT:    cvtss2si %xmm3, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm3
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
 ; X86-SSE2-NEXT:    cvtss2si %xmm1, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm2
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; X86-SSE2-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[1,1,1,1]
 ; X86-SSE2-NEXT:    cvtss2si %xmm1, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X86-SSE2-NEXT:    punpcklqdq {{[^#]+#+}} xmm2 = xmm2[0],xmm3[0]
 ; X86-SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: lrint_v8f32:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-AVX1-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; X86-AVX1-NEXT:    vmovshdup {{[^#]+#+}} xmm2 = xmm1[1,1,3,3]
 ; X86-AVX1-NEXT:    vcvtss2si %xmm2, %eax
 ; X86-AVX1-NEXT:    vcvtss2si %xmm1, %ecx
 ; X86-AVX1-NEXT:    vmovd %ecx, %xmm2
 ; X86-AVX1-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; X86-AVX1-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
+; X86-AVX1-NEXT:    vshufpd {{[^#]+#+}} xmm3 = xmm1[1,0]
 ; X86-AVX1-NEXT:    vcvtss2si %xmm3, %eax
 ; X86-AVX1-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X86-AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
+; X86-AVX1-NEXT:    vshufps {{[^#]+#+}} xmm1 = xmm1[3,3,3,3]
 ; X86-AVX1-NEXT:    vcvtss2si %xmm1, %eax
 ; X86-AVX1-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm1
-; X86-AVX1-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; X86-AVX1-NEXT:    vmovshdup {{[^#]+#+}} xmm2 = xmm0[1,1,3,3]
 ; X86-AVX1-NEXT:    vcvtss2si %xmm2, %eax
 ; X86-AVX1-NEXT:    vcvtss2si %xmm0, %ecx
 ; X86-AVX1-NEXT:    vmovd %ecx, %xmm2
 ; X86-AVX1-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; X86-AVX1-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
+; X86-AVX1-NEXT:    vshufpd {{[^#]+#+}} xmm3 = xmm0[1,0]
 ; X86-AVX1-NEXT:    vcvtss2si %xmm3, %eax
 ; X86-AVX1-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X86-AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X86-AVX1-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; X86-AVX1-NEXT:    vcvtss2si %xmm0, %eax
 ; X86-AVX1-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -259,26 +259,26 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 ; X86-AVX512-LABEL: lrint_v8f32:
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-AVX512-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; X86-AVX512-NEXT:    vmovshdup {{[^#]+#+}} xmm2 = xmm1[1,1,3,3]
 ; X86-AVX512-NEXT:    vcvtss2si %xmm2, %eax
 ; X86-AVX512-NEXT:    vcvtss2si %xmm1, %ecx
 ; X86-AVX512-NEXT:    vmovd %ecx, %xmm2
 ; X86-AVX512-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; X86-AVX512-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
+; X86-AVX512-NEXT:    vshufpd {{[^#]+#+}} xmm3 = xmm1[1,0]
 ; X86-AVX512-NEXT:    vcvtss2si %xmm3, %eax
 ; X86-AVX512-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X86-AVX512-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
+; X86-AVX512-NEXT:    vshufps {{[^#]+#+}} xmm1 = xmm1[3,3,3,3]
 ; X86-AVX512-NEXT:    vcvtss2si %xmm1, %eax
 ; X86-AVX512-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm1
-; X86-AVX512-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; X86-AVX512-NEXT:    vmovshdup {{[^#]+#+}} xmm2 = xmm0[1,1,3,3]
 ; X86-AVX512-NEXT:    vcvtss2si %xmm2, %eax
 ; X86-AVX512-NEXT:    vcvtss2si %xmm0, %ecx
 ; X86-AVX512-NEXT:    vmovd %ecx, %xmm2
 ; X86-AVX512-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; X86-AVX512-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
+; X86-AVX512-NEXT:    vshufpd {{[^#]+#+}} xmm3 = xmm0[1,0]
 ; X86-AVX512-NEXT:    vcvtss2si %xmm3, %eax
 ; X86-AVX512-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X86-AVX512-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X86-AVX512-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; X86-AVX512-NEXT:    vcvtss2si %xmm0, %eax
 ; X86-AVX512-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
 ; X86-AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
@@ -287,26 +287,26 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 ; X64-AVX1-i32-LABEL: lrint_v8f32:
 ; X64-AVX1-i32:       # %bb.0:
 ; X64-AVX1-i32-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-AVX1-i32-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; X64-AVX1-i32-NEXT:    vmovshdup {{[^#]+#+}} xmm2 = xmm1[1,1,3,3]
 ; X64-AVX1-i32-NEXT:    vcvtss2si %xmm2, %eax
 ; X64-AVX1-i32-NEXT:    vcvtss2si %xmm1, %ecx
 ; X64-AVX1-i32-NEXT:    vmovd %ecx, %xmm2
 ; X64-AVX1-i32-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; X64-AVX1-i32-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
+; X64-AVX1-i32-NEXT:    vshufpd {{[^#]+#+}} xmm3 = xmm1[1,0]
 ; X64-AVX1-i32-NEXT:    vcvtss2si %xmm3, %eax
 ; X64-AVX1-i32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X64-AVX1-i32-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
+; X64-AVX1-i32-NEXT:    vshufps {{[^#]+#+}} xmm1 = xmm1[3,3,3,3]
 ; X64-AVX1-i32-NEXT:    vcvtss2si %xmm1, %eax
 ; X64-AVX1-i32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm1
-; X64-AVX1-i32-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; X64-AVX1-i32-NEXT:    vmovshdup {{[^#]+#+}} xmm2 = xmm0[1,1,3,3]
 ; X64-AVX1-i32-NEXT:    vcvtss2si %xmm2, %eax
 ; X64-AVX1-i32-NEXT:    vcvtss2si %xmm0, %ecx
 ; X64-AVX1-i32-NEXT:    vmovd %ecx, %xmm2
 ; X64-AVX1-i32-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; X64-AVX1-i32-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
+; X64-AVX1-i32-NEXT:    vshufpd {{[^#]+#+}} xmm3 = xmm0[1,0]
 ; X64-AVX1-i32-NEXT:    vcvtss2si %xmm3, %eax
 ; X64-AVX1-i32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X64-AVX1-i32-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X64-AVX1-i32-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; X64-AVX1-i32-NEXT:    vcvtss2si %xmm0, %eax
 ; X64-AVX1-i32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
 ; X64-AVX1-i32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -315,26 +315,26 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 ; X64-AVX512-i32-LABEL: lrint_v8f32:
 ; X64-AVX512-i32:       # %bb.0:
 ; X64-AVX512-i32-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-AVX512-i32-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; X64-AVX512-i32-NEXT:    vmovshdup {{[^#]+#+}} xmm2 = xmm1[1,1,3,3]
 ; X64-AVX512-i32-NEXT:    vcvtss2si %xmm2, %eax
 ; X64-AVX512-i32-NEXT:    vcvtss2si %xmm1, %ecx
 ; X64-AVX512-i32-NEXT:    vmovd %ecx, %xmm2
 ; X64-AVX512-i32-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; X64-AVX512-i32-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
+; X64-AVX512-i32-NEXT:    vshufpd {{[^#]+#+}} xmm3 = xmm1[1,0]
 ; X64-AVX512-i32-NEXT:    vcvtss2si %xmm3, %eax
 ; X64-AVX512-i32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X64-AVX512-i32-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
+; X64-AVX512-i32-NEXT:    vshufps {{[^#]+#+}} xmm1 = xmm1[3,3,3,3]
 ; X64-AVX512-i32-NEXT:    vcvtss2si %xmm1, %eax
 ; X64-AVX512-i32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm1
-; X64-AVX512-i32-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; X64-AVX512-i32-NEXT:    vmovshdup {{[^#]+#+}} xmm2 = xmm0[1,1,3,3]
 ; X64-AVX512-i32-NEXT:    vcvtss2si %xmm2, %eax
 ; X64-AVX512-i32-NEXT:    vcvtss2si %xmm0, %ecx
 ; X64-AVX512-i32-NEXT:    vmovd %ecx, %xmm2
 ; X64-AVX512-i32-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; X64-AVX512-i32-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
+; X64-AVX512-i32-NEXT:    vshufpd {{[^#]+#+}} xmm3 = xmm0[1,0]
 ; X64-AVX512-i32-NEXT:    vcvtss2si %xmm3, %eax
 ; X64-AVX512-i32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X64-AVX512-i32-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X64-AVX512-i32-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; X64-AVX512-i32-NEXT:    vcvtss2si %xmm0, %eax
 ; X64-AVX512-i32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
 ; X64-AVX512-i32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
@@ -342,34 +342,34 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 ;
 ; X64-AVX1-i64-LABEL: lrint_v8f32:
 ; X64-AVX1-i64:       # %bb.0:
-; X64-AVX1-i64-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; X64-AVX1-i64-NEXT:    vshufps {{[^#]+#+}} xmm1 = xmm0[3,3,3,3]
 ; X64-AVX1-i64-NEXT:    vcvtss2si %xmm1, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm1
-; X64-AVX1-i64-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; X64-AVX1-i64-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm0[1,0]
 ; X64-AVX1-i64-NEXT:    vcvtss2si %xmm2, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX1-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm1 = xmm2[0],xmm1[0]
 ; X64-AVX1-i64-NEXT:    vcvtss2si %xmm0, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX1-i64-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; X64-AVX1-i64-NEXT:    vmovshdup {{[^#]+#+}} xmm3 = xmm0[1,1,3,3]
 ; X64-AVX1-i64-NEXT:    vcvtss2si %xmm3, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm3
-; X64-AVX1-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm2 = xmm2[0],xmm3[0]
 ; X64-AVX1-i64-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm2
 ; X64-AVX1-i64-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X64-AVX1-i64-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; X64-AVX1-i64-NEXT:    vshufps {{[^#]+#+}} xmm1 = xmm0[3,3,3,3]
 ; X64-AVX1-i64-NEXT:    vcvtss2si %xmm1, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm1
-; X64-AVX1-i64-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
+; X64-AVX1-i64-NEXT:    vshufpd {{[^#]+#+}} xmm3 = xmm0[1,0]
 ; X64-AVX1-i64-NEXT:    vcvtss2si %xmm3, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm3
-; X64-AVX1-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm3[0],xmm1[0]
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm1 = xmm3[0],xmm1[0]
 ; X64-AVX1-i64-NEXT:    vcvtss2si %xmm0, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm3
-; X64-AVX1-i64-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; X64-AVX1-i64-NEXT:    vmovshdup {{[^#]+#+}} xmm0 = xmm0[1,1,3,3]
 ; X64-AVX1-i64-NEXT:    vcvtss2si %xmm0, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
-; X64-AVX1-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm3[0],xmm0[0]
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm3[0],xmm0[0]
 ; X64-AVX1-i64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; X64-AVX1-i64-NEXT:    vmovaps %ymm2, %ymm0
 ; X64-AVX1-i64-NEXT:    retq
@@ -377,33 +377,33 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 ; X64-AVX512-i64-LABEL: lrint_v8f32:
 ; X64-AVX512-i64:       # %bb.0:
 ; X64-AVX512-i64-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-AVX512-i64-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[3,3,3,3]
+; X64-AVX512-i64-NEXT:    vshufps {{[^#]+#+}} xmm2 = xmm1[3,3,3,3]
 ; X64-AVX512-i64-NEXT:    vcvtss2si %xmm2, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX512-i64-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
+; X64-AVX512-i64-NEXT:    vshufpd {{[^#]+#+}} xmm3 = xmm1[1,0]
 ; X64-AVX512-i64-NEXT:    vcvtss2si %xmm3, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm3
-; X64-AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; X64-AVX512-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm2 = xmm3[0],xmm2[0]
 ; X64-AVX512-i64-NEXT:    vcvtss2si %xmm1, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm3
-; X64-AVX512-i64-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; X64-AVX512-i64-NEXT:    vmovshdup {{[^#]+#+}} xmm1 = xmm1[1,1,3,3]
 ; X64-AVX512-i64-NEXT:    vcvtss2si %xmm1, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm1
-; X64-AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm3[0],xmm1[0]
+; X64-AVX512-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm1 = xmm3[0],xmm1[0]
 ; X64-AVX512-i64-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; X64-AVX512-i64-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; X64-AVX512-i64-NEXT:    vshufps {{[^#]+#+}} xmm2 = xmm0[3,3,3,3]
 ; X64-AVX512-i64-NEXT:    vcvtss2si %xmm2, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX512-i64-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
+; X64-AVX512-i64-NEXT:    vshufpd {{[^#]+#+}} xmm3 = xmm0[1,0]
 ; X64-AVX512-i64-NEXT:    vcvtss2si %xmm3, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm3
-; X64-AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; X64-AVX512-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm2 = xmm3[0],xmm2[0]
 ; X64-AVX512-i64-NEXT:    vcvtss2si %xmm0, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm3
-; X64-AVX512-i64-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; X64-AVX512-i64-NEXT:    vmovshdup {{[^#]+#+}} xmm0 = xmm0[1,1,3,3]
 ; X64-AVX512-i64-NEXT:    vcvtss2si %xmm0, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm0
-; X64-AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm3[0],xmm0[0]
+; X64-AVX512-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm3[0],xmm0[0]
 ; X64-AVX512-i64-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; X64-AVX512-i64-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; X64-AVX512-i64-NEXT:    retq
@@ -448,16 +448,16 @@ define <2 x iXLen> @lrint_v2f64(<2 x double> %x) {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    cvtsd2si %xmm0, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
+; X86-SSE2-NEXT:    unpckhpd {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; X86-SSE2-NEXT:    cvtsd2si %xmm0, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: lrint_v2f64:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; X86-AVX-NEXT:    vshufpd {{[^#]+#+}} xmm1 = xmm0[1,0]
 ; X86-AVX-NEXT:    vcvtsd2si %xmm1, %eax
 ; X86-AVX-NEXT:    vcvtsd2si %xmm0, %ecx
 ; X86-AVX-NEXT:    vmovd %ecx, %xmm0
@@ -466,7 +466,7 @@ define <2 x iXLen> @lrint_v2f64(<2 x double> %x) {
 ;
 ; X64-AVX-i32-LABEL: lrint_v2f64:
 ; X64-AVX-i32:       # %bb.0:
-; X64-AVX-i32-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; X64-AVX-i32-NEXT:    vshufpd {{[^#]+#+}} xmm1 = xmm0[1,0]
 ; X64-AVX-i32-NEXT:    vcvtsd2si %xmm1, %eax
 ; X64-AVX-i32-NEXT:    vcvtsd2si %xmm0, %ecx
 ; X64-AVX-i32-NEXT:    vmovd %ecx, %xmm0
@@ -477,10 +477,10 @@ define <2 x iXLen> @lrint_v2f64(<2 x double> %x) {
 ; X64-AVX-i64:       # %bb.0:
 ; X64-AVX-i64-NEXT:    vcvtsd2si %xmm0, %rax
 ; X64-AVX-i64-NEXT:    vmovq %rax, %xmm1
-; X64-AVX-i64-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-AVX-i64-NEXT:    vshufpd {{[^#]+#+}} xmm0 = xmm0[1,0]
 ; X64-AVX-i64-NEXT:    vcvtsd2si %xmm0, %rax
 ; X64-AVX-i64-NEXT:    vmovq %rax, %xmm0
-; X64-AVX-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64-AVX-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm1[0],xmm0[0]
 ; X64-AVX-i64-NEXT:    retq
   %a = call <2 x iXLen> @llvm.lrint.v2iXLen.v2f64(<2 x double> %x)
   ret <2 x iXLen> %a
@@ -492,23 +492,23 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    cvtsd2si %xmm1, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm2
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
+; X86-SSE2-NEXT:    unpckhpd {{[^#]+#+}} xmm1 = xmm1[1,1]
 ; X86-SSE2-NEXT:    cvtsd2si %xmm1, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; X86-SSE2-NEXT:    cvtsd2si %xmm0, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
+; X86-SSE2-NEXT:    unpckhpd {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; X86-SSE2-NEXT:    cvtsd2si %xmm0, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0]
 ; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: lrint_v4f64:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; X86-AVX-NEXT:    vshufpd {{[^#]+#+}} xmm1 = xmm0[1,0]
 ; X86-AVX-NEXT:    vcvtsd2si %xmm1, %eax
 ; X86-AVX-NEXT:    vcvtsd2si %xmm0, %ecx
 ; X86-AVX-NEXT:    vmovd %ecx, %xmm1
@@ -516,7 +516,7 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
 ; X86-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-AVX-NEXT:    vcvtsd2si %xmm0, %eax
 ; X86-AVX-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X86-AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X86-AVX-NEXT:    vshufpd {{[^#]+#+}} xmm0 = xmm0[1,0]
 ; X86-AVX-NEXT:    vcvtsd2si %xmm0, %eax
 ; X86-AVX-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
 ; X86-AVX-NEXT:    vzeroupper
@@ -524,7 +524,7 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
 ;
 ; X64-AVX-i32-LABEL: lrint_v4f64:
 ; X64-AVX-i32:       # %bb.0:
-; X64-AVX-i32-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; X64-AVX-i32-NEXT:    vshufpd {{[^#]+#+}} xmm1 = xmm0[1,0]
 ; X64-AVX-i32-NEXT:    vcvtsd2si %xmm1, %eax
 ; X64-AVX-i32-NEXT:    vcvtsd2si %xmm0, %ecx
 ; X64-AVX-i32-NEXT:    vmovd %ecx, %xmm1
@@ -532,7 +532,7 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
 ; X64-AVX-i32-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X64-AVX-i32-NEXT:    vcvtsd2si %xmm0, %eax
 ; X64-AVX-i32-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X64-AVX-i32-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-AVX-i32-NEXT:    vshufpd {{[^#]+#+}} xmm0 = xmm0[1,0]
 ; X64-AVX-i32-NEXT:    vcvtsd2si %xmm0, %eax
 ; X64-AVX-i32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
 ; X64-AVX-i32-NEXT:    vzeroupper
@@ -543,16 +543,16 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
 ; X64-AVX1-i64-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-AVX1-i64-NEXT:    vcvtsd2si %xmm1, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX1-i64-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; X64-AVX1-i64-NEXT:    vshufpd {{[^#]+#+}} xmm1 = xmm1[1,0]
 ; X64-AVX1-i64-NEXT:    vcvtsd2si %xmm1, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm1
-; X64-AVX1-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm1 = xmm2[0],xmm1[0]
 ; X64-AVX1-i64-NEXT:    vcvtsd2si %xmm0, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX1-i64-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-AVX1-i64-NEXT:    vshufpd {{[^#]+#+}} xmm0 = xmm0[1,0]
 ; X64-AVX1-i64-NEXT:    vcvtsd2si %xmm0, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
-; X64-AVX1-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm2[0],xmm0[0]
 ; X64-AVX1-i64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X64-AVX1-i64-NEXT:    retq
 ;
@@ -561,16 +561,16 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
 ; X64-AVX512-i64-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-AVX512-i64-NEXT:    vcvtsd2si %xmm1, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX512-i64-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; X64-AVX512-i64-NEXT:    vshufpd {{[^#]+#+}} xmm1 = xmm1[1,0]
 ; X64-AVX512-i64-NEXT:    vcvtsd2si %xmm1, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm1
-; X64-AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X64-AVX512-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm1 = xmm2[0],xmm1[0]
 ; X64-AVX512-i64-NEXT:    vcvtsd2si %xmm0, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX512-i64-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-AVX512-i64-NEXT:    vshufpd {{[^#]+#+}} xmm0 = xmm0[1,0]
 ; X64-AVX512-i64-NEXT:    vcvtsd2si %xmm0, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm0
-; X64-AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; X64-AVX512-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm2[0],xmm0[0]
 ; X64-AVX512-i64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; X64-AVX512-i64-NEXT:    retq
   %a = call <4 x iXLen> @llvm.lrint.v4iXLen.v4f64(<4 x double> %x)
@@ -592,30 +592,30 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X86-SSE2-NEXT:    movapd 8(%ebp), %xmm4
 ; X86-SSE2-NEXT:    cvtsd2si %xmm1, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm5
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
+; X86-SSE2-NEXT:    unpckhpd {{[^#]+#+}} xmm1 = xmm1[1,1]
 ; X86-SSE2-NEXT:    cvtsd2si %xmm1, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm0[0],xmm5[1],xmm0[1]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm5 = xmm5[0],xmm0[0],xmm5[1],xmm0[1]
 ; X86-SSE2-NEXT:    cvtsd2si %xmm3, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1,1]
+; X86-SSE2-NEXT:    unpckhpd {{[^#]+#+}} xmm3 = xmm3[1,1]
 ; X86-SSE2-NEXT:    cvtsd2si %xmm3, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm5[0]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-SSE2-NEXT:    punpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm5[0]
 ; X86-SSE2-NEXT:    cvtsd2si %xmm4, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm3
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1,1]
+; X86-SSE2-NEXT:    unpckhpd {{[^#]+#+}} xmm4 = xmm4[1,1]
 ; X86-SSE2-NEXT:    cvtsd2si %xmm4, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
 ; X86-SSE2-NEXT:    cvtsd2si %xmm2, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
+; X86-SSE2-NEXT:    unpckhpd {{[^#]+#+}} xmm2 = xmm2[1,1]
 ; X86-SSE2-NEXT:    cvtsd2si %xmm2, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm2
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; X86-SSE2-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; X86-SSE2-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm3[0]
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
@@ -623,7 +623,7 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ;
 ; X86-AVX1-LABEL: lrint_v8f64:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; X86-AVX1-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm1[1,0]
 ; X86-AVX1-NEXT:    vcvtsd2si %xmm2, %eax
 ; X86-AVX1-NEXT:    vcvtsd2si %xmm1, %ecx
 ; X86-AVX1-NEXT:    vmovd %ecx, %xmm2
@@ -631,10 +631,10 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; X86-AVX1-NEXT:    vcvtsd2si %xmm1, %eax
 ; X86-AVX1-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X86-AVX1-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; X86-AVX1-NEXT:    vshufpd {{[^#]+#+}} xmm1 = xmm1[1,0]
 ; X86-AVX1-NEXT:    vcvtsd2si %xmm1, %eax
 ; X86-AVX1-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm1
-; X86-AVX1-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; X86-AVX1-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm0[1,0]
 ; X86-AVX1-NEXT:    vcvtsd2si %xmm2, %eax
 ; X86-AVX1-NEXT:    vcvtsd2si %xmm0, %ecx
 ; X86-AVX1-NEXT:    vmovd %ecx, %xmm2
@@ -642,7 +642,7 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-AVX1-NEXT:    vcvtsd2si %xmm0, %eax
 ; X86-AVX1-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X86-AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X86-AVX1-NEXT:    vshufpd {{[^#]+#+}} xmm0 = xmm0[1,0]
 ; X86-AVX1-NEXT:    vcvtsd2si %xmm0, %eax
 ; X86-AVX1-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -651,7 +651,7 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X86-AVX512-LABEL: lrint_v8f64:
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm1
-; X86-AVX512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; X86-AVX512-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm1[1,0]
 ; X86-AVX512-NEXT:    vcvtsd2si %xmm2, %eax
 ; X86-AVX512-NEXT:    vcvtsd2si %xmm1, %ecx
 ; X86-AVX512-NEXT:    vmovd %ecx, %xmm1
@@ -659,10 +659,10 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X86-AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm2
 ; X86-AVX512-NEXT:    vcvtsd2si %xmm2, %eax
 ; X86-AVX512-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X86-AVX512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; X86-AVX512-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm2[1,0]
 ; X86-AVX512-NEXT:    vcvtsd2si %xmm2, %eax
 ; X86-AVX512-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X86-AVX512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; X86-AVX512-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm0[1,0]
 ; X86-AVX512-NEXT:    vcvtsd2si %xmm2, %eax
 ; X86-AVX512-NEXT:    vcvtsd2si %xmm0, %ecx
 ; X86-AVX512-NEXT:    vmovd %ecx, %xmm2
@@ -670,7 +670,7 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X86-AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-AVX512-NEXT:    vcvtsd2si %xmm0, %eax
 ; X86-AVX512-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X86-AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X86-AVX512-NEXT:    vshufpd {{[^#]+#+}} xmm0 = xmm0[1,0]
 ; X86-AVX512-NEXT:    vcvtsd2si %xmm0, %eax
 ; X86-AVX512-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
 ; X86-AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
@@ -678,7 +678,7 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ;
 ; X64-AVX1-i32-LABEL: lrint_v8f64:
 ; X64-AVX1-i32:       # %bb.0:
-; X64-AVX1-i32-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; X64-AVX1-i32-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm1[1,0]
 ; X64-AVX1-i32-NEXT:    vcvtsd2si %xmm2, %eax
 ; X64-AVX1-i32-NEXT:    vcvtsd2si %xmm1, %ecx
 ; X64-AVX1-i32-NEXT:    vmovd %ecx, %xmm2
@@ -686,10 +686,10 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X64-AVX1-i32-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; X64-AVX1-i32-NEXT:    vcvtsd2si %xmm1, %eax
 ; X64-AVX1-i32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X64-AVX1-i32-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; X64-AVX1-i32-NEXT:    vshufpd {{[^#]+#+}} xmm1 = xmm1[1,0]
 ; X64-AVX1-i32-NEXT:    vcvtsd2si %xmm1, %eax
 ; X64-AVX1-i32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm1
-; X64-AVX1-i32-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; X64-AVX1-i32-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm0[1,0]
 ; X64-AVX1-i32-NEXT:    vcvtsd2si %xmm2, %eax
 ; X64-AVX1-i32-NEXT:    vcvtsd2si %xmm0, %ecx
 ; X64-AVX1-i32-NEXT:    vmovd %ecx, %xmm2
@@ -697,7 +697,7 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X64-AVX1-i32-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X64-AVX1-i32-NEXT:    vcvtsd2si %xmm0, %eax
 ; X64-AVX1-i32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X64-AVX1-i32-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-AVX1-i32-NEXT:    vshufpd {{[^#]+#+}} xmm0 = xmm0[1,0]
 ; X64-AVX1-i32-NEXT:    vcvtsd2si %xmm0, %eax
 ; X64-AVX1-i32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
 ; X64-AVX1-i32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -706,7 +706,7 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X64-AVX512-i32-LABEL: lrint_v8f64:
 ; X64-AVX512-i32:       # %bb.0:
 ; X64-AVX512-i32-NEXT:    vextractf32x4 $2, %zmm0, %xmm1
-; X64-AVX512-i32-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; X64-AVX512-i32-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm1[1,0]
 ; X64-AVX512-i32-NEXT:    vcvtsd2si %xmm2, %eax
 ; X64-AVX512-i32-NEXT:    vcvtsd2si %xmm1, %ecx
 ; X64-AVX512-i32-NEXT:    vmovd %ecx, %xmm1
@@ -714,10 +714,10 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X64-AVX512-i32-NEXT:    vextractf32x4 $3, %zmm0, %xmm2
 ; X64-AVX512-i32-NEXT:    vcvtsd2si %xmm2, %eax
 ; X64-AVX512-i32-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X64-AVX512-i32-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; X64-AVX512-i32-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm2[1,0]
 ; X64-AVX512-i32-NEXT:    vcvtsd2si %xmm2, %eax
 ; X64-AVX512-i32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X64-AVX512-i32-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; X64-AVX512-i32-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm0[1,0]
 ; X64-AVX512-i32-NEXT:    vcvtsd2si %xmm2, %eax
 ; X64-AVX512-i32-NEXT:    vcvtsd2si %xmm0, %ecx
 ; X64-AVX512-i32-NEXT:    vmovd %ecx, %xmm2
@@ -725,7 +725,7 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X64-AVX512-i32-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X64-AVX512-i32-NEXT:    vcvtsd2si %xmm0, %eax
 ; X64-AVX512-i32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X64-AVX512-i32-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-AVX512-i32-NEXT:    vshufpd {{[^#]+#+}} xmm0 = xmm0[1,0]
 ; X64-AVX512-i32-NEXT:    vcvtsd2si %xmm0, %eax
 ; X64-AVX512-i32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
 ; X64-AVX512-i32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
@@ -736,30 +736,30 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X64-AVX1-i64-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; X64-AVX1-i64-NEXT:    vcvtsd2si %xmm2, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm3
-; X64-AVX1-i64-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; X64-AVX1-i64-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm2[1,0]
 ; X64-AVX1-i64-NEXT:    vcvtsd2si %xmm2, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX1-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm2 = xmm3[0],xmm2[0]
 ; X64-AVX1-i64-NEXT:    vcvtsd2si %xmm0, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm3
-; X64-AVX1-i64-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-AVX1-i64-NEXT:    vshufpd {{[^#]+#+}} xmm0 = xmm0[1,0]
 ; X64-AVX1-i64-NEXT:    vcvtsd2si %xmm0, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
-; X64-AVX1-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm3[0],xmm0[0]
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm3[0],xmm0[0]
 ; X64-AVX1-i64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; X64-AVX1-i64-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; X64-AVX1-i64-NEXT:    vcvtsd2si %xmm2, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm3
-; X64-AVX1-i64-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; X64-AVX1-i64-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm2[1,0]
 ; X64-AVX1-i64-NEXT:    vcvtsd2si %xmm2, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX1-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm2 = xmm3[0],xmm2[0]
 ; X64-AVX1-i64-NEXT:    vcvtsd2si %xmm1, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm3
-; X64-AVX1-i64-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; X64-AVX1-i64-NEXT:    vshufpd {{[^#]+#+}} xmm1 = xmm1[1,0]
 ; X64-AVX1-i64-NEXT:    vcvtsd2si %xmm1, %rax
 ; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm1
-; X64-AVX1-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm3[0],xmm1[0]
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm1 = xmm3[0],xmm1[0]
 ; X64-AVX1-i64-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; X64-AVX1-i64-NEXT:    retq
 ;
@@ -768,31 +768,31 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X64-AVX512-i64-NEXT:    vextractf32x4 $3, %zmm0, %xmm1
 ; X64-AVX512-i64-NEXT:    vcvtsd2si %xmm1, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX512-i64-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; X64-AVX512-i64-NEXT:    vshufpd {{[^#]+#+}} xmm1 = xmm1[1,0]
 ; X64-AVX512-i64-NEXT:    vcvtsd2si %xmm1, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm1
-; X64-AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X64-AVX512-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm1 = xmm2[0],xmm1[0]
 ; X64-AVX512-i64-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
 ; X64-AVX512-i64-NEXT:    vcvtsd2si %xmm2, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm3
-; X64-AVX512-i64-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; X64-AVX512-i64-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm2[1,0]
 ; X64-AVX512-i64-NEXT:    vcvtsd2si %xmm2, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; X64-AVX512-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm2 = xmm3[0],xmm2[0]
 ; X64-AVX512-i64-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
 ; X64-AVX512-i64-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; X64-AVX512-i64-NEXT:    vcvtsd2si %xmm2, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm3
-; X64-AVX512-i64-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; X64-AVX512-i64-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm2[1,0]
 ; X64-AVX512-i64-NEXT:    vcvtsd2si %xmm2, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm2
-; X64-AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; X64-AVX512-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm2 = xmm3[0],xmm2[0]
 ; X64-AVX512-i64-NEXT:    vcvtsd2si %xmm0, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm3
-; X64-AVX512-i64-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-AVX512-i64-NEXT:    vshufpd {{[^#]+#+}} xmm0 = xmm0[1,0]
 ; X64-AVX512-i64-NEXT:    vcvtsd2si %xmm0, %rax
 ; X64-AVX512-i64-NEXT:    vmovq %rax, %xmm0
-; X64-AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm3[0],xmm0[0]
+; X64-AVX512-i64-NEXT:    vpunpcklqdq {{[^#]+#+}} xmm0 = xmm3[0],xmm0[0]
 ; X64-AVX512-i64-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; X64-AVX512-i64-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; X64-AVX512-i64-NEXT:    retq

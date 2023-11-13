@@ -11,7 +11,7 @@ define void @foo(ptr %x, <8 x i1> %y) {
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vpgatherdd %ymm1, (%rax,%ymm2), %ymm3
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-NEXT:    vpmovzxwd {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; CHECK-NEXT:    vpslld $31, %ymm0, %ymm0
 ; CHECK-NEXT:    vpmaskmovd %ymm3, %ymm0, (%rdi)
 ; CHECK-NEXT:    ud2

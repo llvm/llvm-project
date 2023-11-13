@@ -129,7 +129,7 @@ entry:
 define <8 x i16> @sll8_nosplat(<8 x i16> %A) nounwind {
 ; X86-LABEL: sll8_nosplat:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [2,4,8,64,4,4,4,4]
+; X86-NEXT:    movdqa {{[^#]+#+}} xmm1 = [2,4,8,64,4,4,4,4]
 ; X86-NEXT:    pmullw %xmm0, %xmm1
 ; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    pxor %xmm1, %xmm0
@@ -137,7 +137,7 @@ define <8 x i16> @sll8_nosplat(<8 x i16> %A) nounwind {
 ;
 ; X64-LABEL: sll8_nosplat:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [2,4,8,64,4,4,4,4]
+; X64-NEXT:    movdqa {{[^#]+#+}} xmm1 = [2,4,8,64,4,4,4,4]
 ; X64-NEXT:    pmullw %xmm0, %xmm1
 ; X64-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    pxor %xmm1, %xmm0
@@ -156,8 +156,8 @@ define <2 x i64> @shr2_nosplat(<2 x i64> %A) nounwind {
 ; CHECK-NEXT:    psrlq $8, %xmm1
 ; CHECK-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-NEXT:    psrlq $1, %xmm2
-; CHECK-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[0],xmm2[1]
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
+; CHECK-NEXT:    shufpd {{[^#]+#+}} xmm1 = xmm1[0],xmm2[1]
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = xmm2[0],xmm0[1]
 ; CHECK-NEXT:    xorpd %xmm1, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
@@ -247,7 +247,7 @@ define <16 x i8> @sra_v16i8(<16 x i8> %A) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    psrlw $3, %xmm0
 ; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
+; X86-NEXT:    movdqa {{[^#]+#+}} xmm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; X86-NEXT:    pxor %xmm1, %xmm0
 ; X86-NEXT:    psubb %xmm1, %xmm0
 ; X86-NEXT:    retl
@@ -256,7 +256,7 @@ define <16 x i8> @sra_v16i8(<16 x i8> %A) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    psrlw $3, %xmm0
 ; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
+; X64-NEXT:    movdqa {{[^#]+#+}} xmm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    psubb %xmm1, %xmm0
 ; X64-NEXT:    retq

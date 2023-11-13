@@ -687,7 +687,7 @@ define void @test_fp_loads(ptr %fptr, ptr %dptr, ptr %i32ptr, ptr %i64ptr) nounw
 ; X64-NEXT:    movq $-1, %r13
 ; X64-NEXT:    sarq $63, %rax
 ; X64-NEXT:    orq %rax, %r15
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
 ; X64-NEXT:    callq sink_float@PLT
@@ -698,7 +698,7 @@ define void @test_fp_loads(ptr %fptr, ptr %dptr, ptr %i32ptr, ptr %i64ptr) nounw
 ; X64-NEXT:    cmpq $.Lslh_ret_addr7, %rcx
 ; X64-NEXT:    cmovneq %r13, %rax
 ; X64-NEXT:    orq %rax, %r12
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
 ; X64-NEXT:    callq sink_double@PLT
@@ -708,7 +708,7 @@ define void @test_fp_loads(ptr %fptr, ptr %dptr, ptr %i32ptr, ptr %i64ptr) nounw
 ; X64-NEXT:    sarq $63, %rax
 ; X64-NEXT:    cmpq $.Lslh_ret_addr8, %rcx
 ; X64-NEXT:    cmovneq %r13, %rax
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    cvtsd2ss %xmm0, %xmm0
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
@@ -719,7 +719,7 @@ define void @test_fp_loads(ptr %fptr, ptr %dptr, ptr %i32ptr, ptr %i64ptr) nounw
 ; X64-NEXT:    sarq $63, %rax
 ; X64-NEXT:    cmpq $.Lslh_ret_addr9, %rcx
 ; X64-NEXT:    cmovneq %r13, %rax
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    cvtss2sd %xmm0, %xmm0
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
@@ -796,14 +796,14 @@ define void @test_fp_loads(ptr %fptr, ptr %dptr, ptr %i32ptr, ptr %i64ptr) nounw
 ; X64-LFENCE-NEXT:    movq %rdx, %rbx
 ; X64-LFENCE-NEXT:    movq %rsi, %r15
 ; X64-LFENCE-NEXT:    movq %rdi, %r12
-; X64-LFENCE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-LFENCE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-LFENCE-NEXT:    callq sink_float@PLT
-; X64-LFENCE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-LFENCE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-LFENCE-NEXT:    callq sink_double@PLT
-; X64-LFENCE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-LFENCE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-LFENCE-NEXT:    cvtsd2ss %xmm0, %xmm0
 ; X64-LFENCE-NEXT:    callq sink_float@PLT
-; X64-LFENCE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-LFENCE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-LFENCE-NEXT:    cvtss2sd %xmm0, %xmm0
 ; X64-LFENCE-NEXT:    callq sink_double@PLT
 ; X64-LFENCE-NEXT:    xorps %xmm0, %xmm0

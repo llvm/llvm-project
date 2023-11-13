@@ -5,7 +5,7 @@
 define <4 x float> @merge_2_floats(ptr nocapture %p) nounwind readonly {
 ; ALL-LABEL: merge_2_floats:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    retq
   %tmp1 = load float, ptr %p
   %vecins = insertelement <4 x float> undef, float %tmp1, i32 0

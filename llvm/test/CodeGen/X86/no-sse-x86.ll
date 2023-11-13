@@ -11,7 +11,7 @@ define void @test() nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subl $12, %esp
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movss %xmm0, (%esp)
 ; CHECK-NEXT:    calll foo1@PLT
 ; CHECK-NEXT:    fstps f
@@ -19,7 +19,7 @@ define void @test() nounwind {
 ; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    calll foo2@PLT
 ; CHECK-NEXT:    fstpl d
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movss %xmm0, (%esp)
 ; CHECK-NEXT:    calll foo3@PLT
 ; CHECK-NEXT:    fstps f

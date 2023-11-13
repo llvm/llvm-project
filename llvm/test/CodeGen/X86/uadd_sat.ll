@@ -150,7 +150,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ;
 ; X64-LABEL: vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; X64-NEXT:    movdqa {{[^#]+#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; X64-NEXT:    movdqa %xmm0, %xmm3
 ; X64-NEXT:    pxor %xmm2, %xmm3
 ; X64-NEXT:    paddd %xmm1, %xmm0

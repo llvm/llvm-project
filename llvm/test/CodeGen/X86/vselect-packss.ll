@@ -55,7 +55,7 @@ define <16 x i8> @vselect_packss_v16i16(<16 x i16> %a0, <16 x i16> %a1, <16 x i8
 ; AVX512F-LABEL: vselect_packss_v16i16:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX512F-NEXT:    vpmovzxwd {{[^#]+#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512F-NEXT:    vpblendvb %xmm0, %xmm2, %xmm3, %xmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -64,7 +64,7 @@ define <16 x i8> @vselect_packss_v16i16(<16 x i16> %a0, <16 x i16> %a1, <16 x i8
 ; AVX512VL-LABEL: vselect_packss_v16i16:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX512VL-NEXT:    vpmovzxwd {{[^#]+#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512VL-NEXT:    vpternlogq $202, %xmm3, %xmm2, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
@@ -148,7 +148,7 @@ define <16 x i8> @vselect_packss_v16i32(<16 x i32> %a0, <16 x i32> %a1, <16 x i8
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX2-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-NEXT:    vpblendvb %xmm0, %xmm4, %xmm5, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -199,32 +199,32 @@ define <16 x i8> @vselect_packss_v16i64(<16 x i64> %a0, <16 x i64> %a1, <16 x i8
 ; SSE2-LABEL: vselect_packss_v16i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm7
-; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm7[1,0,3,2]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm8 = xmm7[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm7, %xmm8
 ; SSE2-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[1,0,3,2]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm7 = xmm6[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm6, %xmm7
 ; SSE2-NEXT:    packssdw %xmm8, %xmm7
 ; SSE2-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[1,0,3,2]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm6 = xmm5[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm5, %xmm6
 ; SSE2-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm4
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[1,0,3,2]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm5 = xmm4[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm4, %xmm5
 ; SSE2-NEXT:    packssdw %xmm6, %xmm5
 ; SSE2-NEXT:    packssdw %xmm7, %xmm5
 ; SSE2-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,0,3,2]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm4 = xmm3[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm3, %xmm4
 ; SSE2-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,0,3,2]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm3 = xmm2[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm2, %xmm3
 ; SSE2-NEXT:    packssdw %xmm4, %xmm3
 ; SSE2-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,3,2]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm1[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm1, %xmm2
 ; SSE2-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    packssdw %xmm2, %xmm0
 ; SSE2-NEXT:    packssdw %xmm3, %xmm0
@@ -292,15 +292,15 @@ define <16 x i8> @vselect_packss_v16i64(<16 x i64> %a0, <16 x i64> %a1, <16 x i8
 ; AVX2-NEXT:    vpcmpeqq %ymm7, %ymm3, %ymm3
 ; AVX2-NEXT:    vpcmpeqq %ymm6, %ymm2, %ymm2
 ; AVX2-NEXT:    vpackssdw %ymm3, %ymm2, %ymm2
-; AVX2-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[0,2,1,3]
+; AVX2-NEXT:    vpermq {{[^#]+#+}} ymm2 = ymm2[0,2,1,3]
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm1, %ymm1
 ; AVX2-NEXT:    vpcmpeqq %ymm4, %ymm0, %ymm0
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX2-NEXT:    vpermq {{[^#]+#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vpackssdw %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX2-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX2-NEXT:    vpandn {{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0

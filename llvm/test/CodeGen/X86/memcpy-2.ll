@@ -13,7 +13,7 @@ define void @t1(i32 %argc, ptr %argv) nounwind  {
 ; SSE2-Darwin-LABEL: t1:
 ; SSE2-Darwin:       ## %bb.0: ## %entry
 ; SSE2-Darwin-NEXT:    subl $28, %esp
-; SSE2-Darwin-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2-Darwin-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE2-Darwin-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
 ; SSE2-Darwin-NEXT:    movaps _.str, %xmm0
 ; SSE2-Darwin-NEXT:    movaps %xmm0, (%esp)
@@ -23,7 +23,7 @@ define void @t1(i32 %argc, ptr %argv) nounwind  {
 ; SSE2-Mingw32-LABEL: t1:
 ; SSE2-Mingw32:       # %bb.0: # %entry
 ; SSE2-Mingw32-NEXT:    subl $28, %esp
-; SSE2-Mingw32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2-Mingw32-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE2-Mingw32-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
 ; SSE2-Mingw32-NEXT:    movaps _.str, %xmm0
 ; SSE2-Mingw32-NEXT:    movups %xmm0, (%esp)
@@ -135,8 +135,8 @@ define void @t3(ptr nocapture %a, ptr nocapture %b) nounwind ssp {
 ; SSE2-Darwin:       ## %bb.0: ## %entry
 ; SSE2-Darwin-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-Darwin-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SSE2-Darwin-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-Darwin-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE2-Darwin-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE2-Darwin-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; SSE2-Darwin-NEXT:    movsd %xmm1, 8(%eax)
 ; SSE2-Darwin-NEXT:    movsd %xmm0, (%eax)
 ; SSE2-Darwin-NEXT:    retl
@@ -145,8 +145,8 @@ define void @t3(ptr nocapture %a, ptr nocapture %b) nounwind ssp {
 ; SSE2-Mingw32:       # %bb.0: # %entry
 ; SSE2-Mingw32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-Mingw32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SSE2-Mingw32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-Mingw32-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE2-Mingw32-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE2-Mingw32-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; SSE2-Mingw32-NEXT:    movsd %xmm1, 8(%eax)
 ; SSE2-Mingw32-NEXT:    movsd %xmm0, (%eax)
 ; SSE2-Mingw32-NEXT:    retl

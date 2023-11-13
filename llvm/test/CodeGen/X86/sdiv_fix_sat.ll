@@ -563,22 +563,22 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    subq $120, %rsp
 ; X64-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,1,3,3]
+; X64-NEXT:    pshufd {{[^#]+#+}} xmm3 = xmm0[2,1,3,3]
 ; X64-NEXT:    psllq $32, %xmm3
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,3,2,3]
+; X64-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm3[1,3,2,3]
 ; X64-NEXT:    psrad $31, %xmm2
 ; X64-NEXT:    psrlq $31, %xmm3
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[0,2,2,3]
-; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; X64-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm3[0,2,2,3]
+; X64-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; X64-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    movq %xmm0, %rbx
 ; X64-NEXT:    movq %rbx, %r13
 ; X64-NEXT:    sarq $63, %r13
 ; X64-NEXT:    shldq $31, %rbx, %r13
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; X64-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm1[2,3,2,3]
 ; X64-NEXT:    pxor %xmm0, %xmm0
 ; X64-NEXT:    pcmpgtd %xmm1, %xmm0
-; X64-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X64-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; X64-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    movq %xmm1, %rdx
 ; X64-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -673,17 +673,17 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    cmovgeq %rcx, %rbp
 ; X64-NEXT:    movq %rbp, %xmm0
 ; X64-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X64-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0]
 ; X64-NEXT:    psrlq $1, %xmm1
 ; X64-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    pshufd $212, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; X64-NEXT:    # xmm0 = mem[0,1,1,3]
 ; X64-NEXT:    psllq $32, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,3,2,3]
+; X64-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[1,3,2,3]
 ; X64-NEXT:    psrad $31, %xmm1
 ; X64-NEXT:    psrlq $31, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X64-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,2,2,3]
+; X64-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    movq %xmm0, %rbx
 ; X64-NEXT:    movq %rbx, %r13
@@ -692,7 +692,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; X64-NEXT:    pxor %xmm1, %xmm1
 ; X64-NEXT:    pcmpgtd %xmm0, %xmm1
-; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X64-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    movq %xmm0, %rdx
 ; X64-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -785,7 +785,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    cmovgeq %rax, %rbp
 ; X64-NEXT:    movq %rbp, %xmm1
 ; X64-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    punpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    psrlq $1, %xmm0
 ; X64-NEXT:    shufps $136, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; X64-NEXT:    # xmm0 = xmm0[0,2],mem[0,2]

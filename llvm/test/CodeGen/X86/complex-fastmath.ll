@@ -12,35 +12,35 @@
 define <2 x float> @complex_square_f32(<2 x float>) #0 {
 ; SSE-LABEL: complex_square_f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSE-NEXT:    movshdup {{[^#]+#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    addss %xmm0, %xmm2
 ; SSE-NEXT:    mulss %xmm1, %xmm2
 ; SSE-NEXT:    mulss %xmm0, %xmm0
 ; SSE-NEXT:    mulss %xmm1, %xmm1
 ; SSE-NEXT:    subss %xmm1, %xmm0
-; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; SSE-NEXT:    insertps {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: complex_square_f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX1-NEXT:    vmovshdup {{[^#]+#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX1-NEXT:    vaddss %xmm0, %xmm0, %xmm2
 ; AVX1-NEXT:    vmulss %xmm2, %xmm1, %xmm2
 ; AVX1-NEXT:    vmulss %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmulss %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; AVX1-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
 ; AVX1-NEXT:    retq
 ;
 ; FMA-LABEL: complex_square_f32:
 ; FMA:       # %bb.0:
-; FMA-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; FMA-NEXT:    vmovshdup {{[^#]+#+}} xmm1 = xmm0[1,1,3,3]
 ; FMA-NEXT:    vaddss %xmm0, %xmm0, %xmm2
 ; FMA-NEXT:    vmulss %xmm2, %xmm1, %xmm2
 ; FMA-NEXT:    vmulss %xmm1, %xmm1, %xmm1
-; FMA-NEXT:    vfmsub231ss {{.*#+}} xmm1 = (xmm0 * xmm0) - xmm1
-; FMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm2[0],xmm1[2,3]
+; FMA-NEXT:    vfmsub231ss {{[^#]+#+}} xmm1 = (xmm0 * xmm0) - xmm1
+; FMA-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm1[0],xmm2[0],xmm1[2,3]
 ; FMA-NEXT:    retq
   %2 = extractelement <2 x float> %0, i32 0
   %3 = extractelement <2 x float> %0, i32 1
@@ -58,35 +58,35 @@ define <2 x double> @complex_square_f64(<2 x double>) #0 {
 ; SSE-LABEL: complex_square_f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movapd %xmm0, %xmm1
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE-NEXT:    unpckhpd {{[^#]+#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE-NEXT:    movapd %xmm0, %xmm2
 ; SSE-NEXT:    addsd %xmm0, %xmm2
 ; SSE-NEXT:    mulsd %xmm1, %xmm2
 ; SSE-NEXT:    mulsd %xmm0, %xmm0
 ; SSE-NEXT:    mulsd %xmm1, %xmm1
 ; SSE-NEXT:    subsd %xmm1, %xmm0
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; SSE-NEXT:    unpcklpd {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: complex_square_f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-NEXT:    vshufpd {{[^#]+#+}} xmm1 = xmm0[1,0]
 ; AVX1-NEXT:    vaddsd %xmm0, %xmm0, %xmm2
 ; AVX1-NEXT:    vmulsd %xmm2, %xmm1, %xmm2
 ; AVX1-NEXT:    vmulsd %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmulsd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; AVX1-NEXT:    vunpcklpd {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0]
 ; AVX1-NEXT:    retq
 ;
 ; FMA-LABEL: complex_square_f64:
 ; FMA:       # %bb.0:
-; FMA-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; FMA-NEXT:    vshufpd {{[^#]+#+}} xmm1 = xmm0[1,0]
 ; FMA-NEXT:    vaddsd %xmm0, %xmm0, %xmm2
 ; FMA-NEXT:    vmulsd %xmm2, %xmm1, %xmm2
 ; FMA-NEXT:    vmulsd %xmm1, %xmm1, %xmm1
-; FMA-NEXT:    vfmsub231sd {{.*#+}} xmm1 = (xmm0 * xmm0) - xmm1
-; FMA-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm2[0]
+; FMA-NEXT:    vfmsub231sd {{[^#]+#+}} xmm1 = (xmm0 * xmm0) - xmm1
+; FMA-NEXT:    vunpcklpd {{[^#]+#+}} xmm0 = xmm1[0],xmm2[0]
 ; FMA-NEXT:    retq
   %2 = extractelement <2 x double> %0, i32 0
   %3 = extractelement <2 x double> %0, i32 1
@@ -107,8 +107,8 @@ define <2 x double> @complex_square_f64(<2 x double>) #0 {
 define <2 x float> @complex_mul_f32(<2 x float>, <2 x float>) #0 {
 ; SSE-LABEL: complex_mul_f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; SSE-NEXT:    movshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
+; SSE-NEXT:    movshdup {{[^#]+#+}} xmm2 = xmm0[1,1,3,3]
+; SSE-NEXT:    movshdup {{[^#]+#+}} xmm3 = xmm1[1,1,3,3]
 ; SSE-NEXT:    movaps %xmm3, %xmm4
 ; SSE-NEXT:    mulss %xmm0, %xmm4
 ; SSE-NEXT:    mulss %xmm1, %xmm0
@@ -116,31 +116,31 @@ define <2 x float> @complex_mul_f32(<2 x float>, <2 x float>) #0 {
 ; SSE-NEXT:    addss %xmm4, %xmm1
 ; SSE-NEXT:    mulss %xmm2, %xmm3
 ; SSE-NEXT:    subss %xmm3, %xmm0
-; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; SSE-NEXT:    insertps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: complex_mul_f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX1-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
+; AVX1-NEXT:    vmovshdup {{[^#]+#+}} xmm2 = xmm0[1,1,3,3]
+; AVX1-NEXT:    vmovshdup {{[^#]+#+}} xmm3 = xmm1[1,1,3,3]
 ; AVX1-NEXT:    vmulss %xmm0, %xmm3, %xmm4
 ; AVX1-NEXT:    vmulss %xmm2, %xmm1, %xmm5
 ; AVX1-NEXT:    vaddss %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vmulss %xmm2, %xmm3, %xmm1
 ; AVX1-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[2,3]
+; AVX1-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm0[0],xmm4[0],xmm0[2,3]
 ; AVX1-NEXT:    retq
 ;
 ; FMA-LABEL: complex_mul_f32:
 ; FMA:       # %bb.0:
-; FMA-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; FMA-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
+; FMA-NEXT:    vmovshdup {{[^#]+#+}} xmm2 = xmm0[1,1,3,3]
+; FMA-NEXT:    vmovshdup {{[^#]+#+}} xmm3 = xmm1[1,1,3,3]
 ; FMA-NEXT:    vmulss %xmm2, %xmm1, %xmm4
-; FMA-NEXT:    vfmadd231ss {{.*#+}} xmm4 = (xmm3 * xmm0) + xmm4
+; FMA-NEXT:    vfmadd231ss {{[^#]+#+}} xmm4 = (xmm3 * xmm0) + xmm4
 ; FMA-NEXT:    vmulss %xmm2, %xmm3, %xmm2
-; FMA-NEXT:    vfmsub231ss {{.*#+}} xmm2 = (xmm1 * xmm0) - xmm2
-; FMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0],xmm4[0],xmm2[2,3]
+; FMA-NEXT:    vfmsub231ss {{[^#]+#+}} xmm2 = (xmm1 * xmm0) - xmm2
+; FMA-NEXT:    vinsertps {{[^#]+#+}} xmm0 = xmm2[0],xmm4[0],xmm2[2,3]
 ; FMA-NEXT:    retq
   %3 = extractelement <2 x float> %0, i32 0
   %4 = extractelement <2 x float> %0, i32 1
@@ -161,9 +161,9 @@ define <2 x double> @complex_mul_f64(<2 x double>, <2 x double>) #0 {
 ; SSE-LABEL: complex_mul_f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movapd %xmm0, %xmm2
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
+; SSE-NEXT:    unpckhpd {{[^#]+#+}} xmm2 = xmm2[1],xmm0[1]
 ; SSE-NEXT:    movapd %xmm1, %xmm3
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm1[1]
+; SSE-NEXT:    unpckhpd {{[^#]+#+}} xmm3 = xmm3[1],xmm1[1]
 ; SSE-NEXT:    movapd %xmm3, %xmm4
 ; SSE-NEXT:    mulsd %xmm0, %xmm4
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
@@ -171,31 +171,31 @@ define <2 x double> @complex_mul_f64(<2 x double>, <2 x double>) #0 {
 ; SSE-NEXT:    addsd %xmm4, %xmm1
 ; SSE-NEXT:    mulsd %xmm2, %xmm3
 ; SSE-NEXT:    subsd %xmm3, %xmm0
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    unpcklpd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: complex_mul_f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX1-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
+; AVX1-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm0[1,0]
+; AVX1-NEXT:    vshufpd {{[^#]+#+}} xmm3 = xmm1[1,0]
 ; AVX1-NEXT:    vmulsd %xmm0, %xmm3, %xmm4
 ; AVX1-NEXT:    vmulsd %xmm2, %xmm1, %xmm5
 ; AVX1-NEXT:    vaddsd %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vmulsd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vmulsd %xmm2, %xmm3, %xmm1
 ; AVX1-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm4[0]
+; AVX1-NEXT:    vunpcklpd {{[^#]+#+}} xmm0 = xmm0[0],xmm4[0]
 ; AVX1-NEXT:    retq
 ;
 ; FMA-LABEL: complex_mul_f64:
 ; FMA:       # %bb.0:
-; FMA-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
-; FMA-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
+; FMA-NEXT:    vshufpd {{[^#]+#+}} xmm2 = xmm0[1,0]
+; FMA-NEXT:    vshufpd {{[^#]+#+}} xmm3 = xmm1[1,0]
 ; FMA-NEXT:    vmulsd %xmm2, %xmm1, %xmm4
-; FMA-NEXT:    vfmadd231sd {{.*#+}} xmm4 = (xmm3 * xmm0) + xmm4
+; FMA-NEXT:    vfmadd231sd {{[^#]+#+}} xmm4 = (xmm3 * xmm0) + xmm4
 ; FMA-NEXT:    vmulsd %xmm2, %xmm3, %xmm2
-; FMA-NEXT:    vfmsub231sd {{.*#+}} xmm2 = (xmm1 * xmm0) - xmm2
-; FMA-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm2[0],xmm4[0]
+; FMA-NEXT:    vfmsub231sd {{[^#]+#+}} xmm2 = (xmm1 * xmm0) - xmm2
+; FMA-NEXT:    vunpcklpd {{[^#]+#+}} xmm0 = xmm2[0],xmm4[0]
 ; FMA-NEXT:    retq
   %3 = extractelement <2 x double> %0, i32 0
   %4 = extractelement <2 x double> %0, i32 1

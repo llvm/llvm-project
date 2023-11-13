@@ -27,7 +27,7 @@ define void @program_1(ptr %dest, ptr %t0, <4 x float> %p0, <4 x float> %p1, <4 
 ; X32-NEXT:  LBB0_3: ## %forbody
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    subl $88, %esp
-; X32-NEXT:    movaps {{.*#+}} xmm1 = [1.28E+2,1.28E+2,1.28E+2,1.28E+2]
+; X32-NEXT:    movaps {{[^#]+#+}} xmm1 = [1.28E+2,1.28E+2,1.28E+2,1.28E+2]
 ; X32-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-NEXT:    cvttps2dq %xmm1, %xmm0
 ; X32-NEXT:    cvtdq2ps %xmm0, %xmm0
@@ -111,7 +111,7 @@ define void @program_1(ptr %dest, ptr %t0, <4 x float> %p0, <4 x float> %p1, <4 
 ; X64-NEXT:    subq $64, %rsp
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; X64-NEXT:    movaps {{.*#+}} xmm1 = [1.28E+2,1.28E+2,1.28E+2,1.28E+2]
+; X64-NEXT:    movaps {{[^#]+#+}} xmm1 = [1.28E+2,1.28E+2,1.28E+2,1.28E+2]
 ; X64-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-NEXT:    cvttps2dq %xmm1, %xmm0
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm0

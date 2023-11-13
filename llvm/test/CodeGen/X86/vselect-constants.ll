@@ -27,7 +27,7 @@ define <4 x i32> @sel_C1_or_C2_vec(<4 x i1> %cond) {
 ; AVX-LABEL: sel_C1_or_C2_vec:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [42,0,4294967294,4294967295]
+; AVX-NEXT:    vmovaps {{[^#]+#+}} xmm1 = [42,0,4294967294,4294967295]
 ; AVX-NEXT:    vblendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %add = select <4 x i1> %cond, <4 x i32> <i32 3000, i32 1, i32 -1, i32 0>, <4 x i32> <i32 42, i32 0, i32 -2, i32 -1>
@@ -47,7 +47,7 @@ define <4 x i32> @cmp_sel_C1_or_C2_vec(<4 x i32> %x, <4 x i32> %y) {
 ; AVX-LABEL: cmp_sel_C1_or_C2_vec:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [42,0,4294967294,4294967295]
+; AVX-NEXT:    vmovaps {{[^#]+#+}} xmm1 = [42,0,4294967294,4294967295]
 ; AVX-NEXT:    vblendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %cond = icmp eq <4 x i32> %x, %y
@@ -75,7 +75,7 @@ define <4 x i32> @cmp_sel_Cplus1_or_C_vec(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: cmp_sel_Cplus1_or_C_vec:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [42,0,4294967294,4294967295]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm1 = [42,0,4294967294,4294967295]
 ; SSE-NEXT:    psubd %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
@@ -83,7 +83,7 @@ define <4 x i32> @cmp_sel_Cplus1_or_C_vec(<4 x i32> %x, <4 x i32> %y) {
 ; AVX-LABEL: cmp_sel_Cplus1_or_C_vec:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [42,0,4294967294,4294967295]
+; AVX-NEXT:    vmovdqa {{[^#]+#+}} xmm1 = [42,0,4294967294,4294967295]
 ; AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %cond = icmp eq <4 x i32> %x, %y
@@ -281,7 +281,7 @@ define i32 @wrong_min_signbits(<2 x i16> %x) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    pcmpeqw %xmm0, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [1,0,0,0]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm0 = [1,0,0,0]
 ; SSE-NEXT:    pand %xmm1, %xmm0
 ; SSE-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    por %xmm0, %xmm1
@@ -292,7 +292,7 @@ define i32 @wrong_min_signbits(<2 x i16> %x) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,0,0,0]
+; AVX-NEXT:    vmovdqa {{[^#]+#+}} xmm1 = [2,0,0,0]
 ; AVX-NEXT:    vpblendvb %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq

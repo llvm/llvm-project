@@ -9,8 +9,8 @@ target triple = "x86_64-unknown-unknown"
 ; Bugpoint reduced testcase.
 
 ;CHECK-LABEL: _Z16opt_kernel_cachePfS_S_
-;CHECK-NOT:   vmovups {{.*#+}} 32-byte Folded Spill
-;CHECK-NOT:   vmovups {{.*#+}} 32-byte Folded Reload
+;CHECK-NOT:   vmovups {{[^#]+#+}} 32-byte Folded Spill
+;CHECK-NOT:   vmovups {{[^#]+#+}} 32-byte Folded Reload
 
 ; Function Attrs: uwtable
 define void @_Z16opt_kernel_cachePfS_S_() #0 {

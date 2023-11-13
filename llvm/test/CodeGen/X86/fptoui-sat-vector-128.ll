@@ -16,32 +16,32 @@ define <4 x i1> @test_unsigned_v4i1_v4f32(<4 x float> %f) nounwind {
 ; CHECK-LABEL: test_unsigned_v4i1_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[3,3],xmm0[3,3]
 ; CHECK-NEXT:    xorps %xmm2, %xmm2
 ; CHECK-NEXT:    maxss %xmm2, %xmm1
-; CHECK-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    minss %xmm3, %xmm1
 ; CHECK-NEXT:    cvttss2si %xmm1, %eax
 ; CHECK-NEXT:    movd %eax, %xmm1
 ; CHECK-NEXT:    movaps %xmm0, %xmm4
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
+; CHECK-NEXT:    unpckhpd {{[^#]+#+}} xmm4 = xmm4[1],xmm0[1]
 ; CHECK-NEXT:    maxss %xmm2, %xmm4
 ; CHECK-NEXT:    minss %xmm3, %xmm4
 ; CHECK-NEXT:    cvttss2si %xmm4, %eax
 ; CHECK-NEXT:    movd %eax, %xmm4
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
+; CHECK-NEXT:    punpckldq {{[^#]+#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-NEXT:    maxss %xmm2, %xmm1
 ; CHECK-NEXT:    minss %xmm3, %xmm1
 ; CHECK-NEXT:    cvttss2si %xmm1, %eax
 ; CHECK-NEXT:    movd %eax, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    maxss %xmm2, %xmm0
 ; CHECK-NEXT:    minss %xmm3, %xmm0
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm4[0]
+; CHECK-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm4[0]
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %x = call <4 x i1> @llvm.fptoui.sat.v4i1.v4f32(<4 x float> %f)
@@ -54,13 +54,13 @@ define <4 x i8> @test_unsigned_v4i8_v4f32(<4 x float> %f) nounwind {
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    xorps %xmm3, %xmm3
 ; CHECK-NEXT:    maxss %xmm0, %xmm3
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movaps %xmm2, %xmm4
 ; CHECK-NEXT:    minss %xmm3, %xmm4
 ; CHECK-NEXT:    cvttss2si %xmm4, %eax
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    movaps %xmm0, %xmm3
-; CHECK-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm0[1,1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm3 = xmm3[1,1],xmm0[1,1]
 ; CHECK-NEXT:    xorps %xmm4, %xmm4
 ; CHECK-NEXT:    maxss %xmm3, %xmm4
 ; CHECK-NEXT:    movaps %xmm2, %xmm3
@@ -70,7 +70,7 @@ define <4 x i8> @test_unsigned_v4i8_v4f32(<4 x float> %f) nounwind {
 ; CHECK-NEXT:    shll $8, %ecx
 ; CHECK-NEXT:    orl %eax, %ecx
 ; CHECK-NEXT:    movaps %xmm0, %xmm3
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm0[1]
+; CHECK-NEXT:    unpckhpd {{[^#]+#+}} xmm3 = xmm3[1],xmm0[1]
 ; CHECK-NEXT:    xorps %xmm4, %xmm4
 ; CHECK-NEXT:    maxss %xmm3, %xmm4
 ; CHECK-NEXT:    movaps %xmm2, %xmm3
@@ -79,7 +79,7 @@ define <4 x i8> @test_unsigned_v4i8_v4f32(<4 x float> %f) nounwind {
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    orl %ecx, %eax
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    maxss %xmm0, %xmm1
 ; CHECK-NEXT:    minss %xmm1, %xmm2
 ; CHECK-NEXT:    cvttss2si %xmm2, %ecx
@@ -95,11 +95,11 @@ define <4 x i16> @test_unsigned_v4i16_v4f32(<4 x float> %f) nounwind {
 ; CHECK-LABEL: test_unsigned_v4i16_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[1,1],xmm0[1,1]
 ; CHECK-NEXT:    xorps %xmm2, %xmm2
 ; CHECK-NEXT:    xorps %xmm3, %xmm3
 ; CHECK-NEXT:    maxss %xmm1, %xmm3
-; CHECK-NEXT:    movss {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm4 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movaps %xmm4, %xmm1
 ; CHECK-NEXT:    minss %xmm3, %xmm1
 ; CHECK-NEXT:    cvttss2si %xmm1, %eax
@@ -111,14 +111,14 @@ define <4 x i16> @test_unsigned_v4i16_v4f32(<4 x float> %f) nounwind {
 ; CHECK-NEXT:    movd %ecx, %xmm1
 ; CHECK-NEXT:    pinsrw $1, %eax, %xmm1
 ; CHECK-NEXT:    movaps %xmm0, %xmm3
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm0[1]
+; CHECK-NEXT:    unpckhpd {{[^#]+#+}} xmm3 = xmm3[1],xmm0[1]
 ; CHECK-NEXT:    xorps %xmm5, %xmm5
 ; CHECK-NEXT:    maxss %xmm3, %xmm5
 ; CHECK-NEXT:    movaps %xmm4, %xmm3
 ; CHECK-NEXT:    minss %xmm5, %xmm3
 ; CHECK-NEXT:    cvttss2si %xmm3, %eax
 ; CHECK-NEXT:    pinsrw $2, %eax, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    maxss %xmm0, %xmm2
 ; CHECK-NEXT:    minss %xmm2, %xmm4
 ; CHECK-NEXT:    cvttss2si %xmm4, %eax
@@ -133,41 +133,41 @@ define <4 x i32> @test_unsigned_v4i32_v4f32(<4 x float> %f) nounwind {
 ; CHECK-LABEL: test_unsigned_v4i32_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[3,3],xmm0[3,3]
 ; CHECK-NEXT:    cvttss2si %xmm1, %rdx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorps %xmm2, %xmm2
 ; CHECK-NEXT:    ucomiss %xmm2, %xmm1
 ; CHECK-NEXT:    cmovbl %eax, %edx
-; CHECK-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    ucomiss %xmm3, %xmm1
 ; CHECK-NEXT:    movl $-1, %ecx
 ; CHECK-NEXT:    cmoval %ecx, %edx
 ; CHECK-NEXT:    movd %edx, %xmm1
 ; CHECK-NEXT:    movaps %xmm0, %xmm4
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
+; CHECK-NEXT:    unpckhpd {{[^#]+#+}} xmm4 = xmm4[1],xmm0[1]
 ; CHECK-NEXT:    cvttss2si %xmm4, %rdx
 ; CHECK-NEXT:    ucomiss %xmm2, %xmm4
 ; CHECK-NEXT:    cmovbl %eax, %edx
 ; CHECK-NEXT:    ucomiss %xmm3, %xmm4
 ; CHECK-NEXT:    cmoval %ecx, %edx
 ; CHECK-NEXT:    movd %edx, %xmm4
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
+; CHECK-NEXT:    punpckldq {{[^#]+#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
 ; CHECK-NEXT:    cvttss2si %xmm0, %rdx
 ; CHECK-NEXT:    ucomiss %xmm2, %xmm0
 ; CHECK-NEXT:    cmovbl %eax, %edx
 ; CHECK-NEXT:    ucomiss %xmm3, %xmm0
 ; CHECK-NEXT:    cmoval %ecx, %edx
 ; CHECK-NEXT:    movd %edx, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    cvttss2si %xmm0, %rdx
 ; CHECK-NEXT:    ucomiss %xmm2, %xmm0
 ; CHECK-NEXT:    cmovbl %eax, %edx
 ; CHECK-NEXT:    ucomiss %xmm3, %xmm0
 ; CHECK-NEXT:    cmoval %ecx, %edx
 ; CHECK-NEXT:    movd %edx, %xmm0
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm4[0]
+; CHECK-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm4[0]
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %x = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> %f)
@@ -177,7 +177,7 @@ define <4 x i32> @test_unsigned_v4i32_v4f32(<4 x float> %f) nounwind {
 define <4 x i64> @test_unsigned_v4i64_v4f32(<4 x float> %f) nounwind {
 ; CHECK-LABEL: test_unsigned_v4i64_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movaps %xmm0, %xmm2
 ; CHECK-NEXT:    subss %xmm1, %xmm2
 ; CHECK-NEXT:    cvttss2si %xmm2, %rax
@@ -190,13 +190,13 @@ define <4 x i64> @test_unsigned_v4i64_v4f32(<4 x float> %f) nounwind {
 ; CHECK-NEXT:    xorps %xmm3, %xmm3
 ; CHECK-NEXT:    ucomiss %xmm3, %xmm0
 ; CHECK-NEXT:    cmovbq %rax, %rdx
-; CHECK-NEXT:    movss {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm4 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    ucomiss %xmm4, %xmm0
 ; CHECK-NEXT:    movq $-1, %rcx
 ; CHECK-NEXT:    cmovaq %rcx, %rdx
 ; CHECK-NEXT:    movq %rdx, %xmm2
 ; CHECK-NEXT:    movaps %xmm0, %xmm5
-; CHECK-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,1],xmm0[1,1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm5 = xmm5[1,1],xmm0[1,1]
 ; CHECK-NEXT:    movaps %xmm5, %xmm6
 ; CHECK-NEXT:    subss %xmm1, %xmm6
 ; CHECK-NEXT:    cvttss2si %xmm6, %rdx
@@ -210,9 +210,9 @@ define <4 x i64> @test_unsigned_v4i64_v4f32(<4 x float> %f) nounwind {
 ; CHECK-NEXT:    ucomiss %xmm4, %xmm5
 ; CHECK-NEXT:    cmovaq %rcx, %rdi
 ; CHECK-NEXT:    movq %rdi, %xmm5
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm5[0]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm2 = xmm2[0],xmm5[0]
 ; CHECK-NEXT:    movaps %xmm0, %xmm5
-; CHECK-NEXT:    shufps {{.*#+}} xmm5 = xmm5[3,3],xmm0[3,3]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm5 = xmm5[3,3],xmm0[3,3]
 ; CHECK-NEXT:    movaps %xmm5, %xmm6
 ; CHECK-NEXT:    subss %xmm1, %xmm6
 ; CHECK-NEXT:    cvttss2si %xmm6, %rdx
@@ -226,7 +226,7 @@ define <4 x i64> @test_unsigned_v4i64_v4f32(<4 x float> %f) nounwind {
 ; CHECK-NEXT:    ucomiss %xmm4, %xmm5
 ; CHECK-NEXT:    cmovaq %rcx, %rdi
 ; CHECK-NEXT:    movq %rdi, %xmm5
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movaps %xmm0, %xmm6
 ; CHECK-NEXT:    subss %xmm1, %xmm6
 ; CHECK-NEXT:    cvttss2si %xmm6, %rdx
@@ -240,7 +240,7 @@ define <4 x i64> @test_unsigned_v4i64_v4f32(<4 x float> %f) nounwind {
 ; CHECK-NEXT:    ucomiss %xmm4, %xmm0
 ; CHECK-NEXT:    cmovaq %rcx, %rdi
 ; CHECK-NEXT:    movq %rdi, %xmm1
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm5[0]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm5[0]
 ; CHECK-NEXT:    movdqa %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %x = call <4 x i64> @llvm.fptoui.sat.v4i64.v4f32(<4 x float> %f)
@@ -259,7 +259,7 @@ define <4 x i128> @test_unsigned_v4i128_v4f32(<4 x float> %f) nounwind {
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    callq __fixunssfti@PLT
 ; CHECK-NEXT:    movq %rdx, %r15
@@ -275,7 +275,7 @@ define <4 x i128> @test_unsigned_v4i128_v4f32(<4 x float> %f) nounwind {
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    cmovaq %rbp, %r15
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    callq __fixunssfti@PLT
 ; CHECK-NEXT:    movq %rax, %r12
@@ -288,7 +288,7 @@ define <4 x i128> @test_unsigned_v4i128_v4f32(<4 x float> %f) nounwind {
 ; CHECK-NEXT:    cmovaq %rbp, %r12
 ; CHECK-NEXT:    cmovaq %rbp, %r13
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    callq __fixunssfti@PLT
 ; CHECK-NEXT:    movq %rax, %rbp
@@ -352,16 +352,16 @@ define <2 x i1> @test_unsigned_v2i1_v2f64(<2 x double> %f) nounwind {
 ; CHECK-NEXT:    xorpd %xmm2, %xmm2
 ; CHECK-NEXT:    movapd %xmm0, %xmm1
 ; CHECK-NEXT:    maxsd %xmm2, %xmm1
-; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    minsd %xmm3, %xmm1
 ; CHECK-NEXT:    cvttsd2si %xmm1, %rax
 ; CHECK-NEXT:    movq %rax, %xmm1
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    unpckhpd {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    maxsd %xmm2, %xmm0
 ; CHECK-NEXT:    minsd %xmm3, %xmm0
 ; CHECK-NEXT:    cvttsd2si %xmm0, %rax
 ; CHECK-NEXT:    movq %rax, %xmm0
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %x = call <2 x i1> @llvm.fptoui.sat.v2i1.v2f64(<2 x double> %f)
@@ -374,12 +374,12 @@ define <2 x i8> @test_unsigned_v2i8_v2f64(<2 x double> %f) nounwind {
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
 ; CHECK-NEXT:    xorpd %xmm2, %xmm2
 ; CHECK-NEXT:    maxsd %xmm0, %xmm2
-; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    movapd %xmm3, %xmm4
 ; CHECK-NEXT:    minsd %xmm2, %xmm4
 ; CHECK-NEXT:    cvttsd2si %xmm4, %eax
 ; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    unpckhpd {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    maxsd %xmm0, %xmm1
 ; CHECK-NEXT:    minsd %xmm1, %xmm3
 ; CHECK-NEXT:    cvttsd2si %xmm3, %ecx
@@ -396,10 +396,10 @@ define <2 x i16> @test_unsigned_v2i16_v2f64(<2 x double> %f) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
 ; CHECK-NEXT:    maxsd %xmm0, %xmm1
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    unpckhpd {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    xorpd %xmm2, %xmm2
 ; CHECK-NEXT:    maxsd %xmm0, %xmm2
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movapd %xmm0, %xmm3
 ; CHECK-NEXT:    minsd %xmm2, %xmm3
 ; CHECK-NEXT:    cvttsd2si %xmm3, %eax
@@ -418,17 +418,17 @@ define <2 x i32> @test_unsigned_v2i32_v2f64(<2 x double> %f) nounwind {
 ; CHECK-NEXT:    xorpd %xmm2, %xmm2
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
 ; CHECK-NEXT:    maxsd %xmm0, %xmm1
-; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    movapd %xmm3, %xmm4
 ; CHECK-NEXT:    minsd %xmm1, %xmm4
 ; CHECK-NEXT:    cvttsd2si %xmm4, %rax
 ; CHECK-NEXT:    movd %eax, %xmm1
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    unpckhpd {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    maxsd %xmm0, %xmm2
 ; CHECK-NEXT:    minsd %xmm2, %xmm3
 ; CHECK-NEXT:    cvttsd2si %xmm3, %rax
 ; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %x = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f64(<2 x double> %f)
@@ -438,7 +438,7 @@ define <2 x i32> @test_unsigned_v2i32_v2f64(<2 x double> %f) nounwind {
 define <2 x i64> @test_unsigned_v2i64_v2f64(<2 x double> %f) nounwind {
 ; CHECK-LABEL: test_unsigned_v2i64_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm2 = mem[0],zero
 ; CHECK-NEXT:    movapd %xmm0, %xmm1
 ; CHECK-NEXT:    subsd %xmm2, %xmm1
 ; CHECK-NEXT:    cvttsd2si %xmm1, %rax
@@ -451,12 +451,12 @@ define <2 x i64> @test_unsigned_v2i64_v2f64(<2 x double> %f) nounwind {
 ; CHECK-NEXT:    xorpd %xmm3, %xmm3
 ; CHECK-NEXT:    ucomisd %xmm3, %xmm0
 ; CHECK-NEXT:    cmovbq %rax, %rdx
-; CHECK-NEXT:    movsd {{.*#+}} xmm4 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm4 = mem[0],zero
 ; CHECK-NEXT:    ucomisd %xmm4, %xmm0
 ; CHECK-NEXT:    movq $-1, %rcx
 ; CHECK-NEXT:    cmovaq %rcx, %rdx
 ; CHECK-NEXT:    movq %rdx, %xmm1
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    unpckhpd {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movapd %xmm0, %xmm5
 ; CHECK-NEXT:    subsd %xmm2, %xmm5
 ; CHECK-NEXT:    cvttsd2si %xmm5, %rdx
@@ -470,7 +470,7 @@ define <2 x i64> @test_unsigned_v2i64_v2f64(<2 x double> %f) nounwind {
 ; CHECK-NEXT:    ucomisd %xmm4, %xmm0
 ; CHECK-NEXT:    cmovaq %rcx, %rdi
 ; CHECK-NEXT:    movq %rdi, %xmm0
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %x = call <2 x i64> @llvm.fptoui.sat.v2i64.v2f64(<2 x double> %f)
@@ -488,7 +488,7 @@ define <2 x i128> @test_unsigned_v2i128_v2f64(<2 x double> %f) nounwind {
 ; CHECK-NEXT:    subq $32, %rsp
 ; CHECK-NEXT:    movapd %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    unpckhpd {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    callq __fixunsdfti@PLT
 ; CHECK-NEXT:    movq %rax, %r14
@@ -546,7 +546,7 @@ define <8 x i1> @test_unsigned_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $72, %rsp
 ; CHECK-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    psrldq {{[^#]+#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorl %ebx, %ebx
@@ -559,7 +559,7 @@ define <8 x i1> @test_unsigned_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -571,7 +571,7 @@ define <8 x i1> @test_unsigned_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    psrldq {{[^#]+#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -581,7 +581,7 @@ define <8 x i1> @test_unsigned_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -605,7 +605,7 @@ define <8 x i1> @test_unsigned_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -635,7 +635,7 @@ define <8 x i1> @test_unsigned_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cmoval %ebp, %eax
 ; CHECK-NEXT:    movd %eax, %xmm1
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-NEXT:    punpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; CHECK-NEXT:    punpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    punpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
@@ -658,7 +658,7 @@ define <8 x i8> @test_unsigned_v8i8_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $32, %rsp
 ; CHECK-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    psrldq {{[^#]+#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %r15d
 ; CHECK-NEXT:    xorl %ebx, %ebx
@@ -670,7 +670,7 @@ define <8 x i8> @test_unsigned_v8i8_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cmoval %ebp, %r15d
 ; CHECK-NEXT:    shll $8, %r15d
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -699,7 +699,7 @@ define <8 x i8> @test_unsigned_v8i8_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    shll $8, %r12d
 ; CHECK-NEXT:    orl %r15d, %r12d
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -723,7 +723,7 @@ define <8 x i8> @test_unsigned_v8i8_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    pinsrw $2, %r14d, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    psrldq {{[^#]+#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %r14d
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -732,7 +732,7 @@ define <8 x i8> @test_unsigned_v8i8_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cmoval %ebp, %r14d
 ; CHECK-NEXT:    shll $8, %r14d
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -761,7 +761,7 @@ define <8 x i16> @test_unsigned_v8i16_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $72, %rsp
 ; CHECK-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    psrldq {{[^#]+#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorl %ebx, %ebx
@@ -774,7 +774,7 @@ define <8 x i16> @test_unsigned_v8i16_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -786,7 +786,7 @@ define <8 x i16> @test_unsigned_v8i16_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    psrldq {{[^#]+#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -796,7 +796,7 @@ define <8 x i16> @test_unsigned_v8i16_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -820,7 +820,7 @@ define <8 x i16> @test_unsigned_v8i16_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -850,7 +850,7 @@ define <8 x i16> @test_unsigned_v8i16_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cmoval %ebp, %eax
 ; CHECK-NEXT:    movd %eax, %xmm1
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-NEXT:    punpcklwd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; CHECK-NEXT:    punpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    punpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
@@ -883,7 +883,7 @@ define <8 x i32> @test_unsigned_v8i32_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %rax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -913,12 +913,12 @@ define <8 x i32> @test_unsigned_v8i32_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cmoval %ebp, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; CHECK-NEXT:    punpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm1 = xmm1[0],mem[0]
 ; CHECK-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    psrldq {{[^#]+#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %rax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -928,7 +928,7 @@ define <8 x i32> @test_unsigned_v8i32_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %rax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -940,7 +940,7 @@ define <8 x i32> @test_unsigned_v8i32_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    psrldq {{[^#]+#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %rax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -950,7 +950,7 @@ define <8 x i32> @test_unsigned_v8i32_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %rax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -1013,7 +1013,7 @@ define <8 x i64> @test_unsigned_v8i64_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cmovaq %r14, %rdx
 ; CHECK-NEXT:    movq %rdx, %xmm0
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    psrlq $48, %xmm0
@@ -1033,7 +1033,7 @@ define <8 x i64> @test_unsigned_v8i64_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movq %rdx, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
@@ -1052,7 +1052,7 @@ define <8 x i64> @test_unsigned_v8i64_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0]
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    psrldq {{[^#]+#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
@@ -1069,7 +1069,7 @@ define <8 x i64> @test_unsigned_v8i64_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movq %rdx, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
@@ -1088,7 +1088,7 @@ define <8 x i64> @test_unsigned_v8i64_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0]
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    psrldq {{[^#]+#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
@@ -1105,7 +1105,7 @@ define <8 x i64> @test_unsigned_v8i64_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movq %rdx, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
@@ -1163,7 +1163,7 @@ define <8 x i128> @test_unsigned_v8i128_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cmovaq %r13, %rdx
 ; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    callq __fixunssfti@PLT
@@ -1193,7 +1193,7 @@ define <8 x i128> @test_unsigned_v8i128_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cmovaq %r13, %rdx
 ; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    callq __fixunssfti@PLT
@@ -1208,7 +1208,7 @@ define <8 x i128> @test_unsigned_v8i128_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cmovaq %r13, %rdx
 ; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    psrldq {{[^#]+#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; CHECK-NEXT:    callq __fixunssfti@PLT
@@ -1223,7 +1223,7 @@ define <8 x i128> @test_unsigned_v8i128_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    cmovaq %r13, %rbp
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    callq __fixunssfti@PLT
@@ -1238,7 +1238,7 @@ define <8 x i128> @test_unsigned_v8i128_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cmovaq %r13, %r14
 ; CHECK-NEXT:    cmovaq %r13, %r15
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    psrldq {{[^#]+#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; CHECK-NEXT:    callq __fixunssfti@PLT

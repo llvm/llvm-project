@@ -14,7 +14,7 @@ define <2 x double> @test() {
 define <4 x i32> @test2() nounwind  {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [0,0,1,0]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,0,1,0]
 ; CHECK-NEXT:    retl
 	ret <4 x i32> < i32 0, i32 0, i32 1, i32 0 >
 }

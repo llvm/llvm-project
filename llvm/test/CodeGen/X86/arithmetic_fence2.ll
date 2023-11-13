@@ -12,7 +12,7 @@ define double @f1(double %a) {
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movsd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
@@ -41,7 +41,7 @@ define double @f2(double %a) {
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    addsd %xmm0, %xmm0
 ; X86-NEXT:    movapd %xmm0, %xmm1
 ; X86-NEXT:    #ARITH_FENCE
@@ -109,14 +109,14 @@ define <2 x float> @f4(<2 x float> %a) {
 define <8 x float> @f5(<8 x float> %a) {
 ; X86-LABEL: f5:
 ; X86:       # %bb.0:
-; X86-NEXT:    movaps {{.*#+}} xmm2 = [4.0E+0,4.0E+0,4.0E+0,4.0E+0]
+; X86-NEXT:    movaps {{[^#]+#+}} xmm2 = [4.0E+0,4.0E+0,4.0E+0,4.0E+0]
 ; X86-NEXT:    mulps %xmm2, %xmm0
 ; X86-NEXT:    mulps %xmm2, %xmm1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: f5:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps {{.*#+}} xmm2 = [4.0E+0,4.0E+0,4.0E+0,4.0E+0]
+; X64-NEXT:    movaps {{[^#]+#+}} xmm2 = [4.0E+0,4.0E+0,4.0E+0,4.0E+0]
 ; X64-NEXT:    mulps %xmm2, %xmm0
 ; X64-NEXT:    mulps %xmm2, %xmm1
 ; X64-NEXT:    retq

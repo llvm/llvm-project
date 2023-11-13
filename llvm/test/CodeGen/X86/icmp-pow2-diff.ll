@@ -46,7 +46,7 @@ define <4 x i1> @andnot_eq_v4i32(<4 x i32> %x) nounwind {
 ;
 ; AVX2-LABEL: andnot_eq_v4i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294967287,4294967287,4294967287,4294967287]
+; AVX2-NEXT:    vpbroadcastd {{[^#]+#+}} xmm1 = [4294967287,4294967287,4294967287,4294967287]
 ; AVX2-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
@@ -95,10 +95,10 @@ define <2 x i1> @andnot_eq_v2i64_fail_max_not_n1(<2 x i64> %x) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,3,2]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm1[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm1, %xmm2
 ; SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
@@ -135,7 +135,7 @@ define <2 x i1> @andnot_eq_v2i64(<2 x i64> %x) nounwind {
 ; SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    retq
   %cmp1 = icmp eq <2 x i64> %x, <i64 -5, i64 -5>
@@ -323,7 +323,7 @@ define <8 x i1> @addand_ne_v8i16_fail(<8 x i16> %x) nounwind {
 ;
 ; SSE-LABEL: addand_ne_v8i16_fail:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65533,65533,65533,65533,65533,65533,65533,65533]
+; SSE-NEXT:    movdqa {{[^#]+#+}} xmm1 = [65533,65533,65533,65533,65533,65533,65533,65533]
 ; SSE-NEXT:    pcmpeqw %xmm0, %xmm1
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE-NEXT:    pcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0

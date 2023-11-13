@@ -10,13 +10,13 @@ define i32 @t(ptr %val) nounwind  {
 ; X32-SSE2-LABEL: t:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = mem[2,3,2,3]
+; X32-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = mem[2,3,2,3]
 ; X32-SSE2-NEXT:    movd %xmm0, %eax
 ; X32-SSE2-NEXT:    retl
 ;
 ; X64-SSSE3-LABEL: t:
 ; X64-SSSE3:       # %bb.0:
-; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = mem[2,3,2,3]
+; X64-SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm0 = mem[2,3,2,3]
 ; X64-SSSE3-NEXT:    movd %xmm0, %eax
 ; X64-SSSE3-NEXT:    retq
 ;
@@ -60,13 +60,13 @@ define void @t3(ptr %a0) {
 ;
 ; X64-SSSE3-LABEL: t3:
 ; X64-SSSE3:       # %bb.0: # %bb
-; X64-SSSE3-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-SSSE3-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-SSSE3-NEXT:    movsd %xmm0, (%rax)
 ; X64-SSSE3-NEXT:    retq
 ;
 ; X64-AVX-LABEL: t3:
 ; X64-AVX:       # %bb.0: # %bb
-; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-AVX-NEXT:    vmovsd %xmm0, (%rax)
 ; X64-AVX-NEXT:    retq
 bb:
@@ -86,7 +86,7 @@ define i64 @t4(ptr %a) {
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE2-NEXT:    movdqa (%eax), %xmm0
 ; X32-SSE2-NEXT:    movd %xmm0, %eax
-; X32-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X32-SSE2-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X32-SSE2-NEXT:    movd %xmm0, %edx
 ; X32-SSE2-NEXT:    retl
 ;
@@ -136,10 +136,10 @@ define float @t6(ptr%a0) {
 ; X32-SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE2-NEXT:    movaps (%eax), %xmm0
-; X32-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X32-SSE2-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X32-SSE2-NEXT:    xorps %xmm1, %xmm1
 ; X32-SSE2-NEXT:    cmpeqss %xmm0, %xmm1
-; X32-SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X32-SSE2-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X32-SSE2-NEXT:    andps %xmm1, %xmm2
 ; X32-SSE2-NEXT:    andnps %xmm0, %xmm1
 ; X32-SSE2-NEXT:    orps %xmm2, %xmm1
@@ -151,10 +151,10 @@ define float @t6(ptr%a0) {
 ;
 ; X64-SSSE3-LABEL: t6:
 ; X64-SSSE3:       # %bb.0:
-; X64-SSSE3-NEXT:    movshdup {{.*#+}} xmm1 = mem[1,1,3,3]
+; X64-SSSE3-NEXT:    movshdup {{[^#]+#+}} xmm1 = mem[1,1,3,3]
 ; X64-SSSE3-NEXT:    xorps %xmm0, %xmm0
 ; X64-SSSE3-NEXT:    cmpeqss %xmm1, %xmm0
-; X64-SSSE3-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X64-SSSE3-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X64-SSSE3-NEXT:    andps %xmm0, %xmm2
 ; X64-SSSE3-NEXT:    andnps %xmm1, %xmm0
 ; X64-SSSE3-NEXT:    orps %xmm2, %xmm0
@@ -162,7 +162,7 @@ define float @t6(ptr%a0) {
 ;
 ; X64-AVX1-LABEL: t6:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX1-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm1
 ; X64-AVX1-NEXT:    vblendvps %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
@@ -170,10 +170,10 @@ define float @t6(ptr%a0) {
 ;
 ; X64-AVX2-LABEL: t6:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX2-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm1
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; X64-AVX2-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X64-AVX2-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq
   %vecload = load <8 x float>, ptr %a0, align 32
@@ -189,10 +189,10 @@ define void @PR43971(ptr%a0, ptr%a1) {
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-SSE2-NEXT:    movaps 16(%ecx), %xmm0
-; X32-SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X32-SSE2-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; X32-SSE2-NEXT:    xorps %xmm1, %xmm1
 ; X32-SSE2-NEXT:    cmpltss %xmm0, %xmm1
-; X32-SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X32-SSE2-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X32-SSE2-NEXT:    andps %xmm1, %xmm2
 ; X32-SSE2-NEXT:    andnps %xmm0, %xmm1
 ; X32-SSE2-NEXT:    orps %xmm2, %xmm1
@@ -201,10 +201,10 @@ define void @PR43971(ptr%a0, ptr%a1) {
 ;
 ; X64-SSSE3-LABEL: PR43971:
 ; X64-SSSE3:       # %bb.0: # %entry
-; X64-SSSE3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-SSSE3-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-SSSE3-NEXT:    xorps %xmm1, %xmm1
 ; X64-SSSE3-NEXT:    cmpltss %xmm0, %xmm1
-; X64-SSSE3-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X64-SSSE3-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X64-SSSE3-NEXT:    andps %xmm1, %xmm2
 ; X64-SSSE3-NEXT:    andnps %xmm0, %xmm1
 ; X64-SSSE3-NEXT:    orps %xmm2, %xmm1
@@ -213,10 +213,10 @@ define void @PR43971(ptr%a0, ptr%a1) {
 ;
 ; X64-AVX-LABEL: PR43971:
 ; X64-AVX:       # %bb.0: # %entry
-; X64-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX-NEXT:    vcmpltss %xmm0, %xmm1, %xmm1
-; X64-AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X64-AVX-NEXT:    vmovss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X64-AVX-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovss %xmm0, (%rsi)
 ; X64-AVX-NEXT:    retq
@@ -236,10 +236,10 @@ define float @PR43971_1(ptr%a0) nounwind {
 ; X32-SSE2-NEXT:    pushl %eax
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE2-NEXT:    movaps (%eax), %xmm0
-; X32-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X32-SSE2-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X32-SSE2-NEXT:    xorps %xmm1, %xmm1
 ; X32-SSE2-NEXT:    cmpeqss %xmm0, %xmm1
-; X32-SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X32-SSE2-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X32-SSE2-NEXT:    andps %xmm1, %xmm2
 ; X32-SSE2-NEXT:    andnps %xmm0, %xmm1
 ; X32-SSE2-NEXT:    orps %xmm2, %xmm1
@@ -250,10 +250,10 @@ define float @PR43971_1(ptr%a0) nounwind {
 ;
 ; X64-SSSE3-LABEL: PR43971_1:
 ; X64-SSSE3:       # %bb.0: # %entry
-; X64-SSSE3-NEXT:    movshdup {{.*#+}} xmm1 = mem[1,1,3,3]
+; X64-SSSE3-NEXT:    movshdup {{[^#]+#+}} xmm1 = mem[1,1,3,3]
 ; X64-SSSE3-NEXT:    xorps %xmm0, %xmm0
 ; X64-SSSE3-NEXT:    cmpeqss %xmm1, %xmm0
-; X64-SSSE3-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X64-SSSE3-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; X64-SSSE3-NEXT:    andps %xmm0, %xmm2
 ; X64-SSSE3-NEXT:    andnps %xmm1, %xmm0
 ; X64-SSSE3-NEXT:    orps %xmm2, %xmm0
@@ -261,7 +261,7 @@ define float @PR43971_1(ptr%a0) nounwind {
 ;
 ; X64-AVX1-LABEL: PR43971_1:
 ; X64-AVX1:       # %bb.0: # %entry
-; X64-AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX1-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm1
 ; X64-AVX1-NEXT:    vblendvps %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
@@ -269,10 +269,10 @@ define float @PR43971_1(ptr%a0) nounwind {
 ;
 ; X64-AVX2-LABEL: PR43971_1:
 ; X64-AVX2:       # %bb.0: # %entry
-; X64-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX2-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm1
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; X64-AVX2-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X64-AVX2-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq
 entry:
@@ -410,21 +410,21 @@ define i32 @main() nounwind {
 ; X32-SSE2-NEXT:    movaps n1, %xmm2
 ; X32-SSE2-NEXT:    movaps %xmm2, zero
 ; X32-SSE2-NEXT:    movaps %xmm1, zero+16
-; X32-SSE2-NEXT:    movaps {{.*#+}} xmm1 = [2,2,2,2]
+; X32-SSE2-NEXT:    movaps {{[^#]+#+}} xmm1 = [2,2,2,2]
 ; X32-SSE2-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; X32-SSE2-NEXT:    movaps %xmm1, (%esp)
 ; X32-SSE2-NEXT:    movdqa (%esp), %xmm1
 ; X32-SSE2-NEXT:    movaps {{[0-9]+}}(%esp), %xmm2
-; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; X32-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm0[2,3,2,3]
 ; X32-SSE2-NEXT:    movd %xmm2, %eax
-; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
+; X32-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm1[2,3,2,3]
 ; X32-SSE2-NEXT:    movd %xmm2, %ecx
 ; X32-SSE2-NEXT:    xorl %edx, %edx
 ; X32-SSE2-NEXT:    divl %ecx
 ; X32-SSE2-NEXT:    movl %eax, %ecx
-; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X32-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X32-SSE2-NEXT:    movd %xmm0, %eax
-; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; X32-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm1[1,1,1,1]
 ; X32-SSE2-NEXT:    movd %xmm0, %esi
 ; X32-SSE2-NEXT:    xorl %edx, %edx
 ; X32-SSE2-NEXT:    divl %esi
@@ -446,21 +446,21 @@ define i32 @main() nounwind {
 ; X64-SSSE3-NEXT:    movaps 16(%rax), %xmm2
 ; X64-SSSE3-NEXT:    movaps %xmm1, zero(%rip)
 ; X64-SSSE3-NEXT:    movaps %xmm2, zero+16(%rip)
-; X64-SSSE3-NEXT:    movaps {{.*#+}} xmm1 = [2,2,2,2]
+; X64-SSSE3-NEXT:    movaps {{[^#]+#+}} xmm1 = [2,2,2,2]
 ; X64-SSSE3-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; X64-SSSE3-NEXT:    movaps %xmm1, (%rsp)
 ; X64-SSSE3-NEXT:    movdqa (%rsp), %xmm1
 ; X64-SSSE3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2
-; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; X64-SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm0[2,3,2,3]
 ; X64-SSSE3-NEXT:    movd %xmm2, %eax
-; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
+; X64-SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm1[2,3,2,3]
 ; X64-SSSE3-NEXT:    movd %xmm2, %ecx
 ; X64-SSSE3-NEXT:    xorl %edx, %edx
 ; X64-SSSE3-NEXT:    divl %ecx
 ; X64-SSSE3-NEXT:    movl %eax, %ecx
-; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X64-SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-SSSE3-NEXT:    movd %xmm0, %eax
-; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; X64-SSSE3-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm1[1,1,1,1]
 ; X64-SSSE3-NEXT:    movd %xmm0, %esi
 ; X64-SSSE3-NEXT:    xorl %edx, %edx
 ; X64-SSSE3-NEXT:    divl %esi
@@ -480,7 +480,7 @@ define i32 @main() nounwind {
 ; X64-AVX-NEXT:    movl zero+4(%rip), %ecx
 ; X64-AVX-NEXT:    movl zero+8(%rip), %eax
 ; X64-AVX-NEXT:    vmovaps %ymm0, zero(%rip)
-; X64-AVX-NEXT:    vbroadcastss {{.*#+}} ymm0 = [2,2,2,2,2,2,2,2]
+; X64-AVX-NEXT:    vbroadcastss {{[^#]+#+}} ymm0 = [2,2,2,2,2,2,2,2]
 ; X64-AVX-NEXT:    vmovaps %ymm0, (%rsp)
 ; X64-AVX-NEXT:    vmovaps (%rsp), %ymm0
 ; X64-AVX-NEXT:    vextractps $2, %xmm0, %esi

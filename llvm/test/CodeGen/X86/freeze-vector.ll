@@ -41,7 +41,7 @@ define <2 x i64> @freeze_sign_extend_vector_inreg(<16 x i8> %a0) nounwind {
 define <2 x i64> @freeze_zero_extend_vector_inreg(<16 x i8> %a0) nounwind {
 ; CHECK-LABEL: freeze_zero_extend_vector_inreg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpmovzxbq {{[^#]+#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %x = zext <16 x i8> %a0 to <16 x i32>
   %y = shufflevector <16 x i32> %x, <16 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -76,7 +76,7 @@ define void @freeze_bitcast_from_wider_elt(ptr %origin, ptr %dst) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vmovsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -98,7 +98,7 @@ define void @freeze_bitcast_from_wider_elt_escape(ptr %origin, ptr %escape, ptr 
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vmovsd %xmm0, (%ecx)
 ; X86-NEXT:    vmovsd %xmm0, (%eax)
 ; X86-NEXT:    retl
@@ -123,7 +123,7 @@ define void @freeze_bitcast_to_wider_elt(ptr %origin, ptr %dst) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vmovsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -145,7 +145,7 @@ define void @freeze_bitcast_to_wider_elt_escape(ptr %origin, ptr %escape, ptr %d
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vmovsd %xmm0, (%ecx)
 ; X86-NEXT:    vmovsd %xmm0, (%eax)
 ; X86-NEXT:    retl
@@ -280,7 +280,7 @@ define void @freeze_buildvector_single_maybe_poison_operand(ptr %origin, ptr %ds
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm0 = [42,42,42,42]
+; X86-NEXT:    vbroadcastss {{[^#]+#+}} xmm0 = [42,42,42,42]
 ; X86-NEXT:    vpinsrd $0, (%ecx), %xmm0, %xmm0
 ; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
@@ -288,9 +288,9 @@ define void @freeze_buildvector_single_maybe_poison_operand(ptr %origin, ptr %ds
 ;
 ; X64-LABEL: freeze_buildvector_single_maybe_poison_operand:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [42,42,42,42]
+; X64-NEXT:    vpbroadcastd {{[^#]+#+}} xmm0 = [42,42,42,42]
 ; X64-NEXT:    vpinsrd $0, (%rdi), %xmm0, %xmm0
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
+; X64-NEXT:    vpbroadcastd {{[^#]+#+}} xmm1 = [7,7,7,7]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rsi)
 ; X64-NEXT:    retq
@@ -313,19 +313,19 @@ define void @freeze_buildvector_single_repeated_maybe_poison_operand(ptr %origin
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl (%ecx), %ecx
 ; X86-NEXT:    andl $15, %ecx
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm0 = [42,42,42,42]
+; X86-NEXT:    vbroadcastss {{[^#]+#+}} xmm0 = [42,42,42,42]
 ; X86-NEXT:    vpinsrd $0, %ecx, %xmm0, %xmm0
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X86-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[0,1,0,1]
 ; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_buildvector_single_repeated_maybe_poison_operand:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [42,42,42,42]
+; X64-NEXT:    vpbroadcastd {{[^#]+#+}} xmm0 = [42,42,42,42]
 ; X64-NEXT:    vpinsrd $0, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    vpbroadcastq %xmm0, %xmm0
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
+; X64-NEXT:    vpbroadcastd {{[^#]+#+}} xmm1 = [7,7,7,7]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rsi)
 ; X64-NEXT:    retq
@@ -350,13 +350,13 @@ define void @freeze_two_frozen_buildvectors(ptr %origin0, ptr %origin1, ptr %dst
 ; X86-NEXT:    movl (%edx), %edx
 ; X86-NEXT:    andl $15, %edx
 ; X86-NEXT:    vpinsrd $1, %edx, %xmm0, %xmm0
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm1 = [7,7,7,7]
+; X86-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [7,7,7,7]
 ; X86-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%ecx)
 ; X86-NEXT:    vmovd %edx, %xmm0
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X86-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[0,1,0,1]
 ; X86-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1,2,3],xmm0[4,5],xmm2[6,7]
+; X86-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm2[0,1,2,3],xmm0[4,5],xmm2[6,7]
 ; X86-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
@@ -366,13 +366,13 @@ define void @freeze_two_frozen_buildvectors(ptr %origin0, ptr %origin1, ptr %dst
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    andl $15, %eax
 ; X64-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
+; X64-NEXT:    vpbroadcastd {{[^#]+#+}} xmm1 = [7,7,7,7]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdx)
 ; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0,1],xmm0[2],xmm2[3]
+; X64-NEXT:    vpblendd {{[^#]+#+}} xmm0 = xmm2[0,1],xmm0[2],xmm2[3]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rcx)
 ; X64-NEXT:    retq
@@ -401,12 +401,12 @@ define void @freeze_two_buildvectors_only_one_frozen(ptr %origin0, ptr %origin1,
 ; X86-NEXT:    andl $15, %edx
 ; X86-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovd %edx, %xmm1
-; X86-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[0,0,1,1]
-; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5,6,7]
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [7,7,7,7]
+; X86-NEXT:    vpshufd {{[^#]+#+}} xmm2 = xmm1[0,0,1,1]
+; X86-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5,6,7]
+; X86-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [7,7,7,7]
 ; X86-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%ecx)
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; X86-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm1[0,1,0,1]
 ; X86-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
@@ -418,8 +418,8 @@ define void @freeze_two_buildvectors_only_one_frozen(ptr %origin0, ptr %origin1,
 ; X64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovd %eax, %xmm1
 ; X64-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [7,7,7,7]
+; X64-NEXT:    vpblendd {{[^#]+#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
+; X64-NEXT:    vpbroadcastd {{[^#]+#+}} xmm2 = [7,7,7,7]
 ; X64-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdx)
 ; X64-NEXT:    vpand %xmm2, %xmm1, %xmm0
@@ -447,12 +447,12 @@ define void @freeze_two_buildvectors_one_undef_elt(ptr %origin0, ptr %origin1, p
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl (%edx), %edx
 ; X86-NEXT:    andl $15, %edx
-; X86-NEXT:    vmovddup {{.*#+}} xmm0 = [7,0,7,0]
+; X86-NEXT:    vmovddup {{[^#]+#+}} xmm0 = [7,0,7,0]
 ; X86-NEXT:    # xmm0 = mem[0,0]
 ; X86-NEXT:    vmovd %edx, %xmm1
 ; X86-NEXT:    vpand %xmm0, %xmm1, %xmm2
 ; X86-NEXT:    vmovdqa %xmm2, (%ecx)
-; X86-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
+; X86-NEXT:    vpslldq {{[^#]+#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
 ; X86-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
@@ -490,7 +490,7 @@ define void @freeze_buildvector(ptr %origin0, ptr %origin1, ptr %origin2, ptr %o
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpinsrd $1, (%esi), %xmm0, %xmm0
 ; X86-NEXT:    vpinsrd $2, (%edx), %xmm0, %xmm0
 ; X86-NEXT:    vpinsrd $3, (%ecx), %xmm0, %xmm0
@@ -502,11 +502,11 @@ define void @freeze_buildvector(ptr %origin0, ptr %origin1, ptr %origin2, ptr %o
 ;
 ; X64-LABEL: freeze_buildvector:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    vpinsrd $1, (%rsi), %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $2, (%rdx), %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $3, (%rcx), %xmm0, %xmm0
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
+; X64-NEXT:    vpbroadcastd {{[^#]+#+}} xmm1 = [7,7,7,7]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%r8)
 ; X64-NEXT:    retq
@@ -536,7 +536,7 @@ define void @freeze_buildvector_one_undef_elt(ptr %origin0, ptr %origin1, ptr %o
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpinsrd $1, (%edx), %xmm0, %xmm0
 ; X86-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
 ; X86-NEXT:    vpinsrd $3, (%ecx), %xmm0, %xmm0
@@ -547,11 +547,11 @@ define void @freeze_buildvector_one_undef_elt(ptr %origin0, ptr %origin1, ptr %o
 ;
 ; X64-LABEL: freeze_buildvector_one_undef_elt:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    vpinsrd $1, (%rsi), %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $3, (%rcx), %xmm0, %xmm0
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
+; X64-NEXT:    vpbroadcastd {{[^#]+#+}} xmm1 = [7,7,7,7]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%r8)
 ; X64-NEXT:    retq
@@ -582,7 +582,7 @@ define void @freeze_buildvector_extrause(ptr %origin0, ptr %origin1, ptr %origin
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpinsrd $1, (%edi), %xmm0, %xmm0
 ; X86-NEXT:    vpinsrd $2, (%esi), %xmm0, %xmm0
 ; X86-NEXT:    vpinsrd $3, (%edx), %xmm0, %xmm0
@@ -597,14 +597,14 @@ define void @freeze_buildvector_extrause(ptr %origin0, ptr %origin1, ptr %origin
 ;
 ; X64-LABEL: freeze_buildvector_extrause:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    vpinsrd $1, (%rsi), %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $2, (%rdx), %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $3, (%rcx), %xmm0, %xmm0
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
+; X64-NEXT:    vpbroadcastd {{[^#]+#+}} xmm1 = [15,15,15,15]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%r9)
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
+; X64-NEXT:    vpbroadcastd {{[^#]+#+}} xmm1 = [7,7,7,7]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%r8)
 ; X64-NEXT:    retq
@@ -637,8 +637,8 @@ define void @pr59677(i32 %x, ptr %out) nounwind {
 ; X86-NEXT:    vmovd %eax, %xmm0
 ; X86-NEXT:    orl $1, %eax
 ; X86-NEXT:    vmovd %eax, %xmm1
-; X86-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X86-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X86-NEXT:    vpunpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X86-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
@@ -655,8 +655,8 @@ define void @pr59677(i32 %x, ptr %out) nounwind {
 ; X64-NEXT:    vmovd %edi, %xmm0
 ; X64-NEXT:    orl $1, %edi
 ; X64-NEXT:    vmovd %edi, %xmm1
-; X64-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X64-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X64-NEXT:    vpunpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X64-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X64-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    callq sinf@PLT

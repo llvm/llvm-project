@@ -180,9 +180,9 @@ altret:
 define i1 @dont_merge_oddly(ptr %result) nounwind {
 ; CHECK-LABEL: dont_merge_oddly:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    ucomiss %xmm1, %xmm2
 ; CHECK-NEXT:    jbe .LBB2_3
 ; CHECK-NEXT:  # %bb.1: # %bb

@@ -8,8 +8,8 @@
 
 define i64 @constant_hoisting_optnone() #0 {
 ; CHECK-LABEL: @constant_hoisting_optnone
-; CHECK-DAG: movabsq {{.*#+}} imm = 0xBEEBEEBF4
-; CHECK-DAG: movabsq {{.*#+}} imm = 0xBEEBEEBEC
+; CHECK-DAG: movabsq {{[^#]+#+}} imm = 0xBEEBEEBF4
+; CHECK-DAG: movabsq {{[^#]+#+}} imm = 0xBEEBEEBEC
 ; CHECK: ret
 entry:
   %0 = load i64, ptr inttoptr (i64 51250129900 to ptr)

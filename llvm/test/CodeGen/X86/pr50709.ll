@@ -9,14 +9,14 @@ define <6 x i32> @foo(<6 x i16> %x, <6 x i16> %y) {
 ; CHECK-NEXT:    pmulhuw %xmm1, %xmm2
 ; CHECK-NEXT:    pmullw %xmm1, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; CHECK-NEXT:    pslldq {{.*#+}} xmm2 = zero,zero,xmm2[0,1,2,3,4,5,6,7,8,9,10,11,12,13]
-; CHECK-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13]
-; CHECK-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
+; CHECK-NEXT:    punpcklwd {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; CHECK-NEXT:    pslldq {{[^#]+#+}} xmm2 = zero,zero,xmm2[0,1,2,3,4,5,6,7,8,9,10,11,12,13]
+; CHECK-NEXT:    pslldq {{[^#]+#+}} xmm0 = zero,zero,xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13]
+; CHECK-NEXT:    punpckhwd {{[^#]+#+}} xmm0 = xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
 ; CHECK-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = xmm0[0],xmm2[1]
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,0]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,2,2,3]
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm2 = xmm0[0],xmm2[1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm1 = xmm1[0,1],xmm2[2,0]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,2,2,3]
 ; CHECK-NEXT:    movq %xmm0, 16(%rdi)
 ; CHECK-NEXT:    movaps %xmm1, (%rdi)
 ; CHECK-NEXT:    retq

@@ -9,7 +9,7 @@ define <16 x i32> @shuffle_v8i64(<16 x i32> %t0, <16 x i32> %t1) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm2
 ; CHECK-NEXT:    vpsubd %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    vshufps {{.*#+}} zmm0 = zmm2[0,1],zmm0[2,3],zmm2[4,5],zmm0[6,7],zmm2[8,9],zmm0[10,11],zmm2[12,13],zmm0[14,15]
+; CHECK-NEXT:    vshufps {{[^#]+#+}} zmm0 = zmm2[0,1],zmm0[2,3],zmm2[4,5],zmm0[6,7],zmm2[8,9],zmm0[10,11],zmm2[12,13],zmm0[14,15]
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %t2 = add nsw <16 x i32> %t0, %t1
@@ -23,7 +23,7 @@ define <8 x i32> @shuffle_v4i64(<8 x i32> %t0, <8 x i32> %t1) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
 ; CHECK-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1],ymm0[2,3],ymm2[4,5],ymm0[6,7]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm2[0,1],ymm0[2,3],ymm2[4,5],ymm0[6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %t2 = add nsw <8 x i32> %t0, %t1
@@ -37,7 +37,7 @@ define <4 x i32> @shuffle_v2i64(<4 x i32> %t0, <4 x i32> %t1) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
 ; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} xmm0 = xmm2[0,1],xmm0[2,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %t2 = add nsw <4 x i32> %t0, %t1
@@ -51,7 +51,7 @@ define <2 x i32> @shuffle_v2i32(<2 x i32> %t0, <2 x i32> %t1) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
 ; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2,3]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %t2 = add nsw <2 x i32> %t0, %t1
@@ -112,8 +112,8 @@ define <32 x i8> @addb_selectw_32xi8(<32 x i8> %t0, <32 x i8> %t1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpaddb %ymm1, %ymm0, %ymm2
 ; CHECK-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm0[0,1,2,3],ymm2[4,5,6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %t2 = add nsw <32 x i8> %t0, %t1
   %t3 = sub nsw <32 x i8> %t0, %t1
@@ -126,7 +126,7 @@ define <16 x i8> @addb_selectw_16xi8(<16 x i8> %t0, <16 x i8> %t1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm2
 ; CHECK-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %t2 = add nsw <16 x i8> %t0, %t1
   %t3 = sub nsw <16 x i8> %t0, %t1
@@ -139,7 +139,7 @@ define <8 x i8> @addb_selectw_8xi8(<8 x i8> %t0, <8 x i8> %t1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm2
 ; CHECK-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
+; CHECK-NEXT:    vpblendw {{[^#]+#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %t2 = add nsw <8 x i8> %t0, %t1
   %t3 = sub nsw <8 x i8> %t0, %t1
@@ -181,7 +181,7 @@ define <16 x i16> @addw_selectd_16xi16(<16 x i16> %t0, <16 x i16> %t1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpaddw %ymm1, %ymm0, %ymm2
 ; CHECK-NEXT:    vpsubw %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3,4,5,6,7]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm0[0],ymm2[1,2,3,4,5,6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %t2 = add nsw <16 x i16> %t0, %t1
   %t3 = sub nsw <16 x i16> %t0, %t1
@@ -219,7 +219,7 @@ define <8 x i32> @addd_selectq_8xi32(<8 x i32> %t0, <8 x i32> %t1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
 ; CHECK-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm2[2,3,4,5,6,7]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} ymm0 = ymm0[0,1],ymm2[2,3,4,5,6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %t2 = add nsw <8 x i32> %t0, %t1
   %t3 = sub nsw <8 x i32> %t0, %t1
@@ -233,7 +233,7 @@ define <4 x i32> @addd_selectq_4xi32(<4 x i32> %t0, <4 x i32> %t1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
 ; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3]
+; CHECK-NEXT:    vpblendd {{[^#]+#+}} xmm0 = xmm0[0,1],xmm2[2,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %t2 = add nsw <4 x i32> %t0, %t1
   %t3 = sub nsw <4 x i32> %t0, %t1
@@ -246,7 +246,7 @@ define <8 x i32> @shuffle_undef_8xi32(<8 x i32> %0, <8 x i32> %1) {
 ; CHECK-LABEL: shuffle_undef_8xi32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm0 = ymm0[0,2,1,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %2 = add <8 x i32> %0, %1
@@ -258,7 +258,7 @@ define <16 x i16> @shuffle_undef_16xi16(<16 x i16> %0, <16 x i16> %1) {
 ; CHECK-LABEL: shuffle_undef_16xi16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,1,0,3]
+; CHECK-NEXT:    vpermq {{[^#]+#+}} ymm0 = ymm0[2,1,0,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %2 = add <16 x i16> %0, %1

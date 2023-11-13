@@ -105,14 +105,14 @@ for_exit600:                                      ; preds = %for_loop599
 define <4 x i32> @pcmpgt(<4 x i8> %x) {
 ; AVX-LABEL: pcmpgt:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX-NEXT:    vpmovzxbd {{[^#]+#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; KNL-32-LABEL: pcmpgt:
 ; KNL-32:       # %bb.0:
-; KNL-32-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; KNL-32-NEXT:    vpmovzxbd {{[^#]+#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; KNL-32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL-32-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; KNL-32-NEXT:    retl

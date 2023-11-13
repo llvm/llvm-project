@@ -107,12 +107,12 @@ define <16 x i16> @test_llvm_x86_avx2_pmovzxbw(ptr %a) {
 ; X86-LABEL: test_llvm_x86_avx2_pmovzxbw:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpmovzxbw {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; X86-NEXT:    vpmovzxbw {{[^#]+#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovzxbw:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vpmovzxbw {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; X64-NEXT:    vpmovzxbw {{[^#]+#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
 ; X64-NEXT:    retq
   %1 = load <16 x i8>, ptr %a, align 1
   %2 = zext <16 x i8> %1 to <16 x i16>
@@ -123,12 +123,12 @@ define <8 x i32> @test_llvm_x86_avx2_pmovzxbd(ptr %a) {
 ; X86-LABEL: test_llvm_x86_avx2_pmovzxbd:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpmovzxbd {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
+; X86-NEXT:    vpmovzxbd {{[^#]+#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovzxbd:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vpmovzxbd {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
+; X64-NEXT:    vpmovzxbd {{[^#]+#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
 ; X64-NEXT:    retq
   %1 = load <16 x i8>, ptr %a, align 1
   %2 = shufflevector <16 x i8> %1, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -140,12 +140,12 @@ define <4 x i64> @test_llvm_x86_avx2_pmovzxbq(ptr %a) {
 ; X86-LABEL: test_llvm_x86_avx2_pmovzxbq:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpmovzxbq {{.*#+}} ymm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vpmovzxbq {{[^#]+#+}} ymm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovzxbq:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vpmovzxbq {{.*#+}} ymm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero
+; X64-NEXT:    vpmovzxbq {{[^#]+#+}} ymm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    retq
   %1 = load <16 x i8>, ptr %a, align 1
   %2 = shufflevector <16 x i8> %1, <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -157,12 +157,12 @@ define <8 x i32> @test_llvm_x86_avx2_pmovzxwd(ptr %a) {
 ; X86-LABEL: test_llvm_x86_avx2_pmovzxwd:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpmovzxwd {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; X86-NEXT:    vpmovzxwd {{[^#]+#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovzxwd:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vpmovzxwd {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; X64-NEXT:    vpmovzxwd {{[^#]+#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, ptr %a, align 1
   %2 = zext <8 x i16> %1 to <8 x i32>
@@ -173,12 +173,12 @@ define <4 x i64> @test_llvm_x86_avx2_pmovzxwq(ptr %a) {
 ; X86-LABEL: test_llvm_x86_avx2_pmovzxwq:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpmovzxwq {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
+; X86-NEXT:    vpmovzxwq {{[^#]+#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovzxwq:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vpmovzxwq {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
+; X64-NEXT:    vpmovzxwq {{[^#]+#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, ptr %a, align 1
   %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -190,12 +190,12 @@ define <4 x i64> @test_llvm_x86_avx2_pmovzxdq(ptr %a) {
 ; X86-LABEL: test_llvm_x86_avx2_pmovzxdq:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpmovzxdq {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X86-NEXT:    vpmovzxdq {{[^#]+#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_llvm_x86_avx2_pmovzxdq:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vpmovzxdq {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X64-NEXT:    vpmovzxdq {{[^#]+#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; X64-NEXT:    retq
   %1 = load <4 x i32>, ptr %a, align 1
   %2 = zext <4 x i32> %1 to <4 x i64>

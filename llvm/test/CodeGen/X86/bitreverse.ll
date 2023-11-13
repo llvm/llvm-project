@@ -60,21 +60,21 @@ define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) nounwind {
 ; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    movdqa %xmm0, %xmm1
 ; X64-NEXT:    psrlw $4, %xmm1
-; X64-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X64-NEXT:    movdqa {{[^#]+#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; X64-NEXT:    pand %xmm2, %xmm1
 ; X64-NEXT:    pand %xmm2, %xmm0
 ; X64-NEXT:    psllw $4, %xmm0
 ; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    movdqa %xmm0, %xmm1
 ; X64-NEXT:    psrlw $2, %xmm1
-; X64-NEXT:    movdqa {{.*#+}} xmm2 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; X64-NEXT:    movdqa {{[^#]+#+}} xmm2 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; X64-NEXT:    pand %xmm2, %xmm1
 ; X64-NEXT:    pand %xmm2, %xmm0
 ; X64-NEXT:    psllw $2, %xmm0
 ; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    movdqa %xmm0, %xmm1
 ; X64-NEXT:    psrlw $1, %xmm1
-; X64-NEXT:    movdqa {{.*#+}} xmm2 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; X64-NEXT:    movdqa {{[^#]+#+}} xmm2 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
 ; X64-NEXT:    pand %xmm2, %xmm1
 ; X64-NEXT:    pand %xmm2, %xmm0
 ; X64-NEXT:    paddb %xmm0, %xmm0
@@ -88,7 +88,7 @@ define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) nounwind {
 ;
 ; GFNI-LABEL: test_bitreverse_v2i16:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
+; GFNI-NEXT:    vpshufb {{[^#]+#+}} xmm0 = xmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
 ; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; GFNI-NEXT:    retq
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
@@ -164,7 +164,7 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ;
 ; X86XOP-LABEL: test_bitreverse_i64:
 ; X86XOP:       # %bb.0:
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; X86XOP-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %eax
 ; X86XOP-NEXT:    vpextrd $1, %xmm0, %edx
@@ -246,7 +246,7 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ;
 ; X86XOP-LABEL: test_bitreverse_i32:
 ; X86XOP:       # %bb.0:
-; X86XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86XOP-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %eax
 ; X86XOP-NEXT:    retl
@@ -327,7 +327,7 @@ define i24 @test_bitreverse_i24(i24 %a) nounwind {
 ;
 ; X86XOP-LABEL: test_bitreverse_i24:
 ; X86XOP:       # %bb.0:
-; X86XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86XOP-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %eax
 ; X86XOP-NEXT:    shrl $8, %eax
@@ -410,7 +410,7 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ;
 ; X86XOP-LABEL: test_bitreverse_i16:
 ; X86XOP:       # %bb.0:
-; X86XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86XOP-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %eax
 ; X86XOP-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -482,7 +482,7 @@ define i8 @test_bitreverse_i8(i8 %a) {
 ;
 ; X86XOP-LABEL: test_bitreverse_i8:
 ; X86XOP:       # %bb.0:
-; X86XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86XOP-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %eax
 ; X86XOP-NEXT:    # kill: def $al killed $al killed $eax
@@ -549,7 +549,7 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ;
 ; X86XOP-LABEL: test_bitreverse_i4:
 ; X86XOP:       # %bb.0:
-; X86XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86XOP-NEXT:    vmovd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %eax
 ; X86XOP-NEXT:    shrb $4, %al
@@ -587,17 +587,17 @@ define <2 x i16> @fold_v2i16() {
 ;
 ; X64-LABEL: fold_v2i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = <61440,240,u,u,u,u,u,u>
+; X64-NEXT:    movaps {{[^#]+#+}} xmm0 = <61440,240,u,u,u,u,u,u>
 ; X64-NEXT:    retq
 ;
 ; X86XOP-LABEL: fold_v2i16:
 ; X86XOP:       # %bb.0:
-; X86XOP-NEXT:    vbroadcastss {{.*#+}} xmm0 = [61440,240,61440,240,61440,240,61440,240]
+; X86XOP-NEXT:    vbroadcastss {{[^#]+#+}} xmm0 = [61440,240,61440,240,61440,240,61440,240]
 ; X86XOP-NEXT:    retl
 ;
 ; GFNI-LABEL: fold_v2i16:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    vbroadcastss {{.*#+}} xmm0 = [61440,240,61440,240,61440,240,61440,240]
+; GFNI-NEXT:    vbroadcastss {{[^#]+#+}} xmm0 = [61440,240,61440,240,61440,240,61440,240]
 ; GFNI-NEXT:    retq
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> <i16 15, i16 3840>)
   ret <2 x i16> %b
@@ -1310,19 +1310,11 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86XOP-NEXT:    pushl %edi
 ; X86XOP-NEXT:    pushl %esi
 ; X86XOP-NEXT:    subl $44, %esp
-; X86XOP-NEXT:    vmovdqa {{.*#+}} xmm0 = [87,86,85,84,83,82,81,80,95,94,93,92,91,90,89,88]
-; X86XOP-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86XOP-NEXT:    vmovdqa {{[^#]+#+}} xmm0 = [87,86,85,84,83,82,81,80,95,94,93,92,91,90,89,88]
+; X86XOP-NEXT:    vmovd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
 ; X86XOP-NEXT:    vpextrd $1, %xmm1, %eax
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
-; X86XOP-NEXT:    vmovd %xmm1, %ecx
-; X86XOP-NEXT:    shrdl $16, %ecx, %eax
-; X86XOP-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vpextrd $1, %xmm1, %eax
-; X86XOP-NEXT:    shrdl $16, %eax, %ecx
-; X86XOP-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X86XOP-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
 ; X86XOP-NEXT:    vmovd %xmm1, %ecx
 ; X86XOP-NEXT:    shrdl $16, %ecx, %eax
@@ -1330,7 +1322,7 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86XOP-NEXT:    vpextrd $1, %xmm1, %eax
 ; X86XOP-NEXT:    shrdl $16, %eax, %ecx
 ; X86XOP-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X86XOP-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
 ; X86XOP-NEXT:    vmovd %xmm1, %ecx
 ; X86XOP-NEXT:    shrdl $16, %ecx, %eax
@@ -1338,7 +1330,7 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86XOP-NEXT:    vpextrd $1, %xmm1, %eax
 ; X86XOP-NEXT:    shrdl $16, %eax, %ecx
 ; X86XOP-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X86XOP-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
 ; X86XOP-NEXT:    vmovd %xmm1, %ecx
 ; X86XOP-NEXT:    shrdl $16, %ecx, %eax
@@ -1346,7 +1338,7 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86XOP-NEXT:    vpextrd $1, %xmm1, %eax
 ; X86XOP-NEXT:    shrdl $16, %eax, %ecx
 ; X86XOP-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X86XOP-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
 ; X86XOP-NEXT:    vmovd %xmm1, %ecx
 ; X86XOP-NEXT:    shrdl $16, %ecx, %eax
@@ -1354,20 +1346,28 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86XOP-NEXT:    vpextrd $1, %xmm1, %eax
 ; X86XOP-NEXT:    shrdl $16, %eax, %ecx
 ; X86XOP-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X86XOP-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
+; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
+; X86XOP-NEXT:    vmovd %xmm1, %ecx
+; X86XOP-NEXT:    shrdl $16, %ecx, %eax
+; X86XOP-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86XOP-NEXT:    vpextrd $1, %xmm1, %eax
+; X86XOP-NEXT:    shrdl $16, %eax, %ecx
+; X86XOP-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86XOP-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
 ; X86XOP-NEXT:    vmovd %xmm1, %ebp
 ; X86XOP-NEXT:    shrdl $16, %ebp, %eax
 ; X86XOP-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X86XOP-NEXT:    vpextrd $1, %xmm1, %ebx
 ; X86XOP-NEXT:    shrdl $16, %ebx, %ebp
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X86XOP-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
 ; X86XOP-NEXT:    vmovd %xmm1, %esi
 ; X86XOP-NEXT:    shrdl $16, %esi, %ebx
 ; X86XOP-NEXT:    vpextrd $1, %xmm1, %edx
 ; X86XOP-NEXT:    shrdl $16, %edx, %esi
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X86XOP-NEXT:    vmovq {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %ecx
 ; X86XOP-NEXT:    shrdl $16, %ecx, %edx

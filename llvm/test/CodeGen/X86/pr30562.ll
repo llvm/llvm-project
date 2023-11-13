@@ -6,10 +6,10 @@ define i32 @foo(ptr nocapture %perm, i32 %n) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    andl $1, %ecx
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [2,3]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm1 = [2,3]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1

@@ -14,7 +14,7 @@ define x86_mmx @t0(i32 %A) nounwind {
 ; X64-LABEL: t0:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    movd %edi, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
+; X64-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,0,1,1]
 ; X64-NEXT:    retq
   %tmp3 = insertelement <2 x i32> < i32 0, i32 undef >, i32 %A, i32 1
   %tmp4 = bitcast <2 x i32> %tmp3 to x86_mmx
@@ -24,7 +24,7 @@ define x86_mmx @t0(i32 %A) nounwind {
 define <8 x i8> @t1(i8 zeroext %x) nounwind {
 ; X86-LABEL: t1:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t1:

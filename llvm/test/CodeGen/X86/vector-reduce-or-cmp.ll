@@ -816,7 +816,7 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 define i1 @trunc_v2i64(<2 x i64> %a0) {
 ; SSE2-LABEL: trunc_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    por %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    testw %ax, %ax
@@ -849,7 +849,7 @@ define i1 @trunc_v2i64(<2 x i64> %a0) {
 ;
 ; AVX512BWVL-LABEL: trunc_v2i64:
 ; AVX512BWVL:       # %bb.0:
-; AVX512BWVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [65535,65535]
+; AVX512BWVL-NEXT:    vpbroadcastq {{[^#]+#+}} xmm1 = [65535,65535]
 ; AVX512BWVL-NEXT:    vptest %xmm1, %xmm0
 ; AVX512BWVL-NEXT:    sete %al
 ; AVX512BWVL-NEXT:    retq
@@ -884,7 +884,7 @@ define i1 @mask_v8i32(<8 x i32> %a0) {
 ;
 ; AVX2-LABEL: mask_v8i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9223372039002259456,9223372039002259456,9223372039002259456,9223372039002259456]
+; AVX2-NEXT:    vpbroadcastq {{[^#]+#+}} ymm1 = [9223372039002259456,9223372039002259456,9223372039002259456,9223372039002259456]
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    vzeroupper
@@ -892,7 +892,7 @@ define i1 @mask_v8i32(<8 x i32> %a0) {
 ;
 ; AVX512-LABEL: mask_v8i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9223372039002259456,9223372039002259456,9223372039002259456,9223372039002259456]
+; AVX512-NEXT:    vpbroadcastq {{[^#]+#+}} ymm1 = [9223372039002259456,9223372039002259456,9223372039002259456,9223372039002259456]
 ; AVX512-NEXT:    vptest %ymm1, %ymm0
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
@@ -978,7 +978,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; AVX2-NEXT:    vpor %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [72340172838076673,72340172838076673,72340172838076673,72340172838076673]
+; AVX2-NEXT:    vpbroadcastq {{[^#]+#+}} ymm1 = [72340172838076673,72340172838076673,72340172838076673,72340172838076673]
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    vzeroupper
@@ -1042,7 +1042,7 @@ define zeroext i1 @PR44781(ptr %0) {
 ; AVX512BWVL-LABEL: PR44781:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX512BWVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [64424509455,64424509455]
+; AVX512BWVL-NEXT:    vpbroadcastq {{[^#]+#+}} xmm1 = [64424509455,64424509455]
 ; AVX512BWVL-NEXT:    vptest %xmm1, %xmm0
 ; AVX512BWVL-NEXT:    sete %al
 ; AVX512BWVL-NEXT:    retq
@@ -1060,10 +1060,10 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %ecx
 ; SSE2-NEXT:    orl %eax, %ecx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    orl %ecx, %eax
 ; SSE2-NEXT:    testb $1, %al

@@ -133,10 +133,10 @@ define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5)
 ; CHECK-NEXT:  .LBB0_35: # %a97b
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    addss %xmm0, %xmm1
 ; CHECK-NEXT:    addss %xmm0, %xmm1
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    addss %xmm0, %xmm2
 ; CHECK-NEXT:    addss %xmm1, %xmm2
 ; CHECK-NEXT:    movss %xmm2, i6000(%rip)

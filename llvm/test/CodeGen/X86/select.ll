@@ -141,7 +141,7 @@ define float @test3(i32 %x) nounwind readnone {
 ; GENERIC-NEXT:    testl %edi, %edi
 ; GENERIC-NEXT:    sete %al
 ; GENERIC-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rcx
-; GENERIC-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; GENERIC-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; GENERIC-NEXT:    retq
 ;
 ; ATOM-LABEL: test3:
@@ -150,7 +150,7 @@ define float @test3(i32 %x) nounwind readnone {
 ; ATOM-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rcx
 ; ATOM-NEXT:    testl %edi, %edi
 ; ATOM-NEXT:    sete %al
-; ATOM-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; ATOM-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test3:
@@ -177,7 +177,7 @@ entry:
 define signext i8 @test4(ptr nocapture %P, double %F) nounwind readonly {
 ; CHECK-LABEL: test4:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomisd %xmm0, %xmm1
 ; CHECK-NEXT:    seta %al
@@ -439,28 +439,28 @@ define void @test8(i1 %c, ptr %dst.addr, <6 x i32> %src1,<6 x i32> %src2) nounwi
 ; GENERIC-NEXT:    testb $1, %dil
 ; GENERIC-NEXT:    jne LBB7_1
 ; GENERIC-NEXT:  ## %bb.2:
-; GENERIC-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; GENERIC-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; GENERIC-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; GENERIC-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; GENERIC-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; GENERIC-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; GENERIC-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; GENERIC-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; GENERIC-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; GENERIC-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; GENERIC-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; GENERIC-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; GENERIC-NEXT:    movd {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; GENERIC-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; GENERIC-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; GENERIC-NEXT:    punpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
+; GENERIC-NEXT:    movd {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; GENERIC-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; GENERIC-NEXT:    jmp LBB7_3
 ; GENERIC-NEXT:  LBB7_1:
 ; GENERIC-NEXT:    movd %r9d, %xmm0
 ; GENERIC-NEXT:    movd %r8d, %xmm1
-; GENERIC-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; GENERIC-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; GENERIC-NEXT:    movd %ecx, %xmm2
 ; GENERIC-NEXT:    movd %edx, %xmm0
-; GENERIC-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; GENERIC-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; GENERIC-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; GENERIC-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; GENERIC-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; GENERIC-NEXT:    punpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
+; GENERIC-NEXT:    movd {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; GENERIC-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; GENERIC-NEXT:  LBB7_3:
-; GENERIC-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; GENERIC-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; GENERIC-NEXT:    pcmpeqd %xmm2, %xmm2
 ; GENERIC-NEXT:    paddd %xmm2, %xmm0
 ; GENERIC-NEXT:    paddd %xmm2, %xmm1
@@ -473,28 +473,28 @@ define void @test8(i1 %c, ptr %dst.addr, <6 x i32> %src1,<6 x i32> %src2) nounwi
 ; ATOM-NEXT:    testb $1, %dil
 ; ATOM-NEXT:    jne LBB7_1
 ; ATOM-NEXT:  ## %bb.2:
-; ATOM-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; ATOM-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; ATOM-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; ATOM-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; ATOM-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; ATOM-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; ATOM-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; ATOM-NEXT:    movd {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; ATOM-NEXT:    movd {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
+; ATOM-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; ATOM-NEXT:    punpckldq {{[^#]+#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; ATOM-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; ATOM-NEXT:    movd {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
+; ATOM-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    jmp LBB7_3
 ; ATOM-NEXT:  LBB7_1:
 ; ATOM-NEXT:    movd %r9d, %xmm1
 ; ATOM-NEXT:    movd %r8d, %xmm2
 ; ATOM-NEXT:    movd %ecx, %xmm3
 ; ATOM-NEXT:    movd %edx, %xmm0
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; ATOM-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; ATOM-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; ATOM-NEXT:    punpckldq {{[^#]+#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; ATOM-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; ATOM-NEXT:    movd {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
+; ATOM-NEXT:    movd {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; ATOM-NEXT:  LBB7_3:
-; ATOM-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; ATOM-NEXT:    punpcklqdq {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0]
 ; ATOM-NEXT:    pcmpeqd %xmm2, %xmm2
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; ATOM-NEXT:    punpckldq {{[^#]+#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; ATOM-NEXT:    paddd %xmm2, %xmm0
 ; ATOM-NEXT:    paddd %xmm2, %xmm1
 ; ATOM-NEXT:    movq %xmm1, 16(%rsi)

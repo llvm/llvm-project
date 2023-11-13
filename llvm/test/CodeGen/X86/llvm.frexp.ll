@@ -222,12 +222,12 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) {
 ; X64-NEXT:    subq $72, %rsp
 ; X64-NEXT:    .cfi_def_cfa_offset 80
 ; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X64-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; X64-NEXT:    movq %rsp, %rdi
 ; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X64-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    unpcklps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
@@ -238,21 +238,21 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) {
 ; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X64-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X64-NEXT:    unpcklps {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; X64-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
 ; X64-NEXT:    # xmm1 = xmm1[0],mem[0]
 ; X64-NEXT:    movaps %xmm1, %xmm0
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; X64-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X64-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; X64-NEXT:    unpcklps {{[^#]+#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X64-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm3 = mem[0],zero,zero,zero
+; X64-NEXT:    unpcklps {{[^#]+#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; X64-NEXT:    movlhps {{[^#]+#+}} xmm1 = xmm1[0],xmm2[0]
 ; X64-NEXT:    addq $72, %rsp
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
@@ -470,12 +470,12 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) {
 ; X64-NEXT:    subq $72, %rsp
 ; X64-NEXT:    .cfi_def_cfa_offset 80
 ; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X64-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X64-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    unpcklps (%rsp), %xmm0 # 16-byte Folded Reload
@@ -486,11 +486,11 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) {
 ; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X64-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X64-NEXT:    unpcklps {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; X64-NEXT:    unpcklpd (%rsp), %xmm1 # 16-byte Folded Reload
 ; X64-NEXT:    # xmm1 = xmm1[0],mem[0]
 ; X64-NEXT:    movaps %xmm1, %xmm0
@@ -629,27 +629,27 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) {
 ; X64-NEXT:    subq $40, %rsp
 ; X64-NEXT:    .cfi_def_cfa_offset 48
 ; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X64-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,3,3,3]
 ; X64-NEXT:    movq %rsp, %rdi
 ; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X64-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X64-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpf@PLT
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    unpcklps {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
+; X64-NEXT:    unpcklps {{[^#]+#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; X64-NEXT:    movlhps {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq

@@ -19,7 +19,7 @@ define i64 @testmsxs(float %x) {
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pushl %eax
 ; SSE2-NEXT:    .cfi_def_cfa_offset 8
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movss %xmm0, (%esp)
 ; SSE2-NEXT:    calll llroundf
 ; SSE2-NEXT:    popl %ecx
@@ -50,7 +50,7 @@ define i64 @testmsxd(double %x) {
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    subl $8, %esp
 ; SSE2-NEXT:    .cfi_def_cfa_offset 12
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movsd %xmm0, (%esp)
 ; SSE2-NEXT:    calll llround
 ; SSE2-NEXT:    addl $8, %esp

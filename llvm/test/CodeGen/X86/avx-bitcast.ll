@@ -5,7 +5,7 @@ define i64 @bitcasti64tof64() {
 ; CHECK-LABEL: bitcasti64tof64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # implicit-def: $rax
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    retq
   %a = load double, ptr undef

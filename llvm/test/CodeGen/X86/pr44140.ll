@@ -15,7 +15,7 @@ define i32 @main() {
 ; CHECK:       # %bb.0: # %start
 ; CHECK-NEXT:    subq $584, %rsp # imm = 0x248
 ; CHECK-NEXT:    .cfi_def_cfa_offset 592
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm6 = [1010101010101010101,2020202020202020202]
+; CHECK-NEXT:    vmovaps {{[^#]+#+}} xmm6 = [1010101010101010101,2020202020202020202]
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_1: # %fake-loop

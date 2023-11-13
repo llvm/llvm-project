@@ -8,8 +8,8 @@ define i32 @main() nounwind  {
 ; CHECK-LABEL: main:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    callq _t
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx

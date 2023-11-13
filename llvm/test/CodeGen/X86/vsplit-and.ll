@@ -25,12 +25,12 @@ define void @t2(ptr %dst, <3 x i64> %src1, <3 x i64> %src2) nounwind readonly {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %r9, %xmm0
 ; CHECK-NEXT:    movq %r8, %xmm1
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movq %rdx, %xmm0
 ; CHECK-NEXT:    movq %rsi, %xmm2
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; CHECK-NEXT:    punpcklqdq {{[^#]+#+}} xmm2 = xmm2[0],xmm0[0]
 ; CHECK-NEXT:    movq %rcx, %xmm0
-; CHECK-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
+; CHECK-NEXT:    movq {{[^#]+#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    pxor %xmm4, %xmm4
 ; CHECK-NEXT:    pcmpeqq %xmm4, %xmm2
 ; CHECK-NEXT:    pcmpeqq %xmm4, %xmm0
@@ -41,7 +41,7 @@ define void @t2(ptr %dst, <3 x i64> %src1, <3 x i64> %src2) nounwind readonly {
 ; CHECK-NEXT:    por %xmm0, %xmm3
 ; CHECK-NEXT:    packssdw %xmm3, %xmm1
 ; CHECK-NEXT:    pxor %xmm5, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,2,2,2]
+; CHECK-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm1[2,2,2,2]
 ; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pmovsxdq %xmm1, %xmm1

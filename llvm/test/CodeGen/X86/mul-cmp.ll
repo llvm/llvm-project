@@ -146,13 +146,13 @@ define <4 x i1> @mul_nsw_ne0_v4i32(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i1> @mul_nsw_ne0_v4i32_size(<4 x i32> %x, <4 x i32> %y) minsize {
 ; SSE-LABEL: mul_nsw_ne0_v4i32_size:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm0[1,1,3,3]
 ; SSE-NEXT:    pmuludq %xmm1, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,2,2,3]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm1[1,1,3,3]
 ; SSE-NEXT:    pmuludq %xmm2, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm1[0,2,2,3]
+; SSE-NEXT:    punpckldq {{[^#]+#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0

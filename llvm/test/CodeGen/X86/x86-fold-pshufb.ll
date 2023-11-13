@@ -8,7 +8,7 @@
 define <2 x i64> @fold_pshufb() {
 ; CHECK-LABEL: fold_pshufb:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,1,0,0,0,2,0,0,0,3,0,0,0]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,0,0,0,1,0,0,0,2,0,0,0,3,0,0,0]
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0, i8 2, i8 0, i8 0, i8 0, i8 3, i8 0, i8 0, i8 0>, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)

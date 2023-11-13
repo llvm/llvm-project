@@ -17,9 +17,9 @@ define void @foo(ptr byval(%struct.anon) %p) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $28, %esp
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    xorps %xmm0, %xmm1
 ; CHECK-NEXT:    cvtss2sd %xmm1, %xmm1
 ; CHECK-NEXT:    xorps %xmm0, %xmm2
@@ -55,7 +55,7 @@ define double @PR22371(double %x) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    movlps %xmm0, (%esp)
 ; CHECK-NEXT:    fldl (%esp)

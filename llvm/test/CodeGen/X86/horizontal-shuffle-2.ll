@@ -8,13 +8,13 @@ define <4 x float> @test_unpacklo_hadd_v4f32(<4 x float> %0, <4 x float> %1, <4 
 ; SSE-LABEL: test_unpacklo_hadd_v4f32:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    haddps %xmm2, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; SSE-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_unpacklo_hadd_v4f32:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vhaddps %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %5 = tail call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %0, <4 x float> %1) #4
   %6 = tail call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %2, <4 x float> %3) #4
@@ -27,13 +27,13 @@ define <4 x float> @test_unpackhi_hadd_v4f32(<4 x float> %0, <4 x float> %1, <4 
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    haddps %xmm3, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; SSE-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_unpackhi_hadd_v4f32:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vhaddps %xmm3, %xmm1, %xmm0
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %5 = tail call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %0, <4 x float> %1) #4
   %6 = tail call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %2, <4 x float> %3) #4
@@ -45,13 +45,13 @@ define <4 x float> @test_unpacklo_hsub_v4f32(<4 x float> %0, <4 x float> %1, <4 
 ; SSE-LABEL: test_unpacklo_hsub_v4f32:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    hsubps %xmm2, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; SSE-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_unpacklo_hsub_v4f32:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vhsubps %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %5 = tail call <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %0, <4 x float> %1) #4
   %6 = tail call <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %2, <4 x float> %3) #4
@@ -64,13 +64,13 @@ define <4 x float> @test_unpackhi_hsub_v4f32(<4 x float> %0, <4 x float> %1, <4 
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    hsubps %xmm3, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; SSE-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_unpackhi_hsub_v4f32:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vhsubps %xmm3, %xmm1, %xmm0
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %5 = tail call <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %0, <4 x float> %1) #4
   %6 = tail call <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %2, <4 x float> %3) #4
@@ -82,13 +82,13 @@ define <4 x i32> @test_unpacklo_hadd_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32>
 ; SSE-LABEL: test_unpacklo_hadd_v4i32:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    phaddd %xmm2, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_unpacklo_hadd_v4i32:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vphaddd %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %5 = tail call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> %0, <4 x i32> %1) #5
   %6 = tail call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> %2, <4 x i32> %3) #5
@@ -100,13 +100,13 @@ define <4 x i32> @test_unpackhi_hadd_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32>
 ; SSE-LABEL: test_unpackhi_hadd_v4i32:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    phaddd %xmm3, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,1,3]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm1[0,2,1,3]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_unpackhi_hadd_v4i32:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vphaddd %xmm3, %xmm1, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %5 = tail call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> %0, <4 x i32> %1) #5
   %6 = tail call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> %2, <4 x i32> %3) #5
@@ -118,13 +118,13 @@ define <4 x i32> @test_unpacklo_hsub_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32>
 ; SSE-LABEL: test_unpacklo_hsub_v4i32:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    phsubd %xmm2, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_unpacklo_hsub_v4i32:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vphsubd %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %5 = tail call <4 x i32> @llvm.x86.ssse3.phsub.d.128(<4 x i32> %0, <4 x i32> %1) #5
   %6 = tail call <4 x i32> @llvm.x86.ssse3.phsub.d.128(<4 x i32> %2, <4 x i32> %3) #5
@@ -136,13 +136,13 @@ define <4 x i32> @test_unpackhi_hsub_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32>
 ; SSE-LABEL: test_unpackhi_hsub_v4i32:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    phsubd %xmm3, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,1,3]
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm1[0,2,1,3]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_unpackhi_hsub_v4i32:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vphsubd %xmm3, %xmm1, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX-NEXT:    vpshufd {{[^#]+#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX-NEXT:    ret{{[l|q]}}
   %5 = tail call <4 x i32> @llvm.x86.ssse3.phsub.d.128(<4 x i32> %0, <4 x i32> %1) #5
   %6 = tail call <4 x i32> @llvm.x86.ssse3.phsub.d.128(<4 x i32> %2, <4 x i32> %3) #5
@@ -158,13 +158,13 @@ define <4 x float> @test_unpacklo_hadd_v4f32_unary(<4 x float> %0) {
 ; SSE-LABEL: test_unpacklo_hadd_v4f32_unary:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    haddps %xmm0, %xmm0
-; SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; SSE-NEXT:    unpcklps {{[^#]+#+}} xmm0 = xmm0[0,0,1,1]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_unpacklo_hadd_v4f32_unary:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; AVX-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,0,1,1]
 ; AVX-NEXT:    ret{{[l|q]}}
   %2 = tail call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %0, <4 x float> %0) #4
   %3 = shufflevector <4 x float> %2, <4 x float> %2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>

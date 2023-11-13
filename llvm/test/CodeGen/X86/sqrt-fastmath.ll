@@ -189,13 +189,13 @@ define <4 x float> @sqrt_v4f32_check_denorms_ieee_ninf(<4 x float> %x) #3 {
 ; SSE-NEXT:    rsqrtps %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    mulps %xmm1, %xmm2
-; SSE-NEXT:    movaps {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; SSE-NEXT:    mulps %xmm2, %xmm3
 ; SSE-NEXT:    mulps %xmm1, %xmm2
 ; SSE-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    mulps %xmm3, %xmm2
 ; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm1 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; SSE-NEXT:    cmpleps %xmm0, %xmm1
 ; SSE-NEXT:    andps %xmm2, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
@@ -210,7 +210,7 @@ define <4 x float> @sqrt_v4f32_check_denorms_ieee_ninf(<4 x float> %x) #3 {
 ; AVX1-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vmulps %xmm1, %xmm3, %xmm1
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; AVX1-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -219,14 +219,14 @@ define <4 x float> @sqrt_v4f32_check_denorms_ieee_ninf(<4 x float> %x) #3 {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtps %xmm0, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; AVX512-NEXT:    vfmadd231ps {{.*#+}} xmm3 = (xmm2 * xmm1) + xmm3
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX512-NEXT:    vfmadd231ps {{[^#]+#+}} xmm3 = (xmm2 * xmm1) + xmm3
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX512-NEXT:    vmulps %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vmulps %xmm3, %xmm1, %xmm1
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [NaN,NaN,NaN,NaN]
 ; AVX512-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; AVX512-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
 ; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
@@ -240,13 +240,13 @@ define <4 x float> @sqrt_v4f32_check_denorms_dynamic_ninf(<4 x float> %x) #6 {
 ; SSE-NEXT:    rsqrtps %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    mulps %xmm1, %xmm2
-; SSE-NEXT:    movaps {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; SSE-NEXT:    mulps %xmm2, %xmm3
 ; SSE-NEXT:    mulps %xmm1, %xmm2
 ; SSE-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    mulps %xmm3, %xmm2
 ; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm1 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; SSE-NEXT:    cmpleps %xmm0, %xmm1
 ; SSE-NEXT:    andps %xmm2, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
@@ -261,7 +261,7 @@ define <4 x float> @sqrt_v4f32_check_denorms_dynamic_ninf(<4 x float> %x) #6 {
 ; AVX1-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vmulps %xmm1, %xmm3, %xmm1
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; AVX1-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -270,14 +270,14 @@ define <4 x float> @sqrt_v4f32_check_denorms_dynamic_ninf(<4 x float> %x) #6 {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtps %xmm0, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; AVX512-NEXT:    vfmadd231ps {{.*#+}} xmm3 = (xmm2 * xmm1) + xmm3
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX512-NEXT:    vfmadd231ps {{[^#]+#+}} xmm3 = (xmm2 * xmm1) + xmm3
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX512-NEXT:    vmulps %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vmulps %xmm3, %xmm1, %xmm1
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [NaN,NaN,NaN,NaN]
 ; AVX512-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; AVX512-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
 ; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
@@ -289,14 +289,14 @@ define float @f32_no_estimate(float %x) #0 {
 ; SSE-LABEL: f32_no_estimate:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtss %xmm0, %xmm1
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    divss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f32_no_estimate:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %sqrt = tail call float @llvm.sqrt.f32(float %x)
@@ -329,7 +329,7 @@ define float @f32_estimate(float %x) #1 {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem
+; AVX512-NEXT:    vfmadd213ss {{[^#]+#+}} xmm0 = (xmm1 * xmm0) + mem
 ; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX512-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
@@ -356,14 +356,14 @@ define <4 x float> @v4f32_no_estimate(<4 x float> %x) #0 {
 ; SSE-LABEL: v4f32_no_estimate:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtps %xmm0, %xmm1
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; SSE-NEXT:    divps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v4f32_no_estimate:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtps %xmm0, %xmm0
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX-NEXT:    vdivps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %sqrt = tail call <4 x float> @llvm.sqrt.v4f32(<4 x float> %x)
@@ -396,9 +396,9 @@ define <4 x float> @v4f32_estimate(<4 x float> %x) #1 {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtps %xmm0, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; AVX512-NEXT:    vfmadd231ps {{.*#+}} xmm2 = (xmm1 * xmm0) + xmm2
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm0 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX512-NEXT:    vfmadd231ps {{[^#]+#+}} xmm2 = (xmm1 * xmm0) + xmm2
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm0 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX512-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vmulps %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
@@ -413,7 +413,7 @@ define <4 x float> @v4f32_estimate2(<4 x float> %x) #5 {
 ; SSE-NEXT:    rsqrtps %xmm0, %xmm2
 ; SSE-NEXT:    mulps %xmm0, %xmm2
 ; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm1 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; SSE-NEXT:    cmpleps %xmm0, %xmm1
 ; SSE-NEXT:    andps %xmm2, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
@@ -424,7 +424,7 @@ define <4 x float> @v4f32_estimate2(<4 x float> %x) #5 {
 ; AVX1-NEXT:    vrsqrtps %xmm0, %xmm1
 ; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm1
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; AVX1-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -433,9 +433,9 @@ define <4 x float> @v4f32_estimate2(<4 x float> %x) #5 {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtps %xmm0, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [NaN,NaN,NaN,NaN]
 ; AVX512-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; AVX512-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
 ; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
@@ -448,7 +448,7 @@ define <8 x float> @v8f32_no_estimate(<8 x float> %x) #0 {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtps %xmm1, %xmm2
 ; SSE-NEXT:    sqrtps %xmm0, %xmm3
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    divps %xmm3, %xmm0
 ; SSE-NEXT:    divps %xmm2, %xmm1
@@ -457,7 +457,7 @@ define <8 x float> @v8f32_no_estimate(<8 x float> %x) #0 {
 ; AVX-LABEL: v8f32_no_estimate:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtps %ymm0, %ymm0
-; AVX-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX-NEXT:    vbroadcastss {{[^#]+#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX-NEXT:    vdivps %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
   %sqrt = tail call <8 x float> @llvm.sqrt.v8f32(<8 x float> %x)
@@ -469,11 +469,11 @@ define <8 x float> @v8f32_estimate(<8 x float> %x) #1 {
 ; SSE-LABEL: v8f32_estimate:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    rsqrtps %xmm0, %xmm2
-; SSE-NEXT:    movaps {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; SSE-NEXT:    mulps %xmm2, %xmm0
 ; SSE-NEXT:    mulps %xmm2, %xmm0
 ; SSE-NEXT:    mulps %xmm3, %xmm2
-; SSE-NEXT:    movaps {{.*#+}} xmm4 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm4 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
 ; SSE-NEXT:    addps %xmm4, %xmm0
 ; SSE-NEXT:    mulps %xmm2, %xmm0
 ; SSE-NEXT:    rsqrtps %xmm1, %xmm2
@@ -498,9 +498,9 @@ define <8 x float> @v8f32_estimate(<8 x float> %x) #1 {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtps %ymm0, %ymm1
 ; AVX512-NEXT:    vmulps %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; AVX512-NEXT:    vfmadd231ps {{.*#+}} ymm2 = (ymm1 * ymm0) + ymm2
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} ymm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} ymm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX512-NEXT:    vfmadd231ps {{[^#]+#+}} ymm2 = (ymm1 * ymm0) + ymm2
 ; AVX512-NEXT:    vmulps %ymm3, %ymm1, %ymm0
 ; AVX512-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
@@ -516,7 +516,7 @@ define <16 x float> @v16f32_no_estimate(<16 x float> %x) #0 {
 ; SSE-NEXT:    sqrtps %xmm2, %xmm5
 ; SSE-NEXT:    sqrtps %xmm1, %xmm2
 ; SSE-NEXT:    sqrtps %xmm0, %xmm1
-; SSE-NEXT:    movaps {{.*#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; SSE-NEXT:    movaps %xmm3, %xmm0
 ; SSE-NEXT:    divps %xmm1, %xmm0
 ; SSE-NEXT:    movaps %xmm3, %xmm1
@@ -530,7 +530,7 @@ define <16 x float> @v16f32_no_estimate(<16 x float> %x) #0 {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vsqrtps %ymm1, %ymm1
 ; AVX1-NEXT:    vsqrtps %ymm0, %ymm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX1-NEXT:    vdivps %ymm0, %ymm2, %ymm0
 ; AVX1-NEXT:    vdivps %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    retq
@@ -538,7 +538,7 @@ define <16 x float> @v16f32_no_estimate(<16 x float> %x) #0 {
 ; AVX512-LABEL: v16f32_no_estimate:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vsqrtps %zmm0, %zmm0
-; AVX512-NEXT:    vbroadcastss {{.*#+}} zmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} zmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX512-NEXT:    vdivps %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %sqrt = tail call <16 x float> @llvm.sqrt.v16f32(<16 x float> %x)
@@ -550,12 +550,12 @@ define <16 x float> @v16f32_estimate(<16 x float> %x) #1 {
 ; SSE-LABEL: v16f32_estimate:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    rsqrtps %xmm0, %xmm5
-; SSE-NEXT:    movaps {{.*#+}} xmm4 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm4 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; SSE-NEXT:    mulps %xmm5, %xmm0
 ; SSE-NEXT:    mulps %xmm5, %xmm0
 ; SSE-NEXT:    movaps %xmm5, %xmm6
 ; SSE-NEXT:    mulps %xmm4, %xmm6
-; SSE-NEXT:    movaps {{.*#+}} xmm5 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; SSE-NEXT:    movaps {{[^#]+#+}} xmm5 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
 ; SSE-NEXT:    addps %xmm5, %xmm0
 ; SSE-NEXT:    mulps %xmm6, %xmm0
 ; SSE-NEXT:    rsqrtps %xmm1, %xmm6
@@ -581,11 +581,11 @@ define <16 x float> @v16f32_estimate(<16 x float> %x) #1 {
 ; AVX1-LABEL: v16f32_estimate:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vrsqrtps %ymm0, %ymm2
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} ymm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX1-NEXT:    vmulps %ymm3, %ymm2, %ymm4
 ; AVX1-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vmulps %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX1-NEXT:    vbroadcastss {{[^#]+#+}} ymm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
 ; AVX1-NEXT:    vaddps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vrsqrtps %ymm1, %ymm5
 ; AVX1-NEXT:    vmulps %ymm0, %ymm4, %ymm0
@@ -600,7 +600,7 @@ define <16 x float> @v16f32_estimate(<16 x float> %x) #1 {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrt14ps %zmm0, %zmm1
 ; AVX512-NEXT:    vmulps %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + mem
+; AVX512-NEXT:    vfmadd213ps {{[^#]+#+}} zmm0 = (zmm1 * zmm0) + mem
 ; AVX512-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
 ; AVX512-NEXT:    vmulps %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
@@ -645,7 +645,7 @@ define float @div_sqrt_fabs_f32(float %x, float %y, float %z) {
 ; AVX512-NEXT:    vmulss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vrsqrtss %xmm1, %xmm1, %xmm2
 ; AVX512-NEXT:    vmulss %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
+; AVX512-NEXT:    vfmadd213ss {{[^#]+#+}} xmm1 = (xmm2 * xmm1) + mem
 ; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX512-NEXT:    vmulss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
@@ -692,9 +692,9 @@ define <4 x float> @div_sqrt_fabs_v4f32(<4 x float> %x, <4 x float> %y, <4 x flo
 ; AVX512-NEXT:    vmulps %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vrsqrtps %xmm1, %xmm2
 ; AVX512-NEXT:    vmulps %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; AVX512-NEXT:    vfmadd231ps {{.*#+}} xmm3 = (xmm2 * xmm1) + xmm3
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX512-NEXT:    vfmadd231ps {{[^#]+#+}} xmm3 = (xmm2 * xmm1) + xmm3
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX512-NEXT:    vmulps %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vmulps %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
@@ -741,14 +741,14 @@ define <4 x float> @div_sqrt_fabs_v4f32_fmf(<4 x float> %x, <4 x float> %y, <4 x
 ; AVX512-LABEL: div_sqrt_fabs_v4f32_fmf:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtps %xmm2, %xmm3
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm4 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm4 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX512-NEXT:    vmulps %xmm4, %xmm3, %xmm4
 ; AVX512-NEXT:    vmulps %xmm3, %xmm2, %xmm2
 ; AVX512-NEXT:    vmulps %xmm3, %xmm2, %xmm2
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
 ; AVX512-NEXT:    vaddps %xmm3, %xmm2, %xmm2
 ; AVX512-NEXT:    vmulps %xmm2, %xmm4, %xmm2
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm3 = [NaN,NaN,NaN,NaN]
 ; AVX512-NEXT:    vandps %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vdivps %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
@@ -825,7 +825,7 @@ define float @div_sqrt_f32(float %x, float %y) {
 ; AVX512-NEXT:    vmulss %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vrsqrtss %xmm1, %xmm1, %xmm2
 ; AVX512-NEXT:    vmulss %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
+; AVX512-NEXT:    vfmadd213ss {{[^#]+#+}} xmm1 = (xmm2 * xmm1) + mem
 ; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX512-NEXT:    vmulss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
@@ -875,9 +875,9 @@ define <4 x float> @div_sqrt_v4f32(<4 x float> %x, <4 x float> %y) {
 ; AVX512-NEXT:    vmulps %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vrsqrtps %xmm1, %xmm2
 ; AVX512-NEXT:    vmulps %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; AVX512-NEXT:    vfmadd231ps {{.*#+}} xmm3 = (xmm2 * xmm1) + xmm3
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX512-NEXT:    vfmadd231ps {{[^#]+#+}} xmm3 = (xmm2 * xmm1) + xmm3
+; AVX512-NEXT:    vbroadcastss {{[^#]+#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX512-NEXT:    vmulps %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vmulps %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
@@ -940,7 +940,7 @@ define double @sqrt_simplify_before_recip(double %x, ptr %p) nounwind {
 ; SSE-LABEL: sqrt_simplify_before_recip:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtsd %xmm0, %xmm0
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    divsd %xmm0, %xmm1
 ; SSE-NEXT:    movsd %xmm1, (%rdi)
 ; SSE-NEXT:    retq
@@ -948,7 +948,7 @@ define double @sqrt_simplify_before_recip(double %x, ptr %p) nounwind {
 ; AVX-LABEL: sqrt_simplify_before_recip:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vdivsd %xmm0, %xmm1, %xmm1
 ; AVX-NEXT:    vmovsd %xmm1, (%rdi)
 ; AVX-NEXT:    retq
@@ -963,7 +963,7 @@ define <2 x double> @sqrt_simplify_before_recip_vec(<2 x double> %x, ptr %p) nou
 ; SSE-LABEL: sqrt_simplify_before_recip_vec:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtpd %xmm0, %xmm0
-; SSE-NEXT:    movapd {{.*#+}} xmm1 = [1.0E+0,1.0E+0]
+; SSE-NEXT:    movapd {{[^#]+#+}} xmm1 = [1.0E+0,1.0E+0]
 ; SSE-NEXT:    divpd %xmm0, %xmm1
 ; SSE-NEXT:    movupd %xmm1, (%rdi)
 ; SSE-NEXT:    retq
@@ -971,7 +971,7 @@ define <2 x double> @sqrt_simplify_before_recip_vec(<2 x double> %x, ptr %p) nou
 ; AVX-LABEL: sqrt_simplify_before_recip_vec:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtpd %xmm0, %xmm0
-; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [1.0E+0,1.0E+0]
+; AVX-NEXT:    vmovddup {{[^#]+#+}} xmm1 = [1.0E+0,1.0E+0]
 ; AVX-NEXT:    # xmm1 = mem[0,0]
 ; AVX-NEXT:    vdivpd %xmm0, %xmm1, %xmm1
 ; AVX-NEXT:    vmovupd %xmm1, (%rdi)
@@ -987,7 +987,7 @@ define double @sqrt_simplify_before_recip_order(double %x, ptr %p) nounwind {
 ; SSE-LABEL: sqrt_simplify_before_recip_order:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtsd %xmm0, %xmm0
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    divsd %xmm0, %xmm1
 ; SSE-NEXT:    movsd %xmm1, (%rdi)
 ; SSE-NEXT:    retq
@@ -995,7 +995,7 @@ define double @sqrt_simplify_before_recip_order(double %x, ptr %p) nounwind {
 ; AVX-LABEL: sqrt_simplify_before_recip_order:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vdivsd %xmm0, %xmm1, %xmm1
 ; AVX-NEXT:    vmovsd %xmm1, (%rdi)
 ; AVX-NEXT:    retq

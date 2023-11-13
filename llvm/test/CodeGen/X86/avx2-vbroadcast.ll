@@ -189,12 +189,12 @@ define <2 x i64> @Q64(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: Q64:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: Q64:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
   %q = load i64, ptr %ptr, align 4
@@ -227,12 +227,12 @@ define <8 x i16> @broadcast_mem_v4i16_v8i16(ptr %ptr) {
 ; X86-LABEL: broadcast_mem_v4i16_v8i16:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: broadcast_mem_v4i16_v8i16:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
   %load = load <4 x i16>, ptr %ptr
   %shuf = shufflevector <4 x i16> %load, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -465,12 +465,12 @@ define <2 x i64> @load_splat_2i64_2i64_1111(ptr %ptr) nounwind uwtable readnone 
 ; X86-LABEL: load_splat_2i64_2i64_1111:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: load_splat_2i64_2i64_1111:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
   %ld = load <2 x i64>, ptr %ptr
@@ -516,12 +516,12 @@ define <2 x double> @load_splat_2f64_2f64_1111(ptr %ptr) nounwind uwtable readno
 ; X86-LABEL: load_splat_2f64_2f64_1111:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: load_splat_2f64_2f64_1111:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
   %ld = load <2 x double>, ptr %ptr
@@ -569,12 +569,12 @@ define <2 x double> @I(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: I:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: I:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
   %q = load double, ptr %ptr, align 4
@@ -586,13 +586,13 @@ entry:
 define <8 x i32> @V111(<8 x i32> %in) nounwind uwtable readnone ssp {
 ; X86-AVX2-LABEL: V111:
 ; X86-AVX2:       ## %bb.0: ## %entry
-; X86-AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [2,2,2,2,2,2,2,2]
+; X86-AVX2-NEXT:    vpbroadcastd {{[^#]+#+}} ymm1 = [2,2,2,2,2,2,2,2]
 ; X86-AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: V111:
 ; X64-AVX2:       ## %bb.0: ## %entry
-; X64-AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [2,2,2,2,2,2,2,2]
+; X64-AVX2-NEXT:    vpbroadcastd {{[^#]+#+}} ymm1 = [2,2,2,2,2,2,2,2]
 ; X64-AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    retq
 ;
@@ -613,13 +613,13 @@ entry:
 define <8 x float> @V113(<8 x float> %in) nounwind uwtable readnone ssp {
 ; X86-AVX2-LABEL: V113:
 ; X86-AVX2:       ## %bb.0: ## %entry
-; X86-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
+; X86-AVX2-NEXT:    vbroadcastss {{[^#]+#+}} ymm1 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
 ; X86-AVX2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: V113:
 ; X64-AVX2:       ## %bb.0: ## %entry
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
+; X64-AVX2-NEXT:    vbroadcastss {{[^#]+#+}} ymm1 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
 ; X64-AVX2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    retq
 ;
@@ -640,12 +640,12 @@ entry:
 define <4 x float> @_e2(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: _e2:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
+; X86-NEXT:    vbroadcastss {{[^#]+#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: _e2:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
+; X64-NEXT:    vbroadcastss {{[^#]+#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
 ; X64-NEXT:    retq
   %vecinit.i = insertelement <4 x float> undef, float        0xbf80000000000000, i32 0
   %vecinit2.i = insertelement <4 x float> %vecinit.i, float  0xbf80000000000000, i32 1
@@ -657,12 +657,12 @@ define <4 x float> @_e2(ptr %ptr) nounwind uwtable readnone ssp {
 define <8 x i8> @_e4(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: _e4:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm0 = [52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52]
+; X86-NEXT:    vbroadcastss {{[^#]+#+}} xmm0 = [52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: _e4:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm0 = [52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52]
+; X64-NEXT:    vbroadcastss {{[^#]+#+}} xmm0 = [52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52]
 ; X64-NEXT:    retq
   %vecinit0.i = insertelement <8 x i8> undef, i8       52, i32 0
   %vecinit1.i = insertelement <8 x i8> %vecinit0.i, i8 52, i32 1
@@ -864,12 +864,12 @@ define   <4 x i64> @_inreg4xi64(<4 x i64> %a) {
 define   <2 x i64> @_inreg2xi64(<2 x i64> %a) {
 ; X86-LABEL: _inreg2xi64:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X86-NEXT:    vmovddup {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: _inreg2xi64:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X64-NEXT:    vmovddup {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; X64-NEXT:    retq
   %b = shufflevector <2 x i64> %a, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %b
@@ -892,12 +892,12 @@ define   <4 x double> @_inreg4xdouble(<4 x double> %a) {
 define   <2 x double> @_inreg2xdouble(<2 x double> %a) {
 ; X86-LABEL: _inreg2xdouble:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X86-NEXT:    vmovddup {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: _inreg2xdouble:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X64-NEXT:    vmovddup {{[^#]+#+}} xmm0 = xmm0[0,0]
 ; X64-NEXT:    retq
   %b = shufflevector <2 x double> %a, <2 x double> undef, <2 x i32> zeroinitializer
   ret <2 x double> %b
@@ -1368,7 +1368,7 @@ define void @isel_crash_2q(ptr %cV_R.addr) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovaps %xmm0, (%esp)
-; X86-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; X86-NEXT:    vmovddup {{[^#]+#+}} xmm1 = mem[0,0]
 ; X86-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    vmovaps %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    addl $60, %esp
@@ -1378,7 +1378,7 @@ define void @isel_crash_2q(ptr %cV_R.addr) {
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; X64-NEXT:    vmovddup {{[^#]+#+}} xmm1 = mem[0,0]
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
@@ -1454,7 +1454,7 @@ define <8 x i16> @broadcast_x86_mmx(x86_mmx %tmp) nounwind {
 ; X86:       ## %bb.0: ## %bb
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
 ;

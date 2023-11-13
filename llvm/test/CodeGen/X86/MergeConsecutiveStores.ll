@@ -1396,14 +1396,14 @@ define void @merge_vec_stores_of_constant_splat(<4 x i32>* %ptr) {
 ; X86-LABEL: merge_vec_stores_of_constant_splat:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm0 = [42,42,42,42]
+; X86-NEXT:    vbroadcastss {{[^#]+#+}} xmm0 = [42,42,42,42]
 ; X86-NEXT:    vmovaps %xmm0, 48(%eax)
 ; X86-NEXT:    vmovaps %xmm0, 64(%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: merge_vec_stores_of_constant_splat:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm0 = [42,42,42,42]
+; X64-NEXT:    vbroadcastss {{[^#]+#+}} xmm0 = [42,42,42,42]
 ; X64-NEXT:    vmovaps %xmm0, 48(%rdi)
 ; X64-NEXT:    vmovaps %xmm0, 64(%rdi)
 ; X64-NEXT:    retq
@@ -1418,17 +1418,17 @@ define void @merge_vec_stores_of_constants(<4 x i32>* %ptr) {
 ; X86-LABEL: merge_vec_stores_of_constants:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [25,51,45,0]
+; X86-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [25,51,45,0]
 ; X86-NEXT:    vmovaps %xmm0, 48(%eax)
-; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [0,265,26,0]
+; X86-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [0,265,26,0]
 ; X86-NEXT:    vmovaps %xmm0, 64(%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: merge_vec_stores_of_constants:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [25,51,45,0]
+; X64-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [25,51,45,0]
 ; X64-NEXT:    vmovaps %xmm0, 48(%rdi)
-; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [0,265,26,0]
+; X64-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [0,265,26,0]
 ; X64-NEXT:    vmovaps %xmm0, 64(%rdi)
 ; X64-NEXT:    retq
   %idx0 = getelementptr inbounds <4 x i32>, <4 x i32>* %ptr, i64 3
@@ -1470,7 +1470,7 @@ define void @merge_vec_element_and_scalar_load([6 x i64]* %array) {
 ; X86-NEXT:    movl 4(%eax), %edx
 ; X86-NEXT:    movl %edx, 36(%eax)
 ; X86-NEXT:    movl %ecx, 32(%eax)
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vmovsd %xmm0, 40(%eax)
 ; X86-NEXT:    retl
 ;

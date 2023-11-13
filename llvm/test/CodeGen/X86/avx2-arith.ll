@@ -95,8 +95,8 @@ define <16 x i16> @test_vpmullw(<16 x i16> %i, <16 x i16> %j) nounwind readnone 
 define <16 x i8> @mul_v16i8(<16 x i8> %i, <16 x i8> %j) nounwind readnone {
 ; X86-LABEL: mul_v16i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; X86-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; X86-NEXT:    vpmovzxbw {{[^#]+#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; X86-NEXT:    vpmovzxbw {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; X86-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    vextracti128 $1, %ymm0, %xmm1
@@ -106,8 +106,8 @@ define <16 x i8> @mul_v16i8(<16 x i8> %i, <16 x i8> %j) nounwind readnone {
 ;
 ; X64-LABEL: mul_v16i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; X64-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; X64-NEXT:    vpmovzxbw {{[^#]+#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; X64-NEXT:    vpmovzxbw {{[^#]+#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; X64-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vextracti128 $1, %ymm0, %xmm1
@@ -121,13 +121,13 @@ define <16 x i8> @mul_v16i8(<16 x i8> %i, <16 x i8> %j) nounwind readnone {
 define <32 x i8> @mul_v32i8(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
 ; CHECK-LABEL: mul_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
-; CHECK-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
+; CHECK-NEXT:    vpunpckhbw {{[^#]+#+}} ymm2 = ymm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
+; CHECK-NEXT:    vpunpckhbw {{[^#]+#+}} ymm3 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; CHECK-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
-; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; CHECK-NEXT:    vpbroadcastw {{[^#]+#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; CHECK-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
-; CHECK-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
+; CHECK-NEXT:    vpunpcklbw {{[^#]+#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
+; CHECK-NEXT:    vpunpcklbw {{[^#]+#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; CHECK-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpand %ymm3, %ymm0, %ymm0
 ; CHECK-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
@@ -234,7 +234,7 @@ define <8 x i16> @mul_const8(<8 x i16> %x) {
 define <8 x i32> @mul_const9(<8 x i32> %x) {
 ; CHECK-LABEL: mul_const9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,0,0,0]
+; CHECK-NEXT:    vmovdqa {{[^#]+#+}} xmm1 = [2,0,0,0]
 ; CHECK-NEXT:    vpmulld %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %y = mul <8 x i32> %x, <i32 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
@@ -245,7 +245,7 @@ define <8 x i32> @mul_const9(<8 x i32> %x) {
 define <4 x i32> @mul_const10(<4 x i32> %x) {
 ; CHECK-LABEL: mul_const10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [16843009,16843009,16843009,16843009]
+; CHECK-NEXT:    vpbroadcastd {{[^#]+#+}} xmm1 = [16843009,16843009,16843009,16843009]
 ; CHECK-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %m = mul <4 x i32> %x, <i32 16843009, i32 16843009, i32 16843009, i32 16843009>
@@ -256,7 +256,7 @@ define <4 x i32> @mul_const10(<4 x i32> %x) {
 define <4 x i32> @mul_const11(<4 x i32> %x) {
 ; CHECK-LABEL: mul_const11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2155905152,2155905152,2155905152,2155905152]
+; CHECK-NEXT:    vpbroadcastd {{[^#]+#+}} xmm1 = [2155905152,2155905152,2155905152,2155905152]
 ; CHECK-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %m = mul <4 x i32> %x, <i32 2155905152, i32 2155905152, i32 2155905152, i32 2155905152>

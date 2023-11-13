@@ -187,14 +187,14 @@ declare <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32>, <4 x i32>) nounwind readno
 define <8 x i16> @test_x86_sse41_packusdw_fold() {
 ; X86-SSE-LABEL: test_x86_sse41_packusdw_fold:
 ; X86-SSE:       ## %bb.0:
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,65535,65535,0,0]
+; X86-SSE-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,0,0,0,65535,65535,0,0]
 ; X86-SSE-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
 ; X86-SSE-NEXT:    ## fixup A - offset: 3, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-SSE-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X86-AVX1-LABEL: test_x86_sse41_packusdw_fold:
 ; X86-AVX1:       ## %bb.0:
-; X86-AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,65535,65535,0,0]
+; X86-AVX1-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [0,0,0,0,65535,65535,0,0]
 ; X86-AVX1-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
 ; X86-AVX1-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
@@ -208,14 +208,14 @@ define <8 x i16> @test_x86_sse41_packusdw_fold() {
 ;
 ; X64-SSE-LABEL: test_x86_sse41_packusdw_fold:
 ; X64-SSE:       ## %bb.0:
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,65535,65535,0,0]
+; X64-SSE-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,0,0,0,65535,65535,0,0]
 ; X64-SSE-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
 ; X64-SSE-NEXT:    ## fixup A - offset: 3, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-SSE-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: test_x86_sse41_packusdw_fold:
 ; X64-AVX1:       ## %bb.0:
-; X64-AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,65535,65535,0,0]
+; X64-AVX1-NEXT:    vmovaps {{[^#]+#+}} xmm0 = [0,0,0,0,65535,65535,0,0]
 ; X64-AVX1-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
 ; X64-AVX1-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-AVX1-NEXT:    retq ## encoding: [0xc3]

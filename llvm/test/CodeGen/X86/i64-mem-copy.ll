@@ -17,7 +17,7 @@ define void @foo(ptr %x, ptr %y) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    movsd %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
@@ -25,7 +25,7 @@ define void @foo(ptr %x, ptr %y) {
 ; X32AVX:       # %bb.0:
 ; X32AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X32AVX-NEXT:    vmovsd %xmm0, (%eax)
 ; X32AVX-NEXT:    retl
   %tmp1 = load i64, ptr %y, align 8
@@ -111,10 +111,10 @@ define void @PR23476(<5 x i64> %in, ptr %out, i32 %index) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rsi, %xmm0
 ; X64-NEXT:    movq %rdi, %xmm1
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X64-NEXT:    punpcklqdq {{[^#]+#+}} xmm1 = xmm1[0],xmm0[0]
 ; X64-NEXT:    movq %rcx, %xmm0
 ; X64-NEXT:    movq %rdx, %xmm2
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; X64-NEXT:    punpcklqdq {{[^#]+#+}} xmm2 = xmm2[0],xmm0[0]
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    andl $7, %eax
 ; X64-NEXT:    movq %r8, %xmm0
@@ -134,13 +134,13 @@ define void @PR23476(<5 x i64> %in, ptr %out, i32 %index) nounwind {
 ; X32-NEXT:    movl 52(%ebp), %eax
 ; X32-NEXT:    andl $7, %eax
 ; X32-NEXT:    movl 48(%ebp), %ecx
-; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    movups 8(%ebp), %xmm1
 ; X32-NEXT:    movups 24(%ebp), %xmm2
 ; X32-NEXT:    movaps %xmm2, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movaps %xmm1, (%esp)
 ; X32-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    movsd %xmm0, (%ecx)
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
@@ -152,14 +152,14 @@ define void @PR23476(<5 x i64> %in, ptr %out, i32 %index) nounwind {
 ; X32AVX-NEXT:    movl %esp, %ebp
 ; X32AVX-NEXT:    andl $-32, %esp
 ; X32AVX-NEXT:    subl $96, %esp
-; X32AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X32AVX-NEXT:    movl 52(%ebp), %eax
 ; X32AVX-NEXT:    andl $7, %eax
 ; X32AVX-NEXT:    movl 48(%ebp), %ecx
 ; X32AVX-NEXT:    vmovups 8(%ebp), %ymm1
 ; X32AVX-NEXT:    vmovaps %ymm1, (%esp)
 ; X32AVX-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
-; X32AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X32AVX-NEXT:    vmovsd %xmm0, (%ecx)
 ; X32AVX-NEXT:    movl %ebp, %esp
 ; X32AVX-NEXT:    popl %ebp

@@ -50,12 +50,12 @@ define <8 x i16> @load16_ins_elt0_v8i16(ptr %p) nounwind {
 define <4 x i32> @load32_ins_elt0_v4i32(ptr %p) nounwind {
 ; SSE-LABEL: load32_ins_elt0_v4i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load32_ins_elt0_v4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    retq
   %x = load i32, ptr %p
   %ins = insertelement <4 x i32> undef, i32 %x, i32 0
@@ -65,12 +65,12 @@ define <4 x i32> @load32_ins_elt0_v4i32(ptr %p) nounwind {
 define <2 x i64> @load64_ins_elt0_v2i64(ptr %p) nounwind {
 ; SSE-LABEL: load64_ins_elt0_v2i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load64_ins_elt0_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    retq
   %x = load i64, ptr %p
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
@@ -80,12 +80,12 @@ define <2 x i64> @load64_ins_elt0_v2i64(ptr %p) nounwind {
 define <4 x float> @load32_ins_elt0_v4f32(ptr %p) nounwind {
 ; SSE-LABEL: load32_ins_elt0_v4f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load32_ins_elt0_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    retq
   %x = load float, ptr %p
   %ins = insertelement <4 x float> undef, float %x, i32 0
@@ -95,12 +95,12 @@ define <4 x float> @load32_ins_elt0_v4f32(ptr %p) nounwind {
 define <2 x double> @load64_ins_elt0_v2f64(ptr %p) nounwind {
 ; SSE-LABEL: load64_ins_elt0_v2f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load64_ins_elt0_v2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    retq
   %x = load double, ptr %p
   %ins = insertelement <2 x double> undef, double %x, i32 0
@@ -136,14 +136,14 @@ define <8 x i16> @load16_ins_eltc_v8i16(ptr %p) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movzwl (%rdi), %eax
 ; SSE-NEXT:    movd %eax, %xmm0
-; SSE-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5]
+; SSE-NEXT:    pslldq {{[^#]+#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: load16_ins_eltc_v8i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movzwl (%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
-; AVX1-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5]
+; AVX1-NEXT:    vpslldq {{[^#]+#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load16_ins_eltc_v8i16:
@@ -158,8 +158,8 @@ define <8 x i16> @load16_ins_eltc_v8i16(ptr %p) nounwind {
 define <4 x i32> @load32_ins_eltc_v4i32(ptr %p) nounwind {
 ; SSE-LABEL: load32_ins_eltc_v4i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; SSE-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load32_ins_eltc_v4i32:
@@ -174,13 +174,13 @@ define <4 x i32> @load32_ins_eltc_v4i32(ptr %p) nounwind {
 define <2 x i64> @load64_ins_eltc_v2i64(ptr %p) nounwind {
 ; SSE-LABEL: load64_ins_eltc_v2i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; SSE-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load64_ins_eltc_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; AVX-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; AVX-NEXT:    retq
   %x = load i64, ptr %p
   %ins = insertelement <2 x i64> undef, i64 %x, i32 1
@@ -190,8 +190,8 @@ define <2 x i64> @load64_ins_eltc_v2i64(ptr %p) nounwind {
 define <4 x float> @load32_ins_eltc_v4f32(ptr %p) nounwind {
 ; SSE-LABEL: load32_ins_eltc_v4f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load32_ins_eltc_v4f32:
@@ -206,12 +206,12 @@ define <4 x float> @load32_ins_eltc_v4f32(ptr %p) nounwind {
 define <2 x double> @load64_ins_eltc_v2f64(ptr %p) nounwind {
 ; SSE-LABEL: load64_ins_eltc_v2f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
+; SSE-NEXT:    movddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load64_ins_eltc_v2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; AVX-NEXT:    vmovddup {{[^#]+#+}} xmm0 = mem[0,0]
 ; AVX-NEXT:    retq
   %x = load double, ptr %p
   %ins = insertelement <2 x double> undef, double %x, i32 1
@@ -265,12 +265,12 @@ define <16 x i16> @load16_ins_elt0_v16i16(ptr %p) nounwind {
 define <8 x i32> @load32_ins_elt0_v8i32(ptr %p) nounwind {
 ; SSE-LABEL: load32_ins_elt0_v8i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load32_ins_elt0_v8i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    retq
   %x = load i32, ptr %p
   %ins = insertelement <8 x i32> undef, i32 %x, i32 0
@@ -280,12 +280,12 @@ define <8 x i32> @load32_ins_elt0_v8i32(ptr %p) nounwind {
 define <4 x i64> @load64_ins_elt0_v4i64(ptr %p) nounwind {
 ; SSE-LABEL: load64_ins_elt0_v4i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load64_ins_elt0_v4i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    retq
   %x = load i64, ptr %p
   %ins = insertelement <4 x i64> undef, i64 %x, i32 0
@@ -295,12 +295,12 @@ define <4 x i64> @load64_ins_elt0_v4i64(ptr %p) nounwind {
 define <8 x float> @load32_ins_elt0_v8f32(ptr %p) nounwind {
 ; SSE-LABEL: load32_ins_elt0_v8f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load32_ins_elt0_v8f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    retq
   %x = load float, ptr %p
   %ins = insertelement <8 x float> undef, float %x, i32 0
@@ -310,12 +310,12 @@ define <8 x float> @load32_ins_elt0_v8f32(ptr %p) nounwind {
 define <4 x double> @load64_ins_elt0_v4f64(ptr %p) nounwind {
 ; SSE-LABEL: load64_ins_elt0_v4f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load64_ins_elt0_v4f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    retq
   %x = load double, ptr %p
   %ins = insertelement <4 x double> undef, double %x, i32 0
@@ -375,8 +375,8 @@ define <16 x i16> @load16_ins_eltc_v16i16(ptr %p) nounwind {
 define <8 x i32> @load32_ins_eltc_v8i32(ptr %p) nounwind {
 ; SSE-LABEL: load32_ins_eltc_v8i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
+; SSE-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[0,0,0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load32_ins_eltc_v8i32:
@@ -391,8 +391,8 @@ define <8 x i32> @load32_ins_eltc_v8i32(ptr %p) nounwind {
 define <4 x i64> @load64_ins_eltc_v4i64(ptr %p) nounwind {
 ; SSE-LABEL: load64_ins_eltc_v4i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,0,1]
+; SSE-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load64_ins_eltc_v4i64:
@@ -407,8 +407,8 @@ define <4 x i64> @load64_ins_eltc_v4i64(ptr %p) nounwind {
 define <8 x float> @load32_ins_eltc_v8f32(ptr %p) nounwind {
 ; SSE-LABEL: load32_ins_eltc_v8f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    movsldup {{.*#+}} xmm1 = xmm0[0,0,2,2]
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movsldup {{[^#]+#+}} xmm1 = xmm0[0,0,2,2]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load32_ins_eltc_v8f32:
@@ -423,7 +423,7 @@ define <8 x float> @load32_ins_eltc_v8f32(ptr %p) nounwind {
 define <4 x double> @load64_ins_eltc_v4f64(ptr %p) nounwind {
 ; SSE-LABEL: load64_ins_eltc_v4f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movddup {{.*#+}} xmm1 = mem[0,0]
+; SSE-NEXT:    movddup {{[^#]+#+}} xmm1 = mem[0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load64_ins_eltc_v4f64:

@@ -168,8 +168,8 @@ define <2 x i64> @demandedbits_blendvpd(i64 %a0, i64 %a2, <2 x double> %a3) {
 ; SSE-NEXT:    orq $4, %rdi
 ; SSE-NEXT:    movq %rax, %xmm1
 ; SSE-NEXT:    movq %rdi, %xmm2
-; SSE-NEXT:    movq {{.*#+}} xmm1 = xmm1[0],zero
-; SSE-NEXT:    movq {{.*#+}} xmm2 = xmm2[0],zero
+; SSE-NEXT:    movq {{[^#]+#+}} xmm1 = xmm1[0],zero
+; SSE-NEXT:    movq {{[^#]+#+}} xmm2 = xmm2[0],zero
 ; SSE-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
 ; SSE-NEXT:    psrlq $11, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
@@ -182,8 +182,8 @@ define <2 x i64> @demandedbits_blendvpd(i64 %a0, i64 %a2, <2 x double> %a3) {
 ; AVX-NEXT:    orq $4, %rdi
 ; AVX-NEXT:    vmovq %rax, %xmm1
 ; AVX-NEXT:    vmovq %rdi, %xmm2
-; AVX-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
-; AVX-NEXT:    vmovq {{.*#+}} xmm2 = xmm2[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm1 = xmm1[0],zero
+; AVX-NEXT:    vmovq {{[^#]+#+}} xmm2 = xmm2[0],zero
 ; AVX-NEXT:    vblendvpd %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX-NEXT:    vpsrlq $11, %xmm0, %xmm0
 ; AVX-NEXT:    retq

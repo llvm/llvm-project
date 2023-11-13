@@ -5,7 +5,7 @@ define <4 x float> @a(ptr %y) nounwind {
 ; CHECK-LABEL: a:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movups (%rdi), %xmm0
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,2,1,0]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[3,2,1,0]
 ; CHECK-NEXT:    retq
   %x = load <4 x float>, ptr %y, align 4
   %a = extractelement <4 x float> %x, i32 0
@@ -23,7 +23,7 @@ define <4 x float> @b(ptr %y, <4 x float> %z) nounwind {
 ; CHECK-LABEL: b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movups (%rdi), %xmm1
-; CHECK-NEXT:    unpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-NEXT:    unpckhps {{[^#]+#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; CHECK-NEXT:    retq
   %x = load <4 x float>, ptr %y, align 4
   %a = extractelement <4 x float> %x, i32 2
@@ -41,7 +41,7 @@ define <2 x double> @c(ptr %y) nounwind {
 ; CHECK-LABEL: c:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movups (%rdi), %xmm0
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[2,3,0,1]
 ; CHECK-NEXT:    retq
   %x = load <2 x double>, ptr %y, align 8
   %a = extractelement <2 x double> %x, i32 0
@@ -55,7 +55,7 @@ define <2 x double> @d(ptr %y, <2 x double> %z) nounwind {
 ; CHECK-LABEL: d:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movups (%rdi), %xmm1
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; CHECK-NEXT:    unpckhpd {{[^#]+#+}} xmm0 = xmm0[1],xmm1[1]
 ; CHECK-NEXT:    retq
   %x = load <2 x double>, ptr %y, align 8
   %a = extractelement <2 x double> %x, i32 1

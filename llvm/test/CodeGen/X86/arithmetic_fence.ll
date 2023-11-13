@@ -7,9 +7,9 @@ define float @f1(float %a, float %b, float %c) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm0 * xmm1) + mem
+; X86-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    vfmadd213ss {{[^#]+#+}} xmm1 = (xmm0 * xmm1) + mem
 ; X86-NEXT:    vmovss %xmm1, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
@@ -18,7 +18,7 @@ define float @f1(float %a, float %b, float %c) {
 ;
 ; X64-LABEL: f1:
 ; X64:       # %bb.0:
-; X64-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
+; X64-NEXT:    vfmadd213ss {{[^#]+#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; X64-NEXT:    retq
   %mul = fmul fast float %b, %a
   %add = fadd fast float %mul, %c
@@ -30,7 +30,7 @@ define float @f2(float %a, float %b, float %c) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmulss {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; X86-NEXT:    #ARITH_FENCE
 ; X86-NEXT:    vaddss {{[0-9]+}}(%esp), %xmm0, %xmm0
@@ -62,7 +62,7 @@ define double @f3(double %a) {
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
@@ -91,7 +91,7 @@ define double @f4(double %a) {
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovapd %xmm0, %xmm1
 ; X86-NEXT:    #ARITH_FENCE

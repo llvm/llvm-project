@@ -6,7 +6,7 @@ define <4 x i64> @test1(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; CHECK-NEXT:    vunpckhpd {{[^#]+#+}} xmm0 = xmm0[1],xmm1[1]
 ; CHECK-NEXT:    retl
  %b = shufflevector <4 x i64> %a, <4 x i64> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
  ret <4 x i64>%b
@@ -16,7 +16,7 @@ define <8 x i16> @test2(ptr %v) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retl
   %v9 = load <4 x i16>, ptr %v, align 8
   %v10 = shufflevector <4 x i16> %v9, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>

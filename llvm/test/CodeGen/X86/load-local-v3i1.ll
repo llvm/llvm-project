@@ -34,7 +34,7 @@ define  <3 x i32> @masked_load_v3(ptr addrspace(1), <3 x i1>) {
 ; CHECK-NEXT:  .LBB0_6: # %else5
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_1: # %cond.load
-; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movd {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    testb $2, %cl
 ; CHECK-NEXT:    je .LBB0_4
 ; CHECK-NEXT:  .LBB0_3: # %cond.load1

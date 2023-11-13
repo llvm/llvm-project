@@ -800,11 +800,11 @@ define i32 @mul_maybe_zero(i32 %x, i32 %y) {
 define i32 @bitcast_known_nonzero(<2 x i16> %xx) {
 ; CHECK-LABEL: bitcast_known_nonzero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; CHECK-NEXT:    punpcklwd {{[^#]+#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; CHECK-NEXT:    pslld $23, %xmm0
 ; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; CHECK-NEXT:    pshuflw {{[^#]+#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; CHECK-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    bsfl %eax, %ecx

@@ -13,7 +13,7 @@ define i32 @ipt_do_table(ptr noalias nocapture readonly) {
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [12297829382473034410,12297829382473034410]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm0 = [12297829382473034410,12297829382473034410]
 ; CHECK-NEXT:    movaps %xmm0, (%rsp)
 ; CHECK-NEXT:    movabsq $-6148914691236517206, %rcx # imm = 0xAAAAAAAAAAAAAAAA
 ; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)

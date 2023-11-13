@@ -126,8 +126,8 @@ declare x86_mmx @llvm.x86.mmx.punpckldq(x86_mmx, x86_mmx) nounwind readnone
 
 define i64 @test82(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; ALL-LABEL: @test82
-; X86: punpckldq {{.*#+}} mm0 = mm0[0],mem[0]
-; X64: punpckldq {{.*#+}} mm0 = mm0[0],mm1[0]
+; X86: punpckldq {{[^#]+#+}} mm0 = mm0[0],mem[0]
+; X64: punpckldq {{[^#]+#+}} mm0 = mm0[0],mm1[0]
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
@@ -144,8 +144,8 @@ declare x86_mmx @llvm.x86.mmx.punpcklwd(x86_mmx, x86_mmx) nounwind readnone
 
 define i64 @test81(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; ALL-LABEL: @test81
-; X86: punpcklwd {{.*#+}} mm0 = mm0[0],mem[0],mm0[1],mem[1]
-; X64: punpcklwd {{.*#+}} mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
+; X86: punpcklwd {{[^#]+#+}} mm0 = mm0[0],mem[0],mm0[1],mem[1]
+; X64: punpcklwd {{[^#]+#+}} mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
@@ -162,8 +162,8 @@ declare x86_mmx @llvm.x86.mmx.punpcklbw(x86_mmx, x86_mmx) nounwind readnone
 
 define i64 @test80(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; ALL-LABEL: @test80
-; X86: punpcklbw {{.*#+}} mm0 = mm0[0],mem[0],mm0[1],mem[1],mm0[2],mem[2],mm0[3],mem[3]
-; X64: punpcklbw {{.*#+}} mm0 = mm0[0],mm1[0],mm0[1],mm1[1],mm0[2],mm1[2],mm0[3],mm1[3]
+; X86: punpcklbw {{[^#]+#+}} mm0 = mm0[0],mem[0],mm0[1],mem[1],mm0[2],mem[2],mm0[3],mem[3]
+; X64: punpcklbw {{[^#]+#+}} mm0 = mm0[0],mm1[0],mm0[1],mm1[1],mm0[2],mm1[2],mm0[3],mm1[3]
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
@@ -180,8 +180,8 @@ declare x86_mmx @llvm.x86.mmx.punpckhdq(x86_mmx, x86_mmx) nounwind readnone
 
 define i64 @test79(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; ALL-LABEL: @test79
-; X86: punpckhdq {{.*#+}} mm0 = mm0[1],mem[1]
-; X64: punpckhdq {{.*#+}} mm0 = mm0[1],mm1[1]
+; X86: punpckhdq {{[^#]+#+}} mm0 = mm0[1],mem[1]
+; X64: punpckhdq {{[^#]+#+}} mm0 = mm0[1],mm1[1]
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
@@ -198,8 +198,8 @@ declare x86_mmx @llvm.x86.mmx.punpckhwd(x86_mmx, x86_mmx) nounwind readnone
 
 define i64 @test78(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; ALL-LABEL: @test78
-; X86: punpckhwd {{.*#+}} mm0 = mm0[2],mem[2],mm0[3],mem[3]
-; X64: punpckhwd {{.*#+}} mm0 = mm0[2],mm1[2],mm0[3],mm1[3]
+; X86: punpckhwd {{[^#]+#+}} mm0 = mm0[2],mem[2],mm0[3],mem[3]
+; X64: punpckhwd {{[^#]+#+}} mm0 = mm0[2],mm1[2],mm0[3],mm1[3]
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
@@ -216,8 +216,8 @@ declare x86_mmx @llvm.x86.mmx.punpckhbw(x86_mmx, x86_mmx) nounwind readnone
 
 define i64 @test77(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; ALL-LABEL: @test77
-; X86: punpckhbw {{.*#+}} mm0 = mm0[4],mem[4],mm0[5],mem[5],mm0[6],mem[6],mm0[7],mem[7]
-; X64: punpckhbw {{.*#+}} mm0 = mm0[4],mm1[4],mm0[5],mm1[5],mm0[6],mm1[6],mm0[7],mm1[7]
+; X86: punpckhbw {{[^#]+#+}} mm0 = mm0[4],mem[4],mm0[5],mem[5],mm0[6],mem[6],mm0[7],mem[7]
+; X64: punpckhbw {{[^#]+#+}} mm0 = mm0[4],mm1[4],mm0[5],mm1[5],mm0[6],mm1[6],mm0[7],mm1[7]
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
@@ -1146,8 +1146,8 @@ declare x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx, i8) nounwind readnone
 
 define i64 @test21(<1 x i64> %a) nounwind readnone optsize ssp {
 ; ALL-LABEL: @test21
-; X86: pshufw {{.*#+}} mm0 = mem[3,0,0,0]
-; X64: pshufw {{.*#+}} mm0 = mm0[3,0,0,0]
+; X86: pshufw {{[^#]+#+}} mm0 = mem[3,0,0,0]
+; X64: pshufw {{[^#]+#+}} mm0 = mm0[3,0,0,0]
 entry:
   %0 = bitcast <1 x i64> %a to <4 x i16>
   %1 = bitcast <4 x i16> %0 to x86_mmx
@@ -1160,8 +1160,8 @@ entry:
 
 define i32 @test21_2(<1 x i64> %a) nounwind readnone optsize ssp {
 ; ALL-LABEL: @test21_2
-; X86: pshufw {{.*#+}} mm0 = mem[3,0,0,0]
-; X64: pshufw {{.*#+}} mm0 = mm0[3,0,0,0]
+; X86: pshufw {{[^#]+#+}} mm0 = mem[3,0,0,0]
+; X64: pshufw {{[^#]+#+}} mm0 = mm0[3,0,0,0]
 ; ALL: movd
 entry:
   %0 = bitcast <1 x i64> %a to <4 x i16>

@@ -4,8 +4,8 @@
 define <4 x i32> @unpck_permute_canonicalized_mask(<4 x i32> %a, <4 x i32> %b) {
 ; AVX2-LABEL: unpck_permute_canonicalized_mask:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3,2,1]
+; AVX2-NEXT:    vunpckhps {{[^#]+#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX2-NEXT:    vshufps {{[^#]+#+}} xmm0 = xmm0[0,3,2,1]
 ; AVX2-NEXT:    retq
   ; This mask will get canonicalized to vector_shuffle<6, 3, -1, 2> %b, %a.
   ; Make sure the generated permute masks are still correct.

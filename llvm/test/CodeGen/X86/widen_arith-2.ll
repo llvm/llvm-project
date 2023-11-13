@@ -9,7 +9,7 @@ define void @update(ptr %dst_i, ptr %src_i, i32 %n) nounwind {
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = <4,4,4,4,4,4,4,4,u,u,u,u,u,u,u,u>
+; CHECK-NEXT:    movdqa {{[^#]+#+}} xmm1 = <4,4,4,4,4,4,4,4,u,u,u,u,u,u,u,u>
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %forcond
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -25,7 +25,7 @@ define void @update(ptr %dst_i, ptr %src_i, i32 %n) nounwind {
 ; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movq {{[^#]+#+}} xmm2 = mem[0],zero
 ; CHECK-NEXT:    psubb %xmm0, %xmm2
 ; CHECK-NEXT:    pand %xmm1, %xmm2
 ; CHECK-NEXT:    movq %xmm2, (%edx,%eax,8)

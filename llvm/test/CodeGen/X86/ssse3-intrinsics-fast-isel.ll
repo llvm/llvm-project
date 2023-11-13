@@ -62,13 +62,13 @@ declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1) nounwind readnone
 define <2 x i64> @test_mm_alignr_epi8(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE-LABEL: test_mm_alignr_epi8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    palignr {{.*#+}} xmm1 = xmm0[2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0,1]
+; SSE-NEXT:    palignr {{[^#]+#+}} xmm1 = xmm0[2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0,1]
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_mm_alignr_epi8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0,1]
+; AVX-NEXT:    vpalignr {{[^#]+#+}} xmm0 = xmm0[2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0,1]
 ; AVX-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
@@ -80,13 +80,13 @@ define <2 x i64> @test_mm_alignr_epi8(<2 x i64> %a0, <2 x i64> %a1) {
 define <2 x i64> @test2_mm_alignr_epi8(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE-LABEL: test2_mm_alignr_epi8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    palignr {{.*#+}} xmm1 = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0]
+; SSE-NEXT:    palignr {{[^#]+#+}} xmm1 = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0]
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test2_mm_alignr_epi8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0]
+; AVX-NEXT:    vpalignr {{[^#]+#+}} xmm0 = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0]
 ; AVX-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>

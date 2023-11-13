@@ -9,8 +9,8 @@ define void @update(ptr %dst_i, ptr %src_i, i32 %n) nounwind {
 ; WIDE-NEXT:    subl $12, %esp
 ; WIDE-NEXT:    movl $0, (%esp)
 ; WIDE-NEXT:    pcmpeqd %xmm0, %xmm0
-; WIDE-NEXT:    movdqa {{.*#+}} xmm1 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
-; WIDE-NEXT:    movdqa {{.*#+}} xmm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
+; WIDE-NEXT:    movdqa {{[^#]+#+}} xmm1 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
+; WIDE-NEXT:    movdqa {{[^#]+#+}} xmm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
 ; WIDE-NEXT:    .p2align 4, 0x90
 ; WIDE-NEXT:  .LBB0_1: # %forcond
 ; WIDE-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -26,7 +26,7 @@ define void @update(ptr %dst_i, ptr %src_i, i32 %n) nounwind {
 ; WIDE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; WIDE-NEXT:    addl {{[0-9]+}}(%esp), %edx
 ; WIDE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; WIDE-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
+; WIDE-NEXT:    movq {{[^#]+#+}} xmm3 = mem[0],zero
 ; WIDE-NEXT:    psubb %xmm0, %xmm3
 ; WIDE-NEXT:    psrlw $2, %xmm3
 ; WIDE-NEXT:    pand %xmm1, %xmm3

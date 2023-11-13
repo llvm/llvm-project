@@ -294,24 +294,24 @@ define void @merge_2_v4f32_align1_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm0
 ; X86-SSE2-NEXT:    movd %xmm1, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, (%eax)
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
+; X86-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm1[3,3,3,3]
 ; X86-SSE2-NEXT:    movd %xmm2, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 12(%eax)
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
+; X86-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm1[2,3,2,3]
 ; X86-SSE2-NEXT:    movd %xmm2, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 8(%eax)
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; X86-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm1[1,1,1,1]
 ; X86-SSE2-NEXT:    movd %xmm1, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 4(%eax)
 ; X86-SSE2-NEXT:    movd %xmm0, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 16(%eax)
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; X86-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[3,3,3,3]
 ; X86-SSE2-NEXT:    movd %xmm1, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 28(%eax)
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[2,3,2,3]
 ; X86-SSE2-NEXT:    movd %xmm1, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 24(%eax)
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-SSE2-NEXT:    movd %xmm0, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 20(%eax)
 ; X86-SSE2-NEXT:    retl
@@ -336,12 +336,12 @@ define void @merge_2_v4f32_align1_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE2-NEXT:    movdqu 16(%rdi), %xmm1
 ; X64-SSE2-NEXT:    movq %xmm0, %rax
 ; X64-SSE2-NEXT:    movntiq %rax, (%rsi)
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; X64-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[2,3,2,3]
 ; X64-SSE2-NEXT:    movq %xmm0, %rax
 ; X64-SSE2-NEXT:    movntiq %rax, 8(%rsi)
 ; X64-SSE2-NEXT:    movq %xmm1, %rax
 ; X64-SSE2-NEXT:    movntiq %rax, 16(%rsi)
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; X64-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm1[2,3,2,3]
 ; X64-SSE2-NEXT:    movq %xmm0, %rax
 ; X64-SSE2-NEXT:    movntiq %rax, 24(%rsi)
 ; X64-SSE2-NEXT:    retq
@@ -405,24 +405,24 @@ define void @merge_2_v4f32_align1(ptr %a0, ptr %a1) nounwind {
 ; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm0
 ; X86-SSE2-NEXT:    movd %xmm1, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, (%eax)
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
+; X86-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm1[3,3,3,3]
 ; X86-SSE2-NEXT:    movd %xmm2, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 12(%eax)
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
+; X86-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm2 = xmm1[2,3,2,3]
 ; X86-SSE2-NEXT:    movd %xmm2, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 8(%eax)
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; X86-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm1[1,1,1,1]
 ; X86-SSE2-NEXT:    movd %xmm1, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 4(%eax)
 ; X86-SSE2-NEXT:    movd %xmm0, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 16(%eax)
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; X86-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[3,3,3,3]
 ; X86-SSE2-NEXT:    movd %xmm1, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 28(%eax)
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[2,3,2,3]
 ; X86-SSE2-NEXT:    movd %xmm1, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 24(%eax)
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-SSE2-NEXT:    movd %xmm0, %ecx
 ; X86-SSE2-NEXT:    movntil %ecx, 20(%eax)
 ; X86-SSE2-NEXT:    retl
@@ -447,12 +447,12 @@ define void @merge_2_v4f32_align1(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE2-NEXT:    movdqu 16(%rdi), %xmm1
 ; X64-SSE2-NEXT:    movq %xmm0, %rax
 ; X64-SSE2-NEXT:    movntiq %rax, (%rsi)
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; X64-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[2,3,2,3]
 ; X64-SSE2-NEXT:    movq %xmm0, %rax
 ; X64-SSE2-NEXT:    movntiq %rax, 8(%rsi)
 ; X64-SSE2-NEXT:    movq %xmm1, %rax
 ; X64-SSE2-NEXT:    movntiq %rax, 16(%rsi)
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; X64-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm1[2,3,2,3]
 ; X64-SSE2-NEXT:    movq %xmm0, %rax
 ; X64-SSE2-NEXT:    movntiq %rax, 24(%rsi)
 ; X64-SSE2-NEXT:    retq

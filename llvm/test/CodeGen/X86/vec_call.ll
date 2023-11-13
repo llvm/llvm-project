@@ -7,7 +7,7 @@ define void @test() {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    subl $60, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [0,1,3,9]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm0 = [0,1,3,9]
 ; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $7, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $6, {{[0-9]+}}(%esp)
@@ -16,10 +16,10 @@ define void @test() {
 ; CHECK-NEXT:    movl $3, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $2, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $1, (%esp)
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [4,3,2,1]
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [8,7,6,5]
-; CHECK-NEXT:    movaps {{.*#+}} xmm2 = [6,4,2,0]
-; CHECK-NEXT:    movaps {{.*#+}} xmm3 = [8,4,2,1]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm0 = [4,3,2,1]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm1 = [8,7,6,5]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm2 = [6,4,2,0]
+; CHECK-NEXT:    movaps {{[^#]+#+}} xmm3 = [8,4,2,1]
 ; CHECK-NEXT:    calll _xx
 ; CHECK-NEXT:    addl $60, %esp
 ; CHECK-NEXT:    retl

@@ -492,13 +492,13 @@ define void @test_arg_i64(i64 %arg, ptr %dst) {
 define void @test_extract_f32(<4 x float> %arg, ptr %dst) {
 ; SSE2-LABEL: test_extract_f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; SSE2-NEXT:    shufps {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movss %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_extract_f32:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE4A-NEXT:    movshdup {{[^#]+#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE4A-NEXT:    movntss %xmm0, (%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -527,14 +527,14 @@ define void @test_extract_f32(<4 x float> %arg, ptr %dst) {
 define void @test_extract_i32(<4 x i32> %arg, ptr %dst) {
 ; SSE2-LABEL: test_extract_i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    movntil %eax, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_extract_i32:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; SSE4A-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE4A-NEXT:    movd %xmm0, %eax
 ; SSE4A-NEXT:    movntil %eax, (%rdi)
 ; SSE4A-NEXT:    retq
@@ -569,7 +569,7 @@ define void @test_extract_f64(<2 x double> %arg, ptr %dst) {
 ;
 ; SSE4A-LABEL: test_extract_f64:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE4A-NEXT:    movhlps {{[^#]+#+}} xmm0 = xmm0[1,1]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -595,14 +595,14 @@ define void @test_extract_f64(<2 x double> %arg, ptr %dst) {
 define void @test_extract_i64(<2 x i64> %arg, ptr %dst) {
 ; SSE2-LABEL: test_extract_i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rax
 ; SSE2-NEXT:    movntiq %rax, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_extract_i64:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; SSE4A-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE4A-NEXT:    movq %xmm0, %rax
 ; SSE4A-NEXT:    movntiq %rax, (%rdi)
 ; SSE4A-NEXT:    retq

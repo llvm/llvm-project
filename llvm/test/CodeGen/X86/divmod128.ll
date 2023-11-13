@@ -973,7 +973,7 @@ define i128 @urem_i128_3_minsize(i128 %x) nounwind minsize {
 ; WIN64-NEXT:    movq %rax, %rcx
 ; WIN64-NEXT:    callq __umodti3
 ; WIN64-NEXT:    movq %xmm0, %rax
-; WIN64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; WIN64-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[2,3,2,3]
 ; WIN64-NEXT:    movq %xmm0, %rdx
 ; WIN64-NEXT:    addq $72, %rsp
 ; WIN64-NEXT:    retq
@@ -1005,7 +1005,7 @@ define i128 @urem_i128_3_optsize(i128 %x) nounwind optsize {
 ; WIN64-NEXT:    movq %rax, %rcx
 ; WIN64-NEXT:    callq __umodti3
 ; WIN64-NEXT:    movq %xmm0, %rax
-; WIN64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; WIN64-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[2,3,2,3]
 ; WIN64-NEXT:    movq %xmm0, %rdx
 ; WIN64-NEXT:    addq $72, %rsp
 ; WIN64-NEXT:    retq

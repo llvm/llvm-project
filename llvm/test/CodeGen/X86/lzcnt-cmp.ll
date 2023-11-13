@@ -191,7 +191,7 @@ define <2 x i64> @lshr_ctlz_cmpeq_zero_v2i64(<2 x i64> %in) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    pxor %xmm1, %xmm1
 ; X64-NEXT:    pcmpeqd %xmm1, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
+; X64-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[1,0,3,2]
 ; X64-NEXT:    pand %xmm1, %xmm0
 ; X64-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X64-NEXT:    pxor %xmm1, %xmm0
@@ -229,7 +229,7 @@ define <2 x i64> @lshr_ctlz_cmpne_zero_v2i64(<2 x i64> %in) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    pxor %xmm1, %xmm1
 ; X64-NEXT:    pcmpeqd %xmm1, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
+; X64-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm0[1,0,3,2]
 ; X64-NEXT:    pand %xmm1, %xmm0
 ; X64-NEXT:    retq
   %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %in, i1 0)

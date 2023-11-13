@@ -58,7 +58,7 @@ define <2 x double> @test_int_x86_avx512_mask_vfmadd_sd(<2 x double> %a, <2 x do
 ; CHECK-LABEL: test_int_x86_avx512_mask_vfmadd_sd:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm0 {%k1} = (xmm1 * xmm0) + mem
+; CHECK-NEXT:    vfmadd213sd {{[^#]+#+}} xmm0 {%k1} = (xmm1 * xmm0) + mem
 ; CHECK-NEXT:    retq
   %c.val = load double, ptr %c
   %cv0 = insertelement <2 x double> undef, double %c.val, i32 0
@@ -72,7 +72,7 @@ define <4 x float> @test_mask_add_ss_double_use(<4 x float> %a, ptr %b, i8 %mask
 ; CHECK-LABEL: test_mask_add_ss_double_use:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vaddss %xmm2, %xmm0, %xmm1 {%k1}
 ; CHECK-NEXT:    vaddss {rn-sae}, %xmm2, %xmm0, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    vmulps %xmm0, %xmm1, %xmm0

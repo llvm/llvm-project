@@ -283,9 +283,9 @@ def scrub_asm_x86(asm, args):
 
     # Detect shuffle asm comments and hide the operands in favor of the comments.
     if getattr(args, "no_x86_scrub_mem_shuffle", True):
-        asm = SCRUB_X86_SHUFFLES_NO_MEM_RE.sub(r"\1 {{.*#+}} \2", asm)
+        asm = SCRUB_X86_SHUFFLES_NO_MEM_RE.sub(r"\1 {{[^#]+#+}} \2", asm)
     else:
-        asm = SCRUB_X86_SHUFFLES_RE.sub(r"\1 {{.*#+}} \2", asm)
+        asm = SCRUB_X86_SHUFFLES_RE.sub(r"\1 {{[^#]+#+}} \2", asm)
 
     # Detect stack spills and reloads and hide their exact offset and whether
     # they used the stack pointer or frame pointer.

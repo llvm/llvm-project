@@ -120,47 +120,47 @@ define <8 x i16> @trunc_lshr_v8i32(<8 x i32> %a) nounwind {
 define <8 x i16> @trunc_lshr_v4i64_demandedelts(<4 x i64> %a0) {
 ; X86-SSE2-LABEL: trunc_lshr_v4i64_demandedelts:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
+; X86-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm1[0,0,0,0]
+; X86-SSE2-NEXT:    movdqa {{[^#]+#+}} xmm2 = [1,1,1,1]
 ; X86-SSE2-NEXT:    pand %xmm2, %xmm1
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X86-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; X86-SSE2-NEXT:    pand %xmm2, %xmm0
 ; X86-SSE2-NEXT:    packuswb %xmm1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: trunc_lshr_v4i64_demandedelts:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,18446744073709551615]
+; X64-SSE2-NEXT:    movdqa {{[^#]+#+}} xmm2 = [1,18446744073709551615]
 ; X64-SSE2-NEXT:    pand %xmm2, %xmm0
 ; X64-SSE2-NEXT:    pand %xmm2, %xmm1
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X64-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm1[0,0,0,0]
+; X64-SSE2-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-SSE2-NEXT:    packuswb %xmm1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X86-SSE4-LABEL: trunc_lshr_v4i64_demandedelts:
 ; X86-SSE4:       # %bb.0:
-; X86-SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; X86-SSE4-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
+; X86-SSE4-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm1[0,0,0,0]
+; X86-SSE4-NEXT:    movdqa {{[^#]+#+}} xmm2 = [1,1,1,1]
 ; X86-SSE4-NEXT:    pand %xmm2, %xmm1
-; X86-SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X86-SSE4-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; X86-SSE4-NEXT:    pand %xmm2, %xmm0
 ; X86-SSE4-NEXT:    packusdw %xmm1, %xmm0
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE4-LABEL: trunc_lshr_v4i64_demandedelts:
 ; X64-SSE4:       # %bb.0:
-; X64-SSE4-NEXT:    movdqa {{.*#+}} xmm2 = [1,18446744073709551615]
+; X64-SSE4-NEXT:    movdqa {{[^#]+#+}} xmm2 = [1,18446744073709551615]
 ; X64-SSE4-NEXT:    pand %xmm2, %xmm0
 ; X64-SSE4-NEXT:    pand %xmm2, %xmm1
-; X64-SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; X64-SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X64-SSE4-NEXT:    pshufd {{[^#]+#+}} xmm1 = xmm1[0,0,0,0]
+; X64-SSE4-NEXT:    pshufd {{[^#]+#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-SSE4-NEXT:    packusdw %xmm1, %xmm0
 ; X64-SSE4-NEXT:    retq
 ;
 ; X86-AVX1-LABEL: trunc_lshr_v4i64_demandedelts:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; X86-AVX1-NEXT:    vshufps {{[^#]+#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
 ; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
@@ -169,7 +169,7 @@ define <8 x i16> @trunc_lshr_v4i64_demandedelts(<4 x i64> %a0) {
 ;
 ; X64-AVX1-LABEL: trunc_lshr_v4i64_demandedelts:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; X64-AVX1-NEXT:    vshufps {{[^#]+#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
 ; X64-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
@@ -178,8 +178,8 @@ define <8 x i16> @trunc_lshr_v4i64_demandedelts(<4 x i64> %a0) {
 ;
 ; AVX2-LABEL: trunc_lshr_v4i64_demandedelts:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
+; AVX2-NEXT:    vpshufd {{[^#]+#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; AVX2-NEXT:    vpbroadcastd {{[^#]+#+}} ymm1 = [1,1,1,1,1,1,1,1]
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
@@ -309,7 +309,7 @@ define <16 x i8> @packuswb_icmp_zero_128(<8 x i16> %a0) {
 ; X86-SSE-NEXT:    pcmpeqw %xmm0, %xmm1
 ; X86-SSE-NEXT:    packsswb %xmm1, %xmm1
 ; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-SSE-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
+; X86-SSE-NEXT:    movq {{[^#]+#+}} xmm0 = xmm1[0],zero
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: packuswb_icmp_zero_128:
@@ -318,7 +318,7 @@ define <16 x i8> @packuswb_icmp_zero_128(<8 x i16> %a0) {
 ; X64-SSE-NEXT:    pcmpeqw %xmm0, %xmm1
 ; X64-SSE-NEXT:    packsswb %xmm1, %xmm1
 ; X64-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; X64-SSE-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
+; X64-SSE-NEXT:    movq {{[^#]+#+}} xmm0 = xmm1[0],zero
 ; X64-SSE-NEXT:    retq
 ;
 ; X86-AVX-LABEL: packuswb_icmp_zero_128:
@@ -327,7 +327,7 @@ define <16 x i8> @packuswb_icmp_zero_128(<8 x i16> %a0) {
 ; X86-AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X86-AVX-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-AVX-LABEL: packuswb_icmp_zero_128:
@@ -336,7 +336,7 @@ define <16 x i8> @packuswb_icmp_zero_128(<8 x i16> %a0) {
 ; X64-AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X64-AVX-NEXT:    vmovq {{[^#]+#+}} xmm0 = xmm0[0],zero
 ; X64-AVX-NEXT:    retq
   %1 = icmp eq <8 x i16> %a0, zeroinitializer
   %2 = zext <8 x i1> %1 to <8 x i8>

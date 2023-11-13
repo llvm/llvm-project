@@ -350,7 +350,7 @@ declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
 define <4 x float> @int_sqrt_ss() {
 ; CHECK-LABEL: int_sqrt_ss:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
  %x0 = load float, ptr addrspace(1) undef, align 8
@@ -362,7 +362,7 @@ define <4 x float> @int_sqrt_ss() {
 define <2 x double> @vector_sqrt_scalar_load(ptr %a0) optsize {
 ; CHECK-LABEL: vector_sqrt_scalar_load:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vsqrtpd %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %a1 = load double, ptr %a0

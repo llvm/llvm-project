@@ -6,7 +6,7 @@ define float @f32_pos(float %a, float %b) nounwind {
 ; X86-LABEL: f32_pos:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
@@ -25,7 +25,7 @@ define float @f32_neg(float %a, float %b) nounwind {
 ; X86-LABEL: f32_neg:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)

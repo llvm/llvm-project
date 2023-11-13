@@ -55,13 +55,13 @@ entry:
 define double @single_to_double_rm(ptr %x) {
 ; SSE-LABEL: single_to_double_rm:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    cvtss2sd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: single_to_double_rm:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
@@ -89,13 +89,13 @@ entry:
 define float @double_to_single_rm(ptr %x) {
 ; SSE-LABEL: double_to_single_rm:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    cvtsd2ss %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: double_to_single_rm:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:

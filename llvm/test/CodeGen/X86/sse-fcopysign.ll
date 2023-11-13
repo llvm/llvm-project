@@ -10,8 +10,8 @@ define float @tst1(float %a, float %b) nounwind {
 ; X86-LABEL: tst1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    calll copysignf
@@ -32,8 +32,8 @@ define double @tst2(double %a, float %b, float %c) nounwind {
 ; X86-LABEL: tst2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    addss {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    cvtss2sd %xmm1, %xmm1
 ; X86-NEXT:    movsd %xmm0, (%esp)
@@ -91,9 +91,9 @@ define float @int1(float %a, float %b) nounwind {
 ; X86-LABEL: int1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    orps %xmm0, %xmm1
 ; X86-NEXT:    movss %xmm1, (%esp)
@@ -118,9 +118,9 @@ define double @int2(double %a, float %b, float %c) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    addss 20(%ebp), %xmm0
-; X86-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    cvtss2sd %xmm0, %xmm0
 ; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
@@ -188,7 +188,7 @@ define float @cst1() nounwind {
 ;
 ; X64-LABEL: cst1:
 ; X64:       # %bb.0:
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    retq
   %tmp = tail call float @llvm.copysign.f32( float 1.0, float -2.0 )
   ret float %tmp
@@ -203,7 +203,7 @@ define double @cst2() nounwind {
 ;
 ; X64-LABEL: cst2:
 ; X64:       # %bb.0:
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    retq
   %tmp1 = fadd float -1.0, -1.0
   %tmp2 = fpext float %tmp1 to double

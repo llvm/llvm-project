@@ -21,7 +21,7 @@ define float @constrained_fptrunc_f80_to_f32(x86_fp80 %reg) #0 {
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstps -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retq
   %trunc = call float @llvm.experimental.constrained.fptrunc.f32.f80(
              x86_fp80 %reg,
@@ -50,7 +50,7 @@ define double @constrained_fptrunc_f80_to_f64(x86_fp80 %reg) #0 {
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpl -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retq
   %trunc = call double @llvm.experimental.constrained.fptrunc.f64.f80(
              x86_fp80 %reg,

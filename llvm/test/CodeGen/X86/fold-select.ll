@@ -7,7 +7,7 @@ define <8 x float> @select_and_v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %c, <8 x 
 ; CHECK-NEXT:    vpternlogq $200, %xmm1, %xmm2, %xmm0
 ; CHECK-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovw2m %xmm0, %k1
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; CHECK-NEXT:    vbroadcastss {{[^#]+#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vmovaps %ymm3, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %t2 = select <8 x i1> %a, <8 x i1> <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>, <8 x i1> %b
@@ -22,7 +22,7 @@ define <8 x float> @select_and_v8i1_2(i8 %m1, i8 %m2, i8 %m3, <8 x float> %d) {
 ; CHECK-NEXT:    orl %esi, %edi
 ; CHECK-NEXT:    andl %edx, %edi
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; CHECK-NEXT:    vbroadcastss {{[^#]+#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vmovaps %ymm0, %ymm1 {%k1}
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0
 ; CHECK-NEXT:    retq
@@ -42,7 +42,7 @@ define <8 x float> @select_and_v8i1_3(<8 x i16> %m1, <8 x i16> %m2, <8 x i16> %m
 ; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm0, %k1
 ; CHECK-NEXT:    korb %k1, %k0, %k1
 ; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 {%k1}
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; CHECK-NEXT:    vbroadcastss {{[^#]+#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vmovaps %ymm3, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = icmp eq <8 x i16> %m1, %m2
@@ -65,7 +65,7 @@ define <8 x float> @select_or_v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %c, <8 x f
 ; CHECK-NEXT:    vpmovw2m %xmm0, %k2
 ; CHECK-NEXT:    kandnb %k1, %k2, %k1
 ; CHECK-NEXT:    korb %k1, %k0, %k1
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; CHECK-NEXT:    vbroadcastss {{[^#]+#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vmovaps %ymm3, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %t2 = select <8 x i1> %a, <8 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x i1> %b
@@ -82,7 +82,7 @@ define <8 x float> @select_or_v8i1_2(i8 %m1, i8 %m2, i8 %m3, <8 x float> %d) {
 ; CHECK-NEXT:    kmovd %edx, %k2
 ; CHECK-NEXT:    kandnb %k1, %k0, %k0
 ; CHECK-NEXT:    korb %k0, %k2, %k1
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; CHECK-NEXT:    vbroadcastss {{[^#]+#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vmovaps %ymm0, %ymm1 {%k1}
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0
 ; CHECK-NEXT:    retq
@@ -102,7 +102,7 @@ define <8 x float> @select_or_v8i1_3(<8 x i16> %m1, <8 x i16> %m2, <8 x i16> %m3
 ; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k0
 ; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm0, %k1 {%k1}
 ; CHECK-NEXT:    korb %k1, %k0, %k1
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; CHECK-NEXT:    vbroadcastss {{[^#]+#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vmovaps %ymm3, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = icmp eq <8 x i16> %m1, %m2

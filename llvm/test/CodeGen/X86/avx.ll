@@ -15,9 +15,9 @@ define <4 x i32> @blendvb_fallback_v4i32(<4 x i1> %mask, <4 x i32> %x, <4 x i32>
 define <8 x i32> @blendvb_fallback_v8i32(<8 x i1> %mask, <8 x i32> %x, <8 x i32> %y) {
 ; CHECK-LABEL: blendvb_fallback_v8i32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; CHECK-NEXT:    vpmovzxwd {{[^#]+#+}} xmm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; CHECK-NEXT:    vpslld $31, %xmm3, %xmm3
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
+; CHECK-NEXT:    vpunpckhwd {{[^#]+#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    vpslld $31, %xmm0, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
 ; CHECK-NEXT:    vblendvps %ymm0, %ymm1, %ymm2, %ymm0
@@ -29,9 +29,9 @@ define <8 x i32> @blendvb_fallback_v8i32(<8 x i1> %mask, <8 x i32> %x, <8 x i32>
 define <8 x float> @blendvb_fallback_v8f32(<8 x i1> %mask, <8 x float> %x, <8 x float> %y) {
 ; CHECK-LABEL: blendvb_fallback_v8f32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; CHECK-NEXT:    vpmovzxwd {{[^#]+#+}} xmm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; CHECK-NEXT:    vpslld $31, %xmm3, %xmm3
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
+; CHECK-NEXT:    vpunpckhwd {{[^#]+#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    vpslld $31, %xmm0, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
 ; CHECK-NEXT:    vblendvps %ymm0, %ymm1, %ymm2, %ymm0
@@ -144,11 +144,11 @@ define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x fl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vbroadcastss (%ecx,%eax,4), %xmm4
-; X86-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[3]
-; X86-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[3]
+; X86-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0,1,2],xmm4[3]
+; X86-NEXT:    vblendps {{[^#]+#+}} xmm1 = xmm1[0,1,2],xmm4[3]
 ; X86-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vblendps {{.*#+}} xmm1 = xmm2[0,1,2],xmm4[3]
-; X86-NEXT:    vblendps {{.*#+}} xmm2 = xmm3[0,1,2],xmm4[3]
+; X86-NEXT:    vblendps {{[^#]+#+}} xmm1 = xmm2[0,1,2],xmm4[3]
+; X86-NEXT:    vblendps {{[^#]+#+}} xmm2 = xmm3[0,1,2],xmm4[3]
 ; X86-NEXT:    vaddps %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    retl
@@ -156,11 +156,11 @@ define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x fl
 ; X64-LABEL: insertps_from_broadcast_multiple_use:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vbroadcastss (%rdi,%rsi,4), %xmm4
-; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[3]
-; X64-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[3]
+; X64-NEXT:    vblendps {{[^#]+#+}} xmm0 = xmm0[0,1,2],xmm4[3]
+; X64-NEXT:    vblendps {{[^#]+#+}} xmm1 = xmm1[0,1,2],xmm4[3]
 ; X64-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vblendps {{.*#+}} xmm1 = xmm2[0,1,2],xmm4[3]
-; X64-NEXT:    vblendps {{.*#+}} xmm2 = xmm3[0,1,2],xmm4[3]
+; X64-NEXT:    vblendps {{[^#]+#+}} xmm1 = xmm2[0,1,2],xmm4[3]
+; X64-NEXT:    vblendps {{[^#]+#+}} xmm2 = xmm3[0,1,2],xmm4[3]
 ; X64-NEXT:    vaddps %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq

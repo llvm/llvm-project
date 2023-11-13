@@ -6,14 +6,14 @@ define void @load_store(ptr %in) {
 ; X86-LABEL: load_store:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    paddw %xmm0, %xmm0
 ; X86-NEXT:    movq %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: load_store:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    paddw %xmm0, %xmm0
 ; X64-NEXT:    movq %xmm0, (%rcx)
 ; X64-NEXT:    retq
@@ -46,12 +46,12 @@ define <2 x i32> @load_64(ptr %ptr) {
 ; X86-LABEL: load_64:
 ; X86:       # %bb.0: # %BB
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: load_64:
 ; X64:       # %bb.0: # %BB
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    retq
 BB:
   %t = load <2 x i32>, ptr %ptr

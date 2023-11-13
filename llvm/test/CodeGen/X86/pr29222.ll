@@ -15,7 +15,7 @@ define i32 @PR29222(i32) nounwind {
 ; X86-SSE-NEXT:    pshufw $68, %mm0, %mm0 # mm0 = mm0[0,1,0,1]
 ; X86-SSE-NEXT:    packsswb %mm0, %mm0
 ; X86-SSE-NEXT:    movq %mm0, (%esp)
-; X86-SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movq {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    packsswb %xmm0, %xmm0
 ; X86-SSE-NEXT:    movd %xmm0, %eax
 ; X86-SSE-NEXT:    movl %ebp, %esp
@@ -32,7 +32,7 @@ define i32 @PR29222(i32) nounwind {
 ; X86-AVX-NEXT:    pshufw $68, %mm0, %mm0 # mm0 = mm0[0,1,0,1]
 ; X86-AVX-NEXT:    packsswb %mm0, %mm0
 ; X86-AVX-NEXT:    movq %mm0, (%esp)
-; X86-AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovq {{[^#]+#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX-NEXT:    movl %ebp, %esp

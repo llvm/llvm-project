@@ -26,7 +26,7 @@ define float @fceil32(float %f) #0 {
 ; SSE41-X86:       # %bb.0:
 ; SSE41-X86-NEXT:    pushl %eax
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 8
-; SSE41-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE41-X86-NEXT:    roundss $10, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE41-X86-NEXT:    flds (%esp)
@@ -44,7 +44,7 @@ define float @fceil32(float %f) #0 {
 ; AVX-X86:       # %bb.0:
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-X86-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-X86-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
@@ -72,7 +72,7 @@ define double @fceilf64(double %f) #0 {
 ; SSE41-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; SSE41-X86-NEXT:    andl $-8, %esp
 ; SSE41-X86-NEXT:    subl $8, %esp
-; SSE41-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE41-X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE41-X86-NEXT:    roundsd $10, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
 ; SSE41-X86-NEXT:    fldl (%esp)
@@ -96,7 +96,7 @@ define double @fceilf64(double %f) #0 {
 ; AVX-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
-; AVX-X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-X86-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
@@ -120,7 +120,7 @@ define float @ffloor32(float %f) #0 {
 ; SSE41-X86:       # %bb.0:
 ; SSE41-X86-NEXT:    pushl %eax
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 8
-; SSE41-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE41-X86-NEXT:    roundss $9, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE41-X86-NEXT:    flds (%esp)
@@ -138,7 +138,7 @@ define float @ffloor32(float %f) #0 {
 ; AVX-X86:       # %bb.0:
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-X86-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-X86-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
@@ -166,7 +166,7 @@ define double @ffloorf64(double %f) #0 {
 ; SSE41-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; SSE41-X86-NEXT:    andl $-8, %esp
 ; SSE41-X86-NEXT:    subl $8, %esp
-; SSE41-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE41-X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE41-X86-NEXT:    roundsd $9, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
 ; SSE41-X86-NEXT:    fldl (%esp)
@@ -190,7 +190,7 @@ define double @ffloorf64(double %f) #0 {
 ; AVX-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
-; AVX-X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-X86-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
@@ -214,7 +214,7 @@ define float @ftrunc32(float %f) #0 {
 ; SSE41-X86:       # %bb.0:
 ; SSE41-X86-NEXT:    pushl %eax
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 8
-; SSE41-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE41-X86-NEXT:    roundss $11, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE41-X86-NEXT:    flds (%esp)
@@ -232,7 +232,7 @@ define float @ftrunc32(float %f) #0 {
 ; AVX-X86:       # %bb.0:
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-X86-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-X86-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
@@ -260,7 +260,7 @@ define double @ftruncf64(double %f) #0 {
 ; SSE41-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; SSE41-X86-NEXT:    andl $-8, %esp
 ; SSE41-X86-NEXT:    subl $8, %esp
-; SSE41-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE41-X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE41-X86-NEXT:    roundsd $11, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
 ; SSE41-X86-NEXT:    fldl (%esp)
@@ -284,7 +284,7 @@ define double @ftruncf64(double %f) #0 {
 ; AVX-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
-; AVX-X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-X86-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
@@ -308,7 +308,7 @@ define float @frint32(float %f) #0 {
 ; SSE41-X86:       # %bb.0:
 ; SSE41-X86-NEXT:    pushl %eax
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 8
-; SSE41-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE41-X86-NEXT:    roundss $4, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE41-X86-NEXT:    flds (%esp)
@@ -326,7 +326,7 @@ define float @frint32(float %f) #0 {
 ; AVX-X86:       # %bb.0:
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-X86-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-X86-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
@@ -355,7 +355,7 @@ define double @frintf64(double %f) #0 {
 ; SSE41-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; SSE41-X86-NEXT:    andl $-8, %esp
 ; SSE41-X86-NEXT:    subl $8, %esp
-; SSE41-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE41-X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE41-X86-NEXT:    roundsd $4, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
 ; SSE41-X86-NEXT:    fldl (%esp)
@@ -379,7 +379,7 @@ define double @frintf64(double %f) #0 {
 ; AVX-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
-; AVX-X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-X86-NEXT:    vroundsd $4, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
@@ -404,7 +404,7 @@ define float @fnearbyint32(float %f) #0 {
 ; SSE41-X86:       # %bb.0:
 ; SSE41-X86-NEXT:    pushl %eax
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 8
-; SSE41-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE41-X86-NEXT:    roundss $12, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE41-X86-NEXT:    flds (%esp)
@@ -422,7 +422,7 @@ define float @fnearbyint32(float %f) #0 {
 ; AVX-X86:       # %bb.0:
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-X86-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-X86-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
@@ -451,7 +451,7 @@ define double @fnearbyintf64(double %f) #0 {
 ; SSE41-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; SSE41-X86-NEXT:    andl $-8, %esp
 ; SSE41-X86-NEXT:    subl $8, %esp
-; SSE41-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE41-X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE41-X86-NEXT:    roundsd $12, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
 ; SSE41-X86-NEXT:    fldl (%esp)
@@ -475,7 +475,7 @@ define double @fnearbyintf64(double %f) #0 {
 ; AVX-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
-; AVX-X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-X86-NEXT:    vroundsd $12, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
@@ -500,7 +500,7 @@ define float @fround32(float %f) #0 {
 ; SSE41-X86:       # %bb.0:
 ; SSE41-X86-NEXT:    pushl %eax
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 8
-; SSE41-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE41-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE41-X86-NEXT:    calll roundf
 ; SSE41-X86-NEXT:    popl %eax
@@ -520,7 +520,7 @@ define float @fround32(float %f) #0 {
 ; AVX-X86:       # %bb.0:
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-X86-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    calll roundf
 ; AVX-X86-NEXT:    popl %eax
@@ -545,7 +545,7 @@ define double @froundf64(double %f) #0 {
 ; SSE41-X86:       # %bb.0:
 ; SSE41-X86-NEXT:    subl $8, %esp
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 12
-; SSE41-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE41-X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
 ; SSE41-X86-NEXT:    calll round
 ; SSE41-X86-NEXT:    addl $8, %esp
@@ -565,7 +565,7 @@ define double @froundf64(double %f) #0 {
 ; AVX-X86:       # %bb.0:
 ; AVX-X86-NEXT:    subl $8, %esp
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 12
-; AVX-X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    calll round
 ; AVX-X86-NEXT:    addl $8, %esp
@@ -590,7 +590,7 @@ define float @froundeven32(float %f) #0 {
 ; SSE41-X86:       # %bb.0:
 ; SSE41-X86-NEXT:    pushl %eax
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 8
-; SSE41-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-X86-NEXT:    movss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE41-X86-NEXT:    roundss $8, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE41-X86-NEXT:    flds (%esp)
@@ -608,7 +608,7 @@ define float @froundeven32(float %f) #0 {
 ; AVX-X86:       # %bb.0:
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-X86-NEXT:    vmovss {{[^#]+#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-X86-NEXT:    vroundss $8, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
@@ -636,7 +636,7 @@ define double @froundevenf64(double %f) #0 {
 ; SSE41-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; SSE41-X86-NEXT:    andl $-8, %esp
 ; SSE41-X86-NEXT:    subl $8, %esp
-; SSE41-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE41-X86-NEXT:    movsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; SSE41-X86-NEXT:    roundsd $8, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
 ; SSE41-X86-NEXT:    fldl (%esp)
@@ -660,7 +660,7 @@ define double @froundevenf64(double %f) #0 {
 ; AVX-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
-; AVX-X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-X86-NEXT:    vmovsd {{[^#]+#+}} xmm0 = mem[0],zero
 ; AVX-X86-NEXT:    vroundsd $8, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)

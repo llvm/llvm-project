@@ -75,8 +75,8 @@ define i64 @sext_scalar(ptr %p, i1 zeroext %c) {
 define <2 x i64> @zext_vector_i1(ptr %p, i1 zeroext %c) {
 ; CHECK-LABEL: zext_vector_i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
-; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
+; CHECK-NEXT:    pmovzxdq {{[^#]+#+}} xmm1 = mem[0],zero,mem[1],zero
+; CHECK-NEXT:    pmovzxdq {{[^#]+#+}} xmm0 = mem[0],zero,mem[1],zero
 ; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    jne .LBB4_2
 ; CHECK-NEXT:  # %bb.1:
@@ -95,8 +95,8 @@ define <2 x i64> @zext_vector_v2i1(ptr %p, <2 x i1> %c) {
 ; CHECK-LABEL: zext_vector_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psllq $63, %xmm0
-; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
-; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm2 = mem[0],zero,mem[1],zero
+; CHECK-NEXT:    pmovzxdq {{[^#]+#+}} xmm1 = mem[0],zero,mem[1],zero
+; CHECK-NEXT:    pmovzxdq {{[^#]+#+}} xmm2 = mem[0],zero,mem[1],zero
 ; CHECK-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
 ; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
