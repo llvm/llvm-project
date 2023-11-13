@@ -424,6 +424,18 @@ Builtin Macros
   "UTF-16" or "UTF-32" (but may change in the future if the
   ``-fwide-exec-charset="Encoding-Name"`` option is implemented.)
 
+Implementation-defined keywords
+===============================
+
+__datasizeof
+------------
+
+``__datasizeof`` behaves like ``sizeof``, except that it returns the size of the
+type ignoring tail padding.
+
+..
+  FIXME: This should list all the keyword extensions
+
 .. _langext-vectors:
 
 Vectors and Extended Vectors
