@@ -1694,6 +1694,13 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
         context, IntegerAttr::get(intTy, attr.getVScaleRangeMin()),
         IntegerAttr::get(intTy, attr.getVScaleRangeMax().value_or(0))));
   }
+
+  // Process frame-pointer attribute
+  if (func->hasFnAttribute("frame-pointer")) {
+    llvm::StringRef stringRefFramePointerKind = func->getFnAttribute("frame-pointer").getValueAsString();
+    funcOp.setFramePointerAttr(LLVM::FramePointerKindAttr::get(funcOp.getContext(),
+                                  symbolizeFramePointerKind(stringRefFramePointerKind).value()));
+  }
 }
 
 DictionaryAttr

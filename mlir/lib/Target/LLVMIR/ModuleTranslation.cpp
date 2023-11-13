@@ -946,6 +946,10 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
         attr->getMaxRange().getInt()));
+  
+  // Add function attribute frame-pointer, if found.
+  if (auto attr = func.getFramePointerAttr()) 
+    llvmFunc->addFnAttr("frame-pointer", stringifyFramePointerKind(attr.getValue()));
 
   // First, create all blocks so we can jump to them.
   llvm::LLVMContext &llvmContext = llvmFunc->getContext();

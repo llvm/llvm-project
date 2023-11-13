@@ -664,4 +664,23 @@ def ModRefInfoEnum : LLVM_EnumAttr<
   let cppNamespace = "::mlir::LLVM";
 }
 
+//===----------------------------------------------------------------------===//
+// FramePointerAttr
+//===----------------------------------------------------------------------===//
+
+def FramePointerKindNone
+    : LLVM_EnumAttrCase<"None", "none", "None", 0>;
+def FramePointerKindNonLeaf
+    : LLVM_EnumAttrCase<"NonLeaf", "non-leaf", "NonLeaf", 1>;
+def FramePointerKindAll
+    : LLVM_EnumAttrCase<"All", "all", "All", 2>;
+
+def FramePointerKindAttr : LLVM_EnumAttr<
+    "FramePointerKind",
+    "::llvm::FramePointerKind",
+    "LLVM FramePointerKind",
+    [FramePointerKindNone, FramePointerKindNonLeaf, FramePointerKindAll]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
 #endif // LLVMIR_ENUMS
