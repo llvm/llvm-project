@@ -279,7 +279,8 @@ static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
 
-static cl::opt<bool> TryUseNewDbgInfoFormat("try-experimental-debuginfo-iterators",
+static cl::opt<bool> TryUseNewDbgInfoFormat(
+    "try-experimental-debuginfo-iterators",
     cl::desc("Enable debuginfo iterator positions, if they're built in"),
     cl::init(false));
 
