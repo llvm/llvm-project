@@ -177,6 +177,7 @@
 // RUN: rm -rf %t/xpacks
 // RUN: mkdir -pv %t/xpacks/.bin
 // RUN: ln -s %clang %t/xpacks/.bin/clang
+// RUN: mkdir -pv $(dirname $(which %clang))/../include/c++/v1
 
 // RUN: %t/xpacks/.bin/clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
