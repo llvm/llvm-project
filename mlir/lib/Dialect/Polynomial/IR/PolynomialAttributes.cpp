@@ -174,7 +174,7 @@ mlir::Attribute mlir::polynomial::RingAttr::parse(AsmParser &parser,
     if (failed(parser.parseEqual()))
       return {};
 
-    IntegerType iType = llvm::dyn_cast<IntegerType>(typeAttr.getValue());
+    IntegerType iType = dyn_cast<IntegerType>(typeAttr.getValue());
     if (!iType) {
       parser.emitError(parser.getCurrentLocation(),
                        "invalid coefficient modulus, coefficientType must "
