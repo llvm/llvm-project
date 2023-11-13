@@ -787,17 +787,16 @@ void AArch64FrameLowering::allocateStackSpace(
           .addReg(ScratchReg, RegState::Kill)
           .addImm(AArch64_AM::encodeLogicalImmediate(AndMask, 64))
           .setMIFlags(MachineInstr::FrameSetup);
-      if (MFI.hasVarSizedObjects() ||
-          upperBound(AllocSize) + RealignmentPadding >
-              AArch64::StackProbeMaxUnprobedStack) {
-        // STR XZR, [SP]
-        BuildMI(MBB, MBBI, DL, TII.get(AArch64::STRXui))
-            .addReg(AArch64::XZR)
-            .addReg(AArch64::SP)
-            .addImm(0)
-            .setMIFlags(MachineInstr::FrameSetup);
-      }
       AFI.setStackRealigned(true);
+    }
+    if (MFI.hasVarSizedObjects() || upperBound(AllocSize) + RealignmentPadding >
+                                        AArch64::StackProbeMaxUnprobedStack) {
+      // STR XZR, [SP]
+      BuildMI(MBB, MBBI, DL, TII.get(AArch64::STRXui))
+          .addReg(AArch64::XZR)
+          .addReg(AArch64::SP)
+          .addImm(0)
+          .setMIFlags(MachineInstr::FrameSetup);
     }
     return;
   }

@@ -64,6 +64,7 @@ define void @sve_16_vector(ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-16
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x80, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 128 * VG
+; CHECK-NEXT:    str xzr, [sp]
 ; CHECK-NEXT:    addvl sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -215,6 +216,7 @@ define void @sve_16v_csr(<vscale x 4 x float> %a) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-16
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x80, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 128 * VG
+; CHECK-NEXT:    str xzr, [sp]
 ; CHECK-NEXT:    str z23, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z22, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z21, [sp, #2, mul vl] // 16-byte Folded Spill
@@ -549,6 +551,7 @@ define void @sve_1024_64k_guard(ptr %out) #0 "stack-probe-size"="65536" {
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x80, 0x0e, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 1792 * VG
 ; CHECK-NEXT:    addvl sp, sp, #-32
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x80, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 2048 * VG
+; CHECK-NEXT:    str xzr, [sp]
 ; CHECK-NEXT:    addvl sp, sp, #31
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x88, 0x0e, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 1800 * VG
 ; CHECK-NEXT:    addvl sp, sp, #31
@@ -638,6 +641,33 @@ define void @sve_1028_64k_guard(ptr %out) #0 "stack-probe-size"="65536" {
 entry:
   %vec = alloca <vscale x 1024 x float>, align 16
   %vec1 = alloca <vscale x 4 x float>, align 16
+  ret void
+}
+
+; With 5 SVE vectors of stack space the unprobed area
+; at the top of the stack can exceed 1024 bytes (5 x 256 == 1280),
+; hence we need to issue a probe.
+define void @sve_5_vector(ptr %out) #0 {
+; CHECK-LABEL: sve_5_vector:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-5
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x28, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 40 * VG
+; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    addvl sp, sp, #5
+; CHECK-NEXT:    .cfi_def_cfa wsp, 16
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w29
+; CHECK-NEXT:    ret
+entry:
+  %vec1 = alloca <vscale x 4 x float>, align 16
+  %vec2 = alloca <vscale x 4 x float>, align 16
+  %vec3 = alloca <vscale x 4 x float>, align 16
+  %vec4 = alloca <vscale x 4 x float>, align 16
+  %vec5 = alloca <vscale x 4 x float>, align 16
   ret void
 }
 
