@@ -216,6 +216,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     // Use FPR64 for s64 loads on rv32.
     if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
       OperandsMapping =
           getOperandsMapping({getFPValueMapping(64), GPRValueMapping});
       break;
@@ -242,6 +243,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     // Use FPR64 for s64 stores on rv32.
     if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
       OperandsMapping =
           getOperandsMapping({getFPValueMapping(64), GPRValueMapping});
       break;

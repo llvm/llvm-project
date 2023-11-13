@@ -62,10 +62,10 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1:
-    liveins: $x10, $f10_d, $f11_d
+    liveins: $x10, $f10_d
 
     ; RV32-LABEL: name: fp_store_no_def_f64
-    ; RV32: liveins: $x10, $f10_d, $f11_d
+    ; RV32: liveins: $x10, $f10_d
     ; RV32-NEXT: {{  $}}
     ; RV32-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32-NEXT: [[COPY1:%[0-9]+]]:fprb(s64) = COPY $f10_d
@@ -73,7 +73,7 @@ body:             |
     ; RV32-NEXT: PseudoRET
     ;
     ; RV64-LABEL: name: fp_store_no_def_f64
-    ; RV64: liveins: $x10, $f10_d, $f11_d
+    ; RV64: liveins: $x10, $f10_d
     ; RV64-NEXT: {{  $}}
     ; RV64-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64-NEXT: [[COPY1:%[0-9]+]]:fprb(s64) = COPY $f10_d
