@@ -66,15 +66,15 @@ Expected<void *> get_ctor_dtor_array(const void *image, const size_t size,
       handle_error(toString(name_or_err.takeError()).c_str());
 
     // Search for all symbols that contain a constructor or destructor.
-    if (!name_or_err->starts_with("__init_array_object_") &&
-        !name_or_err->starts_with("__fini_array_object_"))
+    if (!name_or_err->starts_with("$init_array_object$") &&
+        !name_or_err->starts_with("$fini_array_object$"))
       continue;
 
     uint16_t priority;
-    if (name_or_err->rsplit('_').second.getAsInteger(10, priority))
+    if (name_or_err->rsplit('$').second.getAsInteger(10, priority))
       handle_error("Invalid priority for constructor or destructor");
 
-    if (name_or_err->starts_with("__init"))
+    if (name_or_err->starts_with("$init"))
       ctors.emplace_back(std::make_pair(name_or_err->data(), priority));
     else
       dtors.emplace_back(std::make_pair(name_or_err->data(), priority));

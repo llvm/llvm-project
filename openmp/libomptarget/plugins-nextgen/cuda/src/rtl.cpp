@@ -1077,12 +1077,12 @@ private:
       if (!NameOrErr)
         return NameOrErr.takeError();
 
-      if (!NameOrErr->starts_with(IsCtor ? "__init_array_object_"
-                                         : "__fini_array_object_"))
+      if (!NameOrErr->starts_with(IsCtor ? "$init_array_object$"
+                                         : "$fini_array_object$"))
         continue;
 
       uint16_t Priority;
-      if (NameOrErr->rsplit('_').second.getAsInteger(10, Priority))
+      if (NameOrErr->rsplit('$').second.getAsInteger(10, Priority))
         return Plugin::error("Invalid priority for constructor or destructor");
 
       Funcs.emplace_back(*NameOrErr, Priority);
