@@ -180,6 +180,14 @@
 
 // RUN: %t/xpacks/.bin/clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
+// RUN:     -v
+
+// RUN: %t/xpacks/.bin/clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-apple-darwin \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 -v
+
+// RUN: %t/xpacks/.bin/clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-apple-darwin \
 // RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
 // RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
 // RUN:               --check-prefix=CHECK-TOOLCHAIN-INCLUDE-CXX-V1 %s
