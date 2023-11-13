@@ -5942,8 +5942,10 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
       MI.eraseFromParent();
       return Legalized;
     }
+    Observer.changingInstr(MI);
     MI.setDesc(TII.get(TargetOpcode::G_CTPOP));
     MI.getOperand(1).setReg(MIBTmp.getReg(0));
+    Observer.changedInstr(MI);
     return Legalized;
   }
   case TargetOpcode::G_CTPOP: {
