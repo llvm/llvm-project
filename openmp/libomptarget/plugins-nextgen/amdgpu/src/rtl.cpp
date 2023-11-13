@@ -789,7 +789,6 @@ private:
                         uint32_t NumTeamsClause[3], uint64_t LoopTripCount,
                         uint32_t &NumThreads,
                         bool IsNumThreadsFromUser) const override {
-
     assert(NumTeamsClause[1] == 0 && NumTeamsClause[2] == 0 &&
            "Multi dimensional launch not supported yet.");
 
@@ -831,6 +830,14 @@ private:
         // to have 16 wavefronts in a CU.
         uint64_t MaxOccupancyFactor = 16 / NumWavesInGroup;
         NumGroups = std::min(NumGroups, MaxOccupancyFactor * DeviceNumCUs);
+
+        // If the user specifies a number of teams for low trip count loops,
+        // honor it.
+        uint64_t LowTripCountBlocks =
+            GenericDevice.getOMPXNumBlocksForLowTripcount(LoopTripCount);
+        if (LowTripCountBlocks) {
+          NumGroups = LowTripCountBlocks;
+        }
       }
       return NumGroups;
     }
@@ -886,6 +893,14 @@ private:
           NumGroupsFromTripCount =
               getNumGroupsFromThreadsAndTripCount(LoopTripCount, NumThreads);
         NumGroups = std::min(NumGroups, NumGroupsFromTripCount);
+
+        // If the user specifies a number of teams for low trip count loops,
+        // and no num_teams clause was used, honor it.
+        uint64_t LowTripCountBlocks =
+            GenericDevice.getOMPXNumBlocksForLowTripcount(LoopTripCount);
+        if (LowTripCountBlocks) {
+          NumGroups = std::min(MaxNumGroups, LowTripCountBlocks);
+        }
       }
       return NumGroups;
     }
@@ -935,6 +950,15 @@ private:
       AdjustedNumBlocks =
           (AdjustedNumBlocks * DefaultNumWavesInGroup) / NumWavesInGroup;
     }
+
+    // If the user specifies a number of teams for low trip count loops, honor
+    // it.
+    uint64_t LowTripCountBlocks =
+        GenericDevice.getOMPXNumBlocksForLowTripcount(LoopTripCount);
+    if (LowTripCountBlocks) {
+      return LowTripCountBlocks;
+    }
+
     uint64_t PreferredNumBlocks =
         std::min(TripCountNumBlocks, AdjustedNumBlocks);
     return std::min(PreferredNumBlocks,
@@ -2326,6 +2350,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_DefaultTeamsPerCU("LIBOMPTARGET_AMDGPU_TEAMS_PER_CU", 6),
         OMPX_LowTripCount("LIBOMPTARGET_AMDGPU_LOW_TRIPCOUNT", 2000),
         OMPX_SmallBlockSize("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 8),
+        OMPX_NumBlocksForLowTripcount("LIBOMPTARGET_BLOCKS_FOR_LOW_TRIP_COUNT",
+                                      0),
+        OMPX_WavesPerCUForLowTripcount(
+            "LIBOMPTARGET_WAVES_PER_CU_FOR_LOW_TRIP_COUNT", 0),
         OMPX_AdjustNumTeamsForSmallBlockSize("LIBOMPTARGET_AMDGPU_ADJUST_TEAMS",
                                              0),
         OMPX_MaxAsyncCopyBytes("LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES",
@@ -2361,6 +2389,57 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
   virtual uint32_t getOMPXSmallBlockSize() const override {
     return OMPX_SmallBlockSize;
+  }
+  virtual uint32_t
+  getOMPXNumBlocksForLowTripcount(uint64_t LoopTripCount) const override {
+    uint32_t NumBlocks = 0;
+
+    if (LoopTripCount > OMPX_LowTripCount)
+      return NumBlocks;
+
+    // if NumBlocksForLowTripcount is set, it has the highest priority.
+    if (OMPX_NumBlocksForLowTripcount > 0) {
+      NumBlocks = OMPX_NumBlocksForLowTripcount;
+      DP("Small trip count loop: Using %u blocks\n", NumBlocks);
+    }
+
+    // Next, check if the waves per CU is set. This will launch a number of
+    // blocks such that we only have at most OMPX_WavesPerCUForLowTripcount
+    // waves per CU.
+    if (OMPX_WavesPerCUForLowTripcount > 0) {
+      // Compute the number of waves per block. For sizes smaller than a full
+      // wave the size is 1.
+      uint32_t WavesPerBlock = (uint32_t)((OMPX_SmallBlockSize - 1) / 64) + 1;
+      DP("Small trip count loop: Using %u waves per block\n", WavesPerBlock);
+
+      // We cannot return less than the number of CUs:
+      if (WavesPerBlock >= OMPX_WavesPerCUForLowTripcount) {
+        NumBlocks = NumComputeUnits;
+        DP("Small trip count loop: Using 1 block per CU\n");
+      } else {
+        uint32_t BlocksPerCU =
+            (uint32_t)(OMPX_WavesPerCUForLowTripcount / WavesPerBlock);
+        DP("Small trip count loop: Using %u blocks per CU\n", BlocksPerCU);
+        NumBlocks = (uint32_t)(BlocksPerCU * NumComputeUnits);
+      }
+    }
+
+    // Adjust the number of blocks to the trip count if number of blocks x
+    // threads is much larger than the loop trip count.
+    if (NumBlocks) {
+      if (LoopTripCount <= OMPX_SmallBlockSize)
+        NumBlocks = 1;
+
+      uint32_t MaxBlocks =
+          (uint32_t)((LoopTripCount - 1) / OMPX_SmallBlockSize) + 1;
+      if (NumBlocks > MaxBlocks) {
+        NumBlocks = MaxBlocks;
+        DP("Small trip count loop: number of blocks capped to %u to fit loop "
+           "trip count\n",
+           NumBlocks);
+      }
+    }
+    return NumBlocks;
   }
   virtual uint32_t getOMPXAdjustNumTeamsForSmallBlockSize() const override {
     return OMPX_AdjustNumTeamsForSmallBlockSize;
@@ -3421,6 +3500,23 @@ private:
   /// Envar specifying a value till which the blocksize can be adjusted if the
   /// tripcount is low.
   UInt32Envar OMPX_SmallBlockSize;
+
+  /// Envar for the number of blocks when the loop trip count is under the small
+  /// trip count limit.
+  /// The default value of 0 means that the number of blocks will be inferred by
+  /// the existing getNumBlocks logic.
+  UInt32Envar OMPX_NumBlocksForLowTripcount;
+
+  /// Envar to set the number of waves per CU for small trip count loops. The
+  /// number of blocks will be adjusted such that there are no more than the
+  /// specified number of blocks per CU than this variable specifies. For
+  /// example:
+  /// Given:
+  //     a GPU with CUs = 100
+  ///    and OMPX_WavesPerCUForLowTripcount = 8
+  ///    and a waves per block number of 4 (256 threads)
+  /// The total number of blocks will be: 200
+  UInt32Envar OMPX_WavesPerCUForLowTripcount;
 
   /// Envar to allow adjusting number of teams after small tripcount
   /// optimization. The default 0 means no adjustment of number of teams is

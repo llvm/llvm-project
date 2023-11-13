@@ -891,6 +891,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual uint32_t getOMPXSmallBlockSize() const {
     llvm_unreachable("Unimplemented");
   }
+  virtual uint32_t
+  getOMPXNumBlocksForLowTripcount(uint64_t LoopTripCount) const {
+    llvm_unreachable("Unimplemented");
+  }
   virtual uint32_t getOMPXAdjustNumTeamsForSmallBlockSize() const {
     llvm_unreachable("Unimplemented");
   }
