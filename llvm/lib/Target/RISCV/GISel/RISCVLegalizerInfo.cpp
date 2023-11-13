@@ -181,11 +181,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
         // Widen sXLen to sDoubleXLen so we can use a single libcall to get
         // the low bits for the mul result and high bits to do the overflow
         // check.
-        .widenScalarIf(
-            [=](const LegalityQuery &Query) { return Query.Types[0] == sXLen; },
-            [=](const LegalityQuery &Query) {
-              return std::make_pair(0, sDoubleXLen);
-            })
+        .widenScalarIf(typeIs(0, sXLen),
+                       LegalizeMutations::changeTo(0, sDoubleXLen))
         .lower();
   }
 
