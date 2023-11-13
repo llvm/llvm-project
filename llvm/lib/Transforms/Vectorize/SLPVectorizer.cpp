@@ -4166,7 +4166,8 @@ static bool areTwoInsertFromSameBuildVector(
   // Go through the vector operand of insertelement instructions trying to find
   // either VU as the original vector for IE2 or V as the original vector for
   // IE1.
-  SmallSet<int, 8> ReusedIdx;
+  SmallBitVector ReusedIdx(
+      cast<VectorType>(VU->getType())->getElementCount().getKnownMinValue());
   bool IsReusedIdx = false;
   do {
     if (IE2 == VU && !IE1)
@@ -4174,16 +4175,18 @@ static bool areTwoInsertFromSameBuildVector(
     if (IE1 == V && !IE2)
       return V->hasOneUse();
     if (IE1 && IE1 != V) {
-      IsReusedIdx |=
-          !ReusedIdx.insert(getInsertIndex(IE1).value_or(*Idx2)).second;
+      unsigned Idx1 = getInsertIndex(IE1).value_or(*Idx2);
+      IsReusedIdx |= ReusedIdx.test(Idx1);
+      ReusedIdx.set(Idx1);
       if ((IE1 != VU && !IE1->hasOneUse()) || IsReusedIdx)
         IE1 = nullptr;
       else
         IE1 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE1));
     }
     if (IE2 && IE2 != VU) {
-      IsReusedIdx |=
-          !ReusedIdx.insert(getInsertIndex(IE2).value_or(*Idx1)).second;
+      unsigned Idx2 = getInsertIndex(IE2).value_or(*Idx1);
+      IsReusedIdx |= ReusedIdx.test(Idx2);
+      ReusedIdx.set(Idx2);
       if ((IE2 != V && !IE2->hasOneUse()) || IsReusedIdx)
         IE2 = nullptr;
       else
@@ -8628,6 +8631,23 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
       (VectorizableTree[1]->getVectorFactor() <= 2 ||
        !(isSplat(VectorizableTree[1]->Scalars) ||
          allConstant(VectorizableTree[1]->Scalars))))
+    return true;
+
+  // If the graph includes only PHI nodes and gathers, it is defnitely not
+  // profitable for the vectorization, we can skip it, if the cost threshold is
+  // default. The cost of vectorized PHI nodes is almost always 0 + the cost of
+  // gathers/buildvectors.
+  constexpr unsigned Limit = 4;
+  if (!ForReduction && !SLPCostThreshold.getNumOccurrences() &&
+      !VectorizableTree.empty() &&
+      all_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+        return (TE->State == TreeEntry::NeedToGather &&
+                TE->getOpcode() != Instruction::ExtractElement &&
+                count_if(TE->Scalars,
+                         [](Value *V) { return isa<ExtractElementInst>(V); }) <=
+                    Limit) ||
+               TE->getOpcode() == Instruction::PHI;
+      }))
     return true;
 
   // We can vectorize the tree if its size is greater than or equal to the
