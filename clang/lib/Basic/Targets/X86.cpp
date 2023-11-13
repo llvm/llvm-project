@@ -123,8 +123,8 @@ bool X86TargetInfo::initFeatureMap(
   enum { FE_NOSET = -1, FE_FALSE, FE_TRUE };
   int HasEVEX512 = FE_NOSET;
   bool HasAVX512F = Features["avx512f"];
-  bool HasAVX10 = false;
-  bool HasAVX10_512 = false;
+  bool HasAVX10 = Features["avx10.1-256"];
+  bool HasAVX10_512 = Features["avx10.1-512"];
   std::string LastAVX10;
   std::string LastAVX512;
   for (const auto &Feature : FeaturesVec) {
