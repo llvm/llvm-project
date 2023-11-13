@@ -257,7 +257,7 @@ mlir::LogicalResult CIRGenFunction::buildCXXTryStmt(const CXXTryStmt &S) {
   // a GPU, we treat it as a basic block.
   const bool IsTargetDevice =
       (CGM.getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN()));
-  assert(IsTargetDevice && "NYI");
+  assert(!IsTargetDevice && "NYI");
 
   auto tryLoc = getLoc(S.getBeginLoc());
   auto numHandlers = S.getNumHandlers();
