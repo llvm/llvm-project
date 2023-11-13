@@ -295,9 +295,15 @@ public:
   // `getLvlType` method instead of STEA's.
   bool isDenseLvl(Level l) const { return isDenseDLT(getLvlType(l)); }
   bool isCompressedLvl(Level l) const { return isCompressedDLT(getLvlType(l)); }
+  bool isLooseCompressedLvl(Level l) const {
+    return isLooseCompressedDLT(getLvlType(l));
+  }
   bool isSingletonLvl(Level l) const { return isSingletonDLT(getLvlType(l)); }
+  bool is2OutOf4Lvl(Level l) const { return is2OutOf4DLT(getLvlType(l)); }
   bool isOrderedLvl(Level l) const { return isOrderedDLT(getLvlType(l)); }
   bool isUniqueLvl(Level l) const { return isUniqueDLT(getLvlType(l)); }
+  bool isWithPos(Level l) const { return isDLTWithPos(getLvlType(l)); }
+  bool isWithCrd(Level l) const { return isDLTWithCrd(getLvlType(l)); }
 
   /// Returns the coordinate-overhead bitwidth, defaulting to zero.
   unsigned getCrdWidth() const { return enc ? enc.getCrdWidth() : 0; }
