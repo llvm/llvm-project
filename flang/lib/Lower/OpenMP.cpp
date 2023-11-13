@@ -481,7 +481,10 @@ void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
 
 void DataSharingProcessor::defaultPrivatize() {
   for (const Fortran::semantics::Symbol *sym : defaultSymbols) {
-    if (!symbolsInNestedRegions.contains(sym) &&
+    if (!Fortran::semantics::IsProcedure(*sym) &&
+        !sym->GetUltimate().has<Fortran::semantics::DerivedTypeDetails>() &&
+        !sym->GetUltimate().has<Fortran::semantics::NamelistDetails>() &&
+        !symbolsInNestedRegions.contains(sym) &&
         !symbolsInParentRegions.contains(sym) &&
         !privatizedSymbols.contains(sym)) {
       cloneSymbol(sym);
@@ -1592,7 +1595,8 @@ bool ClauseProcessor::processCopyin() const {
           mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) {
         assert(sym->has<Fortran::semantics::HostAssocDetails>() &&
                "No host-association found");
-        converter.copyHostAssociateVar(*sym, copyAssignIP);
+        if (converter.isPresentShallowLookup(*sym))
+          converter.copyHostAssociateVar(*sym, copyAssignIP);
       };
   bool hasCopyin = findRepeatableClause<ClauseTy::Copyin>(
       [&](const ClauseTy::Copyin *copyinClause,
