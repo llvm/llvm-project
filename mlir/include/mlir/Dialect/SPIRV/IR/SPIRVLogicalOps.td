@@ -1002,6 +1002,10 @@ def SPIRV_SelectOp : SPIRV_Op<"Select",
   let assemblyFormat = [{
     operands attr-dict `:` type($condition) `,` type($result)
   }];
+
+  // These ops require dynamic availability specification based on operand and
+  // result types.
+  bit autogenAvailability = 0;
 }
 
 // -----
