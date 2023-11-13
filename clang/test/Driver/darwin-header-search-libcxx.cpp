@@ -173,19 +173,31 @@
 // CHECK-LIBCXX-STDLIB-UNSPECIFIED: "-cc1"
 // CHECK-LIBCXX-STDLIB-UNSPECIFIED: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 
-// Reproduce the xPack use case; there must be no include here,
-// to select the executable folder.
+// ----------------------------------------------------------------------------
+// This is the use case with single symlinks to binaries, specific
+// to the xpm/npm ecosystem.
+
+// The build folders do not have an `include/c++/v1`; create a new
+// local folder hierarchy that meets this requirement.
+// Note: this might not work with weird RPATH configurations.
+// RUN: rm -rf %t/install
+// RUN: mkdir -pv %t/install/bin
+// RUN: cp %clang %t/install/bin/clang
+// RUN: mkdir -pv %t/install/include/c++/v1
+
+// Reproduce the xPack use case; there must be no `include/c++/v1` here,
+// to force the inclusion from the executable folder.
 // RUN: rm -rf %t/xpacks
 // RUN: mkdir -pv %t/xpacks/.bin
-// RUN: ln -svf %clang %t/xpacks/.bin/clang
-// The build folders do not include this include; create it.
-// RUN: mkdir -pv $(dirname $(which %clang))/../include/c++/v1
+// RUN: ln -svf %t/install/bin/clang %t/xpacks/.bin/clang
 
+// Invoke clang via a symlink.
 // RUN: %t/xpacks/.bin/clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -stdlib=libc++ \
 // RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
-// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
+// RUN:   | FileCheck -DTOOLCHAIN=%t/install \
+// RUN:               -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
 // RUN:               --check-prefix=CHECK-TOOLCHAIN-INCLUDE-CXX-V1 %s
-// CHECK-TOOLCHAIN-INCLUDE-CXX-V1: "-internal-isystem" "{{.*}}/bin/../include/c++/v1"
+// CHECK-TOOLCHAIN-INCLUDE-CXX-V1: "-internal-isystem" "[[TOOLCHAIN]]/bin/../include/c++/v1"
 // CHECK-TOOLCHAIN-INCLUDE-CXX-V1-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
