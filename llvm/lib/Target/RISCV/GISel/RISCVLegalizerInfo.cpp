@@ -89,7 +89,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .maxScalar(0, sXLen)
       .lower();
 
-  getActionDefinitionsBuilder(G_CTPOP)
+  getActionDefinitionsBuilder(
+      {G_CTPOP, G_CTLZ, G_CTLZ_ZERO_UNDEF, G_CTTZ, G_CTTZ_ZERO_UNDEF})
       .maxScalar(0, sXLen)
       .scalarSameSizeAs(1, 0)
       .lower();
