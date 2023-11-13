@@ -235,8 +235,9 @@ bool CFGuard::doInitialization(Module &M) {
     return false;
 
   // Set up prototypes for the guard check and dispatch functions.
-  GuardFnType = FunctionType::get(Type::getVoidTy(M.getContext()),
-                                  {Type::getInt8PtrTy(M.getContext())}, false);
+  GuardFnType =
+      FunctionType::get(Type::getVoidTy(M.getContext()),
+                        {PointerType::getUnqual(M.getContext())}, false);
   GuardFnPtrType = PointerType::get(GuardFnType, 0);
 
   // Get or insert the guard check or dispatch global symbols.

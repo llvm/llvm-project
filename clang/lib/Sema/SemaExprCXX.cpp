@@ -2050,6 +2050,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                                                   Initializer->getBeginLoc(),
                                                   Initializer->getEndLoc());
     }
+    llvm_unreachable("Unknown initialization kind");
   }();
 
   // C++11 [dcl.spec.auto]p6. Deduce the type which 'auto' stands in for.
@@ -2442,6 +2443,11 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       FullInit = Binder->getSubExpr();
 
     Initializer = FullInit.get();
+    // We don't know that we're generating an implicit initializer until now, so
+    // we have to update the initialization style as well.
+    //
+    // FIXME: it would be nice to determine the correct initialization style
+    // earlier so InitStyle doesn't need adjusting.
     if (InitStyle == CXXNewInitializationStyle::None && Initializer) {
       InitStyle = CXXNewInitializationStyle::Implicit;
     }

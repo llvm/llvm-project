@@ -1,9 +1,9 @@
-! RUN: bbc -emit-fir %s -o - --math-runtime=fast | FileCheck --check-prefixes=ALL %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=fast %s -o - | FileCheck --check-prefixes=ALL %s
-! RUN: bbc -emit-fir %s -o - --math-runtime=relaxed | FileCheck --check-prefixes=ALL %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=relaxed %s -o - | FileCheck --check-prefixes=ALL %s
-! RUN: bbc -emit-fir %s -o - --math-runtime=precise | FileCheck --check-prefixes=ALL %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=precise %s -o - | FileCheck --check-prefixes=ALL %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - --math-runtime=fast | FileCheck --check-prefixes=ALL %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -mllvm -math-runtime=fast %s -o - | FileCheck --check-prefixes=ALL %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - --math-runtime=relaxed | FileCheck --check-prefixes=ALL %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -mllvm -math-runtime=relaxed %s -o - | FileCheck --check-prefixes=ALL %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - --math-runtime=precise | FileCheck --check-prefixes=ALL %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -mllvm -math-runtime=precise %s -o - | FileCheck --check-prefixes=ALL %s
 
 ! ALL-LABEL: @_QPtest_real4
 ! ALL-SAME: (%[[argx:.*]]: !fir.ref<f32>{{.*}}, %[[argn:.*]]: !fir.ref<i32>{{.*}}) -> f32

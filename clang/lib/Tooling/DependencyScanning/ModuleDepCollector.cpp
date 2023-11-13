@@ -529,7 +529,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   CowCompilerInvocation CI =
       MDC.getInvocationAdjustedForModuleBuildWithoutOutputs(
           MD, [&](CowCompilerInvocation &BuildInvocation) {
-            if (MDC.OptimizeArgs)
+            if (any(MDC.OptimizeArgs & ScanningOptimizations::HeaderSearch))
               optimizeHeaderSearchOpts(BuildInvocation.getMutHeaderSearchOpts(),
                                        *MDC.ScanInstance.getASTReader(), *MF);
           });
@@ -628,7 +628,8 @@ ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
     DependencyActionController &Controller, CompilerInvocation OriginalCI,
-    bool OptimizeArgs, bool EagerLoadModules, bool IsStdModuleP1689Format)
+    ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
+    bool IsStdModuleP1689Format)
     : ScanInstance(ScanInstance), Consumer(C), Controller(Controller),
       Opts(std::move(Opts)),
       CommonInvocation(

@@ -1010,6 +1010,7 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
     in convergence.
   }];
   let assemblyFormat = "attr-dict";
+  let hasCanonicalizer = 1;
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [

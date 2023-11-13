@@ -2179,6 +2179,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_functionpadmin, OPT_functionpadmin_opt))
     parseFunctionPadMin(arg);
 
+  // Handle /dependentloadflag
+  for (auto *arg :
+       args.filtered(OPT_dependentloadflag, OPT_dependentloadflag_opt))
+    parseDependentLoadFlags(arg);
+
   if (tar) {
     llvm::TimeTraceScope timeScope("Reproducer: response file");
     tar->append("response.txt",
@@ -2471,6 +2476,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // link those files (unless -thinlto-index-only was given, in which case we
   // resolve symbols and write indices, but don't generate native code or link).
   ctx.symtab.compileBitcodeFiles();
+
+  if (Defined *d =
+          dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used")))
+    config->gcroot.push_back(d);
 
   // If -thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done

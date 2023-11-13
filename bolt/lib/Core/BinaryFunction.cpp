@@ -322,7 +322,8 @@ void BinaryFunction::markUnreachableBlocks() {
 
 // Any unnecessary fallthrough jumps revealed after calling eraseInvalidBBs
 // will be cleaned up by fixBranches().
-std::pair<unsigned, uint64_t> BinaryFunction::eraseInvalidBBs() {
+std::pair<unsigned, uint64_t>
+BinaryFunction::eraseInvalidBBs(const MCCodeEmitter *Emitter) {
   DenseSet<const BinaryBasicBlock *> InvalidBBs;
   unsigned Count = 0;
   uint64_t Bytes = 0;
@@ -331,7 +332,7 @@ std::pair<unsigned, uint64_t> BinaryFunction::eraseInvalidBBs() {
       assert(!isEntryPoint(*BB) && "all entry blocks must be valid");
       InvalidBBs.insert(BB);
       ++Count;
-      Bytes += BC.computeCodeSize(BB->begin(), BB->end());
+      Bytes += BC.computeCodeSize(BB->begin(), BB->end(), Emitter);
     }
   }
 
@@ -1999,7 +2000,7 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
       }
     }
     if (LastNonNop && !MIB->getOffset(*LastNonNop))
-      MIB->setOffset(*LastNonNop, static_cast<uint32_t>(Offset), AllocatorId);
+      MIB->setOffset(*LastNonNop, static_cast<uint32_t>(Offset));
   };
 
   for (auto I = Instructions.begin(), E = Instructions.end(); I != E; ++I) {
@@ -2022,7 +2023,7 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
     if (MIB->isNoop(Instr) && !MIB->getOffset(Instr)) {
       // If "Offset" annotation is not present, set it and mark the nop for
       // deletion.
-      MIB->setOffset(Instr, static_cast<uint32_t>(Offset), AllocatorId);
+      MIB->setOffset(Instr, static_cast<uint32_t>(Offset));
       // Annotate ordinary nops, so we can safely delete them if required.
       MIB->addAnnotation(Instr, "NOP", static_cast<uint32_t>(1), AllocatorId);
     }
@@ -2303,6 +2304,13 @@ void BinaryFunction::removeConditionalTailCalls() {
     assert(CTCTargetLabel && "symbol expected for conditional tail call");
     MCInst TailCallInstr;
     BC.MIB->createTailCall(TailCallInstr, CTCTargetLabel, BC.Ctx.get());
+
+    // Move offset from CTCInstr to TailCallInstr.
+    if (const std::optional<uint32_t> Offset = BC.MIB->getOffset(*CTCInstr)) {
+      BC.MIB->setOffset(TailCallInstr, *Offset);
+      BC.MIB->clearOffset(*CTCInstr);
+    }
+
     // Link new BBs to the original input offset of the BB where the CTC
     // is, so we can map samples recorded in new BBs back to the original BB
     // seem in the input binary (if using BAT)
@@ -2331,12 +2339,6 @@ void BinaryFunction::removeConditionalTailCalls() {
 
     // This branch is no longer a conditional tail call.
     BC.MIB->unsetConditionalTailCall(*CTCInstr);
-
-    // Move offset from CTCInstr to TailCallInstr.
-    if (std::optional<uint32_t> Offset = BC.MIB->getOffset(*CTCInstr)) {
-      BC.MIB->setOffset(TailCallInstr, *Offset);
-      BC.MIB->clearOffset(*CTCInstr);
-    }
   }
 
   insertBasicBlocks(std::prev(end()), std::move(NewBlocks),
@@ -3373,7 +3375,7 @@ void BinaryFunction::propagateGnuArgsSizeInfo(
         }
       } else if (BC.MIB->isInvoke(Instr)) {
         // Add the value of GNU_args_size as an extra operand to invokes.
-        BC.MIB->addGnuArgsSize(Instr, CurrentGnuArgsSize, AllocId);
+        BC.MIB->addGnuArgsSize(Instr, CurrentGnuArgsSize);
       }
       ++II;
     }
@@ -4175,7 +4177,7 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
         assert(PrevBB->getOutputAddressRange().first <= BBAddress &&
                "Bad output address for basic block.");
         assert((PrevBB->getOutputAddressRange().first != BBAddress ||
-                !hasInstructions() || PrevBB->empty()) &&
+                !hasInstructions() || !PrevBB->getNumNonPseudos()) &&
                "Bad output address for basic block.");
         PrevBB->setOutputEndAddress(BBAddress);
       }
@@ -4305,7 +4307,7 @@ BinaryFunction::translateInputToOutputRange(DebugAddressRange InRange) const {
     // block boundaries.
     auto translateBlockOffset = [&](const uint64_t Offset) {
       const uint64_t OutAddress = BB.getOutputAddressRange().first + Offset;
-      return OutAddress;
+      return std::min(OutAddress, BB.getOutputAddressRange().second);
     };
 
     uint64_t OutLowPC = BB.getOutputAddressRange().first;

@@ -148,19 +148,19 @@ clang_InlineCommandComment_getRenderKind(CXComment CXC) {
     return CXCommentInlineCommandRenderKind_Normal;
 
   switch (ICC->getRenderKind()) {
-  case InlineCommandComment::RenderNormal:
+  case InlineCommandRenderKind::Normal:
     return CXCommentInlineCommandRenderKind_Normal;
 
-  case InlineCommandComment::RenderBold:
+  case InlineCommandRenderKind::Bold:
     return CXCommentInlineCommandRenderKind_Bold;
 
-  case InlineCommandComment::RenderMonospaced:
+  case InlineCommandRenderKind::Monospaced:
     return CXCommentInlineCommandRenderKind_Monospaced;
 
-  case InlineCommandComment::RenderEmphasized:
+  case InlineCommandRenderKind::Emphasized:
     return CXCommentInlineCommandRenderKind_Emphasized;
 
-  case InlineCommandComment::RenderAnchor:
+  case InlineCommandRenderKind::Anchor:
     return CXCommentInlineCommandRenderKind_Anchor;
   }
   llvm_unreachable("unknown InlineCommandComment::RenderKind");
@@ -296,13 +296,13 @@ enum CXCommentParamPassDirection clang_ParamCommandComment_getDirection(
     return CXCommentParamPassDirection_In;
 
   switch (PCC->getDirection()) {
-  case ParamCommandComment::In:
+  case ParamCommandPassDirection::In:
     return CXCommentParamPassDirection_In;
 
-  case ParamCommandComment::Out:
+  case ParamCommandPassDirection::Out:
     return CXCommentParamPassDirection_Out;
 
-  case ParamCommandComment::InOut:
+  case ParamCommandPassDirection::InOut:
     return CXCommentParamPassDirection_InOut;
   }
   llvm_unreachable("unknown ParamCommandComment::PassDirection");
