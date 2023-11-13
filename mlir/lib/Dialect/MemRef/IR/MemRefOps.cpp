@@ -2852,17 +2852,6 @@ static LogicalResult produceSubViewErrorMsg(SliceVerificationResult result,
 }
 
 LogicalResult SubViewOp::verify() {
-  for (int64_t offset : getStaticOffsets()) {
-    if (offset < 0 && !ShapedType::isDynamic(offset))
-      return emitError("expected subview offsets to be non-negative, but got ")
-             << offset;
-  }
-  for (int64_t size : getStaticSizes()) {
-    if (size < 0 && !ShapedType::isDynamic(size))
-      return emitError("expected subview sizes to be non-negative, but got ")
-             << size;
-  }
-
   MemRefType baseType = getSourceType();
   MemRefType subViewType = getType();
 

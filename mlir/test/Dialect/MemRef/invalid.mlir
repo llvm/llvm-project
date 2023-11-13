@@ -612,7 +612,7 @@ func.func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 // -----
 
 func.func @invalid_subview(%input: memref<4x1024xf32>) -> memref<2x256xf32, strided<[1024, 1], offset: 2304>> {
-  // expected-error@+1 {{expected subview offsets to be non-negative, but got -1}}
+  // expected-error@+1 {{expected offsets to be non-negative, but got -1}}
   %0 = memref.subview %input[-1, 256] [2, 256] [1, 1] : memref<4x1024xf32> to memref<2x256xf32, strided<[1024, 1], offset: 2304>>
   return %0 : memref<2x256xf32, strided<[1024, 1], offset: 2304>>
 }
@@ -620,7 +620,7 @@ func.func @invalid_subview(%input: memref<4x1024xf32>) -> memref<2x256xf32, stri
 // -----
 
 func.func @invalid_subview(%input: memref<4x1024xf32>) -> memref<2x256xf32, strided<[1024, 1], offset: 2304>> {
-  // expected-error@+1 {{expected subview sizes to be non-negative, but got -1}}
+  // expected-error@+1 {{expected sizes to be non-negative, but got -1}}
   %0 = memref.subview %input[2, 256] [-1, 256] [1, 1] : memref<4x1024xf32> to memref<2x256xf32, strided<[1024, 1], offset: 2304>>
   return %0 : memref<2x256xf32, strided<[1024, 1], offset: 2304>>
 }
