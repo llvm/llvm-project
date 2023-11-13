@@ -82,6 +82,7 @@ public:
   bool isAccum : 1;         // 1.0hk/k/lk/uhk/uk/ulk
   bool isBitInt : 1;        // 1wb, 1uwb (C23) or 1__wb, 1__uwb (Clang extension in C++
                             // mode)
+  bool isBFloat16 : 1;      // 1.0bf
   uint8_t MicrosoftInteger; // Microsoft suffix extension i8, i16, i32, or i64.
 
 

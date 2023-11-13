@@ -55,6 +55,16 @@ template <typename T, unsigned N> class SmallPtrSet;
 
 namespace clang {
 
+// Conversion ranks introduced in C++23 6.8.6p2 [conv.rank]
+enum FloatConvRankCompareResult {
+  FRCR_Unordered,
+  FRCR_Lesser,
+  FRCR_Greater,
+  FRCR_Equal,
+  FRCR_Equal_Lesser_Subrank,
+  FRCR_Equal_Greater_Subrank,
+};
+
 class APValue;
 class ASTMutationListener;
 class ASTRecordLayout;
@@ -1182,8 +1192,8 @@ public:
   CanQualType SatUnsignedShortFractTy, SatUnsignedFractTy,
       SatUnsignedLongFractTy;
   CanQualType HalfTy; // [OpenCL 6.1.1.1], ARM NEON
-  CanQualType BFloat16Ty;
-  CanQualType Float16Ty; // C11 extension ISO/IEC TS 18661-3
+  CanQualType BFloat16Ty; // [C++23 6.8.3p5][basic.extended.fp]
+  CanQualType Float16Ty; // C11 extension ISO/IEC TS 18661-3 and [C++23 6.8.3p1][basic.extended.fp]
   CanQualType VoidPtrTy, NullPtrTy;
   CanQualType DependentTy, OverloadTy, BoundMemberTy, UnresolvedTemplateTy,
       UnknownAnyTy;
@@ -2563,6 +2573,9 @@ public:
   /// More type predicates useful for type checking/promotion
   bool isPromotableIntegerType(QualType T) const; // C99 6.3.1.1p2
 
+  /// Determine if a floating type can be promoted to another floating type.
+  bool isPromotableFloatingType(QualType T) const;
+
   /// Return the "preferred" alignment of the specified type \p T for
   /// the current target, in bits.
   ///
@@ -2970,6 +2983,9 @@ public:
   /// 6.3.1.1p2, assuming that \p PromotableType is a promotable integer type.
   QualType getPromotedIntegerType(QualType PromotableType) const;
 
+  /// Determines the promoted floating point type.
+  QualType getPromotedFloatingType(QualType PromotableType) const;
+
   /// Recurses in pointer/array types until it finds an Objective-C
   /// retainable type and returns its ownership.
   Qualifiers::ObjCLifetime getInnerObjCOwnership(QualType T) const;
@@ -2990,14 +3006,38 @@ public:
   /// Compare the rank of the two specified floating point types,
   /// ignoring the domain of the type (i.e. 'double' == '_Complex double').
   ///
-  /// If \p LHS > \p RHS, returns 1.  If \p LHS == \p RHS, returns 0.  If
-  /// \p LHS < \p RHS, return -1.
-  int getFloatingTypeOrder(QualType LHS, QualType RHS) const;
+  /// If \p LHS > \p RHS, returns FRCR_Greater. If \p LHS == \p RHS, returns
+  /// FRCR_Equal.  If \p LHS < \p RHS, return FRCR_Lesser. If \p LHS and \p RHS
+  /// are unordered, return FRCR_Unordered. If \p LHS and \p RHS are equal but
+  /// the subrank of \p LHS is greater than \p RHS, return
+  /// FRCR_Equal_Greater_Subrank. If \p LHS and \p RHS are equal but the subrank
+  /// of \p LHS is less than \p RHS, return FRCR_Equal_Lesser_Subrank. Subrank
+  /// and Unordered comparison were introduced in C++23.
+  FloatConvRankCompareResult getFloatingTypeOrder(QualType LHS,
+                                                 QualType RHS) const;
 
   /// Compare the rank of two floating point types as above, but compare equal
   /// if both types have the same floating-point semantics on the target (i.e.
-  /// long double and double on AArch64 will return 0).
-  int getFloatingTypeSemanticOrder(QualType LHS, QualType RHS) const;
+  /// long double and double on AArch64 will return FRCR_Equal).
+  FloatConvRankCompareResult getFloatingTypeSemanticOrder(QualType LHS,
+                                                         QualType RHS) const;
+
+  /// C++23 6.8.2p12 [basic.fundamental]
+  /// Checks if extended floating point rules apply to a pair of types.
+  /// It returns true if both the types are C++23 floating point types and
+  /// at least one of them is a C++23 extended floating point type. It returns
+  /// false for pairs of standard C++23 floating point types.
+  bool doCXX23ExtendedFpTypesRulesApply(QualType T1, QualType T2) const;
+
+  /// C++23 6.8.2p12 [basic.fundamental]
+  /// Returns true if \p Result is FRCR_Lesser or FRCR_Unordered rank.
+  bool
+  isCXX23SmallerOrUnorderedFloatingPointRank(FloatConvRankCompareResult Result) const;
+
+  /// C++23 6.8.2p12 [basic.fundamental]
+  /// Returns true if \p Result is FRCR_Equal, FRCR_Equal_Lesser_Subrank or
+  /// FRCR_Equal_Greater_Subrank.
+  bool isCXX23EqualFloatingPointRank(FloatConvRankCompareResult Result) const;
 
   unsigned getTargetAddressSpace(LangAS AS) const;
 

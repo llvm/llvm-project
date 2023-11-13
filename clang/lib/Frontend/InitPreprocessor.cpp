@@ -470,8 +470,12 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     if (LangOpts.CPlusPlus26)
       // FIXME: Use correct value for C++26.
       Builder.defineMacro("__cplusplus", "202400L");
-    else if (LangOpts.CPlusPlus23)
+    else if (LangOpts.CPlusPlus23) {
       Builder.defineMacro("__cplusplus", "202302L");
+      // [C++23] 15.11p2 [cpp.predefined]
+      Builder.defineMacro("__STDCPP_FLOAT16_T__", "1");
+      Builder.defineMacro("__STDCPP_BFLOAT16_T__", "1");
+    }
     //      [C++20] The integer literal 202002L.
     else if (LangOpts.CPlusPlus20)
       Builder.defineMacro("__cplusplus", "202002L");

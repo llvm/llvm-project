@@ -2289,6 +2289,33 @@ bool Type::isFloatingType() const {
   return false;
 }
 
+bool Type::isCXX23StandardFloatingPointType(const ASTContext &Ctx) const {
+  if (!Ctx.getLangOpts().CPlusPlus23)
+    return false;
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
+    return BT->getKind() >= BuiltinType::Float &&
+           BT->getKind() <= BuiltinType::LongDouble;
+  if (const auto *CT = dyn_cast<ComplexType>(CanonicalType))
+    return CT->getElementType()->isCXX23StandardFloatingPointType(Ctx);
+  return false;
+}
+
+bool Type::isCXX23ExtendedFloatingPointType(const ASTContext &Ctx) const {
+  if (!Ctx.getLangOpts().CPlusPlus23)
+    return false;
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
+    return BT->getKind() == BuiltinType::Float16 ||
+           BT->getKind() == BuiltinType::BFloat16;
+  if (const auto *CT = dyn_cast<ComplexType>(CanonicalType))
+    return CT->getElementType()->isCXX23ExtendedFloatingPointType(Ctx);
+  return false;
+}
+
+bool Type::isCXX23FloatingPointType(const ASTContext &Ctx) const {
+  return isCXX23StandardFloatingPointType(Ctx) ||
+         isCXX23ExtendedFloatingPointType(Ctx);
+}
+
 bool Type::hasFloatingRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isFloatingType();

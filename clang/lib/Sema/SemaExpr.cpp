@@ -804,7 +804,7 @@ ExprResult Sema::UsualUnaryConversions(Expr *E) {
       llvm_unreachable("Float evaluation method should be set by now");
       break;
     case LangOptions::FEM_Double:
-      if (Context.getFloatingTypeOrder(Context.DoubleTy, Ty) > 0)
+      if (Context.getFloatingTypeOrder(Context.DoubleTy, Ty) == FRCR_Greater)
         // Widen the expression to double.
         return Ty->isComplexType()
                    ? ImpCastExprToType(E,
@@ -813,7 +813,8 @@ ExprResult Sema::UsualUnaryConversions(Expr *E) {
                    : ImpCastExprToType(E, Context.DoubleTy, CK_FloatingCast);
       break;
     case LangOptions::FEM_Extended:
-      if (Context.getFloatingTypeOrder(Context.LongDoubleTy, Ty) > 0)
+      if (Context.getFloatingTypeOrder(Context.LongDoubleTy, Ty) ==
+          FRCR_Greater)
         // Widen the expression to long double.
         return Ty->isComplexType()
                    ? ImpCastExprToType(
@@ -1171,14 +1172,16 @@ static QualType handleComplexConversion(Sema &S, ExprResult &LHS,
     return RHSType;
 
   // Compute the rank of the two types, regardless of whether they are complex.
-  int Order = S.Context.getFloatingTypeOrder(LHSType, RHSType);
-  if (Order < 0)
+  FloatConvRankCompareResult Order =
+      S.Context.getFloatingTypeOrder(LHSType, RHSType);
+  if (Order == FRCR_Lesser)
     // Promote the precision of the LHS if not an assignment.
     return handleComplexFloatConversion(S, LHS, LHSType, RHSType,
                                         /*PromotePrecision=*/!IsCompAssign);
   // Promote the precision of the RHS unless it is already the same as the LHS.
   return handleComplexFloatConversion(S, RHS, RHSType, LHSType,
-                                      /*PromotePrecision=*/Order > 0);
+                                      /*PromotePrecision=*/Order ==
+                                          clang::FRCR_Greater);
 }
 
 /// Handle arithmetic conversion from integer to float.  Helper function
@@ -1231,16 +1234,34 @@ static QualType handleFloatConversion(Sema &S, ExprResult &LHS,
     return LHSFloat ? LHSType : RHSType;
   }
 
-  // If we have two real floating types, convert the smaller operand
-  // to the bigger result.
+  // C++23 [expr.arith.conv] 7.4
+  // If the floating-point conversion ranks ([conv.rank]) of the types
+  // of the operands are ordered but not equal, then the operand of the type
+  // with the lesser floating-point conversion rank is converted to the type of
+  // the other operand.
+  //
+  // If the floating-point conversion ranks of the types of the operands are
+  // equal, then the operand with the lesser floating-point conversion subrank
+  // ([conv.rank]) is converted to the type of the other operand.
+  //
+  // Otherwise, the expression is ill-formed i.e unordered conversion rank
+  // between floating-point types.
   if (LHSFloat && RHSFloat) {
-    int order = S.Context.getFloatingTypeOrder(LHSType, RHSType);
-    if (order > 0) {
+    FloatConvRankCompareResult order =
+        S.Context.getFloatingTypeOrder(LHSType, RHSType);
+
+    if (order == FRCR_Unordered) {
+      return QualType();
+    }
+
+    if (order == FRCR_Greater || order == FRCR_Equal_Greater_Subrank) {
       RHS = S.ImpCastExprToType(RHS.get(), LHSType, CK_FloatingCast);
       return LHSType;
     }
 
-    assert(order < 0 && "illegal float comparison");
+    assert(((order != FRCR_Equal) &&
+            (order == FRCR_Lesser || order == FRCR_Equal_Lesser_Subrank)) &&
+           "illegal float comparison");
     if (!IsCompAssign)
       LHS = S.ImpCastExprToType(LHS.get(), RHSType, CK_FloatingCast);
     return RHSType;
@@ -3856,6 +3877,8 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       Ty = Context.Float128Ty;
     else if (getLangOpts().HLSL)
       Ty = Context.FloatTy;
+    else if (Literal.isBFloat16)
+      Ty = Context.BFloat16Ty;
     else
       Ty = Context.DoubleTy;
 
@@ -9914,7 +9937,8 @@ static bool tryVectorConvertAndSplat(Sema &S, ExprResult *scalar,
   } else if (vectorEltTy->isRealFloatingType()) {
     if (scalarTy->isRealFloatingType()) {
       if (S.getLangOpts().OpenCL &&
-          S.Context.getFloatingTypeOrder(vectorEltTy, scalarTy) < 0) {
+          S.Context.getFloatingTypeOrder(vectorEltTy, scalarTy) ==
+              clang::FRCR_Lesser) {
         DiagID = diag::err_opencl_scalar_type_rank_greater_than_vector_type;
         return true;
       }
@@ -10108,8 +10132,18 @@ static bool tryGCCVectorConvertAndSplat(Sema &S, ExprResult *Scalar,
       // expression is instantiated.
       bool CstScalar = Scalar->get()->isValueDependent() ||
                        Scalar->get()->EvaluateAsFloat(Result, S.Context);
-      int Order = S.Context.getFloatingTypeOrder(VectorEltTy, ScalarTy);
-      if (!CstScalar && Order < 0)
+      FloatConvRankCompareResult Order =
+          S.Context.getFloatingTypeOrder(VectorEltTy, ScalarTy);
+
+      // Although the GCC Vector Extensions are not part of the C++23 language
+      // standard, we are currently applying the C++23 extended floating point
+      // rules to them. This is in keeping with the spirit of this function and
+      // maintains consistency in handling floating point types
+      if (S.Context.doCXX23ExtendedFpTypesRulesApply(ScalarTy, VectorEltTy) &&
+          S.Context.isCXX23SmallerOrUnorderedFloatingPointRank(Order))
+        return true;
+
+      if (!CstScalar && (Order == FRCR_Lesser))
         return true;
 
       // If the scalar cannot be safely casted to the vector element type,

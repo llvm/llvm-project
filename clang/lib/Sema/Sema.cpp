@@ -767,6 +767,22 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     }
   }
 
+  // C++23 7.3.10 [conv.double]
+  // A prvalue of floating-point type can be converted to a prvalue of another
+  // floating-point type with a greater or equal conversion rank ([conv.rank]).
+  // A prvalue of standard floating-point type can be converted to a prvalue of
+  // another standard floating-point type
+  if (Context.doCXX23ExtendedFpTypesRulesApply(ExprTy, TypeTy) &&
+      Kind == CK_FloatingCast && E->isPRValue() &&
+      (CCK == CheckedConversionKind::Implicit)) {
+    if (Context.isCXX23SmallerOrUnorderedFloatingPointRank(
+            Context.getFloatingTypeOrder(TypeTy, ExprTy))) {
+      Diag(E->getExprLoc(), diag::err_invalid_implicit_floating_point_cast)
+          << TypeTy << ExprTy << E->getSourceRange();
+      return ExprError();
+    }
+  }
+
   if (ImplicitCastExpr *ImpCast = dyn_cast<ImplicitCastExpr>(E)) {
     if (ImpCast->getCastKind() == Kind && (!BasePath || BasePath->empty())) {
       ImpCast->setType(Ty);

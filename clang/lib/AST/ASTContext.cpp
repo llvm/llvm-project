@@ -132,6 +132,84 @@ template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
     return LHS == RHS;
   }
 };
+constexpr unsigned CXX23FloatRankToIndex(clang::BuiltinType::Kind Kind) {
+  switch (Kind) {
+  case clang::BuiltinType::Float16:
+    return 0;
+  case clang::BuiltinType::BFloat16:
+    return 1;
+  case clang::BuiltinType::Float:
+    return 2;
+  case clang::BuiltinType::Double:
+    return 3;
+  case clang::BuiltinType::LongDouble:
+    return 4;
+  default:
+    // Both __float128 and __ibm128 are compiler extensions, not extended floating points.
+    // __float128 also predates the invention of floating-point types.
+    llvm_unreachable("Not a CXX23+ floating point builtin type");
+  }
+}
+
+// C++23 6.8.6p2 [conv.rank]
+// Grid to determine the rank of a floating point type when compared with
+// another floating point type.
+constexpr std::array<std::array<FloatConvRankCompareResult, 5>, 5>
+    CXX23FloatingPointConversionRankMap = {
+        {// Float16 x Float16
+         // Float16 x BFloat16
+         // Float16 x Float
+         // Float16 x Double
+         // Float16 x LongDouble
+         {{FloatConvRankCompareResult::FRCR_Equal,
+           FloatConvRankCompareResult::FRCR_Unordered,
+           FloatConvRankCompareResult::FRCR_Lesser,
+           FloatConvRankCompareResult::FRCR_Lesser,
+           FloatConvRankCompareResult::FRCR_Lesser}},
+
+         // BFloat16 x Float16
+         // BFloat16 x BFloat16
+         // BFloat16 x Float
+         // BFloat16 x Double
+         // BFloat16 x LongDouble
+         {{FloatConvRankCompareResult::FRCR_Unordered,
+           FloatConvRankCompareResult::FRCR_Equal,
+           FloatConvRankCompareResult::FRCR_Lesser,
+           FloatConvRankCompareResult::FRCR_Lesser,
+           FloatConvRankCompareResult::FRCR_Lesser}},
+
+         // Float x Float16
+         // Float x BFloat16
+         // Float x Float
+         // Float x Double
+         // Float x LongDouble
+         {{FloatConvRankCompareResult::FRCR_Greater,
+           FloatConvRankCompareResult::FRCR_Greater,
+           FloatConvRankCompareResult::FRCR_Equal,
+           FloatConvRankCompareResult::FRCR_Lesser,
+           FloatConvRankCompareResult::FRCR_Lesser}},
+
+         // Double x Float16
+         // Double x BFloat16
+         // Double x Float
+         // Double x Double
+         // Double x LongDouble
+         {{FloatConvRankCompareResult::FRCR_Greater,
+           FloatConvRankCompareResult::FRCR_Greater,
+           FloatConvRankCompareResult::FRCR_Greater,
+           FloatConvRankCompareResult::FRCR_Equal,
+           FloatConvRankCompareResult::FRCR_Lesser}},
+
+         // LongDouble x Float16
+         // LongDouble x BFloat16
+         // LongDouble x Float
+         // LongDouble x Double
+         // LongDouble x LongDouble
+         {{FloatConvRankCompareResult::FRCR_Greater,
+           FloatConvRankCompareResult::FRCR_Greater,
+           FloatConvRankCompareResult::FRCR_Greater,
+           FloatConvRankCompareResult::FRCR_Greater,
+           FloatConvRankCompareResult::FRCR_Equal}}}};
 
 /// \returns The locations that are relevant when searching for Doc comments
 /// related to \p D.
@@ -1915,6 +1993,10 @@ bool ASTContext::isPromotableIntegerType(QualType T) const {
   }
 
   return false;
+}
+
+bool ASTContext::isPromotableFloatingType(QualType T) const {
+  return T->getAs<BuiltinType>()->getKind() == BuiltinType::Float;
 }
 
 bool ASTContext::isAlignmentRequired(const Type *T) const {
@@ -7670,25 +7752,67 @@ static FloatingRank getFloatingRank(QualType T) {
   }
 }
 
+/// C++23 6.8.5 [conv.rank]
 /// getFloatingTypeOrder - Compare the rank of the two specified floating
 /// point types, ignoring the domain of the type (i.e. 'double' ==
-/// '_Complex double').  If LHS > RHS, return 1.  If LHS == RHS, return 0. If
-/// LHS < RHS, return -1.
-int ASTContext::getFloatingTypeOrder(QualType LHS, QualType RHS) const {
+/// '_Complex double').
+/// If LHS > RHS, return FRCR_Greater.  If LHS == RHS, return FRCR_Equal. If
+/// LHS < RHS, return FRCR_Lesser. If the values representedable by the two
+/// are not subset of each other, return FRCR_Unordered. If LHS == RHS but
+/// LHS has a higher subrank than RHS return FRCR_Equal_Greater_Subrank else
+/// return FRCR_Equal_Lesser_Subrank.
+FloatConvRankCompareResult
+ASTContext::getFloatingTypeOrder(QualType LHS, QualType RHS) const {
+  if (LHS->isCXX23FloatingPointType(*this) &&
+      RHS->isCXX23FloatingPointType(*this)) {
+    BuiltinType::Kind LHSKind;
+    BuiltinType::Kind RHSKind;
+    if (const auto *CT = LHS->getAs<ComplexType>())
+      LHSKind = CT->getElementType()->castAs<BuiltinType>()->getKind();
+    else
+      LHSKind = LHS->castAs<BuiltinType>()->getKind();
+    if (const auto *CT = RHS->getAs<ComplexType>())
+      RHSKind = CT->getElementType()->castAs<BuiltinType>()->getKind();
+    else
+      RHSKind = RHS->castAs<BuiltinType>()->getKind();
+    return CXX23FloatingPointConversionRankMap[CXX23FloatRankToIndex(LHSKind)]
+                                              [CXX23FloatRankToIndex(RHSKind)];
+  }
+
   FloatingRank LHSR = getFloatingRank(LHS);
   FloatingRank RHSR = getFloatingRank(RHS);
 
   if (LHSR == RHSR)
-    return 0;
+    return FRCR_Equal;
   if (LHSR > RHSR)
-    return 1;
-  return -1;
+    return FRCR_Greater;
+  return FRCR_Lesser;
 }
 
-int ASTContext::getFloatingTypeSemanticOrder(QualType LHS, QualType RHS) const {
+FloatConvRankCompareResult
+ASTContext::getFloatingTypeSemanticOrder(QualType LHS, QualType RHS) const {
   if (&getFloatTypeSemantics(LHS) == &getFloatTypeSemantics(RHS))
-    return 0;
+    return FRCR_Equal;
   return getFloatingTypeOrder(LHS, RHS);
+}
+
+bool ASTContext::doCXX23ExtendedFpTypesRulesApply(QualType T1,
+                                                  QualType T2) const {
+  return (((T1->isCXX23FloatingPointType(*this) &&
+            T2->isCXX23FloatingPointType(*this))) &&
+          (T1->isCXX23ExtendedFloatingPointType(*this) ||
+           T2->isCXX23ExtendedFloatingPointType(*this)));
+}
+
+bool ASTContext::isCXX23SmallerOrUnorderedFloatingPointRank(
+    FloatConvRankCompareResult Result) const {
+  return (Result == FRCR_Lesser) || (Result == FRCR_Unordered);
+}
+
+bool ASTContext::isCXX23EqualFloatingPointRank(
+    FloatConvRankCompareResult Result) const {
+  return (Result == FRCR_Equal) || (Result == FRCR_Equal_Greater_Subrank) ||
+         (Result == FRCR_Equal_Lesser_Subrank);
 }
 
 /// getIntegerRank - Return an integer conversion rank (C99 6.3.1.1p1). This
@@ -7851,6 +7975,13 @@ QualType ASTContext::getPromotedIntegerType(QualType Promotable) const {
   uint64_t IntSize = getIntWidth(IntTy);
   assert(Promotable->isUnsignedIntegerType() && PromotableSize <= IntSize);
   return (PromotableSize != IntSize) ? IntTy : UnsignedIntTy;
+}
+
+QualType ASTContext::getPromotedFloatingType(QualType Promotable) const {
+  assert(!Promotable.isNull());
+  assert(isPromotableFloatingType(Promotable));
+  assert(Promotable->getAs<BuiltinType>()->getKind() == BuiltinType::Float);
+  return DoubleTy;
 }
 
 /// Recurses in pointer/array types until it finds an objc retainable

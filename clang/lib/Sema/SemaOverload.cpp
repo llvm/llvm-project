@@ -431,7 +431,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
   //    if it cannot be represented exactly), or
   case ICK_Floating_Conversion:
     if (FromType->isRealFloatingType() && ToType->isRealFloatingType() &&
-        Ctx.getFloatingTypeOrder(FromType, ToType) == 1) {
+        Ctx.getFloatingTypeOrder(FromType, ToType) == FRCR_Greater) {
       // FromType is larger than ToType.
       const Expr *Initializer = IgnoreNarrowingConversion(Ctx, Converted);
 
@@ -2373,6 +2373,15 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     SCS.Second = ICK_Complex_Real;
     FromType = ToType.getUnqualifiedType();
   } else if (IsFloatingPointConversion(S, FromType, ToType)) {
+    // C++23 7.3.10p1 [conv.double]
+    // A prvalue of floating-point type can be converted to a prvalue of another
+    // floating-point type with a greater or equal conversion rank
+    // ([conv.rank]). A prvalue of standard floating-point type can be converted
+    // to a prvalue of another standard floating-point type.
+    if (S.Context.doCXX23ExtendedFpTypesRulesApply(FromType, ToType) &&
+        S.Context.isCXX23SmallerOrUnorderedFloatingPointRank(
+            S.Context.getFloatingTypeOrder(ToType, FromType)))
+      return false;
     // Floating point conversions (C++ 4.8).
     SCS.Second = ICK_Floating_Conversion;
     FromType = ToType.getUnqualifiedType();
@@ -4445,6 +4454,73 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
     return FEP1 == FixedEnumPromotion::ToUnderlyingType
                ? ImplicitConversionSequence::Better
                : ImplicitConversionSequence::Worse;
+
+  // C++23 12.2.4.3p4:
+  // A conversion in either direction between floating-point type FP1 and
+  // floating-point type FP2 is better than a conversion in the same direction
+  // between FP1 and arithmetic type T3 if:
+  // 1) The floating-point conversion rank ([conv.rank]) of FP1 is equal to the
+  // rank of FP2, and 2) T3 is not a floating-point type, or T3 is a
+  // floating-point type whose rank is not equal to the rank of FP1, or the
+  // floating-point conversion subrank ([conv.rank]) of FP2 is greater than the
+  // subrank of T3.
+  if (S.Context.getLangOpts().CPlusPlus23) {
+    if (SCS1.getFromType()->isCXX23FloatingPointType(S.Context) &&
+        S.Context.hasSameType(SCS1.getFromType(), SCS2.getFromType())) {
+
+      if ((SCS1.Second == ICK_Floating_Conversion) &&
+          SCS1.getToType(1)->isCXX23FloatingPointType(S.Context) &&
+          S.Context.isCXX23EqualFloatingPointRank(
+              S.Context.getFloatingTypeOrder(SCS1.getToType(1),
+                                             SCS1.getFromType()))) {
+
+        if (SCS2.getToType(1)->isArithmeticType()) {
+          if (!SCS2.getToType(1)->isCXX23FloatingPointType(S.Context)) {
+            return ImplicitConversionSequence::Better;
+          }
+
+          if (!S.Context.isCXX23EqualFloatingPointRank(
+                  S.Context.getFloatingTypeOrder(SCS2.getToType(1),
+                                                 SCS1.getFromType()))) {
+            return ImplicitConversionSequence::Better;
+          }
+
+          if (S.Context.getFloatingTypeOrder(SCS1.getToType(1),
+                                             SCS2.getToType(1)) ==
+              FRCR_Equal_Greater_Subrank) {
+            return ImplicitConversionSequence::Better;
+          }
+          return ImplicitConversionSequence::Worse;
+        }
+      }
+
+      if ((SCS2.Second == ICK_Floating_Conversion) &&
+          SCS2.getToType(1)->isCXX23FloatingPointType(S.Context) &&
+          S.Context.isCXX23EqualFloatingPointRank(
+              S.Context.getFloatingTypeOrder(SCS2.getToType(1),
+                                             SCS2.getFromType()))) {
+        if (SCS1.getToType(1)->isArithmeticType()) {
+          if (!SCS1.getToType(1)->isCXX23FloatingPointType(S.Context)) {
+            return ImplicitConversionSequence::Worse;
+          }
+
+          if (!S.Context.isCXX23EqualFloatingPointRank(
+                  S.Context.getFloatingTypeOrder(SCS1.getToType(1),
+                                                 SCS2.getFromType()))) {
+            return ImplicitConversionSequence::Worse;
+          }
+
+          if (S.Context.getFloatingTypeOrder(SCS2.getToType(1),
+                                             SCS1.getToType(1)) ==
+              FRCR_Equal_Greater_Subrank) {
+            return ImplicitConversionSequence::Worse;
+          }
+
+          assert(false && "Should not reach here");
+        }
+      }
+    }
+  }
 
   // C++ [over.ics.rank]p4b2:
   //
@@ -8710,7 +8786,7 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
 
   // Flag if we encounter an arithmetic type.
   HasArithmeticOrEnumeralTypes =
-    HasArithmeticOrEnumeralTypes || Ty->isArithmeticType();
+      HasArithmeticOrEnumeralTypes || Ty->isArithmeticType();
 
   if (Ty->isObjCIdType() || Ty->isObjCClassType())
     PointerTypes.insert(Ty);

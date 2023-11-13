@@ -9278,6 +9278,8 @@ def err_cast_pointer_to_non_pointer_int : Error<
 def err_nullptr_cast : Error<
   "cannot cast an object of type %select{'nullptr_t' to %1|%1 to 'nullptr_t'}0"
 >;
+def err_invalid_implicit_floating_point_cast : Error<
+  "floating-point type %0 cannot be implicitly converted to type %1">;
 def err_typecheck_expect_scalar_operand : Error<
   "operand of type %0 where arithmetic or pointer type is required">;
 def err_typecheck_cond_incompatible_operands : Error<
