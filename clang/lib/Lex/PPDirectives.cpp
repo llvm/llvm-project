@@ -4070,19 +4070,41 @@ static void TripleEncodeBase64(StringRef Bytes0, StringRef Bytes1,
   }
 }
 
-void Preprocessor::HandleEmbedDirectiveBuiltin(
+void Preprocessor::HandleEmbedDirectiveImpl(
     SourceLocation HashLoc, const Token &FilenameTok,
     StringRef ResolvedFilename, StringRef SearchPath, StringRef RelativePath,
     const LexEmbedParametersResult &Params, StringRef BinaryContents,
     const size_t TargetCharWidth) {
-  // if it's empty, just process it like a normal expanded token stream
+  // Pass off the annotation token stream. The parser expects:
+  //   if_empty-tokens or
+  //   embed-annotation-start
+  //     type-name string-literal , string-literal
+  //   embed-annotation-stop
+  // where the type-name is the type used for each element to embed, the first
+  // string-literal is the resolved file name of the file we loaded contents
+  // from, and the second string-literal is the base64 encoded data we loaded
+  // from the file. The comma separation between string-literals prevents the
+  // literals from combining into a single string literal.
+  auto EmitToks = [&](ArrayRef<Token> Toks) {
+    size_t TokCount = Toks.size();
+    auto NewToks = std::make_unique<Token[]>(TokCount);
+    llvm::copy(Toks, NewToks.get());
+    EnterTokenStream(std::move(NewToks), TokCount, true, true);
+  };
   if (BinaryContents.empty()) {
-    HandleEmbedDirectiveNaive(HashLoc, FilenameTok.getLocation(), Params,
-                              BinaryContents, TargetCharWidth);
+    // If we have no binary contents, the only thing we need to emit are the
+    // if_empty tokens, if any.
+    // FIXME: this loses AST fidelity; nothing in the compiler will see that
+    // these tokens came from #embed.
+    if (Params.MaybeIfEmptyParam)
+      EmitToks(Params.MaybeIfEmptyParam->Tokens);
     return;
   }
-  SmallVector<char, 2> BinaryPrefix{};
-  SmallVector<char, 2> BinarySuffix{};
+
+  // FIXME: this is not correct; the standard allows *arbitrary* tokens in the
+  // prefix and suffix, but this only accounts for numeric literals and commas,
+  // but nothing else.
+  SmallVector<char, 2> BinaryPrefix, BinarySuffix;
   if (Params.MaybePrefixParam) {
     // If we ahve a prefix, validate that it's a good fit for direct data
     // embedded (and prepare to prepend it)
@@ -4095,7 +4117,7 @@ void Preprocessor::HandleEmbedDirectiveBuiltin(
     }
   }
   if (Params.MaybeSuffixParam) {
-    // If we ahve a prefix, validate that it's a good fit for direct data
+    // If we have a prefix, validate that it's a good fit for direct data
     // embedding (and prepare to append it)
     const PPEmbedParameterSuffix &SuffixParam = *Params.MaybeSuffixParam;
     if (!TokenListIsCharacterArray(*this, TargetCharWidth, false,
@@ -4106,50 +4128,43 @@ void Preprocessor::HandleEmbedDirectiveBuiltin(
     }
   }
 
-  // Load up a new embed buffer for this file and set of parameters in
-  // particular.
-  EmbedBuffers.push_back("");
-  size_t EmbedBufferNumber = EmbedBuffers.size();
-  std::string &TargetEmbedBuffer = EmbedBuffers.back();
-  StringRef TypeName = "unsigned char";
-  const size_t TotalSize =
-      BinaryPrefix.size() + BinaryContents.size() + BinarySuffix.size();
-  const size_t ReserveSize =        // add up for necessary size:
-      19                            // __builtin_pp_embed(
-      + TypeName.size()             // type-name
-      + 2                           // ,"
-      + ResolvedFilename.size()     // file-name
-      + 3                           // ","
-      + (((TotalSize + 2) / 3) * 4) // base64-string
-      + 2                           // ");
-      ;
-  // Reserve appropriate size
-  TargetEmbedBuffer.reserve(ReserveSize);
+  // Now emit the tokens for the embedded content itself.
+  std::string EncodedContents = llvm::encodeBase64(
+      (Twine(BinaryPrefix) + BinaryContents + Twine(BinarySuffix)).str());
+  auto SetAnnotTok = [](Token &Tok, tok::TokenKind Kind, SourceLocation Loc) {
+    Tok.startToken();
+    Tok.setKind(Kind);
+    Tok.setAnnotationRange(Loc);
+  };
+  auto SetStrTok = [&](Token &Tok, StringRef Contents, SourceLocation Loc) {
+    Tok.startToken();
+    Tok.setKind(tok::string_literal);
+    CreateString(("\"" + Contents + "\"").str(), Tok, Loc, Loc);
+  };
+  constexpr size_t TotalNumToks = 7;
+  auto Toks = std::make_unique<Token[]>(TotalNumToks);
 
-  // Generate the look-alike source file
-  TargetEmbedBuffer.append("__builtin_pp_embed(");
-  TargetEmbedBuffer.append(TypeName.data(), TypeName.size());
-  TargetEmbedBuffer.append(",\"");
-  TargetEmbedBuffer.append(ResolvedFilename.data(), ResolvedFilename.size());
-  TargetEmbedBuffer.append("\",\"");
-  // include the prefix(...) and suffix(...) binary data in the total contents
-  TripleEncodeBase64(
-      StringRef(BinaryPrefix.data(), BinaryPrefix.size()), BinaryContents,
-      StringRef(BinarySuffix.data(), BinarySuffix.size()), TargetEmbedBuffer);
-  TargetEmbedBuffer.append("\")");
-  // Create faux-file and its ID, backed by a memory buffer.
-  std::unique_ptr<llvm::MemoryBuffer> EmbedMemBuffer =
-      llvm::MemoryBuffer::getMemBufferCopy(
-          TargetEmbedBuffer,
-          "<built-in:embed:" + Twine(EmbedBufferNumber) + ">");
-  assert(EmbedMemBuffer && "Cannot create predefined source buffer");
-  FileID EmbedBufferFID = SourceMgr.createFileID(std::move(EmbedMemBuffer));
-  assert(EmbedBufferFID.isValid() &&
-         "Could not create FileID for #embed directive?");
-  // Start parsing the look-alike source file for the embed directive and
-  // pretend everything is normal
-  // TODO: (Maybe? )Stop the PPCallbacks from considering this a Real File™.
-  EnterSourceFile(EmbedBufferFID, nullptr, HashLoc, false);
+  SetAnnotTok(Toks[0], tok::annot_embed_start, HashLoc);
+
+  Toks[1].startToken();
+  Toks[1].setLocation(HashLoc);
+  Toks[1].setKind(tok::kw_unsigned);
+
+  Toks[2].startToken();
+  Toks[2].setLocation(HashLoc);
+  Toks[2].setKind(tok::kw_char);
+
+  SetStrTok(Toks[3], ResolvedFilename, HashLoc);
+
+  Toks[4].startToken();
+  Toks[4].setLocation(HashLoc);
+  Toks[4].setKind(tok::comma);
+
+  SetStrTok(Toks[5], EncodedContents, HashLoc);
+
+  SetAnnotTok(Toks[6], tok::annot_embed_end, HashLoc);
+
+  EnterTokenStream(std::move(Toks), TotalNumToks, true, true);
 }
 
 void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
@@ -4257,13 +4272,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
                               ParametersRange, MaybeFileRef, SearchPath,
                               RelativePath);
   }
-  if (PPOpts->NoBuiltinPPEmbed) {
-    HandleEmbedDirectiveNaive(HashLoc, FilenameLoc, Params, BinaryContents,
-                              TargetCharWidth);
-  } else {
-    // emit a token directly, handle it internally.
-    HandleEmbedDirectiveBuiltin(HashLoc, FilenameTok, Filename, SearchPath,
-                                RelativePath, Params, BinaryContents,
-                                TargetCharWidth);
-  }
+  HandleEmbedDirectiveImpl(HashLoc, FilenameTok, Filename, SearchPath,
+                           RelativePath, Params, BinaryContents,
+                           TargetCharWidth);
 }

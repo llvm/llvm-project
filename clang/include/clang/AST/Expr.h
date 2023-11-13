@@ -4810,7 +4810,7 @@ private:
   friend class ASTStmtReader;
 };
 
-/// Represents a function call to __builtin_pp_embed().
+/// Represents a #embed "expression".
 class PPEmbedExpr final : public Expr {
   SourceLocation BuiltinLoc, RParenLoc;
   DeclContext *ParentContext;

@@ -13371,7 +13371,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
         // Expand the list in-place immediately, let the natural work take hold
         Init = ExpandSinglePPEmbedExpr(PPEmbed);
       } else {
-        // `__builtin_pp_embed( ... )` only produces 2 or more values.
+        // #embed only produces 2 or more values.
+        // FIXME: still uses the old builtin name.
         Diag(RealDecl->getLocation(), diag::err_illegal_initializer_type)
             << "'__builtin_pp_embed'";
         RealDecl->setInvalidDecl();

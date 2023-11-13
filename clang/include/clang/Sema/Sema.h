@@ -6089,7 +6089,7 @@ public:
                                 SourceLocation BuiltinLoc,
                                 SourceLocation RPLoc);
 
-  // __builtin_pp_embed()
+  // #embed
   ExprResult ActOnPPEmbedExpr(SourceLocation BuiltinLoc,
                               SourceLocation Base64DataLocation,
                               SourceLocation RPLoc, StringLiteral *Filename,

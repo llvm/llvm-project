@@ -1147,9 +1147,10 @@ void StmtPrinter::VisitSourceLocExpr(SourceLocExpr *Node) {
 }
 
 void StmtPrinter::VisitPPEmbedExpr(PPEmbedExpr *Node) {
-  OS << "__builtin_pp_embed(" << Node->getType() << ", "
-     << Node->getFilenameStringLiteral()->getBytes() << ", \""
-     << llvm::encodeBase64(Node->getDataStringLiteral()->getBytes()) << "\")";
+  // This isn't yet implemented because the contents of the PPEmbedExpr are
+  // not generally retained in the AST. e.g., when used as an initializer, the
+  // expression will be converted into an InitListExpr, etc.
+  assert(false && "not yet implemented");
 }
 
 void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {

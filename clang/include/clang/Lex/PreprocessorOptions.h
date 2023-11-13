@@ -170,10 +170,6 @@ public:
   /// User specified embed entries.
   std::vector<std::string> EmbedEntries;
 
-  /// Whether or not naive expansion should be used all the time for
-  /// builtin embed
-  bool NoBuiltinPPEmbed = false;
-
   /// Whether the compiler instance should retain (i.e., not free)
   /// the buffers associated with remapped files.
   ///
