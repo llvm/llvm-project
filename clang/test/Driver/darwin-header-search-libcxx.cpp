@@ -178,6 +178,10 @@
 // RUN: mkdir -pv %t/xpacks/.bin
 // RUN: ln -s %clang %t/xpacks/.bin/clang
 
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-apple-darwin \
+// RUN:     -v
+
 // RUN: %t/xpacks/.bin/clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -v
