@@ -607,10 +607,11 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::Value lb = builder.createIntegerConstant(loc, idxTy, 0);
     mlir::Value ub =
         builder.create<mlir::arith::SubIOp>(loc, dimInfo.getExtent(), one);
-    if (!byteStride) // First stride is the element size.
+    if (dim == 0) // First stride is the element size.
       byteStride = dimInfo.getByteStride();
     mlir::Value bound = builder.create<BoundsOp>(
         loc, boundTy, lb, ub, mlir::Value(), byteStride, true, baseLb);
+    // Compute the stride for the next dimension.
     byteStride = builder.create<mlir::arith::MulIOp>(loc, byteStride,
                                                      dimInfo.getExtent());
     bounds.push_back(bound);
