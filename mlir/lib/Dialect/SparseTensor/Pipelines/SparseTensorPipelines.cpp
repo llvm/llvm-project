@@ -29,8 +29,8 @@
 // Pipeline implementation.
 //===----------------------------------------------------------------------===//
 
-void mlir::sparse_tensor::buildSparseCompiler(
-    OpPassManager &pm, const SparseCompilerOptions &options) {
+void mlir::sparse_tensor::buildSparsifier(
+    OpPassManager &pm, const SparsifierOptions &options) {
   // Rewrite named linalg ops into generic ops.
   pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
 
@@ -108,10 +108,10 @@ void mlir::sparse_tensor::buildSparseCompiler(
 //===----------------------------------------------------------------------===//
 
 void mlir::sparse_tensor::registerSparseTensorPipelines() {
-  PassPipelineRegistration<SparseCompilerOptions>(
-      "sparse-compiler",
+  PassPipelineRegistration<SparsifierOptions>(
+      "sparsifier",
       "The standard pipeline for taking sparsity-agnostic IR using the"
       " sparse-tensor type, and lowering it to LLVM IR with concrete"
       " representations and algorithms for sparse tensors.",
-      buildSparseCompiler);
+      buildSparsifier);
 }
