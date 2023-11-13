@@ -1811,6 +1811,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
             LocalMIs.erase(MI);
             continue;
           }
+          // Folding into a move-from-register can create a new move-immediate.
+          isMoveImmediate(*MI, ImmDefRegs, ImmDefMIs);
         }
       }
 
