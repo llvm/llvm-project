@@ -1285,11 +1285,15 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
         return;
       }
       if (const auto &targetArg{arguments[1]}) {
-        // The standard requires that the POINTER= argument be a valid LHS for
-        // a pointer assignment when the TARGET= argument is present.  This,
-        // perhaps unintentionally, excludes function results, including NULL(),
-        // from being used there, as well as INTENT(IN) dummy pointers.
-        // Allow this usage as a benign extension with a portability warning.
+        // The standard requires that the TARGET= argument, when present,
+        // be a valid RHS for a pointer assignment that has the POINTER=
+        // argument as its LHS.  Some popular compilers misinterpret this
+        // requirement more strongly than necessary, and actually validate
+        // the POINTER= argument as if it were serving as the LHS of a pointer
+        // assignment.  This, perhaps unintentionally, excludes function
+        // results, including NULL(), from being used there, as well as
+        // INTENT(IN) dummy pointers.  Detect these conditions and emit
+        // portability warnings.
         if (!evaluate::ExtractDataRef(*pointerExpr) &&
             !evaluate::IsProcedurePointer(*pointerExpr)) {
           context.messages().Say(pointerArg->sourceLocation(),
