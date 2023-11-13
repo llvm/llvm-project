@@ -464,22 +464,27 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           : nullptr};
   int actualRank{actualType.Rank()};
   bool actualIsPointer{evaluate::IsObjectPointer(actual)};
+  bool actualIsAssumedRank{evaluate::IsAssumedRank(actual)};
   if (dummy.type.attrs().test(
           characteristics::TypeAndShape::Attr::AssumedShape)) {
     // 15.5.2.4(16)
-    if (actualRank == 0) {
+    if (actualIsAssumedRank) {
+      messages.Say(
+          "Assumed-rank actual argument may not be associated with assumed-shape %s"_err_en_US,
+          dummyName);
+    } else if (actualRank == 0) {
       messages.Say(
           "Scalar actual argument may not be associated with assumed-shape %s"_err_en_US,
           dummyName);
-    }
-    if (actualIsAssumedSize && actualLastSymbol) {
+    } else if (actualIsAssumedSize && actualLastSymbol) {
       evaluate::SayWithDeclaration(messages, *actualLastSymbol,
           "Assumed-size array may not be associated with assumed-shape %s"_err_en_US,
           dummyName);
     }
   } else if (dummyRank > 0) {
     bool basicError{false};
-    if (actualRank == 0 && !dummyIsAllocatableOrPointer) {
+    if (actualRank == 0 && !actualIsAssumedRank &&
+        !dummyIsAllocatableOrPointer) {
       // Actual is scalar, dummy is an array.  F'2023 15.5.2.5p14
       if (actualIsCoindexed) {
         basicError = true;
@@ -532,7 +537,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             characteristics::DummyDataObject::Attr::DeducedFromActual)) {
       if (auto dummySize{evaluate::ToInt64(evaluate::Fold(foldingContext,
               evaluate::GetSize(evaluate::Shape{dummy.type.shape()})))}) {
-        if (actualRank == 0) {
+        if (actualRank == 0 && !actualIsAssumedRank) {
           if (evaluate::IsArrayElement(actual)) {
             // Actual argument is a scalar array element
             evaluate::DesignatorFolder folder{
@@ -569,7 +574,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               }
             }
           }
-        } else { // actualRank > 0
+        } else { // actualRank > 0 || actualIsAssumedRank
           if (auto actualSize{evaluate::ToInt64(evaluate::Fold(foldingContext,
                   evaluate::GetSize(evaluate::Shape(actualType.shape()))))};
               actualSize && *actualSize < *dummySize) {
@@ -645,7 +650,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           "Coindexed ASYNCHRONOUS or VOLATILE actual argument may not be associated with %s with ASYNCHRONOUS or VOLATILE attributes unless VALUE"_err_en_US,
           dummyName);
     }
-    if (actualRank > 0 && !actualIsContiguous) {
+    if ((actualRank > 0 || actualIsAssumedRank) && !actualIsContiguous) {
       if (dummyIsContiguous ||
           !(dummyIsAssumedShape || dummyIsAssumedRank ||
               (actualIsPointer && dummyIsPointer))) { // C1539 & C1540
