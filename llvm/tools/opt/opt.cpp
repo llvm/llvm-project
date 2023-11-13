@@ -460,16 +460,14 @@ int main(int argc, char **argv) {
 
   // RemoveDIs debug-info transition: tests may request that we /try/ to use the
   // new debug-info format, if it's built in.
-  if (TryUseNewDbgInfoFormat) {
 #ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  if (TryUseNewDbgInfoFormat) {
     // If LLVM was built with support for this, turn the new debug-info format
     // on.
     UseNewDbgInfoFormat = true;
-#else
-    // It it wasn't, do nothing.
-    ;
-#endif
   }
+#endif
+  (void)TryUseNewDbgInfoFormat;
 
   LLVMContext Context;
 
