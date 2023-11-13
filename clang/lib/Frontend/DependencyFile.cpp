@@ -72,7 +72,6 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                                       /*FromModule*/ false,
                                       /*IsSystem*/ false,
                                       /*IsModuleFile*/ false,
-                                      &PP.getFileManager(),
                                       /*IsMissing*/ true);
     // Files that actually exist are handled by FileChanged.
   }
@@ -100,7 +99,6 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
     DepCollector.maybeAddDependency(Filename,
                                     /*FromModule=*/false, false,
                                     /*IsModuleFile=*/false,
-                                    &PP.getFileManager(),
                                     /*IsMissing=*/false);
   }
 
