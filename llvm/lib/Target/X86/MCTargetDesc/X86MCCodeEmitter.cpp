@@ -750,11 +750,11 @@ void X86MCCodeEmitter::emitMemModRMByte(
   bool AllowDisp8 = !UseDisp32;
 
   // Determine whether a SIB byte is needed.
-  if (// The SIB byte must be used if there is an index register or the
-      // encoding requires a SIB byte.
+  if ( // The SIB byte must be used if there is an index register or the
+       // encoding requires a SIB byte.
       !ForceSIB && IndexReg.getReg() == 0 &&
-      // The SIB byte must be used if the base is ESP/RSP/R12, all of which
-      // encode to an R/M value of 4, which indicates that a SIB byte is
+      // The SIB byte must be used if the base is ESP/RSP/R12/R20/R28, all of
+      // which encode to an R/M value of 4, which indicates that a SIB byte is
       // present.
       BaseRegNo != N86::ESP &&
       // If there is no base register and we're in 64-bit mode, we need a SIB
@@ -841,8 +841,8 @@ void X86MCCodeEmitter::emitMemModRMByte(
   } else if (Disp.isImm() && AllowDisp8 &&
              isDispOrCDisp8(TSFlags, Disp.getImm(), ImmOffset)) {
     // Displacement fits in a byte or matches an EVEX compressed disp8, use
-    // disp8 encoding. This also handles EBP/R13 base with 0 displacement unless
-    // {disp32} pseudo prefix was used.
+    // disp8 encoding. This also handles EBP/R13/R21/R29 base with 0
+    // displacement unless {disp32} pseudo prefix was used.
     emitByte(modRMByte(1, RegOpcodeField, 4), CB);
     ForceDisp8 = true;
   } else {
