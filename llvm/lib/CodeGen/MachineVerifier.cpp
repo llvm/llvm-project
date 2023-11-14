@@ -965,7 +965,7 @@ bool MachineVerifier::verifyVectorElementMatch(LLT Ty0, LLT Ty1,
     return false;
   }
 
-  if (Ty0.isVector() && Ty0.getNumElements() != Ty1.getNumElements()) {
+  if (Ty0.isVector() && Ty0.getElementCount() != Ty1.getElementCount()) {
     report("operand types must preserve number of vector elements", MI);
     return false;
   }
