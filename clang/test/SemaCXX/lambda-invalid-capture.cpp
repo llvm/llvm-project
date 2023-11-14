@@ -23,3 +23,9 @@ int pr43080(int i) { // expected-note {{declared here}}
       i; // expected-error {{variable 'i' cannot be implicitly captured in a lambda with no capture-default specified}}
   }();
 }
+
+void pr72198() {
+  int [_, b] = {0, 0}; // expected-error{{decomposition declaration cannot be declared with type 'int'; declared type must be 'auto' or reference to 'auto'}} \
+                          expected-error{{excess elements in scalar initializer}}
+  [b]{}; // expected-warning{{expression result unused}}
+}

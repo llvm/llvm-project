@@ -19773,6 +19773,8 @@ bool Sema::tryCaptureVariable(
   // declcontext can either capture the variable or have already captured
   // the variable.
   CaptureType = Var->getType();
+  if (CaptureType.isNull())
+    return true;
   DeclRefType = CaptureType.getNonReferenceType();
   bool Nested = false;
   bool Explicit = (Kind != TryCapture_Implicit);
