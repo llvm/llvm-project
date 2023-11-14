@@ -23,6 +23,17 @@
 using namespace llvm;
 using namespace LegalityPredicates;
 
+// Is this type supported by scalar FP arithmetic operations given the current
+// subtarget.
+static LegalityPredicate typeIsScalarFPArith(unsigned TypeIdx,
+                                             const RISCVSubtarget &ST) {
+  return [=, &ST](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx].isScalar() &&
+           ((ST.hasStdExtF() && Query.Types[TypeIdx].getSizeInBits() == 32) ||
+            (ST.hasStdExtD() && Query.Types[TypeIdx].getSizeInBits() == 64));
+  };
+}
+
 RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   const unsigned XLen = ST.getXLen();
   const LLT sXLen = LLT::scalar(XLen);
@@ -212,10 +223,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FNEG,
                                G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM})
-      .legalIf([=, &ST](const LegalityQuery &Query) -> bool {
-        return (ST.hasStdExtF() && typeIs(0, s32)(Query)) ||
-               (ST.hasStdExtD() && typeIs(0, s64)(Query));
-      });
+      .legalIf(typeIsScalarFPArith(0, ST));
 
   getActionDefinitionsBuilder(G_FPTRUNC).legalIf(
       [=, &ST](const LegalityQuery &Query) -> bool {
@@ -229,34 +237,18 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       });
 
   getActionDefinitionsBuilder(G_FCMP)
-      .legalIf([=, &ST](const LegalityQuery &Query) -> bool {
-        return typeIs(0, sXLen)(Query) &&
-               ((ST.hasStdExtF() && typeIs(1, s32)(Query)) ||
-                (ST.hasStdExtD() && typeIs(1, s64)(Query)));
-      })
+      .legalIf(all(typeIs(0, sXLen), typeIsScalarFPArith(1, ST)))
       .clampScalar(0, sXLen, sXLen);
 
-  getActionDefinitionsBuilder(G_FCONSTANT)
-      .legalIf([=, &ST](const LegalityQuery &Query) -> bool {
-        return (ST.hasStdExtF() && typeIs(0, s32)(Query)) ||
-               (ST.hasStdExtD() && typeIs(0, s64)(Query));
-      });
+  getActionDefinitionsBuilder(G_FCONSTANT).legalIf(typeIsScalarFPArith(0, ST));
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-      .legalIf([=, &ST](const LegalityQuery &Query) -> bool {
-        return typeInSet(0, {s32, sXLen})(Query) &&
-               ((ST.hasStdExtF() && typeIs(1, s32)(Query)) ||
-                (ST.hasStdExtD() && typeIs(1, s64)(Query)));
-      })
+      .legalIf(all(typeInSet(0, {s32, sXLen}), typeIsScalarFPArith(1, ST)))
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, sXLen);
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
-      .legalIf([=, &ST](const LegalityQuery &Query) -> bool {
-        return ((ST.hasStdExtF() && typeIs(0, s32)(Query)) ||
-                (ST.hasStdExtD() && typeIs(0, s64)(Query))) &&
-               typeInSet(1, {s32, sXLen})(Query);
-      })
+      .legalIf(all(typeIsScalarFPArith(0, ST), typeInSet(1, {s32, sXLen})))
       .widenScalarToNextPow2(1)
       .clampScalar(1, s32, sXLen);
 
