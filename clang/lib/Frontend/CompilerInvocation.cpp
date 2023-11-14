@@ -3618,24 +3618,6 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_frandomize_layout_seed_EQ, Opts.RandstructSeed);
 }
 
-static void CheckBoundsSafetyLang(InputKind IK, DiagnosticsEngine &Diags) {
-  // Currently, bounds safety is only supported for C and it's not supported
-  // in other languages, such as C++, Obj-C, and Obj-C++.
-  switch (IK.getLanguage()) {
-  case Language::Unknown:
-  case Language::LLVM_IR:
-    llvm_unreachable("Unexpected file format");
-  // 'argument unused' warning is reported for assembler in the driver.
-  case Language::Asm:
-  case Language::C:
-    break;
-
-  default:
-    Diags.Report(diag::err_drv_bounds_safety_lang_not_supported);
-    break;
-  }
-}
-
 bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                                        InputKind IK, const llvm::Triple &T,
                                        std::vector<std::string> &Includes,
@@ -3852,9 +3834,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       (!Opts.GNUMode && !Opts.MSVCCompat && !Opts.CPlusPlus17) || T.isOSzOS();
   Opts.Trigraphs =
       Args.hasFlag(OPT_ftrigraphs, OPT_fno_trigraphs, Opts.Trigraphs);
-
-  if (Opts.BoundsSafety)
-    CheckBoundsSafetyLang(IK, Diags);
 
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);
