@@ -81,8 +81,8 @@ namespace Foo {
       },
       "location": {
         "position": {
-          "character": 11,
-          "line": 1
+          "character": 10,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -135,8 +135,8 @@ namespace Foo {
       },
       "location": {
         "position": {
-          "character": 9,
-          "line": 2
+          "character": 8,
+          "line": 1
         },
         "uri": "file://INPUT_DIR/input.h"
       },
