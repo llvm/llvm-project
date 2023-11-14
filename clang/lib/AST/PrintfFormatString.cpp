@@ -485,22 +485,22 @@ bool clang::analyze_format_string::parseFormatStringHasFormattingSpecifiers(
 }
 
 ArgType clang::analyze_format_string::wToArgType(
-    int size, bool fast, ASTContext &C) {
-  ArgType fastType = C.getTargetInfo().getTriple().isArch64Bit() ? C.LongLongTy : C.IntTy;
-  if (size == 8) return C.CharTy;
-  if (size == 16) return fast? fastType : C.ShortTy;
-  if (size == 32) return fast? fastType : C.IntTy;
-  if (size == 64) return C.LongLongTy;
+    int Size, bool Fast, ASTContext &C) {
+  ArgType FastType = C.getTargetInfo().getTriple().isArch64Bit() ? C.LongLongTy : C.IntTy;
+  if (Size == 8) return C.CharTy;
+  if (Size == 16) return Fast? FastType : C.ShortTy;
+  if (Size == 32) return Fast? FastType : C.IntTy;
+  if (Size == 64) return C.LongLongTy;
   return ArgType::Invalid();
 }
 
 ArgType clang::analyze_format_string::wToArgTypeUnsigned(
-    int size, bool fast, ASTContext &C) {
-  ArgType fastType = C.getTargetInfo().getTriple().isArch64Bit() ? C.UnsignedLongLongTy : C.UnsignedIntTy;
-  if (size == 8) return C.UnsignedCharTy;
-  if (size == 16) return fast? fastType : C.UnsignedShortTy;
-  if (size == 32) return fast? fastType : C.UnsignedIntTy;
-  if (size == 64) return C.UnsignedLongLongTy;
+    int Size, bool Fast, ASTContext &C) {
+  ArgType FastType = C.getTargetInfo().getTriple().isArch64Bit() ? C.UnsignedLongLongTy : C.UnsignedIntTy;
+  if (Size == 8) return C.UnsignedCharTy;
+  if (Size == 16) return Fast? FastType : C.UnsignedShortTy;
+  if (Size == 32) return Fast? FastType : C.UnsignedIntTy;
+  if (Size == 64) return C.UnsignedLongLongTy;
   return ArgType::Invalid();
 }
 
@@ -560,7 +560,7 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
         return ArgType::Invalid();
       case LengthModifier::AsWide:
       case LengthModifier::AsWideFast:
-        int s = getSize();
+        int s = getExplicitlyFixedSize();
         bool fast = LM.getKind() == LengthModifier::AsWideFast ? true : false;
         return clang::analyze_format_string::wToArgType(s, fast, Ctx);
     }
@@ -599,7 +599,7 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
         return ArgType::Invalid();
       case LengthModifier::AsWide:
       case LengthModifier::AsWideFast:
-        int s = getSize();
+        int s = getExplicitlyFixedSize();
         bool fast = LM.getKind() == LengthModifier::AsWideFast ? true : false;
         return clang::analyze_format_string::wToArgTypeUnsigned(s, fast, Ctx);
     }

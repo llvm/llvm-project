@@ -419,7 +419,7 @@ protected:
   ///  http://www.opengroup.org/onlinepubs/009695399/functions/printf.html
   bool UsesPositionalArg;
   unsigned argIndex;
-  unsigned size;
+  unsigned ExplicitlyFixedSize;
 public:
   FormatSpecifier(bool isPrintf)
     : CS(isPrintf), VectorNumElts(false),
@@ -463,12 +463,12 @@ public:
     FieldWidth = Amt;
   }
 
-  void setSize(unsigned s) {
-    size = s;
+  void setExplicitlyFixedSize(unsigned s) {
+    ExplicitlyFixedSize = s;
   }
 
-  unsigned getSize() const {
-    return size;
+  unsigned getExplicitlyFixedSize() const {
+    return ExplicitlyFixedSize;
   }
 
   bool usesPositionalArg() const { return UsesPositionalArg; }
@@ -791,8 +791,8 @@ bool parseFormatStringHasFormattingSpecifiers(const char *Begin,
                                               const LangOptions &LO,
                                               const TargetInfo &Target);
 
-ArgType wToArgType(int size, bool fast, ASTContext &C);
-ArgType wToArgTypeUnsigned(int size, bool fast, ASTContext &C);
+ArgType wToArgType(int Size, bool Fast, ASTContext &C);
+ArgType wToArgTypeUnsigned(int Size, bool Fast, ASTContext &C);
 
 } // end analyze_format_string namespace
 } // end clang namespace

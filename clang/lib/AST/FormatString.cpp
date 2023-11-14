@@ -309,7 +309,7 @@ clang::analyze_format_string::ParseLengthModifier(FormatSpecifier &FS,
         if (supported_list.count(s) == 0) {
           return false;
         }
-        FS.setSize(s);
+        FS.setExplicitlyFixedSize(s);
       }
 
       break;

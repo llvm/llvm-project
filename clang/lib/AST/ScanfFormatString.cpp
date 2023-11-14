@@ -265,7 +265,7 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
           return ArgType::Invalid();
         case LengthModifier::AsWide:
         case LengthModifier::AsWideFast:
-          int s = getSize();
+          int s = getExplicitlyFixedSize();
           bool fast = LM.getKind() == LengthModifier::AsWideFast ? true : false;
           return clang::analyze_format_string::wToArgType(s, fast, Ctx);
       }
@@ -311,7 +311,7 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
           return ArgType::Invalid();
         case LengthModifier::AsWide:
         case LengthModifier::AsWideFast:
-          int s = getSize();
+          int s = getExplicitlyFixedSize();
           bool fast = LM.getKind() == LengthModifier::AsWideFast ? true : false;
           if (CS.getKind() == ConversionSpecifier::uArg or CS.getKind() == ConversionSpecifier::UArg)
             return clang::analyze_format_string::wToArgTypeUnsigned(s, fast, Ctx);
