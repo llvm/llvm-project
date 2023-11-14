@@ -1667,20 +1667,21 @@ struct PrefixMatcher {
   }
 
   /// Find the next match of a prefix in Buffer.
-  std::optional<StringRef> match(StringRef Buffer) {
+  /// Returns empty StringRef if not found.
+  StringRef match(StringRef Buffer) {
     assert(Buffer.data() >= Input.data() &&
            Buffer.data() + Buffer.size() == Input.data() + Input.size() &&
            "Buffer must be suffix of Input");
 
     size_t From = Buffer.data() - Input.data();
-    std::optional<StringRef> Match;
+    StringRef Match;
     for (auto &[Prefix, Pos] : Prefixes) {
       // If the last occurrence was before From, find the next one after From.
       if (Pos < From)
         Pos = Input.find(Prefix, From);
       // Find the first prefix with the lowest position.
       if (Pos != StringRef::npos &&
-          (!Match || size_t(Match->data() - Input.data()) > Pos))
+          (Match.empty() || size_t(Match.data() - Input.data()) > Pos))
         Match = StringRef(Input.substr(Pos, Prefix.size()));
     }
     return Match;
@@ -1716,12 +1717,10 @@ FindFirstMatchingPrefix(const FileCheckRequest &Req, PrefixMatcher &Matcher,
                         Check::FileCheckType &CheckTy) {
   while (!Buffer.empty()) {
     // Find the first (longest) prefix match.
-    std::optional<StringRef> Res = Matcher.match(Buffer);
-    if (!Res)
+    StringRef Prefix = Matcher.match(Buffer);
+    if (Prefix.empty())
       // No match at all, bail.
       return {StringRef(), StringRef()};
-
-    StringRef Prefix = *Res;
 
     assert(Prefix.data() >= Buffer.data() &&
            Prefix.data() < Buffer.data() + Buffer.size() &&
