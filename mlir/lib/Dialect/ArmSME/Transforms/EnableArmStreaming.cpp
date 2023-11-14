@@ -62,12 +62,11 @@ struct EnableArmStreamingPass
   }
   void runOnOperation() override {
     auto op = getOperation();
-    if (op->getAttr(kEnableArmStreamingIgnoreAttr))
+    if (op->getAttr(kEnableArmStreamingIgnoreAttr) ||
+        streamingMode == ArmStreamingMode::Disabled)
       return;
-    auto unitAttr = UnitAttr::get(&getContext());
 
-    if (streamingMode == ArmStreamingMode::Disabled)
-      return;
+    auto unitAttr = UnitAttr::get(&getContext());
 
     op->setAttr(stringifyArmStreamingMode(streamingMode), unitAttr);
 
