@@ -730,6 +730,7 @@ class DebugCommunication(object):
         enableAutoVariableSummaries=False,
         enableSyntheticChildDebugging=False,
         commandEscapePrefix="`",
+        customFrameFormat=None,
     ):
         args_dict = {"program": program}
         if args:
@@ -771,6 +772,9 @@ class DebugCommunication(object):
             args_dict["runInTerminal"] = runInTerminal
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
+        if customFrameFormat:
+            args_dict["customFrameFormat"] = customFrameFormat
+
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
         args_dict["commandEscapePrefix"] = commandEscapePrefix
