@@ -96,8 +96,8 @@ template<typename T> T Foo = T(3.14);
       },
       "location": {
         "position": {
-          "character": 24,
-          "line": 1
+          "character": 23,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
