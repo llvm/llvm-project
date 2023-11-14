@@ -235,9 +235,9 @@ define void @test_i16_extend(ptr %p.1, ptr %p.2, i32 %idx.i32) {
 ; CHECK-NEXT:    [[T53:%.*]] = getelementptr inbounds i16, ptr [[P_1:%.*]], i64 [[IDX_0]]
 ; CHECK-NEXT:    [[T56:%.*]] = getelementptr inbounds i16, ptr [[P_2:%.*]], i64 [[IDX_0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[T53]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i16> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <8 x i16> [[TMP1]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr [[T56]], align 2
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i16> [[TMP3]] to <8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <8 x i16> [[TMP3]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <8 x i32> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i32> [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext i32 [[TMP6]] to i64
