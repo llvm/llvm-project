@@ -2965,6 +2965,7 @@ void DWARFASTParserClang::ParseSingleMember(
   // data members is DW_AT_declaration, so we check it instead.
   // FIXME: Since DWARFv5, static data members are marked DW_AT_variable so we
   // can consistently detect them on both GCC and Clang without below heuristic.
+  // Remove this block if we ever drop DWARFv4 support.
   if (attrs.member_byte_offset == UINT32_MAX &&
       attrs.data_bit_offset == UINT64_MAX && attrs.is_declaration) {
     CreateStaticMemberVariable(die, attrs, class_clang_type);
