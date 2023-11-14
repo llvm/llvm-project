@@ -1355,8 +1355,11 @@ unsigned UnwrappedLineFormatter::format(
     bool FixIndentation = (FixBadIndentation || ContinueFormatting) &&
                           Indent != TheLine.First->OriginalColumn;
     bool ShouldFormat = TheLine.Affected || FixIndentation;
-    if (Style.IgnorePPDefinitions && TheLine.Type == LT_PreprocessorDirective)
+    if (Style.IgnorePPDefinitions && TheLine.Type == LT_PreprocessorDirective &&
+        TheLine.getFirstNonComment()->Next->is(tok::pp_define)) {
       ShouldFormat = false;
+    }
+
     // We cannot format this line; if the reason is that the line had a
     // parsing error, remember that.
     if (ShouldFormat && TheLine.Type == LT_Invalid && Status) {

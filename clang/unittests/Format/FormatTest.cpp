@@ -24272,10 +24272,11 @@ TEST_F(FormatTest, IgnorePPDefinitions) {
   Style.IndentPPDirectives = FormatStyle::PPDIS_None;
   verifyNoChange("#if A\n"
                  "#define A  a\n"
-                 "#endif",
+                 "#endif\n",
                  Style);
-  verifyNoChange("#if A\n"
-                 "#define A  a\\\n"
+  verifyNoChange("#define UNITY 1\n"
+                 "#if A\n"
+                 "#  define   A  a\\\n"
                  "  a  a\n"
                  "#endif",
                  Style);
@@ -24287,15 +24288,28 @@ TEST_F(FormatTest, IgnorePPDefinitions) {
                "#endif",
                Style);
   Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
-  verifyNoChange("#if A\n"
-                 "#  define A  a\n"
-                 "#endif",
-                 Style);
+  verifyFormat("#if A\n"
+               "#  define A  a\n"
+               "#endif",
+               "#if A\n"
+               "  #  define A  a\n"
+               "#endif",
+               Style);
   Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
   verifyNoChange("#if A\n"
                  "  #define A  a\n"
                  "#endif",
                  Style);
+
+  Style.IndentPPDirectives = FormatStyle::PPDIS_None;
+  // IgnorePPDefinitions should not affect other PP directives
+  verifyFormat("#if !defined(A)\n"
+               "# define  A  a\n"
+               "#endif",
+               "#if ! defined ( A )\n"
+               "  # define  A  a\n"
+               "#endif",
+               Style);
 }
 
 TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {
