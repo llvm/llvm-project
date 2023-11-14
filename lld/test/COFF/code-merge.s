@@ -18,8 +18,8 @@
 # CHECK-NEXT:     PointerToLineNumbers: 0x0
 # CHECK-NEXT:     RelocationCount: 0
 # CHECK-NEXT:     LineNumberCount: 0
-# CHECK-NEXT:     Characteristics [ (0xC0000080)
-# CHECK-NEXT:       IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
+# CHECK-NEXT:     Characteristics [ (0xC0000020)
+# CHECK-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
 # CHECK-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
 # CHECK-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
 # CHECK-NEXT:     ]
@@ -35,8 +35,8 @@
 # CHECK-NEXT:     PointerToLineNumbers: 0x0
 # CHECK-NEXT:     RelocationCount: 0
 # CHECK-NEXT:     LineNumberCount: 0
-# CHECK-NEXT:     Characteristics [ (0x40000040)
-# CHECK-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+# CHECK-NEXT:     Characteristics [ (0x40000020)
+# CHECK-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
 # CHECK-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
 # CHECK-NEXT:     ]
 # CHECK-NEXT:   }
@@ -77,7 +77,48 @@
 # CHECK-NEXT: ]
 
 # RUN: llvm-objdump -d %t.dll | FileCheck -check-prefix=DISASM %s
-# DISASM:      Disassembly of section .testx3:
+# DISASM:      Disassembly of section .testbss:
+# DISASM-EMPTY:
+# DISASM-NEXT: 0000000180001000 <.testbss>:
+# DISASM-NEXT: 180001000: 00 00                        addb    %al, (%rax)
+# DISASM-NEXT: 180001002: 00 00                        addb    %al, (%rax)
+# DISASM-NEXT: 180001004: cc                           int3
+# DISASM-NEXT: 180001005: cc                           int3
+# DISASM-NEXT: 180001006: cc                           int3
+# DISASM-NEXT: 180001007: cc                           int3
+# DISASM-NEXT: 180001008: cc                           int3
+# DISASM-NEXT: 180001009: cc                           int3
+# DISASM-NEXT: 18000100a: cc                           int3
+# DISASM-NEXT: 18000100b: cc                           int3
+# DISASM-NEXT: 18000100c: cc                           int3
+# DISASM-NEXT: 18000100d: cc                           int3
+# DISASM-NEXT: 18000100e: cc                           int3
+# DISASM-NEXT: 18000100f: cc                           int3
+# DISASM-NEXT: 180001010: 48 c7 c0 02 00 00 00         movq    $0x2, %rax
+# DISASM-NEXT: 180001017: c3                           retq
+# DISASM-EMPTY:
+# DISASM-NEXT: Disassembly of section .testd:
+# DISASM-EMPTY:
+# DISASM-NEXT: 0000000180002000 <.testd>:
+# DISASM-NEXT: 180002000: 01 00                        addl    %eax, (%rax)
+# DISASM-NEXT: 180002002: cc                           int3
+# DISASM-NEXT: 180002003: cc                           int3
+# DISASM-NEXT: 180002004: cc                           int3
+# DISASM-NEXT: 180002005: cc                           int3
+# DISASM-NEXT: 180002006: cc                           int3
+# DISASM-NEXT: 180002007: cc                           int3
+# DISASM-NEXT: 180002008: cc                           int3
+# DISASM-NEXT: 180002009: cc                           int3
+# DISASM-NEXT: 18000200a: cc                           int3
+# DISASM-NEXT: 18000200b: cc                           int3
+# DISASM-NEXT: 18000200c: cc                           int3
+# DISASM-NEXT: 18000200d: cc                           int3
+# DISASM-NEXT: 18000200e: cc                           int3
+# DISASM-NEXT: 18000200f: cc                           int3
+# DISASM-NEXT: 180002010: 48 c7 c0 01 00 00 00         movq    $0x1, %rax
+# DISASM-NEXT: 180002017: c3                           retq
+# DISASM-EMPTY:
+# DISASM-NEXT: Disassembly of section .testx3:
 # DISASM-EMPTY:
 # DISASM-NEXT: 0000000180003000 <.testx3>:
 # DISASM-NEXT: 180003000: 48 c7 c0 03 00 00 00         movq    $0x3, %rax
