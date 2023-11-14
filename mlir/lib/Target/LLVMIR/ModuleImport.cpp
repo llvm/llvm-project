@@ -1573,6 +1573,15 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
   funcOp.setMemoryAttr(memAttr);
 }
 
+// List of LLVM IR attributes that map to an explicit attribute on the MLIR
+// LLVMFuncOp.
+static constexpr std::array ExplicitAttributes{
+    StringLiteral("aarch64_pstate_sm_enabled"),
+    StringLiteral("aarch64_pstate_sm_body"),
+    StringLiteral("aarch64_pstate_za_new"),
+    StringLiteral("vscale_range"),
+};
+
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
   MLIRContext *context = funcOp.getContext();
   SmallVector<Attribute> passthroughs;
@@ -1598,11 +1607,8 @@ static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
       attrName = llvm::Attribute::getNameFromAttrKind(attr.getKindAsEnum());
     auto keyAttr = StringAttr::get(context, attrName);
 
-    // Skip the aarch64_pstate_sm_<body|enabled> since the LLVMFuncOp has an
-    // explicit attribute.
-    // Also skip the vscale_range, it is also an explicit attribute.
-    if (attrName == "aarch64_pstate_sm_enabled" ||
-        attrName == "aarch64_pstate_sm_body" || attrName == "vscale_range")
+    // Skip attributes that map to an explicit attribute on the LLVMFuncOp.
+    if (llvm::is_contained(ExplicitAttributes, attrName))
       continue;
 
     if (attr.isStringAttribute()) {
@@ -1642,6 +1648,10 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setArmStreaming(true);
   else if (func->hasFnAttribute("aarch64_pstate_sm_body"))
     funcOp.setArmLocallyStreaming(true);
+
+  if (func->hasFnAttribute("aarch64_pstate_za_new"))
+    funcOp.setArmNewZa(true);
+
   llvm::Attribute attr = func->getFnAttribute(llvm::Attribute::VScaleRange);
   if (attr.isValid()) {
     MLIRContext *context = funcOp.getContext();

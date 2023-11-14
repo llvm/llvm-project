@@ -220,17 +220,6 @@ llvm.func @arm_sme_store(%nxv1i1  : vector<[1]xi1>,
 
 // -----
 
-// CHECK-LABEL: @arm_sme_toggle_za
-llvm.func @arm_sme_toggle_za() {
-  // CHECK: call void @llvm.aarch64.sme.za.enable()
-  "arm_sme.intr.za.enable"() : () -> ()
-  // CHECK: call void @llvm.aarch64.sme.za.disable()
-  "arm_sme.intr.za.disable"() : () -> ()
-  llvm.return
-}
-
-// -----
-
 // CHECK-LABEL: @arm_sme_vector_to_tile_horiz
 llvm.func @arm_sme_vector_to_tile_horiz(%tileslice : i32,
                                         %nxv16i1 : vector<[16]xi1>,
