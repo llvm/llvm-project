@@ -1,4 +1,4 @@
-! RUN: bbc --use-desc-for-alloc=false -fopenacc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -fopenacc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! This test checks the lowering of atomic write
 
@@ -23,18 +23,15 @@ end program acc_atomic_write_test
 ! Test lowering atomic read for pointer variables.
 
 !CHECK-LABEL: func.func @_QPatomic_write_pointer() {
-!CHECK:         %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "x", uniq_name = "_QFatomic_write_pointerEx"}
-!CHECK:         %[[VAL_1:.*]] = fir.alloca !fir.ptr<i32> {uniq_name = "_QFatomic_write_pointerEx.addr"}
-!CHECK:         %[[VAL_2:.*]] = fir.zero_bits !fir.ptr<i32>
-!CHECK:         fir.store %[[VAL_2]] to %[[VAL_1]] : !fir.ref<!fir.ptr<i32>>
-!CHECK:         %[[VAL_3:.*]] = arith.constant 1 : i32
-!CHECK:         %[[VAL_4:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.ptr<i32>>
-!CHECK:         acc.atomic.write %[[VAL_4]] = %[[VAL_3]]   : !fir.ptr<i32>, i32
-!CHECK:         %[[VAL_5:.*]] = arith.constant 2 : i32
-!CHECK:         %[[VAL_6:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.ptr<i32>>
-!CHECK:         fir.store %[[VAL_5]] to %[[VAL_6]] : !fir.ptr<i32>
-!CHECK:         return
-!CHECK:       }
+!CHECK: %[[X:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "x", uniq_name = "_QFatomic_write_pointerEx"}
+!CHECK: %[[C1:.*]] = arith.constant 1 : i32
+!CHECK: %[[LOAD_X:.*]] = fir.load %[[X]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK: %[[BOX_ADDR_X:.*]] = fir.box_addr %[[LOAD_X]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+!CHECK: acc.atomic.write %[[BOX_ADDR_X]] = %[[C1]] : !fir.ptr<i32>, i32
+!CHECK: %[[C2:.*]] = arith.constant 2 : i32
+!CHECK: %[[LOAD_X:.*]] = fir.load %[[X]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK: %[[BOX_ADDR_X:.*]] = fir.box_addr %[[LOAD_X]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+!CHECK: fir.store %[[C2]] to %[[BOX_ADDR_X]] : !fir.ptr<i32>
 
 subroutine atomic_write_pointer()
   integer, pointer :: x
