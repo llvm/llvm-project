@@ -621,22 +621,6 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base,
   return NewInsts[Start];
 }
 
-/// Looks through GEPs in order to express the input Value as a constant
-/// indexed GEP. Returns a pair containing the GEPs Pointer and Index.
-static std::pair<Value *, APInt>
-getAsConstantIndexedAddress(Value *V, const DataLayout &DL) {
-  APInt Offset = APInt(DL.getIndexTypeSizeInBits(V->getType()), 0);
-  while (GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
-    // We accept only inbouds GEPs here to exclude the possibility of
-    // overflow.
-    if (!GEP->isInBounds() || !GEP->accumulateConstantOffset(DL, Offset))
-      break;
-
-    V = GEP->getPointerOperand();
-  }
-  return {V, Offset};
-}
-
 /// Converts (CMP GEPLHS, RHS) if this change would make RHS a constant.
 /// We can look through PHIs, GEPs and casts in order to determine a common base
 /// between GEPLHS and RHS.
@@ -651,9 +635,14 @@ static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
   if (!GEPLHS->hasAllConstantIndices())
     return nullptr;
 
-  Value *PtrBase;
-  APInt Offset;
-  std::tie(PtrBase, Offset) = getAsConstantIndexedAddress(GEPLHS, DL);
+  APInt Offset(DL.getIndexTypeSizeInBits(GEPLHS->getType()), 0);
+  Value *PtrBase =
+      GEPLHS->stripAndAccumulateConstantOffsets(DL, Offset,
+                                                /*AllowNonInbounds*/ false);
+
+  // Bail if we looked through addrspacecast.
+  if (PtrBase->getType() != GEPLHS->getType())
+    return nullptr;
 
   // The set of nodes that will take part in this transformation.
   SetVector<Value *> Nodes;
