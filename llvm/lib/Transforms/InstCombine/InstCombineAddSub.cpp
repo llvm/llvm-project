@@ -1487,7 +1487,11 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       return BinaryOperator::CreateNeg(Builder.CreateAdd(A, B));
 
     // -A + B --> B - A
-    return BinaryOperator::CreateSub(RHS, A);
+    auto *Sub = BinaryOperator::CreateSub(RHS, A);
+    auto *OB0 = dyn_cast<OverflowingBinaryOperator>(LHS);
+    Sub->setHasNoSignedWrap(I.hasNoSignedWrap() && OB0->hasNoSignedWrap());
+
+    return Sub;
   }
 
   // A + -B  -->  A - B
