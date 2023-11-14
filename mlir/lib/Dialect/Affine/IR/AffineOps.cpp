@@ -573,9 +573,9 @@ OpFoldResult AffineApplyOp::fold(FoldAdaptor adaptor) {
 
   // Fold dims and symbols to existing values.
   auto expr = map.getResult(0);
-  if (auto dim = expr.dyn_cast<AffineDimExpr>())
+  if (auto dim = dyn_cast<AffineDimExpr>(expr))
     return getOperand(dim.getPosition());
-  if (auto sym = expr.dyn_cast<AffineSymbolExpr>())
+  if (auto sym = dyn_cast<AffineSymbolExpr>(expr))
     return getOperand(map.getNumDims() + sym.getPosition());
 
   // Otherwise, default to folding the map.
@@ -597,7 +597,7 @@ static int64_t getLargestKnownDivisor(AffineExpr e, ArrayRef<Value> operands) {
   // well for dim/sym expressions, but in that case, getLargestKnownDivisor
   // can't be part of the IR library but of the `Analysis` library. The IR
   // library can only really depend on simple O(1) checks.
-  auto dimExpr = e.dyn_cast<AffineDimExpr>();
+  auto dimExpr = dyn_cast<AffineDimExpr>(e);
   // If it's not a dim expr, `div` is the best we have.
   if (!dimExpr)
     return div;
@@ -627,11 +627,11 @@ static int64_t getLargestKnownDivisor(AffineExpr e, ArrayRef<Value> operands) {
 /// being an affine dim expression or a constant.
 static bool isNonNegativeBoundedBy(AffineExpr e, ArrayRef<Value> operands,
                                    int64_t k) {
-  if (auto constExpr = e.dyn_cast<AffineConstantExpr>()) {
+  if (auto constExpr = dyn_cast<AffineConstantExpr>(e)) {
     int64_t constVal = constExpr.getValue();
     return constVal >= 0 && constVal < k;
   }
-  auto dimExpr = e.dyn_cast<AffineDimExpr>();
+  auto dimExpr = dyn_cast<AffineDimExpr>(e);
   if (!dimExpr)
     return false;
   Value operand = operands[dimExpr.getPosition()];
@@ -655,7 +655,7 @@ static bool isNonNegativeBoundedBy(AffineExpr e, ArrayRef<Value> operands,
 /// expression is in that form.
 static bool isQTimesDPlusR(AffineExpr e, ArrayRef<Value> operands, int64_t &div,
                            AffineExpr &quotientTimesDiv, AffineExpr &rem) {
-  auto bin = e.dyn_cast<AffineBinaryOpExpr>();
+  auto bin = dyn_cast<AffineBinaryOpExpr>(e);
   if (!bin || bin.getKind() != AffineExprKind::Add)
     return false;
 
@@ -715,7 +715,7 @@ static std::optional<int64_t> getUpperBound(AffineExpr expr, unsigned numDims,
     constUpperBounds.push_back(getUpperBound(operand));
   }
 
-  if (auto constExpr = expr.dyn_cast<AffineConstantExpr>())
+  if (auto constExpr = dyn_cast<AffineConstantExpr>(expr))
     return constExpr.getValue();
 
   return getBoundForAffineExpr(expr, numDims, numSymbols, constLowerBounds,
@@ -739,7 +739,7 @@ static std::optional<int64_t> getLowerBound(AffineExpr expr, unsigned numDims,
   }
 
   std::optional<int64_t> lowerBound;
-  if (auto constExpr = expr.dyn_cast<AffineConstantExpr>()) {
+  if (auto constExpr = dyn_cast<AffineConstantExpr>(expr)) {
     lowerBound = constExpr.getValue();
   } else {
     lowerBound = getBoundForAffineExpr(expr, numDims, numSymbols,
@@ -754,7 +754,7 @@ static void simplifyExprAndOperands(AffineExpr &expr, unsigned numDims,
                                     unsigned numSymbols,
                                     ArrayRef<Value> operands) {
   // We do this only for certain floordiv/mod expressions.
-  auto binExpr = expr.dyn_cast<AffineBinaryOpExpr>();
+  auto binExpr = dyn_cast<AffineBinaryOpExpr>(expr);
   if (!binExpr)
     return;
 
@@ -765,7 +765,7 @@ static void simplifyExprAndOperands(AffineExpr &expr, unsigned numDims,
   simplifyExprAndOperands(rhs, numDims, numSymbols, operands);
   expr = getAffineBinaryOpExpr(binExpr.getKind(), lhs, rhs);
 
-  binExpr = expr.dyn_cast<AffineBinaryOpExpr>();
+  binExpr = dyn_cast<AffineBinaryOpExpr>(expr);
   if (!binExpr || (expr.getKind() != AffineExprKind::FloorDiv &&
                    expr.getKind() != AffineExprKind::CeilDiv &&
                    expr.getKind() != AffineExprKind::Mod)) {
@@ -775,7 +775,7 @@ static void simplifyExprAndOperands(AffineExpr &expr, unsigned numDims,
   // The `lhs` and `rhs` may be different post construction of simplified expr.
   lhs = binExpr.getLHS();
   rhs = binExpr.getRHS();
-  auto rhsConst = rhs.dyn_cast<AffineConstantExpr>();
+  auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
   if (!rhsConst)
     return;
 
@@ -879,7 +879,7 @@ static void simplifyMinOrMaxExprWithOperands(AffineMap &map,
   lowerBounds.reserve(map.getNumResults());
   upperBounds.reserve(map.getNumResults());
   for (AffineExpr e : map.getResults()) {
-    if (auto constExpr = e.dyn_cast<AffineConstantExpr>()) {
+    if (auto constExpr = dyn_cast<AffineConstantExpr>(e)) {
       lowerBounds.push_back(constExpr.getValue());
       upperBounds.push_back(constExpr.getValue());
     } else {
@@ -1335,9 +1335,9 @@ static void canonicalizeMapOrSetAndOperands(MapOrSet *mapOrSet,
   llvm::SmallBitVector usedDims(mapOrSet->getNumDims());
   llvm::SmallBitVector usedSyms(mapOrSet->getNumSymbols());
   mapOrSet->walkExprs([&](AffineExpr expr) {
-    if (auto dimExpr = expr.dyn_cast<AffineDimExpr>())
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(expr))
       usedDims[dimExpr.getPosition()] = true;
-    else if (auto symExpr = expr.dyn_cast<AffineSymbolExpr>())
+    else if (auto symExpr = dyn_cast<AffineSymbolExpr>(expr))
       usedSyms[symExpr.getPosition()] = true;
   });
 
@@ -2066,7 +2066,7 @@ static void printBound(AffineMapAttr boundMap,
 
     // Print constant bound.
     if (map.getNumDims() == 0 && map.getNumSymbols() == 0) {
-      if (auto constExpr = expr.dyn_cast<AffineConstantExpr>()) {
+      if (auto constExpr = dyn_cast<AffineConstantExpr>(expr)) {
         p << constExpr.getValue();
         return;
       }
@@ -2075,7 +2075,7 @@ static void printBound(AffineMapAttr boundMap,
     // Print bound that consists of a single SSA symbol if the map is over a
     // single symbol.
     if (map.getNumDims() == 0 && map.getNumSymbols() == 1) {
-      if (expr.dyn_cast<AffineSymbolExpr>()) {
+      if (dyn_cast<AffineSymbolExpr>(expr)) {
         p.printOperand(*boundOperands.begin());
         return;
       }
@@ -3304,13 +3304,13 @@ struct MergeAffineMinMaxOp : public OpRewritePattern<T> {
     // with the corresponding operand which is the result of another affine
     // min/max op. If So it can be merged into this affine op.
     for (AffineExpr expr : oldMap.getResults()) {
-      if (auto symExpr = expr.dyn_cast<AffineSymbolExpr>()) {
+      if (auto symExpr = dyn_cast<AffineSymbolExpr>(expr)) {
         Value symValue = symOperands[symExpr.getPosition()];
         if (auto producerOp = symValue.getDefiningOp<T>()) {
           producerOps.push_back(producerOp);
           continue;
         }
-      } else if (auto dimExpr = expr.dyn_cast<AffineDimExpr>()) {
+      } else if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
         Value dimValue = dimOperands[dimExpr.getPosition()];
         if (auto producerOp = dimValue.getDefiningOp<T>()) {
           producerOps.push_back(producerOp);
@@ -3760,7 +3760,7 @@ std::optional<SmallVector<int64_t, 8>> AffineParallelOp::getConstantRanges() {
   out.reserve(rangesValueMap.getNumResults());
   for (unsigned i = 0, e = rangesValueMap.getNumResults(); i < e; ++i) {
     auto expr = rangesValueMap.getResult(i);
-    auto cst = expr.dyn_cast<AffineConstantExpr>();
+    auto cst = dyn_cast<AffineConstantExpr>(expr);
     if (!cst)
       return std::nullopt;
     out.push_back(cst.getValue());
@@ -4188,7 +4188,7 @@ ParseResult AffineParallelOp::parse(OpAsmParser &parser,
     SmallVector<int64_t, 4> steps;
     auto stepsMap = stepsMapAttr.getValue();
     for (const auto &result : stepsMap.getResults()) {
-      auto constExpr = result.dyn_cast<AffineConstantExpr>();
+      auto constExpr = dyn_cast<AffineConstantExpr>(result);
       if (!constExpr)
         return parser.emitError(parser.getNameLoc(),
                                 "steps must be constant integers");

@@ -2014,6 +2014,11 @@ def as_i64imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
 }]>;
 
+def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
+  KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0), 0);
+  return Known.isNonNegative();
+}]>;
+
 let Predicates = [IsRV64] in {
 def : LdPat<sextloadi8, LB, i32>;
 def : LdPat<extloadi8, LBU, i32>; // Prefer unsigned due to no c.lb in Zcb.
@@ -2054,6 +2059,9 @@ def : PatGprImm<sra, SRAIW, uimm5, i32>;
 def : Pat<(i32 (and GPR:$rs, TrailingOnesMask:$mask)),
           (SRLI (SLLI $rs, (i64 (XLenSubTrailingOnes $mask))),
                 (i64 (XLenSubTrailingOnes $mask)))>;
+
+// Use sext if the sign bit of the input is 0.
+def : Pat<(zext_is_sext GPR:$src), (ADDIW GPR:$src, 0)>;
 }
 
 let Predicates = [IsRV64, NotHasStdExtZba] in {
