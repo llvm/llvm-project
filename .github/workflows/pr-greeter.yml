@@ -5,12 +5,14 @@ on:
    types: [ opened ]
 
 permissions:
-  pull-requests: write
+  contents: read
 
 jobs:
   greet:
     runs-on: ubuntu-latest
-    if: github.repository == 'DavidSpickett/llvm-project'
+    permissions:
+      pull-requests: write
+    if: github.repository == 'DavidSpickett/llvm-project' && (github.event.pull_request.author.assocation == OWNER)
     steps:
       - name: Setup Automation Script
         run: |
