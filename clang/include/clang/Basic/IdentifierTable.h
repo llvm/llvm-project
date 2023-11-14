@@ -427,6 +427,10 @@ public:
   /// language.
   bool isCPlusPlusKeyword(const LangOptions &LangOpts) const;
 
+  /// Return true if this token is a simple type specifier
+  /// in the specified language.
+  bool isSimpleTypeSpecifier(const LangOptions &LangOpts) const;
+
   /// Get and set FETokenInfo. The language front-end is allowed to associate
   /// arbitrary metadata with this token.
   void *getFETokenInfo() const { return FETokenInfo; }

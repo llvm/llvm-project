@@ -1851,7 +1851,7 @@ void UnwrappedLineParser::parseStructuralElement(
       nextToken();
       // Block return type.
       if (FormatTok->Tok.isAnyIdentifier() ||
-          FormatTok->isSimpleTypeSpecifier()) {
+          FormatTok->isSimpleTypeSpecifier(Style)) {
         nextToken();
         // Return types: pointers are ok too.
         while (FormatTok->is(tok::star))
@@ -2197,7 +2197,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
   bool InTemplateParameterList = false;
 
   while (FormatTok->isNot(tok::l_brace)) {
-    if (FormatTok->isSimpleTypeSpecifier()) {
+    if (FormatTok->isSimpleTypeSpecifier(Style)) {
       nextToken();
       continue;
     }
@@ -2310,7 +2310,7 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
   const FormatToken *Previous = FormatTok->Previous;
   const FormatToken *LeftSquare = FormatTok;
   nextToken();
-  if ((Previous && ((Previous->Tok.getIdentifierInfo() &&
+  if ((Previous && ((Previous->Tok.getIdentifierInfo(Style) &&
                      !Previous->isOneOf(tok::kw_return, tok::kw_co_await,
                                         tok::kw_co_yield, tok::kw_co_return)) ||
                     Previous->closesScope())) ||

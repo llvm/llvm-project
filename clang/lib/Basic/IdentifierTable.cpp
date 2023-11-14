@@ -419,6 +419,45 @@ StringRef IdentifierInfo::deuglifiedName() const {
   return Name;
 }
 
+/// Determine whether the token kind starts a simple-type-specifier.
+bool IdentifierInfo::isSimpleTypeSpecifier(const LangOptions &LangOpts) const {
+  auto Kind = getTokenID();
+
+  switch (Kind) {
+  case tok::kw_short:
+  case tok::kw_long:
+  case tok::kw___int64:
+  case tok::kw___int128:
+  case tok::kw_signed:
+  case tok::kw_unsigned:
+  case tok::kw_void:
+  case tok::kw_char:
+  case tok::kw_int:
+  case tok::kw_half:
+  case tok::kw_float:
+  case tok::kw_double:
+  case tok::kw___bf16:
+  case tok::kw__Float16:
+  case tok::kw___float128:
+  case tok::kw_wchar_t:
+  case tok::kw_bool:
+  case tok::kw___underlying_type:
+  case tok::kw___auto_type:
+  case tok::kw__Bool:
+  case tok::annot_typename:
+  case tok::kw_char16_t:
+  case tok::kw_char32_t:
+  case tok::kw_typeof:
+  case tok::annot_decltype:
+  case tok::kw_decltype:
+  case tok::kw_char8_t:
+    return isKeyword(LangOpts);
+
+  default:
+    return false;
+  }
+}
+
 tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   // We use a perfect hash function here involving the length of the keyword,
   // the first and third character.  For preprocessor ID's there are no

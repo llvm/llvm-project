@@ -1597,7 +1597,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       if (TryAnnotateTypeOrScopeToken())
         return ExprError();
 
-      if (!Actions.isSimpleTypeSpecifier(Tok.getKind()))
+      if (!Tok.getIdentifierInfo() || !Actions.isSimpleTypeSpecifier(*Tok.getIdentifierInfo()))
         // We are trying to parse a simple-type-specifier but might not get such
         // a token after error recovery.
         return ExprError();
