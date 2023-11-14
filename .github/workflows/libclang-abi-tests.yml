@@ -29,7 +29,7 @@ concurrency:
 jobs:
   abi-dump-setup:
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-latest
+    runs-on: arc-google-linux
     outputs:
       BASELINE_REF: ${{ steps.vars.outputs.BASELINE_REF }}
       ABI_HEADERS: ${{ steps.vars.outputs.ABI_HEADERS }}
