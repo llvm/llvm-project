@@ -122,9 +122,9 @@ bool X86TargetInfo::initFeatureMap(
   std::vector<std::string> UpdatedAVX10FeaturesVec;
   enum { FE_NOSET = -1, FE_FALSE, FE_TRUE };
   int HasEVEX512 = FE_NOSET;
-  bool HasAVX512F = Features.lookup("avx512f");
-  bool HasAVX10 = Features.lookup("avx10.1-256");
-  bool HasAVX10_512 = Features.lookup("avx10.1-512");
+  bool HasAVX512F = false;
+  bool HasAVX10 = false;
+  bool HasAVX10_512 = false;
   std::string LastAVX10;
   std::string LastAVX512;
   for (const auto &Feature : FeaturesVec) {
