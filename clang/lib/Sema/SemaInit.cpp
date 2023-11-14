@@ -656,10 +656,9 @@ void InitListChecker::FillInEmptyInitForBase(
 }
 
 static bool hasAnyDesignatedInits(const InitListExpr *IL) {
-  for (const Stmt *Init : *IL)
-    if (isa_and_nonnull<DesignatedInitExpr>(Init))
-      return true;
-  return false;
+  return llvm::any_of(*IL, [=](const Stmt *Init) {
+    return isa_and_nonnull<DesignatedInitExpr>(Init);
+  });
 }
 
 void InitListChecker::FillInEmptyInitForField(
@@ -741,15 +740,18 @@ void InitListChecker::FillInEmptyInitForField(
           RecordDecl *RD = FD->getType()->getAsRecordDecl();
           assert(RD && "Not anonymous member checked?");
           for (auto *F : RD->fields()) {
+            FieldDecl *UninitializedFieldInF = nullptr;
             if (F->isAnonymousStructOrUnion())
-              Uninitialized = CheckAnonMember(F, CheckAnonMember);
+              UninitializedFieldInF = CheckAnonMember(F, CheckAnonMember);
             else if (!F->isUnnamedBitfield() &&
-                     !F->getType()->isIncompleteArrayType() && !Uninitialized &&
+                     !F->getType()->isIncompleteArrayType() &&
                      !F->hasInClassInitializer())
-              Uninitialized = F;
+              UninitializedFieldInF = F;
 
-            if (RD->isUnion() && (F->hasInClassInitializer() || !Uninitialized))
+            if (RD->isUnion() && !UninitializedFieldInF)
               return nullptr;
+            if (!Uninitialized)
+              Uninitialized = UninitializedFieldInF;
           }
           return Uninitialized;
         };

@@ -320,4 +320,14 @@ struct C4 {
   int z;
 };
 C4 a = {.z = 1};
+
+struct C5 {
+  int a;
+  struct { // pedantic-error {{anonymous structs are a GNU extension}}
+    int x;
+    struct { int y = 0; };  // pedantic-error {{anonymous types declared in an anonymous struct are an extension}}
+                            // pedantic-error@-1 {{anonymous structs are a GNU extension}}
+  };
+};
+C5 c5 = C5{.a = 0}; //wmissing-warning {{missing field 'x' initializer}}
 }
