@@ -433,8 +433,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
                            << MaxSVEVectorSize
                            << "StreamingSVEMode=" << StreamingSVEMode
                            << "StreamingCompatibleSVEMode="
-                           << StreamingCompatibleSVEMode << CPU << TuneCPU
-                           << FS << "HasMinSize=" << HasMinSize;
+                           << StreamingCompatibleSVEMode << CPU << TuneCPU << FS
+                           << "HasMinSize=" << HasMinSize;
 
   auto &I = SubtargetMap[Key];
   if (!I) {

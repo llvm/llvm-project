@@ -88,7 +88,8 @@ unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
 }
 
 AArch64Subtarget &AArch64Subtarget::initializeSubtargetDependencies(
-    StringRef FS, StringRef CPUString, StringRef TuneCPUString, bool HasMinSize) {
+    StringRef FS, StringRef CPUString, StringRef TuneCPUString,
+    bool HasMinSize) {
   // Determine default and user-specified characteristics
 
   if (CPUString.empty())
@@ -297,8 +298,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     break;
   }
 
-  if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 ||
-      !HasMinSize)
+  if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 || !HasMinSize)
     MinimumJumpTableEntries = AArch64MinimumJumpTableEntries;
 }
 
