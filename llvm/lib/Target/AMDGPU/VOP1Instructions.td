@@ -166,6 +166,17 @@ multiclass VOP1Inst_t16<string opName,
   }
 }
 
+multiclass VOP1Inst_BF16<string opName,
+                        SDPatternOperator node = null_frag> :
+  VOP1Inst_t16<opName, VOP_F16_F16> {
+  def : GCNPat<(i16 (node i16:$src)),
+               (!cast<VOP1_Pseudo>(NAME#"_t16_e32") $src)> {
+          // Dummy fields to be able to instantiate GCNPat here.
+          field bit TRANS;
+          field list<SchedReadWrite> SchedRW;
+        }
+}
+
 // Special profile for instructions which have clamp
 // and output modifiers (but have no input modifiers)
 class VOPProfileI2F<ValueType dstVt, ValueType srcVt> :
@@ -514,17 +525,17 @@ defm V_COS_F16 : VOP1Inst_t16 <"v_cos_f16", VOP_F16_F16, AMDGPUcos>;
 
 let SubtargetPredicate = HasTanhInsts in {
 defm V_TANH_F16  : VOP1Inst_t16 <"v_tanh_f16",  VOP_F16_F16, int_amdgcn_tanh>;
-defm V_TANH_BF16 : VOP1Inst_t16 <"v_tanh_bf16", VOP_F16_F16>;
+defm V_TANH_BF16 : VOP1Inst_BF16 <"v_tanh_bf16", int_amdgcn_tanh_bf16>;
 }
 
 let SubtargetPredicate = HasBF16TransInsts in {
-defm V_RCP_BF16 : VOP1Inst_t16 <"v_rcp_bf16", VOP_F16_F16>;
-defm V_SQRT_BF16 : VOP1Inst_t16 <"v_sqrt_bf16", VOP_F16_F16>;
-defm V_RSQ_BF16 : VOP1Inst_t16 <"v_rsq_bf16", VOP_F16_F16>;
-defm V_LOG_BF16 : VOP1Inst_t16 <"v_log_bf16", VOP_F16_F16>;
-defm V_EXP_BF16 : VOP1Inst_t16 <"v_exp_bf16", VOP_F16_F16>;
-defm V_SIN_BF16 : VOP1Inst_t16 <"v_sin_bf16", VOP_F16_F16>;
-defm V_COS_BF16 : VOP1Inst_t16 <"v_cos_bf16", VOP_F16_F16>;
+defm V_RCP_BF16  : VOP1Inst_BF16 <"v_rcp_bf16",  int_amdgcn_rcp_bf16>;
+defm V_SQRT_BF16 : VOP1Inst_BF16 <"v_sqrt_bf16", int_amdgcn_sqrt_bf16>;
+defm V_RSQ_BF16  : VOP1Inst_BF16 <"v_rsq_bf16",  int_amdgcn_rsq_bf16>;
+defm V_LOG_BF16  : VOP1Inst_BF16 <"v_log_bf16",  int_amdgcn_log_bf16>;
+defm V_EXP_BF16  : VOP1Inst_BF16 <"v_exp_bf16",  int_amdgcn_exp_bf16>;
+defm V_SIN_BF16  : VOP1Inst_BF16 <"v_sin_bf16",  int_amdgcn_sin_bf16>;
+defm V_COS_BF16  : VOP1Inst_BF16 <"v_cos_bf16",  int_amdgcn_cos_bf16>;
 }
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 defm V_FREXP_MANT_F16 : VOP1Inst_t16 <"v_frexp_mant_f16", VOP_F16_F16, int_amdgcn_frexp_mant>;
@@ -541,27 +552,6 @@ defm V_RNDNE_F16 : VOP1Inst_t16 <"v_rndne_f16", VOP_F16_F16, froundeven>;
 let FPDPRounding = 1 in {
 defm V_FRACT_F16 : VOP1Inst_t16 <"v_fract_f16", VOP_F16_F16, AMDGPUfract>;
 } // End FPDPRounding = 1
-
-let SubtargetPredicate = HasTanhInsts in
-def : GCNPat<(i16 (int_amdgcn_tanh_bf16 i16:$src)),
-             (V_TANH_BF16_t16_e32 $src)>;
-
-let SubtargetPredicate = HasBF16TransInsts in {
-def : GCNPat<(i16 (int_amdgcn_rcp_bf16 i16:$src)),
-             (V_RCP_BF16_t16_e32 $src)>;
-def : GCNPat<(i16 (int_amdgcn_sqrt_bf16 i16:$src)),
-             (V_SQRT_BF16_t16_e32 $src)>;
-def : GCNPat<(i16 (int_amdgcn_rsq_bf16 i16:$src)),
-             (V_RSQ_BF16_t16_e32 $src)>;
-def : GCNPat<(i16 (int_amdgcn_log_bf16 i16:$src)),
-             (V_LOG_BF16_t16_e32 $src)>;
-def : GCNPat<(i16 (int_amdgcn_exp_bf16 i16:$src)),
-             (V_EXP_BF16_t16_e32 $src)>;
-def : GCNPat<(i16 (int_amdgcn_sin_bf16 i16:$src)),
-             (V_SIN_BF16_t16_e32 $src)>;
-def : GCNPat<(i16 (int_amdgcn_cos_bf16 i16:$src)),
-             (V_COS_BF16_t16_e32 $src)>;
-} // End SubtargetPredicate = HasBF16TransInsts
 
 let OtherPredicates = [Has16BitInsts, NotHasTrue16BitInsts] in {
 def : GCNPat<
