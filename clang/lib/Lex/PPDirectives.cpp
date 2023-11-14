@@ -3958,6 +3958,9 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   }
   std::optional<int64_t> MaybeSignedLimit{};
   if (Params.MaybeLimitParam) {
+    // FIXME: just like with the clang::offset() and if_empty() parameters,
+    // this loses source fidelity in the AST; it has no idea there was a limit
+    // involved.
     MaybeSignedLimit = static_cast<int64_t>(Params.MaybeLimitParam->Limit);
   }
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MaybeFile =
@@ -3971,6 +3974,9 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   }
   StringRef BinaryContents = MaybeFile.get()->getBuffer();
   if (Params.MaybeOffsetParam) {
+    // FIXME: just like with the limit() and if_empty() parameters, this loses
+    // source fidelity in the AST; it has no idea that there was an offset
+    // involved.
     // offsets all the way to the end of the file make for an empty file.
     const size_t &OffsetParam = Params.MaybeOffsetParam->Offset;
     BinaryContents = BinaryContents.substr(OffsetParam);
