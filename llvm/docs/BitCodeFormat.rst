@@ -1358,6 +1358,30 @@ The operand fields are
 
 * *int_params*: Numbers that correspond to the integer parameters.
 
+TYPE_CODE_DECIMAL32 Record
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[DECIMAL32]``
+
+The ``DECIMAL32`` record (code 27) adds a ``decimal32`` (32-bit
+decimal floating point) type to the type table.
+
+TYPE_CODE_DECIMAL64 Record
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[DECIMAL64]``
+
+The ``DECIMAL64`` record (code 28) adds a ``decimal64`` (64-bit
+decimal floating point) type to the type table.
+
+TYPE_CODE_DECIMAL128 Record
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[DECIMAL128]``
+
+The ``DECIMAL128`` record (code 29) adds a ``decimal128`` (128-bit
+decimal floating point) type to the type table.
+
 .. _CONSTANTS_BLOCK:
 
 CONSTANTS_BLOCK Contents

@@ -2508,6 +2508,15 @@ Error BitcodeReader::parseTypeTableBody() {
       TypeName.clear();
       break;
     }
+    case bitc::TYPE_CODE_DECIMAL32: // 32-bit DFP
+      ResultTy = Type::getDecimal32Ty(Context);
+      break;
+    case bitc::TYPE_CODE_DECIMAL64: // 64-bit DFP
+      ResultTy = Type::getDecimal64Ty(Context);
+      break;
+    case bitc::TYPE_CODE_DECIMAL128: // 128-bit DFP
+      ResultTy = Type::getDecimal128Ty(Context);
+      break;
     case bitc::TYPE_CODE_ARRAY:     // ARRAY: [numelts, eltty]
       if (Record.size() < 2)
         return error("Invalid array type record");

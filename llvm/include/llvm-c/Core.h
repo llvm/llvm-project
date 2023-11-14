@@ -164,9 +164,12 @@ typedef enum {
   LLVMX86_MMXTypeKind,   /**< X86 MMX */
   LLVMTokenTypeKind,     /**< Tokens */
   LLVMScalableVectorTypeKind, /**< Scalable SIMD vector type */
-  LLVMBFloatTypeKind,    /**< 16 bit brain floating point type */
-  LLVMX86_AMXTypeKind,   /**< X86 AMX */
-  LLVMTargetExtTypeKind, /**< Target extension type */
+  LLVMBFloatTypeKind,         /**< 16 bit brain floating point type */
+  LLVMX86_AMXTypeKind,        /**< X86 AMX */
+  LLVMTargetExtTypeKind,      /**< Target extension type */
+  LLVMDecimal32TypeKind,      /**< 32 bit decimal floating point type */
+  LLVMDecimal64TypeKind,      /**< 64 bit decimal floating point type */
+  LLVMDecimal128TypeKind,     /**< 128 bit decimal floating point type */
 } LLVMTypeKind;
 
 typedef enum {
@@ -1291,6 +1294,21 @@ LLVMTypeRef LLVMFP128TypeInContext(LLVMContextRef C);
 LLVMTypeRef LLVMPPCFP128TypeInContext(LLVMContextRef C);
 
 /**
+ * Obtain a 32-bit decimal floating point type from a context.
+ */
+LLVMTypeRef LLVMDecimal32TypeInContext(LLVMContextRef C);
+
+/**
+ * Obtain a 64-bit decimal floating point type from a context.
+ */
+LLVMTypeRef LLVMDecimal64TypeInContext(LLVMContextRef C);
+
+/**
+ * Obtain a 128-bit decimal floating point type from a context.
+ */
+LLVMTypeRef LLVMDecimal128TypeInContext(LLVMContextRef C);
+
+/**
  * Obtain a floating point type from the global context.
  *
  * These map to the functions in this group of the same name.
@@ -1302,6 +1320,9 @@ LLVMTypeRef LLVMDoubleType(void);
 LLVMTypeRef LLVMX86FP80Type(void);
 LLVMTypeRef LLVMFP128Type(void);
 LLVMTypeRef LLVMPPCFP128Type(void);
+LLVMTypeRef LLVMDecimal32Type(void);
+LLVMTypeRef LLVMDecimal64Type(void);
+LLVMTypeRef LLVMDecimal128Type(void);
 
 /**
  * @}

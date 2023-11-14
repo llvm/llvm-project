@@ -419,10 +419,13 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       break;
 
     case BuiltinType::DecimalFloat32:
+      ResultType = llvm::Type::getDecimal32Ty(getLLVMContext());
+      break;
     case BuiltinType::DecimalFloat64:
+      ResultType = llvm::Type::getDecimal64Ty(getLLVMContext());
+      break;
     case BuiltinType::DecimalFloat128:
-      llvm::report_fatal_error("LLVM type support for decimal floating point "
-                               "is not yet implemented");
+      ResultType = llvm::Type::getDecimal128Ty(getLLVMContext());
       break;
 
     case BuiltinType::NullPtr:

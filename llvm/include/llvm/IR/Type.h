@@ -67,6 +67,11 @@ public:
     X86_AMXTyID,   ///< AMX vectors (8192 bits, X86 specific)
     TokenTyID,     ///< Tokens
 
+    // Decimal floating-point types.
+    Decimal32TyID, ///< 32-bit decimal floating point type
+    Decimal64TyID, ///< 64-bit decimal floating point type
+    Decimal128TyID, ///< 128-bit decimal floating point type
+
     // Derived types... see DerivedTypes.h file.
     IntegerTyID,        ///< Arbitrary bit width integers
     FunctionTyID,       ///< Functions
@@ -165,6 +170,21 @@ public:
   /// Return true if this is powerpc long double.
   bool isPPC_FP128Ty() const { return getTypeID() == PPC_FP128TyID; }
 
+  /// Return true if this is 'decimal32'.
+  bool isDecimal32Ty() const { return getTypeID() == Decimal32TyID; }
+
+  /// Return true if this is 'decimal64'.
+  bool isDecimal64Ty() const { return getTypeID() == Decimal64TyID; }
+
+  /// Return true if this is 'decimal128'.
+  bool isDecimal128Ty() const { return getTypeID() == Decimal128TyID; }
+
+  /// Return true if this is a decimal floating point.
+  bool isDecimalFloatingPointTy() const {
+    return getTypeID() == Decimal32TyID || getTypeID() == Decimal64TyID ||
+           getTypeID() == Decimal128TyID;
+  }
+
   /// Return true if this is a well-behaved IEEE-like type, which has a IEEE
   /// compatible layout as defined by isIEEE(), and does not have unnormal
   /// values
@@ -184,7 +204,7 @@ public:
   /// Return true if this is one of the floating-point types
   bool isFloatingPointTy() const {
     return isIEEELikeFPTy() || getTypeID() == X86_FP80TyID ||
-           getTypeID() == PPC_FP128TyID;
+           getTypeID() == PPC_FP128TyID || isDecimalFloatingPointTy();
   }
 
   /// Returns true if this is a floating-point type that is an unevaluated sum
@@ -334,10 +354,15 @@ public:
   /// type.
   unsigned getScalarSizeInBits() const LLVM_READONLY;
 
-  /// Return the width of the mantissa of this type. This is only valid on
-  /// floating-point types. If the FP type does not have a stable mantissa (e.g.
-  /// ppc long double), this method returns -1.
+  /// Return the width of the mantissa of this type, in bits. This is only valid
+  /// on floating-point types. If the FP type does not have a stable mantissa
+  /// (e.g. ppc long double), this method returns -1.
   int getFPMantissaWidth() const;
+
+  /// Return the precision in digits of a decimal floating-point type
+  /// per the "Decimal interchange format parameters" table of
+  /// C23 annex H.2.1, "Interchange floating types".
+  int getDFPPrecisionInDigits() const;
 
   /// Return whether the type is IEEE compatible, as defined by the eponymous
   /// method in APFloat.
@@ -463,6 +488,9 @@ public:
   static IntegerType *getInt32Ty(LLVMContext &C);
   static IntegerType *getInt64Ty(LLVMContext &C);
   static IntegerType *getInt128Ty(LLVMContext &C);
+  static Type *getDecimal32Ty(LLVMContext &C);
+  static Type *getDecimal64Ty(LLVMContext &C);
+  static Type *getDecimal128Ty(LLVMContext &C);
   template <typename ScalarTy> static Type *getScalarTy(LLVMContext &C) {
     int noOfBits = sizeof(ScalarTy) * CHAR_BIT;
     if (std::is_integral<ScalarTy>::value) {

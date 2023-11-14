@@ -48,6 +48,9 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   case X86_MMXTyID   : return getX86_MMXTy(C);
   case X86_AMXTyID   : return getX86_AMXTy(C);
   case TokenTyID     : return getTokenTy(C);
+  case Decimal32TyID :  return getDecimal32Ty(C);
+  case Decimal64TyID :  return getDecimal64Ty(C);
+  case Decimal128TyID: return getDecimal128Ty(C);
   default:
     return nullptr;
   }
@@ -179,6 +182,9 @@ TypeSize Type::getPrimitiveSizeInBits() const {
   case Type::X86_FP80TyID: return TypeSize::Fixed(80);
   case Type::FP128TyID: return TypeSize::Fixed(128);
   case Type::PPC_FP128TyID: return TypeSize::Fixed(128);
+  case Decimal32TyID: return TypeSize::Fixed(32);
+  case Decimal64TyID: return TypeSize::Fixed(64);
+  case Decimal128TyID: return TypeSize::Fixed(128);
   case Type::X86_MMXTyID: return TypeSize::Fixed(64);
   case Type::X86_AMXTyID: return TypeSize::Fixed(8192);
   case Type::IntegerTyID:
@@ -214,6 +220,18 @@ int Type::getFPMantissaWidth() const {
   return -1;
 }
 
+int Type::getDFPPrecisionInDigits() const {
+  if (auto *VTy = dyn_cast<VectorType>(this))
+    return VTy->getElementType()->getDFPPrecisionInDigits();
+  assert(isDecimalFloatingPointTy() && "Not a decimal floating point type!");
+  // Precision values per the "Decimal interchange format parameters" table of
+  /// C23 annex H.2.1, "Interchange floating types".
+  if (getTypeID() == Decimal32TyID) return 7;
+  if (getTypeID() == Decimal64TyID) return 16;
+  if (getTypeID() == Decimal128TyID) return 34;
+  report_fatal_error("unknown decimal floating point type");
+}
+
 bool Type::isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited) const {
   if (auto *ATy = dyn_cast<ArrayType>(this))
     return ATy->getElementType()->isSized(Visited);
@@ -244,6 +262,10 @@ Type *Type::getFP128Ty(LLVMContext &C) { return &C.pImpl->FP128Ty; }
 Type *Type::getPPC_FP128Ty(LLVMContext &C) { return &C.pImpl->PPC_FP128Ty; }
 Type *Type::getX86_MMXTy(LLVMContext &C) { return &C.pImpl->X86_MMXTy; }
 Type *Type::getX86_AMXTy(LLVMContext &C) { return &C.pImpl->X86_AMXTy; }
+
+Type *Type::getDecimal32Ty(LLVMContext &C) { return &C.pImpl->Decimal32Ty; }
+Type *Type::getDecimal64Ty(LLVMContext &C) { return &C.pImpl->Decimal64Ty; }
+Type *Type::getDecimal128Ty(LLVMContext &C) { return &C.pImpl->Decimal128Ty; }
 
 IntegerType *Type::getInt1Ty(LLVMContext &C) { return &C.pImpl->Int1Ty; }
 IntegerType *Type::getInt8Ty(LLVMContext &C) { return &C.pImpl->Int8Ty; }
