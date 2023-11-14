@@ -249,39 +249,42 @@ include(CMakeParseArguments)
 include(LLVMLibCCheckCpuFeatures)
 include(LLVMLibCRules)
 
-if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/entrypoints.txt")
-  set(entrypoint_file "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/entrypoints.txt")
-elseif(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/entrypoints.txt")
-  set(entrypoint_file "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/entrypoints.txt")
-else()
-  message(FATAL_ERROR "entrypoints.txt file for the target platform '${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}' not found.")
-endif()
-include(${entrypoint_file})
-
-if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/headers.txt")
-  include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/headers.txt")
-elseif(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/headers.txt")
-  include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/headers.txt")
-endif()
-
+# If the user wants to provide their own list of entrypoints and headers
 if(LIBC_SYSTEM_CONFIG_FILE)
+  # Use the file provided by the user if it exists
   if(EXISTS "${LIBC_SYSTEM_CONFIG_FILE}")
     include("${LIBC_SYSTEM_CONFIG_FILE}")
   else()
     message(FATAL_ERROR "System Config File set to unavailable file '${LIBC_SYSTEM_CONFIG_FILE}'")
   endif()
+else()
+  # Else use the files in config/OS/CPU/ or config/OS/
+  if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/entrypoints.txt")
+    set(entrypoint_file "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/entrypoints.txt")
+  elseif(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/entrypoints.txt")
+    set(entrypoint_file "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/entrypoints.txt")
+  else()
+    message(FATAL_ERROR "entrypoints.txt file for the target platform '${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}' not found.")
+  endif()
+  include(${entrypoint_file})
 
-  #TODO: Set up support for premade configs.
-
-  foreach(removed_entrypoint IN LISTS TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS)
-    if(LIBC_CMAKE_VERBOSE_LOGGING)
-      message(STATUS "Removing entrypoint ${removed_entrypoint}")
-    endif()
-    list(REMOVE_ITEM TARGET_LLVMLIBC_ENTRYPOINTS ${removed_entrypoint})
-    list(REMOVE_ITEM TARGET_LIBC_ENTRYPOINTS ${removed_entrypoint})
-    list(REMOVE_ITEM TARGET_LIBM_ENTRYPOINTS ${removed_entrypoint})
-  endforeach()
+  if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/headers.txt")
+    include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/headers.txt")
+  elseif(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/headers.txt")
+    include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/headers.txt")
+  endif()
 endif()
+
+# #TODO: Set up support for premade configs.
+
+# foreach(removed_entrypoint IN LISTS TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS)
+#   if(LIBC_CMAKE_VERBOSE_LOGGING)
+#     message(STATUS "Removing entrypoint ${removed_entrypoint}")
+#   endif()
+#   list(REMOVE_ITEM TARGET_LLVMLIBC_ENTRYPOINTS ${removed_entrypoint})
+#   list(REMOVE_ITEM TARGET_LIBC_ENTRYPOINTS ${removed_entrypoint})
+#   list(REMOVE_ITEM TARGET_LIBM_ENTRYPOINTS ${removed_entrypoint})
+# endforeach()
 
 set(TARGET_ENTRYPOINT_NAME_LIST "")
 foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
