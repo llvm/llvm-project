@@ -211,7 +211,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   }
 
   getActionDefinitionsBuilder(G_ABS).lower();
-  getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN}).lower();
+
+  auto &MinMax = getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN});
+  if (ST.hasStdExtZbb())
+    MinMax.legalFor({sXLen}).minScalar(0, sXLen);
+  MinMax.lower();
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 

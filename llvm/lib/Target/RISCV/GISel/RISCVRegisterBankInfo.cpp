@@ -199,9 +199,13 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_SMULH:
+  case TargetOpcode::G_SMAX:
+  case TargetOpcode::G_SMIN:
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_UREM:
   case TargetOpcode::G_UMULH:
+  case TargetOpcode::G_UMAX:
+  case TargetOpcode::G_UMIN:
   case TargetOpcode::G_PTR_ADD:
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_INTTOPTR:
