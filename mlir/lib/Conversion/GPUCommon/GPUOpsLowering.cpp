@@ -601,7 +601,7 @@ LLVM::GlobalOp getDynamicSharedMemorySymbol(
   return rewriter.create<LLVM::GlobalOp>(
       op->getLoc(), zeroSizedArrayType, /*isConstant=*/false,
       LLVM::Linkage::Internal, symName, /*value=*/Attribute(), alignmentByte,
-      mlir::gpu::GPUMemorySpace::kSharedMemorySpace);
+      addressSpace);
 }
 
 LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(

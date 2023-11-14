@@ -32,18 +32,6 @@
 namespace mlir {
 namespace gpu {
 
-/// GPU memory space identifiers.
-enum GPUMemorySpace {
-  /// Generic memory space identifier.
-  kGenericMemorySpace = 0,
-
-  /// Global memory space identifier.
-  kGlobalMemorySpace = 1,
-
-  /// Shared memory space identifier.
-  kSharedMemorySpace = 3
-};
-
 /// Utility class for the GPU dialect to represent triples of `Value`s
 /// accessible through `.x`, `.y`, and `.z` similarly to CUDA notation.
 struct KernelDim3 {

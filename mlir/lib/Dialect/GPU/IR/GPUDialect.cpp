@@ -168,8 +168,6 @@ MMAMatrixType::verify(function_ref<InFlightDiagnostic()> emitError,
 bool GPUDialect::isWorkgroupMemoryAddressSpace(Attribute memorySpace) {
   if (!memorySpace)
     return false;
-  if (auto intAttr = llvm::dyn_cast<IntegerAttr>(memorySpace))
-    return intAttr.getInt() == GPUMemorySpace::kSharedMemorySpace;
   if (auto gpuAttr = llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
     return gpuAttr.getValue() == getWorkgroupAddressSpace();
   return false;
@@ -2039,13 +2037,14 @@ LogicalResult gpu::DynamicSharedMemoryOp::verify() {
   MemRefType memrefType = getResultMemref().getType();
   // Check address space
   if (!GPUDialect::hasWorkgroupMemoryAddressSpace(memrefType)) {
-    return emitOpError() << "Address space must be "
+    return emitOpError() << "address space must be "
                          << gpu::AddressSpaceAttr::getMnemonic() << "<"
-                         << stringifyEnum(gpu::AddressSpace::Workgroup)
-                         << "> or " << int(GPUMemorySpace::kSharedMemorySpace);
+                         << stringifyEnum(gpu::AddressSpace::Workgroup) << ">";
   }
-  if (memrefType.hasStaticShape())
-    return emitOpError() << "result memref type must be memref<?xi8>";
+  if (memrefType.hasStaticShape()) {
+    return emitOpError() << "result memref type must be memref<?xi8, "
+                            "#gpu.address_space<workgroup>>";
+  }
   return success();
 }
 
@@ -2093,10 +2092,12 @@ TargetOptions::tokenizeCmdOptions() const {
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> options;
   llvm::StringSaver stringSaver(options.first);
   StringRef opts = cmdOptions;
-  // For a correct tokenization of the command line options `opts` must be
-  // unquoted, otherwise the tokenization function returns a single string: the
-  // unquoted `cmdOptions` -which is not the desired behavior.
-  // Remove any quotes if they are at the beginning and end of the string:
+  // For a correct tokenization of the command line
+  // options `opts` must be unquoted, otherwise the
+  // tokenization function returns a single string:
+  // the unquoted `cmdOptions` -which is not the
+  // desired behavior. Remove any quotes if they are
+  // at the beginning and end of the string:
   if (!opts.empty() && opts.front() == '"' && opts.back() == '"')
     opts.consume_front("\""), opts.consume_back("\"");
   if (!opts.empty() && opts.front() == '\'' && opts.back() == '\'')

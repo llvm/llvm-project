@@ -650,7 +650,7 @@ func.func @main() {
              threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
              dynamic_shared_memory_size %shmemSize
   {
-    // expected-error @below {{op Address space must be address_space<workgroup> or 3}}
+    // expected-error @below {{'gpu.dynamic_shared_memory' op address space must be address_space<workgroup>}}
     %0 = gpu.dynamic_shared_memory : memref<?xi8>  
     gpu.terminator
   }
@@ -667,8 +667,8 @@ func.func @main() {
              threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
              dynamic_shared_memory_size %shmemSize
   {
-    // expected-error @below {{result memref type must be memref<?xi8>}}
-    %0 = gpu.dynamic_shared_memory : memref<1xi8,3>  
+    // expected-error @below {{'gpu.dynamic_shared_memory' op result memref type must be memref<?xi8, #gpu.address_space<workgroup>>}}
+    %0 = gpu.dynamic_shared_memory : memref<1xi8, #gpu.address_space<workgroup>>  
     gpu.terminator
   }
   return
@@ -683,8 +683,24 @@ func.func @main(%arg0 : index) {
              threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
              dynamic_shared_memory_size %shmemSize
   {
-    // expected-error @below {{op result #0 must be 1D memref of 8-bit signless integer values, but got 'memref<?xf32, 3>}}
-    %0 = gpu.dynamic_shared_memory : memref<?xf32,3>  
+    // expected-error @below {{'gpu.dynamic_shared_memory' op address space must be address_space<workgroup>}}
+    %0 = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<private>>
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @main(%arg0 : index) {
+  %shmemSize = arith.constant 8192 : i32
+  %c1 = arith.constant 1 : index
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
+             dynamic_shared_memory_size %shmemSize
+  {
+    // expected-error @below {{'gpu.dynamic_shared_memory' op result #0 must be 1D memref of 8-bit signless integer values, but got 'memref<?xf32, #gpu.address_space<workgroup>}}
+    %0 = gpu.dynamic_shared_memory : memref<?xf32, #gpu.address_space<workgroup>>
     gpu.terminator
   }
   return
