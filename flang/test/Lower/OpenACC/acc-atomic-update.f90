@@ -1,5 +1,5 @@
 ! This test checks lowering of atomic and atomic update constructs
-! RUN: bbc -fopenacc -emit-fir -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -fopenacc -emit-fir -hlfir=false %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenacc %s -o - | FileCheck %s
 
 program acc_atomic_update_test
