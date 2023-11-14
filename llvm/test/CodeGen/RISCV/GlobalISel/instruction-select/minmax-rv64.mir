@@ -62,7 +62,6 @@ body:             |
 ...
 ---
 name:            umin_i64
-alignment:       1
 legalized:       true
 regBankSelected: true
 body:             |

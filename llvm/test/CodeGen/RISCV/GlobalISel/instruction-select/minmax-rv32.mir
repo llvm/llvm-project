@@ -5,7 +5,6 @@
 
 ---
 name:            smax_i32
-alignment:       1
 legalized:       true
 regBankSelected: true
 body:             |
@@ -25,7 +24,6 @@ body:             |
 ...
 ---
 name:            smin_i32
-alignment:       1
 legalized:       true
 regBankSelected: true
 body:             |
@@ -45,7 +43,6 @@ body:             |
 ...
 ---
 name:            umax_i32
-alignment:       1
 legalized:       true
 regBankSelected: true
 body:             |
@@ -65,7 +62,6 @@ body:             |
 ...
 ---
 name:            umin_i32
-alignment:       1
 legalized:       true
 regBankSelected: true
 body:             |
