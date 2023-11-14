@@ -92,6 +92,9 @@ end
   non-global name in the same scope.  This is not conforming,
   but it is useful and unambiguous.
 * The argument to `RANDOM_NUMBER` may not be an assumed-size array.
+* `NULL()` without `MOLD=` is not allowed to be associated as an
+  actual argument corresponding to an assumed-rank dummy argument;
+  its rank in the called procedure would not be well-defined.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -304,6 +307,10 @@ end
   compilers.
 * A `NULL()` pointer is treated as an unallocated allocatable
   when associated with an `INTENT(IN)` allocatable dummy argument.
+* `READ(..., SIZE=n)` is accepted with `NML=` and `FMT=*` with
+  a portability warning.
+  The Fortran standard doesn't allow `SIZE=` with formatted input
+  modes that might require look-ahead, perhaps to ease implementations.
 
 ### Extensions supported when enabled by options
 

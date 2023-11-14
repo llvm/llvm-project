@@ -109,6 +109,56 @@ static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
   return &RISCV::ValueMappings[Idx];
 }
 
+// TODO: Make this more like AArch64?
+static bool onlyUsesFP(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_FCMP:
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
+    return true;
+  default:
+    break;
+  }
+
+  return false;
+}
+
+// TODO: Make this more like AArch64?
+static bool onlyDefinesFP(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP:
+  case TargetOpcode::G_FCONSTANT:
+    return true;
+  default:
+    break;
+  }
+
+  return false;
+}
+
 const RegisterBankInfo::InstructionMapping &
 RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
@@ -159,11 +209,53 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
-  case TargetOpcode::G_LOAD:
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
-  case TargetOpcode::G_STORE:
     break;
+  case TargetOpcode::G_LOAD: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    // Use FPR64 for s64 loads on rv32.
+    if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
+      OperandsMapping =
+          getOperandsMapping({getFPValueMapping(64), GPRValueMapping});
+      break;
+    }
+
+    // Check if that load feeds fp instructions.
+    // In that case, we want the default mapping to be on FPR
+    // instead of blind map every scalar to GPR.
+    if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+               [&](const MachineInstr &UseMI) {
+                 // If we have at least one direct use in a FP instruction,
+                 // assume this was a floating point load in the IR. If it was
+                 // not, we would have had a bitcast before reaching that
+                 // instruction.
+                 return onlyUsesFP(UseMI);
+               })) {
+      OperandsMapping = getOperandsMapping(
+          {getFPValueMapping(Ty.getSizeInBits()), GPRValueMapping});
+    }
+
+    break;
+  }
+  case TargetOpcode::G_STORE: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    // Use FPR64 for s64 stores on rv32.
+    if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
+      OperandsMapping =
+          getOperandsMapping({getFPValueMapping(64), GPRValueMapping});
+      break;
+    }
+
+    MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(0).getReg());
+    if (onlyDefinesFP(*DefMI)) {
+      OperandsMapping = getOperandsMapping(
+          {getFPValueMapping(Ty.getSizeInBits()), GPRValueMapping});
+    }
+    break;
+  }
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FRAME_INDEX:
   case TargetOpcode::G_GLOBAL_VALUE:

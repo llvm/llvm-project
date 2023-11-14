@@ -38,14 +38,14 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
   if (auto type{arg.GetType()}) {
     if (type->IsAssumedType()) {
       messages.Say(
-          "Assumed type argument requires an explicit interface"_err_en_US);
-    } else if (type->IsPolymorphic()) {
+          "Assumed type actual argument requires an explicit interface"_err_en_US);
+    } else if (type->IsUnlimitedPolymorphic()) {
       messages.Say(
-          "Polymorphic argument requires an explicit interface"_err_en_US);
+          "Unlimited polymorphic actual argument requires an explicit interface"_err_en_US);
     } else if (const DerivedTypeSpec * derived{GetDerivedTypeSpec(type)}) {
       if (!derived->parameters().empty()) {
         messages.Say(
-            "Parameterized derived type argument requires an explicit interface"_err_en_US);
+            "Parameterized derived type actual argument requires an explicit interface"_err_en_US);
       }
     }
   }
@@ -76,7 +76,8 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
             "VOLATILE argument requires an explicit interface"_err_en_US);
       }
     } else if (auto argChars{characteristics::DummyArgument::FromActual(
-                   "actual argument", *expr, context)}) {
+                   "actual argument", *expr, context,
+                   /*forImplicitInterface=*/true)}) {
       const auto *argProcDesignator{
           std::get_if<evaluate::ProcedureDesignator>(&expr->u)};
       if (const auto *argProcSymbol{
@@ -463,22 +464,27 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           : nullptr};
   int actualRank{actualType.Rank()};
   bool actualIsPointer{evaluate::IsObjectPointer(actual)};
+  bool actualIsAssumedRank{evaluate::IsAssumedRank(actual)};
   if (dummy.type.attrs().test(
           characteristics::TypeAndShape::Attr::AssumedShape)) {
     // 15.5.2.4(16)
-    if (actualRank == 0) {
+    if (actualIsAssumedRank) {
+      messages.Say(
+          "Assumed-rank actual argument may not be associated with assumed-shape %s"_err_en_US,
+          dummyName);
+    } else if (actualRank == 0) {
       messages.Say(
           "Scalar actual argument may not be associated with assumed-shape %s"_err_en_US,
           dummyName);
-    }
-    if (actualIsAssumedSize && actualLastSymbol) {
+    } else if (actualIsAssumedSize && actualLastSymbol) {
       evaluate::SayWithDeclaration(messages, *actualLastSymbol,
           "Assumed-size array may not be associated with assumed-shape %s"_err_en_US,
           dummyName);
     }
   } else if (dummyRank > 0) {
     bool basicError{false};
-    if (actualRank == 0 && !dummyIsAllocatableOrPointer) {
+    if (actualRank == 0 && !actualIsAssumedRank &&
+        !dummyIsAllocatableOrPointer) {
       // Actual is scalar, dummy is an array.  F'2023 15.5.2.5p14
       if (actualIsCoindexed) {
         basicError = true;
@@ -531,7 +537,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             characteristics::DummyDataObject::Attr::DeducedFromActual)) {
       if (auto dummySize{evaluate::ToInt64(evaluate::Fold(foldingContext,
               evaluate::GetSize(evaluate::Shape{dummy.type.shape()})))}) {
-        if (actualRank == 0) {
+        if (actualRank == 0 && !actualIsAssumedRank) {
           if (evaluate::IsArrayElement(actual)) {
             // Actual argument is a scalar array element
             evaluate::DesignatorFolder folder{
@@ -568,7 +574,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               }
             }
           }
-        } else { // actualRank > 0
+        } else { // actualRank > 0 || actualIsAssumedRank
           if (auto actualSize{evaluate::ToInt64(evaluate::Fold(foldingContext,
                   evaluate::GetSize(evaluate::Shape(actualType.shape()))))};
               actualSize && *actualSize < *dummySize) {
@@ -644,7 +650,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           "Coindexed ASYNCHRONOUS or VOLATILE actual argument may not be associated with %s with ASYNCHRONOUS or VOLATILE attributes unless VALUE"_err_en_US,
           dummyName);
     }
-    if (actualRank > 0 && !actualIsContiguous) {
+    if ((actualRank > 0 || actualIsAssumedRank) && !actualIsContiguous) {
       if (dummyIsContiguous ||
           !(dummyIsAssumedShape || dummyIsAssumedRank ||
               (actualIsPointer && dummyIsPointer))) { // C1539 & C1540
@@ -913,7 +919,8 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
       }
     }
     if (auto argChars{characteristics::DummyArgument::FromActual(
-            "actual argument", *expr, foldingContext)}) {
+            "actual argument", *expr, foldingContext,
+            /*forImplicitInterface=*/true)}) {
       if (!argChars->IsTypelessIntrinsicDummy()) {
         if (auto *argProc{
                 std::get_if<characteristics::DummyProcedure>(&argChars->u)}) {
@@ -1077,6 +1084,10 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
                     evaluate::IsNullObjectPointer(*expr)) {
                   // ok, ASSOCIATED(NULL(without MOLD=))
+                } else if (object.type.attrs().test(characteristics::
+                                   TypeAndShape::Attr::AssumedRank)) {
+                  messages.Say(
+                      "NULL() without MOLD= must not be associated with an assumed-rank dummy argument"_err_en_US);
                 } else if ((object.attrs.test(characteristics::DummyDataObject::
                                     Attr::Pointer) ||
                                object.attrs.test(characteristics::
@@ -1274,11 +1285,15 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
         return;
       }
       if (const auto &targetArg{arguments[1]}) {
-        // The standard requires that the POINTER= argument be a valid LHS for
-        // a pointer assignment when the TARGET= argument is present.  This,
-        // perhaps unintentionally, excludes function results, including NULL(),
-        // from being used there, as well as INTENT(IN) dummy pointers.
-        // Allow this usage as a benign extension with a portability warning.
+        // The standard requires that the TARGET= argument, when present,
+        // be a valid RHS for a pointer assignment that has the POINTER=
+        // argument as its LHS.  Some popular compilers misinterpret this
+        // requirement more strongly than necessary, and actually validate
+        // the POINTER= argument as if it were serving as the LHS of a pointer
+        // assignment.  This, perhaps unintentionally, excludes function
+        // results, including NULL(), from being used there, as well as
+        // INTENT(IN) dummy pointers.  Detect these conditions and emit
+        // portability warnings.
         if (!evaluate::ExtractDataRef(*pointerExpr) &&
             !evaluate::IsProcedurePointer(*pointerExpr)) {
           context.messages().Say(pointerArg->sourceLocation(),
