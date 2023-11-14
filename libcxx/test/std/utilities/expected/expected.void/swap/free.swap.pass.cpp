@@ -93,7 +93,7 @@ constexpr bool test() {
     std::expected<void, Traced> e1(std::in_place);
     std::expected<void, Traced> e2(std::unexpect, s, 10);
 
-    e1.swap(e2);
+    swap(e1, e2);
 
     assert(!e1.has_value());
     assert(e1.error().data_ == 10);
@@ -109,7 +109,7 @@ constexpr bool test() {
     std::expected<void, Traced> e1(std::unexpect, s, 10);
     std::expected<void, Traced> e2(std::in_place);
 
-    e1.swap(e2);
+    swap(e1, e2);
 
     assert(e1.has_value());
     assert(!e2.has_value());
@@ -117,6 +117,19 @@ constexpr bool test() {
 
     assert(s.moveCtorCalled);
     assert(s.dtorCalled);
+  }
+
+  // TailClobberer
+  {
+    std::expected<void, TailClobbererNonTrivialMove<1>> x(std::in_place);
+    std::expected<void, TailClobbererNonTrivialMove<1>> y(std::unexpect);
+
+    swap(x, y);
+
+    // The next line would fail if adjusting the "has value" flag happened
+    // _before_ constructing the member object inside the `swap`.
+    assert(!x.has_value());
+    assert(y.has_value());
   }
 
   return true;
@@ -151,6 +164,21 @@ void testException() {
       assert(e1.has_value());
       assert(!e2.has_value());
       assert(!e2Destroyed);
+    }
+  }
+
+  // TailClobberer
+  {
+    std::expected<void, TailClobbererNonTrivialMove<0, false, true>> x(std::in_place);
+    std::expected<void, TailClobbererNonTrivialMove<0, false, true>> y(std::unexpect);
+    try {
+      swap(x, y);
+      assert(false);
+    } catch (Except) {
+      // This would fail if `TailClobbererNonTrivialMove<0, false, true>`
+      // clobbered the flag before throwing the exception.
+      assert(x.has_value());
+      assert(!y.has_value());
     }
   }
 #endif // TEST_HAS_NO_EXCEPTIONS
