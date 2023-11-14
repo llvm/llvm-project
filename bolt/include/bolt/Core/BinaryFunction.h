@@ -1296,7 +1296,7 @@ public:
   /// Return true if the function body is non-contiguous.
   bool isSplit() const { return isSimple() && getLayout().isSplit(); }
 
-  bool shouldPreserveNops() const;
+  bool shouldPreserveNops() const { return PreserveNops; }
 
   /// Return true if the function has exception handling tables.
   bool hasEHRanges() const { return HasEHRanges; }

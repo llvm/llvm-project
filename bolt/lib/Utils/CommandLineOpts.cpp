@@ -129,11 +129,6 @@ cl::opt<bool>
                cl::desc("instrument code to generate accurate profile data"),
                cl::cat(BoltOptCategory));
 
-cl::opt<bool>
-    KeepNops("keep-nops",
-             cl::desc("keep no-op instructions. By default they are removed."),
-             cl::Hidden, cl::cat(BoltOptCategory));
-
 cl::opt<std::string>
 OutputFilename("o",
   cl::desc("<output file>"),
