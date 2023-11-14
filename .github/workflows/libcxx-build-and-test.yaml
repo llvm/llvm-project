@@ -1,4 +1,4 @@
-name: Build and Test libc++
+name: Test libc++ rules
 
 on: pull_request
 concurrency:
@@ -13,126 +13,24 @@ env:
 
 # Comment
 jobs:
-  stage1:
+  test-libcxx:
+    name: "Test libcxx"
     runs-on: libcxx-runners-16
-    continue-on-error: false
-    strategy:
-      fail-fast: true
-      matrix:
-        config: [ 'generic-cxx26', 'generic-cxx03', 'generic-modules' ]
-        cc: [ 'clang-18' ]
-        cxx: [ 'clang++-18' ]
-        include:
-          - config: 'generic-gcc'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 5
-      - name: ${{ matrix.config }}.${{ matrix.cxx }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
-        env:
-          CC: ${{ matrix.cc }}
-          CXX: ${{ matrix.cxx }}
+      - id: test-rule
+        uses: libcxx/test-libcxx@v0
+        with:
+            config: "Generic-cxx23"
+            cc: "clang"
+            cxx: "clang++"
       - uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: ${{ matrix.config }}-${{ matrix.cxx }}-results
+          name: test-results
           path: |
             "**/test-results.xml"
             "**/*.abilist"
-  stage2:
-    runs-on: libcxx-runners-16
-    needs: [ stage1  ]
-    continue-on-error: false
-    strategy:
-      fail-fast: true
-      max-parallel: 4
-      matrix:
-        config: [ 'generic-cxx11', 'generic-cxx14', 'generic-cxx17',
-                  'generic-cxx20', 'generic-cxx23' ]
-        include:
-          - config: 'generic-gcc-cxx11'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
-          - config: 'generic-cxx23'
-            cc: 'clang-16'
-            cxx: 'clang++-16'
-          - config: 'generic-cxx23'
-            cc: 'clang-17'
-            cxx: 'clang++-17'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 5
-      - name: ${{ matrix.config }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
-        env:
-          CC: 'clang-18'
-          CXX: 'clang++-18'
-      - uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: ${{ matrix.config }}-results
-          path: |
-            "**/test-results.xml"
-            "**/*.abilist"
-  stage3-sanitizers:
-    runs-on: libcxx-runners-16
-    needs: [ stage1, stage2 ]
-    continue-on-error: false
-    strategy:
-      fail-fast: true
-      matrix:
-        config: [ 'generic-asan', 'generic-msan', 'generic-tsan', 'generic-ubsan' ]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 5
-      - name: ${{ matrix.config }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
-        env:
-          CC: clang-18
-          CXX: clang++-18
-      - uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: ${{ matrix.config }}-results
-          path: |
-            "**/test-results.xml"
-            "**/*.abilist"
-  stage3-remainder:
-    runs-on: libcxx-runners-8
-    needs: [ stage1, stage2 ]
-    continue-on-error: false
-    strategy:
-      fail-fast: true
-      max-parallel: 8
-      matrix:
-        config: [ 'generic-no-threads', 'generic-no-filesystem', 'generic-no-random_device',
-                 'generic-no-localization', 'generic-no-unicode', 'generic-no-wide-characters',
-                 'generic-no-experimental', 'generic-no-exceptions',
-                 'generic-abi-unstable',  'generic-hardening-mode-fast',
-                 'generic-hardening-mode-fast-with-abi-breaks', 'generic-hardening-mode-extensive',
-                'generic-hardening-mode-debug',
-                'generic-with_llvm_unwinder',
-                'generic-static', 'generic-merged'
-                'generic-modules-lsv', 'generic-no-tzdb']
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 5
-      - name: ${{ matrix.config }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
-        env:
-          CC: clang-18
-          CXX: clang++-18
-      - uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: ${{ matrix.config }}-results
-          path: |
-            "**/test-results.xml"
-            "**/*.abilist"
-  
+
