@@ -1,4 +1,4 @@
-; RUN: llc -O3 -o - %s | FileCheck %s
+; RUN: llc -O3 -aarch64-min-jump-table-entries=4 -o - %s | FileCheck %s
 
 ; Test that the output in the presence of an unreachable default does not have
 ; a compare and branch at the top of the switch to handle the default case.
