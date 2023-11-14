@@ -1533,6 +1533,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::amdgcn_perm:
   case Intrinsic::amdgcn_wave_reduce_umin:
   case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_s_bitreplicate:
   case Intrinsic::arm_mve_vctp8:
   case Intrinsic::arm_mve_vctp16:
   case Intrinsic::arm_mve_vctp32:
@@ -2422,6 +2423,23 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
       return ConstantFP::get(Ty->getContext(), Val);
     }
+
+    case Intrinsic::amdgcn_s_bitreplicate: {
+      uint64_t Val = Op->getZExtValue();
+      uint64_t ReplicatedVal = 0;
+      uint64_t ReplicatedOnes = 0b11;
+      // Input operand is always b32
+      for (unsigned i = 0; i < 32; ++i, ReplicatedOnes <<= 2, Val >>= 1) {
+        uint64_t Bit = Val & 1;
+
+        if (!Bit)
+          continue;
+
+        ReplicatedVal |= ReplicatedOnes;
+      }
+      return ConstantInt::get(Ty, ReplicatedVal);
+    }
+
     default:
       return nullptr;
     }
