@@ -3909,7 +3909,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
     Diag(EmbedTok, diag::warn_compat_pp_embed_directive);
   else
     Diag(EmbedTok, diag::ext_pp_embed_directive)
-        << (LangOpts.CPlusPlus ? /*Clang*/1 : /*C23*/0);
+        << (LangOpts.CPlusPlus ? /*Clang*/ 1 : /*C23*/ 0);
 
   // Parse the filename header
   Token FilenameTok;
