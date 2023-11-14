@@ -59,7 +59,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
     ; CHECK-NEXT: [[FCLASS_D:%[0-9]+]]:gpr = FCLASS_D [[COPY]]
-    ; CHECK-NEXT: $x10 = COPY [[FCLASS_D]]
+    ; CHECK-NEXT: [[ANDI:%[0-9]+]]:gpr = ANDI [[FCLASS_D]], 1
+    ; CHECK-NEXT: $x10 = COPY [[ANDI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:fprb(s64) = COPY $f10_d
     %1:gprb(s64) = G_IS_FPCLASS %0(s64), 4

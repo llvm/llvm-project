@@ -1125,9 +1125,13 @@ bool RISCVInstructionSelector::selectIsFPClass(MachineInstr &MI,
     return false;
 
   if (FClassMask == 1) {
-    // We don't need to generate additional instructions if Mask is 1, as the
-    // `ANDI rs, 1` that follows will suffice.
-    MRI.replaceRegWith(GISFPCLASS, FClassResult);
+    // If Mask is 1, we don't need to generate additional instructions
+    // other than `ANDI rs, 1`, which will likely be folded into an identical
+    // one commonly generated for G_IS_FPCLASS's users.
+    auto And =
+        MIB.buildInstr(RISCV::ANDI, {GISFPCLASS}, {FClassResult}).addImm(1U);
+    if (!And.constrainAllUses(TII, TRI, RBI))
+      return false;
   } else if (FClassMask.popcount() == 1) {
     // If there is only a single bit set in the mask, lower to SLLI + SRLI.
     auto SLLI =
@@ -1140,7 +1144,7 @@ bool RISCVInstructionSelector::selectIsFPClass(MachineInstr &MI,
     if (!SRLI.constrainAllUses(TII, TRI, RBI))
       return false;
   } else {
-    // Otherwise, lower to AND + SNEZ.
+    // Otherwise, lower to ANDI + SNEZ.
     auto And =
         MIB.buildInstr(RISCV::ANDI, {&RISCV::GPRRegClass}, {FClassResult})
             .addImm(FClassMask.getLimitedValue());
