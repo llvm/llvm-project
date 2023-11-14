@@ -2092,12 +2092,10 @@ TargetOptions::tokenizeCmdOptions() const {
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> options;
   llvm::StringSaver stringSaver(options.first);
   StringRef opts = cmdOptions;
-  // For a correct tokenization of the command line
-  // options `opts` must be unquoted, otherwise the
-  // tokenization function returns a single string:
-  // the unquoted `cmdOptions` -which is not the
-  // desired behavior. Remove any quotes if they are
-  // at the beginning and end of the string:
+  // For a correct tokenization of the command line options `opts` must be
+  // unquoted, otherwise the tokenization function returns a single string: the
+  // unquoted `cmdOptions` -which is not the desired behavior.
+  // Remove any quotes if they are at the beginning and end of the string:
   if (!opts.empty() && opts.front() == '"' && opts.back() == '"')
     opts.consume_front("\""), opts.consume_back("\"");
   if (!opts.empty() && opts.front() == '\'' && opts.back() == '\'')
