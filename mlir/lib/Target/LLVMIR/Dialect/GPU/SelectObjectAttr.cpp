@@ -380,8 +380,15 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
     return op.emitError() << "Couldn't find the binary: " << binaryIdentifier;
 
   auto binaryVar = dyn_cast<llvm::GlobalVariable>(binary);
+  if (!binaryVar)
+    return op.emitError() << "Binary is not a global variable: "
+                          << binaryIdentifier;
   llvm::Constant *binaryInit = binaryVar->getInitializer();
-  auto binaryDataSeq = dyn_cast<llvm::ConstantDataSequential>(binaryInit);
+  auto binaryDataSeq =
+      dyn_cast_if_present<llvm::ConstantDataSequential>(binaryInit);
+  if (!binaryDataSeq)
+    return op.emitError() << "Couldn't find binary data array: "
+                          << binaryIdentifier;
   llvm::Constant *binarySize =
       llvm::ConstantInt::get(i64Ty, binaryDataSeq->getNumElements() *
                                         binaryDataSeq->getElementByteSize());

@@ -4,7 +4,6 @@
 module attributes {gpu.container_module} {
   // CHECK: [[ARGS_TY:%.*]] = type { i32, i32 }
   // CHECK: @kernel_module_bin_cst = internal constant [4 x i8] c"BLOB", align 8
-  // CHECK:  @kernel_module_bin_size_cst = internal constant i64 4, align 8
   // CHECK: @kernel_module_kernel_kernel_name = private unnamed_addr constant [7 x i8] c"kernel\00", align 1
   gpu.binary @kernel_module  [#gpu.object<#nvvm.target, "BLOB">]
   llvm.func @foo() {
