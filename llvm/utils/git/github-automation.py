@@ -217,6 +217,7 @@ class PRGreeter:
         self.pr = repo.get_issue(pr_number).as_pull_request()
 
     def run(self) -> bool:
+        print(dir(self.pr))
         # We assume that this is only called for a PR that has just been opened.
 
         # This text is using Markdown formatting.
