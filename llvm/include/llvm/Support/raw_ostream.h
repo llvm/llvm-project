@@ -631,6 +631,32 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
+// Socket Streams
+//===----------------------------------------------------------------------===//
+
+/// A raw stream for sockets reading/writing
+
+class raw_socket_stream : public raw_fd_ostream {
+  StringRef SocketPath;
+  bool ShouldUnlink;
+
+  uint64_t current_pos() const override { return 0; }
+  
+public:
+  int get_socket() {
+    return get_fd();
+  }
+  
+  static int MakeServerSocket(StringRef SocketPath, unsigned int MaxBacklog, std::error_code &EC);
+
+  raw_socket_stream(int SocketFD, StringRef SockPath, std::error_code &EC);
+  raw_socket_stream(StringRef SockPath, std::error_code &EC);
+  ~raw_socket_stream();
+
+  Expected<std::string> read_impl();
+};
+
+//===----------------------------------------------------------------------===//
 // Output Stream Adaptors
 //===----------------------------------------------------------------------===//
 
