@@ -120,6 +120,36 @@ define i32 @test5(i32 %A, i32 %B) {
   ret i32 %D
 }
 
+define i32 @test5_both_nsw(i32 %A, i32 %B) {
+; CHECK-LABEL: @test5_both_nsw(
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %C = sub nsw i32 0, %A
+  %D = add nsw i32 %C, %B
+  ret i32 %D
+}
+
+define i32 @test5_neg_nsw(i32 %A, i32 %B) {
+; CHECK-LABEL: @test5_neg_nsw(
+; CHECK-NEXT:    [[D:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %C = sub nsw i32 0, %A
+  %D = add i32 %C, %B
+  ret i32 %D
+}
+
+define i32 @test5_add_nsw(i32 %A, i32 %B) {
+; CHECK-LABEL: @test5_add_nsw(
+; CHECK-NEXT:    [[D:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %C = sub i32 0, %A
+  %D = add nsw i32 %C, %B
+  ret i32 %D
+}
+
 define <2 x i8> @neg_op0_vec_undef_elt(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @neg_op0_vec_undef_elt(
 ; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> [[B:%.*]], [[A:%.*]]
