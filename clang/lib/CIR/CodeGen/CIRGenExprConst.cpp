@@ -9,7 +9,6 @@
 // This contains code to emit Constant Expr nodes as LLVM code.
 //
 //===----------------------------------------------------------------------===//
-
 #include "Address.h"
 #include "CIRDataLayout.h"
 #include "CIRGenCstEmitter.h"
@@ -705,7 +704,7 @@ public:
 
   mlir::Attribute VisitCastExpr(CastExpr *E, QualType destType) {
     if (const auto *ECE = dyn_cast<ExplicitCastExpr>(E))
-      llvm_unreachable("NYI");
+      CGM.buildExplicitCastExprType(ECE, Emitter.CGF);
     Expr *subExpr = E->getSubExpr();
 
     switch (E->getCastKind()) {
