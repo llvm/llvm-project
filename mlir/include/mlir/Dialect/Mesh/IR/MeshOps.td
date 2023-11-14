@@ -190,12 +190,12 @@ class Mesh_CollectiveCommunicationOpBase<
     string mnemonic, list<Trait> traits = []> :
     Mesh_Op<mnemonic,
       !listconcat(traits,
-      [SymbolUserOpInterface])> {
+      [DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
   let assemblyFormat = "$input attr-dict `:` type($input) `->` type($result)";
-  code extraClassDeclarationBase = [{
-    ::mlir::LogicalResult verifySymbolUses(
-          ::mlir::SymbolTableCollection &symbolTable);
-  }];
+  dag commonArgs = (ins
+    FlatSymbolRefAttr:$mesh,
+    DefaultValuedOptionalAttr<DenseI16ArrayAttr, "{}">:$mesh_axes
+  );
 }
 
 def Mesh_AllGatherOp : Mesh_CollectiveCommunicationOpBase<"all_gather", [
@@ -237,18 +237,14 @@ def Mesh_AllGatherOp : Mesh_CollectiveCommunicationOpBase<"all_gather", [
     +-------------+
     ```
   }];
-  let arguments = (ins
+  let arguments = !con(commonArgs, (ins
     AnyNon0RankedTensor:$input,
-    FlatSymbolRefAttr:$mesh,
-    DefaultValuedOptionalAttr<DenseI16ArrayAttr, "{}">:$mesh_axes,
     APIntAttr:$gather_axis
-  );
+  ));
   let results = (outs
     AnyNon0RankedTensor:$result
   );
-  let hasCanonicalizer = 1;
   let hasVerifier = 1;
-  let extraClassDeclaration = extraClassDeclarationBase;
 }
 
 def Mesh_AllReduceOp : Mesh_CollectiveCommunicationOpBase<"all_reduce", [
@@ -270,17 +266,14 @@ def Mesh_AllReduceOp : Mesh_CollectiveCommunicationOpBase<"all_reduce", [
       } : tensor<3x4xf32> -> tensor<3x4xf64>
     ```
   }];
-  let arguments = (ins
+  let arguments = !con(commonArgs, (ins
     AnyRankedTensor:$input,
-    FlatSymbolRefAttr:$mesh,
-    DefaultValuedOptionalAttr<DenseI16ArrayAttr, "{}">:$mesh_axes,
     DefaultValuedOptionalAttr<Mesh_PartialAttr, "::mlir::mesh::Partial::Sum">:$reduction
-  );
+  ));
   let results = (outs
     AnyRankedTensor:$result
   );
-  let hasCanonicalizer = 1;
-  let extraClassDeclaration = extraClassDeclarationBase;
+  let hasVerifier = 1;
 }
 
 def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
@@ -319,19 +312,15 @@ def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
     +-------+-------+-------+
     ```
   }];
-  let arguments = (ins
+  let arguments = !con(commonArgs, (ins
     AnyNon0RankedTensor:$input,
-    FlatSymbolRefAttr:$mesh,
-    DefaultValuedOptionalAttr<DenseI16ArrayAttr, "{}">:$mesh_axes,
     APIntAttr:$split_axis,
     APIntAttr:$concat_axis
-  );
+  ));
   let results = (outs
     AnyNon0RankedTensor:$result
   );
-  let hasCanonicalizer = 1;
   let hasVerifier = 1;
-  let extraClassDeclaration = extraClassDeclarationBase;
 }
 
 def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", [
@@ -372,19 +361,15 @@ def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", 
     +-------+
     ```
   }];
-  let arguments = (ins
+  let arguments = !con(commonArgs, (ins
     AnyNon0RankedTensor:$input,
-    FlatSymbolRefAttr:$mesh,
-    DefaultValuedOptionalAttr<DenseI16ArrayAttr, "{}">:$mesh_axes,
     DefaultValuedOptionalAttr<Mesh_PartialAttr, "::mlir::mesh::Partial::Sum">:$reduction,
     APIntAttr:$scatter_axis
-  );
+  ));
   let results = (outs
     AnyRankedTensor:$result
   );
-  let hasCanonicalizer = 1;
   let hasVerifier = 1;
-  let extraClassDeclaration = extraClassDeclarationBase;
 }
 
 #endif // MLIR_DIALECT_MESH_IR_MESHOPS_TD

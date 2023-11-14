@@ -96,6 +96,19 @@ func.func @all_reduce_invalid_mesh_axis(
 
 mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 4])
 
+func.func @all_reduce_duplicate_mesh_axis(
+    %arg0 : tensor<4xf32>) -> tensor<4xf64> {
+  // expected-error@+1 {{Mesh axes contains duplicate elements.}}
+  %0 = mesh.all_reduce %arg0 {
+    mesh = @mesh0, mesh_axes = array<i16: 0, 1, 0>, reduction = #mesh.partial<sum>
+    } : tensor<4xf32> -> tensor<4xf64>
+  return %0 : tensor<4xf64>
+}
+
+// -----
+
+mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 4])
+
 func.func @all_reduce_invalid_tensor_dimension_size(
     %arg0 : tensor<4xf32>) -> tensor<5xf64> {
   // expected-error@+1 {{'mesh.all_reduce' op requires the same shape for all operands and results}}
@@ -123,6 +136,19 @@ func.func @all_gather_invalid_mesh_axis(
   // expected-error@+1 {{0-based mesh axis index 2 is out of bounds. The referenced mesh "mesh0" is of rank 2.}}
   %0 = mesh.all_gather %arg0 {
     mesh = @mesh0, mesh_axes = array<i16: 2>, gather_axis = 0 : index
+    } : tensor<4xf32> -> tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+
+// -----
+
+mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 4])
+
+func.func @all_reduce_duplicate_mesh_axis(
+    %arg0 : tensor<4xf32>) -> tensor<4xf32> {
+  // expected-error@+1 {{Mesh axes contains duplicate elements.}}
+  %0 = mesh.all_gather %arg0 {
+    mesh = @mesh0, mesh_axes = array<i16: 2, 2>, gather_axis = 0 : index
     } : tensor<4xf32> -> tensor<4xf32>
   return %0 : tensor<4xf32>
 }
@@ -195,11 +221,24 @@ func.func @all_gather_invalid_negative_gather_axis(
 
 // -----
 
-func.func @all_to_all_gather_invalid_mesh_symbol(
+func.func @all_to_all_invalid_mesh_symbol(
     %arg0 : tensor<3x6xi8>) -> tensor<3x6xi8> {
   // expected-error@+1 {{Undefined required mesh symbol "this_mesh_symbol_does_not_exist".}}
   %0 = mesh.all_to_all %arg0 {
       concat_axis = 0, mesh = @this_mesh_symbol_does_not_exist, split_axis = 1
+    } : tensor<3x6xi8> -> tensor<3x6xi8>
+  return %0 : tensor<3x6xi8>
+}
+
+// -----
+
+mesh.cluster @mesh0(rank = 1, dim_sizes = [1])
+
+func.func @all_to_all_duplicate_mesh_axis(
+    %arg0 : tensor<3x6xi8>) -> tensor<3x6xi8> {
+  // expected-error@+1 {{Mesh axes contains duplicate elements.}}
+  %0 = mesh.all_to_all %arg0 {
+      concat_axis = 0, mesh = @mesh0, mesh_axes = array<i16: 0, 0>, split_axis = 0
     } : tensor<3x6xi8> -> tensor<3x6xi8>
   return %0 : tensor<3x6xi8>
 }
@@ -267,6 +306,19 @@ func.func @all_to_all_invalid_non_dynamic_result_split_dimension_size(
       concat_axis = 1, mesh = @mesh0, mesh_axes = array<i16: 0>, split_axis = 0
     } : tensor<3x2xi8> -> tensor<2x6xi8>
   return %0 : tensor<2x6xi8>
+}
+
+// -----
+
+mesh.cluster @mesh0(rank = 1, dim_sizes = [3])
+
+func.func @reduce_scatter_duplicate_mesh_axis(
+    %arg0 : tensor<?xf32>) -> tensor<?xf64> {
+  // expected-error@+1 {{Mesh axes contains duplicate elements.}}
+  %0 = mesh.reduce_scatter %arg0 {
+      mesh = @mesh0, scatter_axis = 0, mesh_axes = array<i16: 0, 0>
+    } : tensor<?xf32> -> tensor<?xf64>
+  return %0 : tensor<?xf64>
 }
 
 // -----
