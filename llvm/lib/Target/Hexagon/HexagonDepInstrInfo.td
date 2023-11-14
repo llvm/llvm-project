@@ -5825,6 +5825,16 @@ let isExtentSigned = 1;
 let opExtentBits = 9;
 let opExtentAlign = 2;
 }
+def J2_rte : HInst<
+(outs),
+(ins),
+"rte",
+tc_b9bec29e, TypeJ>, Enc_e3b0c4 {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-16} = 0b0101011111100000;
+let Uses = [ELR];
+let Defs = [PC];
+}
 def J2_trap0 : HInst<
 (outs),
 (ins u8_0Imm:$Ii),
@@ -40608,6 +40618,45 @@ def Y2_icinva : HInst<
 tc_0ba0d5da, TypeJ>, Enc_ecbcc8 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b01010110110;
+let isSolo = 1;
+}
+def Y2_icinvidx : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"icinvidx($Rs32)",
+tc_7d6a2568, TypeJ>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00100000000000;
+let Inst{31-21} = 0b01010110110;
+let isSolo = 1;
+}
+def Y2_ickill : HInst<
+(outs),
+(ins),
+"ickill",
+tc_b9bec29e, TypeJ>, Enc_e3b0c4 {
+let Inst{13-0} = 0b01000000000000;
+let Inst{31-16} = 0b0101011011000000;
+let isSolo = 1;
+}
+def Y2_ictagr : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32),
+"$Rd32 = ictagr($Rs32)",
+tc_759e57be, TypeJ>, Enc_5e2823 {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b01010101111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isSolo = 1;
+}
+def Y2_ictagw : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"ictagw($Rs32,$Rt32)",
+tc_139ef484, TypeJ>, Enc_ca3887 {
+let Inst{7-0} = 0b00000000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b01010101110;
 let isSolo = 1;
 }
 def Y2_isync : HInst<
