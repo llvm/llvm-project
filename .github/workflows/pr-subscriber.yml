@@ -17,7 +17,6 @@ jobs:
         run: |
           curl -O -L https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/github-automation.py
           curl -O -L https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/requirements.txt
-          curl -O -L https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/.github/workflows/pr-subscriber-wait.py
           chmod a+x github-automation.py
           pip install -r requirements.txt
 
