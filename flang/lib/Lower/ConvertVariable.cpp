@@ -565,7 +565,8 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                   /*cleanupProhibited=*/true);
               auto box{Fortran::lower::convertProcedureDesignatorInitialTarget(
                   converter, loc, *sym)};
-              b.create<fir::HasValueOp>(loc, box);
+              auto castTo{builder.createConvert(loc, symTy, box)};
+              b.create<fir::HasValueOp>(loc, castTo);
             });
       else { // Has NULL() target.
         Fortran::lower::createGlobalInitialization(
