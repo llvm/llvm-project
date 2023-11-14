@@ -421,9 +421,6 @@ bool Decl::isFlexibleArrayMemberLike(
     using FAMKind = LangOptions::StrictFlexArraysLevelKind;
 
     llvm::APInt Size = CAT->getSize();
-    FAMKind StrictFlexArraysLevel =
-        Ctx.getLangOpts().getStrictFlexArraysLevel();
-
     if (StrictFlexArraysLevel == FAMKind::IncompleteOnly)
       return false;
 
