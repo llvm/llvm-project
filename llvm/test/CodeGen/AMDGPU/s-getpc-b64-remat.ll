@@ -8,29 +8,22 @@ define void @test_remat_s_getpc_b64() {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    v_writelane_b32 v0, s30, 0
-; CHECK-NEXT:    v_writelane_b32 v1, s4, 0
+; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    v_writelane_b32 v0, s31, 1
-; CHECK-NEXT:    v_writelane_b32 v1, s5, 1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s4, v1, 0
-; CHECK-NEXT:    v_readlane_b32 s5, v1, 1
-; CHECK-NEXT:    v_mov_b32_e32 v2, s4
-; CHECK-NEXT:    v_mov_b32_e32 v3, s5
-; CHECK-NEXT:    global_store_dwordx2 v[1:2], v[2:3], off
+; CHECK-NEXT:    s_getpc_b64 s[4:5]
+; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+; CHECK-NEXT:    v_mov_b32_e32 v2, s5
+; CHECK-NEXT:    global_store_dwordx2 v[1:2], v[1:2], off
 ; CHECK-NEXT:    v_readlane_b32 s31, v0, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v0, 0
-; CHECK-NEXT:    ; kill: killed $vgpr1
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
