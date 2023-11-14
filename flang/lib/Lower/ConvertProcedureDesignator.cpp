@@ -99,9 +99,11 @@ hlfir::EntityWithAttributes Fortran::lower::convertProcedureDesignatorToHLFIR(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::evaluate::ProcedureDesignator &proc,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
-  if (std::optional<fir::FortranVariableOpInterface> varDef =
-          symMap.lookupVariableDefinition(*proc.GetSymbol()))
-    return *varDef;
+  const auto *sym = proc.GetSymbol();
+  if (sym)
+    if (std::optional<fir::FortranVariableOpInterface> varDef =
+            symMap.lookupVariableDefinition(*sym))
+      return *varDef;
 
   fir::ExtendedValue procExv =
       convertProcedureDesignator(loc, converter, proc, symMap, stmtCtx);
