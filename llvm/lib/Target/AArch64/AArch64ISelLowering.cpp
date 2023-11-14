@@ -26603,3 +26603,7 @@ bool AArch64TargetLowering::preferScalarizeSplat(SDNode *N) const {
   }
   return true;
 }
+
+unsigned AArch64TargetLowering::getMinimumJumpTableEntries() const {
+  return Subtarget->getMinimumJumpTableEntries();
+}
