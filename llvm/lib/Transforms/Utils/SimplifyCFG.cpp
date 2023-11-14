@@ -4347,6 +4347,20 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
   if (PBI->getSuccessor(PBIOp) == BB)
     return false;
 
+  // If predecessor's branch probability to BB is too low don't merge branches.
+  SmallVector<uint32_t, 2> PredWeights;
+  if (!PBI->getMetadata(LLVMContext::MD_unpredictable) &&
+      extractBranchWeights(*PBI, PredWeights) &&
+      (PredWeights[0] + PredWeights[1]) != 0) {
+
+    BranchProbability CommonDestProb = BranchProbability::getBranchProbability(
+        PredWeights[PBIOp], PredWeights[0] + PredWeights[1]);
+
+    BranchProbability Likely = TTI.getPredictableBranchThreshold();
+    if (CommonDestProb >= Likely)
+      return false;
+  }
+
   // Do not perform this transformation if it would require
   // insertion of a large number of select instructions. For targets
   // without predication/cmovs, this is a big pessimization.

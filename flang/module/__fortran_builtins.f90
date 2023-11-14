@@ -122,13 +122,13 @@ contains
     end if
   end function c_associated_c_ptr
 
-  pure logical function c_associated_c_funptr(c_funptr_1, c_funptr_2)
-    type(__builtin_c_funptr), intent(in) :: c_funptr_1
-    type(__builtin_c_funptr), intent(in), optional :: c_funptr_2
-    if (c_funptr_1%__address == __builtin_c_null_ptr%__address) then
+  pure logical function c_associated_c_funptr(c_ptr_1, c_ptr_2)
+    type(__builtin_c_funptr), intent(in) :: c_ptr_1
+    type(__builtin_c_funptr), intent(in), optional :: c_ptr_2
+    if (c_ptr_1%__address == __builtin_c_null_ptr%__address) then
       c_associated_c_funptr = .false.
-    else if (present(c_funptr_2)) then
-      c_associated_c_funptr = c_funptr_1%__address == c_funptr_2%__address
+    else if (present(c_ptr_2)) then
+      c_associated_c_funptr = c_ptr_1%__address == c_ptr_2%__address
     else
       c_associated_c_funptr = .true.
     end if

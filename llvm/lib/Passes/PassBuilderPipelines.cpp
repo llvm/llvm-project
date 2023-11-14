@@ -302,7 +302,6 @@ PipelineTuningOptions::PipelineTuningOptions() {
 
 namespace llvm {
 extern cl::opt<unsigned> MaxDevirtIterations;
-extern cl::opt<bool> EnableKnowledgeRetention;
 } // namespace llvm
 
 void PassBuilder::invokePeepholeEPCallbacks(FunctionPassManager &FPM,
