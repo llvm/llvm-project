@@ -718,7 +718,7 @@ private:
 struct LoadedDIETopLevel {
   SmallVector<StringRef, 0> AbbrevEntries;
   DIEDistinctDataRef DistinctData;
-  DIEDataRef RootDIE;
+  DIEDedupeTopLevelRef RootDIE;
 };
 
 /// Helper function to load the relevant information from a DIETopLevelRef:
