@@ -6,3 +6,7 @@ Revert: waiting on pip install myst-parser
  b6ff03206 "[Documentation] Replace recommonmark by myst-parser
 
 
+Reverted: 
+[NFC][CodeGen] clang-format RegAllocFast.cpp (#72199)
+  depends on 927771: (Reland) [fastalloc] Support allocating specific register class in fastalloc | https://gerrit-git.amd.com/c/lightning/ec/llvm-project/+/927771
+ 

@@ -57,6 +57,8 @@ Changes to the LLVM IR
 
   * ``and``
   * ``or``
+  * ``lshr``
+  * ``ashr``
   * ``zext``
   * ``sext``
   * ``fptrunc``
@@ -224,6 +226,8 @@ Changes to the C API
 
   * ``LLVMConstAnd``
   * ``LLVMConstOr``
+  * ``LLVMConstLShr``
+  * ``LLVMConstAShr``
   * ``LLVMConstZExt``
   * ``LLVMConstSExt``
   * ``LLVMConstZExtOrBitCast``

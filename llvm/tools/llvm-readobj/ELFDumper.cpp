@@ -5450,8 +5450,8 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
     return {"", ""};
   case ELF::NT_AMD_HSA_CODE_OBJECT_VERSION: {
     struct CodeObjectVersion {
-      uint32_t MajorVersion;
-      uint32_t MinorVersion;
+      support::aligned_ulittle32_t MajorVersion;
+      support::aligned_ulittle32_t MinorVersion;
     };
     if (Desc.size() != sizeof(CodeObjectVersion))
       return {"AMD HSA Code Object Version",
@@ -5465,8 +5465,8 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
   }
   case ELF::NT_AMD_HSA_HSAIL: {
     struct HSAILProperties {
-      uint32_t HSAILMajorVersion;
-      uint32_t HSAILMinorVersion;
+      support::aligned_ulittle32_t HSAILMajorVersion;
+      support::aligned_ulittle32_t HSAILMinorVersion;
       uint8_t Profile;
       uint8_t MachineModel;
       uint8_t DefaultFloatRound;
@@ -5486,11 +5486,11 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
   }
   case ELF::NT_AMD_HSA_ISA_VERSION: {
     struct IsaVersion {
-      uint16_t VendorNameSize;
-      uint16_t ArchitectureNameSize;
-      uint32_t Major;
-      uint32_t Minor;
-      uint32_t Stepping;
+      support::aligned_ulittle16_t VendorNameSize;
+      support::aligned_ulittle16_t ArchitectureNameSize;
+      support::aligned_ulittle32_t Major;
+      support::aligned_ulittle32_t Minor;
+      support::aligned_ulittle32_t Stepping;
     };
     if (Desc.size() < sizeof(IsaVersion))
       return {"AMD HSA ISA Version", "Invalid AMD HSA ISA Version"};
@@ -5526,8 +5526,8 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
   }
   case ELF::NT_AMD_PAL_METADATA: {
     struct PALMetadata {
-      uint32_t Key;
-      uint32_t Value;
+      support::aligned_ulittle32_t Key;
+      support::aligned_ulittle32_t Value;
     };
     if (Desc.size() % sizeof(PALMetadata) != 0)
       return {"AMD PAL Metadata", "Invalid AMD PAL Metadata"};

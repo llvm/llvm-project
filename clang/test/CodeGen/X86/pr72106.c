@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ffreestanding -target-cpu cannonlake -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64 -ffreestanding -target-cpu cannonlake -emit-llvm < %s | FileCheck %s
 
 #include <immintrin.h>
 
