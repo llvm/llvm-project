@@ -62,6 +62,71 @@ static RegisterRegAlloc fastRegAlloc("fast", "fast register allocator",
 
 namespace {
 
+/// Assign ascending index for instructions in machine basic block. The index
+/// can be used to determine dominance between instructions in same MBB.
+class InstrPosIndexes {
+public:
+  void init(const MachineBasicBlock &MBB) {
+    CurMBB = &MBB;
+    Instr2PosIndex.clear();
+    uint64_t LastIndex = 0;
+    for (const MachineInstr &MI : MBB) {
+      LastIndex += InstrDist;
+      Instr2PosIndex[&MI] = LastIndex;
+    }
+  }
+
+  /// Set \p Index to index of \p MI. If \p MI is new inserted, it try to assign
+  /// index without affecting existing instruction's index. Return true if all
+  /// instructions index has been reassigned.
+  bool getIndex(const MachineInstr &MI, uint64_t &Index) {
+    assert(MI.getParent() == CurMBB && "MI is not in CurMBB");
+    if (Instr2PosIndex.count(&MI)) {
+      Index = Instr2PosIndex[&MI];
+      return false;
+    }
+
+    unsigned Distance = 1;
+    MachineBasicBlock::const_iterator Start = MI.getIterator(),
+                                      End = std::next(Start);
+    while (Start != CurMBB->begin() &&
+           !Instr2PosIndex.count(&*std::prev(Start))) {
+      --Start;
+      ++Distance;
+    }
+    while (End != CurMBB->end() && !Instr2PosIndex.count(&*(End))) {
+      ++End;
+      ++Distance;
+    }
+
+    uint64_t LastIndex =
+        Start == CurMBB->begin() ? 0 : Instr2PosIndex.at(&*std::prev(Start));
+    uint64_t Step = End == CurMBB->end()
+                        ? static_cast<uint64_t>(InstrDist)
+                        : (Instr2PosIndex.at(&*End) - LastIndex - 1) / Distance;
+
+    // Reassign index for all instructions if number of new inserted
+    // instructions exceed slot or all instructions are new.
+    if (LLVM_UNLIKELY(!Step || (!LastIndex && Step == InstrDist))) {
+      init(*CurMBB);
+      Index = Instr2PosIndex.at(&MI);
+      return true;
+    }
+
+    for (auto I = Start; I != End; ++I) {
+      LastIndex += Step;
+      Instr2PosIndex[&*I] = LastIndex;
+    }
+    Index = Instr2PosIndex.at(&MI);
+    return false;
+  }
+
+private:
+  enum { InstrDist = 1024 };
+  const MachineBasicBlock *CurMBB = nullptr;
+  DenseMap<const MachineInstr *, uint64_t> Instr2PosIndex;
+};
+
 class RegAllocFast : public MachineFunctionPass {
 public:
   static char ID;
@@ -152,6 +217,9 @@ private:
   SmallVector<uint16_t, 8> DefOperandIndexes;
   // Register masks attached to the current instruction.
   SmallVector<const uint32_t *> RegMasks;
+
+  // Assign index for each instruction to quickly determine dominance.
+  InstrPosIndexes PosIndexes;
 
   void setPhysRegState(MCPhysReg PhysReg, unsigned NewState);
   bool isPhysRegFree(MCPhysReg PhysReg) const;
@@ -339,18 +407,13 @@ int RegAllocFast::getStackSpaceFor(Register VirtReg) {
   return FrameIdx;
 }
 
-static bool dominates(MachineBasicBlock &MBB,
-                      MachineBasicBlock::const_iterator A,
-                      MachineBasicBlock::const_iterator B) {
-  auto MBBEnd = MBB.end();
-  if (B == MBBEnd)
-    return true;
-
-  MachineBasicBlock::const_iterator I = MBB.begin();
-  for (; &*I != A && &*I != B; ++I)
-    ;
-
-  return &*I == A;
+static bool dominates(InstrPosIndexes &PosIndexes, const MachineInstr &A,
+                      const MachineInstr &B) {
+  uint64_t IndexA, IndexB;
+  PosIndexes.getIndex(A, IndexA);
+  if (LLVM_UNLIKELY(PosIndexes.getIndex(B, IndexB)))
+    PosIndexes.getIndex(A, IndexA);
+  return IndexA < IndexB;
 }
 
 /// Returns false if \p VirtReg is known to not live out of the current block.
@@ -371,7 +434,7 @@ bool RegAllocFast::mayLiveOut(Register VirtReg) {
         MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
         return true;
       } else {
-        if (!SelfLoopDef || dominates(*MBB, DefInst.getIterator(), SelfLoopDef))
+        if (!SelfLoopDef || dominates(PosIndexes, DefInst, *SelfLoopDef))
           SelfLoopDef = &DefInst;
       }
     }
@@ -396,7 +459,7 @@ bool RegAllocFast::mayLiveOut(Register VirtReg) {
       // Try to handle some simple cases to avoid spilling and reloading every
       // value inside a self looping block.
       if (SelfLoopDef == &UseInst ||
-          !dominates(*MBB, SelfLoopDef->getIterator(), UseInst.getIterator())) {
+          !dominates(PosIndexes, *SelfLoopDef, UseInst)) {
         MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
         return true;
       }
@@ -1570,6 +1633,7 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
   this->MBB = &MBB;
   LLVM_DEBUG(dbgs() << "\nAllocating " << MBB);
 
+  PosIndexes.init(MBB);
   RegUnitStates.assign(TRI->getNumRegUnits(), regFree);
   assert(LiveVirtRegs.empty() && "Mapping not cleared from last block?");
 
