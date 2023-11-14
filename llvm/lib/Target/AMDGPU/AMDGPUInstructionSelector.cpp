@@ -4125,6 +4125,9 @@ AMDGPUInstructionSelector::selectWMMAVISrc(MachineOperand &Root) const {
         MIB.addImm(FPValReg->Value.bitcastToAPInt().getSExtValue());
       }}};
     }
+    // Non-inlineable splat floats should not fall-through for integer immediate
+    // checks.
+    return {};
   }
 
   APInt ICst;
