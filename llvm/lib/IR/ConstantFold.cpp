@@ -134,7 +134,7 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
   assert(C->getType()->isIntegerTy() &&
          (cast<IntegerType>(C->getType())->getBitWidth() & 7) == 0 &&
          "Non-byte sized integer input");
-  unsigned CSize = cast<IntegerType>(C->getType())->getBitWidth()/8;
+  [[maybe_unused]] unsigned CSize = cast<IntegerType>(C->getType())->getBitWidth()/8;
   assert(ByteSize && "Must be accessing some piece");
   assert(ByteStart+ByteSize <= CSize && "Extracting invalid piece from input");
   assert(ByteSize != CSize && "Should not extract everything");
