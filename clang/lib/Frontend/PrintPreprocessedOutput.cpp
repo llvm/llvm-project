@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Frontend/Utils.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
+#include "clang/Frontend/Utils.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Pragma.h"
@@ -1000,7 +1000,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       // values.
       bool PrintComma = false;
       for (auto Iter = BinaryContents.begin(), End = BinaryContents.end();
-            Iter != End; ++Iter) {
+           Iter != End; ++Iter) {
         if (PrintComma)
           *Callbacks->OS << ", ";
         *Callbacks->OS << static_cast<unsigned>(
@@ -1011,7 +1011,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       // Finally, we expect the end annotation token.
       PP.Lex(Tok);
       assert(Tok.is(tok::annot_embed_end) &&
-              "expected the end of the embed directive");
+             "expected the end of the embed directive");
       IsStartOfLine = true;
     } else if (Tok.isAnnotation()) {
       // Ignore annotation tokens created by pragmas - the pragmas themselves
