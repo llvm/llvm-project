@@ -2,14 +2,13 @@
 Test lldb-dap setBreakpoints request
 """
 
-import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbdap_testcase
 
 
-class TestDAP_correct_thread(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_threads(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     @skipIfRemote
     def test_correct_thread(self):
@@ -44,3 +43,27 @@ class TestDAP_correct_thread(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertFalse(stopped_event[0]["body"]["preserveFocusHint"])
         self.assertTrue(stopped_event[0]["body"]["threadCausedFocus"])
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_thread_format(self):
+        """
+        Tests the support for custom thread formats.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(
+            program, customThreadFormat="This is thread index #${thread.index}"
+        )
+        source = "main.c"
+        breakpoint_line = line_number(source, "// break here")
+        lines = [breakpoint_line]
+        # Set breakpoint in the thread function
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(
+            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        )
+        self.continue_to_breakpoints(breakpoint_ids)
+        # We are stopped at the second thread
+        threads = self.dap_server.get_threads()
+        self.assertEquals(threads[0]["name"], "This is thread index #1")
+        self.assertEquals(threads[1]["name"], "This is thread index #2")

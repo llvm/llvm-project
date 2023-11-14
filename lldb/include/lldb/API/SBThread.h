@@ -200,6 +200,21 @@ public:
 
   bool GetDescription(lldb::SBStream &description, bool stop_format) const;
 
+  /// Similar to \a GetDescription() but the format of the description can be
+  /// configured via the \p format parameter. See
+  /// https://lldb.llvm.org/use/formatting.html for more information on format
+  /// strings.
+  ///
+  /// \param[in] format
+  ///   The format to use for generating the description.
+  ///
+  /// \param[out] output
+  ///   The stream where the description will be written to.
+  ///
+  /// \return
+  ///   An error object with an error message in case of failures.
+  SBError GetDescriptionWithFormat(const SBFormat &format, SBStream &output);
+
   bool GetStatus(lldb::SBStream &status) const;
 
   SBThread GetExtendedBacktraceThread(const char *type);
