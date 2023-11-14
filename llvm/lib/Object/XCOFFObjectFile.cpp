@@ -1252,16 +1252,16 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
       CsectAuxRef.getSymbolType() == XCOFF::XTY_ER)
     return false;
 
-  // If the next symbol is an XTY_LD type symbol with same address, this XTY_SD
-  // symbol is not a function. Otherwise this is a function symbol for
+  // If the next symbol is an XTY_LD type symbol with the same address, this
+  // XTY_SD symbol is not a function. Otherwise this is a function symbol for
   // -ffunction-sections.
   if (CsectAuxRef.getSymbolType() == XCOFF::XTY_SD) {
     // If this is a csect with size 0, it won't be a function definition.
-    // This is used to hack situation that llvm always generates below symbol
-    // for -ffunction-sections:
-    // FIXME: remove or replace this meaningless symbol.
+    // This is used to work around the fact that LLVM always generates below
+    // symbol for -ffunction-sections:
     // m   0x00000000     .text     1  unamex                    **No Symbol**
     // a4  0x00000000       0    0     SD       PR    0    0
+    // FIXME: remove or replace this meaningless symbol.
     if (getSize() == 0)
       return false;
 
