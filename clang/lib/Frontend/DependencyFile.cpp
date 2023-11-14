@@ -62,11 +62,9 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                                     /*IsMissing=*/false);
   }
 
-  void EmbedDirective(SourceLocation HashLoc, StringRef FileName, bool IsAngled,
-                      CharSourceRange FilenameRange,
-                      CharSourceRange ParametersRange,
-                      OptionalFileEntryRef File, StringRef SearchPath,
-                      StringRef RelativePath) override {
+  void EmbedDirective(SourceLocation, StringRef FileName, bool,
+                      OptionalFileEntryRef File,
+                      const LexEmbedParametersResult &Params) override {
     if (!File)
       DepCollector.maybeAddDependency(FileName,
                                       /*FromModule*/ false,

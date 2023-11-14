@@ -1326,8 +1326,7 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
   SourceLocation FilenameLoc = Tok.getLocation();
   Token FilenameTok = Tok;
 
-  Preprocessor::LexEmbedParametersResult Params =
-      this->LexEmbedParameters(Tok, true, false);
+  LexEmbedParametersResult Params = this->LexEmbedParameters(Tok, true, false);
   if (!Params.Successful) {
     if (Tok.isNot(tok::eod))
       this->DiscardUntilEndOfDirective();

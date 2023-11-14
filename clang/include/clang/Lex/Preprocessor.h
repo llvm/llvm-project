@@ -1736,29 +1736,6 @@ public:
   /// Lex a token, forming a header-name token if possible.
   bool LexHeaderName(Token &Result, bool AllowMacroExpansion = true);
 
-  struct LexEmbedParametersResult {
-    std::optional<PPEmbedParameterLimit> MaybeLimitParam;
-    std::optional<PPEmbedParameterOffset> MaybeOffsetParam;
-    std::optional<PPEmbedParameterIfEmpty> MaybeIfEmptyParam;
-    std::optional<PPEmbedParameterPrefix> MaybePrefixParam;
-    std::optional<PPEmbedParameterSuffix> MaybeSuffixParam;
-    SourceLocation StartLoc;
-    SourceLocation EndLoc;
-    int UnrecognizedParams;
-    bool Successful;
-
-    size_t PrefixTokenCount() const {
-      if (MaybePrefixParam)
-        return MaybePrefixParam->Tokens.size();
-      return 0;
-    }
-    size_t SuffixTokenCount() const {
-      if (MaybeSuffixParam)
-        return MaybeSuffixParam->Tokens.size();
-      return 0;
-    }
-  };
-
   LexEmbedParametersResult LexEmbedParameters(Token &Current,
                                               bool InHasEmbed = false,
                                               bool DiagnoseUnknown = true);

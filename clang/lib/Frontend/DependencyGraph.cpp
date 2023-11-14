@@ -63,10 +63,8 @@ public:
                           SrcMgr::CharacteristicKind FileType) override;
 
   void EmbedDirective(SourceLocation HashLoc, StringRef FileName, bool IsAngled,
-                      CharSourceRange FilenameRange,
-                      CharSourceRange ParametersRange,
-                      OptionalFileEntryRef File, StringRef SearchPath,
-                      StringRef RelativePath) override;
+                      OptionalFileEntryRef File,
+                      const LexEmbedParametersResult &Params) override;
 
   void EndOfMainFile() override {
     OutputGraphFile();
@@ -104,10 +102,9 @@ void DependencyGraphCallback::InclusionDirective(
   AllFiles.insert(*FromFile);
 }
 
-void DependencyGraphCallback::EmbedDirective(
-    SourceLocation HashLoc, StringRef FileName, bool IsAngled,
-    CharSourceRange FilenameRange, CharSourceRange ParametersRange,
-    OptionalFileEntryRef File, StringRef SearchPath, StringRef RelativePath) {
+void DependencyGraphCallback::EmbedDirective(SourceLocation HashLoc, StringRef,
+                                             bool, OptionalFileEntryRef File,
+                                             const LexEmbedParametersResult &) {
   if ((Behavior & IgnoreEmbed) == IgnoreEmbed) {
     return;
   }

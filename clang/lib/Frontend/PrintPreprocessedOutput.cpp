@@ -24,6 +24,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
@@ -101,6 +102,7 @@ private:
   bool KeepSystemIncludes;
   raw_ostream *OrigOS;
   std::unique_ptr<llvm::raw_null_ostream> NullOS;
+  unsigned NumToksToSkip;
 
   Token PrevTok;
   Token PrevPrevTok;
@@ -117,7 +119,7 @@ public:
         DumpEmbedDirectives(DumpEmbedDirectives),
         UseLineDirectives(UseLineDirectives),
         MinimizeWhitespace(MinimizeWhitespace), DirectivesOnly(DirectivesOnly),
-        KeepSystemIncludes(KeepSystemIncludes), OrigOS(os) {
+        KeepSystemIncludes(KeepSystemIncludes), OrigOS(os), NumToksToSkip(0) {
     CurLine = 0;
     CurFilename += "<uninit>";
     EmittedTokensOnThisLine = false;
@@ -131,6 +133,10 @@ public:
     PrevTok.startToken();
     PrevPrevTok.startToken();
   }
+
+  /// Returns true if #embed directives should be expanded into a comma-
+  /// delimited list of integer constants or not.
+  bool expandEmbedContents() const { return !DumpEmbedDirectives; }
 
   bool isMinimizeWhitespace() const { return MinimizeWhitespace; }
 
@@ -153,10 +159,8 @@ public:
                    SrcMgr::CharacteristicKind FileType,
                    FileID PrevFID) override;
   void EmbedDirective(SourceLocation HashLoc, StringRef FileName, bool IsAngled,
-                      CharSourceRange FilenameRange,
-                      CharSourceRange ParametersRange,
-                      OptionalFileEntryRef File, StringRef SearchPath,
-                      StringRef RelativePath) override;
+                      OptionalFileEntryRef File,
+                      const LexEmbedParametersResult &Params) override;
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
@@ -239,6 +243,9 @@ public:
 
   void BeginModule(const Module *M);
   void EndModule(const Module *M);
+
+  unsigned GetNumToksToSkip() const { return NumToksToSkip; }
+  void ResetSkipToks() { NumToksToSkip = 0; }
 };
 }  // end anonymous namespace
 
@@ -408,16 +415,72 @@ void PrintPPOutputPPCallbacks::FileChanged(SourceLocation Loc,
 
 void PrintPPOutputPPCallbacks::EmbedDirective(
     SourceLocation HashLoc, StringRef FileName, bool IsAngled,
-    CharSourceRange FilenameRange, CharSourceRange ParametersRange,
-    OptionalFileEntryRef File, StringRef SearchPath, StringRef RelativePath) {
-  // In -dI mode, dump #include directives prior to dumping their content or
-  // interpretation.
-  if (DumpEmbedDirectives) {
-    MoveToLine(HashLoc, /*RequireStartOfLine=*/true);
-    *OS << "#embed " << (IsAngled ? '<' : '"') << FileName
-        << (IsAngled ? '>' : '"') << " /* clang -E -dE */";
-    setEmittedDirectiveOnThisLine();
+    OptionalFileEntryRef File, const LexEmbedParametersResult &Params) {
+  if (!DumpEmbedDirectives)
+    return;
+
+  // The EmbedDirective() callback is called before we produce the annotation
+  // token stream for the directive. We skip printing the annotation tokens
+  // within PrintPreprocessedTokens(), but we also need to skip the prefix,
+  // suffix, and if_empty tokens as those are inserted directly into the token
+  // stream and would otherwise be printed immediately after printing the
+  // #embed directive.
+  //
+  // FIXME: counting tokens to skip is a kludge but we have no way to know
+  // which tokens were inserted as part of the embed and which ones were
+  // explicitly written by the user.
+  MoveToLine(HashLoc, /*RequireStartOfLine=*/true);
+  *OS << "#embed " << (IsAngled ? '<' : '"') << FileName
+      << (IsAngled ? '>' : '"');
+
+  auto PrintToks = [&](llvm::ArrayRef<Token> Toks) {
+    SmallString<128> SpellingBuffer;
+    for (const Token &T : Toks) {
+      if (T.hasLeadingSpace())
+        *OS << " ";
+      *OS << PP.getSpelling(T, SpellingBuffer);
+    }
+  };
+  bool SkipAnnotToks = true;
+  if (Params.MaybeIfEmptyParam) {
+    *OS << " if_empty(";
+    PrintToks(Params.MaybeIfEmptyParam->Tokens);
+    *OS << ")";
+    // If the file is empty, we can skip those tokens. If the file is not
+    // empty, we skip the annotation tokens.
+    if (File && !File->getSize()) {
+      NumToksToSkip += Params.MaybeIfEmptyParam->Tokens.size();
+      SkipAnnotToks = false;
+    }
   }
+
+  if (Params.MaybeLimitParam) {
+    *OS << " limit(" << Params.MaybeLimitParam->Limit << ")";
+  }
+  if (Params.MaybeOffsetParam) {
+    *OS << " clang::offset(" << Params.MaybeOffsetParam->Offset << ")";
+  }
+  if (Params.MaybePrefixParam) {
+    *OS << " prefix(";
+    PrintToks(Params.MaybePrefixParam->Tokens);
+    *OS << ")";
+    NumToksToSkip += Params.MaybePrefixParam->Tokens.size();
+  }
+  if (Params.MaybeSuffixParam) {
+    *OS << " suffix(";
+    PrintToks(Params.MaybeSuffixParam->Tokens);
+    *OS << ")";
+    NumToksToSkip += Params.MaybeSuffixParam->Tokens.size();
+  }
+
+  // This magic number comes from the number of tokens produced by
+  // Preprocessor::HandleEmbedDirectiveImpl(); if we start emitting more tokens
+  // while preprocessing, we will need to update this logic as well.
+  if (SkipAnnotToks)
+    NumToksToSkip += 7;
+
+  *OS << " /* clang -E -dE */";
+  setEmittedDirectiveOnThisLine();
 }
 
 void PrintPPOutputPPCallbacks::InclusionDirective(
@@ -899,6 +962,57 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       std::string Name = M->getFullModuleName();
       Callbacks->OS->write(Name.data(), Name.size());
       Callbacks->HandleNewlinesInToken(Name.data(), Name.size());
+    } else if (Tok.is(tok::annot_embed_start)) {
+      // Manually explode the base64 encoded data out to a stream of comma-
+      // delimited integer values. If the user passed -dE, that is handled by
+      // the EmbedDirective() callback. We should only get here if the user did
+      // not pass -dE.
+      assert(Callbacks->expandEmbedContents() &&
+             "did not expect an embed annotation");
+      // Skip the start annotation token.
+      PP.Lex(Tok);
+
+      // Expand the contents of the file and hope for the best in terms of
+      // compile time performance. The first (few) tokens are type
+      // information; we will skip the explicit cast operations.
+      while (Tok.isOneOf(tok::kw_unsigned, tok::kw_char))
+        PP.Lex(Tok);
+
+      // Next is a string literal for the file name, which we can ignore.
+      assert(Tok.is(tok::string_literal) && "expected string literal token");
+      PP.Lex(Tok);
+
+      // Then we expect a comma followed by the string literal containing the
+      // binary contents.
+      assert(Tok.is(tok::comma) && "expected a comma token");
+      PP.Lex(Tok);
+      assert(Tok.is(tok::string_literal) && "expected string literal token");
+
+      std::vector<char> BinaryContents;
+      llvm::Error Err = llvm::decodeBase64(
+          StringRef(Tok.getLiteralData() + 1, Tok.getLength() - 2),
+          BinaryContents); // +1 and -2 are to skip quotation marks.
+      // We expect no errors because we're the one to generate the original
+      // contents.
+      assert(!Err && "expected no base64 decoding errors");
+
+      // Loop over the contents and print them as a comma-delimited list of
+      // values.
+      bool PrintComma = false;
+      for (auto Iter = BinaryContents.begin(), End = BinaryContents.end();
+            Iter != End; ++Iter) {
+        if (PrintComma)
+          *Callbacks->OS << ", ";
+        *Callbacks->OS << static_cast<unsigned>(
+            static_cast<unsigned char>(*Iter));
+        PrintComma = true;
+      }
+
+      // Finally, we expect the end annotation token.
+      PP.Lex(Tok);
+      assert(Tok.is(tok::annot_embed_end) &&
+              "expected the end of the embed directive");
+      IsStartOfLine = true;
     } else if (Tok.isAnnotation()) {
       // Ignore annotation tokens created by pragmas - the pragmas themselves
       // will be reproduced in the preprocessed output.
@@ -947,6 +1061,10 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
     if (Tok.is(tok::eof)) break;
 
     PP.Lex(Tok);
+    // If lexing that token causes us to need to skip future tokens, do so now.
+    for (unsigned I = 0, Skip = Callbacks->GetNumToksToSkip(); I < Skip; ++I)
+      PP.Lex(Tok);
+    Callbacks->ResetSkipToks();
   }
 }
 

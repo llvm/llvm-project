@@ -3641,7 +3641,7 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
 
 enum class BracketType { Brace, Paren, Square };
 
-Preprocessor::LexEmbedParametersResult
+LexEmbedParametersResult
 Preprocessor::LexEmbedParameters(Token &CurTok, bool InHasEmbed,
                                  bool DiagnoseUnknown) {
   LexEmbedParametersResult Result{};
@@ -3832,6 +3832,11 @@ void Preprocessor::HandleEmbedDirectiveImpl(
   // from, and the second string-literal is the base64 encoded data we loaded
   // from the file. The comma separation between string-literals prevents the
   // literals from combining into a single string literal.
+  //
+  // NOTE: if you change the token sequence, you will need to update
+  // Parser::ParseCastExpression() (the case for tok::annot_embed_start) as
+  // well as PrintPPOutputPPCallbacks::EmbedDirective() and
+  // PrintPreprocessedTokens() (the case for tok::annot_embed_start).
   auto EmitToks = [&](ArrayRef<Token> Toks) {
     size_t TokCount = Toks.size();
     auto NewToks = std::make_unique<Token[]>(TokCount);
@@ -3842,7 +3847,8 @@ void Preprocessor::HandleEmbedDirectiveImpl(
     // If we have no binary contents, the only thing we need to emit are the
     // if_empty tokens, if any.
     // FIXME: this loses AST fidelity; nothing in the compiler will see that
-    // these tokens came from #embed.
+    // these tokens came from #embed. We have to hack around this when printing
+    // preprocessed output. The same is true for prefix and suffix tokens.
     if (Params.MaybeIfEmptyParam)
       EmitToks(Params.MaybeIfEmptyParam->Tokens);
     return;
@@ -4005,15 +4011,9 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
            "definition";
     return;
   }
-  if (Callbacks) {
-    CharSourceRange FilenameSourceRange(
-        SourceRange(FilenameTok.getLocation(), FilenameTok.getEndLoc()), true);
-    CharSourceRange ParametersRange(SourceRange(Params.StartLoc, Params.EndLoc),
-                                    true);
-    Callbacks->EmbedDirective(HashLoc, Filename, isAngled, FilenameSourceRange,
-                              ParametersRange, MaybeFileRef, SearchPath,
-                              RelativePath);
-  }
+  if (Callbacks)
+    Callbacks->EmbedDirective(HashLoc, Filename, isAngled, MaybeFileRef,
+                              Params);
   HandleEmbedDirectiveImpl(HashLoc, FilenameTok, Filename, SearchPath,
                            RelativePath, Params, BinaryContents,
                            TargetCharWidth);

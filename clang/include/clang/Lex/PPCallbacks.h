@@ -27,6 +27,7 @@ namespace clang {
   class MacroDefinition;
   class MacroDirective;
   class MacroArgs;
+  struct LexEmbedParametersResult;
 
 /// This interface provides a way to observe the actions of the
 /// preprocessor as it does its thing.
@@ -104,25 +105,12 @@ public:
   /// \param IsAngled Whether the file name was enclosed in angle brackets;
   /// otherwise, it was enclosed in quotes.
   ///
-  /// \param FilenameRange The character range of the quotes or angle brackets
-  /// for the written file name.
-  ///
-  /// \param ParametersRange The character range of the embed parameters. An
-  /// empty range if there were no parameters.
-  ///
   /// \param File The actual file that may be included by this embed directive.
   ///
-  /// \param SearchPath Contains the search path which was used to find the file
-  /// in the file system. If the file was found via an absolute path,
-  /// SearchPath will be empty.
-  ///
-  /// \param RelativePath The path relative to SearchPath, at which the resource
-  /// file was found. This is equal to FileName.
+  /// \param Params The parameters used by the directive.
   virtual void EmbedDirective(SourceLocation HashLoc, StringRef FileName,
-                              bool IsAngled, CharSourceRange FilenameRange,
-                              CharSourceRange ParametersRange,
-                              OptionalFileEntryRef File, StringRef SearchPath,
-                              StringRef RelativePath) {}
+                              bool IsAngled, OptionalFileEntryRef File,
+                              const LexEmbedParametersResult &Params) {}
 
   /// Callback invoked whenever the preprocessor cannot find a file for an
   /// inclusion directive.
@@ -515,14 +503,10 @@ public:
   }
 
   void EmbedDirective(SourceLocation HashLoc, StringRef FileName, bool IsAngled,
-                      CharSourceRange FilenameRange,
-                      CharSourceRange ParametersRange,
-                      OptionalFileEntryRef File, StringRef SearchPath,
-                      StringRef RelativePath) override {
-    First->EmbedDirective(HashLoc, FileName, IsAngled, FilenameRange,
-                          ParametersRange, File, SearchPath, RelativePath);
-    Second->EmbedDirective(HashLoc, FileName, IsAngled, FilenameRange,
-                           ParametersRange, File, SearchPath, RelativePath);
+                      OptionalFileEntryRef File,
+                      const LexEmbedParametersResult &Params) override {
+    First->EmbedDirective(HashLoc, FileName, IsAngled, File, Params);
+    Second->EmbedDirective(HashLoc, FileName, IsAngled, File, Params);
   }
 
   bool FileNotFound(StringRef FileName) override {

@@ -73,6 +73,28 @@ public:
       : PPDirectiveParameter(Start, End), Tokens(std::move(Tokens)) {}
 };
 
+struct LexEmbedParametersResult {
+  std::optional<PPEmbedParameterLimit> MaybeLimitParam;
+  std::optional<PPEmbedParameterOffset> MaybeOffsetParam;
+  std::optional<PPEmbedParameterIfEmpty> MaybeIfEmptyParam;
+  std::optional<PPEmbedParameterPrefix> MaybePrefixParam;
+  std::optional<PPEmbedParameterSuffix> MaybeSuffixParam;
+  SourceLocation StartLoc;
+  SourceLocation EndLoc;
+  int UnrecognizedParams;
+  bool Successful;
+
+  size_t PrefixTokenCount() const {
+    if (MaybePrefixParam)
+      return MaybePrefixParam->Tokens.size();
+    return 0;
+  }
+  size_t SuffixTokenCount() const {
+    if (MaybeSuffixParam)
+      return MaybeSuffixParam->Tokens.size();
+    return 0;
+  }
+};
 } // end namespace clang
 
 #endif
