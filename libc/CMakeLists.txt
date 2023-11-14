@@ -103,6 +103,8 @@ option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LIBC_GPU_BUILD "Build libc for the GPU. All CPU build options will be ignored." OFF)
 set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
 
+option(LIBC_SYSTEM_CONFIG_FILE "The path to user provided cmake file that configures the build for the target system." OFF)
+
 set(LIBC_ENABLE_UNITTESTS ON)
 set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
 
@@ -260,6 +262,25 @@ if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTUR
   include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/headers.txt")
 elseif(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/headers.txt")
   include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/headers.txt")
+endif()
+
+if(LIBC_SYSTEM_CONFIG_FILE)
+  if(EXISTS "${LIBC_SYSTEM_CONFIG_FILE}")
+    include("${LIBC_SYSTEM_CONFIG_FILE}")
+  else()
+    message(FATAL_ERROR "System Config File set to unavailable file '${LIBC_SYSTEM_CONFIG_FILE}'")
+  endif()
+
+  #TODO: Set up support for premade configs.
+
+  foreach(removed_entrypoint IN LISTS TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS)
+    if(LIBC_CMAKE_VERBOSE_LOGGING)
+      message(STATUS "Removing entrypoint ${removed_entrypoint}")
+    endif()
+    list(REMOVE_ITEM TARGET_LLVMLIBC_ENTRYPOINTS ${removed_entrypoint})
+    list(REMOVE_ITEM TARGET_LIBC_ENTRYPOINTS ${removed_entrypoint})
+    list(REMOVE_ITEM TARGET_LIBM_ENTRYPOINTS ${removed_entrypoint})
+  endforeach()
 endif()
 
 set(TARGET_ENTRYPOINT_NAME_LIST "")
