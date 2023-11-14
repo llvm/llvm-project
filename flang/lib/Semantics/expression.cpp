@@ -641,6 +641,7 @@ struct IntTypeVisitor {
         num.value = unsignedNum.value.Negate().value;
         num.overflow = unsignedNum.overflow || num.value > Int{0};
         if (!num.overflow && num.value.Negate().overflow &&
+            analyzer.context().ShouldWarn(LanguageFeature::BigIntLiterals) &&
             !analyzer.context().IsInModuleFile(digits)) {
           analyzer.Say(digits,
               "negated maximum INTEGER(KIND=%d) literal"_port_en_US, T::kind);
@@ -2078,11 +2079,14 @@ MaybeExpr ExpressionAnalyzer::Analyze(
               continue;
             }
             if (IsNullObjectPointer(*value)) {
-              AttachDeclaration(
-                  Say(expr.source,
-                      "NULL() with arguments is not standard conforming as the value for allocatable component '%s'"_port_en_US,
-                      symbol->name()),
-                  *symbol);
+              if (context().ShouldWarn(common::LanguageFeature::
+                          NullMoldAllocatableComponentValue)) {
+                AttachDeclaration(
+                    Say(expr.source,
+                        "NULL() with arguments is not standard conforming as the value for allocatable component '%s'"_port_en_US,
+                        symbol->name()),
+                    *symbol);
+              }
               // proceed to check type & shape
             } else {
               AttachDeclaration(
@@ -2366,11 +2370,15 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
         if (dataRef && dataRef->Rank() > 0) {
           if (sym->has<semantics::ProcBindingDetails>() &&
               sym->attrs().test(semantics::Attr::NOPASS)) {
-            // C1529 seems unnecessary and most compilers don't enforce it.
-            AttachDeclaration(
-                Say(sc.component.source,
-                    "Base of NOPASS type-bound procedure reference should be scalar"_port_en_US),
-                *sym);
+            // F'2023 C1529 seems unnecessary and most compilers don't
+            // enforce it.
+            if (context().ShouldWarn(
+                    common::LanguageFeature::NopassScalarBase)) {
+              AttachDeclaration(
+                  Say(sc.component.source,
+                      "Base of NOPASS type-bound procedure reference should be scalar"_port_en_US),
+                  *sym);
+            }
           } else if (IsProcedurePointer(*sym)) { // C919
             Say(sc.component.source,
                 "Base of procedure component reference must be scalar"_err_en_US);
@@ -3312,6 +3320,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Subtract &x) {
 
 MaybeExpr ExpressionAnalyzer::Analyze(
     const parser::Expr::ComplexConstructor &z) {
+  if (context_.ShouldWarn(common::LanguageFeature::ComplexConstructor)) {
+    context_.Say(
+        "nonstandard usage: generalized COMPLEX constructor"_port_en_US);
+  }
   return AnalyzeComplex(Analyze(std::get<0>(z.t).value()),
       Analyze(std::get<1>(z.t).value()), "complex constructor");
 }
@@ -3913,11 +3925,13 @@ MaybeExpr ExpressionAnalyzer::MakeFunctionRef(
 
 MaybeExpr ExpressionAnalyzer::AnalyzeComplex(
     MaybeExpr &&re, MaybeExpr &&im, const char *what) {
-  if (re && re->Rank() > 0) {
-    Say("Real part of %s is not scalar"_port_en_US, what);
-  }
-  if (im && im->Rank() > 0) {
-    Say("Imaginary part of %s is not scalar"_port_en_US, what);
+  if (context().ShouldWarn(common::LanguageFeature::ComplexConstructor)) {
+    if (re && re->Rank() > 0) {
+      Say("Real part of %s is not scalar"_port_en_US, what);
+    }
+    if (im && im->Rank() > 0) {
+      Say("Imaginary part of %s is not scalar"_port_en_US, what);
+    }
   }
   if (re && im) {
     ConformabilityCheck(GetContextualMessages(), *re, *im);

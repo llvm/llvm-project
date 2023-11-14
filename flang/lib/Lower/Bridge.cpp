@@ -4914,7 +4914,8 @@ private:
 
 Fortran::evaluate::FoldingContext
 Fortran::lower::LoweringBridge::createFoldingContext() const {
-  return {getDefaultKinds(), getIntrinsicTable(), getTargetCharacteristics()};
+  return {getDefaultKinds(), getIntrinsicTable(), getTargetCharacteristics(),
+          getLanguageFeatures()};
 }
 
 void Fortran::lower::LoweringBridge::lower(
@@ -4944,11 +4945,13 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::parser::AllCookedSources &cooked, llvm::StringRef triple,
     fir::KindMapping &kindMap,
     const Fortran::lower::LoweringOptions &loweringOptions,
-    const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults)
+    const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
+    const Fortran::common::LanguageFeatureControl &languageFeatures)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
       intrinsics{intrinsics}, targetCharacteristics{targetCharacteristics},
       cooked{&cooked}, context{context}, kindMap{kindMap},
-      loweringOptions{loweringOptions}, envDefaults{envDefaults} {
+      loweringOptions{loweringOptions}, envDefaults{envDefaults},
+      languageFeatures{languageFeatures} {
   // Register the diagnostic handler.
   context.getDiagEngine().registerHandler([](mlir::Diagnostic &diag) {
     llvm::raw_ostream &os = llvm::errs();

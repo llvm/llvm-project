@@ -380,7 +380,7 @@ bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
         return false;
       }
     } else if (symbol->has<ProcBindingDetails>() &&
-        context_.ShouldWarn(common::UsageWarning::Portability)) {
+        context_.ShouldWarn(common::LanguageFeature::BindingAsProcedure)) {
       evaluate::SayWithDeclaration(foldingContext_.messages(), *symbol,
           "Procedure binding '%s' used as target of a pointer assignment"_port_en_US,
           symbol->name());

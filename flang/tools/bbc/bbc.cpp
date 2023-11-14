@@ -303,7 +303,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
       semanticsContext.targetCharacteristics(), parsing.allCooked(), "",
-      kindMap, loweringOptions, {});
+      kindMap, loweringOptions, {}, semanticsContext.languageFeatures());
   burnside.lower(parseTree, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP) {

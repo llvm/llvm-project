@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Test intrinsic vs non_intrinsic module coexistence
 module iso_fortran_env
   integer, parameter :: user_defined_123 = 123

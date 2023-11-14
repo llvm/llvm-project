@@ -58,10 +58,11 @@ public:
          const Fortran::parser::AllCookedSources &allCooked,
          llvm::StringRef triple, fir::KindMapping &kindMap,
          const Fortran::lower::LoweringOptions &loweringOptions,
-         const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults) {
+         const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
+         const Fortran::common::LanguageFeatureControl &languageFeatures) {
     return LoweringBridge(ctx, semanticsContext, defaultKinds, intrinsics,
                           targetCharacteristics, allCooked, triple, kindMap,
-                          loweringOptions, envDefaults);
+                          loweringOptions, envDefaults, languageFeatures);
   }
 
   //===--------------------------------------------------------------------===//
@@ -99,6 +100,10 @@ public:
     return envDefaults;
   }
 
+  const Fortran::common::LanguageFeatureControl &getLanguageFeatures() const {
+    return languageFeatures;
+  }
+
   /// Create a folding context. Careful: this is very expensive.
   Fortran::evaluate::FoldingContext createFoldingContext() const;
 
@@ -132,7 +137,8 @@ private:
       const Fortran::parser::AllCookedSources &cooked, llvm::StringRef triple,
       fir::KindMapping &kindMap,
       const Fortran::lower::LoweringOptions &loweringOptions,
-      const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults);
+      const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
+      const Fortran::common::LanguageFeatureControl &languageFeatures);
   LoweringBridge() = delete;
   LoweringBridge(const LoweringBridge &) = delete;
 
@@ -147,6 +153,7 @@ private:
   fir::KindMapping &kindMap;
   const Fortran::lower::LoweringOptions &loweringOptions;
   const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults;
+  const Fortran::common::LanguageFeatureControl &languageFeatures;
 };
 
 } // namespace lower
