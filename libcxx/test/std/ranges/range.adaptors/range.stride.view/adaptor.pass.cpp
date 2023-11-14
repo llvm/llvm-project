@@ -14,6 +14,7 @@
 
 #include "__ranges/stride_view.h"
 #include "test.h"
+#include "test_iterators.h"
 #include <concepts>
 #include <iterator>
 #include <ranges>
@@ -33,11 +34,10 @@ constexpr bool test() {
     // view | stride
     {
       {
-        BidirArrayView<int> view(arr, arr + array_n);
-        //std::ranges::stride_view<BidirView> strided(view, 1);
-        std::same_as<std::ranges::stride_view<BidirArrayView<int>>> decltype(auto) strided =
-            view | std::views::stride(1);
-        auto strided_iter = strided.begin();
+        using View = InputView<bidirectional_iterator<int*>>;
+        View view(bidirectional_iterator(arr), bidirectional_iterator(arr + array_n));
+        std::same_as<std::ranges::stride_view<View>> decltype(auto) strided = view | std::views::stride(1);
+        auto strided_iter                                                   = strided.begin();
 
         // Check that the begin() iter views arr[0]
         assert(*strided_iter == arr[0]);
@@ -47,10 +47,10 @@ constexpr bool test() {
         assert(*strided_iter == arr[2]);
       }
       {
-        BidirArrayView<int> view(arr, arr + array_n);
-        std::same_as<std::ranges::stride_view<BidirArrayView<int>>> decltype(auto) strided =
-            view | std::views::stride(2);
-        auto strided_iter = strided.begin();
+        using View = InputView<bidirectional_iterator<int*>>;
+        View view(bidirectional_iterator(arr), bidirectional_iterator(arr + array_n));
+        std::same_as<std::ranges::stride_view<View>> decltype(auto) strided = view | std::views::stride(2);
+        auto strided_iter                                                   = strided.begin();
 
         assert(*strided_iter == arr[0]);
 
@@ -65,20 +65,22 @@ constexpr bool test() {
   // adaptor | stride
   {
     // Parallels the two tests from above.
-    constexpr auto identity_lambda = [](int i) { return i * 2; };
+    constexpr const auto identity_lambda = [](const int i) { return i * 2; };
     {
-      BidirArrayView<int> view(arr, arr + array_n);
+      using View = InputView<bidirectional_iterator<int*>>;
+      View view(bidirectional_iterator(arr), bidirectional_iterator(arr + array_n));
       const auto transform_stride_partial = std::views::transform(identity_lambda) | std::views::stride(1);
 
-      const auto transform_stride_applied = transform_stride_partial(view);
-      auto transform_stride_applied_iter  = transform_stride_applied.begin();
+      auto transform_stride_applied      = transform_stride_partial(view);
+      auto transform_stride_applied_iter = transform_stride_applied.begin();
       assert(*transform_stride_applied_iter == std::invoke(identity_lambda, arr[0]));
       std::ranges::advance(transform_stride_applied_iter, 2);
       assert(*transform_stride_applied_iter == std::invoke(identity_lambda, arr[2]));
     }
 
     {
-      BidirArrayView<int> view(arr, arr + array_n);
+      using View = InputView<bidirectional_iterator<int*>>;
+      View view(bidirectional_iterator(arr), bidirectional_iterator(arr + array_n));
       const auto transform_stride_partial = std::views::transform(identity_lambda) | std::views::stride(2);
 
       const auto transform_stride_applied = transform_stride_partial(view);
@@ -90,9 +92,9 @@ constexpr bool test() {
   }
 
   {
-    using ForwardStrideView      = std::ranges::stride_view<ForwardArrayView<int>>;
-    using BidirStrideView        = std::ranges::stride_view<BidirArrayView<int>>;
-    using RandomAccessStrideView = std::ranges::stride_view<RandomAccessArrayView<int>>;
+    using ForwardStrideView      = std::ranges::stride_view<InputView<forward_iterator<int*>>>;
+    using BidirStrideView        = std::ranges::stride_view<InputView<bidirectional_iterator<int*>>>;
+    using RandomAccessStrideView = std::ranges::stride_view<InputView<random_access_iterator<int*>>>;
 
     static_assert(std::ranges::forward_range<ForwardStrideView>);
     static_assert(std::ranges::bidirectional_range<BidirStrideView>);
@@ -102,6 +104,7 @@ constexpr bool test() {
 
   // Check SFINAE friendliness
   {
+    using View = InputView<bidirectional_iterator<int*>>;
     struct NotAViewableRange {};
     struct NotARange {};
     // Not invocable because there is no parameter.
@@ -109,15 +112,12 @@ constexpr bool test() {
     // Not invocable because NotAViewableRange is, well, not a viewable range.
     static_assert(!std::is_invocable_v<decltype(std::views::reverse), NotAViewableRange>);
     // Is invocable because BidirView is a viewable range.
-    static_assert(std::is_invocable_v<decltype(std::views::reverse), BidirArrayView<int>>);
+    static_assert(std::is_invocable_v<decltype(std::views::reverse), View>);
 
     // Make sure that pipe operations work!
-    static_assert(CanBePiped<BidirArrayView<int>,
-                             decltype(std::views::stride(std::ranges::range_difference_t<BidirArrayView<int>>{}))>);
-    static_assert(CanBePiped<BidirArrayView<int>&,
-                             decltype(std::views::stride(std::ranges::range_difference_t<BidirArrayView<int>>{}))>);
-    static_assert(
-        !CanBePiped<NotARange, decltype(std::views::stride(std::ranges::range_difference_t<BidirArrayView<int>>{}))>);
+    static_assert(CanBePiped<View, decltype(std::views::stride(std::ranges::range_difference_t<View>{}))>);
+    static_assert(CanBePiped<View&, decltype(std::views::stride(std::ranges::range_difference_t<View>{}))>);
+    static_assert(!CanBePiped<NotARange, decltype(std::views::stride(std::ranges::range_difference_t<View>{}))>);
   }
   // A final sanity check.
   { static_assert(std::same_as<decltype(std::views::stride), decltype(std::ranges::views::stride)>); }

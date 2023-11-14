@@ -56,9 +56,10 @@ constexpr bool operator_tests() {
   {
     // What operators are valid for an iterator derived from a stride view
     // over an input view.
-    int arr[] = {1, 2, 3};
-    auto rav  = InputArrayView<int>(arr, arr + 3);
-    auto str  = std::ranges::stride_view<InputArrayView<int>>(rav, 1);
+    int arr[]  = {1, 2, 3};
+    using View = InputView<cpp17_input_iterator<int*>>;
+    auto rav   = View(cpp17_input_iterator(arr), cpp17_input_iterator(arr + 3));
+    auto str   = std::ranges::stride_view<View>(rav, 1);
 
     auto strb = str.begin();
 
@@ -75,9 +76,10 @@ constexpr bool operator_tests() {
   {
     // What operators are valid for an iterator derived from a stride view
     // over a forward  view.
-    int arr[] = {1, 2, 3};
-    auto rav  = ForwardArrayView<int>(arr, arr + 3);
-    auto str  = std::ranges::stride_view<ForwardArrayView<int>>(rav, 1);
+    int arr[]  = {1, 2, 3};
+    using View = InputView<forward_iterator<int*>>;
+    auto rav   = View(forward_iterator(arr), forward_iterator(arr + 3));
+    auto str   = std::ranges::stride_view<View>(rav, 1);
 
     auto strb = str.begin();
 
@@ -94,9 +96,10 @@ constexpr bool operator_tests() {
   {
     // What operators are valid for an iterator derived from a stride view
     // over a bidirectional view.
-    int arr[] = {1, 2, 3};
-    auto rav  = BidirArrayView<int>(arr, arr + 3);
-    auto str  = std::ranges::stride_view<BidirArrayView<int>>(rav, 1);
+    int arr[]  = {1, 2, 3};
+    using View = InputView<bidirectional_iterator<int*>>;
+    auto rav   = View(bidirectional_iterator(arr), bidirectional_iterator(arr + 3));
+    auto str   = std::ranges::stride_view<View>(rav, 1);
 
     auto strb = str.begin();
 
@@ -113,9 +116,10 @@ constexpr bool operator_tests() {
   {
     // What operators are valid for an iterator derived from a stride view
     // over a random access view.
-    int arr[] = {1, 2, 3};
-    auto rav  = RandomAccessArrayView<int>(arr, arr + 3);
-    auto str  = std::ranges::stride_view<RandomAccessArrayView<int>>(rav, 1);
+    int arr[]  = {1, 2, 3};
+    using View = InputView<random_access_iterator<int*>>;
+    auto rav   = View(random_access_iterator(arr), random_access_iterator(arr + 3));
+    auto str   = std::ranges::stride_view<View>(rav, 1);
 
     auto strb = str.begin();
 
@@ -131,10 +135,12 @@ constexpr bool operator_tests() {
   }
 
   {
-    // Test the non-forward-range operator- between two iterators.
+    // Test the non-forward-range operator- between two iterators (i.e., ceil).
     int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    auto rav_zero    = InputArrayViewNp<int*>(arr, arr + 10);
-    auto rav_one     = InputArrayViewNp<int*>(arr + 1, arr + 10);
+    auto rav_zero =
+        InputView<SizedInputIterator, SizedInputIterator>(SizedInputIterator(arr), SizedInputIterator(arr + 10));
+    auto rav_one =
+        InputView<SizedInputIterator, SizedInputIterator>(SizedInputIterator(arr + 1), SizedInputIterator(arr + 10));
     auto stride_zoff = std::ranges::stride_view(rav_zero, 3);
     auto stride_ooff = std::ranges::stride_view(rav_one, 3);
 
@@ -142,19 +148,19 @@ constexpr bool operator_tests() {
     auto stride_ooff_base = stride_ooff.begin();
 
     auto stride_zoff_one   = stride_zoff_base;
-    auto stride_zoff_four  = stride_zoff_base + 1;
-    auto stride_zoff_seven = stride_zoff_base + 2;
+    auto stride_zoff_four  = ++stride_zoff_base;
+    auto stride_zoff_seven = ++stride_zoff_base;
 
     auto stride_ooff_two  = stride_ooff_base;
-    auto stride_ooff_five = stride_ooff_base + 1;
+    auto stride_ooff_five = ++stride_ooff_base;
 
-    static_assert(!std::ranges::forward_range<decltype(std::move(stride_zoff_base).base())>);
     static_assert(std::sized_sentinel_for<decltype(std::move(stride_zoff_base).base()),
                                           decltype(std::move(stride_zoff_base).base())>);
     static_assert(can_calculate_distance_between_non_sentinel<decltype(stride_zoff_base)>);
 
     assert(*stride_zoff_one == 1);
     assert(*stride_zoff_four == 4);
+    assert(*stride_zoff_seven == 7);
 
     assert(*stride_ooff_two == 2);
     assert(*stride_ooff_five == 5);
