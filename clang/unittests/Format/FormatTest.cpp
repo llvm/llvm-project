@@ -20879,7 +20879,7 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
   verifyFormat("int a[][] = {\n"
                "    {\n"
                "     {0, 2}, //\n"
-               " {1, 2}  //\n"
+               "     {1, 2}  //\n"
                "    }\n"
                "};",
                Style);
