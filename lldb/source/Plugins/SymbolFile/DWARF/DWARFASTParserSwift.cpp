@@ -37,6 +37,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 DWARFASTParserSwift::DWARFASTParserSwift(
     TypeSystemSwiftTypeRef &swift_typesystem)

@@ -923,8 +923,7 @@ TypeSystemSwiftTypeRef::GetSwiftified(swift::Demangle::Demangler &dem,
     return node;
 
   // Extract the toplevel Clang module name from the debug info.
-  llvm::SmallVector<CompilerContext, 4> DeclCtx;
-  clang_type->GetDeclContext(DeclCtx);
+  std::vector<CompilerContext> DeclCtx = clang_type->GetDeclContext();
   StringRef toplevel_module;
   if (resolve_objc_module) {
     for (auto &Context : DeclCtx)
@@ -1595,7 +1594,7 @@ void TypeSystemSwiftTypeRef::DiagnoseWarnings(Process &process,
     swift_ast_context->DiagnoseWarnings(process, module);
 }
 
-DWARFASTParser *TypeSystemSwiftTypeRef::GetDWARFParser() {
+plugin::dwarf::DWARFASTParser *TypeSystemSwiftTypeRef::GetDWARFParser() {
   if (!m_dwarf_ast_parser_up)
     m_dwarf_ast_parser_up.reset(new DWARFASTParserSwift(*this));
   return m_dwarf_ast_parser_up.get();
