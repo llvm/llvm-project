@@ -66,6 +66,23 @@ void foo1(int A)
   [[clang::code_align(5000)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
+  // expected-warning@+2 {{integer literal is too large to be represented in a signed integer type, interpreting as unsigned}}
+  // expected-error@+1 {{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was 9223372036854775808}}
+  [[clang::code_align(9223372036854775808)]]
+  for(int I=0; I<256; ++I) { bar(I); }
+
+  // expected-error@+1 {{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was 0}}
+  [[clang::code_align((__int128_t)0x1234567890abcde0ULL << 64)]]
+  for(int I=0; I<256; ++I) { bar(I); }
+
+  // expected-error@+1 {{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was 1311768467294899680}}
+  [[clang::code_align((__int128_t)0x1234567890abcde0ULL)]]
+  for(int I=0; I<256; ++I) { bar(I); }
+
+  // expected-error@+1 {{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was 32768}}
+  [[clang::code_align(32768)]]
+  for(int I=0; I<256; ++I) { bar(I); }
+
   // cpp-local-error@+3{{expression is not an integral constant expression}}
   // cpp-local-note@+2{{function parameter 'A' with unknown value cannot be used in a constant expression}}
   // c-local-error@+1{{expression is not an integer constant expression}}
