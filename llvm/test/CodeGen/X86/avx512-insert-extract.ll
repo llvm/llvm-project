@@ -1048,8 +1048,8 @@ define zeroext i8 @test_extractelement_v4i1(<4 x i32> %a, <4 x i32> %b) nounwind
 define zeroext i8 @test_extractelement_v32i1(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; KNL-LABEL: test_extractelement_v32i1:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpminub %ymm1, %ymm0, %ymm1
-; KNL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; KNL-NEXT:    vpminub %xmm1, %xmm0, %xmm1
+; KNL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
