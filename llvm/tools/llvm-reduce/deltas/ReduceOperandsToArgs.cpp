@@ -175,7 +175,7 @@ static void substituteOperandWithArgument(Function *OldF,
 
   // Rename NewF to OldF's name.
   std::string FName = OldF->getName().str();
-  OldF->replaceAllUsesWith(ConstantExpr::getBitCast(NewF, OldF->getType()));
+  OldF->replaceAllUsesWith(NewF);
   OldF->eraseFromParent();
   NewF->setName(FName);
 }
