@@ -1062,6 +1062,14 @@ namespace DiscardExprs {
   }
   static_assert(foo<3>() == 3, "");
 
+  struct ATemp {
+    consteval ATemp ret_a() const { return ATemp{}; }
+  };
+
+  void test() {
+    int k = (ATemp().ret_a(), 0);
+  }
+
 #pragma clang diagnostic pop
 }
 #endif

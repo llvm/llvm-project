@@ -1855,7 +1855,7 @@ inline bool CheckGlobalCtor(InterpState &S, CodePtr OpPC) {
 inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func) {
   if (Func->hasThisPointer()) {
     size_t ThisOffset =
-        Func->getArgSize() + (Func->hasRVO() ? primSize(PT_Ptr) : 0);
+        Func->getArgSize() - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
 
     const Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
 
@@ -1904,7 +1904,7 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func) {
   assert(Func->hasThisPointer());
   assert(Func->isVirtual());
   size_t ThisOffset =
-      Func->getArgSize() + (Func->hasRVO() ? primSize(PT_Ptr) : 0);
+      Func->getArgSize() - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
   Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
 
   const CXXRecordDecl *DynamicDecl =
