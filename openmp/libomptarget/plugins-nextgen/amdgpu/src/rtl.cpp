@@ -130,45 +130,6 @@ Error iterateAgentMemoryPools(hsa_agent_t Agent, CallbackTy Cb) {
                        "Error in hsa_amd_agent_iterate_memory_pools: %s");
 }
 
-/// Dispatches an asynchronous memory copy.
-/// Enables different SDMA engines for the dispatch in a round-robin fashion.
-Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
-                   const void *Src, hsa_agent_t SrcAgent, size_t Size,
-                   uint32_t NumDepSignals, const hsa_signal_t *DepSignals,
-                   hsa_signal_t CompletionSignal) {
-  if (UseMultipleSdmaEngines) {
-    hsa_status_t S =
-        hsa_amd_memory_async_copy(Dst, DstAgent, Src, SrcAgent, Size,
-                                  NumDepSignals, DepSignals, CompletionSignal);
-    return Plugin::check(S, "Error in hsa_amd_memory_async_copy: %s");
-  }
-
-// This solution is probably not the best
-#if !(HSA_AMD_INTERFACE_VERSION_MAJOR >= 1 &&                                  \
-      HSA_AMD_INTERFACE_VERSION_MINOR >= 2)
-  return Plugin::error("Async copy on selected SDMA requires ROCm 5.7");
-#else
-  static std::atomic<int> SdmaEngine{1};
-
-  // This atomics solution is probably not the best, but should be sufficient
-  // for now.
-  // In a worst case scenario, in which threads read the same value, they will
-  // dispatch to the same SDMA engine. This may result in sub-optimal
-  // performance. However, I think the possibility to be fairly low.
-  int LocalSdmaEngine = SdmaEngine.load(std::memory_order_acquire);
-  // This call is only avail in ROCm >= 5.7
-  hsa_status_t S = hsa_amd_memory_async_copy_on_engine(
-      Dst, DstAgent, Src, SrcAgent, Size, NumDepSignals, DepSignals,
-      CompletionSignal, (hsa_amd_sdma_engine_id_t)LocalSdmaEngine,
-      /*force_copy_on_sdma=*/true);
-  // Increment to use one of three SDMA engines: 0x1, 0x2, 0x4
-  LocalSdmaEngine = (LocalSdmaEngine << 1) % 7;
-  SdmaEngine.store(LocalSdmaEngine, std::memory_order_relaxed);
-
-  return Plugin::check(S, "Error in hsa_amd_memory_async_copy_on_engine: %s");
-#endif
-}
-
 } // namespace utils
 
 /// Utility class representing generic resource references to AMDGPU resources.
@@ -984,9 +945,6 @@ private:
   /// Timeout hint for HSA actively waiting for signal value to change
   const uint64_t StreamBusyWaitMicroseconds;
 
-  /// Indicate to spread data transfers across all avilable SDMAs
-  bool UseMultipleSdmaEngines;
-
   /// Return the current number of asychronous operations on the stream.
   uint32_t size() const { return NextSlot; }
 
@@ -1212,15 +1170,15 @@ public:
       InputSignal = nullptr;
 
     // Issue the async memory copy.
+    hsa_status_t Status;
     if (InputSignal) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
-      return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Src, Agent,
-                                 CopySize, 1, &InputSignalRaw,
-                                 OutputSignal->get());
-    }
-
-    return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Src, Agent,
-                               CopySize, 0, nullptr, OutputSignal->get());
+      Status = hsa_amd_memory_async_copy(Dst, Agent, Src, Agent, CopySize, 1,
+                                         &InputSignalRaw, OutputSignal->get());
+    } else
+      Status = hsa_amd_memory_async_copy(Dst, Agent, Src, Agent, CopySize, 0,
+                                         nullptr, OutputSignal->get());
+    return Plugin::check(Status, "Error in hsa_amd_memory_async_copy: %s");
   }
 
   /// Push an asynchronous memory copy device-to-host involving an unpinned
@@ -1256,18 +1214,20 @@ public:
 
     // Issue the first step: device to host transfer. Avoid defining the input
     // dependency if already satisfied.
+    hsa_status_t Status;
     if (InputSignal) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
-      if (auto Err = utils::asyncMemCopy(
-              UseMultipleSdmaEngines, Inter, Agent, Src, Agent, CopySize, 1,
-              &InputSignalRaw, OutputSignals[0]->get()))
-        return Err;
+      Status =
+          hsa_amd_memory_async_copy(Inter, Agent, Src, Agent, CopySize, 1,
+                                    &InputSignalRaw, OutputSignals[0]->get());
     } else {
-      if (auto Err = utils::asyncMemCopy(UseMultipleSdmaEngines, Inter, Agent,
-                                         Src, Agent, CopySize, 0, nullptr,
-                                         OutputSignals[0]->get()))
-        return Err;
+      Status = hsa_amd_memory_async_copy(Inter, Agent, Src, Agent, CopySize, 0,
+                                         nullptr, OutputSignals[0]->get());
     }
+
+    if (auto Err =
+            Plugin::check(Status, "Error in hsa_amd_memory_async_copy: %s"))
+      return Err;
 
     // Consume another stream slot and compute dependencies.
     std::tie(Curr, InputSignal) = consume(OutputSignals[1]);
@@ -1282,7 +1242,7 @@ public:
     std::atomic_thread_fence(std::memory_order_release);
 
     // Issue the second step: host to host transfer.
-    hsa_status_t Status = hsa_amd_signal_async_handler(
+    Status = hsa_amd_signal_async_handler(
         InputSignal->get(), HSA_SIGNAL_CONDITION_EQ, 0, asyncActionCallback,
         (void *)&Slots[Curr]);
 
@@ -1358,14 +1318,16 @@ public:
 
     // Issue the second step: host to device transfer. Avoid defining the input
     // dependency if already satisfied.
+    hsa_status_t Status;
     if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
-      return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Inter,
-                                 Agent, CopySize, 1, &InputSignalRaw,
-                                 OutputSignal->get());
-    }
-    return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Inter, Agent,
-                               CopySize, 0, nullptr, OutputSignal->get());
+      Status = hsa_amd_memory_async_copy(Dst, Agent, Inter, Agent, CopySize, 1,
+                                         &InputSignalRaw, OutputSignal->get());
+    } else
+      Status = hsa_amd_memory_async_copy(Dst, Agent, Inter, Agent, CopySize, 0,
+                                         nullptr, OutputSignal->get());
+
+    return Plugin::check(Status, "Error in hsa_amd_memory_async_copy: %s");
   }
 
   // AMDGPUDeviceTy is incomplete here, passing the underlying agent instead
@@ -1391,15 +1353,17 @@ public:
     // allocated by this runtime or the caller made the appropriate
     // access calls.
 
+    hsa_status_t Status;
     if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
-      return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, DstAgent, Src,
-                                 SrcAgent, CopySize, 1, &InputSignalRaw,
-                                 OutputSignal->get());
-    }
-    return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, DstAgent, Src,
-                               SrcAgent, CopySize, 0, nullptr,
-                               OutputSignal->get());
+      Status =
+          hsa_amd_memory_async_copy(Dst, DstAgent, Src, SrcAgent, CopySize, 1,
+                                    &InputSignalRaw, OutputSignal->get());
+    } else
+      Status = hsa_amd_memory_async_copy(Dst, DstAgent, Src, SrcAgent, CopySize,
+                                         0, nullptr, OutputSignal->get());
+
+    return Plugin::check(Status, "Error in D2D hsa_amd_memory_async_copy: %s");
   }
 
   /// Synchronize with the stream. The current thread waits until all operations
@@ -1824,8 +1788,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_InitialNumSignals("LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS",
                                64),
         OMPX_StreamBusyWait("LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT", 2000000),
-        OMPX_UseMultipleSdmaEngines(
-            "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", false),
         AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
         AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
 
@@ -2244,9 +2206,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       if (auto Err = Signal.init())
         return Err;
 
-      if (auto Err = utils::asyncMemCopy(useMultipleSdmaEngines(), TgtPtr,
-                                         Agent, PinnedPtr, Agent, Size, 0,
-                                         nullptr, Signal.get()))
+      Status = hsa_amd_memory_async_copy(TgtPtr, Agent, PinnedPtr, Agent, Size,
+                                         0, nullptr, Signal.get());
+      if (auto Err =
+              Plugin::check(Status, "Error in hsa_amd_memory_async_copy: %s"))
         return Err;
 
       if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
@@ -2304,9 +2267,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       if (auto Err = Signal.init())
         return Err;
 
-      if (auto Err = utils::asyncMemCopy(useMultipleSdmaEngines(), PinnedPtr,
-                                         Agent, TgtPtr, Agent, Size, 0, nullptr,
-                                         Signal.get()))
+      Status = hsa_amd_memory_async_copy(PinnedPtr, Agent, TgtPtr, Agent, Size,
+                                         0, nullptr, Signal.get());
+      if (auto Err =
+              Plugin::check(Status, "Error in hsa_amd_memory_async_copy: %s"))
         return Err;
 
       if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
@@ -2669,8 +2633,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         });
   }
 
-  bool useMultipleSdmaEngines() const { return OMPX_UseMultipleSdmaEngines; }
-
 private:
   using AMDGPUEventRef = AMDGPUResourceRef<AMDGPUEventTy>;
   using AMDGPUEventManagerTy = GenericDeviceResourceManagerTy<AMDGPUEventRef>;
@@ -2739,9 +2701,6 @@ private:
   /// before going into a blocking HSA wait state. The unit for these variables
   /// are microseconds.
   UInt32Envar OMPX_StreamBusyWait;
-
-  /// Use ROCm 5.7 interface for multiple SDMA engines
-  BoolEnvar OMPX_UseMultipleSdmaEngines;
 
   /// Stream manager for AMDGPU streams.
   AMDGPUStreamManagerTy AMDGPUStreamManager;
@@ -2844,8 +2803,7 @@ AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
       SignalManager(Device.getSignalManager()), Device(Device),
       // Initialize the std::deque with some empty positions.
       Slots(32), NextSlot(0), SyncCycle(0), RPCServer(nullptr),
-      StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
-      UseMultipleSdmaEngines(Device.useMultipleSdmaEngines()) {}
+      StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()) {}
 
 /// Class implementing the AMDGPU-specific functionalities of the global
 /// handler.
