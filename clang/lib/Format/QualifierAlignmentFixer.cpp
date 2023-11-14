@@ -345,6 +345,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
         TypeToken = Next->getNextNonComment()->getNextNonComment();
       }
     }
+
     if (Next->is(tok::kw_auto))
       TypeToken = Next;
 
