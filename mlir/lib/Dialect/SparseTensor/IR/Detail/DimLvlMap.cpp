@@ -24,61 +24,61 @@ Var DimLvlExpr::castAnyVar() const {
 }
 
 std::optional<Var> DimLvlExpr::dyn_castAnyVar() const {
-  if (const auto s = expr.dyn_cast_or_null<AffineSymbolExpr>())
+  if (const auto s = dyn_cast_or_null<AffineSymbolExpr>(expr))
     return SymVar(s);
-  if (const auto x = expr.dyn_cast_or_null<AffineDimExpr>())
+  if (const auto x = dyn_cast_or_null<AffineDimExpr>(expr))
     return Var(getAllowedVarKind(), x);
   return std::nullopt;
 }
 
 SymVar DimLvlExpr::castSymVar() const {
-  return SymVar(expr.cast<AffineSymbolExpr>());
+  return SymVar(llvm::cast<AffineSymbolExpr>(expr));
 }
 
 std::optional<SymVar> DimLvlExpr::dyn_castSymVar() const {
-  if (const auto s = expr.dyn_cast_or_null<AffineSymbolExpr>())
+  if (const auto s = dyn_cast_or_null<AffineSymbolExpr>(expr))
     return SymVar(s);
   return std::nullopt;
 }
 
 Var DimLvlExpr::castDimLvlVar() const {
-  return Var(getAllowedVarKind(), expr.cast<AffineDimExpr>());
+  return Var(getAllowedVarKind(), llvm::cast<AffineDimExpr>(expr));
 }
 
 std::optional<Var> DimLvlExpr::dyn_castDimLvlVar() const {
-  if (const auto x = expr.dyn_cast_or_null<AffineDimExpr>())
+  if (const auto x = dyn_cast_or_null<AffineDimExpr>(expr))
     return Var(getAllowedVarKind(), x);
   return std::nullopt;
 }
 
 int64_t DimLvlExpr::castConstantValue() const {
-  return expr.cast<AffineConstantExpr>().getValue();
+  return llvm::cast<AffineConstantExpr>(expr).getValue();
 }
 
 std::optional<int64_t> DimLvlExpr::dyn_castConstantValue() const {
-  const auto k = expr.dyn_cast_or_null<AffineConstantExpr>();
+  const auto k = dyn_cast_or_null<AffineConstantExpr>(expr);
   return k ? std::make_optional(k.getValue()) : std::nullopt;
 }
 
 bool DimLvlExpr::hasConstantValue(int64_t val) const {
-  const auto k = expr.dyn_cast_or_null<AffineConstantExpr>();
+  const auto k = dyn_cast_or_null<AffineConstantExpr>(expr);
   return k && k.getValue() == val;
 }
 
 DimLvlExpr DimLvlExpr::getLHS() const {
-  const auto binop = expr.dyn_cast_or_null<AffineBinaryOpExpr>();
+  const auto binop = dyn_cast_or_null<AffineBinaryOpExpr>(expr);
   return DimLvlExpr(kind, binop ? binop.getLHS() : nullptr);
 }
 
 DimLvlExpr DimLvlExpr::getRHS() const {
-  const auto binop = expr.dyn_cast_or_null<AffineBinaryOpExpr>();
+  const auto binop = dyn_cast_or_null<AffineBinaryOpExpr>(expr);
   return DimLvlExpr(kind, binop ? binop.getRHS() : nullptr);
 }
 
 std::tuple<DimLvlExpr, AffineExprKind, DimLvlExpr>
 DimLvlExpr::unpackBinop() const {
   const auto ak = getAffineKind();
-  const auto binop = expr.dyn_cast<AffineBinaryOpExpr>();
+  const auto binop = llvm::dyn_cast<AffineBinaryOpExpr>(expr);
   const DimLvlExpr lhs(kind, binop ? binop.getLHS() : nullptr);
   const DimLvlExpr rhs(kind, binop ? binop.getRHS() : nullptr);
   return {lhs, ak, rhs};

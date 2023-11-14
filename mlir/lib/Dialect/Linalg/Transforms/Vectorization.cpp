@@ -1297,7 +1297,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
     SmallVector<int64_t> zeroPos;
     auto results = indexingMap.getResults();
     for (const auto &result : llvm::enumerate(results)) {
-      if (result.value().isa<AffineConstantExpr>()) {
+      if (isa<AffineConstantExpr>(result.value())) {
         zeroPos.push_back(result.index());
       }
     }

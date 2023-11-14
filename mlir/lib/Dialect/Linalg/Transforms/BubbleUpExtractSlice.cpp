@@ -107,7 +107,7 @@ struct BubbleUpExtractSliceOpPattern
                                           rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> tileSizes = sizeBounds;
     for (auto const &result : enumerate(indexingMap.getResults())) {
-      unsigned position = result.value().cast<AffineDimExpr>().getPosition();
+      unsigned position = cast<AffineDimExpr>(result.value()).getPosition();
       tileOffsets[position] = sliceOp.getMixedOffsets()[result.index()];
       tileSizes[position] = sliceOp.getMixedSizes()[result.index()];
     }

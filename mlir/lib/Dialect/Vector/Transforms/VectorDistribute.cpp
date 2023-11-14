@@ -97,7 +97,7 @@ struct DistributedLoadStoreHelper {
     SmallVector<Value> indices(rank, zero);
     if (val == distributedVal) {
       for (auto dimExpr : distributionMap.getResults()) {
-        int64_t index = dimExpr.cast<AffineDimExpr>().getPosition();
+        int64_t index = cast<AffineDimExpr>(dimExpr).getPosition();
         indices[index] = buildDistributedOffset(b, loc, index);
       }
     }
@@ -142,7 +142,7 @@ struct DistributedLoadStoreHelper {
     SmallVector<Value> indices(sequentialVectorType.getRank(), zero);
     if (type == distributedVectorType) {
       for (auto dimExpr : distributionMap.getResults()) {
-        int64_t index = dimExpr.cast<AffineDimExpr>().getPosition();
+        int64_t index = cast<AffineDimExpr>(dimExpr).getPosition();
         indices[index] = buildDistributedOffset(b, loc, index);
       }
     }
@@ -530,11 +530,11 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
     for (auto it : llvm::zip(indexMap.getResults(), map.getResults())) {
       AffineExpr d0, d1;
       bindDims(newWarpOp.getContext(), d0, d1);
-      auto indexExpr = std::get<0>(it).dyn_cast<AffineDimExpr>();
+      auto indexExpr = dyn_cast<AffineDimExpr>(std::get<0>(it));
       if (!indexExpr)
         continue;
       unsigned indexPos = indexExpr.getPosition();
-      unsigned vectorPos = std::get<1>(it).cast<AffineDimExpr>().getPosition();
+      unsigned vectorPos = cast<AffineDimExpr>(std::get<1>(it)).getPosition();
       auto scale =
           rewriter.getAffineConstantExpr(targetType.getDimSize(vectorPos));
       indices[indexPos] = affine::makeComposedAffineApply(
@@ -877,11 +877,11 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
     for (auto it : llvm::zip_equal(indexMap.getResults(), map.getResults())) {
       AffineExpr d0, d1;
       bindDims(read.getContext(), d0, d1);
-      auto indexExpr = std::get<0>(it).dyn_cast<AffineDimExpr>();
+      auto indexExpr = dyn_cast<AffineDimExpr>(std::get<0>(it));
       if (!indexExpr)
         continue;
       unsigned indexPos = indexExpr.getPosition();
-      unsigned vectorPos = std::get<1>(it).cast<AffineDimExpr>().getPosition();
+      unsigned vectorPos = cast<AffineDimExpr>(std::get<1>(it)).getPosition();
       int64_t scale = distributedType.getDimSize(vectorPos);
       indices[indexPos] = affine::makeComposedAffineApply(
           rewriter, read.getLoc(), d0 + scale * d1,
