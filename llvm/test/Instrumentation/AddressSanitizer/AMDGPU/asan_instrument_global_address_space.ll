@@ -14,17 +14,23 @@ define protected amdgpu_kernel void @global_store(ptr addrspace(1) %p, i32 %i) s
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP12:%.*]], !prof [[PROF0:![0-9]+]]
-; CHECK:       6:
-; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP0]], 7
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 3
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i8
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp sge i8 [[TMP9]], [[TMP4]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__asan_report_store4(i64 [[TMP0]]) #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP0]], 7
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 3
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP7]] to i8
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp sge i8 [[TMP8]], [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = and i1 [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP10]])
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i64 [[TMP11]], 0
+; CHECK-NEXT:    br i1 [[TMP12]], label [[ASAN_REPORT:%.*]], label [[TMP15:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK:       asan.report:
+; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP13:%.*]], label [[TMP14:%.*]]
+; CHECK:       13:
+; CHECK-NEXT:    call void @__asan_report_store4(i64 [[TMP0]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
+; CHECK-NEXT:    br label [[TMP14]]
+; CHECK:       14:
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
 ; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -37,19 +43,16 @@ define protected amdgpu_kernel void @global_store(ptr addrspace(1) %p, i32 %i) s
 ; RECOV-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; RECOV-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
 ; RECOV-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP4]], 0
-; RECOV-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP13:%.*]], !prof [[PROF0:![0-9]+]]
-; RECOV:       6:
-; RECOV-NEXT:    [[TMP7:%.*]] = and i64 [[TMP0]], 7
-; RECOV-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 3
-; RECOV-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i8
-; RECOV-NEXT:    [[TMP10:%.*]] = icmp sge i8 [[TMP9]], [[TMP4]]
-; RECOV-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]]
-; RECOV:       11:
+; RECOV-NEXT:    [[TMP6:%.*]] = and i64 [[TMP0]], 7
+; RECOV-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 3
+; RECOV-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP7]] to i8
+; RECOV-NEXT:    [[TMP9:%.*]] = icmp sge i8 [[TMP8]], [[TMP4]]
+; RECOV-NEXT:    [[TMP10:%.*]] = and i1 [[TMP5]], [[TMP9]]
+; RECOV-NEXT:    br i1 [[TMP10]], label [[ASAN_REPORT:%.*]], label [[TMP11:%.*]], !prof [[PROF0:![0-9]+]]
+; RECOV:       asan.report:
 ; RECOV-NEXT:    call void @__asan_report_store4_noabort(i64 [[TMP0]]) #[[ATTR3:[0-9]+]]
-; RECOV-NEXT:    br label [[TMP12]]
-; RECOV:       12:
-; RECOV-NEXT:    br label [[TMP13]]
-; RECOV:       13:
+; RECOV-NEXT:    br label [[TMP11]]
+; RECOV:       11:
 ; RECOV-NEXT:    store i32 0, ptr addrspace(1) [[P]], align 4
 ; RECOV-NEXT:    ret void
 ;
@@ -69,17 +72,23 @@ define protected amdgpu_kernel void @global_load(ptr addrspace(1) %p, i32 %i) sa
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP0]], 7
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 3
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i8
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp sge i8 [[TMP9]], [[TMP4]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__asan_report_load4(i64 [[TMP0]]) #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP0]], 7
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 3
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP7]] to i8
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp sge i8 [[TMP8]], [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = and i1 [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP10]])
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i64 [[TMP11]], 0
+; CHECK-NEXT:    br i1 [[TMP12]], label [[ASAN_REPORT:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
+; CHECK:       asan.report:
+; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP13:%.*]], label [[TMP14:%.*]]
+; CHECK:       13:
+; CHECK-NEXT:    call void @__asan_report_load4(i64 [[TMP0]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
+; CHECK-NEXT:    br label [[TMP14]]
+; CHECK:       14:
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
 ; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr addrspace(1) [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -92,19 +101,16 @@ define protected amdgpu_kernel void @global_load(ptr addrspace(1) %p, i32 %i) sa
 ; RECOV-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; RECOV-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
 ; RECOV-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP4]], 0
-; RECOV-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP13:%.*]], !prof [[PROF0]]
-; RECOV:       6:
-; RECOV-NEXT:    [[TMP7:%.*]] = and i64 [[TMP0]], 7
-; RECOV-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 3
-; RECOV-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i8
-; RECOV-NEXT:    [[TMP10:%.*]] = icmp sge i8 [[TMP9]], [[TMP4]]
-; RECOV-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]]
-; RECOV:       11:
+; RECOV-NEXT:    [[TMP6:%.*]] = and i64 [[TMP0]], 7
+; RECOV-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 3
+; RECOV-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP7]] to i8
+; RECOV-NEXT:    [[TMP9:%.*]] = icmp sge i8 [[TMP8]], [[TMP4]]
+; RECOV-NEXT:    [[TMP10:%.*]] = and i1 [[TMP5]], [[TMP9]]
+; RECOV-NEXT:    br i1 [[TMP10]], label [[ASAN_REPORT:%.*]], label [[TMP11:%.*]], !prof [[PROF0]]
+; RECOV:       asan.report:
 ; RECOV-NEXT:    call void @__asan_report_load4_noabort(i64 [[TMP0]]) #[[ATTR3]]
-; RECOV-NEXT:    br label [[TMP12]]
-; RECOV:       12:
-; RECOV-NEXT:    br label [[TMP13]]
-; RECOV:       13:
+; RECOV-NEXT:    br label [[TMP11]]
+; RECOV:       11:
 ; RECOV-NEXT:    [[Q:%.*]] = load i32, ptr addrspace(1) [[P]], align 4
 ; RECOV-NEXT:    ret void
 ;
@@ -124,11 +130,18 @@ define protected amdgpu_kernel void @global_store_8(ptr addrspace(1) %p) sanitiz
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP7:%.*]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__asan_report_store8(i64 [[TMP0]]) #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[TMP6]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label [[ASAN_REPORT:%.*]], label [[TMP10:%.*]], !prof [[PROF0]]
+; CHECK:       asan.report:
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP8:%.*]], label [[TMP9:%.*]]
+; CHECK:       8:
+; CHECK-NEXT:    call void @__asan_report_store8(i64 [[TMP0]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
 ; CHECK-NEXT:    store i64 0, ptr addrspace(1) [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -141,11 +154,11 @@ define protected amdgpu_kernel void @global_store_8(ptr addrspace(1) %p) sanitiz
 ; RECOV-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; RECOV-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
 ; RECOV-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP4]], 0
-; RECOV-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP7:%.*]]
-; RECOV:       6:
+; RECOV-NEXT:    br i1 [[TMP5]], label [[ASAN_REPORT:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
+; RECOV:       asan.report:
 ; RECOV-NEXT:    call void @__asan_report_store8_noabort(i64 [[TMP0]]) #[[ATTR3]]
-; RECOV-NEXT:    br label [[TMP7]]
-; RECOV:       7:
+; RECOV-NEXT:    br label [[TMP6]]
+; RECOV:       6:
 ; RECOV-NEXT:    store i64 0, ptr addrspace(1) [[P]], align 8
 ; RECOV-NEXT:    ret void
 ;
@@ -164,11 +177,18 @@ define protected amdgpu_kernel void @global_load_8(ptr addrspace(1) %p) sanitize
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP7:%.*]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__asan_report_load8(i64 [[TMP0]]) #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[TMP6]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label [[ASAN_REPORT:%.*]], label [[TMP10:%.*]], !prof [[PROF0]]
+; CHECK:       asan.report:
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP8:%.*]], label [[TMP9:%.*]]
+; CHECK:       8:
+; CHECK-NEXT:    call void @__asan_report_load8(i64 [[TMP0]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr addrspace(1) [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -181,11 +201,11 @@ define protected amdgpu_kernel void @global_load_8(ptr addrspace(1) %p) sanitize
 ; RECOV-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; RECOV-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
 ; RECOV-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP4]], 0
-; RECOV-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP7:%.*]]
-; RECOV:       6:
+; RECOV-NEXT:    br i1 [[TMP5]], label [[ASAN_REPORT:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
+; RECOV:       asan.report:
 ; RECOV-NEXT:    call void @__asan_report_load8_noabort(i64 [[TMP0]]) #[[ATTR3]]
-; RECOV-NEXT:    br label [[TMP7]]
-; RECOV:       7:
+; RECOV-NEXT:    br label [[TMP6]]
+; RECOV:       6:
 ; RECOV-NEXT:    [[Q:%.*]] = load i64, ptr addrspace(1) [[P]], align 8
 ; RECOV-NEXT:    ret void
 ;
