@@ -45,6 +45,7 @@
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBExpressionOptions.h"
+#include "lldb/API/SBFormat.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBSymbolContext.h"
 #include "lldb/API/SBThread.h"
@@ -945,6 +946,40 @@ SBValue SBFrame::FindRegister(const char *name) {
   }
 
   return result;
+}
+
+SBError SBFrame::GetDescriptionWithFormat(const SBFormat &format,
+                                          SBStream &output) {
+  Stream &strm = output.ref();
+
+  std::unique_lock<std::recursive_mutex> lock;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+
+  StackFrame *frame = nullptr;
+  Target *target = exe_ctx.GetTargetPtr();
+  Process *process = exe_ctx.GetProcessPtr();
+  SBError error;
+
+  if (!format) {
+    error.SetErrorString("The provided SBFormat object is invalid");
+    return error;
+  }
+
+  if (target && process) {
+    Process::StopLocker stop_locker;
+    if (stop_locker.TryLock(&process->GetRunLock())) {
+      frame = exe_ctx.GetFramePtr();
+      if (frame &&
+          frame->DumpUsingFormat(strm, format.GetFormatEntrySP().get())) {
+        return error;
+      }
+    }
+  }
+  error.SetErrorStringWithFormat(
+      "It was not possible to generate a frame "
+      "description with the given format string '%s'",
+      format.GetFormatEntrySP()->string.c_str());
+  return error;
 }
 
 bool SBFrame::GetDescription(SBStream &description) {

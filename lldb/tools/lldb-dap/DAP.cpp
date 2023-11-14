@@ -824,4 +824,19 @@ bool ReplModeRequestHandler::DoExecute(lldb::SBDebugger debugger,
   return true;
 }
 
+void DAP::SetFrameFormat(llvm::StringRef format) {
+  if (format.empty())
+    return;
+  lldb::SBError error;
+  g_dap.frame_format = lldb::SBFormat(format.data(), error);
+  if (error.Fail()) {
+    g_dap.SendOutput(
+        OutputType::Console,
+        llvm::formatv(
+            "The provided frame format '{0}' couldn't be parsed: {1}\n", format,
+            error.GetCString())
+            .str());
+  }
+}
+
 } // namespace lldb_dap

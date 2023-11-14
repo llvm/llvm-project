@@ -785,11 +785,18 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   int64_t frame_id = MakeDAPFrameID(frame);
   object.try_emplace("id", frame_id);
 
-  // `function_name` can be a nullptr, which throws an error when assigned to an
-  // `std::string`.
-  const char *function_name = frame.GetDisplayFunctionName();
-  std::string frame_name =
-      function_name == nullptr ? std::string() : function_name;
+  std::string frame_name;
+  lldb::SBStream stream;
+  if (g_dap.frame_format &&
+      frame.GetDescriptionWithFormat(g_dap.frame_format, stream).Success()) {
+    frame_name = stream.GetData();
+
+    // `function_name` can be a nullptr, which throws an error when assigned to
+    // an `std::string`.
+  } else if (const char *name = frame.GetDisplayFunctionName()) {
+    frame_name = name;
+  }
+
   if (frame_name.empty()) {
     // If the function name is unavailable, display the pc address as a 16-digit
     // hex string, e.g. "0x0000000000012345"
