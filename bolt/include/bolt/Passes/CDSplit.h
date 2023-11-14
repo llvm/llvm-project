@@ -18,6 +18,11 @@ namespace bolt {
 
 using BasicBlockOrder = BinaryFunction::BasicBlockOrderType;
 
+struct CallInfo {
+  size_t Length;
+  size_t Count;
+};
+
 struct JumpInfo {
   bool HasUncondBranch = false;
   BinaryBasicBlock *CondSuccessor = nullptr;
@@ -57,6 +62,12 @@ private:
 
   /// Helper functions to initialize global variables.
   void initialize(BinaryContext &BC);
+
+  /// Get a collection of "shortenable" calls, that is, calls of type X->Y
+  /// when the function order is [... X ... BF ... Y ...].
+  /// Such calls are guaranteed to get shorter (by the size of non-hot section
+  /// minus that of the total size increase).
+  std::vector<CallInfo> extractCoverCalls(const BinaryFunction &BF);
 
   /// Populate BinaryBasicBlock::OutputAddressRange with estimated basic block
   /// start and end addresses for hot and warm basic blocks, assuming hot-warm
