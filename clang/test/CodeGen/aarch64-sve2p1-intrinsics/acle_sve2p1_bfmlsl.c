@@ -34,7 +34,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslb(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-svfloat32_t test_bfmlslb(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
+svfloat32_t test_bfmlslb(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm) __arm_streaming_compatible
 {
   return SVE_ACLE_FUNC(svbfmlslb,_f32,,)(zda, zn, zm);
 }
@@ -50,7 +50,7 @@ svfloat32_t test_bfmlslb(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslb.lane(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-svfloat32_t test_bfmlslb_lane(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
+svfloat32_t test_bfmlslb_lane(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm) __arm_streaming_compatible
 {
   return SVE_ACLE_FUNC(svbfmlslb_lane,_f32,,)(zda, zn, zm, 7);
 }
@@ -68,7 +68,7 @@ svfloat32_t test_bfmlslb_lane(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslt(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-svfloat32_t test_bfmlslt(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
+svfloat32_t test_bfmlslt(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm) __arm_streaming_compatible
 {
   return SVE_ACLE_FUNC(svbfmlslt,_f32,,)(zda, zn, zm);
 }
@@ -84,7 +84,7 @@ svfloat32_t test_bfmlslt(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslt.lane(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-svfloat32_t test_bfmlslt_lane(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
+svfloat32_t test_bfmlslt_lane(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm) __arm_streaming_compatible
 {
   return SVE_ACLE_FUNC(svbfmlslt_lane,_f32,,)(zda, zn, zm, 7);
 }
