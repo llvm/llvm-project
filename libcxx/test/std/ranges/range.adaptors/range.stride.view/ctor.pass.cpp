@@ -14,17 +14,20 @@
 
 #include "test.h"
 #include "test_convertible.h"
+#include "test_iterators.h"
 #include <type_traits>
 
 constexpr bool test_no_default_ctor() {
   // There is no default ctor for stride_view.
-  static_assert(!std::is_default_constructible_v<std::ranges::stride_view<BidirArrayView<int>>>);
+  using View = InputView<cpp17_input_iterator<int*>>;
+  static_assert(!std::is_default_constructible_v<std::ranges::stride_view<View>>);
   return true;
 }
 
 constexpr bool test_no_implicit_ctor() {
+  using View = InputView<cpp17_input_iterator<int*>>;
   // Test that the stride_view can only be explicitly constructed.
-  static_assert(!test_convertible<std::ranges::stride_view<ForwardArrayView<int>>, ForwardArrayView<int>, int>());
+  static_assert(!test_convertible<std::ranges::stride_view<View>, View, int>());
   return true;
 }
 
