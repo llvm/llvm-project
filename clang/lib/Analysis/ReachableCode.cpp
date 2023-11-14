@@ -60,7 +60,7 @@ static bool isTrivialDoWhile(const CFGBlock *B, const Stmt *S) {
   return false;
 }
 
-static isBuiltinUnreachable(const Stmt *S) {
+static bool isBuiltinUnreachable(const Stmt *S) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(S))
     if (const auto *FDecl = dyn_cast<FunctionDecl>(DRE->getDecl()))
       return FDecl->getIdentifier() &&
