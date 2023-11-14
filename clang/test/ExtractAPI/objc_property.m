@@ -122,8 +122,8 @@
       },
       "location": {
         "position": {
-          "character": 12,
-          "line": 6
+          "character": 11,
+          "line": 5
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -189,8 +189,8 @@
       },
       "location": {
         "position": {
-          "character": 22,
-          "line": 7
+          "character": 21,
+          "line": 6
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -249,8 +249,8 @@
       },
       "location": {
         "position": {
-          "character": 15,
-          "line": 8
+          "character": 14,
+          "line": 7
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -317,8 +317,8 @@
       },
       "location": {
         "position": {
-          "character": 22,
-          "line": 12
+          "character": 21,
+          "line": 11
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -377,8 +377,8 @@
       },
       "location": {
         "position": {
-          "character": 15,
-          "line": 13
+          "character": 14,
+          "line": 12
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -428,8 +428,8 @@
       },
       "location": {
         "position": {
-          "character": 11,
-          "line": 1
+          "character": 10,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -495,8 +495,8 @@
       },
       "location": {
         "position": {
-          "character": 22,
-          "line": 2
+          "character": 21,
+          "line": 1
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -555,8 +555,8 @@
       },
       "location": {
         "position": {
-          "character": 15,
-          "line": 3
+          "character": 14,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },

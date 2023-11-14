@@ -114,8 +114,8 @@ int OtherInt;
       },
       "location": {
         "position": {
-          "character": 5,
-          "line": 2
+          "character": 4,
+          "line": 1
         },
         "uri": "file://SRCROOT/MyHeader.h"
       },
@@ -165,8 +165,8 @@ int OtherInt;
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 1
+          "character": 5,
+          "line": 0
         },
         "uri": "file://SRCROOT/QuotedHeader.h"
       },

@@ -100,12 +100,12 @@ struct Color {
           {
             "range": {
               "end": {
-                "character": 18,
-                "line": 1
+                "character": 17,
+                "line": 0
               },
               "start": {
-                "character": 5,
-                "line": 1
+                "character": 4,
+                "line": 0
               }
             },
             "text": "Color in RGBA"
@@ -122,8 +122,8 @@ struct Color {
       },
       "location": {
         "position": {
-          "character": 8,
-          "line": 2
+          "character": 7,
+          "line": 1
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -173,8 +173,8 @@ struct Color {
       },
       "location": {
         "position": {
-          "character": 12,
-          "line": 3
+          "character": 11,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -225,8 +225,8 @@ struct Color {
       },
       "location": {
         "position": {
-          "character": 12,
-          "line": 4
+          "character": 11,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -277,8 +277,8 @@ struct Color {
       },
       "location": {
         "position": {
-          "character": 12,
-          "line": 5
+          "character": 11,
+          "line": 4
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -324,12 +324,12 @@ struct Color {
           {
             "range": {
               "end": {
-                "character": 37,
-                "line": 6
+                "character": 36,
+                "line": 5
               },
               "start": {
-                "character": 7,
-                "line": 6
+                "character": 6,
+                "line": 5
               }
             },
             "text": "Alpha channel for transparency"
@@ -346,8 +346,8 @@ struct Color {
       },
       "location": {
         "position": {
-          "character": 12,
-          "line": 7
+          "character": 11,
+          "line": 6
         },
         "uri": "file://INPUT_DIR/input.h"
       },
