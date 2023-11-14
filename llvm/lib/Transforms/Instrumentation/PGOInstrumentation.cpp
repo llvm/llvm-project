@@ -875,8 +875,7 @@ static void instrumentOneFunc(
       F, TLI, ComdatMembers, true, BPI, BFI, IsCS, PGOInstrumentEntry,
       PGOBlockCoverage);
 
-  Type *I8PtrTy = PointerType::getUnqual(M->getContext());
-  auto Name = ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy);
+  auto Name = FuncInfo.FuncNameVar;
   auto CFGHash = ConstantInt::get(Type::getInt64Ty(M->getContext()),
                                   FuncInfo.FunctionHash);
   if (PGOFunctionEntryCoverage) {
@@ -965,9 +964,8 @@ static void instrumentOneFunc(
       populateEHOperandBundle(Cand, BlockColors, OpBundles);
       Builder.CreateCall(
           Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
-          {ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy),
-           Builder.getInt64(FuncInfo.FunctionHash), ToProfile,
-           Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)},
+          {FuncInfo.FuncNameVar, Builder.getInt64(FuncInfo.FunctionHash),
+           ToProfile, Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)},
           OpBundles);
     }
   } // IPVK_First <= Kind <= IPVK_Last
@@ -1650,12 +1648,10 @@ void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
   Module *M = F.getParent();
   IRBuilder<> Builder(&SI);
   Type *Int64Ty = Builder.getInt64Ty();
-  Type *I8PtrTy = Builder.getInt8PtrTy();
   auto *Step = Builder.CreateZExt(SI.getCondition(), Int64Ty);
   Builder.CreateCall(
       Intrinsic::getDeclaration(M, Intrinsic::instrprof_increment_step),
-      {ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
-       Builder.getInt64(FuncHash), Builder.getInt32(TotalNumCtrs),
+      {FuncNameVar, Builder.getInt64(FuncHash), Builder.getInt32(TotalNumCtrs),
        Builder.getInt32(*CurCtrIdx), Step});
   ++(*CurCtrIdx);
 }
