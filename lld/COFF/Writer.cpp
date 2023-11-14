@@ -347,6 +347,14 @@ void OutputSection::merge(OutputSection *other) {
   contribSections.insert(contribSections.end(), other->contribSections.begin(),
                          other->contribSections.end());
   other->contribSections.clear();
+
+  // MS link.exe compatibility: when merging a code section into a data section,
+  // mark the target section as a code section.
+  if (other->header.Characteristics & IMAGE_SCN_CNT_CODE) {
+    header.Characteristics |= IMAGE_SCN_CNT_CODE;
+    header.Characteristics &=
+        ~(IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_CNT_UNINITIALIZED_DATA);
+  }
 }
 
 // Write the section header to a given buffer.
