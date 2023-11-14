@@ -21,7 +21,7 @@ jobs:
         with:
           fetch-depth: 5
       - id: test-rule
-        uses: EricWF/test-libcxx@v0.3
+        uses: EricWF/test-libcxx@v0.4
         with:
             config: "Generic-cxx23"
             cc: "clang"
