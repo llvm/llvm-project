@@ -23,7 +23,9 @@
 using namespace llvm;
 using namespace LegalityPredicates;
 
-static LegalityPredicate typeIsLegalScalarFP(unsigned TypeIdx,
+// Is this type supported by scalar FP arithmetic operations given the current
+// subtarget.
+static LegalityPredicate typeIsScalarFPArith(unsigned TypeIdx,
                                              const RISCVSubtarget &ST) {
   return [=, &ST](const LegalityQuery &Query) {
     return Query.Types[TypeIdx].isScalar() &&
@@ -221,26 +223,32 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FNEG,
                                G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM})
-      .legalIf(typeIsLegalScalarFP(0, ST));
+      .legalIf(typeIsScalarFPArith(0, ST));
 
   getActionDefinitionsBuilder(G_FPTRUNC).legalIf(
-      all(typeIsLegalScalarFP(0, ST), typeIsLegalScalarFP(1, ST)));
+      [=, &ST](const LegalityQuery &Query) -> bool {
+        return (ST.hasStdExtD() && typeIs(0, s32)(Query) &&
+                typeIs(1, s64)(Query));
+      });
   getActionDefinitionsBuilder(G_FPEXT).legalIf(
-      all(typeIsLegalScalarFP(0, ST), typeIsLegalScalarFP(1, ST)));
+      [=, &ST](const LegalityQuery &Query) -> bool {
+        return (ST.hasStdExtD() && typeIs(0, s64)(Query) &&
+                typeIs(1, s32)(Query));
+      });
 
   getActionDefinitionsBuilder(G_FCMP)
-      .legalIf(all(typeIs(0, sXLen), typeIsLegalScalarFP(1, ST)))
+      .legalIf(all(typeIs(0, sXLen), typeIsScalarFPArith(1, ST)))
       .clampScalar(0, sXLen, sXLen);
 
-  getActionDefinitionsBuilder(G_FCONSTANT).legalIf(typeIsLegalScalarFP(0, ST));
+  getActionDefinitionsBuilder(G_FCONSTANT).legalIf(typeIsScalarFPArith(0, ST));
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-      .legalIf(all(typeInSet(0, {s32, sXLen}), typeIsLegalScalarFP(1, ST)))
+      .legalIf(all(typeInSet(0, {s32, sXLen}), typeIsScalarFPArith(1, ST)))
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, sXLen);
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
-      .legalIf(all(typeIsLegalScalarFP(0, ST), typeInSet(1, {s32, sXLen})))
+      .legalIf(all(typeIsScalarFPArith(0, ST), typeInSet(1, {s32, sXLen})))
       .widenScalarToNextPow2(1)
       .clampScalar(1, s32, sXLen);
 
