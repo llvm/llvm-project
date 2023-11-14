@@ -3852,6 +3852,10 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     return error(ID.Loc, "and constexprs are no longer supported");
   case lltok::kw_or:
     return error(ID.Loc, "or constexprs are no longer supported");
+  case lltok::kw_lshr:
+    return error(ID.Loc, "lshr constexprs are no longer supported");
+  case lltok::kw_ashr:
+    return error(ID.Loc, "ashr constexprs are no longer supported");
   case lltok::kw_fneg:
     return error(ID.Loc, "fneg constexprs are no longer supported");
   case lltok::kw_select:
@@ -3910,12 +3914,9 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_sub:
   case lltok::kw_mul:
   case lltok::kw_shl:
-  case lltok::kw_lshr:
-  case lltok::kw_ashr:
   case lltok::kw_xor: {
     bool NUW = false;
     bool NSW = false;
-    bool Exact = false;
     unsigned Opc = Lex.getUIntVal();
     Constant *Val0, *Val1;
     Lex.Lex();
@@ -3928,10 +3929,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
         if (EatIfPresent(lltok::kw_nuw))
           NUW = true;
       }
-    } else if (Opc == Instruction::SDiv || Opc == Instruction::UDiv ||
-               Opc == Instruction::LShr || Opc == Instruction::AShr) {
-      if (EatIfPresent(lltok::kw_exact))
-        Exact = true;
     }
     if (parseToken(lltok::lparen, "expected '(' in binary constantexpr") ||
         parseGlobalTypeAndValue(Val0) ||
@@ -3948,7 +3945,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     unsigned Flags = 0;
     if (NUW)   Flags |= OverflowingBinaryOperator::NoUnsignedWrap;
     if (NSW)   Flags |= OverflowingBinaryOperator::NoSignedWrap;
-    if (Exact) Flags |= PossiblyExactOperator::IsExact;
     ID.ConstantVal = ConstantExpr::get(Opc, Val0, Val1, Flags);
     ID.Kind = ValID::t_Constant;
     return false;

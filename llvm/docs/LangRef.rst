@@ -4693,10 +4693,6 @@ The following is the syntax for constant expressions:
     Perform a multiplication on constants.
 ``shl (LHS, RHS)``
     Perform a left shift on constants.
-``lshr (LHS, RHS)``
-    Perform a logical right shift on constants.
-``ashr (LHS, RHS)``
-    Perform an arithmetic right shift on constants.
 ``xor (LHS, RHS)``
     Perform a bitwise xor on constants.
 
