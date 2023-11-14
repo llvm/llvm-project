@@ -208,6 +208,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`abseil-string-find-startswith
+  <clang-tidy/checks/abseil/string-find-startswith>` check to also consider
+  ``std::basic_string_view`` in addition to ``std::basic_string`` by default.
+
 - Improved :doc:`bugprone-dangling-handle
   <clang-tidy/checks/bugprone/dangling-handle>` check to support functional
   casting during type conversions at variable initialization, now with improved
