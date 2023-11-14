@@ -1257,8 +1257,8 @@ namespace test63 {
     A::foo<E0>();
     A::B<E0>::foo();
   }
-  // CHECK-LABEL: define linkonce_odr void @_ZN6test631A3fooILNS_1EE0EEEvv()
-  // CHECK-LABEL: define linkonce_odr void @_ZN6test631A1BILNS_1EE0EE3fooEv()
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test631A3fooILNS_1EE0EEEvv()
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test631A1BILNS_1EE0EE3fooEv()
 }
 
 // Don't ignore the visibility of template arguments just because we

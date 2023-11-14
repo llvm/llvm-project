@@ -268,10 +268,14 @@ LinkageComputer::getLVForTemplateArgumentList(ArrayRef<TemplateArgument> Args,
   for (const TemplateArgument &Arg : Args) {
     switch (Arg.getKind()) {
     case TemplateArgument::Null:
-    case TemplateArgument::Integral:
-    case TemplateArgument::Expression:
       continue;
 
+    case TemplateArgument::Integral:
+      LV.merge(getLVForType(*Arg.getIntegralType(), computation));
+      continue;
+    case TemplateArgument::Expression:
+      LV.merge(getLVForType(*Arg.getAsExpr()->getType(), computation));
+      continue;
     case TemplateArgument::Type:
       LV.merge(getLVForType(*Arg.getAsType(), computation));
       continue;
