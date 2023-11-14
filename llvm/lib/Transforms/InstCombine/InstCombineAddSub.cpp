@@ -1488,7 +1488,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
     // -A + B --> B - A
     auto *Sub = BinaryOperator::CreateSub(RHS, A);
-    auto *OB0 = dyn_cast<OverflowingBinaryOperator>(LHS);
+    auto *OB0 = cast<OverflowingBinaryOperator>(LHS);
     Sub->setHasNoSignedWrap(I.hasNoSignedWrap() && OB0->hasNoSignedWrap());
 
     return Sub;
