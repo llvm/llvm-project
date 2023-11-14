@@ -1746,6 +1746,17 @@ public:
     SourceLocation EndLoc;
     int UnrecognizedParams;
     bool Successful;
+
+    size_t PrefixTokenCount() const {
+      if (MaybePrefixParam)
+        return MaybePrefixParam->Tokens.size();
+      return 0;
+    }
+    size_t SuffixTokenCount() const {
+      if (MaybeSuffixParam)
+        return MaybeSuffixParam->Tokens.size();
+      return 0;
+    }
   };
 
   LexEmbedParametersResult LexEmbedParameters(Token &Current,
@@ -2738,11 +2749,6 @@ private:
   // Binary data inclusion
   void HandleEmbedDirective(SourceLocation HashLoc, Token &Tok,
                             const FileEntry *LookupFromFile = nullptr);
-  void HandleEmbedDirectiveNaive(SourceLocation HashLoc,
-                                 SourceLocation FilenameTok,
-                                 const LexEmbedParametersResult &Params,
-                                 StringRef BinaryContents,
-                                 const size_t TargetCharWidth);
   void HandleEmbedDirectiveImpl(SourceLocation HashLoc,
                                 const Token &FilenameTok,
                                 StringRef ResolvedFilename,

@@ -3815,261 +3815,6 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool InHasEmbed,
   return Result;
 }
 
-// This array must survive for an extended period of time
-inline constexpr const char *IntegerLiterals[] = {
-    "0",   "1",   "2",   "3",   "4",   "5",   "6",   "7",   "8",   "9",   "10",
-    "11",  "12",  "13",  "14",  "15",  "16",  "17",  "18",  "19",  "20",  "21",
-    "22",  "23",  "24",  "25",  "26",  "27",  "28",  "29",  "30",  "31",  "32",
-    "33",  "34",  "35",  "36",  "37",  "38",  "39",  "40",  "41",  "42",  "43",
-    "44",  "45",  "46",  "47",  "48",  "49",  "50",  "51",  "52",  "53",  "54",
-    "55",  "56",  "57",  "58",  "59",  "60",  "61",  "62",  "63",  "64",  "65",
-    "66",  "67",  "68",  "69",  "70",  "71",  "72",  "73",  "74",  "75",  "76",
-    "77",  "78",  "79",  "80",  "81",  "82",  "83",  "84",  "85",  "86",  "87",
-    "88",  "89",  "90",  "91",  "92",  "93",  "94",  "95",  "96",  "97",  "98",
-    "99",  "100", "101", "102", "103", "104", "105", "106", "107", "108", "109",
-    "110", "111", "112", "113", "114", "115", "116", "117", "118", "119", "120",
-    "121", "122", "123", "124", "125", "126", "127", "128", "129", "130", "131",
-    "132", "133", "134", "135", "136", "137", "138", "139", "140", "141", "142",
-    "143", "144", "145", "146", "147", "148", "149", "150", "151", "152", "153",
-    "154", "155", "156", "157", "158", "159", "160", "161", "162", "163", "164",
-    "165", "166", "167", "168", "169", "170", "171", "172", "173", "174", "175",
-    "176", "177", "178", "179", "180", "181", "182", "183", "184", "185", "186",
-    "187", "188", "189", "190", "191", "192", "193", "194", "195", "196", "197",
-    "198", "199", "200", "201", "202", "203", "204", "205", "206", "207", "208",
-    "209", "210", "211", "212", "213", "214", "215", "216", "217", "218", "219",
-    "220", "221", "222", "223", "224", "225", "226", "227", "228", "229", "230",
-    "231", "232", "233", "234", "235", "236", "237", "238", "239", "240", "241",
-    "242", "243", "244", "245", "246", "247", "248", "249", "250", "251", "252",
-    "253", "254", "255"};
-
-static size_t
-ComputeNaiveReserveSize(const Preprocessor::LexEmbedParametersResult &Params,
-                        StringRef TypeName, StringRef BinaryContents,
-                        SmallVectorImpl<char> &TokSpellingBuffer) {
-  size_t ReserveSize = 0;
-  if (BinaryContents.empty()) {
-    if (Params.MaybeIfEmptyParam) {
-      for (const auto &Tok : Params.MaybeIfEmptyParam->Tokens) {
-        const size_t TokLen = Tok.getLength();
-        if (TokLen > TokSpellingBuffer.size()) {
-          TokSpellingBuffer.resize(TokLen);
-        }
-        ReserveSize += TokLen;
-      }
-    }
-  } else {
-    if (Params.MaybePrefixParam) {
-      for (const auto &Tok : Params.MaybePrefixParam->Tokens) {
-        const size_t TokLen = Tok.getLength();
-        if (TokLen > TokSpellingBuffer.size()) {
-          TokSpellingBuffer.resize(TokLen);
-        }
-        ReserveSize += TokLen;
-      }
-    }
-    for (const auto &Byte : BinaryContents) {
-      ReserveSize += 3 + TypeName.size(); // ((type-name)
-      if (Byte > 99) {
-        ReserveSize += 3; // ###
-      } else if (Byte > 9) {
-        ReserveSize += 2; // ##
-      } else {
-        ReserveSize += 1; // #
-      }
-      ReserveSize += 2; // ),
-    }
-    if (Params.MaybePrefixParam) {
-      for (const auto &Tok : Params.MaybePrefixParam->Tokens) {
-        const size_t TokLen = Tok.getLength();
-        if (TokLen > TokSpellingBuffer.size()) {
-          TokSpellingBuffer.resize(TokLen);
-        }
-        ReserveSize += TokLen;
-      }
-    }
-  }
-  return ReserveSize;
-}
-
-void Preprocessor::HandleEmbedDirectiveNaive(
-    SourceLocation HashLoc, SourceLocation FilenameLoc,
-    const LexEmbedParametersResult &Params, StringRef BinaryContents,
-    const size_t TargetCharWidth) {
-  // Load up a new embed buffer for this file and set of parameters in
-  // particular.
-  EmbedBuffers.push_back("");
-  size_t EmbedBufferNumber = EmbedBuffers.size();
-  std::string &TargetEmbedBuffer = EmbedBuffers.back();
-  const size_t TotalSize = BinaryContents.size();
-  // In the future, this might change/improve.
-  const StringRef TypeName = "unsigned char";
-
-  SmallVector<char, 32> TokSpellingBuffer(32, 0);
-  const size_t ReserveSize = ComputeNaiveReserveSize(
-      Params, TypeName, BinaryContents, TokSpellingBuffer);
-  TargetEmbedBuffer.reserve(ReserveSize);
-
-  // Generate the look-alike source file
-  if (BinaryContents.empty()) {
-    if (Params.MaybeIfEmptyParam) {
-      const PPEmbedParameterIfEmpty &EmptyParam = *Params.MaybeIfEmptyParam;
-      for (const auto &Tok : EmptyParam.Tokens) {
-        StringRef Spelling = this->getSpelling(Tok, TokSpellingBuffer);
-        TargetEmbedBuffer.append(Spelling.data(), Spelling.size());
-      }
-    }
-  } else {
-    if (Params.MaybePrefixParam) {
-      const PPEmbedParameterPrefix &PrefixParam = *Params.MaybePrefixParam;
-      for (const auto &Tok : PrefixParam.Tokens) {
-        StringRef Spelling = this->getSpelling(Tok, TokSpellingBuffer);
-        TargetEmbedBuffer.append(Spelling.data(), Spelling.size());
-      }
-    }
-    for (size_t I = 0; I < TotalSize; ++I) {
-      unsigned char ByteValue = BinaryContents[I];
-      StringRef ByteRepresentation = IntegerLiterals[ByteValue];
-      TargetEmbedBuffer.append(2, '(');
-      TargetEmbedBuffer.append(TypeName.data(), TypeName.size());
-      TargetEmbedBuffer.append(1, ')');
-      TargetEmbedBuffer.append(ByteRepresentation.data(),
-                               ByteRepresentation.size());
-      TargetEmbedBuffer.append(1, ')');
-      bool AtEndOfContents = I == (TotalSize - 1);
-      if (!AtEndOfContents) {
-        TargetEmbedBuffer.append(1, ',');
-      }
-    }
-    if (Params.MaybeSuffixParam) {
-      const PPEmbedParameterSuffix &SuffixParam = *Params.MaybeSuffixParam;
-      for (const auto &Tok : SuffixParam.Tokens) {
-        StringRef Spelling = this->getSpelling(Tok, TokSpellingBuffer);
-        TargetEmbedBuffer.append(Spelling.data(), Spelling.size());
-      }
-    }
-  }
-
-  // Create faux-file and its ID, backed by a memory buffer.
-  std::unique_ptr<llvm::MemoryBuffer> EmbedMemBuffer =
-      llvm::MemoryBuffer::getMemBufferCopy(
-          TargetEmbedBuffer,
-          "<built-in:embed:" + Twine(EmbedBufferNumber) + ">");
-  assert(EmbedMemBuffer && "Cannot create predefined source buffer");
-  FileID EmbedBufferFID = SourceMgr.createFileID(std::move(EmbedMemBuffer));
-  assert(EmbedBufferFID.isValid() &&
-         "Could not create FileID for #embed directive?");
-  // Start parsing the look-alike source file for the embed directive and
-  // pretend everything is normal
-  // TODO: (Maybe? )Stop the PPCallbacks from considering this a Real File™.
-  EnterSourceFile(EmbedBufferFID, nullptr, HashLoc, false);
-}
-
-static bool TokenListIsCharacterArray(Preprocessor &PP,
-                                      const size_t TargetCharWidth,
-                                      bool IsPrefix,
-                                      const SmallVectorImpl<Token> &Tokens,
-                                      llvm::SmallVectorImpl<char> &Output) {
-  const bool IsSuffix = !IsPrefix;
-  size_t MaxValue =
-      static_cast<size_t>(std::pow((size_t)2, TargetCharWidth)) - 1u;
-  size_t TokenIndex = 0;
-  // if it's a suffix, we are expecting a comma first
-  // if it's a prefix, we are expecting a numeric literal first
-  bool ExpectingNumericLiteral = IsPrefix;
-  const size_t TokensSize = Tokens.size();
-  if (Tokens.empty()) {
-    return true;
-  }
-  for (; TokenIndex < TokensSize;
-       (void)++TokenIndex, ExpectingNumericLiteral = !ExpectingNumericLiteral) {
-    const Token &Tok = Tokens[TokenIndex];
-    // TODO: parse an optional, PLAIN `(unsigned char)` cast in front of the
-    // literals, since the Spec technically decrees each element is of type
-    // `unsigned char` (unless we have a potential future extension for
-    // `clang::type(meow)` as an embed parameter
-    if (ExpectingNumericLiteral) {
-      if (Tok.isNot(tok::numeric_constant)) {
-        return false;
-      }
-      uint64_t Value = {};
-      Token ParsingTok = Tok;
-      if (!PP.parseSimpleIntegerLiteral(ParsingTok, Value, false)) {
-        // numeric literal is a floating point literal or a UDL; too complex for
-        // us
-        return false;
-      }
-      if (Value > MaxValue || Value > static_cast<uint64_t>(0xFF)) {
-        // number is too large
-        return false;
-      }
-      Output.push_back((char)Value);
-    } else {
-      if (Tok.isNot(tok::comma)) {
-        return false;
-      }
-    }
-  }
-  const bool EndedOnNumber = !ExpectingNumericLiteral;
-  if (IsPrefix && EndedOnNumber) {
-    // we ended on a number: this is a failure for prefix!
-    return false;
-  }
-  const bool EndedOnComma = ExpectingNumericLiteral;
-  if (IsSuffix && EndedOnComma) {
-    // we ended on a comma: this is a failure for suffix!
-    return false;
-  }
-  // if all tokens have been consumed by the above process, then we have
-  // succeeded.
-  return TokenIndex == TokensSize;
-}
-
-static void TripleEncodeBase64(StringRef Bytes0, StringRef Bytes1,
-                               StringRef Bytes2, std::string &OutputBuffer) {
-  static const char Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                              "abcdefghijklmnopqrstuvwxyz"
-                              "0123456789+/";
-  const size_t TotalSize = Bytes0.size() + Bytes1.size() + Bytes2.size();
-  const size_t Bytes0Size = Bytes0.size();
-  const size_t Bytes01Size = Bytes0.size() + Bytes1.size();
-  const size_t IndexOffset = OutputBuffer.size();
-  OutputBuffer.resize(OutputBuffer.size() + (((TotalSize + 2) / 3) * 4));
-  auto IndexInto = [&](size_t i) -> unsigned char {
-    if (i >= Bytes0Size) {
-      if (i >= Bytes01Size) {
-        return Bytes2[i - Bytes01Size];
-      }
-      return Bytes1[i - Bytes0Size];
-    }
-    return Bytes0[i];
-  };
-
-  size_t i = 0, j = 0;
-  for (size_t n = TotalSize / 3 * 3; i < n; i += 3, j += 4) {
-    uint32_t x = ((unsigned char)IndexInto(i) << 16) |
-                 ((unsigned char)IndexInto(i + 1) << 8) |
-                 (unsigned char)IndexInto(i + 2);
-    OutputBuffer[IndexOffset + j + 0] = Table[(x >> 18) & 63];
-    OutputBuffer[IndexOffset + j + 1] = Table[(x >> 12) & 63];
-    OutputBuffer[IndexOffset + j + 2] = Table[(x >> 6) & 63];
-    OutputBuffer[IndexOffset + j + 3] = Table[x & 63];
-  }
-  if (i + 1 == TotalSize) {
-    uint32_t x = ((unsigned char)IndexInto(i) << 16);
-    OutputBuffer[IndexOffset + j + 0] = Table[(x >> 18) & 63];
-    OutputBuffer[IndexOffset + j + 1] = Table[(x >> 12) & 63];
-    OutputBuffer[IndexOffset + j + 2] = '=';
-    OutputBuffer[IndexOffset + j + 3] = '=';
-  } else if (i + 2 == TotalSize) {
-    uint32_t x = ((unsigned char)IndexInto(i) << 16) |
-                 ((unsigned char)IndexInto(i + 1) << 8);
-    OutputBuffer[IndexOffset + j + 0] = Table[(x >> 18) & 63];
-    OutputBuffer[IndexOffset + j + 1] = Table[(x >> 12) & 63];
-    OutputBuffer[IndexOffset + j + 2] = Table[(x >> 6) & 63];
-    OutputBuffer[IndexOffset + j + 3] = '=';
-  }
-}
-
 void Preprocessor::HandleEmbedDirectiveImpl(
     SourceLocation HashLoc, const Token &FilenameTok,
     StringRef ResolvedFilename, StringRef SearchPath, StringRef RelativePath,
@@ -4077,9 +3822,11 @@ void Preprocessor::HandleEmbedDirectiveImpl(
     const size_t TargetCharWidth) {
   // Pass off the annotation token stream. The parser expects:
   //   if_empty-tokens or
-  //   embed-annotation-start
-  //     type-name string-literal , string-literal
-  //   embed-annotation-stop
+  //     prefix-tokens (if any)
+  //     embed-annotation-start
+  //       type-name string-literal , string-literal
+  //     embed-annotation-stop
+  //     suffix-tokens (if any)
   // where the type-name is the type used for each element to embed, the first
   // string-literal is the resolved file name of the file we loaded contents
   // from, and the second string-literal is the base64 encoded data we loaded
@@ -4101,36 +3848,6 @@ void Preprocessor::HandleEmbedDirectiveImpl(
     return;
   }
 
-  // FIXME: this is not correct; the standard allows *arbitrary* tokens in the
-  // prefix and suffix, but this only accounts for numeric literals and commas,
-  // but nothing else.
-  SmallVector<char, 2> BinaryPrefix, BinarySuffix;
-  if (Params.MaybePrefixParam) {
-    // If we ahve a prefix, validate that it's a good fit for direct data
-    // embedded (and prepare to prepend it)
-    const PPEmbedParameterPrefix &PrefixParam = *Params.MaybePrefixParam;
-    if (!TokenListIsCharacterArray(*this, TargetCharWidth, true,
-                                   PrefixParam.Tokens, BinaryPrefix)) {
-      HandleEmbedDirectiveNaive(HashLoc, FilenameTok.getLocation(), Params,
-                                BinaryContents, TargetCharWidth);
-      return;
-    }
-  }
-  if (Params.MaybeSuffixParam) {
-    // If we have a prefix, validate that it's a good fit for direct data
-    // embedding (and prepare to append it)
-    const PPEmbedParameterSuffix &SuffixParam = *Params.MaybeSuffixParam;
-    if (!TokenListIsCharacterArray(*this, TargetCharWidth, false,
-                                   SuffixParam.Tokens, BinarySuffix)) {
-      HandleEmbedDirectiveNaive(HashLoc, FilenameTok.getLocation(), Params,
-                                BinaryContents, TargetCharWidth);
-      return;
-    }
-  }
-
-  // Now emit the tokens for the embedded content itself.
-  std::string EncodedContents = llvm::encodeBase64(
-      (Twine(BinaryPrefix) + BinaryContents + Twine(BinarySuffix)).str());
   auto SetAnnotTok = [](Token &Tok, tok::TokenKind Kind, SourceLocation Loc) {
     Tok.startToken();
     Tok.setKind(Kind);
@@ -4141,29 +3858,47 @@ void Preprocessor::HandleEmbedDirectiveImpl(
     Tok.setKind(tok::string_literal);
     CreateString(("\"" + Contents + "\"").str(), Tok, Loc, Loc);
   };
-  constexpr size_t TotalNumToks = 7;
+
+  size_t NumPrefixToks = Params.PrefixTokenCount(),
+         NumSuffixToks = Params.SuffixTokenCount();
+  size_t TotalNumToks = 7 + NumPrefixToks + NumSuffixToks;
+  size_t CurIdx = 0;
   auto Toks = std::make_unique<Token[]>(TotalNumToks);
 
-  SetAnnotTok(Toks[0], tok::annot_embed_start, HashLoc);
+  // Add the prefix tokens, if any.
+  if (Params.MaybePrefixParam) {
+    llvm::copy(Params.MaybePrefixParam->Tokens, &Toks[CurIdx]);
+    CurIdx += NumPrefixToks;
+  }
 
-  Toks[1].startToken();
-  Toks[1].setLocation(HashLoc);
-  Toks[1].setKind(tok::kw_unsigned);
+  // Now annotate the embed itself.
+  SetAnnotTok(Toks[CurIdx++], tok::annot_embed_start, HashLoc);
 
-  Toks[2].startToken();
-  Toks[2].setLocation(HashLoc);
-  Toks[2].setKind(tok::kw_char);
+  Toks[CurIdx].startToken();
+  Toks[CurIdx].setLocation(HashLoc);
+  Toks[CurIdx++].setKind(tok::kw_unsigned);
 
-  SetStrTok(Toks[3], ResolvedFilename, HashLoc);
+  Toks[CurIdx].startToken();
+  Toks[CurIdx].setLocation(HashLoc);
+  Toks[CurIdx++].setKind(tok::kw_char);
 
-  Toks[4].startToken();
-  Toks[4].setLocation(HashLoc);
-  Toks[4].setKind(tok::comma);
+  SetStrTok(Toks[CurIdx++], ResolvedFilename, HashLoc);
 
-  SetStrTok(Toks[5], EncodedContents, HashLoc);
+  Toks[CurIdx].startToken();
+  Toks[CurIdx].setLocation(HashLoc);
+  Toks[CurIdx++].setKind(tok::comma);
 
-  SetAnnotTok(Toks[6], tok::annot_embed_end, HashLoc);
+  SetStrTok(Toks[CurIdx++], llvm::encodeBase64(BinaryContents), HashLoc);
 
+  SetAnnotTok(Toks[CurIdx++], tok::annot_embed_end, HashLoc);
+
+  // Now add the suffix tokens, if any.
+  if (Params.MaybeSuffixParam) {
+    llvm::copy(Params.MaybeSuffixParam->Tokens, &Toks[CurIdx]);
+    CurIdx += NumSuffixToks;
+  }
+
+  assert(CurIdx == TotalNumToks && "Calculated the incorrect number of tokens");
   EnterTokenStream(std::move(Toks), TotalNumToks, true, true);
 }
 
