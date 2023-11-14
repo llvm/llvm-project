@@ -71,6 +71,22 @@ cl::SubCommand MergeSubcommand(
     "documentation in "
     "https://llvm.org/docs/CommandGuide/llvm-profdata.html#profdata-merge");
 
+namespace {
+enum ProfileKinds { instr, sample, memory };
+enum FailureMode { warnOnly, failIfAnyAreInvalid, failIfAllAreInvalid };
+} // namespace
+
+enum ProfileFormat {
+  PF_None = 0,
+  PF_Text,
+  PF_Compact_Binary, // Deprecated
+  PF_Ext_Binary,
+  PF_GCC,
+  PF_Binary
+};
+
+enum class ShowFormat { Text, Json, Yaml };
+
 // Common options.
 cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
                                     cl::init("-"), cl::desc("Output file"),
@@ -391,17 +407,6 @@ cl::opt<bool> ShowProfileVersion("profile-version", cl::init(false),
 // multiple static functions map to the same name.
 const std::string DuplicateNameStr = "----";
 
-enum ProfileFormat {
-  PF_None = 0,
-  PF_Text,
-  PF_Compact_Binary, // Deprecated
-  PF_Ext_Binary,
-  PF_GCC,
-  PF_Binary
-};
-
-enum class ShowFormat { Text, Json, Yaml };
-
 static void warn(Twine Message, std::string Whence = "",
                  std::string Hint = "") {
   WithColor::warning();
@@ -451,11 +456,6 @@ static void exitWithError(Error E, StringRef Whence = "") {
 static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
   exitWithError(EC.message(), std::string(Whence));
 }
-
-namespace {
-enum ProfileKinds { instr, sample, memory };
-enum FailureMode { warnOnly, failIfAnyAreInvalid, failIfAllAreInvalid };
-} // namespace
 
 static void warnOrExitGivenError(FailureMode FailMode, std::error_code EC,
                                  StringRef Whence = "") {
