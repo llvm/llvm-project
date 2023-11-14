@@ -2865,9 +2865,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{ConstCharPtrRestrictTy, CharPtrRestrictTy, SizeTy},
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-                   ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
+            .Case({ArgumentCondition(2, WithinRange, Range(1, IntMax)),
+                   ReturnValueCondition(LessThanOrEq, ArgNo(2)),
+                   ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ArgumentCondition(2, WithinRange, SingleValue(0)),
+                   ReturnValueCondition(WithinRange, SingleValue(0))},
+                  ErrnoMustNotBeChecked,
+                  "Assuming that argument 'bufsize' is 0")
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
@@ -2884,9 +2889,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             ArgTypes{IntTy, ConstCharPtrRestrictTy, CharPtrRestrictTy, SizeTy},
             RetType{Ssize_tTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(LessThanOrEq, ArgNo(3)),
-                   ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
+            .Case({ArgumentCondition(3, WithinRange, Range(1, IntMax)),
+                   ReturnValueCondition(LessThanOrEq, ArgNo(3)),
+                   ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ArgumentCondition(3, WithinRange, SingleValue(0)),
+                   ReturnValueCondition(WithinRange, SingleValue(0))},
+                  ErrnoMustNotBeChecked,
+                  "Assuming that argument 'bufsize' is 0")
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
