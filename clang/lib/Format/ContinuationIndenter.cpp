@@ -1428,8 +1428,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return CurrentState.Indent - Current.Tok.getLength() -
            Current.SpacesRequiredBefore;
   }
-  if (Current.isOneOf(tok::comment, TT_BlockComment, TT_LineComment) &&
-      NextNonComment->isBinaryOperator() && CurrentState.UnindentOperator) {
+  if (Current.is(tok::comment) && NextNonComment->isBinaryOperator() &&
+      CurrentState.UnindentOperator) {
     return CurrentState.Indent - NextNonComment->Tok.getLength() -
            NextNonComment->SpacesRequiredBefore;
   }
