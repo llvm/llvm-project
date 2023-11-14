@@ -1184,10 +1184,6 @@ multiclass PatShiftXrUimm<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LASX256:$xj, uimm6:$imm)>;
 }
 
-class PatXrXrB<SDPatternOperator OpNode, LAInst Inst>
-    : Pat<(OpNode (v32i8 LASX256:$xj), (v32i8 LASX256:$xk)),
-          (Inst LASX256:$xj, LASX256:$xk)>;
-
 let Predicates = [HasExtLASX] in {
 
 // XVADD_{B/H/W/D}
@@ -1235,13 +1231,20 @@ defm : PatXrXr<srem, "XVMOD">;
 defm : PatXrXrU<urem, "XVMOD">;
 
 // XVAND_V
-def : PatXrXrB<and, XVAND_V>;
-// XVNOR_V
-def : PatXrXrB<or, XVOR_V>;
+foreach vt = [v32i8, v16i16, v8i32, v4i64] in
+def : Pat<(and (vt LASX256:$xj), (vt LASX256:$xk)),
+          (XVAND_V LASX256:$xj, LASX256:$xk)>;
+// XVOR_V
+foreach vt = [v32i8, v16i16, v8i32, v4i64] in
+def : Pat<(or (vt LASX256:$xj), (vt LASX256:$xk)),
+          (XVOR_V LASX256:$xj, LASX256:$xk)>;
 // XVXOR_V
-def : PatXrXrB<xor, XVXOR_V>;
+foreach vt = [v32i8, v16i16, v8i32, v4i64] in
+def : Pat<(xor (vt LASX256:$xj), (vt LASX256:$xk)),
+          (XVXOR_V LASX256:$xj, LASX256:$xk)>;
 // XVNOR_V
-def : Pat<(vnot (or (v32i8 LASX256:$xj), (v32i8 LASX256:$xk))),
+foreach vt = [v32i8, v16i16, v8i32, v4i64] in
+def : Pat<(vnot (or (vt LASX256:$xj), (vt LASX256:$xk))),
           (XVNOR_V LASX256:$xj, LASX256:$xk)>;
 
 // XVANDI_B

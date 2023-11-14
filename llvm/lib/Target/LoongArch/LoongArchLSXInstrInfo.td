@@ -1261,10 +1261,6 @@ multiclass PatShiftVrUimm<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LSX128:$vj, uimm6:$imm)>;
 }
 
-class PatVrVrB<SDPatternOperator OpNode, LAInst Inst>
-    : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
-          (Inst LSX128:$vj, LSX128:$vk)>;
-
 let Predicates = [HasExtLSX] in {
 
 // VADD_{B/H/W/D}
@@ -1312,13 +1308,20 @@ defm : PatVrVr<srem, "VMOD">;
 defm : PatVrVrU<urem, "VMOD">;
 
 // VAND_V
-def : PatVrVrB<and, VAND_V>;
-// VNOR_V
-def : PatVrVrB<or, VOR_V>;
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+def : Pat<(and (vt LSX128:$vj), (vt LSX128:$vk)),
+          (VAND_V LSX128:$vj, LSX128:$vk)>;
+// VOR_V
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+def : Pat<(or (vt LSX128:$vj), (vt LSX128:$vk)),
+          (VOR_V LSX128:$vj, LSX128:$vk)>;
 // VXOR_V
-def : PatVrVrB<xor, VXOR_V>;
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+def : Pat<(xor (vt LSX128:$vj), (vt LSX128:$vk)),
+          (VXOR_V LSX128:$vj, LSX128:$vk)>;
 // VNOR_V
-def : Pat<(vnot (or (v16i8 LSX128:$vj), (v16i8 LSX128:$vk))),
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+def : Pat<(vnot (or (vt LSX128:$vj), (vt LSX128:$vk))),
           (VNOR_V LSX128:$vj, LSX128:$vk)>;
 
 // VANDI_B
