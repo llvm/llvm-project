@@ -671,4 +671,52 @@ entry:
   ret void
 }
 
+; Test with a 14 scalable bytes (so up to 14 * 16 = 224) of unprobed
+; are bellow the save location of `p9`.
+define void @sve_unprobed_area(<vscale x 4 x float> %a, i32 %n) #0 {
+; CHECK-LABEL: sve_unprobed_area:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-4
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
+; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    str p9, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str z10, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z8, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 16 - 16 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 16 - 24 * VG
+; CHECK-NEXT:    addvl sp, sp, #-4
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xc0, 0x00, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 64 * VG
+; CHECK-NEXT:    //APP
+; CHECK-NEXT:    //NO_APP
+; CHECK-NEXT:    addvl sp, sp, #4
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
+; CHECK-NEXT:    ldr p9, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr z10, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z8, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #4
+; CHECK-NEXT:    .cfi_def_cfa wsp, 16
+; CHECK-NEXT:    .cfi_restore z8
+; CHECK-NEXT:    .cfi_restore z9
+; CHECK-NEXT:    .cfi_restore z10
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w29
+; CHECK-NEXT:    ret
+entry:
+  call void asm sideeffect "", "~{z8},~{z9},~{z10},~{p9}" ()
+
+  %v0 = alloca <vscale x 4 x float>, align 16
+  %v1 = alloca <vscale x 4 x float>, align 16
+  %v2 = alloca <vscale x 4 x float>, align 16
+  %v3 = alloca <vscale x 4 x float>, align 16
+
+  ret void
+}
+
 attributes #0 = { uwtable(async) "probe-stack"="inline-asm" "frame-pointer"="none" "target-features"="+sve" }

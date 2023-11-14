@@ -153,8 +153,8 @@ private:
   void allocateStackSpace(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI,
                           int64_t RealignmentPadding, StackOffset AllocSize,
-                          bool NeedsWinCFI, bool *HasWinCFI,
-                          bool EmitCFI, StackOffset InitialOffset) const;
+                          bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI,
+                          StackOffset InitialOffset, bool FollowupAllocs) const;
 
   /// Emit target zero call-used regs.
   void emitZeroCallUsedRegs(BitVector RegsToZero,

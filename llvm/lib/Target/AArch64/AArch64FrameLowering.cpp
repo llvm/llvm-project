@@ -699,7 +699,8 @@ static int64_t upperBound(StackOffset Size) {
 void AArch64FrameLowering::allocateStackSpace(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     int64_t RealignmentPadding, StackOffset AllocSize, bool NeedsWinCFI,
-    bool *HasWinCFI, bool EmitCFI, StackOffset InitialOffset) const {
+    bool *HasWinCFI, bool EmitCFI, StackOffset InitialOffset,
+    bool FollowupAllocs) const {
 
   if (!AllocSize)
     return;
@@ -753,9 +754,10 @@ void AArch64FrameLowering::allocateStackSpace(
         .addImm(InitialOffset.getFixed())
         .addImm(InitialOffset.getScalable());
     // The fixed allocation may leave unprobed bytes at the top of the
-    // stack. If we have variable-sized objects, we need to issue an extra
-    // probe, so their allocations starts in a known state.
-    if (MFI.hasVarSizedObjects()) {
+    // stack. If we have subsequent alocation (e.g. if we have variable-sized
+    // objects), we need to issue an extra probe, so these allocations start in
+    // a known state.
+    if (FollowupAllocs) {
       // STR XZR, [SP]
       BuildMI(MBB, MBBI, DL, TII.get(AArch64::STRXui))
           .addReg(AArch64::XZR)
@@ -789,8 +791,8 @@ void AArch64FrameLowering::allocateStackSpace(
           .setMIFlags(MachineInstr::FrameSetup);
       AFI.setStackRealigned(true);
     }
-    if (MFI.hasVarSizedObjects() || upperBound(AllocSize) + RealignmentPadding >
-                                        AArch64::StackProbeMaxUnprobedStack) {
+    if (FollowupAllocs || upperBound(AllocSize) + RealignmentPadding >
+                              AArch64::StackProbeMaxUnprobedStack) {
       // STR XZR, [SP]
       BuildMI(MBB, MBBI, DL, TII.get(AArch64::STRXui))
           .addReg(AArch64::XZR)
@@ -1986,8 +1988,10 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // Allocate space for the callee saves (if any).
   StackOffset CFAOffset =
       StackOffset::getFixed((int64_t)MFI.getStackSize() - NumBytes);
+  StackOffset LocalsSize = SVELocalsSize + StackOffset::getFixed(NumBytes);
   allocateStackSpace(MBB, CalleeSavesBegin, 0, SVECalleeSavesSize, false,
-                     nullptr, EmitAsyncCFI && !HasFP, CFAOffset);
+                     nullptr, EmitAsyncCFI && !HasFP, CFAOffset,
+                     MFI.hasVarSizedObjects() || LocalsSize);
   CFAOffset += SVECalleeSavesSize;
 
   if (EmitAsyncCFI)
@@ -2004,7 +2008,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     allocateStackSpace(MBB, CalleeSavesEnd, RealignmentPadding,
                        SVELocalsSize + StackOffset::getFixed(NumBytes),
                        NeedsWinCFI, &HasWinCFI, EmitAsyncCFI && !HasFP,
-                       CFAOffset);
+                       CFAOffset, MFI.hasVarSizedObjects());
   }
 
   // If we need a base pointer, set it up here. It's whatever the value of the
