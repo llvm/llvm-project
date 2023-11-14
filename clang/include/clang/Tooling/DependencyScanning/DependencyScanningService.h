@@ -67,8 +67,11 @@ enum class ScanningOptimizations {
   /// Remove unused header search paths including header maps.
   HeaderSearch = 1,
 
-  LLVM_MARK_AS_BITMASK_ENUM(HeaderSearch),
-  All = HeaderSearch,
+  /// Remove warnings from system modules.
+  SystemWarnings = 2,
+
+  LLVM_MARK_AS_BITMASK_ENUM(SystemWarnings),
+  All = HeaderSearch | SystemWarnings,
   Default = All
 };
 

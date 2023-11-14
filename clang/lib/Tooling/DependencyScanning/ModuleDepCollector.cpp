@@ -57,6 +57,29 @@ static void optimizeHeaderSearchOpts(HeaderSearchOptions &Opts,
     Opts.UserEntries.push_back(Entries[Idx]);
 }
 
+static void optimizeDiagnosticOpts(DiagnosticOptions &Opts,
+                                   bool IsSystemModule) {
+  // If this is not a system module or -Wsystem-headers was passed, don't
+  // optimize.
+  if (!IsSystemModule)
+    return;
+  bool Wsystem_headers = false;
+  for (StringRef Opt : Opts.Warnings) {
+    bool isPositive = !Opt.consume_front("no-");
+    if (Opt == "system-headers")
+      Wsystem_headers = isPositive;
+  }
+  if (Wsystem_headers)
+    return;
+
+  // Remove all warning flags. System modules suppress most, but not all,
+  // warnings.
+  Opts.Warnings.clear();
+  Opts.UndefPrefixes.clear();
+  // FIXME: CAS currently depends on remarks. rdar://107619111
+  // Opts.Remarks.clear();
+}
+
 static std::vector<std::string> splitString(std::string S, char Separator) {
   SmallVector<StringRef> Segments;
   StringRef(S).split(Segments, Separator, /*MaxSplit=*/-1, /*KeepEmpty=*/false);
@@ -617,6 +640,10 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
             if (any(MDC.OptimizeArgs & ScanningOptimizations::HeaderSearch))
               optimizeHeaderSearchOpts(BuildInvocation.getMutHeaderSearchOpts(),
                                        *MDC.ScanInstance.getASTReader(), *MF);
+            if (any(MDC.OptimizeArgs & ScanningOptimizations::SystemWarnings))
+              optimizeDiagnosticOpts(
+                  BuildInvocation.getMutDiagnosticOpts(),
+                  BuildInvocation.getFrontendOpts().IsSystemModule);
           });
 
   auto &Diags = MDC.ScanInstance.getDiagnostics();
