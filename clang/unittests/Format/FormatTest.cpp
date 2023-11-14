@@ -16394,8 +16394,10 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
 
   verifyFormat("int f ();", SpaceFuncDecl);
   verifyFormat("void f(int a, T b) {}", SpaceFuncDecl);
+  verifyFormat("void __attribute__((asdf)) f(int a, T b) {}", SpaceFuncDecl);
   verifyFormat("A::A() : a(1) {}", SpaceFuncDecl);
   verifyFormat("void f () __attribute__((asdf));", SpaceFuncDecl);
+  verifyFormat("void __attribute__((asdf)) f ();", SpaceFuncDecl);
   verifyFormat("#define A(x) x", SpaceFuncDecl);
   verifyFormat("#define A (x) x", SpaceFuncDecl);
   verifyFormat("#if defined(x)\n"
@@ -16429,8 +16431,10 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
 
   verifyFormat("int f();", SpaceFuncDef);
   verifyFormat("void f (int a, T b) {}", SpaceFuncDef);
+  verifyFormat("void __attribute__((asdf)) f (int a, T b) {}", SpaceFuncDef);
   verifyFormat("A::A() : a(1) {}", SpaceFuncDef);
   verifyFormat("void f() __attribute__((asdf));", SpaceFuncDef);
+  verifyFormat("void __attribute__((asdf)) f();", SpaceFuncDef);
   verifyFormat("#define A(x) x", SpaceFuncDef);
   verifyFormat("#define A (x) x", SpaceFuncDef);
   verifyFormat("#if defined(x)\n"
