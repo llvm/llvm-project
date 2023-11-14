@@ -205,10 +205,9 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
   if (success && names_array) {
     size_t num_names = names_array->GetSize();
     for (size_t i = 0; i < num_names; i++) {
-      llvm::StringRef name;
-      Status error;
-      success = names_array->GetItemAtIndexAsString(i, name);
-      target.AddNameToBreakpoint(result_sp, name.str().c_str(), error);
+      if (std::optional<llvm::StringRef> maybe_name =
+              names_array->GetItemAtIndexAsString(i))
+        target.AddNameToBreakpoint(result_sp, *maybe_name, error);
     }
   }
 
@@ -238,11 +237,10 @@ bool Breakpoint::SerializedBreakpointMatchesNames(
   size_t num_names = names_array->GetSize();
 
   for (size_t i = 0; i < num_names; i++) {
-    llvm::StringRef name;
-    if (names_array->GetItemAtIndexAsString(i, name)) {
-      if (llvm::is_contained(names, name))
-        return true;
-    }
+    std::optional<llvm::StringRef> maybe_name =
+        names_array->GetItemAtIndexAsString(i);
+    if (maybe_name && llvm::is_contained(names, *maybe_name))
+      return true;
   }
   return false;
 }
@@ -841,9 +839,8 @@ bool Breakpoint::HasResolvedLocations() const {
 
 size_t Breakpoint::GetNumLocations() const { return m_locations.GetSize(); }
 
-bool Breakpoint::AddName(llvm::StringRef new_name) {
+void Breakpoint::AddName(llvm::StringRef new_name) {
   m_name_list.insert(new_name.str());
-  return true;
 }
 
 void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,

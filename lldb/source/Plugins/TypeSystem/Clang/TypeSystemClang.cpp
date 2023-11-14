@@ -2294,12 +2294,13 @@ CompilerType TypeSystemClang::CreateArrayType(const CompilerType &element_type,
 
       llvm::APInt ap_element_count(64, element_count);
       if (element_count == 0) {
-        return GetType(ast.getIncompleteArrayType(
-            ClangUtil::GetQualType(element_type), clang::ArrayType::Normal, 0));
+        return GetType(
+            ast.getIncompleteArrayType(ClangUtil::GetQualType(element_type),
+                                       clang::ArraySizeModifier::Normal, 0));
       } else {
         return GetType(ast.getConstantArrayType(
             ClangUtil::GetQualType(element_type), ap_element_count, nullptr,
-            clang::ArrayType::Normal, 0));
+            clang::ArraySizeModifier::Normal, 0));
       }
     }
   }
@@ -2319,8 +2320,9 @@ CompilerType TypeSystemClang::CreateStructForIdentifier(
     return type;
   }
 
-  type = CreateRecordType(nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-                          type_name, clang::TTK_Struct, lldb::eLanguageTypeC);
+  type = CreateRecordType(
+      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, type_name,
+      llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
   StartTagDeclarationDefinition(type);
   for (const auto &field : type_fields)
     AddFieldToRecordType(type, field.first, field.second, lldb::eAccessPublic,
@@ -3557,8 +3559,15 @@ bool TypeSystemClang::IsPolymorphicClass(lldb::opaque_compiler_type_t type) {
         if (record_decl) {
           const clang::CXXRecordDecl *cxx_record_decl =
               llvm::dyn_cast<clang::CXXRecordDecl>(record_decl);
-          if (cxx_record_decl)
-            return cxx_record_decl->isPolymorphic();
+          if (cxx_record_decl) {
+            // We can't just call is isPolymorphic() here because that just
+            // means the current class has virtual functions, it doesn't check
+            // if any inherited classes have virtual functions. The doc string
+            // in SBType::IsPolymorphicClass() says it is looking for both
+            // if the class has virtual methods or if any bases do, so this
+            // should be more correct.
+            return cxx_record_decl->isDynamicClass();
+          }
         }
       }
       break;
@@ -4301,10 +4310,10 @@ CompilerType TypeSystemClang::GetArrayType(lldb::opaque_compiler_type_t type,
     if (size != 0)
       return GetType(ast_ctx.getConstantArrayType(
           qual_type, llvm::APInt(64, size), nullptr,
-          clang::ArrayType::ArraySizeModifier::Normal, 0));
+          clang::ArraySizeModifier::Normal, 0));
     else
       return GetType(ast_ctx.getIncompleteArrayType(
-          qual_type, clang::ArrayType::ArraySizeModifier::Normal, 0));
+          qual_type, clang::ArraySizeModifier::Normal, 0));
   }
 
   return CompilerType();
@@ -4708,6 +4717,21 @@ TypeSystemClang::GetTypedefedType(lldb::opaque_compiler_type_t type) {
 CompilerType TypeSystemClang::GetBasicTypeFromAST(lldb::BasicType basic_type) {
   return TypeSystemClang::GetBasicType(basic_type);
 }
+
+CompilerType TypeSystemClang::CreateGenericFunctionPrototype() {
+  clang::ASTContext &ast = getASTContext();
+  const FunctionType::ExtInfo generic_ext_info(
+    /*noReturn=*/false,
+    /*hasRegParm=*/false,
+    /*regParm=*/0,
+    CallingConv::CC_C,
+    /*producesResult=*/false,
+    /*noCallerSavedRegs=*/false,
+    /*NoCfCheck=*/false,
+    /*cmseNSCall=*/false);
+  QualType func_type = ast.getFunctionNoProtoType(ast.VoidTy, generic_ext_info);
+  return GetType(func_type);
+}
 // Exploring the type
 
 const llvm::fltSemantics &
@@ -4824,7 +4848,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
 
   case clang::Type::FunctionNoProto:
   case clang::Type::FunctionProto:
-    break;
+    return lldb::eEncodingUint;
 
   case clang::Type::IncompleteArray:
   case clang::Type::VariableArray:
@@ -7183,7 +7207,8 @@ GetNthTemplateArgument(const clang::ClassTemplateSpecializationDecl *decl,
   // (including the ones preceding the parameter pack).
   const auto &pack = args[last_idx];
   const size_t pack_idx = idx - last_idx;
-  assert(pack_idx < pack.pack_size() && "parameter pack index out-of-bounds");
+  if (pack_idx >= pack.pack_size())
+    return nullptr;
   return &pack.pack_elements()[pack_idx];
 }
 
@@ -7986,8 +8011,8 @@ bool TypeSystemClang::AddObjCClassProperty(
     const bool isSynthesizedAccessorStub = false;
     const bool isImplicitlyDeclared = true;
     const bool isDefined = false;
-    const clang::ObjCMethodDecl::ImplementationControl impControl =
-        clang::ObjCMethodDecl::None;
+    const clang::ObjCImplementationControl impControl =
+        clang::ObjCImplementationControl::None;
     const bool HasRelatedResultType = false;
 
     getter = clang::ObjCMethodDecl::CreateDeserialized(clang_ast, 0);
@@ -8028,8 +8053,8 @@ bool TypeSystemClang::AddObjCClassProperty(
     const bool isSynthesizedAccessorStub = false;
     const bool isImplicitlyDeclared = true;
     const bool isDefined = false;
-    const clang::ObjCMethodDecl::ImplementationControl impControl =
-        clang::ObjCMethodDecl::None;
+    const clang::ObjCImplementationControl impControl =
+        clang::ObjCImplementationControl::None;
     const bool HasRelatedResultType = false;
 
     setter = clang::ObjCMethodDecl::CreateDeserialized(clang_ast, 0);
@@ -8150,8 +8175,8 @@ clang::ObjCMethodDecl *TypeSystemClang::AddMethodToObjCObjectType(
   /// Force this to true because we don't have source locations.
   const bool isImplicitlyDeclared = true;
   const bool isDefined = false;
-  const clang::ObjCMethodDecl::ImplementationControl impControl =
-      clang::ObjCMethodDecl::None;
+  const clang::ObjCImplementationControl impControl =
+      clang::ObjCImplementationControl::None;
   const bool HasRelatedResultType = false;
 
   const unsigned num_args = method_function_prototype->getNumParams();

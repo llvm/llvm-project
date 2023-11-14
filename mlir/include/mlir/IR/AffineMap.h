@@ -15,6 +15,7 @@
 #define MLIR_IR_AFFINEMAP_H
 
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -33,7 +34,9 @@ struct AffineMapStorage;
 } // namespace detail
 
 class Attribute;
+class Builder;
 struct LogicalResult;
+class OpFoldResult;
 class MLIRContext;
 
 /// A multi-dimensional affine map
@@ -100,6 +103,18 @@ public:
   /// (i.e. `[1,1,2]` is an invalid permutation).
   static AffineMap getPermutationMap(ArrayRef<unsigned> permutation,
                                      MLIRContext *context);
+
+  /// Returns an affine map with `numDims` input dimensions and results
+  /// specified by `targets`.
+  ///
+  /// Examples:
+  /// * getMultiDimMapWithTargets(3, [0, 2, 1])
+  ///       -> affine_map<(d0, d1, d2) -> (d0, d2, d1)>
+  /// * getMultiDimMapWithTargets(3, [2, 1])
+  ///       -> affine_map<(d0, d1, d2) -> (d2, d1)>
+  static AffineMap getMultiDimMapWithTargets(unsigned numDims,
+                                             ArrayRef<unsigned> targets,
+                                             MLIRContext *context);
 
   /// Returns a vector of AffineMaps; each with as many results as
   /// `exprs.size()`, as many dims as the largest dim in `exprs` and as many
@@ -446,6 +461,12 @@ AffineMap compressUnusedSymbols(AffineMap map);
 /// Asserts that all maps in `maps` are normalized to the same number of
 /// dims and symbols.
 SmallVector<AffineMap> compressUnusedSymbols(ArrayRef<AffineMap> maps);
+
+/// Fold all attributes among the given operands into the affine map. Return the
+/// folded affine map. Return all remaining values via `remainingValues`.
+AffineMap foldAttributesIntoMap(Builder &b, AffineMap map,
+                                ArrayRef<OpFoldResult> operands,
+                                SmallVector<Value> &remainingValues);
 
 /// Returns a map with the same dimension and symbol count as `map`, but whose
 /// results are the unique affine expressions of `map`.

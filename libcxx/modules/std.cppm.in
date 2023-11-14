@@ -148,6 +148,9 @@ module;
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #  include <strstream>
 #endif
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <syncstream>
+#endif
 #include <system_error>
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #  include <thread>
@@ -189,9 +192,6 @@ module;
 #if __has_include(<stdfloat>)
 #  error "update the header information for <stdfloat> in libcxx/utils/generate_std_cppm_in.py"
 #endif //   __has_include(<stdfloat>)
-#if __has_include(<syncstream>)
-#  error "update the header information for <syncstream> in libcxx/utils/generate_std_cppm_in.py"
-#endif //   __has_include(<syncstream>)
 #if __has_include(<text_encoding>)
 #  error "update the header information for <text_encoding> in libcxx/utils/generate_std_cppm_in.py"
 #endif //   __has_include(<text_encoding>)

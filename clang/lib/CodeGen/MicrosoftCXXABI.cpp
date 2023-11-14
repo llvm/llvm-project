@@ -1524,7 +1524,7 @@ void MicrosoftCXXABI::addImplicitStructorParams(CodeGenFunction &CGF,
     auto *IsMostDerived = ImplicitParamDecl::Create(
         Context, /*DC=*/nullptr, CGF.CurGD.getDecl()->getLocation(),
         &Context.Idents.get("is_most_derived"), Context.IntTy,
-        ImplicitParamDecl::Other);
+        ImplicitParamKind::Other);
     // The 'most_derived' parameter goes second if the ctor is variadic and last
     // if it's not.  Dtors can't be variadic.
     const FunctionProtoType *FPT = MD->getType()->castAs<FunctionProtoType>();
@@ -1537,7 +1537,7 @@ void MicrosoftCXXABI::addImplicitStructorParams(CodeGenFunction &CGF,
     auto *ShouldDelete = ImplicitParamDecl::Create(
         Context, /*DC=*/nullptr, CGF.CurGD.getDecl()->getLocation(),
         &Context.Idents.get("should_call_delete"), Context.IntTy,
-        ImplicitParamDecl::Other);
+        ImplicitParamKind::Other);
     Params.push_back(ShouldDelete);
     getStructorImplicitParamDecl(CGF) = ShouldDelete;
   }
@@ -1673,7 +1673,11 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
 void MicrosoftCXXABI::emitVTableTypeMetadata(const VPtrInfo &Info,
                                              const CXXRecordDecl *RD,
                                              llvm::GlobalVariable *VTable) {
-  if (!CGM.getCodeGenOpts().LTOUnit)
+  // Emit type metadata on vtables with LTO or IR instrumentation.
+  // In IR instrumentation, the type metadata could be used to find out vtable
+  // definitions (for type profiling) among all global variables.
+  if (!CGM.getCodeGenOpts().LTOUnit &&
+      !CGM.getCodeGenOpts().hasProfileIRInstr())
     return;
 
   // TODO: Should VirtualFunctionElimination also be supported here?
@@ -2986,7 +2990,6 @@ MicrosoftCXXABI::EmitMemberFunctionPointer(const CXXMethodDecl *MD) {
     NonVirtualBaseAdjustment -= getContext().getOffsetOfBaseWithVBPtr(RD);
 
   // The rest of the fields are common with data member pointers.
-  FirstField = llvm::ConstantExpr::getBitCast(FirstField, CGM.VoidPtrTy);
   return EmitFullMemberPointer(FirstField, /*IsMemberFunction=*/true, RD,
                                NonVirtualBaseAdjustment, VBTableIndex);
 }
@@ -3644,14 +3647,17 @@ uint32_t MSRTTIClass::initialize(const MSRTTIClass *Parent,
 
 static llvm::GlobalValue::LinkageTypes getLinkageForRTTI(QualType Ty) {
   switch (Ty->getLinkage()) {
-  case NoLinkage:
-  case InternalLinkage:
-  case UniqueExternalLinkage:
+  case Linkage::Invalid:
+    llvm_unreachable("Linkage hasn't been computed!");
+
+  case Linkage::None:
+  case Linkage::Internal:
+  case Linkage::UniqueExternal:
     return llvm::GlobalValue::InternalLinkage;
 
-  case VisibleNoLinkage:
-  case ModuleLinkage:
-  case ExternalLinkage:
+  case Linkage::VisibleNone:
+  case Linkage::Module:
+  case Linkage::External:
     return llvm::GlobalValue::LinkOnceODRLinkage;
   }
   llvm_unreachable("Invalid linkage!");
@@ -3978,7 +3984,7 @@ llvm::Constant *MicrosoftCXXABI::getAddrOfRTTIDescriptor(QualType Type) {
 
   // Check to see if we've already declared this TypeDescriptor.
   if (llvm::GlobalVariable *GV = CGM.getModule().getNamedGlobal(MangledName))
-    return llvm::ConstantExpr::getBitCast(GV, CGM.Int8PtrTy);
+    return GV;
 
   // Note for the future: If we would ever like to do deferred emission of
   // RTTI, check if emitting vtables opportunistically need any adjustment.
@@ -4004,7 +4010,7 @@ llvm::Constant *MicrosoftCXXABI::getAddrOfRTTIDescriptor(QualType Type) {
       MangledName);
   if (Var->isWeakForLinker())
     Var->setComdat(CGM.getModule().getOrInsertComdat(Var->getName()));
-  return llvm::ConstantExpr::getBitCast(Var, CGM.Int8PtrTy);
+  return Var;
 }
 
 /// Gets or a creates a Microsoft CompleteObjectLocator.
@@ -4088,7 +4094,7 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
       &getContext().Idents.get("src"),
       getContext().getLValueReferenceType(RecordTy,
                                           /*SpelledAsLValue=*/true),
-      ImplicitParamDecl::Other);
+      ImplicitParamKind::Other);
   if (IsCopy)
     FunctionArgs.push_back(&SrcParam);
 
@@ -4098,7 +4104,7 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   ImplicitParamDecl IsMostDerived(getContext(), /*DC=*/nullptr,
                                   SourceLocation(),
                                   &getContext().Idents.get("is_most_derived"),
-                                  getContext().IntTy, ImplicitParamDecl::Other);
+                                  getContext().IntTy, ImplicitParamKind::Other);
   // Only add the parameter to the list if the class has virtual bases.
   if (RD->getNumVBases() > 0)
     FunctionArgs.push_back(&IsMostDerived);
@@ -4197,8 +4203,6 @@ llvm::Constant *MicrosoftCXXABI::getCatchableType(QualType T,
       CopyCtor = getAddrOfCXXCtorClosure(CD, Ctor_CopyingClosure);
     else
       CopyCtor = CGM.getAddrOfCXXStructor(GlobalDecl(CD, Ctor_Complete));
-
-    CopyCtor = llvm::ConstantExpr::getBitCast(CopyCtor, CGM.Int8PtrTy);
   } else {
     CopyCtor = llvm::Constant::getNullValue(CGM.Int8PtrTy);
   }
@@ -4408,14 +4412,11 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
   if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
     if (CXXDestructorDecl *DtorD = RD->getDestructor())
       if (!DtorD->isTrivial())
-        CleanupFn = llvm::ConstantExpr::getBitCast(
-            CGM.getAddrOfCXXStructor(GlobalDecl(DtorD, Dtor_Complete)),
-            CGM.Int8PtrTy);
+        CleanupFn = CGM.getAddrOfCXXStructor(GlobalDecl(DtorD, Dtor_Complete));
   // This is unused as far as we can tell, initialize it to null.
   llvm::Constant *ForwardCompat =
       getImageRelativeConstant(llvm::Constant::getNullValue(CGM.Int8PtrTy));
-  llvm::Constant *PointerToCatchableTypes = getImageRelativeConstant(
-      llvm::ConstantExpr::getBitCast(CTA, CGM.Int8PtrTy));
+  llvm::Constant *PointerToCatchableTypes = getImageRelativeConstant(CTA);
   llvm::StructType *TIType = getThrowInfoType();
   llvm::Constant *Fields[] = {
       llvm::ConstantInt::get(CGM.IntTy, Flags), // Flags
@@ -4449,7 +4450,7 @@ void MicrosoftCXXABI::emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) {
 
   // Call into the runtime to throw the exception.
   llvm::Value *Args[] = {
-    CGF.Builder.CreateBitCast(AI.getPointer(), CGM.Int8PtrTy),
+    AI.getPointer(),
     TI
   };
   CGF.EmitNoreturnRuntimeCallOrInvoke(getThrowFn(), Args);

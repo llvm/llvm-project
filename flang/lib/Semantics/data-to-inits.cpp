@@ -435,10 +435,15 @@ bool DataInitializationCompiler<DSV>::InitElement(
       // value non-pointer initialization
       if (IsBOZLiteral(*expr) &&
           designatorType->category() != TypeCategory::Integer) { // 8.6.7(11)
-        exprAnalyzer_.Say(
-            "BOZ literal should appear in a DATA statement only as a value for an integer object, but '%s' is '%s'"_port_en_US,
-            DescribeElement(), designatorType->AsFortran());
-      } else if (converted->second) {
+        if (exprAnalyzer_.context().ShouldWarn(
+                common::LanguageFeature::DataStmtExtensions)) {
+          exprAnalyzer_.Say(
+              "BOZ literal should appear in a DATA statement only as a value for an integer object, but '%s' is '%s'"_port_en_US,
+              DescribeElement(), designatorType->AsFortran());
+        }
+      } else if (converted->second &&
+          exprAnalyzer_.context().ShouldWarn(
+              common::LanguageFeature::DataStmtExtensions)) {
         exprAnalyzer_.context().Say(
             "DATA statement value initializes '%s' of type '%s' with CHARACTER"_port_en_US,
             DescribeElement(), designatorType->AsFortran());
@@ -457,10 +462,13 @@ bool DataInitializationCompiler<DSV>::InitElement(
             folded.AsFortran(), DescribeElement());
       } else if (status == evaluate::InitialImage::OutOfRange) {
         OutOfRangeError();
-      } else if (status == evaluate::InitialImage::SizeMismatch) {
+      } else if (status == evaluate::InitialImage::LengthMismatch) {
         exprAnalyzer_.Say(
             "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
             folded.AsFortran(), DescribeElement());
+        return true;
+      } else if (status == evaluate::InitialImage::TooManyElems) {
+        exprAnalyzer_.Say("DATA statement has too many elements"_err_en_US);
       } else {
         CHECK(exprAnalyzer_.context().AnyFatalError());
       }
@@ -773,8 +781,7 @@ static bool CombineEquivalencedInitialization(
     return false;
   }
   // If the items are in static storage, save the final initialization.
-  if (std::find_if(associated.begin(), associated.end(),
-          [](SymbolRef ref) { return IsSaved(*ref); }) != associated.end()) {
+  if (llvm::any_of(associated, [](SymbolRef ref) { return IsSaved(*ref); })) {
     // Create a compiler array temp that overlaps all the items.
     SourceName name{exprAnalyzer.context().GetTempName(scope)};
     auto emplaced{

@@ -803,7 +803,7 @@ bool SymbolFileDWARFDebugMap::CompleteType(CompilerType &compiler_type) {
   bool success = false;
   if (compiler_type) {
     ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-      if (oso_dwarf->HasForwardDeclForClangType(compiler_type)) {
+      if (oso_dwarf->HasForwardDeclForCompilerType(compiler_type)) {
         oso_dwarf->CompleteType(compiler_type);
         success = true;
         return true;
@@ -1278,7 +1278,7 @@ void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
 }
 
 bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
-    lldb_private::StructuredData::Dictionary &d) {
+    lldb_private::StructuredData::Dictionary &d, bool errors_only) {
   StructuredData::Array separate_debug_info_files;
   const uint32_t cu_count = GetNumCompileUnits();
   for (uint32_t cu_idx = 0; cu_idx < cu_count; ++cu_idx) {
@@ -1302,7 +1302,8 @@ bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
       oso_data->AddStringItem("error", info.oso_load_error.AsCString());
     }
     oso_data->AddBooleanItem("loaded", loaded_successfully);
-    separate_debug_info_files.AddItem(oso_data);
+    if (!errors_only || oso_data->HasKey("error"))
+      separate_debug_info_files.AddItem(oso_data);
   }
 
   d.AddStringItem("type", "oso");
@@ -1379,19 +1380,25 @@ void SymbolFileDWARFDebugMap::SetCompileUnit(SymbolFileDWARF *oso_dwarf,
 CompilerDeclContext
 SymbolFileDWARFDebugMap::GetDeclContextForUID(lldb::user_id_t type_uid) {
   const uint64_t oso_idx = GetOSOIndexFromUserID(type_uid);
-  SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
-  if (oso_dwarf)
+  if (SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx))
     return oso_dwarf->GetDeclContextForUID(type_uid);
-  return CompilerDeclContext();
+  return {};
 }
 
 CompilerDeclContext
 SymbolFileDWARFDebugMap::GetDeclContextContainingUID(lldb::user_id_t type_uid) {
   const uint64_t oso_idx = GetOSOIndexFromUserID(type_uid);
-  SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
-  if (oso_dwarf)
+  if (SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx))
     return oso_dwarf->GetDeclContextContainingUID(type_uid);
-  return CompilerDeclContext();
+  return {};
+}
+
+std::vector<CompilerContext>
+SymbolFileDWARFDebugMap::GetCompilerContextForUID(lldb::user_id_t type_uid) {
+  const uint64_t oso_idx = GetOSOIndexFromUserID(type_uid);
+  if (SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx))
+    return oso_dwarf->GetCompilerContextForUID(type_uid);
+  return {};
 }
 
 void SymbolFileDWARFDebugMap::ParseDeclsForContext(

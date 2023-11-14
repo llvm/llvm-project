@@ -8,10 +8,10 @@ define i32 @f0(i32 %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    .cfi_remember_state
-; CHECK-NEXT:    cbz w0, .LBB0_4
+; CHECK-NEXT:    cbz w0, .LBB0_5
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    cmp w0, #2
-; CHECK-NEXT:    b.eq .LBB0_5
+; CHECK-NEXT:    b.eq .LBB0_4
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    cmp w0, #1
 ; CHECK-NEXT:    b.ne .LBB0_6
@@ -22,20 +22,20 @@ define i32 @f0(i32 %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:  .LBB0_4: // %if.then5
 ; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:    .cfi_remember_state
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    bl g0
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    sub w0, w8, w0
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_5: // %if.then5
+; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:    .cfi_remember_state
-; CHECK-NEXT:    bl g0
-; CHECK-NEXT:    mov w8, #1
-; CHECK-NEXT:    sub w0, w8, w0
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w30
@@ -115,7 +115,7 @@ define i32 @f2(i32 %x) #0 {
 ; CHECK-NEXT:    cbz w0, .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %if.end
 ; CHECK-NEXT:    bl g1
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    sub w0, w8, w0
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0

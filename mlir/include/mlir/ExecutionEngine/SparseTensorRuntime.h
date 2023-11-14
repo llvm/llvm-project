@@ -24,8 +24,6 @@
 
 using namespace mlir::sparse_tensor;
 
-using SparseTensorWriter = std::ostream;
-
 extern "C" {
 
 //===----------------------------------------------------------------------===//
@@ -47,6 +45,7 @@ extern "C" {
 /// kEmpty          -               STS, empty
 /// kEmptyForward   -               STS, empty, with forwarding COO
 /// kFromCOO        COO             STS, copied from the COO source
+/// kFromReader     reader          STS, input from reader
 /// kToCOO          STS             COO, copied from the STS source
 /// kPack           buffers         STS, from level buffers
 /// kSortCOOInPlace STS             STS, sorted in place
@@ -166,13 +165,6 @@ MLIR_CRUNNERUTILS_EXPORT void endForwardingInsert(void *tensor);
 
 /// Tensor-storage method to finalize lexicographic insertions.
 MLIR_CRUNNERUTILS_EXPORT void endLexInsert(void *tensor);
-
-/// Coordinate-scheme method to write to file in extended FROSTT format.
-#define DECL_OUTSPARSETENSOR(VNAME, V)                                         \
-  MLIR_CRUNNERUTILS_EXPORT void outSparseTensor##VNAME(void *coo, void *dest,  \
-                                                       bool sort);
-MLIR_SPARSETENSOR_FOREVERY_V(DECL_OUTSPARSETENSOR)
-#undef DECL_OUTSPARSETENSOR
 
 /// Releases the memory for the tensor-storage object.
 MLIR_CRUNNERUTILS_EXPORT void delSparseTensor(void *tensor);

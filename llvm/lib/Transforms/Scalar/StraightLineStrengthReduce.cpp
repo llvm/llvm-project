@@ -680,7 +680,7 @@ void StraightLineStrengthReduce::rewriteCandidateWithBasis(
     if (BumpWithUglyGEP) {
       // C = (char *)Basis + Bump
       unsigned AS = Basis.Ins->getType()->getPointerAddressSpace();
-      Type *CharTy = Type::getInt8PtrTy(Basis.Ins->getContext(), AS);
+      Type *CharTy = PointerType::get(Basis.Ins->getContext(), AS);
       Reduced = Builder.CreateBitCast(Basis.Ins, CharTy);
       Reduced =
           Builder.CreateGEP(Builder.getInt8Ty(), Reduced, Bump, "", InBounds);

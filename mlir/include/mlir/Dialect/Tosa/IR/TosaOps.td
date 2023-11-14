@@ -1271,6 +1271,7 @@ def Tosa_ReduceAllOp : Tosa_InferTensorTypeOp<"reduce_all"> {
   );
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     /// Returns true when two result types are compatible for this op;
@@ -1304,6 +1305,7 @@ def Tosa_ReduceAnyOp : Tosa_InferTensorTypeOp<"reduce_any"> {
   );
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     /// Returns true when two result types are compatible for this op;
@@ -1337,6 +1339,7 @@ def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max"> {
   );
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     /// Returns true when two result types are compatible for this op;
@@ -1371,6 +1374,7 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
   );
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     /// Returns true when two result types are compatible for this op;
@@ -1405,6 +1409,7 @@ def Tosa_ReduceProdOp : Tosa_InferTensorTypeOp<"reduce_prod"> {
   );
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     /// Returns true when two result types are compatible for this op;
@@ -1436,8 +1441,10 @@ def Tosa_ReduceSumOp : Tosa_InferTensorTypeOp<"reduce_sum"> {
   let results = (outs
     Tosa_Tensor:$output
   );
-  let hasFolder = 1;
 
+  let hasFolder = 1;
+  let hasVerifier = 1;
+  
   let extraClassDeclaration = [{
     /// Returns true when two result types are compatible for this op;
     /// Method used by InferTypeOpInterface.
@@ -1586,7 +1593,8 @@ def Tosa_ReverseOp: Tosa_Op<"reverse", [
   );
 
   let hasFolder = 1;
-
+  let hasVerifier = 1;
+  
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
@@ -1614,6 +1622,7 @@ def Tosa_SliceOp : Tosa_InferShapedTypeOp<"slice"> {
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1635,6 +1644,7 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
   );
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1921,11 +1931,11 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
     not expected to be portable across TOSA implementations. The input and
     output signatures must be expressed in the corresponding TOSA node.
 
-    `identifier` is a string that tells the backend which custom operator is being
-    called.
+    `operator_name` is a string that tells the backend which custom operator is
+    being called.
 
-    `config` is a string identifier which can help avoid name collisions on the
-    identifier field.
+    `domain_name` is a string identifier which can help avoid name collisions on
+    the identifier field.
 
     `implementation_attrs` is a string which is a backend and identifier specific
     set of attributes to the custom operator.
@@ -1938,14 +1948,15 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
     Example:
 
     ```mlir
-    %out = tosa.custom %in {config = "tosa_mlir_test", identifier = "custom_test",
-           implementation_attrs = ""} : (tensor<10xi32>) -> (tensor<10xi32>)
+    %out = tosa.custom %in {domain_name = "tosa_mlir_test", operator_name =
+           "custom_test", implementation_attrs = ""}: (tensor<10xi32>) ->
+           (tensor<10xi32>)
     ```
   }];
 
   let arguments = (ins
-    StrAttr:$identifier,
-    StrAttr:$config,
+    StrAttr:$operator_name,
+    StrAttr:$domain_name,
     StrAttr:$implementation_attrs,
     Variadic<Tosa_Tensor>:$inputs
   );

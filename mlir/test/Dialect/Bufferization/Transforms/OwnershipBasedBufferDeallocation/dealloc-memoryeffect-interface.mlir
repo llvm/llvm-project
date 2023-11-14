@@ -124,3 +124,35 @@ func.func @op_without_aliasing_and_allocation() -> memref<4xf32> {
 //       CHECK:     [[CLONE:%.+]] = bufferization.clone [[GLOBAL]]
 //       CHECK:     scf.yield [[CLONE]] :
 //       CHECK:   return [[RES]] :
+
+// -----
+
+// Allocations with "bufferization.manual_deallocation" are assigned an
+// ownership of "false".
+
+func.func @manual_deallocation(%c: i1, %f: f32, %idx: index) -> f32 {
+  %0 = memref.alloc() {bufferization.manual_deallocation} : memref<5xf32>
+  linalg.fill ins(%f : f32) outs(%0 : memref<5xf32>)
+  %1 = memref.alloc() : memref<5xf32>
+  linalg.fill ins(%f : f32) outs(%1 : memref<5xf32>)
+  %2 = arith.select %c, %0, %1 : memref<5xf32>
+  %3 = memref.load %2[%idx] : memref<5xf32>
+
+  // Only buffers that are under "manual deallocation" are allowed to be
+  // deallocated with memref.dealloc. For consistency reasons, the
+  // manual_deallocation attribute must also be specified. A runtime insertion
+  // is inserted to ensure that we do not have ownership. (This is not a
+  // bulletproof check, but covers some cases of invalid IR.)
+  memref.dealloc %0 {bufferization.manual_deallocation} : memref<5xf32>
+
+  return %3 : f32
+}
+
+// CHECK-LABEL: func @manual_deallocation(
+//       CHECK:   %[[true:.*]] = arith.constant true
+//       CHECK:   %[[manual_alloc:.*]] = memref.alloc() {bufferization.manual_deallocation} : memref<5xf32>
+//       CHECK:   %[[managed_alloc:.*]] = memref.alloc() : memref<5xf32>
+//       CHECK:   %[[selected:.*]] = arith.select
+//       CHECK:   cf.assert %[[true]], "expected that the block does not have ownership"
+//       CHECK:   memref.dealloc %[[manual_alloc]]
+//       CHECK:   bufferization.dealloc (%[[managed_alloc]] : memref<5xf32>) if (%[[true]])

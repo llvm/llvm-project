@@ -1,8 +1,8 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc -pedantic
 
 ! Check OpenACC restruction in branch in and out of some construct
 !
-program openacc_clause_validity
+subroutine openacc_clause_validity
 
   implicit none
 
@@ -175,4 +175,4 @@ program openacc_clause_validity
 
   !$acc end data
 
-end program openacc_clause_validity
+end subroutine openacc_clause_validity

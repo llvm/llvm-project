@@ -917,7 +917,6 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
 
   IRBuilder<> IRB(InsertBefore);
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  Ptr = IRB.CreateBitCast(Ptr, Int8PtrTy);
   IRB.CreateCall(Intrinsic::getDeclaration(
                      M, UseShortGranules
                             ? Intrinsic::hwasan_check_memaccess_shortgranules
@@ -1666,7 +1665,7 @@ void HWAddressSanitizer::instrumentGlobals() {
     if (GV.hasSanitizerMetadata() && GV.getSanitizerMetadata().NoHWAddress)
       continue;
 
-    if (GV.isDeclarationForLinker() || GV.getName().startswith("llvm.") ||
+    if (GV.isDeclarationForLinker() || GV.getName().starts_with("llvm.") ||
         GV.isThreadLocal())
       continue;
 
@@ -1752,10 +1751,8 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
         HwasanPersonalityWrapper,
         {ThunkFn->getArg(0), ThunkFn->getArg(1), ThunkFn->getArg(2),
          ThunkFn->getArg(3), ThunkFn->getArg(4),
-         P.first ? IRB.CreateBitCast(P.first, Int8PtrTy)
-                 : Constant::getNullValue(Int8PtrTy),
-         IRB.CreateBitCast(UnwindGetGR.getCallee(), Int8PtrTy),
-         IRB.CreateBitCast(UnwindGetCFA.getCallee(), Int8PtrTy)});
+         P.first ? P.first : Constant::getNullValue(Int8PtrTy),
+         UnwindGetGR.getCallee(), UnwindGetCFA.getCallee()});
     WrapperCall->setTailCall();
     IRB.CreateRet(WrapperCall);
 

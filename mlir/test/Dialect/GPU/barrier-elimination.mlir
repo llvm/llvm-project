@@ -1,11 +1,14 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter | FileCheck %s
+// RUN: mlir-opt %s --gpu-eliminate-barriers | FileCheck %s
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  transform.apply_patterns to %0 {
-    transform.apply_patterns.gpu.eliminate_barriers
-  } : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %0 {
+      transform.apply_patterns.gpu.eliminate_barriers
+    } : !transform.any_op
+    transform.yield
+  }
 }
 
 // CHECK-LABEL: @read_read_write
