@@ -4113,8 +4113,8 @@ void CodeGenModule::emitMultiVersionFunctions() {
         std::string MangledName = getMangledNameImpl(
             *this, GD, FD, /*OmitMultiVersionMangling=*/true);
         auto *Alias = llvm::GlobalAlias::create(
-            DeclTy, 0, llvm::Function::WeakODRLinkage, MangledName + ".ifunc",
-            IFunc, &getModule());
+            DeclTy, 0, getMultiversionLinkage(*this, GD),
+            MangledName + ".ifunc", IFunc, &getModule());
         SetCommonAttributes(FD, Alias);
       }
     }

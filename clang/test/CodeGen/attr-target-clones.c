@@ -16,7 +16,7 @@
 // LINUX: @__cpu_model = external dso_local global { i32, i32, i32, [1 x i32] }
 // LINUX: @__cpu_features2 = external dso_local global [3 x i32]
 
-// LINUX: @internal.ifunc = weak_odr alias i32 (), ptr @internal
+// LINUX: @internal.ifunc = internal alias i32 (), ptr @internal
 // LINUX: @foo.ifunc = weak_odr alias i32 (), ptr @foo
 // LINUX: @foo_dupes.ifunc = weak_odr alias void (), ptr @foo_dupes
 // LINUX: @unused.ifunc = weak_odr alias void (), ptr @unused
