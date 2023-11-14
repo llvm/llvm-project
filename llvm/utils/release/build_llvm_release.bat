@@ -154,6 +154,8 @@ set common_cmake_flags=^
   -DCMAKE_CXX_FLAGS="-DLIBXML_STATIC" ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt;lldb;openmp"
 
+set cmake_profile_flag=""
+
 REM Preserve original path
 set OLDPATH=%PATH%
 
@@ -262,33 +264,10 @@ set all_cmake_flags=^
 set cmake_flags=%all_cmake_flags:\=/%
 
 
-REM Build Clang with instrumentation.
-mkdir build64.instr
-cd build64.instr
-cmake -GNinja %cmake_flags% -DLLVM_BUILD_INSTRUMENTED=IR ..\llvm-project\llvm || exit /b 1
-ninja clang || ninja clang || ninja clang || exit /b 1
-cd ..
-REM Use that to buid some part of llvm to generate a profile.
-mkdir build64.train
-cd build64.train
-set instrumented_clang=%build_dir:\=/%/build64.instr/bin/clang-cl.exe
-cmake -GNinja %cmake_flags% ^
-  -DCMAKE_C_COMPILER=%instrumented_clang% ^
-  -DCMAKE_CXX_COMPILER=%instrumented_clang% ^
-  -DLLVM_ENABLE_PROJECTS=clang ^
-  -DLLVM_TARGETS_TO_BUILD=X86 ^
-  ..\llvm-project\llvm || exit /b 1
-REM Drop profiles from running cmake, those are not representative.
-del ..\build64.instr\profiles\*.profraw
-ninja tools/clang/lib/Sema/CMakeFiles/obj.clangSema.dir/Sema.cpp.obj
-cd ..
-set profile=%build_dir:\=/%/profile.profdata
-%stage0_bin_dir%\llvm-profdata merge -output=%profile% build64.instr\profiles\*.profraw || exit /b 1
-set cmake_flags=%cmake_flags% -DLLVM_PROFDATA_FILE=%profile%
-
 mkdir build64
 cd build64
-cmake -GNinja %cmake_flags% ..\llvm-project\llvm || exit /b 1
+call :do_generate_profile || exit /b 1
+cmake -GNinja %cmake_flags% %cmake_profile_flag% ..\llvm-project\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
@@ -413,8 +392,38 @@ ninja install || exit /b 1
 set libxmldir=%cd%\install
 set "libxmldir=%libxmldir:\=/%"
 cd ..
-
 exit /b 0
+
+::==============================================================================
+:: Generate a PGO profile.
+::==============================================================================
+:do_generate_profile
+REM Build Clang with instrumentation.
+mkdir instrument
+cd instrument
+cmake -GNinja %cmake_flags% -DLLVM_TARGETS_TO_BUILD=Native ^
+  -DLLVM_BUILD_INSTRUMENTED=IR ..\..\llvm-project\llvm || exit /b 1
+ninja clang || ninja clang || ninja clang || exit /b 1
+set instrumented_clang=%cd:\=/%/bin/clang-cl.exe
+cd ..
+REM Use that to build part of llvm to generate a profile.
+mkdir train
+cd train
+cmake -GNinja %cmake_flags% ^
+  -DCMAKE_C_COMPILER=%instrumented_clang% ^
+  -DCMAKE_CXX_COMPILER=%instrumented_clang% ^
+  -DLLVM_ENABLE_PROJECTS=clang ^
+  -DLLVM_TARGETS_TO_BUILD=Native ^
+  ..\..\llvm-project\llvm || exit /b 1
+REM Drop profiles generated from running cmake; those are not representative.
+del ..\instrument\profiles\*.profraw
+ninja tools/clang/lib/Sema/CMakeFiles/obj.clangSema.dir/Sema.cpp.obj
+cd ..
+set profile=%cd:\=/%/profile.profdata
+%stage0_bin_dir%\llvm-profdata merge -output=%profile% instrument\profiles\*.profraw || exit /b 1
+set cmake_profile_flag=-DLLVM_PROFDATA_FILE=%profile%
+exit /b 0
+
 ::=============================================================================
 :: Parse command line arguments.
 :: The format for the arguments is:
