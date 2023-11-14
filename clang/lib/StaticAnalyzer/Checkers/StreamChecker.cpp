@@ -172,13 +172,33 @@ using FnCheck = std::function<void(const StreamChecker *, const FnDescription *,
                                    const CallEvent &, CheckerContext &)>;
 
 using ArgNoTy = unsigned int;
-static const ArgNoTy ArgNone = std::numeric_limits<ArgNoTy>::max();
+const ArgNoTy ArgNone = std::numeric_limits<ArgNoTy>::max();
 
 struct FnDescription {
   FnCheck PreFn;
   FnCheck EvalFn;
   ArgNoTy StreamArgNo;
 };
+
+[[nodiscard]] ProgramStateRef
+escapeArgsAfterIndex(ProgramStateRef State, CheckerContext &C,
+                     const CallEvent &Call, unsigned FirstEscapingArgIndex) {
+  const auto *CE = Call.getOriginExpr();
+  assert(CE);
+
+  if (Call.getNumArgs() <= FirstEscapingArgIndex)
+    return State;
+
+  SmallVector<SVal> EscapingArgs;
+  EscapingArgs.reserve(Call.getNumArgs() - FirstEscapingArgIndex);
+  for (auto EscArgIdx :
+       llvm::seq<int>(FirstEscapingArgIndex, Call.getNumArgs()))
+    EscapingArgs.push_back(Call.getArgSVal(EscArgIdx));
+  State = State->invalidateRegions(EscapingArgs, CE, C.blockCount(),
+                                   C.getLocationContext(),
+                                   /*CausesPointerEscape=*/false);
+  return State;
+}
 
 /// Get the value of the stream argument out of the passed call event.
 /// The call should contain a function that is described by Desc.
@@ -397,6 +417,18 @@ private:
         0}},
       {{{"fileno"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalFileno, 0}},
+      {{{"getc"}, 1},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
+        std::bind(&StreamChecker::evalFgetx, _1, _2, _3, _4, true), 0}},
+      {{{"vfscanf"}, 3},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
+        &StreamChecker::evalFscanf, 0}},
+      {{{"putc"}, 2},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
+        std::bind(&StreamChecker::evalFputx, _1, _2, _3, _4, true), 1}},
+      {{{"vfprintf"}, 3},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
+        &StreamChecker::evalFprintf, 0}},
   };
 
   CallDescriptionMap<FnDescription> FnTestDescriptions = {
@@ -1020,6 +1052,9 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
   StreamOperationEvaluator E(C);
   if (!E.Init(Desc, Call, C, State))
     return;
+
+  // The pointers passed to fscanf escape and get invalidated.
+  State = escapeArgsAfterIndex(State, C, Call, /*FirstEscapingArgIndex=*/2);
 
   // Add the success state.
   // In this context "success" means there is not an EOF or other read error

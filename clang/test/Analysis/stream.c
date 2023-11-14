@@ -1,8 +1,11 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection -verify %s
 
 #include "Inputs/system-header-simulator.h"
+#include "Inputs/system-header-simulator-for-valist.h"
 
 void clang_analyzer_eval(int);
+void clang_analyzer_dump_char(char);
+void clang_analyzer_dump_int(int);
 
 void check_fread(void) {
   FILE *fp = tmpfile();
@@ -65,9 +68,21 @@ void check_fseek(void) {
   fclose(fp);
 }
 
+void check_fseeko(void) {
+  FILE *fp = tmpfile();
+  fseeko(fp, 0, 0); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
 void check_ftell(void) {
   FILE *fp = tmpfile();
   ftell(fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_ftello(void) {
+  FILE *fp = tmpfile();
+  ftello(fp); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
@@ -135,6 +150,15 @@ void f_seek(void) {
     return;
   fseek(p, 1, SEEK_SET); // no-warning
   fseek(p, 1, 3); // expected-warning {{The whence argument to fseek() should be SEEK_SET, SEEK_END, or SEEK_CUR}}
+  fclose(p);
+}
+
+void f_seeko(void) {
+  FILE *p = fopen("foo", "r");
+  if (!p)
+    return;
+  fseeko(p, 1, SEEK_SET); // no-warning
+  fseeko(p, 1, 3); // expected-warning {{The whence argument to fseek() should be SEEK_SET, SEEK_END, or SEEK_CUR}}
   fclose(p);
 }
 
@@ -338,4 +362,108 @@ void fflush_on_open_failed_stream(void) {
     return;
   }
   fclose(F);
+}
+
+void test_fscanf_eof() {
+  FILE *F1 = tmpfile();
+  if (!F1)
+    return;
+
+  int a;
+  unsigned b;
+  int ret = fscanf(F1, "%d %u", &a, &b);
+  char c = fgetc(F1); // expected-warning {{Read function called when stream is in EOF state. Function has no effect}}
+  // expected-warning@-1 {{File position of the stream might be 'indeterminate' after a failed operation. Can cause undefined behavior}}
+  fclose(F1);
+}
+
+void test_fscanf_escape() {
+  FILE *F1 = tmpfile();
+  if (!F1)
+    return;
+
+  int a = 48;
+  unsigned b = 127;
+  char buffer[] = "FSCANF"; // 70 83 67 65 78 70
+
+  clang_analyzer_dump_int(a); // expected-warning {{48 S32b}}
+  clang_analyzer_dump_int(b); // expected-warning {{127 S32b}}
+  clang_analyzer_dump_char(buffer[2]); // expected-warning {{67 S8b}}
+
+  int ret = fscanf(F1, "%d %u %s", &a, &b, buffer);
+  clang_analyzer_dump_int(a); // expected-warning {{conj_$}}
+  clang_analyzer_dump_int(b); // expected-warning {{conj_$}}
+  clang_analyzer_dump_char(buffer[2]); // expected-warning {{derived_$}}
+
+  if (ret != EOF) {
+    char c = fgetc(F1); // ok
+  }
+
+  fclose(F1);
+}
+
+void test_fputc() {
+  FILE *F1 = tmpfile();
+  if (!F1)
+    return;
+
+  char a = 'y'; // 'y' = 121 ASCII
+  char r = fputc(a, F1);
+  if (r != EOF) {
+    clang_analyzer_dump_char(r); // expected-warning {{121 S8b}}
+    char z = fgetc(F1);
+  } else {
+    clang_analyzer_dump_char(r);  // expected-warning {{-1 S8b}}
+  }
+
+  fclose(F1);
+}
+
+void test_fputs() {
+  FILE *F1 = tmpfile();
+  if (!F1)
+    return;
+
+  char buffer[] = "HELLO";
+  int r = fputs(buffer, F1);
+  if (r >= 0) {
+    // fputs does not invalidate the input buffer (72 is ascii for 'H')
+    clang_analyzer_dump_char(buffer[0]); // expected-warning {{72 S8b}}
+  } else if (r == EOF) {
+    // fputs does not invalidate the input buffer, *and* this branch
+    // can happen
+    clang_analyzer_dump_char(buffer[0]); // expected-warning {{72 S8b}}
+  } else {
+    // This branch can not happen
+    int *p = NULL;
+    *p = 0;
+  }
+
+  fclose(F1);
+}
+
+void test_fprintf() {
+  FILE *F1 = tmpfile();
+  if (!F1)
+    return;
+
+  unsigned a = 42;
+  char *output = "HELLO";
+  int r = fprintf(F1, "%s\t%u\n", output, a);
+  // fprintf does not invalidate any of its input
+  // 69 is ascii for 'E'
+  clang_analyzer_dump_int(a); // expected-warning {{42 S32b}}
+  clang_analyzer_dump_char(output[1]); // expected-warning {{69 S8b}}
+  if (r < 0) {
+    // Failure
+    fprintf(F1, "%s\t%u\n", output, a); // expected-warning {{File position of the stream might be 'indeterminate' after a failed operation. Can cause undefined behavior}}
+  } else {
+    char buffer[10];
+    fscanf(F1, "%s", buffer);
+    if (fseek(F1, 0, SEEK_SET) == 0) {
+      fprintf(F1, "%s\t%u\n", buffer, a); // ok
+    }
+  }
+
+  fclose(F1);
 }
