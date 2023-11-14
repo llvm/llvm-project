@@ -10,8 +10,8 @@
 // file does not yet support:
 //   - C++ modules TS
 
-#include <__assert>
-#define DEMANGLE_ASSERT(expr, msg) _LIBCPP_ASSERT_UNCATEGORIZED(expr, msg)
+#include "abort_message.h"
+#define DEMANGLE_ASSERT(expr, msg) _LIBCXXABI_ASSERT(expr, msg)
 
 #include "demangle/DemangleConfig.h"
 #include "demangle/ItaniumDemangle.h"
