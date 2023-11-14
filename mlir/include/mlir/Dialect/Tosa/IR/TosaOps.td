@@ -2289,8 +2289,8 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
     BoolAttr:$scale32,
     BoolAttr:$double_round,
     BoolAttr:$per_channel,
-    DefaultValuedOptionalAttr<BoolAttr, "false">:$input_unsigned,
-    DefaultValuedOptionalAttr<BoolAttr, "false">:$output_unsigned
+    BoolAttr: $input_unsigned,
+    BoolAttr: $output_unsigned
   );
 
   let results = (outs
