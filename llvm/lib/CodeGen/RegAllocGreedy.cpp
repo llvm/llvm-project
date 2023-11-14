@@ -774,15 +774,16 @@ bool RAGreedy::growRegion(GlobalSplitCandidate &Cand) {
       // negative bias on through blocks to prevent unwanted liveness on loop
       // backedges.
       bool PrefSpill = true;
-      if (SA->looksLikeLoopIV() && NewBlocks.size() == 3) {
-        // NewBlocks==3 means we are (possible) adding a Header + start+end of
-        // two loop-internal blocks. If the block is indeed a header, don't make
-        // the newblocks as PrefSpill to allow the variable to be live in
-        // header<->latch.
+      if (SA->looksLikeLoopIV() && NewBlocks.size() >= 2) {
+        // Check that the current bundle is adding a Header + start+end of
+        // loop-internal blocks. If the block is indeed a header, don't make
+        // the NewBlocks as PrefSpill to allow the variable to be live in
+        // Header<->Latch.
         MachineLoop *L = Loops->getLoopFor(MF->getBlockNumbered(NewBlocks[0]));
-        if (L && L->getHeader()->getNumber() == NewBlocks[0] &&
-            L == Loops->getLoopFor(MF->getBlockNumbered(NewBlocks[1])) &&
-            L == Loops->getLoopFor(MF->getBlockNumbered(NewBlocks[2])))
+        if (L && L->getHeader()->getNumber() == (int)NewBlocks[0] &&
+            all_of(NewBlocks.drop_front(), [&](unsigned Block) {
+              return L == Loops->getLoopFor(MF->getBlockNumbered(Block));
+            }))
           PrefSpill = false;
       }
       if (PrefSpill)
