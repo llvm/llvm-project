@@ -1,0 +1,16 @@
+{
+  "sources": [
+    {
+      "type": "git",
+      "repo_url": "https://github.com/torvalds/linux",
+      "commit_sha": "a92b7d26c743b9dc06d520f863d624e94978a1d9"
+    }
+  ],
+  "folder_name": "linux",
+  "build_system": "manual",
+  "commands": [
+    "make CC=clang KCFLAGS='-Xclang -fembed-bitcode=all' allyesconfig",
+    "make CC=clang KCFLAGS='-Xclang -fembed-bitcode=all' -j128"
+  ],
+  "license": "GPL-2.0-only"
+}
