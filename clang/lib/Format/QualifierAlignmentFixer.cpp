@@ -345,6 +345,8 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
         TypeToken = Next->getNextNonComment()->getNextNonComment();
       }
     }
+    if (Next->is(tok::kw_auto))
+      TypeToken = Next;
 
     // Place the Qualifier at the end of the list of qualifiers.
     while (isQualifier(TypeToken->getNextNonComment())) {
@@ -445,6 +447,9 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
           PrePrevious && PrePrevious->is(tok::coloncolon)) {
         return false;
       }
+
+      if (Tok->endsSequence(tok::kw_auto, tok::identifier))
+        return false;
 
       return true;
     };
