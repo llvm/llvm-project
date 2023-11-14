@@ -120,6 +120,12 @@ public:
     return FeatureBits[Feature];
   }
 
+  bool hasMacroFusion(unsigned MacroFusion) const {
+    const MacroFusionBitset *MacroFusionBits =
+        CPUSchedModel->getMacroFusionBits();
+    return MacroFusionBits && MacroFusionBits->test(MacroFusion);
+  }
+
 protected:
   /// Initialize the scheduling model and feature bits.
   ///
@@ -295,6 +301,13 @@ public:
 
   /// \return if target want to issue a prefetch in address space \p AS.
   virtual bool shouldPrefetchAddressSpace(unsigned AS) const;
+
+  /// Enable macro fusion for this subtarget.
+  virtual bool enableMacroFusion() const {
+    const MacroFusionBitset *MacroFusionBits =
+        CPUSchedModel->getMacroFusionBits();
+    return MacroFusionBits && MacroFusionBits->any();
+  }
 };
 
 } // end namespace llvm

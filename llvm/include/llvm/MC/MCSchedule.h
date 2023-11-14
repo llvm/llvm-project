@@ -14,6 +14,7 @@
 #ifndef LLVM_MC_MCSCHEDULE_H
 #define LLVM_MC_MCSCHEDULE_H
 
+#include "llvm/ADT/Bitset.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
@@ -196,6 +197,9 @@ struct MCExtraProcessorInfo {
   unsigned StoreQueueID;
 };
 
+const unsigned MaxMacroFusions = 256;
+using MacroFusionBitset = Bitset<MaxMacroFusions>;
+
 /// Machine model for scheduling, bundling, and heuristics.
 ///
 /// The machine model directly provides basic information about the
@@ -325,8 +329,13 @@ struct MCSchedModel {
   const InstrItinerary *InstrItineraries;
 
   const MCExtraProcessorInfo *ExtraProcessorInfo;
+  const MacroFusionBitset *MacroFusionBits;
 
   bool hasExtraProcessorInfo() const { return ExtraProcessorInfo; }
+
+  const MacroFusionBitset *getMacroFusionBits() const {
+    return MacroFusionBits;
+  }
 
   unsigned getProcessorID() const { return ProcID; }
 

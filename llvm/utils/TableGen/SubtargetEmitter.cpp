@@ -133,6 +133,8 @@ class SubtargetEmitter {
   void EmitMCInstrAnalysisPredicateFunctions(raw_ostream &OS);
 
   void EmitSchedModel(raw_ostream &OS);
+  void emitMacroFusionBits(const CodeGenProcModel &ProcModel, raw_ostream &OS);
+  void emitGetMacroFusions(const std::string &ClassName, raw_ostream &OS);
   void EmitHwModeCheck(const std::string &ClassName, raw_ostream &OS);
   void ParseFeaturesFunction(raw_ostream &OS);
 
@@ -869,6 +871,17 @@ void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
   OS << "};\n";
 }
 
+void SubtargetEmitter::emitMacroFusionBits(const CodeGenProcModel &ProcModel,
+                                           raw_ostream &OS) {
+  OS << "\nstatic const MacroFusionBitset " << ProcModel.ModelName
+     << "MacroFusionBits  = {\n";
+  std::vector<std::string> Predicates;
+  for (auto *R : ProcModel.MacroFusions)
+    Predicates.push_back("  " + Target + "::" + R->getNameInitAsString());
+  OS << llvm::join(Predicates, ",\n");
+  OS << "\n};\n";
+}
+
 // Find the WriteRes Record that defines processor resources for this
 // SchedWrite.
 Record *SubtargetEmitter::FindWriteResources(
@@ -1441,6 +1454,8 @@ void SubtargetEmitter::EmitProcessorModels(raw_ostream &OS) {
     else if(!PM.ProcResourceDefs.empty())
       PrintFatalError(PM.ModelDef->getLoc(), "SchedMachineModel defines "
                     "ProcResources without defining WriteRes SchedWriteRes");
+    if (PM.hasMacroFusions())
+      emitMacroFusionBits(PM, OS);
 
     // Begin processor itinerary properties
     OS << "\n";
@@ -1487,7 +1502,11 @@ void SubtargetEmitter::EmitProcessorModels(raw_ostream &OS) {
     if (PM.hasExtraProcessorInfo())
       OS << "  &" << PM.ModelName << "ExtraInfo,\n";
     else
-      OS << "  nullptr // No extra processor descriptor\n";
+      OS << "  nullptr, // No extra processor descriptor\n";
+    if (PM.hasMacroFusions()) {
+      OS << "  &" << PM.ModelName << "MacroFusionBits,\n";
+    } else
+      OS << "  nullptr, // No macro fusions\n";
     OS << "};\n";
   }
 }
@@ -1770,6 +1789,27 @@ void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
     PE.expandSTIPredicate(OS, Fn);
 }
 
+void SubtargetEmitter::emitGetMacroFusions(const std::string &ClassName,
+                                           raw_ostream &OS) {
+  OS << "std::vector<MacroFusionPredTy> " << ClassName
+     << "::getMacroFusions() const {\n";
+  OS.indent(2) << "switch(getSchedModel().getProcessorID()) {\n";
+  for (auto &Proc : TGT.getSchedModels().procModels()) {
+    if (Proc.hasMacroFusions()) {
+      OS.indent(4) << "case " << Proc.Index << ": // " << Proc.ModelName
+                   << "\n";
+      OS.indent(4) << "  return {";
+      std::vector<std::string> Predicates;
+      for (auto *R : Proc.MacroFusions)
+        Predicates.push_back("is" + R->getNameInitAsString());
+      OS << llvm::join(Predicates, ", ");
+      OS << "};\n";
+    }
+  }
+  OS.indent(2) << "}\n";
+  OS.indent(2) << "return {};\n}\n";
+}
+
 void SubtargetEmitter::EmitHwModeCheck(const std::string &ClassName,
                                        raw_ostream &OS) {
   const CodeGenHwModes &CGH = TGT.getHwModes();
@@ -1987,6 +2027,9 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << " const;\n";
   if (TGT.getHwModes().getNumModeIds() > 1)
     OS << "  unsigned getHwMode() const override;\n";
+  if (TGT.getSchedModels().hasMacroFusions())
+    OS << "  std::vector<MacroFusionPredTy> getMacroFusions() const "
+          "override;\n";
 
   STIPredicateExpander PE(Target);
   PE.setByRef(false);
@@ -2044,6 +2087,8 @@ void SubtargetEmitter::run(raw_ostream &OS) {
 
   EmitSchedModelHelpers(ClassName, OS);
   EmitHwModeCheck(ClassName, OS);
+  if (TGT.getSchedModels().hasMacroFusions())
+    emitGetMacroFusions(ClassName, OS);
 
   OS << "} // end namespace llvm\n\n";
 

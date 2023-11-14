@@ -30,6 +30,8 @@ class MacroFusionPredicatorEmitter {
   RecordKeeper &Records;
   CodeGenTarget Target;
 
+  void emitMacroFusionEnum(std::vector<Record *> Fusions, PredicateExpander &PE,
+                           raw_ostream &OS);
   void emitMacroFusionDecl(std::vector<Record *> Fusions, PredicateExpander &PE,
                            raw_ostream &OS);
   void emitMacroFusionImpl(std::vector<Record *> Fusions, PredicateExpander &PE,
@@ -49,6 +51,33 @@ public:
   void run(raw_ostream &OS);
 };
 } // End anonymous namespace.
+
+void MacroFusionPredicatorEmitter::emitMacroFusionEnum(
+    std::vector<Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
+  unsigned N = Fusions.size();
+  if (N == 0)
+    return;
+  // 256 is `MaxMacroFusions` defined in MCSchedule.h
+  if (N > 256)
+    PrintFatalError("Too many macro fusions! Please bump MaxMacroFusions!");
+
+  OS << "#ifdef GET_MACRO_FUSION_ENUM\n\n";
+  OS << "namespace llvm {\n";
+  OS << "namespace " << Target.getName() << " {\n";
+  OS << "enum {\n";
+
+  for (unsigned Index = 0; Index < N; Index++) {
+    Record *Fusion = Fusions[Index];
+    // Get and emit name
+    OS << "  " << Fusion->getName() << " = " << Index << ",\n";
+  }
+
+  OS << "};\n";
+  OS << "} // end namespace " << Target.getName() << "\n";
+  OS << "} // end namespace llvm\n\n";
+  OS << "#endif\n";
+  OS << "#undef GET_MACRO_FUSION_ENUM\n\n";
+}
 
 void MacroFusionPredicatorEmitter::emitMacroFusionDecl(
     std::vector<Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
@@ -196,6 +225,7 @@ void MacroFusionPredicatorEmitter::run(raw_ostream &OS) {
   std::vector<Record *> Fusions = Records.getAllDerivedDefinitions("Fusion");
   // Sort macro fusions by name.
   sort(Fusions, LessRecord());
+  emitMacroFusionEnum(Fusions, PE, OS);
   emitMacroFusionDecl(Fusions, PE, OS);
   emitMacroFusionImpl(Fusions, PE, OS);
 }

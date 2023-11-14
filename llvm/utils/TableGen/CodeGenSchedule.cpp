@@ -226,6 +226,9 @@ CodeGenSchedModels::CodeGenSchedModels(RecordKeeper &RK,
   // (For per-operand resources mapped to itinerary classes).
   collectProcUnsupportedFeatures();
 
+  // Find MacroFusion records for each processor.
+  collectMacroFusions();
+
   // Infer new SchedClasses from SchedVariant.
   inferSchedClasses();
 
@@ -1168,6 +1171,12 @@ bool CodeGenSchedModels::hasItineraries() const {
   return false;
 }
 
+bool CodeGenSchedModels::hasMacroFusions() const {
+  return llvm::any_of(ProcModels, [](const CodeGenProcModel &PM) {
+    return PM.hasMacroFusions();
+  });
+}
+
 // Gather the processor itineraries.
 void CodeGenSchedModels::collectProcItins() {
   LLVM_DEBUG(dbgs() << "\n+++ PROBLEM ITINERARIES (collectProcItins) +++\n");
@@ -1236,6 +1245,12 @@ void CodeGenSchedModels::collectProcUnsupportedFeatures() {
     append_range(
         ProcModel.UnsupportedFeaturesDefs,
         ProcModel.ModelDef->getValueAsListOfDefs("UnsupportedFeatures"));
+}
+
+void CodeGenSchedModels::collectMacroFusions() {
+  for (CodeGenProcModel &ProcModel : ProcModels)
+    append_range(ProcModel.MacroFusions,
+                 ProcModel.ModelDef->getValueAsListOfDefs("MacroFusions"));
 }
 
 /// Infer new classes from existing classes. In the process, this may create new

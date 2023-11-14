@@ -238,6 +238,10 @@ struct CodeGenProcModel {
   // This list is empty if the Processor has no UnsupportedFeatures.
   RecVec UnsupportedFeaturesDefs;
 
+  // List of MacroFusion.
+  // This list is empty if the Processor has no MacroFusion.
+  RecVec MacroFusions;
+
   // All read/write resources associated with this processor.
   RecVec WriteResDefs;
   RecVec ReadAdvanceDefs;
@@ -259,6 +263,8 @@ struct CodeGenProcModel {
                    Record *IDef) :
     Index(Idx), ModelName(std::move(Name)), ModelDef(MDef), ItinsDef(IDef),
     RetireControlUnit(nullptr), LoadQueue(nullptr), StoreQueue(nullptr) {}
+
+  bool hasMacroFusions() const { return !MacroFusions.empty(); }
 
   bool hasItineraries() const {
     return !ItinsDef->getValueAsListOfDefs("IID").empty();
@@ -508,6 +514,9 @@ public:
   // Return true if any processors have itineraries.
   bool hasItineraries() const;
 
+  // Return true if any processors have MacroFusions.
+  bool hasMacroFusions() const;
+
   // Get a SchedWrite from its index.
   const CodeGenSchedRW &getSchedWrite(unsigned Idx) const {
     assert(Idx < SchedWrites.size() && "bad SchedWrite index");
@@ -609,6 +618,8 @@ private:
   void collectProcItinRW();
 
   void collectProcUnsupportedFeatures();
+
+  void collectMacroFusions();
 
   void inferSchedClasses();
 

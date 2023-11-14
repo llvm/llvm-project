@@ -53,6 +53,7 @@
 include "llvm/Target/TargetItinerary.td"
 
 class Predicate; // Forward def
+class Fusion;
 
 // DAG operator that interprets the DAG args as Instruction defs.
 def instrs;
@@ -122,6 +123,9 @@ class SchedMachineModel {
   // using intervals via ResourceSegments (see
   // llvm/include/llvm/CodeGen/MachineScheduler.h).
   bit EnableIntervals = false;
+
+  // List of Fusion.
+  list<Fusion> MacroFusions = [];
 }
 
 def NoSchedModel : SchedMachineModel {
