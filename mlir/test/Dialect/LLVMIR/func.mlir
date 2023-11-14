@@ -250,9 +250,9 @@ module {
     llvm.return
   }
 
-  llvm.func @frame_pointer_roundtrip() frame_pointer="non-leaf" {
+  llvm.func @frame_pointer_roundtrip() attributes {frame_pointer = 1 : i64} {
     // CHECK: @frame_pointer_roundtrip()
-    // CHECK-SAME: frame_pointer="non-leaf"
+    // CHECK-SAME: attributes {frame_pointer = 1 : i64}
     llvm.return
   }
 }

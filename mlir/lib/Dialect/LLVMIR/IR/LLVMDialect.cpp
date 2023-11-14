@@ -2319,23 +2319,6 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
     result.addAttribute(getComdatAttrName(result.name), comdat);
   }
 
-  // Parse the optional frame_pointer
-  if (succeeded(parser.parseOptionalKeyword("frame_pointer"))) {
-    std::string string;
-    
-    if (parser.parseEqual() || parser.parseString(&string))
-      return failure();
-    if (!LLVM::symbolizeFramePointerKind(string))
-    { 
-      llvm::outs() << "failure: frame-pointer option not recognized: " << string << "\n";
-      return failure();
-    }
-
-    result.addAttribute(getFramePointerAttrName(result.name), 
-        LLVM::FramePointerKindAttr::get(parser.getContext(),
-                                   LLVM::symbolizeFramePointerKind(string).value()));
-  }
-
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
   function_interface_impl::addArgAndResultAttrs(
@@ -2390,17 +2373,13 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
   // Print the optional comdat selector.
   if (auto comdat = getComdat())
     p << " comdat(" << *comdat << ')';
-  
-  // Print the optional frame pointer option.
-  if (std::optional<FramePointerKind> frame_pointer = getFramePointer())
-    p << " frame_pointer=" << "\"" << stringifyFramePointerKind(frame_pointer.value()) << "\"";
 
   function_interface_impl::printFunctionAttributes(
       p, *this,
       {getFunctionTypeAttrName(), getArgAttrsAttrName(), getResAttrsAttrName(),
        getLinkageAttrName(), getCConvAttrName(), getVisibility_AttrName(),
        getComdatAttrName(), getUnnamedAddrAttrName(),
-       getVscaleRangeAttrName(), getFramePointerAttrName()});
+       getVscaleRangeAttrName()});
 
   // Print the body if this is not an external function.
   Region &body = getBody();
