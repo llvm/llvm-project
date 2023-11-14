@@ -3904,11 +3904,12 @@ void Preprocessor::HandleEmbedDirectiveImpl(
 
 void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
                                         const FileEntry *LookupFromFile) {
-  if (!LangOpts.C23 || !LangOpts.CPlusPlus26) {
-    auto EitherDiag = (LangOpts.CPlusPlus ? diag::warn_cxx26_pp_embed
-                                          : diag::warn_c23_pp_embed);
-    Diag(EmbedTok, EitherDiag);
-  }
+  // Give the usual extension/compatibility warnings.
+  if (LangOpts.C23)
+    Diag(EmbedTok, diag::warn_compat_pp_embed_directive);
+  else
+    Diag(EmbedTok, diag::ext_pp_embed_directive)
+        << (LangOpts.CPlusPlus ? /*Clang*/1 : /*C23*/0);
 
   // Parse the filename header
   Token FilenameTok;

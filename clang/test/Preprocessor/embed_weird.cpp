@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -fsyntax-only -embed-dir=%S/Inputs -verify
-// RUN: %clang_cc1 -x c %s -fsyntax-only -embed-dir=%S/Inputs -verify
+// RUN: %clang_cc1 %s -fsyntax-only -embed-dir=%S/Inputs -verify -Wno-c23-extensions
+// RUN: %clang_cc1 -x c -std=c23 %s -fsyntax-only -embed-dir=%S/Inputs -verify
 #embed <media/empty>
 ;
 

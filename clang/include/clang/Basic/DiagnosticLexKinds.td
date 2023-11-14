@@ -422,22 +422,16 @@ def warn_cxx23_compat_warning_directive : Warning<
 def warn_c23_compat_warning_directive : Warning<
   "#warning is incompatible with C standards before C23">,
   InGroup<CPre23Compat>, DefaultIgnore;
-def warn_c23_pp_embed : Warning<
-  "'__has_embed' is a C23 extension">,
-  InGroup<CPre23Compat>,
-  DefaultIgnore;
-def warn_c23_pp_has_embed : Warning<
-  "'__has_embed' is a C23 extension">,
-  InGroup<CPre23Compat>,
-  DefaultIgnore;
-def warn_cxx26_pp_embed : Warning<
-  "'__has_embed' is a C++26 extension">,
-  InGroup<CXXPre26Compat>,
-  DefaultIgnore;
-def warn_cxx26_pp_has_embed : Warning<
-  "'__has_embed' is a C++26 extension">,
-  InGroup<CXXPre26Compat>,
-  DefaultIgnore;
+def ext_pp_embed_directive : ExtWarn<
+  "'#embed' is a %select{C23|Clang}0 extension">, InGroup<C23>;
+def warn_compat_pp_embed_directive : Warning<
+  "'#embed' is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
+def ext_pp_has_embed : ExtWarn<
+  "'__has_embed' is a %select{C23|Clang}0 extension">, InGroup<C23>;
+def warn_compat_pp_has_embed : Warning<
+  "'__has_embed' is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
   "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;

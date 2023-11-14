@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -embed-dir=%S/Inputs -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c23 %s -embed-dir=%S/Inputs -fsyntax-only -verify
 // expected-no-diagnostics
 
 const char data[] = {
@@ -8,11 +8,11 @@ const char empty_data[] = {
 #embed <media/empty> prefix('\xA', )
 1
 };
-_Static_assert(sizeof(data) == 2, "");
-_Static_assert('\xA' == data[0], "");
-_Static_assert('b' == data[1], "");
-_Static_assert(sizeof(empty_data) == 1, "");
-_Static_assert(1 == empty_data[0], "");
+static_assert(sizeof(data) == 2);
+static_assert('\xA' == data[0]);
+static_assert('b' == data[1]);
+static_assert(sizeof(empty_data) == 1);
+static_assert(1 == empty_data[0]);
 
 struct S {
   int x, y, z;
@@ -21,6 +21,6 @@ struct S {
 const struct S s = {
 #embed <single_byte.txt> prefix( .x = 100, .y = 10, )
 };
-_Static_assert(s.x == 100, "");
-_Static_assert(s.y == 10, "");
-_Static_assert(s.z == 'b', "");
+static_assert(s.x == 100);
+static_assert(s.y == 10);
+static_assert(s.z == 'b');

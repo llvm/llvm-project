@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -E -CC -verify
+// RUN: %clang_cc1 %s -std=c23 -E -verify
 
 #embed __FILE__ unrecognized
 // expected-warning@-1 {{unknown embed preprocessor parameter 'unrecognized' ignored}}

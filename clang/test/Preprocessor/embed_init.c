@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -fsyntax-only -embed-dir=%S/Inputs -CC -verify
+// RUN: %clang_cc1 -std=c23 %s -fsyntax-only -embed-dir=%S/Inputs -verify
+// expected-no-diagnostics
 
 typedef struct kitty {
 	int purr;
@@ -21,8 +22,7 @@ const kitty_kitty kit_kit = {
 #embed <jk.txt>
 };
 
-_Static_assert(meow == 'b', "");
-_Static_assert(kit.purr == 'b', "");
-_Static_assert(kit_kit.here == 'j', "");
-_Static_assert(kit_kit.kit.purr == 'k', "");
-// expected-no-diagnostics
+static_assert(meow == 'b');
+static_assert(kit.purr == 'b');
+static_assert(kit_kit.here == 'j');
+static_assert(kit_kit.kit.purr == 'k');

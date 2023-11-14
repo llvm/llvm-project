@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -E -CC -verify
+// RUN: %clang_cc1 -std=c23 %s -E -verify
 
 #if !__has_embed(__FILE__)
 #error 1

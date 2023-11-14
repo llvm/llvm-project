@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -E -embed-dir=%S/Inputs -CC -verify
+// RUN: %clang_cc1 -std=c23 %s -E -embed-dir=%S/Inputs -verify
+// expected-no-diagnostics
 
 #if !__has_embed(__FILE__)
 #error 1
@@ -31,4 +32,3 @@
 #elif !__has_embed(<media/art.txt> if_empty(meow))
 #error 14
 #endif
-// expected-no-diagnostics

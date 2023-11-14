@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 %s -fsyntax-only -embed-dir=%S/Inputs -CC -verify
+// RUN: %clang_cc1 -std=c23 %s -fsyntax-only -embed-dir=%S/Inputs -verify
+// expected-no-diagnostics
 
 const char data[] = {
 #embed "single_byte.txt"
 };
-_Static_assert(sizeof(data) == 1, "");
-_Static_assert('b' == data[0], "");
-// expected-no-diagnostics
+static_assert(sizeof(data) == 1);
+static_assert('b' == data[0]);

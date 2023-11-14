@@ -1273,12 +1273,12 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
 /// EvaluateHasEmbed - Process a '__has_embed("foo" params...)' expression.
 /// Returns a filled optional with the value if successful; otherwise, empty.
 EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
-  // pedwarn for not being on C23
-  if (!LangOpts.C23 || !LangOpts.CPlusPlus26) {
-    auto EitherDiag = (LangOpts.CPlusPlus ? diag::warn_cxx26_pp_has_embed
-                                          : diag::warn_c23_pp_has_embed);
-    Diag(Tok, EitherDiag);
-  }
+  // Give the usual extension/compatibility warnings.
+  if (LangOpts.C23)
+    Diag(Tok, diag::warn_compat_pp_has_embed);
+  else
+    Diag(Tok, diag::ext_pp_has_embed)
+        << (LangOpts.CPlusPlus ? /*Clang*/ 1 : /*C23*/ 0);
 
   // Save the location of the current token.  If a '(' is later found, use
   // that location.  If not, use the end of this location instead.
