@@ -15,7 +15,7 @@ class FormatAPITestCase(TestBase):
         error = lldb.SBError()
         format = lldb.SBFormat("${bad}", error)
         self.assertIn("invalid top level item 'bad'", error.GetCString())
-        self.assertFalse(format) # We expect an invalid object back if we have an error
+        self.assertFalse(format)  # We expect an invalid object back if we have an error
         self.assertTrue(error.Fail())
 
         format = lldb.SBFormat("${frame.index}", error)
