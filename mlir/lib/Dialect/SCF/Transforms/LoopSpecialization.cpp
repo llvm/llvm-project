@@ -106,7 +106,11 @@ static void specializeForLoopForUnrolling(ForOp op) {
   op.erase();
 }
 
-static LogicalResult splitLoopHelper(RewriterBase &b, scf::ForOp &forOp,
+/// Create a new for loop for the remaining iterations (partiaIteration)
+/// after a for loop has been peeled. This is followed by correcting the
+/// loop bounds for both loops given the index (splitBound) where the
+/// iteration space is to be split up.
+static LogicalResult splitLoopHelper(RewriterBase &b, scf::ForOp forOp,
                                      scf::ForOp &partialIteration,
                                      Value &splitBound) {
   RewriterBase::InsertionGuard guard(b);
@@ -135,6 +139,7 @@ static LogicalResult splitLoopHelper(RewriterBase &b, scf::ForOp &forOp,
   return success();
 }
 
+/// Convert single-iteration for loop to if-else block.
 static scf::IfOp convertSingleIterFor(RewriterBase &b, scf::ForOp &forOp) {
   Location loc = forOp->getLoc();
   IRMapping mapping;
@@ -180,7 +185,7 @@ static LogicalResult continuousPeelForLoop(RewriterBase &b, ForOp forOp,
   auto stepInt = getConstantIntValue(forOp.getStep());
 
   // Step size must be a known positive constant greater than 1.
-  if (stepInt && stepInt <= static_cast<int64_t>(1))
+  if (!stepInt || stepInt <= static_cast<int64_t>(1))
     return failure();
 
   Value initialUb = forOp.getUpperBound();
@@ -249,6 +254,7 @@ static LogicalResult continuousPeelForLoop(RewriterBase &b, ForOp forOp,
 
   assert(loops.size() > 0 && "There should be at least one loop available");
   if (convertSingleIterLoopsToIf) {
+    // Loops following the first loop will always be single-iteration.
     for (size_t i = 1; i < loops.size(); ++i) {
       convertSingleIterFor(b, loops[i]);
     }
