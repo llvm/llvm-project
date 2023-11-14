@@ -861,9 +861,15 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
 
   for (auto operand : llvm::make_filter_range(op->getOperands(), isMemref)) {
     if (op.getEffectOnValue<MemoryEffects::Free>(operand).has_value()) {
-      if (!op->hasAttr(BufferizationDialect::kManualDeallocation))
-        return op->emitError(
-            "memory free side-effect on MemRef value not supported!");
+      // This should not be an error because the ownership based buffer
+      // deallocation introduces deallocs itself, so running it twice over (say
+      // when piping IR over different tools with their own pipelines) crashes
+      // the compiler on perfectly valid code.
+      if (!op->hasAttr(BufferizationDialect::kManualDeallocation)) {
+        state.resetOwnerships(operand, block);
+        state.updateOwnership(operand, buildBoolValue(builder, op.getLoc(), false));
+        continue;
+      }
 
       // Buffers that were allocated under "manual deallocation" may be
       // manually deallocated. We insert a runtime assertion to cover certain
