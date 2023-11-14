@@ -37,7 +37,7 @@
 "`P2447R6 <https://wg21.link/P2447R6>`__","LWG","``std::span`` over an initializer list","Kona November 2023","","",""
 "`P2821R5 <https://wg21.link/P2821R5>`__","LWG","``span.at()``","Kona November 2023","","",""
 "`P2868R3 <https://wg21.link/P2868R3>`__","LWG","Remove Deprecated ``std::allocator`` Typedef From C++26","Kona November 2023","","",""
-"`P2870R3 <https://wg21.link/P2870R3>`__","LWG","Remove ``basic_string::reserve()`` From C++26","Kona November 2023","","",""
+"`P2870R3 <https://wg21.link/P2870R3>`__","LWG","Remove ``basic_string::reserve()`` From C++26","Kona November 2023","|Complete|","18.0",""
 "`P2871R3 <https://wg21.link/P2871R3>`__","LWG","Remove Deprecated Unicode Conversion Facets from C++26","Kona November 2023","|Complete|","18.0",""
 "`P2819R2 <https://wg21.link/P2819R2>`__","LWG","Add tuple protocol to complex","Kona November 2023","","",""
 "`P2937R0 <https://wg21.link/P2937R0>`__","LWG","Freestanding: Remove ``strtok``","Kona November 2023","","",""
