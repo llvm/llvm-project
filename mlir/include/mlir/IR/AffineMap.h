@@ -648,9 +648,9 @@ SmallVector<T> applyPermutationMap(AffineMap map, llvm::ArrayRef<T> source) {
   SmallVector<T> result;
   result.reserve(map.getNumResults());
   for (AffineExpr expr : map.getResults()) {
-    if (auto dimExpr = expr.dyn_cast<AffineDimExpr>()) {
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
       result.push_back(source[dimExpr.getPosition()]);
-    } else if (auto constExpr = expr.dyn_cast<AffineConstantExpr>()) {
+    } else if (auto constExpr = dyn_cast<AffineConstantExpr>(expr)) {
       assert(constExpr.getValue() == 0 &&
              "Unexpected constant in projected permutation map");
       result.push_back(0);
@@ -669,9 +669,9 @@ static void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
   for (const auto &exprs : exprsList) {
     for (auto expr : exprs) {
       expr.walk([&maxDim, &maxSym](AffineExpr e) {
-        if (auto d = e.dyn_cast<AffineDimExpr>())
+        if (auto d = dyn_cast<AffineDimExpr>(e))
           maxDim = std::max(maxDim, static_cast<int64_t>(d.getPosition()));
-        if (auto s = e.dyn_cast<AffineSymbolExpr>())
+        if (auto s = dyn_cast<AffineSymbolExpr>(e))
           maxSym = std::max(maxSym, static_cast<int64_t>(s.getPosition()));
       });
     }

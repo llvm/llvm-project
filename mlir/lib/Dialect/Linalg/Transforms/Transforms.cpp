@@ -176,8 +176,7 @@ packLinalgMetadataOnce(SmallVectorImpl<AffineMap> &indexingMaps,
     }
 
     // We can only pack AffineDimExpr atm.
-    if (!map.getResult(maybeOperandDimensionToPack.value())
-             .isa<AffineDimExpr>())
+    if (!isa<AffineDimExpr>(map.getResult(maybeOperandDimensionToPack.value())))
       return failure();
 
     // Add `newDim` to the results of the map.

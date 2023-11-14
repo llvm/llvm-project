@@ -65,7 +65,7 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
     visit(expr.getLHS());
     visit(expr.getRHS());
     if (expr.getKind() == mlir::AffineExprKind::Mul)
-      assert(expr.getRHS().cast<AffineConstantExpr>().getValue() > 0 &&
+      assert(cast<AffineConstantExpr>(expr.getRHS()).getValue() > 0 &&
              "nonpositive multiplying coefficient");
   }
   bool isTiled = false;
