@@ -874,27 +874,39 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // element if this is an array in an elemental call.
   hlfir::Entity actual = preparedActual.getActual(loc, builder);
 
-  // Handles the procedure pointer actual arguments.
+  // Handle the procedure pointer actual arguments.
   if (actual.isProcedurePointer()) {
+    // Procedure pointer actual to procedure pointer dummy.
     if (hlfir::isBoxProcAddressType(dummyType))
-      // Procedure pointer actual to procedure pointer dummy.
       return PreparedDummyArgument{actual, /*cleanups=*/{}};
+    // Procedure pointer actual to procedure dummy.
     if (hlfir::isFortranProcedureValue(dummyType)) {
-      // Procedure pointer actual to procedure dummy.
       actual = hlfir::derefPointersAndAllocatables(loc, builder, actual);
       return PreparedDummyArgument{actual, /*cleanups=*/{}};
     }
   }
 
-  // Do nothing if this is a procedure argument. It is already a
-  // fir.boxproc/fir.tuple<fir.boxproc, len> as it should.
+  // NULL() actual to procedure pointer dummy
+  if (Fortran::evaluate::IsNullProcedurePointer(expr) &&
+      hlfir::isBoxProcAddressType(dummyType)) {
+    auto boxTy{Fortran::lower::getUntypedBoxProcType(builder.getContext())};
+    auto tempBoxProc{builder.createTemporary(loc, boxTy)};
+    hlfir::Entity nullBoxProc(
+        fir::factory::createNullBoxProc(builder, loc, boxTy));
+    builder.create<fir::StoreOp>(loc, nullBoxProc, tempBoxProc);
+    return PreparedDummyArgument{tempBoxProc, /*cleanups=*/{}};
+  }
+
   if (actual.isProcedure()) {
+    // Procedure actual to procedure pointer dummy.
     if (hlfir::isBoxProcAddressType(dummyType)) {
-      // Procedure actual to procedure pointer dummy.
       auto tempBoxProc{builder.createTemporary(loc, actual.getType())};
       builder.create<fir::StoreOp>(loc, actual, tempBoxProc);
       return PreparedDummyArgument{tempBoxProc, /*cleanups=*/{}};
     }
+    // Procedure actual to procedure dummy.
+    // Do nothing if this is a procedure argument. It is already a
+    // fir.boxproc/fir.tuple<fir.boxproc, len> as it should.
     if (actual.getType() != dummyType)
       actual = fixProcedureDummyMismatch(loc, builder, actual, dummyType);
     return PreparedDummyArgument{actual, /*cleanups=*/{}};
