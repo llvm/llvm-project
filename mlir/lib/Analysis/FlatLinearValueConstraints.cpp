@@ -305,7 +305,7 @@ static bool detectAsMod(const FlatLinearConstraints &cst, unsigned pos,
     // `var_n`), we can proceed.
     // TODO: Handle AffineSymbolExpr as well. There is no reason to restrict it
     // to dims themselves.
-    auto dimExpr = dividendExpr.dyn_cast<AffineDimExpr>();
+    auto dimExpr = dyn_cast<AffineDimExpr>(dividendExpr);
     if (!dimExpr)
       continue;
 

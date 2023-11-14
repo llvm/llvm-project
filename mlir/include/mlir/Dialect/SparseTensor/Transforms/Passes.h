@@ -74,15 +74,14 @@ std::unique_ptr<Pass> createPreSparsificationRewritePass();
 
 /// Options for the Sparsification pass.
 struct SparsificationOptions {
-  SparsificationOptions(SparseParallelizationStrategy p, bool idxReduc,
-                        bool gpuLibgen, bool enableRT)
-      : parallelizationStrategy(p), enableIndexReduction(idxReduc),
-        enableGPULibgen(gpuLibgen), enableRuntimeLibrary(enableRT) {}
+  SparsificationOptions(SparseParallelizationStrategy p, bool gpuLibgen,
+                        bool enableRT)
+      : parallelizationStrategy(p), enableGPULibgen(gpuLibgen),
+        enableRuntimeLibrary(enableRT) {}
   SparsificationOptions()
       : SparsificationOptions(SparseParallelizationStrategy::kNone, false,
-                              false, true) {}
+                              true) {}
   SparseParallelizationStrategy parallelizationStrategy;
-  bool enableIndexReduction;
   bool enableGPULibgen;
   bool enableRuntimeLibrary;
 };

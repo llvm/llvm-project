@@ -1,4 +1,3 @@
-; REQUIRES: x86-registered-target
 ; REQUIRES: asserts
 ; RUN: llc -debug-only=isel %s -o /dev/null 2>&1 | FileCheck --match-full-lines %s
 

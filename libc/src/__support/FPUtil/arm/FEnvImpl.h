@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_ARM_FENVIMPL_H
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/macros/config.h" // For LIBC_INLINE
+#include "src/__support/macros/attributes.h" // For LIBC_INLINE
 
 #include <fenv.h>
 #include <stdint.h>
