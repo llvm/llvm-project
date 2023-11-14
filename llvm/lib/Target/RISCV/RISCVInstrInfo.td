@@ -1208,7 +1208,9 @@ def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
 }]>;
 def zexti32 : ComplexPattern<i64, 1, "selectZExtBits<32>">;
 def zexti16 : ComplexPattern<XLenVT, 1, "selectZExtBits<16>">;
+def zexti16i32 : ComplexPattern<i32, 1, "selectZExtBits<16>">;
 def zexti8 : ComplexPattern<XLenVT, 1, "selectZExtBits<8>">;
+def zexti8i32 : ComplexPattern<i32, 1, "selectZExtBits<8>">;
 
 def ext : PatFrags<(ops node:$A), [(sext node:$A), (zext node:$A)]>;
 
@@ -1862,6 +1864,12 @@ def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
           (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
 }
 
+class binop_allhusers<SDPatternOperator operator>
+    : PatFrag<(ops node:$lhs, node:$rhs),
+              (XLenVT (operator node:$lhs, node:$rhs)), [{
+  return hasAllHUsers(Node);
+}]>;
+
 // PatFrag to allow ADDW/SUBW/MULW/SLLW to be selected from i64 add/sub/mul/shl
 // if only the lower 32 bits of their result is used.
 class binop_allwusers<SDPatternOperator operator>
@@ -2006,6 +2014,11 @@ def as_i64imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
 }]>;
 
+def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
+  KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0), 0);
+  return Known.isNonNegative();
+}]>;
+
 let Predicates = [IsRV64] in {
 def : LdPat<sextloadi8, LB, i32>;
 def : LdPat<extloadi8, LBU, i32>; // Prefer unsigned due to no c.lb in Zcb.
@@ -2046,10 +2059,18 @@ def : PatGprImm<sra, SRAIW, uimm5, i32>;
 def : Pat<(i32 (and GPR:$rs, TrailingOnesMask:$mask)),
           (SRLI (SLLI $rs, (i64 (XLenSubTrailingOnes $mask))),
                 (i64 (XLenSubTrailingOnes $mask)))>;
+
+// Use sext if the sign bit of the input is 0.
+def : Pat<(zext_is_sext GPR:$src), (ADDIW GPR:$src, 0)>;
 }
 
 let Predicates = [IsRV64, NotHasStdExtZba] in {
 def : Pat<(zext GPR:$src), (SRLI (SLLI GPR:$src, 32), 32)>;
+
+// If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
+// shifts instead of 3. This can occur when unsigned is used to index an array.
+def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
+          (SRLI (SLLI GPR:$rs, 32), (ImmSubFrom32 uimm5:$shamt))>;
 }
 
 //===----------------------------------------------------------------------===//

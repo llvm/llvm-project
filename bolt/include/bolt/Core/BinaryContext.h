@@ -680,6 +680,15 @@ public:
   /// the execution of the binary is completed.
   std::optional<uint64_t> FiniFunctionAddress;
 
+  /// DT_FINI.
+  std::optional<uint64_t> FiniAddress;
+
+  /// DT_FINI_ARRAY. Only used when DT_FINI is not set.
+  std::optional<uint64_t> FiniArrayAddress;
+
+  /// DT_FINI_ARRAYSZ. Only used when DT_FINI is not set.
+  std::optional<uint64_t> FiniArraySize;
+
   /// Page alignment used for code layout.
   uint64_t PageAlign{HugePageSize};
 
@@ -941,7 +950,7 @@ public:
   bool registerFragment(BinaryFunction &TargetFunction,
                         BinaryFunction &Function) const;
 
-  /// Add unterprocedural reference for \p Function to \p Address
+  /// Add interprocedural reference for \p Function to \p Address
   void addInterproceduralReference(BinaryFunction *Function, uint64_t Address) {
     InterproceduralReferences.push_back({Function, Address});
   }
@@ -1230,8 +1239,8 @@ public:
   uint64_t
   computeInstructionSize(const MCInst &Inst,
                          const MCCodeEmitter *Emitter = nullptr) const {
-    if (auto Size = MIB->getAnnotationWithDefault<uint32_t>(Inst, "Size"))
-      return Size;
+    if (std::optional<uint32_t> Size = MIB->getSize(Inst))
+      return *Size;
 
     if (!Emitter)
       Emitter = this->MCE.get();

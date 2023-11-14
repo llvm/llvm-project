@@ -139,9 +139,9 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
   if (SrcNameStart < SrcCountersStart || SrcNameStart < SrcBitmapStart)
     return 1;
 
-  // Merge counters by iterating the entire counter section when correlation is
-  // enabled.
-  if (__llvm_profile_has_correlation()) {
+  // Merge counters by iterating the entire counter section when data section is
+  // empty due to correlation.
+  if (Header->NumData == 0) {
     for (SrcCounter = SrcCountersStart,
         DstCounter = __llvm_profile_begin_counters();
          SrcCounter < SrcCountersEnd;) {

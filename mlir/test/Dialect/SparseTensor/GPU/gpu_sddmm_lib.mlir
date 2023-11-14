@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --sparsification="enable-gpu-libgen" | FileCheck %s
+// RUN: mlir-opt %s --sparse-gpu-codegen="num-threads=0" | FileCheck %s
 
 #BSR = #sparse_tensor.encoding<{
   map = (i, j) -> (

@@ -37,7 +37,6 @@
 
 #include "llvm-c/lto.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"

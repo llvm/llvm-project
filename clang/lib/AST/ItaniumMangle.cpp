@@ -28,6 +28,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/ABI.h"
+#include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -5068,6 +5069,14 @@ recurse:
       Out << 'a';
       MangleAlignofSizeofArg();
       break;
+    case UETT_DataSizeOf: {
+      DiagnosticsEngine &Diags = Context.getDiags();
+      unsigned DiagID =
+          Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                "cannot yet mangle __datasizeof expression");
+      Diags.Report(DiagID);
+      return;
+    }
     case UETT_VecStep: {
       DiagnosticsEngine &Diags = Context.getDiags();
       unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
