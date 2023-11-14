@@ -58,6 +58,7 @@ extern cl::OptionCategory BoltRelocCategory;
 
 extern cl::opt<bool> EnableBAT;
 extern cl::opt<bool> Instrument;
+extern cl::opt<bool> KeepNops;
 extern cl::opt<bool> StrictMode;
 extern cl::opt<bool> UpdateDebugSections;
 extern cl::opt<unsigned> Verbosity;
@@ -1380,7 +1381,7 @@ add_instruction:
       // NOTE: disassembly loses the correct size information for noops on x86.
       //       E.g. nopw 0x0(%rax,%rax,1) is 9 bytes, but re-encoded it's only
       //       5 bytes. Preserve the size info using annotations.
-      MIB->addAnnotation(Instruction, "Size", static_cast<uint32_t>(Size));
+      MIB->setSize(Instruction, Size);
     }
 
     addInstruction(Offset, std::move(Instruction));
@@ -4353,16 +4354,21 @@ MCInst *BinaryFunction::getInstructionAtOffset(uint64_t Offset) {
     }
 
     if (MCInst *LastInstr = BB->getLastNonPseudoInstr()) {
-      const uint32_t Size =
-          BC.MIB->getAnnotationWithDefault<uint32_t>(*LastInstr, "Size");
-      if (BB->getEndOffset() - Offset == Size)
-        return LastInstr;
+      if (std::optional<uint32_t> Size = BC.MIB->getSize(*LastInstr)) {
+        if (BB->getEndOffset() - Offset == Size) {
+          return LastInstr;
+        }
+      }
     }
 
     return nullptr;
   } else {
     llvm_unreachable("invalid CFG state to use getInstructionAtOffset()");
   }
+}
+
+bool BinaryFunction::shouldPreserveNops() const {
+  return PreserveNops || opts::KeepNops;
 }
 
 void BinaryFunction::printLoopInfo(raw_ostream &OS) const {

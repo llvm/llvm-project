@@ -7009,7 +7009,7 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   {
-    Value *X, *Y;
+    Value *X, *Y, *Z;
     // Transform (X & ~Y) == 0 --> (X & Y) != 0
     // and       (X & ~Y) != 0 --> (X & Y) == 0
     // if A is a power of 2.
@@ -7018,6 +7018,22 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
         I.isEquality())
       return new ICmpInst(I.getInversePredicate(), Builder.CreateAnd(X, Y),
                           Op1);
+
+    // Transform (~X ^ Y) s< ~Z  --> (X ^ Y) s> Z,
+    //           (~X ^ Y) s> ~Z  --> (X ^ Y) s< Z,
+    //           (~X ^ Y) s<= ~Z --> (X ^ Y) s>= Z,
+    //           (~X ^ Y) s>= ~Z --> (X ^ Y) s<= Z,
+    //           (~X ^ Y) u< ~Z  --> (X ^ Y) u< Z,
+    //           (~X ^ Y) u> ~Z  --> (X ^ Y) u< Z,
+    //           (~X ^ Y) u<= ~Z --> (X ^ Y) u>= Z,
+    //           (~X ^ Y) u>= ~Z --> (X ^ Y) u<= Z,
+    //           (~X ^ Y) == ~Z  --> (X ^ Y) == Z,
+    // and       (~X ^ Y) != ~Z  --> (X ^ Y) != Z,
+    if (match(&I, m_c_ICmp(Pred, m_c_Xor(m_Not(m_Value(X)), m_Value(Y)),
+                           m_Not(m_Value(Z)))) &&
+        (I.getOperand(0)->hasOneUse() || I.getOperand(1)->hasOneUse()))
+      return new ICmpInst(I.getSwappedPredicate(Pred), Builder.CreateXor(X, Y),
+                          Z);
 
     // ~X < ~Y --> Y < X
     // ~X < C -->  X > ~C
