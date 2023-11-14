@@ -560,12 +560,21 @@ static IntegerAttr wrapNumericMemorySpace(MLIRContext *ctx, unsigned space) {
 
 /// Generates a symbol with 0-sized array type for dynamic shared memory usage,
 /// or uses existing symbol.
-LLVM::GlobalOp getDynamicSharedMemorySymbol(
-    ConversionPatternRewriter &rewriter, Operation *moduleOp,
-    gpu::DynamicSharedMemoryOp op, const LLVMTypeConverter *typeConverter,
-    MemRefType memrefType, unsigned alignmentBit, unsigned addressSpace) {
-
+LLVM::GlobalOp
+getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
+                             Operation *moduleOp, gpu::DynamicSharedMemoryOp op,
+                             const LLVMTypeConverter *typeConverter,
+                             MemRefType memrefType, unsigned alignmentBit) {
   uint64_t alignmentByte = alignmentBit / memrefType.getElementTypeBitWidth();
+
+  FailureOr<unsigned> addressSpace =
+      typeConverter->getMemRefAddressSpace(memrefType);
+  if (failed(addressSpace)) {
+    op->emitError() << "conversion of memref memory space "
+                    << memrefType.getMemorySpace()
+                    << " to integer address space "
+                       "failed. Consider adding memory space conversions.";
+  }
 
   // Step 1. Collect symbol names of LLVM::GlobalOp Ops. Also if any of
   // LLVM::GlobalOp is suitable for shared memory, return it.
@@ -574,7 +583,7 @@ LLVM::GlobalOp getDynamicSharedMemorySymbol(
        moduleOp->getRegion(0).front().template getOps<LLVM::GlobalOp>()) {
     existingGlobalNames.insert(globalOp.getSymName());
     if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(globalOp.getType())) {
-      if (globalOp.getAddrSpace() == addressSpace &&
+      if (globalOp.getAddrSpace() == addressSpace.value() &&
           arrayType.getNumElements() == 0 &&
           globalOp.getAlignment().value_or(0) == alignmentByte) {
         return globalOp;
@@ -601,7 +610,7 @@ LLVM::GlobalOp getDynamicSharedMemorySymbol(
   return rewriter.create<LLVM::GlobalOp>(
       op->getLoc(), zeroSizedArrayType, /*isConstant=*/false,
       LLVM::Linkage::Internal, symName, /*value=*/Attribute(), alignmentByte,
-      addressSpace);
+      addressSpace.value());
 }
 
 LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
@@ -621,9 +630,8 @@ LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
   LLVM::LLVMFuncOp funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
   LLVM::GlobalOp shmemOp = {};
   Operation *moduleOp = funcOp->getParentWithTrait<OpTrait::SymbolTable>();
-  shmemOp =
-      getDynamicSharedMemorySymbol(rewriter, moduleOp, op, getTypeConverter(),
-                                   memrefType0sz, alignmentBit, addressSpace);
+  shmemOp = getDynamicSharedMemorySymbol(
+      rewriter, moduleOp, op, getTypeConverter(), memrefType0sz, alignmentBit);
 
   // Step 3. Get address of the global symbol
   OpBuilder::InsertionGuard guard(rewriter);
