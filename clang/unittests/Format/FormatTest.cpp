@@ -24243,6 +24243,20 @@ TEST_F(FormatTest, IgnorePPDefinitions) {
   // Columns are not broken when a limit is set.
   Style.ColumnLimit = 10;
   verifyNoChange("#define A a a a a", Style);
+
+  Style.ColumnLimit = 15;
+  verifyNoChange("#define A //a very long comment\n", Style);
+  // in the following examples, since second line will not be formtted, it won't
+  // take into considertaion the alignment from the first line. The third line
+  // will follow the second line's alignment.
+  verifyFormat("int aaaaaa; // a\n"
+               "#define A // a\n"
+               "int a;    // a\n",
+               "int aaaaaa; // a\n"
+               "#define A // a\n"
+               "int a; // a\n",
+               Style);
+
   Style.ColumnLimit = 0;
 
   // Multiline definition.
