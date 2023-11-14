@@ -783,7 +783,7 @@ void CodeGenAction::generateLLVMIR() {
       llvmModule->setPIELevel(
           static_cast<llvm::PIELevel::Level>(opts.PICLevel));
   }
-  
+
   // Set FramePointer LLVM module flag.
   llvmModule->setFramePointer(
       static_cast<llvm::FramePointerKind>(opts.getFramePointer()));
