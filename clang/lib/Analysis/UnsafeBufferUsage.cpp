@@ -1034,19 +1034,16 @@ class UUCAddAssignGadget : public FixableGadget {
 private:
   static constexpr const char *const UUCAddAssignTag =
       "PointerAddAssignUnderUUC";
-  static constexpr const char *const IntOffsetTag = "IntOffset";
   static constexpr const char *const OffsetTag = "Offset";
 
   const BinaryOperator *Node; // the `Ptr += n` node
-  const IntegerLiteral *IntOffset = nullptr;
-  const DeclRefExpr *Offset = nullptr;
+  const Expr *Offset = nullptr;
 
 public:
   UUCAddAssignGadget(const MatchFinder::MatchResult &Result)
       : FixableGadget(Kind::UUCAddAssign),
         Node(Result.Nodes.getNodeAs<BinaryOperator>(UUCAddAssignTag)),
-        IntOffset(Result.Nodes.getNodeAs<IntegerLiteral>(IntOffsetTag)),
-        Offset(Result.Nodes.getNodeAs<DeclRefExpr>(OffsetTag)) {
+        Offset(Result.Nodes.getNodeAs<Expr>(OffsetTag)){
     assert(Node != nullptr && "Expecting a non-null matching result");
   }
 
@@ -1058,8 +1055,7 @@ public:
     return stmt(isInUnspecifiedUntypedContext(expr(ignoringImpCasts(
         binaryOperator(
             hasOperatorName("+="), hasLHS(declRefExpr(toSupportedVariable())),
-            hasRHS(expr(anyOf(ignoringImpCasts(declRefExpr().bind(OffsetTag)),
-                              integerLiteral().bind(IntOffsetTag)))))
+            hasRHS(ignoringParens(expr().bind(OffsetTag))))
             .bind(UUCAddAssignTag)))));
   }
 
@@ -1356,6 +1352,16 @@ PointerInitGadget::getFixits(const Strategy &S) const {
   return std::nullopt;
 }
 
+static bool isNonNegativeIntegerExpr(const Expr *Expr, const VarDecl *VD,
+                                     const ASTContext &Ctx) {
+  if (auto ConstVal = Expr->getIntegerConstantExpr(Ctx)) {
+    if (ConstVal->isNegative())
+      return false;
+  } else if (!Expr->getType()->isUnsignedIntegerType())
+    return false;
+  return true;
+}
+
 std::optional<FixItList>
 ULCArraySubscriptGadget::getFixits(const Strategy &S) const {
   if (const auto *DRE =
@@ -1363,14 +1369,12 @@ ULCArraySubscriptGadget::getFixits(const Strategy &S) const {
     if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
       switch (S.lookup(VD)) {
       case Strategy::Kind::Span: {
+        
         // If the index has a negative constant value, we give up as no valid
         // fix-it can be generated:
         const ASTContext &Ctx = // FIXME: we need ASTContext to be passed in!
             VD->getASTContext();
-        if (auto ConstVal = Node->getIdx()->getIntegerConstantExpr(Ctx)) {
-          if (ConstVal->isNegative())
-            return std::nullopt;
-        } else if (!Node->getIdx()->getType()->isUnsignedIntegerType())
+        if (!isNonNegativeIntegerExpr(Node->getIdx(), VD, Ctx))
           return std::nullopt;
         // no-op is a good fix-it, otherwise
         return FixItList{};
@@ -1825,19 +1829,18 @@ UUCAddAssignGadget::getFixits(const Strategy &S) const {
       StringRef varName = VD->getName();
       const ASTContext &Ctx = VD->getASTContext();
 
-      std::string SubSpanOffset;
-      if (IntOffset) {
-        auto ConstVal = IntOffset->getIntegerConstantExpr(Ctx);
-        if (ConstVal->isNegative())
-          return std::nullopt;
+      if (!isNonNegativeIntegerExpr(Offset, VD, Ctx))
+        return std::nullopt;
 
-        SmallString<256> OffsetStr;
-        ConstVal->toString(OffsetStr);
-        SubSpanOffset = OffsetStr.c_str();
-        SubSpanOffset = OffsetStr.c_str();
-      } else {
-        SubSpanOffset = Offset->getDecl()->getName().str();
-      }
+      std::string SubSpanOffset;
+      const SourceManager &SM = Ctx.getSourceManager();
+      const LangOptions &LangOpts = Ctx.getLangOpts();
+      std::optional<StringRef> ExtentString = getExprText(Offset, SM, LangOpts);;
+      
+      if (ExtentString)
+        SubSpanOffset = ExtentString->str();
+      else
+        SubSpanOffset = getUserFillPlaceHolder(); // FIXME: When does this happen?
 
       // To transform UUC(p += n) to UUC(p = p.subspan(..)):
       SS << varName.data() << " = " << varName.data() << ".subspan("
