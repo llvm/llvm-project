@@ -12,6 +12,9 @@ multiclass JS<string name, string help, string var = ""> {
 //
 def help : FF<"help", "display this help">;
 defm output: JS<"o", "write output to <file>","<file>">;
+def compact: FF<"compact", "write compact tapi output file">;
+defm filetype: JS<"filetype", "specify the output file type (tbd-v3, tbd-v4 or tbd-v5)","<value>">;
+def merge: FF<"merge", "merge the input files that represent the same library">;
 
 //
 // Compare options

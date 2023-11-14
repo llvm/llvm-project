@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include "DiffEngine.h"
-#include "llvm/Object/TapiUniversal.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -21,6 +20,8 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TextAPI/TextAPIError.h"
+#include "llvm/TextAPI/TextAPIReader.h"
+#include "llvm/TextAPI/TextAPIWriter.h"
 #include <cstdlib>
 
 using namespace llvm;
@@ -59,15 +60,22 @@ public:
 struct Context {
   std::vector<std::string> Inputs;
   std::unique_ptr<llvm::raw_fd_stream> OutStream;
+  FileType WriteFT = FileType::TBD_V5;
+  bool Compact = false;
 };
 
-Expected<std::unique_ptr<Binary>>
-convertFileToBinary(const StringRef Filename) {
+std::unique_ptr<InterfaceFile> getInterfaceFile(const StringRef Filename,
+                                                ExitOnError &ExitOnErr) {
+  ExitOnErr.setBanner("error: '" + Filename.str() + "' ");
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getFileOrSTDIN(Filename);
+      MemoryBuffer::getFile(Filename);
   if (BufferOrErr.getError())
-    return errorCodeToError(BufferOrErr.getError());
-  return createBinary(BufferOrErr.get()->getMemBufferRef());
+    ExitOnErr(errorCodeToError(BufferOrErr.getError()));
+  Expected<std::unique_ptr<InterfaceFile>> IF =
+      TextAPIReader::get((*BufferOrErr)->getMemBufferRef());
+  if (!IF)
+    ExitOnErr(IF.takeError());
+  return std::move(*IF);
 }
 
 // Use unique exit code to differentiate failures not directly caused from
@@ -81,28 +89,37 @@ bool handleCompareAction(const Context &Ctx) {
     ExitOnErr(make_error<TextAPIError>(TextAPIErrorCode::InvalidInputFormat,
                                        "compare only supports 2 input files"));
   }
-  StringRef InputFileName = Ctx.Inputs.front();
-  ExitOnErr.setBanner("error: '" + InputFileName.str() + "' ");
-  auto BinLHS = ExitOnErr(convertFileToBinary(InputFileName));
 
-  TapiUniversal *FileLHS = dyn_cast<TapiUniversal>(BinLHS.get());
-  if (!FileLHS) {
-    ExitOnErr(createStringError(std::errc::executable_format_error,
-                                "unsupported file format"));
+  auto LeftIF = getInterfaceFile(Ctx.Inputs.front(), ExitOnErr);
+  auto RightIF = getInterfaceFile(Ctx.Inputs.at(1), ExitOnErr);
+
+  raw_ostream &OS = Ctx.OutStream ? *Ctx.OutStream : outs();
+  return DiffEngine(LeftIF.get(), RightIF.get()).compareFiles(OS);
+}
+
+bool handleMergeAction(const Context &Ctx) {
+  ExitOnError ExitOnErr("error: ");
+  if (Ctx.Inputs.size() < 2) {
+    ExitOnErr(
+        make_error<TextAPIError>(TextAPIErrorCode::InvalidInputFormat,
+                                 "merge requires at least two input files"));
   }
-
-  StringRef CompareInputFileName = Ctx.Inputs.at(1);
-  ExitOnErr.setBanner("error: '" + CompareInputFileName.str() + "' ");
-  auto BinRHS = ExitOnErr(convertFileToBinary(CompareInputFileName));
-
-  TapiUniversal *FileRHS = dyn_cast<TapiUniversal>(BinRHS.get());
-  if (!FileRHS) {
-    ExitOnErr(createStringError(std::errc::executable_format_error,
-                                "unsupported file format"));
+  std::unique_ptr<InterfaceFile> Out;
+  for (StringRef FileName : Ctx.Inputs) {
+    auto IF = getInterfaceFile(FileName, ExitOnErr);
+    if (!Out) {
+      Out = std::move(IF);
+      continue;
+    }
+    auto ResultIF = Out->merge(IF.get());
+    if (!ResultIF)
+      ExitOnErr(ResultIF.takeError());
+    Out = std::move(ResultIF.get());
   }
 
   raw_ostream &OS = Ctx.OutStream ? *Ctx.OutStream : outs();
-  return DiffEngine(FileLHS, FileRHS).compareFiles(OS);
+  ExitOnErr(TextAPIWriter::writeToStream(OS, *Out, Ctx.WriteFT, Ctx.Compact));
+  return EXIT_SUCCESS;
 }
 
 } // anonymous namespace
@@ -138,8 +155,22 @@ int main(int Argc, char **Argv) {
     }
   }
 
+  if (Args.hasArg(OPT_compact))
+    Ctx.Compact = true;
+
+  if (opt::Arg *A = Args.getLastArg(OPT_filetype_EQ)) {
+    Ctx.WriteFT = TextAPIWriter::parseFileType(A->getValue());
+    if (Ctx.WriteFT < FileType::TBD_V3 || Ctx.WriteFT == FileType::Invalid) {
+      llvm::errs() << "error: unsupported filetype '" << A->getValue() << "'\n";
+      return EXIT_FAILURE;
+    }
+  }
+
   if (Args.hasArg(OPT_compare))
     return handleCompareAction(Ctx);
+
+  if (Args.hasArg(OPT_merge))
+    return handleMergeAction(Ctx);
 
   return EXIT_SUCCESS;
 }
