@@ -5452,7 +5452,7 @@ public:
   bool DiagnosePropertyAccessorMismatch(ObjCPropertyDecl *PD,
                                         ObjCMethodDecl *Getter,
                                         SourceLocation Loc);
-  void DiagnoseSentinelCalls(NamedDecl *D, SourceLocation Loc,
+  void DiagnoseSentinelCalls(const NamedDecl *D, SourceLocation Loc,
                              ArrayRef<Expr *> Args);
 
   void PushExpressionEvaluationContext(
