@@ -427,7 +427,7 @@ public:
 
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     internal_key_type Key;
-    Key.NumPieces =
+    Key.NumArgs =
         endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
     unsigned NumIdents = (Length - sizeof(uint16_t)) / sizeof(uint32_t);
     for (unsigned i = 0; i != NumIdents; ++i) {
@@ -750,7 +750,7 @@ APINotesReader::Implementation::getSelector(ObjCSelectorRef Selector) {
 
   // Translate the identifiers.
   StoredObjCSelector Key;
-  Key.NumPieces = Selector.NumPieces;
+  Key.NumArgs = Selector.NumArgs;
   for (auto Ident : Selector.Identifiers) {
     if (auto IdentID = getIdentifier(Ident)) {
       Key.Identifiers.push_back(*IdentID);

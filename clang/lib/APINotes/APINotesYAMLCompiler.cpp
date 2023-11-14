@@ -14,19 +14,22 @@
 //
 
 #include "clang/APINotes/APINotesYAMLCompiler.h"
+#include "clang/APINotes/APINotesWriter.h"
 #include "clang/APINotes/Types.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/VersionTuple.h"
-#include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <optional>
 #include <vector>
+
 using namespace clang;
 using namespace api_notes;
 
 /*
- 
+
  YAML Format specification.
 
  Nullability should be expressed using one of the following values:
@@ -66,7 +69,7 @@ using namespace api_notes;
  Each class and protocol is defined as following:
 
  - Name: NSView                       # The name of the class
- 
+
    AuditedForNullability: false       # Optional: Specifies if the whole class
                                       # has been audited for nullability.
                                       # If yes, we assume all the methods and
@@ -749,524 +752,475 @@ bool clang::api_notes::parseAndDumpAPINotes(StringRef YI,
   return false;
 }
 
-#include "clang/APINotes/APINotesReader.h"
-#include "clang/APINotes/Types.h"
-#include "clang/APINotes/APINotesWriter.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/VersionTuple.h"
-#include "llvm/Support/YAMLParser.h"
-#include "llvm/Support/YAMLTraits.h"
-#include <algorithm>
-
 namespace {
-  using namespace api_notes;
+using namespace api_notes;
 
-  class YAMLConverter {
-    const Module &TheModule;
-    const FileEntry *SourceFile;
-    APINotesWriter *Writer;
-    llvm::raw_ostream &OS;
-    llvm::SourceMgr::DiagHandlerTy DiagHandler;
-    void *DiagHandlerCtxt;
-    bool ErrorOccured;
+class YAMLConverter {
+  const Module &M;
+  APINotesWriter Writer;
+  llvm::raw_ostream &OS;
+  llvm::SourceMgr::DiagHandlerTy DiagHandler;
+  void *DiagHandlerCtxt;
+  bool ErrorOccured;
 
-    /// Emit a diagnostic
-    bool emitError(llvm::Twine message) {
-      DiagHandler(llvm::SMDiagnostic("", llvm::SourceMgr::DK_Error,
-                                     message.str()),
-                  DiagHandlerCtxt);
-      ErrorOccured = true;
-      return true;
+  /// Emit a diagnostic
+  bool emitError(llvm::Twine Message) {
+    DiagHandler(
+        llvm::SMDiagnostic("", llvm::SourceMgr::DK_Error, Message.str()),
+        DiagHandlerCtxt);
+    ErrorOccured = true;
+    return true;
+  }
+
+public:
+  YAMLConverter(const Module &TheModule, const FileEntry *SourceFile,
+                llvm::raw_ostream &OS,
+                llvm::SourceMgr::DiagHandlerTy DiagHandler,
+                void *DiagHandlerCtxt)
+      : M(TheModule), Writer(TheModule.Name, SourceFile), OS(OS),
+        DiagHandler(DiagHandler), DiagHandlerCtxt(DiagHandlerCtxt),
+        ErrorOccured(false) {}
+
+  void convertAvailability(const AvailabilityItem &Availability,
+                           CommonEntityInfo &CEI, llvm::StringRef APIName) {
+    // Populate the unavailability information.
+    CEI.Unavailable = (Availability.Mode == APIAvailability::None);
+    CEI.UnavailableInSwift = (Availability.Mode == APIAvailability::NonSwift);
+    if (CEI.Unavailable || CEI.UnavailableInSwift) {
+      CEI.UnavailableMsg = std::string(Availability.Msg);
+    } else {
+      if (!Availability.Msg.empty())
+        emitError(llvm::Twine("availability message for available API '") +
+                  APIName + "' will not be used");
+    }
+  }
+
+  void convertParams(const ParamsSeq &Params, FunctionInfo &OutInfo) {
+    for (const auto &P : Params) {
+      ParamInfo PI;
+      if (P.Nullability)
+        PI.setNullabilityAudited(*P.Nullability);
+      PI.setNoEscape(P.NoEscape);
+      PI.setType(std::string(P.Type));
+      PI.setRetainCountConvention(P.RetainCountConvention);
+      if (OutInfo.Params.size() <= P.Position)
+        OutInfo.Params.resize(P.Position + 1);
+      OutInfo.Params[P.Position] |= PI;
+    }
+  }
+
+  void convertNullability(const NullabilitySeq &Nullability,
+                          std::optional<NullabilityKind> ReturnNullability,
+                          FunctionInfo &OutInfo, llvm::StringRef APIName) {
+    if (Nullability.size() > FunctionInfo::getMaxNullabilityIndex()) {
+      emitError(llvm::Twine("nullability info for '") + APIName +
+                "' does not fit");
+      return;
     }
 
-  public:
-    YAMLConverter(const Module &module,
-                  const FileEntry *sourceFile,
-                  llvm::raw_ostream &os,
-                  llvm::SourceMgr::DiagHandlerTy diagHandler,
-                  void *diagHandlerCtxt) :
-      TheModule(module), SourceFile(sourceFile), Writer(0), OS(os),
-      DiagHandler(diagHandler), DiagHandlerCtxt(diagHandlerCtxt),
-      ErrorOccured(false) {}
+    bool audited = false;
+    unsigned int idx = 1;
+    for (const auto &N : Nullability)
+      OutInfo.addTypeInfo(idx++, N);
+    audited = Nullability.size() > 0 || ReturnNullability;
+    if (audited)
+      OutInfo.addTypeInfo(0, ReturnNullability ? *ReturnNullability
+                                               : NullabilityKind::NonNull);
+    if (!audited)
+      return;
+    OutInfo.NullabilityAudited = audited;
+    OutInfo.NumAdjustedNullable = idx;
+  }
 
-    bool convertAvailability(const AvailabilityItem &in,
-                             CommonEntityInfo &outInfo,
-                             llvm::StringRef apiName) {
-      // Populate the unavailability information.
-      outInfo.Unavailable = (in.Mode == APIAvailability::None);
-      outInfo.UnavailableInSwift = (in.Mode == APIAvailability::NonSwift);
-      if (outInfo.Unavailable || outInfo.UnavailableInSwift) {
-        outInfo.UnavailableMsg = std::string(in.Msg);
+  /// Convert the common parts of an entity from YAML.
+  template <typename T>
+  void convertCommonEntity(const T &Common, CommonEntityInfo &Info,
+                           StringRef APIName) {
+    convertAvailability(Common.Availability, Info, APIName);
+    Info.setSwiftPrivate(Common.SwiftPrivate);
+    Info.SwiftName = std::string(Common.SwiftName);
+  }
+
+  /// Convert the common parts of a type entity from YAML.
+  template <typename T>
+  void convertCommonType(const T &Common, CommonTypeInfo &Info,
+                         StringRef APIName) {
+    convertCommonEntity(Common, Info, APIName);
+    if (Common.SwiftBridge)
+      Info.setSwiftBridge(std::make_optional(std::string(*Common.SwiftBridge)));
+    Info.setNSErrorDomain(Common.NSErrorDomain);
+  }
+
+  // Translate from Method into ObjCMethodInfo and write it out.
+  void convertMethod(const Method &M, ContextID ClassID, StringRef ClassName,
+                     VersionTuple SwiftVersion) {
+    ObjCMethodInfo MI;
+    convertCommonEntity(M, MI, M.Selector);
+
+    // Check if the selector ends with ':' to determine if it takes arguments.
+    bool takesArguments = M.Selector.endswith(":");
+
+    // Split the selector into pieces.
+    llvm::SmallVector<StringRef, 4> Args;
+    M.Selector.split(Args, ":", /*MaxSplit*/ -1, /*KeepEmpty*/ false);
+    if (!takesArguments && Args.size() > 1) {
+      emitError("selector '" + M.Selector + "' is missing a ':' at the end");
+      return;
+    }
+
+    // Construct ObjCSelectorRef.
+    api_notes::ObjCSelectorRef Selector;
+    Selector.NumArgs = !takesArguments ? 0 : Args.size();
+    Selector.Identifiers = Args;
+
+    // Translate the initializer info.
+    MI.DesignatedInit = M.DesignatedInit;
+    MI.RequiredInit = M.Required;
+    if (M.FactoryAsInit != FactoryAsInitKind::Infer)
+      emitError("'FactoryAsInit' is no longer valid; use 'SwiftName' instead");
+
+    MI.ResultType = std::string(M.ResultType);
+
+    // Translate parameter information.
+    convertParams(M.Params, MI);
+
+    // Translate nullability info.
+    convertNullability(M.Nullability, M.NullabilityOfRet, MI, M.Selector);
+
+    MI.setRetainCountConvention(M.RetainCountConvention);
+
+    // Write it.
+    Writer.addObjCMethod(ClassID, Selector, M.Kind == MethodKind::Instance, MI,
+                         SwiftVersion);
+  }
+
+  void convertContext(std::optional<ContextID> ParentContextID, const Class &C,
+                      ContextKind Kind, VersionTuple SwiftVersion) {
+    // Write the class.
+    ObjCContextInfo CI;
+    convertCommonType(C, CI, C.Name);
+
+    if (C.AuditedForNullability)
+      CI.setDefaultNullability(NullabilityKind::NonNull);
+    if (C.SwiftImportAsNonGeneric)
+      CI.setSwiftImportAsNonGeneric(*C.SwiftImportAsNonGeneric);
+    if (C.SwiftObjCMembers)
+      CI.setSwiftObjCMembers(*C.SwiftObjCMembers);
+
+    ContextID CtxID =
+        Writer.addObjCContext(ParentContextID, C.Name, Kind, CI, SwiftVersion);
+
+    // Write all methods.
+    llvm::StringMap<std::pair<bool, bool>> KnownMethods;
+    for (const auto &method : C.Methods) {
+      // Check for duplicate method definitions.
+      bool IsInstanceMethod = method.Kind == MethodKind::Instance;
+      bool &Known = IsInstanceMethod ? KnownMethods[method.Selector].first
+                                     : KnownMethods[method.Selector].second;
+      if (Known) {
+        emitError(llvm::Twine("duplicate definition of method '") +
+                  (IsInstanceMethod ? "-" : "+") + "[" + C.Name + " " +
+                  method.Selector + "]'");
+        continue;
+      }
+      Known = true;
+
+      convertMethod(method, CtxID, C.Name, SwiftVersion);
+    }
+
+    // Write all properties.
+    llvm::StringSet<> KnownInstanceProperties;
+    llvm::StringSet<> KnownClassProperties;
+    for (const auto &Property : C.Properties) {
+      // Check for duplicate property definitions.
+      if ((!Property.Kind || *Property.Kind == MethodKind::Instance) &&
+          !KnownInstanceProperties.insert(Property.Name).second) {
+        emitError(llvm::Twine("duplicate definition of instance property '") +
+                  C.Name + "." + Property.Name + "'");
+        continue;
+      }
+
+      if ((!Property.Kind || *Property.Kind == MethodKind::Class) &&
+          !KnownClassProperties.insert(Property.Name).second) {
+        emitError(llvm::Twine("duplicate definition of class property '") +
+                  C.Name + "." + Property.Name + "'");
+        continue;
+      }
+
+      // Translate from Property into ObjCPropertyInfo.
+      ObjCPropertyInfo PI;
+      convertAvailability(Property.Availability, PI, Property.Name);
+      PI.setSwiftPrivate(Property.SwiftPrivate);
+      PI.SwiftName = std::string(Property.SwiftName);
+      if (Property.Nullability)
+        PI.setNullabilityAudited(*Property.Nullability);
+      if (Property.SwiftImportAsAccessors)
+        PI.setSwiftImportAsAccessors(*Property.SwiftImportAsAccessors);
+      PI.setType(std::string(Property.Type));
+
+      // Add both instance and class properties with this name.
+      if (Property.Kind) {
+        Writer.addObjCProperty(CtxID, Property.Name,
+                               *Property.Kind == MethodKind::Instance, PI,
+                               SwiftVersion);
       } else {
-        if (!in.Msg.empty()) {
-          emitError("availability message for available API '" +
-                    apiName + "' will not be used");
-        }
-      }
-      return false;
-    }
-
-    void convertParams(const ParamsSeq &params, FunctionInfo &outInfo) {
-      for (const auto &p : params) {
-        ParamInfo pi;
-        if (p.Nullability)
-          pi.setNullabilityAudited(*p.Nullability);
-        pi.setNoEscape(p.NoEscape);
-        pi.setType(std::string(p.Type));
-        pi.setRetainCountConvention(p.RetainCountConvention);
-        while (outInfo.Params.size() <= p.Position) {
-          outInfo.Params.push_back(ParamInfo());
-        }
-        outInfo.Params[p.Position] |= pi;
+        Writer.addObjCProperty(CtxID, Property.Name, true, PI, SwiftVersion);
+        Writer.addObjCProperty(CtxID, Property.Name, false, PI, SwiftVersion);
       }
     }
+  }
 
-    void convertNullability(const NullabilitySeq &nullability,
-                            std::optional<NullabilityKind> nullabilityOfRet,
-                            FunctionInfo &outInfo, llvm::StringRef apiName) {
-      if (nullability.size() > FunctionInfo::getMaxNullabilityIndex()) {
-        emitError("nullability info for " + apiName + " does not fit");
-        return;
+  void convertNamespaceContext(std::optional<ContextID> ParentContextID,
+                               const Namespace &TheNamespace,
+                               VersionTuple SwiftVersion) {
+    // Write the namespace.
+    ObjCContextInfo CI;
+    convertCommonEntity(TheNamespace, CI, TheNamespace.Name);
+
+    ContextID CtxID =
+        Writer.addObjCContext(ParentContextID, TheNamespace.Name,
+                              ContextKind::Namespace, CI, SwiftVersion);
+
+    convertTopLevelItems(Context(CtxID, ContextKind::Namespace),
+                         TheNamespace.Items, SwiftVersion);
+  }
+
+  void convertTopLevelItems(std::optional<Context> Ctx,
+                            const TopLevelItems &TLItems,
+                            VersionTuple SwiftVersion) {
+    std::optional<ContextID> CtxID =
+        Ctx ? std::optional(Ctx->id) : std::nullopt;
+
+    // Write all classes.
+    llvm::StringSet<> KnownClasses;
+    for (const auto &Class : TLItems.Classes) {
+      // Check for duplicate class definitions.
+      if (!KnownClasses.insert(Class.Name).second) {
+        emitError(llvm::Twine("multiple definitions of class '") + Class.Name +
+                  "'");
+        continue;
       }
 
-      bool audited = false;
-      unsigned int idx = 1;
-      for (auto i = nullability.begin(),
-                e = nullability.end(); i != e; ++i, ++idx){
-        outInfo.addTypeInfo(idx, *i);
-        audited = true;
-      }
-      if (nullabilityOfRet) {
-        outInfo.addTypeInfo(0, *nullabilityOfRet);
-        audited = true;
-      } else if (audited) {
-        outInfo.addTypeInfo(0, NullabilityKind::NonNull);
-      }
-      if (audited) {
-        outInfo.NullabilityAudited = audited;
-        outInfo.NumAdjustedNullable = idx;
-      }
+      convertContext(CtxID, Class, ContextKind::ObjCClass, SwiftVersion);
     }
 
-    /// Convert the common parts of an entity from YAML.
-    template<typename T>
-    bool convertCommon(const T& common, CommonEntityInfo &info,
-                       StringRef apiName) {
-      convertAvailability(common.Availability, info, apiName);
-      info.setSwiftPrivate(common.SwiftPrivate);
-      info.SwiftName = std::string(common.SwiftName);
-      return false;
-    }
-    
-    /// Convert the common parts of a type entity from YAML.
-    template<typename T>
-    bool convertCommonType(const T& common, CommonTypeInfo &info,
-                           StringRef apiName) {
-      if (convertCommon(common, info, apiName))
-        return true;
+    // Write all protocols.
+    llvm::StringSet<> KnownProtocols;
+    for (const auto &Protocol : TLItems.Protocols) {
+      // Check for duplicate protocol definitions.
+      if (!KnownProtocols.insert(Protocol.Name).second) {
+        emitError(llvm::Twine("multiple definitions of protocol '") +
+                  Protocol.Name + "'");
+        continue;
+      }
 
-      info.setSwiftBridge(common.SwiftBridge);
-      info.setNSErrorDomain(common.NSErrorDomain);
-      return false;
+      convertContext(CtxID, Protocol, ContextKind::ObjCProtocol, SwiftVersion);
     }
 
-    // Translate from Method into ObjCMethodInfo and write it out.
-    void convertMethod(const Method &meth,
-                       ContextID classID, StringRef className,
-                       VersionTuple swiftVersion) {
-      ObjCMethodInfo mInfo;
-
-      if (convertCommon(meth, mInfo, meth.Selector))
-        return;
-
-      // Check if the selector ends with ':' to determine if it takes arguments.
-      bool takesArguments = meth.Selector.endswith(":");
-
-      // Split the selector into pieces.
-      llvm::SmallVector<StringRef, 4> a;
-      meth.Selector.split(a, ":", /*MaxSplit*/ -1, /*KeepEmpty*/ false);
-      if (!takesArguments && a.size() > 1 ) {
-        emitError("selector " + meth.Selector + "is missing a ':' at the end");
-        return;
+    // Write all namespaces.
+    llvm::StringSet<> KnownNamespaces;
+    for (const auto &Namespace : TLItems.Namespaces) {
+      // Check for duplicate namespace definitions.
+      if (!KnownNamespaces.insert(Namespace.Name).second) {
+        emitError(llvm::Twine("multiple definitions of namespace '") +
+                  Namespace.Name + "'");
+        continue;
       }
 
-      // Construct ObjCSelectorRef.
-      api_notes::ObjCSelectorRef selectorRef;
-      selectorRef.NumPieces = !takesArguments ? 0 : a.size();
-      selectorRef.Identifiers = a;
-
-      // Translate the initializer info.
-      mInfo.DesignatedInit = meth.DesignatedInit;
-      mInfo.RequiredInit = meth.Required;
-      if (meth.FactoryAsInit != FactoryAsInitKind::Infer) {
-        emitError("'FactoryAsInit' is no longer valid; "
-                  "use 'SwiftName' instead");
-      }
-      mInfo.ResultType = std::string(meth.ResultType);
-
-      // Translate parameter information.
-      convertParams(meth.Params, mInfo);
-
-      // Translate nullability info.
-      convertNullability(meth.Nullability, meth.NullabilityOfRet,
-                         mInfo, meth.Selector);
-
-      mInfo.setRetainCountConvention(meth.RetainCountConvention);
-
-      // Write it.
-      Writer->addObjCMethod(classID, selectorRef,
-                            meth.Kind == MethodKind::Instance,
-                            mInfo, swiftVersion);
+      convertNamespaceContext(CtxID, Namespace, SwiftVersion);
     }
 
-    void convertContext(std::optional<ContextID> parentContextID,
-                        const Class &cl, ContextKind contextKind,
-                        VersionTuple swiftVersion) {
-      // Write the class.
-      ObjCContextInfo cInfo;
-
-      if (convertCommonType(cl, cInfo, cl.Name))
-        return;
-
-      if (cl.AuditedForNullability)
-        cInfo.setDefaultNullability(NullabilityKind::NonNull);
-      if (cl.SwiftImportAsNonGeneric)
-        cInfo.setSwiftImportAsNonGeneric(*cl.SwiftImportAsNonGeneric);
-      if (cl.SwiftObjCMembers)
-        cInfo.setSwiftObjCMembers(*cl.SwiftObjCMembers);
-
-      ContextID clID = Writer->addObjCContext(parentContextID, cl.Name,
-                                              contextKind, cInfo, swiftVersion);
-
-      // Write all methods.
-      llvm::StringMap<std::pair<bool, bool>> knownMethods;
-      for (const auto &method : cl.Methods) {
-        // Check for duplicate method definitions.
-        bool isInstanceMethod = method.Kind == MethodKind::Instance;
-        bool &known = isInstanceMethod ? knownMethods[method.Selector].first
-                                       : knownMethods[method.Selector].second;
-        if (known) {
-          emitError(llvm::Twine("duplicate definition of method '") +
-                    (isInstanceMethod? "-" : "+") + "[" + cl.Name + " " +
-                    method.Selector + "]'");
-          continue;
-        }
-        known = true;
-
-        convertMethod(method, clID, cl.Name, swiftVersion);
+    // Write all global variables.
+    llvm::StringSet<> KnownGlobals;
+    for (const auto &Global : TLItems.Globals) {
+      // Check for duplicate global variables.
+      if (!KnownGlobals.insert(Global.Name).second) {
+        emitError(llvm::Twine("multiple definitions of global variable '") +
+                  Global.Name + "'");
+        continue;
       }
 
-      // Write all properties.
-      llvm::StringSet<> knownInstanceProperties;
-      llvm::StringSet<> knownClassProperties;
-      for (const auto &prop : cl.Properties) {
-        // Check for duplicate property definitions.
-        if ((!prop.Kind || *prop.Kind == MethodKind::Instance) &&
-            !knownInstanceProperties.insert(prop.Name).second) {
-          emitError("duplicate definition of instance property '" + cl.Name +
-                    "." + prop.Name + "'");
-          continue;
-        }
-
-        if ((!prop.Kind || *prop.Kind == MethodKind::Class) &&
-            !knownClassProperties.insert(prop.Name).second) {
-          emitError("duplicate definition of class property '" + cl.Name + "." +
-                    prop.Name + "'");
-          continue;
-        }
-
-        // Translate from Property into ObjCPropertyInfo.
-        ObjCPropertyInfo pInfo;
-        convertAvailability(prop.Availability, pInfo, prop.Name);
-        pInfo.setSwiftPrivate(prop.SwiftPrivate);
-        pInfo.SwiftName = std::string(prop.SwiftName);
-        if (prop.Nullability)
-          pInfo.setNullabilityAudited(*prop.Nullability);
-        if (prop.SwiftImportAsAccessors)
-          pInfo.setSwiftImportAsAccessors(*prop.SwiftImportAsAccessors);
-        pInfo.setType(std::string(prop.Type));
-        if (prop.Kind) {
-          Writer->addObjCProperty(clID, prop.Name,
-                                  *prop.Kind == MethodKind::Instance, pInfo,
-                                  swiftVersion);
-        } else {
-          // Add both instance and class properties with this name.
-          Writer->addObjCProperty(clID, prop.Name, true, pInfo, swiftVersion);
-          Writer->addObjCProperty(clID, prop.Name, false, pInfo, swiftVersion);
-        }
-      }
+      GlobalVariableInfo GVI;
+      convertAvailability(Global.Availability, GVI, Global.Name);
+      GVI.setSwiftPrivate(Global.SwiftPrivate);
+      GVI.SwiftName = std::string(Global.SwiftName);
+      if (Global.Nullability)
+        GVI.setNullabilityAudited(*Global.Nullability);
+      GVI.setType(std::string(Global.Type));
+      Writer.addGlobalVariable(Ctx, Global.Name, GVI, SwiftVersion);
     }
 
-    void convertNamespaceContext(std::optional<ContextID> parentContextID,
-                                 const Namespace &ns,
-                                 VersionTuple swiftVersion) {
-      // Write the namespace.
-      ObjCContextInfo cInfo;
+    // Write all global functions.
+    llvm::StringSet<> KnownFunctions;
+    for (const auto &Function : TLItems.Functions) {
+      // Check for duplicate global functions.
+      if (!KnownFunctions.insert(Function.Name).second) {
+        emitError(llvm::Twine("multiple definitions of global function '") +
+                  Function.Name + "'");
+        continue;
+      }
 
-      if (convertCommon(ns, cInfo, ns.Name))
-        return;
-
-      ContextID clID =
-          Writer->addObjCContext(parentContextID, ns.Name,
-                                 ContextKind::Namespace, cInfo, swiftVersion);
-
-      convertTopLevelItems(Context(clID, ContextKind::Namespace), ns.Items,
-                           swiftVersion);
+      GlobalFunctionInfo GFI;
+      convertAvailability(Function.Availability, GFI, Function.Name);
+      GFI.setSwiftPrivate(Function.SwiftPrivate);
+      GFI.SwiftName = std::string(Function.SwiftName);
+      convertParams(Function.Params, GFI);
+      convertNullability(Function.Nullability, Function.NullabilityOfRet, GFI,
+                         Function.Name);
+      GFI.ResultType = std::string(Function.ResultType);
+      GFI.setRetainCountConvention(Function.RetainCountConvention);
+      Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
     }
 
-    void convertTopLevelItems(std::optional<Context> context,
-                              const TopLevelItems &items,
-                              VersionTuple swiftVersion) {
-      std::optional<ContextID> contextID =
-          context ? std::optional(context->id) : std::nullopt;
-
-      // Write all classes.
-      llvm::StringSet<> knownClasses;
-      for (const auto &cl : items.Classes) {
-        // Check for duplicate class definitions.
-        if (!knownClasses.insert(cl.Name).second) {
-          emitError("multiple definitions of class '" + cl.Name + "'");
-          continue;
-        }
-
-        convertContext(contextID, cl, ContextKind::ObjCClass, swiftVersion);
+    // Write all enumerators.
+    llvm::StringSet<> KnownEnumConstants;
+    for (const auto &EnumConstant : TLItems.EnumConstants) {
+      // Check for duplicate enumerators
+      if (!KnownEnumConstants.insert(EnumConstant.Name).second) {
+        emitError(llvm::Twine("multiple definitions of enumerator '") +
+                  EnumConstant.Name + "'");
+        continue;
       }
 
-      // Write all protocols.
-      llvm::StringSet<> knownProtocols;
-      for (const auto &pr : items.Protocols) {
-        // Check for duplicate protocol definitions.
-        if (!knownProtocols.insert(pr.Name).second) {
-          emitError("multiple definitions of protocol '" + pr.Name + "'");
-          continue;
-        }
-
-        convertContext(contextID, pr, ContextKind::ObjCProtocol, swiftVersion);
-      }
-
-      // Write all namespaces.
-      llvm::StringSet<> knownNamespaces;
-      for (const auto &ns : items.Namespaces) {
-        // Check for duplicate namespace definitions.
-        if (!knownNamespaces.insert(ns.Name).second) {
-          emitError("multiple definitions of namespace '" + ns.Name + "'");
-          continue;
-        }
-
-        convertNamespaceContext(contextID, ns, swiftVersion);
-      }
-
-      // Write all global variables.
-      llvm::StringSet<> knownGlobals;
-      for (const auto &global : items.Globals) {
-        // Check for duplicate global variables.
-        if (!knownGlobals.insert(global.Name).second) {
-          emitError("multiple definitions of global variable '" +
-                    global.Name + "'");
-          continue;
-        }
-
-        GlobalVariableInfo info;
-        convertAvailability(global.Availability, info, global.Name);
-        info.setSwiftPrivate(global.SwiftPrivate);
-        info.SwiftName = std::string(global.SwiftName);
-        if (global.Nullability)
-          info.setNullabilityAudited(*global.Nullability);
-        info.setType(std::string(global.Type));
-        Writer->addGlobalVariable(context, global.Name, info, swiftVersion);
-      }
-
-      // Write all global functions.
-      llvm::StringSet<> knownFunctions;
-      for (const auto &function : items.Functions) {
-        // Check for duplicate global functions.
-        if (!knownFunctions.insert(function.Name).second) {
-          emitError("multiple definitions of global function '" +
-                    function.Name + "'");
-          continue;
-        }
-
-        GlobalFunctionInfo info;
-        convertAvailability(function.Availability, info, function.Name);
-        info.setSwiftPrivate(function.SwiftPrivate);
-        info.SwiftName = std::string(function.SwiftName);
-        convertParams(function.Params, info);
-        convertNullability(function.Nullability,
-                           function.NullabilityOfRet,
-                           info, function.Name);
-        info.ResultType = std::string(function.ResultType);
-        info.setRetainCountConvention(function.RetainCountConvention);
-        Writer->addGlobalFunction(context, function.Name, info, swiftVersion);
-      }
-
-      // Write all enumerators.
-      llvm::StringSet<> knownEnumConstants;
-      for (const auto &enumConstant : items.EnumConstants) {
-        // Check for duplicate enumerators
-        if (!knownEnumConstants.insert(enumConstant.Name).second) {
-          emitError("multiple definitions of enumerator '" +
-                    enumConstant.Name + "'");
-          continue;
-        }
-
-        EnumConstantInfo info;
-        convertAvailability(enumConstant.Availability, info, enumConstant.Name);
-        info.setSwiftPrivate(enumConstant.SwiftPrivate);
-        info.SwiftName = std::string(enumConstant.SwiftName);
-        Writer->addEnumConstant(enumConstant.Name, info, swiftVersion);
-      }
-
-      // Write all tags.
-      llvm::StringSet<> knownTags;
-      for (const auto &t : items.Tags) {
-        // Check for duplicate tag definitions.
-        if (!knownTags.insert(t.Name).second) {
-          emitError("multiple definitions Of tag '" + t.Name + "'");
-          continue;
-        }
-
-        TagInfo tagInfo;
-        if (convertCommonType(t, tagInfo, t.Name))
-          continue;
-
-        if ((t.SwiftRetainOp.has_value() || t.SwiftReleaseOp.has_value()) &&
-            !t.SwiftImportAs) {
-          emitError(llvm::Twine("should declare SwiftImportAs to use "
-                                "SwiftRetainOp and SwiftReleaseOp (for ") +
-                    t.Name + ")");
-          continue;
-        }
-        if (t.SwiftReleaseOp.has_value() != t.SwiftRetainOp.has_value()) {
-          emitError(llvm::Twine("should declare both SwiftReleaseOp and "
-                                "SwiftRetainOp (for ") +
-                    t.Name + ")");
-          continue;
-        }
-
-        if (t.SwiftImportAs)
-          tagInfo.SwiftImportAs = t.SwiftImportAs;
-        if (t.SwiftRetainOp)
-          tagInfo.SwiftRetainOp = t.SwiftRetainOp;
-        if (t.SwiftReleaseOp)
-          tagInfo.SwiftReleaseOp = t.SwiftReleaseOp;
-
-        if (t.EnumConvenienceKind) {
-          if (t.EnumExtensibility) {
-            emitError(llvm::Twine(
-                "cannot mix EnumKind and EnumExtensibility (for ") + t.Name +
-                ")");
-            continue;
-          }
-          if (t.FlagEnum) {
-            emitError(llvm::Twine("cannot mix EnumKind and FlagEnum (for ") +
-                t.Name + ")");
-            continue;
-          }
-          switch (*t.EnumConvenienceKind) {
-          case EnumConvenienceAliasKind::None:
-            tagInfo.EnumExtensibility = EnumExtensibilityKind::None;
-            tagInfo.setFlagEnum(false);
-            break;
-          case EnumConvenienceAliasKind::CFEnum:
-            tagInfo.EnumExtensibility = EnumExtensibilityKind::Open;
-            tagInfo.setFlagEnum(false);
-            break;
-          case EnumConvenienceAliasKind::CFOptions:
-            tagInfo.EnumExtensibility = EnumExtensibilityKind::Open;
-            tagInfo.setFlagEnum(true);
-            break;
-          case EnumConvenienceAliasKind::CFClosedEnum:
-            tagInfo.EnumExtensibility = EnumExtensibilityKind::Closed;
-            tagInfo.setFlagEnum(false);
-            break;
-          }
-        } else {
-          tagInfo.EnumExtensibility = t.EnumExtensibility;
-          tagInfo.setFlagEnum(t.FlagEnum);          
-        }
-
-        Writer->addTag(context, t.Name, tagInfo, swiftVersion);
-      }
-
-      // Write all typedefs.
-      llvm::StringSet<> knownTypedefs;
-      for (const auto &t : items.Typedefs) {
-        // Check for duplicate typedef definitions.
-        if (!knownTypedefs.insert(t.Name).second) {
-          emitError("multiple definitions of typedef '" + t.Name + "'");
-          continue;
-        }
-
-        TypedefInfo typedefInfo;
-        if (convertCommonType(t, typedefInfo, t.Name))
-          continue;
-        typedefInfo.SwiftWrapper = t.SwiftType;
-
-        Writer->addTypedef(context, t.Name, typedefInfo, swiftVersion);
-      }
+      EnumConstantInfo ECI;
+      convertAvailability(EnumConstant.Availability, ECI, EnumConstant.Name);
+      ECI.setSwiftPrivate(EnumConstant.SwiftPrivate);
+      ECI.SwiftName = std::string(EnumConstant.SwiftName);
+      Writer.addEnumConstant(EnumConstant.Name, ECI, SwiftVersion);
     }
 
-    bool convertModule() {
-      // Set up the writer.
-      // FIXME: This is kindof ugly.
-      APINotesWriter writer(TheModule.Name, SourceFile);
-      Writer = &writer;
-
-      // Write the top-level items.
-      convertTopLevelItems(/* context */ std::nullopt, TheModule.TopLevel,
-                           VersionTuple());
-
-      if (TheModule.SwiftInferImportAsMember) {
-        ModuleOptions opts;
-        opts.SwiftInferImportAsMember = true;
-        Writer->addModuleOptions(opts);
+    // Write all tags.
+    llvm::StringSet<> KnownTags;
+    for (const auto &Tag : TLItems.Tags) {
+      // Check for duplicate tag definitions.
+      if (!KnownTags.insert(Tag.Name).second) {
+        emitError(llvm::Twine("multiple definitions of tag '") + Tag.Name +
+                  "'");
+        continue;
       }
 
-      // Convert the versioned information.
-      for (const auto &versioned : TheModule.SwiftVersions) {
-        convertTopLevelItems(/* context */ std::nullopt, versioned.Items,
-                             versioned.Version);
+      TagInfo TI;
+      convertCommonType(Tag, TI, Tag.Name);
+
+      if ((Tag.SwiftRetainOp || Tag.SwiftReleaseOp) && !Tag.SwiftImportAs) {
+        emitError(llvm::Twine("should declare SwiftImportAs to use "
+                              "SwiftRetainOp and SwiftReleaseOp (for ") +
+                  Tag.Name + ")");
+        continue;
+      }
+      if (Tag.SwiftReleaseOp.has_value() != Tag.SwiftRetainOp.has_value()) {
+        emitError(llvm::Twine("should declare both SwiftReleaseOp and "
+                              "SwiftRetainOp (for ") +
+                  Tag.Name + ")");
+        continue;
       }
 
-      if (!ErrorOccured)
-        Writer->writeToStream(OS);
+      if (Tag.SwiftImportAs)
+        TI.SwiftImportAs = Tag.SwiftImportAs;
+      if (Tag.SwiftRetainOp)
+        TI.SwiftRetainOp = Tag.SwiftRetainOp;
+      if (Tag.SwiftReleaseOp)
+        TI.SwiftReleaseOp = Tag.SwiftReleaseOp;
 
-      return ErrorOccured;
+      if (Tag.EnumConvenienceKind) {
+        if (Tag.EnumExtensibility) {
+          emitError(
+              llvm::Twine("cannot mix EnumKind and EnumExtensibility (for ") +
+              Tag.Name + ")");
+          continue;
+        }
+        if (Tag.FlagEnum) {
+          emitError(llvm::Twine("cannot mix EnumKind and FlagEnum (for ") +
+                    Tag.Name + ")");
+          continue;
+        }
+        switch (*Tag.EnumConvenienceKind) {
+        case EnumConvenienceAliasKind::None:
+          TI.EnumExtensibility = EnumExtensibilityKind::None;
+          TI.setFlagEnum(false);
+          break;
+        case EnumConvenienceAliasKind::CFEnum:
+          TI.EnumExtensibility = EnumExtensibilityKind::Open;
+          TI.setFlagEnum(false);
+          break;
+        case EnumConvenienceAliasKind::CFOptions:
+          TI.EnumExtensibility = EnumExtensibilityKind::Open;
+          TI.setFlagEnum(true);
+          break;
+        case EnumConvenienceAliasKind::CFClosedEnum:
+          TI.EnumExtensibility = EnumExtensibilityKind::Closed;
+          TI.setFlagEnum(false);
+          break;
+        }
+      } else {
+        TI.EnumExtensibility = Tag.EnumExtensibility;
+        TI.setFlagEnum(Tag.FlagEnum);
+      }
+
+      Writer.addTag(Ctx, Tag.Name, TI, SwiftVersion);
     }
-  };
-}
 
-static bool compile(const Module &module,
-                    const FileEntry *sourceFile,
-                    llvm::raw_ostream &os,
-                    llvm::SourceMgr::DiagHandlerTy diagHandler,
-                    void *diagHandlerCtxt){
-  using namespace api_notes;
+    // Write all typedefs.
+    llvm::StringSet<> KnownTypedefs;
+    for (const auto &Typedef : TLItems.Typedefs) {
+      // Check for duplicate typedef definitions.
+      if (!KnownTypedefs.insert(Typedef.Name).second) {
+        emitError(llvm::Twine("multiple definitions of typedef '") +
+                  Typedef.Name + "'");
+        continue;
+      }
 
-  YAMLConverter c(module, sourceFile, os, diagHandler, diagHandlerCtxt);
-  return c.convertModule();
+      TypedefInfo TInfo;
+      convertCommonType(Typedef, TInfo, Typedef.Name);
+      TInfo.SwiftWrapper = Typedef.SwiftType;
+
+      Writer.addTypedef(Ctx, Typedef.Name, TInfo, SwiftVersion);
+    }
+  }
+
+  bool convertModule() {
+    // Write the top-level items.
+    convertTopLevelItems(/* context */ std::nullopt, M.TopLevel,
+                         VersionTuple());
+
+    // Convert the versioned information.
+    for (const auto &Versioned : M.SwiftVersions)
+      convertTopLevelItems(/* context */ std::nullopt, Versioned.Items,
+                           Versioned.Version);
+
+    if (!ErrorOccured)
+      Writer.writeToStream(OS);
+
+    return ErrorOccured;
+  }
+};
+} // namespace
+
+static bool compile(const Module &M, const FileEntry *SourceFile,
+                    llvm::raw_ostream &OS,
+                    llvm::SourceMgr::DiagHandlerTy DiagHandler,
+                    void *DiagHandlerCtxt) {
+  YAMLConverter C(M, SourceFile, OS, DiagHandler, DiagHandlerCtxt);
+  return C.convertModule();
 }
 
 /// Simple diagnostic handler that prints diagnostics to standard error.
-static void printDiagnostic(const llvm::SMDiagnostic &diag, void *context) {
-  diag.print(nullptr, llvm::errs());
+static void printDiagnostic(const llvm::SMDiagnostic &Diag, void *Context) {
+  Diag.print(nullptr, llvm::errs());
 }
 
-bool api_notes::compileAPINotes(StringRef yamlInput,
-                                const FileEntry *sourceFile,
-                                llvm::raw_ostream &os,
-                                llvm::SourceMgr::DiagHandlerTy diagHandler,
-                                void *diagHandlerCtxt) {
-  Module module;
+bool api_notes::compileAPINotes(StringRef YAMLInput,
+                                const FileEntry *SourceFile,
+                                llvm::raw_ostream &OS,
+                                llvm::SourceMgr::DiagHandlerTy DiagHandler,
+                                void *DiagHandlerCtxt) {
+  Module TheModule;
 
-  if (!diagHandler) {
-    diagHandler = &printDiagnostic;
-  }
+  if (!DiagHandler)
+    DiagHandler = &printDiagnostic;
 
-  if (parseAPINotes(yamlInput, module, diagHandler, diagHandlerCtxt))
+  if (parseAPINotes(YAMLInput, TheModule, DiagHandler, DiagHandlerCtxt))
     return true;
 
-  return compile(module, sourceFile, os, diagHandler, diagHandlerCtxt);
+  return compile(TheModule, SourceFile, OS, DiagHandler, DiagHandlerCtxt);
 }
