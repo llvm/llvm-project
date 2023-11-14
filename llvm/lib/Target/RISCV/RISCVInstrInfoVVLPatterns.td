@@ -2795,23 +2795,18 @@ foreach mti = AllMasks in {
 
 // 16.1. Integer Scalar Move Instructions
 // 16.4. Vector Register Gather Instruction
-foreach vti = AllIntegerVectors in {
+foreach vti = NoGroupIntegerVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in {
-    defvar isGroup = !isa<GroupVTypeInfo>(vti);
-    defvar merge = !if(isGroup,
-                       (!cast<GroupVTypeInfo>(vti).VectorM1
-                          (EXTRACT_SUBREG $merge, sub_vrm1_0)),
-                       (vti.Vector $merge));
-    defvar pseudoVMV = (PseudoVMV_S_X merge,
-                                      (vti.Scalar vti.ScalarRegClass:$rs1),
-                                      GPR:$vl, vti.Log2SEW);
     def : Pat<(vti.Vector (riscv_vmv_s_x_vl (vti.Vector vti.RegClass:$merge),
                                             vti.ScalarRegClass:$rs1,
                                             VLOpFrag)),
-              !if(isGroup, (INSERT_SUBREG $merge, pseudoVMV, sub_vrm1_0),
-                            pseudoVMV)>;
+              (PseudoVMV_S_X $merge, vti.ScalarRegClass:$rs1, GPR:$vl,
+                             vti.Log2SEW)>;
+  }
+}
 
-
+foreach vti = AllIntegerVectors in {
+  let Predicates = GetVTypePredicates<vti>.Predicates in {
     def : Pat<(vti.Vector (riscv_vrgather_vv_vl vti.RegClass:$rs2,
                                                 vti.RegClass:$rs1,
                                                 vti.RegClass:$merge,
@@ -2859,28 +2854,21 @@ foreach vti = AllIntegerVectors in {
 }
 
 // 16.2. Floating-Point Scalar Move Instructions
-foreach vti = AllFloatVectors in {
+foreach vti = NoGroupFloatVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in {
-    defvar isGroup = !isa<GroupVTypeInfo>(vti);
-    defvar merge = !if(isGroup,
-                         (!cast<GroupVTypeInfo>(vti).VectorM1
-                            (EXTRACT_SUBREG $merge, sub_vrm1_0)),
-                         (vti.Vector $merge));
-    defvar pseudoVMVX0 = (PseudoVMV_S_X merge, (XLenVT X0), GPR:$vl,
-                                        vti.Log2SEW);
     def : Pat<(vti.Vector (riscv_vfmv_s_f_vl (vti.Vector vti.RegClass:$merge),
                                              (vti.Scalar (fpimm0)),
                                              VLOpFrag)),
-              !if(isGroup, (INSERT_SUBREG $merge, pseudoVMVX0, sub_vrm1_0),
-                           pseudoVMVX0)>;
-
-    defvar pseudoVMV = (PseudoVMV_S_X merge, GPR:$imm, GPR:$vl, vti.Log2SEW);
+              (PseudoVMV_S_X $merge, (XLenVT X0), GPR:$vl, vti.Log2SEW)>;
     def : Pat<(vti.Vector (riscv_vfmv_s_f_vl (vti.Vector vti.RegClass:$merge),
                                              (vti.Scalar (SelectFPImm (XLenVT GPR:$imm))),
                                              VLOpFrag)),
-              !if(isGroup, (INSERT_SUBREG $merge, pseudoVMV, sub_vrm1_0),
-                           pseudoVMV)>;
+              (PseudoVMV_S_X $merge, GPR:$imm, GPR:$vl, vti.Log2SEW)>;
+  }
+}
 
+foreach vti = AllFloatVectors in {
+  let Predicates = GetVTypePredicates<vti>.Predicates in {
     def : Pat<(vti.Vector (riscv_vfmv_s_f_vl (vti.Vector vti.RegClass:$merge),
                                              vti.ScalarRegClass:$rs1,
                                              VLOpFrag)),

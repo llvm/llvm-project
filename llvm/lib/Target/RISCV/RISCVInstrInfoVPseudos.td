@@ -7402,15 +7402,10 @@ defm : VPatNullaryV<"int_riscv_vid", "PseudoVID">;
 // 16.1. Integer Scalar Move Instructions
 //===----------------------------------------------------------------------===//
 
-foreach vti = AllIntegerVectors in {
+foreach vti = NoGroupIntegerVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in
   def : Pat<(XLenVT (riscv_vmv_x_s (vti.Vector vti.RegClass:$rs2))),
-            (PseudoVMV_X_S
-               !if(!isa<GroupVTypeInfo>(vti),
-                   (!cast<GroupVTypeInfo>(vti).VectorM1
-                      (EXTRACT_SUBREG $rs2, sub_vrm1_0)),
-                   (vti.Vector $rs2)),
-               vti.Log2SEW)>;
+            (PseudoVMV_X_S $rs2, vti.Log2SEW)>;
   // vmv.s.x is handled with a custom node in RISCVInstrInfoVVLPatterns.td
 }
 
