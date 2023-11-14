@@ -22,12 +22,12 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
-  class Token;
-  class IdentifierInfo;
-  class MacroDefinition;
-  class MacroDirective;
-  class MacroArgs;
-  struct LexEmbedParametersResult;
+class Token;
+class IdentifierInfo;
+class MacroDefinition;
+class MacroDirective;
+class MacroArgs;
+struct LexEmbedParametersResult;
 
 /// This interface provides a way to observe the actions of the
 /// preprocessor as it does its thing.
