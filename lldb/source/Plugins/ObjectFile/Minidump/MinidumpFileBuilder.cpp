@@ -8,8 +8,8 @@
 
 #include "MinidumpFileBuilder.h"
 
-#include "Plugins/Process/minidump/RegisterContextMinidump_x86_64.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_ARM64.h"
+#include "Plugins/Process/minidump/RegisterContextMinidump_x86_64.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
@@ -354,10 +354,8 @@ void read_register_u128(RegisterContext *reg_ctx, llvm::StringRef reg_name,
     lldb_private::RegisterValue reg_value;
     if (reg_ctx->ReadRegister(reg_info, reg_value)) {
       Status error;
-      uint32_t bytes_copied =
-          reg_value.GetAsMemoryData(*reg_info, dst, 16,
-                                    lldb::ByteOrder::eByteOrderLittle,
-                                    error);
+      uint32_t bytes_copied = reg_value.GetAsMemoryData(
+          *reg_info, dst, 16, lldb::ByteOrder::eByteOrderLittle, error);
       if (bytes_copied == 16)
         return;
     }
@@ -409,7 +407,7 @@ GetThreadContext_ARM64(RegisterContext *reg_ctx) {
       minidump::RegisterContextMinidump_ARM64::Flags::Integer |
       minidump::RegisterContextMinidump_ARM64::Flags::FloatingPoint);
   char reg_name[16];
-  for (uint32_t i=0; i<31; ++i) {
+  for (uint32_t i = 0; i < 31; ++i) {
     snprintf(reg_name, sizeof(reg_name), "x%u", i);
     thread_context.x[i] = read_register_u64(reg_ctx, reg_name);
   }
@@ -420,9 +418,9 @@ GetThreadContext_ARM64(RegisterContext *reg_ctx) {
   thread_context.cpsr = read_register_u32(reg_ctx, "cpsr");
   thread_context.fpsr = read_register_u32(reg_ctx, "fpsr");
   thread_context.fpcr = read_register_u32(reg_ctx, "fpcr");
-  for (uint32_t i=0; i<32; ++i) {
+  for (uint32_t i = 0; i < 32; ++i) {
     snprintf(reg_name, sizeof(reg_name), "v%u", i);
-    read_register_u128(reg_ctx, reg_name, &thread_context.v[i*16]);
+    read_register_u128(reg_ctx, reg_name, &thread_context.v[i * 16]);
   }
   return thread_context;
 }
@@ -433,39 +431,37 @@ class ArchThreadContexts {
     lldb_private::minidump::MinidumpContext_x86_64 x86_64;
     lldb_private::minidump::RegisterContextMinidump_ARM64::Context arm64;
   };
+
 public:
   ArchThreadContexts(llvm::Triple::ArchType arch) : m_arch(arch) {}
 
   bool prepareRegisterContext(RegisterContext *reg_ctx) {
     switch (m_arch) {
-      case llvm::Triple::ArchType::x86_64:
-        x86_64 = GetThreadContext_x86_64(reg_ctx);
-        return true;
-      case llvm::Triple::ArchType::aarch64:
-        arm64 = GetThreadContext_ARM64(reg_ctx);
-        return true;
-      default:
-        break;
+    case llvm::Triple::ArchType::x86_64:
+      x86_64 = GetThreadContext_x86_64(reg_ctx);
+      return true;
+    case llvm::Triple::ArchType::aarch64:
+      arm64 = GetThreadContext_ARM64(reg_ctx);
+      return true;
+    default:
+      break;
     }
     return false;
   }
 
-  const void *data() const {
-    return &x86_64;
-  }
+  const void *data() const { return &x86_64; }
 
   size_t size() const {
     switch (m_arch) {
-      case llvm::Triple::ArchType::x86_64:
-        return sizeof(x86_64);
-      case llvm::Triple::ArchType::aarch64:
-        return sizeof(arm64);
-      default:
-        break;
+    case llvm::Triple::ArchType::x86_64:
+      return sizeof(x86_64);
+    case llvm::Triple::ArchType::aarch64:
+      return sizeof(arm64);
+    default:
+      break;
     }
     return 0;
   }
-
 };
 
 // Function returns start and size of the memory region that contains
@@ -525,7 +521,8 @@ Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
     const ArchSpec &arch = target.GetArchitecture();
     ArchThreadContexts thread_context(arch.GetMachine());
     if (!thread_context.prepareRegisterContext(reg_ctx)) {
-      error.SetErrorStringWithFormat("architecture %s not supported.",
+      error.SetErrorStringWithFormat(
+          "architecture %s not supported.",
           arch.GetTriple().getArchName().str().c_str());
       return error;
     }
@@ -571,7 +568,6 @@ Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
 
     helper_data.AppendData(thread_context.data(), thread_context.size());
 
-
     llvm::minidump::Thread t;
     t.ThreadId = static_cast<llvm::support::ulittle32_t>(thread_sp->GetID());
     t.SuspendCount = static_cast<llvm::support::ulittle32_t>(
@@ -598,12 +594,12 @@ void MinidumpFileBuilder::AddExceptions(const lldb::ProcessSP &process_sp) {
     bool add_exception = false;
     if (stop_info_sp) {
       switch (stop_info_sp->GetStopReason()) {
-        case eStopReasonSignal:
-        case eStopReasonException:
-          add_exception = true;
-          break;
-        default:
-          break;
+      case eStopReasonSignal:
+      case eStopReasonException:
+        add_exception = true;
+        break;
+      default:
+        break;
       }
     }
     if (add_exception) {

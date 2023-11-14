@@ -73,6 +73,7 @@ public:
     FloatingPoint = ARM64_Flag | 0x00000004,
     LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ FloatingPoint)
   };
+
 protected:
   Context m_regs;
 };
