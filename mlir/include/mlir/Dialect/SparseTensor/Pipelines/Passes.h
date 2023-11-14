@@ -144,8 +144,7 @@ struct SparseCompilerOptions
 
   /// Projects out the options for `createSparsificationPass`.
   SparsificationOptions sparsificationOptions() const {
-    return SparsificationOptions(parallelization, enableGPULibgen,
-                                 enableRuntimeLibrary);
+    return SparsificationOptions(parallelization, enableRuntimeLibrary);
   }
 
   /// Projects out the options for `createConvertVectorToLLVMPass`.

@@ -105,7 +105,6 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
     "affine::AffineDialect",
     "arith::ArithDialect",
     "bufferization::BufferizationDialect",
-    "gpu::GPUDialect",
     "LLVM::LLVMDialect",
     "linalg::LinalgDialect",
     "memref::MemRefDialect",
@@ -131,9 +130,6 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
              clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
                         "any-storage-any-loop",
                         "Enable sparse parallelization for any storage and loop."))}]>,
-    Option<"enableGPULibgen", "enable-gpu-libgen", "bool",
-           "false",
-           "Enable GPU acceleration by means of direct library calls (like cuSPARSE)">,
     Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
            "true", "Enable runtime library for manipulating sparse tensors">,
   ];
@@ -368,7 +364,9 @@ def SparseVectorization : Pass<"sparse-vectorization", "ModuleOp"> {
 def SparseGPUCodegen : Pass<"sparse-gpu-codegen", "ModuleOp"> {
   let summary = "Generates GPU code during sparsification";
   let description = [{
-    Enables the sparsifier to use GPU acceleration.
+    Enables the sparsifier to use GPU acceleration. When the number of GPU
+    threads is set to zero, the pass tries to enable GPU acceleration by
+    means of direct library calls (like cuSPARSE).
   }];
   let constructor = "mlir::createSparseGPUCodegenPass()";
   let dependentDialects = [
@@ -381,7 +379,9 @@ def SparseGPUCodegen : Pass<"sparse-gpu-codegen", "ModuleOp"> {
     "sparse_tensor::SparseTensorDialect",
   ];
   let options = [
-    Option<"numThreads", "num_threads", "int32_t", "1024", "Sets the number of GPU threads">,
+    Option<"numThreads", "num-threads", "int32_t", "1024", "Sets the number of GPU threads">,
+    Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
+           "true", "Enable runtime library for manipulating sparse tensors">,
   ];
 }
 
