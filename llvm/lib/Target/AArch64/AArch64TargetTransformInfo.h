@@ -419,6 +419,8 @@ public:
 
     return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
   }
+
+  std::optional<unsigned> getMinPageSize() const { return 4096; }
 };
 
 } // end namespace llvm

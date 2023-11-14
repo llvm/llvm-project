@@ -753,6 +753,10 @@ TargetTransformInfo::getCacheAssociativity(CacheLevel Level) const {
   return TTIImpl->getCacheAssociativity(Level);
 }
 
+std::optional<unsigned> TargetTransformInfo::getMinPageSize() const {
+  return TTIImpl->getMinPageSize();
+}
+
 unsigned TargetTransformInfo::getPrefetchDistance() const {
   return TTIImpl->getPrefetchDistance();
 }

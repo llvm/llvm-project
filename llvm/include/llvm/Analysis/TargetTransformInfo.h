@@ -1155,6 +1155,9 @@ public:
   /// \return The associativity of the cache level, if available.
   std::optional<unsigned> getCacheAssociativity(CacheLevel Level) const;
 
+  /// \return The minimum architectural page size for the target.
+  std::optional<unsigned> getMinPageSize() const;
+
   /// \return How much before a load we should place the prefetch
   /// instruction.  This is currently measured in number of
   /// instructions.
@@ -1889,6 +1892,7 @@ public:
   virtual std::optional<unsigned> getCacheSize(CacheLevel Level) const = 0;
   virtual std::optional<unsigned> getCacheAssociativity(CacheLevel Level)
       const = 0;
+  virtual std::optional<unsigned> getMinPageSize() const = 0;
 
   /// \return How much before a load we should place the prefetch
   /// instruction.  This is currently measured in number of
@@ -2473,6 +2477,10 @@ public:
   std::optional<unsigned>
   getCacheAssociativity(CacheLevel Level) const override {
     return Impl.getCacheAssociativity(Level);
+  }
+
+  std::optional<unsigned> getMinPageSize() const override {
+    return Impl.getMinPageSize();
   }
 
   /// Return the preferred prefetch distance in terms of instructions.
