@@ -155,29 +155,6 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
 
   switch (CE->getOpcode()) {
   default: return nullptr;
-  case Instruction::LShr: {
-    ConstantInt *Amt = dyn_cast<ConstantInt>(CE->getOperand(1));
-    if (!Amt)
-      return nullptr;
-    APInt ShAmt = Amt->getValue();
-    // Cannot analyze non-byte shifts.
-    if ((ShAmt & 7) != 0)
-      return nullptr;
-    ShAmt.lshrInPlace(3);
-
-    // If the extract is known to be all zeros, return zero.
-    if (ShAmt.uge(CSize - ByteStart))
-      return Constant::getNullValue(
-          IntegerType::get(CE->getContext(), ByteSize * 8));
-    // If the extract is known to be fully in the input, extract it.
-    if (ShAmt.ule(CSize - (ByteStart + ByteSize)))
-      return ExtractConstantBytes(CE->getOperand(0),
-                                  ByteStart + ShAmt.getZExtValue(), ByteSize);
-
-    // TODO: Handle the 'partially zero' case.
-    return nullptr;
-  }
-
   case Instruction::Shl: {
     ConstantInt *Amt = dyn_cast<ConstantInt>(CE->getOperand(1));
     if (!Amt)
