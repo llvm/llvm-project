@@ -101,7 +101,7 @@ public:
   }
 
   /// Get the desired AffineDimExpr.
-  AffineDimExpr getDimExpr() const { return pickedDim.cast<AffineDimExpr>(); }
+  AffineDimExpr getDimExpr() const { return cast<AffineDimExpr>(pickedDim); }
 
 private:
   /// The picked AffineDimExpr after visit.  This must be stored as
@@ -137,7 +137,7 @@ static bool isInvariantAffine(AffineExpr a, ArrayRef<LoopId> loopStack,
                               LoopId ldx, bool &isAtLoop) {
   switch (a.getKind()) {
   case AffineExprKind::DimId: {
-    const LoopId i = a.cast<AffineDimExpr>().getPosition();
+    const LoopId i = cast<AffineDimExpr>(a).getPosition();
     if (i == ldx) {
       isAtLoop = true;
       // Must be invariant if we are at the given loop.
@@ -153,12 +153,12 @@ static bool isInvariantAffine(AffineExpr a, ArrayRef<LoopId> loopStack,
   }
   case AffineExprKind::Add:
   case AffineExprKind::Mul: {
-    auto binOp = a.cast<AffineBinaryOpExpr>();
+    auto binOp = cast<AffineBinaryOpExpr>(a);
     return isInvariantAffine(binOp.getLHS(), loopStack, ldx, isAtLoop) &&
            isInvariantAffine(binOp.getRHS(), loopStack, ldx, isAtLoop);
   }
   default: {
-    assert(a.isa<AffineConstantExpr>());
+    assert(isa<AffineConstantExpr>(a));
     return true;
   }
   }
@@ -197,7 +197,7 @@ static AffineMap permute(CodegenEnv &env, AffineMap m) {
     const unsigned preSize = perm.size();
     for (unsigned dim : worklist.set_bits()) {
       bool isAtLoop = false;
-      if (m.getResult(dim).isa<AffineConstantExpr>() ||
+      if (isa<AffineConstantExpr>(m.getResult(dim)) ||
           (isInvariantAffine(m.getResult(dim), env.getLoopStackUpTo(loopDepth),
                              env.topSortAt(loopDepth - 1), isAtLoop) &&
            isAtLoop)) {
@@ -231,7 +231,7 @@ static bool findAffine(Merger &merger, TensorId tid, Level lvl, AffineExpr a,
                        bool setLvlFormat = true) {
   switch (a.getKind()) {
   case AffineExprKind::DimId: {
-    const LoopId idx = merger.makeLoopId(a.cast<AffineDimExpr>().getPosition());
+    const LoopId idx = merger.makeLoopId(cast<AffineDimExpr>(a).getPosition());
     if (!isUndefDLT(merger.getLvlType(tid, idx)))
       return false; // used more than once
 
@@ -249,7 +249,7 @@ static bool findAffine(Merger &merger, TensorId tid, Level lvl, AffineExpr a,
       ++filterLdx;
     }
 
-    if (auto binOp = a.dyn_cast<AffineBinaryOpExpr>()) {
+    if (auto binOp = dyn_cast<AffineBinaryOpExpr>(a)) {
       // We do not set dim level format for affine expression like d0 + d1 on
       // either loop index at d0 or d1.
       // We continue the recursion merely to check whether current affine is
@@ -290,7 +290,7 @@ static bool findDepIdxSet(Merger &merger, TensorId tensor, Level lvl,
     if (coefficient <= 0)
       return false;
 
-    const LoopId ldx = merger.makeLoopId(a.cast<AffineDimExpr>().getPosition());
+    const LoopId ldx = merger.makeLoopId(cast<AffineDimExpr>(a).getPosition());
     if (!isUndefDLT(merger.getLvlType(tensor, ldx)))
       return false; // used more than once, e.g., A[i][i]
 
@@ -330,20 +330,20 @@ static bool findDepIdxSet(Merger &merger, TensorId tensor, Level lvl,
       return false;
 
     // TODO: Support Constant AffineExp for slice-based codegen
-    if (a.isa<AffineConstantExpr>())
+    if (isa<AffineConstantExpr>(a))
       llvm_unreachable("Not yet implemented");
 
-    auto binOp = a.cast<AffineBinaryOpExpr>();
+    auto binOp = cast<AffineBinaryOpExpr>(a);
     auto lhs = binOp.getLHS(), rhs = binOp.getRHS();
-    if (rhs.isa<AffineConstantExpr>())
+    if (isa<AffineConstantExpr>(rhs))
       std::swap(lhs, rhs);
     // Must be in form of `constant * d`.
-    assert(lhs.isa<AffineConstantExpr>() && rhs.isa<AffineDimExpr>());
-    int64_t coefficient = lhs.cast<AffineConstantExpr>().getValue();
+    assert(isa<AffineConstantExpr>(lhs) && isa<AffineDimExpr>(rhs));
+    int64_t coefficient = cast<AffineConstantExpr>(lhs).getValue();
     return findDepIdxSet(merger, tensor, lvl, rhs, dlt, isSubExp, coefficient);
   }
   case AffineExprKind::Add: {
-    auto binOp = a.cast<AffineBinaryOpExpr>();
+    auto binOp = cast<AffineBinaryOpExpr>(a);
     return findDepIdxSet(merger, tensor, lvl, binOp.getLHS(), dlt, true) &&
            findDepIdxSet(merger, tensor, lvl, binOp.getRHS(), dlt, true);
   }
@@ -395,7 +395,7 @@ static unsigned getNumNonTrivialIdxExpOnSparseLvls(AffineMap map,
   for (Level l = 0; l < lvlRank; l++) {
     // FIXME: `toOrigDim` is deprecated.
     const Dimension d = toOrigDim(stt.getEncoding(), l);
-    if (!exprs[d].isa<AffineDimExpr>() && !stt.isDenseLvl(l))
+    if (!isa<AffineDimExpr>(exprs[d]) && !stt.isDenseLvl(l))
       num++;
   }
   return num;
@@ -571,7 +571,7 @@ static void addAffineOrderings(std::vector<std::vector<bool>> &adjM,
   switch (toExpand.getKind()) {
   case AffineExprKind::DimId: {
     const std::optional<LoopId> idx{
-        toExpand.cast<AffineDimExpr>().getPosition()};
+        cast<AffineDimExpr>(toExpand).getPosition()};
     if (toExpand == a)
       addAffineOrderings(adjM, inDegree, AffineExpr(), b, idx, tidx);
     else // toExpand == b
@@ -580,7 +580,7 @@ static void addAffineOrderings(std::vector<std::vector<bool>> &adjM,
   }
   case AffineExprKind::Add:
   case AffineExprKind::Mul: {
-    auto binOp = toExpand.cast<AffineBinaryOpExpr>();
+    auto binOp = cast<AffineBinaryOpExpr>(toExpand);
     if (toExpand == a) {
       addAffineOrderings(adjM, inDegree, binOp.getLHS(), b, fidx, tidx);
       addAffineOrderings(adjM, inDegree, binOp.getRHS(), b, fidx, tidx);
@@ -610,7 +610,7 @@ static void tryRelaxAffineConstraints(linalg::GenericOp op,
     // require both d0 < d2 and d1 < d2 to ensure correct ordering (i.e.,
     // no ordering like d0->d2->d1).
     // TODO: this is obviously a sub optimal solution.
-    if (!fldx && !fa.isa<AffineConstantExpr>()) {
+    if (!fldx && !isa<AffineConstantExpr>(fa)) {
       // Heuristic: we prefer parallel loop for lhs to reduce the chance
       // we add reduce < parallel ordering.
       finder.setPickedIterType(utils::IteratorType::parallel);
@@ -618,7 +618,7 @@ static void tryRelaxAffineConstraints(linalg::GenericOp op,
       fa = finder.getDimExpr();
       fldx = finder.getDimExpr().getPosition();
     }
-    if (!ta.isa<AffineConstantExpr>()) {
+    if (!isa<AffineConstantExpr>(ta)) {
       // Heuristic: we prefer reduction loop for rhs to reduce the chance
       // adding reduce < parallel ordering.
       finder.setPickedIterType(utils::IteratorType::reduction);
@@ -651,7 +651,7 @@ static void addFilterLoopBasedConstraints(CodegenEnv &env, OpOperand &t,
     // Filter loops should be constructed after all the dependent loops,
     // i.e., d0 + d1 < filter_loop(d0 + d1)
     if (tldx && env.merger().isFilterLoop(*tldx)) {
-      assert(!ta.isa<AffineDimExpr>() && !isDenseDLT(enc.getLvlTypes()[lvl]));
+      assert(!isa<AffineDimExpr>(ta) && !isDenseDLT(enc.getLvlTypes()[lvl]));
       addAffineOrderings(adjM, inDegree, ta, AffineExpr(), std::nullopt, tldx);
       // Now that the ordering of affine expression is captured by filter
       // loop idx, we only need to ensure the affine ordering against filter
@@ -720,7 +720,7 @@ static void addSliceBasedConstraints(CodegenEnv &env, OpOperand &t,
     const AffineExpr fa = map.getResult(toOrigDim(enc, lvl - 1));
     const AffineExpr ta = map.getResult(toOrigDim(enc, lvl));
 
-    if (fa.isa<AffineDimExpr>() || ta.isa<AffineDimExpr>()) {
+    if (isa<AffineDimExpr>(fa) || isa<AffineDimExpr>(ta)) {
       AffineDimCollector fCollector;
       fCollector.walkPostOrder(fa);
 
@@ -928,7 +928,7 @@ static Value genIndex(CodegenEnv &env, OpOperand *t) {
   // but this is assuming there are in fact `dimRank` many results instead.
   const AffineExpr a = map.getResult(toOrigDim(stt.getEncoding(), lvlRank - 1));
   assert(a.getKind() == AffineExprKind::DimId);
-  const LoopId idx = env.makeLoopId(a.cast<AffineDimExpr>().getPosition());
+  const LoopId idx = env.makeLoopId(cast<AffineDimExpr>(a).getPosition());
   return env.getLoopVar(idx);
 }
 
@@ -1635,7 +1635,7 @@ static void genConstantDenseAddressFromLevel(CodegenEnv &env,
     for (Level l = startLvl; l < lvlRank; l++) {
       // FIXME: `toOrigDim` is deprecated.
       AffineExpr lvlExpr = lvlExprs[toOrigDim(enc, l)];
-      if (enc.isDenseLvl(l) && lvlExpr.isa<AffineConstantExpr>())
+      if (enc.isDenseLvl(l) && isa<AffineConstantExpr>(lvlExpr))
         env.emitter().genDenseAffineAddress(
             builder, loc, env.makeTensorLevel(tid, l), lvlExpr);
       else
@@ -1726,11 +1726,11 @@ static bool translateBitsToTidLvlPairs(
             AffineExpr exp = affines[toOrigDim(stt.getEncoding(), l)];
             // Skip simple affine expression and non-dense levels (which
             // have their own filter loop).
-            if (exp.isa<AffineDimExpr>() || !stt.isDenseLvl(l))
+            if (isa<AffineDimExpr>(exp) || !stt.isDenseLvl(l))
               continue;
 
             // Constant affine expression are handled in genLoop
-            if (!exp.isa<AffineConstantExpr>()) {
+            if (!isa<AffineConstantExpr>(exp)) {
               bool isAtLoop = false;
               if (isInvariantAffine(env, exp, ldx, isAtLoop) && isAtLoop) {
                 // If the compound affine is invariant and we are right at the
