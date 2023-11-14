@@ -1509,7 +1509,6 @@ TypeSystemSwiftTypeRef::GetSwiftASTContext(const SymbolContext *sc) const {
   std::lock_guard<std::mutex> guard(m_swift_ast_context_lock);
   // There is only one per-module context.
   const char *key = nullptr;
-
   // Look up the SwiftASTContext in the cache.
   auto it = m_swift_ast_context_map.find(key);
   if (it != m_swift_ast_context_map.end()) {
