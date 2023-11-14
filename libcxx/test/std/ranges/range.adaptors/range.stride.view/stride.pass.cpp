@@ -13,14 +13,16 @@
 // std::views::stride_view
 
 #include "test.h"
+#include "test_iterators.h"
 #include <ranges>
 #include <type_traits>
 #include <utility>
 
 constexpr bool test() {
-  static_assert(noexcept(std::declval<std::ranges::stride_view<BidirArrayView<int>>>().stride()));
-  static_assert(std::is_same_v<std::ranges::range_difference_t<BidirArrayView<int>>,
-                               decltype(std::declval<std::ranges::stride_view<BidirArrayView<int>>>().stride())>);
+  using View = InputView<bidirectional_iterator<int*>>;
+  static_assert(noexcept(std::declval<std::ranges::stride_view<View>>().stride()));
+  static_assert(std::is_same_v<std::ranges::range_difference_t<View>,
+                               decltype(std::declval<std::ranges::stride_view<View>>().stride())>);
   return true;
 }
 
