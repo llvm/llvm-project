@@ -867,7 +867,8 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
       // the compiler on perfectly valid code.
       if (!op->hasAttr(BufferizationDialect::kManualDeallocation)) {
         state.resetOwnerships(operand, block);
-        state.updateOwnership(operand, buildBoolValue(builder, op.getLoc(), false));
+        state.updateOwnership(operand,
+                              buildBoolValue(builder, op.getLoc(), false));
         continue;
       }
 
