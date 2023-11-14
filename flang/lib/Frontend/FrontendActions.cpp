@@ -786,8 +786,7 @@ void CodeGenAction::generateLLVMIR() {
   
   // Set FramePointer LLVM module flag.
   llvmModule->setFramePointer(
-    static_cast<llvm::FramePointerKind>(opts.getFramePointer()));
-
+      static_cast<llvm::FramePointerKind>(opts.getFramePointer()));
 }
 
 bool CodeGenAction::setUpTargetMachine() {

@@ -216,7 +216,7 @@ void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
 } // end namespace driver
 } // end namespace clang
 
-clang::CodeGenOptions::FramePointerKind getFramePointerKind(
-    const llvm::opt::ArgList &Args, const llvm::Triple &Triple);
+clang::CodeGenOptions::FramePointerKind
+getFramePointerKind(const llvm::opt::ArgList &Args, const llvm::Triple &Triple);
 
 #endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_COMMONARGS_H

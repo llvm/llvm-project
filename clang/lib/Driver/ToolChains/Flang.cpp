@@ -608,7 +608,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgValues(CmdArgs, options::OPT_Xflang);
 
   CodeGenOptions::FramePointerKind FPKeepKind =
-    getFramePointerKind(Args, Triple);
+      getFramePointerKind(Args, Triple);
 
   const char *FPKeepKindStr = nullptr;
   switch (FPKeepKind) {

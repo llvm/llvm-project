@@ -123,7 +123,6 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
     return !clang::driver::tools::areOptimizationsEnabled(Args);
   }
 
-  //if (Triple.isOSLinux() || Triple.getOS() == llvm::Triple::CloudABI ||
   if (Triple.isOSLinux() || Triple.isOSHurd()) {
     switch (Triple.getArch()) {
     // Don't use a frame pointer on linux if optimizing for certain targets.
@@ -210,7 +209,6 @@ getFramePointerKind(const llvm::opt::ArgList &Args,
   }
   return clang::CodeGenOptions::FramePointerKind::None;
 }
-
 
 static void renderRpassOptions(const ArgList &Args, ArgStringList &CmdArgs,
                                const StringRef PluginOptPrefix) {
