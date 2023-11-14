@@ -2746,6 +2746,22 @@ AArch64TargetLowering::EmitFill(MachineInstr &MI, MachineBasicBlock *BB) const {
   return BB;
 }
 
+MachineBasicBlock *AArch64TargetLowering::EmitZTSpillFill(MachineInstr &MI,
+                                                          MachineBasicBlock *BB,
+                                                          bool IsSpill) const {
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  MachineInstrBuilder MIB;
+  if (IsSpill) {
+    MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STR_TX));
+    MIB.addReg(MI.getOperand(0).getReg());
+  } else
+    MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::LDR_TX),
+                  MI.getOperand(0).getReg());
+  MIB.add(MI.getOperand(1)); // Base
+  MI.eraseFromParent();      // The pseudo is gone now.
+  return BB;
+}
+
 MachineBasicBlock *
 AArch64TargetLowering::EmitZAInstr(unsigned Opc, unsigned BaseReg,
                                    MachineInstr &MI,
@@ -2862,6 +2878,10 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitTileLoad(AArch64::LD1_MXIPXX_V_Q, AArch64::ZAQ0, MI, BB);
   case AArch64::LDR_ZA_PSEUDO:
     return EmitFill(MI, BB);
+  case AArch64::LDR_TX_PSEUDO:
+    return EmitZTSpillFill(MI, BB, /*IsSpill=*/false);
+  case AArch64::STR_TX_PSEUDO:
+    return EmitZTSpillFill(MI, BB, /*IsSpill=*/true);
   case AArch64::ZERO_M_PSEUDO:
     return EmitZero(MI, BB);
   }
