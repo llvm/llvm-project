@@ -29,6 +29,11 @@ extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> UseCDSplit;
 extern cl::opt<bool> SplitEH;
 extern cl::opt<unsigned> ExecutionCountThreshold;
+
+static cl::opt<double> CallScale("call-scale",
+                                 cl::desc("Call score scale coefficient"),
+                                 cl::init(0.95), cl::ReallyHidden,
+                                 cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {
@@ -161,6 +166,50 @@ void CDSplit::initialize(BinaryContext &BC) {
     // a long cond branch takes BRANCH_SIZE + 4 bytes.
     LONG_COND_BRANCH_SIZE_DELTA = 4;
   }
+}
+
+/// Get a collection of "shortenable" calls, that is, calls of type X->Y
+/// when the function order is [... X ... BF ... Y ...].
+/// If the hot fragment size of BF is reduced, then such calls are guaranteed
+/// to get shorter by the reduced hot fragment size.
+std::vector<CallInfo> CDSplit::extractCoverCalls(const BinaryFunction &BF) {
+  // Record the length and the count of the calls that can be shortened
+  std::vector<CallInfo> CoverCalls;
+  if (opts::CallScale == 0)
+    return CoverCalls;
+
+  const BinaryFunction *ThisBF = &BF;
+  const BinaryBasicBlock *ThisBB = &(ThisBF->front());
+  size_t ThisGI = GlobalIndices[ThisBB];
+
+  for (BinaryFunction *DstBF : FunctionsToConsider) {
+    const BinaryBasicBlock *DstBB = &(DstBF->front());
+    if (DstBB->getKnownExecutionCount() == 0)
+      continue;
+
+    size_t DstGI = GlobalIndices[DstBB];
+    for (const BinaryBasicBlock *SrcBB : Callers[DstGI]) {
+      const BinaryFunction *SrcBF = SrcBB->getFunction();
+      if (ThisBF == SrcBF)
+        continue;
+
+      const size_t CallCount = SrcBB->getKnownExecutionCount();
+
+      size_t SrcGI = GlobalIndices[SrcBB];
+
+      bool IsCoverCall = (SrcGI < ThisGI && ThisGI < DstGI) ||
+                         (DstGI <= ThisGI && ThisGI < SrcGI);
+      if (!IsCoverCall)
+        continue;
+
+      size_t SrcBBEndAddr = BBOffsets[SrcBB] + BBSizes[SrcBB];
+      size_t DstBBStartAddr = BBOffsets[DstBB];
+      size_t CallLength = AbsoluteDifference(SrcBBEndAddr, DstBBStartAddr);
+      CallInfo CI{CallLength, CallCount};
+      CoverCalls.emplace_back(CI);
+    }
+  }
+  return CoverCalls;
 }
 
 std::pair<size_t, size_t>
