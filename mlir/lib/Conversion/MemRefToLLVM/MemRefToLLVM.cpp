@@ -1390,7 +1390,7 @@ public:
     for (const auto &en :
          llvm::enumerate(transposeOp.getPermutation().getResults())) {
       int targetPos = en.index();
-      int sourcePos = en.value().cast<AffineDimExpr>().getPosition();
+      int sourcePos = cast<AffineDimExpr>(en.value()).getPosition();
       targetMemRef.setSize(rewriter, loc, targetPos,
                            viewMemRef.size(rewriter, loc, sourcePos));
       targetMemRef.setStride(rewriter, loc, targetPos,

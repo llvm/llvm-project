@@ -610,22 +610,22 @@ Value LoopEmitter::genAffine(OpBuilder &builder, Location loc, AffineExpr a) {
     // level-expression, the `getPosition` must in fact be a `Dimension`.
     // However, elsewhere we have been lead to expect that `loopIdToOrd`
     // should be indexed by `LoopId`...
-    const auto loopId = a.cast<AffineDimExpr>().getPosition();
+    const auto loopId = cast<AffineDimExpr>(a).getPosition();
     assert(loopId < loopIdToOrd.size());
     return loopStack[loopIdToOrd[loopId]].iv;
   }
   case AffineExprKind::Add: {
-    auto binOp = a.cast<AffineBinaryOpExpr>();
+    auto binOp = cast<AffineBinaryOpExpr>(a);
     return ADDI(genAffine(builder, loc, binOp.getLHS()),
                 genAffine(builder, loc, binOp.getRHS()));
   }
   case AffineExprKind::Mul: {
-    auto binOp = a.cast<AffineBinaryOpExpr>();
+    auto binOp = cast<AffineBinaryOpExpr>(a);
     return MULI(genAffine(builder, loc, binOp.getLHS()),
                 genAffine(builder, loc, binOp.getRHS()));
   }
   case AffineExprKind::Constant: {
-    int64_t c = a.cast<AffineConstantExpr>().getValue();
+    int64_t c = cast<AffineConstantExpr>(a).getValue();
     return C_IDX(c);
   }
   default:
@@ -1159,7 +1159,7 @@ Operation *LoopEmitter::enterFilterLoopOverTensorAtLvl(
     OpBuilder &builder, Location loc, TensorId tid, Level lvl,
     AffineExpr affine, MutableArrayRef<Value> reduc) {
   assert(isValidLevel(tid, lvl));
-  assert(!affine.isa<AffineDimExpr>() && !isDenseDLT(lvlTypes[tid][lvl]));
+  assert(!isa<AffineDimExpr>(affine) && !isDenseDLT(lvlTypes[tid][lvl]));
   // We can not re-enter the same level.
   assert(!coords[tid][lvl]);
 
