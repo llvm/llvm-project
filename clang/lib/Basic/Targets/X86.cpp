@@ -122,7 +122,7 @@ bool X86TargetInfo::initFeatureMap(
   std::vector<std::string> UpdatedAVX10FeaturesVec;
   enum { FE_NOSET = -1, FE_FALSE, FE_TRUE };
   int HasEVEX512 = FE_NOSET;
-  bool HasAVX512F = Features["avx512f"];
+  bool HasAVX512F = false;
   bool HasAVX10 = false;
   bool HasAVX10_512 = false;
   std::string LastAVX10;
@@ -180,6 +180,8 @@ bool X86TargetInfo::initFeatureMap(
       Diags.Report(diag::warn_invalid_feature_combination)
           << LastAVX10 + (HasEVEX512 == FE_TRUE ? " +evex512" : " -evex512");
     UpdatedFeaturesVec.push_back(HasAVX10_512 ? "+evex512" : "-evex512");
+  } else if (HasEVEX512 == FE_FALSE) {
+    UpdatedFeaturesVec.push_back("-evex512");
   }
 
   if (!TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec))
