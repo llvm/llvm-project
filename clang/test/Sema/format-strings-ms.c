@@ -87,30 +87,37 @@ void z_test(void *p) {
 }
 
 void w_int_test(void) {
-  int8_t a = 0b101;
-  int16_t b = 2;
-  uint32_t c = 123;
-  int64_t d = 0x3b;
+  int8_t a;
+  int16_t b;
+  uint32_t c;
+  int64_t d;
 
   // for %w
   printf("%w8b", a); // expected-warning{{format specifies type 'char' but the argument has type 'int8_t' (aka 'signed char')}}
   printf("%w16i", b);
   printf("%w32u", c);
   printf("%w64x", d);
-
+  scanf("%w8b", a); // expected-warning{{format specifies type 'char' but the argument has type 'int'}}
+  scanf("%w16i", b); // expected-warning{{format specifies type 'short' but the argument has type 'int'}}
+  scanf("%w32u", c);
+  scanf("%w64x", d);
 }
 
 void wf_test(void) {
-  int_fast8_t a = 0b101;
-  uint_fast16_t b = 2;
-  int_fast32_t c = 021;
-  int_fast64_t d = 0x3a;
+  int_fast8_t a;
+  uint_fast16_t b;
+  int_fast32_t c;
+  int_fast64_t d;
 
   // for %wf
   printf("%wf8b", a); // expected-warning{{format specifies type 'char' but the argument has type 'int_fast8_t' (aka 'signed char')}}
   printf("%wf16u", b);
   printf("%wf32o", c);
   printf("%wf64X", d);
+  scanf("%wf8b", a); // expected-warning{{format specifies type 'char' but the argument has type 'int'}}
+  scanf("%wf16u", b);
+  scanf("%wf32o", c);
+  scanf("%wf64X", d);
 }
 
 #endif

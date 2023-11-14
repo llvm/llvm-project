@@ -471,7 +471,6 @@ public:
     return size;
   }
 
-
   bool usesPositionalArg() const { return UsesPositionalArg; }
 
   bool hasValidLengthModifier(const TargetInfo &Target,
@@ -791,6 +790,9 @@ bool parseFormatStringHasFormattingSpecifiers(const char *Begin,
                                               const char *End,
                                               const LangOptions &LO,
                                               const TargetInfo &Target);
+
+ArgType wToArgType(int size, bool fast, ASTContext &C);
+ArgType wToArgTypeUnsigned(int size, bool fast, ASTContext &C);
 
 } // end analyze_format_string namespace
 } // end clang namespace

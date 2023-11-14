@@ -484,6 +484,26 @@ bool clang::analyze_format_string::parseFormatStringHasFormattingSpecifiers(
   return false;
 }
 
+ArgType clang::analyze_format_string::wToArgType(
+    int size, bool fast, ASTContext &C) {
+  ArgType fastType = C.getTargetInfo().getTriple().isArch64Bit() ? C.LongLongTy : C.IntTy;
+  if (size == 8) return C.CharTy;
+  if (size == 16) return fast? fastType : C.ShortTy;
+  if (size == 32) return fast? fastType : C.IntTy;
+  if (size == 64) return C.LongLongTy;
+  return ArgType::Invalid();
+}
+
+ArgType clang::analyze_format_string::wToArgTypeUnsigned(
+    int size, bool fast, ASTContext &C) {
+  ArgType fastType = C.getTargetInfo().getTriple().isArch64Bit() ? C.UnsignedLongLongTy : C.UnsignedIntTy;
+  if (size == 8) return C.UnsignedCharTy;
+  if (size == 16) return fast? fastType : C.UnsignedShortTy;
+  if (size == 32) return fast? fastType : C.UnsignedIntTy;
+  if (size == 64) return C.UnsignedLongLongTy;
+  return ArgType::Invalid();
+}
+
 //===----------------------------------------------------------------------===//
 // Methods on PrintfSpecifier.
 //===----------------------------------------------------------------------===//
@@ -542,12 +562,7 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
       case LengthModifier::AsWideFast:
         int s = getSize();
         bool fast = LM.getKind() == LengthModifier::AsWideFast ? true : false;
-        ArgType fastType = Ctx.getTargetInfo().getTriple().isArch64Bit() ? Ctx.LongLongTy : Ctx.IntTy;
-        if (s == 8) return Ctx.CharTy;
-        if (s == 16) return fast? fastType : Ctx.ShortTy;
-        if (s == 32) return fast? fastType : Ctx.IntTy;
-        if (s == 64) return Ctx.LongLongTy;
-        return ArgType::Invalid();
+        return clang::analyze_format_string::wToArgType(s, fast, Ctx);
     }
 
   if (CS.isUIntArg())
@@ -586,12 +601,7 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
       case LengthModifier::AsWideFast:
         int s = getSize();
         bool fast = LM.getKind() == LengthModifier::AsWideFast ? true : false;
-        ArgType fastType = Ctx.getTargetInfo().getTriple().isArch64Bit() ? Ctx.UnsignedLongLongTy : Ctx.UnsignedIntTy;
-        if (s == 8) return Ctx.UnsignedCharTy;
-        if (s == 16) return fast? fastType : Ctx.UnsignedShortTy;
-        if (s == 32) return fast? fastType : Ctx.UnsignedIntTy;
-        if (s == 64) return Ctx.UnsignedLongLongTy;
-        return ArgType::Invalid();
+        return clang::analyze_format_string::wToArgTypeUnsigned(s, fast, Ctx);
     }
 
   if (CS.isDoubleArg()) {
