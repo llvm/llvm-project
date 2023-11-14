@@ -29,6 +29,13 @@ struct JumpInfo {
   BinaryBasicBlock *UncondSuccessor = nullptr;
 };
 
+struct SplitScore {
+  size_t SplitIndex;
+  size_t HotSizeReduction = 0;
+  double LocalScore = 0;
+  double CoverCallScore = 0;
+};
+
 class CDSplit : public BinaryFunctionPass {
 
 private:
@@ -79,6 +86,39 @@ private:
   std::pair<size_t, size_t>
   estimatePostSplitBBAddress(const BasicBlockOrder &BlockOrder,
                              const size_t SplitIndex);
+
+  /// Compute sum of scores over jumps within \p BlockOrder given \p SplitIndex.
+  /// Increament Score.LocalScore in place by the sum.
+  void computeJumpScore(const BasicBlockOrder &BlockOrder,
+                        const size_t SplitIndex, SplitScore &Score);
+
+  /// Compute sum of scores over calls originated in the current function
+  /// given \p SplitIndex. Increament Score.LocalScore in place by the sum.
+  void computeLocalCallScore(const BasicBlockOrder &BlockOrder,
+                             const size_t SplitIndex, SplitScore &Score);
+
+  /// Compute sum of splitting scores for cover calls of the input function.
+  /// Increament Score.CoverCallScore in place by the sum.
+  void computeCoverCallScore(const BasicBlockOrder &BlockOrder,
+                             const size_t SplitIndex,
+                             const std::vector<CallInfo> &CoverCalls,
+                             SplitScore &Score);
+
+  /// Compute the split score of splitting a function at a given index.
+  /// The split score consists of local score and cover score. Cover call score
+  /// is expensive to compute. As a result, we pass in a \p ReferenceScore and
+  /// compute cover score only when the local score exceeds that in the
+  /// ReferenceScore or that the size reduction of the hot fragment is larger
+  /// than that achieved by the split index of the ReferenceScore. This function
+  /// returns \p Score of SplitScore type. It contains the local score and cover
+  /// score (if computed) of the current splitting index. For easier book
+  /// keeping and comparison, it also stores the split index and the resulting
+  /// reduction in hot fragment size.
+  SplitScore computeSplitScore(const BinaryFunction &BF,
+                               const BasicBlockOrder &BlockOrder,
+                               const size_t SplitIndex,
+                               const std::vector<CallInfo> &CoverCalls,
+                               const SplitScore &ReferenceScore);
 
   /// Split function body into 3 fragments: hot / warm / cold.
   void runOnFunction(BinaryFunction &BF);
