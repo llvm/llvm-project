@@ -1,4 +1,5 @@
-//===-- sanitizer_symbolizer_report_fuchsia.cpp -----------------------------------===//
+//===-- sanitizer_symbolizer_report_fuchsia.cpp
+//-----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,8 +15,7 @@
 
 #if SANITIZER_SYMBOLIZER_MARKUP
 
-
-#include "sanitizer_common.h"
+#  include "sanitizer_common.h"
 
 namespace __sanitizer {
 void StartReportDeadlySignal() {}
@@ -28,6 +28,6 @@ void HandleDeadlySignal(void *siginfo, void *context, u32 tid,
                         UnwindSignalStackCallbackType unwind,
                         const void *unwind_context) {}
 
-} // namespace __sanitizer
+}  // namespace __sanitizer
 
 #endif  // SANITIZER_SYMBOLIZER_MARKUP
