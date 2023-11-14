@@ -9164,7 +9164,8 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
       continue;
     }
     auto *VecTy = dyn_cast<FixedVectorType>(EI->getVectorOperandType());
-    if (!VecTy || !isa<ConstantInt, UndefValue>(EI->getIndexOperand()))
+    if (!VecTy || !isa<ConstantInt, UndefValue>(EI->getIndexOperand()) ||
+        getTreeEntry(EI->getVectorOperand()))
       continue;
     std::optional<unsigned> Idx = getExtractIndex(EI);
     // Undefined index.
