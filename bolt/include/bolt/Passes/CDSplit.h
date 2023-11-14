@@ -48,8 +48,26 @@ private:
   // Conditional and unconditional successors of each BB.
   DenseMap<const BinaryBasicBlock *, JumpInfo> JumpInfos;
 
+  /// Sizes of branch instructions used to approximate block size increase
+  /// due to hot-warm splitting. Initialized to be 0. These values are updated
+  /// if the architecture is X86.
+  uint8_t BRANCH_SIZE = 0;
+  uint8_t LONG_UNCOND_BRANCH_SIZE_DELTA = 0;
+  uint8_t LONG_COND_BRANCH_SIZE_DELTA = 0;
+
   /// Helper functions to initialize global variables.
   void initialize(BinaryContext &BC);
+
+  /// Populate BinaryBasicBlock::OutputAddressRange with estimated basic block
+  /// start and end addresses for hot and warm basic blocks, assuming hot-warm
+  /// splitting happens at \p SplitIndex. Also return estimated end addresses
+  /// of the hot fragment before and after splitting.
+  /// The estimations take into account the potential addition of branch
+  /// instructions due to split fall through branches as well as the need to
+  /// use longer branch instructions for split (un)conditional branches.
+  std::pair<size_t, size_t>
+  estimatePostSplitBBAddress(const BasicBlockOrder &BlockOrder,
+                             const size_t SplitIndex);
 
   /// Split function body into 3 fragments: hot / warm / cold.
   void runOnFunction(BinaryFunction &BF);

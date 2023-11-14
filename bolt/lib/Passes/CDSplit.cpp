@@ -149,6 +149,96 @@ void CDSplit::initialize(BinaryContext &BC) {
       }
     }
   }
+
+  // If X86, long branch instructions take more bytes than short branches.
+  // Adjust sizes of branch instructions used to approximate block size
+  // increase due to hot-warm splitting.
+  if (BC.isX86()) {
+    // a short branch takes 2 bytes.
+    BRANCH_SIZE = 2;
+    // a long uncond branch takes BRANCH_SIZE + 3 bytes.
+    LONG_UNCOND_BRANCH_SIZE_DELTA = 3;
+    // a long cond branch takes BRANCH_SIZE + 4 bytes.
+    LONG_COND_BRANCH_SIZE_DELTA = 4;
+  }
+}
+
+std::pair<size_t, size_t>
+CDSplit::estimatePostSplitBBAddress(const BasicBlockOrder &BlockOrder,
+                                    const size_t SplitIndex) {
+  assert(SplitIndex < BlockOrder.size() && "Invalid split index");
+  // Helper function estimating if a branch needs a longer branch instruction.
+  // The function returns true if the following two conditions are satisfied:
+  // condition 1. One of SrcBB and DstBB is in hot, the other is in warm.
+  // condition 2. The pre-split branch distance is within 8 bytes.
+  auto needNewLongBranch = [&](const BinaryBasicBlock *SrcBB,
+                               const BinaryBasicBlock *DstBB) {
+    if (!SrcBB || !DstBB)
+      return false;
+    // The following checks for condition 1.
+    if (SrcBB->isSplit() || DstBB->isSplit())
+      return false;
+    if ((SrcBB->getLayoutIndex() <= SplitIndex) ==
+        (DstBB->getLayoutIndex() <= SplitIndex))
+      return false;
+    // The following checks for condition 2.
+    return (AbsoluteDifference(BBOffsets[DstBB],
+                               BBOffsets[SrcBB] + BBSizes[SrcBB]) <=
+            std::numeric_limits<int8_t>::max());
+  };
+
+  // Populate BB.OutputAddressRange with estimated new start and end addresses
+  // and compute the old end address of the hot section and the new end address
+  // of the hot section.
+  size_t OldHotEndAddr;
+  size_t NewHotEndAddr;
+  size_t CurrentAddr = BBOffsets[BlockOrder[0]];
+  for (BinaryBasicBlock *BB : BlockOrder) {
+    // We only care about new addresses of blocks in hot/warm.
+    if (BB->isSplit())
+      break;
+    size_t NewSize = BBSizes[BB];
+    // Need to add a new branch instruction if a fall-through branch is split.
+    bool NeedNewUncondBranch =
+        (JumpInfos[BB].UncondSuccessor && !JumpInfos[BB].HasUncondBranch &&
+         BB->getLayoutIndex() == SplitIndex);
+
+    NewSize += BRANCH_SIZE * NeedNewUncondBranch +
+               LONG_UNCOND_BRANCH_SIZE_DELTA *
+                   needNewLongBranch(BB, JumpInfos[BB].UncondSuccessor) +
+               LONG_COND_BRANCH_SIZE_DELTA *
+                   needNewLongBranch(BB, JumpInfos[BB].CondSuccessor);
+    BB->setOutputStartAddress(CurrentAddr);
+    CurrentAddr += NewSize;
+    BB->setOutputEndAddress(CurrentAddr);
+    // Temporarily set the start address of the warm fragment of the current
+    // function to be 0. We will update it later when we can get a better
+    // estimate.
+    if (BB->getLayoutIndex() == SplitIndex) {
+      NewHotEndAddr = CurrentAddr;
+      CurrentAddr = 0;
+    }
+    OldHotEndAddr = BBOffsets[BB] + BBSizes[BB];
+  }
+
+  // Update the start and end addresses of blocks in the warm fragment.
+  // First get a better estimate of the start address of the warm fragment.
+  assert(OrigHotSectionSize + NewHotEndAddr >= OldHotEndAddr);
+  size_t WarmSectionStartAddr =
+      OrigHotSectionSize + NewHotEndAddr - OldHotEndAddr;
+  // Do the correction.
+  for (size_t Index = SplitIndex + 1; Index < BlockOrder.size(); Index++) {
+    BinaryBasicBlock *BB = BlockOrder[Index];
+    // We only care about new addresses of blocks in warm.
+    if (BB->isSplit())
+      break;
+    size_t StartAddrOffset = BB->getOutputAddressRange().first;
+    size_t EndAddrOffset = BB->getOutputAddressRange().second;
+    BB->setOutputStartAddress(WarmSectionStartAddr + StartAddrOffset);
+    BB->setOutputEndAddress(WarmSectionStartAddr + EndAddrOffset);
+  }
+
+  return std::make_pair(OldHotEndAddr, NewHotEndAddr);
 }
 
 /// Find the best index for splitting. The returned value is the index of the
