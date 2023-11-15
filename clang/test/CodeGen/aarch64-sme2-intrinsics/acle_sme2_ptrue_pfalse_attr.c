@@ -19,16 +19,17 @@ svcount_t test_svptrue_c8_attr(void) __arm_streaming {
   return svptrue_c8();
 }
 
-// CHECK-LABEL: @test_svptrue_c(
+// CHECK-LABEL: @test_svpfalse_c_attr(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1> zeroinitializer)
 // CHECK-NEXT:    ret target("aarch64.svcount") [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z14test_svptrue_cv(
+// CPP-CHECK-LABEL: @_Z20test_svpfalse_c_attrv(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1> zeroinitializer)
 // CPP-CHECK-NEXT:    ret target("aarch64.svcount") [[TMP0]]
 //
-svcount_t test_svptrue_c(void) __arm_streaming {
+svcount_t test_svpfalse_c_attr(void) __arm_streaming_compatible
+{
   return svpfalse_c();
 }
