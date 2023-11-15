@@ -19,6 +19,7 @@ namespace clang::tidy::bugprone {
 
 //static const char *bin_op_bind = "ptr-sizeof-expression";	
 static constexpr llvm::StringLiteral BinOp{"bin-op"};
+static constexpr llvm::StringLiteral PointedType{"pointed-type"};
 static const auto IgnoredType = qualType(anyOf(asString("char"),asString("unsigned char"),asString("signed char"),asString("int8_t"),asString("uint8_t"),asString("std::byte"),asString("const char"),asString("const unsigned char"),asString("const signed char"),asString("const int8_t"),asString("const uint8_t"),asString("const std::byte")));
 static const auto InterestingPointer = pointerType(unless(pointee(IgnoredType)));
 
@@ -40,21 +41,43 @@ void SuspiciousPointerArithmeticsUsingSizeofCheck::registerMatchers(MatchFinder 
 	              hasLHS(hasType(pointerType())),
 		      hasRHS(sizeOfExpr(expr()))
 		      ).bind(bin_op_bind)
-*/
+
 		    binaryOperator(hasAnyOperatorName("+=","-=","+","-" ),
 	              hasLHS(hasType(InterestingPointer)),
 		      hasRHS(sizeOfExpr(expr()))).bind(BinOp),
 		    binaryOperator(hasAnyOperatorName("+","-" ),
 	              hasRHS(hasType(InterestingPointer)),
 		      hasLHS(sizeOfExpr(expr()))).bind(BinOp)
+*/		    
+		    binaryOperator(hasAnyOperatorName("+=","-=","+","-" ),
+	              hasLHS(hasType(pointerType(pointee(qualType().bind(PointedType))))),
+		      hasRHS(sizeOfExpr(expr()))).bind(BinOp),
+		    binaryOperator(hasAnyOperatorName("+","-" ),
+	              hasRHS(hasType(pointerType(pointee(qualType().bind(PointedType))))),
+		      hasLHS(sizeOfExpr(expr()))).bind(BinOp)
             )),
         this);
 }
 
+static CharUnits getSizeOfType(const ASTContext &Ctx, const Type *Ty) {
+  if (!Ty || Ty->isIncompleteType() || Ty->isDependentType() ||
+      isa<DependentSizedArrayType>(Ty) || !Ty->isConstantSizeType())
+    return CharUnits::Zero();
+  return Ctx.getTypeSizeInChars(Ty);
+}
+
 void SuspiciousPointerArithmeticsUsingSizeofCheck::check(const MatchFinder::MatchResult &Result) {
     static const char *diag_msg	= "Suspicious pointer arithmetics using sizeof() operator";
-    auto Matched = Result.Nodes.getNodeAs<BinaryOperator>(BinOp);
-    diag(Matched->getExprLoc(),diag_msg)<< Matched->getSourceRange();
+    const ASTContext &Ctx = *Result.Context;
+    const auto Matched = Result.Nodes.getNodeAs<BinaryOperator>(BinOp);
+    const auto SuspiciousQualTypePtr = Result.Nodes.getNodeAs<QualType>(PointedType);
+    const auto SuspiciousTypePtr = SuspiciousQualTypePtr->getTypePtr();
+
+    auto sz = getSizeOfType(Ctx,SuspiciousTypePtr).getQuantity();
+    if ( sz > 1 )
+    {
+        diag(Matched->getExprLoc(),diag_msg)<< Matched->getSourceRange();
+    }
 }
 
 } // namespace clang::tidy::bugprone
