@@ -214,7 +214,8 @@ void MachineFunction::init() {
 
   // FIXME: Shouldn't use pref alignment if explicit alignment is set on F.
   // FIXME: Use Function::hasOptSize().
-  if (!F.hasFnAttribute(Attribute::OptimizeForSize))
+  if ((!F.hasFnAttribute(Attribute::OptimizeForSize)) ||
+     (F.getFnAttribute("keepalign").getValueAsBool()))
     Alignment = std::max(Alignment,
                          STI->getTargetLowering()->getPrefFunctionAlignment());
 

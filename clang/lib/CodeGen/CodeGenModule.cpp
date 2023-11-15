@@ -2409,6 +2409,9 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       if (!ShouldAddOptNone)
         B.addAttribute(llvm::Attribute::OptimizeForSize);
       B.addAttribute(llvm::Attribute::Cold);
+      // dont alter alignment if not optimizing for size
+      if (!CodeGenOpts.OptimizeSize)
+        B.addAttribute("keepalign", "true");
     }
     if (D->hasAttr<HotAttr>())
       B.addAttribute(llvm::Attribute::Hot);
