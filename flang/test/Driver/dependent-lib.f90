@@ -1,13 +1,14 @@
+! REQUIRES aarch64-registered-target && x86-registered-target
 ! DEFINE: %{triple} =
-! DEFINE: %{run} = %flang_fc1 -emit-mlir -triple %{triple} --dependent-lib=libtest %s -o - 2>&1 | FileCheck %s
+! DEFINE: %{compile} = %flang_fc1 -emit-mlir -triple %{triple} --dependent-lib=libtest %s -o - 2>&1
 ! REDEFINE: %{triple} = aarch64-pc-windows-msvc
-! RUN: %{run}
+! RUN: %{compile} | FileCheck %s
 ! REDEFINE: %{triple} = x86_64-pc-windows-msvc
-! RUN: %{run}
+! RUN: %{compile} | FileCheck %s
 ! REDEFINE: %{triple} = x86_64-linux-unknown-gnu
-! RUN: not %{run} --check-prefixes=CHECK-NOWIN
+! RUN: not %{compile} | FileCheck %s --check-prefixes=CHECK-NOWIN
 ! REDEFINE: %{triple} = aarch64-apple-darwin
-! RUN: not %{run} --check-prefixes=CHECK-NOWIN
+! RUN: not %{compile} | FileCheck %s --check-prefixes=CHECK-NOWIN
 
 ! CHECK: llvm.linker_options ["/DEFAULTLIB:", "libtest"]
 program test
