@@ -8871,9 +8871,17 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
   const APInt *C;
   if (match(V, m_APInt(C)))
     return ConstantRange(*C);
+  unsigned BitWidth = V->getType()->getScalarSizeInBits();
+
+  if (auto *VC = dyn_cast<ConstantDataVector>(V)) {
+    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
+    for (unsigned ElemIdx = 0, NElem = VC->getNumElements(); ElemIdx < NElem;
+         ++ElemIdx)
+      CR = CR.unionWith(VC->getElementAsAPInt(ElemIdx));
+    return CR;
+  }
 
   InstrInfoQuery IIQ(UseInstrInfo);
-  unsigned BitWidth = V->getType()->getScalarSizeInBits();
   ConstantRange CR = ConstantRange::getFull(BitWidth);
   if (auto *BO = dyn_cast<BinaryOperator>(V)) {
     APInt Lower = APInt(BitWidth, 0);
