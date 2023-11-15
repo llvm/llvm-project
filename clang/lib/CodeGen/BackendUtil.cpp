@@ -111,7 +111,6 @@ static cl::opt<bool> ClRelinkBuiltinBitcodePostop(
     cl::desc("Re-link builtin bitcodes after optimization."), cl::init(false));
 } // namespace llvm
 
-
 namespace {
 
 // Default filename used for profile generation.
