@@ -1953,46 +1953,32 @@ bool ARMBaseInstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   if (!Load1->isMachineOpcode() || !Load2->isMachineOpcode())
     return false;
 
-  switch (Load1->getMachineOpcode()) {
-  default:
-    return false;
-  case ARM::LDRi12:
-  case ARM::LDRBi12:
-  case ARM::LDRD:
-  case ARM::LDRH:
-  case ARM::LDRSB:
-  case ARM::LDRSH:
-  case ARM::VLDRD:
-  case ARM::VLDRS:
-  case ARM::t2LDRi8:
-  case ARM::t2LDRBi8:
-  case ARM::t2LDRDi8:
-  case ARM::t2LDRSHi8:
-  case ARM::t2LDRi12:
-  case ARM::t2LDRBi12:
-  case ARM::t2LDRSHi12:
-    break;
-  }
+  auto IsLoadOpcode = [&](unsigned Opcode) {
+    switch (Opcode) {
+    default:
+      return false;
+    case ARM::LDRi12:
+    case ARM::LDRBi12:
+    case ARM::LDRD:
+    case ARM::LDRH:
+    case ARM::LDRSB:
+    case ARM::LDRSH:
+    case ARM::VLDRD:
+    case ARM::VLDRS:
+    case ARM::t2LDRi8:
+    case ARM::t2LDRBi8:
+    case ARM::t2LDRDi8:
+    case ARM::t2LDRSHi8:
+    case ARM::t2LDRi12:
+    case ARM::t2LDRBi12:
+    case ARM::t2LDRSHi12:
+      return true;
+    }
+  };
 
-  switch (Load2->getMachineOpcode()) {
-  default:
+  if (!IsLoadOpcode(Load1->getMachineOpcode()) ||
+      !IsLoadOpcode(Load2->getMachineOpcode()))
     return false;
-  case ARM::LDRi12:
-  case ARM::LDRBi12:
-  case ARM::LDRD:
-  case ARM::LDRH:
-  case ARM::LDRSB:
-  case ARM::LDRSH:
-  case ARM::VLDRD:
-  case ARM::VLDRS:
-  case ARM::t2LDRi8:
-  case ARM::t2LDRBi8:
-  case ARM::t2LDRSHi8:
-  case ARM::t2LDRi12:
-  case ARM::t2LDRBi12:
-  case ARM::t2LDRSHi12:
-    break;
-  }
 
   // Check if base addresses and chain operands match.
   if (Load1->getOperand(0) != Load2->getOperand(0) ||

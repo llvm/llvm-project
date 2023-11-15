@@ -7636,174 +7636,97 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
                                      int64_t &Offset1, int64_t &Offset2) const {
   if (!Load1->isMachineOpcode() || !Load2->isMachineOpcode())
     return false;
-  unsigned Opc1 = Load1->getMachineOpcode();
-  unsigned Opc2 = Load2->getMachineOpcode();
-  switch (Opc1) {
-  default: return false;
-  case X86::MOV8rm:
-  case X86::MOV16rm:
-  case X86::MOV32rm:
-  case X86::MOV64rm:
-  case X86::LD_Fp32m:
-  case X86::LD_Fp64m:
-  case X86::LD_Fp80m:
-  case X86::MOVSSrm:
-  case X86::MOVSSrm_alt:
-  case X86::MOVSDrm:
-  case X86::MOVSDrm_alt:
-  case X86::MMX_MOVD64rm:
-  case X86::MMX_MOVQ64rm:
-  case X86::MOVAPSrm:
-  case X86::MOVUPSrm:
-  case X86::MOVAPDrm:
-  case X86::MOVUPDrm:
-  case X86::MOVDQArm:
-  case X86::MOVDQUrm:
-  // AVX load instructions
-  case X86::VMOVSSrm:
-  case X86::VMOVSSrm_alt:
-  case X86::VMOVSDrm:
-  case X86::VMOVSDrm_alt:
-  case X86::VMOVAPSrm:
-  case X86::VMOVUPSrm:
-  case X86::VMOVAPDrm:
-  case X86::VMOVUPDrm:
-  case X86::VMOVDQArm:
-  case X86::VMOVDQUrm:
-  case X86::VMOVAPSYrm:
-  case X86::VMOVUPSYrm:
-  case X86::VMOVAPDYrm:
-  case X86::VMOVUPDYrm:
-  case X86::VMOVDQAYrm:
-  case X86::VMOVDQUYrm:
-  // AVX512 load instructions
-  case X86::VMOVSSZrm:
-  case X86::VMOVSSZrm_alt:
-  case X86::VMOVSDZrm:
-  case X86::VMOVSDZrm_alt:
-  case X86::VMOVAPSZ128rm:
-  case X86::VMOVUPSZ128rm:
-  case X86::VMOVAPSZ128rm_NOVLX:
-  case X86::VMOVUPSZ128rm_NOVLX:
-  case X86::VMOVAPDZ128rm:
-  case X86::VMOVUPDZ128rm:
-  case X86::VMOVDQU8Z128rm:
-  case X86::VMOVDQU16Z128rm:
-  case X86::VMOVDQA32Z128rm:
-  case X86::VMOVDQU32Z128rm:
-  case X86::VMOVDQA64Z128rm:
-  case X86::VMOVDQU64Z128rm:
-  case X86::VMOVAPSZ256rm:
-  case X86::VMOVUPSZ256rm:
-  case X86::VMOVAPSZ256rm_NOVLX:
-  case X86::VMOVUPSZ256rm_NOVLX:
-  case X86::VMOVAPDZ256rm:
-  case X86::VMOVUPDZ256rm:
-  case X86::VMOVDQU8Z256rm:
-  case X86::VMOVDQU16Z256rm:
-  case X86::VMOVDQA32Z256rm:
-  case X86::VMOVDQU32Z256rm:
-  case X86::VMOVDQA64Z256rm:
-  case X86::VMOVDQU64Z256rm:
-  case X86::VMOVAPSZrm:
-  case X86::VMOVUPSZrm:
-  case X86::VMOVAPDZrm:
-  case X86::VMOVUPDZrm:
-  case X86::VMOVDQU8Zrm:
-  case X86::VMOVDQU16Zrm:
-  case X86::VMOVDQA32Zrm:
-  case X86::VMOVDQU32Zrm:
-  case X86::VMOVDQA64Zrm:
-  case X86::VMOVDQU64Zrm:
-  case X86::KMOVBkm:
-  case X86::KMOVWkm:
-  case X86::KMOVDkm:
-  case X86::KMOVQkm:
-    break;
-  }
-  switch (Opc2) {
-  default: return false;
-  case X86::MOV8rm:
-  case X86::MOV16rm:
-  case X86::MOV32rm:
-  case X86::MOV64rm:
-  case X86::LD_Fp32m:
-  case X86::LD_Fp64m:
-  case X86::LD_Fp80m:
-  case X86::MOVSSrm:
-  case X86::MOVSSrm_alt:
-  case X86::MOVSDrm:
-  case X86::MOVSDrm_alt:
-  case X86::MMX_MOVD64rm:
-  case X86::MMX_MOVQ64rm:
-  case X86::MOVAPSrm:
-  case X86::MOVUPSrm:
-  case X86::MOVAPDrm:
-  case X86::MOVUPDrm:
-  case X86::MOVDQArm:
-  case X86::MOVDQUrm:
-  // AVX load instructions
-  case X86::VMOVSSrm:
-  case X86::VMOVSSrm_alt:
-  case X86::VMOVSDrm:
-  case X86::VMOVSDrm_alt:
-  case X86::VMOVAPSrm:
-  case X86::VMOVUPSrm:
-  case X86::VMOVAPDrm:
-  case X86::VMOVUPDrm:
-  case X86::VMOVDQArm:
-  case X86::VMOVDQUrm:
-  case X86::VMOVAPSYrm:
-  case X86::VMOVUPSYrm:
-  case X86::VMOVAPDYrm:
-  case X86::VMOVUPDYrm:
-  case X86::VMOVDQAYrm:
-  case X86::VMOVDQUYrm:
-  // AVX512 load instructions
-  case X86::VMOVSSZrm:
-  case X86::VMOVSSZrm_alt:
-  case X86::VMOVSDZrm:
-  case X86::VMOVSDZrm_alt:
-  case X86::VMOVAPSZ128rm:
-  case X86::VMOVUPSZ128rm:
-  case X86::VMOVAPSZ128rm_NOVLX:
-  case X86::VMOVUPSZ128rm_NOVLX:
-  case X86::VMOVAPDZ128rm:
-  case X86::VMOVUPDZ128rm:
-  case X86::VMOVDQU8Z128rm:
-  case X86::VMOVDQU16Z128rm:
-  case X86::VMOVDQA32Z128rm:
-  case X86::VMOVDQU32Z128rm:
-  case X86::VMOVDQA64Z128rm:
-  case X86::VMOVDQU64Z128rm:
-  case X86::VMOVAPSZ256rm:
-  case X86::VMOVUPSZ256rm:
-  case X86::VMOVAPSZ256rm_NOVLX:
-  case X86::VMOVUPSZ256rm_NOVLX:
-  case X86::VMOVAPDZ256rm:
-  case X86::VMOVUPDZ256rm:
-  case X86::VMOVDQU8Z256rm:
-  case X86::VMOVDQU16Z256rm:
-  case X86::VMOVDQA32Z256rm:
-  case X86::VMOVDQU32Z256rm:
-  case X86::VMOVDQA64Z256rm:
-  case X86::VMOVDQU64Z256rm:
-  case X86::VMOVAPSZrm:
-  case X86::VMOVUPSZrm:
-  case X86::VMOVAPDZrm:
-  case X86::VMOVUPDZrm:
-  case X86::VMOVDQU8Zrm:
-  case X86::VMOVDQU16Zrm:
-  case X86::VMOVDQA32Zrm:
-  case X86::VMOVDQU32Zrm:
-  case X86::VMOVDQA64Zrm:
-  case X86::VMOVDQU64Zrm:
-  case X86::KMOVBkm:
-  case X86::KMOVWkm:
-  case X86::KMOVDkm:
-  case X86::KMOVQkm:
-    break;
-  }
+
+  auto IsLoadOpcode = [&](unsigned Opcode) {
+    switch (Opcode) {
+    default:
+      return false;
+    case X86::MOV8rm:
+    case X86::MOV16rm:
+    case X86::MOV32rm:
+    case X86::MOV64rm:
+    case X86::LD_Fp32m:
+    case X86::LD_Fp64m:
+    case X86::LD_Fp80m:
+    case X86::MOVSSrm:
+    case X86::MOVSSrm_alt:
+    case X86::MOVSDrm:
+    case X86::MOVSDrm_alt:
+    case X86::MMX_MOVD64rm:
+    case X86::MMX_MOVQ64rm:
+    case X86::MOVAPSrm:
+    case X86::MOVUPSrm:
+    case X86::MOVAPDrm:
+    case X86::MOVUPDrm:
+    case X86::MOVDQArm:
+    case X86::MOVDQUrm:
+    // AVX load instructions
+    case X86::VMOVSSrm:
+    case X86::VMOVSSrm_alt:
+    case X86::VMOVSDrm:
+    case X86::VMOVSDrm_alt:
+    case X86::VMOVAPSrm:
+    case X86::VMOVUPSrm:
+    case X86::VMOVAPDrm:
+    case X86::VMOVUPDrm:
+    case X86::VMOVDQArm:
+    case X86::VMOVDQUrm:
+    case X86::VMOVAPSYrm:
+    case X86::VMOVUPSYrm:
+    case X86::VMOVAPDYrm:
+    case X86::VMOVUPDYrm:
+    case X86::VMOVDQAYrm:
+    case X86::VMOVDQUYrm:
+    // AVX512 load instructions
+    case X86::VMOVSSZrm:
+    case X86::VMOVSSZrm_alt:
+    case X86::VMOVSDZrm:
+    case X86::VMOVSDZrm_alt:
+    case X86::VMOVAPSZ128rm:
+    case X86::VMOVUPSZ128rm:
+    case X86::VMOVAPSZ128rm_NOVLX:
+    case X86::VMOVUPSZ128rm_NOVLX:
+    case X86::VMOVAPDZ128rm:
+    case X86::VMOVUPDZ128rm:
+    case X86::VMOVDQU8Z128rm:
+    case X86::VMOVDQU16Z128rm:
+    case X86::VMOVDQA32Z128rm:
+    case X86::VMOVDQU32Z128rm:
+    case X86::VMOVDQA64Z128rm:
+    case X86::VMOVDQU64Z128rm:
+    case X86::VMOVAPSZ256rm:
+    case X86::VMOVUPSZ256rm:
+    case X86::VMOVAPSZ256rm_NOVLX:
+    case X86::VMOVUPSZ256rm_NOVLX:
+    case X86::VMOVAPDZ256rm:
+    case X86::VMOVUPDZ256rm:
+    case X86::VMOVDQU8Z256rm:
+    case X86::VMOVDQU16Z256rm:
+    case X86::VMOVDQA32Z256rm:
+    case X86::VMOVDQU32Z256rm:
+    case X86::VMOVDQA64Z256rm:
+    case X86::VMOVDQU64Z256rm:
+    case X86::VMOVAPSZrm:
+    case X86::VMOVUPSZrm:
+    case X86::VMOVAPDZrm:
+    case X86::VMOVUPDZrm:
+    case X86::VMOVDQU8Zrm:
+    case X86::VMOVDQU16Zrm:
+    case X86::VMOVDQA32Zrm:
+    case X86::VMOVDQU32Zrm:
+    case X86::VMOVDQA64Zrm:
+    case X86::VMOVDQU64Zrm:
+    case X86::KMOVBkm:
+    case X86::KMOVWkm:
+    case X86::KMOVDkm:
+    case X86::KMOVQkm:
+      return true;
+    }
+  };
+
+  if (!IsLoadOpcode(Load1->getMachineOpcode()) ||
+      !IsLoadOpcode(Load2->getMachineOpcode()))
+    return false;
 
   // Lambda to check if both the loads have the same value for an operand index.
   auto HasSameOp = [&](int I) {
