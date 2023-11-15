@@ -35,7 +35,6 @@ namespace llvm {
 /// Implements a Union-find algorithm to compute Minimum Spanning Tree
 /// for a given CFG.
 template <class Edge, class BBInfo> class CFGMST {
-public:
   Function &F;
 
   // Store all the edges in CFG. It may contain some stale edges
@@ -48,6 +47,12 @@ public:
   // Whehter the function has an exit block with no successors.
   // (For function with an infinite loop, this block may be absent)
   bool ExitBlockFound = false;
+
+  BranchProbabilityInfo *const BPI;
+  BlockFrequencyInfo *const BFI;
+
+  // If function entry will be always instrumented.
+  const bool InstrumentFuncEntry;
 
   // Find the root group of the G and compress the path from G to the root.
   BBInfo *findAndCompressGroup(BBInfo *G) {
@@ -75,21 +80,6 @@ public:
         BB1G->Rank++;
     }
     return true;
-  }
-
-  // Give BB, return the auxiliary information.
-  BBInfo &getBBInfo(const BasicBlock *BB) const {
-    auto It = BBInfos.find(BB);
-    assert(It->second.get() != nullptr);
-    return *It->second.get();
-  }
-
-  // Give BB, return the auxiliary information if it's available.
-  BBInfo *findBBInfo(const BasicBlock *BB) const {
-    auto It = BBInfos.find(BB);
-    if (It == BBInfos.end())
-      return nullptr;
-    return It->second.get();
   }
 
   // Traverse the CFG using a stack. Find all the edges and assign the weight.
@@ -236,6 +226,7 @@ public:
     }
   }
 
+public:
   // Dump the Debug information about the instrumentation.
   void dumpEdges(raw_ostream &OS, const Twine &Message) const {
     if (!Message.str().empty())
@@ -274,24 +265,41 @@ public:
     return *AllEdges.back();
   }
 
-  BranchProbabilityInfo *BPI;
-  BlockFrequencyInfo *BFI;
-
-  // If function entry will be always instrumented.
-  bool InstrumentFuncEntry;
-
-public:
-  CFGMST(Function &Func, bool InstrumentFuncEntry_,
-         BranchProbabilityInfo *BPI_ = nullptr,
-         BlockFrequencyInfo *BFI_ = nullptr)
-      : F(Func), BPI(BPI_), BFI(BFI_),
-        InstrumentFuncEntry(InstrumentFuncEntry_) {
+  CFGMST(Function &Func, bool InstrumentFuncEntry,
+         BranchProbabilityInfo *BPI = nullptr,
+         BlockFrequencyInfo *BFI = nullptr)
+      : F(Func), BPI(BPI), BFI(BFI), InstrumentFuncEntry(InstrumentFuncEntry) {
     buildEdges();
     sortEdgesByWeight();
     computeMinimumSpanningTree();
     if (AllEdges.size() > 1 && InstrumentFuncEntry)
       std::iter_swap(std::move(AllEdges.begin()),
                      std::move(AllEdges.begin() + AllEdges.size() - 1));
+  }
+
+  const std::vector<std::unique_ptr<Edge>> &allEdges() const {
+    return AllEdges;
+  }
+
+  std::vector<std::unique_ptr<Edge>> &allEdges() { return AllEdges; }
+
+  size_t numEdges() const { return AllEdges.size(); }
+
+  size_t bbInfoSize() const { return BBInfos.size(); }
+
+  // Give BB, return the auxiliary information.
+  BBInfo &getBBInfo(const BasicBlock *BB) const {
+    auto It = BBInfos.find(BB);
+    assert(It->second.get() != nullptr);
+    return *It->second.get();
+  }
+
+  // Give BB, return the auxiliary information if it's available.
+  BBInfo *findBBInfo(const BasicBlock *BB) const {
+    auto It = BBInfos.find(BB);
+    if (It == BBInfos.end())
+      return nullptr;
+    return It->second.get();
   }
 };
 
