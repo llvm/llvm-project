@@ -635,10 +635,8 @@ define <vscale x 16 x i1> @ctpop_nxv16i32_eq_one(<vscale x 16 x i32> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v16, v8, -1
-; CHECK-NEXT:    vand.vv v16, v8, v16
-; CHECK-NEXT:    vmseq.vi v24, v16, 0
-; CHECK-NEXT:    vmsne.vi v16, v8, 0
-; CHECK-NEXT:    vmand.mm v0, v16, v24
+; CHECK-NEXT:    vxor.vv v8, v8, v16
+; CHECK-NEXT:    vmsltu.vv v0, v16, v8
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: ctpop_nxv16i32_eq_one:
@@ -657,10 +655,8 @@ define <vscale x 16 x i1> @ctpop_nxv16i32_ne_one(<vscale x 16 x i32> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v16, v8, -1
-; CHECK-NEXT:    vand.vv v16, v8, v16
-; CHECK-NEXT:    vmsne.vi v24, v16, 0
-; CHECK-NEXT:    vmseq.vi v16, v8, 0
-; CHECK-NEXT:    vmor.mm v0, v16, v24
+; CHECK-NEXT:    vxor.vv v8, v8, v16
+; CHECK-NEXT:    vmsleu.vv v0, v8, v16
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: ctpop_nxv16i32_ne_one:
@@ -1053,10 +1049,8 @@ define <vscale x 8 x i1> @ctpop_nxv8i64_eq_one(<vscale x 8 x i64> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v16, v8, -1
-; CHECK-NEXT:    vand.vv v16, v8, v16
-; CHECK-NEXT:    vmseq.vi v24, v16, 0
-; CHECK-NEXT:    vmsne.vi v16, v8, 0
-; CHECK-NEXT:    vmand.mm v0, v16, v24
+; CHECK-NEXT:    vxor.vv v8, v8, v16
+; CHECK-NEXT:    vmsltu.vv v0, v16, v8
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: ctpop_nxv8i64_eq_one:
@@ -1075,10 +1069,8 @@ define <vscale x 8 x i1> @ctpop_nxv8i64_ne_one(<vscale x 8 x i64> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v16, v8, -1
-; CHECK-NEXT:    vand.vv v16, v8, v16
-; CHECK-NEXT:    vmsne.vi v24, v16, 0
-; CHECK-NEXT:    vmseq.vi v16, v8, 0
-; CHECK-NEXT:    vmor.mm v0, v16, v24
+; CHECK-NEXT:    vxor.vv v8, v8, v16
+; CHECK-NEXT:    vmsleu.vv v0, v8, v16
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: ctpop_nxv8i64_ne_one:
