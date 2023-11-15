@@ -7976,9 +7976,9 @@ static void emitTargetTeamsGenericLoopRegionAsParallel(
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
   DEBUG_WITH_TYPE(TTL_CODEGEN_TYPE,
-      CGF.CGM.emitTargetTeamsLoopCodegenStatus(
-          TTL_CODEGEN_TYPE " as parallel for", S,
-          CGF.CGM.getLangOpts().OpenMPIsTargetDevice));
+                  CGF.CGM.emitTargetTeamsLoopCodegenStatus(
+                      TTL_CODEGEN_TYPE " as parallel for", S,
+                      CGF.CGM.getLangOpts().OpenMPIsTargetDevice));
   emitCommonOMPTeamsDirective(CGF, S, OMPD_distribute_parallel_for,
                               CodeGenTeams);
   emitPostUpdateForReductionClause(CGF, S,
@@ -8006,9 +8006,9 @@ static void emitTargetTeamsGenericLoopRegionAsDistribute(
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
   DEBUG_WITH_TYPE(TTL_CODEGEN_TYPE,
-      CGF.CGM.emitTargetTeamsLoopCodegenStatus(
-          TTL_CODEGEN_TYPE " as distribute", S,
-          CGF.CGM.getLangOpts().OpenMPIsTargetDevice));
+                  CGF.CGM.emitTargetTeamsLoopCodegenStatus(
+                      TTL_CODEGEN_TYPE " as distribute", S,
+                      CGF.CGM.getLangOpts().OpenMPIsTargetDevice));
   emitCommonOMPTeamsDirective(CGF, S, OMPD_distribute, CodeGen);
   emitPostUpdateForReductionClause(CGF, S,
                                    [](CodeGenFunction &) { return nullptr; });

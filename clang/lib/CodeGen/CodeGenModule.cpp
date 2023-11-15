@@ -7623,9 +7623,7 @@ class TeamsLoopChecker final : public ConstStmtVisitor<TeamsLoopChecker> {
 public:
   TeamsLoopChecker(CodeGenModule &CGM)
       : CGM(CGM), TeamsLoopCanBeParallelFor{true} {}
-  bool teamsLoopCanBeParallelFor() const {
-    return TeamsLoopCanBeParallelFor;
-  }
+  bool teamsLoopCanBeParallelFor() const { return TeamsLoopCanBeParallelFor; }
   // Is there a nested OpenMP loop bind(parallel)
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D) {
     if (D->getDirectiveKind() == llvm::omp::Directive::OMPD_loop) {
@@ -7688,7 +7686,7 @@ bool CodeGenModule::teamsLoopCanBeParallelFor(const OMPExecutableDirective &D) {
   if (D.getDirectiveKind() != llvm::omp::Directive::OMPD_target_teams_loop)
     return false;
   assert(D.hasAssociatedStmt() &&
-      "Loop directive must have associated statement.");
+         "Loop directive must have associated statement.");
   TeamsLoopChecker Checker(*this);
   Checker.Visit(D.getAssociatedStmt());
   return Checker.teamsLoopCanBeParallelFor();

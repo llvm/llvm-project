@@ -2657,7 +2657,7 @@ void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
   llvm::Value *Args[] = {
       emitUpdateLocation(CGF, Loc,
                          isOpenMPDistributeDirective(DKind) ||
-                         (DKind == OMPD_target_teams_loop)
+                                 (DKind == OMPD_target_teams_loop)
                              ? OMP_IDENT_WORK_DISTRIBUTE
                              : isOpenMPLoopDirective(DKind)
                                    ? OMP_IDENT_WORK_LOOP
