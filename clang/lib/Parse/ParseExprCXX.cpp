@@ -186,7 +186,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
   if (Tok.is(tok::coloncolon)) {
     // ::new and ::delete aren't nested-name-specifiers.
     tok::TokenKind NextKind = NextToken().getKind();
-    if (NextKind == tok::kw_new || NextKind == tok::kw_delete || NextKind == tok::kw__placement_new)
+    if (NextKind == tok::kw_new || NextKind == tok::kw_delete ||
+        NextKind == tok::kw__placement_new)
       return false;
 
     if (NextKind == tok::l_brace) {
@@ -3171,7 +3172,8 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
 ///
 ExprResult
 Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
-  assert((Tok.is(tok::kw_new) || Tok.is(tok::kw__placement_new)) && "expected 'new' token");
+  assert((Tok.is(tok::kw_new) || Tok.is(tok::kw__placement_new)) &&
+         "expected 'new' token");
   const bool IsPlacementNewExpr = Tok.is(tok::kw__placement_new);
   ConsumeToken();   // Consume 'new'
 
@@ -3308,8 +3310,8 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
   if (Initializer.isInvalid())
     return Initializer;
 
-  return Actions.ActOnCXXNew(Start, UseGlobal, IsPlacementNewExpr, PlacementLParen,
-                             PlacementArgs, PlacementRParen,
+  return Actions.ActOnCXXNew(Start, UseGlobal, IsPlacementNewExpr,
+                             PlacementLParen, PlacementArgs, PlacementRParen,
                              TypeIdParens, DeclaratorInfo, Initializer.get());
 }
 

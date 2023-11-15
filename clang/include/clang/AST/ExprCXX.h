@@ -2283,8 +2283,8 @@ class CXXNewExpr final
              SourceRange DirectInitRange);
 
   /// Build a c++ builtin placement new expression
-  CXXNewExpr(Expr *PlacementArg,
-             SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
+  CXXNewExpr(Expr *PlacementArg, SourceRange TypeIdParens,
+             std::optional<Expr *> ArraySize,
              CXXNewInitializationStyle InitializationStyle, Expr *Initializer,
              QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
              SourceRange DirectInitRange);
@@ -2308,8 +2308,9 @@ public:
   static CXXNewExpr *
   CreatePlacementNew(const ASTContext &Ctx, Expr *PlacementArg,
                      SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
-                     CXXNewInitializationStyle InitializationStyle, Expr *Initializer,
-                     QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
+                     CXXNewInitializationStyle InitializationStyle,
+                     Expr *Initializer, QualType Ty,
+                     TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
                      SourceRange DirectInitRange);
 
   /// Create an empty c++ new expression.

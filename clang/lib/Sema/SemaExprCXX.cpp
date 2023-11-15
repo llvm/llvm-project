@@ -1875,10 +1875,10 @@ static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
 /// \param Initializer The initializing expression or initializer-list, or null
 ///   if there is none.
 ExprResult
-Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal, bool IsPlacementNewExpr,
-                  SourceLocation PlacementLParen, MultiExprArg PlacementArgs,
-                  SourceLocation PlacementRParen, SourceRange TypeIdParens,
-                  Declarator &D, Expr *Initializer) {
+Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
+                  bool IsPlacementNewExpr, SourceLocation PlacementLParen,
+                  MultiExprArg PlacementArgs, SourceLocation PlacementRParen,
+                  SourceRange TypeIdParens, Declarator &D, Expr *Initializer) {
   std::optional<Expr *> ArraySize;
   // If the specified type is an array, unwrap it and save the expression.
   if (D.getNumTypeObjects() > 0 &&
@@ -1940,10 +1940,10 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal, bool IsPlacementNewEx
   if (ParenListExpr *List = dyn_cast_or_null<ParenListExpr>(Initializer))
     DirectInitRange = List->getSourceRange();
 
-  return BuildCXXNew(SourceRange(StartLoc, D.getEndLoc()), UseGlobal, IsPlacementNewExpr,
-                     PlacementLParen, PlacementArgs, PlacementRParen,
-                     TypeIdParens, AllocType, TInfo, ArraySize, DirectInitRange,
-                     Initializer);
+  return BuildCXXNew(SourceRange(StartLoc, D.getEndLoc()), UseGlobal,
+                     IsPlacementNewExpr, PlacementLParen, PlacementArgs,
+                     PlacementRParen, TypeIdParens, AllocType, TInfo, ArraySize,
+                     DirectInitRange, Initializer);
 }
 
 static bool isLegalArrayNewInitializer(CXXNewInitializationStyle Style,
@@ -1997,14 +1997,13 @@ void Sema::diagnoseUnavailableAlignedAllocation(const FunctionDecl &FD,
   }
 }
 
-ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal, bool IsPlacementNewExpr,
-                             SourceLocation PlacementLParen,
-                             MultiExprArg PlacementArgs,
-                             SourceLocation PlacementRParen,
-                             SourceRange TypeIdParens, QualType AllocType,
-                             TypeSourceInfo *AllocTypeInfo,
-                             std::optional<Expr *> ArraySize,
-                             SourceRange DirectInitRange, Expr *Initializer) {
+ExprResult
+Sema::BuildCXXNew(SourceRange Range, bool UseGlobal, bool IsPlacementNewExpr,
+                  SourceLocation PlacementLParen, MultiExprArg PlacementArgs,
+                  SourceLocation PlacementRParen, SourceRange TypeIdParens,
+                  QualType AllocType, TypeSourceInfo *AllocTypeInfo,
+                  std::optional<Expr *> ArraySize, SourceRange DirectInitRange,
+                  Expr *Initializer) {
   SourceRange TypeRange = AllocTypeInfo->getTypeLoc().getSourceRange();
   SourceLocation StartLoc = Range.getBegin();
 
@@ -2286,7 +2285,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal, bool IsPlacement
   bool PassAlignment = getLangOpts().AlignedAllocation &&
                        Alignment > NewAlignment;
 
-  bool HaveDependentPlacementTypes = AllocType->isDependentType() || Expr::hasAnyTypeDependentArguments(PlacementArgs);
+  bool HaveDependentPlacementTypes =
+      AllocType->isDependentType() ||
+      Expr::hasAnyTypeDependentArguments(PlacementArgs);
 
   AllocationFunctionScope Scope = UseGlobal ? AFS_Global : AFS_Both;
   if (!HaveDependentPlacementTypes && !IsPlacementNewExpr &&
@@ -2308,10 +2309,12 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal, bool IsPlacement
     assert(UseGlobal);
     QualType VoidPtr = Context.getPointerType(Context.VoidTy);
 
-    InitializedEntity Entity = InitializedEntity::InitializeParameter(Context, VoidPtr, false);
-    ExprResult ArgE = PerformCopyInitialization(Entity, SourceLocation(), PlacementArgs[0], false, false);
+    InitializedEntity Entity =
+        InitializedEntity::InitializeParameter(Context, VoidPtr, false);
+    ExprResult ArgE = PerformCopyInitialization(Entity, SourceLocation(),
+                                                PlacementArgs[0], false, false);
     if (ArgE.isInvalid())
-        return ExprError();
+      return ExprError();
 
     Expr *Arg = ArgE.getAs<Expr>();
     CheckArrayAccess(Arg);
@@ -2499,9 +2502,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal, bool IsPlacement
   }
 
   if (IsPlacementNewExpr)
-    return CXXNewExpr::CreatePlacementNew(Context, PlacementArgs[0], TypeIdParens, ArraySize,
-                                          InitStyle, Initializer, ResultType, AllocTypeInfo,
-                                          Range, DirectInitRange);
+    return CXXNewExpr::CreatePlacementNew(
+        Context, PlacementArgs[0], TypeIdParens, ArraySize, InitStyle,
+        Initializer, ResultType, AllocTypeInfo, Range, DirectInitRange);
   else
     return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,
                               PassAlignment, UsualArrayDeleteWantsSize,

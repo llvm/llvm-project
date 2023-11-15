@@ -3343,7 +3343,8 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildCXXNewExpr(SourceLocation StartLoc, bool UseGlobal, bool IsPlacementNewExpr,
+  ExprResult RebuildCXXNewExpr(SourceLocation StartLoc, bool UseGlobal,
+                               bool IsPlacementNewExpr,
                                SourceLocation PlacementLParen,
                                MultiExprArg PlacementArgs,
                                SourceLocation PlacementRParen,
@@ -3351,16 +3352,10 @@ public:
                                TypeSourceInfo *AllocatedTypeInfo,
                                std::optional<Expr *> ArraySize,
                                SourceRange DirectInitRange, Expr *Initializer) {
-    return getSema().BuildCXXNew(StartLoc, UseGlobal, IsPlacementNewExpr,
-                                 PlacementLParen,
-                                 PlacementArgs,
-                                 PlacementRParen,
-                                 TypeIdParens,
-                                 AllocatedType,
-                                 AllocatedTypeInfo,
-                                 ArraySize,
-                                 DirectInitRange,
-                                 Initializer);
+    return getSema().BuildCXXNew(
+        StartLoc, UseGlobal, IsPlacementNewExpr, PlacementLParen, PlacementArgs,
+        PlacementRParen, TypeIdParens, AllocatedType, AllocatedTypeInfo,
+        ArraySize, DirectInitRange, Initializer);
   }
 
   /// Build a new C++ "delete" expression.

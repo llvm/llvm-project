@@ -604,12 +604,13 @@ public:
             SourceLocation(), Args, SourceLocation());
       }
       Expr *Args[] = {AllocCall.get()};
-      ExprResult CXXNewCall = S.BuildCXXNew(
-          E->getSourceRange(),
-          /*UseGlobal=*/true, /*IsPlacementNewExpr=*/false,
-          /*PlacementLParen=*/SourceLocation(), Args, /*PlacementRParen=*/SourceLocation(),
-          /*TypeIdParens=*/SourceRange(), TSI->getType(), TSI, std::nullopt,
-          E->getSourceRange(), E);
+      ExprResult CXXNewCall =
+          S.BuildCXXNew(E->getSourceRange(),
+                        /*UseGlobal=*/true, /*IsPlacementNewExpr=*/false,
+                        /*PlacementLParen=*/SourceLocation(), Args,
+                        /*PlacementRParen=*/SourceLocation(),
+                        /*TypeIdParens=*/SourceRange(), TSI->getType(), TSI,
+                        std::nullopt, E->getSourceRange(), E);
 
       assert(!CXXNewCall.isInvalid() &&
              "Can't create runtime placement new call!");

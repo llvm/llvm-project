@@ -1047,7 +1047,8 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
     // where new can return NULL. If we end up supporting that option, we can
     // consider adding a check for it here.
     // C++11 [basic.stc.dynamic.allocation]p3.
-    if (const auto *ProtoType = FD ? FD->getType()->getAs<FunctionProtoType>() : nullptr)
+    if (const auto *ProtoType =
+            FD ? FD->getType()->getAs<FunctionProtoType>() : nullptr)
       if (!ProtoType->isNothrow())
         if (auto dSymVal = symVal.getAs<DefinedOrUnknownSVal>())
           State = State->assume(*dSymVal, true);

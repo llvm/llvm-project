@@ -5456,8 +5456,8 @@ bool Parser::isTypeSpecifierQualifier() {
     return isTypeSpecifierQualifier();
 
   case tok::coloncolon:   // ::foo::bar
-    if (NextToken().is(tok::kw_new) ||    // ::new
-        NextToken().is(tok::kw_delete) || // ::delete
+    if (NextToken().is(tok::kw_new) ||          // ::new
+        NextToken().is(tok::kw_delete) ||       // ::delete
         NextToken().is(tok::kw__placement_new)) // ::_placement_new
       return false;
 
@@ -5650,8 +5650,8 @@ bool Parser::isDeclarationSpecifier(
   case tok::coloncolon:   // ::foo::bar
     if (!getLangOpts().CPlusPlus)
       return false;
-    if (NextToken().is(tok::kw_new) ||    // ::new
-        NextToken().is(tok::kw_delete) || // ::delete
+    if (NextToken().is(tok::kw_new) ||          // ::new
+        NextToken().is(tok::kw_delete) ||       // ::delete
         NextToken().is(tok::kw__placement_new)) // ::_placement_new
       return false;
 
