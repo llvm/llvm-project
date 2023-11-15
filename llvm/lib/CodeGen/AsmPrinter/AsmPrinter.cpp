@@ -3534,12 +3534,7 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
   //
   //    gotpcrelcst := <offset from @foo base> + <cst>
   //
-  // If gotpcrelcst is positive it means that we can safely fold the pc rel
-  // displacement into the GOTPCREL. We can also can have an extra offset <cst>
-  // if the target knows how to encode it.
   int64_t GOTPCRelCst = Offset + MV.getConstant();
-  if (GOTPCRelCst < 0)
-    return;
   if (!AP.getObjFileLowering().supportGOTPCRelWithOffset() && GOTPCRelCst != 0)
     return;
 
