@@ -1,0 +1,16 @@
+# This optional file is used to exclude entrypoints/headers for specific targets.
+
+try_compile(
+  has_sys_random
+  ${CMAKE_CURRENT_BINARY_DIR}
+  SOURCES ${LIBC_SOURCE_DIR}/src/sys/random/linux/getrandom.cpp
+)
+
+# If sys/random isn't available, then this is likely Ubuntu 14, which also
+# doesn't support the syscall we use for sys/stat.
+if(NOT has_sys_random)
+  list(APPEND TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS 
+    libc.src.sys.random.getrandom
+    libc.src.sys.stat.stat
+  )
+endif()
