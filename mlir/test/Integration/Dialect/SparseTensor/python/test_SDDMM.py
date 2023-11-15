@@ -16,7 +16,7 @@ from mlir.dialects.linalg.opdsl import lang as dsl
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
-from tools import sparse_compiler
+from tools import sparsifier
 
 
 @dsl.linalg_structured_op
@@ -159,7 +159,7 @@ def main():
                                 level, ordering, ordering, pwidth, iwidth
                             )
                             opt = f"parallelization-strategy=none"
-                            compiler = sparse_compiler.SparseCompiler(
+                            compiler = sparsifier.Sparsifier(
                                 options=opt, opt_level=0, shared_libs=[support_lib]
                             )
                             build_compile_and_run_SDDMMM(attr, compiler)

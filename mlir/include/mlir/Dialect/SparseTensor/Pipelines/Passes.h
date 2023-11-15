@@ -23,12 +23,11 @@ using namespace llvm::cl;
 namespace mlir {
 namespace sparse_tensor {
 
-/// Options for the "sparse-compiler" pipeline.  So far this only contains
+/// Options for the "sparsifier" pipeline.  So far this only contains
 /// a subset of the options that can be set for the underlying passes,
 /// because it must be manually kept in sync with the tablegen files
 /// for those passes.
-struct SparseCompilerOptions
-    : public PassPipelineOptions<SparseCompilerOptions> {
+struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
   // These options must be kept in sync with `SparsificationBase`.
   // TODO(57514): These options are duplicated in Passes.td.
   PassOptions::Option<mlir::SparseParallelizationStrategy> parallelization{
@@ -164,15 +163,14 @@ struct SparseCompilerOptions
 // Building and Registering.
 //===----------------------------------------------------------------------===//
 
-/// Adds the "sparse-compiler" pipeline to the `OpPassManager`.  This
+/// Adds the "sparsifier" pipeline to the `OpPassManager`.  This
 /// is the standard pipeline for taking sparsity-agnostic IR using
 /// the sparse-tensor type and lowering it to LLVM IR with concrete
 /// representations and algorithms for sparse tensors.
-void buildSparseCompiler(OpPassManager &pm,
-                         const SparseCompilerOptions &options);
+void buildSparsifier(OpPassManager &pm, const SparsifierOptions &options);
 
 /// Registers all pipelines for the `sparse_tensor` dialect.  At present,
-/// this includes only "sparse-compiler".
+/// this includes only "sparsifier".
 void registerSparseTensorPipelines();
 
 } // namespace sparse_tensor

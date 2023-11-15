@@ -23,7 +23,7 @@ namespace sparse_tensor {
 ///
 /// (1) To provide a uniform API for querying aspects of sparse-tensor
 /// types; in particular, to make the "dimension" vs "level" distinction
-/// overt (i.e., explicit everywhere).  Thus, throughout the sparse-compiler
+/// overt (i.e., explicit everywhere).  Thus, throughout the sparsifier
 /// this class should be preferred over using `RankedTensorType` or
 /// `ShapedType` directly, since the methods of the latter do not make
 /// the "dimension" vs "level" distinction overt.
@@ -34,7 +34,7 @@ namespace sparse_tensor {
 /// That is, we want to manipulate dense-tensor types using the same API
 /// that we use for manipulating sparse-tensor types; both to keep the
 /// "dimension" vs "level" distinction overt, and to avoid needing to
-/// handle certain cases specially in the sparse-compiler.
+/// handle certain cases specially in the sparsifier.
 ///
 /// (3) To provide uniform handling of "defaults".  In particular
 /// this means that dense-tensors should always return the same answers
