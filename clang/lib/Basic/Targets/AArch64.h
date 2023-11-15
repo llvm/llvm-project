@@ -70,7 +70,6 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSME = false;
   bool HasSMEF64F64 = false;
   bool HasSMEI16I64 = false;
-  bool HasSMEFA64 = false;
   bool HasSB = false;
   bool HasPredRes = false;
   bool HasSSBS = false;
@@ -84,6 +83,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasFMV = true;
   bool HasGCS = false;
   bool HasRCPC3 = false;
+  bool HasSMEFA64 = false;
 
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 

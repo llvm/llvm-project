@@ -1133,9 +1133,6 @@ typedef struct __ifunc_arg_t {
 #ifndef HWCAP2_SME_F64F64
 #define HWCAP2_SME_F64F64 (1 << 25)
 #endif
-#ifndef HWCAP2_SME_FA64
-#define HWCAP2_SME_FA64 (1 << 30)
-#endif
 #ifndef HWCAP2_WFXT
 #define HWCAP2_WFXT (1UL << 31)
 #endif
@@ -1367,8 +1364,6 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_SME_I64);
   if (hwcap2 & HWCAP2_SME_F64F64)
     setCPUFeature(FEAT_SME_F64);
-  if (hwcap2 & HWCAP2_SME_FA64)
-    setCPUFeature(FEAT_SME_FA64);
   if (hwcap & HWCAP_CPUID) {
     unsigned long ftr;
     getCPUFeature(ID_AA64PFR1_EL1, ftr);
