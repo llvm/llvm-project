@@ -378,7 +378,7 @@ void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
           Builder.buildUnmerge(LLT::fixed_vector(16, 8), Ext1SrcReg);
       MachineInstr *Ext2Unmerge =
           Builder.buildUnmerge(LLT::fixed_vector(16, 8), Ext2SrcReg);
-      for (unsigned i = 0; i < SrcTy.getNumElements() / 16; i++) {
+      for (unsigned i = 0, e = SrcTy.getNumElements() / 16; i < e; i++) {
         Ext1UnmergeReg.push_back(Ext1Unmerge->getOperand(i).getReg());
         Ext2UnmergeReg.push_back(Ext2Unmerge->getOperand(i).getReg());
       }
