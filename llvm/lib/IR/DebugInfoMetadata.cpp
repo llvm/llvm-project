@@ -711,9 +711,7 @@ Constant *DIDerivedType::getStorageOffsetInBits() const {
 }
 
 Constant *DIDerivedType::getConstant() const {
-  assert((getTag() == dwarf::DW_TAG_member ||
-          getTag() == dwarf::DW_TAG_variable) &&
-         isStaticMember());
+  assert(getTag() == dwarf::DW_TAG_member && isStaticMember());
   if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
     return C->getValue();
   return nullptr;
