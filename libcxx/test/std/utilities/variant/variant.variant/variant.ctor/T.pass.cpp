@@ -203,6 +203,7 @@ void test_vector_bool() {
   std::vector<bool> vec = {true};
   std::variant<bool, int> v = vec[0];
   assert(v.index() == 0);
+  assert(std::get<0>(v) == true);
 }
 
 int main(int, char**) {
