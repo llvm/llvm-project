@@ -53323,11 +53323,11 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
   // Using i16 as an intermediate type is a bad idea, unless we have HW support
   // for it. Therefore for type sizes equal or smaller than 32 just go with i32.
   // if hasFP16 support:
-  //   UINT_TO_FP(vXi1~15)  -> UINT_TO_FP(ZEXT(vXi1~15  to vXi16))
-  //   UINT_TO_FP(vXi17~31) -> UINT_TO_FP(ZEXT(vXi17~31 to vXi32))
+  //   UINT_TO_FP(vXi1~15)  -> SINT_TO_FP(ZEXT(vXi1~15  to vXi16))
+  //   UINT_TO_FP(vXi17~31) -> SINT_TO_FP(ZEXT(vXi17~31 to vXi32))
   // else
-  //   UINT_TO_FP(vXi1~31) -> UINT_TO_FP(ZEXT(vXi1~31 to vXi32))
-  // UINT_TO_FP(vXi33~63) -> UINT_TO_FP(ZEXT(vXi33~63 to vXi64))
+  //   UINT_TO_FP(vXi1~31) -> SINT_TO_FP(ZEXT(vXi1~31 to vXi32))
+  // UINT_TO_FP(vXi33~63) -> SINT_TO_FP(ZEXT(vXi33~63 to vXi64))
   if (InVT.isVector() && VT.getVectorElementType() == MVT::f16) {
     unsigned ScalarSize = InVT.getScalarSizeInBits();
     if ((ScalarSize == 16 && Subtarget.hasFP16()) || ScalarSize == 32 ||
@@ -53342,9 +53342,9 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
                          InVT.getVectorNumElements());
     SDValue P = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Op0);
     if (IsStrict)
-      return DAG.getNode(ISD::STRICT_UINT_TO_FP, dl, {VT, MVT::Other},
+      return DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {VT, MVT::Other},
                          {N->getOperand(0), P});
-    return DAG.getNode(ISD::UINT_TO_FP, dl, VT, P);
+    return DAG.getNode(ISD::SINT_TO_FP, dl, VT, P);
   }
 
   // UINT_TO_FP(vXi1) -> SINT_TO_FP(ZEXT(vXi1 to vXi32))
