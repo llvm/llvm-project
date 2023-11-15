@@ -2390,6 +2390,20 @@ TEST_F(TokenAnnotatorTest, UnderstandsDoWhile) {
   EXPECT_TOKEN(Tokens[4], tok::kw_while, TT_DoWhile);
 }
 
+TEST_F(TokenAnnotatorTest, NotStartOfName) {
+  auto Tokens = annotate("#pragma clang diagnostic push");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown);
+
+  Tokens = annotate("#pragma clang diagnostic ignored \"-Wzero-length-array\"");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
