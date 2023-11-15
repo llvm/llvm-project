@@ -1,6 +1,6 @@
-; Tests that coro-split will convert a call before coro.suspend to a musttail call
-; while the user of the coro.suspend is a icmpinst.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; Tests that instrumentation doesn't interfere with lowering (coro-split).
+; It should convert coro.resume followed by a suspend to a musttail call.
+
 ; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define void @fakeresume1(ptr)  {
@@ -8,44 +8,47 @@ entry:
   ret void;
 }
 
-define void @f() #0 {
+define void @fakeresume2(ptr align 8)  {
+entry:
+  ret void;
+}
+
+define void @g() #0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 
   %save = call token @llvm.coro.save(ptr null)
+  call fastcc void @fakeresume1(ptr null)
 
-  %init_suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
-  switch i8 %init_suspend, label %coro.end [
+  %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
+  switch i8 %suspend, label %exit [
     i8 0, label %await.ready
-    i8 1, label %coro.end
+    i8 1, label %exit
   ]
 await.ready:
   %save2 = call token @llvm.coro.save(ptr null)
+  call fastcc void @fakeresume2(ptr align 8 null)
 
-  call fastcc void @fakeresume1(ptr align 8 null)
-  %suspend = call i8 @llvm.coro.suspend(token %save2, i1 true)
-  %switch = icmp ult i8 %suspend, 2
-  br i1 %switch, label %cleanup, label %coro.end
-
-cleanup:
-  %free.handle = call ptr @llvm.coro.free(token %id, ptr %vFrame)
-  %.not = icmp eq ptr %free.handle, null
-  br i1 %.not, label %coro.end, label %coro.free
-
-coro.free:
-  call void @delete(ptr nonnull %free.handle) #2
-  br label %coro.end
-
-coro.end:
+  %suspend2 = call i8 @llvm.coro.suspend(token %save2, i1 false)
+  switch i8 %suspend2, label %exit [
+    i8 0, label %exit
+    i8 1, label %exit
+  ]
+exit:
   call i1 @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
-; CHECK-LABEL: @f.resume(
-; CHECK:          musttail call fastcc void @fakeresume1(
-; CHECK-NEXT:     ret void
+; Verify that in the initial function resume is not marked with musttail.
+; CHECK-LABEL: @g(
+; CHECK-NOT: musttail call fastcc void @fakeresume1(ptr null)
+
+; Verify that in the resume part resume call is marked with musttail.
+; CHECK-LABEL: @g.resume(
+; CHECK: musttail call fastcc void @fakeresume2(ptr align 8 null)
+; CHECK-NEXT: ret void
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
 declare i1 @llvm.coro.alloc(token) #2
@@ -58,7 +61,6 @@ declare ptr @llvm.coro.free(token, ptr nocapture readonly) #1
 declare i1 @llvm.coro.end(ptr, i1, token) #2
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #1
 declare ptr @malloc(i64)
-declare void @delete(ptr nonnull) #2
 
 attributes #0 = { presplitcoroutine }
 attributes #1 = { argmemonly nounwind readonly }

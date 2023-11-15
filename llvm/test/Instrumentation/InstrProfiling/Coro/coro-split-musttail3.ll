@@ -1,7 +1,7 @@
-; Tests that coro-split will convert coro.resume followed by a suspend to a
-; musttail call.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck --check-prefixes=CHECK,NOPGO %s
-; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck --check-prefixes=CHECK,PGO %s
+; Tests that instrumentation doesn't interfere with lowering (coro-split).
+; It should convert coro.resume followed by a suspend to a musttail call.
+
+; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define void @f() #0 {
 entry:
@@ -60,20 +60,15 @@ unreach:
 ; CHECK-LABEL: @f.resume(
 ; CHECK: %[[hdl:.+]] = call ptr @g()
 ; CHECK-NEXT: %[[addr2:.+]] = call ptr @llvm.coro.subfn.addr(ptr %[[hdl]], i8 0)
-; NOPGO-NEXT: musttail call fastcc void %[[addr2]](ptr %[[hdl]])
-; PGO: musttail call fastcc void %[[addr2]](ptr %[[hdl]])
+; CHECK: musttail call fastcc void %[[addr2]](ptr %[[hdl]])
 ; CHECK-NEXT: ret void
 ; CHECK: %[[hdl2:.+]] = call ptr @h()
 ; CHECK-NEXT: %[[addr3:.+]] = call ptr @llvm.coro.subfn.addr(ptr %[[hdl2]], i8 0)
-; NOPGO-NEXT: musttail call fastcc void %[[addr3]](ptr %[[hdl2]])
-; PGO: musttail call fastcc void %[[addr3]](ptr %[[hdl2]])
+; CHECK: musttail call fastcc void %[[addr3]](ptr %[[hdl2]])
 ; CHECK-NEXT: ret void
 ; CHECK: %[[addr4:.+]] = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
-; NOPGO-NEXT: musttail call fastcc void %[[addr4]](ptr null)
-; PGO: musttail call fastcc void %[[addr4]](ptr null)
+; CHECK: musttail call fastcc void %[[addr4]](ptr null)
 ; CHECK-NEXT: ret void
-
-
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
 declare i1 @llvm.coro.alloc(token) #2

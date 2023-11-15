@@ -1,26 +1,17 @@
-; Tests that coro-split will convert coro.resume followed by a suspend to a
-; musttail call.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; Tests that instrumentation doesn't interfere with lowering (coro-split).
+; It should convert coro.resume followed by a suspend to a musttail call.
+
 ; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define void @fakeresume1(ptr)  {
-entry:
-  ret void;
-}
-
-define void @fakeresume2(ptr align 8)  {
-entry:
-  ret void;
-}
-
-define void @g() #0 {
+define void @f() #0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 
   %save = call token @llvm.coro.save(ptr null)
-  call fastcc void @fakeresume1(ptr null)
+  %addr1 = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
+  call fastcc void %addr1(ptr null)
 
   %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
   switch i8 %suspend, label %exit [
@@ -29,7 +20,8 @@ entry:
   ]
 await.ready:
   %save2 = call token @llvm.coro.save(ptr null)
-  call fastcc void @fakeresume2(ptr align 8 null)
+  %addr2 = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
+  call fastcc void %addr2(ptr null)
 
   %suspend2 = call i8 @llvm.coro.suspend(token %save2, i1 false)
   switch i8 %suspend2, label %exit [
@@ -42,12 +34,15 @@ exit:
 }
 
 ; Verify that in the initial function resume is not marked with musttail.
-; CHECK-LABEL: @g(
-; CHECK-NOT: musttail call fastcc void @fakeresume1(ptr null)
+; CHECK-LABEL: @f(
+; CHECK: %[[addr1:.+]] = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
+; CHECK-NOT: musttail call fastcc void %[[addr1]](ptr null)
 
 ; Verify that in the resume part resume call is marked with musttail.
-; CHECK-LABEL: @g.resume(
-; CHECK: musttail call fastcc void @fakeresume2(ptr align 8 null)
+; CHECK-LABEL: @f.resume(
+; CHECK: %[[addr2:.+]] = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
+; CHECK: call void @llvm.instrprof
+; CHECK-NEXT: musttail call fastcc void %[[addr2]](ptr null)
 ; CHECK-NEXT: ret void
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
