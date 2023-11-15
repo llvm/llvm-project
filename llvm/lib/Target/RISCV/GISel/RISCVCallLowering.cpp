@@ -347,7 +347,10 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
 }
 
 // TODO: Only integer, pointer and aggregate types are supported now.
-static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget) {
+// TODO: Remove IsLowerRetVal argument by adding support for vectors in
+// lowerCall.
+static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget,
+                                  bool IsLowerRetVal = false) {
   // TODO: Integers larger than 2*XLen are passed indirectly which is not
   // supported yet.
   if (T->isIntegerTy())
@@ -368,7 +371,8 @@ static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget) {
     return true;
   }
 
-  if (T->isVectorTy() && Subtarget.hasVInstructions() && T->isScalableTy() &&
+  if (IsLowerRetVal && T->isVectorTy() && Subtarget.hasVInstructions() &&
+      T->isScalableTy() &&
       isLegalElementTypeForRVV(T->getScalarType(), Subtarget))
     return true;
 
@@ -384,7 +388,7 @@ bool RISCVCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
 
   const RISCVSubtarget &Subtarget =
       MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
-  if (!isSupportedReturnType(Val->getType(), Subtarget))
+  if (!isSupportedReturnType(Val->getType(), Subtarget, /*IsLowerRetVal=*/true))
     return false;
 
   MachineFunction &MF = MIRBuilder.getMF();
