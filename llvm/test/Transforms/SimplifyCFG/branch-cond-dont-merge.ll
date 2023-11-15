@@ -82,6 +82,7 @@ exit:
 define void @uint32_overflow_test(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @uint32_overflow_test(
 ; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[ARG:%.*]], i1 true, i1 [[ARG1:%.*]]
 ; CHECK-NEXT:    ret void
 ;
 bb:
