@@ -1432,6 +1432,88 @@ define <2 x i8> @sdiv_sdiv_mul_nsw(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
   ret <2 x i8> %r
 }
 
+define i32 @sdiv_sub1(i32 %arg) {
+; CHECK-LABEL: @sdiv_sub1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[ARG:%.*]], -2147483648
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[TMP1]], i32 1, i32 -1
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %neg = sub i32 0, %arg
+  %div = sdiv i32 %neg, %arg
+  ret i32 %div
+}
+
+define i32 @sdiv_sub2(i32 %arg) {
+; CHECK-LABEL: @sdiv_sub2(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[ARG:%.*]], -2147483648
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[TMP1]], i32 1, i32 -1
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %neg = sub i32 0, %arg
+  %div = sdiv i32 %arg, %neg
+  ret i32 %div
+}
+
+define i32 @sub_sdiv_multiuse(i32 %arg) {
+; CHECK-LABEL: @sub_sdiv_multiuse(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[ARG]], -2147483648
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[TMP1]], i32 1, i32 -1
+; CHECK-NEXT:    call void @use(i32 [[NEG]])
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %neg = sub i32 0, %arg
+  %div = sdiv i32 %arg, %neg
+  call void @use(i32 %neg)
+  ret i32 %div
+}
+
+define i32 @sdiv_sub_sub(i32 %x ,i32 %y) {
+; CHECK-LABEL: @sdiv_sub_sub(
+; CHECK-NEXT:    [[S:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[S]], -2147483648
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[TMP1]], i32 1, i32 -1
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %s = sub i32 %x, %y
+  %u = sub i32 %y, %x
+  %d = sdiv i32 %s, %u
+  ret i32 %d
+}
+
+define i32 @sdiv_mul_sub(i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_mul_sub(
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[M]], -2147483648
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 1, i32 -1
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul i32 %y, %x
+  %d = sub i32 0, %m
+  %r = sdiv i32 %d, %m
+  ret i32 %r
+}
+
+define i32 @sdiv_mul_sub_nsw(i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_mul_sub_nsw(
+; CHECK-NEXT:    ret i32 -1
+;
+  %m = mul i32 %y, %x
+  %n = sub nsw i32 0, %m
+  %d = sdiv i32 %m, %n
+  ret i32 %d
+}
+
+define i32 @sdiv_mul_nsw_sub_nsw(i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_mul_nsw_sub_nsw(
+; CHECK-NEXT:    ret i32 -1
+;
+  %m = mul nsw i32 %y, %x
+  %n = sub nsw i32 0, %m
+  %d = sdiv i32 %m, %n
+  ret i32 %d
+}
+
 ; exact propagates
 
 define i8 @sdiv_sdiv_mul_nsw_exact_exact(i8 %x, i8 %y, i8 %z) {
