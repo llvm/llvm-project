@@ -144,6 +144,7 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
 
   OutputFilename = Args.getLastArgValue(OPT_outputFileName, "");
   ContinueOnCuIndexOverflow = Args.hasArg(OPT_continueOnCuIndexOverflow);
+  StopOnCuIndexOverflow = Args.hasArg(OPT_stopOnCuIndexOverflow);
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_execFileNames))
     ExecFilenames.emplace_back(A->getValue());
@@ -255,7 +256,8 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
 
-  if (auto Err = write(*MS, DWOFilenames, ContinueOnCuIndexOverflow)) {
+  if (auto Err = write(*MS, DWOFilenames, ContinueOnCuIndexOverflow,
+      StopOnCuIndexOverflow)) {
     logAllUnhandledErrors(std::move(Err), WithColor::error());
     return 1;
   }
