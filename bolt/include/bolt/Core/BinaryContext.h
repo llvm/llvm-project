@@ -950,7 +950,7 @@ public:
   bool registerFragment(BinaryFunction &TargetFunction,
                         BinaryFunction &Function) const;
 
-  /// Add unterprocedural reference for \p Function to \p Address
+  /// Add interprocedural reference for \p Function to \p Address
   void addInterproceduralReference(BinaryFunction *Function, uint64_t Address) {
     InterproceduralReferences.push_back({Function, Address});
   }
@@ -1239,8 +1239,8 @@ public:
   uint64_t
   computeInstructionSize(const MCInst &Inst,
                          const MCCodeEmitter *Emitter = nullptr) const {
-    if (auto Size = MIB->getAnnotationWithDefault<uint32_t>(Inst, "Size"))
-      return Size;
+    if (std::optional<uint32_t> Size = MIB->getSize(Inst))
+      return *Size;
 
     if (!Emitter)
       Emitter = this->MCE.get();

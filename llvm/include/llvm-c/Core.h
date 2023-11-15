@@ -216,7 +216,6 @@ typedef enum {
   LLVMColdCallConv          = 9,
   LLVMGHCCallConv           = 10,
   LLVMHiPECallConv          = 11,
-  LLVMWebKitJSCallConv      = 12,
   LLVMAnyRegCallConv        = 13,
   LLVMPreserveMostCallConv  = 14,
   LLVMPreserveAllCallConv   = 15,
@@ -2282,8 +2281,6 @@ LLVMValueRef LLVMConstICmp(LLVMIntPredicate Predicate,
 LLVMValueRef LLVMConstFCmp(LLVMRealPredicate Predicate,
                            LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstShl(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstLShr(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstAShr(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                            LLVMValueRef *ConstantIndices, unsigned NumIndices);
 LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,

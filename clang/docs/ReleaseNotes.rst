@@ -217,6 +217,8 @@ Non-comprehensive list of changes in this release
   (e.g., ``uint16x8_t``), this returns the constant number of elements at compile-time.
   For scalable vectors, e.g., SVE or RISC-V V, the number of elements is not known at compile-time and is
   determined at runtime.
+* The ``__datasizeof`` keyword has been added. It is similar to ``sizeof``
+  except that it returns the size of a type ignoring tail padding.
 
 New Compiler Flags
 ------------------
@@ -553,6 +555,8 @@ Bug Fixes in This Version
   Fixes (`#67687 <https://github.com/llvm/llvm-project/issues/67687>`_)
 - Fix crash from constexpr evaluator evaluating uninitialized arrays as rvalue.
   Fixes (`#67317 <https://github.com/llvm/llvm-project/issues/67317>`_)
+- Fixed an issue that a benign assertion might hit when instantiating a pack expansion
+  inside a lambda. (`#61460 <https://github.com/llvm/llvm-project/issues/61460>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -722,6 +726,8 @@ Miscellaneous Clang Crashes Fixed
   (`#68001 <https://github.com/llvm/llvm-project/pull/68001>`_)
 - Fixed a crash in C when redefined struct is another nested redefinition.
   `Issue 41302 <https://github.com/llvm/llvm-project/issues/41302>`_
+- Fixed a crash when ``-ast-dump=json`` was used for code using class
+  template deduction guides.
 
 Target Specific Changes
 -----------------------

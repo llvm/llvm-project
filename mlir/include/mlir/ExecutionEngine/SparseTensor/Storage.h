@@ -301,8 +301,8 @@ public:
       uint64_t lvlRank = getLvlRank();
       uint64_t valIdx = 0;
       // Linearize the address.
-      for (uint64_t lvl = 0; lvl < lvlRank; lvl++)
-        valIdx = valIdx * getLvlSize(lvl) + lvlCoords[lvl];
+      for (uint64_t l = 0; l < lvlRank; l++)
+        valIdx = valIdx * getLvlSize(l) + lvlCoords[l];
       values[valIdx] = val;
       return;
     }
@@ -472,9 +472,10 @@ private:
   uint64_t assembledSize(uint64_t parentSz, uint64_t l) const {
     if (isCompressedLvl(l))
       return positions[l][parentSz];
-    if (isSingletonLvl(l))
-      return parentSz; // New size is same as the parent.
-    // TODO: support levels assignment for loose/2:4?
+    if (isLooseCompressedLvl(l))
+      return positions[l][2 * parentSz - 1];
+    if (isSingletonLvl(l) || is2OutOf4Lvl(l))
+      return parentSz; // new size same as the parent
     assert(isDenseLvl(l));
     return parentSz * getLvlSize(l);
   }
@@ -766,40 +767,59 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
     const uint64_t *dim2lvl, const uint64_t *lvl2dim, const intptr_t *lvlBufs)
     : SparseTensorStorage(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
                           dim2lvl, lvl2dim) {
+  // Note that none of the buffers can be reused because ownership
+  // of the memory passed from clients is not necessarily transferred.
+  // Therefore, all data is copied over into a new SparseTensorStorage.
+  //
+  // TODO: this needs to be generalized to all formats AND
+  //       we need a proper audit of e.g. double compressed
+  //       levels where some are not filled
+  //
   uint64_t trailCOOLen = 0, parentSz = 1, bufIdx = 0;
   for (uint64_t l = 0; l < lvlRank; l++) {
-    if (!isUniqueLvl(l) && isCompressedLvl(l)) {
-      // A `compressed_nu` level marks the start of trailing COO start level.
-      // Since the coordinate buffer used for trailing COO are passed in as AoS
-      // scheme, and SparseTensorStorage uses a SoA scheme, we can not simply
-      // copy the value from the provided buffers.
+    if (!isUniqueLvl(l) && (isCompressedLvl(l) || isLooseCompressedLvl(l))) {
+      // A `(loose)compressed_nu` level marks the start of trailing COO
+      // start level. Since the coordinate buffer used for trailing COO
+      // is passed in as AoS scheme and SparseTensorStorage uses a SoA
+      // scheme, we cannot simply copy the value from the provided buffers.
       trailCOOLen = lvlRank - l;
       break;
     }
-    assert(!isSingletonLvl(l) &&
-           "Singleton level not following a compressed_nu level");
-    if (isCompressedLvl(l)) {
+    if (isCompressedLvl(l) || isLooseCompressedLvl(l)) {
       P *posPtr = reinterpret_cast<P *>(lvlBufs[bufIdx++]);
       C *crdPtr = reinterpret_cast<C *>(lvlBufs[bufIdx++]);
-      // Copies the lvlBuf into the vectors. The buffer can not be simply reused
-      // because the memory passed from users is not necessarily allocated on
-      // heap.
-      positions[l].assign(posPtr, posPtr + parentSz + 1);
-      coordinates[l].assign(crdPtr, crdPtr + positions[l][parentSz]);
+      if (isLooseCompressedLvl(l)) {
+        positions[l].assign(posPtr, posPtr + 2 * parentSz);
+        coordinates[l].assign(crdPtr, crdPtr + positions[l][2 * parentSz - 1]);
+      } else {
+        positions[l].assign(posPtr, posPtr + parentSz + 1);
+        coordinates[l].assign(crdPtr, crdPtr + positions[l][parentSz]);
+      }
+    } else if (isSingletonLvl(l)) {
+      assert(0 && "general singleton not supported yet");
+    } else if (is2OutOf4Lvl(l)) {
+      assert(0 && "2Out4 not supported yet");
     } else {
-      // TODO: support levels assignment for loose/2:4?
       assert(isDenseLvl(l));
     }
     parentSz = assembledSize(parentSz, l);
   }
 
+  // Handle Aos vs. SoA mismatch for COO.
   if (trailCOOLen != 0) {
     uint64_t cooStartLvl = lvlRank - trailCOOLen;
-    assert(!isUniqueLvl(cooStartLvl) && isCompressedLvl(cooStartLvl));
+    assert(!isUniqueLvl(cooStartLvl) &&
+           (isCompressedLvl(cooStartLvl) || isLooseCompressedLvl(cooStartLvl)));
     P *posPtr = reinterpret_cast<P *>(lvlBufs[bufIdx++]);
     C *aosCrdPtr = reinterpret_cast<C *>(lvlBufs[bufIdx++]);
-    positions[cooStartLvl].assign(posPtr, posPtr + parentSz + 1);
-    P crdLen = positions[cooStartLvl][parentSz];
+    P crdLen;
+    if (isLooseCompressedLvl(cooStartLvl)) {
+      positions[cooStartLvl].assign(posPtr, posPtr + 2 * parentSz);
+      crdLen = positions[cooStartLvl][2 * parentSz - 1];
+    } else {
+      positions[cooStartLvl].assign(posPtr, posPtr + parentSz + 1);
+      crdLen = positions[cooStartLvl][parentSz];
+    }
     for (uint64_t l = cooStartLvl; l < lvlRank; l++) {
       coordinates[l].resize(crdLen);
       for (uint64_t n = 0; n < crdLen; n++) {
@@ -809,6 +829,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
     parentSz = assembledSize(parentSz, cooStartLvl);
   }
 
+  // Copy the values buffer.
   V *valPtr = reinterpret_cast<V *>(lvlBufs[bufIdx]);
   values.assign(valPtr, valPtr + parentSz);
 }

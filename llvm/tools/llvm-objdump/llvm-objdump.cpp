@@ -27,7 +27,6 @@
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
@@ -87,6 +86,7 @@
 #include <cctype>
 #include <cstring>
 #include <optional>
+#include <set>
 #include <system_error>
 #include <unordered_map>
 #include <utility>
