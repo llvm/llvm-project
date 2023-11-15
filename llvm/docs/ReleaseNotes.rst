@@ -230,6 +230,8 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* ``SBWatchpoint::GetHardwareIndex`` is deprecated and now returns -1
+  to indicate the index is unavailable.
 * Methods in SBHostOS related to threads have had their implementations
   removed. These methods will return a value indicating failure.
 * ``SBType::FindDirectNestedType`` function is added. It's useful
