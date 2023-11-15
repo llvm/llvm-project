@@ -1,9 +1,6 @@
-; Tests that sinked lifetime markers wouldn't provent optimization
-; to convert a resuming call to a musttail call.
-; The difference between this and coro-split-musttail5.ll and coro-split-musttail5.ll
-; is that this contains dead instruction generated during the transformation,
-; which makes the optimization harder.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; Tests that instrumentation doesn't interfere with lowering (coro-split).
+; It should convert coro.resume followed by a suspend to a musttail call.
+
 ; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 declare void @fakeresume1(ptr align 8)
@@ -42,8 +39,8 @@ exit:
 
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @g.resume(
-; CHECK:         musttail call fastcc void @fakeresume1(ptr align 8 null)
-; CHECK-NEXT:    ret void
+; CHECK:      musttail call fastcc void @fakeresume1(ptr align 8 null)
+; CHECK-NEXT: ret void
 
 ; It has a cleanup bb.
 define void @f() #0 {
@@ -91,8 +88,8 @@ exit:
 ; FIXME: The fakeresume1 here should be marked as musttail.
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @f.resume(
-; CHECK:         musttail call fastcc void @fakeresume1(ptr align 8 null)
-; CHECK-NEXT:    ret void
+; CHECK:      musttail call fastcc void @fakeresume1(ptr align 8 null)
+; CHECK-NEXT: ret void
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
 declare i1 @llvm.coro.alloc(token) #2

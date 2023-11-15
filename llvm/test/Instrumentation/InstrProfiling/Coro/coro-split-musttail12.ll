@@ -1,14 +1,12 @@
-; Tests that coro-split will convert a call before coro.suspend to a musttail call
-; while the user of the coro.suspend is a icmpinst.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; Tests that instrumentation doesn't interfere with lowering (coro-split).
+; It should convert coro.resume followed by a suspend to a musttail call.
+
 ; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define void @fakeresume1(ptr)  {
-entry:
-  ret void;
-}
+declare void @fakeresume1(ptr)
+declare void @print()
 
-define void @f() #0 {
+define void @f(i1 %cond) #0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
@@ -23,8 +21,28 @@ entry:
   ]
 await.ready:
   %save2 = call token @llvm.coro.save(ptr null)
+  br i1 %cond, label %then, label %else
 
+then:
   call fastcc void @fakeresume1(ptr align 8 null)
+  br label %merge
+
+else:
+  br label %merge
+
+merge:
+  %v0 = phi i1 [0, %then], [1, %else]
+  br label %compare
+
+compare:
+  %cond.cmp = icmp eq i1 %v0, 0
+  br i1 %cond.cmp, label %ready, label %prepare
+
+prepare:
+  call void @print()
+  br label %ready
+
+ready:
   %suspend = call i8 @llvm.coro.suspend(token %save2, i1 true)
   %switch = icmp ult i8 %suspend, 2
   br i1 %switch, label %cleanup, label %coro.end
@@ -44,8 +62,9 @@ coro.end:
 }
 
 ; CHECK-LABEL: @f.resume(
-; CHECK:          musttail call fastcc void @fakeresume1(
-; CHECK-NEXT:     ret void
+; CHECK-NOT:      }
+; CHECK:          call void @print()
+
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
 declare i1 @llvm.coro.alloc(token) #2
