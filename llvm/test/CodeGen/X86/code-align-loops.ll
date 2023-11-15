@@ -9,8 +9,8 @@
 ; The test IR is generated from below simple C file:
 ; $ clang -S -emit-llvm loop.c
 ; $ cat loop.c
-; void bar();
-; void var();
+; void bar(void);
+; void var(void);
 ; void foo(int a) {
 ;   for (int i = 0; i < a; ++i)
 ;     bar();
@@ -42,7 +42,7 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.013 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  tail call void (...) @bar()
+  tail call void @bar()
   %inc = add nuw nsw i32 %i.013, 1
   %exitcond.not = icmp eq i32 %inc, %a
   br i1 %exitcond.not, label %for.body5, label %for.body, !llvm.loop !0
@@ -52,7 +52,7 @@ for.cond.cleanup4:                                ; preds = %for.body5, %entry
 
 for.body5:                                        ; preds = %for.body, %for.body5
   %i1.015 = phi i32 [ %inc7, %for.body5 ], [ 0, %for.body ]
-  tail call void (...) @var()
+  tail call void @var()
   %inc7 = add nuw nsw i32 %i1.015, 1
   %exitcond16.not = icmp eq i32 %inc7, %a
   br i1 %exitcond16.not, label %for.cond.cleanup4, label %for.body5, !llvm.loop !2
@@ -80,7 +80,7 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.013 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  tail call void (...) @bar()
+  tail call void @bar()
   %inc = add nuw nsw i32 %i.013, 1
   %exitcond.not = icmp eq i32 %inc, %a
   br i1 %exitcond.not, label %for.body5, label %for.body
@@ -90,14 +90,14 @@ for.cond.cleanup4:                                ; preds = %for.body5, %entry
 
 for.body5:                                        ; preds = %for.body, %for.body5
   %i1.015 = phi i32 [ %inc7, %for.body5 ], [ 0, %for.body ]
-  tail call void (...) @var()
+  tail call void @var()
   %inc7 = add nuw nsw i32 %i1.015, 1
   %exitcond16.not = icmp eq i32 %inc7, %a
   br i1 %exitcond16.not, label %for.cond.cleanup4, label %for.body5, !llvm.loop !2
 }
 
-declare void @bar(...)
-declare void @var(...)
+declare void @bar()
+declare void @var()
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.align", i32 64}

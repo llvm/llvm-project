@@ -153,49 +153,39 @@ MachineLoopInfo::findLoopPreheader(MachineLoop *L, bool SpeculativePreheader,
 
 MDNode *MachineLoop::getLoopID() const {
   MDNode *LoopID = nullptr;
-  if (auto *MBB = findLoopControlBlock()) {
+  if (const auto *MBB = findLoopControlBlock()) {
     // If there is a single latch block, then the metadata
     // node is attached to its terminating instruction.
     const auto *BB = MBB->getBasicBlock();
-    if (!BB)
-      return nullptr;
+    assert(BB && "MBB->BB mapping is invalid.");
     if (const auto *TI = BB->getTerminator())
       LoopID = TI->getMetadata(LLVMContext::MD_loop);
-  } else if (auto *MBB = getHeader()) {
+  } else if (const auto *MBB = getHeader()) {
     // There seem to be multiple latch blocks, so we have to
     // visit all predecessors of the loop header and check
     // their terminating instructions for the metadata.
-    if (const auto *H = MBB->getBasicBlock()) {
+    if (const auto *Header = MBB->getBasicBlock()) {
       // Walk over all blocks in the loop.
-      for (auto *MBB : this->blocks()) {
+      for (const auto *MBB : this->blocks()) {
         const auto *BB = MBB->getBasicBlock();
-        if (!BB)
-          return nullptr;
+        assert(BB && "MBB->BB mapping is invalid.");
         const auto *TI = BB->getTerminator();
-        if (!TI)
-          return nullptr;
+        assert(TI && "Invalid (nullptr) terminating instruction.");
         MDNode *MD = nullptr;
         // Check if this terminating instruction jumps to the loop header.
-        for (const auto *S : successors(TI)) {
-          if (S == H) {
+        for (const auto *Succ : successors(TI)) {
+          if (Succ == Header) {
             // This is a jump to the header - gather the metadata from it.
             MD = TI->getMetadata(LLVMContext::MD_loop);
             break;
           }
         }
-        if (!MD)
-          return nullptr;
-        if (!LoopID)
-          LoopID = MD;
-        else if (MD != LoopID)
-          return nullptr;
+        assert(MD && "Dropped inconsistent MD_loop (nullptr).");
+        LoopID = MD;
       }
     }
   }
-  if (LoopID &&
-      (LoopID->getNumOperands() == 0 || LoopID->getOperand(0) != LoopID)) {
-    LoopID = nullptr;
-  }
+  assert((LoopID && LoopID->getNumOperands() != 0 && LoopID->getOperand(0) == LoopID) && "Dropped inconsistent MD_loop (self-ref).");
   return LoopID;
 }
 
