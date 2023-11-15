@@ -1,0 +1,7 @@
+; RUN: llvm-readtapi --help 2>&1 | FileCheck %s 
+; RUN: llvm-readtapi -help 2>&1 | FileCheck %s 
+
+CHECK: OVERVIEW: LLVM TAPI file reader and manipulator
+CHECK: USAGE: llvm-readtapi [options] <inputs>
+CHECK: OPTIONS:
+CHECK:   -help    display this help
