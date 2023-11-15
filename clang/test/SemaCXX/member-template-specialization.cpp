@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -verify -fsyntax-only %s
+// expected-no-diagnostics
+
 // Verify that the inner template specialization can be found
 
 template <typename Ty>
