@@ -185,7 +185,9 @@ MDNode *MachineLoop::getLoopID() const {
       }
     }
   }
-  assert((LoopID && LoopID->getNumOperands() != 0 && LoopID->getOperand(0) == LoopID) && "Dropped inconsistent MD_loop (self-ref).");
+  assert((LoopID && LoopID->getNumOperands() != 0 &&
+          LoopID->getOperand(0) == LoopID) &&
+         "Dropped inconsistent MD_loop (self-ref).");
   return LoopID;
 }
 
