@@ -4257,14 +4257,13 @@ define signext i32 @atomicrmw_xchg_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind
 ; RV64IA-NEXT:    beqz a1, .LBB53_2
 ; RV64IA-NEXT:  # %bb.1: # %then
 ; RV64IA-NEXT:    li a1, 1
-; RV64IA-NEXT:    amoswap.w a1, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    amoswap.w a0, a1, (a0)
 ; RV64IA-NEXT:    ret
 ; RV64IA-NEXT:  .LBB53_2: # %else
-; RV64IA-NEXT:    lw a1, 0(a0)
+; RV64IA-NEXT:    mv a1, a0
+; RV64IA-NEXT:    lw a0, 0(a0)
 ; RV64IA-NEXT:    li a2, 1
-; RV64IA-NEXT:    sw a2, 0(a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    sw a2, 0(a1)
 ; RV64IA-NEXT:    ret
   br i1 %c, label %then, label %else
 
@@ -4345,14 +4344,13 @@ define signext i32 @atomicrmw_add_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind 
 ; RV64IA-NEXT:    beqz a1, .LBB54_2
 ; RV64IA-NEXT:  # %bb.1: # %then
 ; RV64IA-NEXT:    li a1, 1
-; RV64IA-NEXT:    amoadd.w a1, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    amoadd.w a0, a1, (a0)
 ; RV64IA-NEXT:    ret
 ; RV64IA-NEXT:  .LBB54_2: # %else
-; RV64IA-NEXT:    lw a1, 0(a0)
-; RV64IA-NEXT:    addi a2, a1, 1
-; RV64IA-NEXT:    sw a2, 0(a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    mv a1, a0
+; RV64IA-NEXT:    lw a0, 0(a0)
+; RV64IA-NEXT:    addi a2, a0, 1
+; RV64IA-NEXT:    sw a2, 0(a1)
 ; RV64IA-NEXT:    ret
   br i1 %c, label %then, label %else
 
@@ -4434,14 +4432,13 @@ define signext i32 @atomicrmw_sub_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind 
 ; RV64IA-NEXT:    beqz a1, .LBB55_2
 ; RV64IA-NEXT:  # %bb.1: # %then
 ; RV64IA-NEXT:    li a1, -1
-; RV64IA-NEXT:    amoadd.w a1, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    amoadd.w a0, a1, (a0)
 ; RV64IA-NEXT:    ret
 ; RV64IA-NEXT:  .LBB55_2: # %else
-; RV64IA-NEXT:    lw a1, 0(a0)
-; RV64IA-NEXT:    addi a2, a1, -1
-; RV64IA-NEXT:    sw a2, 0(a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    mv a1, a0
+; RV64IA-NEXT:    lw a0, 0(a0)
+; RV64IA-NEXT:    addi a2, a0, -1
+; RV64IA-NEXT:    sw a2, 0(a1)
 ; RV64IA-NEXT:    ret
   br i1 %c, label %then, label %else
 
@@ -4523,14 +4520,13 @@ define signext i32 @atomicrmw_and_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind 
 ; RV64IA-NEXT:    beqz a1, .LBB56_2
 ; RV64IA-NEXT:  # %bb.1: # %then
 ; RV64IA-NEXT:    li a1, 1
-; RV64IA-NEXT:    amoand.w a1, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    amoand.w a0, a1, (a0)
 ; RV64IA-NEXT:    ret
 ; RV64IA-NEXT:  .LBB56_2: # %else
-; RV64IA-NEXT:    lwu a1, 0(a0)
-; RV64IA-NEXT:    andi a2, a1, 1
-; RV64IA-NEXT:    sw a2, 0(a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    mv a1, a0
+; RV64IA-NEXT:    lw a0, 0(a0)
+; RV64IA-NEXT:    andi a2, a0, 1
+; RV64IA-NEXT:    sw a2, 0(a1)
 ; RV64IA-NEXT:    ret
   br i1 %c, label %then, label %else
 
@@ -4615,25 +4611,24 @@ define signext i32 @atomicrmw_nand_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind
 ;
 ; RV64IA-LABEL: atomicrmw_nand_i32_monotonic_crossbb:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a1, 1
-; RV64IA-NEXT:    beqz a1, .LBB57_2
+; RV64IA-NEXT:    andi a2, a1, 1
+; RV64IA-NEXT:    mv a1, a0
+; RV64IA-NEXT:    beqz a2, .LBB57_2
 ; RV64IA-NEXT:  # %bb.1: # %then
 ; RV64IA-NEXT:    li a2, 1
 ; RV64IA-NEXT:  .LBB57_3: # %then
 ; RV64IA-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a1, (a0)
-; RV64IA-NEXT:    and a3, a1, a2
+; RV64IA-NEXT:    lr.w a0, (a1)
+; RV64IA-NEXT:    and a3, a0, a2
 ; RV64IA-NEXT:    not a3, a3
-; RV64IA-NEXT:    sc.w a3, a3, (a0)
+; RV64IA-NEXT:    sc.w a3, a3, (a1)
 ; RV64IA-NEXT:    bnez a3, .LBB57_3
 ; RV64IA-NEXT:  # %bb.4: # %then
-; RV64IA-NEXT:    sext.w a0, a1
 ; RV64IA-NEXT:    ret
 ; RV64IA-NEXT:  .LBB57_2: # %else
-; RV64IA-NEXT:    lwu a1, 0(a0)
-; RV64IA-NEXT:    andi a2, a1, 1
-; RV64IA-NEXT:    sw a2, 0(a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    lw a0, 0(a1)
+; RV64IA-NEXT:    andi a2, a0, 1
+; RV64IA-NEXT:    sw a2, 0(a1)
 ; RV64IA-NEXT:    ret
   br i1 %c, label %then, label %else
 
@@ -4715,14 +4710,13 @@ define signext i32 @atomicrmw_or_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind {
 ; RV64IA-NEXT:    beqz a1, .LBB58_2
 ; RV64IA-NEXT:  # %bb.1: # %then
 ; RV64IA-NEXT:    li a1, 1
-; RV64IA-NEXT:    amoor.w a1, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    amoor.w a0, a1, (a0)
 ; RV64IA-NEXT:    ret
 ; RV64IA-NEXT:  .LBB58_2: # %else
-; RV64IA-NEXT:    lw a1, 0(a0)
-; RV64IA-NEXT:    ori a2, a1, 1
-; RV64IA-NEXT:    sw a2, 0(a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    mv a1, a0
+; RV64IA-NEXT:    lw a0, 0(a0)
+; RV64IA-NEXT:    ori a2, a0, 1
+; RV64IA-NEXT:    sw a2, 0(a1)
 ; RV64IA-NEXT:    ret
   br i1 %c, label %then, label %else
 
@@ -4804,14 +4798,13 @@ define signext i32 @atomicrmw_xor_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind 
 ; RV64IA-NEXT:    beqz a1, .LBB59_2
 ; RV64IA-NEXT:  # %bb.1: # %then
 ; RV64IA-NEXT:    li a1, 1
-; RV64IA-NEXT:    amoxor.w a1, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    amoxor.w a0, a1, (a0)
 ; RV64IA-NEXT:    ret
 ; RV64IA-NEXT:  .LBB59_2: # %else
-; RV64IA-NEXT:    lw a1, 0(a0)
-; RV64IA-NEXT:    xori a2, a1, 1
-; RV64IA-NEXT:    sw a2, 0(a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    mv a1, a0
+; RV64IA-NEXT:    lw a0, 0(a0)
+; RV64IA-NEXT:    xori a2, a0, 1
+; RV64IA-NEXT:    sw a2, 0(a1)
 ; RV64IA-NEXT:    ret
   br i1 %c, label %then, label %else
 
