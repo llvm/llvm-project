@@ -11,14 +11,15 @@
 
 namespace hlsl {
 
+// Note: Functions in this file are sorted alphabetically, then grouped by base
+// element type, and the element types are sorted by size, then singed integer,
+// unsigned integer and floating point. Keeping this ordering consistent will
+// help keep this file manageable as it grows.
+
 #define _HLSL_BUILTIN_ALIAS(builtin)                                           \
   __attribute__((clang_builtin_alias(builtin)))
 #define _HLSL_AVAILABILITY(environment, version)                               \
   __attribute__((availability(environment, introduced = version)))
-
-_HLSL_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_count_bits)
-uint WaveActiveCountBits(bool bBit);
 
 //===----------------------------------------------------------------------===//
 // abs builtins
@@ -33,6 +34,7 @@ int16_t3 abs(int16_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int16_t4 abs(int16_t4);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+
 half abs(half);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 half2 abs(half2);
@@ -50,6 +52,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int3 abs(int3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int4 abs(int4);
+
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 float abs(float);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
@@ -58,6 +61,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 float3 abs(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 float4 abs(float4);
+
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int64_t abs(int64_t);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
@@ -66,6 +70,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int64_t3 abs(int64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int64_t4 abs(int64_t4);
+
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double abs(double);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
@@ -74,19 +79,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double3 abs(double3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double4 abs(double4);
-
-//===----------------------------------------------------------------------===//
-// sqrt builtins
-//===----------------------------------------------------------------------===//
-_HLSL_BUILTIN_ALIAS(__builtin_sqrt)
-double sqrt(double In);
-_HLSL_BUILTIN_ALIAS(__builtin_sqrtf)
-float sqrt(float In);
-
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_sqrtf16)
-half sqrt(half In);
-#endif
 
 //===----------------------------------------------------------------------===//
 // ceil builtins
@@ -121,38 +113,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
 double4 ceil(double4);
 
 //===----------------------------------------------------------------------===//
-// floor builtins
-//===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-half floor(half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-half2 floor(half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-half3 floor(half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-half4 floor(half4);
-#endif
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-float floor(float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-float2 floor(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-float3 floor(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-float4 floor(float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double floor(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double2 floor(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double3 floor(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double4 floor(double4);
-
-//===----------------------------------------------------------------------===//
 // cos builtins
 //===----------------------------------------------------------------------===//
 #ifdef __HLSL_ENABLE_16_BIT
@@ -185,68 +145,36 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
 double4 cos(double4);
 
 //===----------------------------------------------------------------------===//
-// sin builtins
+// floor builtins
 //===----------------------------------------------------------------------===//
 #ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-half sin(half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-half2 sin(half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-half3 sin(half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-half4 sin(half4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
+half floor(half);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
+half2 floor(half2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
+half3 floor(half3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
+half4 floor(half4);
 #endif
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-float sin(float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-float2 sin(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-float3 sin(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-float4 sin(float4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
+float floor(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
+float2 floor(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
+float3 floor(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
+float4 floor(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double sin(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double2 sin(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double3 sin(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double4 sin(double4);
-
-//===----------------------------------------------------------------------===//
-// trunc builtins
-//===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-half trunc(half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-half2 trunc(half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-half3 trunc(half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-half4 trunc(half4);
-#endif
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-float trunc(float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-float2 trunc(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-float3 trunc(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-float4 trunc(float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double trunc(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double2 trunc(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double3 trunc(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double4 trunc(double4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
+double floor(double);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
+double2 floor(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
+double3 floor(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
+double4 floor(double4);
 
 //===----------------------------------------------------------------------===//
 // log builtins
@@ -281,38 +209,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
 double4 log(double4);
 
 //===----------------------------------------------------------------------===//
-// log2 builtins
-//===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-half log2(half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-half2 log2(half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-half3 log2(half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-half4 log2(half4);
-#endif
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-float log2(float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-float2 log2(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-float3 log2(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-float4 log2(float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double log2(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double2 log2(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double3 log2(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double4 log2(double4);
-
-//===----------------------------------------------------------------------===//
 // log10 builtins
 //===----------------------------------------------------------------------===//
 #ifdef __HLSL_ENABLE_16_BIT
@@ -343,6 +239,38 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
 double3 log10(double3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
 double4 log10(double4);
+
+//===----------------------------------------------------------------------===//
+// log2 builtins
+//===----------------------------------------------------------------------===//
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
+half log2(half);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
+half2 log2(half2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
+half3 log2(half3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
+half4 log2(half4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
+float log2(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
+float2 log2(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
+float3 log2(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
+float4 log2(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
+double log2(double);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
+double2 log2(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
+double3 log2(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
+double4 log2(double4);
 
 //===----------------------------------------------------------------------===//
 // max builtins
@@ -481,6 +409,15 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint4 min(uint4, uint4);
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
+float min(float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
+float2 min(float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
+float3 min(float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
+float4 min(float4, float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int64_t min(int64_t, int64_t);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int64_t2 min(int64_t2, int64_t2);
@@ -499,15 +436,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint64_t4 min(uint64_t4, uint64_t4);
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-float min(float, float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-float2 min(float2, float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-float3 min(float3, float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-float4 min(float4, float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double min(double, double);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double2 min(double2, double2);
@@ -515,6 +443,38 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double3 min(double3, double3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double4 min(double4, double4);
+
+//===----------------------------------------------------------------------===//
+// pow builtins
+//===----------------------------------------------------------------------===//
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
+half pow(half, half);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
+half2 pow(half2, half2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
+half3 pow(half3, half3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
+half4 pow(half4, half4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
+float pow(float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
+float2 pow(float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
+float3 pow(float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
+float4 pow(float4, float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
+double pow(double, double);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
+double2 pow(double2, double2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
+double3 pow(double3, double3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
+double4 pow(double4, double4);
 
 //===----------------------------------------------------------------------===//
 // reversebits builtins
@@ -576,36 +536,89 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint64_t4 reversebits(uint64_t4);
 
 //===----------------------------------------------------------------------===//
-// pow builtins
+// sin builtins
 //===----------------------------------------------------------------------===//
 #ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-half pow(half, half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-half2 pow(half2, half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-half3 pow(half3, half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-half4 pow(half4, half4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
+half sin(half);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
+half2 sin(half2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
+half3 sin(half3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
+half4 sin(half4);
 #endif
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-float pow(float, float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-float2 pow(float2, float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-float3 pow(float3, float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-float4 pow(float4, float4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
+float sin(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
+float2 sin(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
+float3 sin(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
+float4 sin(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double pow(double, double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double2 pow(double2, double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double3 pow(double3, double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double4 pow(double4, double4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
+double sin(double);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
+double2 sin(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
+double3 sin(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
+double4 sin(double4);
+
+//===----------------------------------------------------------------------===//
+// sqrt builtins
+//===----------------------------------------------------------------------===//
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_BUILTIN_ALIAS(__builtin_sqrtf16)
+half sqrt(half In);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_sqrtf)
+float sqrt(float In);
+
+_HLSL_BUILTIN_ALIAS(__builtin_sqrt)
+double sqrt(double In);
+
+//===----------------------------------------------------------------------===//
+// trunc builtins
+//===----------------------------------------------------------------------===//
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
+half trunc(half);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
+half2 trunc(half2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
+half3 trunc(half3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
+half4 trunc(half4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
+float trunc(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
+float2 trunc(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
+float3 trunc(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
+float4 trunc(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
+double trunc(double);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
+double2 trunc(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
+double3 trunc(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
+double4 trunc(double4);
+
+//===----------------------------------------------------------------------===//
+// Wave* builtins
+//===----------------------------------------------------------------------===//
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_count_bits)
+uint WaveActiveCountBits(bool bBit);
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_
