@@ -725,9 +725,9 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
   NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
   ProgramStateRef StateFailed =
       State->BindExpr(CE, C.getLocationContext(), RetVal);
+  SValBuilder &SVB = C.getSValBuilder();
   auto Cond =
-      C.getSValBuilder()
-          .evalBinOpNN(State, BO_LT, RetVal, *NMembVal, C.getASTContext().IntTy)
+      SVB.evalBinOpNN(State, BO_LT, RetVal, *NMembVal, SVB.getConditionType())
           .getAs<DefinedOrUnknownSVal>();
   if (!Cond)
     return;
