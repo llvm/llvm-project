@@ -3295,7 +3295,7 @@ static void SetupFixedPointError(const LangOptions &LangOpts,
                                  bool &isInvalid) {
   assert(!LangOpts.FixedPoint);
   DiagID = diag::err_fixed_point_not_enabled;
-  PrevSpec = "";  // Not used by diagnostic
+  PrevSpec = ""; // Not used by diagnostic
   isInvalid = true;
 }
 
