@@ -218,8 +218,7 @@ Value *SjLjEHPrepare::setupFunctionContext(Function &F,
   Value *PersonalityFn = F.getPersonalityFn();
   Value *PersonalityFieldPtr = Builder.CreateConstGEP2_32(
       FunctionContextTy, FuncCtx, 0, 3, "pers_fn_gep");
-  Builder.CreateStore(Builder.CreateBitCast(PersonalityFn, Builder.getPtrTy()),
-                      PersonalityFieldPtr, /*isVolatile=*/true);
+  Builder.CreateStore(PersonalityFn, PersonalityFieldPtr, /*isVolatile=*/true);
 
   // LSDA address
   Value *LSDA = Builder.CreateCall(LSDAAddrFn, {}, "lsda_addr");
@@ -417,8 +416,7 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
 
   // Store a pointer to the function context so that the back-end will know
   // where to look for it.
-  Value *FuncCtxArg = Builder.CreateBitCast(FuncCtx, Builder.getPtrTy());
-  Builder.CreateCall(FuncCtxFn, FuncCtxArg);
+  Builder.CreateCall(FuncCtxFn, FuncCtx);
 
   // At this point, we are all set up, update the invoke instructions to mark
   // their call_site values.
