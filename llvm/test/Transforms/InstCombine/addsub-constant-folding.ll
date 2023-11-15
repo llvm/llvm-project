@@ -183,6 +183,16 @@ define i8 @add_nuw_const_const_sub_nuw(i8 %arg) {
   ret i8 %t1
 }
 
+define i8 @add_nuw_const_const_sub(i8 %arg) {
+; CHECK-LABEL: @add_nuw_const_const_sub(
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 -128, [[ARG:%.*]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = add nuw i8 %arg, 1
+  %t1 = sub i8 -127, %t0
+  ret i8 %t1
+}
+
 define i8 @add_const_const_sub_nuw(i8 %arg) {
 ; CHECK-LABEL: @add_const_const_sub_nuw(
 ; CHECK-NEXT:    [[T1:%.*]] = sub i8 -128, [[ARG:%.*]]
