@@ -7731,10 +7731,30 @@ private:
               IsImplicit, Mapper, VarRef, ForDeviceAddr);
         };
 
+    // Sort all map clauses and make sure all the maps containing array
+    // sections are processed last.
+    llvm::SmallVector<const OMPMapClause *, 16> SortedMapClauses;
     for (const auto *Cl : Clauses) {
       const auto *C = dyn_cast<OMPMapClause>(Cl);
       if (!C)
         continue;
+      const auto *EI = C->getVarRefs().begin();
+      if (*EI && !isa<OMPArraySectionExpr>(*EI)) {
+        SortedMapClauses.emplace_back(C);
+      }
+    }
+    for (const auto *Cl : Clauses) {
+      const auto *C = dyn_cast<OMPMapClause>(Cl);
+      if (!C)
+        continue;
+      const auto *EI = C->getVarRefs().begin();
+      if (*EI && isa<OMPArraySectionExpr>(*EI)) {
+        SortedMapClauses.emplace_back(C);
+      }
+    }
+
+    // Iterate over all map clauses:
+    for (const OMPMapClause *C : SortedMapClauses) {
       MapKind Kind = Other;
       if (llvm::is_contained(C->getMapTypeModifiers(),
                              OMPC_MAP_MODIFIER_present))
@@ -7751,6 +7771,7 @@ private:
         ++EI;
       }
     }
+
     for (const auto *Cl : Clauses) {
       const auto *C = dyn_cast<OMPToClause>(Cl);
       if (!C)
@@ -7767,6 +7788,7 @@ private:
         ++EI;
       }
     }
+
     for (const auto *Cl : Clauses) {
       const auto *C = dyn_cast<OMPFromClause>(Cl);
       if (!C)
