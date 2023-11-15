@@ -2202,8 +2202,11 @@ MachineInstr *RISCVInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
       .setMIFlags(MemI.getFlags());
 }
 
-// Return true if get the base operand, byte offset of an instruction and the
-// memory width. Width is the size of memory that is being loaded/stored.
+// Set BaseReg (the base register operand), Offset (the byte offset being
+// accessed) and the access Width of the passed instruction that reads/writes
+// memory. Returns false if the instruction does not read/write memory or the
+// BaseReg/Offset/Width can't be determined. Is not guaranteed to always
+// recognise base operands and offsets in all cases.
 bool RISCVInstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseReg, int64_t &Offset,
     unsigned &Width, const TargetRegisterInfo *TRI) const {
@@ -2212,7 +2215,7 @@ bool RISCVInstrInfo::getMemOperandWithOffsetWidth(
 
   // Here we assume the standard RISC-V ISA, which uses a base+offset
   // addressing mode. You'll need to relax these conditions to support custom
-  // load/stores instructions.
+  // load/store instructions.
   if (LdSt.getNumExplicitOperands() != 3)
     return false;
   if (!LdSt.getOperand(1).isReg() || !LdSt.getOperand(2).isImm())
