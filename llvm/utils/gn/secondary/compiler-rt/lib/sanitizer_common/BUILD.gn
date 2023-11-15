@@ -143,7 +143,7 @@ source_set("sources") {
     "sanitizer_suppressions.h",
     "sanitizer_symbolizer.cpp",
     "sanitizer_symbolizer.h",
-    "sanitizer_symbolizer_fuchsia.h",
+    "sanitizer_symbolizer_markup_constants.h",
     "sanitizer_symbolizer_internal.h",
     "sanitizer_symbolizer_libbacktrace.cpp",
     "sanitizer_symbolizer_libbacktrace.h",

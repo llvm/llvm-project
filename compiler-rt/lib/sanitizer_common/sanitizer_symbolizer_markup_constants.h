@@ -1,4 +1,5 @@
-//===-- sanitizer_symbolizer_fuchsia.h -----------------------------------===//
+//===-- sanitizer_symbolizer_markup_constants.h
+//-----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,10 +9,10 @@
 //
 // This file is shared between various sanitizers' runtime libraries.
 //
-// Define Fuchsia's string formats and limits for the markup symbolizer.
+// Define string formats and limits for the markup symbolizer.
 //===----------------------------------------------------------------------===//
-#ifndef SANITIZER_SYMBOLIZER_FUCHSIA_H
-#define SANITIZER_SYMBOLIZER_FUCHSIA_H
+#ifndef SANITIZER_SYMBOLIZER_MARKUP_CONSTANTS_H
+#define SANITIZER_SYMBOLIZER_MARKUP_CONSTANTS_H
 
 #include "sanitizer_internal_defs.h"
 
@@ -39,4 +40,4 @@ constexpr const char *kFormatFrame = "{{{bt:%u:%p}}}";
 
 }  // namespace __sanitizer
 
-#endif  // SANITIZER_SYMBOLIZER_FUCHSIA_H
+#endif  // SANITIZER_SYMBOLIZER_MARKUP_CONSTANTS_H
