@@ -245,11 +245,14 @@ private:
       {{{"fclose"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalFclose, 0}},
       {{{"fread"}, 4},
-       {std::bind(&StreamChecker::preFreadFwrite, _1, _2, _3, _4, true),
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
         std::bind(&StreamChecker::evalFreadFwrite, _1, _2, _3, _4, true), 3}},
       {{{"fwrite"}, 4},
-       {std::bind(&StreamChecker::preFreadFwrite, _1, _2, _3, _4, false),
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
         std::bind(&StreamChecker::evalFreadFwrite, _1, _2, _3, _4, false), 3}},
+      {{{"fputc"}, 2},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
+        &StreamChecker::evalFputc, 1}},
       {{{"fseek"}, 3},
        {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
       {{{"ftell"}, 1},
@@ -305,11 +308,14 @@ private:
   void evalFclose(const FnDescription *Desc, const CallEvent &Call,
                   CheckerContext &C) const;
 
-  void preFreadFwrite(const FnDescription *Desc, const CallEvent &Call,
-                      CheckerContext &C, bool IsFread) const;
+  void preReadWrite(const FnDescription *Desc, const CallEvent &Call,
+                    CheckerContext &C, bool IsRead) const;
 
   void evalFreadFwrite(const FnDescription *Desc, const CallEvent &Call,
                        CheckerContext &C, bool IsFread) const;
+
+  void evalFputc(const FnDescription *Desc, const CallEvent &Call,
+                 CheckerContext &C) const;
 
   void preFseek(const FnDescription *Desc, const CallEvent &Call,
                 CheckerContext &C) const;
@@ -634,9 +640,9 @@ void StreamChecker::evalFclose(const FnDescription *Desc, const CallEvent &Call,
   C.addTransition(StateFailure);
 }
 
-void StreamChecker::preFreadFwrite(const FnDescription *Desc,
-                                   const CallEvent &Call, CheckerContext &C,
-                                   bool IsFread) const {
+void StreamChecker::preReadWrite(const FnDescription *Desc,
+                                 const CallEvent &Call, CheckerContext &C,
+                                 bool IsRead) const {
   ProgramStateRef State = C.getState();
   SVal StreamVal = getStreamArg(Desc, Call);
   State = ensureStreamNonNull(StreamVal, Call.getArgExpr(Desc->StreamArgNo), C,
@@ -650,7 +656,7 @@ void StreamChecker::preFreadFwrite(const FnDescription *Desc,
   if (!State)
     return;
 
-  if (!IsFread) {
+  if (!IsRead) {
     C.addTransition(State);
     return;
   }
@@ -743,6 +749,45 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
     C.addTransition(StateFailed, constructSetEofNoteTag(C, StreamSym));
   else
     C.addTransition(StateFailed);
+}
+
+void StreamChecker::evalFputc(const FnDescription *Desc, const CallEvent &Call,
+                              CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
+  if (!StreamSym)
+    return;
+
+  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
+    return;
+
+  const StreamState *OldSS = State->get<StreamMap>(StreamSym);
+  if (!OldSS)
+    return;
+
+  assertStreamStateOpened(OldSS);
+
+  // `fputc` returns the written character on success, otherwise returns EOF.
+
+  // Generate a transition for the success state.
+  std::optional<NonLoc> PutVal = Call.getArgSVal(0).getAs<NonLoc>();
+  if (!PutVal)
+    return;
+  ProgramStateRef StateNotFailed =
+      State->BindExpr(CE, C.getLocationContext(), *PutVal);
+  StateNotFailed =
+      StateNotFailed->set<StreamMap>(StreamSym, StreamState::getOpened(Desc));
+  C.addTransition(StateNotFailed);
+
+  // Add transition for the failed state.
+  // If a (non-EOF) error occurs, the resulting value of the file position
+  // indicator for the stream is indeterminate.
+  ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
+  StreamState NewSS = StreamState::getOpened(
+      Desc, ErrorFError, /*IsFilePositionIndeterminate*/ true);
+  StateFailed = StateFailed->set<StreamMap>(StreamSym, NewSS);
+  C.addTransition(StateFailed);
 }
 
 void StreamChecker::preFseek(const FnDescription *Desc, const CallEvent &Call,
