@@ -348,6 +348,7 @@ CodeAlignAttr *Sema::BuildCodeAlignAttr(const AttributeCommonInfo &CI,
             << CI << CodeAlignAttr::MinimumAlignment
             << CodeAlignAttr::MaximumAlignment
             << std::numeric_limits<int32_t>::max();
+        return nullptr;
       } else {
         Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
             << CI << CodeAlignAttr::MinimumAlignment
