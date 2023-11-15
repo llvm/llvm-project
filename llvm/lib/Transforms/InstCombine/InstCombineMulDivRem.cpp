@@ -1544,6 +1544,13 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     }
   }
 
+  // -X / X --> X == INT_MIN ? 1 : -1
+  if (isKnownNegation(Op0, Op1)) {
+    APInt MinVal = APInt::getSignedMinValue(Ty->getScalarSizeInBits());
+    Value *Cond = Builder.CreateICmpEQ(Op0, ConstantInt::get(Ty, MinVal));
+    return SelectInst::Create(Cond, ConstantInt::get(Ty, 1),
+                              ConstantInt::getAllOnesValue(Ty));
+  }
   return nullptr;
 }
 
