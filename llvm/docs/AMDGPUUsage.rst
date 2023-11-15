@@ -490,13 +490,6 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
-     ``gfx1105``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
-
      ``gfx1150``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
@@ -1679,7 +1672,6 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1151``    0x04a      ``gfx1151``
      ``EF_AMDGPU_MACH_AMDGCN_GFX941``     0x04b      ``gfx941``
      ``EF_AMDGPU_MACH_AMDGCN_GFX942``     0x04c      ``gfx942``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1105``    0x04d      ``gfx1105``
      ==================================== ========== =============================
 
 Sections
@@ -14858,8 +14850,6 @@ in this description.
                                                                 :doc:`gfx1102<AMDGPU/AMDGPUAsmGFX11>`
 
                                                                 :doc:`gfx1103<AMDGPU/AMDGPUAsmGFX11>`
-
-                                                                :doc:`gfx1105<AMDGPU/AMDGPUAsmGFX11>`
     ============= ============================================= =======================================
 
 For more information about instructions, their semantics and supported

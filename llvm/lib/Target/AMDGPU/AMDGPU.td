@@ -1400,10 +1400,6 @@ def FeatureISAVersion11_0_3 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
     [])>;
 
-def FeatureISAVersion11_0_5 : FeatureSet<
-  !listconcat(FeatureISAVersion11_0_Common.Features,
-    [FeatureGFX11FullVGPRs])>;
-
 // Features for GFX 11.5.0
 def FeatureISAVersion11_5_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
