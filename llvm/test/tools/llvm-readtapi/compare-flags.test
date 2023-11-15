@@ -1,16 +1,21 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t  
-; RUN: not llvm-readtapi --compare %t/tbdv4.tbd  %t/tbdv5.tbd 2>&1 | FileCheck %s 
+; RUN: not llvm-readtapi --compare %t/tbdv4.tbd  %t/tbdv5.tbd -o %t/output.txt 2>&1 | FileCheck %s --allow-empty 
+; RUN: FileCheck %s --check-prefix FILEOUT <  %t/output.txt 
 
-; CHECK: < {{.*}}tbdv4.tbd
-; CHECK: > {{.*}}tbdv5.tbd
+; CHECK-NOT: error: 
+; CHECK-NOT: warning: 
 
-CHECK:      Two Level Namespace
-CHECK-NEXT:         < true
-CHECK-NEXT:         > false
-CHECK-NEXT: Shared Cache Ineligible
-CHECK-NEXT:         < true
-CHECK-NEXT:         > false
+; FILEOUT: < {{.*}}tbdv4.tbd
+; FILEOUT: > {{.*}}tbdv5.tbd
+
+; FILEOUT:      Two Level Namespace
+; FILEOUT-NEXT:         < true
+; FILEOUT-NEXT:         > false
+; FILEOUT-NEXT: Shared Cache Ineligible
+; FILEOUT-NEXT:         < true
+; FILEOUT-NEXT:         > false
+
 
 
 //--- tbdv4.tbd
