@@ -26,18 +26,39 @@ void PolynomialAttr::print(AsmPrinter &p) const {
 
 /// Try to parse a monomial. If successful, populate the fields of the outparam
 /// `monomial` with the results, and the `variable` outparam with the parsed
-/// variable name.
+/// variable name. Sets shouldParseMore to true if the monomial is followed by
+/// a '+'.
 ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
-                          llvm::StringRef &variable, bool *isConstantTerm) {
+                          llvm::StringRef &variable, bool *isConstantTerm,
+                          bool *shouldParseMore) {
   APInt parsedCoeff(apintBitWidth, 1);
-  auto result = parser.parseOptionalInteger(parsedCoeff);
+  auto parsedCoeffResult = parser.parseOptionalInteger(parsedCoeff);
+  monomial.coefficient = parsedCoeff;
 
-  // Variable name
-  result = parser.parseOptionalKeyword(&variable);
-  if (!result.has_value() || failed(*result)) {
-    // We allow "failed" because it triggers when the next token is a +,
-    // which is allowed when the input is the constant term.
-    monomial.coefficient = parsedCoeff;
+  *isConstantTerm = false;
+  *shouldParseMore = false;
+
+  // A + indicates it's a constant term with more to go, as in `1 + x`.
+  if (succeeded(parser.parseOptionalPlus())) {
+    // If no coefficient was parsed, and there's a +, then it's effectively
+    // parsing an empty string.
+    if (!parsedCoeffResult.has_value()) {
+      return failure();
+    }
+    monomial.exponent = APInt(apintBitWidth, 0);
+    *isConstantTerm = true;
+    *shouldParseMore = true;
+    return success();
+  }
+
+  // A monomial can be a trailing constant term, as in `x + 1`
+  if (failed(parser.parseOptionalKeyword(&variable))) {
+    // If neither a coefficient nor a variable was found, then it's effectively
+    // parsing an empty string.
+    if (!parsedCoeffResult.has_value()) {
+      return failure();
+    }
+
     monomial.exponent = APInt(apintBitWidth, 0);
     *isConstantTerm = true;
     return success();
@@ -46,29 +67,30 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
   // Parse exponentiation symbol as **
   // We can't use caret because it's reserved for basic block identifiers
   // If no star is present, it's treated as a polynomial with exponent 1
-  if (failed(parser.parseOptionalStar())) {
-    monomial.coefficient = parsedCoeff;
+  if (succeeded(parser.parseOptionalStar())) {
+    // If there's one * there must be two
+    if (failed(parser.parseStar())) {
+      parser.emitError(parser.getCurrentLocation(),
+                       "exponents must be specified as a double-asterisk `**`");
+      return failure();
+    }
+
+    // If there's a **, then the integer exponent is required.
+    APInt parsedExponent(apintBitWidth, 0);
+    if (failed(parser.parseInteger(parsedExponent))) {
+      parser.emitError(parser.getCurrentLocation(),
+                       "found invalid integer exponent");
+      return failure();
+    }
+
+    monomial.exponent = parsedExponent;
+  } else {
     monomial.exponent = APInt(apintBitWidth, 1);
-    return success();
   }
 
-  // If there's one * there must be two
-  if (failed(parser.parseStar())) {
-    parser.emitError(parser.getCurrentLocation(),
-                     "exponents must be specified as a double-asterisk `**`");
-    return failure();
+  if (succeeded(parser.parseOptionalPlus())) {
+    *shouldParseMore = true;
   }
-
-  // If there's a **, then the integer exponent is required.
-  APInt parsedExponent(apintBitWidth, 0);
-  if (failed(parser.parseInteger(parsedExponent))) {
-    parser.emitError(parser.getCurrentLocation(),
-                     "found invalid integer exponent");
-    return failure();
-  }
-
-  monomial.coefficient = parsedCoeff;
-  monomial.exponent = parsedExponent;
   return success();
 }
 
@@ -83,9 +105,11 @@ Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
   while (true) {
     Monomial parsedMonomial;
     llvm::StringRef parsedVariableRef;
-    bool isConstantTerm = false;
+    bool isConstantTerm;
+    bool shouldParseMore;
     if (failed(parseMonomial(parser, parsedMonomial, parsedVariableRef,
-                             &isConstantTerm))) {
+                             &isConstantTerm, &shouldParseMore))) {
+      parser.emitError(parser.getCurrentLocation(), "expected a monomial");
       return {};
     }
 
@@ -105,26 +129,16 @@ Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
     }
     exponents.insert(parsedMonomial.exponent);
 
-    // Parse optional +. If a + is absent, require > and break, otherwise forbid
-    // > and continue with the next monomial.
-    // ParseOptional{Plus, Greater} does not return an OptionalParseResult, so
-    // failed means that the token was not found.
-    if (failed(parser.parseOptionalPlus())) {
-      if (succeeded(parser.parseGreater())) {
-        break;
-      }
-      parser.emitError(
-          parser.getCurrentLocation(),
-          "expected + and more monomials, or > to end polynomial attribute");
-      return {};
-    }
+    if (shouldParseMore)
+      continue;
 
     if (succeeded(parser.parseOptionalGreater())) {
-      parser.emitError(
-          parser.getCurrentLocation(),
-          "expected another monomial after +, but found > ending attribute");
-      return {};
+      break;
     }
+    parser.emitError(
+        parser.getCurrentLocation(),
+        "expected + and more monomials, or > to end polynomial attribute");
+    return {};
   }
 
   if (variables.size() > 1) {

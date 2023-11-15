@@ -7,6 +7,7 @@
 // -----
 
 // expected-error@below {{expected integer value}}
+// expected-error@below {{expected a monomial}}
 // expected-error@below {{found invalid integer exponent}}
 #my_poly = #polynomial.polynomial<5 + x**f>
 #ring1 = #polynomial.ring<coefficientType=i32, coefficientModulus=2837465, polynomialModulus=#my_poly>
@@ -19,16 +20,16 @@
 
 // -----
 
-// expected-error@below {{expected '>'}}
 // expected-error@below {{expected + and more monomials, or > to end polynomial attribute}}
 #my_poly = #polynomial.polynomial<5 + x**2 7>
 #ring1 = #polynomial.ring<coefficientType=i32, coefficientModulus=2837465, polynomialModulus=#my_poly>
 
 // -----
 
+// expected-error@below {{expected a monomial}}
 #my_poly = #polynomial.polynomial<5 + x**2 +>
-// expected-error@below {{expected another monomial after +, but found > ending attribute}}
 #ring1 = #polynomial.ring<coefficientType=i32, coefficientModulus=2837465, polynomialModulus=#my_poly>
+
 
 // -----
 
