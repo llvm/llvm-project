@@ -175,7 +175,7 @@ define i8 @add_nsw_const_const_sub_nsw_ov(i8 %arg) {
 
 define i8 @add_nuw_const_const_sub_nuw(i8 %arg) {
 ; CHECK-LABEL: @add_nuw_const_const_sub_nuw(
-; CHECK-NEXT:    [[T1:%.*]] = sub i8 -128, [[ARG:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = sub nuw i8 -128, [[ARG:%.*]]
 ; CHECK-NEXT:    ret i8 [[T1]]
 ;
   %t0 = add nuw i8 %arg, 1
