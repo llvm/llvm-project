@@ -1043,7 +1043,7 @@ public:
   UUCAddAssignGadget(const MatchFinder::MatchResult &Result)
       : FixableGadget(Kind::UUCAddAssign),
         Node(Result.Nodes.getNodeAs<BinaryOperator>(UUCAddAssignTag)),
-        Offset(Result.Nodes.getNodeAs<Expr>(OffsetTag)){
+        Offset(Result.Nodes.getNodeAs<Expr>(OffsetTag)) {
     assert(Node != nullptr && "Expecting a non-null matching result");
   }
 
@@ -1053,8 +1053,7 @@ public:
 
   static Matcher matcher() {
     return stmt(isInUnspecifiedUntypedContext(expr(ignoringImpCasts(
-        binaryOperator(
-            hasOperatorName("+="), 
+        binaryOperator(hasOperatorName("+="),
                        hasLHS(declRefExpr(toSupportedVariable())),
                        hasRHS(ignoringParens(expr().bind(OffsetTag))))
             .bind(UUCAddAssignTag)))));
@@ -1841,7 +1840,7 @@ UUCAddAssignGadget::getFixits(const Strategy &S) const {
       if (ExtentString)
         SubSpanOffset = ExtentString->str();
       else
-        SubSpanOffset = 
+        SubSpanOffset =
             getUserFillPlaceHolder(); // FIXME: When does this happen?
 
       // To transform UUC(p += n) to UUC(p = p.subspan(..)):
