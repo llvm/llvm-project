@@ -2786,7 +2786,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   // The next token may be an OpenMP pragma annotation token. That would
   // normally be handled from ParseCXXClassMemberDeclarationWithPragmas, but in
   // this case, it came from an *attribute* rather than a pragma. Handle it now.
-  if (Tok.is(tok::annot_attr_openmp))
+  if (Tok.isOneOf(tok::annot_attr_openmp, tok::annot_attr_openmp_extension))
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, DeclAttrs);
 
   if (Tok.is(tok::kw_using)) {
@@ -3427,6 +3427,8 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
 
   case tok::annot_attr_openmp:
   case tok::annot_pragma_openmp:
+  case tok::annot_attr_openmp_extension:
+  case tok::annot_pragma_openmp_extension:
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(
         AS, AccessAttrs, /*Delayed=*/true, TagType, TagDecl);
 
@@ -4307,7 +4309,8 @@ Parser::TryParseCXX11AttributeIdentifier(SourceLocation &Loc,
 }
 
 void Parser::ParseOpenMPAttributeArgs(const IdentifierInfo *AttrName,
-                                      CachedTokens &OpenMPTokens) {
+                                      CachedTokens &OpenMPTokens,
+                                      bool isOpenMPExtension) {
   // Both 'sequence' and 'directive' attributes require arguments, so parse the
   // open paren for the argument list.
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -4322,7 +4325,10 @@ void Parser::ParseOpenMPAttributeArgs(const IdentifierInfo *AttrName,
     // pragma directive.
     Token OMPBeginTok;
     OMPBeginTok.startToken();
-    OMPBeginTok.setKind(tok::annot_attr_openmp);
+    if (isOpenMPExtension)
+      OMPBeginTok.setKind(tok::annot_attr_openmp_extension);
+    else
+      OMPBeginTok.setKind(tok::annot_attr_openmp);
     OMPBeginTok.setLocation(Tok.getLocation());
     OpenMPTokens.push_back(OMPBeginTok);
 
@@ -4348,8 +4354,12 @@ void Parser::ParseOpenMPAttributeArgs(const IdentifierInfo *AttrName,
 
       // If there is an identifier and it is 'omp', a double colon is required
       // followed by the actual identifier we're after.
-      if (Ident && Ident->isStr("omp") && !ExpectAndConsume(tok::coloncolon))
+      if (Ident && (Ident->isStr("omp") || Ident->isStr("ompx")) &&
+          !ExpectAndConsume(tok::coloncolon)) {
+        if (Ident->isStr("ompx"))
+          isOpenMPExtension = true;
         Ident = TryParseCXX11AttributeIdentifier(IdentLoc);
+      }
 
       // If we failed to find an identifier (scoped or otherwise), or we found
       // an unexpected identifier, diagnose.
@@ -4360,7 +4370,7 @@ void Parser::ParseOpenMPAttributeArgs(const IdentifierInfo *AttrName,
       }
       // We read an identifier. If the identifier is one of the ones we
       // expected, we can recurse to parse the args.
-      ParseOpenMPAttributeArgs(Ident, OpenMPTokens);
+      ParseOpenMPAttributeArgs(Ident, OpenMPTokens, isOpenMPExtension);
 
       // There may be a comma to signal that we expect another directive in the
       // sequence.
@@ -4442,12 +4452,12 @@ bool Parser::ParseCXX11AttributeArgs(
     return true;
   }
 
-  if (ScopeName && ScopeName->isStr("omp")) {
+  if (ScopeName && (ScopeName->isStr("omp") || ScopeName->isStr("ompx"))) {
     Diag(AttrNameLoc, getLangOpts().OpenMP >= 51
                           ? diag::warn_omp51_compat_attributes
                           : diag::ext_omp_attributes);
 
-    ParseOpenMPAttributeArgs(AttrName, OpenMPTokens);
+    ParseOpenMPAttributeArgs(AttrName, OpenMPTokens, ScopeName->isStr("ompx"));
 
     // We claim that an attribute was parsed and added so that one is not
     // created for us by the caller.

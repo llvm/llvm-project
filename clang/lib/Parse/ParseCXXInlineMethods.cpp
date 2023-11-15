@@ -801,7 +801,9 @@ void Parser::ParseLexedPragma(LateParsedPragma &LP) {
   assert(Tok.isAnnotation() && "Expected annotation token.");
   switch (Tok.getKind()) {
   case tok::annot_attr_openmp:
-  case tok::annot_pragma_openmp: {
+  case tok::annot_pragma_openmp:
+  case tok::annot_attr_openmp_extension:
+  case tok::annot_pragma_openmp_extension: {
     AccessSpecifier AS = LP.getAccessSpecifier();
     ParsedAttributes Attrs(AttrFactory);
     (void)ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs);

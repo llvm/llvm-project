@@ -113,6 +113,9 @@ class Clause<string c> {
   // Set the prefix as optional.
   // `clause([prefix]: value)`
   bit isPrefixOptional = true;
+
+  // Is extension (i.e. ompx)
+  bit isExtension = false;
 }
 
 // Hold information about clause validity by version.
@@ -154,4 +157,7 @@ class Directive<string d> {
 
   // Set directive used by default when unknown.
   bit isDefault = false;
+
+  // Is extension (i.e. ompx)
+  bit isExtension = false;
 }

@@ -98,6 +98,10 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-EMPTY:
 // CHECK-NEXT:  /// Return true if \p C is a valid clause for \p D in version \p Version.
 // CHECK-NEXT:  bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
+// CHECK-NEXT:  /// Return true if \p C is an extension clause
+// CHECK-NEXT:  bool isExtensionClause(Clause C);
+// CHECK-NEXT:  /// Return true if \p D is an extension directive
+// CHECK-NEXT:  bool isExtensionDirective(Directive D);
 // CHECK-EMPTY:
 // CHECK-NEXT:  AKind getAKind(StringRef);
 // CHECK-NEXT:  llvm::StringRef getTdlAKindName(AKind);
@@ -337,6 +341,24 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:            return false;
 // IMPL-NEXT:        }
 // IMPL-NEXT:        break;
+// IMPL-NEXT:    }
+// IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
+// IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  bool llvm::tdl::isExtensionClause(Clause C) {
+// IMPL-NEXT:    assert(unsigned(C) <= llvm::tdl::Clause_enumSize);
+// IMPL-NEXT:    switch (C) {
+// IMPL-NEXT:      default:
+// IMPL-NEXT:          return false;
+// IMPL-NEXT:    }
+// IMPL-NEXT:    llvm_unreachable("Invalid Tdl Clause kind");
+// IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  bool llvm::tdl::isExtensionDirective(Directive D) {
+// IMPL-NEXT:    assert(unsigned(D) <= llvm::tdl::Directive_enumSize);
+// IMPL-NEXT:    switch (D) {
+// IMPL-NEXT:      default:
+// IMPL-NEXT:          return false;
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
 // IMPL-NEXT:  }

@@ -4498,6 +4498,7 @@ void ASTWriter::AddToken(const Token &Tok, RecordDataImpl &Record) {
       break;
     }
     // Some annotation tokens do not use the PtrData field.
+    case tok::annot_pragma_openmp_extension:
     case tok::annot_pragma_openmp:
     case tok::annot_pragma_openmp_end:
     case tok::annot_pragma_unused:

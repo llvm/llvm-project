@@ -440,6 +440,7 @@ def OMPC_Bind : Clause<"bind"> {
 def OMPC_OMPX_DynCGroupMem : Clause<"ompx_dyn_cgroup_mem"> {
   let clangClass = "OMPXDynCGroupMemClause";
   let flangClass = "ScalarIntExpr";
+  let isExtension = true;
 }
 
 def OMPC_Doacross : Clause<"doacross"> {
@@ -448,6 +449,7 @@ def OMPC_Doacross : Clause<"doacross"> {
 
 def OMPC_OMPX_Attribute : Clause<"ompx_attribute"> {
   let clangClass = "OMPXAttributeClause";
+  let isExtension = true;
 }
 
 def OMPC_OMX_Bare : Clause<"ompx_bare"> {
@@ -596,6 +598,9 @@ def OMP_TaskWait : Directive<"taskwait"> {
     VersionedClause<OMPC_Depend, 50>,
     VersionedClause<OMPC_NoWait, 51>
   ];
+}
+def OMP_TaskGraph : Directive<"taskgraph"> {
+  let isExtension = true;
 }
 def OMP_TaskGroup : Directive<"taskgroup"> {
   let allowedClauses = [
