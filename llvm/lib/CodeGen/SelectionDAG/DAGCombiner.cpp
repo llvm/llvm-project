@@ -10905,9 +10905,12 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N) {
   Op1 = AbsOp1.getOperand(1);
 
   unsigned Opc0 = Op0.getOpcode();
+
   // Check if the operands of the sub are (zero|sign)-extended.
+  // TODO: Should we use ValueTracking instead?
   if (Opc0 != Op1.getOpcode() ||
-      (Opc0 != ISD::ZERO_EXTEND && Opc0 != ISD::SIGN_EXTEND)) {
+      (Opc0 != ISD::ZERO_EXTEND && Opc0 != ISD::SIGN_EXTEND &&
+       Opc0 != ISD::SIGN_EXTEND_INREG)) {
     // fold (abs (sub nsw x, y)) -> abds(x, y)
     if (AbsOp1->getFlags().hasNoSignedWrap() && hasOperation(ISD::ABDS, VT) &&
         TLI.preferABDSToABSWithNSW(VT)) {
@@ -10917,9 +10920,15 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N) {
     return SDValue();
   }
 
-  EVT VT0 = Op0.getOperand(0).getValueType();
-  EVT VT1 = Op1.getOperand(0).getValueType();
-  unsigned ABDOpcode = (Opc0 == ISD::SIGN_EXTEND) ? ISD::ABDS : ISD::ABDU;
+  EVT VT0, VT1;
+  if (Opc0 == ISD::SIGN_EXTEND_INREG) {
+    VT0 = cast<VTSDNode>(Op0.getOperand(1))->getVT();
+    VT1 = cast<VTSDNode>(Op1.getOperand(1))->getVT();
+  } else {
+    VT0 = Op0.getOperand(0).getValueType();
+    VT1 = Op1.getOperand(0).getValueType();
+  }
+  unsigned ABDOpcode = (Opc0 == ISD::ZERO_EXTEND) ? ISD::ABDU : ISD::ABDS;
 
   // fold abs(sext(x) - sext(y)) -> zext(abds(x, y))
   // fold abs(zext(x) - zext(y)) -> zext(abdu(x, y))
