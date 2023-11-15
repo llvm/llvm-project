@@ -1887,9 +1887,9 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
        })
     EXPECT_TRUE(A->implies(AArch64::ARMV8A));
 
-  for (const auto *A : {&AArch64::ARMV9_1A, &AArch64::ARMV9_2A,
-                        &AArch64::ARMV9_3A, &AArch64::ARMV9_4A,
-                        &AArch64::ARMV9_5A})
+  for (const auto *A :
+       {&AArch64::ARMV9_1A, &AArch64::ARMV9_2A, &AArch64::ARMV9_3A,
+        &AArch64::ARMV9_4A, &AArch64::ARMV9_5A})
     EXPECT_TRUE(A->implies(AArch64::ARMV9A));
 
   EXPECT_TRUE(AArch64::ARMV8_1A.implies(AArch64::ARMV8A));

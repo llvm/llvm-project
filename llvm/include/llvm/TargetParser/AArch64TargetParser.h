@@ -386,7 +386,7 @@ inline constexpr ArchInfo ARMV8R    = { VersionTuple{8, 0}, RProfile, "armv8-r",
 // The set of all architectures
 static constexpr std::array<const ArchInfo *, 17> ArchInfos = {
     &ARMV8A,   &ARMV8_1A, &ARMV8_2A, &ARMV8_3A, &ARMV8_4A, &ARMV8_5A,
-    &ARMV8_6A, &ARMV8_7A, &ARMV8_8A, &ARMV8_9A, &ARMV9A, &ARMV9_1A,
+    &ARMV8_6A, &ARMV8_7A, &ARMV8_8A, &ARMV8_9A, &ARMV9A,   &ARMV9_1A,
     &ARMV9_2A, &ARMV9_3A, &ARMV9_4A, &ARMV9_5A, &ARMV8R,
 };
 
