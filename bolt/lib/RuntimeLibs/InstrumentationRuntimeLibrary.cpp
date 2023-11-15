@@ -65,13 +65,6 @@ void InstrumentationRuntimeLibrary::adjustCommandLineOptions(
     exit(1);
   }
 
-  if (!BC.FiniFunctionAddress && !BC.IsStaticExecutable) {
-    errs() << "BOLT-ERROR: input binary lacks DT_FINI entry in the dynamic "
-              "section but instrumentation currently relies on patching "
-              "DT_FINI to write the profile\n";
-    exit(1);
-  }
-
   if ((opts::InstrumentationWaitForks || opts::InstrumentationSleepTime) &&
       opts::InstrumentationFileAppendPID) {
     errs()

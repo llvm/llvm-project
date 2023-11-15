@@ -1221,6 +1221,20 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
     }
   }
 
+  if (!Zext.hasNonNeg()) {
+    // If this zero extend is only used by a shift, add nneg flag.
+    if (Zext.hasOneUse() && SrcTy->getScalarSizeInBits() > 2 &&
+        match(Zext.user_back(), m_Shift(m_Value(), m_Specific(&Zext)))) {
+      Zext.setNonNeg();
+      return &Zext;
+    }
+
+    if (isKnownNonNegative(Src, DL, 0, &AC, &Zext, &DT)) {
+      Zext.setNonNeg();
+      return &Zext;
+    }
+  }
+
   return nullptr;
 }
 
@@ -2127,9 +2141,12 @@ static bool collectInsertionElements(Value *V, unsigned Shift,
     Type *ElementIntTy = IntegerType::get(C->getContext(), ElementSize);
 
     for (unsigned i = 0; i != NumElts; ++i) {
-      unsigned ShiftI = Shift+i*ElementSize;
-      Constant *Piece = ConstantExpr::getLShr(C, ConstantInt::get(C->getType(),
-                                                                  ShiftI));
+      unsigned ShiftI = Shift + i * ElementSize;
+      Constant *Piece = ConstantFoldBinaryInstruction(
+          Instruction::LShr, C, ConstantInt::get(C->getType(), ShiftI));
+      if (!Piece)
+        return false;
+
       Piece = ConstantExpr::getTrunc(Piece, ElementIntTy);
       if (!collectInsertionElements(Piece, ShiftI, Elements, VecEltTy,
                                     isBigEndian))

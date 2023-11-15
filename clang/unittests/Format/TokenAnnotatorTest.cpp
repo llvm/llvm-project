@@ -2313,6 +2313,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsJavaScript) {
 TEST_F(TokenAnnotatorTest, UnderstandsAttributes) {
   auto Tokens = annotate("bool foo __attribute__((unused));");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
   EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_AttributeLParen);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_Unknown);
@@ -2322,6 +2323,22 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributes) {
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_AttributeLParen);
   EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_AttributeRParen);
+
+  Tokens = annotate("bool __attribute__((unused)) foo;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[7], tok::identifier, TT_StartOfName);
+
+  Tokens = annotate("void __attribute__((x)) Foo();");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[7], tok::identifier, TT_FunctionDeclarationName);
 
   FormatStyle Style = getLLVMStyle();
   Style.AttributeMacros.push_back("FOO");

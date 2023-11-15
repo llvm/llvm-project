@@ -1261,8 +1261,8 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
     Stream.EmitRecord(HEADER_SEARCH_PATHS, Record);
   }
 
-  // Write out the diagnostic/pragma mappings.
-  WritePragmaDiagnosticMappings(Diags, /* isModule = */ WritingModule);
+  if (!HSOpts.ModulesSkipPragmaDiagnosticMappings)
+    WritePragmaDiagnosticMappings(Diags, /* isModule = */ WritingModule);
 
   // Header search entry usage.
   auto HSEntryUsage = PP.getHeaderSearchInfo().computeUserEntryUsage();
@@ -6619,13 +6619,6 @@ void OMPClauseWriter::VisitOMPUpdateClause(OMPUpdateClause *C) {
 void OMPClauseWriter::VisitOMPCaptureClause(OMPCaptureClause *) {}
 
 void OMPClauseWriter::VisitOMPCompareClause(OMPCompareClause *) {}
-
-// Save the parameter of fail clause.
-void OMPClauseWriter::VisitOMPFailClause(OMPFailClause *C) {
-  Record.AddSourceLocation(C->getLParenLoc());
-  Record.AddSourceLocation(C->getFailParameterLoc());
-  Record.writeEnum(C->getFailParameter());
-}
 
 void OMPClauseWriter::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
 

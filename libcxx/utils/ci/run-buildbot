@@ -395,27 +395,27 @@ generic-merged)
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-merged.cfg.in"
     check-runtimes
 ;;
-generic-hardened-mode)
+generic-hardening-mode-fast)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardened-mode.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-fast.cmake"
     check-runtimes
     check-abi-list
 ;;
-generic-hardened-mode-with-abi-breaks)
+generic-hardening-mode-fast-with-abi-breaks)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardened-mode-with-abi-breaks.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-fast-with-abi-breaks.cmake"
     check-runtimes
     check-abi-list
 ;;
-generic-safe-mode)
+generic-hardening-mode-extensive)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-safe-mode.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-extensive.cmake"
     check-runtimes
     check-abi-list
 ;;
-generic-debug-mode)
+generic-hardening-mode-debug)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-mode.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-debug.cmake"
     check-runtimes
     check-abi-list
 ;;
@@ -539,7 +539,7 @@ apple-system-backdeployment-hardened-*)
     PARAMS+=";cxx_runtime_root=${OSX_ROOTS}/macOS/libc++/${DEPLOYMENT_TARGET}"
     PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
     PARAMS+=";unwind_runtime_root=${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}"
-    PARAMS+=";hardening_mode=hardened"
+    PARAMS+=";hardening_mode=fast"
 
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
                    -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \

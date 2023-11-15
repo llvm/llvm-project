@@ -2945,6 +2945,14 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
   {
     Check(I.getParent() == &BB, "Instruction has bogus parent pointer!");
   }
+
+  // Confirm that no issues arise from the debug program.
+  if (BB.IsNewDbgInfoFormat) {
+    // Configure the validate function to not fire assertions, instead print
+    // errors and return true if there's a problem.
+    bool RetVal = BB.validateDbgValues(false, true, OS);
+    Check(!RetVal, "Invalid configuration of new-debug-info data found");
+  }
 }
 
 void Verifier::visitTerminator(Instruction &I) {
@@ -5985,6 +5993,30 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "SGPR arguments must have the `inreg` attribute", &Call);
     Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
+    break;
+  }
+  case Intrinsic::amdgcn_set_inactive_chain_arg: {
+    auto CallerCC = Call.getCaller()->getCallingConv();
+    switch (CallerCC) {
+    case CallingConv::AMDGPU_CS_Chain:
+    case CallingConv::AMDGPU_CS_ChainPreserve:
+      break;
+    default:
+      CheckFailed("Intrinsic can only be used from functions with the "
+                  "amdgpu_cs_chain or amdgpu_cs_chain_preserve "
+                  "calling conventions",
+                  &Call);
+      break;
+    }
+
+    unsigned InactiveIdx = 1;
+    Check(!Call.paramHasAttr(InactiveIdx, Attribute::InReg),
+          "Value for inactive lanes must not have the `inreg` attribute",
+          &Call);
+    Check(isa<Argument>(Call.getArgOperand(InactiveIdx)),
+          "Value for inactive lanes must be a function argument", &Call);
+    Check(!cast<Argument>(Call.getArgOperand(InactiveIdx))->hasInRegAttr(),
+          "Value for inactive lanes must be a VGPR function argument", &Call);
     break;
   }
   case Intrinsic::experimental_convergence_entry:

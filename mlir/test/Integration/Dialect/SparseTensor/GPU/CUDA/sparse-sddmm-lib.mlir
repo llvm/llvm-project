@@ -1,4 +1,3 @@
-//
 // NOTE: this test requires gpu-sm80
 //
 // DEFINE: %{compile} = mlir-opt %s \
@@ -8,18 +7,17 @@
 // DEFINE:   mlir-cpu-runner \
 // DEFINE:   --shared-libs=%mlir_cuda_runtime \
 // DEFINE:   --shared-libs=%mlir_c_runner_utils \
-// DEFINE:   --e entry --entry-point-result=void \
+// DEFINE:   --e main --entry-point-result=void \
 // DEFINE: | FileCheck %s
 //
 // with RT lib:
 //
-// RUN:  %{compile} enable-runtime-library=true" | %{run}
+// RUN: %{compile} enable-runtime-library=true"  | %{run}
 //
 // without RT lib:
 //
 // TODO: make this work
-// R_UN:  %{compile} enable-runtime-library=false" | %{run}
-//
+// R_U_N: %{compile} enable-runtime-library=false" | %{run}
 
 !Filename = !llvm.ptr
 
@@ -117,7 +115,7 @@ module {
   //
   // Main driver.
   //
-  func.func @entry() {
+  func.func @main() {
     llvm.call @mgpuCreateSparseEnv() : () -> ()
     %d0 = arith.constant 0.0 : f32
     %c0 = arith.constant 0 : index

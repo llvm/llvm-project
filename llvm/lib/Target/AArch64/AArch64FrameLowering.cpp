@@ -3426,7 +3426,7 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
   // function.
   DebugLoc DL;
   RS->enterBasicBlockEnd(MBB);
-  RS->backward(std::prev(MBBI));
+  RS->backward(MBBI);
   Register DstReg = RS->FindUnusedReg(&AArch64::GPR64commonRegClass);
   assert(DstReg && "There must be a free register after frame setup");
   BuildMI(MBB, MBBI, DL, TII.get(AArch64::MOVi64imm), DstReg).addImm(-2);
@@ -3789,7 +3789,26 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
 
   // New code will be inserted after the last tagging instruction we've found.
   MachineBasicBlock::iterator InsertI = Instrs.back().MI;
+
+  // All the gathered stack tag instructions are merged and placed after
+  // last tag store in the list. The check should be made if the nzcv
+  // flag is live at the point where we are trying to insert. Otherwise
+  // the nzcv flag might get clobbered if any stg loops are present.
+
+  // FIXME : This approach of bailing out from merge is conservative in
+  // some ways like even if stg loops are not present after merge the
+  // insert list, this liveness check is done (which is not needed).
+  LivePhysRegs LiveRegs(*(MBB->getParent()->getSubtarget().getRegisterInfo()));
+  LiveRegs.addLiveOuts(*MBB);
+  for (auto I = MBB->rbegin();; ++I) {
+    MachineInstr &MI = *I;
+    if (MI == InsertI)
+      break;
+    LiveRegs.stepBackward(*I);
+  }
   InsertI++;
+  if (LiveRegs.contains(AArch64::NZCV))
+    return InsertI;
 
   llvm::stable_sort(Instrs,
                     [](const TagStoreInstr &Left, const TagStoreInstr &Right) {

@@ -1320,7 +1320,7 @@ define dso_local fp128 @qpFREXP(ptr %a, ptr %b) {
 ; CHECK-NEXT:    addi r5, r1, 44
 ; CHECK-NEXT:    mr r30, r4
 ; CHECK-NEXT:    lxv v2, 0(r3)
-; CHECK-NEXT:    bl frexpl
+; CHECK-NEXT:    bl frexpf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lwz r3, 44(r1)
 ; CHECK-NEXT:    stw r3, 0(r30)
@@ -1343,7 +1343,7 @@ define dso_local fp128 @qpFREXP(ptr %a, ptr %b) {
 ; CHECK-P8-NEXT:    mr r30, r4
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    bl frexpl
+; CHECK-P8-NEXT:    bl frexpf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    lwz r3, 44(r1)
 ; CHECK-P8-NEXT:    stw r3, 0(r30)

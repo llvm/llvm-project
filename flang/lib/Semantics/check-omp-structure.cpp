@@ -609,7 +609,8 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
           [&](const auto &c) {},
       },
       c.u);
-  if (!eligibleTarget) {
+  if (!eligibleTarget &&
+      context_.ShouldWarn(common::UsageWarning::Portability)) {
     context_.Say(parser::FindSourceLocation(c),
         "If %s directive is nested inside TARGET region, the behaviour "
         "is unspecified"_port_en_US,
@@ -2227,7 +2228,6 @@ CHECK_SIMPLE_CLAUSE(CancellationConstructType, OMPC_cancellation_construct_type)
 CHECK_SIMPLE_CLAUSE(Doacross, OMPC_doacross)
 CHECK_SIMPLE_CLAUSE(OmpxAttribute, OMPC_ompx_attribute)
 CHECK_SIMPLE_CLAUSE(OmpxBare, OMPC_ompx_bare)
-CHECK_SIMPLE_CLAUSE(Fail, OMPC_fail)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTasks, OMPC_num_tasks)
@@ -2770,15 +2770,17 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
 
 void OmpStructureChecker::CheckCopyingPolymorphicAllocatable(
     SymbolSourceMap &symbols, const llvm::omp::Clause clause) {
-  for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
-    const auto *symbol{it->first};
-    const auto source{it->second};
-    if (IsPolymorphicAllocatable(*symbol)) {
-      context_.Say(source,
-          "If a polymorphic variable with allocatable attribute '%s' is in "
-          "%s clause, the behavior is unspecified"_port_en_US,
-          symbol->name(),
-          parser::ToUpperCaseLetters(getClauseName(clause).str()));
+  if (context_.ShouldWarn(common::UsageWarning::Portability)) {
+    for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
+      const auto *symbol{it->first};
+      const auto source{it->second};
+      if (IsPolymorphicAllocatable(*symbol)) {
+        context_.Say(source,
+            "If a polymorphic variable with allocatable attribute '%s' is in "
+            "%s clause, the behavior is unspecified"_port_en_US,
+            symbol->name(),
+            parser::ToUpperCaseLetters(getClauseName(clause).str()));
+      }
     }
   }
 }
