@@ -192,11 +192,9 @@ bool CodegenEnv::isAdmissibleTensorExp(ExprId exp) {
   const auto iteratorTypes = linalgOp.getIteratorTypesArray();
   assert(topSortSize() == latticeMerger.getNumLoops());
   for (const LoopId i : topSort) {
-    if (!latticeMerger.isFilterLoop(i)) {
-      if (linalg::isReductionIterator(iteratorTypes[i]))
-        break; // terminate at first reduction
-      outerParNest++;
-    }
+    if (linalg::isReductionIterator(iteratorTypes[i]))
+      break; // terminate at first reduction
+    outerParNest++;
   }
 
   // Inadmissible kernel should have already been rejected by the previous
