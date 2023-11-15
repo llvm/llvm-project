@@ -6796,9 +6796,6 @@ def vectorize_loops : Flag<["-"], "vectorize-loops">,
 def vectorize_slp : Flag<["-"], "vectorize-slp">,
   HelpText<"Run the SLP vectorization passes">,
   MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;
-def dependent_lib : Joined<["--"], "dependent-lib=">,
-  HelpText<"Add dependent library">,
-  MarshallingInfoStringVector<CodeGenOpts<"DependentLibraries">>;
 def linker_option : Joined<["--"], "linker-option=">,
   HelpText<"Add linker option">,
   MarshallingInfoStringVector<CodeGenOpts<"LinkerOptions">>;
@@ -7368,6 +7365,11 @@ def pic_level : Separate<["-"], "pic-level">,
 def pic_is_pie : Flag<["-"], "pic-is-pie">,
   HelpText<"File is for a position independent executable">,
   MarshallingInfoFlag<LangOpts<"PIE">>;
+
+
+def dependent_lib : Joined<["--"], "dependent-lib=">,
+  HelpText<"Add dependent library">,
+  MarshallingInfoStringVector<CodeGenOpts<"DependentLibraries">>;
 
 } // let Visibility = [CC1Option, FC1Option]
 
