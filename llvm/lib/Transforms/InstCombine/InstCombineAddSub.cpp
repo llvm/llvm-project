@@ -2111,14 +2111,16 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
     // C-(X+C2) --> (C-C2)-X
     if (match(Op1, m_Add(m_Value(X), m_ImmConstant(C2)))) {
-      // C-C2 never overflow, and C-(X+C2), (X+C2) has NSW
-      // => (C-C2)-X can have NSW
+      // C-C2 never overflow, and C-(X+C2), (X+C2) has NSW/NUW
+      // => (C-C2)-X can have NSW/NUW
       bool WillNotSOV = willNotOverflowSignedSub(C, C2, I);
       BinaryOperator *Res =
           BinaryOperator::CreateSub(ConstantExpr::getSub(C, C2), X);
       auto *OBO1 = cast<OverflowingBinaryOperator>(Op1);
       Res->setHasNoSignedWrap(I.hasNoSignedWrap() && OBO1->hasNoSignedWrap() &&
                               WillNotSOV);
+      Res->setHasNoUnsignedWrap(I.hasNoUnsignedWrap() &&
+                                OBO1->hasNoUnsignedWrap());
       return Res;
     }
   }
