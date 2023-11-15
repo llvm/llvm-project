@@ -401,9 +401,7 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
         auto TupleT = TypeCache.computeType(
             BT, Log2LMUL,
             PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
-                                (BT == BasicType::BFloat16
-                                     ? TypeModifier::BFloat
-                                     : TypeModifier::Float)));
+                                TypeModifier::Float));
         if (TupleT)
           printType(*TupleT);
       }
