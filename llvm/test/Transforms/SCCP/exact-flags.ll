@@ -5,7 +5,7 @@ define i8 @ashr_to_lshr(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @ashr_to_lshr(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[P:%.*]] = and i8 [[X]], 127
-; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[P]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 [[P]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %p = and i8 %x, 127
@@ -18,7 +18,7 @@ define i8 @sdiv_to_udiv(i8 %x, i8 %y) {
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X1:%.*]] = and i8 [[X]], 127
 ; CHECK-NEXT:    [[Y1:%.*]] = and i8 [[Y]], 127
-; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[X1]], [[Y1]]
+; CHECK-NEXT:    [[R:%.*]] = udiv exact i8 [[X1]], [[Y1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x1 = and i8 %x, 127
