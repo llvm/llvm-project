@@ -7504,8 +7504,11 @@ is not a coroutine itself and is marked with ``[[clang::coro_wrapper]]``.
 
 From a language perspective, it is not possible to differentiate between a coroutine and a
 function returning a CRT by merely looking at the function signature.
-These two annotations allows implementations to enforce that only coroutines and explicitly marked
-coroutine wrappers are allowed to return a ``CRT``.
+
+Clang will enforce that all functions that return a ``CRT``  are either coroutines or marked 
+with `[[clang::coro_wrapper]]`. Coroutine wrappers, in particular, are susceptible to capturing
+references to temporaries and other lifetime issues. This allows to avoid such lifetime
+issues with coroutine wrappers.
 
 For example,
 
