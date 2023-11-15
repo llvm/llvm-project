@@ -139,12 +139,12 @@ void test_T_ctor_basic() {
     assert(std::get<0>(v) == "foo");
   }
   {
-    std::variant<bool volatile, std::unique_ptr<int>> v = nullptr;
+    std::variant<bool, std::unique_ptr<int>> v = nullptr;
     assert(v.index() == 1);
     assert(std::get<1>(v) == nullptr);
   }
   {
-    std::variant<bool volatile const, int> v = true;
+    std::variant<bool const, int> v = true;
     assert(v.index() == 0);
     assert(std::get<0>(v));
   }
