@@ -71,7 +71,7 @@ void foo1(int A)
   [[clang::code_align(9223372036854775808)]]
   for(int I=0; I<256; ++I) { bar(I); }
 
-  // expected-error@+1 {{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was 0}}
+  // expected-error@+1 {{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was 2147483647}}
   [[clang::code_align((__int128_t)0x1234567890abcde0ULL << 64)]]
   for(int I=0; I<256; ++I) { bar(I); }
 

@@ -322,6 +322,7 @@ static Attr *handleUnlikely(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) UnlikelyAttr(S.Context, A);
 }
 
+
 CodeAlignAttr *Sema::BuildCodeAlignAttr(const AttributeCommonInfo &CI,
                                         Expr *E) {
   if (!E->isValueDependent()) {
@@ -333,18 +334,26 @@ CodeAlignAttr *Sema::BuildCodeAlignAttr(const AttributeCommonInfo &CI,
 
     // This attribute requires an integer argument which is a constant power of
     // two between 1 and 4096 inclusive.
-    if (ArgVal < CodeAlignAttr::MinimumAlignment) {
+    if ((ArgVal < CodeAlignAttr::MinimumAlignment ||
+	 ArgVal < CodeAlignAttr::MaximumAlignment) && !ArgVal.isPowerOf2()) {
       Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
-          << CI << CodeAlignAttr::MinimumAlignment
-          << CodeAlignAttr::MaximumAlignment << ArgVal.getSExtValue();
+         << CI << CodeAlignAttr::MinimumAlignment
+         << CodeAlignAttr::MaximumAlignment << ArgVal.getSExtValue();
       return nullptr;
     }
 
-    if (ArgVal > CodeAlignAttr::MaximumAlignment || !ArgVal.isPowerOf2()) {
-      Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
-          << CI << CodeAlignAttr::MinimumAlignment
-          << CodeAlignAttr::MaximumAlignment << ArgVal.getZExtValue();
-      return nullptr;
+    if (ArgVal > CodeAlignAttr::MaximumAlignment) {
+      if (ArgVal > std::numeric_limits<int32_t>::max() && !ArgVal.isPowerOf2()) {
+        Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
+           << CI << CodeAlignAttr::MinimumAlignment
+           << CodeAlignAttr::MaximumAlignment
+           << std::numeric_limits<int32_t>::max();
+      }	else {
+        Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
+           << CI << CodeAlignAttr::MinimumAlignment
+           << CodeAlignAttr::MaximumAlignment << ArgVal.getZExtValue();
+        return nullptr;
+      }
     }
   }
   return new (Context) CodeAlignAttr(Context, CI, E);
