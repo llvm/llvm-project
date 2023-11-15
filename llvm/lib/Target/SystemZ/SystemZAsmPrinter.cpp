@@ -1031,9 +1031,9 @@ void SystemZAsmPrinter::emitADASection() {
 }
 
 static uint32_t getProductVersion(Module &M) {
-  if (auto *VersionVal = cast_or_null<ConstantAsMetadata>(
-          M.getModuleFlag("zos_product_major_version")))
-    return cast<ConstantInt>(VersionVal->getValue())->getZExtValue();
+  if (auto *VersionVal = mdconst::extract_or_null<ConstantInt>(
+        M.getModuleFlag("zos_product_major_version")))
+    return VersionVal->getValue().getZExtValue();
   return LLVM_VERSION_MAJOR;
 }
 
