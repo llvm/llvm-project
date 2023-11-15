@@ -167,7 +167,7 @@ Attribute RingAttr::parse(AsmParser &parser, Type type) {
     if (failed(parser.parseEqual()))
       return {};
 
-    IntegerType iType = llvm::dyn_cast<IntegerType>(typeAttr.getValue());
+    IntegerType iType = typeAttr.getValue().dyn_cast<IntegerType>();
     if (!iType) {
       parser.emitError(parser.getCurrentLocation(),
                        "coefficientType must specify an integer type");
