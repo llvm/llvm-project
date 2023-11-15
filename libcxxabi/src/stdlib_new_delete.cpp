@@ -79,7 +79,8 @@ _LIBCPP_WEAK void* operator new(size_t size, const std::nothrow_t&) noexcept {
       "but `operator new(size_t, nothrow_t)` has not been overridden. This is problematic because "
       "`operator new(size_t, nothrow_t)` must call `operator new(size_t)`, which will terminate in case "
       "it fails to allocate, making it impossible for `operator new(size_t, nothrow_t)` to fulfill its "
-      "contract (since it should return nullptr upon failure).");
+      "contract (since it should return nullptr upon failure). Please make sure you override "
+      "`operator new(size_t, nothrow_t)` as well.");
 #  endif
 
   return operator_new_impl(size);
@@ -106,7 +107,8 @@ _LIBCPP_WEAK void* operator new[](size_t size, const std::nothrow_t&) noexcept {
       "but `operator new[](size_t, nothrow_t)` has not been overridden. This is problematic because "
       "`operator new[](size_t, nothrow_t)` must call `operator new[](size_t)`, which will terminate in case "
       "it fails to allocate, making it impossible for `operator new[](size_t, nothrow_t)` to fulfill its "
-      "contract (since it should return nullptr upon failure).");
+      "contract (since it should return nullptr upon failure). Please make sure you override "
+      "`operator new[](size_t, nothrow_t)` as well.");
 #  endif
 
   return operator_new_impl(size);
@@ -171,7 +173,8 @@ _LIBCPP_WEAK void* operator new(size_t size, std::align_val_t alignment, const s
       "but `operator new(size_t, align_val_t, nothrow_t)` has not been overridden. This is problematic because "
       "`operator new(size_t, align_val_t, nothrow_t)` must call `operator new(size_t, align_val_t)`, which will "
       "terminate in case it fails to allocate, making it impossible for `operator new(size_t, align_val_t, nothrow_t)` "
-      "to fulfill its contract (since it should return nullptr upon failure).");
+      "to fulfill its contract (since it should return nullptr upon failure). Please make sure you override "
+      "`operator new(size_t, align_val_t, nothrow_t)` as well.");
 #    endif
 
   return operator_new_aligned_impl(size, alignment);
@@ -199,8 +202,9 @@ _LIBCPP_WEAK void* operator new[](size_t size, std::align_val_t alignment, const
       "but `operator new[](size_t, align_val_t, nothrow_t)` has not been overridden. This is problematic because "
       "`operator new[](size_t, align_val_t, nothrow_t)` must call `operator new[](size_t, align_val_t)`, which will "
       "terminate in case it fails to allocate, making it impossible for `operator new[](size_t, align_val_t, "
-      "nothrow_t)` "
-      "to fulfill its contract (since it should return nullptr upon failure).");
+      "nothrow_t)` to fulfill its contract (since it should return nullptr upon failure). Please make sure you "
+      "override "
+      "`operator new[](size_t, align_val_t, nothrow_t)` as well.");
 #    endif
 
   return operator_new_aligned_impl(size, alignment);
