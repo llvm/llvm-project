@@ -30,13 +30,6 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
                           llvm::StringRef &variable, bool *isConstantTerm) {
   APInt parsedCoeff(apintBitWidth, 1);
   auto result = parser.parseOptionalInteger(parsedCoeff);
-  if (result.has_value()) {
-    if (failed(*result)) {
-      parser.emitError(parser.getCurrentLocation(),
-                       "invalid integer coefficient");
-      return failure();
-    }
-  }
 
   // Variable name
   result = parser.parseOptionalKeyword(&variable);
@@ -118,13 +111,14 @@ Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
     if (failed(parser.parseOptionalPlus())) {
       if (succeeded(parser.parseGreater())) {
         break;
-      } else {
-        parser.emitError(
-            parser.getCurrentLocation(),
-            "expected + and more monomials, or > to end polynomial attribute");
-        return {};
       }
-    } else if (succeeded(parser.parseOptionalGreater())) {
+      parser.emitError(
+          parser.getCurrentLocation(),
+          "expected + and more monomials, or > to end polynomial attribute");
+      return {};
+    }
+
+    if (succeeded(parser.parseOptionalGreater())) {
       parser.emitError(
           parser.getCurrentLocation(),
           "expected another monomial after +, but found > ending attribute");
@@ -175,8 +169,7 @@ Attribute RingAttr::parse(AsmParser &parser, Type type) {
     IntegerType iType = llvm::dyn_cast<IntegerType>(typeAttr.getValue());
     if (!iType) {
       parser.emitError(parser.getCurrentLocation(),
-                       "invalid coefficient modulus, coefficientType must "
-                       "specify an integer type");
+                       "coefficientType must specify an integer type");
       return {};
     }
     APInt coefficientModulus(iType.getWidth(), 0);

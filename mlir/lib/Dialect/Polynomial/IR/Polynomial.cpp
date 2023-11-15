@@ -94,4 +94,4 @@ unsigned Polynomial::getDegree() const {
 } // namespace polynomial
 } // namespace mlir
 
-MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::polynomial::detail::PolynomialStorage);
+MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::polynomial::detail::PolynomialStorage)
