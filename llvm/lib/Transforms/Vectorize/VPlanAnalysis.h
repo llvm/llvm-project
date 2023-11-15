@@ -54,6 +54,9 @@ public:
 
   /// Infer the type of \p V. Returns the scalar type of \p V.
   Type *inferScalarType(const VPValue *V);
+
+  /// Return the LLVMContext used by the analysis.
+  LLVMContext &getContext() { return Ctx; }
 };
 
 } // end namespace llvm

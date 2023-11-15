@@ -124,6 +124,7 @@ namespace readability {
     m(TypeAlias) \
     m(MacroDefinition) \
     m(ObjcIvar) \
+    m(Concept) \
 
 enum StyleKind : int {
 #define ENUMERATE(v) SK_ ## v,
@@ -1390,6 +1391,9 @@ StyleKind IdentifierNamingCheck::findStyleKind(
 
     return SK_Invalid;
   }
+
+  if (isa<ConceptDecl>(D) && NamingStyles[SK_Concept])
+    return SK_Concept;
 
   return SK_Invalid;
 }

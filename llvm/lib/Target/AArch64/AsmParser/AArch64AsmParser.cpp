@@ -3660,6 +3660,8 @@ static const struct Extension {
     {"ssve-fp8dot4", {AArch64::FeatureSSVE_FP8DOT4}},
     {"lut", {AArch64::FeatureLUT}},
     {"sme-lutv2", {AArch64::FeatureSME_LUTv2}},
+    {"sme-f8f16", {AArch64::FeatureSMEF8F16}},
+    {"sme-f8f32", {AArch64::FeatureSMEF8F32}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -4572,13 +4574,12 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
         getLoc(), getContext()));
     if (parseOptionalToken(AsmToken::Comma))
       if (parseOptionalMulOperand(Operands))
-        return MatchOperand_ParseFail;
+        return ParseStatus::Failure;
     if (parseToken(AsmToken::RBrac, "']' expected"))
       return ParseStatus::Failure;
     Operands.push_back(
         AArch64Operand::CreateToken("]", getLoc(), getContext()));
   }
-
   return ParseStatus::Success;
 }
 

@@ -1487,7 +1487,11 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       return BinaryOperator::CreateNeg(Builder.CreateAdd(A, B));
 
     // -A + B --> B - A
-    return BinaryOperator::CreateSub(RHS, A);
+    auto *Sub = BinaryOperator::CreateSub(RHS, A);
+    auto *OB0 = cast<OverflowingBinaryOperator>(LHS);
+    Sub->setHasNoSignedWrap(I.hasNoSignedWrap() && OB0->hasNoSignedWrap());
+
+    return Sub;
   }
 
   // A + -B  -->  A - B
@@ -1841,10 +1845,11 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
     // instcombined.
     if (ConstantFP *CFP = dyn_cast<ConstantFP>(RHS))
       if (IsValidPromotion(FPType, LHSIntVal->getType())) {
-        Constant *CI =
-          ConstantExpr::getFPToSI(CFP, LHSIntVal->getType());
+        Constant *CI = ConstantFoldCastOperand(Instruction::FPToSI, CFP,
+                                               LHSIntVal->getType(), DL);
         if (LHSConv->hasOneUse() &&
-            ConstantExpr::getSIToFP(CI, I.getType()) == CFP &&
+            ConstantFoldCastOperand(Instruction::SIToFP, CI, I.getType(), DL) ==
+                CFP &&
             willNotOverflowSignedAdd(LHSIntVal, CI, I)) {
           // Insert the new integer add.
           Value *NewAdd = Builder.CreateNSWAdd(LHSIntVal, CI, "addconv");

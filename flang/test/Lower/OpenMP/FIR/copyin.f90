@@ -1,6 +1,6 @@
 ! This test checks lowering of `COPYIN` clause.
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPcopyin_scalar_array() {
 ! CHECK:         %[[VAL_0:.*]] = fir.address_of(@_QFcopyin_scalar_arrayEx1) : !fir.ref<i32>
@@ -309,4 +309,44 @@ subroutine common_2()
         y = y + i
      end do
   !$omp end parallel do
+end subroutine
+
+!CHECK: func.func @_QPcommon_3() {
+!CHECK: %[[val_0:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<8xi8>>
+!CHECK: %[[val_1:.*]] = omp.threadprivate %[[val_0]] : !fir.ref<!fir.array<8xi8>> -> !fir.ref<!fir.array<8xi8>>
+!CHECK: %[[val_2:.*]] = fir.convert %[[val_1]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+!CHECK: %[[val_c4:.*]] = arith.constant 4 : index
+!CHECK: %[[val_3:.*]] = fir.coordinate_of %[[val_2]], %[[val_c4]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK: %[[val_4:.*]] = fir.convert %[[val_3]] : (!fir.ref<i8>) -> !fir.ref<i32>
+!CHECK: omp.parallel {
+!CHECK: %[[val_5:.*]] = omp.threadprivate %[[val_0]] : !fir.ref<!fir.array<8xi8>> -> !fir.ref<!fir.array<8xi8>>
+!CHECK: %[[val_6:.*]] = fir.convert %[[val_5]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+!CHECK: %[[val_c4_0:.*]] = arith.constant 4 : index
+!CHECK: %[[val_7:.*]] = fir.coordinate_of %[[val_6]], %[[val_c4_0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK: %[[val_8:.*]] = fir.convert %[[val_7]] : (!fir.ref<i8>) -> !fir.ref<i32>
+!CHECK: %[[val_9:.*]] = fir.load %[[val_4]] : !fir.ref<i32>
+!CHECK: fir.store %[[val_9]] to %[[val_8]] : !fir.ref<i32>
+!CHECK: omp.barrier
+!CHECK: omp.sections {
+!CHECK: omp.section {
+!CHECK: %[[val_10:.*]] = fir.load %[[val_8]] : !fir.ref<i32>
+!CHECK: %[[val_c3_i32:.*]] = arith.constant 3 : i32
+!CHECK: %[[val_11:.*]] = arith.addi %[[val_10]], %[[val_c3_i32]] : i32
+!CHECK: fir.store %[[val_11]] to %[[val_8]] : !fir.ref<i32>
+!CHECK: omp.terminator
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
+!CHECK: return
+!CHECK: }
+subroutine common_3()
+  integer :: x
+  integer :: y
+  common /blk/ x, y
+  !$omp threadprivate (/blk/)
+
+  !$omp parallel sections copyin(/blk/)
+        !$omp section
+            y = y + 3
+  !$omp end parallel sections
 end subroutine

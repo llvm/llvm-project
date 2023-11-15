@@ -1546,7 +1546,7 @@ template <class ELFT> void SharedFile::parse() {
           SharedSymbol{*this, name, sym.getBinding(), sym.st_other,
                        sym.getType(), sym.st_value, sym.st_size, alignment});
       if (s->file == this)
-        s->verdefIndex = ver;
+        s->versionId = ver;
     }
 
     // Also add the symbol with the versioned name to handle undefined symbols
@@ -1563,7 +1563,7 @@ template <class ELFT> void SharedFile::parse() {
         SharedSymbol{*this, saver().save(name), sym.getBinding(), sym.st_other,
                      sym.getType(), sym.st_value, sym.st_size, alignment});
     if (s->file == this)
-      s->verdefIndex = idx;
+      s->versionId = idx;
   }
 }
 
@@ -1769,15 +1769,15 @@ void BinaryFile::parse() {
 
   llvm::StringSaver &saver = lld::saver();
 
-  symtab.addAndCheckDuplicate(Defined{nullptr, saver.save(s + "_start"),
+  symtab.addAndCheckDuplicate(Defined{this, saver.save(s + "_start"),
                                       STB_GLOBAL, STV_DEFAULT, STT_OBJECT, 0, 0,
                                       section});
-  symtab.addAndCheckDuplicate(Defined{nullptr, saver.save(s + "_end"),
-                                      STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
-                                      data.size(), 0, section});
-  symtab.addAndCheckDuplicate(Defined{nullptr, saver.save(s + "_size"),
-                                      STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
-                                      data.size(), 0, nullptr});
+  symtab.addAndCheckDuplicate(Defined{this, saver.save(s + "_end"), STB_GLOBAL,
+                                      STV_DEFAULT, STT_OBJECT, data.size(), 0,
+                                      section});
+  symtab.addAndCheckDuplicate(Defined{this, saver.save(s + "_size"), STB_GLOBAL,
+                                      STV_DEFAULT, STT_OBJECT, data.size(), 0,
+                                      nullptr});
 }
 
 ELFFileBase *elf::createObjFile(MemoryBufferRef mb, StringRef archiveName,

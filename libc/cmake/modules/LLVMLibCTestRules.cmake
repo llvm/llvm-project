@@ -636,6 +636,12 @@ function(add_libc_hermetic_test test_name)
       libc.src.string.memset
       libc.src.__support.StringUtil.error_to_string
   )
+
+  if(TARGET libc.src.time.clock)
+    # We will link in the 'clock' implementation if it exists for test timing.
+    list(APPEND fq_deps_list libc.src.time.clock)
+  endif()
+
   list(REMOVE_DUPLICATES fq_deps_list)
 
   # TODO: Instead of gathering internal object files from entrypoints,

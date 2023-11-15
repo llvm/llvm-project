@@ -3099,7 +3099,7 @@ struct SubViewReturnTypeCanonicalizer {
 
     // Directly return the non-rank reduced type if there are no dropped dims.
     llvm::SmallBitVector droppedDims = op.getDroppedDims();
-    if (droppedDims.empty())
+    if (droppedDims.none())
       return nonReducedType;
 
     // Take the strides and offset from the non-rank reduced type.
@@ -3188,7 +3188,7 @@ static MemRefType inferTransposeResultType(MemRefType memRefType,
   SmallVector<int64_t> sizes(rank, 0);
   SmallVector<int64_t> strides(rank, 1);
   for (const auto &en : llvm::enumerate(permutationMap.getResults())) {
-    unsigned position = en.value().cast<AffineDimExpr>().getPosition();
+    unsigned position = cast<AffineDimExpr>(en.value()).getPosition();
     sizes[en.index()] = originalSizes[position];
     strides[en.index()] = originalStrides[position];
   }

@@ -564,6 +564,8 @@ Expected<TBDFlags> getFlags(const Object *File) {
                   .Case("not_app_extension_safe",
                         TBDFlags::NotApplicationExtensionSafe)
                   .Case("sim_support", TBDFlags::SimulatorSupport)
+                  .Case("not_for_dyld_shared_cache",
+                        TBDFlags::OSLibNotForSharedCache)
                   .Default(TBDFlags::None);
           Flags |= TBDFlag;
         });
@@ -655,6 +657,7 @@ Expected<IFPtr> parseToInterfaceFile(const Object *File) {
   F->setApplicationExtensionSafe(
       !(Flags & TBDFlags::NotApplicationExtensionSafe));
   F->setSimulatorSupport((Flags & TBDFlags::SimulatorSupport));
+  F->setOSLibNotForSharedCache((Flags & TBDFlags::OSLibNotForSharedCache));
   for (auto &T : Targets)
     F->addTarget(T);
   for (auto &[Lib, Targets] : Clients)
@@ -923,6 +926,8 @@ Array serializeFlags(const InterfaceFile *File) {
     Flags.emplace_back("not_app_extension_safe");
   if (File->hasSimulatorSupport())
     Flags.emplace_back("sim_support");
+  if (File->isOSLibNotForSharedCache())
+    Flags.emplace_back("not_for_dyld_shared_cache");
   return serializeScalar(TBDKey::Attributes, std::move(Flags));
 }
 

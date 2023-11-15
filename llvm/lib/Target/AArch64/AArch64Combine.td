@@ -1,4 +1,4 @@
-//=- AArch64.td - Define AArch64 Combine Rules ---------------*- tablegen -*-=//
+//=- AArch64Combine.td - Define AArch64 Combine Rules ---------*-tablegen -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,12 +33,24 @@ def fold_global_offset : GICombineRule<
   (apply [{ applyFoldGlobalOffset(*${root}, MRI, B, Observer, ${matchinfo});}])
 >;
 
+// Boolean: 0 = G_ZEXT, 1 = G_SEXT
+def ext_addv_to_udot_addv_matchinfo : GIDefMatchData<"std::tuple<Register, Register, bool>">;
+let Predicates = [HasDotProd] in {
+def ext_addv_to_udot_addv : GICombineRule<
+  (defs root:$root, ext_addv_to_udot_addv_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_VECREDUCE_ADD):$root,
+         [{ return matchExtAddvToUdotAddv(*${root}, MRI, STI, ${matchinfo}); }]),
+  (apply [{ applyExtAddvToUdotAddv(*${root}, MRI, B, Observer, STI, ${matchinfo}); }])
+>;
+}
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       fconstant_to_constant,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
-                                      shuffle_to_extract]> {
+                                      shuffle_to_extract,
+                                      ext_addv_to_udot_addv]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 

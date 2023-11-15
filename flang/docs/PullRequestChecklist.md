@@ -36,7 +36,7 @@ even though I've read the style guide, they regularly trip me up.
    clang-format will do this for most code.  But you may need to break up long
    strings.
 *  Review declarations for proper use of `constexpr` and `const`.
-*  Follow the C++ [naming guidelines](C++style.html#naming)
+*  Follow the C++ [naming guidelines](C++style.md#naming)
 *  Ensure that the names evoke their purpose and are consistent with existing code.
 *  Used braced initializers.
 *  Review pointer and reference types to make sure that you're using them

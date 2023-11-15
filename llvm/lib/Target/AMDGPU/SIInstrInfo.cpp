@@ -681,7 +681,7 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
   }
 
   RS.enterBasicBlockEnd(MBB);
-  RS.backward(MI);
+  RS.backward(std::next(MI));
 
   // Ideally we want to have three registers for a long reg_sequence copy
   // to hide 2 waitstates between v_mov_b32 and accvgpr_write.
@@ -2692,6 +2692,9 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   if (CommutedOpcode == -1)
     return nullptr;
 
+  if (Src0Idx > Src1Idx)
+    std::swap(Src0Idx, Src1Idx);
+
   assert(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0) ==
            static_cast<int>(Src0Idx) &&
          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1) ==
@@ -2774,14 +2777,8 @@ bool SIInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   return isIntN(BranchOffsetBits, BrOffset);
 }
 
-MachineBasicBlock *SIInstrInfo::getBranchDestBlock(
-  const MachineInstr &MI) const {
-  if (MI.getOpcode() == AMDGPU::S_SETPC_B64) {
-    // This would be a difficult analysis to perform, but can always be legal so
-    // there's no need to analyze it.
-    return nullptr;
-  }
-
+MachineBasicBlock *
+SIInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   return MI.getOperand(0).getMBB();
 }
 
@@ -3448,8 +3445,10 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
         (Src1->isReg() && Src1->getReg() == Reg)) {
       MachineOperand *RegSrc =
           Src1->isReg() && Src1->getReg() == Reg ? Src0 : Src1;
-      if (!RegSrc->isReg() ||
-          RI.isSGPRClass(MRI->getRegClass(RegSrc->getReg())))
+      if (!RegSrc->isReg())
+        return false;
+      if (RI.isSGPRClass(MRI->getRegClass(RegSrc->getReg())) &&
+          ST.getConstantBusLimit(Opc) < 2)
         return false;
 
       if (!Src2->isReg() || RI.isSGPRClass(MRI->getRegClass(Src2->getReg())))
@@ -6484,10 +6483,12 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  // Legalize S_BITREPLICATE and S_QUADMASK
+  // Legalize S_BITREPLICATE, S_QUADMASK and S_WQM
   if (MI.getOpcode() == AMDGPU::S_BITREPLICATE_B64_B32 ||
       MI.getOpcode() == AMDGPU::S_QUADMASK_B32 ||
-      MI.getOpcode() == AMDGPU::S_QUADMASK_B64) {
+      MI.getOpcode() == AMDGPU::S_QUADMASK_B64 ||
+      MI.getOpcode() == AMDGPU::S_WQM_B32 ||
+      MI.getOpcode() == AMDGPU::S_WQM_B64) {
     MachineOperand &Src = MI.getOperand(1);
     if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
       Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));

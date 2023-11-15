@@ -10905,9 +10905,12 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N) {
   Op1 = AbsOp1.getOperand(1);
 
   unsigned Opc0 = Op0.getOpcode();
+
   // Check if the operands of the sub are (zero|sign)-extended.
+  // TODO: Should we use ValueTracking instead?
   if (Opc0 != Op1.getOpcode() ||
-      (Opc0 != ISD::ZERO_EXTEND && Opc0 != ISD::SIGN_EXTEND)) {
+      (Opc0 != ISD::ZERO_EXTEND && Opc0 != ISD::SIGN_EXTEND &&
+       Opc0 != ISD::SIGN_EXTEND_INREG)) {
     // fold (abs (sub nsw x, y)) -> abds(x, y)
     if (AbsOp1->getFlags().hasNoSignedWrap() && hasOperation(ISD::ABDS, VT) &&
         TLI.preferABDSToABSWithNSW(VT)) {
@@ -10917,17 +10920,24 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N) {
     return SDValue();
   }
 
-  EVT VT1 = Op0.getOperand(0).getValueType();
-  EVT VT2 = Op1.getOperand(0).getValueType();
-  unsigned ABDOpcode = (Opc0 == ISD::SIGN_EXTEND) ? ISD::ABDS : ISD::ABDU;
+  EVT VT0, VT1;
+  if (Opc0 == ISD::SIGN_EXTEND_INREG) {
+    VT0 = cast<VTSDNode>(Op0.getOperand(1))->getVT();
+    VT1 = cast<VTSDNode>(Op1.getOperand(1))->getVT();
+  } else {
+    VT0 = Op0.getOperand(0).getValueType();
+    VT1 = Op1.getOperand(0).getValueType();
+  }
+  unsigned ABDOpcode = (Opc0 == ISD::ZERO_EXTEND) ? ISD::ABDU : ISD::ABDS;
 
   // fold abs(sext(x) - sext(y)) -> zext(abds(x, y))
   // fold abs(zext(x) - zext(y)) -> zext(abdu(x, y))
-  // NOTE: Extensions must be equivalent.
-  if (VT1 == VT2 && hasOperation(ABDOpcode, VT1)) {
-    Op0 = Op0.getOperand(0);
-    Op1 = Op1.getOperand(0);
-    SDValue ABD = DAG.getNode(ABDOpcode, DL, VT1, Op0, Op1);
+  EVT MaxVT = VT0.bitsGT(VT1) ? VT0 : VT1;
+  if ((VT0 == MaxVT || Op0->hasOneUse()) &&
+      (VT1 == MaxVT || Op1->hasOneUse()) && hasOperation(ABDOpcode, MaxVT)) {
+    SDValue ABD = DAG.getNode(ABDOpcode, DL, MaxVT,
+                              DAG.getNode(ISD::TRUNCATE, DL, MaxVT, Op0),
+                              DAG.getNode(ISD::TRUNCATE, DL, MaxVT, Op1));
     ABD = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, ABD);
     return DAG.getZExtOrTrunc(ABD, DL, SrcVT);
   }
@@ -12456,127 +12466,27 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   EVT VT = N->getValueType(0);
-  SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
 
-  SDValue Combined = SimplifySetCC(VT, N0, N1, Cond, SDLoc(N), !PreferSetCC);
+  SDValue Combined = SimplifySetCC(VT, N->getOperand(0), N->getOperand(1), Cond,
+                                   SDLoc(N), !PreferSetCC);
 
-  if (Combined) {
-    // If we prefer to have a setcc, and we don't, we'll try our best to
-    // recreate one using rebuildSetCC.
-    if (PreferSetCC && Combined.getOpcode() != ISD::SETCC) {
-      SDValue NewSetCC = rebuildSetCC(Combined);
+  if (!Combined)
+    return SDValue();
 
-      // We don't have anything interesting to combine to.
-      if (NewSetCC.getNode() == N)
-        return SDValue();
+  // If we prefer to have a setcc, and we don't, we'll try our best to
+  // recreate one using rebuildSetCC.
+  if (PreferSetCC && Combined.getOpcode() != ISD::SETCC) {
+    SDValue NewSetCC = rebuildSetCC(Combined);
 
-      if (NewSetCC)
-        return NewSetCC;
-    }
-    return Combined;
+    // We don't have anything interesting to combine to.
+    if (NewSetCC.getNode() == N)
+      return SDValue();
+
+    if (NewSetCC)
+      return NewSetCC;
   }
 
-  // Optimize
-  //    1) (icmp eq/ne (and X, C0), (shift X, C1))
-  // or
-  //    2) (icmp eq/ne X, (rotate X, C1))
-  // If C0 is a mask or shifted mask and the shift amt (C1) isolates the
-  // remaining bits (i.e something like `(x64 & UINT32_MAX) == (x64 >> 32)`)
-  // Then:
-  // If C1 is a power of 2, then the rotate and shift+and versions are
-  // equivilent, so we can interchange them depending on target preference.
-  // Otherwise, if we have the shift+and version we can interchange srl/shl
-  // which inturn affects the constant C0. We can use this to get better
-  // constants again determined by target preference.
-  if (Cond == ISD::SETNE || Cond == ISD::SETEQ) {
-    auto IsAndWithShift = [](SDValue A, SDValue B) {
-      return A.getOpcode() == ISD::AND &&
-             (B.getOpcode() == ISD::SRL || B.getOpcode() == ISD::SHL) &&
-             A.getOperand(0) == B.getOperand(0);
-    };
-    auto IsRotateWithOp = [](SDValue A, SDValue B) {
-      return (B.getOpcode() == ISD::ROTL || B.getOpcode() == ISD::ROTR) &&
-             B.getOperand(0) == A;
-    };
-    SDValue AndOrOp = SDValue(), ShiftOrRotate = SDValue();
-    bool IsRotate = false;
-
-    // Find either shift+and or rotate pattern.
-    if (IsAndWithShift(N0, N1)) {
-      AndOrOp = N0;
-      ShiftOrRotate = N1;
-    } else if (IsAndWithShift(N1, N0)) {
-      AndOrOp = N1;
-      ShiftOrRotate = N0;
-    } else if (IsRotateWithOp(N0, N1)) {
-      IsRotate = true;
-      AndOrOp = N0;
-      ShiftOrRotate = N1;
-    } else if (IsRotateWithOp(N1, N0)) {
-      IsRotate = true;
-      AndOrOp = N1;
-      ShiftOrRotate = N0;
-    }
-
-    if (AndOrOp && ShiftOrRotate && ShiftOrRotate.hasOneUse() &&
-        (IsRotate || AndOrOp.hasOneUse())) {
-      EVT OpVT = N0.getValueType();
-      // Get constant shift/rotate amount and possibly mask (if its shift+and
-      // variant).
-      auto GetAPIntValue = [](SDValue Op) -> std::optional<APInt> {
-        ConstantSDNode *CNode = isConstOrConstSplat(Op, /*AllowUndefs*/ false,
-                                                    /*AllowTrunc*/ false);
-        if (CNode == nullptr)
-          return std::nullopt;
-        return CNode->getAPIntValue();
-      };
-      std::optional<APInt> AndCMask =
-          IsRotate ? std::nullopt : GetAPIntValue(AndOrOp.getOperand(1));
-      std::optional<APInt> ShiftCAmt =
-          GetAPIntValue(ShiftOrRotate.getOperand(1));
-      unsigned NumBits = OpVT.getScalarSizeInBits();
-
-      // We found constants.
-      if (ShiftCAmt && (IsRotate || AndCMask) && ShiftCAmt->ult(NumBits)) {
-        unsigned ShiftOpc = ShiftOrRotate.getOpcode();
-        // Check that the constants meet the constraints.
-        bool CanTransform =
-            IsRotate ||
-            (*ShiftCAmt == (~*AndCMask).popcount() && ShiftOpc == ISD::SHL
-                 ? (~*AndCMask).isMask()
-                 : AndCMask->isMask());
-
-        // See if target prefers another shift/rotate opcode.
-        unsigned NewShiftOpc = TLI.preferedOpcodeForCmpEqPiecesOfOperand(
-            OpVT, ShiftOpc, ShiftCAmt->isPowerOf2(), *ShiftCAmt, AndCMask);
-        // Transform is valid and we have a new preference.
-        if (CanTransform && NewShiftOpc != ShiftOpc) {
-          SDLoc DL(N);
-          SDValue NewShiftOrRotate =
-              DAG.getNode(NewShiftOpc, DL, OpVT, ShiftOrRotate.getOperand(0),
-                          ShiftOrRotate.getOperand(1));
-          SDValue NewAndOrOp = SDValue();
-
-          if (NewShiftOpc == ISD::SHL || NewShiftOpc == ISD::SRL) {
-            APInt NewMask =
-                NewShiftOpc == ISD::SHL
-                    ? APInt::getHighBitsSet(NumBits,
-                                            NumBits - ShiftCAmt->getZExtValue())
-                    : APInt::getLowBitsSet(NumBits,
-                                           NumBits - ShiftCAmt->getZExtValue());
-            NewAndOrOp =
-                DAG.getNode(ISD::AND, DL, OpVT, ShiftOrRotate.getOperand(0),
-                            DAG.getConstant(NewMask, DL, OpVT));
-          } else {
-            NewAndOrOp = ShiftOrRotate.getOperand(0);
-          }
-
-          return DAG.getSetCC(DL, VT, NewAndOrOp, NewShiftOrRotate, Cond);
-        }
-      }
-    }
-  }
-  return SDValue();
+  return Combined;
 }
 
 SDValue DAGCombiner::visitSETCCCARRY(SDNode *N) {
@@ -13484,8 +13394,11 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   // fold (sext x) -> (zext x) if the sign bit is known zero.
   if (!TLI.isSExtCheaperThanZExt(N0.getValueType(), VT) &&
       (!LegalOperations || TLI.isOperationLegal(ISD::ZERO_EXTEND, VT)) &&
-      DAG.SignBitIsZero(N0))
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0);
+      DAG.SignBitIsZero(N0)) {
+    SDNodeFlags Flags;
+    Flags.setNonNeg(true);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0, Flags);
+  }
 
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
     return NewVSel;
@@ -13714,8 +13627,8 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   // fold (zext (and/or/xor (load x), cst)) ->
   //      (and/or/xor (zextload x), (zext cst))
   // Unless (and (load x) cst) will match as a zextload already and has
-  // additional users.
-  if (ISD::isBitwiseLogicOp(N0.getOpcode()) &&
+  // additional users, or the zext is already free.
+  if (ISD::isBitwiseLogicOp(N0.getOpcode()) && !TLI.isZExtFree(N0, VT) &&
       isa<LoadSDNode>(N0.getOperand(0)) &&
       N0.getOperand(1).getOpcode() == ISD::Constant &&
       (!LegalOperations && TLI.isOperationLegal(N0.getOpcode(), VT))) {
@@ -17659,6 +17572,7 @@ SDValue DAGCombiner::visitFTRUNC(SDNode *N) {
   case ISD::FRINT:
   case ISD::FTRUNC:
   case ISD::FNEARBYINT:
+  case ISD::FROUNDEVEN:
   case ISD::FFLOOR:
   case ISD::FCEIL:
     return N0;

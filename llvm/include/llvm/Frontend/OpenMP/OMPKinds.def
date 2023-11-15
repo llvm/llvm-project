@@ -95,7 +95,7 @@ __OMP_STRUCT_TYPE(AsyncInfo, __tgt_async_info, false, Int8Ptr)
 __OMP_STRUCT_TYPE(DependInfo, kmp_dep_info, false, SizeTy, SizeTy, Int8)
 __OMP_STRUCT_TYPE(Task, kmp_task_ompbuilder_t, false, VoidPtr, VoidPtr, Int32, VoidPtr, VoidPtr)
 __OMP_STRUCT_TYPE(ConfigurationEnvironment, ConfigurationEnvironmentTy, false,
-                  Int8, Int8, Int8, Int32, Int32, Int32, Int32, Int32)
+                  Int8, Int8, Int8, Int32, Int32, Int32, Int32, Int32, Int32)
 __OMP_STRUCT_TYPE(DynamicEnvironment, DynamicEnvironmentTy, false, Int16)
 __OMP_STRUCT_TYPE(KernelEnvironment, KernelEnvironmentTy, false,
                   ConfigurationEnvironment, IdentPtr, DynamicEnvironmentPtr)
@@ -469,11 +469,10 @@ __OMP_RTL(__kmpc_kernel_end_parallel, false, Void, )
 __OMP_RTL(__kmpc_serialized_parallel, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_end_serialized_parallel, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_shuffle_int32, false, Int32, Int32, Int16, Int16)
-__OMP_RTL(__kmpc_nvptx_parallel_reduce_nowait_v2, false, Int32, IdentPtr, Int32,
-          Int32, SizeTy, VoidPtr, ShuffleReducePtr, InterWarpCopyPtr)
-__OMP_RTL(__kmpc_nvptx_end_reduce_nowait, false, Void, Int32)
-__OMP_RTL(__kmpc_nvptx_teams_reduce_nowait_v2, false, Int32, IdentPtr, Int32,
-          VoidPtr, Int32, VoidPtr, ShuffleReducePtr, InterWarpCopyPtr,
+__OMP_RTL(__kmpc_nvptx_parallel_reduce_nowait_v2, false, Int32, IdentPtr,
+	  Int64, VoidPtr, ShuffleReducePtr, InterWarpCopyPtr)
+__OMP_RTL(__kmpc_nvptx_teams_reduce_nowait_v2, false, Int32, IdentPtr,
+          VoidPtr, Int32, Int64, VoidPtr, ShuffleReducePtr, InterWarpCopyPtr,
           GlobalListPtr, GlobalListPtr, GlobalListPtr, GlobalListPtr)
 __OMP_RTL(__kmpc_reduction_get_fixed_buffer, false, VoidPtr, )
 
@@ -1041,11 +1040,9 @@ __OMP_RTL_ATTRS(__kmpc_end_serialized_parallel, InaccessibleArgOnlyAttrs,
 __OMP_RTL_ATTRS(__kmpc_shuffle_int32, AttributeSet(), SExt,
                 ParamAttrs(SExt, SExt, SExt))
 __OMP_RTL_ATTRS(__kmpc_nvptx_parallel_reduce_nowait_v2, AttributeSet(), SExt,
-                ParamAttrs(AttributeSet(), SExt, SExt, SizeTyExt))
-__OMP_RTL_ATTRS(__kmpc_nvptx_end_reduce_nowait, AttributeSet(), AttributeSet(),
-                ParamAttrs(SExt))
+                ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_nvptx_teams_reduce_nowait_v2, AttributeSet(), SExt,
-                ParamAttrs(AttributeSet(), SExt, AttributeSet(), ZExt))
+                ParamAttrs(AttributeSet(), AttributeSet(), ZExt))
 __OMP_RTL_ATTRS(__kmpc_reduction_get_fixed_buffer, GetterAttrs, AttributeSet(), ParamAttrs())
 
 __OMP_RTL_ATTRS(__kmpc_shuffle_int64, AttributeSet(), AttributeSet(),

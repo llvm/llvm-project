@@ -1672,7 +1672,7 @@ protected:
 
     /// Storage class qualifiers from declarations like
     /// 'int X[static restrict 4]'. For function parameters only.
-    /// Actually an ArraySizeModifier.
+    LLVM_PREFERRED_TYPE(ArraySizeModifier)
     unsigned SizeModifier : 3;
   };
   enum { NumArrayTypeBits = NumTypeBits + 6 };
@@ -2386,7 +2386,7 @@ public:
 
   bool isRVVType() const;
 
-  bool isRVVType(unsigned Bitwidth, bool IsFloat) const;
+  bool isRVVType(unsigned Bitwidth, bool IsFloat, bool IsBFloat = false) const;
 
   /// Return the implicit lifetime for this type, which must not be dependent.
   Qualifiers::ObjCLifetime getObjCARCImplicitLifetime() const;
@@ -5718,21 +5718,21 @@ enum class ElaboratedTypeKeyword {
 };
 
 /// The kind of a tag type.
-enum TagTypeKind {
+enum class TagTypeKind {
   /// The "struct" keyword.
-  TTK_Struct,
+  Struct,
 
   /// The "__interface" keyword.
-  TTK_Interface,
+  Interface,
 
   /// The "union" keyword.
-  TTK_Union,
+  Union,
 
   /// The "class" keyword.
-  TTK_Class,
+  Class,
 
   /// The "enum" keyword.
-  TTK_Enum
+  Enum
 };
 
 /// A helper class for Type nodes having an ElaboratedTypeKeyword.
@@ -6663,6 +6663,7 @@ public:
 /// A fixed int type of a specified bitwidth.
 class BitIntType final : public Type, public llvm::FoldingSetNode {
   friend class ASTContext;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsUnsigned : 1;
   unsigned NumBits : 24;
 
@@ -7294,19 +7295,20 @@ inline bool Type::isRVVType() const {
 inline bool Type::isRVVType(unsigned ElementCount) const {
   bool Ret = false;
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
-                        IsFP)                                                  \
+                        IsFP, IsBF)                                            \
   if (NumEls == ElementCount)                                                  \
     Ret |= isSpecificBuiltinType(BuiltinType::Id);
 #include "clang/Basic/RISCVVTypes.def"
   return Ret;
 }
 
-inline bool Type::isRVVType(unsigned Bitwidth, bool IsFloat) const {
+inline bool Type::isRVVType(unsigned Bitwidth, bool IsFloat,
+                            bool IsBFloat) const {
   bool Ret = false;
 #define RVV_TYPE(Name, Id, SingletonId)
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
-                        IsFP)                                                  \
-  if (ElBits == Bitwidth && IsFloat == IsFP)                                   \
+                        IsFP, IsBF)                                            \
+  if (ElBits == Bitwidth && IsFloat == IsFP && IsBFloat == IsBF)               \
     Ret |= isSpecificBuiltinType(BuiltinType::Id);
 #include "clang/Basic/RISCVVTypes.def"
   return Ret;

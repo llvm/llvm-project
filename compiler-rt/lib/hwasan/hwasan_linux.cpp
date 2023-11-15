@@ -294,25 +294,6 @@ void InstallAtExitHandler() { atexit(HwasanAtExit); }
 
 // ---------------------- TSD ---------------- {{{1
 
-extern "C" void __hwasan_thread_enter() {
-  hwasanThreadList().CreateCurrentThread()->EnsureRandomStateInited();
-}
-
-extern "C" void __hwasan_thread_exit() {
-  Thread *t = GetCurrentThread();
-  // Make sure that signal handler can not see a stale current thread pointer.
-  atomic_signal_fence(memory_order_seq_cst);
-  if (t) {
-    // Block async signals on the thread as the handler can be instrumented.
-    // After this point instrumented code can't access essential data from TLS
-    // and will crash.
-    // Bionic already calls __hwasan_thread_exit with blocked signals.
-    if (SANITIZER_GLIBC)
-      BlockSignals();
-    hwasanThreadList().ReleaseThread(t);
-  }
-}
-
 #  if HWASAN_WITH_INTERCEPTORS
 static pthread_key_t tsd_key;
 static bool tsd_key_inited = false;
@@ -560,5 +541,26 @@ void InstallAtExitCheckLeaks() {
 }
 
 }  // namespace __hwasan
+
+using namespace __hwasan;
+
+extern "C" void __hwasan_thread_enter() {
+  hwasanThreadList().CreateCurrentThread()->EnsureRandomStateInited();
+}
+
+extern "C" void __hwasan_thread_exit() {
+  Thread *t = GetCurrentThread();
+  // Make sure that signal handler can not see a stale current thread pointer.
+  atomic_signal_fence(memory_order_seq_cst);
+  if (t) {
+    // Block async signals on the thread as the handler can be instrumented.
+    // After this point instrumented code can't access essential data from TLS
+    // and will crash.
+    // Bionic already calls __hwasan_thread_exit with blocked signals.
+    if (SANITIZER_GLIBC)
+      BlockSignals();
+    hwasanThreadList().ReleaseThread(t);
+  }
+}
 
 #endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD

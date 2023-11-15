@@ -465,10 +465,6 @@ void CodeGenFunction::generateThunk(llvm::Function *Fn,
 
   llvm::Constant *Callee = CGM.GetAddrOfFunction(GD, Ty, /*ForVTable=*/true);
 
-  // Fix up the function type for an unprototyped musttail call.
-  if (IsUnprototyped)
-    Callee = llvm::ConstantExpr::getBitCast(Callee, Fn->getType());
-
   // Make the call and return the result.
   EmitCallAndReturnForThunk(llvm::FunctionCallee(Fn->getFunctionType(), Callee),
                             &Thunk, IsUnprototyped);
@@ -537,11 +533,8 @@ llvm::Constant *CodeGenVTables::maybeEmitThunk(GlobalDecl GD,
                                      Name.str(), &CGM.getModule());
     CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn, /*IsThunk=*/false);
 
-    // If needed, replace the old thunk with a bitcast.
     if (!OldThunkFn->use_empty()) {
-      llvm::Constant *NewPtrForOldDecl =
-          llvm::ConstantExpr::getBitCast(ThunkFn, OldThunkFn->getType());
-      OldThunkFn->replaceAllUsesWith(NewPtrForOldDecl);
+      OldThunkFn->replaceAllUsesWith(ThunkFn);
     }
 
     // Remove the old thunk.
@@ -1312,7 +1305,10 @@ llvm::GlobalObject::VCallVisibility CodeGenModule::GetVCallVisibilityLevel(
 void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
                                            llvm::GlobalVariable *VTable,
                                            const VTableLayout &VTLayout) {
-  if (!getCodeGenOpts().LTOUnit)
+  // Emit type metadata on vtables with LTO or IR instrumentation.
+  // In IR instrumentation, the type metadata is used to find out vtable
+  // definitions (for type profiling) among all global variables.
+  if (!getCodeGenOpts().LTOUnit && !getCodeGenOpts().hasProfileIRInstr())
     return;
 
   CharUnits ComponentWidth = GetTargetTypeStoreSize(getVTableComponentType());
