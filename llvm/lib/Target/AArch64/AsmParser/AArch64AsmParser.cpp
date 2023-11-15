@@ -3616,7 +3616,6 @@ static const struct Extension {
     {"flagm", {AArch64::FeatureFlagM}},
     {"rme", {AArch64::FeatureRME}},
     {"sme", {AArch64::FeatureSME}},
-    {"sme-fa64", {AArch64::FeatureSMEFA64}},
     {"sme-f64f64", {AArch64::FeatureSMEF64F64}},
     {"sme-f16f16", {AArch64::FeatureSMEF16F16}},
     {"sme-i16i64", {AArch64::FeatureSMEI16I64}},
@@ -3663,6 +3662,7 @@ static const struct Extension {
     {"sme-lutv2", {AArch64::FeatureSME_LUTv2}},
     {"sme-f8f16", {AArch64::FeatureSMEF8F16}},
     {"sme-f8f32", {AArch64::FeatureSMEF8F32}},
+    {"sme-fa64",  {AArch64::FeatureSMEFA64}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {

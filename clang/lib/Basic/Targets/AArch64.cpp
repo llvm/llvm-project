@@ -808,7 +808,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFullFP16 = true;
     }
     if (Feature == "+sme-fa64") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
       HasSME = true;
+      HasSVE2 = true;
       HasSMEFA64 = true;
     }
     if (Feature == "+sb")

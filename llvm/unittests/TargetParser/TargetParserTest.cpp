@@ -1803,7 +1803,6 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+pauth"));
   EXPECT_TRUE(llvm::is_contained(Features, "+flagm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+sme-fa64"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f64f64"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-i16i64"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f16f16"));
@@ -1833,6 +1832,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-lutv2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f8f16"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f8f32"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme-fa64"));
 
   // Assuming we listed every extension above, this should produce the same
   // result. (note that AEK_NONE doesn't have a name so it won't be in the
