@@ -97,3 +97,21 @@ void use_std_function() {
   test3(true);
 }
 } // namespace std_function
+
+// different_promise_type
+class [[clang::coro_return_type]] Task{};
+struct my_promise_type {
+  Task get_return_object() {
+    return {};
+  }
+  suspend_always initial_suspend();
+  suspend_always final_suspend() noexcept;
+  void unhandled_exception();
+};
+namespace std {
+template<> class coroutine_traits<Task, int> {
+    using promise_type = my_promise_type;
+};
+}
+// expected-error@+1 {{neither a coroutine nor a coroutine wrapper}}
+Task foo(int) { return Task{}; }
