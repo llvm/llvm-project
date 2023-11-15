@@ -1465,13 +1465,12 @@ LLVMMetadataRef LLVMDIBuilderCreateClassType(LLVMDIBuilderRef Builder,
   auto Elts = unwrap(Builder)->getOrCreateArray({unwrap(Elements),
                                                  NumElements});
   return wrap(unwrap(Builder)->createClassType(
-                  unwrapDI<DIScope>(Scope), {Name, NameLen},
-                  unwrapDI<DIFile>(File), LineNumber,
-                  SizeInBits, AlignInBits, OffsetInBits,
-                  map_from_llvmDIFlags(Flags), unwrapDI<DIType>(DerivedFrom),
-                  Elts, unwrapDI<DIType>(VTableHolder),
-                  unwrapDI<MDNode>(TemplateParamsNode),
-                  {UniqueIdentifier, UniqueIdentifierLen}));
+      unwrapDI<DIScope>(Scope), {Name, NameLen}, unwrapDI<DIFile>(File),
+      LineNumber, SizeInBits, AlignInBits, OffsetInBits,
+      map_from_llvmDIFlags(Flags), unwrapDI<DIType>(DerivedFrom), Elts,
+      /*RunTimeLang=*/0, unwrapDI<DIType>(VTableHolder),
+      unwrapDI<MDNode>(TemplateParamsNode),
+      {UniqueIdentifier, UniqueIdentifierLen}));
 }
 
 LLVMMetadataRef
