@@ -15672,12 +15672,14 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   // this doesn't escape.
   MaterializeTemporaryExpr BaseMTE(T, const_cast<Expr*>(this), true);
   APValue::LValueBase Base(&BaseMTE);
-
   Info.setEvaluatingDecl(Base, Result.Val);
-  LValue LVal;
-  LVal.set(Base);
 
-  {
+  if (Info.EnableNewConstInterp) {
+    if (!Info.Ctx.getInterpContext().evaluateAsRValue(Info, this, Result.Val))
+      return false;
+  } else {
+    LValue LVal;
+    LVal.set(Base);
     // C++23 [intro.execution]/p5
     // A full-expression is [...] a constant-expression
     // So we need to make sure temporary objects are destroyed after having
@@ -15686,10 +15688,10 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
     if (!::EvaluateInPlace(Result.Val, Info, LVal, this) ||
         Result.HasSideEffects || !Scope.destroy())
       return false;
-  }
 
-  if (!Info.discardCleanups())
-    llvm_unreachable("Unhandled cleanup; missing full expression marker?");
+    if (!Info.discardCleanups())
+      llvm_unreachable("Unhandled cleanup; missing full expression marker?");
+  }
 
   if (!CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
                                Result.Val, Kind))
