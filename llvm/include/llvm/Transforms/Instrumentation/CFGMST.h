@@ -283,6 +283,8 @@ public:
 
   std::vector<std::unique_ptr<Edge>> &allEdges() { return AllEdges; }
 
+  size_t numEdges() const { return AllEdges.size(); }
+
   size_t bbInfoSize() const { return BBInfos.size(); }
 
   // Give BB, return the auxiliary information.

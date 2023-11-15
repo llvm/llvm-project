@@ -640,7 +640,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
     FunctionHash = (uint64_t)SIVisitor.getNumOfSelectInsts() << 56 |
                    (uint64_t)ValueSites[IPVK_IndirectCallTarget].size() << 48 |
                    //(uint64_t)ValueSites[IPVK_MemOPSize].size() << 40 |
-                   (uint64_t)MST.allEdges().size() << 32 | JC.getCRC();
+                   (uint64_t)MST.numEdges() << 32 | JC.getCRC();
   } else {
     // The higher 32 bits.
     auto updateJCH = [&JCH](uint64_t Num) {
@@ -654,7 +654,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
     if (BCI) {
       updateJCH(BCI->getInstrumentedBlocksHash());
     } else {
-      updateJCH((uint64_t)MST.allEdges().size());
+      updateJCH((uint64_t)MST.numEdges());
     }
 
     // Hash format for context sensitive profile. Reserve 4 bits for other
@@ -669,7 +669,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   LLVM_DEBUG(dbgs() << "Function Hash Computation for " << F.getName() << ":\n"
                     << " CRC = " << JC.getCRC()
                     << ", Selects = " << SIVisitor.getNumOfSelectInsts()
-                    << ", Edges = " << MST.allEdges().size() << ", ICSites = "
+                    << ", Edges = " << MST.numEdges() << ", ICSites = "
                     << ValueSites[IPVK_IndirectCallTarget].size());
   if (!PGOOldCFGHashing) {
     LLVM_DEBUG(dbgs() << ", Memops = " << ValueSites[IPVK_MemOPSize].size()
@@ -757,7 +757,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::getInstrumentBBs(
 
   // Use a worklist as we will update the vector during the iteration.
   std::vector<Edge *> EdgeList;
-  EdgeList.reserve(MST.allEdges().size());
+  EdgeList.reserve(MST.numEdges());
   for (const auto &E : MST.allEdges())
     EdgeList.push_back(E.get());
 

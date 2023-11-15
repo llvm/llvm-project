@@ -820,7 +820,7 @@ bool GCOVProfiler::emitProfileNotes(
       CFGMST<Edge, BBInfo> MST(F, /*InstrumentFuncEntry_=*/false, BPI, BFI);
 
       // getInstrBB can split basic blocks and push elements to AllEdges.
-      for (size_t I : llvm::seq<size_t>(0, MST.allEdges().size())) {
+      for (size_t I : llvm::seq<size_t>(0, MST.numEdges())) {
         auto &E = *MST.allEdges()[I];
         // For now, disable spanning tree optimization when fork or exec* is
         // used.
