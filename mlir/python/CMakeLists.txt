@@ -44,6 +44,17 @@ declare_mlir_python_sources(MLIRPythonCAPI.HeaderSources
   SOURCES_GLOB "mlir-c/*.h"
 )
 
+# The builtin dialect is special (e.g., type casters and such expect it to be loaded
+# in order to work) so we add it to Core instead of Dialects so that anyone depending on
+# Core will get it automatically.
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Core
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/BuiltinOps.td
+  SOURCES
+    dialects/builtin.py
+  DIALECT_NAME builtin)
+
 ################################################################################
 # Dialect bindings
 ################################################################################
@@ -83,14 +94,6 @@ declare_mlir_dialect_python_bindings(
   GEN_ENUM_BINDINGS_TD_FILE
     "../../include/mlir/Dialect/Bufferization/IR/BufferizationEnums.td"
 )
-
-declare_mlir_dialect_python_bindings(
-  ADD_TO_PARENT MLIRPythonSources.Dialects
-  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-  TD_FILE dialects/BuiltinOps.td
-  SOURCES
-    dialects/builtin.py
-  DIALECT_NAME builtin)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
