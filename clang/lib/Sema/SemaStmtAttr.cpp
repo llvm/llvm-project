@@ -333,37 +333,18 @@ CodeAlignAttr *Sema::BuildCodeAlignAttr(const AttributeCommonInfo &CI,
 
     // This attribute requires an integer argument which is a constant power of
     // two between 1 and 4096 inclusive.
-    // Check if an expression resulting in a negative/positive cases that take
-    // more than 64 bits.
-    // Print the actual alignment value passing to the attribute if it is less
-    // than 64 bits otherwise print the expression.
     if (ArgVal < CodeAlignAttr::MinimumAlignment ||
+	ArgVal > CodeAlignAttr::MaximumAlignment ||
         (ArgVal < CodeAlignAttr::MaximumAlignment && !ArgVal.isPowerOf2())) {
-      if (!ArgVal.trySExtValue()) {
+      if (std::optional<int64_t> Value = ArgVal.trySExtValue())
+        Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
+            << CI << CodeAlignAttr::MinimumAlignment
+            << CodeAlignAttr::MaximumAlignment << Value.value();
+      else
         Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
             << CI << CodeAlignAttr::MinimumAlignment
             << CodeAlignAttr::MaximumAlignment << E;
-        return nullptr;
-      } else {
-        Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
-            << CI << CodeAlignAttr::MinimumAlignment
-            << CodeAlignAttr::MaximumAlignment << ArgVal.getSExtValue();
-        return nullptr;
-      }
-    }
-
-    if (ArgVal > CodeAlignAttr::MaximumAlignment) {
-      if (!ArgVal.trySExtValue()) {
-        Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
-            << CI << CodeAlignAttr::MinimumAlignment
-            << CodeAlignAttr::MaximumAlignment << E;
-        return nullptr;
-      } else {
-        Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
-            << CI << CodeAlignAttr::MinimumAlignment
-            << CodeAlignAttr::MaximumAlignment << ArgVal.getZExtValue();
-        return nullptr;
-      }
+      return nullptr;
     }
   }
   return new (Context) CodeAlignAttr(Context, CI, E);

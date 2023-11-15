@@ -67,7 +67,7 @@ void foo1(int A)
   for(int I=0; I<128; ++I) { bar(I); }
 
   // expected-warning@+2{{integer literal is too large to be represented in a signed integer type, interpreting as unsigned}}
-  // expected-error@+1{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was 9223372036854775808}}
+  // expected-error@+1{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was -9223372036854775808}}
   [[clang::code_align(9223372036854775808)]]
   for(int I=0; I<256; ++I) { bar(I); }
 
