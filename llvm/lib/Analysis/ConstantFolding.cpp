@@ -2426,16 +2426,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
     case Intrinsic::amdgcn_s_wqm: {
       uint64_t Val = Op->getZExtValue();
-      uint64_t WQM = 0;
-      uint64_t Quad = 0xF;
-      for (unsigned i = 0; i < Op->getBitWidth() / 4;
-           ++i, Val >>= 4, Quad <<= 4) {
-        if (!(Val & 0xF))
-          continue;
-
-        WQM |= Quad;
-      }
-      return ConstantInt::get(Ty, WQM);
+      Val |=
+          (Val & 0x5555555555555555) << 1 | ((Val >> 1) & 0x5555555555555555);
+      Val |=
+          (Val & 0x3333333333333333) << 2 | ((Val >> 2) & 0x3333333333333333);
+      return ConstantInt::get(Ty, Val);
     }
 
     default:
