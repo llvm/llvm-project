@@ -286,14 +286,12 @@ define i32 @ctpop_eq_one(i64 %x) nounwind readnone {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    subs r2, r0, #1
 ; CHECK-NEXT:    sbc r3, r1, #0
-; CHECK-NEXT:    and r2, r0, r2
-; CHECK-NEXT:    and r3, r1, r3
-; CHECK-NEXT:    orr r2, r2, r3
-; CHECK-NEXT:    rsbs r3, r2, #0
-; CHECK-NEXT:    adc r2, r2, r3
-; CHECK-NEXT:    orrs r0, r0, r1
-; CHECK-NEXT:    movne r0, #1
-; CHECK-NEXT:    and r0, r0, r2
+; CHECK-NEXT:    eor r12, r1, r3
+; CHECK-NEXT:    eor r1, r0, r2
+; CHECK-NEXT:    subs r1, r2, r1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    sbcs r1, r3, r12
+; CHECK-NEXT:    movlo r0, #1
 ; CHECK-NEXT:    mov pc, lr
   %count = tail call i64 @llvm.ctpop.i64(i64 %x)
   %cmp = icmp eq i64 %count, 1

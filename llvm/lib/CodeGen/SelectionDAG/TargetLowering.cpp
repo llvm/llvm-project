@@ -4237,9 +4237,7 @@ static SDValue simplifySetCCWithCTPOP(const TargetLowering &TLI, EVT VT,
     return DAG.getSetCC(dl, VT, Result, DAG.getConstant(0, dl, CTVT), CC);
   }
 
-  // Expand a power-of-2 comparison based on ctpop:
-  // (ctpop x) == 1 --> (x != 0) && ((x & x-1) == 0)
-  // (ctpop x) != 1 --> (x == 0) || ((x & x-1) != 0)
+  // Expand a power-of-2 comparison based on ctpop
   if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) && C1 == 1) {
     // Keep the CTPOP if it is cheap.
     if (TLI.isCtpopFast(CTVT))
@@ -4248,17 +4246,23 @@ static SDValue simplifySetCCWithCTPOP(const TargetLowering &TLI, EVT VT,
     SDValue Zero = DAG.getConstant(0, dl, CTVT);
     SDValue NegOne = DAG.getAllOnesConstant(dl, CTVT);
     assert(CTVT.isInteger());
-    ISD::CondCode InvCond = ISD::getSetCCInverse(Cond, CTVT);
     SDValue Add = DAG.getNode(ISD::ADD, dl, CTVT, CTOp, NegOne);
-    SDValue And = DAG.getNode(ISD::AND, dl, CTVT, CTOp, Add);
-    SDValue RHS = DAG.getSetCC(dl, VT, And, Zero, Cond);
+
     // Its not uncommon for known-never-zero X to exist in (ctpop X) eq/ne 1, so
-    // check before the emit a potentially unnecessary op.
-    if (DAG.isKnownNeverZero(CTOp))
+    // check before emitting a potentially unnecessary op.
+    if (DAG.isKnownNeverZero(CTOp)) {
+      // (ctpop x) == 1 --> (x & x-1) == 0
+      // (ctpop x) != 1 --> (x & x-1) != 0
+      SDValue And = DAG.getNode(ISD::AND, dl, CTVT, CTOp, Add);
+      SDValue RHS = DAG.getSetCC(dl, VT, And, Zero, Cond);
       return RHS;
-    SDValue LHS = DAG.getSetCC(dl, VT, CTOp, Zero, InvCond);
-    unsigned LogicOpcode = Cond == ISD::SETEQ ? ISD::AND : ISD::OR;
-    return DAG.getNode(LogicOpcode, dl, VT, LHS, RHS);
+    }
+
+    // (ctpop x) == 1 --> (x ^ x-1) >  x-1
+    // (ctpop x) != 1 --> (x ^ x-1) <= x-1
+    SDValue Xor = DAG.getNode(ISD::XOR, dl, CTVT, CTOp, Add);
+    ISD::CondCode CmpCond = Cond == ISD::SETEQ ? ISD::SETUGT : ISD::SETULE;
+    return DAG.getSetCC(dl, VT, Xor, Add, CmpCond);
   }
 
   return SDValue();
