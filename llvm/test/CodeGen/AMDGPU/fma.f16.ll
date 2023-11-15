@@ -157,11 +157,11 @@ define i32 @test_D139469_f16(half %arg) {
 ; GFX10-GISEL-LABEL: test_D139469_f16:
 ; GFX10-GISEL:       ; %bb.0: ; %bb
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0x211e
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0x291e
 ; GFX10-GISEL-NEXT:    v_mul_f16_e32 v2, 0x291e, v0
-; GFX10-GISEL-NEXT:    v_fmac_f16_e32 v1, 0x291e, v0
+; GFX10-GISEL-NEXT:    v_fmaak_f16 v0, v0, v1, 0x211e
 ; GFX10-GISEL-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v2
-; GFX10-GISEL-NEXT:    v_cmp_gt_f16_e64 s4, 0, v1
+; GFX10-GISEL-NEXT:    v_cmp_gt_f16_e64 s4, 0, v0
 ; GFX10-GISEL-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
