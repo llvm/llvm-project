@@ -1291,16 +1291,19 @@ public:
   }
 
   /// Compare this range with another.
-  template <typename OtherT>
-  friend bool operator==(const indexed_accessor_range_base &lhs,
-                         const OtherT &rhs) {
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
-  }
-  template <typename OtherT>
-  friend bool operator!=(const indexed_accessor_range_base &lhs,
-                         const OtherT &rhs) {
-    return !(lhs == rhs);
-  }
+  // FIXME: Make me a member function instead of friend when it works in C++20.
+  template <typename OtherT, typename DerivedT2, typename BaseT2, typename T2,
+            typename PointerT2, typename ReferenceT2>
+  friend bool
+  operator==(const indexed_accessor_range_base<DerivedT2, BaseT2, T2, PointerT2,
+                                               ReferenceT2> &lhs,
+             const OtherT &rhs);
+  template <typename OtherT, typename DerivedT2, typename BaseT2, typename T2,
+            typename PointerT2, typename ReferenceT2>
+  friend bool
+  operator!=(const indexed_accessor_range_base<DerivedT2, BaseT2, T2, PointerT2,
+                                               ReferenceT2> &lhs,
+             const OtherT &rhs);
 
   /// Return the size of this range.
   size_t size() const { return count; }
@@ -1364,6 +1367,23 @@ protected:
   /// The size from the owning range.
   ptrdiff_t count;
 };
+
+// FIXME: Make me a member function instead of friend when it works in C++20.
+template <typename OtherT, typename DerivedT2, typename BaseT2, typename T2,
+          typename PointerT2, typename ReferenceT2>
+bool operator==(const indexed_accessor_range_base<DerivedT2, BaseT2, T2,
+                                                  PointerT2, ReferenceT2> &lhs,
+                const OtherT &rhs) {
+  return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+}
+
+template <typename OtherT, typename DerivedT2, typename BaseT2, typename T2,
+          typename PointerT2, typename ReferenceT2>
+bool operator!=(const indexed_accessor_range_base<DerivedT2, BaseT2, T2,
+                                                  PointerT2, ReferenceT2> &lhs,
+                const OtherT &rhs) {
+  return !(lhs == rhs);
+}
 } // end namespace detail
 
 /// This class provides an implementation of a range of
