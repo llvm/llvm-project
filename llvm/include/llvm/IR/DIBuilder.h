@@ -376,11 +376,12 @@ namespace llvm {
     /// \param Ty         Type of the static member.
     /// \param Flags      Flags to encode member attribute, e.g. private.
     /// \param Val        Const initializer of the member.
+    /// \param Tag        DWARF tag of the static member.
     /// \param AlignInBits  Member alignment.
     DIDerivedType *createStaticMemberType(DIScope *Scope, StringRef Name,
                                           DIFile *File, unsigned LineNo,
                                           DIType *Ty, DINode::DIFlags Flags,
-                                          Constant *Val,
+                                          Constant *Val, unsigned Tag,
                                           uint32_t AlignInBits = 0);
 
     /// Create debugging information entry for Objective-C
