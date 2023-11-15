@@ -438,14 +438,15 @@ SparseTensorEncodingAttr::tranlateShape(ArrayRef<int64_t> srcShape,
     // Do constant propagation on the affine map.
     AffineExpr evalExp =
         simplifyAffineExpr(exp.replaceDims(dimRep), srcShape.size(), 0);
-    if (auto c = evalExp.dyn_cast<AffineConstantExpr>()) {
+    // use llvm namespace here to avoid ambiguity
+    if (auto c = llvm::dyn_cast<AffineConstantExpr>(evalExp)) {
       ret.push_back(c.getValue() + 1);
     } else {
-      if (auto mod = evalExp.dyn_cast<AffineBinaryOpExpr>();
+      if (auto mod = llvm::dyn_cast<AffineBinaryOpExpr>(evalExp);
           mod && mod.getKind() == AffineExprKind::Mod) {
         // We can still infer a static bound for expressions in form
         // "d % constant" since d % constant \in [0, constant).
-        if (auto bound = mod.getRHS().dyn_cast<AffineConstantExpr>()) {
+        if (auto bound = llvm::dyn_cast<AffineConstantExpr>(mod.getRHS())) {
           ret.push_back(bound.getValue());
           continue;
         }
@@ -765,10 +766,10 @@ AffineMap mlir::sparse_tensor::inverseBlockSparsity(AffineMap dimToLvl,
   std::map<unsigned, SmallVector<AffineExpr, 3>> lvlExprComponents;
   for (unsigned i = 0, n = numLvls; i < n; i++) {
     auto result = dimToLvl.getResult(i);
-    if (auto binOp = result.dyn_cast<AffineBinaryOpExpr>()) {
+    if (auto binOp = dyn_cast<AffineBinaryOpExpr>(result)) {
       if (result.getKind() == AffineExprKind::FloorDiv) {
         // Position of the dimension in dimToLvl.
-        auto pos = binOp.getLHS().dyn_cast<AffineDimExpr>().getPosition();
+        auto pos = dyn_cast<AffineDimExpr>(binOp.getLHS()).getPosition();
         assert(lvlExprComponents.find(pos) == lvlExprComponents.end() &&
                "expected only one floordiv for each dimension");
         SmallVector<AffineExpr, 3> components;
@@ -779,7 +780,7 @@ AffineMap mlir::sparse_tensor::inverseBlockSparsity(AffineMap dimToLvl,
         // Map key is the position of the dimension.
         lvlExprComponents[pos] = components;
       } else if (result.getKind() == AffineExprKind::Mod) {
-        auto pos = binOp.getLHS().dyn_cast<AffineDimExpr>().getPosition();
+        auto pos = dyn_cast<AffineDimExpr>(binOp.getLHS()).getPosition();
         assert(lvlExprComponents.find(pos) != lvlExprComponents.end() &&
                "expected floordiv before mod");
         // Add level variable for mod to the same vector
@@ -813,10 +814,10 @@ SmallVector<unsigned> mlir::sparse_tensor::getBlockSize(AffineMap dimToLvl) {
          "expected dimToLvl to be block sparsity for calling getBlockSize");
   SmallVector<unsigned> blockSize;
   for (auto result : dimToLvl.getResults()) {
-    if (auto binOp = result.dyn_cast<AffineBinaryOpExpr>()) {
+    if (auto binOp = dyn_cast<AffineBinaryOpExpr>(result)) {
       if (result.getKind() == AffineExprKind::Mod) {
         blockSize.push_back(
-            binOp.getRHS().dyn_cast<AffineConstantExpr>().getValue());
+            dyn_cast<AffineConstantExpr>(binOp.getRHS()).getValue());
       }
     } else {
       blockSize.push_back(0);
@@ -830,20 +831,20 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
     return false;
   std::map<unsigned, int64_t> coeffientMap;
   for (auto result : dimToLvl.getResults()) {
-    if (auto binOp = result.dyn_cast<AffineBinaryOpExpr>()) {
-      auto pos = binOp.getLHS().dyn_cast<AffineDimExpr>().getPosition();
+    if (auto binOp = dyn_cast<AffineBinaryOpExpr>(result)) {
+      auto pos = dyn_cast<AffineDimExpr>(binOp.getLHS()).getPosition();
       if (result.getKind() == AffineExprKind::FloorDiv) {
         // Expect only one floordiv for each dimension.
         if (coeffientMap.find(pos) != coeffientMap.end())
           return false;
         coeffientMap[pos] =
-            binOp.getRHS().dyn_cast<AffineConstantExpr>().getValue();
+            dyn_cast<AffineConstantExpr>(binOp.getRHS()).getValue();
       } else if (result.getKind() == AffineExprKind::Mod) {
         // Expect floordiv before mod.
         if (coeffientMap.find(pos) == coeffientMap.end())
           return false;
         // Expect mod to have the same coefficient as floordiv.
-        if (binOp.getRHS().dyn_cast<AffineConstantExpr>().getValue() !=
+        if (dyn_cast<AffineConstantExpr>(binOp.getRHS()).getValue() !=
             coeffientMap[pos]) {
           return false;
         }
@@ -1197,7 +1198,7 @@ LogicalResult CrdTranslateOp::fold(FoldAdaptor adaptor,
                          ? getEncoder().getDimToLvl()
                          : getEncoder().getLvlToDim();
     for (AffineExpr exp : perm.getResults())
-      results.push_back(getInCrds()[exp.cast<AffineDimExpr>().getPosition()]);
+      results.push_back(getInCrds()[cast<AffineDimExpr>(exp).getPosition()]);
     return success();
   }
 

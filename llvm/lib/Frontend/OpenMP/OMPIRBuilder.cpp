@@ -4494,7 +4494,7 @@ Constant *OpenMPIRBuilder::createOutlinedFunctionID(Function *OutlinedFn,
                                                     StringRef EntryFnIDName) {
   if (Config.isTargetDevice()) {
     assert(OutlinedFn && "The outlined function must exist if embedded");
-    return ConstantExpr::getBitCast(OutlinedFn, Builder.getInt8PtrTy());
+    return OutlinedFn;
   }
 
   return new GlobalVariable(

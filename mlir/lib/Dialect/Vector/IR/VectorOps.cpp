@@ -888,14 +888,14 @@ static LogicalResult verifyOutputShape(
                                      /*symCount=*/0, extents, ctx);
     // Compose the resMap with the extentsMap, which is a constant map.
     AffineMap expectedMap = simplifyAffineMap(resMap.compose(extentsMap));
-    assert(llvm::all_of(
-               expectedMap.getResults(),
-               [](AffineExpr e) { return e.isa<AffineConstantExpr>(); }) &&
-           "expected constant extent along all dimensions.");
+    assert(
+        llvm::all_of(expectedMap.getResults(),
+                     [](AffineExpr e) { return isa<AffineConstantExpr>(e); }) &&
+        "expected constant extent along all dimensions.");
     // Extract the expected shape and build the type.
     auto expectedShape = llvm::to_vector<4>(
         llvm::map_range(expectedMap.getResults(), [](AffineExpr e) {
-          return e.cast<AffineConstantExpr>().getValue();
+          return cast<AffineConstantExpr>(e).getValue();
         }));
     auto expected =
         VectorType::get(expectedShape, resVectorType.getElementType(),
@@ -1076,7 +1076,7 @@ void ContractionOp::getIterationIndexMap(
     auto index = it.index();
     auto map = it.value();
     for (unsigned i = 0, e = map.getNumResults(); i < e; ++i) {
-      auto dim = map.getResult(i).cast<AffineDimExpr>();
+      auto dim = cast<AffineDimExpr>(map.getResult(i));
       iterationIndexMap[index][dim.getPosition()] = i;
     }
   }
@@ -3626,8 +3626,8 @@ static LogicalResult verifyPermutationMap(AffineMap permutationMap,
                                           EmitFun emitOpError) {
   SmallVector<bool, 8> seen(permutationMap.getNumInputs(), false);
   for (auto expr : permutationMap.getResults()) {
-    auto dim = expr.dyn_cast<AffineDimExpr>();
-    auto zero = expr.dyn_cast<AffineConstantExpr>();
+    auto dim = dyn_cast<AffineDimExpr>(expr);
+    auto zero = dyn_cast<AffineConstantExpr>(expr);
     if (zero) {
       if (zero.getValue() != 0) {
         return emitOpError(
@@ -3728,7 +3728,7 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
              << AffineMapAttr::get(permutationMap)
              << " vs inBounds of size: " << inBounds.size();
     for (unsigned int i = 0; i < permutationMap.getNumResults(); ++i)
-      if (permutationMap.getResult(i).isa<AffineConstantExpr>() &&
+      if (isa<AffineConstantExpr>(permutationMap.getResult(i)) &&
           !llvm::cast<BoolAttr>(inBounds.getValue()[i]).getValue())
         return op->emitOpError("requires broadcast dimensions to be in-bounds");
   }
@@ -3920,7 +3920,7 @@ static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
     }
     // Currently out-of-bounds, check whether we can statically determine it is
     // inBounds.
-    auto dimExpr = permutationMap.getResult(i).dyn_cast<AffineDimExpr>();
+    auto dimExpr = dyn_cast<AffineDimExpr>(permutationMap.getResult(i));
     assert(dimExpr && "Broadcast dims must be in-bounds");
     auto inBounds =
         isInBounds(op, /*resultIdx=*/i, /*indicesIdx=*/dimExpr.getPosition());
