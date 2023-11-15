@@ -90,7 +90,7 @@ public:
 REGISTER_MAP_WITH_PROGRAMSTATE(StreamMap, SymbolRef, StreamState)
 
 SimpleStreamChecker::SimpleStreamChecker()
-    : OpenFn({"fopen"}), CloseFn({"fclose"}, 1) {
+    : OpenFn({"fopen"}, 2), CloseFn({"fclose"}, 1) {
   // Initialize the bug types.
   DoubleCloseBugType.reset(
       new BugType(this, "Double fclose", "Unix Stream API Error"));
