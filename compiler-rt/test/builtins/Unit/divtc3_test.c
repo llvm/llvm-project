@@ -3,8 +3,8 @@
 // REQUIRES: c99-complex
 
 //
-// Bug 42493
-// XFAIL: sparc-target-arch
+// This test should be XFAILed on 32-bit sparc (sparc-target-arch, Issue
+// #41838), but that is currently hidden, which caused an XPASS (Issue #72398).
 //
 #include <stdio.h>
 
