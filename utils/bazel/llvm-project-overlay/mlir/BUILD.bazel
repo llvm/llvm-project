@@ -2660,7 +2660,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":PDLDialect",
-        ":TransformDialectTdFiles",
+        ":TransformLoopExtensionTdFiles",
     ],
 )
 
@@ -2680,6 +2680,7 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/SCF/TransformOps/SCFTransformOps.td",
     deps = [
         ":SCFTransformOpsTdFiles",
+        ":TransformLoopExtensionTdFiles",
     ],
 )
 
