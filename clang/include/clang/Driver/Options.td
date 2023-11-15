@@ -5164,7 +5164,8 @@ def : Flag<["-"], "nocudalib">, Alias<nogpulib>;
 def gpulibc : Flag<["-"], "gpulibc">, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Link the LLVM C Library for GPUs">;
 def nogpulibc : Flag<["-"], "nogpulibc">, Visibility<[ClangOption, CC1Option]>;
-def nodefaultlibs : Flag<["-"], "nodefaultlibs">;
+def nodefaultlibs : Flag<["-"], "nodefaultlibs">,
+  Visibility<[ClangOption, FlangOption]>;
 def nodriverkitlib : Flag<["-"], "nodriverkitlib">;
 def nofixprebinding : Flag<["-"], "nofixprebinding">;
 def nolibc : Flag<["-"], "nolibc">;
@@ -5174,7 +5175,8 @@ def no_pie : Flag<["-"], "no-pie">, Visibility<[ClangOption, FlangOption]>;
 def noprebind : Flag<["-"], "noprebind">;
 def noprofilelib : Flag<["-"], "noprofilelib">;
 def noseglinkedit : Flag<["-"], "noseglinkedit">;
-def nostartfiles : Flag<["-"], "nostartfiles">, Group<Link_Group>;
+def nostartfiles : Flag<["-"], "nostartfiles">, Group<Link_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def nostdinc : Flag<["-"], "nostdinc">,
   Visibility<[ClangOption, CLOption, DXCOption]>, Group<IncludePath_Group>;
 def nostdlibinc : Flag<["-"], "nostdlibinc">, Group<IncludePath_Group>;
@@ -5182,7 +5184,8 @@ def nostdincxx : Flag<["-"], "nostdinc++">, Visibility<[ClangOption, CC1Option]>
   Group<IncludePath_Group>,
   HelpText<"Disable standard #include directories for the C++ standard library">,
   MarshallingInfoNegativeFlag<HeaderSearchOpts<"UseStandardCXXIncludes">>;
-def nostdlib : Flag<["-"], "nostdlib">, Group<Link_Group>;
+def nostdlib : Flag<["-"], "nostdlib">, Group<Link_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def nostdlibxx : Flag<["-"], "nostdlib++">;
 def object : Flag<["-"], "object">;
 def o : JoinedOrSeparate<["-"], "o">,
