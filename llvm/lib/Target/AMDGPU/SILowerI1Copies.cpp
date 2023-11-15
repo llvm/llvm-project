@@ -559,6 +559,7 @@ bool SILowerI1Copies::lowerPhis() {
   if (Vreg1Phis.empty())
     return false;
 
+  DT->getBase().updateDFSNumbers();
   MachineBasicBlock *PrevMBB = nullptr;
   for (MachineInstr *MI : Vreg1Phis) {
     MachineBasicBlock &MBB = *MI->getParent();
@@ -592,6 +593,15 @@ bool SILowerI1Copies::lowerPhis() {
 
       Incomings.emplace_back(IncomingReg, IncomingMBB, Register{});
     }
+
+    // Sort the incomings such that incoming values that dominate other incoming
+    // values are sorted earlier. This allows us to do some amount of on-the-fly
+    // constant folding.
+    // Incoming with smaller DFSNumIn goes first, DFSNumIn is 0 for entry block.
+    llvm::sort(Incomings, [this](Incoming LHS, Incoming RHS) {
+      return DT->getNode(LHS.Block)->getDFSNumIn() <
+             DT->getNode(RHS.Block)->getDFSNumIn();
+    });
 
 #ifndef NDEBUG
     PhiRegisters.insert(DstReg);
