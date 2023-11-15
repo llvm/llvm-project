@@ -17,7 +17,6 @@
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
 
-<<<<<<< HEAD
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
