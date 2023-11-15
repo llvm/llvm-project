@@ -341,13 +341,11 @@ CodeAlignAttr *Sema::BuildCodeAlignAttr(const AttributeCommonInfo &CI,
       return nullptr;
     }
 
-    if (ArgVal > CodeAlignAttr::MaximumAlignment) {
-      if (ArgVal > std::numeric_limits<int32_t>::max() &&
-          !ArgVal.isPowerOf2()) {
+     if (ArgVal > CodeAlignAttr::MaximumAlignment) {
+      if (!ArgVal.trySExtValue()) {
         Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
             << CI << CodeAlignAttr::MinimumAlignment
-            << CodeAlignAttr::MaximumAlignment
-            << std::numeric_limits<int32_t>::max();
+            << CodeAlignAttr::MaximumAlignment << E;
         return nullptr;
       } else {
         Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
