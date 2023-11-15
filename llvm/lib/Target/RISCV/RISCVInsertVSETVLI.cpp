@@ -491,6 +491,8 @@ public:
 
   unsigned getSEW() const { return SEW; }
   RISCVII::VLMUL getVLMUL() const { return VLMul; }
+  bool getTailAgnostic() const { return TailAgnostic; }
+  bool getMaskAgnostic() const { return MaskAgnostic; }
 
   bool hasNonZeroAVL(const MachineRegisterInfo &MRI) const {
     if (hasAVLImm())
@@ -1040,48 +1042,54 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   return true;
 }
 
-// Given an incoming state reaching MI, modifies that state so that it is minimally
-// compatible with MI.  The resulting state is guaranteed to be semantically legal
-// for MI, but may not be the state requested by MI.
+// Given an incoming state reaching MI, minimally modifies that state so that it
+// is compatible with MI. The resulting state is guaranteed to be semantically
+// legal for MI, but may not be the state requested by MI.
 void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
                                         const MachineInstr &MI) const {
   uint64_t TSFlags = MI.getDesc().TSFlags;
   if (!RISCVII::hasSEWOp(TSFlags))
     return;
 
-  const VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, MRI);
+  VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, MRI);
   assert(NewInfo.isValid() && !NewInfo.isUnknown());
   if (Info.isValid() && !needVSETVLI(MI, NewInfo, Info))
     return;
 
-  const VSETVLIInfo PrevInfo = Info;
-  Info = NewInfo;
+  if (Info.hasSEWLMULRatioOnly() || !Info.isValid() || Info.isUnknown())
+    Info = NewInfo;
 
-  if (!RISCVII::hasVLOp(TSFlags))
-    return;
+  DemandedFields Demanded = getDemanded(MI, MRI, ST);
 
   // If we don't use LMUL or the SEW/LMUL ratio, then adjust LMUL so that we
   // maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
   // places.
-  DemandedFields Demanded = getDemanded(MI, MRI, ST);
-  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isValid() &&
-      !PrevInfo.isUnknown()) {
-    if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
-            PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
-      Info.setVLMul(*NewVLMul);
+  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && Info.isValid() &&
+      !Info.isUnknown()) {
+    if (auto SameRatioLMUL = RISCVVType::getSameRatioLMUL(
+            Info.getSEW(), Info.getVLMUL(), NewInfo.getSEW())) {
+      NewInfo.setVLMul(*SameRatioLMUL);
+      Demanded.LMUL = true;
+    }
   }
 
-  // If we only demand VL zeroness (i.e. vmv.s.x and vmv.x.s), then there are
-  // only two behaviors, VL = 0 and VL > 0. We can discard the user requested
-  // AVL and just use the last one if we can prove it equally zero. This
-  // removes a vsetvli entirely if the types match or allows use of cheaper avl
-  // preserving variant if VLMAX doesn't change. If VLMAX might change, we
-  // couldn't use the 'vsetvli x0, x0, vtype" variant, so we avoid the transform
-  // to prevent extending live range of an avl register operand.
-  // TODO: We can probably relax this for immediates.
-  if (Demanded.VLZeroness && !Demanded.VLAny && PrevInfo.isValid() &&
-      PrevInfo.hasEquallyZeroAVL(Info, *MRI) && Info.hasSameVLMAX(PrevInfo))
-    Info.setAVL(PrevInfo);
+  // If MI only demands that VL has the same zeroness, we only need to set the
+  // AVL if the zeroness differs, or if VLMAX changes (since that prevents us
+  // from using vsetvli x0, x0).
+  bool CanUseX0X0Form =
+      Info.hasEquallyZeroAVL(NewInfo, *MRI) && Info.hasSameVLMAX(NewInfo);
+  if (Demanded.VLAny || (Demanded.VLZeroness && !CanUseX0X0Form))
+    Info.setAVL(NewInfo);
+
+  Info.setVTYPE(
+      ((Demanded.LMUL || Demanded.SEWLMULRatio) ? NewInfo : Info).getVLMUL(),
+      ((Demanded.SEW || Demanded.SEWLMULRatio) ? NewInfo : Info).getSEW(),
+      // Prefer tail/mask agnostic since it can be relaxed to undisturbed later
+      // if needed.
+      (Demanded.TailPolicy ? NewInfo : Info).getTailAgnostic() ||
+          NewInfo.getTailAgnostic(),
+      (Demanded.MaskPolicy ? NewInfo : Info).getMaskAgnostic() ||
+          NewInfo.getMaskAgnostic());
 }
 
 // Given a state with which we evaluated MI (see transferBefore above for why
