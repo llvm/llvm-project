@@ -56,8 +56,8 @@ define float @foo2(ptr %x0, ptr %x1) nounwind {
 ; CHECK-LABEL: foo2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fmov s0, #1.00000000
 ; CHECK-NEXT:    add x8, sp, #16
@@ -699,8 +699,8 @@ define void @verify_all_operands_are_initialised() {
 ; CHECK-LABEL: verify_all_operands_are_initialised:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x20, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 32 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
