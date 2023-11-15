@@ -21,6 +21,7 @@ namespace clang {
   class DeclGroupRef;
   class ASTMutationListener;
   class ASTDeserializationListener; // layering violation because void* is ugly
+  class QualType;
   class SemaConsumer; // layering violation required for safe SemaConsumer
   class TagDecl;
   class VarDecl;
@@ -36,6 +37,27 @@ class ASTConsumer {
   bool SemaConsumer = false;
 
   friend class SemaConsumer;
+
+public:
+  /// Allow type-based aliasing information to be interrogated by the AST
+  /// producer (for diagnostics).
+  class TypeAliasing {
+  public:
+    TypeAliasing() = default;
+    virtual ~TypeAliasing(){};
+
+  public:
+    enum AliasingKind {
+      AK_Ok,            // Alias sets are compatible.
+      AK_ToIncomplete,  // Converting to an incomplete type
+      AK_KnownDisjoint, // The alias sets are known to be disjoint.
+      AK_MaybeDisjoint, // The alias sets might be disjoint.
+    };
+
+    // Return aliasing kind of reinterpreting the representation of a Src type
+    // to a Dst type.
+    virtual AliasingKind getAliasingKind(QualType &Dst, QualType &Src) = 0;
+  };
 
 public:
   ASTConsumer() = default;
@@ -143,6 +165,9 @@ public:
   /// body may be parsed anyway if it is needed (for instance, if it contains
   /// the code completion point or is constexpr).
   virtual bool shouldSkipFunctionBody(Decl *D) { return true; }
+
+  /// Return a type aliasing object that the frontend can interrogate.
+  virtual TypeAliasing *getTypeAliasing() { return nullptr; }
 };
 
 } // end namespace clang.

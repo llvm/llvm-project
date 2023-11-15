@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/CXXInheritance.h"
@@ -2026,6 +2027,137 @@ static TryCastResult TryConstCast(Sema &Self, ExprResult &SrcExpr,
   return TC_Success;
 }
 
+// We're dereferencing E, either by turning into an RValue, or by dereferencing
+// it. Check whether it's a deref of a reinterpret cast that has aliasing
+// issues.
+void Sema::CheckStrictAliasingDeref(Expr const *E, bool IsLValue) {
+  if (Diags.getDiagnosticOptions().StrictAliasing < 3)
+    return;
+
+  assert(IsLValue || E->getType()->isAnyPointerType());
+  CastExpr const *CE = nullptr;
+  for (;;) {
+    CE = dyn_cast<CastExpr>(E->IgnoreParens());
+    if (!CE)
+      return;
+
+    if (IsLValue || CE->getCastKind() != CK_ArrayToPointerDecay)
+      break;
+
+    E = CE->getSubExpr();
+    IsLValue = true;
+  }
+
+  if (CE->getCastKind() != (IsLValue ? CK_LValueBitCast : CK_BitCast))
+    return;
+
+  if (CE->getSubExpr()->getType()->isVoidPointerType())
+    return;
+
+  QualType DestTy = CE->getType();
+  if (!IsLValue)
+    DestTy = DestTy->getPointeeType();
+
+  CheckStrictAliasing(CE->getSubExpr(), DestTy, IsLValue, CE->getSourceRange());
+}
+
+/// We're building a cast from E to pointer type DestType. If ISLValueCast is
+/// true, DestType is the pointer equivalent of the reference type we're casting
+/// to.
+void Sema::CheckStrictAliasingCast(Expr const *E, QualType DestType,
+                                   bool IsLValueCast, SourceRange Range) {
+  if (Diags.getDiagnosticOptions().StrictAliasing < 1 ||
+      Diags.getDiagnosticOptions().StrictAliasing > 2)
+    return;
+
+  CheckStrictAliasing(E, DestType->getPointeeType(), IsLValueCast, Range);
+}
+
+/// Check for strict-aliasing issues in a bitcast-like conversion of E to
+/// DstTy. DstTy is the non-reference, non-pointer type of the result,
+/// IsLValueCast specifies whether it was a reference or pointer.
+void Sema::CheckStrictAliasing(Expr const *E, QualType DstTy, bool IsLValueCast,
+                               SourceRange Range) {
+  assert(Diags.getDiagnosticOptions().StrictAliasing);
+
+  if (Diags.isIgnored(diag::warn_strict_aliasing, Range.getBegin()))
+    return;
+
+  if (DstTy->isDependentType() || E->getType()->isDependentType() ||
+      E->isValueDependent())
+    return;
+
+  if (DstTy->isVoidType())
+    return; // To void, Ok.
+  if (DstTy->isFunctionType())
+    return; // To Fn type, meaningless.
+
+  Expr const *SrcExpr = E->IgnoreParenNoopCasts(Context);
+  if (Diags.getDiagnosticOptions().StrictAliasing >= 2) {
+    // Require an object of plausible static type.
+    // This (approximately) matches GCC's algorithm.
+    Expr const *IE = SrcExpr;
+
+    if (!IsLValueCast) {
+      // Require AddrOf(Entity) or ArrayDecay(Entity)
+      if (auto *UO = dyn_cast<UnaryOperator>(IE)) {
+        if (UO->getOpcode() != UO_AddrOf)
+          return;
+        IE = UO->getSubExpr();
+      } else if (auto *CE = dyn_cast<ImplicitCastExpr>(IE)) {
+        if (CE->getCastKind() != CK_ArrayToPointerDecay)
+          return;
+        IE = CE->getSubExpr();
+      } else
+        return;
+      IE = IE->IgnoreParens();
+    }
+
+    ValueDecl const *Dcl = nullptr;
+    if (auto const *DRE = dyn_cast<DeclRefExpr>(IE)) {
+      Dcl = DRE->getDecl();
+    } else if (auto const *ME = dyn_cast<MemberExpr>(IE)) {
+      Dcl = ME->getMemberDecl();
+    } else if (auto const *UE = dyn_cast<UnaryOperator>(IE)) {
+      if (UE->getOpcode() != UO_Imag && UE->getOpcode() != UO_Real)
+        return;
+    } else if (auto const *CE = dyn_cast<CastExpr>(IE)) {
+      if (CE->getCastKind() != CK_LValueBitCast)
+        return;
+    } else if (isa<ArraySubscriptExpr>(IE))
+      ; // OK
+    else
+      return;
+
+    if (Dcl && Dcl->getType()->isReferenceType())
+      return; // This is not the object we were looking for.
+  }
+
+  QualType SrcTy = SrcExpr->getType();
+  if (!IsLValueCast)
+    SrcTy = SrcTy->getPointeeType();
+  if (SrcTy->isVoidType())
+    return; // From void type.
+  if (SrcTy->isFunctionType())
+    return; // From Fn type, meaningless.
+
+  auto Aliasing =
+      getASTConsumer().getTypeAliasing()->getAliasingKind(DstTy, SrcTy);
+
+  if (Aliasing != ASTConsumer::TypeAliasing::AK_Ok &&
+      (Diag(Range.getBegin(), diag::warn_strict_aliasing)
+       << IsLValueCast
+       << (Aliasing == ASTConsumer::TypeAliasing::AK_ToIncomplete)
+       << (Aliasing == ASTConsumer::TypeAliasing::AK_KnownDisjoint &&
+           Diags.getDiagnosticOptions().StrictAliasing >= 2)
+       << Range))
+    Diag(Range.getBegin(),
+         Aliasing == ASTConsumer::TypeAliasing::AK_ToIncomplete
+             ? diag::note_incomplete_aliasing
+             : diag::note_incompatible_aliasing)
+        << DstTy << SrcTy;
+}
+
 // Checks for undefined behavior in reinterpret_cast.
 // The cases that is checked for is:
 // *reinterpret_cast<T*>(&a)
@@ -2586,6 +2718,10 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     DestPtee = DestPtee->getPointeeType();
     SrcPtee = SrcPtee->getPointeeType();
   }
+
+  if (Kind == (IsLValueCast ? CK_LValueBitCast : CK_BitCast))
+    Self.CheckStrictAliasingCast(SrcExpr.get(), DestType, IsLValueCast,
+                                 OpRange);
 
   // C++ 5.2.10p7: A pointer to an object can be explicitly converted to
   //   a pointer to an object of different type.
@@ -3236,6 +3372,9 @@ void CastOperation::CheckCStyleCast() {
       SrcExpr = ExprError();
       return;
     }
+
+    if (!SrcTy->isVoidType())
+      Self.CheckStrictAliasingCast(SrcExpr.get(), DestType, false, OpRange);
   }
 
   DiagnoseCastOfObjCSEL(Self, SrcExpr, DestType);

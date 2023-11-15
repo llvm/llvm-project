@@ -498,3 +498,137 @@ CodeGenTBAA::mergeTBAAInfoForMemoryTransfer(TBAAAccessInfo DestInfo,
   // access type regardless of their base types.
   return TBAAAccessInfo::getMayAliasInfo();
 }
+
+// Determine the aliasing kind bit-converting from type Src to type Dst.
+CodeGenTBAA::AliasingKind CodeGenTBAA::getAliasingKind(QualType &Dst,
+                                                       QualType &Src) {
+  assert(!Src->isVoidType() && !Dst->isVoidType());
+  if (TypeHasMayAlias(Src) || TypeHasMayAlias(Dst))
+    return AK_Ok;
+
+  Src = QualType{Src->getBaseElementTypeUnsafe(), 0};
+  Dst = QualType{Dst->getBaseElementTypeUnsafe(), 0};
+
+  auto *SrcDecl = Src->getAsRecordDecl();
+  auto *DstDecl = Dst->getAsRecordDecl();
+
+  const llvm::MDNode *AnyTBAA = getChar();
+  const llvm::MDNode *SrcTBAA = nullptr;
+  const llvm::MDNode *DstTBAA = nullptr;
+
+  if (!SrcDecl) {
+    SrcTBAA = getTypeInfo(Src);
+    if (!SrcTBAA || SrcTBAA == AnyTBAA)
+      return AK_Ok;
+  }
+  if (!DstDecl) {
+    DstTBAA = getTypeInfo(Dst);
+    if (!DstTBAA || DstTBAA == AnyTBAA)
+      return AK_Ok;
+  }
+
+  auto IsAncestor = [](const llvm::MDNode *Ancestor,
+                       const llvm::MDNode *Descendant) {
+    assert(Ancestor != Descendant && "Identical TBAA");
+    while (Descendant->getNumOperands() != 1) {
+      Descendant = cast<llvm::MDNode>(Descendant->getOperand(1));
+      if (Descendant == Ancestor)
+        return true;
+    }
+    return false;
+  };
+
+  assert(SrcTBAA != AnyTBAA && DstTBAA != AnyTBAA &&
+         "AnyTBAA should already be handled");
+
+  if (!SrcDecl && !DstDecl) {
+    // Neither is a record.
+    assert(!Src->isIncompleteType() && !Dst->isIncompleteType());
+
+    if (SrcTBAA == DstTBAA || IsAncestor(SrcTBAA, DstTBAA) ||
+        IsAncestor(DstTBAA, SrcTBAA))
+      return AK_Ok;
+    return AK_KnownDisjoint;
+  }
+
+  // Is InnerTy (recursively) a field(s) or base of Outer at offset zero? Or is
+  // InnerTBAA alias compatible with such an entity?  This is C++ or C-like
+  // 'inheritance'. InnerTBAA is non-null iff InnerTy is not a record type.
+  auto Contains = [&](const RecordDecl *Outer, QualType InnerTy,
+                      const llvm::MDNode *InnerTBAA, auto &Self) {
+    assert(InnerTy->isRecordType() == !InnerTBAA &&
+           "TBAA and record typeness mismatch");
+
+    if (Outer->isLambda())
+      return false;
+
+    const ASTRecordLayout &Layout = Context.getASTRecordLayout(Outer);
+
+    if (auto *CRD = dyn_cast<CXXRecordDecl>(Outer)) {
+      // Try first direct base.
+      const auto Bases = CRD->bases();
+      if (!Bases.empty()) {
+        QualType BTy = Bases.begin()->getType();
+        const auto *BRD = BTy->getAsCXXRecordDecl();
+        if (Layout.getBaseClassOffset(BRD).isZero()) {
+          if (Context.hasSameType(BTy, InnerTy))
+            return true;
+          if (Self(BRD->getDefinition(), InnerTy, InnerTBAA, Self))
+            return true;
+        }
+      }
+    }
+
+    for (auto Field : Outer->fields()) {
+      if (Layout.getFieldOffset(Field->getFieldIndex()) != 0)
+        return false; // Not at offset zero.
+
+      if (Field->hasAttr<MayAliasAttr>())
+        return true; // Can alias anything.
+
+      QualType FTy = QualType{Field->getType()->getBaseElementTypeUnsafe(), 0};
+
+      if (auto *RD = FTy->getAsRecordDecl()) {
+        if (Context.hasSameType(FTy, InnerTy))
+          // The record-type field is the inner's type (C-like 'inheritance').
+          return true;
+        if (Self(RD->getDefinition(), InnerTy, InnerTBAA, Self))
+          return true;
+      } else if (const llvm::MDNode *FTBAA = getTypeInfo(FTy)) {
+        if (FTBAA == AnyTBAA)
+          // The scalar field can alias anything.
+          return true;
+
+        if (FTBAA == InnerTBAA || (InnerTBAA && (IsAncestor(FTBAA, InnerTBAA) ||
+                                                 IsAncestor(InnerTBAA, FTBAA))))
+          // The scalar field is alias-compatible with inner.
+          return true;
+      }
+
+      if (!Outer->isUnion())
+        // Only repeat for unions.
+        break;
+    };
+
+    return false;
+  };
+
+  if (SrcDecl) {
+    const RecordDecl *SrcDef = SrcDecl->getDefinition();
+    if (!SrcDef || Contains(SrcDef, Dst, DstTBAA, Contains))
+      // From incomplete, or container of Dst
+      return AK_Ok;
+  }
+
+  if (DstDecl) {
+    const RecordDecl *DstDef = DstDecl->getDefinition();
+    if (!DstDef)
+      return AK_ToIncomplete;
+    if (Contains(DstDef, Src, SrcTBAA, Contains))
+      // To container of Src.
+      return AK_Ok;
+  }
+
+  // Both are complete and we've not found a relationship.
+  return AK_MaybeDisjoint;
+}

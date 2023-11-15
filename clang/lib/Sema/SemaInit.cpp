@@ -10536,6 +10536,11 @@ Sema::PerformCopyInitialization(const InitializedEntity &Entity,
     CurrentParameterCopyTypes.push_back(Entity.getType());
   }
 
+  if (Seq.isConstructorInitialization())
+    // We'll be passing by reference to the constructor, but check as-if passing
+    // by value, as that's what's morally happening.
+    CheckStrictAliasingDeref(InitE, true);
+
   ExprResult Result = Seq.Perform(*this, Entity, Kind, InitE);
 
   if (ShouldTrackCopy)

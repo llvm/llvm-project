@@ -6650,6 +6650,17 @@ public:
   ParsedType getDestructorTypeForDecltype(const DeclSpec &DS,
                                           ParsedType ObjectType);
 
+  // Check aliasing issues bit-converting Op to DestType.
+  void CheckStrictAliasing(Expr const *Op, QualType DestType, bool IsLValue,
+                           SourceRange Range);
+
+  // Check aliasing issues in the memory reference E, which is being accessed.
+  void CheckStrictAliasingDeref(Expr const *E, bool IsLValue);
+
+  // Check aliasing issues constructing a bitcast from Op to DestType.
+  void CheckStrictAliasingCast(Expr const *Op, QualType DestType, bool IsLValue,
+                               SourceRange Range);
+
   // Checks that reinterpret casts don't have undefined behavior.
   void CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
                                       bool IsDereference, SourceRange Range);

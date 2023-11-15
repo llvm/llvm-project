@@ -760,6 +760,7 @@ public:
   llvm::LLVMContext &getLLVMContext() { return VMContext; }
 
   bool shouldUseTBAA() const { return TBAA != nullptr; }
+  CodeGenTBAA *getTBAA() const { return TBAA.get(); }
 
   const TargetCodeGenInfo &getTargetCodeGenInfo();
 

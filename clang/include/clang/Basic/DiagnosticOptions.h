@@ -128,6 +128,10 @@ public:
   /// whether -Wsystem-headers is enabled on a per-module basis.
   std::vector<std::string> SystemHeaderWarningsModules;
 
+  /// Level of scrutiny reinterpret_casts get for type-unsafe aliasing
+  /// checks. Requires an ASTConsumer that provides TBAA information.
+  unsigned StrictAliasing;
+
 public:
   // Define accessors/mutators for diagnostic options of enumeration type.
 #define DIAGOPT(Name, Bits, Default)

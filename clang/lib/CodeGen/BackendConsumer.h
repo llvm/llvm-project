@@ -97,6 +97,7 @@ public:
   std::unique_ptr<llvm::Module> takeModule();
 
   CodeGenerator *getCodeGenerator();
+  TypeAliasing *getTypeAliasing() override;
 
   void HandleCXXStaticMemberVarInstantiation(VarDecl *VD) override;
   void Initialize(ASTContext &Ctx) override;

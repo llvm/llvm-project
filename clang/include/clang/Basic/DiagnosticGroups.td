@@ -713,12 +713,6 @@ def ReservedIdAsMacroAlias : DiagGroup<"reserved-id-macro", [ReservedIdAsMacro]>
 def RestrictExpansionMacro : DiagGroup<"restrict-expansion">;
 def FinalMacro : DiagGroup<"final-macro">;
 
-// Just silence warnings about -Wstrict-aliasing for now.
-def : DiagGroup<"strict-aliasing=0">;
-def : DiagGroup<"strict-aliasing=1">;
-def : DiagGroup<"strict-aliasing=2">;
-def : DiagGroup<"strict-aliasing">;
-
 // Just silence warnings about -Wstrict-overflow for now.
 def : DiagGroup<"strict-overflow=0">;
 def : DiagGroup<"strict-overflow=1">;

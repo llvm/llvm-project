@@ -930,6 +930,12 @@ def Wnonportable_cfstrings : Joined<["-"], "Wnonportable-cfstrings">, Group<W_Gr
 def Wp_COMMA : CommaJoined<["-"], "Wp,">,
   HelpText<"Pass the comma separated arguments in <arg> to the preprocessor">,
   MetaVarName<"<arg>">, Group<Preprocessor_Group>;
+def Wstrict_aliasing_EQ : Joined<["-"], "Wstrict-aliasing=">,
+  Group<W_value_Group>, Flags<[HelpHidden]>,
+  Visibility<[ClangOption, CC1Option]>,
+  MetaVarName<"<arg>">,
+  HelpText<"Warning level for type-based aliasing-unsafe reinterpret casts">,
+  MarshallingInfoInt<DiagnosticOpts<"StrictAliasing">, "3">;
 def Wundef_prefix_EQ : CommaJoined<["-"], "Wundef-prefix=">, Group<W_value_Group>,
   Flags<[HelpHidden]>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,

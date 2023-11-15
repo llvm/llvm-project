@@ -31,6 +31,7 @@
 #include "clang/Parse/ParseAST.h"
 #include "clang/Sema/HLSLExternalSemaSource.h"
 #include "clang/Sema/MultiplexExternalSemaSource.h"
+#include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
@@ -1005,6 +1006,13 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     if (!CI.hasASTConsumer())
       return false;
   }
+
+  // If we have no TypeAliasing, or the diagnostic is disabled, turn off the
+  // strict aliasing warning.
+  if (!CI.hasASTConsumer() || !CI.getASTConsumer().getTypeAliasing() ||
+      CI.getDiagnostics().isIgnored(diag::warn_strict_aliasing,
+                                    SourceLocation()))
+    CI.getDiagnostics().getDiagnosticOptions().StrictAliasing = 0;
 
   // Initialize built-in info as long as we aren't using an external AST
   // source.

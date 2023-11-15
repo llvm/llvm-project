@@ -171,6 +171,8 @@ namespace {
         Builder->AppendLinkerOptions(Opt);
     }
 
+    TypeAliasing *getTypeAliasing() override { return CGM().getTBAA(); }
+
     void HandleCXXStaticMemberVarInstantiation(VarDecl *VD) override {
       if (Diags.hasErrorOccurred())
         return;

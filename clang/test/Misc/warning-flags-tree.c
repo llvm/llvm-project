@@ -14,10 +14,6 @@
 // CHECK:   -Wmost
 
 // These flags are currently unimplemented; test that we output them anyway.
-// CHECK: -Wstrict-aliasing
-// CHECK-NEXT: -Wstrict-aliasing=0
-// CHECK-NEXT: -Wstrict-aliasing=1
-// CHECK-NEXT: -Wstrict-aliasing=2
 // CHECK: -Wstrict-overflow
 // CHECK-NEXT: -Wstrict-overflow=0
 // CHECK-NEXT: -Wstrict-overflow=1
