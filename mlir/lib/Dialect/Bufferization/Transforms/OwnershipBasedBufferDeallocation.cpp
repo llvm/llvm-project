@@ -861,10 +861,10 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
 
   for (auto operand : llvm::make_filter_range(op->getOperands(), isMemref)) {
     if (op.getEffectOnValue<MemoryEffects::Free>(operand).has_value()) {
-      // This should not be an error because the ownership based buffer
-      // deallocation introduces deallocs itself, so running it twice over (say
-      // when piping IR over different tools with their own pipelines) crashes
-      // the compiler on perfectly valid code.
+      // If we encounter an automatic allocation, some other pass (or this one
+      // in a previous invocation) has added it and we shouldn't try to guess it
+      // if was right or wrong, but we can't do anything, so we just ignore this
+      // operand.
       if (!op->hasAttr(BufferizationDialect::kManualDeallocation)) {
         state.resetOwnerships(operand, block);
         state.updateOwnership(operand,
