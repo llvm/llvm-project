@@ -12455,6 +12455,20 @@ let isExtentSigned = 0;
 let opExtentBits = 6;
 let opExtentAlign = 0;
 }
+def L4_loadw_phys : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"$Rd32 = memw_phys($Rs32,$Rt32)",
+tc_ed3f8d2a, TypeLD>, Enc_5ab2be {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10010010000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = WordAccess;
+let mayLoad = 1;
+let isSolo = 1;
+}
 def L4_or_memopb_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u32_0Imm:$Ii, IntRegs:$Rt32),
@@ -41163,6 +41177,26 @@ let Inst{31-16} = 0b1010100000000000;
 let hasNewValue = 1;
 let opNewValue = 0;
 let hasSideEffects = 1;
+let isSolo = 1;
+}
+def Y6_l2gcleaninvpa : HInst<
+(outs),
+(ins DoubleRegs:$Rtt32),
+"l2gcleaninv($Rtt32)",
+tc_7c28bd7e, TypeST>, Enc_598f6c {
+let Inst{7-0} = 0b00000000;
+let Inst{13-13} = 0b0;
+let Inst{31-16} = 0b1010011011000000;
+let isSolo = 1;
+}
+def Y6_l2gcleanpa : HInst<
+(outs),
+(ins DoubleRegs:$Rtt32),
+"l2gclean($Rtt32)",
+tc_7c28bd7e, TypeST>, Enc_598f6c {
+let Inst{7-0} = 0b00000000;
+let Inst{13-13} = 0b0;
+let Inst{31-16} = 0b1010011010100000;
 let isSolo = 1;
 }
 def dep_A2_addsat : HInst<
