@@ -365,6 +365,8 @@ public:
   void serialiseUnimplementedInstruction(Instruction *I,
                                          ValueLoweringMap &VLMap,
                                          unsigned BBIdx, unsigned &InstIdx) {
+    // type_index:
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
     // opcode:
     serialiseOpcode(UnimplementedInstruction);
     // num_operands:
