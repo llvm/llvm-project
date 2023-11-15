@@ -27,7 +27,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Specialize.cpp
   Split.cpp
   SplitReduction.cpp
-  SubsetHoisting.cpp
   SubsetInsertionOpInterfaceImpl.cpp
   SwapExtractSliceWithFillPatterns.cpp
   Tiling.cpp
@@ -67,7 +66,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRSCFTransforms
   MLIRSCFUtils
   MLIRPass
-  MLIRSubsetInsertionOpInterface
+  MLIRSubsetOpInterface
   MLIRSparseTensorDialect
   MLIRTensorDialect
   MLIRTensorTilingInterfaceImpl

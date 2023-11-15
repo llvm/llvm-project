@@ -12,6 +12,7 @@
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
@@ -35,7 +36,6 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/FuncUnwinders.h"
 #include "lldb/Symbol/LineTable.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
@@ -1452,11 +1452,11 @@ static bool DumpModuleSymbolFile(Stream &strm, Module *module) {
 }
 
 static bool GetSeparateDebugInfoList(StructuredData::Array &list,
-                                     Module *module) {
+                                     Module *module, bool errors_only) {
   if (module) {
     if (SymbolFile *symbol_file = module->GetSymbolFile(/*can_create=*/true)) {
       StructuredData::Dictionary d;
-      if (symbol_file->GetSeparateDebugInfo(d)) {
+      if (symbol_file->GetSeparateDebugInfo(d, errors_only)) {
         list.AddItem(
             std::make_shared<StructuredData::Dictionary>(std::move(d)));
         return true;
@@ -2561,7 +2561,10 @@ public:
         m_json.SetCurrentValue(true);
         m_json.SetOptionWasSet();
         break;
-
+      case 'e':
+        m_errors_only.SetCurrentValue(true);
+        m_errors_only.SetOptionWasSet();
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -2570,6 +2573,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_json.Clear();
+      m_errors_only.Clear();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -2577,6 +2581,7 @@ public:
     }
 
     OptionValueBoolean m_json = false;
+    OptionValueBoolean m_errors_only = false;
   };
 
 protected:
@@ -2607,7 +2612,8 @@ protected:
           break;
 
         if (GetSeparateDebugInfoList(separate_debug_info_lists_by_module,
-                                     module_sp.get()))
+                                     module_sp.get(),
+                                     bool(m_options.m_errors_only)))
           num_dumped++;
       }
     } else {
@@ -2628,7 +2634,7 @@ protected:
               break;
             Module *module = module_list.GetModulePointerAtIndex(i);
             if (GetSeparateDebugInfoList(separate_debug_info_lists_by_module,
-                                         module))
+                                         module, bool(m_options.m_errors_only)))
               num_dumped++;
           }
         } else
@@ -2639,11 +2645,13 @@ protected:
 
     if (num_dumped > 0) {
       Stream &strm = result.GetOutputStream();
+      // Display the debug info files in some format.
       if (m_options.m_json) {
+        // JSON format
         separate_debug_info_lists_by_module.Dump(strm,
                                                  /*pretty_print=*/true);
       } else {
-        // List the debug info files in human readable form.
+        // Human-readable table format
         separate_debug_info_lists_by_module.ForEach(
             [&result, &strm](StructuredData::Object *obj) {
               if (!obj) {
@@ -2793,7 +2801,7 @@ protected:
           module_spec.GetSymbolFileSpec() =
               m_symbol_file.GetOptionValue().GetCurrentValue();
         Status error;
-        if (Symbols::DownloadObjectAndSymbolFile(module_spec, error)) {
+        if (PluginManager::DownloadObjectAndSymbolFile(module_spec, error)) {
           ModuleSP module_sp(
               target->GetOrCreateModule(module_spec, true /* notify */));
           if (module_sp) {
@@ -4489,7 +4497,7 @@ protected:
   bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                                    CommandReturnObject &result, bool &flush) {
     Status error;
-    if (Symbols::DownloadObjectAndSymbolFile(module_spec, error)) {
+    if (PluginManager::DownloadObjectAndSymbolFile(module_spec, error)) {
       if (module_spec.GetSymbolFileSpec())
         return AddModuleSymbols(m_exe_ctx.GetTargetPtr(), module_spec, flush,
                                 result);

@@ -1376,6 +1376,20 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
                     "}";
   RequiresTokenCount = 9;
   TestRequires(__LINE__);
+
+  BaseCode = "template<typename T>\n"
+             "ANNOTATE(\"S\"\n"
+             "         \"S\")\n"
+             "void foo();";
+  ConstrainedCode = "template<typename T>\n"
+                    "  requires(true)\n"
+                    "ANNOTATE(\"S\"\n"
+                    "         \"S\")\n"
+                    "void foo();";
+  BaseTokenCount = 16;
+  RequiresTokenCount = 4;
+  PrefixTokenCount = 5;
+  TestRequires(__LINE__);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
@@ -2138,6 +2152,7 @@ TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
   EXPECT_TOKEN(Tokens[11], tok::l_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[12], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[13], BK_Block);
 
   Tokens = annotate("Class::Class() : BaseClass{}, Member{} {}");
   ASSERT_EQ(Tokens.size(), 16u) << Tokens;
@@ -2150,6 +2165,20 @@ TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
   EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_Unknown);
   EXPECT_TOKEN(Tokens[12], tok::r_brace, TT_Unknown);
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[13], BK_Block);
+
+  Tokens = annotate("class Class {\n"
+                    "  Class() : BaseClass() {\n"
+                    "#if 0\n"
+                    "    // comment\n"
+                    "#endif\n"
+                    "  }\n"
+                    "  Class f();\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 25u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_CtorInitializerColon);
+  EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[10], BK_Block);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsConditionParens) {
@@ -2284,6 +2313,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsJavaScript) {
 TEST_F(TokenAnnotatorTest, UnderstandsAttributes) {
   auto Tokens = annotate("bool foo __attribute__((unused));");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
   EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_AttributeLParen);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_Unknown);
@@ -2293,6 +2323,22 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributes) {
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_AttributeLParen);
   EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_AttributeRParen);
+
+  Tokens = annotate("bool __attribute__((unused)) foo;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[7], tok::identifier, TT_StartOfName);
+
+  Tokens = annotate("void __attribute__((x)) Foo();");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[7], tok::identifier, TT_FunctionDeclarationName);
 
   FormatStyle Style = getLLVMStyle();
   Style.AttributeMacros.push_back("FOO");

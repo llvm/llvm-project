@@ -48,7 +48,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -145,6 +144,7 @@ CompilerInvocationBase::CompilerInvocationBase()
       PPOpts(std::make_shared<PreprocessorOptions>()),
       AnalyzerOpts(llvm::makeIntrusiveRefCnt<AnalyzerOptions>()),
       MigratorOpts(std::make_shared<MigratorOptions>()),
+      APINotesOpts(std::make_shared<APINotesOptions>()),
       CodeGenOpts(std::make_shared<CodeGenOptions>()),
       FSOpts(std::make_shared<FileSystemOptions>()),
       FrontendOpts(std::make_shared<FrontendOptions>()),
@@ -161,6 +161,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
     PPOpts = make_shared_copy(X.getPreprocessorOpts());
     AnalyzerOpts = makeIntrusiveRefCntCopy(X.getAnalyzerOpts());
     MigratorOpts = make_shared_copy(X.getMigratorOpts());
+    APINotesOpts = make_shared_copy(X.getAPINotesOpts());
     CodeGenOpts = make_shared_copy(X.getCodeGenOpts());
     FSOpts = make_shared_copy(X.getFileSystemOpts());
     FrontendOpts = make_shared_copy(X.getFrontendOpts());
@@ -180,6 +181,7 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
     PPOpts = X.PPOpts;
     AnalyzerOpts = X.AnalyzerOpts;
     MigratorOpts = X.MigratorOpts;
+    APINotesOpts = X.APINotesOpts;
     CodeGenOpts = X.CodeGenOpts;
     FSOpts = X.FSOpts;
     FrontendOpts = X.FrontendOpts;
@@ -231,6 +233,10 @@ AnalyzerOptions &CowCompilerInvocation::getMutAnalyzerOpts() {
 
 MigratorOptions &CowCompilerInvocation::getMutMigratorOpts() {
   return ensureOwned(MigratorOpts);
+}
+
+APINotesOptions &CowCompilerInvocation::getMutAPINotesOpts() {
+  return ensureOwned(APINotesOpts);
 }
 
 CodeGenOptions &CowCompilerInvocation::getMutCodeGenOpts() {
@@ -3261,6 +3267,17 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
+static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
+                              DiagnosticsEngine &diags) {
+  if (const Arg *A = Args.getLastArg(OPT_fapinotes_swift_version)) {
+    if (Opts.SwiftVersion.tryParse(A->getValue()))
+      diags.Report(diag::err_drv_invalid_value)
+          << A->getAsString(Args) << A->getValue();
+  }
+  for (const Arg *A : Args.filtered(OPT_iapinotes_modules))
+    Opts.ModuleSearchPaths.push_back(A->getValue());
+}
+
 /// Check if input file kind and language standard are compatible.
 static bool IsInputCompatibleWithStandard(InputKind IK,
                                           const LangStandard &S) {
@@ -4538,6 +4555,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
+  ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
   ParseLangArgs(LangOpts, Args, DashX, T, Res.getPreprocessorOpts().Includes,
                 Diags);

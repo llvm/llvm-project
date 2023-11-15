@@ -10,7 +10,6 @@ libcxx/include/__algorithm/fill.h
 libcxx/include/__algorithm/fill_n.h
 libcxx/include/__algorithm/find_end.h
 libcxx/include/__algorithm/find_first_of.h
-libcxx/include/__algorithm/for_each.h
 libcxx/include/__algorithm/for_each_n.h
 libcxx/include/__algorithm/generate.h
 libcxx/include/__algorithm/generate_n.h
@@ -89,7 +88,6 @@ libcxx/include/array
 libcxx/include/__atomic/atomic_base.h
 libcxx/include/__atomic/atomic_flag.h
 libcxx/include/__atomic/atomic.h
-libcxx/include/__atomic/atomic_init.h
 libcxx/include/__atomic/atomic_lock_free.h
 libcxx/include/__atomic/atomic_sync.h
 libcxx/include/__atomic/check_memory_order.h
@@ -492,6 +490,7 @@ libcxx/src/any.cpp
 libcxx/src/atomic.cpp
 libcxx/src/barrier.cpp
 libcxx/src/bind.cpp
+libcxx/src/call_once.cpp
 libcxx/src/charconv.cpp
 libcxx/src/chrono.cpp
 libcxx/src/condition_variable.cpp
@@ -587,14 +586,6 @@ libcxx/test/libcxx/algorithms/specialized.algorithms/special.mem.concepts/nothro
 libcxx/test/libcxx/assertions/customize_verbose_abort.compile-time.pass.cpp
 libcxx/test/libcxx/assertions/customize_verbose_abort.link-time.pass.cpp
 libcxx/test/libcxx/assertions/deprecated-link-time-custom-handler.pass.cpp
-libcxx/test/libcxx/assertions/modes/debug_mode_enabled_in_tu.pass.cpp
-libcxx/test/libcxx/assertions/modes/debug.pass.cpp
-libcxx/test/libcxx/assertions/modes/enabling_assertions_enables_safe_mode.pass.cpp
-libcxx/test/libcxx/assertions/modes/hardened_mode_enabled_in_tu.pass.cpp
-libcxx/test/libcxx/assertions/modes/hardened.pass.cpp
-libcxx/test/libcxx/assertions/modes/safe_mode_enabled_in_tu.pass.cpp
-libcxx/test/libcxx/assertions/modes/safe.pass.cpp
-libcxx/test/libcxx/assertions/modes/unchecked.pass.cpp
 libcxx/test/libcxx/atomics/atomics.align/align.pass.cpp
 libcxx/test/libcxx/atomics/atomics.flag/init_bool.pass.cpp
 libcxx/test/libcxx/atomics/atomics.order/memory_order.underlying_type.pass.cpp
@@ -708,7 +699,6 @@ libcxx/test/libcxx/containers/views/views.span/span.elem/assert.op_idx.pass.cpp
 libcxx/test/libcxx/containers/views/views.span/span.sub/assert.first.pass.cpp
 libcxx/test/libcxx/containers/views/views.span/span.sub/assert.last.pass.cpp
 libcxx/test/libcxx/containers/views/views.span/span.sub/assert.subspan.pass.cpp
-libcxx/test/libcxx/debug/containers/associative_containers.pass.cpp
 libcxx/test/libcxx/debug/containers.multithread.pass.cpp
 libcxx/test/libcxx/debug/containers/sequence_container_iterators.pass.cpp
 libcxx/test/libcxx/debug/containers/string.pass.cpp
@@ -827,7 +817,6 @@ libcxx/test/libcxx/iterators/predef.iterators/__unconstrained_reverse_iterator/t
 libcxx/test/libcxx/iterators/stream.iterators/ostreambuf.iterator/ostreambuf.iter.ops/failed.pass.cpp
 libcxx/test/libcxx/iterators/unwrap_iter.pass.cpp
 libcxx/test/libcxx/language.support/cxa_deleted_virtual.pass.cpp
-libcxx/test/libcxx/language.support/support.dynamic/aligned_alloc_availability.verify.cpp
 libcxx/test/libcxx/language.support/support.dynamic/libcpp_deallocate.sh.cpp
 libcxx/test/libcxx/language.support/support.dynamic/new_faligned_allocation.pass.cpp
 libcxx/test/libcxx/language.support/support.rtti/type.info/type_info.comparison.apple.compile.pass.cpp
@@ -1140,8 +1129,6 @@ libcxx/test/std/algorithms/alg.nonmodifying/alg.equal/ranges.equal.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.end/find_end.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.end/find_end_pred.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.end/ranges.find_end.pass.cpp
-libcxx/test/std/algorithms/alg.nonmodifying/alg.find/find_if_not.pass.cpp
-libcxx/test/std/algorithms/alg.nonmodifying/alg.find/find_if.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.first.of/find_first_of.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.first.of/find_first_of_pred.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.first.of/ranges.find_first_of.pass.cpp
@@ -1151,7 +1138,6 @@ libcxx/test/std/algorithms/alg.nonmodifying/alg.find/ranges.find.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.foreach/for_each_n.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.foreach/ranges.for_each_n.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.foreach/ranges.for_each.pass.cpp
-libcxx/test/std/algorithms/alg.nonmodifying/alg.foreach/test.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.is_permutation/is_permutation.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.is_permutation/is_permutation_pred.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.is_permutation/ranges.is_permutation.pass.cpp
@@ -6257,7 +6243,6 @@ libcxx/test/std/utilities/expected/expected.expected/observers/deref.pass.cpp
 libcxx/test/std/utilities/expected/expected.expected/observers/error.pass.cpp
 libcxx/test/std/utilities/expected/expected.expected/observers/has_value.pass.cpp
 libcxx/test/std/utilities/expected/expected.expected/observers/value.pass.cpp
-libcxx/test/std/utilities/expected/expected.expected/swap/member.swap.pass.cpp
 libcxx/test/std/utilities/expected/expected.unexpected/ctad.compile.pass.cpp
 libcxx/test/std/utilities/expected/expected.unexpected/ctor/ctor.inplace.pass.cpp
 libcxx/test/std/utilities/expected/expected.unexpected/ctor/ctor.move.pass.cpp
@@ -6277,7 +6262,6 @@ libcxx/test/std/utilities/expected/expected.void/observers/deref.pass.cpp
 libcxx/test/std/utilities/expected/expected.void/observers/error.pass.cpp
 libcxx/test/std/utilities/expected/expected.void/observers/has_value.pass.cpp
 libcxx/test/std/utilities/expected/expected.void/swap/free.swap.pass.cpp
-libcxx/test/std/utilities/expected/expected.void/swap/member.swap.pass.cpp
 libcxx/test/std/utilities/format/format.arguments/format.args/get.pass.cpp
 libcxx/test/std/utilities/format/format.arguments/format.args/types.compile.pass.cpp
 libcxx/test/std/utilities/format/format.arguments/format.arg/visit_format_arg.pass.cpp
@@ -7219,7 +7203,6 @@ libcxx/test/support/archetypes.h
 libcxx/test/support/archetypes.ipp
 libcxx/test/support/asan_testing.h
 libcxx/test/support/assert_macros.h
-libcxx/test/support/boolean_testable.h
 libcxx/test/support/callable_types.h
 libcxx/test/support/charconv_test_helpers.h
 libcxx/test/support/check_assertion.h

@@ -11,8 +11,10 @@ int test_amdgcn_target_temp_alloca() {
 
   int arr[N];
 
+  // CHECK:      [[DYN_PTR_ADDR:%.+]] = alloca ptr, align 8, addrspace(5)
   // CHECK:      [[VAR_ADDR:%.+]] = alloca ptr, align 8, addrspace(5)
   // CHECK-NEXT: [[VAR2_ADDR:%.+]] = alloca i32, align 4, addrspace(5)
+  // CHECK-NEXT: [[DYN_PTR_ADDR_CAST:%.+]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
   // CHECK-NEXT: [[VAR_ADDR_CAST:%.+]] = addrspacecast ptr addrspace(5) [[VAR_ADDR]] to ptr
   // CHECK-NEXT: [[VAR2_ADDR_CAST:%.+]] = addrspacecast ptr addrspace(5) [[VAR2_ADDR]] to ptr
   // CHECK:  store ptr [[VAR:%.+]], ptr [[VAR_ADDR_CAST]], align 8

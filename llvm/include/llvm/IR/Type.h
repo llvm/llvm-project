@@ -482,8 +482,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Convenience methods for getting pointer types.
   //
-  static PointerType *getInt8PtrTy(LLVMContext &C, unsigned AS = 0);
-
   static Type *getWasm_ExternrefTy(LLVMContext &C);
   static Type *getWasm_FuncrefTy(LLVMContext &C);
 

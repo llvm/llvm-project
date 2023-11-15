@@ -290,10 +290,9 @@ void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
 }
 
 std::optional<APInt> llvm::getIConstantVRegVal(Register VReg,
-                                               const MachineRegisterInfo &MRI,
-                                               bool LookThroughInstrs) {
-  std::optional<ValueAndVReg> ValAndVReg =
-      getIConstantVRegValWithLookThrough(VReg, MRI, LookThroughInstrs);
+                                               const MachineRegisterInfo &MRI) {
+  std::optional<ValueAndVReg> ValAndVReg = getIConstantVRegValWithLookThrough(
+      VReg, MRI, /*LookThroughInstrs*/ false);
   assert((!ValAndVReg || ValAndVReg->VReg == VReg) &&
          "Value found while looking through instrs");
   if (!ValAndVReg)
@@ -302,9 +301,8 @@ std::optional<APInt> llvm::getIConstantVRegVal(Register VReg,
 }
 
 std::optional<int64_t>
-llvm::getIConstantVRegSExtVal(Register VReg, const MachineRegisterInfo &MRI,
-                              bool LookThroughInstrs) {
-  std::optional<APInt> Val = getIConstantVRegVal(VReg, MRI, LookThroughInstrs);
+llvm::getIConstantVRegSExtVal(Register VReg, const MachineRegisterInfo &MRI) {
+  std::optional<APInt> Val = getIConstantVRegVal(VReg, MRI);
   if (Val && Val->getBitWidth() <= 64)
     return Val->getSExtValue();
   return std::nullopt;
@@ -1118,9 +1116,9 @@ std::optional<APInt>
 llvm::getIConstantSplatVal(const Register Reg, const MachineRegisterInfo &MRI) {
   if (auto SplatValAndReg =
           getAnyConstantSplat(Reg, MRI, /* AllowUndef */ false)) {
-    std::optional<ValueAndVReg> ValAndVReg =
-        getIConstantVRegValWithLookThrough(SplatValAndReg->VReg, MRI);
-    return ValAndVReg->Value;
+    if (std::optional<ValueAndVReg> ValAndVReg =
+        getIConstantVRegValWithLookThrough(SplatValAndReg->VReg, MRI))
+      return ValAndVReg->Value;
   }
 
   return std::nullopt;

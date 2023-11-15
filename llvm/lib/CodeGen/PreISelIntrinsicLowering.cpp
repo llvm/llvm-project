@@ -162,6 +162,16 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
     CallInst::TailCallKind TCK = CI->getTailCallKind();
     NewCI->setTailCallKind(std::max(TCK, OverridingTCK));
 
+    // Transfer the 'returned' attribute from the intrinsic to the call site.
+    // By applying this only to intrinsic call sites, we avoid applying it to
+    // non-ARC explicit calls to things like objc_retain which have not been
+    // auto-upgraded to use the intrinsics.
+    unsigned Index;
+    if (F.getAttributes().hasAttrSomewhere(Attribute::Returned, &Index) &&
+        Index)
+      NewCI->addParamAttr(Index - AttributeList::FirstArgIndex,
+                          Attribute::Returned);
+
     if (!CI->use_empty())
       CI->replaceAllUsesWith(NewCI);
     CI->eraseFromParent();

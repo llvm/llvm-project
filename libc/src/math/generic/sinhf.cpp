@@ -67,7 +67,7 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);
 
-    return x + FPBits::inf(sign).get_val();
+    return x + FPBits::inf(sign);
   }
 
   // sinh(x) = (e^x - e^(-x)) / 2.

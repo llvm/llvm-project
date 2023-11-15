@@ -440,6 +440,12 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
       Reserved.set(SubReg);
   }
 
+  if (MF.getSubtarget<AArch64Subtarget>().hasSME2()) {
+    for (MCSubRegIterator SubReg(AArch64::ZT0, this, /*self=*/true);
+         SubReg.isValid(); ++SubReg)
+      Reserved.set(*SubReg);
+  }
+
   markSuperRegs(Reserved, AArch64::FPCR);
 
   assert(checkAllSuperRegsMarked(Reserved));
@@ -558,8 +564,6 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
   switch (CC) {
   default:
     report_fatal_error("Unsupported calling convention.");
-  case CallingConv::WebKit_JS:
-    return HasReg(CC_AArch64_WebKit_JS_ArgRegs, Reg);
   case CallingConv::GHC:
     return HasReg(CC_AArch64_GHC_ArgRegs, Reg);
   case CallingConv::C:
@@ -981,6 +985,8 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   case AArch64::FPR64_loRegClassID:
   case AArch64::FPR16_loRegClassID:
     return 16;
+  case AArch64::FPR128_0to7RegClassID:
+    return 8;
   }
 }
 

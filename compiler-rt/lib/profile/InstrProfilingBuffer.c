@@ -92,6 +92,11 @@ uint64_t __llvm_profile_get_num_bitmap_bytes(const char *Begin,
   return (End - Begin);
 }
 
+COMPILER_RT_VISIBILITY
+uint64_t __llvm_profile_get_name_size(const char *Begin, const char *End) {
+  return End - Begin;
+}
+
 /// Calculate the number of padding bytes needed to add to \p Offset in order
 /// for (\p Offset + Padding) to be page-aligned.
 static uint64_t calculateBytesNeededToPageAlign(uint64_t Offset) {

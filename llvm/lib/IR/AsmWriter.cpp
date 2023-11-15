@@ -39,6 +39,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -285,12 +286,21 @@ static const Module *getModuleFromVal(const Value *V) {
   return nullptr;
 }
 
+static const Module *getModuleFromDPI(const DPMarker *Marker) {
+  const Function *M =
+      Marker->getParent() ? Marker->getParent()->getParent() : nullptr;
+  return M ? M->getParent() : nullptr;
+}
+
+static const Module *getModuleFromDPI(const DPValue *DPV) {
+  return getModuleFromDPI(DPV->getMarker());
+}
+
 static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   switch (cc) {
   default:                         Out << "cc" << cc; break;
   case CallingConv::Fast:          Out << "fastcc"; break;
   case CallingConv::Cold:          Out << "coldcc"; break;
-  case CallingConv::WebKit_JS:     Out << "webkit_jscc"; break;
   case CallingConv::AnyReg:        Out << "anyregcc"; break;
   case CallingConv::PreserveMost:  Out << "preserve_mostcc"; break;
   case CallingConv::PreserveAll:   Out << "preserve_allcc"; break;
@@ -2613,6 +2623,8 @@ public:
   void printBasicBlock(const BasicBlock *BB);
   void printInstructionLine(const Instruction &I);
   void printInstruction(const Instruction &I);
+  void printDPMarker(const DPMarker &DPI);
+  void printDPValue(const DPValue &DPI);
 
   void printUseListOrder(const Value *V, const std::vector<unsigned> &Shuffle);
   void printUseLists(const Function *F);
@@ -3772,6 +3784,9 @@ void AssemblyWriter::printTypeIdentities() {
 
 /// printFunction - Print all aspects of a function.
 void AssemblyWriter::printFunction(const Function *F) {
+  bool ConvertBack = F->IsNewDbgInfoFormat;
+  if (ConvertBack)
+    const_cast<Function *>(F)->convertFromNewDbgValues();
   if (AnnotationWriter) AnnotationWriter->emitFunctionAnnot(F, Out);
 
   if (F->isMaterializable())
@@ -3914,6 +3929,8 @@ void AssemblyWriter::printFunction(const Function *F) {
     Out << "}\n";
   }
 
+  if (ConvertBack)
+    const_cast<Function *>(F)->convertToNewDbgValues();
   Machine.purgeFunction();
 }
 
@@ -4008,8 +4025,15 @@ void AssemblyWriter::printInfoComment(const Value &V) {
   if (const auto *Relocate = dyn_cast<GCRelocateInst>(&V))
     printGCRelocateComment(*Relocate);
 
-  if (AnnotationWriter)
+  if (AnnotationWriter) {
     AnnotationWriter->printInfoComment(V, Out);
+  } else if (const Instruction *I = dyn_cast<Instruction>(&V)) {
+    if (I->DbgMarker) {
+      // In the new, experimental DPValue representation of debug-info, print
+      // out which instructions have DPMarkers and where they are.
+      Out << "; dbgmarker @ " << I->DbgMarker;
+    }
+  }
 }
 
 static void maybePrintCallAddrSpace(const Value *Operand, const Instruction *I,
@@ -4469,6 +4493,36 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
   printInfoComment(I);
 }
 
+void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
+  // There's no formal representation of a DPMarker -- print purely as a
+  // debugging aid.
+  for (const DPValue &DPI2 : Marker.StoredDPValues) {
+    printDPValue(DPI2);
+    Out << "\n";
+  }
+
+  Out << "  DPMarker -> { ";
+  printInstruction(*Marker.MarkedInstr);
+  Out << " }";
+  return;
+}
+
+void AssemblyWriter::printDPValue(const DPValue &Value) {
+  // There's no formal representation of a DPValue -- print purely as a
+  // debugging aid.
+  Out << "  DPValue { ";
+  auto WriterCtx = getContext();
+  WriteAsOperandInternal(Out, Value.getRawLocation(), WriterCtx, true);
+  Out << ", ";
+  WriteAsOperandInternal(Out, Value.getVariable(), WriterCtx, true);
+  Out << ", ";
+  WriteAsOperandInternal(Out, Value.getExpression(), WriterCtx, true);
+  Out << ", ";
+  WriteAsOperandInternal(Out, Value.getDebugLoc().get(), WriterCtx, true);
+  Out << " marker @" << Value.getMarker();
+  Out << " }";
+}
+
 void AssemblyWriter::printMetadataAttachments(
     const SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs,
     StringRef Separator) {
@@ -4614,11 +4668,19 @@ void BasicBlock::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
 
 void Module::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                    bool ShouldPreserveUseListOrder, bool IsForDebug) const {
+  // RemoveDIs: always print with debug-info in intrinsic format.
+  bool ConvertAfter = IsNewDbgInfoFormat;
+  if (IsNewDbgInfoFormat)
+    const_cast<Module *>(this)->convertFromNewDbgValues();
+
   SlotTracker SlotTable(this);
   formatted_raw_ostream OS(ROS);
   AssemblyWriter W(OS, SlotTable, this, AAW, IsForDebug,
                    ShouldPreserveUseListOrder);
   W.printModule(this);
+
+  if (ConvertAfter)
+    const_cast<Module *>(this)->convertToNewDbgValues();
 }
 
 void NamedMDNode::print(raw_ostream &ROS, bool IsForDebug) const {
@@ -4693,6 +4755,53 @@ static bool isReferencingMDNode(const Instruction &I) {
             if (isa<MDNode>(V->getMetadata()))
               return true;
   return false;
+}
+
+void DPMarker::print(raw_ostream &ROS, bool IsForDebug) const {
+
+  ModuleSlotTracker MST(getModuleFromDPI(this), true);
+  print(ROS, MST, IsForDebug);
+}
+
+void DPValue::print(raw_ostream &ROS, bool IsForDebug) const {
+
+  ModuleSlotTracker MST(getModuleFromDPI(this), true);
+  print(ROS, MST, IsForDebug);
+}
+
+void DPMarker::print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                     bool IsForDebug) const {
+  // There's no formal representation of a DPMarker -- print purely as a
+  // debugging aid.
+  formatted_raw_ostream OS(ROS);
+  SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
+  SlotTracker &SlotTable =
+      MST.getMachine() ? *MST.getMachine() : EmptySlotTable;
+  auto incorporateFunction = [&](const Function *F) {
+    if (F)
+      MST.incorporateFunction(*F);
+  };
+  incorporateFunction(getParent() ? getParent()->getParent() : nullptr);
+  AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
+  W.printDPMarker(*this);
+}
+
+void DPValue::print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                    bool IsForDebug) const {
+  // There's no formal representation of a DPValue -- print purely as a
+  // debugging aid.
+  formatted_raw_ostream OS(ROS);
+  SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
+  SlotTracker &SlotTable =
+      MST.getMachine() ? *MST.getMachine() : EmptySlotTable;
+  auto incorporateFunction = [&](const Function *F) {
+    if (F)
+      MST.incorporateFunction(*F);
+  };
+  incorporateFunction(Marker->getParent() ? Marker->getParent()->getParent()
+                                          : nullptr);
+  AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
+  W.printDPValue(*this);
 }
 
 void Value::print(raw_ostream &ROS, bool IsForDebug) const {
@@ -4939,6 +5048,14 @@ void ModuleSlotTracker::collectMDNodes(MachineMDNodeListType &L, unsigned LB,
 // Value::dump - allow easy printing of Values from the debugger.
 LLVM_DUMP_METHOD
 void Value::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
+
+// Value::dump - allow easy printing of Values from the debugger.
+LLVM_DUMP_METHOD
+void DPMarker::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
+
+// Value::dump - allow easy printing of Values from the debugger.
+LLVM_DUMP_METHOD
+void DPValue::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
 
 // Type::dump - allow easy printing of Types from the debugger.
 LLVM_DUMP_METHOD

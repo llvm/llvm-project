@@ -24,12 +24,6 @@
 //   memcmp, strlen, etc.
 // Future floating point idioms to recognize in -ffast-math mode:
 //   fpowi
-// Future integer operation idioms to recognize:
-//   ctpop
-//
-// Beware that isel's default lowering for ctpop is highly inefficient for
-// i64 and larger types when i64 is legal and the value has few bits set.  It
-// would be good to enhance isel to emit a loop for ctpop in this case.
 //
 // This could recognize common matrix multiplies and dot product idioms and
 // replace them with calls to BLAS (if linked in??).
@@ -1111,7 +1105,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
                                             PatternValue, ".memset_pattern");
     GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global); // Ok to merge these.
     GV->setAlignment(Align(16));
-    Value *PatternPtr = ConstantExpr::getBitCast(GV, Int8PtrTy);
+    Value *PatternPtr = GV;
     NewCall = Builder.CreateCall(MSP, {BasePtr, PatternPtr, NumBytes});
     
     // Set the TBAA info if present.

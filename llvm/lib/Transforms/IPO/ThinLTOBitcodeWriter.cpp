@@ -186,7 +186,7 @@ void simplifyExternals(Module &M) {
 
     if (!F.isDeclaration() || F.getFunctionType() == EmptyFT ||
         // Changing the type of an intrinsic may invalidate the IR.
-        F.getName().startswith("llvm."))
+        F.getName().starts_with("llvm."))
       continue;
 
     Function *NewF =
@@ -198,7 +198,7 @@ void simplifyExternals(Module &M) {
                                            AttributeList::FunctionIndex,
                                            F.getAttributes().getFnAttrs()));
     NewF->takeName(&F);
-    F.replaceAllUsesWith(ConstantExpr::getBitCast(NewF, F.getType()));
+    F.replaceAllUsesWith(NewF);
     F.eraseFromParent();
   }
 

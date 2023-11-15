@@ -275,3 +275,26 @@ define i1 @global_gep_ugt_global_gep_complex() {
   %cmp = icmp ugt ptr %gep3, @g
   ret i1 %cmp
 }
+
+declare void @func()
+
+define i1 @global_no_cfi() {
+; CHECK-LABEL: @global_no_cfi(
+; CHECK-NEXT:    ret i1 icmp eq (ptr @func, ptr no_cfi @func)
+;
+  %cmp = icmp eq ptr @func, no_cfi @func
+  ret i1 %cmp
+}
+
+define i1 @blockaddr_no_cfi() {
+; CHECK-LABEL: @blockaddr_no_cfi(
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    ret i1 icmp eq (ptr blockaddress(@blockaddr_no_cfi, [[BB]]), ptr no_cfi @func)
+;
+  br label %bb
+
+bb:
+  %cmp = icmp eq ptr blockaddress(@blockaddr_no_cfi, %bb), no_cfi @func
+  ret i1 %cmp
+}

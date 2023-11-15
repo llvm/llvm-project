@@ -1402,7 +1402,7 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
 }
 
 void BinaryContext::fixBinaryDataHoles() {
-  assert(validateObjectNesting() && "object nesting inconsitency detected");
+  assert(validateObjectNesting() && "object nesting inconsistency detected");
 
   for (BinarySection &Section : allocatableSections()) {
     std::vector<std::pair<uint64_t, uint64_t>> Holes;
@@ -1451,7 +1451,7 @@ void BinaryContext::fixBinaryDataHoles() {
     }
   }
 
-  assert(validateObjectNesting() && "object nesting inconsitency detected");
+  assert(validateObjectNesting() && "object nesting inconsistency detected");
   assert(validateHoles() && "top level hole detected in object map");
 }
 
@@ -1796,7 +1796,7 @@ void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
 MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
   // For aarch64 and riscv, the ABI defines mapping symbols so we identify data
   // in the code section (see IHI0056B). $x identifies a symbol starting code or
-  // the end of a data chunk inside code, $d indentifies start of data.
+  // the end of a data chunk inside code, $d identifies start of data.
   if ((!isAArch64() && !isRISCV()) || ELFSymbolRef(Symbol).getSize())
     return MarkerSymType::NONE;
 
@@ -1862,10 +1862,6 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
                                      bool PrintMCInst, bool PrintMemData,
                                      bool PrintRelocations,
                                      StringRef Endl) const {
-  if (MIB->isEHLabel(Instruction)) {
-    OS << "  EH_LABEL: " << *MIB->getTargetSymbol(Instruction) << Endl;
-    return;
-  }
   OS << format("    %08" PRIx64 ": ", Offset);
   if (MIB->isCFI(Instruction)) {
     uint32_t Offset = Instruction.getOperand(0).getImm();
@@ -1901,8 +1897,10 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
   }
   if (std::optional<uint32_t> Offset = MIB->getOffset(Instruction))
     OS << " # Offset: " << *Offset;
-  if (auto Label = MIB->getLabel(Instruction))
-    OS << " # Label: " << **Label;
+  if (std::optional<uint32_t> Size = MIB->getSize(Instruction))
+    OS << " # Size: " << *Size;
+  if (MCSymbol *Label = MIB->getLabel(Instruction))
+    OS << " # Label: " << *Label;
 
   MIB->printAnnotations(Instruction, OS);
 

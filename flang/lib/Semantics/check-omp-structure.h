@@ -79,6 +79,7 @@ public:
   void Leave(const parser::OpenMPDeclarativeAllocate &);
   void Enter(const parser::OpenMPDeclareTargetConstruct &);
   void Leave(const parser::OpenMPDeclareTargetConstruct &);
+  void Enter(const parser::OmpDeclareTargetWithList &);
   void Enter(const parser::OpenMPExecutableAllocate &);
   void Leave(const parser::OpenMPExecutableAllocate &);
   void Enter(const parser::OpenMPAllocatorsConstruct &);
@@ -182,6 +183,7 @@ private:
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
+  void CheckTargetUpdate();
   void CheckCancellationNest(
       const parser::CharBlock &source, const parser::OmpCancelType::Type &type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);

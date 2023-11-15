@@ -216,8 +216,10 @@ let Defs = [SCC] in {
   def S_NOT_B64 : SOP1_64 <"s_not_b64",
     [(set i64:$sdst, (UniformUnaryFrag<not> i64:$src0))]
   >;
-  def S_WQM_B32 : SOP1_32 <"s_wqm_b32">;
-  def S_WQM_B64 : SOP1_64 <"s_wqm_b64">;
+  def S_WQM_B32 : SOP1_32 <"s_wqm_b32",
+    [(set i32:$sdst, (int_amdgcn_s_wqm i32:$src0))]>;
+  def S_WQM_B64 : SOP1_64 <"s_wqm_b64",
+    [(set i64:$sdst, (int_amdgcn_s_wqm i64:$src0))]>;
 } // End Defs = [SCC]
 
 
@@ -326,8 +328,10 @@ def S_XNOR_SAVEEXEC_B64 : SOP1_64 <"s_xnor_saveexec_b64">;
 
 } // End hasSideEffects = 1, Uses = [EXEC], Defs = [EXEC, SCC]
 
-def S_QUADMASK_B32 : SOP1_32 <"s_quadmask_b32">;
-def S_QUADMASK_B64 : SOP1_64 <"s_quadmask_b64">;
+def S_QUADMASK_B32 : SOP1_32 <"s_quadmask_b32",
+  [(set i32:$sdst, (int_amdgcn_s_quadmask i32:$src0))]>;
+def S_QUADMASK_B64 : SOP1_64 <"s_quadmask_b64",
+  [(set i64:$sdst, (int_amdgcn_s_quadmask i64:$src0))]>;
 
 let Uses = [M0] in {
 def S_MOVRELS_B32 : SOP1_32R <"s_movrels_b32">;
@@ -362,7 +366,8 @@ let SubtargetPredicate = isGFX9Plus in {
   } // End hasSideEffects = 1, Defs = [EXEC, SCC], Uses = [EXEC]
 
   let isReMaterializable = 1 in
-  def S_BITREPLICATE_B64_B32 : SOP1_64_32<"s_bitreplicate_b64_b32">;
+  def S_BITREPLICATE_B64_B32 : SOP1_64_32<"s_bitreplicate_b64_b32",
+  [(set i64:$sdst, (int_amdgcn_s_bitreplicate i32:$src0))]>;
 } // End SubtargetPredicate = isGFX9Plus
 
 let SubtargetPredicate = isGFX10Plus in {
@@ -419,7 +424,7 @@ let SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE],
     def S_CEIL_F32  : SOP1_F32_Inst<"s_ceil_f32", fceil>;
     def S_FLOOR_F32 : SOP1_F32_Inst<"s_floor_f32", ffloor>;
     def S_TRUNC_F32 : SOP1_F32_Inst<"s_trunc_f32", ftrunc>;
-    def S_RNDNE_F32 : SOP1_F32_Inst<"s_rndne_f32", frint>;
+    def S_RNDNE_F32 : SOP1_F32_Inst<"s_rndne_f32", froundeven>;
 
     let FPDPRounding = 1 in
       def S_CVT_F16_F32 : SOP1_F32_Inst<"s_cvt_f16_f32", fpround, f16, f32>;
@@ -427,7 +432,7 @@ let SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE],
     def S_CEIL_F16  : SOP1_F32_Inst<"s_ceil_f16", fceil, f16>;
     def S_FLOOR_F16 : SOP1_F32_Inst<"s_floor_f16", ffloor, f16>;
     def S_TRUNC_F16 : SOP1_F32_Inst<"s_trunc_f16", ftrunc, f16>;
-    def S_RNDNE_F16 : SOP1_F32_Inst<"s_rndne_f16", frint, f16>;
+    def S_RNDNE_F16 : SOP1_F32_Inst<"s_rndne_f16", froundeven, f16>;
   } // End mayRaiseFPException = 1
 } // End SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE]
   // SchedRW = [WriteSFPU], isReMaterializable = 1
@@ -1500,7 +1505,10 @@ def S_INCPERFLEVEL : SOPP_Pseudo <"s_incperflevel", (ins i32imm:$simm16), "$simm
 def S_DECPERFLEVEL : SOPP_Pseudo <"s_decperflevel", (ins i32imm:$simm16), "$simm16",
   [(int_amdgcn_s_decperflevel timm:$simm16)]> {
 }
-def S_TTRACEDATA : SOPP_Pseudo <"s_ttracedata", (ins)> {
+
+let Uses = [M0] in
+def S_TTRACEDATA : SOPP_Pseudo <"s_ttracedata", (ins), "",
+                                [(int_amdgcn_s_ttracedata M0)]> {
   let simm16 = 0;
   let fixed_imm = 1;
 }
@@ -1544,8 +1552,10 @@ let SubtargetPredicate = isGFX10Plus in {
       [(SIdenorm_mode (i32 timm:$simm16))]>;
   }
 
+  let hasSideEffects = 1 in
   def S_TTRACEDATA_IMM :
-    SOPP_Pseudo<"s_ttracedata_imm", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_ttracedata_imm", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_ttracedata_imm timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX10Plus
 
 let SubtargetPredicate = isGFX11Plus in {
