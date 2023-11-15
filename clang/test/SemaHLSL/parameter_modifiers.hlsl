@@ -39,6 +39,28 @@ void failOverloadResolution() {
   // expected-note@#fn-in{{candidate function}}
 }
 
+void implicitFn(float f);
+void inFn(in float f);
+void inoutFn(inout float f); // #inoutFn
+void outFn(out float f); // #outFn
+
+void callFns() {
+  // Call with literal arguments.
+  implicitFn(1); // Ok.
+  inFn(1); // Ok.
+  inoutFn(1); // expected-error{{no matching function for call to 'inoutFn'}}
+  // expected-note@#inoutFn{{candidate function not viable: no known conversion from 'int' to 'float &' for 1st argument}}
+  outFn(1); // expected-error{{no matching function for call to 'outFn}}
+  // expected-note@#outFn{{candidate function not viable: no known conversion from 'int' to 'float &' for 1st argument}}
+  
+  // Call with variables.
+  float f;
+  implicitFn(f); // Ok.
+  inFn(f); // Ok.
+  inoutFn(f); // Ok.
+  outFn(f); // Ok.
+}
+
 // No errors on these scenarios.
 
 // Alternating `inout` and `in out` spellings between declaration and
@@ -62,3 +84,11 @@ void fn10(float f) {}
 
 void fn11(float f);
 void fn11(in float f) {}
+
+template <typename T>
+void fn12(inout T f);
+
+void fn13() {
+  float f;
+  fn12<float>(f);
+}

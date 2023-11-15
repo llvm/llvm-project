@@ -8663,6 +8663,10 @@ static void HandleLifetimeBoundAttr(TypeProcessingState &State,
 
 static void HandleHLSLParamModifierAttr(QualType &CurType,
                                         const ParsedAttr &Attr, Sema &S) {
+  // Don't apply this attribute to template dependent types. It is applied on
+  // substitution during template instantiation.
+  if (CurType->isDependentType())
+    return;
   if (Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_inout ||
       Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out)
     CurType = S.getASTContext().getLValueReferenceType(CurType);
