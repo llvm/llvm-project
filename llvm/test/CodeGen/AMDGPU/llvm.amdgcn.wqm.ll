@@ -9,10 +9,9 @@ define i32 @test_s_wqm_constant_i32() {
 ; GFX11-LABEL: test_s_wqm_constant_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_wqm_b32 s0, 0x85fe3a92
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0xff00ff0f
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %br = call i32 @llvm.amdgcn.s.wqm.i32(i32 u0x85FE3A92)
+  %br = call i32 @llvm.amdgcn.s.wqm.i32(i32 u0x85003A02)
   ret i32 %br
 }
 
@@ -48,12 +47,10 @@ define i64 @test_s_wqm_constant_i64() {
 ; GFX11-LABEL: test_s_wqm_constant_i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s0, 0x85fe3a92
-; GFX11-NEXT:    s_mov_b32 s1, 0x3a9285fe
-; GFX11-NEXT:    s_wqm_b64 s[0:1], s[0:1]
-; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0xff00ffff
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0xffff0fff
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %br = call i64 @llvm.amdgcn.s.wqm.i64(i64 u0x3A9285FE85FE3A92)
+  %br = call i64 @llvm.amdgcn.s.wqm.i64(i64 u0x12480FDBAC00753E)
   ret i64 %br
 }
 
