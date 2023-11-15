@@ -125,8 +125,8 @@
 // MS-TYPEMETADATA: comdat($"??_7B@@6B0@@"), !type [[B8:![0-9]+]]
 // MS-TYPEMETADATA: comdat($"??_7B@@6BA@@@"), !type [[A8]]
 // MS-TYPEMETADATA: comdat($"??_7C@@6B@"), !type [[A8]]
-// MS-TYPEMETADATA: private unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr @"??_R4D@?A0xFA4729A9@@6BB@@@", ptr @"?g@B@@UEAAXXZ", ptr @"?h@D@?A0xFA4729A9@@UEAAXXZ"] }, !type [[B8]], !type [[D8:![0-9]+]]
-// MS-TYPEMETADATA: private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4D@?A0xFA4729A9@@6BA@@@", ptr @"?f@D@?A0xFA4729A9@@$4PPPPPPPM@A@EAAXXZ"] }, !type !0
+// MS-TYPEMETADATA: private unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr @"??_R4D@?{{.*}}@@6BB@@@", ptr @"?g@B@@UEAAXXZ", ptr @"?h@D@?{{.*}}@@UEAAXXZ"] }, !type [[B8]], !type [[D8:![0-9]+]]
+// MS-TYPEMETADATA: private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4D@?{{.*}}@@6BA@@@", ptr @"?f@D@?{{.*}}@@$4PPPPPPPM@A@EAAXXZ"] }, !type !0
 // MS: private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4FA@?1??foo@@YAXXZ@6B@", ptr @"?f@FA@?1??foo@@YAXXZ@UEAAXXZ"] }, !type !0, !type [[FA8:![0-9]+]]
 
 struct A {
