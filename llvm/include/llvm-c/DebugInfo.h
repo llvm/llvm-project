@@ -785,14 +785,14 @@ LLVMMetadataRef LLVMDIBuilderCreateMemberType(
  * \param Type         Type of the static member.
  * \param Flags        Flags to encode member attribute, e.g. private.
  * \param ConstantVal  Const initializer of the member.
+ * \param Tag          DWARF tag of the static member.
  * \param AlignInBits  Member alignment.
  */
-LLVMMetadataRef
-LLVMDIBuilderCreateStaticMemberType(
+LLVMMetadataRef LLVMDIBuilderCreateStaticMemberType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
     LLVMMetadataRef Type, LLVMDIFlags Flags, LLVMValueRef ConstantVal,
-    uint32_t AlignInBits);
+    unsigned Tag, uint32_t AlignInBits);
 
 /**
  * Create debugging information entry for a pointer to member.
