@@ -18,24 +18,15 @@ using namespace clang;
 
 namespace {
 
-bool hasPublicRefAndDeref(const CXXRecordDecl *R) {
+bool hasPublicMethodInBaseClass(const CXXRecordDecl *R,
+                                const char *NameToMatch) {
   assert(R);
   assert(R->hasDefinition());
 
-  bool hasRef = false;
-  bool hasDeref = false;
   for (const CXXMethodDecl *MD : R->methods()) {
     const auto MethodName = safeGetName(MD);
-
-    if (MethodName == "ref" && MD->getAccess() == AS_public) {
-      if (hasDeref)
-        return true;
-      hasRef = true;
-    } else if (MethodName == "deref" && MD->getAccess() == AS_public) {
-      if (hasRef)
-        return true;
-      hasDeref = true;
-    }
+    if (MethodName == NameToMatch && MD->getAccess() == AS_public)
+      return true;
   }
   return false;
 }
@@ -44,9 +35,8 @@ bool hasPublicRefAndDeref(const CXXRecordDecl *R) {
 
 namespace clang {
 
-std::optional<const clang::CXXRecordDecl*>
-isRefCountable(const CXXBaseSpecifier* Base)
-{
+std::optional<const clang::CXXRecordDecl *>
+hasPublicMethodInBase(const CXXBaseSpecifier *Base, const char *NameToMatch) {
   assert(Base);
 
   const Type *T = Base->getType().getTypePtrOrNull();
@@ -59,7 +49,7 @@ isRefCountable(const CXXBaseSpecifier* Base)
   if (!R->hasDefinition())
     return std::nullopt;
 
-  return hasPublicRefAndDeref(R) ? R : nullptr;
+  return hasPublicMethodInBaseClass(R, NameToMatch) ? R : nullptr;
 }
 
 std::optional<bool> isRefCountable(const CXXRecordDecl* R)
@@ -70,29 +60,45 @@ std::optional<bool> isRefCountable(const CXXRecordDecl* R)
   if (!R)
     return std::nullopt;
 
-  if (hasPublicRefAndDeref(R))
+  bool hasRef = hasPublicMethodInBaseClass(R, "ref");
+  bool hasDeref = hasPublicMethodInBaseClass(R, "deref");
+  if (hasRef && hasDeref)
     return true;
 
   CXXBasePaths Paths;
   Paths.setOrigin(const_cast<CXXRecordDecl *>(R));
 
   bool AnyInconclusiveBase = false;
-  const auto isRefCountableBase =
-      [&AnyInconclusiveBase](const CXXBaseSpecifier* Base, CXXBasePath&) {
-          std::optional<const clang::CXXRecordDecl*> IsRefCountable = clang::isRefCountable(Base);
-          if (!IsRefCountable) {
-              AnyInconclusiveBase = true;
-              return false;
-          }
-          return (*IsRefCountable) != nullptr;
+  const auto hasPublicRefInBase =
+      [&AnyInconclusiveBase](const CXXBaseSpecifier *Base, CXXBasePath &) {
+        auto hasRefInBase = clang::hasPublicMethodInBase(Base, "ref");
+        if (!hasRefInBase) {
+          AnyInconclusiveBase = true;
+          return false;
+        }
+        return (*hasRefInBase) != nullptr;
       };
 
-  bool BasesResult = R->lookupInBases(isRefCountableBase, Paths,
+  hasRef = hasRef || R->lookupInBases(hasPublicRefInBase, Paths,
                                       /*LookupInDependent =*/true);
   if (AnyInconclusiveBase)
     return std::nullopt;
 
-  return BasesResult;
+  const auto hasPublicDerefInBase =
+      [&AnyInconclusiveBase](const CXXBaseSpecifier *Base, CXXBasePath &) {
+        auto hasDerefInBase = clang::hasPublicMethodInBase(Base, "deref");
+        if (!hasDerefInBase) {
+          AnyInconclusiveBase = true;
+          return false;
+        }
+        return (*hasDerefInBase) != nullptr;
+      };
+  hasDeref = hasDeref || R->lookupInBases(hasPublicDerefInBase, Paths,
+                                          /*LookupInDependent =*/true);
+  if (AnyInconclusiveBase)
+    return std::nullopt;
+
+  return hasRef && hasDeref;
 }
 
 bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
@@ -186,8 +192,7 @@ bool isPtrConversion(const FunctionDecl *F) {
   // FIXME: check # of params == 1
   const auto FunctionName = safeGetName(F);
   if (FunctionName == "getPtr" || FunctionName == "WeakPtr" ||
-      FunctionName == "makeWeakPtr"
-
+      FunctionName == "dynamicDowncast"
       || FunctionName == "downcast" || FunctionName == "bitwise_cast")
     return true;
 

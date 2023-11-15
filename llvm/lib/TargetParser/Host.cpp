@@ -852,6 +852,13 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = X86::INTEL_COREI7_ARROWLAKE_S;
       break;
 
+    // Pantherlake:
+    case 0xcc:
+      CPU = "pantherlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
+      break;
+
     // Graniterapids:
     case 0xad:
       CPU = "graniterapids";
@@ -930,6 +937,12 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0xb6:
       CPU = "grandridge";
       *Type = X86::INTEL_GRANDRIDGE;
+      break;
+
+    // Clearwaterforest:
+    case 0xdd:
+      CPU = "clearwaterforest";
+      *Type = X86::INTEL_CLEARWATERFOREST;
       break;
 
     // Xeon Phi (Knights Landing + Knights Mill):

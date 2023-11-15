@@ -341,6 +341,8 @@ def FeatureAVX10_1 : SubtargetFeature<"avx10.1-256", "HasAVX10_1", "true",
 def FeatureAVX10_1_512 : SubtargetFeature<"avx10.1-512", "HasAVX10_1_512", "true",
                                           "Support AVX10.1 up to 512-bit instruction",
                                           [FeatureAVX10_1, FeatureEVEX512]>;
+def FeatureEGPR : SubtargetFeature<"egpr", "HasEGPR", "true",
+                                   "Support extended general purpose register">;
 
 // Ivy Bridge and newer processors have enhanced REP MOVSB and STOSB (aka
 // "string operations"). See "REP String Enhancement" in the Intel Software
@@ -1257,6 +1259,18 @@ def ProcessorFeatures {
   list<SubtargetFeature> ARLSFeatures =
     !listconcat(SRFFeatures, ARLSAdditionalFeatures);
 
+  // Pantherlake
+  list<SubtargetFeature> PTLAdditionalFeatures = [FeaturePREFETCHI];
+  list<SubtargetFeature> PTLFeatures =
+    !listconcat(ARLSFeatures, PTLAdditionalFeatures);
+
+
+  // Clearwaterforest
+  list<SubtargetFeature> CWFAdditionalFeatures = [FeaturePREFETCHI,
+                                                  FeatureUSERMSR];
+  list<SubtargetFeature> CWFFeatures =
+    !listconcat(ARLSFeatures, CWFAdditionalFeatures);
+
   // Knights Landing
   list<SubtargetFeature> KNLFeatures = [FeatureX87,
                                         FeatureCX8,
@@ -1770,6 +1784,10 @@ foreach P = ["arrowlake-s", "arrowlake_s", "lunarlake"] in {
 def : ProcModel<P, AlderlakePModel,
                 ProcessorFeatures.ARLSFeatures, ProcessorFeatures.ADLTuning>;
 }
+def : ProcModel<"pantherlake", AlderlakePModel,
+                ProcessorFeatures.PTLFeatures, ProcessorFeatures.ADLTuning>;
+def : ProcModel<"clearwaterforest", AlderlakePModel,
+                ProcessorFeatures.CWFFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"graniterapids", SapphireRapidsModel,
                 ProcessorFeatures.GNRFeatures, ProcessorFeatures.SPRTuning>;
 def : ProcModel<"emeraldrapids", SapphireRapidsModel,

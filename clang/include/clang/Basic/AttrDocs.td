@@ -7231,6 +7231,69 @@ its underlying representation to be a WebAssembly ``funcref``.
   }];
 }
 
+def PreferredTypeDocumentation : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+This attribute allows adjusting the type of a bit-field in debug information.
+This can be helpful when a bit-field is intended to store an enumeration value,
+but has to be specified as having the enumeration's underlying type in order to
+facilitate compiler optimizations or bit-field packing behavior. Normally, the
+underlying type is what is emitted in debug information, which can make it hard
+for debuggers to know to map a bit-field's value back to a particular enumeration.
+
+.. code-block:: c++
+
+    enum Colors { Red, Green, Blue };
+
+    struct S {
+      [[clang::preferred_type(Colors)]] unsigned ColorVal : 2;
+      [[clang::preferred_type(bool)]] unsigned UseAlternateColorSpace : 1;
+    } s = { Green, false };
+
+Without the attribute, a debugger is likely to display the value ``1`` for ``ColorVal``
+and ``0`` for ``UseAlternateColorSpace``. With the attribute, the debugger may now
+display ``Green`` and ``false`` instead.
+
+This can be used to map a bit-field to an arbitrary type that isn't integral
+or an enumeration type. For example:
+
+.. code-block:: c++
+
+    struct A {
+      short a1;
+      short a2;
+    };
+
+    struct B {
+      [[clang::preferred_type(A)]] unsigned b1 : 32 = 0x000F'000C;
+    };
+
+will associate the type ``A`` with the ``b1`` bit-field and is intended to display
+something like this in the debugger:
+
+.. code-block:: text
+
+    Process 2755547 stopped
+    * thread #1, name = 'test-preferred-', stop reason = step in
+        frame #0: 0x0000555555555148 test-preferred-type`main at test.cxx:13:14
+       10   int main()
+       11   {
+       12       B b;
+    -> 13       return b.b1;
+       14   }
+    (lldb) v -T
+    (B) b = {
+      (A:32) b1 = {
+        (short) a1 = 12
+        (short) a2 = 15
+      }
+    }
+
+Note that debuggers may not be able to handle more complex mappings, and so
+this usage is debugger-dependent.
+  }];
+}
+
 def CleanupDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
@@ -7349,6 +7412,72 @@ that ``p->array`` must have at least ``p->count`` number of elements available:
   void use_foo(int index) {
     p->count += SIZE_INCR + 1; /* 'count' is now larger than the number of elements of 'array'. */
     p->array[index] = 0;       /* the sanitizer can't properly check if this is an out-of-bounds access. */
+  }
+
+  }];
+}
+
+def CoroOnlyDestroyWhenCompleteDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The `coro_only_destroy_when_complete` attribute should be marked on a C++ class. The coroutines
+whose return type is marked with the attribute are assumed to be destroyed only after the coroutine has
+reached the final suspend point.
+
+This is helpful for the optimizers to reduce the size of the destroy function for the coroutines.
+
+For example,
+
+.. code-block:: c++
+
+  A foo() {
+    dtor d;
+    co_await something();
+    dtor d1;
+    co_await something();
+    dtor d2;
+    co_return 43;
+  }
+
+The compiler may generate the following pseudocode:
+
+.. code-block:: c++
+
+  void foo.destroy(foo.Frame *frame) {
+    switch(frame->suspend_index()) {
+      case 1:
+        frame->d.~dtor();
+        break;
+      case 2:
+        frame->d.~dtor();
+        frame->d1.~dtor();
+        break;
+      case 3:
+        frame->d.~dtor();
+        frame->d1.~dtor();
+        frame->d2.~dtor();
+        break;
+      default: // coroutine completed or haven't started
+        break;
+    }
+
+    frame->promise.~promise_type();
+    delete frame;
+  }
+
+The `foo.destroy()` function's purpose is to release all of the resources
+initialized for the coroutine when it is destroyed in a suspended state.
+However, if the coroutine is only ever destroyed at the final suspend state,
+the rest of the conditions are superfluous.
+
+The user can use the `coro_only_destroy_when_complete` attributo suppress
+generation of the other destruction cases, optimizing the above `foo.destroy` to:
+
+.. code-block:: c++
+
+  void foo.destroy(foo.Frame *frame) {
+    frame->promise.~promise_type();
+    delete frame;
   }
 
   }];

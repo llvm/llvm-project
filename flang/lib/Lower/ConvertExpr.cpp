@@ -1237,41 +1237,8 @@ public:
         [&](const fir::CharBoxValue &boxchar) -> ExtValue {
           if constexpr (TC1 == Fortran::common::TypeCategory::Character &&
                         TC2 == TC1) {
-            // Use char_convert. Each code point is translated from a
-            // narrower/wider encoding to the target encoding. For example, 'A'
-            // may be translated from 0x41 : i8 to 0x0041 : i16. The symbol
-            // for euro (0x20AC : i16) may be translated from a wide character
-            // to "0xE2 0x82 0xAC" : UTF-8.
-            mlir::Value bufferSize = boxchar.getLen();
-            auto kindMap = builder.getKindMap();
-            mlir::Value boxCharAddr = boxchar.getAddr();
-            auto fromTy = boxCharAddr.getType();
-            if (auto charTy = fromTy.dyn_cast<fir::CharacterType>()) {
-              // boxchar is a value, not a variable. Turn it into a temporary.
-              // As a value, it ought to have a constant LEN value.
-              assert(charTy.hasConstantLen() && "must have constant length");
-              mlir::Value tmp = builder.createTemporary(loc, charTy);
-              builder.create<fir::StoreOp>(loc, boxCharAddr, tmp);
-              boxCharAddr = tmp;
-            }
-            auto fromBits =
-                kindMap.getCharacterBitsize(fir::unwrapRefType(fromTy)
-                                                .cast<fir::CharacterType>()
-                                                .getFKind());
-            auto toBits = kindMap.getCharacterBitsize(
-                ty.cast<fir::CharacterType>().getFKind());
-            if (toBits < fromBits) {
-              // Scale by relative ratio to give a buffer of the same length.
-              auto ratio = builder.createIntegerConstant(
-                  loc, bufferSize.getType(), fromBits / toBits);
-              bufferSize =
-                  builder.create<mlir::arith::MulIOp>(loc, bufferSize, ratio);
-            }
-            auto dest = builder.create<fir::AllocaOp>(
-                loc, ty, mlir::ValueRange{bufferSize});
-            builder.create<fir::CharConvertOp>(loc, boxCharAddr,
-                                               boxchar.getLen(), dest);
-            return fir::CharBoxValue{dest, boxchar.getLen()};
+            return fir::factory::convertCharacterKind(builder, loc, boxchar,
+                                                      KIND);
           } else {
             fir::emitFatalError(
                 loc, "unsupported evaluate::Convert between CHARACTER type "
@@ -2567,7 +2534,8 @@ public:
             procRef.proc().GetSpecificIntrinsic())
       return genIntrinsicRef(procRef, resultType, *intrinsic);
 
-    if (Fortran::lower::isIntrinsicModuleProcRef(procRef))
+    if (Fortran::lower::isIntrinsicModuleProcRef(procRef) &&
+        !Fortran::semantics::IsBindCProcedure(*procRef.proc().GetSymbol()))
       return genIntrinsicRef(procRef, resultType);
 
     if (isStatementFunctionCall(procRef))
@@ -2964,7 +2932,20 @@ public:
   }
 
   template <typename A>
+  mlir::Value getIfOverridenExpr(const Fortran::evaluate::Expr<A> &x) {
+    if (const Fortran::lower::ExprToValueMap *map =
+            converter.getExprOverrides()) {
+      Fortran::lower::SomeExpr someExpr = toEvExpr(x);
+      if (auto match = map->find(&someExpr); match != map->end())
+        return match->second;
+    }
+    return mlir::Value{};
+  }
+
+  template <typename A>
   ExtValue gen(const Fortran::evaluate::Expr<A> &x) {
+    if (mlir::Value val = getIfOverridenExpr(x))
+      return val;
     // Whole array symbols or components, and results of transformational
     // functions already have a storage and the scalar expression lowering path
     // is used to not create a new temporary storage.
@@ -2978,6 +2959,8 @@ public:
   }
   template <typename A>
   ExtValue genval(const Fortran::evaluate::Expr<A> &x) {
+    if (mlir::Value val = getIfOverridenExpr(x))
+      return val;
     if (isScalar(x) || Fortran::evaluate::UnwrapWholeSymbolDataRef(x) ||
         inInitializer)
       return std::visit([&](const auto &e) { return genval(e); }, x.u);
@@ -2987,6 +2970,8 @@ public:
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Expr<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Logical, KIND>> &exp) {
+    if (mlir::Value val = getIfOverridenExpr(exp))
+      return val;
     return std::visit([&](const auto &e) { return genval(e); }, exp.u);
   }
 
@@ -3948,7 +3933,7 @@ private:
       auto castTo = builder.createConvert(loc, memrefTy, origVal);
       origVal = builder.create<fir::EmboxOp>(loc, eleTy, castTo);
     }
-    mlir::Value val = builder.createConvert(loc, eleTy, origVal);
+    mlir::Value val = builder.convertWithSemantics(loc, eleTy, origVal);
     if (isBoundsSpec()) {
       assert(lbounds.has_value());
       auto lbs = *lbounds;

@@ -21,7 +21,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -5806,6 +5805,8 @@ const NoteType CoreNoteTypes[] = {
     {ELF::NT_ARM_SVE, "NT_ARM_SVE (AArch64 SVE registers)"},
     {ELF::NT_ARM_PAC_MASK,
      "NT_ARM_PAC_MASK (AArch64 Pointer Authentication code masks)"},
+    {ELF::NT_ARM_TAGGED_ADDR_CTRL,
+     "NT_ARM_TAGGED_ADDR_CTRL (AArch64 Tagged Address Control)"},
     {ELF::NT_ARM_SSVE, "NT_ARM_SSVE (AArch64 Streaming SVE registers)"},
     {ELF::NT_ARM_ZA, "NT_ARM_ZA (AArch64 SME ZA registers)"},
     {ELF::NT_ARM_ZT, "NT_ARM_ZT (AArch64 SME ZT registers)"},

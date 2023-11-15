@@ -57,6 +57,14 @@ Changes to the LLVM IR
 
   * ``and``
   * ``or``
+  * ``zext``
+  * ``sext``
+  * ``fptrunc``
+  * ``fpext``
+  * ``fptoui``
+  * ``fptosi``
+  * ``uitofp``
+  * ``sitofp``
 
 * Added `llvm.exp10` intrinsic.
 
@@ -68,6 +76,13 @@ Changes to building LLVM
 
 Changes to TableGen
 -------------------
+
+* Added constructs for debugging TableGen files:
+
+  * `dump` keyword to dump messages to standard error, see
+     https://github.com/llvm/llvm-project/pull/68793.
+  * `!repr` bang operator to inspect the content of values, see
+     https://github.com/llvm/llvm-project/pull/68716.
 
 Changes to Interprocedural Optimizations
 ----------------------------------------
@@ -135,6 +150,7 @@ Changes to the X86 Backend
   type matched and called into libgcc helper functions.
 * Support ISA of ``USER_MSR``.
 * Support ISA of ``AVX10.1-256`` and ``AVX10.1-512``.
+* ``-mcpu=pantherlake`` and ``-mcpu=clearwaterforest`` are now supported.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -158,6 +174,23 @@ Changes to the C API
 
   * ``LLVMConstAnd``
   * ``LLVMConstOr``
+  * ``LLVMConstZExt``
+  * ``LLVMConstSExt``
+  * ``LLVMConstZExtOrBitCast``
+  * ``LLVMConstSExtOrBitCast``
+  * ``LLVMConstIntCast``
+  * ``LLVMConstFPTrunc``
+  * ``LLVMConstFPExt``
+  * ``LLVMConstFPToUI``
+  * ``LLVMConstFPToSI``
+  * ``LLVMConstUIToFP``
+  * ``LLVMConstSIToFP``
+  * ``LLVMConstFPCast``
+
+* Added ``LLVMCreateTargetMachineWithOptions``, along with helper functions for
+  an opaque option structure, as an alternative to ``LLVMCreateTargetMachine``.
+  The option structure exposes an additional setting (i.e., the target ABI) and
+  provides default values for unspecified settings.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -188,6 +221,8 @@ Changes to the LLVM tools
 * ``llvm-nm`` now supports the ``--line-numbers`` (``-l``) option to use
   debugging information to print symbols' filenames and line numbers.
 
+* llvm-symbolizer and llvm-addr2line now support addresses specified as symbol names.
+
 Changes to LLDB
 ---------------------------------
 
@@ -197,6 +232,27 @@ Changes to LLDB
   for formatters to quickly find directly nested type when it's known
   where to search for it, avoiding more expensive global search via
   ``SBTarget::FindFirstType``.
+* ``lldb-vscode`` was renamed to ``lldb-dap`` and and its installation
+  instructions have been updated to reflect this. The underlying functionality
+  remains unchanged.
+* The ``mte_ctrl`` register can now be read from AArch64 Linux core files.
+* LLDB on AArch64 Linux now supports debugging the Scalable Matrix Extension
+  (SME) and Scalable Matrix Extension 2 (SME2) for both live processes and core
+  files. For details refer to the
+  `AArch64 Linux documentation <https://lldb.llvm.org/use/aarch64-linux.html>`_.
+
+* When running on AArch64 Linux, ``lldb-server`` now provides register
+  field information for the following registers: ``cpsr``, ``fpcr``,
+  ``fpsr``, ``svcr`` and ``mte_ctrl``. ::
+
+    (lldb) register read cpsr
+          cpsr = 0x80001000
+               = (N = 1, Z = 0, C = 0, V = 0, SS = 0, IL = 0, <...>
+
+  This is only available when ``lldb`` is built with XML support.
+  Where possible the CPU's capabilities are used to decide which
+  fields are present, however this is not always possible or entirely
+  accurate. If in doubt, refer to the numerical value.
 
 Changes to Sanitizers
 ---------------------

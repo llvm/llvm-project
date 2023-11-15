@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple loongarch64 -target-feature +f -target-feature +d -target-abi lp64d -emit-llvm %s -o - -x c++ | \
 // RUN:   FileCheck --check-prefix=CHECK-CXX %s
 
-// Fields containing empty structs or unions are ignored when flattening
+// Fields containing empty structs are ignored when flattening
 // structs to examine whether the structs can be passed via FARs, even in C++.
 // But there is an exception that non-zero-length array of empty structures are
 // not ignored in C++. These rules are not documented in psABI <https://www.github.com/loongson/la-abi-specs>
@@ -81,9 +81,62 @@ struct s8 test_s8(struct s8 a) {
   return a;
 }
 
+/// Note: Below tests check how empty structs are passed while above tests check
+/// empty structs as fields of container struct are ignored when flattening
+/// structs to examine whether the container structs can be passed via FARs.
+
 // CHECK-C: define{{.*}} void @test_s9()
 // CHECK-CXX: define{{.*}} i64 @_Z7test_s92s9(i64 {{.*}})
 struct s9 { struct empty e; };
 struct s9 test_s9(struct s9 a) {
+  return a;
+}
+
+// CHECK-C: define{{.*}} void @test_s10()
+// CHECK-CXX: define{{.*}} i64 @_Z8test_s103s10(i64 {{.*}})
+struct s10 { };
+struct s10 test_s10(struct s10 a) {
+  return a;
+}
+
+// CHECK-C: define{{.*}} void @test_s11()
+// CHECK-CXX: define{{.*}} i64 @_Z8test_s113s11(i64 {{.*}})
+struct s11 { struct { } s; };
+struct s11 test_s11(struct s11 a) {
+  return a;
+}
+
+// CHECK-C: define{{.*}} void @test_s12()
+// CHECK-CXX: define{{.*}} void @_Z8test_s123s12()
+struct s12 { int i[0]; };
+struct s12 test_s12(struct s12 a) {
+  return a;
+}
+
+// CHECK-C: define{{.*}} void @test_s13()
+// CHECK-CXX: define{{.*}} void @_Z8test_s133s13()
+struct s13 { struct { } s[0]; };
+struct s13 test_s13(struct s13 a) {
+  return a;
+}
+
+// CHECK-C: define{{.*}} void @test_s14()
+// CHECK-CXX: define{{.*}} i64 @_Z8test_s143s14(i64 {{.*}})
+struct s14 { struct { } s[1]; };
+struct s14 test_s14(struct s14 a) {
+  return a;
+}
+
+// CHECK-C: define{{.*}} void @test_s15()
+// CHECK-CXX: define{{.*}} i64 @_Z8test_s153s15(i64 {{.*}})
+struct s15 { int : 0; };
+struct s15 test_s15(struct s15 a) {
+  return a;
+}
+
+// CHECK-C: define{{.*}} i64 @test_s16(i64 {{.*}})
+// CHECK-CXX: define{{.*}} i64 @_Z8test_s163s16(i64 {{.*}})
+struct s16 { int : 1; };
+struct s16 test_s16(struct s16 a) {
   return a;
 }

@@ -76,16 +76,6 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
                                         : std::nullopt;
   });
 
-  // LLVM container types may (recursively) contain other types that must be
-  // converted even when the outer type is compatible.
-  addConversion([&](LLVM::LLVMPointerType type) -> std::optional<Type> {
-    if (type.isOpaque())
-      return type;
-    if (auto pointee = convertType(type.getElementType()))
-      return LLVM::LLVMPointerType::get(pointee, type.getAddressSpace());
-    return std::nullopt;
-  });
-
   addConversion([&](LLVM::LLVMStructType type, SmallVectorImpl<Type> &results)
                     -> std::optional<LogicalResult> {
     // Fastpath for types that won't be converted by this callback anyway.
@@ -209,14 +199,6 @@ Type LLVMTypeConverter::getIndexType() const {
   return IntegerType::get(&getContext(), getIndexTypeBitwidth());
 }
 
-LLVM::LLVMPointerType
-LLVMTypeConverter::getPointerType(Type elementType,
-                                  unsigned int addressSpace) const {
-  if (useOpaquePointers())
-    return LLVM::LLVMPointerType::get(&getContext(), addressSpace);
-  return LLVM::LLVMPointerType::get(elementType, addressSpace);
-}
-
 unsigned LLVMTypeConverter::getPointerBitwidth(unsigned addressSpace) const {
   return options.dataLayout.getPointerSizeInBits(addressSpace);
 }
@@ -249,12 +231,7 @@ Type LLVMTypeConverter::convertComplexType(ComplexType type) const {
 // Except for signatures, MLIR function types are converted into LLVM
 // pointer-to-function types.
 Type LLVMTypeConverter::convertFunctionType(FunctionType type) const {
-  SignatureConversion conversion(type.getNumInputs());
-  Type converted = convertFunctionSignature(
-      type, /*isVariadic=*/false, options.useBarePtrCallConv, conversion);
-  if (!converted)
-    return {};
-  return getPointerType(converted);
+  return LLVM::LLVMPointerType::get(type.getContext());
 }
 
 // Function types are converted to LLVM Function types by recursively converting
@@ -301,11 +278,12 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) const {
   if (!resultType)
     return {};
 
+  auto ptrType = LLVM::LLVMPointerType::get(type.getContext());
   auto structType = dyn_cast<LLVM::LLVMStructType>(resultType);
   if (structType) {
     // Struct types cannot be safely returned via C interface. Make this a
     // pointer argument, instead.
-    inputs.push_back(getPointerType(structType));
+    inputs.push_back(ptrType);
     resultType = LLVM::LLVMVoidType::get(&getContext());
   }
 
@@ -314,7 +292,7 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) const {
     if (!converted || !LLVM::isCompatibleType(converted))
       return {};
     if (isa<MemRefType, UnrankedMemRefType>(t))
-      converted = getPointerType(converted);
+      converted = ptrType;
     inputs.push_back(converted);
   }
 
@@ -373,7 +351,7 @@ LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
            "failed. Consider adding memory space conversions.";
     return {};
   }
-  auto ptrTy = getPointerType(elementType, *addressSpace);
+  auto ptrTy = LLVM::LLVMPointerType::get(type.getContext(), *addressSpace);
 
   auto indexTy = getIndexType();
 
@@ -419,7 +397,7 @@ Type LLVMTypeConverter::convertMemRefType(MemRefType type) const {
 ///    be unranked.
 SmallVector<Type, 2>
 LLVMTypeConverter::getUnrankedMemRefDescriptorFields() const {
-  return {getIndexType(), getPointerType(IntegerType::get(&getContext(), 8))};
+  return {getIndexType(), LLVM::LLVMPointerType::get(&getContext())};
 }
 
 unsigned LLVMTypeConverter::getUnrankedMemRefDescriptorSize(
@@ -487,7 +465,7 @@ Type LLVMTypeConverter::convertMemRefToBarePtr(BaseMemRefType type) const {
   FailureOr<unsigned> addressSpace = getMemRefAddressSpace(type);
   if (failed(addressSpace))
     return {};
-  return getPointerType(elementType, *addressSpace);
+  return LLVM::LLVMPointerType::get(type.getContext(), *addressSpace);
 }
 
 /// Convert an n-D vector type to an LLVM vector type:
@@ -593,7 +571,7 @@ Value LLVMTypeConverter::promoteOneMemRefDescriptor(Location loc, Value operand,
                                                     OpBuilder &builder) const {
   // Alloca with proper alignment. We do not expect optimizations of this
   // alloca op and so we omit allocating at the entry block.
-  auto ptrType = getPointerType(operand.getType());
+  auto ptrType = LLVM::LLVMPointerType::get(builder.getContext());
   Value one = builder.create<LLVM::ConstantOp>(loc, builder.getI64Type(),
                                                builder.getIndexAttr(1));
   Value allocated =

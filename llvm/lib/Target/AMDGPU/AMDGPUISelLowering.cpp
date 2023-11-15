@@ -384,7 +384,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
        MVT::v12f32, MVT::v16f16, MVT::v16i16, MVT::v16f32, MVT::v16i32,
        MVT::v32f32, MVT::v32i32, MVT::v2f64,  MVT::v2i64,  MVT::v3f64,
        MVT::v3i64,  MVT::v4f64,  MVT::v4i64,  MVT::v8f64,  MVT::v8i64,
-       MVT::v16f64, MVT::v16i64},
+       MVT::v16f64, MVT::v16i64, MVT::v32i16, MVT::v32f16},
       Custom);
 
   setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
@@ -5041,6 +5041,36 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     return performAssertSZExtCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN:
     return performIntrinsicWOChainCombine(N, DCI);
+  case AMDGPUISD::FMAD_FTZ: {
+    SDValue N0 = N->getOperand(0);
+    SDValue N1 = N->getOperand(1);
+    SDValue N2 = N->getOperand(2);
+    EVT VT = N->getValueType(0);
+
+    // FMAD_FTZ is a FMAD + flush denormals to zero.
+    // We flush the inputs, the intermediate step, and the output.
+    ConstantFPSDNode *N0CFP = dyn_cast<ConstantFPSDNode>(N0);
+    ConstantFPSDNode *N1CFP = dyn_cast<ConstantFPSDNode>(N1);
+    ConstantFPSDNode *N2CFP = dyn_cast<ConstantFPSDNode>(N2);
+    if (N0CFP && N1CFP && N2CFP) {
+      const auto FTZ = [](const APFloat &V) {
+        if (V.isDenormal()) {
+          APFloat Zero(V.getSemantics(), 0);
+          return V.isNegative() ? -Zero : Zero;
+        }
+        return V;
+      };
+
+      APFloat V0 = FTZ(N0CFP->getValueAPF());
+      APFloat V1 = FTZ(N1CFP->getValueAPF());
+      APFloat V2 = FTZ(N2CFP->getValueAPF());
+      V0.multiply(V1, APFloat::rmNearestTiesToEven);
+      V0 = FTZ(V0);
+      V0.add(V2, APFloat::rmNearestTiesToEven);
+      return DAG.getConstantFP(FTZ(V0), DL, VT);
+    }
+    break;
+  }
   }
   return SDValue();
 }
@@ -5182,6 +5212,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CALL)
   NODE_NAME_CASE(TC_RETURN)
   NODE_NAME_CASE(TC_RETURN_GFX)
+  NODE_NAME_CASE(TC_RETURN_CHAIN)
   NODE_NAME_CASE(TRAP)
   NODE_NAME_CASE(RET_GLUE)
   NODE_NAME_CASE(WAVE_ADDRESS)

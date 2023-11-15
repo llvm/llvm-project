@@ -11,6 +11,7 @@ target datalayout = "i32:8:8"
 ;    and i32 %mul, 252
 ; The mask is no longer in the form 2^n-1  and this prevents the transformation.
 
+declare void @use.i64(i64)
 
 ; return mul(zext x, zext y) > MAX
 define i32 @pr4917_1(i32 %x, i32 %y) nounwind {
@@ -236,7 +237,8 @@ define i1 @pr21445(i8 %a) {
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ext = zext i8 %a to i32
-  %mul = mul i32 %ext, zext (i8 ptrtoint (ptr @pr21445_data to i8) to i32)
+  %ext2 = zext i8 ptrtoint (ptr @pr21445_data to i8) to i32
+  %mul = mul i32 %ext, %ext2
   %and = and i32 %mul, 255
   %cmp = icmp ne i32 %mul, %and
   ret i1 %cmp
@@ -276,6 +278,68 @@ entry:
   %r = zext i32 %y to i34
   %mul34 = mul nuw i34 %l, %r
   %overflow = icmp ule i34 %mul34, 4294967295
+  %retval = zext i1 %overflow to i32
+  ret i32 %retval
+}
+
+define i32 @extra_and_use(i32 %x, i32 %y) {
+; CHECK-LABEL: @extra_and_use(
+; CHECK-NEXT:    [[UMUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[UMUL_VALUE:%.*]] = extractvalue { i32, i1 } [[UMUL]], 0
+; CHECK-NEXT:    [[AND:%.*]] = zext i32 [[UMUL_VALUE]] to i64
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i32, i1 } [[UMUL]], 1
+; CHECK-NEXT:    call void @use.i64(i64 [[AND]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = zext i1 [[OVERFLOW]] to i32
+; CHECK-NEXT:    ret i32 [[RETVAL]]
+;
+  %l = zext i32 %x to i64
+  %r = zext i32 %y to i64
+  %mul64 = mul i64 %l, %r
+  %overflow = icmp ugt i64 %mul64, 4294967295
+  %and = and i64 %mul64, u0xffffffff
+  call void @use.i64(i64 %and)
+  %retval = zext i1 %overflow to i32
+  ret i32 %retval
+}
+
+define i32 @extra_and_use_small_mask(i32 %x, i32 %y) {
+; CHECK-LABEL: @extra_and_use_small_mask(
+; CHECK-NEXT:    [[UMUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[UMUL_VALUE:%.*]] = extractvalue { i32, i1 } [[UMUL]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[UMUL_VALUE]], 268435455
+; CHECK-NEXT:    [[AND:%.*]] = zext nneg i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i32, i1 } [[UMUL]], 1
+; CHECK-NEXT:    call void @use.i64(i64 [[AND]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = zext i1 [[OVERFLOW]] to i32
+; CHECK-NEXT:    ret i32 [[RETVAL]]
+;
+  %l = zext i32 %x to i64
+  %r = zext i32 %y to i64
+  %mul64 = mul i64 %l, %r
+  %overflow = icmp ugt i64 %mul64, 4294967295
+  %and = and i64 %mul64, u0xfffffff
+  call void @use.i64(i64 %and)
+  %retval = zext i1 %overflow to i32
+  ret i32 %retval
+}
+
+define i32 @extra_and_use_mask_too_large(i32 %x, i32 %y) {
+; CHECK-LABEL: @extra_and_use_mask_too_large(
+; CHECK-NEXT:    [[L:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[MUL64:%.*]] = mul nuw i64 [[L]], [[R]]
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = icmp ugt i64 [[MUL64]], 4294967295
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[MUL64]], 68719476735
+; CHECK-NEXT:    call void @use.i64(i64 [[AND]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = zext i1 [[OVERFLOW]] to i32
+; CHECK-NEXT:    ret i32 [[RETVAL]]
+;
+  %l = zext i32 %x to i64
+  %r = zext i32 %y to i64
+  %mul64 = mul i64 %l, %r
+  %overflow = icmp ugt i64 %mul64, 4294967295
+  %and = and i64 %mul64, u0xfffffffff
+  call void @use.i64(i64 %and)
   %retval = zext i1 %overflow to i32
   ret i32 %retval
 }

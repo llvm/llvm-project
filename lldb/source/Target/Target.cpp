@@ -480,12 +480,12 @@ BreakpointSP Target::CreateBreakpoint(const Address &addr, bool internal,
 
 lldb::BreakpointSP
 Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
-                                        const FileSpec *file_spec,
+                                        const FileSpec &file_spec,
                                         bool request_hardware) {
   SearchFilterSP filter_sp(
       new SearchFilterForUnconstrainedSearches(shared_from_this()));
   BreakpointResolverSP resolver_sp(new BreakpointResolverAddress(
-      nullptr, file_addr, file_spec ? *file_spec : FileSpec()));
+      nullptr, file_addr, file_spec));
   return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
                           false);
 }
@@ -727,7 +727,7 @@ void Target::AddBreakpoint(lldb::BreakpointSP bp_sp, bool internal) {
   }
 }
 
-void Target::AddNameToBreakpoint(BreakpointID &id, const char *name,
+void Target::AddNameToBreakpoint(BreakpointID &id, llvm::StringRef name,
                                  Status &error) {
   BreakpointSP bp_sp =
       m_breakpoint_list.FindBreakpointByID(id.GetBreakpointID());
@@ -740,7 +740,7 @@ void Target::AddNameToBreakpoint(BreakpointID &id, const char *name,
   AddNameToBreakpoint(bp_sp, name, error);
 }
 
-void Target::AddNameToBreakpoint(BreakpointSP &bp_sp, const char *name,
+void Target::AddNameToBreakpoint(BreakpointSP &bp_sp, llvm::StringRef name,
                                  Status &error) {
   if (!bp_sp)
     return;

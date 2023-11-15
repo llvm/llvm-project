@@ -360,6 +360,8 @@ template <> struct ScalarBitSetTraits<TBDFlags> {
     IO.bitSetCase(Flags, "not_app_extension_safe",
                   TBDFlags::NotApplicationExtensionSafe);
     IO.bitSetCase(Flags, "installapi", TBDFlags::InstallAPI);
+    IO.bitSetCase(Flags, "not_for_dyld_shared_cache",
+                  TBDFlags::OSLibNotForSharedCache);
   }
 };
 
@@ -367,39 +369,12 @@ template <> struct ScalarTraits<Target> {
   static void output(const Target &Value, void *, raw_ostream &OS) {
     OS << Value.Arch << "-";
     switch (Value.Platform) {
-    default:
-      OS << "unknown";
-      break;
-    case PLATFORM_MACOS:
-      OS << "macos";
-      break;
-    case PLATFORM_IOS:
-      OS << "ios";
-      break;
-    case PLATFORM_TVOS:
-      OS << "tvos";
-      break;
-    case PLATFORM_WATCHOS:
-      OS << "watchos";
-      break;
-    case PLATFORM_BRIDGEOS:
-      OS << "bridgeos";
-      break;
-    case PLATFORM_MACCATALYST:
-      OS << "maccatalyst";
-      break;
-    case PLATFORM_IOSSIMULATOR:
-      OS << "ios-simulator";
-      break;
-    case PLATFORM_TVOSSIMULATOR:
-      OS << "tvos-simulator";
-      break;
-    case PLATFORM_WATCHOSSIMULATOR:
-      OS << "watchos-simulator";
-      break;
-    case PLATFORM_DRIVERKIT:
-      OS << "driverkit";
-      break;
+#define PLATFORM(platform, id, name, build_name, target, tapi_target,          \
+                 marketing)                                                    \
+  case PLATFORM_##platform:                                                    \
+    OS << #tapi_target;                                                        \
+    break;
+#include "llvm/BinaryFormat/MachO.def"
     }
   }
 
@@ -809,6 +784,9 @@ template <> struct MappingTraits<const InterfaceFile *> {
       if (!File->isTwoLevelNamespace())
         Flags |= TBDFlags::FlatNamespace;
 
+      if (File->isOSLibNotForSharedCache())
+        Flags |= TBDFlags::OSLibNotForSharedCache;
+
       {
         std::map<std::string, TargetList> valueToTargetList;
         for (const auto &it : File->umbrellas())
@@ -899,6 +877,8 @@ template <> struct MappingTraits<const InterfaceFile *> {
       File->setTwoLevelNamespace(!(Flags & TBDFlags::FlatNamespace));
       File->setApplicationExtensionSafe(
           !(Flags & TBDFlags::NotApplicationExtensionSafe));
+      File->setOSLibNotForSharedCache(
+          (Flags & TBDFlags::OSLibNotForSharedCache));
 
       for (const auto &CurrentSection : AllowableClients) {
         for (const auto &lib : CurrentSection.Values)

@@ -101,22 +101,23 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
 //===----------------------------------------------------------------------===//
 
 /// Returns the size of the object specified by V or UnknownSize if unknown.
-static uint64_t getObjectSize(const Value *V, const DataLayout &DL,
-                              const TargetLibraryInfo &TLI,
-                              bool NullIsValidLoc,
-                              bool RoundToAlign = false) {
+static std::optional<TypeSize> getObjectSize(const Value *V,
+                                             const DataLayout &DL,
+                                             const TargetLibraryInfo &TLI,
+                                             bool NullIsValidLoc,
+                                             bool RoundToAlign = false) {
   uint64_t Size;
   ObjectSizeOpts Opts;
   Opts.RoundToAlign = RoundToAlign;
   Opts.NullIsUnknownSize = NullIsValidLoc;
   if (getObjectSize(V, Size, DL, &TLI, Opts))
-    return Size;
-  return MemoryLocation::UnknownSize;
+    return TypeSize::Fixed(Size);
+  return std::nullopt;
 }
 
 /// Returns true if we can prove that the object specified by V is smaller than
 /// Size.
-static bool isObjectSmallerThan(const Value *V, uint64_t Size,
+static bool isObjectSmallerThan(const Value *V, TypeSize Size,
                                 const DataLayout &DL,
                                 const TargetLibraryInfo &TLI,
                                 bool NullIsValidLoc) {
@@ -151,16 +152,16 @@ static bool isObjectSmallerThan(const Value *V, uint64_t Size,
 
   // This function needs to use the aligned object size because we allow
   // reads a bit past the end given sufficient alignment.
-  uint64_t ObjectSize = getObjectSize(V, DL, TLI, NullIsValidLoc,
-                                      /*RoundToAlign*/ true);
+  std::optional<TypeSize> ObjectSize = getObjectSize(V, DL, TLI, NullIsValidLoc,
+                                                     /*RoundToAlign*/ true);
 
-  return ObjectSize != MemoryLocation::UnknownSize && ObjectSize < Size;
+  return ObjectSize && TypeSize::isKnownLT(*ObjectSize, Size);
 }
 
 /// Return the minimal extent from \p V to the end of the underlying object,
 /// assuming the result is used in an aliasing query. E.g., we do use the query
 /// location size and the fact that null pointers cannot alias here.
-static uint64_t getMinimalExtentFrom(const Value &V,
+static TypeSize getMinimalExtentFrom(const Value &V,
                                      const LocationSize &LocSize,
                                      const DataLayout &DL,
                                      bool NullIsValidLoc) {
@@ -175,15 +176,16 @@ static uint64_t getMinimalExtentFrom(const Value &V,
   // If queried with a precise location size, we assume that location size to be
   // accessed, thus valid.
   if (LocSize.isPrecise())
-    DerefBytes = std::max(DerefBytes, LocSize.getValue());
-  return DerefBytes;
+    DerefBytes = std::max(DerefBytes, LocSize.getValue().getKnownMinValue());
+  return TypeSize::Fixed(DerefBytes);
 }
 
 /// Returns true if we can prove that the object specified by V has size Size.
-static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
+static bool isObjectSize(const Value *V, TypeSize Size, const DataLayout &DL,
                          const TargetLibraryInfo &TLI, bool NullIsValidLoc) {
-  uint64_t ObjectSize = getObjectSize(V, DL, TLI, NullIsValidLoc);
-  return ObjectSize != MemoryLocation::UnknownSize && ObjectSize == Size;
+  std::optional<TypeSize> ObjectSize =
+      getObjectSize(V, DL, TLI, NullIsValidLoc);
+  return ObjectSize && *ObjectSize == Size;
 }
 
 //===----------------------------------------------------------------------===//
@@ -206,7 +208,7 @@ bool EarliestEscapeInfo::isNotCapturedBeforeOrAt(const Value *Object,
   if (Iter.second) {
     Instruction *EarliestCapture = FindEarliestCapture(
         Object, *const_cast<Function *>(I->getFunction()),
-        /*ReturnCaptures=*/false, /*StoreCaptures=*/true, DT, EphValues);
+        /*ReturnCaptures=*/false, /*StoreCaptures=*/true, DT);
     if (EarliestCapture) {
       auto Ins = Inst2Obj.insert({EarliestCapture, {}});
       Ins.first->second.push_back(Object);
@@ -219,7 +221,7 @@ bool EarliestEscapeInfo::isNotCapturedBeforeOrAt(const Value *Object,
     return true;
 
   return I != Iter.first->second &&
-         !isPotentiallyReachable(Iter.first->second, I, nullptr, &DT, &LI);
+         !isPotentiallyReachable(Iter.first->second, I, nullptr, &DT, LI);
 }
 
 void EarliestEscapeInfo::removeInstruction(Instruction *I) {
@@ -1056,15 +1058,19 @@ AliasResult BasicAAResult::aliasGEP(
 
   // If an inbounds GEP would have to start from an out of bounds address
   // for the two to alias, then we can assume noalias.
+  // TODO: Remove !isScalable() once BasicAA fully support scalable location
+  // size
   if (*DecompGEP1.InBounds && DecompGEP1.VarIndices.empty() &&
-      V2Size.hasValue() && DecompGEP1.Offset.sge(V2Size.getValue()) &&
+      V2Size.hasValue() && !V2Size.isScalable() &&
+      DecompGEP1.Offset.sge(V2Size.getValue()) &&
       isBaseOfObject(DecompGEP2.Base))
     return AliasResult::NoAlias;
 
   if (isa<GEPOperator>(V2)) {
     // Symmetric case to above.
     if (*DecompGEP2.InBounds && DecompGEP1.VarIndices.empty() &&
-        V1Size.hasValue() && DecompGEP1.Offset.sle(-V1Size.getValue()) &&
+        V1Size.hasValue() && !V1Size.isScalable() &&
+        DecompGEP1.Offset.sle(-V1Size.getValue()) &&
         isBaseOfObject(DecompGEP1.Base))
       return AliasResult::NoAlias;
   }
@@ -1087,6 +1093,10 @@ AliasResult BasicAAResult::aliasGEP(
            BaseAlias == AliasResult::MayAlias);
     return BaseAlias;
   }
+
+  // Bail on analysing scalable LocationSize
+  if (V1Size.isScalable() || V2Size.isScalable())
+    return AliasResult::MayAlias;
 
   // If there is a constant difference between the pointers, but the difference
   // is less than the size of the associated memory object, then we know

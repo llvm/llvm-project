@@ -129,6 +129,11 @@ cl::opt<bool>
                cl::desc("instrument code to generate accurate profile data"),
                cl::cat(BoltOptCategory));
 
+cl::opt<bool>
+    KeepNops("keep-nops",
+             cl::desc("keep no-op instructions. By default they are removed."),
+             cl::Hidden, cl::cat(BoltOptCategory));
+
 cl::opt<std::string>
 OutputFilename("o",
   cl::desc("<output file>"),
@@ -160,7 +165,7 @@ cl::opt<ProfileFormatKind> ProfileFormat(
         "format to dump profile output in aggregation mode, default is fdata"),
     cl::init(PF_Fdata),
     cl::values(clEnumValN(PF_Fdata, "fdata", "offset-based plaintext format"),
-               clEnumValN(PF_YAML, "yaml", "dense YAML reprensentation")),
+               clEnumValN(PF_YAML, "yaml", "dense YAML representation")),
     cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<bool> SplitEH("split-eh", cl::desc("split C++ exception handling code"),

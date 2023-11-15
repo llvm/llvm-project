@@ -89,13 +89,13 @@ llvm.func @func_no_debug() {
 llvm.func @func_with_debug(%arg: i64) {
   // CHECK: %[[ALLOC:.*]] = alloca
   %allocCount = llvm.mlir.constant(1 : i32) : i32
-  %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr<i64>
+  %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
 
   // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression())
   // CHECK: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC:[0-9]+]], metadata !DIExpression())
   // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[NO_NAME_VAR:[0-9]+]], metadata !DIExpression())
   llvm.intr.dbg.value #variable = %arg : i64
-  llvm.intr.dbg.declare #variableAddr = %alloc : !llvm.ptr<i64>
+  llvm.intr.dbg.declare #variableAddr = %alloc : !llvm.ptr
   llvm.intr.dbg.value #noNameVariable= %arg : i64
 
   // CHECK: call void @func_no_debug(), !dbg ![[CALLSITE_LOC:[0-9]+]]
@@ -205,3 +205,61 @@ llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
 // CHECK-DAG: ![[VAR_LOC0]] = !DILocalVariable(name: "a", scope: ![[OUTER_FUNC]], file: ![[FILE]]
 // CHECK-DAG: ![[VAR_LOC1]] = !DILocalVariable(name: "b", scope: ![[LEXICAL_BLOCK_FILE]], file: ![[FILE]]
 // CHECK-DAG  ![[LABEL]] = !DILabel(scope: ![[LEXICAL_BLOCK_FILE]], name: "label", file: ![[FILE]], line: 42)
+
+// -----
+
+#di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32, encoding = DW_ATE_signed>
+#di_file = #llvm.di_file<"foo.mlir" in "/test/">
+#di_compile_unit = #llvm.di_compile_unit<
+  sourceLanguage = DW_LANG_C, file = #di_file, producer = "MLIR",
+  isOptimized = true, emissionKind = Full
+>
+#di_subprogram = #llvm.di_subprogram<
+  compileUnit = #di_compile_unit, scope = #di_file, name = "func",
+  file = #di_file, subprogramFlags = Definition>
+#di_local_variable = #llvm.di_local_variable<scope = #di_subprogram, name = "a", file = #di_file, type = #di_basic_type>
+
+#loc = loc("foo.mlir":0:0)
+
+// CHECK-LABEL: define void @func_without_subprogram(
+// CHECK-SAME: i32 %[[ARG:.*]])
+llvm.func @func_without_subprogram(%0 : i32) {
+  // CHECK: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC0:.*]]
+  llvm.intr.dbg.value #di_local_variable = %0 : i32 loc(fused<#di_subprogram>[#loc])
+  llvm.return
+}
+
+// CHECK: ![[FILE:.*]] = !DIFile(filename: "foo.mlir", directory: "/test/")
+// CHECK-DAG: ![[FUNC:.*]] = distinct !DISubprogram(name: "func", scope: ![[FILE]]
+// CHECK-DAG: ![[VAR_LOC]] = !DILocalVariable(name: "a", scope: ![[FUNC]], file: ![[FILE]]
+
+// -----
+
+// Ensures that debug intrinsics without a valid location are not exported to
+// avoid broken LLVM IR.
+
+#di_file = #llvm.di_file<"foo.mlir" in "/test/">
+#di_compile_unit = #llvm.di_compile_unit<
+  sourceLanguage = DW_LANG_C, file = #di_file, producer = "MLIR",
+  isOptimized = true, emissionKind = Full
+>
+#di_subprogram = #llvm.di_subprogram<
+  compileUnit = #di_compile_unit, scope = #di_file, name = "outer_func",
+  file = #di_file, subprogramFlags = "Definition|Optimized"
+>
+#di_local_variable = #llvm.di_local_variable<scope = #di_subprogram, name = "a">
+#declared_var = #llvm.di_local_variable<scope = #di_subprogram, name = "alloc">
+#di_label = #llvm.di_label<scope = #di_subprogram, name = "label", file = #di_file, line = 42>
+
+// CHECK-LABEL: define i32 @dbg_intrinsics_with_no_location(
+llvm.func @dbg_intrinsics_with_no_location(%arg0: i32) -> (i32) {
+  %allocCount = llvm.mlir.constant(1 : i32) : i32
+  %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
+  // CHECK-NOT: @llvm.dbg.value
+  llvm.intr.dbg.value #di_local_variable = %arg0 : i32
+  // CHECK-NOT: @llvm.dbg.declare
+  llvm.intr.dbg.declare #declared_var = %alloc : !llvm.ptr
+  // CHECK-NOT: @llvm.dbg.label
+  llvm.intr.dbg.label #di_label
+  llvm.return %arg0 : i32
+}

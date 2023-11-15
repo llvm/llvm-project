@@ -4,6 +4,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -flang-experimental-hlfir -o - %s | FileCheck --check-prefix HLFIR --check-prefix ALL %s
 ! RUN: bbc -emit-hlfir -hlfir -o - %s | FileCheck --check-prefix HLFIR --check-prefix ALL %s
 ! RUN: %flang_fc1 -emit-fir -o - %s | FileCheck %s --check-prefix NO-HLFIR --check-prefix ALL
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -o - %s | FileCheck %s --check-prefix NO-HLFIR --check-prefix ALL
 ! RUN: bbc -emit-fir -o - %s | FileCheck %s --check-prefix NO-HLFIR --check-prefix ALL
 ! RUN: %flang_fc1 -emit-fir -flang-experimental-hlfir -o - %s | FileCheck --check-prefix FIR --check-prefix ALL %s
 ! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck --check-prefix FIR --check-prefix ALL %s

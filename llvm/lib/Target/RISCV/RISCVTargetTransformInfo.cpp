@@ -45,8 +45,7 @@ InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
 
   // Otherwise, we check how many instructions it will take to materialise.
   const DataLayout &DL = getDataLayout();
-  return RISCVMatInt::getIntMatCost(Imm, DL.getTypeSizeInBits(Ty),
-                                    getST()->getFeatureBits());
+  return RISCVMatInt::getIntMatCost(Imm, DL.getTypeSizeInBits(Ty), *getST());
 }
 
 // Look for patterns of shift followed by AND that can be turned into a pair of
@@ -210,16 +209,15 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
       llvm::bit_floor(std::clamp<unsigned>(RVVRegisterWidthLMUL, 1, 8));
   switch (K) {
   case TargetTransformInfo::RGK_Scalar:
-    return TypeSize::getFixed(ST->getXLen());
+    return TypeSize::Fixed(ST->getXLen());
   case TargetTransformInfo::RGK_FixedWidthVector:
-    return TypeSize::getFixed(
+    return TypeSize::Fixed(
         ST->useRVVForFixedLengthVectors() ? LMUL * ST->getRealMinVLen() : 0);
   case TargetTransformInfo::RGK_ScalableVector:
-    return TypeSize::getScalable(
-        (ST->hasVInstructions() &&
-         ST->getRealMinVLen() >= RISCV::RVVBitsPerBlock)
-            ? LMUL * RISCV::RVVBitsPerBlock
-            : 0);
+    return TypeSize::Scalable((ST->hasVInstructions() &&
+                               ST->getRealMinVLen() >= RISCV::RVVBitsPerBlock)
+                                  ? LMUL * RISCV::RVVBitsPerBlock
+                                  : 0);
   }
 
   llvm_unreachable("Unsupported register kind");
@@ -668,6 +666,31 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::rint, MVT::nxv2f64, 7},
     {Intrinsic::rint, MVT::nxv4f64, 7},
     {Intrinsic::rint, MVT::nxv8f64, 7},
+    {Intrinsic::lrint, MVT::v2i32, 1},
+    {Intrinsic::lrint, MVT::v4i32, 1},
+    {Intrinsic::lrint, MVT::v8i32, 1},
+    {Intrinsic::lrint, MVT::v16i32, 1},
+    {Intrinsic::lrint, MVT::nxv1i32, 1},
+    {Intrinsic::lrint, MVT::nxv2i32, 1},
+    {Intrinsic::lrint, MVT::nxv4i32, 1},
+    {Intrinsic::lrint, MVT::nxv8i32, 1},
+    {Intrinsic::lrint, MVT::nxv16i32, 1},
+    {Intrinsic::lrint, MVT::v2i64, 1},
+    {Intrinsic::lrint, MVT::v4i64, 1},
+    {Intrinsic::lrint, MVT::v8i64, 1},
+    {Intrinsic::lrint, MVT::v16i64, 1},
+    {Intrinsic::lrint, MVT::nxv1i64, 1},
+    {Intrinsic::lrint, MVT::nxv2i64, 1},
+    {Intrinsic::lrint, MVT::nxv4i64, 1},
+    {Intrinsic::lrint, MVT::nxv8i64, 1},
+    {Intrinsic::llrint, MVT::v2i64, 1},
+    {Intrinsic::llrint, MVT::v4i64, 1},
+    {Intrinsic::llrint, MVT::v8i64, 1},
+    {Intrinsic::llrint, MVT::v16i64, 1},
+    {Intrinsic::llrint, MVT::nxv1i64, 1},
+    {Intrinsic::llrint, MVT::nxv2i64, 1},
+    {Intrinsic::llrint, MVT::nxv4i64, 1},
+    {Intrinsic::llrint, MVT::nxv8i64, 1},
     {Intrinsic::nearbyint, MVT::v2f32, 9},
     {Intrinsic::nearbyint, MVT::v4f32, 9},
     {Intrinsic::nearbyint, MVT::v8f32, 9},
@@ -1051,6 +1074,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::floor:
   case Intrinsic::trunc:
   case Intrinsic::rint:
+  case Intrinsic::lrint:
+  case Intrinsic::llrint:
   case Intrinsic::round:
   case Intrinsic::roundeven: {
     // These all use the same code.

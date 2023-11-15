@@ -96,7 +96,7 @@ static inline void aliasIntoMemref(DataSizeT size, T *data,
                                    StridedMemRefType<T, 1> &ref) {
   ref.basePtr = ref.data = data;
   ref.offset = 0;
-  using MemrefSizeT = typename std::remove_reference_t<decltype(ref.sizes[0])>;
+  using MemrefSizeT = std::remove_reference_t<decltype(ref.sizes[0])>;
   ref.sizes[0] = detail::checkOverflowCast<MemrefSizeT>(size);
   ref.strides[0] = 1;
 }
@@ -449,9 +449,9 @@ void _mlir_ciface_outSparseTensorWriterMetaData(
   ASSERT_NO_STRIDE(dimSizesRef);
   assert(dimRank != 0);
   index_type *dimSizes = MEMREF_GET_PAYLOAD(dimSizesRef);
-  SparseTensorWriter &file = *static_cast<SparseTensorWriter *>(p);
+  std::ostream &file = *static_cast<std::ostream *>(p);
   file << dimRank << " " << nse << std::endl;
-  for (index_type d = 0; d < dimRank - 1; ++d)
+  for (index_type d = 0; d < dimRank - 1; d++)
     file << dimSizes[d] << " ";
   file << dimSizes[dimRank - 1] << std::endl;
 }
@@ -464,8 +464,8 @@ void _mlir_ciface_outSparseTensorWriterMetaData(
     assert(p &&vref);                                                          \
     ASSERT_NO_STRIDE(dimCoordsRef);                                            \
     const index_type *dimCoords = MEMREF_GET_PAYLOAD(dimCoordsRef);            \
-    SparseTensorWriter &file = *static_cast<SparseTensorWriter *>(p);          \
-    for (index_type d = 0; d < dimRank; ++d)                                   \
+    std::ostream &file = *static_cast<std::ostream *>(p);                      \
+    for (index_type d = 0; d < dimRank; d++)                                   \
       file << (dimCoords[d] + 1) << " ";                                       \
     V *value = MEMREF_GET_PAYLOAD(vref);                                       \
     file << *value << std::endl;                                               \
@@ -495,17 +495,6 @@ void endForwardingInsert(void *tensor) {
 void endLexInsert(void *tensor) {
   return static_cast<SparseTensorStorageBase *>(tensor)->endLexInsert();
 }
-
-#define IMPL_OUTSPARSETENSOR(VNAME, V)                                         \
-  void outSparseTensor##VNAME(void *coo, void *dest, bool sort) {              \
-    assert(coo);                                                               \
-    auto &coo_ = *static_cast<SparseTensorCOO<V> *>(coo);                      \
-    if (sort)                                                                  \
-      coo_.sort();                                                             \
-    return writeExtFROSTT(coo_, static_cast<char *>(dest));                    \
-  }
-MLIR_SPARSETENSOR_FOREVERY_V(IMPL_OUTSPARSETENSOR)
-#undef IMPL_OUTSPARSETENSOR
 
 void delSparseTensor(void *tensor) {
   delete static_cast<SparseTensorStorageBase *>(tensor);
@@ -537,14 +526,14 @@ void delSparseTensorReader(void *p) {
 }
 
 void *createSparseTensorWriter(char *filename) {
-  SparseTensorWriter *file =
+  std::ostream *file =
       (filename[0] == 0) ? &std::cout : new std::ofstream(filename);
   *file << "# extended FROSTT format\n";
   return static_cast<void *>(file);
 }
 
 void delSparseTensorWriter(void *p) {
-  SparseTensorWriter *file = static_cast<SparseTensorWriter *>(p);
+  std::ostream *file = static_cast<std::ostream *>(p);
   file->flush();
   assert(file->good());
   if (file != &std::cout)

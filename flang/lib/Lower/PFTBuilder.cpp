@@ -241,6 +241,17 @@ public:
     return enterConstructOrDirective(directive);
   }
 
+  bool Pre(const parser::OpenACCRoutineConstruct &directive) {
+    assert(pftParentStack.size() > 0 &&
+           "At least the Program must be a parent");
+    if (pftParentStack.back().isA<lower::pft::Program>()) {
+      addUnit(
+          lower::pft::OpenACCDirectiveUnit(directive, pftParentStack.back()));
+      return false;
+    }
+    return enterConstructOrDirective(directive);
+  }
+
 private:
   /// Initialize a new module-like unit and make it the builder's focus.
   template <typename A>
@@ -1133,6 +1144,9 @@ public:
                      [&](const lower::pft::CompilerDirectiveUnit &unit) {
                        dumpCompilerDirectiveUnit(outputStream, unit);
                      },
+                     [&](const lower::pft::OpenACCDirectiveUnit &unit) {
+                       dumpOpenACCDirectiveUnit(outputStream, unit);
+                     },
                  },
                  unit);
     }
@@ -1278,6 +1292,16 @@ public:
     outputStream << directive.get<Fortran::parser::CompilerDirective>()
                         .source.ToString();
     outputStream << "\nEnd CompilerDirective\n\n";
+  }
+
+  void
+  dumpOpenACCDirectiveUnit(llvm::raw_ostream &outputStream,
+                           const lower::pft::OpenACCDirectiveUnit &directive) {
+    outputStream << getNodeIndex(directive) << " ";
+    outputStream << "OpenACCDirective: !$acc ";
+    outputStream << directive.get<Fortran::parser::OpenACCRoutineConstruct>()
+                        .source.ToString();
+    outputStream << "\nEnd OpenACCDirective\n\n";
   }
 
   template <typename T>
@@ -1489,7 +1513,7 @@ private:
     // Derived type component symbols may be collected by "CollectSymbols"
     // below when processing something like "real :: x(derived%component)". The
     // symbol "component" has "ObjectEntityDetails", but it should not be
-    // instantiated: it is is part of "derived" that should be the only one to
+    // instantiated: it is part of "derived" that should be the only one to
     // be instantiated.
     if (sym.owner().IsDerivedType())
       return 0;
@@ -1545,7 +1569,8 @@ private:
       // Handle any symbols in initialization expressions.
       if (auto e = details->init())
         for (const auto &s : evaluate::CollectSymbols(*e))
-          depth = std::max(analyze(s) + 1, depth);
+          if (!s->has<semantics::DerivedTypeDetails>())
+            depth = std::max(analyze(s) + 1, depth);
     }
     adjustSize(depth + 1);
     bool global = lower::symbolIsGlobal(sym);

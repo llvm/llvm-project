@@ -1841,10 +1841,11 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
     // instcombined.
     if (ConstantFP *CFP = dyn_cast<ConstantFP>(RHS))
       if (IsValidPromotion(FPType, LHSIntVal->getType())) {
-        Constant *CI =
-          ConstantExpr::getFPToSI(CFP, LHSIntVal->getType());
+        Constant *CI = ConstantFoldCastOperand(Instruction::FPToSI, CFP,
+                                               LHSIntVal->getType(), DL);
         if (LHSConv->hasOneUse() &&
-            ConstantExpr::getSIToFP(CI, I.getType()) == CFP &&
+            ConstantFoldCastOperand(Instruction::SIToFP, CI, I.getType(), DL) ==
+                CFP &&
             willNotOverflowSignedAdd(LHSIntVal, CI, I)) {
           // Insert the new integer add.
           Value *NewAdd = Builder.CreateNSWAdd(LHSIntVal, CI, "addconv");

@@ -120,7 +120,9 @@ namespace Builtins {
   extern "C" int strncmp(const char *, const char *, decltype(sizeof(0))) noexcept;
 
   // Check we recognized both as builtins.
-  typedef int arr[strcmp("bar", "foo") + 4 * strncmp("foo", "bar", 4)]; // expected-warning {{variable length array}}
+  typedef int arr[strcmp("bar", "foo") + 4 * strncmp("foo", "bar", 4)]; // expected-warning {{variable length array folded to constant array as an extension}} \
+                                                                           expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                                                           expected-note {{non-constexpr function 'strcmp' cannot be used in a constant expression}}
   typedef int arr[3];
 }
 
