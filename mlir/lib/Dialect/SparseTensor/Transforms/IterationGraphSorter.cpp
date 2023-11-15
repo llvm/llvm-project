@@ -30,7 +30,7 @@ public:
   explicit AffineDimFinder(ArrayRef<utils::IteratorType> itTypes)
       : iterTypes(itTypes) {}
 
-  // Overrides method from AffineExprVisitor.
+  // Override method from AffineExprVisitor.
   void visitDimExpr(AffineDimExpr expr) {
     if (pickedDim == nullptr || pickIterType == iterTypes[expr.getPosition()])
       pickedDim = expr;
@@ -176,7 +176,7 @@ AffineMap IterationGraphSorter::sort(SortMask mask, Value ignored) {
   for (auto [in, map] : llvm::zip(ins, loop2InsLvl)) {
     // Get map and encoding.
     const auto enc = getSparseTensorEncoding(in.getType());
-    // Skips dense inputs when not requested.
+    // Skip dense inputs when not requested.
     if ((!enc && !includesDenseInput(mask)) || in == ignored)
       continue;
 
@@ -203,7 +203,7 @@ void IterationGraphSorter::addConstraints(Value t, AffineMap loop2LvlMap) {
   finder.setPickedIterType(utils::IteratorType::reduction);
 
   // To compute iteration graph for tensor[d0 + d1 + d3, d4 + d5 + d6],
-  // we requires there exist d_x \in {d0, d1, d3} and d_y \in {d4, d5, d6},
+  // we require there exist d_x \in {d0, d1, d3} and d_y \in {d4, d5, d6},
   // and d_x > d_y && {d0, d1, d3} - d_x > {d4, d5, d6} - d_y
   const Level lvlRank = loop2LvlMap.getNumResults();
   for (Level lvl = 1; lvl < lvlRank; lvl++) {
@@ -211,7 +211,7 @@ void IterationGraphSorter::addConstraints(Value t, AffineMap loop2LvlMap) {
     const AffineExpr ta = loop2LvlMap.getResult(lvl);
 
     if (llvm::isa<AffineDimExpr>(fa) || llvm::isa<AffineDimExpr>(ta)) {
-      // Special case when at least one loop2LvlExp is an simple AffineDimExpr
+      // Special case when at least one loop2LvlExp is a simple AffineDimExpr
       // (say, d0) and we require d0 > {d1, d2, ...} or {d1, d2, ...} > d0
       AffineDimCollector fCollector;
       fCollector.walkPostOrder(fa);
@@ -246,7 +246,7 @@ void IterationGraphSorter::addConstraints(Value t, AffineMap loop2LvlMap) {
     AffineDimCollector tCollector;
     tCollector.walkPostOrder(ta);
 
-    // make sure dx and dy is the last;
+    // Make sure dx and dy is the last.
     for (auto fd : fCollector.dims) {
       const unsigned f = fd.getPosition();
       addIterOrdering(f, fldx);

@@ -515,7 +515,7 @@ private:
       Value tval = t->get();
       auto srcEnc = getSparseTensorEncoding(tval.getType());
       // The constraints introduced by compound index expression are
-      // complicated. Skips them.
+      // complicated. Skip them.
       AffineMap idxMap = linalgOp.getMatchingIndexingMap(t);
       bool hasCompExpr = llvm::any_of(idxMap.getResults(), [](AffineExpr exp) {
         return !llvm::isa<AffineDimExpr>(exp);
