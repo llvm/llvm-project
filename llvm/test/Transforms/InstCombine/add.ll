@@ -440,11 +440,9 @@ define <2 x i8> @test18vec_nsw(<2 x i8> %A) {
   ret <2 x i8> %C
 }
 
-; TODO: fix ValueTracking overflow check for non-splat vector, could be attached nsw
-; this shouldn't overflow.
 define <2 x i8> @test18vec_nsw_false(<2 x i8> %A) {
 ; CHECK-LABEL: @test18vec_nsw_false(
-; CHECK-NEXT:    [[C:%.*]] = sub <2 x i8> <i8 -125, i8 -126>, [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = sub nsw <2 x i8> <i8 -125, i8 -126>, [[A:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
   %B = xor <2 x i8> %A, <i8 -1, i8 -1>
