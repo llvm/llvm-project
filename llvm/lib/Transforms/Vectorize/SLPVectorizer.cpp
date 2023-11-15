@@ -548,150 +548,6 @@ static std::optional<unsigned> getExtractIndex(Instruction *E) {
   return *EI->idx_begin();
 }
 
-/// Tries to find extractelement instructions with constant indices from fixed
-/// vector type and gather such instructions into a bunch, which highly likely
-/// might be detected as a shuffle of 1 or 2 input vectors. If this attempt was
-/// successful, the matched scalars are replaced by poison values in \p VL for
-/// future analysis.
-static std::optional<TTI::ShuffleKind>
-tryToGatherSingleRegisterExtractElements(MutableArrayRef<Value *> VL,
-                                         SmallVectorImpl<int> &Mask) {
-  // Scan list of gathered scalars for extractelements that can be represented
-  // as shuffles.
-  MapVector<Value *, SmallVector<int>> VectorOpToIdx;
-  SmallVector<int> UndefVectorExtracts;
-  for (int I = 0, E = VL.size(); I < E; ++I) {
-    auto *EI = dyn_cast<ExtractElementInst>(VL[I]);
-    if (!EI) {
-      if (isa<UndefValue>(VL[I]))
-        UndefVectorExtracts.push_back(I);
-      continue;
-    }
-    auto *VecTy = dyn_cast<FixedVectorType>(EI->getVectorOperandType());
-    if (!VecTy || !isa<ConstantInt, UndefValue>(EI->getIndexOperand()))
-      continue;
-    std::optional<unsigned> Idx = getExtractIndex(EI);
-    // Undefined index.
-    if (!Idx) {
-      UndefVectorExtracts.push_back(I);
-      continue;
-    }
-    SmallBitVector ExtractMask(VecTy->getNumElements(), true);
-    ExtractMask.reset(*Idx);
-    if (isUndefVector(EI->getVectorOperand(), ExtractMask).all()) {
-      UndefVectorExtracts.push_back(I);
-      continue;
-    }
-    VectorOpToIdx[EI->getVectorOperand()].push_back(I);
-  }
-  // Sort the vector operands by the maximum number of uses in extractelements.
-  MapVector<unsigned, SmallVector<Value *>> VFToVector;
-  for (const auto &Data : VectorOpToIdx)
-    VFToVector[cast<FixedVectorType>(Data.first->getType())->getNumElements()]
-        .push_back(Data.first);
-  for (auto &Data : VFToVector) {
-    stable_sort(Data.second, [&VectorOpToIdx](Value *V1, Value *V2) {
-      return VectorOpToIdx.find(V1)->second.size() >
-             VectorOpToIdx.find(V2)->second.size();
-    });
-  }
-  // Find the best pair of the vectors with the same number of elements or a
-  // single vector.
-  const int UndefSz = UndefVectorExtracts.size();
-  unsigned SingleMax = 0;
-  Value *SingleVec = nullptr;
-  unsigned PairMax = 0;
-  std::pair<Value *, Value *> PairVec(nullptr, nullptr);
-  for (auto &Data : VFToVector) {
-    Value *V1 = Data.second.front();
-    if (SingleMax < VectorOpToIdx[V1].size() + UndefSz) {
-      SingleMax = VectorOpToIdx[V1].size() + UndefSz;
-      SingleVec = V1;
-    }
-    Value *V2 = nullptr;
-    if (Data.second.size() > 1)
-      V2 = *std::next(Data.second.begin());
-    if (V2 && PairMax < VectorOpToIdx[V1].size() + VectorOpToIdx[V2].size() +
-                            UndefSz) {
-      PairMax = VectorOpToIdx[V1].size() + VectorOpToIdx[V2].size() + UndefSz;
-      PairVec = std::make_pair(V1, V2);
-    }
-  }
-  if (SingleMax == 0 && PairMax == 0 && UndefSz == 0)
-    return std::nullopt;
-  // Check if better to perform a shuffle of 2 vectors or just of a single
-  // vector.
-  SmallVector<Value *> SavedVL(VL.begin(), VL.end());
-  SmallVector<Value *> GatheredExtracts(
-      VL.size(), PoisonValue::get(VL.front()->getType()));
-  if (SingleMax >= PairMax && SingleMax) {
-    for (int Idx : VectorOpToIdx[SingleVec])
-      std::swap(GatheredExtracts[Idx], VL[Idx]);
-  } else {
-    for (Value *V : {PairVec.first, PairVec.second})
-      for (int Idx : VectorOpToIdx[V])
-        std::swap(GatheredExtracts[Idx], VL[Idx]);
-  }
-  // Add extracts from undefs too.
-  for (int Idx : UndefVectorExtracts)
-    std::swap(GatheredExtracts[Idx], VL[Idx]);
-  // Check that gather of extractelements can be represented as just a
-  // shuffle of a single/two vectors the scalars are extracted from.
-  std::optional<TTI::ShuffleKind> Res =
-      isFixedVectorShuffle(GatheredExtracts, Mask);
-  if (!Res) {
-    // TODO: try to check other subsets if possible.
-    // Restore the original VL if attempt was not successful.
-    copy(SavedVL, VL.begin());
-    return std::nullopt;
-  }
-  // Restore unused scalars from mask, if some of the extractelements were not
-  // selected for shuffle.
-  for (int I = 0, E = GatheredExtracts.size(); I < E; ++I) {
-    if (Mask[I] == PoisonMaskElem && !isa<PoisonValue>(GatheredExtracts[I]) &&
-        isa<UndefValue>(GatheredExtracts[I])) {
-      std::swap(VL[I], GatheredExtracts[I]);
-      continue;
-    }
-    auto *EI = dyn_cast<ExtractElementInst>(VL[I]);
-    if (!EI || !isa<FixedVectorType>(EI->getVectorOperandType()) ||
-        !isa<ConstantInt, UndefValue>(EI->getIndexOperand()) ||
-        is_contained(UndefVectorExtracts, I))
-      continue;
-  }
-  return Res;
-}
-
-/// Tries to find extractelement instructions with constant indices from fixed
-/// vector type and gather such instructions into a bunch, which highly likely
-/// might be detected as a shuffle of 1 or 2 input vectors. If this attempt was
-/// successful, the matched scalars are replaced by poison values in \p VL for
-/// future analysis.
-static SmallVector<std::optional<TTI::ShuffleKind>>
-tryToGatherExtractElements(SmallVectorImpl<Value *> &VL,
-                           SmallVectorImpl<int> &Mask, unsigned NumParts) {
-  assert(NumParts > 0 && "NumParts expected be greater than or equal to 1.");
-  SmallVector<std::optional<TTI::ShuffleKind>> ShufflesRes(NumParts);
-  Mask.assign(VL.size(), PoisonMaskElem);
-  unsigned SliceSize = VL.size() / NumParts;
-  for (unsigned Part = 0; Part < NumParts; ++Part) {
-    // Scan list of gathered scalars for extractelements that can be represented
-    // as shuffles.
-    MutableArrayRef<Value *> SubVL =
-        MutableArrayRef(VL).slice(Part * SliceSize, SliceSize);
-    SmallVector<int> SubMask;
-    std::optional<TTI::ShuffleKind> Res =
-        tryToGatherSingleRegisterExtractElements(SubVL, SubMask);
-    ShufflesRes[Part] = Res;
-    copy(SubMask, std::next(Mask.begin(), Part * SliceSize));
-  }
-  if (none_of(ShufflesRes, [](const std::optional<TTI::ShuffleKind> &Res) {
-        return Res.has_value();
-      }))
-    ShufflesRes.clear();
-  return ShufflesRes;
-}
-
 namespace {
 
 /// Main data required for vectorization of instructions.
@@ -2537,6 +2393,25 @@ private:
   /// for the case when all operands are external (in this case, it is the first
   /// instruction in the list).
   Instruction &getLastInstructionInBundle(const TreeEntry *E);
+
+  /// Tries to find extractelement instructions with constant indices from fixed
+  /// vector type and gather such instructions into a bunch, which highly likely
+  /// might be detected as a shuffle of 1 or 2 input vectors. If this attempt
+  /// was successful, the matched scalars are replaced by poison values in \p VL
+  /// for future analysis.
+  std::optional<TargetTransformInfo::ShuffleKind>
+  tryToGatherSingleRegisterExtractElements(MutableArrayRef<Value *> VL,
+                                           SmallVectorImpl<int> &Mask) const;
+
+  /// Tries to find extractelement instructions with constant indices from fixed
+  /// vector type and gather such instructions into a bunch, which highly likely
+  /// might be detected as a shuffle of 1 or 2 input vectors. If this attempt
+  /// was successful, the matched scalars are replaced by poison values in \p VL
+  /// for future analysis.
+  SmallVector<std::optional<TargetTransformInfo::ShuffleKind>>
+  tryToGatherExtractElements(SmallVectorImpl<Value *> &VL,
+                             SmallVectorImpl<int> &Mask,
+                             unsigned NumParts) const;
 
   /// Checks if the gathered \p VL can be represented as a single register
   /// shuffle(s) of previous tree entries.
@@ -9272,6 +9147,151 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
 #endif
 
   return Cost;
+}
+
+/// Tries to find extractelement instructions with constant indices from fixed
+/// vector type and gather such instructions into a bunch, which highly likely
+/// might be detected as a shuffle of 1 or 2 input vectors. If this attempt was
+/// successful, the matched scalars are replaced by poison values in \p VL for
+/// future analysis.
+std::optional<TTI::ShuffleKind>
+BoUpSLP::tryToGatherSingleRegisterExtractElements(
+    MutableArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) const {
+  // Scan list of gathered scalars for extractelements that can be represented
+  // as shuffles.
+  MapVector<Value *, SmallVector<int>> VectorOpToIdx;
+  SmallVector<int> UndefVectorExtracts;
+  for (int I = 0, E = VL.size(); I < E; ++I) {
+    auto *EI = dyn_cast<ExtractElementInst>(VL[I]);
+    if (!EI) {
+      if (isa<UndefValue>(VL[I]))
+        UndefVectorExtracts.push_back(I);
+      continue;
+    }
+    auto *VecTy = dyn_cast<FixedVectorType>(EI->getVectorOperandType());
+    if (!VecTy || !isa<ConstantInt, UndefValue>(EI->getIndexOperand()))
+      continue;
+    std::optional<unsigned> Idx = getExtractIndex(EI);
+    // Undefined index.
+    if (!Idx) {
+      UndefVectorExtracts.push_back(I);
+      continue;
+    }
+    SmallBitVector ExtractMask(VecTy->getNumElements(), true);
+    ExtractMask.reset(*Idx);
+    if (isUndefVector(EI->getVectorOperand(), ExtractMask).all()) {
+      UndefVectorExtracts.push_back(I);
+      continue;
+    }
+    VectorOpToIdx[EI->getVectorOperand()].push_back(I);
+  }
+  // Sort the vector operands by the maximum number of uses in extractelements.
+  MapVector<unsigned, SmallVector<Value *>> VFToVector;
+  for (const auto &Data : VectorOpToIdx)
+    VFToVector[cast<FixedVectorType>(Data.first->getType())->getNumElements()]
+        .push_back(Data.first);
+  for (auto &Data : VFToVector) {
+    stable_sort(Data.second, [&VectorOpToIdx](Value *V1, Value *V2) {
+      return VectorOpToIdx.find(V1)->second.size() >
+             VectorOpToIdx.find(V2)->second.size();
+    });
+  }
+  // Find the best pair of the vectors with the same number of elements or a
+  // single vector.
+  const int UndefSz = UndefVectorExtracts.size();
+  unsigned SingleMax = 0;
+  Value *SingleVec = nullptr;
+  unsigned PairMax = 0;
+  std::pair<Value *, Value *> PairVec(nullptr, nullptr);
+  for (auto &Data : VFToVector) {
+    Value *V1 = Data.second.front();
+    if (SingleMax < VectorOpToIdx[V1].size() + UndefSz) {
+      SingleMax = VectorOpToIdx[V1].size() + UndefSz;
+      SingleVec = V1;
+    }
+    Value *V2 = nullptr;
+    if (Data.second.size() > 1)
+      V2 = *std::next(Data.second.begin());
+    if (V2 && PairMax < VectorOpToIdx[V1].size() + VectorOpToIdx[V2].size() +
+                            UndefSz) {
+      PairMax = VectorOpToIdx[V1].size() + VectorOpToIdx[V2].size() + UndefSz;
+      PairVec = std::make_pair(V1, V2);
+    }
+  }
+  if (SingleMax == 0 && PairMax == 0 && UndefSz == 0)
+    return std::nullopt;
+  // Check if better to perform a shuffle of 2 vectors or just of a single
+  // vector.
+  SmallVector<Value *> SavedVL(VL.begin(), VL.end());
+  SmallVector<Value *> GatheredExtracts(
+      VL.size(), PoisonValue::get(VL.front()->getType()));
+  if (SingleMax >= PairMax && SingleMax) {
+    for (int Idx : VectorOpToIdx[SingleVec])
+      std::swap(GatheredExtracts[Idx], VL[Idx]);
+  } else {
+    for (Value *V : {PairVec.first, PairVec.second})
+      for (int Idx : VectorOpToIdx[V])
+        std::swap(GatheredExtracts[Idx], VL[Idx]);
+  }
+  // Add extracts from undefs too.
+  for (int Idx : UndefVectorExtracts)
+    std::swap(GatheredExtracts[Idx], VL[Idx]);
+  // Check that gather of extractelements can be represented as just a
+  // shuffle of a single/two vectors the scalars are extracted from.
+  std::optional<TTI::ShuffleKind> Res =
+      isFixedVectorShuffle(GatheredExtracts, Mask);
+  if (!Res) {
+    // TODO: try to check other subsets if possible.
+    // Restore the original VL if attempt was not successful.
+    copy(SavedVL, VL.begin());
+    return std::nullopt;
+  }
+  // Restore unused scalars from mask, if some of the extractelements were not
+  // selected for shuffle.
+  for (int I = 0, E = GatheredExtracts.size(); I < E; ++I) {
+    if (Mask[I] == PoisonMaskElem && !isa<PoisonValue>(GatheredExtracts[I]) &&
+        isa<UndefValue>(GatheredExtracts[I])) {
+      std::swap(VL[I], GatheredExtracts[I]);
+      continue;
+    }
+    auto *EI = dyn_cast<ExtractElementInst>(VL[I]);
+    if (!EI || !isa<FixedVectorType>(EI->getVectorOperandType()) ||
+        !isa<ConstantInt, UndefValue>(EI->getIndexOperand()) ||
+        is_contained(UndefVectorExtracts, I))
+      continue;
+  }
+  return Res;
+}
+
+/// Tries to find extractelement instructions with constant indices from fixed
+/// vector type and gather such instructions into a bunch, which highly likely
+/// might be detected as a shuffle of 1 or 2 input vectors. If this attempt was
+/// successful, the matched scalars are replaced by poison values in \p VL for
+/// future analysis.
+SmallVector<std::optional<TTI::ShuffleKind>>
+BoUpSLP::tryToGatherExtractElements(SmallVectorImpl<Value *> &VL,
+                                    SmallVectorImpl<int> &Mask,
+                                    unsigned NumParts) const {
+  assert(NumParts > 0 && "NumParts expected be greater than or equal to 1.");
+  SmallVector<std::optional<TTI::ShuffleKind>> ShufflesRes(NumParts);
+  Mask.assign(VL.size(), PoisonMaskElem);
+  unsigned SliceSize = VL.size() / NumParts;
+  for (unsigned Part = 0; Part < NumParts; ++Part) {
+    // Scan list of gathered scalars for extractelements that can be represented
+    // as shuffles.
+    MutableArrayRef<Value *> SubVL =
+        MutableArrayRef(VL).slice(Part * SliceSize, SliceSize);
+    SmallVector<int> SubMask;
+    std::optional<TTI::ShuffleKind> Res =
+        tryToGatherSingleRegisterExtractElements(SubVL, SubMask);
+    ShufflesRes[Part] = Res;
+    copy(SubMask, std::next(Mask.begin(), Part * SliceSize));
+  }
+  if (none_of(ShufflesRes, [](const std::optional<TTI::ShuffleKind> &Res) {
+        return Res.has_value();
+      }))
+    ShufflesRes.clear();
+  return ShufflesRes;
 }
 
 std::optional<TargetTransformInfo::ShuffleKind>
