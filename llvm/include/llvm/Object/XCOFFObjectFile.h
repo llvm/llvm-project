@@ -838,7 +838,7 @@ public:
   }
 
   Expected<StringRef> getName() const;
-  bool isFunction() const;
+  Expected<bool> isFunction() const;
   bool isCsectSymbol() const;
   Expected<XCOFFCsectAuxRef> getXCOFFCsectAuxRef() const;
 
