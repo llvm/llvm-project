@@ -2019,10 +2019,20 @@ void Writer::writeSections() {
     uint8_t *secBuf = buf + sec->getFileOff();
     // Fill gaps between functions in .text with INT3 instructions
     // instead of leaving as NUL bytes (which can be interpreted as
-    // ADD instructions).
+    // ADD instructions). Only fill the gaps between chunks. Most
+    // chunks overwrite it anyway, but uninitialized data chunks
+    // merged into a code section don't.
     if ((sec->header.Characteristics & IMAGE_SCN_CNT_CODE) &&
-        (ctx.config.machine == AMD64 || ctx.config.machine == I386))
-      memset(secBuf, 0xCC, sec->getRawSize());
+        (ctx.config.machine == AMD64 || ctx.config.machine == I386)) {
+      uint32_t prevEnd = 0;
+      for (Chunk *c : sec->chunks) {
+        uint32_t off = c->getRVA() - sec->getRVA();
+        memset(secBuf + prevEnd, 0xCC, off - prevEnd);
+        prevEnd = off + c->getSize();
+      }
+      memset(secBuf + prevEnd, 0xCC, sec->getRawSize() - prevEnd);
+    }
+
     parallelForEach(sec->chunks, [&](Chunk *c) {
       c->writeTo(secBuf + c->getRVA() - sec->getRVA());
     });
