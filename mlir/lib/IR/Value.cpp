@@ -79,15 +79,15 @@ void Value::replaceAllUsesExcept(Value newValue,
 
 /// Replace all uses of 'this' value with 'newValue' if the given callback
 /// returns true.
-void Value::replaceUsesWithIf(Value newValue,
-                              function_ref<bool(OpOperand &)> shouldReplace) {
+void Value::replaceUsesWithIf(
+    Value newValue, function_ref<bool(OpOperand &)> shouldReplace) const {
   for (OpOperand &use : llvm::make_early_inc_range(getUses()))
     if (shouldReplace(use))
       use.set(newValue);
 }
 
 /// Returns true if the value is used outside of the given block.
-bool Value::isUsedOutsideOfBlock(Block *block) {
+bool Value::isUsedOutsideOfBlock(Block *block) const {
   return llvm::any_of(getUsers(), [block](Operation *user) {
     return user->getBlock() != block;
   });

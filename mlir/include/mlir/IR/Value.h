@@ -182,10 +182,10 @@ public:
   /// Replace all uses of 'this' value with 'newValue' if the given callback
   /// returns true.
   void replaceUsesWithIf(Value newValue,
-                         function_ref<bool(OpOperand &)> shouldReplace);
+                         function_ref<bool(OpOperand &)> shouldReplace) const;
 
   /// Returns true if the value is used outside of the given block.
-  bool isUsedOutsideOfBlock(Block *block);
+  bool isUsedOutsideOfBlock(Block *block) const;
 
   /// Shuffle the use list order according to the provided indices. It is
   /// responsibility of the caller to make sure that the indices map the current
