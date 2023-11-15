@@ -299,7 +299,11 @@ Expected<SymbolRef::Type>
 XCOFFObjectFile::getSymbolType(DataRefImpl Symb) const {
   XCOFFSymbolRef XCOFFSym = toSymbolRef(Symb);
 
-  if (XCOFFSym.isFunction())
+  Expected<bool> IsFunction = XCOFFSym.isFunction();
+  if (!IsFunction)
+    return IsFunction.takeError();
+
+  if (*IsFunction)
     return SymbolRef::ST_Function;
 
   if (XCOFF::C_FILE == XCOFFSym.getStorageClass())
@@ -1225,7 +1229,7 @@ std::optional<StringRef> XCOFFObjectFile::tryGetCPUName() const {
   return StringRef("future");
 }
 
-bool XCOFFSymbolRef::isFunction() const {
+Expected<bool> XCOFFSymbolRef::isFunction() const {
   if (!isCsectSymbol())
     return false;
 
@@ -1233,12 +1237,8 @@ bool XCOFFSymbolRef::isFunction() const {
     return true;
 
   Expected<XCOFFCsectAuxRef> ExpCsectAuxEnt = getXCOFFCsectAuxRef();
-  if (!ExpCsectAuxEnt) {
-    // If we could not get the CSECT auxiliary entry, then treat this symbol as
-    // if it isn't a function. Consume the error and return `false` to move on.
-    consumeError(ExpCsectAuxEnt.takeError());
-    return false;
-  }
+  if (!ExpCsectAuxEnt)
+    return ExpCsectAuxEnt.takeError();
 
   const XCOFFCsectAuxRef CsectAuxRef = ExpCsectAuxEnt.get();
 
@@ -1253,12 +1253,8 @@ bool XCOFFSymbolRef::isFunction() const {
 
   const int16_t SectNum = getSectionNumber();
   Expected<DataRefImpl> SI = getObject()->getSectionByNum(SectNum);
-  if (!SI) {
-    // If we could not get the section, then this symbol should not be
-    // a function. So consume the error and return `false` to move on.
-    consumeError(SI.takeError());
-    return false;
-  }
+  if (!SI)
+    return SI.takeError();
 
   return (getObject()->getSectionFlags(SI.get()) & XCOFF::STYP_TEXT);
 }
