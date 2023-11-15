@@ -10149,6 +10149,9 @@ public:
         continue;
       auto *EI = cast<ExtractElementInst>(E->Scalars[I]);
       VecBase = EI->getVectorOperand();
+      if (const TreeEntry *TE = R.getTreeEntry(VecBase))
+        VecBase = TE->VectorizedValue;
+      assert(VecBase && "Expected vectorized value.");
       UniqueBases.insert(VecBase);
       // If the only one use is vectorized - can delete the extractelement
       // itself.
@@ -10186,6 +10189,9 @@ public:
         if (SubMask[I] == PoisonMaskElem)
           continue;
         Value *VecOp = cast<ExtractElementInst>(V)->getVectorOperand();
+        if (const TreeEntry *TE = R.getTreeEntry(VecOp))
+          VecOp = TE->VectorizedValue;
+        assert(VecOp && "Expected vectorized value.");
         const int Size =
             cast<FixedVectorType>(VecOp->getType())->getNumElements();
 #ifndef NDEBUG
@@ -10593,6 +10599,21 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
     ExtractShuffles =
         tryToGatherExtractElements(GatheredScalars, ExtractMask, NumParts);
     if (!ExtractShuffles.empty()) {
+      SmallVector<const TreeEntry *> ExtractEntries;
+      for (auto [Idx, I] : enumerate(ExtractMask)) {
+        if (I == PoisonMaskElem)
+          continue;
+        if (const auto *TE = getTreeEntry(
+                cast<ExtractElementInst>(E->Scalars[Idx])->getVectorOperand()))
+          ExtractEntries.push_back(TE);
+      }
+      if (Value *Delayed = ShuffleBuilder.needToDelay(E, ExtractEntries)) {
+        // Delay emission of gathers which are not ready yet.
+        PostponedGathers.insert(E);
+        // Postpone gather emission, will be emitted after the end of the
+        // process to keep correct order.
+        return Delayed;
+      }
       if (Value *VecBase = ShuffleBuilder.adjustExtracts(
               E, ExtractMask, NumParts, UseVecBaseAsInput)) {
         ExtractVecBase = VecBase;
@@ -10779,12 +10800,16 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
           if (isa<UndefValue>(E->Scalars[I]))
             continue;
           auto *EI = cast<ExtractElementInst>(E->Scalars[I]);
+          Value *VecOp = EI->getVectorOperand();
+          if (const auto *TE = getTreeEntry(VecOp))
+            if (TE->VectorizedValue)
+              VecOp = TE->VectorizedValue;
           if (!Vec1) {
-            Vec1 = EI->getVectorOperand();
+            Vec1 = VecOp;
           } else if (Vec1 != EI->getVectorOperand()) {
             assert((!Vec2 || Vec2 == EI->getVectorOperand()) &&
                    "Expected only 1 or 2 vectors shuffle.");
-            Vec2 = EI->getVectorOperand();
+            Vec2 = VecOp;
           }
         }
       }
