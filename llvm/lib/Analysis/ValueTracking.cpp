@@ -291,7 +291,14 @@ bool llvm::isKnownNonNegative(const Value *V, const DataLayout &DL,
                               const Instruction *CxtI, const DominatorTree *DT,
                               bool UseInstrInfo) {
   KnownBits Known = computeKnownBits(V, DL, Depth, AC, CxtI, DT, UseInstrInfo);
-  return Known.isNonNegative();
+  if (Known.isNonNegative())
+    return true;
+
+  // Look at the immediate proceeding branch to see if it establishes the
+  // condition we need.
+  return isImpliedByDomCondition(ICmpInst::ICMP_SGE, V,
+                                 Constant::getNullValue(V->getType()), CxtI,
+                                 DL).value_or(false);
 }
 
 bool llvm::isKnownPositive(const Value *V, const DataLayout &DL, unsigned Depth,

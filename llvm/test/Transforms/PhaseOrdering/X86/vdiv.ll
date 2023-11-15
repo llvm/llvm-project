@@ -19,7 +19,7 @@ define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[X4:%.*]] = ptrtoint ptr [[X:%.*]] to i64
 ; CHECK-NEXT:    [[Y5:%.*]] = ptrtoint ptr [[Y:%.*]] to i64
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[X4]], [[Y5]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 128
