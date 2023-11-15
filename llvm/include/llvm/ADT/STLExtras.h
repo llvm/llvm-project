@@ -1290,21 +1290,6 @@ public:
     return (*this)[size() - 1];
   }
 
-  /// Compare this range with another.
-  // FIXME: Make me a member function instead of friend when it works in C++20.
-  template <typename OtherT, typename DerivedT2, typename BaseT2, typename T2,
-            typename PointerT2, typename ReferenceT2>
-  friend bool
-  operator==(const indexed_accessor_range_base<DerivedT2, BaseT2, T2, PointerT2,
-                                               ReferenceT2> &lhs,
-             const OtherT &rhs);
-  template <typename OtherT, typename DerivedT2, typename BaseT2, typename T2,
-            typename PointerT2, typename ReferenceT2>
-  friend bool
-  operator!=(const indexed_accessor_range_base<DerivedT2, BaseT2, T2, PointerT2,
-                                               ReferenceT2> &lhs,
-             const OtherT &rhs);
-
   /// Return the size of this range.
   size_t size() const { return count; }
 
@@ -1367,8 +1352,8 @@ protected:
   /// The size from the owning range.
   ptrdiff_t count;
 };
-
-// FIXME: Make me a member function instead of friend when it works in C++20.
+/// Compare this range with another.
+/// FIXME: Make me a member function instead of friend when it works in C++20.
 template <typename OtherT, typename DerivedT2, typename BaseT2, typename T2,
           typename PointerT2, typename ReferenceT2>
 bool operator==(const indexed_accessor_range_base<DerivedT2, BaseT2, T2,
