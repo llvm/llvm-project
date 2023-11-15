@@ -5833,8 +5833,13 @@ void CGDebugInfo::setDwoId(uint64_t Signature) {
 }
 
 void CGDebugInfo::finalize() {
-  for (auto const *VD : StaticDataMemberDefinitionsToEmit) {
-    assert(VD->isStaticDataMember());
+  // We can't use a for-each here because `EmitGlobalVariable`
+  // may push new decls into `StaticDataMemberDefinitionsToEmit`,
+  // which would invalidate any iterator.
+  for (size_t i = 0; i < StaticDataMemberDefinitionsToEmit.size(); ++i) {
+    auto const *VD = StaticDataMemberDefinitionsToEmit[i];
+
+    assert(VD && VD->isStaticDataMember());
 
     if (DeclCache.contains(VD))
       continue;
