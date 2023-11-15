@@ -364,15 +364,13 @@ void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
                 .buildMergeLikeInstr(
                     LLT::fixed_vector(16, 8),
                     {PadUnmergeDstReg1[i * 2], PadUnmergeDstReg1[(i * 2) + 1]})
-                ->getOperand(0)
-                .getReg());
+                .getReg(0));
         Ext2UnmergeReg.push_back(
             Builder
                 .buildMergeLikeInstr(
                     LLT::fixed_vector(16, 8),
                     {PadUnmergeDstReg2[i * 2], PadUnmergeDstReg2[(i * 2) + 1]})
-                ->getOperand(0)
-                .getReg());
+                .getReg(0));
       }
     } else {
       // Unmerge the source vectors to v16i8
@@ -404,8 +402,7 @@ void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
           Builder
               .buildInstr(DotOpcode, {MRI.getType(Zeroes)},
                           {Zeroes, Ext1UnmergeReg[i], Ext2UnmergeReg[i]})
-              ->getOperand(0)
-              .getReg());
+              .getReg(0));
     }
 
     // Merge the output
