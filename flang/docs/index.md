@@ -38,6 +38,7 @@ on how to get in touch with us and to learn more about the current status.
    :titlesonly:
 
    ArrayComposition
+   AssumedRank
    BijectiveInternalNameUniquing
    Calls
    Character

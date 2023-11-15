@@ -466,7 +466,7 @@ end subroutine
 
 Pseudo FIR for the example (some converts and SSA constants creation are not shown for more clarity):
 
-```FIR
+```
 func.func @_QPtest(%arg0: !fir.box<!fir.array<?xf32>>) {
   %x:2 = hlfir.declare %arg0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<*xf32>>) -> (!fir.box<!fir.array<*xf32>>, !fir.box<!fir.array<*xf32>>)
   %r = fir.box_rank %x#1 : (!fir.box<!fir.array<*xf32>>) -> i32
@@ -508,12 +508,12 @@ and harder to optimize out given the descriptor storage size is not a compile
 time constant. To avoid this extra cost, ALLOCATABLE and POINTER assumed-ranks
 will be cast to scalar descriptors before the `fir.load`.
 
-```fortran
+```Fortran
 real, allocatable :: x(..)
 print *, allocated(x)
 ```
 
-```fir
+```
 %1 = fir.convert %x : (!fir.ref<!fir.box<!fir.heap<!fir.array<* x f32>>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
 %2 = fir.load %x : !fir.ref<!fir.box<!fir.heap<f32>>>
 %addr = fir.box_addr %2 : (!fir.box<!fir.heap<f32>>) -> fir.ref<f32>
@@ -524,12 +524,12 @@ Implemented inline with `fir.box_elesize` with the same approach as
 ALLOCATED/ASSOCIATED when dealing with fir.box load for POINTERS and
 ALLOCATABLES.
 
-```fortran
+```Fortran
 character(*) :: x(..)
 print *, len(x)
 ```
 
-```fir
+```
 %ele_size = fir.box_elesize %x : (!fir.box<!fir.array<*x!fir.char<?>>>) -> i64
 # .... divide by character KIND byte size if needed as usual 
 ```
@@ -538,24 +538,24 @@ Implemented inline with `fir.is_present` which ends-up implemented as a check
 that the descriptor address is not null just like with OPTIONAL assumed shapes
 and OPTIONAL pointers and allocatables.
 
-```fortran
+```Fortran
 real, optional :: x(..)
 print *, present(x)
 ```
 
-```fir
+```
 %is_present = fir.is_prent %x : (!fir.box<!fir.array<*xf32>>) -> i1
 ```
 #### RANK
 Implemented inline with `fir.box_rank` which simply reads the descriptor rank
 field.
 
-```fortran
+```Fortran
 real :: x(..)
 print *, len(x)
 ```
 
-```fir
+```
 %rank = fir.box_rank %x : (!fir.box<!fir.array<*xf32>>) -> i32
 ```
 #### SIZE
@@ -599,7 +599,7 @@ Assumed-rank cannot be coarrays (C837), but they can still technically appear
 in COSHAPE (which should obviously return zero). They cannot appear in LBOUND,
 LCOBOUND, UBOUND, UCOBOUND that require the argument to be a coarray.
 
-## Annex - Descriptor temporary for the dummy arguments
+## Annex 1 - Descriptor temporary for the dummy arguments
 
 When passing an actual argument that is descriptor to a dummy that must be
 passed by descriptor, one could expect that the descriptor of the actual can
@@ -646,3 +646,43 @@ bringing any potential asynchronous behavior of OpenMP/OpenACC/Cuda Fortran
 extensions, the actual argument descriptor may be passed inside a call in
 another arguments with "different" lower bounds POINTER or ALLOCATABLE (but
 could also be accessed via host of use association in general).
+
+
+## Annex 2 - Assumed-Rank Objects and IGNORE_TKR
+
+It is possible to:
+- Set IGNORE_TKR(TK) on assumed-rank dummies (but TYPE(*) is better when
+  possible).
+- Pass an assumed-rank to an IGNORE_TKR(R) dummy that is not passed
+  by descriptor (explicit shape and assumed-size). Note that copy-in and
+  copy-out will be performed for the dummy
+
+It is not possible to:
+- Set IGNORE_TKR(R) on an assumed-rank dummy.
+
+Example:
+
+```Fortran
+subroutine test(assumed_rank_actual)
+interface
+ subroutine assumed_size_dummy(x)
+    !dir$ ignore_tkr(tkr) x
+    integer :: x(*)
+ end subroutine
+ subroutine any_type_assumed_rank(x)
+    !dir$ ignore_tkr(tk) x
+    integer :: x(..)
+ end subroutine
+end interface
+  real :: assumed_rank_actual(..)
+  call assumed_size_dummy(assumed_rank_actual) !OK
+  call any_type_assumed_rank(assumed_rank_actual) !OK
+end subroutine
+```
+
+## Annex 3 - Test Plan
+
+MPI_f08 module makes usage of assumed-rank (see
+https://www.mpi-forum.org/docs/mpi-3.1/mpi31-report.pdf).  As such compiling
+MPI_f08 modules of MPI libraries and some applications making usage of MPI_f08
+will be a good test for the implementation of this feature.
