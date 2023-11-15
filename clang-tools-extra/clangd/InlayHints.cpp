@@ -112,7 +112,9 @@ std::string summarizeExpr(const Expr *E) {
       return getSimpleName(*E->getFoundDecl()).str();
     }
     std::string VisitCallExpr(const CallExpr *E) {
-      return Visit(E->getCallee());
+      std::string Result = Visit(E->getCallee());
+      Result += E->getNumArgs() == 0 ? "()" : "(...)";
+      return Result;
     }
     std::string
     VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E) {
@@ -147,6 +149,9 @@ std::string summarizeExpr(const Expr *E) {
     }
 
     // Literals are just printed
+    std::string VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E) {
+      return "nullptr";
+    }
     std::string VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) {
       return E->getValue() ? "true" : "false";
     }
@@ -165,12 +170,14 @@ std::string summarizeExpr(const Expr *E) {
       std::string Result = "\"";
       if (E->containsNonAscii()) {
         Result += "...";
-      } else if (E->getLength() > 10) {
-        Result += E->getString().take_front(7);
-        Result += "...";
       } else {
         llvm::raw_string_ostream OS(Result);
-        llvm::printEscapedString(E->getString(), OS);
+        if (E->getLength() > 10) {
+          llvm::printEscapedString(E->getString().take_front(7), OS);
+          Result += "...";
+        } else {
+          llvm::printEscapedString(E->getString(), OS);
+        }
       }
       Result.push_back('"');
       return Result;
@@ -1120,7 +1127,7 @@ private:
   // Otherwise, the hint shouldn't be shown.
   std::optional<Range> computeBlockEndHintRange(SourceRange BraceRange,
                                                 StringRef OptionalPunctuation) {
-    constexpr unsigned HintMinLineLimit = 2;
+    constexpr unsigned HintMinLineLimit = 10;
 
     auto &SM = AST.getSourceManager();
     auto [BlockBeginFileId, BlockBeginOffset] =
