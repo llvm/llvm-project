@@ -594,16 +594,13 @@ private:
   /// Thread-local origin storage for function return value.
   Value *RetvalOriginTLS;
 
-  /// Thread-local shadow storage for in-register va_arg function
-  /// parameters (x86_64-specific).
+  /// Thread-local shadow storage for in-register va_arg function.
   Value *VAArgTLS;
 
-  /// Thread-local shadow storage for in-register va_arg function
-  /// parameters (x86_64-specific).
+  /// Thread-local shadow storage for in-register va_arg function.
   Value *VAArgOriginTLS;
 
-  /// Thread-local shadow storage for va_arg overflow area
-  /// (x86_64-specific).
+  /// Thread-local shadow storage for va_arg overflow area.
   Value *VAArgOverflowSizeTLS;
 
   /// Are the instrumentation callbacks set up?
@@ -5112,7 +5109,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
   // like x86_64 case, lowers the va_args in the frontend and this pass only
   // sees the low level code that deals with va_list internals).
   // The first seven GR registers are saved in the first 56 bytes of the
-  // va_arg tls arra, followers by the first 8 FP/SIMD registers, and then
+  // va_arg tls arra, followed by the first 8 FP/SIMD registers, and then
   // the remaining arguments.
   // Using constant offset within the va_arg TLS array allows fast copy
   // in the finalize instrumentation.

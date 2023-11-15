@@ -110,7 +110,9 @@ static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
 }
 
 // TODO: Make this more like AArch64?
-static bool onlyUsesFP(const MachineInstr &MI) {
+bool RISCVRegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
+                                       const MachineRegisterInfo &MRI,
+                                       const TargetRegisterInfo &TRI) const {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
@@ -131,11 +133,19 @@ static bool onlyUsesFP(const MachineInstr &MI) {
     break;
   }
 
+  // If we have a copy instruction, we could be feeding floating point
+  // instructions.
+  if (MI.getOpcode() == TargetOpcode::COPY)
+    return getRegBank(MI.getOperand(0).getReg(), MRI, TRI) ==
+           &RISCV::FPRBRegBank;
+
   return false;
 }
 
 // TODO: Make this more like AArch64?
-static bool onlyDefinesFP(const MachineInstr &MI) {
+bool RISCVRegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
+                                          const MachineRegisterInfo &MRI,
+                                          const TargetRegisterInfo &TRI) const {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
@@ -156,6 +166,12 @@ static bool onlyDefinesFP(const MachineInstr &MI) {
     break;
   }
 
+  // If we have a copy instruction, we could be fed by floating point
+  // instructions.
+  if (MI.getOpcode() == TargetOpcode::COPY)
+    return getRegBank(MI.getOperand(0).getReg(), MRI, TRI) ==
+           &RISCV::FPRBRegBank;
+
   return false;
 }
 
@@ -173,6 +189,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
   unsigned GPRSize = getMaximumSize(RISCV::GPRBRegBankID);
   assert((GPRSize == 32 || GPRSize == 64) && "Unexpected GPR size");
@@ -235,7 +253,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                  // assume this was a floating point load in the IR. If it was
                  // not, we would have had a bitcast before reaching that
                  // instruction.
-                 return onlyUsesFP(UseMI);
+                 return onlyUsesFP(UseMI, MRI, TRI);
                })) {
       OperandsMapping = getOperandsMapping(
           {getFPValueMapping(Ty.getSizeInBits()), GPRValueMapping});
@@ -254,7 +272,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
 
     MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(0).getReg());
-    if (onlyDefinesFP(*DefMI)) {
+    if (onlyDefinesFP(*DefMI, MRI, TRI)) {
       OperandsMapping = getOperandsMapping(
           {getFPValueMapping(Ty.getSizeInBits()), GPRValueMapping});
     }
