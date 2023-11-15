@@ -12,8 +12,12 @@ class TestSwiftTaggedPointer(lldbtest.TestBase):
     # This test depends on NSObject, so it is not available on non-Darwin
     # platforms.
     @skipUnlessDarwin
+    # This test exposes a bug in DWARFImporterForClangTypes, which
+    # doesn't do type completion correctly. (rdar://118337109)
+    @skipIf(setting=('symbols.swift-precise-compiler-invocation', 'true'))
     def test(self):
         self.build()
+        self.expect('log enable lldb types')
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
 

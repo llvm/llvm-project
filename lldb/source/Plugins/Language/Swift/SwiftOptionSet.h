@@ -41,7 +41,7 @@ private:
   const SwiftOptionSetSummaryProvider &
   operator=(const SwiftOptionSetSummaryProvider &) = delete;
 
-  void FillCasesIfNeeded();
+  void FillCasesIfNeeded(const ExecutionContext *);
 
   CompilerType m_type;
 

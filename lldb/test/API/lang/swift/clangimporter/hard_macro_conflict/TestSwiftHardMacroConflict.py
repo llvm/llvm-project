@@ -12,6 +12,7 @@ class TestSwiftHardMacroConflict(TestBase):
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(setting=('symbols.swift-precise-compiler-invocation', 'true'))
     @skipUnlessDarwin
     @swiftTest
     def test(self):

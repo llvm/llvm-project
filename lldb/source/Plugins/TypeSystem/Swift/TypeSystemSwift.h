@@ -115,7 +115,7 @@ public:
 
   const std::string &GetDescription() const { return m_description; }
   static LanguageSet GetSupportedLanguagesForTypes();
-  virtual SwiftASTContext *GetSwiftASTContext() const = 0;
+  virtual SwiftASTContext *GetSwiftASTContext(const SymbolContext *sc) const = 0;
   virtual TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() = 0;
   virtual const TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() const = 0;
   virtual void SetTriple(const llvm::Triple triple) = 0;
@@ -127,8 +127,10 @@ public:
   virtual bool IsErrorType(lldb::opaque_compiler_type_t type) = 0;
   virtual CompilerType GetErrorType() = 0;
   virtual CompilerType GetReferentType(lldb::opaque_compiler_type_t type) = 0;
-  static CompilerType GetInstanceType(CompilerType ct);
-  virtual CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) = 0;
+  static CompilerType GetInstanceType(CompilerType ct,
+                                      ExecutionContextScope *exe_scope);
+  virtual CompilerType GetInstanceType(lldb::opaque_compiler_type_t type,
+                                       ExecutionContextScope *exe_scope) = 0;
   /// Return the static type if this is a DynamicSelf type else the input type.
   virtual CompilerType GetStaticSelfType(lldb::opaque_compiler_type_t type) = 0;
   enum class TypeAllocationStrategy { eInline, ePointer, eDynamic, eUnknown };

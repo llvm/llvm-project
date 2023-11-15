@@ -66,6 +66,7 @@ public:
   SwiftModuleLoadingMode GetSwiftModuleLoadingMode() const;
   bool SetSwiftModuleLoadingMode(SwiftModuleLoadingMode);
 
+  bool GetUseSwiftPreciseCompilerInvocation() const;
   bool GetEnableSwiftMetadataCache() const;
   uint64_t GetSwiftMetadataCacheMaxByteSize();
   uint64_t GetSwiftMetadataCacheExpirationDays();

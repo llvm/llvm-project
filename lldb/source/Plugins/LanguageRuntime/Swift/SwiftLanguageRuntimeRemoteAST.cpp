@@ -186,7 +186,11 @@ ConstString SwiftLanguageRuntimeImpl::GetDynamicTypeName_ClassRemoteAST(
   auto scratch_ctx = maybe_scratch_ctx->get();
   if (!scratch_ctx)
     return {};
-  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
+  const SymbolContext *sc = nullptr;
+  auto stack_frame_sp = in_value.GetExecutionContextRef().GetFrameSP();
+  if (stack_frame_sp)
+    sc = &stack_frame_sp->GetSymbolContext(eSymbolContextFunction);
+  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext(sc);
   if (!swift_ast_ctx)
     return {};
 
@@ -223,7 +227,12 @@ SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ProtocolRemoteAST(
   auto scratch_ctx = maybe_scratch_ctx->get();
   if (!scratch_ctx)
     return {};
-  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
+
+  const SymbolContext *sc = nullptr;
+  auto stack_frame_sp = in_value.GetExecutionContextRef().GetFrameSP();
+  if (stack_frame_sp)
+    sc = &stack_frame_sp->GetSymbolContext(eSymbolContextFunction);
+  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext(sc);
   if (!swift_ast_ctx)
     return {};
 
@@ -279,7 +288,8 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
   auto scratch_ctx = maybe_scratch_ctx->get();
   if (!scratch_ctx)
     return base_type;
-  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
+
+  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext(&sc);
   if (!swift_ast_ctx)
     return base_type;
   base_type = swift_ast_ctx->ImportType(base_type, error);
@@ -430,8 +440,8 @@ SwiftLanguageRuntimeImpl::MetadataPromise::MetadataPromise(
     : m_for_object_sp(for_object.GetSP()), m_swift_runtime(runtime),
       m_metadata_location(location) {}
 
-CompilerType
-SwiftLanguageRuntimeImpl::MetadataPromise::FulfillTypePromise(Status *error) {
+CompilerType SwiftLanguageRuntimeImpl::MetadataPromise::FulfillTypePromise(
+    const SymbolContext *sc, Status *error) {
   if (error)
     error->Clear();
 
@@ -456,7 +466,7 @@ SwiftLanguageRuntimeImpl::MetadataPromise::FulfillTypePromise(Status *error) {
     error->SetErrorString("couldn't get Swift scratch context");
     return CompilerType();
   }
-  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
+  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext(sc);
   if (!swift_ast_ctx) {
     error->SetErrorString("couldn't get Swift scratch context");
     return CompilerType();
@@ -485,7 +495,8 @@ SwiftLanguageRuntimeImpl::MetadataPromise::FulfillTypePromise(Status *error) {
 }
 
 SwiftLanguageRuntimeImpl::MetadataPromiseSP
-SwiftLanguageRuntimeImpl::GetMetadataPromise(lldb::addr_t addr,
+SwiftLanguageRuntimeImpl::GetMetadataPromise(const SymbolContext *sc,
+                                             lldb::addr_t addr,
                                              ValueObject &for_object) {
   llvm::Optional<SwiftScratchContextReader> maybe_swift_scratch_ctx =
       for_object.GetSwiftScratchContext();
@@ -494,7 +505,7 @@ SwiftLanguageRuntimeImpl::GetMetadataPromise(lldb::addr_t addr,
   auto scratch_ctx = maybe_swift_scratch_ctx->get();
   if (!scratch_ctx)
     return nullptr;
-  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
+  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext(sc);
   if (!swift_ast_ctx)
     return nullptr;
   if (swift_ast_ctx->HasFatalErrors())
@@ -539,7 +550,8 @@ SwiftLanguageRuntimeImpl::GetPromiseForTypeNameAndFrame(const char *type_name,
   lldb::addr_t metadata_location(metadata_ptr_var_sp->GetValueAsUnsigned(0));
   if (metadata_location == 0 || metadata_location == LLDB_INVALID_ADDRESS)
     return nullptr;
-  return GetMetadataPromise(metadata_location, *metadata_ptr_var_sp);
+  const SymbolContext *sc = &frame->GetSymbolContext(eSymbolContextFunction);
+  return GetMetadataPromise(sc, metadata_location, *metadata_ptr_var_sp);
 }
 
 } // namespace lldb_private

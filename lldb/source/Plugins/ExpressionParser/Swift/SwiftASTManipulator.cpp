@@ -191,9 +191,9 @@ swift::BraceStmt *SwiftASTManipulatorBase::GetUserBody() {
 
 SwiftASTManipulator::SwiftASTManipulator(
     SwiftASTContextForExpressions &swift_ast_ctx,
-    swift::SourceFile &source_file, bool repl,
+    swift::SourceFile &source_file, const SymbolContext &sc, bool repl,
     lldb::BindGenericTypes bind_generic_types)
-    : SwiftASTManipulatorBase(source_file, repl, bind_generic_types),
+    : SwiftASTManipulatorBase(source_file, sc, repl, bind_generic_types),
       m_swift_ast_ctx(swift_ast_ctx) {}
 
 void SwiftASTManipulator::FindSpecialNames(
@@ -889,7 +889,7 @@ llvm::Optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
   // When injecting a value pack or pack count into the outer
   // lldb_expr function, treat it as an opaque raw pointer.
   if (m_bind_generic_types == lldb::eDontBind && variable.IsUnboundPack()) {
-    auto swift_ast_ctx = type_system_swift->GetSwiftASTContext();
+    auto swift_ast_ctx = type_system_swift->GetSwiftASTContext(&m_sc);
     if (swift_ast_ctx) {
       auto it = m_type_aliases.find("$__lldb_builtin_ptr_t");
       if (it == m_type_aliases.end())

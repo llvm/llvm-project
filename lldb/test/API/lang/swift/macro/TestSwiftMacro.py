@@ -35,7 +35,6 @@ class TestSwiftMacro(lldbtest.TestBase):
         """Test Swift macros"""
         self.build(dictionary={'SWIFT_SOURCES': 'main.swift'})
         self.setupPluginServerForTesting()
-
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
 
@@ -70,6 +69,6 @@ class TestSwiftMacro(lldbtest.TestBase):
         self.expect('expression -- #stringify(1)', substrs=['0 = 1', '1 = "1"'])
         self.filecheck('platform shell cat "%s"' % types_log, __file__)
 #       CHECK: CacheUserImports(){{.*}}: Macro.
-#       CHECK: SwiftASTContextForExpressions::LoadOneModule(){{.*}}Imported module Macro from {kind = Serialized Swift AST, filename = "{{.*}}Macro.swiftmodule";}
+#       CHECK: SwiftASTContextForExpressions{{.*}}::LoadOneModule(){{.*}}Imported module Macro from {kind = Serialized Swift AST, filename = "{{.*}}Macro.swiftmodule";}
 #       CHECK: CacheUserImports(){{.*}}Scanning for search paths in{{.*}}Macro.swiftmodule
-#       CHECK: SwiftASTContextForExpressions::LogConfiguration(){{.*}} -external-plugin-path {{.*}}/lang/swift/macro/{{.*}}#{{.*}}/swift-plugin-server
+#       CHECK: SwiftASTContextForExpressions{{.*}}::LogConfiguration(){{.*}} -external-plugin-path {{.*}}/lang/swift/macro/{{.*}}#{{.*}}/swift-plugin-server

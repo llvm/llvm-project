@@ -1156,6 +1156,7 @@ static std::string GetPluginServerForSDK(llvm::StringRef sdk_path) {
 /// \returns true if an error was encountered.
 static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
                                         llvm::StringRef module_name,
+                                        llvm::StringRef module_filter,
                                         llvm::ArrayRef<StringRef> buffers,
                                         const PathMappingList &path_map,
                                         bool discover_implicit_search_paths,
@@ -1258,6 +1259,15 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
         // If there's a size error, quit the loop early, otherwise try the next.
         if (invalid_size)
           break;
+        continue;
+      }
+
+      // Skip over this module if filtering and the filter matches.
+      if (!module_filter.empty() && module_filter != info.name) {
+        LOG_PRINTF(GetLog(LLDBLog::Types),
+                   "Skipping compiler options from %s, filter=%s",
+                   extended_validation_info.getModuleABIName().str().c_str(),
+                   module_filter.str().c_str());
         continue;
       }
 
@@ -1893,17 +1903,17 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     bool discover_implicit_search_paths = false;
     auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
     std::string module_name = module.GetSpecificationDescription();
+    StringRef module_filter;
     std::vector<llvm::StringRef> buffers =
         GetASTBuffersFromModule(m_description, ast_file_datas, module_name);
 
     // If no N_AST symbols exist, this is not an error.
     if (!buffers.empty())
       if (DeserializeAllCompilerFlags(
-              swift_ast_sp->GetCompilerInvocation(),
-              module_name, buffers,
-              module.GetSourceMappingList(), discover_implicit_search_paths,
-              m_description, errs, got_serialized_options,
-              found_swift_modules)) {
+              swift_ast_sp->GetCompilerInvocation(), module_name, module_filter,
+              buffers, module.GetSourceMappingList(),
+              discover_implicit_search_paths, m_description, errs,
+              got_serialized_options, found_swift_modules)) {
         // Validation errors are not fatal for the context.
         swift_ast_sp->AddDiagnostic(eDiagnosticSeverityError, errs.str());
       }
@@ -2085,14 +2095,14 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
 
 /// Scan a newly added lldb::Module for Swift modules and report any errors in
 /// its module SwiftASTContext to Target.
-static void ProcessModule(
-    ModuleSP module_sp, std::string m_description,
-    bool discover_implicit_search_paths, bool use_all_compiler_flags,
-    Target &target, llvm::Triple triple,
-    std::vector<swift::PluginSearchOption> &plugin_search_options,
-    std::vector<std::string> &module_search_paths,
-    std::vector<std::pair<std::string, bool>> &framework_search_paths,
-    std::vector<std::string> &extra_clang_args) {
+static void
+ProcessModule(ModuleSP module_sp, std::string m_description,
+              bool discover_implicit_search_paths, bool use_all_compiler_flags,
+              StringRef module_filter, Target &target, llvm::Triple triple,
+              std::vector<swift::PluginSearchOption> &plugin_search_options,
+              std::vector<std::string> &module_search_paths,
+              std::vector<std::pair<std::string, bool>> &framework_search_paths,
+              std::vector<std::string> &extra_clang_args) {
   {
     llvm::raw_string_ostream ss(m_description);
     ss << "::ProcessModule(" << '"';
@@ -2208,9 +2218,9 @@ static void ProcessModule(
   // If no N_AST symbols exist, this is not an error.
   if (!buffers.empty())
     if (DeserializeAllCompilerFlags(
-            invocation, module_name, buffers, module_sp->GetSourceMappingList(),
-            discover_implicit_search_paths, m_description, errs,
-            got_serialized_options, found_swift_modules)) {
+            invocation, module_name, module_filter, buffers,
+            module_sp->GetSourceMappingList(), discover_implicit_search_paths,
+            m_description, errs, got_serialized_options, found_swift_modules)) {
       // TODO: After removing DeserializeAllCompilerFlags from
       //       CreateInstance(per-Module), errs will need to be
       //       collected here and surfaced.
@@ -2412,9 +2422,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
 
   for (ModuleSP module_sp : target.GetImages().Modules())
     if (module_sp) {
+      StringRef module_filter;
       std::vector<std::string> extra_clang_args;
       ProcessModule(module_sp, m_description, discover_implicit_search_paths,
-                    use_all_compiler_flags, target, triple,
+                    use_all_compiler_flags, module_filter, target, triple,
                     plugin_search_options, module_search_paths,
                     framework_search_paths, extra_clang_args);
       swift_ast_sp->AddExtraClangArgs(extra_clang_args);
@@ -2443,6 +2454,268 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
                                   swift_ast_sp->GetDiagnosticEngine());
   }
 
+  swift_ast_sp->ApplyDiagnosticOptions();
+
+  // Apply source path remappings found in each module's dSYM.
+  for (ModuleSP module : target.GetImages().Modules())
+    if (module)
+      swift_ast_sp->RemapClangImporterOptions(module->GetSourceMappingList());
+
+  // Apply source path remappings found in the target settings.
+  swift_ast_sp->RemapClangImporterOptions(target.GetSourcePathMap());
+  swift_ast_sp->FilterClangImporterOptions(
+      swift_ast_sp->GetClangImporterOptions().ExtraArgs, swift_ast_sp.get());
+
+  // This needs to happen once all the import paths are set, or
+  // otherwise no modules will be found.
+  swift_ast_sp->InitializeSearchPathOptions(module_search_paths,
+                                            framework_search_paths);
+  if (!swift_ast_sp->GetClangImporter()) {
+    logError("couldn't create a ClangImporter");
+    return {};
+  }
+
+  // Initialize the compiler plugin search paths.
+  auto &opts = swift_ast_sp->GetSearchPathOptions();
+  opts.PluginSearchOpts.insert(opts.PluginSearchOpts.end(),
+                               plugin_search_options.begin(),
+                               plugin_search_options.end());
+
+  for (size_t mi = 0; mi != num_images; ++mi) {
+    std::vector<std::string> module_names;
+    auto module_sp = target.GetImages().GetModuleAtIndex(mi);
+    swift_ast_sp->RegisterSectionModules(*module_sp, module_names);
+  }
+
+  LOG_PRINTF(GetLog(LLDBLog::Types), "((Target*)%p) = %p",
+             static_cast<void *>(&target),
+             static_cast<void *>(swift_ast_sp.get()));
+
+  if (swift_ast_sp->HasFatalErrors()) {
+    logError(swift_ast_sp->GetFatalErrors().AsCString());
+    return {};
+  }
+
+  {
+    LLDB_SCOPED_TIMERF("%s (getStdlibModule)", m_description.c_str());
+    const bool can_create = true;
+    swift::ModuleDecl *stdlib =
+        swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create);
+    if (!stdlib || IsDWARFImported(*stdlib)) {
+      logError("couldn't load the Swift stdlib");
+      return {};
+    }
+  }
+
+  return swift_ast_sp;
+}
+
+
+lldb::TypeSystemSP SwiftASTContext::CreateInstance(
+    const SymbolContext &sc,
+    TypeSystemSwiftTypeRefForExpressions &typeref_typesystem) {
+  LLDB_SCOPED_TIMER();
+
+  CompileUnit *cu = sc.comp_unit;
+  StringRef swift_module_name = TypeSystemSwiftTypeRef::GetSwiftModuleFor(&sc);
+  std::string m_description;
+  {
+    StreamString ss;
+    ss << "SwiftASTContextForExpressions"
+       << "(module: " << '"' << swift_module_name << "\", "
+       << "cu: " << '"' << cu->GetPrimaryFile().GetFilename() << '"'
+       << ')';
+    m_description = ss.GetString();
+  }
+
+  TargetSP target_sp = typeref_typesystem.GetTargetWP().lock();
+  if (!target_sp)
+    return {};
+  Target &target = *target_sp;
+
+  // Make an AST but don't set the triple yet. We need to
+  // try and detect if we have a iOS simulator.
+  std::shared_ptr<SwiftASTContextForExpressions> swift_ast_sp(
+      new SwiftASTContextForExpressions(m_description, typeref_typesystem));
+  auto defer_log = llvm::make_scope_exit(
+      [swift_ast_sp] { swift_ast_sp->LogConfiguration(); });
+
+  LOG_PRINTF(GetLog(LLDBLog::Types), "(Target)");
+  auto logError = [&](const char *message) {
+    LOG_PRINTF(GetLog(LLDBLog::Types), "Failed to create scratch context - %s",
+               message);
+    if (StreamSP errs_sp = target.GetDebugger().GetAsyncErrorStream())
+      errs_sp->Printf("Cannot create Swift scratch context (%s)", message);
+  };
+
+  ArchSpec arch = target.GetArchitecture();
+  if (!arch.IsValid()) {
+    logError("invalid target architecture");
+    return {};
+  }
+
+  // This is a scratch AST context, mark it as such.
+  swift_ast_sp->m_is_scratch_context = true;
+
+  swift_ast_sp->GetLanguageOptions().EnableCXXInterop =
+      target.IsSwiftCxxInteropEnabled();
+  bool handled_sdk_path = false;
+  const size_t num_images = target.GetImages().GetSize();
+
+  // Set the SDK path prior to doing search paths.  Otherwise when we
+  // create search path options we put in the wrong SDK path.
+  FileSpec &target_sdk_spec = target.GetSDKPath();
+  if (target_sdk_spec && FileSystem::Instance().Exists(target_sdk_spec)) {
+    swift_ast_sp->SetPlatformSDKPath(target_sdk_spec.GetPath());
+    handled_sdk_path = true;
+  }
+
+  if (!handled_sdk_path) {
+    for (size_t mi = 0; mi != num_images; ++mi) {
+      ModuleSP module_sp = target.GetImages().GetModuleAtIndex(mi);
+      if (!HasSwiftModules(*module_sp))
+        continue;
+
+      std::string sdk_path = GetSDKPathFromDebugInfo(m_description, *module_sp);
+
+      if (sdk_path.empty())
+        continue;
+
+      handled_sdk_path = true;
+      swift_ast_sp->SetPlatformSDKPath(sdk_path);
+      break;
+    }
+  }
+
+  // First, prime the compiler with the options from the main executable:
+  bool got_serialized_options = false;
+  ModuleSP exe_module_sp(target.GetExecutableModule());
+
+  // If we're debugging a testsuite, then treat the main test bundle
+  // as the executable.
+  if (exe_module_sp && IsUnitTestExecutable(*exe_module_sp)) {
+    ModuleSP unit_test_module = GetUnitTestModule(target.GetImages());
+
+    if (unit_test_module) {
+      exe_module_sp = unit_test_module;
+    }
+  }
+
+  {
+    auto get_executable_triple = [&]() -> llvm::Triple {
+      if (!exe_module_sp)
+        return {};
+      return exe_module_sp->GetArchitecture().GetTriple();
+    };
+
+    llvm::Triple computed_triple;
+    llvm::Triple target_triple = target.GetArchitecture().GetTriple();
+
+    if (target.GetArchitecture().IsFullySpecifiedTriple()) {
+      // If a fully specified triple was passed in, for example
+      // through CreateTargetWithFileAndTargetTriple(), prefer that.
+      LOG_PRINTF(GetLog(LLDBLog::Types), "Fully specified target triple %s.",
+                 target_triple.str().c_str());
+      computed_triple = target_triple;
+    } else {
+      // Underspecified means that one or more of vendor, os, or os
+      // version (Darwin only) is missing.
+      LOG_PRINTF(GetLog(LLDBLog::Types), "Underspecified target triple %s.",
+                 target_triple.str().c_str());
+      llvm::VersionTuple platform_version;
+      PlatformSP platform_sp(target.GetPlatform());
+      if (platform_sp)
+        platform_version =
+            platform_sp->GetOSVersion(target.GetProcessSP().get());
+      LOG_PRINTF(GetLog(LLDBLog::Types), "Platform version is %s",
+                 platform_version.empty()
+                     ? "<empty>"
+                     : platform_version.getAsString().c_str());
+      // Try to fill in the platform OS version. The idea behind using
+      // the platform version is to let the expression evaluator mark
+      // the expressions with the highest supported availability
+      // attribute. Don't use the platform when an environment is
+      // present, since there might be some ambiguity about the
+      // plaform (e.g., ios-macabi runs on the macOS, but uses iOS
+      // version numbers).
+      if (!platform_version.empty() &&
+          target_triple.getEnvironment() == llvm::Triple::UnknownEnvironment) {
+        LOG_PRINTF(GetLog(LLDBLog::Types), "Completing triple based on platform.");
+
+        llvm::SmallString<32> buffer;
+        {
+          llvm::raw_svector_ostream os(buffer);
+          os << target_triple.getArchName() << '-';
+          os << target_triple.getVendorName() << '-';
+          os << llvm::Triple::getOSTypeName(target_triple.getOS());
+          os << platform_version.getAsString();
+        }
+        computed_triple = llvm::Triple(buffer);
+      } else {
+        LOG_PRINTF(GetLog(LLDBLog::Types),
+                   "Completing triple based on main binary load commands.");
+        computed_triple = get_executable_triple();
+      }
+    }
+
+    if (computed_triple.getOS() == llvm::Triple::MacOSX) {
+      // Handle the case where an apparent macOS binary has been
+      // force-loaded as a macCatalyst process. The Xcode test
+      // runner works this way.
+      llvm::Triple exe_triple = get_executable_triple();
+      if (exe_triple.getOS() == llvm::Triple::IOS &&
+          exe_triple.getEnvironment() == llvm::Triple::MacABI) {
+        LOG_PRINTF(GetLog(LLDBLog::Types), "Adjusting triple to macCatalyst.");
+        computed_triple.setOSAndEnvironmentName(
+            exe_triple.getOSAndEnvironmentName());
+      }
+    }
+    if (computed_triple == llvm::Triple()) {
+      LOG_PRINTF(GetLog(LLDBLog::Types), "Failed to compute triple.");
+      return {};
+    }
+    swift_ast_sp->SetTriple(computed_triple);
+  }
+
+  llvm::Triple triple = swift_ast_sp->GetTriple();
+  std::string resource_dir = HostInfo::GetSwiftResourceDir(
+      triple, swift_ast_sp->GetPlatformSDKPath());
+  ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(), resource_dir,
+                        triple);
+
+  std::vector<swift::PluginSearchOption> plugin_search_options;
+  std::vector<std::string> module_search_paths;
+  std::vector<std::pair<std::string, bool>> framework_search_paths;
+  std::vector<std::string> extra_clang_args;
+  
+  const bool discover_implicit_search_paths =
+      target.GetSwiftDiscoverImplicitSearchPaths();
+
+  const bool use_all_compiler_flags =
+      !got_serialized_options || target.GetUseAllCompilerFlags();
+
+  for (const FileSpec &path : target.GetSwiftModuleSearchPaths())
+    module_search_paths.push_back(path.GetPath());
+
+  for (const FileSpec &path : target.GetSwiftFrameworkSearchPaths())
+    framework_search_paths.push_back({path.GetPath(),
+                                      /*is_system*/ false});
+  ModuleSP module_sp = sc.module_sp;
+  if (module_sp) {
+    StringRef module_filter = swift_module_name;
+    std::vector<std::string> extra_clang_args;
+    ProcessModule(module_sp, m_description, discover_implicit_search_paths,
+                  use_all_compiler_flags, module_filter, target, triple,
+                  plugin_search_options, module_search_paths,
+                  framework_search_paths, extra_clang_args);
+    swift_ast_sp->AddExtraClangArgs(extra_clang_args);
+  }
+
+  // Now fold any extra options we were passed. This has to be done
+  // BEFORE the ClangImporter is made by calling GetClangImporter or
+  // these options will be ignored.
+
+  swift_ast_sp->AddUserClangArgs(target);
   swift_ast_sp->ApplyDiagnosticOptions();
 
   // Apply source path remappings found in each module's dSYM.
@@ -4763,9 +5036,10 @@ void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
     std::vector<std::pair<std::string, bool>> framework_search_paths;
     std::vector<std::string> extra_clang_args;
     lldb::ModuleSP module_sp = module_list.GetModuleAtIndex(mi);
+    StringRef module_filter;
     ProcessModule(module_sp, m_description, discover_implicit_search_paths,
-                  use_all_compiler_flags, *target_sp, GetTriple(),
-                  plugin_search_options, module_search_paths,
+                  use_all_compiler_flags, module_filter, *target_sp,
+                  GetTriple(), plugin_search_options, module_search_paths,
                   framework_search_paths, extra_clang_args);
     // If the use-all-compiler-flags setting is enabled, the
     // expression context is supposed to merge all search paths
@@ -5629,7 +5903,9 @@ CompilerType SwiftASTContext::GetCanonicalType(opaque_compiler_type_t type) {
   return ToCompilerType({GetCanonicalSwiftType(type).getPointer()});
 }
 
-CompilerType SwiftASTContext::GetInstanceType(opaque_compiler_type_t type) {
+CompilerType
+SwiftASTContext::GetInstanceType(opaque_compiler_type_t type,
+                                 ExecutionContextScope *exe_scope) {
   VALID_OR_RETURN_CHECK_TYPE(type, CompilerType());
 
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
@@ -7685,8 +7961,9 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::Protocol:
     return false;
 
-  case swift::TypeKind::ExistentialMetatype:
-  case swift::TypeKind::Metatype: {
+    
+  case swift::TypeKind::Metatype:
+  case swift::TypeKind::ExistentialMetatype: {
     return DumpDataExtractor(data, &s, byte_offset, eFormatPointer, byte_size, 1,
                              UINT32_MAX, LLDB_INVALID_ADDRESS,
                              bitfield_bit_size, bitfield_bit_offset, exe_scope);
@@ -8371,15 +8648,17 @@ bool SwiftASTContextForExpressions::CacheUserImports(
               llvm::raw_svector_ostream errs(error);
               bool discover_implicit_search_paths = false;
               swift::CompilerInvocation &invocation = GetCompilerInvocation();
+              StringRef module_filter;
 
               LOG_PRINTF(GetLog(LLDBLog::Types),
                          "Scanning for search paths in %s",
                          ast_file.str().c_str());
               if (DeserializeAllCompilerFlags(
-                      invocation, ast_file, {file_or_err->get()->getBuffer()},
-                      path_remap, discover_implicit_search_paths,
-                      m_description.str().str(), errs, got_serialized_options,
-                      found_swift_modules, /*search_paths_only = */true)) {
+                      invocation, ast_file, module_filter,
+                      {file_or_err->get()->getBuffer()}, path_remap,
+                      discover_implicit_search_paths, m_description.str().str(),
+                      errs, got_serialized_options, found_swift_modules,
+                      /*search_paths_only = */ true)) {
                 LOG_PRINTF(GetLog(LLDBLog::Types), "Could not parse %s: %s",
                            ast_file.str().c_str(), error.str().str().c_str());
               }
@@ -8397,15 +8676,16 @@ bool SwiftASTContextForExpressions::CacheUserImports(
 }
 
 bool SwiftASTContext::GetCompileUnitImports(
-    SymbolContext &sc, ProcessSP process_sp,
+    const SymbolContext &sc, ProcessSP process_sp,
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         &modules,
     Status &error) {
   return GetCompileUnitImportsImpl(sc, process_sp, &modules, error);
 }
 
-void SwiftASTContext::PerformCompileUnitImports(
-    SymbolContext &sc, lldb::ProcessSP process_sp, Status &error) {
+void SwiftASTContext::PerformCompileUnitImports(const SymbolContext &sc,
+                                                lldb::ProcessSP process_sp,
+                                                Status &error) {
   GetCompileUnitImportsImpl(sc, process_sp, nullptr, error);
 }
 
@@ -8415,7 +8695,7 @@ GetCUSignature(CompileUnit &compile_unit) {
 }
 
 bool SwiftASTContext::GetCompileUnitImportsImpl(
-    SymbolContext &sc, lldb::ProcessSP process_sp,
+    const SymbolContext &sc, lldb::ProcessSP process_sp,
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         *modules,
     Status &error) {
