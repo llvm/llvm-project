@@ -36,7 +36,7 @@ def SCF_Dialect : Dialect {
 
     Originally, this dialect was developed as a common lowering stage for the
     `affine` and `linalg` dialects. Both convert to SCF loops instead of
-    targeting branch-based CFGs directly. Typically, `scf` is lowered to `sc`
+    targeting branch-based CFGs directly. Typically, `scf` is lowered to `cf`
     and then lowered to some final target like LLVM or SPIR-V.
   }];
 
