@@ -19,6 +19,7 @@
 #include <string>
 #include <type_traits>
 #include <variant>
+#include <vector>
 #include <memory>
 
 #include "test_macros.h"
@@ -145,8 +146,8 @@ void test_T_assignment_sfinae() {
     };
     static_assert(!std::is_assignable<V, X>::value,
                   "no boolean conversion in operator=");
-    static_assert(!std::is_assignable<V, std::false_type>::value,
-                  "no converted to bool in operator=");
+    static_assert(std::is_assignable<V, std::false_type>::value,
+                  "converted to bool in operator=");
   }
   {
     struct X {};
@@ -295,12 +296,21 @@ void test_T_assignment_performs_assignment() {
 #endif // TEST_HAS_NO_EXCEPTIONS
 }
 
+void test_T_assignment_vector_bool() {
+  std::vector<bool> vec = {true};
+  std::variant<bool, int> v;
+  v = vec[0];
+  assert(v.index() == 0);
+  assert(std::get<0>(v) == true);
+}
+
 int main(int, char**) {
   test_T_assignment_basic();
   test_T_assignment_performs_construction();
   test_T_assignment_performs_assignment();
   test_T_assignment_noexcept();
   test_T_assignment_sfinae();
+  test_T_assignment_vector_bool();
 
   return 0;
 }

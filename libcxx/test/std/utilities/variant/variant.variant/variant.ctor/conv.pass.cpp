@@ -32,9 +32,8 @@ int main(int, char**)
 
   static_assert(!std::is_constructible<std::variant<int, bool>, decltype("meow")>::value, "");
   static_assert(!std::is_constructible<std::variant<int, const bool>, decltype("meow")>::value, "");
-  static_assert(!std::is_constructible<std::variant<int, const volatile bool>, decltype("meow")>::value, "");
 
-  static_assert(!std::is_constructible<std::variant<bool>, std::true_type>::value, "");
+  static_assert(std::is_constructible<std::variant<bool>, std::true_type>::value, "");
   static_assert(!std::is_constructible<std::variant<bool>, std::unique_ptr<char> >::value, "");
   static_assert(!std::is_constructible<std::variant<bool>, decltype(nullptr)>::value, "");
 
