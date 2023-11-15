@@ -6412,7 +6412,7 @@ def warn_superclass_variable_sized_type_not_at_end : Warning<
   " in superclass %3">, InGroup<ObjCFlexibleArray>;
 
 def err_counted_by_attr_not_on_flexible_array_member : Error<
-  "'counted_by' only applies to flexible array members">;
+  "'counted_by' only applies to C99 flexible array members">;
 def err_counted_by_attr_refers_to_flexible_array : Error<
   "'counted_by' cannot refer to the flexible array %0">;
 def err_counted_by_must_be_in_structure : Error<
