@@ -648,6 +648,14 @@ public:
                                                       llvmSrcVal);
       return mlir::success();
     }
+    case mlir::cir::CastKind::bool_to_float: {
+      auto dstTy = castOp.getType();
+      auto llvmSrcVal = adaptor.getOperands().front();
+      auto llvmDstTy = getTypeConverter()->convertType(dstTy);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::UIToFPOp>(castOp, llvmDstTy,
+                                                        llvmSrcVal);
+      return mlir::success();
+    }
     case mlir::cir::CastKind::int_to_float: {
       auto dstTy = castOp.getType();
       auto llvmSrcVal = adaptor.getOperands().front();

@@ -1636,7 +1636,7 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
     if (CGF.getBuilder().isInt(DstTy)) {
       CastKind = mlir::cir::CastKind::bool_to_int;
     } else if (DstTy.isa<mlir::FloatType>()) {
-      llvm_unreachable("NYI: bool->float cast");
+      CastKind = mlir::cir::CastKind::bool_to_float;
     } else {
       llvm_unreachable("Internal error: Cast to unexpected type");
     }

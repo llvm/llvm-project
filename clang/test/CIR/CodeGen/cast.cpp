@@ -68,10 +68,13 @@ int cStyleCasts_0(unsigned x1, int x2, float x3, short x4, double x5) {
   unsigned fptoui = (unsigned)x3; // Floating point to unsigned integer
   // CHECK: %{{.+}} = cir.cast(float_to_int, %{{[0-9]+}} : f32), !u32i
 
-  bool ib = (bool)x1; // No checking, because this isn't a cast.
+  bool ib = (bool)x1; // No checking, because this isn't a regular cast.
 
   int bi = (int)ib; // bool to int
   // CHECK: %{{[0-9]+}} = cir.cast(bool_to_int, %{{[0-9]+}} : !cir.bool), !s32i
+
+  float bf = (float)ib; // bool to float
+  // CHECK: %{{[0-9]+}} = cir.cast(bool_to_float, %{{[0-9]+}} : !cir.bool), f32
 
   float dptofp = (float)x5;
   // CHECK: %{{.+}} = cir.cast(floating, %{{[0-9]+}} : f64), f32
