@@ -1954,7 +1954,7 @@ bool ARMBaseInstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
     return false;
 
   auto IsLoadOpcode = [&](unsigned Opcode) {
-    switch (Load1->getMachineOpcode()) {
+    switch (Opcode) {
     default:
       return false;
     case ARM::LDRi12:
