@@ -45,6 +45,7 @@ enum OpCode {
   ICmp,
   BinaryOperator,
   Ret,
+  InsertValue,
   UnimplementedInstruction = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -63,6 +64,7 @@ enum TypeKind {
   Integer,
   Ptr,
   FunctionTy,
+  Struct,
   UnimplementedType = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -350,6 +352,7 @@ public:
     GENERIC_INST_SERIALISE(I, ICmpInst, ICmp)
     GENERIC_INST_SERIALISE(I, llvm::BinaryOperator, BinaryOperator)
     GENERIC_INST_SERIALISE(I, ReturnInst, Ret)
+    GENERIC_INST_SERIALISE(I, llvm::InsertValueInst, InsertValue)
 
     CUSTOM_INST_SERIALISE(I, AllocaInst, serialiseAllocaInst)
     CUSTOM_INST_SERIALISE(I, CallInst, serialiseCallInst)
@@ -365,6 +368,8 @@ public:
   void serialiseUnimplementedInstruction(Instruction *I,
                                          ValueLoweringMap &VLMap,
                                          unsigned BBIdx, unsigned &InstIdx) {
+    // type_index:
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
     // opcode:
     serialiseOpcode(UnimplementedInstruction);
     // num_operands:
@@ -424,6 +429,23 @@ public:
     OutStreamer.emitInt8(Ty->isVarArg());
   }
 
+  void serialiseStructType(StructType *STy) {
+    OutStreamer.emitInt8(TypeKind::Struct);
+    unsigned NumFields = STy->getNumElements();
+    DataLayout DL(&M);
+    const StructLayout *SL = DL.getStructLayout(STy);
+    // num_fields:
+    OutStreamer.emitSizeT(NumFields);
+    // field_tys:
+    for (unsigned I = 0; I < NumFields; I++) {
+      OutStreamer.emitSizeT(typeIndex(STy->getElementType(I)));
+    }
+    // field_bit_offs:
+    for (unsigned I = 0; I < NumFields; I++) {
+      OutStreamer.emitSizeT(SL->getElementOffsetInBits(I));
+    }
+  }
+
   void serialiseType(llvm::Type *Ty) {
     if (Ty->isVoidTy()) {
       OutStreamer.emitInt8(TypeKind::Void);
@@ -434,6 +456,8 @@ public:
       OutStreamer.emitInt32(ITy->getBitWidth());
     } else if (FunctionType *FTy = dyn_cast<FunctionType>(Ty)) {
       serialiseFunctionType(FTy);
+    } else if (StructType *STy = dyn_cast<StructType>(Ty)) {
+      serialiseStructType(STy);
     } else {
       OutStreamer.emitInt8(TypeKind::UnimplementedType);
       serialiseString(toString(Ty));
