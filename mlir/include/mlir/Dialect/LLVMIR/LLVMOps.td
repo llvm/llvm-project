@@ -184,16 +184,14 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
   LLVM_MemOpPatterns {
   let arguments = (ins AnyInteger:$arraySize,
                    OptionalAttr<I64Attr>:$alignment,
-                   OptionalAttr<TypeAttr>:$elem_type,
+                   TypeAttr:$elem_type,
                    UnitAttr:$inalloca);
   let results = (outs Res<LLVM_AnyPointer, "",
                           [MemAlloc<AutomaticAllocationScopeResource>]>:$res);
   string llvmInstName = "Alloca";
   string llvmBuilder = [{
     auto addrSpace = $_resultType->getPointerAddressSpace();
-    llvm::Type *elementType = moduleTranslation.convertType(
-        $elem_type ? *$elem_type
-                   : ::llvm::cast<LLVMPointerType>(op.getType()).getElementType());
+    llvm::Type *elementType = moduleTranslation.convertType($elem_type);
     auto *inst = builder.CreateAlloca(elementType, addrSpace, $arraySize);
     }] # setAlignmentCode # [{
     inst->setUsedWithInAlloca($inalloca);
@@ -207,31 +205,16 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
     $res = $_builder.create<LLVM::AllocaOp>(
       $_location, $_resultType, $arraySize,
       alignment == 0 ? IntegerAttr() : $_builder.getI64IntegerAttr(alignment),
-      TypeAttr::get(allocatedType), allocaInst->isUsedWithInAlloca());
+      allocatedType, allocaInst->isUsedWithInAlloca());
   }];
   let builders = [
-    DeprecatedOpBuilder<"the usage of typed pointers is deprecated",
-               (ins "Type":$resultType, "Value":$arraySize,
-               "unsigned":$alignment),
-    [{
-      assert(!::llvm::cast<LLVMPointerType>(resultType).isOpaque() &&
-             "pass the allocated type explicitly if opaque pointers are used");
-      if (alignment == 0)
-        return build($_builder, $_state, resultType, arraySize, IntegerAttr(),
-                     TypeAttr(), false);
-      build($_builder, $_state, resultType, arraySize,
-        $_builder.getI64IntegerAttr(alignment), TypeAttr(), false);
-    }]>,
     OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$arraySize,
                CArg<"unsigned", "0">:$alignment),
     [{
-      TypeAttr elemTypeAttr =
-          ::llvm::cast<LLVMPointerType>(resultType).isOpaque() ?
-          TypeAttr::get(elementType) : TypeAttr();
       build($_builder, $_state, resultType, arraySize,
             alignment == 0 ? IntegerAttr()
                            : $_builder.getI64IntegerAttr(alignment),
-            elemTypeAttr, false);
+            elementType, false);
 
     }]>
     ];
@@ -247,7 +230,7 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$base,
                    Variadic<LLVM_ScalarOrVectorOf<AnyInteger>>:$dynamicIndices,
                    DenseI32ArrayAttr:$rawConstantIndices,
-                   OptionalAttr<TypeAttr>:$elem_type,
+                   TypeAttr:$elem_type,
                    UnitAttr:$inbounds);
   let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);
   let skipDefaultBuilders = 1;
@@ -267,28 +250,20 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
 
     ```mlir
     // GEP with an SSA value offset
-    %0 = llvm.getelementptr %1[%2] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    %0 = llvm.getelementptr %1[%2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 
     // GEP with a constant offset and the inbounds attribute set
-    %0 = llvm.getelementptr inbounds %1[3] : (!llvm.ptr<f32>) -> !llvm.ptr<f32>
+    %0 = llvm.getelementptr inbounds %1[3] : (!llvm.ptr) -> !llvm.ptr, f32
 
     // GEP with constant offsets into a structure
     %0 = llvm.getelementptr %1[0, 1]
-       : (!llvm.ptr<struct(i32, f32)>) -> !llvm.ptr<f32>
+       : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, f32)>
     ```
   }];
 
   let builders = [
     OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
                "ValueRange":$indices, CArg<"bool", "false">:$inbounds,
-               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
-    DeprecatedOpBuilder<"the usage of typed pointers is deprecated",
-               (ins "Type":$resultType, "Value":$basePtr,
-               "ValueRange":$indices, CArg<"bool", "false">:$inbounds,
-               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
-    DeprecatedOpBuilder<"the usage of typed pointers is deprecated",
-               (ins "Type":$resultType, "Value":$basePtr,
-               "ArrayRef<GEPArg>":$indices, CArg<"bool", "false">:$inbounds,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
                "ArrayRef<GEPArg>":$indices, CArg<"bool", "false">:$inbounds,
@@ -306,21 +281,18 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
         indices.push_back(
             builder.getInt32(valueOrAttr.get<IntegerAttr>().getInt()));
     }
-    Type baseElementType = op.getSourceElementType();
+    Type baseElementType = op.getElemType();
     llvm::Type *elementType = moduleTranslation.convertType(baseElementType);
     $res = builder.CreateGEP(elementType, $base, indices, "", $inbounds);
   }];
   let assemblyFormat = [{
     (`inbounds` $inbounds^)?
     $base `[` custom<GEPIndices>($dynamicIndices, $rawConstantIndices) `]` attr-dict
-    `:` functional-type(operands, results) (`,` $elem_type^)?
+    `:` functional-type(operands, results) `,` $elem_type
   }];
 
   let extraClassDeclaration = [{
     constexpr static int32_t kDynamicIndex = std::numeric_limits<int32_t>::min();
-
-    /// Returns the type pointed to by the pointer argument of this GEP.
-    Type getSourceElementType();
 
     GEPIndicesAdaptor<ValueRange> getIndices();
   }];
@@ -332,7 +304,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>]> {
-  dag args = (ins LLVM_PointerTo<LLVM_LoadableType>:$addr,
+  dag args = (ins LLVM_AnyPointer:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
               UnitAttr:$nontemporal,
@@ -370,7 +342,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
-    attr-dict `:` custom<LoadType>(type($addr), type($res))
+    attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
   string llvmBuilder = [{
     auto *inst = builder.CreateLoad($_resultType, $addr, $volatile_);
@@ -391,9 +363,6 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
         getLLVMSyncScope(loadInst));
   }];
   let builders = [
-    DeprecatedOpBuilder<"the usage of typed pointers is deprecated",
-      (ins "Value":$addr, CArg<"unsigned", "0">:$alignment,
-      CArg<"bool", "false">:$isVolatile, CArg<"bool", "false">:$isNonTemporal)>,
     OpBuilder<(ins "Type":$type, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
       CArg<"bool", "false">:$isNonTemporal,
@@ -408,7 +377,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
      DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>]> {
   dag args = (ins LLVM_LoadableType:$value,
-              LLVM_PointerTo<LLVM_LoadableType>:$addr,
+              LLVM_AnyPointer:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
               UnitAttr:$nontemporal,
@@ -445,7 +414,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $value `,` $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
-    attr-dict `:` custom<StoreType>(type($value), type($addr))
+    attr-dict `:` type($value) `,` qualified(type($addr))
   }];
   string llvmBuilder = [{
     auto *inst = builder.CreateStore($value, $addr, $volatile_);
@@ -552,7 +521,8 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                    Variadic<LLVM_Type>:$callee_operands,
                    Variadic<LLVM_Type>:$normalDestOperands,
                    Variadic<LLVM_Type>:$unwindDestOperands,
-                   OptionalAttr<DenseI32ArrayAttr>:$branch_weights);
+                   OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
+                   DefaultValuedAttr<CConv, "CConv::C">:$CConv);
   let results = (outs Variadic<LLVM_Type>);
   let successors = (successor AnySuccessor:$normalDest,
                               AnySuccessor:$unwindDest);
@@ -602,11 +572,12 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     The `call` instruction supports both direct and indirect calls. Direct calls
     start with a function name (`@`-prefixed) and indirect calls start with an
     SSA value (`%`-prefixed). The direct callee, if present, is stored as a
-    function attribute `callee`. If the callee is a variadic function, then the
-    `callee_type` attribute must carry the function type. The trailing type list
-    contains the optional indirect callee type and the MLIR function type, which
-    differs from the LLVM function type that uses a explicit void type to model
-    functions that do not return a value.
+    function attribute `callee`. For indirect calls, the callee is of `!llvm.ptr` type
+    and is stored as the first value in `callee_operands`. If the callee is a variadic
+    function, then the `callee_type` attribute must carry the function type. The
+    trailing type list contains the optional indirect callee type and the MLIR
+    function type, which differs from the LLVM function type that uses a explicit
+    void type to model functions that do not return a value.
 
     Examples:
 
@@ -618,6 +589,7 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     llvm.call @bar(%0) : (f32) -> ()
 
     // Indirect call with an argument and without a result.
+    %1 = llvm.mlir.addressof @foo : !llvm.ptr
     llvm.call %1(%0) : !llvm.ptr, (f32) -> ()
 
     // Direct variadic call.
@@ -633,7 +605,8 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                   Variadic<LLVM_Type>:$callee_operands,
                   DefaultValuedAttr<LLVM_FastmathFlagsAttr,
                                    "{}">:$fastmathFlags,
-                  OptionalAttr<DenseI32ArrayAttr>:$branch_weights);
+                  OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
+                  DefaultValuedAttr<CConv, "CConv::C">:$CConv);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);
@@ -651,8 +624,7 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     OpBuilder<(ins "LLVMFunctionType":$calleeType, "FlatSymbolRefAttr":$callee,
                    CArg<"ValueRange", "{}">:$args)>,
     OpBuilder<(ins "LLVMFunctionType":$calleeType, "StringRef":$callee,
-                   CArg<"ValueRange", "{}">:$args)>,
-    OpBuilder<(ins "Value":$callee, "ValueRange":$args)>
+                   CArg<"ValueRange", "{}">:$args)>
   ];
   let hasCustomAssemblyFormat = 1;
   let extraClassDeclaration = [{
@@ -1053,16 +1025,16 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
     ```mlir
     func @foo() {
       // Get the address of a global variable.
-      %0 = llvm.mlir.addressof @const : !llvm.ptr<i32>
+      %0 = llvm.mlir.addressof @const : !llvm.ptr
 
       // Use it as a regular pointer.
-      %1 = llvm.load %0 : !llvm.ptr<i32>
+      %1 = llvm.load %0 : !llvm.ptr -> i32
 
       // Get the address of a function.
-      %2 = llvm.mlir.addressof @foo : !llvm.ptr<func<void ()>>
+      %2 = llvm.mlir.addressof @foo : !llvm.ptr
 
       // The function address can be used for indirect calls.
-      llvm.call %2() : () -> ()
+      llvm.call %2() : !llvm.ptr, () -> ()
     }
 
     // Define the global.
@@ -1141,13 +1113,13 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     ```mlir
     // This global is initialized with the equivalent of:
     //   i32* getelementptr (i32* @g2, i32 2)
-    llvm.mlir.global constant @int_gep() : !llvm.ptr<i32> {
-      %0 = llvm.mlir.addressof @g2 : !llvm.ptr<i32>
+    llvm.mlir.global constant @int_gep() : !llvm.ptr {
+      %0 = llvm.mlir.addressof @g2 : !llvm.ptr
       %1 = llvm.mlir.constant(2 : i32) : i32
       %2 = llvm.getelementptr %0[%1]
-         : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
+         : (!llvm.ptr, i32) -> !llvm.ptr, i32
       // The initializer region must end with `llvm.return`.
-      llvm.return %2 : !llvm.ptr<i32>
+      llvm.return %2 : !llvm.ptr
     }
     ```
 
@@ -1174,12 +1146,12 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     llvm.mlir.global constant @no_trailing_type("foo bar")
 
     // A complex initializer is constructed with an initializer region.
-    llvm.mlir.global constant @int_gep() : !llvm.ptr<i32> {
-      %0 = llvm.mlir.addressof @g2 : !llvm.ptr<i32>
+    llvm.mlir.global constant @int_gep() : !llvm.ptr {
+      %0 = llvm.mlir.addressof @g2 : !llvm.ptr
       %1 = llvm.mlir.constant(2 : i32) : i32
       %2 = llvm.getelementptr %0[%1]
-         : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
-      llvm.return %2 : !llvm.ptr<i32>
+         : (!llvm.ptr, i32) -> !llvm.ptr, i32
+      llvm.return %2 : !llvm.ptr
     }
     ```
 
@@ -1415,6 +1387,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
     OptionalAttr<UnitAttr>:$arm_streaming,
     OptionalAttr<UnitAttr>:$arm_locally_streaming,
+    OptionalAttr<UnitAttr>:$arm_new_za,
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<I64Attr>:$alignment,
@@ -1636,7 +1609,7 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
       TypesMatchWith<"result #0 and operand #1 have the same type",
                      "val", "res", "$_self">]> {
   dag args = (ins AtomicBinOp:$bin_op,
-              LLVM_PointerTo<LLVM_AtomicRMWType>:$ptr,
+              LLVM_AnyPointer:$ptr,
               LLVM_AtomicRMWType:$val, AtomicOrdering:$ordering,
               OptionalAttr<StrAttr>:$syncscope,
               OptionalAttr<I64Attr>:$alignment,
@@ -1687,7 +1660,7 @@ def LLVM_AtomicCmpXchgOp : LLVM_MemAccessOpBase<"cmpxchg", [
       TypesMatchWith<"result #0 has an LLVM struct type consisting of "
                      "the type of operand #2 and a bool", "val", "res",
                      "getValAndBoolStructType($_self)">]> {
-  dag args = (ins LLVM_PointerTo<LLVM_AtomicCmpXchgType>:$ptr,
+  dag args = (ins LLVM_AnyPointer:$ptr,
               LLVM_AtomicCmpXchgType:$cmp, LLVM_AtomicCmpXchgType:$val,
               AtomicOrdering:$success_ordering,
               AtomicOrdering:$failure_ordering,
@@ -1820,6 +1793,35 @@ def LLVM_CallIntrinsicOp
   }];
   let assemblyFormat = [{
     $intrin `(` $args `)` `:` functional-type($args, $results) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+def LLVM_LinkerOptionsOp
+    : LLVM_Op<"linker_options"> {
+  let summary = "Options to pass to the linker when the object file is linked";
+  let description = [{
+    Pass the given options to the linker when the resulting object file is linked.
+    This is used extensively on Windows to determine the C runtime that the object
+    files should link against.
+
+    Examples:
+    ```mlir
+    // Link against the MSVC static threaded CRT.
+    llvm.linker_options ["/DEFAULTLIB:", "libcmt"]
+
+    // Link against aarch64 compiler-rt builtins
+    llvm.linker_options ["-l", "clang_rt.builtins-aarch64"]
+    ```
+  }];
+  let arguments  = (ins StrArrayAttr:$options);
+  let assemblyFormat = [{
+    $options attr-dict
+  }];
+
+  let llvmBuilder = [{
+    convertLinkerOptionsOp($options, builder, moduleTranslation);
   }];
 
   let hasVerifier = 1;

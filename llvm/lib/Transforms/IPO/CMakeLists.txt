@@ -30,7 +30,6 @@ add_llvm_component_library(LLVMipo
   LowerTypeTests.cpp
   MemProfContextDisambiguation.cpp
   MergeFunctions.cpp
-  MergeFunctionsIgnoringConst.cpp
   ModuleInliner.cpp
   OpenMPOpt.cpp
   PartialInlining.cpp

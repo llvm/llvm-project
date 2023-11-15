@@ -264,7 +264,8 @@ private:
 
   uint32_t getSizeOfInitializedData();
 
-  void checkLoadConfig();
+  void prepareLoadConfig();
+  template <typename T> void prepareLoadConfig(T *loadConfig);
   template <typename T> void checkLoadConfigGuardData(const T *loadConfig);
 
   std::unique_ptr<FileOutputBuffer> &buffer;
@@ -346,6 +347,14 @@ void OutputSection::merge(OutputSection *other) {
   contribSections.insert(contribSections.end(), other->contribSections.begin(),
                          other->contribSections.end());
   other->contribSections.clear();
+
+  // MS link.exe compatibility: when merging a code section into a data section,
+  // mark the target section as a code section.
+  if (other->header.Characteristics & IMAGE_SCN_CNT_CODE) {
+    header.Characteristics |= IMAGE_SCN_CNT_CODE;
+    header.Characteristics &=
+        ~(IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_CNT_UNINITIALIZED_DATA);
+  }
 }
 
 // Write the section header to a given buffer.
@@ -696,7 +705,7 @@ void Writer::run() {
       writeHeader<pe32_header>();
     }
     writeSections();
-    checkLoadConfig();
+    prepareLoadConfig();
     sortExceptionTable();
 
     // Fix up the alignment in the TLS Directory's characteristic field,
@@ -2018,10 +2027,20 @@ void Writer::writeSections() {
     uint8_t *secBuf = buf + sec->getFileOff();
     // Fill gaps between functions in .text with INT3 instructions
     // instead of leaving as NUL bytes (which can be interpreted as
-    // ADD instructions).
+    // ADD instructions). Only fill the gaps between chunks. Most
+    // chunks overwrite it anyway, but uninitialized data chunks
+    // merged into a code section don't.
     if ((sec->header.Characteristics & IMAGE_SCN_CNT_CODE) &&
-        (ctx.config.machine == AMD64 || ctx.config.machine == I386))
-      memset(secBuf, 0xCC, sec->getRawSize());
+        (ctx.config.machine == AMD64 || ctx.config.machine == I386)) {
+      uint32_t prevEnd = 0;
+      for (Chunk *c : sec->chunks) {
+        uint32_t off = c->getRVA() - sec->getRVA();
+        memset(secBuf + prevEnd, 0xCC, off - prevEnd);
+        prevEnd = off + c->getSize();
+      }
+      memset(secBuf + prevEnd, 0xCC, sec->getRawSize() - prevEnd);
+    }
+
     parallelForEach(sec->chunks, [&](Chunk *c) {
       c->writeTo(secBuf + c->getRVA() - sec->getRVA());
     });
@@ -2256,7 +2275,7 @@ void Writer::fixTlsAlignment() {
   }
 }
 
-void Writer::checkLoadConfig() {
+void Writer::prepareLoadConfig() {
   Symbol *sym = ctx.symtab.findUnderscore("_load_config_used");
   auto *b = cast_if_present<DefinedRegular>(sym);
   if (!b) {
@@ -2280,11 +2299,16 @@ void Writer::checkLoadConfig() {
          Twine(expectedAlign) + " bytes)");
 
   if (ctx.config.is64())
-    checkLoadConfigGuardData(
-        reinterpret_cast<const coff_load_configuration64 *>(symBuf));
+    prepareLoadConfig(reinterpret_cast<coff_load_configuration64 *>(symBuf));
   else
-    checkLoadConfigGuardData(
-        reinterpret_cast<const coff_load_configuration32 *>(symBuf));
+    prepareLoadConfig(reinterpret_cast<coff_load_configuration32 *>(symBuf));
+}
+
+template <typename T> void Writer::prepareLoadConfig(T *loadConfig) {
+  if (ctx.config.dependentLoadFlags)
+    loadConfig->DependentLoadFlags = ctx.config.dependentLoadFlags;
+
+  checkLoadConfigGuardData(loadConfig);
 }
 
 template <typename T>

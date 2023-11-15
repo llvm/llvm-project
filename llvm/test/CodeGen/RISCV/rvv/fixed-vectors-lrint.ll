@@ -111,11 +111,14 @@ define <3 x iXLen> @lrint_v3f32(<3 x float> %x) {
 ; RV64-i32-NEXT:    vfmv.f.s fa5, v10
 ; RV64-i32-NEXT:    fcvt.l.s a0, fa5
 ; RV64-i32-NEXT:    vslide1down.vx v9, v9, a0
-; RV64-i32-NEXT:    vslidedown.vi v8, v8, 2
+; RV64-i32-NEXT:    vslidedown.vi v10, v8, 2
+; RV64-i32-NEXT:    vfmv.f.s fa5, v10
+; RV64-i32-NEXT:    fcvt.l.s a0, fa5
+; RV64-i32-NEXT:    vslide1down.vx v9, v9, a0
+; RV64-i32-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64-i32-NEXT:    vfmv.f.s fa5, v8
 ; RV64-i32-NEXT:    fcvt.l.s a0, fa5
 ; RV64-i32-NEXT:    vslide1down.vx v8, v9, a0
-; RV64-i32-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lrint_v3f32:

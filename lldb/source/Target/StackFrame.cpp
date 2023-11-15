@@ -1779,17 +1779,29 @@ void StackFrame::CalculateExecutionContext(ExecutionContext &exe_ctx) {
   exe_ctx.SetContext(shared_from_this());
 }
 
+bool StackFrame::DumpUsingFormat(Stream &strm,
+                                 const FormatEntity::Entry *format,
+                                 llvm::StringRef frame_marker) {
+  GetSymbolContext(eSymbolContextEverything);
+  ExecutionContext exe_ctx(shared_from_this());
+  StreamString s;
+  s.PutCString(frame_marker);
+
+  if (format && FormatEntity::Format(*format, s, &m_sc, &exe_ctx, nullptr,
+                                     nullptr, false, false)) {
+    strm.PutCString(s.GetString());
+    return true;
+  }
+  return false;
+}
+
 void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
                                          const char *frame_marker) {
   if (strm == nullptr)
     return;
 
-  GetSymbolContext(eSymbolContextEverything);
   ExecutionContext exe_ctx(shared_from_this());
   StreamString s;
-
-  if (frame_marker)
-    s.PutCString(frame_marker);
 
   const FormatEntity::Entry *frame_format = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
@@ -1800,10 +1812,7 @@ void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
       frame_format = target->GetDebugger().GetFrameFormat();
     }
   }
-  if (frame_format && FormatEntity::Format(*frame_format, s, &m_sc, &exe_ctx,
-                                           nullptr, nullptr, false, false)) {
-    strm->PutCString(s.GetString());
-  } else {
+  if (!DumpUsingFormat(*strm, frame_format, frame_marker)) {
     Dump(strm, true, false);
     strm->EOL();
   }

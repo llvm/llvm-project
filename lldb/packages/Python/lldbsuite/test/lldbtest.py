@@ -1224,6 +1224,17 @@ class Base(unittest2.TestCase):
     # (enables reading of the current test configuration)
     # ====================================================
 
+    def hasXMLSupport(self):
+        """Returns True if lldb was built with XML support. Use this check to
+        enable parts of tests, if you want to skip a whole test use skipIfXmlSupportMissing
+        instead."""
+        return (
+            lldb.SBDebugger.GetBuildConfiguration()
+            .GetValueForKey("xml")
+            .GetValueForKey("value")
+            .GetBooleanValue(False)
+        )
+
     def isMIPS(self):
         """Returns true if the architecture is MIPS."""
         arch = self.getArchitecture()

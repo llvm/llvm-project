@@ -1,4 +1,4 @@
-//===- SparseTensorStorageLayout.cpp --------------------------------------===//
+//===- SparseTensorDescriptor.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,7 +65,7 @@ SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
     if (!getSparseTensorEncoding(tp))
       // Not a sparse tensor.
       return std::nullopt;
-    // Sparse compiler knows how to cancel out these casts.
+    // Sparsifier knows how to cancel out these casts.
     return genTuple(builder, loc, tp, inputs);
   });
 }

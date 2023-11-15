@@ -6676,6 +6676,22 @@ def : Pat<(i32 (and (i32 (vector_extract (opNode (v8i16 V128:$Rn)), (i64 0))),
           ssub))>;
 }
 
+// For vecreduce_add, used by GlobalISel not SDAG
+def : Pat<(i8 (vecreduce_add (v8i8 V64:$Rn))), 
+          (i8 (ADDVv8i8v V64:$Rn))>;
+def : Pat<(i8 (vecreduce_add (v16i8 V128:$Rn))), 
+          (i8 (ADDVv16i8v V128:$Rn))>;
+def : Pat<(i16 (vecreduce_add (v4i16 V64:$Rn))), 
+          (i16 (ADDVv4i16v V64:$Rn))>;
+def : Pat<(i16 (vecreduce_add (v8i16 V128:$Rn))), 
+          (i16 (ADDVv8i16v V128:$Rn))>;
+def : Pat<(i32 (vecreduce_add (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (ADDPv2i32 V64:$Rn, V64:$Rn), ssub))>;
+def : Pat<(i32 (vecreduce_add (v4i32 V128:$Rn))), 
+          (i32 (ADDVv4i32v V128:$Rn))>;
+def : Pat<(i64 (vecreduce_add (v2i64 V128:$Rn))), 
+          (i64 (ADDPv2i64p V128:$Rn))>;
+
 defm : SIMDAcrossLanesSignedIntrinsic<"ADDV",  AArch64saddv>;
 // vaddv_[su]32 is special; -> ADDP Vd.2S,Vn.2S,Vm.2S; return Vd.s[0];Vn==Vm
 def : Pat<(v2i32 (AArch64saddv (v2i32 V64:$Rn))),
@@ -6701,6 +6717,43 @@ def : Pat<(v2i32 (AArch64umaxv (v2i32 V64:$Rn))),
 defm : SIMDAcrossLanesUnsignedIntrinsic<"UMINV", AArch64uminv>;
 def : Pat<(v2i32 (AArch64uminv (v2i32 V64:$Rn))),
           (UMINPv2i32 V64:$Rn, V64:$Rn)>;
+
+// For vecreduce_{opc} used by GlobalISel, not SDAG at the moment
+// because GlobalISel allows us to specify the return register to be a FPR
+multiclass SIMDAcrossLanesVecReductionIntrinsic<string baseOpc,
+                                               SDPatternOperator opNode> {
+def : Pat<(i8 (opNode (v8i8 FPR64:$Rn))),
+          (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) FPR64:$Rn)>;
+
+def : Pat<(i8 (opNode (v16i8 FPR128:$Rn))),
+          (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) FPR128:$Rn)>;
+
+def : Pat<(i16 (opNode (v4i16 FPR64:$Rn))),
+          (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) FPR64:$Rn)>;
+
+def : Pat<(i16 (opNode (v8i16 FPR128:$Rn))),
+          (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) FPR128:$Rn)>;
+
+def : Pat<(i32 (opNode (v4i32 V128:$Rn))), 
+          (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn)>;
+}
+
+// For v2i32 source type, the pairwise instruction can be used instead
+defm : SIMDAcrossLanesVecReductionIntrinsic<"UMINV", vecreduce_umin>;
+def : Pat<(i32 (vecreduce_umin (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (UMINPv2i32 V64:$Rn, V64:$Rn), ssub))>;
+
+defm : SIMDAcrossLanesVecReductionIntrinsic<"UMAXV", vecreduce_umax>;
+def : Pat<(i32 (vecreduce_umax (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (UMAXPv2i32 V64:$Rn, V64:$Rn), ssub))>;
+
+defm : SIMDAcrossLanesVecReductionIntrinsic<"SMINV", vecreduce_smin>;
+def : Pat<(i32 (vecreduce_smin (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (SMINPv2i32 V64:$Rn, V64:$Rn), ssub))>;
+
+defm : SIMDAcrossLanesVecReductionIntrinsic<"SMAXV", vecreduce_smax>;
+def : Pat<(i32 (vecreduce_smax (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (SMAXPv2i32 V64:$Rn, V64:$Rn), ssub))>;
 
 multiclass SIMDAcrossLanesSignedLongIntrinsic<string baseOpc, Intrinsic intOp> {
   def : Pat<(i32 (intOp (v8i8 V64:$Rn))),

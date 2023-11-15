@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
-#include <cstdlib>
-#include <print>
 
 #if defined(_LIBCPP_WIN32API)
+
+#  include <cstdlib>
+#  include <print>
+
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <io.h>
@@ -19,11 +21,9 @@
 #  include <__system_error/system_error.h>
 
 #  include "filesystem/error.h"
-#endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifdef _WIN32
 _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream) {
   // Note the Standard does this in one call, but it's unclear whether
   // an invalid handle is allowed when calling GetConsoleMode.
@@ -52,6 +52,6 @@ __write_to_windows_console([[maybe_unused]] FILE* __stream, [[maybe_unused]] wst
 }
 #  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
-#endif // _WIN32
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // !_LIBCPP_WIN32API

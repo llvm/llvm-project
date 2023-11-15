@@ -123,7 +123,6 @@
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/IPO/MergeFunctions.h"
-#include "llvm/Transforms/IPO/MergeFunctionsIgnoringConst.h"
 #include "llvm/Transforms/IPO/ModuleInliner.h"
 #include "llvm/Transforms/IPO/OpenMPOpt.h"
 #include "llvm/Transforms/IPO/PartialInlining.h"
@@ -1081,6 +1080,11 @@ parseFunctionSimplificationPipelineOptions(StringRef Params) {
 Expected<bool> parseMemorySSAPrinterPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "no-ensure-optimized-uses",
                                "MemorySSAPrinterPass");
+}
+
+Expected<bool> parseSpeculativeExecutionPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "only-if-divergent-target",
+                               "SpeculativeExecutionPass");
 }
 
 Expected<std::string> parseMemProfUsePassOptions(StringRef Params) {

@@ -318,18 +318,6 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
-def OMPEarlyOutliningPass
-    : Pass<"omp-early-target-outlining", "mlir::ModuleOp"> {
-  let summary = "Outlines all target ops into separate functions";
-  let description = [{
-    This pass outlines all omp.target operations into individual functions.
-    It is invoked in the front end after the initial FIR has been constructed.
-    This pass is only needed when compiling for the target device to prevent
-    the optimizer to perform transforms across target region boundaries.
-  }];
-  let constructor = "::fir::createOMPEarlyOutliningPass()";
-}
-
 def OMPMarkDeclareTargetPass
     : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
   let summary = "Marks all functions called by an OpenMP declare target function as declare target";
@@ -342,7 +330,8 @@ def OMPFunctionFiltering : Pass<"omp-function-filtering"> {
                 "for the target device.";
   let constructor = "::fir::createOMPFunctionFilteringPass()";
   let dependentDialects = [
-    "mlir::func::FuncDialect"
+    "mlir::func::FuncDialect",
+    "fir::FIROpsDialect"
   ];
 }
 

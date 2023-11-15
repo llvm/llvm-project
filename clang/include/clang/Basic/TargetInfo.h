@@ -156,6 +156,7 @@ protected:
   ///
   /// Otherwise, when this flag is not set, the normal built-in boolean type is
   /// used.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseSignedCharForObjCBool : 1;
 
   /// Control whether the alignment of bit-field types is respected when laying
@@ -163,6 +164,7 @@ protected:
   /// used to (a) impact the alignment of the containing structure, and (b)
   /// ensure that the individual bit-field will not straddle an alignment
   /// boundary.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseBitFieldTypeAlignment : 1;
 
   /// Whether zero length bitfields (e.g., int : 0;) force alignment of
@@ -171,13 +173,16 @@ protected:
   /// If the alignment of the zero length bitfield is greater than the member
   /// that follows it, `bar', `bar' will be aligned as the type of the
   /// zero-length bitfield.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseZeroLengthBitfieldAlignment : 1;
 
   /// Whether zero length bitfield alignment is respected if they are the
   /// leading members.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseLeadingZeroLengthBitfield : 1;
 
   ///  Whether explicit bit field alignment attributes are honored.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseExplicitBitFieldAlignment : 1;
 
   /// If non-zero, specifies a fixed alignment value for bitfields that follow
@@ -239,20 +244,29 @@ protected:
   mutable StringRef PlatformName;
   mutable VersionTuple PlatformMinVersion;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasAlignMac68kSupport : 1;
+  LLVM_PREFERRED_TYPE(FloatModeKind)
   unsigned RealTypeUsesObjCFPRetMask : llvm::BitWidth<FloatModeKind>;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ComplexLongDoubleUsesFP2Ret : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasBuiltinMSVaList : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsRenderScriptTarget : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasAArch64SVETypes : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasRISCVVTypes : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned AllowAMDGPUUnsafeFPAtomics : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ARMCDECoprocMask : 8;
 
   unsigned MaxOpenCLWorkGroupSize;

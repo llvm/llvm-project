@@ -14,6 +14,7 @@
 
 #include "RISCVCallLowering.h"
 #include "RISCVISelLowering.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -47,10 +48,14 @@ public:
     const DataLayout &DL = MF.getDataLayout();
     const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
-    return RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
-                         LocInfo, Flags, State, /*IsFixed=*/true, IsRet,
-                         Info.Ty, *Subtarget.getTargetLowering(),
-                         /*FirstMaskArgument=*/std::nullopt);
+    if (RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
+                      LocInfo, Flags, State, Info.IsFixed, IsRet, Info.Ty,
+                      *Subtarget.getTargetLowering(),
+                      /*FirstMaskArgument=*/std::nullopt))
+      return true;
+
+    StackSize = State.getStackSize();
+    return false;
   }
 };
 
@@ -181,10 +186,17 @@ public:
     const DataLayout &DL = MF.getDataLayout();
     const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
-    return RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
-                         LocInfo, Flags, State, /*IsFixed=*/true, IsRet,
-                         Info.Ty, *Subtarget.getTargetLowering(),
-                         /*FirstMaskArgument=*/std::nullopt);
+    if (LocVT.isScalableVector())
+      MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
+
+    if (RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
+                      LocInfo, Flags, State, /*IsFixed=*/true, IsRet, Info.Ty,
+                      *Subtarget.getTargetLowering(),
+                      /*FirstMaskArgument=*/std::nullopt))
+      return true;
+
+    StackSize = State.getStackSize();
+    return false;
   }
 };
 
@@ -293,8 +305,31 @@ struct RISCVCallReturnHandler : public RISCVIncomingValueHandler {
 RISCVCallLowering::RISCVCallLowering(const RISCVTargetLowering &TLI)
     : CallLowering(&TLI) {}
 
+/// Return true if scalable vector with ScalarTy is legal for lowering.
+static bool isLegalElementTypeForRVV(Type *EltTy,
+                                     const RISCVSubtarget &Subtarget) {
+  if (EltTy->isPointerTy())
+    return Subtarget.is64Bit() ? Subtarget.hasVInstructionsI64() : true;
+  if (EltTy->isIntegerTy(1) || EltTy->isIntegerTy(8) ||
+      EltTy->isIntegerTy(16) || EltTy->isIntegerTy(32))
+    return true;
+  if (EltTy->isIntegerTy(64))
+    return Subtarget.hasVInstructionsI64();
+  if (EltTy->isHalfTy())
+    return Subtarget.hasVInstructionsF16();
+  if (EltTy->isBFloatTy())
+    return Subtarget.hasVInstructionsBF16();
+  if (EltTy->isFloatTy())
+    return Subtarget.hasVInstructionsF32();
+  if (EltTy->isDoubleTy())
+    return Subtarget.hasVInstructionsF64();
+  return false;
+}
+
 // TODO: Support all argument types.
-static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget) {
+// TODO: Remove IsLowerArgs argument by adding support for vectors in lowerCall.
+static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
+                                    bool IsLowerArgs = false) {
   // TODO: Integers larger than 2*XLen are passed indirectly which is not
   // supported yet.
   if (T->isIntegerTy())
@@ -302,6 +337,11 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget) {
   if (T->isFloatTy() || T->isDoubleTy())
     return true;
   if (T->isPointerTy())
+    return true;
+  // TODO: Support fixed vector types.
+  if (IsLowerArgs && T->isVectorTy() && Subtarget.hasVInstructions() &&
+      T->isScalableTy() &&
+      isLegalElementTypeForRVV(T->getScalarType(), Subtarget))
     return true;
   return false;
 }
@@ -390,7 +430,8 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   const RISCVSubtarget &Subtarget =
       MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
   for (auto &Arg : F.args()) {
-    if (!isSupportedArgumentType(Arg.getType(), Subtarget))
+    if (!isSupportedArgumentType(Arg.getType(), Subtarget,
+                                 /*IsLowerArgs=*/true))
       return false;
   }
 
@@ -436,6 +477,13 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
   }
 
+  if (!Info.OrigRet.Ty->isVoidTy() &&
+      !isSupportedReturnType(Info.OrigRet.Ty, Subtarget))
+    return false;
+
+  MachineInstrBuilder CallSeqStart =
+      MIRBuilder.buildInstr(RISCV::ADJCALLSTACKDOWN);
+
   SmallVector<ArgInfo, 32> SplitArgInfos;
   SmallVector<ISD::OutputArg, 8> Outs;
   for (auto &AInfo : Info.OrigArgs) {
@@ -448,14 +496,32 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // TODO: Support tail calls.
   Info.IsTailCall = false;
 
-  if (!Info.Callee.isReg())
-    Info.Callee.setTargetFlags(RISCVII::MO_CALL);
+  // If the callee is a GlobalAddress or ExternalSymbol and cannot be assumed as
+  // DSOLocal, then use MO_PLT. Otherwise use MO_CALL.
+  if (Info.Callee.isGlobal()) {
+    const GlobalValue *GV = Info.Callee.getGlobal();
+    unsigned OpFlags = RISCVII::MO_CALL;
+    if (!getTLI()->getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(),
+                                                           GV))
+      OpFlags = RISCVII::MO_PLT;
+
+    Info.Callee.setTargetFlags(OpFlags);
+  } else if (Info.Callee.isSymbol()) {
+    unsigned OpFlags = RISCVII::MO_CALL;
+    if (!getTLI()->getTargetMachine().shouldAssumeDSOLocal(
+            *MF.getFunction().getParent(), nullptr))
+      OpFlags = RISCVII::MO_PLT;
+
+    Info.Callee.setTargetFlags(OpFlags);
+  }
 
   MachineInstrBuilder Call =
       MIRBuilder
           .buildInstrNoInsert(Info.Callee.isReg() ? RISCV::PseudoCALLIndirect
                                                   : RISCV::PseudoCALL)
           .add(Info.Callee);
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv));
 
   RISCVOutgoingValueAssigner ArgAssigner(
       CC == CallingConv::Fast ? RISCV::CC_RISCV_FastCC : RISCV::CC_RISCV,
@@ -467,20 +533,16 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   MIRBuilder.insertInstr(Call);
 
+  CallSeqStart.addImm(ArgAssigner.StackSize).addImm(0);
+  MIRBuilder.buildInstr(RISCV::ADJCALLSTACKUP)
+      .addImm(ArgAssigner.StackSize)
+      .addImm(0);
+
   if (Info.OrigRet.Ty->isVoidTy())
     return true;
 
-  if (!isSupportedReturnType(Info.OrigRet.Ty, Subtarget))
-    return false;
-
   SmallVector<ArgInfo, 4> SplitRetInfos;
   splitToValueTypes(Info.OrigRet, SplitRetInfos, DL, CC);
-
-  // Assignments should be handled *before* the merging of values takes place.
-  // To ensure this, the insert point is temporarily adjusted to just after the
-  // call instruction.
-  MachineBasicBlock::iterator CallInsertPt = Call;
-  MIRBuilder.setInsertPt(MIRBuilder.getMBB(), std::next(CallInsertPt));
 
   RISCVIncomingValueAssigner RetAssigner(
       CC == CallingConv::Fast ? RISCV::CC_RISCV_FastCC : RISCV::CC_RISCV,
@@ -489,9 +551,6 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (!determineAndHandleAssignments(RetHandler, RetAssigner, SplitRetInfos,
                                      MIRBuilder, CC, Info.IsVarArg))
     return false;
-
-  // Readjust insert point to end of basic block.
-  MIRBuilder.setMBB(MIRBuilder.getMBB());
 
   return true;
 }
