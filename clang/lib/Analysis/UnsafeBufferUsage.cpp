@@ -1054,8 +1054,9 @@ public:
   static Matcher matcher() {
     return stmt(isInUnspecifiedUntypedContext(expr(ignoringImpCasts(
         binaryOperator(
-            hasOperatorName("+="), hasLHS(declRefExpr(toSupportedVariable())),
-            hasRHS(ignoringParens(expr().bind(OffsetTag))))
+            hasOperatorName("+="), 
+                       hasLHS(declRefExpr(toSupportedVariable())),
+                       hasRHS(ignoringParens(expr().bind(OffsetTag))))
             .bind(UUCAddAssignTag)))));
   }
 
@@ -1835,12 +1836,13 @@ UUCAddAssignGadget::getFixits(const Strategy &S) const {
       std::string SubSpanOffset;
       const SourceManager &SM = Ctx.getSourceManager();
       const LangOptions &LangOpts = Ctx.getLangOpts();
-      std::optional<StringRef> ExtentString = getExprText(Offset, SM, LangOpts);;
+      std::optional<StringRef> ExtentString = getExprText(Offset, SM, LangOpts);
       
       if (ExtentString)
         SubSpanOffset = ExtentString->str();
       else
-        SubSpanOffset = getUserFillPlaceHolder(); // FIXME: When does this happen?
+        SubSpanOffset = 
+            getUserFillPlaceHolder(); // FIXME: When does this happen?
 
       // To transform UUC(p += n) to UUC(p = p.subspan(..)):
       SS << varName.data() << " = " << varName.data() << ".subspan("
