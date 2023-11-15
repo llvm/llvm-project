@@ -221,6 +221,7 @@ private:
                                       uint16_t type, int margin);
   bool createThunks(OutputSection *os, int margin);
   bool verifyRanges(const std::vector<Chunk *> chunks);
+  void createECCodeMap();
   void finalizeAddresses();
   void removeEmptySections();
   void assignOutputSectionIndices();
@@ -229,6 +230,7 @@ private:
   template <typename PEHeaderTy> void writeHeader();
   void createSEHTable();
   void createRuntimePseudoRelocs();
+  void createECChunks();
   void insertCtorDtorSymbols();
   void markSymbolsWithRelocations(ObjFile *file, SymbolRVASet &usedSymbols);
   void createGuardCFTables();
@@ -272,6 +274,7 @@ private:
   std::map<PartialSectionKey, PartialSection *> partialSections;
   std::vector<char> strtab;
   std::vector<llvm::object::coff_symbol16> outputSymtab;
+  std::vector<ECCodeMapEntry> codeMap;
   IdataContents idata;
   Chunk *importTableStart = nullptr;
   uint64_t importTableSize = 0;
@@ -535,6 +538,48 @@ bool Writer::createThunks(OutputSection *os, int margin) {
     sc->setRelocs(newRelocs);
   }
   return addressesChanged;
+}
+
+// Create a code map for CHPE metadata.
+void Writer::createECCodeMap() {
+  if (!isArm64EC(ctx.config.machine))
+    return;
+
+  // Clear the map in case we were're recomputing the map after adding
+  // a range extension thunk.
+  codeMap.clear();
+
+  std::optional<chpe_range_type> lastType;
+  Chunk *first, *last;
+
+  auto closeRange = [&]() {
+    if (lastType) {
+      codeMap.push_back({first, last, *lastType});
+      lastType.reset();
+    }
+  };
+
+  for (OutputSection *sec : ctx.outputSections) {
+    for (Chunk *c : sec->chunks) {
+      // Skip empty section chunks. MS link.exe does not seem to do that and
+      // generates empty code ranges in some cases.
+      if (isa<SectionChunk>(c) && !c->getSize())
+        continue;
+
+      std::optional<chpe_range_type> chunkType = c->getArm64ECRangeType();
+      if (chunkType != lastType) {
+        closeRange();
+        first = c;
+        lastType = chunkType;
+      }
+      last = c;
+    }
+  }
+
+  closeRange();
+
+  Symbol *tableCountSym = ctx.symtab.findUnderscore("__hybrid_code_map_count");
+  cast<DefinedAbsolute>(tableCountSym)->setVA(codeMap.size());
 }
 
 // Verify that all relocations are in range, with no extra margin requirements.
@@ -1086,6 +1131,9 @@ void Writer::createMiscChunks() {
   if (config->guardCF != GuardCFLevel::Off)
     createGuardCFTables();
 
+  if (isArm64EC(config->machine))
+    createECChunks();
+
   if (config->autoImport)
     createRuntimePseudoRelocs();
 
@@ -1410,6 +1458,10 @@ void Writer::sortECChunks() {
 void Writer::assignAddresses() {
   llvm::TimeTraceScope timeScope("Assign addresses");
   Configuration *config = &ctx.config;
+
+  // We need to create EC code map so that ECCodeMapChunk knows its size.
+  // We do it here to make sure that we account for range extension chunks.
+  createECCodeMap();
 
   sizeOfHeaders = dosStubSize + sizeof(PEMagic) + sizeof(coff_file_header) +
                   sizeof(data_directory) * numberOfDataDirectory +
@@ -1944,6 +1996,15 @@ void Writer::maybeAddRVATable(SymbolRVASet tableSymbols, StringRef tableSym,
   Symbol *c = ctx.symtab.findUnderscore(countSym);
   replaceSymbol<DefinedSynthetic>(t, t->getName(), tableChunk);
   cast<DefinedAbsolute>(c)->setVA(tableChunk->getSize() / (hasFlag ? 5 : 4));
+}
+
+// Create CHPE metadata chunks.
+void Writer::createECChunks() {
+  auto codeMapChunk = make<ECCodeMapChunk>(codeMap);
+  rdataSec->addChunk(codeMapChunk);
+  Symbol *codeMapSym = ctx.symtab.findUnderscore("__hybrid_code_map");
+  replaceSymbol<DefinedSynthetic>(codeMapSym, codeMapSym->getName(),
+                                  codeMapChunk);
 }
 
 // MinGW specific. Gather all relocations that are imported from a DLL even

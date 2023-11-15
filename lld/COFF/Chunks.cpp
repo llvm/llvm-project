@@ -896,6 +896,20 @@ void RVAFlagTableChunk::writeTo(uint8_t *buf) const {
          "RVA tables should be de-duplicated");
 }
 
+size_t ECCodeMapChunk::getSize() const {
+  return map.size() * sizeof(chpe_range_entry);
+}
+
+void ECCodeMapChunk::writeTo(uint8_t *buf) const {
+  auto table = reinterpret_cast<chpe_range_entry *>(buf);
+  for (uint32_t i = 0; i < map.size(); i++) {
+    const ECCodeMapEntry &entry = map[i];
+    uint32_t start = entry.first->getRVA();
+    table[i].StartOffset = start | entry.type;
+    table[i].Length = entry.last->getRVA() + entry.last->getSize() - start;
+  }
+}
+
 // MinGW specific, for the "automatic import of variables from DLLs" feature.
 size_t PseudoRelocTableChunk::getSize() const {
   if (relocs.empty())
