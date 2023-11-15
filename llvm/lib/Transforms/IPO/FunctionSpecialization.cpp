@@ -371,56 +371,71 @@ Constant *InstCostVisitor::visitPHINode(PHINode &I) {
     return nullptr;
   }
 
-  // Try to see if we can collect a nest of transitive phis. Bail if
-  // it's too complex.
+  // Try to see if we can collect a nest of transitive phis.
   for (PHINode *Phi : UnknownIncomingValues)
     discoverTransitivelyIncomngValues(TransitivePHIs, Phi, 1);
-
 
   // A nested set of PHINodes can be constantfolded if:
   // - It has a constant input.
   // - It is always the SAME constant.
-  auto canConstantFoldNestedPhi = [&](PHINode *PN) -> Constant * {
-    Constant *Const = nullptr;
+  // - All the nodes are part of the nest, or a constant.
+  // Later we will check that the constant is always the same one.
+  Constant *Const = nullptr;
+  enum FoldStatus {
+    Failed,    // Stop, this can't be folded.
+    KeepGoing, // Maybe can be folded, didn't find a constant.
+    FoundConst // Maybe can be folded, we found constant.
+  };
+  auto canConstantFoldNestedPhi = [&](PHINode *PN) -> FoldStatus {
+    FoldStatus Status = KeepGoing;
 
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
       Value *V = PN->getIncomingValue(I);
-
       // Disregard self-references and dead incoming values.
       if (auto *Inst = dyn_cast<Instruction>(V))
         if (Inst == PN || DeadBlocks.contains(PN->getIncomingBlock(I)))
           continue;
 
       if (Constant *C = findConstantFor(V, KnownConstants)) {
-        if (!Const)
+        if (!Const) {
           Const = C;
+          Status = FoundConst;
+        }
         // Not all incoming values are the same constant. Bail immediately.
         if (C != Const)
-          return nullptr;
+          return Failed;
         continue;
       }
       if (auto *Phi = dyn_cast<PHINode>(V)) {
         // It's not a Transitive phi. Bail out.
         if (!TransitivePHIs.contains(Phi))
-          return nullptr;
+          return Failed;
         continue;
       }
 
       // We can't reason about anything else.
-      return nullptr;
+      return Failed;
     }
-    return Const;
+    return Status;
   };
 
   // All TransitivePHIs have to be the SAME constant.
   Constant *Retval = nullptr;
   for (PHINode *Phi : TransitivePHIs) {
-    if (Constant *Const = canConstantFoldNestedPhi(Phi)) {
-      if (!Retval)
+    FoldStatus Status = canConstantFoldNestedPhi(Phi);
+    if (Status == FoundConst) {
+      if (!Retval) {
         Retval = Const;
-      else if (Retval != Const)
+        continue;
+      }
+      // Found more than one constant, can't fold.
+      if (Retval != Const)
         return nullptr;
     }
+    // Found something "wrong", can't fold.
+    else if (Status == Failed)
+      return nullptr;
+    assert(Status == KeepGoing && "Status should be KeepGoing here");
   }
 
   return Retval;
