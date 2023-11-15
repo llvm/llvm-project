@@ -2,13 +2,16 @@
 include "llvm/Option/OptParser.td"
 
 class FF<string name, string help>: Flag<["-", "--"], name>, HelpText<help>;
-class JS<string name, string help, string var = ""> : JoinedOrSeparate<["-", "--"], name>, HelpText<help>, MetaVarName<var>;
+multiclass JS<string name, string help, string var = ""> {
+  def NAME #_EQ : Joined<["--"], name #"=">, HelpText<help>, MetaVarName<var>;
+  def : Separate<["-", "--"], name>, Alias<!cast<Joined>(NAME #_EQ)>;
+}
 
 //
 // General Driver options 
 //
 def help : FF<"help", "display this help">;
-def output: JS<"o", "write output to <file>","<file>">;
+defm output: JS<"o", "write output to <file>","<file>">;
 
 //
 // Compare options
