@@ -295,6 +295,12 @@ INSTR_PROF_SECT_ENTRY(IPSK_covfun, \
 INSTR_PROF_SECT_ENTRY(IPSK_orderfile, \
                       INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COMMON), \
                       INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COFF), "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_covdata, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_COVDATA_COMMON), \
+                      INSTR_PROF_COVDATA_COFF, "__LLVM_COV,")
+INSTR_PROF_SECT_ENTRY(IPSK_covname, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_COVNAME_COMMON), \
+                      INSTR_PROF_COVNAME_COFF, "__LLVM_COV,")
 
 #undef INSTR_PROF_SECT_ENTRY
 #endif
@@ -665,7 +671,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  * version for other variants of profile. We set the 8th most significant bit 
  * (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentation
  * generated profile, and 0 if this is a Clang FE generated profile.
- * 1 in bit 32 indicates whether to use binary to correlate profiles.
  * 1 in bit 57 indicates there are context-sensitive records in the profile.
  * The 59th bit indicates whether to use debug info to correlate profiles.
  * The 60th bit indicates single byte coverage instrumentation.
@@ -675,7 +680,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  */
 #define VARIANT_MASKS_ALL 0xffffffff00000000ULL
 #define GET_VERSION(V) ((V) & ~VARIANT_MASKS_ALL)
-#define VARIANT_MASK_BIN_CORRELATE (0x1ULL << 32)
 #define VARIANT_MASK_IR_PROF (0x1ULL << 56)
 #define VARIANT_MASK_CSIR_PROF (0x1ULL << 57)
 #define VARIANT_MASK_INSTR_ENTRY (0x1ULL << 58)
@@ -704,6 +708,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVMAP_COMMON __llvm_covmap
 #define INSTR_PROF_COVFUN_COMMON __llvm_covfun
 #define INSTR_PROF_ORDERFILE_COMMON __llvm_orderfile
+#define INSTR_PROF_COVDATA_COMMON __llvm_covdata
+#define INSTR_PROF_COVNAME_COMMON __llvm_covnames
 /* Windows section names. Because these section names contain dollar characters,
  * they must be quoted.
  */
@@ -716,6 +722,11 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVMAP_COFF ".lcovmap$M"
 #define INSTR_PROF_COVFUN_COFF ".lcovfun$M"
 #define INSTR_PROF_ORDERFILE_COFF ".lorderfile$M"
+/* Since cov data and cov names sections are not allocated, we don't need to 
+ * access them at runtime.
+ */
+#define INSTR_PROF_COVDATA_COFF ".lprfcovdata"
+#define INSTR_PROF_COVNAME_COFF ".lprfcovnames"
 
 #ifdef _WIN32
 /* Runtime section names and name strings.  */
@@ -732,6 +743,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_COVMAP_COFF
 #define INSTR_PROF_COVFUN_SECT_NAME INSTR_PROF_COVFUN_COFF
 #define INSTR_PROF_ORDERFILE_SECT_NAME INSTR_PROF_ORDERFILE_COFF
+#define INSTR_PROF_COVDATA_SECT_NAME INSTR_PROF_COVDATA_COFF
+#define INSTR_PROF_COVNAME_SECT_NAME INSTR_PROF_COVNAME_COFF
 #else
 /* Runtime section names and name strings.  */
 #define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_DATA_COMMON)
@@ -757,6 +770,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_ORDERFILE_BUFFER_IDX_NAME _llvm_order_file_buffer_idx
 #define INSTR_PROF_ORDERFILE_BUFFER_IDX_NAME_STR                               \
   INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_BUFFER_IDX_NAME)
+#define INSTR_PROF_COVDATA_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVDATA_COMMON)
+#define INSTR_PROF_COVNAME_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVNAME_COMMON)
 
 /* Macros to define start/stop section symbol for a given
  * section on Linux. For instance

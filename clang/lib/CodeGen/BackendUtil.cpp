@@ -104,6 +104,7 @@ static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
     cl::desc("Insert sanitizers on OptimizerEarlyEP."), cl::init(false));
 
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
+
 // Re-link builtin bitcodes after optimization
 static cl::opt<bool> ClRelinkBuiltinBitcodePostop(
     "relink-builtin-bitcode-postop", cl::Optional,

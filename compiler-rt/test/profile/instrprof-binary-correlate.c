@@ -1,13 +1,13 @@
 // REQUIRES: linux || windows
 // Default
-// RUN: %clang -o %t.normal -fprofile-instr-generate -fcoverage-mapping -fuse-ld=lld %S/Inputs/instrprof-debug-info-correlate-main.cpp %S/Inputs/instrprof-debug-info-correlate-foo.cpp
+// RUN: %clang -o %t.normal -fprofile-instr-generate -fcoverage-mapping %S/Inputs/instrprof-debug-info-correlate-main.cpp %S/Inputs/instrprof-debug-info-correlate-foo.cpp
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t.normal
 // RUN: llvm-profdata merge -o %t.normal.profdata %t.profraw
 // RUN: llvm-cov report --instr-profile=%t.normal.profdata %t.normal > %t.normal.report
 // RUN: llvm-cov show --instr-profile=%t.normal.profdata %t.normal > %t.normal.show
 
 // With -profile-correlate=binary flag
-// RUN: %clang -o %t-1.exe -fprofile-instr-generate -fcoverage-mapping -mllvm -profile-correlate=binary -fuse-ld=lld %S/Inputs/instrprof-debug-info-correlate-main.cpp %S/Inputs/instrprof-debug-info-correlate-foo.cpp
+// RUN: %clang -o %t-1.exe -fprofile-instr-generate -fcoverage-mapping -mllvm -profile-correlate=binary %S/Inputs/instrprof-debug-info-correlate-main.cpp %S/Inputs/instrprof-debug-info-correlate-foo.cpp
 // RUN: env LLVM_PROFILE_FILE=%t-1.profraw %run %t-1.exe
 // RUN: llvm-profdata merge -o %t-1.profdata --binary-file=%t-1.exe %t-1.profraw
 // RUN: llvm-cov report --instr-profile=%t-1.profdata %t-1.exe > %t-1.report

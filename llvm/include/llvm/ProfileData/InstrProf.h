@@ -462,7 +462,7 @@ public:
   /// only initialize the symtab with reference to the data and
   /// the section base address. The decompression will be delayed
   /// until before it is used. See also \c create(StringRef) method.
-  Error create(object::SectionRef &Section, bool MightHasNullByte = false);
+  Error create(object::SectionRef &Section);
 
   /// \c NameStrings is a string composed of one of more sub-strings
   ///  encoded in the format described in \c collectPGOFuncNameStrings.

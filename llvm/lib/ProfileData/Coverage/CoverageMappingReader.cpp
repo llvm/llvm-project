@@ -457,7 +457,7 @@ Expected<bool> RawCoverageMappingDummyChecker::isDummy() {
   return Tag == Counter::Zero;
 }
 
-Error InstrProfSymtab::create(SectionRef &Section, bool MightHasNullByte) {
+Error InstrProfSymtab::create(SectionRef &Section) {
   Expected<StringRef> DataOrErr = Section.getContents();
   if (!DataOrErr)
     return DataOrErr.takeError();
@@ -466,10 +466,13 @@ Error InstrProfSymtab::create(SectionRef &Section, bool MightHasNullByte) {
 
   // If this is a linked PE/COFF file, then we have to skip over the null byte
   // that is allocated in the .lprfn$A section in the LLVM profiling runtime.
+  // If the name section is .lprfcovnames, it doesn't have the null byte at the
+  // beginning.
   const ObjectFile *Obj = Section.getObject();
-  if (MightHasNullByte && isa<COFFObjectFile>(Obj) &&
-      !Obj->isRelocatableObject())
-    Data = Data.drop_front(1);
+  if (isa<COFFObjectFile>(Obj) && !Obj->isRelocatableObject())
+    if (Expected<StringRef> NameOrErr = Section.getName())
+      if (*NameOrErr == getInstrProfSectionName(IPSK_name, Triple::COFF))
+        Data = Data.drop_front(1);
 
   return Error::success();
 }
@@ -1054,11 +1057,30 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
 
   // Look for the sections that we are interested in.
   auto ObjFormat = OF->getTripleObjectFormat();
+  InstrProfSymtab ProfileNames;
+  std::vector<SectionRef> NamesSectionRefs;
+  // If IPSK_name is not found, fallback to search for IPK_covname, which is
+  // used when binary correlation is enabled.
   auto NamesSection =
       lookupSections(*OF, getInstrProfSectionName(IPSK_name, ObjFormat,
-                                                 /*AddSegmentInfo=*/false));
-  if (auto E = NamesSection.takeError())
+                                                  /*AddSegmentInfo=*/false));
+  if (auto E = NamesSection.takeError()) {
+    consumeError(std::move(E));
+    NamesSection =
+        lookupSections(*OF, getInstrProfSectionName(IPSK_covname, ObjFormat,
+                                                    /*AddSegmentInfo=*/false));
+    if (auto E = NamesSection.takeError())
+      return std::move(E);
+  }
+  NamesSectionRefs = *NamesSection;
+
+  if (NamesSectionRefs.size() != 1)
+    return make_error<CoverageMapError>(
+        coveragemap_error::malformed,
+        "the size of coverage mapping section is not one");
+  if (Error E = ProfileNames.create(NamesSectionRefs.back()))
     return std::move(E);
+
   auto CoverageSection =
       lookupSections(*OF, getInstrProfSectionName(IPSK_covmap, ObjFormat,
                                                   /*AddSegmentInfo=*/false));
@@ -1072,28 +1094,6 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
   if (!CoverageMappingOrErr)
     return CoverageMappingOrErr.takeError();
   StringRef CoverageMapping = CoverageMappingOrErr.get();
-
-  InstrProfSymtab ProfileNames;
-  std::vector<SectionRef> NamesSectionRefs = *NamesSection;
-  bool MightHasNullByte = true;
-  if (NamesSectionRefs.size() != 1) {
-    // By default, the profile name section in the binary starts with a null
-    // byte and followed by names. But if binary correlation is enabled, there
-    // will be 2 name sections. One contains only two null bytes, and another
-    // one contains the names without the dummy null byte at the beginning.
-    if (ObjFormat == Triple::COFF) {
-      NamesSectionRefs.erase(
-          std::remove_if(NamesSectionRefs.begin(), NamesSectionRefs.end(),
-                         [](const SectionRef &S) { return S.isData(); }));
-      MightHasNullByte = false;
-    }
-    if (NamesSectionRefs.size() != 1)
-      return make_error<CoverageMapError>(
-          coveragemap_error::malformed,
-          "the size of coverage mapping section is not one");
-  }
-  if (Error E = ProfileNames.create(NamesSectionRefs.back(), MightHasNullByte))
-    return std::move(E);
 
   // Look for the coverage records section (Version4 only).
   auto CoverageRecordsSections =

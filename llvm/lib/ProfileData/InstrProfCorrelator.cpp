@@ -24,43 +24,17 @@
 
 using namespace llvm;
 
-namespace llvm {
-cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
-    "profile-correlate",
-    cl::desc("Use debug info or binary file to correlate profiles."),
-    cl::init(InstrProfCorrelator::NONE),
-    cl::values(clEnumValN(InstrProfCorrelator::NONE, "",
-                          "No profile correlation"),
-               clEnumValN(InstrProfCorrelator::DEBUG_INFO, "debug-info",
-                          "Use debug info to correlate"),
-               clEnumValN(InstrProfCorrelator::BINARY, "binary",
-                          "Use binary to correlate")));
-} // namespace llvm
-
 /// Get profile section.
 Expected<object::SectionRef> getInstrProfSection(const object::ObjectFile &Obj,
                                                  InstrProfSectKind IPSK) {
-  // On COFF, the object file section name may end in "$M". This tells the
-  // linker to sort these sections between "$A" and "$Z". The linker removes the
-  // dollar and everything after it in the final binary. Do the same to match.
   Triple::ObjectFormatType ObjFormat = Obj.getTripleObjectFormat();
-  auto StripSuffix = [ObjFormat](StringRef N) {
-    return ObjFormat == Triple::COFF ? N.split('$').first : N;
-  };
   std::string ExpectedSectionName =
       getInstrProfSectionName(IPSK, ObjFormat,
                               /*AddSegmentInfo=*/false);
-  ExpectedSectionName = StripSuffix(ExpectedSectionName);
   for (auto &Section : Obj.sections()) {
     if (auto SectionName = Section.getName())
-      if (StripSuffix(*SectionName) == ExpectedSectionName) {
-        // There will be extra profile name and data sections in COFF used for
-        // runtime to find start/stop of those sections, skipping them.
-        // (details at compiler-rt/lib/profile/InstrProfilingPlatformWindows.c)
-        if (ObjFormat == Triple::COFF && IPSK != IPSK_cnts && Section.isData())
-          continue;
+      if (*SectionName == ExpectedSectionName)
         return Section;
-      }
   }
   return make_error<InstrProfError>(
       instrprof_error::unable_to_correlate_profile,
@@ -80,13 +54,13 @@ InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
   if (auto Err = CountersSection.takeError())
     return std::move(Err);
   if (FileKind == InstrProfCorrelator::BINARY) {
-    auto DataSection = getInstrProfSection(Obj, IPSK_data);
+    auto DataSection = getInstrProfSection(Obj, IPSK_covdata);
     if (auto Err = DataSection.takeError())
       return std::move(Err);
     auto DataOrErr = DataSection->getContents();
     if (!DataOrErr)
       return DataOrErr.takeError();
-    auto NameSection = getInstrProfSection(Obj, IPSK_name);
+    auto NameSection = getInstrProfSection(Obj, IPSK_covname);
     if (auto Err = NameSection.takeError())
       return std::move(Err);
     auto NameOrErr = NameSection->getContents();
@@ -103,7 +77,7 @@ InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
   // In COFF object file, there's a null byte at the beginning of the counter
   // section which doesn't exist in raw profile.
   if (Obj.getTripleObjectFormat() == Triple::COFF)
-    C->CountersSectionStart++;
+    ++C->CountersSectionStart;
 
   C->ShouldSwapBytes = Obj.isLittleEndian() != sys::IsLittleEndianHost;
   return Expected<std::unique_ptr<Context>>(std::move(C));
@@ -461,27 +435,25 @@ Error DwarfInstrProfCorrelator<IntPtrT>::correlateProfileNameImpl() {
 template <class IntPtrT>
 void BinaryInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
     int MaxWarnings, InstrProfCorrelator::CorrelationData *CorrelateData) {
+  using RawProfData = RawInstrProf::ProfileData<IntPtrT>;
   bool UnlimitedWarnings = (MaxWarnings == 0);
   // -N suppressed warnings means we can emit up to N (unsuppressed) warnings
   int NumSuppressedWarnings = -MaxWarnings;
 
-  const RawInstrProf::ProfileData<IntPtrT> *DataStart =
-      (const RawInstrProf::ProfileData<IntPtrT> *)this->Ctx->DataStart;
-  const RawInstrProf::ProfileData<IntPtrT> *DataEnd =
-      (const RawInstrProf::ProfileData<IntPtrT> *)this->Ctx->DataEnd;
+  const RawProfData *DataStart = (const RawProfData *)this->Ctx->DataStart;
+  const RawProfData *DataEnd = (const RawProfData *)this->Ctx->DataEnd;
   // We need to use < here because the last data record may have no padding.
-  for (const RawInstrProf::ProfileData<IntPtrT> *I = DataStart; I < DataEnd;
-       ++I) {
+  for (const RawProfData *I = DataStart; I < DataEnd; ++I) {
     uint64_t CounterPtr = this->template maybeSwap<IntPtrT>(I->CounterPtr);
     uint64_t CountersStart = this->Ctx->CountersSectionStart;
     uint64_t CountersEnd = this->Ctx->CountersSectionEnd;
     if (CounterPtr < CountersStart || CounterPtr >= CountersEnd) {
       if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
-        WithColor::warning() << format(
-            "CounterPtr out of range for function: Actual=0x%x "
-            "Expected=[0x%x, 0x%x) at data offset=0x%x\n",
-            CounterPtr, CountersStart, CountersEnd,
-            (I - DataStart) * sizeof(RawInstrProf::ProfileData<IntPtrT>));
+        WithColor::warning()
+            << format("CounterPtr out of range for function: Actual=0x%x "
+                      "Expected=[0x%x, 0x%x) at data offset=0x%x\n",
+                      CounterPtr, CountersStart, CountersEnd,
+                      (I - DataStart) * sizeof(RawProfData));
       }
     }
     // In binary correlation mode, the CounterPtr is an absolute address of the
