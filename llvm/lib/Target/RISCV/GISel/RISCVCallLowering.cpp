@@ -496,8 +496,24 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // TODO: Support tail calls.
   Info.IsTailCall = false;
 
-  if (!Info.Callee.isReg())
-    Info.Callee.setTargetFlags(RISCVII::MO_CALL);
+  // If the callee is a GlobalAddress or ExternalSymbol and cannot be assumed as
+  // DSOLocal, then use MO_PLT. Otherwise use MO_CALL.
+  if (Info.Callee.isGlobal()) {
+    const GlobalValue *GV = Info.Callee.getGlobal();
+    unsigned OpFlags = RISCVII::MO_CALL;
+    if (!getTLI()->getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(),
+                                                           GV))
+      OpFlags = RISCVII::MO_PLT;
+
+    Info.Callee.setTargetFlags(OpFlags);
+  } else if (Info.Callee.isSymbol()) {
+    unsigned OpFlags = RISCVII::MO_CALL;
+    if (!getTLI()->getTargetMachine().shouldAssumeDSOLocal(
+            *MF.getFunction().getParent(), nullptr))
+      OpFlags = RISCVII::MO_PLT;
+
+    Info.Callee.setTargetFlags(OpFlags);
+  }
 
   MachineInstrBuilder Call =
       MIRBuilder
