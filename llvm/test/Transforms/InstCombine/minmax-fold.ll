@@ -57,7 +57,7 @@ define i32 @t4(i64 %a) {
 define i64 @t5(i32 %a) {
 ; CHECK-LABEL: @t5(
 ; CHECK-NEXT:    [[NARROW:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 5)
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %1 = icmp slt i32 %a, 5

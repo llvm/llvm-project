@@ -7,6 +7,7 @@
 #define INT_MAX __INT_MAX__
 
 typedef __INTPTR_TYPE__ intptr_t;
+typedef __PTRDIFF_TYPE__ ptrdiff_t;
 
 
 static_assert(true, "");
@@ -198,6 +199,20 @@ namespace PointerComparison {
                                  // ref-note {{comparison between '&s.b' and 'nullptr' has unspecified value}}
 
   constexpr bool v7 = qv <= (void*)&s.b; // ok
+
+  constexpr ptrdiff_t m = &m - &m;
+  static_assert(m == 0, "");
+
+  constexpr ptrdiff_t m2 = (&m2 + 1) - (&m2 + 1);
+  static_assert(m2 == 0, "");
+
+  constexpr long m3 = (&m3 + 1) - (&m3);
+  static_assert(m3 == 1, "");
+
+  constexpr long m4 = &m4 + 2 - &m4; // ref-error {{must be initialized by a constant expression}} \
+                                     // ref-note {{cannot refer to element 2 of non-array object}} \
+                                     // expected-error {{must be initialized by a constant expression}} \
+                                     // expected-note {{cannot refer to element 2 of non-array object}}
 }
 
 namespace SizeOf {
@@ -261,15 +276,13 @@ namespace SizeOf {
 #if __cplusplus >= 202002L
   /// FIXME: The following code should be accepted.
   consteval int foo(int n) { // ref-error {{consteval function never produces a constant expression}}
-    return sizeof(int[n]); // ref-note 3{{not valid in a constant expression}} \
-                           // expected-note {{not valid in a constant expression}}
+    return sizeof(int[n]); // ref-note 3{{not valid in a constant expression}}
   }
   constinit int var = foo(5); // ref-error {{not a constant expression}} \
                               // ref-note 2{{in call to}} \
                               // ref-error {{does not have a constant initializer}} \
                               // ref-note {{required by 'constinit' specifier}} \
                               // expected-error  {{is not a constant expression}} \
-                              // expected-note {{in call to}} \
                               // expected-error {{does not have a constant initializer}} \
                               // expected-note {{required by 'constinit' specifier}} \
 
@@ -1061,6 +1074,14 @@ namespace DiscardExprs {
     return I;
   }
   static_assert(foo<3>() == 3, "");
+
+  struct ATemp {
+    consteval ATemp ret_a() const { return ATemp{}; }
+  };
+
+  void test() {
+    int k = (ATemp().ret_a(), 0);
+  }
 
 #pragma clang diagnostic pop
 }

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --sparsification="enable-gpu-libgen" | FileCheck %s
+// RUN: mlir-opt %s --sparse-gpu-codegen="num-threads=0" | FileCheck %s
 
 #trait_sampled_dense_dense = {
   indexing_maps = [
@@ -22,11 +22,11 @@
 #CSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed) }>
 
 // CHECK-LABEL:   func.func @sparse_sampled_dd(
-// CHECK-SAME:                                 %[[VAL_0:.*]]: tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>>,
-// CHECK-SAME:                                 %[[VAL_1:.*]]: tensor<8x8xf64>,
-// CHECK-SAME:                                 %[[VAL_2:.*]]: tensor<8x8xf64>) -> tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>> {
-// CHECK:           %[[VAL_3:.*]] = arith.constant 8 : index
-// CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>>,
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<8x8xf64>,
+// CHECK-SAME:      %[[VAL_2:.*]]: tensor<8x8xf64>) -> tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>> {
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 8 : index
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.number_of_entries %[[VAL_0]] : tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_6:.*]] = bufferization.to_memref %[[VAL_1]] : memref<8x8xf64>
 // CHECK:           %[[VAL_7:.*]] = gpu.wait async

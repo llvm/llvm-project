@@ -4347,6 +4347,21 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
   if (PBI->getSuccessor(PBIOp) == BB)
     return false;
 
+  // If predecessor's branch probability to BB is too low don't merge branches.
+  SmallVector<uint32_t, 2> PredWeights;
+  if (!PBI->getMetadata(LLVMContext::MD_unpredictable) &&
+      extractBranchWeights(*PBI, PredWeights) &&
+      (static_cast<uint64_t>(PredWeights[0]) + PredWeights[1]) != 0) {
+
+    BranchProbability CommonDestProb = BranchProbability::getBranchProbability(
+        PredWeights[PBIOp],
+        static_cast<uint64_t>(PredWeights[0]) + PredWeights[1]);
+
+    BranchProbability Likely = TTI.getPredictableBranchThreshold();
+    if (CommonDestProb >= Likely)
+      return false;
+  }
+
   // Do not perform this transformation if it would require
   // insertion of a large number of select instructions. For targets
   // without predication/cmovs, this is a big pessimization.
@@ -6639,13 +6654,14 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     // WouldFitInRegister.
     // TODO: Consider growing the table also when it doesn't fit in a register
     // if no optsize is specified.
-    if (all_of(ResultTypes, [&](const auto &KV) {
+    const uint64_t UpperBound = CR.getUpper().getLimitedValue();
+    if (!CR.isUpperWrapped() && all_of(ResultTypes, [&](const auto &KV) {
           return SwitchLookupTable::WouldFitInRegister(
-              DL, CR.getUpper().getLimitedValue(), KV.second /* ResultType */);
+              DL, UpperBound, KV.second /* ResultType */);
         })) {
       // The default branch is unreachable after we enlarge the lookup table.
       // Adjust DefaultIsReachable to reuse code path.
-      TableSize = CR.getUpper().getZExtValue();
+      TableSize = UpperBound;
       DefaultIsReachable = false;
     }
   }

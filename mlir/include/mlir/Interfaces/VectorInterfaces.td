@@ -120,8 +120,8 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         auto expr = $_op.getPermutationMap().getResult(idx);
-        return expr.template isa<::mlir::AffineConstantExpr>() &&
-               expr.template dyn_cast<::mlir::AffineConstantExpr>().getValue() == 0;
+        return ::llvm::isa<::mlir::AffineConstantExpr>(expr) &&
+               ::llvm::dyn_cast<::mlir::AffineConstantExpr>(expr).getValue() == 0;
       }]
     >,
     InterfaceMethod<
@@ -278,9 +278,9 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
           AffineExpr dim = std::get<0>(vecDims);
           int64_t size = std::get<1>(vecDims);
           // Skip broadcast.
-          if (dim.isa<AffineConstantExpr>())
+          if (isa<AffineConstantExpr>(dim))
             continue;
-          dimSizes[dim.cast<AffineDimExpr>().getPosition()] = size;
+          dimSizes[cast<AffineDimExpr>(dim).getPosition()] = size;
         }
         return dimSizes;
       }]

@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc -pedantic
 
 ! Check OpenACC clause validity for the following construct and directive:
 !   2.6.5 Data
@@ -208,6 +208,12 @@ contains
 
     !ERROR: Only variables are allowed in data clauses on the DATA directive
     !$acc data copy(t%t1_proc)
+    !$acc end data
+  end subroutine
+
+  subroutine sub5()
+    integer, parameter :: iparam = 1024
+    !$acc data copyin(iparam)
     !$acc end data
   end subroutine
 end module

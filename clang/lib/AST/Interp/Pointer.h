@@ -279,7 +279,7 @@ public:
     return getFieldDesc()->isUnknownSizeArray();
   }
   /// Checks if the pointer points to an array.
-  bool isArrayElement() const { return Base != Offset; }
+  bool isArrayElement() const { return inArray() && Base != Offset; }
   /// Pointer points directly to a block.
   bool isRoot() const {
     return (Base == 0 || Base == RootPtrMark) && Offset == 0;

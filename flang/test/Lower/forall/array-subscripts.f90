@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
   ! Make sure we use array values for subscripts that are arrays on the lhs so
   ! that copy-in/copy-out works correctly.
