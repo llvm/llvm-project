@@ -45,7 +45,7 @@ public:
 
   watch_id_t GetID();
 
-  /// With -1 representing an invalid hardware index.
+  LLDB_DEPRECATED("Hardware index is not available, always returns -1")
   int32_t GetHardwareIndex();
 
   lldb::addr_t GetWatchAddress();
