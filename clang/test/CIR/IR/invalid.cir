@@ -128,7 +128,7 @@ cir.func @cast0(%arg0: !u32i) {
 // -----
 
 cir.func @cast1(%arg1: f32) {
-  %1 = cir.cast(int_to_bool, %arg1 : f32), !cir.bool // expected-error {{requires integral type for result}}
+  %1 = cir.cast(int_to_bool, %arg1 : f32), !cir.bool // expected-error {{requires integral type for source}}
   cir.return
 }
 
@@ -168,6 +168,147 @@ cir.func @cast5(%p: f32) {
 
 cir.func @cast6(%p: !cir.bool) {
   %2 = cir.cast(bool_to_float, %p : !cir.bool), !cir.int<u, 32> // expected-error {{requires !cir.float for result}}
+  cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+cir.func @cast7(%p: !cir.ptr<!u32i>) {
+  %2 = cir.cast(ptr_to_bool, %p : !cir.ptr<!u32i>), !u32i // expected-error {{requires !cir.bool type for result}}
+  cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+cir.func @cast8(%p: !u32i) {
+  %2 = cir.cast(ptr_to_bool, %p : !u32i), !cir.bool // expected-error {{requires pointer type for source}}
+  cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+cir.func @cast9(%p : !u32i) {
+  %2 = cir.cast(integral, %p : !u32i), f32 // expected-error {{requires !IntegerType for result}}
+  cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+cir.func @cast10(%p : f32) {
+  %2 = cir.cast(integral, %p : f32), !u32i // expected-error {{requires !IntegerType for source}}
+  cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+cir.func @cast11(%p : f32) {
+  %2 = cir.cast(floating, %p : f32), !u32i // expected-error {{requries floating for source and result}}
+  cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+cir.func @cast12(%p : !u32i) {
+  %2 = cir.cast(floating, %p : !u32i), f32 // expected-error {{requries floating for source and result}}
+  cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+cir.func @cast13(%p : !u32i) {
+  %2 = cir.cast(float_to_int, %p : !u32i), !u32i // expected-error {{requires floating for source}}
+  cir.return
+}
+
+// -----
+
+cir.func @cast14(%p : f32) {
+  %2 = cir.cast(float_to_int, %p : f32), f32 // expected-error {{requires !IntegerType for result}}
+  cir.return
+}
+
+// -----
+
+!u64i = !cir.int<u, 64>
+cir.func @cast15(%p : !cir.ptr<!u64i>) {
+  %2 = cir.cast(int_to_ptr, %p : !cir.ptr<!u64i>), !cir.ptr<!u64i> // expected-error {{requires integer for source}}
+  cir.return
+}
+
+// -----
+
+!u64i = !cir.int<u, 64>
+cir.func @cast16(%p : !u64i) {
+  %2 = cir.cast(int_to_ptr, %p : !u64i), !u64i // expected-error {{requires pointer for result}}
+  cir.return
+}
+
+// -----
+
+!u64i = !cir.int<u, 64>
+cir.func @cast17(%p : !u64i) {
+  %2 = cir.cast(ptr_to_int, %p : !u64i), !u64i // expected-error {{requires pointer for source}}
+  cir.return
+}
+
+// -----
+
+!u64i = !cir.int<u, 64>
+cir.func @cast18(%p : !cir.ptr<!u64i>) {
+  %2 = cir.cast(ptr_to_int, %p : !cir.ptr<!u64i>), !cir.ptr<!u64i> // expected-error {{requires integer for result}}
+  cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+cir.func @cast19(%p : !u32i) {
+  %2 = cir.cast(float_to_bool, %p : !u32i), !cir.bool // expected-error {{requires float for source}}
+  cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+cir.func @cast20(%p : f32) {
+  %2 = cir.cast(float_to_bool, %p : f32), !u32i // expected-error {{requires !cir.bool for result}}
+  cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+cir.func @cast21(%p : !u32i) {
+  %2 = cir.cast(bool_to_int, %p : !u32i), !u32i // expected-error {{requires !cir.bool for source}}
+  cir.return
+}
+
+// -----
+
+cir.func @cast22(%p : !cir.bool) {
+  %2 = cir.cast(bool_to_int, %p : !cir.bool), f32 // expected-error {{requires !cir.int for result}}
+  cir.return
+}
+
+// -----
+
+cir.func @cast23(%p : !cir.bool) {
+  %2 = cir.cast(int_to_float, %p : !cir.bool), f32 // expected-error {{requires !cir.int for source}}
+  cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+cir.func @cast24(%p : !u32i) {
+  %2 = cir.cast(int_to_float, %p : !u32i), !cir.bool // expected-error {{requires !cir.float for result}}
   cir.return
 }
 
