@@ -6211,9 +6211,8 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     ClassTemplateDecl *ClassTemplate = Record->getDescribedClassTemplate();
     if (ClassTemplate)
       ClassTemplate = ClassTemplate->getCanonicalDecl();
-    else if (ClassTemplatePartialSpecializationDecl *PartialSpec
-               = dyn_cast<ClassTemplatePartialSpecializationDecl>(Record))
-      ClassTemplate = PartialSpec->getSpecializedTemplate()->getCanonicalDecl();
+    else if (ClassTemplateSpecializationDecl *Spec = dyn_cast<ClassTemplateSpecializationDecl>(Record))
+      ClassTemplate = Spec->getSpecializedTemplate()->getCanonicalDecl();
 
     // Walk the current context to find either the record or an instantiation of
     // it.
