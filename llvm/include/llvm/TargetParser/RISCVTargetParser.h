@@ -31,6 +31,7 @@ bool parseTuneCPU(StringRef CPU, bool IsRV64);
 StringRef getMArchFromMcpu(StringRef CPU);
 void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
+bool hasFastUnalignedAccess(StringRef CPU);
 
 } // namespace RISCV
 } // namespace llvm

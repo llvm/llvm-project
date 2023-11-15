@@ -595,7 +595,8 @@ void ASTStmtWriter::VisitPredefinedExpr(PredefinedExpr *E) {
 
   bool HasFunctionName = E->getFunctionName() != nullptr;
   Record.push_back(HasFunctionName);
-  Record.push_back(E->getIdentKind()); // FIXME: stable encoding
+  Record.push_back(
+      llvm::to_underlying(E->getIdentKind())); // FIXME: stable encoding
   Record.push_back(E->isTransparent());
   Record.AddSourceLocation(E->getLocation());
   if (HasFunctionName)
@@ -687,7 +688,7 @@ void ASTStmtWriter::VisitStringLiteral(StringLiteral *E) {
   Record.push_back(E->getNumConcatenated());
   Record.push_back(E->getLength());
   Record.push_back(E->getCharByteWidth());
-  Record.push_back(E->getKind());
+  Record.push_back(llvm::to_underlying(E->getKind()));
   Record.push_back(E->isPascal());
 
   // Store the trailing array of SourceLocation.
@@ -706,7 +707,7 @@ void ASTStmtWriter::VisitCharacterLiteral(CharacterLiteral *E) {
   VisitExpr(E);
   Record.push_back(E->getValue());
   Record.AddSourceLocation(E->getLocation());
-  Record.push_back(E->getKind());
+  Record.push_back(llvm::to_underlying(E->getKind()));
 
   AbbrevToUse = Writer.getCharacterLiteralAbbrev();
 
@@ -1601,7 +1602,8 @@ void ASTStmtWriter::VisitCXXConstructExpr(CXXConstructExpr *E) {
   Record.push_back(E->isListInitialization());
   Record.push_back(E->isStdInitListInitialization());
   Record.push_back(E->requiresZeroInitialization());
-  Record.push_back(E->getConstructionKind()); // FIXME: stable encoding
+  Record.push_back(
+      llvm::to_underlying(E->getConstructionKind())); // FIXME: stable encoding
   Record.push_back(E->isImmediateEscalating());
   Record.AddSourceLocation(E->getLocation());
   Record.AddDeclRef(E->getConstructor());

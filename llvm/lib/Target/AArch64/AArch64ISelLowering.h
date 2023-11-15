@@ -608,6 +608,8 @@ public:
   MachineBasicBlock *EmitZAInstr(unsigned Opc, unsigned BaseReg,
                                  MachineInstr &MI, MachineBasicBlock *BB,
                                  bool HasTile) const;
+  MachineBasicBlock *EmitZTSpillFill(MachineInstr &MI, MachineBasicBlock *BB,
+                                     bool IsSpill) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
 
   MachineBasicBlock *
@@ -1250,6 +1252,8 @@ private:
                       SDLoc DL, EVT VT) const;
 
   bool preferScalarizeSplat(SDNode *N) const override;
+
+  unsigned getMinimumJumpTableEntries() const override;
 };
 
 namespace AArch64 {

@@ -1103,6 +1103,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
     assert(SrcBitWidth && "SrcBitWidth can't be zero");
     Known = Known.anyextOrTrunc(SrcBitWidth);
     computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+    if (auto *Inst = dyn_cast<PossiblyNonNegInst>(I);
+        Inst && Inst->hasNonNeg() && !Known.isNegative())
+      Known.makeNonNegative();
     Known = Known.zextOrTrunc(BitWidth);
     break;
   }
@@ -4178,8 +4181,14 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     }
     case FCmpInst::FCMP_OGE:
     case FCmpInst::FCMP_ULT: {
-      if (ConstRHS->isNegative()) // TODO
-        return {nullptr, fcAllFlags};
+      if (ConstRHS->isNegative()) {
+        // fcmp oge x, -inf -> ~fcNan
+        // fcmp oge fabs(x), -inf -> ~fcNan
+        // fcmp ult x, -inf -> fcNan
+        // fcmp ult fabs(x), -inf -> fcNan
+        Mask = ~fcNan;
+        break;
+      }
 
       // fcmp oge fabs(x), +inf -> fcInf
       // fcmp oge x, +inf -> fcPosInf
@@ -4192,8 +4201,14 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     }
     case FCmpInst::FCMP_OGT:
     case FCmpInst::FCMP_ULE: {
-      if (ConstRHS->isNegative())
-        return {nullptr, fcAllFlags};
+      if (ConstRHS->isNegative()) {
+        // fcmp ogt x, -inf -> fcmp one x, -inf
+        // fcmp ogt fabs(x), -inf -> fcmp ord x, x
+        // fcmp ule x, -inf -> fcmp ueq x, -inf
+        // fcmp ule fabs(x), -inf -> fcmp uno x, x
+        Mask = IsFabs ? ~fcNan : ~(fcNegInf | fcNan);
+        break;
+      }
 
       // No value is ordered and greater than infinity.
       Mask = fcNone;
@@ -7880,22 +7895,22 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
     }
     break;
   case Instruction::FPTrunc:
-    CastedTo = ConstantExpr::getFPExtend(C, SrcTy, true);
+    CastedTo = ConstantFoldCastOperand(Instruction::FPExt, C, SrcTy, DL);
     break;
   case Instruction::FPExt:
-    CastedTo = ConstantExpr::getFPTrunc(C, SrcTy, true);
+    CastedTo = ConstantFoldCastOperand(Instruction::FPTrunc, C, SrcTy, DL);
     break;
   case Instruction::FPToUI:
-    CastedTo = ConstantExpr::getUIToFP(C, SrcTy, true);
+    CastedTo = ConstantFoldCastOperand(Instruction::UIToFP, C, SrcTy, DL);
     break;
   case Instruction::FPToSI:
-    CastedTo = ConstantExpr::getSIToFP(C, SrcTy, true);
+    CastedTo = ConstantFoldCastOperand(Instruction::SIToFP, C, SrcTy, DL);
     break;
   case Instruction::UIToFP:
-    CastedTo = ConstantExpr::getFPToUI(C, SrcTy, true);
+    CastedTo = ConstantFoldCastOperand(Instruction::FPToUI, C, SrcTy, DL);
     break;
   case Instruction::SIToFP:
-    CastedTo = ConstantExpr::getFPToSI(C, SrcTy, true);
+    CastedTo = ConstantFoldCastOperand(Instruction::FPToSI, C, SrcTy, DL);
     break;
   default:
     break;

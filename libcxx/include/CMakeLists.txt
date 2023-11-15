@@ -927,6 +927,7 @@ set(files
   experimental/iterator
   experimental/list
   experimental/map
+  experimental/memory
   experimental/memory_resource
   experimental/propagate_const
   experimental/regex
@@ -1001,6 +1002,7 @@ set(files
   string.h
   string_view
   strstream
+  syncstream
   system_error
   tgmath.h
   thread

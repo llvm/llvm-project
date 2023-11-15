@@ -330,7 +330,7 @@ Value *AA::getWithType(Value &V, Type &Ty) {
       if (C->getType()->isIntegerTy() && Ty.isIntegerTy())
         return ConstantExpr::getTrunc(C, &Ty, /* OnlyIfReduced */ true);
       if (C->getType()->isFloatingPointTy() && Ty.isFloatingPointTy())
-        return ConstantExpr::getFPTrunc(C, &Ty, /* OnlyIfReduced */ true);
+        return ConstantFoldCastInstruction(Instruction::FPTrunc, C, &Ty);
     }
   }
   return nullptr;
@@ -3611,14 +3611,13 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   };
 
   auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(F);
-  bool Success;
+  [[maybe_unused]] bool Success;
   bool UsedAssumedInformation = false;
   Success = checkForAllInstructionsImpl(
       nullptr, OpcodeInstMap, CallSitePred, nullptr, nullptr,
       {(unsigned)Instruction::Invoke, (unsigned)Instruction::CallBr,
        (unsigned)Instruction::Call},
       UsedAssumedInformation);
-  (void)Success;
   assert(Success && "Expected the check call to be successful!");
 
   auto LoadStorePred = [&](Instruction &I) -> bool {
@@ -3644,7 +3643,17 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       nullptr, OpcodeInstMap, LoadStorePred, nullptr, nullptr,
       {(unsigned)Instruction::Load, (unsigned)Instruction::Store},
       UsedAssumedInformation);
-  (void)Success;
+  assert(Success && "Expected the check call to be successful!");
+
+  // AllocaInstPredicate
+  auto AAAllocationInfoPred = [&](Instruction &I) -> bool {
+    getOrCreateAAFor<AAAllocationInfo>(IRPosition::value(I));
+    return true;
+  };
+
+  Success = checkForAllInstructionsImpl(
+      nullptr, OpcodeInstMap, AAAllocationInfoPred, nullptr, nullptr,
+      {(unsigned)Instruction::Alloca}, UsedAssumedInformation);
   assert(Success && "Expected the check call to be successful!");
 }
 

@@ -681,7 +681,7 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
   }
 
   RS.enterBasicBlockEnd(MBB);
-  RS.backward(MI);
+  RS.backward(std::next(MI));
 
   // Ideally we want to have three registers for a long reg_sequence copy
   // to hide 2 waitstates between v_mov_b32 and accvgpr_write.
@@ -2692,6 +2692,9 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   if (CommutedOpcode == -1)
     return nullptr;
 
+  if (Src0Idx > Src1Idx)
+    std::swap(Src0Idx, Src1Idx);
+
   assert(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0) ==
            static_cast<int>(Src0Idx) &&
          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1) ==
@@ -2774,14 +2777,8 @@ bool SIInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   return isIntN(BranchOffsetBits, BrOffset);
 }
 
-MachineBasicBlock *SIInstrInfo::getBranchDestBlock(
-  const MachineInstr &MI) const {
-  if (MI.getOpcode() == AMDGPU::S_SETPC_B64) {
-    // This would be a difficult analysis to perform, but can always be legal so
-    // there's no need to analyze it.
-    return nullptr;
-  }
-
+MachineBasicBlock *
+SIInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   return MI.getOperand(0).getMBB();
 }
 

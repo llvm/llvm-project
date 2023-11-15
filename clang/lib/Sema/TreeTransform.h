@@ -2620,8 +2620,7 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildPredefinedExpr(SourceLocation Loc,
-                                   PredefinedExpr::IdentKind IK) {
+  ExprResult RebuildPredefinedExpr(SourceLocation Loc, PredefinedIdentKind IK) {
     return getSema().BuildPredefinedExpr(Loc, IK);
   }
 
@@ -3450,17 +3449,12 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildCXXConstructExpr(QualType T,
-                                     SourceLocation Loc,
-                                     CXXConstructorDecl *Constructor,
-                                     bool IsElidable,
-                                     MultiExprArg Args,
-                                     bool HadMultipleCandidates,
-                                     bool ListInitialization,
-                                     bool StdInitListInitialization,
-                                     bool RequiresZeroInit,
-                             CXXConstructExpr::ConstructionKind ConstructKind,
-                                     SourceRange ParenRange) {
+  ExprResult RebuildCXXConstructExpr(
+      QualType T, SourceLocation Loc, CXXConstructorDecl *Constructor,
+      bool IsElidable, MultiExprArg Args, bool HadMultipleCandidates,
+      bool ListInitialization, bool StdInitListInitialization,
+      bool RequiresZeroInit, CXXConstructionKind ConstructKind,
+      SourceRange ParenRange) {
     // Reconstruct the constructor we originally found, which might be
     // different if this is a call to an inherited constructor.
     CXXConstructorDecl *FoundCtor = Constructor;

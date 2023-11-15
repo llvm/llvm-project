@@ -1063,6 +1063,51 @@ entry:
   ret i1 %one
 }
 
+; This asserted because we didn't handle non-equality comparisons to
+; negative infinity when recognizing is.fpclass-like compares.
+define float @fcmp_ogt_neginf_implies_class_assert(float %arg) {
+; CHECK-LABEL: define float @fcmp_ogt_neginf_implies_class_assert
+; CHECK-SAME: (float [[ARG:%.*]]) {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %cmp.ogt.neginf = fcmp ogt float %arg, 0xFFF0000000000000
+  %select_1_0 = select i1 %cmp.ogt.neginf, float 1.0, float 0.0
+  %mul_by_zero = fmul float %select_1_0, 0.0
+  ret float %mul_by_zero
+}
+
+define float @fcmp_ule_neginf_implies_class_assert(float %arg) {
+; CHECK-LABEL: define float @fcmp_ule_neginf_implies_class_assert
+; CHECK-SAME: (float [[ARG:%.*]]) {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %cmp.ule.neginf = fcmp ule float %arg, 0xFFF0000000000000
+  %select_1_0 = select i1 %cmp.ule.neginf, float 1.0, float 0.0
+  %mul_by_zero = fmul float %select_1_0, 0.0
+  ret float %mul_by_zero
+}
+
+define float @fcmp_oge_neginf_implies_class_assert(float %arg) {
+; CHECK-LABEL: define float @fcmp_oge_neginf_implies_class_assert
+; CHECK-SAME: (float [[ARG:%.*]]) {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %cmp.oge.neginf = fcmp oge float %arg, 0xFFF0000000000000
+  %select_1_0 = select i1 %cmp.oge.neginf, float 1.0, float 0.0
+  %mul_by_zero = fmul float %select_1_0, 0.0
+  ret float %mul_by_zero
+}
+
+define float @fcmp_ult_neginf_implies_class_assert(float %arg) {
+; CHECK-LABEL: define float @fcmp_ult_neginf_implies_class_assert
+; CHECK-SAME: (float [[ARG:%.*]]) {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %cmp.ult.neginf = fcmp ult float %arg, 0xFFF0000000000000
+  %select_1_0 = select i1 %cmp.ult.neginf, float 1.0, float 0.0
+  %mul_by_zero = fmul float %select_1_0, 0.0
+  ret float %mul_by_zero
+}
 
 declare double @llvm.arithmetic.fence.f64(double)
 declare double @llvm.canonicalize.f64(double)

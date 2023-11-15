@@ -8,7 +8,7 @@ void DWARFTypePrinter::appendTypeTagName(dwarf::Tag T) {
   StringRef TagStr = TagString(T);
   static constexpr StringRef Prefix = "DW_TAG_";
   static constexpr StringRef Suffix = "_type";
-  if (!TagStr.startswith(Prefix) || !TagStr.endswith(Suffix))
+  if (!TagStr.starts_with(Prefix) || !TagStr.ends_with(Suffix))
     return;
   OS << TagStr.substr(Prefix.size(),
                       TagStr.size() - (Prefix.size() + Suffix.size()))
@@ -181,7 +181,7 @@ DWARFTypePrinter::appendUnqualifiedNameBefore(DWARFDie D,
     Word = true;
     StringRef Name = NamePtr;
     static constexpr StringRef MangledPrefix = "_STN|";
-    if (Name.startswith(MangledPrefix)) {
+    if (Name.starts_with(MangledPrefix)) {
       Name = Name.drop_front(MangledPrefix.size());
       auto Separator = Name.find('|');
       assert(Separator != StringRef::npos);
@@ -191,12 +191,12 @@ DWARFTypePrinter::appendUnqualifiedNameBefore(DWARFDie D,
         *OriginalFullName = (BaseName + TemplateArgs).str();
       Name = BaseName;
     } else
-      EndedWithTemplate = Name.endswith(">");
+      EndedWithTemplate = Name.ends_with(">");
     OS << Name;
     // This check would be insufficient for operator overloads like
     // "operator>>" - but for now Clang doesn't try to simplify them, so this
     // is OK. Add more nuanced operator overload handling here if/when needed.
-    if (Name.endswith(">"))
+    if (Name.ends_with(">"))
       break;
     if (!appendTemplateParameters(D))
       break;

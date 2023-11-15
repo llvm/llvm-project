@@ -2386,7 +2386,7 @@ public:
 
   bool isRVVType() const;
 
-  bool isRVVType(unsigned Bitwidth, bool IsFloat) const;
+  bool isRVVType(unsigned Bitwidth, bool IsFloat, bool IsBFloat = false) const;
 
   /// Return the implicit lifetime for this type, which must not be dependent.
   Qualifiers::ObjCLifetime getObjCARCImplicitLifetime() const;
@@ -7295,19 +7295,20 @@ inline bool Type::isRVVType() const {
 inline bool Type::isRVVType(unsigned ElementCount) const {
   bool Ret = false;
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
-                        IsFP)                                                  \
+                        IsFP, IsBF)                                            \
   if (NumEls == ElementCount)                                                  \
     Ret |= isSpecificBuiltinType(BuiltinType::Id);
 #include "clang/Basic/RISCVVTypes.def"
   return Ret;
 }
 
-inline bool Type::isRVVType(unsigned Bitwidth, bool IsFloat) const {
+inline bool Type::isRVVType(unsigned Bitwidth, bool IsFloat,
+                            bool IsBFloat) const {
   bool Ret = false;
 #define RVV_TYPE(Name, Id, SingletonId)
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
-                        IsFP)                                                  \
-  if (ElBits == Bitwidth && IsFloat == IsFP)                                   \
+                        IsFP, IsBF)                                            \
+  if (ElBits == Bitwidth && IsFloat == IsFP && IsBFloat == IsBF)               \
     Ret |= isSpecificBuiltinType(BuiltinType::Id);
 #include "clang/Basic/RISCVVTypes.def"
   return Ret;

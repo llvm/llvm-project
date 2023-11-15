@@ -318,7 +318,7 @@ class LocAsInteger : public NonLoc {
       : NonLoc(LocAsIntegerKind, &data) {
     // We do not need to represent loc::ConcreteInt as LocAsInteger,
     // as it'd collapse into a nonloc::ConcreteInt instead.
-    SValKind K = data.first.getKind();
+    [[maybe_unused]] SValKind K = data.first.getKind();
     assert(K == loc::MemRegionValKind || K == loc::GotoLabelKind);
   }
 
