@@ -666,9 +666,9 @@ static bool isRelevantAttr(Sema &S, const Decl *D, const Attr *A) {
 static void instantiateDependentHLSLParamModifierAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
     const HLSLParamModifierAttr *Attr, Decl *New) {
-    ParmVarDecl *P = cast<ParmVarDecl>(New);
-    P->addAttr(Attr->clone(S.getASTContext()));
-    P->setType(S.getASTContext().getLValueReferenceType(P->getType()));
+  ParmVarDecl *P = cast<ParmVarDecl>(New);
+  P->addAttr(Attr->clone(S.getASTContext()));
+  P->setType(S.getASTContext().getLValueReferenceType(P->getType()));
 }
 
 void Sema::InstantiateAttrsForDecl(
