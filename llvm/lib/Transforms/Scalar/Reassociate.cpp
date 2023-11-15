@@ -466,7 +466,8 @@ using RepeatedValue = std::pair<Value*, APInt>;
 /// type and thus make the expression bigger.
 static bool LinearizeExprTree(Instruction *I,
                               SmallVectorImpl<RepeatedValue> &Ops,
-                              ReassociatePass::OrderedSet &ToRedo) {
+                              ReassociatePass::OrderedSet &ToRedo,
+                              bool &HasNUW) {
   assert((isa<UnaryOperator>(I) || isa<BinaryOperator>(I)) &&
          "Expected a UnaryOperator or BinaryOperator!");
   LLVM_DEBUG(dbgs() << "LINEARIZE: " << *I << '\n');
@@ -514,6 +515,9 @@ static bool LinearizeExprTree(Instruction *I,
   while (!Worklist.empty()) {
     std::pair<Instruction*, APInt> P = Worklist.pop_back_val();
     I = P.first; // We examine the operands of this binary operator.
+
+    if (isa<OverflowingBinaryOperator>(I))
+      HasNUW &= I->hasNoUnsignedWrap();
 
     for (unsigned OpIdx = 0; OpIdx < I->getNumOperands(); ++OpIdx) { // Visit operands.
       Value *Op = I->getOperand(OpIdx);
@@ -657,7 +661,8 @@ static bool LinearizeExprTree(Instruction *I,
 /// Now that the operands for this expression tree are
 /// linearized and optimized, emit them in-order.
 void ReassociatePass::RewriteExprTree(BinaryOperator *I,
-                                      SmallVectorImpl<ValueEntry> &Ops) {
+                                      SmallVectorImpl<ValueEntry> &Ops,
+                                      bool HasNUW) {
   assert(Ops.size() > 1 && "Single values should be used directly!");
 
   // Since our optimizations should never increase the number of operations, the
@@ -814,14 +819,17 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
   if (ExpressionChangedStart) {
     bool ClearFlags = true;
     do {
-      // Preserve FastMathFlags.
+      // Preserve flags.
       if (ClearFlags) {
         if (isa<FPMathOperator>(I)) {
           FastMathFlags Flags = I->getFastMathFlags();
           ExpressionChangedStart->clearSubclassOptionalData();
           ExpressionChangedStart->setFastMathFlags(Flags);
-        } else
+        } else {
           ExpressionChangedStart->clearSubclassOptionalData();
+          if (HasNUW && isa<OverflowingBinaryOperator>(ExpressionChangedStart))
+            ExpressionChangedStart->setHasNoUnsignedWrap();
+        }
       }
 
       if (ExpressionChangedStart == ExpressionChangedEnd)
@@ -1171,7 +1179,8 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
     return nullptr;
 
   SmallVector<RepeatedValue, 8> Tree;
-  MadeChange |= LinearizeExprTree(BO, Tree, RedoInsts);
+  bool HasNUW = true;
+  MadeChange |= LinearizeExprTree(BO, Tree, RedoInsts, HasNUW);
   SmallVector<ValueEntry, 8> Factors;
   Factors.reserve(Tree.size());
   for (unsigned i = 0, e = Tree.size(); i != e; ++i) {
@@ -1213,7 +1222,7 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
 
   if (!FoundFactor) {
     // Make sure to restore the operands to the expression tree.
-    RewriteExprTree(BO, Factors);
+    RewriteExprTree(BO, Factors, HasNUW);
     return nullptr;
   }
 
@@ -1225,7 +1234,7 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
     RedoInsts.insert(BO);
     V = Factors[0].Op;
   } else {
-    RewriteExprTree(BO, Factors);
+    RewriteExprTree(BO, Factors, HasNUW);
     V = BO;
   }
 
@@ -2349,7 +2358,8 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
   // First, walk the expression tree, linearizing the tree, collecting the
   // operand information.
   SmallVector<RepeatedValue, 8> Tree;
-  MadeChange |= LinearizeExprTree(I, Tree, RedoInsts);
+  bool HasNUW = true;
+  MadeChange |= LinearizeExprTree(I, Tree, RedoInsts, HasNUW);
   SmallVector<ValueEntry, 8> Ops;
   Ops.reserve(Tree.size());
   for (const RepeatedValue &E : Tree)
@@ -2542,7 +2552,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
              dbgs() << '\n');
   // Now that we ordered and optimized the expressions, splat them back into
   // the expression tree, removing any unneeded nodes.
-  RewriteExprTree(I, Ops);
+  RewriteExprTree(I, Ops, HasNUW);
 }
 
 void
