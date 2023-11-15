@@ -1454,20 +1454,18 @@ define i32 @sdiv_sub2(i32 %arg) {
   ret i32 %div
 }
 
-define i32 @sub_sdiv_sub(i32 %arg) {
-; CHECK-LABEL: @sub_sdiv_sub(
+define i32 @sub_sdiv_multiuse(i32 %arg) {
+; CHECK-LABEL: @sub_sdiv_multiuse(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[ARG:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[ARG]], -2147483648
 ; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[TMP1]], i32 1, i32 -1
 ; CHECK-NEXT:    call void @use(i32 [[NEG]])
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[DIV]], [[ARG]]
-; CHECK-NEXT:    ret i32 [[SUB]]
+; CHECK-NEXT:    ret i32 [[DIV]]
 ;
   %neg = sub i32 0, %arg
   %div = sdiv i32 %arg, %neg
   call void @use(i32 %neg)
-  %sub = sub i32 %div, %neg
-  ret i32 %sub
+  ret i32 %div
 }
 
 define i32 @sdiv_sub_sub(i32 %x ,i32 %y) {
