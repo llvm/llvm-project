@@ -19,7 +19,8 @@ void test() {
   // MoveOnly type as error_type
   std::expected<void, MoveOnly> e(std::unexpect, 5);
 
-  std::move(e).value(); // expected-note{{in instantiation of member function 'std::expected<void, MoveOnly>::value' requested here}}
+  std::move(e)
+      .value(); // expected-note{{in instantiation of member function 'std::expected<void, MoveOnly>::value' requested here}}
   // expected-error-re@*:* {{static assertion failed due to requirement 'is_copy_constructible_v<MoveOnly>': error_type has to be both copy constructible and move constructible}}
 }
 
