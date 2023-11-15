@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 
 namespace mlir {
 namespace polynomial {
@@ -76,7 +77,7 @@ Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
     return {};
 
   llvm::SmallVector<Monomial> monomials;
-  llvm::SmallSet<std::string, 2> variables;
+  llvm::StringSet<> variables;
   llvm::DenseSet<APInt> exponents;
 
   while (true) {
@@ -127,7 +128,7 @@ Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
   }
 
   if (variables.size() > 1) {
-    std::string vars = llvm::join(variables.begin(), variables.end(), ", ");
+    std::string vars = llvm::join(variables.keys(), ", ");
     parser.emitError(
         parser.getCurrentLocation(),
         "polynomials must have one indeterminate, but there were multiple: " +

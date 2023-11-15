@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --split-input-file --verify-diagnostics
 
 #my_poly = #polynomial.polynomial<y + x**1024>
-// expected-error@below {{polynomials must have one indeterminate, but there were multiple: y, x}}
+// expected-error@below {{polynomials must have one indeterminate, but there were multiple: x, y}}
 #ring1 = #polynomial.ring<coefficientType=i32, coefficientModulus=2837465, polynomialModulus=#my_poly>
 
 // -----
