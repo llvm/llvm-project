@@ -191,10 +191,9 @@ class Mesh_CollectiveCommunicationOpBase<
     Mesh_Op<mnemonic,
       !listconcat(traits,
       [DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
-  let assemblyFormat = "$input attr-dict `:` type($input) `->` type($result)";
   dag commonArgs = (ins
     FlatSymbolRefAttr:$mesh,
-    DefaultValuedOptionalAttr<DenseI16ArrayAttr, "{}">:$mesh_axes
+    DefaultValuedAttr<DenseI16ArrayAttr, "{}">:$mesh_axes
   );
 }
 
@@ -205,16 +204,13 @@ def Mesh_AllGatherOp : Mesh_CollectiveCommunicationOpBase<"all_gather", [
   let summary = "All-gather over a device mesh.";
   let description = [{
     Gathers along the `gather_axis` tensor axis.
-    The order of input tensors in the resulting tensor is the same as the
-    order of the corresponding devices' multi-index in the mesh.
 
     Example:
     ```mlir
     mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 2])
     ...
-    %1 = mesh.all_gather %0 {
-        mesh = @mesh0, mesh_axes = array<i16: 1>, gather_axis = 1 : index
-      } : tensor<2x2xi8> -> tensor<2x4xi8>
+    %1 = mesh.all_gather %0 on @mesh0 mesh_axes = [1] gather_axis = 1
+      : tensor<2x2xi8> -> tensor<2x4xi8>
     ```
     Input:
     ```
@@ -228,6 +224,9 @@ def Mesh_AllGatherOp : Mesh_CollectiveCommunicationOpBase<"all_gather", [
     ```
     Result:
     ```
+    gather tensor
+    axis 1
+    ------------>
     +-------------+
     |  1  2  5  6 | <- devices (0, 0) and (0, 1)
     |  3  4  7  8 |
@@ -239,11 +238,15 @@ def Mesh_AllGatherOp : Mesh_CollectiveCommunicationOpBase<"all_gather", [
   }];
   let arguments = !con(commonArgs, (ins
     AnyNon0RankedTensor:$input,
-    APIntAttr:$gather_axis
+    IndexAttr:$gather_axis
   ));
   let results = (outs
     AnyNon0RankedTensor:$result
   );
+  let assemblyFormat = [{
+    $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)? `gather_axis` `=` $gather_axis
+    attr-dict `:` type($input) `->` type($result)
+  }];
   let hasVerifier = 1;
 }
 
@@ -261,18 +264,21 @@ def Mesh_AllReduceOp : Mesh_CollectiveCommunicationOpBase<"all_reduce", [
 
     Example:
     ```
-    %1 = mesh.all_reduce %0 {
-        mesh = @mesh0, mesh_axes = array<i16: 1, 0>, reduction = #mesh.partial<max>
-      } : tensor<3x4xf32> -> tensor<3x4xf64>
+    %1 = mesh.all_reduce %0 on @mesh0 mesh_axes = [1, 0] reduction = <max>
+      : tensor<3x4xf32> -> tensor<3x4xf64>
     ```
   }];
   let arguments = !con(commonArgs, (ins
     AnyRankedTensor:$input,
-    DefaultValuedOptionalAttr<Mesh_PartialAttr, "::mlir::mesh::Partial::Sum">:$reduction
+    DefaultValuedAttr<Mesh_PartialAttr, "::mlir::mesh::Partial::Sum">:$reduction
   ));
   let results = (outs
     AnyRankedTensor:$result
   );
+  let assemblyFormat = [{
+    $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)? (`reduction` `=` $reduction^)?
+    attr-dict `:` type($input) `->` type($result)
+  }];
   let hasVerifier = 1;
 }
 
@@ -287,17 +293,17 @@ def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
     ```
     mesh.cluster @mesh0(rank = 1, dim_sizes = [3])
     ...
-    %1 = mesh.all_to_all %0 {
-        mesh = @mesh0, mesh_axes = array<i16: 0>, split_axis = 0, concat_axis = 0
-      } : tensor<3x6xi8> -> tensor<3x6xi8>
+    %1 = mesh.all_to_all %0 on @mesh0 mesh_axes = [0]
+      split_axis = 0 concat_axis = 0
+      : tensor<3x6xi8> -> tensor<3x6xi8>
     ```
     Input:
     ```
      device  device  device
      (0)     (1)     (2)
-    +-------+-------+-------+
-    | 11 12 | 21 22 | 31 32 |
-    | 13 14 | 23 24 | 33 34 |
+    +-------+-------+-------+  | split and concat
+    | 11 12 | 21 22 | 31 32 |  | tensor axis 0
+    | 13 14 | 23 24 | 33 34 |  ↓
     | 15 16 | 25 26 | 35 36 |
     +-------+-------+-------+
     ```
@@ -314,12 +320,18 @@ def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
   }];
   let arguments = !con(commonArgs, (ins
     AnyNon0RankedTensor:$input,
-    APIntAttr:$split_axis,
-    APIntAttr:$concat_axis
+    IndexAttr:$split_axis,
+    IndexAttr:$concat_axis
   ));
   let results = (outs
     AnyNon0RankedTensor:$result
   );
+  let assemblyFormat = [{
+    $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)?
+    `split_axis` `=` $split_axis
+    `concat_axis` `=` $concat_axis
+    attr-dict `:` type($input) `->` type($result)
+  }];
   let hasVerifier = 1;
 }
 
@@ -327,26 +339,32 @@ def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", 
     SameOperandsAndResultRank]> {
   let summary = "Reduce-scatter over a device mesh.";
   let description = [{
-    After the reduction scatters the result within each device group.
+    After the reduction, the result is scattered within each device group.
     The tensor is split along `scatter_axis` and the pieces distributed
     across the device group.
     Example:
     ```
     mesh.cluster @mesh0(rank = 1, dim_sizes = [2, 2])
     ...
-    %1 = mesh.reduce_scatter %0 {
-        mesh = @mesh0, mesh_axes = array<i16: 1>, reduction = #mesh.partial<max>, scatter_axis = 0
-      } : tensor<3x4xf32> -> tensor<1x4xf64>
+    %1 = mesh.reduce_scatter %0 on @mesh0 mesh_axes = [1]
+      reduction = <max> scatter_axis = 0
+      : tensor<3x4xf32> -> tensor<1x4xf64>
     ```
     Input:
     ```
+                              device
+                              (0, 1)
+                                 ↓
+                     +-------+-------+  | scatter tensor
+    device (0, 0) -> |  1  2 |  5  6 |  | axis 0
+                     |  3  4 |  7  8 |  ↓
                      +-------+-------+
-    device (0, 0) -> |  1  2 |  5  6 | <- device (0, 1)
-                     |  3  4 |  7  8 |
-                     +-------+-------+
-    device (1, 0) -> |  9 10 | 13 14 | <- device (1, 1)
+    device (1, 0) -> |  9 10 | 13 14 |
                      | 11 12 | 15 16 |
                      +-------+-------+
+                                ↑
+                              device
+                              (1, 1)
     ```
     Result:
     ```
@@ -363,12 +381,18 @@ def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", 
   }];
   let arguments = !con(commonArgs, (ins
     AnyNon0RankedTensor:$input,
-    DefaultValuedOptionalAttr<Mesh_PartialAttr, "::mlir::mesh::Partial::Sum">:$reduction,
-    APIntAttr:$scatter_axis
+    DefaultValuedAttr<Mesh_PartialAttr, "::mlir::mesh::Partial::Sum">:$reduction,
+    IndexAttr:$scatter_axis
   ));
   let results = (outs
     AnyRankedTensor:$result
   );
+  let assemblyFormat = [{
+    $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)?
+    (`reduction` `=` $reduction^)?
+    `scatter_axis` `=` $scatter_axis
+    attr-dict `:` type($input) `->` type($result)
+  }];
   let hasVerifier = 1;
 }
 
