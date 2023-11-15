@@ -2427,11 +2427,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case Intrinsic::amdgcn_s_quadmask: {
       uint64_t Val = Op->getZExtValue();
       uint64_t QuadMask = 0;
-      for (unsigned i = 0; i < Op->getBitWidth() / 4; ++i, Val >>= 4) {
+      for (unsigned I = 0; I < Op->getBitWidth() / 4; ++I, Val >>= 4) {
         if (!(Val & 0xF))
           continue;
 
-        QuadMask |= (1 << i);
+        QuadMask |= (1 << I);
       }
       return ConstantInt::get(Ty, QuadMask);
     }
