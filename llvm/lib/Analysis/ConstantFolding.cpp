@@ -2426,16 +2426,13 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
     case Intrinsic::amdgcn_s_bitreplicate: {
       uint64_t Val = Op->getZExtValue();
-      uint64_t ReplicatedVal = 0;
-      uint64_t ReplicatedOnes = 0b11;
-      // Input operand is always b32
-      for (unsigned i = 0; i < 32; ++i, ReplicatedOnes <<= 2, Val >>= 1) {
-        if (!(Val & 1))
-          continue;
-
-        ReplicatedVal |= ReplicatedOnes;
-      }
-      return ConstantInt::get(Ty, ReplicatedVal);
+      Val = (Val & 0x000000000000FFFF) | (Val & 0x00000000FFFF0000) << 16;
+      Val = (Val & 0x000000FF000000FF) | (Val & 0x0000FF000000FF00) << 8;
+      Val = (Val & 0x000F000F000F000F) | (Val & 0x00F000F000F000F0) << 4;
+      Val = (Val & 0x0303030303030303) | (Val & 0x0C0C0C0C0C0C0C0C) << 2;
+      Val = (Val & 0x5555555555555555) | (Val & 0xAAAAAAAAAAAAAAAA) << 1;
+      Val = Val | Val << 1;
+      return ConstantInt::get(Ty, Val);
     }
 
     default:
