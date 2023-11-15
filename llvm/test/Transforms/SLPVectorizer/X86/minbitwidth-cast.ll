@@ -8,14 +8,13 @@ define ptr @test(i8 %0) {
 ; CHECK-NEXT:    [[CONV12_I:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[CONV12_I]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i32> [[TMP2]] to <2 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[TMP3]] to <2 x i8>
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i64
-; CHECK-NEXT:    [[ARRAYIDX50_I:%.*]] = getelementptr i8, ptr null, i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP7]] to i64
-; CHECK-NEXT:    [[ARRAYIDX16_I:%.*]] = getelementptr i8, ptr null, i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc <2 x i32> [[TMP2]] to <2 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i8> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[TMP4]] to i64
+; CHECK-NEXT:    [[ARRAYIDX50_I:%.*]] = getelementptr i8, ptr null, i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i8> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i64
+; CHECK-NEXT:    [[ARRAYIDX16_I:%.*]] = getelementptr i8, ptr null, i64 [[TMP7]]
 ; CHECK-NEXT:    ret ptr null
 ;
 entry:
