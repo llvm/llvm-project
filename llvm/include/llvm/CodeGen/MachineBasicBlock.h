@@ -846,8 +846,8 @@ public:
 
   /// Return the first instruction in MBB after I that is not a PHI, label or
   /// debug.  This is the correct point to insert copies at the beginning of a
-  /// basic block. \p Reg is the register being defined for a spill/split during
-  /// register allocation.
+  /// basic block. \p Reg is the register being used by a spill or defined for a
+  /// restore/split during register allocation.
   iterator SkipPHIsLabelsAndDebug(iterator I, Register Reg = Register(),
                                   bool SkipPseudoOp = true);
 
