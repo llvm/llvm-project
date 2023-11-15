@@ -268,14 +268,31 @@ static SmallVector<int64_t> getReducedShape(ArrayRef<int64_t> shape) {
   return reducedShape;
 }
 
+/// Converts OpFoldResults to int64_t shape without unit dims.
+static SmallVector<int64_t> getReducedShape(ArrayRef<OpFoldResult> mixedSizes) {
+  SmallVector<int64_t> reducedShape;
+  for (const auto size : mixedSizes) {
+    if (llvm::dyn_cast_if_present<Value>(size)) {
+      reducedShape.push_back(ShapedType::kDynamic);
+      continue;
+    }
+
+    auto value = cast<IntegerAttr>(size.get<Attribute>()).getValue();
+    if (value == 1)
+      continue;
+    reducedShape.push_back(value.getSExtValue());
+  }
+  return reducedShape;
+}
+
 /// Drops unit dimensions from the input MemRefType.
 static MemRefType dropUnitDims(MemRefType inputType,
                                ArrayRef<OpFoldResult> offsets,
                                ArrayRef<OpFoldResult> sizes,
                                ArrayRef<OpFoldResult> strides) {
+  auto targetShape = getReducedShape(sizes);
   Type rankReducedType = memref::SubViewOp::inferRankReducedResultType(
-      getReducedShape(inputType.getShape()), inputType, offsets, sizes,
-      strides);
+      targetShape, inputType, offsets, sizes, strides);
   return canonicalizeStridedLayout(cast<MemRefType>(rankReducedType));
 }
 
@@ -306,7 +323,7 @@ static int getReducedRank(ArrayRef<int64_t> shape) {
 
 /// Trims non-scalable one dimensions from `oldType` and returns the result
 /// type.
-static VectorType trimUnitDims(VectorType oldType) {
+static VectorType trimNonScalableUnitDims(VectorType oldType) {
   SmallVector<int64_t> newShape;
   SmallVector<bool> newScalableDims;
   for (auto [dimIdx, dimSize] : llvm::enumerate(oldType.getShape())) {
@@ -316,6 +333,32 @@ static VectorType trimUnitDims(VectorType oldType) {
     newScalableDims.push_back(oldType.getScalableDims()[dimIdx]);
   }
   return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
+}
+
+// Rewrites vector.create_mask 'op' to drop non-scalable one dimensions.
+static FailureOr<Value>
+createMaskDropNonScalableUnitDims(PatternRewriter &rewriter, Location loc,
+                                  vector::CreateMaskOp op) {
+  auto type = op.getType();
+  auto reducedType = trimNonScalableUnitDims(type);
+  if (reducedType.getRank() == type.getRank())
+    return failure();
+
+  SmallVector<Value> reducedOperands;
+  for (auto [dim, dimIsScalable, operand] : llvm::zip_equal(
+           type.getShape(), type.getScalableDims(), op.getOperands())) {
+    if (dim == 1 && !dimIsScalable) {
+      // If the mask for the unit dim is not a constant of 1, do nothing.
+      auto constant = operand.getDefiningOp<arith::ConstantIndexOp>();
+      if (!constant || (constant.value() != 1))
+        return failure();
+      continue;
+    }
+    reducedOperands.push_back(operand);
+  }
+  return rewriter
+      .create<vector::CreateMaskOp>(loc, reducedType, reducedOperands)
+      .getResult();
 }
 
 namespace {
@@ -348,7 +391,7 @@ class TransferReadDropUnitDimsPattern
       return failure();
     // Check if the reduced vector shape matches the reduced source shape.
     // Otherwise, this case is not supported yet.
-    auto reducedVectorType = trimUnitDims(vectorType);
+    auto reducedVectorType = trimNonScalableUnitDims(vectorType);
     if (reducedRank != reducedVectorType.getRank())
       return failure();
     if (llvm::any_of(transferReadOp.getIndices(), [](Value v) {
@@ -356,30 +399,18 @@ class TransferReadDropUnitDimsPattern
         }))
       return failure();
 
-    auto maskOp = transferReadOp.getMask();
+    Value maskOp = transferReadOp.getMask();
     if (maskOp) {
       auto createMaskOp = maskOp.getDefiningOp<vector::CreateMaskOp>();
       if (!createMaskOp)
+        return rewriter.notifyMatchFailure(
+            transferReadOp, "unsupported mask op, only 'vector.create_mask' is "
+                            "currently supported");
+      FailureOr<Value> rankReducedCreateMask =
+          createMaskDropNonScalableUnitDims(rewriter, loc, createMaskOp);
+      if (failed(rankReducedCreateMask))
         return failure();
-      auto maskType = maskOp.getType();
-      auto reducedMaskType = trimUnitDims(maskType);
-      if (reducedMaskType.getRank() == maskType.getRank())
-        return failure();
-      SmallVector<Value> maskOperands;
-      for (auto [dim, dimIsScalable, maskOperand] :
-           llvm::zip(maskType.getShape(), maskType.getScalableDims(),
-                     createMaskOp.getOperands())) {
-        if (dim == 1 && !dimIsScalable) {
-          // If the mask for the unit dim is not a constant of 1, do nothing.
-          auto constant = maskOperand.getDefiningOp<arith::ConstantIndexOp>();
-          if (!constant || (constant.value() != 1))
-            return failure();
-          continue;
-        }
-        maskOperands.push_back(maskOperand);
-      }
-      maskOp = rewriter.create<vector::CreateMaskOp>(loc, reducedMaskType,
-                                                     maskOperands);
+      maskOp = *rankReducedCreateMask;
     }
 
     Value reducedShapeSource =
