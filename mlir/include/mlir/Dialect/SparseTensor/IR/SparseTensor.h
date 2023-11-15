@@ -127,6 +127,10 @@ inline bool hasAnySparseOperandOrResult(Operation *op) {
   return hasAnySparseOperand(op) || hasAnySparseResult(op);
 }
 
+/// Returns true iff MLIR operation has any sparse tensor with non-identity
+/// dim2lvl maps.
+bool hasAnyNonIdentityOperandsOrResults(Operation *op);
+
 //
 // Inference.
 //

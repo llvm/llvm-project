@@ -1,9 +1,9 @@
-// RUN: mlir-opt %s -sparsification | FileCheck %s --check-prefix=CHECK-HIR
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification | FileCheck %s --check-prefix=CHECK-HIR
 //
-// RUN: mlir-opt %s -sparsification --sparse-tensor-conversion --cse | \
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification --sparse-tensor-conversion --cse | \
 // RUN: FileCheck %s --check-prefix=CHECK-MIR
 //
-// RUN: mlir-opt %s -sparsification --sparse-tensor-conversion --cse \
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification --sparse-tensor-conversion --cse \
 // RUN: --func-bufferize --arith-bufferize           \
 // RUN: --tensor-bufferize --finalizing-bufferize |  \
 // RUN: FileCheck %s --check-prefix=CHECK-LIR

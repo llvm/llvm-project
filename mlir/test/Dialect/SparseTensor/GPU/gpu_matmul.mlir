@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s --linalg-generalize-named-ops \
 // RUN:             --pre-sparsification-rewrite \
+// RUN:             --sparse-reinterpret-map \
 // RUN:             --sparsification="parallelization-strategy=dense-outer-loop" \
 // RUN:             --sparse-gpu-codegen | FileCheck %s
 

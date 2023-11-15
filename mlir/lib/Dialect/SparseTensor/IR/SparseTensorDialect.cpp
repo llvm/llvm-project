@@ -875,6 +875,16 @@ bool mlir::sparse_tensor::isUniqueCOOType(Type tp) {
   return isCOOType(getSparseTensorEncoding(tp), 0, /*isUnique=*/true);
 }
 
+bool mlir::sparse_tensor::hasAnyNonIdentityOperandsOrResults(Operation *op) {
+  auto hasNonIdentityMap = [](Value v) {
+    auto stt = tryGetSparseTensorType(v);
+    return stt && !stt->isIdentity();
+  };
+
+  return llvm::any_of(op->getOperands(), hasNonIdentityMap) ||
+         llvm::any_of(op->getResults(), hasNonIdentityMap);
+}
+
 Level mlir::sparse_tensor::getCOOStart(SparseTensorEncodingAttr enc) {
   // We only consider COO region with at least two levels for the purpose
   // of AOS storage optimization.

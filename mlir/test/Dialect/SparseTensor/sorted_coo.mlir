@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification --canonicalize | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification --canonicalize | FileCheck %s
 
 #SortedCOO = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
