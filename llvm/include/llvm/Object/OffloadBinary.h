@@ -17,6 +17,7 @@
 #ifndef LLVM_OBJECT_OFFLOADBINARY_H
 #define LLVM_OBJECT_OFFLOADBINARY_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -156,11 +157,21 @@ private:
 /// owns its memory.
 class OffloadFile : public OwningBinary<OffloadBinary> {
 public:
+  /// An ordered pair of the target triple and the architecture.
   using TargetID = std::pair<StringRef, StringRef>;
 
   OffloadFile(std::unique_ptr<OffloadBinary> Binary,
               std::unique_ptr<MemoryBuffer> Buffer)
       : OwningBinary<OffloadBinary>(std::move(Binary), std::move(Buffer)) {}
+
+  Expected<OffloadFile> copy() const {
+    std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBufferCopy(
+        getBinary()->getMemoryBufferRef().getBuffer());
+    auto NewBinaryOrErr = OffloadBinary::create(*Buffer);
+    if (!NewBinaryOrErr)
+      return NewBinaryOrErr.takeError();
+    return OffloadFile(std::move(*NewBinaryOrErr), std::move(Buffer));
+  }
 
   /// We use the Triple and Architecture pair to group linker inputs together.
   /// This conversion function lets us use these inputs in a hash-map.
@@ -168,6 +179,28 @@ public:
     return std::make_pair(getBinary()->getTriple(), getBinary()->getArch());
   }
 };
+
+/// Queries if the target \p LHS is compatible with \p RHS for linking purposes.
+inline bool areTargetsCompatible(const OffloadFile::TargetID LHS,
+                                 const OffloadFile::TargetID RHS) {
+  if (LHS == RHS)
+    return true;
+
+  // If the target is AMD we check the target IDs for compatibility. A target id
+  // is a string conforming to the folowing BNF syntax:
+  //
+  //  target-id ::= '<arch> ( : <feature> ( '+' | '-' ) )*'
+  //
+  // This is used to link mutually compatible architectures together.
+  llvm::Triple T(LHS.first);
+  if (!T.isAMDGPU())
+    return false;
+
+  // The targets are compatible if the architecture is a subset of the other.
+  if (RHS.second.contains(LHS.second))
+    return true;
+  return false;
+}
 
 /// Extracts embedded device offloading code from a memory \p Buffer to a list
 /// of \p Binaries.

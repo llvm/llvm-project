@@ -8692,12 +8692,10 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
       }
     }
 
-    // TODO: We need to pass in the full target-id and handle it properly in the
-    // linker wrapper.
     SmallVector<std::string> Parts{
         "file=" + File.str(),
         "triple=" + TC->getTripleString(),
-        "arch=" + getProcessorFromTargetID(TC->getTriple(), Arch).str(),
+        "arch=" + Arch.str(),
         "kind=" + Kind.str(),
     };
 

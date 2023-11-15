@@ -74,6 +74,9 @@ def wrapper_jobs : Joined<["--"], "wrapper-jobs=">,
 def arch_EQ : Joined<["--"], "arch=">,
   Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<arch>">,
   HelpText<"The device subarchitecture">;
+def full_arch_EQ : Joined<["--"], "full-arch=">,
+  Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<arch>">,
+  HelpText<"The fully qualifier device subarchitecture for AMD's target ID">;
 def triple_EQ : Joined<["--"], "triple=">,
   Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<triple>">,
   HelpText<"The device target triple">;
