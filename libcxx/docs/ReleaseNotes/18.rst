@@ -56,6 +56,9 @@ Improvements and New Features
 - ``std::ranges::count`` is now optimized for ``vector<bool>::iterator``, which
   can lead up to 350x performance improvements.
 
+- ``std::for_each`` has been optimized for segmented iterators like ``std::deque::iterator`` in C++23 and
+  later, which can lead up to 40x performance improvements.
+
 - The library now provides several hardening modes under which common cases of library undefined behavior will be turned
   into a reliable program termination. The ``fast`` hardening mode enables a set of security-critical checks with
   minimal runtime overhead; the ``extensive`` hardening mode additionally enables relatively cheap checks that catch

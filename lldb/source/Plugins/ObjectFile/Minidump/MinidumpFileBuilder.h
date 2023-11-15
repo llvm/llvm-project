@@ -64,7 +64,8 @@ public:
   // failed status.
   lldb_private::Status AddException(const lldb::ProcessSP &process_sp);
   // Add MemoryList stream, containing dumps of important memory segments
-  lldb_private::Status AddMemoryList(const lldb::ProcessSP &process_sp);
+  lldb_private::Status AddMemoryList(const lldb::ProcessSP &process_sp,
+                                     lldb::SaveCoreStyle core_style);
   // Add MiscInfo stream, mainly providing ProcessId
   void AddMiscInfo(const lldb::ProcessSP &process_sp);
   // Add informative files about a Linux process

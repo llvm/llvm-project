@@ -3570,10 +3570,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerFFloor(MI);
   case TargetOpcode::G_INTRINSIC_ROUND:
     return lowerIntrinsicRound(MI);
-  case TargetOpcode::G_INTRINSIC_ROUNDEVEN: {
+  case TargetOpcode::G_FRINT: {
     // Since round even is the assumed rounding mode for unconstrained FP
     // operations, rint and roundeven are the same operation.
-    changeOpcode(MI, TargetOpcode::G_FRINT);
+    changeOpcode(MI, TargetOpcode::G_INTRINSIC_ROUNDEVEN);
     return Legalized;
   }
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
@@ -5942,8 +5942,10 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
       MI.eraseFromParent();
       return Legalized;
     }
+    Observer.changingInstr(MI);
     MI.setDesc(TII.get(TargetOpcode::G_CTPOP));
     MI.getOperand(1).setReg(MIBTmp.getReg(0));
+    Observer.changedInstr(MI);
     return Legalized;
   }
   case TargetOpcode::G_CTPOP: {

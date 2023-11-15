@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --sparsification="enable-gpu-libgen" | FileCheck %s
+// RUN: mlir-opt %s --sparse-gpu-codegen="num-threads=0" | FileCheck %s
 
 #trait_sampled_dense_dense = {
   indexing_maps = [

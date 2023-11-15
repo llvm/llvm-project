@@ -24,6 +24,18 @@
 namespace clang {
 namespace format {
 
+static bool mustBreakAfterAttributes(const FormatToken &Tok,
+                                     const FormatStyle &Style) {
+  switch (Style.BreakAfterAttributes) {
+  case FormatStyle::ABS_Always:
+    return true;
+  case FormatStyle::ABS_Leave:
+    return Tok.NewlinesBefore > 0;
+  default:
+    return false;
+  }
+}
+
 namespace {
 
 /// Returns \c true if the line starts with a token that can start a statement
@@ -961,6 +973,15 @@ private:
   }
 
   bool consumeToken() {
+    if (Style.isCpp()) {
+      const auto *Prev = CurrentToken->getPreviousNonComment();
+      if (Prev && Prev->is(tok::r_square) && Prev->is(TT_AttributeSquare) &&
+          CurrentToken->isOneOf(tok::kw_if, tok::kw_switch, tok::kw_case,
+                                tok::kw_default, tok::kw_for, tok::kw_while) &&
+          mustBreakAfterAttributes(*CurrentToken, Style)) {
+        CurrentToken->MustBreakBefore = true;
+      }
+    }
     FormatToken *Tok = CurrentToken;
     next();
     // In Verilog primitives' state tables, `:`, `?`, and `-` aren't normal
@@ -2225,8 +2246,9 @@ private:
              PreviousNotConst->MatchingParen->Previous->isNot(tok::kw_template);
     }
 
-    if (PreviousNotConst->is(tok::r_paren) &&
-        PreviousNotConst->is(TT_TypeDeclarationParen)) {
+    if ((PreviousNotConst->is(tok::r_paren) &&
+         PreviousNotConst->is(TT_TypeDeclarationParen)) ||
+        PreviousNotConst->is(TT_AttributeRParen)) {
       return true;
     }
 
@@ -3418,18 +3440,6 @@ bool TokenAnnotator::mustBreakForReturnType(const AnnotatedLine &Line) const {
   }
 
   return false;
-}
-
-static bool mustBreakAfterAttributes(const FormatToken &Tok,
-                                     const FormatStyle &Style) {
-  switch (Style.BreakAfterAttributes) {
-  case FormatStyle::ABS_Always:
-    return true;
-  case FormatStyle::ABS_Leave:
-    return Tok.NewlinesBefore > 0;
-  default:
-    return false;
-  }
 }
 
 void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {

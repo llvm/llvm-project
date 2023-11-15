@@ -796,6 +796,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FTRUNC, MVT::f80, Expand);
     setOperationAction(ISD::FRINT,  MVT::f80, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::f80, Expand);
+    setOperationAction(ISD::FROUNDEVEN, MVT::f80, Expand);
     setOperationAction(ISD::FMA, MVT::f80, Expand);
     setOperationAction(ISD::LROUND, MVT::f80, Expand);
     setOperationAction(ISD::LLROUND, MVT::f80, Expand);
@@ -929,6 +930,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FTRUNC, VT, Expand);
     setOperationAction(ISD::FRINT, VT, Expand);
     setOperationAction(ISD::FNEARBYINT, VT, Expand);
+    setOperationAction(ISD::FROUNDEVEN, VT, Expand);
     setOperationAction(ISD::SMUL_LOHI, VT, Expand);
     setOperationAction(ISD::MULHS, VT, Expand);
     setOperationAction(ISD::UMUL_LOHI, VT, Expand);
@@ -2111,6 +2113,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FRINT,       VT, Legal);
       setOperationAction(ISD::FNEARBYINT,         VT, Legal);
       setOperationAction(ISD::STRICT_FNEARBYINT,  VT, Legal);
+      setOperationAction(ISD::FROUNDEVEN, VT, Legal);
+      setOperationAction(ISD::STRICT_FROUNDEVEN, VT, Legal);
 
       setOperationAction(ISD::FROUND,             VT, Custom);
 
@@ -43708,6 +43712,7 @@ static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG,
   case ISD::FCEIL:
   case ISD::FTRUNC:
   case ISD::FNEARBYINT:
+  case ISD::FROUNDEVEN:
   case ISD::FROUND:
   case ISD::FFLOOR:
   case X86ISD::FRCP:
@@ -49785,25 +49790,47 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // If we also broadcast this as a subvector to a wider type, then just extract
-  // the lowest subvector.
+  // If we also broadcast this to a wider type, then just extract the lowest
+  // subvector.
   if (Ext == ISD::NON_EXTLOAD && Subtarget.hasAVX() && Ld->isSimple() &&
       (RegVT.is128BitVector() || RegVT.is256BitVector())) {
     SDValue Ptr = Ld->getBasePtr();
     SDValue Chain = Ld->getChain();
-    for (SDNode *User : Ptr->uses()) {
-      if (User != N && User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
-          cast<MemIntrinsicSDNode>(User)->getBasePtr() == Ptr &&
+    for (SDNode *User : Chain->uses()) {
+      if (User != N &&
+          (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
+           User->getOpcode() == X86ISD::VBROADCAST_LOAD) &&
           cast<MemIntrinsicSDNode>(User)->getChain() == Chain &&
-          cast<MemIntrinsicSDNode>(User)->getMemoryVT().getSizeInBits() ==
-              MemVT.getSizeInBits() &&
           !User->hasAnyUseOfValue(1) &&
           User->getValueSizeInBits(0).getFixedValue() >
               RegVT.getFixedSizeInBits()) {
-        SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
-                                           RegVT.getSizeInBits());
-        Extract = DAG.getBitcast(RegVT, Extract);
-        return DCI.CombineTo(N, Extract, SDValue(User, 1));
+        if (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
+            cast<MemIntrinsicSDNode>(User)->getBasePtr() == Ptr &&
+            cast<MemIntrinsicSDNode>(User)->getMemoryVT().getSizeInBits() ==
+                MemVT.getSizeInBits()) {
+          SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
+                                             RegVT.getSizeInBits());
+          Extract = DAG.getBitcast(RegVT, Extract);
+          return DCI.CombineTo(N, Extract, SDValue(User, 1));
+        }
+        if (User->getOpcode() == X86ISD::VBROADCAST_LOAD &&
+            getTargetConstantFromBasePtr(Ptr)) {
+          // See if we are loading a constant that has also been broadcast.
+          APInt Undefs, UserUndefs;
+          SmallVector<APInt> Bits, UserBits;
+          if (getTargetConstantBitsFromNode(SDValue(N, 0), 8, Undefs, Bits) &&
+              getTargetConstantBitsFromNode(SDValue(User, 0), 8, UserUndefs,
+                                            UserBits)) {
+            UserUndefs = UserUndefs.trunc(Undefs.getBitWidth());
+            UserBits.truncate(Bits.size());
+            if (Bits == UserBits && UserUndefs.isSubsetOf(Undefs)) {
+              SDValue Extract = extractSubVector(
+                  SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
+              Extract = DAG.getBitcast(RegVT, Extract);
+              return DCI.CombineTo(N, Extract, SDValue(User, 1));
+            }
+          }
+        }
       }
     }
   }

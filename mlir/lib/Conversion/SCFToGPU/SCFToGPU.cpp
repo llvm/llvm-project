@@ -318,7 +318,7 @@ static Value deriveStaticUpperBound(Value upperBound,
 
   if (auto minOp = upperBound.getDefiningOp<AffineMinOp>()) {
     for (const AffineExpr &result : minOp.getMap().getResults()) {
-      if (auto constExpr = result.dyn_cast<AffineConstantExpr>()) {
+      if (auto constExpr = dyn_cast<AffineConstantExpr>(result)) {
         return rewriter.create<arith::ConstantIndexOp>(minOp.getLoc(),
                                                        constExpr.getValue());
       }

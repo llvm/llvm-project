@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s --linalg-generalize-named-ops \
-// RUN:             --sparsification="enable-gpu-libgen" | FileCheck %s
+// RUN: mlir-opt %s --linalg-generalize-named-ops --sparse-gpu-codegen="num-threads=0" | FileCheck %s
 
 #SortedCOO = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
