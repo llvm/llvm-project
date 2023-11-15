@@ -22,6 +22,8 @@ for parameterized derived types.
 
 The constraints are implemented and tested in flang.
 
+## The two types of PDTs
+
 ### PDT with kind type parameter
 
 PDTs with kind type parameter are already implemented in flang. Since the kind
@@ -394,8 +396,8 @@ expression would then reference the new name.
 type t1(n, m)
   integer, len :: n = 2
   integer, len :: m = 4
-  integer, len :: _t1_n_m = 8 ! hidden extra length type parameter
-  real :: data(_t1_n_m)
+  integer, len :: t1_n_m_ = 8 ! hidden extra length type parameter
+  real :: data(t1_n_m_)
 end type
 ```
 
@@ -825,7 +827,7 @@ parameters are in it.
 The operations will be updated if needed during the implementation of the
 chosen solution.
 
-#### `fir.alloca`
+### `fir.alloca`
 
 This primitive operation is used to allocate an object on the stack. When
 allocating a PDT, the length type parameters are passed to the
@@ -838,7 +840,7 @@ operation so its size can be computed accordingly.
 // %i is the ssa value of the length type parameter
 ```
 
-#### `fir.allocmem`
+### `fir.allocmem`
 
 This operation is used to create a heap memory reference suitable for storing a
 value of the given type. When creating a PDT, the length type parameters are
@@ -852,7 +854,7 @@ passed so the size can be computed accordingly.
 fir.freemem %0 : !fir.type<_QMmod1Tpdt{i:i32,data:!fir.array<?xf32>}>
 ```
 
-#### `fir.embox`
+### `fir.embox`
 
 The `fir.embox` operation create a boxed reference value. In the case of PDTs
 the length type parameters can be passed as well to the operation.
@@ -885,7 +887,7 @@ func.func @_QMpdt_initPlocal() {
 }
 ```
 
-#### `fir.field_index`
+### `fir.field_index`
 
 The `fir.field_index` operation is used to generate a field offset value from
 a field identifier in a derived-type. The operation takes length type parameter
@@ -900,7 +902,7 @@ values with a PDT so it can compute a correct offset.
 return %3
 ```
 
-#### `fir.len_param_index`
+### `fir.len_param_index`
 
 This operation is used to get the length type parameter offset in from a PDT.
 
@@ -914,7 +916,7 @@ func.func @_QPpdt_len_value(%arg0: !fir.box<!fir.type<t1{l:i32,!fir.array<?xi32>
 }
 ```
 
-#### `fir.save_result`
+### `fir.save_result`
 
 Save the result of a function returning an array, box, or record type value into
 a memory location given the shape and LEN parameters of the result. Length type
@@ -931,7 +933,7 @@ func.func @return_pdt(%buffer: !fir.ref<!fir.type<t2(l1:i32,l2:i32){x:f32}>>) {
 }
 ```
 
-#### `fir.array_*` operations
+### `fir.array_*` operations
 
 The current design of the different `fir.array_*` operations include length type
 parameters operands. This is designed to use PDT without descriptor directly in
