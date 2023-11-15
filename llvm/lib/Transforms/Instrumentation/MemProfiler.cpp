@@ -182,6 +182,7 @@ public:
     C = &(M.getContext());
     LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
+    PtrTy = PointerType::getUnqual(*C);
   }
 
   /// If it is an interesting memory access, populate information
@@ -209,6 +210,7 @@ private:
   LLVMContext *C;
   int LongSize;
   Type *IntptrTy;
+  PointerType *PtrTy;
   ShadowMapping Mapping;
 
   // These arrays is indexed by AccessIsWrite
@@ -267,15 +269,13 @@ Value *MemProfiler::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
 void MemProfiler::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> IRB(MI);
   if (isa<MemTransferInst>(MI)) {
-    IRB.CreateCall(
-        isa<MemMoveInst>(MI) ? MemProfMemmove : MemProfMemcpy,
-        {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
-         IRB.CreatePointerCast(MI->getOperand(1), IRB.getInt8PtrTy()),
-         IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
+    IRB.CreateCall(isa<MemMoveInst>(MI) ? MemProfMemmove : MemProfMemcpy,
+                   {MI->getOperand(0), MI->getOperand(1),
+                    IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
   } else if (isa<MemSetInst>(MI)) {
     IRB.CreateCall(
         MemProfMemset,
-        {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
+        {MI->getOperand(0),
          IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
          IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
   }
@@ -519,14 +519,12 @@ void MemProfiler::initializeCallbacks(Module &M) {
                               FunctionType::get(IRB.getVoidTy(), Args1, false));
   }
   MemProfMemmove = M.getOrInsertFunction(
-      ClMemoryAccessCallbackPrefix + "memmove", IRB.getInt8PtrTy(),
-      IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy);
+      ClMemoryAccessCallbackPrefix + "memmove", PtrTy, PtrTy, PtrTy, IntptrTy);
   MemProfMemcpy = M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + "memcpy",
-                                        IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                                        IRB.getInt8PtrTy(), IntptrTy);
-  MemProfMemset = M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + "memset",
-                                        IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                                        IRB.getInt32Ty(), IntptrTy);
+                                        PtrTy, PtrTy, PtrTy, IntptrTy);
+  MemProfMemset =
+      M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + "memset", PtrTy,
+                            PtrTy, IRB.getInt32Ty(), IntptrTy);
 }
 
 bool MemProfiler::maybeInsertMemProfInitAtFunctionEntry(Function &F) {

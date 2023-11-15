@@ -671,13 +671,13 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   Ind->getOperandBundlesAsDefs(OpBundles);
   if (!IsMemOpSize) {
     Value *Args[3] = {Ind->getTargetValue(),
-                      Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
+                      Builder.CreateBitCast(DataVar, Builder.getPtrTy()),
                       Builder.getInt32(Index)};
     Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI), Args,
                               OpBundles);
   } else {
     Value *Args[3] = {Ind->getTargetValue(),
-                      Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
+                      Builder.CreateBitCast(DataVar, Builder.getPtrTy()),
                       Builder.getInt32(Index)};
     Call = Builder.CreateCall(
         getOrInsertValueProfilingCall(*M, *TLI, ValueProfilingCallType::MemOp),
