@@ -405,6 +405,12 @@ def FeatureBF16TransInsts : SubtargetFeature<"bf16-trans-insts",
   "Has bf16 transcendental instructions"
 >;
 
+def FeatureBF16ConversionInsts : SubtargetFeature<"bf16-cvt-insts",
+  "HasBF16ConversionInsts",
+  "true",
+  "Has bf16 conversion instructions"
+>;
+
 def FeatureVOP3P : SubtargetFeature<"vop3p",
   "HasVOP3PInsts",
   "true",
@@ -1592,6 +1598,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureBitOp3Insts,
    FeatureTanhInsts,
    FeatureBF16TransInsts,
+   FeatureBF16ConversionInsts,
    FeaturePrngInst,
    FeatureSupportsSRAMECC]>;
 
@@ -1961,6 +1968,9 @@ def UseFakeTrue16Insts : Predicate<"Subtarget->hasTrue16BitInsts() && "
 
 def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
   AssemblerPredicate<(all_of FeatureBF16TransInsts)>;
+
+def HasBF16ConversionInsts : Predicate<"Subtarget->hasBF16ConversionInsts()">,
+  AssemblerPredicate<(all_of FeatureBF16ConversionInsts)>;
 
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;

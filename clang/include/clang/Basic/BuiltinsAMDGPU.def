@@ -520,5 +520,7 @@ TARGET_BUILTIN(__builtin_amdgcn_exp_bf16, "ss", "nc", "bf16-trans-insts")
 TARGET_BUILTIN(__builtin_amdgcn_sin_bf16, "ss", "nc", "bf16-trans-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cos_bf16, "ss", "nc", "bf16-trans-insts")
 
+TARGET_BUILTIN(__builtin_amdgcn_cvt_f32_bf16, "fs", "nc", "bf16-cvt-insts")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN

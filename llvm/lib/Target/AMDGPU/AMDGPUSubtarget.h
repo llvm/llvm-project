@@ -52,6 +52,7 @@ protected:
   bool HasTrue16BitInsts = false;
   bool EnableRealTrue16Insts = false;
   bool HasBF16TransInsts = false;
+  bool HasBF16ConversionInsts = false;
   bool HasMadMixInsts = false;
   bool HasMadMacF32Insts = false;
   bool HasDsSrc2Insts = false;
@@ -169,6 +170,10 @@ public:
 
   bool hasBF16TransInsts() const {
     return HasBF16TransInsts;
+  }
+
+  bool hasBF16ConversionInsts() const {
+    return HasBF16ConversionInsts;
   }
 
   bool hasMadMixInsts() const {

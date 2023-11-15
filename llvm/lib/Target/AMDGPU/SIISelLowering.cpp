@@ -12598,6 +12598,7 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
     case Intrinsic::amdgcn_exp_bf16:
     case Intrinsic::amdgcn_sin_bf16:
     case Intrinsic::amdgcn_cos_bf16:
+    case Intrinsic::amdgcn_cvt_f32_bf16:
       return true;
     default:
       break;

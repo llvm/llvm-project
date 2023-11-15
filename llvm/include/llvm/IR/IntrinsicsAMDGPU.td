@@ -578,6 +578,10 @@ def int_amdgcn_exp_bf16  : AMDGPUBF16UnaryIntrinsic<"exp">;
 def int_amdgcn_sin_bf16  : AMDGPUBF16UnaryIntrinsic<"sin">;
 def int_amdgcn_cos_bf16  : AMDGPUBF16UnaryIntrinsic<"cos">;
 
+def int_amdgcn_cvt_f32_bf16 : DefaultAttrsIntrinsic<
+  [llvm_float_ty], [llvm_i16_ty], [IntrNoMem, IntrSpeculatable]
+>, ClangBuiltin<"__builtin_amdgcn_cvt_f32_bf16">;
+
 def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
   [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
