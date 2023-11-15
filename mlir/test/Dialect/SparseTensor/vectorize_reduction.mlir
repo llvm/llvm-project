@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -sparsification -cse -sparse-vectorization="vl=8" -cse -split-input-file | \
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification -cse -sparse-vectorization="vl=8" -cse -split-input-file | \
 // RUN:   FileCheck %s --check-prefix=CHECK-ON
-// RUN: mlir-opt %s -sparsification -cse -split-input-file | \
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification -cse -split-input-file | \
 // RUN:   FileCheck %s --check-prefix=CHECK-OFF
 
 // -----

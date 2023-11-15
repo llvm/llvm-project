@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification | FileCheck %s
 
 //
 // A SDDMM implementation with "spy" function and

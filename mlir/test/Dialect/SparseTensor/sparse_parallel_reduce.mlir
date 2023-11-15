@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification="parallelization-strategy=any-storage-any-loop" | \
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification="parallelization-strategy=any-storage-any-loop" | \
 // RUN:   FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{

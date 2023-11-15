@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s  --pre-sparsification-rewrite --sparsification --cse | FileCheck %s
+// RUN: mlir-opt %s --pre-sparsification-rewrite --sparse-reinterpret-map --sparsification --cse | FileCheck %s
 
 #SM = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 

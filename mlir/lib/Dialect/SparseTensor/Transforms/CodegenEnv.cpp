@@ -57,7 +57,11 @@ CodegenEnv::CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
       loopEmitter(), topSort(), sparseOut(nullptr), outerParNest(-1u),
       insChain(), expValues(), expFilled(), expAdded(), expCount(), redVal(),
       redExp(detail::kInvalidId), redCustom(detail::kInvalidId),
-      redValidLexInsert() {}
+      redValidLexInsert() {
+  // TODO: remove topSort, loops should be already sorted by previous pass.
+  for (unsigned l = 0; l < latticeMerger.getNumLoops(); l++)
+    topSort.push_back(l);
+}
 
 LogicalResult CodegenEnv::initTensorExp() {
   // Builds the tensor expression for the Linalg operation in SSA form.
@@ -181,36 +185,23 @@ bool CodegenEnv::isAdmissibleTensorExp(ExprId exp) {
   // Accept "truly dynamic" if the output tensor materializes uninitialized
   // into the computation and insertions occur in lexicographic index order.
   sparseOut = lhs;
-  return isMaterializing(lhs->get());
-}
 
-bool CodegenEnv::isAdmissibleTopoOrder() {
-  if (!hasSparseOutput())
-    return true;
-
-  OpOperand *lhs = linalgOp.getDpsInitOperand(0);
-  // Accept "truly dynamic" if the output tensor materializes uninitialized
-  // into the computation and insertions occur in lexicographic index order.
-  LoopOrd nest = 0;
+  // Find the outermost parallel nest to determine whether compress/expand is
+  // needed.
+  outerParNest = 0;
   const auto iteratorTypes = linalgOp.getIteratorTypesArray();
   assert(topSortSize() == latticeMerger.getNumLoops());
   for (const LoopId i : topSort) {
-    if (!latticeMerger.isFilterLoop(i)) {
-      // We only count non-filter loops as filter loops should be considered
-      // a special type of parallel loops.
-      if (linalg::isReductionIterator(iteratorTypes[i]))
-        break; // terminate at first reduction
-      nest++;
-    }
+    if (linalg::isReductionIterator(iteratorTypes[i]))
+      break; // terminate at first reduction
+    outerParNest++;
   }
-  // Determine admissible dynamic insertion situations:
-  // (1) fully injective, since there are no reductions,
-  // (2) admissible 1-d expansion in innermost dimension.
-  if (static_cast<int64_t>(nest) >= linalgOp.getRank(lhs) - 1) {
-    outerParNest = nest;
-    return true;
-  }
-  return false;
+
+  // Inadmissible kernel should have already been rejected by the previous
+  // path during loop scheduling.
+  assert(static_cast<int64_t>(outerParNest) >=
+         linalgOp.getRank(linalgOp.getDpsInitOperand(0)) - 1);
+  return isMaterializing(lhs->get());
 }
 
 //===----------------------------------------------------------------------===//

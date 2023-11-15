@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification -cse | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification -cse | FileCheck %s
 
 #Dense = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : dense, d1 : dense)
