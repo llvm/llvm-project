@@ -1829,13 +1829,14 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           if (!wp_resource_sp) {
             Log *log(GetLog(GDBRLog::Watchpoints));
             LLDB_LOGF(log, "failed to find watchpoint");
-            abort(); // LWP_TODO FIXME don't continue executing this block if
-                     // we don't get a resource.
+            watch_id = LLDB_INVALID_SITE_ID;
+          } else {
+            // LWP_TODO: This is hardcoding a single Watchpoint in a
+            // Resource, need to add
+            // StopInfo::CreateStopReasonWithWatchpointResource which
+            // represents all watchpoints that were tripped at this stop.
+            watch_id = wp_resource_sp->GetConstituentAtIndex(0)->GetID();
           }
-          // LWP_TODO: This is hardcoding a single Watchpoint in a
-          // Resource, need to add
-          // StopInfo::CreateStopReasonWithWatchpointResource
-          watch_id = wp_resource_sp->GetConstituentAtIndex(0)->GetID();
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithWatchpointID(
               *thread_sp, watch_id, silently_continue));
           handled = true;

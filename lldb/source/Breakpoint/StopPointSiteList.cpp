@@ -27,9 +27,6 @@ StopPointSiteList<StopPointSite>::Add(const StopPointSiteSP &site) {
   typename collection::iterator iter = m_site_list.find(site_load_addr);
 
   if (iter == m_site_list.end()) {
-#if 0
-    m_site_list.insert(iter, collection::value_type(site_load_addr, site));
-#endif
     m_site_list[site_load_addr] = site;
     return site->GetID();
   } else {
@@ -40,8 +37,7 @@ StopPointSiteList<StopPointSite>::Add(const StopPointSiteSP &site) {
 template <typename StopPointSite>
 bool StopPointSiteList<StopPointSite>::ShouldStop(
     StoppointCallbackContext *context, typename StopPointSite::SiteID site_id) {
-  StopPointSiteSP site_sp(FindByID(site_id));
-  if (site_sp) {
+  if (StopPointSiteSP site_sp = FindByID(site_id)) {
     // Let the site decide if it should stop here (could not have
     // reached it's target hit count yet, or it could have a callback that
     // decided it shouldn't stop (shared library loads/unloads).
@@ -164,7 +160,6 @@ bool StopPointSiteList<BreakpointSite>::StopPointSiteContainsBreakpoint(
 template <typename StopPointSite>
 void StopPointSiteList<StopPointSite>::Dump(Stream *s) const {
   s->Printf("%p: ", static_cast<const void *>(this));
-  // s->Indent();
   s->Printf("StopPointSiteList with %u ConstituentSites:\n",
             (uint32_t)m_site_list.size());
   s->IndentMore();
@@ -209,9 +204,8 @@ bool StopPointSiteList<StopPointSite>::FindInRange(
 
   upper = m_site_list.upper_bound(upper_bound);
 
-  for (pos = lower; pos != upper; pos++) {
+  for (pos = lower; pos != upper; pos++)
     site_list.Add((*pos).second);
-  }
   return true;
 }
 
