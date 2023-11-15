@@ -127,7 +127,7 @@ int main(int Argc, char **Argv) {
   for (opt::Arg *A : Args.filtered(OPT_INPUT))
     Ctx.Inputs.push_back(A->getValue());
 
-  if (opt::Arg *A = Args.getLastArg(OPT_output)) {
+  if (opt::Arg *A = Args.getLastArg(OPT_output_EQ)) {
     std::string OutputLoc = std::move(A->getValue());
     std::error_code EC;
     Ctx.OutStream = std::make_unique<llvm::raw_fd_stream>(OutputLoc, EC);
