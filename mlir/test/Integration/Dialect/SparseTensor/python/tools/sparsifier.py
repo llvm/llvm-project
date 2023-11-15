@@ -11,7 +11,7 @@ from typing import Sequence
 
 
 class Sparsifier:
-    """sparsifier class for compiling and building MLIR modules."""
+    """Sparsifier class for compiling and building MLIR modules."""
 
     def __init__(self, options: str, opt_level: int, shared_libs: Sequence[str]):
         pipeline = f"builtin.module(sparsifier{{{options} reassociate-fp-reductions=1 enable-index-optimizations=1}})"
