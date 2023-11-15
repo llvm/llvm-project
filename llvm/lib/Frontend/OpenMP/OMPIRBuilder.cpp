@@ -4566,6 +4566,10 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
+  // Disable TargetData CodeGen on Device pass.
+  if (Config.IsTargetDevice.value_or(false))
+    return Builder.saveIP();
+
   Builder.restoreIP(CodeGenIP);
   bool IsStandAlone = !BodyGenCB;
   MapInfosTy *MapInfo;
