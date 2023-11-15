@@ -129,7 +129,13 @@ protected:
 
   /// Classifies a type.
   std::optional<PrimType> classify(const Expr *E) const {
-    return E->isGLValue() ? PT_Ptr : classify(E->getType());
+    if (E->isGLValue()) {
+      if (E->getType()->isFunctionType())
+        return PT_FnPtr;
+      return PT_Ptr;
+    }
+
+    return classify(E->getType());
   }
   std::optional<PrimType> classify(QualType Ty) const {
     return Ctx.classify(Ty);
