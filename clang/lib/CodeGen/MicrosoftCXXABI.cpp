@@ -1778,11 +1778,9 @@ llvm::Value *MicrosoftCXXABI::getVTableAddressPointInStructor(
 
 static void mangleVFTableName(MicrosoftMangleContext &MangleContext,
                               const CXXRecordDecl *RD, const VPtrInfo &VFPtr,
-                              SmallString<256> &Name,
-                              bool IsLocalVFTAliasReq = false) {
+                              SmallString<256> &Name) {
   llvm::raw_svector_ostream Out(Name);
-  MangleContext.mangleCXXVFTable(RD, VFPtr.MangledPath, Out,
-                                 IsLocalVFTAliasReq);
+  MangleContext.mangleCXXVFTable(RD, VFPtr.MangledPath, Out);
 }
 
 llvm::Constant *
@@ -1846,6 +1844,9 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   }
   const std::unique_ptr<VPtrInfo> &VFPtr = *VFPtrI;
 
+  SmallString<256> VFTableName;
+  mangleVFTableName(getMangleContext(), RD, *VFPtr, VFTableName);
+
   // Classes marked __declspec(dllimport) need vftables generated on the
   // import-side in order to support features like constexpr.  No other
   // translation unit relies on the emission of the local vftable, translation
@@ -1862,12 +1863,6 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   bool VTableAliasIsRequred =
       !VFTableComesFromAnotherTU && getContext().getLangOpts().RTTIData;
 
-  bool IsLocalVFTAliasReq =
-      llvm::GlobalValue::isLocalLinkage(VFTableLinkage) && VTableAliasIsRequred;
-
-  SmallString<256> VFTableName;
-  mangleVFTableName(getMangleContext(), RD, *VFPtr, VFTableName,
-                    IsLocalVFTAliasReq);
   if (llvm::GlobalValue *VFTable =
           CGM.getModule().getNamedGlobal(VFTableName)) {
     VFTablesMap[ID] = VFTable;
@@ -1897,9 +1892,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
 
   llvm::Comdat *C = nullptr;
   if (!VFTableComesFromAnotherTU &&
-      (llvm::GlobalValue::isWeakForLinker(VFTableLinkage) ||
-       (llvm::GlobalValue::isLocalLinkage(VFTableLinkage) &&
-        VTableAliasIsRequred)))
+      llvm::GlobalValue::isWeakForLinker(VFTableLinkage))
     C = CGM.getModule().getOrInsertComdat(VFTableName.str());
 
   // Only insert a pointer into the VFTable for RTTI data if we are not

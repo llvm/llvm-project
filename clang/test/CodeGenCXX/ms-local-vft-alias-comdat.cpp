@@ -25,7 +25,6 @@ struct ah {
   ah(s);
 } a([]{});
 
-//CHECK: "??_7?$T@V
-//CHECK-SAME: <lambda_[[UNIQ:.*]]_0>
-//CHECK-NOT: <lambda_0>
-//CHECK-SAME: @@@@6B@"
+//CHECK: @0 = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4?$T@V<lambda_0>@@@@6B@", ptr @"?c@?$T@V<lambda_0>@@@@UEAAXXZ"] }
+//CHECK: @"??_7?$T@V<lambda_0>@@@@6B@" = internal unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr @0, i32 0, i32 0, i32 1)
+//CHECK-NOT : "??_7?$e@V<lambda_0>@@@@6B@" = comdat any
