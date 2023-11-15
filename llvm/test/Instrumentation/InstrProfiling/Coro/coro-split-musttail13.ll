@@ -1,14 +1,13 @@
-; Tests that coro-split will convert a call before coro.suspend to a musttail call
-; while the user of the coro.suspend is a icmpinst.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; Tests that instrumentation doesn't interfere with lowering (coro-split).
+; It should convert coro.resume followed by a suspend to a musttail call.
+
 ; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define void @fakeresume1(ptr)  {
-entry:
-  ret void;
-}
+declare void @fakeresume1(ptr)
+declare void @may_throw(ptr)
+declare void @print()
 
-define void @f() #0 {
+define void @f(i1 %cond) #0 personality i32 3 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
@@ -22,9 +21,12 @@ entry:
     i8 1, label %coro.end
   ]
 await.ready:
-  %save2 = call token @llvm.coro.save(ptr null)
-
   call fastcc void @fakeresume1(ptr align 8 null)
+  invoke void @may_throw(ptr null)
+    to label %ready unwind label %lpad
+
+ready:
+  %save2 = call token @llvm.coro.save(ptr null)
   %suspend = call i8 @llvm.coro.suspend(token %save2, i1 true)
   %switch = icmp ult i8 %suspend, 2
   br i1 %switch, label %cleanup, label %coro.end
@@ -33,6 +35,13 @@ cleanup:
   %free.handle = call ptr @llvm.coro.free(token %id, ptr %vFrame)
   %.not = icmp eq ptr %free.handle, null
   br i1 %.not, label %coro.end, label %coro.free
+
+lpad:
+  %lpval = landingpad { ptr, i32 }
+     cleanup
+
+  %need.resume = call i1 @llvm.coro.end(ptr null, i1 true, token none)
+  resume { ptr, i32 } %lpval
 
 coro.free:
   call void @delete(ptr nonnull %free.handle) #2
@@ -44,8 +53,9 @@ coro.end:
 }
 
 ; CHECK-LABEL: @f.resume(
-; CHECK:          musttail call fastcc void @fakeresume1(
-; CHECK-NEXT:     ret void
+; CHECK-NOT:          musttail call fastcc void @fakeresume1(
+; CHECK:     }
+
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
 declare i1 @llvm.coro.alloc(token) #2
