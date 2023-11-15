@@ -427,14 +427,14 @@ define void @test_call_local() {
   ; RV32I-LABEL: name: test_call_local
   ; RV32I: bb.1.entry:
   ; RV32I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @dso_local_function, csr_ilp32_lp64, implicit-def $x1
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-plt) @dso_local_function, csr_ilp32_lp64, implicit-def $x1
   ; RV32I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32I-NEXT:   PseudoRET
   ;
   ; RV64I-LABEL: name: test_call_local
   ; RV64I: bb.1.entry:
   ; RV64I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @dso_local_function, csr_ilp32_lp64, implicit-def $x1
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-plt) @dso_local_function, csr_ilp32_lp64, implicit-def $x1
   ; RV64I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   PseudoRET
 entry:
