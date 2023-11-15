@@ -827,7 +827,10 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
           ExpressionChangedStart->setFastMathFlags(Flags);
         } else {
           ExpressionChangedStart->clearSubclassOptionalData();
-          if (HasNUW && isa<OverflowingBinaryOperator>(ExpressionChangedStart))
+          // Note that it doesn't hold for mul if one of the operands is zero.
+          // TODO: We can preserve NUW flag if we prove that all mul operands
+          // are non-zero.
+          if (HasNUW && ExpressionChangedStart->getOpcode() == Instruction::Add)
             ExpressionChangedStart->setHasNoUnsignedWrap();
         }
       }
