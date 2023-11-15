@@ -59,6 +59,33 @@ tileToForallOpImpl(RewriterBase &rewriter, transform::TransformState &state,
                    std::optional<ArrayAttr> mapping,
                    linalg::ForallTilingResult &tilingResult);
 
+/// Find the first "extract" user of `producerOp` and tile it right before its
+/// use. The tiled op is fused under the `containingOp`.
+/// Return this fused op on success or nullptr if anything fails.
+/// If tiled op has uses that are dominated by `containingOp`, return
+/// a new `containingOp` with results of the fused op appended to
+/// results of the `containingOp` or nullptr if there are no dominated uses.
+std::tuple<SmallVector<Operation *>, Operation *>
+tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
+                           Operation *producerOp, Operation *containingOp);
+
+/// First, find the first "scf::ForallOp" user of `producerOp` and ensure
+/// it is exactly the `containingOp`, otherwise bail.
+/// Then, find the first "extract" user of the tied block argument and tile it
+/// right before its "extract" use. The tiled op is fused under the
+/// `containingOp`.
+/// Return this fused op on success or nullptr if anything fails.
+SmallVector<Operation *>
+tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
+    RewriterBase &rewriter, Diagnostic &diag, Operation *producerOp,
+    Operation *containingOp);
+
+/// Find the first use of `producerOp` inside `containingOp` and fuse into
+/// the containing op by cloning the producer. Return nullptr if no such
+/// fusion opportunity exists.
+Operation *cloneAndFuseFirstUse(RewriterBase &rewriter, Diagnostic &diag,
+                                Operation *producerOp, Operation *containingOp);
+
 } // namespace transform
 } // namespace mlir
 
