@@ -305,7 +305,7 @@ func.func @check_scalar_operation(%arg0 : tensor<f32>) -> tensor<f32> {
 // CHECK-LABEL: func @check_scalar_operation
 //   CHECK-NOT:   scf.for
 //       CHECK:   linalg.generic
-//  CHECK-SAME:       __internal_transform__ = "tiled"
+//  CHECK-SAME:       __internal_transform__ = "scalar_op"
 
 // -----
 
@@ -324,4 +324,4 @@ func.func @check_scalar_memref_operation(%arg0 : memref<f32>, %arg1 : memref<f32
 // CHECK-LABEL: func @check_scalar_memref_operation
 //   CHECK-NOT:   scf.for
 //       CHECK:   linalg.generic
-//  CHECK-SAME:       __internal_transform__ = "tiled"
+//  CHECK-SAME:       __internal_transform__ = "scalar_op"

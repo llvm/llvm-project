@@ -128,13 +128,10 @@ static Operation *cloneOpAndUpdateDestinationArgs(RewriterBase &rewriter,
                                                   Operation *op,
                                                   ValueRange newDestArgs) {
   Operation *clonedOp = rewriter.clone(*op);
-  if (newDestArgs.empty()) {
+  if (newDestArgs.empty())
     return clonedOp;
-  }
-  if (auto destinationStyleOp =
-          dyn_cast<DestinationStyleOpInterface>(clonedOp)) {
+  if (auto destinationStyleOp = dyn_cast<DestinationStyleOpInterface>(clonedOp))
     destinationStyleOp.getDpsInitsMutable().assign(newDestArgs);
-  }
   return clonedOp;
 }
 
@@ -150,9 +147,10 @@ static SmallVector<scf::ForOp> generateTileLoopNest(
     OpBuilder &builder, Location loc, ArrayRef<Range> loopRanges,
     ArrayRef<OpFoldResult> tileSizes, SmallVector<OpFoldResult> &offsets,
     SmallVector<OpFoldResult> &sizes, ValueRange destinationTensors = {}) {
-  if (loopRanges.empty()) {
+  if (loopRanges.empty())
     return {};
-  }
+  assert(loopRanges.size() == tileSizes.size() &&
+         "expected as many tile sizes as loop ranges");
   OpBuilder::InsertionGuard guard(builder);
   SmallVector<scf::ForOp> loops;
   offsets.resize(loopRanges.size());
@@ -209,9 +207,8 @@ static void addInitOperandsToLoopNest(
                                           ValueRange newRegionIterArgs)>
         getNewYieldValsFn) {
   SmallVector<scf::ForOp> newLoops;
-  if (loops.empty()) {
+  if (loops.empty())
     return;
-  }
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(loops.front());
   for (auto &loop : loops) {
@@ -284,7 +281,10 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
   // 1. Get the range of the loops that are represented by the operation.
   SmallVector<Range> iterationDomain = op.getIterationDomain(rewriter);
   size_t numLoops = iterationDomain.size();
-
+  if (numLoops == 0) {
+    return rewriter.notifyMatchFailure(
+        op, "unable to tile op with no iteration domain");
+  }
   // 2. Materialize the tile sizes. Enforce the convention that "tiling by zero"
   // skips tiling a particular dimension. This convention is significantly
   // simpler to handle instead of adjusting affine maps to account for missing
@@ -563,13 +563,12 @@ mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
   // 2a. Compute the destination operands to use for the cloned operation.
   SmallVector<Value> origDestinationTensors, clonedOpDestinationTensors;
   Operation *fusableProducerOp = fusableProducer.getOwner();
-  if (isa<DestinationStyleOpInterface>(fusableProducerOp)) {
-    if (failed(tensor::getOrCreateDestinations(
-            rewriter, fusableProducerOp->getLoc(), fusableProducerOp,
-            origDestinationTensors))) {
-      return std::nullopt;
-    }
-  }
+  if (isa<DestinationStyleOpInterface>(fusableProducerOp) &&
+      failed(tensor::getOrCreateDestinations(
+          rewriter, fusableProducerOp->getLoc(), fusableProducerOp,
+          origDestinationTensors)))
+    return std::nullopt;
+
   clonedOpDestinationTensors = origDestinationTensors;
   if (destinationInitArg &&
       isa<DestinationStyleOpInterface>(fusableProducerOp)) {
@@ -664,9 +663,9 @@ void mlir::scf::yieldReplacementForFusedProducer(
     RewriterBase &rewriter, tensor::ExtractSliceOp sliceOp,
     scf::SCFFuseProducerOfSliceResult fusedProducerInfo,
     MutableArrayRef<scf::ForOp> loops) {
-  if (loops.empty()) {
+  if (loops.empty())
     return;
-  }
+
   OpResult fusableProducer = fusedProducerInfo.origProducer;
   Value tiledAndFusedProducer = fusedProducerInfo.tiledAndFusedProducer;
   FailureOr<Value> initValue = tensor::getOrCreateDestination(
