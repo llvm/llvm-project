@@ -72,7 +72,7 @@ void fn8(in out float f);
 void fn8(inout float f) {}
 
 // These two declare two different functions (although calling them will be
-// ambiguous). This is equivalent to declaring a functiion that takes a
+// ambiguous). This is equivalent to declaring a function that takes a
 // reference and a function that takes a value of the same type.
 void fn9(in float f);
 void fn9(out float f);
