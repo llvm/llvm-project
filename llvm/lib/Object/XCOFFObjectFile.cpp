@@ -300,8 +300,8 @@ XCOFFObjectFile::getSymbolType(DataRefImpl Symb) const {
   XCOFFSymbolRef XCOFFSym = toSymbolRef(Symb);
 
   Expected<bool> IsFunction = XCOFFSym.isFunction();
-  if (Error E = IsFunction.takeError())
-    return std::move(E);
+  if (!IsFunction)
+    return IsFunction.takeError();
 
   if (*IsFunction)
     return SymbolRef::ST_Function;
@@ -1237,8 +1237,8 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
     return true;
 
   Expected<XCOFFCsectAuxRef> ExpCsectAuxEnt = getXCOFFCsectAuxRef();
-  if (Error E = ExpCsectAuxEnt.takeError())
-    return std::move(E);
+  if (!ExpCsectAuxEnt)
+    return ExpCsectAuxEnt.takeError();
 
   const XCOFFCsectAuxRef CsectAuxRef = ExpCsectAuxEnt.get();
 
@@ -1253,8 +1253,8 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
 
   const int16_t SectNum = getSectionNumber();
   Expected<DataRefImpl> SI = getObject()->getSectionByNum(SectNum);
-  if (Error E = SI.takeError())
-    return std::move(E);
+  if (!SI)
+    return SI.takeError();
 
   return (getObject()->getSectionFlags(SI.get()) & XCOFF::STYP_TEXT);
 }
