@@ -4832,7 +4832,7 @@ SDValue AArch64TargetLowering::getPStateSM(SelectionDAG &DAG, SDValue Chain,
                      Mask);
 }
 
-// Lower an SME LDR/STR ZA intrinsic to LDR_ZA_PSEUDO or STR_ZA.
+// Lower an SME LDR/STR ZA intrinsic
 // Case 1: If the vector number (vecnum) is an immediate in range, it gets
 // folded into the instruction
 //    ldr(%tileslice, %ptr, 11) -> ldr [%tileslice, 11], [%ptr, 11]
@@ -4910,13 +4910,10 @@ SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
     TileSlice = DAG.getNode(ISD::ADD, DL, MVT::i32, {TileSlice, VarAddend});
   }
 
-  SmallVector<SDValue, 4> Ops = {
-      /*Chain=*/N.getOperand(0), TileSlice, Base,
-      DAG.getTargetConstant(ImmAddend, DL, MVT::i32)};
-  auto LdrStr =
-      DAG.getNode(IsLoad ? AArch64ISD::SME_ZA_LDR : AArch64ISD::SME_ZA_STR, DL,
-                  MVT::Other, Ops);
-  return LdrStr;
+  return DAG.getNode(IsLoad ? AArch64ISD::SME_ZA_LDR : AArch64ISD::SME_ZA_STR,
+                     DL, MVT::Other,
+                     {/*Chain=*/N.getOperand(0), TileSlice, Base,
+                      DAG.getTargetConstant(ImmAddend, DL, MVT::i32)});
 }
 
 SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
