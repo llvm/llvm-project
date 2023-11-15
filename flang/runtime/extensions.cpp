@@ -10,24 +10,23 @@
 // extensions that will eventually be implemented in Fortran.
 
 #include "flang/Runtime/extensions.h"
+#include "terminator.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
 #include <ctime>
 
 #ifdef _WIN32
-inline const char *ctime_alloc(
-    char *buffer, size_t bufsize, const time_t cur_time) {
+inline void ctime_alloc(char *buffer, size_t bufsize, const time_t cur_time,
+    Fortran::runtime::Terminator terminator) {
   int error = ctime_s(buffer, bufsize, &cur_time);
-  assert(error == 0 && "ctime_s returned an error");
-  return buffer;
+  RUNTIME_CHECK(terminator, error == 0);
 }
 #else
-inline const char *ctime_alloc(
-    char *buffer, size_t bufsize, const time_t cur_time) {
+inline void ctime_alloc(char *buffer, size_t bufsize, const time_t cur_time,
+    Fortran::runtime::Terminator terminator) {
   const char *res = ctime_r(&cur_time, buffer);
-  assert(res != nullptr && "ctime_s returned an error");
-  return res;
+  RUNTIME_CHECK(terminator, res != nullptr);
 }
 #endif
 
@@ -48,15 +47,23 @@ void FORTRAN_PROCEDURE_NAME(flush)(const int &unit) {
 std::int32_t FORTRAN_PROCEDURE_NAME(iargc)() { return RTNAME(ArgumentCount)(); }
 
 void FORTRAN_PROCEDURE_NAME(fdate)(std::int8_t *arg, std::int64_t length) {
+  std::array<char, 26> str;
+  // If the length is too short to fit completely, blank return.
+  if (length < 24) {
+    str.fill(' ');
+    strncpy(reinterpret_cast<char *>(arg), str.data(), length);
+    return;
+  }
+
+  Terminator terminator{__FILE__, __LINE__};
   std::time_t current_time;
   std::time(&current_time);
-  std::array<char, 26> str;
   // Day Mon dd hh:mm:ss yyyy\n\0 is 26 characters, e.g.
   // Tue May 26 21:51:03 2015\n\0
 
-  ctime_alloc(str.data(), str.size(), current_time);
-  str[24] = '\0'; // remove new line
+  ctime_alloc(str.data(), str.size(), current_time, terminator);
 
+  std::fill(str.begin() + 24, str.begin() + length, ' ');
   strncpy(reinterpret_cast<char *>(arg), str.data(), length);
 }
 
