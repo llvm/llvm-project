@@ -197,9 +197,9 @@ func.func @matmul2(%A: tensor<4x8xf64, #DCSR>,
 
 
 // CHECK-LABEL:   func.func @conv2d(
-// CHECK-SAME:                      %[[VAL_0:.*]]: tensor<8x8xi32>,
-// CHECK-SAME:                      %[[VAL_1:.*]]: tensor<3x3xi32, #sparse_tensor.encoding<{{{.*}}}>>,
-// CHECK-SAME:                      %[[VAL_2:.*]]: tensor<6x6xi32>) -> tensor<6x6xi32> {
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<8x8xi32>,
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<3x3xi32, #sparse_tensor.encoding<{{{.*}}}>>,
+// CHECK-SAME:      %[[VAL_2:.*]]: tensor<6x6xi32>) -> tensor<6x6xi32> {
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 6 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index

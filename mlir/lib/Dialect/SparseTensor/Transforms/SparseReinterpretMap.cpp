@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodegenUtils.h"
-#include "LoopScheduler.h"
+#include "IterationGraphSorter.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -415,7 +415,7 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
     if (linalgOp->hasAttr(sorted))
       return failure();
 
-    auto scheduler = LoopScheduler::fromGenericOp(linalgOp);
+    auto scheduler = IterationGraphSorter::fromGenericOp(linalgOp);
     bool isAdmissible = false;
     AffineMap order;
     // A const list of all masks that we used for iteration graph
@@ -427,7 +427,7 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
         SortMask::kIncludeDenseInput, SortMask::kIncludeDenseOutput,
         SortMask::kIncludeUndef,      SortMask::kSparseOnly};
     for (const SortMask mask : allMasks) {
-      order = scheduler.schedule(mask);
+      order = scheduler.sort(mask);
       if (order) {
         if (isAdmissibleOrder(linalgOp, order)) {
           isAdmissible = true;
@@ -506,7 +506,7 @@ private:
   };
 
   // Last resort cycle resolution.
-  static LogicalResult resolveCycle(LoopScheduler &scheduler,
+  static LogicalResult resolveCycle(IterationGraphSorter &scheduler,
                                     linalg::LinalgOp linalgOp,
                                     PatternRewriter &rewriter) {
     // Compute topological sort while leaving out every sparse input tensor in
@@ -524,7 +524,7 @@ private:
         continue;
 
       // Try scheduling loop without constraints from `tval`.
-      AffineMap order = scheduler.schedule(SortMask::kSparseOnly, tval);
+      AffineMap order = scheduler.sort(SortMask::kSparseOnly, tval);
       if (!order) // still cyclic
         continue;
 

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LoopScheduler.h"
+#include "IterationGraphSorter.h"
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -85,7 +85,7 @@ inline static bool includesDenseOutput(SortMask mask) {
 /// as we use adj matrix for the graph.
 /// The sorted result will put the first Reduction iterator to the
 /// latest possible position.
-AffineMap LoopScheduler::topoSort() {
+AffineMap IterationGraphSorter::topoSort() {
   std::vector<unsigned> redIt; // reduce iterator with 0 degree
   std::vector<unsigned> parIt; // parallel iterator with 0 degree
   const unsigned numLoops = getNumLoops();
@@ -124,7 +124,8 @@ AffineMap LoopScheduler::topoSort() {
   return AffineMap();
 }
 
-LoopScheduler LoopScheduler::fromGenericOp(linalg::GenericOp genericOp) {
+IterationGraphSorter
+IterationGraphSorter::fromGenericOp(linalg::GenericOp genericOp) {
   // Must be a demapped sparse kernel.
   assert(!hasAnyNonIdentityOperandsOrResults(genericOp) &&
          hasAnySparseOperandOrResult(genericOp) &&
@@ -140,14 +141,13 @@ LoopScheduler LoopScheduler::fromGenericOp(linalg::GenericOp genericOp) {
   SmallVector<utils::IteratorType> iterTypes =
       genericOp.getIteratorTypesArray();
 
-  return LoopScheduler(std::move(ins), std::move(loopMap), out, outMap,
-                       std::move(iterTypes));
+  return IterationGraphSorter(std::move(ins), std::move(loopMap), out, outMap,
+                              std::move(iterTypes));
 }
 
-LoopScheduler::LoopScheduler(SmallVector<Value> &&ins,
-                             SmallVector<AffineMap> &&loop2InsLvl, Value out,
-                             AffineMap loop2OutLvl,
-                             SmallVector<utils::IteratorType> &&iterTypes)
+IterationGraphSorter::IterationGraphSorter(
+    SmallVector<Value> &&ins, SmallVector<AffineMap> &&loop2InsLvl, Value out,
+    AffineMap loop2OutLvl, SmallVector<utils::IteratorType> &&iterTypes)
     : ins(std::move(ins)), loop2InsLvl(std::move(loop2InsLvl)), out(out),
       loop2OutLvl(loop2OutLvl), iterTypes(std::move(iterTypes)) {
   // One map per tensor.
@@ -166,7 +166,7 @@ LoopScheduler::LoopScheduler(SmallVector<Value> &&ins,
   inDegree.resize(getNumLoops());
 }
 
-AffineMap LoopScheduler::schedule(SortMask mask, Value ignored) {
+AffineMap IterationGraphSorter::sort(SortMask mask, Value ignored) {
   // Reset the interation graph.
   for (auto &row : itGraph)
     std::fill(row.begin(), row.end(), false);
@@ -191,7 +191,7 @@ AffineMap LoopScheduler::schedule(SortMask mask, Value ignored) {
   return topoSort();
 }
 
-void LoopScheduler::addConstraints(Value t, AffineMap loop2LvlMap) {
+void IterationGraphSorter::addConstraints(Value t, AffineMap loop2LvlMap) {
   auto addIterOrdering = [this](unsigned f, unsigned t) {
     if (!itGraph[f][t] && f != t) {
       itGraph[f][t] = true;
