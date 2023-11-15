@@ -253,49 +253,66 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
 
 }
 
-llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
-  Expected<uint64_t> AddressIndex = getAddressIndex(Addr);
-  if (!AddressIndex)
-    return AddressIndex.takeError();
-  // Address info offsets size should have been checked in parse().
-  assert(*AddressIndex < AddrInfoOffsets.size());
-  auto AddrInfoOffset = AddrInfoOffsets[*AddressIndex];
-  assert(
-      (Endian == llvm::endianness::big || Endian == llvm::endianness::little) &&
-      "Endian must be either big or little");
-  DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset),
-                     Endian == llvm::endianness::little, 4);
-  if (std::optional<uint64_t> OptAddr = getAddress(*AddressIndex)) {
-    auto ExpectedFI = FunctionInfo::decode(Data, *OptAddr);
-    if (ExpectedFI) {
-      if (ExpectedFI->Range.contains(Addr) || ExpectedFI->Range.size() == 0)
-        return ExpectedFI;
+llvm::Expected<DataExtractor>
+GsymReader::getFunctionInfoData(uint64_t Addr, uint64_t &FuncAddr) const {
+  Expected<uint64_t> ExpectedAddrIdx = getAddressIndex(Addr);
+  if (!ExpectedAddrIdx)
+    return ExpectedAddrIdx.takeError();
+  const uint64_t FirstAddrIdx = *ExpectedAddrIdx;
+  std::optional<uint64_t> OptFirstAddr = getAddress(FirstAddrIdx);
+  if (!OptFirstAddr)
+    return createStringError(std::errc::invalid_argument,
+                             "failed to extract address[%" PRIu64 "]",
+                             FirstAddrIdx);
+  // The AddrIdx is the first index of the function info entries that match
+  // \a Addr. We need to iterate over all function info objects that start with
+  // the same address until we find a match.
+  const auto FirstAddr = *OptFirstAddr;
+  const size_t NumAddresses = getNumAddresses();
+  assert((Endian == endianness::big || Endian == endianness::little) &&
+         "Endian must be either big or little");
+  for (uint64_t AddrIdx = FirstAddrIdx; AddrIdx < NumAddresses; ++AddrIdx) {
+    // Extract the function address and make sure it matches FirstAddr
+    std::optional<uint64_t> OptFuncAddr = getAddress(AddrIdx);
+    if (!OptFuncAddr)
       return createStringError(std::errc::invalid_argument,
-                                "address 0x%" PRIx64 " is not in GSYM", Addr);
+                               "failed to extract address[%" PRIu64 "]",
+                               AddrIdx);
+    if (*OptFuncAddr != FirstAddr)
+      break; // Done with consecutive function info entries with same address.
+
+    // Address info offsets size should have been checked in parse().
+    auto AddrInfoOffset = AddrInfoOffsets[AddrIdx];
+    DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset),
+                       Endian == llvm::endianness::little, 4);
+    uint64_t Offset = 0;
+    // Some symbols on Darwin don't have valid sizes. If we run into a symbol
+    // with zero size, then we have found a match.
+    uint32_t FuncSize = Data.getU32(&Offset);
+    if (FuncSize == 0 ||
+        AddressRange(*OptFuncAddr, *OptFuncAddr + FuncSize).contains(Addr)) {
+      FuncAddr = *OptFuncAddr;
+      return Data;
     }
   }
   return createStringError(std::errc::invalid_argument,
-                           "failed to extract address[%" PRIu64 "]",
-                           *AddressIndex);
+                           "address 0x%" PRIx64 " is not in GSYM", Addr);
+}
+
+llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
+  uint64_t FuncAddr = 0;
+  if (auto ExpectedData = getFunctionInfoData(Addr, FuncAddr))
+    return FunctionInfo::decode(*ExpectedData, FuncAddr);
+  else
+    return ExpectedData.takeError();
 }
 
 llvm::Expected<LookupResult> GsymReader::lookup(uint64_t Addr) const {
-  Expected<uint64_t> AddressIndex = getAddressIndex(Addr);
-  if (!AddressIndex)
-    return AddressIndex.takeError();
-  // Address info offsets size should have been checked in parse().
-  assert(*AddressIndex < AddrInfoOffsets.size());
-  auto AddrInfoOffset = AddrInfoOffsets[*AddressIndex];
-  assert(
-      (Endian == llvm::endianness::big || Endian == llvm::endianness::little) &&
-      "Endian must be either big or little");
-  DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset),
-                     Endian == llvm::endianness::little, 4);
-  if (std::optional<uint64_t> OptAddr = getAddress(*AddressIndex))
-    return FunctionInfo::lookup(Data, *this, *OptAddr, Addr);
-  return createStringError(std::errc::invalid_argument,
-                           "failed to extract address[%" PRIu64 "]",
-                           *AddressIndex);
+  uint64_t FuncAddr = 0;
+  if (auto ExpectedData = getFunctionInfoData(Addr, FuncAddr))
+    return FunctionInfo::lookup(*ExpectedData, *this, FuncAddr, Addr);
+  else
+    return ExpectedData.takeError();
 }
 
 void GsymReader::dump(raw_ostream &OS) {

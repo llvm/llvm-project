@@ -266,6 +266,18 @@ protected:
       return std::nullopt;
     if (Iter == End || AddrOffset < *Iter)
       --Iter;
+
+    // GSYM files store the richest information first in the file, so always
+    // backup as much as possible as long as the address offset is the same
+    // as the previous entry.
+    while (Iter != Begin) {
+      auto Prev = Iter - 1;
+      if (*Prev == *Iter)
+        Iter = Prev;
+      else
+        break;
+    }
+
     return std::distance(Begin, Iter);
   }
 
@@ -303,6 +315,28 @@ protected:
   /// \returns An optional GSYM data offset for the offset of the FunctionInfo
   /// that needs to be decoded.
   std::optional<uint64_t> getAddressInfoOffset(size_t Index) const;
+
+  /// Given an address, find the correct function info data and function
+  /// address.
+  ///
+  /// Binary search the address table and find the matching address info
+  /// and make sure that the function info contains the address. GSYM allows
+  /// functions to overlap, and the most debug info in contained in the first
+  /// entries due to the sorting when GSYM files are created. We can have
+  /// multiple function info that start at the same address only if their
+  /// address range doesn't match. So find the first entry that matches \a Addr
+  /// and iiterate forward until we find one that contains the address.
+  ///
+  /// \param[in] Addr A virtual address that matches the original object file
+  /// to lookup.
+  ///
+  /// \param[out] FuncStartAddr A virtual address that is the base address of
+  /// the function that is used for decoding the FunctionInfo.
+  ///
+  /// \returns An valid data extractor on success, or an error if we fail to
+  /// find the address in a function info or corrrectly decode the data
+  llvm::Expected<llvm::DataExtractor>
+  getFunctionInfoData(uint64_t Addr, uint64_t &FuncStartAddr) const;
 };
 
 } // namespace gsym
