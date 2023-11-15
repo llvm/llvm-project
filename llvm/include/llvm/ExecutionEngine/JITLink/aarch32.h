@@ -226,28 +226,30 @@ struct FixupInfo<Thumb_MovwAbsNC> : public FixupInfo<Thumb_MovtAbs> {
 };
 
 /// Helper function to read the initial addend for Data-class relocations.
-Expected<int64_t> readAddendData(LinkGraph &G, Block &B, const Edge &E);
+Expected<int64_t> readAddendData(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                 Edge::Kind Kind);
 
 /// Helper function to read the initial addend for Arm-class relocations.
-Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, const Edge &E);
+Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                Edge::Kind Kind);
 
 /// Helper function to read the initial addend for Thumb-class relocations.
-Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, const Edge &E,
-                                  const ArmConfig &ArmCfg);
+Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                  Edge::Kind Kind, const ArmConfig &ArmCfg);
 
 /// Read the initial addend for a REL-type relocation. It's the value encoded
 /// in the immediate field of the fixup location by the compiler.
-inline Expected<int64_t> readAddend(LinkGraph &G, Block &B, const Edge &E,
+inline Expected<int64_t> readAddend(LinkGraph &G, Block &B,
+                                    Edge::OffsetT Offset, Edge::Kind Kind,
                                     const ArmConfig &ArmCfg) {
-  Edge::Kind Kind = E.getKind();
   if (Kind <= LastDataRelocation)
-    return readAddendData(G, B, E);
+    return readAddendData(G, B, Offset, Kind);
 
   if (Kind <= LastArmRelocation)
-    return readAddendArm(G, B, E);
+    return readAddendArm(G, B, Offset, Kind);
 
   if (Kind <= LastThumbRelocation)
-    return readAddendThumb(G, B, E, ArmCfg);
+    return readAddendThumb(G, B, Offset, Kind, ArmCfg);
 
   llvm_unreachable("Relocation must be of class Data, Arm or Thumb");
 }
