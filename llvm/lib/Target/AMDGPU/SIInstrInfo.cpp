@@ -8482,12 +8482,13 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
   // needed by the prolog. However, the insertions for scalar registers can
   // always be placed at the BB top as they are independent of the exec mask
   // value.
-  uint16_t Opc = MI.getOpcode();
-  const MachineFunction *MF = MI.getParent()->getParent();
-  const MachineRegisterInfo &MRI = MF->getRegInfo();
-  bool IsNullOrVectorRegister =
-      !Reg || !RI.isSGPRClass(RI.getRegClassForReg(MRI, Reg));
+  bool IsNullOrVectorRegister = true;
+  if (Reg) {
+    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+    IsNullOrVectorRegister = !RI.isSGPRClass(RI.getRegClassForReg(MRI, Reg));
+  }
 
+  uint16_t Opc = MI.getOpcode();
   // FIXME: Copies inserted in the block prolog for live-range split should also
   // be included.
   return IsNullOrVectorRegister &&
