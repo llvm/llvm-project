@@ -13031,29 +13031,16 @@ struct NodeExtensionHelper {
     SupportsSExt = false;
     EnforceOneUse = true;
     CheckMask = true;
-    switch (OrigOperand.getOpcode()) {
-    case ISD::ZERO_EXTEND: {
-      SupportsZExt = true;
-      SDLoc DL(Root);
-      MVT VT = Root->getSimpleValueType(0);
-      if (VT.isFixedLengthVector()) {
-        MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
-        std::tie(Mask, VL) =
-            getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
-      } else if (VT.isVector())
-        std::tie(Mask, VL) = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
-      break;
-    }
+    unsigned Opc = OrigOperand.getOpcode();
+    switch (Opc) {
+    case ISD::ZERO_EXTEND:
     case ISD::SIGN_EXTEND: {
-      SupportsSExt = true;
-      SDLoc DL(Root);
-      MVT VT = Root->getSimpleValueType(0);
-      if (VT.isFixedLengthVector()) {
-        MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
-        std::tie(Mask, VL) =
-            getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
-      } else if (VT.isVector())
+      if (OrigOperand.getValueType().isVector()) {
+        SupportsZExt = Opc == ISD::ZERO_EXTEND;
+        SDLoc DL(Root);
+        MVT VT = Root->getSimpleValueType(0);
         std::tie(Mask, VL) = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
+      }
       break;
     }
     case RISCVISD::VZEXT_VL:
@@ -13118,7 +13105,7 @@ struct NodeExtensionHelper {
     case ISD::MUL: {
       EVT VT0 = Root->getOperand(0).getValueType();
       EVT VT1 = Root->getOperand(1).getValueType();
-      if (VT0.isFixedLengthVector() || VT0.isFixedLengthVector())
+      if (VT0.isFixedLengthVector() || VT1.isFixedLengthVector())
         return false;
       return (VT0.isVector() || VT1.isVector());
     }
@@ -13155,8 +13142,7 @@ struct NodeExtensionHelper {
         SupportsZExt =
             Opc == RISCVISD::VWADDU_W_VL || Opc == RISCVISD::VWSUBU_W_VL;
         SupportsSExt = !SupportsZExt;
-        Mask = Root->getOperand(3);
-        VL = Root->getOperand(4);
+        std::tie(Mask, VL) = getMaskAndVL(Root, DAG, Subtarget);
         CheckMask = true;
         // There's no existing extension here, so we don't have to worry about
         // making sure it gets removed.
@@ -13191,16 +13177,8 @@ struct NodeExtensionHelper {
     case ISD::MUL: {
       SDLoc DL(Root);
       MVT VT = Root->getSimpleValueType(0);
-      SDValue Mask, VL;
-      if (VT.isFixedLengthVector()) {
-        MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
-        std::tie(Mask, VL) =
-            getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
-      } else
-        std::tie(Mask, VL) = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
-      return std::make_pair(Mask, VL);
+      return getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
     }
-
     default:
       return std::make_pair(Root->getOperand(3), Root->getOperand(4));
     }
@@ -14808,8 +14786,7 @@ static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
   SDValue AddMergeOp = [](SDNode *N, SelectionDAG &DAG) {
     if (N->getOpcode() == ISD::ADD)
       return DAG.getUNDEF(N->getValueType(0));
-    else
-      return N->getOperand(2);
+    return N->getOperand(2);
   }(N, DAG);
 
   if (!AddMergeOp.isUndef())
@@ -14843,9 +14820,8 @@ static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
       SDLoc DL(N);
       return getDefaultScalableVLOps(N->getSimpleValueType(0), DL, DAG,
                                      Subtarget);
-    } else {
-      return std::make_pair(N->getOperand(3), N->getOperand(4));
     }
+    return std::make_pair(N->getOperand(3), N->getOperand(4));
   }(N, DAG, Subtarget);
 
   SDValue MulMask = MulOp.getOperand(3);
