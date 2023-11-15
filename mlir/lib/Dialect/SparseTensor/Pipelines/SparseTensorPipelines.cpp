@@ -29,8 +29,8 @@
 // Pipeline implementation.
 //===----------------------------------------------------------------------===//
 
-void mlir::sparse_tensor::buildSparsifier(
-    OpPassManager &pm, const SparsifierOptions &options) {
+void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
+                                          const SparsifierOptions &options) {
   // Rewrite named linalg ops into generic ops.
   
   pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
