@@ -768,9 +768,7 @@ static int readModRM(struct InternalInstruction *insn) {
   return 0;
 }
 
-#define MAX_GPR_NUM (0x1f)
-
-#define GENERIC_FIXUP_FUNC(name, base, prefix, mask)                           \
+#define GENERIC_FIXUP_FUNC(name, base, prefix)                                 \
   static uint16_t name(struct InternalInstruction *insn, OperandType type,     \
                        uint8_t index, uint8_t *valid) {                        \
     *valid = 1;                                                                \
@@ -782,28 +780,15 @@ static int readModRM(struct InternalInstruction *insn) {
     case TYPE_Rv:                                                              \
       return base + index;                                                     \
     case TYPE_R8:                                                              \
-      index &= mask;                                                           \
-      if (index > MAX_GPR_NUM)                                                 \
-        *valid = 0;                                                            \
-      if (insn->rexPrefix && index >= 4 && index <= 7) {                       \
+      if (insn->rexPrefix && index >= 4 && index <= 7)                         \
         return prefix##_SPL + (index - 4);                                     \
-      } else {                                                                 \
+      else                                                                     \
         return prefix##_AL + index;                                            \
-      }                                                                        \
     case TYPE_R16:                                                             \
-      index &= mask;                                                           \
-      if (index > MAX_GPR_NUM)                                                 \
-        *valid = 0;                                                            \
       return prefix##_AX + index;                                              \
     case TYPE_R32:                                                             \
-      index &= mask;                                                           \
-      if (index > MAX_GPR_NUM)                                                 \
-        *valid = 0;                                                            \
       return prefix##_EAX + index;                                             \
     case TYPE_R64:                                                             \
-      index &= mask;                                                           \
-      if (index > MAX_GPR_NUM)                                                 \
-        *valid = 0;                                                            \
       return prefix##_RAX + index;                                             \
     case TYPE_ZMM:                                                             \
       return prefix##_ZMM0 + index;                                            \
@@ -853,8 +838,8 @@ static int readModRM(struct InternalInstruction *insn) {
 // @param valid - The address of a uint8_t.  The target is set to 1 if the
 //                field is valid for the register class; 0 if not.
 // @return      - The proper value.
-GENERIC_FIXUP_FUNC(fixupRegValue, insn->regBase, MODRM_REG, MAX_GPR_NUM)
-GENERIC_FIXUP_FUNC(fixupRMValue, insn->eaRegBase, EA_REG, MAX_GPR_NUM)
+GENERIC_FIXUP_FUNC(fixupRegValue, insn->regBase, MODRM_REG)
+GENERIC_FIXUP_FUNC(fixupRMValue, insn->eaRegBase, EA_REG)
 
 // Consult an operand specifier to determine which of the fixup*Value functions
 // to use in correcting readModRM()'ss interpretation.
