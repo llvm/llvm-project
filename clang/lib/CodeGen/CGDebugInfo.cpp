@@ -1681,8 +1681,7 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
   llvm::DINode::DIFlags Flags = getAccessFlag(Var->getAccess(), RD);
   auto Align = getDeclAlignIfRequired(Var, CGM.getContext());
   llvm::DIDerivedType *GV = DBuilder.createStaticMemberType(
-      RecordTy, VName, VUnit, LineNumber, VTy, Flags, /* Val */ nullptr,
-      llvm::dwarf::DW_TAG_member, Align);
+      RecordTy, VName, VUnit, LineNumber, VTy, Flags, /* Val */ nullptr, Align);
   StaticDataMemberCache[Var->getCanonicalDecl()].reset(GV);
   StaticDataMemberDefinitionsToEmit.push_back(Var->getCanonicalDecl());
   return GV;
