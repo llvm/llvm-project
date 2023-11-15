@@ -3445,8 +3445,10 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
         (Src1->isReg() && Src1->getReg() == Reg)) {
       MachineOperand *RegSrc =
           Src1->isReg() && Src1->getReg() == Reg ? Src0 : Src1;
-      if (!RegSrc->isReg() ||
-          RI.isSGPRClass(MRI->getRegClass(RegSrc->getReg())))
+      if (!RegSrc->isReg())
+        return false;
+      if (RI.isSGPRClass(MRI->getRegClass(RegSrc->getReg())) &&
+          ST.getConstantBusLimit(Opc) < 2)
         return false;
 
       if (!Src2->isReg() || RI.isSGPRClass(MRI->getRegClass(Src2->getReg())))
