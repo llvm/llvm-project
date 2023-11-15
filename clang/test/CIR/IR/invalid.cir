@@ -159,6 +159,20 @@ cir.func @cast4(%p: !cir.ptr<!u32i>) {
 
 // -----
 
+cir.func @cast5(%p: f32) {
+  %2 = cir.cast(bool_to_float, %p : f32), f32 // expected-error {{requires !cir.bool for source}}
+  cir.return
+}
+
+// -----
+
+cir.func @cast6(%p: !cir.bool) {
+  %2 = cir.cast(bool_to_float, %p : !cir.bool), !cir.int<u, 32> // expected-error {{requires !cir.float for result}}
+  cir.return
+}
+
+// -----
+
 #false = #cir.bool<false> : !cir.bool
 #true = #cir.bool<true> : !cir.bool
 cir.func @b0() {
