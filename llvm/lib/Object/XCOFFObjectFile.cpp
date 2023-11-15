@@ -1276,11 +1276,8 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
 
     // Check next symbol is XTY_LD. If so, this symbol is not a function.
     Expected<XCOFFCsectAuxRef> NextCsectAuxEnt = NextIt->getXCOFFCsectAuxRef();
-    if (!NextCsectAuxEnt) {
-      // If the next symbol has no aux entries, won't be a XTY_LD symbol.
-      consumeError(NextCsectAuxEnt.takeError());
-      return true;
-    }
+    if (!NextCsectAuxEnt)
+      return NextCsectAuxEnt.takeError();
 
     if (NextCsectAuxEnt.get().getSymbolType() == XCOFF::XTY_LD)
       return false;
