@@ -12,4 +12,5 @@
 # RUN: %}
 
 import wmma
+
 wmma.main()

@@ -993,6 +993,7 @@ def gen_tests():
     items += gen_mma_tests()
     gen_check_unsupported_ops(items)
 
+
 def main():
     global ptx_version
     global gpu_arch
@@ -1006,5 +1007,6 @@ def main():
 
     gen_tests()
 
+
 if __name__ == "__main__":
-  main()
+    main()
