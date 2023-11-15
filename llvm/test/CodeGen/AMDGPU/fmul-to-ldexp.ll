@@ -715,12 +715,33 @@ define amdgpu_ps i32 @s_mul_fma_32_f32(float inreg %x, float inreg %y) {
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX1011-LABEL: s_mul_fma_32_f32:
-; GFX1011:       ; %bb.0:
-; GFX1011-NEXT:    v_mov_b32_e32 v0, s1
-; GFX1011-NEXT:    v_fmac_f32_e64 v0, 0x42000000, s0
-; GFX1011-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1011-NEXT:    ; return to shader part epilog
+; GFX10-SDAG-LABEL: s_mul_fma_32_f32:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    v_mov_b32_e32 v0, s1
+; GFX10-SDAG-NEXT:    v_fmamk_f32 v0, s0, 0x42000000, v0
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX10-GISEL-LABEL: s_mul_fma_32_f32:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; GFX10-GISEL-NEXT:    v_fmac_f32_e64 v0, 0x42000000, s0
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-GISEL-NEXT:    ; return to shader part epilog
+;
+; GFX11-SDAG-LABEL: s_mul_fma_32_f32:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, s1
+; GFX11-SDAG-NEXT:    v_fmamk_f32 v0, s0, 0x42000000, v0
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX11-GISEL-LABEL: s_mul_fma_32_f32:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; GFX11-GISEL-NEXT:    v_fmac_f32_e64 v0, 0x42000000, s0
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GISEL-NEXT:    ; return to shader part epilog
   %mul = fmul contract float %x, 32.0
   %fma = fadd contract float %mul, %y
   %cast = bitcast float %fma to i32
