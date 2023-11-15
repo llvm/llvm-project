@@ -2430,9 +2430,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       uint64_t ReplicatedOnes = 0b11;
       // Input operand is always b32
       for (unsigned i = 0; i < 32; ++i, ReplicatedOnes <<= 2, Val >>= 1) {
-        uint64_t Bit = Val & 1;
-
-        if (!Bit)
+        if (!(Val & 1))
           continue;
 
         ReplicatedVal |= ReplicatedOnes;
