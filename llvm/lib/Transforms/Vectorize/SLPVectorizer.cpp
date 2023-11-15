@@ -13182,8 +13182,23 @@ void BoUpSLP::computeMinimumValueSizes() {
     collectValuesToDemote(Roots.pop_back_val(), Expr, ToDemote, Roots);
 
   // Finally, map the values we can demote to the maximum bit with we computed.
-  for (auto *Scalar : ToDemote)
-    MinBWs.try_emplace(Scalar, MaxBitWidth, !IsKnownPositive);
+  DenseMap<const TreeEntry *, bool> Signendness;
+  for (auto *Scalar : ToDemote) {
+    bool IsSigned = true;
+    if (auto *TE = getTreeEntry(Scalar)) {
+      auto It = Signendness.find(TE);
+      if (It != Signendness.end()) {
+        IsSigned = It->second;
+      } else {
+        IsSigned = any_of(TE->Scalars, [&](Value *R) {
+          KnownBits Known = computeKnownBits(R, *DL);
+          return !Known.isNonNegative();
+        });
+        Signendness.try_emplace(TE, IsSigned);
+      }
+    }
+    MinBWs.try_emplace(Scalar, MaxBitWidth, IsSigned);
+  }
 }
 
 PreservedAnalyses SLPVectorizerPass::run(Function &F, FunctionAnalysisManager &AM) {
