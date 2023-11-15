@@ -10,8 +10,8 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   %stack = llvm.intr.stacksave : !llvm.ptr
   llvm.store %0, %ptr { alignment = 8 } : i32, !llvm.ptr
   %1 = llvm.load %ptr { alignment = 8 } : !llvm.ptr -> i32
-  llvm.intr.dbg.value #variable = %0 : i32
-  llvm.intr.dbg.declare #variableAddr = %ptr : !llvm.ptr
+  llvm.intr.dbg.value #variable #llvm.di_expr<[]> = %0 : i32
+  llvm.intr.dbg.declare #variableAddr #llvm.di_expr<[]> = %ptr : !llvm.ptr
   llvm.intr.dbg.label #label
   %byte = llvm.mlir.constant(43 : i8) : i8
   %true = llvm.mlir.constant(1 : i1) : i1
@@ -38,8 +38,8 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
 // CHECK: %[[STACK:.+]] = llvm.intr.stacksave
 // CHECK: llvm.store %[[CST]], %[[PTR]]
 // CHECK: %[[RES:.+]] = llvm.load %[[PTR]]
-// CHECK: llvm.intr.dbg.value #{{.+}} = %[[CST]]
-// CHECK: llvm.intr.dbg.declare #{{.+}} = %[[PTR]]
+// CHECK: llvm.intr.dbg.value #{{.+}} #llvm.di_expr<[]> = %[[CST]]
+// CHECK: llvm.intr.dbg.declare #{{.+}} #llvm.di_expr<[]> = %[[PTR]]
 // CHECK: llvm.intr.dbg.label #{{.+}}
 // CHECK: "llvm.intr.memset"(%[[PTR]]
 // CHECK: "llvm.intr.memmove"(%[[PTR]], %[[PTR]]

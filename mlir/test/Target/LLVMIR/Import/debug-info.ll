@@ -256,9 +256,9 @@ source_filename = "debug-info.ll"
 ; CHECK-SAME:  %[[ARG0:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 define void @intrinsic(i64 %0, ptr %1) {
-  ; CHECK: llvm.intr.dbg.declare #[[$VAR1]] = %[[ARG1]] : !llvm.ptr loc(#[[LOC1:.+]])
-  ; CHECK: llvm.intr.dbg.value #[[$VAR0]] = %[[ARG0]] : i64 loc(#[[LOC0:.+]])
-  call void @llvm.dbg.value(metadata i64 %0, metadata !5, metadata !DIExpression()), !dbg !7
+  ; CHECK: llvm.intr.dbg.declare #[[$VAR1]] #llvm.di_expr<[]> = %[[ARG1]] : !llvm.ptr loc(#[[LOC1:.+]])
+  ; CHECK: llvm.intr.dbg.value #[[$VAR0]] #llvm.di_expr<[4096, 0, 8]> = %[[ARG0]] : i64 loc(#[[LOC0:.+]])
+  call void @llvm.dbg.value(metadata i64 %0, metadata !5, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 8)), !dbg !7
   call void @llvm.dbg.declare(metadata ptr %1, metadata !6, metadata !DIExpression()), !dbg !9
   ; CHECK: llvm.intr.dbg.label #[[$LABEL]] loc(#[[LOC1:.+]])
   call void @llvm.dbg.label(metadata !10), !dbg !9
@@ -324,7 +324,7 @@ define void @class_method() {
 ; CHECK-LABEL: @class_field
 ; CHECK-SAME:  %[[ARG0:[a-zA-Z0-9]+]]
 define void @class_field(ptr %arg1) {
-  ; CHECK: llvm.intr.dbg.value #[[$VAR0]] = %[[ARG0]] : !llvm.ptr
+  ; CHECK: llvm.intr.dbg.value #[[$VAR0]] #llvm.di_expr<[]> = %[[ARG0]] : !llvm.ptr
   call void @llvm.dbg.value(metadata ptr %arg1, metadata !7, metadata !DIExpression()), !dbg !9
   ret void
 }
