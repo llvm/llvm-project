@@ -81,22 +81,21 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
 
   case Builtin::BI__builtin_alloca_with_align:
   case Builtin::BI__builtin_alloca: {
-    // FIXME: Refactor into StoreManager itself?
-    MemRegionManager& RM = C.getStoreManager().getRegionManager();
-    const AllocaRegion* R =
-      RM.getAllocaRegion(CE, C.blockCount(), C.getLocationContext());
+    SValBuilder &SVB = C.getSValBuilder();
+    const loc::MemRegionVal R =
+        SVB.getAllocaRegionVal(CE, C.getLocationContext(), C.blockCount());
 
-    // Set the extent of the region in bytes. This enables us to use the
-    // SVal of the argument directly. If we save the extent in bits, we
-    // cannot represent values like symbol*8.
+    // Set the extent of the region in bytes. This enables us to use the SVal
+    // of the argument directly. If we saved the extent in bits, it'd be more
+    // difficult to reason about values like symbol*8.
     auto Size = Call.getArgSVal(0);
-    if (Size.isUndef())
-      return true; // Return true to model purity.
-
-    state = setDynamicExtent(state, R, Size.castAs<DefinedOrUnknownSVal>(),
-                             C.getSValBuilder());
-
-    C.addTransition(state->BindExpr(CE, LCtx, loc::MemRegionVal(R)));
+    if (auto DefSize = Size.getAs<DefinedOrUnknownSVal>()) {
+      state = setDynamicExtent(state, R.getRegion(), *DefSize, SVB);
+      // FIXME: perhaps the following transition should be moved out of the
+      // 'if' to bind an AllocaRegion (with unknown/unspecified size) even in
+      // the unlikely case when the size argument is undefined.
+      C.addTransition(state->BindExpr(CE, LCtx, R));
+    }
     return true;
   }
 
