@@ -10,9 +10,9 @@
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
-#define SVE_ACLE_FUNC(A1,A2_UNUSED,A3,A4_UNUSED,A5) A1##A3##A5
+#define SVE_ACLE_FUNC(A1,A2_UNUSED) A1
 #else
-#define SVE_ACLE_FUNC(A1,A2,A3,A4,A5) A1##A2##A3##A4##A5
+#define SVE_ACLE_FUNC(A1,A2) A1##A2
 #endif
 
 // Single, x2
@@ -40,7 +40,7 @@
 // CPP-CHECK-NEXT:    ret <vscale x 16 x half> [[TMP6]]
 //
 svfloat16x2_t test_svminnm_single_f16_x2(svfloat16x2_t zdn, svfloat16_t zm) __arm_streaming {
-  return SVE_ACLE_FUNC(svminnm,_single_f16_x2,,,)(zdn, zm);
+  return SVE_ACLE_FUNC(svminnm,_single_f16_x2)(zdn, zm);
 }
 
 // CHECK-LABEL: @test_svminnm_single_f32_x2(
@@ -66,7 +66,7 @@ svfloat16x2_t test_svminnm_single_f16_x2(svfloat16x2_t zdn, svfloat16_t zm) __ar
 // CPP-CHECK-NEXT:    ret <vscale x 8 x float> [[TMP6]]
 //
 svfloat32x2_t test_svminnm_single_f32_x2(svfloat32x2_t zdn, svfloat32_t zm) __arm_streaming {
-  return SVE_ACLE_FUNC(svminnm,_single_f32_x2,,,)(zdn, zm);
+  return SVE_ACLE_FUNC(svminnm,_single_f32_x2)(zdn, zm);
 }
 
 // CHECK-LABEL: @test_svminnm_single_f64_x2(
@@ -92,7 +92,7 @@ svfloat32x2_t test_svminnm_single_f32_x2(svfloat32x2_t zdn, svfloat32_t zm) __ar
 // CPP-CHECK-NEXT:    ret <vscale x 4 x double> [[TMP6]]
 //
 svfloat64x2_t test_svminnm_single_f64_x2(svfloat64x2_t zdn, svfloat64_t zm) __arm_streaming {
-  return SVE_ACLE_FUNC(svminnm,_single_f64_x2,,,)(zdn, zm);
+  return SVE_ACLE_FUNC(svminnm,_single_f64_x2)(zdn, zm);
 }
 
 // Single, x4
@@ -132,7 +132,7 @@ svfloat64x2_t test_svminnm_single_f64_x2(svfloat64x2_t zdn, svfloat64_t zm) __ar
 // CPP-CHECK-NEXT:    ret <vscale x 32 x half> [[TMP12]]
 //
 svfloat16x4_t test_svminnm_single_f16_x4(svfloat16x4_t zdn, svfloat16_t zm) __arm_streaming {
-  return SVE_ACLE_FUNC(svminnm,_single_f16_x4,,,)(zdn, zm);
+  return SVE_ACLE_FUNC(svminnm,_single_f16_x4)(zdn, zm);
 }
 
 // CHECK-LABEL: @test_svminnm_single_f32_x4(
@@ -170,7 +170,7 @@ svfloat16x4_t test_svminnm_single_f16_x4(svfloat16x4_t zdn, svfloat16_t zm) __ar
 // CPP-CHECK-NEXT:    ret <vscale x 16 x float> [[TMP12]]
 //
 svfloat32x4_t test_svminnm_single_f32_x4(svfloat32x4_t zdn, svfloat32_t zm) __arm_streaming {
-  return SVE_ACLE_FUNC(svminnm,_single_f32_x4,,,)(zdn, zm);
+  return SVE_ACLE_FUNC(svminnm,_single_f32_x4)(zdn, zm);
 }
 
 // CHECK-LABEL: @test_svminnm_single_f64_x4(
@@ -208,7 +208,7 @@ svfloat32x4_t test_svminnm_single_f32_x4(svfloat32x4_t zdn, svfloat32_t zm) __ar
 // CPP-CHECK-NEXT:    ret <vscale x 8 x double> [[TMP12]]
 //
 svfloat64x4_t test_svminnm_single_f64_x4(svfloat64x4_t zdn, svfloat64_t zm) __arm_streaming {
-  return SVE_ACLE_FUNC(svminnm,_single_f64_x4,,,)(zdn, zm);
+  return SVE_ACLE_FUNC(svminnm,_single_f64_x4)(zdn, zm);
 }
 
 // Multi, x2
@@ -240,7 +240,7 @@ svfloat64x4_t test_svminnm_single_f64_x4(svfloat64x4_t zdn, svfloat64_t zm) __ar
 // CPP-CHECK-NEXT:    ret <vscale x 16 x half> [[TMP8]]
 //
 svfloat16x2_t test_svminnm_multi_f16_x2(svfloat16x2_t zdn, svfloat16x2_t zm) __arm_streaming {
-  return SVE_ACLE_FUNC(svminnm,_f16_x2,,,)(zdn, zm);
+  return SVE_ACLE_FUNC(svminnm,_f16_x2)(zdn, zm);
 }
 
 // CHECK-LABEL: @test_svminnm_multi_f32_x2(
@@ -270,7 +270,7 @@ svfloat16x2_t test_svminnm_multi_f16_x2(svfloat16x2_t zdn, svfloat16x2_t zm) __a
 // CPP-CHECK-NEXT:    ret <vscale x 8 x float> [[TMP8]]
 //
 svfloat32x2_t test_svminnm_multi_f32_x2(svfloat32x2_t zdn, svfloat32x2_t zm) __arm_streaming {
-  return SVE_ACLE_FUNC(svminnm,_f32_x2,,,)(zdn, zm);
+  return SVE_ACLE_FUNC(svminnm,_f32_x2)(zdn, zm);
 }
 
 // CHECK-LABEL: @test_svminnm_multi_f64_x2(
@@ -300,7 +300,7 @@ svfloat32x2_t test_svminnm_multi_f32_x2(svfloat32x2_t zdn, svfloat32x2_t zm) __a
 // CPP-CHECK-NEXT:    ret <vscale x 4 x double> [[TMP8]]
 //
 svfloat64x2_t test_svminnm_multi_f64_x2(svfloat64x2_t zdn, svfloat64x2_t zm) __arm_streaming {
-  return SVE_ACLE_FUNC(svminnm,_f64_x2,,,)(zdn, zm);
+  return SVE_ACLE_FUNC(svminnm,_f64_x2)(zdn, zm);
 }
 
 // Multi, x4
@@ -348,7 +348,7 @@ svfloat64x2_t test_svminnm_multi_f64_x2(svfloat64x2_t zdn, svfloat64x2_t zm) __a
 // CPP-CHECK-NEXT:    ret <vscale x 32 x half> [[TMP16]]
 //
 svfloat16x4_t test_svminnm_multi_f16_x4(svfloat16x4_t zdn, svfloat16x4_t zm) __arm_streaming {
-  return SVE_ACLE_FUNC(svminnm,_f16_x4,,,)(zdn, zm);
+  return SVE_ACLE_FUNC(svminnm,_f16_x4)(zdn, zm);
 }
 
 // CHECK-LABEL: @test_svminnm_multi_f32_x4(
@@ -394,7 +394,7 @@ svfloat16x4_t test_svminnm_multi_f16_x4(svfloat16x4_t zdn, svfloat16x4_t zm) __a
 // CPP-CHECK-NEXT:    ret <vscale x 16 x float> [[TMP16]]
 //
 svfloat32x4_t test_svminnm_multi_f32_x4(svfloat32x4_t zdn, svfloat32x4_t zm) __arm_streaming {
-  return SVE_ACLE_FUNC(svminnm,_f32_x4,,,)(zdn, zm);
+  return SVE_ACLE_FUNC(svminnm,_f32_x4)(zdn, zm);
 }
 
 // CHECK-LABEL: @test_svminnm_multi_f64_x4(
@@ -440,5 +440,5 @@ svfloat32x4_t test_svminnm_multi_f32_x4(svfloat32x4_t zdn, svfloat32x4_t zm) __a
 // CPP-CHECK-NEXT:    ret <vscale x 8 x double> [[TMP16]]
 //
 svfloat64x4_t test_svminnm_multi_f64_x4(svfloat64x4_t zdn, svfloat64x4_t zm) __arm_streaming {
-  return SVE_ACLE_FUNC(svminnm,_f64_x4,,,)(zdn, zm);
+  return SVE_ACLE_FUNC(svminnm,_f64_x4)(zdn, zm);
 }
