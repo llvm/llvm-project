@@ -594,16 +594,13 @@ private:
   /// Thread-local origin storage for function return value.
   Value *RetvalOriginTLS;
 
-  /// Thread-local shadow storage for in-register va_arg function
-  /// parameters (x86_64-specific).
+  /// Thread-local shadow storage for in-register va_arg function.
   Value *VAArgTLS;
 
-  /// Thread-local shadow storage for in-register va_arg function
-  /// parameters (x86_64-specific).
+  /// Thread-local shadow storage for in-register va_arg function.
   Value *VAArgOriginTLS;
 
-  /// Thread-local shadow storage for va_arg overflow area
-  /// (x86_64-specific).
+  /// Thread-local shadow storage for va_arg overflow area.
   Value *VAArgOverflowSizeTLS;
 
   /// Are the instrumentation callbacks set up?
