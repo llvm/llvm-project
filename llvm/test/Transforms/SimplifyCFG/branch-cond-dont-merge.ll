@@ -79,6 +79,25 @@ exit:
   ret void
 }
 
+define void @uint32_overflow_test(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @uint32_overflow_test(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    ret void
+;
+bb:
+  br i1 %arg, label %bb4, label %bb2, !prof !3
+
+bb2:
+  br i1 %arg1, label %bb4, label %bb3
+
+bb3:
+  br label %bb4
+
+bb4:
+  ret void
+}
+
 !0 = !{!"branch_weights", i32 1, i32 1000}
 !1 = !{!"branch_weights", i32 1000, i32 1}
 !2 = !{!"branch_weights", i32 3, i32 2}
+!3 = !{!"branch_weights", i32 -258677585, i32 -1212131848}
