@@ -1,0 +1,318 @@
+# RUN: not llc --crash -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 -run-pass=greedy -filetype=null %s
+
+; This test would crash while trying to split a liverange during register allocator.
+
+---
+name:            test_kernel
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: sreg_32 }
+  - { id: 4, class: sreg_32 }
+  - { id: 5, class: sreg_32 }
+  - { id: 6, class: sgpr_256 }
+  - { id: 7, class: sgpr_256 }
+  - { id: 8, class: sgpr_256 }
+  - { id: 9, class: sgpr_256 }
+  - { id: 10, class: sgpr_256 }
+  - { id: 11, class: sreg_32_xm0_xexec }
+  - { id: 12, class: sreg_32_xm0_xexec }
+  - { id: 13, class: sgpr_64 }
+  - { id: 14, class: sreg_32_xm0_xexec }
+  - { id: 15, class: sreg_32 }
+  - { id: 16, class: sreg_32 }
+  - { id: 17, class: sreg_32 }
+  - { id: 18, class: sreg_32 }
+  - { id: 19, class: sreg_32 }
+  - { id: 20, class: sreg_32 }
+  - { id: 21, class: sreg_32 }
+  - { id: 22, class: sreg_32 }
+  - { id: 23, class: sreg_32 }
+  - { id: 24, class: sreg_32 }
+  - { id: 25, class: sreg_32 }
+  - { id: 26, class: sreg_32 }
+  - { id: 27, class: sreg_32 }
+  - { id: 28, class: sreg_32 }
+  - { id: 29, class: sreg_32 }
+  - { id: 30, class: sreg_32 }
+  - { id: 31, class: sreg_32 }
+  - { id: 32, class: sreg_32 }
+  - { id: 33, class: sreg_32 }
+  - { id: 34, class: sreg_32 }
+  - { id: 35, class: sreg_32 }
+  - { id: 36, class: sreg_32 }
+  - { id: 37, class: sreg_32 }
+  - { id: 38, class: sreg_32 }
+  - { id: 39, class: sreg_32 }
+  - { id: 40, class: sreg_32 }
+  - { id: 41, class: sreg_32 }
+  - { id: 42, class: sreg_32 }
+  - { id: 43, class: sreg_32 }
+  - { id: 44, class: sreg_32 }
+  - { id: 45, class: sreg_32 }
+  - { id: 46, class: sreg_32 }
+  - { id: 47, class: sreg_32 }
+  - { id: 48, class: sreg_32 }
+  - { id: 49, class: sreg_32 }
+  - { id: 50, class: sreg_32 }
+  - { id: 51, class: sreg_32 }
+  - { id: 52, class: sreg_32 }
+  - { id: 53, class: sreg_32 }
+  - { id: 54, class: sreg_32 }
+  - { id: 55, class: sreg_32 }
+  - { id: 56, class: sreg_32 }
+  - { id: 57, class: sreg_32 }
+  - { id: 58, class: sreg_32 }
+  - { id: 59, class: sreg_32 }
+  - { id: 60, class: sreg_32 }
+  - { id: 61, class: sreg_32 }
+  - { id: 62, class: sreg_32 }
+  - { id: 63, class: sreg_32 }
+  - { id: 64, class: sreg_32 }
+  - { id: 65, class: sreg_32 }
+  - { id: 66, class: sreg_32 }
+  - { id: 67, class: sreg_32 }
+  - { id: 68, class: sreg_32 }
+  - { id: 69, class: sreg_32 }
+  - { id: 70, class: sreg_32 }
+  - { id: 71, class: sreg_32 }
+  - { id: 72, class: sreg_32 }
+  - { id: 73, class: sreg_32 }
+  - { id: 74, class: sreg_32 }
+  - { id: 75, class: sreg_32 }
+  - { id: 76, class: sreg_32 }
+  - { id: 77, class: sreg_32 }
+  - { id: 78, class: sreg_32 }
+  - { id: 79, class: sreg_32 }
+  - { id: 80, class: sreg_32 }
+  - { id: 81, class: sreg_32 }
+  - { id: 82, class: sreg_32 }
+  - { id: 83, class: sreg_32 }
+  - { id: 84, class: sreg_32 }
+  - { id: 85, class: sreg_32 }
+  - { id: 86, class: sreg_32 }
+  - { id: 87, class: sreg_32 }
+  - { id: 88, class: sreg_32 }
+  - { id: 89, class: sreg_32 }
+  - { id: 90, class: sreg_32 }
+  - { id: 91, class: sreg_32 }
+  - { id: 92, class: sreg_32 }
+  - { id: 93, class: sgpr_64 }
+  - { id: 94, class: sreg_32_xm0_xexec }
+  - { id: 95, class: sgpr_32 }
+  - { id: 96, class: sreg_32_xm0_xexec }
+  - { id: 97, class: sreg_64 }
+  - { id: 98, class: sreg_32_xm0_xexec }
+  - { id: 99, class: sreg_32_xm0_xexec }
+  - { id: 100, class: sreg_64 }
+  - { id: 101, class: sgpr_128 }
+  - { id: 102, class: sreg_64_xexec }
+  - { id: 103, class: sgpr_32 }
+  - { id: 104, class: sgpr_64 }
+  - { id: 105, class: sgpr_64 }
+  - { id: 106, class: sgpr_64 }
+  - { id: 107, class: sreg_32, preferred-register: '$vcc' }
+  - { id: 108, class: sreg_32, preferred-register: '$vcc' }
+  - { id: 109, class: sgpr_32 }
+  - { id: 110, class: sgpr_256 }
+  - { id: 111, class: sgpr_512 }
+  - { id: 112, class: sgpr_512 }
+  - { id: 113, class: sgpr_256 }
+  - { id: 114, class: sgpr_256 }
+  - { id: 115, class: sgpr_256 }
+  - { id: 116, class: sreg_32_xm0_xexec }
+machineFunctionInfo:
+  maxKernArgAlign: 1
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  sgprForEXECCopy: '$sgpr105'
+body:             |
+ bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13
+
+    %0:vgpr_32 = IMPLICIT_DEF
+    undef %1.sub1:vreg_64 = IMPLICIT_DEF
+    %109:sgpr_32 = COPY undef $sgpr1
+    undef %93.sub1:sgpr_64 = COPY undef $sgpr0
+    undef %106.sub0:sgpr_64 = V_READFIRSTLANE_B32 undef %0, implicit $exec
+    %106.sub1:sgpr_64 = V_READFIRSTLANE_B32 undef %0, implicit $exec
+    undef %105.sub0:sgpr_64 = V_READFIRSTLANE_B32 undef %0, implicit $exec
+    %105.sub1:sgpr_64 = IMPLICIT_DEF
+    undef %104.sub0:sgpr_64 = V_READFIRSTLANE_B32 undef %0, implicit $exec
+    %104.sub1:sgpr_64 = V_READFIRSTLANE_B32 undef %0, implicit $exec
+    %4:sreg_32 = S_MOV_B32 0
+    %5:sreg_32 = S_MOV_B32 0
+    S_CBRANCH_SCC1 %bb.2, implicit undef $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    %5:sreg_32 = IMPLICIT_DEF
+
+  bb.2:
+    successors: %bb.3, %bb.4
+
+    %101:sgpr_128 = S_LOAD_DWORDX4_IMM undef %104, 132, 0 :: ("amdgpu-noclobber" load (s128), align 8, addrspace 1)
+    %10:sgpr_256 = S_LOAD_DWORDX8_IMM undef %104, 188, 0 :: ("amdgpu-noclobber" load (s256), align 8, addrspace 1)
+    %100:sreg_64 = S_MOV_B64 0
+    S_CBRANCH_SCC1 %bb.4, implicit undef $scc
+    S_BRANCH %bb.3
+
+  bb.3:
+    %4:sreg_32 = S_MOV_B32 -1
+
+  bb.4:
+    successors: %bb.5, %bb.6
+
+    %102:sreg_64_xexec = S_LOAD_DWORDX2_IMM undef %104, 120, 0 :: ("amdgpu-noclobber" load (s64), align 16, addrspace 1)
+    %8:sgpr_256 = S_LOAD_DWORDX8_IMM undef %104, 352, 0 :: ("amdgpu-noclobber" load (s256), align 16, addrspace 1)
+    %98:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM undef %97:sreg_64, 0, 0
+    %7:sgpr_256 = S_LOAD_DWORDX8_IMM undef %104, 652, 0 :: ("amdgpu-noclobber" load (s256), align 8, addrspace 1)
+    %96:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %100, 0, 0 :: ("amdgpu-noclobber" load (s32), align 8, addrspace 1)
+    %6:sgpr_256 = S_LOAD_DWORDX8_IMM %104, 688, 0 :: ("amdgpu-noclobber" load (s256), align 16, addrspace 1)
+    %2:sgpr_32 = S_MOV_B32 0
+    %3:sreg_32 = S_MOV_B32 0
+    S_CBRANCH_SCC1 %bb.6, implicit undef $scc
+    S_BRANCH %bb.5
+
+  bb.5:
+    %3:sreg_32 = S_MOV_B32 -1
+
+  bb.6:
+    successors: %bb.7, %bb.10
+
+    %103:sgpr_32 = S_LOAD_DWORD_IMM undef %104, 0, 0 :: ("amdgpu-noclobber" load (s32), align 16, addrspace 1)
+    %115:sgpr_256 = S_LOAD_DWORDX8_IMM undef %104, 152, 0 :: ("amdgpu-noclobber" load (s256), align 4, addrspace 1)
+    %114:sgpr_256 = S_LOAD_DWORDX8_IMM undef %104, 220, 0 :: ("amdgpu-noclobber" load (s256), align 4, addrspace 1)
+    %113:sgpr_256 = S_LOAD_DWORDX8_IMM undef %104, 384, 0 :: ("amdgpu-noclobber" load (s256), align 4, addrspace 1)
+    %112:sgpr_512 = S_LOAD_DWORDX16_IMM undef %104, 440, 0 :: ("amdgpu-noclobber" load (s512), align 8, addrspace 1)
+    %111:sgpr_512 = S_LOAD_DWORDX16_IMM undef %104, 584, 0 :: ("amdgpu-noclobber" load (s512), align 16, addrspace 1)
+    %110:sgpr_256 = S_LOAD_DWORDX8_IMM %106, 156, 0 :: ("amdgpu-noclobber" load (s256), align 8, addrspace 1)
+    %95:sgpr_32 = S_LOAD_DWORD_IMM %105, 0, 0 :: ("amdgpu-noclobber" load (s32), align 8, addrspace 1)
+    %94:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %106, 0, 0 :: ("amdgpu-noclobber" load (s32), addrspace 1)
+    %99:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %100, 0, 0 :: ("amdgpu-noclobber" load (s32), addrspace 1)
+    %107:sreg_32 = IMPLICIT_DEF
+    %108:sreg_32 = IMPLICIT_DEF
+    %93.sub0:sgpr_64 = S_MOV_B32 1
+    S_CBRANCH_SCC1 %bb.10, implicit undef $scc
+    S_BRANCH %bb.7
+
+  bb.7:
+    successors: %bb.8, %bb.9
+
+    undef %13.sub0:sgpr_64 = V_READFIRSTLANE_B32 undef %1.sub0, implicit $exec
+    %13.sub1:sgpr_64 = V_READFIRSTLANE_B32 undef %1.sub1, implicit $exec
+    %92:sreg_32 = IMPLICIT_DEF
+    %2:sgpr_32 = S_MOV_B32 0
+    $vcc = COPY %92
+    S_CBRANCH_VCCNZ %bb.9, implicit $vcc
+    S_BRANCH %bb.8
+
+  bb.8:
+    %2:sgpr_32 = S_MOV_B32 -1
+
+  bb.9:
+
+  bb.10:
+    successors: %bb.11, %bb.12
+
+    %91:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %103, 0, implicit $mode, implicit $exec
+    %90:sreg_32 = S_AND_B32 undef %91, %5, implicit-def dead $scc
+    S_CMP_EQ_U32 %109, 0, implicit-def $scc
+    %12:sreg_32_xm0_xexec = IMPLICIT_DEF
+    S_CMP_EQ_U32 %102.sub1, 0, implicit-def $scc
+    %11:sreg_32_xm0_xexec = IMPLICIT_DEF
+    %77:sreg_32 = S_OR_B32 %115.sub7, %99, implicit-def dead $scc
+    %82:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %115.sub0, 0, implicit $mode, implicit $exec
+    %79:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %115.sub2, 0, implicit $mode, implicit $exec
+    %78:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %115.sub4, 0, implicit $mode, implicit $exec
+    %76:sreg_32 = S_OR_B32 %10.sub0, undef %77, implicit-def dead $scc
+    %75:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %10.sub1, 0, implicit $mode, implicit $exec
+    %74:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %10.sub2, 0, implicit $mode, implicit $exec
+    %73:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %10.sub3, 0, implicit $mode, implicit $exec
+    %72:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %10.sub4, 0, implicit $mode, implicit $exec
+    %70:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %10.sub5, 0, implicit $mode, implicit $exec
+    %69:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %10.sub6, 0, implicit $mode, implicit $exec
+    %87:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %101.sub0, 0, implicit $mode, implicit $exec
+    %86:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %101.sub1, 0, implicit $mode, implicit $exec
+    %83:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %101.sub2, 0, implicit $mode, implicit $exec
+    %89:sreg_32 = S_AND_B32 undef %11, %108, implicit-def dead $scc
+    %88:sreg_32 = IMPLICIT_DEF
+    %85:sreg_32 = IMPLICIT_DEF
+    %84:sreg_32 = IMPLICIT_DEF
+    %81:sreg_32 = IMPLICIT_DEF
+    %80:sreg_32 = IMPLICIT_DEF
+    %71:sreg_32 = S_AND_B32 undef %80, undef %80, implicit-def dead $scc
+    %67:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %114.sub0, 0, implicit $mode, implicit $exec
+    %68:sreg_32 = S_AND_B32 undef %70, undef %69, implicit-def dead $scc
+    %66:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %114.sub2, 0, implicit $mode, implicit $exec
+    %65:sreg_32 = S_OR_B32 %114.sub5, %114.sub7, implicit-def dead $scc
+    %63:sreg_32 = S_OR_B32 %8.sub0, %8.sub1, implicit-def dead $scc
+    %62:sreg_32 = S_OR_B32 %8.sub2, undef %63, implicit-def dead $scc
+    %64:sreg_32 = S_AND_B32 undef %63, %4, implicit-def dead $scc
+    %61:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %8.sub3, 0, implicit $mode, implicit $exec
+    %60:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %8.sub4, 0, implicit $mode, implicit $exec
+    %59:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %8.sub5, 0, implicit $mode, implicit $exec
+    %58:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %8.sub6, 0, implicit $mode, implicit $exec
+    %57:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %98, 0, implicit $mode, implicit $exec
+    %56:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %113.sub0, 0, implicit $mode, implicit $exec
+    %53:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %113.sub2, 0, implicit $mode, implicit $exec
+    %55:sreg_32 = IMPLICIT_DEF
+    %52:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %113.sub4, 0, implicit $mode, implicit $exec
+    %54:sreg_32 = S_AND_B32 undef %55, undef %56, implicit-def dead $scc
+    S_CMP_EQ_U32 %113.sub7, 0, implicit-def $scc
+    %51:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %112.sub0, 0, implicit $mode, implicit $exec
+    %49:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %112.sub2, 0, implicit $mode, implicit $exec
+    %48:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %112.sub4, 0, implicit $mode, implicit $exec
+    %47:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %112.sub6, 0, implicit $mode, implicit $exec
+    %50:sreg_32 = S_AND_B32 undef %51, undef %51, implicit-def dead $scc
+    %46:sreg_32 = S_OR_B32 %112.sub10, %112.sub9, implicit-def dead $scc
+    %45:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %112.sub13, 0, implicit $mode, implicit $exec
+    %44:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %112.sub14, 0, implicit $mode, implicit $exec
+    S_CMP_EQ_U32 %111.sub1, 0, implicit-def $scc
+    %116:sreg_32_xm0_xexec = IMPLICIT_DEF
+    %42:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %111.sub5, 0, implicit $mode, implicit $exec
+    %41:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %111.sub6, 0, implicit $mode, implicit $exec
+    %43:sreg_32 = IMPLICIT_DEF
+    %38:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %111.sub9, 0, implicit $mode, implicit $exec
+    %37:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %111.sub10, 0, implicit $mode, implicit $exec
+    %40:sreg_32 = IMPLICIT_DEF
+    %39:sreg_32 = S_AND_B32 undef %40, undef %43, implicit-def dead $scc
+    %36:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %111.sub12, 0, implicit $mode, implicit $exec
+    %34:sreg_32 = S_OR_B32 %7.sub0, %111.sub15, implicit-def dead $scc
+    %35:sreg_32 = IMPLICIT_DEF
+    %32:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %7.sub1, 0, implicit $mode, implicit $exec
+    %31:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %7.sub2, 0, implicit $mode, implicit $exec
+    %33:sreg_32 = IMPLICIT_DEF
+    %28:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %7.sub3, 0, implicit $mode, implicit $exec
+    %27:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %7.sub4, 0, implicit $mode, implicit $exec
+    %30:sreg_32 = IMPLICIT_DEF
+    %26:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %7.sub5, 0, implicit $mode, implicit $exec
+    %25:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %7.sub6, 0, implicit $mode, implicit $exec
+    %29:sreg_32 = S_AND_B32 undef %30, undef %33, implicit-def dead $scc
+    %23:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %6.sub0, 0, implicit $mode, implicit $exec
+    %22:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %6.sub1, 0, implicit $mode, implicit $exec
+    %24:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %96, 0, implicit $mode, implicit $exec
+    %21:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %6.sub2, 0, implicit $mode, implicit $exec
+    %20:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %6.sub3, 0, implicit $mode, implicit $exec
+    %19:sreg_32 = S_OR_B32 %6.sub4, %6.sub5, implicit-def dead $scc
+    S_CMP_EQ_U32 %96, 0, implicit-def $scc
+    %18:sreg_32 = S_AND_B32 undef %19, %3, implicit-def dead $scc
+    %14:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %93, 0, 0 :: ("amdgpu-noclobber" load (s32), align 8, addrspace 1)
+    S_CMP_EQ_U32 %110.sub7, 0, implicit-def $scc
+    %16:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, %95, 0, implicit $mode, implicit $exec
+    %17:sreg_32 = S_AND_B32 %107, undef %14, implicit-def dead $scc
+    %15:sreg_32 = S_AND_B32 undef %17, %2, implicit-def dead $scc
+    $vcc = COPY undef %15
+    S_CBRANCH_VCCNZ %bb.12, implicit $vcc
+    S_BRANCH %bb.11
+
+  bb.11:
+
+  bb.12:
+    GLOBAL_STORE_DWORD_SADDR undef %0, undef %0, %104, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    GLOBAL_STORE_DWORD_SADDR undef %0, undef %0, %106, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
