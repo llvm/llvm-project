@@ -203,6 +203,26 @@ static void setMLIRDataLayout(mlir::ModuleOp &mlirModule,
   mlirModule->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
 }
 
+static void addDepdendentLibs(mlir::ModuleOp &mlirModule,
+                              CompilerInstance &ci) {
+  const std::vector<std::string> &libs =
+      ci.getInvocation().getCodeGenOpts().DependentLibs;
+  if (libs.empty()) {
+    return;
+  }
+  // dependent-lib is currently only supported on Windows, so the list should be
+  // empty on non-Windows platforms
+  assert(
+      llvm::Triple(ci.getInvocation().getTargetOpts().triple).isOSWindows() &&
+      "--dependent-lib is only supported on Windows");
+  // Add linker options specified by --dependent-lib
+  auto builder = mlir::OpBuilder(mlirModule.getRegion());
+  for (const std::string &lib : libs) {
+    builder.create<mlir::LLVM::LinkerOptionsOp>(
+        mlirModule.getLoc(), builder.getStrArrayAttr({"/DEFAULTLIB:", lib}));
+  }
+}
+
 bool CodeGenAction::beginSourceFileAction() {
   llvmCtx = std::make_unique<llvm::LLVMContext>();
   CompilerInstance &ci = this->getInstance();
@@ -303,6 +323,9 @@ bool CodeGenAction::beginSourceFileAction() {
   // Create a parse tree and lower it to FIR
   Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
   lb.lower(parseTree, ci.getInvocation().getSemanticsContext());
+
+  // Add dependent libraries
+  addDepdendentLibs(*mlirModule, ci);
 
   // run the default passes.
   mlir::PassManager pm((*mlirModule)->getName(),
