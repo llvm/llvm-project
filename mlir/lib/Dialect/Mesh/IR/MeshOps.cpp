@@ -234,32 +234,16 @@ struct EmptyMeshAxesCanonicalizationPattern : OpRewritePattern<Op> {
 
 } // namespace
 
-static LogicalResult verifyMeshSymbolUses(Operation *op,
-                                          FlatSymbolRefAttr meshSymbol,
-                                          DenseI16ArrayAttr meshAxes,
-                                          SymbolTableCollection &symbolTable) {
-  if (!meshSymbol) {
-    return op->emitError() << "Unspecified \"mesh\" symbol attribute.";
-  }
-  SymbolTableCollection symbolTableCollection;
+static FailureOr<ClusterOp> getMesh(Operation *op, FlatSymbolRefAttr meshSymbol,
+                                    SymbolTableCollection &symbolTable) {
   mesh::ClusterOp mesh =
-      symbolTableCollection.lookupNearestSymbolFrom<mesh::ClusterOp>(
-          op, meshSymbol);
+      symbolTable.lookupNearestSymbolFrom<mesh::ClusterOp>(op, meshSymbol);
   if (!mesh) {
     return op->emitError() << "Undefined required mesh symbol \""
                            << meshSymbol.getValue() << "\".";
   }
-  MeshAxis rank = mesh.getRank();
-  for (auto axis : meshAxes.asArrayRef()) {
-    if (axis >= rank || axis < 0) {
-      return op->emitError()
-             << "0-based mesh axis index " << axis
-             << " is out of bounds. The referenced mesh \""
-             << meshSymbol.getValue() << "\" is of rank " << rank << ".";
-    }
-  }
 
-  return success();
+  return mesh;
 }
 
 template <typename It>
@@ -279,13 +263,38 @@ bool isUnique(It begin, It end) {
   return true;
 }
 
-static LogicalResult verifyMeshAxes(Location loc, ArrayRef<MeshAxis> axes) {
+static LogicalResult verifyMeshAxes(Location loc, ArrayRef<MeshAxis> axes,
+                                    ClusterOp mesh) {
   SmallVector<MeshAxis> sorted = llvm::to_vector(axes);
   llvm::sort(sorted);
   if (!isUnique(sorted.begin(), sorted.end())) {
     return emitError(loc) << "Mesh axes contains duplicate elements.";
   }
+
+  MeshAxis rank = mesh.getRank();
+  for (auto axis : axes) {
+    if (axis >= rank || axis < 0) {
+      return emitError(loc)
+             << "0-based mesh axis index " << axis
+             << " is out of bounds. The referenced mesh \"" << mesh.getSymName()
+             << "\" is of rank " << rank << ".";
+    }
+  }
+
   return success();
+}
+
+template <typename Op>
+static FailureOr<ClusterOp>
+getMeshAndVerifyAxes(Op op, SymbolTableCollection &symbolTable) {
+  auto mesh = ::getMesh(op.getOperation(), op.getMeshAttr(), symbolTable);
+  if (failed(mesh)) {
+    return failure();
+  }
+  if (failed(verifyMeshAxes(op.getLoc(), op.getMeshAxes(), mesh.value()))) {
+    return failure();
+  }
+  return mesh;
 }
 
 template <typename It>
@@ -335,6 +344,13 @@ static LogicalResult verifyDimensionCompatibility(Location loc,
 static LogicalResult verifyAllGatherOperandAndResultShape(
     Value operand, Value result, int64_t gatherAxis,
     ArrayRef<MeshAxis> meshAxes, ArrayRef<int64_t> meshShape) {
+  auto resultRank = result.getType().template cast<ShapedType>().getRank();
+  if (gatherAxis < 0 || gatherAxis >= resultRank) {
+    return emitError(result.getLoc())
+           << "Gather axis " << gatherAxis << " is out of bounds [0, "
+           << resultRank << ").";
+  }
+
   ShapedType operandType = operand.getType().cast<ShapedType>();
   ShapedType resultType = result.getType().cast<ShapedType>();
   auto deviceGroupSize =
@@ -350,38 +366,6 @@ static LogicalResult verifyAllGatherOperandAndResultShape(
     }
   }
   return success();
-}
-
-static FailureOr<ClusterOp> getMesh(Operation *op, FlatSymbolRefAttr meshSymbol,
-                                    DenseI16ArrayAttr meshAxes) {
-  SymbolTableCollection symbolTableCollection;
-  if (failed(verifyMeshSymbolUses(op, meshSymbol, meshAxes,
-                                  symbolTableCollection))) {
-    // We need to check the symbol here since this runs before
-    // SymbolUserOpInterface.
-    return failure();
-  }
-  return symbolTableCollection.lookupNearestSymbolFrom<mesh::ClusterOp>(
-      op, meshSymbol);
-}
-
-static LogicalResult verifyAllGather(AllGatherOp op) {
-  auto rank = op.getResult().getType().template cast<ShapedType>().getRank();
-  auto gatherAxis = op.getGatherAxis().getSExtValue();
-  if (gatherAxis < 0 || gatherAxis >= rank) {
-    return op.emitError() << "Gather axis " << gatherAxis
-                          << " is out of bounds [0, " << rank << ").";
-  }
-
-  FlatSymbolRefAttr meshSymbol = op.getMeshAttr();
-  DenseI16ArrayAttr meshAxes = op.getMeshAxesAttr();
-  auto mesh = getMesh(op.getOperation(), meshSymbol, meshAxes);
-  if (failed(mesh)) {
-    return failure();
-  }
-  return verifyAllGatherOperandAndResultShape(op.getOperand(), op.getResult(),
-                                              gatherAxis, op.getMeshAxes(),
-                                              mesh.value().canonicalDimSizes());
 }
 
 static LogicalResult verifyAllToAllOperandAndResultShape(
@@ -472,43 +456,19 @@ static LogicalResult verifyReduceScatterOperandAndResultShape(
 }
 
 //===----------------------------------------------------------------------===//
-// mesh.all_reduce op
-//===----------------------------------------------------------------------===//
-
-LogicalResult
-AllReduceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  FlatSymbolRefAttr meshSymbol = getMeshAttr();
-  DenseI16ArrayAttr meshAxes = getMeshAxesAttr();
-  return verifyMeshSymbolUses(getOperation(), meshSymbol, meshAxes,
-                              symbolTable);
-}
-
-LogicalResult mlir::mesh::AllReduceOp::verify() {
-  return verifyMeshAxes(getLoc(), getMeshAxes());
-}
-
-void AllReduceOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
-                                              MLIRContext *context) {
-  patterns.add<EmptyMeshAxesCanonicalizationPattern<AllReduceOp>>(context);
-}
-
-//===----------------------------------------------------------------------===//
 // mesh.all_gather op
 //===----------------------------------------------------------------------===//
 
 LogicalResult
 AllGatherOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  FlatSymbolRefAttr meshSymbol = getMeshAttr();
-  DenseI16ArrayAttr meshAxes = getMeshAxesAttr();
-  return verifyMeshSymbolUses(getOperation(), meshSymbol, meshAxes,
-                              symbolTable);
-}
-
-LogicalResult mlir::mesh::AllGatherOp::verify() {
-  if (failed(verifyMeshAxes(getLoc(), getMeshAxes()))) {
+  auto mesh = getMeshAndVerifyAxes(*this, symbolTable);
+  if (failed(mesh)) {
     return failure();
   }
-  return verifyAllGather(*this);
+  auto gatherAxis = getGatherAxis().getSExtValue();
+  return verifyAllGatherOperandAndResultShape(getOperand(), getResult(),
+                                              gatherAxis, getMeshAxes(),
+                                              mesh.value().canonicalDimSizes());
 }
 
 void AllGatherOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -517,26 +477,29 @@ void AllGatherOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 }
 
 //===----------------------------------------------------------------------===//
+// mesh.all_reduce op
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+AllReduceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return getMeshAndVerifyAxes(*this, symbolTable);
+}
+
+void AllReduceOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                              MLIRContext *context) {
+  patterns.add<EmptyMeshAxesCanonicalizationPattern<AllReduceOp>>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // mesh.all_to_all op
 //===----------------------------------------------------------------------===//
 
 LogicalResult AllToAllOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  FlatSymbolRefAttr meshSymbol = getMeshAttr();
-  DenseI16ArrayAttr meshAxes = getMeshAxesAttr();
-  return verifyMeshSymbolUses(getOperation(), meshSymbol, meshAxes,
-                              symbolTable);
-}
-
-LogicalResult AllToAllOp::verify() {
-  if (failed(verifyMeshAxes(getLoc(), getMeshAxes()))) {
-    return failure();
-  }
-  FlatSymbolRefAttr meshSymbol = getMeshAttr();
-  DenseI16ArrayAttr meshAxes = getMeshAxesAttr();
-  auto mesh = ::getMesh(getOperation(), meshSymbol, meshAxes);
+  auto mesh = getMeshAndVerifyAxes(*this, symbolTable);
   if (failed(mesh)) {
     return failure();
   }
+
   return verifyAllToAllOperandAndResultShape(
       getOperand(), getResult(), getSplitAxis().getSExtValue(),
       getConcatAxis().getSExtValue(), getMeshAxes(),
@@ -554,22 +517,11 @@ void AllToAllOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 LogicalResult
 ReduceScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  FlatSymbolRefAttr meshSymbol = getMeshAttr();
-  DenseI16ArrayAttr meshAxes = getMeshAxesAttr();
-  return verifyMeshSymbolUses(getOperation(), meshSymbol, meshAxes,
-                              symbolTable);
-}
-
-LogicalResult ReduceScatterOp::verify() {
-  if (failed(verifyMeshAxes(getLoc(), getMeshAxes()))) {
-    return failure();
-  }
-  FlatSymbolRefAttr meshSymbol = getMeshAttr();
-  DenseI16ArrayAttr meshAxes = getMeshAxesAttr();
-  auto mesh = ::getMesh(getOperation(), meshSymbol, meshAxes);
+  auto mesh = getMeshAndVerifyAxes(*this, symbolTable);
   if (failed(mesh)) {
     return failure();
   }
+
   return verifyReduceScatterOperandAndResultShape(
       getOperand(), getResult(), getScatterAxis().getSExtValue(), getMeshAxes(),
       mesh.value().canonicalDimSizes());

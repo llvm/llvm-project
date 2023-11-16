@@ -250,7 +250,6 @@ def Mesh_AllGatherOp : Mesh_CollectiveCommunicationOpBase<"all_gather", [
     $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)? `gather_axis` `=` $gather_axis
     attr-dict `:` type($input) `->` type($result)
   }];
-  let hasVerifier = 1;
   let hasCanonicalizer = 1;
 }
 
@@ -283,7 +282,6 @@ def Mesh_AllReduceOp : Mesh_CollectiveCommunicationOpBase<"all_reduce", [
     $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)? (`reduction` `=` $reduction^)?
     attr-dict `:` type($input) `->` type($result)
   }];
-  let hasVerifier = 1;
   let hasCanonicalizer = 1;
 }
 
@@ -337,7 +335,6 @@ def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
     `concat_axis` `=` $concat_axis
     attr-dict `:` type($input) `->` type($result)
   }];
-  let hasVerifier = 1;
   let hasCanonicalizer = 1;
 }
 
@@ -399,7 +396,6 @@ def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", 
     `scatter_axis` `=` $scatter_axis
     attr-dict `:` type($input) `->` type($result)
   }];
-  let hasVerifier = 1;
   let hasCanonicalizer = 1;
 }
 
