@@ -761,6 +761,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
   const bool IsPPC64 = Subtarget->isPPC64();
   const bool IsAIX = Subtarget->isAIXABI();
+  const bool HasAIXSmallLocalExecTLS = Subtarget->hasAIXSmallLocalExecTLS();
   const Module *M = MF->getFunction().getParent();
   PICLevel::Level PL = M->getPICLevel();
 
@@ -1511,11 +1512,15 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::LWA: {
     // Verify alignment is legal, so we don't create relocations
     // that can't be supported.
-    unsigned OpNum;
-    if (Subtarget->hasAIXSmallLocalExecTLS())
-      OpNum = 1;
-    else
-      OpNum = (MI->getOpcode() == PPC::STD) ? 2 : 1;
+    unsigned OpNum = (MI->getOpcode() == PPC::STD) ? 2 : 1;
+    // For non-TOC-based local-exec TLS accesses with non-zero offsets, the
+    // machine operand (which is a TargetGlobalTLSAddress) is expected to be
+    // the same operand for both loads and stores.
+    for (const MachineOperand &TempMO : MI->operands()) {
+      if (((TempMO.getTargetFlags() & PPCII::MO_TPREL_FLAG) != 0) &&
+          TempMO.getOperandNo() == 1)
+        OpNum = 1;
+    }
     const MachineOperand &MO = MI->getOperand(OpNum);
     if (MO.isGlobal()) {
       const DataLayout &DL = MO.getGlobal()->getParent()->getDataLayout();
@@ -1528,20 +1533,14 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       // Such instructions do not otherwise arise.
       unsigned Flag = MO.getTargetFlags();
       if (Flag == PPCII::MO_TPREL_FLAG) {
-        assert(Subtarget->hasAIXSmallLocalExecTLS() &&
+        assert(HasAIXSmallLocalExecTLS &&
                "lwa/ld/std with thread-pointer only expected with "
                "local-exec small TLS");
         int64_t Offset = MO.getOffset();
-        // Non-zero offsets for lwa/ld/std require special handling and are
-        // handled here.
-        if (!Offset)
-          break;
-
         LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
-        if (Offset) {
-          const MCExpr *Expr = getAdjustedLocalExecExpr(MO, Offset);
-          TmpInst.getOperand(1) = MCOperand::createExpr(Expr);
-        }
+        const MCExpr *Expr = getAdjustedLocalExecExpr(MO, Offset);
+        if (Expr)
+          TmpInst.getOperand(OpNum) = MCOperand::createExpr(Expr);
         EmitToStreamer(*OutStreamer, TmpInst);
         return;
       }
@@ -1590,23 +1589,16 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (Flag == PPCII::MO_TPREL_FLAG ||
         Flag == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
         Flag == PPCII::MO_TPREL_PCREL_FLAG) {
-      assert(
-          Subtarget->hasAIXSmallLocalExecTLS() &&
-          "addi, or load/stores with thread-pointer only expected with "
-          "local-exec small TLS");
+      assert(HasAIXSmallLocalExecTLS &&
+             "addi, or load/stores with thread-pointer only expected with "
+             "local-exec small TLS");
 
       int64_t Offset = MO.getOffset();
-      // Non-zero offsets for loads/stores require special handling and are
-      // handled here. For `addi`, all offsets are handled here.
-      if (!Offset && !IsMIADDI8)
-        break;
-
       LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
-      if (Offset) {
-        const MCExpr *Expr = getAdjustedLocalExecExpr(MO, Offset);
+      const MCExpr *Expr = getAdjustedLocalExecExpr(MO, Offset);
+      if (Expr)
         TmpInst.getOperand(OpNum) = MCOperand::createExpr(Expr);
-      }
 
       // Change the opcode to load address if the original opcode is an `addi`.
       if (IsMIADDI8)
@@ -1627,7 +1619,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 // we need to create a new MCExpr that adds the non-zero offset to the address
 // of the local-exec variable that will be used in either an addi, load or
 // store. However, the final displacement for these instructions must be
-// between [-32768, 32768), so if the TLS address + it's non-zero offset is
+// between [-32768, 32768), so if the TLS address + its non-zero offset is
 // greater than 32KB, a new MCExpr is produced to accommodate this situation.
 const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
                                                       int64_t Offset) {
@@ -1638,6 +1630,10 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
          "Only local-exec accesses are handled!");
   MCSymbolRefExpr::VariantKind RefKind = MCSymbolRefExpr::VK_PPC_AIX_TLSLE;
 
+  // Non-zero offsets (for loads, stores or `addi`) require additional handling.
+  // When the offset is zero, there is no need to create an adjusted MCExpr.
+  if (!Offset)
+    return nullptr;
   const MCExpr *Expr =
       MCSymbolRefExpr::create(getSymbol(GValue), RefKind, OutContext);
 
@@ -1651,7 +1647,8 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
            "Only expecting to find extern TLS variables not present in the TLS "
            "variables to address map!");
 
-  unsigned TLSVarAddress = TLSVarsMapEntryIter->second;
+  unsigned TLSVarAddress =
+      IsGlobalADeclaration ? 0 : TLSVarsMapEntryIter->second;
   ptrdiff_t FinalAddress = (TLSVarAddress + Offset);
   // If the address of the TLS variable + the offset is less than 32KB,
   // or if the TLS variable is extern, we simply produce an MCExpr to add the
@@ -1663,24 +1660,20 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
         Expr, MCConstantExpr::create(Offset, OutContext), OutContext);
   else {
     // Handle the written offset for cases where:
-    //   address of the TLS variable + the offset is greater than 32KB.
+    //   TLS variable address + Offset > 32KB.
 
-    // Get the address in the range of 0 to 64KB.
-    FinalAddress = FinalAddress & 0xFFFF;
-    // If the highest bit in the calculated address is set, subtract
-    // additional 64KB to ensure that the final address fits within
-    // [-32768,32768).
-    if (FinalAddress & 0x8000)
-      FinalAddress = FinalAddress - 0x10000;
-    assert((FinalAddress < 32768) ||
-           (FinalAddress >= -32768) &&
-               "Expecting the final address for local-exec TLS variables to be "
-               "between [-32768,32768)!");
-    // Get the offset that is actually written out in assembly by adding back
-    // the original address of the TLS variable.
-    ptrdiff_t WrittenOffset = FinalAddress - TLSVarAddress;
+    // The assembly that is printed is actually:
+    //  TLSVar[storageMappingClass]@le + Offset - Delta
+    // where Delta is a multiple of 64KB: ((FinalAddress + 32768) & ~0xFFFF).
+    ptrdiff_t OffsetDelta = Offset - ((FinalAddress + 32768) & ~0xFFFF);
+    // Check that the total instruction displacement fits within [-32768,32768).
+    ptrdiff_t InstDisp = TLSVarAddress + OffsetDelta;
+    assert((InstDisp < 32768) ||
+           (InstDisp >= -32768) &&
+               "Expecting the instruction displacement for local-exec TLS "
+               "variables to be between [-32768, 32768)!");
     Expr = MCBinaryExpr::createAdd(
-        Expr, MCConstantExpr::create(WrittenOffset, OutContext), OutContext);
+        Expr, MCConstantExpr::create(OffsetDelta, OutContext), OutContext);
   }
 
   return Expr;
