@@ -131,8 +131,10 @@ DEBUG_COUNTER(VisitCounter, "instcombine-visit",
               "Controls which instructions are visited");
 
 static cl::opt<bool>
-EnableCodeSinking("instcombine-code-sinking", cl::desc("Enable code sinking"),
-                                              cl::init(true));
+    EnableCodeSinking("instcombine-code-sinking",
+                      cl::desc("Enable code sinking, unless code sinking is "
+                               "disabled via a pass option."),
+                      cl::init(true));
 
 static cl::opt<unsigned> MaxSinkNumUsers(
     "instcombine-max-sink-users", cl::init(32),
@@ -4017,7 +4019,7 @@ bool InstCombinerImpl::run() {
     // Return the UserBlock if successful.
     auto getOptionalSinkBlockForInst =
         [this](Instruction *I) -> std::optional<BasicBlock *> {
-      if (!EnableCodeSinking)
+      if (!Opts.EnableCodeSinking || !EnableCodeSinking)
         return std::nullopt;
 
       BasicBlock *BB = I->getParent();
@@ -4367,8 +4369,7 @@ static bool combineInstructionsOverFunction(
     Function &F, InstructionWorklist &Worklist, AliasAnalysis *AA,
     AssumptionCache &AC, TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
-    ProfileSummaryInfo *PSI, unsigned MaxIterations, bool VerifyFixpoint,
-    LoopInfo *LI) {
+    ProfileSummaryInfo *PSI, LoopInfo *LI, const InstCombineOptions &Opts) {
   auto &DL = F.getParent()->getDataLayout();
 
   /// Builder - This is an IRBuilder that automatically inserts new
@@ -4394,8 +4395,8 @@ static bool combineInstructionsOverFunction(
   while (true) {
     ++Iteration;
 
-    if (Iteration > MaxIterations && !VerifyFixpoint) {
-      LLVM_DEBUG(dbgs() << "\n\n[IC] Iteration limit #" << MaxIterations
+    if (Iteration > Opts.MaxIterations && !Opts.VerifyFixpoint) {
+      LLVM_DEBUG(dbgs() << "\n\n[IC] Iteration limit #" << Opts.MaxIterations
                         << " on " << F.getName()
                         << " reached; stopping without verifying fixpoint\n");
       break;
@@ -4406,7 +4407,7 @@ static bool combineInstructionsOverFunction(
                       << F.getName() << "\n");
 
     InstCombinerImpl IC(Worklist, Builder, F.hasMinSize(), AA, AC, TLI, TTI, DT,
-                        ORE, BFI, PSI, DL, LI);
+                        ORE, BFI, PSI, DL, LI, Opts);
     IC.MaxArraySizeForCombine = MaxArraySize;
     bool MadeChangeInThisIteration = IC.prepareWorklist(F, RPOT);
     MadeChangeInThisIteration |= IC.run();
@@ -4414,10 +4415,10 @@ static bool combineInstructionsOverFunction(
       break;
 
     MadeIRChange = true;
-    if (Iteration > MaxIterations) {
+    if (Iteration > Opts.MaxIterations) {
       report_fatal_error(
           "Instruction Combining did not reach a fixpoint after " +
-          Twine(MaxIterations) + " iterations");
+          Twine(Opts.MaxIterations) + " iterations");
     }
   }
 
@@ -4468,8 +4469,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
 
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                       BFI, PSI, Options.MaxIterations,
-                                       Options.VerifyFixpoint, LI))
+                                       BFI, PSI, LI, Options))
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
 
@@ -4518,9 +4518,7 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
       nullptr;
 
   return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                         BFI, PSI,
-                                         InstCombineDefaultMaxIterations,
-                                         /*VerifyFixpoint */ false, LI);
+                                         BFI, PSI, LI, InstCombineOptions());
 }
 
 char InstructionCombiningPass::ID = 0;

@@ -23,27 +23,23 @@ define void @test_find_min(ptr noundef nonnull align 8 dereferenceable(24) %this
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[TMP0]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[COND_END7:%.*]] ]
-; CHECK-NEXT:    [[MIN_010:%.*]] = phi ptr [ [[TMP1]], [[FOR_BODY_LR_PH]] ], [ [[COND8:%.*]], [[COND_END7]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[MIN_010:%.*]] = phi ptr [ [[TMP1]], [[FOR_BODY_LR_PH]] ], [ [[COND8:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP2]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[KEY:%.*]] = getelementptr inbounds [[STRUCT_NODE:%.*]], ptr [[TMP3]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[KEY]], align 4
+; CHECK-NEXT:    [[KEY2:%.*]] = getelementptr inbounds [[STRUCT_NODE]], ptr [[MIN_010]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[KEY2]], align 4
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq ptr [[MIN_010]], null
-; CHECK-NEXT:    br i1 [[CMP3]], label [[COND_END7]], label [[COND_FALSE:%.*]]
-; CHECK:       cond.false:
-; CHECK-NEXT:    [[KEY2:%.*]] = getelementptr inbounds [[STRUCT_NODE:%.*]], ptr [[MIN_010]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[KEY2]], align 4
-; CHECK-NEXT:    [[KEY:%.*]] = getelementptr inbounds [[STRUCT_NODE]], ptr [[TMP3]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[KEY]], align 4
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp slt i32 [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP4]], ptr [[TMP3]], ptr [[MIN_010]]
-; CHECK-NEXT:    br label [[COND_END7]]
-; CHECK:       cond.end7:
-; CHECK-NEXT:    [[COND8]] = phi ptr [ [[COND]], [[COND_FALSE]] ], [ [[TMP3]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp slt i32 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[CMP3]], i1 true, i1 [[CMP4]]
+; CHECK-NEXT:    [[COND8]] = select i1 [[TMP6]], ptr [[TMP3]], ptr [[MIN_010]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[MIN_0_LCSSA:%.*]] = phi ptr [ [[TMP1]], [[ENTRY:%.*]] ], [ [[COND8]], [[COND_END7]] ]
+; CHECK-NEXT:    [[MIN_0_LCSSA:%.*]] = phi ptr [ [[TMP1]], [[ENTRY:%.*]] ], [ [[COND8]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    store ptr [[MIN_0_LCSSA]], ptr [[THIS]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -140,24 +136,28 @@ define void @cond_select_loop(ptr noalias nocapture noundef readonly %a, ptr noa
 ; CHECK-LABEL: define void @cond_select_loop(
 ; CHECK-SAME: ptr noalias nocapture noundef readonly [[A:%.*]], ptr noalias nocapture noundef readonly [[B:%.*]], ptr noalias nocapture noundef writeonly [[C:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[I_07:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[COND_END:%.*]] ]
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[I_07]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[TMP0]], 0.000000e+00
-; CHECK-NEXT:    br i1 [[CMP2]], label [[COND_END]], label [[COND_FALSE:%.*]]
-; CHECK:       cond.false:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[I_07]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    br label [[COND_END]]
-; CHECK:       cond.end:
-; CHECK-NEXT:    [[COND:%.*]] = phi float [ [[TMP1]], [[COND_FALSE]] ], [ [[TMP0]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[I_07]]
-; CHECK-NEXT:    store float [[COND]], ptr [[ARRAYIDX4]], align 4
-; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_07]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 4
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD9]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD10]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP4]], <4 x float> [[WIDE_LOAD9]], <4 x float> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP5]], <4 x float> [[WIDE_LOAD10]], <4 x float> [[WIDE_LOAD8]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 4
+; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[TMP9]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP10]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -222,3 +222,8 @@ for.inc:                                          ; preds = %cond.end
 for.end:
   ret void
 }
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+;.
