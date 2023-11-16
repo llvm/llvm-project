@@ -9,7 +9,7 @@
 // RUN: clang-scan-deps -compilation-database %t/cdb1.json \
 // RUN:   -cas-path %t/cas -module-files-dir %t/dir1/outputs \
 // RUN:   -prefix-map=%t/dir1/outputs=/^modules -prefix-map=%t/dir1=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
-// RUN:   -format experimental-include-tree-full -mode preprocess-dependency-directives \
+// RUN:   -format experimental-include-tree-full -mode preprocess-dependency-directives -optimize-args=none \
 // RUN:   > %t/deps.json
 
 // Extract the include-tree commands
@@ -291,7 +291,7 @@
 // RUN: clang-scan-deps -compilation-database %t/cdb2.json \
 // RUN:   -cas-path %t/cas -module-files-dir %t/dir2/outputs \
 // RUN:   -prefix-map=%t/dir2/outputs=/^modules -prefix-map=%t/dir2=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
-// RUN:   -format experimental-include-tree-full -mode preprocess-dependency-directives \
+// RUN:   -format experimental-include-tree-full -mode preprocess-dependency-directives -optimize-args=none \
 // RUN:   > %t/deps2.json
 
 // RUN: %deps-to-rsp %t/deps2.json --module-name Top > %t/Top2.rsp

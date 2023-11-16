@@ -11,12 +11,12 @@
 // RUN: sed -e "s|DIR|%t/dir2|g" -e "s|CLANG|%clang|g" -e "s|SDK|%S/Inputs/SDK|g" %t/cdb_pch.json.template > %t/dir2/cdb_pch.json
 
 // == Scan PCH
-// RUN: clang-scan-deps -compilation-database %t/dir1/cdb_pch.json -format experimental-full \
+// RUN: clang-scan-deps -compilation-database %t/dir1/cdb_pch.json -format experimental-full -optimize-args=none \
 // RUN:    -cas-path %t/cas -module-files-dir %t/dir1/modules \
 // RUN:    -prefix-map=%t/dir1/modules=/^modules -prefix-map=%t/dir1=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
 // RUN:  > %t/pch_dir1.txt
 
-// RUN: clang-scan-deps -compilation-database %t/dir2/cdb_pch.json -format experimental-full \
+// RUN: clang-scan-deps -compilation-database %t/dir2/cdb_pch.json -format experimental-full -optimize-args=none \
 // RUN:    -cas-path %t/cas -module-files-dir %t/dir2/modules \
 // RUN:    -prefix-map=%t/dir2/modules=/^modules -prefix-map=%t/dir2=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
 // RUN:  > %t/pch_dir2.txt
@@ -41,12 +41,12 @@
 // CACHE-HIT: compile job cache hit
 
 // == Scan TU, including PCH
-// RUN: clang-scan-deps -compilation-database %t/dir1/cdb.json -format experimental-full \
+// RUN: clang-scan-deps -compilation-database %t/dir1/cdb.json -format experimental-full -optimize-args=none \
 // RUN:    -cas-path %t/cas -module-files-dir %t/dir1/modules \
 // RUN:    -prefix-map=%t/dir1/modules=/^modules -prefix-map=%t/dir1=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
 // RUN:  > %t/dir1.txt
 
-// RUN: clang-scan-deps -compilation-database %t/dir2/cdb.json -format experimental-full \
+// RUN: clang-scan-deps -compilation-database %t/dir2/cdb.json -format experimental-full -optimize-args=none \
 // RUN:    -cas-path %t/cas -module-files-dir %t/dir2/modules \
 // RUN:    -prefix-map=%t/dir2/modules=/^modules -prefix-map=%t/dir2=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
 // RUN:  > %t/dir2.txt
