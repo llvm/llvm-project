@@ -271,10 +271,9 @@ bool BackendConsumer::LinkInModules(llvm::Module *M, bool ShouldLinkFiles) {
         Err = Linker::linkModules(
           *M, std::move(Clone), LM.LinkFlags,
           [](llvm::Module &M, const llvm::StringSet<> &GVS) {
-          internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
-                            return !GV.hasName() ||
-                            (GVS.count(GV.getName()) == 0);
-                            });
+            internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
+              return !GV.hasName() || (GVS.count(GV.getName()) == 0);
+            });
           });
       } else
         Err = Linker::linkModules(*M, std::move(Clone), LM.LinkFlags);
@@ -288,10 +287,9 @@ bool BackendConsumer::LinkInModules(llvm::Module *M, bool ShouldLinkFiles) {
         Err = Linker::linkModules(
           *M, std::move(LM.Module), LM.LinkFlags,
           [](llvm::Module &M, const llvm::StringSet<> &GVS) {
-          internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
-                            return !GV.hasName() ||
-                            (GVS.count(GV.getName()) == 0);
-                            });
+            internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
+              return !GV.hasName() || (GVS.count(GV.getName()) == 0);
+            });
           });
       } else
         Err = Linker::linkModules(*M, std::move(LM.Module), LM.LinkFlags);
