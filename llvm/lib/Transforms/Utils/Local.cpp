@@ -2675,6 +2675,9 @@ llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
     if (!Inst->use_empty() && !Inst->getType()->isTokenTy())
       Inst->replaceAllUsesWith(PoisonValue::get(Inst->getType()));
     if (Inst->isEHPad() || Inst->getType()->isTokenTy()) {
+      // EHPads can't have DPValues attached to them, but it might be possible
+      // for things with token type.
+      Inst->dropDbgValues();
       EndInst = Inst;
       continue;
     }
