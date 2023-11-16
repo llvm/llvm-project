@@ -1800,20 +1800,6 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           watch_id_t watch_id = LLDB_INVALID_WATCH_ID;
           bool silently_continue = false;
           WatchpointResourceSP wp_resource_sp;
-          if (wp_hw_index != LLDB_INVALID_WATCHPOINT_RESOURCE_ID) {
-            wp_resource_sp = m_watchpoint_resource_list.FindByID(wp_hw_index);
-            if (wp_resource_sp) {
-              // If we were given an access address, and the Resource we
-              // found by watchpoint register index does not contain that
-              // address, then the wp_resource_id's have not tracked the
-              // hardware watchpoint registers correctly, discard this
-              // Resource found by ID and look it up by access address.
-              if (wp_hit_addr != LLDB_INVALID_ADDRESS &&
-                  !wp_resource_sp->Contains(wp_hit_addr)) {
-                wp_resource_sp.reset();
-              }
-            }
-          }
           if (wp_hit_addr != LLDB_INVALID_ADDRESS) {
             wp_resource_sp =
                 m_watchpoint_resource_list.FindByAddress(wp_hit_addr);
@@ -2261,10 +2247,6 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
 
         WatchpointResourceSP wp_resource_sp =
             m_watchpoint_resource_list.FindByAddress(wp_addr);
-        uint32_t wp_index = LLDB_INVALID_INDEX32;
-
-        if (wp_resource_sp)
-          wp_index = wp_resource_sp->GetID();
 
         // Rewrite gdb standard watch/rwatch/awatch to
         // "reason:watchpoint" + "description:ADDR",
