@@ -876,7 +876,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     }
 
     BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DestReg)
-            .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
 
@@ -891,13 +891,13 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (DestReg == AMDGPU::VCC) {
       if (AMDGPU::SReg_64RegClass.contains(SrcReg)) {
         BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B64), AMDGPU::VCC)
-          .addReg(SrcReg, getKillRegState(KillSrc));
+            .addReg(SrcReg, getKillRegState(KillSrc));
       } else {
         // FIXME: Hack until VReg_1 removed.
         assert(AMDGPU::VGPR_32RegClass.contains(SrcReg));
         BuildMI(MBB, MI, DL, get(AMDGPU::V_CMP_NE_U32_e32))
-          .addImm(0)
-          .addReg(SrcReg, getKillRegState(KillSrc));
+            .addImm(0)
+            .addReg(SrcReg, getKillRegState(KillSrc));
       }
 
       return;
@@ -907,13 +907,14 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       // When an i1 argument is allocated to an SGPR_32, we may have a COPY
       // from SGPR_32 to SReg_64. The following handles this case to avoid
       // an illegal copy.
-      if(AMDGPU::SGPR_32RegClass.contains(SrcReg)) {
+      if (AMDGPU::SGPR_32RegClass.contains(SrcReg)) {
         auto sub0 = RI.getSubReg(DestReg, AMDGPU::sub0);
         if (sub0 != SrcReg) {
           BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), sub0).addReg(SrcReg);
         }
         BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32),
-                RI.getSubReg(DestReg, AMDGPU::sub1)).addImm(0);
+                RI.getSubReg(DestReg, AMDGPU::sub1))
+            .addImm(0);
         return;
       }
 
