@@ -45,7 +45,6 @@ DimLvlExpr::unpackBinop() const {
   return {lhs, ak, rhs};
 }
 
-
 //===----------------------------------------------------------------------===//
 // `DimSpec` implementation.
 //===----------------------------------------------------------------------===//
@@ -58,7 +57,6 @@ bool DimSpec::isValid(Ranks const &ranks) const {
   // We explicitly consider null-expr to be vacuously valid.
   return ranks.isValid(var) && (!expr || ranks.isValid(expr));
 }
-
 
 //===----------------------------------------------------------------------===//
 // `LvlSpec` implementation.
@@ -74,7 +72,6 @@ bool LvlSpec::isValid(Ranks const &ranks) const {
   // Nothing in `type` needs additional validation.
   return ranks.isValid(var) && ranks.isValid(expr);
 }
-
 
 //===----------------------------------------------------------------------===//
 // `DimLvlMap` implementation.
@@ -143,6 +140,5 @@ AffineMap DimLvlMap::getLvlToDimMap(MLIRContext *context) const {
     return AffineMap();
   return map;
 }
-
 
 //===----------------------------------------------------------------------===//
