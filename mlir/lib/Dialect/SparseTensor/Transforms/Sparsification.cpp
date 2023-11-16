@@ -336,8 +336,8 @@ static void genBuffers(CodegenEnv &env, OpBuilder &builder) {
         }
         return init;
       },
-      [&loopRange, &env](OpBuilder &b, Location loc, Level l) {
-        assert(l < env.getLoopNum());
+      [&loopRange](OpBuilder &b, Location loc, Level l) {
+        assert(l < loopRange.size());
         return mlir::getValueOrCreateConstantIndexOp(b, loc, loopRange[l].size);
       });
 }
