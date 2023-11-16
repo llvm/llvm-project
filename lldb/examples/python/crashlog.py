@@ -356,7 +356,10 @@ class CrashLog(symbolication.Symbolicator):
             # Keep track of unresolved source paths.
             unavailable_source_paths = set()
             if os.path.exists(self.dsymForUUIDBinary):
-                dsym_for_uuid_command = "%s %s" % (self.dsymForUUIDBinary, uuid_str)
+                dsym_for_uuid_command = (
+                    "%s --copyExecutable --ignoreNegativeCache %s"
+                    % (self.dsymForUUIDBinary, uuid_str)
+                )
                 s = subprocess.check_output(dsym_for_uuid_command, shell=True)
                 if s:
                     try:
