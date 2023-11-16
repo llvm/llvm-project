@@ -49,14 +49,18 @@ func.func @by_operand_type() {
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %match_name = transform.structured.match
-    ops{["arith.fptoui"]} filter_operand_type = f32 in %arg1 : (!transform.any_op) -> !transform.any_op
+    ops{["arith.fptoui"]} filter_operand_types = [f32] in %arg1 : (!transform.any_op) -> !transform.any_op
   transform.test_print_remark_at_operand %match_name, "matched op name" : !transform.any_op
   transform.test_consume_operand %match_name : !transform.any_op
 
   %no_match_name = transform.structured.match
-    ops{["arith.fptoui"]} filter_operand_type = i32 in %arg1 : (!transform.any_op) -> !transform.any_op
+    ops{["arith.fptoui"]} filter_operand_types = [i32] in %arg1 : (!transform.any_op) -> !transform.any_op
   transform.test_print_remark_at_operand %no_match_name, "should not match" : !transform.any_op
   transform.test_consume_operand %no_match_name : !transform.any_op
+
+  // expected-error @+1 {{filter_operand_types length must be equal to the number of operands in the target ops}}
+  %failure_match = transform.structured.match
+    ops{["arith.fptoui"]} filter_operand_types = [i32, i32] in %arg1 : (!transform.any_op) -> !transform.any_op
 }
 
 // -----

@@ -1141,6 +1141,7 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
   }
 
   SmallVector<Operation *> res;
+  bool wrong_operand_filter = false;
   auto matchFun = [&](Operation *op) {
     if (getOps().has_value() && !strs.contains(op->getName().getStringRef()))
       return;
@@ -1180,11 +1181,23 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
         return;
     }
 
-    if (getFilterOperandType().has_value()) {
-      Type t = getFilterOperandType().value();
-      if (!llvm::all_of(op->getOperandTypes(),
-                        [&](Type operandType) { return operandType == t; }))
+    if (getFilterOperandTypes().has_value()) {
+      mlir::ArrayAttr types = getFilterOperandTypes().value();
+      auto operandTypes = op->getOperandTypes();
+      if (types.size() != operandTypes.size()) {
+        wrong_operand_filter = true;
         return;
+      }
+
+      for (auto const &it :
+           llvm::zip(getFilterOperandTypes().value(), operandTypes)) {
+        auto attr = dyn_cast<mlir::TypeAttr>(std::get<0>(it));
+        Type type = attr.getValue().cast<::mlir::Type>();
+        Type t = getElementTypeOrSelf(std::get<1>(it));
+
+        if (type != t)
+          return;
+      }
     }
 
     // All constraints are satisfied.
@@ -1193,6 +1206,9 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
   };
 
   (*payloadOps.begin())->walk(matchFun);
+  if (wrong_operand_filter)
+    return emitDefiniteFailure("filter_operand_types length must be equal to "
+                               "the number of operands in the target ops");
   results.set(cast<OpResult>(getResult()), res);
   return DiagnosedSilenceableFailure::success();
 }
