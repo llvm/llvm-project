@@ -202,7 +202,7 @@ def expand_glob_expressions(args, cwd):
 
 
 def quote_windows_command(seq):
-    """
+    r"""
     Reimplement Python's private subprocess.list2cmdline for MSys compatibility
 
     Based on CPython implementation here:
@@ -1558,7 +1558,7 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
             return cond, ln
 
         def tryParseElse(ln):
-            match = _caching_re_compile("^\s*%else\s*(%{)?").search(ln)
+            match = _caching_re_compile(r"^\s*%else\s*(%{)?").search(ln)
             if not match:
                 return False, ln
             if not match.group(1):
