@@ -1356,16 +1356,16 @@ protected:
 /// FIXME: Make me a member function instead of friend when it works in C++20.
 template <typename OtherT, typename DerivedT, typename BaseT, typename T,
           typename PointerT, typename ReferenceT>
-bool operator==(const indexed_accessor_range_base<DerivedT, BaseT, T,
-                                                  PointerT, ReferenceT> &lhs,
+bool operator==(const indexed_accessor_range_base<DerivedT, BaseT, T, PointerT,
+                                                  ReferenceT> &lhs,
                 const OtherT &rhs) {
   return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 }
 
 template <typename OtherT, typename DerivedT, typename BaseT, typename T,
           typename PointerT, typename ReferenceT>
-bool operator!=(const indexed_accessor_range_base<DerivedT, BaseT, T,
-                                                  PointerT, ReferenceT> &lhs,
+bool operator!=(const indexed_accessor_range_base<DerivedT, BaseT, T, PointerT,
+                                                  ReferenceT> &lhs,
                 const OtherT &rhs) {
   return !(lhs == rhs);
 }
