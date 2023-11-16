@@ -326,7 +326,8 @@ index_type _mlir_ciface_getNumPartitions(void *tensor) {
 void *_mlir_ciface_getSlice(void *tensor,
                             StridedMemRefType<index_type, 1> *partSpec) {
   return static_cast<PartTensorStorageBase *>(tensor)->getSlice(
-      llvm::ArrayRef<index_type>(partSpec->data, partSpec->sizes[0]));
+      llvm::ArrayRef<index_type>(partSpec->data + partSpec->offset,
+                                 partSpec->sizes[0]));
 }
 } // extern "C"
 
