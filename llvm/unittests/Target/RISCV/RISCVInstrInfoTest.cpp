@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -25,6 +26,7 @@ namespace {
 
 class RISCVInstrInfoTest : public testing::TestWithParam<const char *> {
 protected:
+  std::unique_ptr<RISCVTargetMachine> TM;
   std::unique_ptr<LLVMContext> Ctx;
   std::unique_ptr<RISCVSubtarget> ST;
   std::unique_ptr<MachineModuleInfo> MMI;
@@ -42,16 +44,16 @@ protected:
     const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     TargetOptions Options;
 
-    RISCVTargetMachine *TM = static_cast<RISCVTargetMachine *>(
-        TheTarget->createTargetMachine(TT, "generic", "", Options, std::nullopt,
-                                       std::nullopt, CodeGenOptLevel::Default));
+    TM.reset(static_cast<RISCVTargetMachine *>(TheTarget->createTargetMachine(
+        TT, "generic", "", Options, std::nullopt, std::nullopt,
+        CodeGenOptLevel::Default)));
 
     Ctx = std::make_unique<LLVMContext>();
     Module M("Module", *Ctx);
     M.setDataLayout(TM->createDataLayout());
     auto *FType = FunctionType::get(Type::getVoidTy(*Ctx), false);
     auto *F = Function::Create(FType, GlobalValue::ExternalLinkage, "Test", &M);
-    MMI = std::make_unique<MachineModuleInfo>(TM);
+    MMI = std::make_unique<MachineModuleInfo>(TM.get());
 
     ST = std::make_unique<RISCVSubtarget>(
         TM->getTargetTriple(), TM->getTargetCPU(), TM->getTargetCPU(),
