@@ -100,6 +100,7 @@ AsanThread *AsanThread::Create(const void *start_data, uptr data_size,
 #if SANITIZER_WINDOWS
   while (atomic_load(&main_thread_created, memory_order_acquire) == 0) {
     // If another thread is trying to be created before the main thread, wait.
+    internal_sched_yield();
   }
 #endif
   uptr PageSize = GetPageSizeCached();
