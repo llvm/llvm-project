@@ -12,16 +12,14 @@ define void @v4xi8_concat_vector_insert_idx0(ptr %a, ptr %b, i8 %x) {
 ; CHECK-NEXT:    vle8.v v9, (a1)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 2
-; CHECK-NEXT:    vmv.s.x v9, a2
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 1
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v1 = load <2 x i8>, ptr %a
   %v2 = load <2 x i8>, ptr %b
   %concat = shufflevector <2 x i8> %v1, <2 x i8> %v2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %ins = insertelement <4 x i8> %concat, i8 %x, i32 1
+  %ins = insertelement <4 x i8> %concat, i8 %x, i32 0
   store <4 x i8> %ins, ptr %a
   ret void
 }
@@ -98,11 +96,9 @@ define void @v4xi64_concat_vector_insert_idx0(ptr %a, ptr %b, i64 %x) {
 ; RV32-NEXT:    vle64.v v10, (a1)
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vslideup.vi v8, v10, 2
-; RV32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32-NEXT:    vslide1down.vx v10, v8, a2
-; RV32-NEXT:    vslide1down.vx v10, v10, a3
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
-; RV32-NEXT:    vslideup.vi v8, v10, 1
+; RV32-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; RV32-NEXT:    vslide1down.vx v8, v8, a2
+; RV32-NEXT:    vslide1down.vx v8, v8, a3
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    ret
@@ -114,16 +110,14 @@ define void @v4xi64_concat_vector_insert_idx0(ptr %a, ptr %b, i64 %x) {
 ; RV64-NEXT:    vle64.v v10, (a1)
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vslideup.vi v8, v10, 2
-; RV64-NEXT:    vmv.s.x v10, a2
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
-; RV64-NEXT:    vslideup.vi v8, v10, 1
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m2, tu, ma
+; RV64-NEXT:    vmv.s.x v8, a2
 ; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:    ret
   %v1 = load <2 x i64>, ptr %a
   %v2 = load <2 x i64>, ptr %b
   %concat = shufflevector <2 x i64> %v1, <2 x i64> %v2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %ins = insertelement <4 x i64> %concat, i64 %x, i32 1
+  %ins = insertelement <4 x i64> %concat, i64 %x, i32 0
   store <4 x i64> %ins, ptr %a
   ret void
 }
