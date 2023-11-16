@@ -290,7 +290,7 @@ Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
 // A depth limit is used to avoid extreme recurusion.
 // A max number of incoming phi values ensures that expensive searches
 // are avoided.
-void InstCostVisitor::discoverTransitivelyIncomngValues(
+void InstCostVisitor::discoverTransitivelyIncomingValues(
     DenseSet<PHINode *> &PHINodes, PHINode *PN, unsigned Depth) {
   if (Depth > MaxDiscoveryDepth) {
     LLVM_DEBUG(dbgs() << "FnSpecialization: Discover PHI nodes too deep ("
@@ -315,7 +315,7 @@ void InstCostVisitor::discoverTransitivelyIncomngValues(
     if (auto *Phi = dyn_cast<PHINode>(V)) {
       if (Phi == PN || DeadBlocks.contains(PN->getIncomingBlock(I)))
         continue;
-      discoverTransitivelyIncomngValues(PHINodes, Phi, Depth + 1);
+      discoverTransitivelyIncomingValues(PHINodes, Phi, Depth + 1);
     }
   }
 }
@@ -328,12 +328,10 @@ Constant *InstCostVisitor::visitPHINode(PHINode &I) {
   DenseSet<PHINode *> TransitivePHIs;
 
   bool Inserted = VisitedPHIs.insert(&I).second;
-  SmallVector<PHINode *, 8> UnknownIncomingValues;
 
   auto canConstantFoldPhiTrivially = [&](PHINode *PN) -> Constant * {
     Constant *Const = nullptr;
 
-    UnknownIncomingValues.clear();
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
       Value *V = PN->getIncomingValue(I);
 
@@ -350,15 +348,11 @@ Constant *InstCostVisitor::visitPHINode(PHINode &I) {
           return nullptr;
         continue;
       }
-      if (auto *Phi = dyn_cast<PHINode>(V)) {
-        UnknownIncomingValues.push_back(Phi);
-        continue;
-      }
 
       // We can't reason about anything else.
       return nullptr;
     }
-    return UnknownIncomingValues.empty() ? Const : nullptr;
+    return Const;
   };
 
   if (Constant *Const = canConstantFoldPhiTrivially(&I))
@@ -371,24 +365,18 @@ Constant *InstCostVisitor::visitPHINode(PHINode &I) {
     return nullptr;
   }
 
-  // Try to see if we can collect a nest of transitive phis.
-  for (PHINode *Phi : UnknownIncomingValues)
-    discoverTransitivelyIncomngValues(TransitivePHIs, Phi, 1);
+  for (unsigned J = 0, E = I.getNumIncomingValues(); J != E; ++J) {
+    Value *V = I.getIncomingValue(J);
+    if (auto *Phi = dyn_cast<PHINode>(V))
+      discoverTransitivelyIncomingValues(TransitivePHIs, Phi, 1);
+  }
 
   // A nested set of PHINodes can be constantfolded if:
   // - It has a constant input.
   // - It is always the SAME constant.
   // - All the nodes are part of the nest, or a constant.
   // Later we will check that the constant is always the same one.
-  Constant *Const = nullptr;
-  enum FoldStatus {
-    Failed,    // Stop, this can't be folded.
-    KeepGoing, // Maybe can be folded, didn't find a constant.
-    FoundConst // Maybe can be folded, we found constant.
-  };
-  auto canConstantFoldNestedPhi = [&](PHINode *PN) -> FoldStatus {
-    FoldStatus Status = KeepGoing;
-
+  auto canConstantFoldNestedPhi = [&](PHINode *PN, Constant *&Const) -> bool {
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
       Value *V = PN->getIncomingValue(I);
       // Disregard self-references and dead incoming values.
@@ -397,45 +385,45 @@ Constant *InstCostVisitor::visitPHINode(PHINode &I) {
           continue;
 
       if (Constant *C = findConstantFor(V, KnownConstants)) {
-        if (!Const) {
+        if (!Const)
           Const = C;
-          Status = FoundConst;
-        }
+
         // Not all incoming values are the same constant. Bail immediately.
         if (C != Const)
-          return Failed;
+          return false;
         continue;
       }
       if (auto *Phi = dyn_cast<PHINode>(V)) {
         // It's not a Transitive phi. Bail out.
         if (!TransitivePHIs.contains(Phi))
-          return Failed;
+          return false;
         continue;
       }
 
       // We can't reason about anything else.
-      return Failed;
+      return false;
     }
-    return Status;
+    return true;
   };
 
   // All TransitivePHIs have to be the SAME constant.
   Constant *Retval = nullptr;
   for (PHINode *Phi : TransitivePHIs) {
-    FoldStatus Status = canConstantFoldNestedPhi(Phi);
-    if (Status == FoundConst) {
-      if (!Retval) {
-        Retval = Const;
-        continue;
+    Constant *Const = nullptr;
+    if (canConstantFoldNestedPhi(Phi, Const)) {
+      if (Const) {
+        if (!Retval) {
+          Retval = Const;
+          continue;
+        }
+        // Found more than one constant, can't fold.
+        if (Retval != Const)
+          return nullptr;
       }
-      // Found more than one constant, can't fold.
-      if (Retval != Const)
-        return nullptr;
     }
     // Found something "wrong", can't fold.
-    else if (Status == Failed)
+    else
       return nullptr;
-    assert(Status == KeepGoing && "Status should be KeepGoing here");
   }
 
   return Retval;
