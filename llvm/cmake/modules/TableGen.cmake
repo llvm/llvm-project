@@ -4,6 +4,10 @@
 # Adds the name of the generated file to TABLEGEN_OUTPUT.
 include(LLVMDistributionSupport)
 
+# Clear out any pre-existing compile_commands file before processing. This
+# allows for generating a clean compile_commands on each configure.
+file(REMOVE ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml)
+
 function(tablegen project ofn)
   cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
 
@@ -91,6 +95,29 @@ function(tablegen project ofn)
   # but lets us having smaller and cleaner code here.
   get_directory_property(tblgen_includes INCLUDE_DIRECTORIES)
   list(APPEND tblgen_includes ${ARG_EXTRA_INCLUDES})
+
+  # Get the current set of include paths for this td file.
+  cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
+  get_directory_property(tblgen_includes INCLUDE_DIRECTORIES)
+  list(APPEND tblgen_includes ${ARG_EXTRA_INCLUDES})
+  # Filter out any empty include items.
+  list(REMOVE_ITEM tblgen_includes "")
+
+  # Build the absolute path for the current input file.
+  if (IS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
+    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
+  else()
+    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${CMAKE_CURRENT_SOURCE_DIR}/${LLVM_TARGET_DEFINITIONS})
+  endif()
+
+  # Append this file and its includes to the compile commands file.
+  # This file is used by the TableGen LSP Language Server (tblgen-lsp-server).
+  file(APPEND ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml
+      "--- !FileInfo:\n"
+      "  filepath: \"${LLVM_TARGET_DEFINITIONS_ABSOLUTE}\"\n"
+      "  includes: \"${CMAKE_CURRENT_SOURCE_DIR};${tblgen_includes}\"\n"
+  )
+
   # Filter out empty items before prepending each entry with -I
   list(REMOVE_ITEM tblgen_includes "")
   list(TRANSFORM tblgen_includes PREPEND -I)
