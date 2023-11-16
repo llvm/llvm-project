@@ -244,8 +244,8 @@ public:
   ///
   /// The maxLvlRank specifies the max level rank of all inputs/output tensors.
   /// It is used to pre-allocate sufficient memory for internal storage.
-  Merger(unsigned numInputOutputTensors, unsigned numNativeLoops,
-         unsigned numFilterLoops, unsigned maxLvlRank);
+  Merger(unsigned numInputOutputTensors, unsigned numLoops,
+         unsigned maxLvlRank);
 
   //
   // Constructing valid tensor and loop identifiers.
@@ -366,19 +366,6 @@ public:
   /// Gets the total number of loops (native loops + filter loops).
   constexpr unsigned getNumLoops() const { return numLoops; }
 
-  /// Gets the number of native loops.
-  constexpr unsigned getNumNativeLoops() const { return numNativeLoops; }
-
-  /// Gets the number of filter loops.
-  constexpr unsigned getNumFilterLoops() const {
-    return numLoops - numNativeLoops;
-  }
-
-  /// Gets the identifier of the first filter-loop.
-  constexpr LoopId getStartingFilterLoopId() const {
-    return getNumNativeLoops();
-  }
-
   /// Returns true if `b` is the `i`th loop of the output tensor.
   constexpr bool isOutTensor(TensorLoopId b, LoopId i) const {
     return b == makeTensorLoopId(outTensor, i);
@@ -390,11 +377,6 @@ public:
   /// Gets the synthetic tensor's identifier (used for all invariant
   /// tensor expressions).
   constexpr TensorId getSynTensorID() const { return syntheticTensor; }
-
-  constexpr bool isFilterLoop(LoopId i) const {
-    assert(isValidLoopId(i));
-    return i >= numNativeLoops;
-  }
 
   /// Returns true if the expression is `(kTensor t)`.
   bool expIsTensor(ExprId e, TensorId t) const {
@@ -657,7 +639,6 @@ private:
   const TensorId outTensor;
   const TensorId syntheticTensor;
   const unsigned numTensors;
-  const unsigned numNativeLoops;
   const unsigned numLoops;
   bool hasSparseOut;
 
