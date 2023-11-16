@@ -84,36 +84,6 @@ bool VarSet::contains(Var var) const {
   return num < bits.size() && bits[num];
 }
 
-bool VarSet::occursIn(VarSet const &other) const {
-  for (const auto vk : everyVarKind)
-    if (impl[vk].anyCommon(other.impl[vk]))
-      return true;
-  return false;
-}
-
-bool VarSet::occursIn(DimLvlExpr expr) const {
-  if (!expr)
-    return false;
-  switch (expr.getAffineKind()) {
-  case AffineExprKind::Constant:
-    return false;
-  case AffineExprKind::SymbolId:
-    return contains(expr.castSymVar());
-  case AffineExprKind::DimId:
-    return contains(expr.castDimLvlVar());
-  case AffineExprKind::Add:
-  case AffineExprKind::Mul:
-  case AffineExprKind::Mod:
-  case AffineExprKind::FloorDiv:
-  case AffineExprKind::CeilDiv: {
-    const auto [lhs, op, rhs] = expr.unpackBinop();
-    (void)op;
-    return occursIn(lhs) || occursIn(rhs);
-  }
-  }
-  llvm_unreachable("unknown AffineExprKind");
-}
-
 void VarSet::add(Var var) {
   // NOTE: `SmallBitVector::operator[]` will raise assertion errors for OOB.
   impl[var.getKind()][var.getNum()] = true;
