@@ -413,7 +413,7 @@ def CanonicalLoopInfoType : OpenMP_Type<"CanonicalLoopInfo", "cli"> {
   let summary = "Type for representing a reference to a canonical loop";
   let description = [{
     A variable of type CanonicalLoopInfo refers to an OpenMP-compatible
-    canonical loop in the same function. Variables of this type are not
+    canonical loop in the same function. Values of this type are not
     available at runtime and therefore cannot be used by the program itself,
     i.e. an opaque type. It is similar to the transform dialect's
     `!transform.interface` type, but instead of implementing an interface
