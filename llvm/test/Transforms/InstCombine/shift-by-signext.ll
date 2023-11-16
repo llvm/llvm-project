@@ -75,7 +75,7 @@ define i32 @t6_twoshifts(i32 %x, i8 %shamt) {
 ; CHECK:       end:
 ; CHECK-NEXT:    [[SHAMT_WIDE:%.*]] = sext i8 [[SHAMT:%.*]] to i32
 ; CHECK-NEXT:    [[N0:%.*]] = shl i32 [[X:%.*]], [[SHAMT_WIDE]]
-; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[N0]], [[SHAMT_WIDE]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 [[N0]], [[SHAMT_WIDE]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 bb:
@@ -157,7 +157,7 @@ define i32 @n12_twoshifts_and_extrause(i32 %x, i8 %shamt) {
 ; CHECK:       end:
 ; CHECK-NEXT:    [[SHAMT_WIDE:%.*]] = sext i8 [[SHAMT:%.*]] to i32
 ; CHECK-NEXT:    [[N0:%.*]] = shl i32 [[X:%.*]], [[SHAMT_WIDE]]
-; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[N0]], [[SHAMT_WIDE]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 [[N0]], [[SHAMT_WIDE]]
 ; CHECK-NEXT:    call void @use32(i32 [[SHAMT_WIDE]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;

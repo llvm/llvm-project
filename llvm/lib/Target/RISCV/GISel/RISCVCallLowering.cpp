@@ -347,7 +347,10 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
 }
 
 // TODO: Only integer, pointer and aggregate types are supported now.
-static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget) {
+// TODO: Remove IsLowerRetVal argument by adding support for vectors in
+// lowerCall.
+static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget,
+                                  bool IsLowerRetVal = false) {
   // TODO: Integers larger than 2*XLen are passed indirectly which is not
   // supported yet.
   if (T->isIntegerTy())
@@ -368,6 +371,11 @@ static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget) {
     return true;
   }
 
+  if (IsLowerRetVal && T->isVectorTy() && Subtarget.hasVInstructions() &&
+      T->isScalableTy() &&
+      isLegalElementTypeForRVV(T->getScalarType(), Subtarget))
+    return true;
+
   return false;
 }
 
@@ -380,7 +388,7 @@ bool RISCVCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
 
   const RISCVSubtarget &Subtarget =
       MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
-  if (!isSupportedReturnType(Val->getType(), Subtarget))
+  if (!isSupportedReturnType(Val->getType(), Subtarget, /*IsLowerRetVal=*/true))
     return false;
 
   MachineFunction &MF = MIRBuilder.getMF();
@@ -496,24 +504,8 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // TODO: Support tail calls.
   Info.IsTailCall = false;
 
-  // If the callee is a GlobalAddress or ExternalSymbol and cannot be assumed as
-  // DSOLocal, then use MO_PLT. Otherwise use MO_CALL.
-  if (Info.Callee.isGlobal()) {
-    const GlobalValue *GV = Info.Callee.getGlobal();
-    unsigned OpFlags = RISCVII::MO_CALL;
-    if (!getTLI()->getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(),
-                                                           GV))
-      OpFlags = RISCVII::MO_PLT;
-
-    Info.Callee.setTargetFlags(OpFlags);
-  } else if (Info.Callee.isSymbol()) {
-    unsigned OpFlags = RISCVII::MO_CALL;
-    if (!getTLI()->getTargetMachine().shouldAssumeDSOLocal(
-            *MF.getFunction().getParent(), nullptr))
-      OpFlags = RISCVII::MO_PLT;
-
-    Info.Callee.setTargetFlags(OpFlags);
-  }
+  // Select the recommended relocation type R_RISCV_CALL_PLT.
+  Info.Callee.setTargetFlags(RISCVII::MO_PLT);
 
   MachineInstrBuilder Call =
       MIRBuilder

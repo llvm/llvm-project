@@ -3380,9 +3380,9 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
   unsigned Line = getLineNumber(ED->getLocation());
   llvm::DIScope *EnumContext = getDeclContextDescriptor(ED);
   llvm::DIType *ClassTy = getOrCreateType(ED->getIntegerType(), DefUnit);
-  return DBuilder.createEnumerationType(EnumContext, ED->getName(), DefUnit,
-                                        Line, Size, Align, EltArray, ClassTy,
-                                        Identifier, ED->isScoped());
+  return DBuilder.createEnumerationType(
+      EnumContext, ED->getName(), DefUnit, Line, Size, Align, EltArray, ClassTy,
+      /*RunTimeLang=*/0, Identifier, ED->isScoped());
 }
 
 llvm::DIMacro *CGDebugInfo::CreateMacro(llvm::DIMacroFile *Parent,
@@ -5833,8 +5833,13 @@ void CGDebugInfo::setDwoId(uint64_t Signature) {
 }
 
 void CGDebugInfo::finalize() {
-  for (auto const *VD : StaticDataMemberDefinitionsToEmit) {
-    assert(VD->isStaticDataMember());
+  // We can't use a for-each here because `EmitGlobalVariable`
+  // may push new decls into `StaticDataMemberDefinitionsToEmit`,
+  // which would invalidate any iterator.
+  for (size_t i = 0; i < StaticDataMemberDefinitionsToEmit.size(); ++i) {
+    auto const *VD = StaticDataMemberDefinitionsToEmit[i];
+
+    assert(VD && VD->isStaticDataMember());
 
     if (DeclCache.contains(VD))
       continue;
