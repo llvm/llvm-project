@@ -1023,6 +1023,17 @@ let SubtargetPredicate = isGFX11Plus in {
   defm V_CVT_PK_U16_F32 : VOP3Inst<"v_cvt_pk_u16_f32", VOP3_Profile<VOP_V2I16_F32_F32>>;
 } // End SubtargetPredicate = isGFX11Plus
 
+let SubtargetPredicate = HasBF16ConversionInsts in {
+  defm V_CVT_PK_BF16_F32    : VOP3Inst<"v_cvt_pk_bf16_f32", VOP3_Profile<VOP_V2F16_F32_F32>>;
+  defm V_CVT_SR_PK_BF16_F32 : VOP3Inst<"v_cvt_sr_pk_bf16_f32", VOP3_Profile<VOP_V2F16_F32_F32_V2F16>>;
+  def : GCNPat<(v2i16 (int_amdgcn_cvt_pk_bf16_f32 (VOP3Mods f32:$src0, i32:$src0_modifiers),
+                                                  (VOP3Mods f32:$src1, i32:$src1_modifiers))),
+               (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
+  def : GCNPat<(v2i16 (int_amdgcn_cvt_sr_pk_bf16_f32 (VOP3Mods f32:$src0, i32:$src0_modifiers),
+                                                     (VOP3Mods f32:$src1, i32:$src1_modifiers), v2i16:$src2)),
+               (V_CVT_SR_PK_BF16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1, 0, $src2)>;
+}
+
 let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
   defm V_MAXIMUMMINIMUM_F32 : VOP3Inst<"v_maximumminimum_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
   defm V_MINIMUMMAXIMUM_F32 : VOP3Inst<"v_minimummaximum_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
@@ -1337,6 +1348,8 @@ defm V_OR_B16_t16          : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b1
 defm V_XOR_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
 
 defm V_LSHL_ADD_U64        : VOP3Only_Realtriple_gfx1210<0x252>;
+defm V_CVT_PK_BF16_F32     : VOP3Only_Realtriple_gfx1210<0x36d>;
+defm V_CVT_SR_PK_BF16_F32  : VOP3Only_Realtriple_gfx1210<0x36e>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
