@@ -1,10 +1,12 @@
-// RUN: %clangxx -target arm64-apple-macosx11.0.0 -g %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK %s
+// RUN: %clangxx -target arm64-apple-macosx11.0.0 -g -gdwarf-4 -debug-info-kind=standalone %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK %s
+// RUN: %clangxx -target arm64-apple-macosx11.0.0 -g -gdwarf-4 -debug-info-kind=limited %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK %s
 
 enum class Enum : int {
   VAL = -1
 };
 
 struct Empty {};
+struct Fwd;
 
 constexpr auto func() { return 25; }
 
@@ -16,19 +18,23 @@ struct Foo {
     static constexpr Empty cexpr_struct_with_addr{};
     static inline    Enum inline_enum = Enum::VAL;
 
-    template<typename T>
-    static constexpr T cexpr_template{};
+    template<typename T, unsigned V>
+    static constexpr auto cexpr_template = V;
+
+    static const auto empty_templated = cexpr_template<Fwd, 1>;
 };
 
 int main() {
     Foo f;
+    //Bar b;
 
     // Force global variable definitions to be emitted.
     (void)&Foo::cexpr_int_with_addr;
     (void)&Foo::cexpr_struct_with_addr;
 
     return Foo::cexpr_int_with_addr + Foo::cexpr_float
-           + (int)Foo::cexpr_enum + Foo::cexpr_template<short>;
+           + (int)Foo::cexpr_enum + Foo::cexpr_template<short, 5>
+           + Foo::empty_templated;
 }
 
 // CHECK:      @{{.*}}cexpr_int_with_addr{{.*}} =
@@ -65,6 +71,10 @@ int main() {
 // CHECK-SAME:                          flags: DIFlagStaticMember
 // CHECK-NOT:                           extraData:
 
+// CHECK:      ![[EMPTY_TEMPLATED_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "empty_templated",
+// CHECK-SAME:                                    flags: DIFlagStaticMember
+// CHECK-NOT:                                     extraData:
+
 // CHECK:      ![[TEMPLATE_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_template",
 // CHECK-SAME:                             flags: DIFlagStaticMember
 // CHECK-NOT:                              extraData:
@@ -74,21 +84,31 @@ int main() {
 // CHECK-SAME:                  isLocal: false, isDefinition: true, declaration: ![[EMPTY_DECL]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[INT_VAR2:[0-9]+]], expr: !DIExpression(DW_OP_constu, 26, DW_OP_stack_value))
-// CHECK:      ![[INT_VAR2]] = distinct !DIGlobalVariable(name: "cexpr_int2", linkageName:
+// CHECK:      ![[INT_VAR2]] = distinct !DIGlobalVariable(name: "cexpr_int2"
+// CHECK-NOT:                  linkageName:
 // CHECK-SAME:                 isLocal: true, isDefinition: true, declaration: ![[INT_DECL2]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[FLOAT_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, {{.*}}, DW_OP_stack_value))
-// CHECK:      ![[FLOAT_VAR]] = distinct !DIGlobalVariable(name: "cexpr_float", linkageName:
+// CHECK:      ![[FLOAT_VAR]] = distinct !DIGlobalVariable(name: "cexpr_float"
+// CHECK-NOT:                   linkageName:
 // CHECK-SAME:                  isLocal: true, isDefinition: true, declaration: ![[FLOAT_DECL]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[ENUM_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, {{.*}}, DW_OP_stack_value))
-// CHECK:      ![[ENUM_VAR]] = distinct !DIGlobalVariable(name: "cexpr_enum", linkageName:
+// CHECK:      ![[ENUM_VAR]] = distinct !DIGlobalVariable(name: "cexpr_enum"
+// CHECK-NOT:                  linkageName:
 // CHECK-SAME:                 isLocal: true, isDefinition: true, declaration: ![[ENUM_DECL]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[IENUM_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, {{.*}}, DW_OP_stack_value))
-// CHECK:      ![[IENUM_VAR]] = distinct !DIGlobalVariable(name: "inline_enum", linkageName:
+// CHECK:      ![[IENUM_VAR]] = distinct !DIGlobalVariable(name: "inline_enum"
+// CHECK-NOT:                   linkageName:
 // CHECK-SAME:                  isLocal: true, isDefinition: true, declaration: ![[IENUM_DECL]])
 
-// CHECK:      !DIGlobalVariableExpression(var: ![[TEMPLATE_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 0, DW_OP_stack_value))
-// CHECK:      ![[TEMPLATE_VAR]] = distinct !DIGlobalVariable(name: "cexpr_template", linkageName:
-// CHECK-SAME:                     isLocal: true, isDefinition: true, declaration: ![[TEMPLATE_DECL]], templateParams: ![[TEMPLATE_PARMS:[0-9]+]])
+// CHECK:      !DIGlobalVariableExpression(var: ![[EMPTY_TEMPLATED_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 1, DW_OP_stack_value))
+// CHECK:      ![[EMPTY_TEMPLATED_VAR]] = distinct !DIGlobalVariable(name: "empty_templated"
+// CHECK-NOT:                             linkageName:
+// CHECK-SAME:                            isLocal: true, isDefinition: true, declaration: ![[EMPTY_TEMPLATED_DECL]])
+
+// CHECK:      !DIGlobalVariableExpression(var: ![[TEMPLATE_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 5, DW_OP_stack_value))
+// CHECK:      ![[TEMPLATE_VAR]] = distinct !DIGlobalVariable(name: "cexpr_template"
+// CHECK-NOT:                      linkageName:
+// CHECK-SAME:                     isLocal: true, isDefinition: true, declaration: ![[TEMPLATE_DECL]], templateParams: ![[TEMPLATE_PARMS_2:[0-9]+]])

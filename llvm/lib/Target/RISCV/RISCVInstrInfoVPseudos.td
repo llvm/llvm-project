@@ -241,6 +241,8 @@ def VLOpFrag : PatFrag<(ops), (XLenVT (VLOp (XLenVT AVL:$vl)))>;
 // This must be kept in sync with RISCV::VLMaxSentinel.
 def VLMax : OutPatFrag<(ops), (XLenVT -1)>;
 
+def SelectFPImm : ComplexPattern<fAny, 1, "selectFPImm", [], [], 1>;
+
 // List of EEW.
 defvar EEWList = [8, 16, 32, 64];
 
@@ -3213,7 +3215,8 @@ multiclass VPseudoTernaryWithTailPolicy<VReg RetClass,
     defvar mx = MInfo.MX;
     let isCommutable = Commutable in
     def "_" # mx # "_E" # sew : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class, Constraint>;
-    def "_" # mx # "_E" # sew # "_MASK" : VPseudoTernaryMaskPolicy<RetClass, Op1Class, Op2Class, Constraint>;
+    def "_" # mx # "_E" # sew # "_MASK" : VPseudoTernaryMaskPolicy<RetClass, Op1Class, Op2Class, Constraint>,
+                                          RISCVMaskedPseudo<MaskIdx=3, MaskAffectsRes=true>;
   }
 }
 
@@ -3232,7 +3235,8 @@ multiclass VPseudoTernaryWithTailPolicyRoundingMode<VReg RetClass,
                                                      Op2Class, Constraint>;
     def "_" # mx # "_E" # sew # "_MASK"
         : VPseudoTernaryMaskPolicyRoundingMode<RetClass, Op1Class,
-                                               Op2Class, Constraint>;
+                                               Op2Class, Constraint>,
+          RISCVMaskedPseudo<MaskIdx=3, MaskAffectsRes=true>;
   }
 }
 
@@ -7423,6 +7427,11 @@ foreach fvti = AllFloatVectors in {
                            (fvti.Scalar (fpimm0)), VLOpFrag)),
               (!cast<Instruction>("PseudoVMV_S_X_" # fvti.LMul.MX)
                (fvti.Vector $rs1), (XLenVT X0), GPR:$vl, fvti.Log2SEW)>;
+
+    def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
+                           (fvti.Scalar (SelectFPImm (XLenVT GPR:$imm))), VLOpFrag)),
+              (!cast<Instruction>("PseudoVMV_S_X_" # fvti.LMul.MX)
+               (fvti.Vector $rs1), GPR:$imm, GPR:$vl, fvti.Log2SEW)>;
   }
 }
 

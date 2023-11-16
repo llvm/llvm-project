@@ -1093,7 +1093,7 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
     Size = SE.getElementSize(Inst);
   } else {
     auto *SizeTy =
-        SE.getEffectiveSCEVType(PointerType::getInt8PtrTy(SE.getContext()));
+        SE.getEffectiveSCEVType(PointerType::getUnqual(SE.getContext()));
     Size = SE.getConstant(SizeTy, 8);
   }
 

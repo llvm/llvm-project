@@ -435,19 +435,6 @@ static ReassociationIndices getReassociationForFlattening(ShapedType srcTp) {
   return reassociation;
 }
 
-/// Generates scalar to tensor cast.
-static Value genScalarToTensor(OpBuilder &builder, Location loc, Value elem,
-                               Type dstTp) {
-  if (auto rtp = dstTp.dyn_cast<RankedTensorType>()) {
-    // Scalars can only be converted to 0-ranked tensors.
-    if (rtp.getRank() != 0)
-      return nullptr;
-    elem = genCast(builder, loc, elem, rtp.getElementType());
-    return builder.create<tensor::FromElementsOp>(loc, rtp, elem);
-  }
-  return genCast(builder, loc, elem, dstTp);
-}
-
 //===----------------------------------------------------------------------===//
 // Codegen rules.
 //===----------------------------------------------------------------------===//
@@ -1497,11 +1484,12 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
     createAllocFields(rewriter, loc, dstTp, dynSizes, /*enableInit=*/false,
                       fields, nse);
 
-    // Now construct the dim2lvl and lvl2dim buffers.
+    // Now construct the lvl sizes and the dim2lvl/lvl2dim buffers.
+    SmallVector<Value> lvlSizesValues;
     Value dim2lvlBuffer;
     Value lvl2dimBuffer;
     genMapBuffers(rewriter, loc, dstTp, dimShapesValues, dimSizesBuffer,
-                  dim2lvlBuffer, lvl2dimBuffer);
+                  lvlSizesValues, dim2lvlBuffer, lvl2dimBuffer);
 
     // Read the COO tensor data.
     MutSparseTensorDescriptor desc(dstTp, fields);

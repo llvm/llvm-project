@@ -3184,9 +3184,14 @@ static bool HandleLValueIndirectMember(EvalInfo &Info, const Expr *E,
   return true;
 }
 
+enum class SizeOfType {
+  SizeOf,
+  DataSizeOf,
+};
+
 /// Get the size of the given type in char units.
-static bool HandleSizeof(EvalInfo &Info, SourceLocation Loc,
-                         QualType Type, CharUnits &Size) {
+static bool HandleSizeof(EvalInfo &Info, SourceLocation Loc, QualType Type,
+                         CharUnits &Size, SizeOfType SOT = SizeOfType::SizeOf) {
   // sizeof(void), __alignof__(void), sizeof(function) = 1 as a gcc
   // extension.
   if (Type->isVoidType() || Type->isFunctionType()) {
@@ -3206,7 +3211,10 @@ static bool HandleSizeof(EvalInfo &Info, SourceLocation Loc,
     return false;
   }
 
-  Size = Info.Ctx.getTypeSizeInChars(Type);
+  if (SOT == SizeOfType::SizeOf)
+    Size = Info.Ctx.getTypeSizeInChars(Type);
+  else
+    Size = Info.Ctx.getTypeInfoDataSizeInChars(Type).Width;
   return true;
 }
 
@@ -13689,6 +13697,7 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
       return Success(1, E);
   }
 
+  case UETT_DataSizeOf:
   case UETT_SizeOf: {
     QualType SrcTy = E->getTypeOfArgument();
     // C++ [expr.sizeof]p2: "When applied to a reference or a reference type,
@@ -13697,8 +13706,11 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
       SrcTy = Ref->getPointeeType();
 
     CharUnits Sizeof;
-    if (!HandleSizeof(Info, E->getExprLoc(), SrcTy, Sizeof))
+    if (!HandleSizeof(Info, E->getExprLoc(), SrcTy, Sizeof,
+                      E->getKind() == UETT_DataSizeOf ? SizeOfType::DataSizeOf
+                                                      : SizeOfType::SizeOf)) {
       return false;
+    }
     return Success(Sizeof, E);
   }
   case UETT_OpenMPRequiredSimdAlign:
@@ -15660,12 +15672,14 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   // this doesn't escape.
   MaterializeTemporaryExpr BaseMTE(T, const_cast<Expr*>(this), true);
   APValue::LValueBase Base(&BaseMTE);
-
   Info.setEvaluatingDecl(Base, Result.Val);
-  LValue LVal;
-  LVal.set(Base);
 
-  {
+  if (Info.EnableNewConstInterp) {
+    if (!Info.Ctx.getInterpContext().evaluateAsRValue(Info, this, Result.Val))
+      return false;
+  } else {
+    LValue LVal;
+    LVal.set(Base);
     // C++23 [intro.execution]/p5
     // A full-expression is [...] a constant-expression
     // So we need to make sure temporary objects are destroyed after having
@@ -15674,10 +15688,10 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
     if (!::EvaluateInPlace(Result.Val, Info, LVal, this) ||
         Result.HasSideEffects || !Scope.destroy())
       return false;
-  }
 
-  if (!Info.discardCleanups())
-    llvm_unreachable("Unhandled cleanup; missing full expression marker?");
+    if (!Info.discardCleanups())
+      llvm_unreachable("Unhandled cleanup; missing full expression marker?");
+  }
 
   if (!CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
                                Result.Val, Kind))

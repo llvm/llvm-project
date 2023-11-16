@@ -1608,8 +1608,8 @@ static bool isUsedByLifetimeMarker(Value *V) {
 // lifetime.start or lifetime.end intrinsics.
 static bool hasLifetimeMarkers(AllocaInst *AI) {
   Type *Ty = AI->getType();
-  Type *Int8PtrTy = Type::getInt8PtrTy(Ty->getContext(),
-                                       Ty->getPointerAddressSpace());
+  Type *Int8PtrTy =
+      PointerType::get(Ty->getContext(), Ty->getPointerAddressSpace());
   if (Ty == Int8PtrTy)
     return isUsedByLifetimeMarker(AI);
 

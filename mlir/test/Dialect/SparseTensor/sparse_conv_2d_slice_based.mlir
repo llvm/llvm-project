@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --sparsification="enable-index-reduction=true" --canonicalize --cse | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map --sparsification --canonicalize --cse | FileCheck %s
 
 #map = affine_map<(d0, d1, d2, d3) -> (d0 + d2, d1 + d3)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d3)>

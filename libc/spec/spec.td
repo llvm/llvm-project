@@ -50,6 +50,9 @@ def DoubleType : NamedType<"double">;
 def LongDoubleType : NamedType<"long double">;
 def CharType : NamedType<"char">;
 
+// TODO: Add compatibility layer to use C23 type _Float128 if possible.
+def Float128Type : NamedType<"__float128">;
+
 // Common types
 def VoidPtr : PtrType<VoidType>;
 def VoidPtrPtr : PtrType<VoidPtr>;

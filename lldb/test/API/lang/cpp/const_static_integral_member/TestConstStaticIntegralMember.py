@@ -105,7 +105,9 @@ class TestCase(TestBase):
     # For debug-info produced by older versions of clang, dsymutil strips the
     # debug info for classes that only have const static data members without
     # definitions.
-    @expectedFailureAll(compiler=["clang"], compiler_version=["<", "18.0"])
+    @expectedFailureAll(
+        debug_info=["dsym"], compiler=["clang"], compiler_version=["<", "18.0"]
+    )
     def test_class_with_only_const_static(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -125,7 +127,6 @@ class TestCase(TestBase):
     # wouldn't get indexed into the Names accelerator table preventing LLDB from finding
     # them.
     @expectedFailureAll(compiler=["clang"], compiler_version=["<", "18.0"])
-    @expectedFailureAll(debug_info=no_match(["dsym"]), oslist=no_match(["linux", "windows"]))
     def test_inline_static_members(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -173,6 +174,9 @@ class TestCase(TestBase):
             "ClassWithEnumAlias::enum_alias_alias", result_value="scoped_enum_case1"
         )
 
+    # With older versions of Clang, LLDB fails to evaluate classes with only
+    # constexpr members when dsymutil is enabled
+    @expectedFailureAll(compiler=["clang"], compiler_version=["<", "18.0"])
     def test_shadowed_static_inline_members(self):
         """Tests that the expression evaluator and SBAPI can both
         correctly determine the requested inline static variable

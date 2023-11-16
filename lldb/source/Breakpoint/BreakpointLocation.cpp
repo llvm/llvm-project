@@ -626,22 +626,19 @@ void BreakpointLocation::Dump(Stream *s) const {
 
   bool is_resolved = IsResolved();
   bool is_hardware = is_resolved && m_bp_site_sp->IsHardware();
-  auto hardware_index = is_resolved ?
-      m_bp_site_sp->GetHardwareIndex() : LLDB_INVALID_INDEX32;
 
   lldb::tid_t tid = GetOptionsSpecifyingKind(BreakpointOptions::eThreadSpec)
                         .GetThreadSpecNoCreate()
                         ->GetTID();
   s->Printf("BreakpointLocation %u: tid = %4.4" PRIx64
             "  load addr = 0x%8.8" PRIx64 "  state = %s  type = %s breakpoint  "
-            "hw_index = %i  hit_count = %-4u  ignore_count = %-4u",
+            "hit_count = %-4u  ignore_count = %-4u",
             GetID(), tid,
             (uint64_t)m_address.GetOpcodeLoadAddress(&m_owner.GetTarget()),
             (m_options_up ? m_options_up->IsEnabled() : m_owner.IsEnabled())
                 ? "enabled "
                 : "disabled",
-            is_hardware ? "hardware" : "software", hardware_index,
-            GetHitCount(),
+            is_hardware ? "hardware" : "software", GetHitCount(),
             GetOptionsSpecifyingKind(BreakpointOptions::eIgnoreCount)
                 .GetIgnoreCount());
 }

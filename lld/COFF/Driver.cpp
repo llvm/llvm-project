@@ -2179,6 +2179,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_functionpadmin, OPT_functionpadmin_opt))
     parseFunctionPadMin(arg);
 
+  // Handle /dependentloadflag
+  for (auto *arg :
+       args.filtered(OPT_dependentloadflag, OPT_dependentloadflag_opt))
+    parseDependentLoadFlags(arg);
+
   if (tar) {
     llvm::TimeTraceScope timeScope("Reproducer: response file");
     tar->append("response.txt",
@@ -2354,6 +2359,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Needed for MSVC 2019 16.8 CRT.
   ctx.symtab.addAbsolute(mangle("__guard_eh_cont_count"), 0);
   ctx.symtab.addAbsolute(mangle("__guard_eh_cont_table"), 0);
+
+  if (isArm64EC(config->machine)) {
+    ctx.symtab.addAbsolute("__hybrid_code_map", 0);
+    ctx.symtab.addAbsolute("__hybrid_code_map_count", 0);
+  }
 
   if (config->pseudoRelocs) {
     ctx.symtab.addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST__"), 0);

@@ -1679,9 +1679,13 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
   StringRef VName = Var->getName();
 
   llvm::DINode::DIFlags Flags = getAccessFlag(Var->getAccess(), RD);
+  auto Tag = CGM.getCodeGenOpts().DwarfVersion >= 5
+                 ? llvm::dwarf::DW_TAG_variable
+                 : llvm::dwarf::DW_TAG_member;
   auto Align = getDeclAlignIfRequired(Var, CGM.getContext());
-  llvm::DIDerivedType *GV = DBuilder.createStaticMemberType(
-      RecordTy, VName, VUnit, LineNumber, VTy, Flags, /* Val */ nullptr, Align);
+  llvm::DIDerivedType *GV =
+      DBuilder.createStaticMemberType(RecordTy, VName, VUnit, LineNumber, VTy,
+                                      Flags, /* Val */ nullptr, Tag, Align);
   StaticDataMemberCache[Var->getCanonicalDecl()].reset(GV);
   StaticDataMemberDefinitionsToEmit.push_back(Var->getCanonicalDecl());
   return GV;
@@ -3376,9 +3380,9 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
   unsigned Line = getLineNumber(ED->getLocation());
   llvm::DIScope *EnumContext = getDeclContextDescriptor(ED);
   llvm::DIType *ClassTy = getOrCreateType(ED->getIntegerType(), DefUnit);
-  return DBuilder.createEnumerationType(EnumContext, ED->getName(), DefUnit,
-                                        Line, Size, Align, EltArray, ClassTy,
-                                        Identifier, ED->isScoped());
+  return DBuilder.createEnumerationType(
+      EnumContext, ED->getName(), DefUnit, Line, Size, Align, EltArray, ClassTy,
+      /*RunTimeLang=*/0, Identifier, ED->isScoped());
 }
 
 llvm::DIMacro *CGDebugInfo::CreateMacro(llvm::DIMacroFile *Parent,
@@ -5588,13 +5592,15 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
 }
 
 void CGDebugInfo::EmitGlobalVariable(const VarDecl *VD) {
-  assert(VD->hasInit());
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   if (VD->hasAttr<NoDebugAttr>())
     return;
 
-  auto &GV = DeclCache[VD];
-  if (GV)
+  if (!VD->hasInit())
+    return;
+
+  const auto CacheIt = DeclCache.find(VD);
+  if (CacheIt != DeclCache.end())
     return;
 
   auto const *InitVal = VD->evaluateValue();
@@ -5614,10 +5620,13 @@ void CGDebugInfo::EmitGlobalVariable(const VarDecl *VD) {
   llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(VD);
   llvm::DIExpression *InitExpr = createConstantValueExpression(VD, *InitVal);
 
-  GV.reset(DBuilder.createGlobalVariableExpression(
-      TheCU, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
-      true, true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VD),
-      TemplateParameters, Align, Annotations));
+  // Omit linkage name for variable definitions that represent constants.
+  // There hasn't been a need from consumers yet to have it attached.
+  DeclCache[VD].reset(DBuilder.createGlobalVariableExpression(
+      TheCU, DeclName, /* LinkageName */ {}, Unit, LineNo,
+      getOrCreateType(T, Unit), true, true, InitExpr,
+      getOrCreateStaticDataMemberDeclarationOrNull(VD), TemplateParameters,
+      Align, Annotations));
 }
 
 void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
@@ -5824,6 +5833,20 @@ void CGDebugInfo::setDwoId(uint64_t Signature) {
 }
 
 void CGDebugInfo::finalize() {
+  // We can't use a for-each here because `EmitGlobalVariable`
+  // may push new decls into `StaticDataMemberDefinitionsToEmit`,
+  // which would invalidate any iterator.
+  for (size_t i = 0; i < StaticDataMemberDefinitionsToEmit.size(); ++i) {
+    auto const *VD = StaticDataMemberDefinitionsToEmit[i];
+
+    assert(VD && VD->isStaticDataMember());
+
+    if (DeclCache.contains(VD))
+      continue;
+
+    EmitGlobalVariable(VD);
+  }
+
   // Creating types might create further types - invalidating the current
   // element and the size(), so don't cache/reference them.
   for (size_t i = 0; i != ObjCInterfaceCache.size(); ++i) {
@@ -5888,18 +5911,6 @@ void CGDebugInfo::finalize() {
     if (auto *GVE = dyn_cast_or_null<llvm::DIGlobalVariableExpression>(Repl))
       Repl = GVE->getVariable();
     DBuilder.replaceTemporary(std::move(FwdDecl), cast<llvm::MDNode>(Repl));
-  }
-
-  for (auto const *VD : StaticDataMemberDefinitionsToEmit) {
-    assert(VD->isStaticDataMember());
-
-    if (DeclCache.contains(VD))
-      continue;
-
-    if (!VD->hasInit())
-      continue;
-
-    EmitGlobalVariable(VD);
   }
 
   // We keep our own list of retained types, because we need to look

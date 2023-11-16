@@ -500,6 +500,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"gamma", {{"x", SameReal}}, SameReal},
     {"get_team", {{"level", DefaultInt, Rank::scalar, Optionality::optional}},
         TeamType, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"getpid", {}, DefaultInt},
     {"huge",
         {{"x", SameIntOrReal, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In, {ArgFlag::canBeNull}}},
@@ -2224,12 +2225,15 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         if (const Symbol *whole{
                 UnwrapWholeSymbolOrComponentDataRef(actualForDummy[*dimArg])}) {
           if (IsOptional(*whole) || IsAllocatableOrObjectPointer(whole)) {
-            if (rank == Rank::scalarIfDim || arrayRank.value_or(-1) == 1) {
-              messages.Say(
-                  "The actual argument for DIM= is optional, pointer, or allocatable, and it is assumed to be present and equal to 1 at execution time"_port_en_US);
-            } else {
-              messages.Say(
-                  "The actual argument for DIM= is optional, pointer, or allocatable, and may not be absent during execution; parenthesize to silence this warning"_warn_en_US);
+            if (context.languageFeatures().ShouldWarn(
+                    common::UsageWarning::DimMustBePresent)) {
+              if (rank == Rank::scalarIfDim || arrayRank.value_or(-1) == 1) {
+                messages.Say(
+                    "The actual argument for DIM= is optional, pointer, or allocatable, and it is assumed to be present and equal to 1 at execution time"_warn_en_US);
+              } else {
+                messages.Say(
+                    "The actual argument for DIM= is optional, pointer, or allocatable, and may not be absent during execution; parenthesize to silence this warning"_warn_en_US);
+              }
             }
           }
         }
@@ -2324,8 +2328,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             }
           }
         }
-        if (auto dc{characteristics::DummyArgument::FromActual(
-                std::move(kw), *expr, context)}) {
+        if (auto dc{characteristics::DummyArgument::FromActual(std::move(kw),
+                *expr, context, /*forImplicitInterface=*/false)}) {
           dummyArgs.emplace_back(std::move(*dc));
           if (d.typePattern.kindCode == KindCode::same && !sameDummyArg) {
             sameDummyArg = j;
@@ -3180,28 +3184,37 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
 
   // If there was no exact match with a specific, try to match the related
   // generic and convert the result to the specific required type.
-  for (auto specIter{specificRange.first}; specIter != specificRange.second;
-       ++specIter) {
-    // We only need to check the cases with distinct generic names.
-    if (const char *genericName{specIter->second->generic}) {
-      if (specIter->second->useGenericAndForceResultType) {
-        auto genericRange{genericFuncs_.equal_range(genericName)};
-        for (auto genIter{genericRange.first}; genIter != genericRange.second;
-             ++genIter) {
-          if (auto specificCall{
-                  matchOrBufferMessages(*genIter->second, specificBuffer)}) {
-            // Force the call result type to the specific intrinsic result type
-            DynamicType newType{GetReturnType(*specIter->second, defaults_)};
-            context.messages().Say(
-                "argument types do not match specific intrinsic '%s' "
-                "requirements; using '%s' generic instead and converting the "
-                "result to %s if needed"_port_en_US,
-                call.name, genericName, newType.AsFortran());
-            specificCall->specificIntrinsic.name = call.name;
-            specificCall->specificIntrinsic.characteristics.value()
-                .functionResult.value()
-                .SetType(newType);
-            return specificCall;
+  if (context.languageFeatures().IsEnabled(common::LanguageFeature::
+              UseGenericIntrinsicWhenSpecificDoesntMatch)) {
+    for (auto specIter{specificRange.first}; specIter != specificRange.second;
+         ++specIter) {
+      // We only need to check the cases with distinct generic names.
+      if (const char *genericName{specIter->second->generic}) {
+        if (specIter->second->useGenericAndForceResultType) {
+          auto genericRange{genericFuncs_.equal_range(genericName)};
+          for (auto genIter{genericRange.first}; genIter != genericRange.second;
+               ++genIter) {
+            if (auto specificCall{
+                    matchOrBufferMessages(*genIter->second, specificBuffer)}) {
+              // Force the call result type to the specific intrinsic result
+              // type
+              DynamicType newType{GetReturnType(*specIter->second, defaults_)};
+              if (context.languageFeatures().ShouldWarn(
+                      common::LanguageFeature::
+                          UseGenericIntrinsicWhenSpecificDoesntMatch)) {
+                context.messages().Say(
+                    "Argument types do not match specific intrinsic '%s' "
+                    "requirements; using '%s' generic instead and converting "
+                    "the "
+                    "result to %s if needed"_port_en_US,
+                    call.name, genericName, newType.AsFortran());
+              }
+              specificCall->specificIntrinsic.name = call.name;
+              specificCall->specificIntrinsic.characteristics.value()
+                  .functionResult.value()
+                  .SetType(newType);
+              return specificCall;
+            }
           }
         }
       }
