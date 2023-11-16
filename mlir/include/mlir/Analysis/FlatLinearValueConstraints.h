@@ -374,10 +374,10 @@ public:
       setValue(i, values[i - start]);
   }
 
-  /// Looks up the position of the variable with the specified Value. Returns
-  /// true if found (false otherwise). `pos` is set to the (column) position of
-  /// the variable.
-  bool findVar(Value val, unsigned *pos) const;
+  /// Looks up the position of the variable with the specified Value starting
+  /// with variables at offset `offset`. Returns true if found (false
+  /// otherwise). `pos` is set to the (column) position of the variable.
+  bool findVar(Value val, unsigned *pos, unsigned offset = 0) const;
 
   /// Returns true if a variable with the specified Value exists, false
   /// otherwise.
