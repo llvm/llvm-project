@@ -49,8 +49,8 @@ using namespace mlir::sparse_tensor;
 // (assuming that's the actual meaning behind the "idx"-vs-"ldx" convention).
 
 /// Determines if affine expression is invariant.
-static bool isInvariantAffine(AffineExpr a, ArrayRef<LoopId> loopStack,
-                              LoopId ldx, bool &isAtLoop) {
+static bool isInvariantAffine(AffineExpr a, unsigned loopDepth, LoopId ldx,
+                              bool &isAtLoop) {
   switch (a.getKind()) {
   case AffineExprKind::DimId: {
     const LoopId i = cast<AffineDimExpr>(a).getPosition();
@@ -59,31 +59,20 @@ static bool isInvariantAffine(AffineExpr a, ArrayRef<LoopId> loopStack,
       // Must be invariant if we are at the given loop.
       return true;
     }
-    bool isInvariant = false;
-    for (LoopId l : loopStack) {
-      isInvariant = (l == i);
-      if (isInvariant)
-        break;
-    }
-    return isInvariant;
+    // The DimExpr is invariant the loop has already been generated.
+    return i < loopDepth;
   }
   case AffineExprKind::Add:
   case AffineExprKind::Mul: {
     auto binOp = cast<AffineBinaryOpExpr>(a);
-    return isInvariantAffine(binOp.getLHS(), loopStack, ldx, isAtLoop) &&
-           isInvariantAffine(binOp.getRHS(), loopStack, ldx, isAtLoop);
+    return isInvariantAffine(binOp.getLHS(), loopDepth, ldx, isAtLoop) &&
+           isInvariantAffine(binOp.getRHS(), loopDepth, ldx, isAtLoop);
   }
   default: {
     assert(isa<AffineConstantExpr>(a));
     return true;
   }
   }
-}
-
-/// Determines if affine expression is invariant.
-static bool isInvariantAffine(CodegenEnv &env, AffineExpr a, LoopId ldx,
-                              bool &isAtLoop) {
-  return isInvariantAffine(a, env.getCurrentLoopStack(), ldx, isAtLoop);
 }
 
 /// Helper method to inspect affine expressions. Rejects cases where the
@@ -351,17 +340,6 @@ static void genBuffers(CodegenEnv &env, OpBuilder &builder) {
       llvm::cast<linalg::LinalgOp>(op.getOperation())
           .createLoopRanges(builder, loc);
 
-  assert(loopRange.size() == env.merger().getStartingFilterLoopId());
-  SmallVector<Range, 4> sortedRange;
-  for (unsigned i = 0, e = env.topSortSize(); i < e; i++) {
-    LoopId ldx = env.topSortAt(i);
-    // FIXME: Gets rid of filter loops since we have a better algorithm to deal
-    // with affine index expression.
-    if (ldx < env.merger().getStartingFilterLoopId()) {
-      sortedRange.push_back(loopRange[ldx]);
-    }
-  }
-
   env.emitter().initializeLoopEmit(
       builder, loc,
       /// Generates buffer for the output tensor.
@@ -396,15 +374,14 @@ static void genBuffers(CodegenEnv &env, OpBuilder &builder) {
         }
         return init;
       },
-      [&sortedRange, &env](OpBuilder &b, Location loc, Level l) {
-        assert(l < env.topSortSize());
+      [&loopRange, &env](OpBuilder &b, Location loc, Level l) {
+        assert(l < env.getLoopNum());
         // FIXME: Remove filter loop since we have a better algorithm to
         // deal with affine index expression.
         if (l >= env.merger().getStartingFilterLoopId())
           return Value();
 
-        return mlir::getValueOrCreateConstantIndexOp(b, loc,
-                                                     sortedRange[l].size);
+        return mlir::getValueOrCreateConstantIndexOp(b, loc, loopRange[l].size);
       });
 }
 
@@ -762,7 +739,7 @@ static void genInvariants(CodegenEnv &env, OpBuilder &builder, ExprId exp,
           return;
         if (*sldx == ldx)
           isAtLoop = true;
-      } else if (!isInvariantAffine(env, a, ldx, isAtLoop))
+      } else if (!isInvariantAffine(a, env.getLoopDepth(), ldx, isAtLoop))
         return; // still in play
     }
     // All exhausted at this level (isAtLoop denotes exactly at this LoopId).
@@ -934,14 +911,8 @@ static Operation *genCoIteration(CodegenEnv &env, OpBuilder &builder,
 /// singleton iteration or co-iteration over the given conjunction.
 static Operation *genLoop(CodegenEnv &env, OpBuilder &builder, LoopOrd at,
                           bool needsUniv, ArrayRef<TensorLevel> tidLvls) {
-  const LoopId ldx = env.topSortAt(at);
-  if (env.merger().isFilterLoop(ldx)) {
-    assert(tidLvls.size() == 1);
-    return genFilterLoop(env, builder, ldx, tidLvls.front());
-  }
-
-  bool tryParallel = shouldTryParallize(env, ldx, at == 0, tidLvls);
-  return genCoIteration(env, builder, ldx, tidLvls, tryParallel, needsUniv);
+  bool tryParallel = shouldTryParallize(env, at, at == 0, tidLvls);
+  return genCoIteration(env, builder, at, tidLvls, tryParallel, needsUniv);
 }
 
 /// Generates the induction structure for a while-loop.
@@ -1226,7 +1197,8 @@ static bool translateBitsToTidLvlPairs(
             // Constant affine expression are handled in genLoop
             if (!isa<AffineConstantExpr>(exp)) {
               bool isAtLoop = false;
-              if (isInvariantAffine(env, exp, ldx, isAtLoop) && isAtLoop) {
+              if (isInvariantAffine(exp, env.getLoopDepth(), ldx, isAtLoop) &&
+                  isAtLoop) {
                 // If the compound affine is invariant and we are right at the
                 // level. We need to generate the address according to the
                 // affine expression. This is also the best place we can do it
@@ -1273,8 +1245,8 @@ static std::pair<Operation *, bool> startLoop(CodegenEnv &env,
   // becomes invariant and the address shall now be generated at the current
   // level.
   SmallVector<std::pair<TensorLevel, AffineExpr>> affineTidLvls;
-  bool isSingleCond = translateBitsToTidLvlPairs(env, li, env.topSortAt(at),
-                                                 tidLvls, affineTidLvls);
+  bool isSingleCond =
+      translateBitsToTidLvlPairs(env, li, at, tidLvls, affineTidLvls);
 
   // Emit the for/while-loop control.
   Operation *loop = genLoop(env, builder, at, needsUniv, tidLvls);
@@ -1339,22 +1311,21 @@ static void endLoopSeq(CodegenEnv &env, OpBuilder &builder, unsigned exp,
 static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
                     LoopOrd at) {
   // At each leaf, assign remaining tensor (sub)expression to output tensor.
-  if (at == env.topSortSize()) {
-    const LoopId ldx = env.topSortAt(at - 1);
-    Value rhs = genExp(env, rewriter, exp, ldx);
+  if (at == env.getLoopNum()) {
+    Value rhs = genExp(env, rewriter, exp, at - 1);
     genTensorStore(env, rewriter, exp, rhs);
     return;
   }
 
   // Construct iteration lattices for current loop index, with L0 at top.
-  const LoopId idx = env.topSortAt(at);
-  const LoopId ldx = at == 0 ? ::mlir::sparse_tensor::detail::kInvalidId
-                             : env.topSortAt(at - 1);
+  const LoopId ldx = at == 0 ? sparse_tensor::detail::kInvalidId : at - 1;
   const LatSetId lts =
-      env.merger().optimizeSet(env.merger().buildLattices(exp, idx));
+      env.merger().optimizeSet(env.merger().buildLattices(exp, at));
 
   // Start a loop sequence.
-  bool needsUniv = startLoopSeq(env, rewriter, exp, at, idx, ldx, lts);
+  // TODO: simplifies the function, we no longer need to distinguish loop depth
+  // and loop id anymore, remove two `at`s.
+  bool needsUniv = startLoopSeq(env, rewriter, exp, at, at, ldx, lts);
 
   // Emit a loop for every lattice point L0 >= Li in this loop sequence.
   //
@@ -1382,7 +1353,7 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
       if (li == lj || env.merger().latGT(li, lj)) {
         // Recurse into body of each branch.
         if (!isSingleCond) {
-          scf::IfOp ifOp = genIf(env, rewriter, idx, lj);
+          scf::IfOp ifOp = genIf(env, rewriter, at, lj);
           genStmt(env, rewriter, ej, at + 1);
           endIf(env, rewriter, ifOp, redInput, cntInput, insInput, validIns);
         } else {
@@ -1392,11 +1363,11 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
     }
 
     // End a loop.
-    needsUniv = endLoop(env, rewriter, loop, idx, li, needsUniv, isSingleCond);
+    needsUniv = endLoop(env, rewriter, loop, at, li, needsUniv, isSingleCond);
   }
 
   // End a loop sequence.
-  endLoopSeq(env, rewriter, exp, at, idx, ldx);
+  endLoopSeq(env, rewriter, exp, at, at, ldx);
 }
 
 /// Converts the result computed by the sparse kernel into the required form.
