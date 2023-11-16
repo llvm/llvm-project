@@ -2860,7 +2860,8 @@ TypeSystemSwiftTypeRef::GetByteStride(opaque_compiler_type_t type,
     LLDB_LOGF(GetLog(LLDBLog::Types),
               "Couldn't compute stride of type %s using SwiftLanguageRuntime.",
               AsMangledName(type));
-    if (auto *swift_ast_context = GetSwiftASTContext())
+    if (auto *swift_ast_context =
+            GetSwiftASTContextFromExecutionScope(exe_scope))
       return swift_ast_context->GetByteStride(ReconstructType(type), exe_scope);
     return {};
   };
