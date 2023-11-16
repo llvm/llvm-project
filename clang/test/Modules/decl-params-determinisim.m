@@ -19,7 +19,7 @@
 // RUN: diff %t1.pcm %t2.pcm
 
 /// Spot check entries to make sure they are in current ordering.
-/// op13 encodes the anonymous decl number which should be in order.
+/// op6 encodes the anonymous decl number which should be in order.
 
 /// NOTE: This test case is on determinism of TypeID for function declaration.
 /// Change related to TypeID (or PredefinedTypeIDs) will affect the result and
