@@ -1354,18 +1354,18 @@ protected:
 };
 /// Compare this range with another.
 /// FIXME: Make me a member function instead of friend when it works in C++20.
-template <typename OtherT, typename DerivedT2, typename BaseT2, typename T2,
-          typename PointerT2, typename ReferenceT2>
-bool operator==(const indexed_accessor_range_base<DerivedT2, BaseT2, T2,
-                                                  PointerT2, ReferenceT2> &lhs,
+template <typename OtherT, typename DerivedT, typename BaseT, typename T,
+          typename PointerT, typename ReferenceT>
+bool operator==(const indexed_accessor_range_base<DerivedT, BaseT, T,
+                                                  PointerT, ReferenceT> &lhs,
                 const OtherT &rhs) {
   return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 }
 
-template <typename OtherT, typename DerivedT2, typename BaseT2, typename T2,
-          typename PointerT2, typename ReferenceT2>
-bool operator!=(const indexed_accessor_range_base<DerivedT2, BaseT2, T2,
-                                                  PointerT2, ReferenceT2> &lhs,
+template <typename OtherT, typename DerivedT, typename BaseT, typename T,
+          typename PointerT, typename ReferenceT>
+bool operator!=(const indexed_accessor_range_base<DerivedT, BaseT, T,
+                                                  PointerT, ReferenceT> &lhs,
                 const OtherT &rhs) {
   return !(lhs == rhs);
 }
