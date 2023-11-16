@@ -223,24 +223,11 @@ struct LatPoint final {
 /// independently from the basic algorithm if bottlenecks are identified.
 class Merger {
 public:
-  /// Constructs a merger for the given number of tensors, native loops, and
-  /// filter loops. The user supplies the number of tensors involved in the
-  /// kernel, with the last tensor in this set denoting the output tensor.
-  /// The merger adds an additional synthetic tensor at the end of this set
-  /// to represent all invariant expressions in the kernel.
-  ///
-  /// In addition to natives loops (which are specified by the GenericOp),
-  /// extra filter loops are needed in order to handle affine expressions on
-  /// sparse levels.  E.g., (d0, d1, d2) => (d0 + d1, d2), a naive
-  /// implementation of the filter loop could be generated as
-  ///
-  /// for (const auto c0 : coordinates[0]) {
-  ///   if (c0 == d0 + d1) {
-  ///      generated_code;
-  ///   }
-  /// }
-  ///
-  /// to filter out coordinates that are not equal to the affine expression.
+  /// Constructs a merger for the given number of tensors and loops. The user
+  /// supplies the number of tensors involved in the kernel, with the last
+  /// tensor in this set denoting the output tensor. The merger adds an
+  /// additional synthetic tensor at the end of this set to represent all
+  /// invariant expressions in the kernel.
   ///
   /// The maxLvlRank specifies the max level rank of all inputs/output tensors.
   /// It is used to pre-allocate sufficient memory for internal storage.
