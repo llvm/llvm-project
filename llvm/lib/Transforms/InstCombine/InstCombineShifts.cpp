@@ -953,6 +953,12 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
   } else {
     if (I.isExact())
       return false;
+
+    // shr (shl X, Y), Y
+    if (match(I.getOperand(0), m_Shl(m_Value(), m_Specific(I.getOperand(1))))) {
+      I.setIsExact();
+      return true;
+    }
   }
 
   // Compute what we know about shift count.
@@ -1293,9 +1299,10 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
         unsigned ShlAmtC = C1->getZExtValue();
         Constant *ShiftDiff = ConstantInt::get(Ty, ShlAmtC - ShAmtC);
         if (cast<BinaryOperator>(Op0)->hasNoUnsignedWrap()) {
-          // (X <<nuw C1) >>u C --> X <<nuw (C1 - C)
+          // (X <<nuw C1) >>u C --> X <<nuw/nsw (C1 - C)
           auto *NewShl = BinaryOperator::CreateShl(X, ShiftDiff);
           NewShl->setHasNoUnsignedWrap(true);
+          NewShl->setHasNoSignedWrap(ShAmtC > 0);
           return NewShl;
         }
         if (Op0->hasOneUse()) {
