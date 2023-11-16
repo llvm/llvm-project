@@ -7659,16 +7659,24 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             << "SLP: perfect diamond match for gather bundle "
             << shortBundleName(VL) << ".\n");
         // Restore the mask for previous partially matched values.
-        for (auto [I, V] : enumerate(E->Scalars)) {
-          if (isa<PoisonValue>(V)) {
-            Mask[I] = PoisonMaskElem;
-            continue;
+        Mask.resize(E->Scalars.size());
+        const TreeEntry *FrontTE = Entries.front().front();
+        if (FrontTE->ReorderIndices.empty() &&
+            ((FrontTE->ReuseShuffleIndices.empty() &&
+              E->Scalars.size() == FrontTE->Scalars.size()) ||
+             (E->Scalars.size() == FrontTE->ReuseShuffleIndices.size()))) {
+          std::iota(Mask.begin(), Mask.end(), 0);
+        } else {
+          for (auto [I, V] : enumerate(E->Scalars)) {
+            if (isa<PoisonValue>(V)) {
+              Mask[I] = PoisonMaskElem;
+              continue;
+            }
+            Mask[I] = FrontTE->findLaneForValue(V);
           }
-          if (Mask[I] == PoisonMaskElem)
-            Mask[I] = Entries.front().front()->findLaneForValue(V);
         }
-        Estimator.add(*Entries.front().front(), Mask);
-        return Estimator.finalize(E->ReuseShuffleIndices);
+        Estimator.add(*FrontTE, Mask);
+        return Estimator.finalize(E->getCommonMask());
       }
       if (!Resized) {
         if (GatheredScalars.size() != VF &&
@@ -9460,10 +9468,19 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     auto *It = find_if(FirstEntries, [=](const TreeEntry *EntryPtr) {
       return EntryPtr->isSame(VL) || EntryPtr->isSame(TE->Scalars);
     });
-    if (It != FirstEntries.end() && (*It)->getVectorFactor() == VL.size()) {
+    if (It != FirstEntries.end() &&
+        ((*It)->getVectorFactor() == VL.size() ||
+         ((*It)->getVectorFactor() == TE->Scalars.size() &&
+          TE->ReuseShuffleIndices.size() == VL.size() &&
+          (*It)->isSame(TE->Scalars)))) {
       Entries.push_back(*It);
-      std::iota(std::next(Mask.begin(), Part * VL.size()),
-                std::next(Mask.begin(), (Part + 1) * VL.size()), 0);
+      if ((*It)->getVectorFactor() == VL.size()) {
+        std::iota(std::next(Mask.begin(), Part * VL.size()),
+                  std::next(Mask.begin(), (Part + 1) * VL.size()), 0);
+      } else {
+        SmallVector<int> CommonMask = TE->getCommonMask();
+        copy(CommonMask, Mask.begin());
+      }
       // Clear undef scalars.
       for (int I = 0, Sz = VL.size(); I < Sz; ++I)
         if (isa<PoisonValue>(VL[I]))
@@ -10221,7 +10238,7 @@ public:
                                       });
                                     })) &&
                "Expected first part or all previous parts masked.");
-        copy(SubMask, VecMask.begin());
+        copy(SubMask, std::next(VecMask.begin(), Part * SliceSize));
       } else {
         unsigned VF = cast<FixedVectorType>(Vec->getType())->getNumElements();
         if (Vec->getType() != SubVec->getType()) {
@@ -10569,8 +10586,12 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
         });
     if (It == VectorizableTree.end())
       return false;
-    if (Mask.size() <= InputVF &&
-        ShuffleVectorInst::isIdentityMask(Mask, Mask.size())) {
+    int Idx;
+    if ((Mask.size() < InputVF &&
+         ShuffleVectorInst::isExtractSubvectorMask(Mask, InputVF, Idx) &&
+         Idx == 0) ||
+        (Mask.size() == InputVF &&
+         ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))) {
       std::iota(Mask.begin(), Mask.end(), 0);
     } else {
       unsigned I =
@@ -10653,6 +10674,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
             << "SLP: perfect diamond match for gather bundle "
             << shortBundleName(E->Scalars) << ".\n");
         // Restore the mask for previous partially matched values.
+        Mask.resize(E->Scalars.size());
         const TreeEntry *FrontTE = Entries.front().front();
         if (FrontTE->ReorderIndices.empty() &&
             ((FrontTE->ReuseShuffleIndices.empty() &&

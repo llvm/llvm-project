@@ -439,6 +439,24 @@ static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_parity(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Val = peekToAPSInt(S.Stk, ArgT);
+  pushInt(S, Val.popcount() % 2);
+  return true;
+}
+
+static bool interp__builtin_clrsb(InterpState &S, CodePtr OpPC,
+                                  const InterpFrame *Frame,
+                                  const Function *Func, const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Val = peekToAPSInt(S.Stk, ArgT);
+  pushInt(S, Val.getBitWidth() - Val.getSignificantBits());
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
@@ -573,6 +591,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__popcnt:
   case Builtin::BI__popcnt64:
     if (interp__builtin_popcount(S, OpPC, Frame, F, Call))
+      return retInt(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_parity:
+  case Builtin::BI__builtin_parityl:
+  case Builtin::BI__builtin_parityll:
+    if (interp__builtin_parity(S, OpPC, Frame, F, Call))
+      return retInt(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_clrsb:
+  case Builtin::BI__builtin_clrsbl:
+  case Builtin::BI__builtin_clrsbll:
+    if (interp__builtin_clrsb(S, OpPC, Frame, F, Call))
       return retInt(S, OpPC, Dummy);
     break;
 
