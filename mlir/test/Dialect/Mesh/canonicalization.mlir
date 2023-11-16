@@ -15,6 +15,18 @@ func.func @all_reduce_empty_mesh_axes_and_default_reduction(
   return %0 : tensor<4xf64>
 }
 
+// CHECK-LABEL: func @all_to_all_empty_mesh_axes
+func.func @all_to_all_empty_mesh_axes(
+    %arg0 : tensor<8xf32>) -> tensor<8xf32> {
+  %0 = mesh.all_to_all %arg0 on @mesh0
+// CHECK-NOT: mesh_axes
+    mesh_axes = []
+    split_axis = 0
+    concat_axis = 0
+    : tensor<8xf32> -> tensor<8xf32>
+  return %0 : tensor<8xf32>
+}
+
 // CHECK-LABEL: func @all_gather_empty_mesh_axes
 func.func @all_gather_empty_mesh_axes(
     %arg0 : tensor<4xf32>) -> tensor<4xf32> {
