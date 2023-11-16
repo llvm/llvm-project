@@ -186,6 +186,8 @@ public:
 
   EnableSwiftCxxInterop GetEnableSwiftCxxInterop() const;
 
+  bool GetSwiftEnableFullDwarfDebugging() const;
+
   Args GetSwiftPluginServerForPath() const;
 
   bool GetSwiftAutoImportFrameworks() const;

@@ -629,6 +629,14 @@ ifeq "$(SWIFT_CXX_INTEROP)" "1"
 endif
 
 #----------------------------------------------------------------------
+# Check if we should compile in Swift embedded mode
+#----------------------------------------------------------------------
+ifeq "$(SWIFT_EMBEDDED_MODE)" "1"
+	SWIFTFLAGS += -gdwarf-types -enable-experimental-feature Embedded -Xfrontend -disable-objc-interop -runtime-compatibility-version none
+	SWIFT_WMO = 1
+endif
+	
+#----------------------------------------------------------------------
 # Set up variables to run the Swift frontend directly.
 #----------------------------------------------------------------------
 SWIFT=$(shell dirname $(SWIFTC))/swift
@@ -678,9 +686,17 @@ endif
 
 VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES)) $(patsubst %,$(VPATH)/%,$(DYLIB_SWIFT_SOURCES))
 
+# Whole module optimization and primary file directives are at direct odds with each other. 
+# Either pick one or the other.
+ifeq "$(SWIFT_WMO)" "1"
+SWIFT_COMPILE_MODE_DIRECTIVE = "-wmo"
+else
+SWIFT_COMPILE_DIRECTIVE = "-primary-file"
+endif
+
 %.o: %.swift $(SWIFT_BRIDGING_PCH) $(SWIFT_OBJC_HEADER)
 	@echo "### Compiling" $<
-	$(SWIFT_FE) -c -primary-file $< \
+	$(SWIFT_FE) -c $(SWIFT_COMPILE_DIRECTIVE) $< \
 	  $(filter-out $(VPATH)/$<,$(filter-out $<,$(VPATHSOURCES))) \
 	  $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) $(PARSE_AS_LIBRARY) \
 	  -module-name $(MODULENAME)  -emit-module-path \
