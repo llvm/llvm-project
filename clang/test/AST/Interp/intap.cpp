@@ -172,4 +172,16 @@ namespace Bitfields {
                         // expected-warning {{changes value from 100 to 0}}
 }
 
+namespace BitOps {
+  constexpr unsigned __int128 UZero = 0;
+  constexpr unsigned __int128 Max = ~UZero;
+  static_assert(Max == ~0, "");
+  static_assert((Max & 0) == 0, "");
+  static_assert((UZero | 0) == 0, "");
+  static_assert((Max ^ Max) == 0, "");
+  static_assert((Max & 1) == 1, "");
+  static_assert((UZero | 1) == 1, "");
+  static_assert((Max ^ UZero) == Max, "");
+}
+
 #endif
