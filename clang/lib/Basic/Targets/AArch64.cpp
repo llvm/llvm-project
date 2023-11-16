@@ -333,6 +333,12 @@ void AArch64TargetInfo::getTargetDefinesARMV94A(const LangOptions &Opts,
   getTargetDefinesARMV89A(Opts, Builder);
 }
 
+void AArch64TargetInfo::getTargetDefinesARMV95A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.5-A does not have a v8.* equivalent, but is a superset of v9.4-A.
+  getTargetDefinesARMV94A(Opts, Builder);
+}
+
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   // Target identification.
@@ -565,6 +571,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     getTargetDefinesARMV93A(Opts, Builder);
   else if (*ArchInfo == llvm::AArch64::ARMV9_4A)
     getTargetDefinesARMV94A(Opts, Builder);
+  else if (*ArchInfo == llvm::AArch64::ARMV9_5A)
+    getTargetDefinesARMV95A(Opts, Builder);
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -899,6 +907,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v9.4a" &&
         ArchInfo->Version < llvm::AArch64::ARMV9_4A.Version)
       ArchInfo = &llvm::AArch64::ARMV9_4A;
+    if (Feature == "+v9.5a" &&
+        ArchInfo->Version < llvm::AArch64::ARMV9_5A.Version)
+      ArchInfo = &llvm::AArch64::ARMV9_5A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
     if (Feature == "+fullfp16") {
