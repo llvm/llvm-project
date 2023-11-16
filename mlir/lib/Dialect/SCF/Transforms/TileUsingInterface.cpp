@@ -186,11 +186,13 @@ static SmallVector<scf::ForOp> generateTileLoopNest(
   }
 
   // Add the scf.yield operations for all the outer loops.
-  for (auto [outerLoop, innerLoop] :
-       llvm::zip(MutableArrayRef(loops).drop_back(),
-                 MutableArrayRef(loops).drop_front())) {
-    builder.setInsertionPointToEnd(outerLoop.getBody());
-    builder.create<scf::YieldOp>(outerLoop.getLoc(), innerLoop.getResults());
+  if (!loops.empty()) {
+    for (auto [outerLoop, innerLoop] :
+         llvm::zip_equal(MutableArrayRef(loops).drop_back(),
+                         MutableArrayRef(loops).drop_front())) {
+      builder.setInsertionPointToEnd(outerLoop.getBody());
+      builder.create<scf::YieldOp>(outerLoop.getLoc(), innerLoop.getResults());
+    }
   }
   return loops;
 }
@@ -252,7 +254,7 @@ static void addInitOperandsToLoopNest(
   // Make all other loops except the innermost loops yield the values returned
   // by the inner loop.
   for (auto [outerLoop, innerLoop] :
-       llvm::zip(loops.drop_back(), loops.drop_front())) {
+       llvm::zip_equal(loops.drop_back(), loops.drop_front())) {
     auto outerLoopYield =
         cast<scf::YieldOp>(outerLoop.getBody()->getTerminator());
     SmallVector<Value> newYields =
