@@ -426,7 +426,7 @@ def CanonicalLoopInfoType : OpenMP_Type<"CanonicalLoopInfo", "cli"> {
     2. passed to omp operations that take a CanonicalLoopInfo argument,
        such as `omp.unroll`.
 
-    A CanonicalLoopInfo variable can not
+    A CanonicalLoopInfo value can not
 
     1. be returned from a function,
     2. passed to operations that are not specifically designed to take a
