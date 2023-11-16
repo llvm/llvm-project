@@ -448,6 +448,11 @@ public:
   /// which supports this flag. See LangRef.html for the meaning of this flag.
   void setIsExact(bool b = true);
 
+  /// Set or clear the disjoint flag on this instruction, which must be an
+  /// operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setIsDisjoint(bool b = true);
+
   /// Set or clear the nneg flag on this instruction, which must be a zext
   /// instruction.
   void setNonNeg(bool b = true);
@@ -499,6 +504,9 @@ public:
 
   /// Determine whether the exact flag is set.
   bool isExact() const LLVM_READONLY;
+
+  /// Determine whether the disjoint flag is set.
+  bool isDisjoint() const LLVM_READONLY;
 
   /// Set or clear all fast-math-flags on this instruction, which must be an
   /// operator which supports this flag. See LangRef.html for the meaning of

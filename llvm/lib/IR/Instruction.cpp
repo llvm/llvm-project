@@ -317,6 +317,12 @@ void Instruction::setIsExact(bool b) {
   cast<PossiblyExactOperator>(this)->setIsExact(b);
 }
 
+void Instruction::setIsDisjoint(bool b) {
+  assert(isa<PossiblyDisjointInst>(this) && "Must be or");
+  SubclassOptionalData = (SubclassOptionalData & ~PossiblyDisjointInst::IsDisjoint) |
+                         (b * PossiblyDisjointInst::IsDisjoint);
+}
+
 void Instruction::setNonNeg(bool b) {
   assert(isa<PossiblyNonNegInst>(this) && "Must be zext");
   SubclassOptionalData = (SubclassOptionalData & ~PossiblyNonNegInst::NonNeg) |
@@ -355,6 +361,10 @@ void Instruction::dropPoisonGeneratingFlags() {
   case Instruction::AShr:
   case Instruction::LShr:
     cast<PossiblyExactOperator>(this)->setIsExact(false);
+    break;
+
+  case Instruction::Or:
+    cast<PossiblyDisjointInst>(this)->setIsDisjoint(false);
     break;
 
   case Instruction::GetElementPtr:
@@ -417,6 +427,11 @@ void Instruction::dropUBImplyingAttrsAndMetadata() {
 
 bool Instruction::isExact() const {
   return cast<PossiblyExactOperator>(this)->isExact();
+}
+
+bool Instruction::isDisjoint() const {
+  assert(isa<PossiblyDisjointInst>(this) && "Must be or");
+  return (SubclassOptionalData & PossiblyDisjointInst::IsDisjoint) != 0;
 }
 
 void Instruction::setFast(bool B) {
@@ -532,6 +547,10 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
     if (isa<PossiblyExactOperator>(this))
       setIsExact(PE->isExact());
 
+  if (auto *PD = dyn_cast<PossiblyDisjointInst>(V))
+    if (isa<PossiblyDisjointInst>(this))
+      setIsDisjoint(PD->isDisjoint());
+
   // Copy the fast-math flags.
   if (auto *FP = dyn_cast<FPMathOperator>(V))
     if (isa<FPMathOperator>(this))
@@ -557,6 +576,10 @@ void Instruction::andIRFlags(const Value *V) {
   if (auto *PE = dyn_cast<PossiblyExactOperator>(V))
     if (isa<PossiblyExactOperator>(this))
       setIsExact(isExact() && PE->isExact());
+
+  if (auto *PE = dyn_cast<PossiblyDisjointInst>(V))
+    if (isa<PossiblyDisjointInst>(this))
+      setIsDisjoint(isDisjoint() && PE->isDisjoint());
 
   if (auto *FP = dyn_cast<FPMathOperator>(V)) {
     if (isa<FPMathOperator>(this)) {
