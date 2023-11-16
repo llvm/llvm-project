@@ -268,17 +268,70 @@ StringRef::size_type StringRef::find_first_not_of(StringRef Chars,
   return npos;
 }
 
+// See https://graphics.stanford.edu/~seander/bithacks.html#ValueInWord
+static inline uint64_t haszero(uint64_t v) {
+  return ~((((v & 0x7F7F7F7F7F7F7F7FULL) + 0x7F7F7F7F7F7F7F7FULL) | v) |
+           0x7F7F7F7F7F7F7F7FULL);
+}
+static inline uint64_t hasvalue(uint64_t x, char n) {
+  return haszero((x) ^ (~0ULL / 255 * (n)));
+}
+
+/// This is a hot spot for some clangd operations, enough to be eligible to
+/// a pseudo - vectorized implementation.
+static StringRef::size_type
+vectorized_find_last_of_specialized(const char *Data, size_t Sz, char C0,
+                                    char C1) {
+  while (Sz >= 8) {
+    Sz -= 8;
+    uint64_t Buffer = 0;
+    std::memcpy((void *)&Buffer, (void *)(Data + Sz), sizeof(Buffer));
+    uint64_t Check = hasvalue(Buffer, C0) | hasvalue(Buffer, C1);
+    if (Check)
+      return Sz + 7 - llvm::countl_zero(Check) / 8;
+  }
+  if (Sz >= 4) {
+    Sz -= 4;
+    uint32_t Buffer = 0;
+    std::memcpy((void *)&Buffer, (void *)(Data + Sz), sizeof(Buffer));
+    uint64_t Check = hasvalue(Buffer, C0) | hasvalue(Buffer, C1);
+    if (Check)
+      return Sz + 7 - llvm::countl_zero(Check) / 8;
+  }
+  if (Sz >= 2) {
+    Sz -= 2;
+    uint16_t Buffer = 0;
+    std::memcpy((void *)&Buffer, (void *)(Data + Sz), sizeof(Buffer));
+    uint64_t Check = hasvalue(Buffer, C0) | hasvalue(Buffer, C1);
+    if (Check)
+      return Sz + 7 - llvm::countl_zero(Check) / 8;
+  }
+  if (Sz >= 1)
+    if (*Data == C0 || *Data == C1)
+      return 0;
+
+  return StringRef::npos;
+}
+
 /// find_last_of - Find the last character in the string that is in \arg C,
 /// or npos if not found.
 ///
-/// Note: O(size() + Chars.size())
+/// Note: O(size() + Chars.size()) for the generic case.
 StringRef::size_type StringRef::find_last_of(StringRef Chars,
                                              size_t From) const {
+  size_type Sz = std::min(From, Length);
+
+  if (Chars.size() == 2) {
+    auto res =
+        vectorized_find_last_of_specialized(Data, Sz, Chars[0], Chars[1]);
+    return res;
+  }
+
   std::bitset<1 << CHAR_BIT> CharBits;
   for (char C : Chars)
     CharBits.set((unsigned char)C);
 
-  for (size_type i = std::min(From, Length) - 1, e = -1; i != e; --i)
+  for (size_type i = Sz - 1, e = -1; i != e; --i)
     if (CharBits.test((unsigned char)Data[i]))
       return i;
   return npos;
