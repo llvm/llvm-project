@@ -359,34 +359,22 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
 static void
 CheckForDuplicateCodeAlignAttrs(Sema &S,
                                 const SmallVectorImpl<const Attr *> &Attrs) {
-    const auto *FirstItr =
-      std::find_if(Attrs.begin(), Attrs.end(), [](const Attr *A) {
-         return isa<const CodeAlignAttr>(A);
-      });
+  auto FindFunc = [](const Attr *A) {
+    return isa<const CodeAlignAttr>(A);
+  };
 
-    const Attr *FirstItrAttr =
-      FirstItr == Attrs.end() ? nullptr: *FirstItr;
+  const auto *FirstItr =
+    std::find_if(Attrs.begin(), Attrs.end(), FindFunc);
 
-    if (FirstItr == Attrs.end()) // no attributes found
-      return;
-    const auto *NextItr =
-      std::find_if(FirstItr + 1, Attrs.end(), [](const Attr *A) {
-        return isa<const CodeAlignAttr>(A);
-      });
-    const Attr *NextItrAttr =
-      NextItr == Attrs.end() ? nullptr : *NextItr;
-    if (NextItr == Attrs.end()) // only 1 attribute found
-      return;
+  if (FirstItr == Attrs.end()) // no attributes found
+    return;
 
-    while (NextItr != Attrs.end()) {
-      // Diagnose
-      S.Diag(NextItrAttr->getLocation(), diag::err_loop_attr_duplication) << FirstItrAttr;
-      S.Diag(FirstItrAttr->getLocation(), diag::note_previous_attribute);
-      NextItr =
-	  std::find_if(NextItr + 1, Attrs.end(), [](const Attr *A) {
-            return isa<const CodeAlignAttr>(A);
-          });
-    }
+  const auto *LastFoundItr = FirstItr;
+
+  while (Attrs.end() != (LastFoundItr = std::find_if(LastFoundItr + 1, Attrs.end(), FindFunc)))  {
+      S.Diag((*LastFoundItr)->getLocation(), diag::err_loop_attr_duplication) << *FirstItr;
+      S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
+  }
 }
 
 #define WANT_STMT_MERGE_LOGIC
