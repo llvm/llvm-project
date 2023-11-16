@@ -38,32 +38,32 @@ using namespace mlir::mesh;
 
 #include "mlir/Dialect/Mesh/IR/MeshOpsDialect.cpp.inc"
 
-namespace {
-
 template <typename It>
-It canonicalizeSetAsArray(It begin, It end) {
-  std::sort(begin, end);
+static It canonicalizeSetAsArray(It begin, It end) {
+  llvm::sort(begin, end);
   return std::unique(begin, end);
 }
 
 template <typename R>
-auto canonicalizeSetAsArray(R &&range) {
+static auto canonicalizeSetAsArray(R &&range) {
   return canonicalizeSetAsArray(adl_begin(range), adl_end(range));
 }
 
 template <typename T>
-SmallVector<T> &canonicalizeSetAsVector(SmallVector<T> &vec) {
+static SmallVector<T> &canonicalizeSetAsVector(SmallVector<T> &vec) {
   auto newEnd = canonicalizeSetAsArray(vec);
   vec.resize(newEnd - vec.begin());
   return vec;
 }
 
 template <typename DimSize>
-bool isMeshDimensionDynamic(DimSize size) {
+static bool isMeshDimensionDynamic(DimSize size) {
   return size <= DimSize(0);
 }
 
 using MeshAxis = int16_t;
+
+namespace {
 
 struct DimensionSize {
   static DimensionSize dynamic() { return DimensionSize(ShapedType::kDynamic); }
@@ -76,21 +76,21 @@ private:
   int64_t val;
 };
 
-DimensionSize operator/(DimensionSize lhs, DimensionSize rhs) {
+} // namespace
+
+static DimensionSize operator/(DimensionSize lhs, DimensionSize rhs) {
   if (lhs.isDynamic() || rhs.isDynamic()) {
     return DimensionSize::dynamic();
   }
   return lhs.value() / rhs.value();
 }
 
-DimensionSize operator*(DimensionSize lhs, DimensionSize rhs) {
+static DimensionSize operator*(DimensionSize lhs, DimensionSize rhs) {
   if (lhs.isDynamic() || rhs.isDynamic()) {
     return DimensionSize::dynamic();
   }
   return lhs.value() * rhs.value();
 }
-
-} // namespace
 
 //===----------------------------------------------------------------------===//
 // Mesh dialect
@@ -211,33 +211,31 @@ MeshShardingAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // collective communication ops
 //===----------------------------------------------------------------------===//
 
-namespace {
-
-template <typename Op>
-LogicalResult verifyMeshSymbolUses(Op op, SymbolTableCollection &symbolTable) {
-  FlatSymbolRefAttr symbolAttr = op.getMeshAttr();
-  if (!symbolAttr) {
-    return op.emitError() << "Unspecified \"mesh\" symbol attribute.";
+static LogicalResult verifyMeshSymbolUses(Operation *op,
+                                          FlatSymbolRefAttr meshSymbol,
+                                          DenseI16ArrayAttr meshAxes,
+                                          SymbolTableCollection &symbolTable) {
+  if (!meshSymbol) {
+    return op->emitError() << "Unspecified \"mesh\" symbol attribute.";
   }
   SymbolTableCollection symbolTableCollection;
   mesh::ClusterOp mesh =
       symbolTableCollection.lookupNearestSymbolFrom<mesh::ClusterOp>(
-          op.getOperation(), symbolAttr);
+          op, meshSymbol);
   if (!mesh) {
-    return op.emitError() << "Undefined required mesh symbol \""
-                          << symbolAttr.getValue() << "\".";
+    return op->emitError() << "Undefined required mesh symbol \""
+                           << meshSymbol.getValue() << "\".";
   }
-  DenseI16ArrayAttr meshAxes = op.getMeshAxesAttr();
   if (!meshAxes) {
     return success();
   }
   MeshAxis rank = mesh.getRank();
   for (auto axis : meshAxes.asArrayRef()) {
     if (axis >= rank || axis < 0) {
-      return op.emitError()
+      return op->emitError()
              << "0-based mesh axis index " << axis
              << " is out of bounds. The referenced mesh \""
-             << symbolAttr.getValue() << "\" is of rank " << rank << ".";
+             << meshSymbol.getValue() << "\" is of rank " << rank << ".";
     }
   }
 
@@ -261,9 +259,9 @@ bool isUnique(It begin, It end) {
   return true;
 }
 
-LogicalResult verifyMeshAxes(Location loc, ArrayRef<MeshAxis> axes) {
+static LogicalResult verifyMeshAxes(Location loc, ArrayRef<MeshAxis> axes) {
   SmallVector<MeshAxis> sorted = llvm::to_vector(axes);
-  std::sort(sorted.begin(), sorted.end());
+  llvm::sort(sorted);
   if (!isUnique(sorted.begin(), sorted.end())) {
     return emitError(loc) << "Mesh axes contains duplicate elements.";
   }
@@ -271,19 +269,19 @@ LogicalResult verifyMeshAxes(Location loc, ArrayRef<MeshAxis> axes) {
 }
 
 template <typename It>
-auto product(It begin, It end) {
+static auto product(It begin, It end) {
   using ElementType = std::decay_t<decltype(*begin)>;
   return std::accumulate(begin, end, static_cast<ElementType>(1),
                          std::multiplies<ElementType>());
 }
 
 template <typename R>
-auto product(R &&range) {
+static auto product(R &&range) {
   return product(adl_begin(range), adl_end(range));
 }
 
-int64_t collectiveDeviceGroupSize(ArrayRef<MeshAxis> meshAxes,
-                                  ArrayRef<int64_t> meshShape) {
+static int64_t collectiveDeviceGroupSize(ArrayRef<MeshAxis> meshAxes,
+                                         ArrayRef<int64_t> meshShape) {
   int64_t res = 1;
 
   for (MeshAxis axis : meshAxes) {
@@ -297,10 +295,10 @@ int64_t collectiveDeviceGroupSize(ArrayRef<MeshAxis> meshAxes,
   return res;
 }
 
-LogicalResult verifyDimensionCompatibility(Location loc,
-                                           int64_t expectedDimSize,
-                                           int64_t resultDimSize,
-                                           int64_t resultAxis) {
+static LogicalResult verifyDimensionCompatibility(Location loc,
+                                                  int64_t expectedDimSize,
+                                                  int64_t resultDimSize,
+                                                  int64_t resultAxis) {
   if (!ShapedType::isDynamic(resultDimSize) &&
       expectedDimSize != resultDimSize) {
     return emitError(loc) << "Dimension size mismatch for result axis "
@@ -314,7 +312,7 @@ LogicalResult verifyDimensionCompatibility(Location loc,
   return success();
 }
 
-LogicalResult verifyAllGatherOperandAndResultShape(
+static LogicalResult verifyAllGatherOperandAndResultShape(
     Value operand, Value result, int64_t gatherAxis,
     ArrayRef<MeshAxis> meshAxes, ArrayRef<int64_t> meshShape) {
   ShapedType operandType = operand.getType().cast<ShapedType>();
@@ -334,20 +332,20 @@ LogicalResult verifyAllGatherOperandAndResultShape(
   return success();
 }
 
-template <typename Op>
-FailureOr<ClusterOp> getMesh(Op op) {
+static FailureOr<ClusterOp> getMesh(Operation *op, FlatSymbolRefAttr meshSymbol,
+                                    DenseI16ArrayAttr meshAxes) {
   SymbolTableCollection symbolTableCollection;
-  if (failed(verifyMeshSymbolUses(op, symbolTableCollection))) {
+  if (failed(verifyMeshSymbolUses(op, meshSymbol, meshAxes,
+                                  symbolTableCollection))) {
     // We need to check the symbol here since this runs before
     // SymbolUserOpInterface.
     return failure();
   }
   return symbolTableCollection.lookupNearestSymbolFrom<mesh::ClusterOp>(
-      op.getOperation(), op.getMeshAttr());
+      op, meshSymbol);
 }
 
-template <typename Op>
-LogicalResult verifyAllGather(Op op) {
+static LogicalResult verifyAllGather(AllGatherOp op) {
   auto rank = op.getResult().getType().template cast<ShapedType>().getRank();
   auto gatherAxis = op.getGatherAxis().getSExtValue();
   if (gatherAxis < 0 || gatherAxis >= rank) {
@@ -355,7 +353,9 @@ LogicalResult verifyAllGather(Op op) {
                           << " is out of bounds [0, " << rank << ").";
   }
 
-  auto mesh = getMesh(op);
+  FlatSymbolRefAttr meshSymbol = op.getMeshAttr();
+  DenseI16ArrayAttr meshAxes = op.getMeshAxesAttr();
+  auto mesh = getMesh(op.getOperation(), meshSymbol, meshAxes);
   if (failed(mesh)) {
     return failure();
   }
@@ -364,11 +364,9 @@ LogicalResult verifyAllGather(Op op) {
                                               mesh.value().canonicalDimSizes());
 }
 
-LogicalResult verifyAllToAllOperandAndResultShape(Value operand, Value result,
-                                                  int64_t splitAxis,
-                                                  int64_t concatAxis,
-                                                  ArrayRef<MeshAxis> meshAxes,
-                                                  ArrayRef<int64_t> meshShape) {
+static LogicalResult verifyAllToAllOperandAndResultShape(
+    Value operand, Value result, int64_t splitAxis, int64_t concatAxis,
+    ArrayRef<MeshAxis> meshAxes, ArrayRef<int64_t> meshShape) {
   ShapedType operandType = operand.getType().cast<ShapedType>();
   ShapedType resultType = result.getType().cast<ShapedType>();
   for (int64_t axis = 0; axis < operandType.getRank(); ++axis) {
@@ -415,7 +413,7 @@ LogicalResult verifyAllToAllOperandAndResultShape(Value operand, Value result,
   return success();
 }
 
-LogicalResult verifyReduceScatterOperandAndResultShape(
+static LogicalResult verifyReduceScatterOperandAndResultShape(
     Value operand, Value result, int64_t scatterAxis,
     ArrayRef<MeshAxis> meshAxes, ArrayRef<int64_t> meshShape) {
   ShapedType operandType = operand.getType().cast<ShapedType>();
@@ -453,15 +451,16 @@ LogicalResult verifyReduceScatterOperandAndResultShape(
   return success();
 }
 
-} // namespace
-
 //===----------------------------------------------------------------------===//
 // mesh.all_reduce op
 //===----------------------------------------------------------------------===//
 
 LogicalResult
 AllReduceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  return verifyMeshSymbolUses(*this, symbolTable);
+  FlatSymbolRefAttr meshSymbol = getMeshAttr();
+  DenseI16ArrayAttr meshAxes = getMeshAxesAttr();
+  return verifyMeshSymbolUses(getOperation(), meshSymbol, meshAxes,
+                              symbolTable);
 }
 
 LogicalResult mlir::mesh::AllReduceOp::verify() {
@@ -474,7 +473,10 @@ LogicalResult mlir::mesh::AllReduceOp::verify() {
 
 LogicalResult
 AllGatherOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  return verifyMeshSymbolUses(*this, symbolTable);
+  FlatSymbolRefAttr meshSymbol = getMeshAttr();
+  DenseI16ArrayAttr meshAxes = getMeshAxesAttr();
+  return verifyMeshSymbolUses(getOperation(), meshSymbol, meshAxes,
+                              symbolTable);
 }
 
 LogicalResult mlir::mesh::AllGatherOp::verify() {
@@ -489,14 +491,19 @@ LogicalResult mlir::mesh::AllGatherOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult AllToAllOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  return verifyMeshSymbolUses(*this, symbolTable);
+  FlatSymbolRefAttr meshSymbol = getMeshAttr();
+  DenseI16ArrayAttr meshAxes = getMeshAxesAttr();
+  return verifyMeshSymbolUses(getOperation(), meshSymbol, meshAxes,
+                              symbolTable);
 }
 
 LogicalResult AllToAllOp::verify() {
   if (failed(verifyMeshAxes(getLoc(), getMeshAxes()))) {
     return failure();
   }
-  auto mesh = ::getMesh(*this);
+  FlatSymbolRefAttr meshSymbol = getMeshAttr();
+  DenseI16ArrayAttr meshAxes = getMeshAxesAttr();
+  auto mesh = ::getMesh(getOperation(), meshSymbol, meshAxes);
   if (failed(mesh)) {
     return failure();
   }
@@ -512,14 +519,19 @@ LogicalResult AllToAllOp::verify() {
 
 LogicalResult
 ReduceScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  return verifyMeshSymbolUses(*this, symbolTable);
+  FlatSymbolRefAttr meshSymbol = getMeshAttr();
+  DenseI16ArrayAttr meshAxes = getMeshAxesAttr();
+  return verifyMeshSymbolUses(getOperation(), meshSymbol, meshAxes,
+                              symbolTable);
 }
 
 LogicalResult ReduceScatterOp::verify() {
   if (failed(verifyMeshAxes(getLoc(), getMeshAxes()))) {
     return failure();
   }
-  auto mesh = ::getMesh(*this);
+  FlatSymbolRefAttr meshSymbol = getMeshAttr();
+  DenseI16ArrayAttr meshAxes = getMeshAxesAttr();
+  auto mesh = ::getMesh(getOperation(), meshSymbol, meshAxes);
   if (failed(mesh)) {
     return failure();
   }
