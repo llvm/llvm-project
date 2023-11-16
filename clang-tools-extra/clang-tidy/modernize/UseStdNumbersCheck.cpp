@@ -293,8 +293,8 @@ UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,
     : ClangTidyCheck(Name, Context),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()) {
-  DiffThresholdString = Options.get("DiffThreshold", "0.001");
+                      areDiagsSelfContained()),
+      DiffThresholdString{Options.get("DiffThreshold", "0.001")} {
   if (DiffThresholdString.getAsDouble(DiffThreshold)) {
     configurationDiag(
         "Invalid DiffThreshold config value: '%0', expected a double")
