@@ -4559,7 +4559,9 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
   // Check for unexpanded parameter packs in any of the template arguments.
   for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
     if (DiagnoseUnexpandedParameterPack(TemplateArgs[I],
-                                        UPPC_PartialSpecialization))
+                                        IsPartialSpecialization
+                                            ? UPPC_PartialSpecialization
+                                            : UPPC_ExplicitSpecialization))
       return true;
 
   // Check that the template argument list is well-formed for this
@@ -8744,7 +8746,9 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   // Check for unexpanded parameter packs in any of the template arguments.
   for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
     if (DiagnoseUnexpandedParameterPack(TemplateArgs[I],
-                                        UPPC_PartialSpecialization))
+                                        isPartialSpecialization
+                                            ? UPPC_PartialSpecialization
+                                            : UPPC_ExplicitSpecialization))
       return true;
 
   // Check that the template argument list is well-formed for this
