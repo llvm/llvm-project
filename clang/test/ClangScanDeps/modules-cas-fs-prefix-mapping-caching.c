@@ -11,13 +11,13 @@
 // RUN: clang-scan-deps -compilation-database %t/dir1/cdb.json -format experimental-full \
 // RUN:    -cas-path %t/cas -module-files-dir %t/dir1/modules \
 // RUN:    -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
-// RUN:    -prefix-map=%t/dir1/modules=/^modules -prefix-map=%t/dir1=/^src \
+// RUN:    -prefix-map=%t/dir1/modules=/^modules -prefix-map=%t/dir1=/^src -optimize-args=none \
 // RUN:  > %t/dir1.txt
 
 // RUN: clang-scan-deps -compilation-database %t/dir2/cdb.json -format experimental-full \
 // RUN:    -cas-path %t/cas -module-files-dir %t/dir2/modules \
 // RUN:    -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
-// RUN:    -prefix-map=%t/dir2/modules=/^modules -prefix-map=%t/dir2=/^src \
+// RUN:    -prefix-map=%t/dir2/modules=/^modules -prefix-map=%t/dir2=/^src -optimize-args=none \
 // RUN:  > %t/dir2.txt
 
 // Extract individual commands.
