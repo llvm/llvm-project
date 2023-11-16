@@ -95,8 +95,9 @@ def EmitC_ApplyOp : EmitC_Op<"apply", []> {
 def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", []> {
   let summary = "Opaque call operation";
   let description = [{
-    The `call_opaque` operation represents a C++ function call. The call allows
-    specifying order of operands and attributes in the call as follows:
+    The `call_opaque` operation represents a C++ function call. The callee
+    can be an arbitrary non-empty string. The call allows specifying order
+    of operands and attributes in the call as follows:
 
     - integer value of index type refers to an operand;
     - attribute which will get lowered to constant value in call;
