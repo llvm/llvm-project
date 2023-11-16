@@ -162,6 +162,12 @@ private:
     void install(facet* f, long id);
     template <class F> void install(F* f) {install(f, f->id.__get());}
     template <class F> void install_from(const __imp& other);
+
+    // We don't do reference counting on the classic locale.
+    // It's never destroyed anyway, but atomic reference counting may be very
+    // expensive in parallel applications. The classic locale is used by default
+    // in all streams. Note: if a new global locale is installed, then we lose
+    // the benefit of no reference counting.
     static std::atomic<__imp*> classic_;
 };
 
@@ -563,6 +569,15 @@ std::atomic<locale::__imp*> locale::__imp::classic_;
 const locale& locale::classic() {
     static const __no_destroy<locale> c(__private_tag{}, &make<__imp>(1u));
     // TODO:
+    // We use relaxed memory ordering because readers don't access
+    // the contents of the objects, they are interested in just the
+    // pointer value.
+    // If a locale uses the classic imp, then this store happens
+    // before acquire/release methods, and they must observe the
+    // right value and omit reference counting.
+    // If a locale uses a non-classic imp, then it does not matter
+    // what value it will load, the result of the comparison will
+    // be false in all cases.
     classic_.store(c->__locale_, std::memory_order_relaxed);
     return c.get();
 }
