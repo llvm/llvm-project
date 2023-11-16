@@ -212,6 +212,11 @@ Changes in existing checks
   <clang-tidy/checks/abseil/string-find-startswith>` check to also consider
   ``std::basic_string_view`` in addition to ``std::basic_string`` by default.
 
+- Improved :doc:`bugprone-assert-side-effect
+  <clang-tidy/checks/bugprone/assert-side-effect>` check to report usage of
+  non-const ``<<`` and ``>>`` operators in assertions and fixed some false-positives
+  with const operators.
+
 - Improved :doc:`bugprone-dangling-handle
   <clang-tidy/checks/bugprone/dangling-handle>` check to support functional
   casting during type conversions at variable initialization, now with improved
