@@ -52,6 +52,10 @@ public:
 
   static tok::TokenKind getTokenFromQualifier(const std::string &Qualifier);
 
+  void fixQualifierAlignment(SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
+                             FormatTokenLexer &Tokens,
+                             tooling::Replacements &Fixes);
+
   const FormatToken *analyzeRight(const SourceManager &SourceMgr,
                                   const AdditionalKeywords &Keywords,
                                   tooling::Replacements &Fixes,
