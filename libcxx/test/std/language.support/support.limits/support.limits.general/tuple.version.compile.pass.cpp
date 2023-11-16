@@ -21,6 +21,8 @@
     __cpp_lib_make_from_tuple    201606L [C++17]
     __cpp_lib_ranges_zip         202110L [C++23]
     __cpp_lib_tuple_element_t    201402L [C++14]
+    __cpp_lib_tuple_like         202207L [C++23]
+                                 202311L [C++26]
     __cpp_lib_tuples_by_type     201304L [C++14]
 */
 
@@ -47,6 +49,10 @@
 
 # ifdef __cpp_lib_tuple_element_t
 #   error "__cpp_lib_tuple_element_t should not be defined before c++14"
+# endif
+
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_tuples_by_type
@@ -76,6 +82,10 @@
 # endif
 # if __cpp_lib_tuple_element_t != 201402L
 #   error "__cpp_lib_tuple_element_t should have the value 201402L in c++14"
+# endif
+
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_tuples_by_type
@@ -114,6 +124,10 @@
 # endif
 # if __cpp_lib_tuple_element_t != 201402L
 #   error "__cpp_lib_tuple_element_t should have the value 201402L in c++17"
+# endif
+
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_tuples_by_type
@@ -155,6 +169,10 @@
 # endif
 # if __cpp_lib_tuple_element_t != 201402L
 #   error "__cpp_lib_tuple_element_t should have the value 201402L in c++20"
+# endif
+
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_tuples_by_type
@@ -207,6 +225,19 @@
 #   error "__cpp_lib_tuple_element_t should have the value 201402L in c++23"
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should be defined in c++23"
+#   endif
+#   if __cpp_lib_tuple_like != 202207L
+#     error "__cpp_lib_tuple_like should have the value 202207L in c++23"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_tuples_by_type
 #   error "__cpp_lib_tuples_by_type should be defined in c++23"
 # endif
@@ -255,6 +286,19 @@
 # endif
 # if __cpp_lib_tuple_element_t != 201402L
 #   error "__cpp_lib_tuple_element_t should have the value 201402L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should be defined in c++26"
+#   endif
+#   if __cpp_lib_tuple_like != 202311L
+#     error "__cpp_lib_tuple_like should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_tuples_by_type
