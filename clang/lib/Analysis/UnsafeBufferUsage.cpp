@@ -1830,21 +1830,11 @@ UUCAddAssignGadget::getFixits(const Strategy &S) const {
       if (!isNonNegativeIntegerExpr(Offset, VD, Ctx))
         return std::nullopt;
 
-      std::string SubSpanOffset;
-      const SourceManager &SM = Ctx.getSourceManager();
-      const LangOptions &LangOpts = Ctx.getLangOpts();
-      std::optional<StringRef> ExtentString = getExprText(Offset, SM, LangOpts);
-      
-      if (ExtentString)
-        SubSpanOffset = ExtentString->str();
-      else
-        SubSpanOffset =
-            getUserFillPlaceHolder(); // FIXME: When does this happen?
-
       // To transform UUC(p += n) to UUC(p = p.subspan(..)):
       SS << varName.data() << " = " << varName.data() << ".subspan";
 
-      bool NotParenExpr = (Offset->IgnoreParens()->getBeginLoc() == Offset->getBeginLoc());
+      bool NotParenExpr =
+          (Offset->IgnoreParens()->getBeginLoc() == Offset->getBeginLoc());
       if (NotParenExpr)
         SS << "(";
       
@@ -1854,11 +1844,11 @@ UUCAddAssignGadget::getFixits(const Strategy &S) const {
         return std::nullopt;
 
       Fixes.push_back(FixItHint::CreateReplacement(
-                                                   SourceRange(AddAssignNode->getBeginLoc(),
-                                                               Node->getOperatorLoc()),
+          SourceRange(AddAssignNode->getBeginLoc(), Node->getOperatorLoc()),
           SS.str()));
       if (NotParenExpr)
-        Fixes.push_back(FixItHint::CreateInsertion(Offset->getEndLoc().getLocWithOffset(1), ")"));
+        Fixes.push_back(FixItHint::CreateInsertion(
+            Offset->getEndLoc().getLocWithOffset(1), ")"));
       return Fixes;
     }
   }
