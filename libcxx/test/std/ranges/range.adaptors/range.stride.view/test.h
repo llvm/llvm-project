@@ -126,6 +126,24 @@ struct InputIterBase {
   friend constexpr bool operator==(const Derived&, const std::default_sentinel_t&) { return true; }
 };
 
+template <std::input_iterator T, std::sentinel_for<T> S = sentinel_wrapper<T>>
+struct MoveOnlyView : std::ranges::view_base {
+  T begin_;
+  T end_;
+
+  constexpr MoveOnlyView(T b, T e) : begin_(b), end_(e) {}
+
+  constexpr MoveOnlyView(const MoveOnlyView&)            = delete;
+  constexpr MoveOnlyView(MoveOnlyView&& other)           = default;
+  constexpr MoveOnlyView& operator=(MoveOnlyView&&)      = default;
+  constexpr MoveOnlyView& operator=(const MoveOnlyView&) = delete;
+
+  constexpr T begin() { return begin_; }
+  constexpr T begin() const { return begin_; }
+  constexpr sentinel_wrapper<T> end() { return sentinel_wrapper<T>{end_}; }
+  constexpr sentinel_wrapper<T> end() const { return sentinel_wrapper<T>{end_}; }
+};
+
 //TODO: Rename as View.
 template <std::input_iterator T, std::sentinel_for<T> S = sentinel_wrapper<T>>
 struct InputView : std::ranges::view_base {
@@ -171,7 +189,7 @@ struct SizedInputIterator {
   int* __v_;
 
   constexpr SizedInputIterator() { __v_ = nullptr; }
-  constexpr SizedInputIterator(int* __v) { __v_ = __v; }
+  constexpr SizedInputIterator(int* v) { __v_ = v; }
   constexpr SizedInputIterator(const SizedInputIterator& sii) { __v_ = sii.__v_; }
 
   constexpr int operator*() const { return *__v_; }
