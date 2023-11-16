@@ -42,14 +42,12 @@ static void sortDependentLoops(std::vector<LoopCoeffPair> &target) {
 //===----------------------------------------------------------------------===//
 
 CodegenEnv::CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
-                       unsigned numTensors, unsigned numLoops,
-                       unsigned numFilterLoops, unsigned maxRank)
+                       unsigned numTensors, unsigned numLoops, unsigned maxRank)
     : linalgOp(linop), sparseOptions(opts),
-      latticeMerger(numTensors, numLoops, numFilterLoops, maxRank),
-      loopEmitter(), sparseOut(nullptr), outerParNest(-1u), insChain(),
-      expValues(), expFilled(), expAdded(), expCount(), redVal(),
-      redExp(detail::kInvalidId), redCustom(detail::kInvalidId),
-      redValidLexInsert() {}
+      latticeMerger(numTensors, numLoops, maxRank), loopEmitter(),
+      sparseOut(nullptr), outerParNest(-1u), insChain(), expValues(),
+      expFilled(), expAdded(), expCount(), redVal(), redExp(detail::kInvalidId),
+      redCustom(detail::kInvalidId), redValidLexInsert() {}
 
 LogicalResult CodegenEnv::initTensorExp() {
   // Builds the tensor expression for the Linalg operation in SSA form.

@@ -220,12 +220,12 @@ TensorExp::TensorExp(TensorExp::Kind k, unsigned x, ExprId y, Value v,
   llvm_unreachable("unexpected kind");
 }
 
-Merger::Merger(unsigned numInputOutputTensors, unsigned numNativeLoops,
-               unsigned numFilterLoops, unsigned maxLvlRank)
+Merger::Merger(unsigned numInputOutputTensors, unsigned numLoops,
+               unsigned maxLvlRank)
     : outTensor(numInputOutputTensors - 1),
       syntheticTensor(numInputOutputTensors),
-      numTensors(numInputOutputTensors + 1), numNativeLoops(numNativeLoops),
-      numLoops(numNativeLoops + numFilterLoops), hasSparseOut(false),
+      numTensors(numInputOutputTensors + 1), numLoops(numLoops),
+      hasSparseOut(false),
       lvlTypes(numTensors,
                std::vector<DimLevelType>(numLoops, DimLevelType::Undef)),
       loopToLvl(numTensors,

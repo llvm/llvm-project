@@ -38,8 +38,7 @@ public:
   /// passed around during sparsification for bookkeeping
   /// together with some consistency asserts.
   CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
-             unsigned numTensors, unsigned numLoops, unsigned numFilterLoops,
-             unsigned maxRank);
+             unsigned numTensors, unsigned numLoops, unsigned maxRank);
 
   //
   // General methods.
