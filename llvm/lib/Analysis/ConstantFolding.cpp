@@ -2425,7 +2425,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       return ConstantFP::get(Ty->getContext(), Val);
     }
 
-
     case Intrinsic::amdgcn_s_quadmask: {
       uint64_t Val = Op->getZExtValue();
       uint64_t QuadMask = 0;
@@ -2436,6 +2435,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         QuadMask |= (1 << I);
       }
       return ConstantInt::get(Ty, QuadMask);
+    }
 
     case Intrinsic::amdgcn_s_bitreplicate: {
       uint64_t Val = Op->getZExtValue();
@@ -2446,7 +2446,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       Val = (Val & 0x1111111111111111ULL) | (Val & 0x2222222222222222ULL) << 1;
       Val = Val | Val << 1;
       return ConstantInt::get(Ty, Val);
-
     }
 
     default:
