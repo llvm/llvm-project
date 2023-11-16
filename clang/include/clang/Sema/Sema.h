@@ -710,9 +710,13 @@ public:
     return result;
   }
 
+  // Saves the current floating-point pragma stack and clear it in this Sema.
   class FpPragmaStackSaveRAII {
   public:
-    FpPragmaStackSaveRAII(Sema &S) : S(S), SavedStack(S.FpPragmaStack) {}
+    FpPragmaStackSaveRAII(Sema &S)
+        : S(S), SavedStack(std::move(S.FpPragmaStack)) {
+      S.FpPragmaStack.Stack.clear();
+    }
     ~FpPragmaStackSaveRAII() { S.FpPragmaStack = std::move(SavedStack); }
 
   private:
@@ -722,7 +726,6 @@ public:
 
   void resetFPOptions(FPOptions FPO) {
     CurFPFeatures = FPO;
-    FpPragmaStack.Stack.clear();
     FpPragmaStack.CurrentValue = FPO.getChangesFrom(FPOptions(LangOpts));
   }
 
@@ -5449,7 +5452,7 @@ public:
   bool DiagnosePropertyAccessorMismatch(ObjCPropertyDecl *PD,
                                         ObjCMethodDecl *Getter,
                                         SourceLocation Loc);
-  void DiagnoseSentinelCalls(NamedDecl *D, SourceLocation Loc,
+  void DiagnoseSentinelCalls(const NamedDecl *D, SourceLocation Loc,
                              ArrayRef<Expr *> Args);
 
   void PushExpressionEvaluationContext(
@@ -8838,6 +8841,9 @@ public:
 
     /// The type of an exception.
     UPPC_ExceptionType,
+
+    /// Explicit specialization.
+    UPPC_ExplicitSpecialization,
 
     /// Partial specialization.
     UPPC_PartialSpecialization,
@@ -13447,6 +13453,10 @@ public:
   void maybeAddCUDAHostDeviceAttrs(FunctionDecl *FD,
                                    const LookupResult &Previous);
 
+  /// May add implicit CUDAHostAttr and CUDADeviceAttr attributes to a
+  /// trivial cotr/dtor that does not have host and device attributes.
+  void maybeAddCUDAHostDeviceAttrsToTrivialCtorDtor(FunctionDecl *FD);
+
   /// May add implicit CUDAConstantAttr attribute to VD, depending on VD
   /// and current compilation settings.
   void MaybeAddCUDAConstantAttr(VarDecl *VD);
@@ -13476,6 +13486,10 @@ public:
   /// CUDA lambdas by default is host device function unless it has explicit
   /// host or device attribute.
   void CUDASetLambdaAttrs(CXXMethodDecl *Method);
+
+  /// Record \p FD if it is a CUDA/HIP implicit host device function used on
+  /// device side in device compilation.
+  void CUDARecordImplicitHostDeviceFuncUsedByDevice(const FunctionDecl *FD);
 
   /// Finds a function in \p Matches with highest calling priority
   /// from \p Caller context and erases all functions with lower

@@ -191,9 +191,9 @@ bool mlir::vector::isDisjointTransferIndices(
   if (transferA.getVectorType() != transferB.getVectorType())
     return false;
   unsigned rankOffset = transferA.getLeadingShapedRank();
-  for (unsigned i = 0, e = transferA.indices().size(); i < e; i++) {
-    Value indexA = transferA.indices()[i];
-    Value indexB = transferB.indices()[i];
+  for (unsigned i = 0, e = transferA.getIndices().size(); i < e; i++) {
+    Value indexA = transferA.getIndices()[i];
+    Value indexB = transferB.getIndices()[i];
     std::optional<int64_t> cstIndexA = getConstantIntValue(indexA);
     std::optional<int64_t> cstIndexB = getConstantIntValue(indexB);
 
@@ -251,7 +251,7 @@ bool mlir::vector::isDisjointTransferIndices(
 bool mlir::vector::isDisjointTransferSet(VectorTransferOpInterface transferA,
                                          VectorTransferOpInterface transferB,
                                          bool testDynamicValueUsingBounds) {
-  if (transferA.source() != transferB.source())
+  if (transferA.getSource() != transferB.getSource())
     return false;
   return isDisjointTransferIndices(transferA, transferB,
                                    testDynamicValueUsingBounds);
@@ -888,14 +888,14 @@ static LogicalResult verifyOutputShape(
                                      /*symCount=*/0, extents, ctx);
     // Compose the resMap with the extentsMap, which is a constant map.
     AffineMap expectedMap = simplifyAffineMap(resMap.compose(extentsMap));
-    assert(llvm::all_of(
-               expectedMap.getResults(),
-               [](AffineExpr e) { return e.isa<AffineConstantExpr>(); }) &&
-           "expected constant extent along all dimensions.");
+    assert(
+        llvm::all_of(expectedMap.getResults(),
+                     [](AffineExpr e) { return isa<AffineConstantExpr>(e); }) &&
+        "expected constant extent along all dimensions.");
     // Extract the expected shape and build the type.
     auto expectedShape = llvm::to_vector<4>(
         llvm::map_range(expectedMap.getResults(), [](AffineExpr e) {
-          return e.cast<AffineConstantExpr>().getValue();
+          return cast<AffineConstantExpr>(e).getValue();
         }));
     auto expected =
         VectorType::get(expectedShape, resVectorType.getElementType(),
@@ -1076,7 +1076,7 @@ void ContractionOp::getIterationIndexMap(
     auto index = it.index();
     auto map = it.value();
     for (unsigned i = 0, e = map.getNumResults(); i < e; ++i) {
-      auto dim = map.getResult(i).cast<AffineDimExpr>();
+      auto dim = cast<AffineDimExpr>(map.getResult(i));
       iterationIndexMap[index][dim.getPosition()] = i;
     }
   }
@@ -3626,8 +3626,8 @@ static LogicalResult verifyPermutationMap(AffineMap permutationMap,
                                           EmitFun emitOpError) {
   SmallVector<bool, 8> seen(permutationMap.getNumInputs(), false);
   for (auto expr : permutationMap.getResults()) {
-    auto dim = expr.dyn_cast<AffineDimExpr>();
-    auto zero = expr.dyn_cast<AffineConstantExpr>();
+    auto dim = dyn_cast<AffineDimExpr>(expr);
+    auto zero = dyn_cast<AffineConstantExpr>(expr);
     if (zero) {
       if (zero.getValue() != 0) {
         return emitOpError(
@@ -3728,7 +3728,7 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
              << AffineMapAttr::get(permutationMap)
              << " vs inBounds of size: " << inBounds.size();
     for (unsigned int i = 0; i < permutationMap.getNumResults(); ++i)
-      if (permutationMap.getResult(i).isa<AffineConstantExpr>() &&
+      if (isa<AffineConstantExpr>(permutationMap.getResult(i)) &&
           !llvm::cast<BoolAttr>(inBounds.getValue()[i]).getValue())
         return op->emitOpError("requires broadcast dimensions to be in-bounds");
   }
@@ -3740,10 +3740,10 @@ static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
   SmallVector<StringRef, 3> elidedAttrs;
   elidedAttrs.push_back(TransferReadOp::getOperandSegmentSizeAttr());
   if (op.getPermutationMap().isMinorIdentity())
-    elidedAttrs.push_back(op.getPermutationMapAttrStrName());
+    elidedAttrs.push_back(op.getPermutationMapAttrName());
   // Elide in_bounds attribute if all dims are out-of-bounds.
   if (llvm::none_of(op.getInBoundsValues(), [](bool b) { return b; }))
-    elidedAttrs.push_back(op.getInBoundsAttrStrName());
+    elidedAttrs.push_back(op.getInBoundsAttrName());
   p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 }
 
@@ -3802,7 +3802,7 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   VectorType vectorType = llvm::dyn_cast<VectorType>(types[1]);
   if (!vectorType)
     return parser.emitError(typesLoc, "requires vector type");
-  auto permMapAttrName = TransferReadOp::getPermutationMapAttrStrName();
+  auto permMapAttrName = TransferReadOp::getPermutationMapAttrName(result.name);
   Attribute permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
@@ -3888,7 +3888,7 @@ Type TransferReadOp::getExpectedMaskType() {
 template <typename TransferOp>
 static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   // TODO: support more aggressive createOrFold on:
-  // `op.indices()[indicesIdx] + vectorType < dim(op.source(), indicesIdx)`
+  // op.getIndices()[indicesIdx] + vectorType < dim(op.getSource(), indicesIdx)
   if (op.getShapedType().isDynamicDim(indicesIdx))
     return false;
   Value index = op.getIndices()[indicesIdx];
@@ -3920,7 +3920,7 @@ static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
     }
     // Currently out-of-bounds, check whether we can statically determine it is
     // inBounds.
-    auto dimExpr = permutationMap.getResult(i).dyn_cast<AffineDimExpr>();
+    auto dimExpr = dyn_cast<AffineDimExpr>(permutationMap.getResult(i));
     assert(dimExpr && "Broadcast dims must be in-bounds");
     auto inBounds =
         isInBounds(op, /*resultIdx=*/i, /*indicesIdx=*/dimExpr.getPosition());
@@ -3932,8 +3932,7 @@ static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
     return failure();
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(op.getContext());
-  op->setAttr(TransferOp::getInBoundsAttrStrName(),
-              b.getBoolArrayAttr(newInBounds));
+  op.setInBoundsAttr(b.getBoolArrayAttr(newInBounds));
   return success();
 }
 
@@ -3947,7 +3946,7 @@ static LogicalResult foldTransferFullMask(TransferOp op) {
   if (!constantMask)
     return failure();
 
-  if (!constantMask.isFullMask())
+  if (!constantMask.isAllOnesMask())
     return failure();
 
   op.getMaskMutable().clear();
@@ -4169,7 +4168,8 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
   ShapedType shapedType = llvm::dyn_cast<ShapedType>(types[1]);
   if (!shapedType || !llvm::isa<MemRefType, RankedTensorType>(shapedType))
     return parser.emitError(typesLoc, "requires memref or ranked tensor type");
-  auto permMapAttrName = TransferWriteOp::getPermutationMapAttrStrName();
+  auto permMapAttrName =
+      TransferWriteOp::getPermutationMapAttrName(result.name);
   auto permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
@@ -5622,7 +5622,7 @@ LogicalResult ConstantMaskOp::verify() {
   return success();
 }
 
-bool ConstantMaskOp::isFullMask() {
+bool ConstantMaskOp::isAllOnesMask() {
   auto resultType = getVectorType();
   // Check the corner case of 0-D vectors first.
   if (resultType.getRank() == 0) {
