@@ -388,7 +388,7 @@ define i32 @negative_oneuse(i32 %x, i32 %y) {
 ; CHECK-LABEL: @negative_oneuse(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
-; CHECK-NEXT:    [[RET:%.*]] = lshr i32 [[T0]], [[Y]]
+; CHECK-NEXT:    [[RET:%.*]] = lshr exact i32 [[T0]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %t0 = shl i32 %x, %y
