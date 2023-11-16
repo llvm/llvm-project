@@ -42,8 +42,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include <cassert>
 #include <cstdint>
 #include <utility>
+#include <vector>
 
 namespace mlir {
 // TODO: part_tensor need to have it's own namespace.
@@ -76,6 +78,7 @@ public:
   virtual ~PartTensorStorageBase() = default;
   virtual void getPartitions(std::vector<index_type> **) = 0;
   virtual index_type getNumPartitions() = 0;
+  virtual void *getSlice(llvm::ArrayRef<index_type> partSpec) = 0;
 };
 
 /// A memory-resident sparse tensor using a storage scheme based on
@@ -107,8 +110,26 @@ public:
   void getPartitions(std::vector<index_type> **partData) override {
     *partData = &this->partData;
   }
-  index_type getNumPartitions() override {
-    return parts.size() * std::size(parts[0]->getDimSizes());
+  index_type getNumPartitions() override { return parts.size() * getRank(); }
+  auto getRank() { return parts[0]->getRank(); }
+  void *getSlice(llvm::ArrayRef<index_type> partSpec) override {
+    auto partSpecSize = 2 * getRank();
+    assert(std::size(partSpec) == partSpecSize);
+    for (auto i : llvm::seq(0ul, std::size(parts))) {
+      auto loOffset = 2 * i * getRank();
+      ArrayRef curPartSpec(partData.data() + loOffset, partSpecSize);
+      if (curPartSpec == partSpec) {
+        DimLevelType dimLevelTypes[2] = {DimLevelType::CompressedNu,
+                                         DimLevelType::Singleton};
+        uint64_t lvl2dim[2] = {0, 1};
+        return SparseTensorStorage<P, I, V>::newFromCOO(
+            getRank(), parts[i]->getDimSizes().data(), getRank(), dimLevelTypes,
+            lvl2dim, *parts[i]);
+      }
+    }
+    assert(0 &&
+           "We currently don't support union or intersection of partitions");
+    return nullptr;
   }
 
 protected:

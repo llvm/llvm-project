@@ -46,6 +46,7 @@
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/ExecutionEngine/PartTensor/Storage.h"
 #include "mlir/ExecutionEngine/SparseTensorRuntime.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <cassert>
 #include <cstdint>
 
@@ -320,6 +321,12 @@ void _mlir_ciface_getPartitions( // NOLINT
 
 index_type _mlir_ciface_getNumPartitions(void *tensor) {
   return static_cast<PartTensorStorageBase *>(tensor)->getNumPartitions();
+}
+
+void *_mlir_ciface_getSlice(void *tensor,
+                            StridedMemRefType<index_type, 1> *partSpec) {
+  return static_cast<PartTensorStorageBase *>(tensor)->getSlice(
+      llvm::ArrayRef<index_type>(partSpec->data, partSpec->sizes[0]));
 }
 } // extern "C"
 
