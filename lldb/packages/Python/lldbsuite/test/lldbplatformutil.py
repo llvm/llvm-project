@@ -207,7 +207,7 @@ def getArchitecture():
 lldbArchitecture = None
 
 
-def getLldbArchitecture():
+def getLLDBArchitecture():
     """Returns the architecture of the lldb binary."""
     global lldbArchitecture
     if not lldbArchitecture:

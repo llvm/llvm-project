@@ -734,7 +734,7 @@ def skipIfHostIncompatibleWithRemote(func):
     """Decorate the item to skip tests if binaries built on this host are incompatible."""
 
     def is_host_incompatible_with_remote():
-        host_arch = lldbplatformutil.getLldbArchitecture()
+        host_arch = lldbplatformutil.getLLDBArchitecture()
         host_platform = lldbplatformutil.getHostPlatform()
         target_arch = lldbplatformutil.getArchitecture()
         target_platform = (

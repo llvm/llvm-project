@@ -1312,7 +1312,7 @@ class Base(unittest2.TestCase):
 
     def getLldbArchitecture(self):
         """Returns the architecture of the lldb binary."""
-        return lldbplatformutil.getLldbArchitecture()
+        return lldbplatformutil.getLLDBArchitecture()
 
     def getCompiler(self):
         """Returns the compiler in effect the test suite is running with."""
