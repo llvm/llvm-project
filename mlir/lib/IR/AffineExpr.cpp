@@ -444,12 +444,89 @@ static AffineExpr symbolicDivide(AffineExpr expr, unsigned symbolPos,
   llvm_unreachable("Unknown AffineExpr");
 }
 
+/// Populate `result` with all summand operands of given (potentially nested)
+/// addition. If the given expression is not an addition, just populate the
+/// expression itself.
+/// Example: Add(Add(7, 8), Mul(9, 10)) will return [7, 8, Mul(9, 10)].
+static void getSummandExprs(AffineExpr expr, SmallVector<AffineExpr> &result) {
+  auto addExpr = dyn_cast<AffineBinaryOpExpr>(expr);
+  if (!addExpr || addExpr.getKind() != AffineExprKind::Add) {
+    result.push_back(expr);
+    return;
+  }
+  getSummandExprs(addExpr.getLHS(), result);
+  getSummandExprs(addExpr.getRHS(), result);
+}
+
+/// Return "true" if `candidate` is a negated expression, i.e., Mul(-1, expr).
+/// If so, also return the non-negated expression via `expr`.
+static bool isNegatedAffineExpr(AffineExpr candidate, AffineExpr &expr) {
+  auto mulExpr = dyn_cast<AffineBinaryOpExpr>(candidate);
+  if (!mulExpr || mulExpr.getKind() != AffineExprKind::Mul)
+    return false;
+  if (auto lhs = dyn_cast<AffineConstantExpr>(mulExpr.getLHS())) {
+    if (lhs.getValue() == -1) {
+      expr = mulExpr.getRHS();
+      return true;
+    }
+  }
+  if (auto rhs = dyn_cast<AffineConstantExpr>(mulExpr.getRHS())) {
+    if (rhs.getValue() == -1) {
+      expr = mulExpr.getLHS();
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Return "true" if `lhs` % `rhs` is guaranteed to evaluate to zero based on
+/// the fact that `lhs` contains another modulo expression that ensures that
+/// `lhs` is divisible by `rhs`. This is a common pattern in the resulting IR
+/// after loop peeling.
+///
+/// Example: lhs = ub - ub % step
+///          rhs = step
+///       => (ub - ub % step) % step is guaranteed to evaluate to 0.
+static bool isModOfModSubtraction(AffineExpr lhs, AffineExpr rhs,
+                                  unsigned numDims, unsigned numSymbols) {
+  // TODO: Try to unify this function with `getBoundForAffineExpr`.
+  // Collect all summands in lhs.
+  SmallVector<AffineExpr> summands;
+  getSummandExprs(lhs, summands);
+  // Look for Mul(-1, Mod(x, rhs)) among the summands. If x matches the
+  // remaining summands, then lhs % rhs is guaranteed to evaluate to 0.
+  for (int64_t i = 0, e = summands.size(); i < e; ++i) {
+    AffineExpr current = summands[i];
+    AffineExpr beforeNegation;
+    if (!isNegatedAffineExpr(current, beforeNegation))
+      continue;
+    AffineBinaryOpExpr innerMod = dyn_cast<AffineBinaryOpExpr>(beforeNegation);
+    if (!innerMod || innerMod.getKind() != AffineExprKind::Mod)
+      continue;
+    if (innerMod.getRHS() != rhs)
+      continue;
+    // Sum all remaining summands and subtract x. If that expression can be
+    // simplified to zero, then the remaining summands and x are equal.
+    AffineExpr diff = getAffineConstantExpr(0, lhs.getContext());
+    for (int64_t j = 0; j < e; ++j)
+      if (i != j)
+        diff = diff + summands[j];
+    diff = diff - innerMod.getLHS();
+    diff = simplifyAffineExpr(diff, numDims, numSymbols);
+    auto constExpr = dyn_cast<AffineConstantExpr>(diff);
+    if (constExpr && constExpr.getValue() == 0)
+      return true;
+  }
+  return false;
+}
+
 /// Simplify a semi-affine expression by handling modulo, floordiv, or ceildiv
 /// operations when the second operand simplifies to a symbol and the first
 /// operand is divisible by that symbol. It can be applied to any semi-affine
 /// expression. Returned expression can either be a semi-affine or pure affine
 /// expression.
-static AffineExpr simplifySemiAffine(AffineExpr expr) {
+static AffineExpr simplifySemiAffine(AffineExpr expr, unsigned numDims,
+                                     unsigned numSymbols) {
   switch (expr.getKind()) {
   case AffineExprKind::Constant:
   case AffineExprKind::DimId:
@@ -458,9 +535,10 @@ static AffineExpr simplifySemiAffine(AffineExpr expr) {
   case AffineExprKind::Add:
   case AffineExprKind::Mul: {
     AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
-    return getAffineBinaryOpExpr(expr.getKind(),
-                                 simplifySemiAffine(binaryExpr.getLHS()),
-                                 simplifySemiAffine(binaryExpr.getRHS()));
+    return getAffineBinaryOpExpr(
+        expr.getKind(),
+        simplifySemiAffine(binaryExpr.getLHS(), numDims, numSymbols),
+        simplifySemiAffine(binaryExpr.getRHS(), numDims, numSymbols));
   }
   // Check if the simplification of the second operand is a symbol, and the
   // first operand is divisible by it. If the operation is a modulo, a constant
@@ -471,10 +549,14 @@ static AffineExpr simplifySemiAffine(AffineExpr expr) {
   case AffineExprKind::CeilDiv:
   case AffineExprKind::Mod: {
     AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
-    AffineExpr sLHS = simplifySemiAffine(binaryExpr.getLHS());
-    AffineExpr sRHS = simplifySemiAffine(binaryExpr.getRHS());
-    AffineSymbolExpr symbolExpr =
-        dyn_cast<AffineSymbolExpr>(simplifySemiAffine(binaryExpr.getRHS()));
+    AffineExpr sLHS =
+        simplifySemiAffine(binaryExpr.getLHS(), numDims, numSymbols);
+    AffineExpr sRHS =
+        simplifySemiAffine(binaryExpr.getRHS(), numDims, numSymbols);
+    if (isModOfModSubtraction(sLHS, sRHS, numDims, numSymbols))
+      return getAffineConstantExpr(0, expr.getContext());
+    AffineSymbolExpr symbolExpr = dyn_cast<AffineSymbolExpr>(
+        simplifySemiAffine(binaryExpr.getRHS(), numDims, numSymbols));
     if (!symbolExpr)
       return getAffineBinaryOpExpr(expr.getKind(), sLHS, sRHS);
     unsigned symbolPos = symbolExpr.getPosition();
@@ -1415,7 +1497,7 @@ AffineExpr mlir::simplifyAffineExpr(AffineExpr expr, unsigned numDims,
                                     unsigned numSymbols) {
   // Simplify semi-affine expressions separately.
   if (!expr.isPureAffine())
-    expr = simplifySemiAffine(expr);
+    expr = simplifySemiAffine(expr, numDims, numSymbols);
 
   SimpleAffineExprFlattener flattener(numDims, numSymbols);
   flattener.walkPostOrder(expr);
