@@ -52,10 +52,17 @@ if config.compiler_id == "GNU":
 else:
     extra_link_flags = []
 
+if config.libcxx_used == "1":
+    extra_libcxx_flags = config.libcxx_flags
+else:
+    extra_libcxx_flags = []
+
 # Setup default compiler flags used with -fsanitize=address option.
 # FIXME: Review the set of required flags and check if it can be reduced.
 target_cflags = [get_required_attr(config, "target_cflags")] + extra_link_flags
-target_cxxflags = config.cxx_mode_flags + target_cflags
+target_cxxflags = config.cxx_mode_flags
+target_cxxflags += extra_libcxx_flags + target_cflags
+
 clang_asan_static_cflags = (
     [
         "-fsanitize=address",
@@ -68,7 +75,9 @@ clang_asan_static_cflags = (
 )
 if config.target_arch == "s390x":
     clang_asan_static_cflags.append("-mbackchain")
-clang_asan_static_cxxflags = config.cxx_mode_flags + clang_asan_static_cflags
+clang_asan_static_cxxflags = (
+    config.cxx_mode_flags + extra_libcxx_flags + clang_asan_static_cflags
+)
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
 
@@ -82,7 +91,7 @@ if config.asan_dynamic:
             "-D_DLL",
             "-Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames",
         ]
-    elif platform.system() == "FreeBSD":
+    elif platform.system() == "FreeBSD" or config.libcxx_used:
         # On FreeBSD, we need to add -pthread to ensure pthread functions are available.
         asan_dynamic_flags += ["-pthread"]
     config.available_features.add("asan-dynamic-runtime")

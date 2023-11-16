@@ -17,7 +17,9 @@ pythonize_bool(ZLIB_FOUND)
 pythonize_bool(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
 
 pythonize_bool(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
-
+if (SANITIZER_LIT_USE_LIBCXX)
+  set (LLVM_LIBCXX_USED 1)
+endif ()
 configure_compiler_rt_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.common.configured.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.common.configured)

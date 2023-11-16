@@ -23,9 +23,14 @@ def build_invocation(compile_flags):
     return " " + " ".join([config.clang] + compile_flags) + " "
 
 
+if config.libcxx_used == "1":
+    extra_libcxx_flags = config.libcxx_flags
+else:
+    extra_libcxx_flags = []
+
 target_cflags = [get_required_attr(config, "target_cflags")]
 clang_ubsan_cflags = ["-fsanitize-minimal-runtime"] + target_cflags
-clang_ubsan_cxxflags = config.cxx_mode_flags + clang_ubsan_cflags
+clang_ubsan_cxxflags = config.cxx_mode_flags + extra_libcxx_flags + clang_ubsan_cflags
 
 # Define %clang and %clangxx substitutions to use in test RUN lines.
 config.substitutions.append(("%clang ", build_invocation(clang_ubsan_cflags)))

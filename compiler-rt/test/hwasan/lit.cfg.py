@@ -42,9 +42,15 @@ clang_hwasan_oldrt_cflags = clang_hwasan_common_cflags + [
     "-hwasan-instrument-personality-functions=0",
 ]
 
-clang_hwasan_cxxflags = config.cxx_mode_flags + clang_hwasan_cflags
-clang_hwasan_oldrt_cxxflags = config.cxx_mode_flags + clang_hwasan_oldrt_cflags
+if config.libcxx_used == "1":
+    extra_libcxx_flags = config.libcxx_flags
+else:
+    extra_libcxx_flags = []
 
+clang_hwasan_cxxflags = config.cxx_mode_flags + extra_libcxx_flags + clang_hwasan_cflags
+clang_hwasan_oldrt_cxxflags = (
+    config.cxx_mode_flags + extra_libcxx_flags + clang_hwasan_oldrt_cflags
+)
 
 def build_invocation(compile_flags):
     return " " + " ".join([config.clang] + compile_flags) + " "

@@ -25,7 +25,13 @@ if config.host_os == "FreeBSD":
 # On SystemZ we need -mbackchain to make the fast unwinder work.
 if config.target_arch == "s390x":
     clang_msan_cflags.append("-mbackchain")
-clang_msan_cxxflags = config.cxx_mode_flags + clang_msan_cflags
+
+if config.libcxx_used == "1":
+    extra_libcxx_flags = config.libcxx_flags
+else:
+    extra_libcxx_flags = []
+
+clang_msan_cxxflags = config.cxx_mode_flags + extra_libcxx_flags + clang_msan_cflags
 
 # Flags for KMSAN invocation. This is C-only, we're not interested in C++.
 clang_kmsan_cflags = (

@@ -71,7 +71,13 @@ if lit.util.which("strace"):
 clang_cflags = ["-O0", config.target_cflags] + config.debug_info_flags
 if config.android:
     clang_cflags = clang_cflags + ["-fno-emulated-tls"]
-clang_cxxflags = config.cxx_mode_flags + clang_cflags
+
+if config.libcxx_used == "1":
+    extra_libcxx_flags = config.libcxx_flags
+else:
+    extra_libcxx_flags = []
+
+clang_cxxflags = config.cxx_mode_flags + extra_libcxx_flags + clang_cflags
 lsan_incdir = config.test_source_root + "/../"
 clang_lsan_cflags = clang_cflags + lsan_cflags + ["-I%s" % lsan_incdir]
 clang_lsan_cxxflags = clang_cxxflags + lsan_cflags + ["-I%s" % lsan_incdir]

@@ -69,7 +69,9 @@ else:
 set_default("have_internal_symbolizer", @COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER_PYBOOL@)
 set_default("have_zlib", @ZLIB_FOUND_PYBOOL@)
 set_default("libcxx_used", "@LLVM_LIBCXX_USED@")
-
+set_default("libcxx_flags", ["-nostdinc++ -nostdlib++ " + \
+                            "-isystem @LLVM_BINARY_DIR@/include/c++/v1 -L @LLVM_BINARY_DIR@/lib@LLVM_LIBDIR_SUFFIX@ " + \
+                            "-Wl,-rpath,@LLVM_BINARY_DIR@/lib@LLVM_LIBDIR_SUFFIX@ -lc++"])
 # LLVM tools dir can be passed in lit parameters, so try to
 # apply substitution.
 config.llvm_tools_dir = lit_config.substitute(config.llvm_tools_dir)
