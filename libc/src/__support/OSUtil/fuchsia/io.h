@@ -17,12 +17,12 @@
 
 #include <zircon/sanitizer.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE void write_to_stderr(cpp::string_view msg) {
   __sanitizer_log_write(msg.data(), msg.size());
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_FUCHSIA_IO_H

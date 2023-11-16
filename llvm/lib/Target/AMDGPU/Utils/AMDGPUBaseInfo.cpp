@@ -128,8 +128,6 @@ std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
     return std::nullopt;
 
   switch (AmdhsaCodeObjectVersion) {
-  case 3:
-    return ELF::ELFABIVERSION_AMDGPU_HSA_V3;
   case 4:
     return ELF::ELFABIVERSION_AMDGPU_HSA_V4;
   case 5:
@@ -138,12 +136,6 @@ std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
     report_fatal_error(Twine("Unsupported AMDHSA Code Object Version ") +
                        Twine(AmdhsaCodeObjectVersion));
   }
-}
-
-bool isHsaAbiVersion3(const MCSubtargetInfo *STI) {
-  if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
-    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V3;
-  return false;
 }
 
 bool isHsaAbiVersion4(const MCSubtargetInfo *STI) {
@@ -174,7 +166,6 @@ unsigned getCodeObjectVersion(const Module &M) {
 
 unsigned getMultigridSyncArgImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
-  case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 48;
   case AMDHSA_COV5:
@@ -188,7 +179,6 @@ unsigned getMultigridSyncArgImplicitArgPosition(unsigned CodeObjectVersion) {
 // central TD file.
 unsigned getHostcallImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
-  case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 24;
   case AMDHSA_COV5:
@@ -199,7 +189,6 @@ unsigned getHostcallImplicitArgPosition(unsigned CodeObjectVersion) {
 
 unsigned getDefaultQueueImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
-  case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 32;
   case AMDHSA_COV5:
@@ -210,7 +199,6 @@ unsigned getDefaultQueueImplicitArgPosition(unsigned CodeObjectVersion) {
 
 unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
-  case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 40;
   case AMDHSA_COV5:
@@ -774,15 +762,6 @@ std::string AMDGPUTargetID::toString() const {
   std::string Features;
   if (STI.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
-    case AMDGPU::AMDHSA_COV3:
-      // xnack.
-      if (isXnackOnOrAny())
-        Features += "+xnack";
-      // In code object v2 and v3, "sramecc" feature was spelled with a
-      // hyphen ("sram-ecc").
-      if (isSramEccOnOrAny())
-        Features += "+sram-ecc";
-      break;
     case AMDGPU::AMDHSA_COV4:
     case AMDGPU::AMDHSA_COV5:
       // sramecc.
@@ -1163,10 +1142,10 @@ amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
                     amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
                     STI->getFeatureBits().test(FeatureWavefrontSize32) ? 1 : 0);
     AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_WGP_MODE,
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE,
                     STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1);
     AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_MEM_ORDERED, 1);
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED, 1);
   }
   if (AMDGPU::isGFX90A(*STI)) {
     AMDHSA_BITS_SET(KD.compute_pgm_rsrc3,
@@ -2085,6 +2064,10 @@ bool hasVOPD(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureVOPD);
 }
 
+bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureDPPSrc1SGPR);
+}
+
 unsigned hasKernargPreload(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureKernargPreload);
 }
@@ -2101,6 +2084,10 @@ bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
   const unsigned FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
   return SGPRClass.contains(FirstSubReg != 0 ? FirstSubReg : Reg) ||
     Reg == AMDGPU::SCC;
+}
+
+bool isHi(unsigned Reg, const MCRegisterInfo &MRI) {
+  return MRI.getEncodingValue(Reg) & AMDGPU::HWEncoding::IS_HI;
 }
 
 #define MAP_REG2REG \
@@ -2233,16 +2220,13 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
-  case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
@@ -2255,8 +2239,10 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
   unsigned OpType = Desc.operands()[OpNo].OperandType;
-  return OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
-         OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST;
+  return (OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
+          OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST) ||
+         (OpType >= AMDGPU::OPERAND_REG_INLINE_AC_FIRST &&
+          OpType <= AMDGPU::OPERAND_REG_INLINE_AC_LAST);
 }
 
 // Avoid using MCRegisterClass::getSize, since that function will go away
@@ -2514,6 +2500,13 @@ bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi) {
   return Lo16 == Hi16;
 }
 
+bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {
+  if (IsFP64)
+    return !(Val & 0xffffffffu);
+
+  return isUInt<32>(Val) || isInt<32>(Val);
+}
+
 bool isArgPassedInSGPR(const Argument *A) {
   const Function *F = A->getParent();
 
@@ -2538,8 +2531,8 @@ bool isArgPassedInSGPR(const Argument *A) {
     return A->hasAttribute(Attribute::InReg) ||
            A->hasAttribute(Attribute::ByVal);
   default:
-    // TODO: Should calls support inreg for SGPR inputs?
-    return false;
+    // TODO: treat i1 as divergent?
+    return A->hasAttribute(Attribute::InReg);
   }
 }
 
@@ -2565,8 +2558,7 @@ bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
     return CB->paramHasAttr(ArgNo, Attribute::InReg) ||
            CB->paramHasAttr(ArgNo, Attribute::ByVal);
   default:
-    // TODO: Should calls support inreg for SGPR inputs?
-    return false;
+    return CB->paramHasAttr(ArgNo, Attribute::InReg);
   }
 }
 

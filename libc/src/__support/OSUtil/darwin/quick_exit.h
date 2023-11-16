@@ -13,14 +13,14 @@
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE void quick_exit(int status) {
   for (;;) {
-    __llvm_libc::syscall_impl<long>(1 /* SYS_exit */, status);
+    LIBC_NAMESPACE::syscall_impl<long>(1 /* SYS_exit */, status);
   }
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_DARWIN_QUICK_EXIT_H

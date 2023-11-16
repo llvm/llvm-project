@@ -14,7 +14,7 @@ add_libc_unittest(
     libc.src.fcntl.creat
     libc.src.fcntl.open
     libc.src.unistd.close
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -30,5 +30,5 @@ add_libc_unittest(
     libc.src.fcntl.openat
     libc.src.unistd.close
     libc.src.unistd.read
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

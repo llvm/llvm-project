@@ -13,7 +13,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // remove_all_extents
 #if LIBC_HAS_BUILTIN(__remove_all_extents)
@@ -34,6 +34,6 @@ template <typename T>
 using remove_all_extents_t = typename remove_all_extents<T>::type;
 #endif
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_REMOVE_ALL_EXTENTS_H

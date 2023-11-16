@@ -14,7 +14,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(char *, fgets,
                    (char *__restrict str, int count,
@@ -22,25 +22,21 @@ LLVM_LIBC_FUNCTION(char *, fgets,
   if (count < 1)
     return nullptr;
 
-  // This implementation is very slow as it makes multiple RPC calls.
-  unsigned char c = '\0';
-  int i = 0;
-  for (; i < count - 1 && c != '\n'; ++i) {
-    auto r = file::read(stream, &c, 1);
-    if (r != 1)
-      break;
+  uint64_t recv_size;
+  void *buf = nullptr;
+  rpc::Client::Port port = rpc::client.open<RPC_READ_FGETS>();
+  port.send([=](rpc::Buffer *buffer) {
+    buffer->data[0] = count;
+    buffer->data[1] = file::from_stream(stream);
+  });
+  port.recv_n(&buf, &recv_size,
+              [&](uint64_t) { return reinterpret_cast<void *>(str); });
+  port.close();
 
-    str[i] = c;
-  }
-
-  bool has_error = __llvm_libc::ferror(stream);
-  bool has_eof = __llvm_libc::feof(stream);
-
-  if (has_error || (i == 0 && has_eof))
+  if (recv_size == 0)
     return nullptr;
 
-  str[i] = '\0';
   return str;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -31,15 +31,16 @@ class ObjectFile;
 /// to their functions.
 class InstrProfCorrelator {
 public:
+  /// Indicate which kind correlator to use.
+  enum ProfCorrelatorKind { NONE, DEBUG_INFO };
+
   static llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
-  get(StringRef DebugInfoFilename);
+  get(StringRef Filename, ProfCorrelatorKind FileKind);
 
   /// Construct a ProfileData vector used to correlate raw instrumentation data
   /// to their functions.
   /// \param MaxWarnings the maximum number of warnings to emit (0 = no limit)
   virtual Error correlateProfileData(int MaxWarnings) = 0;
-
-  virtual Error correlateCovUnusedFuncNames(int MaxWarnings) = 0;
 
   /// Process debug info and dump the correlation data.
   /// \param MaxWarnings the maximum number of warnings to emit (0 = no limit)
@@ -54,12 +55,6 @@ public:
   /// Return the number of bytes in the names string.
   size_t getNamesSize() const { return Names.size(); }
 
-  const char *getCovUnusedFuncNamesPointer() const {
-    return CovUnusedFuncNames.c_str();
-  }
-
-  size_t getCovUnusedFuncNamesSize() const { return CovUnusedFuncNames.size(); }
-
   /// Return the size of the counters section in bytes.
   uint64_t getCountersSectionSize() const {
     return Ctx->CountersSectionEnd - Ctx->CountersSectionStart;
@@ -68,7 +63,6 @@ public:
   static const char *FunctionNameAttributeName;
   static const char *CFGHashAttributeName;
   static const char *NumCountersAttributeName;
-  static const char *CovFunctionNameAttributeName;
 
   enum InstrProfCorrelatorKind { CK_32Bit, CK_64Bit };
   InstrProfCorrelatorKind getKind() const { return Kind; }
@@ -92,7 +86,6 @@ protected:
 
   std::string Names;
   std::vector<std::string> NamesVec;
-  std::string CovUnusedFuncNames;
 
   struct Probe {
     std::string FunctionName;
@@ -114,7 +107,7 @@ protected:
 
 private:
   static llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
-  get(std::unique_ptr<MemoryBuffer> Buffer);
+  get(std::unique_ptr<MemoryBuffer> Buffer, ProfCorrelatorKind FileKind);
 
   const InstrProfCorrelatorKind Kind;
 };
@@ -138,7 +131,7 @@ public:
 
   static llvm::Expected<std::unique_ptr<InstrProfCorrelatorImpl<IntPtrT>>>
   get(std::unique_ptr<InstrProfCorrelator::Context> Ctx,
-      const object::ObjectFile &Obj);
+      const object::ObjectFile &Obj, ProfCorrelatorKind FileKind);
 
 protected:
   std::vector<RawInstrProf::ProfileData<IntPtrT>> Data;
@@ -147,6 +140,8 @@ protected:
   virtual void correlateProfileDataImpl(
       int MaxWarnings,
       InstrProfCorrelator::CorrelationData *Data = nullptr) = 0;
+
+  virtual Error correlateProfileNameImpl() = 0;
 
   Error dumpYaml(int MaxWarnings, raw_ostream &OS) override;
 
@@ -216,7 +211,7 @@ private:
       int MaxWarnings,
       InstrProfCorrelator::CorrelationData *Data = nullptr) override;
 
-  Error correlateCovUnusedFuncNames(int MaxWarnings) override;
+  Error correlateProfileNameImpl() override;
 };
 
 } // end namespace llvm

@@ -115,7 +115,7 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
     auto &Expr2 = cast<BoolValue>(Val2).formula();
     auto &A = MergedEnv.arena();
     auto &MergedVal = A.makeAtomRef(A.makeAtom());
-    MergedEnv.addToFlowCondition(
+    MergedEnv.assume(
         A.makeOr(A.makeAnd(A.makeAtomRef(Env1.getFlowConditionToken()),
                            A.makeEquals(MergedVal, Expr1)),
                  A.makeAnd(A.makeAtomRef(Env2.getFlowConditionToken()),
@@ -434,12 +434,24 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
   if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(&DeclCtx)) {
     auto *Parent = MethodDecl->getParent();
     assert(Parent != nullptr);
-    if (Parent->isLambda())
-      MethodDecl = dyn_cast<CXXMethodDecl>(Parent->getDeclContext());
 
-    // FIXME: Initialize the ThisPointeeLoc of lambdas too.
-    if (MethodDecl && !MethodDecl->isStatic()) {
-      QualType ThisPointeeType = MethodDecl->getThisObjectType();
+    if (Parent->isLambda()) {
+      for (auto Capture : Parent->captures()) {
+        if (Capture.capturesVariable()) {
+          const auto *VarDecl = Capture.getCapturedVar();
+          assert(VarDecl != nullptr);
+          setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
+        } else if (Capture.capturesThis()) {
+          const auto *SurroundingMethodDecl =
+              cast<CXXMethodDecl>(DeclCtx.getNonClosureAncestor());
+          QualType ThisPointeeType =
+              SurroundingMethodDecl->getFunctionObjectParameterType();
+          ThisPointeeLoc =
+              &cast<RecordValue>(createValue(ThisPointeeType))->getLoc();
+        }
+      }
+    } else if (MethodDecl->isImplicitObjectMemberFunction()) {
+      QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
       ThisPointeeLoc =
           &cast<RecordValue>(createValue(ThisPointeeType))->getLoc();
     }
@@ -636,10 +648,6 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   else
     JoinedEnv.ReturnLoc = nullptr;
 
-  // FIXME: Once we're able to remove declarations from `DeclToLoc` when their
-  // lifetime ends, add an assertion that there aren't any entries in
-  // `DeclToLoc` and `Other.DeclToLoc` that map the same declaration to
-  // different storage locations.
   JoinedEnv.DeclToLoc = intersectDenseMaps(EnvA.DeclToLoc, EnvB.DeclToLoc);
 
   JoinedEnv.ExprToLoc = intersectDenseMaps(EnvA.ExprToLoc, EnvB.ExprToLoc);
@@ -662,7 +670,7 @@ StorageLocation &Environment::createStorageLocation(QualType Type) {
   return DACtx->createStorageLocation(Type);
 }
 
-StorageLocation &Environment::createStorageLocation(const VarDecl &D) {
+StorageLocation &Environment::createStorageLocation(const ValueDecl &D) {
   // Evaluated declarations are always assigned the same storage locations to
   // ensure that the environment stabilizes across loop iterations. Storage
   // locations for evaluated declarations are stored in the analysis context.
@@ -690,6 +698,8 @@ StorageLocation *Environment::getStorageLocation(const ValueDecl &D) const {
 
   return Loc;
 }
+
+void Environment::removeDecl(const ValueDecl &D) { DeclToLoc.erase(&D); }
 
 void Environment::setStorageLocation(const Expr &E, StorageLocation &Loc) {
   // `DeclRefExpr`s to builtin function types aren't glvalues, for some reason,
@@ -869,7 +879,7 @@ Environment::createLocAndMaybeValue(QualType Ty,
   return Loc;
 }
 
-StorageLocation &Environment::createObjectInternal(const VarDecl *D,
+StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
                                                    QualType Ty,
                                                    const Expr *InitExpr) {
   if (Ty->isReferenceType()) {
@@ -919,12 +929,16 @@ StorageLocation &Environment::createObjectInternal(const VarDecl *D,
   return Loc;
 }
 
-void Environment::addToFlowCondition(const Formula &Val) {
-  DACtx->addFlowConditionConstraint(FlowConditionToken, Val);
+void Environment::assume(const Formula &F) {
+  DACtx->addFlowConditionConstraint(FlowConditionToken, F);
 }
 
-bool Environment::flowConditionImplies(const Formula &Val) const {
-  return DACtx->flowConditionImplies(FlowConditionToken, Val);
+bool Environment::proves(const Formula &F) const {
+  return DACtx->flowConditionImplies(FlowConditionToken, F);
+}
+
+bool Environment::allows(const Formula &F) const {
+  return DACtx->flowConditionAllows(FlowConditionToken, F);
 }
 
 void Environment::dump(raw_ostream &OS) const {
@@ -947,7 +961,7 @@ void Environment::dump(raw_ostream &OS) const {
     OS << "  [" << L << ", " << V << ": " << *V << "]\n";
   }
 
-  OS << "FlowConditionToken:\n";
+  OS << "\n";
   DACtx->dumpFlowCondition(FlowConditionToken, OS);
 }
 

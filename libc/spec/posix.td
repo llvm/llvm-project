@@ -44,6 +44,7 @@ def ConstStructDirentPtrPtr : ConstType<StructDirentPtrPtr>;
 
 def StructTimeSpec : NamedType<"struct timespec">;
 def StructTimeSpecPtr : PtrType<StructTimeSpec>;
+def ConstStructTimeSpecPtr : ConstType<StructTimeSpecPtr>;
 
 def StructSchedParam : NamedType<"struct sched_param">;
 def StructSchedParamPtr : PtrType<StructSchedParam>;
@@ -1192,7 +1193,7 @@ def POSIX : StandardSpec<"POSIX"> {
           FunctionSpec<
               "nanosleep",
               RetValSpec<IntType>,
-              [ArgSpec<StructTimeSpecPtr>, ArgSpec<StructTimeSpecPtr>]
+              [ArgSpec<ConstStructTimeSpecPtr>, ArgSpec<StructTimeSpecPtr>]
           >,
       ]
   >;

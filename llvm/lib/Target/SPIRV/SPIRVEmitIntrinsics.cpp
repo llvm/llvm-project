@@ -413,7 +413,7 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I) {
     EltTyConst = Constant::getNullValue(AI->getAllocatedType());
     AddressSpace = AI->getAddressSpace();
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
-    EltTyConst = Constant::getNullValue(GEP->getSourceElementType());
+    EltTyConst = Constant::getNullValue(GEP->getResultElementType());
     AddressSpace = GEP->getPointerAddressSpace();
   } else {
     llvm_unreachable("Unexpected instruction!");

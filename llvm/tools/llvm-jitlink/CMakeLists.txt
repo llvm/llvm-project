@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   JITLink
   MC
   Object
+  OrcDebugging
   OrcJIT
   OrcShared
   OrcTargetProcess

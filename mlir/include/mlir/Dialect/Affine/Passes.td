@@ -349,7 +349,8 @@ def AffineVectorize : Pass<"affine-super-vectorize", "func::FuncOp"> {
   let dependentDialects = ["vector::VectorDialect"];
   let options = [
     ListOption<"vectorSizes", "virtual-vector-size", "int64_t",
-               "Specify an n-D virtual vector size for vectorization">,
+               "Specify an n-D virtual vector size for vectorization. "
+               "This must be greater than zero.">,
     // Optionally, the fixed mapping from loop to fastest varying MemRef
     // dimension for all the MemRefs within a loop pattern:
     //   the index represents the loop depth, the value represents the k^th

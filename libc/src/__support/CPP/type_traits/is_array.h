@@ -14,7 +14,7 @@
 
 #include <stddef.h> // For size_t
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // is_array
 template <class T> struct is_array : false_type {};
@@ -23,6 +23,6 @@ template <class T, size_t N> struct is_array<T[N]> : true_type {};
 template <class T>
 LIBC_INLINE_VAR constexpr bool is_array_v = is_array<T>::value;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_ARRAY_H

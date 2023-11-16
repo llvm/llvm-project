@@ -34,7 +34,7 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; RV64-NEXT:    addiw a1, a1, 331
 ; RV64-NEXT:    call __muldi3@plt
 ; RV64-NEXT:    lui a1, 662
-; RV64-NEXT:    addiw a1, a1, -83
+; RV64-NEXT:    addi a1, a1, -83
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    slli a0, a0, 35
 ; RV64-NEXT:    srli a0, a0, 35
@@ -63,10 +63,10 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; RV64M-LABEL: test_srem_odd:
 ; RV64M:       # %bb.0:
 ; RV64M-NEXT:    lui a1, 128424
-; RV64M-NEXT:    addiw a1, a1, 331
+; RV64M-NEXT:    addi a1, a1, 331
 ; RV64M-NEXT:    mul a0, a0, a1
 ; RV64M-NEXT:    lui a1, 662
-; RV64M-NEXT:    addiw a1, a1, -83
+; RV64M-NEXT:    addi a1, a1, -83
 ; RV64M-NEXT:    add a0, a0, a1
 ; RV64M-NEXT:    slli a0, a0, 35
 ; RV64M-NEXT:    srli a0, a0, 35
@@ -93,10 +93,10 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; RV64MV-LABEL: test_srem_odd:
 ; RV64MV:       # %bb.0:
 ; RV64MV-NEXT:    lui a1, 128424
-; RV64MV-NEXT:    addiw a1, a1, 331
+; RV64MV-NEXT:    addi a1, a1, 331
 ; RV64MV-NEXT:    mul a0, a0, a1
 ; RV64MV-NEXT:    lui a1, 662
-; RV64MV-NEXT:    addiw a1, a1, -83
+; RV64MV-NEXT:    addi a1, a1, -83
 ; RV64MV-NEXT:    add a0, a0, a1
 ; RV64MV-NEXT:    slli a0, a0, 35
 ; RV64MV-NEXT:    srli a0, a0, 35
@@ -661,22 +661,25 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32MV-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32MV-NEXT:    vslidedown.vi v8, v8, 2
-; RV32MV-NEXT:    li a0, 85
-; RV32MV-NEXT:    vmv.s.x v0, a0
+; RV32MV-NEXT:    li a0, 511
+; RV32MV-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; RV32MV-NEXT:    vmv.v.x v10, a0
+; RV32MV-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV32MV-NEXT:    vsext.vf4 v12, v10
+; RV32MV-NEXT:    vand.vv v8, v8, v12
+; RV32MV-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; RV32MV-NEXT:    vmv.v.i v10, 1
-; RV32MV-NEXT:    vmerge.vim v10, v10, -1, v0
-; RV32MV-NEXT:    vand.vv v8, v8, v10
-; RV32MV-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; RV32MV-NEXT:    vmv.v.i v11, 0
+; RV32MV-NEXT:    vsetivli zero, 3, e8, mf2, tu, ma
+; RV32MV-NEXT:    vslideup.vi v11, v10, 2
+; RV32MV-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32MV-NEXT:    vmv.v.i v10, 2
-; RV32MV-NEXT:    vmv.v.i v12, 1
+; RV32MV-NEXT:    vsetivli zero, 5, e8, mf2, tu, ma
+; RV32MV-NEXT:    vslideup.vi v11, v10, 4
 ; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32MV-NEXT:    vmv.v.i v14, 0
-; RV32MV-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
-; RV32MV-NEXT:    vslideup.vi v14, v12, 2
-; RV32MV-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
-; RV32MV-NEXT:    vslideup.vi v14, v10, 4
+; RV32MV-NEXT:    vsext.vf4 v12, v11
 ; RV32MV-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32MV-NEXT:    vmsne.vv v0, v8, v14
+; RV32MV-NEXT:    vmsne.vv v0, v8, v12
 ; RV32MV-NEXT:    vmv.v.i v8, 0
 ; RV32MV-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV32MV-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
@@ -770,7 +773,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    srli a1, a1, 31
 ; RV64MV-NEXT:    vand.vx v8, v8, a1
 ; RV64MV-NEXT:    lui a2, 32
-; RV64MV-NEXT:    addiw a2, a2, 256
+; RV64MV-NEXT:    addi a2, a2, 256
 ; RV64MV-NEXT:    vmv.s.x v10, a2
 ; RV64MV-NEXT:    vsext.vf8 v12, v10
 ; RV64MV-NEXT:    vmsne.vv v0, v8, v12

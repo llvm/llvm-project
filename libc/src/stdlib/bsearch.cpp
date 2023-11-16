@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void *, bsearch,
                    (const void *key, const void *array, size_t array_size,
@@ -44,4 +44,4 @@ LLVM_LIBC_FUNCTION(void *, bsearch,
   return nullptr;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

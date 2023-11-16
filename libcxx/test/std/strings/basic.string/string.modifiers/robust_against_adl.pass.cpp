@@ -26,14 +26,19 @@ struct Charlike {
   TEST_CONSTEXPR operator char() const { return ch_; }
 };
 
-TEST_CONSTEXPR_CXX20 bool test() {
-  std::string s;
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  S s;
   Charlike<Holder<Incomplete> > a[] = {'m', 'a', 'h', 'i'};
   s.append(a, a + 4);
   s.assign(a, a + 4);
   s.insert(s.begin(), a, a + 4);
   s.replace(s.begin(), s.begin() + 4, a, a + 4);
   assert(s == "mahimahi");
+}
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_string<std::string>();
 
   return true;
 }

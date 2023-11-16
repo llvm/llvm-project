@@ -2,13 +2,13 @@
 // Tests for the hvx qfloat feature and errors.
 // -----------------------------------------------------------------------------
 
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv68 -mhvx -mhvx-qfloat \
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv68 -mhvx -mhvx-qfloat \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-QFLOAT %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv66 -mhvx=v68 -mhvx-qfloat \
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv66 -mhvx=v68 -mhvx-qfloat \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-QFLOAT %s
 // CHECK-QFLOAT: "-target-feature" "+hvx-qfloat"
 
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv68 -mhvx -mhvx-qfloat \
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv68 -mhvx -mhvx-qfloat \
 // RUN:  -mno-hvx-qfloat 2>&1 | FileCheck -check-prefix=CHECK-NO-QFLOAT %s
 // CHECK-NO-QFLOAT: "-target-feature" "-hvx-qfloat"
 

@@ -15,7 +15,9 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
+#include <__utility/empty.h>
 #include <__utility/move.h>
+#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -30,10 +32,21 @@ template <class _ExecutionPolicy,
           class _Comp                                         = less<>,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI void
-stable_sort(_ExecutionPolicy&&, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp = {}) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty> __stable_sort(
+    _ExecutionPolicy&&, _RandomAccessIterator&& __first, _RandomAccessIterator&& __last, _Comp&& __comp = {}) noexcept {
   using _Backend = typename __select_backend<_RawPolicy>::type;
-  std::__pstl_stable_sort<_RawPolicy>(_Backend{}, std::move(__first), std::move(__last), std::move(__comp));
+  return std::__pstl_stable_sort<_RawPolicy>(_Backend{}, std::move(__first), std::move(__last), std::move(__comp));
+}
+
+template <class _ExecutionPolicy,
+          class _RandomAccessIterator,
+          class _Comp                                         = less<>,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI void stable_sort(
+    _ExecutionPolicy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp = {}) {
+  if (!std::__stable_sort(__policy, std::move(__first), std::move(__last), std::move(__comp)))
+    std::__throw_bad_alloc();
 }
 
 _LIBCPP_END_NAMESPACE_STD

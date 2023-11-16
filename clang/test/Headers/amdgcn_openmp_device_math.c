@@ -113,21 +113,21 @@
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-CPP-NEXT:    store double [[TMP0]], ptr [[__X_ADDR_ASCAST_I]], align 8
 // CHECK-CPP-NEXT:    [[TMP1:%.*]] = load double, ptr [[__X_ADDR_ASCAST_I]], align 8
-// CHECK-CPP-NEXT:    [[CALL_I:%.*]] = call double @__ocml_sin_f64(double noundef [[TMP1]]) #[[ATTR3:[0-9]+]]
+// CHECK-CPP-NEXT:    [[CALL_I:%.*]] = call noundef double @__ocml_sin_f64(double noundef [[TMP1]]) #[[ATTR3:[0-9]+]]
 // CHECK-CPP-NEXT:    store double [[CALL_I]], ptr [[L1_ASCAST]], align 8
 // CHECK-CPP-NEXT:    [[TMP2:%.*]] = load double, ptr [[X_ADDR_ASCAST]], align 8
 // CHECK-CPP-NEXT:    [[RETVAL_ASCAST_I6:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I4]] to ptr
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I7:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I5]] to ptr
 // CHECK-CPP-NEXT:    store double [[TMP2]], ptr [[__X_ADDR_ASCAST_I7]], align 8
 // CHECK-CPP-NEXT:    [[TMP3:%.*]] = load double, ptr [[__X_ADDR_ASCAST_I7]], align 8
-// CHECK-CPP-NEXT:    [[CALL_I8:%.*]] = call double @__ocml_cos_f64(double noundef [[TMP3]]) #[[ATTR3]]
+// CHECK-CPP-NEXT:    [[CALL_I8:%.*]] = call noundef double @__ocml_cos_f64(double noundef [[TMP3]]) #[[ATTR3]]
 // CHECK-CPP-NEXT:    store double [[CALL_I8]], ptr [[L2_ASCAST]], align 8
 // CHECK-CPP-NEXT:    [[TMP4:%.*]] = load double, ptr [[X_ADDR_ASCAST]], align 8
 // CHECK-CPP-NEXT:    [[RETVAL_ASCAST_I11:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I9]] to ptr
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I12:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I10]] to ptr
 // CHECK-CPP-NEXT:    store double [[TMP4]], ptr [[__X_ADDR_ASCAST_I12]], align 8
 // CHECK-CPP-NEXT:    [[TMP5:%.*]] = load double, ptr [[__X_ADDR_ASCAST_I12]], align 8
-// CHECK-CPP-NEXT:    [[TMP6:%.*]] = call double @llvm.fabs.f64(double [[TMP5]])
+// CHECK-CPP-NEXT:    [[TMP6:%.*]] = call noundef double @llvm.fabs.f64(double [[TMP5]])
 // CHECK-CPP-NEXT:    store double [[TMP6]], ptr [[L3_ASCAST]], align 8
 // CHECK-CPP-NEXT:    [[TMP7:%.*]] = load double, ptr [[X_ADDR_ASCAST]], align 8
 // CHECK-CPP-NEXT:    [[TMP8:%.*]] = load double, ptr [[Y_ADDR_ASCAST]], align 8
@@ -142,7 +142,7 @@
 // CHECK-CPP-NEXT:    [[TMP10:%.*]] = load double, ptr [[__X_ADDR_ASCAST_I16]], align 8
 // CHECK-CPP-NEXT:    [[TMP11:%.*]] = load double, ptr [[__Y_ADDR_ASCAST_I]], align 8
 // CHECK-CPP-NEXT:    [[TMP12:%.*]] = load double, ptr [[__Z_ADDR_ASCAST_I]], align 8
-// CHECK-CPP-NEXT:    [[TMP13:%.*]] = call double @llvm.fma.f64(double [[TMP10]], double [[TMP11]], double [[TMP12]])
+// CHECK-CPP-NEXT:    [[TMP13:%.*]] = call noundef double @llvm.fma.f64(double [[TMP10]], double [[TMP11]], double [[TMP12]])
 // CHECK-CPP-NEXT:    store double [[TMP13]], ptr [[L4_ASCAST]], align 8
 // CHECK-CPP-NEXT:    ret void
 //
@@ -278,7 +278,7 @@ void test_math_f64(double x, double y, double z) {
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I22:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I20]] to ptr
 // CHECK-CPP-NEXT:    store float [[TMP1]], ptr [[__X_ADDR_ASCAST_I22]], align 4
 // CHECK-CPP-NEXT:    [[TMP2:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I22]], align 4
-// CHECK-CPP-NEXT:    [[CALL_I23:%.*]] = call float @__ocml_sin_f32(float noundef [[TMP2]]) #[[ATTR3]]
+// CHECK-CPP-NEXT:    [[CALL_I23:%.*]] = call noundef float @__ocml_sin_f32(float noundef [[TMP2]]) #[[ATTR3]]
 // CHECK-CPP-NEXT:    store float [[CALL_I23]], ptr [[L1_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[TMP3:%.*]] = load float, ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[RETVAL_ASCAST_I6:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I4]] to ptr
@@ -289,7 +289,7 @@ void test_math_f64(double x, double y, double z) {
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I27:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I25]] to ptr
 // CHECK-CPP-NEXT:    store float [[TMP4]], ptr [[__X_ADDR_ASCAST_I27]], align 4
 // CHECK-CPP-NEXT:    [[TMP5:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I27]], align 4
-// CHECK-CPP-NEXT:    [[CALL_I:%.*]] = call float @__ocml_cos_f32(float noundef [[TMP5]]) #[[ATTR3]]
+// CHECK-CPP-NEXT:    [[CALL_I:%.*]] = call noundef float @__ocml_cos_f32(float noundef [[TMP5]]) #[[ATTR3]]
 // CHECK-CPP-NEXT:    store float [[CALL_I]], ptr [[L2_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[TMP6:%.*]] = load float, ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[RETVAL_ASCAST_I11:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I9]] to ptr
@@ -300,7 +300,7 @@ void test_math_f64(double x, double y, double z) {
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I31:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I29]] to ptr
 // CHECK-CPP-NEXT:    store float [[TMP7]], ptr [[__X_ADDR_ASCAST_I31]], align 4
 // CHECK-CPP-NEXT:    [[TMP8:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I31]], align 4
-// CHECK-CPP-NEXT:    [[TMP9:%.*]] = call float @llvm.fabs.f32(float [[TMP8]])
+// CHECK-CPP-NEXT:    [[TMP9:%.*]] = call noundef float @llvm.fabs.f32(float [[TMP8]])
 // CHECK-CPP-NEXT:    store float [[TMP9]], ptr [[L3_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[TMP10:%.*]] = load float, ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[TMP11:%.*]] = load float, ptr [[Y_ADDR_ASCAST]], align 4
@@ -325,7 +325,7 @@ void test_math_f64(double x, double y, double z) {
 // CHECK-CPP-NEXT:    [[TMP16:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I37]], align 4
 // CHECK-CPP-NEXT:    [[TMP17:%.*]] = load float, ptr [[__Y_ADDR_ASCAST_I38]], align 4
 // CHECK-CPP-NEXT:    [[TMP18:%.*]] = load float, ptr [[__Z_ADDR_ASCAST_I39]], align 4
-// CHECK-CPP-NEXT:    [[TMP19:%.*]] = call float @llvm.fma.f32(float [[TMP16]], float [[TMP17]], float [[TMP18]])
+// CHECK-CPP-NEXT:    [[TMP19:%.*]] = call noundef float @llvm.fma.f32(float [[TMP16]], float [[TMP17]], float [[TMP18]])
 // CHECK-CPP-NEXT:    store float [[TMP19]], ptr [[L4_ASCAST]], align 4
 // CHECK-CPP-NEXT:    ret void
 //
@@ -437,21 +437,21 @@ void test_math_f32(float x, float y, float z) {
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-CPP-NEXT:    store float [[TMP0]], ptr [[__X_ADDR_ASCAST_I]], align 4
 // CHECK-CPP-NEXT:    [[TMP1:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I]], align 4
-// CHECK-CPP-NEXT:    [[CALL_I:%.*]] = call float @__ocml_sin_f32(float noundef [[TMP1]]) #[[ATTR3]]
+// CHECK-CPP-NEXT:    [[CALL_I:%.*]] = call noundef float @__ocml_sin_f32(float noundef [[TMP1]]) #[[ATTR3]]
 // CHECK-CPP-NEXT:    store float [[CALL_I]], ptr [[L1_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[TMP2:%.*]] = load float, ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[RETVAL_ASCAST_I6:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I4]] to ptr
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I7:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I5]] to ptr
 // CHECK-CPP-NEXT:    store float [[TMP2]], ptr [[__X_ADDR_ASCAST_I7]], align 4
 // CHECK-CPP-NEXT:    [[TMP3:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I7]], align 4
-// CHECK-CPP-NEXT:    [[CALL_I8:%.*]] = call float @__ocml_cos_f32(float noundef [[TMP3]]) #[[ATTR3]]
+// CHECK-CPP-NEXT:    [[CALL_I8:%.*]] = call noundef float @__ocml_cos_f32(float noundef [[TMP3]]) #[[ATTR3]]
 // CHECK-CPP-NEXT:    store float [[CALL_I8]], ptr [[L2_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[TMP4:%.*]] = load float, ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[RETVAL_ASCAST_I11:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I9]] to ptr
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I12:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I10]] to ptr
 // CHECK-CPP-NEXT:    store float [[TMP4]], ptr [[__X_ADDR_ASCAST_I12]], align 4
 // CHECK-CPP-NEXT:    [[TMP5:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I12]], align 4
-// CHECK-CPP-NEXT:    [[TMP6:%.*]] = call float @llvm.fabs.f32(float [[TMP5]])
+// CHECK-CPP-NEXT:    [[TMP6:%.*]] = call noundef float @llvm.fabs.f32(float [[TMP5]])
 // CHECK-CPP-NEXT:    store float [[TMP6]], ptr [[L3_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[TMP7:%.*]] = load float, ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[TMP8:%.*]] = load float, ptr [[Y_ADDR_ASCAST]], align 4
@@ -466,7 +466,7 @@ void test_math_f32(float x, float y, float z) {
 // CHECK-CPP-NEXT:    [[TMP10:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I16]], align 4
 // CHECK-CPP-NEXT:    [[TMP11:%.*]] = load float, ptr [[__Y_ADDR_ASCAST_I]], align 4
 // CHECK-CPP-NEXT:    [[TMP12:%.*]] = load float, ptr [[__Z_ADDR_ASCAST_I]], align 4
-// CHECK-CPP-NEXT:    [[TMP13:%.*]] = call float @llvm.fma.f32(float [[TMP10]], float [[TMP11]], float [[TMP12]])
+// CHECK-CPP-NEXT:    [[TMP13:%.*]] = call noundef float @llvm.fma.f32(float [[TMP10]], float [[TMP11]], float [[TMP12]])
 // CHECK-CPP-NEXT:    store float [[TMP13]], ptr [[L4_ASCAST]], align 4
 // CHECK-CPP-NEXT:    ret void
 //

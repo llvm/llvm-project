@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDIO_GETCHAR_UNLOCKED_H
 #define LLVM_LIBC_SRC_STDIO_GETCHAR_UNLOCKED_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int getchar_unlocked();
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_GETCHAR_UNLOCKED_H

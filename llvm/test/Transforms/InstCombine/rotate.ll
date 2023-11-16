@@ -705,7 +705,7 @@ define i9 @rotateleft_9_neg_mask_wide_amount_commute(i9 %v, i33 %shamt) {
 ; CHECK-NEXT:    [[LSHAMT:%.*]] = and i33 [[SHAMT]], 8
 ; CHECK-NEXT:    [[RSHAMT:%.*]] = and i33 [[NEG]], 8
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i9 [[V:%.*]] to i33
-; CHECK-NEXT:    [[SHL:%.*]] = shl i33 [[CONV]], [[LSHAMT]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i33 [[CONV]], [[LSHAMT]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i33 [[CONV]], [[RSHAMT]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i33 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    [[RET:%.*]] = trunc i33 [[OR]] to i9
@@ -956,4 +956,25 @@ define i8 @unmasked_shlop_unmasked_shift_amount(i32 %x, i32 %shamt) {
   %t7 = or i32 %t5, %t6
   %t8 = trunc i32 %t7 to i8
   ret i8 %t8
+}
+
+define i16 @check_rotate_masked_16bit(i8 %shamt, i32 %cond) {
+; CHECK-LABEL: @check_rotate_masked_16bit(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[SHAMT:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[COND:%.*]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP2]], 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = call i16 @llvm.fshr.i16(i16 [[TMP3]], i16 [[TMP3]], i16 [[TMP1]])
+; CHECK-NEXT:    ret i16 [[TRUNC]]
+;
+  %maskx = and i32 %cond, 1
+  %masky = and i8 %shamt, 15
+  %z = zext i8 %masky to i32
+  %shr = lshr i32 %maskx, %z
+  %sub = sub i8 0, %shamt
+  %maskw = and i8 %sub, 15
+  %z2 = zext i8 %maskw to i32
+  %shl = shl nuw nsw i32 %maskx, %z2
+  %or = or i32 %shr, %shl
+  %trunc = trunc i32 %or to i16
+  ret i16 %trunc
 }

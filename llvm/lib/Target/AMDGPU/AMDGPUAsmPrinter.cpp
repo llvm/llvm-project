@@ -148,20 +148,6 @@ void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
   }
 }
 
-bool AMDGPUAsmPrinter::isBlockOnlyReachableByFallthrough(
-  const MachineBasicBlock *MBB) const {
-  if (!AsmPrinter::isBlockOnlyReachableByFallthrough(MBB))
-    return false;
-
-  if (MBB->empty())
-    return true;
-
-  // If this is a block implementing a long branch, an expression relative to
-  // the start of the block is needed.  to the start of the block.
-  // XXX - Is there a smarter way to check this?
-  return (MBB->back().getOpcode() != AMDGPU::S_SETPC_B64);
-}
-
 void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
@@ -205,6 +191,11 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
 
   if (STM.isAmdHsaOS())
     HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
+
+  if (MFI.getNumKernargPreloadedSGPRs() > 0) {
+    assert(AMDGPU::hasKernargPreload(STM));
+    getTargetStreamer()->EmitKernargPreloadHeader(*getGlobalSTI());
+  }
 }
 
 void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
@@ -243,6 +234,21 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
       CodeObjectVersion);
 
   Streamer.popSection();
+}
+
+void AMDGPUAsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
+  Register RegNo = MI->getOperand(0).getReg();
+
+  SmallString<128> Str;
+  raw_svector_ostream OS(Str);
+  OS << "implicit-def: "
+     << printReg(RegNo, MF->getSubtarget().getRegisterInfo());
+
+  if (MI->getAsmPrinterFlags() & AMDGPU::SGPR_SPILL)
+    OS << " : SGPR spill to VGPR lane";
+
+  OutStreamer->AddComment(OS.str());
+  OutStreamer->addBlankLine();
 }
 
 void AMDGPUAsmPrinter::emitFunctionEntryLabel() {
@@ -321,9 +327,6 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
 
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
-    case AMDGPU::AMDHSA_COV3:
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV3());
-      break;
     case AMDGPU::AMDHSA_COV4:
       HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV4());
       break;
@@ -417,6 +420,7 @@ amdhsa::kernel_descriptor_t AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(
     const SIProgramInfo &PI) const {
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const Function &F = MF.getFunction();
+  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
   amdhsa::kernel_descriptor_t KernelDescriptor;
   memset(&KernelDescriptor, 0x0, sizeof(KernelDescriptor));
@@ -439,6 +443,10 @@ amdhsa::kernel_descriptor_t AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(
   if (STM.hasGFX90AInsts())
     KernelDescriptor.compute_pgm_rsrc3 =
       CurrentProgramInfo.ComputePGMRSrc3GFX90A;
+
+  if (AMDGPU::hasKernargPreload(STM))
+    KernelDescriptor.kernarg_preload =
+        static_cast<uint16_t>(Info->getNumKernargPreloadedSGPRs());
 
   return KernelDescriptor;
 }

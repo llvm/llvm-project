@@ -23,33 +23,33 @@ TEST(LlvmLibcSetvbufTest, SetNBFBuffer) {
   // handle.
   constexpr char FILENAME[] = "testdata/setvbuf_nbf.test";
 
-  ::FILE *fw = __llvm_libc::fopen(FILENAME, "w");
+  ::FILE *fw = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(fw == nullptr);
   char buffer[BUFSIZ];
-  ASSERT_EQ(__llvm_libc::setvbuf(fw, buffer, _IONBF, BUFSIZ), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::setvbuf(fw, buffer, _IONBF, BUFSIZ), 0);
 
-  ::FILE *fr = __llvm_libc::fopen(FILENAME, "r");
+  ::FILE *fr = LIBC_NAMESPACE::fopen(FILENAME, "r");
   ASSERT_FALSE(fr == nullptr);
 
   constexpr char CONTENT[] = "abcdef";
   constexpr size_t CONTENT_SIZE = sizeof(CONTENT);
   for (size_t i = 0; i < CONTENT_SIZE; ++i) {
-    ASSERT_EQ(size_t(1), __llvm_libc::fwrite(CONTENT + i, 1, 1, fw));
+    ASSERT_EQ(size_t(1), LIBC_NAMESPACE::fwrite(CONTENT + i, 1, 1, fw));
     char c;
-    ASSERT_EQ(size_t(1), __llvm_libc::fread(&c, 1, 1, fr));
+    ASSERT_EQ(size_t(1), LIBC_NAMESPACE::fread(&c, 1, 1, fr));
     ASSERT_EQ(c, CONTENT[i]);
   }
 
-  ASSERT_EQ(0, __llvm_libc::fclose(fw));
-  ASSERT_EQ(0, __llvm_libc::fclose(fr));
+  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(fw));
+  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(fr));
 
   // Make sure NBF buffer has no effect for reading.
-  fr = __llvm_libc::fopen(FILENAME, "r");
+  fr = LIBC_NAMESPACE::fopen(FILENAME, "r");
   char data[CONTENT_SIZE];
-  ASSERT_EQ(__llvm_libc::setvbuf(fr, buffer, _IONBF, BUFSIZ), 0);
-  ASSERT_EQ(CONTENT_SIZE, __llvm_libc::fread(data, 1, CONTENT_SIZE, fr));
+  ASSERT_EQ(LIBC_NAMESPACE::setvbuf(fr, buffer, _IONBF, BUFSIZ), 0);
+  ASSERT_EQ(CONTENT_SIZE, LIBC_NAMESPACE::fread(data, 1, CONTENT_SIZE, fr));
   ASSERT_STREQ(CONTENT, data);
-  ASSERT_EQ(0, __llvm_libc::fclose(fr));
+  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(fr));
 }
 
 TEST(LlvmLibcSetvbufTest, SetLBFBuffer) {
@@ -59,48 +59,49 @@ TEST(LlvmLibcSetvbufTest, SetLBFBuffer) {
   // written.
   constexpr char FILENAME[] = "testdata/setvbuf_lbf.test";
 
-  ::FILE *fw = __llvm_libc::fopen(FILENAME, "w");
+  ::FILE *fw = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(fw == nullptr);
   char buffer[BUFSIZ];
-  ASSERT_EQ(__llvm_libc::setvbuf(fw, buffer, _IOLBF, BUFSIZ), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::setvbuf(fw, buffer, _IOLBF, BUFSIZ), 0);
 
-  ::FILE *fr = __llvm_libc::fopen(FILENAME, "r");
+  ::FILE *fr = LIBC_NAMESPACE::fopen(FILENAME, "r");
   ASSERT_FALSE(fr == nullptr);
 
   constexpr char CONTENT[] = "abcdef\n";
   constexpr size_t CONTENT_SIZE = sizeof(CONTENT);
-  ASSERT_EQ(CONTENT_SIZE, __llvm_libc::fwrite(CONTENT, 1, CONTENT_SIZE, fw));
+  ASSERT_EQ(CONTENT_SIZE, LIBC_NAMESPACE::fwrite(CONTENT, 1, CONTENT_SIZE, fw));
 
   // Note that CONTENT_SIZE worth of data written also includes the
   // null-terminator '\0'. But, since it is after the new line character,
   // it should not be availabe for reading.
   char data[CONTENT_SIZE];
-  ASSERT_EQ(CONTENT_SIZE - 1, __llvm_libc::fread(data, 1, CONTENT_SIZE, fr));
+  ASSERT_EQ(CONTENT_SIZE - 1, LIBC_NAMESPACE::fread(data, 1, CONTENT_SIZE, fr));
   char c;
-  ASSERT_EQ(size_t(0), __llvm_libc::fread(&c, 1, 1, fr));
+  ASSERT_EQ(size_t(0), LIBC_NAMESPACE::fread(&c, 1, 1, fr));
 
   data[CONTENT_SIZE - 1] = '\0';
   ASSERT_STREQ(CONTENT, data);
 
-  ASSERT_EQ(0, __llvm_libc::fclose(fw));
-  ASSERT_EQ(0, __llvm_libc::fclose(fr));
+  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(fw));
+  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(fr));
 
   // Make sure LBF buffer has no effect for reading.
-  fr = __llvm_libc::fopen(FILENAME, "r");
-  ASSERT_EQ(__llvm_libc::setvbuf(fr, buffer, _IOLBF, BUFSIZ), 0);
-  ASSERT_EQ(CONTENT_SIZE, __llvm_libc::fread(data, 1, CONTENT_SIZE, fr));
+  fr = LIBC_NAMESPACE::fopen(FILENAME, "r");
+  ASSERT_EQ(LIBC_NAMESPACE::setvbuf(fr, buffer, _IOLBF, BUFSIZ), 0);
+  ASSERT_EQ(CONTENT_SIZE, LIBC_NAMESPACE::fread(data, 1, CONTENT_SIZE, fr));
   ASSERT_STREQ(CONTENT, data);
-  ASSERT_EQ(0, __llvm_libc::fclose(fr));
+  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(fr));
 }
 
 TEST(LlvmLibcSetbufTest, InvalidBufferMode) {
   constexpr char FILENAME[] = "testdata/setvbuf_invalid_bufmode.test";
-  ::FILE *f = __llvm_libc::fopen(FILENAME, "w");
+  ::FILE *f = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(f == nullptr);
   char buf[BUFSIZ];
-  ASSERT_NE(__llvm_libc::setvbuf(f, buf, _IOFBF + _IOLBF + _IONBF, BUFSIZ), 0);
+  ASSERT_NE(LIBC_NAMESPACE::setvbuf(f, buf, _IOFBF + _IOLBF + _IONBF, BUFSIZ),
+            0);
   ASSERT_EQ(libc_errno, EINVAL);
 
   libc_errno = 0;
-  ASSERT_EQ(0, __llvm_libc::fclose(f));
+  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(f));
 }

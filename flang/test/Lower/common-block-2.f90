@@ -6,12 +6,12 @@
 ! - A common block that is initialized outside of a BLOCK DATA.
 
 ! CHECK-LABEL: fir.global @__BLNK__ : tuple<i32, !fir.array<8xi8>> {
-! CHECK:  %[[undef:.*]] = fir.undefined tuple<i32, !fir.array<8xi8>>
+! CHECK:  %[[undef:.*]] = fir.zero_bits tuple<i32, !fir.array<8xi8>>
 ! CHECK:  %[[init:.*]] = fir.insert_value %[[undef]], %c42{{.*}}, [0 : index] : (tuple<i32, !fir.array<8xi8>>, i32) -> tuple<i32, !fir.array<8xi8>>
 ! CHECK:  fir.has_value %[[init]] : tuple<i32, !fir.array<8xi8>>
 
 ! CHECK-LABEL: fir.global @a_ : tuple<i32, !fir.array<8xi8>> {
-! CHECK:  %[[undef:.*]] = fir.undefined tuple<i32, !fir.array<8xi8>>
+! CHECK:  %[[undef:.*]] = fir.zero_bits tuple<i32, !fir.array<8xi8>>
 ! CHECK:  %[[init:.*]] = fir.insert_value %[[undef]], %c42{{.*}}, [0 : index] : (tuple<i32, !fir.array<8xi8>>, i32) -> tuple<i32, !fir.array<8xi8>>
 ! CHECK:  fir.has_value %[[init]] : tuple<i32, !fir.array<8xi8>>
 

@@ -110,6 +110,7 @@ enum Kind {
   kw_nsw,
   kw_exact,
   kw_inbounds,
+  kw_nneg,
   kw_inrange,
   kw_addrspace,
   kw_section,
@@ -152,7 +153,6 @@ enum Kind {
   kw_spir_func,
   kw_x86_64_sysvcc,
   kw_win64cc,
-  kw_webkit_jscc,
   kw_anyregcc,
   kw_swiftcc,
   kw_swifttailcc,
@@ -175,6 +175,7 @@ enum Kind {
   kw_amdgpu_kernel,
   kw_amdgpu_gfx,
   kw_tailcc,
+  kw_m68k_rtdcc,
 
   // Attributes:
   kw_attributes,

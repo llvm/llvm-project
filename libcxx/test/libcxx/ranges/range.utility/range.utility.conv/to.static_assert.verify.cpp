@@ -18,8 +18,8 @@ void test() {
   using R = std::vector<int>;
   R in = {1, 2, 3};
 
-  (void)std::ranges::to<const R>(in); //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}The target container cannot be const-qualified, please remove the const}}
-  (void)(in | std::ranges::to<const R>()); //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}The target container cannot be const-qualified, please remove the const}}
-  (void)std::ranges::to<volatile R>(in); //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}The target container cannot be volatile-qualified, please remove the volatile}}
-  (void)(in | std::ranges::to<volatile R>()); //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}The target container cannot be volatile-qualified, please remove the volatile}}
+  (void)std::ranges::to<const R>(in); //expected-error-re@*:* {{static assertion failed{{.*}}The target container cannot be const-qualified, please remove the const}}
+  (void)(in | std::ranges::to<const R>()); //expected-error-re@*:* {{static assertion failed{{.*}}The target container cannot be const-qualified, please remove the const}}
+  (void)std::ranges::to<volatile R>(in); //expected-error-re@*:* {{static assertion failed{{.*}}The target container cannot be volatile-qualified, please remove the volatile}}
+  (void)(in | std::ranges::to<volatile R>()); //expected-error-re@*:* {{static assertion failed{{.*}}The target container cannot be volatile-qualified, please remove the volatile}}
 }

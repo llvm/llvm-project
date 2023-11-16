@@ -21,6 +21,7 @@
 #include "SIInstrInfo.h"
 #include "SIModeRegisterDefaults.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/Support/raw_ostream.h"
@@ -593,6 +594,8 @@ public:
     return PrologEpilogSGPRSpills;
   }
 
+  GCNUserSGPRUsageInfo &getUserSGPRInfo() { return UserSGPRInfo; }
+
   const GCNUserSGPRUsageInfo &getUserSGPRInfo() const { return UserSGPRInfo; }
 
   void addToPrologEpilogSGPRSpills(Register Reg,
@@ -727,6 +730,10 @@ public:
   Register addFlatScratchInit(const SIRegisterInfo &TRI);
   Register addImplicitBufferPtr(const SIRegisterInfo &TRI);
   Register addLDSKernelId();
+  SmallVectorImpl<MCRegister> *
+  addPreloadedKernArg(const SIRegisterInfo &TRI, const TargetRegisterClass *RC,
+                      unsigned AllocSizeDWord, int KernArgIdx,
+                      int PaddingSGPRs);
 
   /// Increment user SGPRs used for padding the argument list only.
   Register addReservedUserSGPR() {
@@ -870,6 +877,10 @@ public:
 
   unsigned getNumPreloadedSGPRs() const {
     return NumUserSGPRs + NumSystemSGPRs;
+  }
+
+  unsigned getNumKernargPreloadedSGPRs() const {
+    return UserSGPRInfo.getNumKernargPreloadSGPRs();
   }
 
   Register getPrivateSegmentWaveByteOffsetSystemSGPR() const {

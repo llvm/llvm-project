@@ -16,62 +16,62 @@
 
 #include <stdint.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+using LlvmLibcExp10fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-DECLARE_SPECIAL_CONSTANTS(float)
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-TEST(LlvmLibcExp10fTest, SpecialNumbers) {
+TEST_F(LlvmLibcExp10fTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::exp10f(aNaN));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::exp10f(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(inf, __llvm_libc::exp10f(inf));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::exp10f(inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(0.0f, __llvm_libc::exp10f(neg_inf));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::exp10f(neg_inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(1.0f, __llvm_libc::exp10f(0.0f));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp10f(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(1.0f, __llvm_libc::exp10f(-0.0f));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp10f(-0.0f));
   EXPECT_MATH_ERRNO(0);
 }
 
-TEST(LlvmLibcExp10fTest, Overflow) {
+TEST_F(LlvmLibcExp10fTest, Overflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::exp10f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp10f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::exp10f(float(FPBits(0x43000000U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp10f(float(FPBits(0x43000000U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::exp10f(float(FPBits(0x43000001U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp10f(float(FPBits(0x43000001U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
-TEST(LlvmLibcExp10fTest, Underflow) {
+TEST_F(LlvmLibcExp10fTest, Underflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      0.0f, __llvm_libc::exp10f(float(FPBits(0xff7fffffU))), FE_UNDERFLOW);
+      0.0f, LIBC_NAMESPACE::exp10f(float(FPBits(0xff7fffffU))), FE_UNDERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   float x = float(FPBits(0xc2cffff8U));
   EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
-                                 __llvm_libc::exp10f(x), 0.5);
+                                 LIBC_NAMESPACE::exp10f(x), 0.5);
   EXPECT_MATH_ERRNO(ERANGE);
 
   x = float(FPBits(0xc2d00008U));
   EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
-                                 __llvm_libc::exp10f(x), 0.5);
+                                 LIBC_NAMESPACE::exp10f(x), 0.5);
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
-TEST(LlvmLibcExp10fTest, TrickyInputs) {
+TEST_F(LlvmLibcExp10fTest, TrickyInputs) {
   constexpr int N = 20;
   constexpr uint32_t INPUTS[N] = {
       0x325e5bd8, // x = 0x1.bcb7bp-27f
@@ -99,13 +99,13 @@ TEST(LlvmLibcExp10fTest, TrickyInputs) {
     libc_errno = 0;
     float x = float(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
-                                   __llvm_libc::exp10f(x), 0.5);
+                                   LIBC_NAMESPACE::exp10f(x), 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, -x,
-                                   __llvm_libc::exp10f(-x), 0.5);
+                                   LIBC_NAMESPACE::exp10f(-x), 0.5);
   }
 }
 
-TEST(LlvmLibcExp10fTest, InFloatRange) {
+TEST_F(LlvmLibcExp10fTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
@@ -113,7 +113,7 @@ TEST(LlvmLibcExp10fTest, InFloatRange) {
     if (isnan(x) || isinf(x))
       continue;
     libc_errno = 0;
-    float result = __llvm_libc::exp10f(x);
+    float result = LIBC_NAMESPACE::exp10f(x);
 
     // If the computation resulted in an error or did not produce valid result
     // in the single-precision floating point range, then ignore comparing with
@@ -122,6 +122,6 @@ TEST(LlvmLibcExp10fTest, InFloatRange) {
     if (isnan(result) || isinf(result) || libc_errno != 0)
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
-                                   __llvm_libc::exp10f(x), 0.5);
+                                   LIBC_NAMESPACE::exp10f(x), 0.5);
   }
 }

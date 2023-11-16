@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE uint32_t as_uint32_bits(float x) {
   return cpp::bit_cast<uint32_t>(x);
@@ -102,6 +102,6 @@ LIBC_INLINE constexpr float invalid(T x) {
   return isnan(x) ? y : with_errno(y, EDOM);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_MATH_UTILS_H

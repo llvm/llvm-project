@@ -14,8 +14,8 @@ TEST(LlvmLibcIsBlank, DefaultLocale) {
   // return a non-zero integer and everything else returns zero.
   for (int ch = -255; ch < 255; ++ch) {
     if (ch == ' ' || ch == '\t')
-      EXPECT_NE(__llvm_libc::isblank(ch), 0);
+      EXPECT_NE(LIBC_NAMESPACE::isblank(ch), 0);
     else
-      EXPECT_EQ(__llvm_libc::isblank(ch), 0);
+      EXPECT_EQ(LIBC_NAMESPACE::isblank(ch), 0);
   }
 }

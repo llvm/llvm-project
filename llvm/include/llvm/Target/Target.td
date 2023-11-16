@@ -58,6 +58,16 @@ class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
   list<ValueType> Objects = Ts;
 }
 
+// A class that implements a counterpart of PtrValueType, which is
+// dependent on a HW mode. This class inherits from PtrValueType itself,
+// which makes it possible to use objects of this class where PtrValueType
+// or ValueType could be used. This is specifically applicable to selection
+// patterns.
+class PtrValueTypeByHwMode<ValueTypeByHwMode scalar, int addrspace>
+    : HwModeSelect<scalar.Modes>, PtrValueType<ValueType<0, 0>, addrspace> {
+  list<ValueType> Objects = scalar.Objects;
+}
+
 // A class representing the register size, spill size and spill alignment
 // in bits of a register.
 class RegInfo<int RS, int SS, int SA> {
@@ -195,6 +205,10 @@ class Register<string n, list<string> altNames = []> {
   // isConstant - This register always holds a constant value (e.g. the zero
   // register in architectures such as MIPS)
   bit isConstant = false;
+
+  /// PositionOrder - Indicate tablegen to place the newly added register at a later
+  /// position to avoid iterations on them on unsupported target.
+  int PositionOrder = 0;
 }
 
 // RegisterWithSubRegs - This can be used to define instances of Register which
@@ -407,6 +421,10 @@ class RegisterTuples<list<SubRegIndex> Indices, list<dag> Regs,
 
   // List of asm names for the generated tuple registers.
   list<string> RegAsmNames = RegNames;
+
+  // PositionOrder - Indicate tablegen to place the newly added register at a later
+  // position to avoid iterations on them on unsupported target.
+  int PositionOrder = 0;
 }
 
 // RegisterCategory - This class is a list of RegisterClasses that belong to a

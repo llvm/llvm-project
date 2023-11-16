@@ -12,12 +12,12 @@
 
 #include <math.h>
 
-template <typename T> class FrexpTest : public __llvm_libc::testing::Test {
+template <typename T> class FrexpTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
   static constexpr UIntType HIDDEN_BIT =
-      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::VALUE;
+      UIntType(1) << LIBC_NAMESPACE::fputil::MantissaWidth<T>::VALUE;
 
 public:
   typedef T (*FrexpFunc)(T, int *);
@@ -93,4 +93,4 @@ public:
   using LlvmLibcFrexpTest = FrexpTest<T>;                                      \
   TEST_F(LlvmLibcFrexpTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
   TEST_F(LlvmLibcFrexpTest, PowersOfTwo) { testPowersOfTwo(&func); }           \
-  TEST_F(LlvmLibcFrexpTest, SomeIntegers) { testSomeIntegers(&func); }\
+  TEST_F(LlvmLibcFrexpTest, SomeIntegers) { testSomeIntegers(&func); }

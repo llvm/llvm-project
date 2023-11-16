@@ -99,17 +99,6 @@ LoopUnrollResult UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 bool isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
                           DependenceInfo &DI, LoopInfo &LI);
 
-bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
-                        DominatorTree &DT, LoopInfo *LI, AssumptionCache *AC,
-                        ScalarEvolution &SE,
-                        const SmallPtrSetImpl<const Value *> &EphValues,
-                        OptimizationRemarkEmitter *ORE, unsigned TripCount,
-                        unsigned MaxTripCount, bool MaxOrZero,
-                        unsigned TripMultiple, unsigned LoopSize,
-                        TargetTransformInfo::UnrollingPreferences &UP,
-                        TargetTransformInfo::PeelingPreferences &PP,
-                        bool &UseUpperBound);
-
 void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                              ScalarEvolution *SE, DominatorTree *DT,
                              AssumptionCache *AC,
@@ -126,9 +115,44 @@ TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     std::optional<bool> UserUpperBound,
     std::optional<unsigned> UserFullUnrollMaxCount);
 
-InstructionCost ApproximateLoopSize(const Loop *L, unsigned &NumCalls,
-    bool &NotDuplicatable, bool &Convergent, const TargetTransformInfo &TTI,
-    const SmallPtrSetImpl<const Value *> &EphValues, unsigned BEInsns);
+/// Produce an estimate of the unrolled cost of the specified loop.  This
+/// is used to a) produce a cost estimate for partial unrolling and b) to
+/// cheaply estimate cost for full unrolling when we don't want to symbolically
+/// evaluate all iterations.
+class UnrollCostEstimator {
+  InstructionCost LoopSize;
+  bool NotDuplicatable;
+
+public:
+  unsigned NumInlineCandidates;
+  bool Convergent;
+
+  UnrollCostEstimator(const Loop *L, const TargetTransformInfo &TTI,
+                      const SmallPtrSetImpl<const Value *> &EphValues,
+                      unsigned BEInsns);
+
+  /// Whether it is legal to unroll this loop.
+  bool canUnroll() const { return LoopSize.isValid() && !NotDuplicatable; }
+
+  uint64_t getRolledLoopSize() const { return *LoopSize.getValue(); }
+
+  /// Returns loop size estimation for unrolled loop, given the unrolling
+  /// configuration specified by UP.
+  uint64_t
+  getUnrolledLoopSize(const TargetTransformInfo::UnrollingPreferences &UP,
+                      unsigned CountOverwrite = 0) const;
+};
+
+bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
+                        DominatorTree &DT, LoopInfo *LI, AssumptionCache *AC,
+                        ScalarEvolution &SE,
+                        const SmallPtrSetImpl<const Value *> &EphValues,
+                        OptimizationRemarkEmitter *ORE, unsigned TripCount,
+                        unsigned MaxTripCount, bool MaxOrZero,
+                        unsigned TripMultiple, const UnrollCostEstimator &UCE,
+                        TargetTransformInfo::UnrollingPreferences &UP,
+                        TargetTransformInfo::PeelingPreferences &PP,
+                        bool &UseUpperBound);
 
 } // end namespace llvm
 

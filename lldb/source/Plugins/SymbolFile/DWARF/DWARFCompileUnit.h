@@ -12,11 +12,17 @@
 #include "DWARFUnit.h"
 #include "llvm/Support/Error.h"
 
+namespace llvm {
+class DWARFAbbreviationDeclarationSet;
+} // namespace llvm
+
+namespace lldb_private::plugin {
+namespace dwarf {
 class DWARFCompileUnit : public DWARFUnit {
 public:
   void BuildAddressRangeTable(DWARFDebugAranges *debug_aranges) override;
 
-  void Dump(lldb_private::Stream *s) const override;
+  void Dump(Stream *s) const override;
 
   static bool classof(const DWARFUnit *unit) { return !unit->IsTypeUnit(); }
 
@@ -27,7 +33,7 @@ public:
 private:
   DWARFCompileUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                    const DWARFUnitHeader &header,
-                   const DWARFAbbreviationDeclarationSet &abbrevs,
+                   const llvm::DWARFAbbreviationDeclarationSet &abbrevs,
                    DIERef::Section section, bool is_dwo)
       : DWARFUnit(dwarf, uid, header, abbrevs, section, is_dwo) {}
 
@@ -36,5 +42,7 @@ private:
 
   friend class DWARFUnit;
 };
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFCOMPILEUNIT_H

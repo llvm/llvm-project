@@ -13,11 +13,11 @@
 #include "posix_signals.h"
 #include "stdc_signals.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE_VAR constexpr auto PLATFORM_SIGNALS =
     STDC_SIGNALS + POSIX_SIGNALS + LINUX_SIGNALS;
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_LINUX_PLATFORM_SIGNALS_H

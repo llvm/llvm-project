@@ -155,9 +155,8 @@ define <8 x i32> @smull_zext_v8i8_v8i32_top_bit_is_1(ptr %A, ptr %B) nounwind {
 ;
 ; CHECK-GI-LABEL: smull_zext_v8i8_v8i32_top_bit_is_1:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI5_0
+; CHECK-GI-NEXT:    movi v0.8h, #128, lsl #8
 ; CHECK-GI-NEXT:    ldr q1, [x0]
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI5_0]
 ; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ldr q1, [x1]
 ; CHECK-GI-NEXT:    ushll v2.4s, v0.4h, #0
@@ -222,12 +221,11 @@ define <2 x i64> @smull_zext_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ;
 ; CHECK-GI-LABEL: smull_zext_v2i32_v2i64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr h0, [x0]
-; CHECK-GI-NEXT:    ldr h1, [x0, #2]
-; CHECK-GI-NEXT:    adrp x8, .LCPI7_0
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI7_0]
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ldr h1, [x0]
+; CHECK-GI-NEXT:    ldr h2, [x0, #2]
+; CHECK-GI-NEXT:    movi d0, #0x00ffff0000ffff
+; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
+; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    ldr d0, [x1]
@@ -273,9 +271,8 @@ define <2 x i64> @smull_zext_and_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ;
 ; CHECK-GI-LABEL: smull_zext_and_v2i32_v2i64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI8_0
+; CHECK-GI-NEXT:    mvni v0.2s, #128, lsl #24
 ; CHECK-GI-NEXT:    ldr d1, [x0]
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI8_0]
 ; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ldr d1, [x1]
 ; CHECK-GI-NEXT:    sshll v1.2d, v1.2s, #0
@@ -364,12 +361,11 @@ define <8 x i16> @amull_v8i8_v8i16(ptr %A, ptr %B) nounwind {
 ;
 ; CHECK-GI-LABEL: amull_v8i8_v8i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr d0, [x0]
-; CHECK-GI-NEXT:    ldr d1, [x1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI12_0
-; CHECK-GI-NEXT:    umull v0.8h, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI12_0]
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ldr d1, [x0]
+; CHECK-GI-NEXT:    ldr d2, [x1]
+; CHECK-GI-NEXT:    movi v0.2d, #0xff00ff00ff00ff
+; CHECK-GI-NEXT:    umull v1.8h, v1.8b, v2.8b
+; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <8 x i8>, ptr %A
   %tmp2 = load <8 x i8>, ptr %B
@@ -401,12 +397,11 @@ define <4 x i32> @amull_v4i16_v4i32(ptr %A, ptr %B) nounwind {
 ;
 ; CHECK-GI-LABEL: amull_v4i16_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr d0, [x0]
-; CHECK-GI-NEXT:    ldr d1, [x1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI13_0
-; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI13_0]
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ldr d1, [x0]
+; CHECK-GI-NEXT:    ldr d2, [x1]
+; CHECK-GI-NEXT:    movi v0.2d, #0x00ffff0000ffff
+; CHECK-GI-NEXT:    umull v1.4s, v1.4h, v2.4h
+; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <4 x i16>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
@@ -438,12 +433,11 @@ define <2 x i64> @amull_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ;
 ; CHECK-GI-LABEL: amull_v2i32_v2i64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr d0, [x0]
-; CHECK-GI-NEXT:    ldr d1, [x1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI14_0
-; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI14_0]
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ldr d1, [x0]
+; CHECK-GI-NEXT:    ldr d2, [x1]
+; CHECK-GI-NEXT:    movi v0.2d, #0x000000ffffffff
+; CHECK-GI-NEXT:    umull v1.2d, v1.2s, v2.2s
+; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <2 x i32>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
@@ -585,11 +579,10 @@ define <8 x i16> @amlal_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
 ; CHECK-GI-NEXT:    ldr d1, [x1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI21_0
+; CHECK-GI-NEXT:    movi v3.2d, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    ldr d2, [x2]
 ; CHECK-GI-NEXT:    umlal v0.8h, v1.8b, v2.8b
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI21_0]
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <8 x i16>, ptr %A
   %tmp2 = load <8 x i8>, ptr %B
@@ -627,11 +620,10 @@ define <4 x i32> @amlal_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
 ; CHECK-GI-NEXT:    ldr d1, [x1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI22_0
+; CHECK-GI-NEXT:    movi v3.2d, #0x00ffff0000ffff
 ; CHECK-GI-NEXT:    ldr d2, [x2]
 ; CHECK-GI-NEXT:    umlal v0.4s, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI22_0]
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <4 x i32>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
@@ -669,11 +661,10 @@ define <2 x i64> @amlal_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
 ; CHECK-GI-NEXT:    ldr d1, [x1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI23_0
+; CHECK-GI-NEXT:    movi v3.2d, #0x000000ffffffff
 ; CHECK-GI-NEXT:    ldr d2, [x2]
 ; CHECK-GI-NEXT:    umlal v0.2d, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI23_0]
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <2 x i64>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
@@ -817,11 +808,10 @@ define <8 x i16> @amlsl_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
 ; CHECK-GI-NEXT:    ldr d1, [x1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI30_0
+; CHECK-GI-NEXT:    movi v3.2d, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    ldr d2, [x2]
 ; CHECK-GI-NEXT:    umlsl v0.8h, v1.8b, v2.8b
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI30_0]
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <8 x i16>, ptr %A
   %tmp2 = load <8 x i8>, ptr %B
@@ -859,11 +849,10 @@ define <4 x i32> @amlsl_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
 ; CHECK-GI-NEXT:    ldr d1, [x1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI31_0
+; CHECK-GI-NEXT:    movi v3.2d, #0x00ffff0000ffff
 ; CHECK-GI-NEXT:    ldr d2, [x2]
 ; CHECK-GI-NEXT:    umlsl v0.4s, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI31_0]
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <4 x i32>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
@@ -901,11 +890,10 @@ define <2 x i64> @amlsl_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
 ; CHECK-GI-NEXT:    ldr d1, [x1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI32_0
+; CHECK-GI-NEXT:    movi v3.2d, #0x000000ffffffff
 ; CHECK-GI-NEXT:    ldr d2, [x2]
 ; CHECK-GI-NEXT:    umlsl v0.2d, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI32_0]
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <2 x i64>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
@@ -934,9 +922,8 @@ define <8 x i16> @smull_extvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 ;
 ; CHECK-GI-LABEL: smull_extvec_v8i8_v8i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI33_0
+; CHECK-GI-NEXT:    mvni v1.8h, #11
 ; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI33_0]
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
   %tmp3 = sext <8 x i8> %arg to <8 x i16>
@@ -989,9 +976,8 @@ define <4 x i32> @smull_extvec_v4i16_v4i32(<4 x i16> %arg) nounwind {
 ;
 ; CHECK-GI-LABEL: smull_extvec_v4i16_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI35_0
+; CHECK-GI-NEXT:    mvni v1.4s, #11
 ; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI35_0]
 ; CHECK-GI-NEXT:    mul v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    ret
   %tmp3 = sext <4 x i16> %arg to <4 x i32>
@@ -1050,9 +1036,8 @@ define <8 x i16> @umull_extvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 ;
 ; CHECK-GI-LABEL: umull_extvec_v8i8_v8i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI37_0
+; CHECK-GI-NEXT:    movi v1.8h, #12
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI37_0]
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
   %tmp3 = zext <8 x i8> %arg to <8 x i16>
@@ -1170,13 +1155,11 @@ define <8 x i16> @amull_extvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 ;
 ; CHECK-GI-LABEL: amull_extvec_v8i8_v8i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI41_1
+; CHECK-GI-NEXT:    movi v1.8h, #12
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI41_1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI41_0
+; CHECK-GI-NEXT:    movi v2.2d, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI41_0]
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %tmp3 = zext <8 x i8> %arg to <8 x i16>
   %tmp4 = mul <8 x i16> %tmp3, <i16 12, i16 12, i16 12, i16 12, i16 12, i16 12, i16 12, i16 12>
@@ -1205,13 +1188,12 @@ define <4 x i32> @amull_extvec_v4i16_v4i32(<4 x i16> %arg) nounwind {
 ;
 ; CHECK-GI-LABEL: amull_extvec_v4i16_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI42_1
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI42_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI42_0
-; CHECK-GI-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI42_0]
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %tmp3 = zext <4 x i16> %arg to <4 x i32>
   %tmp4 = mul <4 x i32> %tmp3, <i32 1234, i32 1234, i32 1234, i32 1234>
@@ -1240,20 +1222,19 @@ define <2 x i64> @amull_extvec_v2i32_v2i64(<2 x i32> %arg) nounwind {
 ;
 ; CHECK-GI-LABEL: amull_extvec_v2i32_v2i64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI43_1
+; CHECK-GI-NEXT:    adrp x8, .LCPI43_0
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI43_1]
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI43_0]
 ; CHECK-GI-NEXT:    mov d2, v0.d[1]
 ; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    fmov x9, d1
+; CHECK-GI-NEXT:    movi v1.2d, #0x000000ffffffff
 ; CHECK-GI-NEXT:    mul x8, x8, x9
 ; CHECK-GI-NEXT:    fmov x9, d2
 ; CHECK-GI-NEXT:    fmov x10, d3
 ; CHECK-GI-NEXT:    mul x9, x9, x10
 ; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    adrp x8, .LCPI43_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI43_0]
 ; CHECK-GI-NEXT:    mov v0.d[1], x9
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
@@ -1533,12 +1514,11 @@ define <16 x i16> @amull2_i8(<16 x i8> %arg1, <16 x i8> %arg2) {
 ;
 ; CHECK-GI-LABEL: amull2_i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    umull v2.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    movi v2.2d, #0xff00ff00ff00ff
+; CHECK-GI-NEXT:    umull v3.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    umull2 v1.8h, v0.16b, v1.16b
-; CHECK-GI-NEXT:    adrp x8, .LCPI53_0
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI53_0]
-; CHECK-GI-NEXT:    and v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    and v0.16b, v3.16b, v2.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %arg1_ext = zext <16 x i8> %arg1 to <16 x i16>
   %arg2_ext = zext <16 x i8> %arg2 to <16 x i16>
@@ -1568,12 +1548,11 @@ define <8 x i32> @amull2_i16(<8 x i16> %arg1, <8 x i16> %arg2) {
 ;
 ; CHECK-GI-LABEL: amull2_i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    umull v2.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    movi v2.2d, #0x00ffff0000ffff
+; CHECK-GI-NEXT:    umull v3.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    umull2 v1.4s, v0.8h, v1.8h
-; CHECK-GI-NEXT:    adrp x8, .LCPI54_0
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI54_0]
-; CHECK-GI-NEXT:    and v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    and v0.16b, v3.16b, v2.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %arg1_ext = zext <8 x i16> %arg1 to <8 x i32>
   %arg2_ext = zext <8 x i16> %arg2 to <8 x i32>
@@ -1603,12 +1582,11 @@ define <4 x i64> @amull2_i32(<4 x i32> %arg1, <4 x i32> %arg2) {
 ;
 ; CHECK-GI-LABEL: amull2_i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    umull v2.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    movi v2.2d, #0x000000ffffffff
+; CHECK-GI-NEXT:    umull v3.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    umull2 v1.2d, v0.4s, v1.4s
-; CHECK-GI-NEXT:    adrp x8, .LCPI55_0
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI55_0]
-; CHECK-GI-NEXT:    and v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    and v0.16b, v3.16b, v2.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %arg1_ext = zext <4 x i32> %arg1 to <4 x i64>
   %arg2_ext = zext <4 x i32> %arg2 to <4 x i64>
@@ -1635,9 +1613,8 @@ define <8 x i16> @umull_and_v8i16(<8 x i8> %src1, <8 x i16> %src2) {
 ;
 ; CHECK-GI-LABEL: umull_and_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI56_0
+; CHECK-GI-NEXT:    movi v2.2d, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI56_0]
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
@@ -1665,9 +1642,8 @@ define <8 x i16> @umull_and_v8i16_c(<8 x i8> %src1, <8 x i16> %src2) {
 ;
 ; CHECK-GI-LABEL: umull_and_v8i16_c:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI57_0
+; CHECK-GI-NEXT:    movi v2.2d, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI57_0]
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    mul v0.8h, v1.8h, v0.8h
 ; CHECK-GI-NEXT:    ret
@@ -1679,30 +1655,13 @@ entry:
 }
 
 define <8 x i16> @umull_and256_v8i16(<8 x i8> %src1, <8 x i16> %src2) {
-; CHECK-NEON-LABEL: umull_and256_v8i16:
-; CHECK-NEON:       // %bb.0: // %entry
-; CHECK-NEON-NEXT:    movi v2.8h, #1, lsl #8
-; CHECK-NEON-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEON-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEON-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-NEON-NEXT:    ret
-;
-; CHECK-SVE-LABEL: umull_and256_v8i16:
-; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v2.8h, #1, lsl #8
-; CHECK-SVE-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-SVE-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-SVE-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-SVE-NEXT:    ret
-;
-; CHECK-GI-LABEL: umull_and256_v8i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI58_0
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI58_0]
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: umull_and256_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.8h, #1, lsl #8
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
 entry:
   %in1 = zext <8 x i8> %src1 to <8 x i16>
   %in2 = and <8 x i16> %src2, <i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256>
@@ -1725,9 +1684,8 @@ define <8 x i16> @umull_andconst_v8i16(<8 x i8> %src1, <8 x i16> %src2) {
 ;
 ; CHECK-GI-LABEL: umull_andconst_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI59_0
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI59_0]
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1757,11 +1715,9 @@ define <8 x i16> @umull_smaller_v8i16(<8 x i4> %src1, <8 x i16> %src2) {
 ;
 ; CHECK-GI-LABEL: umull_smaller_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI60_1
-; CHECK-GI-NEXT:    adrp x9, .LCPI60_0
+; CHECK-GI-NEXT:    movi v2.2d, #0xff00ff00ff00ff
+; CHECK-GI-NEXT:    movi v3.8h, #15
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI60_1]
-; CHECK-GI-NEXT:    ldr q3, [x9, :lo12:.LCPI60_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
@@ -1792,9 +1748,8 @@ define <4 x i32> @umull_and_v4i32(<4 x i16> %src1, <4 x i32> %src2) {
 ;
 ; CHECK-GI-LABEL: umull_and_v4i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI61_0
+; CHECK-GI-NEXT:    movi v2.2d, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI61_0]
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    mul v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    ret
@@ -1828,10 +1783,9 @@ define <8 x i32> @umull_and_v8i32(<8 x i16> %src1, <8 x i32> %src2) {
 ;
 ; CHECK-GI-LABEL: umull_and_v8i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI62_0
+; CHECK-GI-NEXT:    movi v3.2d, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    ushll v4.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    ushll2 v5.4s, v0.8h, #0
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI62_0]
 ; CHECK-GI-NEXT:    and v0.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    and v1.16b, v2.16b, v3.16b
 ; CHECK-GI-NEXT:    mul v0.4s, v4.4s, v0.4s
@@ -1898,12 +1852,11 @@ define <2 x i64> @umull_and_v2i64(<2 x i32> %src1, <2 x i64> %src2) {
 ;
 ; CHECK-GI-LABEL: umull_and_v2i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI64_0
+; CHECK-GI-NEXT:    movi v2.2d, #0x000000000000ff
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI64_0]
+; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    mov d2, v0.d[1]
-; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    fmov x9, d1
 ; CHECK-GI-NEXT:    mul x8, x8, x9
@@ -1943,13 +1896,12 @@ define <4 x i64> @umull_and_v4i64(<4 x i32> %src1, <4 x i64> %src2) {
 ;
 ; CHECK-GI-LABEL: umull_and_v4i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI65_0
+; CHECK-GI-NEXT:    movi v3.2d, #0x000000000000ff
 ; CHECK-GI-NEXT:    ushll v4.2d, v0.2s, #0
 ; CHECK-GI-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI65_0]
+; CHECK-GI-NEXT:    fmov x8, d4
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    and v2.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    fmov x8, d4
 ; CHECK-GI-NEXT:    mov d3, v4.d[1]
 ; CHECK-GI-NEXT:    fmov x9, d1
 ; CHECK-GI-NEXT:    mov d4, v1.d[1]

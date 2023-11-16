@@ -3,6 +3,10 @@
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfh,+v -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv32 -mattr=+d,+zfh,+zvfh,+v -target-abi=ilp32d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfh,+v -target-abi=lp64d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
 define <vscale x 1 x half> @select_nxv1f16(i1 zeroext %c, <vscale x 1 x half> %a, <vscale x 1 x half> %b) {
 ; CHECK-LABEL: select_nxv1f16:

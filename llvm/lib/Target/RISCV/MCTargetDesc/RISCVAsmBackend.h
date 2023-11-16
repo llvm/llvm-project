@@ -31,8 +31,8 @@ class RISCVAsmBackend : public MCAsmBackend {
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                   const MCTargetOptions &Options)
-      : MCAsmBackend(support::little, RISCV::fixup_riscv_relax), STI(STI),
-        OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
+      : MCAsmBackend(llvm::endianness::little, RISCV::fixup_riscv_relax),
+        STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
     RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
   }
   ~RISCVAsmBackend() override = default;
@@ -99,6 +99,8 @@ public:
                           bool &WasRelaxed) const override;
   bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF, MCAsmLayout &Layout,
                      bool &WasRelaxed) const override;
+  bool relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout,
+                   int64_t &Value) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;

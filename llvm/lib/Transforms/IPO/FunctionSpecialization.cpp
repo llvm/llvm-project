@@ -202,7 +202,7 @@ Bonus InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) 
   CodeSize += TTI.getInstructionCost(User, TargetTransformInfo::TCK_CodeSize);
 
   uint64_t Weight = BFI.getBlockFreq(User->getParent()).getFrequency() /
-                    BFI.getEntryFreq();
+                    BFI.getEntryFreq().getFrequency();
 
   Cost Latency = Weight *
       TTI.getInstructionCost(User, TargetTransformInfo::TCK_Latency);
@@ -488,9 +488,6 @@ void FunctionSpecializer::promoteConstantStackValues(Function *F) {
       Value *GV = new GlobalVariable(M, ConstVal->getType(), true,
                                      GlobalValue::InternalLinkage, ConstVal,
                                      "specialized.arg." + Twine(++NGlobals));
-      if (ArgOpType != ConstVal->getType())
-        GV = ConstantExpr::getBitCast(cast<Constant>(GV), ArgOpType);
-
       Call->setArgOperand(Idx, GV);
     }
   }

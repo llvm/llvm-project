@@ -242,7 +242,7 @@ Value LoopEmitter::genSegmentHigh(OpBuilder &builder, Location loc,
         {
           OpBuilder::InsertionGuard guard(builder);
           // Load the next coordinates only when inbound (to avoid OOB
-          // acccesses).
+          // accesses).
           builder.setInsertionPointToStart(ifInBound.thenBlock());
           Value crd = genIndexLoad(builder, loc, coordinates, pos);
           Value isSameCrd = builder.create<arith::CmpIOp>(
@@ -422,10 +422,20 @@ void LoopEmitter::initializeLoopEmit(
     // FIXME: the definition of `lvlRank` looks more like a dim-rank;
     // but the variable is used as a level everywhere below, which
     // suggests there may be some dim/lvl confusion going on here.
-    const Level lvlRank = rtp.getRank();
+    auto stt = getSparseTensorType(tensor);
+    const Level lvlRank = stt.getLvlRank();
     const auto shape = rtp.getShape();
     const auto enc = getSparseTensorEncoding(rtp);
     const Level cooStart = enc ? getCOOStart(enc) : lvlRank;
+
+    SmallVector<Value> lvlSzs;
+    for (Level l = 0; l < stt.getLvlRank(); l++) {
+      if (stt.hasEncoding())
+        lvlSzs.push_back(builder.create<LvlOp>(loc, tensor, l));
+      else
+        lvlSzs.push_back(builder.create<tensor::DimOp>(loc, tensor, l));
+    }
+
     // Scan all levels of current tensor.
     for (Level l = 0; l < lvlRank; l++) {
       // This should be called only once at beginning.
@@ -433,12 +443,12 @@ void LoopEmitter::initializeLoopEmit(
              !highs[t][l]);
       const auto lvlTp = lvlTypes[t][l];
       // Handle sparse storage schemes.
-      if (isCompressedDLT(lvlTp) || isCompressedWithHiDLT(lvlTp)) {
+      if (isCompressedDLT(lvlTp) || isLooseCompressedDLT(lvlTp)) {
         // Generate sparse primitives to obtain positions and coordinates.
         positionsBuffers[t][l] = genToPositions(builder, loc, tensor, l);
         coordinatesBuffers[t][l] =
             genToCoordinates(builder, loc, tensor, l, cooStart);
-      } else if (isSingletonDLT(lvlTp)) {
+      } else if (isSingletonDLT(lvlTp) || is2OutOf4DLT(lvlTp)) {
         // Singleton level, fetch coordinates.
         coordinatesBuffers[t][l] =
             genToCoordinates(builder, loc, tensor, l, cooStart);
@@ -447,13 +457,8 @@ void LoopEmitter::initializeLoopEmit(
         assert(isDenseDLT(lvlTp));
       }
 
-      // FIXME: `toOrigDim` is deprecated.  For now this relies on the
-      // 1:1 mapping between levels and dimensions, since nowhere else
-      // in the code supports non-permutations yet either.
-      Value lvlSz = mlir::linalg::createOrFoldDimOp(builder, loc, tensor,
-                                                    toOrigDim(enc, l));
       // Find upper bound in current dimension.
-      highs[t][l] = lvlSizes[t][l] = lvlSz;
+      highs[t][l] = lvlSizes[t][l] = lvlSzs[l];
       if (isSparseSlices[t]) {
         sliceOffsets[t][l] = genSliceOffset(builder, loc, tensors[t], l);
         sliceStrides[t][l] = genSliceStride(builder, loc, tensors[t], l);
@@ -485,7 +490,8 @@ void LoopEmitter::initializeLoopEmit(
       valBuffer[t] = denseVal;
     } else {
       // Annotated sparse tensors.
-      // We also need the value buffer for all-dense annotated "sparse" tensors.
+      // We also need the value buffer for all-dense annotated "sparse"
+      // tensors.
       valBuffer[t] = genToValues(builder, loc, tensor);
     }
     // NOTE: we can also prepare for 0 lvl here in advance, this will hoist
@@ -534,7 +540,8 @@ void LoopEmitter::categorizeLoopCondition(
     auto lvlType = lvlTypes[t][l];
     // Must be a recognizable DLT.
     assert(isDenseDLT(lvlType) || isCompressedDLT(lvlType) ||
-           isCompressedWithHiDLT(lvlType) || isSingletonDLT(lvlType));
+           isLooseCompressedDLT(lvlType) || isSingletonDLT(lvlType) ||
+           is2OutOf4DLT(lvlType));
 
     bool isSparse = !isDenseDLT(lvlType);
     bool isSlice = isSparseSlices[t];
@@ -603,22 +610,22 @@ Value LoopEmitter::genAffine(OpBuilder &builder, Location loc, AffineExpr a) {
     // level-expression, the `getPosition` must in fact be a `Dimension`.
     // However, elsewhere we have been lead to expect that `loopIdToOrd`
     // should be indexed by `LoopId`...
-    const auto loopId = a.cast<AffineDimExpr>().getPosition();
+    const auto loopId = cast<AffineDimExpr>(a).getPosition();
     assert(loopId < loopIdToOrd.size());
     return loopStack[loopIdToOrd[loopId]].iv;
   }
   case AffineExprKind::Add: {
-    auto binOp = a.cast<AffineBinaryOpExpr>();
+    auto binOp = cast<AffineBinaryOpExpr>(a);
     return ADDI(genAffine(builder, loc, binOp.getLHS()),
                 genAffine(builder, loc, binOp.getRHS()));
   }
   case AffineExprKind::Mul: {
-    auto binOp = a.cast<AffineBinaryOpExpr>();
+    auto binOp = cast<AffineBinaryOpExpr>(a);
     return MULI(genAffine(builder, loc, binOp.getLHS()),
                 genAffine(builder, loc, binOp.getRHS()));
   }
   case AffineExprKind::Constant: {
-    int64_t c = a.cast<AffineConstantExpr>().getValue();
+    int64_t c = cast<AffineConstantExpr>(a).getValue();
     return C_IDX(c);
   }
   default:
@@ -630,7 +637,8 @@ std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
     OpBuilder &builder, Location loc, TensorId tid, Level lvl, Value lo,
     Value hi, MutableArrayRef<Value> reduc, bool isParallel) {
   bool isSparseCond = isCompressedDLT(lvlTypes[tid][lvl]) ||
-                      isCompressedWithHiDLT(lvlTypes[tid][lvl]) ||
+                      isLooseCompressedDLT(lvlTypes[tid][lvl]) ||
+                      is2OutOf4DLT(lvlTypes[tid][lvl]) ||
                       isSingletonDLT(lvlTypes[tid][lvl]);
   // TODO: support dynamic slices.
   // Uses the first dimension here to build the loop bound (which is also the
@@ -651,7 +659,7 @@ std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
     // expression on init vals will be moved into scf.reduce and replaced with
     // the block arguments when exiting the loop (see exitForLoop). This is
     // needed as we can not build the actual reduction block and get the actual
-    // reduction varaible before users fill parallel loop body.
+    // reduction variable before users fill parallel loop body.
     for (int i = 0, e = reduc.size(); i < e; i++)
       reduc[i] = parOp.getInitVals()[i];
     loop = parOp;
@@ -882,7 +890,7 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
 
   // The set of induction variables for the while loop.
   SmallVector<Value> ivs;
-  // Segement sizes for induction variables used for different kinds of loop
+  // Segment sizes for induction variables used for different kinds of loop
   // conditions.
   SmallVector<unsigned> opSegSize;
 
@@ -893,7 +901,7 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
     // Dense level are handled by the shared univeral index.
     assert(!isDenseCond(cKind));
     // Must be a recognizable sparse level.
-    assert(isCompressedDLT(lvlTp) || isCompressedWithHiDLT(lvlTp) ||
+    assert(isCompressedDLT(lvlTp) || isLooseCompressedDLT(lvlTp) ||
            isSingletonDLT(lvlTp));
     (void)lvlTp;
 
@@ -1012,7 +1020,7 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
     for (auto [tid, lvl] : unpackTensorLevelFromCondRange(spConds)) {
       const auto lvlTp = lvlTypes[tid][lvl];
       if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp) ||
-          isCompressedWithHiDLT(lvlTp)) {
+          isLooseCompressedDLT(lvlTp)) {
         const auto crd = coords[tid][lvl];
         if (min) {
           Value cmp = CMPI(ult, coords[tid][lvl], min);
@@ -1077,7 +1085,7 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
   needsUniv = !spConds.empty() && needsUniv;
   // The TensorLevel used for loop conditions.
   // If there is any sparse level, we need to use the sparse condition.
-  // If all levels are dense, we can pick arbitary one (dense slice-driven loop
+  // If all levels are dense, we can pick arbitrary one (dense slice-driven loop
   // can be generated using a simple ForOp as well).
   Operation *l = nullptr;
   Value iv = nullptr;
@@ -1151,7 +1159,7 @@ Operation *LoopEmitter::enterFilterLoopOverTensorAtLvl(
     OpBuilder &builder, Location loc, TensorId tid, Level lvl,
     AffineExpr affine, MutableArrayRef<Value> reduc) {
   assert(isValidLevel(tid, lvl));
-  assert(!affine.isa<AffineDimExpr>() && !isDenseDLT(lvlTypes[tid][lvl]));
+  assert(!isa<AffineDimExpr>(affine) && !isDenseDLT(lvlTypes[tid][lvl]));
   // We can not re-enter the same level.
   assert(!coords[tid][lvl]);
 
@@ -1234,15 +1242,16 @@ void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
 
   const Value c0 = C_IDX(0);
   const Value c1 = C_IDX(1);
+  const Value c2 = C_IDX(2);
   // Either the first level, or the previous level has been set.
   /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
   assert(lvl == 0 || posits[tid][lvl - 1]);
-  if (isCompressedDLT(lvlTp) || isCompressedWithHiDLT(lvlTp)) {
+  if (isCompressedDLT(lvlTp) || isLooseCompressedDLT(lvlTp)) {
     const Value mem = positionsBuffers[tid][lvl];
 
     Value pLo = lvl == 0 ? c0 : posits[tid][lvl - 1];
-    if (isCompressedWithHiDLT(lvlTp))
-      pLo = builder.create<arith::MulIOp>(loc, pLo, C_IDX(2));
+    if (isLooseCompressedDLT(lvlTp))
+      pLo = builder.create<arith::MulIOp>(loc, pLo, c2);
     posits[tid][lvl] = genIndexLoad(builder, loc, mem, pLo);
 
     const Value pHi = ADDI(pLo, c1);
@@ -1265,7 +1274,13 @@ void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
                           : ADDI(pLo, c1);
     return;
   }
-
+  if (is2OutOf4DLT(lvlTp)) {
+    const Value pLo = lvl == 0 ? c0 : posits[tid][lvl - 1];
+    // Each 2:4 block has exactly two specified elements.
+    posits[tid][lvl] = MULI(pLo, c2);
+    highs[tid][lvl] = ADDI(posits[tid][lvl], c2);
+    return;
+  }
   llvm_unreachable("Unrecognized level-type!");
 }
 
@@ -1538,7 +1553,7 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
   for (auto [tid, lvl] : unpackTensorLevelRange(loopInfo.trivialTidLvls)) {
     const auto lvlTp = lvlTypes[tid][lvl];
     if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp) ||
-        isCompressedWithHiDLT(lvlTp)) {
+        isLooseCompressedDLT(lvlTp)) {
       const Value crd = coords[tid][lvl];
       const Value pos = posits[tid][lvl];
       Value cmp = CMPI(eq, crd, iv);
@@ -1700,7 +1715,7 @@ std::pair<Operation *, ValueRange> LoopEmitter::genSliceLvlTraverseLoop(
           // Delegates to users' callback.
           bodyBuilder(builder, loc, iv, ifRet);
         }
-        // Marks this speical ifOp to avoid sparisification finalizing it.
+        // Marks this special ifOp to avoid sparisification finalizing it.
         ifOp->setAttr(getLoopEmitterLoopAttrName(),
                       StringAttr::get(builder.getContext(), "slice"));
         // Insertion point restored to after ifOp.
@@ -1741,7 +1756,7 @@ ValueRange LoopEmitter::genUnResolvedSliceTreeTraverse(
   Value pos = c0;
   OpBuilder::InsertPoint ip;
   SmallVector<Value> innerArgs(userReduc.begin(), userReduc.end());
-  scf::ForOp outerMost = nullptr; // the outtermost loop.
+  scf::ForOp outerMost = nullptr; // the outermost loop.
 
   // Wraps body builder and inserts a extra counting instruction at the end.
   auto wrapped = [bodyBuilder](OpBuilder &builder, Location loc, Value iv,
@@ -1842,7 +1857,7 @@ ValueRange LoopEmitter::genUnResolvedSliceTreeTraverse(
                                OpBuilder &builder, Location loc, ValueRange ivs,
                                ValueRange iterArgs) -> scf::ValueVector {
                              for (auto em : llvm::enumerate(ivs)) {
-                               // Linearizes postion: pos = (pos * lvlsize) +
+                               // Linearizes position: pos = (pos * lvlsize) +
                                // iv;
                                pos = MULI(pos, lvlSzs[em.index()]);
                                pos = ADDI(pos, em.value());
@@ -2072,7 +2087,7 @@ bool LoopEmitter::genSliceBegin(OpBuilder &builder, Location loc, TensorId tid,
   assert(isOrderedDLT(lvlType));
   if (isSingletonDLT(lvlType)) {
     llvm_unreachable("TODO: dense level should be easy to support, while "
-                     "singleton level requres more efforts");
+                     "singleton level requires more efforts");
   }
 
   assert(!dependentLvlMap[tid][lvl].empty());

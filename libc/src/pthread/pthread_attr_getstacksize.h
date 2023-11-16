@@ -11,11 +11,11 @@
 
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int pthread_attr_getstacksize(const pthread_attr_t *__restrict attr,
                               size_t *__restrict stacksize);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_GETSTACKSIZE_H

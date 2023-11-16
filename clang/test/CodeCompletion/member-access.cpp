@@ -341,3 +341,14 @@ namespace members_using_fixits {
   // RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:339:10 %s -o - | FileCheck -check-prefix=CHECK-FIELD-DECLARED-VIA-USING %s
   // CHECK-FIELD-DECLARED-VIA-USING: [#int#]field (requires fix-it: {339:8-339:9} to "->")
 }
+
+namespace function_can_be_call {
+  struct S {
+    template <typename T, typename U, typename V = int>
+    T foo(U, V);
+  };
+
+  &S::f
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:351:7 %s -o - | FileCheck -check-prefix=CHECK_FUNCTION_CAN_BE_CALL %s
+  // CHECK_FUNCTION_CAN_BE_CALL: COMPLETION: foo : [#T#]foo<<#typename T#>, <#typename U#>>(<#U#>, <#V#>)
+}

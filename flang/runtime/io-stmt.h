@@ -295,8 +295,7 @@ template <>
 class ListDirectedStatementState<Direction::Input>
     : public FormattedIoStatementState<Direction::Input> {
 public:
-  bool inNamelistArray() const { return inNamelistArray_; }
-  void set_inNamelistArray(bool yes = true) { inNamelistArray_ = yes; }
+  bool inNamelistSequence() const { return inNamelistSequence_; }
 
   // Skips value separators, handles repetition and null values.
   // Vacant when '/' appears; present with descriptor == ListDirectedNullValue
@@ -308,11 +307,11 @@ public:
   // input statement.  This member function resets some state so that
   // repetition and null values work correctly for each successive
   // NAMELIST input item.
-  void ResetForNextNamelistItem(bool inNamelistArray) {
+  void ResetForNextNamelistItem(bool inNamelistSequence) {
     remaining_ = 0;
     eatComma_ = false;
     realPart_ = imaginaryPart_ = false;
-    inNamelistArray_ = inNamelistArray;
+    inNamelistSequence_ = inNamelistSequence;
   }
 
 private:
@@ -322,7 +321,7 @@ private:
   bool hitSlash_{false}; // once '/' is seen, nullify further items
   bool realPart_{false};
   bool imaginaryPart_{false};
-  bool inNamelistArray_{false};
+  bool inNamelistSequence_{false};
 };
 
 template <Direction DIR>

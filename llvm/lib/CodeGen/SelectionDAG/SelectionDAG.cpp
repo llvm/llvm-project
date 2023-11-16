@@ -27,6 +27,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -161,8 +162,13 @@ bool ISD::isConstantSplatVector(const SDNode *N, APInt &SplatVal) {
   unsigned SplatBitSize;
   bool HasUndefs;
   unsigned EltSize = N->getValueType(0).getVectorElementType().getSizeInBits();
+  // Endianness does not matter here. We are checking for a splat given the
+  // element size of the vector, and if we find such a splat for little endian
+  // layout, then that should be valid also for big endian (as the full vector
+  // size is known to be a multiple of the element size).
+  const bool IsBigEndian = false;
   return BV->isConstantSplat(SplatVal, SplatUndef, SplatBitSize, HasUndefs,
-                             EltSize) &&
+                             EltSize, IsBigEndian) &&
          EltSize == SplatBitSize;
 }
 
@@ -957,7 +963,7 @@ static void AddNodeIDNode(FoldingSetNodeID &ID, const SDNode *N) {
 /// doNotCSE - Return true if CSE should not be performed for this node.
 static bool doNotCSE(SDNode *N) {
   if (N->getValueType(0) == MVT::Glue)
-    return true; // Never CSE anything that produces a flag.
+    return true; // Never CSE anything that produces a glue result.
 
   switch (N->getOpcode()) {
   default: break;
@@ -969,7 +975,7 @@ static bool doNotCSE(SDNode *N) {
   // Check that remaining values produced are not flags.
   for (unsigned i = 1, e = N->getNumValues(); i != e; ++i)
     if (N->getValueType(i) == MVT::Glue)
-      return true; // Never CSE anything that produces a flag.
+      return true; // Never CSE anything that produces a glue result.
 
   return false;
 }
@@ -1203,7 +1209,7 @@ bool SelectionDAG::RemoveNodeFromCSEMaps(SDNode *N) {
   }
 #ifndef NDEBUG
   // Verify that the node was actually in one of the CSE maps, unless it has a
-  // flag result (which cannot be CSE'd) or is one of the special cases that are
+  // glue result (which cannot be CSE'd) or is one of the special cases that are
   // not subject to CSE.
   if (!Erased && N->getValueType(N->getNumValues()-1) != MVT::Glue &&
       !N->isMachineOpcode() && !doNotCSE(N)) {
@@ -1620,7 +1626,11 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
   if (VT.isVector() && TLI->getTypeAction(*getContext(), EltVT) ==
                            TargetLowering::TypePromoteInteger) {
     EltVT = TLI->getTypeToTransformTo(*getContext(), EltVT);
-    APInt NewVal = Elt->getValue().zextOrTrunc(EltVT.getSizeInBits());
+    APInt NewVal;
+    if (TLI->isSExtCheaperThanZExt(VT.getScalarType(), EltVT))
+      NewVal = Elt->getValue().sextOrTrunc(EltVT.getSizeInBits());
+    else
+      NewVal = Elt->getValue().zextOrTrunc(EltVT.getSizeInBits());
     Elt = ConstantInt::get(*getContext(), NewVal);
   }
   // In other cases the element type is illegal and needs to be expanded, for
@@ -3732,14 +3742,19 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     assert(Op.getResNo() == 0 &&
            "We only compute knownbits for the difference here.");
 
-    // TODO: Compute influence of the carry operand.
-    if (Opcode == ISD::USUBO_CARRY || Opcode == ISD::SSUBO_CARRY)
-      break;
+    // With USUBO_CARRY and SSUBO_CARRY a borrow bit may be added in.
+    KnownBits Borrow(1);
+    if (Opcode == ISD::USUBO_CARRY || Opcode == ISD::SSUBO_CARRY) {
+      Borrow = computeKnownBits(Op.getOperand(2), DemandedElts, Depth + 1);
+      // Borrow has bit width 1
+      Borrow = Borrow.trunc(1);
+    } else {
+      Borrow.setAllZero();
+    }
 
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = KnownBits::computeForAddSub(/* Add */ false, /* NSW */ false,
-                                        Known, Known2);
+    Known = KnownBits::computeForSubBorrow(Known, Known2, Borrow);
     break;
   }
   case ISD::UADDO:
@@ -3764,15 +3779,13 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     if (Opcode == ISD::ADDE)
       // Can't track carry from glue, set carry to unknown.
       Carry.resetAll();
-    else if (Opcode == ISD::UADDO_CARRY || Opcode == ISD::SADDO_CARRY)
-      // TODO: Compute known bits for the carry operand. Not sure if it is worth
-      // the trouble (how often will we find a known carry bit). And I haven't
-      // tested this very much yet, but something like this might work:
-      //   Carry = computeKnownBits(Op.getOperand(2), DemandedElts, Depth + 1);
-      //   Carry = Carry.zextOrTrunc(1, false);
-      Carry.resetAll();
-    else
+    else if (Opcode == ISD::UADDO_CARRY || Opcode == ISD::SADDO_CARRY) {
+      Carry = computeKnownBits(Op.getOperand(2), DemandedElts, Depth + 1);
+      // Carry has bit width 1
+      Carry = Carry.trunc(1);
+    } else {
       Carry.setAllZero();
+    }
 
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
@@ -4091,8 +4104,11 @@ SelectionDAG::computeOverflowForSignedSub(SDValue N0, SDValue N1) const {
   if (ComputeNumSignBits(N0) > 1 && ComputeNumSignBits(N1) > 1)
     return OFK_Never;
 
-  // TODO: Add ConstantRange::signedSubMayOverflow handling.
-  return OFK_Sometime;
+  KnownBits N0Known = computeKnownBits(N0);
+  KnownBits N1Known = computeKnownBits(N1);
+  ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, true);
+  ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, true);
+  return mapOverflowResult(N0Range.signedSubMayOverflow(N1Range));
 }
 
 SelectionDAG::OverflowKind
@@ -4101,8 +4117,11 @@ SelectionDAG::computeOverflowForUnsignedSub(SDValue N0, SDValue N1) const {
   if (isNullConstant(N1))
     return OFK_Never;
 
-  // TODO: Add ConstantRange::unsignedSubMayOverflow handling.
-  return OFK_Sometime;
+  KnownBits N0Known = computeKnownBits(N0);
+  KnownBits N1Known = computeKnownBits(N1);
+  ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, false);
+  ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, false);
+  return mapOverflowResult(N0Range.unsignedSubMayOverflow(N1Range));
 }
 
 SelectionDAG::OverflowKind
@@ -4993,8 +5012,6 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
 
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
-  case ISD::AssertSext:
-  case ISD::AssertZext:
   case ISD::FREEZE:
   case ISD::CONCAT_VECTORS:
   case ISD::INSERT_SUBVECTOR:
@@ -5010,7 +5027,6 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BITREVERSE:
   case ISD::PARITY:
   case ISD::SIGN_EXTEND:
-  case ISD::ZERO_EXTEND:
   case ISD::TRUNCATE:
   case ISD::SIGN_EXTEND_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
@@ -5019,6 +5035,10 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
     return false;
+
+  // Matches hasPoisonGeneratingFlags().
+  case ISD::ZERO_EXTEND:
+    return ConsiderFlags && Op->getFlags().hasNonNeg();
 
   case ISD::ADD:
   case ISD::SUB:
@@ -5117,6 +5137,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::FRINT:
+  case ISD::LRINT:
+  case ISD::LLRINT:
   case ISD::FNEARBYINT:
   case ISD::FLDEXP: {
     if (SNaN)
@@ -5867,7 +5889,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   SDNode *N;
   SDVTList VTs = getVTList(VT);
   SDValue Ops[] = {N1};
-  if (VT != MVT::Glue) { // Don't CSE flag producing nodes
+  if (VT != MVT::Glue) { // Don't CSE glue producing nodes
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opcode, VTs, Ops);
     void *IP = nullptr;
@@ -6221,7 +6243,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 
   // Handle binops special cases.
   if (NumOps == 2) {
-    if (SDValue CFP = foldConstantFPMath(Opcode, DL, VT, Ops[0], Ops[1]))
+    if (SDValue CFP = foldConstantFPMath(Opcode, DL, VT, Ops))
       return CFP;
 
     if (auto *C1 = dyn_cast<ConstantSDNode>(Ops[0])) {
@@ -6414,11 +6436,17 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 }
 
 SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
-                                         EVT VT, SDValue N1, SDValue N2) {
+                                         EVT VT, ArrayRef<SDValue> Ops) {
+  // TODO: Add support for unary/ternary fp opcodes.
+  if (Ops.size() != 2)
+    return SDValue();
+
   // TODO: We don't do any constant folding for strict FP opcodes here, but we
   //       should. That will require dealing with a potentially non-default
   //       rounding mode, checking the "opStatus" return value from the APFloat
   //       math calculations, and possibly other variations.
+  SDValue N1 = Ops[0];
+  SDValue N2 = Ops[1];
   ConstantFPSDNode *N1CFP = isConstOrConstSplatFP(N1, /*AllowUndefs*/ false);
   ConstantFPSDNode *N2CFP = isConstOrConstSplatFP(N2, /*AllowUndefs*/ false);
   if (N1CFP && N2CFP) {
@@ -7054,7 +7082,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
          "Operand is DELETED_NODE!");
   // Perform various simplifications.
   switch (Opcode) {
-  case ISD::FMA: {
+  case ISD::FMA:
+  case ISD::FMAD: {
     assert(VT.isFloatingPoint() && "This operator only applies to FP types!");
     assert(N1.getValueType() == VT && N2.getValueType() == VT &&
            N3.getValueType() == VT && "FMA types must match!");
@@ -7065,7 +7094,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       APFloat  V1 = N1CFP->getValueAPF();
       const APFloat &V2 = N2CFP->getValueAPF();
       const APFloat &V3 = N3CFP->getValueAPF();
-      V1.fusedMultiplyAdd(V2, V3, APFloat::rmNearestTiesToEven);
+      if (Opcode == ISD::FMAD) {
+        V1.multiply(V2, APFloat::rmNearestTiesToEven);
+        V1.add(V3, APFloat::rmNearestTiesToEven);
+      } else
+        V1.fusedMultiplyAdd(V2, V3, APFloat::rmNearestTiesToEven);
       return getConstantFP(V1, DL, VT);
     }
     break;
@@ -7187,7 +7220,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   }
 
-  // Memoize node if it doesn't produce a flag.
+  // Memoize node if it doesn't produce a glue result.
   SDNode *N;
   SDVTList VTs = getVTList(VT);
   SDValue Ops[] = {N1, N2, N3};
@@ -8326,7 +8359,7 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
            (int)Opcode >= ISD::FIRST_TARGET_MEMORY_OPCODE)) &&
          "Opcode is not a memory-accessing opcode!");
 
-  // Memoize the node unless it returns a flag.
+  // Memoize the node unless it returns a glue result.
   MemIntrinsicSDNode *N;
   if (VTList.VTs[VTList.NumVTs-1] != MVT::Glue) {
     FoldingSetNodeID ID;
@@ -9844,6 +9877,27 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
       SDValue ZeroOverFlow = getConstant(0, DL, VTList.VTs[1]);
       return getNode(ISD::MERGE_VALUES, DL, VTList, {N1, ZeroOverFlow}, Flags);
     }
+
+    if (VTList.VTs[0].isVector() &&
+        VTList.VTs[0].getVectorElementType() == MVT::i1 &&
+        VTList.VTs[1].getVectorElementType() == MVT::i1) {
+      SDValue F1 = getFreeze(N1);
+      SDValue F2 = getFreeze(N2);
+      // {vXi1,vXi1} (u/s)addo(vXi1 x, vXi1y) -> {xor(x,y),and(x,y)}
+      if (Opcode == ISD::UADDO || Opcode == ISD::SADDO)
+        return getNode(ISD::MERGE_VALUES, DL, VTList,
+                       {getNode(ISD::XOR, DL, VTList.VTs[0], F1, F2),
+                        getNode(ISD::AND, DL, VTList.VTs[1], F1, F2)},
+                       Flags);
+      // {vXi1,vXi1} (u/s)subo(vXi1 x, vXi1y) -> {xor(x,y),and(~x,y)}
+      if (Opcode == ISD::USUBO || Opcode == ISD::SSUBO) {
+        SDValue NotF1 = getNOT(DL, F1, VTList.VTs[0]);
+        return getNode(ISD::MERGE_VALUES, DL, VTList,
+                       {getNode(ISD::XOR, DL, VTList.VTs[0], F1, F2),
+                        getNode(ISD::AND, DL, VTList.VTs[1], NotF1, F2)},
+                       Flags);
+      }
+    }
     break;
   }
   case ISD::SMUL_LOHI:
@@ -9853,6 +9907,28 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
            VTList.VTs[0] == Ops[0].getValueType() &&
            VTList.VTs[0] == Ops[1].getValueType() &&
            "Binary operator types must match!");
+    // Constant fold.
+    ConstantSDNode *LHS = dyn_cast<ConstantSDNode>(Ops[0]);
+    ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(Ops[1]);
+    if (LHS && RHS) {
+      unsigned Width = VTList.VTs[0].getScalarSizeInBits();
+      unsigned OutWidth = Width * 2;
+      APInt Val = LHS->getAPIntValue();
+      APInt Mul = RHS->getAPIntValue();
+      if (Opcode == ISD::SMUL_LOHI) {
+        Val = Val.sext(OutWidth);
+        Mul = Mul.sext(OutWidth);
+      } else {
+        Val = Val.zext(OutWidth);
+        Mul = Mul.zext(OutWidth);
+      }
+      Val *= Mul;
+
+      SDValue Hi =
+          getConstant(Val.extractBits(Width, Width), DL, VTList.VTs[0]);
+      SDValue Lo = getConstant(Val.trunc(Width), DL, VTList.VTs[0]);
+      return getNode(ISD::MERGE_VALUES, DL, VTList, {Lo, Hi}, Flags);
+    }
     break;
   }
   case ISD::FFREXP: {
@@ -9926,7 +10002,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
 #endif
   }
 
-  // Memoize the node unless it returns a flag.
+  // Memoize the node unless it returns a glue result.
   SDNode *N;
   if (VTList.VTs[VTList.NumVTs-1] != MVT::Glue) {
     FoldingSetNodeID ID;
@@ -10768,11 +10844,14 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
     switch (N.getOpcode()) {
     default:
       break;
-    case ISD::ADD:
+    case ISD::ADD: {
       SDValue N0 = N.getOperand(0);
       SDValue N1 = N.getOperand(1);
-      if (!isa<ConstantSDNode>(N0) && isa<ConstantSDNode>(N1)) {
-        uint64_t Offset = N.getConstantOperandVal(1);
+      if (!isa<ConstantSDNode>(N0)) {
+        bool RHSConstant = isa<ConstantSDNode>(N1);
+        uint64_t Offset;
+        if (RHSConstant)
+          Offset = N.getConstantOperandVal(1);
 
         // Rewrite an ADD constant node into a DIExpression. Since we are
         // performing arithmetic to compute the variable's *value* in the
@@ -10781,7 +10860,8 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
         auto *DIExpr = DV->getExpression();
         auto NewLocOps = DV->copyLocationOps();
         bool Changed = false;
-        for (size_t i = 0; i < NewLocOps.size(); ++i) {
+        size_t OrigLocOpsSize = NewLocOps.size();
+        for (size_t i = 0; i < OrigLocOpsSize; ++i) {
           // We're not given a ResNo to compare against because the whole
           // node is going away. We know that any ISD::ADD only has one
           // result, so we can assume any node match is using the result.
@@ -10789,19 +10869,37 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
               NewLocOps[i].getSDNode() != &N)
             continue;
           NewLocOps[i] = SDDbgOperand::fromNode(N0.getNode(), N0.getResNo());
-          SmallVector<uint64_t, 3> ExprOps;
-          DIExpression::appendOffset(ExprOps, Offset);
-          DIExpr = DIExpression::appendOpsToArg(DIExpr, ExprOps, i, true);
+          if (RHSConstant) {
+            SmallVector<uint64_t, 3> ExprOps;
+            DIExpression::appendOffset(ExprOps, Offset);
+            DIExpr = DIExpression::appendOpsToArg(DIExpr, ExprOps, i, true);
+          } else {
+            // Convert to a variadic expression (if not already).
+            // convertToVariadicExpression() returns a const pointer, so we use
+            // a temporary const variable here.
+            const auto *TmpDIExpr =
+                DIExpression::convertToVariadicExpression(DIExpr);
+            SmallVector<uint64_t, 3> ExprOps;
+            ExprOps.push_back(dwarf::DW_OP_LLVM_arg);
+            ExprOps.push_back(NewLocOps.size());
+            ExprOps.push_back(dwarf::DW_OP_plus);
+            SDDbgOperand RHS =
+                SDDbgOperand::fromNode(N1.getNode(), N1.getResNo());
+            NewLocOps.push_back(RHS);
+            DIExpr = DIExpression::appendOpsToArg(TmpDIExpr, ExprOps, i, true);
+          }
           Changed = true;
         }
         (void)Changed;
         assert(Changed && "Salvage target doesn't use N");
 
+        bool IsVariadic =
+            DV->isVariadic() || OrigLocOpsSize != NewLocOps.size();
+
         auto AdditionalDependencies = DV->getAdditionalDependencies();
-        SDDbgValue *Clone = getDbgValueList(DV->getVariable(), DIExpr,
-                                            NewLocOps, AdditionalDependencies,
-                                            DV->isIndirect(), DV->getDebugLoc(),
-                                            DV->getOrder(), DV->isVariadic());
+        SDDbgValue *Clone = getDbgValueList(
+            DV->getVariable(), DIExpr, NewLocOps, AdditionalDependencies,
+            DV->isIndirect(), DV->getDebugLoc(), DV->getOrder(), IsVariadic);
         ClonedDVs.push_back(Clone);
         DV->setIsInvalidated();
         DV->setIsEmitted();
@@ -10809,6 +10907,41 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
                    N0.getNode()->dumprFull(this);
                    dbgs() << " into " << *DIExpr << '\n');
       }
+      break;
+    }
+    case ISD::TRUNCATE: {
+      SDValue N0 = N.getOperand(0);
+      TypeSize FromSize = N0.getValueSizeInBits();
+      TypeSize ToSize = N.getValueSizeInBits(0);
+
+      DIExpression *DbgExpression = DV->getExpression();
+      auto ExtOps = DIExpression::getExtOps(FromSize, ToSize, false);
+      auto NewLocOps = DV->copyLocationOps();
+      bool Changed = false;
+      for (size_t i = 0; i < NewLocOps.size(); ++i) {
+        if (NewLocOps[i].getKind() != SDDbgOperand::SDNODE ||
+            NewLocOps[i].getSDNode() != &N)
+          continue;
+
+        NewLocOps[i] = SDDbgOperand::fromNode(N0.getNode(), N0.getResNo());
+        DbgExpression = DIExpression::appendOpsToArg(DbgExpression, ExtOps, i);
+        Changed = true;
+      }
+      assert(Changed && "Salvage target doesn't use N");
+      (void)Changed;
+
+      SDDbgValue *Clone =
+          getDbgValueList(DV->getVariable(), DbgExpression, NewLocOps,
+                          DV->getAdditionalDependencies(), DV->isIndirect(),
+                          DV->getDebugLoc(), DV->getOrder(), DV->isVariadic());
+
+      ClonedDVs.push_back(Clone);
+      DV->setIsInvalidated();
+      DV->setIsEmitted();
+      LLVM_DEBUG(dbgs() << "SALVAGE: Rewriting"; N0.getNode()->dumprFull(this);
+                 dbgs() << " into " << *DbgExpression << '\n');
+      break;
+    }
     }
   }
 
@@ -12312,6 +12445,10 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue, APInt &SplatUndef,
 
   // FIXME: This does not work for vectors with elements less than 8 bits.
   while (VecWidth > 8) {
+    // If we can't split in half, stop here.
+    if (VecWidth & 1)
+      break;
+
     unsigned HalfSize = VecWidth / 2;
     APInt HighValue = SplatValue.extractBits(HalfSize, HalfSize);
     APInt LowValue = SplatValue.extractBits(HalfSize, 0);
@@ -12328,6 +12465,12 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue, APInt &SplatUndef,
 
     VecWidth = HalfSize;
   }
+
+  // FIXME: The loop above only tries to split in halves. But if the input
+  // vector for example is <3 x i16> it wouldn't be able to detect a
+  // SplatBitSize of 16. No idea if that is a design flaw currently limiting
+  // optimizations. I guess that back in the days when this helper was created
+  // vectors normally was power-of-2 sized.
 
   SplatBitSize = VecWidth;
   return true;

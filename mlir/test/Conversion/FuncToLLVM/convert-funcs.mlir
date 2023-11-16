@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-func-to-llvm='use-opaque-pointers=1' -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -convert-func-to-llvm -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //CHECK: llvm.func @second_order_arg(!llvm.ptr)
 func.func private @second_order_arg(%arg0 : () -> ())
@@ -59,6 +59,21 @@ func.func @indirect_call(%arg0: (f32) -> i32, %arg1: f32) -> i32 {
 
 func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true } {
   return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @private_callee
+// CHECK-SAME: sym_visibility = "private"
+func.func private @private_callee(%arg1: f32) -> i32 {
+  %0 = arith.constant 0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: llvm.func @caller_private_callee
+func.func @caller_private_callee(%arg1: f32) -> i32 {
+  %0 = call @private_callee(%arg1) : (f32) -> i32
+  return %0 : i32
 }
 
 // -----

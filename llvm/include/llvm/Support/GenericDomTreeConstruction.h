@@ -40,7 +40,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GenericDomTree.h"
@@ -120,7 +119,7 @@ struct SemiNCAInfo {
     SmallVector<NodePtr, 8> Res(detail::reverse_if<!Inversed>(R));
 
     // Remove nullptr children for clang.
-    llvm::erase_value(Res, nullptr);
+    llvm::erase(Res, nullptr);
     return Res;
   }
 

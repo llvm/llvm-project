@@ -90,8 +90,8 @@ subroutine test_explicit_char_to_box(e)
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_explicit_char_to_box(
 ! CHECK:  %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:  %[[VAL_2:.*]] = arith.constant 10 : index
 ! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<20x!fir.char<1,10>>>
+! CHECK:  %[[VAL_2:.*]] = arith.constant 10 : index
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 20 : index
 ! CHECK:  %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_5:[a-z0-9]*]]) typeparams %[[VAL_2:[a-z0-9]*]] {uniq_name = "_QFtest_explicit_char_to_boxEe"} : (!fir.ref<!fir.array<20x!fir.char<1,10>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<20x!fir.char<1,10>>>, !fir.ref<!fir.array<20x!fir.char<1,10>>>)

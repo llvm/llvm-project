@@ -9,10 +9,10 @@
 #include "src/math/fmin.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, fmin, (double x, double y)) {
   return __builtin_fmin(x, y);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

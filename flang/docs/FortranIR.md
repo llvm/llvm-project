@@ -8,9 +8,10 @@
 
 # Design: Fortran IR
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 ## Introduction

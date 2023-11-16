@@ -42,6 +42,10 @@ llvm::cl::opt<std::string>
     stripPrefix("strip-prefix",
                 llvm::cl::desc("Strip prefix of the fully qualified names"),
                 llvm::cl::init("::mlir::"), llvm::cl::cat(docCat));
+llvm::cl::opt<bool> allowHugoSpecificFeatures(
+    "allow-hugo-specific-features",
+    llvm::cl::desc("Allows using features specific to Hugo"),
+    llvm::cl::init(false), llvm::cl::cat(docCat));
 
 using namespace llvm;
 using namespace mlir;
@@ -50,8 +54,9 @@ using mlir::tblgen::Operator;
 
 void mlir::tblgen::emitSummary(StringRef summary, raw_ostream &os) {
   if (!summary.empty()) {
-    char first = std::toupper(summary.front());
-    llvm::StringRef rest = summary.drop_front();
+    llvm::StringRef trimmed = summary.trim();
+    char first = std::toupper(trimmed.front());
+    llvm::StringRef rest = trimmed.drop_front();
     os << "\n_" << first << rest << "_\n\n";
   }
 }
@@ -173,6 +178,13 @@ static void emitOpTraitsDoc(const Operator &op, raw_ostream &os) {
   }
 }
 
+static StringRef resolveAttrDescription(const Attribute &attr) {
+  StringRef description = attr.getDescription();
+  if (description.empty())
+    return attr.getBaseAttr().getDescription();
+  return description;
+}
+
 static void emitOpDoc(const Operator &op, raw_ostream &os) {
   std::string classNameStr = op.getQualCppClassName();
   StringRef className = classNameStr;
@@ -192,16 +204,35 @@ static void emitOpDoc(const Operator &op, raw_ostream &os) {
 
   // Emit attributes.
   if (op.getNumAttributes() != 0) {
-    // TODO: Attributes are only documented by TableGen name, with no further
-    // info. This should be improved.
     os << "\n#### Attributes:\n\n";
-    os << "| Attribute | MLIR Type | Description |\n"
-       << "| :-------: | :-------: | ----------- |\n";
+    // Note: This table is HTML rather than markdown so the attribute's
+    // description can appear in an expandable region. The description may be
+    // multiple lines, which is not supported in a markdown table cell.
+    os << "<table>\n";
+    // Header.
+    os << "<tr><th>Attribute</th><th>MLIR Type</th><th>Description</th></tr>\n";
     for (const auto &it : op.getAttributes()) {
       StringRef storageType = it.attr.getStorageType();
-      os << "| `" << it.name << "` | " << storageType << " | "
-         << it.attr.getSummary() << "\n";
+      // Name and storage type.
+      os << "<tr>";
+      os << "<td><code>" << it.name << "</code></td><td>" << storageType
+         << "</td><td>";
+      StringRef description = resolveAttrDescription(it.attr);
+      if (allowHugoSpecificFeatures && !description.empty()) {
+        // Expandable description.
+        // This appears as just the summary, but when clicked shows the full
+        // description.
+        os << "<details>"
+           << "<summary>" << it.attr.getSummary() << "</summary>"
+           << "{{% markdown %}}" << description << "{{% /markdown %}}"
+           << "</details>";
+      } else {
+        // Fallback: Single-line summary.
+        os << it.attr.getSummary();
+      }
+      os << "</td></tr>\n";
     }
+    os << "</table>\n";
   }
 
   // Emit each of the operands.

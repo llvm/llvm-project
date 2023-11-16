@@ -111,6 +111,10 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: #pragma omp target teams
   a=2;
 // CHECK-NEXT: a = 2;
+#pragma omp target teams ompx_bare
+// CHECK-NEXT: #pragma omp target teams ompx_bare
+  a=3;
+// CHECK-NEXT: a = 3;
 #pragma omp target teams default(none), private(argc,b) num_teams(f) firstprivate(argv) reduction(| : c, d) reduction(* : e) thread_limit(f+g)
 // CHECK-NEXT: #pragma omp target teams default(none) private(argc,b) num_teams(f) firstprivate(argv) reduction(|: c,d) reduction(*: e) thread_limit(f + g)
   foo();

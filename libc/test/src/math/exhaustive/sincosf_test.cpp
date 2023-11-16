@@ -10,11 +10,11 @@
 #include "src/math/sincosf.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-struct SincosfChecker : public virtual __llvm_libc::testing::Test {
+struct SincosfChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FloatType = float;
-  using FPBits = __llvm_libc::fputil::FPBits<float>;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
   using UIntType = uint32_t;
 
   uint64_t check(UIntType start, UIntType stop, mpfr::RoundingMode rounding) {
@@ -27,7 +27,7 @@ struct SincosfChecker : public virtual __llvm_libc::testing::Test {
       FPBits xbits(bits);
       FloatType x = FloatType(xbits);
       FloatType sinx, cosx;
-      __llvm_libc::sincosf(x, &sinx, &cosx);
+      LIBC_NAMESPACE::sincosf(x, &sinx, &cosx);
 
       bool correct = TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Sin, x,
                                                        sinx, 0.5, rounding);

@@ -18,7 +18,6 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
-#include "llvm/ADT/DenseSet.h"
 #include <optional>
 
 using namespace clang;
@@ -149,7 +148,7 @@ public:
 
     auto name = safeGetName(Callee);
     if (name == "adoptRef" || name == "getPtr" || name == "WeakPtr" ||
-        name == "makeWeakPtr" || name == "downcast" || name == "bitwise_cast" ||
+        name == "dynamicDowncast" || name == "downcast" || name == "bitwise_cast" ||
         name == "is" || name == "equal" || name == "hash" ||
         name == "isType"
         // FIXME: Most/all of these should be implemented via attributes.

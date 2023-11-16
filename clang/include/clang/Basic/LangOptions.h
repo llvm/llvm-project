@@ -134,7 +134,8 @@ public:
     DCC_FastCall,
     DCC_StdCall,
     DCC_VectorCall,
-    DCC_RegCall
+    DCC_RegCall,
+    DCC_RtdCall
   };
 
   enum AddrSpaceMapMangling { ASMM_Target, ASMM_On, ASMM_Off };
@@ -595,6 +596,9 @@ public:
   bool implicitFunctionsAllowed() const {
     return !requiresStrictPrototypes() && !OpenCL;
   }
+
+  /// Returns true if the language supports calling the 'atexit' function.
+  bool hasAtExit() const { return !(OpenMP && OpenMPIsTargetDevice); }
 
   /// Returns true if implicit int is part of the language requirements.
   bool isImplicitIntRequired() const { return !CPlusPlus && !C99; }

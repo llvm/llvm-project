@@ -41,7 +41,7 @@ public:
     return m_backend.GetIndexOfChildWithName(name);
   }
 
-  bool MightHaveChildren() override { return true; }
+  bool MightHaveChildren() override { return m_backend.MightHaveChildren(); }
 
   bool Update() override { return false; }
 };

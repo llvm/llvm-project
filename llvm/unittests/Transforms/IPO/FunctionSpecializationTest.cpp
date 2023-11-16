@@ -103,9 +103,12 @@ protected:
     Cost CodeSize =
         TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
 
-    Cost Latency = SizeOnly ? 0 :
-        BFI.getBlockFreq(I.getParent()).getFrequency() / BFI.getEntryFreq() *
-        TTI.getInstructionCost(&I, TargetTransformInfo::TCK_Latency);
+    Cost Latency =
+        SizeOnly
+            ? 0
+            : BFI.getBlockFreq(I.getParent()).getFrequency() /
+                  BFI.getEntryFreq().getFrequency() *
+                  TTI.getInstructionCost(&I, TargetTransformInfo::TCK_Latency);
 
     return {CodeSize, Latency};
   }

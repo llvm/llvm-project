@@ -11,11 +11,11 @@
 
 #include <stddef.h> // For size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 void *memmem(const void *haystack, size_t haystack_len, const void *needle,
              size_t needle_len);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMMEM_H

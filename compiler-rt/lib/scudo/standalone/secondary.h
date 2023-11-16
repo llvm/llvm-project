@@ -174,9 +174,9 @@ public:
       if (!Entry.isValid())
         continue;
       Str->append("StartBlockAddress: 0x%zx, EndBlockAddress: 0x%zx, "
-                  "BlockSize: %zu\n",
+                  "BlockSize: %zu %s\n",
                   Entry.CommitBase, Entry.CommitBase + Entry.CommitSize,
-                  Entry.CommitSize);
+                  Entry.CommitSize, Entry.Time == 0 ? "[R]" : "");
     }
   }
 
@@ -223,7 +223,7 @@ public:
                                          MAP_NOACCESS);
       }
     } else if (Interval == 0) {
-      Entry.MemMap.releasePagesToOS(Entry.CommitBase, Entry.CommitSize);
+      Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase, Entry.CommitSize);
       Entry.Time = 0;
     }
     do {
@@ -441,7 +441,7 @@ private:
         OldestTime = Entry.Time;
       return;
     }
-    Entry.MemMap.releasePagesToOS(Entry.CommitBase, Entry.CommitSize);
+    Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase, Entry.CommitSize);
     Entry.Time = 0;
   }
 

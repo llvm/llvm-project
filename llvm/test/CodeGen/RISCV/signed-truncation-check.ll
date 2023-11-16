@@ -265,7 +265,7 @@ define i1 @add_ugecmp_i16_i8(i16 %x) nounwind {
 ;
 ; RV64-LABEL: add_ugecmp_i16_i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addiw a0, a0, -128
+; RV64-NEXT:    addi a0, a0, -128
 ; RV64-NEXT:    slli a0, a0, 48
 ; RV64-NEXT:    srli a0, a0, 56
 ; RV64-NEXT:    sltiu a0, a0, 255
@@ -482,7 +482,7 @@ define i1 @add_ugtcmp_i16_i8(i16 %x) nounwind {
 ;
 ; RV64-LABEL: add_ugtcmp_i16_i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addiw a0, a0, -128
+; RV64-NEXT:    addi a0, a0, -128
 ; RV64-NEXT:    slli a0, a0, 48
 ; RV64-NEXT:    srli a0, a0, 56
 ; RV64-NEXT:    sltiu a0, a0, 255
@@ -508,7 +508,7 @@ define i1 @add_ultcmp_i16_i8(i16 %x) nounwind {
 ;
 ; RV64I-LABEL: add_ultcmp_i16_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, 128
+; RV64I-NEXT:    addi a0, a0, 128
 ; RV64I-NEXT:    slli a0, a0, 48
 ; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    sltiu a0, a0, 256
@@ -523,7 +523,7 @@ define i1 @add_ultcmp_i16_i8(i16 %x) nounwind {
 ;
 ; RV64ZBB-LABEL: add_ultcmp_i16_i8:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    addiw a0, a0, 128
+; RV64ZBB-NEXT:    addi a0, a0, 128
 ; RV64ZBB-NEXT:    zext.h a0, a0
 ; RV64ZBB-NEXT:    sltiu a0, a0, 256
 ; RV64ZBB-NEXT:    ret
@@ -688,7 +688,7 @@ define i1 @add_ulecmp_i16_i8(i16 %x) nounwind {
 ;
 ; RV64I-LABEL: add_ulecmp_i16_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, 128
+; RV64I-NEXT:    addi a0, a0, 128
 ; RV64I-NEXT:    slli a0, a0, 48
 ; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    sltiu a0, a0, 256
@@ -703,7 +703,7 @@ define i1 @add_ulecmp_i16_i8(i16 %x) nounwind {
 ;
 ; RV64ZBB-LABEL: add_ulecmp_i16_i8:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    addiw a0, a0, 128
+; RV64ZBB-NEXT:    addi a0, a0, 128
 ; RV64ZBB-NEXT:    zext.h a0, a0
 ; RV64ZBB-NEXT:    sltiu a0, a0, 256
 ; RV64ZBB-NEXT:    ret
@@ -784,7 +784,7 @@ define i1 @add_ultcmp_bad_i16_i8_cmp(i16 %x, i16 %y) nounwind {
 ; RV64ZBB-LABEL: add_ultcmp_bad_i16_i8_cmp:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    zext.h a1, a1
-; RV64ZBB-NEXT:    addiw a0, a0, 128
+; RV64ZBB-NEXT:    addi a0, a0, 128
 ; RV64ZBB-NEXT:    zext.h a0, a0
 ; RV64ZBB-NEXT:    sltu a0, a0, a1
 ; RV64ZBB-NEXT:    ret
@@ -805,7 +805,7 @@ define i1 @add_ultcmp_bad_i8_i16(i16 %x) nounwind {
 ;
 ; RV64I-LABEL: add_ultcmp_bad_i8_i16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, 128
+; RV64I-NEXT:    addi a0, a0, 128
 ; RV64I-NEXT:    slli a0, a0, 48
 ; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    sltiu a0, a0, 128
@@ -820,7 +820,7 @@ define i1 @add_ultcmp_bad_i8_i16(i16 %x) nounwind {
 ;
 ; RV64ZBB-LABEL: add_ultcmp_bad_i8_i16:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    addiw a0, a0, 128
+; RV64ZBB-NEXT:    addi a0, a0, 128
 ; RV64ZBB-NEXT:    zext.h a0, a0
 ; RV64ZBB-NEXT:    sltiu a0, a0, 128
 ; RV64ZBB-NEXT:    ret
@@ -841,7 +841,7 @@ define i1 @add_ultcmp_bad_i16_i8_c0notpoweroftwo(i16 %x) nounwind {
 ;
 ; RV64I-LABEL: add_ultcmp_bad_i16_i8_c0notpoweroftwo:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, 192
+; RV64I-NEXT:    addi a0, a0, 192
 ; RV64I-NEXT:    slli a0, a0, 48
 ; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    sltiu a0, a0, 256
@@ -856,7 +856,7 @@ define i1 @add_ultcmp_bad_i16_i8_c0notpoweroftwo(i16 %x) nounwind {
 ;
 ; RV64ZBB-LABEL: add_ultcmp_bad_i16_i8_c0notpoweroftwo:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    addiw a0, a0, 192
+; RV64ZBB-NEXT:    addi a0, a0, 192
 ; RV64ZBB-NEXT:    zext.h a0, a0
 ; RV64ZBB-NEXT:    sltiu a0, a0, 256
 ; RV64ZBB-NEXT:    ret
@@ -877,7 +877,7 @@ define i1 @add_ultcmp_bad_i16_i8_c1notpoweroftwo(i16 %x) nounwind {
 ;
 ; RV64I-LABEL: add_ultcmp_bad_i16_i8_c1notpoweroftwo:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, 128
+; RV64I-NEXT:    addi a0, a0, 128
 ; RV64I-NEXT:    slli a0, a0, 48
 ; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    sltiu a0, a0, 768
@@ -892,7 +892,7 @@ define i1 @add_ultcmp_bad_i16_i8_c1notpoweroftwo(i16 %x) nounwind {
 ;
 ; RV64ZBB-LABEL: add_ultcmp_bad_i16_i8_c1notpoweroftwo:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    addiw a0, a0, 128
+; RV64ZBB-NEXT:    addi a0, a0, 128
 ; RV64ZBB-NEXT:    zext.h a0, a0
 ; RV64ZBB-NEXT:    sltiu a0, a0, 768
 ; RV64ZBB-NEXT:    ret
@@ -913,7 +913,7 @@ define i1 @add_ultcmp_bad_i16_i8_magic(i16 %x) nounwind {
 ;
 ; RV64I-LABEL: add_ultcmp_bad_i16_i8_magic:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, 64
+; RV64I-NEXT:    addi a0, a0, 64
 ; RV64I-NEXT:    slli a0, a0, 48
 ; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    sltiu a0, a0, 256
@@ -928,7 +928,7 @@ define i1 @add_ultcmp_bad_i16_i8_magic(i16 %x) nounwind {
 ;
 ; RV64ZBB-LABEL: add_ultcmp_bad_i16_i8_magic:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    addiw a0, a0, 64
+; RV64ZBB-NEXT:    addi a0, a0, 64
 ; RV64ZBB-NEXT:    zext.h a0, a0
 ; RV64ZBB-NEXT:    sltiu a0, a0, 256
 ; RV64ZBB-NEXT:    ret
@@ -949,7 +949,7 @@ define i1 @add_ultcmp_bad_i16_i4(i16 %x) nounwind {
 ;
 ; RV64I-LABEL: add_ultcmp_bad_i16_i4:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, 8
+; RV64I-NEXT:    addi a0, a0, 8
 ; RV64I-NEXT:    slli a0, a0, 48
 ; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    sltiu a0, a0, 16
@@ -964,7 +964,7 @@ define i1 @add_ultcmp_bad_i16_i4(i16 %x) nounwind {
 ;
 ; RV64ZBB-LABEL: add_ultcmp_bad_i16_i4:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    addiw a0, a0, 8
+; RV64ZBB-NEXT:    addi a0, a0, 8
 ; RV64ZBB-NEXT:    zext.h a0, a0
 ; RV64ZBB-NEXT:    sltiu a0, a0, 16
 ; RV64ZBB-NEXT:    ret
@@ -985,7 +985,7 @@ define i1 @add_ultcmp_bad_i24_i8(i24 %x) nounwind {
 ;
 ; RV64-LABEL: add_ultcmp_bad_i24_i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addiw a0, a0, 128
+; RV64-NEXT:    addi a0, a0, 128
 ; RV64-NEXT:    slli a0, a0, 40
 ; RV64-NEXT:    srli a0, a0, 40
 ; RV64-NEXT:    sltiu a0, a0, 256

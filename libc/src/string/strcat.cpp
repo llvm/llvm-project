@@ -12,15 +12,15 @@
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(char *, strcat,
                    (char *__restrict dest, const char *__restrict src)) {
   size_t dest_length = internal::string_length(dest);
   size_t src_length = internal::string_length(src);
-  __llvm_libc::strcpy(dest + dest_length, src);
+  LIBC_NAMESPACE::strcpy(dest + dest_length, src);
   dest[dest_length + src_length] = '\0';
   return dest;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

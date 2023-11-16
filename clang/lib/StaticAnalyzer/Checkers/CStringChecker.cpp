@@ -881,8 +881,8 @@ SVal CStringChecker::getCStringLengthForRegion(CheckerContext &C,
       const llvm::APSInt *maxLengthInt = BVF.evalAPSInt(BO_Div, maxValInt,
                                                         fourInt);
       NonLoc maxLength = svalBuilder.makeIntVal(*maxLengthInt);
-      SVal evalLength = svalBuilder.evalBinOpNN(state, BO_LE, *strLn,
-                                                maxLength, sizeTy);
+      SVal evalLength = svalBuilder.evalBinOpNN(state, BO_LE, *strLn, maxLength,
+                                                svalBuilder.getConditionType());
       state = state->assume(evalLength.castAs<DefinedOrUnknownSVal>(), true);
     }
     state = state->set<CStringLength>(MR, strLength);
@@ -930,9 +930,23 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
     const StringLiteral *strLit = cast<StringRegion>(MR)->getStringLiteral();
     return svalBuilder.makeIntVal(strLit->getLength(), sizeTy);
   }
+  case MemRegion::NonParamVarRegionKind: {
+    // If we have a global constant with a string literal initializer,
+    // compute the initializer's length.
+    const VarDecl *Decl = cast<NonParamVarRegion>(MR)->getDecl();
+    if (Decl->getType().isConstQualified() && Decl->hasGlobalStorage()) {
+      if (const Expr *Init = Decl->getInit()) {
+        if (auto *StrLit = dyn_cast<StringLiteral>(Init)) {
+          SValBuilder &SvalBuilder = C.getSValBuilder();
+          QualType SizeTy = SvalBuilder.getContext().getSizeType();
+          return SvalBuilder.makeIntVal(StrLit->getLength(), SizeTy);
+        }
+      }
+    }
+    [[fallthrough]];
+  }
   case MemRegion::SymbolicRegionKind:
   case MemRegion::AllocaRegionKind:
-  case MemRegion::NonParamVarRegionKind:
   case MemRegion::ParamVarRegionKind:
   case MemRegion::FieldRegionKind:
   case MemRegion::ObjCIvarRegionKind:

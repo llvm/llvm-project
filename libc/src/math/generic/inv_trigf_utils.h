@@ -18,7 +18,7 @@
 
 #include <errno.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // PI and PI / 2
 constexpr double M_MATH_PI = 0x1.921fb54442d18p+1;
@@ -54,16 +54,16 @@ LIBC_INLINE double atan_eval(double x) {
   auto x_abs = bs.uintval() & FPB::FloatProp::EXP_MANT_MASK;
 
   if (x_abs <= umin) {
-    double pe = __llvm_libc::fputil::polyeval(x * x, 0.0, ATAN_K[1], ATAN_K[2],
-                                              ATAN_K[3], ATAN_K[4]);
+    double pe = LIBC_NAMESPACE::fputil::polyeval(
+        x * x, 0.0, ATAN_K[1], ATAN_K[2], ATAN_K[3], ATAN_K[4]);
     return fputil::multiply_add(pe, x, x);
   }
 
   if (x_abs >= umax) {
     double one_over_x_m = -1.0 / x;
     double one_over_x2 = one_over_x_m * one_over_x_m;
-    double pe = __llvm_libc::fputil::polyeval(one_over_x2, ATAN_K[0], ATAN_K[1],
-                                              ATAN_K[2], ATAN_K[3]);
+    double pe = LIBC_NAMESPACE::fputil::polyeval(
+        one_over_x2, ATAN_K[0], ATAN_K[1], ATAN_K[2], ATAN_K[3]);
     return fputil::multiply_add(pe, one_over_x_m, sign ? (-M_MATH_PI_2) : (M_MATH_PI_2));
   }
 
@@ -79,8 +79,8 @@ LIBC_INLINE double atan_eval(double x) {
 
   double v = (pos_x - near_x) / fputil::multiply_add(near_x, pos_x, 1.0);
   double v2 = v * v;
-  double pe = __llvm_libc::fputil::polyeval(v2, ATAN_K[0], ATAN_K[1], ATAN_K[2],
-                                            ATAN_K[3], ATAN_K[4]);
+  double pe = LIBC_NAMESPACE::fputil::polyeval(v2, ATAN_K[0], ATAN_K[1],
+                                               ATAN_K[2], ATAN_K[3], ATAN_K[4]);
   double result;
   if (one_over_x)
     result = M_MATH_PI_2 - fputil::multiply_add(pe, v, ATAN_T[val - 1]);
@@ -107,6 +107,6 @@ LIBC_INLINE double asin_eval(double xsq) {
   return fputil::multiply_add(xsq, r2, r1);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_INV_TRIGF_UTILS_H

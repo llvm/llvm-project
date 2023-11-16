@@ -62,12 +62,32 @@ public:
   virtual std::optional<int64_t>
   getSubprogramRelocAdjustment(const DWARFDie &DIE) = 0;
 
+  /// Returns the file name associated to the AddessesMap
+  virtual std::optional<StringRef> getLibraryInstallName() = 0;
+
   /// Apply the valid relocations to the buffer \p Data, taking into
   /// account that Data is at \p BaseOffset in the .debug_info section.
   ///
   /// \returns true whether any reloc has been applied.
   virtual bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                                 bool IsLittleEndian) = 0;
+
+  /// Check if the linker needs to gather and save relocation info.
+  virtual bool needToSaveValidRelocs() = 0;
+
+  /// Update and save original relocations located in between StartOffset and
+  /// EndOffset. LinkedOffset is the value which should be added to the original
+  /// relocation offset to get new relocation offset in linked binary.
+  virtual void updateAndSaveValidRelocs(bool IsDWARF5,
+                                        uint64_t OriginalUnitOffset,
+                                        int64_t LinkedOffset,
+                                        uint64_t StartOffset,
+                                        uint64_t EndOffset) = 0;
+
+  /// Update the valid relocations that used OriginalUnitOffset as the compile
+  /// unit offset, and update their values to reflect OutputUnitOffset.
+  virtual void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
+                                               uint64_t OutputUnitOffset) = 0;
 
   /// Erases all data.
   virtual void clear() = 0;
@@ -119,8 +139,7 @@ public:
   virtual void emitLineStrings(const NonRelocatableStringpool &Pool) = 0;
 
   /// Emit DWARF debug names.
-  virtual void
-  emitDebugNames(AccelTable<DWARF5AccelTableStaticData> &Table) = 0;
+  virtual void emitDebugNames(DWARF5AccelTable &Table) = 0;
 
   /// Emit Apple namespaces accelerator table.
   virtual void
@@ -269,9 +288,10 @@ class DWARFFile {
 public:
   using UnloadCallbackTy = std::function<void(StringRef FileName)>;
   DWARFFile(StringRef Name, std::unique_ptr<DWARFContext> Dwarf,
-            std::unique_ptr<AddressesMap> Addresses, UnloadCallbackTy = nullptr)
+            std::unique_ptr<AddressesMap> Addresses,
+            UnloadCallbackTy UnloadFunc = nullptr)
       : FileName(Name), Dwarf(std::move(Dwarf)),
-        Addresses(std::move(Addresses)) {}
+        Addresses(std::move(Addresses)), UnloadFunc(UnloadFunc) {}
 
   /// The object file name.
   StringRef FileName;
@@ -281,6 +301,18 @@ public:
 
   /// Helpful address information(list of valid address ranges, relocations).
   std::unique_ptr<AddressesMap> Addresses;
+
+  /// Callback to the module keeping object file to unload.
+  UnloadCallbackTy UnloadFunc;
+
+  /// Unloads object file and corresponding AddressesMap and Dwarf Context.
+  void unload() {
+    Addresses.reset();
+    Dwarf.reset();
+
+    if (UnloadFunc)
+      UnloadFunc(FileName);
+  }
 };
 
 typedef std::map<std::string, std::string> swiftInterfacesMap;
@@ -529,7 +561,8 @@ private:
     /// the debug object.
     void clear() {
       CompileUnits.clear();
-      File.Addresses->clear();
+      ModuleUnits.clear();
+      File.unload();
     }
   };
 
@@ -738,6 +771,9 @@ private:
       /// Is there a DW_AT_str_offsets_base in the CU?
       bool AttrStrOffsetBaseSeen = false;
 
+      /// Is there a DW_AT_APPLE_origin in the CU?
+      bool HasAppleOrigin = false;
+
       AttributesInfo() = default;
     };
 
@@ -866,7 +902,7 @@ private:
   uint32_t LastCIEOffset = 0;
 
   /// Apple accelerator tables.
-  AccelTable<DWARF5AccelTableStaticData> DebugNames;
+  DWARF5AccelTable DebugNames;
   AccelTable<AppleAccelTableStaticOffsetData> AppleNames;
   AccelTable<AppleAccelTableStaticOffsetData> AppleNamespaces;
   AccelTable<AppleAccelTableStaticOffsetData> AppleObjc;

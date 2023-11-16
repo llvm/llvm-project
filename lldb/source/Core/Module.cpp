@@ -23,11 +23,11 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Symbol/SymbolLocator.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Symbol/Type.h"
@@ -1314,7 +1314,7 @@ UnwindTable &Module::GetUnwindTable() {
   if (!m_unwind_table) {
     m_unwind_table.emplace(*this);
     if (!m_symfile_spec)
-      Symbols::DownloadSymbolFileAsync(GetUUID());
+      SymbolLocator::DownloadSymbolFileAsync(GetUUID());
   }
   return *m_unwind_table;
 }

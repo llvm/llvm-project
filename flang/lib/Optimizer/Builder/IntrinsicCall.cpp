@@ -253,6 +253,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"trim_name", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"getpid", &I::genGetPID},
     {"iachar", &I::genIchar},
     {"iall",
      &I::genIall,
@@ -1343,6 +1344,12 @@ static bool isIntrinsicModuleProcedure(llvm::StringRef name) {
          name.startswith("ieee_") || name.startswith("__ppc_");
 }
 
+static bool isCoarrayIntrinsic(llvm::StringRef name) {
+  return name.startswith("atomic_") || name.startswith("co_") ||
+         name.contains("image") || name.endswith("cobound") ||
+         name.equals("team_number");
+}
+
 /// Return the generic name of an intrinsic module procedure specific name.
 /// Remove any "__builtin_" prefix, and any specific suffix of the form
 /// {_[ail]?[0-9]+}*, such as _1 or _a4.
@@ -1363,6 +1370,8 @@ llvm::StringRef genericName(llvm::StringRef specificName) {
 void crashOnMissingIntrinsic(mlir::Location loc, llvm::StringRef name) {
   if (isIntrinsicModuleProcedure(name))
     TODO(loc, "intrinsic module procedure: " + llvm::Twine(name));
+  else if (isCoarrayIntrinsic(name))
+    TODO(loc, "coarray: intrinsic " + llvm::Twine(name));
   else
     TODO(loc, "intrinsic: " + llvm::Twine(name));
 }
@@ -2934,6 +2943,14 @@ void IntrinsicLibrary::genGetCommand(llvm::ArrayRef<fir::ExtendedValue> args) {
         .genThen([&]() { builder.createStoreWithConvert(loc, stat, statAddr); })
         .end();
   }
+}
+
+// GETPID
+mlir::Value IntrinsicLibrary::genGetPID(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0 && "getpid takes no input");
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genGetPID(builder, loc));
 }
 
 // GET_COMMAND_ARGUMENT
@@ -5284,11 +5301,8 @@ IntrinsicLibrary::genStorageSize(mlir::Type resultType,
         builder.getKindMap().getIntegerBitsize(fir::toInt(constOp)));
   }
 
-  if (args[0].getBoxOf<fir::PolymorphicValue>()) {
-    box = builder.createBox(loc, args[0], /*isPolymorphic=*/true);
-  } else if (box.getType().isa<fir::ReferenceType>()) {
-    box = builder.create<fir::LoadOp>(loc, box);
-  }
+  box = builder.createBox(loc, args[0],
+                          /*isPolymorphic=*/args[0].isPolymorphic());
   mlir::Value eleSize = builder.create<fir::BoxEleSizeOp>(loc, kindTy, box);
   mlir::Value c8 = builder.createIntegerConstant(loc, kindTy, 8);
   return builder.create<mlir::arith::MulIOp>(loc, eleSize, c8);

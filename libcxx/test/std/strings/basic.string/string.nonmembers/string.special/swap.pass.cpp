@@ -31,46 +31,30 @@ TEST_CONSTEXPR_CXX20 void test(S s1, S s2) {
   assert(s2 == s1_);
 }
 
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  test(S(""), S(""));
+  test(S(""), S("12345"));
+  test(S(""), S("1234567890"));
+  test(S(""), S("12345678901234567890"));
+  test(S("abcde"), S(""));
+  test(S("abcde"), S("12345"));
+  test(S("abcde"), S("1234567890"));
+  test(S("abcde"), S("12345678901234567890"));
+  test(S("abcdefghij"), S(""));
+  test(S("abcdefghij"), S("12345"));
+  test(S("abcdefghij"), S("1234567890"));
+  test(S("abcdefghij"), S("12345678901234567890"));
+  test(S("abcdefghijklmnopqrst"), S(""));
+  test(S("abcdefghijklmnopqrst"), S("12345"));
+  test(S("abcdefghijklmnopqrst"), S("1234567890"));
+  test(S("abcdefghijklmnopqrst"), S("12345678901234567890"));
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    test(S(""), S(""));
-    test(S(""), S("12345"));
-    test(S(""), S("1234567890"));
-    test(S(""), S("12345678901234567890"));
-    test(S("abcde"), S(""));
-    test(S("abcde"), S("12345"));
-    test(S("abcde"), S("1234567890"));
-    test(S("abcde"), S("12345678901234567890"));
-    test(S("abcdefghij"), S(""));
-    test(S("abcdefghij"), S("12345"));
-    test(S("abcdefghij"), S("1234567890"));
-    test(S("abcdefghij"), S("12345678901234567890"));
-    test(S("abcdefghijklmnopqrst"), S(""));
-    test(S("abcdefghijklmnopqrst"), S("12345"));
-    test(S("abcdefghijklmnopqrst"), S("1234567890"));
-    test(S("abcdefghijklmnopqrst"), S("12345678901234567890"));
-  }
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test(S(""), S(""));
-    test(S(""), S("12345"));
-    test(S(""), S("1234567890"));
-    test(S(""), S("12345678901234567890"));
-    test(S("abcde"), S(""));
-    test(S("abcde"), S("12345"));
-    test(S("abcde"), S("1234567890"));
-    test(S("abcde"), S("12345678901234567890"));
-    test(S("abcdefghij"), S(""));
-    test(S("abcdefghij"), S("12345"));
-    test(S("abcdefghij"), S("1234567890"));
-    test(S("abcdefghij"), S("12345678901234567890"));
-    test(S("abcdefghijklmnopqrst"), S(""));
-    test(S("abcdefghijklmnopqrst"), S("12345"));
-    test(S("abcdefghijklmnopqrst"), S("1234567890"));
-    test(S("abcdefghijklmnopqrst"), S("12345678901234567890"));
-  }
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 #endif
 
   return true;

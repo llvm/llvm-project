@@ -152,8 +152,7 @@ define void @call_copy_pod() {
 ; CHECK-NEXT:    add x19, x19, :lo12:Pod
 ; CHECK-NEXT:    mov x0, x19
 ; CHECK-NEXT:    bl copy_pod
-; CHECK-NEXT:    str d0, [x19]
-; CHECK-NEXT:    str d1, [x19, #8]
+; CHECK-NEXT:    stp d0, d1, [x19]
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 8

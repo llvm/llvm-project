@@ -9,7 +9,6 @@ add_libc_test(
   DEPENDS
     libc.src.errno.errno
     libc.src.stdlib.atof
-    libc.test.errno_setter_matcher
 )
 
 add_header_library(

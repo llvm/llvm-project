@@ -327,7 +327,8 @@ define <32 x i16> @reverse_v32i16(<32 x i16> %a) {
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI19_0)
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    vle8.v v12, (a0)
+; CHECK-NEXT:    vsext.vf2 v16, v12
 ; CHECK-NEXT:    vrgather.vv v12, v8, v16
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -523,7 +524,8 @@ define <32 x half> @reverse_v32f16(<32 x half> %a) {
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI34_0)
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    vle8.v v12, (a0)
+; CHECK-NEXT:    vsext.vf2 v16, v12
 ; CHECK-NEXT:    vrgather.vv v12, v8, v16
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret

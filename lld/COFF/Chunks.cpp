@@ -437,7 +437,7 @@ void SectionChunk::applyRelocation(uint8_t *off,
   // Compute the RVA of the relocation for relative relocations.
   uint64_t p = rva + rel.VirtualAddress;
   uint64_t imageBase = file->ctx.config.imageBase;
-  switch (file->ctx.config.machine) {
+  switch (getMachine()) {
   case AMD64:
     applyRelX64(off, rel.Type, os, s, p, imageBase);
     break;
@@ -551,7 +551,7 @@ static uint8_t getBaserelType(const coff_relocation &rel,
 // Only called when base relocation is enabled.
 void SectionChunk::getBaserels(std::vector<Baserel> *res) {
   for (const coff_relocation &rel : getRelocs()) {
-    uint8_t ty = getBaserelType(rel, file->ctx.config.machine);
+    uint8_t ty = getBaserelType(rel, getMachine());
     if (ty == IMAGE_REL_BASED_ABSOLUTE)
       continue;
     Symbol *target = file->getSymbol(rel.SymbolTableIndex);
@@ -894,6 +894,20 @@ void RVAFlagTableChunk::writeTo(uint8_t *buf) const {
                                 const RVAFlag &b) { return a.rva == b.rva; }) ==
              flags.end() &&
          "RVA tables should be de-duplicated");
+}
+
+size_t ECCodeMapChunk::getSize() const {
+  return map.size() * sizeof(chpe_range_entry);
+}
+
+void ECCodeMapChunk::writeTo(uint8_t *buf) const {
+  auto table = reinterpret_cast<chpe_range_entry *>(buf);
+  for (uint32_t i = 0; i < map.size(); i++) {
+    const ECCodeMapEntry &entry = map[i];
+    uint32_t start = entry.first->getRVA();
+    table[i].StartOffset = start | entry.type;
+    table[i].Length = entry.last->getRVA() + entry.last->getSize() - start;
+  }
 }
 
 // MinGW specific, for the "automatic import of variables from DLLs" feature.

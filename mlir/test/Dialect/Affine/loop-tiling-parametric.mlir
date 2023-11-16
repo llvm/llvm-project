@@ -175,7 +175,7 @@ func.func @simple_matmul(%t6 : index, %t7 : index, %t8 : index, %arg0: memref<25
 // CHECK-DAG: [[UBI0:#map[0-9]*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s1, s0)>
 // CHECK-DAG: [[UBO0:#map[0-9]*]] = affine_map<()[s0, s1] -> (s0 ceildiv s1)>
 
-// CHECK: func @tile_with_symbolic_loop_upper_bounds([[ARG0:%arg[0-9]+]]: index, [[ARG1:%arg[0-9]+]]: index{{.*}}){{.*}}
+// CHECK: func @tile_using_symbolic_loop_upper_bounds([[ARG0:%arg[0-9]+]]: index, [[ARG1:%arg[0-9]+]]: index{{.*}}){{.*}}
 // CHECK:        affine.for [[ARG2:%arg[0-9]+]] = 0 to [[UBO0]](){{.*}}[[ARG0]]{{.*}}
 // CHECK-NEXT:     affine.for [[ARG3:%arg[0-9]+]] = 0 to [[UBO0]](){{.*}}[[ARG1]]{{.*}}
 // CHECK-NEXT:       affine.for %[[I0:.*]] = [[LBI0]]{{.*}}[[ARG2]]{{.*}}[[ARG0]]{{.*}} to min [[UBI0]]{{.*}}[[ARG2]]{{.*}}[[ARG0]]{{.*}}
@@ -188,7 +188,7 @@ func.func @simple_matmul(%t6 : index, %t7 : index, %t8 : index, %arg0: memref<25
 // CHECK-NEXT:             affine.load %{{.*}}%[[I0]], %[[I1]]
 // CHECK-NEXT:             arith.addf
 // CHECK-NEXT:             affine.store %{{.*}}%[[I0]], %[[I1]]
-func.func @tile_with_symbolic_loop_upper_bounds(%t9 : index, %t10: index, %arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
+func.func @tile_using_symbolic_loop_upper_bounds(%t9 : index, %t10: index, %arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
   %cst = arith.constant 0.000000e+00 : f32
   %c0 = arith.constant 0 : index
   %0 = memref.dim %arg0, %c0 : memref<?x?xf32>
@@ -214,8 +214,8 @@ func.func @tile_with_symbolic_loop_upper_bounds(%t9 : index, %t10: index, %arg0:
 // CHECK-DAG: [[UBI0:#map[0-9]*]] = affine_map<(d0)[s0, s1, s2] -> (d0 * s2 + s2, s0 + s1)>
 // CHECK-DAG: [[UBO0:#map[0-9]*]] = affine_map<()[s0, s1, s2] -> ((s0 + s1) ceildiv s2)>
 
-// CHECK: func @tile_with_loop_upper_bounds_in_two_symbols([[ARG0:%arg[0-9]+]]: index{{.*}}){{.*}}
-func.func @tile_with_loop_upper_bounds_in_two_symbols(%t11 : index, %arg0: memref<?xf32>, %limit: index) {
+// CHECK: func @tile_using_loop_upper_bounds_in_two_symbols([[ARG0:%arg[0-9]+]]: index{{.*}}){{.*}}
+func.func @tile_using_loop_upper_bounds_in_two_symbols(%t11 : index, %arg0: memref<?xf32>, %limit: index) {
   %c0 = arith.constant 0 : index
   %dim0 = memref.dim %arg0, %c0 : memref<?xf32>
   affine.for %i0 = 0 to affine_map<()[s0, s1] -> (s0 + s1)> ()[%dim0, %limit] {
@@ -235,12 +235,12 @@ func.func @tile_with_loop_upper_bounds_in_two_symbols(%t11 : index, %arg0: memre
 // CHECK-DAG: [[UBO1:#map[0-9]*]] = affine_map<(d0)[s0, s1] -> ((d0 + s0 + 4) ceildiv s1)>
 // CHECK-DAG: [[UBO0:#map[0-9]*]] = affine_map<(d0)[s0, s1] -> ((d0 + s0 + 2) ceildiv s1)>
 
-// CHECK: func @tile_with_upper_bounds_in_dimensions_and_symbols([[ARG0:%arg[0-9]+]]: index, [[ARG1:%arg[0-9]+]]: index, [[ARG2:%arg[0-9]+]]: index, [[ARG3:%arg[0-9]+]]: index{{.*}}){{.*}}
+// CHECK: func @tile_using_upper_bounds_in_dimensions_and_symbols([[ARG0:%arg[0-9]+]]: index, [[ARG1:%arg[0-9]+]]: index, [[ARG2:%arg[0-9]+]]: index, [[ARG3:%arg[0-9]+]]: index{{.*}}){{.*}}
 // CHECK-NEXT: affine.for [[ARG4:%arg[0-9]+]] = 0 to [[UBO0]]({{.*}}){{.*}}[[ARG0]]
 // CHECK-NEXT:   affine.for [[ARG5:%arg[0-9]+]] = 0 to [[UBO1]]({{.*}}){{.*}}[[ARG1]]
 // CHECK-NEXT:     affine.for {{.*}} = [[LBI0]]([[ARG4]]){{.*}}[[ARG0]]{{.*}} to min [[UBI0]]({{.*}}, [[ARG4]]){{.*}}[[ARG0]]{{.*}}
 // CHECK-NEXT:       affine.for {{.*}} = [[LBI0]]([[ARG5]]){{.*}}[[ARG1]]{{.*}} to min [[UBI1]]({{.*}}, [[ARG5]]){{.*}}[[ARG1]]{{.*}}
-func.func @tile_with_upper_bounds_in_dimensions_and_symbols(%t12 : index, %t13 :index, %M: index, %N:  index, %K: index) {
+func.func @tile_using_upper_bounds_in_dimensions_and_symbols(%t12 : index, %t13 :index, %M: index, %N:  index, %K: index) {
   affine.for %i = 0 to affine_map<(d0)[s0] -> (d0 + s0 + 2)>(%M)[%K] {
     affine.for %j = 0 to affine_map<(d0)[s0] -> (d0 + s0 + 4)>(%N)[%K] {
       "test.foo" () : () -> ()
@@ -257,13 +257,13 @@ func.func @tile_with_upper_bounds_in_dimensions_and_symbols(%t12 : index, %t13 :
 // CHECK-DAG: [[UBO1:#map[0-9]*]] = affine_map<(d0)[s0, s1] -> ((d0 + s0 + 4) ceildiv s1)>
 // CHECK-DAG: [[UBO0:#map[0-9]*]] = affine_map<(d0)[s0, s1] -> ((d0 + s0 + 2) ceildiv s1)>
 
-// CHECK: func @tile_with_upper_bounds_in_dimensions_and_symbols_non_unit_steps
+// CHECK: func @tile_using_upper_bounds_in_dimensions_and_symbols_non_unit_steps
 // CHECK-SAME: ([[ARG0:%arg[0-9]+]]: index, [[ARG1:%arg[0-9]+]]: index, [[ARG2:%arg[0-9]+]]: index, [[ARG3:%arg[0-9]+]]: index{{.*}}){{.*}}
 // CHECK-NEXT: affine.for [[ARG4:%arg[0-9]+]] = 0 to [[UBO0]]({{.*}}){{.*}}[[ARG0]]{{.*}} step 2{{.*}}
 // CHECK-NEXT:   affine.for [[ARG5:%arg[0-9]+]] = 0 to [[UBO1]]({{.*}}){{.*}}[[ARG1]]{{.*}} step 4{{.*}}
 // CHECK-NEXT:     affine.for {{.*}} = [[LBI0]]([[ARG4]]){{.*}}[[ARG0]]{{.*}} to min [[UBI0]]({{.*}}, [[ARG4]]){{.*}}[[ARG0]]{{.*}} step 2{{.*}}
 // CHECK-NEXT:       affine.for {{.*}} = [[LBI0]]([[ARG5]]){{.*}}[[ARG1]]{{.*}} to min [[UBI1]]({{.*}}, [[ARG5]]){{.*}}[[ARG1]]{{.*}} step 4{{.*}}
-func.func @tile_with_upper_bounds_in_dimensions_and_symbols_non_unit_steps(%t12 : index, %t13 :index, %M: index, %N :  index, %K: index) {
+func.func @tile_using_upper_bounds_in_dimensions_and_symbols_non_unit_steps(%t12 : index, %t13 :index, %M: index, %N :  index, %K: index) {
   affine.for %i = 0 to affine_map<(d0)[s0] -> (d0 + s0 + 2)>(%M)[%K] step 2 {
     affine.for %j = 0 to affine_map<(d0)[s0] -> (d0 + s0 + 4)>(%N)[%K] step 4 {
       "test.foo" () : () -> ()

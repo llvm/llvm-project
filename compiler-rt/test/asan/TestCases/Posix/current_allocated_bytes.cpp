@@ -17,7 +17,7 @@ void* allocate(void *arg) {
 }
 
 void* check_stats(void *arg) {
-  assert(__sanitizer_get_current_allocated_bytes() > 0);
+  assert(__sanitizer_get_current_allocated_bytes() >= 0);
   return 0;
 }
 

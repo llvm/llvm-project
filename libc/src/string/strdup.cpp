@@ -15,7 +15,7 @@
 
 #include <stdlib.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(char *, strdup, (const char *src)) {
   auto dup = internal::strdup(src);
@@ -26,4 +26,4 @@ LLVM_LIBC_FUNCTION(char *, strdup, (const char *src)) {
   return nullptr;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

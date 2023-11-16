@@ -17,21 +17,6 @@ def run(f):
 
 
 @run
-def getParentLoop():
-    sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
-    )
-    with InsertionPoint(sequence.body):
-        loop.GetParentForOp(
-            transform.OperationType.get("scf.for"), sequence.bodyTarget, num_loops=2
-        )
-        transform.YieldOp()
-    # CHECK-LABEL: TEST: getParentLoop
-    # CHECK: = transform.loop.get_parent_for %
-    # CHECK: num_loops = 2
-
-
-@run
 def loopOutline():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
@@ -59,7 +44,7 @@ def loopPeel():
         transform.OperationType.get("scf.for"),
     )
     with InsertionPoint(sequence.body):
-        loop.LoopPeelOp(pdl.OperationType.get(), sequence.bodyTarget)
+        loop.LoopPeelOp(transform.AnyOpType.get(), transform.AnyOpType.get(), sequence.bodyTarget)
         transform.YieldOp()
     # CHECK-LABEL: TEST: loopPeel
     # CHECK: = transform.loop.peel %

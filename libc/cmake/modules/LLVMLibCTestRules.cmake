@@ -525,7 +525,11 @@ function(add_integration_test test_name)
                            --target=${LIBC_GPU_TARGET_TRIPLE})
   endif()
 
-  target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
+  else()
+    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  endif()
   target_link_libraries(
     ${fq_build_target_name}
     # The NVIDIA 'nvlink' linker does not currently support static libraries.
@@ -632,6 +636,12 @@ function(add_libc_hermetic_test test_name)
       libc.src.string.memset
       libc.src.__support.StringUtil.error_to_string
   )
+
+  if(TARGET libc.src.time.clock)
+    # We will link in the 'clock' implementation if it exists for test timing.
+    list(APPEND fq_deps_list libc.src.time.clock)
+  endif()
+
   list(REMOVE_DUPLICATES fq_deps_list)
 
   # TODO: Instead of gathering internal object files from entrypoints,

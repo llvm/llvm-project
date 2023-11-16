@@ -35,7 +35,7 @@ bool testBuildAttr(unsigned Tag, unsigned Value,
     reinterpret_cast<const uint8_t*>(OS.str().c_str()), OS.str().size());
 
   ARMAttributeParser Parser;
-  cantFail(Parser.parse(Bytes, support::little));
+  cantFail(Parser.parse(Bytes, llvm::endianness::little));
 
   std::optional<unsigned> Attr = Parser.getAttributeValue(ExpectedTag);
   return Attr && *Attr == ExpectedValue;
@@ -43,7 +43,7 @@ bool testBuildAttr(unsigned Tag, unsigned Value,
 
 void testParseError(ArrayRef<uint8_t> bytes, const char *msg) {
   ARMAttributeParser parser;
-  Error e = parser.parse(bytes, support::little);
+  Error e = parser.parse(bytes, llvm::endianness::little);
   EXPECT_STREQ(toString(std::move(e)).c_str(), msg);
 }
 

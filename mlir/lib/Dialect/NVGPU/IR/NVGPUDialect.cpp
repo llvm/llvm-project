@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -334,54 +335,96 @@ LogicalResult LdMatrixOp::verify() {
 // NVGPU_TmaAsyncLoadOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult TmaAsyncLoadOp::verify() {
-  // Destination memref
-  auto dstMemref = llvm::cast<MemRefType>(getDst().getType());
+std::optional<InFlightDiagnostic> verifyTmaDescriptorWithMemref(
+    Operation *op, nvgpu::TensorMapDescriptorType descType,
+    std::optional<MemRefType> memrefType = std::nullopt) {
+  MemRefType descMemref = descType.getTensor();
+  // Limitation
+  if (descType.getInterleave() != TensorMapInterleaveKind::INTERLEAVE_NONE)
+    return op->emitError() << "Interleave options are not supported yet.";
+
+  // Address space check for shared memory check
+  if (!NVGPUDialect::hasSharedMemoryAddressSpace(descMemref)) {
+    return op->emitError() << "the tensor map descriptor has incorrect address "
+                              "space, it must be shared memory address space.";
+  }
+  // Support only static shape for the time being
+  if (!descMemref.hasStaticShape())
+    return op->emitError() << "the tensor map descriptor must be static shaped";
+
+  // No verification if memref type is not provided
+  if (!memrefType.has_value())
+    return std::nullopt;
+
+  MemRefType dstMemref = memrefType.value();
+
+  // Check element type
+  if (descMemref.getElementType() != dstMemref.getElementType()) {
+    return op->emitError() << "the element type of tensor map descriptor and "
+                              "memref must be same";
+  }
+
   if (!NVGPUDialect::hasSharedMemoryAddressSpace(dstMemref)) {
-    return emitError()
-           << "The operation stores data to shared memory, but "
-              "the destination memref does not have a memory space of "
-           << NVGPUDialect::kSharedMemoryAddressSpace;
+    return op->emitError() << "the destination memref has incorrect address "
+                              "space, it must be shared memory address space.";
   }
-  if (getCoordinates().size() > 5) {
-    return emitError() << "Maximum 5 coordinates are supported.";
+  if (!dstMemref.hasStaticShape())
+    return op->emitError() << "the destination memref must be static shaped";
+
+  if (dstMemref.getRank() != descMemref.getRank()) {
+    return op->emitError() << "the shape of tensor map descriptor and "
+                              "memref must have same rank";
   }
-  if (getCoordinates().size() != size_t(dstMemref.getRank())) {
-    return emitError() << "Destination memref rank is "
-                       << size_t(dstMemref.getRank()) << " but there are  "
-                       << getCoordinates().size()
-                       << " coordinates. They must match.";
+  if (!descMemref.getShape().equals(dstMemref.getShape())) {
+    return op->emitError() << "memref and tensor map shapes mismatch "
+                           << descMemref << " != " << dstMemref;
   }
+
+  return std::nullopt;
+}
+
+LogicalResult TmaAsyncLoadOp::verify() {
+  std::optional<InFlightDiagnostic> error = verifyTmaDescriptorWithMemref(
+      *this, getTensorMapDescriptor().getType(), getDst().getType());
+  if (error.has_value())
+    return error.value();
+
+  if (getCoordinates().size() > kMaxTMATensorDimension) {
+    return emitError() << "Maximum " << kMaxTMATensorDimension
+                       << " coordinates are supported.";
+  }
+  if (getCoordinates().size() !=
+      size_t(getTensorMapDescriptor().getType().getTensor().getRank())) {
+    return emitError() << "number of coordinates do not match with the rank of "
+                          "tensor descriptor map.";
+  }
+
   return success();
 }
 
 LogicalResult TmaCreateDescriptorOp::verify() {
-  if (getBoxDimensions().size() > 5) {
-    return emitError() << "Maximum 5 dimensional box is supported.";
+  if (getBoxDimensions().size() > kMaxTMATensorDimension) {
+    return emitError() << "Maximum " << kMaxTMATensorDimension
+                       << " coordinates are supported.";
   }
-  nvgpu::TensorMapDescriptorType desc = getTensorMap().getType();
-  if (desc.getInterleave() != TensorMapInterleaveKind::INTERLEAVE_NONE)
-    return emitError() << "Interleave options are not supported yet.";
+
+  std::optional<InFlightDiagnostic> error =
+      verifyTmaDescriptorWithMemref(*this, getTensorMap().getType());
+  if (error.has_value())
+    return error.value();
 
   return success();
 }
 
 //===----------------------------------------------------------------------===//
-// NVGPU_GenerateGmmaDescriptorOp
+// NVGPU_WarpgroupGenerateDescriptorOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult GenerateGmmaDescriptorOp::verify() {
-  MemRefType memrefType = getTensor().getType();
-  MemRefType tensorMapType = getTensorMap().getType().getTensor();
-
-  if (memrefType != tensorMapType)
-    return emitError() << "memref and tensor map type mismatch";
-
-  if (!memrefType.hasStaticShape() || !tensorMapType.hasStaticShape())
-    return emitError() << "supports only static shapes";
-
-  if (memrefType.getRank() != 2)
-    return emitError() << "supports only 2d memref is supported for now";
+LogicalResult WarpgroupGenerateDescriptorOp::verify() {
+  std::optional<InFlightDiagnostic> error =
+      verifyTmaDescriptorWithMemref(*this, getTensorMap().getType());
+  if (error.has_value())
+    return error.value();
 
   if (getTensorMap().getType().getSwizzle() !=
       TensorMapSwizzleKind::SWIZZLE_128B) {
@@ -434,6 +477,12 @@ LogicalResult isAllowedWGMMADataType(Type typeD, Type typeA, Type typeB) {
   return failure();
 }
 
+LogicalResult isAllowedSizeM(int sizeM) {
+  if (sizeM % kWgmmaSizeM)
+    return failure();
+  return success();
+}
+
 LogicalResult isAllowedSizeN(int sizeN, Type typeA) {
   SmallVector<int> allowedN = {8,   16,  24,  32,  40,  48,  56,  64,
                                72,  80,  88,  96,  104, 112, 120, 128,
@@ -442,7 +491,7 @@ LogicalResult isAllowedSizeN(int sizeN, Type typeA) {
   SmallVector<int> allowedNshort = {8,   16,  24,  32,  48,  64,
                                     80,  96,  112, 128, 144, 160,
                                     176, 192, 208, 224, 240, 256};
-  if (typeA.isBF16() || typeA.isF16() || typeA.isTF32() ||
+  if (typeA.isBF16() || typeA.isF16() || typeA.isF32() || typeA.isTF32() ||
       typeA.isFloat8E4M3FN() || typeA.isFloat8E5M2())
     if (llvm::is_contained(allowedN, sizeN))
       return success();
@@ -455,35 +504,16 @@ LogicalResult isAllowedSizeN(int sizeN, Type typeA) {
 
 LogicalResult WarpgroupMmaOp::verify() {
   if (getTransposeA() && !getTransposeB())
-    return emitOpError() << "supports non-transpose A (Row Major) "
-                            "and transpose B (Column Major) for the time being";
+    return emitOpError()
+           << "supports non-transpose A (Row Major) "
+              "and transpose B (Column Major) for the time being ";
   MemRefType matrixA = getDescriptorA().getType().getTensor();
   MemRefType matrixB = getDescriptorB().getType().getTensor();
-  VectorType matrixC = getMatrixC()
-                           .front()
-                           .getType()
-                           .cast<WarpgroupAccumulatorType>()
-                           .getFragmented();
-  VectorType matrixD = getMatrixD()
-                           .front()
-                           .getType()
-                           .cast<WarpgroupAccumulatorType>()
-                           .getFragmented();
-  unsigned sizeAcc = getMatrixC().size();
+  VectorType matrixC = getMatrixC().getType().getFragmented();
+  VectorType matrixD = getMatrixD().getType().getFragmented();
 
-  if (getMatrixC().size() != getMatrixD().size())
-    return emitOpError() << "number of matrix C and matrix D must be the same";
-
-  if (llvm::all_of(getMatrixC(),
-                   [&](Value rhs) { return rhs.getType() == matrixC; })) {
-    return emitOpError()
-           << "types of all operands in matrix C must be the same";
-  }
-  if (llvm::all_of(getMatrixD(),
-                   [&](Value rhs) { return rhs.getType() == matrixC; })) {
-    return emitOpError()
-           << "types of all operands in matrix D must be the same as matrix C";
-  }
+  if (matrixC != matrixD)
+    return emitOpError() << "type of matrix C and matrix D must be the same";
 
   if (matrixA.getRank() != 2 || matrixB.getRank() != 2 ||
       matrixC.getRank() != 2 || matrixD.getRank() != 2) {
@@ -495,7 +525,7 @@ LogicalResult WarpgroupMmaOp::verify() {
     return emitOpError() << "2nd dim matrix-A (" << matrixA.getShape()[1]
                          << ")!= 1st dim matrix-B (" << matrixB.getShape()[0]
                          << " )";
-  if (matrixA.getShape()[0] != (matrixC.getShape()[0] * sizeAcc))
+  if (matrixA.getShape()[0] != matrixC.getShape()[0])
     return emitOpError() << "1st dim matrix-A ( " << matrixA.getShape()[0]
                          << " )!= 1st dim matrix-C ( " << matrixC.getShape()[0]
                          << " )";
@@ -526,6 +556,47 @@ LogicalResult WarpgroupMmaOp::verify() {
                          << ", it is not supported yet";
   }
 
+  return success();
+}
+
+LogicalResult WarpgroupMmaStoreOp::verify() {
+  MemRefType dstMemrefType = getDstMemref().getType();
+  VectorType vtype = getMatrixD().getType().getFragmented();
+
+  // Limitation
+  if (!vtype.getElementType().isF32()) {
+    return emitOpError()
+           << "hit a limitation: only f32 results for the time being";
+  }
+  if (vtype.getDimSize(0) != dstMemrefType.getDimSize(0) ||
+      vtype.getDimSize(1) != dstMemrefType.getDimSize(1)) {
+    return emitOpError() << "results [" << vtype << "][" << vtype.getDimSize(1)
+                         << "] values. However, destination memref["
+                         << dstMemrefType.getDimSize(0) << "]["
+                         << dstMemrefType.getDimSize(1)
+                         << "]  does not have same size as results";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// WarpgroupMmaInitAccumulatorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult WarpgroupMmaInitAccumulatorOp::verify() {
+
+  nvgpu::WarpgroupAccumulatorType accType = getMatrixC().getType();
+  int64_t sizeM = accType.getFragmented().getDimSize(0);
+  int64_t sizeN = accType.getFragmented().getDimSize(1);
+  Type elemType = accType.getFragmented().getElementType();
+
+  if (failed(isAllowedSizeM(sizeM)) ||
+      failed(isAllowedSizeN(sizeN, elemType))) {
+    return emitOpError() << "has type " << accType.getFragmented()
+                         << ". It does not fit into warp-group "
+                            "level (wgmma) matrix multiplication instruction "
+                            "(or not supported yet)";
+  }
   return success();
 }
 

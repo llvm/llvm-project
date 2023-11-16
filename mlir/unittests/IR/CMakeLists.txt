@@ -8,6 +8,7 @@ add_mlir_unittest(MLIRIRTests
   OperationSupportTest.cpp
   PatternMatchTest.cpp
   ShapedTypeTest.cpp
+  SymbolTableTest.cpp
   TypeTest.cpp
   OpPropertiesTest.cpp
 

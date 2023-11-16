@@ -17,7 +17,6 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Casting.h"
 #include <optional>
 
@@ -104,7 +103,7 @@ public:
 
     const auto Kind = RD->getTagKind();
     // FIMXE: Should we check union members too?
-    if (Kind != TTK_Struct && Kind != TTK_Class)
+    if (Kind != TagTypeKind::Struct && Kind != TagTypeKind::Class)
       return true;
 
     // Ignore CXXRecords that come from system headers.

@@ -16,7 +16,7 @@
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 namespace details {
 
@@ -70,6 +70,6 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
   return s;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FP_BITS_STR_H

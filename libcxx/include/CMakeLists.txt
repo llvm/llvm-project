@@ -94,7 +94,9 @@ set(files
   __algorithm/pstl_generate.h
   __algorithm/pstl_is_partitioned.h
   __algorithm/pstl_merge.h
+  __algorithm/pstl_move.h
   __algorithm/pstl_replace.h
+  __algorithm/pstl_rotate_copy.h
   __algorithm/pstl_sort.h
   __algorithm/pstl_stable_sort.h
   __algorithm/pstl_transform.h
@@ -508,6 +510,7 @@ set(files
   __mdspan/extents.h
   __mdspan/layout_left.h
   __mdspan/layout_right.h
+  __mdspan/layout_stride.h
   __mdspan/mdspan.h
   __memory/addressof.h
   __memory/align.h
@@ -838,6 +841,7 @@ set(files
   __utility/cmp.h
   __utility/convert_to_integral.h
   __utility/declval.h
+  __utility/empty.h
   __utility/exception_guard.h
   __utility/exchange.h
   __utility/forward.h
@@ -850,8 +854,8 @@ set(files
   __utility/piecewise_construct.h
   __utility/priority_tag.h
   __utility/rel_ops.h
+  __utility/small_buffer.h
   __utility/swap.h
-  __utility/terminate_on_exception.h
   __utility/to_underlying.h
   __utility/unreachable.h
   __variant/monostate.h
@@ -921,6 +925,7 @@ set(files
   experimental/iterator
   experimental/list
   experimental/map
+  experimental/memory
   experimental/memory_resource
   experimental/propagate_const
   experimental/regex
@@ -954,7 +959,6 @@ set(files
   latch
   libcxx.imp
   limits
-  limits.h
   list
   locale
   locale.h
@@ -978,7 +982,6 @@ set(files
   scoped_allocator
   semaphore
   set
-  setjmp.h
   shared_mutex
   source_location
   span
@@ -997,6 +1000,7 @@ set(files
   string.h
   string_view
   strstream
+  syncstream
   system_error
   tgmath.h
   thread

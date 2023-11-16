@@ -12,7 +12,7 @@
 #include "src/__support/CPP/type_traits/is_arithmetic.h"
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // is_signed
 template <typename T>
@@ -23,6 +23,6 @@ struct is_signed : bool_constant<(is_arithmetic_v<T> && (T(-1) < T(0)))> {
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_signed_v = is_signed<T>::value;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_SIGNED_H

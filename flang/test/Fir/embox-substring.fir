@@ -26,13 +26,13 @@ func.func @substring_dyn_base(%base_addr: !fir.ref<!fir.array<2x!fir.char<1,?>>>
 func.func private @dump(!fir.box<!fir.array<2x!fir.char<1>>>)
 
 // CHECK-LABEL:   llvm.func @substring_dyn_base(
-// CHECK-SAME:                                  %[[VAL_0:.*]]: !llvm.ptr<i8>,
+// CHECK-SAME:                                  %[[VAL_0:.*]]: !llvm.ptr,
 // CHECK-SAME:                                  %[[VAL_1:.*]]: i64) {
 // CHECK:           %[[VAL_5:.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK:           llvm.getelementptr
-// CHECK:           %[[VAL_28:.*]] = llvm.mlir.null : !llvm.ptr<i8>
-// CHECK:           %[[VAL_29:.*]] = llvm.getelementptr %[[VAL_28]][1] : (!llvm.ptr<i8>) -> !llvm.ptr<i8>
-// CHECK:           %[[VAL_30:.*]] = llvm.ptrtoint %[[VAL_29]] : !llvm.ptr<i8> to i64
+// CHECK:           %[[VAL_28:.*]] = llvm.mlir.zero : !llvm.ptr
+// CHECK:           %[[VAL_29:.*]] = llvm.getelementptr %[[VAL_28]][1] : (!llvm.ptr) -> !llvm.ptr, i8
+// CHECK:           %[[VAL_30:.*]] = llvm.ptrtoint %[[VAL_29]] : !llvm.ptr to i64
 // CHECK:           %[[VAL_31:.*]] = llvm.mul %[[VAL_30]], %[[VAL_1]]  : i64
 // CHECK:           %[[VAL_42:.*]] = llvm.mul %[[VAL_31]], %[[VAL_5]]  : i64
-// CHECK:           %[[VAL_43:.*]] = llvm.insertvalue %[[VAL_42]], %{{.*}}[7, 0, 2] : !llvm.struct<(ptr<array<2 x array<1 x i8>>>, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
+// CHECK:           %[[VAL_43:.*]] = llvm.insertvalue %[[VAL_42]], %{{.*}}[7, 0, 2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>

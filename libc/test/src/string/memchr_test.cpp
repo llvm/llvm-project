@@ -13,7 +13,7 @@
 // A helper function that calls memchr and abstracts away the explicit cast for
 // readability purposes.
 const char *call_memchr(const void *src, int c, size_t size) {
-  return reinterpret_cast<const char *>(__llvm_libc::memchr(src, c, size));
+  return reinterpret_cast<const char *>(LIBC_NAMESPACE::memchr(src, c, size));
 }
 
 TEST(LlvmLibcMemChrTest, FindsCharacterAfterNullTerminator) {
@@ -80,10 +80,10 @@ TEST(LlvmLibcMemChrTest, TheSourceShouldNotChange) {
   const unsigned char src[size] = {'a', 'b', 'c', 'd', 'e', '\0'};
   const char *src_copy = reinterpret_cast<const char *>(src);
   // When the character is found, the source string should not change.
-  __llvm_libc::memchr(src, 'd', size);
+  LIBC_NAMESPACE::memchr(src, 'd', size);
   ASSERT_STREQ(reinterpret_cast<const char *>(src), src_copy);
   // Same case for when the character is not found.
-  __llvm_libc::memchr(src, 'z', size);
+  LIBC_NAMESPACE::memchr(src, 'z', size);
   ASSERT_STREQ(reinterpret_cast<const char *>(src), src_copy);
 }
 

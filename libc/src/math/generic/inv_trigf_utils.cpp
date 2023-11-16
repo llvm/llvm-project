@@ -8,7 +8,7 @@
 
 #include "inv_trigf_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // N[Table[ArcTan[x], {x, 1/16, 16/16, 1/16}], 40]
 alignas(64) const double ATAN_T[ATAN_T_SIZE] = {
@@ -25,4 +25,4 @@ alignas(64) const double ATAN_K[5] = {
     0x1.0000000000000p+0, -0x1.5555555555555p-2, 0x1.999999999999ap-3,
     -0x1.2492492492492p-3, 0x1.c71c71c71c71cp-4};
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

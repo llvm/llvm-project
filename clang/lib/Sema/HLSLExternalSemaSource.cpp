@@ -62,9 +62,9 @@ struct BuiltinTypeDeclBuilder {
       return;
     }
 
-    Record = CXXRecordDecl::Create(AST, TagDecl::TagKind::TTK_Class,
-                                   HLSLNamespace, SourceLocation(),
-                                   SourceLocation(), &II, PrevDecl, true);
+    Record = CXXRecordDecl::Create(AST, TagDecl::TagKind::Class, HLSLNamespace,
+                                   SourceLocation(), SourceLocation(), &II,
+                                   PrevDecl, true);
     Record->setImplicit(true);
     Record->setLexicalDeclContext(HLSLNamespace);
     Record->setHasExternalLexicalStorage();
@@ -115,9 +115,8 @@ struct BuiltinTypeDeclBuilder {
     return addMemberVariable("h", Ty, Access);
   }
 
-  BuiltinTypeDeclBuilder &
-  annotateResourceClass(HLSLResourceAttr::ResourceClass RC,
-                        HLSLResourceAttr::ResourceKind RK) {
+  BuiltinTypeDeclBuilder &annotateResourceClass(ResourceClass RC,
+                                                ResourceKind RK) {
     if (Record->isCompleteDefinition())
       return *this;
     Record->addAttr(
@@ -175,8 +174,8 @@ struct BuiltinTypeDeclBuilder {
                                   SourceLocation(), FPOptionsOverride());
 
     CXXThisExpr *This = CXXThisExpr::Create(
-        AST, SourceLocation(),
-        Constructor->getThisObjectType(), true);
+        AST, SourceLocation(), Constructor->getFunctionObjectParameterType(),
+        true);
     Expr *Handle = MemberExpr::CreateImplicit(AST, This, false, Fields["h"],
                                               Fields["h"]->getType(), VK_LValue,
                                               OK_Ordinary);
@@ -260,9 +259,9 @@ struct BuiltinTypeDeclBuilder {
     auto FnProtoLoc = TSInfo->getTypeLoc().getAs<FunctionProtoTypeLoc>();
     FnProtoLoc.setParam(0, IdxParam);
 
-    auto *This = CXXThisExpr::Create(
-        AST, SourceLocation(),
-        MethodDecl->getThisObjectType(), true);
+    auto *This =
+        CXXThisExpr::Create(AST, SourceLocation(),
+                            MethodDecl->getFunctionObjectParameterType(), true);
     auto *HandleAccess = MemberExpr::CreateImplicit(
         AST, This, false, Handle, Handle->getType(), VK_LValue, OK_Ordinary);
 
@@ -503,7 +502,6 @@ void HLSLExternalSemaSource::completeBufferType(CXXRecordDecl *Record) {
       .addHandleMember()
       .addDefaultHandleConstructor(*SemaPtr, ResourceClass::UAV)
       .addArraySubscriptOperators()
-      .annotateResourceClass(HLSLResourceAttr::UAV,
-                             HLSLResourceAttr::TypedBuffer)
+      .annotateResourceClass(ResourceClass::UAV, ResourceKind::TypedBuffer)
       .completeDefinition();
 }

@@ -24,9 +24,8 @@ bb4:                                              ; preds = %bb1
   ret i32 %add3
 }
 
-; NUMBER: Running pass 1 LoopSimplifyPass
-; NUMBER-NEXT: Running pass 2 LCSSAPass
-; NUMBER-NEXT: Running pass 3 IndVarSimplifyPass
-; NUMBER-NEXT: Running pass 4 LoopDeletionPass
-; NUMBER-NEXT: Running pass 5 VerifierPass
-; NUMBER-NEXT: Running pass 6 PrintModulePass
+; NUMBER:  Running pass 1 LoopSimplifyPass on bar
+; NUMBER-NEXT: Running pass 2 LCSSAPass on bar
+; NUMBER-NEXT: Running pass 3 IndVarSimplifyPass on bb1
+; NUMBER-NEXT: Running pass 4 LoopDeletionPass on bb1
+; NUMBER-NOT: Running pass

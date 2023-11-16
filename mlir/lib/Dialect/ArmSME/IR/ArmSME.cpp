@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -28,7 +29,10 @@ using namespace mlir::arm_sme;
 #include "mlir/Dialect/ArmSME/IR/ArmSMEEnums.cpp.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/ArmSME/IR/ArmSME.cpp.inc"
+#include "mlir/Dialect/ArmSME/IR/ArmSMEOps.cpp.inc"
+
+#define GET_OP_CLASSES
+#include "mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.cpp.inc"
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/ArmSME/IR/ArmSMETypes.cpp.inc"
@@ -44,7 +48,10 @@ void ArmSMEDialect::initialize() {
 
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/ArmSME/IR/ArmSME.cpp.inc"
+#include "mlir/Dialect/ArmSME/IR/ArmSMEOps.cpp.inc"
+      ,
+#define GET_OP_LIST
+#include "mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.cpp.inc"
       >();
 }
 

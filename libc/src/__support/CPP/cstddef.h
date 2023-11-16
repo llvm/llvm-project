@@ -12,7 +12,7 @@
 #include "src/__support/macros/attributes.h"
 #include "type_traits.h" // For enable_if_t, is_integral_v.
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 enum class byte : unsigned char {};
 
@@ -66,6 +66,6 @@ to_integer(byte b) noexcept {
   return static_cast<IntegerType>(b);
 }
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_CSTDDEF_H

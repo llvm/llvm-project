@@ -31,7 +31,7 @@ define void @fabs() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %26 = call <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %27 = call <vscale x 4 x double> @llvm.fabs.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %28 = call <vscale x 8 x double> @llvm.fabs.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 
   call half @llvm.fabs.f16(half undef)
@@ -86,7 +86,7 @@ define void @minnum() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = call <vscale x 2 x double> @llvm.minnum.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = call <vscale x 4 x double> @llvm.minnum.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = call <vscale x 8 x double> @llvm.minnum.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.minnum.f32(float undef, float undef)
   call <2 x float> @llvm.minnum.v2f32(<2 x float> undef, <2 x float> undef)
@@ -131,7 +131,7 @@ define void @maxnum() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = call <vscale x 2 x double> @llvm.maxnum.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = call <vscale x 4 x double> @llvm.maxnum.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = call <vscale x 8 x double> @llvm.maxnum.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.maxnum.f32(float undef, float undef)
   call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
@@ -176,7 +176,7 @@ define void @minimum() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %17 = call <vscale x 2 x double> @llvm.minimum.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = call <vscale x 4 x double> @llvm.minimum.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %19 = call <vscale x 8 x double> @llvm.minimum.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.minimum.f32(float undef, float undef)
   call <2 x float> @llvm.minimum.v2f32(<2 x float> undef, <2 x float> undef)
@@ -221,7 +221,7 @@ define void @maximum() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %17 = call <vscale x 2 x double> @llvm.maximum.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = call <vscale x 4 x double> @llvm.maximum.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %19 = call <vscale x 8 x double> @llvm.maximum.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.maximum.f32(float undef, float undef)
   call <2 x float> @llvm.maximum.v2f32(<2 x float> undef, <2 x float> undef)
@@ -266,7 +266,7 @@ define void @copysign() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = call <vscale x 2 x double> @llvm.copysign.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = call <vscale x 4 x double> @llvm.copysign.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = call <vscale x 8 x double> @llvm.copysign.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.copysign.f32(float undef, float undef)
   call <2 x float> @llvm.copysign.v2f32(<2 x float> undef, <2 x float> undef)

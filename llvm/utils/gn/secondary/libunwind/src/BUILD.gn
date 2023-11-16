@@ -33,6 +33,7 @@ unwind_sources = [
   "Unwind-EHABI.h",
   "Unwind-seh.cpp",
   "Unwind-sjlj.c",
+  "Unwind-wasm.c",
   "UnwindCursor.hpp",
   "UnwindLevel1-gcc-ext.c",
   "UnwindLevel1.c",

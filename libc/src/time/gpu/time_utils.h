@@ -11,7 +11,7 @@
 
 #include "src/__support/GPU/utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 #if defined(LIBC_TARGET_ARCH_IS_AMDGPU)
 // AMDGPU does not have a single set frequency. Different architectures and
@@ -49,6 +49,6 @@ extern "C" [[gnu::visibility("protected")]] uint64_t
 #error "Unsupported target"
 #endif
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TIME_GPU_TIME_UTILS_H

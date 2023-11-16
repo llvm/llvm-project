@@ -14,10 +14,9 @@ define i1 @n_unknown(ptr %dst, i32 %n, i32 %i) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       pre.bb.2:
-; CHECK-NEXT:    [[PRE_2:%.*]] = icmp uge i32 [[I:%.*]], 0
-; CHECK-NEXT:    br i1 [[PRE_2]], label [[TGT_BB:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br i1 true, label [[TGT_BB:%.*]], label [[EXIT]]
 ; CHECK:       tgt.bb:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[I]], [[N]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[I:%.*]], [[N]]
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
 entry:
@@ -50,10 +49,9 @@ define i1 @n_known_zero_due_to_nuw(ptr %dst, i32 %n, i32 %i) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       pre.bb.2:
-; CHECK-NEXT:    [[PRE_2:%.*]] = icmp uge i32 [[I:%.*]], 0
-; CHECK-NEXT:    br i1 [[PRE_2]], label [[TGT_BB:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br i1 true, label [[TGT_BB:%.*]], label [[EXIT]]
 ; CHECK:       tgt.bb:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[I]], [[N]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[I:%.*]], [[N]]
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
 entry:
@@ -86,10 +84,9 @@ define i4 @inc_ptr_N_could_be_negative(ptr %src, ptr %lower, ptr %upper, i8 %N, 
 ; CHECK:       trap.bb:
 ; CHECK-NEXT:    ret i4 2
 ; CHECK:       step.check:
-; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp uge i8 [[STEP:%.*]], 0
-; CHECK-NEXT:    [[NEXT:%.*]] = add nuw nsw i8 [[STEP]], 2
+; CHECK-NEXT:    [[NEXT:%.*]] = add nuw nsw i8 [[STEP:%.*]], 2
 ; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i8 [[NEXT]], [[N]]
-; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 [[STEP_POS]], [[STEP_ULT_N]]
+; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 true, [[STEP_ULT_N]]
 ; CHECK-NEXT:    br i1 [[AND_STEP]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[STEP]]
@@ -141,10 +138,9 @@ define i4 @inc_ptr_src_uge_end(ptr %src, ptr %lower, ptr %upper, i16 %N, i16 %st
 ; CHECK:       trap.bb:
 ; CHECK-NEXT:    ret i4 2
 ; CHECK:       step.check:
-; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp uge i16 [[STEP:%.*]], 0
-; CHECK-NEXT:    [[NEXT:%.*]] = add nuw nsw i16 [[STEP]], 2
+; CHECK-NEXT:    [[NEXT:%.*]] = add nuw nsw i16 [[STEP:%.*]], 2
 ; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i16 [[NEXT]], [[N]]
-; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 [[STEP_POS]], [[STEP_ULT_N]]
+; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 true, [[STEP_ULT_N]]
 ; CHECK-NEXT:    br i1 [[AND_STEP]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i16 [[STEP]]

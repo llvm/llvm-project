@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
   unsigned char uc = static_cast<unsigned char>(c);
@@ -23,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

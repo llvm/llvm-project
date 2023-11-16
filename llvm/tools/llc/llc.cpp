@@ -558,12 +558,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
         exit(1);
       }
 
-      // On AIX, setting the relocation model to anything other than PIC is
-      // considered a user error.
-      if (TheTriple.isOSAIX() && RM && *RM != Reloc::PIC_)
-        reportError("invalid relocation model, AIX only supports PIC",
-                    InputFilename);
-
       InitializeOptions(TheTriple);
       Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
           TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM, CM, OLvl));
@@ -607,14 +601,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
       return 1;
     }
 
-    // On AIX, setting the relocation model to anything other than PIC is
-    // considered a user error.
-    if (TheTriple.isOSAIX() && RM && *RM != Reloc::PIC_) {
-      WithColor::error(errs(), argv[0])
-          << "invalid relocation model, AIX only supports PIC.\n";
-      return 1;
-    }
-
     InitializeOptions(TheTriple);
     Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
         TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM, CM, OLvl));
@@ -628,7 +614,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   assert(M && "Should have exited if we didn't have a module!");
   if (codegen::getFloatABIForCalls() != FloatABI::Default)
-    Options.FloatABIType = codegen::getFloatABIForCalls();
+    Target->Options.FloatABIType = codegen::getFloatABIForCalls();
 
   // Figure out where we are going to send the output.
   std::unique_ptr<ToolOutputFile> Out =

@@ -17,8 +17,8 @@
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
 #include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
-#include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
-#include "mlir/Dialect/ArmSVE/Transforms.h"
+#include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
+#include "mlir/Dialect/ArmSVE/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -82,7 +82,6 @@ void LowerVectorToLLVMPass::runOnOperation() {
 
   // Convert to the LLVM IR dialect.
   LowerToLLVMOptions options(&getContext());
-  options.useOpaquePointers = useOpaquePointers;
   LLVMTypeConverter converter(&getContext(), options);
   RewritePatternSet patterns(&getContext());
   populateVectorMaskMaterializationPatterns(patterns, force32BitVectorIndices);

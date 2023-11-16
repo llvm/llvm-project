@@ -11,6 +11,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 DWARFDebugRanges::DWARFDebugRanges() : m_range_map() {}
 

@@ -120,27 +120,92 @@ struct AsanMapUnmapCallback {
 
 #if SANITIZER_CAN_USE_ALLOCATOR64
 # if SANITIZER_FUCHSIA
+// This is a sentinel indicating we do not want the primary allocator arena to
+// be placed at a fixed address. It will be anonymously mmap'd.
 const uptr kAllocatorSpace = ~(uptr)0;
-const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
+#    if SANITIZER_RISCV64
+
+// These are sanitizer tunings that allow all bringup tests for RISCV-64 Sv39 +
+// Fuchsia to run with asan-instrumented. That is, we can run bringup, e2e,
+// libc, and scudo tests with this configuration.
+//
+// TODO: This is specifically tuned for Sv39. 48/57 will likely require other
+// tunings, or possibly use the same tunings Fuchsia uses for other archs. The
+// VMA size isn't technically tied to the Fuchsia System ABI, so once 48/57 is
+// supported, we'd need a way of dynamically checking what the VMA size is and
+// determining optimal configuration.
+
+// This indicates the total amount of space dedicated for the primary allocator
+// during initialization. This is roughly proportional to the size set by the
+// FuchsiaConfig for scudo (~11.25GB == ~2^33.49). Requesting any more could
+// lead to some failures in sanitized bringup tests where we can't allocate new
+// vmars because there wouldn't be enough contiguous space. We could try 2^34 if
+// we re-evaluate the SizeClassMap settings.
+const uptr kAllocatorSize = UINT64_C(1) << 33;  // 8GB
+
+// This is roughly equivalent to the configuration for the VeryDenseSizeClassMap
+// but has fewer size classes (ideally at most 32). Fewer class sizes means the
+// region size for each class is larger, thus less chances of running out of
+// space for each region. The main differences are the MidSizeLog (which is
+// smaller) and the MaxSizeLog (which is larger).
+//
+// - The MaxSizeLog is higher to allow some of the largest allocations I've
+//   observed to be placed in the primary allocator's arena as opposed to being
+//   mmap'd by the secondary allocator. This helps reduce fragmentation from
+//   large classes. A huge example of this the scudo allocator tests (and its
+//   testing infrastructure) which malloc's/new's objects on the order of
+//   hundreds of kilobytes which normally would not be in the primary allocator
+//   arena with the default VeryDenseSizeClassMap.
+// - The MidSizeLog is reduced to help shrink the number of size classes and
+//   increase region size. Without this, we'd see ASan complain many times about
+//   a region running out of available space.
+//
+// This differs a bit from the fuchsia config in scudo, mainly from the NumBits,
+// MaxSizeLog, and NumCachedHintT. This should place the number of size classes
+// for scudo at 45 and some large objects allocated by this config would be
+// placed in the arena whereas scudo would mmap them. The asan allocator needs
+// to have a number of classes that are a power of 2 for various internal things
+// to work, so we can't match the scudo settings to a tee. The sanitizer
+// allocator is slightly slower than scudo's but this is enough to get
+// memory-intensive scudo tests to run with asan instrumentation.
+typedef SizeClassMap</*kNumBits=*/2,
+                     /*kMinSizeLog=*/5,
+                     /*kMidSizeLog=*/8,
+                     /*kMaxSizeLog=*/18,
+                     /*kNumCachedHintT=*/8,
+                     /*kMaxBytesCachedLog=*/10>
+    SizeClassMap;
+static_assert(SizeClassMap::kNumClassesRounded <= 32,
+              "The above tunings were specifically selected to ensure there "
+              "would be at most 32 size classes. This restriction could be "
+              "loosened to 64 size classes if we can find a configuration of "
+              "allocator size and SizeClassMap tunings that allows us to "
+              "reliably run all bringup tests in a sanitized environment.");
+
+#    else
+// These are the default allocator tunings for non-RISCV environments where the
+// VMA is usually 48 bits and we have lots of space.
+const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
 typedef DefaultSizeClassMap SizeClassMap;
-# elif defined(__powerpc64__)
+#    endif
+#  elif defined(__powerpc64__)
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize  =  0x20000000000ULL;  // 2T.
 typedef DefaultSizeClassMap SizeClassMap;
-# elif defined(__aarch64__) && SANITIZER_ANDROID
+#  elif defined(__aarch64__) && SANITIZER_ANDROID
 // Android needs to support 39, 42 and 48 bit VMA.
 const uptr kAllocatorSpace =  ~(uptr)0;
 const uptr kAllocatorSize  =  0x2000000000ULL;  // 128G.
 typedef VeryCompactSizeClassMap SizeClassMap;
-#elif SANITIZER_RISCV64
+#  elif SANITIZER_RISCV64
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize = 0x2000000000ULL;  // 128G.
 typedef VeryDenseSizeClassMap SizeClassMap;
-#elif defined(__sparc__)
+#  elif defined(__sparc__)
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize = 0x20000000000ULL;  // 2T.
 typedef DefaultSizeClassMap SizeClassMap;
-# elif SANITIZER_WINDOWS
+#  elif SANITIZER_WINDOWS
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize  =  0x8000000000ULL;  // 500G
 typedef DefaultSizeClassMap SizeClassMap;

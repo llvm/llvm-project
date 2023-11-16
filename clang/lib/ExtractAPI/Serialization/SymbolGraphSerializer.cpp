@@ -109,8 +109,8 @@ Object serializeSourcePosition(const PresumedLoc &Loc) {
   assert(Loc.isValid() && "invalid source position");
 
   Object SourcePosition;
-  SourcePosition["line"] = Loc.getLine();
-  SourcePosition["character"] = Loc.getColumn();
+  SourcePosition["line"] = Loc.getLine() - 1;
+  SourcePosition["character"] = Loc.getColumn() - 1;
 
   return SourcePosition;
 }
@@ -177,11 +177,11 @@ serializeAvailability(const AvailabilitySet &Availabilities) {
     if (AvailInfo.Unavailable)
       Availability["isUnconditionallyUnavailable"] = true;
     else {
-      serializeObject(Availability, "introducedVersion",
+      serializeObject(Availability, "introduced",
                       serializeSemanticVersion(AvailInfo.Introduced));
-      serializeObject(Availability, "deprecatedVersion",
+      serializeObject(Availability, "deprecated",
                       serializeSemanticVersion(AvailInfo.Deprecated));
-      serializeObject(Availability, "obsoletedVersion",
+      serializeObject(Availability, "obsoleted",
                       serializeSemanticVersion(AvailInfo.Obsoleted));
     }
     AvailabilityArray.emplace_back(std::move(Availability));
@@ -900,7 +900,7 @@ void SymbolGraphSerializer::visitCXXClassRecord(const CXXClassRecord &Record) {
     return;
 
   Symbols.emplace_back(std::move(*Class));
-  for (const auto Base : Record.Bases)
+  for (const auto &Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
   if (!Record.ParentInformation.empty())
     serializeRelationship(RelationshipKind::MemberOf, Record,
@@ -914,7 +914,7 @@ void SymbolGraphSerializer::visitClassTemplateRecord(
     return;
 
   Symbols.emplace_back(std::move(*Class));
-  for (const auto Base : Record.Bases)
+  for (const auto &Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
   if (!Record.ParentInformation.empty())
     serializeRelationship(RelationshipKind::MemberOf, Record,
@@ -929,7 +929,7 @@ void SymbolGraphSerializer::visitClassTemplateSpecializationRecord(
 
   Symbols.emplace_back(std::move(*Class));
 
-  for (const auto Base : Record.Bases)
+  for (const auto &Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
   if (!Record.ParentInformation.empty())
     serializeRelationship(RelationshipKind::MemberOf, Record,
@@ -944,7 +944,7 @@ void SymbolGraphSerializer::visitClassTemplatePartialSpecializationRecord(
 
   Symbols.emplace_back(std::move(*Class));
 
-  for (const auto Base : Record.Bases)
+  for (const auto &Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
   if (!Record.ParentInformation.empty())
     serializeRelationship(RelationshipKind::MemberOf, Record,

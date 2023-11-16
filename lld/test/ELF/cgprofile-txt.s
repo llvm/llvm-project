@@ -24,8 +24,19 @@
 # RUN: echo "TooManyPreds8 TooManyPreds 10" >> %t.call_graph
 # RUN: echo "TooManyPreds9 TooManyPreds 10" >> %t.call_graph
 # RUN: echo "TooManyPreds10 TooManyPreds 11" >> %t.call_graph
-# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph -o %t2
+# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph --call-graph-profile-sort=hfsort -o %t2
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s
+
+# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph --call-graph-profile-sort=cdsort -o %t2
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefix=CDSORT
+## --call-graph-profile-sort=cdsort is the default.
+# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph -o %t2b
+# RUN: cmp %t2 %t2b
+
+# RUN: not ld.lld -e A %t --call-graph-ordering-file %t.call_graph --call-graph-profile-sort=sort \
+# RUN:   -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+
+# UNKNOWN: error: unknown --call-graph-profile-sort= value: sort
 
     .section    .text.D,"ax",@progbits
 D:
@@ -158,6 +169,31 @@ TooManyPreds10:
 # CHECK-NEXT:     Value: 0x201140
 # CHECK:          Name: _init2
 # CHECK-NEXT:     Value: 0x201141
+
+# CDSORT:          Name: D
+# CDSORT-NEXT:     Value: 0x201123
+# CDSORT:          Name: TooManyPreds
+# CDSORT-NEXT:     Value: 0x20112F
+# CDSORT:          Name: TooManyPreds10
+# CDSORT-NEXT:     Value: 0x20112E
+# CDSORT:          Name: C
+# CDSORT-NEXT:     Value: 0x201122
+# CDSORT:          Name: B
+# CDSORT-NEXT:     Value: 0x201121
+# CDSORT:          Name: A
+# CDSORT-NEXT:     Value: 0x201120
+# CDSORT:          Name: TS
+# CDSORT-NEXT:     Value: 0x20113D
+# CDSORT:          Name: PP
+# CDSORT-NEXT:     Value: 0x20113C
+# CDSORT:          Name: QC
+# CDSORT-NEXT:     Value: 0x20113E
+# CDSORT:          Name: GB
+# CDSORT-NEXT:     Value: 0x20113F
+# CDSORT:          Name: _init
+# CDSORT-NEXT:     Value: 0x201140
+# CDSORT:          Name: _init2
+# CDSORT-NEXT:     Value: 0x201141
 
 # NOSORT:          Name: D
 # NOSORT-NEXT:     Value: 0x201120

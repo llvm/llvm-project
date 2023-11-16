@@ -256,10 +256,6 @@ IntegerType *Type::getIntNTy(LLVMContext &C, unsigned N) {
   return IntegerType::get(C, N);
 }
 
-PointerType *Type::getInt8PtrTy(LLVMContext &C, unsigned AS) {
-  return PointerType::get(C, AS);
-}
-
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
   // opaque pointer in addrspace(10)
   static PointerType *Ty = PointerType::get(C, 10);
@@ -841,7 +837,8 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
 
   // Opaque types in the AArch64 name space.
   if (Name == "aarch64.svcount")
-    return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16));
+    return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16),
+                          TargetExtType::HasZeroInit);
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }

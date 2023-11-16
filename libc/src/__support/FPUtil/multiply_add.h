@@ -14,7 +14,7 @@
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 // Implement a simple wrapper for multiply-add operation:
@@ -34,14 +34,14 @@ multiply_add(T x, T y, T z) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #if defined(LIBC_TARGET_CPU_HAS_FMA)
 
 // FMA instructions are available.
 #include "FMA.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 LIBC_INLINE float multiply_add(float x, float y, float z) {
@@ -53,7 +53,7 @@ LIBC_INLINE double multiply_add(double x, double y, double z) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LIBC_TARGET_CPU_HAS_FMA
 

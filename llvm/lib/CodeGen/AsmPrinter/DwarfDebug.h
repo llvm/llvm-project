@@ -103,6 +103,11 @@ public:
 
 class DbgVariable;
 
+bool operator<(const struct FrameIndexExpr &LHS,
+               const struct FrameIndexExpr &RHS);
+bool operator<(const struct EntryValueInfo &LHS,
+               const struct EntryValueInfo &RHS);
+
 /// Proxy for one MMI entry.
 struct FrameIndexExpr {
   int FI;
@@ -491,7 +496,7 @@ private:
   AddressPool AddrPool;
 
   /// Accelerator tables.
-  AccelTable<DWARF5AccelTableData> AccelDebugNames;
+  DWARF5AccelTable AccelDebugNames;
   AccelTable<AppleAccelTableOffsetData> AccelNames;
   AccelTable<AppleAccelTableOffsetData> AccelObjC;
   AccelTable<AppleAccelTableOffsetData> AccelNamespace;

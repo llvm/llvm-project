@@ -12,7 +12,7 @@ declare void @use_vec(<2 x i5>)
 define i64 @test1(i32 %x) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[T:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[S:%.*]] = zext i32 [[T]] to i64
+; CHECK-NEXT:    [[S:%.*]] = zext nneg i32 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[S]]
 ;
   %t = call i32 @llvm.ctpop.i32(i32 %x)
@@ -23,7 +23,7 @@ define i64 @test1(i32 %x) {
 define i64 @test2(i32 %x) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[T:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), !range [[RNG0]]
-; CHECK-NEXT:    [[S:%.*]] = zext i32 [[T]] to i64
+; CHECK-NEXT:    [[S:%.*]] = zext nneg i32 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[S]]
 ;
   %t = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
@@ -34,7 +34,7 @@ define i64 @test2(i32 %x) {
 define i64 @test3(i32 %x) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[T:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true), !range [[RNG0]]
-; CHECK-NEXT:    [[S:%.*]] = zext i32 [[T]] to i64
+; CHECK-NEXT:    [[S:%.*]] = zext nneg i32 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[S]]
 ;
   %t = call i32 @llvm.cttz.i32(i32 %x, i1 true)
@@ -45,7 +45,7 @@ define i64 @test3(i32 %x) {
 define i64 @test4(i32 %x) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[T:%.*]] = udiv i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[S:%.*]] = zext i32 [[T]] to i64
+; CHECK-NEXT:    [[S:%.*]] = zext nneg i32 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[S]]
 ;
   %t = udiv i32 %x, 3
@@ -56,7 +56,7 @@ define i64 @test4(i32 %x) {
 define i64 @test5(i32 %x) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[T:%.*]] = urem i32 [[X:%.*]], 30000
-; CHECK-NEXT:    [[S:%.*]] = zext i32 [[T]] to i64
+; CHECK-NEXT:    [[S:%.*]] = zext nneg i32 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[S]]
 ;
   %t = urem i32 %x, 30000
@@ -68,7 +68,7 @@ define i64 @test6(i32 %x) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[U:%.*]] = lshr i32 [[X:%.*]], 3
 ; CHECK-NEXT:    [[T:%.*]] = mul nuw nsw i32 [[U]], 3
-; CHECK-NEXT:    [[S:%.*]] = zext i32 [[T]] to i64
+; CHECK-NEXT:    [[S:%.*]] = zext nneg i32 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[S]]
 ;
   %u = lshr i32 %x, 3
@@ -81,7 +81,7 @@ define i64 @test7(i32 %x) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[T:%.*]] = and i32 [[X:%.*]], 511
 ; CHECK-NEXT:    [[U:%.*]] = sub nuw nsw i32 20000, [[T]]
-; CHECK-NEXT:    [[S:%.*]] = zext i32 [[U]] to i64
+; CHECK-NEXT:    [[S:%.*]] = zext nneg i32 [[U]] to i64
 ; CHECK-NEXT:    ret i64 [[S]]
 ;
   %t = and i32 %x, 511
@@ -296,7 +296,7 @@ define i32 @test17(i1 %x) {
 define i32 @test18(i16 %x) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:    [[SEL:%.*]] = call i16 @llvm.smax.i16(i16 [[X:%.*]], i16 0)
-; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[SEL]] to i32
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i16 [[SEL]] to i32
 ; CHECK-NEXT:    ret i32 [[EXT]]
 ;
   %cmp = icmp slt i16 %x, 0

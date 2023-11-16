@@ -11,12 +11,12 @@
 
 #include <stdio.h> // For SEEK_* macros
 
-using File = __llvm_libc::File;
+using File = LIBC_NAMESPACE::File;
 constexpr char TEXT[] = "Hello, File";
 constexpr size_t TEXT_SIZE = sizeof(TEXT) - 1; // Ignore the null terminator
 
 LIBC_INLINE File *openfile(const char *file_name, const char *mode) {
-  auto error_or_file = __llvm_libc::openfile(file_name, mode);
+  auto error_or_file = LIBC_NAMESPACE::openfile(file_name, mode);
   return error_or_file.has_value() ? error_or_file.value() : nullptr;
 }
 

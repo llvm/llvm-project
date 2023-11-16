@@ -24,8 +24,6 @@
 namespace llvm {
 namespace object {
 
-using support::endianness;
-
 template <class ELFT> struct Elf_Ehdr_Impl;
 template <class ELFT> struct Elf_Shdr_Impl;
 template <class ELFT> struct Elf_Sym_Impl;
@@ -92,10 +90,10 @@ public:
   using Off = packed<uint>;
 };
 
-using ELF32LE = ELFType<support::little, false>;
-using ELF32BE = ELFType<support::big, false>;
-using ELF64LE = ELFType<support::little, true>;
-using ELF64BE = ELFType<support::big, true>;
+using ELF32LE = ELFType<llvm::endianness::little, false>;
+using ELF32BE = ELFType<llvm::endianness::big, false>;
+using ELF64LE = ELFType<llvm::endianness::little, true>;
+using ELF64BE = ELFType<llvm::endianness::big, true>;
 
 // Use an alignment of 2 for the typedefs since that is the worst case for
 // ELF files in archives.
@@ -742,7 +740,7 @@ template <class ELFT> struct Elf_CGProfile_Impl {
 template <class ELFT>
 struct Elf_Mips_RegInfo;
 
-template <support::endianness TargetEndianness>
+template <llvm::endianness TargetEndianness>
 struct Elf_Mips_RegInfo<ELFType<TargetEndianness, false>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
   Elf_Word ri_gprmask;     // bit-mask of used general registers
@@ -750,7 +748,7 @@ struct Elf_Mips_RegInfo<ELFType<TargetEndianness, false>> {
   Elf_Addr ri_gp_value;    // gp register value
 };
 
-template <support::endianness TargetEndianness>
+template <llvm::endianness TargetEndianness>
 struct Elf_Mips_RegInfo<ELFType<TargetEndianness, true>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
   Elf_Word ri_gprmask;     // bit-mask of used general registers

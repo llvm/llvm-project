@@ -19,7 +19,7 @@
 
 int main(int, char**)
 {
-    // expected-error-re@variant:* 1 {{{{(static_assert|static assertion)}} failed}}
+    // expected-error@variant:* 1 {{static assertion failed}}
     std::variant<> v; // expected-note {{requested here}}
 
   return 0;

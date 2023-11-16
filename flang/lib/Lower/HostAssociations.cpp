@@ -508,12 +508,13 @@ void Fortran::lower::HostAssociations::addSymbolsToBind(
          "must be initially empty");
   this->hostScope = &hostScope;
   for (const auto *s : symbols)
-    if (Fortran::lower::symbolIsGlobal(*s))
+    if (Fortran::lower::symbolIsGlobal(*s)) {
       // The ultimate symbol is stored here so that global symbols from the
       // host scope can later be searched in this set.
       globalSymbols.insert(&s->GetUltimate());
-    else
+    } else {
       tupleSymbols.insert(s);
+    }
 }
 
 void Fortran::lower::HostAssociations::hostProcedureBindings(

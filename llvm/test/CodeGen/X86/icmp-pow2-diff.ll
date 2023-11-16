@@ -215,29 +215,28 @@ define <16 x i1> @andnot_ne_v16i8_fail_max_not_n1(<16 x i8> %x) nounwind {
 ; AVX512-LABEL: andnot_ne_v16i8_fail_max_not_n1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; AVX512-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm0
-; AVX512-NEXT:    vpandn %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq $54, %xmm2, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX2-LABEL: andnot_ne_v16i8_fail_max_not_n1:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm1
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; AVX2-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm0
-; AVX2-NEXT:    vpandn %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; SSE-LABEL: andnot_ne_v16i8_fail_max_not_n1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; SSE-NEXT:    pcmpgtb %xmm0, %xmm2
-; SSE-NEXT:    pandn %xmm2, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    pcmpeqb %xmm1, %xmm2
+; SSE-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm0
 ; SSE-NEXT:    retq
   %cmp1 = icmp ne <16 x i8> %x, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %cmp2 = icmp ne <16 x i8> %x, <i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127>

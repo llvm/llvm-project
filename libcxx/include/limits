@@ -43,8 +43,8 @@ public:
     static constexpr bool has_infinity = false;
     static constexpr bool has_quiet_NaN = false;
     static constexpr bool has_signaling_NaN = false;
-    static constexpr float_denorm_style has_denorm = denorm_absent;
-    static constexpr bool has_denorm_loss = false;
+    static constexpr float_denorm_style has_denorm = denorm_absent; // deprecated in C++23
+    static constexpr bool has_denorm_loss = false;                  // deprecated in C++23
     static constexpr T infinity() noexcept;
     static constexpr T quiet_NaN() noexcept;
     static constexpr T signaling_NaN() noexcept;
@@ -68,7 +68,7 @@ enum float_round_style
     round_toward_neg_infinity =  3
 };
 
-enum float_denorm_style
+enum float_denorm_style // deprecated in C++23
 {
     denorm_indeterminate = -1,
     denorm_absent = 0,
@@ -128,7 +128,7 @@ enum float_round_style
     round_toward_neg_infinity =  3
 };
 
-enum float_denorm_style
+enum _LIBCPP_DEPRECATED_IN_CXX23 float_denorm_style
 {
     denorm_indeterminate = -1,
     denorm_absent = 0,
@@ -164,8 +164,8 @@ protected:
     static _LIBCPP_CONSTEXPR const bool has_infinity = false;
     static _LIBCPP_CONSTEXPR const bool has_quiet_NaN = false;
     static _LIBCPP_CONSTEXPR const bool has_signaling_NaN = false;
-    static _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_absent;
-    static _LIBCPP_CONSTEXPR const bool has_denorm_loss = false;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_absent;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss = false;
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {return type();}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {return type();}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {return type();}
@@ -224,8 +224,8 @@ protected:
     static _LIBCPP_CONSTEXPR const bool has_infinity = false;
     static _LIBCPP_CONSTEXPR const bool has_quiet_NaN = false;
     static _LIBCPP_CONSTEXPR const bool has_signaling_NaN = false;
-    static _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_absent;
-    static _LIBCPP_CONSTEXPR const bool has_denorm_loss = false;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_absent;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss = false;
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {return type(0);}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {return type(0);}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {return type(0);}
@@ -277,8 +277,8 @@ protected:
     static _LIBCPP_CONSTEXPR const bool has_infinity = false;
     static _LIBCPP_CONSTEXPR const bool has_quiet_NaN = false;
     static _LIBCPP_CONSTEXPR const bool has_signaling_NaN = false;
-    static _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_absent;
-    static _LIBCPP_CONSTEXPR const bool has_denorm_loss = false;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_absent;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss = false;
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {return type(0);}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {return type(0);}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {return type(0);}
@@ -323,8 +323,8 @@ protected:
     static _LIBCPP_CONSTEXPR const bool has_infinity = true;
     static _LIBCPP_CONSTEXPR const bool has_quiet_NaN = true;
     static _LIBCPP_CONSTEXPR const bool has_signaling_NaN = true;
-    static _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_present;
-    static _LIBCPP_CONSTEXPR const bool has_denorm_loss = false;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_present;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss = false;
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {return __builtin_huge_valf();}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {return __builtin_nanf("");}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {return __builtin_nansf("");}
@@ -373,8 +373,8 @@ protected:
     static _LIBCPP_CONSTEXPR const bool has_infinity = true;
     static _LIBCPP_CONSTEXPR const bool has_quiet_NaN = true;
     static _LIBCPP_CONSTEXPR const bool has_signaling_NaN = true;
-    static _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_present;
-    static _LIBCPP_CONSTEXPR const bool has_denorm_loss = false;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_present;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss = false;
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {return __builtin_huge_val();}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {return __builtin_nan("");}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {return __builtin_nans("");}
@@ -423,8 +423,8 @@ protected:
     static _LIBCPP_CONSTEXPR const bool has_infinity = true;
     static _LIBCPP_CONSTEXPR const bool has_quiet_NaN = true;
     static _LIBCPP_CONSTEXPR const bool has_signaling_NaN = true;
-    static _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_present;
-    static _LIBCPP_CONSTEXPR const bool has_denorm_loss = false;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_present;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss = false;
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {return __builtin_huge_vall();}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {return __builtin_nanl("");}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {return __builtin_nansl("");}
@@ -477,8 +477,10 @@ public:
     static _LIBCPP_CONSTEXPR const bool has_infinity = __base::has_infinity;
     static _LIBCPP_CONSTEXPR const bool has_quiet_NaN = __base::has_quiet_NaN;
     static _LIBCPP_CONSTEXPR const bool has_signaling_NaN = __base::has_signaling_NaN;
-    static _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = __base::has_denorm;
-    static _LIBCPP_CONSTEXPR const bool has_denorm_loss = __base::has_denorm_loss;
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = __base::has_denorm;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss = __base::has_denorm_loss;
+_LIBCPP_SUPPRESS_DEPRECATED_POP
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {return __base::infinity();}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {return __base::quiet_NaN();}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {return __base::signaling_NaN();}
@@ -570,8 +572,10 @@ public:
     static _LIBCPP_CONSTEXPR const bool has_infinity = __base::has_infinity;
     static _LIBCPP_CONSTEXPR const bool has_quiet_NaN = __base::has_quiet_NaN;
     static _LIBCPP_CONSTEXPR const bool has_signaling_NaN = __base::has_signaling_NaN;
-    static _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = __base::has_denorm;
-    static _LIBCPP_CONSTEXPR const bool has_denorm_loss = __base::has_denorm_loss;
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = __base::has_denorm;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss = __base::has_denorm_loss;
+_LIBCPP_SUPPRESS_DEPRECATED_POP
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {return __base::infinity();}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {return __base::quiet_NaN();}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {return __base::signaling_NaN();}
@@ -663,8 +667,10 @@ public:
     static _LIBCPP_CONSTEXPR const bool has_infinity = __base::has_infinity;
     static _LIBCPP_CONSTEXPR const bool has_quiet_NaN = __base::has_quiet_NaN;
     static _LIBCPP_CONSTEXPR const bool has_signaling_NaN = __base::has_signaling_NaN;
-    static _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = __base::has_denorm;
-    static _LIBCPP_CONSTEXPR const bool has_denorm_loss = __base::has_denorm_loss;
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = __base::has_denorm;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss = __base::has_denorm_loss;
+_LIBCPP_SUPPRESS_DEPRECATED_POP
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {return __base::infinity();}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {return __base::quiet_NaN();}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {return __base::signaling_NaN();}
@@ -756,8 +762,10 @@ public:
     static _LIBCPP_CONSTEXPR const bool has_infinity = __base::has_infinity;
     static _LIBCPP_CONSTEXPR const bool has_quiet_NaN = __base::has_quiet_NaN;
     static _LIBCPP_CONSTEXPR const bool has_signaling_NaN = __base::has_signaling_NaN;
-    static _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = __base::has_denorm;
-    static _LIBCPP_CONSTEXPR const bool has_denorm_loss = __base::has_denorm_loss;
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = __base::has_denorm;
+    static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss = __base::has_denorm_loss;
+_LIBCPP_SUPPRESS_DEPRECATED_POP
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {return __base::infinity();}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {return __base::quiet_NaN();}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {return __base::signaling_NaN();}

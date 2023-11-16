@@ -16,7 +16,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 int printf_main(Writer *writer, const char *__restrict str,
@@ -39,4 +39,4 @@ int printf_main(Writer *writer, const char *__restrict str,
 }
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

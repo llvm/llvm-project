@@ -15,7 +15,7 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcSymlinkTest, CreateAndUnlink) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE_BASE = "symlink.test";
   constexpr const char *TEST_FILE = "testdata/symlink.test";
   constexpr const char *TEST_FILE_LINK = "testdata/symlink.test.symlink";
@@ -26,26 +26,26 @@ TEST(LlvmLibcSymlinkTest, CreateAndUnlink) {
   //   3. Open the symlink to check that the symlink was created.
   //   4. Cleanup the file and its symlink.
   libc_errno = 0;
-  int write_fd = __llvm_libc::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
+  int write_fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(write_fd, 0);
-  ASSERT_THAT(__llvm_libc::close(write_fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(write_fd), Succeeds(0));
 
-  ASSERT_THAT(__llvm_libc::symlink(TEST_FILE_BASE, TEST_FILE_LINK),
+  ASSERT_THAT(LIBC_NAMESPACE::symlink(TEST_FILE_BASE, TEST_FILE_LINK),
               Succeeds(0));
 
-  int symlink_fd = __llvm_libc::open(TEST_FILE_LINK, O_PATH);
+  int symlink_fd = LIBC_NAMESPACE::open(TEST_FILE_LINK, O_PATH);
   ASSERT_GT(symlink_fd, 0);
   ASSERT_EQ(libc_errno, 0);
-  ASSERT_THAT(__llvm_libc::close(symlink_fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(symlink_fd), Succeeds(0));
 
-  ASSERT_THAT(__llvm_libc::unlink(TEST_FILE), Succeeds(0));
-  ASSERT_THAT(__llvm_libc::unlink(TEST_FILE_LINK), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE_LINK), Succeeds(0));
 }
 
 TEST(LlvmLibcSymlinkTest, SymlinkInNonExistentPath) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-  ASSERT_THAT(__llvm_libc::symlink("non-existent-dir/non-existent-file",
-                                   "non-existent-dir/bad-symlink"),
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+  ASSERT_THAT(LIBC_NAMESPACE::symlink("non-existent-dir/non-existent-file",
+                                      "non-existent-dir/bad-symlink"),
               Fails(ENOENT));
 }

@@ -12,12 +12,12 @@
 
 #include <math.h>
 
-template <typename T> class SqrtTest : public __llvm_libc::testing::Test {
+template <typename T> class SqrtTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
   static constexpr UIntType HIDDEN_BIT =
-      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::VALUE;
+      UIntType(1) << LIBC_NAMESPACE::fputil::MantissaWidth<T>::VALUE;
 
 public:
   typedef T (*SqrtFunc)(T);

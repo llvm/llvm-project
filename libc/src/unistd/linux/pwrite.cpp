@@ -15,18 +15,18 @@
 #include <stdint.h>      // For uint64_t.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(ssize_t, pwrite,
                    (int fd, const void *buf, size_t count, off_t offset)) {
 #ifdef LIBC_TARGET_ARCH_IS_RISCV32
   static_assert(sizeof(off_t) == 8);
-  ssize_t ret = __llvm_libc::syscall_impl<ssize_t>(
+  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(
       SYS_pwrite64, fd, buf, count, (long)offset,
       (long)(((uint64_t)(offset)) >> 32));
 #else
-  ssize_t ret =
-      __llvm_libc::syscall_impl<ssize_t>(SYS_pwrite64, fd, buf, count, offset);
+  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_pwrite64, fd, buf,
+                                                      count, offset);
 #endif
   if (ret < 0) {
     libc_errno = static_cast<int>(-ret);
@@ -35,4 +35,4 @@ LLVM_LIBC_FUNCTION(ssize_t, pwrite,
   return ret;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

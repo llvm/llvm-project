@@ -12,7 +12,7 @@
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // This calls the associated function pointer on the RPC server with the given
 // arguments. We expect that the pointer here is a valid pointer on the server.
@@ -26,4 +26,4 @@ LLVM_LIBC_FUNCTION(void, rpc_host_call, (void *fn, void *data, size_t size)) {
   port.close();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

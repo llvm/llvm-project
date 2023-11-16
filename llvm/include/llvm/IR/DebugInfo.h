@@ -16,7 +16,9 @@
 #ifndef LLVM_IR_DEBUGINFO_H
 #define LLVM_IR_DEBUGINFO_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -259,11 +261,35 @@ struct VarRecord {
   }
 };
 
+} // namespace at
+
+template <> struct DenseMapInfo<at::VarRecord> {
+  static inline at::VarRecord getEmptyKey() {
+    return at::VarRecord(DenseMapInfo<DILocalVariable *>::getEmptyKey(),
+                         DenseMapInfo<DILocation *>::getEmptyKey());
+  }
+
+  static inline at::VarRecord getTombstoneKey() {
+    return at::VarRecord(DenseMapInfo<DILocalVariable *>::getTombstoneKey(),
+                         DenseMapInfo<DILocation *>::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const at::VarRecord &Var) {
+    return hash_combine(Var.Var, Var.DL);
+  }
+
+  static bool isEqual(const at::VarRecord &A, const at::VarRecord &B) {
+    return A == B;
+  }
+};
+
+namespace at {
 /// Map of backing storage to a set of variables that are stored to it.
 /// TODO: Backing storage shouldn't be limited to allocas only. Some local
 /// variables have their storage allocated by the calling function (addresses
 /// passed in with sret & byval parameters).
-using StorageToVarsMap = DenseMap<const AllocaInst *, SmallSet<VarRecord, 2>>;
+using StorageToVarsMap =
+    DenseMap<const AllocaInst *, SmallSetVector<VarRecord, 2>>;
 
 /// Track assignments to \p Vars between \p Start and \p End.
 
@@ -314,6 +340,7 @@ public:
 
 /// Return true if assignment tracking is enabled for module \p M.
 bool isAssignmentTrackingEnabled(const Module &M);
+
 } // end namespace llvm
 
 #endif // LLVM_IR_DEBUGINFO_H

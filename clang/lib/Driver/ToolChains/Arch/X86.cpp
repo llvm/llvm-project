@@ -229,6 +229,29 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
         << D.getOpts().getOptionName(LVIOpt);
   }
 
+  for (const Arg *A : Args.filtered(options::OPT_m_x86_AVX10_Features_Group)) {
+    StringRef Name = A->getOption().getName();
+    A->claim();
+
+    // Skip over "-m".
+    assert(Name.startswith("m") && "Invalid feature name.");
+    Name = Name.substr(1);
+
+    bool IsNegative = Name.startswith("no-");
+    if (IsNegative)
+      Name = Name.substr(3);
+
+#ifndef NDEBUG
+    assert(Name.startswith("avx10.") && "Invalid AVX10 feature name.");
+    StringRef Version, Width;
+    std::tie(Version, Width) = Name.substr(6).split('-');
+    assert(Version == "1" && "Invalid AVX10 feature name.");
+    assert((Width == "256" || Width == "512") && "Invalid AVX10 feature name.");
+#endif
+
+    Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
+  }
+
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.
   for (const Arg *A : Args.filtered(options::OPT_m_x86_Features_Group,

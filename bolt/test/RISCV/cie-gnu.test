@@ -1,0 +1,17 @@
+# Test that BOLT can handle CIE's produced by GNU as. On RISC-V, GNU as produces
+# the following initial instruction:
+# DW_CFA_def_cfa_register: r2
+# While I believe it is technically incorrect to use this instruction without
+# first using a DW_CFA_def_cfa (since the offset is unspecified), both readelf
+# and llvm-dwarfdump accept this and implicitly set the offset to 0.
+# In BOLT, this used to trigger an assert, however, since it (correctly)
+# believed the offset was not set. This test checks we can handle this
+# situation.
+
+RUN: yaml2obj -o %t %p/Inputs/cie-gnu.yaml
+RUN: llvm-bolt -o %t.bolt %t --reorder-blocks=reverse
+RUN: llvm-dwarfdump --debug-frame %t.bolt | FileCheck %s
+
+CHECK: 0x400000: CFA=X2
+CHECK: 0x400004: CFA=X2: X5=undefined
+CHECK: 0x400006: CFA=X2

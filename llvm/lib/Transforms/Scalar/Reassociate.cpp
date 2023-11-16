@@ -2253,8 +2253,8 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   if (I->getOpcode() == Instruction::Or &&
       shouldConvertOrWithNoCommonBitsToAdd(I) && !isLoadCombineCandidate(I) &&
       haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1),
-                          I->getModule()->getDataLayout(), /*AC=*/nullptr, I,
-                          /*DT=*/nullptr)) {
+                          SimplifyQuery(I->getModule()->getDataLayout(),
+                                        /*DT=*/nullptr, /*AC=*/nullptr, I))) {
     Instruction *NI = convertOrWithNoCommonBitsToAdd(I);
     RedoInsts.insert(I);
     MadeChange = true;

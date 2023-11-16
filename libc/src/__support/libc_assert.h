@@ -25,7 +25,7 @@
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // This is intended to be removed in a future patch to use a similar design to
 // below, but it's necessary for the external assert.
@@ -43,7 +43,7 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
   write_to_stderr("'\n");
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #ifdef LIBC_ASSERT
 #error "Unexpected: LIBC_ASSERT macro already defined"
@@ -71,12 +71,12 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
 #define LIBC_ASSERT(COND)                                                      \
   do {                                                                         \
     if (!(COND)) {                                                             \
-      __llvm_libc::write_to_stderr(__FILE__ ":" __LIBC_LINE_STR__              \
-                                            ": Assertion failed: '" #COND      \
-                                            "' in function: '");               \
-      __llvm_libc::write_to_stderr(__PRETTY_FUNCTION__);                       \
-      __llvm_libc::write_to_stderr("'\n");                                     \
-      __llvm_libc::quick_exit(0xFF);                                           \
+      LIBC_NAMESPACE::write_to_stderr(__FILE__ ":" __LIBC_LINE_STR__           \
+                                               ": Assertion failed: '" #COND   \
+                                               "' in function: '");            \
+      LIBC_NAMESPACE::write_to_stderr(__PRETTY_FUNCTION__);                    \
+      LIBC_NAMESPACE::write_to_stderr("'\n");                                  \
+      LIBC_NAMESPACE::quick_exit(0xFF);                                        \
     }                                                                          \
   } while (false)
 #endif // NDEBUG

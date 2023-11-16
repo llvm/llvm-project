@@ -1,5 +1,5 @@
 ! Test basic parts of derived type entities lowering
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Note: only testing non parameterized derived type here.
 
@@ -67,8 +67,7 @@ subroutine scalar_character_ref()
   ! CHECK: %[[field:.*]] = fir.field_index ch, !fir.type<_QMdTc{ch:!fir.char<1,10>}>
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[alloc]], %[[field]] : (!fir.ref<!fir.type<_QMdTc{ch:!fir.char<1,10>}>>, !fir.field) -> !fir.ref<!fir.char<1,10>>
   ! CHECK-DAG: %[[c10:.*]] = arith.constant 10 : index
-  ! CHECK-DAG: %[[conv:.*]] = fir.convert %[[coor]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,?>>
-  ! CHECK: fir.emboxchar %[[conv]], %c10 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: fir.emboxchar %[[coor]], %c10 : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
   call char_bar(some_c%ch)
 end subroutine
 
@@ -95,7 +94,7 @@ subroutine char_array_comp_elt_ref()
   ! CHECK-DAG: %[[index1:.*]] = arith.subi %c5{{.*}}, %c1{{.*}} : i64
   ! CHECK-DAG: %[[index2:.*]] = arith.subi %c6{{.*}}, %c1{{.*}} : i64
   ! CHECK: fir.coordinate_of %[[coor]], %[[index1]], %[[index2]] : (!fir.ref<!fir.array<20x30x!fir.char<1,10>>>, i64, i64) -> !fir.ref<!fir.char<1,10>>
-  ! CHECK: fir.emboxchar %{{.*}}, %c10 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: fir.emboxchar %{{.*}}, %c10 : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
   call char_bar(some_c2%ch_array(5, 6))
 end subroutine
 
@@ -115,7 +114,7 @@ subroutine char_array_elt_comp_ref()
   type(c) :: some_c_array(100)
   ! CHECK: fir.coordinate_of %{{.*}}, %{{.*}} : (!fir.ref<!fir.array<100x!fir.type<_QMdTc{ch:!fir.char<1,10>}>>>, i64) -> !fir.ref<!fir.type<_QMdTc{ch:!fir.char<1,10>}>>
   ! CHECK: fir.coordinate_of %{{.*}}, %{{.*}} : (!fir.ref<!fir.type<_QMdTc{ch:!fir.char<1,10>}>>, !fir.field) -> !fir.ref<!fir.char<1,10>>
-  ! CHECK: fir.emboxchar %{{.*}}, %c10{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: fir.emboxchar %{{.*}}, %c10{{.*}} : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
   call char_bar(some_c_array(5)%ch)
 end subroutine
 

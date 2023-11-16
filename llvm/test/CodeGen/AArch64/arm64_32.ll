@@ -649,7 +649,7 @@ define <2 x ptr> @test_pointer_vec_load(ptr %addr) {
 define void @test_inline_asm_mem_pointer(ptr %in) {
 ; CHECK-LABEL: test_inline_asm_mem_pointer:
 ; CHECK: str w0,
-  tail call void asm sideeffect "ldr x0, $0", "rm"(ptr %in)
+  tail call void asm sideeffect "ldr x0, $0", "m"(ptr %in)
   ret void
 }
 

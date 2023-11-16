@@ -214,7 +214,7 @@ void IntrinsicEmitter::EmitTargetInfo(const CodeGenIntrinsicTable &Ints,
      << "  size_t Count;\n"
      << "};\n";
   OS << "static constexpr IntrinsicTargetInfo TargetInfos[] = {\n";
-  for (auto Target : Ints.Targets)
+  for (const auto &Target : Ints.Targets)
     OS << "  {llvm::StringLiteral(\"" << Target.Name << "\"), " << Target.Offset
        << ", " << Target.Count << "},\n";
   OS << "};\n";

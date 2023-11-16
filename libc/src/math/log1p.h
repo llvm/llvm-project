@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_LOG1P_H
 #define LLVM_LIBC_SRC_MATH_LOG1P_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 double log1p(double x);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_LOG1P_H

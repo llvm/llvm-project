@@ -13,7 +13,7 @@
 
 #include <fenv.h>
 
-namespace __llvm_libc::fputil {
+namespace LIBC_NAMESPACE::fputil {
 
 // Quick free-standing test whether fegetround() == FE_UPWARD.
 // Using the following observation:
@@ -74,6 +74,6 @@ LIBC_INLINE int quick_get_round() {
   return (2.0f + y == 2.0f) ? FE_TONEAREST : FE_UPWARD;
 }
 
-} // namespace __llvm_libc::fputil
+} // namespace LIBC_NAMESPACE::fputil
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_ROUNDING_MODE_H

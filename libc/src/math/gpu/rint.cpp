@@ -9,8 +9,8 @@
 #include "src/math/rint.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, rint, (double x)) { return __builtin_rint(x); }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

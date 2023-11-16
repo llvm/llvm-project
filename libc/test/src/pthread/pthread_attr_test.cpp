@@ -25,89 +25,95 @@
 
 TEST(LlvmLibcPThreadAttrTest, InitAndDestroy) {
   pthread_attr_t attr;
-  ASSERT_EQ(__llvm_libc::pthread_attr_init(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
 
   int detachstate;
-  ASSERT_EQ(__llvm_libc::pthread_attr_getdetachstate(&attr, &detachstate), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getdetachstate(&attr, &detachstate),
+            0);
   ASSERT_EQ(detachstate, int(PTHREAD_CREATE_JOINABLE));
 
   size_t guardsize;
-  ASSERT_EQ(__llvm_libc::pthread_attr_getguardsize(&attr, &guardsize), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getguardsize(&attr, &guardsize), 0);
   ASSERT_EQ(guardsize, size_t(EXEC_PAGESIZE));
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_destroy(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
 }
 
 TEST(LlvmLibcPThreadattrTest, SetAndGetDetachState) {
   pthread_attr_t attr;
-  ASSERT_EQ(__llvm_libc::pthread_attr_init(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
 
   int detachstate;
-  __llvm_libc::pthread_attr_getdetachstate(&attr, &detachstate);
+  LIBC_NAMESPACE::pthread_attr_getdetachstate(&attr, &detachstate);
   ASSERT_EQ(detachstate, int(PTHREAD_CREATE_JOINABLE));
-  ASSERT_EQ(
-      __llvm_libc::pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED),
-      0);
-  ASSERT_EQ(__llvm_libc::pthread_attr_getdetachstate(&attr, &detachstate), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setdetachstate(
+                &attr, PTHREAD_CREATE_DETACHED),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getdetachstate(&attr, &detachstate),
+            0);
   ASSERT_EQ(detachstate, int(PTHREAD_CREATE_DETACHED));
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_setdetachstate(&attr, 0xBAD), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setdetachstate(&attr, 0xBAD), EINVAL);
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_destroy(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
 }
 
 TEST(LlvmLibcPThreadattrTest, SetAndGetGuardSize) {
   pthread_attr_t attr;
-  ASSERT_EQ(__llvm_libc::pthread_attr_init(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
 
   size_t guardsize;
-  ASSERT_EQ(__llvm_libc::pthread_attr_getguardsize(&attr, &guardsize), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getguardsize(&attr, &guardsize), 0);
   ASSERT_EQ(guardsize, size_t(EXEC_PAGESIZE));
-  ASSERT_EQ(__llvm_libc::pthread_attr_setguardsize(&attr, 2 * EXEC_PAGESIZE),
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setguardsize(&attr, 2 * EXEC_PAGESIZE),
             0);
-  ASSERT_EQ(__llvm_libc::pthread_attr_getguardsize(&attr, &guardsize), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getguardsize(&attr, &guardsize), 0);
   ASSERT_EQ(guardsize, size_t(2 * EXEC_PAGESIZE));
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_setguardsize(&attr, EXEC_PAGESIZE / 2),
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setguardsize(&attr, EXEC_PAGESIZE / 2),
             EINVAL);
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_destroy(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
 }
 
 TEST(LlvmLibcPThreadattrTest, SetAndGetStackSize) {
   pthread_attr_t attr;
-  ASSERT_EQ(__llvm_libc::pthread_attr_init(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
 
   size_t stacksize;
   ASSERT_EQ(
-      __llvm_libc::pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN << 2), 0);
-  ASSERT_EQ(__llvm_libc::pthread_attr_getstacksize(&attr, &stacksize), 0);
+      LIBC_NAMESPACE::pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN << 2),
+      0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getstacksize(&attr, &stacksize), 0);
   ASSERT_EQ(stacksize, size_t(PTHREAD_STACK_MIN << 2));
 
   ASSERT_EQ(
-      __llvm_libc::pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN / 2),
+      LIBC_NAMESPACE::pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN / 2),
       EINVAL);
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_destroy(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
 }
 
 TEST(LlvmLibcPThreadattrTest, SetAndGetStack) {
   pthread_attr_t attr;
-  ASSERT_EQ(__llvm_libc::pthread_attr_init(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
 
   void *stack;
   size_t stacksize;
   ASSERT_EQ(
-      __llvm_libc::pthread_attr_setstack(&attr, 0, PTHREAD_STACK_MIN << 2), 0);
-  ASSERT_EQ(__llvm_libc::pthread_attr_getstack(&attr, &stack, &stacksize), 0);
+      LIBC_NAMESPACE::pthread_attr_setstack(&attr, 0, PTHREAD_STACK_MIN << 2),
+      0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getstack(&attr, &stack, &stacksize),
+            0);
   ASSERT_EQ(stacksize, size_t(PTHREAD_STACK_MIN << 2));
   ASSERT_EQ(reinterpret_cast<uintptr_t>(stack), uintptr_t(0));
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_setstack(
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setstack(
                 &attr, reinterpret_cast<void *>(1), PTHREAD_STACK_MIN << 2),
             EINVAL);
-  ASSERT_EQ(__llvm_libc::pthread_attr_setstack(&attr, 0, PTHREAD_STACK_MIN / 2),
-            EINVAL);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_attr_setstack(&attr, 0, PTHREAD_STACK_MIN / 2),
+      EINVAL);
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_destroy(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
 }

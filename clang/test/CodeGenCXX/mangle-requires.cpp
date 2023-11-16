@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -std=c++2a -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
+// RUN: %clang_cc1 -verify -std=c++2a -fclang-abi-compat=latest -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
 // expected-no-diagnostics
 
 template <typename T, int N> concept SmallerThan = sizeof(T) < N;

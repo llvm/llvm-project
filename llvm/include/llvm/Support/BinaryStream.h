@@ -12,7 +12,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/BinaryStreamError.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 
@@ -36,7 +35,7 @@ class BinaryStream {
 public:
   virtual ~BinaryStream() = default;
 
-  virtual llvm::support::endianness getEndian() const = 0;
+  virtual llvm::endianness getEndian() const = 0;
 
   /// Given an offset into the stream and a number of bytes, attempt to
   /// read the bytes and set the output ArrayRef to point to data owned by the

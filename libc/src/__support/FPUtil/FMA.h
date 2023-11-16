@@ -18,8 +18,8 @@
 #include "x86_64/FMA.h"
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "aarch64/FMA.h"
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
-#include "riscv64/FMA.h"
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+#include "riscv/FMA.h"
 #elif defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "gpu/FMA.h"
 #endif
@@ -29,7 +29,7 @@
 #include "generic/FMA.h"
 #include "src/__support/CPP/type_traits.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <typename T> LIBC_INLINE T fma(T x, T y, T z) {
@@ -37,7 +37,7 @@ template <typename T> LIBC_INLINE T fma(T x, T y, T z) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif
 

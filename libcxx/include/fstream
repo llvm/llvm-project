@@ -750,8 +750,8 @@ basic_filebuf<_CharT, _Traits>::underflow()
         else
         {
             if (__extbufend_ != __extbufnext_) {
-                _LIBCPP_ASSERT_UNCATEGORIZED(__extbufnext_ != nullptr, "underflow moving from nullptr");
-                _LIBCPP_ASSERT_UNCATEGORIZED(__extbuf_ != nullptr, "underflow moving into nullptr");
+                _LIBCPP_ASSERT_NON_NULL(__extbufnext_ != nullptr, "underflow moving from nullptr");
+                _LIBCPP_ASSERT_NON_NULL(__extbuf_ != nullptr, "underflow moving into nullptr");
                 _VSTD::memmove(__extbuf_, __extbufnext_, __extbufend_ - __extbufnext_);
             }
             __extbufnext_ = __extbuf_ + (__extbufend_ - __extbufnext_);
@@ -912,7 +912,7 @@ basic_filebuf<_CharT, _Traits>::setbuf(char_type* __s, streamsize __n)
     if (!__always_noconv_)
     {
         __ibs_ = max<streamsize>(__n, sizeof(__extbuf_min_));
-        if (__s && __ibs_ >= sizeof(__extbuf_min_))
+        if (__s && __ibs_ > sizeof(__extbuf_min_))
         {
             __intbuf_ = __s;
             __owns_ib_ = false;
@@ -1734,7 +1734,7 @@ basic_fstream<_CharT, _Traits>::close()
         this->setstate(ios_base::failbit);
 }
 
-#if defined(_LIBCPP_ABI_ENABLE_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1)
+#ifndef _LIBCPP_AVAILABILITY_HAS_NO_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ifstream<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ofstream<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_filebuf<char>;

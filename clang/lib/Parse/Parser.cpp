@@ -13,8 +13,8 @@
 #include "clang/Parse/Parser.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -22,6 +22,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 using namespace clang;
 
 
@@ -1229,6 +1230,13 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
 Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
     ParsedAttributes &Attrs, ParsedAttributes &DeclSpecAttrs,
     ParsingDeclSpec *DS, AccessSpecifier AS) {
+  // Add an enclosing time trace scope for a bunch of small scopes with
+  // "EvaluateAsConstExpr".
+  llvm::TimeTraceScope TimeScope("ParseDeclarationOrFunctionDefinition", [&]() {
+    return Tok.getLocation().printToString(
+        Actions.getASTContext().getSourceManager());
+  });
+
   if (DS) {
     return ParseDeclOrFunctionDefInternal(Attrs, DeclSpecAttrs, *DS, AS);
   } else {
@@ -1259,6 +1267,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
 Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                       const ParsedTemplateInfo &TemplateInfo,
                                       LateParsedAttrList *LateParsedAttrs) {
+  llvm::TimeTraceScope TimeScope("ParseFunctionDefinition", [&]() {
+    return Actions.GetNameForDeclarator(D).getName().getAsString();
+  });
+
   // Poison SEH identifiers so they are flagged as illegal in function bodies.
   PoisonSEHIdentifiersRAIIObject PoisonSEHIdentifiers(*this, true);
   const DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
@@ -1449,12 +1461,12 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
 
   // With abbreviated function templates - we need to explicitly add depth to
   // account for the implicit template parameter list induced by the template.
-  if (auto *Template = dyn_cast_or_null<FunctionTemplateDecl>(Res))
-    if (Template->isAbbreviated() &&
-        Template->getTemplateParameters()->getParam(0)->isImplicit())
-      // First template parameter is implicit - meaning no explicit template
-      // parameter list was specified.
-      CurTemplateDepthTracker.addDepth(1);
+  if (const auto *Template = dyn_cast_if_present<FunctionTemplateDecl>(Res);
+      Template && Template->isAbbreviated() &&
+      Template->getTemplateParameters()->getParam(0)->isImplicit())
+    // First template parameter is implicit - meaning no explicit template
+    // parameter list was specified.
+    CurTemplateDepthTracker.addDepth(1);
 
   if (SkipFunctionBodies && (!Res || Actions.canSkipFunctionBody(Res)) &&
       trySkippingFunctionBody()) {
@@ -2564,6 +2576,10 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     SeenError = false;
     break;
   case Sema::ModuleImportState::FirstDecl:
+    // If we found an import decl as the first declaration, we must be not in
+    // a C++20 module unit or we are in an invalid state.
+    ImportState = Sema::ModuleImportState::NotACXX20Module;
+    [[fallthrough]];
   case Sema::ModuleImportState::NotACXX20Module:
     // We can only import a partition within a module purview.
     if (IsPartition)

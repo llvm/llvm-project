@@ -68,6 +68,7 @@ function(_get_common_compile_options output_var flags)
   if (LIBC_TARGET_ARCHITECTURE_IS_GPU)
     list(APPEND compile_options "-nogpulib")
     list(APPEND compile_options "-fvisibility=hidden")
+    list(APPEND compile_options "-fconvergent-functions")
 
     # Manually disable all standard include paths and include the resource
     # directory to prevent system headers from being included.
@@ -88,6 +89,7 @@ function(get_nvptx_compile_options output_var gpu_arch)
   set(nvptx_options "")
   list(APPEND nvptx_options "-march=${gpu_arch}")
   list(APPEND nvptx_options "-Wno-unknown-cuda-version")
+  list(APPEND nvptx_options "SHELL:-mllvm -nvptx-emit-init-fini-kernel=false")
   if(${gpu_arch} STREQUAL "sm_35")
     list(APPEND nvptx_options "--cuda-feature=+ptx60")
   elseif(${gpu_arch} STREQUAL "sm_37")
@@ -383,6 +385,8 @@ function(create_object_library fq_target_name)
 
   if(fq_deps_list)
     add_dependencies(${fq_target_name} ${fq_deps_list})
+    # Add deps as link libraries to inherit interface compile and link options.
+    target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
   endif()
 
   if(NOT ADD_OBJECT_CXX_STANDARD)

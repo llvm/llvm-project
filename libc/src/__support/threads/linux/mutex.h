@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 struct Mutex {
   unsigned char timed;
@@ -76,7 +76,7 @@ public:
         // futex syscall will block if the futex data is still
         // `LockState::Waiting` (the 4th argument to the syscall function
         // below.)
-        __llvm_libc::syscall_impl<long>(
+        LIBC_NAMESPACE::syscall_impl<long>(
             FUTEX_SYSCALL_ID, &futex_word.val, FUTEX_WAIT_PRIVATE,
             FutexWordType(LockState::Waiting), 0, 0, 0);
         was_waiting = true;
@@ -91,7 +91,7 @@ public:
           // we will wait for the futex to be woken up. Note again that the
           // following syscall will block only if the futex data is still
           // `LockState::Waiting`.
-          __llvm_libc::syscall_impl<long>(
+          LIBC_NAMESPACE::syscall_impl<long>(
               FUTEX_SYSCALL_ID, &futex_word, FUTEX_WAIT_PRIVATE,
               FutexWordType(LockState::Waiting), 0, 0, 0);
           was_waiting = true;
@@ -110,8 +110,8 @@ public:
       if (futex_word.compare_exchange_strong(mutex_status,
                                              FutexWordType(LockState::Free))) {
         // If any thread is waiting to be woken up, then do it.
-        __llvm_libc::syscall_impl<long>(FUTEX_SYSCALL_ID, &futex_word,
-                                        FUTEX_WAKE_PRIVATE, 1, 0, 0, 0);
+        LIBC_NAMESPACE::syscall_impl<long>(FUTEX_SYSCALL_ID, &futex_word,
+                                           FUTEX_WAKE_PRIVATE, 1, 0, 0, 0);
         return MutexError::NONE;
       }
 
@@ -131,6 +131,6 @@ public:
   MutexError trylock();
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_MUTEX_H

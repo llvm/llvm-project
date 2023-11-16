@@ -253,17 +253,15 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ; RV32IZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; RV32IZHINXMIN-NEXT:    fneg.s a1, a1
 ; RV32IZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; RV32IZHINXMIN-NEXT:    addi a2, sp, 8
-; RV32IZHINXMIN-NEXT:    sh a0, 0(a2)
-; RV32IZHINXMIN-NEXT:    addi a0, sp, 12
-; RV32IZHINXMIN-NEXT:    sh a1, 0(a0)
+; RV32IZHINXMIN-NEXT:    sh a0, 8(sp)
+; RV32IZHINXMIN-NEXT:    sh a1, 12(sp)
 ; RV32IZHINXMIN-NEXT:    lbu a0, 9(sp)
 ; RV32IZHINXMIN-NEXT:    lbu a1, 13(sp)
 ; RV32IZHINXMIN-NEXT:    andi a0, a0, 127
 ; RV32IZHINXMIN-NEXT:    andi a1, a1, 128
 ; RV32IZHINXMIN-NEXT:    or a0, a0, a1
 ; RV32IZHINXMIN-NEXT:    sb a0, 9(sp)
-; RV32IZHINXMIN-NEXT:    lh a0, 0(a2)
+; RV32IZHINXMIN-NEXT:    lh a0, 8(sp)
 ; RV32IZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV32IZHINXMIN-NEXT:    ret
 ;
@@ -273,17 +271,15 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; RV64IZHINXMIN-NEXT:    fneg.s a1, a1
 ; RV64IZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; RV64IZHINXMIN-NEXT:    mv a2, sp
-; RV64IZHINXMIN-NEXT:    sh a0, 0(a2)
-; RV64IZHINXMIN-NEXT:    addi a0, sp, 8
-; RV64IZHINXMIN-NEXT:    sh a1, 0(a0)
+; RV64IZHINXMIN-NEXT:    sh a0, 0(sp)
+; RV64IZHINXMIN-NEXT:    sh a1, 8(sp)
 ; RV64IZHINXMIN-NEXT:    lbu a0, 1(sp)
 ; RV64IZHINXMIN-NEXT:    lbu a1, 9(sp)
 ; RV64IZHINXMIN-NEXT:    andi a0, a0, 127
 ; RV64IZHINXMIN-NEXT:    andi a1, a1, 128
 ; RV64IZHINXMIN-NEXT:    or a0, a0, a1
 ; RV64IZHINXMIN-NEXT:    sb a0, 1(sp)
-; RV64IZHINXMIN-NEXT:    lh a0, 0(a2)
+; RV64IZHINXMIN-NEXT:    lh a0, 0(sp)
 ; RV64IZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = fneg half %b

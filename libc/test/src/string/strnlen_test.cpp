@@ -12,35 +12,35 @@
 
 TEST(LlvmLibcStrNLenTest, EmptyString) {
   const char *empty = "";
-  ASSERT_EQ(static_cast<size_t>(0), __llvm_libc::strnlen(empty, 0));
+  ASSERT_EQ(static_cast<size_t>(0), LIBC_NAMESPACE::strnlen(empty, 0));
   // If N is greater than string length, this should still return 0.
-  ASSERT_EQ(static_cast<size_t>(0), __llvm_libc::strnlen(empty, 1));
+  ASSERT_EQ(static_cast<size_t>(0), LIBC_NAMESPACE::strnlen(empty, 1));
 }
 
 TEST(LlvmLibcStrNLenTest, OneCharacterString) {
   const char *single = "X";
-  ASSERT_EQ(static_cast<size_t>(1), __llvm_libc::strnlen(single, 1));
+  ASSERT_EQ(static_cast<size_t>(1), LIBC_NAMESPACE::strnlen(single, 1));
   // If N is zero, this should return 0.
-  ASSERT_EQ(static_cast<size_t>(0), __llvm_libc::strnlen(single, 0));
+  ASSERT_EQ(static_cast<size_t>(0), LIBC_NAMESPACE::strnlen(single, 0));
   // If N is greater than string length, this should still return 1.
-  ASSERT_EQ(static_cast<size_t>(1), __llvm_libc::strnlen(single, 2));
+  ASSERT_EQ(static_cast<size_t>(1), LIBC_NAMESPACE::strnlen(single, 2));
 }
 
 TEST(LlvmLibcStrNLenTest, ManyCharacterString) {
   const char *many = "123456789";
-  ASSERT_EQ(static_cast<size_t>(9), __llvm_libc::strnlen(many, 9));
+  ASSERT_EQ(static_cast<size_t>(9), LIBC_NAMESPACE::strnlen(many, 9));
   // If N is smaller than the string length, it should return N.
-  ASSERT_EQ(static_cast<size_t>(3), __llvm_libc::strnlen(many, 3));
+  ASSERT_EQ(static_cast<size_t>(3), LIBC_NAMESPACE::strnlen(many, 3));
   // If N is zero, this should return 0.
-  ASSERT_EQ(static_cast<size_t>(0), __llvm_libc::strnlen(many, 0));
+  ASSERT_EQ(static_cast<size_t>(0), LIBC_NAMESPACE::strnlen(many, 0));
   // If N is greater than the string length, this should still return 9.
-  ASSERT_EQ(static_cast<size_t>(9), __llvm_libc::strnlen(many, 42));
+  ASSERT_EQ(static_cast<size_t>(9), LIBC_NAMESPACE::strnlen(many, 42));
 }
 
 TEST(LlvmLibcStrNLenTest, CharactersAfterNullTerminatorShouldNotBeIncluded) {
   const char str[5] = {'a', 'b', 'c', '\0', 'd'};
-  ASSERT_EQ(static_cast<size_t>(3), __llvm_libc::strnlen(str, 3));
+  ASSERT_EQ(static_cast<size_t>(3), LIBC_NAMESPACE::strnlen(str, 3));
   // This should only read up to the null terminator.
-  ASSERT_EQ(static_cast<size_t>(3), __llvm_libc::strnlen(str, 4));
-  ASSERT_EQ(static_cast<size_t>(3), __llvm_libc::strnlen(str, 5));
+  ASSERT_EQ(static_cast<size_t>(3), LIBC_NAMESPACE::strnlen(str, 4));
+  ASSERT_EQ(static_cast<size_t>(3), LIBC_NAMESPACE::strnlen(str, 5));
 }

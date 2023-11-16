@@ -63,22 +63,18 @@ TEST_CONSTEXPR_CXX20 void test(S s, typename S::value_type c, S expected) {
   assert(s == expected);
 }
 
-TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    test(S(), 'a', S(1, 'a'));
-    test(S("12345"), 'a', S("12345a"));
-    test(S("12345678901234567890"), 'a', S("12345678901234567890a"));
-  }
-#if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test(S(), 'a', S(1, 'a'));
-    test(S("12345"), 'a', S("12345a"));
-    test(S("12345678901234567890"), 'a', S("12345678901234567890a"));
-  }
-#endif
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  test(S(), 'a', S(1, 'a'));
+  test(S("12345"), 'a', S("12345a"));
+  test(S("12345678901234567890"), 'a', S("12345678901234567890a"));
+}
 
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_string<std::string>();
+#if TEST_STD_VER >= 11
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
+#endif
   {
     // https://llvm.org/PR31454
     std::basic_string<VeryLarge> s;

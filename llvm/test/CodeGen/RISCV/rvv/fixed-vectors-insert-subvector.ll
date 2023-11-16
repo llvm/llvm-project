@@ -14,7 +14,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_v2i32_0(<vscale x 8 x i32> %vec, ptr %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v12, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, m4, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
   %sv = load <2 x i32>, ptr %svp
@@ -27,7 +27,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_v2i32_2(<vscale x 8 x i32> %vec, ptr %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v12, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m4, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v12, 2
 ; CHECK-NEXT:    ret
   %sv = load <2 x i32>, ptr %svp
@@ -40,7 +40,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_v2i32_6(<vscale x 8 x i32> %vec, ptr %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v12, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m4, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v12, 6
 ; CHECK-NEXT:    ret
   %sv = load <2 x i32>, ptr %svp
@@ -51,19 +51,22 @@ define <vscale x 8 x i32> @insert_nxv8i32_v2i32_6(<vscale x 8 x i32> %vec, ptr %
 define <vscale x 8 x i32> @insert_nxv8i32_v8i32_0(<vscale x 8 x i32> %vec, ptr %svp) {
 ; LMULMAX2-LABEL: insert_nxv8i32_v8i32_0:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, tu, ma
-; LMULMAX2-NEXT:    vle32.v v8, (a0)
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; LMULMAX2-NEXT:    vle32.v v12, (a0)
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m4, tu, ma
+; LMULMAX2-NEXT:    vmv.v.v v8, v12
 ; LMULMAX2-NEXT:    ret
 ;
 ; LMULMAX1-LABEL: insert_nxv8i32_v8i32_0:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi a1, a0, 16
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX1-NEXT:    vle32.v v12, (a1)
-; LMULMAX1-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
-; LMULMAX1-NEXT:    vle32.v v8, (a0)
-; LMULMAX1-NEXT:    vsetivli zero, 8, e32, m2, tu, ma
-; LMULMAX1-NEXT:    vslideup.vi v8, v12, 4
+; LMULMAX1-NEXT:    vle32.v v12, (a0)
+; LMULMAX1-NEXT:    addi a0, a0, 16
+; LMULMAX1-NEXT:    vle32.v v16, (a0)
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m4, tu, ma
+; LMULMAX1-NEXT:    vmv.v.v v8, v12
+; LMULMAX1-NEXT:    vsetivli zero, 8, e32, m4, tu, ma
+; LMULMAX1-NEXT:    vslideup.vi v8, v16, 4
 ; LMULMAX1-NEXT:    ret
   %sv = load <8 x i32>, ptr %svp
   %v = call <vscale x 8 x i32> @llvm.vector.insert.v8i32.nxv8i32(<vscale x 8 x i32> %vec, <8 x i32> %sv, i64 0)
@@ -81,14 +84,14 @@ define <vscale x 8 x i32> @insert_nxv8i32_v8i32_8(<vscale x 8 x i32> %vec, ptr %
 ;
 ; LMULMAX1-LABEL: insert_nxv8i32_v8i32_8:
 ; LMULMAX1:       # %bb.0:
+; LMULMAX1-NEXT:    addi a1, a0, 16
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX1-NEXT:    vle32.v v12, (a0)
-; LMULMAX1-NEXT:    addi a0, a0, 16
+; LMULMAX1-NEXT:    vle32.v v12, (a1)
 ; LMULMAX1-NEXT:    vle32.v v16, (a0)
 ; LMULMAX1-NEXT:    vsetivli zero, 12, e32, m4, tu, ma
-; LMULMAX1-NEXT:    vslideup.vi v8, v12, 8
+; LMULMAX1-NEXT:    vslideup.vi v8, v16, 8
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e32, m4, tu, ma
-; LMULMAX1-NEXT:    vslideup.vi v8, v16, 12
+; LMULMAX1-NEXT:    vslideup.vi v8, v12, 12
 ; LMULMAX1-NEXT:    ret
   %sv = load <8 x i32>, ptr %svp
   %v = call <vscale x 8 x i32> @llvm.vector.insert.v8i32.nxv8i32(<vscale x 8 x i32> %vec, <8 x i32> %sv, i64 8)
@@ -163,7 +166,7 @@ define void @insert_v8i32_v2i32_0(ptr %vp, ptr %svp) {
 ; LMULMAX2-NEXT:    vle32.v v8, (a1)
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-NEXT:    vle32.v v10, (a0)
-; LMULMAX2-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; LMULMAX2-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
 ; LMULMAX2-NEXT:    vmv.v.v v10, v8
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-NEXT:    vse32.v v10, (a0)
@@ -194,7 +197,7 @@ define void @insert_v8i32_v2i32_2(ptr %vp, ptr %svp) {
 ; LMULMAX2-NEXT:    vle32.v v8, (a1)
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-NEXT:    vle32.v v10, (a0)
-; LMULMAX2-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; LMULMAX2-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
 ; LMULMAX2-NEXT:    vslideup.vi v10, v8, 2
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-NEXT:    vse32.v v10, (a0)
@@ -505,9 +508,9 @@ define void @insert_v2i64_nxv16i64(ptr %psv0, ptr %psv1, <vscale x 16 x i64>* %o
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vle64.v v12, (a1)
-; CHECK-NEXT:    vsetivli zero, 6, e64, m4, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v12, 4
+; CHECK-NEXT:    vle64.v v16, (a1)
+; CHECK-NEXT:    vsetivli zero, 6, e64, m8, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v16, 4
 ; CHECK-NEXT:    vs8r.v v8, (a2)
 ; CHECK-NEXT:    ret
   %sv0 = load <2 x i64>, ptr %psv0
@@ -536,7 +539,7 @@ define void @insert_v2i64_nxv16i64_lo2(ptr %psv, <vscale x 16 x i64>* %out) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m8, ta, ma
 ; CHECK-NEXT:    vslideup.vi v16, v8, 2
 ; CHECK-NEXT:    vs8r.v v16, (a1)
 ; CHECK-NEXT:    ret
@@ -636,3 +639,21 @@ declare <vscale x 2 x i16> @llvm.vector.insert.v2i16.nxv2i16(<vscale x 2 x i16>,
 declare <vscale x 8 x i32> @llvm.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32>, <2 x i32>, i64)
 declare <vscale x 8 x i32> @llvm.vector.insert.v4i32.nxv8i32(<vscale x 8 x i32>, <4 x i32>, i64)
 declare <vscale x 8 x i32> @llvm.vector.insert.v8i32.nxv8i32(<vscale x 8 x i32>, <8 x i32>, i64)
+
+; We emit insert_subvectors of fixed vectors at index 0 into undefs as a
+; copy_to_regclass or insert_subreg, depending on the register classes of the
+; vector types. Make sure that we use the correct type and not the shrunken
+; LMUL=1 type, otherwise we will end up with an invalid extract_subvector when
+; converting it from scalable->fixed, e.g. we get this for VLEN=128:
+;
+;   t14: nxv2i32 = insert_subvector undef:nxv2i32, t4, Constant:i64<0>
+; t15: v8i32 = extract_subvector t14, Constant:i64<0>
+declare <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32>, i64)
+define <4 x i32> @insert_extract_v8i32_v2i32_0(<2 x i32> %v) {
+; CHECK-LABEL: insert_extract_v8i32_v2i32_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %1 = call <8 x i32> @llvm.vector.insert.v2i32.v8i32(<8 x i32> poison, <2 x i32> %v, i64 0)
+  %2 = call <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> %1, i64 0)
+  ret <4 x i32> %2
+}

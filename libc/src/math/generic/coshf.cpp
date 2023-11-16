@@ -13,7 +13,7 @@
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/explogxf.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -31,7 +31,7 @@ LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
     }
 
     if (xbits.is_inf_or_nan())
-      return x + FPBits::inf().get_val();
+      return x + FPBits::inf();
 
     int rounding = fputil::quick_get_round();
     if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
@@ -40,7 +40,7 @@ LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);
 
-    return x + FPBits::inf().get_val();
+    return x + FPBits::inf();
   }
 
   // TODO: We should be able to reduce the latency and reciprocal throughput
@@ -51,4 +51,4 @@ LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
   return static_cast<float>(exp_pm_eval</*is_sinh*/ false>(x));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

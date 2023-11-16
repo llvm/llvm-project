@@ -10,7 +10,7 @@
 define ptr @zero_indices_i8(ptr %p) {
 ; CHECK-LABEL: 'zero_indices_i8'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = getelementptr i8, ptr %p, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret ptr %x
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret ptr %x
 ;
   %x = getelementptr i8, ptr %p, i32 0
   ret ptr %x
@@ -19,7 +19,7 @@ define ptr @zero_indices_i8(ptr %p) {
 define ptr @zero_indices_i16(ptr %p) {
 ; CHECK-LABEL: 'zero_indices_i16'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = getelementptr i16, ptr %p, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret ptr %x
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret ptr %x
 ;
   %x = getelementptr i16, ptr %p, i32 0
   ret ptr %x
@@ -28,7 +28,7 @@ define ptr @zero_indices_i16(ptr %p) {
 define ptr @zero_indices_i32(ptr %p) {
 ; CHECK-LABEL: 'zero_indices_i32'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = getelementptr i32, ptr %p, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret ptr %x
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret ptr %x
 ;
   %x = getelementptr i32, ptr %p, i32 0
   ret ptr %x
@@ -37,7 +37,7 @@ define ptr @zero_indices_i32(ptr %p) {
 define ptr @zero_indices_i64(ptr %p) {
 ; CHECK-LABEL: 'zero_indices_i64'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = getelementptr i64, ptr %p, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret ptr %x
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret ptr %x
 ;
   %x = getelementptr i64, ptr %p, i32 0
   ret ptr %x
@@ -46,7 +46,7 @@ define ptr @zero_indices_i64(ptr %p) {
 define ptr @zero_indices_array(ptr %p) {
 ; CHECK-LABEL: 'zero_indices_array'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = getelementptr [42 x i64], ptr %p, i32 0, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret ptr %x
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret ptr %x
 ;
   %x = getelementptr [42 x i64], ptr %p, i32 0, i32 0
   ret ptr %x
@@ -59,7 +59,7 @@ define ptr @zero_indices_array(ptr %p) {
 define ptr @zero_indices_struct(ptr %p) {
 ; CHECK-LABEL: 'zero_indices_struct'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = getelementptr %struct, ptr %p, i32 0, i32 0, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret ptr %x
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret ptr %x
 ;
   %x = getelementptr %struct, ptr %p, i32 0, i32 0, i32 0
   ret ptr %x
@@ -68,7 +68,7 @@ define ptr @zero_indices_struct(ptr %p) {
 define <4 x ptr> @zero_indices_v4i32(<4 x ptr> %p) {
 ; CHECK-LABEL: 'zero_indices_v4i32'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = getelementptr i32, <4 x ptr> %p, <4 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x ptr> %x
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x ptr> %x
 ;
   %x = getelementptr i32, <4 x ptr> %p, <4 x i32> zeroinitializer
   ret <4 x ptr> %x
@@ -77,7 +77,7 @@ define <4 x ptr> @zero_indices_v4i32(<4 x ptr> %p) {
 define <16 x ptr> @zero_indices_v16i32(<16 x ptr> %p) {
 ; CHECK-LABEL: 'zero_indices_v16i32'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = getelementptr i32, <16 x ptr> %p, <16 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x ptr> %x
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x ptr> %x
 ;
   %x = getelementptr i32, <16 x ptr> %p, <16 x i32> zeroinitializer
   ret <16 x ptr> %x
@@ -86,7 +86,7 @@ define <16 x ptr> @zero_indices_v16i32(<16 x ptr> %p) {
 define <4 x ptr> @zero_indices_v4f32(<4 x ptr> %p) {
 ; CHECK-LABEL: 'zero_indices_v4f32'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = getelementptr float, <4 x ptr> %p, <4 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x ptr> %x
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x ptr> %x
 ;
   %x = getelementptr float, <4 x ptr> %p, <4 x i32> zeroinitializer
   ret <4 x ptr> %x
@@ -95,7 +95,7 @@ define <4 x ptr> @zero_indices_v4f32(<4 x ptr> %p) {
 define <4 x ptr> @zero_indices_v4v4i32(<4 x ptr> %p) {
 ; CHECK-LABEL: 'zero_indices_v4v4i32'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = getelementptr <32 x i32>, <4 x ptr> %p, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x ptr> %x
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x ptr> %x
 ;
   %x = getelementptr <32 x i32>, <4 x ptr> %p, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
   ret <4 x ptr> %x

@@ -224,7 +224,7 @@ std::vector<DiffOutput> getSingleIF(InterfaceFile *Interface,
                 Order);
   diffAttribute("Parent Umbrellas", Output, Interface->umbrellas(), Order);
   diffAttribute("Symbols", Output, Interface->symbols(), Order);
-  for (auto Doc : Interface->documents()) {
+  for (const auto &Doc : Interface->documents()) {
     DiffOutput Documents("Inlined Reexported Frameworks/Libraries");
     Documents.Kind = AD_Inline_Doc;
     Documents.Values.push_back(std::make_unique<InlineDoc>(
@@ -369,6 +369,14 @@ DiffEngine::findDifferences(const InterfaceFile *IFLHS,
                                        DiffScalarVal<bool, AD_Diff_Scalar_Bool>(
                                            rhs, IFRHS->hasSimulatorSupport()),
                                        "Simulator Support"));
+
+  if (IFLHS->isOSLibNotForSharedCache() != IFRHS->isOSLibNotForSharedCache())
+    Output.push_back(
+        recordDifferences(DiffScalarVal<bool, AD_Diff_Scalar_Bool>(
+                              lhs, IFLHS->isOSLibNotForSharedCache()),
+                          DiffScalarVal<bool, AD_Diff_Scalar_Bool>(
+                              rhs, IFRHS->isOSLibNotForSharedCache()),
+                          "Shared Cache Ineligible"));
 
   if (IFLHS->reexportedLibraries() != IFRHS->reexportedLibraries())
     Output.push_back(recordDifferences(IFLHS->reexportedLibraries(),

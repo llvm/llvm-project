@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -verify %s \
-// RUN:     -analyzer-checker=core,alpha.unix.StdCLibraryFunctions \
-// RUN:     -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:     -analyzer-checker=core,unix.StdCLibraryFunctions \
+// RUN:     -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:     -analyzer-output=text
 
 #include "Inputs/std-c-library-functions-POSIX.h"
@@ -79,4 +79,13 @@ int test_fileno_arg_note(FILE *f1) {
   // expected-warning{{The 1st argument to 'dup' is < 0 but should be >= 0}} \
   // expected-note{{The 1st argument to 'dup' is < 0 but should be >= 0}} \
   // expected-note{{Assuming that 'fileno' fails}}
+}
+
+int test_readlink_bufsize_zero(char *Buf, size_t Bufsize) {
+  ssize_t Ret = readlink("path", Buf, Bufsize); // \
+  // expected-note{{Assuming that argument 'bufsize' is 0}} \
+  // expected-note{{'Ret' initialized here}}
+  return 1 / Ret; // \
+  // expected-warning{{Division by zero}} \
+  // expected-note{{Division by zero}}
 }

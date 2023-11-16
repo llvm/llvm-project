@@ -77,7 +77,8 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
     if (llvm::StringRef(returnType).contains("_Noreturn"))
       returnType = "void";
 
-    OS << "  static_assert(__llvm_libc::cpp::is_same_v<" << returnType << '(';
+    OS << "  static_assert(LIBC_NAMESPACE::cpp::is_same_v<" << returnType
+       << '(';
     auto args = functionSpec->getValueAsListOfDefs("Args");
     for (size_t i = 0, size = args.size(); i < size; ++i) {
       llvm::Record *argType = args[i]->getValueAsDef("ArgType");

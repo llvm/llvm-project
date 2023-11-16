@@ -127,8 +127,8 @@ namespace cfi_internal {
 template <typename T> struct FlexibleArray : T {
   RT_API_ATTRS T &operator[](int index) { return *(this + index); }
   const RT_API_ATTRS T &operator[](int index) const { return *(this + index); }
-  operator T *() { return this; }
-  operator const T *() const { return this; }
+  RT_API_ATTRS operator T *() { return this; }
+  RT_API_ATTRS operator const T *() const { return this; }
 };
 } // namespace cfi_internal
 #endif
@@ -169,7 +169,7 @@ template <int r> struct CdescStorage : public CFI_cdesc_t {
 template <> struct CdescStorage<1> : public CFI_cdesc_t {};
 template <> struct CdescStorage<0> : public CFI_cdesc_t {};
 } // namespace cfi_internal
-#define CFI_CDESC_T(rank) cfi_internal::CdescStorage<rank>
+#define CFI_CDESC_T(rank) ::Fortran::ISO::cfi_internal::CdescStorage<rank>
 #else
 #define CFI_CDESC_T(_RANK) \
   struct { \
@@ -182,25 +182,26 @@ template <> struct CdescStorage<0> : public CFI_cdesc_t {};
 #ifdef __cplusplus
 extern "C" {
 #endif
-void *CFI_address(const CFI_cdesc_t *, const CFI_index_t subscripts[]);
-int CFI_allocate(CFI_cdesc_t *, const CFI_index_t lower_bounds[],
+RT_API_ATTRS void *CFI_address(
+    const CFI_cdesc_t *, const CFI_index_t subscripts[]);
+RT_API_ATTRS int CFI_allocate(CFI_cdesc_t *, const CFI_index_t lower_bounds[],
     const CFI_index_t upper_bounds[], size_t elem_len);
 RT_API_ATTRS int CFI_deallocate(CFI_cdesc_t *);
 int CFI_establish(CFI_cdesc_t *, void *base_addr, CFI_attribute_t, CFI_type_t,
     size_t elem_len, CFI_rank_t, const CFI_index_t extents[]);
-int CFI_is_contiguous(const CFI_cdesc_t *);
+RT_API_ATTRS int CFI_is_contiguous(const CFI_cdesc_t *);
 RT_API_ATTRS int CFI_section(CFI_cdesc_t *, const CFI_cdesc_t *source,
     const CFI_index_t lower_bounds[], const CFI_index_t upper_bounds[],
     const CFI_index_t strides[]);
-int CFI_select_part(CFI_cdesc_t *, const CFI_cdesc_t *source,
+RT_API_ATTRS int CFI_select_part(CFI_cdesc_t *, const CFI_cdesc_t *source,
     size_t displacement, size_t elem_len);
-int CFI_setpointer(
+RT_API_ATTRS int CFI_setpointer(
     CFI_cdesc_t *, const CFI_cdesc_t *source, const CFI_index_t lower_bounds[]);
 #ifdef __cplusplus
 } // extern "C"
 } // inline namespace Fortran_2018
-}
-}
+} // namespace ISO
+} // namespace Fortran
 #endif
 
 #endif /* CFI_ISO_FORTRAN_BINDING_H_ */

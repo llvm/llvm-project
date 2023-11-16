@@ -11,7 +11,7 @@
 
 #include <math.h>
 
-template <typename T> class FAbsTest : public __llvm_libc::testing::Test {
+template <typename T> class FAbsTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

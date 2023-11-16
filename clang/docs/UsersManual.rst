@@ -2134,6 +2134,18 @@ are listed below.
    new operator will always return a pointer that does not alias any
    other pointer when the function returns.
 
+.. option:: -fassume-nothrow-exception-dtor
+
+   Assume that an exception object' destructor will not throw, and generate
+   less code for catch handlers. A throw expression of a type with a
+   potentially-throwing destructor will lead to an error.
+
+   By default, Clang assumes that the exception object may have a throwing
+   destructor. For the Itanium C++ ABI, Clang generates a landing pad to
+   destroy local variables and call ``_Unwind_Resume`` for the code
+   ``catch (...) { ... }``. This option tells Clang that an exception object's
+   destructor will not throw and code simplification is possible.
+
 .. option:: -ftrap-function=[name]
 
    Instruct code generator to emit a function call to the specified
@@ -4383,6 +4395,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fno-sanitize-trap=<value>
                               Disable trapping for specified sanitizers
       -fno-standalone-debug   Limit debug information produced to reduce size of debug binary
+      -fno-strict-aliasing    Disable optimizations based on strict aliasing rules (default)
       -fobjc-runtime=<value>  Specify the target Objective-C runtime kind and version
       -fprofile-exclude-files=<value>
                               Instrument only functions from files where names don't match all the regexes separated by a semi-colon
@@ -4444,6 +4457,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               behavior. See user manual for available checks
       -fsplit-lto-unit        Enables splitting of the LTO unit.
       -fstandalone-debug      Emit full debug info for all types used by the program
+      -fstrict-aliasing	      Enable optimizations based on strict aliasing rules
       -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
       -fwhole-program-vtables Enables whole-program vtable optimization. Requires -flto
       -gcodeview-ghash        Emit type record hashes in a .debug$H section
@@ -4722,3 +4736,16 @@ The Visual C++ Toolset has a slightly more elaborate mechanism for detection.
     The registry information is used to help locate the installation as a final
     fallback.  This is only possible for pre-VS2017 installations and is
     considered deprecated.
+
+Restrictions and Limitations compared to Clang
+----------------------------------------------
+
+Strict Aliasing
+^^^^^^^^^^^^^^^
+
+Strict aliasing (TBAA) is always off by default in clang-cl. Whereas in clang,
+strict aliasing is turned on by default for all optimization levels.
+
+To enable LLVM optimizations based on strict aliasing rules (e.g., optimizations
+based on type of expressions in C/C++), user will need to explicitly pass
+`-fstrict-aliasing` to clang-cl.
