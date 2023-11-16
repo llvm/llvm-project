@@ -3,6 +3,8 @@
 
 %funcref = type target("wasm.funcref")
 
+declare ptr @llvm.wasm.funcref.to_ptr(%funcref) nounwind
+
 ; CHECK: .tabletype __funcref_call_table, funcref, 1
 
 define void @call_funcref(%funcref %ref) {
@@ -18,7 +20,8 @@ define void @call_funcref(%funcref %ref) {
 ; CHECK-NEXT:    ref.null_func
 ; CHECK-NEXT:    table.set __funcref_call_table
 ; CHECK-NEXT:    # fallthrough-return
-  call void %ref()
+  %refptr = call ptr @llvm.wasm.funcref.to_ptr(%funcref %ref)
+  call void %refptr()
   ret void
 }
 
@@ -40,6 +43,7 @@ define float @call_funcref_with_args(%funcref %ref) {
 ; CHECK-NEXT:    table.set __funcref_call_table
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    # fallthrough-return
-  %ret = call float %ref(double 1.0, i32 2)
+  %refptr = call ptr @llvm.wasm.funcref.to_ptr(%funcref %ref)
+  %ret = call float %refptr(double 1.0, i32 2)
   ret float %ret
 }
