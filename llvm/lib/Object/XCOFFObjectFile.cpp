@@ -1246,7 +1246,7 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
       CsectAuxRef.getStorageMappingClass() != XCOFF::XMC_GL)
     return false;
 
-  // A function definition should not be a common type symbol or a external
+  // A function definition should not be a common type symbol or an external
   // symbol.
   if (CsectAuxRef.getSymbolType() == XCOFF::XTY_CM ||
       CsectAuxRef.getSymbolType() == XCOFF::XTY_ER)
