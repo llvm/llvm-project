@@ -13453,6 +13453,10 @@ public:
   void maybeAddCUDAHostDeviceAttrs(FunctionDecl *FD,
                                    const LookupResult &Previous);
 
+  /// May add implicit CUDAHostAttr and CUDADeviceAttr attributes to a
+  /// trivial cotr/dtor that does not have host and device attributes.
+  void maybeAddCUDAHostDeviceAttrsToTrivialCtorDtor(FunctionDecl *FD);
+
   /// May add implicit CUDAConstantAttr attribute to VD, depending on VD
   /// and current compilation settings.
   void MaybeAddCUDAConstantAttr(VarDecl *VD);
