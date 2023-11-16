@@ -250,6 +250,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
   DiagnosticManager diagnostics;
 
   if (condition_hash != m_condition_hash || !m_user_expression_sp ||
+      !m_user_expression_sp->IsParseCacheable() ||
       !m_user_expression_sp->MatchesContext(exe_ctx)) {
     LanguageType language = eLanguageTypeUnknown;
     // See if we can figure out the language from the frame, otherwise use the
