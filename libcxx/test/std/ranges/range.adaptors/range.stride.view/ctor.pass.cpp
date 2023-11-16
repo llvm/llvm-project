@@ -8,49 +8,53 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// ranges
+// constexpr explicit stride_view(_View, range_difference_t<_View>)
 
-// std::views::stride_view
+#include <type_traits>
 
 #include "test.h"
 #include "test_convertible.h"
 #include "test_iterators.h"
-#include <type_traits>
 
-constexpr bool test_no_default_ctor() {
-  // There is no default ctor for stride_view.
-  using View = InputView<cpp17_input_iterator<int*>>;
-  static_assert(!std::is_default_constructible_v<std::ranges::stride_view<View>>);
-  return true;
-}
+// There is no default ctor for stride_view.
+using View = InputView<cpp17_input_iterator<int*>>;
+static_assert(!std::is_default_constructible_v<std::ranges::stride_view<View>>);
 
-constexpr bool test_no_implicit_ctor() {
-  using View = InputView<cpp17_input_iterator<int*>>;
-  // Test that the stride_view can only be explicitly constructed.
-  static_assert(!test_convertible<std::ranges::stride_view<View>, View, int>());
-  return true;
-}
+// Test that the stride_view can only be explicitly constructed.
+static_assert(!test_convertible<std::ranges::stride_view<View>, View, int>());
 
-constexpr bool test_move_ctor() {
-  int arr[] = {1, 2, 3};
-  // Test that the stride_view ctor properly moves from the base (and works with a move-only type).
-  static_assert(!std::is_copy_constructible_v<MovedOnlyTrackedBasicView<int>>);
-  static_assert(std::is_move_constructible_v<MovedOnlyTrackedBasicView<int>>);
+constexpr bool test() {
+  {
+    int arr[] = {1, 2, 3};
+    // Test that what we will stride over is move only.
+    static_assert(!std::is_copy_constructible_v<MoveOnlyView<cpp17_input_iterator<int*>>>);
+    static_assert(std::is_move_constructible_v<MoveOnlyView<cpp17_input_iterator<int*>>>);
 
-  bool moved(false), copied(false);
-  MovedOnlyTrackedBasicView<int> mov(arr, arr + 3, &moved, &copied);
-  std::ranges::stride_view<MovedOnlyTrackedBasicView<int>> mosv(std::move(mov), 2);
-  assert(moved);
-  assert(!copied);
+    MoveOnlyView<cpp17_input_iterator<int*>> mov(cpp17_input_iterator(arr), cpp17_input_iterator(arr + 3));
+    // Because MoveOnlyView is, well, move only, we can test that it is moved
+    // from when the stride view is constructed.
+    std::ranges::stride_view<MoveOnlyView<cpp17_input_iterator<int*>>> mosv(std::move(mov), 1);
+
+    // While we are here, make sure that the ctor captured the proper things
+    assert(mosv.stride() == 1);
+
+    auto mosv_i = mosv.begin();
+    assert(*mosv_i == 1);
+
+    mosv_i++;
+    assert(*mosv_i == 2);
+
+    mosv_i++;
+    assert(*mosv_i == 3);
+
+    mosv_i++;
+    assert(mosv_i == mosv.end());
+  }
   return true;
 }
 
 int main(int, char**) {
-  test_no_implicit_ctor();
-  static_assert(test_no_implicit_ctor());
-  test_no_default_ctor();
-  static_assert(test_no_default_ctor());
-  test_move_ctor();
-  static_assert(test_move_ctor());
+  test();
+  static_assert(test());
   return 0;
 }
