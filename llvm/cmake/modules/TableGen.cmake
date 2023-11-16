@@ -110,8 +110,8 @@ function(tablegen project ofn)
     set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${CMAKE_CURRENT_SOURCE_DIR}/${LLVM_TARGET_DEFINITIONS})
   endif()
 
-  # Append the includes used for this file to the tablegen_compile_commands
-  # file.
+  # Append this file and its includes to the compile commands file.
+  # This file is used by the TableGen LSP Language Server (tblgen-lsp-server).
   file(APPEND ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml
       "--- !FileInfo:\n"
       "  filepath: \"${LLVM_TARGET_DEFINITIONS_ABSOLUTE}\"\n"
