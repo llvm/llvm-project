@@ -39,7 +39,7 @@ protected:
 LoongArchELFObjectWriter::LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit,
                                                    bool EnableRelax)
     : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_LOONGARCH,
-                              /*HasRelocationAddend*/ true),
+                              /*HasRelocationAddend=*/true),
       EnableRelax(EnableRelax) {}
 
 LoongArchELFObjectWriter::~LoongArchELFObjectWriter() {}
