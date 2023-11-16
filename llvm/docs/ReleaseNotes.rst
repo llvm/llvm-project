@@ -102,6 +102,8 @@ Changes to the AMDGPU Backend
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>`
 
+* Added support for Cortex-A520, Cortex-A720 and Cortex-X4 CPUs.
+
 Changes to the ARM Backend
 --------------------------
 
