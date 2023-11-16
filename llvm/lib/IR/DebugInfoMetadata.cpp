@@ -915,11 +915,11 @@ DICompileUnit::DICompileUnit(LLVMContext &C, StorageType Storage,
                              bool DebugInfoForProfiling, unsigned NameTableKind,
                              bool RangesBaseAddress, ArrayRef<Metadata *> Ops)
     : DIScope(C, DICompileUnitKind, Storage, dwarf::DW_TAG_compile_unit, Ops),
-      SourceLanguage(SourceLanguage), IsOptimized(IsOptimized),
-      RuntimeVersion(RuntimeVersion), EmissionKind(EmissionKind), DWOId(DWOId),
-      SplitDebugInlining(SplitDebugInlining),
+      SourceLanguage(SourceLanguage), RuntimeVersion(RuntimeVersion),
+      DWOId(DWOId), EmissionKind(EmissionKind), NameTableKind(NameTableKind),
+      IsOptimized(IsOptimized), SplitDebugInlining(SplitDebugInlining),
       DebugInfoForProfiling(DebugInfoForProfiling),
-      NameTableKind(NameTableKind), RangesBaseAddress(RangesBaseAddress) {
+      RangesBaseAddress(RangesBaseAddress) {
   assert(Storage != Uniqued);
 }
 
@@ -1181,8 +1181,9 @@ DILexicalBlockFile *DILexicalBlockFile::getImpl(LLVMContext &Context,
 
 DINamespace::DINamespace(LLVMContext &Context, StorageType Storage,
                          bool ExportSymbols, ArrayRef<Metadata *> Ops)
-    : DIScope(Context, DINamespaceKind, Storage, dwarf::DW_TAG_namespace, Ops),
-      ExportSymbols(ExportSymbols) {}
+    : DIScope(Context, DINamespaceKind, Storage, dwarf::DW_TAG_namespace, Ops) {
+  SubclassData1 = ExportSymbols;
+}
 DINamespace *DINamespace::getImpl(LLVMContext &Context, Metadata *Scope,
                                   MDString *Name, bool ExportSymbols,
                                   StorageType Storage, bool ShouldCreate) {
@@ -1196,8 +1197,9 @@ DINamespace *DINamespace::getImpl(LLVMContext &Context, Metadata *Scope,
 DICommonBlock::DICommonBlock(LLVMContext &Context, StorageType Storage,
                              unsigned LineNo, ArrayRef<Metadata *> Ops)
     : DIScope(Context, DICommonBlockKind, Storage, dwarf::DW_TAG_common_block,
-              Ops),
-      LineNo(LineNo) {}
+              Ops) {
+  SubclassData32 = LineNo;
+}
 DICommonBlock *DICommonBlock::getImpl(LLVMContext &Context, Metadata *Scope,
                                       Metadata *Decl, MDString *Name,
                                       Metadata *File, unsigned LineNo,
@@ -1211,8 +1213,10 @@ DICommonBlock *DICommonBlock::getImpl(LLVMContext &Context, Metadata *Scope,
 
 DIModule::DIModule(LLVMContext &Context, StorageType Storage, unsigned LineNo,
                    bool IsDecl, ArrayRef<Metadata *> Ops)
-    : DIScope(Context, DIModuleKind, Storage, dwarf::DW_TAG_module, Ops),
-      LineNo(LineNo), IsDecl(IsDecl) {}
+    : DIScope(Context, DIModuleKind, Storage, dwarf::DW_TAG_module, Ops) {
+  SubclassData1 = IsDecl;
+  SubclassData32 = LineNo;
+}
 DIModule *DIModule::getImpl(LLVMContext &Context, Metadata *File,
                             Metadata *Scope, MDString *Name,
                             MDString *ConfigurationMacros,
@@ -1301,8 +1305,9 @@ DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
 DIVariable::DIVariable(LLVMContext &C, unsigned ID, StorageType Storage,
                        signed Line, ArrayRef<Metadata *> Ops,
                        uint32_t AlignInBits)
-    : DINode(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
-      AlignInBits(AlignInBits) {}
+    : DINode(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line) {
+  SubclassData32 = AlignInBits;
+}
 std::optional<uint64_t> DIVariable::getSizeInBits() const {
   // This is used by the Verifier so be mindful of broken types.
   const Metadata *RawType = getRawType();
@@ -1328,7 +1333,9 @@ std::optional<uint64_t> DIVariable::getSizeInBits() const {
 
 DILabel::DILabel(LLVMContext &C, StorageType Storage, unsigned Line,
                  ArrayRef<Metadata *> Ops)
-    : DINode(C, DILabelKind, Storage, dwarf::DW_TAG_label, Ops), Line(Line) {}
+    : DINode(C, DILabelKind, Storage, dwarf::DW_TAG_label, Ops) {
+  SubclassData32 = Line;
+}
 DILabel *DILabel::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
                           Metadata *File, unsigned Line, StorageType Storage,
                           bool ShouldCreate) {
