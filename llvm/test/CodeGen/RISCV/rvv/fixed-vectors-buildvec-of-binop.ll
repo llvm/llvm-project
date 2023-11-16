@@ -446,6 +446,25 @@ define <4 x i32> @add_general_splat(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; This test previously failed with an assertion failure because constant shift
 ; amounts are type legalized early.
 define void @buggy(i32 %0) #0 {
+; RV32-LABEL: buggy:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.v.x v8, a0
+; RV32-NEXT:    vadd.vv v8, v8, v8
+; RV32-NEXT:    vor.vi v8, v8, 1
+; RV32-NEXT:    vrgather.vi v9, v8, 0
+; RV32-NEXT:    vse32.v v9, (zero)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: buggy:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    slli a0, a0, 1
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vor.vi v8, v8, 1
+; RV64-NEXT:    vrgather.vi v9, v8, 0
+; RV64-NEXT:    vse32.v v9, (zero)
+; RV64-NEXT:    ret
 entry:
   %mul.us.us.i.3 = shl i32 %0, 1
   %1 = insertelement <4 x i32> zeroinitializer, i32 %mul.us.us.i.3, i64 0
@@ -453,4 +472,97 @@ entry:
   %3 = shufflevector <4 x i32> %2, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
   store <4 x i32> %3, ptr null, align 16
   ret void
+}
+
+
+define <8 x i32> @add_constant_rhs_8xi32_vector_in(<8 x i32> %vin, i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: add_constant_rhs_8xi32_vector_in:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 23
+; CHECK-NEXT:    addi a1, a1, 25
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    addi a3, a3, 2047
+; CHECK-NEXT:    addi a3, a3, 308
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vmv.s.x v10, a1
+; CHECK-NEXT:    vslideup.vi v8, v10, 1
+; CHECK-NEXT:    vmv.s.x v10, a2
+; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 2
+; CHECK-NEXT:    vmv.s.x v10, a3
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 3
+; CHECK-NEXT:    ret
+  %e0 = add i32 %a, 23
+  %e1 = add i32 %b, 25
+  %e2 = add i32 %c, 1
+  %e3 = add i32 %d, 2355
+  %v0 = insertelement <8 x i32> %vin, i32 %e0, i32 0
+  %v1 = insertelement <8 x i32> %v0, i32 %e1, i32 1
+  %v2 = insertelement <8 x i32> %v1, i32 %e2, i32 2
+  %v3 = insertelement <8 x i32> %v2, i32 %e3, i32 3
+  ret <8 x i32> %v3
+}
+
+define <8 x i32> @add_constant_rhs_8xi32_vector_in2(<8 x i32> %vin, i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: add_constant_rhs_8xi32_vector_in2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 23
+; CHECK-NEXT:    addi a1, a1, 25
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    addi a3, a3, 2047
+; CHECK-NEXT:    addi a3, a3, 308
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
+; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vmv.s.x v10, a1
+; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 5
+; CHECK-NEXT:    vmv.s.x v10, a2
+; CHECK-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 6
+; CHECK-NEXT:    vmv.s.x v10, a3
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 7
+; CHECK-NEXT:    ret
+  %e0 = add i32 %a, 23
+  %e1 = add i32 %b, 25
+  %e2 = add i32 %c, 1
+  %e3 = add i32 %d, 2355
+  %v0 = insertelement <8 x i32> %vin, i32 %e0, i32 4
+  %v1 = insertelement <8 x i32> %v0, i32 %e1, i32 5
+  %v2 = insertelement <8 x i32> %v1, i32 %e2, i32 6
+  %v3 = insertelement <8 x i32> %v2, i32 %e3, i32 7
+  ret <8 x i32> %v3
+}
+
+define <8 x i32> @add_constant_rhs_8xi32_vector_in3(<8 x i32> %vin, i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: add_constant_rhs_8xi32_vector_in3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 23
+; CHECK-NEXT:    addi a1, a1, 25
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    addi a3, a3, 2047
+; CHECK-NEXT:    addi a3, a3, 308
+; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vmv.s.x v10, a1
+; CHECK-NEXT:    vslideup.vi v8, v10, 2
+; CHECK-NEXT:    vmv.s.x v10, a2
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vmv.s.x v10, a3
+; CHECK-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 6
+; CHECK-NEXT:    ret
+  %e0 = add i32 %a, 23
+  %e1 = add i32 %b, 25
+  %e2 = add i32 %c, 1
+  %e3 = add i32 %d, 2355
+  %v0 = insertelement <8 x i32> %vin, i32 %e0, i32 0
+  %v1 = insertelement <8 x i32> %v0, i32 %e1, i32 2
+  %v2 = insertelement <8 x i32> %v1, i32 %e2, i32 4
+  %v3 = insertelement <8 x i32> %v2, i32 %e3, i32 6
+  ret <8 x i32> %v3
 }
