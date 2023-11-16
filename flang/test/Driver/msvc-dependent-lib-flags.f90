@@ -1,0 +1,36 @@
+! RUN: %flang -### --target=aarch64-windows-msvc -fuse-ld= %S/Inputs/hello.f90 -v 2>&1 | FileCheck %s --check-prefixes=MSVC
+! RUN: %flang -### --target=aarch64-windows-msvc -fms-runtime-lib=static_dbg -fuse-ld= %S/Inputs/hello.f90 -v 2>&1 | FileCheck %s --check-prefixes=MSVC-DEBUG
+! RUN: %flang -### --target=aarch64-windows-msvc -fms-runtime-lib=dll -fuse-ld= %S/Inputs/hello.f90 -v 2>&1 | FileCheck %s --check-prefixes=MSVC-DLL
+! RUN: %flang -### --target=aarch64-windows-msvc -fms-runtime-lib=dll_dbg -fuse-ld= %S/Inputs/hello.f90 -v 2>&1 | FileCheck %s --check-prefixes=MSVC-DLL-DEBUG
+
+! MSVC: --dependent-lib=clang_rt.builtins-aarch64.lib
+! MSVC-SAME: -D_MT
+! MSVC-SAME: --dependent-lib=libcmt
+! MSVC-SAME: --dependent-lib=Fortran_main.static.lib
+! MSVC-SAME: --dependent-lib=FortranRuntime.static.lib
+! MSVC-SAME: --dependent-lib=FortranDecimal.static.lib
+
+! MSVC-DEBUG: --dependent-lib=clang_rt.builtins-aarch64.lib
+! MSVC-DEBUG-SAME: -D_MT
+! MSVC-DEBUG-SAME: -D_DEBUG
+! MSVC-DEBUG-SAME: --dependent-lib=libcmtd
+! MSVC-DEBUG-SAME: --dependent-lib=Fortran_main.static_dbg.lib
+! MSVC-DEBUG-SAME: --dependent-lib=FortranRuntime.static_dbg.lib
+! MSVC-DEBUG-SAME: --dependent-lib=FortranDecimal.static_dbg.lib
+
+! MSVC-DLL: --dependent-lib=clang_rt.builtins-aarch64.lib
+! MSVC-DLL-SAME: -D_MT
+! MSVC-DLL-SAME: -D_DLL
+! MSVC-DLL-SAME: --dependent-lib=msvcrt
+! MSVC-DLL-SAME: --dependent-lib=Fortran_main.dynamic.lib
+! MSVC-DLL-SAME: --dependent-lib=FortranRuntime.dynamic.lib
+! MSVC-DLL-SAME: --dependent-lib=FortranDecimal.dynamic.lib
+
+! MSVC-DLL-DEBUG: --dependent-lib=clang_rt.builtins-aarch64.lib
+! MSVC-DLL-DEBUG-SAME: -D_MT
+! MSVC-DLL-DEBUG-SAME: -D_DEBUG
+! MSVC-DLL-DEBUG-SAME: -D_DLL
+! MSVC-DLL-DEBUG-SAME: --dependent-lib=msvcrtd
+! MSVC-DLL-DEBUG-SAME: --dependent-lib=Fortran_main.dynamic_dbg.lib
+! MSVC-DLL-DEBUG-SAME: --dependent-lib=FortranRuntime.dynamic_dbg.lib
+! MSVC-DLL-DEBUG-SAME: --dependent-lib=FortranDecimal.dynamic_dbg.lib
