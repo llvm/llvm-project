@@ -191,12 +191,11 @@ public:
   }
 
   static bool add(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    return CheckAddUB(A, B, OpBits, R);
+    return CheckAddSubUB<std::plus>(A, B, OpBits, R);
   }
 
   static bool sub(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    /// FIXME: Gotta check if the result fits into OpBits bits.
-    return CheckSubUB(A, B, R);
+    return CheckAddSubUB<std::minus>(A, B, OpBits, R);
   }
 
   static bool mul(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
@@ -264,28 +263,21 @@ public:
   }
 
 private:
-  static bool CheckAddUB(const IntegralAP &A, const IntegralAP &B,
-                         unsigned BitWidth, IntegralAP *R) {
-    if (!A.isSigned()) {
-      R->V = A.V + B.V;
+  template <template <typename T> class Op>
+  static bool CheckAddSubUB(const IntegralAP &A, const IntegralAP &B,
+                            unsigned BitWidth, IntegralAP *R) {
+    if constexpr (!Signed) {
+      R->V = Op<APInt>{}(A.V, B.V);
       return false;
     }
 
-    const APSInt &LHS = APSInt(A.V, A.isSigned());
-    const APSInt &RHS = APSInt(B.V, B.isSigned());
-
-    APSInt Value(LHS.extend(BitWidth) + RHS.extend(BitWidth), false);
+    const APSInt &LHS = A.toAPSInt();
+    const APSInt &RHS = B.toAPSInt();
+    APSInt Value = Op<APSInt>{}(LHS.extend(BitWidth), RHS.extend(BitWidth));
     APSInt Result = Value.trunc(LHS.getBitWidth());
-    if (Result.extend(BitWidth) != Value)
-      return true;
-
     R->V = Result;
-    return false;
-  }
-  static bool CheckSubUB(const IntegralAP &A, const IntegralAP &B,
-                         IntegralAP *R) {
-    R->V = A.V - B.V;
-    return false; // Success!
+
+    return Result.extend(BitWidth) != Value;
   }
 };
 

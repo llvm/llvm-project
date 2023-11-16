@@ -11,7 +11,12 @@ constexpr _BitInt(2) B = A + 1;
 constexpr _BitInt(2) C = B + 1; // expected-warning {{from 2 to -2}} \
                                 // ref-warning {{from 2 to -2}}
 static_assert(C == -2, "");
+static_assert(C - B == A, ""); // expected-error {{not an integral constant expression}} \
+                               // expected-note {{value -3 is outside the range of representable values}} \
+                               // ref-error {{not an integral constant expression}} \
+                               // ref-note {{value -3 is outside the range of representable values}}
 
+static_assert(B - 1 == 0, "");
 
 constexpr MaxBitInt A_ = 0;
 constexpr MaxBitInt B_ = A_ + 1;
@@ -130,6 +135,16 @@ namespace i128 {
                                            // expected-warning {{implicit conversion of out of range value}} \
                                            // expected-error {{must be initialized by a constant expression}} \
                                            // expected-note {{is outside the range of representable values of type}}
+
+  constexpr uint128_t Zero = 0;
+  static_assert((Zero -1) == -1, "");
+  constexpr int128_t Five = 5;
+  static_assert(Five - Zero == Five, "");
+
+  constexpr int128_t Sub1 = INT128_MIN - 1; // expected-error {{must be initialized by a constant expression}} \
+                                            // expected-note {{-170141183460469231731687303715884105729 is outside the range}} \
+                                            // ref-error {{must be initialized by a constant expression}} \
+                                            // ref-note {{-170141183460469231731687303715884105729 is outside the range}}
 }
 
 namespace AddSubOffset {
