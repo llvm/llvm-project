@@ -83,6 +83,8 @@ public:
   }
   DimLevelType dlt(TensorLoopId b) const { return latticeMerger.getLvlType(b); }
 
+  unsigned getLoopNum() const { return latticeMerger.getNumLoops(); }
+
   //
   // LoopEmitter delegates.
   //
@@ -107,6 +109,8 @@ public:
     return loopEmitter.unpackTensorLevelRange(std::forward<ContainerTy>(c));
   }
 
+  unsigned getLoopDepth() const { return loopEmitter.getCurrentDepth(); }
+
   //
   // Code generation environment verify functions.
   //
@@ -115,25 +119,6 @@ public:
   /// It also sets the sparseOut if the output tensor is sparse.
   bool isAdmissibleTensorExp(ExprId e);
 
-  /// Whether the iteration graph is sorted in admissible topoOrder.
-  /// Sets outerParNest on success with sparse output
-  bool isAdmissibleTopoOrder();
-
-  //
-  // Topological delegate and sort methods.
-  //
-
-  LoopOrd topSortSize() const { return topSort.size(); }
-  LoopId topSortAt(LoopOrd n) const { return topSort.at(n); }
-  void topSortPushBack(LoopId i) { topSort.push_back(i); }
-  void topSortClear(size_t capacity = 0) {
-    topSort.clear();
-    topSort.reserve(capacity);
-  }
-
-  ArrayRef<LoopId> getTopSortSlice(LoopOrd n, LoopOrd m) const;
-  ArrayRef<LoopId> getLoopStackUpTo(LoopOrd n) const;
-  ArrayRef<LoopId> getCurrentLoopStack() const;
   /// Returns the induction-variable for the loop identified by the given
   /// `LoopId`.  This method handles application of the topological sort
   /// in order to convert the `LoopId` into the corresponding `LoopOrd`.
@@ -190,10 +175,6 @@ private:
 
   // Loop emitter helper class.
   LoopEmitter loopEmitter;
-
-  // Topological sort.  This serves as a mapping from `LoopOrd` to `LoopId`
-  // (cf., `getLoopVar` and `topSortAt`).
-  std::vector<LoopId> topSort;
 
   // Sparse tensor as output. Implemented either through direct injective
   // insertion in lexicographic index order or through access pattern
