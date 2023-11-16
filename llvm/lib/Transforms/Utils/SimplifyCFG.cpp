@@ -1101,12 +1101,13 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
   // Note that there may be multiple predecessor blocks, so we cannot move
   // bonus instructions to a predecessor block.
   for (Instruction &BonusInst : *BB) {
-    if (isa<DbgInfoIntrinsic>(BonusInst) || BonusInst.isTerminator())
+    if (BonusInst.isTerminator())
       continue;
 
     Instruction *NewBonusInst = BonusInst.clone();
 
-    if (PTI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
+    if (!isa<DbgInfoIntrinsic>(BonusInst) &&
+        PTI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
       // Unless the instruction has the same !dbg location as the original
       // branch, drop it. When we fold the bonus instructions we want to make
       // sure we reset their debug locations in order to avoid stepping on
@@ -1116,7 +1117,6 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     RemapInstruction(NewBonusInst, VMap,
                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-    VMap[&BonusInst] = NewBonusInst;
 
     // If we speculated an instruction, we need to drop any metadata that may
     // result in undefined behavior, as the metadata might have been valid
@@ -1126,8 +1126,13 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
     NewBonusInst->dropUBImplyingAttrsAndMetadata();
 
     NewBonusInst->insertInto(PredBlock, PTI->getIterator());
+
+    if (isa<DbgInfoIntrinsic>(BonusInst))
+      continue;
+
     NewBonusInst->takeName(&BonusInst);
     BonusInst.setName(NewBonusInst->getName() + ".old");
+    VMap[&BonusInst] = NewBonusInst;
 
     // Update (liveout) uses of bonus instructions,
     // now that the bonus instruction has been cloned into predecessor.
@@ -3748,16 +3753,6 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   Value *BICond = VMap[BI->getCondition()];
   PBI->setCondition(
       createLogicalOp(Builder, Opc, PBI->getCondition(), BICond, "or.cond"));
-
-  // Copy any debug value intrinsics into the end of PredBlock.
-  for (Instruction &I : *BB) {
-    if (isa<DbgInfoIntrinsic>(I)) {
-      Instruction *NewI = I.clone();
-      RemapInstruction(NewI, VMap,
-                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-      NewI->insertBefore(PBI);
-    }
-  }
 
   ++NumFoldBranchToCommonDest;
   return true;
