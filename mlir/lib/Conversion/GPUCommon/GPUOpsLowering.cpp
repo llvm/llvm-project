@@ -577,7 +577,7 @@ getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
   // LLVM::GlobalOp is suitable for shared memory, return it.
   llvm::StringSet<> existingGlobalNames;
   for (auto globalOp :
-       moduleOp->getRegion(0).front().template getOps<LLVM::GlobalOp>()) {
+       moduleOp->getRegion(0).front().getOps<LLVM::GlobalOp>()) {
     existingGlobalNames.insert(globalOp.getSymName());
     if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(globalOp.getType())) {
       if (globalOp.getAddrSpace() == addressSpace.value() &&
