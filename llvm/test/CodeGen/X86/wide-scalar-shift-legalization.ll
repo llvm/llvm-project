@@ -5194,7 +5194,7 @@ define void @shl_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl %ebx, %ecx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %eax
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %edi
-; X86-NO-BMI2-NO-SHLD-NEXT:    movl %ebx, %edx
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl %esi, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    notl %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    andl $31, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -5205,7 +5205,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl 20(%ebp), %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl %ebx, %ecx
-; X86-NO-BMI2-NO-SHLD-NEXT:    movl %ebx, %esi
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl 16(%ebp), %eax
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ebx

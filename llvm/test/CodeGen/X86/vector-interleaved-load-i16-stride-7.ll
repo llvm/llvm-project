@@ -15734,7 +15734,7 @@ define void @load_i16_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm12
 ; AVX512DQ-FAST-NEXT:    vpblendw {{.*#+}} xmm0 = xmm12[0],xmm0[1],xmm12[2,3,4,5],xmm0[6],xmm12[7]
 ; AVX512DQ-FAST-NEXT:    vpblendd {{.*#+}} ymm12 = ymm4[0],ymm15[1],ymm4[2,3],ymm15[4],ymm4[5,6,7]
-; AVX512DQ-FAST-NEXT:    vmovdqa64 %ymm4, %ymm17
+; AVX512DQ-FAST-NEXT:    vmovdqa64 %ymm16, %ymm17
 ; AVX512DQ-FAST-NEXT:    vmovdqa %ymm15, %ymm13
 ; AVX512DQ-FAST-NEXT:    vextracti128 $1, %ymm12, %xmm14
 ; AVX512DQ-FAST-NEXT:    vpblendw {{.*#+}} xmm12 = xmm12[0],xmm14[1],xmm12[2,3,4,5],xmm14[6],xmm12[7]
