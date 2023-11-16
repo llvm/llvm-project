@@ -7535,3 +7535,11 @@ For example,
 
 }];
 }
+
+def CoroLifetimeBoundDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The `[[clang::coro_lifetimebound]]` attribute
+
+}];
+}
