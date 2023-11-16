@@ -2824,7 +2824,7 @@ struct Conv1DGenerator
   /// kw is always unrolled.
   /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is
   /// > 1.
-  FailureOr<Operation *> depthwiseConvGeneric(bool flatten) {
+  FailureOr<Operation *> depthwiseConv(bool flatten) {
     if (!valid)
       return rewriter.notifyMatchFailure(op, "unvectorizable depthwise conv");
 
@@ -2881,7 +2881,8 @@ struct Conv1DGenerator
         lhsVals.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
             loc, lhs,
             /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
-            inOutSliceSizes, inOutStrides));
+            inOutSliceSizes,
+            inOutStrides));
       }
     }
     // Extract rhs slice of size {c} @ [kw].
@@ -2893,7 +2894,8 @@ struct Conv1DGenerator
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       resVals.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
           loc, res,
-          /*offsets=*/ArrayRef<int64_t>{0, w, 0}, inOutSliceSizes,
+          /*offsets=*/ArrayRef<int64_t>{0, w, 0},
+          inOutSliceSizes,
           inOutStrides));
     }
 
@@ -2901,8 +2903,7 @@ struct Conv1DGenerator
       return kw * (wSize / wSizeStep) + w;
     };
 
-    auto inOutFlattenSliceSizes =
-        SmallVector<int64_t>{nSize, wSizeStep * cSize};
+    auto inOutFlattenSliceSizes = SmallVector<int64_t>{nSize, wSizeStep * cSize};
     auto lhsCastType = VectorType::get(inOutFlattenSliceSizes, lhsEltType);
     auto resCastType = VectorType::get(inOutFlattenSliceSizes, lhsEltType);
     // Compute contraction: O{n, w, c} += I{n, sw * w + dw * kw, c} * F{c}
@@ -3085,7 +3086,7 @@ struct Conv1DGenerator
     if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
                 /*rhsIndex*/ {kw, c},
                 /*resIndex*/ {n, w, c}}))
-      return depthwiseConvGeneric(flatten);
+      return depthwiseConv(flatten);
 
     return rewriter.notifyMatchFailure(op, "not a depthwise::Nwc layout");
   }
