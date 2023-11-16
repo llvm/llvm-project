@@ -832,8 +832,8 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_and_vtable_data_read_write) {
 TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   NamedInstrProfRecord Record("caller", 0x1234, {1, 2});
   Record.reserveSites(IPVK_IndirectCallTarget, 1);
-  InstrProfValueData VD0[] = {{1000, 1}, {2000, 2}, {3000, 3}, {5000, 5},
-                              {4000, 4}, {6000, 6}};
+  InstrProfValueData VD0[] = {{1000, 1}, {2000, 2}, {3000, 3},
+                              {5000, 5}, {4000, 4}, {6000, 6}};
   Record.addValueData(IPVK_IndirectCallTarget, 0, VD0, 6, nullptr);
   Writer.addRecord(std::move(Record), Err);
   auto Profile = Writer.writeBuffer();
@@ -887,8 +887,8 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   Inst->setMetadata(LLVMContext::MD_prof, 0);
   // Annotate 5 records this time.
   annotateValueSite(*M, *Inst, R.get(), IPVK_IndirectCallTarget, 0, 5);
-  Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5,
-                                      ValueData, N, T);
+  Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, ValueData,
+                                 N, T);
   ASSERT_TRUE(Res);
   ASSERT_EQ(5U, N);
   ASSERT_EQ(21U, T);
@@ -906,12 +906,12 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   // Remove the MD_prof metadata
   Inst->setMetadata(LLVMContext::MD_prof, 0);
   // Annotate with 4 records.
-  InstrProfValueData VD0Sorted[] = {{1000, 6}, {2000, 5}, {3000, 4}, {4000, 3},
-                              {5000, 2}, {6000, 1}};
+  InstrProfValueData VD0Sorted[] = {{1000, 6}, {2000, 5}, {3000, 4},
+                                    {4000, 3}, {5000, 2}, {6000, 1}};
   annotateValueSite(*M, *Inst, ArrayRef(VD0Sorted).slice(2), 10,
                     IPVK_IndirectCallTarget, 5);
-  Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5,
-                                      ValueData, N, T);
+  Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, ValueData,
+                                 N, T);
   ASSERT_TRUE(Res);
   ASSERT_EQ(4U, N);
   ASSERT_EQ(10U, T);
@@ -1306,13 +1306,13 @@ TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write_mapping) {
 
   // Sanity check the vtable value data
   ASSERT_EQ(5U, Record.getNumValueSites(IPVK_VTableTarget));
- 
+
   // The fourth and last site has no vtable profile record.
   EXPECT_EQ(0, Record.getNumValueDataForSite(IPVK_VTableTarget, 3));
   EXPECT_EQ(nullptr, Record.getValueForSite(IPVK_VTableTarget, 3));
   EXPECT_EQ(0, Record.getNumValueDataForSite(IPVK_VTableTarget, 4));
   EXPECT_EQ(nullptr, Record.getValueForSite(IPVK_VTableTarget, 4));
-  { 
+  {
     // The first vtable site.
     std::unique_ptr<InstrProfValueData[]> VD(
         Record.getValueForSite(IPVK_VTableTarget, 0));
@@ -1345,11 +1345,11 @@ TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write_mapping) {
     EXPECT_EQ(VD[2].Value, MD5Hash("vtable3"));
     EXPECT_EQ(1000U, VD[2].Count);
     // vtable5 isn't mapped -- default to 0.
-    EXPECT_EQ(VD[3].Value,0);
+    EXPECT_EQ(VD[3].Value, 0);
     EXPECT_EQ(800U, VD[3].Count);
   }
 
-    {
+  {
     // The second vtable site.
     std::unique_ptr<InstrProfValueData[]> VD(
         Record.getValueForSite(IPVK_VTableTarget, 2));
@@ -1360,7 +1360,7 @@ TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write_mapping) {
     EXPECT_EQ(VD[1].Value, MD5Hash("vtable3"));
     EXPECT_EQ(1000U, VD[1].Count);
     // vtable6 isn't mapped -- default to 0.
-    EXPECT_EQ(VD[2].Value,0);
+    EXPECT_EQ(VD[2].Value, 0);
     EXPECT_EQ(800U, VD[2].Count);
   }
 }

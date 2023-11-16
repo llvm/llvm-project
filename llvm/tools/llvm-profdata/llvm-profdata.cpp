@@ -333,10 +333,9 @@ cl::opt<bool> ShowIndirectCallTargets(
     "ic-targets", cl::init(false),
     cl::desc("Show indirect call site target values for shown functions"),
     cl::sub(ShowSubcommand));
-cl::opt<bool> ShowVTables(
-    "show-vtables", cl::init(false),
-    cl::desc("Show vtable names for shown functions"),
-    cl::sub(ShowSubcommand)); 
+cl::opt<bool> ShowVTables("show-vtables", cl::init(false),
+                          cl::desc("Show vtable names for shown functions"),
+                          cl::sub(ShowSubcommand));
 cl::opt<bool> ShowMemOPSizes(
     "memop-sizes", cl::init(false),
     cl::desc("Show the profiled sizes of the memory intrinsic calls "
@@ -552,7 +551,7 @@ public:
     return New.empty() ? Name : FunctionId(New);
   }
 };
-}
+} // namespace
 
 struct WeightedFile {
   std::string Filename;
@@ -1280,8 +1279,8 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
                           BodySample.second.getSamples());
     for (const auto &Target : BodySample.second.getCallTargets()) {
       Result.addCalledTargetSamples(BodySample.first.LineOffset,
-                                    MaskedDiscriminator,
-                                    Remapper(Target.first), Target.second);
+                                    MaskedDiscriminator, Remapper(Target.first),
+                                    Target.second);
     }
   }
   for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
@@ -1297,12 +1296,8 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
 }
 
 static sampleprof::SampleProfileFormat FormatMap[] = {
-    sampleprof::SPF_None,
-    sampleprof::SPF_Text,
-    sampleprof::SPF_None,
-    sampleprof::SPF_Ext_Binary,
-    sampleprof::SPF_GCC,
-    sampleprof::SPF_Binary};
+    sampleprof::SPF_None,       sampleprof::SPF_Text, sampleprof::SPF_None,
+    sampleprof::SPF_Ext_Binary, sampleprof::SPF_GCC,  sampleprof::SPF_Binary};
 
 static std::unique_ptr<MemoryBuffer>
 getInputFileBuf(const StringRef &InputFile) {
@@ -3135,7 +3130,8 @@ static int show_main(int argc, const char *argv[]) {
     exitWithErrorCode(EC, OutputFilename);
 
   if (ShowAllFunctions && !FuncNameFilter.empty())
-    WithColor::warning() << "-function argument ignored: showing all functions\n";
+    WithColor::warning()
+        << "-function argument ignored: showing all functions\n";
 
   if (!DebugInfoFilename.empty())
     return showDebugInfoCorrelation(DebugInfoFilename, SFormat, OS);

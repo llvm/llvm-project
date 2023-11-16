@@ -6,8 +6,8 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__Fuchsia__) || \
-    (defined(__sun__) && defined(__svr4__)) || defined(__NetBSD__) || \
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__Fuchsia__) ||      \
+    (defined(__sun__) && defined(__svr4__)) || defined(__NetBSD__) ||          \
     defined(_AIX)
 
 #if !defined(_AIX)
@@ -108,8 +108,7 @@ COMPILER_RT_VISIBILITY uint32_t *__llvm_profile_begin_orderfile(void) {
   return &PROF_ORDERFILE_START;
 }
 
-COMPILER_RT_VISIBILITY ValueProfNode *
-__llvm_profile_begin_vnodes(void) {
+COMPILER_RT_VISIBILITY ValueProfNode *__llvm_profile_begin_vnodes(void) {
   return &PROF_VNODES_START;
 }
 COMPILER_RT_VISIBILITY ValueProfNode *__llvm_profile_end_vnodes(void) {

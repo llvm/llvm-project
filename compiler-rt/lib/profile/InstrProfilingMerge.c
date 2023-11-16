@@ -83,7 +83,7 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
     return 1;
 
   for (SrcData = SrcDataStart,
-       DstData = (__llvm_profile_data *)__llvm_profile_begin_data();
+      DstData = (__llvm_profile_data *)__llvm_profile_begin_data();
        SrcData < SrcDataEnd; ++SrcData, ++DstData) {
     if (SrcData->NameRef != DstData->NameRef ||
         SrcData->FuncHash != DstData->FuncHash ||

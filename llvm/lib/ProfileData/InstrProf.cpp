@@ -265,7 +265,7 @@ std::string getPGOFuncName(StringRef RawFuncName,
 static StringRef stripDirPrefix(StringRef PathNameStr, uint32_t NumPrefix) {
   uint32_t Count = NumPrefix;
   uint32_t Pos = 0, LastPos = 0;
-  for (auto & CI : PathNameStr) {
+  for (auto &CI : PathNameStr) {
     ++Pos;
     if (llvm::sys::path::is_separator(CI)) {
       LastPos = Pos;
@@ -642,9 +642,10 @@ Error collectGlobalObjectNameStrings(ArrayRef<std::string> NameStrs,
   std::string UncompressedNameStrings =
       join(NameStrs.begin(), NameStrs.end(), getInstrProfNameSeparator());
 
-  assert(StringRef(UncompressedNameStrings)
-                 .count(getInstrProfNameSeparator()) == (NameStrs.size() - 1) &&
-         "PGO name is invalid (contains separator token)");
+  assert(
+      StringRef(UncompressedNameStrings).count(getInstrProfNameSeparator()) ==
+          (NameStrs.size() - 1) &&
+      "PGO name is invalid (contains separator token)");
 
   unsigned EncLen = encodeULEB128(UncompressedNameStrings.length(), P);
   P += EncLen;
@@ -1037,19 +1038,19 @@ uint32_t getNumValueKindsInstrProf(const void *Record) {
 }
 
 uint32_t getNumValueSitesInstrProf(const void *Record, uint32_t VKind) {
-  return reinterpret_cast<const InstrProfRecord *>(Record)
-      ->getNumValueSites(VKind);
+  return reinterpret_cast<const InstrProfRecord *>(Record)->getNumValueSites(
+      VKind);
 }
 
 uint32_t getNumValueDataInstrProf(const void *Record, uint32_t VKind) {
-  return reinterpret_cast<const InstrProfRecord *>(Record)
-      ->getNumValueData(VKind);
+  return reinterpret_cast<const InstrProfRecord *>(Record)->getNumValueData(
+      VKind);
 }
 
 uint32_t getNumValueDataForSiteInstrProf(const void *R, uint32_t VK,
                                          uint32_t S) {
-  return reinterpret_cast<const InstrProfRecord *>(R)
-      ->getNumValueDataForSite(VK, S);
+  return reinterpret_cast<const InstrProfRecord *>(R)->getNumValueDataForSite(
+      VK, S);
 }
 
 void getValueForSiteInstrProf(const void *R, InstrProfValueData *Dst,
@@ -1255,9 +1256,8 @@ void annotateValueSite(Module &M, Instruction &Inst,
 }
 
 void annotateValueSite(Module &M, Instruction &Inst,
-                       ArrayRef<InstrProfValueData> VDs,
-                       uint64_t Sum, InstrProfValueKind ValueKind,
-                       uint32_t MaxMDCount) {
+                       ArrayRef<InstrProfValueData> VDs, uint64_t Sum,
+                       InstrProfValueKind ValueKind, uint32_t MaxMDCount) {
   LLVMContext &Ctx = M.getContext();
   MDBuilder MDHelper(Ctx);
   SmallVector<Metadata *, 3> Vals;
@@ -1346,7 +1346,7 @@ MDNode *getPGOFuncNameMetadata(const Function &F) {
 void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
   // Only for internal linkage functions.
   if (PGOFuncName == F.getName())
-      return;
+    return;
   // Don't create duplicated meta-data.
   if (getPGOFuncNameMetadata(F))
     return;

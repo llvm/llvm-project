@@ -1207,8 +1207,8 @@ void InstrProfiling::getOrCreateVTableProfData(GlobalVariable *GV) {
   UsedVars.push_back(Data);
 }
 
-GlobalVariable *
-InstrProfiling::setupProfileSection(InstrProfInstBase *Inc, InstrProfSectKind IPSK) {
+GlobalVariable *InstrProfiling::setupProfileSection(InstrProfInstBase *Inc,
+                                                    InstrProfSectKind IPSK) {
   GlobalVariable *NamePtr = Inc->getName();
 
   // Match the linkage and visibility of the name global.
