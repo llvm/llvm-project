@@ -1837,7 +1837,7 @@ UUCAddAssignGadget::getFixits(const Strategy &S) const {
           (Offset->IgnoreParens()->getBeginLoc() == Offset->getBeginLoc());
       if (NotParenExpr)
         SS << "(";
-      
+
       std::optional<SourceLocation> AddAssignLocation = getEndCharLoc(
           AddAssignNode, Ctx.getSourceManager(), Ctx.getLangOpts());
       if (!AddAssignLocation)
