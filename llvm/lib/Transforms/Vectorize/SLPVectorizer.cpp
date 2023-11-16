@@ -10569,8 +10569,12 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
         });
     if (It == VectorizableTree.end())
       return false;
-    if (Mask.size() <= InputVF &&
-        ShuffleVectorInst::isIdentityMask(Mask, Mask.size())) {
+    int Idx;
+    if ((Mask.size() < InputVF &&
+         ShuffleVectorInst::isExtractSubvectorMask(Mask, InputVF, Idx) &&
+         Idx == 0) ||
+        (Mask.size() == InputVF &&
+         ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))) {
       std::iota(Mask.begin(), Mask.end(), 0);
     } else {
       unsigned I =
