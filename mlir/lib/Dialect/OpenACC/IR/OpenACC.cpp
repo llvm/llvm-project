@@ -1089,8 +1089,8 @@ LogicalResult AtomicCaptureOp::verifyRegions() { return verifyRegionsCommon(); }
 template <typename Op>
 static LogicalResult checkDeclareOperands(Op &op,
                                           const mlir::ValueRange &operands,
-                                          bool requireAtLeastOnOperand = true) {
-  if (operands.empty() && requireAtLeastOnOperand)
+                                          bool requireAtLeastOneOperand = true) {
+  if (operands.empty() && requireAtLeastOneOperand)
     return emitError(
         op->getLoc(),
         "at least one operand must appear on the declare operation");
