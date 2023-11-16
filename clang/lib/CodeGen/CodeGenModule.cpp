@@ -7657,6 +7657,7 @@ bool CodeGenModule::teamsLoopCanBeParallelFor(const OMPExecutableDirective &D) {
 
 void CodeGenModule::emitTargetTeamsLoopCodegenStatus(
     std::string StatusMsg, const OMPExecutableDirective &D, bool IsDevice) {
+#ifndef NDEBUG
   if (IsDevice)
     StatusMsg += ": DEVICE";
   else
@@ -7668,6 +7669,7 @@ void CodeGenModule::emitTargetTeamsLoopCodegenStatus(
   unsigned LineNo =
       PLoc.isValid() ? PLoc.getLine() : SM.getExpansionLineNumber(L);
   llvm::dbgs() << StatusMsg << ": " << FileName << ": " << LineNo << "\n";
+#endif
 }
 
 void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
