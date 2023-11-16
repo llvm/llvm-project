@@ -1080,6 +1080,13 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
 ; FIXME: These constants have enough sign bits that we could use vmv.v.x/i and
 ; vsext, but we don't support this for FP yet.
 define <2 x float> @signbits() {
+; CHECK-LABEL: signbits:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a0, %hi(.LCPI24_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI24_0)
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    ret
 entry:
   ret <2 x float> <float 0x36A0000000000000, float 0.000000e+00>
 }
