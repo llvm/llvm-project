@@ -26798,7 +26798,7 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
 
   // Ignore two operands if no SVE2 or all index numbers couldn't
   // be represented.
-  if (!IsSingleOp && (!Subtarget.hasSVE2() || MinSVESize != MaxSVESize))
+  if (!IsSingleOp && !Subtarget.hasSVE2())
     return SDValue();
 
   EVT VTOp1 = Op.getOperand(0).getValueType();
@@ -26806,18 +26806,40 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   unsigned IndexLen = MinSVESize / BitsPerElt;
   unsigned ElementsPerVectorReg = VTOp1.getVectorNumElements();
   uint64_t MaxOffset = APInt(BitsPerElt, -1, false).getZExtValue();
+  EVT MaskEltType = EVT::getIntegerVT(*DAG.getContext(), BitsPerElt);
+  EVT MaskType = EVT::getVectorVT(*DAG.getContext(), MaskEltType, IndexLen);
+  bool MinMaxEqual = (MinSVESize == MaxSVESize);
   assert(ElementsPerVectorReg <= IndexLen && ShuffleMask.size() <= IndexLen &&
          "Incorrectly legalised shuffle operation");
 
   SmallVector<SDValue, 8> TBLMask;
+  // If MinSVESize is not equal to MaxSVESize then we need to know which
+  // TBL mask element needs adjustment.
+  SmallVector<SDValue, 8> MaskNormalized;
+
+  if (BitsPerElt == 8 && !MinMaxEqual && !IsSingleOp)
+    return SDValue();
+
   for (int Index : ShuffleMask) {
     // Handling poison index value.
     if (Index < 0)
       Index = 0;
     // If we refer to the second operand then we have to add elements
-    // number in hardware register minus number of elements in a type.
-    if ((unsigned)Index >= ElementsPerVectorReg)
-      Index += IndexLen - ElementsPerVectorReg;
+    // number in hardware register minus number of elements in a type in
+    // case if MinSVESize equals to MaxSVESize, otherwise just add normalized
+    // value and record this element in MaskNormalized to be adjusted in the
+    // runtime.
+    if ((unsigned)Index >= ElementsPerVectorReg) {
+      if (!MinMaxEqual) {
+        Index = Index - ElementsPerVectorReg;
+        MaskNormalized.push_back(DAG.getConstant(1, DL, MVT::i64));
+      } else {
+        Index += IndexLen - ElementsPerVectorReg;
+      }
+    } else {
+      if (!MinMaxEqual)
+        MaskNormalized.push_back(DAG.getConstant(0, DL, MVT::i64));
+    }
     // For 8-bit elements and 1024-bit SVE registers and MaxOffset equals
     // to 255, this might point to the last element of in the second operand
     // of the shufflevector, thus we are rejecting this transform.
@@ -26830,11 +26852,12 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   // value where it would perform first lane duplication for out of
   // index elements. For i8 elements an out-of-range index could be a valid
   // for 2048-bit vector register size.
-  for (unsigned i = 0; i < IndexLen - ElementsPerVectorReg; ++i)
+  for (unsigned i = 0; i < IndexLen - ElementsPerVectorReg; ++i) {
     TBLMask.push_back(DAG.getConstant((int)MaxOffset, DL, MVT::i64));
+    if (!MinMaxEqual)
+      MaskNormalized.push_back(DAG.getConstant(0, DL, MVT::i64));
+  }
 
-  EVT MaskEltType = EVT::getIntegerVT(*DAG.getContext(), BitsPerElt);
-  EVT MaskType = EVT::getVectorVT(*DAG.getContext(), MaskEltType, IndexLen);
   EVT MaskContainerVT = getContainerForFixedLengthVector(DAG, MaskType);
   SDValue VecMask =
       DAG.getBuildVector(MaskType, DL, ArrayRef(TBLMask.data(), IndexLen));
@@ -26846,13 +26869,35 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
         DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
                     DAG.getConstant(Intrinsic::aarch64_sve_tbl, DL, MVT::i32),
                     Op1, SVEMask);
-  else if (Subtarget.hasSVE2())
-    Shuffle =
-        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
-                    DAG.getConstant(Intrinsic::aarch64_sve_tbl2, DL, MVT::i32),
-                    Op1, Op2, SVEMask);
-  else
-    llvm_unreachable("Cannot lower shuffle without SVE2 TBL");
+  else if (Subtarget.hasSVE2()) {
+    if (!MinMaxEqual) {
+      SDValue VScale = DAG.getVScale(DL, MVT::i32, APInt(32, 1));
+      SDValue Mul =
+          DAG.getNode(ISD::MUL, DL, MVT::i32,
+                      DAG.getConstant(128 / BitsPerElt, DL, MVT::i32), VScale);
+      SDValue VecMask =
+          DAG.getBuildVector(MaskType, DL, ArrayRef(TBLMask.data(), IndexLen));
+      SDValue MulMask = DAG.getBuildVector(
+          MaskType, DL, ArrayRef(MaskNormalized.data(), IndexLen));
+      SDValue SplatPred = DAG.getNode(ISD::SPLAT_VECTOR, DL, MaskType, Mul);
+      SDValue MulMaskNormalized =
+          DAG.getNode(ISD::MUL, DL, MaskType, SplatPred, MulMask);
+      SDValue UpdatedVecMask =
+          DAG.getNode(ISD::ADD, DL, MaskType, VecMask, MulMaskNormalized);
+      EVT MaskContainerVT = getContainerForFixedLengthVector(DAG, MaskType);
+      SDValue SVEMask =
+          convertToScalableVector(DAG, MaskContainerVT, UpdatedVecMask);
+      Shuffle = DAG.getNode(
+          ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
+          DAG.getConstant(Intrinsic::aarch64_sve_tbl2, DL, MVT::i32), Op1, Op2,
+          SVEMask);
+    } else {
+      Shuffle = DAG.getNode(
+          ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
+          DAG.getConstant(Intrinsic::aarch64_sve_tbl2, DL, MVT::i32), Op1, Op2,
+          SVEMask);
+    }
+  }
   Shuffle = convertFromScalableVector(DAG, VT, Shuffle);
   return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Shuffle);
 }
