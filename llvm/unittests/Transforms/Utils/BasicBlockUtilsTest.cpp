@@ -617,41 +617,54 @@ TEST(BasicBlockUtils, IsPresplitCoroSuspendExitTest) {
   std::unique_ptr<Module> M = parseIR(C, R"IR(
 define void @positive_case(i32 %0) #0 {
 entry:
-  %suspend2 = call i8 @llvm.coro.suspend(token %save2, i1 false)
-  switch i8 %suspend2, label %exit [
+  %save = call token @llvm.coro.save(ptr null)
+  %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
+  switch i8 %suspend, label %exit [
     i8 0, label %resume
     i8 1, label %destroy
   ]
-%resume:
+resume:
   ret void
-%destroy:
+destroy:
   ret void
-%exit:
+exit:
   call i1 @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
 define void @notpresplit(i32 %0) {
 entry:
-  %suspend2 = call i8 @llvm.coro.suspend(token %save2, i1 false)
-  switch i8 %suspend2, label %exit [
+  %save = call token @llvm.coro.save(ptr null)
+  %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
+  switch i8 %suspend, label %exit [
     i8 0, label %resume
     i8 1, label %destroy
   ]
-%resume:
+resume:
   ret void
-%destroy:
+destroy:
   ret void
-%exit:
+exit:
   call i1 @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
+
+declare token @llvm.coro.save(ptr)
+declare i8 @llvm.coro.suspend(token, i1)
+declare i1 @llvm.coro.end(ptr, i1, token)
+
 attributes #0 = { presplitcoroutine }
 )IR");
 
+  auto FindExit = [](const Function &F) -> const BasicBlock * {
+    for (const auto &BB : F)
+      if (BB.getName() == "exit")
+        return &BB;
+    return nullptr;
+  };
   Function *P = M->getFunction("positive_case");
-  EXPECT_TRUE(llvm::isPresplitCoroSuspendExit(*P->begin()));
+  EXPECT_TRUE(llvm::isPresplitCoroSuspendExit(*FindExit(*P)));
 
   Function *N = M->getFunction("notpresplit");
-  EXPECT_FALSE(llvm::isPresplitCoroSuspendExit(*N->begin()));
+  EXPECT_FALSE(llvm::isPresplitCoroSuspendExit(*FindExit(*N)));
 }
