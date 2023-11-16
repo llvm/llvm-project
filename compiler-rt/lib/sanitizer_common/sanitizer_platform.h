@@ -415,9 +415,9 @@
 
 // Enable offline markup symbolizer for Fuchsia.
 #if SANITIZER_FUCHSIA
-#  define SANITIZER_SYMBOLIZER_MARKUP 1
+#  define SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA 1
 #else
-#  define SANITIZER_SYMBOLIZER_MARKUP 0
+#  define SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA 0
 #endif
 
 // Enable ability to support sanitizer initialization that is

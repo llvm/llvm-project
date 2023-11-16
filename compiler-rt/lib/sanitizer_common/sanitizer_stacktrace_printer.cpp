@@ -12,28 +12,15 @@
 
 #include "sanitizer_stacktrace_printer.h"
 
+#include "sanitizer_common.h"
 #include "sanitizer_file.h"
 #include "sanitizer_flags.h"
-#include "sanitizer_fuchsia.h"
+#include "sanitizer_symbolizer_markup.h"
 
 namespace __sanitizer {
 
-StackTracePrinter *StackTracePrinter::GetOrInit() {
-  static StackTracePrinter *stacktrace_printer;
-  static StaticSpinMutex init_mu;
-  SpinMutexLock l(&init_mu);
-  if (stacktrace_printer)
-    return stacktrace_printer;
 
-  stacktrace_printer =
-      new (GetGlobalLowLevelAllocator()) FormattedStackTracePrinter();
-
-  CHECK(stacktrace_printer);
-  return stacktrace_printer;
-}
-
-const char *FormattedStackTracePrinter::StripFunctionName(
-    const char *function) {
+const char *StackTracePrinter::StripFunctionName(const char *function) {
   if (!common_flags()->demangle)
     return function;
   if (!function)
@@ -59,8 +46,27 @@ const char *FormattedStackTracePrinter::StripFunctionName(
   return function;
 }
 
-// sanitizer_symbolizer_markup.cpp implements these differently.
-#if !SANITIZER_SYMBOLIZER_MARKUP
+// sanitizer_symbolizer_markup_fuchsia.cpp implements these differently.
+#if !SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
+
+StackTracePrinter *StackTracePrinter::GetOrInit() {
+  static StackTracePrinter *stacktrace_printer;
+  static StaticSpinMutex init_mu;
+  SpinMutexLock l(&init_mu);
+  if (stacktrace_printer)
+    return stacktrace_printer;
+
+  if (common_flags()->enable_symbolizer_markup) {
+    stacktrace_printer =
+        new (GetGlobalLowLevelAllocator()) MarkupStackTracePrinter();
+  } else {
+    stacktrace_printer =
+        new (GetGlobalLowLevelAllocator()) FormattedStackTracePrinter();
+  }
+
+  CHECK(stacktrace_printer);
+  return stacktrace_printer;
+}
 
 static const char *DemangleFunctionName(const char *function) {
   if (!common_flags()->demangle)
@@ -322,9 +328,9 @@ void FormattedStackTracePrinter::RenderData(InternalScopedString *buffer,
   }
 }
 
-#endif  // !SANITIZER_SYMBOLIZER_MARKUP
+#endif  // !SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
 
-void FormattedStackTracePrinter::RenderSourceLocation(
+void StackTracePrinter::RenderSourceLocation(
     InternalScopedString *buffer, const char *file, int line, int column,
     bool vs_style, const char *strip_path_prefix) {
   if (vs_style && line > 0) {
@@ -343,7 +349,7 @@ void FormattedStackTracePrinter::RenderSourceLocation(
   }
 }
 
-void FormattedStackTracePrinter::RenderModuleLocation(
+void StackTracePrinter::RenderModuleLocation(
     InternalScopedString *buffer, const char *module, uptr offset,
     ModuleArch arch, const char *strip_path_prefix) {
   buffer->AppendF("(%s", StripPathPrefix(module, strip_path_prefix));

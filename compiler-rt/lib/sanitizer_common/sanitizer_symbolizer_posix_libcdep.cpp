@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_platform.h"
+#include "sanitizer_symbolizer_markup.h"
 #if SANITIZER_POSIX
 #  include <dlfcn.h>  // for dlsym()
 #  include <errno.h>
@@ -474,6 +475,12 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
   if (!common_flags()->symbolize) {
     VReport(2, "Symbolizer is disabled.\n");
     return;
+  }
+  if(common_flags()->enable_symbolizer_markup) {
+      VReport(2, "Symbolizer markup enabled.\n");
+      SymbolizerTool *tool = new(*allocator) MarkupSymbolizerTool();
+      list->push_back(tool);
+      return;
   }
   if (IsAllocatorOutOfMemory()) {
     VReport(2, "Cannot use internal symbolizer: out of memory\n");

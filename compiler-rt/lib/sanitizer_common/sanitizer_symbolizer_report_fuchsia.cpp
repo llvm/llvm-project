@@ -13,7 +13,7 @@
 
 #include "sanitizer_platform.h"
 
-#if SANITIZER_SYMBOLIZER_MARKUP
+#if SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
 
 #  include "sanitizer_common.h"
 
@@ -30,4 +30,4 @@ void HandleDeadlySignal(void *siginfo, void *context, u32 tid,
 
 }  // namespace __sanitizer
 
-#endif  // SANITIZER_SYMBOLIZER_MARKUP
+#endif  // SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA

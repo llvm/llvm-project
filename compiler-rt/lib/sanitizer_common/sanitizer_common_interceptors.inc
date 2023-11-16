@@ -6357,7 +6357,7 @@ INTERCEPTOR(int, dlclose, void *handle) {
   COMMON_INTERCEPT_FUNCTION(dlclose);
 #else
 #define INIT_DLOPEN_DLCLOSE
-#endif
+#endif //  SANITIZER_INTERCEPT_DLOPEN_DLCLOSE
 
 #if SANITIZER_INTERCEPT_GETPASS
 INTERCEPTOR(char *, getpass, const char *prompt) {

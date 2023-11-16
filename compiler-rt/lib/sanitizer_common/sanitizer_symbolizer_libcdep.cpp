@@ -26,8 +26,8 @@ Symbolizer *Symbolizer::GetOrInit() {
   return symbolizer_;
 }
 
-// See sanitizer_symbolizer_markup.cpp.
-#if !SANITIZER_SYMBOLIZER_MARKUP
+// See sanitizer_symbolizer_markup_fuchsia.cpp.
+#if !SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
 
 const char *ExtractToken(const char *str, const char *delims, char **result) {
   uptr prefix_len = internal_strcspn(str, delims);
@@ -189,6 +189,14 @@ void Symbolizer::RefreshModules() {
   fallback_modules_.fallbackInit();
   RAW_CHECK(modules_.size() > 0);
   modules_fresh_ = true;
+}
+
+ListOfModules &Symbolizer::GetRefreshedListOfModules() {
+  if(!modules_fresh_) {
+      RefreshModules();
+  }
+  CHECK(modules_fresh_);
+  return modules_;
 }
 
 static const LoadedModule *SearchForModule(const ListOfModules &modules,
@@ -566,6 +574,6 @@ bool SymbolizerProcess::WriteToSymbolizer(const char *buffer, uptr length) {
   return true;
 }
 
-#endif  // !SANITIZER_SYMBOLIZER_MARKUP
+#endif  // !SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
 
 }  // namespace __sanitizer
