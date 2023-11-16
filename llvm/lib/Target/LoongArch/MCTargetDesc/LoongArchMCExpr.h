@@ -67,16 +67,18 @@ public:
 private:
   const MCExpr *Expr;
   const VariantKind Kind;
+  const bool RelaxHint;
 
-  explicit LoongArchMCExpr(const MCExpr *Expr, VariantKind Kind)
-      : Expr(Expr), Kind(Kind) {}
+  explicit LoongArchMCExpr(const MCExpr *Expr, VariantKind Kind, bool Hint)
+      : Expr(Expr), Kind(Kind), RelaxHint(Hint) {}
 
 public:
   static const LoongArchMCExpr *create(const MCExpr *Expr, VariantKind Kind,
-                                       MCContext &Ctx);
+                                       MCContext &Ctx, bool Hint = false);
 
   VariantKind getKind() const { return Kind; }
   const MCExpr *getSubExpr() const { return Expr; }
+  bool getRelaxHint() const { return RelaxHint; }
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,

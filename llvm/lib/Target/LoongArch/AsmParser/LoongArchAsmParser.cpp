@@ -85,7 +85,7 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   // "emitLoadAddress*" functions.
   void emitLAInstSeq(MCRegister DestReg, MCRegister TmpReg,
                      const MCExpr *Symbol, SmallVectorImpl<Inst> &Insts,
-                     SMLoc IDLoc, MCStreamer &Out);
+                     SMLoc IDLoc, MCStreamer &Out, bool RelaxHint = false);
 
   // Helper to emit pseudo instruction "la.abs $rd, sym".
   void emitLoadAddressAbs(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
@@ -748,12 +748,14 @@ bool LoongArchAsmParser::ParseInstruction(ParseInstructionInfo &Info,
 void LoongArchAsmParser::emitLAInstSeq(MCRegister DestReg, MCRegister TmpReg,
                                        const MCExpr *Symbol,
                                        SmallVectorImpl<Inst> &Insts,
-                                       SMLoc IDLoc, MCStreamer &Out) {
+                                       SMLoc IDLoc, MCStreamer &Out,
+                                       bool RelaxHint) {
   MCContext &Ctx = getContext();
   for (LoongArchAsmParser::Inst &Inst : Insts) {
     unsigned Opc = Inst.Opc;
     LoongArchMCExpr::VariantKind VK = Inst.VK;
-    const LoongArchMCExpr *LE = LoongArchMCExpr::create(Symbol, VK, Ctx);
+    const LoongArchMCExpr *LE =
+        LoongArchMCExpr::create(Symbol, VK, Ctx, RelaxHint);
     switch (Opc) {
     default:
       llvm_unreachable("unexpected opcode");
@@ -854,7 +856,7 @@ void LoongArchAsmParser::emitLoadAddressPcrel(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(
       LoongArchAsmParser::Inst(ADDI, LoongArchMCExpr::VK_LoongArch_PCALA_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
 }
 
 void LoongArchAsmParser::emitLoadAddressPcrelLarge(MCInst &Inst, SMLoc IDLoc,
@@ -900,7 +902,7 @@ void LoongArchAsmParser::emitLoadAddressGot(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(
       LoongArchAsmParser::Inst(LD, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
 }
 
 void LoongArchAsmParser::emitLoadAddressGotLarge(MCInst &Inst, SMLoc IDLoc,
