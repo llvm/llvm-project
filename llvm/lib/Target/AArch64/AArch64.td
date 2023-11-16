@@ -1383,7 +1383,7 @@ def ProcessorFeatures {
                                  FeaturePerfMon, FeatureMatMulInt8, FeatureSPE];
   list<SubtargetFeature> A720 = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
                                  FeatureTRBE, FeatureSVE2BitPerm, FeatureETE,
-                                 FeaturePerfMon, FeatureSPE, FFeatureSPE_EEF];
+                                 FeaturePerfMon, FeatureSPE, FeatureSPE_EEF];
   list<SubtargetFeature> R82  = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
                                  FeatureFP16FML, FeatureSSBS, FeaturePredRes,
                                  FeatureSB];
