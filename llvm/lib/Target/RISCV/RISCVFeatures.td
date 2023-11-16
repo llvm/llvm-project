@@ -851,6 +851,13 @@ def FeatureVendorXSfvfnrclipxfqf
 def HasVendorXSfvfnrclipxfqf : Predicate<"Subtarget->hasVendorXSfvfnrclipxfqf()">,
                                AssemblerPredicate<(all_of FeatureVendorXSfvfnrclipxfqf),
                                "'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)">;
+def FeatureVendorXCVelw
+   : SubtargetFeature<"xcvelw", "HasVendorXCVelw", "true",
+                      "'XCVelw' (CORE-V Event Load Word)">;
+def HasVendorXCVelw
+   : Predicate<"Subtarget->hasVendorXCVelw()">,
+              AssemblerPredicate<(any_of FeatureVendorXCVelw),
+              "'XCVelw' (CORE-V Event Load Word)">;
 
 def FeatureVendorXCVbitmanip
     : SubtargetFeature<"xcvbitmanip", "HasVendorXCVbitmanip", "true",
@@ -865,6 +872,14 @@ def FeatureVendorXCVmac
 def HasVendorXCVmac : Predicate<"Subtarget->hasVendorXCVmac()">,
                                 AssemblerPredicate<(all_of FeatureVendorXCVmac),
                                 "'XCVmac' (CORE-V Multiply-Accumulate)">;
+
+def FeatureVendorXCVmem
+    : SubtargetFeature<"xcvmem", "HasVendorXCVmem", "true",
+                       "'XCVmem' (CORE-V Post-incrementing Load & Store)">;
+def HasVendorXCVmem
+    : Predicate<"Subtarget->hasVendorXCVmem()">,
+               AssemblerPredicate<(any_of FeatureVendorXCVmem),
+               "'XCVmem' (CORE-V Post-incrementing Load & Store)">;
 
 def FeatureVendorXCValu
     : SubtargetFeature<"xcvalu", "HasVendorXCValu", "true",

@@ -279,6 +279,22 @@ void RISCVInstPrinter::printRlist(const MCInst *MI, unsigned OpNo,
   O << "}";
 }
 
+void RISCVInstPrinter::printRegReg(const MCInst *MI, unsigned OpNo,
+                                   const MCSubtargetInfo &STI, raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  assert(MO.isReg() && "printRegReg can only print register operands");
+  if (MO.getReg() == RISCV::NoRegister)
+    return;
+  printRegName(O, MO.getReg());
+
+  O << "(";
+  const MCOperand &MO1 = MI->getOperand(OpNo + 1);
+  assert(MO1.isReg() && "printRegReg can only print register operands");
+  printRegName(O, MO1.getReg());
+  O << ")";
+}
+
 void RISCVInstPrinter::printSpimm(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNo).getImm();
