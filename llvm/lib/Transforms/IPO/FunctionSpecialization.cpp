@@ -328,10 +328,12 @@ Constant *InstCostVisitor::visitPHINode(PHINode &I) {
   DenseSet<PHINode *> TransitivePHIs;
 
   bool Inserted = VisitedPHIs.insert(&I).second;
+  SmallVector<PHINode *, 8> UnknownIncomingValues;
 
   auto canConstantFoldPhiTrivially = [&](PHINode *PN) -> Constant * {
     Constant *Const = nullptr;
 
+    UnknownIncomingValues.clear();
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
       Value *V = PN->getIncomingValue(I);
 
@@ -348,11 +350,15 @@ Constant *InstCostVisitor::visitPHINode(PHINode &I) {
           return nullptr;
         continue;
       }
+      if (auto *Phi = dyn_cast<PHINode>(V)) {
+        UnknownIncomingValues.push_back(Phi);
+        continue;
+      }
 
       // We can't reason about anything else.
       return nullptr;
     }
-    return Const;
+    return UnknownIncomingValues.empty() ? Const : nullptr;
   };
 
   if (Constant *Const = canConstantFoldPhiTrivially(&I))
@@ -365,11 +371,9 @@ Constant *InstCostVisitor::visitPHINode(PHINode &I) {
     return nullptr;
   }
 
-  for (unsigned J = 0, E = I.getNumIncomingValues(); J != E; ++J) {
-    Value *V = I.getIncomingValue(J);
-    if (auto *Phi = dyn_cast<PHINode>(V))
-      discoverTransitivelyIncomingValues(TransitivePHIs, Phi, 1);
-  }
+  // Try to see if we can collect a nest of transitive phis.
+  for (PHINode *Phi : UnknownIncomingValues)
+    discoverTransitivelyIncomingValues(TransitivePHIs, Phi, 1);
 
   // A nested set of PHINodes can be constantfolded if:
   // - It has a constant input.
