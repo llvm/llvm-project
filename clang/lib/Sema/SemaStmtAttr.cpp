@@ -359,21 +359,19 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
 static void
 CheckForDuplicateCodeAlignAttrs(Sema &S,
                                 const SmallVectorImpl<const Attr *> &Attrs) {
-  auto FindFunc = [](const Attr *A) {
-    return isa<const CodeAlignAttr>(A);
-  };
-
-  const auto *FirstItr =
-    std::find_if(Attrs.begin(), Attrs.end(), FindFunc);
+  auto FindFunc = [](const Attr *A) { return isa<const CodeAlignAttr>(A); };
+  const auto *FirstItr = std::find_if(Attrs.begin(), Attrs.end(), FindFunc);
 
   if (FirstItr == Attrs.end()) // no attributes found
     return;
 
   const auto *LastFoundItr = FirstItr;
 
-  while (Attrs.end() != (LastFoundItr = std::find_if(LastFoundItr + 1, Attrs.end(), FindFunc)))  {
-      S.Diag((*LastFoundItr)->getLocation(), diag::err_loop_attr_duplication) << *FirstItr;
-      S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
+  while (Attrs.end() != (LastFoundItr = std::find_if(LastFoundItr + 1,
+                                                     Attrs.end(), FindFunc))) {
+    S.Diag((*LastFoundItr)->getLocation(), diag::err_loop_attr_duplication)
+        << *FirstItr;
+    S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
   }
 }
 
