@@ -2455,8 +2455,8 @@ LogicalResult AffineForOp::promoteIfSingleIteration(RewriterBase &rewriter) {
     return failure();
 
   // Replaces all IV uses to its single iteration value.
-  auto iv = forOp.getInductionVar();
-  auto *parentBlock = forOp->getBlock();
+  BlockArgument iv = forOp.getInductionVar();
+  Block *parentBlock = forOp->getBlock();
   if (!iv.use_empty()) {
     if (forOp.hasConstantLowerBound()) {
       OpBuilder topBuilder(forOp->getParentOfType<func::FuncOp>().getBody());
@@ -2464,8 +2464,8 @@ LogicalResult AffineForOp::promoteIfSingleIteration(RewriterBase &rewriter) {
           forOp.getLoc(), forOp.getConstantLowerBound());
       iv.replaceAllUsesWith(constOp);
     } else {
-      auto lbOperands = forOp.getLowerBoundOperands();
-      auto lbMap = forOp.getLowerBoundMap();
+      OperandRange lbOperands = forOp.getLowerBoundOperands();
+      AffineMap lbMap = forOp.getLowerBoundMap();
       OpBuilder builder(forOp);
       if (lbMap == builder.getDimIdentityMap()) {
         // No need of generating an affine.apply.

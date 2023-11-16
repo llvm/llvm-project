@@ -109,16 +109,16 @@ std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
 
 void mlir::affine::replaceIterArgsAndYieldResults(AffineForOp forOp) {
   // Replace uses of iter arguments with iter operands (initial values).
-  auto iterOperands = forOp.getInits();
-  auto iterArgs = forOp.getRegionIterArgs();
-  for (auto e : llvm::zip(iterOperands, iterArgs))
-    std::get<1>(e).replaceAllUsesWith(std::get<0>(e));
+  OperandRange iterOperands = forOp.getInits();
+  MutableArrayRef<BlockArgument> iterArgs = forOp.getRegionIterArgs();
+  for (auto [operand, arg] : llvm::zip(iterOperands, iterArgs))
+    arg.replaceAllUsesWith(operand);
 
   // Replace uses of loop results with the values yielded by the loop.
-  auto outerResults = forOp.getResults();
-  auto innerResults = forOp.getBody()->getTerminator()->getOperands();
-  for (auto e : llvm::zip(outerResults, innerResults))
-    std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
+  ResultRange outerResults = forOp.getResults();
+  OperandRange innerResults = forOp.getBody()->getTerminator()->getOperands();
+  for (auto [outer, inner] : llvm::zip(outerResults, innerResults))
+    outer.replaceAllUsesWith(inner);
 }
 
 /// Returns the greatest known integral divisor of the trip count. Affine
