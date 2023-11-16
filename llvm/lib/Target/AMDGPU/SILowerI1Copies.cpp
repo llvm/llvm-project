@@ -481,6 +481,12 @@ bool Vreg1LoweringHelper::lowerCopiesFromI1() {
       if (isLaneMaskReg(DstReg) || isVreg1(DstReg))
         continue;
 
+      // When the calling convention allocates i1 argument to SGPR,
+      // we may have a COPY with dst being an SGPR_32. This should
+      // not be lowered into V_CNDMASK_B32.
+      if(AMDGPU::SGPR_32RegClass.contains(DstReg))
+        continue;
+
       Changed = true;
 
       // Copy into a 32-bit vector register.

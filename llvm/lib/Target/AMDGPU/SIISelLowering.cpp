@@ -3668,6 +3668,19 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     passSpecialInputs(CLI, CCInfo, *Info, RegsToPass, MemOpChains, Chain);
   }
 
+  // In code below (after call of AnalyzeCallOperands),
+  // if (!Subtarget->enableFlatScratch()), it would use either s[48:51] or
+  // s[0:3]. Therefore, before calling AnalyzeCallOperands, we may need to
+  // reserve these registers.
+  if (!Subtarget->enableFlatScratch()) {
+    if (IsChainCallConv)
+      CCInfo.AllocateRegBlock(ArrayRef<MCPhysReg>{
+          AMDGPU::SGPR48, AMDGPU::SGPR49, AMDGPU::SGPR50, AMDGPU::SGPR51}, 4);
+    else
+      CCInfo.AllocateRegBlock(ArrayRef<MCPhysReg>{
+          AMDGPU::SGPR0, AMDGPU::SGPR1, AMDGPU::SGPR2, AMDGPU::SGPR3}, 4);
+  }
+
   CCInfo.AnalyzeCallOperands(Outs, AssignFn);
 
   // Get a count of how many bytes are to be pushed on the stack.
