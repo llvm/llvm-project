@@ -46,7 +46,7 @@ struct SemaRecord {
   unsigned Log2LMULMask;
 
   // Required extensions for this intrinsic.
-  unsigned RequiredExtensions;
+  RVVRequireT RequiredExtensions;
 
   // Prototype for this intrinsic.
   SmallVector<PrototypeDescriptor> Prototype;
