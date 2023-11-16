@@ -548,7 +548,7 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
     return success();
   }];
   let assemblyFormat = [{
-    qualified($varInfo) qualified($locationExpr) `=` $}] # argName #
+    qualified($varInfo) (qualified($locationExpr)^)? `=` $}] # argName #
       [{ `:` qualified(type($}] # argName # [{)) attr-dict
   }];
 }
@@ -559,7 +559,7 @@ def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr",
   let arguments = (ins
     LLVM_AnyPointer:$addr,
     LLVM_DILocalVariableAttr:$varInfo,
-    LLVM_DIExpressionAttr:$locationExpr
+    DefaultValuedAttr<LLVM_DIExpressionAttr, "std::nullopt">:$locationExpr
   );
 }
 
@@ -569,7 +569,7 @@ def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
   let arguments = (ins
     LLVM_Type:$value,
     LLVM_DILocalVariableAttr:$varInfo,
-    LLVM_DIExpressionAttr:$locationExpr
+    DefaultValuedAttr<LLVM_DIExpressionAttr, "std::nullopt">:$locationExpr
   );
 }
 

@@ -155,8 +155,8 @@ llvm.func @addr(%arg: i64) {
   %allocCount = llvm.mlir.constant(1 : i32) : i32
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
 
-  // CHECK: llvm.intr.dbg.value #[[VAR0]] #llvm.di_expr<[]> = %[[ALLOC]]
-  llvm.intr.dbg.value #var0 #llvm.di_expr<[]> = %alloc : !llvm.ptr
+  // CHECK: llvm.intr.dbg.value #[[VAR0]] = %[[ALLOC]]
+  llvm.intr.dbg.value #var0 = %alloc : !llvm.ptr
   llvm.return
 }
 
@@ -164,8 +164,8 @@ llvm.func @addr(%arg: i64) {
 llvm.func @value(%arg1: i32, %arg2: i32) {
   // CHECK: llvm.intr.dbg.value #[[VAR1]] #llvm.di_expr<[2, 4096, 0, 4]> = %[[ARG1]]
   llvm.intr.dbg.value #var1 #llvm.di_expr<[2, 4096, 0, 4]> = %arg1 : i32
-  // CHECK: llvm.intr.dbg.value #[[VAR2]] #llvm.di_expr<[]> = %[[ARG2]]
-  llvm.intr.dbg.value #var2 #llvm.di_expr<[]> = %arg2 : i32
+  // CHECK: llvm.intr.dbg.value #[[VAR2]] = %[[ARG2]]
+  llvm.intr.dbg.value #var2 = %arg2 : i32
   // CHECK: llvm.intr.dbg.label #[[LABEL1]]
   llvm.intr.dbg.label #label1
   // CHECK: llvm.intr.dbg.label #[[LABEL2]]

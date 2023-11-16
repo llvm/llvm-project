@@ -91,12 +91,12 @@ llvm.func @func_with_debug(%arg: i64) {
   %allocCount = llvm.mlir.constant(1 : i32) : i32
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
 
-  // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression())
+  // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 8, 8))
   // CHECK: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 8))
   // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[NO_NAME_VAR:[0-9]+]], metadata !DIExpression())
-  llvm.intr.dbg.value #variable #llvm.di_expr<[]> = %arg : i64
+  llvm.intr.dbg.value #variable #llvm.di_expr<[4096, 8, 8]> = %arg : i64
   llvm.intr.dbg.declare #variableAddr #llvm.di_expr<[4096, 0, 8]> = %alloc : !llvm.ptr
-  llvm.intr.dbg.value #noNameVariable #llvm.di_expr<[]> = %arg : i64
+  llvm.intr.dbg.value #noNameVariable = %arg : i64
 
   // CHECK: call void @func_no_debug(), !dbg ![[CALLSITE_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc(callsite("mysource.cc":3:4 at "mysource.cc":5:6))
@@ -190,9 +190,9 @@ llvm.func @empty_types() {
 // CHECK-SAME: i32 %[[ARG:.*]]) !dbg ![[OUTER_FUNC:[0-9]+]]
 llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
   // CHECK: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC0:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC0:.*]]
-  llvm.intr.dbg.value #di_local_variable0 #llvm.di_expr<[]> = %arg0 : i32 loc(fused<#di_subprogram>[#loc0])
+  llvm.intr.dbg.value #di_local_variable0 = %arg0 : i32 loc(fused<#di_subprogram>[#loc0])
   // CHECK: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC1:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC1:.*]]
-  llvm.intr.dbg.value #di_local_variable1 #llvm.di_expr<[]> = %arg0 : i32 loc(fused<#di_lexical_block_file>[#loc1])
+  llvm.intr.dbg.value #di_local_variable1 = %arg0 : i32 loc(fused<#di_lexical_block_file>[#loc1])
   // CHECK: call void @llvm.dbg.label(metadata ![[LABEL:[0-9]+]]), !dbg ![[DBG_LOC1:.*]]
   llvm.intr.dbg.label #di_label loc(fused<#di_lexical_block_file>[#loc1])
   llvm.return %arg0 : i32
@@ -225,7 +225,7 @@ llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
 // CHECK-SAME: i32 %[[ARG:.*]])
 llvm.func @func_without_subprogram(%0 : i32) {
   // CHECK: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC0:.*]]
-  llvm.intr.dbg.value #di_local_variable #llvm.di_expr<[]> = %0 : i32 loc(fused<#di_subprogram>[#loc])
+  llvm.intr.dbg.value #di_local_variable = %0 : i32 loc(fused<#di_subprogram>[#loc])
   llvm.return
 }
 
@@ -256,9 +256,9 @@ llvm.func @dbg_intrinsics_with_no_location(%arg0: i32) -> (i32) {
   %allocCount = llvm.mlir.constant(1 : i32) : i32
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
   // CHECK-NOT: @llvm.dbg.value
-  llvm.intr.dbg.value #di_local_variable #llvm.di_expr<[]> = %arg0 : i32
+  llvm.intr.dbg.value #di_local_variable = %arg0 : i32
   // CHECK-NOT: @llvm.dbg.declare
-  llvm.intr.dbg.declare #declared_var #llvm.di_expr<[]> = %alloc : !llvm.ptr
+  llvm.intr.dbg.declare #declared_var = %alloc : !llvm.ptr
   // CHECK-NOT: @llvm.dbg.label
   llvm.intr.dbg.label #di_label
   llvm.return %arg0 : i32
