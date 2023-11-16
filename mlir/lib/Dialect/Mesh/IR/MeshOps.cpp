@@ -249,9 +249,6 @@ static LogicalResult verifyMeshSymbolUses(Operation *op,
     return op->emitError() << "Undefined required mesh symbol \""
                            << meshSymbol.getValue() << "\".";
   }
-  if (!meshAxes) {
-    return success();
-  }
   MeshAxis rank = mesh.getRank();
   for (auto axis : meshAxes.asArrayRef()) {
     if (axis >= rank || axis < 0) {
