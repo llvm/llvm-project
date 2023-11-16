@@ -7,23 +7,24 @@ define double @test() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr getelementptr inbounds ([13 x double], ptr null, i64 0, i64 5), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr getelementptr inbounds ([13 x double], ptr null, i64 0, i64 8), align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x double> zeroinitializer, [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call reassoc nsz double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul double [[TMP5]], 0.000000e+00
-; CHECK-NEXT:    store double [[TMP6]], ptr null, align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double poison>, <4 x i32> <i32 4, i32 5, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x double> zeroinitializer, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call reassoc nsz double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul double [[TMP6]], 0.000000e+00
+; CHECK-NEXT:    store double [[TMP7]], ptr null, align 16
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x double> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd double [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul <2 x double> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP11]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = fadd double [[TMP12]], [[TMP10]]
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x double> [[TMP11]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = fadd double [[TMP14]], [[TMP13]]
-; CHECK-NEXT:    ret double [[TMP15]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd double [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul <2 x double> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x double> [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd double [[TMP13]], [[TMP11]]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x double> [[TMP12]], i32 0
+; CHECK-NEXT:    [[TMP16:%.*]] = fadd double [[TMP15]], [[TMP14]]
+; CHECK-NEXT:    ret double [[TMP16]]
 ;
 entry:
   %0 = fmul double 0.000000e+00, 0.000000e+00
