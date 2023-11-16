@@ -485,7 +485,7 @@ public:
 
 // RVVRequire should be sync'ed with target features, but only
 // required features used in riscv_vector.td.
-using RVVRequireT = uint16_t;
+using RVVRequireT = uint32_t;
 enum RVVRequire : RVVRequireT {
   RVV_REQ_None = 0,
   RVV_REQ_RV64 = 1 << 0,
@@ -504,8 +504,9 @@ enum RVVRequire : RVVRequireT {
   RVV_REQ_Zvknhb = 1 << 13,
   RVV_REQ_Zvksed = 1 << 14,
   RVV_REQ_Zvksh = 1 << 15,
+  RVV_REQ_Zvfbfmin = 1 << 16,
 
-  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Zvksh)
+  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Zvfbfmin)
 };
 
 // Raw RVV intrinsic info, used to expand later.

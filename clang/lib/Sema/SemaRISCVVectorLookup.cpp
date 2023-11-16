@@ -288,6 +288,16 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
         }
       }
 
+      if (BaseType == BasicType::BFloat16) {
+        if (Record.RequiredExtensions & RVV_REQ_Zvfbfmin) {
+          if (!TI.hasFeature("experimental-zvfbfmin"))
+            continue;
+        } else {
+          llvm_unreachable_internal(
+              "Non-basic BFloat16 intrinsics are not implemented yet.");
+        }
+      }
+
       // Expanded with different LMUL.
       for (int Log2LMUL = -3; Log2LMUL <= 3; Log2LMUL++) {
         if (!(Record.Log2LMULMask & (1 << (Log2LMUL + 3))))

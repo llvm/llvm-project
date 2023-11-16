@@ -683,6 +683,8 @@ defm vle8: RVVVLEBuiltin<["c"]>;
 defm vle16: RVVVLEBuiltin<["s"]>;
 let Name = "vle16_v", RequiredFeatures = ["ZvfhminOrZvfh"] in
   defm vle16_h: RVVVLEBuiltin<["x"]>;
+let Name = "vle16_v", RequiredFeatures = ["Zvfbfmin"] in
+  defm vle16_b: RVVVLEBuiltin<["b"]>;
 defm vle32: RVVVLEBuiltin<["i","f"]>;
 defm vle64: RVVVLEBuiltin<["l","d"]>;
 
