@@ -5253,7 +5253,8 @@ def resource_dir : Separate<["-"], "resource-dir">,
 def resource_dir_EQ : Joined<["-"], "resource-dir=">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   Alias<resource_dir>;
-def rpath : Separate<["-"], "rpath">, Flags<[LinkerInput]>, Group<Link_Group>;
+def rpath : Separate<["-"], "rpath">, Flags<[LinkerInput]>, Group<Link_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def rtlib_EQ : Joined<["-", "--"], "rtlib=">, Visibility<[ClangOption, CLOption]>,
   HelpText<"Compiler runtime library to use">;
 def frtlib_add_rpath: Flag<["-"], "frtlib-add-rpath">, Flags<[NoArgumentUnused]>,
@@ -5304,7 +5305,8 @@ def segs__read__only__addr : Separate<["-"], "segs_read_only_addr">;
 def segs__read__write__addr : Separate<["-"], "segs_read_write_addr">;
 def segs__read__ : Joined<["-"], "segs_read_">;
 def shared_libgcc : Flag<["-"], "shared-libgcc">;
-def shared : Flag<["-", "--"], "shared">, Group<Link_Group>;
+def shared : Flag<["-", "--"], "shared">, Group<Link_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def single__module : Flag<["-"], "single_module">;
 def specs_EQ : Joined<["-", "--"], "specs=">, Group<Link_Group>;
 def specs : Separate<["-", "--"], "specs">, Flags<[Unsupported]>;
@@ -5314,6 +5316,7 @@ def start_no_unused_arguments : Flag<["--"], "start-no-unused-arguments">,
 def static_libgcc : Flag<["-"], "static-libgcc">;
 def static_libstdcxx : Flag<["-"], "static-libstdc++">;
 def static : Flag<["-", "--"], "static">, Group<Link_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   Flags<[NoArgumentUnused]>;
 def std_default_EQ : Joined<["-"], "std-default=">;
 def std_EQ : Joined<["-", "--"], "std=">,
