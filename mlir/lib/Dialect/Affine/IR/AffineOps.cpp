@@ -722,11 +722,11 @@ getBoundForExpr(AffineExpr expr, unsigned numDims, unsigned numSymbols,
                 ArrayRef<std::optional<int64_t>> constUpperBounds,
                 bool isUpper) {
   // Handle divs and mods.
-  if (auto binOpExpr = expr.dyn_cast<AffineBinaryOpExpr>()) {
+  if (auto binOpExpr = dyn_cast<AffineBinaryOpExpr>(expr)) {
     // If the LHS of a floor or ceil is bounded and the RHS is a constant, we
     // can compute an upper bound.
     if (binOpExpr.getKind() == AffineExprKind::FloorDiv) {
-      auto rhsConst = binOpExpr.getRHS().dyn_cast<AffineConstantExpr>();
+      auto rhsConst = dyn_cast<AffineConstantExpr>(binOpExpr.getRHS());
       if (!rhsConst || rhsConst.getValue() < 1)
         return std::nullopt;
       std::optional<int64_t> bound =
@@ -737,7 +737,7 @@ getBoundForExpr(AffineExpr expr, unsigned numDims, unsigned numSymbols,
       return mlir::floorDiv(*bound, rhsConst.getValue());
     }
     if (binOpExpr.getKind() == AffineExprKind::CeilDiv) {
-      auto rhsConst = binOpExpr.getRHS().dyn_cast<AffineConstantExpr>();
+      auto rhsConst = dyn_cast<AffineConstantExpr>(binOpExpr.getRHS());
       if (rhsConst && rhsConst.getValue() >= 1) {
         std::optional<int64_t> bound =
             getBoundForExpr(binOpExpr.getLHS(), numDims, numSymbols,
@@ -752,7 +752,7 @@ getBoundForExpr(AffineExpr expr, unsigned numDims, unsigned numSymbols,
       // lhs mod c is always <= c - 1 and non-negative. In addition, if `lhs` is
       // bounded such that lb <= lhs <= ub and lb floordiv c == ub floordiv c
       // (same "interval"), then lb mod c <= lhs mod c <= ub mod c.
-      auto rhsConst = binOpExpr.getRHS().dyn_cast<AffineConstantExpr>();
+      auto rhsConst = dyn_cast<AffineConstantExpr>(binOpExpr.getRHS());
       if (rhsConst && rhsConst.getValue() >= 1) {
         int64_t rhsConstVal = rhsConst.getValue();
         std::optional<int64_t> lb =

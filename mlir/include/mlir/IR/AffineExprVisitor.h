@@ -76,31 +76,31 @@ public:
     auto self = static_cast<SubClass *>(this);
     switch (expr.getKind()) {
     case AffineExprKind::Add: {
-      auto binOpExpr = expr.cast<AffineBinaryOpExpr>();
+      auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
       return self->visitAddExpr(binOpExpr);
     }
     case AffineExprKind::Mul: {
-      auto binOpExpr = expr.cast<AffineBinaryOpExpr>();
+      auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
       return self->visitMulExpr(binOpExpr);
     }
     case AffineExprKind::Mod: {
-      auto binOpExpr = expr.cast<AffineBinaryOpExpr>();
+      auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
       return self->visitModExpr(binOpExpr);
     }
     case AffineExprKind::FloorDiv: {
-      auto binOpExpr = expr.cast<AffineBinaryOpExpr>();
+      auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
       return self->visitFloorDivExpr(binOpExpr);
     }
     case AffineExprKind::CeilDiv: {
-      auto binOpExpr = expr.cast<AffineBinaryOpExpr>();
+      auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
       return self->visitCeilDivExpr(binOpExpr);
     }
     case AffineExprKind::Constant:
-      return self->visitConstantExpr(expr.cast<AffineConstantExpr>());
+      return self->visitConstantExpr(cast<AffineConstantExpr>(expr));
     case AffineExprKind::DimId:
-      return self->visitDimExpr(expr.cast<AffineDimExpr>());
+      return self->visitDimExpr(cast<AffineDimExpr>(expr));
     case AffineExprKind::SymbolId:
-      return self->visitSymbolExpr(expr.cast<AffineSymbolExpr>());
+      return self->visitSymbolExpr(cast<AffineSymbolExpr>(expr));
     }
     llvm_unreachable("Unknown AffineExpr");
   }
@@ -174,11 +174,11 @@ public:
       return self->visitCeilDivExpr(binOpExpr);
     }
     case AffineExprKind::Constant:
-      return self->visitConstantExpr(expr.cast<AffineConstantExpr>());
+      return self->visitConstantExpr(cast<AffineConstantExpr>(expr));
     case AffineExprKind::DimId:
-      return self->visitDimExpr(expr.cast<AffineDimExpr>());
+      return self->visitDimExpr(cast<AffineDimExpr>(expr));
     case AffineExprKind::SymbolId:
-      return self->visitSymbolExpr(expr.cast<AffineSymbolExpr>());
+      return self->visitSymbolExpr(cast<AffineSymbolExpr>(expr));
     }
     llvm_unreachable("Unknown AffineExpr");
   }
@@ -205,41 +205,41 @@ public:
     auto self = static_cast<SubClass *>(this);
     switch (expr.getKind()) {
     case AffineExprKind::Add: {
-      auto binOpExpr = expr.cast<AffineBinaryOpExpr>();
+      auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
       if (failed(walkOperandsPostOrder(binOpExpr)))
         return failure();
       return self->visitAddExpr(binOpExpr);
     }
     case AffineExprKind::Mul: {
-      auto binOpExpr = expr.cast<AffineBinaryOpExpr>();
+      auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
       if (failed(walkOperandsPostOrder(binOpExpr)))
         return failure();
       return self->visitMulExpr(binOpExpr);
     }
     case AffineExprKind::Mod: {
-      auto binOpExpr = expr.cast<AffineBinaryOpExpr>();
+      auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
       if (failed(walkOperandsPostOrder(binOpExpr)))
         return failure();
       return self->visitModExpr(binOpExpr);
     }
     case AffineExprKind::FloorDiv: {
-      auto binOpExpr = expr.cast<AffineBinaryOpExpr>();
+      auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
       if (failed(walkOperandsPostOrder(binOpExpr)))
         return failure();
       return self->visitFloorDivExpr(binOpExpr);
     }
     case AffineExprKind::CeilDiv: {
-      auto binOpExpr = expr.cast<AffineBinaryOpExpr>();
+      auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
       if (failed(walkOperandsPostOrder(binOpExpr)))
         return failure();
       return self->visitCeilDivExpr(binOpExpr);
     }
     case AffineExprKind::Constant:
-      return self->visitConstantExpr(expr.cast<AffineConstantExpr>());
+      return self->visitConstantExpr(cast<AffineConstantExpr>(expr));
     case AffineExprKind::DimId:
-      return self->visitDimExpr(expr.cast<AffineDimExpr>());
+      return self->visitDimExpr(cast<AffineDimExpr>(expr));
     case AffineExprKind::SymbolId:
-      return self->visitSymbolExpr(expr.cast<AffineSymbolExpr>());
+      return self->visitSymbolExpr(cast<AffineSymbolExpr>(expr));
     }
     llvm_unreachable("Unknown AffineExpr");
   }
