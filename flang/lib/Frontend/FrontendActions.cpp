@@ -175,6 +175,45 @@ getExplicitAndImplicitAMDGPUTargetFeatures(CompilerInstance &ci,
   return llvm::join(featuresVec, ",");
 }
 
+// Get feature string which represents combined explicit target features
+// for NVPTX and the target features specified by the user/
+// TODO: Have a more robust target conf like `clang/lib/Basic/Targets/NVPTX.cpp`
+static std::string
+getExplicitAndImplicitNVPTXTargetFeatures(CompilerInstance &ci,
+                                          const TargetOptions &targetOpts,
+                                          const llvm::Triple triple) {
+  llvm::StringRef cpu = targetOpts.cpu;
+  llvm::StringMap<bool> implicitFeaturesMap;
+  std::string errorMsg;
+  bool ptxVer = false;
+
+  // Add target features specified by the user
+  for (auto &userFeature : targetOpts.featuresAsWritten) {
+    llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
+    implicitFeaturesMap[userKeyString.str()] = (userFeature[0] == '+');
+    // Check if the user provided a PTX version
+    if (userKeyString.startswith("ptx"))
+      ptxVer = true;
+  }
+
+  // Set the default PTX version to `ptx61` if none was provided.
+  // TODO: set the default PTX version based on the chip.
+  if (!ptxVer)
+    implicitFeaturesMap["ptx61"] = true;
+
+  // Set the compute capability.
+  implicitFeaturesMap[cpu.str()] = true;
+
+  llvm::SmallVector<std::string> featuresVec;
+  for (auto &implicitFeatureItem : implicitFeaturesMap) {
+    featuresVec.push_back((llvm::Twine(implicitFeatureItem.second ? "+" : "-") +
+                           implicitFeatureItem.first().str())
+                              .str());
+  }
+  llvm::sort(featuresVec);
+  return llvm::join(featuresVec, ",");
+}
+
 // Produces the string which represents target feature
 static std::string getTargetFeatures(CompilerInstance &ci) {
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
@@ -188,6 +227,8 @@ static std::string getTargetFeatures(CompilerInstance &ci) {
   // them to the target features specified by the user
   if (triple.isAMDGPU()) {
     return getExplicitAndImplicitAMDGPUTargetFeatures(ci, targetOpts, triple);
+  } else if (triple.isNVPTX()) {
+    return getExplicitAndImplicitNVPTXTargetFeatures(ci, targetOpts, triple);
   }
   return llvm::join(targetOpts.featuresAsWritten.begin(),
                     targetOpts.featuresAsWritten.end(), ",");
