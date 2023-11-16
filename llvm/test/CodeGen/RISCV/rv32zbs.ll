@@ -746,12 +746,18 @@ define i32 @or_i32_66901(i32 %a) nounwind {
 }
 
 define i32 @bset_trailing_ones_i32_mask(i32 %a) nounwind {
-; CHECK-LABEL: bset_trailing_ones_i32_mask:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    sll a0, a1, a0
-; CHECK-NEXT:    not a0, a0
-; CHECK-NEXT:    ret
+; RV32I-LABEL: bset_trailing_ones_i32_mask:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, -1
+; RV32I-NEXT:    sll a0, a1, a0
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBS-LABEL: bset_trailing_ones_i32_mask:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bset a0, zero, a0
+; RV32ZBS-NEXT:    addi a0, a0, -1
+; RV32ZBS-NEXT:    ret
   %and = and i32 %a, 31
   %shift = shl nsw i32 -1, %and
   %not = xor i32 %shift, -1
@@ -759,12 +765,18 @@ define i32 @bset_trailing_ones_i32_mask(i32 %a) nounwind {
 }
 
 define i32 @bset_trailing_ones_i32_no_mask(i32 %a) nounwind {
-; CHECK-LABEL: bset_trailing_ones_i32_no_mask:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    sll a0, a1, a0
-; CHECK-NEXT:    not a0, a0
-; CHECK-NEXT:    ret
+; RV32I-LABEL: bset_trailing_ones_i32_no_mask:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, -1
+; RV32I-NEXT:    sll a0, a1, a0
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBS-LABEL: bset_trailing_ones_i32_no_mask:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bset a0, zero, a0
+; RV32ZBS-NEXT:    addi a0, a0, -1
+; RV32ZBS-NEXT:    ret
   %shift = shl nsw i32 -1, %a
   %not = xor i32 %shift, -1
   ret i32 %not
