@@ -32,6 +32,7 @@ void floatSink(float) {}
 #define MY_PI 3.1415926
 
 #define INV_SQRT3 1 / bar::sqrt(3)
+#define NOT_INV_SQRT3 1 / bar::sqrt(3) + 1
 
 using my_double = double;
 using my_float = float;
@@ -280,6 +281,8 @@ void foo(){
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:10: warning: prefer 'std::numbers::inv_sqrt3' to this macro [modernize-use-std-numbers]
     // CHECK-FIXES-ALL: sink(std::numbers::inv_sqrt3);
 
+    sink(NOT_INV_SQRT3);
+
     const auto inv_sqrt3f = .577350269F;
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:29: warning: prefer 'std::numbers::inv_sqrt3_v<float>' to this literal, differs by '1.04e-08' [modernize-use-std-numbers]
     // CHECK-FIXES-ALL: const auto inv_sqrt3f = std::numbers::inv_sqrt3_v<float>;
@@ -470,4 +473,17 @@ void foobar(){
 }
 void use_foobar() {
     foobar<float>();
+}
+
+#define BIG_MARCO                                                              \
+  struct InvSqrt3 {                                                            \
+    template <typename T> static T get() { return 1 / bar::sqrt(3); }          \
+  }
+
+BIG_MARCO;
+
+void use_BIG_MACRO() {
+InvSqrt3 f{};
+f.get<float>();
+f.get<double>();
 }
