@@ -1579,7 +1579,7 @@ mlir::omp::CanonicalLoopOp::parse(::mlir::OpAsmParser &parser,
                                   ::mlir::OperationState &result) {
   Builder &builder = parser.getBuilder();
 
-  // We derive the type of tripCount from inductionVariable. Unfortunatelty we
+  // We derive the type of tripCount from inductionVariable. Unfortunately we
   // cannot do the other way around because MLIR requires the type of tripCount
   // to be known when calling resolveOperand.
   OpAsmParser::Argument inductionVariable;
