@@ -67,16 +67,17 @@ static CharUnits getSizeOfType(const ASTContext &Ctx, const Type *Ty) {
 }
 
 void SuspiciousPointerArithmeticsUsingSizeofCheck::check(const MatchFinder::MatchResult &Result) {
-    static const char *diag_msg	= "Suspicious pointer arithmetics using sizeof() operator";
     const ASTContext &Ctx = *Result.Context;
-    const auto Matched = Result.Nodes.getNodeAs<BinaryOperator>(BinOp);
-    const auto SuspiciousQualTypePtr = Result.Nodes.getNodeAs<QualType>(PointedType);
-    const auto SuspiciousTypePtr = SuspiciousQualTypePtr->getTypePtr();
+    const BinaryOperator* Matched = Result.Nodes.getNodeAs<BinaryOperator>(BinOp);
+    const QualType* SuspiciousQualTypePtr = Result.Nodes.getNodeAs<QualType>(PointedType);
+    const Type* SuspiciousTypePtr = SuspiciousQualTypePtr->getTypePtr();
 
-    auto sz = getSizeOfType(Ctx,SuspiciousTypePtr).getQuantity();
+    std::size_t sz = getSizeOfType(Ctx,SuspiciousTypePtr).getQuantity();
     if ( sz > 1 )
     {
-        diag(Matched->getExprLoc(),diag_msg)<< Matched->getSourceRange();
+        diag(Matched->getExprLoc(),"Suspicious pointer arithmetics using sizeof() operator: sizeof(%0) is %1") << SuspiciousQualTypePtr->getAsString(Ctx.getPrintingPolicy())
+	                       << sz
+		               << Matched->getSourceRange();
     }
 }
 
