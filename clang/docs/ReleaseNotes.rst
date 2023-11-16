@@ -303,7 +303,7 @@ Attribute Changes in Clang
 - Clang now introduced ``[[clang::coro_return_type]]`` and ``[[clang::coro_wrapper]]``
   attributes. A function returning a type marked with ``[[clang::coro_return_type]]``
   should be a coroutine. A non-coroutine function marked with ``[[clang::coro_wrapper]]``
-  is still allowed to return the such a type.
+  is still allowed to return the such a type. This is helpful for analyzers to recognize coroutines from the function signatures.
 
 Improvements to Clang's diagnostics
 -----------------------------------

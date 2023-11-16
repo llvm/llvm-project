@@ -7487,6 +7487,8 @@ generation of the other destruction cases, optimizing the above `foo.destroy` to
 def CoroReturnTypeAndWrapperDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
+The `[[clang::coro_return_type]]` attribute is used to help static analyzers to recognize coroutines from the function signatures.
+
 The ``coro_return_type`` attribute should be marked on a C++ class to mark it as
 a **coroutine return type (CRT)**.
 
@@ -7495,7 +7497,7 @@ is marked by ``[[clang::coro_return_type]]`` and  ``R`` has a promise type assoc
 (i.e., std​::​coroutine_traits<R, P1, .., PN>​::​promise_type is a valid promise type).
 
 If the return type of a function is a ``CRT`` then the function must be a coroutine.
-Otherwise it is invalid. It is allowed for a non-coroutine to return a ``CRT``
+Otherwise the program is invalid. It is allowed for a non-coroutine to return a ``CRT``
 if the function is marked with ``[[clang::coro_wrapper]]``.
 
 The ``coro_wrapper`` attribute should be marked on a C++ function to mark it as
