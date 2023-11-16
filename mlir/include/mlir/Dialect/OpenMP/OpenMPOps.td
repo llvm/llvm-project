@@ -420,7 +420,7 @@ def CanonicalLoopInfoType : OpenMP_Type<"CanonicalLoopInfo", "cli"> {
     for each transformation, the OpenMP dialect itself defines possible
     operations on this type.
 
-    A CanonicalLoopInfo variable can
+    A CanonicalLoopInfo value can be
 
     1. passed to omp.canonical_loop to assiciate the loop to that variable
     2. passed to omp operations that take a CanonicalLoopInfo argument,
