@@ -264,8 +264,6 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   SmallVector<const ValueMapping *, 4> OpdsMapping(NumOperands);
 
   switch (Opc) {
-  case TargetOpcode::G_INVOKE_REGION_START:
-    break;
   case TargetOpcode::G_LOAD: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     OpdsMapping[0] = GPRValueMapping;
@@ -308,28 +306,6 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
     break;
   }
-  case TargetOpcode::G_CONSTANT:
-  case TargetOpcode::G_FRAME_INDEX:
-  case TargetOpcode::G_GLOBAL_VALUE:
-  case TargetOpcode::G_JUMP_TABLE:
-  case TargetOpcode::G_BRCOND:
-    OpdsMapping[0] = GPRValueMapping;
-    break;
-  case TargetOpcode::G_BR:
-    break;
-  case TargetOpcode::G_BRJT:
-    OpdsMapping[0] = GPRValueMapping;
-    OpdsMapping[2] = GPRValueMapping;
-    break;
-  case TargetOpcode::G_ICMP:
-    OpdsMapping[0] = GPRValueMapping;
-    OpdsMapping[2] = GPRValueMapping;
-    OpdsMapping[3] = GPRValueMapping;
-    break;
-  case TargetOpcode::G_SEXT_INREG:
-    OpdsMapping[0] = GPRValueMapping;
-    OpdsMapping[1] = GPRValueMapping;
-    break;
   case TargetOpcode::G_SELECT:
     OpdsMapping[0] = GPRValueMapping;
     OpdsMapping[1] = GPRValueMapping;
@@ -379,7 +355,14 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   default:
-    return getInvalidInstructionMapping();
+    // By default map all scalars to GPR.
+    for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+       auto &MO = MI.getOperand(Idx);
+       if (!MO.isReg())
+         continue;
+       OpdsMapping[Idx] = GPRValueMapping;
+    }
+    break;
   }
 
   return getInstructionMapping(DefaultMappingID, /*Cost=*/1,
