@@ -432,7 +432,7 @@ def CanonicalLoopInfoType : OpenMP_Type<"CanonicalLoopInfo", "cli"> {
     2. passed to operations that are not specifically designed to take a
        CanonicalLoopInfo, including AnyType.
 
-    A CanonicalLoopInfo variable directly corresponds to an object of
+    A CanonicalLoopInfo value directly corresponds to an object of
     OpenMPIRBuilder's CanonicalLoopInfo struct when lowering to LLVM-IR.
   }];
 }
