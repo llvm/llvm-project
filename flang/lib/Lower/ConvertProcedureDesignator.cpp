@@ -17,6 +17,7 @@
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 
 static bool areAllSymbolsInExprMapped(const Fortran::evaluate::ExtentExpr &expr,
@@ -100,10 +101,13 @@ hlfir::EntityWithAttributes Fortran::lower::convertProcedureDesignatorToHLFIR(
     const Fortran::evaluate::ProcedureDesignator &proc,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
   const auto *sym = proc.GetSymbol();
-  if (sym)
+  if (sym) {
+    if (sym->GetUltimate().attrs().test(Fortran::semantics::Attr::INTRINSIC))
+      TODO(loc, "Procedure pointer with intrinsic target.");
     if (std::optional<fir::FortranVariableOpInterface> varDef =
             symMap.lookupVariableDefinition(*sym))
       return *varDef;
+  }
 
   fir::ExtendedValue procExv =
       convertProcedureDesignator(loc, converter, proc, symMap, stmtCtx);

@@ -1532,6 +1532,8 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
     }
 
     hlfir::Entity actual = arg.value()->getActual(loc, builder);
+    if (actual.isProcedurePointer())
+      TODO(loc, "Procedure pointer as actual argument to intrinsics.");
     switch (argRules.lowerAs) {
     case fir::LowerIntrinsicArgAs::Value:
       operands.emplace_back(
