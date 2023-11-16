@@ -2951,9 +2951,11 @@ void coro::salvageDebugInfo(
   // dbg.declare does.
   if (isa<DbgDeclareInst>(DVI)) {
     std::optional<BasicBlock::iterator> InsertPt;
-    if (auto *I = dyn_cast<Instruction>(Storage))
+    if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
-    else if (isa<Argument>(Storage))
+      if (!OptimizeFrame && I->getDebugLoc())
+        DVI.setDebugLoc(I->getDebugLoc());
+    } else if (isa<Argument>(Storage))
       InsertPt = F->getEntryBlock().begin();
     if (InsertPt)
       DVI.moveBefore(*(*InsertPt)->getParent(), *InsertPt);
