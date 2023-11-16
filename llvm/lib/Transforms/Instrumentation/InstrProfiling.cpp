@@ -48,6 +48,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include <algorithm>
@@ -242,16 +243,9 @@ public:
     if (!isPromotionPossible(&L, LoopExitBlocks))
       return;
 
-    auto IsSuspendBB = [&](BasicBlock *BB) {
-      if (auto *Pred = BB->getSinglePredecessor())
-        if (auto *SW = dyn_cast<SwitchInst>(Pred->getTerminator()))
-          if (auto *Intr = dyn_cast<IntrinsicInst>(SW->getCondition()))
-            return Intr->getIntrinsicID() == Intrinsic::coro_suspend &&
-                   SW->getDefaultDest() == BB;
-      return false;
-    };
     for (BasicBlock *ExitBlock : LoopExitBlocks) {
-      if (BlockSet.insert(ExitBlock).second && !IsSuspendBB(ExitBlock)) {
+      if (BlockSet.insert(ExitBlock).second &&
+          !llvm::isPresplitCoroSuspendExit(*ExitBlock)) {
         ExitBlocks.push_back(ExitBlock);
         InsertPts.push_back(&*ExitBlock->getFirstInsertionPt());
       }

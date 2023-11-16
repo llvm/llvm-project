@@ -611,3 +611,47 @@ L19:
   EXPECT_EQ(BranchProbability::getRaw(1),
             BPI.getEdgeProbability(EntryBB, UnreachableBB));
 }
+
+TEST(BasicBlockUtils, IsPresplitCoroSuspendExitTest) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define void @positive_case(i32 %0) #0 {
+entry:
+  %suspend2 = call i8 @llvm.coro.suspend(token %save2, i1 false)
+  switch i8 %suspend2, label %exit [
+    i8 0, label %resume
+    i8 1, label %destroy
+  ]
+%resume:
+  ret void
+%destroy:
+  ret void
+%exit:
+  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  ret void
+}
+
+define void @notpresplit(i32 %0) {
+entry:
+  %suspend2 = call i8 @llvm.coro.suspend(token %save2, i1 false)
+  switch i8 %suspend2, label %exit [
+    i8 0, label %resume
+    i8 1, label %destroy
+  ]
+%resume:
+  ret void
+%destroy:
+  ret void
+%exit:
+  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  ret void
+}
+attributes #0 = { presplitcoroutine }
+)IR");
+
+  Function *P = M->getFunction("positive_case");
+  EXPECT_TRUE(llvm::isPresplitCoroSuspendExit(*P->begin()));
+
+  Function *N = M->getFunction("notpresplit");
+  EXPECT_FALSE(llvm::isPresplitCoroSuspendExit(*N->begin()));
+}
