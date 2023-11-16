@@ -106,6 +106,11 @@ static cl::opt<bool> DeterministicCheck(
     cl::init((bool)sys::Process::GetEnv(
         "LLVM_CACHE_CHECK_REPRODUCIBLE_CACHING_ISSUES")),
     cl::Hidden);
+static cl::opt<bool> StrictCASErrors(
+    "thinlto-strict-cas-errors",
+    cl::desc("Treat CAS errors during ThinLTO as fatal errors"),
+    cl::init((bool)sys::Process::GetEnv("LLVM_THINLTO_STRICT_CAS_ERRORS")),
+    cl::Hidden);
 
 class LoggingStream {
 public:
@@ -475,6 +480,25 @@ private:
   SmallString<128> EntryPath;
 };
 
+static void handleCASError(
+    Error E, llvm::function_ref<void(llvm::function_ref<void(raw_ostream &OS)>)>
+                 Logger) {
+  if (!E)
+    return;
+
+  // If strict CAS error, abort.
+  if (StrictCASErrors)
+    report_fatal_error(std::move(E));
+
+  // Otherwise, log the error message and return error_code.
+  if (Logger)
+    Logger([&](raw_ostream &OS) {
+      OS << "LTO CAS Error: '" << toString(std::move(E)) << "'\n";
+    });
+  else
+    consumeError(std::move(E));
+}
+
 class CASModuleCacheEntry : public ModuleCacheEntry {
 public:
   // Create a cache entry. This compute a unique hash for the Module considering
@@ -502,8 +526,11 @@ public:
     // TODO: We can have an alternative hashing function that doesn't
     // need to store the key into CAS to get the CacheKey.
     auto CASKey = CAS.createProxy(std::nullopt, *Key);
-    if (!CASKey)
-      report_fatal_error(CASKey.takeError());
+    if (!CASKey) {
+      handleCASError(CASKey.takeError(), this->Logger);
+      // return as if the key doesn't exist, which will be treated as miss.
+      return;
+    }
 
     ID = CASKey->getID();
   }
@@ -531,8 +558,11 @@ public:
         }
       });
 
-      if (Error E = Cache.get(*ID, /*Globally=*/true).moveInto(MaybeKeyID))
-        return errorToErrorCode(std::move(E));
+      if (Error E = Cache.get(*ID, /*Globally=*/true).moveInto(MaybeKeyID)) {
+        handleCASError(std::move(E), Logger);
+        // If handleCASError didn't abort, treat as miss.
+        return std::error_code();
+      }
     }
 
     if (!MaybeKeyID)
@@ -548,8 +578,11 @@ public:
     });
 
     auto MaybeObject = CAS.getProxy(*MaybeKeyID);
-    if (!MaybeObject)
-      return errorToErrorCode(MaybeObject.takeError());
+    if (!MaybeObject) {
+      handleCASError(MaybeObject.takeError(), Logger);
+      // If handleCASError didn't abort, treat as miss.
+      return std::error_code();
+    }
 
     return MaybeObject->getMemoryBuffer("", /*NullTerminated=*/true);
   }
@@ -572,7 +605,7 @@ public:
 
       if (Error E = CAS.createProxy(std::nullopt, OutputBuffer.getBuffer())
                         .moveInto(Proxy))
-        report_fatal_error(std::move(E));
+        return handleCASError(std::move(E), Logger);
     }
 
     ScopedDurationTimer ScopedTime([&](double Seconds) {
@@ -585,7 +618,7 @@ public:
     });
 
     if (auto Err = Cache.put(*ID, Proxy->getID(), /*Globally=*/true))
-      report_fatal_error(std::move(Err));
+      handleCASError(std::move(Err), Logger);
   }
 
 private:
@@ -640,8 +673,11 @@ public:
         }
       });
 
-      if (Error E = Service.KVDB->getValueSync(ID).moveInto(GetResponse))
-        return errorToErrorCode(std::move(E));
+      if (Error E = Service.KVDB->getValueSync(ID).moveInto(GetResponse)) {
+        handleCASError(std::move(E), Logger);
+        // If handleCASError didn't abort, treat as miss.
+        return std::error_code();
+      }
     }
 
     // Cache Miss.
@@ -667,8 +703,11 @@ public:
 
     // Request the output buffer.
     auto LoadResponse = Service.CASDB->loadSync(Result->getValue(), OutputPath);
-    if (!LoadResponse)
-      return errorToErrorCode(LoadResponse.takeError());
+    if (!LoadResponse) {
+      handleCASError(LoadResponse.takeError(), Logger);
+      // If handleCASError didn't abort, treat as miss.
+      return std::error_code();
+    }
 
     // Object not found. Treat it as a miss.
     if (LoadResponse->KeyNotFound)
@@ -700,7 +739,7 @@ public:
 
       if (Error E =
               Service.CASDB->saveFileSync(OutputPath).moveInto(SaveResponse))
-        report_fatal_error(std::move(E));
+        return handleCASError(std::move(E), Logger);
     }
 
     // Only check determinism when the cache lookup succeeded before.
@@ -723,7 +762,7 @@ public:
     cas::remote::KeyValueDBClient::ValueTy CompResult;
     CompResult["Output"] = *SaveResponse;
     if (auto Err = Service.KVDB->putValueSync(ID, CompResult))
-      report_fatal_error(std::move(Err));
+      handleCASError(std::move(Err), Logger);
   }
 
   Error writeObject(const MemoryBuffer &OutputBuffer,
