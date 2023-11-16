@@ -123,70 +123,87 @@ static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
   return &RISCV::ValueMappings[Idx];
 }
 
-// TODO: Make this more like AArch64?
-bool RISCVRegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
-                                       const MachineRegisterInfo &MRI,
-                                       const TargetRegisterInfo &TRI) const {
-  switch (MI.getOpcode()) {
+/// Returns whether opcode \p Opc is a pre-isel generic floating-point opcode,
+/// having only floating-point operands.
+/// FIXME: this is copied from target AArch64. Needs some code refactor here to
+/// put this function in GlobalISel/Utils.cpp.
+static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
+  switch (Opc) {
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FMA:
   case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FNEG:
-  case TargetOpcode::G_FABS:
-  case TargetOpcode::G_FSQRT:
-  case TargetOpcode::G_FMAXNUM:
-  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FCONSTANT:
   case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC:
-  case TargetOpcode::G_FCMP:
-  case TargetOpcode::G_FPTOSI:
-  case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_FCEIL:
+  case TargetOpcode::G_FFLOOR:
+  case TargetOpcode::G_FNEARBYINT:
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_FCOS:
+  case TargetOpcode::G_FSIN:
+  case TargetOpcode::G_FLOG10:
+  case TargetOpcode::G_FLOG:
+  case TargetOpcode::G_FLOG2:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FEXP:
+  case TargetOpcode::G_FRINT:
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+  case TargetOpcode::G_INTRINSIC_ROUND:
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMINIMUM:
     return true;
-  default:
-    break;
   }
-
-  // If we have a copy instruction, we could be feeding floating point
-  // instructions.
-  if (MI.getOpcode() == TargetOpcode::COPY)
-    return getRegBank(MI.getOperand(0).getReg(), MRI, TRI) ==
-           &RISCV::FPRBRegBank;
-
   return false;
 }
 
 // TODO: Make this more like AArch64?
-bool RISCVRegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
-                                          const MachineRegisterInfo &MRI,
-                                          const TargetRegisterInfo &TRI) const {
+bool RISCVRegisterBankInfo::hasFPConstraints(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI,
+    const TargetRegisterInfo &TRI) const {
+  if (isPreISelGenericFloatingPointOpcode(MI.getOpcode()))
+    return true;
+
+  // If we have a copy instruction, we could be feeding floating point
+  // instructions.
+  if (MI.getOpcode() != TargetOpcode::COPY)
+    return false;
+
+  return getRegBank(MI.getOperand(0).getReg(), MRI, TRI) == &RISCV::FPRBRegBank;
+}
+
+bool RISCVRegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
+                                       const MachineRegisterInfo &MRI,
+                                       const TargetRegisterInfo &TRI) const {
   switch (MI.getOpcode()) {
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FNEG:
-  case TargetOpcode::G_FABS:
-  case TargetOpcode::G_FSQRT:
-  case TargetOpcode::G_FMAXNUM:
-  case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FPEXT:
-  case TargetOpcode::G_FPTRUNC:
-  case TargetOpcode::G_SITOFP:
-  case TargetOpcode::G_UITOFP:
-  case TargetOpcode::G_FCONSTANT:
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_FCMP:
     return true;
   default:
     break;
   }
 
-  // If we have a copy instruction, we could be fed by floating point
-  // instructions.
-  if (MI.getOpcode() == TargetOpcode::COPY)
-    return getRegBank(MI.getOperand(0).getReg(), MRI, TRI) ==
-           &RISCV::FPRBRegBank;
+  return hasFPConstraints(MI, MRI, TRI);
+}
 
-  return false;
+bool RISCVRegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
+                                          const MachineRegisterInfo &MRI,
+                                          const TargetRegisterInfo &TRI) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP:
+    return true;
+  default:
+    break;
+  }
+
+  return hasFPConstraints(MI, MRI, TRI);
 }
 
 const RegisterBankInfo::InstructionMapping &
