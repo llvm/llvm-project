@@ -62,14 +62,14 @@ spirv.func @select_vector(%arg0: vector<2xi1>, %arg1: vector<2xi32>) "None" {
 // spirv.VectorShuffle
 //===----------------------------------------------------------------------===//
 
-spirv.func @VectorShuffle_same_size(%vector1: vector<2xf32>, %vector2: vector<2xf32>) -> vector<3xf32> "None" {
+spirv.func @vector_shuffle_same_size(%vector1: vector<2xf32>, %vector2: vector<2xf32>) -> vector<3xf32> "None" {
   //      CHECK: %[[res:.*]] = llvm.shufflevector {{.*}} [0, 2, -1] : vector<2xf32>
   // CHECK-NEXT: return %[[res]] : vector<3xf32>
   %0 = spirv.VectorShuffle [0: i32, 2: i32, 0xffffffff: i32] %vector1, %vector2 : vector<2xf32>, vector<2xf32> -> vector<3xf32>
   spirv.ReturnValue %0: vector<3xf32>
 }
 
-spirv.func @VectorShuffle_different_size(%vector1: vector<3xf32>, %vector2: vector<2xf32>) -> vector<3xf32> "None" {
+spirv.func @vector_shuffle_different_size(%vector1: vector<3xf32>, %vector2: vector<2xf32>) -> vector<3xf32> "None" {
   //      CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : vector<3xf32>
   // CHECK-NEXT: %[[C0_0:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK-NEXT: %[[C0_1:.*]] = llvm.mlir.constant(0 : i32) : i32
