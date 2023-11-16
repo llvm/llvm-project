@@ -117,7 +117,7 @@ func.func private @sparse_bsr(tensor<10x60xf64, #BSR>)
 
 // CHECK-DAG: #[[$ELL:.*]] = #sparse_tensor.encoding<{ map = [s0](d0, d1) -> (d0 * (s0 * 4) : dense, d0 : dense, d1 : compressed) }>
 // CHECK-LABEL: func private @sparse_ell(
-// CHECK-SAME: tensor<?x?xf64, #sparse>
+// CHECK-SAME: tensor<?x?xf64, #[[$ELL]]>
 func.func private @sparse_ell(tensor<?x?xf64, #ELL>)
 
 // -----
