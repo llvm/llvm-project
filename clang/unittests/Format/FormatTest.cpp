@@ -21140,6 +21140,24 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
       "that really, in any just world, ought to be split over multiple "
       "lines\"},{-1, 93463, \"world\"},{7, 5, \"!!\"},};",
       Style);
+
+  Style.ColumnLimit = 25;
+  verifyNoCrash("Type object[X][Y] = {\n"
+                "    {{val}, {val}, {val}},\n"
+                "    {{val}, {val}, // some comment\n"
+                "                   {val}}\n"
+                "};",
+                Style);
+
+  Style.ColumnLimit = 120;
+  verifyNoCrash(
+      "T v[] {\n"
+      "    { AAAAAAAAAAAAAAAAAAAAAAAAA::aaaaaaaaaaaaaaaaaaa, "
+      "AAAAAAAAAAAAAAAAAAAAAAAAA::aaaaaaaaaaaaaaaaaaaaaaaa, 1, 0.000000000f, "
+      "\"00000000000000000000000000000000000000000000000000000000"
+      "00000000000000000000000000000000000000000000000000000000\" },\n"
+      "};",
+      Style);
 }
 
 TEST_F(FormatTest, UnderstandsPragmas) {
