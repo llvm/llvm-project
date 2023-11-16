@@ -640,3 +640,69 @@ module {
   // expected-error @+1 {{'gpu.binary' op attribute 'offloadingHandler' failed to satisfy constraint: any attribute with the `OffloadingTranslationAttrTrait` trait.}}
   gpu.binary @binary <1> [#gpu.object<#nvvm.target, "">]
 }
+
+// -----
+
+func.func @main() {
+  %shmemSize = arith.constant 10000 : i32
+  %c1 = arith.constant 1 : index
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
+             dynamic_shared_memory_size %shmemSize
+  {
+    // expected-error @below {{'gpu.dynamic_shared_memory' op address space must be address_space<workgroup>}}
+    %0 = gpu.dynamic_shared_memory : memref<?xi8>  
+    gpu.terminator
+  }
+  return
+}
+
+
+// -----
+
+func.func @main() {
+  %shmemSize = arith.constant 8192 : i32
+  %c1 = arith.constant 1 : index
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
+             dynamic_shared_memory_size %shmemSize
+  {
+    // expected-error @below {{'gpu.dynamic_shared_memory' op result memref type must be memref<?xi8, #gpu.address_space<workgroup>>}}
+    %0 = gpu.dynamic_shared_memory : memref<1xi8, #gpu.address_space<workgroup>>  
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @main(%arg0 : index) {
+  %shmemSize = arith.constant 8192 : i32
+  %c1 = arith.constant 1 : index
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
+             dynamic_shared_memory_size %shmemSize
+  {
+    // expected-error @below {{'gpu.dynamic_shared_memory' op address space must be address_space<workgroup>}}
+    %0 = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<private>>
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @main(%arg0 : index) {
+  %shmemSize = arith.constant 8192 : i32
+  %c1 = arith.constant 1 : index
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
+             dynamic_shared_memory_size %shmemSize
+  {
+    // expected-error @below {{'gpu.dynamic_shared_memory' op result #0 must be 1D memref of 8-bit signless integer values, but got 'memref<?xf32, #gpu.address_space<workgroup>}}
+    %0 = gpu.dynamic_shared_memory : memref<?xf32, #gpu.address_space<workgroup>>
+    gpu.terminator
+  }
+  return
+}
+
