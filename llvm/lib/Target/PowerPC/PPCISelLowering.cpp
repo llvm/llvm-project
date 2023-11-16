@@ -420,13 +420,12 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   } else {
     setOperationAction(ISD::FMA  , MVT::f64, Legal);
     setOperationAction(ISD::FMA  , MVT::f32, Legal);
+    setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
+    setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
   }
 
   if (Subtarget.hasSPE())
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
-
-  setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
-  setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
 
   // If we're enabling GP optimizations, use hardware square root
   if (!Subtarget.hasFSQRT() &&

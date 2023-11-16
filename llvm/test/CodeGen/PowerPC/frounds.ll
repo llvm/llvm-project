@@ -233,14 +233,14 @@ define void @setrnd_var(i32 %x) {
 ; PPC64LE-LABEL: setrnd_var:
 ; PPC64LE:       # %bb.0: # %entry
 ; PPC64LE-NEXT:    mffs 0
-; PPC64LE-NEXT:    stfd 0, -16(1)
 ; PPC64LE-NEXT:    clrlwi 4, 3, 30
 ; PPC64LE-NEXT:    rlwinm 3, 3, 31, 31, 31
+; PPC64LE-NEXT:    stfd 0, -16(1)
 ; PPC64LE-NEXT:    xor 3, 3, 4
 ; PPC64LE-NEXT:    ld 4, -16(1)
 ; PPC64LE-NEXT:    xori 3, 3, 1
-; PPC64LE-NEXT:    clrldi 3, 3, 32
 ; PPC64LE-NEXT:    rldicr 4, 4, 0, 61
+; PPC64LE-NEXT:    clrldi 3, 3, 32
 ; PPC64LE-NEXT:    or 3, 4, 3
 ; PPC64LE-NEXT:    std 3, -8(1)
 ; PPC64LE-NEXT:    lfd 0, -8(1)
