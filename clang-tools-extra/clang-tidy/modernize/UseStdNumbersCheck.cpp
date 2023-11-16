@@ -83,12 +83,11 @@ AST_MATCHER_P(clang::Expr, anyOfExhaustive,
 struct MatchBuilder {
   auto
   ignoreParenAndArithmeticCasting(const Matcher<clang::Expr> Matcher) const {
-    return expr(hasType(qualType(isArithmetic())),
-                ignoringParenCasts((Matcher)));
+    return expr(hasType(qualType(isArithmetic())), ignoringParenCasts(Matcher));
   }
 
   auto ignoreParenAndFloatingCasting(const Matcher<clang::Expr> Matcher) const {
-    return expr(hasType(qualType(isFloating())), ignoringParenCasts((Matcher)));
+    return expr(hasType(qualType(isFloating())), ignoringParenCasts(Matcher));
   }
 
   auto matchMathCall(const StringRef FunctionName,
