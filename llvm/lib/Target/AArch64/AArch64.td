@@ -1352,10 +1352,9 @@ def ProcessorFeatures {
                                  FeatureMatMulInt8, FeatureBF16, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
                                  FeatureFP16FML];
-  list<SubtargetFeature> A520 = [HasV9_2aOps, FeatureNEON, FeaturePerfMon,
-                                 FeatureMatMulInt8, FeatureBF16, FeatureAM,
+  list<SubtargetFeature> A520 = [HasV9_2aOps, FeaturePerfMon, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
-                                 FeatureFP16FML, FeatureFineGrainedTraps];
+                                 FeatureFP16FML];
   list<SubtargetFeature> A65  = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
                                  FeatureRCPC, FeatureSSBS, FeatureRAS,
@@ -1382,11 +1381,9 @@ def ProcessorFeatures {
                                  FeatureFP16FML, FeatureSVE, FeatureTRBE,
                                  FeatureSVE2BitPerm, FeatureBF16, FeatureETE,
                                  FeaturePerfMon, FeatureMatMulInt8, FeatureSPE];
-  list<SubtargetFeature> A720 = [HasV9_2aOps, FeatureNEON, FeatureMTE,
-                                 FeatureFP16FML, FeatureSVE, FeatureTRBE,
-                                 FeatureSVE2BitPerm, FeatureBF16, FeatureETE,
-                                 FeaturePerfMon, FeatureMatMulInt8, FeatureSPE,
-                                 FeatureSPE_EEF, FeatureTME];
+  list<SubtargetFeature> A720 = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
+                                 FeatureTRBE, FeatureSVE2BitPerm, FeatureETE,
+                                 FeaturePerfMon, FeatureSPE, FFeatureSPE_EEF];
   list<SubtargetFeature> R82  = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
                                  FeatureFP16FML, FeatureSSBS, FeaturePredRes,
                                  FeatureSB];
@@ -1408,11 +1405,10 @@ def ProcessorFeatures {
                                  FeatureSPE, FeatureBF16, FeatureMatMulInt8,
                                  FeatureMTE, FeatureSVE2BitPerm, FeatureFullFP16,
                                  FeatureFP16FML];
-  list<SubtargetFeature> X4 =   [HasV9_2aOps, FeatureSVE, FeatureNEON,
+  list<SubtargetFeature> X4 =   [HasV9_2aOps,
                                  FeaturePerfMon, FeatureETE, FeatureTRBE,
-                                 FeatureSPE, FeatureBF16, FeatureMatMulInt8,
-                                 FeatureMTE, FeatureSVE2BitPerm, FeatureFullFP16,
-                                 FeatureFP16FML];
+                                 FeatureSPE, FeatureMTE, FeatureSVE2BitPerm,
+                                 FeatureFP16FML, FeatureSPE_EEF];
   list<SubtargetFeature> A64FX    = [HasV8_2aOps, FeatureFPARMv8, FeatureNEON,
                                      FeatureSHA2, FeaturePerfMon, FeatureFullFP16,
                                      FeatureSVE, FeatureComplxNum];
