@@ -953,6 +953,12 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
   } else {
     if (I.isExact())
       return false;
+
+    // shr (shl X, Y), Y
+    if (match(I.getOperand(0), m_Shl(m_Value(), m_Specific(I.getOperand(1))))) {
+      I.setIsExact();
+      return true;
+    }
   }
 
   // Compute what we know about shift count.
