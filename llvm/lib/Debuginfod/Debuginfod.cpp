@@ -69,10 +69,8 @@ SmallVector<StringRef> getDefaultDebuginfodUrls() {
   if (!DebuginfodUrlsSet) {
     // Only read from the environment variable if the user hasn't already
     // set the value
-    const char *DebuginfodUrlsEnv = std::getenv("DEBUGINFOD_URLS");
-    if (DebuginfodUrlsEnv != nullptr) {
+    if (const char *DebuginfodUrlsEnv = std::getenv("DEBUGINFOD_URLS"))
       StringRef(DebuginfodUrlsEnv).split(DebuginfodUrls, " ", -1, false);
-    }
     DebuginfodUrlsSet = true;
   }
   return DebuginfodUrls;
