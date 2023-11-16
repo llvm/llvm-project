@@ -60,6 +60,13 @@ static bool generateSnippetSetupCode(
     BBF.addInstructions(ET.setStackRegisterToAuxMem());
   }
   for (const RegisterValue &RV : RegisterInitialValues) {
+    if (GenerateMemoryInstructions) {
+      // If we're generating memory instructions, don't load in the value for
+      // the register with the stack pointer as it will be used later to finish
+      // the setup.
+      if (RV.Register == ET.getStackRegister())
+        continue;
+    }
     // Load a constant in the register.
     const auto SetRegisterCode = ET.setRegTo(*MSI, RV.Register, RV.Value);
     if (SetRegisterCode.empty())
@@ -70,6 +77,18 @@ static bool generateSnippetSetupCode(
 #ifdef HAVE_LIBPFM
     BBF.addInstructions(ET.configurePerfCounter(PERF_EVENT_IOC_RESET, true));
 #endif // HAVE_LIBPFM
+    for (const RegisterValue &RV : RegisterInitialValues) {
+      // Load in the stack register now as we're done using it elsewhere
+      // and need to set the value in preparation for executing the
+      // snippet.
+      if (RV.Register != ET.getStackRegister())
+        continue;
+      const auto SetRegisterCode = ET.setRegTo(*MSI, RV.Register, RV.Value);
+      if (SetRegisterCode.empty())
+        IsSnippetSetupComplete = false;
+      BBF.addInstructions(SetRegisterCode);
+      break;
+    }
   }
   return IsSnippetSetupComplete;
 }
