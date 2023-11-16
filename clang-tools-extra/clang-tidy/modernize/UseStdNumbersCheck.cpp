@@ -303,7 +303,7 @@ UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,
   }
 }
 
-void UseStdNumbersCheck::registerMatchers(MatchFinder *Finder) {
+void UseStdNumbersCheck::registerMatchers(MatchFinder *const Finder) {
   const auto Matches = MatchBuilder{DiffThreshold};
   static const auto ConstantMatchers = {
       Matches.matchLog2Euler(),     Matches.matchLog10Euler(),
@@ -436,9 +436,9 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
              Result.SourceManager->getFileID(Range.getBegin()), "<numbers>");
 }
 
-void UseStdNumbersCheck::registerPPCallbacks(const SourceManager &SM,
-                                             Preprocessor *PP,
-                                             Preprocessor *ModuleExpanderPP) {
+void UseStdNumbersCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *const PP,
+    Preprocessor *const ModuleExpanderPP) {
   IncludeInserter.registerPreprocessor(PP);
 }
 } // namespace clang::tidy::modernize
