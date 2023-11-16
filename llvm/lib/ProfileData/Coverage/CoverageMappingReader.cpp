@@ -471,7 +471,7 @@ Error InstrProfSymtab::create(SectionRef &Section) {
   const ObjectFile *Obj = Section.getObject();
   if (isa<COFFObjectFile>(Obj) && !Obj->isRelocatableObject())
     if (Expected<StringRef> NameOrErr = Section.getName())
-      if (*NameOrErr == getInstrProfSectionName(IPSK_name, Triple::COFF))
+      if (*NameOrErr != getInstrProfSectionName(IPSK_covname, Triple::COFF))
         Data = Data.drop_front(1);
 
   return Error::success();
@@ -1001,10 +1001,13 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
       BytesInAddress, Endian, CompilationDir);
 }
 
-/// Find all sections that match \p Name. There may be more than one if comdats
-/// are in use, e.g. for the __llvm_covfun section on ELF.
-static Expected<std::vector<SectionRef>> lookupSections(ObjectFile &OF,
-                                                        StringRef Name) {
+/// Find all sections that match \p IPSK name. There may be more than one if
+/// comdats are in use, e.g. for the __llvm_covfun section on ELF.
+static Expected<std::vector<SectionRef>>
+lookupSections(ObjectFile &OF, InstrProfSectKind IPSK) {
+  auto ObjFormat = OF.getTripleObjectFormat();
+  auto Name =
+      getInstrProfSectionName(IPSK, ObjFormat, /*AddSegmentInfo=*/false);
   // On COFF, the object file section name may end in "$M". This tells the
   // linker to sort these sections between "$A" and "$Z". The linker removes the
   // dollar and everything after it in the final binary. Do the same to match.
@@ -1019,8 +1022,13 @@ static Expected<std::vector<SectionRef>> lookupSections(ObjectFile &OF,
     Expected<StringRef> NameOrErr = Section.getName();
     if (!NameOrErr)
       return NameOrErr.takeError();
-    if (stripSuffix(*NameOrErr) == Name)
+    if (stripSuffix(*NameOrErr) == Name) {
+      // COFF profile name section contains two null bytes indicating the
+      // start/end of the section. If its size is 2 bytes, it's empty.
+      if (IsCOFF && IPSK == IPSK_name && Section.getSize() == 2)
+        continue;
       Sections.push_back(Section);
+    }
   }
   if (Sections.empty())
     return make_error<CoverageMapError>(coveragemap_error::no_data_found);
@@ -1056,19 +1064,14 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
       OF->isLittleEndian() ? llvm::endianness::little : llvm::endianness::big;
 
   // Look for the sections that we are interested in.
-  auto ObjFormat = OF->getTripleObjectFormat();
   InstrProfSymtab ProfileNames;
   std::vector<SectionRef> NamesSectionRefs;
   // If IPSK_name is not found, fallback to search for IPK_covname, which is
   // used when binary correlation is enabled.
-  auto NamesSection =
-      lookupSections(*OF, getInstrProfSectionName(IPSK_name, ObjFormat,
-                                                  /*AddSegmentInfo=*/false));
+  auto NamesSection = lookupSections(*OF, IPSK_name);
   if (auto E = NamesSection.takeError()) {
     consumeError(std::move(E));
-    NamesSection =
-        lookupSections(*OF, getInstrProfSectionName(IPSK_covname, ObjFormat,
-                                                    /*AddSegmentInfo=*/false));
+    NamesSection = lookupSections(*OF, IPSK_covname);
     if (auto E = NamesSection.takeError())
       return std::move(E);
   }
@@ -1081,9 +1084,7 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
   if (Error E = ProfileNames.create(NamesSectionRefs.back()))
     return std::move(E);
 
-  auto CoverageSection =
-      lookupSections(*OF, getInstrProfSectionName(IPSK_covmap, ObjFormat,
-                                                  /*AddSegmentInfo=*/false));
+  auto CoverageSection = lookupSections(*OF, IPSK_covmap);
   if (auto E = CoverageSection.takeError())
     return std::move(E);
   std::vector<SectionRef> CoverageSectionRefs = *CoverageSection;
@@ -1096,9 +1097,7 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
   StringRef CoverageMapping = CoverageMappingOrErr.get();
 
   // Look for the coverage records section (Version4 only).
-  auto CoverageRecordsSections =
-      lookupSections(*OF, getInstrProfSectionName(IPSK_covfun, ObjFormat,
-                                                  /*AddSegmentInfo=*/false));
+  auto CoverageRecordsSections = lookupSections(*OF, IPSK_covfun);
 
   BinaryCoverageReader::FuncRecordsStorage FuncRecords;
   if (auto E = CoverageRecordsSections.takeError()) {

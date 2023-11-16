@@ -725,8 +725,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* Since cov data and cov names sections are not allocated, we don't need to 
  * access them at runtime.
  */
-#define INSTR_PROF_COVDATA_COFF ".lprfcovdata"
-#define INSTR_PROF_COVNAME_COFF ".lprfcovnames"
+#define INSTR_PROF_COVDATA_COFF ".lcovd"
+#define INSTR_PROF_COVNAME_COFF ".lcovn"
 
 #ifdef _WIN32
 /* Runtime section names and name strings.  */

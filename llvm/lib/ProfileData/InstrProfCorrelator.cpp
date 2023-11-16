@@ -27,10 +27,17 @@ using namespace llvm;
 /// Get profile section.
 Expected<object::SectionRef> getInstrProfSection(const object::ObjectFile &Obj,
                                                  InstrProfSectKind IPSK) {
+  // On COFF, the getInstrProfSectionName returns the section names may followed
+  // by "$M". The linker removes the dollar and everything after it in the final
+  // binary. Do the same to match.
   Triple::ObjectFormatType ObjFormat = Obj.getTripleObjectFormat();
+  auto StripSuffix = [ObjFormat](StringRef N) {
+    return ObjFormat == Triple::COFF ? N.split('$').first : N;
+  };
   std::string ExpectedSectionName =
       getInstrProfSectionName(IPSK, ObjFormat,
                               /*AddSegmentInfo=*/false);
+  ExpectedSectionName = StripSuffix(ExpectedSectionName);
   for (auto &Section : Obj.sections()) {
     if (auto SectionName = Section.getName())
       if (*SectionName == ExpectedSectionName)
