@@ -13098,16 +13098,15 @@ struct NodeExtensionHelper {
   }
 
   /// Check if \p Root supports any extension folding combines.
-  static bool isSupportedRoot(const SDNode *Root) {
+  static bool isSupportedRoot(const SDNode *Root, const SelectionDAG &DAG) {
     switch (Root->getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
     case ISD::MUL: {
-      EVT VT0 = Root->getOperand(0).getValueType();
-      EVT VT1 = Root->getOperand(1).getValueType();
-      if (VT0.isFixedLengthVector() || VT1.isFixedLengthVector())
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      if (!TLI.isTypeLegal(Root->getValueType(0)))
         return false;
-      return (VT0.isVector() || VT1.isVector());
+      return Root->getValueType(0).isScalableVector();
     }
     case RISCVISD::ADD_VL:
     case RISCVISD::MUL_VL:
@@ -13125,8 +13124,8 @@ struct NodeExtensionHelper {
   /// Build a NodeExtensionHelper for \p Root.getOperand(\p OperandIdx).
   NodeExtensionHelper(SDNode *Root, unsigned OperandIdx, SelectionDAG &DAG,
                       const RISCVSubtarget &Subtarget) {
-    assert(isSupportedRoot(Root) && "Trying to build an helper with an "
-                                    "unsupported root");
+    assert(isSupportedRoot(Root, DAG) && "Trying to build an helper with an "
+                                         "unsupported root");
     assert(OperandIdx < 2 && "Requesting something else than LHS or RHS");
     OrigOperand = Root->getOperand(OperandIdx);
 
@@ -13170,7 +13169,7 @@ struct NodeExtensionHelper {
   static std::pair<SDValue, SDValue>
   getMaskAndVL(const SDNode *Root, SelectionDAG &DAG,
                const RISCVSubtarget &Subtarget) {
-    assert(isSupportedRoot(Root) && "Unexpected root");
+    assert(isSupportedRoot(Root, DAG) && "Unexpected root");
     switch (Root->getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
@@ -13431,7 +13430,7 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
                                            const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
 
-  if (!NodeExtensionHelper::isSupportedRoot(N))
+  if (!NodeExtensionHelper::isSupportedRoot(N, DAG))
     return SDValue();
 
   SmallVector<SDNode *> Worklist;
@@ -13442,7 +13441,7 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
 
   while (!Worklist.empty()) {
     SDNode *Root = Worklist.pop_back_val();
-    if (!NodeExtensionHelper::isSupportedRoot(Root))
+    if (!NodeExtensionHelper::isSupportedRoot(Root, DAG))
       return SDValue();
 
     NodeExtensionHelper LHS(N, 0, DAG, Subtarget);
