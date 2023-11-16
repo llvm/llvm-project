@@ -163,7 +163,6 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   MachineBasicBlock *MBB = nullptr;
-  bool IsExiting = false;
   float TotalWeight = 0;
   unsigned NumInstr = 0; // Number of instructions using LI
   SmallPtrSet<MachineInstr *, 8> Visited;
@@ -220,6 +219,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
     }
   };
 
+  bool IsExiting = false;
   std::set<CopyHint> CopyHints;
   DenseMap<unsigned, float> Hint;
   for (MachineRegisterInfo::reg_instr_nodbg_iterator
