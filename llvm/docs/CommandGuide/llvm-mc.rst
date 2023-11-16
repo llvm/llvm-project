@@ -11,13 +11,13 @@ SYNOPSIS
 DESCRIPTION
 -----------
 
-The :program:`llvm-mc` command take input as the assembly code for a specified
-architecture and generate object file or executable as a output for a specified
-architecture.
+The :program:`llvm-mc` command takes as input assembly code for a specified
+architecture and generates as output an object file or executable for a
+specified architecture.
 
-:program:`llvm-mc` provide powerful set of the tool for working with the
-machine code such as encoding of their instruction and their internal
-representation, disassemble string to bytes etc.
+:program:`llvm-mc` provides a powerful tool for working with machine code,
+such as encoding of instructions and displaying their internal representations,
+disassembling strings to bytes, etc.
 
 The choice of architecture for the output assembly code is automatically
 determined from the input file, unless the :option:`--arch` option is used to
