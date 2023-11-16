@@ -1631,7 +1631,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses8) {
           FnF->getEntryBlock().front().moveBefore(RI);
         ASSERT_NE(FnF, nullptr);
 
-        // Create an unsused constant that is referencing the old (=replaced)
+        // Create an unused constant that is referencing the old (=replaced)
         // function.
         ConstantExpr::getPtrToInt(FnF, Type::getInt64Ty(FnF->getContext()));
 
