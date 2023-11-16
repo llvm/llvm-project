@@ -106,6 +106,15 @@ public:
   /// address.
   llvm::Expected<FunctionInfo> getFunctionInfo(uint64_t Addr) const;
 
+  /// Get the full function info given an address index.
+  ///
+  /// \param AddrIdx A address index for an address in the address table.
+  ///
+  /// \returns An expected FunctionInfo that contains the function info object
+  /// or an error object that indicates reason for failing get the function
+  /// info object.
+  llvm::Expected<FunctionInfo> getFunctionInfoAtIndex(uint64_t AddrIdx) const;
+
   /// Lookup an address in the a GSYM.
   ///
   /// Lookup just the information needed for a specific address \a Addr. This
@@ -267,9 +276,10 @@ protected:
     if (Iter == End || AddrOffset < *Iter)
       --Iter;
 
-    // GSYM files store the richest information first in the file, so always
-    // backup as much as possible as long as the address offset is the same
-    // as the previous entry.
+    // GSYM files have sorted function infos with the most information (line
+    // table and/or inline info) first in the array of function infos, so
+    // always backup as much as possible as long as the address offset is the
+    // same as the previous entry.
     while (Iter != Begin) {
       auto Prev = Iter - 1;
       if (*Prev == *Iter)
@@ -336,7 +346,18 @@ protected:
   /// \returns An valid data extractor on success, or an error if we fail to
   /// find the address in a function info or corrrectly decode the data
   llvm::Expected<llvm::DataExtractor>
-  getFunctionInfoData(uint64_t Addr, uint64_t &FuncStartAddr) const;
+  getFunctionInfoDataForAddress(uint64_t Addr, uint64_t &FuncStartAddr) const;
+
+  /// Get the function data and address given an address index.
+  ///
+  /// \param AddrIdx A address index from the address table.
+  ///
+  /// \returns An expected FunctionInfo that contains the function info object
+  /// or an error object that indicates reason for failing to lookup the
+  /// address.
+  llvm::Expected<llvm::DataExtractor>
+  getFunctionInfoDataAtIndex(uint64_t AddrIdx, uint64_t &FuncStartAddr) const;
+
 };
 
 } // namespace gsym

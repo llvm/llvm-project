@@ -254,63 +254,91 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
 }
 
 llvm::Expected<DataExtractor>
-GsymReader::getFunctionInfoData(uint64_t Addr, uint64_t &FuncAddr) const {
+GsymReader::getFunctionInfoDataForAddress(uint64_t Addr, uint64_t &FuncStartAddr) const {
   Expected<uint64_t> ExpectedAddrIdx = getAddressIndex(Addr);
   if (!ExpectedAddrIdx)
     return ExpectedAddrIdx.takeError();
   const uint64_t FirstAddrIdx = *ExpectedAddrIdx;
-  std::optional<uint64_t> OptFirstAddr = getAddress(FirstAddrIdx);
-  if (!OptFirstAddr)
-    return createStringError(std::errc::invalid_argument,
-                             "failed to extract address[%" PRIu64 "]",
-                             FirstAddrIdx);
   // The AddrIdx is the first index of the function info entries that match
   // \a Addr. We need to iterate over all function info objects that start with
-  // the same address until we find a match.
-  const auto FirstAddr = *OptFirstAddr;
+  // the same address until we find a range that contains \a Addr.
+  std::optional<uint64_t> FirstFuncStartAddr;
   const size_t NumAddresses = getNumAddresses();
-  assert((Endian == endianness::big || Endian == endianness::little) &&
-         "Endian must be either big or little");
   for (uint64_t AddrIdx = FirstAddrIdx; AddrIdx < NumAddresses; ++AddrIdx) {
-    // Extract the function address and make sure it matches FirstAddr
-    std::optional<uint64_t> OptFuncAddr = getAddress(AddrIdx);
-    if (!OptFuncAddr)
-      return createStringError(std::errc::invalid_argument,
-                               "failed to extract address[%" PRIu64 "]",
-                               AddrIdx);
-    if (*OptFuncAddr != FirstAddr)
-      break; // Done with consecutive function info entries with same address.
+    auto ExpextedData = getFunctionInfoDataAtIndex(AddrIdx, FuncStartAddr);
+    // If there was an error, return the error.
+    if (!ExpextedData)
+      return ExpextedData;
 
-    // Address info offsets size should have been checked in parse().
-    auto AddrInfoOffset = AddrInfoOffsets[AddrIdx];
-    DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset),
-                       Endian == llvm::endianness::little, 4);
-    uint64_t Offset = 0;
-    // Some symbols on Darwin don't have valid sizes. If we run into a symbol
-    // with zero size, then we have found a match.
-    uint32_t FuncSize = Data.getU32(&Offset);
-    if (FuncSize == 0 ||
-        AddressRange(*OptFuncAddr, *OptFuncAddr + FuncSize).contains(Addr)) {
-      FuncAddr = *OptFuncAddr;
-      return Data;
+    // Remember the first function start address if it hasn't already been set.
+    // If it is already valid, check to see if it matches the first function
+    // start address and only continue if it matches.
+    if (FirstFuncStartAddr.has_value()) {
+      if (*FirstFuncStartAddr != FuncStartAddr)
+        break; // Done with consecutive function entries with same address.
+    } else {
+      FirstFuncStartAddr = FuncStartAddr;
     }
+    // Make sure the current function address ranges contains \a Addr.
+    // Some symbols on Darwin don't have valid sizes, so if we run into a
+    // symbol with zero size, then we have found a match for our address.
+
+    // The first thing the encoding of a FunctionInfo object is the function
+    // size.
+    uint64_t Offset = 0;
+    uint32_t FuncSize = ExpextedData->getU32(&Offset);
+    if (FuncSize == 0 ||
+        AddressRange(FuncStartAddr, FuncStartAddr + FuncSize).contains(Addr))
+      return ExpextedData;
   }
   return createStringError(std::errc::invalid_argument,
                            "address 0x%" PRIx64 " is not in GSYM", Addr);
 }
 
+llvm::Expected<DataExtractor>
+GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
+                                       uint64_t &FuncStartAddr) const {
+  if (AddrIdx >= getNumAddresses())
+    return createStringError(std::errc::invalid_argument,
+                             "invalid address index %" PRIu64,
+                             AddrIdx);
+  const uint32_t AddrInfoOffset = AddrInfoOffsets[AddrIdx];
+  assert((Endian == endianness::big || Endian == endianness::little) &&
+         "Endian must be either big or little");
+  StringRef Bytes = MemBuffer->getBuffer().substr(AddrInfoOffset);
+  if (Bytes.empty())
+    return createStringError(std::errc::invalid_argument,
+                             "invalid address info offset 0x%" PRIx32,
+                             AddrInfoOffset);
+  std::optional<uint64_t> OptFuncStartAddr = getAddress(AddrIdx);
+  if (!OptFuncStartAddr)
+    return createStringError(std::errc::invalid_argument,
+                             "failed to extract address[%" PRIu64 "]",
+                             AddrIdx);
+  FuncStartAddr = *OptFuncStartAddr;
+  return DataExtractor(Bytes, Endian == llvm::endianness::little, 4);
+}
+
 llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
-  uint64_t FuncAddr = 0;
-  if (auto ExpectedData = getFunctionInfoData(Addr, FuncAddr))
-    return FunctionInfo::decode(*ExpectedData, FuncAddr);
+  uint64_t FuncStartAddr = 0;
+  if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr))
+    return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
+  else
+    return ExpectedData.takeError();
+}
+
+llvm::Expected<FunctionInfo> GsymReader::getFunctionInfoAtIndex(uint64_t Idx) const {
+  uint64_t FuncStartAddr = 0;
+  if (auto ExpectedData = getFunctionInfoDataAtIndex(Idx, FuncStartAddr))
+    return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
   else
     return ExpectedData.takeError();
 }
 
 llvm::Expected<LookupResult> GsymReader::lookup(uint64_t Addr) const {
-  uint64_t FuncAddr = 0;
-  if (auto ExpectedData = getFunctionInfoData(Addr, FuncAddr))
-    return FunctionInfo::lookup(*ExpectedData, *this, FuncAddr, Addr);
+  uint64_t FuncStartAddr = 0;
+  if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr))
+    return FunctionInfo::lookup(*ExpectedData, *this, FuncStartAddr, Addr);
   else
     return ExpectedData.takeError();
 }
@@ -363,7 +391,7 @@ void GsymReader::dump(raw_ostream &OS) {
 
   for (uint32_t I = 0; I < Header.NumAddresses; ++I) {
     OS << "FunctionInfo @ " << HEX32(AddrInfoOffsets[I]) << ": ";
-    if (auto FI = getFunctionInfo(*getAddress(I)))
+    if (auto FI = getFunctionInfoAtIndex(I))
       dump(OS, *FI);
     else
       logAllUnhandledErrors(FI.takeError(), OS, "FunctionInfo:");

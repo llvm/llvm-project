@@ -4857,4 +4857,25 @@ TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRanges) {
     StringRef FuncName = GR->getString(ExpFI->Name);
     EXPECT_EQ(FuncName, "bar");
   }
+
+  // Prior to the fix for this issue when we dumped an entire GSYM file, we
+  // were using a function that would extract a FunctionInfo object for a
+  // given address which caused us to always dump the first FunctionInfo
+  // entry for a given address. We now dump it correctly using an address
+  // index. Below we verify that we dump the right FunctionInfo gets dumped.
+
+  SmallString<512> DumpStr;
+  raw_svector_ostream DumpStrm(DumpStr);
+  GR->dump(DumpStrm);
+
+  // Make sure we see both "foo" and "bar" in the output of an entire GSYM
+  // dump. Prior to this fix we would two "foo" entries.
+  std::vector<std::string> ExpectedDumpLines = {
+    "@ 0x00000068: [0x0000000000001000 - 0x0000000000001050) \"foo\"",
+    "@ 0x00000088: [0x0000000000001000 - 0x0000000000001100) \"bar\""
+  };
+  // Make sure all expected errors are in the error stream for the two invalid
+  // inlined functions that we removed due to invalid range scoping.
+  for (const auto &Line : ExpectedDumpLines)
+    EXPECT_TRUE(DumpStr.find(Line) != std::string::npos);
 }
