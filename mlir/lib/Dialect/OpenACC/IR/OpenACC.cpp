@@ -1087,9 +1087,9 @@ LogicalResult AtomicCaptureOp::verifyRegions() { return verifyRegionsCommon(); }
 //===----------------------------------------------------------------------===//
 
 template <typename Op>
-static LogicalResult checkDeclareOperands(Op &op,
-                                          const mlir::ValueRange &operands,
-                                          bool requireAtLeastOneOperand = true) {
+static LogicalResult
+checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
+                     bool requireAtLeastOneOperand = true) {
   if (operands.empty() && requireAtLeastOneOperand)
     return emitError(
         op->getLoc(),
