@@ -985,8 +985,9 @@ void BasicBlock::insertDPValueAfter(DPValue *DPV, Instruction *I) {
   assert(I->getParent() == this);
 
   iterator NextIt = std::next(I->getIterator());
-  DPMarker *NextMarker =
-      (NextIt == end()) ? getTrailingDPValues() : NextIt->DbgMarker;
+  DPMarker *NextMarker = getMarker(NextIt);
+  if (!NextMarker)
+    NextMarker = createMarker(NextIt);
   NextMarker->insertDPValue(DPV, true);
 }
 

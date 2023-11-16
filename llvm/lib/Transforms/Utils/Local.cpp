@@ -1716,7 +1716,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
 
 // RemoveDIs: duplicate the getDebugValueLoc method using DPValues instead of
 // dbg.value intrinsics.
-static DebugLoc getDebugValueLocDPV(DPValue *DPV, Instruction *Src) {
+static DebugLoc getDebugValueLocDPV(DPValue *DPV) {
   // Original dbg.declare must have a location.
   const DebugLoc &DeclareLoc = DPV->getDebugLoc();
   MDNode *Scope = DeclareLoc.getScope();
@@ -1759,7 +1759,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DPValue *DPV,
   auto *DIExpr = DPV->getExpression();
   Value *DV = SI->getValueOperand();
 
-  DebugLoc NewLoc = getDebugValueLocDPV(DPV, SI);
+  DebugLoc NewLoc = getDebugValueLocDPV(DPV);
 
   if (!valueCoversEntireFragment(DV->getType(), DPV)) {
     // FIXME: If storing to a part of the variable described by the dbg.declare,
@@ -1831,7 +1831,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DPValue *DPV,
     return;
   }
 
-  DebugLoc NewLoc = getDebugValueLocDPV(DPV, nullptr);
+  DebugLoc NewLoc = getDebugValueLocDPV(DPV);
 
   // We are now tracking the loaded value instead of the address. In the
   // future if multi-location support is added to the IR, it might be
@@ -1876,7 +1876,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DPValue *DPV,
   BasicBlock *BB = APN->getParent();
   auto InsertionPt = BB->getFirstInsertionPt();
 
-  DebugLoc NewLoc = getDebugValueLocDPV(DPV, nullptr);
+  DebugLoc NewLoc = getDebugValueLocDPV(DPV);
 
   // The block may be a catchswitch block, which does not have a valid
   // insertion point.
@@ -2069,22 +2069,17 @@ static void updateOneDbgValueForAlloca(const DebugLoc &Loc, DILocalVariable *DIV
 
 void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                     DIBuilder &Builder, int Offset) {
-  SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
+  SmallVector<DbgValueInst *, 1> DbgUsers;
   SmallVector<DPValue *, 1> DPUsers;
-  findDbgUsers(DbgUsers, AI, &DPUsers);
+  findDbgValues(DbgUsers, AI, &DPUsers);
 
   // Attempt to replace dbg.values that use this alloca.
-  for (auto *DV : DbgUsers) {
-    auto *DVI = dyn_cast<DbgValueInst>(DV);
-    if (!DVI)
-      continue;
+  for (auto *DVI : DbgUsers)
     updateOneDbgValueForAlloca(DVI->getDebugLoc(), DVI->getVariable(), DVI->getExpression(), NewAllocaAddress, DVI, nullptr, Builder, Offset);
-  }
 
   // Replace any DPValues that use this alloca.
-  for (DPValue *DPV : DPUsers) {
+  for (DPValue *DPV : DPUsers)
     updateOneDbgValueForAlloca(DPV->getDebugLoc(), DPV->getVariable(), DPV->getExpression(), NewAllocaAddress, nullptr, DPV, Builder, Offset);
-  }
 }
 
 /// Where possible to salvage debug information for \p I do so.
@@ -2524,7 +2519,6 @@ static bool rewriteDebugUsers(
         LLVM_DEBUG(dbgs() << "MOVE:  " << *DPV << '\n');
         DPV->removeFromParent();
         // Ensure there's a marker.
-        DomPoint.getParent()->createMarker(std::next(DomPoint.getIterator()));
         DomPoint.getParent()->insertDPValueAfter(DPV, &DomPoint);
         Changed = true;
       } else if (!DT.dominates(&DomPoint, MarkedInstr)) {
@@ -3422,22 +3416,10 @@ void llvm::dropDebugUsers(Instruction &I) {
   SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   SmallVector<DPValue *, 1> DPUsers;
   findDbgUsers(DbgUsers, &I, &DPUsers);
-  for (auto *DII : DbgUsers) {
-    if (auto *DbgValue = dyn_cast<DbgValueInst>(DII)) {
-      // Don't delete dbg.values, that's bad.
-      DbgValue->setKillLocation();
-    } else {
-      DII->eraseFromParent();
-    }
-  }
-  for (auto *DPV : DPUsers) {
-    if (DPV->getType() == DPValue::LocationType::Value) {
-      // Don't delete DPValues, that's bad.
-      DPV->setKillLocation();
-    } else {
-      DPV->eraseFromParent();
-    }
-  }
+  for (auto *DII : DbgUsers)
+    DII->eraseFromParent();
+  for (auto *DPV : DPUsers)
+    DPV->eraseFromParent();
 }
 
 void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
