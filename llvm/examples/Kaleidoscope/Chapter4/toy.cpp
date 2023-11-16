@@ -7,15 +7,19 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/Reassociate.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -413,8 +417,14 @@ static std::unique_ptr<LLVMContext> TheContext;
 static std::unique_ptr<Module> TheModule;
 static std::unique_ptr<IRBuilder<>> Builder;
 static std::map<std::string, Value *> NamedValues;
-static std::unique_ptr<legacy::FunctionPassManager> TheFPM;
 static std::unique_ptr<KaleidoscopeJIT> TheJIT;
+static std::unique_ptr<FunctionPassManager> TheFPM;
+static std::unique_ptr<LoopAnalysisManager> TheLAM;
+static std::unique_ptr<FunctionAnalysisManager> TheFAM;
+static std::unique_ptr<CGSCCAnalysisManager> TheCGAM;
+static std::unique_ptr<ModuleAnalysisManager> TheMAM;
+static std::unique_ptr<PassInstrumentationCallbacks> ThePIC;
+static std::unique_ptr<StandardInstrumentations> TheSI;
 static std::map<std::string, std::unique_ptr<PrototypeAST>> FunctionProtos;
 static ExitOnError ExitOnErr;
 
@@ -535,7 +545,7 @@ Function *FunctionAST::codegen() {
     verifyFunction(*TheFunction);
 
     // Run the optimizer on the function.
-    TheFPM->run(*TheFunction);
+    TheFPM->run(*TheFunction, *TheFAM);
 
     return TheFunction;
   }
@@ -549,28 +559,41 @@ Function *FunctionAST::codegen() {
 // Top-Level parsing and JIT Driver
 //===----------------------------------------------------------------------===//
 
-static void InitializeModuleAndPassManager() {
+static void InitializeModuleAndManagers() {
   // Open a new context and module.
   TheContext = std::make_unique<LLVMContext>();
-  TheModule = std::make_unique<Module>("my cool jit", *TheContext);
+  TheModule = std::make_unique<Module>("KaleidoscopeJIT", *TheContext);
   TheModule->setDataLayout(TheJIT->getDataLayout());
 
   // Create a new builder for the module.
   Builder = std::make_unique<IRBuilder<>>(*TheContext);
 
-  // Create a new pass manager attached to it.
-  TheFPM = std::make_unique<legacy::FunctionPassManager>(TheModule.get());
+  // Create new pass and analysis managers.
+  TheFPM = std::make_unique<FunctionPassManager>();
+  TheLAM = std::make_unique<LoopAnalysisManager>();
+  TheFAM = std::make_unique<FunctionAnalysisManager>();
+  TheCGAM = std::make_unique<CGSCCAnalysisManager>();
+  TheMAM = std::make_unique<ModuleAnalysisManager>();
+  ThePIC = std::make_unique<PassInstrumentationCallbacks>();
+  TheSI = std::make_unique<StandardInstrumentations>(*TheContext,
+                                                     /*DebugLogging*/ true);
+  TheSI->registerCallbacks(*ThePIC, TheMAM.get());
 
+  // Add transform passes.
   // Do simple "peephole" optimizations and bit-twiddling optzns.
-  TheFPM->add(createInstructionCombiningPass());
+  TheFPM->addPass(InstCombinePass());
   // Reassociate expressions.
-  TheFPM->add(createReassociatePass());
+  TheFPM->addPass(ReassociatePass());
   // Eliminate Common SubExpressions.
-  TheFPM->add(createGVNPass());
+  TheFPM->addPass(GVNPass());
   // Simplify the control flow graph (deleting unreachable blocks, etc).
-  TheFPM->add(createCFGSimplificationPass());
+  TheFPM->addPass(SimplifyCFGPass());
 
-  TheFPM->doInitialization();
+  // Register analysis passes used in these transform passes.
+  PassBuilder PB;
+  PB.registerModuleAnalyses(*TheMAM);
+  PB.registerFunctionAnalyses(*TheFAM);
+  PB.crossRegisterProxies(*TheLAM, *TheFAM, *TheCGAM, *TheMAM);
 }
 
 static void HandleDefinition() {
@@ -581,7 +604,7 @@ static void HandleDefinition() {
       fprintf(stderr, "\n");
       ExitOnErr(TheJIT->addModule(
           ThreadSafeModule(std::move(TheModule), std::move(TheContext))));
-      InitializeModuleAndPassManager();
+      InitializeModuleAndManagers();
     }
   } else {
     // Skip token for error recovery.
@@ -613,7 +636,7 @@ static void HandleTopLevelExpression() {
 
       auto TSM = ThreadSafeModule(std::move(TheModule), std::move(TheContext));
       ExitOnErr(TheJIT->addModule(std::move(TSM), RT));
-      InitializeModuleAndPassManager();
+      InitializeModuleAndManagers();
 
       // Search the JIT for the __anon_expr symbol.
       auto ExprSymbol = ExitOnErr(TheJIT->lookup("__anon_expr"));
@@ -699,7 +722,7 @@ int main() {
 
   TheJIT = ExitOnErr(KaleidoscopeJIT::Create());
 
-  InitializeModuleAndPassManager();
+  InitializeModuleAndManagers();
 
   // Run the main "interpreter loop" now.
   MainLoop();
