@@ -1055,7 +1055,7 @@ public:
     return stmt(isInUnspecifiedUntypedContext(expr(ignoringImpCasts(
         binaryOperator(hasOperatorName("+="),
                        hasLHS(declRefExpr(toSupportedVariable())),
-                       hasRHS(ignoringParens(expr().bind(OffsetTag))))
+                       hasRHS(expr().bind(OffsetTag)))
             .bind(UUCAddAssignTag)))));
   }
 
@@ -1453,10 +1453,8 @@ static std::optional<SourceLocation> getPastLoc(const NodeTy *Node,
                                                 const LangOptions &LangOpts) {
   SourceLocation Loc =
       Lexer::getLocForEndOfToken(Node->getEndLoc(), 0, SM, LangOpts);
-
   if (Loc.isValid())
     return Loc;
-
   return std::nullopt;
 }
 
@@ -1844,17 +1842,23 @@ UUCAddAssignGadget::getFixits(const Strategy &S) const {
             getUserFillPlaceHolder(); // FIXME: When does this happen?
 
       // To transform UUC(p += n) to UUC(p = p.subspan(..)):
-      SS << varName.data() << " = " << varName.data() << ".subspan("
-         << SubSpanOffset << ")";
+      SS << varName.data() << " = " << varName.data() << ".subspan";
 
+      bool NotParenExpr = (Offset->IgnoreParens()->getBeginLoc() == Offset->getBeginLoc());
+      if (NotParenExpr)
+        SS << "(";
+      
       std::optional<SourceLocation> AddAssignLocation = getEndCharLoc(
           AddAssignNode, Ctx.getSourceManager(), Ctx.getLangOpts());
       if (!AddAssignLocation)
         return std::nullopt;
 
       Fixes.push_back(FixItHint::CreateReplacement(
-          SourceRange(AddAssignNode->getBeginLoc(), *AddAssignLocation),
+                                                   SourceRange(AddAssignNode->getBeginLoc(),
+                                                               Node->getOperatorLoc()),
           SS.str()));
+      if (NotParenExpr)
+        Fixes.push_back(FixItHint::CreateInsertion(Offset->getEndLoc().getLocWithOffset(1), ")"));
       return Fixes;
     }
   }

@@ -9,7 +9,8 @@ void add_assign_test(unsigned int n, int *a, int y) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
   p += 2;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:9}:"p = p.subspan(2)"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:7}:"p = p.subspan("
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:9-[[@LINE-2]]:9}:")"
   
   int *r = p;
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> r"
@@ -19,27 +20,30 @@ void add_assign_test(unsigned int n, int *a, int y) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:10-[[@LINE-1]]:11}:""
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"[0]"
     r += 2;
-    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:11}:"r = r.subspan(2)"
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:9}:"r = r.subspan("
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:11-[[@LINE-2]]:11}:")"
   }
   
   if (*p == 0) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:8}:""
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:9-[[@LINE-2]]:9}:"[0]"
     p += n;
-    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:11}:"p = p.subspan(n)"
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:9}:"p = p.subspan("
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:11-[[@LINE-2]]:11}:")"
   }
   
   if (*p == 1)
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:8}:""
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:9-[[@LINE-2]]:9}:"[0]"
     p += 3;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:11}:"p = p.subspan(3)"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:9}:"p = p.subspan("
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:11-[[@LINE-2]]:11}:")"
   
   a += -9;
-  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:11}:"p = p.subspan(-9)"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:9}:"p = p.subspan("
   
   a += y;
-  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:11}:"p = p.subspan(y)"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:9}:"p = p.subspan("
 }
 
 int expr_test(unsigned x, int *q, int y) {
@@ -48,8 +52,8 @@ int expr_test(unsigned x, int *q, int y) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 8}"
   p += (x + 1);
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:15}:"p = p.subspan(x + 1)"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:7}:"p = p.subspan"
   
   q += (y + 7);
-  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:15}:"q = q.subspan(y + 1)"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:7}:"q = q.subspan"
 }
