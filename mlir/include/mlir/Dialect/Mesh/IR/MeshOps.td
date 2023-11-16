@@ -80,6 +80,9 @@ def Mesh_ClusterOp : Mesh_Op<"cluster", [Symbol]> {
       attr-dict
   }];
   let extraClassDeclaration = [{
+    // The `dim_sizes` attribute may have size less than the rank of the mesh.
+    // Returns the shape of the mesh with missing trailing dimensions
+    // explicitly set as dynamic.
     ::mlir::SmallVector<int64_t> canonicalDimSizes();
 
     template <typename OutIt>
