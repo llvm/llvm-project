@@ -247,7 +247,8 @@ Fortran::lower::CallerInterface::characterize() const {
           std::optional<Fortran::evaluate::characteristics::DummyArgument>
               argCharacteristic =
                   Fortran::evaluate::characteristics::DummyArgument::FromActual(
-                      "actual", *expr, foldingContext);
+                      "actual", *expr, foldingContext,
+                      /*forImplicitInterface=*/true);
           assert(argCharacteristic &&
                  "failed to characterize argument in implicit call");
           characteristic->dummyArguments.emplace_back(
