@@ -1967,12 +1967,11 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush_safe(ptr addrsp
 ;
 ; GFX940-LABEL: local_atomic_fadd_f64_noret_pat_flush_safe:
 ; GFX940:       ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_load_dword s2, s[0:1], 0x24
-; GFX940-NEXT:    s_mov_b64 s[0:1], 0
+; GFX940-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    v_mov_b32_e32 v0, s2
-; GFX940-NEXT:    ds_read_b64 v[0:1], v0
-; GFX940-NEXT:    v_mov_b32_e32 v2, s2
+; GFX940-NEXT:    v_mov_b32_e32 v2, s0
+; GFX940-NEXT:    ds_read_b64 v[0:1], v2
+; GFX940-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX940-NEXT:  .LBB67_1: ; %atomicrmw.start
 ; GFX940-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
