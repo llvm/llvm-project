@@ -422,7 +422,7 @@ def CanonicalLoopInfoType : OpenMP_Type<"CanonicalLoopInfo", "cli"> {
 
     A CanonicalLoopInfo value can be
 
-    1. passed to omp.canonical_loop to assiciate the loop to that variable
+    1. passed to omp.canonical_loop to associate the loop to that value
     2. passed to omp operations that take a CanonicalLoopInfo argument,
        such as `omp.unroll`.
 
