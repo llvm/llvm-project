@@ -408,9 +408,8 @@ define i32 @ashr_sel_op1_use(i1 %b) {
 define i32 @umax1_as_select_sub(i32 %a) {
 ; CHECK-LABEL: @umax1_as_select_sub(
 ; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C_NOT]], i32 0, i32 2
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.umax.i32(i32 [[A]], i32 1)
-; CHECK-NEXT:    [[B:%.*]] = sub i32 [[S]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 2, [[A]]
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[C_NOT]], i32 -1, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %c = icmp ugt i32 %a, 0
@@ -423,9 +422,8 @@ define i32 @umax1_as_select_sub(i32 %a) {
 define i32 @umax1_as_select_add(i32 %a) {
 ; CHECK-LABEL: @umax1_as_select_add(
 ; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[S_NEG:%.*]] = select i1 [[C_NOT]], i32 0, i32 -2
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.umax.i32(i32 [[A]], i32 1)
-; CHECK-NEXT:    [[B:%.*]] = add i32 [[S_NEG]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A]], -2
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[C_NOT]], i32 1, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %c = icmp ugt i32 %a, 0
@@ -466,9 +464,8 @@ define i32 @umax1_as_select_add_equalselect(i32 %a) {
 define i8 @smin1_as_select_add_nonequalselect(i8 %a, i8 %x) {
 ; CHECK-LABEL: @smin1_as_select_add_nonequalselect(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A:%.*]], 127
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 -3, i8 [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[A]], i8 126)
-; CHECK-NEXT:    [[B:%.*]] = sub i8 [[S]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[X:%.*]], [[A]]
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[C]], i8 127, i8 [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[B]]
 ;
   %c = icmp eq i8 %a, 127
@@ -481,11 +478,8 @@ define i8 @smin1_as_select_add_nonequalselect(i8 %a, i8 %x) {
 
 define i32 @umax1_as_select_mul(i32 %a) {
 ; CHECK-LABEL: @umax1_as_select_mul(
-; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C_NOT]], i32 0, i32 2
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.umax.i32(i32 [[A]], i32 1)
-; CHECK-NEXT:    [[B:%.*]] = mul i32 [[S]], [[M]]
-; CHECK-NEXT:    ret i32 [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A:%.*]], 1
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %c = icmp ugt i32 %a, 0
   %s = select i1 %c, i32 2, i32 0
@@ -497,9 +491,8 @@ define i32 @umax1_as_select_mul(i32 %a) {
 define i8 @umin1_as_select_sub(i8 %a) {
 ; CHECK-LABEL: @umin1_as_select_sub(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A:%.*]], -1
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 0, i8 2
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[A]], i8 -2)
-; CHECK-NEXT:    [[B:%.*]] = sub i8 [[S]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 2, [[A]]
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[C]], i8 2, i8 [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[B]]
 ;
   %c = icmp eq i8 %a, 255
@@ -512,9 +505,8 @@ define i8 @umin1_as_select_sub(i8 %a) {
 define i8 @umin1_as_select_sub_c(i8 %a) {
 ; CHECK-LABEL: @umin1_as_select_sub_c(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A:%.*]], -1
-; CHECK-NEXT:    [[S_NEG:%.*]] = select i1 [[C]], i8 0, i8 -2
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[A]], i8 -2)
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[S_NEG]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[A]], -2
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[C]], i8 -2, i8 [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[B]]
 ;
   %c = icmp eq i8 %a, 255
@@ -527,9 +519,8 @@ define i8 @umin1_as_select_sub_c(i8 %a) {
 define i8 @smax1_as_select_sub(i8 %a) {
 ; CHECK-LABEL: @smax1_as_select_sub(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A:%.*]], -128
-; CHECK-NEXT:    [[S_NEG:%.*]] = select i1 [[C]], i8 0, i8 -2
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[A]], i8 -127)
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[S_NEG]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[A]], -2
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[C]], i8 -127, i8 [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[B]]
 ;
   %c = icmp eq i8 %a, -128
@@ -542,9 +533,8 @@ define i8 @smax1_as_select_sub(i8 %a) {
 define i8 @smin1_as_select_sub(i8 %a) {
 ; CHECK-LABEL: @smin1_as_select_sub(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A:%.*]], 127
-; CHECK-NEXT:    [[S_NEG:%.*]] = select i1 [[C]], i8 0, i8 -2
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[A]], i8 126)
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[S_NEG]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[A]], -2
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[C]], i8 126, i8 [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[B]]
 ;
   %c = icmp eq i8 %a, 127
@@ -822,10 +812,8 @@ define i8 @smin_as_select_1_e(i8 %a, i8 %b, i8 %c) {
 
 define i32 @original(i32 %l) {
 ; CHECK-LABEL: @original(
-; CHECK-NEXT:    [[M:%.*]] = tail call i32 @llvm.umax.i32(i32 [[L:%.*]], i32 1)
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 9, i32 [[L]]
-; CHECK-NEXT:    [[R:%.*]] = sub i32 [[S]], [[M]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[L:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 8, i32 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %m = tail call i32 @llvm.umax.i32(i32 %l, i32 1)
@@ -837,10 +825,9 @@ define i32 @original(i32 %l) {
 
 define i32 @extrause_select(i32 %l) {
 ; CHECK-LABEL: @extrause_select(
-; CHECK-NEXT:    [[M:%.*]] = tail call i32 @llvm.umax.i32(i32 [[L:%.*]], i32 1)
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[L:%.*]], 0
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 9, i32 [[L]]
-; CHECK-NEXT:    [[R:%.*]] = sub i32 [[S]], [[M]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 8, i32 0
 ; CHECK-NEXT:    call void @use(i32 [[S]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -856,8 +843,7 @@ define i32 @extrause_umax(i32 %l) {
 ; CHECK-LABEL: @extrause_umax(
 ; CHECK-NEXT:    [[M:%.*]] = tail call i32 @llvm.umax.i32(i32 [[L:%.*]], i32 1)
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 9, i32 [[L]]
-; CHECK-NEXT:    [[R:%.*]] = sub i32 [[S]], [[M]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 8, i32 0
 ; CHECK-NEXT:    call void @use(i32 [[M]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
