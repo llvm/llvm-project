@@ -52,6 +52,7 @@
 #include "Config.h"
 #include "Diagnostics.h"
 #include "GlobalCompilationDatabase.h"
+#include "HeaderSourceSwitch.h"
 #include "ParsedAST.h"
 #include "Preamble.h"
 #include "clang-include-cleaner/Record.h"
@@ -64,6 +65,7 @@
 #include "support/Threading.h"
 #include "support/Trace.h"
 #include "clang/Basic/Stack.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -622,7 +624,7 @@ public:
          const TUScheduler::Options &Opts, ParsingCallbacks &Callbacks);
   ~ASTWorker();
 
-  void update(ParseInputs Inputs, WantDiagnostics, bool ContentChanged);
+  void update(ParseInputs Inputs, WantDiagnostics, bool ContentChanged, std::optional<std::vector<std::string>> SourceInclides);
   void
   runWithAST(llvm::StringRef Name,
              llvm::unique_function<void(llvm::Expected<InputsAndAST>)> Action,
@@ -857,7 +859,7 @@ ASTWorker::~ASTWorker() {
 }
 
 void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
-                       bool ContentChanged) {
+                       bool ContentChanged, std::optional<std::vector<std::string>> SourceInclides) {
   llvm::StringLiteral TaskName = "Update";
   auto Task = [=]() mutable {
     // Get the actual command as `Inputs` does not have a command.
@@ -881,10 +883,24 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
         }
       }
     }
-    if (Cmd)
+    if (!Cmd)
+      Cmd = CDB.getFallbackCommand(FileName);
+    if (Cmd) {
+      if (SourceInclides && !SourceInclides->empty()) {
+        Cmd->CommandLine.reserve(Cmd->CommandLine.size() +
+                                 SourceInclides->size());
+        auto PosArg =
+            std::find(Cmd->CommandLine.begin(), Cmd->CommandLine.end(), "--");
+        auto UsePushBack = PosArg == Cmd->CommandLine.end();
+        for (auto &&Arg : *SourceInclides) {
+          if (UsePushBack)
+            Cmd->CommandLine.push_back(std::move(Arg));
+          else
+            PosArg = std::next(Cmd->CommandLine.insert(PosArg, std::move(Arg)));
+        }
+      }
       Inputs.CompileCommand = std::move(*Cmd);
-    else
-      Inputs.CompileCommand = CDB.getFallbackCommand(FileName);
+    }
 
     bool InputsAreTheSame =
         std::tie(FileInputs.CompileCommand, FileInputs.Contents) ==
@@ -1684,7 +1700,39 @@ bool TUScheduler::update(PathRef File, ParseInputs Inputs,
     ContentChanged = true;
     FD->Contents = Inputs.Contents;
   }
-  FD->Worker->update(std::move(Inputs), WantDiags, ContentChanged);
+  std::optional<std::vector<std::string>> SourceInclides;
+  if (isHeaderFile(File)) {
+    std::string SourceFile;
+    auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
+    if (auto CorrespondingFile =
+            clang::clangd::getCorrespondingHeaderOrSource(File, std::move(VFS)))
+      SourceFile = *CorrespondingFile;
+    if (SourceFile.empty())
+      SourceFile = HeaderIncluders->get(File);
+    if (!SourceFile.empty() && Files.contains(SourceFile)) {
+      std::unique_ptr<FileData> &FD = Files[SourceFile];
+      if (FD && FD->Worker->isASTCached()) {
+        if (auto AST = IdleASTs->take(FD->Worker.lock().get())) {
+          auto &Headers = AST.value()->getIncludeStructure().MainFileIncludes;
+          std::vector<std::string> Includes;
+          Includes.reserve(Headers.size());
+          for (const auto &H : Headers) {
+            if (H.Resolved == File) {
+              if (isSystem(H.FileKind))
+                Includes.clear();
+              break;
+            }
+            auto Include = "-include" + H.Resolved;
+            Includes.push_back(std::move(Include));
+          }
+          if (!Includes.empty())
+            SourceInclides = std::move(Includes);
+          IdleASTs->put(FD->Worker.lock().get(), std::move(AST.value()));
+        }
+      }
+    }
+  }
+  FD->Worker->update(std::move(Inputs), WantDiags, ContentChanged, SourceInclides);
   // There might be synthetic update requests, don't change the LastActiveFile
   // in such cases.
   if (ContentChanged)
