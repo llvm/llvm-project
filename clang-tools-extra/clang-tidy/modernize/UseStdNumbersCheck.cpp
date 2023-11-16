@@ -387,6 +387,9 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
     const auto Range = Match->getSourceRange();
 
     const auto IsMacro = Range.getBegin().isMacroID();
+
+    // We do not want to emit a diagnostic when we are matching a macro, but the
+    // match inside of the macro does not cover the whole macro.
     if (IsMacro && !isRangeOfCompleteMacro(Range, SM, LO)) {
       continue;
     }
@@ -410,7 +413,7 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   // We may have had no matches with literals, but a match with a pattern that
-  // was a subexpression of a macro which was therefore skipped.
+  // was a part of a macro which was therefore skipped.
   if (MatchedLiterals.empty()) {
     return;
   }
@@ -423,6 +426,9 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
 
   const auto Range = Node->getSourceRange();
   const auto IsMacro = Range.getBegin().isMacroID();
+
+  // We do not want to emit a diagnostic when we are matching a macro, but the
+  // match inside of the macro does not cover the whole macro.
   if (IsMacro && !isRangeOfCompleteMacro(Range, SM, LO)) {
     return;
   }
