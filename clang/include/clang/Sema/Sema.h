@@ -8842,6 +8842,9 @@ public:
     /// The type of an exception.
     UPPC_ExceptionType,
 
+    /// Explicit specialization.
+    UPPC_ExplicitSpecialization,
+
     /// Partial specialization.
     UPPC_PartialSpecialization,
 
