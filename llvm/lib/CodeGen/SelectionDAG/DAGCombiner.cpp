@@ -546,6 +546,7 @@ namespace {
     SDValue visitFP_TO_FP16(SDNode *N);
     SDValue visitFP16_TO_FP(SDNode *N);
     SDValue visitFP_TO_BF16(SDNode *N);
+    SDValue visitBF16_TO_FP(SDNode *N);
     SDValue visitVECREDUCE(SDNode *N);
     SDValue visitVPOp(SDNode *N);
     SDValue visitGET_FPENV_MEM(SDNode *N);
@@ -2048,7 +2049,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::FP_TO_FP16:         return visitFP_TO_FP16(N);
   case ISD::FP16_TO_FP:         return visitFP16_TO_FP(N);
   case ISD::FP_TO_BF16:         return visitFP_TO_BF16(N);
-  case ISD::BF16_TO_FP:         return visitFP16_TO_FP(N);
+  case ISD::BF16_TO_FP:         return visitBF16_TO_FP(N);
   case ISD::FREEZE:             return visitFREEZE(N);
   case ISD::GET_FPENV_MEM:      return visitGET_FPENV_MEM(N);
   case ISD::SET_FPENV_MEM:      return visitSET_FPENV_MEM(N);
@@ -26163,6 +26164,8 @@ SDValue DAGCombiner::visitFP_TO_BF16(SDNode *N) {
 
   return SDValue();
 }
+
+SDValue DAGCombiner::visitBF16_TO_FP(SDNode *N) { return visitFP16_TO_FP(N); }
 
 SDValue DAGCombiner::visitVECREDUCE(SDNode *N) {
   SDValue N0 = N->getOperand(0);
