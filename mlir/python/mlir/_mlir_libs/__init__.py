@@ -82,9 +82,9 @@ class _M:
     def __get_registry(self):
         return self.__registry
 
-    def process_initializer_module(self, module_name):
+    def process_c_ext_module(self, module_name):
         try:
-            m = importlib.import_module(f".{module_name}", __name__)
+            m = importlib.import_module(f"{module_name}", __name__)
         except ModuleNotFoundError:
             return False
         except ImportError:
@@ -112,14 +112,14 @@ class _M:
         # If _mlirRegisterEverything is built, then include it as an initializer
         # module.
         init_module = None
-        if self.process_initializer_module("_mlirRegisterEverything"):
+        if self.process_c_ext_module("._mlirRegisterEverything"):
             init_module = importlib.import_module(f"._mlirRegisterEverything", __name__)
 
         # Load all _site_initialize_{i} modules, where 'i' is a number starting
         # at 0.
         for i in itertools.count():
-            module_name = f"_site_initialize_{i}"
-            if not self.process_initializer_module(module_name):
+            module_name = f"._site_initialize_{i}"
+            if not self.process_c_ext_module(module_name):
                 break
 
         that = self

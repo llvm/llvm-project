@@ -1,5 +1,9 @@
 # RUN: %PYTHON %s | FileCheck %s
 
+from mlir import _mlir_libs
+
+_mlir_libs.process_c_ext_module("mlir._mlir_libs._mlirPythonTest")
+
 from mlir.ir import *
 import mlir.dialects.func as func
 import mlir.dialects.python_test as test
@@ -17,7 +21,6 @@ def run(f):
 @run
 def testAttributes():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
         #
         # Check op construction with attributes.
         #
@@ -138,7 +141,6 @@ def testAttributes():
 @run
 def attrBuilder():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
         # CHECK: python_test.attributes_op
         op = test.AttributesOp(
             # CHECK-DAG: x_affinemap = affine_map<() -> (2)>
@@ -215,7 +217,6 @@ def attrBuilder():
 @run
 def inferReturnTypes():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             op = test.InferResultsOp()
@@ -260,7 +261,6 @@ def inferReturnTypes():
 @run
 def resultTypesDefinedByTraits():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             inferred = test.InferResultsOp()
@@ -295,7 +295,6 @@ def resultTypesDefinedByTraits():
 @run
 def testOptionalOperandOp():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
 
         module = Module.create()
         with InsertionPoint(module.body):
@@ -312,7 +311,6 @@ def testOptionalOperandOp():
 @run
 def testCustomAttribute():
     with Context() as ctx:
-        test.register_python_test_dialect(ctx)
         a = test.TestAttr.get()
         # CHECK: #python_test.test_attr
         print(a)
@@ -350,7 +348,6 @@ def testCustomAttribute():
 @run
 def testCustomType():
     with Context() as ctx:
-        test.register_python_test_dialect(ctx)
         a = test.TestType.get()
         # CHECK: !python_test.test_type
         print(a)
@@ -397,8 +394,6 @@ def testCustomType():
 # CHECK-LABEL: TEST: testTensorValue
 def testTensorValue():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
-
         i8 = IntegerType.get_signless(8)
 
         class Tensor(test.TestTensorValue):
@@ -436,7 +431,6 @@ def testTensorValue():
 @run
 def inferReturnTypeComponents():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         i32 = IntegerType.get_signless(32)
         with InsertionPoint(module.body):
@@ -488,8 +482,6 @@ def inferReturnTypeComponents():
 @run
 def testCustomTypeTypeCaster():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
-
         a = test.TestType.get()
         assert a.typeid is not None
 
@@ -542,7 +534,6 @@ def testCustomTypeTypeCaster():
 @run
 def testInferTypeOpInterface():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             i64 = IntegerType.get_signless(64)

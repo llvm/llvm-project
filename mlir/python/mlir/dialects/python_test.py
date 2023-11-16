@@ -9,9 +9,3 @@ from .._mlir_libs._mlirPythonTest import (
     TestTensorValue,
     TestIntegerRankedTensorType,
 )
-
-
-def register_python_test_dialect(context, load=True):
-    from .._mlir_libs import _mlirPythonTest
-
-    _mlirPythonTest.register_python_test_dialect(context, load)
