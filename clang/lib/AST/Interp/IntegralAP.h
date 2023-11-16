@@ -218,21 +218,19 @@ public:
 
   static bool bitAnd(IntegralAP A, IntegralAP B, unsigned OpBits,
                      IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
+    *R = IntegralAP(A.V & B.V);
     return false;
   }
 
   static bool bitOr(IntegralAP A, IntegralAP B, unsigned OpBits,
                     IntegralAP *R) {
-    assert(false);
+    *R = IntegralAP(A.V | B.V);
     return false;
   }
 
   static bool bitXor(IntegralAP A, IntegralAP B, unsigned OpBits,
                      IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
+    *R = IntegralAP(A.V ^ B.V);
     return false;
   }
 
