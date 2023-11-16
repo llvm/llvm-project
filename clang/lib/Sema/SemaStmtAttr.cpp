@@ -358,13 +358,13 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
 // Emit duplicate error for [[clang::code_align()]] attribute.
 static void
 CheckForDuplicateCodeAlignAttrs(Sema &S,
-		                const SmallVectorImpl<const Attr *> &Attrs) {
+                                const SmallVectorImpl<const Attr *> &Attrs) {
   const Attr *A = nullptr;
   for (const auto *I : Attrs) {
     if (isa<CodeAlignAttr>(I)) {
       if (A) {
         S.Diag(I->getLocation(), diag::err_loop_attr_duplication) << A;
-        S.Diag(A->getLocation(),diag::note_previous_attribute);
+        S.Diag(A->getLocation(), diag::note_previous_attribute);
       }
       A = I;
     }
