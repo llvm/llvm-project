@@ -1484,11 +1484,12 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
     createAllocFields(rewriter, loc, dstTp, dynSizes, /*enableInit=*/false,
                       fields, nse);
 
-    // Now construct the dim2lvl and lvl2dim buffers.
+    // Now construct the lvl sizes and the dim2lvl/lvl2dim buffers.
+    SmallVector<Value> lvlSizesValues;
     Value dim2lvlBuffer;
     Value lvl2dimBuffer;
     genMapBuffers(rewriter, loc, dstTp, dimShapesValues, dimSizesBuffer,
-                  dim2lvlBuffer, lvl2dimBuffer);
+                  lvlSizesValues, dim2lvlBuffer, lvl2dimBuffer);
 
     // Read the COO tensor data.
     MutSparseTensorDescriptor desc(dstTp, fields);
