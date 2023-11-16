@@ -155,8 +155,8 @@ llvm.func @addr(%arg: i64) {
   %allocCount = llvm.mlir.constant(1 : i32) : i32
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
 
-  // CHECK: llvm.intr.dbg.value #[[VAR0]] = %[[ALLOC]]
-  llvm.intr.dbg.value #var0 = %alloc : !llvm.ptr
+  // CHECK: llvm.intr.dbg.declare #[[VAR0]] = %[[ALLOC]]
+  llvm.intr.dbg.declare #var0 = %alloc : !llvm.ptr
   llvm.return
 }
 

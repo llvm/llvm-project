@@ -268,7 +268,7 @@ def LLVM_DITagParameter : LLVM_DIParameter<
 // TODO: Implement custom printer/parser for elements so that operators are
 // dumped in textual form.
 def LLVM_DIExpressionAttr : ArrayOfAttr<LLVM_Dialect, "DIExpression",
-                                          "di_expr", "uint64_t"> {
+                                        "di_expr", "uint64_t"> {
   let assemblyFormat = "`<` `[` (`]` `>`) : ($value^ `]` `>`)?";
 }
 
