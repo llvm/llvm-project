@@ -24,7 +24,7 @@
 ; CHECK:   br i1 %cmp.n, label %exit.loopexit, label %vec.epilog.iter.check, !prof [[PROF_F0_MIDDLE_BLOCKS:![0-9]+]]
 ;
 ; CHECK: vec.epilog.iter.check:
-; CHECK:   br i1 %min.epilog.iters.check, label %vec.epilog.scalar.ph, label %vec.epilog.ph, !prof [[PROF_F0_UNLIKELY]]
+; CHECK:   br i1 %min.epilog.iters.check, label %vec.epilog.scalar.ph, label %vec.epilog.ph, !prof [[PROF_F0_VEC_EPILOGUE_SKIP:![0-9]+]]
 ;
 ; CHECK: vec.epilog.ph:
 ; CHECK:   br label %vec.epilog.vector.body
@@ -77,5 +77,6 @@ exit:
 ; CHECK: [[PROF_F0_UNLIKELY]] = !{!"branch_weights", i32 1, i32 127}
 ; CEHCK: [[PROF_F0_VECTOR_BODY]] = !{!"branch_weights", i32 1, i32 307}
 ; CHECK: [[PROF_F0_MIDDLE_BLOCKS]] =  !{!"branch_weights", i32 1, i32 3}
+; CHECK: [[PROF_F0_VEC_EPILOGUE_SKIP]] = !{!"branch_weights", i32 4, i32 0}
 ; CHECK: [[PROF_F0_VEC_EPILOG_VECTOR_BODY]] = !{!"branch_weights", i32 0, i32 0}
 ; CEHCK: [[PROF_F0_LOOP]] = !{!"branch_weights", i32 2, i32 1}
