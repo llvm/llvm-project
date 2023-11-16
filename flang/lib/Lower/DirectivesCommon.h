@@ -198,7 +198,7 @@ static inline void genOmpAccAtomicUpdateStatement(
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
 
-  //  Create the omp.atomic.update or acc.atmoic.update operation
+  //  Create the omp.atomic.update or acc.atomic.update operation
   //
   //  func.func @_QPsb() {
   //    %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFsbEa"}
@@ -206,40 +206,81 @@ static inline void genOmpAccAtomicUpdateStatement(
   //    %2 = fir.load %1 : !fir.ref<i32>
   //    omp.atomic.update   %0 : !fir.ref<i32> {
   //    ^bb0(%arg0: i32):
-  //      %3 = fir.load %1 : !fir.ref<i32>
-  //      %4 = arith.addi %arg0, %3 : i32
+  //      %3 = arith.addi %arg0, %2 : i32
   //      omp.yield(%3 : i32)
   //    }
   //    return
   //  }
 
-  Fortran::lower::ExprToValueMap exprValueOverrides;
+  auto getArgExpression =
+      [](std::list<parser::ActualArgSpec>::const_iterator it) {
+        const auto &arg{std::get<parser::ActualArg>((*it).t)};
+        const auto *parserExpr{
+            std::get_if<common::Indirection<parser::Expr>>(&arg.u)};
+        return parserExpr;
+      };
+
   // Lower any non atomic sub-expression before the atomic operation, and
   // map its lowered value to the semantic representation.
-  const Fortran::lower::SomeExpr *nonAtomicSubExpr{nullptr};
-  std::visit(
-      [&](const auto &op) -> void {
-        using T = std::decay_t<decltype(op)>;
-        if constexpr (std::is_base_of<Fortran::parser::Expr::IntrinsicBinary,
-                                      T>::value) {
-          const auto &exprLeft{std::get<0>(op.t)};
-          const auto &exprRight{std::get<1>(op.t)};
-          if (exprLeft.value().source == assignmentStmtVariable.GetSource())
-            nonAtomicSubExpr = Fortran::semantics::GetExpr(exprRight);
-          else
-            nonAtomicSubExpr = Fortran::semantics::GetExpr(exprLeft);
-        }
+  Fortran::lower::ExprToValueMap exprValueOverrides;
+  // Max and min intrinsics can have a list of Args. Hence we need a list
+  // of nonAtomicSubExprs to hoist. Currently, only the load is hoisted.
+  llvm::SmallVector<const Fortran::lower::SomeExpr *> nonAtomicSubExprs;
+  Fortran::common::visit(
+      Fortran::common::visitors{
+          [&](const common::Indirection<parser::FunctionReference> &funcRef)
+              -> void {
+            const auto &args{std::get<std::list<parser::ActualArgSpec>>(
+                funcRef.value().v.t)};
+            std::list<parser::ActualArgSpec>::const_iterator beginIt =
+                args.begin();
+            std::list<parser::ActualArgSpec>::const_iterator endIt = args.end();
+            const auto *exprFirst{getArgExpression(beginIt)};
+            if (exprFirst && exprFirst->value().source ==
+                                 assignmentStmtVariable.GetSource()) {
+              // Add everything except the first
+              beginIt++;
+            } else {
+              // Add everything except the last
+              endIt--;
+            }
+            std::list<parser::ActualArgSpec>::const_iterator it;
+            for (it = beginIt; it != endIt; it++) {
+              const common::Indirection<parser::Expr> *expr =
+                  getArgExpression(it);
+              if (expr)
+                nonAtomicSubExprs.push_back(Fortran::semantics::GetExpr(*expr));
+            }
+          },
+          [&](const auto &op) -> void {
+            using T = std::decay_t<decltype(op)>;
+            if constexpr (std::is_base_of<
+                              Fortran::parser::Expr::IntrinsicBinary,
+                              T>::value) {
+              const auto &exprLeft{std::get<0>(op.t)};
+              const auto &exprRight{std::get<1>(op.t)};
+              if (exprLeft.value().source == assignmentStmtVariable.GetSource())
+                nonAtomicSubExprs.push_back(
+                    Fortran::semantics::GetExpr(exprRight));
+              else
+                nonAtomicSubExprs.push_back(
+                    Fortran::semantics::GetExpr(exprLeft));
+            }
+          },
       },
       assignmentStmtExpr.u);
   StatementContext nonAtomicStmtCtx;
-  if (nonAtomicSubExpr) {
+  if (!nonAtomicSubExprs.empty()) {
     // Generate non atomic part before all the atomic operations.
     auto insertionPoint = firOpBuilder.saveInsertionPoint();
     if (atomicCaptureOp)
       firOpBuilder.setInsertionPoint(atomicCaptureOp);
-    mlir::Value nonAtomicVal = fir::getBase(converter.genExprValue(
-        currentLocation, *nonAtomicSubExpr, nonAtomicStmtCtx));
-    exprValueOverrides.try_emplace(nonAtomicSubExpr, nonAtomicVal);
+    mlir::Value nonAtomicVal;
+    for (auto *nonAtomicSubExpr : nonAtomicSubExprs) {
+      nonAtomicVal = fir::getBase(converter.genExprValue(
+          currentLocation, *nonAtomicSubExpr, nonAtomicStmtCtx));
+      exprValueOverrides.try_emplace(nonAtomicSubExpr, nonAtomicVal);
+    }
     if (atomicCaptureOp)
       firOpBuilder.restoreInsertionPoint(insertionPoint);
   }
