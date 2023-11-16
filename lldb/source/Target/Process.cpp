@@ -3156,8 +3156,8 @@ Status Process::Halt(bool clear_thread_plans, bool use_run_lock) {
     // Don't hijack and eat the eStateExited as the code that was doing the
     // attach will be waiting for this event...
     RestoreProcessEvents();
-    SetExitStatus(SIGKILL, "Cancelled async attach.");
     Destroy(false);
+    SetExitStatus(SIGKILL, "Cancelled async attach.");
     return Status();
   }
 
@@ -3843,6 +3843,13 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
                   ") woke up with an interrupt while attaching - "
                   "forwarding interrupt.",
                   __FUNCTION__, static_cast<void *>(this), GetID());
+        // The server may be spinning waiting for a process to appear, in which
+        // case we should tell it to stop doing that.  Normally, we don't NEED
+        // to do that because we will next close the communication to the stub
+        // and that will get it to shut down.  But there are remote debugging
+        // cases where relying on that side-effect causes the shutdown to be 
+        // flakey, so we should send a positive signal to interrupt the wait. 
+        Status error = HaltPrivate();
         BroadcastEvent(eBroadcastBitInterrupt, nullptr);
       } else if (StateIsRunningState(m_last_broadcast_state)) {
         LLDB_LOGF(log,
