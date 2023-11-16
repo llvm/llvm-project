@@ -1060,9 +1060,9 @@ public:
   }
 
   /// If the specific machine instruction is an instruction that adds an
-  /// immediate value and a physical register, and stores the result in
-  /// the given physical register \c Reg, return a pair of the source
-  /// register and the offset which has been added.
+  /// immediate value and a register, and stores the result in the given
+  /// register \c Reg, return a pair of the source register and the offset
+  /// which has been added.
   virtual std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
                                                    Register Reg) const {
     return std::nullopt;
