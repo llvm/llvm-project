@@ -2251,7 +2251,13 @@ bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
       SI->hasOrderedMemoryRef() || DI->hasOrderedMemoryRef())
     return true;
 
-  // Only chain dependences between a load and store can be loop carried.
+  // Dependences between stores are loop carried to ensure that the dependent
+  // store is not scheduled after the source store on the next iteration.
+  if (Dep.isNormalMemory() && DI->mayStore() && SI->mayStore())
+    return true;
+
+  // The rest of this function handles chain dependences between a load and
+  // store can be loop carried.
   if (!DI->mayStore() || !SI->mayLoad())
     return false;
 
