@@ -25,14 +25,13 @@ function(get_object_files_for_test result skipped_entrypoints_list)
 
     foreach(dep IN LISTS unchecked_list)
       if (NOT TARGET ${dep})
-        # Skip any tests whose dependencies have not been defined.
+        # Skip tests with undefined dependencies.
         list(APPEND skipped_list ${dep})
         continue()
       endif()
       get_target_property(dep_type ${dep} "TARGET_TYPE")
       if(NOT dep_type)
-        # Target for which TARGET_TYPE property is not set do not
-        # provide any object files.
+        # Skip tests with no object dependencies.
         continue()
       endif()
 
@@ -52,7 +51,7 @@ function(get_object_files_for_test result skipped_entrypoints_list)
           list(APPEND object_files ${object_file_raw})
         endif()
       elseif(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
-        # We skip tests for all externally implemented entrypoints.
+        # Skip tests for externally implemented entrypoints.
         list(APPEND skipped_list ${dep})
         continue()
       endif()
