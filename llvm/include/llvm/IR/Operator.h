@@ -124,47 +124,6 @@ public:
   }
 };
 
-/// A udiv or sdiv instruction, which can be marked as "exact",
-/// indicating that no bits are destroyed.
-class PossiblyExactOperator : public Operator {
-public:
-  enum {
-    IsExact = (1 << 0)
-  };
-
-private:
-  friend class Instruction;
-  friend class ConstantExpr;
-
-  void setIsExact(bool B) {
-    SubclassOptionalData = (SubclassOptionalData & ~IsExact) | (B * IsExact);
-  }
-
-public:
-  /// Test whether this division is known to be exact, with zero remainder.
-  bool isExact() const {
-    return SubclassOptionalData & IsExact;
-  }
-
-  static bool isPossiblyExactOpcode(unsigned OpC) {
-    return OpC == Instruction::SDiv ||
-           OpC == Instruction::UDiv ||
-           OpC == Instruction::AShr ||
-           OpC == Instruction::LShr;
-  }
-
-  static bool classof(const ConstantExpr *CE) {
-    return isPossiblyExactOpcode(CE->getOpcode());
-  }
-  static bool classof(const Instruction *I) {
-    return isPossiblyExactOpcode(I->getOpcode());
-  }
-  static bool classof(const Value *V) {
-    return (isa<Instruction>(V) && classof(cast<Instruction>(V))) ||
-           (isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V)));
-  }
-};
-
 /// Utility class for floating point operations which can have
 /// information about relaxed accuracy requirements attached to them.
 class FPMathOperator : public Operator {
@@ -358,13 +317,6 @@ class MulOperator
 };
 class ShlOperator
   : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Shl> {
-};
-
-class AShrOperator
-  : public ConcreteOperator<PossiblyExactOperator, Instruction::AShr> {
-};
-class LShrOperator
-  : public ConcreteOperator<PossiblyExactOperator, Instruction::LShr> {
 };
 
 class GEPOperator
