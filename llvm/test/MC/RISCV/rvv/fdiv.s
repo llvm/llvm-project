@@ -14,35 +14,35 @@
 vfdiv.vv v8, v4, v20, v0.t
 # CHECK-INST: vfdiv.vv v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x80]
-# CHECK-ERROR: instruction requires the following: 'V'{{.*}}'Zve32f', 'Zve64f' or 'Zve64d' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-ERROR: instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 14 4a 80 <unknown>
 
 vfdiv.vv v8, v4, v20
 # CHECK-INST: vfdiv.vv v8, v4, v20
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x82]
-# CHECK-ERROR: instruction requires the following: 'V'{{.*}}'Zve32f', 'Zve64f' or 'Zve64d' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-ERROR: instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 14 4a 82 <unknown>
 
 vfdiv.vf v8, v4, fa0, v0.t
 # CHECK-INST: vfdiv.vf v8, v4, fa0, v0.t
 # CHECK-ENCODING: [0x57,0x54,0x45,0x80]
-# CHECK-ERROR: instruction requires the following: 'V'{{.*}}'Zve32f', 'Zve64f' or 'Zve64d' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-ERROR: instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 54 45 80 <unknown>
 
 vfdiv.vf v8, v4, fa0
 # CHECK-INST: vfdiv.vf v8, v4, fa0
 # CHECK-ENCODING: [0x57,0x54,0x45,0x82]
-# CHECK-ERROR: instruction requires the following: 'V'{{.*}}'Zve32f', 'Zve64f' or 'Zve64d' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-ERROR: instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 54 45 82 <unknown>
 
 vfrdiv.vf v8, v4, fa0, v0.t
 # CHECK-INST: vfrdiv.vf v8, v4, fa0, v0.t
 # CHECK-ENCODING: [0x57,0x54,0x45,0x84]
-# CHECK-ERROR: instruction requires the following: 'V'{{.*}}'Zve32f', 'Zve64f' or 'Zve64d' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-ERROR: instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 54 45 84 <unknown>
 
 vfrdiv.vf v8, v4, fa0
 # CHECK-INST: vfrdiv.vf v8, v4, fa0
 # CHECK-ENCODING: [0x57,0x54,0x45,0x86]
-# CHECK-ERROR: instruction requires the following: 'V'{{.*}}'Zve32f', 'Zve64f' or 'Zve64d' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-ERROR: instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 54 45 86 <unknown>
