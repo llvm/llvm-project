@@ -104,6 +104,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   void emitARM64WinCFITrapFrame() override { OS << "\t.seh_trap_frame\n"; }
   void emitARM64WinCFIMachineFrame() override { OS << "\t.seh_pushframe\n"; }
   void emitARM64WinCFIContext() override { OS << "\t.seh_context\n"; }
+  void emitARM64WinCFIECContext() override { OS << "\t.seh_ec_context\n"; }
   void emitARM64WinCFIClearUnwoundToCall() override {
     OS << "\t.seh_clear_unwound_to_call\n";
   }
