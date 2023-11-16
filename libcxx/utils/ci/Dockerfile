@@ -22,12 +22,11 @@
 # If you're only looking to run the Docker image locally for debugging a
 # build bot, see the `run-buildbot-container` script located in this directory.
 #
-# A pre-built version of this image is maintained on DockerHub as ldionne/libcxx-builder.
-# To update the image, rebuild it and push it to ldionne/libcxx-builder (which
-# will obviously only work if you have permission to do so).
+# A pre-built version of this image is maintained on Github under the libc++ organization, as ghcr.io/libcxx/libcxx-builder.
+# To update the image, rebuild it and push it to github (all members of the libc++ organization should be able to do this).
 #
-#   $ docker build -t ldionne/libcxx-builder libcxx/utils/ci
-#   $ docker push ldionne/libcxx-builder
+#   $ docker compose build
+#   $ docker compose push
 #
 
 FROM ubuntu:jammy
@@ -66,8 +65,8 @@ RUN locale-gen
 # LLVM 15, we still need to have Clang 12 in this Docker image because the LLVM
 # 14 release branch CI uses it. The tip-of-trunk CI will never use Clang 12,
 # though.
-# LLVM POST-BRANCH bump version
-ENV LLVM_HEAD_VERSION=18
+ARG LLVM_HEAD_VERSION # populated in the docker-compose file
+ENV LLVM_HEAD_VERSION=${LLVM_HEAD_VERSION}
 RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
 RUN wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
 RUN bash /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 3)) # for CI transitions
@@ -97,8 +96,9 @@ RUN apt-get update && apt-get install -y llvm-$(($LLVM_HEAD_VERSION - 2))-dev ll
                                                                                                                        libomp5-$LLVM_HEAD_VERSION
 
 # Install the most recent GCC, like clang install the previous version as a transition.
-ENV GCC_LATEST_VERSION=13
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test
+ARG GCC_LATEST_VERSION # populated in the docker-compose file
+ENV GCC_LATEST_VERSION=${GCC_LATEST_VERSION}
 RUN apt-get update && apt install -y gcc-$((GCC_LATEST_VERSION - 1)) g++-$((GCC_LATEST_VERSION - 1))
 RUN apt-get update && apt install -y gcc-$GCC_LATEST_VERSION g++-$GCC_LATEST_VERSION
 
@@ -136,4 +136,4 @@ ENV PATH="${PATH}:/home/libcxx-builder/.buildkite-agent/bin"
 RUN echo "tags=\"queue=libcxx-builders,arch=$(uname -m),os=linux\"" >> "/home/libcxx-builder/.buildkite-agent/buildkite-agent.cfg"
 
 # By default, start the Buildkite agent (this requires a token).
-CMD buildkite-agent start
+CMD ["buildkite-agent", "start"]

@@ -37,7 +37,7 @@ int use() {
     f1();
     f2();
     f3();
-    unexported(); // expected-error {{missing '#include'; 'unexported' must be declared before it is used}}
+    unexported(); // expected-error {{declaration of 'unexported' must be imported from module 'a' before it is required}}
                    // expected-note@a.cppm:15 {{declaration here is not visible}}
     return foo();
 }
@@ -58,6 +58,6 @@ int use() {
 }
 
 int use_of_nonexported() {
-    return h(); // expected-error {{missing '#include'; 'h' must be declared before it is used}}
+    return h(); // expected-error {{declaration of 'h' must be imported from module 'c' before it is required}}
                 // expected-note@c.cppm:4 {{declaration here is not visible}}
 }

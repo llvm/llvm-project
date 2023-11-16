@@ -14,7 +14,6 @@
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Function.h"
@@ -712,7 +711,9 @@ Constant *DIDerivedType::getStorageOffsetInBits() const {
 }
 
 Constant *DIDerivedType::getConstant() const {
-  assert(getTag() == dwarf::DW_TAG_member && isStaticMember());
+  assert((getTag() == dwarf::DW_TAG_member ||
+          getTag() == dwarf::DW_TAG_variable) &&
+         isStaticMember());
   if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
     return C->getValue();
   return nullptr;

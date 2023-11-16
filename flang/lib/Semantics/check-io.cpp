@@ -793,6 +793,14 @@ void IoChecker::Leave(const parser::ReadStmt &readStmt) {
   CheckForProhibitedSpecifier(IoSpecKind::Delim); // C1212
   CheckForProhibitedSpecifier(IoSpecKind::Sign); // C1212
   CheckForProhibitedSpecifier(IoSpecKind::Rec, IoSpecKind::End); // C1220
+  if (specifierSet_.test(IoSpecKind::Size)) {
+    // F'2023 C1214 - allow with a warning
+    if (specifierSet_.test(IoSpecKind::Nml)) {
+      context_.Say("If NML appears, SIZE should not appear"_port_en_US);
+    } else if (flags_.test(Flag::StarFmt)) {
+      context_.Say("If FMT=* appears, SIZE should not appear"_port_en_US);
+    }
+  }
   CheckForRequiredSpecifier(IoSpecKind::Eor,
       specifierSet_.test(IoSpecKind::Advance) && !flags_.test(Flag::AdvanceYes),
       "ADVANCE with value 'NO'"); // C1222 + 12.6.2.1p2

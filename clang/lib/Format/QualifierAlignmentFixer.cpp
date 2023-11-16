@@ -346,6 +346,9 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
       }
     }
 
+    if (Next->is(tok::kw_auto))
+      TypeToken = Next;
+
     // Place the Qualifier at the end of the list of qualifiers.
     while (isQualifier(TypeToken->getNextNonComment())) {
       // The case `volatile Foo::iter const` -> `Foo::iter const volatile`
@@ -380,7 +383,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
 
   // For left qualifiers preceeded by nothing, a template declaration, or *,&,&&
   // we only perform sorting.
-  if (!TypeToken || TypeToken->isOneOf(tok::star, tok::amp, tok::ampamp) ||
+  if (!TypeToken || TypeToken->isPointerOrReference() ||
       TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration) {
 
     // Don't sort past a non-configured qualifier token.
@@ -445,6 +448,9 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
           PrePrevious && PrePrevious->is(tok::coloncolon)) {
         return false;
       }
+
+      if (Tok->endsSequence(tok::kw_auto, tok::identifier))
+        return false;
 
       return true;
     };

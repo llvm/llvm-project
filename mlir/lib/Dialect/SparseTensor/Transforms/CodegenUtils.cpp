@@ -163,6 +163,17 @@ Value sparse_tensor::genCast(OpBuilder &builder, Location loc, Value value,
   return mlir::convertScalarToDtype(builder, loc, value, dstTp, isUnsignedCast);
 }
 
+Value sparse_tensor::genScalarToTensor(OpBuilder &builder, Location loc,
+                                       Value elem, Type dstTp) {
+  if (auto rtp = dstTp.dyn_cast<RankedTensorType>()) {
+    // Scalars can only be converted to 0-ranked tensors.
+    assert(rtp.getRank() == 0);
+    elem = sparse_tensor::genCast(builder, loc, elem, rtp.getElementType());
+    return builder.create<tensor::FromElementsOp>(loc, rtp, elem);
+  }
+  return sparse_tensor::genCast(builder, loc, elem, dstTp);
+}
+
 Value sparse_tensor::genIndexLoad(OpBuilder &builder, Location loc, Value mem,
                                   Value s) {
   Value load = builder.create<memref::LoadOp>(loc, mem, s);
@@ -712,19 +723,19 @@ Value sparse_tensor::genMapBuffers(OpBuilder &builder, Location loc,
     uint64_t cf = 0, cm = 0;
     switch (exp.getKind()) {
     case AffineExprKind::DimId: {
-      d = exp.cast<AffineDimExpr>().getPosition();
+      d = cast<AffineDimExpr>(exp).getPosition();
       break;
     }
     case AffineExprKind::FloorDiv: {
-      auto floor = exp.cast<AffineBinaryOpExpr>();
-      d = floor.getLHS().cast<AffineDimExpr>().getPosition();
-      cf = floor.getRHS().cast<AffineConstantExpr>().getValue();
+      auto floor = cast<AffineBinaryOpExpr>(exp);
+      d = cast<AffineDimExpr>(floor.getLHS()).getPosition();
+      cf = cast<AffineConstantExpr>(floor.getRHS()).getValue();
       break;
     }
     case AffineExprKind::Mod: {
-      auto mod = exp.cast<AffineBinaryOpExpr>();
-      d = mod.getLHS().cast<AffineDimExpr>().getPosition();
-      cm = mod.getRHS().cast<AffineConstantExpr>().getValue();
+      auto mod = cast<AffineBinaryOpExpr>(exp);
+      d = cast<AffineDimExpr>(mod.getLHS()).getPosition();
+      cm = cast<AffineConstantExpr>(mod.getRHS()).getValue();
       break;
     }
     default:
@@ -760,17 +771,17 @@ Value sparse_tensor::genMapBuffers(OpBuilder &builder, Location loc,
     uint64_t c = 0;
     switch (exp.getKind()) {
     case AffineExprKind::DimId: {
-      l = exp.cast<AffineDimExpr>().getPosition();
+      l = cast<AffineDimExpr>(exp).getPosition();
       break;
     }
     case AffineExprKind::Add: {
       // Always mul on lhs, symbol/constant on rhs.
-      auto add = exp.cast<AffineBinaryOpExpr>();
+      auto add = cast<AffineBinaryOpExpr>(exp);
       assert(add.getLHS().getKind() == AffineExprKind::Mul);
-      auto mul = add.getLHS().cast<AffineBinaryOpExpr>();
-      ll = mul.getLHS().cast<AffineDimExpr>().getPosition();
-      c = mul.getRHS().cast<AffineConstantExpr>().getValue();
-      l = add.getRHS().cast<AffineDimExpr>().getPosition();
+      auto mul = cast<AffineBinaryOpExpr>(add.getLHS());
+      ll = cast<AffineDimExpr>(mul.getLHS()).getPosition();
+      c = cast<AffineConstantExpr>(mul.getRHS()).getValue();
+      l = cast<AffineDimExpr>(add.getRHS()).getPosition();
       break;
     }
     default:
