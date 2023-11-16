@@ -325,10 +325,10 @@ void UseStdNumbersCheck::registerMatchers(MatchFinder *Finder) {
            unless(hasParent(expr(
                anyOf(implicitCastExpr(hasImplicitDestinationType(isFloating())),
                      explicitCastExpr(hasDestinationType(isFloating())))))),
-           hasType(qualType(hasCanonicalType(hasCanonicalTypeUnqualified(anyOf(
-               qualType(asString("float")).bind("float"),
-               qualType(asString("double")),
-               qualType(asString("long double")).bind("long double"))))))),
+           hasType(qualType(hasCanonicalTypeUnqualified(
+               anyOf(qualType(asString("float")).bind("float"),
+                     qualType(asString("double")),
+                     qualType(asString("long double")).bind("long double")))))),
       this);
 }
 
