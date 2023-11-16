@@ -211,6 +211,29 @@ MeshShardingAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // collective communication ops
 //===----------------------------------------------------------------------===//
 
+namespace {
+
+template <typename Op>
+struct EmptyMeshAxesCanonicalizationPattern : OpRewritePattern<Op> {
+  using OpRewritePattern<Op>::OpRewritePattern;
+  LogicalResult matchAndRewrite(Op op,
+                                PatternRewriter &rewriter) const override {
+    auto meshAxes = op.getMeshAxes();
+    if (!meshAxes.empty()) {
+      return failure();
+    }
+    if (op.getInput().getType() != op.getResult().getType()) {
+      return failure();
+    }
+
+    rewriter.replaceAllUsesWith(op.getResult(), op.getInput());
+    rewriter.eraseOp(op.getOperation());
+    return success();
+  }
+};
+
+} // namespace
+
 static LogicalResult verifyMeshSymbolUses(Operation *op,
                                           FlatSymbolRefAttr meshSymbol,
                                           DenseI16ArrayAttr meshAxes,
@@ -467,6 +490,11 @@ LogicalResult mlir::mesh::AllReduceOp::verify() {
   return verifyMeshAxes(getLoc(), getMeshAxes());
 }
 
+void AllReduceOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                              MLIRContext *context) {
+  patterns.add<EmptyMeshAxesCanonicalizationPattern<AllReduceOp>>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // mesh.all_gather op
 //===----------------------------------------------------------------------===//
@@ -484,6 +512,11 @@ LogicalResult mlir::mesh::AllGatherOp::verify() {
     return failure();
   }
   return verifyAllGather(*this);
+}
+
+void AllGatherOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                              MLIRContext *context) {
+  patterns.add<EmptyMeshAxesCanonicalizationPattern<AllGatherOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -513,6 +546,11 @@ LogicalResult AllToAllOp::verify() {
       mesh.value().canonicalDimSizes());
 }
 
+void AllToAllOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                             MLIRContext *context) {
+  patterns.add<EmptyMeshAxesCanonicalizationPattern<AllToAllOp>>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // mesh.reduce_scatter op
 //===----------------------------------------------------------------------===//
@@ -538,6 +576,11 @@ LogicalResult ReduceScatterOp::verify() {
   return verifyReduceScatterOperandAndResultShape(
       getOperand(), getResult(), getScatterAxis().getSExtValue(), getMeshAxes(),
       mesh.value().canonicalDimSizes());
+}
+
+void ReduceScatterOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                  MLIRContext *context) {
+  patterns.add<EmptyMeshAxesCanonicalizationPattern<ReduceScatterOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//

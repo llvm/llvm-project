@@ -251,6 +251,7 @@ def Mesh_AllGatherOp : Mesh_CollectiveCommunicationOpBase<"all_gather", [
     attr-dict `:` type($input) `->` type($result)
   }];
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Mesh_AllReduceOp : Mesh_CollectiveCommunicationOpBase<"all_reduce", [
@@ -283,6 +284,7 @@ def Mesh_AllReduceOp : Mesh_CollectiveCommunicationOpBase<"all_reduce", [
     attr-dict `:` type($input) `->` type($result)
   }];
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
@@ -336,6 +338,7 @@ def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
     attr-dict `:` type($input) `->` type($result)
   }];
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", [
@@ -397,6 +400,7 @@ def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", 
     attr-dict `:` type($input) `->` type($result)
   }];
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 #endif // MLIR_DIALECT_MESH_IR_MESHOPS_TD
