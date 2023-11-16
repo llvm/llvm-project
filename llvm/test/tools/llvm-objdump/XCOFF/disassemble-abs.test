@@ -1,0 +1,37 @@
+# RUN: llvm-objdump -d %p/Inputs/abs32.o | \
+# RUN:   FileCheck %s
+
+# RUN: llvm-objdump -d %p/Inputs/abs64.o | \
+# RUN:   FileCheck --check-prefixes=CHECK64 %s
+
+## Object files assembled on AIX from the following source:
+##        .csect [PR]
+##.main:
+##        .globl .main
+##        .extern .function
+##        bla     .function
+##        btla    .function
+##        ba      0x1234
+##        ba      -32
+##        bta     0x2348
+##        bta     -256
+
+CHECK:        Inputs/abs32.o:	file format aixcoff-rs6000
+CHECK:        Disassembly of section .text:
+CHECK:        00000000 <.main>:
+CHECK:            0: 48 00 00 03   bla 0x0
+CHECK-NEXT:       4: 41 80 00 03   btla    0, 0x0
+CHECK-NEXT:       8: 48 00 12 36   ba 0x1234
+CHECK-NEXT:       c: 4b ff ff e2   ba 0xffffffe0
+CHECK-NEXT:      10: 41 80 23 4a   bta     0, 0x2348
+CHECK-NEXT:      14: 41 80 ff 02   bta     0, 0xffffff00
+
+CHECK64:      Inputs/abs64.o: file format aix5coff64-rs6000
+CHECK64:      Disassembly of section .text:
+CHECK64:      0000000000000000 <.main>:
+CHECK64-NEXT:       0: 48 00 00 03   bla 0x0
+CHECK64-NEXT:       4: 41 80 00 03   btla    0, 0x0
+CHECK64-NEXT:       8: 48 00 12 36   ba 0x1234
+CHECK64-NEXT:       c: 4b ff ff e2   ba 0xffffffffffffffe0
+CHECK64-NEXT:      10: 41 80 23 4a   bta     0, 0x2348
+CHECK64-NEXT:      14: 41 80 ff 02   bta     0, 0xffffffffffffff00
