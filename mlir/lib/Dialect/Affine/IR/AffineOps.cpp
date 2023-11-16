@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/IRMapping.h"
@@ -2440,6 +2442,53 @@ std::optional<OpFoldResult> AffineForOp::getSingleUpperBound() {
   return OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()));
 }
 
+/// Promotes the loop body of a forOp to its containing block if the forOp
+/// was known to have a single iteration.
+LogicalResult AffineForOp::promoteIfSingleIteration(RewriterBase &rewriter) {
+  auto forOp = cast<AffineForOp>(getOperation());
+  std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
+  if (!tripCount || *tripCount != 1)
+    return failure();
+
+  // TODO: extend this for arbitrary affine bounds.
+  if (forOp.getLowerBoundMap().getNumResults() != 1)
+    return failure();
+
+  // Replaces all IV uses to its single iteration value.
+  auto iv = forOp.getInductionVar();
+  auto *parentBlock = forOp->getBlock();
+  if (!iv.use_empty()) {
+    if (forOp.hasConstantLowerBound()) {
+      OpBuilder topBuilder(forOp->getParentOfType<func::FuncOp>().getBody());
+      auto constOp = topBuilder.create<arith::ConstantIndexOp>(
+          forOp.getLoc(), forOp.getConstantLowerBound());
+      iv.replaceAllUsesWith(constOp);
+    } else {
+      auto lbOperands = forOp.getLowerBoundOperands();
+      auto lbMap = forOp.getLowerBoundMap();
+      OpBuilder builder(forOp);
+      if (lbMap == builder.getDimIdentityMap()) {
+        // No need of generating an affine.apply.
+        iv.replaceAllUsesWith(lbOperands[0]);
+      } else {
+        auto affineApplyOp =
+            builder.create<AffineApplyOp>(forOp.getLoc(), lbMap, lbOperands);
+        iv.replaceAllUsesWith(affineApplyOp);
+      }
+    }
+  }
+
+  replaceIterArgsAndYieldResults(forOp);
+
+  // Move the loop body operations, except for its terminator, to the loop's
+  // containing block.
+  forOp.getBody()->back().erase();
+  parentBlock->getOperations().splice(Block::iterator(forOp),
+                                      forOp.getBody()->getOperations());
+  forOp.erase();
+  return success();
+}
+
 FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(
     RewriterBase &rewriter, ValueRange newInitOperands,
     bool replaceInitOperandUsesInLoop,
@@ -2905,8 +2954,7 @@ static void composeSetAndOperands(IntegerSet &set,
 }
 
 /// Canonicalize an affine if op's conditional (integer set + operands).
-LogicalResult AffineIfOp::fold(FoldAdaptor,
-                               SmallVectorImpl<OpFoldResult> &) {
+LogicalResult AffineIfOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
   auto set = getIntegerSet();
   SmallVector<Value, 4> operands(getOperands());
   composeSetAndOperands(set, operands);
@@ -2997,11 +3045,11 @@ static LogicalResult
 verifyMemoryOpIndexing(Operation *op, AffineMapAttr mapAttr,
                        Operation::operand_range mapOperands,
                        MemRefType memrefType, unsigned numIndexOperands) {
-    AffineMap map = mapAttr.getValue();
-    if (map.getNumResults() != memrefType.getRank())
-      return op->emitOpError("affine map num results must equal memref rank");
-    if (map.getNumInputs() != numIndexOperands)
-      return op->emitOpError("expects as many subscripts as affine map inputs");
+  AffineMap map = mapAttr.getValue();
+  if (map.getNumResults() != memrefType.getRank())
+    return op->emitOpError("affine map num results must equal memref rank");
+  if (map.getNumInputs() != numIndexOperands)
+    return op->emitOpError("expects as many subscripts as affine map inputs");
 
   Region *scope = getAffineScope(op);
   for (auto idx : mapOperands) {

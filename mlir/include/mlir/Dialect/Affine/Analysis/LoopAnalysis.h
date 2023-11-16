@@ -43,6 +43,10 @@ void getTripCountMapAndOperands(AffineForOp forOp, AffineMap *map,
 /// constant trip count in non-trivial cases.
 std::optional<uint64_t> getConstantTripCount(AffineForOp forOp);
 
+/// Helper to replace uses of loop carried values (iter_args) and loop
+/// yield values while promoting single iteration affine.for ops.
+void replaceIterArgsAndYieldResults(AffineForOp forOp);
+
 /// Returns the greatest known integral divisor of the trip count. Affine
 /// expression analysis is used (indirectly through getTripCount), and
 /// this method is thus able to determine non-trivial divisors.
