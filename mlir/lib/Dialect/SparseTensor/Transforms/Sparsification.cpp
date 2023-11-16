@@ -867,29 +867,6 @@ static bool shouldTryParallize(CodegenEnv &env, LoopId ldx, bool isOuter,
   return isParallelFor(env, isOuter, isSparse);
 }
 
-/// Generates a "filter loop" on the given tid level to locate a coordinate that
-/// is of the same value as evaluated by the affine expression in its matching
-/// indexing map.
-static Operation *genFilterLoop(CodegenEnv &env, OpBuilder &builder, LoopId ldx,
-                                TensorLevel tidLvl) {
-  linalg::GenericOp op = env.op();
-  Location loc = op.getLoc();
-  Operation *loop = *env.genLoopBoundary([&](MutableArrayRef<Value> reduc) {
-    assert(env.merger().isFilterLoop(ldx));
-    const auto [tid, lvl] = env.unpackTensorLevel(tidLvl);
-    // tids/lvls must only have one value because filter loops only
-    // corresponding to the one and only sparse tensor level.
-    OpOperand *t = &op->getOpOperand(tid);
-    auto enc = getSparseTensorEncoding(t->get().getType());
-    // Retrieves the affine expression for the filter loop.
-    // FIXME: `toOrigDim` is deprecated.
-    AffineExpr a = op.getMatchingIndexingMap(t).getResult(toOrigDim(enc, lvl));
-    return env.emitter().enterFilterLoopOverTensorAtLvl(builder, loc, tid, lvl,
-                                                        a, reduc);
-  });
-  return loop;
-}
-
 /// Emit a loop to coiterate over the list of tensor levels. The generated loop
 /// can either be a for loop or while loop depending on whether there is at most
 /// one sparse level in the list.
@@ -1037,12 +1014,12 @@ static void endIf(CodegenEnv &env, OpBuilder &builder, scf::IfOp ifOp,
 /// Starts a loop sequence at given level. Returns true if
 /// the universal loop index must be maintained at this level.
 static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
-                         LoopOrd at, LoopId idx, LoopId ldx, LatSetId lts) {
+                         LoopOrd idx, LoopId ldx, LatSetId lts) {
   assert(!env.getLoopVar(idx));
   // Emit invariants at this loop sequence level.
   genInvariants(env, builder, exp, ldx, /*atStart=*/true);
   // Emit access pattern expansion for sparse tensor output.
-  genExpand(env, builder, at, /*atStart=*/true);
+  genExpand(env, builder, idx, /*atStart=*/true);
   // Emit further intitialization at this loop sequence level.
   const LatPointId l0 = env.set(lts)[0];
   bool needsUniv = false;
@@ -1296,13 +1273,13 @@ static bool endLoop(CodegenEnv &env, RewriterBase &rewriter, Operation *loop,
 
 /// Ends a loop sequence at given level.
 static void endLoopSeq(CodegenEnv &env, OpBuilder &builder, unsigned exp,
-                       unsigned at, unsigned idx, unsigned ldx) {
+                       unsigned idx, unsigned ldx) {
   assert(!env.getLoopVar(idx));
   env.emitter().exitCurrentLoopSeq(builder, env.op().getLoc());
   // Unmark bookkeeping of invariants and loop index.
   genInvariants(env, builder, exp, ldx, /*atStart=*/false);
   // Finalize access pattern expansion for sparse tensor output.
-  genExpand(env, builder, at, /*atStart=*/false);
+  genExpand(env, builder, idx, /*atStart=*/false);
 }
 
 /// Recursively generates code while computing iteration lattices in order
@@ -1323,9 +1300,7 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
       env.merger().optimizeSet(env.merger().buildLattices(exp, at));
 
   // Start a loop sequence.
-  // TODO: simplifies the function, we no longer need to distinguish loop depth
-  // and loop id anymore, remove two `at`s.
-  bool needsUniv = startLoopSeq(env, rewriter, exp, at, at, ldx, lts);
+  bool needsUniv = startLoopSeq(env, rewriter, exp, at, ldx, lts);
 
   // Emit a loop for every lattice point L0 >= Li in this loop sequence.
   //
@@ -1367,7 +1342,7 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
   }
 
   // End a loop sequence.
-  endLoopSeq(env, rewriter, exp, at, at, ldx);
+  endLoopSeq(env, rewriter, exp, at, ldx);
 }
 
 /// Converts the result computed by the sparse kernel into the required form.
