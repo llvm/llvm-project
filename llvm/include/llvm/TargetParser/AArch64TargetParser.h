@@ -91,7 +91,6 @@ enum CPUFeatures {
   FEAT_SME2,
   FEAT_RCPC3,
   FEAT_MAX,
-  FEAT_SME_FA64,
   FEAT_EXT = 62,
   FEAT_INIT
 };
