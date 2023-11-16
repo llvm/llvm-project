@@ -39,6 +39,16 @@
 // overload will have a dummy parameter whose type indicates whether or not it
 // should be preferred. Any other parameters required for SFINAE should have
 // default values provided.
+
+void copyBufferAndPad(
+    char *dest, std::size_t destChars, char *buffer, std::size_t len) {
+  auto copyLen{std::min(len, destChars)};
+  std::memcpy(dest, buffer, copyLen);
+  for (auto i{copyLen}; i < destChars; ++i) {
+    dest[i] = ' ';
+  }
+}
+
 namespace {
 // Types for the dummy parameter indicating the priority of a given overload.
 // We will invoke our helper with an integer literal argument, so the overload
@@ -279,29 +289,21 @@ static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
 
   static constexpr std::size_t buffSize{16};
   char buffer[buffSize];
-  auto copyBufferAndPad{
-      [&](char *dest, std::size_t destChars, std::size_t len) {
-        auto copyLen{std::min(len, destChars)};
-        std::memcpy(dest, buffer, copyLen);
-        for (auto i{copyLen}; i < destChars; ++i) {
-          dest[i] = ' ';
-        }
-      }};
   if (date) {
     auto len = std::strftime(buffer, buffSize, "%Y%m%d", &localTime);
-    copyBufferAndPad(date, dateChars, len);
+    copyBufferAndPad(date, dateChars, buffer, len);
   }
   if (time) {
     auto len{std::snprintf(buffer, buffSize, "%02d%02d%02d.%03jd",
         localTime.tm_hour, localTime.tm_min, localTime.tm_sec, ms)};
-    copyBufferAndPad(time, timeChars, len);
+    copyBufferAndPad(time, timeChars, buffer, len);
   }
   if (zone) {
     // Note: this may leave the buffer empty on many platforms. Classic flang
     // has a much more complex way of doing this (see __io_timezone in classic
     // flang).
     auto len{std::strftime(buffer, buffSize, "%z", &localTime)};
-    copyBufferAndPad(zone, zoneChars, len);
+    copyBufferAndPad(zone, zoneChars, buffer, len);
   }
   if (values) {
     auto typeCode{values->type().GetCategoryAndKind()};

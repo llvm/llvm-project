@@ -9,6 +9,17 @@
 // Defines the API between compiled code and the implementations of time-related
 // intrinsic subroutines in the runtime library.
 
+// time-intrinsic.h
+#ifndef TIME_INTRINSIC_H
+#define TIME_INTRINSIC_H
+
+#include <cstddef>
+
+void copyBufferAndPad(
+    char *dest, std::size_t destChars, char *buffer, std::size_t len);
+
+#endif // TIME_INTRINSIC_H
+
 #ifndef FORTRAN_RUNTIME_TIME_INTRINSIC_H_
 #define FORTRAN_RUNTIME_TIME_INTRINSIC_H_
 
