@@ -1116,7 +1116,6 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     RemapInstruction(NewBonusInst, VMap,
                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-    VMap[&BonusInst] = NewBonusInst;
 
     // If we speculated an instruction, we need to drop any metadata that may
     // result in undefined behavior, as the metadata might have been valid
@@ -1132,6 +1131,7 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     NewBonusInst->takeName(&BonusInst);
     BonusInst.setName(NewBonusInst->getName() + ".old");
+    VMap[&BonusInst] = NewBonusInst;
 
     // Update (liveout) uses of bonus instructions,
     // now that the bonus instruction has been cloned into predecessor.
