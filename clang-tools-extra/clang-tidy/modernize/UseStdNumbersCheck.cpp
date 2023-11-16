@@ -391,8 +391,8 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
       continue;
     }
 
-    const auto PatternBindString = (ConstantName + "_pattern").str();
-    if (Result.Nodes.getNodeAs<Expr>(PatternBindString) != nullptr) {
+    if (const auto PatternBindString = (ConstantName + "_pattern").str();
+        Result.Nodes.getNodeAs<Expr>(PatternBindString) != nullptr) {
       const auto Code = getCode(ConstantName, IsFloat, IsLongDouble);
       diag(Range.getBegin(), "prefer '%0' to this %select{formula|macro}1")
           << Code << IsMacro << FixItHint::CreateReplacement(Range, Code);
