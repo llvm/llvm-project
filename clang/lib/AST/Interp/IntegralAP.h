@@ -204,14 +204,18 @@ public:
   }
 
   static bool rem(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
+    if constexpr (Signed)
+      *R = IntegralAP(A.V.srem(B.V));
+    else
+      *R = IntegralAP(A.V.urem(B.V));
     return false;
   }
 
   static bool div(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
+    if constexpr (Signed)
+      *R = IntegralAP(A.V.sdiv(B.V));
+    else
+      *R = IntegralAP(A.V.udiv(B.V));
     return false;
   }
 
