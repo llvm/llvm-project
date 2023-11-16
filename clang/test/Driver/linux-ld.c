@@ -182,12 +182,8 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE %s
 // CHECK-CLANG-LD-STATIC-PIE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-LD-STATIC-PIE: "-static"
-// CHECK-CLANG-LD-STATIC-PIE: "-pie"
-// CHECK-CLANG-LD-STATIC-PIE: "--no-dynamic-linker"
-// CHECK-CLANG-LD-STATIC-PIE: "-z"
-// CHECK-CLANG-LD-STATIC-PIE: "text"
 // CHECK-CLANG-LD-STATIC-PIE: "-m" "elf_x86_64"
+// CHECK-CLANG-LD-STATIC-PIE-SAME: "-static" "-pie" "--no-dynamic-linker" "-z" "text"
 // CHECK-CLANG-LD-STATIC-PIE: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
@@ -197,12 +193,8 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE-PIE %s
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "-static"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "-pie"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "--no-dynamic-linker"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "-z"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "text"
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "-m" "elf_x86_64"
+// CHECK-CLANG-LD-STATIC-PIE-PIE-SAME: "-static" "-pie" "--no-dynamic-linker" "-z" "text"
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
@@ -212,12 +204,8 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE-STATIC %s
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "-static"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "-pie"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "--no-dynamic-linker"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "-z"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "text"
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "-m" "elf_x86_64"
+// CHECK-CLANG-LD-STATIC-PIE-STATIC-SAME: "-static" "-pie" "--no-dynamic-linker" "-z" "text"
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
