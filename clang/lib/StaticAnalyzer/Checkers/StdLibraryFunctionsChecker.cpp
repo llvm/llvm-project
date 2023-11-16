@@ -606,7 +606,7 @@ class StdLibraryFunctionsChecker
       return errno_modeling::setErrnoForStdSuccess(State, C);
     }
 
-    const std::string describe(CheckerContext &C) const {
+    const std::string describe(CheckerContext &C) const override {
       return "'errno' becomes undefined after the call";
     }
   };
@@ -624,7 +624,7 @@ class StdLibraryFunctionsChecker
                                                       Call.getOriginExpr());
     }
 
-    const std::string describe(CheckerContext &C) const {
+    const std::string describe(CheckerContext &C) const override {
       return "reading 'errno' is required to find out if the call has failed";
     }
   };
