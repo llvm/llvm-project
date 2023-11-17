@@ -2808,12 +2808,12 @@ static StringRef EnumComplexRangeToStr(LangOptions::ComplexRangeKind Range) {
 }
 
 static void EmitComplexRangeDiag(const Driver &D,
-                                  LangOptions::ComplexRangeKind Range1,
-                                  LangOptions::ComplexRangeKind Range2) {
-   if (Range1 != LangOptions::ComplexRangeKind::CX_None)
+                                 LangOptions::ComplexRangeKind Range1,
+                                 LangOptions::ComplexRangeKind Range2) {
+  if (Range1 != LangOptions::ComplexRangeKind::CX_Full)
     D.Diag(clang::diag::warn_drv_overriding_option)
-         << EnumComplexRangeToStr(Range1) << EnumComplexRangeToStr(Range2);
- }
+        << EnumComplexRangeToStr(Range1) << EnumComplexRangeToStr(Range2);
+}
 
 
 static std::string RenderComplexRangeOption(std::string Range) {
@@ -2868,7 +2868,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   bool StrictFPModel = false;
   StringRef Float16ExcessPrecision = "";
   StringRef BFloat16ExcessPrecision = "";
-  LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_None;
+  LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_Full;
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");

@@ -3,8 +3,14 @@
 // RUN: %clang -### -target x86_64 -fcx-limited-range -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=LMTD %s
 
+// RUN: %clang -### -target x86_64 -fno-cx-limited-range -c %s 2>&1 \
+// RUN:   | FileCheck %s
+
 // RUN: %clang -### -target x86_64 -fcx-fortran-rules -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=FRTRN %s
+
+// RUN: %clang -### -target x86_64 -fno-cx-fortran-rules -c %s 2>&1 \
+// RUN:   | FileCheck  %s
 
 // RUN: %clang -### -target x86_64 -fcx-limited-range \
 // RUN: -fcx-fortran-rules -c %s 2>&1 \
@@ -24,6 +30,10 @@
 // RUN:   | FileCheck --check-prefix=FRTRN %s
 
 // LMTD: -complex-range=cx_limited
+// LMTD-NOT: -complex-range=cx_fortran
+// CHECK-NOT: -complex-range=cx_limited
 // FRTRN: -complex-range=cx_fortran
+// FRTRN-NOT: -complex-range=cx_limited
+// CHECK-NOT: -complex-range=cx_fortran
 // WARN1: warning: overriding '-fcx-limited-range' option with '-fcx-fortran-rules' [-Woverriding-option]
 // WARN2: warning: overriding '-fcx-fortran-rules' option with '-fcx-limited-range' [-Woverriding-option]

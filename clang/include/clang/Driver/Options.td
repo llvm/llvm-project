@@ -1030,8 +1030,8 @@ def fno_cx_fortran_rules : Joined<["-"], "fno-cx-fortran-rules">,
 
 def complex_range_EQ : Joined<["-"], "complex-range=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  Values<"cx_full,cx_limited,cx_fortran,cx_none">, NormalizedValuesScope<"LangOptions">,
-  NormalizedValues<["CX_Full", "CX_Limited", "CX_Fortran", "CX_None"]>,
+  Values<"cx_full,cx_limited,cx_fortran">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["CX_Full", "CX_Limited", "CX_Fortran"]>,
   MarshallingInfoEnum<LangOpts<"ComplexRange">, "CX_Full">;
 
 // OpenCL-only Options
