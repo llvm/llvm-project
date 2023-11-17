@@ -269,6 +269,37 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   }
 }
 
+// Creating external wrappers with UseBarePtrCallConv=true.
+static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
+                                   LLVM::LLVMFuncOp newFuncOp) {
+  // Create the auxiliary function.
+  auto wrapperFunc = rewriter.cloneWithoutRegions(newFuncOp);
+  wrapperFunc.setSymName(
+      llvm::formatv("_mlir_ciface_{0}", newFuncOp.getName()).str());
+
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointToStart(wrapperFunc.addEntryBlock());
+  auto call =
+      rewriter.create<LLVM::CallOp>(loc, newFuncOp, wrapperFunc.getArguments());
+  rewriter.create<LLVM::ReturnOp>(loc, call.getResults());
+}
+
+static void wrapExternalFunction(OpBuilder &builder, Location loc,
+                                 LLVM::LLVMFuncOp newFuncOp) {
+  OpBuilder::InsertionGuard guard(builder);
+  // Create the auxiliary function.
+  auto wrapperFunc = builder.cloneWithoutRegions(newFuncOp);
+  wrapperFunc.setSymName(
+      llvm::formatv("_mlir_ciface_{0}", newFuncOp.getName()).str());
+
+  // This wrapper should only be visible in this module.
+  newFuncOp.setLinkage(LLVM::Linkage::Private);
+  builder.setInsertionPointToStart(newFuncOp.addEntryBlock());
+  auto call =
+      builder.create<LLVM::CallOp>(loc, wrapperFunc, newFuncOp.getArguments());
+  builder.create<LLVM::ReturnOp>(loc, call.getResults());
+}
+
 /// Modifies the body of the function to construct the `MemRefDescriptor` from
 /// the bare pointer calling convention lowering of `memref` types.
 static void modifyFuncOpToUseBarePtrCallingConv(
@@ -502,6 +533,16 @@ struct FuncOpConversion : public FuncOpConversionBase {
       modifyFuncOpToUseBarePtrCallingConv(rewriter, funcOp->getLoc(),
                                           *getTypeConverter(), *newFuncOp,
                                           funcOp.getFunctionType().getInputs());
+      if (funcOp->getAttrOfType<UnitAttr>(
+              LLVM::LLVMDialect::getEmitCWrapperAttrName())) {
+        if (newFuncOp->isVarArg())
+          return funcOp->emitError("C interface for variadic functions is not "
+                                   "supported yet.");
+        if (newFuncOp->isExternal())
+          wrapExternalFunction(rewriter, newFuncOp->getLoc(), *newFuncOp);
+        else
+          wrapForExternalCallers(rewriter, funcOp->getLoc(), *newFuncOp);
+      }
     }
 
     rewriter.eraseOp(funcOp);

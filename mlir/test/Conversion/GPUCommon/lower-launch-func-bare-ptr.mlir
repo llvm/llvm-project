@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --gpu-to-llvm="use-bare-pointers-for-kernels=1" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --gpu-to-llvm="use-bare-pointers-for-kernels=1 use-bare-pointers-for-host=1" -split-input-file | FileCheck %s
 
 module attributes {gpu.container_module} {
   gpu.module @kernels [#nvvm.target]  {
@@ -15,7 +15,8 @@ module attributes {gpu.container_module} {
       llvm.return
     }
   }
-  func.func @foo() {
+  // CHECK: @foo
+  func.func @foo() attributes {llvm.emit_c_interface} {
     // CHECK: [[MEMREF:%.*]] = gpu.alloc () : memref<10xf32, 1>
     // CHECK: [[DESCRIPTOR:%.*]] = builtin.unrealized_conversion_cast [[MEMREF]] : memref<10xf32, 1> to !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK: [[PTR:%.*]] = llvm.extractvalue [[DESCRIPTOR]][1] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
@@ -28,3 +29,4 @@ module attributes {gpu.container_module} {
     return
   }
 }
+// CHECK: @_mlir_ciface_foo
