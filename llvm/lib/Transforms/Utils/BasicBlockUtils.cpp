@@ -2087,13 +2087,14 @@ bool llvm::hasOnlySimpleTerminator(const Function &F) {
   return true;
 }
 
-bool llvm::isPresplitCoroSuspendExit(const BasicBlock &BB) {
-  if (!BB.getParent()->isPresplitCoroutine())
+bool llvm::isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
+                                         const BasicBlock &Dest) {
+  assert(Src.getParent() == Dest.getParent());
+  if (!Src.getParent()->isPresplitCoroutine())
     return false;
-  if (auto *Pred = BB.getSinglePredecessor())
-    if (auto *SW = dyn_cast<SwitchInst>(Pred->getTerminator()))
-      if (auto *Intr = dyn_cast<IntrinsicInst>(SW->getCondition()))
-        return Intr->getIntrinsicID() == Intrinsic::coro_suspend &&
-               SW->getDefaultDest() == &BB;
+  if (auto *SW = dyn_cast<SwitchInst>(Src.getTerminator()))
+    if (auto *Intr = dyn_cast<IntrinsicInst>(SW->getCondition()))
+      return Intr->getIntrinsicID() == Intrinsic::coro_suspend &&
+             SW->getDefaultDest() == &Dest;
   return false;
 }

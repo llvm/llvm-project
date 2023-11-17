@@ -663,8 +663,12 @@ attributes #0 = { presplitcoroutine }
     return nullptr;
   };
   Function *P = M->getFunction("positive_case");
-  EXPECT_TRUE(llvm::isPresplitCoroSuspendExit(*FindExit(*P)));
+  const auto &ExitP = *FindExit(*P);
+  EXPECT_TRUE(llvm::isPresplitCoroSuspendExitEdge(*ExitP.getSinglePredecessor(),
+                                                  ExitP));
 
   Function *N = M->getFunction("notpresplit");
-  EXPECT_FALSE(llvm::isPresplitCoroSuspendExit(*FindExit(*N)));
+  const auto &ExitN = *FindExit(*N);
+  EXPECT_FALSE(llvm::isPresplitCoroSuspendExitEdge(
+      *ExitN.getSinglePredecessor(), ExitN));
 }

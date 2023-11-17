@@ -706,7 +706,8 @@ void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
 // br/brcond/unreachable/ret
 bool hasOnlySimpleTerminator(const Function &F);
 
-bool isPresplitCoroSuspendExit(const BasicBlock &BB);
+bool isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
+                                   const BasicBlock &Dest);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_BASICBLOCKUTILS_H

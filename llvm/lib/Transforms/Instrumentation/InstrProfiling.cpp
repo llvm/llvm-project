@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -23,6 +24,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
@@ -245,7 +247,9 @@ public:
 
     for (BasicBlock *ExitBlock : LoopExitBlocks) {
       if (BlockSet.insert(ExitBlock).second &&
-          !llvm::isPresplitCoroSuspendExit(*ExitBlock)) {
+          llvm::none_of(predecessors(ExitBlock), [&](const BasicBlock *Pred) {
+            return llvm::isPresplitCoroSuspendExitEdge(*Pred, *ExitBlock);
+          })) {
         ExitBlocks.push_back(ExitBlock);
         InsertPts.push_back(&*ExitBlock->getFirstInsertionPt());
       }
