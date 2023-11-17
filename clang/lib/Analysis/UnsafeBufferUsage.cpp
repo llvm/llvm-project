@@ -1822,7 +1822,7 @@ UUCAddAssignGadget::getFixits(const Strategy &S) const {
   if (const VarDecl *VD = dyn_cast<VarDecl>(DREs.front()->getDecl())) {
     if (S.lookup(VD) == Strategy::Kind::Span) {
       FixItList Fixes;
-      std::stringstream SS;
+
       const Stmt *AddAssignNode = getBaseStmt();
       StringRef varName = VD->getName();
       const ASTContext &Ctx = VD->getASTContext();
@@ -1831,12 +1831,11 @@ UUCAddAssignGadget::getFixits(const Strategy &S) const {
         return std::nullopt;
 
       // To transform UUC(p += n) to UUC(p = p.subspan(..)):
-      SS << varName.data() << " = " << varName.data() << ".subspan";
-
       bool NotParenExpr =
           (Offset->IgnoreParens()->getBeginLoc() == Offset->getBeginLoc());
+      std::string SS = varName.str() + " = " + varName.str() + ".subspan";
       if (NotParenExpr)
-        SS << "(";
+        SS += "(";
 
       std::optional<SourceLocation> AddAssignLocation = getEndCharLoc(
           AddAssignNode, Ctx.getSourceManager(), Ctx.getLangOpts());
@@ -1845,7 +1844,7 @@ UUCAddAssignGadget::getFixits(const Strategy &S) const {
 
       Fixes.push_back(FixItHint::CreateReplacement(
           SourceRange(AddAssignNode->getBeginLoc(), Node->getOperatorLoc()),
-          SS.str()));
+          SS));
       if (NotParenExpr)
         Fixes.push_back(FixItHint::CreateInsertion(
             Offset->getEndLoc().getLocWithOffset(1), ")"));
