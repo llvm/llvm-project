@@ -1836,6 +1836,8 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
       if (!DemandedElts[i])
         continue;
       Constant *Element = CV->getAggregateElement(i);
+      if (isa<PoisonValue>(Element))
+        continue;
       auto *ElementCI = dyn_cast_or_null<ConstantInt>(Element);
       if (!ElementCI) {
         Known.resetAll();
