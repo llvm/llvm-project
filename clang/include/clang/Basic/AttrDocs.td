@@ -7487,7 +7487,8 @@ generation of the other destruction cases, optimizing the above `foo.destroy` to
 def CoroReturnTypeAndWrapperDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
-The `[[clang::coro_return_type]]` attribute is used to help static analyzers to recognize coroutines from the function signatures.
+The ``[[clang::coro_return_type]]`` attribute is used to help static analyzers to recognize
+coroutines from the function signatures.
 
 The ``coro_return_type`` attribute should be marked on a C++ class to mark it as
 a **coroutine return type (CRT)**.
@@ -7500,15 +7501,17 @@ If the return type of a function is a ``CRT`` then the function must be a corout
 Otherwise the program is invalid. It is allowed for a non-coroutine to return a ``CRT``
 if the function is marked with ``[[clang::coro_wrapper]]``.
 
-The ``coro_wrapper`` attribute should be marked on a C++ function to mark it as
+The ``[[clang::coro_wrapper]]`` attribute should be marked on a C++ function to mark it as
 a **coroutine wrapper**. A coroutine wrapper is a function which returns a ``CRT``,
 is not a coroutine itself and is marked with ``[[clang::coro_wrapper]]``.
+
+Clang will enforce that all functions that return a ``CRT`` are either coroutines or marked
+with ``[[clang::coro_wrapper]]``. Clang will enforce this with an error.
 
 From a language perspective, it is not possible to differentiate between a coroutine and a
 function returning a CRT by merely looking at the function signature.
 
-Clang will enforce that all functions that return a ``CRT``  are either coroutines or marked
-with `[[clang::coro_wrapper]]`. Coroutine wrappers, in particular, are susceptible to capturing
+Coroutine wrappers, in particular, are susceptible to capturing
 references to temporaries and other lifetime issues. This allows to avoid such lifetime
 issues with coroutine wrappers.
 
@@ -7533,5 +7536,7 @@ For example,
     std::function<Task<int>(int)> f = increment;
   }
 
+  Note: ``a_promise_type::get_return_object`` is exempted from this analysis as it is a necessary
+  implementation detail of any coroutine library.
 }];
 }
