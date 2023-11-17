@@ -3753,49 +3753,38 @@ public:
 
 /// List of ValueAsMetadata, to be used as an argument to a dbg.value
 /// intrinsic.
-class DIArgList : public MDNode {
+class DIArgList : public Metadata, ReplaceableMetadataImpl {
+  friend class ReplaceableMetadataImpl;
   friend class LLVMContextImpl;
-  friend class MDNode;
   using iterator = SmallVectorImpl<ValueAsMetadata *>::iterator;
 
   SmallVector<ValueAsMetadata *, 4> Args;
 
-  DIArgList(LLVMContext &C, StorageType Storage,
-            ArrayRef<ValueAsMetadata *> Args)
-      : MDNode(C, DIArgListKind, Storage, std::nullopt),
+  DIArgList(LLVMContext &Context, ArrayRef<ValueAsMetadata *> Args)
+      : Metadata(DIArgListKind, Uniqued), ReplaceableMetadataImpl(Context),
         Args(Args.begin(), Args.end()) {
     track();
   }
   ~DIArgList() { untrack(); }
 
-  static DIArgList *getImpl(LLVMContext &Context,
-                            ArrayRef<ValueAsMetadata *> Args,
-                            StorageType Storage, bool ShouldCreate = true);
-
-  TempDIArgList cloneImpl() const {
-    return getTemporary(getContext(), getArgs());
-  }
-
   void track();
   void untrack();
-  void dropAllReferences();
+  void dropAllReferences(bool Untrack);
 
 public:
-  DEFINE_MDNODE_GET(DIArgList, (ArrayRef<ValueAsMetadata *> Args), (Args))
-
-  TempDIArgList clone() const { return cloneImpl(); }
+  static DIArgList *get(LLVMContext &Context, ArrayRef<ValueAsMetadata *> Args);
 
   ArrayRef<ValueAsMetadata *> getArgs() const { return Args; }
 
   iterator args_begin() { return Args.begin(); }
   iterator args_end() { return Args.end(); }
 
-  ReplaceableMetadataImpl *getReplaceableUses() {
-    return Context.getReplaceableUses();
-  }
-
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIArgListKind;
+  }
+
+  SmallVector<DPValue *> getAllDPValueUsers() {
+    return ReplaceableMetadataImpl::getAllDPValueUsers();
   }
 
   void handleChangedOperand(void *Ref, Metadata *New);
