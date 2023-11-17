@@ -12,8 +12,6 @@
 //
 // [simd.reference]
 // template<class U> reference=(U&& x) && noexcept;
-//
-// XFAIL: LIBCXX-AIX-FIXME
 
 #include "../test_utils.h"
 #include <experimental/simd>
