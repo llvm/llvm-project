@@ -167,6 +167,9 @@ extern char &SILowerWWMCopiesID;
 void initializeSILowerI1CopiesPass(PassRegistry &);
 extern char &SILowerI1CopiesID;
 
+void initializeAMDGPUMarkLastScratchLoadPass(PassRegistry &);
+extern char &AMDGPUMarkLastScratchLoadID;
+
 void initializeSILowerSGPRSpillsPass(PassRegistry &);
 extern char &SILowerSGPRSpillsID;
 
