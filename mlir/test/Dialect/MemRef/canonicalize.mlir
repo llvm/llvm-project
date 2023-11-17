@@ -180,6 +180,17 @@ func.func @dim_of_sized_view(%arg : memref<?xi8>, %size: index) -> index {
 
 // -----
 
+// CHECK-LABEL: func @no_fold_subview_negative_size
+//  CHECK:        %[[SUBVIEW:.+]] = memref.subview
+//  CHECK:        return %[[SUBVIEW]]
+func.func @no_fold_subview_negative_size(%input: memref<4x1024xf32>) -> memref<?x256xf32, strided<[1024, 1], offset: 2304>> {
+  %cst = arith.constant -13 : index
+  %0 = memref.subview %input[2, 256] [%cst, 256] [1, 1] : memref<4x1024xf32> to memref<?x256xf32, strided<[1024, 1], offset: 2304>>
+  return %0 : memref<?x256xf32, strided<[1024, 1], offset: 2304>>
+}
+
+// -----
+
 // CHECK-LABEL: func @no_fold_of_store
 //  CHECK:   %[[cst:.+]] = memref.cast %arg
 //  CHECK:   memref.store %[[cst]]

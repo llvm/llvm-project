@@ -1,9 +1,11 @@
 // RUN: mlir-opt %s --linalg-generalize-named-ops \
 // RUN:             --linalg-fuse-elementwise-ops \
+// RUN:             --sparse-reinterpret-map \
 // RUN:             --sparsification | \
 // RUN:   FileCheck %s --check-prefix=CHECK-SPARSE
 // RUN: mlir-opt %s --linalg-generalize-named-ops \
 // RUN:             --linalg-fuse-elementwise-ops \
+// RUN:             --sparse-reinterpret-map \
 // RUN:             --sparsification --lower-sparse-ops-to-foreach \
 // RUN:             --lower-sparse-foreach-to-scf \
 // RUN:             --sparse-tensor-conversion --cse | \
@@ -142,7 +144,8 @@ func.func @matmul1(%A: tensor<8x2xf64, #CSR>,
 // CHECK-SPARSE:   }
 // CHECK-SPARSE:   sparse_tensor.compress %[[A]], %[[B]], %[[C]], %[[COUNT]]
 // CHECK-SPARSE: }
-// CHECK-SPARSE: %[[RET:.*]] = sparse_tensor.load %[[T]] hasInserts
+// CHECK-SPARSE: %[[DEMAP:.*]] = sparse_tensor.load %[[T]] hasInserts
+// CHECK-SPARSE: %[[RET:.*]] = sparse_tensor.reinterpret_map %[[DEMAP]]
 // CHECK-SPARSE: return %[[RET]]
 //
 // CHECK-CONVERT-LABEL: func @matmul2(

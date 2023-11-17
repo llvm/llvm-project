@@ -198,17 +198,16 @@ bool SanitizerBinaryMetadata::run() {
   // metadata features.
   //
 
-  auto *Int8PtrTy = IRB.getInt8PtrTy();
-  auto *Int8PtrPtrTy = PointerType::getUnqual(Int8PtrTy);
+  auto *PtrTy = IRB.getPtrTy();
   auto *Int32Ty = IRB.getInt32Ty();
-  const std::array<Type *, 3> InitTypes = {Int32Ty, Int8PtrPtrTy, Int8PtrPtrTy};
+  const std::array<Type *, 3> InitTypes = {Int32Ty, PtrTy, PtrTy};
   auto *Version = ConstantInt::get(Int32Ty, getVersion());
 
   for (const MetadataInfo *MI : MIS) {
     const std::array<Value *, InitTypes.size()> InitArgs = {
         Version,
-        getSectionMarker(getSectionStart(MI->SectionSuffix), Int8PtrTy),
-        getSectionMarker(getSectionEnd(MI->SectionSuffix), Int8PtrTy),
+        getSectionMarker(getSectionStart(MI->SectionSuffix), PtrTy),
+        getSectionMarker(getSectionEnd(MI->SectionSuffix), PtrTy),
     };
     // We declare the _add and _del functions as weak, and only call them if
     // there is a valid symbol linked. This allows building binaries with

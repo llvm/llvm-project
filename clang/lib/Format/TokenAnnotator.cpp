@@ -2018,10 +2018,6 @@ private:
                (!Line.MightBeFunctionDecl || Current.NestingLevel != 0)) {
       Contexts.back().FirstStartOfName = &Current;
       Current.setType(TT_StartOfName);
-      if (auto *PrevNonComment = Current.getPreviousNonComment();
-          PrevNonComment && PrevNonComment->is(TT_StartOfName)) {
-        PrevNonComment->setType(TT_Unknown);
-      }
     } else if (Current.is(tok::semi)) {
       // Reset FirstStartOfName after finding a semicolon so that a for loop
       // with multiple increment statements is not confused with a for loop
@@ -2210,7 +2206,8 @@ private:
       return false;
 
     if (const auto *NextNonComment = Tok.getNextNonComment();
-        !NextNonComment || NextNonComment->isPointerOrReference()) {
+        !NextNonComment || NextNonComment->isPointerOrReference() ||
+        NextNonComment->isOneOf(tok::identifier, tok::string_literal)) {
       return false;
     }
 
@@ -2246,8 +2243,9 @@ private:
              PreviousNotConst->MatchingParen->Previous->isNot(tok::kw_template);
     }
 
-    if (PreviousNotConst->is(tok::r_paren) &&
-        PreviousNotConst->is(TT_TypeDeclarationParen)) {
+    if ((PreviousNotConst->is(tok::r_paren) &&
+         PreviousNotConst->is(TT_TypeDeclarationParen)) ||
+        PreviousNotConst->is(TT_AttributeRParen)) {
       return true;
     }
 

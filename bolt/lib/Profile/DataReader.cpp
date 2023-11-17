@@ -698,7 +698,8 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
       if (!BC.MIB->isNoop(Instr))
         break;
 
-      Offset += BC.MIB->getAnnotationWithDefault<uint32_t>(Instr, "Size");
+      if (std::optional<uint32_t> Size = BC.MIB->getSize(Instr))
+        Offset += *Size;
     }
 
     if (To == Offset)

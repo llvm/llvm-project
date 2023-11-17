@@ -319,10 +319,6 @@ private:
   /// Execution halts whenever this function is entered.
   bool TrapsOnEntry{false};
 
-  /// True if the function had an indirect branch with a fixed internal
-  /// destination.
-  bool HasFixedIndirectBranch{false};
-
   /// True if the function is a fragment of another function. This means that
   /// this function could only be entered via its parent or one of its sibling
   /// fragments. It could be entered at any basic block. It can also return

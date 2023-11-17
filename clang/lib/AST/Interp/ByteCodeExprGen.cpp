@@ -2231,10 +2231,12 @@ bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
   if (!Func)
     return false;
 
-  // Put arguments on the stack.
-  for (const auto *Arg : E->arguments()) {
-    if (!this->visit(Arg))
-      return false;
+  if (!Func->isUnevaluatedBuiltin()) {
+    // Put arguments on the stack.
+    for (const auto *Arg : E->arguments()) {
+      if (!this->visit(Arg))
+        return false;
+    }
   }
 
   if (!this->emitCallBI(Func, E, E))
@@ -2269,11 +2271,15 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
       }
     } else {
       assert(Initializing);
-      if (!isa<CXXMemberCallExpr>(E)) {
-        if (!this->emitDupPtr(E))
-          return false;
-      }
+      if (!this->emitDupPtr(E))
+        return false;
     }
+  }
+
+  // Add the (optional, implicit) This pointer.
+  if (const auto *MC = dyn_cast<CXXMemberCallExpr>(E)) {
+    if (!this->visit(MC->getImplicitObjectArgument()))
+      return false;
   }
 
   // Put arguments on the stack.
@@ -2330,22 +2336,6 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     return this->emitPop(*T, E);
 
   return true;
-}
-
-template <class Emitter>
-bool ByteCodeExprGen<Emitter>::VisitCXXMemberCallExpr(
-    const CXXMemberCallExpr *E) {
-  if (Initializing) {
-    // If we're initializing, the current stack top is the pointer to
-    // initialize, so dup that so this call has its own version.
-    if (!this->emitDupPtr(E))
-      return false;
-  }
-
-  if (!this->visit(E->getImplicitObjectArgument()))
-    return false;
-
-  return VisitCallExpr(E);
 }
 
 template <class Emitter>

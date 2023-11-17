@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification -cse -sparse-vectorization="vl=8" -cse | \
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification -cse -sparse-vectorization="vl=8" -cse | \
 // RUN:   FileCheck %s
 
 #SparseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
@@ -18,19 +18,19 @@
 //
 // CHECK-LABEL:   func.func @sparse_matrix_sum(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<f64>,
-// CHECK-SAME:      %[[VAL_1:.*]]: tensor<64x32xf64, #sparse_tensor.encoding<{{{.*}}}>>,
-// CHECK-SAME:      %[[VAL_2:.*]]: tensor<64x32xf64, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<f64> {
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<64x32xf64, #sparse{{[0-9]*}}>,
+// CHECK-SAME:      %[[VAL_2:.*]]: tensor<64x32xf64, #sparse{{[0-9]*}}>) -> tensor<f64> {
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 8 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant dense<0.000000e+00> : vector<8xf64>
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 64 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 1 : index} : tensor<64x32xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 1 : index} : tensor<64x32xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<64x32xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf64>
-// CHECK:           %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_2]] {level = 1 : index} : tensor<64x32xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
-// CHECK:           %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_2]] {level = 1 : index} : tensor<64x32xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
-// CHECK:           %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_2]] : tensor<64x32xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf64>
+// CHECK:           %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 1 : index} : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK:           %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 1 : index} : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xf64>
+// CHECK:           %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_2]] {level = 1 : index} : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK:           %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_2]] {level = 1 : index} : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK:           %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_2]] : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xf64>
 // CHECK:           %[[VAL_14:.*]] = bufferization.to_memref %[[VAL_0]] : memref<f64>
 // CHECK:           %[[VAL_15:.*]] = memref.load %[[VAL_14]][] : memref<f64>
 // CHECK:           %[[VAL_16:.*]] = scf.for %[[VAL_17:.*]] = %[[VAL_6]] to %[[VAL_5]] step %[[VAL_7]] iter_args(%[[VAL_18:.*]] = %[[VAL_15]]) -> (f64) {
