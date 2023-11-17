@@ -575,6 +575,7 @@ private:
   LLVMContext *C;
   Type *IntptrTy;  ///< Integer type with the size of a ptr in default AS.
   Type *OriginTy;
+  PointerType *PtrTy; ///< Integer type with the size of a ptr in default AS.
 
   // XxxTLS variables represent the per-thread state in MSan and per-task state
   // in KMSAN.
@@ -819,11 +820,10 @@ void MemorySanitizer::createKernelApi(Module &M, const TargetLibraryInfo &TLI) {
       PointerType::get(IRB.getInt8Ty(), 0), IRB.getInt64Ty());
 
   // Functions for poisoning and unpoisoning memory.
-  MsanPoisonAllocaFn =
-      M.getOrInsertFunction("__msan_poison_alloca", IRB.getVoidTy(),
-                            IRB.getInt8PtrTy(), IntptrTy, IRB.getInt8PtrTy());
+  MsanPoisonAllocaFn = M.getOrInsertFunction(
+      "__msan_poison_alloca", IRB.getVoidTy(), PtrTy, IntptrTy, PtrTy);
   MsanUnpoisonAllocaFn = M.getOrInsertFunction(
-      "__msan_unpoison_alloca", IRB.getVoidTy(), IRB.getInt8PtrTy(), IntptrTy);
+      "__msan_unpoison_alloca", IRB.getVoidTy(), PtrTy, IntptrTy);
 }
 
 static Constant *getOrInsertGlobal(Module &M, StringRef Name, Type *Ty) {
@@ -890,18 +890,18 @@ void MemorySanitizer::createUserspaceApi(Module &M, const TargetLibraryInfo &TLI
     FunctionName = "__msan_maybe_store_origin_" + itostr(AccessSize);
     MaybeStoreOriginFn[AccessSizeIndex] = M.getOrInsertFunction(
         FunctionName, TLI.getAttrList(C, {0, 2}, /*Signed=*/false),
-        IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8), IRB.getInt8PtrTy(),
+        IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8), PtrTy,
         IRB.getInt32Ty());
   }
 
-  MsanSetAllocaOriginWithDescriptionFn = M.getOrInsertFunction(
-      "__msan_set_alloca_origin_with_descr", IRB.getVoidTy(),
-      IRB.getInt8PtrTy(), IntptrTy, IRB.getInt8PtrTy(), IRB.getInt8PtrTy());
-  MsanSetAllocaOriginNoDescriptionFn = M.getOrInsertFunction(
-      "__msan_set_alloca_origin_no_descr", IRB.getVoidTy(), IRB.getInt8PtrTy(),
-      IntptrTy, IRB.getInt8PtrTy());
-  MsanPoisonStackFn = M.getOrInsertFunction(
-      "__msan_poison_stack", IRB.getVoidTy(), IRB.getInt8PtrTy(), IntptrTy);
+  MsanSetAllocaOriginWithDescriptionFn =
+      M.getOrInsertFunction("__msan_set_alloca_origin_with_descr",
+                            IRB.getVoidTy(), PtrTy, IntptrTy, PtrTy, PtrTy);
+  MsanSetAllocaOriginNoDescriptionFn =
+      M.getOrInsertFunction("__msan_set_alloca_origin_no_descr",
+                            IRB.getVoidTy(), PtrTy, IntptrTy, PtrTy);
+  MsanPoisonStackFn = M.getOrInsertFunction("__msan_poison_stack",
+                                            IRB.getVoidTy(), PtrTy, IntptrTy);
 }
 
 /// Insert extern declaration of runtime-provided functions and globals.
@@ -919,16 +919,14 @@ void MemorySanitizer::initializeCallbacks(Module &M, const TargetLibraryInfo &TL
       IRB.getInt32Ty());
   MsanSetOriginFn = M.getOrInsertFunction(
       "__msan_set_origin", TLI.getAttrList(C, {2}, /*Signed=*/false),
-      IRB.getVoidTy(), IRB.getInt8PtrTy(), IntptrTy, IRB.getInt32Ty());
+      IRB.getVoidTy(), PtrTy, IntptrTy, IRB.getInt32Ty());
   MemmoveFn =
-      M.getOrInsertFunction("__msan_memmove", IRB.getInt8PtrTy(),
-                            IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy);
+      M.getOrInsertFunction("__msan_memmove", PtrTy, PtrTy, PtrTy, IntptrTy);
   MemcpyFn =
-      M.getOrInsertFunction("__msan_memcpy", IRB.getInt8PtrTy(),
-                            IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy);
-  MemsetFn = M.getOrInsertFunction(
-      "__msan_memset", TLI.getAttrList(C, {1}, /*Signed=*/true),
-      IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IRB.getInt32Ty(), IntptrTy);
+      M.getOrInsertFunction("__msan_memcpy", PtrTy, PtrTy, PtrTy, IntptrTy);
+  MemsetFn = M.getOrInsertFunction("__msan_memset",
+                                   TLI.getAttrList(C, {1}, /*Signed=*/true),
+                                   PtrTy, PtrTy, IRB.getInt32Ty(), IntptrTy);
 
   MsanInstrumentAsmStoreFn =
       M.getOrInsertFunction("__msan_instrument_asm_store", IRB.getVoidTy(),
@@ -1042,6 +1040,7 @@ void MemorySanitizer::initializeModule(Module &M) {
   IRBuilder<> IRB(*C);
   IntptrTy = IRB.getIntPtrTy(DL);
   OriginTy = IRB.getInt32Ty();
+  PtrTy = IRB.getPtrTy();
 
   ColdCallWeights = MDBuilder(*C).createBranchWeights(1, 1000);
   OriginStoreWeights = MDBuilder(*C).createBranchWeights(1, 1000);
@@ -1300,9 +1299,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       FunctionCallee Fn = MS.MaybeStoreOriginFn[SizeIndex];
       Value *ConvertedShadow2 =
           IRB.CreateZExt(ConvertedShadow, IRB.getIntNTy(8 * (1 << SizeIndex)));
-      CallBase *CB = IRB.CreateCall(
-          Fn, {ConvertedShadow2,
-               IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()), Origin});
+      CallBase *CB = IRB.CreateCall(Fn, {ConvertedShadow2, Addr, Origin});
       CB->addParamAttr(0, Attribute::ZExt);
       CB->addParamAttr(2, Attribute::ZExt);
     } else {
@@ -2837,11 +2834,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitMemMoveInst(MemMoveInst &I) {
     getShadow(I.getArgOperand(1)); // Ensure shadow initialized
     IRBuilder<> IRB(&I);
-    IRB.CreateCall(
-        MS.MemmoveFn,
-        {IRB.CreatePointerCast(I.getArgOperand(0), IRB.getInt8PtrTy()),
-         IRB.CreatePointerCast(I.getArgOperand(1), IRB.getInt8PtrTy()),
-         IRB.CreateIntCast(I.getArgOperand(2), MS.IntptrTy, false)});
+    IRB.CreateCall(MS.MemmoveFn,
+                   {I.getArgOperand(0), I.getArgOperand(1),
+                    IRB.CreateIntCast(I.getArgOperand(2), MS.IntptrTy, false)});
     I.eraseFromParent();
   }
 
@@ -2862,11 +2857,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitMemCpyInst(MemCpyInst &I) {
     getShadow(I.getArgOperand(1)); // Ensure shadow initialized
     IRBuilder<> IRB(&I);
-    IRB.CreateCall(
-        MS.MemcpyFn,
-        {IRB.CreatePointerCast(I.getArgOperand(0), IRB.getInt8PtrTy()),
-         IRB.CreatePointerCast(I.getArgOperand(1), IRB.getInt8PtrTy()),
-         IRB.CreateIntCast(I.getArgOperand(2), MS.IntptrTy, false)});
+    IRB.CreateCall(MS.MemcpyFn,
+                   {I.getArgOperand(0), I.getArgOperand(1),
+                    IRB.CreateIntCast(I.getArgOperand(2), MS.IntptrTy, false)});
     I.eraseFromParent();
   }
 
@@ -2875,7 +2868,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
     IRB.CreateCall(
         MS.MemsetFn,
-        {IRB.CreatePointerCast(I.getArgOperand(0), IRB.getInt8PtrTy()),
+        {I.getArgOperand(0),
          IRB.CreateIntCast(I.getArgOperand(1), IRB.getInt32Ty(), false),
          IRB.CreateIntCast(I.getArgOperand(2), MS.IntptrTy, false)});
     I.eraseFromParent();
@@ -4372,8 +4365,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void poisonAllocaUserspace(AllocaInst &I, IRBuilder<> &IRB, Value *Len) {
     if (PoisonStack && ClPoisonStackWithCall) {
-      IRB.CreateCall(MS.MsanPoisonStackFn,
-                     {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len});
+      IRB.CreateCall(MS.MsanPoisonStackFn, {&I, Len});
     } else {
       Value *ShadowBase, *OriginBase;
       std::tie(ShadowBase, OriginBase) = getShadowOriginPtr(
@@ -4388,13 +4380,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       if (ClPrintStackNames) {
         Value *Descr = getLocalVarDescription(I);
         IRB.CreateCall(MS.MsanSetAllocaOriginWithDescriptionFn,
-                       {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len,
-                        IRB.CreatePointerCast(Idptr, IRB.getInt8PtrTy()),
-                        IRB.CreatePointerCast(Descr, IRB.getInt8PtrTy())});
+                       {&I, Len, Idptr, Descr});
       } else {
-        IRB.CreateCall(MS.MsanSetAllocaOriginNoDescriptionFn,
-                       {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len,
-                        IRB.CreatePointerCast(Idptr, IRB.getInt8PtrTy())});
+        IRB.CreateCall(MS.MsanSetAllocaOriginNoDescriptionFn, {&I, Len, Idptr});
       }
     }
   }
@@ -4402,12 +4390,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void poisonAllocaKmsan(AllocaInst &I, IRBuilder<> &IRB, Value *Len) {
     Value *Descr = getLocalVarDescription(I);
     if (PoisonStack) {
-      IRB.CreateCall(MS.MsanPoisonAllocaFn,
-                     {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len,
-                      IRB.CreatePointerCast(Descr, IRB.getInt8PtrTy())});
+      IRB.CreateCall(MS.MsanPoisonAllocaFn, {&I, Len, Descr});
     } else {
-      IRB.CreateCall(MS.MsanUnpoisonAllocaFn,
-                     {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len});
+      IRB.CreateCall(MS.MsanUnpoisonAllocaFn, {&I, Len});
     }
   }
 
@@ -4569,10 +4554,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
     if (!ElemTy->isSized())
       return;
-    Value *Ptr = IRB.CreatePointerCast(Operand, IRB.getInt8PtrTy());
     Value *SizeVal =
       IRB.CreateTypeSize(MS.IntptrTy, DL.getTypeStoreSize(ElemTy));
-    IRB.CreateCall(MS.MsanInstrumentAsmStoreFn, {Ptr, SizeVal});
+    IRB.CreateCall(MS.MsanInstrumentAsmStoreFn, {Operand, SizeVal});
   }
 
   /// Get the number of output arguments returned by pointers.
@@ -5261,7 +5245,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
       // we need to adjust the offset for both GR and VR fields based on
       // the __{gr,vr}_offs value (since they are stores based on incoming
       // named arguments).
-      Type *RegSaveAreaPtrTy = IRB.getInt8PtrTy();
+      Type *RegSaveAreaPtrTy = IRB.getPtrTy();
 
       // Read the stack pointer from the va_list.
       Value *StackSaveAreaPtr =
