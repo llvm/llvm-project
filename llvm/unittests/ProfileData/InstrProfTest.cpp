@@ -882,7 +882,6 @@ TEST_P(MaybeSparseInstrProfTest, icall_data_merge) {
   addValueProfData(Record11, IPVK_IndirectCallTarget, FuncVD0);
 
   // A different record for the same caller.
-
   std::vector<InstrProfValueData> VD02 = {{uint64_t(callee2), 5},
                                           {uint64_t(callee3), 3}};
   std::vector<InstrProfValueData> VD22 = {
