@@ -247,7 +247,8 @@ private:
   void writeBuildId();
   void writePEChecksum();
   void sortSections();
-  void sortExceptionTable();
+  template <typename T> void sortExceptionTable(Chunk *first, Chunk *last);
+  void sortExceptionTables();
   void sortCRTSectionChunks(std::vector<Chunk *> &chunks);
   void addSyntheticIdata();
   void sortBySectionOrder(std::vector<Chunk *> &chunks);
@@ -751,7 +752,7 @@ void Writer::run() {
     }
     writeSections();
     prepareLoadConfig();
-    sortExceptionTable();
+    sortExceptionTables();
 
     // Fix up the alignment in the TLS Directory's characteristic field,
     // if a specific alignment value is needed
@@ -2164,41 +2165,52 @@ void Writer::writeBuildId() {
 }
 
 // Sort .pdata section contents according to PE/COFF spec 5.5.
-void Writer::sortExceptionTable() {
-  if (!firstPdata)
-    return;
-  llvm::TimeTraceScope timeScope("Sort exception table");
+template <typename T>
+void Writer::sortExceptionTable(Chunk *first, Chunk *last) {
   // We assume .pdata contains function table entries only.
   auto bufAddr = [&](Chunk *c) {
     OutputSection *os = ctx.getOutputSection(c);
     return buffer->getBufferStart() + os->getFileOff() + c->getRVA() -
            os->getRVA();
   };
-  uint8_t *begin = bufAddr(firstPdata);
-  uint8_t *end = bufAddr(lastPdata) + lastPdata->getSize();
-  if (ctx.config.machine == AMD64) {
-    struct Entry { ulittle32_t begin, end, unwind; };
-    if ((end - begin) % sizeof(Entry) != 0) {
-      fatal("unexpected .pdata size: " + Twine(end - begin) +
-            " is not a multiple of " + Twine(sizeof(Entry)));
-    }
-    parallelSort(
-        MutableArrayRef<Entry>((Entry *)begin, (Entry *)end),
-        [](const Entry &a, const Entry &b) { return a.begin < b.begin; });
-    return;
+  uint8_t *begin = bufAddr(first);
+  uint8_t *end = bufAddr(last) + last->getSize();
+  if ((end - begin) % sizeof(T) != 0) {
+    fatal("unexpected .pdata size: " + Twine(end - begin) +
+          " is not a multiple of " + Twine(sizeof(T)));
   }
-  if (ctx.config.machine == ARMNT || ctx.config.machine == ARM64) {
-    struct Entry { ulittle32_t begin, unwind; };
-    if ((end - begin) % sizeof(Entry) != 0) {
-      fatal("unexpected .pdata size: " + Twine(end - begin) +
-            " is not a multiple of " + Twine(sizeof(Entry)));
-    }
-    parallelSort(
-        MutableArrayRef<Entry>((Entry *)begin, (Entry *)end),
-        [](const Entry &a, const Entry &b) { return a.begin < b.begin; });
-    return;
+
+  parallelSort(MutableArrayRef<T>(reinterpret_cast<T *>(begin),
+                                  reinterpret_cast<T *>(end)),
+               [](const T &a, const T &b) { return a.begin < b.begin; });
+}
+
+// Sort .pdata section contents according to PE/COFF spec 5.5.
+void Writer::sortExceptionTables() {
+  llvm::TimeTraceScope timeScope("Sort exception table");
+
+  struct EntryX64 {
+    ulittle32_t begin, end, unwind;
+  };
+  struct EntryArm {
+    ulittle32_t begin, unwind;
+  };
+
+  switch (ctx.config.machine) {
+  case AMD64:
+    if (firstPdata)
+      sortExceptionTable<EntryX64>(firstPdata, lastPdata);
+    break;
+  case ARMNT:
+  case ARM64:
+    if (firstPdata)
+      sortExceptionTable<EntryArm>(firstPdata, lastPdata);
+    break;
+  default:
+    if (firstPdata)
+      lld::errs() << "warning: don't know how to handle .pdata.\n";
+    break;
   }
-  lld::errs() << "warning: don't know how to handle .pdata.\n";
 }
 
 // The CRT section contains, among other things, the array of function
