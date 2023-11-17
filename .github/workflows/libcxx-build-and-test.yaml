@@ -1,4 +1,4 @@
-# This file defines pre-commit CI for libc++ [bla bla bla].
+# This file defines pre-commit CI for libc++, libc++abi, and libunwind (on Github).
 #
 # We split the configurations in multiple stages with the intent of saving compute time
 # when a job fails early in the pipeline. This is why the jobs are marked as `continue-on-error: false`.
@@ -41,11 +41,6 @@ env:
   CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
 
 
-# Job breakdown:
-#   The jobs run in three stages to save resources while providing actionalable feedback as soon as possible.
-#   The stages are broken down as follows:
-#   - stage1:
-#     Stage1 contains the bots that most often fail.
 jobs:
   stage1:
     runs-on: libcxx-runners-16
@@ -53,9 +48,13 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        config: [ 'generic-cxx26', 'generic-cxx03', 'generic-modules' ]
-        cc: [  clang-18 ]
-        cxx: [ clang++-18 ]
+        config: [
+          'generic-cxx03',
+          'generic-cxx26',
+          'generic-modules'
+        ]
+        cc: [  'clang-18' ]
+        cxx: [ 'clang++-18' ]
         clang_tidy: [ 'ON' ]
         include:
           - config: 'generic-gcc'
@@ -87,8 +86,13 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        config: [ 'generic-cxx11', 'generic-cxx14', 'generic-cxx17',
-                  'generic-cxx20', 'generic-cxx23' ]
+        config: [
+          'generic-cxx11',
+          'generic-cxx14',
+          'generic-cxx17',
+          'generic-cxx20',
+          'generic-cxx23'
+        ]
         cc: [ 'clang-18' ]
         cxx: [ 'clang++-18' ]
         clang_tidy: [ 'ON' ]
@@ -130,14 +134,26 @@ jobs:
       fail-fast: false
       max-parallel: 8
       matrix:
-        config: [ 'generic-no-threads', 'generic-no-filesystem', 'generic-no-random_device',
-          'generic-no-localization', 'generic-no-unicode', 'generic-no-wide-characters',
-          'generic-no-experimental', 'generic-no-exceptions', 'generic-abi-unstable',
+        config: [
+          'generic-abi-unstable',
+          'generic-hardening-mode-debug',
+          'generic-hardening-mode-extensive',
           'generic-hardening-mode-fast',
           'generic-hardening-mode-fast-with-abi-breaks',
-          'generic-hardening-mode-extensive',
-          'generic-hardening-mode-debug', 'generic-with_llvm_unwinder', 'generic-static', 'generic-merged',
-          'generic-modules-lsv', 'generic-no-tzdb' ]
+          'generic-merged',
+          'generic-modules-lsv',
+          'generic-no-exceptions',
+          'generic-no-experimental',
+          'generic-no-filesystem',
+          'generic-no-localization',
+          'generic-no-random_device',
+          'generic-no-threads',
+          'generic-no-tzdb',
+          'generic-no-unicode',
+          'generic-no-wide-characters',
+          'generic-static',
+          'generic-with_llvm_unwinder'
+        ]
         machine: [ 'libcxx-runners-8' ]
         std_modules: [ 'OFF' ]
         include:
