@@ -54,7 +54,15 @@ void foo() {
     return foo_coro(1);
   };
 }
+
+Co<int> coor_containing_lambda(int b) {
+  // expected-error@+1 {{neither a coroutine nor a coroutine wrapper}}
+  auto wrapper_lambda = []() -> Gen<int> {
+    return foo_coro(1);
+  };
+  co_return wrapper_lambda();
 }
+} // namespace lambdas
 
 namespace std_function {
 namespace std {
@@ -112,6 +120,6 @@ namespace std {
 template<> class coroutine_traits<Task, int> {
     using promise_type = my_promise_type;
 };
-}
+} // namespace std
 // expected-error@+1 {{neither a coroutine nor a coroutine wrapper}}
 Task foo(int) { return Task{}; }
