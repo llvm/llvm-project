@@ -4667,13 +4667,6 @@ struct VarArgHelperBase : public VarArgHelper {
     return IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
   }
 
-  Value *getOriginPtrForVAArgument(IRBuilder<> &IRB, int ArgOffset) {
-    Value *Base = IRB.CreatePointerCast(MS.VAArgOriginTLS, MS.IntptrTy);
-    Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
-    return IRB.CreateIntToPtr(Base, PointerType::get(MS.OriginTy, 0),
-                              "_msarg_va_o");
-  }
-
   /// Compute the shadow address for a given va_arg.
   Value *getShadowPtrForVAArgument(Type *Ty, IRBuilder<> &IRB,
                                    unsigned ArgOffset, unsigned ArgSize) {
@@ -4687,7 +4680,7 @@ struct VarArgHelperBase : public VarArgHelper {
   }
 
   /// Compute the origin address for a given va_arg.
-  Value *getOriginPtrForVAArgument(Type *Ty, IRBuilder<> &IRB, int ArgOffset) {
+  Value *getOriginPtrForVAArgument(IRBuilder<> &IRB, int ArgOffset) {
     Value *Base = IRB.CreatePointerCast(MS.VAArgOriginTLS, MS.IntptrTy);
     // getOriginPtrForVAArgument() is always called after
     // getShadowPtrForVAArgument(), so __msan_va_arg_origin_tls can never
@@ -4793,7 +4786,7 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
             RealTy, IRB, OverflowOffset, alignTo(ArgSize, 8));
         Value *OriginBase = nullptr;
         if (MS.TrackOrigins)
-          OriginBase = getOriginPtrForVAArgument(RealTy, IRB, OverflowOffset);
+          OriginBase = getOriginPtrForVAArgument(IRB, OverflowOffset);
         OverflowOffset += alignTo(ArgSize, 8);
         if (!ShadowBase)
           continue;
@@ -4819,14 +4812,14 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
           ShadowBase =
               getShadowPtrForVAArgument(A->getType(), IRB, GpOffset, 8);
           if (MS.TrackOrigins)
-            OriginBase = getOriginPtrForVAArgument(A->getType(), IRB, GpOffset);
+            OriginBase = getOriginPtrForVAArgument(IRB, GpOffset);
           GpOffset += 8;
           break;
         case AK_FloatingPoint:
           ShadowBase =
               getShadowPtrForVAArgument(A->getType(), IRB, FpOffset, 16);
           if (MS.TrackOrigins)
-            OriginBase = getOriginPtrForVAArgument(A->getType(), IRB, FpOffset);
+            OriginBase = getOriginPtrForVAArgument(IRB, FpOffset);
           FpOffset += 16;
           break;
         case AK_Memory:
@@ -4836,8 +4829,7 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
           ShadowBase =
               getShadowPtrForVAArgument(A->getType(), IRB, OverflowOffset, 8);
           if (MS.TrackOrigins)
-            OriginBase =
-                getOriginPtrForVAArgument(A->getType(), IRB, OverflowOffset);
+            OriginBase = getOriginPtrForVAArgument(IRB, OverflowOffset);
           OverflowOffset += alignTo(ArgSize, 8);
         }
         // Take fixed arguments into account for GpOffset and FpOffset,
