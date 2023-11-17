@@ -521,6 +521,34 @@ static llvm::Triple computeTargetTriple(const Driver &D,
   if (TargetTriple.contains("-unknown-gnu") || TargetTriple.contains("-pc-gnu"))
     Target.setOSName("hurd");
 
+  auto SetDefaultAppleTarget = [&Target]() {
+    if (Target.getVendorName().empty())
+      Target.setVendor(llvm::Triple::Apple);
+    if (Target.getVendor() == llvm::Triple::Apple &&
+        Target.getOSAndEnvironmentName().empty())
+      Target.setOSName("darwin10");
+  };
+
+  // Since '-arch' is an Apple-specific option, construct a default Apple triple
+  // when '-target' is not explicitely passed.
+  if (Args.hasArg(options::OPT_arch) && !Args.hasArg(options::OPT_target)) {
+    StringRef ArchName = Args.getLastArg(options::OPT_arch)->getValue();
+    if (Target.isOSBinFormatMachO()) {
+      // The default triple is already Apple-specific - just update the arch.
+      tools::darwin::setTripleTypeForMachOArchName(Target, ArchName, Args);
+    } else {
+      // The default triple is not Apple-specific - construct a new one to avoid
+      // handling unrelated info from the default one (e.g. environment).
+      Target = llvm::Triple(ArchName);
+      SetDefaultAppleTarget();
+    }
+  }
+
+  // Since arm64e arch is Apple-specific, set VendorName and OS correspondingly
+  // if not set already.
+  if (Target.getArchName() == "arm64e")
+    SetDefaultAppleTarget();
+
   // Handle Apple-specific options available here.
   if (Target.isOSBinFormatMachO()) {
     // If an explicit Darwin arch name is given, that trumps all.
