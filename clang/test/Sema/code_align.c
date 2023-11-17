@@ -118,13 +118,17 @@ void check_code_align_expression() {
 }
 
 #if __cplusplus >= 201103L
-template <int A, int B, int C, int D>
+template <int A, int B, int C, int D, int E>
 void code_align_dependent() {
   [[clang::code_align(C)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
   [[clang::code_align(A)]] // OK
   [[clang::code_align(A)]] // OK
+  for(int I=0; I<128; ++I) { bar(I); }
+
+  [[clang::code_align(A)]]
+  [[clang::code_align(E)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
   // cpp-local-error@+1{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was 23}}
@@ -137,8 +141,24 @@ void code_align_dependent() {
   for(int I=0; I<128; ++I) { bar(I); }
 }
 
+template<int ITMPL>
+void bar3() {
+  [[clang::code_align(8)]]
+  [[clang::code_align(ITMPL)]]
+  for(int I=0; I<128; ++I) { bar(I); }
+}
+
+template<int ITMPL1>
+void bar4() {
+  [[clang::code_align(ITMPL1)]]
+  [[clang::code_align(32)]]
+  for(int I=0; I<128; ++I) { bar(I); }
+}
+
 int main() {
-  code_align_dependent<8, 23, 32, -10>(); // #neg-instantiation
+  code_align_dependent<8, 23, 32, -10, 64>(); // #neg-instantiation
+  bar3 <4>();
+  bar4 <64>();
   return 0;
 }
 #endif
