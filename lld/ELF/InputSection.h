@@ -191,15 +191,15 @@ public:
 
   // Get a symbol that encloses this offset from within the section. If type is
   // not zero, return a symbol with the specified type.
-  Defined *getEnclosingSymbol(uint64_t offset, uint8_t type = 0);
-  Defined *getEnclosingFunction(uint64_t offset) {
+  Defined *getEnclosingSymbol(uint64_t offset, uint8_t type = 0) const;
+  Defined *getEnclosingFunction(uint64_t offset) const {
     return getEnclosingSymbol(offset, llvm::ELF::STT_FUNC);
   }
 
   // Returns a source location string. Used to construct an error message.
-  std::string getLocation(uint64_t offset);
-  std::string getSrcMsg(const Symbol &sym, uint64_t offset);
-  std::string getObjMsg(uint64_t offset);
+  std::string getLocation(uint64_t offset) const;
+  std::string getSrcMsg(const Symbol &sym, uint64_t offset) const;
+  std::string getObjMsg(uint64_t offset) const;
 
   // Each section knows how to relocate itself. These functions apply
   // relocations, assuming that Buf points to this section's copy in
