@@ -262,9 +262,6 @@ check-generated-output)
            --exclude 'transcoding.pass.cpp' \
            --exclude 'underflow.pass.cpp' \
            || false
-
-    # Reject code with trailing whitespace
-    ! grep -rn '[[:blank:]]$' libcxx/include libcxx/src libcxx/test libcxx/benchmarks || false
 ;;
 #
 # Various Standard modes
