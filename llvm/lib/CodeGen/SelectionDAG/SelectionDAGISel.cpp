@@ -192,6 +192,8 @@ static const bool ViewDAGCombine1 = false, ViewLegalizeTypesDAGs = false,
 /// traces subject to filter.
 static bool MatchFilterFuncs = false;
 
+/// LLVM_DEBUG messages that are specific to functions filtered by
+/// `-filter-print-dags-funcs`.
 #define ISEL_TRACE(X)                                                          \
   do {                                                                         \
     if (MatchFilterFuncs) {                                                    \
