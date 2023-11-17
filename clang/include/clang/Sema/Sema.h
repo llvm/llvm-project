@@ -11184,9 +11184,10 @@ public:
   VarDecl *buildCoroutinePromise(SourceLocation Loc);
   void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
 
-  // As a clang extension, enforces that a function returning a type marked with
-  // [[clang::coro_return_type]] must be a coroutine. A function marked with
-  // [[clang::coro_wrapper]] are still allowed to return such a type.
+  // As a clang extension, enforces that a non-coroutine function must be marked
+  // with [[clang::coro_wrapper]] if it returns a type marked with
+  // [[clang::coro_return_type]].
+  // Expects that FD is not a coroutine.
   void CheckCoroutineWrapper(FunctionDecl *FD);
   /// Lookup 'coroutine_traits' in std namespace and std::experimental
   /// namespace. The namespace found is recorded in Namespace.

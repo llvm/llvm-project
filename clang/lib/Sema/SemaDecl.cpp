@@ -15814,7 +15814,7 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
 }
 
 void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
-  if (!FD || getCurFunction()->isCoroutine())
+  if (!FD)
     return;
   RecordDecl *RD = FD->getReturnType()->getAsRecordDecl();
   if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
@@ -15841,7 +15841,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (getLangOpts().Coroutines) {
     if (FSI->isCoroutine())
       CheckCompletedCoroutineBody(FD, Body);
-    CheckCoroutineWrapper(FD);
+    else
+      CheckCoroutineWrapper(FD);
   }
 
   {
