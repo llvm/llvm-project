@@ -13,7 +13,7 @@ template <typename T> struct [[clang::coro_return_type]] Gen {
     suspend_always initial_suspend();
     suspend_always final_suspend() noexcept;
     void unhandled_exception();
-    void return_value(const T &t);
+    void return_value(T t);
 
     template <typename U>
     auto await_transform(const Gen<U> &) {
@@ -45,22 +45,31 @@ Co<int> non_marked_wrapper(int b) { return foo_coro(b); }
 } // namespace using_decl
 
 namespace lambdas {
+#define CORO_WRAPPER \
+  _Pragma("clang diagnostic push") \
+  _Pragma("clang diagnostic ignored \"-Wc++23-extensions\"") \
+  [[clang::coro_wrapper]] \
+  _Pragma("clang diagnostic pop")
+
 void foo() {
   auto coro_lambda = []() -> Gen<int> {
     co_return 1;
   };
   // expected-error@+1 {{neither a coroutine nor a coroutine wrapper}}
-  auto wrapper_lambda = []() -> Gen<int> {
+  auto not_allowed_wrapper = []() -> Gen<int> {
+    return foo_coro(1);
+  };
+  auto allowed_wrapper = [] CORO_WRAPPER() -> Gen<int> {
     return foo_coro(1);
   };
 }
 
-Co<int> coor_containing_lambda(int b) {
+Gen<int> coro_containing_lambda() {
   // expected-error@+1 {{neither a coroutine nor a coroutine wrapper}}
   auto wrapper_lambda = []() -> Gen<int> {
     return foo_coro(1);
   };
-  co_return wrapper_lambda();
+  co_return co_await wrapper_lambda();
 }
 } // namespace lambdas
 
