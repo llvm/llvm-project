@@ -3,7 +3,7 @@
 
 func.func @emitc_call_operand() {
   %p0 = emitc.literal "M_PI" : f32
-  %1 = emitc.call "foo"(%p0) : (f32) -> f32
+  %1 = emitc.call_opaque "foo"(%p0) : (f32) -> f32
   return
 }
 // CPP-DEFAULT: void emitc_call_operand() {
@@ -15,7 +15,7 @@ func.func @emitc_call_operand() {
 
 func.func @emitc_call_operand_arg() {
   %p0 = emitc.literal "M_PI" : f32
-  %1 = emitc.call "bar"(%p0) {args = [42 : i32, 0 : index]} : (f32) -> f32
+  %1 = emitc.call_opaque "bar"(%p0) {args = [42 : i32, 0 : index]} : (f32) -> f32
   return
 }
 // CPP-DEFAULT: void emitc_call_operand_arg() {
