@@ -346,6 +346,17 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
     return (offset - data_offset) + subexpr_len;
   }
 
+  case DW_OP_WASM_location: {
+    uint8_t wasm_op = data.GetU8(&offset);
+    if (wasm_op == 3) {
+      data.GetU32(&offset);
+    }
+    else {
+      data.GetULEB128(&offset);
+    }
+    return offset - data_offset;
+  }
+
   default:
     if (!dwarf_cu) {
       return LLDB_INVALID_OFFSET;
@@ -2592,6 +2603,37 @@ bool DWARFExpression::Evaluate(
                     DW_OP_value_to_name(op));
         return false;
       }
+      break;
+    }
+
+    case DW_OP_WASM_location: {
+      uint8_t wasm_op = opcodes.GetU8(&offset);
+      uint32_t index;
+
+      /* LLDB doesn't have an address space to represents WebAssembly Locals,
+       * GLobals and operand stacks.
+       * We encode these elements into virtual registers: 
+       *   | tag: 2 bits | index: 30 bits |
+       *   where tag is:
+       *    0: Not a WebAssembly location
+       *    1: Local
+       *    2: Global
+       *    3: Operand stack value 
+       */
+      if (wasm_op == 3) {
+        index = opcodes.GetU32(&offset);
+        wasm_op = 1;
+      } else {
+        index = opcodes.GetULEB128(&offset);
+      }
+
+      reg_num = (((wasm_op + 1) & 0x03) << 30) | (index & 0x3fffffff);
+
+      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, error_ptr, tmp))
+        stack.push_back(tmp);
+      else
+        return false;
+
       break;
     }
 
