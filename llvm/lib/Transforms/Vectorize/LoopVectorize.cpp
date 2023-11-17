@@ -9562,8 +9562,12 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
   InnerLoopVectorizer::VectorParts BlockInMaskParts(State.UF);
   bool isMaskRequired = getMask();
   if (isMaskRequired)
-    for (unsigned Part = 0; Part < State.UF; ++Part)
-      BlockInMaskParts[Part] = State.get(getMask(), Part);
+    for (unsigned Part = 0; Part < State.UF; ++Part) {
+      Value *Mask = State.get(getMask(), Part);
+      if (isReverse())
+        Mask = Builder.CreateVectorReverse(Mask, "reverse");
+      BlockInMaskParts[Part] = Mask;
+    }
 
   const auto CreateVecPtr = [&](unsigned Part, Value *Ptr) -> Value * {
     // Calculate the pointer for the specific unroll-part.
@@ -9595,9 +9599,6 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
       PartPtr = Builder.CreateGEP(ScalarDataTy, Ptr, NumElt, "", InBounds);
       PartPtr =
           Builder.CreateGEP(ScalarDataTy, PartPtr, LastLane, "", InBounds);
-      if (isMaskRequired) // Reverse of a null all-one mask is a null mask.
-        BlockInMaskParts[Part] =
-            Builder.CreateVectorReverse(BlockInMaskParts[Part], "reverse");
     } else {
       Value *Increment = createStepForVF(Builder, IndexTy, State.VF, Part);
       PartPtr = Builder.CreateGEP(ScalarDataTy, Ptr, Increment, "", InBounds);
