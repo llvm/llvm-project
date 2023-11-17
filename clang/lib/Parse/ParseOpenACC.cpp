@@ -10,18 +10,79 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
+#include "clang/Parse/RAIIObjectsForParser.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;
+using namespace llvm;
 
+namespace {
+
+// Translate single-token string representations to the OpenACC Directive Kind.
+OpenACCDirectiveKind GetOpenACCDirectiveKind(StringRef Name) {
+  return llvm::StringSwitch<OpenACCDirectiveKind>(Name)
+      .Case("parallel", OpenACCDirectiveKind::Parallel)
+      .Default(OpenACCDirectiveKind::Invalid);
+}
+
+// Parse and consume the tokens for OpenACC Directive/Construct kinds.
+OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
+  Token FirstTok = P.getCurToken();
+  P.ConsumeToken();
+  std::string FirstTokSpelling = P.getPreprocessor().getSpelling(FirstTok);
+
+  OpenACCDirectiveKind DirKind = GetOpenACCDirectiveKind(FirstTokSpelling);
+
+  if (DirKind == OpenACCDirectiveKind::Invalid)
+    P.Diag(FirstTok, diag::err_acc_invalid_directive) << FirstTokSpelling;
+
+  return DirKind;
+}
+
+void ParseOpenACCClauseList(Parser &P) {
+  // FIXME: In the future, we'll start parsing the clauses here, but for now we
+  // haven't implemented that, so just emit the unimplemented diagnostic and
+  // fail reasonably.
+  if (P.getCurToken().isNot(tok::annot_pragma_openacc_end))
+    P.Diag(P.getCurToken(), diag::warn_pragma_acc_unimplemented_clause_parsing);
+}
+
+void ParseOpenACCDirective(Parser &P) {
+  ParseOpenACCDirectiveKind(P);
+
+  // Parses the list of clauses, if present.
+  ParseOpenACCClauseList(P);
+
+  P.Diag(P.getCurToken(), diag::warn_pragma_acc_unimplemented);
+  P.SkipUntil(tok::annot_pragma_openacc_end);
+}
+
+} // namespace
+
+// Parse OpenACC directive on a declaration.
 Parser::DeclGroupPtrTy Parser::ParseOpenACCDirectiveDecl() {
-  Diag(Tok, diag::warn_pragma_acc_unimplemented);
-  SkipUntil(tok::annot_pragma_openacc_end);
+  assert(Tok.is(tok::annot_pragma_openacc) && "expected OpenACC Start Token");
+
+  ParsingOpenACCDirectiveRAII DirScope(*this);
+  ConsumeAnnotationToken();
+
+  ParseOpenACCDirective(*this);
+
   return nullptr;
 }
+
+// Parse OpenACC Directive on a Statement.
 StmtResult Parser::ParseOpenACCDirectiveStmt() {
-  Diag(Tok, diag::warn_pragma_acc_unimplemented);
-  SkipUntil(tok::annot_pragma_openacc_end);
+  assert(Tok.is(tok::annot_pragma_openacc) && "expected OpenACC Start Token");
+
+  ParsingOpenACCDirectiveRAII DirScope(*this);
+  ConsumeAnnotationToken();
+
+  ParseOpenACCDirective(*this);
+
   return StmtEmpty();
 }
