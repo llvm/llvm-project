@@ -20709,6 +20709,11 @@ TEST_F(FormatTest, CatchExceptionReferenceBinding) {
 TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
   auto Style = getLLVMStyle();
   Style.AlignArrayOfStructures = FormatStyle::AIAS_Right;
+  verifyNoCrash("f({\n"
+                "table({}, table({{\"\", false}}, {}))\n"
+                "});",
+                Style);
+
   Style.AlignConsecutiveAssignments.Enabled = true;
   Style.AlignConsecutiveDeclarations.Enabled = true;
   verifyFormat("struct test demo[] = {\n"
@@ -21139,6 +21144,33 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
       "test demo[] = {{56, 23, \"hello world i am a very long line "
       "that really, in any just world, ought to be split over multiple "
       "lines\"},{-1, 93463, \"world\"},{7, 5, \"!!\"},};",
+      Style);
+
+  Style.ColumnLimit = 25;
+  verifyNoCrash("Type foo{\n"
+                "    {\n"
+                "        1,  // A\n"
+                "        2,  // B\n"
+                "        3,  // C\n"
+                "    },\n"
+                "    \"hello\",\n"
+                "};",
+                Style);
+  verifyNoCrash("Type object[X][Y] = {\n"
+                "    {{val}, {val}, {val}},\n"
+                "    {{val}, {val}, // some comment\n"
+                "                   {val}}\n"
+                "};",
+                Style);
+
+  Style.ColumnLimit = 120;
+  verifyNoCrash(
+      "T v[] {\n"
+      "    { AAAAAAAAAAAAAAAAAAAAAAAAA::aaaaaaaaaaaaaaaaaaa, "
+      "AAAAAAAAAAAAAAAAAAAAAAAAA::aaaaaaaaaaaaaaaaaaaaaaaa, 1, 0.000000000f, "
+      "\"00000000000000000000000000000000000000000000000000000000"
+      "00000000000000000000000000000000000000000000000000000000\" },\n"
+      "};",
       Style);
 }
 
