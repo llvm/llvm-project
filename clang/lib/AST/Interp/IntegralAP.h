@@ -102,7 +102,12 @@ public:
 
   template <bool InputSigned>
   static IntegralAP from(IntegralAP<InputSigned> V, unsigned NumBits = 0) {
-    return IntegralAP<Signed>(V.V);
+    if (NumBits == 0)
+      NumBits = V.bitWidth();
+
+    if constexpr (InputSigned)
+      return IntegralAP<Signed>(V.V.sextOrTrunc(NumBits));
+    return IntegralAP<Signed>(V.V.zextOrTrunc(NumBits));
   }
 
   template <unsigned Bits, bool InputSigned>
@@ -191,17 +196,15 @@ public:
   }
 
   static bool add(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    return CheckAddSubUB<std::plus>(A, B, OpBits, R);
+    return CheckAddSubMulUB<std::plus>(A, B, OpBits, R);
   }
 
   static bool sub(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    return CheckAddSubUB<std::minus>(A, B, OpBits, R);
+    return CheckAddSubMulUB<std::minus>(A, B, OpBits, R);
   }
 
   static bool mul(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
-    return false;
+    return CheckAddSubMulUB<std::multiplies>(A, B, OpBits, R);
   }
 
   static bool rem(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
@@ -262,8 +265,8 @@ public:
 
 private:
   template <template <typename T> class Op>
-  static bool CheckAddSubUB(const IntegralAP &A, const IntegralAP &B,
-                            unsigned BitWidth, IntegralAP *R) {
+  static bool CheckAddSubMulUB(const IntegralAP &A, const IntegralAP &B,
+                               unsigned BitWidth, IntegralAP *R) {
     if constexpr (!Signed) {
       R->V = Op<APInt>{}(A.V, B.V);
       return false;
