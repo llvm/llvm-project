@@ -6382,6 +6382,7 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
   case CallingConv::Tail:
+  case CallingConv::GRAAL:
     if (Subtarget->isTargetWindows()) {
       if (IsVarArg) {
         if (Subtarget->isWindowsArm64EC())
@@ -9889,9 +9890,10 @@ Register AArch64TargetLowering::
 getRegisterByName(const char* RegName, LLT VT, const MachineFunction &MF) const {
   Register Reg = MatchRegisterName(RegName);
   if (AArch64::X1 <= Reg && Reg <= AArch64::X28) {
-    const MCRegisterInfo *MRI = Subtarget->getRegisterInfo();
+    const AArch64RegisterInfo *MRI = Subtarget->getRegisterInfo();
     unsigned DwarfRegNum = MRI->getDwarfRegNum(Reg, false);
-    if (!Subtarget->isXRegisterReserved(DwarfRegNum))
+    if (!Subtarget->isXRegisterReserved(DwarfRegNum) &&
+        !MRI->isReservedReg(MF, Reg))
       Reg = 0;
   }
   if (Reg)
