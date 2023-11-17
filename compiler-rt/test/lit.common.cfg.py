@@ -803,7 +803,7 @@ for postfix in ["2", "1", ""]:
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
-                "-Wl,-z,origin -Wl,-rpath,\$ORIGIN -L%T -l%xdynamiclib_namespec"
+                r"-Wl,-z,origin -Wl,-rpath,\$ORIGIN -L%T -l%xdynamiclib_namespec"
                 + postfix,
             )
         )
@@ -812,7 +812,7 @@ for postfix in ["2", "1", ""]:
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
-                "-Wl,-rpath,\$ORIGIN -L%T -l%xdynamiclib_namespec" + postfix,
+                r"-Wl,-rpath,\$ORIGIN -L%T -l%xdynamiclib_namespec" + postfix,
             )
         )
         config.substitutions.append(("%ld_flags_rpath_so" + postfix, ""))
@@ -820,7 +820,7 @@ for postfix in ["2", "1", ""]:
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
-                "-Wl,-R\$ORIGIN -L%T -l%xdynamiclib_namespec" + postfix,
+                r"-Wl,-R\$ORIGIN -L%T -l%xdynamiclib_namespec" + postfix,
             )
         )
         config.substitutions.append(("%ld_flags_rpath_so" + postfix, ""))
