@@ -7659,16 +7659,24 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             << "SLP: perfect diamond match for gather bundle "
             << shortBundleName(VL) << ".\n");
         // Restore the mask for previous partially matched values.
-        for (auto [I, V] : enumerate(E->Scalars)) {
-          if (isa<PoisonValue>(V)) {
-            Mask[I] = PoisonMaskElem;
-            continue;
+        Mask.resize(E->Scalars.size());
+        const TreeEntry *FrontTE = Entries.front().front();
+        if (FrontTE->ReorderIndices.empty() &&
+            ((FrontTE->ReuseShuffleIndices.empty() &&
+              E->Scalars.size() == FrontTE->Scalars.size()) ||
+             (E->Scalars.size() == FrontTE->ReuseShuffleIndices.size()))) {
+          std::iota(Mask.begin(), Mask.end(), 0);
+        } else {
+          for (auto [I, V] : enumerate(E->Scalars)) {
+            if (isa<PoisonValue>(V)) {
+              Mask[I] = PoisonMaskElem;
+              continue;
+            }
+            Mask[I] = FrontTE->findLaneForValue(V);
           }
-          if (Mask[I] == PoisonMaskElem)
-            Mask[I] = Entries.front().front()->findLaneForValue(V);
         }
-        Estimator.add(*Entries.front().front(), Mask);
-        return Estimator.finalize(E->ReuseShuffleIndices);
+        Estimator.add(*FrontTE, Mask);
+        return Estimator.finalize(E->getCommonMask());
       }
       if (!Resized) {
         if (GatheredScalars.size() != VF &&
@@ -8556,7 +8564,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // profitable for the vectorization, we can skip it, if the cost threshold is
   // default. The cost of vectorized PHI nodes is almost always 0 + the cost of
   // gathers/buildvectors.
-  constexpr unsigned Limit = 4;
+  constexpr int Limit = 4;
   if (!ForReduction && !SLPCostThreshold.getNumOccurrences() &&
       !VectorizableTree.empty() &&
       all_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
@@ -9460,10 +9468,19 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     auto *It = find_if(FirstEntries, [=](const TreeEntry *EntryPtr) {
       return EntryPtr->isSame(VL) || EntryPtr->isSame(TE->Scalars);
     });
-    if (It != FirstEntries.end() && (*It)->getVectorFactor() == VL.size()) {
+    if (It != FirstEntries.end() &&
+        ((*It)->getVectorFactor() == VL.size() ||
+         ((*It)->getVectorFactor() == TE->Scalars.size() &&
+          TE->ReuseShuffleIndices.size() == VL.size() &&
+          (*It)->isSame(TE->Scalars)))) {
       Entries.push_back(*It);
-      std::iota(std::next(Mask.begin(), Part * VL.size()),
-                std::next(Mask.begin(), (Part + 1) * VL.size()), 0);
+      if ((*It)->getVectorFactor() == VL.size()) {
+        std::iota(std::next(Mask.begin(), Part * VL.size()),
+                  std::next(Mask.begin(), (Part + 1) * VL.size()), 0);
+      } else {
+        SmallVector<int> CommonMask = TE->getCommonMask();
+        copy(CommonMask, Mask.begin());
+      }
       // Clear undef scalars.
       for (int I = 0, Sz = VL.size(); I < Sz; ++I)
         if (isa<PoisonValue>(VL[I]))
@@ -10221,7 +10238,7 @@ public:
                                       });
                                     })) &&
                "Expected first part or all previous parts masked.");
-        copy(SubMask, VecMask.begin());
+        copy(SubMask, std::next(VecMask.begin(), Part * SliceSize));
       } else {
         unsigned VF = cast<FixedVectorType>(Vec->getType())->getNumElements();
         if (Vec->getType() != SubVec->getType()) {
@@ -10244,7 +10261,7 @@ public:
   /// Checks if the specified entry \p E needs to be delayed because of its
   /// dependency nodes.
   Value *needToDelay(const TreeEntry *E,
-                     ArrayRef<SmallVector<const TreeEntry *>> Deps) {
+                     ArrayRef<SmallVector<const TreeEntry *>> Deps) const {
     // No need to delay emission if all deps are ready.
     if (all_of(Deps, [](ArrayRef<const TreeEntry *> TEs) {
           return all_of(
@@ -10258,6 +10275,16 @@ public:
     return Builder.CreateAlignedLoad(
         VecTy, PoisonValue::get(PointerType::getUnqual(VecTy->getContext())),
         MaybeAlign());
+  }
+  /// Adds 2 input vectors (in form of tree entries) and the mask for their
+  /// shuffling.
+  void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
+    add(E1.VectorizedValue, E2.VectorizedValue, Mask);
+  }
+  /// Adds single input vector (in form of tree entry) and the mask for its
+  /// shuffling.
+  void add(const TreeEntry &E1, ArrayRef<int> Mask) {
+    add(E1.VectorizedValue, Mask);
   }
   /// Adds 2 input vectors and the mask for their shuffling.
   void add(Value *V1, Value *V2, ArrayRef<int> Mask) {
@@ -10569,8 +10596,12 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
         });
     if (It == VectorizableTree.end())
       return false;
-    if (Mask.size() <= InputVF &&
-        ShuffleVectorInst::isIdentityMask(Mask, Mask.size())) {
+    int Idx;
+    if ((Mask.size() < InputVF &&
+         ShuffleVectorInst::isExtractSubvectorMask(Mask, InputVF, Idx) &&
+         Idx == 0) ||
+        (Mask.size() == InputVF &&
+         ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))) {
       std::iota(Mask.begin(), Mask.end(), 0);
     } else {
       unsigned I =
@@ -10653,6 +10684,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
             << "SLP: perfect diamond match for gather bundle "
             << shortBundleName(E->Scalars) << ".\n");
         // Restore the mask for previous partially matched values.
+        Mask.resize(E->Scalars.size());
         const TreeEntry *FrontTE = Entries.front().front();
         if (FrontTE->ReorderIndices.empty() &&
             ((FrontTE->ReuseShuffleIndices.empty() &&
@@ -10668,7 +10700,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
             Mask[I] = FrontTE->findLaneForValue(V);
           }
         }
-        ShuffleBuilder.add(FrontTE->VectorizedValue, Mask);
+        ShuffleBuilder.add(*FrontTE, Mask);
         Res = ShuffleBuilder.finalize(E->getCommonMask());
         return Res;
       }
@@ -10846,17 +10878,14 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
         VecMask.assign(VecMask.size(), PoisonMaskElem);
         copy(SubMask, std::next(VecMask.begin(), I * SliceSize));
         if (TEs.size() == 1) {
-          IsUsedInExpr &= FindReusedSplat(
-              VecMask,
-              cast<FixedVectorType>(TEs.front()->VectorizedValue->getType())
-                  ->getNumElements());
-          ShuffleBuilder.add(TEs.front()->VectorizedValue, VecMask);
+          IsUsedInExpr &=
+              FindReusedSplat(VecMask, TEs.front()->getVectorFactor());
+          ShuffleBuilder.add(*TEs.front(), VecMask);
           IsNonPoisoned &=
               isGuaranteedNotToBePoison(TEs.front()->VectorizedValue);
         } else {
           IsUsedInExpr = false;
-          ShuffleBuilder.add(TEs.front()->VectorizedValue,
-                             TEs.back()->VectorizedValue, VecMask);
+          ShuffleBuilder.add(*TEs.front(), *TEs.back(), VecMask);
           IsNonPoisoned &=
               isGuaranteedNotToBePoison(TEs.front()->VectorizedValue) &&
               isGuaranteedNotToBePoison(TEs.back()->VectorizedValue);

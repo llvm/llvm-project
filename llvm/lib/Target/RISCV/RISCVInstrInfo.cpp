@@ -2441,6 +2441,23 @@ MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
   return It;
 }
 
+std::optional<RegImmPair> RISCVInstrInfo::isAddImmediate(const MachineInstr &MI,
+                                                         Register Reg) const {
+  // TODO: Handle cases where Reg is a super- or sub-register of the
+  // destination register.
+  const MachineOperand &Op0 = MI.getOperand(0);
+  if (!Op0.isReg() || Reg != Op0.getReg())
+    return std::nullopt;
+
+  // Don't consider ADDIW as a candidate because the caller may not be aware
+  // of its sign extension behaviour.
+  if (MI.getOpcode() == RISCV::ADDI && MI.getOperand(1).isReg() &&
+      MI.getOperand(2).isImm())
+    return RegImmPair{MI.getOperand(1).getReg(), MI.getOperand(2).getImm()};
+
+  return std::nullopt;
+}
+
 // MIR printer helper function to annotate Operands with a comment.
 std::string RISCVInstrInfo::createMIROperandComment(
     const MachineInstr &MI, const MachineOperand &Op, unsigned OpIdx,

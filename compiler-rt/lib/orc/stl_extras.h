@@ -13,6 +13,7 @@
 #ifndef ORC_RT_STL_EXTRAS_H
 #define ORC_RT_STL_EXTRAS_H
 
+#include <cstdint>
 #include <utility>
 #include <tuple>
 
@@ -27,6 +28,17 @@ template <class Ty> struct identity {
   Ty &operator()(Ty &self) const { return self; }
   const Ty &operator()(const Ty &self) const { return self; }
 };
+
+/// Substitute for std::bit_ceil.
+constexpr uint64_t bit_ceil(uint64_t Val) noexcept {
+  Val |= (Val >> 1);
+  Val |= (Val >> 2);
+  Val |= (Val >> 4);
+  Val |= (Val >> 8);
+  Val |= (Val >> 16);
+  Val |= (Val >> 32);
+  return Val + 1;
+}
 
 } // namespace __orc_rt
 
