@@ -1101,7 +1101,7 @@ private:
   }
 };
 
-// FIXME: these are redundant if CmpInst < ninaryOperator
+// FIXME: these are redundant if CmpInst < BinaryOperator
 template <>
 struct OperandTraits<CmpInst> : public FixedNumOperandTraits<CmpInst, 2> {
 };
