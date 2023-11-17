@@ -53,6 +53,11 @@ class LinuxCoreTestCase(TestBase):
         """Test that lldb can read the process information from an x86_64 linux core file."""
         self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions, "a.out")
 
+    @skipIfLLVMTargetMissing("X86")
+    def test_x86_64_fd(self):
+        """Test that lldb can read the process information from an x86_64 linux core file."""
+        self.do_test_fd("linux-x86_64", self._x86_64_pid, self._x86_64_regions, "a.out")
+
     @skipIfLLVMTargetMissing("SystemZ")
     def test_s390x(self):
         """Test that lldb can read the process information from an s390x linux core file."""
@@ -756,6 +761,19 @@ class LinuxCoreTestCase(TestBase):
         self.check_all(process, pid, region_count, thread_name)
 
         self.dbg.DeleteTarget(target)
+
+    def do_test_fd(self, filename, pid, region_count, thread_name):
+        file_object = open(filename + ".core", "r")
+        fd = file_object.fileno()
+        file = lldb.SBFile(fd, "r", True)
+        target = self.dbg.CreateTarget(filename + ".out")
+        error = lldb.SBError()
+        process = target.LoadCore(file, error)
+
+        self.check_all(process, pid, region_count, thread_name)
+
+        self.dbg.DeleteTarget(target)
+
 
 
 def replace_path(binary, replace_from, replace_to):
