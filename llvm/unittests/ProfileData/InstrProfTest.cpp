@@ -77,7 +77,7 @@ static const auto Err = [](Error E) {
   FAIL();
 };
 
-typedef std::vector<std::vector<InstrProfValueData>> VDArray;
+typedef std::vector<MutableArrayRef<InstrProfValueData>> VDArray;
 
 // 'ValueDataArray' should be a non-const reference, and the array element is
 // a vector of InstrProfRecord. This is mainly because method
@@ -107,18 +107,6 @@ struct MaybeSparseInstrProfTest : public InstrProfTest,
     Writer.setValueProfDataEndianness(llvm::endianness::little);
     if (Reader)
       Reader->setValueProfDataEndianness(llvm::endianness::little);
-  }
-
-private:
-  // Returns a copy rather than a reference so callers can modify the result.
-  static VDArray getFuncVDArrayForReaderWriterTest() {
-    static std::vector<InstrProfValueData> FuncVD0 = {
-        {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
-    static std::vector<InstrProfValueData> FuncVD2 = {{uint64_t(callee1), 1},
-                                                      {uint64_t(callee2), 2}};
-    static std::vector<InstrProfValueData> FuncVD3 = {{uint64_t(callee1), 1}};
-    VDArray FuncVD = {FuncVD0, {}, FuncVD2, FuncVD3};
-    return FuncVD;
   }
 
 public:
@@ -172,8 +160,12 @@ public:
     NamedInstrProfRecord Record1("caller", 0x1234, {1, 2});
 
     // 4 function value sites.
-    VDArray FuncVD =
-        MaybeSparseInstrProfTest::getFuncVDArrayForReaderWriterTest();
+    std::vector<InstrProfValueData> FuncVD0 = {
+        {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
+    std::vector<InstrProfValueData> FuncVD2 = {{uint64_t(callee1), 1},
+                                               {uint64_t(callee2), 2}};
+    std::vector<InstrProfValueData> FuncVD3 = {{uint64_t(callee1), 1}};
+    VDArray FuncVD = {FuncVD0, {}, FuncVD2, FuncVD3};
     addValueProfData(Record1, IPVK_IndirectCallTarget, FuncVD);
 
     if (ProfWeight == 1U) {
@@ -758,7 +750,7 @@ TEST_F(InstrProfTest, test_irpgo_read_deprecated_names) {
       Succeeded());
 }
 
-TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write) {
+TEST_P(MaybeSparseInstrProfTest, icall_data_read_write) {
   testICallDataReadWrite(1 /* ProfWeight */);
 }
 
@@ -858,60 +850,42 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_EQ(1U, ValueData[3].Count);
 }
 
-TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_with_weight) {
+TEST_P(MaybeSparseInstrProfTest, icall_data_read_write_with_weight) {
   testICallDataReadWrite(10 /* ProfWeight */);
 }
 
-TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_big_endian) {
+TEST_P(MaybeSparseInstrProfTest, icall_data_read_write_big_endian) {
   testICallDataReadWrite(1 /* ProfWeight */, llvm::endianness::big);
 }
 
-TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge) {
+TEST_P(MaybeSparseInstrProfTest, icall_data_merge) {
   static const char caller[] = "caller";
   NamedInstrProfRecord Record11(caller, 0x1234, {1, 2});
   NamedInstrProfRecord Record12(caller, 0x1234, {1, 2});
 
   // 5 value sites.
-  Record11.reserveSites(IPVK_IndirectCallTarget, 5);
-  InstrProfValueData VD0[] = {{uint64_t(callee1), 1},
-                              {uint64_t(callee2), 2},
-                              {uint64_t(callee3), 3},
-                              {uint64_t(callee4), 4}};
-  Record11.addValueData(IPVK_IndirectCallTarget, 0, VD0, 4, nullptr);
-
-  // No value profile data at the second site.
-  Record11.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
-
-  InstrProfValueData VD2[] = {
+  std::vector<InstrProfValueData> VD0 = {{uint64_t(callee1), 1},
+                                         {uint64_t(callee2), 2},
+                                         {uint64_t(callee3), 3},
+                                         {uint64_t(callee4), 4}};
+  std::vector<InstrProfValueData> VD2 = {
       {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
-  Record11.addValueData(IPVK_IndirectCallTarget, 2, VD2, 3, nullptr);
-
-  InstrProfValueData VD3[] = {{uint64_t(callee1), 1}};
-  Record11.addValueData(IPVK_IndirectCallTarget, 3, VD3, 1, nullptr);
-
-  InstrProfValueData VD4[] = {{uint64_t(callee1), 1},
-                              {uint64_t(callee2), 2},
-                              {uint64_t(callee3), 3}};
-  Record11.addValueData(IPVK_IndirectCallTarget, 4, VD4, 3, nullptr);
+  std::vector<InstrProfValueData> VD3 = {{uint64_t(callee1), 1}};
+  std::vector<InstrProfValueData> VD4 = {
+      {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
+  VDArray FuncVD0 = {VD0, {}, VD2, VD3, VD4};
+  addValueProfData(Record11, IPVK_IndirectCallTarget, FuncVD0);
 
   // A different record for the same caller.
-  Record12.reserveSites(IPVK_IndirectCallTarget, 5);
-  InstrProfValueData VD02[] = {{uint64_t(callee2), 5}, {uint64_t(callee3), 3}};
-  Record12.addValueData(IPVK_IndirectCallTarget, 0, VD02, 2, nullptr);
 
-  // No value profile data at the second site.
-  Record12.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
-
-  InstrProfValueData VD22[] = {
+  std::vector<InstrProfValueData> VD02 = {{uint64_t(callee2), 5},
+                                          {uint64_t(callee3), 3}};
+  std::vector<InstrProfValueData> VD22 = {
       {uint64_t(callee2), 1}, {uint64_t(callee3), 3}, {uint64_t(callee4), 4}};
-  Record12.addValueData(IPVK_IndirectCallTarget, 2, VD22, 3, nullptr);
-
-  Record12.addValueData(IPVK_IndirectCallTarget, 3, nullptr, 0, nullptr);
-
-  InstrProfValueData VD42[] = {{uint64_t(callee1), 1},
-                               {uint64_t(callee2), 2},
-                               {uint64_t(callee3), 3}};
-  Record12.addValueData(IPVK_IndirectCallTarget, 4, VD42, 3, nullptr);
+  std::vector<InstrProfValueData> VD42 = {
+      {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
+  VDArray FuncVD1 = {VD02, {}, VD22, {}, VD42};
+  addValueProfData(Record12, IPVK_IndirectCallTarget, FuncVD1);
 
   Writer.addRecord(std::move(Record11), Err);
   // Merge profile data.
