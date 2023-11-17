@@ -15,7 +15,7 @@ using namespace lldb_private;
 
 WatchpointResource::WatchpointResource(lldb::addr_t addr, size_t size,
                                        bool read, bool write)
-    : m_id(LLDB_INVALID_WATCHPOINT_RESOURCE_ID), m_addr(addr), m_size(size),
+    : m_id(GetNextID()), m_addr(addr), m_size(size),
       m_watch_read(read), m_watch_write(write) {}
 
 WatchpointResource::~WatchpointResource() {
@@ -114,4 +114,9 @@ bool WatchpointResource::ShouldStop(StoppointCallbackContext *context) {
 
 void WatchpointResource::Dump(Stream *s) const {
   return; // LWP_TODO
+}
+
+wp_resource_id_t WatchpointResource::GetNextID() {
+  static wp_resource_id_t g_next_id = 0;
+  return ++g_next_id;
 }

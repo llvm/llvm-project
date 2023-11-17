@@ -22,40 +22,8 @@ wp_resource_id_t
 WatchpointResourceList::Add(const WatchpointResourceSP &wp_res_sp) {
   Log *log = GetLog(LLDBLog::Watchpoints);
   std::lock_guard<std::mutex> guard(m_mutex);
-
   LLDB_LOGF(log, "WatchpointResourceList::Add(addr 0x%" PRIx64 " size %zu)",
             wp_res_sp->GetLoadAddress(), wp_res_sp->GetByteSize());
-
-  // The goal is to have the wp_resource_id_t match the actual hardware
-  // watchpoint register number.  If we assume that the remote stub is
-  // setting them in the register context in the same order that they
-  // are sent from lldb, and if a watchpoint is removed and then a new
-  // one is added and gets the same register number, then we can
-  // iterate over all used IDs looking for the first unused number.
-
-  // If the Process was able to find the actual hardware watchpoint register
-  // number that was used, it can set the ID for the WatchpointResource
-  // before we get here.
-
-  if (wp_res_sp->GetID() == LLDB_INVALID_WATCHPOINT_RESOURCE_ID) {
-    std::set<wp_resource_id_t> used_ids;
-    size_t size = m_resources.size();
-    for (size_t i = 0; i < size; ++i)
-      used_ids.insert(m_resources[i]->GetID());
-
-    wp_resource_id_t best = 0;
-    for (wp_resource_id_t id : used_ids)
-      if (id == best)
-        best++;
-      else
-        break;
-
-    LLDB_LOGF(log,
-              "WatchpointResourceList::Add assigning next "
-              "available WatchpointResource ID, %u",
-              best);
-    wp_res_sp->SetID(best);
-  }
 
   m_resources.push_back(wp_res_sp);
   return wp_res_sp->GetID();

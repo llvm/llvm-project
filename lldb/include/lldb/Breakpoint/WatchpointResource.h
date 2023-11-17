@@ -142,6 +142,8 @@ protected:
   void BumpHitCounts();
 
 private:
+  static lldb::wp_resource_id_t GetNextID();
+
   lldb::wp_resource_id_t m_id;
 
   // Start address & size aligned & expanded to be a valid watchpoint
