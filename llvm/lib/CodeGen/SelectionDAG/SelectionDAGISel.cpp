@@ -142,6 +142,12 @@ UseMBPI("use-mbpi",
         cl::init(true), cl::Hidden);
 
 #ifndef NDEBUG
+static cl::list<std::string> FilterDAGFuncNames(
+    "filter-print-dags-funcs", cl::Hidden, cl::value_desc("function names"),
+    cl::desc("Only print DAGs of functions whose names "
+             "are in this list for all debug-only=" DEBUG_TYPE " traces"),
+    cl::CommaSeparated);
+
 static cl::opt<std::string>
 FilterDAGBasicBlockName("filter-view-dags", cl::Hidden,
                         cl::desc("Only display the basic block whose name "
@@ -179,6 +185,19 @@ static const bool ViewDAGCombine1 = false, ViewLegalizeTypesDAGs = false,
                   ViewDAGCombine2 = false, ViewISelDAGs = false,
                   ViewSchedDAGs = false, ViewSUnitDAGs = false;
 #endif
+
+/// True if the current processing function matches any of the names in
+/// FilterDAGFuncNames. Ideally this variable should be a member of
+/// SelectionDAGISel but some of the static functions in this file also print
+/// traces subject to filter.
+static bool MatchFilterFuncs = false;
+
+#define ISEL_TRACE(X)                                                          \
+  do {                                                                         \
+    if (MatchFilterFuncs) {                                                    \
+      LLVM_DEBUG(X);                                                           \
+    }                                                                          \
+  } while (false)
 
 //===---------------------------------------------------------------------===//
 ///
@@ -232,9 +251,9 @@ namespace llvm {
       if (NewOptLevel != SavedOptLevel) {
         IS.OptLevel = NewOptLevel;
         IS.TM.setOptLevel(NewOptLevel);
-        LLVM_DEBUG(dbgs() << "\nChanging optimization level for Function "
+        ISEL_TRACE(dbgs() << "\nChanging optimization level for Function "
                           << IS.MF->getFunction().getName() << "\n");
-        LLVM_DEBUG(dbgs() << "\tBefore: -O" << static_cast<int>(SavedOptLevel)
+        ISEL_TRACE(dbgs() << "\tBefore: -O" << static_cast<int>(SavedOptLevel)
                           << " ; After: -O" << static_cast<int>(NewOptLevel)
                           << "\n");
         if (NewOptLevel == CodeGenOptLevel::None)
@@ -251,10 +270,11 @@ namespace llvm {
     ~OptLevelChanger() {
       if (IS.OptLevel == SavedOptLevel)
         return;
-      LLVM_DEBUG(dbgs() << "\nRestoring optimization level for Function "
+      ISEL_TRACE(dbgs() << "\nRestoring optimization level for Function "
                         << IS.MF->getFunction().getName() << "\n");
-      LLVM_DEBUG(dbgs() << "\tBefore: -O" << static_cast<int>(IS.OptLevel)
-                        << " ; After: -O" << static_cast<int>(SavedOptLevel) << "\n");
+      ISEL_TRACE(dbgs() << "\tBefore: -O" << static_cast<int>(IS.OptLevel)
+                        << " ; After: -O" << static_cast<int>(SavedOptLevel)
+                        << "\n");
       IS.OptLevel = SavedOptLevel;
       IS.TM.setOptLevel(SavedOptLevel);
       IS.TM.setFastISel(SavedFastISel);
@@ -403,6 +423,15 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   const Function &Fn = mf.getFunction();
   MF = &mf;
 
+#ifndef NDEBUG
+  static std::unordered_set<std::string> DumpDAGFuncNames(
+      FilterDAGFuncNames.begin(), FilterDAGFuncNames.end());
+  MatchFilterFuncs = DumpDAGFuncNames.empty() ||
+                     DumpDAGFuncNames.count(std::string(Fn.getName()));
+#else
+  (void)MatchFilterFuncs;
+#endif
+
   // Decide what flavour of variable location debug-info will be used, before
   // we change the optimisation level.
   bool InstrRef = mf.shouldUseDebugInstrRef();
@@ -436,7 +465,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   if (isAssignmentTrackingEnabled(*Fn.getParent()))
     FnVarLocs = getAnalysis<AssignmentTrackingAnalysis>().getResults();
 
-  LLVM_DEBUG(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
+  ISEL_TRACE(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
 
   UniformityInfo *UA = nullptr;
   if (auto *UAPass = getAnalysisIfAvailable<UniformityInfoWrapperPass>())
@@ -576,7 +605,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
         // FIXME: VR def may not be in entry block.
         Def->getParent()->insert(std::next(InsertPos), MI);
       } else
-        LLVM_DEBUG(dbgs() << "Dropping debug info for dead vreg"
+        ISEL_TRACE(dbgs() << "Dropping debug info for dead vreg"
                           << Register::virtReg2Index(Reg) << "\n");
     }
 
@@ -668,8 +697,8 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   // at this point.
   FuncInfo->clear();
 
-  LLVM_DEBUG(dbgs() << "*** MachineFunction at end of ISel ***\n");
-  LLVM_DEBUG(MF->print(dbgs()));
+  ISEL_TRACE(dbgs() << "*** MachineFunction at end of ISel ***\n");
+  ISEL_TRACE(MF->print(dbgs()));
 
   return true;
 }
@@ -687,7 +716,7 @@ static void reportFastISelFailure(MachineFunction &MF,
     report_fatal_error(Twine(R.getMsg()));
 
   ORE.emit(R);
-  LLVM_DEBUG(dbgs() << R.getMsg() << "\n");
+  ISEL_TRACE(dbgs() << R.getMsg() << "\n");
 }
 
 void SelectionDAGISel::SelectBasicBlock(BasicBlock::const_iterator Begin,
@@ -777,7 +806,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     BlockName =
         (MF->getName() + ":" + FuncInfo->MBB->getBasicBlock()->getName()).str();
   }
-  LLVM_DEBUG(dbgs() << "\nInitial selection DAG: "
+  ISEL_TRACE(dbgs() << "\nInitial selection DAG: "
                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                     << "'\n";
              CurDAG->dump());
@@ -797,7 +826,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->Combine(BeforeLegalizeTypes, AA, OptLevel);
   }
 
-  LLVM_DEBUG(dbgs() << "\nOptimized lowered selection DAG: "
+  ISEL_TRACE(dbgs() << "\nOptimized lowered selection DAG: "
                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                     << "'\n";
              CurDAG->dump());
@@ -819,7 +848,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     Changed = CurDAG->LegalizeTypes();
   }
 
-  LLVM_DEBUG(dbgs() << "\nType-legalized selection DAG: "
+  ISEL_TRACE(dbgs() << "\nType-legalized selection DAG: "
                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                     << "'\n";
              CurDAG->dump());
@@ -843,7 +872,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
       CurDAG->Combine(AfterLegalizeTypes, AA, OptLevel);
     }
 
-    LLVM_DEBUG(dbgs() << "\nOptimized type-legalized selection DAG: "
+    ISEL_TRACE(dbgs() << "\nOptimized type-legalized selection DAG: "
                       << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                       << "'\n";
                CurDAG->dump());
@@ -861,7 +890,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   }
 
   if (Changed) {
-    LLVM_DEBUG(dbgs() << "\nVector-legalized selection DAG: "
+    ISEL_TRACE(dbgs() << "\nVector-legalized selection DAG: "
                       << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                       << "'\n";
                CurDAG->dump());
@@ -877,7 +906,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
       CurDAG->LegalizeTypes();
     }
 
-    LLVM_DEBUG(dbgs() << "\nVector/type-legalized selection DAG: "
+    ISEL_TRACE(dbgs() << "\nVector/type-legalized selection DAG: "
                       << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                       << "'\n";
                CurDAG->dump());
@@ -897,7 +926,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
       CurDAG->Combine(AfterLegalizeVectorOps, AA, OptLevel);
     }
 
-    LLVM_DEBUG(dbgs() << "\nOptimized vector-legalized selection DAG: "
+    ISEL_TRACE(dbgs() << "\nOptimized vector-legalized selection DAG: "
                       << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                       << "'\n";
                CurDAG->dump());
@@ -917,7 +946,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->Legalize();
   }
 
-  LLVM_DEBUG(dbgs() << "\nLegalized selection DAG: "
+  ISEL_TRACE(dbgs() << "\nLegalized selection DAG: "
                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                     << "'\n";
              CurDAG->dump());
@@ -937,7 +966,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->Combine(AfterLegalizeDAG, AA, OptLevel);
   }
 
-  LLVM_DEBUG(dbgs() << "\nOptimized legalized selection DAG: "
+  ISEL_TRACE(dbgs() << "\nOptimized legalized selection DAG: "
                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                     << "'\n";
              CurDAG->dump());
@@ -961,7 +990,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     DoInstructionSelection();
   }
 
-  LLVM_DEBUG(dbgs() << "\nSelected selection DAG: "
+  ISEL_TRACE(dbgs() << "\nSelected selection DAG: "
                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                     << "'\n";
              CurDAG->dump());
@@ -1092,7 +1121,7 @@ int SelectionDAGISel::getUninvalidatedNodeId(SDNode *N) {
 }
 
 void SelectionDAGISel::DoInstructionSelection() {
-  LLVM_DEBUG(dbgs() << "===== Instruction selection begins: "
+  ISEL_TRACE(dbgs() << "===== Instruction selection begins: "
                     << printMBBReference(*FuncInfo->MBB) << " '"
                     << FuncInfo->MBB->getName() << "'\n");
 
@@ -1184,7 +1213,7 @@ void SelectionDAGISel::DoInstructionSelection() {
           Node = CurDAG->mutateStrictFPToFP(Node);
       }
 
-      LLVM_DEBUG(dbgs() << "\nISEL: Starting selection on root node: ";
+      ISEL_TRACE(dbgs() << "\nISEL: Starting selection on root node: ";
                  Node->dump(CurDAG));
 
       Select(Node);
@@ -1193,7 +1222,7 @@ void SelectionDAGISel::DoInstructionSelection() {
     CurDAG->setRoot(Dummy.getValue());
   }
 
-  LLVM_DEBUG(dbgs() << "\n===== Instruction selection ends:\n");
+  ISEL_TRACE(dbgs() << "\n===== Instruction selection ends:\n");
 
   PostprocessISelDAG();
 }
@@ -1372,7 +1401,7 @@ static bool processIfEntryValueDbgDeclare(FunctionLoweringInfo &FuncInfo,
       // Append an op deref to account for the fact that this is a dbg_declare.
       Expr = DIExpression::append(Expr, dwarf::DW_OP_deref);
       FuncInfo.MF->setVariableDbgInfo(Var, Expr, PhysReg, DbgLoc);
-      LLVM_DEBUG(dbgs() << "processDbgDeclare: setVariableDbgInfo Var=" << *Var
+      ISEL_TRACE(dbgs() << "processDbgDeclare: setVariableDbgInfo Var=" << *Var
                         << ", Expr=" << *Expr << ",  MCRegister=" << PhysReg
                         << ", DbgLoc=" << DbgLoc << "\n");
       return true;
@@ -1384,7 +1413,7 @@ static bool processDbgDeclare(FunctionLoweringInfo &FuncInfo,
                               const Value *Address, DIExpression *Expr,
                               DILocalVariable *Var, DebugLoc DbgLoc) {
   if (!Address) {
-    LLVM_DEBUG(dbgs() << "processDbgDeclares skipping " << *Var
+    ISEL_TRACE(dbgs() << "processDbgDeclares skipping " << *Var
                       << " (bad address)\n");
     return false;
   }
@@ -1421,7 +1450,7 @@ static bool processDbgDeclare(FunctionLoweringInfo &FuncInfo,
     Expr = DIExpression::prepend(Expr, DIExpression::ApplyOffset,
                                  Offset.getZExtValue());
 
-  LLVM_DEBUG(dbgs() << "processDbgDeclare: setVariableDbgInfo Var=" << *Var
+  ISEL_TRACE(dbgs() << "processDbgDeclare: setVariableDbgInfo Var=" << *Var
                     << ", Expr=" << *Expr << ",  FI=" << FI
                     << ", DbgLoc=" << DbgLoc << "\n");
   MF->setVariableDbgInfo(Var, Expr, FI, DbgLoc);
@@ -1458,7 +1487,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   // Initialize the Fast-ISel state, if needed.
   FastISel *FastIS = nullptr;
   if (TM.Options.EnableFastISel) {
-    LLVM_DEBUG(dbgs() << "Enabling fast-isel\n");
+    ISEL_TRACE(dbgs() << "Enabling fast-isel\n");
     FastIS = TLI->createFastISel(*FuncInfo, LibInfo);
   }
 
@@ -1605,7 +1634,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
               BeforeInst->hasOneUse() &&
               FastIS->tryToFoldLoad(cast<LoadInst>(BeforeInst), Inst)) {
             // If we succeeded, don't re-select the load.
-            LLVM_DEBUG(dbgs()
+            ISEL_TRACE(dbgs()
                        << "FastISel folded load: " << *BeforeInst << "\n");
             BI = std::next(BasicBlock::const_iterator(BeforeInst));
             --NumFastIselRemaining;
@@ -1742,7 +1771,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
 void
 SelectionDAGISel::FinishBasicBlock() {
-  LLVM_DEBUG(dbgs() << "Total amount of phi nodes to update: "
+  ISEL_TRACE(dbgs() << "Total amount of phi nodes to update: "
                     << FuncInfo->PHINodesToUpdate.size() << "\n";
              for (unsigned i = 0, e = FuncInfo->PHINodesToUpdate.size(); i != e;
                   ++i) dbgs()
@@ -2511,7 +2540,7 @@ void SelectionDAGISel::UpdateChains(
   if (!NowDeadNodes.empty())
     CurDAG->RemoveDeadNodes(NowDeadNodes);
 
-  LLVM_DEBUG(dbgs() << "ISEL: Match complete!\n");
+  ISEL_TRACE(dbgs() << "ISEL: Match complete!\n");
 }
 
 /// HandleMergeInputChains - This implements the OPC_EmitMergeInputChains
@@ -3048,7 +3077,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
   // update the chain results when the pattern is complete.
   SmallVector<SDNode*, 3> ChainNodesMatched;
 
-  LLVM_DEBUG(dbgs() << "ISEL: Starting pattern match\n");
+  ISEL_TRACE(dbgs() << "ISEL: Starting pattern match\n");
 
   // Determine where to start the interpreter.  Normally we start at opcode #0,
   // but if the state machine starts with an OPC_SwitchOpcode, then we
@@ -3060,7 +3089,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     // Already computed the OpcodeOffset table, just index into it.
     if (N.getOpcode() < OpcodeOffset.size())
       MatcherIndex = OpcodeOffset[N.getOpcode()];
-    LLVM_DEBUG(dbgs() << "  Initial Opcode index to " << MatcherIndex << "\n");
+    ISEL_TRACE(dbgs() << "  Initial Opcode index to " << MatcherIndex << "\n");
 
   } else if (MatcherTable[0] == OPC_SwitchOpcode) {
     // Otherwise, the table isn't computed, but the state machine does start
@@ -3127,7 +3156,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         if (!Result)
           break;
 
-        LLVM_DEBUG(
+        ISEL_TRACE(
             dbgs() << "  Skipped scope entry (due to false predicate) at "
                    << "index " << MatcherIndexOfPredicate << ", continuing at "
                    << FailIndex << "\n");
@@ -3179,7 +3208,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (auto *MN = dyn_cast<MemSDNode>(N))
         MatchedMemRefs.push_back(MN->getMemOperand());
       else {
-        LLVM_DEBUG(dbgs() << "Expected MemSDNode "; N->dump(CurDAG);
+        ISEL_TRACE(dbgs() << "Expected MemSDNode "; N->dump(CurDAG);
                    dbgs() << '\n');
       }
 
@@ -3316,7 +3345,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (CaseSize == 0) break;
 
       // Otherwise, execute the case we found.
-      LLVM_DEBUG(dbgs() << "  OpcodeSwitch from " << SwitchStart << " to "
+      ISEL_TRACE(dbgs() << "  OpcodeSwitch from " << SwitchStart << " to "
                         << MatcherIndex << "\n");
       continue;
     }
@@ -3348,9 +3377,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (CaseSize == 0) break;
 
       // Otherwise, execute the case we found.
-      LLVM_DEBUG(dbgs() << "  TypeSwitch[" << CurNodeVT
-                        << "] from " << SwitchStart << " to " << MatcherIndex
-                        << '\n');
+      ISEL_TRACE(dbgs() << "  TypeSwitch[" << CurNodeVT << "] from "
+                        << SwitchStart << " to " << MatcherIndex << '\n');
       continue;
     }
     case OPC_CheckChild0Type: case OPC_CheckChild1Type:
@@ -3758,7 +3786,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         CurDAG->setNodeMemRefs(Res, FilteredMemRefs);
       }
 
-      LLVM_DEBUG(if (!MatchedMemRefs.empty() && Res->memoperands_empty()) dbgs()
+      ISEL_TRACE(if (!MatchedMemRefs.empty() && Res->memoperands_empty()) dbgs()
                      << "  Dropping mem operands\n";
                  dbgs() << "  " << (IsMorphNodeTo ? "Morphed" : "Created")
                         << " node: ";
@@ -3824,7 +3852,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     // If the code reached this point, then the match failed.  See if there is
     // another child to try in the current 'Scope', otherwise pop it until we
     // find a case to check.
-    LLVM_DEBUG(dbgs() << "  Match failed at index " << CurrentOpcodeIndex
+    ISEL_TRACE(dbgs() << "  Match failed at index " << CurrentOpcodeIndex
                       << "\n");
     ++NumDAGIselRetries;
     while (true) {
@@ -3845,7 +3873,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         MatchedMemRefs.resize(LastScope.NumMatchedMemRefs);
       MatcherIndex = LastScope.FailIndex;
 
-      LLVM_DEBUG(dbgs() << "  Continuing at " << MatcherIndex << "\n");
+      ISEL_TRACE(dbgs() << "  Continuing at " << MatcherIndex << "\n");
 
       InputChain = LastScope.InputChain;
       InputGlue = LastScope.InputGlue;
