@@ -489,6 +489,14 @@ public:
   YkIRWriter(Module &M, MCStreamer &OutStreamer)
       : M(M), OutStreamer(OutStreamer) {}
 
+  // Entry point for IR serialisation.
+  //
+  // The order of serialisation matters.
+  //
+  // - Serialising functions can introduce new types and constants.
+  // - Serialising constants can introduce new types.
+  //
+  // So we must serialise functions, then constants, then types.
   void serialise() {
     // header:
     OutStreamer.emitInt32(Magic);
