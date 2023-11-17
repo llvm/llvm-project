@@ -10221,7 +10221,7 @@ public:
                                       });
                                     })) &&
                "Expected first part or all previous parts masked.");
-        copy(SubMask, VecMask.begin());
+        copy(SubMask, std::next(VecMask.begin(), Part * SliceSize));
       } else {
         unsigned VF = cast<FixedVectorType>(Vec->getType())->getNumElements();
         if (Vec->getType() != SubVec->getType()) {
