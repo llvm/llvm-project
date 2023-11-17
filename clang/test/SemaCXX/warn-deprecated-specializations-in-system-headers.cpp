@@ -7,7 +7,7 @@ template <typename T>
 struct traits;
 
 template <>
-struct [[ deprecated]] traits<int> {}; // expected-note {{'traits<int>' has been explicitly marked deprecated here}}
+struct [[deprecated]] traits<int> {}; // expected-note {{'traits<int>' has been explicitly marked deprecated here}}
 
 template<typename T, typename Trait = traits<T>>  // expected-warning {{'traits<int>' is deprecated}}
 struct basic_string {};

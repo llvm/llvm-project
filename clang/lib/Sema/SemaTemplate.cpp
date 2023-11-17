@@ -11609,7 +11609,7 @@ void Sema::checkSpecializationReachability(SourceLocation Loc,
 SourceLocation Sema::getTopMostPointOfInstantiation(const NamedDecl *N) const {
   if (!getLangOpts().CPlusPlus || CodeSynthesisContexts.empty())
     return N->getLocation();
-  if (auto *FD = dyn_cast<FunctionDecl>(N)) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(N)) {
     if (!FD->isFunctionTemplateSpecialization())
       return FD->getLocation();
   } else if (!isa<ClassTemplateSpecializationDecl,
