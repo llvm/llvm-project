@@ -131,7 +131,7 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 // CallOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult emitc::CallOp::verify() {
+LogicalResult emitc::CallOpaqueOp::verify() {
   // Callee must not be empty.
   if (getCallee().empty())
     return emitOpError("callee must not be empty");
