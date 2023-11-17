@@ -58,22 +58,20 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   Token SecondTok = P.getCurToken();
   if (!SecondTok.isAnnotation() &&
       P.getPreprocessor().getSpelling(SecondTok) == "loop") {
-    OpenACCDirectiveKind ReturnKind;
     switch (DirKind) {
     default:
       // Nothing to do except in the below cases, as they should be diagnosed as
       // a clause.
       break;
     case OpenACCDirectiveKind::Parallel:
-      ReturnKind = OpenACCDirectiveKind::ParallelLoop;
-      LLVM_FALLTHROUGH;
-    case OpenACCDirectiveKind::Serial:
-      ReturnKind = OpenACCDirectiveKind::SerialLoop;
-      LLVM_FALLTHROUGH;
-    case OpenACCDirectiveKind::Kernels:
-      ReturnKind = OpenACCDirectiveKind::KernelsLoop;
       P.ConsumeToken();
-      return ReturnKind;
+      return OpenACCDirectiveKind::ParallelLoop;
+    case OpenACCDirectiveKind::Serial:
+      P.ConsumeToken();
+      return OpenACCDirectiveKind::SerialLoop;
+    case OpenACCDirectiveKind::Kernels:
+      P.ConsumeToken();
+      return OpenACCDirectiveKind::KernelsLoop;
     }
   }
 
