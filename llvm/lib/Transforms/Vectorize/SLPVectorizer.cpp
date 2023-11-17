@@ -10261,7 +10261,7 @@ public:
   /// Checks if the specified entry \p E needs to be delayed because of its
   /// dependency nodes.
   Value *needToDelay(const TreeEntry *E,
-                     ArrayRef<SmallVector<const TreeEntry *>> Deps) {
+                     ArrayRef<SmallVector<const TreeEntry *>> Deps) const {
     // No need to delay emission if all deps are ready.
     if (all_of(Deps, [](ArrayRef<const TreeEntry *> TEs) {
           return all_of(
