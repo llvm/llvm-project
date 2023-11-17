@@ -219,6 +219,8 @@ Non-comprehensive list of changes in this release
   determined at runtime.
 * The ``__datasizeof`` keyword has been added. It is similar to ``sizeof``
   except that it returns the size of a type ignoring tail padding.
+* ``__builtin_classify_type()`` now classifies ``_BitInt`` values as the return value ``18``,
+  to match GCC 14's behavior.
 
 New Compiler Flags
 ------------------
@@ -759,6 +761,12 @@ Arm and AArch64 Support
   manglings if ``-fclang-abi-compat=17`` or lower is  specified.
 
 - New AArch64 asm constraints have been added for r8-r11(Uci) and r12-r15(Ucj).
+
+  Support has been added for the following processors (-mcpu identifiers in parenthesis):
+
+  * Arm Cortex-A520 (cortex-a520).
+  * Arm Cortex-A720 (cortex-a720).
+  * Arm Cortex-X4 (cortex-x4).
 
 Android Support
 ^^^^^^^^^^^^^^^

@@ -8564,7 +8564,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // profitable for the vectorization, we can skip it, if the cost threshold is
   // default. The cost of vectorized PHI nodes is almost always 0 + the cost of
   // gathers/buildvectors.
-  constexpr unsigned Limit = 4;
+  constexpr int Limit = 4;
   if (!ForReduction && !SLPCostThreshold.getNumOccurrences() &&
       !VectorizableTree.empty() &&
       all_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
@@ -10261,7 +10261,7 @@ public:
   /// Checks if the specified entry \p E needs to be delayed because of its
   /// dependency nodes.
   Value *needToDelay(const TreeEntry *E,
-                     ArrayRef<SmallVector<const TreeEntry *>> Deps) {
+                     ArrayRef<SmallVector<const TreeEntry *>> Deps) const {
     // No need to delay emission if all deps are ready.
     if (all_of(Deps, [](ArrayRef<const TreeEntry *> TEs) {
           return all_of(
@@ -10275,6 +10275,16 @@ public:
     return Builder.CreateAlignedLoad(
         VecTy, PoisonValue::get(PointerType::getUnqual(VecTy->getContext())),
         MaybeAlign());
+  }
+  /// Adds 2 input vectors (in form of tree entries) and the mask for their
+  /// shuffling.
+  void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
+    add(E1.VectorizedValue, E2.VectorizedValue, Mask);
+  }
+  /// Adds single input vector (in form of tree entry) and the mask for its
+  /// shuffling.
+  void add(const TreeEntry &E1, ArrayRef<int> Mask) {
+    add(E1.VectorizedValue, Mask);
   }
   /// Adds 2 input vectors and the mask for their shuffling.
   void add(Value *V1, Value *V2, ArrayRef<int> Mask) {
@@ -10690,7 +10700,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
             Mask[I] = FrontTE->findLaneForValue(V);
           }
         }
-        ShuffleBuilder.add(FrontTE->VectorizedValue, Mask);
+        ShuffleBuilder.add(*FrontTE, Mask);
         Res = ShuffleBuilder.finalize(E->getCommonMask());
         return Res;
       }
@@ -10868,17 +10878,14 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
         VecMask.assign(VecMask.size(), PoisonMaskElem);
         copy(SubMask, std::next(VecMask.begin(), I * SliceSize));
         if (TEs.size() == 1) {
-          IsUsedInExpr &= FindReusedSplat(
-              VecMask,
-              cast<FixedVectorType>(TEs.front()->VectorizedValue->getType())
-                  ->getNumElements());
-          ShuffleBuilder.add(TEs.front()->VectorizedValue, VecMask);
+          IsUsedInExpr &=
+              FindReusedSplat(VecMask, TEs.front()->getVectorFactor());
+          ShuffleBuilder.add(*TEs.front(), VecMask);
           IsNonPoisoned &=
               isGuaranteedNotToBePoison(TEs.front()->VectorizedValue);
         } else {
           IsUsedInExpr = false;
-          ShuffleBuilder.add(TEs.front()->VectorizedValue,
-                             TEs.back()->VectorizedValue, VecMask);
+          ShuffleBuilder.add(*TEs.front(), *TEs.back(), VecMask);
           IsNonPoisoned &=
               isGuaranteedNotToBePoison(TEs.front()->VectorizedValue) &&
               isGuaranteedNotToBePoison(TEs.back()->VectorizedValue);
