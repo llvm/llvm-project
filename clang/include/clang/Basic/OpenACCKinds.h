@@ -21,47 +21,6 @@ namespace clang {
 enum class OpenACCDirectiveKind {
   // Compute Constructs.
   Parallel,
-  Serial,
-  Kernels,
-
-  // Data Environment. "enter data" and "exit data" are also referred to in the
-  // Executable Directives section, but just as a back reference to the Data
-  // Environment.
-  Data,
-  EnterData,
-  ExitData,
-  HostData,
-
-  // Misc.
-  Loop,
-  Cache,
-
-  // Combined Constructs.
-  ParallelLoop,
-  SerialLoop,
-  KernelsLoop,
-
-  // Atomic Construct.  The OpenACC standard considers these as a single
-  // construct, however the atomic-clause (read, write, update, capture) are
-  // important for legalization of the application of this to statements/blocks.
-  AtomicRead,
-  AtomicWrite,
-  AtomicUpdate,
-  AtomicCapture,
-
-  // Declare Directive.
-  Declare,
-
-  // Executable Directives. "wait" is first referred to here, but ends up being
-  // in its own section after "routine".
-  Init,
-  Shutdown,
-  Set,
-  Update,
-  Wait,
-
-  // Procedure Calls in Compute Regions.
-  Routine,
 
   // Invalid.
   Invalid,

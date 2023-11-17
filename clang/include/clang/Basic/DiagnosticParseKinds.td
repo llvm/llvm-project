@@ -1352,21 +1352,11 @@ def err_acc_unexpected_directive
 def warn_pragma_acc_unimplemented
     : Warning<"OpenACC directives not yet implemented, pragma ignored">,
       InGroup<SourceUsesOpenACC>;
-def warn_pragma_acc_unimplemented_construct_parens
-    : Warning<
-          "OpenACC %select{'cache' 'var-list'|'wait-argument'|'routine-name'}0 "
-          "parsing not yet implemented">,
-      InGroup<SourceUsesOpenACC>;
 def warn_pragma_acc_unimplemented_clause_parsing
     : Warning<"OpenACC clause parsing not yet implemented">,
       InGroup<SourceUsesOpenACC>;
 def err_acc_invalid_directive
-    : Error<"invalid OpenACC directive '%select{%1|%1 %2}0'">;
-def err_acc_invalid_atomic_clause
-    : Error<"invalid OpenACC 'atomic-clause' '%0'; expected 'read', 'write', "
-            "'update', or 'capture'">;
-def err_acc_invalid_open_paren
-    : Error<"expected clause-list or newline in pragma directive">;
+    : Error<"invalid OpenACC directive '%0'">;
 
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<
