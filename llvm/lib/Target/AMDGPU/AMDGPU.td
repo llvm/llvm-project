@@ -333,6 +333,12 @@ def FeatureGFX940Insts : SubtargetFeature<"gfx940-insts",
   "Additional instructions for GFX940+"
 >;
 
+def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
+  "GFX950Insts",
+  "true",
+  "Additional instructions for GFX950+"
+>;
+
 def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
   "GFX10Insts",
   "true",
@@ -1330,6 +1336,9 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureBackOffBarrier,
    FeatureKernargPreload]>;
 
+def FeatureISAVersion9_5_Common : FeatureSet<
+  !listconcat(FeatureISAVersion9_4_Common.Features, [FeatureGFX950Insts])>;
+
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [FeatureForceStoreSC0SC1])>;
@@ -1341,6 +1350,8 @@ def FeatureISAVersion9_4_1 : FeatureSet<
 def FeatureISAVersion9_4_2 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [])>;
+
+def FeatureISAVersion9_5_0 : FeatureSet<FeatureISAVersion9_5_Common.Features>;
 
 def FeatureISAVersion10_Common : FeatureSet<
   [FeatureGFX10,
