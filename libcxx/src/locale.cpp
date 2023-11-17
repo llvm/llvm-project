@@ -555,7 +555,7 @@ struct no_destroy {
 };
 
 const locale& locale::classic() {
-    static const no_destroy<locale> c(&make<__imp>(1u));
+    static const no_destroy<locale> c(__private_tag{}, &make<__imp>(1u));
     return c.get();
 }
 
