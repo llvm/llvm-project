@@ -138,7 +138,32 @@ bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
   InlineAsm *Exit = InlineAsm::get(ExitFTy, "exit;", "", true);
 
   bool Changed = false;
+
+  // In scenarios where a Switch Instruction has an unreachable default
+  // successor, substituting the unreachable instruction with an exit
+  // instruction introduces an additional block in the Control Flow Graph
+  // (CFG), thereby negatively impacting performance. To mitigate this
+  // undesirable impact, we proactively refrain from processing blocks that
+  // serve as successors to the unreachable default in the switch instruction.
+  // It is noteworthy that these blocks are subsequently optimized out by other
+  // passes in the optimization pipeline.
+
+  SmallPtrSet<const BasicBlock *, 4> BlocksToAvoid;
+
   for (auto &BB : F)
+    for (auto &I : BB) {
+      if (auto SI = dyn_cast<SwitchInst>(&I)) {
+        const auto DefaultSuccessorBlock = SI->getDefaultDest();
+        if (DefaultSuccessorBlock->size() == 1 &&
+            dyn_cast<UnreachableInst>(DefaultSuccessorBlock->begin())) {
+          BlocksToAvoid.insert(DefaultSuccessorBlock);
+        }
+      }
+    }
+
+  for (auto &BB : F) {
+    if (BlocksToAvoid.find(&BB) != BlocksToAvoid.end())
+      continue;
     for (auto &I : BB) {
       if (auto unreachableInst = dyn_cast<UnreachableInst>(&I)) {
         if (isLoweredToTrap(*unreachableInst))
@@ -147,6 +172,7 @@ bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
         Changed = true;
       }
     }
+  }
   return Changed;
 }
 
