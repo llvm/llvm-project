@@ -21,6 +21,7 @@
 #include "Utilities.h"
 
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <mutex>
@@ -347,15 +348,16 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 ///                   execution on persistent storage
 EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                         void *VAddr, bool IsRecord,
-                                        bool SaveOutput) {
+                                        bool SaveOutput,
+                                        uint64_t &ReqPtrArgOffset) {
   if (!deviceIsReady(DeviceId)) {
     DP("Device %" PRId64 " is not ready\n", DeviceId);
     return OMP_TGT_FAIL;
   }
 
   DeviceTy &Device = *PM->Devices[DeviceId];
-  [[maybe_unused]] int Rc =
-      target_activate_rr(Device, MemorySize, VAddr, IsRecord, SaveOutput);
+  [[maybe_unused]] int Rc = target_activate_rr(
+      Device, MemorySize, VAddr, IsRecord, SaveOutput, ReqPtrArgOffset);
   assert(Rc == OFFLOAD_SUCCESS &&
          "__tgt_activate_record_replay unexpected failure!");
   return OMP_TGT_SUCCESS;

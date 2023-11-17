@@ -55,6 +55,8 @@ private:
 
   RRStatusTy Status;
   bool ReplaySaveOutput;
+  bool UsedVAMap = false;
+  uintptr_t MemoryOffset = 0;
 
   void *suggestAddress(uint64_t MaxMemoryAllocation) {
     // Get a valid pointer address for this system
@@ -89,10 +91,12 @@ private:
     MemoryPtr = MemoryStart;
     MemorySize = 0;
     TotalSize = ASize;
+    UsedVAMap = true;
     return Plugin::success();
   }
 
-  Error preAllocateHeuristic(uint64_t MaxMemoryAllocation, void *VAddr) {
+  Error preAllocateHeuristic(uint64_t MaxMemoryAllocation,
+                             uint64_t RequiredMemoryAllocation, void *VAddr) {
     const size_t MAX_MEMORY_ALLOCATION = MaxMemoryAllocation;
     constexpr size_t STEP = 1024 * 1024 * 1024ULL;
     MemoryStart = nullptr;
@@ -102,32 +106,55 @@ private:
       if (MemoryStart)
         break;
     }
+    if (!MemoryStart)
+      return Plugin::error("Allocating record/replay memory");
+
+    if (VAddr && VAddr != MemoryStart)
+      MemoryOffset = uintptr_t(VAddr) - uintptr_t(MemoryStart);
+
+    MemoryPtr = MemoryStart;
+    MemorySize = 0;
+
+    // Check if we need adjustment.
+    if (MemoryOffset > 0 &&
+        TotalSize >= RequiredMemoryAllocation + MemoryOffset) {
+      // If we are off but "before" the required address and with enough space,
+      // we just "allocate" the offset to match the required address.
+      MemoryPtr = (char *)MemoryPtr + MemoryOffset;
+      MemorySize += MemoryOffset;
+      MemoryOffset = 0;
+      assert(MemoryPtr == VAddr && "Expected offset adjustment to work");
+    } else if (MemoryOffset) {
+      // If we are off and in a situation we cannot just "waste" memory to force
+      // a match, we hope adjusting the arguments is sufficient.
+      REPORT(
+          "WARNING Failed to allocate replay memory at required location %p, "
+          "got %p, trying to offset argument pointers by %" PRIi64 "\n",
+          VAddr, MemoryStart, MemoryOffset);
+    }
 
     INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device->getDeviceId(),
          "Allocated %" PRIu64 " bytes at %p for replay.\n", TotalSize,
          MemoryStart);
 
-    if (!MemoryStart)
-      return Plugin::error("Allocating record/replay memory");
-
-    if (VAddr && VAddr != MemoryStart)
-      return Plugin::error("Cannot allocate recorded address");
-
-    MemoryPtr = MemoryStart;
-    MemorySize = 0;
-
     return Plugin::success();
   }
 
   Error preallocateDeviceMemory(uint64_t DeviceMemorySize, void *ReqVAddr) {
-    if (Device->supportVAManagement())
-      return preAllocateVAMemory(DeviceMemorySize, ReqVAddr);
+    if (Device->supportVAManagement()) {
+      auto Err = preAllocateVAMemory(DeviceMemorySize, ReqVAddr);
+      if (Err) {
+        REPORT("WARNING VA mapping failed, fallback to heuristic: "
+               "(Error: %s)\n",
+               toString(std::move(Err)).data());
+      }
+    }
 
     uint64_t DevMemSize;
     if (Device->getDeviceMemorySize(DevMemSize))
       return Plugin::error("Cannot determine Device Memory Size");
 
-    return preAllocateHeuristic(DevMemSize, ReqVAddr);
+    return preAllocateHeuristic(DevMemSize, DeviceMemorySize, ReqVAddr);
   }
 
   void dumpDeviceMemory(StringRef Filename) {
@@ -293,7 +320,7 @@ public:
   }
 
   Error init(GenericDeviceTy *Device, uint64_t MemSize, void *VAddr,
-             RRStatusTy Status, bool SaveOutput) {
+             RRStatusTy Status, bool SaveOutput, uint64_t &ReqPtrArgOffset) {
     this->Device = Device;
     this->Status = Status;
     this->ReplaySaveOutput = SaveOutput;
@@ -308,11 +335,14 @@ public:
          MemoryStart, TotalSize,
          Status == RRStatusTy::RRRecording ? "Recording" : "Replaying");
 
+    // Tell the user to offset pointer arguments as the memory allocation does
+    // not match.
+    ReqPtrArgOffset = MemoryOffset;
     return Plugin::success();
   }
 
   void deinit() {
-    if (Device->supportVAManagement()) {
+    if (UsedVAMap) {
       if (auto Err = Device->memoryVAUnMap(MemoryStart, TotalSize))
         report_fatal_error("Error on releasing virtual memory space");
     } else {
@@ -1694,15 +1724,16 @@ int32_t __tgt_rtl_is_data_exchangable(int32_t SrcDeviceId,
 
 int32_t __tgt_rtl_initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
                                            void *VAddr, bool isRecord,
-                                           bool SaveOutput) {
+                                           bool SaveOutput,
+                                           uint64_t &ReqPtrArgOffset) {
   GenericPluginTy &Plugin = Plugin::get();
   GenericDeviceTy &Device = Plugin.getDevice(DeviceId);
   RecordReplayTy::RRStatusTy Status =
       isRecord ? RecordReplayTy::RRStatusTy::RRRecording
                : RecordReplayTy::RRStatusTy::RRReplaying;
 
-  if (auto Err =
-          RecordReplay.init(&Device, MemorySize, VAddr, Status, SaveOutput)) {
+  if (auto Err = RecordReplay.init(&Device, MemorySize, VAddr, Status,
+                                   SaveOutput, ReqPtrArgOffset)) {
     REPORT("WARNING RR did not intialize RR-properly with %lu bytes"
            "(Error: %s)\n",
            MemorySize, toString(std::move(Err)).data());
