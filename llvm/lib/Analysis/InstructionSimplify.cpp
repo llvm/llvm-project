@@ -4911,10 +4911,8 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
 
   // Compute the (pointer) type returned by the GEP instruction.
   Type *LastType = GetElementPtrInst::getIndexedType(SrcTy, Indices);
-  Type *GEPTy = PointerType::get(LastType, AS);
-  if (VectorType *VT = dyn_cast<VectorType>(Ptr->getType()))
-    GEPTy = VectorType::get(GEPTy, VT->getElementCount());
-  else {
+  Type *GEPTy = Ptr->getType();
+  if (!GEPTy->isVectorTy()) {
     for (Value *Op : Indices) {
       // If one of the operands is a vector, the result type is a vector of
       // pointers. All vector operands must have the same number of elements.
