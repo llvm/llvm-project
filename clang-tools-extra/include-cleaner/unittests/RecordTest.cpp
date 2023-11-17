@@ -452,6 +452,8 @@ TEST_F(PragmaIncludeTest, IWYUExportForStandardHeaders) {
   auto &FM = Processed.fileManager();
   EXPECT_THAT(PI.getExporters(*tooling::stdlib::Header::named("<string>"), FM),
               testing::UnorderedElementsAre(FileNamed("export.h")));
+  EXPECT_THAT(PI.getExporters(llvm::cantFail(FM.getFileRef("string")), FM),
+              testing::UnorderedElementsAre(FileNamed("export.h")));
 }
 
 TEST_F(PragmaIncludeTest, IWYUExportBlock) {
