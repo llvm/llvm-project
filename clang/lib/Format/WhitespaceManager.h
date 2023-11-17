@@ -317,7 +317,7 @@ private:
     auto Offset = std::distance(CellStart, CellStop);
     for (const auto *Next = CellStop->NextColumnElement; Next;
          Next = Next->NextColumnElement) {
-      if (RowCount > MaxRowCount)
+      if (RowCount >= MaxRowCount)
         break;
       auto Start = (CellStart + RowCount * CellCount);
       auto End = Start + Offset;
