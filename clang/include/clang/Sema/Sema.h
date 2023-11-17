@@ -8464,6 +8464,8 @@ public:
       ArrayRef<TemplateArgument> SugaredConverted,
       ArrayRef<TemplateArgument> CanonicalConverted, bool &HasDefaultArg);
 
+  SourceLocation getTopMostPointOfInstantiation(const NamedDecl *) const;
+
   /// Specifies the context in which a particular template
   /// argument is being checked.
   enum CheckTemplateArgumentKind {
