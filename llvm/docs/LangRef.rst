@@ -10016,7 +10016,7 @@ The truth table used for the '``or``' instruction is:
 ``disjoint`` means every bit is known to be zero in at least one of the inputs.
 This allows the Or to be treated as an Add since no carry can occur from any
 bit. If the disjoint keyword is present, the result value of the ``or`` is a
-:ref:`poison value <poisonvalues>` if both inputs have a one in any bit
+:ref:`poison value <poisonvalues>` if both inputs have a one in the same bit
 position. For vectors, only the element containing the bit is poison.
 
 Example:
