@@ -12,9 +12,9 @@
 #ifndef SANITIZER_STACKTRACE_PRINTER_H
 #define SANITIZER_STACKTRACE_PRINTER_H
 
-#include "sanitizer_platform.h"
 #include "sanitizer_common.h"
 #include "sanitizer_internal_defs.h"
+#include "sanitizer_platform.h"
 #include "sanitizer_symbolizer.h"
 
 namespace __sanitizer {
@@ -29,15 +29,13 @@ class StackTracePrinter {
   // Strip interceptor prefixes from function name.
   const char *StripFunctionName(const char *function);
 
-  void RenderSourceLocation(InternalScopedString *buffer,
-                                    const char *file, int line, int column,
-                                    bool vs_style,
-                                    const char *strip_path_prefix);
+  void RenderSourceLocation(InternalScopedString *buffer, const char *file,
+                            int line, int column, bool vs_style,
+                            const char *strip_path_prefix);
 
-  void RenderModuleLocation(InternalScopedString *buffer,
-                                    const char *module, uptr offset,
-                                    ModuleArch arch,
-                                    const char *strip_path_prefix);
+  void RenderModuleLocation(InternalScopedString *buffer, const char *module,
+                            uptr offset, ModuleArch arch,
+                            const char *strip_path_prefix);
 
   virtual void RenderFrame(InternalScopedString *buffer, const char *format,
                            int frame_no, uptr address, const AddressInfo *info,
@@ -53,7 +51,6 @@ class StackTracePrinter {
  protected:
   ~StackTracePrinter() {}
 };
-
 
 // See sanitizer_symbolizer_markup.h for the markup implementation of
 // StackTracePrinter. This is code is omited for targets that opt in to
@@ -108,7 +105,7 @@ class FormattedStackTracePrinter : public StackTracePrinter {
   ~FormattedStackTracePrinter() {}
 };
 
-#endif // !SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
+#endif  // !SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
 
 }  // namespace __sanitizer
 

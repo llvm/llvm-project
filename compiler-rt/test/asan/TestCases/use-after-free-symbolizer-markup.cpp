@@ -1,11 +1,11 @@
 // Test that verifies that asan produces valid symbolizer markup when enabled.
-// RUN: %clangxx_asan -O1 %s -o %t 
+// RUN: %clangxx_asan -O1 %s -o %t
 // RUN: env ASAN_OPTIONS=enable_symbolizer_markup=1 not %run %t 2>&1 | FileCheck %s
 // REQUIRES: linux
 
 #include <stdlib.h>
 int main() {
-  char *x = (char*)malloc(10 * sizeof(char));
+  char *x = (char *)malloc(10 * sizeof(char));
   free(x);
   return x[5];
 }

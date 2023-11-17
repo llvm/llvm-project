@@ -192,8 +192,8 @@ void Symbolizer::RefreshModules() {
 }
 
 ListOfModules &Symbolizer::GetRefreshedListOfModules() {
-  if(!modules_fresh_) {
-      RefreshModules();
+  if (!modules_fresh_) {
+    RefreshModules();
   }
   CHECK(modules_fresh_);
   return modules_;

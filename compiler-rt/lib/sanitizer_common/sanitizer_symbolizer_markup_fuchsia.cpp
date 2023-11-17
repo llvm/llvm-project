@@ -13,12 +13,11 @@
 
 #include "sanitizer_platform.h"
 #if SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
-#include "sanitizer_symbolizer_markup.h"
-
-#include "sanitizer_common.h"
-#include "sanitizer_symbolizer.h"
-#include "sanitizer_stacktrace_printer.h"
-#include "sanitizer_symbolizer_markup_constants.h"
+#  include "sanitizer_common.h"
+#  include "sanitizer_stacktrace_printer.h"
+#  include "sanitizer_symbolizer.h"
+#  include "sanitizer_symbolizer_markup.h"
+#  include "sanitizer_symbolizer_markup_constants.h"
 
 namespace __sanitizer {
 

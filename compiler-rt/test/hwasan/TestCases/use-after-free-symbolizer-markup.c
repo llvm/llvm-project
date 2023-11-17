@@ -8,14 +8,13 @@
 // RUN: %clang_hwasan -O3 %s -o %t
 // RUN: env HWASAN_OPTIONS=enable_symbolizer_markup=1 not %run %t 2>&1 | FileCheck %s
 
-
-#include <stdlib.h>
-#include <stdio.h>
 #include <sanitizer/hwasan_interface.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 int main() {
   __hwasan_enable_allocator_tagging();
-  char * volatile x = (char*)malloc(10);
+  char *volatile x = (char *)malloc(10);
   free(x);
   __hwasan_disable_allocator_tagging();
 
