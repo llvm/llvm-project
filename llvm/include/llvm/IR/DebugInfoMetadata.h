@@ -129,6 +129,8 @@ public:
 /// A metadata node with a DWARF tag (i.e., a constant named \c DW_TAG_*,
 /// defined in llvm/BinaryFormat/Dwarf.h).  Called \a DINode because it's
 /// potentially used for non-DWARF output.
+///
+/// Uses the SubclassData16 Metadata slot.
 class DINode : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
@@ -228,6 +230,8 @@ public:
 /// (possibly empty) null-separated \a MDString header that contains arbitrary
 /// fields.  The remaining operands are \a dwarf_operands(), and are pointers
 /// to other metadata.
+///
+/// Uses the SubclassData32 Metadata slot.
 class GenericDINode : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
@@ -696,12 +700,13 @@ std::optional<StringRef> DIScope::getSource() const {
 /// TODO: Remove the hardcoded name and context, since many types don't use
 /// them.
 /// TODO: Split up flags.
+///
+/// Uses the SubclassData32 Metadata slot.
 class DIType : public DIScope {
   unsigned Line;
   DIFlags Flags;
   uint64_t SizeInBits;
   uint64_t OffsetInBits;
-  uint32_t AlignInBits;
 
 protected:
   DIType(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Tag,
@@ -717,7 +722,7 @@ protected:
     this->Line = Line;
     this->Flags = Flags;
     this->SizeInBits = SizeInBits;
-    this->AlignInBits = AlignInBits;
+    this->SubclassData32 = AlignInBits;
     this->OffsetInBits = OffsetInBits;
   }
 
@@ -736,7 +741,7 @@ public:
 
   unsigned getLine() const { return Line; }
   uint64_t getSizeInBits() const { return SizeInBits; }
-  uint32_t getAlignInBits() const { return AlignInBits; }
+  uint32_t getAlignInBits() const { return SubclassData32; }
   uint32_t getAlignInBytes() const { return getAlignInBits() / CHAR_BIT; }
   uint64_t getOffsetInBits() const { return OffsetInBits; }
   DIFlags getFlags() const { return Flags; }
@@ -1446,13 +1451,13 @@ public:
 
 private:
   unsigned SourceLanguage;
-  bool IsOptimized;
   unsigned RuntimeVersion;
-  unsigned EmissionKind;
   uint64_t DWOId;
+  unsigned EmissionKind;
+  unsigned NameTableKind;
+  bool IsOptimized;
   bool SplitDebugInlining;
   bool DebugInfoForProfiling;
-  unsigned NameTableKind;
   bool RangesBaseAddress;
 
   DICompileUnit(LLVMContext &C, StorageType Storage, unsigned SourceLanguage,
@@ -1936,6 +1941,10 @@ public:
 /// Debug location.
 ///
 /// A debug location in source code, used for debug info and otherwise.
+///
+/// Uses the SubclassData1, SubclassData16 and SubclassData32
+/// Metadata slots.
+
 class DILocation : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
@@ -2221,17 +2230,20 @@ public:
   }
 };
 
+/// Debug lexical block.
+///
+/// Uses the SubclassData32 Metadata slot.
 class DILexicalBlock : public DILexicalBlockBase {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  unsigned Line;
   uint16_t Column;
 
   DILexicalBlock(LLVMContext &C, StorageType Storage, unsigned Line,
                  unsigned Column, ArrayRef<Metadata *> Ops)
-      : DILexicalBlockBase(C, DILexicalBlockKind, Storage, Ops), Line(Line),
+      : DILexicalBlockBase(C, DILexicalBlockKind, Storage, Ops),
         Column(Column) {
+    SubclassData32 = Line;
     assert(Column < (1u << 16) && "Expected 16-bit column");
   }
   ~DILexicalBlock() = default;
@@ -2266,7 +2278,7 @@ public:
 
   TempDILexicalBlock clone() const { return cloneImpl(); }
 
-  unsigned getLine() const { return Line; }
+  unsigned getLine() const { return SubclassData32; }
   unsigned getColumn() const { return Column; }
 
   static bool classof(const Metadata *MD) {
@@ -2278,12 +2290,11 @@ class DILexicalBlockFile : public DILexicalBlockBase {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  unsigned Discriminator;
-
   DILexicalBlockFile(LLVMContext &C, StorageType Storage,
                      unsigned Discriminator, ArrayRef<Metadata *> Ops)
-      : DILexicalBlockBase(C, DILexicalBlockFileKind, Storage, Ops),
-        Discriminator(Discriminator) {}
+      : DILexicalBlockBase(C, DILexicalBlockFileKind, Storage, Ops) {
+    SubclassData32 = Discriminator;
+  }
   ~DILexicalBlockFile() = default;
 
   static DILexicalBlockFile *getImpl(LLVMContext &Context, DILocalScope *Scope,
@@ -2315,7 +2326,7 @@ public:
                     (Scope, File, Discriminator))
 
   TempDILexicalBlockFile clone() const { return cloneImpl(); }
-  unsigned getDiscriminator() const { return Discriminator; }
+  unsigned getDiscriminator() const { return SubclassData32; }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DILexicalBlockFileKind;
@@ -2398,11 +2409,12 @@ DILocation::cloneByMultiplyingDuplicationFactor(unsigned DF) const {
   return std::nullopt;
 }
 
+/// Debug lexical block.
+///
+/// Uses the SubclassData1 Metadata slot.
 class DINamespace : public DIScope {
   friend class LLVMContextImpl;
   friend class MDNode;
-
-  unsigned ExportSymbols : 1;
 
   DINamespace(LLVMContext &Context, StorageType Storage, bool ExportSymbols,
               ArrayRef<Metadata *> Ops);
@@ -2433,7 +2445,7 @@ public:
 
   TempDINamespace clone() const { return cloneImpl(); }
 
-  bool getExportSymbols() const { return ExportSymbols; }
+  bool getExportSymbols() const { return SubclassData1; }
   DIScope *getScope() const { return cast_or_null<DIScope>(getRawScope()); }
   StringRef getName() const { return getStringOperand(2); }
 
@@ -2447,11 +2459,11 @@ public:
 
 /// Represents a module in the programming language, for example, a Clang
 /// module, or a Fortran module.
+///
+/// Uses the SubclassData1 and SubclassData32 Metadata slots.
 class DIModule : public DIScope {
   friend class LLVMContextImpl;
   friend class MDNode;
-  unsigned LineNo;
-  bool IsDecl;
 
   DIModule(LLVMContext &Context, StorageType Storage, unsigned LineNo,
            bool IsDecl, ArrayRef<Metadata *> Ops);
@@ -2503,8 +2515,8 @@ public:
   StringRef getConfigurationMacros() const { return getStringOperand(3); }
   StringRef getIncludePath() const { return getStringOperand(4); }
   StringRef getAPINotesFile() const { return getStringOperand(5); }
-  unsigned getLineNo() const { return LineNo; }
-  bool getIsDecl() const { return IsDecl; }
+  unsigned getLineNo() const { return SubclassData32; }
+  bool getIsDecl() const { return SubclassData1; }
 
   Metadata *getRawScope() const { return getOperand(1); }
   MDString *getRawName() const { return getOperandAs<MDString>(2); }
@@ -2520,13 +2532,15 @@ public:
 };
 
 /// Base class for template parameters.
+///
+/// Uses the SubclassData1 Metadata slot.
 class DITemplateParameter : public DINode {
 protected:
-  bool IsDefault;
-
   DITemplateParameter(LLVMContext &Context, unsigned ID, StorageType Storage,
                       unsigned Tag, bool IsDefault, ArrayRef<Metadata *> Ops)
-      : DINode(Context, ID, Storage, Tag, Ops), IsDefault(IsDefault) {}
+      : DINode(Context, ID, Storage, Tag, Ops) {
+    SubclassData1 = IsDefault;
+  }
   ~DITemplateParameter() = default;
 
 public:
@@ -2535,7 +2549,7 @@ public:
 
   MDString *getRawName() const { return getOperandAs<MDString>(0); }
   Metadata *getRawType() const { return getOperand(1); }
-  bool isDefault() const { return IsDefault; }
+  bool isDefault() const { return SubclassData1; }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DITemplateTypeParameterKind ||
@@ -2632,9 +2646,10 @@ public:
 };
 
 /// Base class for variables.
+///
+/// Uses the SubclassData32 Metadata slot.
 class DIVariable : public DINode {
   unsigned Line;
-  uint32_t AlignInBits;
 
 protected:
   DIVariable(LLVMContext &C, unsigned ID, StorageType Storage, signed Line,
@@ -2647,7 +2662,7 @@ public:
   StringRef getName() const { return getStringOperand(1); }
   DIFile *getFile() const { return cast_or_null<DIFile>(getRawFile()); }
   DIType *getType() const { return cast_or_null<DIType>(getRawType()); }
-  uint32_t getAlignInBits() const { return AlignInBits; }
+  uint32_t getAlignInBits() const { return SubclassData32; }
   uint32_t getAlignInBytes() const { return getAlignInBits() / CHAR_BIT; }
   /// Determines the size of the variable's type.
   std::optional<uint64_t> getSizeInBits() const;
@@ -3221,9 +3236,10 @@ public:
   }
 };
 
+/// Debug common block.
+///
+/// Uses the SubclassData32 Metadata slot.
 class DICommonBlock : public DIScope {
-  unsigned LineNo;
-
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -3265,7 +3281,7 @@ public:
   }
   StringRef getName() const { return getStringOperand(2); }
   DIFile *getFile() const { return cast_or_null<DIFile>(getRawFile()); }
-  unsigned getLineNo() const { return LineNo; }
+  unsigned getLineNo() const { return SubclassData32; }
 
   Metadata *getRawScope() const { return getOperand(0); }
   Metadata *getRawDecl() const { return getOperand(1); }
@@ -3370,11 +3386,10 @@ public:
 
 /// Label.
 ///
+/// Uses the SubclassData32 Metadata slot.
 class DILabel : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
-
-  unsigned Line;
 
   DILabel(LLVMContext &C, StorageType Storage, unsigned Line,
           ArrayRef<Metadata *> Ops);
@@ -3413,7 +3428,7 @@ public:
   DILocalScope *getScope() const {
     return cast_or_null<DILocalScope>(getRawScope());
   }
-  unsigned getLine() const { return Line; }
+  unsigned getLine() const { return SubclassData32; }
   StringRef getName() const { return getStringOperand(1); }
   DIFile *getFile() const { return cast_or_null<DIFile>(getRawFile()); }
 
@@ -3515,15 +3530,17 @@ public:
 };
 
 /// An imported module (C++ using directive or similar).
+///
+/// Uses the SubclassData32 Metadata slot.
 class DIImportedEntity : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  unsigned Line;
-
   DIImportedEntity(LLVMContext &C, StorageType Storage, unsigned Tag,
                    unsigned Line, ArrayRef<Metadata *> Ops)
-      : DINode(C, DIImportedEntityKind, Storage, Tag, Ops), Line(Line) {}
+      : DINode(C, DIImportedEntityKind, Storage, Tag, Ops) {
+    SubclassData32 = Line;
+  }
   ~DIImportedEntity() = default;
 
   static DIImportedEntity *getImpl(LLVMContext &Context, unsigned Tag,
@@ -3559,7 +3576,7 @@ public:
 
   TempDIImportedEntity clone() const { return cloneImpl(); }
 
-  unsigned getLine() const { return Line; }
+  unsigned getLine() const { return SubclassData32; }
   DIScope *getScope() const { return cast_or_null<DIScope>(getRawScope()); }
   DINode *getEntity() const { return cast_or_null<DINode>(getRawEntity()); }
   StringRef getName() const { return getStringOperand(2); }
@@ -3627,6 +3644,8 @@ public:
 /// \c DW_MACINFO_*, defined in llvm/BinaryFormat/Dwarf.h).  Called \a
 /// DIMacroNode
 /// because it's potentially used for non-DWARF output.
+///
+/// Uses the SubclassData16 Metadata slot.
 class DIMacroNode : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
@@ -3671,15 +3690,18 @@ public:
   }
 };
 
+/// Macro
+///
+/// Uses the SubclassData32 Metadata slot.
 class DIMacro : public DIMacroNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  unsigned Line;
-
   DIMacro(LLVMContext &C, StorageType Storage, unsigned MIType, unsigned Line,
           ArrayRef<Metadata *> Ops)
-      : DIMacroNode(C, DIMacroKind, Storage, MIType, Ops), Line(Line) {}
+      : DIMacroNode(C, DIMacroKind, Storage, MIType, Ops) {
+    SubclassData32 = Line;
+  }
   ~DIMacro() = default;
 
   static DIMacro *getImpl(LLVMContext &Context, unsigned MIType, unsigned Line,
@@ -3709,7 +3731,7 @@ public:
 
   TempDIMacro clone() const { return cloneImpl(); }
 
-  unsigned getLine() const { return Line; }
+  unsigned getLine() const { return SubclassData32; }
 
   StringRef getName() const { return getStringOperand(0); }
   StringRef getValue() const { return getStringOperand(1); }
@@ -3722,15 +3744,18 @@ public:
   }
 };
 
+/// Macro file
+///
+/// Uses the SubclassData32 Metadata slot.
 class DIMacroFile : public DIMacroNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  unsigned Line;
-
   DIMacroFile(LLVMContext &C, StorageType Storage, unsigned MIType,
               unsigned Line, ArrayRef<Metadata *> Ops)
-      : DIMacroNode(C, DIMacroFileKind, Storage, MIType, Ops), Line(Line) {}
+      : DIMacroNode(C, DIMacroFileKind, Storage, MIType, Ops) {
+    SubclassData32 = Line;
+  }
   ~DIMacroFile() = default;
 
   static DIMacroFile *getImpl(LLVMContext &Context, unsigned MIType,
@@ -3771,7 +3796,7 @@ public:
     replaceOperandWith(1, Elements.get());
   }
 
-  unsigned getLine() const { return Line; }
+  unsigned getLine() const { return SubclassData32; }
   DIFile *getFile() const { return cast_or_null<DIFile>(getRawFile()); }
 
   DIMacroNodeArray getElements() const {
