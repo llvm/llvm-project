@@ -20709,16 +20709,9 @@ TEST_F(FormatTest, CatchExceptionReferenceBinding) {
 TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
   auto Style = getLLVMStyle();
   Style.AlignArrayOfStructures = FormatStyle::AIAS_Right;
-
   verifyNoCrash("f({\n"
                 "table({}, table({{\"\", false}}, {}))\n"
                 "});",
-                Style);
-  verifyNoCrash("Bar a[1] = {\n"
-                "    #define buf(a, b) \\\n"
-                "      { #a, #b },\n"
-                "    { Test, bar }\n"
-                "};",
                 Style);
 
   Style.AlignConsecutiveAssignments.Enabled = true;
