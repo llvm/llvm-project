@@ -78,12 +78,25 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK: define internal void [[FUNC1]](
 // CHECK-SAME: ptr noalias noundef [[TID_ADDR_ASCAST:%.*]], ptr noalias noundef [[ZERO_ADDR_ASCAST:%.*]], ptr [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 
+// Test if num_threads OpenMP clause for target region is correctly lowered
+// and passed as a param to kmpc_parallel_51 function
+
 // CHECK: define weak_odr protected amdgpu_kernel void [[FUNC_NUM_THREADS0:@.*]](
 // CHECK-NOT:     call void @__kmpc_push_num_threads(
 // CHECK:         call void @__kmpc_parallel_51(ptr addrspacecast (
 // CHECK-SAME:  ptr addrspace(1) @[[NUM_THREADS_GLOB:[0-9]+]] to ptr),
 // CHECK-SAME:  i32 [[NUM_THREADS_TMP0:%.*]], i32 1, i32 156,
 // CHECK-SAME:  i32 -1,  ptr [[FUNC_NUM_THREADS1:@.*]], ptr null, ptr [[NUM_THREADS_TMP1:%.*]], i64 1)
+
+// The one of arguments of  kmpc_parallel_51 function is responsible for handling if clause
+// of omp parallel construct for target region. If this  argument is nonzero,
+// then kmpc_parallel_51 launches multiple threads for parallel region.
+//
+// This test checks if MLIR expression:
+//      %7 = llvm.icmp "ne" %5, %6 : i32
+//      omp.parallel if(%7 : i1)
+// is correctly lowered to LLVM IR code and the if condition variable
+// is passed as a param to kmpc_parallel_51 function
 
 // CHECK: define weak_odr protected amdgpu_kernel void [[FUNC2:@.*]](
 // CHECK-SAME: ptr [[IFCOND_ARG0:%.*]], ptr [[IFCOND_ARG1:.*]], ptr [[IFCOND_ARG2:.*]]) {
