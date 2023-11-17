@@ -80,6 +80,10 @@ public:
 
   bool updateOperand(FoldCandidate &Fold) const;
 
+  bool canUseImmWithOpSel(FoldCandidate &Fold) const;
+
+  bool tryFoldImmWithOpSel(FoldCandidate &Fold) const;
+
   bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
                         MachineInstr *MI, unsigned OpNo,
                         MachineOperand *OpToFold) const;
@@ -196,60 +200,85 @@ FunctionPass *llvm::createSIFoldOperandsPass() {
   return new SIFoldOperands();
 }
 
+bool SIFoldOperands::canUseImmWithOpSel(FoldCandidate &Fold) const {
+  MachineInstr *MI = Fold.UseMI;
+  MachineOperand &Old = MI->getOperand(Fold.UseOpNo);
+  const uint64_t TSFlags = MI->getDesc().TSFlags;
+
+  assert(Old.isReg() && Fold.isImm());
+
+  if (!(TSFlags & SIInstrFlags::IsPacked) || (TSFlags & SIInstrFlags::IsMAI) ||
+      (ST->hasDOTOpSelHazard() && (TSFlags & SIInstrFlags::IsDOT)) ||
+      isUInt<16>(Fold.ImmToFold) ||
+      !AMDGPU::isFoldableLiteralV216(Fold.ImmToFold, ST->hasInv2PiInlineImm()))
+    return false;
+
+  unsigned Opcode = MI->getOpcode();
+  int OpNo = MI->getOperandNo(&Old);
+  uint8_t OpType = TII->get(Opcode).operands()[OpNo].OperandType;
+  switch (OpType) {
+  default:
+    return false;
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+    break;
+  }
+
+  return true;
+}
+
+bool SIFoldOperands::tryFoldImmWithOpSel(FoldCandidate &Fold) const {
+  MachineInstr *MI = Fold.UseMI;
+  MachineOperand &Old = MI->getOperand(Fold.UseOpNo);
+  unsigned Opcode = MI->getOpcode();
+  int OpNo = MI->getOperandNo(&Old);
+
+  // Set op_sel/op_sel_hi on this operand or bail out if op_sel is
+  // already set.
+  int ModIdx = -1;
+  if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0))
+    ModIdx = AMDGPU::OpName::src0_modifiers;
+  else if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1))
+    ModIdx = AMDGPU::OpName::src1_modifiers;
+  else if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2))
+    ModIdx = AMDGPU::OpName::src2_modifiers;
+  assert(ModIdx != -1);
+  ModIdx = AMDGPU::getNamedOperandIdx(Opcode, ModIdx);
+  MachineOperand &Mod = MI->getOperand(ModIdx);
+  unsigned Val = Mod.getImm();
+  if ((Val & SISrcMods::OP_SEL_0) || !(Val & SISrcMods::OP_SEL_1))
+    return false;
+
+  // Only apply the following transformation if that operand requires
+  // a packed immediate.
+  // If upper part is all zero we do not need op_sel_hi.
+  if (!(Fold.ImmToFold & 0xffff)) {
+    MachineOperand New =
+        MachineOperand::CreateImm((Fold.ImmToFold >> 16) & 0xffff);
+    if (!TII->isOperandLegal(*MI, OpNo, &New))
+      return false;
+    Mod.setImm(Mod.getImm() | SISrcMods::OP_SEL_0);
+    Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
+    Old.ChangeToImmediate((Fold.ImmToFold >> 16) & 0xffff);
+    return true;
+  }
+  MachineOperand New = MachineOperand::CreateImm(Fold.ImmToFold & 0xffff);
+  if (!TII->isOperandLegal(*MI, OpNo, &New))
+    return false;
+  Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
+  Old.ChangeToImmediate(Fold.ImmToFold & 0xffff);
+  return true;
+}
+
 bool SIFoldOperands::updateOperand(FoldCandidate &Fold) const {
   MachineInstr *MI = Fold.UseMI;
   MachineOperand &Old = MI->getOperand(Fold.UseOpNo);
   assert(Old.isReg());
 
-
-  const uint64_t TSFlags = MI->getDesc().TSFlags;
-  if (Fold.isImm()) {
-    if (TSFlags & SIInstrFlags::IsPacked && !(TSFlags & SIInstrFlags::IsMAI) &&
-        (!ST->hasDOTOpSelHazard() || !(TSFlags & SIInstrFlags::IsDOT)) &&
-        AMDGPU::isFoldableLiteralV216(Fold.ImmToFold,
-                                      ST->hasInv2PiInlineImm())) {
-      // Set op_sel/op_sel_hi on this operand or bail out if op_sel is
-      // already set.
-      unsigned Opcode = MI->getOpcode();
-      int OpNo = MI->getOperandNo(&Old);
-      int ModIdx = -1;
-      if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0))
-        ModIdx = AMDGPU::OpName::src0_modifiers;
-      else if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1))
-        ModIdx = AMDGPU::OpName::src1_modifiers;
-      else if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2))
-        ModIdx = AMDGPU::OpName::src2_modifiers;
-      assert(ModIdx != -1);
-      ModIdx = AMDGPU::getNamedOperandIdx(Opcode, ModIdx);
-      MachineOperand &Mod = MI->getOperand(ModIdx);
-      unsigned Val = Mod.getImm();
-      if (!(Val & SISrcMods::OP_SEL_0) && (Val & SISrcMods::OP_SEL_1)) {
-        // Only apply the following transformation if that operand requires
-        // a packed immediate.
-        switch (TII->get(Opcode).operands()[OpNo].OperandType) {
-        case AMDGPU::OPERAND_REG_IMM_V2FP16:
-        case AMDGPU::OPERAND_REG_IMM_V2INT16:
-        case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-        case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
-          // If upper part is all zero we do not need op_sel_hi.
-          if (!isUInt<16>(Fold.ImmToFold)) {
-            if (!(Fold.ImmToFold & 0xffff)) {
-              Mod.setImm(Mod.getImm() | SISrcMods::OP_SEL_0);
-              Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
-              Old.ChangeToImmediate((Fold.ImmToFold >> 16) & 0xffff);
-              return true;
-            }
-            Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
-            Old.ChangeToImmediate(Fold.ImmToFold & 0xffff);
-            return true;
-          }
-          break;
-        default:
-          break;
-        }
-      }
-    }
-  }
+  if (Fold.isImm() && canUseImmWithOpSel(Fold))
+    return tryFoldImmWithOpSel(Fold);
 
   if ((Fold.isImm() || Fold.isFI() || Fold.isGlobal()) && Fold.needsShrink()) {
     MachineBasicBlock *MBB = MI->getParent();
@@ -381,7 +410,13 @@ bool SIFoldOperands::tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
     return false;
   };
 
-  if (!TII->isOperandLegal(*MI, OpNo, OpToFold)) {
+  bool IsLegal = TII->isOperandLegal(*MI, OpNo, OpToFold);
+  if (!IsLegal && OpToFold->isImm()) {
+    FoldCandidate Fold(MI, OpNo, OpToFold);
+    IsLegal = canUseImmWithOpSel(Fold);
+  }
+
+  if (!IsLegal) {
     // Special case for v_mac_{f16, f32}_e64 if we are trying to fold into src2
     unsigned NewOpc = macToMad(Opc);
     if (NewOpc != AMDGPU::INSTRUCTION_LIST_END) {

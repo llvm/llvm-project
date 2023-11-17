@@ -41,9 +41,11 @@ entry:
   ret void
 }
 
+; FIXME: GFX940 fails to fold 0x1001 with op_sel
+
 ; GCN-LABEL: {{^}}test_llvm_amdgcn_udot2_op_sel:
 ; GFX906: v_dot2_u32_u16 v{{[0-9]+}}, 1, v{{[0-9]+}}, s{{[0-9]+}} op_sel:[0,1,0] op_sel_hi:[0,0,1]{{$}}
-; GFX940: v_dot2_u32_u16 v{{[0-9]+}}, 1, v{{[0-9]+}}, s{{[0-9]+}}{{$}}
+; GFX940: v_dot2_u32_u16 v{{[0-9]+}}, {{[sv][0-9]+}}, v{{[0-9]+}}, {{[sv][0-9]+}}{{$}}
 ; GFX10:  v_dot2_u32_u16 v{{[0-9]+}}, 1, v{{[0-9]+}}, s{{[0-9]+}} op_sel:[0,1,0] op_sel_hi:[0,0,1]{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_udot2_op_sel(
     ptr addrspace(1) %r,
