@@ -117,7 +117,7 @@ public:
       }
       MemoryMapping MemMap;
       MemMap.MemoryValueName = Parts[0].trim().str();
-      MemMap.Address = std::stol(Parts[1].trim().str());
+      MemMap.Address = std::stol(Parts[1].trim().str(), nullptr, 16);
       // validate that the annotation refers to an already existing memory
       // definition
       auto MemValIT = Result->Key.MemoryValues.find(Parts[0].trim().str());

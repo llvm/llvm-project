@@ -77,7 +77,7 @@ properly.
 * `LLVM-EXEGESIS-MEM-MAP <value name> <address>` - This annotation allows for
   mapping previously defined memory definitions into the execution context of a
   process. The value name refers to a previously defined memory definition and
-  the address is a decimal number that specifies the address the memory
+  the address is a hex value that specifies the address the memory
   definition should start at. Note that a single memory definition can be
   mapped multiple times. Using this annotation requires the subprocess
   execution mode.
