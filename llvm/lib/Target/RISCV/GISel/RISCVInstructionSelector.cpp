@@ -532,6 +532,9 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     if (!Dest.constrainAllUses(TII, TRI, RBI))
       return false;
 
+    // If the Kind is EK_LabelDifference32, the table stores an offset from
+    // the location of the table. Add the table address to get an absolute
+    // address.
     if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32) {
       Dest = MIB.buildInstr(RISCV::ADD, {&RISCV::GPRRegClass},
                             {Dest.getReg(0), MI.getOperand(0)});
