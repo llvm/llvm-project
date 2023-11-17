@@ -386,7 +386,7 @@ CheckForDuplicateCodeAlignAttrs(Sema &S,
       return;
     // Test the attribute values.
     llvm::APSInt SecondValue = CASA->getResultAsAPSInt();
-    FirstValue = CAFA->getResultAsAPSInt();
+    if (!FirstValue) FirstValue = CAFA->getResultAsAPSInt();
 
     if (FirstValue != SecondValue) {
       S.Diag((*LastFoundItr)->getLocation(), diag::err_loop_attr_conflict)
