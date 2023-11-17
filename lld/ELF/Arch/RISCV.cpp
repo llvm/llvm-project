@@ -651,6 +651,20 @@ static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
   if (!isInt<12>(r.sym->getVA(r.addend) - gp->getVA()))
     return;
 
+  // The symbol may be accessed in multiple pieces. We need to make sure that
+  // all of the possible accesses are relaxed or none are. This prevents
+  // relaxing the hi relocation and being unable to relax one of the low
+  // relocations. The compiler will only access multiple pieces of an object
+  // with low relocations on the memory op if the alignment allows it.
+  // Therefore it should suffice to check that the smaller of the alignment
+  // and size can be reached from GP.
+  uint32_t alignAdjust =
+      r.sym->getOutputSection() ? r.sym->getOutputSection()->addralign : 0;
+  alignAdjust = std::min<uint32_t>(alignAdjust, r.sym->getSize());
+
+  if (!isInt<12>(r.sym->getVA() + alignAdjust - gp->getVA()))
+    return;
+
   switch (r.type) {
   case R_RISCV_HI20:
     // Remove lui rd, %hi20(x).
