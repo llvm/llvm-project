@@ -8564,7 +8564,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // profitable for the vectorization, we can skip it, if the cost threshold is
   // default. The cost of vectorized PHI nodes is almost always 0 + the cost of
   // gathers/buildvectors.
-  constexpr unsigned Limit = 4;
+  constexpr int Limit = 4;
   if (!ForReduction && !SLPCostThreshold.getNumOccurrences() &&
       !VectorizableTree.empty() &&
       all_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
