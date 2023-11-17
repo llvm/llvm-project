@@ -400,7 +400,7 @@ class NonportablePrivateAPINotesPath  : Warning<
   "'%0_private.apinotes', not '%1'">;
 def warn_apinotes_private_case : NonportablePrivateAPINotesPath,
   InGroup<DiagGroup<"nonportable-private-apinotes-path">>;
-def warn_apinotes_private_case_system : NonportablePrivateAPINotesPath, 
+def warn_apinotes_private_case_system : NonportablePrivateAPINotesPath,
   DefaultIgnore, InGroup<DiagGroup<"nonportable-private-system-apinotes-path">>;
 
 // C++ for OpenCL.

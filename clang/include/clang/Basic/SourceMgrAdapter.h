@@ -32,7 +32,7 @@ class SourceMgrAdapter {
   SourceManager &SrcMgr;
 
   /// Clang diagnostics engine.
-  DiagnosticsEngine &Diag;
+  DiagnosticsEngine &Diagnostics;
 
   /// Diagnostic IDs for errors, warnings, and notes.
   unsigned ErrorDiagID, WarningDiagID, NoteDiagID;
@@ -43,31 +43,32 @@ class SourceMgrAdapter {
   /// A mapping from (LLVM source manager, buffer ID) pairs to the
   /// corresponding file ID within the Clang source manager.
   llvm::DenseMap<std::pair<const llvm::SourceMgr *, unsigned>, FileID>
-    FileIDMapping;
+      FileIDMapping;
 
   /// Diagnostic handler.
-  static void handleDiag(const llvm::SMDiagnostic &diag, void *context);
+  static void handleDiag(const llvm::SMDiagnostic &Diag, void *Context);
 
 public:
   /// Create a new \c SourceMgr adaptor that maps to the given source
   /// manager and diagnostics engine.
-  SourceMgrAdapter(SourceManager &srcMgr, DiagnosticsEngine &diag,
-                   unsigned errorDiagID, unsigned warningDiagID,
-                   unsigned noteDiagID,
-                   OptionalFileEntryRef defaultFile = std::nullopt);
+  SourceMgrAdapter(SourceManager &SM, DiagnosticsEngine &Diagnostics,
+                   unsigned ErrorDiagID, unsigned WarningDiagID,
+                   unsigned NoteDiagID,
+                   OptionalFileEntryRef DefaultFile = std::nullopt);
 
   ~SourceMgrAdapter();
 
   /// Map a source location in the given LLVM source manager to its
   /// corresponding location in the Clang source manager.
-  SourceLocation mapLocation(const llvm::SourceMgr &llvmSrcMgr,llvm::SMLoc loc);
+  SourceLocation mapLocation(const llvm::SourceMgr &LLVMSrcMgr,
+                             llvm::SMLoc Loc);
 
   /// Map a source range in the given LLVM source manager to its corresponding
   /// range in the Clang source manager.
-  SourceRange mapRange(const llvm::SourceMgr &llvmSrcMgr, llvm::SMRange range);
+  SourceRange mapRange(const llvm::SourceMgr &LLVMSrcMgr, llvm::SMRange Range);
 
   /// Handle the given diagnostic from an LLVM source manager.
-  void handleDiag(const llvm::SMDiagnostic &diag);
+  void handleDiag(const llvm::SMDiagnostic &Diag);
 
   /// Retrieve the diagnostic handler to use with the underlying SourceMgr.
   llvm::SourceMgr::DiagHandlerTy getDiagHandler() {
@@ -78,7 +79,6 @@ public:
   /// \c getDiagHandler().
   void *getDiagContext() { return this; }
 };
-
 
 } // end namespace clang
 
