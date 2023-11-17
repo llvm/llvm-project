@@ -590,8 +590,6 @@ public:
   bool processSectionsReduction(mlir::Location currentLocation) const;
   bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool
-  processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
-  bool
   processUseDeviceAddr(llvm::SmallVectorImpl<mlir::Value> &operands,
                        llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
                        llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
@@ -1853,18 +1851,6 @@ bool ClauseProcessor::processTo(
       });
 }
 
-bool ClauseProcessor::processEnter(
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
-  return findRepeatableClause<ClauseTy::Enter>(
-      [&](const ClauseTy::Enter *enterClause,
-          const Fortran::parser::CharBlock &) {
-        // Case: declare target to(func, var1, var2)...
-        gatherFuncAndVarSyms(enterClause->v,
-                             mlir::omp::DeclareTargetCaptureClause::enter,
-                             result);
-      });
-}
-
 bool ClauseProcessor::processUseDeviceAddr(
     llvm::SmallVectorImpl<mlir::Value> &operands,
     llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
@@ -2806,7 +2792,6 @@ static mlir::omp::DeclareTargetDeviceType getDeclareTargetInfo(
 
     ClauseProcessor cp(converter, *clauseList);
     cp.processTo(symbolAndClause);
-    cp.processEnter(symbolAndClause);
     cp.processLink(symbolAndClause);
     cp.processDeviceType(deviceType);
     cp.processTODO<Fortran::parser::OmpClause::Indirect>(
