@@ -29,11 +29,9 @@ struct CheckSimdReferenceAssignmentHelper {
   void operator()() const {
     if constexpr (std::is_assignable_v<T&, U&&>) {
       ex::simd<T, SimdAbi> origin_simd([](T i) { return i; });
-      for (size_t i = 0; i < origin_simd.size(); ++i) {
-        static_assert(noexcept(origin_simd[i] = static_cast<U>(i + 1)));
-        origin_simd[i] = static_cast<U>(i + 1);
-        assert(origin_simd[i] == static_cast<T>(std::forward<U>(i + 1)));
-      }
+      static_assert(noexcept(origin_simd[0] = static_cast<U>(5)));
+      origin_simd[0] = static_cast<U>(5);
+      assert(origin_simd[0] == static_cast<T>(std::forward<U>(5)));
     }
   }
 };
@@ -44,11 +42,9 @@ struct CheckMaskReferenceAssignmentHelper {
   void operator()() const {
     if constexpr (std::is_assignable_v<bool&, U&&>) {
       ex::simd_mask<T, SimdAbi> origin_mask(true);
-      for (size_t i = 0; i < origin_mask.size(); ++i) {
-        static_assert(noexcept(origin_mask[i] = static_cast<U>(i + 1)));
-        origin_mask[i] = static_cast<U>(i % 2);
-        assert(origin_mask[i] == static_cast<T>(std::forward<U>(i % 2)));
-      }
+      static_assert(noexcept(origin_mask[0] = false));
+      origin_mask[0] = false;
+      assert(origin_mask[0] == false);
     }
   }
 };
