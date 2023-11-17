@@ -76,25 +76,29 @@
 //  | . . . . | . . . . | . . 6 7 | . . . . |
 //  +---------+---------+---------+---------+
 //
-// Stored for row "2x4-blocked"
+// Storage for CSR block storage. Note that this essentially
+// provides CSR storage of 2x4 blocks with either row-major
+// or column-major storage within each 3x4 block of elements.
 //
 //    positions[1]   : 0 1 2
 //    coordinates[1] : 0 2
 //    values         : 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
-//                     4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 6, 7 [row]
+//                     4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 6, 7 [row-major]
 //
 //                     1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3,
-//                     4, 0, 0, 5, 0, 0, 0, 0, 6, 0, 0, 7 [col]
+//                     4, 0, 0, 5, 0, 0, 0, 0, 6, 0, 0, 7 [col-major]
 //
-// or for column "4x2-blocked"
+// Storage for CSC block storage. Note that this essentially
+// provides CSC storage of 4x2 blocks with either row-major
+// or column-major storage within each 3x4 block of elements.
 //
 //    positions[1]   : 0 1 1 2 2
 //    coordinates[1] : 0 1
 //    values         : 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
-//                     4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 6, 7 [row]
+//                     4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 6, 7 [row-major]
 //
 //                     1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3,
-//                     4, 0, 0, 5, 0, 0, 0, 0, 6, 0, 0, 7 [col]
+//                     4, 0, 0, 5, 0, 0, 0, 0, 6, 0, 0, 7 [col-major]
 //
 module {
 
