@@ -289,9 +289,6 @@ def OMPC_To : Clause<"to"> {
   let clangClass = "OMPToClause";
   let flangClass = "OmpObjectList";
 }
-def OMPC_Enter : Clause<"enter"> {
-  let flangClass = "OmpObjectList";
-}
 def OMPC_From : Clause<"from"> {
   let clangClass = "OMPFromClause";
   let flangClass = "OmpObjectList";
@@ -1127,8 +1124,7 @@ def OMP_DeclareTarget : Directive<"declare target"> {
   let allowedClauses = [
     VersionedClause<OMPC_To>,
     VersionedClause<OMPC_Link>,
-    VersionedClause<OMPC_Indirect>,
-    VersionedClause<OMPC_Enter, 52>
+    VersionedClause<OMPC_Indirect>
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_DeviceType, 50>
