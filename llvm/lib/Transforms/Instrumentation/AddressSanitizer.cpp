@@ -798,7 +798,9 @@ public:
         // do globals-gc.
         UseCtorComdat(UseGlobalsGC && ClWithComdat && !this->CompileKernel),
         DestructorKind(DestructorKind),
-        ConstructorKind(ConstructorKind) {
+        ConstructorKind(ClConstructorKind.getNumOccurrences() > 0
+                            ? ClConstructorKind
+                            : ConstructorKind) {
     C = &(M.getContext());
     int LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
@@ -1144,7 +1146,7 @@ AddressSanitizerPass::AddressSanitizerPass(
     AsanCtorKind ConstructorKind)
     : Options(Options), UseGlobalGC(UseGlobalGC),
       UseOdrIndicator(UseOdrIndicator), DestructorKind(DestructorKind),
-      ConstructorKind(ClConstructorKind) {}
+      ConstructorKind(ConstructorKind) {}
 
 PreservedAnalyses AddressSanitizerPass::run(Module &M,
                                             ModuleAnalysisManager &MAM) {
