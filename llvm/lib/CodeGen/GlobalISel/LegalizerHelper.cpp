@@ -3783,6 +3783,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerTRUNC(MI);
   GISEL_VECREDUCE_CASES_NONSEQ
     return lowerVectorReduction(MI);
+  case G_VAARG:
+    return lowerVAArg(MI);
   }
 }
 
@@ -7866,6 +7868,71 @@ LegalizerHelper::lowerVectorReduction(MachineInstr &MI) {
     return Legalized;
   }
   return UnableToLegalize;
+}
+
+static Type *getTypeForLLT(LLT Ty, LLVMContext &C);
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
+  Observer.changingInstr(MI);
+  MachineFunction &MF = *MI.getMF();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  Register ListPtr = MI.getOperand(1).getReg();
+  LLT PtrTy = MRI.getType(ListPtr);
+
+  // LstPtr is a pointer to the head of the list. Get the address
+  // of the head of the list.
+  Align PtrAlignment = Align(DL.getABITypeAlign(getTypeForLLT(PtrTy, Ctx)));
+  MachineMemOperand *PtrLoadMMO =
+      MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
+                              MachineMemOperand::MOLoad, PtrTy, PtrAlignment);
+  Register HeadOfList = MRI.createGenericVirtualRegister(PtrTy);
+  Register VAList =
+      MIRBuilder.buildLoad(HeadOfList, ListPtr, *PtrLoadMMO).getReg(0);
+
+  const MaybeAlign MA(MI.getOperand(2).getImm());
+  LLT PtrTyAsScalarTy = LLT::scalar(PtrTy.getSizeInBits());
+  if (MA && *MA > TLI.getMinStackArgumentAlignment()) {
+    Register AlignAmt =
+        MIRBuilder.buildConstant(PtrTyAsScalarTy, MA->value() - 1).getReg(0);
+    Register AddDst = MRI.createGenericVirtualRegister(PtrTy);
+    MIRBuilder.buildPtrAdd(AddDst, HeadOfList, AlignAmt);
+    Register Mask =
+        MIRBuilder.buildConstant(PtrTyAsScalarTy, -(int64_t)MA->value())
+            .getReg(0);
+    Register AndDst = MRI.createGenericVirtualRegister(PtrTy);
+    VAList = MIRBuilder.buildPtrMask(AndDst, AddDst, Mask).getReg(0);
+  }
+
+  // Increment the pointer, VAList, to the next vaarg
+  // The list should be bumped by the size of element in the current head of
+  // list.
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  Register IncAmt =
+      MIRBuilder
+          .buildConstant(PtrTyAsScalarTy,
+                         DL.getTypeAllocSize(getTypeForLLT(Ty, Ctx)))
+          .getReg(0);
+  Register Succ = MRI.createGenericVirtualRegister(PtrTy);
+  MIRBuilder.buildPtrAdd(Succ, VAList, IncAmt);
+
+  // Store the increment VAList to the legalized pointer
+  MachineMemOperand *StoreMMO =
+      MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
+                              MachineMemOperand::MOStore, PtrTy, PtrAlignment);
+  MIRBuilder.buildStore(Succ, ListPtr, *StoreMMO);
+  // Load the actual argument out of the pointer VAList
+  Align EltAlignment = Align(DL.getABITypeAlign(getTypeForLLT(Ty, Ctx)));
+  MachineMemOperand *EltLoadMMO =
+      MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
+                              MachineMemOperand::MOLoad, Ty, EltAlignment);
+  MIRBuilder.buildLoad(Dst, VAList, *EltLoadMMO);
+
+  Observer.changedInstr(MI);
+  Observer.erasingInstr(MI);
+  MI.eraseFromParent();
+  return Legalized;
 }
 
 static bool shouldLowerMemFuncForSize(const MachineFunction &MF) {
