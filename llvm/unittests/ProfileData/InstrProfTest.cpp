@@ -80,13 +80,15 @@ static const auto Err = [](Error E) {
 typedef std::vector<MutableArrayRef<InstrProfValueData>> VDArray;
 
 // 'ValueDataArray' should be a non-const reference, and the array element is
-// a vector of InstrProfRecord. This is mainly because method
+// mutable array reference of InstrProfRecord. This is mainly because method
 // `InstrProfRecord::addValueData` might modify the underlying C array.
 static void addValueProfData(InstrProfRecord &Record, uint32_t ValueKind,
                              VDArray &ValueDataArray) {
   Record.reserveSites(ValueKind, ValueDataArray.size());
   for (long unsigned int i = 0; i < ValueDataArray.size(); i++) {
-    // The state of data() is not specified when the vector is empty.
+    // The state of vector::data() is not specified when the vector is empty,
+    // and MutableArrayRef takes vector::data() when initialized with a vector.
+    // This should probably be fixed in MutableArrayRef library.
     Record.addValueData(ValueKind, i,
                         ValueDataArray[i].empty() ? nullptr
                                                   : ValueDataArray[i].data(),
@@ -110,7 +112,10 @@ struct MaybeSparseInstrProfTest : public InstrProfTest,
   }
 
 public:
+  // A helper function to test the counter-overflow when merging value profiles.
   void testValueProfileMergeSaturation(uint32_t ValueKind);
+  // A helper function to test that when there are too many values for a given
+  // site, the merged results are properly truncated.
   void testValueProfileMergeTrunc(uint32_t ValueKind);
 
   // Tests that value profiles in Record has the same content as (possibly
@@ -974,7 +979,6 @@ TEST_P(MaybeSparseInstrProfTest, test_block_counter_merge_saturation) {
   EXPECT_EQ(MaxEdgeCount, ReadRecord1->Counts[0]);
 }
 
-// A helper function to test the counter-overflow when merging value profiles.
 void MaybeSparseInstrProfTest::testValueProfileMergeSaturation(
     uint32_t ValueKind) {
   assert(ValueKind == IPVK_IndirectCallTarget);
@@ -1033,8 +1037,6 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge_saturation) {
   testValueProfileMergeSaturation(IPVK_IndirectCallTarget);
 }
 
-// A helper function to test that when there are too many values for a given
-// site, the merged results are properly truncated.
 void MaybeSparseInstrProfTest::testValueProfileMergeTrunc(uint32_t ValueKind) {
   assert(ValueKind == IPVK_IndirectCallTarget);
 
