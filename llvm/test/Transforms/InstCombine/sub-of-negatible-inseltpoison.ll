@@ -499,8 +499,8 @@ define void @phi_with_duplicate_incoming_basic_blocks(i32 %x, i32 %y, i1 %should
 ; CHECK:       lookup:
 ; CHECK-NEXT:    [[TO_LOOKUP:%.*]] = phi i32 [ [[Y:%.*]], [[ENTRY:%.*]] ], [ [[METAVAL_NEG:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    switch i32 [[TO_LOOKUP]], label [[END:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LOOP]]
-; CHECK-NEXT:    i32 42, label [[LOOP]]
+; CHECK-NEXT:      i32 0, label [[LOOP]]
+; CHECK-NEXT:      i32 42, label [[LOOP]]
 ; CHECK-NEXT:    ]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[METAVAL_NEG]] = phi i32 [ [[X_INC_NEG]], [[LOOKUP]] ], [ [[X_INC_NEG]], [[LOOKUP]] ], [ -84, [[ENTRY]] ]
