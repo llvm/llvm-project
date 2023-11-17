@@ -190,7 +190,7 @@ define <2 x i16> @zext_lshr_vec_undef(<2 x i8> %x) {
 define <2 x i16> @zext_shl_vec_overshift(<2 x i8> %x) {
 ; CHECK-LABEL: @zext_shl_vec_overshift(
 ; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i16>
-; CHECK-NEXT:    [[B:%.*]] = shl <2 x i16> [[Z]], <i16 8, i16 2>
+; CHECK-NEXT:    [[B:%.*]] = shl nuw <2 x i16> [[Z]], <i16 8, i16 2>
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i16> [[B]], [[Z]]
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
