@@ -17,6 +17,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
 
+#define MAX_FILENAME_LEN 255
+
 namespace llvm {
 
 /// Default traits class for extracting a graph from an analysis pass.
@@ -94,7 +96,7 @@ void printGraphForFunction(Function &F, GraphT Graph, StringRef Name,
   raw_fd_ostream File(Filename, EC, sys::fs::OF_TextWithCRLF);
   std::string GraphName = DOTGraphTraits<GraphT>::getGraphName(Graph);
 
-  if (!EC)
+  if (!EC && (Filename.length() <= MAX_FILENAME_LEN ))
     WriteGraph(File, Graph, IsSimple,
                GraphName + " for '" + F.getName() + "' function");
   else
@@ -280,7 +282,7 @@ public:
     raw_fd_ostream File(Filename, EC, sys::fs::OF_TextWithCRLF);
     std::string Title = DOTGraphTraits<GraphT>::getGraphName(Graph);
 
-    if (!EC)
+    if (!EC && (Filename.length() <= MAX_FILENAME_LEN ))
       WriteGraph(File, Graph, IsSimple, Title);
     else
       errs() << "  error opening file for writing!";
@@ -310,7 +312,7 @@ void WriteDOTGraphToFile(Function &F, GraphT &&Graph,
   std::string GraphName = DOTGraphTraits<GraphT>::getGraphName(Graph);
   std::string Title = GraphName + " for '" + F.getName().str() + "' function";
 
-  if (!EC)
+  if (!EC && (Filename.length() <= MAX_FILENAME_LEN ))
     WriteGraph(File, Graph, IsSimple, Title);
   else
     errs() << "  error opening file for writing!";
