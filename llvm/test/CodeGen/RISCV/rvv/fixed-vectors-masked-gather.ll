@@ -6765,13 +6765,12 @@ define <8 x i64> @mgather_baseidx_v8i64(ptr %base, <8 x i64> %idxs, <8 x i1> %m,
 ; RV32ZVE32F-NEXT:    lw a6, 40(a2)
 ; RV32ZVE32F-NEXT:    lw a7, 32(a2)
 ; RV32ZVE32F-NEXT:    lw t0, 24(a2)
-; RV32ZVE32F-NEXT:    lw t1, 0(a2)
+; RV32ZVE32F-NEXT:    lw t1, 16(a2)
 ; RV32ZVE32F-NEXT:    lw t2, 8(a2)
-; RV32ZVE32F-NEXT:    lw a2, 16(a2)
 ; RV32ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, t1
+; RV32ZVE32F-NEXT:    vlse32.v v8, (a2), zero
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, t2
-; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
+; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, t1
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, t0
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, a7
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, a6
@@ -11934,13 +11933,12 @@ define <8 x double> @mgather_baseidx_v8f64(ptr %base, <8 x i64> %idxs, <8 x i1> 
 ; RV32ZVE32F-NEXT:    lw a5, 40(a2)
 ; RV32ZVE32F-NEXT:    lw a6, 32(a2)
 ; RV32ZVE32F-NEXT:    lw a7, 24(a2)
-; RV32ZVE32F-NEXT:    lw t0, 0(a2)
+; RV32ZVE32F-NEXT:    lw t0, 16(a2)
 ; RV32ZVE32F-NEXT:    lw t1, 8(a2)
-; RV32ZVE32F-NEXT:    lw a2, 16(a2)
 ; RV32ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, t0
+; RV32ZVE32F-NEXT:    vlse32.v v8, (a2), zero
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, t1
-; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
+; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, t0
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, a7
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, a6
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, a5
