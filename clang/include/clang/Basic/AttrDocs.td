@@ -7536,7 +7536,7 @@ For example,
     std::function<Task<int>(int)> f = increment;
   }
 
-  Note: ``a_promise_type::get_return_object`` is exempted from this analysis as it is a necessary
-  implementation detail of any coroutine library.
+Note: ``a_promise_type::get_return_object`` is exempted from this analysis as it is a necessary
+implementation detail of any coroutine library.
 }];
 }
