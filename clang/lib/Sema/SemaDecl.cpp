@@ -16256,6 +16256,9 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (FD && !FD->isDeleted())
     checkTypeSupport(FD->getType(), FD->getLocation(), FD);
 
+  if (LangOpts.CUDA)
+    maybeAddCUDAHostDeviceAttrsToTrivialCtorDtor(FD);
+
   return dcl;
 }
 
