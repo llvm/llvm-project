@@ -69,14 +69,15 @@ def PartTensor_GetPartitionsOp : PartTensor_Op<"get_partitions">,
 		let assemblyFormat = " $Parts `,` $tupleList attr-dict `:` type($Parts) `,` type($tupleList) `->` type($result)";
 		}
  def PartTensor_SetSliceOp : PartTensor_Op<"set_slice">,
-     Arguments<(ins AnyTensor:$Parts, AnyTensor:$partT, TensorOf<[AnySignlessIntegerOrIndex]>:$tupleList)>,
-     Results<(outs)> {
-         let summary = "get slice";
+     Arguments<(ins AnyTensor:$in_part_tensor, AnyStridedMemRefOfRank<1>:$part_spec, AnyTensor:$sparse_tensor)>,
+     Results<(outs AnyTensor:$result_part_tensor)> {
+         let summary = "set slice";
          let description = [{
              This operation will take tuples and output one tensor
              }]; 
          //%slice = partition.get_slice(%total_iteration_space,%partition) -> tensor<2xindex>
-         let assemblyFormat = " $Parts `,` $partT `,` $tupleList attr-dict `:` type($Parts) `,` type($partT) `,` type($tupleList)";
+         // let assemblyFormat = " $in_part_tensor `,` $part_spec `,` $sparse_tensor attr-dict `:` type($in_part_tensor) `,` type($part_spec) `->` type($result_part_tensor)";
+         let assemblyFormat = " $in_part_tensor `,` $part_spec `,` $sparse_tensor attr-dict `:` type($in_part_tensor) `,` type($part_spec) `,` type($sparse_tensor) `->` type($result_part_tensor)";
          }
 
 def PartTensor_GetNumPartitionsOp : PartTensor_Op<"get_num_partitions">,
