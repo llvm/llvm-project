@@ -2658,26 +2658,20 @@ SmallVector<OpFoldResult> transform::TileUsingForOp::getMixedSizes() {
 // `array` prefix to be consistent in the IR with `parseDynamicIndexList`.
 ParseResult parseOptionalInterchange(OpAsmParser &parser,
                                      OperationState &result) {
-  if (succeeded(parser.parseOptionalLBrace())) {
-    if (failed(parser.parseKeyword("interchange")))
-      return parser.emitError(parser.getNameLoc()) << "expect `interchange`";
-    if (failed(parser.parseEqual()))
-      return parser.emitError(parser.getNameLoc()) << "expect `=`";
-    result.addAttribute("interchange",
-                        DenseI64ArrayAttr::parse(parser, Type{}));
-    if (failed(parser.parseRBrace()))
-      return parser.emitError(parser.getNameLoc()) << "expect `}`";
-  }
+  if (succeeded(parser.parseOptionalKeyword("interchange")))
+    result.addAttribute(
+        transform::TileUsingForOp::getInterchangeAttrName(result.name),
+        DenseI64ArrayAttr::parse(parser, Type{}));
   return success();
 }
 
 void printOptionalInterchange(OpAsmPrinter &p,
                               ArrayRef<int64_t> interchangeVals) {
   if (!interchangeVals.empty()) {
-    p << " {interchange = [";
+    p << " interchange [";
     llvm::interleaveComma(interchangeVals, p,
                           [&](int64_t integer) { p << integer; });
-    p << "]}";
+    p << "]";
   }
 }
 
@@ -2693,6 +2687,7 @@ ParseResult transform::TileUsingForOp::parse(OpAsmParser &parser,
   if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc) ||
       parseDynamicIndexList(parser, dynamicSizes, staticSizes, scalableVals) ||
       parseOptionalInterchange(parser, result) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonType(functionalType))
     return ParseResult::failure();
 
@@ -2727,6 +2722,11 @@ void TileUsingForOp::print(OpAsmPrinter &p) {
                         /*valueTypes=*/{}, getScalableSizesAttr(),
                         OpAsmParser::Delimiter::Square);
   printOptionalInterchange(p, getInterchange());
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      /*elidedAttrs=*/{getInterchangeAttrName(getOperation()->getName()),
+                       getScalableSizesAttrName(getOperation()->getName()),
+                       getStaticSizesAttrName(getOperation()->getName())});
   p << " : ";
   p.printFunctionalType(getOperands().getTypes(), getResults().getTypes());
 }
