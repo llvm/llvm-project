@@ -32,7 +32,7 @@ end subroutine read_write_section
 module assumed_array_routines
 contains
 !ALL-LABEL: func.func @_QMassumed_array_routinesPassumed_shape_array(
-!ALL-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "arr_read_write"}) {
+!ALL-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "arr_read_write"})
 !ALL: %[[ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMassumed_array_routinesFassumed_shape_arrayEi"}
 !ALL: %[[C0:.*]] = arith.constant 1 : index
 !ALL: %[[C1:.*]] = arith.constant 0 : index
@@ -56,7 +56,7 @@ contains
         end subroutine assumed_shape_array
 
 !ALL-LABEL:   func.func @_QMassumed_array_routinesPassumed_size_array(
-!ALL-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr_read_write"}) {
+!ALL-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr_read_write"})
 !ALL: %[[ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMassumed_array_routinesFassumed_size_arrayEi"}
 !ALL: %[[C0:.*]] = arith.constant 1 : index
 !ALL: %[[C1:.*]] = arith.constant 1 : index

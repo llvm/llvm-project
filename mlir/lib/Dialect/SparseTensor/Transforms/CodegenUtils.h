@@ -142,6 +142,10 @@ private:
 /// Add type casting between arith and index types when needed.
 Value genCast(OpBuilder &builder, Location loc, Value value, Type dstTy);
 
+/// Add conversion from scalar to given type (possibly a 0-rank tensor).
+Value genScalarToTensor(OpBuilder &builder, Location loc, Value elem,
+                        Type dstTp);
+
 /// Generates a pointer/index load from the sparse storage scheme. Narrower
 /// data types need to be zero extended before casting the value into the
 /// index type used for looping and indexing.
@@ -313,20 +317,16 @@ Value createOrFoldSliceOffsetOp(OpBuilder &builder, Location loc, Value tensor,
 Value createOrFoldSliceStrideOp(OpBuilder &builder, Location loc, Value tensor,
                                 Dimension dim);
 
-/// Populates the array with the dimension-shape of the given
-/// `SparseTensorType`, where dynamic sizes are represented by zero.
-void fillDimShape(OpBuilder &builder, Location loc, SparseTensorType stt,
-                  SmallVectorImpl<Value> &out);
-
 /// Generates code that opens a reader and sets the dimension sizes.
 Value genReader(OpBuilder &builder, Location loc, SparseTensorType stt,
                 Value tensor,
-                /*out*/ SmallVectorImpl<Value> &dimShapeValues,
+                /*out*/ SmallVectorImpl<Value> &dimSizesValues,
                 /*out*/ Value &dimSizesBuffer);
 
 /// Generates code to set up the buffer parameters for a map.
 Value genMapBuffers(OpBuilder &builder, Location loc, SparseTensorType stt,
-                    ArrayRef<Value> dimShapeValues, Value dimSizesBuffer,
+                    ArrayRef<Value> dimSizesValues, Value dimSizesBuffer,
+                    /*out*/ SmallVectorImpl<Value> &lvlSizesValues,
                     /*out*/ Value &dim2lvlBuffer,
                     /*out*/ Value &lvl2dimBuffer);
 

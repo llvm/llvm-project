@@ -4351,10 +4351,11 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
   SmallVector<uint32_t, 2> PredWeights;
   if (!PBI->getMetadata(LLVMContext::MD_unpredictable) &&
       extractBranchWeights(*PBI, PredWeights) &&
-      (PredWeights[0] + PredWeights[1]) != 0) {
+      (static_cast<uint64_t>(PredWeights[0]) + PredWeights[1]) != 0) {
 
     BranchProbability CommonDestProb = BranchProbability::getBranchProbability(
-        PredWeights[PBIOp], PredWeights[0] + PredWeights[1]);
+        PredWeights[PBIOp],
+        static_cast<uint64_t>(PredWeights[0]) + PredWeights[1]);
 
     BranchProbability Likely = TTI.getPredictableBranchThreshold();
     if (CommonDestProb >= Likely)

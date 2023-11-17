@@ -32,3 +32,9 @@
 /clang/www/make_cxx_dr_status @Endilll
 
 /lldb/ @JDevlieghere
+
+# SPIR-V in MLIR.
+/mlir/**/SPIRV/ @antiagainst @kuhar
+/mlir/**/SPIRVTo*/ @antiagainst @kuhar
+/mlir/**/*ToSPIRV/ @antiagainst @kuhar
+/mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar

@@ -54,7 +54,6 @@ namespace opts {
 
 extern cl::OptionCategory BoltCategory;
 extern cl::OptionCategory BoltOptCategory;
-extern cl::OptionCategory BoltRelocCategory;
 
 extern cl::opt<bool> EnableBAT;
 extern cl::opt<bool> Instrument;
@@ -431,8 +430,6 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
   OS << "\n  IsSplit     : " << isSplit();
   OS << "\n  BB Count    : " << size();
 
-  if (HasFixedIndirectBranch)
-    OS << "\n  HasFixedIndirectBranch : true";
   if (HasUnknownControlFlow)
     OS << "\n  Unknown CF  : true";
   if (getPersonalityFunction())
@@ -1117,7 +1114,7 @@ void BinaryFunction::handleIndirectBranch(MCInst &Instruction, uint64_t Size,
       Instruction.clear();
       MIB->createUncondBranch(Instruction, TargetSymbol, BC.Ctx.get());
       TakenBranches.emplace_back(Offset, IndirectTarget - getAddress());
-      HasFixedIndirectBranch = true;
+      addEntryPointAtOffset(IndirectTarget - getAddress());
     } else {
       MIB->convertJmpToTailCall(Instruction);
       BC.addInterproceduralReference(this, IndirectTarget);
@@ -1380,7 +1377,7 @@ add_instruction:
       // NOTE: disassembly loses the correct size information for noops on x86.
       //       E.g. nopw 0x0(%rax,%rax,1) is 9 bytes, but re-encoded it's only
       //       5 bytes. Preserve the size info using annotations.
-      MIB->addAnnotation(Instruction, "Size", static_cast<uint32_t>(Size));
+      MIB->setSize(Instruction, Size);
     }
 
     addInstruction(Offset, std::move(Instruction));
@@ -1892,9 +1889,6 @@ bool BinaryFunction::postProcessIndirectBranches(
 
     LastIndirectJumpBB->updateJumpTableSuccessors();
   }
-
-  if (HasFixedIndirectBranch)
-    return false;
 
   // Validate that all data references to function offsets are claimed by
   // recognized jump tables. Register externally referenced blocks as entry
@@ -4353,10 +4347,11 @@ MCInst *BinaryFunction::getInstructionAtOffset(uint64_t Offset) {
     }
 
     if (MCInst *LastInstr = BB->getLastNonPseudoInstr()) {
-      const uint32_t Size =
-          BC.MIB->getAnnotationWithDefault<uint32_t>(*LastInstr, "Size");
-      if (BB->getEndOffset() - Offset == Size)
-        return LastInstr;
+      if (std::optional<uint32_t> Size = BC.MIB->getSize(*LastInstr)) {
+        if (BB->getEndOffset() - Offset == Size) {
+          return LastInstr;
+        }
+      }
     }
 
     return nullptr;

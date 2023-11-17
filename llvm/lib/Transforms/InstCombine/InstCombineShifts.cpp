@@ -953,6 +953,12 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
   } else {
     if (I.isExact())
       return false;
+
+    // shr (shl X, Y), Y
+    if (match(I.getOperand(0), m_Shl(m_Value(), m_Specific(I.getOperand(1))))) {
+      I.setIsExact();
+      return true;
+    }
   }
 
   // Compute what we know about shift count.
@@ -1293,9 +1299,10 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
         unsigned ShlAmtC = C1->getZExtValue();
         Constant *ShiftDiff = ConstantInt::get(Ty, ShlAmtC - ShAmtC);
         if (cast<BinaryOperator>(Op0)->hasNoUnsignedWrap()) {
-          // (X <<nuw C1) >>u C --> X <<nuw (C1 - C)
+          // (X <<nuw C1) >>u C --> X <<nuw/nsw (C1 - C)
           auto *NewShl = BinaryOperator::CreateShl(X, ShiftDiff);
           NewShl->setHasNoUnsignedWrap(true);
+          NewShl->setHasNoSignedWrap(ShAmtC > 0);
           return NewShl;
         }
         if (Op0->hasOneUse()) {
@@ -1428,12 +1435,13 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       if (Op0->hasOneUse()) {
         APInt NewMulC = MulC->lshr(ShAmtC);
         // if c is divisible by (1 << ShAmtC):
-        // lshr (mul nuw x, MulC), ShAmtC -> mul nuw x, (MulC >> ShAmtC)
+        // lshr (mul nuw x, MulC), ShAmtC -> mul nuw nsw x, (MulC >> ShAmtC)
         if (MulC->eq(NewMulC.shl(ShAmtC))) {
           auto *NewMul =
               BinaryOperator::CreateNUWMul(X, ConstantInt::get(Ty, NewMulC));
-          BinaryOperator *OrigMul = cast<BinaryOperator>(Op0);
-          NewMul->setHasNoSignedWrap(OrigMul->hasNoSignedWrap());
+          assert(ShAmtC != 0 &&
+                 "lshr X, 0 should be handled by simplifyLShrInst.");
+          NewMul->setHasNoSignedWrap(true);
           return NewMul;
         }
       }

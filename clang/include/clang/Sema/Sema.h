@@ -5452,7 +5452,7 @@ public:
   bool DiagnosePropertyAccessorMismatch(ObjCPropertyDecl *PD,
                                         ObjCMethodDecl *Getter,
                                         SourceLocation Loc);
-  void DiagnoseSentinelCalls(NamedDecl *D, SourceLocation Loc,
+  void DiagnoseSentinelCalls(const NamedDecl *D, SourceLocation Loc,
                              ArrayRef<Expr *> Args);
 
   void PushExpressionEvaluationContext(
@@ -8842,6 +8842,9 @@ public:
     /// The type of an exception.
     UPPC_ExceptionType,
 
+    /// Explicit specialization.
+    UPPC_ExplicitSpecialization,
+
     /// Partial specialization.
     UPPC_PartialSpecialization,
 
@@ -11186,6 +11189,12 @@ public:
   bool buildCoroutineParameterMoves(SourceLocation Loc);
   VarDecl *buildCoroutinePromise(SourceLocation Loc);
   void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
+
+  // As a clang extension, enforces that a non-coroutine function must be marked
+  // with [[clang::coro_wrapper]] if it returns a type marked with
+  // [[clang::coro_return_type]].
+  // Expects that FD is not a coroutine.
+  void CheckCoroutineWrapper(FunctionDecl *FD);
   /// Lookup 'coroutine_traits' in std namespace and std::experimental
   /// namespace. The namespace found is recorded in Namespace.
   ClassTemplateDecl *lookupCoroutineTraits(SourceLocation KwLoc,
@@ -13449,6 +13458,10 @@ public:
   /// depending on FD and the current compilation settings.
   void maybeAddCUDAHostDeviceAttrs(FunctionDecl *FD,
                                    const LookupResult &Previous);
+
+  /// May add implicit CUDAHostAttr and CUDADeviceAttr attributes to a
+  /// trivial cotr/dtor that does not have host and device attributes.
+  void maybeAddCUDAHostDeviceAttrsToTrivialCtorDtor(FunctionDecl *FD);
 
   /// May add implicit CUDAConstantAttr attribute to VD, depending on VD
   /// and current compilation settings.

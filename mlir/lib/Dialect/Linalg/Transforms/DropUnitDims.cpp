@@ -349,14 +349,14 @@ static UnitExtentReplacementInfo dropUnitExtentFromOperandMetadata(
   ArrayRef<AffineExpr> exprs = indexingMap.getResults();
 
   auto isUnitDim = [&](unsigned dim) {
-    if (auto dimExpr = exprs[dim].dyn_cast<AffineDimExpr>()) {
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(exprs[dim])) {
       unsigned oldPosition = dimExpr.getPosition();
       return !oldDimsToNewDimsMap.count(oldPosition);
     }
     // Handle the other case where the shape is 1, and is accessed using a
     // constant 0.
     if (operandShape[dim] == 1) {
-      auto constAffineExpr = exprs[dim].dyn_cast<AffineConstantExpr>();
+      auto constAffineExpr = dyn_cast<AffineConstantExpr>(exprs[dim]);
       return constAffineExpr && constAffineExpr.getValue() == 0;
     }
     return false;
@@ -411,7 +411,7 @@ LogicalResult linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
                                                allowedUnitDims.end());
   llvm::SmallDenseSet<unsigned> unitDims;
   for (const auto &expr : enumerate(invertedMap.getResults())) {
-    if (AffineDimExpr dimExpr = expr.value().dyn_cast<AffineDimExpr>()) {
+    if (AffineDimExpr dimExpr = dyn_cast<AffineDimExpr>(expr.value())) {
       if (dims[dimExpr.getPosition()] == 1 &&
           unitDimsFilter.count(expr.index()))
         unitDims.insert(expr.index());
