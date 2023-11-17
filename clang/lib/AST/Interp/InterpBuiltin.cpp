@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "../ExprConstShared.h"
 #include "Boolean.h"
 #include "Interp.h"
 #include "PrimType.h"
@@ -517,6 +518,21 @@ static bool interp__builtin_bitreverse(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_classify_type(InterpState &S, CodePtr OpPC,
+                                          const InterpFrame *Frame,
+                                          const Function *Func,
+                                          const CallExpr *Call) {
+  // This is an unevaluated call, so there are no arguments on the stack.
+  assert(Call->getNumArgs() == 1);
+  const Expr *Arg = Call->getArg(0);
+
+  GCCTypeClass ResultClass =
+      EvaluateBuiltinClassifyType(Arg->getType(), S.getLangOpts());
+  int32_t ReturnVal = static_cast<int32_t>(ResultClass);
+  pushInt(S, ReturnVal);
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
@@ -678,6 +694,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_bitreverse32:
   case Builtin::BI__builtin_bitreverse64:
     if (!interp__builtin_bitreverse(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_classify_type:
+    if (!interp__builtin_classify_type(S, OpPC, Frame, F, Call))
       return false;
     break;
 
