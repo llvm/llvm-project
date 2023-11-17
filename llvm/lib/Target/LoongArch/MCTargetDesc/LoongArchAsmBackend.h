@@ -31,9 +31,14 @@ class LoongArchAsmBackend : public MCAsmBackend {
 public:
   LoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                       const MCTargetOptions &Options)
-      : MCAsmBackend(llvm::endianness::little), STI(STI), OSABI(OSABI),
-        Is64Bit(Is64Bit), TargetOptions(Options) {}
+      : MCAsmBackend(llvm::endianness::little,
+                     LoongArch::fixup_loongarch_relax),
+        STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {}
   ~LoongArchAsmBackend() override {}
+
+  bool handleAddSubRelocations(const MCAsmLayout &Layout, const MCFragment &F,
+                               const MCFixup &Fixup, const MCValue &Target,
+                               uint64_t &FixedValue) const override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,

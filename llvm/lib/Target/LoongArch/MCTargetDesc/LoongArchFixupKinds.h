@@ -106,7 +106,20 @@ enum Fixups {
   // 20-bit fixup corresponding to %gd_pc_hi20(foo) for instruction pcalau12i.
   fixup_loongarch_tls_gd_pc_hi20,
   // 20-bit fixup corresponding to %gd_hi20(foo) for instruction lu12i.w.
-  fixup_loongarch_tls_gd_hi20
+  fixup_loongarch_tls_gd_hi20,
+  // ADD and SUB fixups.
+  fixup_loongarch_add6 = FirstLiteralRelocationKind + ELF::R_LARCH_ADD6,
+  fixup_loongarch_sub6 = FirstLiteralRelocationKind + ELF::R_LARCH_SUB6,
+  fixup_loongarch_add8 = FirstLiteralRelocationKind + ELF::R_LARCH_ADD8,
+  fixup_loongarch_sub8 = FirstLiteralRelocationKind + ELF::R_LARCH_SUB8,
+  fixup_loongarch_add16 = FirstLiteralRelocationKind + ELF::R_LARCH_ADD16,
+  fixup_loongarch_sub16 = FirstLiteralRelocationKind + ELF::R_LARCH_SUB16,
+  fixup_loongarch_add32 = FirstLiteralRelocationKind + ELF::R_LARCH_ADD32,
+  fixup_loongarch_sub32 = FirstLiteralRelocationKind + ELF::R_LARCH_SUB32,
+  fixup_loongarch_add64 = FirstLiteralRelocationKind + ELF::R_LARCH_ADD64,
+  fixup_loongarch_sub64 = FirstLiteralRelocationKind + ELF::R_LARCH_SUB64,
+  // Generate an R_LARCH_RELAX which indicates the linker may relax here.
+  fixup_loongarch_relax = FirstLiteralRelocationKind + ELF::R_LARCH_RELAX
 };
 } // end namespace LoongArch
 } // end namespace llvm
