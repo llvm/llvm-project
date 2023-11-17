@@ -471,8 +471,12 @@ void foobar(){
     const T Two = 2;
     bar::sqrt(Two);
 }
-void use_foobar() {
+void use_templates() {
     foobar<float>();
+    foobar<double>();
+
+    baz<float>();
+    baz<double>();
 }
 
 #define BIG_MARCO                                                              \
