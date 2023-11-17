@@ -4669,14 +4669,20 @@ struct VarArgHelperBase : public VarArgHelper {
 
   /// Compute the shadow address for a given va_arg.
   Value *getShadowPtrForVAArgument(Type *Ty, IRBuilder<> &IRB,
-                                   unsigned ArgOffset, unsigned ArgSize) {
-    // Make sure we don't overflow __msan_va_arg_tls.
-    if (ArgOffset + ArgSize > kParamTLSSize)
-      return nullptr;
+                                   unsigned ArgOffset) {
     Value *Base = IRB.CreatePointerCast(MS.VAArgTLS, MS.IntptrTy);
     Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
     return IRB.CreateIntToPtr(Base, PointerType::get(MSV.getShadowTy(Ty), 0),
                               "_msarg_va_s");
+  }
+
+  /// Compute the shadow address for a given va_arg.
+  Value *getShadowPtrForVAArgument(Type *Ty, IRBuilder<> &IRB,
+                                   unsigned ArgOffset, unsigned ArgSize) {
+    // Make sure we don't overflow __msan_va_arg_tls.
+    if (ArgOffset + ArgSize > kParamTLSSize)
+      return nullptr;
+    return getShadowPtrForVAArgument(Ty, IRB, ArgOffset);
   }
 
   /// Compute the origin address for a given va_arg.
@@ -4772,6 +4778,24 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
     unsigned FpOffset = AMD64GpEndOffset;
     unsigned OverflowOffset = AMD64FpEndOffset;
     const DataLayout &DL = F.getParent()->getDataLayout();
+
+    auto CleanUnusedTLS = [&](Value *ShadowBase, unsigned BaseOffset) {
+      // Make sure we don't overflow __msan_va_arg_tls.
+      if (OverflowOffset <= kParamTLSSize)
+        return false; // Not needed, end is not reacheed.
+
+      // The tails of __msan_va_arg_tls is not large enough to fit full
+      // value shadow, but it will be copied to backup anyway. Make it
+      // clean.
+      if (BaseOffset < kParamTLSSize) {
+        Value *TailSize = ConstantInt::getSigned(IRB.getInt32Ty(),
+                                                 kParamTLSSize - BaseOffset);
+        IRB.CreateMemSet(ShadowBase, ConstantInt::getNullValue(IRB.getInt8Ty()),
+                         TailSize, Align(8));
+      }
+      return true; // Incomplete
+    };
+
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
@@ -4784,19 +4808,22 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);
         uint64_t ArgSize = DL.getTypeAllocSize(RealTy);
-        Value *ShadowBase = getShadowPtrForVAArgument(
-            RealTy, IRB, OverflowOffset, alignTo(ArgSize, 8));
+        uint64_t AlignedSize = alignTo(ArgSize, 8);
+        unsigned BaseOffset = OverflowOffset;
+        Value *ShadowBase =
+            getShadowPtrForVAArgument(RealTy, IRB, OverflowOffset);
         Value *OriginBase = nullptr;
         if (MS.TrackOrigins)
           OriginBase = getOriginPtrForVAArgument(IRB, OverflowOffset);
-        OverflowOffset += alignTo(ArgSize, 8);
-        if (!ShadowBase)
-          continue;
+        OverflowOffset += AlignedSize;
+
+        if (CleanUnusedTLS(ShadowBase, BaseOffset))
+          continue; // We have no space to copy shadow there.
+
         Value *ShadowPtr, *OriginPtr;
         std::tie(ShadowPtr, OriginPtr) =
             MSV.getShadowOriginPtr(A, IRB, IRB.getInt8Ty(), kShadowTLSAlignment,
                                    /*isStore*/ false);
-
         IRB.CreateMemCpy(ShadowBase, kShadowTLSAlignment, ShadowPtr,
                          kShadowTLSAlignment, ArgSize);
         if (MS.TrackOrigins)
@@ -4811,35 +4838,38 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
         Value *ShadowBase, *OriginBase = nullptr;
         switch (AK) {
         case AK_GeneralPurpose:
-          ShadowBase =
-              getShadowPtrForVAArgument(A->getType(), IRB, GpOffset, 8);
+          ShadowBase = getShadowPtrForVAArgument(A->getType(), IRB, GpOffset);
           if (MS.TrackOrigins)
             OriginBase = getOriginPtrForVAArgument(IRB, GpOffset);
           GpOffset += 8;
+          assert(GpOffset <= kParamTLSSize);
           break;
         case AK_FloatingPoint:
-          ShadowBase =
-              getShadowPtrForVAArgument(A->getType(), IRB, FpOffset, 16);
+          ShadowBase = getShadowPtrForVAArgument(A->getType(), IRB, FpOffset);
           if (MS.TrackOrigins)
             OriginBase = getOriginPtrForVAArgument(IRB, FpOffset);
           FpOffset += 16;
+          assert(FpOffset <= kParamTLSSize);
           break;
         case AK_Memory:
           if (IsFixed)
             continue;
           uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
+          uint64_t AlignedSize = alignTo(ArgSize, 8);
+          unsigned BaseOffset = OverflowOffset;
           ShadowBase =
-              getShadowPtrForVAArgument(A->getType(), IRB, OverflowOffset, 8);
-          if (MS.TrackOrigins)
+              getShadowPtrForVAArgument(A->getType(), IRB, OverflowOffset);
+          if (MS.TrackOrigins) {
             OriginBase = getOriginPtrForVAArgument(IRB, OverflowOffset);
-          OverflowOffset += alignTo(ArgSize, 8);
+          }
+          OverflowOffset += AlignedSize;
+          if (CleanUnusedTLS(ShadowBase, BaseOffset))
+            continue; // We have no space to copy shadow there.
         }
         // Take fixed arguments into account for GpOffset and FpOffset,
         // but don't actually store shadows for them.
         // TODO(glider): don't call get*PtrForVAArgument() for them.
         if (IsFixed)
-          continue;
-        if (!ShadowBase)
           continue;
         Value *Shadow = MSV.getShadow(A);
         IRB.CreateAlignedStore(Shadow, ShadowBase, kShadowTLSAlignment);
