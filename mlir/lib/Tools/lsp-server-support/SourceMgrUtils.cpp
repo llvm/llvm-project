@@ -83,7 +83,7 @@ lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr, SMLoc loc) {
 
   // Pop the last line from the buffer string.
   auto popLastLine = [&]() -> std::optional<StringRef> {
-    size_t newlineOffset = buffer.find_last_of("\n");
+    size_t newlineOffset = buffer.find_last_of('\n');
     if (newlineOffset == StringRef::npos)
       return std::nullopt;
     StringRef lastLine = buffer.drop_front(newlineOffset).trim();
