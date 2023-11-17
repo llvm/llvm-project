@@ -13,6 +13,7 @@
 #ifndef ORC_RT_STL_EXTRAS_H
 #define ORC_RT_STL_EXTRAS_H
 
+#include <cstdint>
 #include <utility>
 #include <tuple>
 
