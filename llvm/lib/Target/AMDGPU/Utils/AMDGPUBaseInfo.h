@@ -1114,11 +1114,6 @@ bool isModuleEntryFunctionCC(CallingConv::ID CC);
 LLVM_READNONE
 bool isChainCC(CallingConv::ID CC);
 
-// Functions that are called via the 'call' instruction, rather than launched
-// by the hardware or via the 'llvm.amdgcn.cs.chain' intrinsic.
-LLVM_READNONE
-bool isCallableCC(CallingConv::ID CC);
-
 bool isKernelCC(const Function *Func);
 
 // FIXME: Remove this when calling conventions cleaned up

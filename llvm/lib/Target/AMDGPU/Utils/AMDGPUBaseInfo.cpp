@@ -1924,10 +1924,6 @@ bool isChainCC(CallingConv::ID CC) {
   }
 }
 
-bool isCallableCC(CallingConv::ID CC) {
-  return !isEntryFunctionCC(CC) && !isChainCC(CC);
-}
-
 bool isKernelCC(const Function *Func) {
   return AMDGPU::isModuleEntryFunctionCC(Func->getCallingConv());
 }
