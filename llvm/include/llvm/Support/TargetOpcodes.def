@@ -454,8 +454,12 @@ HANDLE_TARGET_OPCODE(G_FCONSTANT)
 /// Generic va_start instruction. Stores to its one pointer operand.
 HANDLE_TARGET_OPCODE(G_VASTART)
 
-/// Generic va_start instruction. Stores to its one pointer operand.
+/// Generic va_arg instruction. Stores to its one pointer operand.
 HANDLE_TARGET_OPCODE(G_VAARG)
+
+/// Generic va_copy instruction. Copies the source element into the destination
+/// element.
+HANDLE_TARGET_OPCODE(G_VACOPY)
 
 // Generic sign extend
 HANDLE_TARGET_OPCODE(G_SEXT)

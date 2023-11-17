@@ -2076,6 +2076,12 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                                 ListSize, Alignment));
     return true;
   }
+  case Intrinsic::vacopy: {
+    Register DstList = getOrCreateVReg(*CI.getArgOperand(0));
+    Register SrcList = getOrCreateVReg(*CI.getArgOperand(1));
+    MIRBuilder.buildInstr(TargetOpcode::G_VACOPY, {}, {DstList, SrcList});
+    return true;
+  }
   case Intrinsic::dbg_value: {
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst &DI = cast<DbgValueInst>(CI);

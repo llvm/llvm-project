@@ -325,6 +325,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, s32, sXLen)
       .lowerForCartesianProduct({s32, sXLen, p0}, {p0});
 
+  // The va_list arguments must be a pointer
+  getActionDefinitionsBuilder(G_VACOPY).lowerFor({p0});
+
   getLegacyLegalizerInfo().computeTables();
 }
 

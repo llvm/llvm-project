@@ -155,6 +155,13 @@ def G_VASTART : GenericInstruction {
   let mayStore = true;
 }
 
+def G_VACOPY : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$dest, type0:$src);
+  let hasSideEffects = true;
+  let mayStore = true;
+}
+
 def G_VAARG : GenericInstruction {
   let OutOperandList = (outs type0:$val);
   let InOperandList = (ins type1:$list, unknown:$align);

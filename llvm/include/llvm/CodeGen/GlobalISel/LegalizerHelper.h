@@ -433,6 +433,7 @@ public:
   LegalizeResult lowerMemcpyInline(MachineInstr &MI);
   LegalizeResult lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);
   LegalizeResult lowerVAArg(MachineInstr &MI);
+  LegalizeResult lowerVACopy(MachineInstr &MI);
 };
 
 /// Helper function that creates a libcall to the given \p Name using the given
