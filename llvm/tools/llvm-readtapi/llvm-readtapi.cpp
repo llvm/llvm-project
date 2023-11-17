@@ -171,10 +171,10 @@ int main(int Argc, char **Argv) {
   opt::InputArgList Args = Tbl.parseArgs(
       Argc, Argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) { reportError(Msg); });
   if (Args.hasArg(OPT_help)) {
-    Tbl.printHelp(
-        outs(),
-        "llvm-readtapi [options]* [-arch <arch>]* <inputs> [-o <output>]*",
-        "LLVM TAPI file reader and manipulator");
+    Tbl.printHelp(outs(),
+                  "USAGE: llvm-readtapi [options] [-arch <arch>]* <inputs> [-o "
+                  "<output>]*",
+                  "LLVM TAPI file reader and manipulator");
     return EXIT_SUCCESS;
   }
 
