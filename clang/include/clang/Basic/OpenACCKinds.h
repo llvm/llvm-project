@@ -21,6 +21,34 @@ namespace clang {
 enum class OpenACCDirectiveKind {
   // Compute Constructs.
   Parallel,
+  Serial,
+  Kernels,
+
+  // Data Environment.
+  Data,
+  // FIXME: 'enter data', 'exit data'.
+  HostData,
+
+  // Misc.
+  Loop,
+  // FIXME: 'cache'
+
+  // FIXME: Combined Constructs.
+
+  // FIXME: atomic Construct variants.
+
+  // Declare Directive.
+  Declare,
+
+  // Executable Directives. "wait" is first referred to here, but ends up being
+  // in its own section after "routine".
+  Init,
+  Shutdown,
+  Set,
+  Update,
+  // FIXME: wait construct.
+
+  // FIXME: routine construct.
 
   // Invalid.
   Invalid,
