@@ -57,8 +57,14 @@ class BPFunctionNode {
   friend class BalancedPartitioning;
 
 public:
+  /// The type of ID
   using IDT = uint64_t;
-  using UtilityNodeT = uint32_t;
+  /// The type of UtilityNode
+  struct UtilityNodeT {
+    UtilityNodeT(uint32_t id, uint32_t weight = 1) : id(id), weight(weight) {}
+    uint32_t id;
+    uint32_t weight;
+  };
 
   /// \param UtilityNodes the set of utility nodes (must be unique'd)
   BPFunctionNode(IDT Id, ArrayRef<UtilityNodeT> UtilityNodes)
@@ -68,6 +74,8 @@ public:
   IDT Id;
 
   void dump(raw_ostream &OS) const;
+
+  std::optional<unsigned> getBucket() const { return Bucket; };
 
 protected:
   /// The list of utility nodes associated with this node
@@ -188,6 +196,8 @@ private:
     float CachedGainRL;
     /// Whether \p CachedGainLR and \p CachedGainRL are valid
     bool CachedGainIsValid = false;
+    /// The weight of this utility node
+    uint32_t Weight = 1;
   };
 
 protected:

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/BalancedPartitioning.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -36,6 +37,14 @@ protected:
     for (auto &N : Nodes)
       Ids.push_back(N.Id);
     return Ids;
+  }
+
+  static std::vector<std::pair<BPFunctionNode::IDT, uint32_t>>
+  getBuckets(std::vector<BPFunctionNode> &Nodes) {
+    std::vector<std::pair<BPFunctionNode::IDT, uint32_t>> Res;
+    for (auto &N : Nodes)
+      Res.emplace_back(std::make_pair(N.Id, *N.getBucket()));
+    return Res;
   }
 };
 
@@ -95,6 +104,58 @@ TEST_F(BalancedPartitioningTest, MoveGain) {
                   10.f);
   EXPECT_FLOAT_EQ(Bp.moveGain(BPFunctionNode(0, {1, 2}), false, Signatures),
                   30.f);
+}
+
+TEST_F(BalancedPartitioningTest, Weight1) {
+  std::vector<BPFunctionNode::UtilityNodeT> UNs = {
+      BPFunctionNode::UtilityNodeT(0, 100),
+      BPFunctionNode::UtilityNodeT(1, 100),
+      BPFunctionNode::UtilityNodeT(2, 100),
+      BPFunctionNode::UtilityNodeT(3, 1),
+      BPFunctionNode::UtilityNodeT(4, 1),
+  };
+  std::vector<BPFunctionNode> Nodes = {
+      BPFunctionNode(0, {UNs[0], UNs[3]}), BPFunctionNode(1, {UNs[1], UNs[3]}),
+      BPFunctionNode(2, {UNs[2], UNs[3]}), BPFunctionNode(3, {UNs[0], UNs[4]}),
+      BPFunctionNode(4, {UNs[1], UNs[4]}), BPFunctionNode(5, {UNs[2], UNs[4]}),
+  };
+
+  Bp.run(Nodes);
+
+  // Verify that the created groups are [(0,3) -- (1,4) -- (2,5)].
+  auto Res = getBuckets(Nodes);
+  llvm::sort(Res);
+  EXPECT_THAT(AbsoluteDifference(Res[0].second, Res[3].second), 1);
+  EXPECT_THAT(AbsoluteDifference(Res[1].second, Res[4].second), 1);
+  EXPECT_THAT(AbsoluteDifference(Res[2].second, Res[5].second), 1);
+}
+
+TEST_F(BalancedPartitioningTest, Weight2) {
+  std::vector<BPFunctionNode::UtilityNodeT> UNs = {
+      BPFunctionNode::UtilityNodeT(0, 1),
+      BPFunctionNode::UtilityNodeT(1, 1),
+      BPFunctionNode::UtilityNodeT(2, 1),
+      BPFunctionNode::UtilityNodeT(3, 100),
+      BPFunctionNode::UtilityNodeT(4, 100),
+  };
+  std::vector<BPFunctionNode> Nodes = {
+      BPFunctionNode(0, {UNs[0], UNs[3]}), BPFunctionNode(1, {UNs[1], UNs[4]}),
+      BPFunctionNode(2, {UNs[2], UNs[3]}), BPFunctionNode(3, {UNs[0], UNs[4]}),
+      BPFunctionNode(4, {UNs[1], UNs[3]}), BPFunctionNode(5, {UNs[2], UNs[4]}),
+  };
+
+  Bp.run(Nodes);
+
+  // Verify that the created groups are [(0,2,4) -- (1,3,5)].
+  auto Res = getBuckets(Nodes);
+  llvm::sort(Res);
+  EXPECT_LE(AbsoluteDifference(Res[0].second, Res[2].second), 2u);
+  EXPECT_LE(AbsoluteDifference(Res[0].second, Res[4].second), 2u);
+  EXPECT_LE(AbsoluteDifference(Res[2].second, Res[4].second), 2u);
+
+  EXPECT_LE(AbsoluteDifference(Res[1].second, Res[3].second), 2u);
+  EXPECT_LE(AbsoluteDifference(Res[1].second, Res[5].second), 2u);
+  EXPECT_LE(AbsoluteDifference(Res[3].second, Res[5].second), 2u);
 }
 
 } // end namespace llvm
