@@ -1232,7 +1232,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
           target.GetSwiftScratchContext(error, frame);
       auto scratch_ctx = maybe_swift_ast->get();
       if (scratch_ctx) {
-        if (SwiftASTContext *swift_ast = scratch_ctx->GetSwiftASTContext()) {
+        if (SwiftASTContext *swift_ast = scratch_ctx->GetSwiftASTContext(&sc)) {
         CompilerType function_type = swift_ast->GetTypeFromMangledTypename(
             mangled_name.GetMangledName());
         if (error.Success()) {
@@ -1444,7 +1444,9 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
   auto scratch_ctx = maybe_scratch_context->get();
   if (!scratch_ctx)
     return error_valobj_sp;
-  SwiftASTContext *ast_context = scratch_ctx->GetSwiftASTContext();
+
+  const SymbolContext *sc = &frame_sp->GetSymbolContext(eSymbolContextFunction);
+  SwiftASTContext *ast_context = scratch_ctx->GetSwiftASTContext(sc);
   if (!ast_context)
     return error_valobj_sp;
 
