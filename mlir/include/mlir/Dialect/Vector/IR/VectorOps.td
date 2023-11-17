@@ -386,9 +386,14 @@ def Vector_BroadcastOp :
       return ::llvm::cast<VectorType>(getVector().getType());
     }
 
-    /// Return the dimensions of the result vector that were formerly ones in the
-    /// source tensor and thus correspond to "dim-1" broadcasting.
+    /// Return the dimensions of the result vector that were formerly ones in
+    /// the source vector and thus correspond to "dim-1" broadcasting.
     llvm::SetVector<int64_t> computeBroadcastedUnitDims();
+
+    /// Return the dimensions of the result vector that were newly added to the
+    /// source vector via rank extension. These are all the dimensions that were
+    /// not "dim-1" broadcasted.
+    llvm::SetVector<int64_t> computeRankExtendedDims();
 
     /// Broadcast `value` to a vector of `dstShape`, knowing that exactly the
     /// `broadcastedDims` dimensions in the dstShape are broadcasted.
