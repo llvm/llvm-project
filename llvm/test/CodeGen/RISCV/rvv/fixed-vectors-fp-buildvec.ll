@@ -252,7 +252,7 @@ define <2 x half> @buildvec_v2f16(half %a, half %b) {
 ; CHECK-LABEL: buildvec_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
 ; CHECK-NEXT:    ret
   %v1 = insertelement <2 x half> poison, half %a, i64 0
@@ -264,7 +264,7 @@ define <2 x float> @buildvec_v2f32(float %a, float %b) {
 ; CHECK-LABEL: buildvec_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
 ; CHECK-NEXT:    ret
   %v1 = insertelement <2 x float> poison, float %a, i64 0
@@ -276,7 +276,7 @@ define <2 x double> @buildvec_v2f64(double %a, double %b) {
 ; CHECK-LABEL: buildvec_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
 ; CHECK-NEXT:    ret
   %v1 = insertelement <2 x double> poison, double %a, i64 0
@@ -288,7 +288,7 @@ define <2 x double> @buildvec_v2f64_b(double %a, double %b) {
 ; CHECK-LABEL: buildvec_v2f64_b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
 ; CHECK-NEXT:    ret
   %v1 = insertelement <2 x double> poison, double %b, i64 1
@@ -300,7 +300,7 @@ define <4 x float> @buildvec_v4f32(float %a, float %b, float %c, float %d) {
 ; CHECK-LABEL: buildvec_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3
@@ -316,7 +316,7 @@ define <8 x float> @buildvec_v8f32(float %e0, float %e1, float %e2, float %e3, f
 ; CHECK-LABEL: buildvec_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3

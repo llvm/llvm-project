@@ -6,7 +6,7 @@ define <4 x i32> @add_constant_rhs(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: add_constant_rhs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    lui a0, %hi(.LCPI0_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI0_0)
 ; CHECK-NEXT:    vle32.v v9, (a0)
@@ -30,7 +30,7 @@ define <8 x i32> @add_constant_rhs_8xi32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e,
 ; CHECK-LABEL: add_constant_rhs_8xi32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a2
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a3
@@ -67,7 +67,7 @@ define <4 x i32> @sub_constant_rhs(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: sub_constant_rhs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    lui a0, %hi(.LCPI2_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI2_0)
 ; CHECK-NEXT:    vle32.v v9, (a0)
@@ -91,7 +91,7 @@ define <4 x i32> @mul_constant_rhs(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: mul_constant_rhs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    lui a0, %hi(.LCPI3_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI3_0)
 ; CHECK-NEXT:    vle32.v v9, (a0)
@@ -115,7 +115,7 @@ define <4 x i32> @udiv_constant_rhs(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: udiv_constant_rhs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    lui a0, %hi(.LCPI4_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI4_0)
 ; CHECK-NEXT:    vle32.v v9, (a0)
@@ -152,7 +152,7 @@ define <4 x float> @fadd_constant_rhs(float %a, float %b, float %c, float %d) {
 ; CHECK-LABEL: fadd_constant_rhs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    lui a0, %hi(.LCPI5_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI5_0)
 ; CHECK-NEXT:    vle32.v v9, (a0)
@@ -176,7 +176,7 @@ define <4 x float> @fdiv_constant_rhs(float %a, float %b, float %c, float %d) {
 ; CHECK-LABEL: fdiv_constant_rhs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    lui a0, %hi(.LCPI6_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI6_0)
 ; CHECK-NEXT:    vle32.v v9, (a0)
@@ -200,7 +200,7 @@ define <4 x i32> @add_constant_rhs_splat(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: add_constant_rhs_splat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a2
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a3
@@ -226,7 +226,7 @@ define <4 x i32> @add_constant_rhs_with_identity(i32 %a, i32 %b, i32 %c, i32 %d)
 ; RV32-NEXT:    addi a3, a3, 2047
 ; RV32-NEXT:    addi a3, a3, 308
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vmv.v.x v8, a0
 ; RV32-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
@@ -239,7 +239,7 @@ define <4 x i32> @add_constant_rhs_with_identity(i32 %a, i32 %b, i32 %c, i32 %d)
 ; RV64-NEXT:    addi a3, a3, 2047
 ; RV64-NEXT:    addiw a3, a3, 308
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
+; RV64-NEXT:    vmv.v.x v8, a0
 ; RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; RV64-NEXT:    vslide1down.vx v8, v8, a2
 ; RV64-NEXT:    vslide1down.vx v8, v8, a3
@@ -263,7 +263,7 @@ define <4 x i32> @add_constant_rhs_identity(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; RV32-NEXT:    addi a3, a3, 2047
 ; RV32-NEXT:    addi a3, a3, 308
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vmv.v.x v8, a0
 ; RV32-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
@@ -276,7 +276,7 @@ define <4 x i32> @add_constant_rhs_identity(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; RV64-NEXT:    addi a3, a3, 2047
 ; RV64-NEXT:    addiw a3, a3, 308
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
+; RV64-NEXT:    vmv.v.x v8, a0
 ; RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; RV64-NEXT:    vslide1down.vx v8, v8, a2
 ; RV64-NEXT:    vslide1down.vx v8, v8, a3
@@ -293,25 +293,15 @@ define <4 x i32> @add_constant_rhs_identity(i32 %a, i32 %b, i32 %c, i32 %d) {
 }
 
 define <4 x i32> @add_constant_rhs_identity2(i32 %a, i32 %b, i32 %c, i32 %d) {
-; RV32-LABEL: add_constant_rhs_identity2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, a0, 23
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-NEXT:    vslide1down.vx v8, v8, a1
-; RV32-NEXT:    vslide1down.vx v8, v8, a2
-; RV32-NEXT:    vslide1down.vx v8, v8, a3
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: add_constant_rhs_identity2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addiw a0, a0, 23
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
-; RV64-NEXT:    vslide1down.vx v8, v8, a1
-; RV64-NEXT:    vslide1down.vx v8, v8, a2
-; RV64-NEXT:    vslide1down.vx v8, v8, a3
-; RV64-NEXT:    ret
+; CHECK-LABEL: add_constant_rhs_identity2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 23
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vslide1down.vx v8, v8, a1
+; CHECK-NEXT:    vslide1down.vx v8, v8, a2
+; CHECK-NEXT:    vslide1down.vx v8, v8, a3
+; CHECK-NEXT:    ret
   %e0 = add i32 %a, 23
   %v0 = insertelement <4 x i32> poison, i32 %e0, i32 0
   %v1 = insertelement <4 x i32> %v0, i32 %b, i32 1
@@ -324,7 +314,7 @@ define <4 x i32> @add_constant_rhs_inverse(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: add_constant_rhs_inverse:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    lui a0, %hi(.LCPI11_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI11_0)
 ; CHECK-NEXT:    vle32.v v9, (a0)
@@ -348,7 +338,7 @@ define <4 x i32> @add_constant_rhs_commute(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: add_constant_rhs_commute:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    lui a0, %hi(.LCPI12_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI12_0)
 ; CHECK-NEXT:    vle32.v v9, (a0)
@@ -377,7 +367,7 @@ define <4 x i32> @add_general_rhs(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f
 ; RV32-NEXT:    add a2, a2, a6
 ; RV32-NEXT:    add a3, a3, a7
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vmv.v.x v8, a0
 ; RV32-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
@@ -385,12 +375,12 @@ define <4 x i32> @add_general_rhs(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f
 ;
 ; RV64-LABEL: add_general_rhs:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addw a0, a0, a4
+; RV64-NEXT:    add a0, a0, a4
 ; RV64-NEXT:    addw a1, a1, a5
 ; RV64-NEXT:    addw a2, a2, a6
 ; RV64-NEXT:    addw a3, a3, a7
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
+; RV64-NEXT:    vmv.v.x v8, a0
 ; RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; RV64-NEXT:    vslide1down.vx v8, v8, a2
 ; RV64-NEXT:    vslide1down.vx v8, v8, a3
@@ -414,7 +404,7 @@ define <4 x i32> @add_general_splat(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; RV32-NEXT:    add a2, a2, a4
 ; RV32-NEXT:    add a3, a3, a4
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vmv.v.x v8, a0
 ; RV32-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
@@ -422,12 +412,12 @@ define <4 x i32> @add_general_splat(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV64-LABEL: add_general_splat:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addw a0, a0, a4
+; RV64-NEXT:    add a0, a0, a4
 ; RV64-NEXT:    addw a1, a1, a4
 ; RV64-NEXT:    addw a2, a2, a4
 ; RV64-NEXT:    addw a3, a3, a4
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
+; RV64-NEXT:    vmv.v.x v8, a0
 ; RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; RV64-NEXT:    vslide1down.vx v8, v8, a2
 ; RV64-NEXT:    vslide1down.vx v8, v8, a3
