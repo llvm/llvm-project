@@ -1789,8 +1789,12 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           // disable/step/re-enable it, so one of the valid watchpoint
           // addresses should be provided as \a wp_addr.
           StringExtractor desc_extractor(description.c_str());
+          // FIXME NativeThreadLinux::SetStoppedByWatchpoint sends this
+          // up as
+          //  <address within wp range> <wp hw index> <actual accessed addr>
+          // but this is not reading the <wp hw index>.  Seems like it
+          // wouldn't work on MIPS, where that third field is important.
           addr_t wp_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
-          uint32_t wp_index = desc_extractor.GetU32(LLDB_INVALID_INDEX32);
           addr_t wp_hit_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
           watch_id_t watch_id = LLDB_INVALID_WATCH_ID;
           bool silently_continue = false;
@@ -1807,7 +1811,6 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           if (!wp_sp && wp_addr != LLDB_INVALID_ADDRESS)
             wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_addr);
           if (wp_sp) {
-            wp_sp->SetHardwareIndex(wp_index);
             watch_id = wp_sp->GetID();
           }
           if (watch_id == LLDB_INVALID_WATCH_ID) {
@@ -2238,17 +2241,13 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
 
         WatchpointSP wp_sp =
             GetTarget().GetWatchpointList().FindByAddress(wp_addr);
-        uint32_t wp_index = LLDB_INVALID_INDEX32;
-
-        if (wp_sp)
-          wp_index = wp_sp->GetHardwareIndex();
 
         // Rewrite gdb standard watch/rwatch/awatch to
         // "reason:watchpoint" + "description:ADDR",
         // which is parsed in SetThreadStopInfo.
         reason = "watchpoint";
         StreamString ostr;
-        ostr.Printf("%" PRIu64 " %" PRIu32, wp_addr, wp_index);
+        ostr.Printf("%" PRIu64, wp_addr);
         description = std::string(ostr.GetString());
       } else if (key.compare("library") == 0) {
         auto error = LoadModules();
