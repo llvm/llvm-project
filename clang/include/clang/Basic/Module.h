@@ -184,7 +184,7 @@ public:
 
   /// For the debug info, the path to this module's .apinotes file, if any.
   std::string APINotesFile;
-  
+
   /// Does this Module is a named module of a standard named module?
   bool isNamedModule() const {
     switch (Kind) {

@@ -5,16 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the APINotesManager interface.
-//
-//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_APINOTES_APINOTESMANAGER_H
 #define LLVM_CLANG_APINOTES_APINOTESMANAGER_H
 
-#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -48,7 +44,7 @@ class APINotesReader;
 class APINotesManager {
   using ReaderEntry = llvm::PointerUnion<DirectoryEntryRef, APINotesReader *>;
 
-  SourceManager &SourceMgr;
+  SourceManager &SM;
 
   /// Whether to implicitly search for API notes files based on the
   /// source file from which an entity was declared.
@@ -57,11 +53,16 @@ class APINotesManager {
   /// The Swift version to use when interpreting versioned API notes.
   llvm::VersionTuple SwiftVersion;
 
+  enum ReaderKind : unsigned { Public = 0, Private = 1 };
+
   /// API notes readers for the current module.
   ///
   /// There can be up to two of these, one for public headers and one
   /// for private headers.
-  APINotesReader *CurrentModuleReaders[2] = { nullptr, nullptr };
+  ///
+  /// Not using std::unique_ptr to store these, since the reader pointers are
+  /// also stored in llvm::PointerUnion below.
+  APINotesReader *CurrentModuleReaders[2] = {nullptr, nullptr};
 
   /// A mapping from header file directories to the API notes reader for
   /// that directory, or a redirection to another directory entry that may
@@ -74,7 +75,7 @@ class APINotesManager {
   ///
   /// \returns the API notes reader for this file, or null if there is
   /// a failure.
-  std::unique_ptr<APINotesReader> loadAPINotes(FileEntryRef apiNotesFile);
+  std::unique_ptr<APINotesReader> loadAPINotes(FileEntryRef APINotesFile);
 
   /// Load the API notes associated with the given buffer, whether it is
   /// the binary or source form of API notes.
@@ -93,11 +94,14 @@ class APINotesManager {
   /// Look for API notes in the given directory.
   ///
   /// This might find either a binary or source API notes.
-  OptionalFileEntryRef findAPINotesFile(DirectoryEntryRef directory,
-                                        StringRef filename,
-                                        bool wantPublic = true);
+  OptionalFileEntryRef findAPINotesFile(DirectoryEntryRef Directory,
+                                        StringRef FileName,
+                                        bool WantPublic = true);
 
-  /// Attempt to load API notes for the given framework.
+  /// Attempt to load API notes for the given framework. A framework will have
+  /// the API notes file under either {FrameworkPath}/APINotes,
+  /// {FrameworkPath}/Headers or {FrameworkPath}/PrivateHeaders, while a
+  /// library will have the API notes simply in its directory.
   ///
   /// \param FrameworkPath The path to the framework.
   /// \param Public Whether to load the public API notes. Otherwise, attempt
@@ -111,37 +115,38 @@ class APINotesManager {
                                                   bool Public);
 
 public:
-  APINotesManager(SourceManager &sourceMgr, const LangOptions &langOpts);
+  APINotesManager(SourceManager &SM, const LangOptions &LangOpts);
   ~APINotesManager();
 
   /// Set the Swift version to use when filtering API notes.
-  void setSwiftVersion(llvm::VersionTuple swiftVersion) {
-    SwiftVersion = swiftVersion;
+  void setSwiftVersion(llvm::VersionTuple Version) {
+    this->SwiftVersion = Version;
   }
 
   /// Load the API notes for the current module.
   ///
-  /// \param module The current module.
-  /// \param lookInModule Whether to look inside the module itself.
-  /// \param searchPaths The paths in which we should search for API notes
+  /// \param M The current module.
+  /// \param LookInModule Whether to look inside the module itself.
+  /// \param SearchPaths The paths in which we should search for API notes
   /// for the current module.
   ///
   /// \returns true if API notes were successfully loaded, \c false otherwise.
-  bool loadCurrentModuleAPINotes(Module *module,
-                                 bool lookInModule,
-                                 ArrayRef<std::string> searchPaths);
+  bool loadCurrentModuleAPINotes(Module *M, bool LookInModule,
+                                 ArrayRef<std::string> SearchPaths);
 
-  /// Get FileEntry for the APINotes of the current module.
+  /// Get FileEntry for the APINotes of the module that is currently being
+  /// compiled.
   ///
-  /// \param module The current module.
-  /// \param lookInModule Whether to look inside the module itself.
-  /// \param searchPaths The paths in which we should search for API notes
-  /// for the current module.
+  /// \param M The current module.
+  /// \param LookInModule Whether to look inside the directory of the current
+  /// module.
+  /// \param SearchPaths The paths in which we should search for API
+  /// notes for the current module.
   ///
   /// \returns a vector of FileEntry where APINotes files are.
   llvm::SmallVector<FileEntryRef, 2>
-  getCurrentModuleAPINotes(Module *module, bool lookInModule,
-                           ArrayRef<std::string> searchPaths);
+  getCurrentModuleAPINotes(Module *M, bool LookInModule,
+                           ArrayRef<std::string> SearchPaths);
 
   /// Load Compiled API notes for current module.
   ///
@@ -152,9 +157,12 @@ public:
 
   /// Retrieve the set of API notes readers for the current module.
   ArrayRef<APINotesReader *> getCurrentModuleReaders() const {
-    unsigned numReaders = static_cast<unsigned>(CurrentModuleReaders[0] != nullptr) +
-      static_cast<unsigned>(CurrentModuleReaders[1] != nullptr);
-    return ArrayRef(CurrentModuleReaders).slice(0, numReaders);
+    bool HasPublic = CurrentModuleReaders[ReaderKind::Public];
+    bool HasPrivate = CurrentModuleReaders[ReaderKind::Private];
+    assert(!HasPrivate || HasPublic && "private module requires public module");
+    if (!HasPrivate && !HasPublic)
+      return {};
+    return ArrayRef(CurrentModuleReaders).slice(0, HasPrivate ? 2 : 1);
   }
 
   /// Find the API notes readers that correspond to the given source location.

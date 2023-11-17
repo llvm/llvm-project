@@ -16,123 +16,121 @@
 
 using namespace clang;
 
-void SourceMgrAdapter::handleDiag(const llvm::SMDiagnostic &diag,
-                                  void *context) {
-  static_cast<SourceMgrAdapter *>(context)->handleDiag(diag);
+void SourceMgrAdapter::handleDiag(const llvm::SMDiagnostic &Diag,
+                                  void *Context) {
+  static_cast<SourceMgrAdapter *>(Context)->handleDiag(Diag);
 }
 
-SourceMgrAdapter::SourceMgrAdapter(SourceManager &srcMgr,
-                                   DiagnosticsEngine &diag,
-                                   unsigned errorDiagID,
-                                   unsigned warningDiagID,
-                                   unsigned noteDiagID,
-                                   OptionalFileEntryRef defaultFile)
-  : SrcMgr(srcMgr), Diag(diag), ErrorDiagID(errorDiagID),
-    WarningDiagID(warningDiagID), NoteDiagID(noteDiagID),
-    DefaultFile(defaultFile) { }
+SourceMgrAdapter::SourceMgrAdapter(SourceManager &SM,
+                                   DiagnosticsEngine &Diagnostics,
+                                   unsigned ErrorDiagID, unsigned WarningDiagID,
+                                   unsigned NoteDiagID,
+                                   OptionalFileEntryRef DefaultFile)
+    : SrcMgr(SM), Diagnostics(Diagnostics), ErrorDiagID(ErrorDiagID),
+      WarningDiagID(WarningDiagID), NoteDiagID(NoteDiagID),
+      DefaultFile(DefaultFile) {}
 
-SourceMgrAdapter::~SourceMgrAdapter() { }
+SourceMgrAdapter::~SourceMgrAdapter() {}
 
-SourceLocation SourceMgrAdapter::mapLocation(const llvm::SourceMgr &llvmSrcMgr,
-                                             llvm::SMLoc loc) {
+SourceLocation SourceMgrAdapter::mapLocation(const llvm::SourceMgr &LLVMSrcMgr,
+                                             llvm::SMLoc Loc) {
   // Map invalid locations.
-  if (!loc.isValid())
+  if (!Loc.isValid())
     return SourceLocation();
 
   // Find the buffer containing the location.
-  unsigned bufferID = llvmSrcMgr.FindBufferContainingLoc(loc);
-  if (!bufferID)
+  unsigned BufferID = LLVMSrcMgr.FindBufferContainingLoc(Loc);
+  if (!BufferID)
     return SourceLocation();
 
-
   // If we haven't seen this buffer before, copy it over.
-  auto buffer = llvmSrcMgr.getMemoryBuffer(bufferID);
-  auto knownBuffer = FileIDMapping.find(std::make_pair(&llvmSrcMgr, bufferID));
-  if (knownBuffer == FileIDMapping.end()) {
-    FileID fileID;
+  auto Buffer = LLVMSrcMgr.getMemoryBuffer(BufferID);
+  auto KnownBuffer = FileIDMapping.find(std::make_pair(&LLVMSrcMgr, BufferID));
+  if (KnownBuffer == FileIDMapping.end()) {
+    FileID FileID;
     if (DefaultFile) {
       // Map to the default file.
-      fileID = SrcMgr.getOrCreateFileID(*DefaultFile, SrcMgr::C_User);
+      FileID = SrcMgr.getOrCreateFileID(*DefaultFile, SrcMgr::C_User);
 
       // Only do this once.
       DefaultFile = std::nullopt;
     } else {
       // Make a copy of the memory buffer.
-      StringRef bufferName = buffer->getBufferIdentifier();
-      auto bufferCopy
-        = std::unique_ptr<llvm::MemoryBuffer>(
-            llvm::MemoryBuffer::getMemBufferCopy(buffer->getBuffer(),
-                                                 bufferName));
+      StringRef bufferName = Buffer->getBufferIdentifier();
+      auto bufferCopy = std::unique_ptr<llvm::MemoryBuffer>(
+          llvm::MemoryBuffer::getMemBufferCopy(Buffer->getBuffer(),
+                                               bufferName));
 
       // Add this memory buffer to the Clang source manager.
-      fileID = SrcMgr.createFileID(std::move(bufferCopy));
+      FileID = SrcMgr.createFileID(std::move(bufferCopy));
     }
 
     // Save the mapping.
-    knownBuffer = FileIDMapping.insert(
-                    std::make_pair(std::make_pair(&llvmSrcMgr, bufferID),
-                                   fileID)).first;
+    KnownBuffer = FileIDMapping
+                      .insert(std::make_pair(
+                          std::make_pair(&LLVMSrcMgr, BufferID), FileID))
+                      .first;
   }
 
   // Translate the offset into the file.
-  unsigned offset = loc.getPointer() - buffer->getBufferStart();
-  return SrcMgr.getLocForStartOfFile(knownBuffer->second)
-           .getLocWithOffset(offset);
+  unsigned Offset = Loc.getPointer() - Buffer->getBufferStart();
+  return SrcMgr.getLocForStartOfFile(KnownBuffer->second)
+      .getLocWithOffset(Offset);
 }
 
-SourceRange SourceMgrAdapter::mapRange(const llvm::SourceMgr &llvmSrcMgr,
-                                       llvm::SMRange range) {
-  if (!range.isValid())
+SourceRange SourceMgrAdapter::mapRange(const llvm::SourceMgr &LLVMSrcMgr,
+                                       llvm::SMRange Range) {
+  if (!Range.isValid())
     return SourceRange();
 
-  SourceLocation start = mapLocation(llvmSrcMgr, range.Start);
-  SourceLocation end = mapLocation(llvmSrcMgr, range.End);
-  return SourceRange(start, end);
+  SourceLocation Start = mapLocation(LLVMSrcMgr, Range.Start);
+  SourceLocation End = mapLocation(LLVMSrcMgr, Range.End);
+  return SourceRange(Start, End);
 }
 
-void SourceMgrAdapter::handleDiag(const llvm::SMDiagnostic &diag) {
+void SourceMgrAdapter::handleDiag(const llvm::SMDiagnostic &Diag) {
   // Map the location.
-  SourceLocation loc;
-  if (auto *llvmSrcMgr = diag.getSourceMgr())
-    loc = mapLocation(*llvmSrcMgr, diag.getLoc());
+  SourceLocation Loc;
+  if (auto *LLVMSrcMgr = Diag.getSourceMgr())
+    Loc = mapLocation(*LLVMSrcMgr, Diag.getLoc());
 
   // Extract the message.
-  StringRef message = diag.getMessage();
+  StringRef Message = Diag.getMessage();
 
   // Map the diagnostic kind.
-  unsigned diagID;
-  switch (diag.getKind()) {
+  unsigned DiagID;
+  switch (Diag.getKind()) {
   case llvm::SourceMgr::DK_Error:
-    diagID = ErrorDiagID;
+    DiagID = ErrorDiagID;
     break;
 
   case llvm::SourceMgr::DK_Warning:
-    diagID = WarningDiagID;
+    DiagID = WarningDiagID;
     break;
 
   case llvm::SourceMgr::DK_Remark:
     llvm_unreachable("remarks not implemented");
 
   case llvm::SourceMgr::DK_Note:
-    diagID = NoteDiagID;
+    DiagID = NoteDiagID;
     break;
   }
 
   // Report the diagnostic.
-  DiagnosticBuilder builder = Diag.Report(loc, diagID) << message;
+  DiagnosticBuilder Builder = Diagnostics.Report(Loc, DiagID) << Message;
 
-  if (auto *llvmSrcMgr = diag.getSourceMgr()) {
+  if (auto *LLVMSrcMgr = Diag.getSourceMgr()) {
     // Translate ranges.
-    SourceLocation startOfLine = loc.getLocWithOffset(-diag.getColumnNo());
-    for (auto range : diag.getRanges()) {
-      builder << SourceRange(startOfLine.getLocWithOffset(range.first),
-                             startOfLine.getLocWithOffset(range.second));
+    SourceLocation StartOfLine = Loc.getLocWithOffset(-Diag.getColumnNo());
+    for (auto Range : Diag.getRanges()) {
+      Builder << SourceRange(StartOfLine.getLocWithOffset(Range.first),
+                             StartOfLine.getLocWithOffset(Range.second));
     }
 
     // Translate Fix-Its.
-    for (const llvm::SMFixIt &fixIt : diag.getFixIts()) {
-      CharSourceRange range(mapRange(*llvmSrcMgr, fixIt.getRange()), false);
-      builder << FixItHint::CreateReplacement(range, fixIt.getText());
+    for (const llvm::SMFixIt &FixIt : Diag.getFixIts()) {
+      CharSourceRange Range(mapRange(*LLVMSrcMgr, FixIt.getRange()), false);
+      Builder << FixItHint::CreateReplacement(Range, FixIt.getText());
     }
   }
 }
