@@ -19,6 +19,7 @@
 
 #include "make_string.h"
 #include "test_macros.h"
+#include "asan_testing.h"
 
 template <class S>
 constexpr void test_appending(std::size_t k, size_t N, size_t new_capacity) {
@@ -76,11 +77,14 @@ constexpr bool test() {
 void test_value_categories() {
   std::string s;
   s.resize_and_overwrite(10, [](char*&&, std::size_t&&) { return 0; });
+  LIBCPP_ASSERT(is_string_asan_correct(s));
   s.resize_and_overwrite(10, [](char* const&, const std::size_t&) { return 0; });
+  LIBCPP_ASSERT(is_string_asan_correct(s));
   struct RefQualified {
     int operator()(char*, std::size_t) && { return 0; }
   };
   s.resize_and_overwrite(10, RefQualified{});
+  LIBCPP_ASSERT(is_string_asan_correct(s));
 }
 
 int main(int, char**) {

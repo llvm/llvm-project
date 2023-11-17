@@ -10,38 +10,40 @@
 
 // <string>
 
-// basic_string<charT,traits,Allocator>&
-//   operator=(basic_string<charT,traits,Allocator>&& str); // constexpr since C++20
-
 #include <string>
 #include <cassert>
 
 #include "test_macros.h"
 #include "asan_testing.h"
 
-TEST_CONSTEXPR_CXX20 bool test() {
-  // Test that assignment from {} and {ptr, len} are allowed and are not
-  // ambiguous.
-  {
-    std::string s = "hello world";
-    s             = {};
-    assert(s.empty());
-    LIBCPP_ASSERT(is_string_asan_correct(s));
-  }
-  {
-    std::string s = "hello world";
-    s             = {"abc", 2};
-    assert(s == "ab");
-    LIBCPP_ASSERT(is_string_asan_correct(s));
-  }
+template <class CharT>
+void test(const CharT val) {
+  using S = std::basic_string<CharT>;
 
-  return true;
+  S s;
+  while (s.size() < 8000) {
+    s.push_back(val);
+
+    LIBCPP_ASSERT(is_string_asan_correct(s));
+  }
+  while (s.size() > 0) {
+    s.pop_back();
+
+    LIBCPP_ASSERT(is_string_asan_correct(s));
+  }
 }
 
 int main(int, char**) {
-  test();
-#if TEST_STD_VER > 17
-  static_assert(test());
+  test<char>('x');
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  test<wchar_t>(L'x');
+#endif
+#if TEST_STD_VER >= 11
+  test<char16_t>(u'x');
+  test<char32_t>(U'x');
+#endif
+#if TEST_STD_VER >= 20
+  test<char8_t>(u8'x');
 #endif
 
   return 0;
