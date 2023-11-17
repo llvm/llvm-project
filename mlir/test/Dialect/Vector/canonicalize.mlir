@@ -2503,12 +2503,12 @@ func.func @fold_shape_cast_with_constant_mask() -> vector<4xi1>{
 
 // -----
 
-// TODO: This IR could be canonicalized but the canonicalization pattern is not
-// smart enough. For now, just make sure that we do not crash.
-
 // CHECK-LABEL: func.func @load_store_forwarding_rank_mismatch(
-//       CHECK:   vector.transfer_write
-//       CHECK:   vector.transfer_read
+//  CHECK-SAME:     %[[v0:.*]]: vector<4x1x1xf32>
+//       CHECK:   %[[bc:.*]] = vector.broadcast %[[v0]] : vector<4x1x1xf32> to vector<100x5x4x1x1xf32>
+//       CHECK:   %[[tp:.*]] = vector.transpose %[[bc]], [4, 3, 0, 2, 1] : vector<100x5x4x1x1xf32> to vector<1x1x100x4x5xf32>
+//       CHECK:   %[[extract:.*]] = vector.extract %[[tp]][0] : vector<1x100x4x5xf32> from vector<1x1x100x4x5xf32>
+//       CHECK:   return %[[extract]]
 func.func @load_store_forwarding_rank_mismatch(%v0: vector<4x1x1xf32>, %arg0: tensor<4x4x4xf32>) -> (vector<1x100x4x5xf32>) {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
