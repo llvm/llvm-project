@@ -331,11 +331,11 @@ protected:
   ///
   /// Binary search the address table and find the matching address info
   /// and make sure that the function info contains the address. GSYM allows
-  /// functions to overlap, and the most debug info in contained in the first
+  /// functions to overlap, and the most debug info is contained in the first
   /// entries due to the sorting when GSYM files are created. We can have
   /// multiple function info that start at the same address only if their
   /// address range doesn't match. So find the first entry that matches \a Addr
-  /// and iiterate forward until we find one that contains the address.
+  /// and iterate forward until we find one that contains the address.
   ///
   /// \param[in] Addr A virtual address that matches the original object file
   /// to lookup.
