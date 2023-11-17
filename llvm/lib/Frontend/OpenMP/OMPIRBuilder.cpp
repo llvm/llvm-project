@@ -4402,7 +4402,7 @@ static void updateNVPTXMetadata(Function &Kernel, StringRef Name, int32_t Value,
   // Update the "maxntidx" metadata for NVIDIA, or add it.
   MDNode *ExistingOp = getNVPTXMDNode(Kernel, Name);
   if (ExistingOp) {
-    auto *OldVal = dyn_cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
+    auto *OldVal = cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
     int32_t OldLimit = cast<ConstantInt>(OldVal->getValue())->getZExtValue();
     ExistingOp->replaceOperandWith(
         2, ConstantAsMetadata::get(ConstantInt::get(
@@ -4441,7 +4441,7 @@ OpenMPIRBuilder::readThreadBoundsForKernel(const Triple &T, Function &Kernel) {
   }
 
   if (MDNode *ExistingOp = getNVPTXMDNode(Kernel, "maxntidx")) {
-    auto *OldVal = dyn_cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
+    auto *OldVal = cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
     int32_t UB = cast<ConstantInt>(OldVal->getValue())->getZExtValue();
     return {0, ThreadLimit ? std::min(ThreadLimit, UB) : UB};
   }
