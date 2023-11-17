@@ -1205,7 +1205,7 @@ ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const 
   if(SaveRegisters) {
     // Restore RAX, RDI, and RSI, in reverse order.
     generateRegisterStackPop(X86::RSI, ConfigurePerfCounterCode);
-    generateRegisterStackPop(X86::RDI, ConfigurePerfCounterCode);
+    generateRegisterStackPop(X86::RIP, ConfigurePerfCounterCode);
     generateRegisterStackPop(X86::RAX, ConfigurePerfCounterCode);
   }
   return ConfigurePerfCounterCode;
