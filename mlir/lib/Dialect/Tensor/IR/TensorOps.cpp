@@ -1261,7 +1261,7 @@ struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
 
     for (int64_t newdim : newShape) {
       // This check also occurs in the verifier, but we need it here too
-      // since intermediate passes may have some replaced dynamic dimensions
+      // since intermediate passes may have replaced some dynamic dimensions
       // by constants.
       if (newdim < 0 && !ShapedType::isDynamic(newdim))
         return failure();
