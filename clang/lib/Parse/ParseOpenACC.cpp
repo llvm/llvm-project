@@ -15,7 +15,7 @@
 
 using namespace clang;
 
-Parser::DeclGroupPtrTy Parser::ParseOpenACCDirective() {
+Parser::DeclGroupPtrTy Parser::ParseOpenACCDirectiveDecl() {
   Diag(Tok, diag::warn_pragma_acc_unimplemented);
   SkipUntil(tok::annot_pragma_openacc_end);
   return nullptr;
