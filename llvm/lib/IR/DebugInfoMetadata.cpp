@@ -2115,14 +2115,11 @@ DIMacroFile *DIMacroFile::getImpl(LLVMContext &Context, unsigned MIType,
   DEFINE_GETIMPL_STORE(DIMacroFile, (MIType, Line), Ops);
 }
 
-DIArgList *DIArgList::get(LLVMContext &Context,
-                          ArrayRef<ValueAsMetadata *> Args) {
-  auto ExistingIt = Context.pImpl->DIArgLists.find_as(DIArgListKeyInfo(Args));
-  if (ExistingIt != Context.pImpl->DIArgLists.end())
-    return *ExistingIt;
-  DIArgList *NewArgList = new DIArgList(Context, Args);
-  Context.pImpl->DIArgLists.insert(NewArgList);
-  return NewArgList;
+DIArgList *DIArgList::getImpl(LLVMContext &Context,
+                              ArrayRef<ValueAsMetadata *> Args,
+                              StorageType Storage, bool ShouldCreate) {
+  DEFINE_GETIMPL_LOOKUP(DIArgList, (Args));
+  DEFINE_GETIMPL_STORE_NO_OPS(DIArgList, (Args));
 }
 
 void DIArgList::handleChangedOperand(void *Ref, Metadata *New) {
@@ -2130,9 +2127,12 @@ void DIArgList::handleChangedOperand(void *Ref, Metadata *New) {
   assert((!New || isa<ValueAsMetadata>(New)) &&
          "DIArgList must be passed a ValueAsMetadata");
   untrack();
-  // We need to update the set storage once the Args are updated since they
-  // form the key to the DIArgLists store.
-  getContext().pImpl->DIArgLists.erase(this);
+  bool Uniq = isUniqued();
+  if (Uniq) {
+    // We need to update the uniqueness once the Args are updated since they
+    // form the key to the DIArgLists store.
+    eraseFromStore();
+  }
   ValueAsMetadata *NewVM = cast_or_null<ValueAsMetadata>(New);
   for (ValueAsMetadata *&VM : Args) {
     if (&VM == OldVMPtr) {
@@ -2142,19 +2142,28 @@ void DIArgList::handleChangedOperand(void *Ref, Metadata *New) {
         VM = ValueAsMetadata::get(PoisonValue::get(VM->getValue()->getType()));
     }
   }
-  // We've changed the contents of this DIArgList, and the set storage may
-  // already contain a DIArgList with our new set of args; if it does, then we
-  // must RAUW this with the existing DIArgList, otherwise we simply insert this
-  // back into the set storage.
-  DIArgList *ExistingArgList = getUniqued(getContext().pImpl->DIArgLists, this);
-  if (ExistingArgList) {
-    replaceAllUsesWith(ExistingArgList);
-    // Clear this here so we don't try to untrack in the destructor.
-    Args.clear();
-    delete this;
-    return;
+  if (Uniq) {
+    // In the RemoveDIs project (eliminating debug-info-intrinsics), DIArgLists
+    // can be referred to by DebugValueUser objects, which necessitates them
+    // being unique and replaceable metadata. This causes a slight
+    // performance regression that's to be avoided during the early stages of
+    // the RemoveDIs prototype, see D154080.
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+    MDNode *UniqueArgList = uniquify();
+    if (UniqueArgList != this) {
+      replaceAllUsesWith(UniqueArgList);
+      // Clear this here so we don't try to untrack in the destructor.
+      Args.clear();
+      delete this;
+      return;
+    }
+#else
+    // Otherwise, don't fully unique, become distinct instead. See D108968,
+    // there's a latent bug that presents here as nondeterminism otherwise.
+    if (uniquify() != this)
+      storeDistinctInContext();
+#endif
   }
-  getContext().pImpl->DIArgLists.insert(this);
   track();
 }
 void DIArgList::track() {
@@ -2167,9 +2176,8 @@ void DIArgList::untrack() {
     if (VAM)
       MetadataTracking::untrack(&VAM, *VAM);
 }
-void DIArgList::dropAllReferences(bool Untrack) {
-  if (Untrack)
-    untrack();
+void DIArgList::dropAllReferences() {
+  untrack();
   Args.clear();
-  ReplaceableMetadataImpl::resolveAllUses(/* ResolveUsers */ false);
+  MDNode::dropAllReferences();
 }
