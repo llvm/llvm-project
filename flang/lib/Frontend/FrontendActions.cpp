@@ -244,8 +244,7 @@ static void setMLIRDataLayout(mlir::ModuleOp &mlirModule,
   mlirModule->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
 }
 
-static void addDepdendentLibs(mlir::ModuleOp &mlirModule,
-                              CompilerInstance &ci) {
+static void addDependentLibs(mlir::ModuleOp &mlirModule, CompilerInstance &ci) {
   const std::vector<std::string> &libs =
       ci.getInvocation().getCodeGenOpts().DependentLibs;
   if (libs.empty()) {
@@ -262,6 +261,37 @@ static void addDepdendentLibs(mlir::ModuleOp &mlirModule,
     builder.create<mlir::LLVM::LinkerOptionsOp>(
         mlirModule.getLoc(), builder.getStrArrayAttr({"/DEFAULTLIB:" + lib}));
   }
+}
+
+// Add to MLIR code target specific items which are dependent on target
+// configuration specified by the user
+static void addTargetSpecificMLIRItems(mlir::ModuleOp &mlirModule,
+                                       CompilerInstance &ci) {
+  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
+  const llvm::Triple triple(targetOpts.triple);
+  if (triple.isAMDGPU()) {
+    unsigned oclcABIVERsion;
+    const unsigned defaultOclcABIVERsion = 400;
+    mlir::OpBuilder builder(mlirModule.getContext());
+    const CodeGenOptions &codeGenOpts = ci.getInvocation().getCodeGenOpts();
+    if (codeGenOpts.CodeObjectVersion ==
+        CodeGenOptions::CodeObjectVersionKind::COV_None)
+      oclcABIVERsion = defaultOclcABIVERsion;
+    else
+      oclcABIVERsion = static_cast<unsigned>(codeGenOpts.CodeObjectVersion);
+
+    auto int32Type = builder.getI32Type();
+    auto covInfo = builder.create<mlir::LLVM::GlobalOp>(
+        mlirModule.getLoc(), int32Type, true, mlir::LLVM::Linkage::WeakODR,
+        "__oclc_ABI_version",
+        builder.getIntegerAttr(int32Type, oclcABIVERsion));
+    covInfo.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
+    covInfo.setAddrSpace(4);
+    covInfo.setVisibility_(mlir::LLVM::Visibility::Hidden);
+    builder.setInsertionPointToStart(mlirModule.getBody());
+    builder.insert(covInfo);
+  }
+  addDependentLibs(mlirModule, ci);
 }
 
 bool CodeGenAction::beginSourceFileAction() {
@@ -365,8 +395,9 @@ bool CodeGenAction::beginSourceFileAction() {
   Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
   lb.lower(parseTree, ci.getInvocation().getSemanticsContext());
 
-  // Add dependent libraries
-  addDepdendentLibs(*mlirModule, ci);
+  // Add target specific items like dependent libraries, target specific
+  // constants etc.
+  addTargetSpecificMLIRItems(*mlirModule, ci);
 
   // run the default passes.
   mlir::PassManager pm((*mlirModule)->getName(),

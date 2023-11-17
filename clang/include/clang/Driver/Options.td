@@ -4721,7 +4721,7 @@ defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
 
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 4. (AMDGPU only)">,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, FlangOption, CC1Option, FC1Option]>,
   Values<"none,4,5">,
   NormalizedValuesScope<"TargetOptions">,
   NormalizedValues<["COV_None", "COV_4", "COV_5"]>,

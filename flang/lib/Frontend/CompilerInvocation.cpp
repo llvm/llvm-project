@@ -268,6 +268,15 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.PrepareForThinLTO = true;
   }
 
+  if (const llvm::opt::Arg *a = args.getLastArg(
+          clang::driver::options::OPT_mcode_object_version_EQ)) {
+    llvm::StringRef s = a->getValue();
+    if (s == "5")
+      opts.CodeObjectVersion = CodeGenOptions::CodeObjectVersionKind::COV_5;
+    if (s == "4")
+      opts.CodeObjectVersion = CodeGenOptions::CodeObjectVersionKind::COV_4;
+  }
+
   // -f[no-]save-optimization-record[=<format>]
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_opt_record_file))
