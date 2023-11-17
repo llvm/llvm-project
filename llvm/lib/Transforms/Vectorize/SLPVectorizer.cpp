@@ -1167,7 +1167,7 @@ public:
   /// {{{i16, i16}, {i16, i16}}, {{i16, i16}, {i16, i16}}} and so on.
   ///
   /// \returns number of elements in vector if isomorphism exists, 0 otherwise.
-  unsigned canMapToVector(Type *T, const DataLayout &DL) const;
+  unsigned canMapToVector(Type *T) const;
 
   /// \returns True if the VectorizableTree is both tiny and not fully
   /// vectorizable. We do not vectorize such trees.
@@ -6326,7 +6326,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   llvm_unreachable("Unexpected vectorization of the instructions.");
 }
 
-unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
+unsigned BoUpSLP::canMapToVector(Type *T) const {
   unsigned N = 1;
   Type *EltTy = T;
 
@@ -6350,9 +6350,9 @@ unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
 
   if (!isValidElementType(EltTy))
     return 0;
-  uint64_t VTSize = DL.getTypeStoreSizeInBits(FixedVectorType::get(EltTy, N));
+  uint64_t VTSize = DL->getTypeStoreSizeInBits(FixedVectorType::get(EltTy, N));
   if (VTSize < MinVecRegSize || VTSize > MaxVecRegSize ||
-      VTSize != DL.getTypeStoreSizeInBits(T))
+      VTSize != DL->getTypeStoreSizeInBits(T))
     return 0;
   return N;
 }
@@ -6380,8 +6380,7 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
   // We have to extract from a vector/aggregate with the same number of elements.
   unsigned NElts;
   if (E0->getOpcode() == Instruction::ExtractValue) {
-    const DataLayout &DL = E0->getModule()->getDataLayout();
-    NElts = canMapToVector(Vec->getType(), DL);
+    NElts = canMapToVector(Vec->getType());
     if (!NElts)
       return false;
     // Check if load can be rewritten as load of vector.
@@ -15569,8 +15568,7 @@ bool SLPVectorizerPass::tryToVectorize(ArrayRef<WeakTrackingVH> Insts,
 
 bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
                                                  BasicBlock *BB, BoUpSLP &R) {
-  const DataLayout &DL = BB->getModule()->getDataLayout();
-  if (!R.canMapToVector(IVI->getType(), DL))
+  if (!R.canMapToVector(IVI->getType()))
     return false;
 
   SmallVector<Value *, 16> BuildVectorOpds;
