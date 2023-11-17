@@ -379,14 +379,15 @@ CheckForDuplicateCodeAlignAttrs(Sema &S,
 
   while (Attrs.end() != (LastFoundItr = std::find_if(LastFoundItr + 1,
                                                      Attrs.end(), FindFunc))) {
-    const auto *CASA =
-	dyn_cast<ConstantExpr>(cast<CodeAlignAttr>(*LastFoundItr)->getAlignment());
+    const auto *CASA = dyn_cast<ConstantExpr>(
+        cast<CodeAlignAttr>(*LastFoundItr)->getAlignment());
     // If the value is dependent, we can not test anything.
     if (!CASA)
       return;
     // Test the attribute values.
     llvm::APSInt SecondValue = CASA->getResultAsAPSInt();
-    if (!FirstValue) FirstValue = CAFA->getResultAsAPSInt();
+    if (!FirstValue)
+      FirstValue = CAFA->getResultAsAPSInt();
 
     if (FirstValue != SecondValue) {
       S.Diag((*LastFoundItr)->getLocation(), diag::err_loop_attr_conflict)
