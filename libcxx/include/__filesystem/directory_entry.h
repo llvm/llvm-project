@@ -34,14 +34,14 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 class directory_entry {
-  typedef _VSTD_FS::path _Path;
+  typedef path _Path;
 
 public:
   // constructors and destructors
@@ -104,11 +104,11 @@ public:
   operator const _Path&() const noexcept { return __p_; }
 
   _LIBCPP_INLINE_VISIBILITY
-  bool exists() const { return _VSTD_FS::exists(file_status{__get_ft()}); }
+  bool exists() const { return filesystem::exists(file_status{__get_ft()}); }
 
   _LIBCPP_INLINE_VISIBILITY
   bool exists(error_code& __ec) const noexcept {
-    return _VSTD_FS::exists(file_status{__get_ft(&__ec)});
+    return filesystem::exists(file_status{__get_ft(&__ec)});
   }
 
   _LIBCPP_INLINE_VISIBILITY
@@ -144,11 +144,11 @@ public:
   }
 
   _LIBCPP_INLINE_VISIBILITY
-  bool is_other() const { return _VSTD_FS::is_other(file_status{__get_ft()}); }
+  bool is_other() const { return filesystem::is_other(file_status{__get_ft()}); }
 
   _LIBCPP_INLINE_VISIBILITY
   bool is_other(error_code& __ec) const noexcept {
-    return _VSTD_FS::is_other(file_status{__get_ft(&__ec)});
+    return filesystem::is_other(file_status{__get_ft(&__ec)});
   }
 
   _LIBCPP_INLINE_VISIBILITY
@@ -366,7 +366,7 @@ private:
     case _IterNonSymlink:
     case _RefreshNonSymlink:
       file_status __st(__data_.__type_);
-      if (__ec && !_VSTD_FS::exists(__st))
+      if (__ec && !filesystem::exists(__st))
         *__ec = make_error_code(errc::no_such_file_or_directory);
       else if (__ec)
         __ec->clear();
@@ -386,7 +386,7 @@ private:
     case _RefreshNonSymlink:
     case _RefreshSymlink: {
       file_status __st(__data_.__type_);
-      if (__ec && !_VSTD_FS::exists(__st))
+      if (__ec && !filesystem::exists(__st))
         *__ec = make_error_code(errc::no_such_file_or_directory);
       else if (__ec)
         __ec->clear();
@@ -434,15 +434,15 @@ private:
     case _IterNonSymlink:
     case _IterSymlink:
     case _RefreshSymlinkUnresolved:
-      return _VSTD_FS::__file_size(__p_, __ec);
+      return filesystem::__file_size(__p_, __ec);
     case _RefreshSymlink:
     case _RefreshNonSymlink: {
       error_code __m_ec;
       file_status __st(__get_ft(&__m_ec));
       __handle_error("in directory_entry::file_size", __ec, __m_ec);
-      if (_VSTD_FS::exists(__st) && !_VSTD_FS::is_regular_file(__st)) {
-        errc __err_kind = _VSTD_FS::is_directory(__st) ? errc::is_a_directory
-                                                       : errc::not_supported;
+      if (filesystem::exists(__st) && !filesystem::is_regular_file(__st)) {
+        errc __err_kind = filesystem::is_directory(__st) ? errc::is_a_directory
+                                                         : errc::not_supported;
         __handle_error("in directory_entry::file_size", __ec,
                        make_error_code(__err_kind));
       }
@@ -459,7 +459,7 @@ private:
     case _IterNonSymlink:
     case _IterSymlink:
     case _RefreshSymlinkUnresolved:
-      return _VSTD_FS::__hard_link_count(__p_, __ec);
+      return filesystem::__hard_link_count(__p_, __ec);
     case _RefreshSymlink:
     case _RefreshNonSymlink: {
       error_code __m_ec;
@@ -478,13 +478,13 @@ private:
     case _IterNonSymlink:
     case _IterSymlink:
     case _RefreshSymlinkUnresolved:
-      return _VSTD_FS::__last_write_time(__p_, __ec);
+      return filesystem::__last_write_time(__p_, __ec);
     case _RefreshSymlink:
     case _RefreshNonSymlink: {
       error_code __m_ec;
       file_status __st(__get_ft(&__m_ec));
       __handle_error("in directory_entry::last_write_time", __ec, __m_ec);
-      if (_VSTD_FS::exists(__st) &&
+      if (filesystem::exists(__st) &&
           __data_.__write_time_ == file_time_type::min())
         __handle_error("in directory_entry::last_write_time", __ec,
                        make_error_code(errc::value_too_large));
@@ -518,7 +518,7 @@ _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
-#endif // !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#endif // _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 _LIBCPP_POP_MACROS
 
