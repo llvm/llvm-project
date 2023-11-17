@@ -259,6 +259,8 @@ TYPE_PARSER(
             parenthesized("STATIC" >> maybe("," >> scalarIntExpr)))) ||
     "DYNAMIC_ALLOCATORS" >>
         construct<OmpClause>(construct<OmpClause::DynamicAllocators>()) ||
+    "ENTER" >> construct<OmpClause>(construct<OmpClause::Enter>(
+                   parenthesized(Parser<OmpObjectList>{}))) ||
     "FINAL" >> construct<OmpClause>(construct<OmpClause::Final>(
                    parenthesized(scalarLogicalExpr))) ||
     "FULL" >> construct<OmpClause>(construct<OmpClause::Full>()) ||
