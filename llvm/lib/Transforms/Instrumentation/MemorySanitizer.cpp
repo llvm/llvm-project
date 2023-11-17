@@ -5602,7 +5602,6 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
                        Alignment, RegSaveAreaSize);
   }
 
-
   // FIXME: This implementation limits OverflowOffset to kParamTLSSize, so we
   // don't know real overflow size and can't clear shadow beyond kParamTLSSize.
   void copyOverflowArea(IRBuilder<> &IRB, Value *VAListTag) {
