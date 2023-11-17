@@ -17619,14 +17619,16 @@ ExprResult Sema::ActOnPPEmbedExpr(SourceLocation BuiltinLoc,
                   RPLoc, CurContext);
 }
 
-IntegerLiteral *Sema::ExpandSinglePPEmbedExpr(PPEmbedExpr *PPEmbed) {
-  assert(PPEmbed->getDataElementCount(Context) == 1 &&
+IntegerLiteral *Sema::ExpandSinglePPEmbedExpr(PPEmbedExpr *PPEmbed,
+                                              bool FirstElement) {
+  assert((PPEmbed->getDataElementCount(Context) == 1 || !FirstElement) &&
          "Data should only contain a single element");
   StringLiteral *DataLiteral = PPEmbed->getDataStringLiteral();
   QualType ElementTy = PPEmbed->getType();
   const size_t TargetWidth = Context.getTypeSize(ElementTy);
   const size_t BytesPerElement = CHAR_BIT / TargetWidth;
   StringRef Data = DataLiteral->getBytes();
+  Data = Data.substr(FirstElement ? 0 : Data.size() - 1, 1);
   SmallVector<uint64_t, 4> ByteVals{};
   for (size_t ValIndex = 0; ValIndex < BytesPerElement; ++ValIndex) {
     if ((ValIndex % sizeof(uint64_t)) == 0) {
@@ -17647,9 +17649,10 @@ Sema::CheckExprListForPPEmbedExpr(ArrayRef<Expr *> ExprList,
   if (ExprList.empty()) {
     return PPEmbedExpr::NotFound;
   }
-  PPEmbedExpr *First = ExprList.size() == 1
-                           ? dyn_cast_if_present<PPEmbedExpr>(ExprList[0])
-                           : nullptr;
+  PPEmbedExpr *First =
+      ExprList.size() == 1
+          ? dyn_cast_if_present<PPEmbedExpr>(ExprList[0]->IgnoreParens())
+          : nullptr;
   if (First) {
     // only one and it's an embed
     if (MaybeInitType) {
@@ -17675,7 +17678,7 @@ Sema::CheckExprListForPPEmbedExpr(ArrayRef<Expr *> ExprList,
   }
   if (std::find_if(ExprList.begin(), ExprList.end(),
                    [](const Expr *const SomeExpr) {
-                     return isa<PPEmbedExpr>(SomeExpr);
+                     return isa<PPEmbedExpr>(SomeExpr->IgnoreParens());
                    }) == ExprList.end()) {
     // We didn't find one.
     return PPEmbedExpr::NotFound;
@@ -17784,40 +17787,6 @@ Sema::ExpandPPEmbedExprInExprList(ArrayRef<Expr *> ExprList,
     }
   }
   return PPEmbedExpr::Expanded;
-}
-
-StringRef Sema::GetLocationName(PPEmbedExprContext Context) const {
-  switch (Context) {
-  default:
-    llvm_unreachable("unhandled PPEmbedExprContext value");
-  case PPEEC__StaticAssert:
-    return "_Static_assert";
-  case PPEEC_StaticAssert:
-    return "static_assert";
-  }
-}
-
-bool Sema::DiagnosePPEmbedExpr(Expr *&E, SourceLocation ContextLocation,
-                               PPEmbedExprContext PPEmbedContext,
-                               bool SingleAllowed) {
-  PPEmbedExpr *PPEmbed = dyn_cast_if_present<PPEmbedExpr>(E);
-  if (!PPEmbed)
-    return false;
-
-  if (SingleAllowed && PPEmbed->getDataElementCount(Context) == 1) {
-    E = ExpandSinglePPEmbedExpr(PPEmbed);
-    return false;
-  }
-
-  StringRef LocationName = GetLocationName(PPEmbedContext);
-  StringRef DiagnosticMessage =
-      (SingleAllowed ? "cannot use a preprocessor embed that expands to "
-                       "nothing or expands to "
-                       "more than one item in "
-                     : "cannot use a preprocessor embed in ");
-  Diag(ContextLocation, diag::err_builtin_pp_embed_invalid_location)
-      << DiagnosticMessage << 1 << LocationName;
-  return true;
 }
 
 bool Sema::CheckConversionToObjCLiteral(QualType DstType, Expr *&Exp,

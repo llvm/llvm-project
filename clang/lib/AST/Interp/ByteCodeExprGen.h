@@ -107,6 +107,7 @@ public:
   bool VisitOffsetOfExpr(const OffsetOfExpr *E);
   bool VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E);
   bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
+  bool VisitPPEmbedExpr(const PPEmbedExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;

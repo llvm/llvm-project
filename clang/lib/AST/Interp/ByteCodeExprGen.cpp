@@ -703,6 +703,15 @@ bool ByteCodeExprGen<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
   return this->delegate(E->getSubExpr());
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitPPEmbedExpr(const PPEmbedExpr *E) {
+  for (const IntegerLiteral *IL : E->underlying_data_elements()) {
+    if (!this->visit(IL))
+      return false;
+  }
+  return true;
+}
+
 static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
                              UnaryExprOrTypeTrait Kind) {
   bool AlignOfReturnsPreferred =

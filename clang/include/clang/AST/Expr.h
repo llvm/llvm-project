@@ -4814,8 +4814,10 @@ private:
 class PPEmbedExpr final : public Expr {
   SourceLocation BuiltinLoc, RParenLoc;
   DeclContext *ParentContext;
-  StringLiteral *Filename;
-  StringLiteral *BinaryData;
+  StringLiteral *Filename = nullptr;
+  StringLiteral *BinaryData = nullptr;
+  IntegerLiteral *FakeChildNode = nullptr;
+  const ASTContext *Ctx = nullptr;
 
 public:
   enum Action {
@@ -4845,12 +4847,82 @@ public:
 
   size_t getDataElementCount(ASTContext &Context) const;
 
+private:
+  template <bool Const>
+  class ChildElementIter
+      : public llvm::iterator_facade_base<
+            // FIXME: it seems reasonable to make this a random access iterator
+            // instead, but all current access patterns are a linear walk over
+            // the contents, so it's being left for follow-up work if needed.
+            ChildElementIter<Const>, std::input_iterator_tag,
+            std::conditional_t<Const, const IntegerLiteral *,
+                               IntegerLiteral *>> {
+    friend class PPEmbedExpr;
+
+    const ASTContext *Ctx = nullptr;
+    IntegerLiteral *FakeNode = nullptr;
+    StringRef DataRef;
+    LLVM_PREFERRED_TYPE(bool) unsigned IsSigned : 1;
+    // FIXME: a sufficiently large embedded resource cannot be iterated over,
+    // woe unto such users.
+    unsigned CurOffset : 31;
+    using BaseTy = typename ChildElementIter::iterator_facade_base;
+
+    ChildElementIter(const PPEmbedExpr *E)
+        : IsSigned(E->getType()->isSignedIntegerType()), CurOffset(0) {
+      Ctx = E->Ctx;
+      FakeNode = E->FakeChildNode;
+      DataRef = E->BinaryData->getBytes();
+    }
+
+    // Max value that can be stored in a 31-bit bit-field.
+    static constexpr unsigned EndIterSentinel = 0x7FFFFFFF;
+
+  public:
+    ChildElementIter() : IsSigned(false), CurOffset(EndIterSentinel) {}
+    typename BaseTy::reference operator*() const {
+      assert(Ctx && FakeNode && CurOffset != EndIterSentinel &&
+             "trying to dereference an invalid iterator");
+      FakeNode->setValue(*Ctx, llvm::APInt(FakeNode->getValue().getBitWidth(),
+                                           DataRef[CurOffset], IsSigned));
+      return const_cast<typename BaseTy::reference>(FakeNode);
+    }
+    typename BaseTy::pointer operator->() const { return **this; }
+    using BaseTy::operator++;
+    ChildElementIter &operator++() {
+      assert(CurOffset != EndIterSentinel &&
+             "Already at the end of what we can iterate over");
+      if (++CurOffset >= DataRef.size()) {
+        CurOffset = EndIterSentinel;
+        FakeNode = nullptr;
+      }
+      return *this;
+    }
+    bool operator==(ChildElementIter Other) const {
+      return (FakeNode == Other.FakeNode && CurOffset == Other.CurOffset);
+    }
+  }; // class ChildElementIter
+
+public:
+  using fake_child_range = llvm::iterator_range<ChildElementIter<false>>;
+  using const_fake_child_range = llvm::iterator_range<ChildElementIter<true>>;
+
+  fake_child_range underlying_data_elements() {
+    return fake_child_range(ChildElementIter<false>(this),
+                            ChildElementIter<false>());
+  }
+
+  const_fake_child_range underlying_data_elements() const {
+    return const_fake_child_range(ChildElementIter<true>(this),
+                                  ChildElementIter<true>());
+  }
+
   child_range children() {
     return child_range(child_iterator(), child_iterator());
   }
 
   const_child_range children() const {
-    return const_child_range(child_iterator(), child_iterator());
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   static bool classof(const Stmt *T) {

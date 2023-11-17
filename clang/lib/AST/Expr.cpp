@@ -2351,8 +2351,10 @@ PPEmbedExpr::PPEmbedExpr(const ASTContext &Ctx, QualType ResultTy,
                          DeclContext *ParentContext)
     : Expr(PPEmbedExprClass, ResultTy, VK_PRValue, OK_Ordinary),
       BuiltinLoc(BLoc), RParenLoc(RParenLoc), ParentContext(ParentContext),
-      Filename(Filename), BinaryData(BinaryData) {
+      Filename(Filename), BinaryData(BinaryData), Ctx(&Ctx) {
   setDependence(ExprDependence::None);
+  FakeChildNode = IntegerLiteral::Create(
+      Ctx, llvm::APInt::getZero(Ctx.getTypeSize(ResultTy)), ResultTy, BLoc);
 }
 
 size_t PPEmbedExpr::getDataElementCount(ASTContext &Context) const {

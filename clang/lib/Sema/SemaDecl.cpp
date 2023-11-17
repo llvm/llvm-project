@@ -13361,22 +13361,19 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     }
   }
 
-  if (!AlreadyAdjustedPPEmbedExpr) {
+  if (!AlreadyAdjustedPPEmbedExpr && Init) {
     // If there is a PPEmbedExpr as a single initializer without braces,
     // make sure it only produces a single element (and then expand said
     // element).
-    if (PPEmbedExpr *PPEmbed = dyn_cast_if_present<PPEmbedExpr>(Init);
-        PPEmbed) {
+    if (PPEmbedExpr *PPEmbed = dyn_cast<PPEmbedExpr>(Init->IgnoreParens())) {
       if (PPEmbed->getDataElementCount(Context) == 1) {
         // Expand the list in-place immediately, let the natural work take hold
         Init = ExpandSinglePPEmbedExpr(PPEmbed);
       } else {
-        // #embed only produces 2 or more values.
-        // FIXME: still uses the old builtin name.
-        Diag(RealDecl->getLocation(), diag::err_illegal_initializer_type)
-            << "'__builtin_pp_embed'";
-        RealDecl->setInvalidDecl();
-        return;
+        // Whee, this is a comma expression! However, we don't need to retain
+        // it as such because the comma expression results are the right-most
+        // operand. So we'll get that value and expand it as a single value.
+        Init = ExpandSinglePPEmbedExpr(PPEmbed, /*FirstElement*/ false);
       }
     }
 

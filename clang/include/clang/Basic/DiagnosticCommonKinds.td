@@ -83,9 +83,6 @@ def err_expected : Error<"expected %0">;
 def err_expected_either : Error<"expected %0 or %1">;
 def err_expected_after : Error<"expected %1 after %0">;
 
-def err_builtin_pp_embed_invalid_location : Error<
-  "'__builtin_pp_embed' in invalid location: %0%select{|%2}1">;
-
 def err_param_redefinition : Error<"redefinition of parameter %0">;
 def warn_method_param_redefinition : Warning<"redefinition of method parameter %0">;
 def warn_method_param_declaration : Warning<"redeclaration of method parameter %0">,

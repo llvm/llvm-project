@@ -6095,7 +6095,8 @@ public:
                               SourceLocation RPLoc, StringLiteral *Filename,
                               QualType DataTy, std::vector<char> BinaryData);
 
-  IntegerLiteral *ExpandSinglePPEmbedExpr(PPEmbedExpr *PPEmbed);
+  IntegerLiteral *ExpandSinglePPEmbedExpr(PPEmbedExpr *PPEmbed,
+                                          bool FirstElement = true);
 
   PPEmbedExpr::Action
   CheckExprListForPPEmbedExpr(ArrayRef<Expr *> ExprList,
@@ -6106,17 +6107,6 @@ public:
                               bool ClearOutputFirst = true);
   PPEmbedExpr::Action
   ExpandPPEmbedExprInExprList(SmallVectorImpl<Expr *> &OutputList);
-
-  enum PPEmbedExprContext {
-    PPEEC__StaticAssert,
-    PPEEC_StaticAssert,
-  };
-
-  StringRef GetLocationName(PPEmbedExprContext Context) const;
-
-  bool DiagnosePPEmbedExpr(Expr *&E, SourceLocation ContextLocation,
-                           PPEmbedExprContext Context,
-                           bool SingleAllowed = true);
 
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,

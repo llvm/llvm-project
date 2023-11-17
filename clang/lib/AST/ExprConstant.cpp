@@ -7662,6 +7662,14 @@ public:
     return Error(E);
   }
 
+  bool VisitPPEmbedExpr(const PPEmbedExpr *E) {
+    for (const IntegerLiteral *IL : E->underlying_data_elements()) {
+      if (!StmtVisitorTy::Visit(IL))
+        return false;
+    }
+    return true;
+  }
+
   bool VisitPredefinedExpr(const PredefinedExpr *E) {
     return StmtVisitorTy::Visit(E->getFunctionName());
   }
@@ -16029,6 +16037,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::SizeOfPackExprClass:
   case Expr::GNUNullExprClass:
   case Expr::SourceLocExprClass:
+  case Expr::PPEmbedExprClass:
     return NoDiag();
 
   case Expr::SubstNonTypeTemplateParmExprClass:
@@ -16309,9 +16318,6 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
     if (!checkBitCastConstexprEligibility(nullptr, Ctx, cast<CastExpr>(E)))
       return ICEDiag(IK_NotICE, E->getBeginLoc());
     return CheckICE(cast<CastExpr>(E)->getSubExpr(), Ctx);
-  }
-  case Expr::PPEmbedExprClass: {
-    return ICEDiag(IK_ICE, E->getBeginLoc());
   }
   }
 
