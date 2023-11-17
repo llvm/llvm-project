@@ -81,7 +81,8 @@ protected:
 
   std::string getTypeName(Type *Ty, bool Signed) const;
 
-  msgpack::ArrayDocNode getWorkGroupDimensions(MDNode *Node) const;
+  msgpack::ArrayDocNode getWorkGroupDimensions(const Function &Func,
+                                               MDNode *Node) const;
 
   msgpack::MapDocNode getHSAKernelProps(const MachineFunction &MF,
                                         const SIProgramInfo &ProgramInfo,
