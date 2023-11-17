@@ -5,6 +5,7 @@ add_llvm_component_library(LLVMYkPasses
   LivenessAnalysis.cpp
   StackMaps.cpp
   ShadowStack.cpp
+  NoCallsInEntryBlocks.cpp
 
   DEPENDS
   intrinsics_gen
