@@ -20714,6 +20714,12 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
                 "table({}, table({{\"\", false}}, {}))\n"
                 "});",
                 Style);
+  verifyNoCrash("Bar a[1] = {\n"
+                "    #define buf(a, b) \\\n"
+                "      { #a, #b },\n"
+                "    { Test, bar }\n"
+                "};",
+                Style);
 
   Style.AlignConsecutiveAssignments.Enabled = true;
   Style.AlignConsecutiveDeclarations.Enabled = true;
