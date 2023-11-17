@@ -871,9 +871,8 @@ const Value *GCProjectionInst::getStatepoint() const {
     return Token;
 
   // Treat none token as if it was undef here
-  if (isa<ConstantTokenNone>(Token)) {
+  if (isa<ConstantTokenNone>(Token))
     return UndefValue::get(Token->getType());
-  }
 
   // This takes care both of relocates for call statepoints and relocates
   // on normal path of invoke statepoint.
