@@ -1,6 +1,6 @@
-; Tests that coro-split will convert a call before coro.suspend to a musttail call
-; while the user of the coro.suspend is a icmpinst.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; Tests that instrumentation doesn't interfere with lowering (coro-split).
+; It should convert coro.resume followed by a suspend to a musttail call.
+
 ; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define void @fakeresume1(ptr)  {

@@ -19,6 +19,8 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -82,6 +84,38 @@ template <class Edge, class BBInfo> class CFGMST {
     return true;
   }
 
+  void handleCoroSuspendEdge(Edge *E) {
+    // We must not add instrumentation to the BB representing the
+    // "suspend" path, else CoroSplit won't be able to lower
+    // llvm.coro.suspend to a tail call. We do want profiling info for
+    // the other branches (resume/destroy). So we do 2 things:
+    // 1. we prefer instrumenting those other edges by setting the weight
+    //    of the "suspend" edge to max, and
+    // 2. we mark the edge as "Removed" to guarantee it is not considered
+    //    for instrumentation. That could technically happen:
+    //    (from test/Transforms/Coroutines/coro-split-musttail.ll)
+    //
+    // %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
+    // switch i8 %suspend, label %exit [
+    //   i8 0, label %await.ready
+    //   i8 1, label %exit
+    // ]
+    const BasicBlock *EdgeTarget = E->DestBB;
+    if (!EdgeTarget)
+      return;
+    assert(E->SrcBB);
+    const Function *F = EdgeTarget->getParent();
+    if (!F->isPresplitCoroutine())
+      return;
+
+    const Instruction *TI = E->SrcBB->getTerminator();
+    if (auto *SWInst = dyn_cast<SwitchInst>(TI))
+      if (auto *Intrinsic = dyn_cast<IntrinsicInst>(SWInst->getCondition()))
+        if (Intrinsic->getIntrinsicID() == Intrinsic::coro_suspend &&
+            SWInst->getDefaultDest() == EdgeTarget)
+          E->Removed = true;
+  }
+
   // Traverse the CFG using a stack. Find all the edges and assign the weight.
   // Edges with large weight will be put into MST first so they are less likely
   // to be instrumented.
@@ -133,6 +167,7 @@ template <class Edge, class BBInfo> class CFGMST {
             Weight++;
           auto *E = &addEdge(&BB, TargetBB, Weight);
           E->IsCritical = Critical;
+          handleCoroSuspendEdge(E);
           LLVM_DEBUG(dbgs() << "  Edge: from " << BB.getName() << " to "
                             << TargetBB->getName() << "  w=" << Weight << "\n");
 
