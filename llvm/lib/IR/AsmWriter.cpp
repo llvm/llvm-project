@@ -1265,9 +1265,8 @@ void SlotTracker::CreateFunctionSlot(const Value *V) {
 void SlotTracker::CreateMetadataSlot(const MDNode *N) {
   assert(N && "Can't insert a null Value into SlotTracker!");
 
-  // Don't make slots for DIExpressions or DIArgLists. We just print them inline
-  // everywhere.
-  if (isa<DIExpression>(N) || isa<DIArgList>(N))
+  // Don't make slots for DIExpressions. We just print them inline everywhere.
+  if (isa<DIExpression>(N))
     return;
 
   unsigned DestSlot = mdnNext;
@@ -3516,8 +3515,6 @@ void AssemblyWriter::printNamedMDNode(const NamedMDNode *NMD) {
     // Write DIExpressions inline.
     // FIXME: Ban DIExpressions in NamedMDNodes, they will serve no purpose.
     MDNode *Op = NMD->getOperand(i);
-    assert(!isa<DIArgList>(Op) &&
-           "DIArgLists should not appear in NamedMDNodes");
     if (auto *Expr = dyn_cast<DIExpression>(Op)) {
       writeDIExpression(Out, Expr, AsmWriterContext::getEmpty());
       continue;
@@ -4918,7 +4915,7 @@ static void printMetadataImplRec(raw_ostream &ROS, const Metadata &MD,
   WriteAsOperandInternal(OS, &MD, WriterCtx, /* FromValue */ true);
 
   auto *N = dyn_cast<MDNode>(&MD);
-  if (!N || isa<DIExpression>(MD) || isa<DIArgList>(MD))
+  if (!N || isa<DIExpression>(MD))
     return;
 
   OS << " = ";
@@ -4986,7 +4983,7 @@ static void printMetadataImpl(raw_ostream &ROS, const Metadata &MD,
   WriteAsOperandInternal(OS, &MD, *WriterCtx, /* FromValue */ true);
 
   auto *N = dyn_cast<MDNode>(&MD);
-  if (OnlyAsOperand || !N || isa<DIExpression>(MD) || isa<DIArgList>(MD))
+  if (OnlyAsOperand || !N || isa<DIExpression>(MD))
     return;
 
   OS << " = ";
