@@ -164,15 +164,9 @@ private:
   void inlineStackProbe(MachineFunction &MF,
                         MachineBasicBlock &PrologueMBB) const override;
 
-  MachineBasicBlock::iterator
-  inlineStackProbeFixed(MachineBasicBlock::iterator MBBI, Register ScratchReg,
-                        int64_t FrameSize, StackOffset CFAOffset) const;
-
-  MachineBasicBlock::iterator
-  inlineStackProbeFixed(MachineBasicBlock::iterator MBBI) const;
-
-  MachineBasicBlock::iterator
-  inlineStackProbeVar(MachineBasicBlock::iterator MBBI) const;
+  void inlineStackProbeFixed(MachineBasicBlock::iterator MBBI,
+                             Register ScratchReg, int64_t FrameSize,
+                             StackOffset CFAOffset) const;
 
   MachineBasicBlock::iterator
   inlineStackProbeLoopExactMultiple(MachineBasicBlock::iterator MBBI,

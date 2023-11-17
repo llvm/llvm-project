@@ -4276,7 +4276,7 @@ AArch64FrameLowering::inlineStackProbeLoopExactMultiple(
   return ExitMBB->begin();
 }
 
-MachineBasicBlock::iterator AArch64FrameLowering::inlineStackProbeFixed(
+void AArch64FrameLowering::inlineStackProbeFixed(
     MachineBasicBlock::iterator MBBI, Register ScratchReg, int64_t FrameSize,
     StackOffset CFAOffset) const {
   MachineBasicBlock *MBB = MBBI->getParent();
@@ -4353,54 +4353,35 @@ MachineBasicBlock::iterator AArch64FrameLowering::inlineStackProbeFixed(
           .setMIFlags(MachineInstr::FrameSetup);
     }
   }
-
-  MachineBasicBlock::iterator Next = std::next(MBBI);
-  return Next;
-}
-
-MachineBasicBlock::iterator AArch64FrameLowering::inlineStackProbeFixed(
-    MachineBasicBlock::iterator MBBI) const {
-
-  Register ScratchReg = MBBI->getOperand(0).getReg();
-  int64_t FrameSize = MBBI->getOperand(1).getImm();
-  StackOffset CFAOffset = StackOffset::get(MBBI->getOperand(2).getImm(),
-                                           MBBI->getOperand(3).getImm());
-
-  MachineBasicBlock::iterator NextInst =
-      inlineStackProbeFixed(MBBI, ScratchReg, FrameSize, CFAOffset);
-
-  MBBI->eraseFromParent();
-  return NextInst;
-}
-
-MachineBasicBlock::iterator AArch64FrameLowering::inlineStackProbeVar(
-    MachineBasicBlock::iterator MBBI) const {
-  MachineBasicBlock &MBB = *MBBI->getParent();
-  MachineFunction &MF = *MBB.getParent();
-  const AArch64InstrInfo *TII =
-      MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
-
-  DebugLoc DL = MBB.findDebugLoc(MBBI);
-  Register TargetReg = MBBI->getOperand(0).getReg();
-
-  MachineBasicBlock::iterator NextInst =
-      TII->probedStackAlloc(MBBI, TargetReg, true);
-
-  MBBI->eraseFromParent();
-  return NextInst;
 }
 
 void AArch64FrameLowering::inlineStackProbe(MachineFunction &MF,
                                             MachineBasicBlock &MBB) const {
-  for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E;) {
-    if (MBBI->getOpcode() == AArch64::PROBED_STACKALLOC) {
-      MBBI = inlineStackProbeFixed(MBBI);
-      E = MBBI->getParent()->end();
-    } else if (MBBI->getOpcode() == AArch64::PROBED_STACKALLOC_VAR) {
-      MBBI = inlineStackProbeVar(MBBI);
-      E = MBBI->getParent()->end();
+  // Get the instructions that need to be replaced. We emit at most two of
+  // these. Remember them in order to avoid complications coming from the need
+  // to traverse the block while potentially creating more blocks.
+  SmallVector<MachineInstr *, 4> ToReplace;
+  for (MachineInstr &MI : MBB)
+    if (MI.getOpcode() == AArch64::PROBED_STACKALLOC ||
+        MI.getOpcode() == AArch64::PROBED_STACKALLOC_VAR)
+      ToReplace.push_back(&MI);
+
+  for (MachineInstr *MI : ToReplace) {
+    if (MI->getOpcode() == AArch64::PROBED_STACKALLOC) {
+      Register ScratchReg = MI->getOperand(0).getReg();
+      int64_t FrameSize = MI->getOperand(1).getImm();
+      StackOffset CFAOffset = StackOffset::get(MI->getOperand(2).getImm(),
+                                               MI->getOperand(3).getImm());
+      inlineStackProbeFixed(MI->getIterator(), ScratchReg, FrameSize,
+                            CFAOffset);
     } else {
-      ++MBBI;
+      assert(MI->getOpcode() == AArch64::PROBED_STACKALLOC_VAR &&
+             "Stack probe pseudo-instruction expected");
+      const AArch64InstrInfo *TII =
+          MI->getMF()->getSubtarget<AArch64Subtarget>().getInstrInfo();
+      Register TargetReg = MI->getOperand(0).getReg();
+      (void)TII->probedStackAlloc(MI->getIterator(), TargetReg, true);
     }
+    MI->eraseFromParent();
   }
 }
