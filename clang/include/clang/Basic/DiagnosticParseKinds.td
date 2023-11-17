@@ -1357,6 +1357,7 @@ def warn_pragma_acc_unimplemented_clause_parsing
       InGroup<SourceUsesOpenACC>;
 def err_acc_invalid_directive
     : Error<"invalid OpenACC directive '%0'">;
+def err_acc_missing_directive : Error<"expected OpenACC directive">;
 
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<
