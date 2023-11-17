@@ -1343,13 +1343,30 @@ def err_openclcxx_virtual_function : Error<
   "virtual functions are not supported in C++ for OpenCL">;
 
 // OpenACC Support.
-def warn_pragma_acc_ignored : Warning<
-  "unexpected '#pragma acc ...' in program">, InGroup<SourceUsesOpenACC>, DefaultIgnore;
-def err_acc_unexpected_directive : Error<
-  "unexpected OpenACC directive %select{|'#pragma acc %1'}0">;
+def warn_pragma_acc_ignored
+    : Warning<"unexpected '#pragma acc ...' in program">,
+      InGroup<SourceUsesOpenACC>,
+      DefaultIgnore;
+def err_acc_unexpected_directive
+    : Error<"unexpected OpenACC directive %select{|'#pragma acc %1'}0">;
 def warn_pragma_acc_unimplemented
     : Warning<"OpenACC directives not yet implemented, pragma ignored">,
       InGroup<SourceUsesOpenACC>;
+def warn_pragma_acc_unimplemented_construct_parens
+    : Warning<
+          "OpenACC %select{'cache' 'var-list'|'wait-argument'|'routine-name'}0 "
+          "parsing not yet implemented">,
+      InGroup<SourceUsesOpenACC>;
+def warn_pragma_acc_unimplemented_clause_parsing
+    : Warning<"OpenACC clause parsing not yet implemented">,
+      InGroup<SourceUsesOpenACC>;
+def err_acc_invalid_directive
+    : Error<"invalid OpenACC directive '%select{%1|%1 %2}0'">;
+def err_acc_invalid_atomic_clause
+    : Error<"invalid OpenACC 'atomic-clause' '%0'; expected 'read', 'write', "
+            "'update', or 'capture'">;
+def err_acc_invalid_open_paren
+    : Error<"expected clause-list or newline in pragma directive">;
 
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<

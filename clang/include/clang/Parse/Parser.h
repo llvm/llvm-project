@@ -53,6 +53,7 @@ namespace clang {
 class Parser : public CodeCompletionHandler {
   friend class ColonProtectionRAIIObject;
   friend class ParsingOpenMPDirectiveRAII;
+  friend class ParsingOpenACCDirectiveRAII;
   friend class InMessageExpressionRAIIObject;
   friend class OffsetOfStateRAIIObject;
   friend class PoisonSEHIdentifiersRAIIObject;
@@ -229,6 +230,9 @@ class Parser : public CodeCompletionHandler {
 
   /// Parsing OpenMP directive mode.
   bool OpenMPDirectiveParsing = false;
+
+  /// Parsing OpenACC directive mode.
+  bool OpenACCDirectiveParsing = false;
 
   /// When true, we are directly inside an Objective-C message
   /// send expression.
@@ -3531,7 +3535,7 @@ public:
   /// Placeholder for now, should just ignore the directives after emitting a
   /// diagnostic. Eventually will be split into a few functions to parse
   /// different situations.
-  DeclGroupPtrTy ParseOpenACCDirective();
+  DeclGroupPtrTy ParseOpenACCDirectiveDecl();
   StmtResult ParseOpenACCDirectiveStmt();
 
 private:
