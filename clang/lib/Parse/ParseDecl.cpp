@@ -4735,7 +4735,7 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
     }
 
     if (Tok.is(tok::annot_pragma_openacc)) {
-      ParseOpenACCDirective();
+      ParseOpenACCDirectiveDecl();
       continue;
     }
 
