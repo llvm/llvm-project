@@ -57,6 +57,13 @@ public:
   }
 };
 
+// Handle error reporting in cases where `ExitOnError` is not used.
+void reportError(Twine Message, int ExitCode = EXIT_FAILURE) {
+  WithColor::error(errs()) << Message << "\n";
+  errs().flush();
+  exit(ExitCode);
+}
+
 struct Context {
   std::vector<std::string> Inputs;
   std::unique_ptr<llvm::raw_fd_stream> OutStream;
@@ -84,12 +91,11 @@ std::unique_ptr<InterfaceFile> getInterfaceFile(const StringRef Filename,
 const int NON_TAPI_EXIT_CODE = 2;
 
 bool handleCompareAction(const Context &Ctx) {
-  ExitOnError ExitOnErr("error: ", /*DefaultErrorExitCode=*/NON_TAPI_EXIT_CODE);
-  if (Ctx.Inputs.size() != 2) {
-    ExitOnErr(make_error<TextAPIError>(TextAPIErrorCode::InvalidInputFormat,
-                                       "compare only supports 2 input files"));
-  }
+  if (Ctx.Inputs.size() != 2)
+    reportError("compare only supports two input files",
+                /*ExitCode=*/NON_TAPI_EXIT_CODE);
 
+  ExitOnError ExitOnErr("error: ", /*DefaultErrorExitCode=*/NON_TAPI_EXIT_CODE);
   auto LeftIF = getInterfaceFile(Ctx.Inputs.front(), ExitOnErr);
   auto RightIF = getInterfaceFile(Ctx.Inputs.at(1), ExitOnErr);
 
@@ -97,16 +103,28 @@ bool handleCompareAction(const Context &Ctx) {
   return DiffEngine(LeftIF.get(), RightIF.get()).compareFiles(OS);
 }
 
-bool handleMergeAction(const Context &Ctx) {
+bool handleWriteAction(const Context &Ctx,
+                       std::unique_ptr<InterfaceFile> Out = nullptr) {
   ExitOnError ExitOnErr("error: ");
-  if (Ctx.Inputs.size() < 2) {
-    ExitOnErr(
-        make_error<TextAPIError>(TextAPIErrorCode::InvalidInputFormat,
-                                 "merge requires at least two input files"));
+  if (!Out) {
+    if (Ctx.Inputs.size() != 1)
+      reportError("write only supports one input file");
+    Out = getInterfaceFile(Ctx.Inputs.front(), ExitOnErr);
   }
+  raw_ostream &OS = Ctx.OutStream ? *Ctx.OutStream : outs();
+  ExitOnErr(TextAPIWriter::writeToStream(OS, *Out, Ctx.WriteFT, Ctx.Compact));
+  return EXIT_SUCCESS;
+}
+
+bool handleMergeAction(const Context &Ctx) {
+  if (Ctx.Inputs.size() < 2)
+    reportError("merge requires at least two input files");
+
+  ExitOnError ExitOnErr("error: ");
   std::unique_ptr<InterfaceFile> Out;
   for (StringRef FileName : Ctx.Inputs) {
     auto IF = getInterfaceFile(FileName, ExitOnErr);
+    // On the first iteration copy the input file and skip merge.
     if (!Out) {
       Out = std::move(IF);
       continue;
@@ -116,10 +134,7 @@ bool handleMergeAction(const Context &Ctx) {
       ExitOnErr(ResultIF.takeError());
     Out = std::move(ResultIF.get());
   }
-
-  raw_ostream &OS = Ctx.OutStream ? *Ctx.OutStream : outs();
-  ExitOnErr(TextAPIWriter::writeToStream(OS, *Out, Ctx.WriteFT, Ctx.Compact));
-  return EXIT_SUCCESS;
+  return handleWriteAction(Ctx, std::move(Out));
 }
 
 } // anonymous namespace
@@ -155,22 +170,39 @@ int main(int Argc, char **Argv) {
     }
   }
 
-  if (Args.hasArg(OPT_compact))
-    Ctx.Compact = true;
+  Ctx.Compact = Args.hasArg(OPT_compact);
 
   if (opt::Arg *A = Args.getLastArg(OPT_filetype_EQ)) {
-    Ctx.WriteFT = TextAPIWriter::parseFileType(A->getValue());
-    if (Ctx.WriteFT < FileType::TBD_V3 || Ctx.WriteFT == FileType::Invalid) {
-      llvm::errs() << "error: unsupported filetype '" << A->getValue() << "'\n";
-      return EXIT_FAILURE;
-    }
+    StringRef FT = A->getValue();
+    Ctx.WriteFT = TextAPIWriter::parseFileType(FT);
+    if (Ctx.WriteFT < FileType::TBD_V3)
+      reportError("deprecated filetype '" + FT + "' is not supported to write");
+    if (Ctx.WriteFT == FileType::Invalid)
+      reportError("unsupported filetype '" + FT + "'");
   }
 
-  if (Args.hasArg(OPT_compare))
-    return handleCompareAction(Ctx);
+  // Handle top level and exclusive operation.
+  SmallVector<opt::Arg *, 1> ActionArgs(Args.filtered(OPT_action_group));
 
-  if (Args.hasArg(OPT_merge))
+  if (ActionArgs.empty())
+    // If no action specified, write out tapi file in requested format.
+    return handleWriteAction(Ctx);
+
+  if (ActionArgs.size() > 1) {
+    std::string Buf;
+    raw_string_ostream OS(Buf);
+    OS << "only one of the following actions can be specified:";
+    for (auto *Arg : ActionArgs)
+      OS << " " << Arg->getSpelling();
+    reportError(OS.str());
+  }
+
+  switch (ActionArgs.front()->getOption().getID()) {
+  case OPT_compare:
+    return handleCompareAction(Ctx);
+  case OPT_merge:
     return handleMergeAction(Ctx);
+  }
 
   return EXIT_SUCCESS;
 }

@@ -1,6 +1,6 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
-; RUN: not llvm-readtapi -merge %t/libfoo.tbd %t/libbar.tbd 2>&1| FileCheck %s --allow-empty --check-prefix DIFF
+; RUN: not llvm-readtapi -merge %t/libfoo.tbd %t/libbar.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix DIFF
 ; RUN: not llvm-readtapi -merge %t/libfoo.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix INPUT
 
 ; DIFF: install names do not match

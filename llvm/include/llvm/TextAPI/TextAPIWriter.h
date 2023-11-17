@@ -34,7 +34,7 @@ public:
                              const FileType FileKind = FileType::Invalid,
                              bool Compact = false);
 
-  /// Get TAPI Text FileType of string input.
+  /// Get TAPI FileType from the input string.
   ///
   /// \param FT String of input to map to FileType.
   static FileType parseFileType(const StringRef FT) {
