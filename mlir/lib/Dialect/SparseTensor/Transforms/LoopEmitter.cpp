@@ -276,13 +276,13 @@ Value LoopEmitter::genSparseCrd(OpBuilder &builder, Location loc, TensorId tid,
 }
 
 LoopEmitter::LoopEmitter(ValueRange tensors, StringAttr loopTag, bool hasOutput,
-                         bool isSparseOut, ArrayRef<LoopId> topSort,
+                         bool isSparseOut, unsigned numLoops,
                          DependentLvlGetter dimGetter) {
-  initialize(tensors, loopTag, hasOutput, isSparseOut, topSort, dimGetter);
+  initialize(tensors, loopTag, hasOutput, isSparseOut, numLoops, dimGetter);
 }
 
 void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
-                             bool isSparseOut, ArrayRef<LoopId> topSort,
+                             bool isSparseOut, unsigned numLoops,
                              DependentLvlGetter dimGetter) {
   // First initialize the top-level type of the fields.
   this->loopTag = loopTag;
@@ -308,10 +308,8 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
   this->sliceOffsets.assign(numTensors, std::vector<Value>());
   this->sliceStrides.assign(numTensors, std::vector<Value>());
 
-  const LoopOrd numLoops = topSort.size();
   // These zeros will be overwritten below, but we need to initialize
   // them to something since we'll need random-access assignment.
-  this->loopIdToOrd.assign(numLoops, 0);
   this->loopStack.reserve(numLoops);
   this->loopSeqStack.reserve(numLoops);
 
@@ -387,13 +385,6 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
       }
     }
   }
-
-  // Construct the inverse of the `topSort` from the sparsifier.
-  // This is needed to map `AffineDimExpr`s back to the `LoopOrd`
-  // used in loop emitter.
-  // FIXME: This map should be maintained outside loop emitter.
-  for (LoopOrd n = 0; n < numLoops; n++)
-    loopIdToOrd[topSort[n]] = n;
 }
 
 void LoopEmitter::initializeLoopEmit(
@@ -611,8 +602,7 @@ Value LoopEmitter::genAffine(OpBuilder &builder, Location loc, AffineExpr a) {
     // However, elsewhere we have been lead to expect that `loopIdToOrd`
     // should be indexed by `LoopId`...
     const auto loopId = cast<AffineDimExpr>(a).getPosition();
-    assert(loopId < loopIdToOrd.size());
-    return loopStack[loopIdToOrd[loopId]].iv;
+    return loopStack[loopId].iv;
   }
   case AffineExprKind::Add: {
     auto binOp = cast<AffineBinaryOpExpr>(a);

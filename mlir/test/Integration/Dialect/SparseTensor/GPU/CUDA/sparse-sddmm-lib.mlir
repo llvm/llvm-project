@@ -16,8 +16,7 @@
 //
 // without RT lib:
 //
-// TODO: make this work
-// R_U_N: %{compile} enable-runtime-library=false" | %{run}
+// RUN: %{compile} enable-runtime-library=false" | %{run}
 
 !Filename = !llvm.ptr
 
