@@ -159,6 +159,11 @@ private:
                                   MachineBasicBlock::iterator MBBI) const;
   void emitCalleeSavedSVERestores(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator MBBI) const;
+  void allocateStackSpace(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          bool NeedsRealignment, StackOffset AllocSize,
+                          bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI,
+                          StackOffset InitialOffset) const;
 
   /// Emit target zero call-used regs.
   void emitZeroCallUsedRegs(BitVector RegsToZero,
