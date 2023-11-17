@@ -449,6 +449,8 @@ Improvements to Clang's diagnostics
 - ``-Wzero-as-null-pointer-constant`` diagnostic is no longer emitted when using ``__null``
   (or, more commonly, ``NULL`` when the platform defines it as ``__null``) to be more consistent
   with GCC.
+- Clang will warn on deprecated specializations used in system headers when their instantiation
+  is caused by user code.
 
 Improvements to Clang's time-trace
 ----------------------------------
