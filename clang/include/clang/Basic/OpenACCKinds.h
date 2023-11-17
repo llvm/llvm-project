@@ -66,7 +66,6 @@ enum class OpenACCDirectiveKind {
   // Invalid.
   Invalid,
 };
-}
-
+} // namespace clang
 
 #endif // LLVM_CLANG_BASIC_OPENACCKINDS_H
