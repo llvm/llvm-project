@@ -137,19 +137,20 @@ class TestSwiftPlaygrounds(TestBase):
         self.expect('settings set target.swift-framework-search-paths "%s"' %
                     self.getBuildDir())
 
-        self.options = lldb.SBExpressionOptions()
-        self.options.SetLanguage(lldb.eLanguageTypeSwift)
-        self.options.SetPlaygroundTransformEnabled()
-        # The concurrency expressions will spawn multiple threads.
-        self.options.SetOneThreadTimeoutInMicroSeconds(1)
-        self.options.SetTryAllThreads(True)
-
-
     def execute_code(self, input_file, expect_error=False):
         contents = "syntax error"
         with open(input_file, 'r') as contents_file:
             contents = contents_file.read()
-        res = self.frame().EvaluateExpression(contents, self.options)
+
+        options = lldb.SBExpressionOptions()
+        options.SetLanguage(lldb.eLanguageTypeSwift)
+        options.SetPlaygroundTransformEnabled()
+        # The concurrency expressions will spawn multiple threads.
+        options.SetOneThreadTimeoutInMicroSeconds(1)
+        options.SetTryAllThreads(True)
+        options.SetAutoApplyFixIts(False)
+
+        res = self.frame().EvaluateExpression(contents, options)
         ret = self.frame().EvaluateExpression("get_output()")
         is_error = res.GetError().Fail() and not (
                      res.GetError().GetType() == 1 and
@@ -198,12 +199,5 @@ class TestSwiftPlaygrounds(TestBase):
         self.assertIn("Hello from the Dylib", playground_output)
 
         # Scan through the types log to make sure the SwiftASTContext was poisoned.
-        import io
-        logfile = io.open(log, "r", encoding='utf-8')
-        found = 0
-        for line in logfile:
-            if 'New Swift image added' in line \
-               and 'Versions/A/Dylib' in line \
-               and 'ClangImporter needs to be reinitialized' in line:
-                    found += 1
-        self.assertEqual(found, 2)
+        self.filecheck('platform shell cat ""%s"' % log, __file__)
+#       CHECK: New Swift image added{{.*}}Versions/A/Dylib{{.*}}ClangImporter needs to be reinitialized

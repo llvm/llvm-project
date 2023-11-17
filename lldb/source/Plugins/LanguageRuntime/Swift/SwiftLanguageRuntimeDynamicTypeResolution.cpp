@@ -503,8 +503,10 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
             .GetSwiftValidateTypeSystem()) {
       // Convert to an AST type, if necessary.
       if (auto ts = instance_type.GetTypeSystem()
-                        .dyn_cast_or_null<TypeSystemSwiftTypeRef>())
-        instance_type = ts->ReconstructType(instance_type);
+                        .dyn_cast_or_null<TypeSystemSwiftTypeRef>()) {
+        ExecutionContext exe_ctx = instance->GetExecutionContextRef().Lock(false);
+        instance_type = ts->ReconstructType(instance_type, &exe_ctx);
+      }
       auto reference = GetMemberVariableOffsetRemoteAST(instance_type, instance,
                                                         member_name);
       if (reference.has_value() && offset != reference) {

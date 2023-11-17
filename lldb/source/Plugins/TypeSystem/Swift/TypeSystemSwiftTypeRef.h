@@ -67,7 +67,7 @@ public:
   GetSwiftASTContextFromExecutionContext(const ExecutionContext *exe_ctx) const;
   /// Return SwiftASTContext, iff one has already been created.
   virtual SwiftASTContext *
-  GetSwiftASTContextOrNull(const SymbolContext *sc = nullptr) const;
+  GetSwiftASTContextOrNull(const SymbolContext *sc) const;
   TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override { return *this; }
   const TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() const override {
     return *this;
@@ -79,7 +79,9 @@ public:
   void ClearModuleDependentCaches() override;
   lldb::TargetWP GetTargetWP() const override { return {}; }
 
-  CompilerType ReconstructType(CompilerType type);
+  /// Return a SwiftASTContext type for type.
+  CompilerType ReconstructType(CompilerType type,
+                               const ExecutionContext *exe_ctx);
   CompilerType
   GetTypeFromMangledTypename(ConstString mangled_typename) override;
 
@@ -119,6 +121,9 @@ public:
   }
 
   Module *GetModule() const { return m_module; }
+
+  /// Return the owning Swift module for a function.
+  static ConstString GetSwiftModuleFor(const SymbolContext *sc);
 
   // Tests
 #ifndef NDEBUG
@@ -277,7 +282,8 @@ public:
   bool IsErrorType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetErrorType() override;
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
-  CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) override;
+  CompilerType GetInstanceType(lldb::opaque_compiler_type_t type,
+                               ExecutionContextScope *exe_scope) override;
   CompilerType GetStaticSelfType(lldb::opaque_compiler_type_t type) override;
   static swift::Demangle::NodePointer
   GetStaticSelfType(swift::Demangle::Demangler &dem,
@@ -369,7 +375,10 @@ public:
 
 protected:
   /// Helper that creates an AST type from \p type.
-  void *ReconstructType(lldb::opaque_compiler_type_t type);
+  void *ReconstructType(lldb::opaque_compiler_type_t type,
+                        const ExecutionContext *exe_ctx = nullptr);
+  void *ReconstructType(lldb::opaque_compiler_type_t type,
+                        ExecutionContextScope *exe_scope);
   /// Cast \p opaque_type as a mangled name.
   static const char *AsMangledName(lldb::opaque_compiler_type_t type);
 
@@ -439,11 +448,15 @@ protected:
   bool ShouldSkipValidation(lldb::opaque_compiler_type_t type);
 #endif
 
-  /// The sibling SwiftASTContext.
-  llvm::Triple m_swift_ast_context_triple;
-  mutable bool m_swift_ast_context_initialized = false;
-  mutable lldb::TypeSystemSP m_swift_ast_context_sp;
-  mutable SwiftASTContext *m_swift_ast_context = nullptr;
+  /// Perform an action on all subling SwiftASTContexts.
+  void NotifyAllTypeSystems(std::function<void(lldb::TypeSystemSP)> fn);
+  
+  mutable std::mutex m_swift_ast_context_lock;
+  /// The "precise" SwiftASTContexts managed by this scratch context. There
+  /// exists one per Swift module. The keys in this map are module names.
+  mutable llvm::DenseMap<const char *, lldb::TypeSystemSP>
+      m_swift_ast_context_map;
+
   mutable std::unique_ptr<SwiftDWARFImporterForClangTypes>
       m_dwarf_importer_for_clang_types_up;
   mutable std::unique_ptr<ClangNameImporter> m_name_importer_up;
@@ -484,8 +497,10 @@ public:
 
   SwiftASTContext *GetSwiftASTContext(const SymbolContext *sc) const override;
   SwiftASTContext *
-  GetSwiftASTContextOrNull(const SymbolContext *sc = nullptr) const override;
+  GetSwiftASTContextOrNull(const SymbolContext *sc) const override;
   lldb::TargetWP GetTargetWP() const override { return m_target_wp; }
+
+  void ModulesDidLoad(ModuleList &module_list);
 
   /// Forwards to SwiftASTContext.
   UserExpression *GetUserExpression(llvm::StringRef expr,
@@ -497,7 +512,7 @@ public:
 
   /// Forwards to SwiftASTContext.
   PersistentExpressionState *GetPersistentExpressionState() override;
-  Status PerformCompileUnitImports(SymbolContext &sc);
+  Status PerformCompileUnitImports(const SymbolContext &sc);
 
   friend class SwiftASTContextForExpressions;
 protected:

@@ -145,7 +145,7 @@ findSwiftSelf(StackFrame &frame, lldb::VariableSP self_var_sp) {
   // 4) If `self` is a metatype, get its instance type.
   if (Flags(info.type.GetTypeInfo())
           .AllSet(lldb::eTypeIsSwift | lldb::eTypeIsMetatype)) {
-    info.type = TypeSystemSwift::GetInstanceType(info.type);
+    info.type = TypeSystemSwift::GetInstanceType(info.type, &frame);
     info.is_metatype = true;
   }
 
@@ -686,9 +686,11 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   if (!frame)
     return error("couldn't start parsing - no stack frame");
 
-  auto *exe_scope = exe_ctx.GetBestExecutionContextScope();
-  if (!exe_scope)
-    return error( "no execution context scope");
+  ExecutionContextScope *exe_scope =
+      m_options.GetREPLEnabled() ? static_cast<ExecutionContextScope *>(target)
+                                 : static_cast<ExecutionContextScope *>(frame);
+
+exe_scope = exe_ctx.GetBestExecutionContextScope();
 
   m_swift_scratch_ctx = target->GetSwiftScratchContext(m_err, *exe_scope);
   if (!m_swift_scratch_ctx)
@@ -697,8 +699,9 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   const SymbolContext *sc =
       &frame->GetSymbolContext(lldb::eSymbolContextFunction);
-  m_swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-      m_swift_scratch_ctx->get()->GetSwiftASTContext(sc));
+  auto *swift_ast_ctx = m_swift_scratch_ctx->get()->GetSwiftASTContext(sc);
+  m_swift_ast_ctx =
+      llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(swift_ast_ctx);
 
   if (!m_swift_ast_ctx)
     return error("could not create a Swift AST context");
