@@ -4,7 +4,7 @@
 // RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins=0 -O3 %s -o %t
 
 // Nothing works yet.
-// XFAIL: *
+// XFAIL: target={{(aarch64|loongarch64|mips|powerpc64).*}}
 
 #include <sanitizer/msan_interface.h>
 #include <stdarg.h>
