@@ -42,6 +42,14 @@ OpenACCDirectiveKind GetOpenACCDirectiveKind(StringRef Name) {
 // Parse and consume the tokens for OpenACC Directive/Construct kinds.
 OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   Token FirstTok = P.getCurToken();
+
+  // Just #pragma acc can get us immediately to the end, make sure we don't
+  // introspect on the spelling before then.
+  if (FirstTok.isAnnotation()) {
+    P.Diag(FirstTok, diag::err_acc_missing_directive);
+    return OpenACCDirectiveKind::Invalid;
+  }
+
   P.ConsumeToken();
   std::string FirstTokSpelling = P.getPreprocessor().getSpelling(FirstTok);
 
