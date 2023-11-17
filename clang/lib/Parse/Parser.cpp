@@ -318,6 +318,12 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
         return false;
       ConsumeAnnotationToken();
       break;
+    case tok::annot_pragma_openacc:
+    case tok::annot_pragma_openacc_end:
+      // FIXME: Like OpenMP above, we should not be doing this if we're parsing
+      // an OpenACC Directive.
+      ConsumeAnnotationToken();
+      break;
     case tok::annot_module_begin:
     case tok::annot_module_end:
     case tok::annot_module_include:
@@ -851,6 +857,8 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     AccessSpecifier AS = AS_none;
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs);
   }
+  case tok::annot_pragma_openacc:
+    return ParseOpenACCDirective();
   case tok::annot_pragma_ms_pointers_to_members:
     HandlePragmaMSPointersToMembers();
     return nullptr;
