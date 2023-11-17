@@ -4664,6 +4664,8 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
 
     unsigned SrcEltSizeInBits = CstTy->getScalarSizeInBits();
     unsigned NumSrcElts = SizeInBits / SrcEltSizeInBits;
+    if ((SizeInBits % SrcEltSizeInBits) != 0)
+      return false;
 
     APInt UndefSrcElts(NumSrcElts, 0);
     SmallVector<APInt, 64> SrcEltBits(NumSrcElts, APInt(SrcEltSizeInBits, 0));
