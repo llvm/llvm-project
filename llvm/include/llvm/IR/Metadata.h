@@ -1037,7 +1037,6 @@ struct TempMDNodeDeleter {
 class MDNode : public Metadata {
   friend class ReplaceableMetadataImpl;
   friend class LLVMContextImpl;
-  friend class DIArgList;
 
   /// The header that is coallocated with an MDNode along with its "small"
   /// operands. It is located immediately before the main body of the node.
@@ -1220,9 +1219,7 @@ public:
   bool isDistinct() const { return Storage == Distinct; }
   bool isTemporary() const { return Storage == Temporary; }
 
-  bool isReplaceable() const {
-    return isTemporary() || getMetadataID() == DIArgListKind;
-  }
+  bool isReplaceable() const { return isTemporary(); }
 
   /// RAUW a temporary.
   ///
