@@ -80,8 +80,6 @@ public:
   void Enter(const parser::OpenMPDeclareTargetConstruct &);
   void Leave(const parser::OpenMPDeclareTargetConstruct &);
   void Enter(const parser::OmpDeclareTargetWithList &);
-  void Enter(const parser::OmpDeclareTargetWithClause &);
-  void Leave(const parser::OmpDeclareTargetWithClause &);
   void Enter(const parser::OpenMPExecutableAllocate &);
   void Leave(const parser::OpenMPExecutableAllocate &);
   void Enter(const parser::OpenMPAllocatorsConstruct &);

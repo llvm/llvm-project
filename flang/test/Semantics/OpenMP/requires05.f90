@@ -5,9 +5,7 @@
 ! device constructs, such as declare target with 'to' clause and no device_type.
 
 subroutine f
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead.
   !$omp declare target to(f)
-  !$omp declare target enter(f)
 end subroutine f
 
 subroutine g
