@@ -205,8 +205,8 @@ define linkonce_odr dso_local void @_Z4testIeEvT_(x86_fp80 noundef %arg) sanitiz
 ; CHECK-NEXT:    store i80 [[_MSLD]], ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    store i80 [[_MSLD]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
-; CHECK-NEXT:    store i80 [[_MSLD]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 64) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr @__msan_va_arg_overflow_size_tls, align 8
+; CHECK-NEXT:    store i80 [[_MSLD]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 176) to ptr), align 8
+; CHECK-NEXT:    store i64 16, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void (x86_fp80, i32, ...) @_Z5test2IeEvT_iz(x86_fp80 noundef [[TMP7]], i32 noundef 1, x86_fp80 noundef [[TMP7]])
 ; CHECK-NEXT:    ret void
 ;
