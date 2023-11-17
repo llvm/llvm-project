@@ -1619,6 +1619,8 @@ TEST(TargetParserTest, testAArch64Arch) {
                               ARMBuildAttrs::CPUArch::v8_A));
   EXPECT_TRUE(testAArch64Arch("armv9.4-a", "generic", "v9.4a",
                               ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(testAArch64Arch("armv9.5-a", "generic", "v9.5a",
+                              ARMBuildAttrs::CPUArch::v8_A));
 }
 
 bool testAArch64Extension(StringRef CPUName, StringRef ArchExt) {
@@ -1857,6 +1859,7 @@ TEST(TargetParserTest, AArch64ArchFeatures) {
   EXPECT_EQ(AArch64::ARMV9_2A.ArchFeature, "+v9.2a");
   EXPECT_EQ(AArch64::ARMV9_3A.ArchFeature, "+v9.3a");
   EXPECT_EQ(AArch64::ARMV9_4A.ArchFeature, "+v9.4a");
+  EXPECT_EQ(AArch64::ARMV9_5A.ArchFeature, "+v9.5a");
   EXPECT_EQ(AArch64::ARMV8R.ArchFeature, "+v8r");
 }
 
@@ -1884,8 +1887,9 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
        })
     EXPECT_TRUE(A->implies(AArch64::ARMV8A));
 
-  for (const auto *A : {&AArch64::ARMV9_1A, &AArch64::ARMV9_2A,
-                        &AArch64::ARMV9_3A, &AArch64::ARMV9_4A})
+  for (const auto *A :
+       {&AArch64::ARMV9_1A, &AArch64::ARMV9_2A, &AArch64::ARMV9_3A,
+        &AArch64::ARMV9_4A, &AArch64::ARMV9_5A})
     EXPECT_TRUE(A->implies(AArch64::ARMV9A));
 
   EXPECT_TRUE(AArch64::ARMV8_1A.implies(AArch64::ARMV8A));
@@ -1902,6 +1906,7 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
   EXPECT_TRUE(AArch64::ARMV9_2A.implies(AArch64::ARMV9_1A));
   EXPECT_TRUE(AArch64::ARMV9_3A.implies(AArch64::ARMV9_2A));
   EXPECT_TRUE(AArch64::ARMV9_4A.implies(AArch64::ARMV9_3A));
+  EXPECT_TRUE(AArch64::ARMV9_5A.implies(AArch64::ARMV9_4A));
 
   EXPECT_TRUE(AArch64::ARMV9A.implies(AArch64::ARMV8_5A));
   EXPECT_TRUE(AArch64::ARMV9_1A.implies(AArch64::ARMV8_6A));
