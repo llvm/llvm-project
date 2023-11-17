@@ -4878,7 +4878,6 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           if (FMF.any())
             I->setFastMathFlags(FMF);
         }
-
       }
       break;
     }

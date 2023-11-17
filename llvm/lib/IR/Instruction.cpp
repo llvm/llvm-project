@@ -319,8 +319,9 @@ void Instruction::setIsExact(bool b) {
 
 void Instruction::setIsDisjoint(bool b) {
   assert(isa<PossiblyDisjointInst>(this) && "Must be or");
-  SubclassOptionalData = (SubclassOptionalData & ~PossiblyDisjointInst::IsDisjoint) |
-                         (b * PossiblyDisjointInst::IsDisjoint);
+  SubclassOptionalData =
+      (SubclassOptionalData & ~PossiblyDisjointInst::IsDisjoint) |
+      (b * PossiblyDisjointInst::IsDisjoint);
 }
 
 void Instruction::setNonNeg(bool b) {
