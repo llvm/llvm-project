@@ -11520,6 +11520,9 @@ enum class GCCTypeClass {
   // decay to pointer. (Prior to version 6 it was only used in C++ mode).
   // GCC reserves 15 for strings, but actually uses 5 (pointer) for string
   // literals.
+  // Lang = 16,
+  // OpaqueType = 17,
+  BitInt = 18
 };
 
 /// EvaluateBuiltinClassifyType - Evaluate __builtin_classify_type the same way
@@ -11652,10 +11655,12 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
   case Type::Pipe:
-  case Type::BitInt:
     // GCC classifies vectors as None. We follow its lead and classify all
     // other types that don't fit into the regular classification the same way.
     return GCCTypeClass::None;
+
+  case Type::BitInt:
+    return GCCTypeClass::BitInt;
 
   case Type::LValueReference:
   case Type::RValueReference:

@@ -11,7 +11,8 @@ enum gcc_type_class {
   function_type_class, method_type_class,
   record_type_class, union_type_class,
   array_type_class, string_type_class,
-  lang_type_class
+  lang_type_class, opaque_type_class,
+  bitint_type_class
 };
 
 class cl {
@@ -42,6 +43,7 @@ void foo() {
   _Atomic double atomic_d;
   _Complex int complex_i;
   _Complex double complex_d;
+  _BitInt(32) bitint;
 
   int a1[__builtin_classify_type(f()) == void_type_class ? 1 : -1];
   int a2[__builtin_classify_type(i) == integer_type_class ? 1 : -1];
@@ -65,5 +67,6 @@ void foo() {
   int a20[__builtin_classify_type(atomic_d) == real_type_class ? 1 : -1];
   int a21[__builtin_classify_type(complex_i) == complex_type_class ? 1 : -1];
   int a22[__builtin_classify_type(complex_d) == complex_type_class ? 1 : -1];
+  int a23[__builtin_classify_type(bitint) == bitint_type_class ? 1 : -1];
 }
 
