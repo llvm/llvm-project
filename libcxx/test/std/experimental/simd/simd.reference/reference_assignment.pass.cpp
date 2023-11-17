@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// FIXME: Timeouts.
-// UNSUPPORTED: sanitizer-new-delete
-
 // <experimental/simd>
 //
 // [simd.reference]
