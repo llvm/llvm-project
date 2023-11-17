@@ -11601,3 +11601,25 @@ void Sema::checkSpecializationReachability(SourceLocation Loc,
                                           Sema::AcceptableKind::Reachable)
       .check(Spec);
 }
+
+/// Returns the top most location responsible for the definition of \p N.
+/// If \p N is a a template specialization, this is the location
+/// of the top of the instantiation stack.
+/// Otherwise, the location of \p N is returned.
+SourceLocation Sema::getTopMostPointOfInstantiation(const NamedDecl *N) const {
+  if (!getLangOpts().CPlusPlus || CodeSynthesisContexts.empty())
+    return N->getLocation();
+  if (const auto *FD = dyn_cast<FunctionDecl>(N)) {
+    if (!FD->isFunctionTemplateSpecialization())
+      return FD->getLocation();
+  } else if (!isa<ClassTemplateSpecializationDecl,
+                  VarTemplateSpecializationDecl>(N)) {
+    return N->getLocation();
+  }
+  for (const CodeSynthesisContext &CSC : CodeSynthesisContexts) {
+    if (!CSC.isInstantiationRecord() || CSC.PointOfInstantiation.isInvalid())
+      continue;
+    return CSC.PointOfInstantiation;
+  }
+  return N->getLocation();
+}
