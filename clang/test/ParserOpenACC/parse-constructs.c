@@ -1,6 +1,12 @@
 // RUN: %clang_cc1 %s -verify -fopenacc
 
 void func() {
+
+  // expected-error@+2{{expected OpenACC directive}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc
+  for(;;){}
+
   // expected-error@+2{{invalid OpenACC directive 'invalid'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc invalid

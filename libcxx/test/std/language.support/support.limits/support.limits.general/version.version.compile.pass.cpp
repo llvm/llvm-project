@@ -114,6 +114,7 @@
     __cpp_lib_interpolate                            201902L [C++20]
     __cpp_lib_invoke                                 201411L [C++17]
     __cpp_lib_invoke_r                               202106L [C++23]
+    __cpp_lib_ios_noreplace                          202207L [C++23]
     __cpp_lib_is_aggregate                           201703L [C++17]
     __cpp_lib_is_constant_evaluated                  201811L [C++20]
     __cpp_lib_is_final                               201402L [C++14]
@@ -600,6 +601,10 @@
 
 # ifdef __cpp_lib_invoke_r
 #   error "__cpp_lib_invoke_r should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ios_noreplace
+#   error "__cpp_lib_ios_noreplace should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_is_aggregate
@@ -1400,6 +1405,10 @@
 
 # ifdef __cpp_lib_invoke_r
 #   error "__cpp_lib_invoke_r should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ios_noreplace
+#   error "__cpp_lib_ios_noreplace should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_is_aggregate
@@ -2329,6 +2338,10 @@
 
 # ifdef __cpp_lib_invoke_r
 #   error "__cpp_lib_invoke_r should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ios_noreplace
+#   error "__cpp_lib_ios_noreplace should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_is_aggregate
@@ -3534,6 +3547,10 @@
 
 # ifdef __cpp_lib_invoke_r
 #   error "__cpp_lib_invoke_r should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ios_noreplace
+#   error "__cpp_lib_ios_noreplace should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_is_aggregate
@@ -4940,6 +4957,13 @@
 # endif
 # if __cpp_lib_invoke_r != 202106L
 #   error "__cpp_lib_invoke_r should have the value 202106L in c++23"
+# endif
+
+# ifndef __cpp_lib_ios_noreplace
+#   error "__cpp_lib_ios_noreplace should be defined in c++23"
+# endif
+# if __cpp_lib_ios_noreplace != 202207L
+#   error "__cpp_lib_ios_noreplace should have the value 202207L in c++23"
 # endif
 
 # ifndef __cpp_lib_is_aggregate
@@ -6643,6 +6667,13 @@
 # endif
 # if __cpp_lib_invoke_r != 202106L
 #   error "__cpp_lib_invoke_r should have the value 202106L in c++26"
+# endif
+
+# ifndef __cpp_lib_ios_noreplace
+#   error "__cpp_lib_ios_noreplace should be defined in c++26"
+# endif
+# if __cpp_lib_ios_noreplace != 202207L
+#   error "__cpp_lib_ios_noreplace should have the value 202207L in c++26"
 # endif
 
 # ifndef __cpp_lib_is_aggregate
