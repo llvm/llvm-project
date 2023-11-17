@@ -3599,7 +3599,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
   OrigLoop->getExitBlocks(ExitBlocks);
   for (BasicBlock *Exit : ExitBlocks)
     for (PHINode &PN : Exit->phis())
-      PSE.getSE()->forgetValue(&PN);
+      PSE.getSE()->forgetLcssaPhiWithNewPredecessor(OrigLoop, &PN);
 
   VPBasicBlock *LatchVPBB = Plan.getVectorLoopRegion()->getExitingBasicBlock();
   Loop *VectorLoop = LI->getLoopFor(State.CFG.VPBB2IRBB[LatchVPBB]);
