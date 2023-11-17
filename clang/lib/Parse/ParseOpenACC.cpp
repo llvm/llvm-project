@@ -26,6 +26,16 @@ namespace {
 OpenACCDirectiveKind GetOpenACCDirectiveKind(StringRef Name) {
   return llvm::StringSwitch<OpenACCDirectiveKind>(Name)
       .Case("parallel", OpenACCDirectiveKind::Parallel)
+      .Case("serial", OpenACCDirectiveKind::Serial)
+      .Case("kernels", OpenACCDirectiveKind::Kernels)
+      .Case("data", OpenACCDirectiveKind::Data)
+      .Case("host_data", OpenACCDirectiveKind::HostData)
+      .Case("loop", OpenACCDirectiveKind::Loop)
+      .Case("declare", OpenACCDirectiveKind::Declare)
+      .Case("init", OpenACCDirectiveKind::Init)
+      .Case("shutdown", OpenACCDirectiveKind::Shutdown)
+      .Case("set", OpenACCDirectiveKind::Shutdown)
+      .Case("update", OpenACCDirectiveKind::Update)
       .Default(OpenACCDirectiveKind::Invalid);
 }
 
