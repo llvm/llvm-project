@@ -14,6 +14,7 @@
       "binaryDir": "${sourceDir}/build",
       "installDir": "${sourceDir}/install",
       "cacheVariables": {
+        "LLVM_BUILD_EXAMPLES": "ON",
         "LLVM_ENABLE_PROJECTS": "mlir",
         "LLVM_TARGETS_TO_BUILD": "X86",
         "LLVM_ENABLE_ASSERTIONS": "ON",
