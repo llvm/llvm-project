@@ -898,17 +898,9 @@ public:
       return Src;
     }
 
-    // Handle pointer conversions next: pointers can only be converted to/from
-    // other pointers and integers.
-    if (DstTy.isa<::mlir::cir::PointerType>()) {
-      llvm_unreachable("not implemented");
-    }
-
-    if (SrcTy.isa<::mlir::cir::PointerType>()) {
-      // Must be a ptr to int cast.
-      assert(CGF.getBuilder().isInt(DstTy) && "not ptr->int?");
-      llvm_unreachable("not implemented");
-    }
+    assert(!SrcTy.isa<::mlir::cir::PointerType>() &&
+           !DstTy.isa<::mlir::cir::PointerType>() &&
+           "Internal error: pointer conversions are handled elsewhere");
 
     // A scalar can be splatted to an extended vector of the same element type
     if (DstType->isExtVectorType() && !SrcType->isVectorType()) {
@@ -1439,8 +1431,14 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     mlir::Value Src = Visit(const_cast<Expr *>(E));
 
     // Properly resize by casting to an int of the same size as the pointer.
+    // Clang's IntegralToPointer includes 'bool' as the source, but in CIR
+    // 'bool' is not an integral type.  So check the source type to get the
+    // correct CIR conversion.
     auto MiddleTy = CGF.CGM.getDataLayout().getIntPtrType(DestCIRTy);
-    auto MiddleVal = Builder.createIntCast(Src, MiddleTy);
+    auto MiddleVal = Builder.createCast(E->getType()->isBooleanType()
+                                            ? mlir::cir::CastKind::bool_to_int
+                                            : mlir::cir::CastKind::integral,
+                                        Src, MiddleTy);
 
     if (CGF.CGM.getCodeGenOpts().StrictVTablePointers)
       llvm_unreachable("NYI");

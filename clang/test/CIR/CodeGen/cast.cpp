@@ -76,6 +76,10 @@ int cStyleCasts_0(unsigned x1, int x2, float x3, short x4, double x5) {
   float bf = (float)ib; // bool to float
   // CHECK: %{{[0-9]+}} = cir.cast(bool_to_float, %{{[0-9]+}} : !cir.bool), f32
 
+  void* bpv = (void*)ib; // bool to pointer, which is done in two steps
+  // CHECK: %[[TMP:[0-9]+]] = cir.cast(bool_to_int,  %{{[0-9]+}} : !cir.bool), !u64i
+  // CHECK: %{{[0-9]+}} = cir.cast(int_to_ptr, %[[TMP]] : !u64i), !cir.ptr<!void>
+
   float dptofp = (float)x5;
   // CHECK: %{{.+}} = cir.cast(floating, %{{[0-9]+}} : f64), f32
 
