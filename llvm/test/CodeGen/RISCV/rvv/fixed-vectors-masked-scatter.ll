@@ -1674,18 +1674,17 @@ define void @mscatter_v2i64_truncstore_v2i32(<2 x i64> %val, <2 x ptr> %ptrs, <2
 ;
 ; RV32ZVE32F-LABEL: mscatter_v2i64_truncstore_v2i32:
 ; RV32ZVE32F:       # %bb.0:
-; RV32ZVE32F-NEXT:    lw a1, 0(a0)
-; RV32ZVE32F-NEXT:    lw a0, 8(a0)
+; RV32ZVE32F-NEXT:    lw a1, 8(a0)
 ; RV32ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32ZVE32F-NEXT:    vslide1down.vx v9, v8, a1
-; RV32ZVE32F-NEXT:    vslide1down.vx v9, v9, a0
+; RV32ZVE32F-NEXT:    vlse32.v v9, (a0), zero
+; RV32ZVE32F-NEXT:    vslide1down.vx v9, v9, a1
 ; RV32ZVE32F-NEXT:    vsoxei32.v v9, (zero), v8, v0.t
 ; RV32ZVE32F-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mscatter_v2i64_truncstore_v2i32:
 ; RV64ZVE32F:       # %bb.0:
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
+; RV64ZVE32F-NEXT:    vmv.v.x v8, a0
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
 ; RV64ZVE32F-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; RV64ZVE32F-NEXT:    vmv.x.s a0, v0
@@ -5751,13 +5750,12 @@ define void @mscatter_baseidx_v8i64(<8 x i64> %val, ptr %base, <8 x i64> %idxs, 
 ; RV32ZVE32F-NEXT:    lw s4, 40(a2)
 ; RV32ZVE32F-NEXT:    lw s5, 32(a2)
 ; RV32ZVE32F-NEXT:    lw s6, 24(a2)
-; RV32ZVE32F-NEXT:    lw s7, 0(a2)
+; RV32ZVE32F-NEXT:    lw s7, 16(a2)
 ; RV32ZVE32F-NEXT:    lw s8, 8(a2)
-; RV32ZVE32F-NEXT:    lw a2, 16(a2)
 ; RV32ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, s7
+; RV32ZVE32F-NEXT:    vlse32.v v8, (a2), zero
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, s8
-; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
+; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, s7
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, s6
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, s5
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, s4
@@ -10459,13 +10457,12 @@ define void @mscatter_baseidx_v8f64(<8 x double> %val, ptr %base, <8 x i64> %idx
 ; RV32ZVE32F-NEXT:    lw a4, 40(a1)
 ; RV32ZVE32F-NEXT:    lw a5, 32(a1)
 ; RV32ZVE32F-NEXT:    lw a6, 24(a1)
-; RV32ZVE32F-NEXT:    lw a7, 0(a1)
+; RV32ZVE32F-NEXT:    lw a7, 16(a1)
 ; RV32ZVE32F-NEXT:    lw t0, 8(a1)
-; RV32ZVE32F-NEXT:    lw a1, 16(a1)
 ; RV32ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, a7
+; RV32ZVE32F-NEXT:    vlse32.v v8, (a1), zero
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, t0
-; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
+; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, a7
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, a6
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, a5
 ; RV32ZVE32F-NEXT:    vslide1down.vx v8, v8, a4

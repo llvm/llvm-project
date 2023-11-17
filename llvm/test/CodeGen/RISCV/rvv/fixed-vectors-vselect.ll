@@ -8,9 +8,9 @@ define void @vselect_vv_v6i32(ptr %a, ptr %b, ptr %cc, ptr %z) {
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    lbu a2, 0(a2)
 ; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vslide1down.vx v10, v8, a2
 ; CHECK-NEXT:    srli a1, a2, 1
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v10, a2
 ; CHECK-NEXT:    vslide1down.vx v10, v10, a1
 ; CHECK-NEXT:    srli a1, a2, 2
 ; CHECK-NEXT:    vslide1down.vx v10, v10, a1
@@ -41,9 +41,9 @@ define void @vselect_vx_v6i32(i32 %a, ptr %b, ptr %cc, ptr %z) {
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    lbu a2, 0(a2)
 ; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vslide1down.vx v10, v8, a2
 ; CHECK-NEXT:    srli a1, a2, 1
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v10, a2
 ; CHECK-NEXT:    vslide1down.vx v10, v10, a1
 ; CHECK-NEXT:    srli a1, a2, 2
 ; CHECK-NEXT:    vslide1down.vx v10, v10, a1
@@ -76,9 +76,9 @@ define void @vselect_vi_v6i32(ptr %b, ptr %cc, ptr %z) {
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    lbu a1, 0(a1)
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vslide1down.vx v10, v8, a1
 ; CHECK-NEXT:    srli a0, a1, 1
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v10, a1
 ; CHECK-NEXT:    vslide1down.vx v10, v10, a0
 ; CHECK-NEXT:    srli a0, a1, 2
 ; CHECK-NEXT:    vslide1down.vx v10, v10, a0
@@ -112,9 +112,9 @@ define void @vselect_vv_v6f32(ptr %a, ptr %b, ptr %cc, ptr %z) {
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    lbu a2, 0(a2)
 ; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vslide1down.vx v10, v8, a2
 ; CHECK-NEXT:    srli a1, a2, 1
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v10, a2
 ; CHECK-NEXT:    vslide1down.vx v10, v10, a1
 ; CHECK-NEXT:    srli a1, a2, 2
 ; CHECK-NEXT:    vslide1down.vx v10, v10, a1
@@ -145,9 +145,9 @@ define void @vselect_vx_v6f32(float %a, ptr %b, ptr %cc, ptr %z) {
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    lbu a1, 0(a1)
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vslide1down.vx v10, v8, a1
 ; CHECK-NEXT:    srli a0, a1, 1
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v10, a1
 ; CHECK-NEXT:    vslide1down.vx v10, v10, a0
 ; CHECK-NEXT:    srli a0, a1, 2
 ; CHECK-NEXT:    vslide1down.vx v10, v10, a0
@@ -180,9 +180,9 @@ define void @vselect_vfpzero_v6f32(ptr %b, ptr %cc, ptr %z) {
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    lbu a1, 0(a1)
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vslide1down.vx v10, v8, a1
 ; CHECK-NEXT:    srli a0, a1, 1
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v10, a1
 ; CHECK-NEXT:    vslide1down.vx v10, v10, a0
 ; CHECK-NEXT:    srli a0, a1, 2
 ; CHECK-NEXT:    vslide1down.vx v10, v10, a0
