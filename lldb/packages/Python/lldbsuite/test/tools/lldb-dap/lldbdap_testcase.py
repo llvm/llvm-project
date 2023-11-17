@@ -195,6 +195,9 @@ class DAPTestCaseBase(TestBase):
 
     def get_local_as_int(self, name, threadId=None):
         value = self.dap_server.get_local_variable_value(name, threadId=threadId)
+        # 'value' may have the variable value and summary.
+        # Extract the variable value since summary can have nonnumeric characters.
+        value = value.split(" ")[0]
         if value.startswith("0x"):
             return int(value, 16)
         elif value.startswith("0"):
