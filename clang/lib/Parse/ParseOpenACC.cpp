@@ -22,7 +22,9 @@ using namespace llvm;
 
 namespace {
 
-// Translate single-token string representations to the OpenACC Directive Kind.
+// This doesn't completely comprehend 'Compound Constructs' (as it just
+// identifies the first token) just the first token of each.  So
+// this should only be used by `ParseOpenACCDirectiveKind`.
 OpenACCDirectiveKind GetOpenACCDirectiveKind(StringRef Name) {
   return llvm::StringSwitch<OpenACCDirectiveKind>(Name)
       .Case("parallel", OpenACCDirectiveKind::Parallel)
@@ -49,6 +51,35 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
 
   if (DirKind == OpenACCDirectiveKind::Invalid)
     P.Diag(FirstTok, diag::err_acc_invalid_directive) << FirstTokSpelling;
+
+  // Combined Constructs allows parallel loop, serial loop, or kernels loop. Any
+  // other attempt at a combined construct will be diagnosed as an invalid
+  // clause.
+  Token SecondTok = P.getCurToken();
+  switch (DirKind) {
+  default:
+    // Nothing to do except in the below cases, as they should be diagnosed as
+    // a clause.
+    break;
+  case OpenACCDirectiveKind::Parallel:
+    if (P.getPreprocessor().getSpelling(SecondTok) == "loop") {
+      P.ConsumeToken();
+      return OpenACCDirectiveKind::ParallelLoop;
+    }
+    break;
+  case OpenACCDirectiveKind::Serial:
+    if (P.getPreprocessor().getSpelling(SecondTok) == "loop") {
+      P.ConsumeToken();
+      return OpenACCDirectiveKind::SerialLoop;
+    }
+    break;
+  case OpenACCDirectiveKind::Kernels:
+    if (P.getPreprocessor().getSpelling(SecondTok) == "loop") {
+      P.ConsumeToken();
+      return OpenACCDirectiveKind::KernelsLoop;
+    }
+    break;
+  }
 
   return DirKind;
 }

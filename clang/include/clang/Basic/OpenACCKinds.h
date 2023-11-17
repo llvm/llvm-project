@@ -33,7 +33,10 @@ enum class OpenACCDirectiveKind {
   Loop,
   // FIXME: 'cache'
 
-  // FIXME: Combined Constructs.
+  // Combined Constructs.
+  ParallelLoop,
+  SerialLoop,
+  KernelsLoop,
 
   // FIXME: atomic Construct variants.
 
