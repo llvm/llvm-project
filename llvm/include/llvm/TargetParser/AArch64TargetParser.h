@@ -426,6 +426,11 @@ inline constexpr CpuInfo CpuInfos[] = {
           AArch64::AEK_PAUTH, AArch64::AEK_MTE, AArch64::AEK_SSBS,
           AArch64::AEK_SVE, AArch64::AEK_SVE2, AArch64::AEK_SVE2BITPERM,
           AArch64::AEK_FP16FML}))},
+    {"cortex-a520", ARMV9_2A,
+     (AArch64::ExtensionBitset(
+         {AArch64::AEK_SB, AArch64::AEK_SSBS, AArch64::AEK_MTE,
+          AArch64::AEK_FP16FML, AArch64::AEK_PAUTH, AArch64::AEK_SVE2BITPERM,
+          AArch64::AEK_FLAGM, AArch64::AEK_PERFMON, AArch64::AEK_PREDRES}))},
     {"cortex-a57", ARMV8A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_CRC}))},
@@ -483,6 +488,12 @@ inline constexpr CpuInfo CpuInfos[] = {
           AArch64::AEK_I8MM, AArch64::AEK_PREDRES, AArch64::AEK_PERFMON,
           AArch64::AEK_PROFILE, AArch64::AEK_SVE, AArch64::AEK_SVE2BITPERM,
           AArch64::AEK_BF16, AArch64::AEK_FLAGM}))},
+    {"cortex-a720", ARMV9_2A,
+     (AArch64::ExtensionBitset(
+         {AArch64::AEK_SB, AArch64::AEK_SSBS, AArch64::AEK_MTE,
+          AArch64::AEK_FP16FML, AArch64::AEK_PAUTH, AArch64::AEK_SVE2BITPERM,
+          AArch64::AEK_FLAGM, AArch64::AEK_PERFMON, AArch64::AEK_PREDRES,
+          AArch64::AEK_PROFILE}))},
     {"cortex-r82", ARMV8R,
      (AArch64::ExtensionBitset({AArch64::AEK_LSE}))},
     {"cortex-x1", ARMV8_2A,
@@ -508,6 +519,12 @@ inline constexpr CpuInfo CpuInfos[] = {
           AArch64::AEK_SVE2BITPERM, AArch64::AEK_SB, AArch64::AEK_PAUTH,
           AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_PREDRES,
           AArch64::AEK_FLAGM, AArch64::AEK_SSBS}))},
+    {"cortex-x4", ARMV9_2A,
+     (AArch64::ExtensionBitset(
+         {AArch64::AEK_SB, AArch64::AEK_SSBS, AArch64::AEK_MTE,
+          AArch64::AEK_FP16FML, AArch64::AEK_PAUTH, AArch64::AEK_SVE2BITPERM,
+          AArch64::AEK_FLAGM, AArch64::AEK_PERFMON, AArch64::AEK_PREDRES,
+          AArch64::AEK_PROFILE}))},
     {"neoverse-e1", ARMV8_2A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_DOTPROD,
