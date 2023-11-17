@@ -1538,6 +1538,74 @@ inline namespace literals
 } // namespace literals
 #endif
 
+#if _LIBCPP_STD_VER >= 26
+// Tuple interface [complex.tuple]
+template<class _Tp>
+struct _LIBCPP_TEMPLATE_VIS tuple_size<complex<_Tp>>
+  : public integral_constant<size_t, 2> {};
+
+template<size_t _Ip, class _Tp>
+struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, complex<_Tp>>
+{
+  static_assert(_Ip < 2, "Index out of bounds in std::tuple_element<std::complex<T>>");
+
+  using type _LIBCPP_NODEBUG = _Tp;
+};
+
+template <size_t _Ip>
+struct __get_complex
+{
+  static_assert(_Ip < 2, "Index out of bounds in std::get<std::complex<T>>");
+
+  template <typename _Tp>
+  struct to_array_type;
+
+  template <typename _Tp>
+  struct to_array_type<complex<_Tp>>
+  {
+    using type = _Tp[2];
+  };
+
+  template <class _Tp>
+  static _LIBCPP_HIDE_FROM_ABI constexpr
+  decltype(auto)
+  get(_Tp&& __z) _NOEXCEPT
+  {
+    using _Array_type = typename __get_complex::to_array_type<std::remove_cvref_t<_Tp>>::type;
+    using _Forwarded_array_type = decltype(forward_like<_Tp>(declval<_Array_type>()));
+    return reinterpret_cast<_Forwarded_array_type>(__z)[_Ip];
+  }
+};
+
+template<size_t _Ip, class _Tp>
+inline _LIBCPP_HIDE_FROM_ABI
+constexpr _Tp& get(complex<_Tp>& __z) _NOEXCEPT
+{
+  return __get_complex<_Ip>::get(__z);
+}
+
+template<size_t _Ip, class _Tp>
+inline _LIBCPP_HIDE_FROM_ABI
+constexpr const _Tp& get(const complex<_Tp>& __z) _NOEXCEPT
+{
+  return __get_complex<_Ip>::get(__z);
+}
+
+template<size_t _Ip, class _Tp>
+inline _LIBCPP_HIDE_FROM_ABI
+constexpr _Tp&& get(complex<_Tp>&& __z) _NOEXCEPT
+{
+  return __get_complex<_Ip>::get(std::move(__z));
+}
+
+template<size_t _Ip, class _Tp>
+inline _LIBCPP_HIDE_FROM_ABI
+constexpr const _Tp&& get(const complex<_Tp>&& __z) _NOEXCEPT
+{
+  return __get_complex<_Ip>::get(std::move(__z));
+}
+#endif
+
 _LIBCPP_END_NAMESPACE_STD
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
