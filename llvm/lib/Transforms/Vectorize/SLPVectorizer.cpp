@@ -9032,8 +9032,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     // for the extract and the added cost of the sign extend if needed.
     auto *VecTy = FixedVectorType::get(EU.Scalar->getType(), BundleWidth);
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-    auto *ScalarRoot = VectorizableTree[0]->Scalars[0];
-    auto It = MinBWs.find(ScalarRoot);
+    auto It = MinBWs.find(EU.Scalar);
     if (It != MinBWs.end()) {
       auto *MinTy = IntegerType::get(F->getContext(), It->second.first);
       unsigned Extend =
