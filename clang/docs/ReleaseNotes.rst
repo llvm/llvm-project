@@ -251,6 +251,7 @@ New Compiler Flags
   (1962). The default is ``-fno-cx-fortran-rules``, but is enabled by
   ``-ffast-math``.
 
+* ``-fopenacc`` was added as a part of the effort to support OpenACC in clang.
 
 Deprecated Compiler Flags
 -------------------------
@@ -741,6 +742,17 @@ Miscellaneous Clang Crashes Fixed
   `Issue 41302 <https://github.com/llvm/llvm-project/issues/41302>`_
 - Fixed a crash when ``-ast-dump=json`` was used for code using class
   template deduction guides.
+
+OpenACC Specific Changes
+------------------------
+- OpenACC Implementation effort is beginning with semantic analysis and parsing
+  of OpenACC pragmas. The ``-fopenacc`` flag was added to enable these new,
+  albeit incomplete changes. The ``_OPENACC`` macro is currently defined to
+  ``1``, as support is too incomplete to update to a standards-required value.
+- Added ``-fexperimental-openacc-macro-override``, a command line option to
+  permit overriding the ``_OPENACC`` macro to be any digit-only value specified
+  by the user, which permits testing the compiler against existing OpenACC
+  workloads in order to evaluate implementation progress.
 
 Target Specific Changes
 -----------------------
