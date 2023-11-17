@@ -169,10 +169,6 @@ private:
     return getIndex(&M, F);
   }
 
-public:
-  YkIRWriter(Module &M, MCStreamer &OutStreamer)
-      : M(M), OutStreamer(OutStreamer) {}
-
   // Serialises a null-terminated string.
   void serialiseString(StringRef S) {
     OutStreamer.emitBinaryData(S);
@@ -488,6 +484,10 @@ public:
       serialiseUnimplementedConstant(C);
     }
   }
+
+public:
+  YkIRWriter(Module &M, MCStreamer &OutStreamer)
+      : M(M), OutStreamer(OutStreamer) {}
 
   void serialise() {
     // header:
