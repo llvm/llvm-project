@@ -4748,6 +4748,8 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
   ArgKind classifyArgument(Value *arg) {
     // A very rough approximation of X86_64 argument classification rules.
     Type *T = arg->getType();
+    if (T->isX86_FP80Ty())
+      return AK_Memory;
     if (T->isFPOrFPVectorTy() || T->isX86_MMXTy())
       return AK_FloatingPoint;
     if (T->isIntegerTy() && T->getPrimitiveSizeInBits() <= 64)
