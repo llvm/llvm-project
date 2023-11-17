@@ -94,13 +94,7 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
     if (Pred == ICmpInst::ICMP_EQ) {
       // For equality comparisons, we handle the case of bit inversion.
       auto AddAffectedFromEq = [&AddAffected](Value *V) {
-        Value *A;
-        if (match(V, m_Not(m_Value(A)))) {
-          AddAffected(A);
-          V = A;
-        }
-
-        Value *B;
+        Value *A, *B;
         // (A & B) or (A | B) or (A ^ B).
         if (match(V, m_BitwiseLogic(m_Value(A), m_Value(B)))) {
           AddAffected(A);
