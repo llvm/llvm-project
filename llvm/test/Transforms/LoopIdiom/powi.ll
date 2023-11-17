@@ -6,17 +6,9 @@ define float @powi_f32(float %base, i32 %exp) {
 ; CHECK-SAME: float [[BASE:%.*]], i32 [[EXP:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[EXP]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
-; CHECK:       while.body:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi float [ [[MUL:%.*]], [[WHILE_BODY]] ], [ 1.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[MERGE_DEC:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[EXP]], [[ENTRY]] ]
-; CHECK-NEXT:    [[MUL]] = fmul fast float [[RESULT]], [[BASE]]
-; CHECK-NEXT:    [[DEC]] = add nsw i32 [[MERGE_DEC]], -1
-; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[CMP_EQ]], label [[WHILE_END]], label [[WHILE_BODY]]
-; CHECK:       while.end:
-; CHECK-NEXT:    [[RESULT_LCSSA:%.*]] = phi float [ 1.000000e+00, [[ENTRY]] ], [ [[MUL]], [[WHILE_BODY]] ]
-; CHECK-NEXT:    ret float [[RESULT_LCSSA]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.powi.f32.i32(float [[BASE]], i32 [[EXP]])
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP_NOT]], float 1.000000e+00, float [[TMP0]]
+; CHECK-NEXT:    ret float [[SPEC_SELECT]]
 ;
 entry:
   %cmp.not = icmp eq i32 %exp, 0
@@ -40,17 +32,9 @@ define double @powi_f64(double %base, i32 %exp) {
 ; CHECK-SAME: double [[BASE:%.*]], i32 [[EXP:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[EXP]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
-; CHECK:       while.body:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi double [ [[MUL:%.*]], [[WHILE_BODY]] ], [ 1.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[MERGE_DEC:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[EXP]], [[ENTRY]] ]
-; CHECK-NEXT:    [[MUL]] = fmul fast double [[RESULT]], [[BASE]]
-; CHECK-NEXT:    [[DEC]] = add nsw i32 [[MERGE_DEC]], -1
-; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[CMP_EQ]], label [[WHILE_END]], label [[WHILE_BODY]]
-; CHECK:       while.end:
-; CHECK-NEXT:    [[RESULT_LCSSA:%.*]] = phi double [ 1.000000e+00, [[ENTRY]] ], [ [[MUL]], [[WHILE_BODY]] ]
-; CHECK-NEXT:    ret double [[RESULT_LCSSA]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call double @llvm.powi.f64.i32(double [[BASE]], i32 [[EXP]])
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP_NOT]], double 1.000000e+00, double [[TMP0]]
+; CHECK-NEXT:    ret double [[SPEC_SELECT]]
 ;
 entry:
   %cmp.not = icmp eq i32 %exp, 0
@@ -74,16 +58,9 @@ define double @powi_i16_iv(double %base, i16 %exp) {
 ; CHECK-SAME: double [[BASE:%.*]], i16 [[EXP:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[EXP]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
-; CHECK:       while.body:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi double [ [[MUL:%.*]], [[WHILE_BODY]] ], [ 1.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[MERGE_DEC:%.*]] = phi i16 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[EXP]], [[ENTRY]] ]
-; CHECK-NEXT:    [[MUL]] = fmul fast double [[RESULT]], [[BASE]]
-; CHECK-NEXT:    [[DEC]] = add nsw i16 [[MERGE_DEC]], -1
-; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i16 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[CMP_EQ]], label [[WHILE_END]], label [[WHILE_BODY]]
-; CHECK:       while.end:
-; CHECK-NEXT:    [[RESULT_LCSSA:%.*]] = phi double [ 1.000000e+00, [[ENTRY]] ], [ [[MUL]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[EXP]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.powi.f64.i32(double [[BASE]], i32 [[TMP0]])
+; CHECK-NEXT:    [[RESULT_LCSSA:%.*]] = select i1 [[CMP_NOT]], double 1.000000e+00, double [[TMP1]]
 ; CHECK-NEXT:    ret double [[RESULT_LCSSA]]
 ;
 entry:
@@ -108,17 +85,9 @@ define float @powi_canonical_iv_signed(float %base, i32 %exp) {
 ; CHECK-SAME: float [[BASE:%.*]], i32 [[EXP:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_SGT:%.*]] = icmp sgt i32 [[EXP]], 0
-; CHECK-NEXT:    br i1 [[CMP_SGT]], label [[FOR_BODY:%.*]], label [[EXIT:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RESULT:%.*]] = phi float [ [[MUL:%.*]], [[FOR_BODY]] ], [ 1.000000e+00, [[ENTRY]] ]
-; CHECK-NEXT:    [[MUL]] = fmul fast float [[RESULT]], [[BASE]]
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[EXP]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT]], label [[FOR_BODY]]
-; CHECK:       exit:
-; CHECK-NEXT:    [[RESULT_LCSSA:%.*]] = phi float [ 1.000000e+00, [[ENTRY]] ], [ [[MUL]], [[FOR_BODY]] ]
-; CHECK-NEXT:    ret float [[RESULT_LCSSA]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.powi.f32.i32(float [[BASE]], i32 [[EXP]])
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP_SGT]], float [[TMP0]], float 1.000000e+00
+; CHECK-NEXT:    ret float [[SPEC_SELECT]]
 ;
 entry:
   %cmp.sgt = icmp sgt i32 %exp, 0
@@ -142,17 +111,9 @@ define float @powi_canonical_iv_unsigned(float %base, i32 %exp) {
 ; CHECK-SAME: float [[BASE:%.*]], i32 [[EXP:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i32 [[EXP]], 0
-; CHECK-NEXT:    br i1 [[CMP_EQ]], label [[EXIT:%.*]], label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RESULT:%.*]] = phi float [ [[MUL:%.*]], [[FOR_BODY]] ], [ 1.000000e+00, [[ENTRY]] ]
-; CHECK-NEXT:    [[MUL]] = fmul fast float [[RESULT]], [[BASE]]
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[EXP]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT]], label [[FOR_BODY]]
-; CHECK:       exit:
-; CHECK-NEXT:    [[RESULT_LCSSA:%.*]] = phi float [ 1.000000e+00, [[ENTRY]] ], [ [[MUL]], [[FOR_BODY]] ]
-; CHECK-NEXT:    ret float [[RESULT_LCSSA]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.powi.f32.i32(float [[BASE]], i32 [[EXP]])
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP_EQ]], float 1.000000e+00, float [[TMP0]]
+; CHECK-NEXT:    ret float [[SPEC_SELECT]]
 ;
 entry:
   %cmp.eq = icmp eq i32 %exp, 0
@@ -175,16 +136,8 @@ define float @powi_const_i32_exp(float %base) {
 ; CHECK-LABEL: define float @powi_const_i32_exp(
 ; CHECK-SAME: float [[BASE:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[RESULT:%.*]] = phi float [ 1.000000e+00, [[ENTRY]] ], [ [[MUL:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[MUL]] = fmul fast float [[RESULT]], [[BASE]]
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INC]], 2147483647
-; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[FOR_BODY]]
-; CHECK:       exit:
-; CHECK-NEXT:    ret float [[MUL]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.powi.f32.i32(float [[BASE]], i32 2147483647)
+; CHECK-NEXT:    ret float [[TMP0]]
 ;
 entry:
   br label %for.body
@@ -206,22 +159,23 @@ define float @powi_unrelated_computation(float %base, i32 %exp) {
 ; CHECK-SAME: float [[BASE:%.*]], i32 [[EXP:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[EXP]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.powi.f32.i32(float [[BASE]], i32 [[EXP]])
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[UNRELATED:%.*]] = phi i32 [ [[UNRELATED_XOR:%.*]], [[FOR_BODY]] ], [ 5, [[ENTRY]] ]
-; CHECK-NEXT:    [[RESULT:%.*]] = phi float [ [[MUL:%.*]], [[FOR_BODY]] ], [ 1.000000e+00, [[ENTRY]] ]
-; CHECK-NEXT:    [[MUL]] = fmul fast float [[RESULT]], [[BASE]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[UNRELATED:%.*]] = phi i32 [ [[UNRELATED_XOR:%.*]], [[FOR_BODY]] ], [ 5, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[UNRELATED_XOR]] = xor i32 [[IV]], [[UNRELATED]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[EXP]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_CLEANUP:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.cleanup:
-; CHECK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[UNRELATED_XOR]] to float
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast float [[MUL]], [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sitofp i32 [[UNRELATED_XOR]] to float
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast float [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[ADD:%.*]] = phi float [ 6.000000e+00, [[ENTRY]] ], [ [[TMP1]], [[FOR_CLEANUP]] ]
+; CHECK-NEXT:    [[ADD:%.*]] = phi float [ 6.000000e+00, [[ENTRY:%.*]] ], [ [[TMP2]], [[FOR_CLEANUP]] ]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
 entry:
@@ -253,17 +207,9 @@ define float @powi_afn(float %base, i32 %exp) {
 ; CHECK-SAME: float [[BASE:%.*]], i32 [[EXP:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[EXP]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
-; CHECK:       while.body:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi float [ [[MUL:%.*]], [[WHILE_BODY]] ], [ 1.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[MERGE_DEC:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[EXP]], [[ENTRY]] ]
-; CHECK-NEXT:    [[MUL]] = fmul afn float [[RESULT]], [[BASE]]
-; CHECK-NEXT:    [[DEC]] = add nsw i32 [[MERGE_DEC]], -1
-; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[CMP_EQ]], label [[WHILE_END]], label [[WHILE_BODY]]
-; CHECK:       while.end:
-; CHECK-NEXT:    [[RESULT_LCSSA:%.*]] = phi float [ 1.000000e+00, [[ENTRY]] ], [ [[MUL]], [[WHILE_BODY]] ]
-; CHECK-NEXT:    ret float [[RESULT_LCSSA]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.powi.f32.i32(float [[BASE]], i32 [[EXP]])
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP_NOT]], float 1.000000e+00, float [[TMP0]]
+; CHECK-NEXT:    ret float [[SPEC_SELECT]]
 ;
 entry:
   %cmp.not = icmp eq i32 %exp, 0

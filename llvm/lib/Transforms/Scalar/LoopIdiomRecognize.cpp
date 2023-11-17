@@ -22,8 +22,6 @@
 //
 // Future loop memory idioms to recognize:
 //   memcmp, strlen, etc.
-// Future floating point idioms to recognize in -ffast-math mode:
-//   fpowi
 //
 // This could recognize common matrix multiplies and dot product idioms and
 // replace them with calls to BLAS (if linked in??).
@@ -94,6 +92,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "loop-idiom"
 
@@ -128,6 +127,14 @@ static cl::opt<bool, true>
                                "not convert loop(s) to memcpy."),
                       cl::location(DisableLIRP::Memcpy), cl::init(false),
                       cl::ReallyHidden);
+
+bool DisableLIRP::Powi;
+static cl::opt<bool, true>
+    DisableLIRPPowi("disable-" DEBUG_TYPE "-powi",
+                    cl::desc("Proceed with loop idiom recognize pass, but do "
+                             "not convert the powi idiom."),
+                    cl::location(DisableLIRP::Powi), cl::init(false),
+                    cl::ReallyHidden);
 
 static cl::opt<bool> UseLIRCodeSizeHeurs(
     "use-lir-code-size-heurs",
@@ -206,6 +213,7 @@ private:
       const SCEV *BECount);
   bool processLoopMemCpy(MemCpyInst *MCI, const SCEV *BECount);
   bool processLoopMemSet(MemSetInst *MSI, const SCEV *BECount);
+  bool processLoopPowi(const SCEV *BECount);
 
   bool processLoopStridedStore(Value *DestPtr, const SCEV *StoreSizeSCEV,
                                MaybeAlign StoreAlignment, Value *StoredVal,
@@ -298,13 +306,8 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
   ApplyCodeSizeHeuristics =
       L->getHeader()->getParent()->hasOptSize() && UseLIRCodeSizeHeurs;
 
-  HasMemset = TLI->has(LibFunc_memset);
-  HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
-  HasMemcpy = TLI->has(LibFunc_memcpy);
-
-  if (HasMemset || HasMemsetPattern || HasMemcpy)
-    if (SE->hasLoopInvariantBackedgeTakenCount(L))
-      return runOnCountableLoop();
+  if (SE->hasLoopInvariantBackedgeTakenCount(L))
+    return runOnCountableLoop();
 
   return runOnNoncountableLoop();
 }
@@ -549,33 +552,44 @@ bool LoopIdiomRecognize::runOnLoopBlock(
     BasicBlock *BB, const SCEV *BECount,
     SmallVectorImpl<BasicBlock *> &ExitBlocks) {
   // We can only promote stores in this block if they are unconditionally
-  // executed in the loop.  For a block to be unconditionally executed, it has
-  // to dominate all the exit blocks of the loop.  Verify this now.
+  // executed in the loop. The powi idiom also requires the block to be
+  // unconditionally executed. For a block to be unconditionally executed, it
+  // has to dominate all the exit blocks of the loop.
   for (BasicBlock *ExitBlock : ExitBlocks)
     if (!DT->dominates(BB, ExitBlock))
       return false;
 
   bool MadeChange = false;
-  // Look for store instructions, which may be optimized to memset/memcpy.
-  collectStores(BB);
 
-  // Look for a single store or sets of stores with a common base, which can be
-  // optimized into a memset (memset_pattern).  The latter most commonly happens
-  // with structs and handunrolled loops.
-  for (auto &SL : StoreRefsForMemset)
-    MadeChange |= processLoopStores(SL.second, BECount, ForMemset::Yes);
+  HasMemset = TLI->has(LibFunc_memset);
+  HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
+  HasMemcpy = TLI->has(LibFunc_memcpy);
 
-  for (auto &SL : StoreRefsForMemsetPattern)
-    MadeChange |= processLoopStores(SL.second, BECount, ForMemset::No);
+  if (HasMemset || HasMemsetPattern || HasMemcpy) {
+    // Look for store instructions, which may be optimized to memset/memcpy.
+    collectStores(BB);
 
-  // Optimize the store into a memcpy, if it feeds an similarly strided load.
-  for (auto &SI : StoreRefsForMemcpy)
-    MadeChange |= processLoopStoreOfLoopLoad(SI, BECount);
+    // Look for a single store or sets of stores with a common base, which can
+    // be optimized into a memset (memset_pattern).  The latter most commonly
+    // happens with structs and handunrolled loops.
+    for (auto &SL : StoreRefsForMemset)
+      MadeChange |= processLoopStores(SL.second, BECount, ForMemset::Yes);
 
-  MadeChange |= processLoopMemIntrinsic<MemCpyInst>(
-      BB, &LoopIdiomRecognize::processLoopMemCpy, BECount);
-  MadeChange |= processLoopMemIntrinsic<MemSetInst>(
-      BB, &LoopIdiomRecognize::processLoopMemSet, BECount);
+    for (auto &SL : StoreRefsForMemsetPattern)
+      MadeChange |= processLoopStores(SL.second, BECount, ForMemset::No);
+
+    // Optimize the store into a memcpy, if it feeds an similarly strided load.
+    for (auto &SI : StoreRefsForMemcpy)
+      MadeChange |= processLoopStoreOfLoopLoad(SI, BECount);
+
+    MadeChange |= processLoopMemIntrinsic<MemCpyInst>(
+        BB, &LoopIdiomRecognize::processLoopMemCpy, BECount);
+    MadeChange |= processLoopMemIntrinsic<MemSetInst>(
+        BB, &LoopIdiomRecognize::processLoopMemSet, BECount);
+  }
+
+  if (!DisableLIRP::Powi)
+    MadeChange |= processLoopPowi(BECount);
 
   return MadeChange;
 }
@@ -923,6 +937,112 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
   return processLoopStridedStore(Pointer, SE->getSCEV(MSI->getLength()),
                                  MSI->getDestAlign(), SplatValue, MSI, MSIs, Ev,
                                  BECount, IsNegStride, /*IsLoopMemset=*/true);
+}
+
+static CallInst *createPowiIntrinsic(IRBuilder<> &IRBuilder, Value *Base,
+                                     Value *Exp, const DebugLoc &DL) {
+  Value *Ops[] = {Base, Exp};
+  Type *Tys[] = {Base->getType(), Exp->getType()};
+
+  Module *M = IRBuilder.GetInsertBlock()->getParent()->getParent();
+  Function *Func = Intrinsic::getDeclaration(M, Intrinsic::powi, Tys);
+  CallInst *CI = IRBuilder.CreateCall(Func, Ops);
+  CI->setDebugLoc(DL);
+  return CI;
+}
+
+// Checks that the Phi is an fmul fast with a loop-invariant operand, and
+// returns the the fmul instruction.
+static Instruction *detectPowiIdiom(PHINode *Phi, BasicBlock *PH,
+                                    BasicBlock *Latch, Loop *CurLoop) {
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE " Performing powi idiom detection\n");
+
+  // The phi must have two incoming values (one from the preheader, and another
+  // from the latch), it must have one use (which we will subsequently check is
+  // an fmul fast instruction), and it must be a floating-point type.
+  if (Phi->getNumIncomingValues() != 2 || !Phi->hasOneUse() ||
+      Phi->getBasicBlockIndex(PH) < 0 || Phi->getBasicBlockIndex(Latch) < 0 ||
+      !Phi->getType()->isFloatingPointTy()) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " Unable to operate on this PHI node\n");
+    return nullptr;
+  }
+
+  // Further, check that the incoming value from the preheader is 1.0.
+  auto *ConstFP = dyn_cast<ConstantFP>(Phi->getIncomingValueForBlock(PH));
+  if (!ConstFP || !ConstFP->isExactlyValue(1.0)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " Initial value comparison failed\n");
+    return nullptr;
+  }
+
+  auto *I = cast<Instruction>(Phi->use_begin()->getUser());
+  Value *Op1, *Op2;
+  if (!match(I, m_FMul(m_Value(Op1), m_Value(Op2))) || !I->hasApproxFunc()) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " fmul-afn test failed\n");
+    return nullptr;
+  }
+  for (Use &U : I->uses()) {
+    if (isa<PHINode>(U.getUser()))
+      continue;
+    if (U->isUsedInBasicBlock(Latch)) {
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE " FMul used inside loop\n");
+      return nullptr;
+    }
+  }
+  Value *Base = Op1 == Phi ? Op2 : Op1;
+  if (CurLoop->isLoopInvariant(Base))
+    return I;
+  else
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " Base is not loop-invariant\n");
+  return nullptr;
+}
+
+/// Detect the powi idiom, and convert it to an intrinsic.
+bool LoopIdiomRecognize::processLoopPowi(const SCEV *BECount) {
+  // We only process loops where the IV is found, and at most i32.
+  PHINode *IV = CurLoop->getInductionVariable(*SE);
+  if (!IV || IV->getType()->getScalarSizeInBits() > 32)
+    return false;
+
+  // If the loop doesn't have a valid preheader and latch, give up now.
+  BasicBlock *PH = CurLoop->getLoopPreheader();
+  BasicBlock *Latch = CurLoop->getLoopLatch();
+  if (!PH || !Latch)
+    return false;
+
+  // Find the Phi corresponding to the powi idiom, amongst all phis except the
+  // induction phi.
+  for (PHINode &Phi : Latch->phis()) {
+    if (&Phi == IV)
+      continue;
+    if (Instruction *FMul = detectPowiIdiom(&Phi, PH, Latch, CurLoop)) {
+      // Find the trip count, and expand the SCEV to find the exponent of the
+      // powi.
+      IRBuilder<> Builder(PH->getTerminator());
+      SCEVExpander Expander(*SE, *DL, "loop-idiom");
+      SCEVExpanderCleaner ExpCleaner(Expander);
+      Type *ExpTy = Builder.getInt32Ty();
+      const SCEV *TripCount =
+          SE->getTripCountFromExitCount(BECount, ExpTy, CurLoop);
+      if (!Expander.isSafeToExpand(TripCount)) {
+        LLVM_DEBUG(dbgs() << DEBUG_TYPE " Trip count not safe to expand\n");
+        return false;
+      }
+      Value *Exp =
+          Expander.expandCodeFor(TripCount, ExpTy, PH->getTerminator());
+
+      // Insert the powi intrinsic, and replace its uses outside the block.
+      const DebugLoc &Loc = FMul->getDebugLoc();
+      Value *Base = isa<PHINode>(FMul->getOperand(0)) ? FMul->getOperand(1)
+                                                      : FMul->getOperand(0);
+      CallInst *Powi = createPowiIntrinsic(Builder, Base, Exp, Loc);
+      FMul->replaceUsesOutsideBlock(Powi, Latch);
+      ExpCleaner.markResultUsed();
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE " powi idiom optimized!\n");
+      return true;
+    }
+  }
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE " powi idiom detection failed\n");
+  return false;
 }
 
 /// mayLoopAccessLocation - Return true if the specified loop might access the
@@ -2215,8 +2335,6 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
   BasicBlock *LoopHeaderBB = CurLoop->getHeader();
   BasicBlock *LoopPreheaderBB = CurLoop->getLoopPreheader();
   assert(LoopPreheaderBB && "There is always a loop preheader.");
-
-  using namespace PatternMatch;
 
   // Step 1: Check if the loop backedge is in desirable form.
 

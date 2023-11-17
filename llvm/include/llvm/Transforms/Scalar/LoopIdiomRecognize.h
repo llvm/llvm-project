@@ -34,6 +34,9 @@ struct DisableLIRP {
 
   /// When true, Memcpy is disabled.
   static bool Memcpy;
+
+  // When true, Powi is disabled.
+  static bool Powi;
 };
 
 /// Performs Loop Idiom Recognize Pass.
