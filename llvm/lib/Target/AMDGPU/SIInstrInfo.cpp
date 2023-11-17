@@ -8476,16 +8476,25 @@ unsigned SIInstrInfo::getLiveRangeSplitOpcode(Register SrcReg,
   return AMDGPU::COPY;
 }
 
-bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI) const {
+bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
+                                       Register Reg) const {
   // We need to handle instructions which may be inserted during register
   // allocation to handle the prolog. The initial prolog instruction may have
   // been separated from the start of the block by spills and copies inserted
-  // needed by the prolog.
-  uint16_t Opc = MI.getOpcode();
+  // needed by the prolog. However, the insertions for scalar registers can
+  // always be placed at the BB top as they are independent of the exec mask
+  // value.
+  bool IsNullOrVectorRegister = true;
+  if (Reg) {
+    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+    IsNullOrVectorRegister = !RI.isSGPRClass(RI.getRegClassForReg(MRI, Reg));
+  }
 
+  uint16_t Opc = MI.getOpcode();
   // FIXME: Copies inserted in the block prolog for live-range split should also
   // be included.
-  return (isSpillOpcode(Opc) || (!MI.isTerminator() && Opc != AMDGPU::COPY &&
+  return IsNullOrVectorRegister &&
+         (isSpillOpcode(Opc) || (!MI.isTerminator() && Opc != AMDGPU::COPY &&
                                  MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }
 
