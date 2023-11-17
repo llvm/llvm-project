@@ -264,7 +264,7 @@ check-generated-output)
            || false
 
     # Reject code with trailing whitespace
-    ! grep -rn '[[:blank:]]$' libcxx/include libcxx/src libcxx/test libcxx/benchmarks || false
+    ! grep -rn '[[:blank:]]$' libcxx libcxxabi libunwind runtimes || false
 ;;
 #
 # Various Standard modes
