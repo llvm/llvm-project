@@ -391,18 +391,14 @@ static LogicalResult verifyAllToAllOperandAndResultShape(
       DimensionSize(collectiveDeviceGroupSize(meshAxes, meshShape));
   auto operandConcatDimSize = DimensionSize(operandType.getDimSize(concatAxis));
   auto operandSplitDimSize = DimensionSize(operandType.getDimSize(splitAxis));
-  if (!operandSplitDimSize.isDynamic() && !deviceGroupSize.isDynamic() &&
-      int64_t(operandSplitDimSize) % int64_t(deviceGroupSize) != 0) {
-    return emitError(result.getLoc())
-           << "Operand dimension size " << int64_t(operandSplitDimSize)
-           << " is not divisible by collective device group size "
-           << int64_t(deviceGroupSize) << " for split axis " << splitAxis
-           << ".";
-  }
   DimensionSize expectedResultConcatDimSize =
       operandConcatDimSize * deviceGroupSize;
   DimensionSize expectedResultSplitDimSize =
       operandSplitDimSize / deviceGroupSize;
+  if (!expectedResultSplitDimSize.isDynamic() &&
+      int64_t(operandSplitDimSize) % int64_t(deviceGroupSize) != 0) {
+    expectedResultSplitDimSize = DimensionSize::dynamic();
+  }
   if (failed(verifyDimensionCompatibility(
           result.getLoc(), expectedResultConcatDimSize.value(),
           resultType.getDimSize(concatAxis), concatAxis))) {

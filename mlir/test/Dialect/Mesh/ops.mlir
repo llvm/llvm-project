@@ -199,7 +199,7 @@ func.func @all_to_all_dynamic_dims_in_result(
   return %0 : tensor<3x?xi8>
 }
 
-// CHECK-LABEL: func @all_to_all
+// CHECK-LABEL: func @all_to_all_same_split_concat_dim_with_dynamic_device_group_size
 func.func @all_to_all_same_split_concat_dim_with_dynamic_device_group_size(
     // CHECK-SAME: %[[ARG:.*]]: tensor<3xi8>
     %arg0 : tensor<3xi8>) -> tensor<3xi8> {
@@ -210,6 +210,19 @@ func.func @all_to_all_same_split_concat_dim_with_dynamic_device_group_size(
     split_axis = 0 concat_axis = 0
     : tensor<3xi8> -> tensor<3xi8>
   return %0 : tensor<3xi8>
+}
+
+// CHECK-LABEL: func @all_to_all_non_divisible_split_axis_size
+func.func @all_to_all_non_divisible_split_axis_size(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<2x3xi8>
+    %arg0 : tensor<2x3xi8>) -> tensor<?x12xi8> {
+  // CHECK-NEXT: mesh.all_to_all %[[ARG]]
+  // CHECK-SAME: @mesh0 mesh_axes = [0, 1] split_axis = 0 concat_axis = 1
+  // CHECK-SAME: : tensor<2x3xi8> -> tensor<?x12xi8>
+  %0 = mesh.all_to_all %arg0 on @mesh0 mesh_axes = [0, 1]
+    split_axis = 0 concat_axis = 1
+    : tensor<2x3xi8> -> tensor<?x12xi8>
+  return %0 : tensor<?x12xi8>
 }
 
 // CHECK-LABEL: func @reduce_scatter_static_dimensions

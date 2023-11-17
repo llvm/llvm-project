@@ -292,19 +292,20 @@ def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
   let description = [{
     Performs an all-to-all on tensor pieces split along `split_axis`.
     The resulting pieces are concatenated along `concat_axis` on ech device.
+
     Example:
     ```
     mesh.cluster @mesh0(rank = 1, dim_sizes = [3])
     ...
     %1 = mesh.all_to_all %0 on @mesh0 mesh_axes = [0]
       split_axis = 0 concat_axis = 0
-      : tensor<3x6xi8> -> tensor<3x6xi8>
+      : tensor<3x2xi8> -> tensor<3x2xi8>
     ```
     Input:
     ```
      device  device  device
      (0)     (1)     (2)
-    +-------+-------+-------+  | split and concat
+    +-------+-------+-------+  | split and concat along
     | 11 12 | 21 22 | 31 32 |  | tensor axis 0
     | 13 14 | 23 24 | 33 34 |  ↓
     | 15 16 | 25 26 | 35 36 |
