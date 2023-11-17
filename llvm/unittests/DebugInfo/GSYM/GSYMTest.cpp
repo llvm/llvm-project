@@ -4871,9 +4871,8 @@ TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRanges) {
   // Make sure we see both "foo" and "bar" in the output of an entire GSYM
   // dump. Prior to this fix we would two "foo" entries.
   std::vector<std::string> ExpectedDumpLines = {
-    "@ 0x00000068: [0x0000000000001000 - 0x0000000000001050) \"foo\"",
-    "@ 0x00000088: [0x0000000000001000 - 0x0000000000001100) \"bar\""
-  };
+      "@ 0x00000068: [0x0000000000001000 - 0x0000000000001050) \"foo\"",
+      "@ 0x00000088: [0x0000000000001000 - 0x0000000000001100) \"bar\""};
   // Make sure all expected errors are in the error stream for the two invalid
   // inlined functions that we removed due to invalid range scoping.
   for (const auto &Line : ExpectedDumpLines)

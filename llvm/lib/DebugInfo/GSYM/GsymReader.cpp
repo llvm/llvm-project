@@ -254,7 +254,8 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
 }
 
 llvm::Expected<DataExtractor>
-GsymReader::getFunctionInfoDataForAddress(uint64_t Addr, uint64_t &FuncStartAddr) const {
+GsymReader::getFunctionInfoDataForAddress(uint64_t Addr,
+                                          uint64_t &FuncStartAddr) const {
   Expected<uint64_t> ExpectedAddrIdx = getAddressIndex(Addr);
   if (!ExpectedAddrIdx)
     return ExpectedAddrIdx.takeError();
@@ -300,8 +301,7 @@ GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
                                        uint64_t &FuncStartAddr) const {
   if (AddrIdx >= getNumAddresses())
     return createStringError(std::errc::invalid_argument,
-                             "invalid address index %" PRIu64,
-                             AddrIdx);
+                             "invalid address index %" PRIu64, AddrIdx);
   const uint32_t AddrInfoOffset = AddrInfoOffsets[AddrIdx];
   assert((Endian == endianness::big || Endian == endianness::little) &&
          "Endian must be either big or little");
@@ -313,8 +313,7 @@ GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
   std::optional<uint64_t> OptFuncStartAddr = getAddress(AddrIdx);
   if (!OptFuncStartAddr)
     return createStringError(std::errc::invalid_argument,
-                             "failed to extract address[%" PRIu64 "]",
-                             AddrIdx);
+                             "failed to extract address[%" PRIu64 "]", AddrIdx);
   FuncStartAddr = *OptFuncStartAddr;
   return DataExtractor(Bytes, Endian == llvm::endianness::little, 4);
 }
@@ -327,7 +326,8 @@ llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
     return ExpectedData.takeError();
 }
 
-llvm::Expected<FunctionInfo> GsymReader::getFunctionInfoAtIndex(uint64_t Idx) const {
+llvm::Expected<FunctionInfo>
+GsymReader::getFunctionInfoAtIndex(uint64_t Idx) const {
   uint64_t FuncStartAddr = 0;
   if (auto ExpectedData = getFunctionInfoDataAtIndex(Idx, FuncStartAddr))
     return FunctionInfo::decode(*ExpectedData, FuncStartAddr);

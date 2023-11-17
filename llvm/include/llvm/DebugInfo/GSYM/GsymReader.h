@@ -357,7 +357,6 @@ protected:
   /// address.
   llvm::Expected<llvm::DataExtractor>
   getFunctionInfoDataAtIndex(uint64_t AddrIdx, uint64_t &FuncStartAddr) const;
-
 };
 
 } // namespace gsym
