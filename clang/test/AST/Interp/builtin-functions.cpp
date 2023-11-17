@@ -324,3 +324,10 @@ namespace clrsb {
   char clrsb11[__builtin_clrsb(0xf) == BITSIZE(int) - 5 ? 1 : -1];
   char clrsb12[__builtin_clrsb(~0x1f) == BITSIZE(int) - 6 ? 1 : -1];
 }
+
+namespace bitreverse {
+  char bitreverse1[__builtin_bitreverse8(0x01) == 0x80 ? 1 : -1];
+  char bitreverse2[__builtin_bitreverse16(0x3C48) == 0x123C ? 1 : -1];
+  char bitreverse3[__builtin_bitreverse32(0x12345678) == 0x1E6A2C48 ? 1 : -1];
+  char bitreverse4[__builtin_bitreverse64(0x0123456789ABCDEFULL) == 0xF7B3D591E6A2C480 ? 1 : -1];
+}
