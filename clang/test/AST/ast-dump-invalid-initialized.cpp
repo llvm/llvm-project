@@ -26,15 +26,17 @@ void test() {
   auto b5 = A{1};
 }
 
-void pr72198() {
+void GH72198() {
   // CHECK: DecompositionDecl {{.*}} invalid 'int'
   int [_, b] = {0, 0};
   [b]{};
 }
 
+namespace GH67495 {
 int get_point();
-void pr67495() {
+void f() {
   // CHECK: DecompositionDecl {{.*}} invalid 'int &'
   auto& [x, y] = get_point();
   [x, y] {};
+}
 }
