@@ -91,6 +91,12 @@ def : WriteRes<WriteBREV8, [XS2ALU]>;
 def : WriteRes<WritePACK, [XS2ALU]>;
 def : WriteRes<WritePACK32, [XS2ALU]>;
 def : WriteRes<WriteZIP, [XS2ALU]>;
+
+// Zbs
+def : WriteRes<WriteSingleBit, [XS2ALU]>;
+def : WriteRes<WriteSingleBitImm, [XS2ALU]>;
+def : WriteRes<WriteBEXT, [XS2ALU]>;
+def : WriteRes<WriteBEXTI, [XS2ALU]>;
 }
 
 let Latency = 3 in {
@@ -101,12 +107,6 @@ def : WriteRes<WriteCTZ, [XS2MDU]>;
 def : WriteRes<WriteCTZ32, [XS2MDU]>;
 def : WriteRes<WriteCPOP, [XS2MDU]>;
 def : WriteRes<WriteCPOP32, [XS2MDU]>;
-
-// Zbs
-def : WriteRes<WriteSingleBit, [XS2MDU]>;
-def : WriteRes<WriteSingleBitImm, [XS2MDU]>;
-def : WriteRes<WriteBEXT, [XS2MDU]>;
-def : WriteRes<WriteBEXTI, [XS2MDU]>;
 
 // Zbkc
 def : WriteRes<WriteCLMUL, [XS2MDU]>;
@@ -289,8 +289,8 @@ def : XS2LoadToALUBypass<ReadREV8>;
 // Zbkc
 def : ReadAdvance<ReadCLMUL, 0>;
 // Zbs
-def : ReadAdvance<ReadSingleBit, 0>;
-def : ReadAdvance<ReadSingleBitImm, 0>;
+def : XS2LoadToALUBypass<ReadSingleBit>;
+def : XS2LoadToALUBypass<ReadSingleBitImm>;
 // Zbkb
 def : XS2LoadToALUBypass<ReadBREV8>;
 def : XS2LoadToALUBypass<ReadPACK>;
