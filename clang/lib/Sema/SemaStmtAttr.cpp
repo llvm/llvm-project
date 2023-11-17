@@ -355,7 +355,9 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
   return S.BuildCodeAlignAttr(A, E);
 }
 
-// Emit duplicate error for [[clang::code_align()]] attribute.
+// Diagnose non-identical duplicates as a 'conflicting' loop attr
+// and suppress duplicate errors in cases where the two match for
+// [[clang::code_align()]] attribute.
 static void
 CheckForDuplicateCodeAlignAttrs(Sema &S,
                                 const SmallVectorImpl<const Attr *> &Attrs) {
@@ -364,14 +366,26 @@ CheckForDuplicateCodeAlignAttrs(Sema &S,
 
   if (FirstItr == Attrs.end()) // no attributes found
     return;
-
   const auto *LastFoundItr = FirstItr;
 
   while (Attrs.end() != (LastFoundItr = std::find_if(LastFoundItr + 1,
                                                      Attrs.end(), FindFunc))) {
-    S.Diag((*LastFoundItr)->getLocation(), diag::err_loop_attr_duplication)
+
+    const auto *CEA = dyn_cast<ConstantExpr>(cast<CodeAlignAttr>(*FirstItr)->getAlignment());
+    const auto *CEB = dyn_cast<ConstantExpr>(cast<CodeAlignAttr>(*LastFoundItr)->getAlignment());
+    // If the value is dependent, we can not test anything.
+    if (!CEA || !CEB)
+      return;
+    // Test the attribute value.
+    std::optional<llvm::APSInt> FirstValue = CEA->getResultAsAPSInt();
+    llvm::APSInt SecondValue = CEB->getResultAsAPSInt();
+
+    if (FirstValue != SecondValue) {
+      S.Diag((*LastFoundItr)->getLocation(), diag::err_loop_attr_conflict)
         << *FirstItr;
-    S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
+      S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
+    }
+    return;
   }
 }
 

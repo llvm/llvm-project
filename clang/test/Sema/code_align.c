@@ -54,8 +54,12 @@ void foo1(int A)
   [[clang::code_align("abc")]]
   for(int I=0; I<128; ++I) { bar(I); }
 
-  [[clang::code_align(64)]] // expected-note{{previous attribute is here}}
-  [[clang::code_align(64)]] // expected-error{{duplicate loop attribute 'code_align'}}
+  [[clang::code_align(64)]] // OK
+  [[clang::code_align(64)]] // OK
+  for(int I=0; I<128; ++I) { bar(I); }
+
+  [[clang::code_align(8)]]  // expected-note{{previous attribute is here}}
+  [[clang::code_align(64)]] // expected-error{{conflicting loop attribute 'code_align'}}
   for(int I=0; I<128; ++I) { bar(I); }
 
   // expected-error@+1{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was 7}}
@@ -119,8 +123,12 @@ void code_align_dependent() {
   [[clang::code_align(C)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
-  [[clang::code_align(A)]] // expected-note{{previous attribute is here}}
-  [[clang::code_align(B)]] // cpp-local-error{{duplicate loop attribute 'code_align'}}
+  [[clang::code_align(A)]] // OK
+  [[clang::code_align(A)]] // OK
+  for(int I=0; I<128; ++I) { bar(I); }
+
+  // cpp-local-error@+1{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was 23}}
+  [[clang::code_align(B)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
   // cpp-local-error@+2{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was -10}}
@@ -130,7 +138,7 @@ void code_align_dependent() {
 }
 
 int main() {
-  code_align_dependent<8, 16, 32, -10>(); // #neg-instantiation
+  code_align_dependent<8, 23, 32, -10>(); // #neg-instantiation
   return 0;
 }
 #endif
