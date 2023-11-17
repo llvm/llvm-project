@@ -13,9 +13,9 @@
 	.def	_main; .scl	2; .type	32; .endef
 	.section	.text,"xr",one_only,_main
 	.globl	_main
+_main:
 	.cfi_startproc
 	.cfi_personality 0, ___gxx_personality_v0
-_main:
 	xorl	%eax, %eax
 	ret
 	.cfi_endproc
@@ -29,8 +29,8 @@ ___gxx_personality_v0:
 	.def	_unused; .scl	2; .type	32; .endef
 	.section	.text,"xr",one_only,_unused
 	.globl	_unused
+_unused:
 	.cfi_startproc
 	.cfi_personality 0, ___gxx_personality_v0
-_unused:
 	ret
 	.cfi_endproc
