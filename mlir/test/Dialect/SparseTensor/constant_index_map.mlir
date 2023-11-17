@@ -1,6 +1,6 @@
 // Reported by https://github.com/llvm/llvm-project/issues/61530
 
-// RUN: mlir-opt %s -sparsification | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification | FileCheck %s
 
 #map1 = affine_map<(d0) -> (0, d0)>
 #map2 = affine_map<(d0) -> (d0)>

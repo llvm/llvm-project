@@ -74,6 +74,7 @@
     __cpp_lib_constexpr_vector                       201907L [C++20]
     __cpp_lib_copyable_function                      202306L [C++26]
     __cpp_lib_coroutine                              201902L [C++20]
+    __cpp_lib_debugging                              202311L [C++26]
     __cpp_lib_destroying_delete                      201806L [C++20]
     __cpp_lib_enable_shared_from_this                201603L [C++17]
     __cpp_lib_endian                                 201907L [C++20]
@@ -85,8 +86,17 @@
     __cpp_lib_filesystem                             201703L [C++17]
     __cpp_lib_format                                 202106L [C++20]
     __cpp_lib_format_ranges                          202207L [C++23]
+    __cpp_lib_format_uchar                           202311L [C++20]
     __cpp_lib_formatters                             202302L [C++23]
     __cpp_lib_forward_like                           202207L [C++23]
+    __cpp_lib_freestanding_algorithm                 202311L [C++26]
+    __cpp_lib_freestanding_array                     202311L [C++26]
+    __cpp_lib_freestanding_cstring                   202306L [C++26]
+    __cpp_lib_freestanding_expected                  202311L [C++26]
+    __cpp_lib_freestanding_mdspan                    202311L [C++26]
+    __cpp_lib_freestanding_optional                  202311L [C++26]
+    __cpp_lib_freestanding_string_view               202311L [C++26]
+    __cpp_lib_freestanding_variant                   202311L [C++26]
     __cpp_lib_fstream_native_handle                  202306L [C++26]
     __cpp_lib_function_ref                           202306L [C++26]
     __cpp_lib_gcd_lcm                                201606L [C++17]
@@ -117,6 +127,7 @@
     __cpp_lib_jthread                                201911L [C++20]
     __cpp_lib_latch                                  201907L [C++20]
     __cpp_lib_launder                                201606L [C++17]
+    __cpp_lib_linalg                                 202311L [C++26]
     __cpp_lib_list_remove_return_type                201806L [C++20]
     __cpp_lib_logical_traits                         201510L [C++17]
     __cpp_lib_make_from_tuple                        201606L [C++17]
@@ -136,11 +147,13 @@
     __cpp_lib_optional                               201606L [C++17]
                                                      202110L [C++23]
     __cpp_lib_out_ptr                                202106L [C++23]
+                                                     202311L [C++26]
     __cpp_lib_parallel_algorithm                     201603L [C++17]
     __cpp_lib_polymorphic_allocator                  201902L [C++20]
     __cpp_lib_print                                  202207L [C++23]
     __cpp_lib_quoted_string_io                       201304L [C++14]
     __cpp_lib_ranges                                 202207L [C++20]
+    __cpp_lib_ranges_as_const                        202207L [C++23]
     __cpp_lib_ranges_as_rvalue                       202207L [C++23]
     __cpp_lib_ranges_chunk                           202202L [C++23]
     __cpp_lib_ranges_chunk_by                        202202L [C++23]
@@ -159,6 +172,7 @@
     __cpp_lib_result_of_sfinae                       201210L [C++14]
     __cpp_lib_robust_nonmodifying_seq_ops            201304L [C++14]
     __cpp_lib_sample                                 201603L [C++17]
+    __cpp_lib_saturation_arithmetic                  202311L [C++26]
     __cpp_lib_scoped_lock                            201703L [C++17]
     __cpp_lib_semaphore                              201907L [C++20]
     __cpp_lib_shared_mutex                           201505L [C++17]
@@ -171,6 +185,7 @@
     __cpp_lib_smart_ptr_owner_equality               202306L [C++26]
     __cpp_lib_source_location                        201907L [C++20]
     __cpp_lib_span                                   202002L [C++20]
+    __cpp_lib_span_initializer_list                  202311L [C++26]
     __cpp_lib_spanstream                             202106L [C++23]
     __cpp_lib_ssize                                  201902L [C++20]
     __cpp_lib_sstream_from_string_view               202306L [C++26]
@@ -196,6 +211,8 @@
     __cpp_lib_transparent_operators                  201210L [C++14]
                                                      201510L [C++17]
     __cpp_lib_tuple_element_t                        201402L [C++14]
+    __cpp_lib_tuple_like                             202207L [C++23]
+                                                     202311L [C++26]
     __cpp_lib_tuples_by_type                         201304L [C++14]
     __cpp_lib_type_identity                          201806L [C++20]
     __cpp_lib_type_trait_variable_templates          201510L [C++17]
@@ -429,6 +446,10 @@
 #   error "__cpp_lib_coroutine should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_debugging
+#   error "__cpp_lib_debugging should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_destroying_delete
 #   error "__cpp_lib_destroying_delete should not be defined before c++20"
 # endif
@@ -469,12 +490,48 @@
 #   error "__cpp_lib_format_ranges should not be defined before c++23"
 # endif
 
+# ifdef __cpp_lib_format_uchar
+#   error "__cpp_lib_format_uchar should not be defined before c++20"
+# endif
+
 # ifdef __cpp_lib_formatters
 #   error "__cpp_lib_formatters should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_forward_like
 #   error "__cpp_lib_forward_like should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_freestanding_algorithm
+#   error "__cpp_lib_freestanding_algorithm should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_array
+#   error "__cpp_lib_freestanding_array should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_cstring
+#   error "__cpp_lib_freestanding_cstring should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_expected
+#   error "__cpp_lib_freestanding_expected should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_mdspan
+#   error "__cpp_lib_freestanding_mdspan should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_optional
+#   error "__cpp_lib_freestanding_optional should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_string_view
+#   error "__cpp_lib_freestanding_string_view should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_variant
+#   error "__cpp_lib_freestanding_variant should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_fstream_native_handle
@@ -597,6 +654,10 @@
 #   error "__cpp_lib_launder should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_linalg
+#   error "__cpp_lib_linalg should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_list_remove_return_type
 #   error "__cpp_lib_list_remove_return_type should not be defined before c++20"
 # endif
@@ -689,6 +750,10 @@
 #   error "__cpp_lib_ranges should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_ranges_as_const
+#   error "__cpp_lib_ranges_as_const should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_ranges_as_rvalue
 #   error "__cpp_lib_ranges_as_rvalue should not be defined before c++23"
 # endif
@@ -761,6 +826,10 @@
 #   error "__cpp_lib_sample should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_scoped_lock
 #   error "__cpp_lib_scoped_lock should not be defined before c++17"
 # endif
@@ -803,6 +872,10 @@
 
 # ifdef __cpp_lib_span
 #   error "__cpp_lib_span should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_span_initializer_list
+#   error "__cpp_lib_span_initializer_list should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_spanstream
@@ -891,6 +964,10 @@
 
 # ifdef __cpp_lib_tuple_element_t
 #   error "__cpp_lib_tuple_element_t should not be defined before c++14"
+# endif
+
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_tuples_by_type
@@ -1157,6 +1234,10 @@
 #   error "__cpp_lib_coroutine should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_debugging
+#   error "__cpp_lib_debugging should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_destroying_delete
 #   error "__cpp_lib_destroying_delete should not be defined before c++20"
 # endif
@@ -1200,12 +1281,48 @@
 #   error "__cpp_lib_format_ranges should not be defined before c++23"
 # endif
 
+# ifdef __cpp_lib_format_uchar
+#   error "__cpp_lib_format_uchar should not be defined before c++20"
+# endif
+
 # ifdef __cpp_lib_formatters
 #   error "__cpp_lib_formatters should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_forward_like
 #   error "__cpp_lib_forward_like should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_freestanding_algorithm
+#   error "__cpp_lib_freestanding_algorithm should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_array
+#   error "__cpp_lib_freestanding_array should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_cstring
+#   error "__cpp_lib_freestanding_cstring should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_expected
+#   error "__cpp_lib_freestanding_expected should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_mdspan
+#   error "__cpp_lib_freestanding_mdspan should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_optional
+#   error "__cpp_lib_freestanding_optional should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_string_view
+#   error "__cpp_lib_freestanding_string_view should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_variant
+#   error "__cpp_lib_freestanding_variant should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_fstream_native_handle
@@ -1343,6 +1460,10 @@
 #   error "__cpp_lib_launder should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_linalg
+#   error "__cpp_lib_linalg should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_list_remove_return_type
 #   error "__cpp_lib_list_remove_return_type should not be defined before c++20"
 # endif
@@ -1447,6 +1568,10 @@
 #   error "__cpp_lib_ranges should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_ranges_as_const
+#   error "__cpp_lib_ranges_as_const should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_ranges_as_rvalue
 #   error "__cpp_lib_ranges_as_rvalue should not be defined before c++23"
 # endif
@@ -1525,6 +1650,10 @@
 #   error "__cpp_lib_sample should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_scoped_lock
 #   error "__cpp_lib_scoped_lock should not be defined before c++17"
 # endif
@@ -1576,6 +1705,10 @@
 
 # ifdef __cpp_lib_span
 #   error "__cpp_lib_span should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_span_initializer_list
+#   error "__cpp_lib_span_initializer_list should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_spanstream
@@ -1676,6 +1809,10 @@
 # endif
 # if __cpp_lib_tuple_element_t != 201402L
 #   error "__cpp_lib_tuple_element_t should have the value 201402L in c++14"
+# endif
+
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_tuples_by_type
@@ -1981,6 +2118,10 @@
 #   error "__cpp_lib_coroutine should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_debugging
+#   error "__cpp_lib_debugging should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_destroying_delete
 #   error "__cpp_lib_destroying_delete should not be defined before c++20"
 # endif
@@ -2045,12 +2186,48 @@
 #   error "__cpp_lib_format_ranges should not be defined before c++23"
 # endif
 
+# ifdef __cpp_lib_format_uchar
+#   error "__cpp_lib_format_uchar should not be defined before c++20"
+# endif
+
 # ifdef __cpp_lib_formatters
 #   error "__cpp_lib_formatters should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_forward_like
 #   error "__cpp_lib_forward_like should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_freestanding_algorithm
+#   error "__cpp_lib_freestanding_algorithm should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_array
+#   error "__cpp_lib_freestanding_array should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_cstring
+#   error "__cpp_lib_freestanding_cstring should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_expected
+#   error "__cpp_lib_freestanding_expected should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_mdspan
+#   error "__cpp_lib_freestanding_mdspan should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_optional
+#   error "__cpp_lib_freestanding_optional should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_string_view
+#   error "__cpp_lib_freestanding_string_view should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_variant
+#   error "__cpp_lib_freestanding_variant should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_fstream_native_handle
@@ -2224,6 +2401,10 @@
 #   error "__cpp_lib_launder should have the value 201606L in c++17"
 # endif
 
+# ifdef __cpp_lib_linalg
+#   error "__cpp_lib_linalg should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_list_remove_return_type
 #   error "__cpp_lib_list_remove_return_type should not be defined before c++20"
 # endif
@@ -2376,6 +2557,10 @@
 #   error "__cpp_lib_ranges should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_ranges_as_const
+#   error "__cpp_lib_ranges_as_const should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_ranges_as_rvalue
 #   error "__cpp_lib_ranges_as_rvalue should not be defined before c++23"
 # endif
@@ -2460,6 +2645,10 @@
 #   error "__cpp_lib_sample should have the value 201603L in c++17"
 # endif
 
+# ifdef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
+# endif
+
 # ifndef __cpp_lib_scoped_lock
 #   error "__cpp_lib_scoped_lock should be defined in c++17"
 # endif
@@ -2529,6 +2718,10 @@
 
 # ifdef __cpp_lib_span
 #   error "__cpp_lib_span should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_span_initializer_list
+#   error "__cpp_lib_span_initializer_list should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_spanstream
@@ -2641,6 +2834,10 @@
 # endif
 # if __cpp_lib_tuple_element_t != 201402L
 #   error "__cpp_lib_tuple_element_t should have the value 201402L in c++17"
+# endif
+
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_tuples_by_type
@@ -3081,6 +3278,10 @@
 #   error "__cpp_lib_coroutine should have the value 201902L in c++20"
 # endif
 
+# ifdef __cpp_lib_debugging
+#   error "__cpp_lib_debugging should not be defined before c++26"
+# endif
+
 # if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #   ifndef __cpp_lib_destroying_delete
 #     error "__cpp_lib_destroying_delete should be defined in c++20"
@@ -3169,12 +3370,57 @@
 #   error "__cpp_lib_format_ranges should not be defined before c++23"
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_format_uchar
+#     error "__cpp_lib_format_uchar should be defined in c++20"
+#   endif
+#   if __cpp_lib_format_uchar != 202311L
+#     error "__cpp_lib_format_uchar should have the value 202311L in c++20"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_format_uchar
+#     error "__cpp_lib_format_uchar should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifdef __cpp_lib_formatters
 #   error "__cpp_lib_formatters should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_forward_like
 #   error "__cpp_lib_forward_like should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_freestanding_algorithm
+#   error "__cpp_lib_freestanding_algorithm should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_array
+#   error "__cpp_lib_freestanding_array should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_cstring
+#   error "__cpp_lib_freestanding_cstring should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_expected
+#   error "__cpp_lib_freestanding_expected should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_mdspan
+#   error "__cpp_lib_freestanding_mdspan should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_optional
+#   error "__cpp_lib_freestanding_optional should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_string_view
+#   error "__cpp_lib_freestanding_string_view should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_variant
+#   error "__cpp_lib_freestanding_variant should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_fstream_native_handle
@@ -3402,6 +3648,10 @@
 #   error "__cpp_lib_launder should have the value 201606L in c++20"
 # endif
 
+# ifdef __cpp_lib_linalg
+#   error "__cpp_lib_linalg should not be defined before c++26"
+# endif
+
 # ifndef __cpp_lib_list_remove_return_type
 #   error "__cpp_lib_list_remove_return_type should be defined in c++20"
 # endif
@@ -3575,6 +3825,10 @@
 #   error "__cpp_lib_ranges should have the value 202207L in c++20"
 # endif
 
+# ifdef __cpp_lib_ranges_as_const
+#   error "__cpp_lib_ranges_as_const should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_ranges_as_rvalue
 #   error "__cpp_lib_ranges_as_rvalue should not be defined before c++23"
 # endif
@@ -3660,6 +3914,10 @@
 # endif
 # if __cpp_lib_sample != 201603L
 #   error "__cpp_lib_sample should have the value 201603L in c++20"
+# endif
+
+# ifdef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_scoped_lock
@@ -3764,6 +4022,10 @@
 # endif
 # if __cpp_lib_span != 202002L
 #   error "__cpp_lib_span should have the value 202002L in c++20"
+# endif
+
+# ifdef __cpp_lib_span_initializer_list
+#   error "__cpp_lib_span_initializer_list should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_spanstream
@@ -3906,6 +4168,10 @@
 # endif
 # if __cpp_lib_tuple_element_t != 201402L
 #   error "__cpp_lib_tuple_element_t should have the value 201402L in c++20"
+# endif
+
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_tuples_by_type
@@ -4397,6 +4663,10 @@
 #   error "__cpp_lib_coroutine should have the value 201902L in c++23"
 # endif
 
+# ifdef __cpp_lib_debugging
+#   error "__cpp_lib_debugging should not be defined before c++26"
+# endif
+
 # if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #   ifndef __cpp_lib_destroying_delete
 #     error "__cpp_lib_destroying_delete should be defined in c++23"
@@ -4492,6 +4762,19 @@
 # endif
 
 # if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_format_uchar
+#     error "__cpp_lib_format_uchar should be defined in c++23"
+#   endif
+#   if __cpp_lib_format_uchar != 202311L
+#     error "__cpp_lib_format_uchar should have the value 202311L in c++23"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_format_uchar
+#     error "__cpp_lib_format_uchar should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_formatters
 #     error "__cpp_lib_formatters should be defined in c++23"
 #   endif
@@ -4509,6 +4792,38 @@
 # endif
 # if __cpp_lib_forward_like != 202207L
 #   error "__cpp_lib_forward_like should have the value 202207L in c++23"
+# endif
+
+# ifdef __cpp_lib_freestanding_algorithm
+#   error "__cpp_lib_freestanding_algorithm should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_array
+#   error "__cpp_lib_freestanding_array should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_cstring
+#   error "__cpp_lib_freestanding_cstring should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_expected
+#   error "__cpp_lib_freestanding_expected should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_mdspan
+#   error "__cpp_lib_freestanding_mdspan should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_optional
+#   error "__cpp_lib_freestanding_optional should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_string_view
+#   error "__cpp_lib_freestanding_string_view should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_freestanding_variant
+#   error "__cpp_lib_freestanding_variant should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_fstream_native_handle
@@ -4742,6 +5057,10 @@
 #   error "__cpp_lib_launder should have the value 201606L in c++23"
 # endif
 
+# ifdef __cpp_lib_linalg
+#   error "__cpp_lib_linalg should not be defined before c++26"
+# endif
+
 # ifndef __cpp_lib_list_remove_return_type
 #   error "__cpp_lib_list_remove_return_type should be defined in c++23"
 # endif
@@ -4945,6 +5264,19 @@
 #   error "__cpp_lib_ranges should have the value 202207L in c++23"
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_ranges_as_const
+#     error "__cpp_lib_ranges_as_const should be defined in c++23"
+#   endif
+#   if __cpp_lib_ranges_as_const != 202207L
+#     error "__cpp_lib_ranges_as_const should have the value 202207L in c++23"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_ranges_as_const
+#     error "__cpp_lib_ranges_as_const should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_ranges_as_rvalue
 #   error "__cpp_lib_ranges_as_rvalue should be defined in c++23"
 # endif
@@ -5107,6 +5439,10 @@
 #   error "__cpp_lib_sample should have the value 201603L in c++23"
 # endif
 
+# ifdef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
+# endif
+
 # ifndef __cpp_lib_scoped_lock
 #   error "__cpp_lib_scoped_lock should be defined in c++23"
 # endif
@@ -5209,6 +5545,10 @@
 # endif
 # if __cpp_lib_span != 202002L
 #   error "__cpp_lib_span should have the value 202002L in c++23"
+# endif
+
+# ifdef __cpp_lib_span_initializer_list
+#   error "__cpp_lib_span_initializer_list should not be defined before c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -5390,6 +5730,19 @@
 # endif
 # if __cpp_lib_tuple_element_t != 201402L
 #   error "__cpp_lib_tuple_element_t should have the value 201402L in c++23"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should be defined in c++23"
+#   endif
+#   if __cpp_lib_tuple_like != 202207L
+#     error "__cpp_lib_tuple_like should have the value 202207L in c++23"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_tuples_by_type
@@ -5905,6 +6258,19 @@
 #   error "__cpp_lib_coroutine should have the value 201902L in c++26"
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_debugging
+#     error "__cpp_lib_debugging should be defined in c++26"
+#   endif
+#   if __cpp_lib_debugging != 202311L
+#     error "__cpp_lib_debugging should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_debugging
+#     error "__cpp_lib_debugging should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #   ifndef __cpp_lib_destroying_delete
 #     error "__cpp_lib_destroying_delete should be defined in c++26"
@@ -6000,6 +6366,19 @@
 # endif
 
 # if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_format_uchar
+#     error "__cpp_lib_format_uchar should be defined in c++26"
+#   endif
+#   if __cpp_lib_format_uchar != 202311L
+#     error "__cpp_lib_format_uchar should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_format_uchar
+#     error "__cpp_lib_format_uchar should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_formatters
 #     error "__cpp_lib_formatters should be defined in c++26"
 #   endif
@@ -6017,6 +6396,110 @@
 # endif
 # if __cpp_lib_forward_like != 202207L
 #   error "__cpp_lib_forward_like should have the value 202207L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_freestanding_algorithm
+#     error "__cpp_lib_freestanding_algorithm should be defined in c++26"
+#   endif
+#   if __cpp_lib_freestanding_algorithm != 202311L
+#     error "__cpp_lib_freestanding_algorithm should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_freestanding_algorithm
+#     error "__cpp_lib_freestanding_algorithm should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_freestanding_array
+#     error "__cpp_lib_freestanding_array should be defined in c++26"
+#   endif
+#   if __cpp_lib_freestanding_array != 202311L
+#     error "__cpp_lib_freestanding_array should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_freestanding_array
+#     error "__cpp_lib_freestanding_array should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_freestanding_cstring
+#     error "__cpp_lib_freestanding_cstring should be defined in c++26"
+#   endif
+#   if __cpp_lib_freestanding_cstring != 202306L
+#     error "__cpp_lib_freestanding_cstring should have the value 202306L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_freestanding_cstring
+#     error "__cpp_lib_freestanding_cstring should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_freestanding_expected
+#     error "__cpp_lib_freestanding_expected should be defined in c++26"
+#   endif
+#   if __cpp_lib_freestanding_expected != 202311L
+#     error "__cpp_lib_freestanding_expected should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_freestanding_expected
+#     error "__cpp_lib_freestanding_expected should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_freestanding_mdspan
+#     error "__cpp_lib_freestanding_mdspan should be defined in c++26"
+#   endif
+#   if __cpp_lib_freestanding_mdspan != 202311L
+#     error "__cpp_lib_freestanding_mdspan should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_freestanding_mdspan
+#     error "__cpp_lib_freestanding_mdspan should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_freestanding_optional
+#     error "__cpp_lib_freestanding_optional should be defined in c++26"
+#   endif
+#   if __cpp_lib_freestanding_optional != 202311L
+#     error "__cpp_lib_freestanding_optional should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_freestanding_optional
+#     error "__cpp_lib_freestanding_optional should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_freestanding_string_view
+#     error "__cpp_lib_freestanding_string_view should be defined in c++26"
+#   endif
+#   if __cpp_lib_freestanding_string_view != 202311L
+#     error "__cpp_lib_freestanding_string_view should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_freestanding_string_view
+#     error "__cpp_lib_freestanding_string_view should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_freestanding_variant
+#     error "__cpp_lib_freestanding_variant should be defined in c++26"
+#   endif
+#   if __cpp_lib_freestanding_variant != 202311L
+#     error "__cpp_lib_freestanding_variant should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_freestanding_variant
+#     error "__cpp_lib_freestanding_variant should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -6277,6 +6760,19 @@
 #   error "__cpp_lib_launder should have the value 201606L in c++26"
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_linalg
+#     error "__cpp_lib_linalg should be defined in c++26"
+#   endif
+#   if __cpp_lib_linalg != 202311L
+#     error "__cpp_lib_linalg should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_linalg
+#     error "__cpp_lib_linalg should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_list_remove_return_type
 #   error "__cpp_lib_list_remove_return_type should be defined in c++26"
 # endif
@@ -6418,8 +6914,8 @@
 #   ifndef __cpp_lib_out_ptr
 #     error "__cpp_lib_out_ptr should be defined in c++26"
 #   endif
-#   if __cpp_lib_out_ptr != 202106L
-#     error "__cpp_lib_out_ptr should have the value 202106L in c++26"
+#   if __cpp_lib_out_ptr != 202311L
+#     error "__cpp_lib_out_ptr should have the value 202311L in c++26"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_out_ptr
@@ -6478,6 +6974,19 @@
 # endif
 # if __cpp_lib_ranges != 202207L
 #   error "__cpp_lib_ranges should have the value 202207L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_ranges_as_const
+#     error "__cpp_lib_ranges_as_const should be defined in c++26"
+#   endif
+#   if __cpp_lib_ranges_as_const != 202207L
+#     error "__cpp_lib_ranges_as_const should have the value 202207L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_ranges_as_const
+#     error "__cpp_lib_ranges_as_const should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_ranges_as_rvalue
@@ -6654,6 +7163,19 @@
 #   error "__cpp_lib_sample should have the value 201603L in c++26"
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_saturation_arithmetic
+#     error "__cpp_lib_saturation_arithmetic should be defined in c++26"
+#   endif
+#   if __cpp_lib_saturation_arithmetic != 202311L
+#     error "__cpp_lib_saturation_arithmetic should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_saturation_arithmetic
+#     error "__cpp_lib_saturation_arithmetic should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_scoped_lock
 #   error "__cpp_lib_scoped_lock should be defined in c++26"
 # endif
@@ -6765,6 +7287,19 @@
 # endif
 # if __cpp_lib_span != 202002L
 #   error "__cpp_lib_span should have the value 202002L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_span_initializer_list
+#     error "__cpp_lib_span_initializer_list should be defined in c++26"
+#   endif
+#   if __cpp_lib_span_initializer_list != 202311L
+#     error "__cpp_lib_span_initializer_list should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_span_initializer_list
+#     error "__cpp_lib_span_initializer_list should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -6973,6 +7508,19 @@
 # endif
 # if __cpp_lib_tuple_element_t != 201402L
 #   error "__cpp_lib_tuple_element_t should have the value 201402L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should be defined in c++26"
+#   endif
+#   if __cpp_lib_tuple_like != 202311L
+#     error "__cpp_lib_tuple_like should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_tuples_by_type

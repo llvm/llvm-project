@@ -298,11 +298,3 @@ multiclass ZAAddSub<string n_suffix> {
 
 defm SVADD : ZAAddSub<"add">;
 defm SVSUB : ZAAddSub<"sub">;
-
-//
-// Spill and fill of ZT0
-//
-let TargetGuard = "sme2" in {
-  def SVLDR_ZT : Inst<"svldr_zt", "viQ", "", MergeNone, "aarch64_sme_ldr_zt", [IsOverloadNone, IsStreamingCompatible, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>]>;
-  def SVSTR_ZT : Inst<"svstr_zt", "vi%", "", MergeNone, "aarch64_sme_str_zt", [IsOverloadNone, IsStreamingCompatible, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>]>;
-}

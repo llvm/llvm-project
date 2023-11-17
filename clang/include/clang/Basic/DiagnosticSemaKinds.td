@@ -5655,9 +5655,9 @@ def err_unexpanded_parameter_pack : Error<
   "%select{expression|base type|declaration type|data member type|bit-field "
   "size|static assertion|fixed underlying type|enumerator value|"
   "using declaration|friend declaration|qualifier|initializer|default argument|"
-  "non-type template parameter type|exception type|partial specialization|"
-  "__if_exists name|__if_not_exists name|lambda|block|type constraint|"
-  "requirement|requires clause}0 "
+  "non-type template parameter type|exception type|explicit specialization|"
+  "partial specialization|__if_exists name|__if_not_exists name|lambda|block|"
+  "type constraint|requirement|requires clause}0 "
   "contains%plural{0: an|:}1 unexpanded parameter pack"
   "%plural{0:|1: %2|2:s %2 and %3|:s %2, %3, ...}1">;
 
@@ -6412,7 +6412,7 @@ def warn_superclass_variable_sized_type_not_at_end : Warning<
   " in superclass %3">, InGroup<ObjCFlexibleArray>;
 
 def err_counted_by_attr_not_on_flexible_array_member : Error<
-  "'counted_by' only applies to flexible array members">;
+  "'counted_by' only applies to C99 flexible array members">;
 def err_counted_by_attr_refers_to_flexible_array : Error<
   "'counted_by' cannot refer to the flexible array %0">;
 def err_counted_by_must_be_in_structure : Error<
@@ -11590,6 +11590,10 @@ def err_conflicting_aligned_options : Error <
 >;
 def err_coro_invalid_addr_of_label : Error<
   "the GNU address of label extension is not allowed in coroutines."
+>;
+def err_coroutine_return_type : Error<
+  "function returns a type %0 makred with [[clang::coro_return_type]] but is neither a coroutine nor a coroutine wrapper; "
+  "non-coroutines should be marked with [[clang::coro_wrapper]] to allow returning coroutine return type"
 >;
 } // end of coroutines issue category
 

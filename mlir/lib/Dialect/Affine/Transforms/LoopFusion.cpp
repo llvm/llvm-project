@@ -896,6 +896,16 @@ public:
         if (fusedLoopInsPoint == nullptr)
           continue;
 
+        // It's possible this fusion is at an inner depth (i.e., there are
+        // common surrounding affine loops for the source and destination for
+        // ops). We need to get this number because the call to canFuseLoops
+        // needs to be passed the absolute depth. The max legal depth and the
+        // depths we try below are however *relative* and as such don't include
+        // the common depth.
+        SmallVector<AffineForOp, 4> surroundingLoops;
+        getAffineForIVs(*dstAffineForOp, &surroundingLoops);
+        unsigned numSurroundingLoops = surroundingLoops.size();
+
         // Compute the innermost common loop depth for dstNode
         // producer-consumer loads/stores.
         SmallVector<Operation *, 2> dstMemrefOps;
@@ -907,7 +917,8 @@ public:
           if (producerConsumerMemrefs.count(
                   cast<AffineWriteOpInterface>(op).getMemRef()))
             dstMemrefOps.push_back(op);
-        unsigned dstLoopDepthTest = getInnermostCommonLoopDepth(dstMemrefOps);
+        unsigned dstLoopDepthTest =
+            getInnermostCommonLoopDepth(dstMemrefOps) - numSurroundingLoops;
 
         // Check the feasibility of fusing src loop nest into dst loop nest
         // at loop depths in range [1, dstLoopDepthTest].
@@ -916,9 +927,10 @@ public:
         depthSliceUnions.resize(dstLoopDepthTest);
         FusionStrategy strategy(FusionStrategy::ProducerConsumer);
         for (unsigned i = 1; i <= dstLoopDepthTest; ++i) {
-          FusionResult result = affine::canFuseLoops(
-              srcAffineForOp, dstAffineForOp,
-              /*dstLoopDepth=*/i, &depthSliceUnions[i - 1], strategy);
+          FusionResult result =
+              affine::canFuseLoops(srcAffineForOp, dstAffineForOp,
+                                   /*dstLoopDepth=*/i + numSurroundingLoops,
+                                   &depthSliceUnions[i - 1], strategy);
 
           if (result.value == FusionResult::Success)
             maxLegalFusionDepth = i;
@@ -1125,9 +1137,18 @@ public:
       SmallVector<Operation *, 2> dstLoadOpInsts;
       dstNode->getLoadOpsForMemref(memref, &dstLoadOpInsts);
 
+      // It's possible this fusion is at an inner depth (i.e., there are common
+      // surrounding affine loops for the source and destination for ops). We
+      // need to get this number because the call to canFuseLoops needs to be
+      // passed the absolute depth. The max legal depth and the depths we try
+      // below are however *relative* and as such don't include the common
+      // depth.
+      SmallVector<AffineForOp, 4> surroundingLoops;
+      getAffineForIVs(*dstAffineForOp, &surroundingLoops);
+      unsigned numSurroundingLoops = surroundingLoops.size();
       SmallVector<AffineForOp, 4> dstLoopIVs;
       getAffineForIVs(*dstLoadOpInsts[0], &dstLoopIVs);
-      unsigned dstLoopDepthTest = dstLoopIVs.size();
+      unsigned dstLoopDepthTest = dstLoopIVs.size() - numSurroundingLoops;
       auto sibAffineForOp = cast<AffineForOp>(sibNode->op);
 
       // Compute loop depth and slice union for fusion.
@@ -1136,13 +1157,17 @@ public:
       unsigned maxLegalFusionDepth = 0;
       FusionStrategy strategy(memref);
       for (unsigned i = 1; i <= dstLoopDepthTest; ++i) {
-        FusionResult result = affine::canFuseLoops(
-            sibAffineForOp, dstAffineForOp,
-            /*dstLoopDepth=*/i, &depthSliceUnions[i - 1], strategy);
+        FusionResult result =
+            affine::canFuseLoops(sibAffineForOp, dstAffineForOp,
+                                 /*dstLoopDepth=*/i + numSurroundingLoops,
+                                 &depthSliceUnions[i - 1], strategy);
 
         if (result.value == FusionResult::Success)
           maxLegalFusionDepth = i;
       }
+
+      LLVM_DEBUG(llvm::dbgs() << "Max legal depth for fusion: "
+                              << maxLegalFusionDepth << '\n');
 
       // Skip if fusion is not feasible at any loop depths.
       if (maxLegalFusionDepth == 0)
@@ -1238,9 +1263,15 @@ public:
         SmallVector<AffineForOp, 4> loops;
         getAffineForIVs(*user, &loops);
         // Skip 'use' if it is not within a loop nest.
-        if (loops.empty())
+        // Find the surrounding affine.for nested immediately within the
+        // block.
+        auto *it = llvm::find_if(loops, [&](AffineForOp loop) {
+          return loop->getBlock() == &mdg->block;
+        });
+        // Skip 'use' if it is not within a loop nest in `block`.
+        if (it == loops.end())
           continue;
-        Node *sibNode = mdg->getForOpNode(loops[0]);
+        Node *sibNode = mdg->getForOpNode(*it);
         assert(sibNode != nullptr);
         // Skip 'use' if it not a sibling to 'dstNode'.
         if (sibNode->id == dstNode->id)
@@ -1373,9 +1404,17 @@ void LoopFusion::runOnBlock(Block *block) {
 }
 
 void LoopFusion::runOnOperation() {
-  for (Region &region : getOperation()->getRegions())
-    for (Block &block : region.getBlocks())
-      runOnBlock(&block);
+  // Call fusion on every op that has at least two affine.for nests (in post
+  // order).
+  getOperation()->walk([&](Operation *op) {
+    for (Region &region : op->getRegions()) {
+      for (Block &block : region.getBlocks()) {
+        auto affineFors = block.getOps<AffineForOp>();
+        if (!affineFors.empty() && !llvm::hasSingleElement(affineFors))
+          runOnBlock(&block);
+      }
+    }
+  });
 }
 
 std::unique_ptr<Pass> mlir::affine::createLoopFusionPass(

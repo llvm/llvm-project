@@ -1372,6 +1372,19 @@ def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
 }
 
+// Clang specific/exclusive options for OpenACC.
+def openacc_macro_override
+    : Separate<["-"], "fexperimental-openacc-macro-override">,
+      Visibility<[ClangOption, CC1Option]>,
+      Group<f_Group>,
+      HelpText<"Overrides the _OPENACC macro value for experimental testing "
+               "during OpenACC support development">;
+def openacc_macro_override_EQ
+    : Joined<["-"], "fexperimental-openacc-macro-override=">,
+      Alias<openacc_macro_override>;
+
+// End Clang specific/exclusive options for OpenACC.
+
 def libomptarget_amdgpu_bc_path_EQ : Joined<["--"], "libomptarget-amdgpu-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-amdgcn bitcode library">;
 def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path=">, Group<i_Group>,
@@ -2133,7 +2146,7 @@ defm fixed_point : BoolFOption<"fixed-point",
   LangOpts<"FixedPoint">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption], " fixed point types">>, ShouldParseIf<!strconcat("!", cplusplus.KeyPath)>;
+  BothFlags<[], [ClangOption], " fixed point types">>;
 defm cxx_static_destructors : BoolFOption<"c++-static-destructors",
   LangOpts<"RegisterStaticDestructors">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
@@ -3357,6 +3370,14 @@ def fno_openmp_target_debug : Flag<["-"], "fno-openmp-target-debug">;
 } // let Group = f_Group
 } // let Visibility = [ClangOption, CC1Option, FC1Option]
 } // let Flags = [NoArgumentUnused]
+
+//===----------------------------------------------------------------------===//
+// FlangOption + FC1 + ClangOption + CC1Option
+//===----------------------------------------------------------------------===//
+let Visibility = [FC1Option, FlangOption, CC1Option, ClangOption] in {
+def fopenacc : Flag<["-"], "fopenacc">, Group<f_Group>,
+  HelpText<"Enable OpenACC">;
+} // let Visibility = [FC1Option, FlangOption, CC1Option, ClangOption]
 
 //===----------------------------------------------------------------------===//
 // Optimisation remark options
@@ -5269,7 +5290,8 @@ def resource_dir : Separate<["-"], "resource-dir">,
 def resource_dir_EQ : Joined<["-"], "resource-dir=">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   Alias<resource_dir>;
-def rpath : Separate<["-"], "rpath">, Flags<[LinkerInput]>, Group<Link_Group>;
+def rpath : Separate<["-"], "rpath">, Flags<[LinkerInput]>, Group<Link_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def rtlib_EQ : Joined<["-", "--"], "rtlib=">, Visibility<[ClangOption, CLOption]>,
   HelpText<"Compiler runtime library to use">;
 def frtlib_add_rpath: Flag<["-"], "frtlib-add-rpath">, Flags<[NoArgumentUnused]>,
@@ -5320,7 +5342,8 @@ def segs__read__only__addr : Separate<["-"], "segs_read_only_addr">;
 def segs__read__write__addr : Separate<["-"], "segs_read_write_addr">;
 def segs__read__ : Joined<["-"], "segs_read_">;
 def shared_libgcc : Flag<["-"], "shared-libgcc">;
-def shared : Flag<["-", "--"], "shared">, Group<Link_Group>;
+def shared : Flag<["-", "--"], "shared">, Group<Link_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def single__module : Flag<["-"], "single_module">;
 def specs_EQ : Joined<["-", "--"], "specs=">, Group<Link_Group>;
 def specs : Separate<["-", "--"], "specs">, Flags<[Unsupported]>;
@@ -5330,6 +5353,7 @@ def start_no_unused_arguments : Flag<["--"], "start-no-unused-arguments">,
 def static_libgcc : Flag<["-"], "static-libgcc">;
 def static_libstdcxx : Flag<["-"], "static-libstdc++">;
 def static : Flag<["-", "--"], "static">, Group<Link_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   Flags<[NoArgumentUnused]>;
 def std_default_EQ : Joined<["-"], "std-default=">;
 def std_EQ : Joined<["-", "--"], "std=">,
@@ -6279,8 +6303,6 @@ file}]>;
 def ffixed_line_length_VALUE : Joined<["-"], "ffixed-line-length-">, Group<f_Group>, Alias<ffixed_line_length_EQ>;
 def fconvert_EQ : Joined<["-"], "fconvert=">, Group<f_Group>,
   HelpText<"Set endian conversion of data for unformatted files">;
-def fopenacc : Flag<["-"], "fopenacc">, Group<f_Group>,
-  HelpText<"Enable OpenACC">;
 def fdefault_double_8 : Flag<["-"],"fdefault-double-8">, Group<f_Group>,
   HelpText<"Set the default double precision kind to an 8 byte wide type">;
 def fdefault_integer_8 : Flag<["-"],"fdefault-integer-8">, Group<f_Group>,
@@ -6812,9 +6834,6 @@ def vectorize_loops : Flag<["-"], "vectorize-loops">,
 def vectorize_slp : Flag<["-"], "vectorize-slp">,
   HelpText<"Run the SLP vectorization passes">,
   MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;
-def dependent_lib : Joined<["--"], "dependent-lib=">,
-  HelpText<"Add dependent library">,
-  MarshallingInfoStringVector<CodeGenOpts<"DependentLibraries">>;
 def linker_option : Joined<["--"], "linker-option=">,
   HelpText<"Add linker option">,
   MarshallingInfoStringVector<CodeGenOpts<"LinkerOptions">>;
@@ -7384,6 +7403,11 @@ def pic_level : Separate<["-"], "pic-level">,
 def pic_is_pie : Flag<["-"], "pic-is-pie">,
   HelpText<"File is for a position independent executable">,
   MarshallingInfoFlag<LangOpts<"PIE">>;
+
+
+def dependent_lib : Joined<["--"], "dependent-lib=">,
+  HelpText<"Add dependent library">,
+  MarshallingInfoStringVector<CodeGenOpts<"DependentLibraries">>;
 
 } // let Visibility = [CC1Option, FC1Option]
 

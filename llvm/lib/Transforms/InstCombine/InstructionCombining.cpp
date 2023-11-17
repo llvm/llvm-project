@@ -1185,6 +1185,8 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
       break;
     case Instruction::Xor:
       replaceInstUsesWith(cast<Instruction>(*U), I);
+      // Add to worklist for DCE.
+      addToWorklist(cast<Instruction>(U));
       break;
     default:
       llvm_unreachable("Got unexpected user - out of sync with "
@@ -4365,8 +4367,7 @@ static bool combineInstructionsOverFunction(
     Function &F, InstructionWorklist &Worklist, AliasAnalysis *AA,
     AssumptionCache &AC, TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
-    ProfileSummaryInfo *PSI, unsigned MaxIterations, bool VerifyFixpoint,
-    LoopInfo *LI) {
+    ProfileSummaryInfo *PSI, LoopInfo *LI, const InstCombineOptions &Opts) {
   auto &DL = F.getParent()->getDataLayout();
 
   /// Builder - This is an IRBuilder that automatically inserts new
@@ -4392,8 +4393,8 @@ static bool combineInstructionsOverFunction(
   while (true) {
     ++Iteration;
 
-    if (Iteration > MaxIterations && !VerifyFixpoint) {
-      LLVM_DEBUG(dbgs() << "\n\n[IC] Iteration limit #" << MaxIterations
+    if (Iteration > Opts.MaxIterations && !Opts.VerifyFixpoint) {
+      LLVM_DEBUG(dbgs() << "\n\n[IC] Iteration limit #" << Opts.MaxIterations
                         << " on " << F.getName()
                         << " reached; stopping without verifying fixpoint\n");
       break;
@@ -4412,10 +4413,10 @@ static bool combineInstructionsOverFunction(
       break;
 
     MadeIRChange = true;
-    if (Iteration > MaxIterations) {
+    if (Iteration > Opts.MaxIterations) {
       report_fatal_error(
           "Instruction Combining did not reach a fixpoint after " +
-          Twine(MaxIterations) + " iterations");
+          Twine(Opts.MaxIterations) + " iterations");
     }
   }
 
@@ -4466,8 +4467,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
 
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                       BFI, PSI, Options.MaxIterations,
-                                       Options.VerifyFixpoint, LI))
+                                       BFI, PSI, LI, Options))
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
 
@@ -4516,9 +4516,7 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
       nullptr;
 
   return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                         BFI, PSI,
-                                         InstCombineDefaultMaxIterations,
-                                         /*VerifyFixpoint */ false, LI);
+                                         BFI, PSI, LI, InstCombineOptions());
 }
 
 char InstructionCombiningPass::ID = 0;
