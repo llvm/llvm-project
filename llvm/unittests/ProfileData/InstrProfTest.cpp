@@ -71,8 +71,6 @@ static const char callee3[] = "callee3";
 static const char callee4[] = "callee4";
 static const char callee5[] = "callee5";
 static const char callee6[] = "callee6";
-static const char callee7[] = "callee7";
-static const char callee8[] = "callee8";
 
 static const auto Err = [](Error E) {
   consumeError(std::move(E));
@@ -118,7 +116,7 @@ private:
         {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
     static std::vector<InstrProfValueData> FuncVD2 = {{uint64_t(callee1), 1},
                                                       {uint64_t(callee2), 2}};
-    static std::vector<InstrProfValueData> FuncVD3 = {{uint64_t(callee7), 1}};
+    static std::vector<InstrProfValueData> FuncVD3 = {{uint64_t(callee1), 1}};
     VDArray FuncVD = {FuncVD0, {}, FuncVD2, FuncVD3};
     return FuncVD;
   }
@@ -186,7 +184,6 @@ public:
     Writer.addRecord({"callee1", 0x1235, {3, 4}}, Err);
     Writer.addRecord({"callee2", 0x1235, {3, 4}}, Err);
     Writer.addRecord({"callee3", 0x1235, {3, 4}}, Err);
-    Writer.addRecord({"callee7", 0x1235, {3, 4}}, Err);
 
     // Set writer endianness.
     Writer.setValueProfDataEndianness(Endianness);
@@ -1133,8 +1130,8 @@ static VDArray getFuncVDArrayForSerializationTest() {
                                                 {uint64_t(callee3), 1000},
                                                 {uint64_t(callee4), 5500}};
 
-  static std::vector<InstrProfValueData> VD3 = {{uint64_t(callee7), 1800},
-                                                {uint64_t(callee8), 2000}};
+  static std::vector<InstrProfValueData> VD3 = {{uint64_t(callee2), 1800},
+                                                {uint64_t(callee3), 2000}};
   // No value profile at the last site.
   return VDArray{VD0, VD1, VD2, VD3, {}};
 }
