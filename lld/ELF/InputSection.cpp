@@ -242,7 +242,8 @@ InputSection *InputSectionBase::getLinkOrderDep() const {
 }
 
 // Find a symbol that encloses a given location.
-Defined *InputSectionBase::getEnclosingSymbol(uint64_t offset, uint8_t type) {
+Defined *InputSectionBase::getEnclosingSymbol(uint64_t offset,
+                                              uint8_t type) const {
   for (Symbol *b : file->getSymbols())
     if (Defined *d = dyn_cast<Defined>(b))
       if (d->section == this && d->value <= offset &&
@@ -252,7 +253,7 @@ Defined *InputSectionBase::getEnclosingSymbol(uint64_t offset, uint8_t type) {
 }
 
 // Returns an object file location string. Used to construct an error message.
-std::string InputSectionBase::getLocation(uint64_t offset) {
+std::string InputSectionBase::getLocation(uint64_t offset) const {
   std::string secAndOffset =
       (name + "+0x" + Twine::utohexstr(offset) + ")").str();
 
@@ -273,7 +274,8 @@ std::string InputSectionBase::getLocation(uint64_t offset) {
 //   foo.c:42 (/home/alice/possibly/very/long/path/foo.c:42)
 //
 //  Returns an empty string if there's no way to get line info.
-std::string InputSectionBase::getSrcMsg(const Symbol &sym, uint64_t offset) {
+std::string InputSectionBase::getSrcMsg(const Symbol &sym,
+                                        uint64_t offset) const {
   return file->getSrcMsg(sym, *this, offset);
 }
 
@@ -286,7 +288,7 @@ std::string InputSectionBase::getSrcMsg(const Symbol &sym, uint64_t offset) {
 // or
 //
 //   path/to/foo.o:(function bar) in archive path/to/bar.a
-std::string InputSectionBase::getObjMsg(uint64_t off) {
+std::string InputSectionBase::getObjMsg(uint64_t off) const {
   std::string filename = std::string(file->getName());
 
   std::string archive;
