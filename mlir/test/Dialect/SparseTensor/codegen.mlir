@@ -664,7 +664,7 @@ func.func @sparse_convert_element_type(%arg0: tensor<32xf32, #SparseVector>) -> 
 }
 
 // CHECK-LABEL: func.func @sparse_new_coo(
-// CHECK-SAME:  %[[A0:.*]]: !llvm.ptr) -> (memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{{{.*}}}>>) {
+// CHECK-SAME:  %[[A0:.*]]: !llvm.ptr) -> (memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier<#sparse{{[0-9]*}}>) {
 // CHECK-DAG:   %[[VAL_1:.*]] = arith.constant false
 // CHECK-DAG:   %[[VAL_2:.*]] = arith.constant 2 : i32
 // CHECK-DAG:   %[[VAL_3:.*]] = arith.constant 1 : index
@@ -712,7 +712,7 @@ func.func @sparse_new_coo(%arg0: !llvm.ptr) -> tensor<?x?xf32, #Coo> {
 }
 
 // CHECK-LABEL: func.func @sparse_new_coo_permute_no(
-// CHECK-SAME:  %[[A0:.*]]: !llvm.ptr) -> (memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{{{.*}}}>>) {
+// CHECK-SAME:  %[[A0:.*]]: !llvm.ptr) -> (memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier<#sparse{{[0-9]*}}>) {
 // CHECK-DAG:   %[[VAL_1:.*]] = arith.constant 2 : i32
 // CHECK-DAG:   %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK-DAG:   %[[VAL_3:.*]] = arith.constant 0 : index
