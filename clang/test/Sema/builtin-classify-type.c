@@ -11,7 +11,8 @@ enum gcc_type_class {
   function_type_class, method_type_class,
   record_type_class, union_type_class,
   array_type_class, string_type_class,
-  lang_type_class
+  lang_type_class, opaque_type_class,
+  bitint_type_class
 };
 
 void foo(void) {
@@ -45,6 +46,7 @@ void foo(void) {
   vint32_t3 vt5;
   typedef _BitInt(64) vint64_t3 __attribute__((vector_size(16)));
   vint64_t3 vt6;
+  _BitInt(16) bitint;
 
   _Atomic int atomic_i;
   _Atomic double atomic_d;
@@ -70,6 +72,7 @@ void foo(void) {
   int a17[__builtin_classify_type(atomic_d) == real_type_class ? 1 : -1];
   int a18[__builtin_classify_type(complex_i) == complex_type_class ? 1 : -1];
   int a19[__builtin_classify_type(complex_d) == complex_type_class ? 1 : -1];
+  int a20[__builtin_classify_type(bitint) == bitint_type_class ? 1 : -1];
 }
 
 extern int (^p)(void);
