@@ -67,6 +67,11 @@ void populateReassociativeReshapeFoldingPatterns(RewritePatternSet &patterns);
 void populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
                                      bool foldSingleUseOnly = false);
 
+/// Populates `patterns` with patterns that decompose `tensor.concat` into
+/// `tensor.empty` of a tensor of the concatenated size, followed by a chain
+/// of `tensor.insert_slice` operations on the inputs.
+void populateDecomposeTensorConcatPatterns(RewritePatternSet &patterns);
+
 /// Populates `patterns` with patterns that fold operations like `tensor.pad`
 /// and `tensor.extract_slice` into `tensor.pack` and `tensor.unpack` operations
 /// respectively.

@@ -122,6 +122,66 @@ def Tensor_CastOp : Tensor_Op<"cast", [
 }
 
 //===----------------------------------------------------------------------===//
+// ConcatOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_ConcatOp : Tensor_Op<"concat",
+    [Pure,
+     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+  let summary = "tensor concatenation operation";
+  let description = [{
+    The "concat" operation constructs a tensor out of a variadic list of input
+    tensors, concatenated along a static dimension. All inputs and the result
+    type must share the same rank.
+
+    `dim` specifies the dimension along which to concatenate. The size of the
+    concatenated dimension in the result must be equal to the sum of the sizes
+    of the inputs along that dimension. All other dimensions in both the inputs
+    and result must be the same size.
+
+    Example:
+
+    ```mlir
+    %0 = tensor.concat dim(0) %0, %1, %2 :
+        (tensor<3x6xf32>, tensor<3x6xf32>, tensor<1x6xf32) -> tensor<7x6xf32>
+
+    // Dynamic + dynamic -> static
+    %0 = tensor.concat dim(1) %0, %1, %2 :
+        (tensor<3x?xf32>, tensor<3x2xf32>, tensor<3x?xf32) -> tensor<3x10xf32>
+    ```
+  }];
+  let arguments = (ins I64Attr:$dim,
+                       Variadic<AnyRankedTensor>:$inputs);
+  let results = (outs AnyRankedTensor:$result);
+  let assemblyFormat = [{
+    `dim` `(` $dim `)` $inputs attr-dict
+    `:` functional-type(operands, results)
+  }];
+
+  let builders = [
+    // Builder with an inferred result type.
+    OpBuilder<(ins "int64_t":$dim, "ValueRange":$inputs)>,
+  ];
+
+  let extraClassDeclaration = [{
+    // Helper to infer the concatenated result type for the given list of input
+    // types, being concatenated along `dim`. Because concatenation can specify
+    // more static information than can automatically be inferred,
+    // InferTypeOpInterface is not used.
+    static FailureOr<RankedTensorType> inferResultType(int64_t dim, TypeRange inputTypes);
+
+    RankedTensorType getResultType() {
+      return ::llvm::cast<RankedTensorType>(getResult().getType());
+    }
+  }];
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // DimOp
 //===----------------------------------------------------------------------===//
 
