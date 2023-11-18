@@ -244,6 +244,16 @@ template<class T> complex<T> tanh (const complex<T>&);
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 26
+// Tuple interface [complex.tuple]
+#  include <__fwd/get.h>
+#  include <__tuple/tuple_element.h>
+#  include <__tuple/tuple_size.h>
+#  include <__type_traits/remove_cvref.h>
+#  include <__type_traits/integral_constant.h>
+#  include <__utility/move.h>
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template<class _Tp> class _LIBCPP_TEMPLATE_VIS complex;
@@ -1563,7 +1573,7 @@ struct __get_complex
   template <typename _Tp>
   struct to_array_type<complex<_Tp>>
   {
-    using type = _Tp[2];
+    using type _LIBCPP_NODEBUG = _Tp[2];
   };
 
   template <class _Tp>
@@ -1572,8 +1582,7 @@ struct __get_complex
   get(_Tp&& __z) _NOEXCEPT
   {
     using _Array_type = typename __get_complex::to_array_type<std::remove_cvref_t<_Tp>>::type;
-    using _Forwarded_array_type = decltype(forward_like<_Tp>(declval<_Array_type>()));
-    return reinterpret_cast<_Forwarded_array_type>(__z)[_Ip];
+    return reinterpret_cast<_ForwardLike<_Tp, _Array_type>>(__z)[_Ip];
   }
 };
 
