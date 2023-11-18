@@ -45,10 +45,10 @@ struct __tuple_like_impl<array<_Tp, _Size> > : true_type {};
 template <class _Ip, class _Sp, ranges::subrange_kind _Kp>
 struct __tuple_like_impl<ranges::subrange<_Ip, _Sp, _Kp> > : true_type {};
 
-#if _LIBCPP_STD_VER >= 26
+#  if _LIBCPP_STD_VER >= 26
 template <class _Tp>
 struct __tuple_like_impl<complex<_Tp> > : true_type {};
-#endif
+#  endif
 
 template <class _Tp>
 concept __tuple_like = __tuple_like_impl<remove_cvref_t<_Tp>>::value;
