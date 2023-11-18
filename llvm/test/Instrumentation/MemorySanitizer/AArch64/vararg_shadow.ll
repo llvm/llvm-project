@@ -304,8 +304,8 @@ define linkonce_odr dso_local void @_Z4testI10Int64Int64EvT_([2 x i64] %arg.coer
 ; CHECK-NEXT:    store [2 x i64] [[TMP19]], ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    store [2 x i64] [[TMP19]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
-; CHECK-NEXT:    store [2 x i64] [[TMP19]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 192) to ptr), align 8
-; CHECK-NEXT:    store i64 16, ptr @__msan_va_arg_overflow_size_tls, align 8
+; CHECK-NEXT:    store [2 x i64] [[TMP19]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    store i64 0, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void ([2 x i64], i32, ...) @_Z5test2I10Int64Int64EvT_iz([2 x i64] [[DOTFCA_1_INSERT3]], i32 noundef 1, [2 x i64] [[DOTFCA_1_INSERT3]])
 ; CHECK-NEXT:    ret void
 ;
@@ -370,8 +370,8 @@ define linkonce_odr dso_local void @_Z4testI12DoubleDoubleEvT_([2 x double] alig
 ; CHECK-NEXT:    store [2 x i64] [[TMP19]], ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    store [2 x i64] [[TMP19]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
-; CHECK-NEXT:    store [2 x i64] [[TMP19]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 192) to ptr), align 8
-; CHECK-NEXT:    store i64 16, ptr @__msan_va_arg_overflow_size_tls, align 8
+; CHECK-NEXT:    store [2 x i64] [[TMP19]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 96) to ptr), align 8
+; CHECK-NEXT:    store i64 0, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void ([2 x double], i32, ...) @_Z5test2I12DoubleDoubleEvT_iz([2 x double] alignstack(8) [[DOTFCA_1_INSERT3]], i32 noundef 1, [2 x double] alignstack(8) [[DOTFCA_1_INSERT3]])
 ; CHECK-NEXT:    ret void
 ;
@@ -466,8 +466,8 @@ define linkonce_odr dso_local void @_Z4testI7Double4EvT_([4 x double] alignstack
 ; CHECK-NEXT:    store [4 x i64] [[TMP35]], ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    store [4 x i64] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 40) to ptr), align 8
-; CHECK-NEXT:    store [4 x i64] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 192) to ptr), align 8
-; CHECK-NEXT:    store i64 32, ptr @__msan_va_arg_overflow_size_tls, align 8
+; CHECK-NEXT:    store [4 x i64] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 128) to ptr), align 8
+; CHECK-NEXT:    store i64 0, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void ([4 x double], i32, ...) @_Z5test2I7Double4EvT_iz([4 x double] alignstack(8) [[DOTFCA_3_INSERT7]], i32 noundef 1, [4 x double] alignstack(8) [[DOTFCA_3_INSERT7]])
 ; CHECK-NEXT:    ret void
 ;
@@ -542,8 +542,8 @@ define linkonce_odr dso_local void @_Z4testI11DoubleFloatEvT_([2 x i64] %arg.coe
 ; CHECK-NEXT:    store [2 x i64] [[TMP19]], ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    store [2 x i64] [[TMP19]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
-; CHECK-NEXT:    store [2 x i64] [[TMP19]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 192) to ptr), align 8
-; CHECK-NEXT:    store i64 16, ptr @__msan_va_arg_overflow_size_tls, align 8
+; CHECK-NEXT:    store [2 x i64] [[TMP19]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    store i64 0, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void ([2 x i64], i32, ...) @_Z5test2I11DoubleFloatEvT_iz([2 x i64] [[DOTFCA_1_INSERT3]], i32 noundef 1, [2 x i64] [[DOTFCA_1_INSERT3]])
 ; CHECK-NEXT:    ret void
 ;
@@ -608,8 +608,8 @@ define linkonce_odr dso_local void @_Z4testI11LongDouble2EvT_([2 x fp128] aligns
 ; CHECK-NEXT:    store [2 x i128] [[TMP19]], ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    store [2 x i128] [[TMP19]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 40) to ptr), align 8
-; CHECK-NEXT:    store [2 x i128] [[TMP19]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 192) to ptr), align 8
-; CHECK-NEXT:    store i64 32, ptr @__msan_va_arg_overflow_size_tls, align 8
+; CHECK-NEXT:    store [2 x i128] [[TMP19]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 96) to ptr), align 8
+; CHECK-NEXT:    store i64 0, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void ([2 x fp128], i32, ...) @_Z5test2I11LongDouble2EvT_iz([2 x fp128] alignstack(16) [[DOTFCA_1_INSERT5]], i32 noundef 1, [2 x fp128] alignstack(16) [[DOTFCA_1_INSERT5]])
 ; CHECK-NEXT:    ret void
 ;
@@ -704,8 +704,8 @@ define linkonce_odr dso_local void @_Z4testI11LongDouble4EvT_([4 x fp128] aligns
 ; CHECK-NEXT:    store [4 x i128] [[TMP35]], ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    store [4 x i128] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 72) to ptr), align 8
-; CHECK-NEXT:    store [4 x i128] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 192) to ptr), align 8
-; CHECK-NEXT:    store i64 64, ptr @__msan_va_arg_overflow_size_tls, align 8
+; CHECK-NEXT:    store [4 x i128] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 128) to ptr), align 8
+; CHECK-NEXT:    store i64 0, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void ([4 x fp128], i32, ...) @_Z5test2I11LongDouble4EvT_iz([4 x fp128] alignstack(16) [[DOTFCA_3_INSERT7]], i32 noundef 1, [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT7]])
 ; CHECK-NEXT:    ret void
 ;
@@ -1850,6 +1850,7 @@ define linkonce_odr dso_local void @_Z4test2I11LongDouble4EvT_([4 x fp128] align
 ; CHECK-NEXT:    store [4 x i128] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 584) to ptr), align 8
 ; CHECK-NEXT:    store [4 x i128] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 648) to ptr), align 8
 ; CHECK-NEXT:    store [4 x i128] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 712) to ptr), align 8
+; CHECK-NEXT:    store [4 x i128] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 128) to ptr), align 8
 ; CHECK-NEXT:    store [4 x i128] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 192) to ptr), align 8
 ; CHECK-NEXT:    store [4 x i128] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 256) to ptr), align 8
 ; CHECK-NEXT:    store [4 x i128] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 320) to ptr), align 8
@@ -1860,7 +1861,7 @@ define linkonce_odr dso_local void @_Z4test2I11LongDouble4EvT_([4 x fp128] align
 ; CHECK-NEXT:    store [4 x i128] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 640) to ptr), align 8
 ; CHECK-NEXT:    store [4 x i128] [[TMP35]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 704) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 8 inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 768) to ptr), i8 0, i32 32, i1 false)
-; CHECK-NEXT:    store i64 1280, ptr @__msan_va_arg_overflow_size_tls, align 8
+; CHECK-NEXT:    store i64 1216, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void ([4 x fp128], i32, ...) @_Z5test2I11LongDouble4EvT_iz([4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], i32 noundef 20, [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]], [4 x fp128] alignstack(16) [[DOTFCA_3_INSERT121]])
 ; CHECK-NEXT:    ret void
 ;
