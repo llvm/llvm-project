@@ -128,8 +128,9 @@ constexpr bool test() {
   { // check that an iterator is returned with a borrowing range
     std::array in{1, 2, 3, 4};
     std::array<int, 4> out;
-    std::same_as<std::ranges::in_out_result<int*, int*>> auto ret = std::ranges::copy(std::views::all(in), out.data());
-    assert(ret.in == in.data() + 4);
+    std::same_as<std::ranges::in_out_result<std::array<int, 4>::iterator, int*>> auto ret =
+        std::ranges::copy(std::views::all(in), out.data());
+    assert(ret.in == in.end());
     assert(ret.out == out.data() + 4);
     assert(in == out);
   }

@@ -105,7 +105,7 @@ subroutine scalar_character_2(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPscalar_character_2(
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFscalar_character_2Ex"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQcl.68656C6C6F"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX68656C6C6F"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:  hlfir.assign %[[VAL_5]]#0 to %[[VAL_2]]#0 : !fir.ref<!fir.char<1,5>>, !fir.boxchar<1>
 
 ! -----------------------------------------------------------------------------

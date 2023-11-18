@@ -131,19 +131,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
   const Function *CurFunc = S.Current->getFunction();
   assert(CurFunc);
 
-  // Certain builtin functions are declared as func-name(...), so the
-  // parameters are checked in Sema and only available through the CallExpr.
-  // The interp::Function we create for them has 0 parameters, so we need to
-  // remove them from the stack by checking the CallExpr.
-  // FIXME: This is potentially just a special case and could be handled more
-  // generally with the code just below?
-  if (CurFunc->needsRuntimeArgPop(S.getCtx())) {
-    const auto *CE = cast<CallExpr>(S.Current->getExpr(OpPC));
-    for (int32_t I = CE->getNumArgs() - 1; I >= 0; --I) {
-      popArg(S, CE->getArg(I));
-    }
+  if (CurFunc->isUnevaluatedBuiltin())
     return;
-  }
 
   if (S.Current->Caller && CurFunc->isVariadic()) {
     // CallExpr we're look for is at the return PC of the current function, i.e.

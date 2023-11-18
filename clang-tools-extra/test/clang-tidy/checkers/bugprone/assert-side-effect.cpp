@@ -84,5 +84,27 @@ int main() {
   msvc_assert(mc2 = mc);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in msvc_assert() condition discarded in release builds
 
+  struct OperatorTest {
+    int operator<<(int i) const { return i; }
+    int operator<<(int i) { return i; }
+    int operator+=(int i) const { return i; }
+    int operator+=(int i) { return i; }
+  };
+
+  const OperatorTest const_instance;
+  assert(const_instance << 1);
+  assert(const_instance += 1);
+
+  OperatorTest non_const_instance;
+  assert(static_cast<const OperatorTest>(non_const_instance) << 1);
+  assert(static_cast<const OperatorTest>(non_const_instance) += 1);
+  assert(non_const_instance << 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
+  assert(non_const_instance += 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
+
+  assert(5<<1);
+  assert(5>>1);
+
   return 0;
 }

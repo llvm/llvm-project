@@ -120,6 +120,36 @@ define i32 @test5(i32 %A, i32 %B) {
   ret i32 %D
 }
 
+define i32 @test5_both_nsw(i32 %A, i32 %B) {
+; CHECK-LABEL: @test5_both_nsw(
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %C = sub nsw i32 0, %A
+  %D = add nsw i32 %C, %B
+  ret i32 %D
+}
+
+define i32 @test5_neg_nsw(i32 %A, i32 %B) {
+; CHECK-LABEL: @test5_neg_nsw(
+; CHECK-NEXT:    [[D:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %C = sub nsw i32 0, %A
+  %D = add i32 %C, %B
+  ret i32 %D
+}
+
+define i32 @test5_add_nsw(i32 %A, i32 %B) {
+; CHECK-LABEL: @test5_add_nsw(
+; CHECK-NEXT:    [[D:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %C = sub i32 0, %A
+  %D = add nsw i32 %C, %B
+  ret i32 %D
+}
+
 define <2 x i8> @neg_op0_vec_undef_elt(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @neg_op0_vec_undef_elt(
 ; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> [[B:%.*]], [[A:%.*]]
@@ -410,11 +440,9 @@ define <2 x i8> @test18vec_nsw(<2 x i8> %A) {
   ret <2 x i8> %C
 }
 
-; TODO: fix ValueTracking overflow check for non-splat vector, could be attached nsw
-; this shouldn't overflow.
 define <2 x i8> @test18vec_nsw_false(<2 x i8> %A) {
 ; CHECK-LABEL: @test18vec_nsw_false(
-; CHECK-NEXT:    [[C:%.*]] = sub <2 x i8> <i8 -125, i8 -126>, [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = sub nsw <2 x i8> <i8 -125, i8 -126>, [[A:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
   %B = xor <2 x i8> %A, <i8 -1, i8 -1>
@@ -3009,7 +3037,7 @@ define <2 x i32> @dec_zext_add_nonzero_vec_poison2(<2 x i8> %x) {
 ; CHECK-NEXT:    [[O:%.*]] = or <2 x i8> [[X:%.*]], <i8 8, i8 8>
 ; CHECK-NEXT:    [[A:%.*]] = add nsw <2 x i8> [[O]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    [[B:%.*]] = zext <2 x i8> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], <i32 1, i32 poison>
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw <2 x i32> [[B]], <i32 1, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %o = or <2 x i8> %x, <i8 8, i8 8>

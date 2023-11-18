@@ -52,28 +52,28 @@ class ApplyPatternsOp(ApplyPatternsOp):
 
 @_ods_cext.register_operation(_Dialect, replace=True)
 class GetParentOp(GetParentOp):
-  def __init__(
-      self,
-      result_type: Type,
-      target: Union[Operation, Value],
-      *,
-      isolated_from_above: bool = False,
-      op_name: Optional[str] = None,
-      deduplicate: bool = False,
-      nth_parent: int = 1,
-      loc=None,
-      ip=None,
-  ):
-    super().__init__(
-        result_type,
-        _get_op_result_or_value(target),
-        isolated_from_above=isolated_from_above,
-        op_name=op_name,
-        deduplicate=deduplicate,
-        nth_parent=nth_parent,
-        loc=loc,
-        ip=ip,
-    )
+    def __init__(
+        self,
+        result_type: Type,
+        target: Union[Operation, Value],
+        *,
+        isolated_from_above: bool = False,
+        op_name: Optional[str] = None,
+        deduplicate: bool = False,
+        nth_parent: int = 1,
+        loc=None,
+        ip=None,
+    ):
+        super().__init__(
+            result_type,
+            _get_op_result_or_value(target),
+            isolated_from_above=isolated_from_above,
+            op_name=op_name,
+            deduplicate=deduplicate,
+            nth_parent=nth_parent,
+            loc=loc,
+            ip=ip,
+        )
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -151,6 +151,40 @@ class SequenceOp(SequenceOp):
             extra_bindings=extra_bindings,
         )
         self.regions[0].blocks.append(*tuple([root_type] + extra_binding_types))
+
+    @property
+    def body(self) -> Block:
+        return self.regions[0].blocks[0]
+
+    @property
+    def bodyTarget(self) -> Value:
+        return self.body.arguments[0]
+
+    @property
+    def bodyExtraArgs(self) -> BlockArgumentList:
+        return self.body.arguments[1:]
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class NamedSequenceOp(NamedSequenceOp):
+    def __init__(
+        self,
+        sym_name,
+        input_types: Sequence[Type],
+        result_types: Sequence[Type],
+        sym_visibility=None,
+        arg_attrs=None,
+        res_attrs=None
+    ):
+        function_type = FunctionType.get(input_types, result_types)
+        super().__init__(
+            sym_name=sym_name,
+            function_type=TypeAttr.get(function_type),
+            sym_visibility=sym_visibility,
+            arg_attrs=arg_attrs,
+            res_attrs=res_attrs
+        )
+        self.regions[0].blocks.append(*input_types)
 
     @property
     def body(self) -> Block:

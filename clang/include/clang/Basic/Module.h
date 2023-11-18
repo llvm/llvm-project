@@ -178,9 +178,11 @@ public:
   /// eventually be exposed, for use in "private" modules.
   std::string ExportAsModule;
 
-  /// Does this Module scope describe part of the purview of a standard named
-  /// C++ module?
-  bool isModulePurview() const {
+  /// For the debug info, the path to this module's .apinotes file, if any.
+  std::string APINotesFile;
+
+  /// Does this Module is a named module of a standard named module?
+  bool isNamedModule() const {
     switch (Kind) {
     case ModuleInterfaceUnit:
     case ModuleImplementationUnit:

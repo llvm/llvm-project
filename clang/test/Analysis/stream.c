@@ -14,6 +14,12 @@ void check_fwrite(void) {
   fclose(fp);
 }
 
+void check_fputc(void) {
+  FILE *fp = tmpfile();
+  fputc('A', fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
 void check_fseek(void) {
   FILE *fp = tmpfile();
   fseek(fp, 0, 0); // expected-warning {{Stream pointer might be NULL}}

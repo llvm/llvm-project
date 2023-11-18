@@ -1,8 +1,7 @@
-//
 // NOTE: this test requires gpu-sm80
 //
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   --sparse-compiler="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
+// DEFINE:   --sparsifier="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
 // DEFINE: %{run} = mlir-cpu-runner \
 // DEFINE:   --shared-libs=%mlir_cuda_runtime \
 // DEFINE:   --shared-libs=%mlir_c_runner_utils \
@@ -12,17 +11,10 @@
 // with RT lib (SoA COO):
 //
 // RUN: %{compile} enable-runtime-library=true"  | %{run}
-// RUN: %{compile} enable-runtime-library=true gpu-data-transfer-strategy=pinned-dma" | %{run}
-// Tracker #64316
-// RUNNOT: %{compile} enable-runtime-library=true gpu-data-transfer-strategy=zero-copy"  | %{run}
 //
 // without RT lib (AoS COO): note, may fall back to CPU
 //
-// RUN: %{compile} enable-runtime-library=false"  | %{run}
-// RUN: %{compile} enable-runtime-library=false gpu-data-transfer-strategy=pinned-dma" | %{run}
-// Tracker #64316
-// RUNNOT: %{compile} enable-runtime-library=false gpu-data-transfer-strategy=zero-copy"  | %{run}
-//
+// RUN: %{compile} enable-runtime-library=false" | %{run}
 
 #SortedCOO = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)

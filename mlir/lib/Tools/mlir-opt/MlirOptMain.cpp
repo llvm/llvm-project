@@ -90,6 +90,11 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         "emit-bytecode", cl::desc("Emit bytecode when generating output"),
         cl::location(emitBytecodeFlag), cl::init(false));
 
+    static cl::opt<bool, /*ExternalStorage=*/true> elideResourcesFromBytecode(
+        "elide-resource-data-from-bytecode",
+        cl::desc("Elide resources when generating bytecode"),
+        cl::location(elideResourceDataFromBytecodeFlag), cl::init(false));
+
     static cl::opt<std::optional<int64_t>, /*ExternalStorage=*/true,
                    BytecodeVersionParser>
         bytecodeVersion(
@@ -385,6 +390,8 @@ performActions(raw_ostream &os,
     BytecodeWriterConfig writerConfig(fallbackResourceMap);
     if (auto v = config.bytecodeVersionToEmit())
       writerConfig.setDesiredBytecodeVersion(*v);
+    if (config.shouldElideResourceDataFromBytecode())
+      writerConfig.setElideResourceDataFlag();
     return writeBytecodeToFile(op.get(), os, writerConfig);
   }
 

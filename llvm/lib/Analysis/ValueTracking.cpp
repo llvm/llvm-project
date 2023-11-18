@@ -662,16 +662,6 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
       // known bits from the RHS to V.
       Known.Zero |= RHSKnown.Zero & MaskKnown.One;
       Known.One |= RHSKnown.One & MaskKnown.One;
-      // assume(~(v & b) = a)
-    } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_c_And(m_V, m_Value(B))),
-                                   m_Value(A)))) {
-      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
-      KnownBits MaskKnown = computeKnownBits(B, Depth + 1, QueryNoAC);
-
-      // For those bits in the mask that are known to be one, we can propagate
-      // inverted known bits from the RHS to V.
-      Known.Zero |= RHSKnown.One & MaskKnown.One;
-      Known.One |= RHSKnown.Zero & MaskKnown.One;
       // assume(v | b = a)
     } else if (match(Cmp,
                      m_c_ICmp(Pred, m_c_Or(m_V, m_Value(B)), m_Value(A)))) {
@@ -682,16 +672,6 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
       // bits from the RHS to V.
       Known.Zero |= RHSKnown.Zero & BKnown.Zero;
       Known.One |= RHSKnown.One & BKnown.Zero;
-      // assume(~(v | b) = a)
-    } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_c_Or(m_V, m_Value(B))),
-                                   m_Value(A)))) {
-      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
-      KnownBits BKnown = computeKnownBits(B, Depth + 1, QueryNoAC);
-
-      // For those bits in B that are known to be zero, we can propagate
-      // inverted known bits from the RHS to V.
-      Known.Zero |= RHSKnown.One & BKnown.Zero;
-      Known.One |= RHSKnown.Zero & BKnown.Zero;
       // assume(v ^ b = a)
     } else if (match(Cmp,
                      m_c_ICmp(Pred, m_c_Xor(m_V, m_Value(B)), m_Value(A)))) {
@@ -705,19 +685,6 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
       Known.One |= RHSKnown.One & BKnown.Zero;
       Known.Zero |= RHSKnown.One & BKnown.One;
       Known.One |= RHSKnown.Zero & BKnown.One;
-      // assume(~(v ^ b) = a)
-    } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_c_Xor(m_V, m_Value(B))),
-                                   m_Value(A)))) {
-      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
-      KnownBits BKnown = computeKnownBits(B, Depth + 1, QueryNoAC);
-
-      // For those bits in B that are known to be zero, we can propagate
-      // inverted known bits from the RHS to V. For those bits in B that are
-      // known to be one, we can propagate known bits from the RHS to V.
-      Known.Zero |= RHSKnown.One & BKnown.Zero;
-      Known.One |= RHSKnown.Zero & BKnown.Zero;
-      Known.Zero |= RHSKnown.Zero & BKnown.One;
-      Known.One |= RHSKnown.One & BKnown.One;
       // assume(v << c = a)
     } else if (match(Cmp, m_c_ICmp(Pred, m_Shl(m_V, m_ConstantInt(C)),
                                    m_Value(A))) &&
@@ -729,17 +696,6 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
       RHSKnown.Zero.lshrInPlace(C);
       RHSKnown.One.lshrInPlace(C);
       Known = Known.unionWith(RHSKnown);
-      // assume(~(v << c) = a)
-    } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_Shl(m_V, m_ConstantInt(C))),
-                                   m_Value(A))) &&
-               C < BitWidth) {
-      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
-      // For those bits in RHS that are known, we can propagate them inverted
-      // to known bits in V shifted to the right by C.
-      RHSKnown.One.lshrInPlace(C);
-      Known.Zero |= RHSKnown.One;
-      RHSKnown.Zero.lshrInPlace(C);
-      Known.One |= RHSKnown.Zero;
       // assume(v >> c = a)
     } else if (match(Cmp, m_c_ICmp(Pred, m_Shr(m_V, m_ConstantInt(C)),
                                    m_Value(A))) &&
@@ -749,15 +705,6 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
       // bits in V shifted to the right by C.
       Known.Zero |= RHSKnown.Zero << C;
       Known.One |= RHSKnown.One << C;
-      // assume(~(v >> c) = a)
-    } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_Shr(m_V, m_ConstantInt(C))),
-                                   m_Value(A))) &&
-               C < BitWidth) {
-      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
-      // For those bits in RHS that are known, we can propagate them inverted
-      // to known bits in V shifted to the right by C.
-      Known.Zero |= RHSKnown.One << C;
-      Known.One |= RHSKnown.Zero << C;
     }
     break;
   case ICmpInst::ICMP_NE: {
@@ -1889,6 +1836,8 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
       if (!DemandedElts[i])
         continue;
       Constant *Element = CV->getAggregateElement(i);
+      if (isa<PoisonValue>(Element))
+        continue;
       auto *ElementCI = dyn_cast_or_null<ConstantInt>(Element);
       if (!ElementCI) {
         Known.resetAll();
@@ -4181,8 +4130,14 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     }
     case FCmpInst::FCMP_OGE:
     case FCmpInst::FCMP_ULT: {
-      if (ConstRHS->isNegative()) // TODO
-        return {nullptr, fcAllFlags};
+      if (ConstRHS->isNegative()) {
+        // fcmp oge x, -inf -> ~fcNan
+        // fcmp oge fabs(x), -inf -> ~fcNan
+        // fcmp ult x, -inf -> fcNan
+        // fcmp ult fabs(x), -inf -> fcNan
+        Mask = ~fcNan;
+        break;
+      }
 
       // fcmp oge fabs(x), +inf -> fcInf
       // fcmp oge x, +inf -> fcPosInf
@@ -4195,8 +4150,14 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     }
     case FCmpInst::FCMP_OGT:
     case FCmpInst::FCMP_ULE: {
-      if (ConstRHS->isNegative())
-        return {nullptr, fcAllFlags};
+      if (ConstRHS->isNegative()) {
+        // fcmp ogt x, -inf -> fcmp one x, -inf
+        // fcmp ogt fabs(x), -inf -> fcmp ord x, x
+        // fcmp ule x, -inf -> fcmp ueq x, -inf
+        // fcmp ule fabs(x), -inf -> fcmp uno x, x
+        Mask = IsFabs ? ~fcNan : ~(fcNegInf | fcNan);
+        break;
+      }
 
       // No value is ordered and greater than infinity.
       Mask = fcNone;
@@ -8859,9 +8820,17 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
   const APInt *C;
   if (match(V, m_APInt(C)))
     return ConstantRange(*C);
+  unsigned BitWidth = V->getType()->getScalarSizeInBits();
+
+  if (auto *VC = dyn_cast<ConstantDataVector>(V)) {
+    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
+    for (unsigned ElemIdx = 0, NElem = VC->getNumElements(); ElemIdx < NElem;
+         ++ElemIdx)
+      CR = CR.unionWith(VC->getElementAsAPInt(ElemIdx));
+    return CR;
+  }
 
   InstrInfoQuery IIQ(UseInstrInfo);
-  unsigned BitWidth = V->getType()->getScalarSizeInBits();
   ConstantRange CR = ConstantRange::getFull(BitWidth);
   if (auto *BO = dyn_cast<BinaryOperator>(V)) {
     APInt Lower = APInt(BitWidth, 0);

@@ -2050,6 +2050,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                                                   Initializer->getBeginLoc(),
                                                   Initializer->getEndLoc());
     }
+    llvm_unreachable("Unknown initialization kind");
   }();
 
   // C++11 [dcl.spec.auto]p6. Deduce the type which 'auto' stands in for.
@@ -2442,6 +2443,11 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       FullInit = Binder->getSubExpr();
 
     Initializer = FullInit.get();
+    // We don't know that we're generating an implicit initializer until now, so
+    // we have to update the initialization style as well.
+    //
+    // FIXME: it would be nice to determine the correct initialization style
+    // earlier so InitStyle doesn't need adjusting.
     if (InitStyle == CXXNewInitializationStyle::None && Initializer) {
       InitStyle = CXXNewInitializationStyle::Implicit;
     }
@@ -4498,6 +4504,36 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       From = ImpCastExprToType(From, ToType, CK_FloatingToIntegral, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
                  .get();
+    break;
+
+  case ICK_Fixed_Point_Conversion:
+    assert((FromType->isFixedPointType() || ToType->isFixedPointType()) &&
+           "Attempting implicit fixed point conversion without a fixed "
+           "point operand");
+    if (FromType->isFloatingType())
+      From = ImpCastExprToType(From, ToType, CK_FloatingToFixedPoint,
+                               VK_PRValue,
+                               /*BasePath=*/nullptr, CCK).get();
+    else if (ToType->isFloatingType())
+      From = ImpCastExprToType(From, ToType, CK_FixedPointToFloating,
+                               VK_PRValue,
+                               /*BasePath=*/nullptr, CCK).get();
+    else if (FromType->isIntegralType(Context))
+      From = ImpCastExprToType(From, ToType, CK_IntegralToFixedPoint,
+                               VK_PRValue,
+                               /*BasePath=*/nullptr, CCK).get();
+    else if (ToType->isIntegralType(Context))
+      From = ImpCastExprToType(From, ToType, CK_FixedPointToIntegral,
+                               VK_PRValue,
+                               /*BasePath=*/nullptr, CCK).get();
+    else if (ToType->isBooleanType())
+      From = ImpCastExprToType(From, ToType, CK_FixedPointToBoolean,
+                               VK_PRValue,
+                               /*BasePath=*/nullptr, CCK).get();
+    else
+      From = ImpCastExprToType(From, ToType, CK_FixedPointCast,
+                               VK_PRValue,
+                               /*BasePath=*/nullptr, CCK).get();
     break;
 
   case ICK_Compatible_Conversion:

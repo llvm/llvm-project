@@ -267,12 +267,6 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
       processType(TVal->getType());
     }
   }
-
-  for (auto *N : SP->getRetainedNodes()) {
-    if (auto *Var = dyn_cast<DILocalVariable>(N)) {
-      processLocalVariable(Var);
-    }
-  }
 }
 
 void DebugInfoFinder::processVariable(const Module &M,
@@ -281,10 +275,7 @@ void DebugInfoFinder::processVariable(const Module &M,
   if (!N)
     return;
 
-  processLocalVariable(dyn_cast<DILocalVariable>(N));
-}
-
-void DebugInfoFinder::processLocalVariable(DILocalVariable *DV) {
+  auto *DV = dyn_cast<DILocalVariable>(N);
   if (!DV)
     return;
 
@@ -1324,17 +1315,15 @@ LLVMDIBuilderCreateUnspecifiedType(LLVMDIBuilderRef Builder, const char *Name,
   return wrap(unwrap(Builder)->createUnspecifiedType({Name, NameLen}));
 }
 
-LLVMMetadataRef
-LLVMDIBuilderCreateStaticMemberType(
+LLVMMetadataRef LLVMDIBuilderCreateStaticMemberType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
     LLVMMetadataRef Type, LLVMDIFlags Flags, LLVMValueRef ConstantVal,
     uint32_t AlignInBits) {
   return wrap(unwrap(Builder)->createStaticMemberType(
-                  unwrapDI<DIScope>(Scope), {Name, NameLen},
-                  unwrapDI<DIFile>(File), LineNumber, unwrapDI<DIType>(Type),
-                  map_from_llvmDIFlags(Flags), unwrap<Constant>(ConstantVal),
-                  AlignInBits));
+      unwrapDI<DIScope>(Scope), {Name, NameLen}, unwrapDI<DIFile>(File),
+      LineNumber, unwrapDI<DIType>(Type), map_from_llvmDIFlags(Flags),
+      unwrap<Constant>(ConstantVal), DW_TAG_member, AlignInBits));
 }
 
 LLVMMetadataRef
@@ -1476,13 +1465,12 @@ LLVMMetadataRef LLVMDIBuilderCreateClassType(LLVMDIBuilderRef Builder,
   auto Elts = unwrap(Builder)->getOrCreateArray({unwrap(Elements),
                                                  NumElements});
   return wrap(unwrap(Builder)->createClassType(
-                  unwrapDI<DIScope>(Scope), {Name, NameLen},
-                  unwrapDI<DIFile>(File), LineNumber,
-                  SizeInBits, AlignInBits, OffsetInBits,
-                  map_from_llvmDIFlags(Flags), unwrapDI<DIType>(DerivedFrom),
-                  Elts, unwrapDI<DIType>(VTableHolder),
-                  unwrapDI<MDNode>(TemplateParamsNode),
-                  {UniqueIdentifier, UniqueIdentifierLen}));
+      unwrapDI<DIScope>(Scope), {Name, NameLen}, unwrapDI<DIFile>(File),
+      LineNumber, SizeInBits, AlignInBits, OffsetInBits,
+      map_from_llvmDIFlags(Flags), unwrapDI<DIType>(DerivedFrom), Elts,
+      /*RunTimeLang=*/0, unwrapDI<DIType>(VTableHolder),
+      unwrapDI<MDNode>(TemplateParamsNode),
+      {UniqueIdentifier, UniqueIdentifierLen}));
 }
 
 LLVMMetadataRef
