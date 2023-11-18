@@ -215,43 +215,43 @@ int main(int argc, char *argv[]) {
   }
 
   TEST(char);
-  // RUN: %run %t char 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
+  // RUN: %run %t char 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
   TEST(int);
-  // RUN: %run %t int 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
+  // RUN: %run %t int 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
   TEST(void*);
-  // RUN: %run %t "void*" 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
+  // RUN: %run %t "void*" 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
   TEST(float);
-  // RUN: %run %t float 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
+  // RUN: %run %t float 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
   TEST(double);
-  // RUN: %run %t double 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
+  // RUN: %run %t double 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
   TEST(long double);
-  // RUN: %run %t "long double" 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
+  // RUN: %run %t "long double" 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
   TEST(IntInt);
-  // RUN: %run %t IntInt 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
+  // RUN: %run %t IntInt 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
   TEST(Int64Int64);
-  // RUN: %run %t Int64Int64 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
+  // RUN: %run %t Int64Int64 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
   TEST(DoubleDouble);
-  // RUN: %run %t DoubleDouble 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
+  // RUN: %run %t DoubleDouble 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
   TEST(Double4);
-  // RUN: %run %t Double4 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
+  // RUN: %run %t Double4 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
   TEST(DoubleFloat);
-  // RUN: %run %t DoubleFloat 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
+  // RUN: %run %t DoubleFloat 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
   TEST(LongDouble2);
-  // RUN: %run %t LongDouble2 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
+  // RUN: %run %t LongDouble2 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
   TEST(LongDouble4);
-  // RUN: %run %t LongDouble4 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
+  // RUN: %run %t LongDouble4 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
   return 1;
 }
