@@ -43,7 +43,8 @@ env:
 
 jobs:
   stage1:
-    runs-on: libcxx-runners-16
+    runs-on:
+      group: libcxx-runners-16
     continue-on-error: false
     strategy:
       fail-fast: true
@@ -80,7 +81,8 @@ jobs:
             **/CMakeOutput.log
             **/crash_diagnostics/*
   stage2:
-    runs-on: libcxx-runners-8
+    runs-on:
+      group: libcxx-runners-8
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -171,9 +173,10 @@ jobs:
           std_modules: 'OFF'
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: libcxx-runners-30
+          machine: libcxx-runners-32
           std_modules: 'OFF'
-    runs-on: ${{ matrix.machine }}
+    runs-on:
+      group: ${{ matrix.machine }}
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
