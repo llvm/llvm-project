@@ -13037,6 +13037,7 @@ struct NodeExtensionHelper {
     case ISD::SIGN_EXTEND: {
       if (OrigOperand.getValueType().isVector()) {
         SupportsZExt = Opc == ISD::ZERO_EXTEND;
+        SupportsSExt = Opc == ISD::SIGN_EXTEND;
         SDLoc DL(Root);
         MVT VT = Root->getSimpleValueType(0);
         std::tie(Mask, VL) = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
