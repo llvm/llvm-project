@@ -17,7 +17,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
 
-#define MAX_FILENAME_LEN 255
+static std::vector<std::string> nameObj;
 
 namespace llvm {
 
@@ -85,10 +85,29 @@ private:
   StringRef Name;
 };
 
+static void shortenFileName(std::string &FN, unsigned char len = 250) {
+
+  FN = FN.substr(0, len);
+  if (nameObj.empty())
+    nameObj.push_back(FN);
+
+  else {
+    for (auto it = nameObj.begin(); it != nameObj.end(); it++) {
+      if (*it == FN) {
+        FN = FN.substr(0, --len);
+        nameObj.push_back(FN);
+        break;
+      }
+    }
+  }
+}
+
 template <typename GraphT>
 void printGraphForFunction(Function &F, GraphT Graph, StringRef Name,
                            bool IsSimple) {
-  std::string Filename = Name.str() + "." + F.getName().str() + ".dot";
+  std::string Filename = Name.str() + "." + F.getName().str();
+  shortenFileName(Filename);
+  Filename = Filename + ".dot";
   std::error_code EC;
 
   errs() << "Writing '" << Filename << "'...";
@@ -96,7 +115,7 @@ void printGraphForFunction(Function &F, GraphT Graph, StringRef Name,
   raw_fd_ostream File(Filename, EC, sys::fs::OF_TextWithCRLF);
   std::string GraphName = DOTGraphTraits<GraphT>::getGraphName(Graph);
 
-  if (!EC && (Filename.length() <= MAX_FILENAME_LEN))
+  if (!EC)
     WriteGraph(File, Graph, IsSimple,
                GraphName + " for '" + F.getName() + "' function");
   else
@@ -274,6 +293,7 @@ public:
 
   bool runOnModule(Module &M) override {
     GraphT Graph = AnalysisGraphTraitsT::getGraph(&getAnalysis<AnalysisT>());
+    shortenFileName(Name);
     std::string Filename = Name + ".dot";
     std::error_code EC;
 
@@ -282,7 +302,7 @@ public:
     raw_fd_ostream File(Filename, EC, sys::fs::OF_TextWithCRLF);
     std::string Title = DOTGraphTraits<GraphT>::getGraphName(Graph);
 
-    if (!EC && (Filename.length() <= MAX_FILENAME_LEN))
+    if (!EC)
       WriteGraph(File, Graph, IsSimple, Title);
     else
       errs() << "  error opening file for writing!";
@@ -303,7 +323,9 @@ private:
 template <typename GraphT>
 void WriteDOTGraphToFile(Function &F, GraphT &&Graph,
                          std::string FileNamePrefix, bool IsSimple) {
-  std::string Filename = FileNamePrefix + "." + F.getName().str() + ".dot";
+  std::string Filename = FileNamePrefix + "." + F.getName().str();
+  shortenFileName(Filename);
+  Filename = Filename + ".dot";
   std::error_code EC;
 
   errs() << "Writing '" << Filename << "'...";
@@ -312,7 +334,7 @@ void WriteDOTGraphToFile(Function &F, GraphT &&Graph,
   std::string GraphName = DOTGraphTraits<GraphT>::getGraphName(Graph);
   std::string Title = GraphName + " for '" + F.getName().str() + "' function";
 
-  if (!EC && (Filename.length() <= MAX_FILENAME_LEN))
+  if (!EC)
     WriteGraph(File, Graph, IsSimple, Title);
   else
     errs() << "  error opening file for writing!";
