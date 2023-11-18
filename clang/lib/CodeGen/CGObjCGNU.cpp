@@ -1725,9 +1725,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       SmallVector<ObjCMethodDecl*, 16> ClassMethods;
       ClassMethods.insert(ClassMethods.begin(), OID->classmeth_begin(),
           OID->classmeth_end());
-      metaclassFields.addBitCast(
-              GenerateMethodList(className, "", ClassMethods, true),
-              PtrTy);
+      metaclassFields.add(
+          GenerateMethodList(className, "", ClassMethods, true));
     }
     // void *dtable;
     metaclassFields.addNullPointer(PtrTy);
@@ -1894,9 +1893,9 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     if (InstanceMethods.size() == 0)
       classFields.addNullPointer(PtrTy);
     else
-      classFields.addBitCast(
-              GenerateMethodList(className, "", InstanceMethods, false),
-              PtrTy);
+      classFields.add(
+          GenerateMethodList(className, "", InstanceMethods, false));
+
     // void *dtable;
     classFields.addNullPointer(PtrTy);
     // IMP cxx_construct;
@@ -2887,14 +2886,14 @@ GenerateMethodList(StringRef ClassName,
     assert(FnPtr && "Can't generate metadata for method that doesn't exist");
     auto Method = MethodArray.beginStruct(ObjCMethodTy);
     if (isV2ABI) {
-      Method.addBitCast(FnPtr, IMPTy);
+      Method.add(FnPtr);
       Method.add(GetConstantSelector(OMD->getSelector(),
           Context.getObjCEncodingForMethodDecl(OMD)));
       Method.add(MakeConstantString(Context.getObjCEncodingForMethodDecl(OMD, true)));
     } else {
       Method.add(MakeConstantString(OMD->getSelector().getAsString()));
       Method.add(MakeConstantString(Context.getObjCEncodingForMethodDecl(OMD)));
-      Method.addBitCast(FnPtr, IMPTy);
+      Method.add(FnPtr);
     }
     Method.finishAndAddTo(MethodArray);
   }
@@ -2993,7 +2992,7 @@ llvm::Constant *CGObjCGNU::GenerateClassStructure(
   // Fill in the structure
 
   // isa
-  Elements.addBitCast(MetaClass, PtrToInt8Ty);
+  Elements.add(MetaClass);
   // super_class
   Elements.add(SuperClass);
   // name
@@ -3022,7 +3021,7 @@ llvm::Constant *CGObjCGNU::GenerateClassStructure(
   // sibling_class
   Elements.add(NULLPtr);
   // protocols
-  Elements.addBitCast(Protocols, PtrTy);
+  Elements.add(Protocols);
   // gc_object_type
   Elements.add(NULLPtr);
   // abi_version
@@ -3094,7 +3093,7 @@ CGObjCGNU::GenerateProtocolList(ArrayRef<std::string> Protocols) {
     } else {
       protocol = value->getValue();
     }
-    Elements.addBitCast(protocol, PtrToInt8Ty);
+    Elements.add(protocol);
   }
   Elements.finishAndAddTo(ProtocolList);
   return ProtocolList.finishAndCreateGlobal(".objc_protocol_list",
@@ -3224,11 +3223,9 @@ void CGObjCGNU::GenerateProtocolHolderCategory() {
   Elements.add(MakeConstantString(CategoryName));
   Elements.add(MakeConstantString(ClassName));
   // Instance method list
-  Elements.addBitCast(GenerateMethodList(
-          ClassName, CategoryName, {}, false), PtrTy);
+  Elements.add(GenerateMethodList(ClassName, CategoryName, {}, false));
   // Class method list
-  Elements.addBitCast(GenerateMethodList(
-          ClassName, CategoryName, {}, true), PtrTy);
+  Elements.add(GenerateMethodList(ClassName, CategoryName, {}, true));
 
   // Protocol list
   ConstantInitBuilder ProtocolListBuilder(CGM);
@@ -3238,13 +3235,11 @@ void CGObjCGNU::GenerateProtocolHolderCategory() {
   auto ProtocolElements = ProtocolList.beginArray(PtrTy);
   for (auto iter = ExistingProtocols.begin(), endIter = ExistingProtocols.end();
        iter != endIter ; iter++) {
-    ProtocolElements.addBitCast(iter->getValue(), PtrTy);
+    ProtocolElements.add(iter->getValue());
   }
   ProtocolElements.finishAndAddTo(ProtocolList);
-  Elements.addBitCast(
-                   ProtocolList.finishAndCreateGlobal(".objc_protocol_list",
-                                                      CGM.getPointerAlign()),
-                   PtrTy);
+  Elements.add(ProtocolList.finishAndCreateGlobal(".objc_protocol_list",
+                                                  CGM.getPointerAlign()));
   Categories.push_back(
       Elements.finishAndCreateGlobal("", CGM.getPointerAlign()));
 }
@@ -3321,27 +3316,26 @@ void CGObjCGNU::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
   SmallVector<ObjCMethodDecl*, 16> InstanceMethods;
   InstanceMethods.insert(InstanceMethods.begin(), OCD->instmeth_begin(),
       OCD->instmeth_end());
-  Elements.addBitCast(
-          GenerateMethodList(ClassName, CategoryName, InstanceMethods, false),
-          PtrTy);
+  Elements.add(
+      GenerateMethodList(ClassName, CategoryName, InstanceMethods, false));
+
   // Class method list
 
   SmallVector<ObjCMethodDecl*, 16> ClassMethods;
   ClassMethods.insert(ClassMethods.begin(), OCD->classmeth_begin(),
       OCD->classmeth_end());
-  Elements.addBitCast(
-          GenerateMethodList(ClassName, CategoryName, ClassMethods, true),
-          PtrTy);
+  Elements.add(GenerateMethodList(ClassName, CategoryName, ClassMethods, true));
+
   // Protocol list
-  Elements.addBitCast(GenerateCategoryProtocolList(CatDecl), PtrTy);
+  Elements.add(GenerateCategoryProtocolList(CatDecl));
   if (isRuntime(ObjCRuntime::GNUstep, 2)) {
     const ObjCCategoryDecl *Category =
       Class->FindCategoryDeclaration(OCD->getIdentifier());
     if (Category) {
       // Instance properties
-      Elements.addBitCast(GeneratePropertyList(OCD, Category, false), PtrTy);
+      Elements.add(GeneratePropertyList(OCD, Category, false));
       // Class properties
-      Elements.addBitCast(GeneratePropertyList(OCD, Category, true), PtrTy);
+      Elements.add(GeneratePropertyList(OCD, Category, true));
     } else {
       Elements.addNullPointer(PtrTy);
       Elements.addNullPointer(PtrTy);
@@ -3785,7 +3779,7 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
     // Number of static selectors
     symtab.addInt(LongTy, selectorCount);
 
-    symtab.addBitCast(selectorList, selStructPtrTy);
+    symtab.add(selectorList);
 
     // Number of classes defined.
     symtab.addInt(CGM.Int16Ty, Classes.size());
