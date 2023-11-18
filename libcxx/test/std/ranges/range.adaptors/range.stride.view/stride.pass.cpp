@@ -19,7 +19,7 @@
 constexpr bool test() {
   using View = InputView<cpp17_input_iterator<int*>>;
   int arr[]{1, 2, 3};
-  auto arrv(View(cpp17_input_iterator(arr), cpp17_input_iterator(arr + 3)));
+  auto arrv(View(cpp17_input_iterator<int*>(arr), cpp17_input_iterator<int*>(arr + 3)));
   // Mark str const so that we confirm that stride is a const member function.
   const std::ranges::stride_view<View> str(arrv, 1);
 
