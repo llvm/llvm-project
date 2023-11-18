@@ -17,12 +17,12 @@
 
 template <typename T>
 void test() {
-    static_assert(std::is_same_v<typename std::tuple_element<0, std::complex<T>>::type, T>);
-    static_assert(std::is_same_v<typename std::tuple_element<1, std::complex<T>>::type, T>);
+  static_assert(std::is_same_v<typename std::tuple_element<0, std::complex<T>>::type, T>);
+  static_assert(std::is_same_v<typename std::tuple_element<1, std::complex<T>>::type, T>);
 }
 
 int main() {
-    test<float>();
-    test<double>();
-    test<long double>();
+  test<float>();
+  test<double>();
+  test<long double>();
 }

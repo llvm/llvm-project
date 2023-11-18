@@ -17,11 +17,11 @@
 
 template <typename T>
 void test() {
-    static_assert(std::tuple_size<std::complex<T>>::value == 2);
+  static_assert(std::tuple_size<std::complex<T>>::value == 2);
 }
 
 int main() {
-    test<float>();
-    test<double>();
-    test<long double>();
+  test<float>();
+  test<double>();
+  test<long double>();
 }
