@@ -3,8 +3,8 @@
 // Without -fno-sanitize-memory-param-retval we can't even pass poisoned values.
 // RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins=0 -O3 %s -o %t
 
-// Nothing works yet.
-// XFAIL: target={{(aarch64|loongarch64|mips|powerpc64).*}}
+// FIXME: The rest is likely still broken.
+// XFAIL: target={{(loongarch64|mips|powerpc64).*}}
 
 #include <sanitizer/msan_interface.h>
 #include <stdarg.h>
