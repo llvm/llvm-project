@@ -338,7 +338,9 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // %z = G_SELECT %cond %x %y
     // fpr = G_FOO %z ...
     if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
-               [&](const MachineInstr &UseMI) { return onlyUsesFP(UseMI, MRI, TRI); }))
+               [&](const MachineInstr &UseMI) {
+                 return onlyUsesFP(UseMI, MRI, TRI);
+               }))
       ++NumFP;
 
     // Check if the defs of the source values always produce floating point
