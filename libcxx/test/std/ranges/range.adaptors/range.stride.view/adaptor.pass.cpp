@@ -35,7 +35,7 @@ constexpr bool test() {
     {
       {
         using View = InputView<bidirectional_iterator<int*>>;
-        View view(bidirectional_iterator(arr), bidirectional_iterator(arr + array_n));
+        View view(bidirectional_iterator<int*>(arr), bidirectional_iterator<int*>(arr + array_n));
         std::same_as<std::ranges::stride_view<View>> decltype(auto) strided = view | std::views::stride(1);
         auto strided_iter                                                   = strided.begin();
 
@@ -48,7 +48,7 @@ constexpr bool test() {
       }
       {
         using View = InputView<bidirectional_iterator<int*>>;
-        View view(bidirectional_iterator(arr), bidirectional_iterator(arr + array_n));
+        View view(bidirectional_iterator<int*>(arr), bidirectional_iterator<int*>(arr + array_n));
         std::same_as<std::ranges::stride_view<View>> decltype(auto) strided = view | std::views::stride(2);
         auto strided_iter                                                   = strided.begin();
 
@@ -68,7 +68,7 @@ constexpr bool test() {
     constexpr const auto identity_lambda = [](const int i) { return i * 2; };
     {
       using View = InputView<bidirectional_iterator<int*>>;
-      View view(bidirectional_iterator(arr), bidirectional_iterator(arr + array_n));
+      View view(bidirectional_iterator<int*>(arr), bidirectional_iterator<int*>(arr + array_n));
       const auto transform_stride_partial = std::views::transform(identity_lambda) | std::views::stride(1);
 
       auto transform_stride_applied      = transform_stride_partial(view);
@@ -80,7 +80,7 @@ constexpr bool test() {
 
     {
       using View = InputView<bidirectional_iterator<int*>>;
-      View view(bidirectional_iterator(arr), bidirectional_iterator(arr + array_n));
+      View view(bidirectional_iterator<int*>(arr), bidirectional_iterator<int*>(arr + array_n));
       const auto transform_stride_partial = std::views::transform(identity_lambda) | std::views::stride(2);
 
       const auto transform_stride_applied = transform_stride_partial(view);
