@@ -69,7 +69,7 @@ static uint32_t getDeclAlignIfRequired(const Decl *D, const ASTContext &Ctx) {
   return D->hasAttr<AlignedAttr>() ? D->getMaxAlignment() : 0;
 }
 
-APValue const *evaluateConstantInitializer(clang::VarDecl const *VD) {
+static APValue const *evaluateConstantInitializer(clang::VarDecl const *VD) {
   assert(VD != nullptr);
 
   VD = VD->getCanonicalDecl();
