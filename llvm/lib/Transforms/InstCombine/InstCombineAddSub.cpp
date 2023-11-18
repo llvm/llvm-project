@@ -2229,8 +2229,10 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     if (isFreeToInvert(Op0, Op0->hasOneUse(), ConsumesOp0) &&
         isFreeToInvert(Op1, Op1->hasOneUse(), ConsumesOp1) &&
         (ConsumesOp0 || ConsumesOp1)) {
-      Value *NotOp0 = Builder.CreateNot(Op0);
-      Value *NotOp1 = Builder.CreateNot(Op1);
+      Value *NotOp0 = getFreelyInverted(Op0, Op0->hasOneUse(), &Builder);
+      Value *NotOp1 = getFreelyInverted(Op1, Op1->hasOneUse(), &Builder);
+      assert(NotOp0 != nullptr && NotOp1 != nullptr &&
+             "isFreeToInvert desynced with getFreelyInverted");
       return BinaryOperator::CreateSub(NotOp1, NotOp0);
     }
   }

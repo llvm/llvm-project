@@ -3281,10 +3281,12 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
   // icmp eq/ne (bitcast (not X) to iN), -1 --> icmp eq/ne (bitcast X to iN), 0
   // Example: are all elements equal? --> are zero elements not equal?
   // TODO: Try harder to reduce compare of 2 freely invertible operands?
-  if (Cmp.isEquality() && C->isAllOnes() && Bitcast->hasOneUse() &&
-      isFreeToInvert(BCSrcOp, BCSrcOp->hasOneUse())) {
-    Value *Cast = Builder.CreateBitCast(Builder.CreateNot(BCSrcOp), DstType);
-    return new ICmpInst(Pred, Cast, ConstantInt::getNullValue(DstType));
+  if (Cmp.isEquality() && C->isAllOnes() && Bitcast->hasOneUse()) {
+    if (Value *NotBCSrcOp =
+            getFreelyInverted(BCSrcOp, BCSrcOp->hasOneUse(), &Builder)) {
+      Value *Cast = Builder.CreateBitCast(NotBCSrcOp, DstType);
+      return new ICmpInst(Pred, Cast, ConstantInt::getNullValue(DstType));
+    }
   }
 
   // If this is checking if all elements of an extended vector are clear or not,
@@ -4549,14 +4551,13 @@ static Instruction *foldICmpOrXX(ICmpInst &I, const SimplifyQuery &Q,
 
   if (ICmpInst::isEquality(Pred) && Op0->hasOneUse()) {
     // icmp (X | Y) eq/ne Y --> (X & ~Y) eq/ne 0 if Y is freely invertible
-    if (IC.isFreeToInvert(Op1, Op1->hasOneUse()))
-      return new ICmpInst(Pred,
-                          IC.Builder.CreateAnd(A, IC.Builder.CreateNot(Op1)),
+    if (Value *NotOp1 =
+            IC.getFreelyInverted(Op1, Op1->hasOneUse(), &IC.Builder))
+      return new ICmpInst(Pred, IC.Builder.CreateAnd(A, NotOp1),
                           Constant::getNullValue(Op1->getType()));
     // icmp (X | Y) eq/ne Y --> (~X | Y) eq/ne -1 if X  is freely invertible.
-    if (IC.isFreeToInvert(A, A->hasOneUse()))
-      return new ICmpInst(Pred,
-                          IC.Builder.CreateOr(Op1, IC.Builder.CreateNot(A)),
+    if (Value *NotA = IC.getFreelyInverted(A, A->hasOneUse(), &IC.Builder))
+      return new ICmpInst(Pred, IC.Builder.CreateOr(Op1, NotA),
                           Constant::getAllOnesValue(Op1->getType()));
   }
   return nullptr;

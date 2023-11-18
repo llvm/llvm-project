@@ -11,8 +11,8 @@ declare void @use.i8(i8)
 define i8 @xor_1(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @xor_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -124
-; CHECK-NEXT:    [[B_NOT:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
-; CHECK-NEXT:    [[NOT_BA:%.*]] = xor i8 [[B_NOT]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    [[NOT_BA:%.*]] = xor i8 [[TMP2]], [[A:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOT_BA]]
 ;
   %nx = xor i8 %x, -1
@@ -26,8 +26,8 @@ define i8 @xor_1(i8 %a, i1 %c, i8 %x, i8 %y) {
 define i8 @xor_2(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @xor_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -124
-; CHECK-NEXT:    [[B_NOT:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
-; CHECK-NEXT:    [[NOT_AB:%.*]] = xor i8 [[B_NOT]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    [[NOT_AB:%.*]] = xor i8 [[TMP2]], [[A:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOT_AB]]
 ;
   %nx = xor i8 %x, -1
