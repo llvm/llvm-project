@@ -2157,7 +2157,7 @@ define void @load_i16_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm11 = ymm10[2,3,0,1]
 ; AVX2-SLOW-NEXT:    vpblendw {{.*#+}} ymm10 = ymm10[0,1,2],ymm11[3],ymm10[4,5,6,7,8,9,10],ymm11[11],ymm10[12,13,14,15]
 ; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm11 = ymm10[2,3,2,3,2,3,2,3,8,9,8,9,6,7,4,5,18,19,18,19,18,19,18,19,24,25,24,25,22,23,20,21]
-; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} xmm10 = <255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0>
+; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} xmm10 = [255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0]
 ; AVX2-SLOW-NEXT:    vpblendvb %ymm10, %ymm8, %ymm11, %ymm8
 ; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} ymm11 = ymm5[0,1],ymm6[2],ymm5[3,4,5],ymm6[6],ymm5[7]
 ; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm11, %xmm12
@@ -2329,7 +2329,7 @@ define void @load_i16_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm12 = <2,5,1,u,4,u,u,u>
 ; AVX2-FAST-NEXT:    vpermd %ymm11, %ymm12, %ymm11
 ; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm12 = ymm11[2,3,2,3,2,3,2,3,8,9,0,1,6,7,8,9,18,19,18,19,18,19,18,19,24,25,16,17,22,23,24,25]
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} xmm11 = <255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0>
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} xmm11 = [255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0]
 ; AVX2-FAST-NEXT:    vpblendvb %ymm11, %ymm10, %ymm12, %ymm10
 ; AVX2-FAST-NEXT:    vpblendd {{.*#+}} ymm12 = ymm4[0,1],ymm6[2],ymm4[3,4,5],ymm6[6],ymm4[7]
 ; AVX2-FAST-NEXT:    vextracti128 $1, %ymm12, %xmm13
@@ -2496,7 +2496,7 @@ define void @load_i16_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm12 = ymm11[2,3,0,1]
 ; AVX2-FAST-PERLANE-NEXT:    vpblendw {{.*#+}} ymm11 = ymm11[0,1,2],ymm12[3],ymm11[4,5,6,7,8,9,10],ymm12[11],ymm11[12,13,14,15]
 ; AVX2-FAST-PERLANE-NEXT:    vpshufb {{.*#+}} ymm12 = ymm11[2,3,2,3,2,3,2,3,8,9,8,9,6,7,4,5,18,19,18,19,18,19,18,19,24,25,24,25,22,23,20,21]
-; AVX2-FAST-PERLANE-NEXT:    vmovdqa {{.*#+}} xmm11 = <255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0>
+; AVX2-FAST-PERLANE-NEXT:    vmovdqa {{.*#+}} xmm11 = [255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0]
 ; AVX2-FAST-PERLANE-NEXT:    vpblendvb %ymm11, %ymm8, %ymm12, %ymm8
 ; AVX2-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm12 = ymm5[0,1],ymm6[2],ymm5[3,4,5],ymm6[6],ymm5[7]
 ; AVX2-FAST-PERLANE-NEXT:    vextracti128 $1, %ymm12, %xmm13
