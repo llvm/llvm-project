@@ -6828,9 +6828,6 @@ static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
 
   // This transform can be done speculatively because it is so cheap - it
   // results in a single rotate operation being inserted.
-  // FIXME: It's possible that optimizing a switch on powers of two might also
-  // be beneficial - flag values are often powers of two and we could use a CLZ
-  // as the key function.
 
   // countTrailingZeros(0) returns 64. As Values is guaranteed to have more than
   // one element and LLVM disallows duplicate cases, Shift is guaranteed to be
@@ -6872,6 +6869,80 @@ static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
     Case.setValue(
         cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(ShiftC->getValue()))));
   }
+  return true;
+}
+
+/// Tries to transform switch of powers of two to reduce switch range.
+/// For example, switch like:
+/// switch (C) { case 1: case 2: case 64: case 128: }
+/// will be transformed to:
+/// switch (count_trailing_zeros(C)) { case 0: case 1: case 6: case 7: }
+///
+/// This transformation allows better lowering and could allow transforming into
+/// a lookup table.
+static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
+                                        const DataLayout &DL,
+                                        const TargetTransformInfo &TTI) {
+  Value *Condition = SI->getCondition();
+  LLVMContext &Context = SI->getContext();
+  auto *CondTy = cast<IntegerType>(Condition->getType());
+
+  if (CondTy->getIntegerBitWidth() > 64 ||
+      !DL.fitsInLegalInteger(CondTy->getIntegerBitWidth()))
+    return false;
+
+  const auto CttzIntrinsicCost = TTI.getIntrinsicInstrCost(
+      IntrinsicCostAttributes(Intrinsic::cttz, CondTy,
+                              {Condition, ConstantInt::getTrue(Context)}),
+      TTI::TCK_SizeAndLatency);
+
+  if (CttzIntrinsicCost > TTI::TCC_Basic)
+    // Inserting intrinsic is too expensive.
+    return false;
+
+  // Only bother with this optimization if there are more than 3 switch cases.
+  // SDAG will only bother creating jump tables for 4 or more cases.
+  if (SI->getNumCases() < 4)
+    return false;
+
+  // We perform this optimization only for switches with
+  // unreachable default case.
+  // This assumtion will save us from checking if `Condition` is a power of two.
+  if (!isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg()))
+    return false;
+
+  // Check that switch cases are powers of two.
+  SmallVector<uint64_t, 4> Values;
+  for (const auto &Case : SI->cases()) {
+    uint64_t CaseValue = Case.getCaseValue()->getValue().getZExtValue();
+    if (llvm::has_single_bit(CaseValue))
+      Values.push_back(CaseValue);
+    else
+      return false;
+  }
+
+  // isSwichDense requires case values to be sorted.
+  llvm::sort(Values);
+  if (!isSwitchDense(Values.size(), llvm::countr_zero(Values.back()) -
+                                        llvm::countr_zero(Values.front()) + 1))
+    // Transform is unable to generate dense switch.
+    return false;
+
+  Builder.SetInsertPoint(SI);
+
+  // Replace each case with its trailing zeros number.
+  for (auto &Case : SI->cases()) {
+    auto *OrigValue = Case.getCaseValue();
+    Case.setValue(ConstantInt::get(OrigValue->getType(),
+                                   OrigValue->getValue().countr_zero()));
+  }
+
+  // Replace condition with its trailing zeros number.
+  auto *ConditionTrailingZeros = Builder.CreateIntrinsic(
+      Intrinsic::cttz, {CondTy}, {Condition, ConstantInt::getTrue(Context)});
+
+  SI->setCondition(ConditionTrailingZeros);
+
   return true;
 }
 
@@ -6920,6 +6991,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   // optimisation pipeline.
   if (Options.ConvertSwitchToLookupTable &&
       SwitchToLookupTable(SI, Builder, DTU, DL, TTI))
+    return requestResimplify();
+
+  if (simplifySwitchOfPowersOfTwo(SI, Builder, DL, TTI))
     return requestResimplify();
 
   if (ReduceSwitchRange(SI, Builder, DL, TTI))
