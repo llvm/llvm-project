@@ -5074,24 +5074,24 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
   // A very rough approximation of aarch64 argument classification rules.
   std::pair<ArgKind, uint64_t> classifyArgument(Type *T) {
     if (T->isIntOrPtrTy() && T->getPrimitiveSizeInBits() <= 64)
-      return { AK_GeneralPurpose, 1 };
+      return {AK_GeneralPurpose, 1};
     if (T->isFloatingPointTy() && T->getPrimitiveSizeInBits() <= 128)
       return {AK_FloatingPoint, 1};
-    
+
     if (T->isArrayTy()) {
       auto R = classifyArgument(T->getArrayElementType());
       R.second *= T->getScalarType()->getArrayNumElements();
       return R;
     }
 
-    if (const FixedVectorType* FV = dyn_cast<FixedVectorType>(T)) {
+    if (const FixedVectorType *FV = dyn_cast<FixedVectorType>(T)) {
       auto R = classifyArgument(FV->getScalarType());
       R.second *= FV->getNumElements();
       return R;
     }
 
     LLVM_DEBUG(errs() << "Unknown vararg type: " << *T << "\n");
-    return { AK_Memory, 0};
+    return {AK_Memory, 0};
   }
 
   // The instrumentation stores the argument shadow in a non ABI-specific
