@@ -24245,16 +24245,16 @@ TEST_F(FormatTest, IgnorePPDefinitions) {
   verifyNoChange("#define A a a a a", Style);
 
   Style.ColumnLimit = 15;
-  verifyNoChange("#define A //a very long comment\n", Style);
+  verifyNoChange("#define A //a very long comment", Style);
   // in the following examples, since second line will not be formtted, it won't
   // take into considertaion the alignment from the first line. The third line
   // will follow the second line's alignment.
   verifyFormat("int aaaaaa; // a\n"
                "#define A // a\n"
-               "int a;    // a\n",
+               "int a;    // a",
                "int aaaaaa; // a\n"
                "#define A // a\n"
-               "int a; // a\n",
+               "int a; // a",
                Style);
 
   Style.ColumnLimit = 0;
@@ -24286,7 +24286,7 @@ TEST_F(FormatTest, IgnorePPDefinitions) {
   Style.IndentPPDirectives = FormatStyle::PPDIS_None;
   verifyNoChange("#if A\n"
                  "#define A  a\n"
-                 "#endif\n",
+                 "#endif",
                  Style);
   verifyNoChange("#define UNITY 1\n"
                  "#if A\n"
@@ -24323,6 +24323,16 @@ TEST_F(FormatTest, IgnorePPDefinitions) {
                "#if ! defined ( A )\n"
                "  # define  A  a\n"
                "#endif",
+               Style);
+
+  // With comments.
+  verifyNoChange("/* */  # define A  a  //  a  a", Style);
+  verifyFormat("int a;     // a\n"
+               "#define A  // a\n"
+               "int aaa;   // a",
+               "int a; // a\n"
+               "#define A  // a\n"
+               "int aaa; // a",
                Style);
 }
 

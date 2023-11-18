@@ -1308,6 +1308,13 @@ private:
 
 } // anonymous namespace
 
+static bool lineContainsPPDefinition(const AnnotatedLine &Line) {
+  auto *Tok = Line.getFirstNonComment();
+  if (!Tok || !Tok->is(tok::hash) || !Tok->Next)
+    return false;
+  return Tok->Next->is(tok::pp_define);
+}
+
 unsigned UnwrappedLineFormatter::format(
     const SmallVectorImpl<AnnotatedLine *> &Lines, bool DryRun,
     int AdditionalIndent, bool FixBadIndentation, unsigned FirstStartColumn,
@@ -1355,10 +1362,9 @@ unsigned UnwrappedLineFormatter::format(
     bool FixIndentation = (FixBadIndentation || ContinueFormatting) &&
                           Indent != TheLine.First->OriginalColumn;
     bool ShouldFormat = TheLine.Affected || FixIndentation;
-    if (Style.IgnorePPDefinitions && TheLine.Type == LT_PreprocessorDirective &&
-        TheLine.getFirstNonComment()->Next->is(tok::pp_define)) {
+
+    if (Style.IgnorePPDefinitions && lineContainsPPDefinition(TheLine))
       ShouldFormat = false;
-    }
 
     // We cannot format this line; if the reason is that the line had a
     // parsing error, remember that.
