@@ -1209,7 +1209,7 @@ RValue CIRGenFunction::buildCall(clang::QualType CalleeType,
 /// Emit code to compute the specified expression, ignoring the result.
 void CIRGenFunction::buildIgnoredExpr(const Expr *E) {
   if (E->isPRValue())
-    return (void)buildAnyExpr(E);
+    return (void)buildAnyExpr(E, AggValueSlot::ignored(), true);
 
   // Just emit it as an l-value and drop the result.
   buildLValue(E);

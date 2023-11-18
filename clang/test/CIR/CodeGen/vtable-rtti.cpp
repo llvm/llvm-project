@@ -47,14 +47,14 @@ public:
 // foo - zero initialize object B and call ctor (@B::B())
 //
 // CHECK: cir.func @_Z3foov()
-// CHECK:     %0 = cir.alloca ![[ClassB]], cir.ptr <![[ClassB]]>, ["agg.tmp0"] {alignment = 8 : i64}
-// CHECK:     cir.scope {
-// CHECK:       %1 = cir.const(#cir.zero : ![[ClassB]]) : ![[ClassB]]
-// CHECK:       cir.store %1, %0 : ![[ClassB]], cir.ptr <![[ClassB]]>
-// CHECK:       cir.call @_ZN1BC2Ev(%0) : (!cir.ptr<![[ClassB]]>) -> ()
-// CHECK:     }
-// CHECK:     cir.return
+// CHECK:   cir.scope {
+// CHECK:     %0 = cir.alloca !ty_22B22, cir.ptr <!ty_22B22>, ["agg.tmp.ensured"] {alignment = 8 : i64}
+// CHECK:     %1 = cir.const(#cir.zero : ![[ClassB]]) : ![[ClassB]]
+// CHECK:     cir.store %1, %0 : ![[ClassB]], cir.ptr <![[ClassB]]>
+// CHECK:     cir.call @_ZN1BC2Ev(%0) : (!cir.ptr<![[ClassB]]>) -> ()
 // CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
 
 // Vtable definition for A
 // CHECK: cir.global "private" external @_ZTV1A : ![[VTableTypeA]] {alignment = 8 : i64}

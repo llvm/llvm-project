@@ -17,7 +17,7 @@ typedef struct yep_ {
 void use() { yop{}; }
 
 // CHECK: cir.func @_Z3usev()
-// CHECK:   %0 = cir.alloca !ty_22yep_22, cir.ptr <!ty_22yep_22>, ["agg.tmp0"] {alignment = 4 : i64}
+// CHECK:   %0 = cir.alloca !ty_22yep_22, cir.ptr <!ty_22yep_22>, ["agg.tmp.ensured"] {alignment = 4 : i64}
 // CHECK:   %1 = cir.get_member %0[0] {name = "Status"} : !cir.ptr<!ty_22yep_22> -> !cir.ptr<!u32i>
 // CHECK:   %2 = cir.const(#cir.int<0> : !u32i) : !u32i
 // CHECK:   cir.store %2, %1 : !u32i, cir.ptr <!u32i>
