@@ -3407,10 +3407,8 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
         Tok->isOneOf(TT_PointerOrReference, TT_StartOfName, tok::ellipsis)) {
       return true;
     }
-    if (Tok->isOneOf(tok::l_brace, tok::string_literal, TT_ObjCMethodExpr) ||
-        Tok->Tok.isLiteral()) {
+    if (Tok->isOneOf(tok::l_brace, TT_ObjCMethodExpr) || Tok->Tok.isLiteral())
       return false;
-    }
   }
   return false;
 }
