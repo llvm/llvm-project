@@ -31,7 +31,7 @@
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
 // RUN: FileCheck %s --check-prefix=BINARY-ID-SHARE-RAW-PROF < %t.profraw.out
 
-// RUN: llvm-profdata merge -o %t.profdata %t.profraw 
+// RUN: llvm-profdata merge -o %t.profdata %t.profraw
 // RUN: llvm-profdata show --binary-ids %t.profdata > %t.profdata.out
 // RUN: FileCheck %s --check-prefix=BINARY-ID-SHARE-INDEXED-PROF < %t.profraw.out
 
