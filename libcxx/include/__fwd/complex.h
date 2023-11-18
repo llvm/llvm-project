@@ -18,7 +18,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class>
-struct _LIBCPP_TEMPLATE_VIS complex;
+class _LIBCPP_TEMPLATE_VIS complex;
 
 _LIBCPP_END_NAMESPACE_STD
 
