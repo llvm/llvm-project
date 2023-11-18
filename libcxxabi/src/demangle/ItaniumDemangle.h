@@ -2780,6 +2780,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     Qualifiers CVQualifiers = QualNone;
     FunctionRefQual ReferenceQualifier = FrefQualNone;
     size_t ForwardTemplateRefsBegin;
+    bool HasExplicitObjectParameter = false;
 
     NameState(AbstractManglingParser *Enclosing)
         : ForwardTemplateRefsBegin(Enclosing->ForwardTemplateRefs.size()) {}
@@ -3438,15 +3439,25 @@ AbstractManglingParser<Derived, Alloc>::parseNestedName(NameState *State) {
   if (!consumeIf('N'))
     return nullptr;
 
-  Qualifiers CVTmp = parseCVQualifiers();
-  if (State) State->CVQualifiers = CVTmp;
+  // 'H' specifies that the encoding that follows
+  // has an explicit object parameter.
+  if (!consumeIf('H')) {
+    Qualifiers CVTmp = parseCVQualifiers();
+    if (State)
+      State->CVQualifiers = CVTmp;
 
-  if (consumeIf('O')) {
-    if (State) State->ReferenceQualifier = FrefQualRValue;
-  } else if (consumeIf('R')) {
-    if (State) State->ReferenceQualifier = FrefQualLValue;
-  } else {
-    if (State) State->ReferenceQualifier = FrefQualNone;
+    if (consumeIf('O')) {
+      if (State)
+        State->ReferenceQualifier = FrefQualRValue;
+    } else if (consumeIf('R')) {
+      if (State)
+        State->ReferenceQualifier = FrefQualLValue;
+    } else {
+      if (State)
+        State->ReferenceQualifier = FrefQualNone;
+    }
+  } else if (State) {
+    State->HasExplicitObjectParameter = true;
   }
 
   Node *SoFar = nullptr;
@@ -5424,6 +5435,9 @@ Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
         return nullptr;
       Names.push_back(Ty);
     } while (!IsEndOfEncoding() && look() != 'Q');
+    // Ignore the explicit 'this' parameter.
+    if (NameInfo.HasExplicitObjectParameter)
+      ++ParamsBegin;
     Params = popTrailingNodeArray(ParamsBegin);
   }
 
