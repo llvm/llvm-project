@@ -8,6 +8,7 @@
 
 #include "mlir/IR/AffineMap.h"
 #include "AffineMapDetail.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -59,13 +60,34 @@ private:
           expr, [](int64_t lhs, int64_t rhs) { return lhs * rhs; });
     case AffineExprKind::Mod:
       return constantFoldBinExpr(
-          expr, [](int64_t lhs, int64_t rhs) { return mod(lhs, rhs); });
+          expr,
+          [expr, this](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
+            if (rhs < 1) {
+              hasPoison_ = true;
+              return std::nullopt;
+            }
+            return mod(lhs, rhs);
+          });
     case AffineExprKind::FloorDiv:
       return constantFoldBinExpr(
-          expr, [](int64_t lhs, int64_t rhs) { return floorDiv(lhs, rhs); });
+          expr,
+          [expr, this](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
+            if (rhs == 0) {
+              hasPoison_ = true;
+              return std::nullopt;
+            }
+            return floorDiv(lhs, rhs);
+          });
     case AffineExprKind::CeilDiv:
       return constantFoldBinExpr(
-          expr, [](int64_t lhs, int64_t rhs) { return ceilDiv(lhs, rhs); });
+          expr,
+          [expr, this](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
+            if (rhs == 0) {
+              hasPoison_ = true;
+              return std::nullopt;
+            }
+            return ceilDiv(lhs, rhs);
+          });
     case AffineExprKind::Constant:
       return cast<AffineConstantExpr>(expr).getValue();
     case AffineExprKind::DimId:
@@ -387,12 +409,12 @@ std::optional<unsigned> AffineMap::getResultPosition(AffineExpr input) const {
 /// Folds the results of the application of an affine map on the provided
 /// operands to a constant if possible. Returns false if the folding happens,
 /// true otherwise.
-LogicalResult
-AffineMap::constantFold(ArrayRef<Attribute> operandConstants,
-                        SmallVectorImpl<Attribute> &results) const {
+LogicalResult AffineMap::constantFold(ArrayRef<Attribute> operandConstants,
+                                      SmallVectorImpl<Attribute> &results,
+                                      bool *hasPoison) const {
   // Attempt partial folding.
   SmallVector<int64_t, 2> integers;
-  partialConstantFold(operandConstants, &integers);
+  partialConstantFold(operandConstants, &integers, hasPoison);
 
   // If all expressions folded to a constant, populate results with attributes
   // containing those constants.
@@ -406,9 +428,9 @@ AffineMap::constantFold(ArrayRef<Attribute> operandConstants,
   return success();
 }
 
-AffineMap
-AffineMap::partialConstantFold(ArrayRef<Attribute> operandConstants,
-                               SmallVectorImpl<int64_t> *results) const {
+AffineMap AffineMap::partialConstantFold(ArrayRef<Attribute> operandConstants,
+                                         SmallVectorImpl<int64_t> *results,
+                                         bool *hasPoison) const {
   assert(getNumInputs() == operandConstants.size());
 
   // Fold each of the result expressions.
@@ -418,6 +440,10 @@ AffineMap::partialConstantFold(ArrayRef<Attribute> operandConstants,
 
   for (auto expr : getResults()) {
     auto folded = exprFolder.constantFold(expr);
+    if (exprFolder.hasPoison() && hasPoison) {
+      *hasPoison = true;
+      return {};
+    }
     // If did not fold to a constant, keep the original expression, and clear
     // the integer results vector.
     if (folded) {
