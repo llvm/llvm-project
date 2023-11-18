@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
@@ -226,6 +227,8 @@ void AffineDialect::initialize() {
 Operation *AffineDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
+  if (auto poison = dyn_cast<ub::PoisonAttr>(value))
+    return builder.create<ub::PoisonOp>(loc, type, poison);
   return arith::ConstantOp::materialize(builder, value, type, loc);
 }
 
@@ -580,7 +583,12 @@ OpFoldResult AffineApplyOp::fold(FoldAdaptor adaptor) {
 
   // Otherwise, default to folding the map.
   SmallVector<Attribute, 1> result;
-  if (failed(map.constantFold(adaptor.getMapOperands(), result)))
+  bool hasPoison = false;
+  auto foldResult =
+      map.constantFold(adaptor.getMapOperands(), result, &hasPoison);
+  if (hasPoison)
+    return ub::PoisonAttr::get(getContext());
+  if (failed(foldResult))
     return {};
   return result[0];
 }
@@ -3379,7 +3387,9 @@ static LogicalResult canonicalizeMapExprAndTermOrder(AffineMap &map) {
       return failure();
 
     SimpleAffineExprFlattener flattener(map.getNumDims(), map.getNumSymbols());
-    flattener.walkPostOrder(resultExpr);
+    auto flattenResult = flattener.walkPostOrder(resultExpr);
+    if (failed(flattenResult))
+      return failure();
 
     // Fail if the flattened expression has local variables.
     if (flattener.operandExprStack.back().size() !=
