@@ -5071,14 +5071,27 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
                       MemorySanitizerVisitor &MSV)
       : VarArgHelperBase(F, MS, MSV, /*VAListTagSize=*/32) {}
 
-  ArgKind classifyArgument(Value *arg) {
-    Type *T = arg->getType();
-    if (T->isFPOrFPVectorTy())
-      return AK_FloatingPoint;
-    if ((T->isIntegerTy() && T->getPrimitiveSizeInBits() <= 64) ||
-        (T->isPointerTy()))
-      return AK_GeneralPurpose;
-    return AK_Memory;
+  // A very rough approximation of aarch64 argument classification rules.
+  std::pair<ArgKind, uint64_t> classifyArgument(Type *T) {
+    if (T->isIntOrPtrTy() && T->getPrimitiveSizeInBits() <= 64)
+      return {AK_GeneralPurpose, 1};
+    if (T->isFloatingPointTy() && T->getPrimitiveSizeInBits() <= 128)
+      return {AK_FloatingPoint, 1};
+
+    if (T->isArrayTy()) {
+      auto R = classifyArgument(T->getArrayElementType());
+      R.second *= T->getScalarType()->getArrayNumElements();
+      return R;
+    }
+
+    if (const FixedVectorType *FV = dyn_cast<FixedVectorType>(T)) {
+      auto R = classifyArgument(FV->getScalarType());
+      R.second *= FV->getNumElements();
+      return R;
+    }
+
+    LLVM_DEBUG(errs() << "Unknown vararg type: " << *T << "\n");
+    return {AK_Memory, 0};
   }
 
   // The instrumentation stores the argument shadow in a non ABI-specific
@@ -5098,20 +5111,22 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
     const DataLayout &DL = F.getParent()->getDataLayout();
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      ArgKind AK = classifyArgument(A);
-      if (AK == AK_GeneralPurpose && GrOffset >= AArch64GrEndOffset)
+      auto [AK, RegNum] = classifyArgument(A->getType());
+      if (AK == AK_GeneralPurpose &&
+          (GrOffset + RegNum * 8) > AArch64GrEndOffset)
         AK = AK_Memory;
-      if (AK == AK_FloatingPoint && VrOffset >= AArch64VrEndOffset)
+      if (AK == AK_FloatingPoint &&
+          (VrOffset + RegNum * 16) > AArch64VrEndOffset)
         AK = AK_Memory;
       Value *Base;
       switch (AK) {
       case AK_GeneralPurpose:
-        Base = getShadowPtrForVAArgument(A->getType(), IRB, GrOffset, 8);
-        GrOffset += 8;
+        Base = getShadowPtrForVAArgument(A->getType(), IRB, GrOffset);
+        GrOffset += 8 * RegNum;
         break;
       case AK_FloatingPoint:
-        Base = getShadowPtrForVAArgument(A->getType(), IRB, VrOffset, 8);
-        VrOffset += 16;
+        Base = getShadowPtrForVAArgument(A->getType(), IRB, VrOffset);
+        VrOffset += 16 * RegNum;
         break;
       case AK_Memory:
         // Don't count fixed arguments in the overflow area - va_start will
