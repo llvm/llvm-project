@@ -1421,11 +1421,6 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     Protocol = GV;
     return GV;
   }
-  llvm::Constant *EnforceType(llvm::Constant *Val, llvm::Type *Ty) {
-    if (Val->getType() == Ty)
-      return Val;
-    return llvm::ConstantExpr::getBitCast(Val, Ty);
-  }
   llvm::Value *GetTypedSelector(CodeGenFunction &CGF, Selector Sel,
                                 const std::string &TypeEncoding) override {
     return GetConstantSelector(Sel, TypeEncoding);
@@ -1462,7 +1457,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     auto SelVarName = (StringRef(".objc_selector_") + Sel.getAsString() + "_" +
       MangledTypes).str();
     if (auto *GV = TheModule.getNamedGlobal(SelVarName))
-      return EnforceType(GV, SelectorTy);
+      return GV;
     ConstantInitBuilder builder(CGM);
     auto SelBuilder = builder.beginStruct();
     SelBuilder.add(ExportUniqueString(Sel.getAsString(), ".objc_sel_name_",
@@ -1473,8 +1468,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     GV->setComdat(TheModule.getOrInsertComdat(SelVarName));
     GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
     GV->setSection(sectionName<SelectorSection>());
-    auto *SelVal = EnforceType(GV, SelectorTy);
-    return SelVal;
+    return GV;
   }
   llvm::StructType *emptyStruct = nullptr;
 
