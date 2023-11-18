@@ -220,6 +220,9 @@ int main(int argc, char *argv[]) {
   TEST(int);
   // RUN: %run %t int 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
 
+  TEST(void*);
+  // RUN: %run %t "void*" 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
+
   TEST(float);
   // RUN: %run %t float 2>&1 | FileCheck %s --implicit-check-not="ArgShadow" --check-prefixes=CHECK
 
