@@ -22,6 +22,20 @@ define i32 @p0_scalar(i32 %x, i32 %y) {
   ret i32 %t1
 }
 
+define i8 @p0_scalar_not_truly_negatable(i8 %x, i8 %y) {
+; CHECK-LABEL: @p0_scalar_not_truly_negatable(
+; CHECK-NEXT:    [[XX:%.*]] = xor i8 [[X:%.*]], 123
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -46
+; CHECK-NEXT:    [[YY_NEG:%.*]] = add i8 [[TMP1]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[YY_NEG]], [[XX]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xx = xor i8 %x, 123
+  %yy = xor i8 %y, 45
+  %r = sub i8 %xx, %yy
+  ret i8 %r
+}
+
 ;------------------------------------------------------------------------------;
 ; Vector tests
 ;------------------------------------------------------------------------------;
@@ -79,7 +93,7 @@ define i32 @n4(i32 %x, i32 %y) {
 ; CHECK-NEXT:    ret i32 [[T1]]
 ;
   %t0 = xor i32 %x, -1
-  %t1 = sub i32 %t0, %y ; swapped
+  %t1 = sub i32 %t0, %y  ; swapped
   ret i32 %t1
 }
 
@@ -89,7 +103,7 @@ define i32 @n5_is_not_not(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[T1:%.*]] = add i32 [[T0_NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[T1]]
 ;
-  %t0 = xor i32 %x, 2147483647 ; not -1
+  %t0 = xor i32 %x, 2147483647  ; not -1
   %t1 = sub i32 %y, %t0
   ret i32 %t1
 }
@@ -100,7 +114,7 @@ define <2 x i32> @n5_is_not_not_vec_splat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    [[T1:%.*]] = add <2 x i32> [[T0_NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[T1]]
 ;
-  %t0 = xor <2 x i32> %x, <i32 2147483647, i32 2147483647> ; signmask, but not -1
+  %t0 = xor <2 x i32> %x, <i32 2147483647, i32 2147483647>  ; signmask, but not -1
   %t1 = sub <2 x i32> %y, %t0
   ret <2 x i32> %t1
 }
