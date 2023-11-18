@@ -1685,7 +1685,7 @@ define void @load_i8_stride5_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-ONLY-NEXT:    # ymm10 = mem[0,1,0,1]
 ; AVX2-ONLY-NEXT:    vpblendvb %ymm10, %ymm7, %ymm8, %ymm7
 ; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} ymm7 = ymm7[u,u,u,u,u,u,u,u,u,u,u,u,u,1,6,11,16,21,26,31,20,25,30,19,24,29,u,u,u,u,u,u]
-; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm10 = <255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0>
+; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} xmm10 = [255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0]
 ; AVX2-ONLY-NEXT:    vpblendvb %ymm10, %ymm6, %ymm7, %ymm6
 ; AVX2-ONLY-NEXT:    vmovdqa 144(%rdi), %xmm7
 ; AVX2-ONLY-NEXT:    vpshufb {{.*#+}} xmm11 = xmm7[u,u,u,u,u,u,u,u,u,u],zero,zero,zero,xmm7[1,6,11]
