@@ -71,7 +71,7 @@ entry:
     i32 8,  label %bb2
     i32 16, label %bb3
     i32 32, label %bb4
-    i32 64, label %bb5
+    i32 -64, label %bb5
   ]
 
 ; The switch is lowered with a jump table for cases 1--32 and case 64 handled

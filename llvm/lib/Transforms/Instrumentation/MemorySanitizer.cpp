@@ -4696,6 +4696,19 @@ struct VarArgHelperBase : public VarArgHelper {
                               "_msarg_va_o");
   }
 
+  void CleanUnusedTLS(IRBuilder<> &IRB, Value *ShadowBase,
+                      unsigned BaseOffset) {
+    // The tails of __msan_va_arg_tls is not large enough to fit full
+    // value shadow, but it will be copied to backup anyway. Make it
+    // clean.
+    if (BaseOffset >= kParamTLSSize)
+      return;
+    Value *TailSize =
+        ConstantInt::getSigned(IRB.getInt32Ty(), kParamTLSSize - BaseOffset);
+    IRB.CreateMemSet(ShadowBase, ConstantInt::getNullValue(IRB.getInt8Ty()),
+                     TailSize, Align(8));
+  }
+
   void unpoisonVAListTagForInst(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *VAListTag = I.getArgOperand(0);
@@ -4779,23 +4792,6 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
     unsigned OverflowOffset = AMD64FpEndOffset;
     const DataLayout &DL = F.getParent()->getDataLayout();
 
-    auto CleanUnusedTLS = [&](Value *ShadowBase, unsigned BaseOffset) {
-      // Make sure we don't overflow __msan_va_arg_tls.
-      if (OverflowOffset <= kParamTLSSize)
-        return false; // Not needed, end is not reacheed.
-
-      // The tails of __msan_va_arg_tls is not large enough to fit full
-      // value shadow, but it will be copied to backup anyway. Make it
-      // clean.
-      if (BaseOffset < kParamTLSSize) {
-        Value *TailSize = ConstantInt::getSigned(IRB.getInt32Ty(),
-                                                 kParamTLSSize - BaseOffset);
-        IRB.CreateMemSet(ShadowBase, ConstantInt::getNullValue(IRB.getInt8Ty()),
-                         TailSize, Align(8));
-      }
-      return true; // Incomplete
-    };
-
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
@@ -4817,8 +4813,10 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
           OriginBase = getOriginPtrForVAArgument(IRB, OverflowOffset);
         OverflowOffset += AlignedSize;
 
-        if (CleanUnusedTLS(ShadowBase, BaseOffset))
+        if (OverflowOffset > kParamTLSSize) {
+          CleanUnusedTLS(IRB, ShadowBase, BaseOffset);
           continue; // We have no space to copy shadow there.
+        }
 
         Value *ShadowPtr, *OriginPtr;
         std::tie(ShadowPtr, OriginPtr) =
@@ -4863,8 +4861,11 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
             OriginBase = getOriginPtrForVAArgument(IRB, OverflowOffset);
           }
           OverflowOffset += AlignedSize;
-          if (CleanUnusedTLS(ShadowBase, BaseOffset))
-            continue; // We have no space to copy shadow there.
+          if (OverflowOffset > kParamTLSSize) {
+            // We have no space to copy shadow there.
+            CleanUnusedTLS(IRB, ShadowBase, BaseOffset);
+            continue;
+          }
         }
         // Take fixed arguments into account for GpOffset and FpOffset,
         // but don't actually store shadows for them.
@@ -5070,14 +5071,27 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
                       MemorySanitizerVisitor &MSV)
       : VarArgHelperBase(F, MS, MSV, /*VAListTagSize=*/32) {}
 
-  ArgKind classifyArgument(Value *arg) {
-    Type *T = arg->getType();
-    if (T->isFPOrFPVectorTy())
-      return AK_FloatingPoint;
-    if ((T->isIntegerTy() && T->getPrimitiveSizeInBits() <= 64) ||
-        (T->isPointerTy()))
-      return AK_GeneralPurpose;
-    return AK_Memory;
+  // A very rough approximation of aarch64 argument classification rules.
+  std::pair<ArgKind, uint64_t> classifyArgument(Type *T) {
+    if (T->isIntOrPtrTy() && T->getPrimitiveSizeInBits() <= 64)
+      return {AK_GeneralPurpose, 1};
+    if (T->isFloatingPointTy() && T->getPrimitiveSizeInBits() <= 128)
+      return {AK_FloatingPoint, 1};
+
+    if (T->isArrayTy()) {
+      auto R = classifyArgument(T->getArrayElementType());
+      R.second *= T->getScalarType()->getArrayNumElements();
+      return R;
+    }
+
+    if (const FixedVectorType *FV = dyn_cast<FixedVectorType>(T)) {
+      auto R = classifyArgument(FV->getScalarType());
+      R.second *= FV->getNumElements();
+      return R;
+    }
+
+    LLVM_DEBUG(errs() << "Unknown vararg type: " << *T << "\n");
+    return {AK_Memory, 0};
   }
 
   // The instrumentation stores the argument shadow in a non ABI-specific
@@ -5097,20 +5111,22 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
     const DataLayout &DL = F.getParent()->getDataLayout();
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      ArgKind AK = classifyArgument(A);
-      if (AK == AK_GeneralPurpose && GrOffset >= AArch64GrEndOffset)
+      auto [AK, RegNum] = classifyArgument(A->getType());
+      if (AK == AK_GeneralPurpose &&
+          (GrOffset + RegNum * 8) > AArch64GrEndOffset)
         AK = AK_Memory;
-      if (AK == AK_FloatingPoint && VrOffset >= AArch64VrEndOffset)
+      if (AK == AK_FloatingPoint &&
+          (VrOffset + RegNum * 16) > AArch64VrEndOffset)
         AK = AK_Memory;
       Value *Base;
       switch (AK) {
       case AK_GeneralPurpose:
-        Base = getShadowPtrForVAArgument(A->getType(), IRB, GrOffset, 8);
-        GrOffset += 8;
+        Base = getShadowPtrForVAArgument(A->getType(), IRB, GrOffset);
+        GrOffset += 8 * RegNum;
         break;
       case AK_FloatingPoint:
-        Base = getShadowPtrForVAArgument(A->getType(), IRB, VrOffset, 8);
-        VrOffset += 16;
+        Base = getShadowPtrForVAArgument(A->getType(), IRB, VrOffset);
+        VrOffset += 16 * RegNum;
         break;
       case AK_Memory:
         // Don't count fixed arguments in the overflow area - va_start will
@@ -5118,16 +5134,20 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
         if (IsFixed)
           continue;
         uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
-        Base = getShadowPtrForVAArgument(A->getType(), IRB, OverflowOffset,
-                                         alignTo(ArgSize, 8));
-        OverflowOffset += alignTo(ArgSize, 8);
+        uint64_t AlignedSize = alignTo(ArgSize, 8);
+        unsigned BaseOffset = OverflowOffset;
+        Base = getShadowPtrForVAArgument(A->getType(), IRB, BaseOffset);
+        OverflowOffset += AlignedSize;
+        if (OverflowOffset > kParamTLSSize) {
+          // We have no space to copy shadow there.
+          CleanUnusedTLS(IRB, Base, BaseOffset);
+          continue;
+        }
         break;
       }
       // Count Gp/Vr fixed arguments to their respective offsets, but don't
       // bother to actually store a shadow.
       if (IsFixed)
-        continue;
-      if (!Base)
         continue;
       IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
     }

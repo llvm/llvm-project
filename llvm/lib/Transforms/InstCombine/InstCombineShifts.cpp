@@ -964,14 +964,10 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
   // Compute what we know about shift count.
   KnownBits KnownCnt =
       computeKnownBits(I.getOperand(1), Q.DL, /*Depth*/ 0, Q.AC, Q.CxtI, Q.DT);
-  // If we know nothing about shift count or its a poison shift, we won't be
-  // able to prove anything so return before computing shift amount.
-  if (KnownCnt.isUnknown())
-    return false;
   unsigned BitWidth = KnownCnt.getBitWidth();
-  APInt MaxCnt = KnownCnt.getMaxValue();
-  if (MaxCnt.uge(BitWidth))
-    return false;
+  // Since shift produces a poison value if RHS is equal to or larger than the
+  // bit width, we can safely assume that RHS is less than the bit width.
+  uint64_t MaxCnt = KnownCnt.getMaxValue().getLimitedValue(BitWidth - 1);
 
   KnownBits KnownAmt =
       computeKnownBits(I.getOperand(0), Q.DL, /*Depth*/ 0, Q.AC, Q.CxtI, Q.DT);
@@ -979,15 +975,15 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
 
   if (I.getOpcode() == Instruction::Shl) {
     // If we have as many leading zeros than maximum shift cnt we have nuw.
-    if (!I.hasNoUnsignedWrap() && MaxCnt.ule(KnownAmt.countMinLeadingZeros())) {
+    if (!I.hasNoUnsignedWrap() && MaxCnt <= KnownAmt.countMinLeadingZeros()) {
       I.setHasNoUnsignedWrap();
       Changed = true;
     }
     // If we have more sign bits than maximum shift cnt we have nsw.
     if (!I.hasNoSignedWrap()) {
-      if (MaxCnt.ult(KnownAmt.countMinSignBits()) ||
-          MaxCnt.ult(ComputeNumSignBits(I.getOperand(0), Q.DL, /*Depth*/ 0,
-                                        Q.AC, Q.CxtI, Q.DT))) {
+      if (MaxCnt < KnownAmt.countMinSignBits() ||
+          MaxCnt < ComputeNumSignBits(I.getOperand(0), Q.DL, /*Depth*/ 0, Q.AC,
+                                      Q.CxtI, Q.DT)) {
         I.setHasNoSignedWrap();
         Changed = true;
       }
@@ -997,7 +993,7 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
 
   // If we have at least as many trailing zeros as maximum count then we have
   // exact.
-  Changed = MaxCnt.ule(KnownAmt.countMinTrailingZeros());
+  Changed = MaxCnt <= KnownAmt.countMinTrailingZeros();
   I.setIsExact(Changed);
 
   return Changed;
@@ -1224,15 +1220,6 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
               m_OneUse(m_Intrinsic<Intrinsic::cttz>(m_Value(X), m_Value())))) {
       Value *NegX = Builder.CreateNeg(X, "neg");
       return BinaryOperator::CreateAnd(NegX, X);
-    }
-
-    // The only way to shift out the 1 is with an over-shift, so that would
-    // be poison with or without "nuw". Undef is excluded because (undef << X)
-    // is not undef (it is zero).
-    Constant *ConstantOne = cast<Constant>(Op0);
-    if (!I.hasNoUnsignedWrap() && !ConstantOne->containsUndefElement()) {
-      I.setHasNoUnsignedWrap();
-      return &I;
     }
   }
 
