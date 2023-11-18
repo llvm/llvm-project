@@ -11856,26 +11856,28 @@ multiclass CASregister_patterns<string inst, string op> {
 }
 
 let Predicates = [HasLSE] in
-class BaseSTOPregister<string asm, RegisterClass OP, Register Reg,
-                        Instruction inst> :
-      InstAlias<asm # "\t$Rs, [$Rn]", (inst Reg, OP:$Rs, GPR64sp:$Rn)>;
+multiclass BaseSTOPregister<string asm, RegisterClass OP, Register Reg,
+                        Instruction inst> {
+  def : InstAlias<asm # "\t$Rs, [$Rn]", (inst OP:$Rs, OP:$Rs, GPR64sp:$Rn)>;
+  def : InstAlias<asm # "\t$Rs, [$Rn]", (inst Reg, OP:$Rs, GPR64sp:$Rn)>;
+}
 
 multiclass STOPregister<string asm, string instr> {
-  def : BaseSTOPregister<asm # "lb", GPR32, WZR,
+  defm : BaseSTOPregister<asm # "lb", GPR32, WZR,
                     !cast<Instruction>(instr # "LB")>;
-  def : BaseSTOPregister<asm # "lh", GPR32, WZR,
+  defm : BaseSTOPregister<asm # "lh", GPR32, WZR,
                     !cast<Instruction>(instr # "LH")>;
-  def : BaseSTOPregister<asm # "l",  GPR32, WZR,
+  defm : BaseSTOPregister<asm # "l",  GPR32, WZR,
                     !cast<Instruction>(instr # "LW")>;
-  def : BaseSTOPregister<asm # "l",  GPR64, XZR,
+  defm : BaseSTOPregister<asm # "l",  GPR64, XZR,
                     !cast<Instruction>(instr # "LX")>;
-  def : BaseSTOPregister<asm # "b",  GPR32, WZR,
+  defm : BaseSTOPregister<asm # "b",  GPR32, WZR,
                     !cast<Instruction>(instr # "B")>;
-  def : BaseSTOPregister<asm # "h",  GPR32, WZR,
+  defm : BaseSTOPregister<asm # "h",  GPR32, WZR,
                     !cast<Instruction>(instr # "H")>;
-  def : BaseSTOPregister<asm,        GPR32, WZR,
+  defm : BaseSTOPregister<asm,        GPR32, WZR,
                     !cast<Instruction>(instr # "W")>;
-  def : BaseSTOPregister<asm,        GPR64, XZR,
+  defm : BaseSTOPregister<asm,        GPR64, XZR,
                     !cast<Instruction>(instr # "X")>;
 }
 
