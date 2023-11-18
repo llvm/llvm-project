@@ -1725,6 +1725,34 @@ static void computeKnownBitsFromOperator(const Operator *I,
                                   Depth + 1))
       computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
     break;
+  case Instruction::AddrSpaceCast: {
+    auto ASC = cast<AddrSpaceCastOperator>(I);
+    unsigned SrcAS = ASC->getSrcAddressSpace();
+    unsigned DestAS = ASC->getDestAddressSpace();
+
+    auto DL = Q.DL;
+    if (DL.isNonIntegralAddressSpace(SrcAS) ||
+        DL.isNonIntegralAddressSpace(DestAS))
+      break;
+
+    auto SrcSize = DL.getPointerSizeInBits(SrcAS);
+    auto DstSize = DL.getPointerSizeInBits(DestAS);
+
+    if (DstSize > SrcSize) {
+      Known2 = Known;
+      Known2 = Known2.clearLowBits(SrcSize);
+      Known = Known.trunc(SrcSize);
+      computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+      Known = Known.anyext(DstSize);
+      Known = Known.unionWith(Known2);
+    }
+
+    else { // DstSize <= SrcSize
+      Known = Known.anyext(SrcSize);
+      computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+      Known = Known.trunc(DstSize);
+    }
+  }
   }
 }
 
