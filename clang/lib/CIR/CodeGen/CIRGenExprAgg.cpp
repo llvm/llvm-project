@@ -43,9 +43,9 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   void withReturnValueSlot(const Expr *E,
                            llvm::function_ref<RValue(ReturnValueSlot)> Fn);
 
-  AggValueSlot EnsureSlot(QualType T) {
-    assert(!Dest.isIgnored() && "ignored slots NYI");
-    return Dest;
+  AggValueSlot EnsureSlot(mlir::Location loc, QualType T) {
+    if (!Dest.isIgnored()) return Dest;
+    return CGF.CreateAggTemp(T, loc, "agg.tmp.ensured");
   }
 
   void EnsureDest(mlir::Location loc, QualType T) {
@@ -504,7 +504,7 @@ void AggExprEmitter::VisitMaterializeTemporaryExpr(
 }
 
 void AggExprEmitter::VisitCXXConstructExpr(const CXXConstructExpr *E) {
-  AggValueSlot Slot = EnsureSlot(E->getType());
+  AggValueSlot Slot = EnsureSlot(CGF.getLoc(E->getSourceRange()), E->getType());
   CGF.buildCXXConstructExpr(E, Slot);
 }
 
@@ -526,7 +526,7 @@ void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
 
 void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
   CIRGenFunction::SourceLocRAIIObject loc{CGF, CGF.getLoc(E->getSourceRange())};
-  AggValueSlot Slot = EnsureSlot(E->getType());
+  AggValueSlot Slot = EnsureSlot(CGF.getLoc(E->getSourceRange()), E->getType());
   LLVM_ATTRIBUTE_UNUSED LValue SlotLV =
       CGF.makeAddrLValue(Slot.getAddress(), E->getType());
 
@@ -754,7 +754,8 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
   }
 #endif
 
-  AggValueSlot Dest = EnsureSlot(ExprToVisit->getType());
+  AggValueSlot Dest = EnsureSlot(CGF.getLoc(ExprToVisit->getSourceRange()),
+                                 ExprToVisit->getType());
 
   LValue DestLV = CGF.makeAddrLValue(Dest.getAddress(), ExprToVisit->getType());
 
