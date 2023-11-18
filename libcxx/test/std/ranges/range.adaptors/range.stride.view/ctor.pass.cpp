@@ -30,7 +30,7 @@ constexpr bool test() {
     static_assert(!std::is_copy_constructible_v<MoveOnlyView<cpp17_input_iterator<int*>>>);
     static_assert(std::is_move_constructible_v<MoveOnlyView<cpp17_input_iterator<int*>>>);
 
-    MoveOnlyView<cpp17_input_iterator<int*>> mov(cpp17_input_iterator(arr), cpp17_input_iterator(arr + 3));
+    MoveOnlyView<cpp17_input_iterator<int*>> mov(cpp17_input_iterator<int*>(arr), cpp17_input_iterator<int*>(arr + 3));
     // Because MoveOnlyView is, well, move only, we can test that it is moved
     // from when the stride view is constructed.
     std::ranges::stride_view<MoveOnlyView<cpp17_input_iterator<int*>>> mosv(std::move(mov), 1);
