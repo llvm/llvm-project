@@ -17,7 +17,7 @@ declare void @use64(i64)
 define i32 @t0_basic(i64 %x, i32 %nbits) {
 ; CHECK-LABEL: @t0_basic(
 ; CHECK-NEXT:    [[T0:%.*]] = zext i32 [[NBITS:%.*]] to i64
-; CHECK-NEXT:    [[T1:%.*]] = shl i64 -1, [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nsw i64 -1, [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = lshr exact i64 [[T1]], [[T0]]
 ; CHECK-NEXT:    [[T3:%.*]] = add i32 [[NBITS]], -33
 ; CHECK-NEXT:    call void @use64(i64 [[T0]])
@@ -53,7 +53,7 @@ declare void @use8xi64(<8 x i64>)
 define <8 x i32> @t1_vec_splat(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-LABEL: @t1_vec_splat(
 ; CHECK-NEXT:    [[T0:%.*]] = zext <8 x i32> [[NBITS:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[T1:%.*]] = shl <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>, [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nsw <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>, [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = lshr exact <8 x i64> [[T1]], [[T0]]
 ; CHECK-NEXT:    [[T3:%.*]] = add <8 x i32> [[NBITS]], <i32 -33, i32 -33, i32 -33, i32 -33, i32 -33, i32 -33, i32 -33, i32 -33>
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T0]])
@@ -148,7 +148,7 @@ define <8 x i32> @t3_vec_nonsplat(<8 x i64> %x, <8 x i32> %nbits) {
 define i32 @n4_extrause0(i64 %x, i32 %nbits) {
 ; CHECK-LABEL: @n4_extrause0(
 ; CHECK-NEXT:    [[T0:%.*]] = zext i32 [[NBITS:%.*]] to i64
-; CHECK-NEXT:    [[T1:%.*]] = shl i64 -1, [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nsw i64 -1, [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = lshr exact i64 [[T1]], [[T0]]
 ; CHECK-NEXT:    [[T3:%.*]] = add i32 [[NBITS]], -33
 ; CHECK-NEXT:    call void @use64(i64 [[T0]])
@@ -181,7 +181,7 @@ define i32 @n4_extrause0(i64 %x, i32 %nbits) {
 define i32 @n5_extrause1(i64 %x, i32 %nbits) {
 ; CHECK-LABEL: @n5_extrause1(
 ; CHECK-NEXT:    [[T0:%.*]] = zext i32 [[NBITS:%.*]] to i64
-; CHECK-NEXT:    [[T1:%.*]] = shl i64 -1, [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nsw i64 -1, [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = lshr exact i64 [[T1]], [[T0]]
 ; CHECK-NEXT:    [[T3:%.*]] = add i32 [[NBITS]], -33
 ; CHECK-NEXT:    call void @use64(i64 [[T0]])
@@ -214,7 +214,7 @@ define i32 @n5_extrause1(i64 %x, i32 %nbits) {
 define i32 @n6_extrause2(i64 %x, i32 %nbits) {
 ; CHECK-LABEL: @n6_extrause2(
 ; CHECK-NEXT:    [[T0:%.*]] = zext i32 [[NBITS:%.*]] to i64
-; CHECK-NEXT:    [[T1:%.*]] = shl i64 -1, [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nsw i64 -1, [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = lshr exact i64 [[T1]], [[T0]]
 ; CHECK-NEXT:    [[T3:%.*]] = add i32 [[NBITS]], -33
 ; CHECK-NEXT:    call void @use64(i64 [[T0]])
