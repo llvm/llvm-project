@@ -435,13 +435,11 @@ class MCLEBFragment final : public MCEncodedFragmentWithFixups<10, 1> {
   /// The value this fragment should contain.
   const MCExpr *Value;
 
-  SmallString<8> Contents;
-
 public:
   MCLEBFragment(const MCExpr &Value, bool IsSigned, MCSection *Sec = nullptr)
       : MCEncodedFragmentWithFixups<10, 1>(FT_LEB, false, Sec),
         IsSigned(IsSigned), Value(&Value) {
-    Contents.push_back(0);
+    getContents().push_back(0);
   }
 
   const MCExpr &getValue() const { return *Value; }
