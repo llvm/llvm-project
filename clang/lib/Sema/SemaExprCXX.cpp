@@ -2304,6 +2304,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal, bool IsPlacementNewExpr,
     UsualArrayDeleteWantsSize =
         doesUsualArrayDeleteWantSize(*this, StartLoc, AllocType);
 
+  SmallVector<Expr *, 8> AllPlaceArgs;
   if (IsPlacementNewExpr && !HaveDependentPlacementTypes) {
     assert(PlacementArgs.size() == 1);
     assert(UseGlobal);
@@ -2324,7 +2325,6 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal, bool IsPlacementNewExpr,
     auto *Proto = OperatorNew->getType()->castAs<FunctionProtoType>();
     VariadicCallType CallType = Proto->isVariadic() ? VariadicFunction
                                                     : VariadicDoesNotApply;
-    SmallVector<Expr *, 8> AllPlaceArgs;
 
     // We've already converted the placement args, just fill in any default
     // arguments. Skip the first parameter because we don't have a corresponding
