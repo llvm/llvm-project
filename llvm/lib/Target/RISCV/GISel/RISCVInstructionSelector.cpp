@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Debug.h"
 
@@ -64,6 +65,8 @@ private:
   bool materializeImm(Register Reg, int64_t Imm, MachineIRBuilder &MIB) const;
   bool selectGlobalValue(MachineInstr &MI, MachineIRBuilder &MIB,
                          MachineRegisterInfo &MRI) const;
+  bool selectJumpTable(MachineInstr &MI, MachineIRBuilder &MIB,
+                       MachineRegisterInfo &MRI) const;
   bool selectSExtInreg(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool selectSelect(MachineInstr &MI, MachineIRBuilder &MIB,
                     MachineRegisterInfo &MRI) const;
@@ -483,6 +486,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_GLOBAL_VALUE:
     return selectGlobalValue(MI, MIB, MRI);
+  case TargetOpcode::G_JUMP_TABLE:
+    return selectJumpTable(MI, MIB, MRI);
   case TargetOpcode::G_BRCOND: {
     Register LHS, RHS;
     RISCVCC::CondCode CC;
@@ -492,6 +497,58 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
                    .addMBB(MI.getOperand(1).getMBB());
     MI.eraseFromParent();
     return constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
+  }
+  case TargetOpcode::G_BRJT: {
+    // FIXME: Move to legalization?
+    const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
+    unsigned EntrySize = MJTI->getEntrySize(MF.getDataLayout());
+    assert((EntrySize == 4 || (Subtarget->is64Bit() && EntrySize == 8)) &&
+           "Unsupported jump-table entry size");
+    assert(
+        (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
+         MJTI->getEntryKind() == MachineJumpTableInfo::EK_Custom32 ||
+         MJTI->getEntryKind() == MachineJumpTableInfo::EK_BlockAddress) &&
+        "Unexpected jump-table entry kind");
+
+    auto SLL =
+        MIB.buildInstr(RISCV::SLLI, {&RISCV::GPRRegClass}, {MI.getOperand(2)})
+            .addImm(Log2_32(EntrySize));
+    if (!SLL.constrainAllUses(TII, TRI, RBI))
+      return false;
+
+    // TODO: Use SHXADD. Moving to legalization would fix this automatically.
+    auto ADD = MIB.buildInstr(RISCV::ADD, {&RISCV::GPRRegClass},
+                              {MI.getOperand(0), SLL.getReg(0)});
+    if (!ADD.constrainAllUses(TII, TRI, RBI))
+      return false;
+
+    unsigned LdOpc = EntrySize == 8 ? RISCV::LD : RISCV::LW;
+    auto Dest =
+        MIB.buildInstr(LdOpc, {&RISCV::GPRRegClass}, {ADD.getReg(0)})
+            .addImm(0)
+            .addMemOperand(MF.getMachineMemOperand(
+                MachinePointerInfo::getJumpTable(MF), MachineMemOperand::MOLoad,
+                EntrySize, Align(MJTI->getEntryAlignment(MF.getDataLayout()))));
+    if (!Dest.constrainAllUses(TII, TRI, RBI))
+      return false;
+
+    // If the Kind is EK_LabelDifference32, the table stores an offset from
+    // the location of the table. Add the table address to get an absolute
+    // address.
+    if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32) {
+      Dest = MIB.buildInstr(RISCV::ADD, {&RISCV::GPRRegClass},
+                            {Dest.getReg(0), MI.getOperand(0)});
+      if (!Dest.constrainAllUses(TII, TRI, RBI))
+        return false;
+    }
+
+    auto Branch =
+        MIB.buildInstr(RISCV::PseudoBRIND, {}, {Dest.getReg(0)}).addImm(0);
+    if (!Branch.constrainAllUses(TII, TRI, RBI))
+      return false;
+
+    MI.eraseFromParent();
+    return true;
   }
   case TargetOpcode::G_SEXT_INREG:
     return selectSExtInreg(MI, MIB);
@@ -773,6 +830,97 @@ bool RISCVInstructionSelector::selectGlobalValue(
       Result =
           MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {}).addGlobalAddress(GV);
     }
+
+    if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
+      return false;
+
+    MI.eraseFromParent();
+    return true;
+  }
+  }
+  return false;
+}
+
+// FIXME: This is very similar to selectGlobalValue. Merge somehow?
+bool RISCVInstructionSelector::selectJumpTable(MachineInstr &MI,
+                                               MachineIRBuilder &MIB,
+                                               MachineRegisterInfo &MRI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_JUMP_TABLE &&
+         "Expected G_JUMP_TABLE");
+
+  int Idx = MI.getOperand(1).getIndex();
+
+  Register DefReg = MI.getOperand(0).getReg();
+  const LLT DefTy = MRI.getType(DefReg);
+  MachineInstr *Result = nullptr;
+
+  // When HWASAN is used and tagging of global variables is enabled
+  // they should be accessed via the GOT, since the tagged address of a global
+  // is incompatible with existing code models. This also applies to non-pic
+  // mode.
+  if (TM.isPositionIndependent() || Subtarget->allowTaggedGlobals()) {
+    if (!Subtarget->allowTaggedGlobals()) {
+      // Use PC-relative addressing to access the symbol. This generates the
+      // pattern (PseudoLLA sym), which expands to (addi (auipc %pcrel_hi(sym))
+      // %pcrel_lo(auipc)).
+      Result =
+          MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {}).addJumpTableIndex(Idx);
+    } else {
+      // Use PC-relative addressing to access the GOT for this symbol, then
+      // load the address from the GOT. This generates the pattern (PseudoLGA
+      // sym), which expands to (ld (addi (auipc %got_pcrel_hi(sym))
+      // %pcrel_lo(auipc))).
+      MachineFunction &MF = *MI.getParent()->getParent();
+      MachineMemOperand *MemOp = MF.getMachineMemOperand(
+          MachinePointerInfo::getGOT(MF),
+          MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+              MachineMemOperand::MOInvariant,
+          DefTy, Align(DefTy.getSizeInBits() / 8));
+
+      Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
+                   .addJumpTableIndex(Idx)
+                   .addMemOperand(MemOp);
+    }
+
+    if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
+      return false;
+
+    MI.eraseFromParent();
+    return true;
+  }
+
+  switch (TM.getCodeModel()) {
+  default: {
+    reportGISelFailure(const_cast<MachineFunction &>(*MF), *TPC, *MORE,
+                       getName(), "Unsupported code model for lowering", MI);
+    return false;
+  }
+  case CodeModel::Small: {
+    // Must lie within a single 2 GiB address range and must lie between
+    // absolute addresses -2 GiB and +2 GiB. This generates the pattern (addi
+    // (lui %hi(sym)) %lo(sym)).
+    Register AddrHiDest = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    MachineInstr *AddrHi = MIB.buildInstr(RISCV::LUI, {AddrHiDest}, {})
+                               .addJumpTableIndex(Idx, RISCVII::MO_HI);
+
+    if (!constrainSelectedInstRegOperands(*AddrHi, TII, TRI, RBI))
+      return false;
+
+    Result = MIB.buildInstr(RISCV::ADDI, {DefReg}, {AddrHiDest})
+                 .addJumpTableIndex(Idx, RISCVII::MO_LO);
+
+    if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
+      return false;
+
+    MI.eraseFromParent();
+    return true;
+  }
+  case CodeModel::Medium: {
+    // Generate a sequence for accessing addresses within any 2GiB range
+    // within the address space. This generates the pattern (PseudoLLA sym),
+    // which expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
+    Result =
+        MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {}).addJumpTableIndex(Idx);
 
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
       return false;
