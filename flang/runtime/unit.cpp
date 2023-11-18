@@ -825,10 +825,6 @@ void ExternalFileUnit::BackspaceVariableUnformattedRecord(
     return;
   }
   frameOffsetInFile_ -= *recordLength + 2 * headerBytes;
-  if (frameOffsetInFile_ >= headerBytes) {
-    frameOffsetInFile_ -= headerBytes;
-    recordOffsetInFrame_ = headerBytes;
-  }
   auto need{static_cast<std::size_t>(
       recordOffsetInFrame_ + sizeof header + *recordLength)};
   got = ReadFrame(frameOffsetInFile_, need, handler);
