@@ -43,7 +43,7 @@ int main() {
 // CHECK:      @{{.*}}cexpr_struct_with_addr{{.*}} = 
 // CHECK-SAME    !dbg ![[EMPTY_GLOBAL:[0-9]+]]
 
-// CHECK:      !DIGlobalVariableExpression(var: ![[INT_VAR:[0-9]+]], expr: !DIExpression())
+// CHECK:      !DIGlobalVariableExpression(var: ![[INT_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 25, DW_OP_stack_value))
 // CHECK:      ![[INT_VAR]] = distinct !DIGlobalVariable(name: "cexpr_int_with_addr", linkageName:
 // CHECK-SAME:                isLocal: false, isDefinition: true, declaration: ![[INT_DECL:[0-9]+]])
 

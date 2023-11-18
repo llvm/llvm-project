@@ -7,7 +7,7 @@ struct __declspec(dllexport) s {
   static const unsigned int ui = 0;
 };
 
-// CHECK: [[UI]] = !DIGlobalVariableExpression(var: [[UIV:.*]], expr: !DIExpression())
+// CHECK: [[UI]] = !DIGlobalVariableExpression(var: [[UIV:.*]], expr: !DIExpression(DW_OP_constu, 0, DW_OP_stack_value))
 // CHECK: [[UIV]] = distinct !DIGlobalVariable(name: "ui", linkageName: "?ui@s@@2IB", scope: ![[SCOPE:[0-9]+]],
 // CHECK: ![[SCOPE]] = distinct !DICompileUnit(
 
