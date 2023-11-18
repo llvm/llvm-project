@@ -195,6 +195,9 @@ class DAPTestCaseBase(TestBase):
 
     def get_local_as_int(self, name, threadId=None):
         value = self.dap_server.get_local_variable_value(name, threadId=threadId)
+        # 'value' may have the variable value and summary.
+        # Extract the variable value since summary can have nonnumeric characters.
+        value = value.split(" ")[0]
         if value.startswith("0x"):
             return int(value, 16)
         elif value.startswith("0"):
@@ -353,6 +356,7 @@ class DAPTestCaseBase(TestBase):
         enableSyntheticChildDebugging=False,
         commandEscapePrefix="`",
         customFrameFormat=None,
+        customThreadFormat=None,
     ):
         """Sending launch request to dap"""
 
@@ -393,6 +397,7 @@ class DAPTestCaseBase(TestBase):
             enableSyntheticChildDebugging=enableSyntheticChildDebugging,
             commandEscapePrefix=commandEscapePrefix,
             customFrameFormat=customFrameFormat,
+            customThreadFormat=customThreadFormat,
         )
 
         if expectFailure:
@@ -431,6 +436,7 @@ class DAPTestCaseBase(TestBase):
         enableSyntheticChildDebugging=False,
         commandEscapePrefix="`",
         customFrameFormat=None,
+        customThreadFormat=None,
     ):
         """Build the default Makefile target, create the DAP debug adaptor,
         and launch the process.
@@ -463,4 +469,5 @@ class DAPTestCaseBase(TestBase):
             enableSyntheticChildDebugging=enableSyntheticChildDebugging,
             commandEscapePrefix=commandEscapePrefix,
             customFrameFormat=customFrameFormat,
+            customThreadFormat=customThreadFormat,
         )

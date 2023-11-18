@@ -2018,10 +2018,6 @@ private:
                (!Line.MightBeFunctionDecl || Current.NestingLevel != 0)) {
       Contexts.back().FirstStartOfName = &Current;
       Current.setType(TT_StartOfName);
-      if (auto *PrevNonComment = Current.getPreviousNonComment();
-          PrevNonComment && PrevNonComment->is(TT_StartOfName)) {
-        PrevNonComment->setType(TT_Unknown);
-      }
     } else if (Current.is(tok::semi)) {
       // Reset FirstStartOfName after finding a semicolon so that a for loop
       // with multiple increment statements is not confused with a for loop
@@ -2210,7 +2206,8 @@ private:
       return false;
 
     if (const auto *NextNonComment = Tok.getNextNonComment();
-        !NextNonComment || NextNonComment->isPointerOrReference()) {
+        !NextNonComment || NextNonComment->isPointerOrReference() ||
+        NextNonComment->isOneOf(tok::identifier, tok::string_literal)) {
       return false;
     }
 
@@ -3410,10 +3407,8 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
         Tok->isOneOf(TT_PointerOrReference, TT_StartOfName, tok::ellipsis)) {
       return true;
     }
-    if (Tok->isOneOf(tok::l_brace, tok::string_literal, TT_ObjCMethodExpr) ||
-        Tok->Tok.isLiteral()) {
+    if (Tok->isOneOf(tok::l_brace, TT_ObjCMethodExpr) || Tok->Tok.isLiteral())
       return false;
-    }
   }
   return false;
 }

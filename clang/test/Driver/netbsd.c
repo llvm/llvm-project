@@ -134,6 +134,7 @@
 // STATIC-NOT: "-shared"
 // STATIC: "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
 // STATIC: "{{.*}}/usr/lib{{/|\\\\}}crti.o" "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o"
+// STATIC: "-L{{.*}}/usr/lib"
 // STATIC: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // STATIC-PIE: ld{{.*}}" "--eh-frame-hdr"
@@ -144,6 +145,7 @@
 // STATIC-PIE-NOT: "-shared"
 // STATIC-PIE: "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
 // STATIC-PIE: "{{.*}}/usr/lib{{/|\\\\}}crti.o" "{{.*}}/usr/lib{{/|\\\\}}crtbeginS.o"
+// STATIC-PIE: "-L{{.*}}/usr/lib"
 // STATIC-PIE: "{{.*}}/usr/lib{{/|\\\\}}crtendS.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // SHARED: ld{{.*}}" "--eh-frame-hdr"
@@ -151,6 +153,7 @@
 // SHARED-NOT: "-dynamic-linker"
 // SHARED-NOT: "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
 // SHARED: "{{.*}}/usr/lib{{/|\\\\}}crti.o" "{{.*}}/usr/lib{{/|\\\\}}crtbeginS.o"
+// SHARED: "-L{{.*}}/usr/lib"
 // SHARED: "{{.*}}/usr/lib{{/|\\\\}}crtendS.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // PIE: ld{{.*}}" "--eh-frame-hdr"
@@ -159,6 +162,7 @@
 // PIE-NOT: "-shared"
 // PIE: "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
 // PIE: "{{.*}}/usr/lib{{/|\\\\}}crtbeginS.o"
+// PIE: "-L{{.*}}/usr/lib"
 // PIE: "{{.*}}/usr/lib{{/|\\\\}}crtendS.o"
 // PIE: "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 

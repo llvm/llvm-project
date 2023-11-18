@@ -3,6 +3,8 @@
 # RUN: echo "SECTIONS { .text.zed : { *(.text.foo) } .text.qux : { *(.text.bar) } }" > %t.script
 # RUN: ld.lld -T %t.script --emit-relocs %t.o -o %t
 # RUN: llvm-objdump --section-headers %t | FileCheck %s
+# RUN: ld.lld -T %t.script -r %t.o -o %t.ro
+# RUN: llvm-readelf -S %t.ro | FileCheck %s
 
 ## Check we name relocation sections in according to
 ## their target sections names.
