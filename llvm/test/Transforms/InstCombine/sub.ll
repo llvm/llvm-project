@@ -480,7 +480,7 @@ define i64 @test_neg_shl_div(i64 %a) {
 define i64 @test_neg_shl_zext_i1(i1 %a, i64 %b) {
 ; CHECK-LABEL: @test_neg_shl_zext_i1(
 ; CHECK-NEXT:    [[EXT_NEG:%.*]] = sext i1 [[A:%.*]] to i64
-; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i64 [[EXT_NEG]], [[B:%.*]]
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl nsw i64 [[EXT_NEG]], [[B:%.*]]
 ; CHECK-NEXT:    ret i64 [[SHL_NEG]]
 ;
   %ext = zext i1 %a to i64
@@ -492,7 +492,7 @@ define i64 @test_neg_shl_zext_i1(i1 %a, i64 %b) {
 define i64 @test_neg_shl_sext_i1(i1 %a, i64 %b) {
 ; CHECK-LABEL: @test_neg_shl_sext_i1(
 ; CHECK-NEXT:    [[EXT_NEG:%.*]] = zext i1 [[A:%.*]] to i64
-; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i64 [[EXT_NEG]], [[B:%.*]]
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl nuw i64 [[EXT_NEG]], [[B:%.*]]
 ; CHECK-NEXT:    ret i64 [[SHL_NEG]]
 ;
   %ext = sext i1 %a to i64
@@ -544,7 +544,7 @@ define i32 @test_neg_trunc_shl_sub(i64 %a, i64 %b) {
 define i32 @test_neg_trunc_shl_ashr(i64 %a, i64 %b) {
 ; CHECK-LABEL: @test_neg_trunc_shl_ashr(
 ; CHECK-NEXT:    [[SHR_NEG:%.*]] = lshr i64 [[A:%.*]], 63
-; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i64 [[SHR_NEG]], [[B:%.*]]
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl nuw i64 [[SHR_NEG]], [[B:%.*]]
 ; CHECK-NEXT:    [[TRUNC_NEG:%.*]] = trunc i64 [[SHL_NEG]] to i32
 ; CHECK-NEXT:    ret i32 [[TRUNC_NEG]]
 ;
@@ -558,7 +558,7 @@ define i32 @test_neg_trunc_shl_ashr(i64 %a, i64 %b) {
 define i32 @test_neg_trunc_shl_lshr(i64 %a, i64 %b) {
 ; CHECK-LABEL: @test_neg_trunc_shl_lshr(
 ; CHECK-NEXT:    [[SHR_NEG:%.*]] = ashr i64 [[A:%.*]], 63
-; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i64 [[SHR_NEG]], [[B:%.*]]
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl nsw i64 [[SHR_NEG]], [[B:%.*]]
 ; CHECK-NEXT:    [[TRUNC_NEG:%.*]] = trunc i64 [[SHL_NEG]] to i32
 ; CHECK-NEXT:    ret i32 [[TRUNC_NEG]]
 ;
