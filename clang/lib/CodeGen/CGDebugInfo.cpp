@@ -69,6 +69,19 @@ static uint32_t getDeclAlignIfRequired(const Decl *D, const ASTContext &Ctx) {
   return D->hasAttr<AlignedAttr>() ? D->getMaxAlignment() : 0;
 }
 
+APValue const * evaluateConstantInitializer(clang::VarDecl const * VD) {
+  assert (VD != nullptr);
+
+  VD = VD->getCanonicalDecl();
+  if (!VD)
+    return nullptr;
+
+  if (!VD->hasConstantInitialization() || !VD->hasInit())
+    return nullptr;
+
+  return VD->evaluateValue();
+}
+
 CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
     : CGM(CGM), DebugKind(CGM.getCodeGenOpts().getDebugInfo()),
       DebugTypeExtRefs(CGM.getCodeGenOpts().DebugTypeExtRefs),
@@ -5596,14 +5609,11 @@ void CGDebugInfo::EmitGlobalVariable(const VarDecl *VD) {
   if (VD->hasAttr<NoDebugAttr>())
     return;
 
-  if (!VD->hasInit())
-    return;
-
   const auto CacheIt = DeclCache.find(VD);
   if (CacheIt != DeclCache.end())
     return;
 
-  auto const *InitVal = VD->evaluateValue();
+  auto const * InitVal = evaluateConstantInitializer(VD);
   if (!InitVal)
     return;
 
