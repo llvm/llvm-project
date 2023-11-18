@@ -317,13 +317,16 @@ added in the future:
     not be used lightly but only for specific situations such as an
     alternative to the *register pinning* performance technique often
     used when implementing functional programming languages. At the
-    moment only X86 supports this convention and it has the following
-    limitations:
+    moment only X86 and AArch64 support this convention. The following
+    limitations exist:
 
-    -  On *X86-32* only supports up to 4 bit type parameters. No
+    -  On *X86-32* only up to 4 bit type parameters are supported. No
        floating-point types are supported.
-    -  On *X86-64* only supports up to 10 bit type parameters and 6
-       floating-point parameters.
+    -  On *X86-64* only up to 10 bit type parameters and 6
+       floating-point parameters are supported.
+    -  On *AArch64* only up to 4 32-bit floating-point parameters,
+       4 64-bit floating-point parameters, and 10 bit type parameters
+       are supported.
 
     This calling convention supports `tail call
     optimization <CodeGenerator.html#tail-call-optimization>`_ but requires
