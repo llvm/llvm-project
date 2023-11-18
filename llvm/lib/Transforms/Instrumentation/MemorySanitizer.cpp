@@ -4696,7 +4696,8 @@ struct VarArgHelperBase : public VarArgHelper {
                               "_msarg_va_o");
   }
 
-  void CleanUnusedTLS(IRBuilder<> &IRB, Value *ShadowBase, unsigned BaseOffset) {
+  void CleanUnusedTLS(IRBuilder<> &IRB, Value *ShadowBase,
+                      unsigned BaseOffset) {
     // The tails of __msan_va_arg_tls is not large enough to fit full
     // value shadow, but it will be copied to backup anyway. Make it
     // clean.
@@ -4705,7 +4706,7 @@ struct VarArgHelperBase : public VarArgHelper {
     Value *TailSize =
         ConstantInt::getSigned(IRB.getInt32Ty(), kParamTLSSize - BaseOffset);
     IRB.CreateMemSet(ShadowBase, ConstantInt::getNullValue(IRB.getInt8Ty()),
-                      TailSize, Align(8));
+                     TailSize, Align(8));
   }
 
   void unpoisonVAListTagForInst(IntrinsicInst &I) {
@@ -4863,7 +4864,7 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
           if (OverflowOffset > kParamTLSSize) {
             // We have no space to copy shadow there.
             CleanUnusedTLS(IRB, ShadowBase, BaseOffset);
-            continue; 
+            continue;
           }
         }
         // Take fixed arguments into account for GpOffset and FpOffset,
