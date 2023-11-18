@@ -335,6 +335,14 @@ def OMPFunctionFiltering : Pass<"omp-function-filtering"> {
   ];
 }
 
+def OpenACCLoopExpand : Pass<"acc-loop-expand", "mlir::func::FuncOp"> {
+  let summary = "";
+  let constructor = "::fir::createOpenACCLoopExpandPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect"
+  ];
+}
+
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
   let summary = "Add vscale_range attribute to functions";
   let description = [{

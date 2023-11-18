@@ -1218,6 +1218,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
+
+    Block &getBody() { return getLoopRegions().front()->front(); }
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -1237,7 +1239,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     )
     $region
     ( `(` type($results)^ `)` )?
-    attr-dict-with-keyword
+  attr-dict-with-keyword
   }];
 
   let hasVerifier = 1;

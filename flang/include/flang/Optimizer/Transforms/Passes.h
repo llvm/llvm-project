@@ -45,6 +45,7 @@ namespace fir {
 #define GEN_PASS_DECL_ALGEBRAICSIMPLIFICATION
 #define GEN_PASS_DECL_POLYMORPHICOPCONVERSION
 #define GEN_PASS_DECL_OPENACCDATAOPERANDCONVERSION
+#define GEN_PASS_DECL_OPENACCLOOPEXPAND
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
 std::unique_ptr<mlir::Pass> createAbstractResultOnFuncOptPass();
@@ -78,6 +79,8 @@ std::unique_ptr<mlir::Pass> createPolymorphicOpConversionPass();
 std::unique_ptr<mlir::Pass> createOMPFunctionFilteringPass();
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 createOMPMarkDeclareTargetPass();
+
+std::unique_ptr<mlir::Pass> createOpenACCLoopExpandPass();
 
 std::unique_ptr<mlir::Pass> createVScaleAttrPass();
 std::unique_ptr<mlir::Pass>
