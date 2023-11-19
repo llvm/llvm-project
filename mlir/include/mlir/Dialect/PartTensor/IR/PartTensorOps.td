@@ -38,7 +38,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 class PartTensor_Op<string mnemonic, list<Trait> traits = []>
     : Op<PartTensor_Dialect, mnemonic, traits>;
 
-def PartTensor_GetPartitionsOp : PartTensor_Op<"get_partitions">,
+def PartTensor_GetPartitionsOp : PartTensor_Op<"get_partitions", [Pure]>,
                                 Arguments<(ins AnyTensor
                                            : $primary)>,
                                 Results<(outs AnyStridedMemRefOfRank<1>
