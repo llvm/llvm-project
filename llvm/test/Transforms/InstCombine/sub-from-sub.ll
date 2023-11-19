@@ -20,8 +20,8 @@ define i8 @t0(i8 %x, i8 %y, i8 %z) {
 ; NSW/NUW flags are propagated
 define i8 @t1_flags(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @t1_flags(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %o0 = sub nuw nsw i8 %x, %y
@@ -32,8 +32,8 @@ define i8 @t1_flags(i8 %x, i8 %y, i8 %z) {
 ; NUW flags are propagated
 define i8 @t1_flags_nuw_only(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @t1_flags_nuw_only(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %o0 = sub nuw i8 %x, %y
