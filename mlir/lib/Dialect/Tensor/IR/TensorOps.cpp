@@ -602,13 +602,18 @@ ConcatOp::reifyResultShapes(OpBuilder &builder,
       if (i == dim)
         hasStaticConcatDim = true;
     } else if (!inferredResultType.isDynamicDim(i)) {
+      // ReifyRankedShapedTypeOpInterface requires that reifyResultShapes
+      // returns a Value for dynamic dimensions.
       reifiedReturnShapes[0][i] =
-          builder.getIndexAttr(inferredResultType.getDimSize(i));
+          builder
+              .create<arith::ConstantIndexOp>(getLoc(),
+                                              inferredResultType.getDimSize(i))
+              .getResult();
       if (i == dim)
         hasStaticConcatDim = true;
     } else {
       reifiedReturnShapes[0][i] =
-          tensor::getMixedSize(builder, init.getLoc(), init, i);
+          builder.create<tensor::DimOp>(init.getLoc(), init, i).getResult();
     }
   }
 
@@ -623,8 +628,8 @@ ConcatOp::reifyResultShapes(OpBuilder &builder,
   for (Value input : inputs.drop_front()) {
     Value newSize =
         builder.createOrFold<tensor::DimOp>(input.getLoc(), input, dim);
-    concatValue =
-        builder.create<arith::AddIOp>(input.getLoc(), concatValue, newSize);
+    concatValue = builder.createOrFold<arith::AddIOp>(input.getLoc(),
+                                                      concatValue, newSize);
   }
   reifiedReturnShapes[0][dim] = concatValue;
   return success();
