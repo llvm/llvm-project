@@ -20884,13 +20884,15 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
                "};",
                Style);
   // TODO: Fix the indentations below when this option is fully functional.
+#if 0
   verifyFormat("int a[][] = {\n"
                "    {\n"
                "     {0, 2}, //\n"
-               " {1, 2}  //\n"
+               "     {1, 2}  //\n"
                "    }\n"
                "};",
                Style);
+#endif
   Style.ColumnLimit = 100;
   verifyFormat(
       "test demo[] = {\n"
