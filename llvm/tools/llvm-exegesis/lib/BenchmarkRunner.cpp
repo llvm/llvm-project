@@ -343,6 +343,12 @@ private:
                                  Twine(strerror(errno)));
     }
 
+    if (ChildSignalInfo.si_signo == SIGSEGV)
+      return make_error<SnippetCrash>(
+          "A segmentation fault occurred at address " +
+          Twine::utohexstr(
+              reinterpret_cast<intptr_t>(ChildSignalInfo.si_addr)));
+
     return make_error<SnippetCrash>(
         "The benchmarking subprocess sent unexpected signal: " +
         Twine(strsignal(ChildSignalInfo.si_signo)));
