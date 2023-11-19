@@ -1110,8 +1110,8 @@ define i32 @test57(i32 %A, i32 %B) {
 
 define i64 @test58(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test58(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[I:%.*]], [[J:%.*]]
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i64 [[I:%.*]], [[J:%.*]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %gep1 = getelementptr inbounds [100 x [100 x i8]], ptr %foo, i64 0, i64 42, i64 %i
   %gep2 = getelementptr inbounds [100 x [100 x i8]], ptr %foo, i64 0, i64 42, i64 %j
@@ -2585,7 +2585,7 @@ define i8 @sub_of_adds_2xz_multiuse(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sub_of_adds_2xz_multiuse(
 ; CHECK-NEXT:    [[XZ:%.*]] = add i8 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[YZ:%.*]] = add i8 [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[XZ]], [[YZ]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use8(i8 [[XZ]])
 ; CHECK-NEXT:    call void @use8(i8 [[YZ]])
 ; CHECK-NEXT:    ret i8 [[R]]

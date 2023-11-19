@@ -2202,6 +2202,25 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     return Sub;
   }
 
+  {
+    // (X + Z) - (Y + Z) --> (X - Y)
+    // This is done in other passes, but we want to be able to consume this
+    // pattern in InstCombine so we can generate it without creating infinite
+    // loops.
+    if (match(Op0, m_Add(m_Value(X), m_Value(Z))) &&
+        match(Op1, m_c_Add(m_Value(Y), m_Specific(Z))))
+      return BinaryOperator::CreateSub(X, Y);
+
+    // (X + C0) - (Y + C1) --> (X - Y) + (C0 - C1)
+    Constant *CX, *CY;
+    if (match(Op0, m_OneUse(m_Add(m_Value(X), m_ImmConstant(CX)))) &&
+        match(Op1, m_OneUse(m_Add(m_Value(Y), m_ImmConstant(CY))))) {
+      Value *OpsSub = Builder.CreateSub(X, Y);
+      Constant *ConstsSub = ConstantExpr::getSub(CX, CY);
+      return BinaryOperator::CreateAdd(OpsSub, ConstsSub);
+    }
+  }
+
   // (~X) - (~Y) --> Y - X
   // This is placed after the other reassociations and explicitly excludes a
   // sub-of-sub pattern to avoid infinite looping.
