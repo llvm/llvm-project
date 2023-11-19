@@ -49,18 +49,6 @@ static std::optional<Type> convertPartTensorTypes(Type type) {
   return std::nullopt;
 }
 
-static FunctionType getElementalFuncTypeForOp(Operation *op) {
-  SmallVector<Type, 1> resultTys(op->getNumResults());
-  SmallVector<Type, 2> inputTys(op->getNumOperands());
-  std::transform(op->result_type_begin(), op->result_type_end(),
-                 resultTys.begin(),
-                 [](Type ty) { return getElementTypeOrSelf(ty); });
-  std::transform(op->operand_type_begin(), op->operand_type_end(),
-                 inputTys.begin(),
-                 [](Type ty) { return getElementTypeOrSelf(ty); });
-  return FunctionType::get(op->getContext(), inputTys, resultTys);
-}
-
 //===----------------------------------------------------------------------===//
 // Conversion rules.
 //===----------------------------------------------------------------------===//
