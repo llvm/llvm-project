@@ -117,11 +117,10 @@ define i8 @sub_1(i8 %a, i1 %c, i8 %x, i8 %y) {
 
 define i8 @sub_2(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_2(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 123
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[YY]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[A:%.*]], -1
-; CHECK-NEXT:    [[NOT_AB:%.*]] = add i8 [[B]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i8 [[TMP2]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT_AB:%.*]] = sub i8 -2, [[TMP3]]
 ; CHECK-NEXT:    ret i8 [[NOT_AB]]
 ;
   %nx = xor i8 %x, -1
