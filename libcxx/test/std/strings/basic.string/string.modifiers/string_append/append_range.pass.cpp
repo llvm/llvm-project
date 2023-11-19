@@ -23,7 +23,7 @@
 
 constexpr bool test_constexpr() {
   for_all_iterators_and_allocators_constexpr<char, const char*>([]<class Iter, class Sent, class Alloc>() {
-    test_sequence_append_range<std::basic_string<char, std::char_traits<char>, Alloc>, Iter, Sent>([](auto&& c) {
+    test_sequence_append_range<std::basic_string<char, std::char_traits<char>, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
     });
   });
@@ -35,7 +35,7 @@ int main(int, char**) {
   static_assert(test_constraints_append_range<std::basic_string, char, int>());
 
   for_all_iterators_and_allocators<char, const char*>([]<class Iter, class Sent, class Alloc>() {
-    test_sequence_append_range<std::basic_string<char, std::char_traits<char>, Alloc>, Iter, Sent>([](auto&& c) {
+    test_sequence_append_range<std::basic_string<char, std::char_traits<char>, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
     });
   });
