@@ -264,7 +264,7 @@ extern "C" {
       assert(ptr && "Received nullptr for PartTensorCOO object");              \
       auto coo = static_cast<SparseTensorCOO<V> *>(ptr);                       \
       return (void *)PartTensorStorage<uint64_t, uint64_t, V>::newFromCOO(     \
-          partRank, partSizes, dimRank, dimSizes, coo);                        \
+          partRank, partSizes, dimRank, dimSizes, lvlTypes, coo);              \
     }                                                                          \
     default:                                                                   \
       MLIR_SPARSETENSOR_FATAL("unknown action: %d\n",                          \
@@ -285,15 +285,17 @@ static_assert(std::is_same<index_type, uint64_t>::value,
 // the first two arguments are "sizes" vs "shapes", (2) whether the "lvl"
 // arguments are actually storage-levels vs target tensor-dimensions,
 // (3) whether all the arguments are actually used/required.
-void *_mlir_ciface_newPartTensor( // NOLINT
-    StridedMemRefType<index_type, 1> *partSizesRef,
-    StridedMemRefType<index_type, 1> *dimSizesRef, PrimaryType valTp,
-    Action action, void *ptr) {
+void *
+_mlir_ciface_newPartTensor(StridedMemRefType<index_type, 1> *partSizesRef,
+                           StridedMemRefType<index_type, 1> *dimSizesRef,
+                           StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
+                           PrimaryType valTp, Action action, void *ptr) {
   ASSERT_NO_STRIDE(dimSizesRef);
   const uint64_t partRank = MEMREF_GET_USIZE(partSizesRef);
   const uint64_t dimRank = MEMREF_GET_USIZE(dimSizesRef);
   const index_type *partSizes = MEMREF_GET_PAYLOAD(partSizesRef);
   const index_type *dimSizes = MEMREF_GET_PAYLOAD(dimSizesRef);
+  const DimLevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
   assert((valTp == PrimaryType::kF64 || valTp == PrimaryType::kF32) &&
          "Only float and double is supported for now");
   assert(action == mlir::sparse_tensor::Action::kFromCOO &&

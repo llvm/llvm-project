@@ -104,7 +104,8 @@ public:
 
   static PartTensorStorage<P, I, V> *
   newFromCOO(uint64_t nParts, const uint64_t *partData, uint64_t dimRank,
-             const uint64_t *dimShape, const SparseTensorCOO<V> *spCOO);
+             const uint64_t *dimShape, const DimLevelType *lvlTypes,
+             const SparseTensorCOO<V> *spCOO);
 
   ~PartTensorStorage() = default;
   void getPartitions(std::vector<index_type> **partData) override {
@@ -152,7 +153,8 @@ bool inRegion(T loPoint, T hiPoint, T point) {
 template <typename P, typename I, typename V>
 PartTensorStorage<P, I, V> *PartTensorStorage<P, I, V>::newFromCOO(
     uint64_t partDataLength, const uint64_t *partData, uint64_t dimRank,
-    const uint64_t *dimShape, const SparseTensorCOO<V> *spCOO) {
+    const uint64_t *dimShape, const DimLevelType *lvlTypes,
+    const SparseTensorCOO<V> *spCOO) {
   using namespace mlir::part_tensor;
   using llvm::ArrayRef;
   assert(partData && "Got nullptr for partition shape");
