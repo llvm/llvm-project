@@ -125,14 +125,12 @@ public:
   LogicalResult
   matchAndRewrite(SetSliceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto Context = op.getContext();
-    auto resType = std::nullopt;
     Location loc = op->getLoc();
-    auto fn = mlir::sparse_tensor::getFunc(
-        op->getParentOfType<ModuleOp>(), "SetSlice", resType,
-        adaptor.getOperands(), mlir::sparse_tensor::EmitCInterface::On);
-    rewriter.create<func::CallOp>(loc, resType, fn, adaptor.getOperands());
-    rewriter.eraseOp(op);
+    createFuncCall(rewriter, loc, "SetSlice", {},
+                   {adaptor.getInPartTensor(), adaptor.getPartSpec(),
+                    adaptor.getSparseTensor()},
+                   mlir::sparse_tensor::EmitCInterface::On);
+    rewriter.replaceOp(op, adaptor.getInPartTensor());
     return success();
   }
 };
