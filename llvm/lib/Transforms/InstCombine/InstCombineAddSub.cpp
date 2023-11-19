@@ -2191,8 +2191,15 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
   // ((X - Y) - Op1)  -->  X - (Y + Op1)
   if (match(Op0, m_OneUse(m_Sub(m_Value(X), m_Value(Y))))) {
-    Value *Add = Builder.CreateAdd(Y, Op1);
-    return BinaryOperator::CreateSub(X, Add);
+    OverflowingBinaryOperator *LHSSub = cast<OverflowingBinaryOperator>(Op0);
+    bool HasNUW = I.hasNoUnsignedWrap() && LHSSub->hasNoUnsignedWrap();
+    bool HasNSW = HasNUW && I.hasNoSignedWrap() && LHSSub->hasNoSignedWrap();
+    Value *Add = Builder.CreateAdd(Y, Op1, "", /* HasNUW */ HasNUW,
+                                   /* HasNSW */ HasNSW);
+    BinaryOperator *Sub = BinaryOperator::CreateSub(X, Add);
+    Sub->setHasNoUnsignedWrap(HasNUW);
+    Sub->setHasNoSignedWrap(HasNSW);
+    return Sub;
   }
 
   // (~X) - (~Y) --> Y - X
