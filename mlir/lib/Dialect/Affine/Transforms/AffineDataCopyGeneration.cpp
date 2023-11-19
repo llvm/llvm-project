@@ -219,14 +219,13 @@ void AffineDataCopyGeneration::runOnOperation() {
 
   // Promote any single iteration loops in the copy nests and collect
   // load/stores to simplify.
-  IRRewriter rewriter(f.getContext());
   SmallVector<Operation *, 4> copyOps;
   for (Operation *nest : copyNests)
     // With a post order walk, the erasure of loops does not affect
     // continuation of the walk or the collection of load/store ops.
     nest->walk([&](Operation *op) {
       if (auto forOp = dyn_cast<AffineForOp>(op))
-        (void)forOp.promoteIfSingleIteration(rewriter);
+        (void)promoteIfSingleIteration(forOp);
       else if (isa<AffineLoadOp, AffineStoreOp>(op))
         copyOps.push_back(op);
     });

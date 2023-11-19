@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
@@ -19,15 +20,92 @@
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Support/MathExtras.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
-
 #include <numeric>
 #include <optional>
 #include <type_traits>
 
 using namespace mlir;
 using namespace mlir::affine;
+
+/// Returns the trip count of the loop as an affine expression if the latter is
+/// expressible as an affine expression, and nullptr otherwise. The trip count
+/// expression is simplified before returning. This method only utilizes map
+/// composition to construct lower and upper bounds before computing the trip
+/// count expressions.
+void mlir::affine::getTripCountMapAndOperands(
+    AffineForOp forOp, AffineMap *tripCountMap,
+    SmallVectorImpl<Value> *tripCountOperands) {
+  MLIRContext *context = forOp.getContext();
+  int64_t step = forOp.getStepAsInt();
+  int64_t loopSpan;
+  if (forOp.hasConstantBounds()) {
+    int64_t lb = forOp.getConstantLowerBound();
+    int64_t ub = forOp.getConstantUpperBound();
+    loopSpan = ub - lb;
+    if (loopSpan < 0)
+      loopSpan = 0;
+    *tripCountMap = AffineMap::getConstantMap(ceilDiv(loopSpan, step), context);
+    tripCountOperands->clear();
+    return;
+  }
+  auto lbMap = forOp.getLowerBoundMap();
+  auto ubMap = forOp.getUpperBoundMap();
+  if (lbMap.getNumResults() != 1) {
+    *tripCountMap = AffineMap();
+    return;
+  }
+
+  // Difference of each upper bound expression from the single lower bound
+  // expression (divided by the step) provides the expressions for the trip
+  // count map.
+  AffineValueMap ubValueMap(ubMap, forOp.getUpperBoundOperands());
+
+  SmallVector<AffineExpr, 4> lbSplatExpr(ubValueMap.getNumResults(),
+                                         lbMap.getResult(0));
+  auto lbMapSplat = AffineMap::get(lbMap.getNumDims(), lbMap.getNumSymbols(),
+                                   lbSplatExpr, context);
+  AffineValueMap lbSplatValueMap(lbMapSplat, forOp.getLowerBoundOperands());
+
+  AffineValueMap tripCountValueMap;
+  AffineValueMap::difference(ubValueMap, lbSplatValueMap, &tripCountValueMap);
+  for (unsigned i = 0, e = tripCountValueMap.getNumResults(); i < e; ++i)
+    tripCountValueMap.setResult(i,
+                                tripCountValueMap.getResult(i).ceilDiv(step));
+
+  *tripCountMap = tripCountValueMap.getAffineMap();
+  tripCountOperands->assign(tripCountValueMap.getOperands().begin(),
+                            tripCountValueMap.getOperands().end());
+}
+
+/// Returns the trip count of the loop if it's a constant, std::nullopt
+/// otherwise. This method uses affine expression analysis (in turn using
+/// getTripCount) and is able to determine constant trip count in non-trivial
+/// cases.
+std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
+  SmallVector<Value, 4> operands;
+  AffineMap map;
+  getTripCountMapAndOperands(forOp, &map, &operands);
+
+  if (!map)
+    return std::nullopt;
+
+  // Take the min if all trip counts are constant.
+  std::optional<uint64_t> tripCount;
+  for (auto resultExpr : map.getResults()) {
+    if (auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr)) {
+      if (tripCount.has_value())
+        tripCount =
+            std::min(*tripCount, static_cast<uint64_t>(constExpr.getValue()));
+      else
+        tripCount = constExpr.getValue();
+    } else
+      return std::nullopt;
+  }
+  return tripCount;
+}
 
 /// Returns the greatest known integral divisor of the trip count. Affine
 /// expression analysis is used (indirectly through getTripCount), and
