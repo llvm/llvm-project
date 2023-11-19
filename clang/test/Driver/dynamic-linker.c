@@ -23,6 +23,12 @@
 // RUN: %clang -target powerpc64-unknown-linux-gnu -### -static /dev/null -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-STATIC %s
 // RUN: %clang -target x86_64-unknown-linux-gnu -### -static /dev/null -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-STATIC %s
 
+// RUN: %clang -target armv7-unknown-linux-gnueabi -### -export-dynamic /dev/null -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-RDYNAMIC %s
+// RUN: %clang -target i386-unknown-linux-gnu -### -export-dynamic /dev/null -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-RDYNAMIC %s
+// RUN: %clang -target mips64-unknown-linux-gnu -### -export-dynamic /dev/null -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-RDYNAMIC %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu -### -export-dynamic /dev/null -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-RDYNAMIC %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -### -export-dynamic /dev/null -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-RDYNAMIC %s
+
 // CHECK-SHARED: "-shared"
 // CHECK-RDYNAMIC: "-export-dynamic"
 // CHECK-STATIC: "-{{B?}}static"
