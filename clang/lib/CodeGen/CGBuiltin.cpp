@@ -948,10 +948,10 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
         ConstantInt::get(ResType, Layout.getSize().getQuantity(), IsSigned);
 
     Res = IsSigned
-              ? Builder.CreateBinaryIntrinsic(
-                    llvm::Intrinsic::smax, OffsetAndFAMSize, SizeofStruct)
-              : Builder.CreateBinaryIntrinsic(
-                    llvm::Intrinsic::umax, OffsetAndFAMSize, SizeofStruct);
+              ? Builder.CreateBinaryIntrinsic(llvm::Intrinsic::smax,
+                                              OffsetAndFAMSize, SizeofStruct)
+              : Builder.CreateBinaryIntrinsic(llvm::Intrinsic::umax,
+                                              OffsetAndFAMSize, SizeofStruct);
   } else if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
     // Pointing to a place before the FAM. Add the difference to the FAM's
     // size.
@@ -969,9 +969,9 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
   // A negative 'FAMSize' means that the index was greater than the count,
   // or an improperly set count field. Return -1 (for types 0 and 1) or 0
   // (for types 2 and 3).
-  return Builder.CreateSelect(
-      Builder.CreateIsNeg(FAMSize),
-      getDefaultBuiltinObjectSizeResult(Type, ResType), Res);
+  return Builder.CreateSelect(Builder.CreateIsNeg(FAMSize),
+                              getDefaultBuiltinObjectSizeResult(Type, ResType),
+                              Res);
 }
 
 /// Returns a Value corresponding to the size of the given expression.
