@@ -15,11 +15,11 @@
 // the PartTensorCodegen pass.
 //
 //===----------------------------------------------------------------------===//
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/PartTensor/IR/PartTensor.h"
@@ -91,8 +91,7 @@ public:
   }
 };
 
-class PartTensorGetSliceConverter
-    : public OpConversionPattern<GetSliceOp> {
+class PartTensorGetSliceConverter : public OpConversionPattern<GetSliceOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -102,8 +101,8 @@ public:
     Location loc = op->getLoc();
     SmallVector<Value> operands{adaptor.getOperands()[0]};
     auto fn = mlir::sparse_tensor::getFunc(
-        op->getParentOfType<ModuleOp>(), "getSlice", resType, adaptor.getOperands(),
-        mlir::sparse_tensor::EmitCInterface::On);
+        op->getParentOfType<ModuleOp>(), "getSlice", resType,
+        adaptor.getOperands(), mlir::sparse_tensor::EmitCInterface::On);
     Value callRet =
         rewriter.create<func::CallOp>(loc, resType, fn, adaptor.getOperands())
             .getResult(0);
@@ -122,8 +121,8 @@ public:
     Type resType = op.getType();
     Location loc = op->getLoc();
     auto fn = mlir::sparse_tensor::getFunc(
-        op->getParentOfType<ModuleOp>(), "getNumPartitions", resType, adaptor.getOperands(),
-        mlir::sparse_tensor::EmitCInterface::On);
+        op->getParentOfType<ModuleOp>(), "getNumPartitions", resType,
+        adaptor.getOperands(), mlir::sparse_tensor::EmitCInterface::On);
     Value callRet =
         rewriter.create<func::CallOp>(loc, resType, fn, adaptor.getOperands())
             .getResult(0);
@@ -132,20 +131,19 @@ public:
   }
 };
 
-class PartTensorSetSliceConverter
-    : public OpConversionPattern<SetSliceOp> {
+class PartTensorSetSliceConverter : public OpConversionPattern<SetSliceOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(SetSliceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-	auto Context = op.getContext();
+    auto Context = op.getContext();
     auto resType = std::nullopt;
     Location loc = op->getLoc();
     auto fn = mlir::sparse_tensor::getFunc(
-        op->getParentOfType<ModuleOp>(), "SetSlice", resType, adaptor.getOperands(),
-        mlir::sparse_tensor::EmitCInterface::On);
-        rewriter.create<func::CallOp>(loc, resType, fn, adaptor.getOperands());
+        op->getParentOfType<ModuleOp>(), "SetSlice", resType,
+        adaptor.getOperands(), mlir::sparse_tensor::EmitCInterface::On);
+    rewriter.create<func::CallOp>(loc, resType, fn, adaptor.getOperands());
     rewriter.eraseOp(op);
     return success();
   }
@@ -174,11 +172,11 @@ void mlir::populatePartTensorConversionPatterns(TypeConverter &typeConverter,
                                                  patterns.getContext());
 
   patterns.add<PartTensorGetSliceConverter>(typeConverter,
-                                                 patterns.getContext());
+                                            patterns.getContext());
 
   patterns.add<PartTensorGetNumPartitionsConverter>(typeConverter,
-                                                 patterns.getContext());
+                                                    patterns.getContext());
 
   patterns.add<PartTensorSetSliceConverter>(typeConverter,
-                                                 patterns.getContext());
+                                            patterns.getContext());
 }
