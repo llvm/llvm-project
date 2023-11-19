@@ -81,6 +81,8 @@ void LLVMTargetMachine::initAsmInfo() {
 
   TmpAsmInfo->setRelaxELFRelocations(Options.RelaxELFRelocations);
 
+  TmpAsmInfo->setFullRegisterNames(Options.MCOptions.PPCUseFullRegisterNames);
+
   if (Options.ExceptionModel != ExceptionHandling::None)
     TmpAsmInfo->setExceptionsType(Options.ExceptionModel);
 

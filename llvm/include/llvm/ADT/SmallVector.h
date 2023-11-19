@@ -601,15 +601,15 @@ protected:
     RHS.resetToSmall();
   }
 
-public:
-  SmallVectorImpl(const SmallVectorImpl &) = delete;
-
   ~SmallVectorImpl() {
     // Subclass has already destructed this vector's elements.
     // If this wasn't grown from the inline copy, deallocate the old space.
     if (!this->isSmall())
       free(this->begin());
   }
+
+public:
+  SmallVectorImpl(const SmallVectorImpl &) = delete;
 
   void clear() {
     this->destroy_range(this->begin(), this->end());

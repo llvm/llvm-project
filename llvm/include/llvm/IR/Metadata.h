@@ -43,6 +43,7 @@ namespace llvm {
 class Module;
 class ModuleSlotTracker;
 class raw_ostream;
+class DPValue;
 template <typename T> class StringMapEntry;
 template <typename ValueTy> class StringMapEntryStorage;
 class Type;
@@ -201,6 +202,78 @@ private:
   void untrack();
 };
 
+/// Base class for tracking ValueAsMetadata/DIArgLists with user lookups and
+/// Owner callbacks outside of ValueAsMetadata.
+///
+/// Currently only inherited by DPValue; if other classes need to use it, then
+/// a SubclassID will need to be added (either as a new field or by making
+/// DebugValue into a PointerIntUnion) to discriminate between the subclasses in
+/// lookup and callback handling.
+class DebugValueUser {
+protected:
+  Metadata *DebugValue;
+
+public:
+  DPValue *getUser();
+  const DPValue *getUser() const;
+  void handleChangedValue(Metadata *NewDebugValue);
+  DebugValueUser() = default;
+  explicit DebugValueUser(Metadata *DebugValue) : DebugValue(DebugValue) {
+    trackDebugValue();
+  }
+
+  DebugValueUser(DebugValueUser &&X) : DebugValue(X.DebugValue) {
+    retrackDebugValue(X);
+  }
+  DebugValueUser(const DebugValueUser &X) : DebugValue(X.DebugValue) {
+    trackDebugValue();
+  }
+
+  DebugValueUser &operator=(DebugValueUser &&X) {
+    if (&X == this)
+      return *this;
+
+    untrackDebugValue();
+    DebugValue = X.DebugValue;
+    retrackDebugValue(X);
+    return *this;
+  }
+
+  DebugValueUser &operator=(const DebugValueUser &X) {
+    if (&X == this)
+      return *this;
+
+    untrackDebugValue();
+    DebugValue = X.DebugValue;
+    trackDebugValue();
+    return *this;
+  }
+
+  ~DebugValueUser() { untrackDebugValue(); }
+
+  void resetDebugValue() {
+    untrackDebugValue();
+    DebugValue = nullptr;
+  }
+  void resetDebugValue(Metadata *DebugValue) {
+    untrackDebugValue();
+    this->DebugValue = DebugValue;
+    trackDebugValue();
+  }
+
+  bool operator==(const DebugValueUser &X) const {
+    return DebugValue == X.DebugValue;
+  }
+  bool operator!=(const DebugValueUser &X) const {
+    return DebugValue != X.DebugValue;
+  }
+
+private:
+  void trackDebugValue();
+  void untrackDebugValue();
+  void retrackDebugValue(DebugValueUser &X);
+};
+
 /// API for tracking metadata references through RAUW and deletion.
 ///
 /// Shared API for updating \a Metadata pointers in subclasses that support
@@ -241,6 +314,15 @@ public:
     return track(Ref, MD, &Owner);
   }
 
+  /// Track the reference to metadata for \a DebugValueUser.
+  ///
+  /// As \a track(Metadata*&), but with support for calling back to \c Owner to
+  /// tell it that its operand changed.  This could trigger \c Owner being
+  /// re-uniqued.
+  static bool track(void *Ref, Metadata &MD, DebugValueUser &Owner) {
+    return track(Ref, MD, &Owner);
+  }
+
   /// Stop tracking a reference to metadata.
   ///
   /// Stops \c *MD from tracking \c MD.
@@ -263,7 +345,7 @@ public:
   /// Check whether metadata is replaceable.
   static bool isReplaceable(const Metadata &MD);
 
-  using OwnerTy = PointerUnion<MetadataAsValue *, Metadata *>;
+  using OwnerTy = PointerUnion<MetadataAsValue *, Metadata *, DebugValueUser *>;
 
 private:
   /// Track a reference to metadata for an owner.
@@ -275,8 +357,8 @@ private:
 /// Shared implementation of use-lists for replaceable metadata.
 ///
 /// Most metadata cannot be RAUW'ed.  This is a shared implementation of
-/// use-lists and associated API for the two that support it (\a ValueAsMetadata
-/// and \a TempMDNode).
+/// use-lists and associated API for the three that support it (
+/// \a ValueAsMetadata, \a TempMDNode, and \a DIArgList).
 class ReplaceableMetadataImpl {
   friend class MetadataTracking;
 
@@ -305,6 +387,8 @@ public:
   static void SalvageDebugInfo(const Constant &C); 
   /// Returns the list of all DIArgList users of this.
   SmallVector<Metadata *> getAllArgListUsers();
+  /// Returns the list of all DPValue users of this.
+  SmallVector<DPValue *> getAllDPValueUsers();
 
   /// Resolve all uses of this.
   ///
@@ -387,6 +471,9 @@ public:
 
   SmallVector<Metadata *> getAllArgListUsers() {
     return ReplaceableMetadataImpl::getAllArgListUsers();
+  }
+  SmallVector<DPValue *> getAllDPValueUsers() {
+    return ReplaceableMetadataImpl::getAllDPValueUsers();
   }
 
   static void handleDeletion(Value *V);
@@ -950,7 +1037,6 @@ struct TempMDNodeDeleter {
 class MDNode : public Metadata {
   friend class ReplaceableMetadataImpl;
   friend class LLVMContextImpl;
-  friend class DIArgList;
 
   /// The header that is coallocated with an MDNode along with its "small"
   /// operands. It is located immediately before the main body of the node.
@@ -1133,11 +1219,13 @@ public:
   bool isDistinct() const { return Storage == Distinct; }
   bool isTemporary() const { return Storage == Temporary; }
 
+  bool isReplaceable() const { return isTemporary(); }
+
   /// RAUW a temporary.
   ///
   /// \pre \a isTemporary() must be \c true.
   void replaceAllUsesWith(Metadata *MD) {
-    assert(isTemporary() && "Expected temporary node");
+    assert(isReplaceable() && "Expected temporary/replaceable node");
     if (Context.hasReplaceableUses())
       Context.getReplaceableUses()->replaceAllUsesWith(MD);
   }

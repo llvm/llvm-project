@@ -1297,7 +1297,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
     SmallVector<int64_t> zeroPos;
     auto results = indexingMap.getResults();
     for (const auto &result : llvm::enumerate(results)) {
-      if (result.value().isa<AffineConstantExpr>()) {
+      if (isa<AffineConstantExpr>(result.value())) {
         zeroPos.push_back(result.index());
       }
     }
@@ -1465,9 +1465,11 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
 }
 
 static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
-  // TODO: Masking only supports dynamic generic ops for now.
-  if (!isa<linalg::GenericOp, linalg::FillOp, linalg::CopyOp,
-           linalg::ContractionOpInterface>(op.getOperation()))
+  // TODO: Masking only supports dynamic element-wise ops, linalg.generic ops,
+  // linalg.copy ops and ops that implement ContractionOpInterface for now.
+  if (!isElementwise(op) &&
+      !isa<linalg::GenericOp, linalg::CopyOp, linalg::ContractionOpInterface>(
+          op.getOperation()))
     return failure();
 
   LDBG("Dynamically-shaped op meets vectorization pre-conditions\n");

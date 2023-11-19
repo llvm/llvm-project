@@ -58,7 +58,7 @@ static dwarf::Tag GetCompileUnitType(UnitKind Kind, DwarfDebug *DW) {
 DwarfCompileUnit::DwarfCompileUnit(unsigned UID, const DICompileUnit *Node,
                                    AsmPrinter *A, DwarfDebug *DW,
                                    DwarfFile *DWU, UnitKind Kind)
-    : DwarfUnit(GetCompileUnitType(Kind, DW), Node, A, DW, DWU), UniqueID(UID) {
+    : DwarfUnit(GetCompileUnitType(Kind, DW), Node, A, DW, DWU, UID) {
   insertDIE(Node, &getUnitDie());
   MacroLabelBegin = Asm->createTempSymbol("cu_macro_begin");
 }
@@ -367,13 +367,15 @@ void DwarfCompileUnit::addLocationAttribute(
     addLinkageName(*VariableDIE, GV->getLinkageName());
 
   if (addToAccelTable) {
-    DD->addAccelName(*CUNode, GV->getName(), *VariableDIE);
+    DD->addAccelName(*this, CUNode->getNameTableKind(), GV->getName(),
+                     *VariableDIE);
 
     // If the linkage name is different than the name, go ahead and output
     // that as well into the name table.
     if (GV->getLinkageName() != "" && GV->getName() != GV->getLinkageName() &&
         DD->useAllLinkageNames())
-      DD->addAccelName(*CUNode, GV->getLinkageName(), *VariableDIE);
+      DD->addAccelName(*this, CUNode->getNameTableKind(), GV->getLinkageName(),
+                       *VariableDIE);
   }
 }
 
@@ -561,7 +563,7 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
 
   // Add name to the name table, we do this here because we're guaranteed
   // to have concrete versions of our DW_TAG_subprogram nodes.
-  DD->addSubprogramNames(*CUNode, SP, *SPDie);
+  DD->addSubprogramNames(*this, CUNode->getNameTableKind(), SP, *SPDie);
 
   return *SPDie;
 }
@@ -592,9 +594,10 @@ void DwarfCompileUnit::constructScopeDIE(LexicalScope *Scope,
     return;
 
   // Emit lexical blocks.
-  DIE *ScopeDIE = getOrCreateLexicalBlockDIE(Scope, ParentScopeDIE);
+  DIE *ScopeDIE = constructLexicalScopeDIE(Scope);
   assert(ScopeDIE && "Scope DIE should not be null.");
 
+  ParentScopeDIE.addChild(ScopeDIE);
   createAndAddScopeChildren(Scope, *ScopeDIE);
 }
 
@@ -709,44 +712,30 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope,
 
   // Add name to the name table, we do this here because we're guaranteed
   // to have concrete versions of our DW_TAG_inlined_subprogram nodes.
-  DD->addSubprogramNames(*CUNode, InlinedSP, *ScopeDIE);
+  DD->addSubprogramNames(*this, CUNode->getNameTableKind(), InlinedSP,
+                         *ScopeDIE);
 
   return ScopeDIE;
 }
 
-DIE *DwarfCompileUnit::getOrCreateLexicalBlockDIE(LexicalScope *Scope,
-                                                  DIE &ParentScopeDIE) {
+// Construct new DW_TAG_lexical_block for this scope and attach
+// DW_AT_low_pc/DW_AT_high_pc labels.
+DIE *DwarfCompileUnit::constructLexicalScopeDIE(LexicalScope *Scope) {
   if (DD->isLexicalScopeDIENull(Scope))
     return nullptr;
   const auto *DS = Scope->getScopeNode();
-  DIE *ScopeDIE = nullptr;
 
-  // FIXME: We may have a concrete DIE for this scope already created.
-  // This may happen when we emit local variables for an abstract tree of
-  // an inlined function: if a local variable has a templated type with
-  // a function-local type as a template parameter. See PR55680 for details
-  // (see also llvm/test/DebugInfo/Generic/local-type-as-template-parameter.ll).
-  if (!Scope->isAbstractScope() && !Scope->getInlinedAt()) {
-    if (auto It = LexicalBlockDIEs.find(DS); It != LexicalBlockDIEs.end()) {
-      ScopeDIE = It->second;
-      assert(!ScopeDIE->findAttribute(dwarf::DW_AT_low_pc) &&
-             !ScopeDIE->findAttribute(dwarf::DW_AT_ranges));
-      assert(ScopeDIE->getParent() == &ParentScopeDIE);
-    }
+  auto ScopeDIE = DIE::get(DIEValueAllocator, dwarf::DW_TAG_lexical_block);
+  if (Scope->isAbstractScope()) {
+    assert(!getAbstractScopeDIEs().count(DS) &&
+           "Abstract DIE for this scope exists!");
+    getAbstractScopeDIEs()[DS] = ScopeDIE;
+    return ScopeDIE;
   }
-  if (!ScopeDIE) {
-    ScopeDIE = DIE::get(DIEValueAllocator, dwarf::DW_TAG_lexical_block);
-    ParentScopeDIE.addChild(ScopeDIE);
-
-    if (Scope->isAbstractScope()) {
-      assert(!getAbstractScopeDIEs().count(DS) &&
-             "Abstract DIE for this scope exists!");
-      getAbstractScopeDIEs()[DS] = ScopeDIE;
-      return ScopeDIE;
-    }
-
-    if (!Scope->getInlinedAt())
-      LexicalBlockDIEs[DS] = ScopeDIE;
+  if (!Scope->getInlinedAt()) {
+    assert(!LexicalBlockDIEs.count(DS) &&
+           "Concrete out-of-line DIE for this scope exists!");
+    LexicalBlockDIEs[DS] = ScopeDIE;
   }
 
   attachRangesOrLowHighPC(*ScopeDIE, Scope->getRanges());
@@ -1372,7 +1361,7 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
     // or `using namespace std::ranges`, we could add the
     // import declaration into the accelerator table with the
     // name being the one of the entity being imported.
-    DD->addAccelNamespace(*CUNode, Name, *IMDie);
+    DD->addAccelNamespace(*this, CUNode->getNameTableKind(), Name, *IMDie);
   }
 
   // This is for imported module with renamed entities (such as variables and
@@ -1436,9 +1425,18 @@ void DwarfCompileUnit::finishEntityDefinition(const DbgEntity *Entity) {
       llvm_unreachable("DbgEntity must be DbgVariable or DbgLabel.");
   }
 
-  if (Label)
-    if (const auto *Sym = Label->getSymbol())
-      addLabelAddress(*Die, dwarf::DW_AT_low_pc, Sym);
+  if (!Label)
+    return;
+
+  const auto *Sym = Label->getSymbol();
+  if (!Sym)
+    return;
+
+  addLabelAddress(*Die, dwarf::DW_AT_low_pc, Sym);
+
+  // A TAG_label with a name and an AT_low_pc must be placed in debug_names.
+  if (StringRef Name = Label->getName(); !Name.empty())
+    getDwarfDebug().addAccelName(*this, CUNode->getNameTableKind(), Name, *Die);
 }
 
 DbgEntity *DwarfCompileUnit::getExistingAbstractEntity(const DINode *Node) {
@@ -1700,21 +1698,15 @@ void DwarfCompileUnit::createBaseTypeDIEs() {
   }
 }
 
-DIE *DwarfCompileUnit::getLocalContextDIE(const DILexicalBlock *LB) {
+DIE *DwarfCompileUnit::getLexicalBlockDIE(const DILexicalBlock *LB) {
   // Assume if there is an abstract tree all the DIEs are already emitted.
   bool isAbstract = getAbstractScopeDIEs().count(LB->getSubprogram());
   if (isAbstract && getAbstractScopeDIEs().count(LB))
     return getAbstractScopeDIEs()[LB];
   assert(!isAbstract && "Missed lexical block DIE in abstract tree!");
 
-  // Check if we have a concrete DIE.
-  if (auto It = LexicalBlockDIEs.find(LB); It != LexicalBlockDIEs.end())
-    return It->second;
-
-  // If nothing available found, we cannot just create a new lexical block,
-  // because it isn't known where to put it into the DIE tree.
-  // So, we may only try to find the most close avaiable parent DIE.
-  return getOrCreateContextDIE(LB->getScope()->getNonLexicalBlockFileScope());
+  // Return a concrete DIE if it exists or nullptr otherwise.
+  return LexicalBlockDIEs.lookup(LB);
 }
 
 DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
@@ -1722,7 +1714,7 @@ DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
     if (auto *LFScope = dyn_cast<DILexicalBlockFile>(Context))
       Context = LFScope->getNonLexicalBlockFileScope();
     if (auto *LScope = dyn_cast<DILexicalBlock>(Context))
-      return getLocalContextDIE(LScope);
+      return getLexicalBlockDIE(LScope);
 
     // Otherwise the context must be a DISubprogram.
     auto *SPScope = cast<DISubprogram>(Context);

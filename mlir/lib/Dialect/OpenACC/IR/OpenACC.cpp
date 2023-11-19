@@ -27,13 +27,18 @@ using namespace acc;
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.cpp.inc"
 
 namespace {
-/// Model for pointer-like types that already provide a `getElementType` method.
-template <typename T>
-struct PointerLikeModel
-    : public PointerLikeType::ExternalModel<PointerLikeModel<T>, T> {
+struct MemRefPointerLikeModel
+    : public PointerLikeType::ExternalModel<MemRefPointerLikeModel,
+                                            MemRefType> {
   Type getElementType(Type pointer) const {
-    return llvm::cast<T>(pointer).getElementType();
+    return llvm::cast<MemRefType>(pointer).getElementType();
   }
+};
+
+struct LLVMPointerPointerLikeModel
+    : public PointerLikeType::ExternalModel<LLVMPointerPointerLikeModel,
+                                            LLVM::LLVMPointerType> {
+  Type getElementType(Type pointer) const { return Type(); }
 };
 } // namespace
 
@@ -58,9 +63,9 @@ void OpenACCDialect::initialize() {
   // By attaching interfaces here, we make the OpenACC dialect dependent on
   // the other dialects. This is probably better than having dialects like LLVM
   // and memref be dependent on OpenACC.
-  LLVM::LLVMPointerType::attachInterface<
-      PointerLikeModel<LLVM::LLVMPointerType>>(*getContext());
-  MemRefType::attachInterface<PointerLikeModel<MemRefType>>(*getContext());
+  MemRefType::attachInterface<MemRefPointerLikeModel>(*getContext());
+  LLVM::LLVMPointerType::attachInterface<LLVMPointerPointerLikeModel>(
+      *getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -888,7 +893,6 @@ Value LoopOp::getDataOperand(unsigned i) {
   numOptional += getGangStatic() ? 1 : 0;
   numOptional += getVectorLength() ? 1 : 0;
   numOptional += getWorkerNum() ? 1 : 0;
-  numOptional += getVectorLength() ? 1 : 0;
   numOptional += getTileOperands().size();
   numOptional += getCacheOperands().size();
   return getOperand(numOptional + i);
@@ -1023,17 +1027,13 @@ void EnterDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // AtomicReadOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult AtomicReadOp::verify() {
-  return verifyCommon();
-}
+LogicalResult AtomicReadOp::verify() { return verifyCommon(); }
 
 //===----------------------------------------------------------------------===//
 // AtomicWriteOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult AtomicWriteOp::verify() {
-  return verifyCommon();
-}
+LogicalResult AtomicWriteOp::verify() { return verifyCommon(); }
 
 //===----------------------------------------------------------------------===//
 // AtomicUpdateOp
@@ -1054,13 +1054,9 @@ LogicalResult AtomicUpdateOp::canonicalize(AtomicUpdateOp op,
   return failure();
 }
 
-LogicalResult AtomicUpdateOp::verify() {
-  return verifyCommon();
-}
+LogicalResult AtomicUpdateOp::verify() { return verifyCommon(); }
 
-LogicalResult AtomicUpdateOp::verifyRegions() {
-  return verifyRegionsCommon();
-}
+LogicalResult AtomicUpdateOp::verifyRegions() { return verifyRegionsCommon(); }
 
 //===----------------------------------------------------------------------===//
 // AtomicCaptureOp
@@ -1084,18 +1080,17 @@ AtomicUpdateOp AtomicCaptureOp::getAtomicUpdateOp() {
   return dyn_cast<AtomicUpdateOp>(getSecondOp());
 }
 
-LogicalResult AtomicCaptureOp::verifyRegions() {
-  return verifyRegionsCommon();
-}
+LogicalResult AtomicCaptureOp::verifyRegions() { return verifyRegionsCommon(); }
 
 //===----------------------------------------------------------------------===//
 // DeclareEnterOp
 //===----------------------------------------------------------------------===//
 
 template <typename Op>
-static LogicalResult checkDeclareOperands(Op &op,
-                                          const mlir::ValueRange &operands) {
-  if (operands.empty())
+static LogicalResult
+checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
+                     bool requireAtLeastOneOperand = true) {
+  if (operands.empty() && requireAtLeastOneOperand)
     return emitError(
         op->getLoc(),
         "at least one operand must appear on the declare operation");
@@ -1157,6 +1152,9 @@ LogicalResult acc::DeclareEnterOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult acc::DeclareExitOp::verify() {
+  if (getToken())
+    return checkDeclareOperands(*this, this->getDataClauseOperands(),
+                                /*requireAtLeastOneOperand=*/false);
   return checkDeclareOperands(*this, this->getDataClauseOperands());
 }
 

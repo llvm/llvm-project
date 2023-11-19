@@ -1156,6 +1156,10 @@ public:
   /// host code.
   llvm::DenseSet<const ValueDecl *> CUDAExternalDeviceDeclODRUsedByHost;
 
+  /// Keep track of CUDA/HIP implicit host device functions used on device side
+  /// in device compilation.
+  llvm::DenseSet<const FunctionDecl *> CUDAImplicitHostDeviceFunUsedByDevice;
+
   ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
              SelectorTable &sels, Builtin::Context &builtins,
              TranslationUnitKind TUKind);

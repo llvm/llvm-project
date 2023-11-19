@@ -1,4 +1,4 @@
-; RUN: llc -O3 -o - %s | FileCheck %s
+; RUN: llc -O3 -aarch64-min-jump-table-entries=4 -o - %s | FileCheck %s
 
 ; Test that the output in the presence of an unreachable default does not have
 ; a compare and branch at the top of the switch to handle the default case.
@@ -71,7 +71,7 @@ entry:
     i32 8,  label %bb2
     i32 16, label %bb3
     i32 32, label %bb4
-    i32 64, label %bb5
+    i32 -64, label %bb5
   ]
 
 ; The switch is lowered with a jump table for cases 1--32 and case 64 handled
