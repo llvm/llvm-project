@@ -9441,7 +9441,8 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     Value *NewVecOp = State.get(getVecOp(), Part);
     if (VPValue *Cond = getCondOp()) {
-      Value *NewCond = State.get(Cond, Part);
+      Value *NewCond = State.VF.isVector() ? State.get(Cond, Part)
+                                           : State.get(Cond, {Part, 0});
       VectorType *VecTy = dyn_cast<VectorType>(NewVecOp->getType());
       Type *ElementTy = VecTy ? VecTy->getElementType() : NewVecOp->getType();
       Value *Iden = RdxDesc.getRecurrenceIdentity(Kind, ElementTy,
@@ -9561,13 +9562,16 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   InnerLoopVectorizer::VectorParts BlockInMaskParts(State.UF);
   bool isMaskRequired = getMask();
-  if (isMaskRequired)
+  if (isMaskRequired) {
+    // Mask reversal is only neede for non-all-one (null) masks, as reverse of a
+    // null all-one mask is a null mask.
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Value *Mask = State.get(getMask(), Part);
       if (isReverse())
         Mask = Builder.CreateVectorReverse(Mask, "reverse");
       BlockInMaskParts[Part] = Mask;
     }
+  }
 
   const auto CreateVecPtr = [&](unsigned Part, Value *Ptr) -> Value * {
     // Calculate the pointer for the specific unroll-part.
