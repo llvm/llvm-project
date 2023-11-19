@@ -456,6 +456,7 @@ void mlir::affine::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
     return (buildSliceTripCountMap(srcSlice, &sliceTripCountMap) &&
             (getSliceIterationCount(sliceTripCountMap) == 1));
   };
+  IRRewriter rewriter(srcForOp.getContext());
   // Fix up and if possible, eliminate single iteration loops.
   for (AffineForOp forOp : sliceLoops) {
     if (isLoopParallelAndContainsReduction(forOp) &&
@@ -463,9 +464,8 @@ void mlir::affine::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
       // Patch reduction loop - only ones that are sibling-fused with the
       // destination loop - into the parent loop.
       (void)promoteSingleIterReductionLoop(forOp, true);
-    else
-      // Promote any single iteration slice loops.
-      (void)promoteIfSingleIteration(forOp);
+    else // Promote any single iteration slice loops.
+      (void)forOp.promoteIfSingleIteration(rewriter);
   }
 }
 
