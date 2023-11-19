@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/IRMapping.h"
@@ -25,6 +24,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+
 #include <numeric>
 #include <optional>
 
@@ -2468,10 +2468,13 @@ LogicalResult AffineForOp::promoteIfSingleIteration(RewriterBase &rewriter) {
 
   // Replaces all IV uses to its single iteration value.
   BlockArgument iv = forOp.getInductionVar();
-  Block *parentBlock = forOp->getBlock();
   if (!iv.use_empty()) {
     if (forOp.hasConstantLowerBound()) {
-      OpBuilder topBuilder(forOp->getParentOfType<func::FuncOp>().getBody());
+      Operation *parentOp = forOp.getOperation();
+      while (isa<AffineForOp>(parentOp->getParentOp()))
+        parentOp = parentOp->getParentOp();
+      Block *parentBlock = parentOp->getBlock();
+      OpBuilder topBuilder(parentBlock, parentBlock->begin());
       auto constOp = topBuilder.create<arith::ConstantIndexOp>(
           forOp.getLoc(), forOp.getConstantLowerBound());
       iv.replaceAllUsesWith(constOp);
@@ -2495,6 +2498,7 @@ LogicalResult AffineForOp::promoteIfSingleIteration(RewriterBase &rewriter) {
   // Move the loop body operations, except for its terminator, to the loop's
   // containing block.
   forOp.getBody()->back().erase();
+  Block *parentBlock = forOp->getBlock();
   parentBlock->getOperations().splice(Block::iterator(forOp),
                                       forOp.getBody()->getOperations());
   forOp.erase();
