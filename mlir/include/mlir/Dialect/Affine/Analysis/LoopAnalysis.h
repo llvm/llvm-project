@@ -15,6 +15,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+
 #include <optional>
 
 namespace mlir {
@@ -28,20 +29,6 @@ class Value;
 namespace affine {
 class AffineForOp;
 class NestedPattern;
-
-/// Returns the trip count of the loop as an affine map with its corresponding
-/// operands if the latter is expressible as an affine expression, and nullptr
-/// otherwise. This method always succeeds as long as the lower bound is not a
-/// multi-result map. The trip count expression is simplified before returning.
-/// This method only utilizes map composition to construct lower and upper
-/// bounds before computing the trip count expressions
-void getTripCountMapAndOperands(AffineForOp forOp, AffineMap *map,
-                                SmallVectorImpl<Value> *operands);
-
-/// Returns the trip count of the loop if it's a constant, std::nullopt
-/// otherwise. This uses affine expression analysis and is able to determine
-/// constant trip count in non-trivial cases.
-std::optional<uint64_t> getConstantTripCount(AffineForOp forOp);
 
 /// Returns the greatest known integral divisor of the trip count. Affine
 /// expression analysis is used (indirectly through getTripCount), and
