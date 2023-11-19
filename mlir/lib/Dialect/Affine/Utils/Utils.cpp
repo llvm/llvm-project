@@ -552,8 +552,7 @@ void mlir::affine::normalizeAffineParallel(AffineParallelOp op) {
 
 LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op,
                                                bool promoteSingleIter) {
-  IRRewriter rewriter(op.getContext());
-  if (promoteSingleIter && succeeded(op.promoteIfSingleIteration(rewriter)))
+  if (promoteSingleIter && succeeded(promoteIfSingleIteration(op)))
     return success();
 
   // Check if the forop is already normalized.

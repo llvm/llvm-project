@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/AffineExprVisitor.h"
@@ -2450,65 +2448,6 @@ std::optional<OpFoldResult> AffineForOp::getSingleUpperBound() {
   return OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()));
 }
 
-void mlir::affine::replaceIterArgsAndYieldResults(AffineForOp forOp) {
-  // Replace uses of iter arguments with iter operands (initial values).
-  OperandRange iterOperands = forOp.getInits();
-  MutableArrayRef<BlockArgument> iterArgs = forOp.getRegionIterArgs();
-  for (auto [operand, arg] : llvm::zip(iterOperands, iterArgs))
-    arg.replaceAllUsesWith(operand);
-
-  // Replace uses of loop results with the values yielded by the loop.
-  ResultRange outerResults = forOp.getResults();
-  OperandRange innerResults = forOp.getBody()->getTerminator()->getOperands();
-  for (auto [outer, inner] : llvm::zip(outerResults, innerResults))
-    outer.replaceAllUsesWith(inner);
-}
-
-LogicalResult AffineForOp::promoteIfSingleIteration(RewriterBase &rewriter) {
-  auto forOp = cast<AffineForOp>(getOperation());
-  std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
-  if (!tripCount || *tripCount != 1)
-    return failure();
-
-  // TODO: extend this for arbitrary affine bounds.
-  if (forOp.getLowerBoundMap().getNumResults() != 1)
-    return failure();
-
-  // Replaces all IV uses to its single iteration value.
-  BlockArgument iv = forOp.getInductionVar();
-  Block *parentBlock = forOp->getBlock();
-  if (!iv.use_empty()) {
-    if (forOp.hasConstantLowerBound()) {
-      OpBuilder topBuilder(forOp->getParentOfType<func::FuncOp>().getBody());
-      auto constOp = topBuilder.create<arith::ConstantIndexOp>(
-          forOp.getLoc(), forOp.getConstantLowerBound());
-      iv.replaceAllUsesWith(constOp);
-    } else {
-      OperandRange lbOperands = forOp.getLowerBoundOperands();
-      AffineMap lbMap = forOp.getLowerBoundMap();
-      OpBuilder builder(forOp);
-      if (lbMap == builder.getDimIdentityMap()) {
-        // No need of generating an affine.apply.
-        iv.replaceAllUsesWith(lbOperands[0]);
-      } else {
-        auto affineApplyOp =
-            builder.create<AffineApplyOp>(forOp.getLoc(), lbMap, lbOperands);
-        iv.replaceAllUsesWith(affineApplyOp);
-      }
-    }
-  }
-
-  replaceIterArgsAndYieldResults(forOp);
-
-  // Move the loop body operations, except for its terminator, to the loop's
-  // containing block.
-  forOp.getBody()->back().erase();
-  parentBlock->getOperations().splice(Block::iterator(forOp),
-                                      forOp.getBody()->getOperations());
-  forOp.erase();
-  return success();
-}
-
 FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(
     RewriterBase &rewriter, ValueRange newInitOperands,
     bool replaceInitOperandUsesInLoop,
@@ -2605,79 +2544,6 @@ AffineParallelOp mlir::affine::getAffineParallelInductionVarOwner(Value val) {
   if (parallelOp && llvm::is_contained(parallelOp.getIVs(), val))
     return parallelOp;
   return nullptr;
-}
-
-/// Returns the trip count of the loop as an affine expression if the latter is
-/// expressible as an affine expression, and nullptr otherwise. The trip count
-/// expression is simplified before returning. This method only utilizes map
-/// composition to construct lower and upper bounds before computing the trip
-/// count expressions.
-void mlir::affine::getTripCountMapAndOperands(
-    AffineForOp forOp, AffineMap *tripCountMap,
-    SmallVectorImpl<Value> *tripCountOperands) {
-  MLIRContext *context = forOp.getContext();
-  int64_t step = forOp.getStepAsInt();
-  int64_t loopSpan;
-  if (forOp.hasConstantBounds()) {
-    int64_t lb = forOp.getConstantLowerBound();
-    int64_t ub = forOp.getConstantUpperBound();
-    loopSpan = ub - lb;
-    if (loopSpan < 0)
-      loopSpan = 0;
-    *tripCountMap = AffineMap::getConstantMap(ceilDiv(loopSpan, step), context);
-    tripCountOperands->clear();
-    return;
-  }
-  auto lbMap = forOp.getLowerBoundMap();
-  auto ubMap = forOp.getUpperBoundMap();
-  if (lbMap.getNumResults() != 1) {
-    *tripCountMap = AffineMap();
-    return;
-  }
-
-  // Difference of each upper bound expression from the single lower bound
-  // expression (divided by the step) provides the expressions for the trip
-  // count map.
-  AffineValueMap ubValueMap(ubMap, forOp.getUpperBoundOperands());
-
-  SmallVector<AffineExpr, 4> lbSplatExpr(ubValueMap.getNumResults(),
-                                         lbMap.getResult(0));
-  auto lbMapSplat = AffineMap::get(lbMap.getNumDims(), lbMap.getNumSymbols(),
-                                   lbSplatExpr, context);
-  AffineValueMap lbSplatValueMap(lbMapSplat, forOp.getLowerBoundOperands());
-
-  AffineValueMap tripCountValueMap;
-  AffineValueMap::difference(ubValueMap, lbSplatValueMap, &tripCountValueMap);
-  for (unsigned i = 0, e = tripCountValueMap.getNumResults(); i < e; ++i)
-    tripCountValueMap.setResult(i,
-                                tripCountValueMap.getResult(i).ceilDiv(step));
-
-  *tripCountMap = tripCountValueMap.getAffineMap();
-  tripCountOperands->assign(tripCountValueMap.getOperands().begin(),
-                            tripCountValueMap.getOperands().end());
-}
-
-std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
-  SmallVector<Value, 4> operands;
-  AffineMap map;
-  getTripCountMapAndOperands(forOp, &map, &operands);
-
-  if (!map)
-    return std::nullopt;
-
-  // Take the min if all trip counts are constant.
-  std::optional<uint64_t> tripCount;
-  for (auto resultExpr : map.getResults()) {
-    if (auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr)) {
-      if (tripCount.has_value())
-        tripCount =
-            std::min(*tripCount, static_cast<uint64_t>(constExpr.getValue()));
-      else
-        tripCount = constExpr.getValue();
-    } else
-      return std::nullopt;
-  }
-  return tripCount;
 }
 
 /// Extracts the induction variables from a list of AffineForOps and returns
@@ -3047,7 +2913,8 @@ static void composeSetAndOperands(IntegerSet &set,
 }
 
 /// Canonicalize an affine if op's conditional (integer set + operands).
-LogicalResult AffineIfOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
+LogicalResult AffineIfOp::fold(FoldAdaptor,
+                               SmallVectorImpl<OpFoldResult> &) {
   auto set = getIntegerSet();
   SmallVector<Value, 4> operands(getOperands());
   composeSetAndOperands(set, operands);
@@ -3138,11 +3005,11 @@ static LogicalResult
 verifyMemoryOpIndexing(Operation *op, AffineMapAttr mapAttr,
                        Operation::operand_range mapOperands,
                        MemRefType memrefType, unsigned numIndexOperands) {
-  AffineMap map = mapAttr.getValue();
-  if (map.getNumResults() != memrefType.getRank())
-    return op->emitOpError("affine map num results must equal memref rank");
-  if (map.getNumInputs() != numIndexOperands)
-    return op->emitOpError("expects as many subscripts as affine map inputs");
+    AffineMap map = mapAttr.getValue();
+    if (map.getNumResults() != memrefType.getRank())
+      return op->emitOpError("affine map num results must equal memref rank");
+    if (map.getNumInputs() != numIndexOperands)
+      return op->emitOpError("expects as many subscripts as affine map inputs");
 
   Region *scope = getAffineScope(op);
   for (auto idx : mapOperands) {
