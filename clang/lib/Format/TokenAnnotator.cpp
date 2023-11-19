@@ -2206,8 +2206,10 @@ private:
       return false;
 
     if (const auto *NextNonComment = Tok.getNextNonComment();
-        !NextNonComment || NextNonComment->isPointerOrReference() ||
-        NextNonComment->isOneOf(tok::identifier, tok::string_literal)) {
+        (!NextNonComment && !Line.InMacroBody) ||
+        (NextNonComment &&
+         (NextNonComment->isPointerOrReference() ||
+          NextNonComment->isOneOf(tok::identifier, tok::string_literal)))) {
       return false;
     }
 
