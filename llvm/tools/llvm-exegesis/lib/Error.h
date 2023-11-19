@@ -12,6 +12,8 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 
+#include <cstdint>
+
 namespace llvm {
 namespace exegesis {
 
@@ -41,7 +43,10 @@ private:
 class SnippetCrash : public ErrorInfo<SnippetCrash> {
 public:
   static char ID;
-  SnippetCrash(const Twine &S) : Msg(S.str()) {}
+  SnippetCrash(const Twine &S)
+      : Msg(S.str()), SIAddress(-1), SISignalNumber(-1) {}
+  SnippetCrash(int SISignalNumber_, intptr_t SIAddress_)
+      : Msg(""), SIAddress(SIAddress_), SISignalNumber(SISignalNumber_) {}
 
   void log(raw_ostream &OS) const override;
 
@@ -49,6 +54,8 @@ public:
 
 private:
   std::string Msg;
+  intptr_t SIAddress;
+  int SISignalNumber;
 };
 
 } // namespace exegesis

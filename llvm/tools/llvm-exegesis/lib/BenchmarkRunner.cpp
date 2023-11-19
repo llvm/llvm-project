@@ -374,8 +374,8 @@ private:
     }
 
     return make_error<SnippetCrash>(
-        "The benchmarking subprocess sent unexpected signal: " +
-        Twine(strsignal(ChildSignalInfo.si_signo)));
+        ChildSignalInfo.si_signo,
+        reinterpret_cast<intptr_t>(ChildSignalInfo.si_addr));
   }
 
   [[noreturn]] void prepareAndRunBenchmark(int Pipe,
