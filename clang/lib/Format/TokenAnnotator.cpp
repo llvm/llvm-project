@@ -3065,8 +3065,8 @@ void TokenAnnotator::setCommentLineLevels(
 
     // If the comment is currently aligned with the line immediately following
     // it, that's probably intentional and we should keep it.
-    if (NextNonCommentLine && !NextNonCommentLine->First->Finalized &&
-        Line->isComment() && NextNonCommentLine->First->NewlinesBefore <= 1 &&
+    if (NextNonCommentLine && NextNonCommentLine->First->NewlinesBefore < 2 &&
+        Line->isComment() && !isClangFormatOff(Line->First->TokenText) &&
         NextNonCommentLine->First->OriginalColumn ==
             Line->First->OriginalColumn) {
       const bool PPDirectiveOrImportStmt =
