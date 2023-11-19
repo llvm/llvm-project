@@ -2176,16 +2176,16 @@ static void createBodyOfOp(
 
   // Handle privatization. Do not privatize if this is the outer operation.
   if (clauses && !outerCombined) {
-    constexpr bool is_loop = std::is_same_v<Op, mlir::omp::WsLoopOp> ||
-                             std::is_same_v<Op, mlir::omp::SimdLoopOp>;
+    constexpr bool isLoop = std::is_same_v<Op, mlir::omp::WsLoopOp> ||
+                            std::is_same_v<Op, mlir::omp::SimdLoopOp>;
     if (!dsp) {
       DataSharingProcessor proc(converter, *clauses, eval);
       proc.processStep1();
-      proc.processStep2(op, is_loop);
+      proc.processStep2(op, isLoop);
     } else {
-      if (is_loop && args.size() > 0)
+      if (isLoop && args.size() > 0)
         dsp->setLoopIV(converter.getSymbolAddress(*args[0]));
-      dsp->processStep2(op, is_loop);
+      dsp->processStep2(op, isLoop);
     }
 
     if (storeOp)
