@@ -99,8 +99,10 @@ public:
   /// The called is resposible to keep spCOO alive for the lifetime of this
   /// partTensor.
   PartTensorStorage(uint64_t nParts, const uint64_t *partDataPtr,
-                    std::vector<unique_ptr<SparseTensorCOO<V>>> &&spCOO)
-      : partData(partDataPtr, partDataPtr + nParts), parts(std::move(spCOO)) {}
+                    std::vector<unique_ptr<SparseTensorCOO<V>>> &&spCOOs,
+                    std::vector<SparseTensorStorage<P, I, V> *> partTensors_)
+      : partData(partDataPtr, partDataPtr + nParts), parts(std::move(spCOOs)),
+        partTensors(partTensors_) {}
 
   static PartTensorStorage<P, I, V> *
   newFromCOO(uint64_t nParts, const uint64_t *partData, uint64_t dimRank,
@@ -120,22 +122,19 @@ public:
       auto loOffset = 2 * i * getRank();
       ArrayRef curPartSpec(partData.data() + loOffset, partSpecSize);
       if (curPartSpec == partSpec) {
-        DimLevelType dimLevelTypes[2] = {DimLevelType::CompressedNu,
-                                         DimLevelType::Singleton};
-        uint64_t lvl2dim[2] = {0, 1};
-        return SparseTensorStorage<P, I, V>::newFromCOO(
-            getRank(), parts[i]->getDimSizes().data(), getRank(), dimLevelTypes,
-            lvl2dim, *parts[i]);
+        return partTensors[i];
       }
     }
     assert(0 &&
            "We currently don't support union or intersection of partitions");
     return nullptr;
   }
+  auto &getParts() { return partTensors; }
 
 protected:
   std::vector<index_type> partData;
   const std::vector<unique_ptr<SparseTensorCOO<V>>> parts;
+  const std::vector<SparseTensorStorage<P, I, V> *> partTensors;
 };
 
 template <typename T>
@@ -167,7 +166,11 @@ PartTensorStorage<P, I, V> *PartTensorStorage<P, I, V>::newFromCOO(
          "Partition data len must be a multiple of dimension rank");
 
   std::vector<unique_ptr<SparseTensorCOO<V>>> parts;
+  std::vector<SparseTensorStorage<P, I, V> *> partTensors;
   parts.reserve(numPartitions);
+  partTensors.resize(numPartitions);
+  // For now map 1-1 lvl to dim
+  uint64_t lvl2dim[2] = {0, 1};
   for (auto i : llvm::seq(0lu, numPartitions)) {
     auto loOffset = 2 * i * dimRank;
     auto hiOffset = (2 * i + 1) * dimRank;
@@ -194,9 +197,14 @@ PartTensorStorage<P, I, V> *PartTensorStorage<P, I, V>::newFromCOO(
         parts[i]->add(newCoords, e.value);
       }
     });
+    // TODO: get rid of parts when all code is migrated to partTensors
+
+    partTensors[i] = SparseTensorStorage<P, I, V>::newFromCOO(
+        dimRank, partShape.data(), dimRank /*lvlRank*/, lvlTypes, lvl2dim,
+        *parts[i]);
   }
-  return new PartTensorStorage<P, I, V>(partDataLength, partData,
-                                        std::move(parts));
+  return new PartTensorStorage<P, I, V>(
+      partDataLength, partData, std::move(parts), std::move(partTensors));
 }
 
 } // namespace part_tensor
