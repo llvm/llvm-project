@@ -149,7 +149,12 @@ B {
 }
 )"[1]);
 
-class Incomplete;
+class Incomplete; // #incomplete-type
+
+template <class T>
+class Class {
+  T value = {};
+};
 
 void errors(B b) {
   ConstexprString cs;
@@ -161,6 +166,9 @@ void errors(B b) {
                                         // expected-note@-1 {{in call to printing function with arguments '(0, "%s", "B")' while dumping struct}}
                                         // expected-note@#Format {{no known conversion from 'int' to 'ConstexprString &' for 1st argument}}
   __builtin_dump_struct((Incomplete *)nullptr, Format, cs); // expected-error {{incomplete type 'Incomplete' where a complete type is required}}
+                                        // expected-note@#incomplete-type {{forward declaration of 'Incomplete'}}
+  // Ensure the Class<int> gets instantiated; otherwise crash happens.
+  __builtin_dump_struct((Class<int> *)nullptr, Format, cs);
 }
 #endif
 
