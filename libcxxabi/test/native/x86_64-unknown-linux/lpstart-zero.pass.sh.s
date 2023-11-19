@@ -1,4 +1,4 @@
-# RUN: %{cxx} %{flags} %{link_flags} -no-pie %s -o %t.exe
+# RUN: %{cxx} %{flags} %s %{link_flags} -no-pie -o %t.exe
 # RUN: %t.exe
 # UNSUPPORTED: no-exceptions
 
