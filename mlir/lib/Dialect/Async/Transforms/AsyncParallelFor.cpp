@@ -102,6 +102,10 @@ struct AsyncParallelForPass
     : public impl::AsyncParallelForBase<AsyncParallelForPass> {
   AsyncParallelForPass() = default;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<async::AsyncDialect, func::FuncDialect>();
+  }
+
   AsyncParallelForPass(bool asyncDispatch, int32_t numWorkerThreads,
                        int32_t minTaskSize) {
     this->asyncDispatch = asyncDispatch;
