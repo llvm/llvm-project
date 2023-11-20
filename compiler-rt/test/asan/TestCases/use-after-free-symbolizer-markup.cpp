@@ -1,5 +1,5 @@
 // Test that verifies that asan produces valid symbolizer markup when enabled.
-// RUN: %clangxx_asan -O1 %s -o %t
+// RUN: %clangxx_asan %s -o %t
 // RUN: env ASAN_OPTIONS=enable_symbolizer_markup=1 not %run %t 2>&1 | FileCheck %s
 // REQUIRES: linux
 
