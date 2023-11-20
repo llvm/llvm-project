@@ -7588,8 +7588,8 @@ The ``[[clang::coro_lifetimebound]]`` is a class attribute which can be applied
 to a `coroutine return type (CRT) <https://clang.llvm.org/docs/AttributeReference.html#coro-return-type>` _ (i.e.
 it should also be annotated with ``[[clang::coro_return_type]]``).
 
-All arguments to a function are considered to be lifetime bound if the function
-returns a coroutine return type (CRT) annotated with ``[[clang::coro_lifetimebound]]``.
+All arguments to a function are considered to be `lifetime bound <https://clang.llvm.org/docs/AttributeReference.html#lifetimebound> _`
+if the function returns a coroutine return type (CRT) annotated with ``[[clang::coro_lifetimebound]]``.
 
 Reference parameters of a coroutine are susceptible to capturing references to temporaries or local variables.
 
