@@ -1015,40 +1015,7 @@ PreservedAnalyses GuardWideningPass::run(Loop &L, LoopAnalysisManager &AM,
 }
 
 namespace {
-struct GuardWideningLegacyPass : public FunctionPass {
-  static char ID;
-
-  GuardWideningLegacyPass() : FunctionPass(ID) {
-    initializeGuardWideningLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
-    std::unique_ptr<MemorySSAUpdater> MSSAU;
-    if (MSSAWP)
-      MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAWP->getMSSA());
-    return GuardWideningImpl(DT, &PDT, LI, AC, MSSAU ? MSSAU.get() : nullptr,
-                             DT.getRootNode(),
-                             [](BasicBlock *) { return true; })
-        .run();
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<PostDominatorTreeWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addPreserved<MemorySSAWrapperPass>();
-  }
-};
-
-/// Same as above, but restricted to a single loop at a time.  Can be
+/// Restricted to a single loop at a time.  Can be
 /// scheduled with other loop passes w/o breaking out of LPM
 struct LoopGuardWideningLegacyPass : public LoopPass {
   static char ID;
@@ -1091,16 +1058,7 @@ struct LoopGuardWideningLegacyPass : public LoopPass {
 };
 }
 
-char GuardWideningLegacyPass::ID = 0;
 char LoopGuardWideningLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(GuardWideningLegacyPass, "guard-widening", "Widen guards",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(GuardWideningLegacyPass, "guard-widening", "Widen guards",
-                    false, false)
 
 INITIALIZE_PASS_BEGIN(LoopGuardWideningLegacyPass, "loop-guard-widening",
                       "Widen guards (within a single loop, as a loop pass)",
@@ -1111,10 +1069,6 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(LoopGuardWideningLegacyPass, "loop-guard-widening",
                     "Widen guards (within a single loop, as a loop pass)",
                     false, false)
-
-FunctionPass *llvm::createGuardWideningPass() {
-  return new GuardWideningLegacyPass();
-}
 
 Pass *llvm::createLoopGuardWideningPass() {
   return new LoopGuardWideningLegacyPass();
