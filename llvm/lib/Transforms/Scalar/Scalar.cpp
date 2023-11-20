@@ -32,7 +32,6 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeInstSimplifyLegacyPassPass(Registry);
   initializeLegacyLICMPassPass(Registry);
   initializeLoopDataPrefetchLegacyPassPass(Registry);
-  initializeLoopInstSimplifyLegacyPassPass(Registry);
   initializeLoopPredicationLegacyPassPass(Registry);
   initializeLoopRotateLegacyPassPass(Registry);
   initializeLoopStrengthReducePass(Registry);
