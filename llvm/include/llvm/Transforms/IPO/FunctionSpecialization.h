@@ -217,6 +217,10 @@ private:
   Cost estimateSwitchInst(SwitchInst &I);
   Cost estimateBranchInst(BranchInst &I);
 
+  bool discoverTransitivelyIncomingValues(
+      Constant *Const, PHINode *Root, DenseSet<PHINode *> &TransitivePHIs,
+      SmallVectorImpl<PHINode *> &UnknownIncomingValues);
+
   Constant *visitInstruction(Instruction &I) { return nullptr; }
   Constant *visitPHINode(PHINode &I);
   Constant *visitFreezeInst(FreezeInst &I);
