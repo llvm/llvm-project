@@ -9,7 +9,9 @@
 @ ARM: R_ARM_LDRS_PC_G0
 @ ARM: foo3
 
-// Value is decimal at the moment but hex in other cases (things could change)
+// The value format is decimal in these specific cases, but it's hex for other
+// ldr instructions. These checks are valid for both formats.
+
 @ ARM_ADDEND: r0, [pc, #-
 @ ARM_ADDEND 8]
 @ ARM_ADDEND: r0, [pc, #-
