@@ -69,7 +69,7 @@ func.func @sink_constant_step(%arg0: memref<?xf32>, %lb: index, %ub: index) {
 
 // -----
 
-// Smoke test that parallel for doesn't crash when func dialect is not loaded.
+// Smoke test that parallel for doesn't crash when func dialect is not used.
 
 // CHECK-LABEL: llvm.func @without_func_dialect()
 llvm.func @without_func_dialect() {
