@@ -4876,6 +4876,9 @@ private:
                                      llvm::Value *EmittedE,
                                      bool IsDynamic);
 
+  llvm::Value *emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
+                                           llvm::IntegerType *ResType);
+
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);
 
