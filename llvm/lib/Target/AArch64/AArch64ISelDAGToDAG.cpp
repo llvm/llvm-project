@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64ExpandImm.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -1074,6 +1075,41 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedBitWidth(SDValue N, bool IsSigned
   return true;
 }
 
+// 16-bit optionally shifted immediates are legal for single mov.
+static bool isLegalSingleMOVImmediate(int64_t Immed) {
+  if (Immed == std::numeric_limits<int64_t>::min()) {
+    LLVM_DEBUG(dbgs() << "Illegal single mov imm " << Immed
+                      << ": avoid UB for INT64_MIN\n");
+    return false;
+  }
+
+  // Calculate how many moves we will need to materialize this constant.
+  SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
+  AArch64_IMM::expandMOVImm(Immed, 64, Insn);
+  return Insn.size() == 1;
+}
+
+// Check whether a unsigned vaule is not in the immediate range of mov but in
+// the immediate range of imm24. The "Size" argument is the size in bytes of the
+// memory reference.
+static bool isPreferredBaseAddrMode(const TargetLowering *TLI, int64_t ImmOff,
+                                    unsigned Size) {
+  if ((ImmOff & (Size - 1)) != 0 || ImmOff < 0)
+    return false;
+
+  // If the immediate already can be encoded in mov, then just keep the existing
+  // logic.
+  if (isLegalSingleMOVImmediate(ImmOff))
+    return false;
+
+  // For a imm24, its low imm12 can be fold as the immediate of load or store,
+  // and its high part can be encoded in an add.
+  int64_t HighPart = ImmOff & ~0xfffULL;
+  if (TLI->isLegalAddImmediate(HighPart))
+    return true;
+  return false;
+}
+
 /// SelectAddrModeIndexed - Select a "register plus scaled unsigned 12-bit
 /// immediate" address.  The "Size" argument is the size in bytes of the memory
 /// reference, which determines the scale.
@@ -1113,6 +1149,24 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexed(SDValue N, unsigned Size,
           Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
         }
         OffImm = CurDAG->getTargetConstant(RHSC >> Scale, dl, MVT::i64);
+        return true;
+      }
+
+      // Perfer [Reg + imm] mode.
+      //     ADD  BaseReg, WideImmediate & 0x0fff000
+      //     LDR  X2, [BaseReg, WideImmediate & 0x0fff]
+      SDValue LHS = N.getOperand(0);
+      if (isPreferredBaseAddrMode(TLI, RHSC, Size)) {
+        int64_t ImmOffUnScale = RHSC;
+        int64_t ImmOffLow = ImmOffUnScale & 0x0fff;
+        int64_t ImmOffHigh = RHSC - ImmOffLow;
+        SDValue ImmHighSDV =
+            CurDAG->getTargetConstant(ImmOffHigh >> 12, dl, MVT::i64);
+        Base = SDValue(CurDAG->getMachineNode(
+                           AArch64::ADDXri, dl, MVT::i64, LHS, ImmHighSDV,
+                           CurDAG->getTargetConstant(12, dl, MVT::i32)),
+                       0);
+        OffImm = CurDAG->getTargetConstant(ImmOffLow >> Scale, dl, MVT::i64);
         return true;
       }
     }
@@ -1356,6 +1410,14 @@ bool AArch64DAGToDAGISel::SelectAddrModeXRO(SDValue N, unsigned Size,
     return true;
   }
 
+  // Perfer [Reg + imm] mode, so skip this scenarios.
+  if (auto *OffsetC = dyn_cast<ConstantSDNode>(RHS)) {
+    int64_t ImmOff = (int64_t)OffsetC->getZExtValue();
+    const TargetLowering *TLI = getTargetLowering();
+    if (isPreferredBaseAddrMode(TLI, ImmOff, Size)) {
+      return false;
+    }
+  }
   // Match any non-shifted, non-extend, non-immediate add expression.
   Base = LHS;
   Offset = RHS;

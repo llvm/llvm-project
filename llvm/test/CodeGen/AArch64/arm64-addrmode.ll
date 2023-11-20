@@ -213,9 +213,8 @@ define void @t17(i64 %a) {
 define i32 @LdOffset_i8(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #56952 // =0xde78
-; CHECK-NEXT:    movk w8, #15, lsl #16
-; CHECK-NEXT:    ldrb w0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #253, lsl #12 // =1036288
+; CHECK-NEXT:    ldrb w0, [x8, #3704]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 1039992
   %val = load i8, ptr %arrayidx, align 1
@@ -226,9 +225,8 @@ define i32 @LdOffset_i8(ptr %a)  {
 define i32 @LdOffset_i16(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #48368 // =0xbcf0
-; CHECK-NEXT:    movk w8, #31, lsl #16
-; CHECK-NEXT:    ldrsh w0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #507, lsl #12 // =2076672
+; CHECK-NEXT:    ldrsh w0, [x8, #3312]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i16, ptr %a, i64 1039992
   %val = load i16, ptr %arrayidx, align 2
@@ -239,9 +237,8 @@ define i32 @LdOffset_i16(ptr %a)  {
 define i32 @LdOffset_i32(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31200 // =0x79e0
-; CHECK-NEXT:    movk w8, #63, lsl #16
-; CHECK-NEXT:    ldr w0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #1015, lsl #12 // =4157440
+; CHECK-NEXT:    ldr w0, [x8, #2528]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 1039992
   %val = load i32, ptr %arrayidx, align 4
