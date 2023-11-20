@@ -510,7 +510,13 @@ void IRNormalizer::reorderDefinition(
     if (Call->getIntrinsicID() == Intrinsic::experimental_deoptimize)
       return;
   }
-  // TODO: return on llvm.experimental.deopt...
+  if (auto *BitCast = dyn_cast<BitCastInst>(Definition)) {
+    if (auto *Call = dyn_cast<CallInst>(BitCast->getOperand(0))) {
+      if (Call->isMustTailCall())
+        return;
+    }
+  }
+
   TopologicalSort.emplace(Definition);
 }
 
