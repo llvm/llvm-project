@@ -1004,7 +1004,7 @@ bool SetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
-  auto *B = S.P.getGlobal(I);
+  const Block *B = S.P.getGlobal(I);
   if (B->isExtern())
     return false;
   S.Stk.push<T>(B->deref<T>());
