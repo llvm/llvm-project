@@ -121,6 +121,26 @@ protected:
           llvmPointerType, /* void **extra */
           llvmInt64Type    /* size_t paramsCount */
       }};
+  FunctionCallBuilder launchClusterKernelCallBuilder = {
+      "mgpuLaunchClusterKernel",
+      llvmVoidType,
+      {
+          llvmPointerType, /* void* f */
+          llvmIntPtrType,  /* intptr_t clusterXDim */
+          llvmIntPtrType,  /* intptr_t clusteryDim */
+          llvmIntPtrType,  /* intptr_t clusterZDim */
+          llvmIntPtrType,  /* intptr_t gridXDim */
+          llvmIntPtrType,  /* intptr_t gridyDim */
+          llvmIntPtrType,  /* intptr_t gridZDim */
+          llvmIntPtrType,  /* intptr_t blockXDim */
+          llvmIntPtrType,  /* intptr_t blockYDim */
+          llvmIntPtrType,  /* intptr_t blockZDim */
+          llvmInt32Type,   /* unsigned int sharedMemBytes */
+          llvmPointerType, /* void *hstream */
+          llvmPointerType, /* void **kernelParams */
+          llvmPointerType, /* void **extra */
+          llvmInt64Type    /* size_t paramsCount */
+      }};
   FunctionCallBuilder streamCreateCallBuilder = {
       "mgpuStreamCreate", llvmPointerType /* void *stream */, {}};
   FunctionCallBuilder streamDestroyCallBuilder = {
@@ -1128,13 +1148,19 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
         loc, launchOp.getKernelOperands(), adaptor.getKernelOperands(),
         rewriter, /*useBarePtrCallConv=*/kernelBarePtrCallConv);
 
+    std::optional<gpu::KernelDim3> clusterSize = std::nullopt;
+    if (launchOp.hasClusterSize()) {
+      clusterSize =
+          gpu::KernelDim3{adaptor.getClusterSizeX(), adaptor.getClusterSizeY(),
+                          adaptor.getClusterSizeZ()};
+    }
     rewriter.create<gpu::LaunchFuncOp>(
         launchOp.getLoc(), launchOp.getKernelAttr(),
         gpu::KernelDim3{adaptor.getGridSizeX(), adaptor.getGridSizeY(),
                         adaptor.getGridSizeZ()},
         gpu::KernelDim3{adaptor.getBlockSizeX(), adaptor.getBlockSizeY(),
                         adaptor.getBlockSizeZ()},
-        adaptor.getDynamicSharedMemorySize(), arguments, stream);
+        adaptor.getDynamicSharedMemorySize(), arguments, stream, clusterSize);
     if (launchOp.getAsyncToken())
       rewriter.replaceOp(launchOp, {stream});
     else

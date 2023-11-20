@@ -53,6 +53,32 @@ class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
   let assemblyFormat = "$dimension attr-dict";
 }
 
+def GPU_ClusterDimOp : GPU_IndexOp<"cluster_dim"> {
+  let description = [{
+    Returns the number of thread blocks in the cluster along
+    the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %cDimX = gpu.cluster_dim x
+    ```
+  }];
+}
+
+def GPU_ClusterIdOp : GPU_IndexOp<"cluster_id"> {
+  let description = [{
+    Returns the cluster id, i.e. the index of the current cluster within the 
+    grid along the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %cIdY = gpu.cluster_id y
+    ```
+  }];
+}
+
 def GPU_BlockDimOp : GPU_IndexOp<"block_dim"> {
   let description = [{
     Returns the number of threads in the thread block (aka the block size) along
@@ -441,8 +467,15 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
                      "blockSizeY", "blockSizeZ"]>]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                SymbolRefAttr:$kernel,
-               LaunchIndx:$gridSizeX, LaunchIndx:$gridSizeY, LaunchIndx:$gridSizeZ,
-               LaunchIndx:$blockSizeX, LaunchIndx:$blockSizeY, LaunchIndx:$blockSizeZ,
+               LaunchIndx:$gridSizeX, 
+               LaunchIndx:$gridSizeY, 
+               LaunchIndx:$gridSizeZ,
+               LaunchIndx:$blockSizeX, 
+               LaunchIndx:$blockSizeY, 
+               LaunchIndx:$blockSizeZ,
+               Optional<LaunchIndx>:$clusterSizeX,
+               Optional<LaunchIndx>:$clusterSizeY,
+               Optional<LaunchIndx>:$clusterSizeZ,
                Optional<I32>:$dynamicSharedMemorySize,
                Variadic<AnyType>:$kernelOperands,
                Optional<AnyType>:$asyncObject)>,
@@ -480,6 +513,12 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
     The remaining operands if present are passed as arguments to the kernel
     function.
 
+    The `gpu.launch_func` also supports kernel launching with clusters if 
+    supported by the target architecture. The cluster size can be set by 
+    `clusterSizeX`, `clusterSizeY`, and `clusterSizeZ` arguments. When these 
+    arguments are present, the Op launches a kernel that clusters the given 
+    thread blocks. This feature is exclusive to certain architectures.
+
     Example:
 
     ```mlir
@@ -509,6 +548,15 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
           %gDimY = gpu.grid_dim y
           %gDimZ = gpu.grid_dim z
 
+          // (Optional)  Cluster size only for support architectures
+          %cIdX = gpu.cluster_id x
+          %cIdY = gpu.cluster_id y
+          %cIdZ = gpu.cluster_id z
+
+          %cDimX = gpu.cluster_dim x
+          %cDimY = gpu.cluster_dim y
+          %cDimZ = gpu.cluster_dim z
+
           "some_op"(%bx, %tx) : (index, index) -> ()
           %42 = load %arg1[%bx] : memref<?xf32, 1>
         }
@@ -519,6 +567,7 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
           async                           // (Optional) Don't block host, return token.
           [%t0]                           // (Optional) Execute only after %t0 has completed.
           @kernels::@kernel_1             // Kernel function.
+          clusters in (%cst, %cst, %cst)  // (Optional) Cluster size only for support architectures. 
           blocks in (%cst, %cst, %cst)    // Grid size.
           threads in (%cst, %cst, %cst)   // Block size.
           dynamic_shared_memory_size %s   // (Optional) Amount of dynamic shared
@@ -536,11 +585,13 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
       "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
       "ValueRange":$kernelOperands,
       CArg<"Type", "nullptr">:$asyncTokenType,
-      CArg<"ValueRange", "{}">:$asyncDependencies)>,
+      CArg<"ValueRange", "{}">:$asyncDependencies,
+      CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize)>,
     OpBuilder<(ins "SymbolRefAttr":$kernel, "KernelDim3":$gridSize,
       "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
       "ValueRange":$kernelOperands,
-      CArg<"Value", "nullptr">:$asyncObject)>
+      CArg<"Value", "nullptr">:$asyncObject,
+      CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize)>
   ];
 
   let extraClassDeclaration = [{
@@ -550,11 +601,22 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
     /// The name of the kernel.
     StringAttr getKernelName();
 
+    /// Has cluster
+    bool hasClusterSize() {
+      auto totalSize = getOperands().size();
+      totalSize -= getKernelOperands().size();
+      totalSize -= getAsyncDependencies().size();
+      return totalSize > 7;
+    }
+
     /// The number of operands passed to the kernel function.
     unsigned getNumKernelOperands();
 
     /// The i-th operand passed to the kernel function.
     Value getKernelOperand(unsigned i);
+
+    /// Get the SSA values passed as operands to specify the cluster size.
+    KernelDim3 getClusterSizeOperandValues();
 
     /// Get the SSA values passed as operands to specify the grid size.
     KernelDim3 getGridSizeOperandValues();
@@ -571,10 +633,11 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
   let assemblyFormat = [{
       custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
       (`<` $asyncObject^ `:` type($asyncObject) `>`)?
-      $kernel
+      $kernel      
+      ( `clusters` `in` ` ` `(` $clusterSizeX^ `,` $clusterSizeY `,` $clusterSizeZ `)` )?
       `blocks` `in` ` ` `(` $gridSizeX `,` $gridSizeY `,` $gridSizeZ `)`
       `threads` `in` ` ` `(` $blockSizeX `,` $blockSizeY `,` $blockSizeZ `)`
-      custom<LaunchDimType>(type($gridSizeX))
+      custom<LaunchDimType>(type($gridSizeX), ref($clusterSizeX), type($clusterSizeX), type($clusterSizeY), type($clusterSizeZ))
       (`dynamic_shared_memory_size` $dynamicSharedMemorySize^)?
       custom<LaunchFuncOperands>($kernelOperands, type($kernelOperands)) attr-dict
   }];
