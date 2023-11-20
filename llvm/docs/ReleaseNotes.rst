@@ -57,6 +57,8 @@ Changes to the LLVM IR
 
   * ``and``
   * ``or``
+  * ``lshr``
+  * ``ashr``
   * ``zext``
   * ``sext``
   * ``fptrunc``
@@ -99,6 +101,8 @@ Changes to the AMDGPU Backend
 * Implemented `llvm.stacksave` and `llvm.stackrestore` intrinsics.
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>`
+
+* Added support for Cortex-A520, Cortex-A720 and Cortex-X4 CPUs.
 
 Changes to the ARM Backend
 --------------------------
@@ -174,6 +178,8 @@ Changes to the C API
 
   * ``LLVMConstAnd``
   * ``LLVMConstOr``
+  * ``LLVMConstLShr``
+  * ``LLVMConstAShr``
   * ``LLVMConstZExt``
   * ``LLVMConstSExt``
   * ``LLVMConstZExtOrBitCast``
@@ -226,6 +232,8 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* ``SBWatchpoint::GetHardwareIndex`` is deprecated and now returns -1
+  to indicate the index is unavailable.
 * Methods in SBHostOS related to threads have had their implementations
   removed. These methods will return a value indicating failure.
 * ``SBType::FindDirectNestedType`` function is added. It's useful
@@ -240,6 +248,19 @@ Changes to LLDB
   (SME) and Scalable Matrix Extension 2 (SME2) for both live processes and core
   files. For details refer to the
   `AArch64 Linux documentation <https://lldb.llvm.org/use/aarch64-linux.html>`_.
+
+* When running on AArch64 Linux, ``lldb-server`` now provides register
+  field information for the following registers: ``cpsr``, ``fpcr``,
+  ``fpsr``, ``svcr`` and ``mte_ctrl``. ::
+
+    (lldb) register read cpsr
+          cpsr = 0x80001000
+               = (N = 1, Z = 0, C = 0, V = 0, SS = 0, IL = 0, <...>
+
+  This is only available when ``lldb`` is built with XML support.
+  Where possible the CPU's capabilities are used to decide which
+  fields are present, however this is not always possible or entirely
+  accurate. If in doubt, refer to the numerical value.
 
 Changes to Sanitizers
 ---------------------

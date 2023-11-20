@@ -2756,40 +2756,38 @@ exit:
 define i32 @test_pr62620_widening_instr(ptr %p1, ptr %p2, i64 %lx, i32 %h) {
 ; CHECK-LABEL: test_pr62620_widening_instr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    lsl x9, x2, #4
-; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    lsl x8, x2, #4
+; CHECK-NEXT:    ldr q0, [x0, x8]
+; CHECK-NEXT:    ldr q1, [x1, x8]
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:  LBB23_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q0, [x0, x9]
-; CHECK-NEXT:    ldr q1, [x1, x9]
-; CHECK-NEXT:    subs w3, w3, #1
 ; CHECK-NEXT:    uabdl.8h v2, v0, v1
+; CHECK-NEXT:    subs w3, w3, #1
 ; CHECK-NEXT:    uabal2.8h v2, v0, v1
-; CHECK-NEXT:    uaddlv.8h s0, v2
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    add w8, w10, w8
+; CHECK-NEXT:    uaddlv.8h s2, v2
+; CHECK-NEXT:    fmov w8, s2
+; CHECK-NEXT:    add w0, w8, w0
 ; CHECK-NEXT:    b.ne LBB23_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
-; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_pr62620_widening_instr:
 ; CHECK-BE:       // %bb.0: // %entry
-; CHECK-BE-NEXT:    lsl x9, x2, #4
-; CHECK-BE-NEXT:    mov x8, x0
+; CHECK-BE-NEXT:    lsl x8, x2, #4
+; CHECK-BE-NEXT:    add x9, x0, x8
+; CHECK-BE-NEXT:    add x8, x1, x8
 ; CHECK-BE-NEXT:    mov w0, wzr
-; CHECK-BE-NEXT:    add x8, x8, x9
-; CHECK-BE-NEXT:    add x9, x1, x9
+; CHECK-BE-NEXT:    ld1 { v0.16b }, [x9]
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x8]
 ; CHECK-BE-NEXT:  .LBB23_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ld1 { v0.16b }, [x8]
-; CHECK-BE-NEXT:    ld1 { v1.16b }, [x9]
-; CHECK-BE-NEXT:    subs w3, w3, #1
 ; CHECK-BE-NEXT:    uabdl v2.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    subs w3, w3, #1
 ; CHECK-BE-NEXT:    uabal2 v2.8h, v0.16b, v1.16b
-; CHECK-BE-NEXT:    uaddlv s0, v2.8h
-; CHECK-BE-NEXT:    fmov w10, s0
-; CHECK-BE-NEXT:    add w0, w10, w0
+; CHECK-BE-NEXT:    uaddlv s2, v2.8h
+; CHECK-BE-NEXT:    fmov w8, s2
+; CHECK-BE-NEXT:    add w0, w8, w0
 ; CHECK-BE-NEXT:    b.ne .LBB23_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret

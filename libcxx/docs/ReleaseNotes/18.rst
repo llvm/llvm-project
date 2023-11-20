@@ -48,6 +48,7 @@ Implemented Papers
 - P2538R1 - ADL-proof ``std::projected``
 - P2614R2 - Deprecate ``numeric_limits::has_denorm``
 - P0053R7 - C++ Synchronized Buffered Ostream (in the experimental library)
+- P2467R1 - Support exclusive mode for fstreams
 
 
 Improvements and New Features
@@ -55,6 +56,9 @@ Improvements and New Features
 
 - ``std::ranges::count`` is now optimized for ``vector<bool>::iterator``, which
   can lead up to 350x performance improvements.
+
+- ``std::for_each`` has been optimized for segmented iterators like ``std::deque::iterator`` in C++23 and
+  later, which can lead up to 40x performance improvements.
 
 - The library now provides several hardening modes under which common cases of library undefined behavior will be turned
   into a reliable program termination. The ``fast`` hardening mode enables a set of security-critical checks with

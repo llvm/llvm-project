@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Debug.h"
 
@@ -64,9 +65,13 @@ private:
   bool materializeImm(Register Reg, int64_t Imm, MachineIRBuilder &MIB) const;
   bool selectGlobalValue(MachineInstr &MI, MachineIRBuilder &MIB,
                          MachineRegisterInfo &MRI) const;
+  bool selectJumpTable(MachineInstr &MI, MachineIRBuilder &MIB,
+                       MachineRegisterInfo &MRI) const;
   bool selectSExtInreg(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool selectSelect(MachineInstr &MI, MachineIRBuilder &MIB,
                     MachineRegisterInfo &MRI) const;
+  bool selectFPCompare(MachineInstr &MI, MachineIRBuilder &MIB,
+                       MachineRegisterInfo &MRI) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
@@ -294,6 +299,92 @@ RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
            [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
 }
 
+/// Returns the RISCVCC::CondCode that corresponds to the CmpInst::Predicate CC.
+/// CC Must be an ICMP Predicate.
+static RISCVCC::CondCode getRISCVCCFromICmp(CmpInst::Predicate CC) {
+  switch (CC) {
+  default:
+    llvm_unreachable("Expected ICMP CmpInst::Predicate.");
+  case CmpInst::Predicate::ICMP_EQ:
+    return RISCVCC::COND_EQ;
+  case CmpInst::Predicate::ICMP_NE:
+    return RISCVCC::COND_NE;
+  case CmpInst::Predicate::ICMP_ULT:
+    return RISCVCC::COND_LTU;
+  case CmpInst::Predicate::ICMP_SLT:
+    return RISCVCC::COND_LT;
+  case CmpInst::Predicate::ICMP_UGE:
+    return RISCVCC::COND_GEU;
+  case CmpInst::Predicate::ICMP_SGE:
+    return RISCVCC::COND_GE;
+  }
+}
+
+static void getOperandsForBranch(Register CondReg, MachineRegisterInfo &MRI,
+                                 RISCVCC::CondCode &CC, Register &LHS,
+                                 Register &RHS) {
+  // Try to fold an ICmp. If that fails, use a NE compare with X0.
+  CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+  if (!mi_match(CondReg, MRI, m_GICmp(m_Pred(Pred), m_Reg(LHS), m_Reg(RHS)))) {
+    LHS = CondReg;
+    RHS = RISCV::X0;
+    CC = RISCVCC::COND_NE;
+    return;
+  }
+
+  // We found an ICmp, do some canonicalizations.
+
+  // Adjust comparisons to use comparison with 0 if possible.
+  if (auto Constant = getIConstantVRegSExtVal(RHS, MRI)) {
+    switch (Pred) {
+    case CmpInst::Predicate::ICMP_SGT:
+      // Convert X > -1 to X >= 0
+      if (*Constant == -1) {
+        CC = RISCVCC::COND_GE;
+        RHS = RISCV::X0;
+        return;
+      }
+      break;
+    case CmpInst::Predicate::ICMP_SLT:
+      // Convert X < 1 to 0 >= X
+      if (*Constant == 1) {
+        CC = RISCVCC::COND_GE;
+        RHS = LHS;
+        LHS = RISCV::X0;
+        return;
+      }
+      break;
+    default:
+      break;
+    }
+  }
+
+  switch (Pred) {
+  default:
+    llvm_unreachable("Expected ICMP CmpInst::Predicate.");
+  case CmpInst::Predicate::ICMP_EQ:
+  case CmpInst::Predicate::ICMP_NE:
+  case CmpInst::Predicate::ICMP_ULT:
+  case CmpInst::Predicate::ICMP_SLT:
+  case CmpInst::Predicate::ICMP_UGE:
+  case CmpInst::Predicate::ICMP_SGE:
+    // These CCs are supported directly by RISC-V branches.
+    break;
+  case CmpInst::Predicate::ICMP_SGT:
+  case CmpInst::Predicate::ICMP_SLE:
+  case CmpInst::Predicate::ICMP_UGT:
+  case CmpInst::Predicate::ICMP_ULE:
+    // These CCs are not supported directly by RISC-V branches, but changing the
+    // direction of the CC and swapping LHS and RHS are.
+    Pred = CmpInst::getSwappedPredicate(Pred);
+    std::swap(LHS, RHS);
+    break;
+  }
+
+  CC = getRISCVCCFromICmp(Pred);
+  return;
+}
+
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -395,13 +486,69 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_GLOBAL_VALUE:
     return selectGlobalValue(MI, MIB, MRI);
+  case TargetOpcode::G_JUMP_TABLE:
+    return selectJumpTable(MI, MIB, MRI);
   case TargetOpcode::G_BRCOND: {
-    // TODO: Fold with G_ICMP.
-    auto Bcc =
-        MIB.buildInstr(RISCV::BNE, {}, {MI.getOperand(0), Register(RISCV::X0)})
-            .addMBB(MI.getOperand(1).getMBB());
+    Register LHS, RHS;
+    RISCVCC::CondCode CC;
+    getOperandsForBranch(MI.getOperand(0).getReg(), MRI, CC, LHS, RHS);
+
+    auto Bcc = MIB.buildInstr(RISCVCC::getBrCond(CC), {}, {LHS, RHS})
+                   .addMBB(MI.getOperand(1).getMBB());
     MI.eraseFromParent();
     return constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
+  }
+  case TargetOpcode::G_BRJT: {
+    // FIXME: Move to legalization?
+    const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
+    unsigned EntrySize = MJTI->getEntrySize(MF.getDataLayout());
+    assert((EntrySize == 4 || (Subtarget->is64Bit() && EntrySize == 8)) &&
+           "Unsupported jump-table entry size");
+    assert(
+        (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
+         MJTI->getEntryKind() == MachineJumpTableInfo::EK_Custom32 ||
+         MJTI->getEntryKind() == MachineJumpTableInfo::EK_BlockAddress) &&
+        "Unexpected jump-table entry kind");
+
+    auto SLL =
+        MIB.buildInstr(RISCV::SLLI, {&RISCV::GPRRegClass}, {MI.getOperand(2)})
+            .addImm(Log2_32(EntrySize));
+    if (!SLL.constrainAllUses(TII, TRI, RBI))
+      return false;
+
+    // TODO: Use SHXADD. Moving to legalization would fix this automatically.
+    auto ADD = MIB.buildInstr(RISCV::ADD, {&RISCV::GPRRegClass},
+                              {MI.getOperand(0), SLL.getReg(0)});
+    if (!ADD.constrainAllUses(TII, TRI, RBI))
+      return false;
+
+    unsigned LdOpc = EntrySize == 8 ? RISCV::LD : RISCV::LW;
+    auto Dest =
+        MIB.buildInstr(LdOpc, {&RISCV::GPRRegClass}, {ADD.getReg(0)})
+            .addImm(0)
+            .addMemOperand(MF.getMachineMemOperand(
+                MachinePointerInfo::getJumpTable(MF), MachineMemOperand::MOLoad,
+                EntrySize, Align(MJTI->getEntryAlignment(MF.getDataLayout()))));
+    if (!Dest.constrainAllUses(TII, TRI, RBI))
+      return false;
+
+    // If the Kind is EK_LabelDifference32, the table stores an offset from
+    // the location of the table. Add the table address to get an absolute
+    // address.
+    if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32) {
+      Dest = MIB.buildInstr(RISCV::ADD, {&RISCV::GPRRegClass},
+                            {Dest.getReg(0), MI.getOperand(0)});
+      if (!Dest.constrainAllUses(TII, TRI, RBI))
+        return false;
+    }
+
+    auto Branch =
+        MIB.buildInstr(RISCV::PseudoBRIND, {}, {Dest.getReg(0)}).addImm(0);
+    if (!Branch.constrainAllUses(TII, TRI, RBI))
+      return false;
+
+    MI.eraseFromParent();
+    return true;
   }
   case TargetOpcode::G_SEXT_INREG:
     return selectSExtInreg(MI, MIB);
@@ -415,6 +562,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_SELECT:
     return selectSelect(MI, MIB, MRI);
+  case TargetOpcode::G_FCMP:
+    return selectFPCompare(MI, MIB, MRI);
   default:
     return false;
   }
@@ -428,7 +577,7 @@ bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
 
   const LLT sXLen = LLT::scalar(STI.getXLen());
   auto PtrToInt = MIB.buildPtrToInt(sXLen, PtrReg);
-  MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRRegBankID));
+  MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRBRegBankID));
   Op.setReg(PtrToInt.getReg(0));
   return select(*PtrToInt);
 }
@@ -487,12 +636,12 @@ void RISCVInstructionSelector::renderTrailingZeros(MachineInstrBuilder &MIB,
 
 const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
     LLT Ty, const RegisterBank &RB) const {
-  if (RB.getID() == RISCV::GPRRegBankID) {
+  if (RB.getID() == RISCV::GPRBRegBankID) {
     if (Ty.getSizeInBits() <= 32 || (STI.is64Bit() && Ty.getSizeInBits() == 64))
       return &RISCV::GPRRegClass;
   }
 
-  if (RB.getID() == RISCV::FPRRegBankID) {
+  if (RB.getID() == RISCV::FPRBRegBankID) {
     if (Ty.getSizeInBits() == 32)
       return &RISCV::FPR32RegClass;
     if (Ty.getSizeInBits() == 64)
@@ -692,6 +841,97 @@ bool RISCVInstructionSelector::selectGlobalValue(
   return false;
 }
 
+// FIXME: This is very similar to selectGlobalValue. Merge somehow?
+bool RISCVInstructionSelector::selectJumpTable(MachineInstr &MI,
+                                               MachineIRBuilder &MIB,
+                                               MachineRegisterInfo &MRI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_JUMP_TABLE &&
+         "Expected G_JUMP_TABLE");
+
+  int Idx = MI.getOperand(1).getIndex();
+
+  Register DefReg = MI.getOperand(0).getReg();
+  const LLT DefTy = MRI.getType(DefReg);
+  MachineInstr *Result = nullptr;
+
+  // When HWASAN is used and tagging of global variables is enabled
+  // they should be accessed via the GOT, since the tagged address of a global
+  // is incompatible with existing code models. This also applies to non-pic
+  // mode.
+  if (TM.isPositionIndependent() || Subtarget->allowTaggedGlobals()) {
+    if (!Subtarget->allowTaggedGlobals()) {
+      // Use PC-relative addressing to access the symbol. This generates the
+      // pattern (PseudoLLA sym), which expands to (addi (auipc %pcrel_hi(sym))
+      // %pcrel_lo(auipc)).
+      Result =
+          MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {}).addJumpTableIndex(Idx);
+    } else {
+      // Use PC-relative addressing to access the GOT for this symbol, then
+      // load the address from the GOT. This generates the pattern (PseudoLGA
+      // sym), which expands to (ld (addi (auipc %got_pcrel_hi(sym))
+      // %pcrel_lo(auipc))).
+      MachineFunction &MF = *MI.getParent()->getParent();
+      MachineMemOperand *MemOp = MF.getMachineMemOperand(
+          MachinePointerInfo::getGOT(MF),
+          MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+              MachineMemOperand::MOInvariant,
+          DefTy, Align(DefTy.getSizeInBits() / 8));
+
+      Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
+                   .addJumpTableIndex(Idx)
+                   .addMemOperand(MemOp);
+    }
+
+    if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
+      return false;
+
+    MI.eraseFromParent();
+    return true;
+  }
+
+  switch (TM.getCodeModel()) {
+  default: {
+    reportGISelFailure(const_cast<MachineFunction &>(*MF), *TPC, *MORE,
+                       getName(), "Unsupported code model for lowering", MI);
+    return false;
+  }
+  case CodeModel::Small: {
+    // Must lie within a single 2 GiB address range and must lie between
+    // absolute addresses -2 GiB and +2 GiB. This generates the pattern (addi
+    // (lui %hi(sym)) %lo(sym)).
+    Register AddrHiDest = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    MachineInstr *AddrHi = MIB.buildInstr(RISCV::LUI, {AddrHiDest}, {})
+                               .addJumpTableIndex(Idx, RISCVII::MO_HI);
+
+    if (!constrainSelectedInstRegOperands(*AddrHi, TII, TRI, RBI))
+      return false;
+
+    Result = MIB.buildInstr(RISCV::ADDI, {DefReg}, {AddrHiDest})
+                 .addJumpTableIndex(Idx, RISCVII::MO_LO);
+
+    if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
+      return false;
+
+    MI.eraseFromParent();
+    return true;
+  }
+  case CodeModel::Medium: {
+    // Generate a sequence for accessing addresses within any 2GiB range
+    // within the address space. This generates the pattern (PseudoLLA sym),
+    // which expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
+    Result =
+        MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {}).addJumpTableIndex(Idx);
+
+    if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
+      return false;
+
+    MI.eraseFromParent();
+    return true;
+  }
+  }
+  return false;
+}
+
 bool RISCVInstructionSelector::selectSExtInreg(MachineInstr &MI,
                                                MachineIRBuilder &MIB) const {
   if (!STI.isRV64())
@@ -715,99 +955,14 @@ bool RISCVInstructionSelector::selectSExtInreg(MachineInstr &MI,
   return true;
 }
 
-/// Returns the RISCVCC::CondCode that corresponds to the CmpInst::Predicate CC.
-/// CC Must be an ICMP Predicate.
-static RISCVCC::CondCode getRISCVCCFromICMP(CmpInst::Predicate CC) {
-  switch (CC) {
-  default:
-    llvm_unreachable("Expected ICMP CmpInst::Predicate.");
-  case CmpInst::Predicate::ICMP_EQ:
-    return RISCVCC::COND_EQ;
-  case CmpInst::Predicate::ICMP_NE:
-    return RISCVCC::COND_NE;
-  case CmpInst::Predicate::ICMP_ULT:
-    return RISCVCC::COND_LTU;
-  case CmpInst::Predicate::ICMP_SLT:
-    return RISCVCC::COND_LT;
-  case CmpInst::Predicate::ICMP_UGE:
-    return RISCVCC::COND_GEU;
-  case CmpInst::Predicate::ICMP_SGE:
-    return RISCVCC::COND_GE;
-  }
-}
-
-static void getICMPOperandsForBranch(MachineInstr &MI, MachineIRBuilder &MIB,
-                                     MachineRegisterInfo &MRI,
-                                     RISCVCC::CondCode &CC, Register &LHS,
-                                     Register &RHS) {
-  assert(MI.getOpcode() == TargetOpcode::G_ICMP);
-  CmpInst::Predicate ICMPCC =
-      static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
-  LHS = MI.getOperand(2).getReg();
-  RHS = MI.getOperand(3).getReg();
-
-  // Adjust comparisons to use comparison with 0 if possible.
-  if (auto Constant = getIConstantVRegSExtVal(RHS, MRI)) {
-    switch (ICMPCC) {
-    case CmpInst::Predicate::ICMP_SGT:
-      // Convert X > -1 to X >= 0
-      if (*Constant == -1) {
-        CC = RISCVCC::COND_GE;
-        RHS = RISCV::X0;
-        return;
-      }
-      break;
-    case CmpInst::Predicate::ICMP_SLT:
-      // Convert X < 1 to 0 >= X
-      if (*Constant == 1) {
-        CC = RISCVCC::COND_GE;
-        RHS = LHS;
-        LHS = RISCV::X0;
-        return;
-      }
-      break;
-    default:
-      break;
-    }
-  }
-
-  switch (ICMPCC) {
-  default:
-    llvm_unreachable("Expected ICMP CmpInst::Predicate.");
-  case CmpInst::Predicate::ICMP_EQ:
-  case CmpInst::Predicate::ICMP_NE:
-  case CmpInst::Predicate::ICMP_ULT:
-  case CmpInst::Predicate::ICMP_SLT:
-  case CmpInst::Predicate::ICMP_UGE:
-  case CmpInst::Predicate::ICMP_SGE:
-    // These CCs are supported directly by RISC-V branches.
-    CC = getRISCVCCFromICMP(ICMPCC);
-    return;
-  case CmpInst::Predicate::ICMP_SGT:
-  case CmpInst::Predicate::ICMP_SLE:
-  case CmpInst::Predicate::ICMP_UGT:
-  case CmpInst::Predicate::ICMP_ULE:
-    // These CCs are not supported directly by RISC-V branches, but changing the
-    // direction of the CC and swapping LHS and RHS are.
-    CC = getRISCVCCFromICMP(CmpInst::getSwappedPredicate(ICMPCC));
-    std::swap(LHS, RHS);
-    return;
-  }
-}
-
 bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
                                             MachineIRBuilder &MIB,
                                             MachineRegisterInfo &MRI) const {
   auto &SelectMI = cast<GSelect>(MI);
 
-  // If MI is a G_SELECT(G_ICMP(tst, A, B), C, D) then we can use (A, B, tst)
-  // as the (LHS, RHS, CC) of the Select_GPR_Using_CC_GPR.
-  Register LHS = SelectMI.getCondReg();
-  Register RHS = RISCV::X0;
-  RISCVCC::CondCode CC = RISCVCC::COND_NE;
-
-  if (mi_match(LHS, MRI, m_GICmp(m_Pred(), m_Reg(), m_Reg())))
-    getICMPOperandsForBranch(*MRI.getVRegDef(LHS), MIB, MRI, CC, LHS, RHS);
+  Register LHS, RHS;
+  RISCVCC::CondCode CC;
+  getOperandsForBranch(SelectMI.getCondReg(), MRI, CC, LHS, RHS);
 
   MachineInstr *Result = MIB.buildInstr(RISCV::Select_GPR_Using_CC_GPR)
                              .addDef(SelectMI.getReg(0))
@@ -818,6 +973,130 @@ bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
                              .addReg(SelectMI.getFalseReg());
   MI.eraseFromParent();
   return constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
+}
+
+// Convert an FCMP predicate to one of the supported F or D instructions.
+static unsigned getFCmpOpcode(CmpInst::Predicate Pred, unsigned Size) {
+  assert((Size == 32 || Size == 64) && "Unsupported size");
+  switch (Pred) {
+  default:
+    llvm_unreachable("Unsupported predicate");
+  case CmpInst::FCMP_OLT:
+    return Size == 32 ? RISCV::FLT_S : RISCV::FLT_D;
+  case CmpInst::FCMP_OLE:
+    return Size == 32 ? RISCV::FLE_S : RISCV::FLE_D;
+  case CmpInst::FCMP_OEQ:
+    return Size == 32 ? RISCV::FEQ_S : RISCV::FEQ_D;
+  }
+}
+
+// Try legalizing an FCMP by swapping or inverting the predicate to one that
+// is supported.
+static bool legalizeFCmpPredicate(Register &LHS, Register &RHS,
+                                  CmpInst::Predicate &Pred, bool &NeedInvert) {
+  auto isLegalFCmpPredicate = [](CmpInst::Predicate Pred) {
+    return Pred == CmpInst::FCMP_OLT || Pred == CmpInst::FCMP_OLE ||
+           Pred == CmpInst::FCMP_OEQ;
+  };
+
+  assert(!isLegalFCmpPredicate(Pred) && "Predicate already legal?");
+
+  CmpInst::Predicate InvPred = CmpInst::getSwappedPredicate(Pred);
+  if (isLegalFCmpPredicate(InvPred)) {
+    Pred = InvPred;
+    std::swap(LHS, RHS);
+    return true;
+  }
+
+  InvPred = CmpInst::getInversePredicate(Pred);
+  NeedInvert = true;
+  if (isLegalFCmpPredicate(InvPred)) {
+    Pred = InvPred;
+    return true;
+  }
+  InvPred = CmpInst::getSwappedPredicate(InvPred);
+  if (isLegalFCmpPredicate(InvPred)) {
+    Pred = InvPred;
+    std::swap(LHS, RHS);
+    return true;
+  }
+
+  return false;
+}
+
+// Emit a sequence of instructions to compare LHS and RHS using Pred. Return
+// the result in DstReg.
+// FIXME: Maybe we should expand this earlier.
+bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
+                                               MachineIRBuilder &MIB,
+                                               MachineRegisterInfo &MRI) const {
+  auto &CmpMI = cast<GFCmp>(MI);
+  CmpInst::Predicate Pred = CmpMI.getCond();
+
+  Register DstReg = CmpMI.getReg(0);
+  Register LHS = CmpMI.getLHSReg();
+  Register RHS = CmpMI.getRHSReg();
+
+  unsigned Size = MRI.getType(LHS).getSizeInBits();
+  assert((Size == 32 || Size == 64) && "Unexpected size");
+
+  Register TmpReg = DstReg;
+
+  bool NeedInvert = false;
+  // First try swapping operands or inverting.
+  if (legalizeFCmpPredicate(LHS, RHS, Pred, NeedInvert)) {
+    if (NeedInvert)
+      TmpReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    auto Cmp = MIB.buildInstr(getFCmpOpcode(Pred, Size), {TmpReg}, {LHS, RHS});
+    if (!Cmp.constrainAllUses(TII, TRI, RBI))
+      return false;
+  } else if (Pred == CmpInst::FCMP_ONE || Pred == CmpInst::FCMP_UEQ) {
+    // fcmp one LHS, RHS => (OR (FLT LHS, RHS), (FLT RHS, LHS))
+    NeedInvert = Pred == CmpInst::FCMP_UEQ;
+    auto Cmp1 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OLT, Size),
+                               {&RISCV::GPRRegClass}, {LHS, RHS});
+    if (!Cmp1.constrainAllUses(TII, TRI, RBI))
+      return false;
+    auto Cmp2 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OLT, Size),
+                               {&RISCV::GPRRegClass}, {RHS, LHS});
+    if (!Cmp2.constrainAllUses(TII, TRI, RBI))
+      return false;
+    if (NeedInvert)
+      TmpReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    auto Or =
+        MIB.buildInstr(RISCV::OR, {TmpReg}, {Cmp1.getReg(0), Cmp2.getReg(0)});
+    if (!Or.constrainAllUses(TII, TRI, RBI))
+      return false;
+  } else if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
+    // fcmp ord LHS, RHS => (AND (FEQ LHS, LHS), (FEQ RHS, RHS))
+    // FIXME: If LHS and RHS are the same we can use a single FEQ.
+    NeedInvert = Pred == CmpInst::FCMP_UNO;
+    auto Cmp1 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OEQ, Size),
+                               {&RISCV::GPRRegClass}, {LHS, LHS});
+    if (!Cmp1.constrainAllUses(TII, TRI, RBI))
+      return false;
+    auto Cmp2 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OEQ, Size),
+                               {&RISCV::GPRRegClass}, {RHS, RHS});
+    if (!Cmp2.constrainAllUses(TII, TRI, RBI))
+      return false;
+    if (NeedInvert)
+      TmpReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    auto And =
+        MIB.buildInstr(RISCV::AND, {TmpReg}, {Cmp1.getReg(0), Cmp2.getReg(0)});
+    if (!And.constrainAllUses(TII, TRI, RBI))
+      return false;
+  } else
+    llvm_unreachable("Unhandled predicate");
+
+  // Emit an XORI to invert the result if needed.
+  if (NeedInvert) {
+    auto Xor = MIB.buildInstr(RISCV::XORI, {DstReg}, {TmpReg}).addImm(1);
+    if (!Xor.constrainAllUses(TII, TRI, RBI))
+      return false;
+  }
+
+  MI.eraseFromParent();
+  return true;
 }
 
 namespace llvm {

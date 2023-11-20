@@ -1487,7 +1487,11 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       return BinaryOperator::CreateNeg(Builder.CreateAdd(A, B));
 
     // -A + B --> B - A
-    return BinaryOperator::CreateSub(RHS, A);
+    auto *Sub = BinaryOperator::CreateSub(RHS, A);
+    auto *OB0 = cast<OverflowingBinaryOperator>(LHS);
+    Sub->setHasNoSignedWrap(I.hasNoSignedWrap() && OB0->hasNoSignedWrap());
+
+    return Sub;
   }
 
   // A + -B  -->  A - B
@@ -2107,14 +2111,16 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
     // C-(X+C2) --> (C-C2)-X
     if (match(Op1, m_Add(m_Value(X), m_ImmConstant(C2)))) {
-      // C-C2 never overflow, and C-(X+C2), (X+C2) has NSW
-      // => (C-C2)-X can have NSW
+      // C-C2 never overflow, and C-(X+C2), (X+C2) has NSW/NUW
+      // => (C-C2)-X can have NSW/NUW
       bool WillNotSOV = willNotOverflowSignedSub(C, C2, I);
       BinaryOperator *Res =
           BinaryOperator::CreateSub(ConstantExpr::getSub(C, C2), X);
       auto *OBO1 = cast<OverflowingBinaryOperator>(Op1);
       Res->setHasNoSignedWrap(I.hasNoSignedWrap() && OBO1->hasNoSignedWrap() &&
                               WillNotSOV);
+      Res->setHasNoUnsignedWrap(I.hasNoUnsignedWrap() &&
+                                OBO1->hasNoUnsignedWrap());
       return Res;
     }
   }
@@ -2185,8 +2191,15 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
   // ((X - Y) - Op1)  -->  X - (Y + Op1)
   if (match(Op0, m_OneUse(m_Sub(m_Value(X), m_Value(Y))))) {
-    Value *Add = Builder.CreateAdd(Y, Op1);
-    return BinaryOperator::CreateSub(X, Add);
+    OverflowingBinaryOperator *LHSSub = cast<OverflowingBinaryOperator>(Op0);
+    bool HasNUW = I.hasNoUnsignedWrap() && LHSSub->hasNoUnsignedWrap();
+    bool HasNSW = HasNUW && I.hasNoSignedWrap() && LHSSub->hasNoSignedWrap();
+    Value *Add = Builder.CreateAdd(Y, Op1, "", /* HasNUW */ HasNUW,
+                                   /* HasNSW */ HasNSW);
+    BinaryOperator *Sub = BinaryOperator::CreateSub(X, Add);
+    Sub->setHasNoUnsignedWrap(HasNUW);
+    Sub->setHasNoSignedWrap(HasNSW);
+    return Sub;
   }
 
   // (~X) - (~Y) --> Y - X

@@ -200,7 +200,7 @@ Value *SjLjEHPrepare::setupFunctionContext(Function &F,
     Value *ExceptionAddr = Builder.CreateConstGEP2_32(doubleUnderDataTy, FCData,
                                                       0, 0, "exception_gep");
     Value *ExnVal = Builder.CreateLoad(DataTy, ExceptionAddr, true, "exn_val");
-    ExnVal = Builder.CreateIntToPtr(ExnVal, Builder.getInt8PtrTy());
+    ExnVal = Builder.CreateIntToPtr(ExnVal, Builder.getPtrTy());
 
     Value *SelectorAddr = Builder.CreateConstGEP2_32(doubleUnderDataTy, FCData,
                                                      0, 1, "exn_selector_gep");
@@ -218,9 +218,7 @@ Value *SjLjEHPrepare::setupFunctionContext(Function &F,
   Value *PersonalityFn = F.getPersonalityFn();
   Value *PersonalityFieldPtr = Builder.CreateConstGEP2_32(
       FunctionContextTy, FuncCtx, 0, 3, "pers_fn_gep");
-  Builder.CreateStore(
-      Builder.CreateBitCast(PersonalityFn, Builder.getInt8PtrTy()),
-      PersonalityFieldPtr, /*isVolatile=*/true);
+  Builder.CreateStore(PersonalityFn, PersonalityFieldPtr, /*isVolatile=*/true);
 
   // LSDA address
   Value *LSDA = Builder.CreateCall(LSDAAddrFn, {}, "lsda_addr");
@@ -418,8 +416,7 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
 
   // Store a pointer to the function context so that the back-end will know
   // where to look for it.
-  Value *FuncCtxArg = Builder.CreateBitCast(FuncCtx, Builder.getInt8PtrTy());
-  Builder.CreateCall(FuncCtxFn, FuncCtxArg);
+  Builder.CreateCall(FuncCtxFn, FuncCtx);
 
   // At this point, we are all set up, update the invoke instructions to mark
   // their call_site values.

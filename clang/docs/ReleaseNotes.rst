@@ -217,6 +217,10 @@ Non-comprehensive list of changes in this release
   (e.g., ``uint16x8_t``), this returns the constant number of elements at compile-time.
   For scalable vectors, e.g., SVE or RISC-V V, the number of elements is not known at compile-time and is
   determined at runtime.
+* The ``__datasizeof`` keyword has been added. It is similar to ``sizeof``
+  except that it returns the size of a type ignoring tail padding.
+* ``__builtin_classify_type()`` now classifies ``_BitInt`` values as the return value ``18``,
+  to match GCC 14's behavior.
 
 New Compiler Flags
 ------------------
@@ -236,6 +240,8 @@ New Compiler Flags
   an thrown exception object will not throw. The generated code for catch
   handlers will be smaller. A throw expression of a type with a
   potentially-throwing destructor will lead to an error.
+
+* ``-fopenacc`` was added as a part of the effort to support OpenACC in clang.
 
 Deprecated Compiler Flags
 -------------------------
@@ -299,6 +305,11 @@ Attribute Changes in Clang
 - Clang now introduced ``[[clang::coro_only_destroy_when_complete]]`` attribute
   to reduce the size of the destroy functions for coroutines which are known to
   be destroyed after having reached the final suspend point.
+
+- Clang now introduced ``[[clang::coro_return_type]]`` and ``[[clang::coro_wrapper]]``
+  attributes. A function returning a type marked with ``[[clang::coro_return_type]]``
+  should be a coroutine. A non-coroutine function marked with ``[[clang::coro_wrapper]]``
+  is still allowed to return the such a type. This is helpful for analyzers to recognize coroutines from the function signatures.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -438,6 +449,8 @@ Improvements to Clang's diagnostics
 - ``-Wzero-as-null-pointer-constant`` diagnostic is no longer emitted when using ``__null``
   (or, more commonly, ``NULL`` when the platform defines it as ``__null``) to be more consistent
   with GCC.
+- Clang will warn on deprecated specializations used in system headers when their instantiation
+  is caused by user code.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -553,6 +566,8 @@ Bug Fixes in This Version
   Fixes (`#67687 <https://github.com/llvm/llvm-project/issues/67687>`_)
 - Fix crash from constexpr evaluator evaluating uninitialized arrays as rvalue.
   Fixes (`#67317 <https://github.com/llvm/llvm-project/issues/67317>`_)
+- Fixed an issue that a benign assertion might hit when instantiating a pack expansion
+  inside a lambda. (`#61460 <https://github.com/llvm/llvm-project/issues/61460>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -722,6 +737,19 @@ Miscellaneous Clang Crashes Fixed
   (`#68001 <https://github.com/llvm/llvm-project/pull/68001>`_)
 - Fixed a crash in C when redefined struct is another nested redefinition.
   `Issue 41302 <https://github.com/llvm/llvm-project/issues/41302>`_
+- Fixed a crash when ``-ast-dump=json`` was used for code using class
+  template deduction guides.
+
+OpenACC Specific Changes
+------------------------
+- OpenACC Implementation effort is beginning with semantic analysis and parsing
+  of OpenACC pragmas. The ``-fopenacc`` flag was added to enable these new,
+  albeit incomplete changes. The ``_OPENACC`` macro is currently defined to
+  ``1``, as support is too incomplete to update to a standards-required value.
+- Added ``-fexperimental-openacc-macro-override``, a command line option to
+  permit overriding the ``_OPENACC`` macro to be any digit-only value specified
+  by the user, which permits testing the compiler against existing OpenACC
+  workloads in order to evaluate implementation progress.
 
 Target Specific Changes
 -----------------------
@@ -753,6 +781,12 @@ Arm and AArch64 Support
   manglings if ``-fclang-abi-compat=17`` or lower is  specified.
 
 - New AArch64 asm constraints have been added for r8-r11(Uci) and r12-r15(Ucj).
+
+  Support has been added for the following processors (-mcpu identifiers in parenthesis):
+
+  * Arm Cortex-A520 (cortex-a520).
+  * Arm Cortex-A720 (cortex-a720).
+  * Arm Cortex-X4 (cortex-x4).
 
 Android Support
 ^^^^^^^^^^^^^^^

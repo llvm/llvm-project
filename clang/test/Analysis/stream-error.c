@@ -101,6 +101,24 @@ void error_fwrite(void) {
   Ret = fwrite(0, 1, 10, F); // expected-warning {{Stream might be already closed}}
 }
 
+void error_fputc(void) {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  int Ret = fputc('X', F);
+  if (Ret == EOF) {
+    clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
+    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
+    fputc('Y', F); // expected-warning {{might be 'indeterminate'}}
+  } else {
+    clang_analyzer_eval(Ret == 'X'); // expected-warning {{TRUE}}
+    clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{FALSE}}
+    fputc('Y', F); // no-warning
+  }
+  fclose(F);
+  fputc('A', F); // expected-warning {{Stream might be already closed}}
+}
+
 void freadwrite_zerosize(FILE *F) {
   size_t Ret;
   Ret = fwrite(0, 1, 0, F);
@@ -236,6 +254,23 @@ void error_indeterminate_clearerr(void) {
     } else {
       clearerr(F);
       fwrite(Buf, 1, 10, F); // expected-warning {{might be 'indeterminate'}}
+    }
+  }
+  fclose(F);
+}
+
+void error_indeterminate_fputc(void) {
+  FILE *F = fopen("file", "r+");
+  if (!F)
+    return;
+  int rc = fseek(F, 0, SEEK_SET);
+  if (rc) {
+    if (feof(F)) {
+      fputc('X', F); // no warning
+    } else if (ferror(F)) {
+      fputc('C', F); // expected-warning {{might be 'indeterminate'}}
+    } else {
+      fputc('E', F); // expected-warning {{might be 'indeterminate'}}
     }
   }
   fclose(F);

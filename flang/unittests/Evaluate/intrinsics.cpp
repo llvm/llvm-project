@@ -105,7 +105,9 @@ struct TestCall {
     CallCharacteristics call{fName.ToString()};
     auto messages{strings.Messages(buffer)};
     TargetCharacteristics targetCharacteristics;
-    FoldingContext context{messages, defaults, table, targetCharacteristics};
+    common::LanguageFeatureControl languageFeatures;
+    FoldingContext context{
+        messages, defaults, table, targetCharacteristics, languageFeatures};
     std::optional<SpecificCall> si{table.Probe(call, args, context)};
     if (resultType.has_value()) {
       TEST(si.has_value());

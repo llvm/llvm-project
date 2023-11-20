@@ -1512,6 +1512,61 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
   return nullptr;
 }
 
+/// Fold icmp (trunc X), (trunc Y).
+/// Fold icmp (trunc X), (zext Y).
+Instruction *
+InstCombinerImpl::foldICmpTruncWithTruncOrExt(ICmpInst &Cmp,
+                                              const SimplifyQuery &Q) {
+  if (Cmp.isSigned())
+    return nullptr;
+
+  Value *X, *Y;
+  ICmpInst::Predicate Pred;
+  bool YIsZext = false;
+  // Try to match icmp (trunc X), (trunc Y)
+  if (match(&Cmp, m_ICmp(Pred, m_Trunc(m_Value(X)), m_Trunc(m_Value(Y))))) {
+    if (X->getType() != Y->getType() &&
+        (!Cmp.getOperand(0)->hasOneUse() || !Cmp.getOperand(1)->hasOneUse()))
+      return nullptr;
+    if (!isDesirableIntType(X->getType()->getScalarSizeInBits()) &&
+        isDesirableIntType(Y->getType()->getScalarSizeInBits())) {
+      std::swap(X, Y);
+      Pred = Cmp.getSwappedPredicate(Pred);
+    }
+  }
+  // Try to match icmp (trunc X), (zext Y)
+  else if (match(&Cmp, m_c_ICmp(Pred, m_Trunc(m_Value(X)),
+                                m_OneUse(m_ZExt(m_Value(Y))))))
+
+    YIsZext = true;
+  else
+    return nullptr;
+
+  Type *TruncTy = Cmp.getOperand(0)->getType();
+  unsigned TruncBits = TruncTy->getScalarSizeInBits();
+
+  // If this transform will end up changing from desirable types -> undesirable
+  // types skip it.
+  if (isDesirableIntType(TruncBits) &&
+      !isDesirableIntType(X->getType()->getScalarSizeInBits()))
+    return nullptr;
+
+  // Check if the trunc is unneeded.
+  KnownBits KnownX = llvm::computeKnownBits(X, /*Depth*/ 0, Q);
+  if (KnownX.countMaxActiveBits() > TruncBits)
+    return nullptr;
+
+  if (!YIsZext) {
+    // If Y is also a trunc, make sure it is unneeded.
+    KnownBits KnownY = llvm::computeKnownBits(Y, /*Depth*/ 0, Q);
+    if (KnownY.countMaxActiveBits() > TruncBits)
+      return nullptr;
+  }
+
+  Value *NewY = Builder.CreateZExtOrTrunc(Y, X->getType());
+  return new ICmpInst(Pred, X, NewY);
+}
+
 /// Fold icmp (xor X, Y), C.
 Instruction *InstCombinerImpl::foldICmpXorConstant(ICmpInst &Cmp,
                                                    BinaryOperator *Xor,
@@ -5554,11 +5609,16 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
         return new ICmpInst(ICmp.getPredicate(), Builder.CreateOr(X, Y),
                             Constant::getNullValue(X->getType()));
 
-      // If we have mismatched casts, treat the zext of a non-negative source as
-      // a sext to simulate matching casts. Otherwise, we are done.
-      // TODO: Can we handle some predicates (equality) without non-negative?
-      if ((IsZext0 && isKnownNonNegative(X, DL, 0, &AC, &ICmp, &DT)) ||
-          (IsZext1 && isKnownNonNegative(Y, DL, 0, &AC, &ICmp, &DT)))
+      // If we have mismatched casts and zext has the nneg flag, we can
+      //  treat the "zext nneg" as "sext". Otherwise, we cannot fold and quit.
+
+      auto *NonNegInst0 = dyn_cast<PossiblyNonNegInst>(ICmp.getOperand(0));
+      auto *NonNegInst1 = dyn_cast<PossiblyNonNegInst>(ICmp.getOperand(1));
+
+      bool IsNonNeg0 = NonNegInst0 && NonNegInst0->hasNonNeg();
+      bool IsNonNeg1 = NonNegInst1 && NonNegInst1->hasNonNeg();
+
+      if ((IsZext0 && IsNonNeg0) || (IsZext1 && IsNonNeg1))
         IsSignedExt = true;
       else
         return nullptr;
@@ -6874,6 +6934,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpUsingKnownBits(I))
     return Res;
 
+  if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
+    return Res;
+
   // Test if the ICmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
   // any other folding. This helps out other analyses which understand
@@ -7004,7 +7067,7 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   {
-    Value *X, *Y;
+    Value *X, *Y, *Z;
     // Transform (X & ~Y) == 0 --> (X & Y) != 0
     // and       (X & ~Y) != 0 --> (X & Y) == 0
     // if A is a power of 2.
@@ -7013,6 +7076,22 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
         I.isEquality())
       return new ICmpInst(I.getInversePredicate(), Builder.CreateAnd(X, Y),
                           Op1);
+
+    // Transform (~X ^ Y) s< ~Z  --> (X ^ Y) s> Z,
+    //           (~X ^ Y) s> ~Z  --> (X ^ Y) s< Z,
+    //           (~X ^ Y) s<= ~Z --> (X ^ Y) s>= Z,
+    //           (~X ^ Y) s>= ~Z --> (X ^ Y) s<= Z,
+    //           (~X ^ Y) u< ~Z  --> (X ^ Y) u< Z,
+    //           (~X ^ Y) u> ~Z  --> (X ^ Y) u< Z,
+    //           (~X ^ Y) u<= ~Z --> (X ^ Y) u>= Z,
+    //           (~X ^ Y) u>= ~Z --> (X ^ Y) u<= Z,
+    //           (~X ^ Y) == ~Z  --> (X ^ Y) == Z,
+    // and       (~X ^ Y) != ~Z  --> (X ^ Y) != Z,
+    if (match(&I, m_c_ICmp(Pred, m_c_Xor(m_Not(m_Value(X)), m_Value(Y)),
+                           m_Not(m_Value(Z)))) &&
+        (I.getOperand(0)->hasOneUse() || I.getOperand(1)->hasOneUse()))
+      return new ICmpInst(I.getSwappedPredicate(Pred), Builder.CreateXor(X, Y),
+                          Z);
 
     // ~X < ~Y --> Y < X
     // ~X < C -->  X > ~C

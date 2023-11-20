@@ -17,7 +17,6 @@
 #include "PPCInstrBuilder.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -1531,6 +1530,9 @@ bool PPCInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                    Register DstReg, Register TrueReg,
                                    Register FalseReg, int &CondCycles,
                                    int &TrueCycles, int &FalseCycles) const {
+  if (!Subtarget.hasISEL())
+    return false;
+
   if (Cond.size() != 2)
     return false;
 

@@ -556,7 +556,6 @@ bool InstrProfiling::run(
   // target value sites to enter it as field in the profile data variable.
   for (Function &F : M) {
     InstrProfCntrInstBase *FirstProfInst = nullptr;
-    InstrProfMCDCBitmapParameters *FirstProfMCDCParams = nullptr;
     for (BasicBlock &BB : F) {
       for (auto I = BB.begin(), E = BB.end(); I != E; I++) {
         if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(I))
@@ -565,22 +564,17 @@ bool InstrProfiling::run(
           if (FirstProfInst == nullptr &&
               (isa<InstrProfIncrementInst>(I) || isa<InstrProfCoverInst>(I)))
             FirstProfInst = dyn_cast<InstrProfCntrInstBase>(I);
-          if (FirstProfMCDCParams == nullptr)
-            FirstProfMCDCParams = dyn_cast<InstrProfMCDCBitmapParameters>(I);
+          // If the MCDCBitmapParameters intrinsic seen, create the bitmaps.
+          if (const auto &Params = dyn_cast<InstrProfMCDCBitmapParameters>(I))
+            static_cast<void>(getOrCreateRegionBitmaps(Params));
         }
       }
-    }
-
-    // If the MCDCBitmapParameters intrinsic was seen, create the bitmaps.
-    if (FirstProfMCDCParams != nullptr) {
-      static_cast<void>(getOrCreateRegionBitmaps(FirstProfMCDCParams));
     }
 
     // Use a profile intrinsic to create the region counters and data variable.
     // Also create the data variable based on the MCDCParams.
     if (FirstProfInst != nullptr) {
       static_cast<void>(getOrCreateRegionCounters(FirstProfInst));
-      createDataVariable(FirstProfInst, FirstProfMCDCParams);
     }
   }
 
@@ -676,15 +670,11 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   SmallVector<OperandBundleDef, 1> OpBundles;
   Ind->getOperandBundlesAsDefs(OpBundles);
   if (!IsMemOpSize) {
-    Value *Args[3] = {Ind->getTargetValue(),
-                      Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
-                      Builder.getInt32(Index)};
+    Value *Args[3] = {Ind->getTargetValue(), DataVar, Builder.getInt32(Index)};
     Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI), Args,
                               OpBundles);
   } else {
-    Value *Args[3] = {Ind->getTargetValue(),
-                      Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
-                      Builder.getInt32(Index)};
+    Value *Args[3] = {Ind->getTargetValue(), DataVar, Builder.getInt32(Index)};
     Call = Builder.CreateCall(
         getOrInsertValueProfilingCall(*M, *TLI, ValueProfilingCallType::MemOp),
         Args, OpBundles);
@@ -1010,7 +1000,7 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
   // If we can't use an alias, we must use the public symbol, even though this
   // may require a symbolic relocation.
   if (shouldUsePublicSymbol(Fn))
-    return ConstantExpr::getBitCast(Fn, Int8PtrTy);
+    return Fn;
 
   // When possible use a private alias to avoid symbolic relocations.
   auto *GA = GlobalAlias::create(GlobalValue::LinkageTypes::PrivateLinkage,
@@ -1033,7 +1023,7 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
 
   // appendToCompilerUsed(*Fn->getParent(), {GA});
 
-  return ConstantExpr::getBitCast(GA, Int8PtrTy);
+  return GA;
 }
 
 static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
@@ -1162,6 +1152,7 @@ InstrProfiling::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
   // the corresponding profile section.
   auto *BitmapPtr = setupProfileSection(Inc, IPSK_bitmap);
   PD.RegionBitmaps = BitmapPtr;
+  PD.NumBitmapBytes = Inc->getNumBitmapBytes()->getZExtValue();
   return PD.RegionBitmaps;
 }
 
@@ -1238,11 +1229,13 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
     CompilerUsedVars.push_back(PD.RegionCounters);
   }
 
+  // Create the data variable (if it doesn't already exist).
+  createDataVariable(Inc);
+
   return PD.RegionCounters;
 }
 
-void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
-                                        InstrProfMCDCBitmapParameters *Params) {
+void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc) {
   // When debug information is correlated to profile data, a data variable
   // is not needed.
   if (DebugInfoCorrelate)
@@ -1250,6 +1243,10 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
 
   GlobalVariable *NamePtr = Inc->getName();
   auto &PD = ProfileDataMap[NamePtr];
+
+  // Return if data variable was already created.
+  if (PD.DataVar)
+    return;
 
   LLVMContext &Ctx = M->getContext();
 
@@ -1295,16 +1292,13 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
         getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
     ValuesVar->setAlignment(Align(8));
     maybeSetComdat(ValuesVar, Fn, CntsVarName);
-    ValuesPtrExpr =
-        ConstantExpr::getBitCast(ValuesVar, PointerType::getUnqual(Ctx));
+    ValuesPtrExpr = ValuesVar;
   }
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
   auto *CounterPtr = PD.RegionCounters;
 
-  uint64_t NumBitmapBytes = 0;
-  if (Params != nullptr)
-    NumBitmapBytes = Params->getNumBitmapBytes()->getZExtValue();
+  uint64_t NumBitmapBytes = PD.NumBitmapBytes;
 
   // Create data variable.
   auto *IntPtrTy = M->getDataLayout().getIntPtrType(M->getContext());
@@ -1486,10 +1480,10 @@ void InstrProfiling::emitRegistration() {
   IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", RegisterF));
   for (Value *Data : CompilerUsedVars)
     if (!isa<Function>(Data))
-      IRB.CreateCall(RuntimeRegisterF, IRB.CreateBitCast(Data, VoidPtrTy));
+      IRB.CreateCall(RuntimeRegisterF, Data);
   for (Value *Data : UsedVars)
     if (Data != NamesVar && !isa<Function>(Data))
-      IRB.CreateCall(RuntimeRegisterF, IRB.CreateBitCast(Data, VoidPtrTy));
+      IRB.CreateCall(RuntimeRegisterF, Data);
 
   if (NamesVar) {
     Type *ParamTypes[] = {VoidPtrTy, Int64Ty};
@@ -1498,8 +1492,7 @@ void InstrProfiling::emitRegistration() {
     auto *NamesRegisterF =
         Function::Create(NamesRegisterTy, GlobalVariable::ExternalLinkage,
                          getInstrProfNamesRegFuncName(), M);
-    IRB.CreateCall(NamesRegisterF, {IRB.CreateBitCast(NamesVar, VoidPtrTy),
-                                    IRB.getInt64(NamesSize)});
+    IRB.CreateCall(NamesRegisterF, {NamesVar, IRB.getInt64(NamesSize)});
   }
 
   IRB.CreateRetVoid();

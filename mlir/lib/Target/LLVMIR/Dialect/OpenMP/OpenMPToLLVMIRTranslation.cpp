@@ -1560,10 +1560,10 @@ convertToCaptureClauseKind(
   switch (captureClasue) {
   case mlir::omp::DeclareTargetCaptureClause::to:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo;
-    break;
   case mlir::omp::DeclareTargetCaptureClause::link:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink;
-    break;
+  case mlir::omp::DeclareTargetCaptureClause::enter:
+    return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryEnter;
   }
   llvm_unreachable("unhandled capture clause");
 }
@@ -2496,8 +2496,6 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       if (declareType == omp::DeclareTargetDeviceType::host) {
         llvm::Function *llvmFunc =
             moduleTranslation.lookupFunction(funcOp.getName());
-        llvmFunc->replaceAllUsesWith(
-            llvm::UndefValue::get(llvmFunc->getType()));
         llvmFunc->dropAllReferences();
         llvmFunc->eraseFromParent();
       }

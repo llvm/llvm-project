@@ -38,6 +38,12 @@ struct RISCVTuneInfo {
   const char *Name;
   uint8_t PrefFunctionAlignment;
   uint8_t PrefLoopAlignment;
+
+  // Information needed by LoopDataPrefetch.
+  uint16_t CacheLineSize;
+  uint16_t PrefetchDistance;
+  uint16_t MinPrefetchStride;
+  unsigned MaxPrefetchIterationsAhead;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -248,6 +254,22 @@ public:
                               &Mutations) const override;
 
   bool useAA() const override;
+
+  unsigned getCacheLineSize() const override {
+    return TuneInfo->CacheLineSize;
+  };
+  unsigned getPrefetchDistance() const override {
+    return TuneInfo->PrefetchDistance;
+  };
+  unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                unsigned NumStridedMemAccesses,
+                                unsigned NumPrefetches,
+                                bool HasCall) const override {
+    return TuneInfo->MinPrefetchStride;
+  };
+  unsigned getMaxPrefetchIterationsAhead() const override {
+    return TuneInfo->MaxPrefetchIterationsAhead;
+  };
 };
 } // End llvm namespace
 

@@ -951,11 +951,11 @@ define <2 x i32> @test52_splat_vec(<2 x i32> %x) {
   ret <2 x i32> %B
 }
 
-; (X <<nuw C1) >>u C2 --> X <<nuw (C1 - C2)
+; (X <<nuw C1) >>u C2 --> X <<nuw/nsw (C1 - C2)
 
 define i32 @test53(i32 %x) {
 ; CHECK-LABEL: @test53(
-; CHECK-NEXT:    [[B:%.*]] = shl nuw i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[B:%.*]] = shl nuw nsw i32 [[X:%.*]], 2
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %A = shl nuw i32 %x, 3
@@ -963,11 +963,11 @@ define i32 @test53(i32 %x) {
   ret i32 %B
 }
 
-; (X <<nuw C1) >>u C2 --> X <<nuw (C1 - C2)
+; (X <<nuw C1) >>u C2 --> X <<nuw/nsw (C1 - C2)
 
 define <2 x i32> @test53_splat_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test53_splat_vec(
-; CHECK-NEXT:    [[B:%.*]] = shl nuw <2 x i32> [[X:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[B:%.*]] = shl nuw nsw <2 x i32> [[X:%.*]], <i32 2, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[B]]
 ;
   %A = shl nuw <2 x i32> %x, <i32 3, i32 3>
@@ -1235,7 +1235,7 @@ define <2 x i32> @test_shl_zext_bool_vec(<2 x i1> %t) {
 define i32 @test_shl_zext_bool_not_constant(i1 %cmp, i32 %shamt) {
 ; CHECK-LABEL: @test_shl_zext_bool_not_constant(
 ; CHECK-NEXT:    [[CONV3:%.*]] = zext i1 [[CMP:%.*]] to i32
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV3]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[CONV3]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret i32 [[SHL]]
 ;
   %conv3 = zext i1 %cmp to i32

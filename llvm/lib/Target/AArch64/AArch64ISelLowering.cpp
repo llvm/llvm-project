@@ -6382,6 +6382,7 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
   case CallingConv::Tail:
+  case CallingConv::GRAAL:
     if (Subtarget->isTargetWindows()) {
       if (IsVarArg) {
         if (Subtarget->isWindowsArm64EC())
@@ -9889,9 +9890,10 @@ Register AArch64TargetLowering::
 getRegisterByName(const char* RegName, LLT VT, const MachineFunction &MF) const {
   Register Reg = MatchRegisterName(RegName);
   if (AArch64::X1 <= Reg && Reg <= AArch64::X28) {
-    const MCRegisterInfo *MRI = Subtarget->getRegisterInfo();
+    const AArch64RegisterInfo *MRI = Subtarget->getRegisterInfo();
     unsigned DwarfRegNum = MRI->getDwarfRegNum(Reg, false);
-    if (!Subtarget->isXRegisterReserved(DwarfRegNum))
+    if (!Subtarget->isXRegisterReserved(DwarfRegNum) &&
+        !MRI->isReservedReg(MF, Reg))
       Reg = 0;
   }
   if (Reg)
@@ -16356,33 +16358,7 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
       !(Divisor.isPowerOf2() || Divisor.isNegatedPowerOf2()))
     return SDValue();
 
-  SDLoc DL(N);
-  SDValue N0 = N->getOperand(0);
-  unsigned Lg2 = Divisor.countr_zero();
-  SDValue Zero = DAG.getConstant(0, DL, VT);
-  SDValue Pow2MinusOne = DAG.getConstant((1ULL << Lg2) - 1, DL, VT);
-
-  // Add (N0 < 0) ? Pow2 - 1 : 0;
-  SDValue CCVal;
-  SDValue Cmp = getAArch64Cmp(N0, Zero, ISD::SETLT, CCVal, DAG, DL);
-  SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, Pow2MinusOne);
-  SDValue CSel = DAG.getNode(AArch64ISD::CSEL, DL, VT, Add, N0, CCVal, Cmp);
-
-  Created.push_back(Cmp.getNode());
-  Created.push_back(Add.getNode());
-  Created.push_back(CSel.getNode());
-
-  // Divide by pow2.
-  SDValue SRA =
-      DAG.getNode(ISD::SRA, DL, VT, CSel, DAG.getConstant(Lg2, DL, MVT::i64));
-
-  // If we're dividing by a positive value, we're done.  Otherwise, we must
-  // negate the result.
-  if (Divisor.isNonNegative())
-    return SRA;
-
-  Created.push_back(SRA.getNode());
-  return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), SRA);
+  return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);
 }
 
 SDValue
@@ -22415,13 +22391,14 @@ static SDValue performVSelectCombine(SDNode *N, SelectionDAG &DAG) {
     }
   }
 
+  EVT CmpVT = N0.getOperand(0).getValueType();
   if (N0.getOpcode() != ISD::SETCC ||
       CCVT.getVectorElementCount() != ElementCount::getFixed(1) ||
-      CCVT.getVectorElementType() != MVT::i1)
+      CCVT.getVectorElementType() != MVT::i1 ||
+      CmpVT.getVectorElementType().isFloatingPoint())
     return SDValue();
 
   EVT ResVT = N->getValueType(0);
-  EVT CmpVT = N0.getOperand(0).getValueType();
   // Only combine when the result type is of the same size as the compared
   // operands.
   if (ResVT.getSizeInBits() != CmpVT.getSizeInBits())
@@ -22464,8 +22441,10 @@ static SDValue performSelectCombine(SDNode *N,
   EVT SrcVT = N0.getOperand(0).getValueType();
 
   // Don't try to do this optimization when the setcc itself has i1 operands.
-  // There are no legal vectors of i1, so this would be pointless.
-  if (SrcVT == MVT::i1)
+  // There are no legal vectors of i1, so this would be pointless. v1f16 is
+  // ruled out to prevent the creation of setcc that need to be scalarized.
+  if (SrcVT == MVT::i1 ||
+      (SrcVT.isFloatingPoint() && SrcVT.getSizeInBits() <= 16))
     return SDValue();
 
   int NumMaskElts = ResVT.getSizeInBits() / SrcVT.getSizeInBits();
@@ -26605,4 +26584,8 @@ bool AArch64TargetLowering::preferScalarizeSplat(SDNode *N) const {
       return false;
   }
   return true;
+}
+
+unsigned AArch64TargetLowering::getMinimumJumpTableEntries() const {
+  return Subtarget->getMinimumJumpTableEntries();
 }

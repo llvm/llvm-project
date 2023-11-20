@@ -1305,8 +1305,9 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
   // function arguments are declared in zero address space
   bool ArgsInZeroAddressSpace = Config.isTargetDevice();
 
-  if (NumThreads) {
-    // Build call __kmpc_push_num_threads(&Ident, global_tid, num_threads)
+  // Build call __kmpc_push_num_threads(&Ident, global_tid, num_threads)
+  // only if we compile for host side.
+  if (NumThreads && !Config.isTargetDevice()) {
     Value *Args[] = {
         Ident, ThreadID,
         Builder.CreateIntCast(NumThreads, Int32, /*isSigned*/ false)};
@@ -4401,7 +4402,7 @@ static void updateNVPTXMetadata(Function &Kernel, StringRef Name, int32_t Value,
   // Update the "maxntidx" metadata for NVIDIA, or add it.
   MDNode *ExistingOp = getNVPTXMDNode(Kernel, Name);
   if (ExistingOp) {
-    auto *OldVal = dyn_cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
+    auto *OldVal = cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
     int32_t OldLimit = cast<ConstantInt>(OldVal->getValue())->getZExtValue();
     ExistingOp->replaceOperandWith(
         2, ConstantAsMetadata::get(ConstantInt::get(
@@ -4440,7 +4441,7 @@ OpenMPIRBuilder::readThreadBoundsForKernel(const Triple &T, Function &Kernel) {
   }
 
   if (MDNode *ExistingOp = getNVPTXMDNode(Kernel, "maxntidx")) {
-    auto *OldVal = dyn_cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
+    auto *OldVal = cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
     int32_t UB = cast<ConstantInt>(OldVal->getValue())->getZExtValue();
     return {0, ThreadLimit ? std::min(ThreadLimit, UB) : UB};
   }
@@ -4493,7 +4494,7 @@ Constant *OpenMPIRBuilder::createOutlinedFunctionID(Function *OutlinedFn,
                                                     StringRef EntryFnIDName) {
   if (Config.isTargetDevice()) {
     assert(OutlinedFn && "The outlined function must exist if embedded");
-    return ConstantExpr::getBitCast(OutlinedFn, Builder.getInt8PtrTy());
+    return OutlinedFn;
   }
 
   return new GlobalVariable(
@@ -4564,6 +4565,10 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
     function_ref<Value *(unsigned int)> CustomMapperCB, Value *SrcLocInfo) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
+
+  // Disable TargetData CodeGen on Device pass.
+  if (Config.IsTargetDevice.value_or(false))
+    return Builder.saveIP();
 
   Builder.restoreIP(CodeGenIP);
   bool IsStandAlone = !BodyGenCB;
@@ -4747,6 +4752,22 @@ FunctionCallee OpenMPIRBuilder::createDispatchFiniFunction(unsigned IVSize,
   return getOrCreateRuntimeFunction(M, Name);
 }
 
+static void replaceConstatExprUsesInFuncWithInstr(ConstantExpr *ConstExpr,
+                                                  Function *Func) {
+  for (User *User : make_early_inc_range(ConstExpr->users()))
+    if (auto *Instr = dyn_cast<Instruction>(User))
+      if (Instr->getFunction() == Func)
+        Instr->replaceUsesOfWith(ConstExpr, ConstExpr->getAsInstruction(Instr));
+}
+
+static void replaceConstantValueUsesInFuncWithInstr(llvm::Value *Input,
+                                                    Function *Func) {
+  for (User *User : make_early_inc_range(Input->users()))
+    if (auto *Const = dyn_cast<Constant>(User))
+      if (auto *ConstExpr = dyn_cast<ConstantExpr>(Const))
+        replaceConstatExprUsesInFuncWithInstr(ConstExpr, Func);
+}
+
 static Function *createOutlinedFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, StringRef FuncName,
     SmallVectorImpl<Value *> &Inputs,
@@ -4817,9 +4838,23 @@ static Function *createOutlinedFunction(
     Builder.restoreIP(
         ArgAccessorFuncCB(Arg, Input, InputCopy, AllocaIP, Builder.saveIP()));
 
+    // Things like GEP's can come in the form of Constants. Constants and
+    // ConstantExpr's do not have access to the knowledge of what they're
+    // contained in, so we must dig a little to find an instruction so we can
+    // tell if they're used inside of the function we're outlining. We also
+    // replace the original constant expression with a new instruction
+    // equivalent; an instruction as it allows easy modification in the
+    // following loop, as we can now know the constant (instruction) is owned by
+    // our target function and replaceUsesOfWith can now be invoked on it
+    // (cannot do this with constants it seems). A brand new one also allows us
+    // to be cautious as it is perhaps possible the old expression was used
+    // inside of the function but exists and is used externally (unlikely by the
+    // nature of a Constant, but still).
+    replaceConstantValueUsesInFuncWithInstr(Input, Func);
+
     // Collect all the instructions
     for (User *User : make_early_inc_range(Input->users()))
-      if (auto Instr = dyn_cast<Instruction>(User))
+      if (auto *Instr = dyn_cast<Instruction>(User))
         if (Instr->getFunction() == Func)
           Instr->replaceUsesOfWith(Input, InputCopy);
   }

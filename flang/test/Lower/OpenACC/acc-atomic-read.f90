@@ -1,4 +1,4 @@
-! RUN: bbc --use-desc-for-alloc=false -fopenacc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenacc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! This test checks the lowering of atomic read
 
@@ -20,23 +20,14 @@ end program acc_atomic_test
 ! operation, instead of %[[VAL_3]] and %[[VAL_0]].
 
 !CHECK-LABEL: func.func @_QPatomic_read_pointer() {
-!CHECK:         %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "x", uniq_name = "_QFatomic_read_pointerEx"}
-!CHECK:         %[[VAL_1:.*]] = fir.alloca !fir.ptr<i32> {uniq_name = "_QFatomic_read_pointerEx.addr"}
-!CHECK:         %[[VAL_2:.*]] = fir.zero_bits !fir.ptr<i32>
-!CHECK:         fir.store %[[VAL_2]] to %[[VAL_1]] : !fir.ref<!fir.ptr<i32>>
-!CHECK:         %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "y", uniq_name = "_QFatomic_read_pointerEy"}
-!CHECK:         %[[VAL_4:.*]] = fir.alloca !fir.ptr<i32> {uniq_name = "_QFatomic_read_pointerEy.addr"}
-!CHECK:         %[[VAL_5:.*]] = fir.zero_bits !fir.ptr<i32>
-!CHECK:         fir.store %[[VAL_5]] to %[[VAL_4]] : !fir.ref<!fir.ptr<i32>>
-!CHECK:         %[[VAL_6:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.ptr<i32>>
-!CHECK:         %[[VAL_7:.*]] = fir.load %[[VAL_4]] : !fir.ref<!fir.ptr<i32>>
-!CHECK:         acc.atomic.read %[[VAL_7]] = %[[VAL_6]]   : !fir.ptr<i32>, i32
-!CHECK:         %[[VAL_8:.*]] = fir.load %[[VAL_4]] : !fir.ref<!fir.ptr<i32>>
-!CHECK:         %[[VAL_9:.*]] = fir.load %[[VAL_8]] : !fir.ptr<i32>
-!CHECK:         %[[VAL_10:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.ptr<i32>>
-!CHECK:         fir.store %[[VAL_9]] to %[[VAL_10]] : !fir.ptr<i32>
-!CHECK:         return
-!CHECK:       }
+! CHECK:   %[[X:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "x", uniq_name = "_QFatomic_read_pointerEx"}
+! CHECK:   %[[Y:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "y", uniq_name = "_QFatomic_read_pointerEy"}
+! CHECK:   %[[LOAD_X:.*]] = fir.load %[[X]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:   %[[BOX_ADDR_X:.*]] = fir.box_addr %[[LOAD_X]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+! CHECK:   %[[LOAD_Y:.*]] = fir.load %[[Y]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:   %[[BOX_ADDR_Y:.*]] = fir.box_addr %[[LOAD_Y]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+! CHECK:   acc.atomic.read %[[BOX_ADDR_Y]] = %[[BOX_ADDR_X]] : !fir.ptr<i32>, i32
+! CHECK: }
 
 subroutine atomic_read_pointer()
   integer, pointer :: x, y
