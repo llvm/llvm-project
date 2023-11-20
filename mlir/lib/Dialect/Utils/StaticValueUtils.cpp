@@ -200,6 +200,12 @@ decomposeMixedValues(Builder &b,
   return {b.getI64ArrayAttr(staticValues), dynamicValues};
 }
 
+bool hasNegativeDimension(SmallVector<int64_t> values) {
+  return llvm::any_of(values, [](int64_t value) {
+    return !ShapedType::isDynamic(value) && value < 0;
+  });
+}
+
 /// Helper to sort `values` according to matching `keys`.
 template <typename K, typename V>
 static SmallVector<V>

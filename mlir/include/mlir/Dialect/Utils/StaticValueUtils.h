@@ -128,6 +128,12 @@ std::pair<ArrayAttr, SmallVector<Value>>
 decomposeMixedValues(Builder &b,
                      const SmallVectorImpl<OpFoldResult> &mixedValues);
 
+/// Helper function to check whether the dimensions are non-negative.
+///
+/// This is used to re-check whether dimensions are still non-negative after
+/// constant folding the dynamic dimensions.
+bool hasNegativeDimension(SmallVector<int64_t> values);
+
 /// Helper to sort `values` according to matching `keys`.
 SmallVector<Value>
 getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<Value> values,
