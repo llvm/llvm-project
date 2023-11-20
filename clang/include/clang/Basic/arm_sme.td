@@ -321,9 +321,18 @@ let TargetGuard = "sme2" in {
 let TargetGuard = "sme2" in {
   def SVLDR_ZT : Inst<"svldr_zt", "viQ", "", MergeNone, "aarch64_sme_ldr_zt", [IsOverloadNone, IsStreamingCompatible, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>]>;
   def SVSTR_ZT : Inst<"svstr_zt", "vi%", "", MergeNone, "aarch64_sme_str_zt", [IsOverloadNone, IsStreamingCompatible, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>]>;
+}
 
 //
 // Zero ZT0
 //
+let TargetGuard = "sme2" in {
   def SVZERO_ZT : Inst<"svzero_zt", "vi", "", MergeNone, "aarch64_sme_zero_zt", [IsOverloadNone, IsStreamingCompatible, IsSharedZA], [ImmCheck<0, ImmCheck0_0>]>;
+}
+
+// lookup table expand four contiguous registers
+//
+let TargetGuard = "sme2" in {
+  def SVLUTI2_LANE_ZT_X4 : Inst<"svluti2_lane_zt[_{d}]_x4", "4.didi", "cUcsUsiUi", MergeNone, "aarch64_sme_luti2_lane_zt_x4", [IsStreaming, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_3>]>;
+  def SVLUTI4_LANE_ZT_X4 : Inst<"svluti4_lane_zt[_{d}]_x4", "4.didi", "sUsiUi", MergeNone, "aarch64_sme_luti4_lane_zt_x4", [IsStreaming, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_1>]>;
 }

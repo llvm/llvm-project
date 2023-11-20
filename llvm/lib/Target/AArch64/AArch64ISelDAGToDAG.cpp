@@ -404,6 +404,9 @@ public:
     return SelectSVERegRegAddrMode(N, Scale, Base, Offset);
   }
 
+  template <int64_t Max>
+  void SelectMultiVectorLuti(SDNode *Node, unsigned NumOutVecs, unsigned Opc);
+
   template <unsigned MaxIdx, unsigned Scale>
   bool SelectSMETileSlice(SDValue N, SDValue &Vector, SDValue &Offset) {
     return SelectSMETileSlice(N, MaxIdx, Vector, Offset, Scale);
@@ -1862,6 +1865,34 @@ void AArch64DAGToDAGISel::SelectFrintFromVT(SDNode *N, unsigned NumVecs,
   if (N->getValueType(0) != MVT::nxv4f32)
     return;
   SelectUnaryMultiIntrinsic(N, NumVecs, true, Opcode);
+}
+
+template <int64_t Max>
+void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
+                                                unsigned NumOutVecs,
+                                                unsigned Opc) {
+  if (ConstantSDNode *Imm = dyn_cast<ConstantSDNode>(Node->getOperand(4)))
+    if (Imm->getZExtValue() > Max)
+      return;
+
+  SDValue ZtValue;
+  ImmToTile<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue);
+  SDValue Ops[] = {ZtValue, Node->getOperand(3), Node->getOperand(4)};
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+
+  SDNode *Instruction =
+      CurDAG->getMachineNode(Opc, DL, {MVT::Untyped, MVT::Other}, Ops);
+  SDValue SuperReg = SDValue(Instruction, 0);
+
+  for (unsigned i = 0; i < NumOutVecs; ++i)
+    ReplaceUses(SDValue(Node, i), CurDAG->getTargetExtractSubreg(
+                                      AArch64::zsub0 + i, DL, VT, SuperReg));
+
+  // Copy chain
+  unsigned ChainIdx = NumOutVecs;
+  ReplaceUses(SDValue(Node, ChainIdx), SDValue(Instruction, 1));
+  CurDAG->RemoveDeadNode(Node);
 }
 
 void AArch64DAGToDAGISel::SelectClamp(SDNode *N, unsigned NumVecs,
@@ -5070,6 +5101,23 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       auto &MF = CurDAG->getMachineFunction();
       MF.getFrameInfo().setFrameAddressIsTaken(true);
       MF.getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
+      return;
+    }
+    case Intrinsic::aarch64_sme_luti2_lane_zt_x4: {
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::LUTI2_4ZTZI_B, AArch64::LUTI2_4ZTZI_H,
+               AArch64::LUTI2_4ZTZI_S}))
+        // Second Immediate must be <= 3:
+        SelectMultiVectorLuti<3>(Node, 4, Opc);
+      return;
+    }
+    case Intrinsic::aarch64_sme_luti4_lane_zt_x4: {
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {0, AArch64::LUTI4_4ZTZI_H, AArch64::LUTI4_4ZTZI_S}))
+        // Second Immediate must be <= 1:
+        SelectMultiVectorLuti<1>(Node, 4, Opc);
       return;
     }
     }

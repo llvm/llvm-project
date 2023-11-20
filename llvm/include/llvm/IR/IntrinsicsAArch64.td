@@ -3548,6 +3548,18 @@ let TargetPrefix = "aarch64" in {
   //  Zero ZT0
   //
   def int_aarch64_sme_zero_zt : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrWriteMem]>;
+
+  //
+  // Lookup table expand four registers
+  //
+  def int_aarch64_sme_luti2_lane_zt_x4
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+                            [llvm_i32_ty, LLVMMatchType<0>, llvm_i32_ty],
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
+  def int_aarch64_sme_luti4_lane_zt_x4
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+                            [llvm_i32_ty, LLVMMatchType<0>, llvm_i32_ty],
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
 }
 
 // SVE2.1 - ZIPQ1, ZIPQ2, UZPQ1, UZPQ2
