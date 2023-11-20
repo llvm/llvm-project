@@ -22,21 +22,21 @@
 # RUN: lld-link /Brepro /debug /dll /out:%t.dll /entry:DllMain %t.obj
 # RUN: llvm-readobj --coff-debug-directory %t.dll | FileCheck --check-prefix REPRODEBUG %s
 
-# Generate .buildid section when /build-id is given.
+# Generate .buildid section using binary hash under /lldmingw and /build-id
+# RUN: rm -f %t.dll %t.pdb
+# RUN: lld-link /lldmingw /build-id /dll /out:%t.dll /entry:DllMain %t.obj
+# RUN: llvm-readobj --coff-debug-directory %t.dll | FileCheck --check-prefix BUILDID %s
+
+# Generate debug directory with use binary hash when /build-id is given and not 
+# generating PDB.
 # RUN: rm -f %t.dll %t.pdb
 # RUN: lld-link /build-id /dll /out:%t.dll /entry:DllMain %t.obj
 # RUN: llvm-readobj --coff-debug-directory %t.dll | FileCheck --check-prefix BUILDID %s
-# RUN: llvm-readobj --coff-debug-directory %t.dll | grep "PDBGUID: " > %t.binary.guid
 
-# When generating PDB, generate extra .buildid section.
+# If generate PDB, PDB hash is used and /build-id is ignored.
 # RUN: rm -f %t.dll %t.pdb
-# RUN: lld-link /build-id /debug /dll /out:%t.dll /entry:DllMain %t.obj
+# RUN: lld-link /build-id /debug /pdbaltpath:test.pdb /dll /out:%t.dll /entry:DllMain %t.obj
 # RUN: llvm-readobj --coff-debug-directory %t.dll | FileCheck --check-prefix BUILDID %s
-# RUN: llvm-readobj -S %t.dll | FileCheck --check-prefix BUILDID_SEC %s
-
-# RUN: llvm-readobj --coff-debug-directory %t.dll | grep "PDBGUID: " > %t.pdb.guid
-# PDB hash should be different from binary hash.
-# RUN: not diff %t.binary.guid %t.pdb.guid
 
 # Do not generate .buildid section under /build-id:no
 # RUN: rm -f %t.dll %t.pdb

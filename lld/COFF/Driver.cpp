@@ -1672,10 +1672,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       config->driverUponly || config->driverWdm || args.hasArg(OPT_driver);
 
   // Handle /pdb
-  config->shouldCreatePDB =
+  bool shouldCreatePDB =
       (debug == DebugKind::Full || debug == DebugKind::GHash ||
        debug == DebugKind::NoGHash);
-  if (config->shouldCreatePDB) {
+  if (shouldCreatePDB) {
     if (auto *arg = args.getLastArg(OPT_pdb))
       config->pdbPath = arg->getValue();
     if (auto *arg = args.getLastArg(OPT_pdbaltpath))
@@ -2309,7 +2309,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     config->lldmapFile.clear();
   }
 
-  if (config->shouldCreatePDB) {
+  // If should create PDB, use the hash of PDB content for build id. Otherwise,
+  // generate using the hash of executable content.
+  if (args.hasFlag(OPT_build_id, OPT_build_id_no, false))
+    config->buildIDHash = BuildIDHash::Binary;
+
+  if (shouldCreatePDB) {
     // Put the PDB next to the image if no /pdb flag was passed.
     if (config->pdbPath.empty()) {
       config->pdbPath = config->outputFile;
@@ -2330,14 +2335,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       // Don't do this earlier, so that ctx.OutputFile is ready.
       parsePDBAltPath();
     }
+    config->buildIDHash = BuildIDHash::PDB;
   }
-
-  // Generate build id hash in .buildid section if /build-id is given:
-  // 1. If PDB is generated, the build id hash will be the hash of PDB content.
-  // 2. Otherwise, the build id hash will be the hash of executable content.
-  if (args.hasFlag(OPT_build_id, OPT_build_id_no, false))
-    config->buildIDHash =
-        config->shouldCreatePDB ? BuildIDHash::PDB : BuildIDHash::Binary;
 
   // Set default image base if /base is not given.
   if (config->imageBase == uint64_t(-1))

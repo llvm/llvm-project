@@ -323,7 +323,6 @@ struct Configuration {
   bool writeCheckSum = false;
   EmitKind emit = EmitKind::Obj;
   bool allowDuplicateWeak = false;
-  bool shouldCreatePDB = false;
   BuildIDHash buildIDHash = BuildIDHash::None;
 };
 

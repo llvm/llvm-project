@@ -1044,13 +1044,7 @@ void Writer::createMiscChunks() {
 
   // Create Debug Information Chunks
   std::vector<std::pair<COFF::DebugType, Chunk *>> debugRecords;
-  // The default debug info section is .rdata. It is set to .buildid section
-  // only when not generating PDB and /build-id flag is given. If .rdata is
-  // chosen and /build-id is given, an extra .buildid section will be generated.
-  debugInfoSec =
-      config->shouldCreatePDB || config->buildIDHash != BuildIDHash::Binary
-          ? rdataSec
-          : buildidSec;
+  debugInfoSec = config->mingw ? buildidSec : rdataSec;
   if (config->buildIDHash != BuildIDHash::None || config->debug ||
       config->repro || config->cetCompat) {
     debugDirectory = make<DebugDirectoryChunk>(ctx, config->repro);
@@ -1078,18 +1072,6 @@ void Writer::createMiscChunks() {
     r.second->setAlignment(4);
     debugInfoSec->addChunk(r.second);
     debugDirectory->addRecord(r.first, r.second);
-  }
-  // Create extra .buildid section if build id was stored in .rdata and
-  // /build-id is given.
-  if (debugInfoSec != buildidSec && config->buildIDHash != BuildIDHash::None) {
-    DebugDirectoryChunk *debugDirectory =
-        make<DebugDirectoryChunk>(ctx, config->repro);
-    debugDirectory->setAlignment(4);
-    CVDebugRecordChunk *buildId = make<CVDebugRecordChunk>(ctx);
-    buildId->setAlignment(4);
-    debugDirectory->addRecord(COFF::IMAGE_DEBUG_TYPE_CODEVIEW, buildId);
-    buildidSec->addChunk(debugDirectory);
-    buildidSec->addChunk(buildId);
   }
 
   // Create SEH table. x86-only.
@@ -2050,8 +2032,8 @@ void Writer::writeBuildId() {
   // For reproducibility, instead of a timestamp we want to use a hash of the
   // PE contents.
   Configuration *config = &ctx.config;
-
-  if (config->debug || config->buildIDHash != BuildIDHash::None) {
+  bool generateSyntheticBuildId = config->buildIDHash == BuildIDHash::Binary;
+  if (generateSyntheticBuildId) {
     assert(buildId && "BuildId is not set!");
     // BuildId->BuildId was filled in when the PDB was written.
   }
@@ -2067,26 +2049,18 @@ void Writer::writeBuildId() {
   uint32_t timestamp = config->timestamp;
   uint64_t hash = 0;
 
-  if (config->repro || config->buildIDHash != BuildIDHash::None)
+  if (config->repro || generateSyntheticBuildId)
     hash = xxh3_64bits(outputFileData);
 
   if (config->repro)
     timestamp = static_cast<uint32_t>(hash);
 
-  if (config->buildIDHash == BuildIDHash::Binary) {
+  if (generateSyntheticBuildId) {
     buildId->buildId->PDB70.CVSignature = OMF::Signature::PDB70;
     buildId->buildId->PDB70.Age = 1;
     memcpy(buildId->buildId->PDB70.Signature, &hash, 8);
     // xxhash only gives us 8 bytes, so put some fixed data in the other half.
     memcpy(&buildId->buildId->PDB70.Signature[8], "LLD PDB.", 8);
-  }
-
-  // If using PDB hash, build id in .buildid section is not set yet.
-  if (debugInfoSec != buildidSec && config->buildIDHash != BuildIDHash::None) {
-    auto *buildIdChunk = buildidSec->chunks.back();
-    codeview::DebugInfo *buildIdInfo =
-        cast<CVDebugRecordChunk>(buildIdChunk)->buildId;
-    memcpy(buildIdInfo, buildId->buildId, sizeof(codeview::DebugInfo));
   }
 
   if (debugDirectory)
