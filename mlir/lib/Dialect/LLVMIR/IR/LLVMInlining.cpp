@@ -557,8 +557,8 @@ static unsigned tryToEnforceAlignment(Value value, unsigned requestedAlignment,
 /// the address of the new alloca, then returns the value of the new alloca.
 static Value handleByValArgumentInit(OpBuilder &builder, Location loc,
                                      Value argument, Type elementType,
-                                     unsigned elementTypeSize,
-                                     unsigned targetAlignment) {
+                                     uint64_t elementTypeSize,
+                                     uint64_t targetAlignment) {
   // Allocate the new value on the stack.
   Value allocaOp;
   {
@@ -587,7 +587,7 @@ static Value handleByValArgumentInit(OpBuilder &builder, Location loc,
 /// attribute (or 1 if no align attribute was set).
 static Value handleByValArgument(OpBuilder &builder, Operation *callable,
                                  Value argument, Type elementType,
-                                 unsigned requestedAlignment) {
+                                 uint64_t requestedAlignment) {
   auto func = cast<LLVM::LLVMFuncOp>(callable);
   LLVM::MemoryEffectsAttr memoryEffects = func.getMemoryAttr();
   // If there is no memory effects attribute, assume that the function is
@@ -597,16 +597,16 @@ static Value handleByValArgument(OpBuilder &builder, Operation *callable,
                     memoryEffects.getArgMem() != LLVM::ModRefInfo::Mod;
   // Check if there's an alignment mismatch requiring us to copy.
   DataLayout dataLayout = DataLayout::closest(callable);
-  unsigned minimumAlignment = dataLayout.getTypeABIAlignment(elementType);
+  uint64_t minimumAlignment = dataLayout.getTypeABIAlignment(elementType);
   if (isReadOnly) {
     if (requestedAlignment <= minimumAlignment)
       return argument;
-    unsigned currentAlignment =
+    uint64_t currentAlignment =
         tryToEnforceAlignment(argument, requestedAlignment, dataLayout);
     if (currentAlignment >= requestedAlignment)
       return argument;
   }
-  unsigned targetAlignment = std::max(requestedAlignment, minimumAlignment);
+  uint64_t targetAlignment = std::max(requestedAlignment, minimumAlignment);
   return handleByValArgumentInit(builder, func.getLoc(), argument, elementType,
                                  dataLayout.getTypeSize(elementType),
                                  targetAlignment);
@@ -753,7 +753,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     if (std::optional<NamedAttribute> attr =
             argumentAttrs.getNamed(LLVM::LLVMDialect::getByValAttrName())) {
       Type elementType = cast<TypeAttr>(attr->getValue()).getValue();
-      unsigned requestedAlignment = 1;
+      uint64_t requestedAlignment = 1;
       if (std::optional<NamedAttribute> alignAttr =
               argumentAttrs.getNamed(LLVM::LLVMDialect::getAlignAttrName())) {
         requestedAlignment = cast<IntegerAttr>(alignAttr->getValue())
