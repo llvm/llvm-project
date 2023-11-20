@@ -358,9 +358,8 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
 // Diagnose non-identical duplicates as a 'conflicting' loop attributes
 // and suppress duplicate errors in cases where the two match for
 // [[clang::code_align()]] attribute.
-static void
-CheckForDuplicateCodeAlignAttrs(Sema &S,
-                                ArrayRef<const Attr *> Attrs) {
+static void CheckForDuplicateCodeAlignAttrs(Sema &S,
+                                            ArrayRef<const Attr *> Attrs) {
   auto FindFunc = [](const Attr *A) { return isa<const CodeAlignAttr>(A); };
   const auto *FirstItr = std::find_if(Attrs.begin(), Attrs.end(), FindFunc);
 
