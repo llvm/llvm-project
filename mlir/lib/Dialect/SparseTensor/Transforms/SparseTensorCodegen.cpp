@@ -746,11 +746,6 @@ public:
     if (!resType.hasEncoding())
       return failure();
 
-    if (!resType.isIdentity()) {
-      return rewriter.notifyMatchFailure(
-          op, "try run --sparse-reinterpret-map before codegen");
-    }
-
     Location loc = op.getLoc();
     // Deal with copy.
     if (op.getCopy()) {
@@ -773,10 +768,14 @@ public:
       return success();
     }
 
+    if (!resType.isIdentity()) {
+      return rewriter.notifyMatchFailure(
+          op, "try run --sparse-reinterpret-map before codegen");
+    }
     // Level size equals to dimension size since lvl2dim map is an identity map.
     SmallVector<Value> lvlSizesValues;
     createDimSizes(rewriter, loc, resType, adaptor.getDynamicSizes(),
-                   lvlSizesValues);
+                   /*dimSizesValues=*/lvlSizesValues);
 
     // Construct allocation for each field.
     Value sizeHint = op.getSizeHint();
@@ -818,7 +817,7 @@ public:
     // Level size equals to dimension size since lvl2dim map is an identity map.
     SmallVector<Value> lvlSizesValues;
     createDimSizes(rewriter, loc, resType, adaptor.getDynamicSizes(),
-                   lvlSizesValues);
+                   /*dimSizesValues=*/lvlSizesValues);
     // Construct allocation for each field.
     Value sizeHint; // none
     SmallVector<Value> fields;
