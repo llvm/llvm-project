@@ -257,7 +257,7 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
     return error("no object streamer for target " + TripleName, Context);
 
   if (auto Err = write(*MS, DWOFilenames, ContinueOnCuIndexOverflow,
-      SoftStopOnCuIndexOverflow)) {
+                       SoftStopOnCuIndexOverflow)) {
     logAllUnhandledErrors(std::move(Err), WithColor::error());
     return 1;
   }
