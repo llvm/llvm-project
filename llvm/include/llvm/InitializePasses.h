@@ -228,7 +228,6 @@ void initializeMachineVerifierPassPass(PassRegistry&);
 void initializeMemoryDependenceWrapperPassPass(PassRegistry&);
 void initializeMemorySSAWrapperPassPass(PassRegistry&);
 void initializeMergeICmpsLegacyPassPass(PassRegistry &);
-void initializeMergedLoadStoreMotionLegacyPassPass(PassRegistry&);
 void initializeModuleSummaryIndexWrapperPassPass(PassRegistry&);
 void initializeModuloScheduleTestPass(PassRegistry&);
 void initializeNaryReassociateLegacyPassPass(PassRegistry&);
