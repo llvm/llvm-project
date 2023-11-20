@@ -770,9 +770,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     // element in the same array are NOT equal. They have the same Base value,
     // but a different Offset. This is a pretty rare case, so we fix this here
     // by comparing pointers to the first elements.
-    if (LHS.inArray() && LHS.isRoot())
+    if (LHS.isArrayRoot())
       VL = LHS.atIndex(0).getByteOffset();
-    if (RHS.inArray() && RHS.isRoot())
+    if (RHS.isArrayRoot())
       VR = RHS.atIndex(0).getByteOffset();
 
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
