@@ -149,13 +149,6 @@ FunctionPass *createEarlyCSEPass(bool UseMemorySSA = false);
 
 //===----------------------------------------------------------------------===//
 //
-// MergedLoadStoreMotion - This pass merges loads and stores in diamonds. Loads
-// are hoisted into the header, while stores sink into the footer.
-//
-FunctionPass *createMergedLoadStoreMotionPass(bool SplitFooterBB = false);
-
-//===----------------------------------------------------------------------===//
-//
 // ConstantHoisting - This pass prepares a function for expensive constants.
 //
 FunctionPass *createConstantHoistingPass();
