@@ -2750,6 +2750,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool PreserveLCSSA,
       Updates.push_back({DominatorTree::Delete, BB, UniqueSuccessor});
     DTU->applyUpdates(Updates);
   }
+  BB->flushTerminatorDbgValues();
   return NumInstrsRemoved;
 }
 
@@ -2903,9 +2904,9 @@ static bool markAliveBlocks(Function &F,
           // If we found a call to a no-return function, insert an unreachable
           // instruction after it.  Make sure there isn't *already* one there
           // though.
-          if (!isa<UnreachableInst>(CI->getNextNode())) {
+          if (!isa<UnreachableInst>(CI->getNextNonDebugInstruction())) {
             // Don't insert a call to llvm.trap right before the unreachable.
-            changeToUnreachable(CI->getNextNode(), false, DTU);
+            changeToUnreachable(CI->getNextNonDebugInstruction(), false, DTU);
             Changed = true;
           }
           break;
