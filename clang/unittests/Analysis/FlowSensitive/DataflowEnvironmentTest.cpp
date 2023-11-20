@@ -101,6 +101,42 @@ TEST_F(EnvironmentTest, CreateValueRecursiveType) {
   EXPECT_THAT(PV, NotNull());
 }
 
+TEST_F(EnvironmentTest, JoinWithExprsToKeep) {
+  // Code is empty -- we just want access to an `ASTContext`.
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs("", {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  OpaqueValueExpr ExprToKeep(SourceLocation(), Context.BoolTy, VK_PRValue);
+  OpaqueValueExpr ExprToDiscard(SourceLocation(), Context.BoolTy, VK_PRValue);
+
+  Environment Env1(DAContext);
+  Env1.setValue(ExprToKeep, Env1.getBoolLiteralValue(true));
+  Env1.setValue(ExprToDiscard, Env1.getBoolLiteralValue(true));
+
+  Environment Env2 = Env1.fork();
+
+  Environment::ValueModel Model;
+
+  // Without `ExprsToKeep`, we retain all expressions.
+  {
+    Environment JoinedEnv = Environment::join(Env1, Env2, Model);
+    EXPECT_EQ(JoinedEnv.getValue(ExprToKeep),
+              &JoinedEnv.getBoolLiteralValue(true));
+    EXPECT_EQ(JoinedEnv.getValue(ExprToDiscard),
+              &JoinedEnv.getBoolLiteralValue(true));
+  }
+
+  // With `ExprsToKeep`, we retain only the requested expressions.
+  {
+    llvm::DenseSet<const Expr *> ExprsToKeep = {&ExprToKeep};
+    Environment JoinedEnv = Environment::join(Env1, Env2, Model, &ExprsToKeep);
+    EXPECT_EQ(JoinedEnv.getValue(ExprToKeep),
+              &JoinedEnv.getBoolLiteralValue(true));
+    EXPECT_EQ(JoinedEnv.getValue(ExprToDiscard), nullptr);
+  }
+}
+
 TEST_F(EnvironmentTest, JoinRecords) {
   using namespace ast_matchers;
 

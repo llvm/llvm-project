@@ -37,10 +37,14 @@ static constexpr int MaxCompositeValueSize = 1000;
 
 /// Returns a map consisting of key-value entries that are present in both maps.
 template <typename K, typename V>
-llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
-                                        const llvm::DenseMap<K, V> &Map2) {
+llvm::DenseMap<K, V>
+intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
+                   const llvm::DenseMap<K, V> &Map2,
+                   const llvm::DenseSet<K> *KeysToKeep = nullptr) {
   llvm::DenseMap<K, V> Result;
   for (auto &Entry : Map1) {
+    if (KeysToKeep && !KeysToKeep->contains(Entry.first))
+      continue;
     auto It = Map2.find(Entry.first);
     if (It != Map2.end() && Entry.second == It->second)
       Result.insert({Entry.first, Entry.second});
@@ -210,7 +214,8 @@ llvm::MapVector<Key, Value *>
 joinKeyToValueMap(const llvm::MapVector<Key, Value *> &Map1,
                   const llvm::MapVector<Key, Value *> &Map2,
                   const Environment &Env1, const Environment &Env2,
-                  Environment &JoinedEnv, Environment::ValueModel &Model) {
+                  Environment &JoinedEnv, Environment::ValueModel &Model,
+                  const llvm::DenseSet<Key> *KeysToKeep = nullptr) {
   llvm::MapVector<Key, Value *> MergedMap;
   for (auto &Entry : Map1) {
     Key K = Entry.first;
@@ -218,6 +223,9 @@ joinKeyToValueMap(const llvm::MapVector<Key, Value *> &Map1,
 
     Value *Val = Entry.second;
     assert(Val != nullptr);
+
+    if (KeysToKeep && !KeysToKeep->contains(K))
+      continue;
 
     auto It = Map2.find(K);
     if (It == Map2.end())
@@ -610,7 +618,8 @@ LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
 }
 
 Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
-                              Environment::ValueModel &Model) {
+                              Environment::ValueModel &Model,
+                              const llvm::DenseSet<const Expr *> *ExprsToKeep) {
   assert(EnvA.DACtx == EnvB.DACtx);
   assert(EnvA.ThisPointeeLoc == EnvB.ThisPointeeLoc);
   assert(EnvA.CallStack == EnvB.CallStack);
@@ -650,7 +659,8 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
 
   JoinedEnv.DeclToLoc = intersectDenseMaps(EnvA.DeclToLoc, EnvB.DeclToLoc);
 
-  JoinedEnv.ExprToLoc = intersectDenseMaps(EnvA.ExprToLoc, EnvB.ExprToLoc);
+  JoinedEnv.ExprToLoc =
+      intersectDenseMaps(EnvA.ExprToLoc, EnvB.ExprToLoc, ExprsToKeep);
 
   // FIXME: update join to detect backedges and simplify the flow condition
   // accordingly.
@@ -658,7 +668,7 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
       EnvA.FlowConditionToken, EnvB.FlowConditionToken);
 
   JoinedEnv.ExprToVal = joinKeyToValueMap(EnvA.ExprToVal, EnvB.ExprToVal, EnvA,
-                                          EnvB, JoinedEnv, Model);
+                                          EnvB, JoinedEnv, Model, ExprsToKeep);
 
   JoinedEnv.LocToVal = joinKeyToValueMap(EnvA.LocToVal, EnvB.LocToVal, EnvA,
                                          EnvB, JoinedEnv, Model);

@@ -211,12 +211,16 @@ public:
   /// Joins two environments by taking the intersection of storage locations and
   /// values that are stored in them. Distinct values that are assigned to the
   /// same storage locations in `EnvA` and `EnvB` are merged using `Model`.
+  /// If `ExprsToKeep` is non-null, only retains state for expressions contained
+  /// in it.
   ///
   /// Requirements:
   ///
   ///  `EnvA` and `EnvB` must use the same `DataflowAnalysisContext`.
-  static Environment join(const Environment &EnvA, const Environment &EnvB,
-                          Environment::ValueModel &Model);
+  static Environment
+  join(const Environment &EnvA, const Environment &EnvB,
+       Environment::ValueModel &Model,
+       const llvm::DenseSet<const Expr *> *ExprsToKeep = nullptr);
 
   /// Widens the environment point-wise, using `PrevEnv` as needed to inform the
   /// approximation.

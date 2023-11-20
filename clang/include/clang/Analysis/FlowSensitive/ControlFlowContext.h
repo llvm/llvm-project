@@ -52,23 +52,39 @@ public:
     return StmtToBlock;
   }
 
+  /// Returns the expressions consumed by `Block`. These are all children of
+  /// statements in `Block` as well as children of a possible terminator.
+  const llvm::DenseSet<const Expr *> *
+  getExprConsumedByBlock(const CFGBlock *Block) const {
+    auto It = ExprConsumedByBlock.find(Block);
+    if (It == ExprConsumedByBlock.end())
+      return nullptr;
+    return &It->second;
+  }
+
   /// Returns whether `B` is reachable from the entry block.
   bool isBlockReachable(const CFGBlock &B) const {
     return BlockReachable[B.getBlockID()];
   }
 
 private:
-  ControlFlowContext(const Decl &D, std::unique_ptr<CFG> Cfg,
-                     llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock,
-                     llvm::BitVector BlockReachable)
+  ControlFlowContext(
+      const Decl &D, std::unique_ptr<CFG> Cfg,
+      llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock,
+      llvm::DenseMap<const CFGBlock *, llvm::DenseSet<const Expr *>>
+          ExprConsumedByBlock,
+      llvm::BitVector BlockReachable)
       : ContainingDecl(D), Cfg(std::move(Cfg)),
         StmtToBlock(std::move(StmtToBlock)),
+        ExprConsumedByBlock(std::move(ExprConsumedByBlock)),
         BlockReachable(std::move(BlockReachable)) {}
 
   /// The `Decl` containing the statement used to construct the CFG.
   const Decl &ContainingDecl;
   std::unique_ptr<CFG> Cfg;
   llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock;
+  const llvm::DenseMap<const CFGBlock *, llvm::DenseSet<const Expr *>>
+      ExprConsumedByBlock;
   llvm::BitVector BlockReachable;
 };
 

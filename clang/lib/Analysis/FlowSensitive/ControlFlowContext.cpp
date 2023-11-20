@@ -24,25 +24,35 @@
 namespace clang {
 namespace dataflow {
 
-/// Returns a map from statements to basic blocks that contain them.
-static llvm::DenseMap<const Stmt *, const CFGBlock *>
-buildStmtToBasicBlockMap(const CFG &Cfg) {
-  llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock;
+/// Builds maps:
+/// - From statements to basic blocks that contain them.
+/// - From blocks to the expressions they consume.
+static void buildStatementMaps(
+    const CFG &Cfg, llvm::DenseMap<const Stmt *, const CFGBlock *> &StmtToBlock,
+    llvm::DenseMap<const CFGBlock *, llvm::DenseSet<const Expr *>>
+        &ExprConsumedByBlock) {
   for (const CFGBlock *Block : Cfg) {
     if (Block == nullptr)
       continue;
 
     for (const CFGElement &Element : *Block) {
-      auto Stmt = Element.getAs<CFGStmt>();
-      if (!Stmt)
+      auto S = Element.getAs<CFGStmt>();
+      if (!S)
         continue;
 
-      StmtToBlock[Stmt->getStmt()] = Block;
+      StmtToBlock[S->getStmt()] = Block;
+
+      for (const Stmt *Child : S->getStmt()->children())
+        if (const Expr *E = dyn_cast_or_null<Expr>(Child))
+          ExprConsumedByBlock[Block].insert(E);
     }
-    if (const Stmt *TerminatorStmt = Block->getTerminatorStmt())
+    if (const Stmt *TerminatorStmt = Block->getTerminatorStmt()) {
       StmtToBlock[TerminatorStmt] = Block;
+      for (const Stmt *Child : TerminatorStmt->children())
+        if (const Expr *E = dyn_cast_or_null<Expr>(Child))
+          ExprConsumedByBlock[Block].insert(E);
+    }
   }
-  return StmtToBlock;
 }
 
 static llvm::BitVector findReachableBlocks(const CFG &Cfg) {
@@ -108,12 +118,15 @@ ControlFlowContext::build(const Decl &D, Stmt &S, ASTContext &C) {
         std::make_error_code(std::errc::invalid_argument),
         "CFG::buildCFG failed");
 
-  llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock =
-      buildStmtToBasicBlockMap(*Cfg);
+  llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock;
+  llvm::DenseMap<const CFGBlock *, llvm::DenseSet<const Expr *>>
+      ExprConsumedByBlock;
+  buildStatementMaps(*Cfg, StmtToBlock, ExprConsumedByBlock);
 
   llvm::BitVector BlockReachable = findReachableBlocks(*Cfg);
 
   return ControlFlowContext(D, std::move(Cfg), std::move(StmtToBlock),
+                            std::move(ExprConsumedByBlock),
                             std::move(BlockReachable));
 }
 

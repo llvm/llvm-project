@@ -232,16 +232,19 @@ class JoinedStateBuilder {
   AnalysisContext &AC;
   std::vector<const TypeErasedDataflowAnalysisState *> All;
   std::deque<TypeErasedDataflowAnalysisState> Owned;
+  const llvm::DenseSet<const Expr *> *ExprsToKeep;
 
   TypeErasedDataflowAnalysisState
   join(const TypeErasedDataflowAnalysisState &L,
        const TypeErasedDataflowAnalysisState &R) {
     return {AC.Analysis.joinTypeErased(L.Lattice, R.Lattice),
-            Environment::join(L.Env, R.Env, AC.Analysis)};
+            Environment::join(L.Env, R.Env, AC.Analysis, ExprsToKeep)};
   }
 
 public:
-  JoinedStateBuilder(AnalysisContext &AC) : AC(AC) {}
+  JoinedStateBuilder(AnalysisContext &AC,
+                     const llvm::DenseSet<const Expr *> *ExprsToKeep)
+      : AC(AC), ExprsToKeep(ExprsToKeep) {}
 
   void addOwned(TypeErasedDataflowAnalysisState State) {
     Owned.push_back(std::move(State));
@@ -256,8 +259,12 @@ public:
       // to enable building analyses like computation of dominators that
       // initialize the state of each basic block differently.
       return {AC.Analysis.typeErasedInitialElement(), AC.InitEnv.fork()};
+
     if (All.size() == 1)
-      return Owned.empty() ? All.front()->fork() : std::move(Owned.front());
+      // Join the environment with itself so that we can discard unwanted
+      // expression state.
+      return {All[0]->Lattice, Environment::join(All[0]->Env, All[0]->Env,
+                                                 AC.Analysis, ExprsToKeep)};
 
     auto Result = join(*All[0], *All[1]);
     for (unsigned I = 2; I < All.size(); ++I)
@@ -311,7 +318,10 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     }
   }
 
-  JoinedStateBuilder Builder(AC);
+  // When performing the join, only retain state for those expressions that are
+  // consumed by this block. This avoids performing joins and potentially
+  // extending the flow condition for expressions that we won't need anyway.
+  JoinedStateBuilder Builder(AC, AC.CFCtx.getExprConsumedByBlock(&Block));
   for (const CFGBlock *Pred : Preds) {
     // Skip if the `Block` is unreachable or control flow cannot get past it.
     if (!Pred || Pred->hasNoReturnElement())
