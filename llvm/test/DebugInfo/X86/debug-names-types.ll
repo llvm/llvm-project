@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=x86_64 -generate-type-units -dwarf-version=5 -filetype=obj %s -o %t
 ; RUN: llvm-dwarfdump -debug-info -debug-names %t | FileCheck %s
 
-; RUN: llc -mtriple=x86_64 -generate-type-units -dwarf-version=5 -filetype=obj -split-dwarf-file=mainTypes.dwo --split-dwarf-output=mainTypes.dwo %s -o %t
+; RUN: llc -mtriple=x86_64 -generate-type-units -dwarf-version=5 -filetype=obj -split-dwarf-file=%t.mainTypes.dwo --split-dwarf-output=%t.mainTypes.dwo %s -o %t
 ; RUN: llvm-readelf --sections %t | FileCheck %s --check-prefixes=CHECK-SPLIT
 
 ; CHECK-SPLIT-NOT: .debug_names
