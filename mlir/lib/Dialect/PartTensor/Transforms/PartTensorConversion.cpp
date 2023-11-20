@@ -126,7 +126,7 @@ public:
   matchAndRewrite(SetSliceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    createFuncCall(rewriter, loc, "SetSlice", {},
+    createFuncCall(rewriter, loc, "setSlice", {},
                    {adaptor.getInPartTensor(), adaptor.getPartSpec(),
                     adaptor.getSparseTensor()},
                    mlir::sparse_tensor::EmitCInterface::On);
