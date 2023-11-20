@@ -629,6 +629,28 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
 static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
                                     KnownBits &Known, unsigned Depth,
                                     const SimplifyQuery &Q) {
+  if (Cmp->getOperand(1)->getType()->isPointerTy()) {
+    // Handle comparison of pointer to null explicitly, as it will not be
+    // covered by the m_APInt() logic below.
+    if (match(Cmp->getOperand(1), m_Zero())) {
+      switch (Cmp->getPredicate()) {
+      case ICmpInst::ICMP_EQ:
+        Known.setAllZero();
+        break;
+      case ICmpInst::ICMP_SGE:
+      case ICmpInst::ICMP_SGT:
+        Known.makeNonNegative();
+        break;
+      case ICmpInst::ICMP_SLT:
+        Known.makeNegative();
+        break;
+      default:
+        break;
+      }
+    }
+    return;
+  }
+
   unsigned BitWidth = Known.getBitWidth();
   auto m_V =
       m_CombineOr(m_Specific(V), m_PtrToIntSameSize(Q.DL, m_Specific(V)));

@@ -4016,10 +4016,9 @@ define i32 @abs_preserve(i32 %x) {
 declare void @llvm.assume(i1)
 define i1 @PR35794(ptr %a) {
 ; CHECK-LABEL: @PR35794(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt ptr [[A:%.*]], inttoptr (i64 -1 to ptr)
-; CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq ptr [[A]], null
+; CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq ptr [[A:%.*]], null
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp sgt ptr %a, inttoptr (i64 -1 to ptr)
   %maskcond = icmp eq ptr %a, null
