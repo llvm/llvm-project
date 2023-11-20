@@ -90,12 +90,11 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
     // difficult to reason about values like symbol*8.
     auto Size = Call.getArgSVal(0);
     if (auto DefSize = Size.getAs<DefinedOrUnknownSVal>()) {
+      // This `getAs()` is mostly paranoia, because core.CallAndMessage reports
+      // undefined function arguments (unless it's disabled somehow).
       state = setDynamicExtent(state, R.getRegion(), *DefSize, SVB);
-      // FIXME: perhaps the following transition should be moved out of the
-      // 'if' to bind an AllocaRegion (with unknown/unspecified size) even in
-      // the unlikely case when the size argument is undefined.
-      C.addTransition(state->BindExpr(CE, LCtx, R));
     }
+    C.addTransition(state->BindExpr(CE, LCtx, R));
     return true;
   }
 
