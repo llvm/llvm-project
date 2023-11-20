@@ -468,17 +468,19 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name == "pabs.d.128" || // Added in 6.0
             Name == "pabs.w.128");  // Added in 6.0
 
-  return (Name == "addcarry.u32" ||         // Added in 8.0
-          Name == "addcarry.u64" ||         // Added in 8.0
-          Name == "addcarryx.u32" ||        // Added in 8.0
-          Name == "addcarryx.u64" ||        // Added in 8.0
-          Name == "subborrow.u32" ||        // Added in 8.0
-          Name == "subborrow.u64" ||        // Added in 8.0
-          Name.starts_with("vcvtph2ps.") || // Added in 11.0
-          Name == "xop.vpcmov" ||           // Added in 3.8
-          Name == "xop.vpcmov.256" ||       // Added in 5.0
-          Name.starts_with("xop.vpcom") ||  // Added in 3.2, Updated in 9.0
-          Name.starts_with("xop.vprot"));   // Added in 8.0
+  if (Name.consume_front("xop."))
+    return (Name == "vpcmov" ||          // Added in 3.8
+            Name == "vpcmov.256" ||      // Added in 5.0
+            Name.starts_with("vpcom") || // Added in 3.2, Updated in 9.0
+            Name.starts_with("vprot"));  // Added in 8.0
+
+  return (Name == "addcarry.u32" ||        // Added in 8.0
+          Name == "addcarry.u64" ||        // Added in 8.0
+          Name == "addcarryx.u32" ||       // Added in 8.0
+          Name == "addcarryx.u64" ||       // Added in 8.0
+          Name == "subborrow.u32" ||       // Added in 8.0
+          Name == "subborrow.u64" ||       // Added in 8.0
+          Name.starts_with("vcvtph2ps.")); // Added in 11.0
 }
 
 static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
