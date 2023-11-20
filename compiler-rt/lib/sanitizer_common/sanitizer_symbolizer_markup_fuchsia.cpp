@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_platform.h"
-#if SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
+#if SANITIZER_FUCHSIA
 #  include "sanitizer_common.h"
 #  include "sanitizer_stacktrace_printer.h"
 #  include "sanitizer_symbolizer.h"
@@ -90,4 +90,4 @@ Symbolizer *Symbolizer::PlatformInit() {
 void Symbolizer::LateInitialize() { Symbolizer::GetOrInit(); }
 
 }  // namespace __sanitizer
-#endif  // SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
+#endif  // SANITIZER_FUCHSIA

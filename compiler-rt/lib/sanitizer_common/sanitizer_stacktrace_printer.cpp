@@ -46,7 +46,7 @@ const char *StackTracePrinter::StripFunctionName(const char *function) {
 }
 
 // sanitizer_symbolizer_markup_fuchsia.cpp implements these differently.
-#if !SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
+#if !SANITIZER_FUCHSIA
 
 StackTracePrinter *StackTracePrinter::GetOrInit() {
   static StackTracePrinter *stacktrace_printer;
@@ -327,7 +327,7 @@ void FormattedStackTracePrinter::RenderData(InternalScopedString *buffer,
   }
 }
 
-#endif  // !SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
+#endif  // !SANITIZER_FUCHSIA
 
 void StackTracePrinter::RenderSourceLocation(InternalScopedString *buffer,
                                              const char *file, int line,

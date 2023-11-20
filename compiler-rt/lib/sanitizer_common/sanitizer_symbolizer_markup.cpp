@@ -72,7 +72,7 @@ const char *MarkupSymbolizerTool::Demangle(const char *name) {
 // Fuchsia's logging infrastructure emits enough information about
 // process memory layout that a post-processing filter can do the
 // symbolization and pretty-print the markup.
-#if !SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
+#if !SANITIZER_FUCHSIA
 
 // Simplier view of a LoadedModule. It only holds information necessary to
 // identify unique modules.
@@ -93,41 +93,46 @@ static bool ModulesEq(const LoadedModule &module,
 static bool ModuleHasBeenRendered(
     const LoadedModule &module,
     const InternalMmapVectorNoCtor<RenderedModule> &renderedModules) {
-  for (const auto &renderedModule : renderedModules) {
-    if (ModulesEq(module, renderedModule)) {
+  for (const auto &renderedModule : renderedModules)
+    if (ModulesEq(module, renderedModule))
       return true;
-    }
-  }
+
   return false;
 }
 
 static void RenderModule(InternalScopedString *buffer,
                          const LoadedModule &module, uptr moduleId) {
-  buffer->AppendF("{{{module:%d:%s:elf:", moduleId, module.full_name());
-  for (uptr i = 0; i < module.uuid_size(); i++) {
-    buffer->AppendF("%02x", module.uuid()[i]);
-  }
-  buffer->Append("}}}\n");
+  InternalScopedString buildIdBuffer;
+  for (uptr i = 0; i < module.uuid_size(); i++)
+    buildIdBuffer.AppendF("%02x", module.uuid()[i]);
+
+  buffer->AppendF(kFormatModule, moduleId, module.full_name(),
+                  buildIdBuffer.data());
+  buffer->Append("\n");
 }
 
 static void RenderMmaps(InternalScopedString *buffer,
                         const LoadedModule &module, uptr moduleId) {
-  for (const auto &range : module.ranges()) {
-    //{{{mmap:starting_addr:size_in_hex:load:module_Id:r(w|x):relative_addr}}}
-    buffer->AppendF("{{{mmap:%p:%p:load:%d:", range.beg, range.end - range.beg,
-                    moduleId);
+  InternalScopedString accessBuffer;
 
-    // All module mmaps are readable at least
-    buffer->Append("r");
+  // All module mmaps are readable at least
+  for (const auto &range : module.ranges()) {
+    accessBuffer.Append("r");
     if (range.writable)
-      buffer->Append("w");
+      accessBuffer.Append("w");
     if (range.executable)
-      buffer->Append("x");
+      accessBuffer.Append("x");
+
+    //{{{mmap:%starting_addr:%size_in_hex:load:%moduleId:r%(w|x):%relative_addr}}}
 
     // module.base_address == dlpi_addr
     // range.beg == dlpi_addr + p_vaddr
     // relative address == p_vaddr == range.beg - module.base_address
-    buffer->AppendF(":%p}}}\n", range.beg - module.base_address());
+    buffer->AppendF(kFormatMmap, range.beg, range.end - range.beg, moduleId,
+                    accessBuffer.data(), range.beg - module.base_address());
+
+    buffer->Append("\n");
+    accessBuffer.clear();
   }
 }
 
@@ -142,16 +147,14 @@ void MarkupStackTracePrinter::RenderContext(InternalScopedString *buffer) {
     initialized = true;
   }
 
-  if (renderedModules.size() == 0) {
+  if (renderedModules.size() == 0)
     buffer->Append("{{{reset}}}\n");
-  }
 
   const auto &modules = Symbolizer::GetOrInit()->GetRefreshedListOfModules();
 
   for (const auto &module : modules) {
-    if (ModuleHasBeenRendered(module, renderedModules)) {
+    if (ModuleHasBeenRendered(module, renderedModules))
       continue;
-    }
 
     // symbolizer markup id, used to refer to this modules from other contextual
     // elements
@@ -169,5 +172,5 @@ void MarkupStackTracePrinter::RenderContext(InternalScopedString *buffer) {
     renderedModules.push_back(renderedModule);
   }
 }
-#endif  // !SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
+#endif  // !SANITIZER_FUCHSIA
 }  // namespace __sanitizer

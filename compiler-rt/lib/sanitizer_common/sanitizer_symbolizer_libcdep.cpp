@@ -27,7 +27,7 @@ Symbolizer *Symbolizer::GetOrInit() {
 }
 
 // See sanitizer_symbolizer_markup_fuchsia.cpp.
-#if !SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
+#if !SANITIZER_FUCHSIA
 
 const char *ExtractToken(const char *str, const char *delims, char **result) {
   uptr prefix_len = internal_strcspn(str, delims);
@@ -192,9 +192,9 @@ void Symbolizer::RefreshModules() {
 }
 
 ListOfModules &Symbolizer::GetRefreshedListOfModules() {
-  if (!modules_fresh_) {
+  if (!modules_fresh_)
     RefreshModules();
-  }
+
   CHECK(modules_fresh_);
   return modules_;
 }
@@ -574,6 +574,6 @@ bool SymbolizerProcess::WriteToSymbolizer(const char *buffer, uptr length) {
   return true;
 }
 
-#endif  // !SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
+#endif  // !SANITIZER_FUCHSIA
 
 }  // namespace __sanitizer

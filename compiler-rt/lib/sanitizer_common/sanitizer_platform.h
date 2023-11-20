@@ -413,13 +413,6 @@
 #  define SANITIZER_CACHE_LINE_SIZE 64
 #endif
 
-// Enable offline markup symbolizer for Fuchsia.
-#if SANITIZER_FUCHSIA
-#  define SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA 1
-#else
-#  define SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA 0
-#endif
-
 // Enable ability to support sanitizer initialization that is
 // compatible with the sanitizer library being loaded via
 // `dlopen()`.

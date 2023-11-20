@@ -55,7 +55,7 @@ class StackTracePrinter {
 // See sanitizer_symbolizer_markup.h for the markup implementation of
 // StackTracePrinter. This is code is omited for targets that opt in to
 // use SymbolizerMarkup only.
-#if !SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
+#if !SANITIZER_FUCHSIA
 
 class FormattedStackTracePrinter : public StackTracePrinter {
  public:
@@ -105,7 +105,7 @@ class FormattedStackTracePrinter : public StackTracePrinter {
   ~FormattedStackTracePrinter() {}
 };
 
-#endif  // !SANITIZER_SYMBOLIZER_MARKUP_FUCHSIA
+#endif  // !SANITIZER_FUCHSIA
 
 }  // namespace __sanitizer
 
