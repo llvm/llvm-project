@@ -2790,8 +2790,6 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
 }
 
-
-
 static StringRef EnumComplexRangeToStr(LangOptions::ComplexRangeKind Range) {
   StringRef RangeStr = "";
   switch (Range) {
@@ -2815,11 +2813,10 @@ static void EmitComplexRangeDiag(const Driver &D,
         << EnumComplexRangeToStr(Range1) << EnumComplexRangeToStr(Range2);
 }
 
-
 static std::string RenderComplexRangeOption(std::string Range) {
-   std::string ComplexRangeStr = "-complex-range=";
-   ComplexRangeStr += Range;
-   return ComplexRangeStr;
+  std::string ComplexRangeStr = "-complex-range=";
+  ComplexRangeStr += Range;
+  return ComplexRangeStr;
 }
 
 static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
