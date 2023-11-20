@@ -1007,10 +1007,10 @@ struct ConstantLValue {
   /*implicit*/ ConstantLValue(mlir::Value value, bool hasOffsetApplied = false)
       : Value(value), HasOffsetApplied(hasOffsetApplied) {}
 
-  /*implicit*/ ConstantLValue(mlir::cir::GlobalViewAttr address) : Value(address) {}
+  /*implicit*/ ConstantLValue(mlir::cir::GlobalViewAttr address)
+      : Value(address), HasOffsetApplied(false) {}
 
   ConstantLValue(std::nullptr_t) : ConstantLValue({}, false) {}
-  ConstantLValue(mlir::Attribute value) : Value(value) {}
 };
 
 /// A helper class for emitting constant l-values.
@@ -1052,8 +1052,22 @@ private:
 
   bool hasNonZeroOffset() const { return !Value.getLValueOffset().isZero(); }
 
-  /// Return the value offset.
-  mlir::Attribute getOffset() { llvm_unreachable("NYI"); }
+  /// Return GEP-like value offset
+  mlir::ArrayAttr getOffset(mlir::Type Ty) {
+    auto Offset = Value.getLValueOffset().getQuantity();
+    CIRDataLayout Layout(CGM.getModule());
+    SmallVector<int64_t, 3> Idx;
+    CGM.getBuilder().computeGlobalViewIndicesFromFlatOffset(Offset, Ty, Layout,
+                                                            Idx);
+
+    llvm::SmallVector<mlir::Attribute, 3> Indices;
+    for (auto I : Idx) {
+      auto Attr = mlir::cir::IntAttr::get(CGM.getBuilder().getSInt64Ty(), I);
+      Indices.push_back(Attr);
+    }
+
+    return CGM.getBuilder().getArrayAttr(Indices);
+  }
 
   // TODO(cir): create a proper interface to absctract CIR constant values.
 
@@ -1061,6 +1075,14 @@ private:
   ConstantLValue applyOffset(ConstantLValue &C) {
     if (!hasNonZeroOffset())
       return C;
+
+    if (auto Attr = C.Value.dyn_cast<mlir::Attribute>()) {
+      auto GV = cast<mlir::cir::GlobalViewAttr>(Attr);
+      assert(!GV.getIndices());
+
+      return mlir::cir::GlobalViewAttr::get(
+          GV.getType(), GV.getSymbol(), getOffset(GV.getType()));
+    }
 
     // TODO(cir): use ptr_stride, or something...
     llvm_unreachable("NYI");
@@ -1097,7 +1119,7 @@ mlir::Attribute ConstantLValueEmitter::tryEmit() {
     return {};
 
   // Apply the offset if necessary and not already done.
-  if (!result.HasOffsetApplied && !value.is<mlir::Attribute>()) {
+  if (!result.HasOffsetApplied) {
     value = applyOffset(result).Value;
   }
 

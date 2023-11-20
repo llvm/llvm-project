@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_CIR_CIRGENBUILDER_H
 
 #include "Address.h"
+#include "CIRDataLayout.h"
 #include "CIRGenTypeCache.h"
 #include "UnimplementedFeatureGuarding.h"
 
@@ -699,6 +700,47 @@ public:
                                      mlir::Value dst) {
     auto flag = getBool(val, loc);
     return create<mlir::cir::StoreOp>(loc, flag, dst);
+  }
+
+  // Convert byte offset to sequence of high-level indices suitable for
+  // GlobalViewAttr. Ideally we shouldn't deal with low-level offsets at all
+  // but currently some parts of Clang AST, which we don't want to touch just
+  // yet, return them.
+  void computeGlobalViewIndicesFromFlatOffset(
+      int64_t Offset, mlir::Type Ty, CIRDataLayout Layout,
+      llvm::SmallVectorImpl<int64_t> &Indices) {
+    if (!Offset)
+      return;
+
+    mlir::Type SubType;
+
+    if (auto ArrayTy = Ty.dyn_cast<mlir::cir::ArrayType>()) {
+      auto EltSize = Layout.getTypeAllocSize(ArrayTy.getEltType());
+      Indices.push_back(Offset / EltSize);
+      SubType = ArrayTy.getEltType();
+      Offset %= EltSize;
+    } else if (auto PtrTy = Ty.dyn_cast<mlir::cir::PointerType>()) {
+      auto EltSize = Layout.getTypeAllocSize(PtrTy.getPointee());
+      Indices.push_back(Offset / EltSize);
+      SubType = PtrTy.getPointee();
+      Offset %= EltSize;
+    } else if (auto StructTy = Ty.dyn_cast<mlir::cir::StructType>()) {
+      auto Elts = StructTy.getMembers();
+      for (size_t I = 0; I < Elts.size(); ++I) {
+        auto EltSize = Layout.getTypeAllocSize(Elts[I]);
+        if (Offset < EltSize) {
+          Indices.push_back(I);
+          SubType = Elts[I];
+          break;
+        }
+        Offset -= EltSize;
+      }
+    } else {
+      llvm_unreachable("unexpected type");
+    }
+
+    assert(SubType);
+    computeGlobalViewIndicesFromFlatOffset(Offset, SubType, Layout, Indices);
   }
 };
 

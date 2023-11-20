@@ -47,6 +47,9 @@ struct {
 } nestedStringPtr = {"1"};
 // CHECK: cir.global external @nestedStringPtr = #cir.const_struct<{#cir.global_view<@".str"> : !cir.ptr<!s8i>}>
 
+int *globalPtr = &nestedString.y[1];
+// CHECK: cir.global external @globalPtr = #cir.global_view<@nestedString, [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<1> : !s64i]>
+
 // TODO: test tentatives with internal linkage.
 
 // Tentative definition is THE definition. Should be zero-initialized.
