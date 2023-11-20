@@ -4954,10 +4954,6 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
       });
 
   if (Indices.size() == 1) {
-    // getelementptr P, 0 -> P.
-    if (match(Indices[0], m_Zero()) && Ptr->getType() == GEPTy)
-      return Ptr;
-
     Type *Ty = SrcTy;
     if (!IsScalableVec && Ty->isSized()) {
       Value *P;
