@@ -2099,6 +2099,9 @@ public:
   QualType BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
                                  SourceLocation AttrLoc);
 
+  CodeAlignAttr *BuildCodeAlignAttr(const AttributeCommonInfo &CI, Expr *E);
+  bool CheckRebuiltCodeAlignStmtAttributes(ArrayRef<const Attr *> Attrs);
+
   bool CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc);
 
   bool CheckFunctionReturnType(QualType T, SourceLocation Loc);
