@@ -415,18 +415,15 @@ class Parser : public CodeCompletionHandler {
 
   /// Flags describing a context in which we're parsing a statement.
   enum class ParsedStmtContext {
-    /// This context permits declarations in language modes where declarations
-    /// are not statements.
-    AllowDeclarationsInC = 0x1,
     /// This context permits standalone OpenMP directives.
-    AllowStandaloneOpenMPDirectives = 0x2,
+    AllowStandaloneOpenMPDirectives = 0x1,
     /// This context is at the top level of a GNU statement expression.
-    InStmtExpr = 0x4,
+    InStmtExpr = 0x2,
 
     /// The context of a regular substatement.
     SubStmt = 0,
     /// The context of a compound-statement.
-    Compound = AllowDeclarationsInC | AllowStandaloneOpenMPDirectives,
+    Compound = AllowStandaloneOpenMPDirectives,
 
     LLVM_MARK_AS_BITMASK_ENUM(InStmtExpr)
   };
