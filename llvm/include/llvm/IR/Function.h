@@ -48,9 +48,11 @@ class AssemblyAnnotationWriter;
 class Constant;
 struct DenormalMode;
 class DISubprogram;
+enum LibFunc : unsigned;
 class LLVMContext;
 class Module;
 class raw_ostream;
+class TargetLibraryInfoImpl;
 class Type;
 class User;
 class BranchProbabilityInfo;
@@ -120,6 +122,13 @@ public:
   void setIsNewDbgInfoFormat(bool NewVal);
 
 private:
+  friend class TargetLibraryInfoImpl;
+
+  /// Cache for TLI::getLibFunc() result without prototype validation.
+  /// -1 if uninitialized. NotLibFunc if definitely not lib func.
+  /// Otherwise may be libfunc if prototype validation passes.
+  mutable LibFunc LibFuncCache = LibFunc(-1);
+
   void CheckLazyArguments() const {
     if (hasLazyArguments())
       BuildLazyArguments();
