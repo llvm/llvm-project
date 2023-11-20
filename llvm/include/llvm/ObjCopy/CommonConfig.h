@@ -84,6 +84,14 @@ struct SectionFlagsUpdate {
   SectionFlag NewFlags;
 };
 
+enum class SectionUpdateType { Increase, Decrease, Set };
+
+struct SectionVMAUpdate {
+  int64_t UpdateValue;
+  StringRef UpdateSection;
+  SectionUpdateType UpdateAs;
+};
+
 enum class DiscardType {
   None,   // Default
   All,    // --discard-all (-x)
@@ -244,6 +252,7 @@ struct CommonConfig {
   StringMap<SectionFlagsUpdate> SetSectionFlags;
   StringMap<uint64_t> SetSectionType;
   StringMap<StringRef> SymbolsToRename;
+  StringMap<SectionVMAUpdate> AdjustSectionVMA;
 
   // Symbol info specified by --add-symbol option.
   std::vector<NewSymbolInfo> SymbolsToAdd;

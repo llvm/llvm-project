@@ -532,6 +532,38 @@ static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
   return Error::success();
 }
 
+// readChangeSectionVMA reads the command line arguments and sets
+// sectionName and adjustValue of VMA and LMA addresses.
+static Expected<SectionVMAUpdate> parseAdjustSectionVMA(StringRef ArgValue,
+                                                        StringRef OptionName) {
+  SectionVMAUpdate SectionUpdate;
+  std::pair<StringRef, StringRef> SecPair;
+  if (ArgValue.contains("=")) {
+    SectionUpdate.UpdateAs = SectionUpdateType::Set;
+    SecPair = ArgValue.split("=");
+  } else if (ArgValue.contains("+")) {
+    SectionUpdate.UpdateAs = SectionUpdateType::Increase;
+    SecPair = ArgValue.split("+");
+  } else if (ArgValue.contains("-")) {
+    SectionUpdate.UpdateAs = SectionUpdateType::Decrease;
+    SecPair = ArgValue.split("-");
+  } else {
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName + ": missing '='");
+  }
+  if (SecPair.second.empty())
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": missing offset of VMA");
+  SectionUpdate.UpdateSection = SecPair.first;
+  auto ChangeValue = getAsInteger<int64_t>(SecPair.second);
+  if (!ChangeValue)
+    return createStringError(ChangeValue.getError(),
+                             "Unable to parse adjustment value");
+  SectionUpdate.UpdateValue = *ChangeValue;
+  return SectionUpdate;
+}
+
 // parseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then parseObjcopyOptions will print the help messege and
 // exit.
@@ -605,8 +637,8 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   MatchStyle SectionMatchStyle = InputArgs.hasArg(OBJCOPY_regex)
                                      ? MatchStyle::Regex
                                      : MatchStyle::Wildcard;
-  MatchStyle SymbolMatchStyle
-      = InputArgs.hasArg(OBJCOPY_regex)    ? MatchStyle::Regex
+  MatchStyle SymbolMatchStyle =
+      InputArgs.hasArg(OBJCOPY_regex)      ? MatchStyle::Regex
       : InputArgs.hasArg(OBJCOPY_wildcard) ? MatchStyle::Wildcard
                                            : MatchStyle::Literal;
   StringRef InputFormat, OutputFormat;
@@ -827,6 +859,18 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                                        Config.UpdateSection))
       return std::move(Err);
   }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_adjust_section_vma)) {
+    Expected<SectionVMAUpdate> SVMAU =
+        parseAdjustSectionVMA(Arg->getValue(), "--adjust-section-vma");
+    if (!SVMAU)
+      return SVMAU.takeError();
+    if (!Config.AdjustSectionVMA.try_emplace(SVMAU->UpdateSection, *SVMAU)
+             .second)
+      return createStringError(
+          errc::invalid_argument,
+          "--adjust-section-vma set multiple times for section '%s'",
+          SVMAU->UpdateSection.str().c_str());
+  }
   for (auto *Arg : InputArgs.filtered(OBJCOPY_dump_section)) {
     StringRef Value(Arg->getValue());
     if (Value.split('=').second.empty())
@@ -961,6 +1005,25 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         return createStringError(EIncr.getError(),
                                  "bad entry point increment: '%s'",
                                  Arg->getValue());
+      auto Expr = ELFConfig.EntryExpr ? std::move(ELFConfig.EntryExpr)
+                                      : [](uint64_t A) { return A; };
+      ELFConfig.EntryExpr = [Expr, EIncr](uint64_t EAddr) {
+        return Expr(EAddr) + *EIncr;
+      };
+    } else if (Arg->getOption().matches(OBJCOPY_adjust_vma)) {
+      auto EIncr = getAsInteger<int64_t>(Arg->getValue());
+      if (!EIncr)
+        return createStringError(EIncr.getError(),
+                                 "bad entry point VMA increment: '%s'",
+                                 Arg->getValue());
+      SectionVMAUpdate SVMAU;
+      SVMAU.UpdateSection = "*";
+      SVMAU.UpdateValue = *EIncr;
+      SVMAU.UpdateAs = SectionUpdateType::Increase;
+      if (!Config.AdjustSectionVMA.try_emplace(SVMAU.UpdateSection, SVMAU)
+               .second)
+        return createStringError(errc::invalid_argument,
+                                 "--adjust-vma set multiple times");
       auto Expr = ELFConfig.EntryExpr ? std::move(ELFConfig.EntryExpr)
                                       : [](uint64_t A) { return A; };
       ELFConfig.EntryExpr = [Expr, EIncr](uint64_t EAddr) {
@@ -1250,8 +1313,8 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
                              "--regex and --wildcard are incompatible");
   MatchStyle SectionMatchStyle =
       InputArgs.hasArg(STRIP_regex) ? MatchStyle::Regex : MatchStyle::Wildcard;
-  MatchStyle SymbolMatchStyle
-      = InputArgs.hasArg(STRIP_regex)    ? MatchStyle::Regex
+  MatchStyle SymbolMatchStyle =
+      InputArgs.hasArg(STRIP_regex)      ? MatchStyle::Regex
       : InputArgs.hasArg(STRIP_wildcard) ? MatchStyle::Wildcard
                                          : MatchStyle::Literal;
   ELFConfig.AllowBrokenLinks = InputArgs.hasArg(STRIP_allow_broken_links);
