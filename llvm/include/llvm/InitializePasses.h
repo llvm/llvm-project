@@ -323,7 +323,6 @@ void initializeTwoAddressInstructionPassPass(PassRegistry&);
 void initializeTypeBasedAAWrapperPassPass(PassRegistry&);
 void initializeTypePromotionLegacyPass(PassRegistry&);
 void initializeUniformityInfoWrapperPassPass(PassRegistry &);
-void initializeUnifyFunctionExitNodesLegacyPassPass(PassRegistry &);
 void initializeUnifyLoopExitsLegacyPassPass(PassRegistry &);
 void initializeUnpackMachineBundlesPass(PassRegistry&);
 void initializeUnreachableBlockElimLegacyPassPass(PassRegistry&);
