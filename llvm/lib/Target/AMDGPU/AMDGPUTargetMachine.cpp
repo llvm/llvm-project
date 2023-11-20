@@ -380,6 +380,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNDPPCombinePass(*PR);
   initializeSILowerI1CopiesPass(*PR);
   initializeSILowerWWMCopiesPass(*PR);
+  initializeAMDGPUMarkLastScratchLoadPass(*PR);
   initializeSILowerSGPRSpillsPass(*PR);
   initializeSIFixSGPRCopiesPass(*PR);
   initializeSIFixVGPRCopiesPass(*PR);
@@ -959,6 +960,7 @@ public:
 
   void addPreRegAlloc() override;
   bool addPreRewrite() override;
+  void addPreStackSlotColoring() override;
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -1340,6 +1342,10 @@ bool GCNPassConfig::addPreRewrite() {
   if (EnableRegReassign)
     addPass(&GCNNSAReassignID);
   return true;
+}
+
+void GCNPassConfig::addPreStackSlotColoring() {
+  addPass(&AMDGPUMarkLastScratchLoadID);
 }
 
 FunctionPass *GCNPassConfig::createSGPRAllocPass(bool Optimized) {

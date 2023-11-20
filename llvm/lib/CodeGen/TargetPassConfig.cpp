@@ -1496,6 +1496,8 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   addPass(&MachineSchedulerID);
 
   if (addRegAssignAndRewriteOptimized()) {
+    addPreStackSlotColoring();
+
     // Perform stack slot coloring and post-ra machine LICM.
     addPass(&StackSlotColoringID);
 
