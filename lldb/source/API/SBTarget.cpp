@@ -16,7 +16,6 @@
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBExpressionOptions.h"
-#include "lldb/API/SBFile.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBModule.h"
@@ -245,31 +244,6 @@ SBProcess SBTarget::LoadCore(const char *core_file, lldb::SBError &error) {
   TargetSP target_sp(GetSP());
   if (target_sp) {
     FileSpec filespec(core_file);
-    FileSystem::Instance().Resolve(filespec);
-    ProcessSP process_sp(target_sp->CreateProcess(
-        target_sp->GetDebugger().GetListener(), "", &filespec, false));
-    if (process_sp) {
-      error.SetError(process_sp->LoadCore());
-      if (error.Success())
-        sb_process.SetSP(process_sp);
-    } else {
-      error.SetErrorString("Failed to create the process");
-    }
-  } else {
-    error.SetErrorString("SBTarget is invalid");
-  }
-  return sb_process;
-}
-
-SBProcess SBTarget::LoadCore(const SBFile &file, lldb::SBError &error) {
-  LLDB_INSTRUMENT_VA(this, file, error);
-
-  SBProcess sb_process;
-  TargetSP target_sp(GetSP());
-  if (target_sp) {
-    FileSP file_sp = file.GetFile();
-    FileSpec filespec;
-    file_sp->GetFileSpec(filespec);
     FileSystem::Instance().Resolve(filespec);
     ProcessSP process_sp(target_sp->CreateProcess(
         target_sp->GetDebugger().GetListener(), "", &filespec, false));
