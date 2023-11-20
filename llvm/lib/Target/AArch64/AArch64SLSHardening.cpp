@@ -14,7 +14,6 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/IndirectThunks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -222,8 +221,7 @@ void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
 
   const TargetInstrInfo *TII =
       MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
-  assert (MF.size() == 0);
-  MF.push_back(MF.CreateMachineBasicBlock());
+  assert (MF.size() == 1);
   MachineBasicBlock *Entry = &MF.front();
   Entry->clear();
 

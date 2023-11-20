@@ -115,11 +115,11 @@ static cl::opt<double> MaxMergeDensityRatio(
     "ext-tsp-max-merge-density-ratio", cl::ReallyHidden, cl::init(100),
     cl::desc("The maximum ratio between densities of two chains for merging"));
 
-// Algorithm-specific options for CDS.
-static cl::opt<unsigned> CacheEntries("cds-cache-entries", cl::ReallyHidden,
+// Algorithm-specific options for CDSort.
+static cl::opt<unsigned> CacheEntries("cdsort-cache-entries", cl::ReallyHidden,
                                       cl::desc("The size of the cache"));
 
-static cl::opt<unsigned> CacheSize("cds-cache-size", cl::ReallyHidden,
+static cl::opt<unsigned> CacheSize("cdsort-cache-size", cl::ReallyHidden,
                                    cl::desc("The size of a line in the cache"));
 
 static cl::opt<unsigned>
@@ -127,11 +127,11 @@ static cl::opt<unsigned>
                    cl::desc("The maximum size of a chain to create"));
 
 static cl::opt<double> DistancePower(
-    "cds-distance-power", cl::ReallyHidden,
+    "cdsort-distance-power", cl::ReallyHidden,
     cl::desc("The power exponent for the distance-based locality"));
 
 static cl::opt<double> FrequencyScale(
-    "cds-frequency-scale", cl::ReallyHidden,
+    "cdsort-frequency-scale", cl::ReallyHidden,
     cl::desc("The scale factor for the frequency-based locality"));
 
 namespace {
@@ -614,7 +614,7 @@ private:
   void initialize(const ArrayRef<uint64_t> &NodeSizes,
                   const ArrayRef<uint64_t> &NodeCounts,
                   const ArrayRef<EdgeCount> &EdgeCounts) {
-    // Initialize nodes
+    // Initialize nodes.
     AllNodes.reserve(NumNodes);
     for (uint64_t Idx = 0; Idx < NumNodes; Idx++) {
       uint64_t Size = std::max<uint64_t>(NodeSizes[Idx], 1ULL);
@@ -625,7 +625,7 @@ private:
       AllNodes.emplace_back(Idx, Size, ExecutionCount);
     }
 
-    // Initialize jumps between nodes
+    // Initialize jumps between the nodes.
     SuccNodes.resize(NumNodes);
     PredNodes.resize(NumNodes);
     std::vector<uint64_t> OutDegree(NumNodes, 0);
@@ -644,6 +644,9 @@ private:
         AllJumps.emplace_back(&PredNode, &SuccNode, Edge.count);
         SuccNode.InJumps.push_back(&AllJumps.back());
         PredNode.OutJumps.push_back(&AllJumps.back());
+        // Adjust execution counts.
+        PredNode.ExecutionCount = std::max(PredNode.ExecutionCount, Edge.count);
+        SuccNode.ExecutionCount = std::max(SuccNode.ExecutionCount, Edge.count);
       }
     }
     for (JumpT &Jump : AllJumps) {
@@ -667,6 +670,7 @@ private:
     AllEdges.reserve(AllJumps.size());
     for (NodeT &PredNode : AllNodes) {
       for (JumpT *Jump : PredNode.OutJumps) {
+        assert(Jump->ExecutionCount > 0 && "incorrectly initialized jump");
         NodeT *SuccNode = Jump->Target;
         ChainEdge *CurEdge = PredNode.CurChain->getEdge(SuccNode->CurChain);
         // This edge is already present in the graph.
@@ -760,13 +764,13 @@ private:
           // Skip the merge if the ratio between the densities exceeds
           // MaxMergeDensityRatio. Smaller values of the option result in fewer
           // merges, and hence, more chains.
-          auto ChainPredDensity = ChainPred->density();
-          auto ChainSuccDensity = ChainSucc->density();
-          auto [minDensity, maxDensity] =
-              std::minmax(ChainPredDensity, ChainSuccDensity);
-          assert(minDensity > 0.0 && maxDensity > 0.0 &&
+          const double ChainPredDensity = ChainPred->density();
+          const double ChainSuccDensity = ChainSucc->density();
+          assert(ChainPredDensity > 0.0 && ChainSuccDensity > 0.0 &&
                  "incorrectly computed chain densities");
-          const double Ratio = maxDensity / minDensity;
+          auto [MinDensity, MaxDensity] =
+              std::minmax(ChainPredDensity, ChainSuccDensity);
+          const double Ratio = MaxDensity / MinDensity;
           if (Ratio > MaxMergeDensityRatio)
             continue;
 
@@ -1028,8 +1032,8 @@ private:
   std::vector<ChainT *> HotChains;
 };
 
-/// The implementation of the Cache-Directed Sort (CDS) algorithm for ordering
-/// functions represented by a call graph.
+/// The implementation of the Cache-Directed Sort (CDSort) algorithm for
+/// ordering functions represented by a call graph.
 class CDSortImpl {
 public:
   CDSortImpl(const CDSortConfig &Config, ArrayRef<uint64_t> NodeSizes,
@@ -1084,6 +1088,9 @@ private:
         AllJumps.back().Offset = EdgeOffsets[I];
         SuccNode.InJumps.push_back(&AllJumps.back());
         PredNode.OutJumps.push_back(&AllJumps.back());
+        // Adjust execution counts.
+        PredNode.ExecutionCount = std::max(PredNode.ExecutionCount, Count);
+        SuccNode.ExecutionCount = std::max(SuccNode.ExecutionCount, Count);
       }
     }
 
@@ -1104,13 +1111,13 @@ private:
       for (JumpT *Jump : PredNode.OutJumps) {
         NodeT *SuccNode = Jump->Target;
         ChainEdge *CurEdge = PredNode.CurChain->getEdge(SuccNode->CurChain);
-        // this edge is already present in the graph.
+        // This edge is already present in the graph.
         if (CurEdge != nullptr) {
           assert(SuccNode->CurChain->getEdge(PredNode.CurChain) != nullptr);
           CurEdge->appendJump(Jump);
           continue;
         }
-        // this is a new edge.
+        // This is a new edge.
         AllEdges.emplace_back(Jump);
         PredNode.CurChain->addEdge(SuccNode->CurChain, &AllEdges.back());
         SuccNode->CurChain->addEdge(PredNode.CurChain, &AllEdges.back());

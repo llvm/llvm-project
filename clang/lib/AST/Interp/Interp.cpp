@@ -131,19 +131,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
   const Function *CurFunc = S.Current->getFunction();
   assert(CurFunc);
 
-  // Certain builtin functions are declared as func-name(...), so the
-  // parameters are checked in Sema and only available through the CallExpr.
-  // The interp::Function we create for them has 0 parameters, so we need to
-  // remove them from the stack by checking the CallExpr.
-  // FIXME: This is potentially just a special case and could be handled more
-  // generally with the code just below?
-  if (CurFunc->needsRuntimeArgPop(S.getCtx())) {
-    const auto *CE = cast<CallExpr>(S.Current->getExpr(OpPC));
-    for (int32_t I = CE->getNumArgs() - 1; I >= 0; --I) {
-      popArg(S, CE->getArg(I));
-    }
+  if (CurFunc->isUnevaluatedBuiltin())
     return;
-  }
 
   if (S.Current->Caller && CurFunc->isVariadic()) {
     // CallExpr we're look for is at the return PC of the current function, i.e.
@@ -213,6 +202,10 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   return true;
+}
+
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  return !Ptr.isZero() && !Ptr.isDummy();
 }
 
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -297,6 +290,8 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 }
 
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!CheckDummy(S, OpPC, Ptr))
+    return false;
   if (!CheckLive(S, OpPC, Ptr, AK_Read))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
@@ -433,7 +428,8 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
 static void DiagnoseUninitializedSubobject(InterpState &S, const SourceInfo &SI,
                                            const FieldDecl *SubObjDecl) {
   assert(SubObjDecl && "Subobject declaration does not exist");
-  S.FFDiag(SI, diag::note_constexpr_uninitialized) << SubObjDecl;
+  S.FFDiag(SI, diag::note_constexpr_uninitialized)
+      << /*(name)*/ 1 << SubObjDecl;
   S.Note(SubObjDecl->getLocation(),
          diag::note_constexpr_subobject_declared_here);
 }
@@ -483,6 +479,8 @@ static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
 
     if (FieldType->isRecordType()) {
       Result &= CheckFieldsInitialized(S, OpPC, FieldPtr, FieldPtr.getRecord());
+    } else if (FieldType->isIncompleteArrayType()) {
+      // Nothing to do here.
     } else if (FieldType->isArrayType()) {
       const auto *CAT =
           cast<ConstantArrayType>(FieldType->getAsArrayTypeUnsafe());

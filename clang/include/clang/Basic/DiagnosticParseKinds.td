@@ -1342,6 +1342,23 @@ def err_opencl_logical_exclusive_or : Error<
 def err_openclcxx_virtual_function : Error<
   "virtual functions are not supported in C++ for OpenCL">;
 
+// OpenACC Support.
+def warn_pragma_acc_ignored
+    : Warning<"unexpected '#pragma acc ...' in program">,
+      InGroup<SourceUsesOpenACC>,
+      DefaultIgnore;
+def err_acc_unexpected_directive
+    : Error<"unexpected OpenACC directive %select{|'#pragma acc %1'}0">;
+def warn_pragma_acc_unimplemented
+    : Warning<"OpenACC directives not yet implemented, pragma ignored">,
+      InGroup<SourceUsesOpenACC>;
+def warn_pragma_acc_unimplemented_clause_parsing
+    : Warning<"OpenACC clause parsing not yet implemented">,
+      InGroup<SourceUsesOpenACC>;
+def err_acc_invalid_directive
+    : Error<"invalid OpenACC directive '%0'">;
+def err_acc_missing_directive : Error<"expected OpenACC directive">;
+
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<
   "unexpected '#pragma omp ...' in program">, InGroup<SourceUsesOpenMP>, DefaultIgnore;
@@ -1349,7 +1366,9 @@ def warn_omp_extra_tokens_at_eol : Warning<
   "extra tokens at the end of '#pragma omp %0' are ignored">,
   InGroup<ExtraTokens>;
 def err_omp_multiple_step_or_linear_modifier : Error<
-  "multiple %select{'step size'|'linear modifier'}0 found in linear clause">; 
+  "multiple %select{'step size'|'linear modifier'}0 found in linear clause">;
+def err_omp_deprecate_old_syntax: Error<
+  "old syntax '%0' on '%1' clause was deprecated, use new syntax '%2'">;
 def warn_pragma_expected_colon_r_paren : Warning<
   "missing ':' or ')' after %0 - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unknown_directive : Error<

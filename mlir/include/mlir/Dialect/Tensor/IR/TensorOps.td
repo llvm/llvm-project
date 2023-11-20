@@ -659,6 +659,7 @@ def Tensor_GatherOp : Tensor_Op<"gather", [
     }
   }];
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -986,6 +987,7 @@ def Tensor_ReshapeOp: Tensor_Op<"reshape", [
     $source `(` $shape `)` attr-dict `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1751,42 +1753,71 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     AttrSizedOperandSegments]> {
   let summary = "tensor pack operation";
   let description = [{
-    The pack operation converts an input tensor to a higher-dimensional tensor
-    with a tiled and packed layout. The mandatory `inner_dims_pos` attribute
-    specifies a permutation for the original dimensions, while `inner_tiles` is the
-    tiling factor for each dimension. The optional attribute `outer_dims_perm`
-    specifies the order for the tiled data dimension, while the attribute
+    The "pack" operation converts a source tensor of rank `n` into a result
+    tensor of rank `n + k` with a tiled and packed layout (maybe with padding)
+    and optionally transposes the tiled source tensor dimensions.
+
+    `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions that are
+    being tiled, where `0 < k <= n`. The order of the dimensions matters: the
+    tiled dimensions (of size `inner_tiles`) are added to the end of the result
+    tensor in the order in which they appear in `inner_dims_pos`.
+
+    `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions that are
+    being tiled, where `0 < k <= n`. The order of the dimensions matters:
+    `inner_dims_pos[i]` specifies the source tensor dimension tiled by
+    `inner_tiles[i]`.
+
+    `inner_tiles` (mandatory) specifies `k` tile sizes. These tile sizes
+    correspond to the least significant ("inner") result tensor dimension sizes,
+    in the same order. Tile sizes can be static or dynamic.
+
+    Example: If `inner_tiles = [16, 32]`, the result tensor has a shape of
+    `...x16x32`. If `inner_dims_pos = [0, 1]`, the 0th source dimension is tiled
+    by 16 and the 1st source dimension is tiled by 32. Other source dimensions
+    (if any) are not tiled. If `inner_dims_pos = [1, 0]`, the 1st dimension is
+    tiled by 16 and the 0th dimension is tiled by 32.
+
+    Example:
+    ```mlir
+    // NC to NCnc
+    %0 = tensor.pack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32]
+        into %dest : tensor<128x256xf32> -> tensor<16x8 x 8x32 xf32>
+    //                                             \  /   \  /
+    //                                       outer dims  inner dims
+    ```
+
+    `outer_dims_perm` (optional) specifies a permutation for the outer
+    dimensions. If specified, it must have `n` elements.
+
+    Example:
+    ```mlir
+    // CK to KCck
+    %0 = tensor.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
+        inner_tiles = [8, 32] into %dest
+        : tensor<128x256xf32> -> tensor<8x16 x 8x32 xf32>
+    //                                  \  /
+    //            compare with "NC to NCnc": outer dims are transposed
+    ```
+
     `padding_value` specifies a padding value at the boundary on non-perfectly
     divisible dimensions. Padding is optional:
     - If absent, it is UB if the tile does not perfectly divide the dimension.
     - If present, it will pad along high dimensions (high-padding) to make the
       tile complete.
 
-    Example NC_to_NCnc:
-
+    Example:
     ```mlir
-    %0 = tensor.pack %source inner_dims_pos = [0, 1]
-      inner_tiles = [8, 32] into %dest : tensor<128x256xf32> -> tensor<16x8x8x32xf32>
+    %0 = tensor.pack %arg0 padding_value(%pad : f32) outer_dims_perm = [2, 1, 0]
+        inner_dims_pos = [1] inner_tiles = [2] into %arg1
+        : tensor<200x127x256xf32> -> tensor<256x64x200x2xf32>
+    //                 \
+    //                padded and tiled dim
+    //
+    // Source dimension 1 is tiled. 64 does not divide 127 evenly, so 1 padded
+    // element is added at the end.
+    //
+    // Note: Only tiled dimensions can be padded.
     ```
-    Example CK to KCck
-
-    ```mlir
-    %0 = tensor.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
-      inner_tiles = [8, 32] into %dest : tensor<128x256xf32> -> tensor<8x16x8x32xf32>
-    ```
-
-    In all cases, dimension at position 0 in the input tensor (128) is tiled
-    with a factor of 8, while dimension at position 1 (256) is tiled with a factor
-    of 32. In the second example, the outer data dimensions are interchanged
-    according to `outer_dims_perm`.
-
-    Example NC_to_NCnc with padding:
-
-    ```mlir
-    %0 = tensor.pack %arg padding_value(%pad : f32) inner_dims_pos = [0, 1]
-      inner_tiles = [8, 2] into %arg1 : tensor<13x15xf32> -> tensor<2x8x8x2xf32>
-    ```
-
   }];
   let arguments = (ins AnyRankedTensor:$source,
                        AnyRankedTensor:$dest,
@@ -1867,6 +1898,8 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
   }];
 
   let hasCanonicalizeMethod = 1;
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1876,25 +1909,40 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
 def Tensor_UnPackOp : Tensor_RelayoutOp<"unpack"> {
   let summary = "tensor unpack operation";
   let description = [{
-    The unpack operation converts a tensor with a tiled and packed layout to a
-    lower-dimensional tensor. Similar to `pack`,  the mandatory attributes
-    `inner_dims_pos` specifies a permutation for the inner data dimensions, while
-    `inner_tiles` is the tiling factor. The attribute `outer_dims_perm` has the
-    exact behavior as the one described in `pack`. In `unpack`, it is UB if the
-    tile does not perfectly divide the dimension.
+    The "unpack" operation converts a source tensor of rank `n` with a tiled and
+    packed layout to a result tensor of rank `n - k`.
 
-    Example NCnc_to_NC:
+    `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions with
+    which the last `k` source tensor dimensions are combined, where
+    `0 < k <= n/2`. Each `inner_dims_pos` element must be `>= 0` and `< n - k`.
+    The order of the dimensions in `inner_dims_pos` matters: dimension
+    `inner_dims_pos[i]` is combined with dimension `n - k + i` (assuming that
+    `outer_dims_perm` is not specified).
+
+    `inner_tiles` (mandatory) specifies `k` tile sizes. These tile sizes
+    correspond to the least significant ("inner") source tensor dimension sizes.
+    The behavior of this op is undefined if:
+    - `inner_tiles` do not exactly match with the corresponding source tensor
+      dimension sizes.
+    - Or, `inner_tiles[i]` does not divide the size of dimension
+      `inner_dims_pos[i]` (assuming that `outer_dims_perm` is not specified)
+      evenly.
+
+    `outer_dims_perm` (optional) specifies a permutation for the outer
+    dimensions. If specified, it must have `n - k` elements. If specified, this
+    permutation is applied before combining any dimensions.
+
+    Example:
 
     ```mlir
-    %0 = tensor.unpack %source inner_dims_pos = [0, 1]
-      inner_tiles = [8, 32] into %dest : tensor<16x8x8x32xf32> -> tensor<128x256xf32>
-    ```
+    // NCnc to NC:
+    %0 = tensor.unpack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32]
+        into %dest : tensor<16x8x8x32xf32> -> tensor<128x256xf32>
 
-    Example CK to KCck:
-
-    ```mlir
-    %0 = tensor.unapck %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
-      inner_tiles = [8, 32] into %dest : tensor<8x16x8x32xf32> -> tensor<128x256xf32>
+    // CK to KCck:
+    %0 = tensor.unpack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
+        inner_tiles = [8, 32] into %dest
+        : tensor<8x16x8x32xf32> -> tensor<128x256xf32>
     ```
   }];
   let arguments = (ins AnyRankedTensor:$source,
@@ -1948,6 +1996,8 @@ def Tensor_UnPackOp : Tensor_RelayoutOp<"unpack"> {
   }];
 
   let hasCanonicalizeMethod = 1;
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

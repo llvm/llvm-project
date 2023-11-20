@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
+//
 // The slash direction in linux and windows are different.
 // UNSUPPORTED: system-windows
 //
@@ -42,6 +44,14 @@
 // RUN: clang-scan-deps -format=p1689 \
 // RUN:   -- %clang++ -std=c++20 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -c %t/impl_part.cppm -o %t/impl_part.o \
 // RUN:   | FileCheck %t/impl_part.cppm -DPREFIX=%/t
+//
+// Check the path in the make style dependencies are generated in relative path form
+// RUN: cd %t
+// RUN: clang-scan-deps -format=p1689 \
+// RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t impl_part.cppm -o impl_part.o \
+// RUN:      -MT impl_part.o.ddi -MD -MF impl_part.dep
+// RUN:   cat impl_part.dep | FileCheck impl_part.cppm -DPREFIX=%/t --check-prefix=CHECK-MAKE-RELATIVE
+
 
 //--- P1689.json.in
 [
@@ -167,6 +177,8 @@ void World() {
 // CHECK-MAKE: [[PREFIX]]/impl_part.o.ddi:
 // CHECK-MAKE:   [[PREFIX]]/impl_part.cppm
 // CHECK-MAKE:   [[PREFIX]]/header.mock
+
+// CHECK-MAKE-RELATIVE: impl_part.o.ddi: impl_part.cppm header.mock
 
 //--- interface_part.cppm
 export module M:interface_part;

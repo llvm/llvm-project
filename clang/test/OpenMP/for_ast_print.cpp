@@ -48,7 +48,11 @@ public:
 #pragma omp for lastprivate(a) lastprivate(this->a) lastprivate(T::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
+#if defined(OMP52)
+#pragma omp for linear(c: val)
+#else
 #pragma omp for linear(val(c))
+#endif
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }
@@ -59,7 +63,11 @@ public:
 #pragma omp for lastprivate(a) lastprivate(this->a)
     for (int k = 0; k < s.a.a; ++k)
       ++s.a.a;
+#if defined(OMP52)
+#pragma omp for linear(this->b: uval)
+#else
 #pragma omp for linear(uval(this->b))
+#endif
     for (int k = 0; k < s.a.a; ++k)
       ++s.a.a;
     return *this;
@@ -87,7 +95,11 @@ public:
 #pragma omp for lastprivate(a) lastprivate(this->a) lastprivate(S7<S>::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
+#if defined(OMP52)
+#pragma omp for linear(S7<S>::d: ref)
+#else
 #pragma omp for linear(ref(S7<S>::d))
+#endif
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }

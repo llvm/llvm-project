@@ -1060,9 +1060,9 @@ public:
   }
 
   /// If the specific machine instruction is an instruction that adds an
-  /// immediate value and a physical register, and stores the result in
-  /// the given physical register \c Reg, return a pair of the source
-  /// register and the offset which has been added.
+  /// immediate value and a register, and stores the result in the given
+  /// register \c Reg, return a pair of the source register and the offset
+  /// which has been added.
   virtual std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
                                                    Register Reg) const {
     return std::nullopt;
@@ -1988,8 +1988,10 @@ public:
 
   /// True if the instruction is bound to the top of its basic block and no
   /// other instructions shall be inserted before it. This can be implemented
-  /// to prevent register allocator to insert spills before such instructions.
-  virtual bool isBasicBlockPrologue(const MachineInstr &MI) const {
+  /// to prevent register allocator to insert spills for \p Reg before such
+  /// instructions.
+  virtual bool isBasicBlockPrologue(const MachineInstr &MI,
+                                    Register Reg = Register()) const {
     return false;
   }
 

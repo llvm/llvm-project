@@ -67,16 +67,8 @@ static bool isVLPreservingConfig(const MachineInstr &MI) {
   return RISCV::X0 == MI.getOperand(0).getReg();
 }
 
-static uint16_t getRVVMCOpcode(uint16_t RVVPseudoOpcode) {
-  const RISCVVPseudosTable::PseudoInfo *RVV =
-      RISCVVPseudosTable::getPseudoInfo(RVVPseudoOpcode);
-  if (!RVV)
-    return 0;
-  return RVV->BaseInstr;
-}
-
 static bool isFloatScalarMoveOrScalarSplatInstr(const MachineInstr &MI) {
-  switch (getRVVMCOpcode(MI.getOpcode())) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   default:
     return false;
   case RISCV::VFMV_S_F:
@@ -86,7 +78,7 @@ static bool isFloatScalarMoveOrScalarSplatInstr(const MachineInstr &MI) {
 }
 
 static bool isScalarExtractInstr(const MachineInstr &MI) {
-  switch (getRVVMCOpcode(MI.getOpcode())) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   default:
     return false;
   case RISCV::VMV_X_S:
@@ -96,7 +88,7 @@ static bool isScalarExtractInstr(const MachineInstr &MI) {
 }
 
 static bool isScalarInsertInstr(const MachineInstr &MI) {
-  switch (getRVVMCOpcode(MI.getOpcode())) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   default:
     return false;
   case RISCV::VMV_S_X:
@@ -106,7 +98,7 @@ static bool isScalarInsertInstr(const MachineInstr &MI) {
 }
 
 static bool isScalarSplatInstr(const MachineInstr &MI) {
-  switch (getRVVMCOpcode(MI.getOpcode())) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   default:
     return false;
   case RISCV::VMV_V_I:
@@ -117,7 +109,7 @@ static bool isScalarSplatInstr(const MachineInstr &MI) {
 }
 
 static bool isVSlideInstr(const MachineInstr &MI) {
-  switch (getRVVMCOpcode(MI.getOpcode())) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   default:
     return false;
   case RISCV::VSLIDEDOWN_VX:
@@ -131,7 +123,7 @@ static bool isVSlideInstr(const MachineInstr &MI) {
 /// Get the EEW for a load or store instruction.  Return std::nullopt if MI is
 /// not a load or store which ignores SEW.
 static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
-  switch (getRVVMCOpcode(MI.getOpcode())) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   default:
     return std::nullopt;
   case RISCV::VLE8_V:
@@ -301,18 +293,23 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DemandedFields &DF) {
 /// of instructions) which use only the Used subfields and properties.
 static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
                                 const DemandedFields &Used) {
-  if (Used.SEW == DemandedFields::SEWEqual &&
-      RISCVVType::getSEW(CurVType) != RISCVVType::getSEW(NewVType))
-    return false;
-
-  if (Used.SEW == DemandedFields::SEWGreaterThanOrEqual &&
-      RISCVVType::getSEW(NewVType) < RISCVVType::getSEW(CurVType))
-    return false;
-
-  if (Used.SEW == DemandedFields::SEWGreaterThanOrEqualAndLessThan64 &&
-      (RISCVVType::getSEW(NewVType) < RISCVVType::getSEW(CurVType) ||
-       RISCVVType::getSEW(NewVType) >= 64))
-    return false;
+  switch (Used.SEW) {
+  case DemandedFields::SEWNone:
+    break;
+  case DemandedFields::SEWEqual:
+    if (RISCVVType::getSEW(CurVType) != RISCVVType::getSEW(NewVType))
+      return false;
+    break;
+  case DemandedFields::SEWGreaterThanOrEqual:
+    if (RISCVVType::getSEW(NewVType) < RISCVVType::getSEW(CurVType))
+      return false;
+    break;
+  case DemandedFields::SEWGreaterThanOrEqualAndLessThan64:
+    if (RISCVVType::getSEW(NewVType) < RISCVVType::getSEW(CurVType) ||
+        RISCVVType::getSEW(NewVType) >= 64)
+      return false;
+    break;
+  }
 
   if (Used.LMUL &&
       RISCVVType::getVLMUL(CurVType) != RISCVVType::getVLMUL(NewVType))
@@ -533,6 +530,8 @@ public:
     TailAgnostic = TA;
     MaskAgnostic = MA;
   }
+
+  void setVLMul(RISCVII::VLMUL VLMul) { this->VLMul = VLMul; }
 
   unsigned encodeVTYPE() const {
     assert(isValid() && !isUnknown() && !SEWLMULRatioOnly &&
@@ -1024,6 +1023,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
     return;
 
   const VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, MRI);
+  assert(NewInfo.isValid() && !NewInfo.isUnknown());
   if (Info.isValid() && !needVSETVLI(MI, NewInfo, Info))
     return;
 
@@ -1033,17 +1033,27 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   if (!RISCVII::hasVLOp(TSFlags))
     return;
 
-  // For vmv.s.x and vfmv.s.f, there are only two behaviors, VL = 0 and
-  // VL > 0. We can discard the user requested AVL and just use the last
-  // one if we can prove it equally zero.  This removes a vsetvli entirely
-  // if the types match or allows use of cheaper avl preserving variant
-  // if VLMAX doesn't change.  If VLMAX might change, we couldn't use
-  // the 'vsetvli x0, x0, vtype" variant, so we avoid the transform to
-  // prevent extending live range of an avl register operand.
+  // If we don't use LMUL or the SEW/LMUL ratio, then adjust LMUL so that we
+  // maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
+  // places.
+  DemandedFields Demanded = getDemanded(MI, MRI, ST);
+  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isValid() &&
+      !PrevInfo.isUnknown()) {
+    if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
+            PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
+      Info.setVLMul(*NewVLMul);
+  }
+
+  // If we only demand VL zeroness (i.e. vmv.s.x and vmv.x.s), then there are
+  // only two behaviors, VL = 0 and VL > 0. We can discard the user requested
+  // AVL and just use the last one if we can prove it equally zero. This
+  // removes a vsetvli entirely if the types match or allows use of cheaper avl
+  // preserving variant if VLMAX doesn't change. If VLMAX might change, we
+  // couldn't use the 'vsetvli x0, x0, vtype" variant, so we avoid the transform
+  // to prevent extending live range of an avl register operand.
   // TODO: We can probably relax this for immediates.
-  if (isScalarInsertInstr(MI) && PrevInfo.isValid() &&
-      PrevInfo.hasEquallyZeroAVL(Info, *MRI) &&
-      Info.hasSameVLMAX(PrevInfo)) {
+  if (Demanded.VLZeroness && !Demanded.VLAny && PrevInfo.isValid() &&
+      PrevInfo.hasEquallyZeroAVL(Info, *MRI) && Info.hasSameVLMAX(PrevInfo)) {
     if (PrevInfo.hasAVLImm())
       Info.setAVLImm(PrevInfo.getAVLImm());
     else
@@ -1298,29 +1308,6 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
   }
 }
 
-/// Return true if the VL value configured by a vset(i)vli with the
-/// provided Info must be equal to the requested AVL.  That is, that
-/// AVL <= VLMAX.
-static bool willVLBeAVL(const VSETVLIInfo &Info, const RISCVSubtarget &ST) {
-  if (!Info.hasAVLImm())
-    // VLMAX is always the same value.
-    // TODO: Could extend to other registers by looking at the associated vreg
-    // def placement.
-    return RISCV::X0 == Info.getAVLReg();
-
-  unsigned AVL = Info.getAVLImm();
-  unsigned SEW = Info.getSEW();
-  unsigned AVLInBits = AVL * SEW;
-
-  unsigned LMul;
-  bool Fractional;
-  std::tie(LMul, Fractional) = RISCVVType::decodeVLMUL(Info.getVLMUL());
-
-  if (Fractional)
-    return ST.getRealMinVLen() / LMul >= AVLInBits;
-  return ST.getRealMinVLen() * LMul >= AVLInBits;
-}
-
 /// Perform simple partial redundancy elimination of the VSETVLI instructions
 /// we're about to insert by looking for cases where we can PRE from the
 /// beginning of one block to the end of one of its predecessors.  Specifically,
@@ -1354,9 +1341,21 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
   if (UnavailablePred->succ_size() != 1)
     return;
 
-  // If VL can be less than AVL, then we can't reduce the frequency of exec.
-  if (!willVLBeAVL(AvailableInfo, *ST))
-    return;
+  // If the AVL value is a register (other than our VLMAX sentinel),
+  // we need to prove the value is available at the point we're going
+  // to insert the vsetvli at.
+  if (AvailableInfo.hasAVLReg() && RISCV::X0 != AvailableInfo.getAVLReg()) {
+    MachineInstr *AVLDefMI = MRI->getVRegDef(AvailableInfo.getAVLReg());
+    if (!AVLDefMI)
+      return;
+    // This is an inline dominance check which covers the case of
+    // UnavailablePred being the preheader of a loop.
+    if (AVLDefMI->getParent() != UnavailablePred)
+      return;
+    for (auto &TermMI : UnavailablePred->terminators())
+      if (&TermMI == AVLDefMI)
+        return;
+  }
 
   // Model the effect of changing the input state of the block MBB to
   // AvailableInfo.  We're looking for two issues here; one legality,

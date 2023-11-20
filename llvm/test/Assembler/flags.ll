@@ -174,16 +174,6 @@ define i64 @mul_both_ce() {
 	ret i64 mul nuw nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
-define i64 @ashr_exact_ce() {
-; CHECK: ret i64 ashr exact (i64 ptrtoint (ptr @addr to i64), i64 9)
-	ret i64 ashr exact (i64 ptrtoint (ptr @addr to i64), i64 9)
-}
-
-define i64 @lshr_exact_ce() {
-; CHECK: ret i64 lshr exact (i64 ptrtoint (ptr @addr to i64), i64 9)
-	ret i64 lshr exact (i64 ptrtoint (ptr @addr to i64), i64 9)
-}
-
 define ptr @gep_nw_ce() {
 ; CHECK: ret ptr getelementptr inbounds (i64, ptr @addr, i64 171)
         ret ptr getelementptr inbounds (i64, ptr @addr, i64 171)
@@ -258,5 +248,11 @@ define i64 @sub_unsigned_ce() {
 define i64 @mul_unsigned_ce() {
 ; CHECK: ret i64 mul nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 	ret i64 mul nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
+}
+
+define i64 @test_zext(i32 %a) {
+; CHECK: %res = zext nneg i32 %a to i64
+  %res = zext nneg i32 %a to i64
+  ret i64 %res
 }
 

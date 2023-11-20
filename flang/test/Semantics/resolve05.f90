@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 program p
   !PORTABILITY: Name 'p' declared in a main program should not have the same name as the main program
   integer :: p

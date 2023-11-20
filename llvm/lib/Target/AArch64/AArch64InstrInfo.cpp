@@ -3538,8 +3538,10 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::PRFUMi:
   case AArch64::LDURXi:
   case AArch64::LDURDi:
+  case AArch64::LDAPURXi:
   case AArch64::STURXi:
   case AArch64::STURDi:
+  case AArch64::STLURXi:
     Width = 8;
     Scale = TypeSize::Fixed(1);
     MinOffset = -256;
@@ -3548,8 +3550,11 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDURWi:
   case AArch64::LDURSi:
   case AArch64::LDURSWi:
+  case AArch64::LDAPURi:
+  case AArch64::LDAPURSWi:
   case AArch64::STURWi:
   case AArch64::STURSi:
+  case AArch64::STLURWi:
     Width = 4;
     Scale = TypeSize::Fixed(1);
     MinOffset = -256;
@@ -3559,8 +3564,12 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDURHHi:
   case AArch64::LDURSHXi:
   case AArch64::LDURSHWi:
+  case AArch64::LDAPURHi:
+  case AArch64::LDAPURSHWi:
+  case AArch64::LDAPURSHXi:
   case AArch64::STURHi:
   case AArch64::STURHHi:
+  case AArch64::STLURHi:
     Width = 2;
     Scale = TypeSize::Fixed(1);
     MinOffset = -256;
@@ -3570,8 +3579,12 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDURBBi:
   case AArch64::LDURSBXi:
   case AArch64::LDURSBWi:
+  case AArch64::LDAPURBi:
+  case AArch64::LDAPURSBWi:
+  case AArch64::LDAPURSBXi:
   case AArch64::STURBi:
   case AArch64::STURBBi:
+  case AArch64::STLURBi:
     Width = 1;
     Scale = TypeSize::Fixed(1);
     MinOffset = -256;
@@ -4426,36 +4439,27 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (AArch64::PNRRegClass.contains(DestReg) &&
-      AArch64::PPRRegClass.contains(SrcReg)) {
+  // Copy a predicate-as-counter register by ORRing with itself as if it
+  // were a regular predicate (mask) register.
+  bool DestIsPNR = AArch64::PNRRegClass.contains(DestReg);
+  bool SrcIsPNR = AArch64::PNRRegClass.contains(SrcReg);
+  if (DestIsPNR || SrcIsPNR) {
     assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
            "Unexpected predicate-as-counter register.");
-    // Copy from pX to pnX is a no-op
-    if ((DestReg.id() - AArch64::PN0) == (SrcReg.id() - AArch64::P0))
-      return;
-    MCRegister PPRDestReg = (DestReg - AArch64::PN0) + AArch64::P0;
-    BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), PPRDestReg)
-        .addReg(SrcReg)
-        .addReg(SrcReg)
-        .addReg(SrcReg, getKillRegState(KillSrc))
-        .addDef(DestReg, RegState::Implicit);
-    return;
-  }
+    auto ToPPR = [](MCRegister R) -> MCRegister {
+      return (R - AArch64::PN0) + AArch64::P0;
+    };
+    MCRegister PPRSrcReg = SrcIsPNR ? ToPPR(SrcReg) : SrcReg;
+    MCRegister PPRDestReg = DestIsPNR ? ToPPR(DestReg) : DestReg;
 
-  if (AArch64::PPRRegClass.contains(DestReg) &&
-      AArch64::PNRRegClass.contains(SrcReg)) {
-    assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
-           "Unexpected predicate-as-counter register.");
-    // Copy from pnX to pX is a no-op
-    if ((DestReg.id() - AArch64::P0) == (SrcReg.id() - AArch64::PN0))
-      return;
-    MCRegister PNRDestReg = (DestReg - AArch64::P0) + AArch64::PN0;
-    MCRegister PPRSrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
-    BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), DestReg)
-        .addReg(PPRSrcReg)
-        .addReg(PPRSrcReg)
-        .addReg(PPRSrcReg, getKillRegState(KillSrc))
-        .addDef(PNRDestReg, RegState::Implicit);
+    if (PPRSrcReg != PPRDestReg) {
+      auto NewMI = BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), PPRDestReg)
+                       .addReg(PPRSrcReg) // Pg
+                       .addReg(PPRSrcReg)
+                       .addReg(PPRSrcReg, getKillRegState(KillSrc));
+      if (DestIsPNR)
+        NewMI.addDef(DestReg, RegState::Implicit);
+    }
     return;
   }
 
@@ -4770,7 +4774,14 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     } else if (AArch64::PNRRegClass.hasSubClassEq(RC)) {
       assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
              "Unexpected register store without SVE2p1 or SME2");
-      SrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
+      if (SrcReg.isVirtual()) {
+        auto NewSrcReg =
+            MF.getRegInfo().createVirtualRegister(&AArch64::PPRRegClass);
+        BuildMI(MBB, MBBI, DebugLoc(), get(TargetOpcode::COPY), NewSrcReg)
+            .addReg(SrcReg);
+        SrcReg = NewSrcReg;
+      } else
+        SrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
       Opc = AArch64::STR_PXI;
       StackID = TargetStackID::ScalableVector;
     }
@@ -4925,7 +4936,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   unsigned Opc = 0;
   bool Offset = true;
   unsigned StackID = TargetStackID::Default;
-  MCRegister PNRReg = MCRegister::NoRegister;
+  Register PNRReg = MCRegister::NoRegister;
   switch (TRI->getSpillSize(*RC)) {
   case 1:
     if (AArch64::FPR8RegClass.hasSubClassEq(RC))
@@ -4943,7 +4954,10 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
              "Unexpected register load without SVE2p1 or SME2");
       PNRReg = DestReg;
-      DestReg = (DestReg - AArch64::PN0) + AArch64::P0;
+      if (DestReg.isVirtual())
+        DestReg = MF.getRegInfo().createVirtualRegister(&AArch64::PPRRegClass);
+      else
+        DestReg = (DestReg - AArch64::PN0) + AArch64::P0;
       Opc = AArch64::LDR_PXI;
       StackID = TargetStackID::ScalableVector;
     }
@@ -5052,9 +5066,13 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                      .addFrameIndex(FI);
   if (Offset)
     MI.addImm(0);
-  if (PNRReg.isValid())
+  if (PNRReg.isValid() && !PNRReg.isVirtual())
     MI.addDef(PNRReg, RegState::Implicit);
   MI.addMemOperand(MMO);
+
+  if (PNRReg.isValid() && PNRReg.isVirtual())
+    BuildMI(MBB, MBBI, DebugLoc(), get(TargetOpcode::COPY), PNRReg)
+        .addReg(DestReg);
 }
 
 bool llvm::isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,
@@ -5657,7 +5675,7 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
     Offset = Remainder;
   else {
     NewOffset = NewOffset < 0 ? MinOff : MaxOff;
-    Offset = Offset - NewOffset * Scale + Remainder;
+    Offset = Offset - NewOffset * Scale;
   }
 
   if (EmittableOffset)

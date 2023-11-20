@@ -17,7 +17,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 
 #define DEBUG_TYPE "loongarch-asmbackend"
@@ -168,7 +167,7 @@ bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
     return true;
   switch (Fixup.getTargetKind()) {
   default:
-    return false;
+    return STI.hasFeature(LoongArch::FeatureRelax);
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
@@ -193,7 +192,8 @@ bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 std::unique_ptr<MCObjectTargetWriter>
 LoongArchAsmBackend::createObjectTargetWriter() const {
-  return createLoongArchELFObjectWriter(OSABI, Is64Bit);
+  return createLoongArchELFObjectWriter(
+      OSABI, Is64Bit, STI.hasFeature(LoongArch::FeatureRelax));
 }
 
 MCAsmBackend *llvm::createLoongArchAsmBackend(const Target &T,

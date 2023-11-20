@@ -574,6 +574,237 @@ define <16 x i1> @shl_to_ror_eq_16xi16_s8_fail_preserve_i16(<16 x i16> %x) {
   ret <16 x i1> %r
 }
 
+define i1 @shr_to_shl_eq_i32_s5_fail_doesnt_add_up(i32 %x) {
+; CHECK-LABEL: shr_to_shl_eq_i32_s5_fail_doesnt_add_up:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $7, %eax
+; CHECK-NEXT:    shrl $5, %edi
+; CHECK-NEXT:    cmpl %edi, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, 7
+  %sh = lshr i32 %x, 5
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
+define i1 @shr_to_shl_eq_i8_s5_fail_doesnt_add_up2(i32 %x) {
+; CHECK-LABEL: shr_to_shl_eq_i8_s5_fail_doesnt_add_up2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $268435455, %eax # imm = 0xFFFFFFF
+; CHECK-NEXT:    shrl $5, %edi
+; CHECK-NEXT:    cmpl %edi, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, 268435455
+  %sh = lshr i32 %x, 5
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
+define i1 @shr_to_shl_eq_i8_s5_fail_doesnt_add_up3(i32 %x) {
+; CHECK-LABEL: shr_to_shl_eq_i8_s5_fail_doesnt_add_up3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $67108863, %eax # imm = 0x3FFFFFF
+; CHECK-NEXT:    shrl $5, %edi
+; CHECK-NEXT:    cmpl %edi, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, 67108863
+  %sh = lshr i32 %x, 5
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
+define i1 @shr_to_shl_eq_i8_s5_fail_doesnt_not_mask(i32 %x) {
+; CHECK-LABEL: shr_to_shl_eq_i8_s5_fail_doesnt_not_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $11, %eax
+; CHECK-NEXT:    shrl $5, %edi
+; CHECK-NEXT:    cmpl %edi, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, 11
+  %sh = lshr i32 %x, 5
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
+define i1 @shl_to_shr_eq_i32_s9_fail_wrong_mask(i32 %x) {
+; CHECK-LABEL: shl_to_shr_eq_i32_s9_fail_wrong_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $511, %eax # imm = 0x1FF
+; CHECK-NEXT:    shll $9, %edi
+; CHECK-NEXT:    cmpl %edi, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, 511
+  %sh = shl i32 %x, 9
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
+define i1 @shr_to_shl_eq_i32_s5_fail_wrong_mask(i32 %x) {
+; CHECK-LABEL: shr_to_shl_eq_i32_s5_fail_wrong_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $-32, %eax
+; CHECK-NEXT:    shrl $5, %edi
+; CHECK-NEXT:    cmpl %edi, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, -32
+  %sh = lshr i32 %x, 5
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
+define i1 @shl_to_shr_eq_i32_s9_fail_doesnt_add_up(i32 %x) {
+; CHECK-LABEL: shl_to_shr_eq_i32_s9_fail_doesnt_add_up:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $65024, %eax # imm = 0xFE00
+; CHECK-NEXT:    shll $9, %edi
+; CHECK-NEXT:    cmpl %edi, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, 65024
+  %sh = shl i32 %x, 9
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
+define i1 @shl_to_shr_eq_i32_s9_fail_doesnt_add_up2(i32 %x) {
+; CHECK-LABEL: shl_to_shr_eq_i32_s9_fail_doesnt_add_up2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $-1024, %eax # imm = 0xFC00
+; CHECK-NEXT:    shll $9, %edi
+; CHECK-NEXT:    cmpl %edi, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, -1024
+  %sh = shl i32 %x, 9
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
+define i1 @shl_to_shr_eq_i32_s9_fail_doesnt_add_up3(i32 %x) {
+; CHECK-LABEL: shl_to_shr_eq_i32_s9_fail_doesnt_add_up3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $-256, %eax
+; CHECK-NEXT:    shll $9, %edi
+; CHECK-NEXT:    cmpl %edi, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, -256
+  %sh = shl i32 %x, 9
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
+define i1 @shl_to_shr_eq_i32_s9_fail_not_mask(i32 %x) {
+; CHECK-LABEL: shl_to_shr_eq_i32_s9_fail_not_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $-511, %eax # imm = 0xFE01
+; CHECK-NEXT:    shll $9, %edi
+; CHECK-NEXT:    cmpl %edi, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, -511
+  %sh = shl i32 %x, 9
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
+define i1 @shl_to_shr_eq_i32_s9_fail_not_mask2(i32 %x) {
+; CHECK-LABEL: shl_to_shr_eq_i32_s9_fail_not_mask2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $-255, %eax
+; CHECK-NEXT:    shll $9, %edi
+; CHECK-NEXT:    cmpl %edi, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, -255
+  %sh = shl i32 %x, 9
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
+define i1 @shl_to_shr_eq_i32_s9_fail_wrong_mask2(i32 %x) {
+; CHECK-LABEL: shl_to_shr_eq_i32_s9_fail_wrong_mask2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $8388607, %eax # imm = 0x7FFFFF
+; CHECK-NEXT:    shll $9, %edi
+; CHECK-NEXT:    cmpl %edi, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, 8388607
+  %sh = shl i32 %x, 9
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
+define i1 @shl_to_shr_eq_i32_s9(i32 %x) {
+; CHECK-LABEL: shl_to_shr_eq_i32_s9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shrl $9, %eax
+; CHECK-NEXT:    andl $8388607, %edi # imm = 0x7FFFFF
+; CHECK-NEXT:    cmpl %eax, %edi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, -512
+  %sh = shl i32 %x, 9
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
+define i1 @shr_to_shl_eq_i32_s5(i32 %x) {
+; CHECK-LABEL: shr_to_shl_eq_i32_s5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shll $5, %eax
+; CHECK-NEXT:    andl $-32, %edi
+; CHECK-NEXT:    cmpl %eax, %edi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, 134217727
+  %sh = lshr i32 %x, 5
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
+define i1 @shr_to_rotate_eq_i32_s5(i32 %x) {
+; CHECK-NOBMI-LABEL: shr_to_rotate_eq_i32_s5:
+; CHECK-NOBMI:       # %bb.0:
+; CHECK-NOBMI-NEXT:    movl %edi, %eax
+; CHECK-NOBMI-NEXT:    roll $4, %eax
+; CHECK-NOBMI-NEXT:    cmpl %eax, %edi
+; CHECK-NOBMI-NEXT:    sete %al
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI2-LABEL: shr_to_rotate_eq_i32_s5:
+; CHECK-BMI2:       # %bb.0:
+; CHECK-BMI2-NEXT:    rorxl $28, %edi, %eax
+; CHECK-BMI2-NEXT:    cmpl %eax, %edi
+; CHECK-BMI2-NEXT:    sete %al
+; CHECK-BMI2-NEXT:    retq
+  %and = and i32 %x, 268435455
+  %sh = lshr i32 %x, 4
+  %r = icmp eq i32 %and, %sh
+  ret i1 %r
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK-AVX: {{.*}}
 ; CHECK-NOBMI-SSE2: {{.*}}

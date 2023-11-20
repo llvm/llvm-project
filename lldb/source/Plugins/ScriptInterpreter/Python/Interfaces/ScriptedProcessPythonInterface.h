@@ -29,6 +29,11 @@ public:
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) override;
 
+  llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const override {
+    return llvm::SmallVector<llvm::StringLiteral>(
+        {"read_memory_at_address", "is_alive", "get_scripted_thread_plugin"});
+  }
+
   StructuredData::DictionarySP GetCapabilities() override;
 
   Status Attach(const ProcessAttachInfo &attach_info) override;

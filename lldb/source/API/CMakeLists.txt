@@ -45,6 +45,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBFileSpec.cpp
   SBFile.cpp
   SBFileSpecList.cpp
+  SBFormat.cpp
   SBFrame.cpp
   SBFunction.cpp
   SBHostOS.cpp
@@ -196,13 +197,15 @@ elseif (LLDB_EXPORT_ALL_SYMBOLS)
   MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
 
   # Pull out the various lldb libraries linked into liblldb, these will be used
-  # when looking for symbols to extract. We ignore plugin libraries here,
-  # because these symbols aren't publicly exposed.
+  # when looking for symbols to extract. We ignore most plugin libraries here,
+  # because we may expose more symbols than the DLL limit and these symbols
+  # aren't useful to expose.
   get_target_property(all_liblldb_libs liblldb LINK_LIBRARIES)
   set(lldb_libs "")
   foreach(lib ${all_liblldb_libs})
     if(TARGET ${lib} AND ${lib} MATCHES "^lldb" AND
-       NOT ${lib} MATCHES "^lldbPlugin")
+       (${lib} IN_LIST LLDB_EXPORT_ALL_SYMBOLS_PLUGINS OR
+        NOT ${lib} MATCHES "^lldbPlugin"))
       get_target_property(lib_type ${lib} TYPE)
       if("${lib_type}" STREQUAL "STATIC_LIBRARY")
         list(APPEND lldb_libs ${lib})

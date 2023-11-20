@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -post-sparsification-rewrite="enable-runtime-library=false enable-convert=false" | \
-// RUN: FileCheck %s
+// RUN: mlir-opt %s --lower-sparse-ops-to-foreach="enable-runtime-library=false enable-convert=false" \
+// RUN: --lower-sparse-foreach-to-scf | FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : dense, d1 : compressed)
@@ -14,39 +14,39 @@
 }>
 
 // CHECK-LABEL:   func.func @sparse_new(
-// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<i8>) -> tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> {
-// CHECK:         %[[COO:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr<i8> to tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-SAME:    %[[A:.*]]: !llvm.ptr) -> tensor<?x?xf32, #sparse{{[0-9]*}}> {
+// CHECK:         %[[COO:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr to tensor<?x?xf32, #sparse{{[0-9]*}}>
 // CHECK:         %[[R:.*]] = sparse_tensor.convert %[[COO]]
 // CHECK:         bufferization.dealloc_tensor %[[COO]]
 // CHECK:         return %[[R]]
-func.func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CSR> {
-  %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<?x?xf32, #CSR>
+func.func @sparse_new(%arg0: !llvm.ptr) -> tensor<?x?xf32, #CSR> {
+  %0 = sparse_tensor.new %arg0 : !llvm.ptr to tensor<?x?xf32, #CSR>
   return %0 : tensor<?x?xf32, #CSR>
 }
 
 // CHECK-LABEL:   func.func @sparse_new_csc(
-// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<i8>) -> tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> {
-// CHECK:         %[[COO:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr<i8> to tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-SAME:    %[[A:.*]]: !llvm.ptr) -> tensor<?x?xf32, #sparse{{[0-9]*}}> {
+// CHECK:         %[[COO:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr to tensor<?x?xf32, #sparse{{[0-9]*}}>
 // CHECK:         %[[R:.*]] = sparse_tensor.convert %[[COO]]
 // CHECK:         bufferization.dealloc_tensor %[[COO]]
 // CHECK:         return %[[R]]
-func.func @sparse_new_csc(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CSC> {
-  %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<?x?xf32, #CSC>
+func.func @sparse_new_csc(%arg0: !llvm.ptr) -> tensor<?x?xf32, #CSC> {
+  %0 = sparse_tensor.new %arg0 : !llvm.ptr to tensor<?x?xf32, #CSC>
   return %0 : tensor<?x?xf32, #CSC>
 }
 
 // CHECK-LABEL:   func.func @sparse_new_coo(
-// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<i8>) -> tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> {
-// CHECK:         %[[COO:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr<i8> to tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-SAME:    %[[A:.*]]: !llvm.ptr) -> tensor<?x?xf32, #sparse{{[0-9]*}}> {
+// CHECK:         %[[COO:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr to tensor<?x?xf32, #sparse{{[0-9]*}}>
 // CHECK:         return %[[COO]]
-func.func @sparse_new_coo(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #COO> {
-  %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<?x?xf32, #COO>
+func.func @sparse_new_coo(%arg0: !llvm.ptr) -> tensor<?x?xf32, #COO> {
+  %0 = sparse_tensor.new %arg0 : !llvm.ptr to tensor<?x?xf32, #COO>
   return %0 : tensor<?x?xf32, #COO>
 }
 
 // CHECK-LABEL:   func.func @sparse_out(
-// CHECK-SAME:    %[[A:.*]]: tensor<10x20xf32, #sparse_tensor.encoding<{{{.*}}}>>,
-// CHECK-SAME:    %[[B:.*]]: !llvm.ptr<i8>) {
+// CHECK-SAME:    %[[A:.*]]: tensor<10x20xf32, #sparse{{[0-9]*}}>,
+// CHECK-SAME:    %[[B:.*]]: !llvm.ptr) {
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
@@ -67,7 +67,7 @@ func.func @sparse_new_coo(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #COO> {
 // CHECK:         call @delSparseTensorWriter(%[[W]])
 // CHECK:         return
 // CHECK:         }
-func.func @sparse_out( %arg0: tensor<10x20xf32, #CSR>, %arg1: !llvm.ptr<i8>) -> () {
-  sparse_tensor.out %arg0, %arg1 : tensor<10x20xf32, #CSR>, !llvm.ptr<i8>
+func.func @sparse_out( %arg0: tensor<10x20xf32, #CSR>, %arg1: !llvm.ptr) -> () {
+  sparse_tensor.out %arg0, %arg1 : tensor<10x20xf32, #CSR>, !llvm.ptr
   return
 }

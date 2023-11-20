@@ -223,17 +223,26 @@ void DwarfEmitterImpl::emitDIE(DIE &Die) {
   DebugInfoSectionSize += Die.getSize();
 }
 
-void DwarfEmitterImpl::emitDebugNames(
-    AccelTable<DWARF5AccelTableStaticData> &Table,
-    DebugNamesUnitsOffsets &CUOffsets, CompUnitIDToIdx &CUidToIdx) {
+void DwarfEmitterImpl::emitDebugNames(DWARF5AccelTable &Table,
+                                      DebugNamesUnitsOffsets &CUOffsets,
+                                      CompUnitIDToIdx &CUidToIdx) {
   if (CUOffsets.empty())
     return;
 
   Asm->OutStreamer->switchSection(MOFI->getDwarfDebugNamesSection());
-  emitDWARF5AccelTable(Asm.get(), Table, CUOffsets,
-                       [&CUidToIdx](const DWARF5AccelTableStaticData &Entry) {
-                         return CUidToIdx[Entry.getCUIndex()];
-                       });
+  dwarf::Form Form =
+      DIEInteger::BestForm(/*IsSigned*/ false, (uint64_t)CUidToIdx.size() - 1);
+  // FIXME: add support for type units + .debug_names. For now the behavior is
+  // unsuported.
+  emitDWARF5AccelTable(
+      Asm.get(), Table, CUOffsets,
+      [&](const DWARF5AccelTableData &Entry)
+          -> std::optional<DWARF5AccelTable::UnitIndexAndEncoding> {
+        if (CUidToIdx.size() > 1)
+          return {{CUidToIdx[Entry.getUnitID()],
+                   {dwarf::DW_IDX_compile_unit, Form}}};
+        return std::nullopt;
+      });
 }
 
 void DwarfEmitterImpl::emitAppleNamespaces(

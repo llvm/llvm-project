@@ -61,7 +61,7 @@ static void getXferIndices(RewriterBase &rewriter, TransferOpType xferOp,
   Location loc = xferOp.getLoc();
   unsigned offsetsIdx = 0;
   for (auto expr : xferOp.getPermutationMap().getResults()) {
-    if (auto dim = expr.template dyn_cast<AffineDimExpr>()) {
+    if (auto dim = dyn_cast<AffineDimExpr>(expr)) {
       Value prevIdx = indices[dim.getPosition()];
       SmallVector<OpFoldResult, 3> dims(dimValues.begin(), dimValues.end());
       dims.push_back(prevIdx);
@@ -473,13 +473,8 @@ struct CombineTransferReadOpTranspose final
     if (transferReadOp.getMask() || transferReadOp.hasOutOfBoundsDim())
       return rewriter.notifyMatchFailure(op, "not inbounds transfer read");
 
-    SmallVector<int64_t, 2> perm;
-    op.getTransp(perm);
-    SmallVector<unsigned, 2> permU;
-    for (int64_t o : perm)
-      permU.push_back(unsigned(o));
     AffineMap permutationMap =
-        AffineMap::getPermutationMap(permU, op.getContext());
+        AffineMap::getPermutationMap(op.getPermutation(), op.getContext());
     AffineMap newMap =
         permutationMap.compose(transferReadOp.getPermutationMap());
 
@@ -549,8 +544,7 @@ convertTransferReadOp(RewriterBase &rewriter, vector::TransferReadOp op,
   bool isTranspose = isTransposeMatrixLoadMap(map);
 
   // Handle broadcast by setting the stride to 0.
-  if (auto cstExpr =
-          map.getResult(isTranspose).dyn_cast<AffineConstantExpr>()) {
+  if (auto cstExpr = dyn_cast<AffineConstantExpr>(map.getResult(isTranspose))) {
     assert(cstExpr.getValue() == 0);
     stride = 0;
   }
@@ -682,8 +676,8 @@ static FailureOr<bool> isTransposed(vector::TransferReadOp op) {
   mlir::AffineExpr dN = map.getResult(1);
 
   //  Find the position of these expressions in the input.
-  auto exprM = dM.dyn_cast<AffineDimExpr>();
-  auto exprN = dN.dyn_cast<AffineDimExpr>();
+  auto exprM = dyn_cast<AffineDimExpr>(dM);
+  auto exprN = dyn_cast<AffineDimExpr>(dN);
 
   if (!exprM || !exprN) {
     LLVM_DEBUG(DBGS() << "Failed because expressions are not affine dim "

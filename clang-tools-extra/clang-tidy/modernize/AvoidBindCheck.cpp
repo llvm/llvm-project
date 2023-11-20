@@ -691,12 +691,15 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *MethodDecl = dyn_cast<CXXMethodDecl>(LP.Callable.Decl);
     const BindArgument &ObjPtr = FunctionCallArgs.front();
 
-    if (!isa<CXXThisExpr>(ignoreTemporariesAndPointers(ObjPtr.E))) {
-      Stream << ObjPtr.UsageIdentifier;
-      Stream << "->";
+    if (MethodDecl->getOverloadedOperator() == OO_Call) {
+      Stream << "(*" << ObjPtr.UsageIdentifier << ')';
+    } else {
+      if (!isa<CXXThisExpr>(ignoreTemporariesAndPointers(ObjPtr.E))) {
+        Stream << ObjPtr.UsageIdentifier;
+        Stream << "->";
+      }
+      Stream << MethodDecl->getNameAsString();
     }
-
-    Stream << MethodDecl->getName();
   } else {
     switch (LP.Callable.CE) {
     case CE_Var:

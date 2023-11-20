@@ -854,6 +854,7 @@ set(files
   __utility/piecewise_construct.h
   __utility/priority_tag.h
   __utility/rel_ops.h
+  __utility/small_buffer.h
   __utility/swap.h
   __utility/to_underlying.h
   __utility/unreachable.h
@@ -924,6 +925,7 @@ set(files
   experimental/iterator
   experimental/list
   experimental/map
+  experimental/memory
   experimental/memory_resource
   experimental/propagate_const
   experimental/regex
@@ -998,6 +1000,7 @@ set(files
   string.h
   string_view
   strstream
+  syncstream
   system_error
   tgmath.h
   thread
