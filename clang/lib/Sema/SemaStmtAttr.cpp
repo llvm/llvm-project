@@ -355,12 +355,12 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
   return S.BuildCodeAlignAttr(A, E);
 }
 
-// Diagnose non-identical duplicates as a 'conflicting' loop attr
+// Diagnose non-identical duplicates as a 'conflicting' loop attributes
 // and suppress duplicate errors in cases where the two match for
 // [[clang::code_align()]] attribute.
 static void
 CheckForDuplicateCodeAlignAttrs(Sema &S,
-                                const SmallVectorImpl<const Attr *> &Attrs) {
+                                ArrayRef<const Attr *> Attrs) {
   auto FindFunc = [](const Attr *A) { return isa<const CodeAlignAttr>(A); };
   const auto *FirstItr = std::find_if(Attrs.begin(), Attrs.end(), FindFunc);
 
@@ -620,4 +620,9 @@ void Sema::ProcessStmtAttributes(Stmt *S, const ParsedAttributes &InAttrs,
 
   CheckForIncompatibleAttributes(*this, OutAttrs);
   CheckForDuplicateCodeAlignAttrs(*this, OutAttrs);
+}
+
+bool Sema::CheckRebuiltCodeAlignStmtAttributes(ArrayRef<const Attr *> Attrs) {
+  CheckForDuplicateCodeAlignAttrs(*this, Attrs);
+  return false;
 }

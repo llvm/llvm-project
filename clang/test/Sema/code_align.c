@@ -127,8 +127,8 @@ void code_align_dependent() {
   [[clang::code_align(A)]] // OK
   for(int I=0; I<128; ++I) { bar(I); }
 
-  [[clang::code_align(A)]]
-  [[clang::code_align(E)]]
+  [[clang::code_align(A)]] // expected-note{{previous attribute is here}}
+  [[clang::code_align(E)]] // cpp-local-error{{conflicting loop attribute 'code_align'}}
   for(int I=0; I<128; ++I) { bar(I); }
 
   // cpp-local-error@+1{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was 23}}
@@ -136,29 +136,31 @@ void code_align_dependent() {
   for(int I=0; I<128; ++I) { bar(I); }
 
   // cpp-local-error@+2{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was -10}}
-  // cpp-local-note@#neg-instantiation{{in instantiation of function template specialization}}
+  // cpp-local-note@#neg-instantiation{{in instantiation of function template specialization 'code_align_dependent<8, 23, 32, -10, 64>' requested here}}
   [[clang::code_align(D)]]
   for(int I=0; I<128; ++I) { bar(I); }
 }
 
 template<int ITMPL>
 void bar3() {
-  [[clang::code_align(8)]]
-  [[clang::code_align(ITMPL)]]
+  [[clang::code_align(8)]]      // expected-note{{previous attribute is here}}
+  [[clang::code_align(ITMPL)]] // cpp-local-error{{conflicting loop attribute 'code_align'}} \
+	                       // cpp-local-note@#temp-instantiation{{in instantiation of function template specialization 'bar3<4>' requested here}}
   for(int I=0; I<128; ++I) { bar(I); }
 }
 
 template<int ITMPL1>
 void bar4() {
-  [[clang::code_align(ITMPL1)]]
-  [[clang::code_align(32)]]
+  [[clang::code_align(ITMPL1)]] // expected-note{{previous attribute is here}}
+  [[clang::code_align(32)]]    // cpp-local-error{{conflicting loop attribute 'code_align'}} \
+	                       // cpp-local-note@#temp-instantiation1{{in instantiation of function template specialization 'bar4<64>' requested here}}
   for(int I=0; I<128; ++I) { bar(I); }
 }
 
 int main() {
   code_align_dependent<8, 23, 32, -10, 64>(); // #neg-instantiation
-  bar3 <4>();
-  bar4 <64>();
+  bar3<4>();  // #temp-instantiation
+  bar4<64>(); // #temp-instantiation1
   return 0;
 }
 #endif
