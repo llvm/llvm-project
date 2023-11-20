@@ -340,6 +340,20 @@ public:
     return false;
   }
 
+  template <unsigned BaseReg, unsigned Max>
+  bool ImmToTile(SDValue N, SDValue &Imm) {
+    if (auto *CI = dyn_cast<ConstantSDNode>(N)) {
+      uint64_t C = CI->getZExtValue();
+
+      if (C > Max)
+        return false;
+
+      Imm = CurDAG->getRegister(BaseReg + C, MVT::Other);
+      return true;
+    }
+    return false;
+  }
+
   /// Form sequences of consecutive 64/128-bit registers for use in NEON
   /// instructions making use of a vector-list (e.g. ldN, tbl). Vecs must have
   /// between 1 and 4 elements. If it contains a single element that is returned
@@ -5118,6 +5132,24 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
               {0, AArch64::LUTI4_4ZTZI_H, AArch64::LUTI4_4ZTZI_S}))
         // Second Immediate must be <= 1:
         SelectMultiVectorLuti(Node, 4, Opc, 1);
+      return;
+    }
+    case Intrinsic::aarch64_sme_luti2_lane_zt_x2: {
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::LUTI2_2ZTZI_B, AArch64::LUTI2_2ZTZI_H,
+               AArch64::LUTI2_2ZTZI_S}))
+        // Second Immediate must be <= 7:
+        SelectMultiVectorLuti(Node, 2, Opc, 7);
+      return;
+    }
+    case Intrinsic::aarch64_sme_luti4_lane_zt_x2: {
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::LUTI4_2ZTZI_B, AArch64::LUTI4_2ZTZI_H,
+               AArch64::LUTI4_2ZTZI_S}))
+      // Second Immediate must be <= 3:
+        SelectMultiVectorLuti(Node, 2, Opc, 3);
       return;
     }
     }
