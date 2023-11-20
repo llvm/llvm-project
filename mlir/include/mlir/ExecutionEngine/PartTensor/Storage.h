@@ -79,6 +79,8 @@ public:
   virtual void getPartitions(std::vector<index_type> **) = 0;
   virtual index_type getNumPartitions() = 0;
   virtual void *getSlice(llvm::ArrayRef<index_type> partSpec) = 0;
+  virtual void setSlice(llvm::ArrayRef<index_type> partSpec,
+                        SparseTensorStorageBase *spTensor) = 0;
 };
 
 /// A memory-resident sparse tensor using a storage scheme based on
@@ -129,12 +131,27 @@ public:
            "We currently don't support union or intersection of partitions");
     return nullptr;
   }
+  void setSlice(llvm::ArrayRef<index_type> partSpec,
+                SparseTensorStorageBase *spTensor) override {
+    auto partSpecSize = 2 * getRank();
+    assert(std::size(partSpec) == partSpecSize);
+    for (auto i : llvm::seq(0ul, std::size(parts))) {
+      auto loOffset = 2 * i * getRank();
+      ArrayRef curPartSpec(partData.data() + loOffset, partSpecSize);
+      if (curPartSpec == partSpec) {
+        partTensors[i] = static_cast<SparseTensorStorage<P, I, V> *>(spTensor);
+        return;
+      }
+    }
+    assert(0 &&
+           "We currently don't support union or intersection of partitions");
+  }
   auto &getParts() { return partTensors; }
 
 protected:
   std::vector<index_type> partData;
   const std::vector<unique_ptr<SparseTensorCOO<V>>> parts;
-  const std::vector<SparseTensorStorage<P, I, V> *> partTensors;
+  std::vector<SparseTensorStorage<P, I, V> *> partTensors;
 };
 
 template <typename T>

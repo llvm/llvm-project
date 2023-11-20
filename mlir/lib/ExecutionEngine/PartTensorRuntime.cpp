@@ -331,6 +331,14 @@ void *_mlir_ciface_getSlice(void *tensor,
       llvm::ArrayRef<index_type>(partSpec->data + partSpec->offset,
                                  partSpec->sizes[0]));
 }
+void _mlir_ciface_setSlice(void *tensor,
+                           StridedMemRefType<index_type, 1> *partSpec,
+                           void *spTensor) {
+  static_cast<PartTensorStorageBase *>(tensor)->setSlice(
+      llvm::ArrayRef<index_type>(partSpec->data + partSpec->offset,
+                                 partSpec->sizes[0]),
+      static_cast<SparseTensorStorageBase *>(spTensor));
+}
 } // extern "C"
 
 #undef MEMREF_GET_PAYLOAD
