@@ -150,7 +150,7 @@ public:
   // adding a record. `Endianness` specifies the endianness used by profile
   // writer and reader when handling value profile records.
   void testICallDataReadWrite(
-      uint64_t ProfWeight,
+      uint64_t ProfWeight = 1,
       llvm::endianness Endianness = llvm::endianness::little) {
     NamedInstrProfRecord Record1("caller", 0x1234, {1, 2});
 
@@ -746,7 +746,7 @@ TEST_F(InstrProfTest, test_irpgo_read_deprecated_names) {
 }
 
 TEST_P(MaybeSparseInstrProfTest, icall_data_read_write) {
-  testICallDataReadWrite(1 /* ProfWeight */);
+  testICallDataReadWrite();
 }
 
 TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
