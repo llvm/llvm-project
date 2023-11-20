@@ -21,6 +21,7 @@
 #include "__ranges/size.h"
 #include "__ranges/stride_view.h"
 #include "test_iterators.h"
+#include "test_range.h"
 #include <iterator>
 #include <ranges>
 
@@ -33,6 +34,12 @@ template <typename T = int>
 struct InstrumentedBasicRange {
   T* begin() const;
   T* end() const;
+};
+
+class non_view_range {
+public:
+  constexpr int* begin() const { return nullptr; }
+  constexpr int* end() const { return nullptr; }
 };
 
 struct MovedCopiedTrackedView {
