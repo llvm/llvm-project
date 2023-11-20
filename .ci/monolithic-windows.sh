@@ -48,7 +48,9 @@ cmake -S ${MONOREPO_ROOT}/llvm -B ${BUILD_DIR} \
       -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml" \
       -D COMPILER_RT_BUILD_ORC=OFF \
       -D CMAKE_C_COMPILER_LAUNCHER=sccache \
-      -D CMAKE_CXX_COMPILER_LAUNCHER=sccache
+      -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
+      -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
+      -D Python3_EXECUTABLE="$(which python)"
 
 echo "--- ninja"
 # Targets are not escaped as they are passed as separate arguments.

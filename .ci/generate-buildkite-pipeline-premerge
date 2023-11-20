@@ -188,6 +188,11 @@ function check-targets() {
     libclc)
       echo "check-all"
     ;;
+    mlir)
+      for t in check-mlir check-mlir-python; do
+        echo $t
+      done
+    ;;
     *)
       echo "check-${project}"
     ;;
