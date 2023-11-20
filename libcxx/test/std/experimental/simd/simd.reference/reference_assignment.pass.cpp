@@ -8,15 +8,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// FIXME: Timeouts.
-// UNSUPPORTED: sanitizer-new-delete
-
 // <experimental/simd>
 //
 // [simd.reference]
 // template<class U> reference=(U&& x) && noexcept;
-//
-// XFAIL: LIBCXX-AIX-FIXME
 
 #include "../test_utils.h"
 #include <experimental/simd>
