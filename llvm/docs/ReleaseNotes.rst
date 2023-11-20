@@ -201,6 +201,14 @@ Changes to the C API
 Changes to the CodeGen infrastructure
 -------------------------------------
 
+* A new debug type ``isel-dump`` is added to show only the SelectionDAG dumps
+  after each ISel phase (i.e. ``-debug-only=isel-dump``). This new debug type
+  can be filtered by function names using ``-filter-print-funcs=<function names>``,
+  the same flag used to filter IR dumps after each Pass. Note that the existing
+  ``-debug-only=isel`` will take precedence over the new behavior and
+  print SelectionDAG dumps of every single function regardless of
+  ``-filter-print-funcs``'s values.
+
 * ``PrologEpilogInserter`` no longer supports register scavenging
   during forwards frame index elimination. Targets should use
   backwards frame index elimination instead.
