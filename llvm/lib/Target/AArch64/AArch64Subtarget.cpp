@@ -502,13 +502,13 @@ bool AArch64Subtarget::isStreamingCompatible() const {
 }
 
 bool AArch64Subtarget::isNeonAvailable() const {
-  return hasNEON() && !isStreaming() && !isStreamingCompatible();
+  return hasNEON() &&
+         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
 }
 
-bool AArch64Subtarget::isSVEAvailable() const{
-  // FIXME: Also return false if FEAT_FA64 is set, but we can't do this yet
-  // as we don't yet support the feature in LLVM.
-  return hasSVE() && !isStreaming() && !isStreamingCompatible();
+bool AArch64Subtarget::isSVEAvailable() const {
+  return hasSVE() &&
+         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
 }
 
 // If return address signing is enabled, tail calls are emitted as follows:
