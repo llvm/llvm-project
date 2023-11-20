@@ -63,13 +63,6 @@ Pass *createLICMPass();
 
 //===----------------------------------------------------------------------===//
 //
-// LoopSink - This pass sinks invariants from preheader to loop body where
-// frequency is lower than loop preheader.
-//
-Pass *createLoopSinkPass();
-
-//===----------------------------------------------------------------------===//
-//
 // LoopPredication - This pass does loop predication on guards.
 //
 Pass *createLoopPredicationPass();
