@@ -128,7 +128,6 @@ namespace {
 class AllocaSliceRewriter;
 class AllocaSlices;
 class Partition;
-class SROALegacyPass;
 
 class SelectHandSpeculativity {
   unsigned char Storage = 0; // None are speculatable by default.
@@ -241,12 +240,11 @@ public:
       : C(C), DTU(DTU), AC(AC),
         PreserveCFG(PreserveCFG_ == SROAOptions::PreserveCFG) {}
 
-  /// Helper used by both the SROAPass and by the legacy pass.
+  /// Main run method used by both the SROAPass and by the legacy pass.
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runSROA(Function &F);
 
 private:
   friend class AllocaSliceRewriter;
-  friend class SROALegacyPass;
 
   bool presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS);
   AllocaInst *rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P);
