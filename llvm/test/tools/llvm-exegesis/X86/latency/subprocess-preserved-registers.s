@@ -2,10 +2,6 @@
 
 # RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mode=latency -snippets-file=%s -execution-mode=subprocess | FileCheck %s
 
-# See comment in ./subprocess-abnormal-exit-code.s on the transient
-# PTRACE_ATTACH failure.
-# ALLOW_RETRIES: 2
-
 # Check that the value of the registers preserved in subprocess mode while
 # making the ioctl system call are actually preserved correctly.
 
