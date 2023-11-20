@@ -202,7 +202,13 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
         Signatures[UN.id].LeftCount++;
       else
         Signatures[UN.id].RightCount++;
-      Signatures[UN.id].Weight = UN.weight;
+      // Identical utility nodes (having the same UN.id) are guaranteed to have
+      // the same weight; thus, we can get a new weight only when the signature
+      // is uninitialized.
+      if (Signatures[UN.id].Weight != UN.weight) {
+        assert(Signatures[UN.id].Weight == 1);
+        Signatures[UN.id].Weight = UN.weight;
+      }
     }
   }
 
