@@ -115,7 +115,9 @@ public:
   void getPartitions(std::vector<index_type> **partData) override {
     *partData = &this->partData;
   }
-  index_type getNumPartitions() override { return parts.size() * getRank(); }
+  index_type getNumPartitions() override {
+    return 2 * parts.size() * getRank();
+  }
   auto getRank() { return parts[0]->getRank(); }
   void *getSlice(llvm::ArrayRef<index_type> partSpec) override {
     auto partSpecSize = 2 * getRank();
