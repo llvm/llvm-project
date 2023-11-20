@@ -427,7 +427,7 @@ buildConstantSignedPointer(CodeGenModule &CGM,
                            llvm::Constant *otherDiscriminator) {
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct();
-  values.addBitCast(pointer, CGM.Int8PtrTy);
+  values.add(pointer);
   values.addInt(CGM.Int32Ty, key);
   if (storageAddress) {
     if (isa<llvm::ConstantInt>(storageAddress)) {
