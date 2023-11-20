@@ -182,6 +182,7 @@ static const bool ViewDAGCombine1 = false, ViewLegalizeTypesDAGs = false,
                   ViewSchedDAGs = false, ViewSUnitDAGs = false;
 #endif
 
+#ifndef NDEBUG
 #define ISEL_DUMP(X)                                                           \
   do {                                                                         \
     if (llvm::DebugFlag &&                                                     \
@@ -190,6 +191,11 @@ static const bool ViewDAGCombine1 = false, ViewLegalizeTypesDAGs = false,
       X;                                                                       \
     }                                                                          \
   } while (false)
+#else
+#define ISEL_DUMP(X)                                                           \
+  do {                                                                         \
+  } while (false)
+#endif
 
 //===---------------------------------------------------------------------===//
 ///
