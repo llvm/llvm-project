@@ -15,9 +15,9 @@
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
-#define SVE_ACLE_FUNC(A1, A2_UNUSED, A3, A4_UNUSED) A1##A3
+#define SVE_ACLE_FUNC(A1, A2_UNUSED) A1
 #else
-#define SVE_ACLE_FUNC(A1, A2, A3, A4) A1##A2##A3##A4
+#define SVE_ACLE_FUNC(A1, A2) A1##A2
 #endif
 
 // CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svzipq2_u8
@@ -33,7 +33,7 @@
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svzipq2_u8(svuint8_t zn, svuint8_t zm) {
-    return svzipq2_u8(zn, zm);
+    return SVE_ACLE_FUNC(svzipq2,_u8)(zn, zm);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svzipq2_u16
@@ -49,7 +49,7 @@ svuint8_t test_svzipq2_u8(svuint8_t zn, svuint8_t zm) {
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svuint16_t test_svzipq2_u16(svuint16_t zn, svuint16_t zm) {
-    return svzipq2_u16(zn, zm);
+  return SVE_ACLE_FUNC(svzipq2,_u16)(zn, zm);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svzipq2_u32
@@ -65,7 +65,7 @@ svuint16_t test_svzipq2_u16(svuint16_t zn, svuint16_t zm) {
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svuint32_t test_svzipq2_u32(svuint32_t zn, svuint32_t zm) {
-    return svzipq2_u32(zn, zm);
+    return SVE_ACLE_FUNC(svzipq2,_u32)(zn, zm);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 2 x i64> @test_svzipq2_u64
@@ -81,7 +81,7 @@ svuint32_t test_svzipq2_u32(svuint32_t zn, svuint32_t zm) {
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svuint64_t test_svzipq2_u64(svuint64_t zn, svuint64_t zm) {
-    return svzipq2_u64(zn, zm);
+    return SVE_ACLE_FUNC(svzipq2,_u64)(zn, zm);
 }
 
 
@@ -98,7 +98,7 @@ svuint64_t test_svzipq2_u64(svuint64_t zn, svuint64_t zm) {
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svzipq2_s8(svint8_t zn, svint8_t zm) {
-    return svzipq2_s8(zn, zm);
+    return SVE_ACLE_FUNC(svzipq2,_s8)(zn, zm);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svzipq2_s16
@@ -114,7 +114,7 @@ svint8_t test_svzipq2_s8(svint8_t zn, svint8_t zm) {
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svint16_t test_svzipq2_s16(svint16_t zn, svint16_t zm) {
-    return svzipq2_s16(zn, zm);
+    return SVE_ACLE_FUNC(svzipq2,_s16)(zn, zm);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svzipq2_s32
@@ -130,7 +130,7 @@ svint16_t test_svzipq2_s16(svint16_t zn, svint16_t zm) {
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svzipq2_s32(svint32_t zn, svint32_t zm) {
-    return svzipq2_s32(zn, zm);
+  return SVE_ACLE_FUNC(svzipq2,_s32)(zn, zm);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 2 x i64> @test_svzipq2_s64
@@ -146,7 +146,7 @@ svint32_t test_svzipq2_s32(svint32_t zn, svint32_t zm) {
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svint64_t test_svzipq2_s64(svint64_t zn, svint64_t zm) {
-    return svzipq2_s64(zn, zm);
+    return SVE_ACLE_FUNC(svzipq2,_s64)(zn, zm);
 }
 
 
@@ -163,7 +163,7 @@ svint64_t test_svzipq2_s64(svint64_t zn, svint64_t zm) {
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 svfloat16_t test_svzipq2_f16(svfloat16_t zn, svfloat16_t zm) {
-    return svzipq2_f16(zn, zm);
+    return SVE_ACLE_FUNC(svzipq2,_f16)(zn, zm);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svzipq2_f32
@@ -179,7 +179,7 @@ svfloat16_t test_svzipq2_f16(svfloat16_t zn, svfloat16_t zm) {
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 svfloat32_t test_svzipq2_f32(svfloat32_t zn, svfloat32_t zm) {
-    return svzipq2_f32(zn, zm);
+    return SVE_ACLE_FUNC(svzipq2,_f32)(zn, zm);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 2 x double> @test_svzipq2_f64
@@ -195,7 +195,7 @@ svfloat32_t test_svzipq2_f32(svfloat32_t zn, svfloat32_t zm) {
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 svfloat64_t test_svzipq2_f64(svfloat64_t zn, svfloat64_t zm) {
-    return svzipq2_f64(zn, zm);
+    return SVE_ACLE_FUNC(svzipq2,_f64)(zn, zm);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 8 x bfloat> @test_svzipq2_bf16
@@ -211,7 +211,7 @@ svfloat64_t test_svzipq2_f64(svfloat64_t zn, svfloat64_t zm) {
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 svbfloat16_t test_svzipq2_bf16(svbfloat16_t zn, svbfloat16_t zm) {
-    return svzipq2_bf16(zn, zm);
+    return SVE_ACLE_FUNC(svzipq2,_bf16)(zn, zm);
 }
 
 

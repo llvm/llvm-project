@@ -2007,13 +2007,13 @@ let TargetGuard = "sve2p1" in {
   // PMOV
   // Move to Pred
   multiclass PMOV_TO_PRED<string name, string types, string intrinsic, list<FlagType> flags=[], ImmCheckType immCh > {
-    def _LANE : SInst<name # "_lane[_{d}]", "Pdk", types, MergeNone, intrinsic, flags, [ImmCheck<1, immCh>]>;
-    def _ZERO : SInst<name # "[_{d}]", "Pd", types, MergeNone, intrinsic # "_zero", flags, []>;
+    def _LANE      : SInst<name # "_lane[_{d}]", "Pdk", types, MergeNone, intrinsic, flags, [ImmCheck<1, immCh>]>;
+    def _LANE_ZERO : SInst<name # "[_{d}]", "Pd", types, MergeNone, intrinsic # "_zero", flags, []>;
   }
-  defm SVPMOV_B_TO_PRED_LANE : PMOV_TO_PRED<"svpmov", "cUc", "aarch64_sve_pmov_to_pred_lane", [], ImmCheck0_0>;
-  defm SVPMOV_H_TO_PRED_LANE : PMOV_TO_PRED<"svpmov", "sUs", "aarch64_sve_pmov_to_pred_lane", [], ImmCheck0_1>;
-  defm SVPMOV_S_TO_PRED_LANE : PMOV_TO_PRED<"svpmov", "iUi", "aarch64_sve_pmov_to_pred_lane", [], ImmCheck0_3>;
-  defm SVPMOV_D_TO_PRED_LANE : PMOV_TO_PRED<"svpmov", "lUl", "aarch64_sve_pmov_to_pred_lane", [], ImmCheck0_7>;
+  defm SVPMOV_B_TO_PRED : PMOV_TO_PRED<"svpmov", "cUc", "aarch64_sve_pmov_to_pred_lane", [], ImmCheck0_0>;
+  defm SVPMOV_H_TO_PRED : PMOV_TO_PRED<"svpmov", "sUs", "aarch64_sve_pmov_to_pred_lane", [], ImmCheck0_1>;
+  defm SVPMOV_S_TO_PRED : PMOV_TO_PRED<"svpmov", "iUi", "aarch64_sve_pmov_to_pred_lane", [], ImmCheck0_3>;
+  defm SVPMOV_D_TO_PRED : PMOV_TO_PRED<"svpmov", "lUl", "aarch64_sve_pmov_to_pred_lane", [], ImmCheck0_7>;
 
   // Move to Vector
   multiclass PMOV_TO_VEC<string name, string types, string intrinsic, list<FlagType> flags=[], ImmCheckType immCh > {
