@@ -77,3 +77,33 @@ void test_svluti4_lane_zt_x4(svuint8_t zn) __arm_streaming __arm_shared_za __arm
   // Test index value range
   svluti4_lane_zt_f32_x4(0, zn, 2);   // expected-error {{argument value 2 is outside the valid range [0, 1]}}
 }
+
+void test_svluti2_lane_zt(svuint8_t zn_u8, svuint16_t zn_u16, svuint32_t zn_u32) __arm_streaming __arm_shared_za __arm_preserves_za {
+  // Test Reg Offset
+  svluti2_lane_zt_u8(1, zn_u8, 2);    // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti2_lane_zt_u8(0, zn_u8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  // Test Reg Offset
+  svluti2_lane_zt_u16(1, zn_u16, 2);  // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti2_lane_zt_u16(0, zn_u16, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  // Test Reg Offset
+  svluti2_lane_zt_u32(1, zn_u32, 2);  // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti2_lane_zt_u32(0, zn_u32, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+}
+
+void test_svluti4_lane_zt(svuint8_t zn_u8, svuint16_t zn_u16, svuint32_t zn_u32) __arm_streaming __arm_shared_za __arm_preserves_za {
+  // Test Reg Offset
+  svluti4_lane_zt_u8(1, zn_u8, 2);   // expected-error {{argument val]ue 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti4_lane_zt_u8(0, zn_u8, 8);  // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  // Test Reg Offset
+  svluti4_lane_zt_u16(1, zn_u16, 2); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti4_lane_zt_u16(0, zn_u16, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  // Test Reg Offset
+  svluti4_lane_zt_u32(1, zn_u32, 2); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti4_lane_zt_u32(0, zn_u32, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+}
