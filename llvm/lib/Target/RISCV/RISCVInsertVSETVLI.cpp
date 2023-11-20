@@ -1023,6 +1023,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
     return;
 
   const VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, MRI);
+  assert(NewInfo.isValid() && !NewInfo.isUnknown());
   if (Info.isValid() && !needVSETVLI(MI, NewInfo, Info))
     return;
 
@@ -1036,8 +1037,8 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   // maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
   // places.
   DemandedFields Demanded = getDemanded(MI, MRI, ST);
-  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && Info.isValid() &&
-      PrevInfo.isValid() && !Info.isUnknown() && !PrevInfo.isUnknown()) {
+  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isValid() &&
+      !PrevInfo.isUnknown()) {
     if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
             PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
       Info.setVLMul(*NewVLMul);
