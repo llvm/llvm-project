@@ -1260,7 +1260,7 @@ struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
     operandsAndShape(resultType, dynamicExtents, newOperands, newShape);
 
     if (hasNegativeDimension(newShape))
-        return failure();
+      return failure();
 
     if (newOperands.size() == tensorFromElements.getDynamicExtents().size())
       return failure();
