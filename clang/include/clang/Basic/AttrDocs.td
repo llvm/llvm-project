@@ -7596,6 +7596,7 @@ Reference parameters of a coroutine are susceptible to capturing references to t
 For example,
 
 .. code-block:: c++
+
   task<int> coro(const int& a) { co_return a + 1; }
   task<int> dangling_refs(int a) {
     // `coro` captures reference to a temporary. `foo` would now contain a dangling reference to `a`.
@@ -7613,6 +7614,7 @@ temporaries or return address of a local variable.
 Both coroutines and coroutine wrappers are part of this analysis.
 
 .. code-block:: c++
+
   template <typename T> struct [[clang::coro_return_type, clang::coro_lifetimebound]] Task {
     using promise_type = some_promise_type;
   };
