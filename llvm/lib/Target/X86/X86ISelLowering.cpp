@@ -41450,6 +41450,18 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       // Integer ops.
     case X86ISD::PACKSS:
     case X86ISD::PACKUS:
+    case X86ISD::PCMPEQ:
+    case X86ISD::PCMPGT:
+    case X86ISD::PMULUDQ:
+    case X86ISD::PMULDQ:
+    case X86ISD::VSHLV:
+    case X86ISD::VSRLV:
+    case X86ISD::VSRAV:
+      // Float ops.
+    case X86ISD::FMAX:
+    case X86ISD::FMIN:
+    case X86ISD::FMAXC:
+    case X86ISD::FMINC:
       // Horizontal Ops.
     case X86ISD::HADD:
     case X86ISD::HSUB:
