@@ -182,11 +182,11 @@ static const bool ViewDAGCombine1 = false, ViewLegalizeTypesDAGs = false,
                   ViewSchedDAGs = false, ViewSUnitDAGs = false;
 #endif
 
-#define ISEL_DUMP(F, X)                                                        \
+#define ISEL_DUMP(X)                                                           \
   do {                                                                         \
-    if (llvm::DebugFlag && (isCurrentDebugType(DEBUG_TYPE) ||                  \
-                            (isCurrentDebugType(ISEL_DUMP_DEBUG_TYPE) &&       \
-                             isFunctionInPrintList(F)))) {                     \
+    if (llvm::DebugFlag &&                                                     \
+        (isCurrentDebugType(DEBUG_TYPE) ||                                     \
+         (isCurrentDebugType(ISEL_DUMP_DEBUG_TYPE) && MatchFilterFuncName))) {     \
       X;                                                                       \
     }                                                                          \
   } while (false)
@@ -412,8 +412,14 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
          "-fast-isel-abort > 0 requires -fast-isel");
 
   const Function &Fn = mf.getFunction();
-  StringRef FuncName = Fn.getName();
   MF = &mf;
+
+#ifndef NDEBUG
+  StringRef FuncName = Fn.getName();
+  MatchFilterFuncName = isFunctionInPrintList(FuncName);
+#else
+  (void)MatchFilterFuncName;
+#endif
 
   // Decide what flavour of variable location debug-info will be used, before
   // we change the optimisation level.
@@ -448,7 +454,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   if (isAssignmentTrackingEnabled(*Fn.getParent()))
     FnVarLocs = getAnalysis<AssignmentTrackingAnalysis>().getResults();
 
-  ISEL_DUMP(FuncName, dbgs() << "\n\n\n=== " << FuncName << "\n");
+  ISEL_DUMP(dbgs() << "\n\n\n=== " << FuncName << "\n");
 
   UniformityInfo *UA = nullptr;
   if (auto *UAPass = getAnalysisIfAvailable<UniformityInfoWrapperPass>())
@@ -680,8 +686,8 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   // at this point.
   FuncInfo->clear();
 
-  ISEL_DUMP(FuncName, dbgs() << "*** MachineFunction at end of ISel ***\n");
-  ISEL_DUMP(FuncName, MF->print(dbgs()));
+  ISEL_DUMP(dbgs() << "*** MachineFunction at end of ISel ***\n");
+  ISEL_DUMP(MF->print(dbgs()));
 
   return true;
 }
@@ -766,7 +772,6 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   StringRef GroupName = "sdag";
   StringRef GroupDescription = "Instruction Selection and Scheduling";
   std::string BlockName;
-  StringRef FuncName = MF->getName();
   bool MatchFilterBB = false; (void)MatchFilterBB;
 #ifndef NDEBUG
   TargetTransformInfo &TTI =
@@ -788,13 +793,12 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 #endif
   {
     BlockName =
-        (FuncName + ":" + FuncInfo->MBB->getBasicBlock()->getName()).str();
+        (MF->getName() + ":" + FuncInfo->MBB->getBasicBlock()->getName()).str();
   }
-  ISEL_DUMP(FuncName, {
-    dbgs() << "\nInitial selection DAG: " << printMBBReference(*FuncInfo->MBB)
-           << " '" << BlockName << "'\n";
-    CurDAG->dump();
-  });
+  ISEL_DUMP(dbgs() << "\nInitial selection DAG: "
+                   << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                   << "'\n";
+            CurDAG->dump());
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
@@ -811,11 +815,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->Combine(BeforeLegalizeTypes, AA, OptLevel);
   }
 
-  ISEL_DUMP(FuncName, {
-    dbgs() << "\nOptimized lowered selection DAG: "
-           << printMBBReference(*FuncInfo->MBB) << " '" << BlockName << "'\n";
-    CurDAG->dump();
-  });
+  ISEL_DUMP(dbgs() << "\nOptimized lowered selection DAG: "
+                   << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                   << "'\n";
+            CurDAG->dump());
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
@@ -834,11 +837,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     Changed = CurDAG->LegalizeTypes();
   }
 
-  ISEL_DUMP(FuncName, {
-    dbgs() << "\nType-legalized selection DAG: "
-           << printMBBReference(*FuncInfo->MBB) << " '" << BlockName << "'\n";
-    CurDAG->dump();
-  });
+  ISEL_DUMP(dbgs() << "\nType-legalized selection DAG: "
+                   << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                   << "'\n";
+            CurDAG->dump());
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
@@ -859,11 +861,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
       CurDAG->Combine(AfterLegalizeTypes, AA, OptLevel);
     }
 
-    ISEL_DUMP(FuncName, {
-      dbgs() << "\nOptimized type-legalized selection DAG: "
-             << printMBBReference(*FuncInfo->MBB) << " '" << BlockName << "'\n";
-      CurDAG->dump();
-    });
+    ISEL_DUMP(dbgs() << "\nOptimized type-legalized selection DAG: "
+                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                     << "'\n";
+              CurDAG->dump());
 
 #ifndef NDEBUG
     if (TTI.hasBranchDivergence())
@@ -878,11 +879,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   }
 
   if (Changed) {
-    ISEL_DUMP(FuncName, {
-      dbgs() << "\nVector-legalized selection DAG: "
-             << printMBBReference(*FuncInfo->MBB) << " '" << BlockName << "'\n";
-      CurDAG->dump();
-    });
+    ISEL_DUMP(dbgs() << "\nVector-legalized selection DAG: "
+                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                     << "'\n";
+              CurDAG->dump());
 
 #ifndef NDEBUG
     if (TTI.hasBranchDivergence())
@@ -895,11 +895,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
       CurDAG->LegalizeTypes();
     }
 
-    ISEL_DUMP(FuncName, {
-      dbgs() << "\nVector/type-legalized selection DAG: "
-             << printMBBReference(*FuncInfo->MBB) << " '" << BlockName << "'\n";
-      CurDAG->dump();
-    });
+    ISEL_DUMP(dbgs() << "\nVector/type-legalized selection DAG: "
+                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                     << "'\n";
+              CurDAG->dump());
 
 #ifndef NDEBUG
     if (TTI.hasBranchDivergence())
@@ -916,11 +915,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
       CurDAG->Combine(AfterLegalizeVectorOps, AA, OptLevel);
     }
 
-    ISEL_DUMP(FuncName, {
-      dbgs() << "\nOptimized vector-legalized selection DAG: "
-             << printMBBReference(*FuncInfo->MBB) << " '" << BlockName << "'\n";
-      CurDAG->dump();
-    });
+    ISEL_DUMP(dbgs() << "\nOptimized vector-legalized selection DAG: "
+                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                     << "'\n";
+              CurDAG->dump());
 
 #ifndef NDEBUG
     if (TTI.hasBranchDivergence())
@@ -937,11 +935,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->Legalize();
   }
 
-  ISEL_DUMP(FuncName, {
-    dbgs() << "\nLegalized selection DAG: " << printMBBReference(*FuncInfo->MBB)
-           << " '" << BlockName << "'\n";
-    CurDAG->dump();
-  });
+  ISEL_DUMP(dbgs() << "\nLegalized selection DAG: "
+                   << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                   << "'\n";
+            CurDAG->dump());
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
@@ -958,11 +955,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->Combine(AfterLegalizeDAG, AA, OptLevel);
   }
 
-  ISEL_DUMP(FuncName, {
-    dbgs() << "\nOptimized legalized selection DAG: "
-           << printMBBReference(*FuncInfo->MBB) << " '" << BlockName << "'\n";
-    CurDAG->dump();
-  });
+  ISEL_DUMP(dbgs() << "\nOptimized legalized selection DAG: "
+                   << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                   << "'\n";
+            CurDAG->dump());
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
@@ -983,11 +979,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     DoInstructionSelection();
   }
 
-  ISEL_DUMP(FuncName, {
-    dbgs() << "\nSelected selection DAG: " << printMBBReference(*FuncInfo->MBB)
-           << " '" << BlockName << "'\n";
-    CurDAG->dump();
-  });
+  ISEL_DUMP(dbgs() << "\nSelected selection DAG: "
+                   << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                   << "'\n";
+            CurDAG->dump());
 
   if (ViewSchedDAGs && MatchFilterBB)
     CurDAG->viewGraph("scheduler input for " + BlockName);
