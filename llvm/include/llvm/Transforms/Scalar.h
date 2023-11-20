@@ -39,16 +39,6 @@ Pass *createRedundantDbgInstEliminationPass();
 //
 FunctionPass *createDeadCodeEliminationPass();
 
-
-//===----------------------------------------------------------------------===//
-//
-// GuardWidening - An optimization over the @llvm.experimental.guard intrinsic
-// that (optimistically) combines multiple guards into one to have fewer checks
-// at runtime.
-//
-FunctionPass *createGuardWideningPass();
-
-
 //===----------------------------------------------------------------------===//
 //
 // LoopGuardWidening - Analogous to the GuardWidening pass, but restricted to a
