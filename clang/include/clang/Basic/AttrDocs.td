@@ -7483,7 +7483,6 @@ generation of the other destruction cases, optimizing the above `foo.destroy` to
   }];
 }
 
-
 def CoroReturnTypeAndWrapperDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -7580,4 +7579,11 @@ alignment boundary. Its value must be a power of 2, between 1 and 4096
   }
 
   }];
+}
+
+def CoroLifetimeBoundDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+asdam
+}];
 }
