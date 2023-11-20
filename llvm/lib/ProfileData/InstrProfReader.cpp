@@ -559,17 +559,17 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   if (!useCorrelate() && Correlator)
     return error(instrprof_error::unexpected_debug_info_for_correlation);
 
-  uint64_t BinaryIdsSize = swap(Header.BinaryIdsSize);
-  // Binary ids start just after the header.
-  const uint8_t *BinaryIdsStart =
+  uint64_t BinaryIdSize = swap(Header.BinaryIdsSize);
+  // Binary id start just after the header if exists.
+  const uint8_t *BinaryIdStart =
       reinterpret_cast<const uint8_t *>(&Header) + sizeof(RawInstrProf::Header);
-  const uint8_t *BinaryIdEnd = BinaryIdsStart + BinaryIdsSize;
+  const uint8_t *BinaryIdEnd = BinaryIdStart + BinaryIdSize;
   const uint8_t *BufferEnd = (const uint8_t *)DataBuffer->getBufferEnd();
-  if (BinaryIdsSize % sizeof(uint64_t) || BinaryIdEnd > BufferEnd)
+  if (BinaryIdSize % sizeof(uint64_t) || BinaryIdEnd > BufferEnd)
     return error(instrprof_error::bad_header);
-  if (BinaryIdsSize != 0) {
+  if (BinaryIdSize != 0) {
     if (Error Err =
-            readBinaryIdsInternal(*DataBuffer, BinaryIdsSize, BinaryIdsStart,
+            readBinaryIdsInternal(*DataBuffer, BinaryIdSize, BinaryIdStart,
                                   BinaryIds, getDataEndianness()))
       return Err;
   }
@@ -590,7 +590,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto PaddingSize = getNumPaddingBytes(NamesSize);
 
   // Profile data starts after profile header and binary ids if exist.
-  ptrdiff_t DataOffset = sizeof(RawInstrProf::Header) + BinaryIdsSize;
+  ptrdiff_t DataOffset = sizeof(RawInstrProf::Header) + BinaryIdSize;
   ptrdiff_t CountersOffset = DataOffset + DataSize + PaddingBytesBeforeCounters;
   ptrdiff_t BitmapOffset =
       CountersOffset + CountersSize + PaddingBytesAfterCounters;
