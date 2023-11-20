@@ -10276,6 +10276,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_compare:
     C = new (Context) OMPCompareClause();
     break;
+  case llvm::omp::OMPC_fail:
+    C = new (Context) OMPFailClause();
+    break;
   case llvm::omp::OMPC_seq_cst:
     C = new (Context) OMPSeqCstClause();
     break;
@@ -10668,6 +10671,16 @@ void OMPClauseReader::VisitOMPUpdateClause(OMPUpdateClause *C) {
 void OMPClauseReader::VisitOMPCaptureClause(OMPCaptureClause *) {}
 
 void OMPClauseReader::VisitOMPCompareClause(OMPCompareClause *) {}
+
+// Read the parameter of fail clause. This will have been saved when
+// OMPClauseWriter is called.
+void OMPClauseReader::VisitOMPFailClause(OMPFailClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  SourceLocation FailParameterLoc = Record.readSourceLocation();
+  C->setFailParameterLoc(FailParameterLoc);
+  OpenMPClauseKind CKind = Record.readEnum<OpenMPClauseKind>();
+  C->setFailParameter(CKind);
+}
 
 void OMPClauseReader::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
 
