@@ -9,7 +9,6 @@
 // This file implements lowering of CIR operations to LLVMIR.
 //
 //===----------------------------------------------------------------------===//
-
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
@@ -1076,6 +1075,17 @@ public:
       rewriter.replaceAllUsesWith(op, initVal);
       rewriter.eraseOp(op);
       return mlir::success();
+    } else if (auto strTy = op.getType().dyn_cast<mlir::cir::StructType>()) {
+      if (auto zero = op.getValue().dyn_cast<mlir::cir::ZeroAttr>()) {
+        auto initVal =
+          lowerCirAttrAsValue(op, zero, rewriter, typeConverter);
+        rewriter.replaceAllUsesWith(op, initVal);
+        rewriter.eraseOp(op);
+        return mlir::success();
+      }
+
+      return op.emitError()
+        << "unsupported lowering for struct constant type " << op.getType();
     } else
       return op.emitError() << "unsupported constant type " << op.getType();
 
