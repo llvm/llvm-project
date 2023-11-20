@@ -87,14 +87,11 @@ mlir::vector::isTranspose2DSlice(vector::TransposeOp op) {
   if (srcGtOneDims.size() != 2)
     return failure();
 
-  SmallVector<int64_t> transp;
-  for (auto attr : op.getTransp())
-    transp.push_back(cast<IntegerAttr>(attr).getInt());
-
   // Check whether the two source vector dimensions that are greater than one
   // must be transposed with each other so that we can apply one of the 2-D
   // transpose pattens. Otherwise, these patterns are not applicable.
-  if (!areDimsTransposedIn2DSlice(srcGtOneDims[0], srcGtOneDims[1], transp))
+  if (!areDimsTransposedIn2DSlice(srcGtOneDims[0], srcGtOneDims[1],
+                                  op.getPermutation()))
     return failure();
 
   return std::pair<int, int>(srcGtOneDims[0], srcGtOneDims[1]);

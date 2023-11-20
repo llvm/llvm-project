@@ -436,12 +436,9 @@ struct TransposeOpToArmSMELowering
     if (!tileType || !arm_sme::isValidSMETileVectorType(tileType))
       return failure();
 
-    SmallVector<int64_t> transp;
-    for (auto attr : transposeOp.getTransp())
-      transp.push_back(cast<IntegerAttr>(attr).getInt());
-
     // Bail unless this is a true 2-D matrix transpose.
-    if (transp[0] != 1 || transp[1] != 0)
+    ArrayRef<int64_t> permutation = transposeOp.getPermutation();
+    if (permutation[0] != 1 || permutation[1] != 0)
       return failure();
 
     OpBuilder::InsertionGuard g(rewriter);
