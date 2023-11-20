@@ -64,38 +64,6 @@ struct InstrProfTest : ::testing::Test {
   }
 };
 
-static const char callee1[] = "callee1";
-static const char callee2[] = "callee2";
-static const char callee3[] = "callee3";
-static const char callee4[] = "callee4";
-static const char callee5[] = "callee5";
-static const char callee6[] = "callee6";
-
-static const auto Err = [](Error E) {
-  consumeError(std::move(E));
-  FAIL();
-};
-
-typedef std::vector<MutableArrayRef<InstrProfValueData>> VDArray;
-
-// This helper function adds the value profile data to Record. The type of
-// value profiles is specified by 'ValueKind'. 'ValueDataArray' is a non-const
-// reference and the vector element is a mutable array reference. This is mainly
-// because method `InstrProfRecord::addValueData` takes a pointer and might
-// modify the pointed-to content.
-static void addValueProfData(InstrProfRecord &Record, uint32_t ValueKind,
-                             VDArray &ValueDataArray) {
-  Record.reserveSites(ValueKind, ValueDataArray.size());
-  for (long unsigned int i = 0; i < ValueDataArray.size(); i++) {
-    // The state of vector::data() is not specified when the vector is empty,
-    // and MutableArrayRef takes vector::data() when initialized with a vector.
-    Record.addValueData(ValueKind, i,
-                        ValueDataArray[i].empty() ? nullptr
-                                                  : ValueDataArray[i].data(),
-                        ValueDataArray[i].size(), nullptr);
-  }
-}
-
 struct SparseInstrProfTest : public InstrProfTest {
   void SetUp() override { Writer.setOutputSparse(true); }
 };
@@ -103,91 +71,6 @@ struct SparseInstrProfTest : public InstrProfTest {
 struct MaybeSparseInstrProfTest : public InstrProfTest,
                                   public ::testing::WithParamInterface<bool> {
   void SetUp() override { Writer.setOutputSparse(GetParam()); }
-
-public:
-  // Tests that value profiles in Record has the same content as (possibly
-  // weighted and sorted) InputVDs for each value kind. ValueProfSorted is true
-  // iff the value profiles of Record are already sorted by count.
-  // InputVDs is a non-const reference since it might need a in-place sort.
-  void testValueDataArray(
-      std::vector<std::pair<uint32_t /* ValueKind */, VDArray &>> &InputVDs,
-      InstrProfRecord &Record, bool ValueProfSorted = false,
-      uint64_t ProfWeight = 1) {
-    for (auto &[ValueKind, InputVD] : InputVDs) {
-      ASSERT_EQ(InputVD.size(), Record.getNumValueSites(ValueKind));
-      for (unsigned i = 0; i < InputVD.size(); i++) {
-        ASSERT_EQ(InputVD[i].size(),
-                  Record.getNumValueDataForSite(ValueKind, i));
-
-        uint64_t WantTotalC = 0, GetTotalC = 0;
-        std::unique_ptr<InstrProfValueData[]> OutputVD =
-            Record.getValueForSite(ValueKind, i, &GetTotalC);
-
-        // If value profile elements of the same instrumented site are sorted by
-        // count in Record, sort the input value data array the same way for
-        // comparison purpose.
-        if (ValueProfSorted) {
-          llvm::stable_sort(InputVD[i], [](const InstrProfValueData &lhs,
-                                           const InstrProfValueData &rhs) {
-            return lhs.Count > rhs.Count;
-          });
-        }
-
-        // The previous ASSERT_EQ already tests the number of value data is
-        // InputVD[i].size(), so there won't be out-of-bound access.
-        for (unsigned j = 0; j < InputVD[i].size(); j++) {
-          EXPECT_EQ(InputVD[i][j].Count * ProfWeight, OutputVD[j].Count);
-          EXPECT_EQ(InputVD[i][j].Value, OutputVD[j].Value);
-          WantTotalC += InputVD[i][j].Count;
-        }
-        EXPECT_EQ(WantTotalC * ProfWeight, GetTotalC);
-      }
-    }
-  }
-
-  // A helper function to test the writes and reads of indirect call value
-  // profiles. The profile writer will scale counters by `ProfWeight` when
-  // adding a record. `Endianness` specifies the endianness used by profile
-  // writer and reader when handling value profile records.
-  void testICallDataReadWrite(
-      uint64_t ProfWeight = 1,
-      llvm::endianness Endianness = llvm::endianness::little) {
-    NamedInstrProfRecord Record1("caller", 0x1234, {1, 2});
-
-    // 4 function value sites.
-    std::vector<InstrProfValueData> FuncVD0 = {
-        {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
-    std::vector<InstrProfValueData> FuncVD2 = {{uint64_t(callee1), 1},
-                                               {uint64_t(callee2), 2}};
-    std::vector<InstrProfValueData> FuncVD3 = {{uint64_t(callee1), 1}};
-    VDArray FuncVD = {FuncVD0, {}, FuncVD2, FuncVD3};
-    addValueProfData(Record1, IPVK_IndirectCallTarget, FuncVD);
-
-    if (ProfWeight == 1U) {
-      Writer.addRecord(std::move(Record1), Err);
-    } else {
-      Writer.addRecord(std::move(Record1), ProfWeight, Err);
-    }
-    Writer.addRecord({"callee1", 0x1235, {3, 4}}, Err);
-    Writer.addRecord({"callee2", 0x1235, {3, 4}}, Err);
-    Writer.addRecord({"callee3", 0x1235, {3, 4}}, Err);
-
-    // Set writer endianness.
-    Writer.setValueProfDataEndianness(Endianness);
-
-    auto Profile = Writer.writeBuffer();
-    readProfile(std::move(Profile));
-
-    // Set reader endianness.
-    Reader->setValueProfDataEndianness(Endianness);
-
-    Expected<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
-    EXPECT_THAT_ERROR(R.takeError(), Succeeded());
-
-    std::vector<std::pair<uint32_t, VDArray &>> InputVDs = {
-        std::pair<uint32_t, VDArray &>{IPVK_IndirectCallTarget, FuncVD}};
-    testValueDataArray(InputVDs, R.get(), true, ProfWeight);
-  }
 };
 
 TEST_P(MaybeSparseInstrProfTest, write_and_read_empty_profile) {
@@ -195,6 +78,11 @@ TEST_P(MaybeSparseInstrProfTest, write_and_read_empty_profile) {
   readProfile(std::move(Profile));
   ASSERT_TRUE(Reader->begin() == Reader->end());
 }
+
+static const auto Err = [](Error E) {
+  consumeError(std::move(E));
+  FAIL();
+};
 
 TEST_P(MaybeSparseInstrProfTest, write_and_read_one_function) {
   Writer.addRecord({"foo", 0x1234, {1, 2, 3, 4}}, Err);
@@ -745,8 +633,55 @@ TEST_F(InstrProfTest, test_irpgo_read_deprecated_names) {
       Succeeded());
 }
 
-TEST_P(MaybeSparseInstrProfTest, icall_data_read_write) {
-  testICallDataReadWrite();
+static const char callee1[] = "callee1";
+static const char callee2[] = "callee2";
+static const char callee3[] = "callee3";
+static const char callee4[] = "callee4";
+static const char callee5[] = "callee5";
+static const char callee6[] = "callee6";
+
+TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write) {
+  NamedInstrProfRecord Record1("caller", 0x1234, {1, 2});
+
+  // 4 value sites.
+  Record1.reserveSites(IPVK_IndirectCallTarget, 4);
+  InstrProfValueData VD0[] = {
+      {(uint64_t)callee1, 1}, {(uint64_t)callee2, 2}, {(uint64_t)callee3, 3}};
+  Record1.addValueData(IPVK_IndirectCallTarget, 0, VD0, 3, nullptr);
+  // No value profile data at the second site.
+  Record1.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
+  InstrProfValueData VD2[] = {{(uint64_t)callee1, 1}, {(uint64_t)callee2, 2}};
+  Record1.addValueData(IPVK_IndirectCallTarget, 2, VD2, 2, nullptr);
+  InstrProfValueData VD3[] = {{(uint64_t)callee1, 1}};
+  Record1.addValueData(IPVK_IndirectCallTarget, 3, VD3, 1, nullptr);
+
+  Writer.addRecord(std::move(Record1), Err);
+  Writer.addRecord({"callee1", 0x1235, {3, 4}}, Err);
+  Writer.addRecord({"callee2", 0x1235, {3, 4}}, Err);
+  Writer.addRecord({"callee3", 0x1235, {3, 4}}, Err);
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  Expected<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
+  EXPECT_THAT_ERROR(R.takeError(), Succeeded());
+  ASSERT_EQ(4U, R->getNumValueSites(IPVK_IndirectCallTarget));
+  ASSERT_EQ(3U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 0));
+  ASSERT_EQ(0U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 1));
+  ASSERT_EQ(2U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 2));
+  ASSERT_EQ(1U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 3));
+
+  uint64_t TotalC;
+  std::unique_ptr<InstrProfValueData[]> VD =
+      R->getValueForSite(IPVK_IndirectCallTarget, 0, &TotalC);
+
+  ASSERT_EQ(3U, VD[0].Count);
+  ASSERT_EQ(2U, VD[1].Count);
+  ASSERT_EQ(1U, VD[2].Count);
+  ASSERT_EQ(6U, TotalC);
+
+  ASSERT_EQ(StringRef((const char *)VD[0].Value, 7), StringRef("callee3"));
+  ASSERT_EQ(StringRef((const char *)VD[1].Value, 7), StringRef("callee2"));
+  ASSERT_EQ(StringRef((const char *)VD[2].Value, 7), StringRef("callee1"));
 }
 
 TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
@@ -845,15 +780,94 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_EQ(1U, ValueData[3].Count);
 }
 
-TEST_P(MaybeSparseInstrProfTest, icall_data_read_write_with_weight) {
-  testICallDataReadWrite(10 /* ProfWeight */);
+TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_with_weight) {
+  NamedInstrProfRecord Record1("caller", 0x1234, {1, 2});
+
+  // 4 value sites.
+  Record1.reserveSites(IPVK_IndirectCallTarget, 4);
+  InstrProfValueData VD0[] = {
+      {(uint64_t)callee1, 1}, {(uint64_t)callee2, 2}, {(uint64_t)callee3, 3}};
+  Record1.addValueData(IPVK_IndirectCallTarget, 0, VD0, 3, nullptr);
+  // No value profile data at the second site.
+  Record1.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
+  InstrProfValueData VD2[] = {{(uint64_t)callee1, 1}, {(uint64_t)callee2, 2}};
+  Record1.addValueData(IPVK_IndirectCallTarget, 2, VD2, 2, nullptr);
+  InstrProfValueData VD3[] = {{(uint64_t)callee1, 1}};
+  Record1.addValueData(IPVK_IndirectCallTarget, 3, VD3, 1, nullptr);
+
+  Writer.addRecord(std::move(Record1), 10, Err);
+  Writer.addRecord({"callee1", 0x1235, {3, 4}}, Err);
+  Writer.addRecord({"callee2", 0x1235, {3, 4}}, Err);
+  Writer.addRecord({"callee3", 0x1235, {3, 4}}, Err);
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  Expected<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
+  EXPECT_THAT_ERROR(R.takeError(), Succeeded());
+  ASSERT_EQ(4U, R->getNumValueSites(IPVK_IndirectCallTarget));
+  ASSERT_EQ(3U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 0));
+  ASSERT_EQ(0U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 1));
+  ASSERT_EQ(2U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 2));
+  ASSERT_EQ(1U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 3));
+
+  uint64_t TotalC;
+  std::unique_ptr<InstrProfValueData[]> VD =
+      R->getValueForSite(IPVK_IndirectCallTarget, 0, &TotalC);
+  ASSERT_EQ(30U, VD[0].Count);
+  ASSERT_EQ(20U, VD[1].Count);
+  ASSERT_EQ(10U, VD[2].Count);
+  ASSERT_EQ(60U, TotalC);
+
+  ASSERT_EQ(StringRef((const char *)VD[0].Value, 7), StringRef("callee3"));
+  ASSERT_EQ(StringRef((const char *)VD[1].Value, 7), StringRef("callee2"));
+  ASSERT_EQ(StringRef((const char *)VD[2].Value, 7), StringRef("callee1"));
 }
 
-TEST_P(MaybeSparseInstrProfTest, icall_data_read_write_big_endian) {
-  testICallDataReadWrite(1 /* ProfWeight */, llvm::endianness::big);
-  // Restore little endianness after this test case.
+TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_big_endian) {
+  NamedInstrProfRecord Record1("caller", 0x1234, {1, 2});
+
+  // 4 value sites.
+  Record1.reserveSites(IPVK_IndirectCallTarget, 4);
+  InstrProfValueData VD0[] = {
+      {(uint64_t)callee1, 1}, {(uint64_t)callee2, 2}, {(uint64_t)callee3, 3}};
+  Record1.addValueData(IPVK_IndirectCallTarget, 0, VD0, 3, nullptr);
+  // No value profile data at the second site.
+  Record1.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
+  InstrProfValueData VD2[] = {{(uint64_t)callee1, 1}, {(uint64_t)callee2, 2}};
+  Record1.addValueData(IPVK_IndirectCallTarget, 2, VD2, 2, nullptr);
+  InstrProfValueData VD3[] = {{(uint64_t)callee1, 1}};
+  Record1.addValueData(IPVK_IndirectCallTarget, 3, VD3, 1, nullptr);
+
+  Writer.addRecord(std::move(Record1), Err);
+  Writer.addRecord({"callee1", 0x1235, {3, 4}}, Err);
+  Writer.addRecord({"callee2", 0x1235, {3, 4}}, Err);
+  Writer.addRecord({"callee3", 0x1235, {3, 4}}, Err);
+
+  // Set big endian output.
+  Writer.setValueProfDataEndianness(llvm::endianness::big);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  // Set big endian input.
+  Reader->setValueProfDataEndianness(llvm::endianness::big);
+
+  Expected<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
+  EXPECT_THAT_ERROR(R.takeError(), Succeeded());
+  ASSERT_EQ(4U, R->getNumValueSites(IPVK_IndirectCallTarget));
+  ASSERT_EQ(3U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 0));
+  ASSERT_EQ(0U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 1));
+  ASSERT_EQ(2U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 2));
+  ASSERT_EQ(1U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 3));
+
+  std::unique_ptr<InstrProfValueData[]> VD =
+      R->getValueForSite(IPVK_IndirectCallTarget, 0);
+  ASSERT_EQ(StringRef((const char *)VD[0].Value, 7), StringRef("callee3"));
+  ASSERT_EQ(StringRef((const char *)VD[1].Value, 7), StringRef("callee2"));
+  ASSERT_EQ(StringRef((const char *)VD[2].Value, 7), StringRef("callee1"));
+
+  // Restore little endian default:
   Writer.setValueProfDataEndianness(llvm::endianness::little);
-  Reader->setValueProfDataEndianness(llvm::endianness::little);
 }
 
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1) {
@@ -879,8 +893,9 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1) {
   InstrProfValueData VD3[] = {{uint64_t(callee1), 1}};
   Record11.addValueData(IPVK_IndirectCallTarget, 3, VD3, 1, nullptr);
 
-  InstrProfValueData VD4[] = {
-      {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
+  InstrProfValueData VD4[] = {{uint64_t(callee1), 1},
+                              {uint64_t(callee2), 2},
+                              {uint64_t(callee3), 3}};
   Record11.addValueData(IPVK_IndirectCallTarget, 4, VD4, 3, nullptr);
 
   // A different record for the same caller.
@@ -897,8 +912,9 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1) {
 
   Record12.addValueData(IPVK_IndirectCallTarget, 3, nullptr, 0, nullptr);
 
-  InstrProfValueData VD42[] = {
-      {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
+  InstrProfValueData VD42[] = {{uint64_t(callee1), 1},
+                               {uint64_t(callee2), 2},
+                               {uint64_t(callee3), 3}};
   Record12.addValueData(IPVK_IndirectCallTarget, 4, VD42, 3, nullptr);
 
   Writer.addRecord(std::move(Record11), Err);
