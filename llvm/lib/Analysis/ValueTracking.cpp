@@ -665,13 +665,8 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
       // assume(V ^ Mask = C)
     } else if (match(Cmp,
                      m_ICmp(Pred, m_Xor(m_V, m_APInt(Mask)), m_APInt(C)))) {
-      // For those bits in Mask that are zero, we can propagate known bits
-      // from C to V. For those bits in Mask that are one, we can propagate
-      // inverted bits from C to V.
-      Known.Zero |= ~*C & ~*Mask;
-      Known.One |= *C & ~*Mask;
-      Known.Zero |= *C & *Mask;
-      Known.One |= ~*C & *Mask;
+      // Equivalent to assume(V == Mask ^ C)
+      Known = Known.unionWith(KnownBits::makeConstant(*C ^ *Mask));
       // assume(V << ShAmt = C)
     } else if (match(Cmp, m_ICmp(Pred, m_Shl(m_V, m_ConstantInt(ShAmt)),
                                  m_APInt(C))) &&
