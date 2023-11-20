@@ -578,18 +578,16 @@ static void foldInlineAsmMemOperand(MachineInstr *MI, unsigned OpNo, int FI,
     foldInlineAsmMemOperand(MI, TiedTo, FI, TII);
   }
 
-  // Change the operand from a register to a frame index.
-  MO.ChangeToFrameIndex(FI, MO.getTargetFlags());
-
-  SmallVector<MachineOperand, 4> NewOps;
-  TII.getFrameIndexOperands(NewOps);
+  SmallVector<MachineOperand, 5> NewOps;
+  TII.getFrameIndexOperands(NewOps, FI);
   assert(!NewOps.empty() && "getFrameIndexOperands didn't create any operands");
-  MI->insert(MI->operands_begin() + OpNo + 1, NewOps);
+  MI->removeOperand(OpNo);
+  MI->insert(MI->operands_begin() + OpNo, NewOps);
 
   // Change the previous operand to a MemKind InlineAsm::Flag. The second param
   // is the per-target number of operands that represent the memory operand
   // excluding this one (MD). This includes MO.
-  InlineAsm::Flag F(InlineAsm::Kind::Mem, NewOps.size() + 1);
+  InlineAsm::Flag F(InlineAsm::Kind::Mem, NewOps.size());
   F.setMemConstraint(InlineAsm::ConstraintCode::m);
   MachineOperand &MD = MI->getOperand(OpNo - 1);
   MD.setImm(F);

@@ -10288,13 +10288,11 @@ void X86InstrInfo::genAlternativeCodeSequence(
 }
 
 // See also: X86DAGToDAGISel::SelectInlineAsmMemoryOperand().
-void X86InstrInfo::getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops) const {
-  Ops.append({
-    MachineOperand::CreateImm(1),        // Scale
-    MachineOperand::CreateReg(0, false), // Index
-    MachineOperand::CreateImm(0),        // Disp
-    MachineOperand::CreateReg(0, false), // Segment
-  });
+void X86InstrInfo::getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops, int FI) const {
+  X86AddressMode M;
+  M.BaseType = X86AddressMode::FrameIndexBase;
+  M.Base.FrameIndex = FI;
+  M.getFullAddress(Ops);
 }
 
 #define GET_INSTRINFO_HELPERS
