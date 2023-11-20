@@ -5,9 +5,9 @@
 using std::suspend_always;
 using std::suspend_never;
 
-template <typename T> struct [[clang::coro_lifetimebound, clang::coro_return_type]] Gen {
+template <typename T> struct [[clang::coro_lifetimebound, clang::coro_return_type]] Co {
   struct promise_type {
-    Gen<T> get_return_object() {
+    Co<T> get_return_object() {
       return {};
     }
     suspend_always initial_suspend();
@@ -16,7 +16,7 @@ template <typename T> struct [[clang::coro_lifetimebound, clang::coro_return_typ
     void return_value(const T &t);
 
     template <typename U>
-    auto await_transform(const Gen<U> &) {
+    auto await_transform(const Co<U> &) {
       struct awaitable {
         bool await_ready() noexcept { return false; }
         void await_suspend(std::coroutine_handle<>) noexcept {}
@@ -27,11 +27,7 @@ template <typename T> struct [[clang::coro_lifetimebound, clang::coro_return_typ
   };
 };
 
-template <typename T> using Co = Gen<T>;
-
-Gen<int> foo_coro(const int& b);
-
-Gen<int> foo_coro(const int& b) {
+Co<int> foo_coro(const int& b) {
   if (b > 0)
     co_return 1;
   co_return 2;
@@ -50,15 +46,15 @@ Co<int> bar_coro(const int &b, int c) {
   co_return co_await foo_coro(co_await foo_coro(1));
 }
 
-[[clang::coro_wrapper]] Gen<int> plain_return_co(int b) {
+[[clang::coro_wrapper]] Co<int> plain_return_co(int b) {
   return foo_coro(b); // expected-warning {{address of stack memory associated with parameter}}
 }
 
-[[clang::coro_wrapper]] Gen<int> safe_forwarding(const int& b) {
+[[clang::coro_wrapper]] Co<int> safe_forwarding(const int& b) {
   return foo_coro(b);
 }
 
-[[clang::coro_wrapper]] Gen<int> unsafe_wrapper(int b) {
+[[clang::coro_wrapper]] Co<int> unsafe_wrapper(int b) {
   return safe_forwarding(b); // expected-warning {{address of stack memory associated with parameter}}
 }
 
@@ -78,6 +74,17 @@ void lambdas() {
   auto unsafe_lambda = [] CORO_WRAPPER (int b) {
     return foo_coro(b); // expected-warning {{address of stack memory associated with parameter}}
   };
+  auto coro_lambda = [] (const int&) -> Co<int> {
+    co_return 0;
+  };
+  auto unsafe_coro_lambda = [&] (const int& b) -> Co<int> {
+    int x = co_await coro_lambda(b);
+    auto safe = coro_lambda(b);
+    auto unsafe1 = coro_lambda(1); // expected-warning {{temporary whose address is used as value of local variable}}
+    auto unsafe2 = coro_lambda(getInt()); // expected-warning {{temporary whose address is used as value of local variable}}
+    auto unsafe3 = coro_lambda(co_await coro_lambda(b)); // expected-warning {{temporary whose address is used as value of local variable}}
+    co_return co_await safe;
+  };
   auto safe_lambda = [](int b) -> Co<int> {
     int x = co_await foo_coro(1);
     co_return x + co_await foo_coro(b);
@@ -87,7 +94,7 @@ void lambdas() {
 // Safe usage when parameters are value
 // =============================================================================
 namespace by_value {
-Gen<int> value_coro(int b) { co_return co_await foo_coro(b); }
-[[clang::coro_wrapper]] Gen<int> wrapper1(int b) { return value_coro(b); }
-[[clang::coro_wrapper]] Gen<int> wrapper2(const int& b) { return value_coro(b); }
+Co<int> value_coro(int b) { co_return co_await foo_coro(b); }
+[[clang::coro_wrapper]] Co<int> wrapper1(int b) { return value_coro(b); }
+[[clang::coro_wrapper]] Co<int> wrapper2(const int& b) { return value_coro(b); }
 }
