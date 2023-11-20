@@ -69,17 +69,27 @@ static uint32_t getDeclAlignIfRequired(const Decl *D, const ASTContext &Ctx) {
   return D->hasAttr<AlignedAttr>() ? D->getMaxAlignment() : 0;
 }
 
-static APValue const *evaluateConstantInitializer(clang::VarDecl const *VD) {
+/// Given a VarDecl corresponding to either the definition or
+/// declaration of a C++ static data member, if it has a constant
+/// initializer and is evaluatable, return the evaluated value.
+/// Returns std::nullopt on failure.
+static std::optional<APValue>
+evaluateConstantInitializer(const clang::VarDecl *VD,
+                            const clang::ASTContext &Ctx) {
   assert(VD != nullptr);
 
-  VD = VD->getCanonicalDecl();
-  if (!VD)
-    return nullptr;
+  if (!VD->isStaticDataMember())
+    return std::nullopt;
 
-  if (!VD->hasConstantInitialization() || !VD->hasInit())
-    return nullptr;
+  if (!VD->isUsableInConstantExpressions(Ctx))
+    return std::nullopt;
 
-  return VD->evaluateValue();
+  auto const *InitExpr = VD->getAnyInitializer();
+  Expr::EvalResult Result;
+  if (!InitExpr->EvaluateAsConstantExpr(Result, Ctx))
+    return std::nullopt;
+
+  return Result.Val;
 }
 
 CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
@@ -5518,7 +5528,7 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
 
     llvm::DIExpression *E = nullptr;
     if (Expr.empty()) {
-      if (auto const *InitVal = evaluateConstantInitializer(D))
+      if (const auto InitVal = evaluateConstantInitializer(D, CGM.getContext()))
         E = createConstantValueExpression(D, *InitVal);
     } else {
       E = DBuilder.createExpression(Expr);
@@ -5620,7 +5630,7 @@ void CGDebugInfo::EmitGlobalVariable(const VarDecl *VD) {
   if (CacheIt != DeclCache.end())
     return;
 
-  auto const *InitVal = evaluateConstantInitializer(VD);
+  const auto InitVal = evaluateConstantInitializer(VD, CGM.getContext());
   if (!InitVal)
     return;
 
