@@ -33,6 +33,15 @@
 
 /lldb/ @JDevlieghere
 
+/mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar
+
+/mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar
+/mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @MaheshRavishankar
+/mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar
+/mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar
+/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @MaheshRavishankar
+/mlir/lib/Interfaces/TilingInterface.* @MaheshRavishankar
+
 # SPIR-V in MLIR.
 /mlir/**/SPIRV/ @antiagainst @kuhar
 /mlir/**/SPIRVTo*/ @antiagainst @kuhar
