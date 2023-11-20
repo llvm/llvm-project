@@ -3926,6 +3926,11 @@ defm STURBB : StoreUnscaled<0b00, 0, 0b00, GPR32z, "sturb",
                          [(truncstorei8 GPR32z:$Rt,
                                   (am_unscaled8 GPR64sp:$Rn, simm9:$offset))]>;
 
+// bf16 store pattern
+def : Pat<(store (bf16 FPR16Op:$Rt),
+                 (am_unscaled16 GPR64sp:$Rn, simm9:$offset)),
+          (STURHi FPR16:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+
 // Armv8.4 Weaker Release Consistency enhancements
 //         LDAPR & STLR with Immediate Offset instructions
 let Predicates = [HasRCPC_IMMO] in {
