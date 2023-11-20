@@ -463,6 +463,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_B16:
   case R_LARCH_B21:
   case R_LARCH_B26:
+  case R_LARCH_CALL36:
     return R_PLT_PC;
   case R_LARCH_GOT_PC_HI20:
   case R_LARCH_GOT64_PC_LO20:
@@ -589,6 +590,20 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     checkAlignment(loc, val, 4, rel);
     write32le(loc, setD10k16(read32le(loc), val >> 2));
     return;
+
+  case R_LARCH_CALL36: {
+    // This relocation type is designed for the adjancent pcaddu18i+jirl pair,
+    // so patch these 2 instructions in one time.
+    checkInt(loc, val, 38, rel);
+    checkAlignment(loc, val, 4, rel);
+    // Since jirl performs sign extension on the offset immediate, adds (1<<17)
+    // to original val to get the correct hi20.
+    uint32_t hi20 = extractBits(val + (1 << 17), 37, 18);
+    uint32_t lo18 = val & (1 << 18) - 1;
+    write32le(loc, setJ20(read32le(loc), hi20));
+    write32le(loc + 4, setK16(read32le(loc + 4), lo18 >> 2));
+    return;
+  }
 
   // Relocs intended for `addi`, `ld` or `st`.
   case R_LARCH_PCALA_LO12:
