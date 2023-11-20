@@ -255,11 +255,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return I->getOperand(1);
 
     // If the RHS is a constant, see if we can simplify it.
-    if (ShrinkDemandedConstant(I, 1, DemandedMask)) {
-      // Disjoint flag may not longer hold.
-      I->dropPoisonGeneratingFlags();
+    if (ShrinkDemandedConstant(I, 1, DemandedMask))
       return I;
-    }
 
     break;
   }

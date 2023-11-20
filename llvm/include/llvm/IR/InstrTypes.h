@@ -415,7 +415,7 @@ struct OperandTraits<BinaryOperator> :
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BinaryOperator, Value)
 
-/// A or instruction, which can be marked as "disjoint", indicating that the
+/// An or instruction, which can be marked as "disjoint", indicating that the
 /// inputs don't have a 1 in the same bit position. Meaning this instruction
 /// can also be treated as an add.
 class PossiblyDisjointInst : public BinaryOperator {

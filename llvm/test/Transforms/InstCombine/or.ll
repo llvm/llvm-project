@@ -1576,3 +1576,10 @@ define <4 x i1> @and_or_not_or_logical_vec(<4 x i32> %ap, <4 x i32> %bp) {
   %Z = or <4 x i1> %X, %Y
   ret <4 x i1> %Z
 }
+
+; Make sure SimplifyDemandedBits drops the disjoint flag.
+define i8 @drop_disjoint(i8 %x) {
+  %a = and i8 %x, -2
+  %b = or disjoint i8 %a, 1
+  ret i8 %b
+}
