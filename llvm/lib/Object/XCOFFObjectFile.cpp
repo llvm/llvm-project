@@ -1288,7 +1288,11 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
   if (CsectAuxRef.getSymbolType() == XCOFF::XTY_LD)
     return true;
 
-  return createError("csect symbol has no valid symbol type.");
+  return createError(
+      "Symbol csect aux entry with index " +
+      Twine(getObject()->getSymbolIndex(CsectAuxRef.getEntryAddress())) +
+      " has invalid symbol type " +
+      Twine::utohexstr(CsectAuxRef.getSymbolType()));
 }
 
 bool XCOFFSymbolRef::isCsectSymbol() const {
