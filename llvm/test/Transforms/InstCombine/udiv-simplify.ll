@@ -55,11 +55,13 @@ define i64 @test2_PR2274(i32 %x, i32 %v) nounwind {
 define i32 @PR30366(i1 %a) {
 ; CHECK-LABEL: @PR30366(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[A:%.*]] to i32
-; CHECK-NEXT:    [[D:%.*]] = udiv i32 [[Z]], zext (i16 shl (i16 1, i16 ptrtoint (ptr @b to i16)) to i32)
+; CHECK-NEXT:    [[Z2:%.*]] = zext nneg i16 shl (i16 1, i16 ptrtoint (ptr @b to i16)) to i32
+; CHECK-NEXT:    [[D:%.*]] = udiv i32 [[Z]], [[Z2]]
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %z = zext i1 %a to i32
-  %d = udiv i32 %z, zext (i16 shl (i16 1, i16 ptrtoint (ptr @b to i16)) to i32)
+  %z2 = zext i16 shl (i16 1, i16 ptrtoint (ptr @b to i16)) to i32
+  %d = udiv i32 %z, %z2
   ret i32 %d
 }
 

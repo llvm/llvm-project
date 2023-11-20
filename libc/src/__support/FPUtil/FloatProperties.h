@@ -175,6 +175,38 @@ template <> struct FloatProperties<long double> {
 };
 #endif
 
+#if (defined(LIBC_COMPILER_HAS_FLOAT128) &&                                    \
+     !defined(LIBC_FLOAT128_IS_LONG_DOUBLE))
+// Properties for numbers represented in 128 bits long double on non x86
+// platform.
+template <> struct FloatProperties<float128> {
+  typedef UInt128 BitsType;
+  static_assert(sizeof(BitsType) == sizeof(float128),
+                "Unexpected size of 'float128' type.");
+
+  static constexpr uint32_t BIT_WIDTH = sizeof(BitsType) << 3;
+
+  static constexpr uint32_t MANTISSA_WIDTH = 112;
+  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
+  static constexpr uint32_t EXPONENT_WIDTH = 15;
+  static constexpr BitsType MANTISSA_MASK = (BitsType(1) << MANTISSA_WIDTH) - 1;
+  static constexpr BitsType SIGN_MASK = BitsType(1)
+                                        << (EXPONENT_WIDTH + MANTISSA_WIDTH);
+  static constexpr BitsType EXPONENT_MASK = ~(SIGN_MASK | MANTISSA_MASK);
+  static constexpr uint32_t EXPONENT_BIAS = 16383;
+
+  static constexpr BitsType EXP_MANT_MASK = MANTISSA_MASK | EXPONENT_MASK;
+  static_assert(EXP_MANT_MASK == ~SIGN_MASK,
+                "Exponent and mantissa masks are not as expected.");
+
+  // If a number x is a NAN, then it is a quiet NAN if:
+  //   QuietNaNMask & bits(x) != 0
+  // Else, it is a signalling NAN.
+  static constexpr BitsType QUIET_NAN_MASK = BitsType(1)
+                                             << (MANTISSA_WIDTH - 1);
+};
+#endif // LIBC_COMPILER_HAS_FLOAT128
+
 // Define the float type corresponding to the BitsType.
 template <typename BitsType> struct FloatType;
 

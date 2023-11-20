@@ -153,7 +153,6 @@ enum Kind {
   kw_spir_func,
   kw_x86_64_sysvcc,
   kw_win64cc,
-  kw_webkit_jscc,
   kw_anyregcc,
   kw_swiftcc,
   kw_swifttailcc,
@@ -177,6 +176,7 @@ enum Kind {
   kw_amdgpu_gfx,
   kw_tailcc,
   kw_m68k_rtdcc,
+  kw_graalcc,
 
   // Attributes:
   kw_attributes,

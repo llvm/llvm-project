@@ -336,8 +336,7 @@ private:
                     unsigned Abbrev);
   void writeDIMacroFile(const DIMacroFile *N, SmallVectorImpl<uint64_t> &Record,
                         unsigned Abbrev);
-  void writeDIArgList(const DIArgList *N, SmallVectorImpl<uint64_t> &Record,
-                      unsigned Abbrev);
+  void writeDIArgList(const DIArgList *N, SmallVectorImpl<uint64_t> &Record);
   void writeDIModule(const DIModule *N, SmallVectorImpl<uint64_t> &Record,
                      unsigned Abbrev);
   void writeDIAssignID(const DIAssignID *N, SmallVectorImpl<uint64_t> &Record,
@@ -826,6 +825,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_PRESPLIT_COROUTINE;
   case Attribute::Writable:
     return bitc::ATTR_KIND_WRITABLE;
+  case Attribute::CoroDestroyOnlyWhenComplete:
+    return bitc::ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -1973,13 +1974,12 @@ void ModuleBitcodeWriter::writeDIMacroFile(const DIMacroFile *N,
 }
 
 void ModuleBitcodeWriter::writeDIArgList(const DIArgList *N,
-                                         SmallVectorImpl<uint64_t> &Record,
-                                         unsigned Abbrev) {
+                                         SmallVectorImpl<uint64_t> &Record) {
   Record.reserve(N->getArgs().size());
   for (ValueAsMetadata *MD : N->getArgs())
     Record.push_back(VE.getMetadataID(MD));
 
-  Stream.EmitRecord(bitc::METADATA_ARG_LIST, Record, Abbrev);
+  Stream.EmitRecord(bitc::METADATA_ARG_LIST, Record);
   Record.clear();
 }
 
@@ -2261,6 +2261,10 @@ void ModuleBitcodeWriter::writeMetadataRecords(
     continue;
 #include "llvm/IR/Metadata.def"
       }
+    }
+    if (auto *AL = dyn_cast<DIArgList>(MD)) {
+      writeDIArgList(AL, Record);
+      continue;
     }
     writeValueAsMetadata(cast<ValueAsMetadata>(MD), Record);
   }
@@ -5178,7 +5182,7 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
   // Save llvm.compiler.used and remove it.
   SmallVector<Constant *, 2> UsedArray;
   SmallVector<GlobalValue *, 4> UsedGlobals;
-  Type *UsedElementType = Type::getInt8PtrTy(M.getContext());
+  Type *UsedElementType = PointerType::getUnqual(M.getContext());
   GlobalVariable *Used = collectUsedGlobalVariables(M, UsedGlobals, true);
   for (auto *GV : UsedGlobals) {
     if (GV->getName() != "llvm.embedded.module" &&

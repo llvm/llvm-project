@@ -667,6 +667,13 @@ MLIR_CAPI_EXPORTED void mlirOperationPrintWithFlags(MlirOperation op,
                                                     MlirStringCallback callback,
                                                     void *userData);
 
+/// Same as mlirOperationPrint but accepts AsmState controlling the printing
+/// behavior as well as caching computed names.
+MLIR_CAPI_EXPORTED void mlirOperationPrintWithState(MlirOperation op,
+                                                    MlirAsmState state,
+                                                    MlirStringCallback callback,
+                                                    void *userData);
+
 /// Same as mlirOperationPrint but writing the bytecode format.
 MLIR_CAPI_EXPORTED void mlirOperationWriteBytecode(MlirOperation op,
                                                    MlirStringCallback callback,

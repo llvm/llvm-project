@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
   uint8_t *recored_data = new uint8_t[DeviceMemoryMB.get()->getBufferSize()];
   std::memcpy(recored_data,
               const_cast<char *>(DeviceMemoryMB.get()->getBuffer().data()),
-              DeviceMemorySizeJson.value() * sizeof(uint8_t));
+              DeviceMemoryMB.get()->getBufferSize());
 
   __tgt_target_kernel_replay(
       /* Loc */ nullptr, DeviceId, KernelEntry.addr, (char *)recored_data,

@@ -90,6 +90,8 @@ on support follow.
      ``F``            Supported
      ``H``            Assembly Support
      ``M``            Supported
+     ``Smaia``        Supported
+     ``Ssaia``        Supported
      ``Svinval``      Assembly Support
      ``Svnapot``      Assembly Support
      ``Svpbmt``       Supported
@@ -188,12 +190,6 @@ LLVM supports (to various degrees) a number of experimental extensions.  All exp
 
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
 
-``experimental-smaia``
-  LLVM implements the `Ratification candidate 3 <https://github.com/riscv/riscv-aia/releases/tag/1.0-RC3>`_.
-
-``experimental-ssaia``
-  LLVM implements the `Ratification candidate 3 <https://github.com/riscv/riscv-aia/releases/tag/1.0-RC3>`_.
-
 ``experimental-zacas``
   LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zacas/releases/tag/v1.0-rc1>`_.
 
@@ -267,8 +263,14 @@ The current vendor extensions supported are:
 ``XCVbitmanip``
   LLVM implements `version 1.0.0 of the CORE-V Bit Manipulation custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/62bec66b36182215e18c9cf10f723567e23878e9/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification.
 
+``XCVelw``
+  LLVM implements `version 1.0.0 of the CORE-V Event load custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/master/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
+
 ``XCVmac``
   LLVM implements `version 1.0.0 of the CORE-V Multiply-Accumulate (MAC) custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/4f024fe4b15a68b76615b0630c07a6745c620da7/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.mac` as described in the specification. These instructions are only available for riscv32 at this time.
+
+``XCVmem``
+  LLVM implements `version 1.0.0 of the CORE-V Post-Increment load and stores custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/master/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
 
 ``XCValu``
   LLVM implements `version 1.0.0 of the Core-V ALU custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/4f024fe4b15a68b76615b0630c07a6745c620da7/docs/source/instruction_set_extensions.rst>`_ by Core-V.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.

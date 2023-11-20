@@ -7,14 +7,14 @@
 
 define void @test1() {
 entry:
-  tail call void @f1(i16 zext (i1 icmp eq (ptr @g_2, ptr getelementptr inbounds ([3 x i32], ptr @g_1, i64 0, i64 1)) to i16))
+  tail call void @f1(i1 icmp eq (ptr @g_2, ptr getelementptr inbounds ([3 x i32], ptr @g_1, i64 0, i64 1)))
   ret void
 }
 
-declare void @f1(i16)
+declare void @f1(i1)
 
 define void @test2() {
-  tail call void inttoptr (i64 sext (i32 ptrtoint (ptr @f2 to i32) to i64) to ptr)()
+  tail call void inttoptr (i64 -1 to ptr)()
 
   ret void
 }

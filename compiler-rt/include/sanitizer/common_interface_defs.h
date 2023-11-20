@@ -15,11 +15,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// GCC does not understand __has_feature.
-#if !defined(__has_feature)
-#define __has_feature(x) 0
-#endif
-
 // Windows allows a user to set their default calling convention, but we always
 // use __cdecl
 #ifdef _WIN32

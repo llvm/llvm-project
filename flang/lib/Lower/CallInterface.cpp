@@ -247,7 +247,8 @@ Fortran::lower::CallerInterface::characterize() const {
           std::optional<Fortran::evaluate::characteristics::DummyArgument>
               argCharacteristic =
                   Fortran::evaluate::characteristics::DummyArgument::FromActual(
-                      "actual", *expr, foldingContext);
+                      "actual", *expr, foldingContext,
+                      /*forImplicitInterface=*/true);
           assert(argCharacteristic &&
                  "failed to characterize argument in implicit call");
           characteristic->dummyArguments.emplace_back(
@@ -1002,7 +1003,8 @@ private:
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
     } else if (dummyRequiresBox(obj, isBindC)) {
       // Pass as fir.box or fir.class
-      if (isValueAttr)
+      if (isValueAttr &&
+          !getConverter().getLoweringOptions().getLowerToHighLevelFIR())
         TODO(loc, "assumed shape dummy argument with VALUE attribute");
       addFirOperand(boxType, nextPassedArgPosition(), Property::Box, attrs);
       addPassedArg(PassEntityBy::Box, entity, characteristics);

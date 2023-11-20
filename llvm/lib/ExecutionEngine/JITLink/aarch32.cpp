@@ -304,12 +304,11 @@ void writeImmediate(WritableArmRelocation &R, uint32_t Imm) {
   R.Wd = (R.Wd & ~Mask) | Imm;
 }
 
-Expected<int64_t> readAddendData(LinkGraph &G, Block &B, const Edge &E) {
+Expected<int64_t> readAddendData(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                 Edge::Kind Kind) {
   llvm::endianness Endian = G.getEndianness();
-
-  Edge::Kind Kind = E.getKind();
   const char *BlockWorkingMem = B.getContent().data();
-  const char *FixupPtr = BlockWorkingMem + E.getOffset();
+  const char *FixupPtr = BlockWorkingMem + Offset;
 
   switch (Kind) {
   case Data_Delta32:
@@ -319,13 +318,13 @@ Expected<int64_t> readAddendData(LinkGraph &G, Block &B, const Edge &E) {
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
         " can not read implicit addend for aarch32 edge kind " +
-        G.getEdgeKindName(E.getKind()));
+        G.getEdgeKindName(Kind));
   }
 }
 
-Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, const Edge &E) {
-  ArmRelocation R(B.getContent().data() + E.getOffset());
-  Edge::Kind Kind = E.getKind();
+Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                Edge::Kind Kind) {
+  ArmRelocation R(B.getContent().data() + Offset);
 
   switch (Kind) {
   case Arm_Call:
@@ -352,14 +351,13 @@ Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, const Edge &E) {
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
         " can not read implicit addend for aarch32 edge kind " +
-        G.getEdgeKindName(E.getKind()));
+        G.getEdgeKindName(Kind));
   }
 }
 
-Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, const Edge &E,
-                                  const ArmConfig &ArmCfg) {
-  ThumbRelocation R(B.getContent().data() + E.getOffset());
-  Edge::Kind Kind = E.getKind();
+Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                  Edge::Kind Kind, const ArmConfig &ArmCfg) {
+  ThumbRelocation R(B.getContent().data() + Offset);
 
   switch (Kind) {
   case Thumb_Call:
@@ -377,12 +375,14 @@ Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, const Edge &E,
                   : decodeImmBT4BlT1BlxT2(R.Hi, R.Lo);
 
   case Thumb_MovwAbsNC:
+  case Thumb_MovwPrelNC:
     if (!checkOpcode<Thumb_MovwAbsNC>(R))
       return makeUnexpectedOpcodeError(G, R, Kind);
     // Initial addend is interpreted as a signed value
     return SignExtend64<16>(decodeImmMovtT1MovwT3(R.Hi, R.Lo));
 
   case Thumb_MovtAbs:
+  case Thumb_MovtPrel:
     if (!checkOpcode<Thumb_MovtAbs>(R))
       return makeUnexpectedOpcodeError(G, R, Kind);
     // Initial addend is interpreted as a signed value
@@ -392,7 +392,7 @@ Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, const Edge &E,
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
         " can not read implicit addend for aarch32 edge kind " +
-        G.getEdgeKindName(E.getKind()));
+        G.getEdgeKindName(Kind));
   }
 }
 
@@ -610,6 +610,20 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
     writeImmediate<Thumb_MovtAbs>(R, encodeImmMovtT1MovwT3(Value));
     return Error::success();
   }
+  case Thumb_MovwPrelNC: {
+    if (!checkOpcode<Thumb_MovwAbsNC>(R))
+      return makeUnexpectedOpcodeError(G, R, Kind);
+    uint16_t Value = ((TargetAddress + Addend - FixupAddress) & 0xffff);
+    writeImmediate<Thumb_MovwAbsNC>(R, encodeImmMovtT1MovwT3(Value));
+    return Error::success();
+  }
+  case Thumb_MovtPrel: {
+    if (!checkOpcode<Thumb_MovtAbs>(R))
+      return makeUnexpectedOpcodeError(G, R, Kind);
+    uint16_t Value = (((TargetAddress + Addend - FixupAddress) >> 16) & 0xffff);
+    writeImmediate<Thumb_MovtAbs>(R, encodeImmMovtT1MovwT3(Value));
+    return Error::success();
+  }
 
   default:
     return make_error<JITLinkError>(
@@ -659,6 +673,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     KIND_NAME_CASE(Thumb_Jump24)
     KIND_NAME_CASE(Thumb_MovwAbsNC)
     KIND_NAME_CASE(Thumb_MovtAbs)
+    KIND_NAME_CASE(Thumb_MovwPrelNC)
+    KIND_NAME_CASE(Thumb_MovtPrel)
   default:
     return getGenericEdgeKindName(K);
   }

@@ -2534,7 +2534,8 @@ public:
             procRef.proc().GetSpecificIntrinsic())
       return genIntrinsicRef(procRef, resultType, *intrinsic);
 
-    if (Fortran::lower::isIntrinsicModuleProcRef(procRef))
+    if (Fortran::lower::isIntrinsicModuleProcRef(procRef) &&
+        !Fortran::semantics::IsBindCProcedure(*procRef.proc().GetSymbol()))
       return genIntrinsicRef(procRef, resultType);
 
     if (isStatementFunctionCall(procRef))

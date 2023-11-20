@@ -120,9 +120,9 @@ define <vscale x 16 x i8> @insert_v16i8_nxv16i8_idx16(<vscale x 16 x i8> %vec, <
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mov x8, #-16 // =0xfffffffffffffff0
+; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    mov w9, #16 // =0x10
-; CHECK-NEXT:    addvl x8, x8, #1
+; CHECK-NEXT:    sub x8, x8, #16
 ; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    cmp x8, #16
 ; CHECK-NEXT:    csel x8, x8, x9, lo

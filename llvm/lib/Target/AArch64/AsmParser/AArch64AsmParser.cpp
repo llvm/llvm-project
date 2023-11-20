@@ -223,6 +223,7 @@ private:
   bool parseDirectiveSEHTrapFrame(SMLoc L);
   bool parseDirectiveSEHMachineFrame(SMLoc L);
   bool parseDirectiveSEHContext(SMLoc L);
+  bool parseDirectiveSEHECContext(SMLoc L);
   bool parseDirectiveSEHClearUnwoundToCall(SMLoc L);
   bool parseDirectiveSEHPACSignLR(SMLoc L);
   bool parseDirectiveSEHSaveAnyReg(SMLoc L, bool Paired, bool Writeback);
@@ -3658,6 +3659,11 @@ static const struct Extension {
     {"ssve-fp8dot2", {AArch64::FeatureSSVE_FP8DOT2}},
     {"fp8dot4", {AArch64::FeatureFP8DOT4}},
     {"ssve-fp8dot4", {AArch64::FeatureSSVE_FP8DOT4}},
+    {"lut", {AArch64::FeatureLUT}},
+    {"sme-lutv2", {AArch64::FeatureSME_LUTv2}},
+    {"sme-f8f16", {AArch64::FeatureSMEF8F16}},
+    {"sme-f8f32", {AArch64::FeatureSMEF8F32}},
+    {"sme-fa64",  {AArch64::FeatureSMEFA64}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -3691,6 +3697,8 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
     Str += "ARMv9.3a";
   else if (FBS[AArch64::HasV9_4aOps])
     Str += "ARMv9.4a";
+  else if (FBS[AArch64::HasV9_5aOps])
+    Str += "ARMv9.5a";
   else if (FBS[AArch64::HasV8_0rOps])
     Str += "ARMv8r";
   else {
@@ -4553,7 +4561,7 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
 
   Operands.push_back(AArch64Operand::CreateReg(
       RegNum, RegKind::LookupTable, StartLoc, getLoc(), getContext()));
-  Lex(); // Eat identifier token.
+  Lex(); // Eat register.
 
   // Check if register is followed by an index
   if (parseOptionalToken(AsmToken::LBrac)) {
@@ -4565,16 +4573,17 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(ImmVal);
     if (!MCE)
       return TokError("immediate value expected for vector index");
-    if (parseToken(AsmToken::RBrac, "']' expected"))
-      return ParseStatus::Failure;
-
     Operands.push_back(AArch64Operand::CreateImm(
         MCConstantExpr::create(MCE->getValue(), getContext()), StartLoc,
         getLoc(), getContext()));
+    if (parseOptionalToken(AsmToken::Comma))
+      if (parseOptionalMulOperand(Operands))
+        return ParseStatus::Failure;
+    if (parseToken(AsmToken::RBrac, "']' expected"))
+      return ParseStatus::Failure;
     Operands.push_back(
         AArch64Operand::CreateToken("]", getLoc(), getContext()));
   }
-
   return ParseStatus::Success;
 }
 
@@ -6732,6 +6741,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHMachineFrame(Loc);
     else if (IDVal == ".seh_context")
       parseDirectiveSEHContext(Loc);
+    else if (IDVal == ".seh_ec_context")
+      parseDirectiveSEHECContext(Loc);
     else if (IDVal == ".seh_clear_unwound_to_call")
       parseDirectiveSEHClearUnwoundToCall(Loc);
     else if (IDVal == ".seh_pac_sign_lr")
@@ -7393,6 +7404,13 @@ bool AArch64AsmParser::parseDirectiveSEHMachineFrame(SMLoc L) {
 /// ::= .seh_context
 bool AArch64AsmParser::parseDirectiveSEHContext(SMLoc L) {
   getTargetStreamer().emitARM64WinCFIContext();
+  return false;
+}
+
+/// parseDirectiveSEHECContext
+/// ::= .seh_ec_context
+bool AArch64AsmParser::parseDirectiveSEHECContext(SMLoc L) {
+  getTargetStreamer().emitARM64WinCFIECContext();
   return false;
 }
 

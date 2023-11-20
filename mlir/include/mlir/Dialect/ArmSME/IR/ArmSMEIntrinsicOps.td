@@ -19,10 +19,40 @@ include "ArmSME.td"
 // ArmSME Intrinsic op definitions
 //===----------------------------------------------------------------------===//
 
-def MOPPredicate : ScalableVectorOfLengthAndType<[16, 8, 4, 2], [I1]>;
-def MOPVector : ScalableVectorOfLengthAndType<[16, 8, 4, 2],
-                                              [I8, I16, BF16, F16, F32, F64]>;
-def LDSTPredicate : ScalableVectorOfLengthAndType<[16, 8, 4, 2, 1], [I1]>;
+def MOPPredicate : ScalableVectorOfRankAndLengthAndType<[1], [16, 8, 4, 2], [I1]>
+{
+  let summary = "a vector type that is a supported predicate for the SME MOP instructions";
+  let description = [{
+    Possible vector types:
+
+    * `vector<[16]xi1>`
+    * `vector<[8]xi1>`
+    * `vector<[4]xi1>`
+    * `vector<[2]xi1>`
+  }];
+}
+
+// FIXME: This allows types that are not SVE vectors, e.g. vector<[16]xf32>.
+def MOPVector : ScalableVectorOfRankAndLengthAndType<[1], [16, 8, 4, 2],
+                                              [I8, I16, BF16, F16, F32, F64]>
+{
+  let summary = "a vector type that is a supported input for the SME MOP instructions";
+  let description = [{
+    Possible vector types:
+
+    Integer elements:
+
+    * `vector<[16]xi8>`
+    * `vector<[8]xi16>`
+
+    Floating point elements:
+
+    * `vector<[8]xf16>`
+    * `vector<[8]xbf16>`
+    * `vector<[4]xf32>`
+    * `vector<[2]xf64>`
+  }];
+}
 
 class ArmSME_IntrOp<string mnemonic, list<int> overloadedOperands = [],
                     list<Trait> traits = [], int numResults = 0,
@@ -65,7 +95,7 @@ def LLVM_aarch64_sme_usmops_wide : ArmSME_IntrMopOverloadedOp<"usmops.wide">;
 // Loads
 class ArmSME_IntrLoadOp<string mnemonic>
     : ArmSME_IntrOp<mnemonic>,
-      Arguments<(ins Arg<LDSTPredicate, "Vector predicate">:$predicate,
+      Arguments<(ins Arg<SVEPredicate, "Vector predicate">:$predicate,
                  Arg<LLVM_AnyPointer, "Load address">:$load_address,
                  Arg<I32, "Virtual tile ID">:$tile_id,
                  Arg<I32, "Tile slice">:$tile_slice_index)>;
@@ -84,7 +114,7 @@ def LLVM_aarch64_sme_ld1q_vert : ArmSME_IntrLoadOp<"ld1q.vert">;
 // Stores
 class ArmSME_IntrStoreOp<string mnemonic>
     : ArmSME_IntrOp<mnemonic>,
-      Arguments<(ins Arg<LDSTPredicate, "Vector predicate">:$predicate,
+      Arguments<(ins Arg<SVEPredicate, "Vector predicate">:$predicate,
                  Arg<LLVM_AnyPointer, "Store address", [MemWrite]>:$store_address,
                  Arg<I32, "Virtual tile ID">:$tile_id,
                  Arg<I32, "Tile slice">:$tile_slice_index)>;
@@ -103,7 +133,8 @@ def LLVM_aarch64_sme_st1q_vert : ArmSME_IntrStoreOp<"st1q.vert">;
 def LLVM_aarch64_sme_str
     : ArmSME_IntrOp<"str">,
       Arguments<(ins Arg<I32, "Index">:$index,
-                 Arg<LLVM_AnyPointer, "Store address", [MemWrite]>:$store_address)>;
+                 Arg<LLVM_AnyPointer, "Store address", [MemWrite]>:$store_address,
+                 Arg<I32, "Offset">:$offset)>;
 
 // Vector to tile slice
 class LLVM_aarch64_sme_write<string direction>
@@ -130,8 +161,5 @@ def LLVM_aarch64_sme_write_vert : LLVM_aarch64_sme_write<"vert">;
 
 def LLVM_aarch64_sme_read_horiz : LLVM_aarch64_sme_read<"horiz">;
 def LLVM_aarch64_sme_read_vert : LLVM_aarch64_sme_read<"vert">;
-
-def LLVM_aarch64_sme_za_enable : ArmSME_IntrOp<"za.enable">;
-def LLVM_aarch64_sme_za_disable : ArmSME_IntrOp<"za.disable">;
 
 #endif // ARMSME_INTRINSIC_OPS

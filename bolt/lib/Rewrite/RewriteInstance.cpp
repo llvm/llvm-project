@@ -704,6 +704,10 @@ Error RewriteInstance::run() {
   adjustCommandLineOptions();
   discoverFileObjects();
 
+  if (opts::Instrument && !BC->IsStaticExecutable)
+    if (Error E = discoverRtFiniAddress())
+      return E;
+
   preprocessProfileData();
 
   // Skip disassembling if we have a translation table and we are running an
@@ -739,6 +743,9 @@ Error RewriteInstance::run() {
   emitAndLink();
 
   updateMetadata();
+
+  if (opts::Instrument && !BC->IsStaticExecutable)
+    updateRtFiniReloc();
 
   if (opts::LinuxKernelMode) {
     errs() << "BOLT-WARNING: not writing the output file for Linux Kernel\n";
@@ -1280,6 +1287,77 @@ void RewriteInstance::discoverFileObjects() {
   registerFragments();
 }
 
+Error RewriteInstance::discoverRtFiniAddress() {
+  // Use DT_FINI if it's available.
+  if (BC->FiniAddress) {
+    BC->FiniFunctionAddress = BC->FiniAddress;
+    return Error::success();
+  }
+
+  if (!BC->FiniArrayAddress || !BC->FiniArraySize) {
+    return createStringError(
+        std::errc::not_supported,
+        "Instrumentation needs either DT_FINI or DT_FINI_ARRAY");
+  }
+
+  if (*BC->FiniArraySize < BC->AsmInfo->getCodePointerSize()) {
+    return createStringError(std::errc::not_supported,
+                             "Need at least 1 DT_FINI_ARRAY slot");
+  }
+
+  ErrorOr<BinarySection &> FiniArraySection =
+      BC->getSectionForAddress(*BC->FiniArrayAddress);
+  if (auto EC = FiniArraySection.getError())
+    return errorCodeToError(EC);
+
+  if (const Relocation *Reloc = FiniArraySection->getDynamicRelocationAt(0)) {
+    BC->FiniFunctionAddress = Reloc->Addend;
+    return Error::success();
+  }
+
+  if (const Relocation *Reloc = FiniArraySection->getRelocationAt(0)) {
+    BC->FiniFunctionAddress = Reloc->Value;
+    return Error::success();
+  }
+
+  return createStringError(std::errc::not_supported,
+                           "No relocation for first DT_FINI_ARRAY slot");
+}
+
+void RewriteInstance::updateRtFiniReloc() {
+  // Updating DT_FINI is handled by patchELFDynamic.
+  if (BC->FiniAddress)
+    return;
+
+  const RuntimeLibrary *RT = BC->getRuntimeLibrary();
+  if (!RT || !RT->getRuntimeFiniAddress())
+    return;
+
+  assert(BC->FiniArrayAddress && BC->FiniArraySize &&
+         "inconsistent .fini_array state");
+
+  ErrorOr<BinarySection &> FiniArraySection =
+      BC->getSectionForAddress(*BC->FiniArrayAddress);
+  assert(FiniArraySection && ".fini_array removed");
+
+  if (std::optional<Relocation> Reloc =
+          FiniArraySection->takeDynamicRelocationAt(0)) {
+    assert(Reloc->Addend == BC->FiniFunctionAddress &&
+           "inconsistent .fini_array dynamic relocation");
+    Reloc->Addend = RT->getRuntimeFiniAddress();
+    FiniArraySection->addDynamicRelocation(*Reloc);
+  }
+
+  // Update the static relocation by adding a pending relocation which will get
+  // patched when flushPendingRelocations is called in rewriteFile. Note that
+  // flushPendingRelocations will calculate the value to patch as
+  // "Symbol + Addend". Since we don't have a symbol, just set the addend to the
+  // desired value.
+  FiniArraySection->addPendingRelocation(Relocation{
+      /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
+      /*Addend*/ RT->getRuntimeFiniAddress(), /*Value*/ 0});
+}
+
 void RewriteInstance::registerFragments() {
   if (!BC->HasSplitFunctions)
     return;
@@ -1344,24 +1422,41 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
 
   BinaryFunction *BF = BC->getBinaryFunctionAtAddress(EntryAddress);
   if (BF && BC->isAArch64()) {
-    // Handle IFUNC trampoline
+    // Handle IFUNC trampoline with symbol
     setPLTSymbol(BF, BF->getOneName());
     return;
   }
 
   const Relocation *Rel = BC->getDynamicRelocationAt(TargetAddress);
-  if (!Rel || !Rel->Symbol)
+  if (!Rel)
     return;
+
+  MCSymbol *Symbol = Rel->Symbol;
+  if (!Symbol) {
+    if (!BC->isAArch64() || !Rel->Addend || !Rel->isIRelative())
+      return;
+
+    // IFUNC trampoline without symbol
+    BinaryFunction *TargetBF = BC->getBinaryFunctionAtAddress(Rel->Addend);
+    if (!TargetBF) {
+      errs()
+          << "BOLT-WARNING: Expected BF to be presented as IFUNC resolver at "
+          << Twine::utohexstr(Rel->Addend) << ", skipping\n";
+      return;
+    }
+
+    Symbol = TargetBF->getSymbol();
+  }
 
   ErrorOr<BinarySection &> Section = BC->getSectionForAddress(EntryAddress);
   assert(Section && "cannot get section for address");
   if (!BF)
-    BF = BC->createBinaryFunction(Rel->Symbol->getName().str() + "@PLT",
-                                  *Section, EntryAddress, 0, EntrySize,
+    BF = BC->createBinaryFunction(Symbol->getName().str() + "@PLT", *Section,
+                                  EntryAddress, 0, EntrySize,
                                   Section->getAlignment());
   else
-    BF->addAlternativeName(Rel->Symbol->getName().str() + "@PLT");
-  setPLTSymbol(BF, Rel->Symbol->getName());
+    BF->addAlternativeName(Symbol->getName().str() + "@PLT");
+  setPLTSymbol(BF, Symbol->getName());
 }
 
 void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
@@ -1689,13 +1784,6 @@ void RewriteInstance::relocateEHFrameSection() {
   check_error(std::move(E), "failed to patch EH frame");
 }
 
-ArrayRef<uint8_t> RewriteInstance::getLSDAData() {
-  return ArrayRef<uint8_t>(LSDASection->getData(),
-                           LSDASection->getContents().size());
-}
-
-uint64_t RewriteInstance::getLSDAAddress() { return LSDASection->getAddress(); }
-
 Error RewriteInstance::readSpecialSections() {
   NamedRegionTimer T("readSpecialSections", "read special sections",
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
@@ -1734,7 +1822,6 @@ Error RewriteInstance::readSpecialSections() {
 
   HasTextRelocations = (bool)BC->getUniqueSectionByName(".rela.text");
   HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
-  LSDASection = BC->getUniqueSectionByName(".gcc_except_table");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
   BuildIDSection = BC->getUniqueSectionByName(".note.gnu.build-id");
 
@@ -2122,6 +2209,19 @@ void RewriteInstance::processDynamicRelocations() {
   }
 
   // The rest of dynamic relocations - DT_RELA.
+  // The static executable might have .rela.dyn secion and not have PT_DYNAMIC
+  if (!DynamicRelocationsSize && BC->IsStaticExecutable) {
+    ErrorOr<BinarySection &> DynamicRelSectionOrErr =
+        BC->getUniqueSectionByName(getRelaDynSectionName());
+    if (DynamicRelSectionOrErr) {
+      DynamicRelocationsAddress = DynamicRelSectionOrErr->getAddress();
+      DynamicRelocationsSize = DynamicRelSectionOrErr->getSize();
+      const SectionRef &SectionRef = DynamicRelSectionOrErr->getSectionRef();
+      DynamicRelativeRelocationsCount = std::distance(
+          SectionRef.relocation_begin(), SectionRef.relocation_end());
+    }
+  }
+
   if (DynamicRelocationsSize > 0) {
     ErrorOr<BinarySection &> DynamicRelSectionOrErr =
         BC->getSectionForAddress(*DynamicRelocationsAddress);
@@ -3092,8 +3192,14 @@ void RewriteInstance::disassembleFunctions() {
 
     // Parse LSDA.
     if (Function.getLSDAAddress() != 0 &&
-        !BC->getFragmentsToSkip().count(&Function))
-      Function.parseLSDA(getLSDAData(), getLSDAAddress());
+        !BC->getFragmentsToSkip().count(&Function)) {
+      ErrorOr<BinarySection &> LSDASection =
+          BC->getSectionForAddress(Function.getLSDAAddress());
+      check_error(LSDASection.getError(), "failed to get LSDA section");
+      ArrayRef<uint8_t> LSDAData = ArrayRef<uint8_t>(
+          LSDASection->getData(), LSDASection->getContents().size());
+      Function.parseLSDA(LSDAData, LSDASection->getAddress());
+    }
   }
 }
 
@@ -3104,7 +3210,6 @@ void RewriteInstance::buildFunctionsCFG() {
   // Create annotation indices to allow lock-free execution
   BC->MIB->getOrCreateAnnotationIndex("JTIndexReg");
   BC->MIB->getOrCreateAnnotationIndex("NOP");
-  BC->MIB->getOrCreateAnnotationIndex("Size");
 
   ParallelUtilities::WorkFuncWithAllocTy WorkFun =
       [&](BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId) {
@@ -4467,7 +4572,7 @@ void RewriteInstance::updateELFSymbolTable(
               OutputAddress >= Function->getCodeSection()->getOutputAddress() &&
               OutputAddress < (Function->getCodeSection()->getOutputAddress() +
                                Function->getCodeSection()->getOutputSize()) &&
-              "Cannot locate fragment containg secondary entrypoint");
+              "Cannot locate fragment containing secondary entrypoint");
           FF = Function->getLayout().fragment_begin();
         }
 
@@ -5118,7 +5223,13 @@ Error RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
       }
       break;
     case ELF::DT_FINI:
-      BC->FiniFunctionAddress = Dyn.getPtr();
+      BC->FiniAddress = Dyn.getPtr();
+      break;
+    case ELF::DT_FINI_ARRAY:
+      BC->FiniArrayAddress = Dyn.getPtr();
+      break;
+    case ELF::DT_FINI_ARRAYSZ:
+      BC->FiniArraySize = Dyn.getPtr();
       break;
     case ELF::DT_RELA:
       DynamicRelocationsAddress = Dyn.getPtr();

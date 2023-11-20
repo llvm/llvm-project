@@ -580,6 +580,7 @@ class ObjCTypeParamDecl : public TypedefNameDecl {
   unsigned Index : 14;
 
   /// The variance of the type parameter.
+  LLVM_PREFERRED_TYPE(ObjCTypeParamVariance)
   unsigned Variance : 2;
 
   /// The location of the variance, if any.
@@ -741,10 +742,13 @@ private:
 
   QualType DeclType;
   TypeSourceInfo *DeclTypeSourceInfo;
+  LLVM_PREFERRED_TYPE(ObjCPropertyAttribute::Kind)
   unsigned PropertyAttributes : NumObjCPropertyAttrsBits;
+  LLVM_PREFERRED_TYPE(ObjCPropertyAttribute::Kind)
   unsigned PropertyAttributesAsWritten : NumObjCPropertyAttrsBits;
 
   // \@required/\@optional
+  LLVM_PREFERRED_TYPE(PropertyControl)
   unsigned PropertyImplementation : 2;
 
   // getter name of NULL if no getter
@@ -1178,14 +1182,17 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
 
     /// Indicates that the contents of this Objective-C class will be
     /// completed by the external AST source when required.
+    LLVM_PREFERRED_TYPE(bool)
     mutable unsigned ExternallyCompleted : 1;
 
     /// Indicates that the ivar cache does not yet include ivars
     /// declared in the implementation.
+    LLVM_PREFERRED_TYPE(bool)
     mutable unsigned IvarListMissingImplementation : 1;
 
     /// Indicates that this interface decl contains at least one initializer
     /// marked with the 'objc_designated_initializer' attribute.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasDesignatedInitializers : 1;
 
     enum InheritedDesignatedInitializersState {
@@ -1201,9 +1208,11 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
     };
 
     /// One of the \c InheritedDesignatedInitializersState enumeratos.
+    LLVM_PREFERRED_TYPE(InheritedDesignatedInitializersState)
     mutable unsigned InheritedDesignatedInitializers : 2;
 
     /// Tracks whether a ODR hash has been computed for this interface.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasODRHash : 1;
 
     /// A hash of parts of the class to help in ODR checking.
@@ -2007,7 +2016,9 @@ private:
   ObjCIvarDecl *NextIvar = nullptr;
 
   // NOTE: VC++ treats enums as signed, avoid using the AccessControl enum
+  LLVM_PREFERRED_TYPE(AccessControl)
   unsigned DeclAccess : 3;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Synthesized : 1;
 };
 
@@ -2074,6 +2085,7 @@ class ObjCProtocolDecl : public ObjCContainerDecl,
     ObjCProtocolList ReferencedProtocols;
 
     /// Tracks whether a ODR hash has been computed for this protocol.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasODRHash : 1;
 
     /// A hash of parts of the class to help in ODR checking.
@@ -2596,9 +2608,11 @@ class ObjCImplementationDecl : public ObjCImplDecl {
 
   /// Do the ivars of this class require initialization other than
   /// zero-initialization?
+  LLVM_PREFERRED_TYPE(bool)
   bool HasNonZeroConstructors : 1;
 
   /// Do the ivars of this class require non-trivial destruction?
+  LLVM_PREFERRED_TYPE(bool)
   bool HasDestructors : 1;
 
   ObjCImplementationDecl(DeclContext *DC,

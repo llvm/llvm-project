@@ -870,7 +870,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
 
   auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
   BasicBlock *LoopPred = L->getLoopPredecessor();
-  if (!AR || !LoopPred)
+  if (!AR || AR->getLoop() != L || !LoopPred)
     return;
 
   const SCEV *StartSCEV = AR->getStart();
@@ -897,6 +897,10 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (auto *C = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE)))
     StepOffset = C->getAPInt();
   else
+    return;
+
+  // Make sure the bound B is loop-invariant.
+  if (!L->isLoopInvariant(B))
     return;
 
   // Handle negative steps.
@@ -1595,21 +1599,13 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       LLVM_DEBUG(dbgs() << "fact to add to the system: "
                         << CmpInst::getPredicateName(Pred) << " ";
                  A->printAsOperand(dbgs()); dbgs() << ", ";
-                 B->printAsOperand(dbgs()); dbgs() << "\n");
+                 B->printAsOperand(dbgs(), false); dbgs() << "\n");
       if (Info.getCS(CmpInst::isSigned(Pred)).size() > MaxRows) {
         LLVM_DEBUG(
             dbgs()
             << "Skip adding constraint because system has too many rows.\n");
         return;
       }
-
-      LLVM_DEBUG({
-        dbgs() << "Processing fact to add to the system: " << Pred << " ";
-        A->printAsOperand(dbgs());
-        dbgs() << ", ";
-        B->printAsOperand(dbgs(), false);
-        dbgs() << "\n";
-      });
 
       Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
       if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size())

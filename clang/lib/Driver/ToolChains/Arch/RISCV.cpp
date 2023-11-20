@@ -63,6 +63,9 @@ static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
       D.Diag(clang::diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Mcpu;
   }
+
+  if (llvm::RISCV::hasFastUnalignedAccess(Mcpu))
+    Features.push_back("+unaligned-scalar-mem");
 }
 
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,

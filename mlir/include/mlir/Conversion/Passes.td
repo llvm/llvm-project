@@ -556,7 +556,10 @@ def ConvertGPUToSPIRV : Pass<"convert-gpu-to-spirv", "ModuleOp"> {
     to control the set and binding if wanted.
   }];
   let constructor = "mlir::createConvertGPUToSPIRVPass()";
-  let dependentDialects = ["spirv::SPIRVDialect"];
+  let dependentDialects = [
+    "func::FuncDialect",
+    "spirv::SPIRVDialect",
+  ];
   let options = [
     Option<"use64bitIndex", "use-64bit-index",
            "bool", /*default=*/"false",
@@ -1091,6 +1094,19 @@ def TosaToLinalgNamed
 }
 
 //===----------------------------------------------------------------------===//
+// TosaToMLProgram
+//===----------------------------------------------------------------------===//
+
+def TosaToMLProgram : Pass<"tosa-to-mlprogram", "ModuleOp"> {
+  let summary = "Lower TOSA to the MLProgram dialect";
+  let dependentDialects = ["ml_program::MLProgramDialect"];
+  let description = [{
+    Pass that converts TOSA's variable operator operations to the equivalent
+    MLProgram operations.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // TosaToSCF
 //===----------------------------------------------------------------------===//
 
@@ -1201,6 +1217,7 @@ def ConvertVectorToSCF : Pass<"convert-vector-to-scf"> {
 def ConvertVectorToArmSME : Pass<"convert-vector-to-arm-sme"> {
   let summary = "Lower the operations from the vector dialect into the ArmSME "
                 "dialect";
+  let constructor = "mlir::createConvertVectorToArmSMEPass()";
   let description = [{
     Pass that converts vector dialect operations into equivalent ArmSME dialect
     operations.
@@ -1270,10 +1287,7 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
     Option<"x86Vector", "enable-x86vector",
            "bool", /*default=*/"false",
            "Enables the use of X86Vector dialect while lowering the vector "
-	   "dialect.">,
-	  Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-               /*default=*/"true", "Generate LLVM IR using opaque pointers "
-               "instead of typed pointers">
+	   "dialect.">
   ];
 }
 

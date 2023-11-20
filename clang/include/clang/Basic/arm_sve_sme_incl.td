@@ -257,7 +257,7 @@ class ImmCheck<int arg, ImmCheckType kind, int eltSizeArg = -1> {
 }
 
 class Inst<string n, string p, string t, MergeType mt, string i,
-           list<FlagType> ft, list<ImmCheck> ch, MemEltType met> {
+           list<FlagType> ft, list<ImmCheck> ch, MemEltType met = MemEltTyDefault> {
   string Name = n;
   string Prototype = p;
   string Types = t;

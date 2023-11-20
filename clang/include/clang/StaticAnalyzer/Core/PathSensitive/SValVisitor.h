@@ -14,9 +14,9 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SVALVISITOR_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SVALVISITOR_H
 
+#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 
 namespace clang {
 
@@ -25,49 +25,40 @@ namespace ento {
 /// SValVisitor - this class implements a simple visitor for SVal
 /// subclasses.
 template <typename ImplClass, typename RetTy = void> class SValVisitor {
+  ImplClass &derived() { return *static_cast<ImplClass *>(this); }
+
 public:
-
-#define DISPATCH(NAME, CLASS) \
-  return static_cast<ImplClass *>(this)->Visit ## NAME(V.castAs<CLASS>())
-
   RetTy Visit(SVal V) {
     // Dispatch to VisitFooVal for each FooVal.
-    // Take namespaces (loc:: and nonloc::) into account.
-    switch (V.getBaseKind()) {
-#define BASIC_SVAL(Id, Parent) case SVal::Id ## Kind: DISPATCH(Id, Id);
+    switch (V.getKind()) {
+#define BASIC_SVAL(Id, Parent)                                                 \
+  case SVal::Id##Kind:                                                         \
+    return derived().Visit##Id(V.castAs<Id>());
+#define LOC_SVAL(Id, Parent)                                                   \
+  case SVal::Loc##Id##Kind:                                                    \
+    return derived().Visit##Id(V.castAs<loc::Id>());
+#define NONLOC_SVAL(Id, Parent)                                                \
+  case SVal::NonLoc##Id##Kind:                                                 \
+    return derived().Visit##Id(V.castAs<nonloc::Id>());
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.def"
-    case SVal::LocKind:
-      switch (V.getSubKind()) {
-#define LOC_SVAL(Id, Parent) \
-      case loc::Id ## Kind: DISPATCH(Loc ## Id, loc :: Id);
-#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.def"
-      }
-      llvm_unreachable("Unknown Loc sub-kind!");
-    case SVal::NonLocKind:
-      switch (V.getSubKind()) {
-#define NONLOC_SVAL(Id, Parent) \
-      case nonloc::Id ## Kind: DISPATCH(NonLoc ## Id, nonloc :: Id);
-#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.def"
-      }
-      llvm_unreachable("Unknown NonLoc sub-kind!");
     }
     llvm_unreachable("Unknown SVal kind!");
   }
 
-#define BASIC_SVAL(Id, Parent) \
-  RetTy Visit ## Id(Id V) { DISPATCH(Parent, Id); }
-#define ABSTRACT_SVAL(Id, Parent) \
-  BASIC_SVAL(Id, Parent)
-#define LOC_SVAL(Id, Parent) \
-  RetTy VisitLoc ## Id(loc::Id V) { DISPATCH(Parent, Parent); }
-#define NONLOC_SVAL(Id, Parent) \
-  RetTy VisitNonLoc ## Id(nonloc::Id V) { DISPATCH(Parent, Parent); }
+  // Dispatch to the more generic handler as a default implementation.
+#define BASIC_SVAL(Id, Parent)                                                 \
+  RetTy Visit##Id(Id V) { return derived().Visit##Parent(V.castAs<Id>()); }
+#define ABSTRACT_SVAL(Id, Parent) BASIC_SVAL(Id, Parent)
+#define LOC_SVAL(Id, Parent)                                                   \
+  RetTy Visit##Id(loc::Id V) { return derived().VisitLoc(V.castAs<Loc>()); }
+#define NONLOC_SVAL(Id, Parent)                                                \
+  RetTy Visit##Id(nonloc::Id V) {                                              \
+    return derived().VisitNonLoc(V.castAs<NonLoc>());                          \
+  }
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.def"
 
   // Base case, ignore it. :)
   RetTy VisitSVal(SVal V) { return RetTy(); }
-
-#undef DISPATCH
 };
 
 /// SymExprVisitor - this class implements a simple visitor for SymExpr

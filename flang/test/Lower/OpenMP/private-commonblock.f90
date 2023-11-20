@@ -100,7 +100,7 @@ end subroutine
 !CHECK:    fir.call @_QPsub4(%[[C_REF]], %[[A_DECL]]#1) fastmath<contract> : (!fir.ref<!fir.complex<4>>, !fir.ref<i32>) -> ()
 !CHECK:    omp.parallel {
 !CHECK:      %[[C_PVT_REF:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.complex<4>>> {bindc_name = "c", pinned, uniq_name = "_QFprivate_clause_commonblock_pointerEc"}
-!CHECK:      %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT_REF]] {uniq_name = "_QFprivate_clause_commonblock_pointerEc"} : (!fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>)
+!CHECK:      %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT_REF]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFprivate_clause_commonblock_pointerEc"} : (!fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>)
 !CHECK:      %[[A_PVT_REF:.*]] = fir.alloca i32 {bindc_name = "a", pinned, uniq_name = "_QFprivate_clause_commonblock_pointerEa"}
 !CHECK:      %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT_REF]] {uniq_name = "_QFprivate_clause_commonblock_pointerEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:      %[[C_PVT_BOX:.*]] = fir.load %[[C_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>

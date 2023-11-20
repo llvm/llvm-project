@@ -133,8 +133,8 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-LABEL: OUTLINED_FUNCTION_0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w9, #2 // =0x2
-; CHECK-NEXT:    mov w10, #3 // =0x3
 ; CHECK-NEXT:    stp w9, w8, [x29, #-12]
+; CHECK-NEXT:    mov w9, #3 // =0x3
 ; CHECK-NEXT:    mov w8, #4 // =0x4
-; CHECK-NEXT:    stp w8, w10, [sp, #12]
+; CHECK-NEXT:    stp w8, w9, [sp, #12]
 ; CHECK-NEXT:    ret

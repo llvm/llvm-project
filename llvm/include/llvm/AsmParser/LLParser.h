@@ -548,6 +548,7 @@ namespace llvm {
     bool parseMetadataAsValue(Value *&V, PerFunctionState &PFS);
     bool parseValueAsMetadata(Metadata *&MD, const Twine &TypeMsg,
                               PerFunctionState *PFS);
+    bool parseDIArgList(Metadata *&MD, PerFunctionState *PFS);
     bool parseMetadata(Metadata *&MD, PerFunctionState *PFS);
     bool parseMDTuple(MDNode *&MD, bool IsDistinct = false);
     bool parseMDNode(MDNode *&N);
@@ -569,8 +570,6 @@ namespace llvm {
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS)                                  \
   bool parse##CLASS(MDNode *&Result, bool IsDistinct);
 #include "llvm/IR/Metadata.def"
-    bool parseDIArgList(MDNode *&Result, bool IsDistinct,
-                        PerFunctionState *PFS);
 
     // Function Parsing.
     struct ArgInfo {

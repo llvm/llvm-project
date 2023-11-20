@@ -106,9 +106,8 @@ define <2 x i1> @sub_XY_and_bit0_is_zero_fail(<2 x i8> %x, <2 x i8> %C) nounwind
 
 define i1 @sub_XY_xor_bit0_is_one_fail(i8 %x, i8 %C) nounwind {
 ; CHECK-LABEL: @sub_XY_xor_bit0_is_one_fail(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[C:%.*]], -2
-; CHECK-NEXT:    [[C1_NEG:%.*]] = add i8 [[TMP1]], 1
-; CHECK-NEXT:    [[Y:%.*]] = add i8 [[C1_NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[C1:%.*]] = xor i8 [[C:%.*]], 1
+; CHECK-NEXT:    [[Y:%.*]] = sub i8 [[X:%.*]], [[C1]]
 ; CHECK-NEXT:    [[W:%.*]] = xor i8 [[Y]], [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[W]], 10
 ; CHECK-NEXT:    ret i1 [[R]]

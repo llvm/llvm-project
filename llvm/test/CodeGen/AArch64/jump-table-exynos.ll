@@ -1,5 +1,5 @@
-; RUN: llc -o - %s -mtriple=aarch64-none-linux-gnu -mattr=+force-32bit-jump-tables -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
-; RUN: llc -o - %s -mtriple=aarch64-none-linux-gnu -mcpu=exynos-m3 -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc -o - %s -mtriple=aarch64-none-linux-gnu -mattr=+force-32bit-jump-tables -aarch64-min-jump-table-entries=4 -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc -o - %s -mtriple=aarch64-none-linux-gnu -mcpu=exynos-m3 -aarch64-min-jump-table-entries=4 -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
 
 ; Exynos doesn't want jump tables to be compressed for now.
 

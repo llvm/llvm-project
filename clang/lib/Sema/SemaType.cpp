@@ -3667,11 +3667,20 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         Error = 6; // Interface member.
       } else {
         switch (cast<TagDecl>(SemaRef.CurContext)->getTagKind()) {
-        case TTK_Enum: llvm_unreachable("unhandled tag kind");
-        case TTK_Struct: Error = Cxx ? 1 : 2; /* Struct member */ break;
-        case TTK_Union:  Error = Cxx ? 3 : 4; /* Union member */ break;
-        case TTK_Class:  Error = 5; /* Class member */ break;
-        case TTK_Interface: Error = 6; /* Interface member */ break;
+        case TagTypeKind::Enum:
+          llvm_unreachable("unhandled tag kind");
+        case TagTypeKind::Struct:
+          Error = Cxx ? 1 : 2; /* Struct member */
+          break;
+        case TagTypeKind::Union:
+          Error = Cxx ? 3 : 4; /* Union member */
+          break;
+        case TagTypeKind::Class:
+          Error = 5; /* Class member */
+          break;
+        case TagTypeKind::Interface:
+          Error = 6; /* Interface member */
+          break;
         }
       }
       if (D.getDeclSpec().isFriendSpecified())
@@ -4413,7 +4422,7 @@ bool Sema::isCFError(RecordDecl *RD) {
   // NSError. CFErrorRef used to be declared with "objc_bridge" but is now
   // declared with "objc_bridge_mutable", so look for either one of the two
   // attributes.
-  if (RD->getTagKind() == TTK_Struct) {
+  if (RD->getTagKind() == TagTypeKind::Struct) {
     IdentifierInfo *bridgedType = nullptr;
     if (auto bridgeAttr = RD->getAttr<ObjCBridgeAttr>())
       bridgedType = bridgeAttr->getBridgedType();
@@ -9417,9 +9426,12 @@ bool Sema::RequireCompleteType(SourceLocation Loc, QualType T,
 /// \returns diagnostic %select index.
 static unsigned getLiteralDiagFromTagKind(TagTypeKind Tag) {
   switch (Tag) {
-  case TTK_Struct: return 0;
-  case TTK_Interface: return 1;
-  case TTK_Class:  return 2;
+  case TagTypeKind::Struct:
+    return 0;
+  case TagTypeKind::Interface:
+    return 1;
+  case TagTypeKind::Class:
+    return 2;
   default: llvm_unreachable("Invalid tag kind for literal type diagnostic!");
   }
 }

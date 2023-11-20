@@ -11,7 +11,6 @@
 
 #include "DWARFLinkerGlobalData.h"
 #include "OutputSections.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DWARFLinkerParallel/DWARFLinker.h"
 #include "llvm/DWARFLinkerParallel/StringPool.h"

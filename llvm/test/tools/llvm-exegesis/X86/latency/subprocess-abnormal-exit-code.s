@@ -4,9 +4,6 @@
 
 # CHECK: error: 'Child benchmarking process exited with non-zero exit code: Child process returned with unknown exit code'
 
-# TODO: Sometimes transiently fails on PTRACE_ATTACH
-# ALLOW_RETRIES: 2
-
 movl $60, %eax
 movl $127, %edi
 syscall

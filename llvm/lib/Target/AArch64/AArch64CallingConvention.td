@@ -325,31 +325,6 @@ def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
            CCAssignToStack<16, 16>>
 ]>;
 
-
-// The WebKit_JS calling convention only passes the first argument (the callee)
-// in register and the remaining arguments on stack. We allow 32bit stack slots,
-// so that WebKit can write partial values in the stack and define the other
-// 32bit quantity as undef.
-let Entry = 1 in
-def CC_AArch64_WebKit_JS : CallingConv<[
-  // Handle i1, i8, i16, i32, and i64 passing in register X0 (W0).
-  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
-  CCIfType<[i32], CCAssignToReg<[W0]>>,
-  CCIfType<[i64], CCAssignToReg<[X0]>>,
-
-  // Pass the remaining arguments on the stack instead.
-  CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
-  CCIfType<[i64, f64], CCAssignToStack<8, 8>>
-]>;
-
-let Entry = 1 in
-def RetCC_AArch64_WebKit_JS : CallingConv<[
-  CCIfType<[i32], CCAssignToReg<[W0, W1, W2, W3, W4, W5, W6, W7]>>,
-  CCIfType<[i64], CCAssignToReg<[X0, X1, X2, X3, X4, X5, X6, X7]>>,
-  CCIfType<[f32], CCAssignToReg<[S0, S1, S2, S3, S4, S5, S6, S7]>>,
-  CCIfType<[f64], CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>
-]>;
-
 //===----------------------------------------------------------------------===//
 // ARM64 Calling Convention for GHC
 //===----------------------------------------------------------------------===//

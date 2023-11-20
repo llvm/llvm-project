@@ -154,22 +154,26 @@ class CXXBaseSpecifier {
   SourceLocation EllipsisLoc;
 
   /// Whether this is a virtual base class or not.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Virtual : 1;
 
   /// Whether this is the base of a class (true) or of a struct (false).
   ///
   /// This determines the mapping from the access specifier as written in the
   /// source code to the access specifier used for semantic analysis.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned BaseOfClass : 1;
 
   /// Access specifier as written in the source code (may be AS_none).
   ///
   /// The actual type of data stored here is an AccessSpecifier, but we use
-  /// "unsigned" here to work around a VC++ bug.
+  /// "unsigned" here to work around Microsoft ABI.
+  LLVM_PREFERRED_TYPE(AccessSpecifier)
   unsigned Access : 2;
 
   /// Whether the class contains a using declaration
   /// to inherit the named class's constructors.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned InheritConstructors : 1;
 
   /// The type of the base class.
@@ -290,15 +294,19 @@ private:
     #include "CXXRecordDeclDefinitionBits.def"
 
     /// Whether this class describes a C++ lambda.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsLambda : 1;
 
     /// Whether we are currently parsing base specifiers.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsParsingBaseSpecifiers : 1;
 
     /// True when visible conversion functions are already computed
     /// and are available.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ComputedVisibleConversions : 1;
 
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasODRHash : 1;
 
     /// A hash of parts of the class to help in ODR checking.
@@ -383,12 +391,15 @@ private:
     /// lambda will have been created with the enclosing context as its
     /// declaration context, rather than function. This is an unfortunate
     /// artifact of having to parse the default arguments before.
+    LLVM_PREFERRED_TYPE(LambdaDependencyKind)
     unsigned DependencyKind : 2;
 
     /// Whether this lambda is a generic lambda.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsGenericLambda : 1;
 
     /// The Default Capture.
+    LLVM_PREFERRED_TYPE(LambdaCaptureDefault)
     unsigned CaptureDefault : 2;
 
     /// The number of captures in this lambda is limited 2^NumCaptures.
@@ -398,6 +409,7 @@ private:
     unsigned NumExplicitCaptures : 12;
 
     /// Has known `internal` linkage.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasKnownInternalLinkage : 1;
 
     /// The number used to indicate this lambda expression for name
@@ -2305,14 +2317,17 @@ class CXXCtorInitializer final {
 
   /// If the initializee is a type, whether that type makes this
   /// a delegating initialization.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsDelegating : 1;
 
   /// If the initializer is a base initializer, this keeps track
   /// of whether the base is virtual or not.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsVirtual : 1;
 
   /// Whether or not the initializer is explicitly written
   /// in the sources.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsWritten : 1;
 
   /// If IsWritten is true, then this number keeps track of the textual order
@@ -3588,6 +3603,7 @@ class ConstructorUsingShadowDecl final : public UsingShadowDecl {
   /// \c true if the constructor ultimately named by this using shadow
   /// declaration is within a virtual base class subobject of the class that
   /// contains this declaration.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsVirtual : 1;
 
   ConstructorUsingShadowDecl(ASTContext &C, DeclContext *DC, SourceLocation Loc,

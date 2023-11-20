@@ -598,7 +598,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
-      llvm::sys::path::stem(Linker) != "ld.lld") {
+      llvm::sys::path::stem(Linker) != "ld.lld" &&
+      !ToolChain.getTriple().isOSOpenBSD()) {
     // Tell the linker to load the plugin. This has to come before
     // AddLinkerInputs as gold requires -plugin and AIX ld requires -bplugin to
     // come before any -plugin-opt/-bplugin_opt that -Wl might forward.
@@ -976,12 +977,46 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
   return true;
 }
 
-void tools::addFortranRuntimeLibs(const ToolChain &TC,
+void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs) {
   if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    CmdArgs.push_back("Fortran_main.lib");
-    CmdArgs.push_back("FortranRuntime.lib");
-    CmdArgs.push_back("FortranDecimal.lib");
+    CmdArgs.push_back(Args.MakeArgString(
+        "/DEFAULTLIB:" + TC.getCompilerRTBasename(Args, "builtins")));
+    unsigned RTOptionID = options::OPT__SLASH_MT;
+    if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+      RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
+                       .Case("static", options::OPT__SLASH_MT)
+                       .Case("static_dbg", options::OPT__SLASH_MTd)
+                       .Case("dll", options::OPT__SLASH_MD)
+                       .Case("dll_dbg", options::OPT__SLASH_MDd)
+                       .Default(options::OPT__SLASH_MT);
+    }
+    switch (RTOptionID) {
+    case options::OPT__SLASH_MT:
+      CmdArgs.push_back("/DEFAULTLIB:libcmt");
+      CmdArgs.push_back("Fortran_main.static.lib");
+      CmdArgs.push_back("FortranRuntime.static.lib");
+      CmdArgs.push_back("FortranDecimal.static.lib");
+      break;
+    case options::OPT__SLASH_MTd:
+      CmdArgs.push_back("/DEFAULTLIB:libcmtd");
+      CmdArgs.push_back("Fortran_main.static_dbg.lib");
+      CmdArgs.push_back("FortranRuntime.static_dbg.lib");
+      CmdArgs.push_back("FortranDecimal.static_dbg.lib");
+      break;
+    case options::OPT__SLASH_MD:
+      CmdArgs.push_back("/DEFAULTLIB:msvcrt");
+      CmdArgs.push_back("Fortran_main.dynamic.lib");
+      CmdArgs.push_back("FortranRuntime.dynamic.lib");
+      CmdArgs.push_back("FortranDecimal.dynamic.lib");
+      break;
+    case options::OPT__SLASH_MDd:
+      CmdArgs.push_back("/DEFAULTLIB:msvcrtd");
+      CmdArgs.push_back("Fortran_main.dynamic_dbg.lib");
+      CmdArgs.push_back("FortranRuntime.dynamic_dbg.lib");
+      CmdArgs.push_back("FortranDecimal.dynamic_dbg.lib");
+      break;
+    }
   } else {
     CmdArgs.push_back("-lFortran_main");
     CmdArgs.push_back("-lFortranRuntime");
@@ -2349,7 +2384,7 @@ getAMDGPUCodeObjectArgument(const Driver &D, const llvm::opt::ArgList &Args) {
 
 void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
                                          const llvm::opt::ArgList &Args) {
-  const unsigned MinCodeObjVer = 3;
+  const unsigned MinCodeObjVer = 4;
   const unsigned MaxCodeObjVer = 5;
 
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args)) {

@@ -614,7 +614,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   assert(M && "Should have exited if we didn't have a module!");
   if (codegen::getFloatABIForCalls() != FloatABI::Default)
-    Options.FloatABIType = codegen::getFloatABIForCalls();
+    Target->Options.FloatABIType = codegen::getFloatABIForCalls();
 
   // Figure out where we are going to send the output.
   std::unique_ptr<ToolOutputFile> Out =

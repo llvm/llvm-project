@@ -4,7 +4,7 @@
 
 target triple = "amdgcn-amd-amdhsa"
 
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32 }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32, i32, i32 }
 %struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
 
 @G = internal addrspace(3) global i32 undef, align 4
@@ -27,7 +27,7 @@ target triple = "amdgcn-amd-amdhsa"
 @UAA3 = internal addrspace(3) global i32 undef, align 4
 @UANA1 = internal addrspace(3) global i32 undef, align 4
 @str = private unnamed_addr addrspace(4) constant [1 x i8] c"\00", align 1
-@kernel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
+@kernel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 
 ; Make sure we do not delete the stores to @G without also replacing the load with `1`.
 ;.
@@ -51,7 +51,7 @@ target triple = "amdgcn-amd-amdhsa"
 ; CHECK: @[[UAA3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; CHECK: @[[UANA1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; CHECK: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
-; CHECK: @[[KERNEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
+; CHECK: @[[KERNEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 ;.
 define void @kernel(ptr %dyn) "kernel" {
 ;

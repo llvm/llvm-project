@@ -1220,9 +1220,9 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
         tolower(src[index + 2]) == inf_string[2]) {
       seen_digit = true;
       if (result.get_sign())
-        result = result.neg_inf();
+        result = fputil::FPBits<T>(result.neg_inf());
       else
-        result = result.inf();
+        result = fputil::FPBits<T>(result.inf());
       if (tolower(src[index + 3]) == inf_string[3] &&
           tolower(src[index + 4]) == inf_string[4] &&
           tolower(src[index + 5]) == inf_string[5] &&

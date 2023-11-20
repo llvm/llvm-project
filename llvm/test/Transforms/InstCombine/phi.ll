@@ -154,6 +154,27 @@ Exit:           ; preds = %Loop
   ret i32 0
 }
 
+define i32 @test_dead_UnaryOp_cycle(double %A, i1 %cond) {
+; CHECK-LABEL: @test_dead_UnaryOp_cycle(
+; CHECK-NEXT:  BB0:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       Loop:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       Exit:
+; CHECK-NEXT:    ret i32 0
+;
+BB0:
+  br label %Loop
+
+Loop:           ; preds = %Loop, %BB0
+  %B = phi double [ %A, %BB0 ], [ %C, %Loop ]
+  %C = fneg double %B
+  br i1 %cond, label %Loop, label %Exit
+
+Exit:           ; preds = %Loop
+  ret i32 0
+}
+
 define i32 @test_dead_cycle_two_insts(i32 %A, i1 %cond) {
 ; CHECK-LABEL: @test_dead_cycle_two_insts(
 ; CHECK-NEXT:  BB0:
@@ -901,14 +922,14 @@ define i1 @test26(i32 %n) {
 ; CHECK:       one:
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @test26a()
 ; CHECK-NEXT:    switch i32 [[N:%.*]], label [[END:%.*]] [
-; CHECK-NEXT:    i32 2, label [[TWO:%.*]]
-; CHECK-NEXT:    i32 3, label [[THREE:%.*]]
+; CHECK-NEXT:      i32 2, label [[TWO:%.*]]
+; CHECK-NEXT:      i32 3, label [[THREE:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       two:
 ; CHECK-NEXT:    [[D:%.*]] = call i1 @test26a()
 ; CHECK-NEXT:    switch i32 [[N]], label [[END]] [
-; CHECK-NEXT:    i32 10, label [[ONE]]
-; CHECK-NEXT:    i32 30, label [[THREE]]
+; CHECK-NEXT:      i32 10, label [[ONE]]
+; CHECK-NEXT:      i32 30, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       three:
 ; CHECK-NEXT:    [[E:%.*]] = call i1 @test26a()
@@ -977,8 +998,8 @@ define i1 @PR24766(i8 %x1, i8 %x2, i8 %condition) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[CONDITION:%.*]] to i32
 ; CHECK-NEXT:    switch i32 [[CONV]], label [[EPILOG:%.*]] [
-; CHECK-NEXT:    i32 0, label [[SW1:%.*]]
-; CHECK-NEXT:    i32 1, label [[SW2:%.*]]
+; CHECK-NEXT:      i32 0, label [[SW1:%.*]]
+; CHECK-NEXT:      i32 1, label [[SW2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw1:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X1:%.*]], [[X2:%.*]]
@@ -1021,8 +1042,8 @@ define i1 @PR24766_no_constants(i8 %x1, i8 %x2, i8 %condition, i1 %another_condi
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[CONDITION:%.*]] to i32
 ; CHECK-NEXT:    switch i32 [[CONV]], label [[EPILOG:%.*]] [
-; CHECK-NEXT:    i32 0, label [[SW1:%.*]]
-; CHECK-NEXT:    i32 1, label [[SW2:%.*]]
+; CHECK-NEXT:      i32 0, label [[SW1:%.*]]
+; CHECK-NEXT:      i32 1, label [[SW2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw1:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X1:%.*]], [[X2:%.*]]
@@ -1066,8 +1087,8 @@ define i1 @PR24766_two_constants(i8 %x1, i8 %x2, i8 %condition) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[CONDITION:%.*]] to i32
 ; CHECK-NEXT:    switch i32 [[CONV]], label [[EPILOG:%.*]] [
-; CHECK-NEXT:    i32 0, label [[SW1:%.*]]
-; CHECK-NEXT:    i32 1, label [[SW2:%.*]]
+; CHECK-NEXT:      i32 0, label [[SW1:%.*]]
+; CHECK-NEXT:      i32 1, label [[SW2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw1:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X1:%.*]], [[X2:%.*]]
@@ -1109,9 +1130,9 @@ define i1 @PR24766_two_constants_two_var(i8 %x1, i8 %x2, i8 %condition) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[CONDITION:%.*]] to i32
 ; CHECK-NEXT:    switch i32 [[CONV]], label [[EPILOG:%.*]] [
-; CHECK-NEXT:    i32 0, label [[SW1:%.*]]
-; CHECK-NEXT:    i32 1, label [[SW2:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW3:%.*]]
+; CHECK-NEXT:      i32 0, label [[SW1:%.*]]
+; CHECK-NEXT:      i32 1, label [[SW2:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw1:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X1:%.*]], [[X2:%.*]]

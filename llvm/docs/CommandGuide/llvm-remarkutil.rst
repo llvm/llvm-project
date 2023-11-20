@@ -123,7 +123,7 @@ Summary
 ^^^^^^^
 
 :program:`llvm-remarkutil count` counts `remarks <https://llvm.org/docs/Remarks.html>` based on specified properties.
-By default the tool counts remarks based on how many occour in a source file or function or total for the generated remark file.
+By default the tool counts remarks based on how many occur in a source file or function or total for the generated remark file.
 The tool also supports collecting count based on specific remark arguments. The specified arguments should have an integer value to be able to report a count.
 
 The tool contains utilities to filter the remark count based on remark name, pass name, argument value and remark type.
@@ -149,7 +149,7 @@ OPTIONS
   * ``Total``: Report a count for the provided remark file.
 
 .. option:: --args[=arguments]
-  If `count-by` is set to `arg` this flag can be used to collect from specified remark arguments represented as a comma seperated string.
+  If `count-by` is set to `arg` this flag can be used to collect from specified remark arguments represented as a comma separated string.
   The arguments must have a numeral value to be able to count remarks by
 
 .. option:: --rargs[=arguments]

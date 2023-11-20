@@ -568,7 +568,7 @@ void CodeExtractor::findAllocas(const CodeExtractorAnalysisCache &CEAC,
     for (Instruction *I : LifetimeBitcastUsers) {
       Module *M = AIFunc->getParent();
       LLVMContext &Ctx = M->getContext();
-      auto *Int8PtrTy = Type::getInt8PtrTy(Ctx);
+      auto *Int8PtrTy = PointerType::getUnqual(Ctx);
       CastInst *CastI =
           CastInst::CreatePointerCast(AI, Int8PtrTy, "lt.cast", I);
       I->replaceUsesOfWith(I->getOperand(1), CastI);
@@ -922,6 +922,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::PresplitCoroutine:
       case Attribute::Memory:
       case Attribute::NoFPClass:
+      case Attribute::CoroDestroyOnlyWhenComplete:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:

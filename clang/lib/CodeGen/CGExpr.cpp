@@ -450,9 +450,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
     Address Object = createReferenceTemporary(*this, M, E);
     if (auto *Var = dyn_cast<llvm::GlobalVariable>(Object.getPointer())) {
       llvm::Type *Ty = ConvertTypeForMem(E->getType());
-      Object = Address(llvm::ConstantExpr::getBitCast(
-                           Var, Ty->getPointerTo(Object.getAddressSpace())),
-                       Ty, Object.getAlignment());
+      Object = Object.withElementType(Ty);
 
       // createReferenceTemporary will promote the temporary to a global with a
       // constant initializer if it can.  It can only do this to a value of
@@ -508,11 +506,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
   if (auto *Var = dyn_cast<llvm::GlobalVariable>(
           Object.getPointer()->stripPointerCasts())) {
     llvm::Type *TemporaryType = ConvertTypeForMem(E->getType());
-    Object = Address(llvm::ConstantExpr::getBitCast(
-                         cast<llvm::Constant>(Object.getPointer()),
-                         TemporaryType->getPointerTo()),
-                     TemporaryType,
-                     Object.getAlignment());
+    Object = Object.withElementType(TemporaryType);
     // If the temporary is a global and has a constant initializer or is a
     // constant temporary that we promoted to a global, we may have already
     // initialized it.
@@ -944,14 +938,10 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
       // Ignore pass_object_size here. It's not applicable on decayed pointers.
     }
 
-    if (FieldDecl *FD = CGF.FindCountedByField(Base, StrictFlexArraysLevel)) {
-      const auto *ME = dyn_cast<MemberExpr>(CE->getSubExpr());
+    if (const ValueDecl *VD = CGF.FindCountedByField(Base)) {
       IndexedType = Base->getType();
-      return CGF
-          .EmitAnyExprToTemp(MemberExpr::CreateImplicit(
-              CGF.getContext(), const_cast<Expr *>(ME->getBase()),
-              ME->isArrow(), FD, FD->getType(), VK_LValue, OK_Ordinary))
-          .getScalarVal();
+      const Expr *E = CGF.BuildCountedByFieldExpr(Base, VD);
+      return CGF.EmitAnyExprToTemp(E).getScalarVal();
     }
   }
 
@@ -966,46 +956,115 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
   return nullptr;
 }
 
-FieldDecl *CodeGenFunction::FindCountedByField(
-    const Expr *Base,
-    LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel) {
-  const ValueDecl *VD = nullptr;
+const Expr *
+CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
+                                         const ValueDecl *CountedByVD) {
+  // Find the outer struct expr (i.e. p in p->a.b.c.d).
+  Expr *CountedByExpr = const_cast<Expr *>(Base)->IgnoreParenImpCasts();
+
+  // Work our way up the expression until we reach the DeclRefExpr.
+  while (!isa<DeclRefExpr>(CountedByExpr))
+    if (const auto *ME = dyn_cast<MemberExpr>(CountedByExpr))
+      CountedByExpr = ME->getBase()->IgnoreParenImpCasts();
+
+  // Add back an implicit cast to create the required pr-value.
+  CountedByExpr = ImplicitCastExpr::Create(
+      getContext(), CountedByExpr->getType(), CK_LValueToRValue, CountedByExpr,
+      nullptr, VK_PRValue, FPOptionsOverride());
+
+  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountedByVD)) {
+    // The counted_by field is inside an anonymous struct / union. The
+    // IndirectFieldDecl has the correct order of FieldDecls to build this
+    // easily. (Yay!)
+    for (NamedDecl *ND : IFD->chain()) {
+      auto *VD = cast<ValueDecl>(ND);
+      CountedByExpr =
+          MemberExpr::CreateImplicit(getContext(), CountedByExpr,
+                                     CountedByExpr->getType()->isPointerType(),
+                                     VD, VD->getType(), VK_LValue, OK_Ordinary);
+    }
+  } else {
+    CountedByExpr = MemberExpr::CreateImplicit(
+        getContext(), const_cast<Expr *>(CountedByExpr),
+        CountedByExpr->getType()->isPointerType(),
+        const_cast<ValueDecl *>(CountedByVD), CountedByVD->getType(), VK_LValue,
+        OK_Ordinary);
+  }
+
+  return CountedByExpr;
+}
+
+const ValueDecl *
+CodeGenFunction::FindFlexibleArrayMemberField(ASTContext &Ctx,
+                                              const RecordDecl *RD) {
+  const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+      getLangOpts().getStrictFlexArraysLevel();
+
+  for (const Decl *D : RD->decls()) {
+    if (const auto *VD = dyn_cast<ValueDecl>(D);
+        VD && Decl::isFlexibleArrayMemberLike(
+                  Ctx, VD, VD->getType(), StrictFlexArraysLevel,
+                  /*IgnoreTemplateOrMacroSubstitution=*/true))
+      return VD;
+
+    if (const auto *Record = dyn_cast<RecordDecl>(D))
+      if (const ValueDecl *VD = FindFlexibleArrayMemberField(Ctx, Record))
+        return VD;
+  }
+
+  return nullptr;
+}
+
+const ValueDecl *CodeGenFunction::FindCountedByField(const Expr *Base) {
+  ASTContext &Ctx = getContext();
+  const RecordDecl *OuterRD = nullptr;
+  const FieldDecl *FD = nullptr;
 
   Base = Base->IgnoreParenImpCasts();
 
-  if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
-    VD = dyn_cast<ValueDecl>(ME->getMemberDecl());
-  } else if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
-    // Pointing to the full structure.
-    VD = dyn_cast<ValueDecl>(DRE->getDecl());
-
-    QualType Ty = VD->getType();
+  // Get the outer-most lexical RecordDecl.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
+    QualType Ty = DRE->getDecl()->getType();
     if (Ty->isPointerType())
       Ty = Ty->getPointeeType();
 
     if (const auto *RD = Ty->getAsRecordDecl())
-      VD = RD->getLastField();
-  } else if (const auto *CE = dyn_cast<CastExpr>(Base)) {
-    if (const auto *ME = dyn_cast<MemberExpr>(CE->getSubExpr()))
-      VD = dyn_cast<ValueDecl>(ME->getMemberDecl());
+      OuterRD = RD->getOuterLexicalRecordContext();
+  } else if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
+    if (const ValueDecl *MD = ME->getMemberDecl()) {
+      OuterRD = MD->getDeclContext()->getOuterLexicalRecordContext();
+
+      const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+          getLangOpts().getStrictFlexArraysLevel();
+      if (Decl::isFlexibleArrayMemberLike(
+              Ctx, MD, MD->getType(), StrictFlexArraysLevel,
+              /*IgnoreTemplateOrMacroSubstitution=*/true))
+        // Base is referencing the FAM itself.
+        FD = dyn_cast<FieldDecl>(MD);
+    }
   }
 
-  const auto *FD = dyn_cast_if_present<FieldDecl>(VD);
-  if (!FD || !FD->getParent() ||
-      !Decl::isFlexibleArrayMemberLike(getContext(), FD, FD->getType(),
-                                       StrictFlexArraysLevel, true))
+  if (!OuterRD)
     return nullptr;
+
+  if (!FD) {
+    const ValueDecl *VD = FindFlexibleArrayMemberField(Ctx, OuterRD);
+    FD = dyn_cast_if_present<FieldDecl>(VD);
+    if (!FD)
+      return nullptr;
+  }
 
   const auto *CBA = FD->getAttr<CountedByAttr>();
   if (!CBA)
     return nullptr;
 
-  StringRef FieldName = CBA->getCountedByField()->getName();
-  auto It =
-      llvm::find_if(FD->getParent()->fields(), [&](const FieldDecl *Field) {
-        return FieldName == Field->getName();
-      });
-  return It != FD->getParent()->field_end() ? *It : nullptr;
+  DeclarationName DName(CBA->getCountedByField());
+  DeclContext::lookup_result Lookup = OuterRD->lookup(DName);
+
+  if (Lookup.empty())
+    return nullptr;
+
+  return dyn_cast<ValueDecl>(Lookup.front());
 }
 
 void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
@@ -2678,19 +2737,6 @@ static llvm::Constant *EmitFunctionDeclPointer(CodeGenModule &CGM,
   }
 
   llvm::Constant *V = CGM.GetAddrOfFunction(GD);
-  if (!FD->hasPrototype()) {
-    if (const FunctionProtoType *Proto =
-            FD->getType()->getAs<FunctionProtoType>()) {
-      // Ugly case: for a K&R-style definition, the type of the definition
-      // isn't the same as the type of a use.  Correct for this with a
-      // bitcast.
-      QualType NoProtoType =
-          CGM.getContext().getFunctionNoProtoType(Proto->getReturnType());
-      NoProtoType = CGM.getContext().getPointerType(NoProtoType);
-      V = llvm::ConstantExpr::getBitCast(V,
-                                      CGM.getTypes().ConvertType(NoProtoType));
-    }
-  }
   return V;
 }
 
@@ -3513,9 +3559,9 @@ void CodeGenFunction::EmitCfiCheckFail() {
   SanitizerScope SanScope(this);
   FunctionArgList Args;
   ImplicitParamDecl ArgData(getContext(), getContext().VoidPtrTy,
-                            ImplicitParamDecl::Other);
+                            ImplicitParamKind::Other);
   ImplicitParamDecl ArgAddr(getContext(), getContext().VoidPtrTy,
-                            ImplicitParamDecl::Other);
+                            ImplicitParamKind::Other);
   Args.push_back(&ArgData);
   Args.push_back(&ArgAddr);
 
