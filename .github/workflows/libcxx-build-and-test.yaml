@@ -82,7 +82,7 @@ jobs:
             **/crash_diagnostics/*
   stage2:
     runs-on:
-      group: libcxx-runners-8
+      group: libcxx-runners-16
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -156,11 +156,11 @@ jobs:
           'generic-static',
           'generic-with_llvm_unwinder'
         ]
-        machine: [ 'libcxx-runners-8' ]
+        machine: [ 'libcxx-runners-16' ]
         std_modules: [ 'OFF' ]
         include:
         - config: 'generic-cxx26'
-          machine: libcxx-runners-8
+          machine: libcxx-runners-16
           std_modules: 'ON'
         - config: 'generic-asan'
           machine: libcxx-runners-16
@@ -169,7 +169,7 @@ jobs:
           machine: libcxx-runners-16
           std_modules: 'OFF'
         - config: 'generic-ubsan'
-          machine: libcxx-runners-8
+          machine: libcxx-runners-16
           std_modules: 'OFF'
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
