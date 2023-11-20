@@ -75,8 +75,8 @@ private:
   /// @{
   void reorderInstructions(Function &F) const;
   void reorderDefinition(Instruction *Definition,
-      std::stack<Instruction *> &TopologicalSort,
-      SmallPtrSet<const Instruction *, 32> &Visited) const;
+                         std::stack<Instruction *> &TopologicalSort,
+                         SmallPtrSet<const Instruction *, 32> &Visited) const;
   void reorderInstructionOperandsByNames(Instruction *I) const;
   void reorderPHIIncomingValues(PHINode *PN) const;
   /// @}
@@ -441,43 +441,43 @@ void IRNormalizer::foldInstructionName(Instruction *I) const {
 /// \see reorderInstruction()
 void IRNormalizer::reorderInstructions(Function &F) const {
   for (auto &BB : F) {
-    LLVM_DEBUG(dbgs() << "Reordering instructions in basic block: " 
+    LLVM_DEBUG(dbgs() << "Reordering instructions in basic block: "
                       << BB.getName() << "\n");
     // Find the source nodes of the DAG of instructions in this basic block.
-    // We must iterate from the first to the last instruction otherwise side 
-    // effecting instructions could be reordered. 
+    // We must iterate from the first to the last instruction otherwise side
+    // effecting instructions could be reordered.
 
     std::stack<Instruction *> TopologicalSort;
     SmallPtrSet<const Instruction *, 32> Visited;
-    for (auto &I : BB) { 
-      if (!isOutput(&I) && !I.isTerminator()) 
-        continue; // I is not a source node. 
-      LLVM_DEBUG(dbgs() << "\tReordering from source effecting instruction: "; 
+    for (auto &I : BB) {
+      if (!isOutput(&I) && !I.isTerminator())
+        continue; // I is not a source node.
+      LLVM_DEBUG(dbgs() << "\tReordering from source effecting instruction: ";
                  I.dump());
       reorderDefinition(&I, TopologicalSort, Visited);
     }
 
-    for (auto &I : BB) { 
-      if (Visited.contains(&I)) 
-        continue; // I is not a source node. 
+    for (auto &I : BB) {
+      if (Visited.contains(&I))
+        continue; // I is not a source node.
       LLVM_DEBUG(dbgs() << "\tReordering from source instruction: "; I.dump());
       reorderDefinition(&I, TopologicalSort, Visited);
     }
 
-    LLVM_DEBUG(dbgs() << "Inserting instructions into: " << BB.getName() 
+    LLVM_DEBUG(dbgs() << "Inserting instructions into: " << BB.getName()
                       << "\n");
-    // Reorder based on the topological sort. 
+    // Reorder based on the topological sort.
     while (!TopologicalSort.empty()) {
       auto *Instruction = TopologicalSort.top();
       auto *FirstNonPHIOrDbgOrAlloca = &*BB.getFirstNonPHIOrDbgOrAlloca();
       Instruction->moveBefore(FirstNonPHIOrDbgOrAlloca);
-        TopologicalSort.pop();
+      TopologicalSort.pop();
     }
   }
 }
 
-void IRNormalizer::reorderDefinition(Instruction *Definition,
-    std::stack<Instruction *> &TopologicalSort,
+void IRNormalizer::reorderDefinition(
+    Instruction *Definition, std::stack<Instruction *> &TopologicalSort,
     SmallPtrSet<const Instruction *, 32> &Visited) const {
   if (Visited.contains(Definition))
     return;
@@ -485,11 +485,12 @@ void IRNormalizer::reorderDefinition(Instruction *Definition,
 
   {
     const auto *BasicBlock = Definition->getParent();
-    const auto FirstNonPHIOrDbgOrAlloca = BasicBlock->getFirstNonPHIOrDbgOrAlloca();
+    const auto FirstNonPHIOrDbgOrAlloca =
+        BasicBlock->getFirstNonPHIOrDbgOrAlloca();
     if (FirstNonPHIOrDbgOrAlloca == BasicBlock->end())
       return;
     if (Definition->comesBefore(&*FirstNonPHIOrDbgOrAlloca))
-      return; // TODO: Do some kind of ordering for these instructions. 
+      return; // TODO: Do some kind of ordering for these instructions.
   }
 
   for (auto &Operand : Definition->operands()) {
