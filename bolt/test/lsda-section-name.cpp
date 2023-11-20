@@ -1,8 +1,8 @@
 // This test check that LSDA section named by .gcc_except_table.main is
 // disassembled by BOLT.
 
-// RUN: %clang++ %cxxflags -O3 -flto=thin -no-pie -c %s -o %t.o
-// RUN: %clang++ %cxxflags -flto=thin -no-pie -fuse-ld=lld %t.o -o %t.exe \
+// RUN: %clang++ %cxxflags -O3 -no-pie -c %s -o %t.o
+// RUN: %clang++ %cxxflags -no-pie -fuse-ld=lld %t.o -o %t.exe \
 // RUN:   -Wl,-q -Wl,--script=%S/Inputs/lsda.ldscript
 // RUN: llvm-readelf -SW %t.exe | FileCheck %s
 // RUN: llvm-bolt %t.exe -o %t.bolt
