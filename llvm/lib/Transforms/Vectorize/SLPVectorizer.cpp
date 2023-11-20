@@ -11110,7 +11110,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         Builder.SetCurrentDebugLocation(PH->getDebugLoc());
         Value *Vec = vectorizeOperand(E, i, /*PostponedPHIs=*/true);
         if (VecTy != Vec->getType()) {
-          assert(It != MinBWs.end() && "Expected item in MinBWs.");
+          assert(MinBWs.contains(PH->getIncomingValue(i)) &&
+                 "Expected item in MinBWs.");
           Vec = Builder.CreateIntCast(Vec, VecTy, It->second.second);
         }
         NewPhi->addIncoming(Vec, IBB);
@@ -11362,13 +11363,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         return E->VectorizedValue;
       }
       if (L->getType() != R->getType()) {
-        assert(It != MinBWs.end() && "Expected item in MinBWs.");
-        if (L == R) {
-          R = L = Builder.CreateIntCast(L, VecTy, IsSigned);
-        } else {
-          L = Builder.CreateIntCast(L, VecTy, IsSigned);
-          R = Builder.CreateIntCast(R, VecTy, IsSigned);
-        }
+        assert((MinBWs.contains(VL0->getOperand(0)) ||
+                MinBWs.contains(VL0->getOperand(1))) &&
+               "Expected item in MinBWs.");
+        L = Builder.CreateIntCast(L, VecTy, IsSigned);
+        R = Builder.CreateIntCast(R, VecTy, IsSigned);
       }
 
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
@@ -11401,13 +11400,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         return E->VectorizedValue;
       }
       if (True->getType() != False->getType()) {
-        assert(It != MinBWs.end() && "Expected item in MinBWs.");
-        if (True == False) {
-          True = False = Builder.CreateIntCast(True, VecTy, IsSigned);
-        } else {
-          True = Builder.CreateIntCast(True, VecTy, IsSigned);
-          False = Builder.CreateIntCast(False, VecTy, IsSigned);
-        }
+        assert((MinBWs.contains(VL0->getOperand(1)) ||
+                MinBWs.contains(VL0->getOperand(2))) &&
+               "Expected item in MinBWs.");
+        True = Builder.CreateIntCast(True, VecTy, IsSigned);
+        False = Builder.CreateIntCast(False, VecTy, IsSigned);
       }
 
       Value *V = Builder.CreateSelect(Cond, True, False);
@@ -11471,13 +11468,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         return E->VectorizedValue;
       }
       if (LHS->getType() != RHS->getType()) {
-        assert(It != MinBWs.end() && "Expected item in MinBWs.");
-        if (LHS == RHS) {
-          RHS = LHS = Builder.CreateIntCast(LHS, VecTy, IsSigned);
-        } else {
-          LHS = Builder.CreateIntCast(LHS, VecTy, IsSigned);
-          RHS = Builder.CreateIntCast(RHS, VecTy, IsSigned);
-        }
+        assert((MinBWs.contains(VL0->getOperand(0)) ||
+                MinBWs.contains(VL0->getOperand(1))) &&
+               "Expected item in MinBWs.");
+        LHS = Builder.CreateIntCast(LHS, VecTy, IsSigned);
+        RHS = Builder.CreateIntCast(RHS, VecTy, IsSigned);
       }
 
       Value *V = Builder.CreateBinOp(
@@ -11710,13 +11705,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         return E->VectorizedValue;
       }
       if (LHS && RHS && LHS->getType() != RHS->getType()) {
-        assert(It != MinBWs.end() && "Expected item in MinBWs.");
-        if (LHS == RHS) {
-          RHS = LHS = Builder.CreateIntCast(LHS, VecTy, IsSigned);
-        } else {
-          LHS = Builder.CreateIntCast(LHS, VecTy, IsSigned);
-          RHS = Builder.CreateIntCast(RHS, VecTy, IsSigned);
-        }
+        assert((MinBWs.contains(VL0->getOperand(0)) ||
+                MinBWs.contains(VL0->getOperand(1))) &&
+               "Expected item in MinBWs.");
+        LHS = Builder.CreateIntCast(LHS, VecTy, IsSigned);
+        RHS = Builder.CreateIntCast(RHS, VecTy, IsSigned);
       }
 
       Value *V0, *V1;
