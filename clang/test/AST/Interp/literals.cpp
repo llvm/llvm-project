@@ -35,6 +35,23 @@ static_assert(one == 1, "");
 constexpr bool b2 = bool();
 static_assert(!b2, "");
 
+constexpr int Failed1 = 1 / 0; // expected-error {{must be initialized by a constant expression}} \
+                               // expected-note {{division by zero}} \
+                               // expected-note {{declared here}} \
+                               // ref-error {{must be initialized by a constant expression}} \
+                               // ref-note {{division by zero}} \
+                               // ref-note {{declared here}}
+constexpr int Failed2 = Failed1 + 1; // expected-error {{must be initialized by a constant expression}} \
+                                     // expected-note {{declared here}} \
+                                     // expected-note {{initializer of 'Failed1' is not a constant expression}} \
+                                     // ref-error {{must be initialized by a constant expression}} \
+                                     // ref-note {{declared here}} \
+                                     // ref-note {{initializer of 'Failed1' is not a constant expression}}
+static_assert(Failed2 == 0, ""); // expected-error {{not an integral constant expression}} \
+                                 // expected-note {{initializer of 'Failed2' is not a constant expression}} \
+                                 // ref-error {{not an integral constant expression}} \
+                                 // ref-note {{initializer of 'Failed2' is not a constant expression}}
+
 namespace ScalarTypes {
   constexpr int ScalarInitInt = int();
   static_assert(ScalarInitInt == 0, "");

@@ -38,14 +38,7 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
     for (auto &Local : Scope.locals()) {
       Block *B = new (localBlock(Local.Offset)) Block(Local.Desc);
       B->invokeCtor();
-      InlineDescriptor *ID = localInlineDesc(Local.Offset);
-      ID->Desc = Local.Desc;
-      ID->IsActive = true;
-      ID->Offset = sizeof(InlineDescriptor);
-      ID->IsBase = false;
-      ID->IsFieldMutable = false;
-      ID->IsConst = false;
-      ID->IsInitialized = false;
+      new (localInlineDesc(Local.Offset)) InlineDescriptor(Local.Desc);
     }
   }
 }
@@ -201,7 +194,7 @@ const FunctionDecl *InterpFrame::getCallee() const {
 
 Pointer InterpFrame::getLocalPointer(unsigned Offset) const {
   assert(Offset < Func->getFrameSize() && "Invalid local offset.");
-  return Pointer(localBlock(Offset), sizeof(InlineDescriptor));
+  return Pointer(localBlock(Offset));
 }
 
 Pointer InterpFrame::getParamPointer(unsigned Off) {

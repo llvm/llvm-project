@@ -317,9 +317,8 @@ def GetPtrBasePop : Opcode {
   let Args = [ArgUint32];
 }
 
-def InitPtrPop : Opcode {
-  let Args = [];
-}
+def InitPtrPop : Opcode;
+def InitPtr : Opcode;
 
 def GetPtrDerivedPop : Opcode {
   let Args = [ArgUint32];
