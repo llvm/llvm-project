@@ -1288,7 +1288,7 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
   if (CsectAuxRef.getSymbolType() == XCOFF::XTY_LD)
     return true;
 
-  return false;
+  return createError("csect symbol has no valid symbol type.");
 }
 
 bool XCOFFSymbolRef::isCsectSymbol() const {
