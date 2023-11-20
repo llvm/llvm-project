@@ -72,7 +72,7 @@ static uint32_t getDeclAlignIfRequired(const Decl *D, const ASTContext &Ctx) {
 /// Given a VarDecl corresponding to either the definition or
 /// declaration of a C++ static data member, if it has a constant
 /// initializer and is evaluatable, return the evaluated value.
-/// Returns std::nullopt on failure.
+/// Returns std::nullopt otherwise.
 static std::optional<APValue>
 evaluateConstantInitializer(const clang::VarDecl *VD,
                             const clang::ASTContext &Ctx) {
