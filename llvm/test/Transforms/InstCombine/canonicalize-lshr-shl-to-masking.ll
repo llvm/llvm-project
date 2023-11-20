@@ -141,8 +141,8 @@ define i8 @positive_biggerlshr_shlnsw(i8 %x) {
 
 define i8 @positive_biggershl_shlnsw(i8 %x) {
 ; CHECK-LABEL: @positive_biggershl_shlnsw(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -64
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], 64
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %t0 = lshr i8 %x, 3
@@ -273,7 +273,7 @@ define i8 @positive_biggerlshr_shlnsw_lshrexact(i8 %x) {
 
 define i8 @positive_biggershl_shlnsw_lshrexact(i8 %x) {
 ; CHECK-LABEL: @positive_biggershl_shlnsw_lshrexact(
-; CHECK-NEXT:    [[RET:%.*]] = shl nsw i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[RET:%.*]] = shl nuw nsw i8 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %t0 = lshr exact i8 %x, 3
