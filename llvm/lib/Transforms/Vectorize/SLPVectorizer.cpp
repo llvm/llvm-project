@@ -11338,7 +11338,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           VecOpcode = It->second.second ? Instruction::SExt : Instruction::ZExt;
         }
       }
-      Value *V = Builder.CreateCast(VecOpcode, InVec, VecTy);
+      Value *V = (VecOpcode != ShuffleOrOp && VecOpcode == Instruction::BitCast)
+                     ? InVec
+                     : Builder.CreateCast(VecOpcode, InVec, VecTy);
       V = FinalShuffle(V, E, VecTy, IsSigned);
 
       E->VectorizedValue = V;
