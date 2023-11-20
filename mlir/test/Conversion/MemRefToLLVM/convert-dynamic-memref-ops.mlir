@@ -261,8 +261,8 @@ func.func @mixed_store(%mixed : memref<42x?xf32>, %i : index, %j : index, %val :
 // to set address spaces, so the constants below don't reflect the layout
 // Update this test once that data layout attribute works how we'd expect it to.
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!llvm.ptr, dense<[64, 64, 64]> : vector<3xi32>>,
-  #dlti.dl_entry<!llvm.ptr<1>, dense<[32, 32, 32]> : vector<3xi32>>> }  {
+  #dlti.dl_entry<!llvm.ptr, dense<[64, 64, 64]> : vector<3xi64>>,
+  #dlti.dl_entry<!llvm.ptr<1>, dense<[32, 32, 32]> : vector<3xi64>>> }  {
   // CHECK-LABEL: @memref_memory_space_cast
   func.func @memref_memory_space_cast(%input : memref<*xf32>) -> memref<*xf32, 1> {
     %cast = memref.memory_space_cast %input : memref<*xf32> to memref<*xf32, 1>

@@ -244,6 +244,14 @@ public:
         isScalable());
   }
 
+  /// Returns a value X where the known coefficient will be rounded up to the
+  /// closest power-of-two, except for the zero coefficient that remains zero.
+  constexpr LeafTy coefficientPowerOf2Ceil() const {
+    return LeafTy::get(
+        static_cast<ScalarTy>(llvm::PowerOf2Ceil(getKnownMinValue())),
+        isScalable());
+  }
+
   /// Returns true if there exists a value X where RHS.multiplyCoefficientBy(X)
   /// will result in a value whose quantity matches our own.
   constexpr bool
