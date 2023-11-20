@@ -41450,6 +41450,18 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       // Integer ops.
     case X86ISD::PACKSS:
     case X86ISD::PACKUS:
+    case X86ISD::PCMPEQ:
+    case X86ISD::PCMPGT:
+    case X86ISD::PMULUDQ:
+    case X86ISD::PMULDQ:
+    case X86ISD::VSHLV:
+    case X86ISD::VSRLV:
+    case X86ISD::VSRAV:
+      // Float ops.
+    case X86ISD::FMAX:
+    case X86ISD::FMIN:
+    case X86ISD::FMAXC:
+    case X86ISD::FMINC:
       // Horizontal Ops.
     case X86ISD::HADD:
     case X86ISD::HSUB:
@@ -49863,8 +49875,8 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // If we also broadcast this to a wider type, then just extract the lowest
-  // subvector.
+  // If we also load/broadcast this to a wider type, then just extract the
+  // lowest subvector.
   if (Ext == ISD::NON_EXTLOAD && Subtarget.hasAVX() && Ld->isSimple() &&
       (RegVT.is128BitVector() || RegVT.is256BitVector())) {
     SDValue Ptr = Ld->getBasePtr();
@@ -49872,8 +49884,9 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     for (SDNode *User : Chain->uses()) {
       if (User != N &&
           (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
-           User->getOpcode() == X86ISD::VBROADCAST_LOAD) &&
-          cast<MemIntrinsicSDNode>(User)->getChain() == Chain &&
+           User->getOpcode() == X86ISD::VBROADCAST_LOAD ||
+           ISD::isNormalLoad(User)) &&
+          cast<MemSDNode>(User)->getChain() == Chain &&
           !User->hasAnyUseOfValue(1) &&
           User->getValueSizeInBits(0).getFixedValue() >
               RegVT.getFixedSizeInBits()) {
@@ -49901,6 +49914,31 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
                   SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
               Extract = DAG.getBitcast(RegVT, Extract);
               return DCI.CombineTo(N, Extract, SDValue(User, 1));
+            }
+          }
+        }
+        if (ISD::isNormalLoad(User)) {
+          // See if we are loading a constant that matches in the lower
+          // bits of a longer constant (but from a different constant pool ptr).
+          SDValue UserPtr = cast<LoadSDNode>(User)->getBasePtr();
+          const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
+          const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
+          if (LdC && UserC && UserPtr != Ptr &&
+              LdC->getType()->getPrimitiveSizeInBits() <
+                  UserC->getType()->getPrimitiveSizeInBits()) {
+            APInt Undefs, UserUndefs;
+            SmallVector<APInt> Bits, UserBits;
+            if (getTargetConstantBitsFromNode(SDValue(N, 0), 8, Undefs, Bits) &&
+                getTargetConstantBitsFromNode(SDValue(User, 0), 8, UserUndefs,
+                                              UserBits)) {
+              UserUndefs = UserUndefs.trunc(Undefs.getBitWidth());
+              UserBits.truncate(Bits.size());
+              if (Bits == UserBits && UserUndefs.isSubsetOf(Undefs)) {
+                SDValue Extract = extractSubVector(
+                    SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
+                Extract = DAG.getBitcast(RegVT, Extract);
+                return DCI.CombineTo(N, Extract, SDValue(User, 1));
+              }
             }
           }
         }
