@@ -51,7 +51,6 @@ void initializeTarget(PassRegistry&);
 void initializeAAResultsWrapperPassPass(PassRegistry&);
 void initializeAlwaysInlinerLegacyPassPass(PassRegistry&);
 void initializeAssignmentTrackingAnalysisPass(PassRegistry &);
-void initializeAssumeBuilderPassLegacyPassPass(PassRegistry &);
 void initializeAssumptionCacheTrackerPass(PassRegistry&);
 void initializeAtomicExpandPass(PassRegistry&);
 void initializeBasicBlockPathCloningPass(PassRegistry &);
