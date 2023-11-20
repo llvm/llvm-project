@@ -1059,16 +1059,15 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   if (Info.hasSEWLMULRatioOnly() || !Info.isValid() || Info.isUnknown())
     Info = NewInfo;
 
-  DemandedFields Demanded = getDemanded(MI, MRI, ST);
-
   // If we don't use LMUL or the SEW/LMUL ratio, then adjust LMUL so that we
   // maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
   // places.
+  DemandedFields Demanded = getDemanded(MI, MRI, ST);
   if (!Demanded.LMUL && !Demanded.SEWLMULRatio && Info.isValid() &&
       !Info.isUnknown()) {
-    if (auto SameRatioLMUL = RISCVVType::getSameRatioLMUL(
+    if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
             Info.getSEW(), Info.getVLMUL(), NewInfo.getSEW())) {
-      NewInfo.setVLMul(*SameRatioLMUL);
+      NewInfo.setVLMul(*NewVLMul);
       Demanded.LMUL = true;
     }
   }
