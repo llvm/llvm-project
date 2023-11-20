@@ -653,6 +653,35 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
     }
   }
 
+  // Handle VMA adjustment
+  for (SectionBase &Sec : Obj.sections()) {
+    SectionVMAUpdate SectionUpdate;
+    bool AdjustThisSection = false;
+    if (auto It = Config.AdjustSectionVMA.find(Sec.Name);
+        It != Config.AdjustSectionVMA.end()) {
+      AdjustThisSection = true;
+      SectionUpdate = It->second;
+    } else if (auto It = Config.AdjustSectionVMA.find("*");
+               It != Config.AdjustSectionVMA.end()) {
+      AdjustThisSection = true;
+      SectionUpdate = It->second;
+    }
+    if (((Sec.Flags & ELF::SHF_ALLOC) || (Sec.Flags & ELF::SHT_RELA)) &&
+        AdjustThisSection) {
+      switch (SectionUpdate.UpdateAs) {
+      case SectionUpdateType::Increase:
+        Sec.Addr += SectionUpdate.UpdateValue;
+        break;
+      case SectionUpdateType::Decrease:
+        Sec.Addr -= SectionUpdate.UpdateValue;
+        break;
+      case SectionUpdateType::Set:
+        Sec.Addr = SectionUpdate.UpdateValue;
+        break;
+      }
+    }
+  }
+
   if (Config.OnlyKeepDebug)
     for (auto &Sec : Obj.sections())
       if (Sec.Flags & SHF_ALLOC && Sec.Type != SHT_NOTE)

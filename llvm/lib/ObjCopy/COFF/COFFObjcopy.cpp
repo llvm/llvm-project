@@ -316,6 +316,12 @@ static Error handleArgs(const CommonConfig &Config,
       Obj.PeHeader.MinorSubsystemVersion = *COFFConfig.MinorSubsystemVersion;
   }
 
+  if (!Config.AdjustSectionVMA.empty()) {
+    return createStringError(
+        errc::invalid_argument,
+        "Adjustment of VMA and LMA addresses not supported!");
+  }
+
   return Error::success();
 }
 

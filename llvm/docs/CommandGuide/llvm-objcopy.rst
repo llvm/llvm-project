@@ -483,6 +483,12 @@ them.
 
  Mark all defined global symbols as weak in the output.
 
+.. option:: --adjust-vma <value>
+  Add ``<value>`` to VMA and LMA address
+
+.. option:: --adjust-section-vma <name>{+|-|=}<value>
+  Adjust section ``<name>`` VMA and LMA address by ``<value>``
+
 MACH-O-SPECIFIC OPTIONS
 -----------------------
 
