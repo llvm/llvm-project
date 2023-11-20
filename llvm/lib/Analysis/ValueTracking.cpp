@@ -630,16 +630,6 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
                                     KnownBits &Known, unsigned Depth,
                                     const SimplifyQuery &Q) {
   unsigned BitWidth = Known.getBitWidth();
-  // We are attempting to compute known bits for the operands of an assume.
-  // Do not try to use other assumptions for those recursive calls because
-  // that can lead to mutual recursion and a compile-time explosion.
-  // An example of the mutual recursion: computeKnownBits can call
-  // isKnownNonZero which calls computeKnownBitsFromAssume (this function)
-  // and so on.
-  SimplifyQuery QueryNoAC = Q;
-  QueryNoAC.AC = nullptr;
-
-  // Note that ptrtoint may change the bitwidth.
   auto m_V =
       m_CombineOr(m_Specific(V), m_PtrToIntSameSize(Q.DL, m_Specific(V)));
 
@@ -696,15 +686,10 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
     break;
   }
   default:
-    Value *A;
     const APInt *Offset = nullptr;
     if (match(Cmp, m_ICmp(Pred, m_CombineOr(m_V, m_Add(m_V, m_APInt(Offset))),
-                          m_Value(A)))) {
-      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
-      ConstantRange RHSRange =
-          ConstantRange::fromKnownBits(RHSKnown, Cmp->isSigned());
-      ConstantRange LHSRange =
-          ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
+                          m_APInt(C)))) {
+      ConstantRange LHSRange = ConstantRange::makeAllowedICmpRegion(Pred, *C);
       if (Offset)
         LHSRange = LHSRange.sub(*Offset);
       Known = Known.unionWith(LHSRange.toKnownBits());
