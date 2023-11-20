@@ -26,28 +26,31 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-emit-printf"
 
-static Value *fitArgInto64Bits(IRBuilder<> &Builder, Value *Arg) {
+static Value *fitArgInto64Bits(IRBuilder<> &Builder, Value *Arg,
+                               bool IsBuffered) {
+  const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
   auto Int64Ty = Builder.getInt64Ty();
   auto Ty = Arg->getType();
 
   if (auto IntTy = dyn_cast<IntegerType>(Ty)) {
-    switch (IntTy->getBitWidth()) {
-    case 32:
-      return Builder.CreateZExt(Arg, Int64Ty);
-    case 64:
-      return Arg;
+    if (IntTy->getBitWidth() < 64) {
+      return Builder.CreateZExt(Arg, Builder.getInt64Ty());
     }
   }
 
-  if (Ty->getTypeID() == Type::DoubleTyID) {
+  if (Ty->isFloatingPointTy()) {
+    if (DL.getTypeAllocSize(Ty) < 8)
+      Arg = Builder.CreateFPExt(Arg, Builder.getDoubleTy());
+    if (IsBuffered)
+      return Arg;
     return Builder.CreateBitCast(Arg, Int64Ty);
   }
 
-  if (isa<PointerType>(Ty)) {
+  if (!IsBuffered && isa<PointerType>(Ty)) {
     return Builder.CreatePtrToInt(Arg, Int64Ty);
   }
 
-  llvm_unreachable("unexpected type");
+  return Arg;
 }
 
 static Value *callPrintfBegin(IRBuilder<> &Builder, Value *Version) {
@@ -74,8 +77,8 @@ static Value *callAppendArgs(IRBuilder<> &Builder, Value *Desc, int NumArgs,
 }
 
 static Value *appendArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
-                        bool IsLast) {
-  auto Arg0 = fitArgInto64Bits(Builder, Arg);
+                        bool IsLast, bool IsBuffered) {
+  auto Arg0 = fitArgInto64Bits(Builder, Arg, IsBuffered);
   auto Zero = Builder.getInt64(0);
   return callAppendArgs(Builder, Desc, 1, Arg0, Zero, Zero, Zero, Zero, Zero,
                         Zero, IsLast);
@@ -168,20 +171,49 @@ static Value *appendString(IRBuilder<> &Builder, Value *Desc, Value *Arg,
   return callAppendStringN(Builder, Desc, Arg, Length, IsLast);
 }
 
+static Value *appendVectorArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
+                              bool IsLast, bool IsBuffered) {
+  assert(Arg->getType()->isVectorTy() && "incorrent append* function");
+  auto VectorTy = dyn_cast<FixedVectorType>(Arg->getType());
+  auto Zero = Builder.getInt64(0);
+  if (VectorTy) {
+    for (unsigned int i = 0; i < VectorTy->getNumElements() - 1; i++) {
+      auto Val = Builder.CreateExtractElement(Arg, i);
+      Desc = callAppendArgs(Builder, Desc, 1,
+                            fitArgInto64Bits(Builder, Val, IsBuffered), Zero,
+                            Zero, Zero, Zero, Zero, Zero, false);
+    }
+
+    Value* Val =
+        Builder.CreateExtractElement(Arg, VectorTy->getNumElements() - 1);
+    return callAppendArgs(Builder, Desc, 1,
+                          fitArgInto64Bits(Builder, Val, IsBuffered), Zero,
+                          Zero, Zero, Zero, Zero, Zero, IsLast);
+  }
+  return nullptr;
+}
+
 static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
-                         bool SpecIsCString, bool IsLast) {
+                         bool SpecIsCString, bool IsVector, bool IsLast,
+                         bool IsBuffered) {
   if (SpecIsCString && isa<PointerType>(Arg->getType())) {
     return appendString(Builder, Desc, Arg, IsLast);
   }
-  // If the format specifies a string but the argument is not, the frontend will
-  // have printed a warning. We just rely on undefined behaviour and send the
-  // argument anyway.
-  return appendArg(Builder, Desc, Arg, IsLast);
+
+  if (IsVector) {
+    return appendVectorArg(Builder, Desc, Arg, IsLast, IsBuffered);
+  } 
+    
+  // If the format specifies a string but the argument is not, the frontend
+  // will have printed a warning. We just rely on undefined behaviour and send
+  // the argument anyway.
+  return appendArg(Builder, Desc, Arg, IsLast, IsBuffered);
 }
 
 // Scan the format string to locate all specifiers, and mark the ones that
 // specify a string, i.e, the "%s" specifier with optional '*' characters.
-static void locateCStrings(SparseBitVector<8> &BV, StringRef Str) {
+static void locateCStringsAndVectors(SparseBitVector<8> &BV,
+                                     SparseBitVector<8> &OV, StringRef Str) {
   static const char ConvSpecifiers[] = "diouxXfFeEgGaAcspn";
   size_t SpecPos = 0;
   // Skip the first argument, the format string.
@@ -192,6 +224,8 @@ static void locateCStrings(SparseBitVector<8> &BV, StringRef Str) {
       SpecPos += 2;
       continue;
     }
+    if (Str.find_first_of("v", SpecPos) != StringRef::npos)
+      OV.set(ArgIdx);
     auto SpecEnd = Str.find_first_of(ConvSpecifiers, SpecPos);
     if (SpecEnd == StringRef::npos)
       return;
@@ -222,7 +256,8 @@ struct StringData {
 static Value *callBufferedPrintfStart(
     IRBuilder<> &Builder, ArrayRef<Value *> Args, Value *Fmt,
     bool isConstFmtStr, SparseBitVector<8> &SpecIsCString,
-    SmallVectorImpl<StringData> &StringContents, Value *&ArgSize) {
+    SparseBitVector<8> &OCLVectors, SmallVectorImpl<StringData> &StringContents,
+    Value *&ArgSize) {
   Module *M = Builder.GetInsertBlock()->getModule();
   Value *NonConstStrLen = nullptr;
   Value *LenWithNull = nullptr;
@@ -276,7 +311,12 @@ static Value *callBufferedPrintfStart(
             StringData(StringRef(), LenWithNull, LenWithNullAligned, false));
       }
     } else {
-      int AllocSize = M->getDataLayout().getTypeAllocSize(Args[i]->getType());
+      int AllocSize = 0;
+      if (OCLVectors.test(i)) {
+        auto VecArg = cast<FixedVectorType>(Args[i]->getType());
+        AllocSize = VecArg->getNumElements() * 8;
+      } else
+        AllocSize = M->getDataLayout().getTypeAllocSize(Args[i]->getType());
       // We end up expanding non string arguments to 8 bytes
       // (args smaller than 8 bytes)
       BufSize += std::max(AllocSize, 8);
@@ -350,30 +390,10 @@ static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
     WhatToStore.push_back(ConstantInt::get(Builder.getInt32Ty(), 0));
 }
 
-static Value *processNonStringArg(Value *Arg, IRBuilder<> &Builder) {
-  const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
-  auto Ty = Arg->getType();
-
-  if (auto IntTy = dyn_cast<IntegerType>(Ty)) {
-    if (IntTy->getBitWidth() < 64) {
-      return Builder.CreateZExt(Arg, Builder.getInt64Ty());
-    }
-  }
-
-  if (Ty->isFloatingPointTy()) {
-    if (DL.getTypeAllocSize(Ty) < 8) {
-      return Builder.CreateFPExt(Arg, Builder.getDoubleTy());
-    }
-  }
-
-  return Arg;
-}
-
-static void
-callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
-                          Value *PtrToStore, SparseBitVector<8> &SpecIsCString,
-                          SmallVectorImpl<StringData> &StringContents,
-                          bool IsConstFmtStr) {
+static void callBufferedPrintfArgPush(
+    IRBuilder<> &Builder, ArrayRef<Value *> Args, Value *PtrToStore,
+    SparseBitVector<8> &SpecIsCString, SparseBitVector<8> &OCLVectors,
+    SmallVectorImpl<StringData> &StringContents, bool IsConstFmtStr) {
   Module *M = Builder.GetInsertBlock()->getModule();
   const DataLayout &DL = M->getDataLayout();
   auto StrIt = StringContents.begin();
@@ -405,7 +425,17 @@ callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
         continue;
       }
     } else {
-      WhatToStore.push_back(processNonStringArg(Args[i], Builder));
+      if (OCLVectors.test(i)) {
+        auto VectorTy = dyn_cast<FixedVectorType>(Args[i]->getType());
+        auto VecArg = Args[i];
+        for (unsigned int Num = 0; Num < VectorTy->getNumElements(); Num++) {
+          auto Val = Builder.CreateExtractElement(VecArg, Num);
+          WhatToStore.push_back(
+              fitArgInto64Bits(Builder, Val, /*IsBuffered*/ true));
+        }
+      } else
+        WhatToStore.push_back(
+            fitArgInto64Bits(Builder, Args[i], /*IsBuffered*/ true));
     }
 
     for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
@@ -432,10 +462,11 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
 
   auto Fmt = Args[0];
   SparseBitVector<8> SpecIsCString;
+  SparseBitVector<8> OCLVectors;
   StringRef FmtStr;
 
   if (getConstantStringInfo(Fmt, FmtStr))
-    locateCStrings(SpecIsCString, FmtStr);
+    locateCStringsAndVectors(SpecIsCString, OCLVectors, FmtStr);
 
   if (IsBuffered) {
     SmallVector<StringData, 8> StringContents;
@@ -446,9 +477,9 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
     bool IsConstFmtStr = !FmtStr.empty();
 
     Value *ArgSize = nullptr;
-    Value *Ptr =
-        callBufferedPrintfStart(Builder, Args, Fmt, IsConstFmtStr,
-                                SpecIsCString, StringContents, ArgSize);
+    Value *Ptr = callBufferedPrintfStart(Builder, Args, Fmt, IsConstFmtStr,
+                                         SpecIsCString, OCLVectors,
+                                         StringContents, ArgSize);
 
     // The buffered version still follows OpenCL printf standards for
     // printf return value, i.e 0 on success, -1 on failure.
@@ -511,8 +542,8 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
     }
 
     // Push The printf arguments onto buffer
-    callBufferedPrintfArgPush(Builder, Args, Ptr, SpecIsCString, StringContents,
-                              IsConstFmtStr);
+    callBufferedPrintfArgPush(Builder, Args, Ptr, SpecIsCString, OCLVectors,
+                              StringContents, IsConstFmtStr);
 
     // End block, returns -1 on failure
     BranchInst::Create(End, ArgPush);
@@ -529,7 +560,9 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
   for (unsigned int i = 1; i != NumOps; ++i) {
     bool IsLast = i == NumOps - 1;
     bool IsCString = SpecIsCString.test(i);
-    Desc = processArg(Builder, Desc, Args[i], IsCString, IsLast);
+    bool IsVector = OCLVectors.test(i);
+    Desc = processArg(Builder, Desc, Args[i], IsCString, IsVector, IsLast,
+                      IsBuffered);
   }
 
   return Builder.CreateTrunc(Desc, Builder.getInt32Ty());
