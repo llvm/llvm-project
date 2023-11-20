@@ -20,6 +20,8 @@
 #include "llvm/ADT/Twine.h"
 
 namespace mlir {
+class StringAttr;
+
 //===----------------------------------------------------------------------===//
 // AbstractAttribute
 //===----------------------------------------------------------------------===//
@@ -38,6 +40,16 @@ public:
   /// reference to it.
   static const AbstractAttribute &lookup(TypeID typeID, MLIRContext *context);
 
+  /// Look up the specified abstract attribute in the MLIRContext and return a
+  /// reference to it if it exists.
+  static std::optional<std::reference_wrapper<const AbstractAttribute>>
+  lookup(StringRef name, MLIRContext *context);
+
+  /// Look up the specified abstract attribute in the MLIRContext and return a
+  /// reference to it if it exists.
+  static std::optional<std::reference_wrapper<const AbstractAttribute>>
+  lookup(StringAttr name, MLIRContext *context);
+
   /// This method is used by Dialect objects when they register the list of
   /// attributes they contain.
   template <typename T>
@@ -45,7 +57,7 @@ public:
     return AbstractAttribute(dialect, T::getInterfaceMap(), T::getHasTraitFn(),
                              T::getWalkImmediateSubElementsFn(),
                              T::getReplaceImmediateSubElementsFn(),
-                             T::getTypeID(), T::getAttrName());
+                             T::getTypeID(), T::name);
   }
 
   /// This method is used by Dialect objects to register attributes with

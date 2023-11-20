@@ -132,7 +132,7 @@ class ArrayType : public Type::TypeBase<ArrayType, CompositeType,
 public:
   using Base::Base;
 
-  static constexpr StringRef getTypeName() { return "spirv.array"; }
+  static constexpr StringLiteral name = "spirv.array";
 
   static ArrayType get(Type elementType, unsigned elementCount);
 
@@ -164,7 +164,7 @@ class ImageType
 public:
   using Base::Base;
 
-  static constexpr StringRef getTypeName() { return "spirv.image"; }
+  static constexpr StringLiteral name = "spirv.image";
 
   static ImageType
   get(Type elementType, Dim dim,
@@ -205,7 +205,7 @@ class PointerType : public Type::TypeBase<PointerType, SPIRVType,
 public:
   using Base::Base;
 
-  static constexpr StringRef getTypeName() { return "spirv.pointer"; }
+  static constexpr StringLiteral name = "spirv.pointer";
 
   static PointerType get(Type pointeeType, StorageClass storageClass);
 
@@ -226,7 +226,7 @@ class RuntimeArrayType
 public:
   using Base::Base;
 
-  static constexpr StringRef getTypeName() { return "spirv.rtarray"; }
+  static constexpr StringLiteral name = "spirv.rtarray";
 
   static RuntimeArrayType get(Type elementType);
 
@@ -252,7 +252,7 @@ class SampledImageType
 public:
   using Base::Base;
 
-  static constexpr StringRef getTypeName() { return "spirv.sampled_image"; }
+  static constexpr StringLiteral name = "spirv.sampled_image";
 
   static SampledImageType get(Type imageType);
 
@@ -298,7 +298,7 @@ public:
   // Type for specifying the offset of the struct members
   using OffsetInfo = uint32_t;
 
-  static constexpr StringRef getTypeName() { return "spirv.struct"; }
+  static constexpr StringLiteral name = "spirv.struct";
 
   // Type for specifying the decoration(s) on struct members
   struct MemberDecorationInfo {
@@ -399,7 +399,7 @@ class CooperativeMatrixType
 public:
   using Base::Base;
 
-  static constexpr StringRef getTypeName() { return "spirv.coopmatrix"; }
+  static constexpr StringLiteral name = "spirv.coopmatrix";
 
   static CooperativeMatrixType get(Type elementType, uint32_t rows,
                                    uint32_t columns, Scope scope,
@@ -428,7 +428,7 @@ class CooperativeMatrixNVType
 public:
   using Base::Base;
 
-  static constexpr StringRef getTypeName() { return "spirv.NV.coopmatrix"; }
+  static constexpr StringLiteral name = "spirv.NV.coopmatrix";
 
   static CooperativeMatrixNVType get(Type elementType, Scope scope,
                                      unsigned rows, unsigned columns);
@@ -454,7 +454,7 @@ class JointMatrixINTELType
 public:
   using Base::Base;
 
-  static constexpr StringRef getTypeName() { return "spirv.jointmatrix"; }
+  static constexpr StringLiteral name = "spirv.jointmatrix";
 
   static JointMatrixINTELType get(Type elementType, Scope scope, unsigned rows,
                                   unsigned columns, MatrixLayout matrixLayout);
@@ -482,7 +482,7 @@ class MatrixType : public Type::TypeBase<MatrixType, CompositeType,
 public:
   using Base::Base;
 
-  static constexpr StringRef getTypeName() { return "spirv.matrix"; }
+  static constexpr StringLiteral name = "spirv.matrix";
 
   static MatrixType get(Type columnType, uint32_t columnCount);
 

@@ -88,7 +88,7 @@ struct SingleQueryType
 
   using Base::Base;
 
-  static constexpr StringRef getTypeName() { return "test.single_query"; }
+  static constexpr StringLiteral name = "test.single_query";
 
   static SingleQueryType get(MLIRContext *ctx) { return Base::get(ctx); }
 
@@ -138,7 +138,7 @@ struct TypeNoLayout : public Type::TypeBase<TypeNoLayout, Type, TypeStorage> {
 
   using Base::Base;
 
-  static constexpr StringRef getTypeName() { return "test.no_layout"; }
+  static constexpr StringLiteral name = "test.no_layout";
 
   static TypeNoLayout get(MLIRContext *ctx) { return Base::get(ctx); }
 };

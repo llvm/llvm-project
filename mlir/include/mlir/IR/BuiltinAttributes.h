@@ -1045,7 +1045,7 @@ public:
   /// unique identifier.
   static DistinctAttr create(Attribute referencedAttr);
 
-  static constexpr StringRef getAttrName() { return "builtin.distinct"; }
+  static constexpr StringLiteral name = "builtin.distinct";
 };
 
 //===----------------------------------------------------------------------===//

@@ -62,7 +62,7 @@ namespace LLVM {
   class ClassName : public Type::TypeBase<ClassName, Type, TypeStorage> {      \
   public:                                                                      \
     using Base::Base;                                                          \
-    static constexpr StringRef getTypeName() { return TypeName; }              \
+    static constexpr StringLiteral name = TypeName;                            \
   }
 
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMVoidType, "llvm.void");
@@ -111,7 +111,7 @@ public:
   /// Inherit base constructors.
   using Base::Base;
 
-  static constexpr StringRef getTypeName() { return "llvm.struct"; }
+  static constexpr StringLiteral name = "llvm.struct";
 
   /// Checks if the given type can be contained in a structure type.
   static bool isValidElementType(Type type);

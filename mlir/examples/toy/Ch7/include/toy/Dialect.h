@@ -73,8 +73,8 @@ public:
   /// Returns the number of element type held by this struct.
   size_t getNumElementTypes() { return getElementTypes().size(); }
 
-  /// Returns the name of this struct type.
-  static constexpr StringRef getTypeName() { return "toy.struct"; }
+  /// The name of this struct type.
+  static constexpr StringLiteral name = "toy.struct";
 };
 } // namespace toy
 } // namespace mlir

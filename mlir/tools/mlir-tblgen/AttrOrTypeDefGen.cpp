@@ -269,16 +269,16 @@ void DefGen::emitTopLevelDeclarations() {
 }
 
 void DefGen::emitName() {
-  auto *mnemonic = defCls.addStaticMethod<Method::Constexpr>(
-      "::llvm::StringLiteral", "get" + defType + "Name");
+  std::string name;
   if (auto *attrDef = dyn_cast<AttrDef>(&def)) {
-    mnemonic->body().indent()
-        << strfmt("return \"{0}\";", attrDef->getAttrName());
-    return;
+    name = attrDef->getAttrName();
+  } else {
+    auto *typeDef = cast<TypeDef>(&def);
+    name = typeDef->getTypeName();
   }
-  auto *typeDef = cast<TypeDef>(&def);
-  mnemonic->body().indent()
-      << strfmt("return \"{0}\";", typeDef->getTypeName());
+  std::string nameDecl =
+      strfmt("static constexpr ::llvm::StringLiteral name = \"{0}\";\n", name);
+  defCls.declare<ExtraClassDeclaration>(std::move(nameDecl));
 }
 
 void DefGen::emitBuilders() {
