@@ -254,6 +254,12 @@ AffineMap AffineMap::getPermutationMap(ArrayRef<unsigned> permutation,
   assert(permutationMap.isPermutation() && "Invalid permutation vector");
   return permutationMap;
 }
+AffineMap AffineMap::getPermutationMap(ArrayRef<int64_t> permutation,
+                                       MLIRContext *context) {
+  SmallVector<unsigned> perm = llvm::map_to_vector(
+      permutation, [](int64_t i) { return static_cast<unsigned>(i); });
+  return AffineMap::getPermutationMap(perm, context);
+}
 
 AffineMap AffineMap::getMultiDimMapWithTargets(unsigned numDims,
                                                ArrayRef<unsigned> targets,
