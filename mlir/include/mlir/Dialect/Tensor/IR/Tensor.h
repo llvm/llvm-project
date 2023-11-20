@@ -150,6 +150,12 @@ LogicalResult getOrCreateDestinations(OpBuilder &b, Location loc, Operation *op,
 /// Tests if types are the same when ignoring encoding on ranked tensors.
 bool isSameTypeWithoutEncoding(Type tp1, Type tp2);
 
+/// Helper function to check whether the dimensions are non-negative. This
+/// check also occurs in the verifier, but we need it at later stages too
+/// because the verifier ignores dynamic dimensions, but later stages might
+/// have constant folded those to (negative) constants.
+bool hasNegativeDimension(SmallVector<int64_t> shape);
+
 /// Function to control the folding of constant and extract slice.
 using ControlConstantExtractSliceFusionFn = std::function<bool(ExtractSliceOp)>;
 

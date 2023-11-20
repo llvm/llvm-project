@@ -125,6 +125,12 @@ bool tensor::isSameTypeWithoutEncoding(Type tp1, Type tp2) {
   return tp1 == tp2; // default implementation
 }
 
+bool tensor::hasNegativeDimension(SmallVector<int64_t> shape) {
+  return llvm::any_of(shape, [](int64_t dim) {
+    return !ShapedType::isDynamic(dim) && dim < 0;
+  });
+}
+
 /// Compute the dropped dimensions of a rank-reducing tensor.extract_slice op or
 /// rank-extending tensor.insert_slice op.
 static llvm::SmallBitVector getDroppedDims(ArrayRef<int64_t> reducedShape,
@@ -1801,6 +1807,10 @@ RankedTensorType ExtractSliceOp::inferCanonicalRankReducedResultType(
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+  if (hasNegativeDimension(staticOffsets))
+    return {};
+  if (hasNegativeDimension(staticSizes))
+    return {};
   return ExtractSliceOp::inferCanonicalRankReducedResultType(
       desiredResultRank, sourceRankedTensorType, staticOffsets, staticSizes,
       staticStrides);
@@ -2370,6 +2380,8 @@ public:
     auto sourceType = ExtractSliceOp::inferCanonicalRankReducedResultType(
         insertSliceOp.getSourceType().getRank(), insertSliceOp.getDestType(),
         mixedOffsets, mixedSizes, mixedStrides);
+    if (!sourceType)
+      return failure();
     Value toInsert = insertSliceOp.getSource();
     if (sourceType != insertSliceOp.getSourceType()) {
       OpBuilder::InsertionGuard g(rewriter);
@@ -2500,6 +2512,8 @@ struct InsertSliceOpSourceCastInserter final
               getConstantIntValue(insertSliceOp.getMixedSizes()[i]))
         newSrcShape[i] = *constInt;
     }
+    // if (hasNegativeDimension(newSrcShape))
+    //  return failure();
 
     RankedTensorType newSrcType =
         RankedTensorType::get(newSrcShape, srcType.getElementType());
@@ -2521,6 +2535,7 @@ struct InsertSliceOpSourceCastInserter final
       rewriter.setInsertionPoint(insertSliceOp->getParentOp());
     Value cast = rewriter.create<tensor::CastOp>(
         insertSliceOp.getLoc(), newSrcType, insertSliceOp.getSource());
+
     rewriter.replaceOpWithNewOp<InsertOpTy>(
         insertSliceOp, cast, insertSliceOp.getDest(),
         insertSliceOp.getMixedOffsets(), insertSliceOp.getMixedSizes(),
