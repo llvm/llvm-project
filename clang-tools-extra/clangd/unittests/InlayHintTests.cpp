@@ -1729,7 +1729,8 @@ TEST(ParameterHints, PseudoObjectExpr) {
     struct S {
       __declspec(property(get=GetX, put=PutX)) int x[];
       int GetX(int y, int z) { return 42 + y; }
-      void PutX(int y) { x = $one[[y]]; } // FIXME: Undesired `x = y: y` for this ill-formed expression.
+      // FIXME: Undesired hint `x = y: y`.
+      void PutX(int y) { x = $one[[y]]; }
     };
 
     int printf(const char *Format, ...);
@@ -1738,6 +1739,8 @@ TEST(ParameterHints, PseudoObjectExpr) {
       S s;
       __builtin_dump_struct(&s, printf); // Not `Format: __builtin_dump_struct()`
       printf($Param[["Hello, %d"]], 42); // Normal calls are not affected.
+      // This builds a PseudoObjectExpr, but here it's useful for showing the
+      // arguments from the semantic form.
       return s.x[ $two[[1]] ][ $three[[2]] ]; // `x[y: 1][z: 2]`
     }
   )cpp");
