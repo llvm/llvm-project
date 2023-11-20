@@ -10,6 +10,7 @@
 #define LLDB_CORE_ARCHITECTURE_H
 
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/MemoryTagManager.h"
 
 namespace lldb_private {
@@ -108,6 +109,25 @@ public:
   // architecture.
   virtual const MemoryTagManager *GetMemoryTagManager() const {
     return nullptr;
+  }
+
+  // This returns true if a write to the named register should cause lldb to
+  // reconfigure its register information. For example on AArch64 writing to vg
+  // to change the vector length means lldb has to change the size of registers.
+  virtual bool
+  RegisterWriteCausesReconfigure(const llvm::StringRef name) const {
+    return false;
+  }
+
+  // Call this after writing a register for which RegisterWriteCausesReconfigure
+  // returns true. This method will update the layout of registers according to
+  // the new state e.g. the new length of scalable vector registers.
+  // Returns true if anything changed, which means existing register values must
+  // be invalidated.
+  virtual bool ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
+                                       DataExtractor &reg_data,
+                                       RegisterContext &reg_context) const {
+    return false;
   }
 };
 

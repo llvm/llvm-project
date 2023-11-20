@@ -192,7 +192,7 @@ public:
   SafeStack(Function &F, const TargetLoweringBase &TL, const DataLayout &DL,
             DomTreeUpdater *DTU, ScalarEvolution &SE)
       : F(F), TL(TL), DL(DL), DTU(DTU), SE(SE),
-        StackPtrTy(Type::getInt8PtrTy(F.getContext())),
+        StackPtrTy(PointerType::getUnqual(F.getContext())),
         IntPtrTy(DL.getIntPtrType(F.getContext())),
         Int32Ty(Type::getInt32Ty(F.getContext())),
         Int8Ty(Type::getInt8Ty(F.getContext())) {}

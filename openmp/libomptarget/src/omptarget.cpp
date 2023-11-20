@@ -191,38 +191,50 @@ static int initLibrary(DeviceTy &Device) {
                                *EntryDeviceEnd = TargetTable->EntriesEnd;
            CurrDeviceEntry != EntryDeviceEnd;
            CurrDeviceEntry++, CurrHostEntry++) {
-        if (CurrDeviceEntry->size != 0) {
-          // has data.
-          assert(CurrDeviceEntry->size == CurrHostEntry->size &&
-                 "data size mismatch");
+        if (CurrDeviceEntry->size == 0)
+          continue;
 
-          // Fortran may use multiple weak declarations for the same symbol,
-          // therefore we must allow for multiple weak symbols to be loaded from
-          // the fat binary. Treat these mappings as any other "regular"
-          // mapping. Add entry to map.
-          if (Device.getTgtPtrBegin(HDTTMap, CurrHostEntry->addr,
-                                    CurrHostEntry->size))
-            continue;
+        assert(CurrDeviceEntry->size == CurrHostEntry->size &&
+               "data size mismatch");
 
-          DP("Add mapping from host " DPxMOD " to device " DPxMOD
-             " with size %zu"
-             "\n",
-             DPxPTR(CurrHostEntry->addr), DPxPTR(CurrDeviceEntry->addr),
-             CurrDeviceEntry->size);
-          HDTTMap->emplace(new HostDataToTargetTy(
-              (uintptr_t)CurrHostEntry->addr /*HstPtrBase*/,
-              (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
-              (uintptr_t)CurrHostEntry->addr +
-                  CurrHostEntry->size /*HstPtrEnd*/,
-              (uintptr_t)CurrDeviceEntry->addr /*TgtAllocBegin*/,
-              (uintptr_t)CurrDeviceEntry->addr /*TgtPtrBegin*/,
-              false /*UseHoldRefCount*/, CurrHostEntry->name,
-              true /*IsRefCountINF*/));
+        // Fortran may use multiple weak declarations for the same symbol,
+        // therefore we must allow for multiple weak symbols to be loaded from
+        // the fat binary. Treat these mappings as any other "regular"
+        // mapping. Add entry to map.
+        if (Device.getTgtPtrBegin(HDTTMap, CurrHostEntry->addr,
+                                  CurrHostEntry->size))
+          continue;
 
-          // Notify about the new mapping.
-          if (Device.notifyDataMapped(CurrHostEntry->addr, CurrHostEntry->size))
+        void *CurrDeviceEntryAddr = CurrDeviceEntry->addr;
+
+        // For indirect mapping, follow the indirection and map the actual
+        // target.
+        if (CurrDeviceEntry->flags & OMP_DECLARE_TARGET_INDIRECT) {
+          AsyncInfoTy AsyncInfo(Device);
+          void *DevPtr;
+          Device.retrieveData(&DevPtr, CurrDeviceEntryAddr, sizeof(void *),
+                              AsyncInfo);
+          if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
             return OFFLOAD_FAIL;
+          CurrDeviceEntryAddr = DevPtr;
         }
+
+        DP("Add mapping from host " DPxMOD " to device " DPxMOD " with size %zu"
+           ", name \"%s\"\n",
+           DPxPTR(CurrHostEntry->addr), DPxPTR(CurrDeviceEntry->addr),
+           CurrDeviceEntry->size, CurrDeviceEntry->name);
+        HDTTMap->emplace(new HostDataToTargetTy(
+            (uintptr_t)CurrHostEntry->addr /*HstPtrBase*/,
+            (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
+            (uintptr_t)CurrHostEntry->addr + CurrHostEntry->size /*HstPtrEnd*/,
+            (uintptr_t)CurrDeviceEntryAddr /*TgtAllocBegin*/,
+            (uintptr_t)CurrDeviceEntryAddr /*TgtPtrBegin*/,
+            false /*UseHoldRefCount*/, CurrHostEntry->name,
+            true /*IsRefCountINF*/));
+
+        // Notify about the new mapping.
+        if (Device.notifyDataMapped(CurrHostEntry->addr, CurrHostEntry->size))
+          return OFFLOAD_FAIL;
       }
     }
   }

@@ -19,8 +19,7 @@ struct s1 {
 };
 
 // CHECK-C: define{{.*}} { i32, float } @test2(i32{{[^,]*}}, float{{[^,]*}})
-/// FIXME: This doesn't match g++.
-// CHECK-CXX: define{{.*}} { i32, float } @_Z5test22s1(i32{{[^,]*}}, float{{[^,]*}})
+// CHECK-CXX: define{{.*}} [2 x i64] @_Z5test22s1([2 x i64]{{[^,]*}})
 struct s1 test2(struct s1 a) {
   return a;
 }

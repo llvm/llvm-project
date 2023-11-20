@@ -385,12 +385,12 @@ public:
     ImplicitParamDecl *Cmd = Method->getCmdDecl();
     Hash.AddBoolean(Cmd);
     if (Cmd)
-      ID.AddInteger(Cmd->getParameterKind());
+      ID.AddInteger(llvm::to_underlying(Cmd->getParameterKind()));
 
     ImplicitParamDecl *Self = Method->getSelfDecl();
     Hash.AddBoolean(Self);
     if (Self)
-      ID.AddInteger(Self->getParameterKind());
+      ID.AddInteger(llvm::to_underlying(Self->getParameterKind()));
 
     AddDecl(Method);
 

@@ -185,6 +185,7 @@ def main():
             diff_string = "".join(diff)
             if len(diff_string) > 0:
                 sys.stdout.write(diff_string)
+                sys.exit(1)
 
 
 if __name__ == "__main__":

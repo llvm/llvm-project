@@ -177,6 +177,10 @@ public:
   /// implement the fastmath interface.
   void setFastmathFlagsAttr(llvm::Instruction *inst, Operation *op) const;
 
+  /// Converts !llvm.linker.options metadata to the llvm.linker.options
+  /// LLVM dialect operation.
+  LogicalResult convertLinkerOptionsMetadata();
+
   /// Converts all LLVM metadata nodes that translate to attributes such as
   /// alias analysis or access group metadata, and builds a map from the
   /// metadata nodes to the converted attributes.

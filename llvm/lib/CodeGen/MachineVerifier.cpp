@@ -965,7 +965,7 @@ bool MachineVerifier::verifyVectorElementMatch(LLT Ty0, LLT Ty1,
     return false;
   }
 
-  if (Ty0.isVector() && Ty0.getNumElements() != Ty1.getNumElements()) {
+  if (Ty0.isVector() && Ty0.getElementCount() != Ty1.getElementCount()) {
     report("operand types must preserve number of vector elements", MI);
     return false;
   }
@@ -1937,17 +1937,14 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
 
     // If we have only one valid type, this is likely a copy between a virtual
     // and physical register.
-    unsigned SrcSize = 0;
-    unsigned DstSize = 0;
+    TypeSize SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
+    TypeSize DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
     if (SrcReg.isPhysical() && DstTy.isValid()) {
       const TargetRegisterClass *SrcRC =
           TRI->getMinimalPhysRegClassLLT(SrcReg, DstTy);
       if (SrcRC)
         SrcSize = TRI->getRegSizeInBits(*SrcRC);
     }
-
-    if (SrcSize == 0)
-      SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
 
     if (DstReg.isPhysical() && SrcTy.isValid()) {
       const TargetRegisterClass *DstRC =
@@ -1956,10 +1953,21 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
         DstSize = TRI->getRegSizeInBits(*DstRC);
     }
 
-    if (DstSize == 0)
-      DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
+    // The next two checks allow COPY between physical and virtual registers,
+    // when the virtual register has a scalable size and the physical register
+    // has a fixed size. These checks allow COPY between *potentialy* mismatched
+    // sizes. However, once RegisterBankSelection occurs, MachineVerifier should
+    // be able to resolve a fixed size for the scalable vector, and at that
+    // point this function will know for sure whether the sizes are mismatched
+    // and correctly report a size mismatch.
+    if (SrcReg.isPhysical() && DstReg.isVirtual() && DstSize.isScalable() &&
+        !SrcSize.isScalable())
+      break;
+    if (SrcReg.isVirtual() && DstReg.isPhysical() && SrcSize.isScalable() &&
+        !DstSize.isScalable())
+      break;
 
-    if (SrcSize != 0 && DstSize != 0 && SrcSize != DstSize) {
+    if (SrcSize.isNonZero() && DstSize.isNonZero() && SrcSize != DstSize) {
       if (!DstOp.getSubReg() && !SrcOp.getSubReg()) {
         report("Copy Instruction is illegal with mismatching sizes", MI);
         errs() << "Def Size = " << DstSize << ", Src Size = " << SrcSize
@@ -2254,7 +2262,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
           }
 
           // Make sure the register fits into its register bank if any.
-          if (RegBank && Ty.isValid() &&
+          if (RegBank && Ty.isValid() && !Ty.isScalableVector() &&
               RBI->getMaximumSize(RegBank->getID()) < Ty.getSizeInBits()) {
             report("Register bank is too small for virtual register", MO,
                    MONum);

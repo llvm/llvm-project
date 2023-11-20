@@ -1,5 +1,5 @@
 ! Test default initialization of global variables (static init)
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 
 module tinit
   real, target :: ziel(100)

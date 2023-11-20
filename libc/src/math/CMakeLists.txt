@@ -80,6 +80,7 @@ add_math_entrypoint_object(ceill)
 add_math_entrypoint_object(copysign)
 add_math_entrypoint_object(copysignf)
 add_math_entrypoint_object(copysignl)
+add_math_entrypoint_object(copysignf128)
 
 add_math_entrypoint_object(cos)
 add_math_entrypoint_object(cosf)

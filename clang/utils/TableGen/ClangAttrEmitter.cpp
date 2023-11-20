@@ -161,7 +161,7 @@ static StringRef NormalizeNameForSpellingComparison(StringRef Name) {
 // Normalize the spelling of a GNU attribute (i.e. "x" in "__attribute__((x))"),
 // removing "__" if it appears at the beginning and end of the attribute's name.
 static StringRef NormalizeGNUAttrSpelling(StringRef AttrSpelling) {
-  if (AttrSpelling.startswith("__") && AttrSpelling.endswith("__")) {
+  if (AttrSpelling.starts_with("__") && AttrSpelling.ends_with("__")) {
     AttrSpelling = AttrSpelling.substr(2, AttrSpelling.size() - 4);
   }
 
@@ -356,7 +356,7 @@ namespace {
     }
 
     void writeDump(raw_ostream &OS) const override {
-      if (StringRef(type).endswith("Decl *")) {
+      if (StringRef(type).ends_with("Decl *")) {
         OS << "    OS << \" \";\n";
         OS << "    dumpBareDeclRef(SA->get" << getUpperName() << "());\n";
       } else if (type == "IdentifierInfo *") {
@@ -4537,7 +4537,7 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
         continue;
       ArgNames.push_back(Arg->getValueAsString("Name").str());
       for (const auto &Class : Arg->getSuperClasses()) {
-        if (Class.first->getName().startswith("Variadic")) {
+        if (Class.first->getName().starts_with("Variadic")) {
           ArgNames.back().append("...");
           break;
         }

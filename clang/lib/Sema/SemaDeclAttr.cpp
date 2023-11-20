@@ -189,7 +189,7 @@ static inline bool isCFStringType(QualType T, ASTContext &Ctx) {
     return false;
 
   const RecordDecl *RD = RT->getDecl();
-  if (RD->getTagKind() != TTK_Struct)
+  if (RD->getTagKind() != TagTypeKind::Struct)
     return false;
 
   return RD->getIdentifier() == &Ctx.Idents.get("__CFString");
@@ -8430,7 +8430,7 @@ bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
   }
 
   LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-      Context.getLangOpts().getStrictFlexArraysLevel();
+      LangOptions::StrictFlexArraysLevelKind::IncompleteOnly;
 
   if (!Decl::isFlexibleArrayMemberLike(Context, FD, FD->getType(),
                                        StrictFlexArraysLevel, true)) {

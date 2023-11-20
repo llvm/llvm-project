@@ -32,7 +32,7 @@ enum PartialMappingIdx {
   PMI_Min = PMI_GPR,
 };
 
-RegisterBankInfo::PartialMapping PartMappings[]{
+const RegisterBankInfo::PartialMapping PartMappings[]{
     {0, 32, GPRBRegBank},
     {0, 32, FPRBRegBank},
     {0, 64, FPRBRegBank},
@@ -47,7 +47,7 @@ enum ValueMappingIdx {
     MSAIdx = 10
 };
 
-RegisterBankInfo::ValueMapping ValueMappings[] = {
+const RegisterBankInfo::ValueMapping ValueMappings[] = {
     // invalid
     {nullptr, 0},
     // up to 3 operands in GPRs

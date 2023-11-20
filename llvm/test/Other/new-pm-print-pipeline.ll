@@ -120,3 +120,6 @@
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='globaldce<vfe-linkage-unit-visibility>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-35
 ; CHECK-35: globaldce<vfe-linkage-unit-visibility>
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='speculative-execution<only-if-divergent-target>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-36
+; CHECK-36: function(speculative-execution<only-if-divergent-target>)

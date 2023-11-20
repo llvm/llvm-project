@@ -632,7 +632,7 @@ def OpenACC_FirstprivateRecipeOp : OpenACC_Op<"firstprivate.recipe",
       // init region contains a sequence of operations to create and
       // initialize the copy if needed. It yields the create copy.
     } copy {
-    ^bb0(%0: f32, %1: !llvm.ptr<f32>):
+    ^bb0(%0: f32, %1: !llvm.ptr):
       // copy region contains a sequence of operations to copy the initial value
       // of the firstprivate value to the newly created value.
     } destroy {
@@ -1131,8 +1131,8 @@ def OpenACC_HostDataOp : OpenACC_Op<"host_data", [AttrSizedOperandSegments]> {
     Example:
 
     ```mlir
-    %0 = acc.use_device varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-    acc.host_data dataOperands(%0 : !llvm.ptr<f32>) {
+    %0 = acc.use_device varPtr(%a : !llvm.ptr) -> !llvm.ptr
+    acc.host_data dataOperands(%0 : !llvm.ptr) {
 
     }
     ```
@@ -1424,12 +1424,13 @@ def OpenACC_DeclareEnterOp : OpenACC_Op<"declare_enter", []> {
     Example showing `acc declare create(a)`:
 
     ```mlir
-    %0 = acc.create varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-    acc.declare_enter dataOperands(%0 : !llvm.ptr<f32>)
+    %0 = acc.create varPtr(%a : !llvm.ptr) -> !llvm.ptr
+    acc.declare_enter dataOperands(%0 : !llvm.ptr)
     ```
   }];
 
   let arguments = (ins Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands);
+  let results = (outs OpenACC_DeclareTokenType:$token);
 
   let assemblyFormat = [{
     oilist(
@@ -1441,7 +1442,7 @@ def OpenACC_DeclareEnterOp : OpenACC_Op<"declare_enter", []> {
   let hasVerifier = 1;
 }
 
-def OpenACC_DeclareExitOp : OpenACC_Op<"declare_exit", []> {
+def OpenACC_DeclareExitOp : OpenACC_Op<"declare_exit", [AttrSizedOperandSegments]> {
   let summary = "declare directive - exit from implicit data region";
 
   let description = [{
@@ -1452,16 +1453,19 @@ def OpenACC_DeclareExitOp : OpenACC_Op<"declare_exit", []> {
     Example showing `acc declare device_resident(a)`:
 
     ```mlir
-    %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32> {dataClause = #acc<data_clause declare_device_resident>}
-    acc.declare_exit dataOperands(%0 : !llvm.ptr<f32>)
-    acc.delete accPtr(%0 : !llvm.ptr<f32>) {dataClause = #acc<data_clause declare_device_resident>}
+    %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr {dataClause = #acc<data_clause declare_device_resident>}
+    acc.declare_exit dataOperands(%0 : !llvm.ptr)
+    acc.delete accPtr(%0 : !llvm.ptr) {dataClause = #acc<data_clause declare_device_resident>}
     ```
   }];
 
-  let arguments = (ins Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands);
+  let arguments = (ins
+      Optional<OpenACC_DeclareTokenType>:$token,
+      Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands);
 
   let assemblyFormat = [{
     oilist(
+        `token` `(` $token `)` |
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     attr-dict-with-keyword
@@ -1487,9 +1491,9 @@ def OpenACC_GlobalConstructorOp : OpenACC_Op<"global_ctor",
       llvm.return %0 : i32
     }
     acc.global_ctor @acc_constructor {
-      %0 = llvm.mlir.addressof @globalvar : !llvm.ptr<i32>
-      %1 = acc.create varPtr(%0 : !llvm.ptr<i32>) -> !llvm.ptr<i32>
-      acc.declare_enter dataOperands(%1 : !llvm.ptr<i32>)
+      %0 = llvm.mlir.addressof @globalvar : !llvm.ptr
+      %1 = acc.create varPtr(%0 : !llvm.ptr) -> !llvm.ptr
+      acc.declare_enter dataOperands(%1 : !llvm.ptr)
     }
     ```
   }];
@@ -1521,10 +1525,10 @@ def OpenACC_GlobalDestructorOp : OpenACC_Op<"global_dtor",
       llvm.return %0 : i32
     }
     acc.global_dtor @acc_destructor {
-      %0 = llvm.mlir.addressof @globalvar : !llvm.ptr<i32>
-      %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr<i32>) -> !llvm.ptr<i32> {dataClause = #acc<data_clause create>}
-      acc.declare_exit dataOperands(%1 : !llvm.ptr<i32>)
-      acc.delete accPtr(%1 : !llvm.ptr<i32>) {dataClause = #acc<data_clause create>}
+      %0 = llvm.mlir.addressof @globalvar : !llvm.ptr
+      %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr) -> !llvm.ptr {dataClause = #acc<data_clause create>}
+      acc.declare_exit dataOperands(%1 : !llvm.ptr)
+      acc.delete accPtr(%1 : !llvm.ptr) {dataClause = #acc<data_clause create>}
     }
     ```
   }];

@@ -41,8 +41,8 @@ define ptr@test2(i32 %A, i32 %Offset) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 100
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHSTO_PTR:%.*]] = inttoptr i32 [[A:%.*]] to ptr
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[RHSTO_PTR]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    [[A_PTR:%.*]] = inttoptr i32 [[A:%.*]] to ptr
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[A_PTR]], i32 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
@@ -107,8 +107,8 @@ define ptr@test4(i16 %A, i32 %Offset) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[A:%.*]] to i32
-; CHECK-NEXT:    [[RHSTO_PTR:%.*]] = inttoptr i32 [[TMP0]] to ptr
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[RHSTO_PTR]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    [[A_PTR:%.*]] = inttoptr i32 [[TMP0]] to ptr
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[A_PTR]], i32 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
@@ -135,7 +135,7 @@ define ptr@test5(i32 %Offset) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = invoke ptr @fun_ptr()
-; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
@@ -148,7 +148,7 @@ define ptr@test5(i32 %Offset) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[L:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    ret ptr null
 ;
 entry:
@@ -179,7 +179,7 @@ define ptr@test6(i32 %Offset) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = invoke i32 @fun_i32()
-; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
@@ -188,12 +188,12 @@ define ptr@test6(i32 %Offset) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 100
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHSTO_PTR:%.*]] = inttoptr i32 [[A]] to ptr
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[RHSTO_PTR]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    [[A_PTR:%.*]] = inttoptr i32 [[A]] to ptr
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[A_PTR]], i32 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[L:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    ret ptr null
 ;
 entry:
@@ -272,10 +272,16 @@ entry:
 define void @test_zero_offset_cycle(ptr %arg) {
 ; CHECK-LABEL: @test_zero_offset_cycle(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[ARG:%.*]], i32 0, i32 1
+; CHECK-NEXT:    [[GEP_INT:%.*]] = ptrtoint ptr [[GEP]] to i32
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[LOOP_CONT:%.*]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[GEP_INT]], [[ENTRY:%.*]] ], [ [[GEP_INT2:%.*]], [[LOOP_CONT:%.*]] ], [ [[PHI]], [[LOOP]] ]
+; CHECK-NEXT:    [[PHI_PTR:%.*]] = inttoptr i32 [[PHI]] to ptr
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP]], [[PHI_PTR]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[LOOP_CONT]]
 ; CHECK:       loop.cont:
+; CHECK-NEXT:    [[GEP_INT2]] = ptrtoint ptr [[GEP]] to i32
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

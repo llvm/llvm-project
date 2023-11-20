@@ -1,5 +1,5 @@
 ! Test lower of elemental user defined assignments
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module defined_assignments
   type t

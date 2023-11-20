@@ -1049,6 +1049,9 @@ public:
   }
 };
 
+/// Describes the kind of result that can be tail-allocated.
+enum class ConstantResultStorageKind { None, Int64, APValue };
+
 /// ConstantExpr - An expression that occurs in a constant context and
 /// optionally the result of evaluating the expression.
 class ConstantExpr final
@@ -1061,20 +1064,15 @@ class ConstantExpr final
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
-public:
-  /// Describes the kind of result that can be tail-allocated.
-  enum ResultStorageKind { RSK_None, RSK_Int64, RSK_APValue };
-
-private:
   size_t numTrailingObjects(OverloadToken<APValue>) const {
-    return ConstantExprBits.ResultKind == ConstantExpr::RSK_APValue;
+    return getResultStorageKind() == ConstantResultStorageKind::APValue;
   }
   size_t numTrailingObjects(OverloadToken<uint64_t>) const {
-    return ConstantExprBits.ResultKind == ConstantExpr::RSK_Int64;
+    return getResultStorageKind() == ConstantResultStorageKind::Int64;
   }
 
   uint64_t &Int64Result() {
-    assert(ConstantExprBits.ResultKind == ConstantExpr::RSK_Int64 &&
+    assert(getResultStorageKind() == ConstantResultStorageKind::Int64 &&
            "invalid accessor");
     return *getTrailingObjects<uint64_t>();
   }
@@ -1082,7 +1080,7 @@ private:
     return const_cast<ConstantExpr *>(this)->Int64Result();
   }
   APValue &APValueResult() {
-    assert(ConstantExprBits.ResultKind == ConstantExpr::RSK_APValue &&
+    assert(getResultStorageKind() == ConstantResultStorageKind::APValue &&
            "invalid accessor");
     return *getTrailingObjects<APValue>();
   }
@@ -1090,22 +1088,23 @@ private:
     return const_cast<ConstantExpr *>(this)->APValueResult();
   }
 
-  ConstantExpr(Expr *SubExpr, ResultStorageKind StorageKind,
+  ConstantExpr(Expr *SubExpr, ConstantResultStorageKind StorageKind,
                bool IsImmediateInvocation);
-  ConstantExpr(EmptyShell Empty, ResultStorageKind StorageKind);
+  ConstantExpr(EmptyShell Empty, ConstantResultStorageKind StorageKind);
 
 public:
   static ConstantExpr *Create(const ASTContext &Context, Expr *E,
                               const APValue &Result);
-  static ConstantExpr *Create(const ASTContext &Context, Expr *E,
-                              ResultStorageKind Storage = RSK_None,
-                              bool IsImmediateInvocation = false);
+  static ConstantExpr *
+  Create(const ASTContext &Context, Expr *E,
+         ConstantResultStorageKind Storage = ConstantResultStorageKind::None,
+         bool IsImmediateInvocation = false);
   static ConstantExpr *CreateEmpty(const ASTContext &Context,
-                                   ResultStorageKind StorageKind);
+                                   ConstantResultStorageKind StorageKind);
 
-  static ResultStorageKind getStorageKind(const APValue &Value);
-  static ResultStorageKind getStorageKind(const Type *T,
-                                          const ASTContext &Context);
+  static ConstantResultStorageKind getStorageKind(const APValue &Value);
+  static ConstantResultStorageKind getStorageKind(const Type *T,
+                                                  const ASTContext &Context);
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return SubExpr->getBeginLoc();
@@ -1126,8 +1125,8 @@ public:
   APValue::ValueKind getResultAPValueKind() const {
     return static_cast<APValue::ValueKind>(ConstantExprBits.APValueKind);
   }
-  ResultStorageKind getResultStorageKind() const {
-    return static_cast<ResultStorageKind>(ConstantExprBits.ResultKind);
+  ConstantResultStorageKind getResultStorageKind() const {
+    return static_cast<ConstantResultStorageKind>(ConstantExprBits.ResultKind);
   }
   bool isImmediateInvocation() const {
     return ConstantExprBits.IsImmediateInvocation;
@@ -1621,26 +1620,18 @@ class FixedPointLiteral : public Expr, public APIntStorage {
   }
 };
 
-class CharacterLiteral : public Expr {
-public:
-  enum CharacterKind {
-    Ascii,
-    Wide,
-    UTF8,
-    UTF16,
-    UTF32
-  };
+enum class CharacterLiteralKind { Ascii, Wide, UTF8, UTF16, UTF32 };
 
-private:
+class CharacterLiteral : public Expr {
   unsigned Value;
   SourceLocation Loc;
 public:
   // type should be IntTy
-  CharacterLiteral(unsigned value, CharacterKind kind, QualType type,
+  CharacterLiteral(unsigned value, CharacterLiteralKind kind, QualType type,
                    SourceLocation l)
       : Expr(CharacterLiteralClass, type, VK_PRValue, OK_Ordinary),
         Value(value), Loc(l) {
-    CharacterLiteralBits.Kind = kind;
+    CharacterLiteralBits.Kind = llvm::to_underlying(kind);
     setDependence(ExprDependence::None);
   }
 
@@ -1648,8 +1639,8 @@ public:
   CharacterLiteral(EmptyShell Empty) : Expr(CharacterLiteralClass, Empty) { }
 
   SourceLocation getLocation() const { return Loc; }
-  CharacterKind getKind() const {
-    return static_cast<CharacterKind>(CharacterLiteralBits.Kind);
+  CharacterLiteralKind getKind() const {
+    return static_cast<CharacterLiteralKind>(CharacterLiteralBits.Kind);
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
@@ -1658,14 +1649,16 @@ public:
   unsigned getValue() const { return Value; }
 
   void setLocation(SourceLocation Location) { Loc = Location; }
-  void setKind(CharacterKind kind) { CharacterLiteralBits.Kind = kind; }
+  void setKind(CharacterLiteralKind kind) {
+    CharacterLiteralBits.Kind = llvm::to_underlying(kind);
+  }
   void setValue(unsigned Val) { Value = Val; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CharacterLiteralClass;
   }
 
-  static void print(unsigned val, CharacterKind Kind, raw_ostream &OS);
+  static void print(unsigned val, CharacterLiteralKind Kind, raw_ostream &OS);
 
   // Iterators
   child_range children() {
@@ -1787,6 +1780,15 @@ public:
   }
 };
 
+enum class StringLiteralKind {
+  Ordinary,
+  Wide,
+  UTF8,
+  UTF16,
+  UTF32,
+  Unevaluated
+};
+
 /// StringLiteral - This represents a string literal expression, e.g. "foo"
 /// or L"bar" (wide strings). The actual string data can be obtained with
 /// getBytes() and is NOT null-terminated. The length of the string data is
@@ -1825,10 +1827,6 @@ class StringLiteral final
   ///
   /// * An array of getByteLength() char used to store the string data.
 
-public:
-  enum StringKind { Ordinary, Wide, UTF8, UTF16, UTF32, Unevaluated };
-
-private:
   unsigned numTrailingObjects(OverloadToken<unsigned>) const { return 1; }
   unsigned numTrailingObjects(OverloadToken<SourceLocation>) const {
     return getNumConcatenated();
@@ -1850,7 +1848,7 @@ private:
   }
 
   /// Build a string literal.
-  StringLiteral(const ASTContext &Ctx, StringRef Str, StringKind Kind,
+  StringLiteral(const ASTContext &Ctx, StringRef Str, StringLiteralKind Kind,
                 bool Pascal, QualType Ty, const SourceLocation *Loc,
                 unsigned NumConcatenated);
 
@@ -1859,7 +1857,8 @@ private:
                 unsigned CharByteWidth);
 
   /// Map a target and string kind to the appropriate character width.
-  static unsigned mapCharByteWidth(TargetInfo const &Target, StringKind SK);
+  static unsigned mapCharByteWidth(TargetInfo const &Target,
+                                   StringLiteralKind SK);
 
   /// Set one of the string literal token.
   void setStrTokenLoc(unsigned TokNum, SourceLocation L) {
@@ -1871,13 +1870,13 @@ public:
   /// This is the "fully general" constructor that allows representation of
   /// strings formed from multiple concatenated tokens.
   static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
-                               StringKind Kind, bool Pascal, QualType Ty,
+                               StringLiteralKind Kind, bool Pascal, QualType Ty,
                                const SourceLocation *Loc,
                                unsigned NumConcatenated);
 
   /// Simple constructor for string literals made from one token.
   static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
-                               StringKind Kind, bool Pascal, QualType Ty,
+                               StringLiteralKind Kind, bool Pascal, QualType Ty,
                                SourceLocation Loc) {
     return Create(Ctx, Str, Kind, Pascal, Ty, &Loc, 1);
   }
@@ -1919,16 +1918,16 @@ public:
   unsigned getLength() const { return *getTrailingObjects<unsigned>(); }
   unsigned getCharByteWidth() const { return StringLiteralBits.CharByteWidth; }
 
-  StringKind getKind() const {
-    return static_cast<StringKind>(StringLiteralBits.Kind);
+  StringLiteralKind getKind() const {
+    return static_cast<StringLiteralKind>(StringLiteralBits.Kind);
   }
 
-  bool isOrdinary() const { return getKind() == Ordinary; }
-  bool isWide() const { return getKind() == Wide; }
-  bool isUTF8() const { return getKind() == UTF8; }
-  bool isUTF16() const { return getKind() == UTF16; }
-  bool isUTF32() const { return getKind() == UTF32; }
-  bool isUnevaluated() const { return getKind() == Unevaluated; }
+  bool isOrdinary() const { return getKind() == StringLiteralKind::Ordinary; }
+  bool isWide() const { return getKind() == StringLiteralKind::Wide; }
+  bool isUTF8() const { return getKind() == StringLiteralKind::UTF8; }
+  bool isUTF16() const { return getKind() == StringLiteralKind::UTF16; }
+  bool isUTF32() const { return getKind() == StringLiteralKind::UTF32; }
+  bool isUnevaluated() const { return getKind() == StringLiteralKind::Unevaluated; }
   bool isPascal() const { return StringLiteralBits.IsPascal; }
 
   bool containsNonAscii() const {
@@ -1996,6 +1995,19 @@ public:
   }
 };
 
+enum class PredefinedIdentKind {
+  Func,
+  Function,
+  LFunction, // Same as Function, but as wide string.
+  FuncDName,
+  FuncSig,
+  LFuncSig, // Same as FuncSig, but as wide string
+  PrettyFunction,
+  /// The same as PrettyFunction, except that the
+  /// 'virtual' keyword is omitted for virtual member functions.
+  PrettyFunctionNoVirtual
+};
+
 /// [C99 6.4.2.2] - A predefined identifier such as __func__.
 class PredefinedExpr final
     : public Expr,
@@ -2007,22 +2019,7 @@ class PredefinedExpr final
   // "Stmt *" for the predefined identifier. It is present if and only if
   // hasFunctionName() is true and is always a "StringLiteral *".
 
-public:
-  enum IdentKind {
-    Func,
-    Function,
-    LFunction, // Same as Function, but as wide string.
-    FuncDName,
-    FuncSig,
-    LFuncSig, // Same as FuncSig, but as wide string
-    PrettyFunction,
-    /// The same as PrettyFunction, except that the
-    /// 'virtual' keyword is omitted for virtual member functions.
-    PrettyFunctionNoVirtual
-  };
-
-private:
-  PredefinedExpr(SourceLocation L, QualType FNTy, IdentKind IK,
+  PredefinedExpr(SourceLocation L, QualType FNTy, PredefinedIdentKind IK,
                  bool IsTransparent, StringLiteral *SL);
 
   explicit PredefinedExpr(EmptyShell Empty, bool HasFunctionName);
@@ -2042,15 +2039,15 @@ public:
   /// If IsTransparent, the PredefinedExpr is transparently handled as a
   /// StringLiteral.
   static PredefinedExpr *Create(const ASTContext &Ctx, SourceLocation L,
-                                QualType FNTy, IdentKind IK, bool IsTransparent,
-                                StringLiteral *SL);
+                                QualType FNTy, PredefinedIdentKind IK,
+                                bool IsTransparent, StringLiteral *SL);
 
   /// Create an empty PredefinedExpr.
   static PredefinedExpr *CreateEmpty(const ASTContext &Ctx,
                                      bool HasFunctionName);
 
-  IdentKind getIdentKind() const {
-    return static_cast<IdentKind>(PredefinedExprBits.Kind);
+  PredefinedIdentKind getIdentKind() const {
+    return static_cast<PredefinedIdentKind>(PredefinedExprBits.Kind);
   }
 
   bool isTransparent() const { return PredefinedExprBits.IsTransparent; }
@@ -2070,12 +2067,13 @@ public:
                : nullptr;
   }
 
-  static StringRef getIdentKindName(IdentKind IK);
+  static StringRef getIdentKindName(PredefinedIdentKind IK);
   StringRef getIdentKindName() const {
     return getIdentKindName(getIdentKind());
   }
 
-  static std::string ComputeName(IdentKind IK, const Decl *CurrentDecl);
+  static std::string ComputeName(PredefinedIdentKind IK,
+                                 const Decl *CurrentDecl);
 
   SourceLocation getBeginLoc() const { return getLocation(); }
   SourceLocation getEndLoc() const { return getLocation(); }
@@ -4735,6 +4733,16 @@ public:
   }
 };
 
+enum class SourceLocIdentKind {
+  Function,
+  FuncSig,
+  File,
+  FileName,
+  Line,
+  Column,
+  SourceLocStruct
+};
+
 /// Represents a function call to one of __builtin_LINE(), __builtin_COLUMN(),
 /// __builtin_FUNCTION(), __builtin_FUNCSIG(), __builtin_FILE(),
 /// __builtin_FILE_NAME() or __builtin_source_location().
@@ -4743,19 +4751,9 @@ class SourceLocExpr final : public Expr {
   DeclContext *ParentContext;
 
 public:
-  enum IdentKind {
-    Function,
-    FuncSig,
-    File,
-    FileName,
-    Line,
-    Column,
-    SourceLocStruct
-  };
-
-  SourceLocExpr(const ASTContext &Ctx, IdentKind Type, QualType ResultTy,
-                SourceLocation BLoc, SourceLocation RParenLoc,
-                DeclContext *Context);
+  SourceLocExpr(const ASTContext &Ctx, SourceLocIdentKind Type,
+                QualType ResultTy, SourceLocation BLoc,
+                SourceLocation RParenLoc, DeclContext *Context);
 
   /// Build an empty call expression.
   explicit SourceLocExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
@@ -4768,20 +4766,20 @@ public:
   /// Return a string representing the name of the specific builtin function.
   StringRef getBuiltinStr() const;
 
-  IdentKind getIdentKind() const {
-    return static_cast<IdentKind>(SourceLocExprBits.Kind);
+  SourceLocIdentKind getIdentKind() const {
+    return static_cast<SourceLocIdentKind>(SourceLocExprBits.Kind);
   }
 
   bool isIntType() const {
     switch (getIdentKind()) {
-    case File:
-    case FileName:
-    case Function:
-    case FuncSig:
-    case SourceLocStruct:
+    case SourceLocIdentKind::File:
+    case SourceLocIdentKind::FileName:
+    case SourceLocIdentKind::Function:
+    case SourceLocIdentKind::FuncSig:
+    case SourceLocIdentKind::SourceLocStruct:
       return false;
-    case Line:
-    case Column:
+    case SourceLocIdentKind::Line:
+    case SourceLocIdentKind::Column:
       return true;
     }
     llvm_unreachable("unknown source location expression kind");
@@ -5114,6 +5112,7 @@ private:
 
   /// Whether this designated initializer used the GNU deprecated
   /// syntax rather than the C99 '=' syntax.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned GNUSyntax : 1;
 
   /// The number of designators in this initializer expression.
@@ -5745,6 +5744,7 @@ class GenericSelectionExpr final
   /// if and only if the generic selection expression is result-dependent.
   unsigned NumAssocs : 15;
   unsigned ResultIndex : 15; // NB: ResultDependentIndex is tied to this width.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsExprPredicate : 1;
   enum : unsigned {
     ResultDependentIndex = 0x7FFF

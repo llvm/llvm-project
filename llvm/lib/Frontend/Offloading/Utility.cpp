@@ -16,15 +16,15 @@ using namespace llvm;
 using namespace llvm::offloading;
 
 // TODO: Export this to the linker wrapper code registration.
-static StructType *getEntryTy(Module &M) {
+StructType *offloading::getEntryTy(Module &M) {
   LLVMContext &C = M.getContext();
   StructType *EntryTy =
       StructType::getTypeByName(C, "struct.__tgt_offload_entry");
   if (!EntryTy)
-    EntryTy = StructType::create("struct.__tgt_offload_entry",
-                                 Type::getInt8PtrTy(C), Type::getInt8PtrTy(C),
-                                 M.getDataLayout().getIntPtrType(C),
-                                 Type::getInt32Ty(C), Type::getInt32Ty(C));
+    EntryTy = StructType::create(
+        "struct.__tgt_offload_entry", PointerType::getUnqual(C),
+        PointerType::getUnqual(C), M.getDataLayout().getIntPtrType(C),
+        Type::getInt32Ty(C), Type::getInt32Ty(C));
   return EntryTy;
 }
 
@@ -32,7 +32,7 @@ static StructType *getEntryTy(Module &M) {
 void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
                                      uint64_t Size, int32_t Flags,
                                      StringRef SectionName) {
-  Type *Int8PtrTy = Type::getInt8PtrTy(M.getContext());
+  Type *Int8PtrTy = PointerType::getUnqual(M.getContext());
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
   Type *SizeTy = M.getDataLayout().getIntPtrType(M.getContext());
 
@@ -64,4 +64,33 @@ void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
   // The entry has to be created in the section the linker expects it to be.
   Entry->setSection(SectionName);
   Entry->setAlignment(Align(1));
+}
+
+std::pair<GlobalVariable *, GlobalVariable *>
+offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
+  auto *EntriesB =
+      new GlobalVariable(M, ArrayType::get(getEntryTy(M), 0),
+                         /*isConstant=*/true, GlobalValue::ExternalLinkage,
+                         /*Initializer=*/nullptr, "__start_" + SectionName);
+  EntriesB->setVisibility(GlobalValue::HiddenVisibility);
+  auto *EntriesE =
+      new GlobalVariable(M, ArrayType::get(getEntryTy(M), 0),
+                         /*isConstant=*/true, GlobalValue::ExternalLinkage,
+                         /*Initializer=*/nullptr, "__stop_" + SectionName);
+  EntriesE->setVisibility(GlobalValue::HiddenVisibility);
+
+  // We assume that external begin/end symbols that we have created above will
+  // be defined by the linker. But linker will do that only if linker inputs
+  // have section with "omp_offloading_entries" name which is not guaranteed.
+  // So, we just create dummy zero sized object in the offload entries section
+  // to force linker to define those symbols.
+  auto *DummyInit =
+      ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), 0u));
+  auto *DummyEntry = new GlobalVariable(M, DummyInit->getType(), true,
+                                        GlobalVariable::ExternalLinkage,
+                                        DummyInit, "__dummy." + SectionName);
+  DummyEntry->setSection(SectionName);
+  DummyEntry->setVisibility(GlobalValue::HiddenVisibility);
+
+  return std::make_pair(EntriesB, EntriesE);
 }

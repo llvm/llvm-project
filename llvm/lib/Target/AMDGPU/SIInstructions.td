@@ -259,6 +259,12 @@ def V_SET_INACTIVE_B64 : VPseudoInstSI <(outs VReg_64:$vdst),
 }
 } // End Defs = [SCC]
 
+def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
+    (V_SET_INACTIVE_B32 VGPR_32:$src, VGPR_32:$inactive)>;
+
+def : GCNPat<(i64 (int_amdgcn_set_inactive_chain_arg i64:$src, i64:$inactive)),
+    (V_SET_INACTIVE_B64 VReg_64:$src, VReg_64:$inactive)>;
+
 let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
   def WAVE_REDUCE_UMIN_PSEUDO_U32 : VPseudoInstSI <(outs SGPR_32:$sdst),
     (ins VSrc_b32: $src, VSrc_b32:$strategy),
@@ -664,6 +670,50 @@ def : GCNPat<
   (AMDGPUtc_return_gfx i64:$src0, (i64 0), (i32 timm:$fpdiff)),
   (SI_TCRETURN_GFX Gfx_CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff)
 >;
+
+// Pseudo for the llvm.amdgcn.cs.chain intrinsic.
+// This is essentially a tail call, but it also takes a mask to put in EXEC
+// right before jumping to the callee.
+class SI_CS_CHAIN_TC<
+    ValueType execvt, Predicate wavesizepred,
+    RegisterOperand execrc = getSOPSrcForVT<execvt>.ret>
+    : SPseudoInstSI <(outs),
+      (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)> {
+  let FixedSize = 0;
+  let isCall = 1;
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isReturn = 1;
+  let UseNamedOperandTable = 1;
+  let SchedRW = [WriteBranch];
+  let isConvergent = 1;
+
+  let WaveSizePredicate = wavesizepred;
+}
+
+def SI_CS_CHAIN_TC_W32 : SI_CS_CHAIN_TC<i32, isWave32>;
+def SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64, isWave64>;
+
+// Handle selecting direct & indirect calls via SI_CS_CHAIN_TC_W32/64
+multiclass si_cs_chain_tc_pattern<
+  dag callee, ValueType execvt, RegisterOperand execrc, Instruction tc> {
+def : GCNPat<
+  (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
+  (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
+>;
+}
+
+multiclass si_cs_chain_tc_patterns<
+  ValueType execvt,
+  RegisterOperand execrc = getSOPSrcForVT<execvt>.ret,
+  Instruction tc = !if(!eq(execvt, i32), SI_CS_CHAIN_TC_W32, SI_CS_CHAIN_TC_W64)
+  > {
+  defm direct: si_cs_chain_tc_pattern<(tglobaladdr:$callee), execvt, execrc, tc>;
+  defm indirect: si_cs_chain_tc_pattern<(i64 0), execvt, execrc, tc>;
+}
+
+defm : si_cs_chain_tc_patterns<i32>;
+defm : si_cs_chain_tc_patterns<i64>;
 
 def ADJCALLSTACKUP : SPseudoInstSI<
   (outs), (ins i32imm:$amt0, i32imm:$amt1),

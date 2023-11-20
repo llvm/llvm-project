@@ -21,7 +21,7 @@
 using namespace llvm;
 
 SanitizerStatReport::SanitizerStatReport(Module *M) : M(M) {
-  StatTy = ArrayType::get(Type::getInt8PtrTy(M->getContext()), 2);
+  StatTy = ArrayType::get(PointerType::getUnqual(M->getContext()), 2);
   EmptyModuleStatsTy = makeModuleStatsTy();
 
   ModuleStatsGV = new GlobalVariable(*M, EmptyModuleStatsTy, false,
@@ -33,9 +33,10 @@ ArrayType *SanitizerStatReport::makeModuleStatsArrayTy() {
 }
 
 StructType *SanitizerStatReport::makeModuleStatsTy() {
-  return StructType::get(M->getContext(), {Type::getInt8PtrTy(M->getContext()),
-                                           Type::getInt32Ty(M->getContext()),
-                                           makeModuleStatsArrayTy()});
+  return StructType::get(M->getContext(),
+                         {PointerType::getUnqual(M->getContext()),
+                          Type::getInt32Ty(M->getContext()),
+                          makeModuleStatsArrayTy()});
 }
 
 void SanitizerStatReport::create(IRBuilder<> &B, SanitizerStatKind SK) {
@@ -64,7 +65,7 @@ void SanitizerStatReport::create(IRBuilder<> &B, SanitizerStatKind SK) {
           ConstantInt::get(IntPtrTy, 0), ConstantInt::get(B.getInt32Ty(), 2),
           ConstantInt::get(IntPtrTy, Inits.size() - 1),
       });
-  B.CreateCall(StatReport, ConstantExpr::getBitCast(InitAddr, Int8PtrTy));
+  B.CreateCall(StatReport, InitAddr);
 }
 
 void SanitizerStatReport::finish() {
@@ -73,7 +74,7 @@ void SanitizerStatReport::finish() {
     return;
   }
 
-  PointerType *Int8PtrTy = Type::getInt8PtrTy(M->getContext());
+  PointerType *Int8PtrTy = PointerType::getUnqual(M->getContext());
   IntegerType *Int32Ty = Type::getInt32Ty(M->getContext());
   Type *VoidTy = Type::getVoidTy(M->getContext());
 
@@ -85,8 +86,7 @@ void SanitizerStatReport::finish() {
           {Constant::getNullValue(Int8PtrTy),
            ConstantInt::get(Int32Ty, Inits.size()),
            ConstantArray::get(makeModuleStatsArrayTy(), Inits)}));
-  ModuleStatsGV->replaceAllUsesWith(
-      ConstantExpr::getBitCast(NewModuleStatsGV, ModuleStatsGV->getType()));
+  ModuleStatsGV->replaceAllUsesWith(NewModuleStatsGV);
   ModuleStatsGV->eraseFromParent();
 
   // Create a global constructor to register NewModuleStatsGV.
@@ -99,7 +99,7 @@ void SanitizerStatReport::finish() {
   FunctionCallee StatInit =
       M->getOrInsertFunction("__sanitizer_stat_init", StatInitTy);
 
-  B.CreateCall(StatInit, ConstantExpr::getBitCast(NewModuleStatsGV, Int8PtrTy));
+  B.CreateCall(StatInit, NewModuleStatsGV);
   B.CreateRetVoid();
 
   appendToGlobalCtors(*M, F, 0);

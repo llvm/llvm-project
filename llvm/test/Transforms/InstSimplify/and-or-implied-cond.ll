@@ -236,9 +236,7 @@ define i1 @pr69050(i32 %arg, i32 %arg1) {
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[ARG:%.*]], -1
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[ARG1:%.*]]
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ne i32 [[ARG]], -1
-; CHECK-NEXT:    [[AND3:%.*]] = and i1 [[ICMP2]], [[ICMP]]
-; CHECK-NEXT:    ret i1 [[AND3]]
+; CHECK-NEXT:    ret i1 [[ICMP]]
 ;
   %xor = xor i32 %arg, -1
   %and = and i32 %xor, %arg1
@@ -251,11 +249,7 @@ define i1 @pr69050(i32 %arg, i32 %arg1) {
 define i1 @pr69091(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @pr69091(
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[ARG:%.*]], -1
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[ARG]], 1
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ADD]], [[ARG1:%.*]]
-; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ne i32 [[MUL]], 0
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ICMP]], [[ICMP2]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    ret i1 [[ICMP]]
 ;
   %icmp = icmp ne i32 %arg, -1
   %add = add i32 %arg, 1
@@ -323,3 +317,18 @@ define i1 @and_icmp_implies_poison(i32 %x) {
   %and = and i1 %cmp1, %cmp2
   ret i1 %and
 }
+
+define i1 @and_is_constant(ptr %arg, ptr %arg2) {
+; CHECK-LABEL: @and_is_constant(
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq ptr [[ARG:%.*]], [[ARG2:%.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i1 @llvm.is.constant.i1(i1 [[ICMP]])
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CALL]], [[ICMP]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %icmp = icmp eq ptr %arg, %arg2
+  %call = call i1 @llvm.is.constant.i1(i1 %icmp)
+  %and = and i1 %call, %icmp
+  ret i1 %and
+}
+
+declare i1 @llvm.is.constant.i1(i1)

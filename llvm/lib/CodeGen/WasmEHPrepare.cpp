@@ -136,9 +136,9 @@ FunctionPass *llvm::createWasmEHPass() { return new WasmEHPrepare(); }
 
 bool WasmEHPrepare::doInitialization(Module &M) {
   IRBuilder<> IRB(M.getContext());
-  LPadContextTy = StructType::get(IRB.getInt32Ty(),   // lpad_index
-                                  IRB.getInt8PtrTy(), // lsda
-                                  IRB.getInt32Ty()    // selector
+  LPadContextTy = StructType::get(IRB.getInt32Ty(), // lpad_index
+                                  IRB.getPtrTy(),   // lsda
+                                  IRB.getInt32Ty()  // selector
   );
   return false;
 }
@@ -249,8 +249,8 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
   CatchF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_catch);
 
   // _Unwind_CallPersonality() wrapper function, which calls the personality
-  CallPersonalityF = M.getOrInsertFunction(
-      "_Unwind_CallPersonality", IRB.getInt32Ty(), IRB.getInt8PtrTy());
+  CallPersonalityF = M.getOrInsertFunction("_Unwind_CallPersonality",
+                                           IRB.getInt32Ty(), IRB.getPtrTy());
   if (Function *F = dyn_cast<Function>(CallPersonalityF.getCallee()))
     F->setDoesNotThrow();
 

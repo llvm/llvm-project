@@ -9,7 +9,6 @@
 // of the RISC-V instructions.
 //
 // Currently the pass implements:
-// -Naive insertion of a write to vxrm before an RVV fixed-point instruction.
 // -Writing and saving frm before an RVV floating-point instruction with a
 //  static rounding mode and restores the value after.
 //
@@ -58,25 +57,11 @@ char RISCVInsertReadWriteCSR::ID = 0;
 INITIALIZE_PASS(RISCVInsertReadWriteCSR, DEBUG_TYPE,
                 RISCV_INSERT_READ_WRITE_CSR_NAME, false, false)
 
-// This function inserts a write to vxrm when encountering an RVV fixed-point
-// instruction. This function also swaps frm and restores it when encountering
-// an RVV floating point instruction with a static rounding mode.
+// This function also swaps frm and restores it when encountering an RVV
+// floating point instruction with a static rounding mode.
 bool RISCVInsertReadWriteCSR::emitWriteRoundingMode(MachineBasicBlock &MBB) {
   bool Changed = false;
   for (MachineInstr &MI : MBB) {
-    int VXRMIdx = RISCVII::getVXRMOpNum(MI.getDesc());
-    if (VXRMIdx >= 0) {
-      unsigned VXRMImm = MI.getOperand(VXRMIdx).getImm();
-
-      Changed = true;
-
-      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::WriteVXRMImm))
-          .addImm(VXRMImm);
-      MI.addOperand(MachineOperand::CreateReg(RISCV::VXRM, /*IsDef*/ false,
-                                              /*IsImp*/ true));
-      continue;
-    }
-
     int FRMIdx = RISCVII::getFRMOpNum(MI.getDesc());
     if (FRMIdx < 0)
       continue;

@@ -1,7 +1,6 @@
 ! Basic offloading test of a regular array explicitly
 ! passed within a target region
-! REQUIRES: flang, amdgcn-amd-amdhsa
-! UNSUPPORTED: nvptx64-nvidia-cuda
+! REQUIRES: flang, amdgcn-amd-amdhsa, nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 ! UNSUPPORTED: aarch64-unknown-linux-gnu
 ! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
@@ -23,7 +22,7 @@ program main
     end do
 
 i = 1
-j = 1 
+j = 1
 k = 1
 
 !$omp target map(tofrom:x, counter) map(to: i, j, k, i2, j2, k2)
@@ -50,5 +49,12 @@ k = 1
         end do
     end do
 end program main
-  
-! CHECK: 1 2 3 4 5 6 7 8
+
+! CHECK: 1
+! CHECK: 2
+! CHECK: 3
+! CHECK: 4
+! CHECK: 5
+! CHECK: 6
+! CHECK: 7
+! CHECK: 8

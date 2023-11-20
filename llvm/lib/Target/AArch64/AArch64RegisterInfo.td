@@ -1268,6 +1268,10 @@ class ZPRVectorListMul<int ElementWidth, int NumRegs> : ZPRVectorList<ElementWid
 
 let EncoderMethod = "EncodeRegAsMultipleOf<2>",
     DecoderMethod = "DecodeZPR2Mul2RegisterClass" in {
+  def ZZ_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,0>"> {
+    let ParserMatchClass = ZPRVectorListMul<0, 2>;
+  }
+
   def ZZ_b_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'b'>"> {
     let ParserMatchClass = ZPRVectorListMul<8, 2>;
   }

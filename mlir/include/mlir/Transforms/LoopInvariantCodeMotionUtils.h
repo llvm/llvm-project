@@ -18,6 +18,7 @@ namespace mlir {
 class LoopLikeOpInterface;
 class Operation;
 class Region;
+class RewriterBase;
 class Value;
 
 /// Given a list of regions, perform loop-invariant code motion. An operation is
@@ -108,7 +109,8 @@ size_t moveLoopInvariantCode(LoopLikeOpInterface loopLike);
 /// %r = tensor.insert_slice %new_loop#1 into %new_loop#0
 ///     : tensor<5xf32> into tensor<?xf32>
 /// ```
-LoopLikeOpInterface hoistLoopInvariantSubsets(LoopLikeOpInterface loopLike);
+LoopLikeOpInterface hoistLoopInvariantSubsets(RewriterBase &rewriter,
+                                              LoopLikeOpInterface loopLike);
 
 } // end namespace mlir
 

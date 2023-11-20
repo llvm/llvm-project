@@ -266,6 +266,13 @@ enum {
   /// - NewOpIdx
   GIM_CheckCanReplaceReg,
 
+  /// Check that a matched instruction has, or doesn't have a MIFlag.
+  ///
+  /// - InsnID  - Instruction to check.
+  /// - Flag(s) - (can be one or more flags OR'd together)
+  GIM_MIFlags,
+  GIM_MIFlagsNot,
+
   /// Predicates with 'let PredicateCodeUsesOperands = 1' need to examine some
   /// named operands that will be recorded in RecordedOperands. Names of these
   /// operands are referenced in predicate argument list. Emitter determines
@@ -343,6 +350,20 @@ enum {
   ///
   /// OpIdx starts at 0 for the first implicit def.
   GIR_SetImplicitDefDead,
+
+  /// Set or unset a MIFlag on an instruction.
+  ///
+  /// - InsnID  - Instruction to modify.
+  /// - Flag(s) - (can be one or more flags OR'd together)
+  GIR_SetMIFlags,
+  GIR_UnsetMIFlags,
+
+  /// Copy the MIFlags of a matched instruction into an
+  /// output instruction. The flags are OR'd together.
+  ///
+  /// - InsnID     - Instruction to modify.
+  /// - OldInsnID  - Matched instruction to copy flags from.
+  GIR_CopyMIFlags,
 
   /// Add a temporary register to the specified instruction
   /// - InsnID - Instruction ID to modify

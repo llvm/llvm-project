@@ -349,13 +349,13 @@ public:
   void runOnOperation() override {
     SymbolTable symbolTable(getOperation());
     bool modified = false;
-    for (auto func : getOperation().getOps<func::FuncOp>()) {
+    for (auto func : getOperation().getOps<SymbolOpInterface>()) {
       // Insert just after the function.
       Block::iterator insertPt(func->getNextNode());
       auto funcWalkResult = func.walk([&](gpu::LaunchOp op) {
         SetVector<Value> operands;
         std::string kernelFnName =
-            Twine(op->getParentOfType<func::FuncOp>().getName(), "_kernel")
+            Twine(op->getParentOfType<SymbolOpInterface>().getName(), "_kernel")
                 .str();
 
         gpu::GPUFuncOp outlinedFunc =

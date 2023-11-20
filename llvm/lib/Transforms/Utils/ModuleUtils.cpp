@@ -96,7 +96,7 @@ static void appendToUsedList(Module &M, StringRef Name, ArrayRef<GlobalValue *> 
   if (GV)
     GV->eraseFromParent();
 
-  Type *ArrayEltTy = llvm::Type::getInt8PtrTy(M.getContext());
+  Type *ArrayEltTy = llvm::PointerType::getUnqual(M.getContext());
   for (auto *V : Values)
     Init.insert(ConstantExpr::getPointerBitCastOrAddrSpaceCast(V, ArrayEltTy));
 
@@ -301,7 +301,7 @@ std::string llvm::getUniqueModuleId(Module *M) {
   MD5 Md5;
   bool ExportsSymbols = false;
   auto AddGlobal = [&](GlobalValue &GV) {
-    if (GV.isDeclaration() || GV.getName().startswith("llvm.") ||
+    if (GV.isDeclaration() || GV.getName().starts_with("llvm.") ||
         !GV.hasExternalLinkage() || GV.hasComdat())
       return;
     ExportsSymbols = true;

@@ -1,5 +1,5 @@
-! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir %s -o - | FileCheck %s
-! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir %s -o - | tco | FileCheck %s --check-prefix=LLVM
+! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir -hlfir=false %s -o - | tco | FileCheck %s --check-prefix=LLVM
 
 module poly
   type p1
@@ -569,17 +569,17 @@ end
 ! LLVM-LABEL: define void @_QMpolyPtest_allocatable()
 
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerivedForAllocate(ptr %{{.*}}, ptr @_QMpolyE.dt.p1, i32 0, i32 0)
-! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
+! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQclX{{.*}}, i32 {{.*}})
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerivedForAllocate(ptr %{{.*}}, ptr @_QMpolyE.dt.p1, i32 0, i32 0)
-! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
+! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQclX{{.*}}, i32 {{.*}})
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerivedForAllocate(ptr %{{.*}}, ptr @_QMpolyE.dt.p2, i32 0, i32 0)
-! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
+! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQclX{{.*}}, i32 {{.*}})
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerivedForAllocate(ptr %{{.*}}, ptr @_QMpolyE.dt.p1, i32 1, i32 0)
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableSetBounds(ptr %{{.*}}, i32 0, i64 1, i64 10)
-! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
+! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQclX{{.*}}, i32 {{.*}})
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerivedForAllocate(ptr %{{.*}}, ptr @_QMpolyE.dt.p2, i32 1, i32 0)
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableSetBounds(ptr %{{.*}}, i32 0, i64 1, i64 20)
-! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
+! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQclX{{.*}}, i32 {{.*}})
 ! LLVM-COUNT-2:  call void %{{.*}}()
 
 ! LLVM: %[[C1_LOAD:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}
@@ -660,5 +660,5 @@ end
 ! LLVM: %[[LOAD:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[ALLOCA1]]
 ! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD]], ptr %[[ALLOCA2:[0-9]*]]
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerivedForAllocate(ptr %[[ALLOCA2]], ptr @_QMpolyE.dt.p1, i32 0, i32 0)
-! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %[[ALLOCA2]], i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
-! LLVM: %{{.*}} = call i32 @_FortranAAllocatableDeallocatePolymorphic(ptr %[[ALLOCA2]], ptr {{.*}}, i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
+! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %[[ALLOCA2]], i1 false, ptr null, ptr @_QQclX{{.*}}, i32 {{.*}})
+! LLVM: %{{.*}} = call i32 @_FortranAAllocatableDeallocatePolymorphic(ptr %[[ALLOCA2]], ptr {{.*}}, i1 false, ptr null, ptr @_QQclX{{.*}}, i32 {{.*}})

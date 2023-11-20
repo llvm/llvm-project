@@ -3550,6 +3550,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDURWi:
   case AArch64::LDURSi:
   case AArch64::LDURSWi:
+  case AArch64::LDAPURi:
   case AArch64::LDAPURSWi:
   case AArch64::STURWi:
   case AArch64::STURSi:

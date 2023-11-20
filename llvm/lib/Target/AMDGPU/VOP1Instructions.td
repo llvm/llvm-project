@@ -317,7 +317,7 @@ defm V_CVT_F32_UBYTE3 : VOP1Inst <"v_cvt_f32_ubyte3", VOP1_F32_I32, AMDGPUcvt_f3
 defm V_FRACT_F32 : VOP1Inst <"v_fract_f32", VOP_F32_F32, AMDGPUfract>;
 defm V_TRUNC_F32 : VOP1Inst <"v_trunc_f32", VOP_F32_F32, ftrunc>;
 defm V_CEIL_F32 : VOP1Inst <"v_ceil_f32", VOP_F32_F32, fceil>;
-defm V_RNDNE_F32 : VOP1Inst <"v_rndne_f32", VOP_F32_F32, frint>;
+defm V_RNDNE_F32 : VOP1Inst <"v_rndne_f32", VOP_F32_F32, froundeven>;
 defm V_FLOOR_F32 : VOP1Inst <"v_floor_f32", VOP_F32_F32, ffloor>;
 
 let TRANS = 1, SchedRW = [WriteTrans32] in {
@@ -458,7 +458,7 @@ let SubtargetPredicate = isGFX7Plus in {
   let SchedRW = [WriteDoubleAdd] in {
     defm V_TRUNC_F64 : VOP1Inst<"v_trunc_f64", VOP_F64_F64, ftrunc>;
     defm V_CEIL_F64  : VOP1Inst<"v_ceil_f64", VOP_F64_F64, fceil>;
-    defm V_RNDNE_F64 : VOP1Inst<"v_rndne_f64", VOP_F64_F64, frint>;
+    defm V_RNDNE_F64 : VOP1Inst<"v_rndne_f64", VOP_F64_F64, froundeven>;
     defm V_FLOOR_F64 : VOP1Inst<"v_floor_f64", VOP_F64_F64, ffloor>;
   } // End SchedRW = [WriteDoubleAdd]
 } // End SubtargetPredicate = isGFX7Plus
@@ -502,7 +502,7 @@ defm V_FREXP_EXP_I16_F16_t16 : VOP1Inst <"v_frexp_exp_i16_f16_t16", VOP_I16_F16_
 defm V_FLOOR_F16 : VOP1Inst_t16 <"v_floor_f16", VOP_F16_F16, ffloor>;
 defm V_CEIL_F16 : VOP1Inst_t16 <"v_ceil_f16", VOP_F16_F16, fceil>;
 defm V_TRUNC_F16 : VOP1Inst_t16 <"v_trunc_f16", VOP_F16_F16, ftrunc>;
-defm V_RNDNE_F16 : VOP1Inst_t16 <"v_rndne_f16", VOP_F16_F16, frint>;
+defm V_RNDNE_F16 : VOP1Inst_t16 <"v_rndne_f16", VOP_F16_F16, froundeven>;
 let FPDPRounding = 1 in {
 defm V_FRACT_F16 : VOP1Inst_t16 <"v_fract_f16", VOP_F16_F16, AMDGPUfract>;
 } // End FPDPRounding = 1

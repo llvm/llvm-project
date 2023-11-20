@@ -519,11 +519,16 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
       AlreadyStarted = true;
 
       switch (D->getTagKind()) {
-      case TTK_Interface:
-      case TTK_Class:
-      case TTK_Struct: Out << "@ST"; break;
-      case TTK_Union:  Out << "@UT"; break;
-      case TTK_Enum: llvm_unreachable("enum template");
+      case TagTypeKind::Interface:
+      case TagTypeKind::Class:
+      case TagTypeKind::Struct:
+        Out << "@ST";
+        break;
+      case TagTypeKind::Union:
+        Out << "@UT";
+        break;
+      case TagTypeKind::Enum:
+        llvm_unreachable("enum template");
       }
       VisitTemplateParameterList(ClassTmpl->getTemplateParameters());
     } else if (const ClassTemplatePartialSpecializationDecl *PartialSpec
@@ -531,11 +536,16 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
       AlreadyStarted = true;
 
       switch (D->getTagKind()) {
-      case TTK_Interface:
-      case TTK_Class:
-      case TTK_Struct: Out << "@SP"; break;
-      case TTK_Union:  Out << "@UP"; break;
-      case TTK_Enum: llvm_unreachable("enum partial specialization");
+      case TagTypeKind::Interface:
+      case TagTypeKind::Class:
+      case TagTypeKind::Struct:
+        Out << "@SP";
+        break;
+      case TagTypeKind::Union:
+        Out << "@UP";
+        break;
+      case TagTypeKind::Enum:
+        llvm_unreachable("enum partial specialization");
       }
       VisitTemplateParameterList(PartialSpec->getTemplateParameters());
     }
@@ -543,11 +553,17 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
 
   if (!AlreadyStarted) {
     switch (D->getTagKind()) {
-      case TTK_Interface:
-      case TTK_Class:
-      case TTK_Struct: Out << "@S"; break;
-      case TTK_Union:  Out << "@U"; break;
-      case TTK_Enum:   Out << "@E"; break;
+    case TagTypeKind::Interface:
+    case TagTypeKind::Class:
+    case TagTypeKind::Struct:
+      Out << "@S";
+      break;
+    case TagTypeKind::Union:
+      Out << "@U";
+      break;
+    case TagTypeKind::Enum:
+      Out << "@E";
+      break;
     }
   }
 

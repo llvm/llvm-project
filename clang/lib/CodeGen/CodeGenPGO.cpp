@@ -954,9 +954,7 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
 
 void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
                                       llvm::Value *StepV) {
-  if (!CGM.getCodeGenOpts().hasProfileClangInstr() || !RegionCounterMap)
-    return;
-  if (!Builder.GetInsertBlock())
+  if (!RegionCounterMap || !Builder.GetInsertBlock())
     return;
 
   unsigned Counter = (*RegionCounterMap)[S];

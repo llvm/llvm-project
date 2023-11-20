@@ -3468,10 +3468,16 @@ define i1 @f9(i32 %val, i32 %lim) {
 
 define i1 @f10(i16 %p) {
 ; CHECK-LABEL: @f10(
-; CHECK-NEXT:    [[CMP580:%.*]] = icmp uge i16 [[P:%.*]], mul (i16 zext (i8 ptrtoint (ptr @f10 to i8) to i16), i16 zext (i8 ptrtoint (ptr @f10 to i8) to i16))
+; CHECK-NEXT:    [[EXT1:%.*]] = zext i8 ptrtoint (ptr @f10 to i8) to i16
+; CHECK-NEXT:    [[EXT2:%.*]] = zext i8 ptrtoint (ptr @f10 to i8) to i16
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[EXT1]], [[EXT2]]
+; CHECK-NEXT:    [[CMP580:%.*]] = icmp ule i16 [[MUL]], [[P:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP580]]
 ;
-  %cmp580 = icmp ule i16 mul (i16 zext (i8 ptrtoint (ptr @f10 to i8) to i16), i16 zext (i8 ptrtoint (ptr @f10 to i8) to i16)), %p
+  %ext1 = zext i8 ptrtoint (ptr @f10 to i8) to i16
+  %ext2 = zext i8 ptrtoint (ptr @f10 to i8) to i16
+  %mul = mul i16 %ext1, %ext2
+  %cmp580 = icmp ule i16 %mul, %p
   ret i1 %cmp580
 }
 

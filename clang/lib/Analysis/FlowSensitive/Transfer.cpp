@@ -514,8 +514,14 @@ public:
           !Method->isMoveAssignmentOperator())
         return;
 
-      auto *LocSrc =
-          cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg1));
+      RecordStorageLocation *LocSrc = nullptr;
+      if (Arg1->isPRValue()) {
+        if (auto *Val = cast_or_null<RecordValue>(Env.getValue(*Arg1)))
+          LocSrc = &Val->getLoc();
+      } else {
+        LocSrc =
+            cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg1));
+      }
       auto *LocDst =
           cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg0));
 
@@ -677,11 +683,11 @@ public:
       assert(
           // The types are same, or
           Field->getType().getCanonicalType().getUnqualifiedType() ==
-              Init->getType().getCanonicalType() ||
+              Init->getType().getCanonicalType().getUnqualifiedType() ||
           // The field's type is T&, and initializer is T
           (Field->getType()->isReferenceType() &&
-              Field->getType().getCanonicalType()->getPointeeType() ==
-              Init->getType().getCanonicalType()));
+           Field->getType().getCanonicalType()->getPointeeType() ==
+               Init->getType().getCanonicalType()));
       auto& Loc = Env.createObject(Field->getType(), Init);
       FieldLocs.insert({Field, &Loc});
     }

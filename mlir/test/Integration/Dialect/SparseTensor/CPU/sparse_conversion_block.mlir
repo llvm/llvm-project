@@ -5,10 +5,10 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
 // DEFINE: %{run_opts} = -e entry -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
@@ -20,11 +20,11 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and VLA vectorization.
@@ -74,26 +74,34 @@ module {
     //
     // Initialize a 2-dim dense tensor.
     //
-    %t = arith.constant dense<[
-       [  1.0,  2.0,  3.0,  4.0 ],
-       [  5.0,  6.0,  7.0,  8.0 ]
-    ]> : tensor<2x4xf64>
+    %t = arith.constant sparse<[[0, 0], [0, 1], [0, 2], [0, 3],
+                                [1, 0], [1, 1], [1, 2], [1, 3]],
+                                [ 1.0, 2.0, 3.0, 4.0,
+                                  5.0, 6.0, 7.0, 8.0 ]> : tensor<2x4xf64>
 
+    %td = arith.constant dense<[[ 1.0, 2.0, 3.0, 4.0 ],
+                                [ 5.0, 6.0, 7.0, 8.0 ]]> : tensor<2x4xf64>
 
-    %1 = sparse_tensor.convert %t : tensor<2x4xf64> to tensor<2x4xf64, #CSR>
-    %2 = sparse_tensor.convert %1 : tensor<2x4xf64, #CSR> to tensor<2x4xf64, #BSR>
-    %3 = sparse_tensor.convert %2 : tensor<2x4xf64, #BSR> to tensor<2x4xf64, #CSC>
+    // constant -> BSR (either from SparseElementAttibutes or DenseElementAttribute)
+    %1 = sparse_tensor.convert %t : tensor<2x4xf64> to tensor<2x4xf64, #BSR>
+    %2 = sparse_tensor.convert %td : tensor<2x4xf64> to tensor<2x4xf64, #BSR>
+    %3 = sparse_tensor.convert %1 : tensor<2x4xf64, #BSR> to tensor<2x4xf64, #CSR>
+    %4 = sparse_tensor.convert %1 : tensor<2x4xf64, #BSR> to tensor<2x4xf64, #CSC>
 
-    %v1 = sparse_tensor.values %1 : tensor<2x4xf64, #CSR> to memref<?xf64>
+    %v1 = sparse_tensor.values %1 : tensor<2x4xf64, #BSR> to memref<?xf64>
     %v2 = sparse_tensor.values %2 : tensor<2x4xf64, #BSR> to memref<?xf64>
-    %v3 = sparse_tensor.values %3 : tensor<2x4xf64, #CSC> to memref<?xf64>
+    %v3 = sparse_tensor.values %3 : tensor<2x4xf64, #CSR> to memref<?xf64>
+    %v4 = sparse_tensor.values %4 : tensor<2x4xf64, #CSC> to memref<?xf64>
 
-    // CHECK:      ( 1, 2, 3, 4, 5, 6, 7, 8 )
+
+    // CHECK:      ( 1, 2, 5, 6, 3, 4, 7, 8 )
     // CHECK-NEXT: ( 1, 2, 5, 6, 3, 4, 7, 8 )
+    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8 )
     // CHECK-NEXT: ( 1, 5, 2, 6, 3, 7, 4, 8 )
     call @dumpf64(%v1) : (memref<?xf64>) -> ()
     call @dumpf64(%v2) : (memref<?xf64>) -> ()
     call @dumpf64(%v3) : (memref<?xf64>) -> ()
+    call @dumpf64(%v4) : (memref<?xf64>) -> ()
 
     return
   }

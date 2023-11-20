@@ -717,7 +717,7 @@ StringRef demanglePE32ExternCFunc(StringRef SymbolName) {
 
   // Remove any ending '@' for vectorcall.
   bool IsVectorCall = false;
-  if (HasAtNumSuffix && SymbolName.endswith("@")) {
+  if (HasAtNumSuffix && SymbolName.ends_with("@")) {
     SymbolName = SymbolName.drop_back();
     IsVectorCall = true;
   }

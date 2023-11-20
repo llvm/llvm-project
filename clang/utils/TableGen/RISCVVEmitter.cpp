@@ -151,7 +151,9 @@ static BasicType ParseBasicType(char c) {
   case 'd':
     return BasicType::Float64;
     break;
-
+  case 'b':
+    return BasicType::BFloat16;
+    break;
   default:
     return BasicType::Unknown;
   }
@@ -389,8 +391,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
     }
   }
 
-  for (BasicType BT :
-       {BasicType::Float16, BasicType::Float32, BasicType::Float64}) {
+  for (BasicType BT : {BasicType::Float16, BasicType::Float32,
+                       BasicType::Float64, BasicType::BFloat16}) {
     for (int Log2LMUL : Log2LMULs) {
       auto T = TypeCache.computeType(BT, Log2LMUL, PrototypeDescriptor::Vector);
       if (T)
@@ -399,7 +401,9 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
         auto TupleT = TypeCache.computeType(
             BT, Log2LMUL,
             PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
-                                TypeModifier::Float));
+                                (BT == BasicType::BFloat16
+                                     ? TypeModifier::BFloat
+                                     : TypeModifier::Float)));
         if (TupleT)
           printType(*TupleT);
       }
@@ -656,6 +660,8 @@ void RVVEmitter::createRVVIntrinsics(
                                   .Case("RV64", RVV_REQ_RV64)
                                   .Case("ZvfhminOrZvfh", RVV_REQ_ZvfhminOrZvfh)
                                   .Case("Xsfvcp", RVV_REQ_Xsfvcp)
+                                  .Case("Xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf)
+                                  .Case("Xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq)
                                   .Case("Xsfvqmaccdod", RVV_REQ_Xsfvqmaccdod)
                                   .Case("Xsfvqmaccqoq", RVV_REQ_Xsfvqmaccqoq)
                                   .Case("Zvbb", RVV_REQ_Zvbb)
@@ -664,6 +670,7 @@ void RVVEmitter::createRVVIntrinsics(
                                   .Case("Zvkg", RVV_REQ_Zvkg)
                                   .Case("Zvkned", RVV_REQ_Zvkned)
                                   .Case("Zvknha", RVV_REQ_Zvknha)
+                                  .Case("Zvknhb", RVV_REQ_Zvknhb)
                                   .Case("Zvksed", RVV_REQ_Zvksed)
                                   .Case("Zvksh", RVV_REQ_Zvksh)
                                   .Default(RVV_REQ_None);

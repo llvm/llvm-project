@@ -50,7 +50,7 @@ public:
 private:
   bool convertVMergeToVMv(MachineInstr &MI, MachineInstr *MaskDef);
 
-  bool isAllOnesMask(MachineInstr *MaskCopy);
+  bool isAllOnesMask(MachineInstr *MaskDef);
 };
 
 } // namespace
@@ -59,22 +59,21 @@ char RISCVFoldMasks::ID = 0;
 
 INITIALIZE_PASS(RISCVFoldMasks, DEBUG_TYPE, "RISC-V Fold Masks", false, false)
 
-bool RISCVFoldMasks::isAllOnesMask(MachineInstr *MaskCopy) {
-  if (!MaskCopy)
+bool RISCVFoldMasks::isAllOnesMask(MachineInstr *MaskDef) {
+  if (!MaskDef)
     return false;
-  assert(MaskCopy->isCopy() && MaskCopy->getOperand(0).getReg() == RISCV::V0);
-  Register SrcReg =
-      TRI->lookThruCopyLike(MaskCopy->getOperand(1).getReg(), MRI);
+  assert(MaskDef->isCopy() && MaskDef->getOperand(0).getReg() == RISCV::V0);
+  Register SrcReg = TRI->lookThruCopyLike(MaskDef->getOperand(1).getReg(), MRI);
   if (!SrcReg.isVirtual())
     return false;
-  MachineInstr *SrcDef = MRI->getVRegDef(SrcReg);
-  if (!SrcDef)
+  MaskDef = MRI->getVRegDef(SrcReg);
+  if (!MaskDef)
     return false;
 
   // TODO: Check that the VMSET is the expected bitwidth? The pseudo has
   // undefined behaviour if it's the wrong bitwidth, so we could choose to
   // assume that it's all-ones? Same applies to its VL.
-  switch (SrcDef->getOpcode()) {
+  switch (MaskDef->getOpcode()) {
   case RISCV::PseudoVMSET_M_B1:
   case RISCV::PseudoVMSET_M_B2:
   case RISCV::PseudoVMSET_M_B4:

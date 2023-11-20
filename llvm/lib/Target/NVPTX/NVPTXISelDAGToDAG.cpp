@@ -105,7 +105,9 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   case NVPTXISD::SETP_F16X2:
     SelectSETP_F16X2(N);
     return;
-
+  case NVPTXISD::SETP_BF16X2:
+    SelectSETP_BF16X2(N);
+    return;
   case NVPTXISD::LoadV2:
   case NVPTXISD::LoadV4:
     if (tryLoadVector(N))
@@ -603,6 +605,17 @@ bool NVPTXDAGToDAGISel::SelectSETP_F16X2(SDNode *N) {
   SDLoc DL(N);
   SDNode *SetP = CurDAG->getMachineNode(
       NVPTX::SETP_f16x2rr, DL, MVT::i1, MVT::i1, N->getOperand(0),
+      N->getOperand(1), CurDAG->getTargetConstant(PTXCmpMode, DL, MVT::i32));
+  ReplaceNode(N, SetP);
+  return true;
+}
+
+bool NVPTXDAGToDAGISel::SelectSETP_BF16X2(SDNode *N) {
+  unsigned PTXCmpMode =
+      getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)), useF32FTZ());
+  SDLoc DL(N);
+  SDNode *SetP = CurDAG->getMachineNode(
+      NVPTX::SETP_bf16x2rr, DL, MVT::i1, MVT::i1, N->getOperand(0),
       N->getOperand(1), CurDAG->getTargetConstant(PTXCmpMode, DL, MVT::i32));
   ReplaceNode(N, SetP);
   return true;

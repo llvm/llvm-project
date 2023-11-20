@@ -113,6 +113,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVISelLowering.cpp",
     "RISCVInsertReadWriteCSR.cpp",
     "RISCVInsertVSETVLI.cpp",
+    "RISCVInsertWriteVXRM.cpp",
     "RISCVInstrInfo.cpp",
     "RISCVMachineFunctionInfo.cpp",
     "RISCVMacroFusion.cpp",

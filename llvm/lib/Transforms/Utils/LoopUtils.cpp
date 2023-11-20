@@ -296,7 +296,7 @@ std::optional<MDNode *> llvm::makeFollowupLoopID(
         StringRef AttrName = cast<MDString>(NameMD)->getString();
 
         // Do not inherit excluded attributes.
-        return !AttrName.startswith(InheritOptionsExceptPrefix);
+        return !AttrName.starts_with(InheritOptionsExceptPrefix);
       };
 
       if (InheritThisAttribute(Op))
