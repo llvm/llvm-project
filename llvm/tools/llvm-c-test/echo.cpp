@@ -162,34 +162,18 @@ struct TypeCloner {
         unsigned TypeParamCount = LLVMCountTargetExtTypeTypeParams(Src);
         unsigned IntParamCount = LLVMCountTargetExtTypeIntParams(Src);
 
-        LLVMTypeRef *TypeParams = nullptr;
-        unsigned *IntParams = nullptr;
+        SmallVector<LLVMTypeRef, 4> TypeParams((size_t)TypeParamCount);
+        SmallVector<unsigned, 4> IntParams((size_t)IntParamCount);
 
-        // If we have type params, get them from Src and clone them individually
-        if (TypeParamCount > 0) {
-          TypeParams = static_cast<LLVMTypeRef *>(
-              safe_malloc(TypeParamCount * sizeof(LLVMTypeRef)));
-          LLVMGetTargetExtTypeTypeParams(Src, TypeParams);
+        LLVMGetTargetExtTypeTypeParams(Src, TypeParams.data());
+        for (unsigned i = 0; i < TypeParams.size(); i++)
+          TypeParams[i] = Clone(TypeParams[i]);
 
-          for (unsigned i = 0; i < TypeParamCount; i++)
-            TypeParams[i] = Clone(TypeParams[i]);
-        }
-
-        // If we have integer params, get them from Src
-        if (IntParamCount > 0) {
-          IntParams = static_cast<unsigned *>(
-              safe_malloc(IntParamCount * sizeof(unsigned)));
-          LLVMGetTargetExtTypeIntParams(Src, IntParams);
-        }
+        LLVMGetTargetExtTypeIntParams(Src, IntParams.data());
 
         LLVMTypeRef TargtExtTy = LLVMTargetExtTypeInContext(
-            Ctx, Name, TypeParams, TypeParamCount, IntParams, IntParamCount);
-
-        if (TypeParams)
-          free(TypeParams);
-
-        if (IntParams)
-          free(IntParams);
+            Ctx, Name, TypeParams.data(), TypeParams.size(), IntParams.data(),
+            IntParams.size());
 
         return TargtExtTy;
       }
