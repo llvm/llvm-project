@@ -11594,7 +11594,7 @@ def err_coro_invalid_addr_of_label : Error<
   "the GNU address of label extension is not allowed in coroutines."
 >;
 def err_coroutine_return_type : Error<
-  "function returns a type %0 makred with [[clang::coro_return_type]] but is neither a coroutine nor a coroutine wrapper; "
+  "function returns a type %0 marked with [[clang::coro_return_type]] but is neither a coroutine nor a coroutine wrapper; "
   "non-coroutines should be marked with [[clang::coro_wrapper]] to allow returning coroutine return type"
 >;
 } // end of coroutines issue category
