@@ -7316,7 +7316,7 @@ defm VMASKMOVPD : avx_movmask_rm<0x2D, 0x2F, "vmaskmovpd",
 // AVX_VNNI
 //===----------------------------------------------------------------------===//
 let Predicates = [HasAVXVNNI, NoVLX_Or_NoVNNI], Constraints = "$src1 = $dst",
-    ExplicitVEXPrefix = 1, checkVEXPredicate = 1 in
+    explicitOpPrefix = ExplicitVEX, checkVEXPredicate = 1 in
 multiclass avx_vnni_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                        bit IsCommutable> {
   let isCommutable = IsCommutable in
