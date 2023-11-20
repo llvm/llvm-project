@@ -11,3 +11,5 @@ def execFileNames : S<"e", "Specify the executable/library files to get the list
 def outputFileName : S<"o", "Specify the output file.">, MetaVarName<"<filename>">;
 def continueOnCuIndexOverflow: F<"continue-on-cu-index-overflow", "This turns an error when offset for .debug_*.dwo sections "
                                          "overfolws into a warning.">, MetaVarName<"<filename>">;
+def softStopOnCuIndexOverflow: F<"soft-stop-on-cu-index-overflow", "This turns to make a best effort dwp when offset for "
+                                        ".debug_*.dwo sections overfolws into a warning.">, MetaVarName<"<filename>">;

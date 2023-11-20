@@ -61,7 +61,7 @@ struct CompileUnitIdentifiers {
 };
 
 Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
-            bool ContinueOnCuIndexOverflow);
+            bool ContinueOnCuIndexOverflow, bool SoftStopOnCuIndexOverflow);
 
 unsigned getContributionIndex(DWARFSectionKind Kind, uint32_t IndexVersion);
 
