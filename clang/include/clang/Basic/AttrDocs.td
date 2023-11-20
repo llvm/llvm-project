@@ -6701,7 +6701,7 @@ def ArmSmeStreamingCompatibleDocs : Documentation {
   let Category = DocCatArmSmeAttributes;
   let Content = [{
 The ``__arm_streaming_compatible`` keyword applies to prototyped function types and
-specifies that the function has a “streaming compatible interface”.  This
+specifies that the function has a "streaming compatible interface".  This
 means that:
 
 * the function may be entered in either non-streaming mode (PSTATE.SM=0) or
@@ -7495,7 +7495,7 @@ a **coroutine return type (CRT)**.
 
 A function ``R func(P1, .., PN)`` has a coroutine return type (CRT) ``R`` if ``R``
 is marked by ``[[clang::coro_return_type]]`` and  ``R`` has a promise type associated to it
-(i.e., std​::​coroutine_traits<R, P1, .., PN>​::​promise_type is a valid promise type).
+(i.e., std::coroutine_traits<R, P1, .., PN>::promise_type is a valid promise type).
 
 If the return type of a function is a ``CRT`` then the function must be a coroutine.
 Otherwise the program is invalid. It is allowed for a non-coroutine to return a ``CRT``
