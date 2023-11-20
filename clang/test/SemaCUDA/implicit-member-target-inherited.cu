@@ -39,6 +39,7 @@ struct A2_with_device_ctor {
 };
 // expected-note@-3 {{candidate constructor (the implicit copy constructor) not viable}}
 // expected-note@-4 {{candidate constructor (the implicit move constructor) not viable}}
+// expected-note@-4 {{candidate inherited constructor not viable: call to __device__ function from __host__ function}}
 
 struct B2_with_implicit_default_ctor : A2_with_device_ctor {
   using A2_with_device_ctor::A2_with_device_ctor;
