@@ -48,13 +48,23 @@ void func() {
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc parallel loop clause list
   for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel loop
+  for(;;){}
   // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial loop clause list
   for(;;){}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial loop
+  for(;;){}
   // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc kernels loop clause list
+  for(;;){}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc kernels loop
   for(;;){}
 
   // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
