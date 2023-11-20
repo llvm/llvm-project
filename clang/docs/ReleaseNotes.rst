@@ -209,6 +209,12 @@ C23 Feature Support
 - Clang now supports ``<stdckdint.h>`` which defines several macros for performing
   checked integer arithmetic. It is also exposed in pre-C23 modes.
 
+- Completed the implementation of
+  `N2508 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2508.pdf>`_. We
+  previously implemented allowing a label at the end of a compound statement,
+  and now we've implemented allowing a label to be followed by a declaration
+  instead of a statement.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -566,6 +572,23 @@ Bug Fixes in This Version
   Fixes (`#67687 <https://github.com/llvm/llvm-project/issues/67687>`_)
 - Fix crash from constexpr evaluator evaluating uninitialized arrays as rvalue.
   Fixes (`#67317 <https://github.com/llvm/llvm-project/issues/67317>`_)
+- Clang now properly diagnoses use of stand-alone OpenMP directives after a
+  label (including ``case`` or ``default`` labels).
+
+  Before:
+
+  .. code-block:: c++
+
+    label:
+    #pragma omp barrier // ok
+
+  After:
+
+  .. code-block:: c++
+
+    label:
+    #pragma omp barrier // error: '#pragma omp barrier' cannot be an immediate substatement
+
 - Fixed an issue that a benign assertion might hit when instantiating a pack expansion
   inside a lambda. (`#61460 <https://github.com/llvm/llvm-project/issues/61460>`_)
 
