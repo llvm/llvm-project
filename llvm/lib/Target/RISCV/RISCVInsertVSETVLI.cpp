@@ -1043,17 +1043,16 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
       Info.setVLMul(*NewVLMul);
   }
 
-  // For vmv.s.x and vfmv.s.f, there are only two behaviors, VL = 0 and
-  // VL > 0. We can discard the user requested AVL and just use the last
-  // one if we can prove it equally zero.  This removes a vsetvli entirely
-  // if the types match or allows use of cheaper avl preserving variant
-  // if VLMAX doesn't change.  If VLMAX might change, we couldn't use
-  // the 'vsetvli x0, x0, vtype" variant, so we avoid the transform to
-  // prevent extending live range of an avl register operand.
+  // If we only demand VL zeroness (i.e. vmv.s.x and vmv.x.s), then there are
+  // only two behaviors, VL = 0 and VL > 0. We can discard the user requested
+  // AVL and just use the last one if we can prove it equally zero. This
+  // removes a vsetvli entirely if the types match or allows use of cheaper avl
+  // preserving variant if VLMAX doesn't change. If VLMAX might change, we
+  // couldn't use the 'vsetvli x0, x0, vtype" variant, so we avoid the transform
+  // to prevent extending live range of an avl register operand.
   // TODO: We can probably relax this for immediates.
-  if (isScalarInsertInstr(MI) && PrevInfo.isValid() &&
-      PrevInfo.hasEquallyZeroAVL(Info, *MRI) &&
-      Info.hasSameVLMAX(PrevInfo)) {
+  if (Demanded.VLZeroness && !Demanded.VLAny && PrevInfo.isValid() &&
+      PrevInfo.hasEquallyZeroAVL(Info, *MRI) && Info.hasSameVLMAX(PrevInfo)) {
     if (PrevInfo.hasAVLImm())
       Info.setAVLImm(PrevInfo.getAVLImm());
     else
