@@ -85,18 +85,9 @@ public:
     RK_WithPattern, // Remark pattern specified via '-Rgroup=regexp'.
   };
 
-  /// \brief Enumeration value for AMDGPU code object version, which is the
-  /// code object version times 100.
-  enum class CodeObjectVersionKind {
-    COV_None,
-    COV_2 = 200, // Unsupported.
-    COV_3 = 300, // Unsupported.
-    COV_4 = 400,
-    COV_5 = 500,
-  };
-
   /// \brief Code object version for AMDGPU.
-  CodeObjectVersionKind CodeObjectVersion = CodeObjectVersionKind::COV_None;
+  llvm::CodeObjectVersionKind CodeObjectVersion =
+      llvm::CodeObjectVersionKind::COV_4;
 
   /// Optimization remark with an optional regular expression pattern.
   struct OptRemark {

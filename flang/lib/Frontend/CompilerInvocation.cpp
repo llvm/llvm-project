@@ -272,9 +272,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
           clang::driver::options::OPT_mcode_object_version_EQ)) {
     llvm::StringRef s = a->getValue();
     if (s == "5")
-      opts.CodeObjectVersion = CodeGenOptions::CodeObjectVersionKind::COV_5;
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_5;
     if (s == "4")
-      opts.CodeObjectVersion = CodeGenOptions::CodeObjectVersionKind::COV_4;
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_4;
+    if (s == "none")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_None;
   }
 
   // -f[no-]save-optimization-record[=<format>]
