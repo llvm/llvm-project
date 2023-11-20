@@ -474,6 +474,10 @@ void IRNormalizer::reorderInstructions(Function &F) const {
       reorderDefinition(&I, TopologicalSort, Visited);
     }
 
+    // Output order should be:
+    // 1 - Unused Instructions.
+    // 2 - Side effecting instructions .
+    // 3 - Instructions used outside of the basic block.
     LLVM_DEBUG(dbgs() << "Inserting instructions into: " << BB.getName() 
                       << "\n");
     reorderBasedOnTopologicalSort(BB, UsedOutsideOfBBTopologicalSort);
@@ -489,12 +493,14 @@ void IRNormalizer::reorderDefinition(Instruction *Definition,
   Visited.insert(Definition);
 
   {
+    // TODO: Do some kind of ordering for instructions that come before the 
+    // result of getFirstNonPHIOrDbgOrAlloca().
     const auto *BasicBlock = Definition->getParent();
     const auto FirstNonPHIOrDbgOrAlloca = BasicBlock->getFirstNonPHIOrDbgOrAlloca();
     if (FirstNonPHIOrDbgOrAlloca == BasicBlock->end())
       return;
     else if (Definition->comesBefore(&*FirstNonPHIOrDbgOrAlloca))
-      return; // TODO: Do some kind of ordering for these instructions. 
+      return; 
   }
 
   for (auto &Operand : Definition->operands()) {
