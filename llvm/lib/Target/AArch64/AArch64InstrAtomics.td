@@ -525,22 +525,22 @@ def CMP_SWAP_128_MONOTONIC : cmp_swap_128;
 
 // v8.1 Atomic instructions:
 let Predicates = [HasLSE] in {
-  defm : LDOPregister_patterns<"LDADD", "atomic_load_add">;
-  defm : LDOPregister_patterns<"LDSET", "atomic_load_or">;
-  defm : LDOPregister_patterns<"LDEOR", "atomic_load_xor">;
-  defm : LDOPregister_patterns<"LDCLR", "atomic_load_clr">;
-  defm : LDOPregister_patterns<"LDSMAX", "atomic_load_max">;
-  defm : LDOPregister_patterns<"LDSMIN", "atomic_load_min">;
-  defm : LDOPregister_patterns<"LDUMAX", "atomic_load_umax">;
-  defm : LDOPregister_patterns<"LDUMIN", "atomic_load_umin">;
-  defm : LDOPregister_patterns<"SWP", "atomic_swap">;
+  defm : STLDOPregister_patterns<"ADD", "atomic_load_add">;
+  defm : STLDOPregister_patterns<"SET", "atomic_load_or">;
+  defm : STLDOPregister_patterns<"EOR", "atomic_load_xor">;
+  defm : STLDOPregister_patterns<"CLR", "atomic_load_clr">;
+  defm : STLDOPregister_patterns<"SMAX", "atomic_load_max">;
+  defm : STLDOPregister_patterns<"SMIN", "atomic_load_min">;
+  defm : STLDOPregister_patterns<"UMAX", "atomic_load_umax">;
+  defm : STLDOPregister_patterns<"UMIN", "atomic_load_umin">;
+  defm : SWPregister_patterns<"SWP", "atomic_swap">;
   defm : CASregister_patterns<"CAS", "atomic_cmp_swap">;
 
   // These two patterns are only needed for global isel, selection dag isel
   // converts atomic load-sub into a sub and atomic load-add, and likewise for
   // and -> clr.
-  defm : LDOPregister_patterns_mod<"LDADD", "atomic_load_sub", "SUB">;
-  defm : LDOPregister_patterns_mod<"LDCLR", "atomic_load_and", "ORN">;
+  defm : LDOPregister_patterns_mod<"ADD", "atomic_load_sub", "SUB">;
+  defm : LDOPregister_patterns_mod<"CLR", "atomic_load_and", "ORN">;
 }
 
 // v8.9a/v9.4a FEAT_LRCPC patterns

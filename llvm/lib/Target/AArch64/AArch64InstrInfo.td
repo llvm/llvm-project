@@ -2188,56 +2188,46 @@ defm SWPA  : Swap<1, 0, "a">;
 defm SWPL  : Swap<0, 1, "l">;
 defm SWPAL : Swap<1, 1, "al">;
 
-// v8.1 atomic LD<OP>(register). Performs load and then ST<OP>(register)
-defm LDADD   : LDOPregister<0b000, "add", 0, 0, "">;
-defm LDADDA  : LDOPregister<0b000, "add", 1, 0, "a">;
-defm LDADDL  : LDOPregister<0b000, "add", 0, 1, "l">;
-defm LDADDAL : LDOPregister<0b000, "add", 1, 1, "al">;
+// v8.1 atomic (ST|LD)<OP>(register).
+defm ADD   : STLDOPregister<0b000, "add", 0, 0, "">;
+defm ADDA  : STLDOPregister<0b000, "add", 1, 0, "a">;
+defm ADDL  : STLDOPregister<0b000, "add", 0, 1, "l">;
+defm ADDAL : STLDOPregister<0b000, "add", 1, 1, "al">;
 
-defm LDCLR   : LDOPregister<0b001, "clr", 0, 0, "">;
-defm LDCLRA  : LDOPregister<0b001, "clr", 1, 0, "a">;
-defm LDCLRL  : LDOPregister<0b001, "clr", 0, 1, "l">;
-defm LDCLRAL : LDOPregister<0b001, "clr", 1, 1, "al">;
+defm CLR   : STLDOPregister<0b001, "clr", 0, 0, "">;
+defm CLRA  : STLDOPregister<0b001, "clr", 1, 0, "a">;
+defm CLRL  : STLDOPregister<0b001, "clr", 0, 1, "l">;
+defm CLRAL : STLDOPregister<0b001, "clr", 1, 1, "al">;
 
-defm LDEOR   : LDOPregister<0b010, "eor", 0, 0, "">;
-defm LDEORA  : LDOPregister<0b010, "eor", 1, 0, "a">;
-defm LDEORL  : LDOPregister<0b010, "eor", 0, 1, "l">;
-defm LDEORAL : LDOPregister<0b010, "eor", 1, 1, "al">;
+defm EOR   : STLDOPregister<0b010, "eor", 0, 0, "">;
+defm EORA  : STLDOPregister<0b010, "eor", 1, 0, "a">;
+defm EORL  : STLDOPregister<0b010, "eor", 0, 1, "l">;
+defm EORAL : STLDOPregister<0b010, "eor", 1, 1, "al">;
 
-defm LDSET   : LDOPregister<0b011, "set", 0, 0, "">;
-defm LDSETA  : LDOPregister<0b011, "set", 1, 0, "a">;
-defm LDSETL  : LDOPregister<0b011, "set", 0, 1, "l">;
-defm LDSETAL : LDOPregister<0b011, "set", 1, 1, "al">;
+defm SET   : STLDOPregister<0b011, "set", 0, 0, "">;
+defm SETA  : STLDOPregister<0b011, "set", 1, 0, "a">;
+defm SETL  : STLDOPregister<0b011, "set", 0, 1, "l">;
+defm SETAL : STLDOPregister<0b011, "set", 1, 1, "al">;
 
-defm LDSMAX   : LDOPregister<0b100, "smax", 0, 0, "">;
-defm LDSMAXA  : LDOPregister<0b100, "smax", 1, 0, "a">;
-defm LDSMAXL  : LDOPregister<0b100, "smax", 0, 1, "l">;
-defm LDSMAXAL : LDOPregister<0b100, "smax", 1, 1, "al">;
+defm SMAX   : STLDOPregister<0b100, "smax", 0, 0, "">;
+defm SMAXA  : STLDOPregister<0b100, "smax", 1, 0, "a">;
+defm SMAXL  : STLDOPregister<0b100, "smax", 0, 1, "l">;
+defm SMAXAL : STLDOPregister<0b100, "smax", 1, 1, "al">;
 
-defm LDSMIN   : LDOPregister<0b101, "smin", 0, 0, "">;
-defm LDSMINA  : LDOPregister<0b101, "smin", 1, 0, "a">;
-defm LDSMINL  : LDOPregister<0b101, "smin", 0, 1, "l">;
-defm LDSMINAL : LDOPregister<0b101, "smin", 1, 1, "al">;
+defm SMIN   : STLDOPregister<0b101, "smin", 0, 0, "">;
+defm SMINA  : STLDOPregister<0b101, "smin", 1, 0, "a">;
+defm SMINL  : STLDOPregister<0b101, "smin", 0, 1, "l">;
+defm SMINAL : STLDOPregister<0b101, "smin", 1, 1, "al">;
 
-defm LDUMAX   : LDOPregister<0b110, "umax", 0, 0, "">;
-defm LDUMAXA  : LDOPregister<0b110, "umax", 1, 0, "a">;
-defm LDUMAXL  : LDOPregister<0b110, "umax", 0, 1, "l">;
-defm LDUMAXAL : LDOPregister<0b110, "umax", 1, 1, "al">;
+defm UMAX   : STLDOPregister<0b110, "umax", 0, 0, "">;
+defm UMAXA  : STLDOPregister<0b110, "umax", 1, 0, "a">;
+defm UMAXL  : STLDOPregister<0b110, "umax", 0, 1, "l">;
+defm UMAXAL : STLDOPregister<0b110, "umax", 1, 1, "al">;
 
-defm LDUMIN   : LDOPregister<0b111, "umin", 0, 0, "">;
-defm LDUMINA  : LDOPregister<0b111, "umin", 1, 0, "a">;
-defm LDUMINL  : LDOPregister<0b111, "umin", 0, 1, "l">;
-defm LDUMINAL : LDOPregister<0b111, "umin", 1, 1, "al">;
-
-// v8.1 atomic ST<OP>(register) as aliases to "LD<OP>(register) when Rt=xZR"
-defm : STOPregister<"stadd","LDADD">; // STADDx
-defm : STOPregister<"stclr","LDCLR">; // STCLRx
-defm : STOPregister<"steor","LDEOR">; // STEORx
-defm : STOPregister<"stset","LDSET">; // STSETx
-defm : STOPregister<"stsmax","LDSMAX">;// STSMAXx
-defm : STOPregister<"stsmin","LDSMIN">;// STSMINx
-defm : STOPregister<"stumax","LDUMAX">;// STUMAXx
-defm : STOPregister<"stumin","LDUMIN">;// STUMINx
+defm UMIN   : STLDOPregister<0b111, "umin", 0, 0, "">;
+defm UMINA  : STLDOPregister<0b111, "umin", 1, 0, "a">;
+defm UMINL  : STLDOPregister<0b111, "umin", 0, 1, "l">;
+defm UMINAL : STLDOPregister<0b111, "umin", 1, 1, "al">;
 
 // v8.5 Memory Tagging Extension
 let Predicates = [HasMTE] in {
