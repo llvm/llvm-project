@@ -29,7 +29,6 @@
 #include "RISCV.h"
 #include "RISCVISelDAGToDAG.h"
 #include "RISCVSubtarget.h"
-#include "llvm/ADT/SmallSet.h"
 
 using namespace llvm;
 
@@ -118,64 +117,6 @@ static unsigned getVMSetForLMul(RISCVII::VLMUL LMUL) {
     llvm_unreachable("Unexpected LMUL");
   }
   llvm_unreachable("Unknown VLMUL enum");
-}
-
-// Try to sink From to before To, also sinking any instructions between From and
-// To where there is a write-after-read dependency on a physical register.
-static bool sinkInstructionAndDeps(MachineInstr &From, MachineInstr &To) {
-  assert(From.getParent() == To.getParent());
-  SmallVector<MachineInstr *> Worklist, ToSink;
-  Worklist.push_back(&From);
-
-  // Rather than compute whether or not we saw a store for every instruction,
-  // just compute it once even if it's more conservative.
-  bool SawStore = false;
-  for (MachineBasicBlock::instr_iterator II = From.getIterator();
-       II != To.getIterator(); II++) {
-    if (II->mayStore()) {
-      SawStore = true;
-      break;
-    }
-  }
-
-  while (!Worklist.empty()) {
-    MachineInstr *MI = Worklist.pop_back_val();
-
-    if (!MI->isSafeToMove(nullptr, SawStore))
-      return false;
-
-    SmallSet<Register, 8> Defs, Uses;
-    for (MachineOperand &Def : MI->all_defs())
-      Defs.insert(Def.getReg());
-    for (MachineOperand &Use : MI->all_uses())
-      Uses.insert(Use.getReg());
-
-    // If anything from [MI, To] uses a definition of MI, we can't sink it.
-    for (MachineBasicBlock::instr_iterator II = MI->getIterator();
-         II != To.getIterator(); II++) {
-      for (MachineOperand &Use : II->all_uses()) {
-        if (Defs.contains(Use.getReg()))
-          return false;
-      }
-    }
-
-    // If MI uses any physical registers, we need to sink any instructions after
-    // it where there might be a write-after-read dependency.
-    for (MachineBasicBlock::instr_iterator II = MI->getIterator();
-         II != To.getIterator(); II++) {
-      bool NeedsSink = any_of(II->all_defs(), [&Uses](MachineOperand &Def) {
-        return Def.getReg().isPhysical() && Uses.contains(Def.getReg());
-      });
-      if (NeedsSink)
-        Worklist.push_back(&*II);
-    }
-
-    ToSink.push_back(MI);
-  }
-
-  for (MachineInstr *MI : ToSink)
-    MI->moveBefore(&To);
-  return true;
 }
 
 // Returns true if LHS is the same register as RHS, or if LHS is undefined.
@@ -330,8 +271,18 @@ bool RISCVFoldMasks::foldVMergeIntoOps(MachineInstr &MI,
 #endif
 
   // Sink True down to MI so that it can access MI's operands.
-  if (!sinkInstructionAndDeps(TrueMI, MI))
+  assert(!TrueMI.hasImplicitDef());
+  bool SawStore = false;
+  for (MachineBasicBlock::instr_iterator II = TrueMI.getIterator();
+       II != MI.getIterator(); II++) {
+    if (II->mayStore()) {
+      SawStore = true;
+      break;
+    }
+  }
+  if (!TrueMI.isSafeToMove(nullptr, SawStore))
     return false;
+  TrueMI.moveBefore(&MI);
 
   // Set the merge to the false operand of the merge.
   TrueMI.getOperand(1).setReg(False->getReg());
@@ -392,6 +343,8 @@ bool RISCVFoldMasks::foldVMergeIntoOps(MachineInstr &MI,
 
   MRI->replaceRegWith(MI.getOperand(0).getReg(), TrueMI.getOperand(0).getReg());
   MI.eraseFromParent();
+  if (IsMasked)
+    MaskDef->eraseFromParent();
 
   return true;
 }
