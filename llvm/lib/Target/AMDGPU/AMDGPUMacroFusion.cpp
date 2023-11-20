@@ -59,7 +59,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII_,
 
 namespace llvm {
 
-std::unique_ptr<ScheduleDAGMutation> createAMDGPUMacroFusionDAGMutation () {
+std::unique_ptr<ScheduleDAGMutation> createAMDGPUMacroFusionDAGMutation() {
   return createMacroFusionDAGMutation(shouldScheduleAdjacent);
 }
 

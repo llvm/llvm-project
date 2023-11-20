@@ -62,7 +62,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   return false;
 }
 
-std::unique_ptr<ScheduleDAGMutation> createARMMacroFusionDAGMutation () {
+std::unique_ptr<ScheduleDAGMutation> createARMMacroFusionDAGMutation() {
   return createMacroFusionDAGMutation(shouldScheduleAdjacent);
 }
 
