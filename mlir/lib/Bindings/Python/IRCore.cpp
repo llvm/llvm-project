@@ -17,12 +17,36 @@
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
-#include "mlir/Bindings/Python/PybindAdaptors.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <exception>
+#include <funcobject.h>
+#include <functional>
 #include <optional>
+#include <pybind11/attr.h>
+#include <pybind11/cast.h>
+#include <pybind11/detail/common.h>
+#include <pybind11/detail/type_caster_base.h>
+#include <pybind11/gil.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
+#include <pyerrors.h>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <tuple>
 #include <utility>
+#include <vector>
 
 namespace py = pybind11;
 using namespace py::literals;
@@ -981,8 +1005,7 @@ MlirDialect PyDialects::getDialectForKey(const std::string &key,
     std::string msg = (Twine("Dialect '") + key + "' not found").str();
     if (attrError)
       throw py::attribute_error(msg);
-    else
-      throw py::index_error(msg);
+    throw py::index_error(msg);
   }
   return dialect;
 }
@@ -3289,9 +3312,9 @@ void mlir::python::populateIRCore(py::module &m) {
       .def_property_readonly(
           "ref_operation",
           [](PyInsertionPoint &self) -> py::object {
-            auto ref_operation = self.getRefOperation();
-            if (ref_operation)
-              return ref_operation->getObject();
+            auto refOperation = self.getRefOperation();
+            if (refOperation)
+              return refOperation->getObject();
             return py::none();
           },
           "The reference operation before which new operations are "
