@@ -1729,7 +1729,7 @@ TEST(ParameterHints, PseudoObjectExpr) {
     struct S {
       __declspec(property(get=GetX, put=PutX)) int x[];
       int GetX(int y, int z) { return 42 + y; }
-      // FIXME: Undesired hint `x = y: y`.
+      // FIXME: Undesired hint `x = y: y`. This builds a PseudoObjectExpr too.
       void PutX(int y) { x = $one[[y]]; }
     };
 
