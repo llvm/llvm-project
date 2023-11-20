@@ -1262,6 +1262,18 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI,
     return false;
   }
 
+  // If we have a COPY with other uses in the loop, hoist to allow the users to
+  // also be hoisted.
+  if (MI.isCopy() && MI.getOperand(0).isReg() &&
+      MI.getOperand(0).getReg().isVirtual() && MI.getOperand(1).isReg() &&
+      MI.getOperand(1).getReg().isVirtual() &&
+      IsLoopInvariantInst(MI, CurLoop) &&
+      any_of(MRI->use_nodbg_instructions(MI.getOperand(0).getReg()),
+             [&CurLoop](MachineInstr &UseMI) {
+               return CurLoop->contains(&UseMI);
+             }))
+    return true;
+
   // High register pressure situation, only hoist if the instruction is going
   // to be remat'ed.
   if (!isTriviallyReMaterializable(MI) &&
