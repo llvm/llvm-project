@@ -943,6 +943,12 @@ void LLVMGetTargetExtTypeTypeParams(LLVMTypeRef TargetExtTy,
   }
 }
 
+LLVMTypeRef LLVMGetTargetExtTypeTypeParam(LLVMTypeRef TargetExtTy,
+                                          unsigned Idx) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return wrap(Type->getTypeParameter(Idx));
+}
+
 unsigned LLVMCountTargetExtTypeIntParams(LLVMTypeRef TargetExtTy) {
   TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
   return Type->getNumIntParameters();
@@ -954,6 +960,11 @@ void LLVMGetTargetExtTypeIntParams(LLVMTypeRef TargetExtTy, unsigned *Dest) {
   for (unsigned int i = 0; i < Type->getNumIntParameters(); i++) {
     Dest[i] = Type->getIntParameter(i);
   }
+}
+
+unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy, unsigned Idx) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return Type->getIntParameter(Idx);
 }
 
 /*===-- Operations on values ----------------------------------------------===*/

@@ -1674,6 +1674,12 @@ unsigned LLVMCountTargetExtTypeTypeParams(LLVMTypeRef TargetExtTy);
 void LLVMGetTargetExtTypeTypeParams(LLVMTypeRef TargetExtTy, LLVMTypeRef *Dest);
 
 /**
+ * Get the type param at the given index for the target extension type
+ */
+LLVMTypeRef LLVMGetTargetExtTypeTypeParam(LLVMTypeRef TargetExtTy,
+                                          unsigned Idx);
+
+/**
  * Obtain the number of int parameters for this target extension type
  */
 unsigned LLVMCountTargetExtTypeIntParams(LLVMTypeRef TargetExtTy);
@@ -1686,6 +1692,11 @@ unsigned LLVMCountTargetExtTypeIntParams(LLVMTypeRef TargetExtTy);
  * @see LLVMCountTargetExtTypeIntParams
  */
 void LLVMGetTargetExtTypeIntParams(LLVMTypeRef TargetExtTy, unsigned *Dest);
+
+/**
+ * Get the int param at the given index for the target extension type
+ */
+unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy, unsigned Idx);
 
 /**
  * @}

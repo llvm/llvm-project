@@ -183,8 +183,12 @@ Changes to the C API
   integer parameters of Target Extension Types:
 
   * ``LLVMGetTargetExtTypeName``
-  * ``LLVMCountTargetExtTypeTypeParams`` / ``LLVMGetTargetExtTypeTypeParams``
-  * ``LLVMCountTargetExtTypeIntParams`` / ``LLVMGetTargetExtTypeIntParams``
+  * ``LLVMCountTargetExtTypeTypeParams``
+  * ``LLVMGetTargetExtTypeTypeParams``
+  * ``LLVMGetTargetExtTypeTypeParam``
+  * ``LLVMCountTargetExtTypeIntParams``
+  * ``LLVMGetTargetExtTypeIntParams``
+  * ``LLVMGetTargetExtTypeIntParam``
 
 Changes to the CodeGen infrastructure
 -------------------------------------
