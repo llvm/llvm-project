@@ -77,6 +77,8 @@ private:
   void reorderDefinition(Instruction *Definition,
       std::stack<Instruction *> &TopologicalSort,
       SmallPtrSet<const Instruction *, 32> &Visited) const;
+  void reorderBasedOnTopologicalSort(BasicBlock &BB, 
+      std::stack<Instruction *> &TopologicalSort) const;
   void reorderInstructionOperandsByNames(Instruction *I) const;
   void reorderPHIIncomingValues(PHINode *PN) const;
   /// @}
@@ -447,32 +449,35 @@ void IRNormalizer::reorderInstructions(Function &F) const {
     // We must iterate from the first to the last instruction otherwise side 
     // effecting instructions could be reordered. 
 
-    std::stack<Instruction *> TopologicalSort;
     SmallPtrSet<const Instruction *, 32> Visited;
+    std::stack<Instruction *> TopologicalSort;
     for (auto &I : BB) { 
       if (!isOutput(&I) && !I.isTerminator()) 
-        continue; // I is not a source node. 
-      LLVM_DEBUG(dbgs() << "\tReordering from source effecting instruction: "; 
+        continue; // I is not side effecting. 
+      LLVM_DEBUG(dbgs() << "\tReordering from effecting source instruction: "; 
                  I.dump());
       reorderDefinition(&I, TopologicalSort, Visited);
     }
 
+    std::stack<Instruction *> UsedOutsideOfBBTopologicalSort;
+    for (auto &I : BB) { 
+      if (Visited.contains(&I) || !I.isUsedOutsideOfBlock(I.getParent())) 
+        continue;
+      LLVM_DEBUG(dbgs() << "\tReordering from source instruction that's used in another block: "; I.dump());
+      reorderDefinition(&I, UsedOutsideOfBBTopologicalSort, Visited);
+    }
+
     for (auto &I : BB) { 
       if (Visited.contains(&I)) 
-        continue; // I is not a source node. 
-      LLVM_DEBUG(dbgs() << "\tReordering from source instruction: "; I.dump());
+        continue;
+      LLVM_DEBUG(dbgs() << "\tReordering from dead source instruction: "; I.dump());
       reorderDefinition(&I, TopologicalSort, Visited);
     }
 
     LLVM_DEBUG(dbgs() << "Inserting instructions into: " << BB.getName() 
                       << "\n");
-    // Reorder based on the topological sort. 
-    while (!TopologicalSort.empty()) {
-      auto *Instruction = TopologicalSort.top();
-      auto *FirstNonPHIOrDbgOrAlloca = &*BB.getFirstNonPHIOrDbgOrAlloca();
-      Instruction->moveBefore(FirstNonPHIOrDbgOrAlloca);
-        TopologicalSort.pop();
-    }
+    reorderBasedOnTopologicalSort(BB, UsedOutsideOfBBTopologicalSort);
+    reorderBasedOnTopologicalSort(BB, TopologicalSort);
   }
 }
 
@@ -488,7 +493,7 @@ void IRNormalizer::reorderDefinition(Instruction *Definition,
     const auto FirstNonPHIOrDbgOrAlloca = BasicBlock->getFirstNonPHIOrDbgOrAlloca();
     if (FirstNonPHIOrDbgOrAlloca == BasicBlock->end())
       return;
-    if (Definition->comesBefore(&*FirstNonPHIOrDbgOrAlloca))
+    else if (Definition->comesBefore(&*FirstNonPHIOrDbgOrAlloca))
       return; // TODO: Do some kind of ordering for these instructions. 
   }
 
@@ -500,7 +505,7 @@ void IRNormalizer::reorderDefinition(Instruction *Definition,
     }
   }
 
-  LLVM_DEBUG(dbgs() << "\t\tNext in topological sort: "; Definition->dump());
+  // Don't reorder certain instructions. 
   if (Definition->isTerminator())
     return;
   if (auto *Call = dyn_cast<CallInst>(Definition)) {
@@ -509,8 +514,20 @@ void IRNormalizer::reorderDefinition(Instruction *Definition,
     if (Call->getIntrinsicID() == Intrinsic::experimental_deoptimize)
       return;
   }
-  // TODO: return on llvm.experimental.deopt...
+
+  LLVM_DEBUG(dbgs() << "\t\tNext in topological sort: "; Definition->dump());
   TopologicalSort.emplace(Definition);
+}
+
+void IRNormalizer::reorderBasedOnTopologicalSort(BasicBlock &BB, 
+    std::stack<Instruction *> &TopologicalSort) const {
+  // Reorder based on the topological sort. 
+  while (!TopologicalSort.empty()) {
+    auto *Instruction = TopologicalSort.top();
+    auto *FirstNonPHIOrDbgOrAlloca = &*BB.getFirstNonPHIOrDbgOrAlloca();
+    Instruction->moveBefore(FirstNonPHIOrDbgOrAlloca);
+      TopologicalSort.pop();
+  }
 }
 
 /// Reorders instruction's operands alphabetically. This method assumes
