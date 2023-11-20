@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: target={{.+}}-windows-gnu
+// XFAIL: LIBCXX-AIX-FIXME
+// Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
+// XFAIL: tsan
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 
 // floating-point-type fetch_add(floating-point-type,
