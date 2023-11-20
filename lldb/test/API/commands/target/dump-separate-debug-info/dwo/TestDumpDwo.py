@@ -26,7 +26,7 @@ class TestDumpDWO(lldbtest.TestBase):
 
     def build_and_skip_if_error(self):
         try:
-            self.build() 
+            self.build()
         except BuildError as e:
             self.skipTest(f"Skipping test due to build exception: {e}")
 
