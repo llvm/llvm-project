@@ -10,6 +10,6 @@
 #include <sanitizer/asan_interface.h>
 
 int main() {
-  __alignas(8) char buffer[8];
+  alignas(8) char buffer[8];
   __asan_poison_memory_region(buffer, sizeof buffer);
 }
