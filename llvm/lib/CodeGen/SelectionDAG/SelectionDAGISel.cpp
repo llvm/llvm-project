@@ -186,7 +186,7 @@ static const bool ViewDAGCombine1 = false, ViewLegalizeTypesDAGs = false,
   do {                                                                         \
     if (llvm::DebugFlag &&                                                     \
         (isCurrentDebugType(DEBUG_TYPE) ||                                     \
-         (isCurrentDebugType(ISEL_DUMP_DEBUG_TYPE) && MatchFilterFuncName))) {     \
+         (isCurrentDebugType(ISEL_DUMP_DEBUG_TYPE) && MatchFilterFuncName))) { \
       X;                                                                       \
     }                                                                          \
   } while (false)
