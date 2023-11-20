@@ -41,6 +41,42 @@ OpenACCDirectiveKind getOpenACCDirectiveKind(StringRef Name) {
       .Default(OpenACCDirectiveKind::Invalid);
 }
 
+bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, StringRef Tok) {
+  switch (Kind) {
+  case OpenACCDirectiveKind::Parallel:
+    return Tok == "parallel";
+  case OpenACCDirectiveKind::Serial:
+    return Tok == "serial";
+  case OpenACCDirectiveKind::Kernels:
+    return Tok == "kernels";
+  case OpenACCDirectiveKind::Data:
+    return Tok == "data";
+  case OpenACCDirectiveKind::HostData:
+    return Tok == "host_data";
+  case OpenACCDirectiveKind::Loop:
+    return Tok == "loop";
+
+  case OpenACCDirectiveKind::ParallelLoop:
+  case OpenACCDirectiveKind::SerialLoop:
+  case OpenACCDirectiveKind::KernelsLoop:
+    return false;
+
+  case OpenACCDirectiveKind::Declare:
+    return Tok == "declare";
+  case OpenACCDirectiveKind::Init:
+    return Tok == "init";
+  case OpenACCDirectiveKind::Shutdown:
+    return Tok == "shutdown";
+  case OpenACCDirectiveKind::Set:
+    return Tok == "set";
+  case OpenACCDirectiveKind::Update:
+    return Tok == "update";
+  case OpenACCDirectiveKind::Invalid:
+    return false;
+  }
+  llvm_unreachable("Unknown 'Kind' Passed");
+}
+
 // Parse and consume the tokens for OpenACC Directive/Construct kinds.
 OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   Token FirstTok = P.getCurToken();
@@ -57,7 +93,8 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   // clause.
   Token SecondTok = P.getCurToken();
   if (!SecondTok.isAnnotation() &&
-      P.getPreprocessor().getSpelling(SecondTok) == "loop") {
+      isOpenACCDirectiveKind(OpenACCDirectiveKind::Loop,
+                             P.getPreprocessor().getSpelling(SecondTok))) {
     switch (DirKind) {
     default:
       // Nothing to do except in the below cases, as they should be diagnosed as
