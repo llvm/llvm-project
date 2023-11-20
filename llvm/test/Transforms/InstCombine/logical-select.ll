@@ -770,7 +770,7 @@ define <8 x i3> @bitcast_vec_cond_commute1(<3 x i1> %cond, <8 x i3> %pc, <8 x i3
 ; CHECK-NEXT:    [[NOTT9:%.*]] = xor <8 x i3> [[T9]], <i3 -1, i3 -1, i3 -1, i3 -1, i3 -1, i3 -1, i3 -1, i3 -1>
 ; CHECK-NEXT:    [[T11:%.*]] = and <8 x i3> [[C]], [[NOTT9]]
 ; CHECK-NEXT:    [[T12:%.*]] = and <8 x i3> [[T9]], [[D:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or <8 x i3> [[T11]], [[T12]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <8 x i3> [[T11]], [[T12]]
 ; CHECK-NEXT:    ret <8 x i3> [[R]]
 ;
   %c = mul <8 x i3> %pc, %pc ; thwart complexity-based canonicalization
@@ -836,7 +836,7 @@ define <2 x i64> @bitcast_fp_vec_cond(<2 x double> %s, <2 x i64> %c, <2 x i64> %
 ; CHECK-NEXT:    [[NOTT9:%.*]] = xor <2 x i64> [[T9]], <i64 -1, i64 -1>
 ; CHECK-NEXT:    [[T11:%.*]] = and <2 x i64> [[NOTT9]], [[C:%.*]]
 ; CHECK-NEXT:    [[T12:%.*]] = and <2 x i64> [[T9]], [[D:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i64> [[T11]], [[T12]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i64> [[T11]], [[T12]]
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %t9 = bitcast <2 x double> %s to <2 x i64>
@@ -856,7 +856,7 @@ define <2 x i64> @bitcast_int_vec_cond(i1 %b, <2 x i64> %c, <2 x i64> %d) {
 ; CHECK-NEXT:    [[NOTT9:%.*]] = xor <2 x i64> [[T9]], <i64 -1, i64 -1>
 ; CHECK-NEXT:    [[T11:%.*]] = and <2 x i64> [[NOTT9]], [[C:%.*]]
 ; CHECK-NEXT:    [[T12:%.*]] = and <2 x i64> [[T9]], [[D:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i64> [[T11]], [[T12]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i64> [[T11]], [[T12]]
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %s = sext i1 %b to i128

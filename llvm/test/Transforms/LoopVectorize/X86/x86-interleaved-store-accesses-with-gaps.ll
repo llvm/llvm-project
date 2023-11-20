@@ -46,7 +46,7 @@ define dso_local void @test1(ptr noalias nocapture %points, ptr noalias nocaptur
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP13]], ptr [[TMP9]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i16>, ptr [[TMP14]], align 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = or <4 x i64> [[TMP1]], <i64 1, i64 1, i64 1, i64 1>
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = or disjoint <4 x i64> [[TMP1]], <i64 1, i64 1, i64 1, i64 1>
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <4 x i64> [[TMP15]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP16]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = extractelement <4 x i64> [[TMP15]], i64 1
@@ -81,7 +81,7 @@ define dso_local void @test1(ptr noalias nocapture %points, ptr noalias nocaptur
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDEX]], 2
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 [[INDEX]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i16>, ptr [[TMP2]], align 2
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = or i64 [[TMP1]], 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[TMP1]], 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[TMP3]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i16> [[WIDE_LOAD]], <4 x i16> [[WIDE_LOAD1]], <16 x i32> <i32 0, i32 4, i32 poison, i32 poison, i32 1, i32 5, i32 poison, i32 poison, i32 2, i32 6, i32 poison, i32 poison, i32 3, i32 7, i32 poison, i32 poison>
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v16i16.p0(<16 x i16> [[INTERLEAVED_VEC]], ptr [[GEP]], i32 2, <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false>)
@@ -182,7 +182,7 @@ define dso_local void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr 
 ; DISABLED_MASKED_STRIDED:       pred.store.continue6:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[WIDE_MASKED_LOAD7:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr [[TMP19]], i32 2, <4 x i1> [[TMP0]], <4 x i16> poison)
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = or <4 x i64> [[TMP2]], <i64 1, i64 1, i64 1, i64 1>
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = or disjoint <4 x i64> [[TMP2]], <i64 1, i64 1, i64 1, i64 1>
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP21]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if8:
@@ -252,7 +252,7 @@ define dso_local void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr 
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[INDEX]], 2
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 [[INDEX]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr [[TMP3]], i32 2, <4 x i1> [[TMP0]], <4 x i16> poison)
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP2]], 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[TMP4]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i16> [[WIDE_MASKED_LOAD]], <4 x i16> [[WIDE_MASKED_LOAD3]], <16 x i32> <i32 0, i32 4, i32 poison, i32 poison, i32 1, i32 5, i32 poison, i32 poison, i32 2, i32 6, i32 poison, i32 poison, i32 3, i32 7, i32 poison, i32 poison>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <4 x i1> [[TMP0]], <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
