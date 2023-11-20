@@ -10,7 +10,8 @@
 ! CHECK-SAME:  %[[ARG_4:.*]]: !fir.boxchar<1> {fir.bindc_command = "cmdmsg", fir.optional}) {
 subroutine test(command, wait, length, cmdstat, cmdmsg)
   integer, optional :: cmdstat, length
-  character(*), optional :: command, wait, cmdmsg
+  logical :: wait
+  character(*), optional :: command, cmdmsg
   ! Note: command is not optional in execute_command_line and must be present
   call execute_command_line(command, wait, length, cmdstat, cmdmsg)
 ! CHECK:  %[[VAL_0:.*]]:2 = fir.unboxchar %[[ARG_5]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
@@ -44,7 +45,7 @@ subroutine test(command, wait, length, cmdstat, cmdmsg)
 ! CHECK:  %[[VAL_21:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK:  %[[VAL_22:.*]] = fir.convert %[[VAL_11]] : (!fir.box<i32>) -> !fir.box<none>
 ! CHECK:  %[[VAL_23:.*]] = fir.convert %[[VAL_15]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-! CHECK:  %[[VAL_25:.*]] = fir.call @_FortranAGetEnvVariable(%[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_18]], %[[VAL_23]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:  %[[VAL_25:.*]] = fir.call @_FortranAExecuteCommandLine(%[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_18]], %[[VAL_23]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:  %[[VAL_26:.*]] = fir.convert %[[ARG_3]] : (!fir.ref<i32>) -> i64
 ! CHECK:  %[[CONST_2:.*]] = arith.constant 0 : i64
 ! CHECK:  %[[VAL_27:.*]] = arith.cmpi ne, %[[VAL_26]], %[[CONST_2]] : i64

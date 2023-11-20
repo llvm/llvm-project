@@ -6,7 +6,7 @@
 subroutine command_only(command)
     character(len=32) :: command
     call execute_command_line(command)
-! CHECK-NOT: fir.call @_FortranAGetEnvVariable
+! CHECK-Next: fir.call @_FortranAExecuteCommandLine
 ! CHECK-NEXT: return
 end subroutine command_only
 
@@ -14,7 +14,9 @@ end subroutine command_only
 ! CHECK-SAME: %[[commandArg:.*]]: !fir.boxchar<1> {fir.bindc_command = "command"},
 ! CHECK-SAME: %[[waitArg:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_command = "wait", fir.optional},
 subroutine command_and_wait_only(command, wait)
-    character(len=32) :: command, wait
+    character(len=32) :: command
+    logical::wait
+    wait = .false.
     call execute_command_line(command, wait)
 ! CHECK: %[[commandUnbox:.*]]:2 = fir.unboxchar %[[commandArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK-NEXT: %[[commandCast:.*]] = fir.convert %[[commandUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,32>>
@@ -30,7 +32,7 @@ subroutine command_and_wait_only(command, wait)
 ! CHECK-NEXT: %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[wait:.*]] = fir.convert %[[waitBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[sourceFileexitstat]]>>) -> !fir.ref<i8>
-! CHECK-NEXT: %{{[0-9]+}} = fir.call @_FortranAGetEnvVariable(%[[command]], %[[wait]], %[[exitstat]], %true, %[[cmdmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK-NEXT: %{{[0-9]+}} = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[wait]], %[[exitstat]], %true, %[[cmdmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK-NEXT: return
 end subroutine command_and_wait_only
 
@@ -53,7 +55,7 @@ subroutine command_and_exitstat_only(command, exitstat)
 ! CHECK-NEXT: %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[exitstat:.*]] = fir.convert %[[exitstatBox]] : (!fir.box<i[[DEFAULT_INTEGER_SIZE]]>) -> !fir.box<none>
 ! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[sourceFileexitstat]]>>) -> !fir.ref<i8>
-! CHECK-NEXT: %{{.*}} = fir.call @_FortranAGetEnvVariable(%[[command]], %[[wait]], %[[exitstat]], %true, %[[cmdmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK-NEXT: %{{.*}} = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[wait]], %[[exitstat]], %true, %[[cmdmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 end subroutine command_and_exitstat_only
 
 ! CHECK-LABEL: func @_QPcommand_and_cmdstat_only(
@@ -74,8 +76,8 @@ subroutine command_and_cmdstat_only(command, cmdstat)
 ! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 9]] : i32
 ! CHECK-NEXT: %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[sourceFileexitstat]]>>) -> !fir.ref<i8>
-! CHECK-32-NEXT: %[[cmdstat:.*]] = fir.call @_FortranAGetEnvVariable(%[[command]], %[[wait]], %[[exitstat]], %true, %[[cmdmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
-! CHECK-64-NEXT: %[[cmdstat32:.*]] = fir.call @_FortranAGetEnvVariable(%[[command]], %[[wait]], %[[exitstat]], %true, %[[cmdmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK-32-NEXT: %[[cmdstat:.*]] = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[wait]], %[[exitstat]], %true, %[[cmdmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK-64-NEXT: %[[cmdstat32:.*]] = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[wait]], %[[exitstat]], %true, %[[cmdmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK-64: %[[cmdstat:.*]] = fir.convert %[[cmdstat32]] : (i32) -> i64
 ! CHECK: fir.store %[[cmdstat]] to %[[cmdstatArg]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
 end subroutine command_and_cmdstat_only
@@ -100,7 +102,7 @@ subroutine command_and_cmdmsg_only(command, cmdmsg)
 ! CHECK-NEXT: %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[cmdmsg:.*]] = fir.convert %[[cmdmsgBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[sourceFileexitstat]]>>) -> !fir.ref<i8>
-! CHECK-NEXT: %{{[0-9]+}} = fir.call @_FortranAGetEnvVariable(%[[command]], %[[wait]], %[[exitstat]], %true, %[[cmdmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK-NEXT: %{{[0-9]+}} = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[wait]], %[[exitstat]], %true, %[[cmdmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK-NEXT: return
 end subroutine command_and_cmdmsg_only
 
@@ -111,8 +113,10 @@ end subroutine command_and_cmdmsg_only
 ! CHECK-SAME: %[[cmdstatArg:.*]]: !fir.ref<i[[DEFAULT_INTEGER_SIZE]]> {fir.bindc_command = "cmdstat"},
 ! CHECK-SAME: %[[cmdmsgArg:.*]]: !fir.boxchar<1> {fir.bindc_command = "cmdmsg"}) {
 subroutine all_arguments(command, wait, exitstat, cmdstat, cmdmsg)
-    character(len=32) :: command, wait, cmdmsg
+    character(len=32) :: command, cmdmsg
+    logical :: wait
     integer :: exitstat, cmdstat
+    wait=.false.
     call execute_command_line(command, wait, exitstat, cmdstat, cmdmsg)
 ! CHECK: %[[cmdmsgUnbox:.*]]:2 = fir.unboxchar %[[cmdmsgArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK-NEXT: %[[cmdmsgCast:.*]] = fir.convert %[[cmdmsgUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,32>>
@@ -131,8 +135,8 @@ subroutine all_arguments(command, wait, exitstat, cmdstat, cmdmsg)
 ! CHECK-NEXT: %[[exitstat:.*]] = fir.convert %[[exitstatBoxed]] : (!fir.box<i[[DEFAULT_INTEGER_SIZE]]>) -> !fir.box<none>
 ! CHECK-NEXT: %[[cmdmsg:.*]] = fir.convert %[[cmdmsgBoxed]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[fileStringexitstat]]>>) -> !fir.ref<i8>
-! CHECK-32-NEXT: %[[cmdstat:.*]] = fir.call @_FortranAGetEnvVariable(%[[command]], %[[wait]], %[[exitstat]], %[[cmdmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
-! CHECK-64-NEXT: %[[cmdstat32:.*]] = fir.call @_FortranAGetEnvVariable(%[[command]], %[[wait]], %[[exitstat]], %[[cmdmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK-32-NEXT: %[[cmdstat:.*]] = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[wait]], %[[exitstat]], %[[cmdmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK-64-NEXT: %[[cmdstat32:.*]] = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[wait]], %[[exitstat]], %[[cmdmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK-64: %[[cmdstat:.*]] = fir.convert %[[cmdstat32]] : (i32) -> i64
 ! CHECK: fir.store %[[cmdstat]] to %[[cmdstatArg]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
 end subroutine all_arguments

@@ -13,6 +13,8 @@
 #include "tools.h"
 #include "flang/Runtime/descriptor.h"
 #include <cstdlib>
+// #include <iostream>
+// #include <string>
 #include <limits>
 
 namespace Fortran::runtime {
@@ -41,12 +43,6 @@ static bool IsValidIntDescriptor(const Descriptor *length) {
   // kind != 1 (i.e. with a large enough decimal exponent range).
   return length->IsAllocated() && length->rank() == 0 &&
       length->type().IsInteger() && typeCode && typeCode->second != 1;
-}
-
-static bool IsValidLogicalDescriptor(const Descriptor *wait) {
-  return wait && wait->IsAllocated() &&
-      wait->type() == TypeCode(TypeCategory::Logical, 1) &&
-      wait->rank() == 0;
 }
 
 static void FillWithSpaces(const Descriptor &value, std::size_t offset = 0) {
@@ -96,12 +92,12 @@ static std::int32_t CheckAndCopyToDescriptor(const Descriptor *value,
   return stat;
 }
 
-static void StoreLengthToDescriptor(
-    const Descriptor *length, std::int64_t value, Terminator &terminator) {
-  auto typeCode{length->type().GetCategoryAndKind()};
+static void StoreIntToDescriptor(
+    const Descriptor *intVal, std::int64_t value, Terminator &terminator) {
+  auto typeCode{intVal->type().GetCategoryAndKind()};
   int kind{typeCode->second};
   Fortran::runtime::ApplyIntegerKind<Fortran::runtime::StoreIntegerAt, void>(
-      kind, terminator, *length, /* atIndex = */ 0, value);
+      kind, terminator, *intVal, /* atIndex = */ 0, value);
 }
 
 template <int KIND> struct FitsInIntegerKind {
@@ -123,18 +119,39 @@ static bool FitsInDescriptor(
       kind, terminator, value);
 }
 
-std::int32_t RTNAME(ExecuteCommandLine)(const Descriptor *command,
-    const Descriptor *wait, const Descriptor *exitstat,
-    const Descriptor *cmdstat, const Descriptor *cmdmsg, const char *sourceFile,
-    int line) {
+std::int32_t RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
+    const Descriptor *exitstat, const Descriptor *cmdstat,
+    const Descriptor *cmdmsg, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
 
-  if (command) {
-    RUNTIME_CHECK(terminator, IsValidCharDescriptor(command));
-  }
+  int exitstatVal;
+  int cmdstatVal;
 
   if (wait) {
-    RUNTIME_CHECK(terminator, IsValidLogicalDescriptor(wait));
+    // RUNTIME_CHECK(terminator, IsValidLogicalDescriptor(wait));
+    // if (wait)
+  } else {
+    if (command) {
+      RUNTIME_CHECK(terminator, IsValidCharDescriptor(command));
+      exitstatVal = std::system(command->OffsetElement());
+    }
+  }
+
+  if (exitstat) {
+    RUNTIME_CHECK(terminator, IsValidIntDescriptor(exitstat));
+    StoreIntToDescriptor(exitstat, exitstatVal, terminator);
+  }
+
+  if (cmdstat) {
+    RUNTIME_CHECK(terminator, IsValidIntDescriptor(cmdstat));
+    StoreIntToDescriptor(cmdstat, 0, terminator);
+  }
+
+  if (cmdmsg) {
+    RUNTIME_CHECK(terminator, IsValidCharDescriptor(cmdmsg));
+    std::array<char, 5> str;
+    str.fill('f');
+    CopyToDescriptor(*cmdmsg, str.data(), str.size(), nullptr);
   }
 
   // TODO
