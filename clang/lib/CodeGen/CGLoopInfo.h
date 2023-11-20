@@ -79,6 +79,9 @@ struct LoopAttributes {
   /// Value for llvm.loop.pipeline.iicount metadata.
   unsigned PipelineInitiationInterval;
 
+  /// Value for 'llvm.loop.align' metadata.
+  unsigned CodeAlign;
+
   /// Value for whether the loop is required to make progress.
   bool MustProgress;
 };
@@ -281,6 +284,9 @@ public:
   void setPipelineInitiationInterval(unsigned C) {
     StagedAttrs.PipelineInitiationInterval = C;
   }
+
+  /// Set value of code align for the next loop pushed.
+  void setCodeAlign(unsigned C) { StagedAttrs.CodeAlign = C; }
 
   /// Set no progress for the next loop pushed.
   void setMustProgress(bool P) { StagedAttrs.MustProgress = P; }
