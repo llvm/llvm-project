@@ -197,12 +197,6 @@ Pass *createLowerAtomicPass();
 
 //===----------------------------------------------------------------------===//
 //
-// LowerWidenableCondition - Lower widenable condition to i1 true.
-//
-Pass *createLowerWidenableConditionPass();
-
-//===----------------------------------------------------------------------===//
-//
 // MergeICmps - Merge integer comparison chains into a memcmp
 //
 Pass *createMergeICmpsLegacyPass();
