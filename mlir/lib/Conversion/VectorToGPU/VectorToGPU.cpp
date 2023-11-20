@@ -473,13 +473,8 @@ struct CombineTransferReadOpTranspose final
     if (transferReadOp.getMask() || transferReadOp.hasOutOfBoundsDim())
       return rewriter.notifyMatchFailure(op, "not inbounds transfer read");
 
-    SmallVector<int64_t, 2> perm;
-    op.getTransp(perm);
-    SmallVector<unsigned, 2> permU;
-    for (int64_t o : perm)
-      permU.push_back(unsigned(o));
     AffineMap permutationMap =
-        AffineMap::getPermutationMap(permU, op.getContext());
+        AffineMap::getPermutationMap(op.getPermutation(), op.getContext());
     AffineMap newMap =
         permutationMap.compose(transferReadOp.getPermutationMap());
 
