@@ -74,15 +74,9 @@ private:
   /// \name Reordering.
   /// @{
   void reorderInstructions(Function &F) const;
-  void reorderSourceInstruction(Instruction *I,
-      std::stack<Instruction *> &TopologicalSort, 
-      SmallPtrSet<const Instruction *, 32> &Visited) const;
   void reorderDefinition(Instruction *Definition,
       std::stack<Instruction *> &TopologicalSort,
       SmallPtrSet<const Instruction *, 32> &Visited) const;
-  // TODO: Delete reorderInstruction
-  void reorderInstruction(Instruction *Used, Instruction *User,
-                          SmallPtrSet<const Instruction *, 32> &Visited) const;
   void reorderInstructionOperandsByNames(Instruction *I) const;
   void reorderPHIIncomingValues(PHINode *PN) const;
   /// @}
@@ -458,7 +452,8 @@ void IRNormalizer::reorderInstructions(Function &F) const {
     for (auto &I : BB) { 
       if (!isOutput(&I) && !I.isTerminator()) 
         continue; // I is not a source node. 
-      LLVM_DEBUG(dbgs() << "\tReordering from source instruction: "; I.dump());
+      LLVM_DEBUG(dbgs() << "\tReordering from source effecting instruction: "; 
+                 I.dump());
       reorderDefinition(&I, TopologicalSort, Visited);
     }
 
@@ -475,34 +470,10 @@ void IRNormalizer::reorderInstructions(Function &F) const {
     while (!TopologicalSort.empty()) {
       auto *Instruction = TopologicalSort.top();
       auto *FirstNonPHIOrDbgOrAlloca = &*BB.getFirstNonPHIOrDbgOrAlloca();
-      // if (Instruction == FirstNonPHIOrDbgOrAlloca) {
-      //   // If the first instruction in the block is the instruction that we're
-      //   // currently trying to insert, then leave it at the top of the block
-      //   // and insert the next instruction above it. 
-      //   TopologicalSort.pop();
-      //   if (TopologicalSort.empty())
-      //     break;
-      //   auto *NextInstruction = TopologicalSort.top();
-      //   LLVM_DEBUG(dbgs() << "\tInserting "; NextInstruction->dump(); 
-      //              dbgs() << "\t\tbefore"; Instruction->dump());
-      //   NextInstruction->moveBefore(Instruction);
-      //   TopologicalSort.pop();
-      // } else {
-      //   LLVM_DEBUG(dbgs() << "\tInserting "; Instruction->dump(); 
-      //              dbgs() << "\t\tafter"; FirstNonPHIOrDbgOrAlloca->dump());
-      //   Instruction->moveAfter(FirstNonPHIOrDbgOrAlloca);
-      //   TopologicalSort.pop();
-      // }
       Instruction->moveBefore(FirstNonPHIOrDbgOrAlloca);
         TopologicalSort.pop();
     }
   }
-}
-
-void IRNormalizer::reorderSourceInstruction(Instruction *I,
-    std::stack<Instruction *> &TopologicalSort,
-    SmallPtrSet<const Instruction *, 32> &Visited) const {
-  LLVM_DEBUG(dbgs() << "\tReordering from source instruction: "; I->dump());
 }
 
 void IRNormalizer::reorderDefinition(Instruction *Definition,
@@ -512,9 +483,14 @@ void IRNormalizer::reorderDefinition(Instruction *Definition,
     return;
   Visited.insert(Definition);
 
-  if (Definition->comesBefore(&*Definition->getParent()
-                                          ->getFirstNonPHIOrDbgOrAlloca()))
-    return; // TODO: Do some kind of ordering for these instructions. 
+  {
+    const auto *BasicBlock = Definition->getParent();
+    const auto FirstNonPHIOrDbgOrAlloca = BasicBlock->getFirstNonPHIOrDbgOrAlloca();
+    if (FirstNonPHIOrDbgOrAlloca == BasicBlock->end())
+      return;
+    if (Definition->comesBefore(&*FirstNonPHIOrDbgOrAlloca))
+      return; // TODO: Do some kind of ordering for these instructions. 
+  }
 
   for (auto &Operand : Definition->operands()) {
     if (auto *Op = dyn_cast<Instruction>(Operand)) {
@@ -525,44 +501,16 @@ void IRNormalizer::reorderDefinition(Instruction *Definition,
   }
 
   LLVM_DEBUG(dbgs() << "\t\tNext in topological sort: "; Definition->dump());
-  if (!Definition->isTerminator())
-    TopologicalSort.emplace(Definition);
-}
-
-/// Reduces def-use distance or places instruction at the end of the basic
-/// block. Continues to walk up the def-use tree recursively. Used by
-/// reorderInstructions().
-///
-/// \see reorderInstructions()
-/// \param Used Pointer to the instruction whose value is used by the \p User.
-/// \param User Pointer to the instruction which uses the \p Used.
-/// \param Visited Set of visited instructions.
-void IRNormalizer::reorderInstruction(
-    Instruction *Used, Instruction *User,
-    SmallPtrSet<const Instruction *, 32> &Visited) const {
-  if (isa<PHINode>(Used))
+  if (Definition->isTerminator())
     return;
-  if (Visited.contains(Used))
-    return;
-  Visited.insert(Used);
-
-  if (Used->getParent() == User->getParent()) {
-    // If Used and User share the same basic block move Used just before User.
-    LLVM_DEBUG(dbgs() << "\tMoved " << *Used << " before " << *User << "\n");
-    Used->moveBefore(User);
-  } else {
-    // Otherwise move Used to the very end of its basic block.
-    LLVM_DEBUG(dbgs() << "\tMoved " << *Used << " to end of block "
-                      << Used->getParent()->getName() << "\n");
-    Used->moveBefore(&Used->getParent()->back());
+  if (auto *Call = dyn_cast<CallInst>(Definition)) {
+    if (Call->isMustTailCall())
+      return;
+    if (Call->getIntrinsicID() == Intrinsic::experimental_deoptimize)
+      return;
   }
-
-  for (auto &OP : Used->operands()) {
-    if (auto *IOP = dyn_cast<Instruction>(OP)) {
-      // Walk up the def-use tree.
-      reorderInstruction(IOP, Used, Visited);
-    }
-  }
+  // TODO: return on llvm.experimental.deopt...
+  TopologicalSort.emplace(Definition);
 }
 
 /// Reorders instruction's operands alphabetically. This method assumes
