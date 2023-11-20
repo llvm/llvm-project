@@ -44,7 +44,7 @@ env:
 jobs:
   stage1:
     runs-on:
-      group: libcxx-runners-16
+      group: libcxx-runners-8
     continue-on-error: false
     strategy:
       fail-fast: true
@@ -163,10 +163,10 @@ jobs:
           machine: libcxx-runners-8
           std_modules: 'ON'
         - config: 'generic-asan'
-          machine: libcxx-runners-16
+          machine: libcxx-runners-8
           std_modules: 'OFF'
         - config: 'generic-tsan'
-          machine: libcxx-runners-16
+          machine: libcxx-runners-8
           std_modules: 'OFF'
         - config: 'generic-ubsan'
           machine: libcxx-runners-8
