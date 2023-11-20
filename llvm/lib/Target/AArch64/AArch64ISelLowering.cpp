@@ -11050,7 +11050,12 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
     if (SrcEltTy == SmallestEltTy)
       continue;
     assert(ShuffleVT.getVectorElementType() == SmallestEltTy);
-    Src.ShuffleVec = DAG.getNode(ISD::BITCAST, dl, ShuffleVT, Src.ShuffleVec);
+    if (DAG.getDataLayout().isBigEndian()) {
+      Src.ShuffleVec =
+          DAG.getNode(AArch64ISD::NVCAST, dl, ShuffleVT, Src.ShuffleVec);
+    } else {
+      Src.ShuffleVec = DAG.getNode(ISD::BITCAST, dl, ShuffleVT, Src.ShuffleVec);
+    }
     Src.WindowScale =
         SrcEltTy.getFixedSizeInBits() / SmallestEltTy.getFixedSizeInBits();
     Src.WindowBase *= Src.WindowScale;
@@ -11102,7 +11107,12 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
 
   SDValue Shuffle = DAG.getVectorShuffle(ShuffleVT, dl, ShuffleOps[0],
                                          ShuffleOps[1], Mask);
-  SDValue V = DAG.getNode(ISD::BITCAST, dl, VT, Shuffle);
+  SDValue V;
+  if (DAG.getDataLayout().isBigEndian()) {
+    V = DAG.getNode(AArch64ISD::NVCAST, dl, VT, Shuffle);
+  } else {
+    V = DAG.getNode(ISD::BITCAST, dl, VT, Shuffle);
+  }
 
   LLVM_DEBUG(dbgs() << "Reshuffle, creating node: "; Shuffle.dump();
              dbgs() << "Reshuffle, creating node: "; V.dump(););
