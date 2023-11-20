@@ -192,9 +192,7 @@ static const bool ViewDAGCombine1 = false, ViewLegalizeTypesDAGs = false,
     }                                                                          \
   } while (false)
 #else
-#define ISEL_DUMP(X)                                                           \
-  do {                                                                         \
-  } while (false)
+#define ISEL_DUMP(X) do { } while (false)
 #endif
 
 //===---------------------------------------------------------------------===//
