@@ -72,6 +72,7 @@ public:
 static std::vector<std::string> ExecFilenames;
 static std::string OutputFilename;
 static bool ContinueOnCuIndexOverflow;
+static bool SoftStopOnCuIndexOverflow;
 
 static Expected<SmallVector<std::string, 16>>
 getDWOFilenames(StringRef ExecFilename) {
@@ -144,7 +145,7 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
 
   OutputFilename = Args.getLastArgValue(OPT_outputFileName, "");
   ContinueOnCuIndexOverflow = Args.hasArg(OPT_continueOnCuIndexOverflow);
-  SoftStopOnCuIndexOverflow = Args.hasArg(OPT_stopOnCuIndexOverflow);
+  SoftStopOnCuIndexOverflow = Args.hasArg(OPT_softStopOnCuIndexOverflow);
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_execFileNames))
     ExecFilenames.emplace_back(A->getValue());
