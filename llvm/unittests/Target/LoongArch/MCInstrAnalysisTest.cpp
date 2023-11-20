@@ -94,17 +94,13 @@ TEST_P(InstrAnalysisTest, IsBranch) {
 
 TEST_P(InstrAnalysisTest, IsConditionalBranch) {
   EXPECT_TRUE(Analysis->isConditionalBranch(beq()));
-  // FIXME: Instr 'b' is not a ConditionalBranch, so the analysis here is
-  // wrong. The following patch will fix it.
-  EXPECT_TRUE(Analysis->isConditionalBranch(b()));
+  EXPECT_FALSE(Analysis->isConditionalBranch(b()));
   EXPECT_FALSE(Analysis->isConditionalBranch(bl()));
 }
 
 TEST_P(InstrAnalysisTest, IsUnconditionalBranch) {
   EXPECT_FALSE(Analysis->isUnconditionalBranch(beq()));
-  // FIXME: Instr 'b' is an UnconditionalBranch, so the analysis here is
-  // wrong. The following patch will fix it.
-  EXPECT_FALSE(Analysis->isUnconditionalBranch(b()));
+  EXPECT_TRUE(Analysis->isUnconditionalBranch(b()));
   EXPECT_FALSE(Analysis->isUnconditionalBranch(bl()));
   EXPECT_TRUE(Analysis->isUnconditionalBranch(jirl(LoongArch::R0)));
   EXPECT_FALSE(Analysis->isUnconditionalBranch(jirl(LoongArch::R1)));

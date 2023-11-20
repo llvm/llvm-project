@@ -2360,6 +2360,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ctx.symtab.addAbsolute(mangle("__guard_eh_cont_count"), 0);
   ctx.symtab.addAbsolute(mangle("__guard_eh_cont_table"), 0);
 
+  if (isArm64EC(config->machine)) {
+    ctx.symtab.addAbsolute("__hybrid_code_map", 0);
+    ctx.symtab.addAbsolute("__hybrid_code_map_count", 0);
+  }
+
   if (config->pseudoRelocs) {
     ctx.symtab.addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST__"), 0);
     ctx.symtab.addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST_END__"), 0);

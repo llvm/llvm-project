@@ -1430,6 +1430,7 @@ def OpenACC_DeclareEnterOp : OpenACC_Op<"declare_enter", []> {
   }];
 
   let arguments = (ins Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands);
+  let results = (outs OpenACC_DeclareTokenType:$token);
 
   let assemblyFormat = [{
     oilist(
@@ -1441,7 +1442,7 @@ def OpenACC_DeclareEnterOp : OpenACC_Op<"declare_enter", []> {
   let hasVerifier = 1;
 }
 
-def OpenACC_DeclareExitOp : OpenACC_Op<"declare_exit", []> {
+def OpenACC_DeclareExitOp : OpenACC_Op<"declare_exit", [AttrSizedOperandSegments]> {
   let summary = "declare directive - exit from implicit data region";
 
   let description = [{
@@ -1458,10 +1459,13 @@ def OpenACC_DeclareExitOp : OpenACC_Op<"declare_exit", []> {
     ```
   }];
 
-  let arguments = (ins Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands);
+  let arguments = (ins
+      Optional<OpenACC_DeclareTokenType>:$token,
+      Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands);
 
   let assemblyFormat = [{
     oilist(
+        `token` `(` $token `)` |
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     attr-dict-with-keyword

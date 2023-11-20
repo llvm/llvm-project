@@ -1530,6 +1530,9 @@ bool PPCInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                    Register DstReg, Register TrueReg,
                                    Register FalseReg, int &CondCycles,
                                    int &TrueCycles, int &FalseCycles) const {
+  if (!Subtarget.hasISEL())
+    return false;
+
   if (Cond.size() != 2)
     return false;
 

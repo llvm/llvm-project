@@ -1396,6 +1396,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FMINIMUM,          VT, Custom);
     }
 
+    setOperationAction(ISD::FABS, MVT::v8f16, Custom);
+
     // (fp_to_int:v8i16 (v8f32 ..)) requires the result type to be promoted
     // even though v8i16 is a legal type.
     setOperationPromotedToType(ISD::FP_TO_SINT,        MVT::v8i16, MVT::v8i32);
@@ -3261,6 +3263,73 @@ bool X86TargetLowering::
   return NewShiftOpcode == ISD::SHL;
 }
 
+unsigned X86TargetLowering::preferedOpcodeForCmpEqPiecesOfOperand(
+    EVT VT, unsigned ShiftOpc, bool MayTransformRotate,
+    const APInt &ShiftOrRotateAmt, const std::optional<APInt> &AndMask) const {
+  if (!VT.isInteger())
+    return ShiftOpc;
+
+  bool PreferRotate = false;
+  if (VT.isVector()) {
+    // For vectors, if we have rotate instruction support, then its definetly
+    // best. Otherwise its not clear what the best so just don't make changed.
+    PreferRotate = Subtarget.hasAVX512() && (VT.getScalarType() == MVT::i32 ||
+                                             VT.getScalarType() == MVT::i64);
+  } else {
+    // For scalar, if we have bmi prefer rotate for rorx. Otherwise prefer
+    // rotate unless we have a zext mask+shr.
+    PreferRotate = Subtarget.hasBMI2();
+    if (!PreferRotate) {
+      unsigned MaskBits =
+          VT.getScalarSizeInBits() - ShiftOrRotateAmt.getZExtValue();
+      PreferRotate = (MaskBits != 8) && (MaskBits != 16) && (MaskBits != 32);
+    }
+  }
+
+  if (ShiftOpc == ISD::SHL || ShiftOpc == ISD::SRL) {
+    assert(AndMask.has_value() && "Null andmask when querying about shift+and");
+
+    if (PreferRotate && MayTransformRotate)
+      return ISD::ROTL;
+
+    // If vector we don't really get much benefit swapping around constants.
+    // Maybe we could check if the DAG has the flipped node already in the
+    // future.
+    if (VT.isVector())
+      return ShiftOpc;
+
+    // See if the beneficial to swap shift type.
+    if (ShiftOpc == ISD::SHL) {
+      // If the current setup has imm64 mask, then inverse will have
+      // at least imm32 mask (or be zext i32 -> i64).
+      if (VT == MVT::i64)
+        return AndMask->getSignificantBits() > 32 ? (unsigned)ISD::SRL
+                                                  : ShiftOpc;
+
+      // We can only benefit if req at least 7-bit for the mask. We
+      // don't want to replace shl of 1,2,3 as they can be implemented
+      // with lea/add.
+      return ShiftOrRotateAmt.uge(7) ? (unsigned)ISD::SRL : ShiftOpc;
+    }
+
+    if (VT == MVT::i64)
+      // Keep exactly 32-bit imm64, this is zext i32 -> i64 which is
+      // extremely efficient.
+      return AndMask->getSignificantBits() > 33 ? (unsigned)ISD::SHL : ShiftOpc;
+
+    // Keep small shifts as shl so we can generate add/lea.
+    return ShiftOrRotateAmt.ult(7) ? (unsigned)ISD::SHL : ShiftOpc;
+  }
+
+  // We prefer rotate for vectors of if we won't get a zext mask with SRL
+  // (PreferRotate will be set in the latter case).
+  if (PreferRotate || VT.isVector())
+    return ShiftOpc;
+
+  // Non-vector type and we have a zext mask with SRL.
+  return ISD::SRL;
+}
+
 bool X86TargetLowering::preferScalarizeSplat(SDNode *N) const {
   return N->getOpcode() != ISD::FP_EXTEND;
 }
@@ -4662,6 +4731,8 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
 
     unsigned SrcEltSizeInBits = CstTy->getScalarSizeInBits();
     unsigned NumSrcElts = SizeInBits / SrcEltSizeInBits;
+    if ((SizeInBits % SrcEltSizeInBits) != 0)
+      return false;
 
     APInt UndefSrcElts(NumSrcElts, 0);
     SmallVector<APInt, 64> SrcEltBits(NumSrcElts, APInt(SrcEltSizeInBits, 0));
@@ -27013,11 +27084,13 @@ Register X86TargetLowering::getRegisterByName(const char* RegName, LLT VT,
   const TargetFrameLowering &TFI = *Subtarget.getFrameLowering();
 
   Register Reg = StringSwitch<unsigned>(RegName)
-                       .Case("esp", X86::ESP)
-                       .Case("rsp", X86::RSP)
-                       .Case("ebp", X86::EBP)
-                       .Case("rbp", X86::RBP)
-                       .Default(0);
+                     .Case("esp", X86::ESP)
+                     .Case("rsp", X86::RSP)
+                     .Case("ebp", X86::EBP)
+                     .Case("rbp", X86::RBP)
+                     .Case("r14", X86::R14)
+                     .Case("r15", X86::R15)
+                     .Default(0);
 
   if (Reg == X86::EBP || Reg == X86::RBP) {
     if (!TFI.hasFP(MF))
@@ -53323,11 +53396,11 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
   // Using i16 as an intermediate type is a bad idea, unless we have HW support
   // for it. Therefore for type sizes equal or smaller than 32 just go with i32.
   // if hasFP16 support:
-  //   UINT_TO_FP(vXi1~15)  -> UINT_TO_FP(ZEXT(vXi1~15  to vXi16))
-  //   UINT_TO_FP(vXi17~31) -> UINT_TO_FP(ZEXT(vXi17~31 to vXi32))
+  //   UINT_TO_FP(vXi1~15)  -> SINT_TO_FP(ZEXT(vXi1~15  to vXi16))
+  //   UINT_TO_FP(vXi17~31) -> SINT_TO_FP(ZEXT(vXi17~31 to vXi32))
   // else
-  //   UINT_TO_FP(vXi1~31) -> UINT_TO_FP(ZEXT(vXi1~31 to vXi32))
-  // UINT_TO_FP(vXi33~63) -> UINT_TO_FP(ZEXT(vXi33~63 to vXi64))
+  //   UINT_TO_FP(vXi1~31) -> SINT_TO_FP(ZEXT(vXi1~31 to vXi32))
+  // UINT_TO_FP(vXi33~63) -> SINT_TO_FP(ZEXT(vXi33~63 to vXi64))
   if (InVT.isVector() && VT.getVectorElementType() == MVT::f16) {
     unsigned ScalarSize = InVT.getScalarSizeInBits();
     if ((ScalarSize == 16 && Subtarget.hasFP16()) || ScalarSize == 32 ||
@@ -53342,9 +53415,9 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
                          InVT.getVectorNumElements());
     SDValue P = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Op0);
     if (IsStrict)
-      return DAG.getNode(ISD::STRICT_UINT_TO_FP, dl, {VT, MVT::Other},
+      return DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {VT, MVT::Other},
                          {N->getOperand(0), P});
-    return DAG.getNode(ISD::UINT_TO_FP, dl, VT, P);
+    return DAG.getNode(ISD::SINT_TO_FP, dl, VT, P);
   }
 
   // UINT_TO_FP(vXi1) -> SINT_TO_FP(ZEXT(vXi1 to vXi32))
