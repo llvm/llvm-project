@@ -156,6 +156,19 @@ static bool isHeaderVPBB(VPBasicBlock *VPBB) {
   return VPBB->getParent() && VPBB->getParent()->getEntry() == VPBB;
 }
 
+/// Return true of \p L loop is contained within \p OuterLoop.
+static bool doesContainLoop(const Loop *L, const Loop *OuterLoop) {
+  if (L->getLoopDepth() < OuterLoop->getLoopDepth())
+    return false;
+  const Loop *P = L;
+  while (P) {
+    if (P == OuterLoop)
+      return true;
+    P = P->getParentLoop();
+  }
+  return false;
+}
+
 // Create a new empty VPBasicBlock for an incoming BasicBlock in the region
 // corresponding to the containing loop  or retrieve an existing one if it was
 // already created. If no region exists yet for the loop containing \p BB, a new
@@ -174,7 +187,7 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
 
   // Get or create a region for the loop containing BB.
   Loop *LoopOfBB = LI->getLoopFor(BB);
-  if (!LoopOfBB)
+  if (!LoopOfBB || !doesContainLoop(LoopOfBB, TheLoop))
     return VPBB;
 
   auto *RegionOfVPBB = Loop2Region.lookup(LoopOfBB);
