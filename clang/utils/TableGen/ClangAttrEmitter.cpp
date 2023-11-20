@@ -1414,7 +1414,29 @@ namespace {
     }
   };
 
-} // end anonymous namespace
+  class WrappedAttr : public SimpleArgument {
+  public:
+    WrappedAttr(const Record &Arg, StringRef Attr)
+        : SimpleArgument(Arg, Attr, "Attr *") {}
+
+    void writePCHReadDecls(raw_ostream &OS) const override {
+      OS << "    Attr *" << getLowerName() << " = Record.readAttr();";
+    }
+
+    void writePCHWrite(raw_ostream &OS) const override {
+      OS << "    AddAttr(SA->get" << getUpperName() << "());";
+    }
+
+    void writeDump(raw_ostream &OS) const override {}
+
+    void writeDumpChildren(raw_ostream &OS) const override {
+      OS << "    Visit(SA->get" << getUpperName() << "());\n";
+    }
+
+    void writeHasChildren(raw_ostream &OS) const override { OS << "true"; }
+  };
+
+  } // end anonymous namespace
 
 static std::unique_ptr<Argument>
 createArgument(const Record &Arg, StringRef Attr,
@@ -1470,6 +1492,8 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = std::make_unique<VariadicIdentifierArgument>(Arg, Attr);
   else if (ArgName == "VersionArgument")
     Ptr = std::make_unique<VersionArgument>(Arg, Attr);
+  else if (ArgName == "WrappedAttr")
+    Ptr = std::make_unique<WrappedAttr>(Arg, Attr);
   else if (ArgName == "OMPTraitInfoArgument")
     Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "OMPTraitInfo *");
   else if (ArgName == "VariadicOMPInteropInfoArgument")
