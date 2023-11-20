@@ -184,7 +184,6 @@ public:
 
   SBProcess LoadCore(const char *core_file);
   SBProcess LoadCore(const char *core_file, lldb::SBError &error);
-  SBProcess LoadCore(const SBFile &file, lldb::SBError &error);
 
   /// Launch a new process with sensible defaults.
   ///
