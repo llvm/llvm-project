@@ -16,8 +16,9 @@
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
+#include <unordered_set>
 
-static std::vector<std::string> nameObj;
+static std::unordered_set<std::string> nameObj;
 
 namespace llvm {
 
@@ -89,15 +90,18 @@ static void shortenFileName(std::string &FN, unsigned char len = 250) {
 
   FN = FN.substr(0, len);
   if (nameObj.empty())
-    nameObj.push_back(FN);
+    nameObj.insert(FN);
 
   else {
-    for (auto it = nameObj.begin(); it != nameObj.end(); it++) {
-      if (*it == FN) {
+    auto strLen = FN.length();
+    while (strLen > 0) {
+      if (auto it = nameObj.find(FN); it != nameObj.end()) {
         FN = FN.substr(0, --len);
-        nameObj.push_back(FN);
+      } else {
+        nameObj.insert(FN);
         break;
       }
+      strLen--;
     }
   }
 }
