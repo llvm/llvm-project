@@ -1047,7 +1047,11 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
         // If C1 < C: (X >>?,exact C1) << C --> X << (C - C1)
         Constant *ShiftDiff = ConstantInt::get(Ty, ShAmtC - ShrAmt);
         auto *NewShl = BinaryOperator::CreateShl(X, ShiftDiff);
-        NewShl->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+        NewShl->setHasNoUnsignedWrap(
+            I.hasNoUnsignedWrap() ||
+            (ShrAmt &&
+             cast<Instruction>(Op0)->getOpcode() == Instruction::LShr &&
+             I.hasNoSignedWrap()));
         NewShl->setHasNoSignedWrap(I.hasNoSignedWrap());
         return NewShl;
       }
@@ -1068,7 +1072,11 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
         // If C1 < C: (X >>? C1) << C --> (X << (C - C1)) & (-1 << C)
         Constant *ShiftDiff = ConstantInt::get(Ty, ShAmtC - ShrAmt);
         auto *NewShl = BinaryOperator::CreateShl(X, ShiftDiff);
-        NewShl->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+        NewShl->setHasNoUnsignedWrap(
+            I.hasNoUnsignedWrap() ||
+            (ShrAmt &&
+             cast<Instruction>(Op0)->getOpcode() == Instruction::LShr &&
+             I.hasNoSignedWrap()));
         NewShl->setHasNoSignedWrap(I.hasNoSignedWrap());
         Builder.Insert(NewShl);
         APInt Mask(APInt::getHighBitsSet(BitWidth, BitWidth - ShAmtC));
