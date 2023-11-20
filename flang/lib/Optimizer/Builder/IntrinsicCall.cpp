@@ -209,6 +209,14 @@ static constexpr IntrinsicHandler handlers[]{
        {"boundary", asBox, handleDynamicOptional},
        {"dim", asValue}}},
      /*isElemental=*/false},
+    {"execute_command_line",
+     &I::genExecuteCommandLine,
+     {{{"command", asBox},
+       {"wait", asAddr, handleDynamicOptional},
+       {"exitstat", asAddr, handleDynamicOptional},
+       {"cmdstat", asAddr, handleDynamicOptional},
+       {"cmdmsg", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"exit",
      &I::genExit,
      {{{"status", asValue, handleDynamicOptional}}},
@@ -2774,6 +2782,61 @@ IntrinsicLibrary::genEoshift(mlir::Type resultType,
                              dim);
   }
   return readAndAddCleanUp(resultMutableBox, resultType, "EOSHIFT");
+}
+
+// EXECUTE_COMMAND_LINE
+void IntrinsicLibrary::genExecuteCommandLine(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 5);
+  mlir::Value command = fir::getBase(args[0]);
+  const fir::ExtendedValue &wait = args[1];
+  const fir::ExtendedValue &exitstat = args[2];
+  const fir::ExtendedValue &cmdstat = args[3];
+  const fir::ExtendedValue &cmdmsg = args[4];
+
+  if (!command)
+    fir::emitFatalError(loc, "expected COMMAND parameter");
+
+  // If none of the optional parameters are present, do nothing.
+  if (!isStaticallyPresent(wait) && !isStaticallyPresent(exitstat) &&
+      !isStaticallyPresent(cmdstat) && !isStaticallyPresent(cmdmsg))
+    return;
+
+  mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+  mlir::Value waitBox =
+      isStaticallyPresent(wait)
+          ? fir::getBase(wait)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  mlir::Value exitstatBox =
+      isStaticallyPresent(exitstat)
+          ? fir::getBase(exitstt)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  mlir::Value cmdstatBox =
+      isStaticallyPresent(cmdstat)
+          ? fir::getBase(cmdstat)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  mlir::Value cmdmsgBox =
+      isStaticallyPresent(cmdmsg)
+          ? fir::getBase(cmdmsg)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  mlir::Value stat = fir::runtime::genExecuteCommandLine(
+      builder, loc, command, waitBox, cmdstatBox, exitstatBox, cmdmsgBox);
+  if (isStaticallyPresent(exitstat)) {
+    mlir::Value exitstatAddr = fir::getBase(exitstat);
+    mlir::Value exitstatIsPresentAtRuntime =
+        builder.genIsNotNullAddr(loc, exitstatAddr);
+    builder.genIfThen(loc, exitstatIsPresentAtRuntime)
+        .genThen([&]() { builder.createStoreWithConvert(loc, exitstat, exitstatAddr); })
+        .end();
+  }
+  if (isStaticallyPresent(cmdstat)) {
+    mlir::Value cmdstatAddr = fir::getBase(cmdstat);
+    mlir::Value cmdstatIsPresentAtRuntime =
+        builder.genIsNotNullAddr(loc, cmdstatAddr);
+    builder.genIfThen(loc, cmdstatIsPresentAtRuntime)
+        .genThen([&]() { builder.createStoreWithConvert(loc, cmdstat, cmdstatAddr); })
+        .end();
+  }
 }
 
 // EXIT
