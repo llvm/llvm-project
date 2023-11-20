@@ -80,7 +80,6 @@ namespace {
       (void) llvm::createDomViewerWrapperPassPass();
       (void) llvm::createAlwaysInlinerLegacyPass();
       (void) llvm::createGlobalsAAWrapperPass();
-      (void) llvm::createGuardWideningPass();
       (void) llvm::createLoopGuardWideningPass();
       (void) llvm::createInstSimplifyLegacyPass();
       (void) llvm::createInstructionCombiningPass();
