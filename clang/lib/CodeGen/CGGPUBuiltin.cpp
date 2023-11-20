@@ -13,6 +13,7 @@
 
 #include "CodeGenFunction.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/MathExtras.h"
@@ -178,10 +179,20 @@ RValue CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E) {
       E, this, GetVprintfDeclaration(CGM.getModule()), false);
 }
 
+// Deterimines if an argument is a string
+static bool isString(const clang::Type *argXTy) {
+  if ((argXTy->isPointerType() || argXTy->isConstantArrayType()) &&
+      argXTy->getPointeeOrArrayElementType()->isCharType())
+    return true;
+  else
+    return false;
+}
+
 RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
   assert(getTarget().getTriple().getArch() == llvm::Triple::amdgcn);
   assert(E->getBuiltinCallee() == Builtin::BIprintf ||
-         E->getBuiltinCallee() == Builtin::BI__builtin_printf);
+         E->getBuiltinCallee() == Builtin::BI__builtin_printf ||
+         E->getBuiltinCallee() == AMDGPU::BIprintf);
   assert(E->getNumArgs() >= 1); // printf always has at least one arg.
 
   CallArgList CallArgs;
@@ -189,6 +200,8 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
                E->getDirectCallee()->getType()->getAs<FunctionProtoType>(),
                E->arguments(), E->getDirectCallee(),
                /* ParamsToSkip = */ 0);
+  llvm::IRBuilder<> IRB(Builder.GetInsertBlock(), Builder.GetInsertPoint());
+  IRB.SetCurrentDebugLocation(Builder.getCurrentDebugLocation());
 
   SmallVector<llvm::Value *, 8> Args;
   for (const auto &A : CallArgs) {
@@ -199,14 +212,14 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
     }
 
     llvm::Value *Arg = A.getRValue(*this).getScalarVal();
+    if (isString(A.getType().getTypePtr()) && CGM.getLangOpts().OpenCL)
+      Arg = Builder.CreateAddrSpaceCast(Arg, CGM.Int8PtrTy);
     Args.push_back(Arg);
   }
 
-  llvm::IRBuilder<> IRB(Builder.GetInsertBlock(), Builder.GetInsertPoint());
-  IRB.SetCurrentDebugLocation(Builder.getCurrentDebugLocation());
-
-  bool isBuffered = (CGM.getTarget().getTargetOpts().AMDGPUPrintfKindVal ==
-                     clang::TargetOptions::AMDGPUPrintfKind::Buffered);
+  auto PFK = CGM.getTarget().getTargetOpts().AMDGPUPrintfKindVal;
+  bool isBuffered =
+       (PFK == clang::TargetOptions::AMDGPUPrintfKind::Buffered);
   auto Printf = llvm::emitAMDGPUPrintfCall(IRB, Args, isBuffered);
   Builder.SetInsertPoint(IRB.GetInsertBlock(), IRB.GetInsertPoint());
   return RValue::get(Printf);

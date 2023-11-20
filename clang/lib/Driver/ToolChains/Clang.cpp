@@ -4757,6 +4757,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.ClaimAllArgs(options::OPT_gen_cdb_fragment_path);
   }
 
+  if (TC.getTriple().isAMDGPU() && types::isOpenCL(Input.getType())) {
+    if (Args.getLastArg(options::OPT_mprintf_kind_EQ)) {
+      CmdArgs.push_back(Args.MakeArgString(
+          "-mprintf-kind=" +
+          Args.getLastArgValue(options::OPT_mprintf_kind_EQ)));
+      // Force compiler error on invalid conversion specifiers
+      CmdArgs.push_back(Args.MakeArgString("-Werror=format-invalid-specifier"));
+    }
+  }
+
   if (IsCuda || IsHIP) {
     // We have to pass the triple of the host if compiling for a CUDA/HIP device
     // and vice-versa.
