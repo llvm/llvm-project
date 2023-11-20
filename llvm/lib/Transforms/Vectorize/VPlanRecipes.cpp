@@ -517,7 +517,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     for (const auto &I : enumerate(operands())) {
       // Some intrinsics have a scalar argument - don't replace it with a
       // vector.
-      // Some vectorized function variants may take also take a scalar argument,
+      // Some vectorized function variants may also take a scalar argument,
       // e.g. linear parameters for pointers.
       Value *Arg;
       if ((VFTy && !VFTy->getParamType(I.index())->isVectorTy()) ||
