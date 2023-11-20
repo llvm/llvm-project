@@ -271,6 +271,8 @@ Error TextInstrProfReader::readHeader() {
       ProfileKind |= InstrProfKind::FunctionEntryInstrumentation;
     else if (Str.equals_insensitive("not_entry_first"))
       ProfileKind &= ~InstrProfKind::FunctionEntryInstrumentation;
+    else if (Str.equals_insensitive("single_byte_coverage"))
+      ProfileKind |= InstrProfKind::SingleByteCoverage;
     else if (Str.equals_insensitive("temporal_prof_traces")) {
       ProfileKind |= InstrProfKind::TemporalProfile;
       if (auto Err = readTemporalProfTraceData())
