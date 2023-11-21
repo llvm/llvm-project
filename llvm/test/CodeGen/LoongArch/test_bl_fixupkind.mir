@@ -1,14 +1,10 @@
-## Tagged as "Expectedly Failed" until the following patch fix it
-# XFAIL: *
 # RUN: llc --mtriple=loongarch64 --filetype=obj %s -o - | \
 # RUN: llvm-objdump -d - | FileCheck %s
 
 # REQUIRES: asserts
 
-## Check that bl can get fixupkind correctly.
-## When BL has target-flags(loongarch-call), there is no error. But without
-## this flag, an assertion error will appear:
-## Assertion `FixupKind != LoongArch::fixup_loongarch_invalid && "Unhandled expression!"' failed.
+## Check that bl can get fixupkind correctly, whether BL contains
+## target-flags(loongarch-call) or not.
 
 --- |
   target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
