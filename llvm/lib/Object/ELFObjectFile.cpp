@@ -33,7 +33,6 @@
 #include <optional>
 #include <string>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace object;
