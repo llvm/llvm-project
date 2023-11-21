@@ -1405,13 +1405,29 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
   Arguments<(ins  LLVM_PointerShared:$dstMem,
                   LLVM_AnyPointer:$tmaDescriptor,
                   LLVM_PointerShared:$mbar,
+                  Optional<I16>:$multicastMask,                  
                   Variadic<I32>:$coordinates,
                   PtxPredicate:$predicate)> {
+  let description = [{
+    Initiates an asynchronous copy operation on the tensor data from global 
+    memory to shared memory. 
+
+    The `multicastMask` operand is optional. When it is present, the Op copies
+    data from global memory to shared memory of multiple CTAs in the cluster.
+    Operand `multicastMask` specifies the destination CTAs in the cluster such 
+    that each bit position in the 16-bit `multicastMask` operand corresponds to
+     the `nvvm.read.ptx.sreg.ctaid` of the destination CTA.     
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor)
+  }];
+
   let assemblyFormat = [{ 
     $dstMem `,` 
     $tmaDescriptor `,` 
     $mbar `,` 
-    `box` `[`$coordinates `]` 
+    ( `multicast_mask` `=` $multicastMask^ `,` )?    
+    `box` `[`$coordinates `]`
     (`,` `predicate` `=` $predicate^)? 
     attr-dict  `:` type(operands)
   }];
@@ -1422,11 +1438,20 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
       std::string ptx = "cp.async.bulk.tensor.";
       ptx += std::to_string(dim) + "d.";
       ptx += "shared::cluster.global.mbarrier::complete_tx::bytes";
-      if(dim == 1) ptx += " [%0], [%1, {%3} ], [%2];";
-      if(dim == 2) ptx += " [%0], [%1, {%3, %4} ], [%2];";
-      if(dim == 3) ptx += " [%0], [%1, {%3, %4, %5} ], [%2];";
-      if(dim == 4) ptx += " [%0], [%1, {%3, %4, %5, %6} ], [%2];";
-      if(dim == 5) ptx += " [%0], [%1, {%3, %4, %5, %6, %7} ], [%2];";
+      if(getMulticastMask()) {
+        ptx += ".multicast::cluster";
+        if(dim == 1) ptx += " [%0], [%1, {%4} ], [%2], %3;";
+        if(dim == 2) ptx += " [%0], [%1, {%4, %5} ], [%2], %3;";
+        if(dim == 3) ptx += " [%0], [%1, {%4, %5, %6} ], [%2], %3;";
+        if(dim == 4) ptx += " [%0], [%1, {%4, %5, %6, %7} ], [%2], %3;";
+        if(dim == 5) ptx += " [%0], [%1, {%4, %5, %6, %7, %8} ], [%2], %3;";      
+      } else { 
+        if(dim == 1) ptx += " [%0], [%1, {%3} ], [%2];";
+        if(dim == 2) ptx += " [%0], [%1, {%3, %4} ], [%2];";
+        if(dim == 3) ptx += " [%0], [%1, {%3, %4, %5} ], [%2];";
+        if(dim == 4) ptx += " [%0], [%1, {%3, %4, %5, %6} ], [%2];";
+        if(dim == 5) ptx += " [%0], [%1, {%3, %4, %5, %6, %7} ], [%2];";
+      }
       return ptx;
     }
   }];

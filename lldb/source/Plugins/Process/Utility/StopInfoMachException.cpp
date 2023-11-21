@@ -495,10 +495,6 @@ static StopInfoSP GetStopInfoForHardwareBP(Thread &thread, Target *target,
     lldb::WatchpointSP wp_sp =
         target->GetWatchpointList().FindByAddress((lldb::addr_t)exc_sub_code);
     if (wp_sp && wp_sp->IsEnabled()) {
-      // Debugserver may piggyback the hardware index of the fired watchpoint
-      // in the exception data. Set the hardware index if that's the case.
-      if (exc_data_count >= 3)
-        wp_sp->SetHardwareIndex((uint32_t)exc_sub_sub_code);
       return StopInfo::CreateStopReasonWithWatchpointID(thread, wp_sp->GetID());
     }
   }
@@ -511,10 +507,6 @@ static StopInfoSP GetStopInfoForHardwareBP(Thread &thread, Target *target,
         process_sp->GetBreakpointSiteList().FindByAddress(
             (lldb::addr_t)exc_sub_code);
     if (bp_sp && bp_sp->IsEnabled()) {
-      // Debugserver may piggyback the hardware index of the fired breakpoint
-      // in the exception data. Set the hardware index if that's the case.
-      if (exc_data_count >= 3)
-        bp_sp->SetHardwareIndex((uint32_t)exc_sub_sub_code);
       return StopInfo::CreateStopReasonWithBreakpointSiteID(thread,
                                                             bp_sp->GetID());
     }
@@ -681,11 +673,6 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
           wp_sp = target->GetWatchpointList().FindByAddress(
               (lldb::addr_t)exc_sub_code);
         if (wp_sp && wp_sp->IsEnabled()) {
-          // Debugserver may piggyback the hardware index of the fired
-          // watchpoint in the exception data. Set the hardware index if
-          // that's the case.
-          if (exc_data_count >= 3)
-            wp_sp->SetHardwareIndex((uint32_t)exc_sub_sub_code);
           return StopInfo::CreateStopReasonWithWatchpointID(thread,
                                                             wp_sp->GetID());
         } else {
@@ -762,11 +749,6 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
           wp_sp = target->GetWatchpointList().FindByAddress(
               (lldb::addr_t)exc_sub_code);
         if (wp_sp && wp_sp->IsEnabled()) {
-          // Debugserver may piggyback the hardware index of the fired
-          // watchpoint in the exception data. Set the hardware index if
-          // that's the case.
-          if (exc_data_count >= 3)
-            wp_sp->SetHardwareIndex((uint32_t)exc_sub_sub_code);
           return StopInfo::CreateStopReasonWithWatchpointID(thread,
                                                             wp_sp->GetID());
         }

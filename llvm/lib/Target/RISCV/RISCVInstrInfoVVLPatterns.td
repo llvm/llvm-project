@@ -585,8 +585,6 @@ def SplatPat_simm5_plus1_nonzero
 def Low8BitsSplatPat
     : ComplexPattern<vAny, 1, "selectLow8BitsVSplat", [], [], 2>;
 
-def SelectFPImm : ComplexPattern<fAny, 1, "selectFPImm", [], [], 1>;
-
 // Ignore the vl operand on vmv_v_f, and vmv_s_f.
 def SplatFPOp : PatFrags<(ops node:$op),
                          [(riscv_vfmv_v_f_vl undef, node:$op, srcvalue),

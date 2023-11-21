@@ -205,7 +205,7 @@ CHECK-NEXT: 0x00000028: 000000dc "int"
 CHECK: .debug_names contents:
 CHECK-NEXT: Name Index @ 0x0 {
 CHECK-NEXT:   Header {
-CHECK-NEXT:     Length: 0xBC
+CHECK-NEXT:     Length: 0xC4
 CHECK-NEXT:     Format: DWARF32
 CHECK-NEXT:     Version: 5
 CHECK-NEXT:     CU count: 2
@@ -213,6 +213,6 @@ CHECK-NEXT:     Local TU count: 0
 CHECK-NEXT:     Foreign TU count: 0
 CHECK-NEXT:     Bucket count: 5
 CHECK-NEXT:     Name count: 5
-CHECK-NEXT:     Abbreviations table size: 0x11
+CHECK-NEXT:     Abbreviations table size: 0x13
 CHECK-NEXT:     Augmentation: 'LLVM0700'
 CHECK-NEXT:   }

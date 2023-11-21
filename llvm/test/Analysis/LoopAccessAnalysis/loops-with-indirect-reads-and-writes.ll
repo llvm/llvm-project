@@ -8,8 +8,6 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 ; the loops are safe with runtime checks via FoundNonConstantDistanceDependence
 ; handling code in LAA.
 
-; FIXME: Not safe with runtime checks due to the indirect pointers are modified
-;        in the loop.
 define void @test_indirect_read_write_loop_also_modifies_pointer_array(ptr noundef %arr) {
 ; CHECK-LABEL: 'test_indirect_read_write_loop_also_modifies_pointer_array'
 ; CHECK-NEXT:    loop.1:
@@ -23,21 +21,19 @@ define void @test_indirect_read_write_loop_also_modifies_pointer_array(ptr nound
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:    loop.2:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndidrectUnsafe:
+; CHECK-NEXT:            %l.2 = load i64, ptr %l.1, align 8, !tbaa !4 ->
+; CHECK-NEXT:            store i64 %inc, ptr %l.1, align 8, !tbaa !4
+; CHECK-EMPTY:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %l.1 = load ptr, ptr %gep.iv.1, align 8, !tbaa !0 ->
+; CHECK-NEXT:            store ptr %l.1, ptr %gep.iv.2, align 8, !tbaa !0
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds ptr, ptr %arr, i64 %iv.2
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.iv.1 = getelementptr inbounds ptr, ptr %arr, i64 %iv.1
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
-; CHECK-NEXT:          (Low: {(64 + %arr),+,64}<%loop.1> High: {(8064 + %arr),+,64}<%loop.1>)
-; CHECK-NEXT:            Member: {{\{\{}}(64 + %arr),+,64}<%loop.1>,+,8}<%loop.2>
-; CHECK-NEXT:        Group [[GRP2]]:
-; CHECK-NEXT:          (Low: %arr High: (8000 + %arr))
-; CHECK-NEXT:            Member: {%arr,+,8}<nuw><%loop.2>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -96,15 +92,15 @@ define void @test_indirect_read_loop_also_modifies_pointer_array(ptr noundef %ar
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds i64, ptr %arr, i64 %iv.2
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.iv.1 = getelementptr inbounds ptr, ptr %arr, i64 %iv.1
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group [[GRP1]]:
 ; CHECK-NEXT:          (Low: {(64 + %arr),+,64}<%loop.1> High: {(8064 + %arr),+,64}<%loop.1>)
 ; CHECK-NEXT:            Member: {{\{\{}}(64 + %arr),+,64}<%loop.1>,+,8}<%loop.2>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group [[GRP2]]:
 ; CHECK-NEXT:          (Low: %arr High: (8000 + %arr))
 ; CHECK-NEXT:            Member: {%arr,+,8}<nuw><%loop.2>
 ; CHECK-EMPTY:
@@ -164,15 +160,15 @@ define void @test_indirect_write_loop_also_modifies_pointer_array(ptr noundef %a
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds ptr, ptr %arr, i64 %iv.2
-; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.iv.1 = getelementptr inbounds ptr, ptr %arr, i64 %iv.1
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:        Group [[GRP3]]:
 ; CHECK-NEXT:          (Low: {(64 + %arr),+,64}<%loop.1> High: {(8064 + %arr),+,64}<%loop.1>)
 ; CHECK-NEXT:            Member: {{\{\{}}(64 + %arr),+,64}<%loop.1>,+,8}<%loop.2>
-; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:        Group [[GRP4]]:
 ; CHECK-NEXT:          (Low: %arr High: (8000 + %arr))
 ; CHECK-NEXT:            Member: {%arr,+,8}<nuw><%loop.2>
 ; CHECK-EMPTY:
@@ -230,21 +226,19 @@ define void @test_indirect_read_write_loop_does_not_modify_pointer_array(ptr nou
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:    loop.2:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndidrectUnsafe:
+; CHECK-NEXT:            %l.2 = load i64, ptr %l.1, align 8, !tbaa !4 ->
+; CHECK-NEXT:            store i64 %inc, ptr %l.1, align 8, !tbaa !4
+; CHECK-EMPTY:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %l.3 = load i64, ptr %gep.arr2.iv.1, align 8 ->
+; CHECK-NEXT:            store i64 %inc.2, ptr %gep.arr2.iv.2, align 8, !tbaa !0
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP7:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.arr2.iv.2 = getelementptr inbounds i64, ptr %arr2, i64 %iv.2
-; CHECK-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.arr2.iv.1 = getelementptr inbounds i64, ptr %arr2, i64 %iv.1
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP7]]:
-; CHECK-NEXT:          (Low: {(64 + %arr2),+,64}<%loop.1> High: {(8064 + %arr2),+,64}<%loop.1>)
-; CHECK-NEXT:            Member: {{\{\{}}(64 + %arr2),+,64}<%loop.1>,+,8}<%loop.2>
-; CHECK-NEXT:        Group [[GRP8]]:
-; CHECK-NEXT:          (Low: %arr2 High: (8000 + %arr2))
-; CHECK-NEXT:            Member: {%arr2,+,8}<nuw><%loop.2>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

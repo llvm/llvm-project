@@ -8430,7 +8430,7 @@ bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
   }
 
   LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-      Context.getLangOpts().getStrictFlexArraysLevel();
+      LangOptions::StrictFlexArraysLevelKind::IncompleteOnly;
 
   if (!Decl::isFlexibleArrayMemberLike(Context, FD, FD->getType(),
                                        StrictFlexArraysLevel, true)) {

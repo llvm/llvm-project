@@ -176,6 +176,7 @@ enum Kind {
   kw_amdgpu_gfx,
   kw_tailcc,
   kw_m68k_rtdcc,
+  kw_graalcc,
 
   // Attributes:
   kw_attributes,
