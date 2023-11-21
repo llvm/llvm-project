@@ -21,8 +21,8 @@ extern "C" {
 // 16.9.83 EXECUTE_COMMAND_LINE
 // Execute a command line.
 // Returns a EXITSTAT, CMDSTAT, and CMDMSG as described in the standard.
-std::int32_t RTNAME(ExecuteCommandLine)(const Descriptor *command = nullptr,
-    bool wait = false, const Descriptor *exitstat = nullptr,
+void RTNAME(ExecuteCommandLine)(const Descriptor *command = nullptr,
+    bool wait = true, const Descriptor *exitstat = nullptr,
     const Descriptor *cmdstat = nullptr, const Descriptor *cmdmsg = nullptr,
     const char *sourceFile = nullptr, int line = 0);
 }

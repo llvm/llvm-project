@@ -13,23 +13,17 @@
 #include "tools.h"
 #include "flang/Runtime/descriptor.h"
 #include <cstdlib>
-// #include <iostream>
-// #include <string>
+#include <future>
 #include <limits>
+#ifdef _WIN32
+#define LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 namespace Fortran::runtime {
-
-// Returns the length of the \p string. Assumes \p string is valid.
-static std::int64_t StringLength(const char *string) {
-  std::size_t length{std::strlen(string)};
-  if constexpr (sizeof(std::size_t) < sizeof(std::int64_t)) {
-    return static_cast<std::int64_t>(length);
-  } else {
-    std::size_t max{std::numeric_limits<std::int64_t>::max()};
-    return length > max ? 0 // Just fail.
-                        : static_cast<std::int64_t>(length);
-  }
-}
 
 static bool IsValidCharDescriptor(const Descriptor *value) {
   return value && value->IsAllocated() &&
@@ -71,27 +65,6 @@ static std::int32_t CopyToDescriptor(const Descriptor &value,
   return StatOk;
 }
 
-static std::int32_t CheckAndCopyToDescriptor(const Descriptor *value,
-    const char *rawValue, const Descriptor *errmsg, std::size_t &offset) {
-  bool haveValue{IsValidCharDescriptor(value)};
-
-  std::int64_t len{StringLength(rawValue)};
-  if (len <= 0) {
-    if (haveValue) {
-      FillWithSpaces(*value);
-    }
-    return ToErrmsg(errmsg, StatMissingArgument);
-  }
-
-  std::int32_t stat{StatOk};
-  if (haveValue) {
-    stat = CopyToDescriptor(*value, rawValue, len, errmsg, offset);
-  }
-
-  offset += len;
-  return stat;
-}
-
 static void StoreIntToDescriptor(
     const Descriptor *intVal, std::int64_t value, Terminator &terminator) {
   auto typeCode{intVal->type().GetCategoryAndKind()};
@@ -111,30 +84,75 @@ template <int KIND> struct FitsInIntegerKind {
   }
 };
 
-static bool FitsInDescriptor(
-    const Descriptor *length, std::int64_t value, Terminator &terminator) {
-  auto typeCode{length->type().GetCategoryAndKind()};
-  int kind{typeCode->second};
-  return Fortran::runtime::ApplyIntegerKind<FitsInIntegerKind, bool>(
-      kind, terminator, value);
-}
-
-std::int32_t RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
+void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
     const Descriptor *exitstat, const Descriptor *cmdstat,
     const Descriptor *cmdmsg, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
 
   int exitstatVal;
   int cmdstatVal;
+  pid_t pid;
+  std::array<char, 30> cmdstr;
+  cmdstr.fill(' ');
+
+  // cmdstat specified in 16.9.73
+  // It is assigned the value −1 if the processor does not support command
+  // line execution, a processor-dependent positive value if an error
+  // condition occurs, or the value −2 if no error condition occurs but WAIT
+  // is present with the value false and the processor does not support
+  // asynchronous execution. Otherwise it is assigned the value 0
+  enum CMD_STAT {
+    ASYNC_NO_SUPPORT_ERR = -2,
+    NO_SUPPORT_ERR = -1,
+    CMD_EXECUTED = 0,
+    FORK_ERR = 1,
+    EXECL_ERR = 2,
+    SIGNAL_ERR = 3
+  };
+
+  if (command) {
+    RUNTIME_CHECK(terminator, IsValidCharDescriptor(command));
+  }
 
   if (wait) {
-    // RUNTIME_CHECK(terminator, IsValidLogicalDescriptor(wait));
-    // if (wait)
+    // either wait is not specified or wait is true: synchronous mode
+    exitstatVal = std::system(command->OffsetElement());
+    cmdstatVal = CMD_EXECUTED;
   } else {
-    if (command) {
-      RUNTIME_CHECK(terminator, IsValidCharDescriptor(command));
-      exitstatVal = std::system(command->OffsetElement());
+// Asynchronous mode, Windows doesn't support fork()
+#ifdef _WIN32
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+
+    if (CreateProcess(nullptr, const_cast<char *>(cmd), nullptr, nullptr, FALSE,
+            0, nullptr, nullptr, &si, &pi)) {
+      if (!GetExitCodeProcess(pi.hProcess, (DWORD)&exitstatVal)) {
+        cmdstatVal = (uint32_t)GetLastError();
+        std::strncpy(cmdstr.data(), "GetExitCodeProcess failed.", 26);
+      } else {
+        cmdstatVal = CMD_EXECUTED;
+      }
+    } else {
+      cmdstatVal = (uint32_t)GetLastError();
+      std::strncpy(cmdstr.data(), "CreateProcess failed.", 21);
     }
+
+#else
+    pid = fork();
+    if (pid < 0) {
+      std::strncpy(cmdstr.data(), "Fork failed", 11);
+      cmdstatVal = FORK_ERR;
+    } else if (pid == 0) {
+      exitstatVal =
+          execl("/bin/sh", "sh", "-c", command->OffsetElement(), (char *)NULL);
+      cmdstatVal = CMD_EXECUTED;
+      std::strncpy(cmdstr.data(), "Command executed.", 17);
+    }
+#endif
   }
 
   if (exitstat) {
@@ -144,19 +162,14 @@ std::int32_t RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
 
   if (cmdstat) {
     RUNTIME_CHECK(terminator, IsValidIntDescriptor(cmdstat));
-    StoreIntToDescriptor(cmdstat, 0, terminator);
+    StoreIntToDescriptor(cmdstat, cmdstatVal, terminator);
   }
 
   if (cmdmsg) {
     RUNTIME_CHECK(terminator, IsValidCharDescriptor(cmdmsg));
-    std::array<char, 5> str;
-    str.fill('f');
-    CopyToDescriptor(*cmdmsg, str.data(), str.size(), nullptr);
+    FillWithSpaces(*cmdmsg);
+    CopyToDescriptor(*cmdmsg, cmdstr.data(), cmdstr.size(), nullptr);
   }
-
-  // TODO
-
-  return StatOk;
 }
 
 } // namespace Fortran::runtime
