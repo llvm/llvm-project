@@ -32,8 +32,7 @@ StackTracePrinter *StackTracePrinter::GetOrInit() {
   return stacktrace_printer;
 }
 
-const char *FormattedStackTracePrinter::StripFunctionName(
-    const char *function) {
+const char *StackTracePrinter::StripFunctionName(const char *function) {
   if (!common_flags()->demangle)
     return function;
   if (!function)
@@ -324,9 +323,10 @@ void FormattedStackTracePrinter::RenderData(InternalScopedString *buffer,
 
 #endif  // !SANITIZER_SYMBOLIZER_MARKUP
 
-void FormattedStackTracePrinter::RenderSourceLocation(
-    InternalScopedString *buffer, const char *file, int line, int column,
-    bool vs_style, const char *strip_path_prefix) {
+void StackTracePrinter::RenderSourceLocation(InternalScopedString *buffer,
+                                             const char *file, int line,
+                                             int column, bool vs_style,
+                                             const char *strip_path_prefix) {
   if (vs_style && line > 0) {
     buffer->AppendF("%s(%d", StripPathPrefix(file, strip_path_prefix), line);
     if (column > 0)
@@ -343,9 +343,10 @@ void FormattedStackTracePrinter::RenderSourceLocation(
   }
 }
 
-void FormattedStackTracePrinter::RenderModuleLocation(
-    InternalScopedString *buffer, const char *module, uptr offset,
-    ModuleArch arch, const char *strip_path_prefix) {
+void StackTracePrinter::RenderModuleLocation(InternalScopedString *buffer,
+                                             const char *module, uptr offset,
+                                             ModuleArch arch,
+                                             const char *strip_path_prefix) {
   buffer->AppendF("(%s", StripPathPrefix(module, strip_path_prefix));
   if (arch != kModuleArchUnknown) {
     buffer->AppendF(":%s", ModuleArchToString(arch));
