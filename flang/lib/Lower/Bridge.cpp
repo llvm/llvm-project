@@ -3095,6 +3095,16 @@ private:
       const Fortran::lower::SomeExpr *expr =
           Fortran::semantics::GetExpr(pointerObject);
       assert(expr);
+      if (Fortran::evaluate::IsProcedurePointer(*expr)) {
+        Fortran::lower::StatementContext stmtCtx;
+        hlfir::Entity pptr = Fortran::lower::convertExprToHLFIR(
+            loc, *this, *expr, localSymbols, stmtCtx);
+        auto boxTy{Fortran::lower::getUntypedBoxProcType(&getMLIRContext())};
+        hlfir::Entity nullBoxProc(
+            fir::factory::createNullBoxProc(*builder, loc, boxTy));
+        builder->createStoreWithConvert(loc, nullBoxProc, pptr);
+        return;
+      }
       fir::MutableBoxValue box = genExprMutableBox(loc, *expr);
       fir::factory::disassociateMutableBox(*builder, loc, box);
     }
