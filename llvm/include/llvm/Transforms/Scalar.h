@@ -41,16 +41,6 @@ FunctionPass *createDeadCodeEliminationPass();
 
 //===----------------------------------------------------------------------===//
 //
-// LoopGuardWidening - Analogous to the GuardWidening pass, but restricted to a
-// single loop at a time for use within a LoopPassManager.  Desired effect is
-// to widen guards into preheader or a single guard within loop if that's not
-// possible.
-//
-Pass *createLoopGuardWideningPass();
-
-
-//===----------------------------------------------------------------------===//
-//
 // SROA - Replace aggregates or pieces of aggregates with scalar SSA values.
 //
 FunctionPass *createSROAPass(bool PreserveCFG = true);
