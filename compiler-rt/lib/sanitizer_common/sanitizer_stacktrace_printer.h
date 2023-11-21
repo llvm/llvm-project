@@ -46,6 +46,10 @@ class StackTracePrinter {
                           const DataInfo *DI,
                           const char *strip_path_prefix = "") = 0;
 
+ private:
+  // To be called from StackTracePrinter::GetOrInit
+  static StackTracePrinter *NewStackTracePrinter();
+
  protected:
   ~StackTracePrinter() {}
 };
