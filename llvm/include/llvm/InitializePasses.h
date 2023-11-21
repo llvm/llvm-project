@@ -83,7 +83,6 @@ void initializeCheckDebugMachineModulePass(PassRegistry &);
 void initializeCodeGenPreparePass(PassRegistry&);
 void initializeComplexDeinterleavingLegacyPassPass(PassRegistry&);
 void initializeConstantHoistingLegacyPassPass(PassRegistry&);
-void initializeCostModelAnalysisPass(PassRegistry&);
 void initializeCycleInfoWrapperPassPass(PassRegistry &);
 void initializeDAEPass(PassRegistry&);
 void initializeDAHPass(PassRegistry&);
