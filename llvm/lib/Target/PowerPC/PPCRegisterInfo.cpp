@@ -660,10 +660,9 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
           continue;
         // PhysReg as hint to avoid potential split. Current
         // getRegAllocationHints doesn't interface LiveInterval, so the
-        // interference check is not viable. In the other side, CRs don't
-        // live cross multiple BBs in common cases, so checking
-        // interference
-        // might help rare seen cases.
+        // interference check is not viable. In the other side, CRs don't live
+        // cross multiple BBs in common cases, so checking interference might
+        // help rare seen cases.
         if (VRM->hasPhys(MO.getReg()))
           llvm::copy_if(
               TRI->superregs_inclusive(VRM->getPhys(MO.getReg())),
