@@ -182,7 +182,7 @@ static StringRef getSubsection(StringRef Section,
 
 static Error sectionOverflowErrorOrWarning(
     uint32_t PrevOffset, uint32_t OverflowedOffset, StringRef SectionName,
-    const OnCuIndexOverflow &overflowOptValue, bool &SeeOverflowFlag) {
+    const OnCuIndexOverflow &OverflowOptValue, bool &SeeOverflowFlag) {
   std::string Msg =
       (SectionName +
        Twine(" Section Contribution Offset overflow 4G. Previous Offset ") +
@@ -238,7 +238,7 @@ static Error addAllTypesFromDWP(
     if (OldOffset > TypesOffset) {
       if (Error Err =
               sectionOverflowErrorOrWarning(OldOffset, TypesOffset, "Types",
-                                            overflowOptValue, SeeOverflowFlag))
+                                            OverflowOptValue, SeeOverflowFlag))
         return Err;
       return Error::success();
     }
@@ -280,7 +280,7 @@ static Error addAllTypesFromTypesSection(
       TypesOffset += C.getLength32();
       if (OldOffset > TypesOffset) {
         if (Error Err = sectionOverflowErrorOrWarning(OldOffset, TypesOffset,
-                                                      "Types", overflowOptValue,
+                                                      "Types", OverflowOptValue,
                                                       SeeOverflowFlag))
           return Err;
         return Error::success();
