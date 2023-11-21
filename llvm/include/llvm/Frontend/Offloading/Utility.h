@@ -12,10 +12,14 @@
 namespace llvm {
 namespace offloading {
 
+/// Returns the type of the offloading entry we use to store kernels and
+/// globals that will be registered with the offloading runtime.
+StructType *getEntryTy(Module &M);
+
 /// Create an offloading section struct used to register this global at
 /// runtime.
 ///
-/// Type struct __tgt_offload_entry{
+/// Type struct __tgt_offload_entry {
 ///   void    *addr;      // Pointer to the offload entry info.
 ///                       // (function or global)
 ///   char    *name;      // Name of the function or global.
@@ -32,6 +36,11 @@ namespace offloading {
 /// \param SectionName The section this entry will be placed at.
 void emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
                          uint64_t Size, int32_t Flags, StringRef SectionName);
+
+/// Creates a pair of globals used to iterate the array of offloading entries by
+/// accessing the section variables provided by the linker.
+std::pair<GlobalVariable *, GlobalVariable *>
+getOffloadEntryArray(Module &M, StringRef SectionName);
 
 } // namespace offloading
 } // namespace llvm

@@ -819,7 +819,7 @@ define i32 @extelt_select_const_operand_select_use(i1 %c) {
 ; ANY-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <3 x i32> <i32 poison, i32 3, i32 4>, <3 x i32> <i32 poison, i32 6, i32 7>
 ; ANY-NEXT:    [[E:%.*]] = extractelement <3 x i32> [[S]], i64 2
 ; ANY-NEXT:    [[E_2:%.*]] = extractelement <3 x i32> [[S]], i64 1
-; ANY-NEXT:    [[R:%.*]] = mul i32 [[E]], [[E_2]]
+; ANY-NEXT:    [[R:%.*]] = mul nuw nsw i32 [[E]], [[E_2]]
 ; ANY-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %c, <3 x i32> <i32 2, i32 3, i32 4>, <3 x i32> <i32 5, i32 6, i32 7>

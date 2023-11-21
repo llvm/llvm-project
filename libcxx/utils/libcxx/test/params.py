@@ -114,7 +114,7 @@ DEFAULT_PARAMETERS = [
         ),
         actions=lambda std: [
             AddFeature(std),
-            AddSubstitution("%{cxx_std}", re.sub("\+", "x", std)),
+            AddSubstitution("%{cxx_std}", re.sub(r"\+", "x", std)),
             AddCompileFlag(lambda cfg: getStdFlag(cfg, std)),
         ],
     ),
@@ -187,7 +187,7 @@ DEFAULT_PARAMETERS = [
                 AddFeature("stdlib={}".format(stdlib)),
                 # Also add an umbrella feature 'stdlib=libc++' for all flavors of libc++, to simplify
                 # the test suite.
-                AddFeature("stdlib=libc++") if re.match(".+-libc\+\+", stdlib) else None,
+                AddFeature("stdlib=libc++") if re.match(r".+-libc\+\+", stdlib) else None,
             ],
         ),
     ),

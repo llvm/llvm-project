@@ -13,7 +13,7 @@ from mlir.dialects import sparse_tensor as st
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
-from tools import sparse_compiler
+from tools import sparsifier
 
 
 def boilerplate(attr: st.EncodingAttr):
@@ -135,7 +135,7 @@ def main():
             (ir.AffineMap.get_permutation([1, 0]), 1),
         ]
         bitwidths = [8, 64]
-        compiler = sparse_compiler.SparseCompiler(
+        compiler = sparsifier.Sparsifier(
             options="", opt_level=2, shared_libs=[support_lib]
         )
         for level in levels:

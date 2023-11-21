@@ -16,7 +16,7 @@ from mlir.dialects.linalg.opdsl import lang as dsl
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
-from tools import sparse_compiler
+from tools import sparsifier
 
 
 @dsl.linalg_structured_op
@@ -137,7 +137,7 @@ def main():
             ir.AffineMap.get_permutation([1, 0]),
         ]
         bitwidths = [0]
-        compiler = sparse_compiler.SparseCompiler(
+        compiler = sparsifier.Sparsifier(
             options=opt, opt_level=0, shared_libs=[support_lib]
         )
         for level in levels:

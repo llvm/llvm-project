@@ -2007,6 +2007,20 @@ let TargetGuard = "sme2" in {
   defm MIN_MULTI_X4  : MinMaxIntr<"min", "",        "x4", "444">;
 }
 
+multiclass SInstMinMaxByVector<string name> {
+  def NAME # _SINGLE_X2 : SInst<"sv" # name # "nm[_single_{d}_x2]", "22d", "hfd", MergeNone, "aarch64_sve_f" # name # "nm_single_x2", [IsStreaming], []>;
+  def NAME # _SINGLE_X4 : SInst<"sv" # name # "nm[_single_{d}_x4]", "44d", "hfd", MergeNone, "aarch64_sve_f" # name # "nm_single_x4", [IsStreaming], []>;
+
+  def NAME # _X2 : SInst<"sv" # name # "nm[_{d}_x2]", "222", "hfd", MergeNone, "aarch64_sve_f" # name # "nm_x2", [IsStreaming], []>;
+  def NAME # _X4 : SInst<"sv" # name # "nm[_{d}_x4]", "444", "hfd", MergeNone, "aarch64_sve_f" # name # "nm_x4", [IsStreaming], []>;
+}
+
+let TargetGuard = "sme2" in {
+// == FMINNM / FMAXNM ==
+  defm SVMINNM : SInstMinMaxByVector<"min">;
+  defm SVMAXNM : SInstMinMaxByVector<"max">;
+}
+
 let TargetGuard = "sme2" in {
 // == ADD (vectors) ==
   def SVADD_SINGLE_X2 : SInst<"svadd[_single_{d}_x2]", "22d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x2", [IsStreaming], []>;

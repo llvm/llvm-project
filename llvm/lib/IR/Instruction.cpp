@@ -146,6 +146,8 @@ void Instruction::insertBefore(BasicBlock &BB,
   bool InsertAtHead = InsertPos.getHeadBit();
   if (!InsertAtHead) {
     DPMarker *SrcMarker = BB.getMarker(InsertPos);
+    if (!SrcMarker)
+      SrcMarker = BB.createMarker(InsertPos);
     DbgMarker->absorbDebugValues(*SrcMarker, false);
   }
 

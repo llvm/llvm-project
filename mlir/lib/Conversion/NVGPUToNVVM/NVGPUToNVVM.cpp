@@ -975,7 +975,7 @@ struct NVGPUTmaAsyncLoadOpLowering
     }
 
     rewriter.replaceOpWithNewOp<NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp>(
-        op, dest, adaptor.getTensorMapDescriptor(), barrier, coords,
+        op, dest, adaptor.getTensorMapDescriptor(), barrier, Value(), coords,
         adaptor.getPredicate());
     return success();
   }

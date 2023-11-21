@@ -44,32 +44,16 @@ TEST(AArch32_ELF, readAddendArmErrors) {
                             sizeof(ArmWord));
   auto &BArm = G->createContentBlock(Sec, ArmContent, B1DummyAddr, ArmAlignment,
                                      AlignmentOffset);
-  Symbol &TargetSymbol =
-      G->addAnonymousSymbol(BArm, SymbolOffset, SymbolSize, false, false);
-  Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
-                   0 /*Addend*/);
+  Edge::Kind Invalid = Edge::GenericEdgeKind::Invalid;
 
-  // Edge kind is tested, block itself is not significant here. So it is tested
-  // once in Arm
-  EXPECT_THAT_EXPECTED(readAddendData(*G, BArm, InvalidEdge),
-                       FailedWithMessage(testing::HasSubstr(
-                           "can not read implicit addend for aarch32 edge kind "
-                           "INVALID RELOCATION")));
-
-  EXPECT_THAT_EXPECTED(readAddendArm(*G, BArm, InvalidEdge),
-                       FailedWithMessage(testing::HasSubstr(
-                           "can not read implicit addend for aarch32 edge kind "
-                           "INVALID RELOCATION")));
-
-  EXPECT_THAT_EXPECTED(readAddendThumb(*G, BArm, InvalidEdge, ArmCfg),
+  EXPECT_THAT_EXPECTED(readAddend(*G, BArm, SymbolOffset, Invalid, ArmCfg),
                        FailedWithMessage(testing::HasSubstr(
                            "can not read implicit addend for aarch32 edge kind "
                            "INVALID RELOCATION")));
 
   for (Edge::Kind K = FirstArmRelocation; K < LastArmRelocation; K += 1) {
-    Edge E(K, 0, TargetSymbol, 0);
     EXPECT_THAT_EXPECTED(
-        readAddendArm(*G, BArm, E),
+        readAddend(*G, BArm, SymbolOffset, K, ArmCfg),
         FailedWithMessage(testing::StartsWith("Invalid opcode")));
   }
 }
@@ -90,15 +74,10 @@ TEST(AArch32_ELF, readAddendThumbErrors) {
                               sizeof(ThumbHalfWords));
   auto &BThumb = G->createContentBlock(Sec, ThumbContent, B2DummyAddr,
                                        ThumbAlignment, AlignmentOffset);
-  Symbol &TargetSymbol =
-      G->addAnonymousSymbol(BThumb, SymbolOffset, SymbolSize, false, false);
-  Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
-                   0 /*Addend*/);
 
   for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
-    Edge E(K, 0, TargetSymbol, 0);
     EXPECT_THAT_EXPECTED(
-        readAddendThumb(*G, BThumb, E, ArmCfg),
+        readAddend(*G, BThumb, SymbolOffset, K, ArmCfg),
         FailedWithMessage(testing::StartsWith("Invalid opcode")));
   }
 }
@@ -119,24 +98,14 @@ TEST(AArch32_ELF, applyFixupArmErrors) {
   Edge InvalidEdge(Edge::GenericEdgeKind::Invalid, 0 /*Offset*/, TargetSymbol,
                    0 /*Addend*/);
 
-  // Edge kind is tested, block itself is not significant here. So it is tested
-  // once in Arm
   EXPECT_THAT_ERROR(
-      applyFixupData(*G, BArm, InvalidEdge),
-      FailedWithMessage(testing::HasSubstr(
-          "encountered unfixable aarch32 edge kind INVALID RELOCATION")));
-  EXPECT_THAT_ERROR(
-      applyFixupArm(*G, BArm, InvalidEdge),
-      FailedWithMessage(testing::HasSubstr(
-          "encountered unfixable aarch32 edge kind INVALID RELOCATION")));
-  EXPECT_THAT_ERROR(
-      applyFixupThumb(*G, BArm, InvalidEdge, ArmCfg),
+      applyFixup(*G, BArm, InvalidEdge, ArmCfg),
       FailedWithMessage(testing::HasSubstr(
           "encountered unfixable aarch32 edge kind INVALID RELOCATION")));
 
   for (Edge::Kind K = FirstArmRelocation; K < LastArmRelocation; K += 1) {
     Edge E(K, 0, TargetSymbol, 0);
-    EXPECT_THAT_ERROR(applyFixupArm(*G, BArm, E),
+    EXPECT_THAT_ERROR(applyFixup(*G, BArm, E, ArmCfg),
                       FailedWithMessage(testing::AllOf(
                           testing::StartsWith("Invalid opcode"),
                           testing::EndsWith(G->getEdgeKindName(K)))));
@@ -177,7 +146,7 @@ TEST(AArch32_ELF, applyFixupThumbErrors) {
 
   for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
     Edge E(K, 0, TargetSymbol, 0);
-    EXPECT_THAT_ERROR(applyFixupThumb(*G, BThumb, E, ArmCfg),
+    EXPECT_THAT_ERROR(applyFixup(*G, BThumb, E, ArmCfg),
                       FailedWithMessage(testing::AllOf(
                           testing::StartsWith("Invalid opcode"),
                           testing::EndsWith(G->getEdgeKindName(K)))));

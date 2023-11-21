@@ -92,11 +92,12 @@ def EmitC_ApplyOp : EmitC_Op<"apply", []> {
   let hasVerifier = 1;
 }
 
-def EmitC_CallOp : EmitC_Op<"call", []> {
-  let summary = "Call operation";
+def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", []> {
+  let summary = "Opaque call operation";
   let description = [{
-    The `call` operation represents a C++ function call. The call allows
-    specifying order of operands and attributes in the call as follows:
+    The `call_opaque` operation represents a C++ function call. The callee
+    can be an arbitrary non-empty string. The call allows specifying order
+    of operands and attributes in the call as follows:
 
     - integer value of index type refers to an operand;
     - attribute which will get lowered to constant value in call;
@@ -105,10 +106,10 @@ def EmitC_CallOp : EmitC_Op<"call", []> {
 
     ```mlir
     // Custom form defining a call to `foo()`.
-    %0 = emitc.call "foo" () : () -> i32
+    %0 = emitc.call_opaque "foo" () : () -> i32
 
     // Generic form of the same operation.
-    %0 = "emitc.call"() {callee = "foo"} : () -> i32
+    %0 = "emitc.call_opaque"() {callee = "foo"} : () -> i32
     ```
   }];
   let arguments = (ins
@@ -454,7 +455,8 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
     %1 = "emitc.variable"() {value = 0 : i32} : () -> i32
     %2 = emitc.apply "&"(%0) : (i32) -> !emitc.ptr<i32>
     %3 = emitc.apply "&"(%1) : (i32) -> !emitc.ptr<i32>
-    emitc.call "write"(%2, %3) : (!emitc.ptr<i32>, !emitc.ptr<i32>) -> ()
+    emitc.call_opaque "write"(%2, %3)
+      : (!emitc.ptr<i32>, !emitc.ptr<i32>) -> ()
     ```
   }];
 
@@ -477,7 +479,7 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
     ```mlir
     // Integer variable
     %0 = "emitc.variable"(){value = 42 : i32} : () -> i32
-    %1 = emitc.call "foo"() : () -> (i32)
+    %1 = emitc.call_opaque "foo"() : () -> (i32)
 
     // Assign emitted as `... = ...;`
     "emitc.assign"(%0, %1) : (i32, i32) -> ()

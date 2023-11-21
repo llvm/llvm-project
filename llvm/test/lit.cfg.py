@@ -271,7 +271,7 @@ def ptxas_version(ptxas):
     ptxas_cmd = subprocess.Popen([ptxas, "--version"], stdout=subprocess.PIPE)
     ptxas_out = ptxas_cmd.stdout.read().decode("ascii")
     ptxas_cmd.wait()
-    match = re.search("release (\d+)\.(\d+)", ptxas_out)
+    match = re.search(r"release (\d+)\.(\d+)", ptxas_out)
     if match:
         return (int(match.group(1)), int(match.group(2)))
     print("couldn't determine ptxas version")

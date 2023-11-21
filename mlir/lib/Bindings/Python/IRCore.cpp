@@ -981,8 +981,7 @@ MlirDialect PyDialects::getDialectForKey(const std::string &key,
     std::string msg = (Twine("Dialect '") + key + "' not found").str();
     if (attrError)
       throw py::attribute_error(msg);
-    else
-      throw py::index_error(msg);
+    throw py::index_error(msg);
   }
   return dialect;
 }
@@ -3289,9 +3288,9 @@ void mlir::python::populateIRCore(py::module &m) {
       .def_property_readonly(
           "ref_operation",
           [](PyInsertionPoint &self) -> py::object {
-            auto ref_operation = self.getRefOperation();
-            if (ref_operation)
-              return ref_operation->getObject();
+            auto refOperation = self.getRefOperation();
+            if (refOperation)
+              return refOperation->getObject();
             return py::none();
           },
           "The reference operation before which new operations are "
