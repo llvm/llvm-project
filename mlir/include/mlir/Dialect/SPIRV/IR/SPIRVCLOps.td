@@ -113,6 +113,37 @@ class SPIRV_CLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
 
 // -----
 
+def SPIRV_CLMixOp : SPIRV_CLTernaryArithmeticOp<"mix", 99, SPIRV_Float> {
+  let summary = "Returns the linear blend of x & y implemented as: x + (y - x) * a";
+
+  let description = [{
+    Result Type, x, y and a must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    Note: This instruction can be implemented using contractions such as mad
+    or fma.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    mix-op ::= ssa-id `=` `spirv.CL.mix` ssa-use, ssa-use, ssa-use `:`
+           float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.CL.mix %a, %b, %c : f32
+    %1 = spirv.CL.mix %a, %b, %c : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLCeilOp : SPIRV_CLUnaryArithmeticOp<"ceil", 12, SPIRV_Float> {
   let summary = [{
     Round x to integral value using the round to positive infinity rounding
