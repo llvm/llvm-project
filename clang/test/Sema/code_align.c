@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,c-local -x c %s
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp-local -pedantic -x c++ -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -fsyntax-only -verify=expected,c-local -x c %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -fsyntax-only -verify=expected,cpp-local -pedantic -x c++ -std=c++11 %s
 
 void foo() {
   int i;
@@ -131,7 +131,7 @@ void code_align_dependent() {
   [[clang::code_align(A)]] // OK
   for(int I=0; I<128; ++I) { bar(I); }
 
-  [[clang::code_align(A)]] // expected-note{{previous attribute is here}}
+  [[clang::code_align(A)]] // cpp-local-note{{previous attribute is here}}
   [[clang::code_align(E)]] // cpp-local-error{{conflicting loop attribute 'code_align'}}
   for(int I=0; I<128; ++I) { bar(I); }
 
@@ -147,7 +147,7 @@ void code_align_dependent() {
 
 template<int ITMPL>
 void bar3() {
-  [[clang::code_align(8)]]      // expected-note{{previous attribute is here}}
+  [[clang::code_align(8)]]      // cpp-local-note{{previous attribute is here}}
   [[clang::code_align(ITMPL)]] // cpp-local-error{{conflicting loop attribute 'code_align'}} \
 	                       // cpp-local-note@#temp-instantiation{{in instantiation of function template specialization 'bar3<4>' requested here}}
   for(int I=0; I<128; ++I) { bar(I); }
@@ -155,7 +155,7 @@ void bar3() {
 
 template<int ITMPL1>
 void bar4() {
-  [[clang::code_align(ITMPL1)]] // expected-note{{previous attribute is here}}
+  [[clang::code_align(ITMPL1)]] // cpp-local-note{{previous attribute is here}}
   [[clang::code_align(32)]]    // cpp-local-error{{conflicting loop attribute 'code_align'}} \
 	                       // cpp-local-note@#temp-instantiation1{{in instantiation of function template specialization 'bar4<64>' requested here}}
   for(int I=0; I<128; ++I) { bar(I); }
