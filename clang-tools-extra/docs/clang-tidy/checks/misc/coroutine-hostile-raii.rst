@@ -48,7 +48,7 @@ Options
     Eg: ``my::lockable; a::b;::my::other::lockable;``
     The default value of this option is `"std::lock_guard;std::scoped_lock"`.
 
-.. option:: SafeAwaitablesList
+.. option:: AllowedAwaitablesList
 
     A semicolon-separated list of qualified types of awaitables types which can
     be safely awaited while having hostile RAII objects in scope.
@@ -62,7 +62,7 @@ Options
 
     .. code-block:: c++
 
-      // Consider option SafeAwaitablesList = "safe_awaitable"
+      // Consider option AllowedAwaitablesList = "safe_awaitable"
       struct safe_awaitable {
         bool await_ready() noexcept { return false; }
         void await_suspend(std::coroutine_handle<>) noexcept {}

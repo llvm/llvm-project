@@ -56,8 +56,9 @@ AST_MATCHER_P(Stmt, forEachPrevStmt, ast_matchers::internal::Matcher<Stmt>,
 // Matches the expression awaited by the `co_await`.
 AST_MATCHER_P(CoawaitExpr, awaiatable, ast_matchers::internal::Matcher<Expr>,
               InnerMatcher) {
-  return Node.getCommonExpr() &&
-         InnerMatcher.matches(*Node.getCommonExpr(), Finder, Builder);
+  if (Expr *E = Node.getCommonExpr())
+    return InnerMatcher.matches(*E, Finder, Builder);
+  return false;
 }
 
 auto typeWithNameIn(const std::vector<StringRef> &Names) {
@@ -71,8 +72,8 @@ CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       RAIITypesList(utils::options::parseStringList(
           Options.get("RAIITypesList", "std::lock_guard;std::scoped_lock"))),
-      SafeAwaitablesList(utils::options::parseStringList(
-          Options.get("SafeAwaitablesList", ""))) {}
+      AllowedAwaitablesList(utils::options::parseStringList(
+          Options.get("AllowedAwaitablesList", ""))) {}
 
 void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
   // A suspension happens with co_await or co_yield.
@@ -80,9 +81,9 @@ void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
                                     hasAttr(attr::Kind::ScopedLockable)))))
                             .bind("scoped-lockable");
   auto OtherRAII = varDecl(typeWithNameIn(RAIITypesList)).bind("raii");
-  auto SafeSuspend = awaiatable(typeWithNameIn(SafeAwaitablesList));
+  auto AllowedSuspend = awaiatable(typeWithNameIn(AllowedAwaitablesList));
   Finder->addMatcher(
-      expr(anyOf(coawaitExpr(unless(SafeSuspend)), coyieldExpr()),
+      expr(anyOf(coawaitExpr(unless(AllowedSuspend)), coyieldExpr()),
            forEachPrevStmt(
                declStmt(forEach(varDecl(anyOf(ScopedLockable, OtherRAII))))))
           .bind("suspension"),
@@ -109,6 +110,6 @@ void CoroutineHostileRAIICheck::storeOptions(
   Options.store(Opts, "RAIITypesList",
                 utils::options::serializeStringList(RAIITypesList));
   Options.store(Opts, "SafeAwaitableList",
-                utils::options::serializeStringList(SafeAwaitablesList));
+                utils::options::serializeStringList(AllowedAwaitablesList));
 }
 } // namespace clang::tidy::misc

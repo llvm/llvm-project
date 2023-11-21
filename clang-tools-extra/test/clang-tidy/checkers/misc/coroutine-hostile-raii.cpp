@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++20 %s misc-coroutine-hostile-raii %t \
 // RUN:   -config="{CheckOptions: {\
 // RUN:             misc-coroutine-hostile-raii.RAIITypesList: 'my::Mutex; ::my::other::Mutex', \
-// RUN:             misc-coroutine-hostile-raii.SafeAwaitablesList: 'safe::awaitable; ::my::other::awaitable' \
+// RUN:             misc-coroutine-hostile-raii.AllowedAwaitablesList: 'safe::awaitable; ::my::other::awaitable' \
 // RUN:             }}"
 
 namespace std {
