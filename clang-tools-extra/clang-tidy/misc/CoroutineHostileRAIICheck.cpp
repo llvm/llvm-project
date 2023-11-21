@@ -53,12 +53,15 @@ AST_MATCHER_P(Stmt, forEachPrevStmt, ast_matchers::internal::Matcher<Stmt>,
   return IsHostile;
 }
 
+// Matches the expression awaited by the `co_await`.
 AST_MATCHER_P(CoawaitExpr, awaiatable, ast_matchers::internal::Matcher<Expr>,
               InnerMatcher) {
   return Node.getCommonExpr() &&
          InnerMatcher.matches(*Node.getCommonExpr(), Finder, Builder);
 }
 
+// Matches a declaration annotated with
+// [[clang::annotate("coro_raii_safe_suspend")]].
 AST_MATCHER(Decl, isRAIISafe) {
   for (const auto &Attr : Node.specific_attrs<clang::AnnotateAttr>())
     if (Attr->getAnnotation() == "coro_raii_safe_suspend")
