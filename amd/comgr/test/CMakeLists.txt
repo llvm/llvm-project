@@ -1,5 +1,7 @@
 set(TEST_INPUT_BINARIES)
 set(TEST_INPUT_BITCODES)
+set(TEST_INPUT_BUNDLES)
+set(TEST_INPUT_ARCHIVES)
 # Create target ${name} which depends on a clang command to compile ${input} to
 # ${output}, with any additional arguments from ${ARGN}, and add it to the
 # TEST_INPUT_BINARIES target list.
@@ -39,6 +41,24 @@ endmacro()
 macro(add_test_input_bitcode name input output)
   add_custom_command(
     OUTPUT "${output}"
+    COMMAND "$<TARGET_FILE:clang>" -c -emit-llvm -target amdgcn-amd-amdhsa
+    -mcpu=gfx900
+    ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
+    -o "${output}"
+    VERBATIM
+    DEPENDS clang lld "${input}")
+  add_custom_target("${name}"
+    DEPENDS "${output}"
+    SOURCES "${input}")
+  list(APPEND TEST_INPUT_BITCODES "${name}")
+endmacro()
+
+# Creates target ${name} which depends on a clang command to compile ${input} to
+# ${output}, with any additional arguments from ${ARGN}, and add it to the
+# TEST_INPUT_BUNDLES target list.
+macro(add_test_input_bundle name input output)
+  add_custom_command(
+    OUTPUT "${output}"
     COMMAND "$<TARGET_FILE:clang>" -c --offload-arch=gfx900 -emit-llvm -fgpu-rdc
     --gpu-bundle-output ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
     -o "${output}"
@@ -47,7 +67,7 @@ macro(add_test_input_bitcode name input output)
   add_custom_target("${name}"
     DEPENDS "${output}"
     SOURCES "${input}")
-  list(APPEND TEST_INPUT_BITCODES "${name}")
+  list(APPEND TEST_INPUT_BUNDLES "${name}")
 endmacro()
 
 # Creates target ${name} and output ${output} by archiving a file.
@@ -63,7 +83,7 @@ macro(add_test_archive name target input output)
   add_custom_target("${name}"
     DEPENDS "${output}"
     SOURCES "${input}")
-  list(APPEND TEST_INPUT_BITCODES "${name}")
+  list(APPEND TEST_INPUT_ARCHIVES "${name}")
 endmacro()
 
 add_test_input_binary(reloc1 source/reloc1.cl source/reloc1.o -c -mcode-object-version=4)
@@ -134,7 +154,8 @@ endif()
   target_link_libraries("${name}"
     amd_comgr)
   add_dependencies("${name}"
-    ${TEST_INPUT_BINARIES};${TEST_INPUT_BITCODES})
+    ${TEST_INPUT_BINARIES};${TEST_INPUT_BITCODES};${TEST_INPUT_BUNDLES};
+    ${TEST_INPUT_ARCHIVES})
   add_test(NAME ${test_name}
     COMMAND "${name}")
   add_dependencies(check-comgr ${name})
@@ -183,9 +204,9 @@ add_comgr_test(map_elf_virtual_address_test c)
 
 # Test : Compile HIP tests only if HIP-Clang is installed.
 if (DEFINED HIP_COMPILER AND "${HIP_COMPILER}" STREQUAL "clang")
-  add_test_input_bitcode(cube source/cube.hip source/cube.bc)
-  add_test_input_bitcode(square source/square.hip source/square.bc)
-  add_test_input_bitcode(double source/double.hip source/double.bc)
+  add_test_input_bundle(cube source/cube.hip source/cube.bc)
+  add_test_input_bundle(square source/square.hip source/square.bc)
+  add_test_input_bundle(double source/double.hip source/double.bc)
 
   add_test_archive(cube_archive cube source/cube.bc source/cube.a)
 
