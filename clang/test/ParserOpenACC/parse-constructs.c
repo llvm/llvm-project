@@ -95,16 +95,14 @@ void func() {
   for(;;){}
 
   int i = 0, j = 0, k = 0;
-  // expected-error@+2{{missing OpenACC 'atomic-clause'; expected 'read', 'write', 'update', or 'capture'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc atomic
   i = j;
-  // expected-error@+2{{invalid OpenACC 'atomic-clause' 'garbage'; expected 'read', 'write', 'update', or 'capture'}}
+  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc atomic garbage
   i = j;
-  // expected-warning@+3{{OpenACC clause parsing not yet implemented}}
-  // expected-error@+2{{invalid OpenACC 'atomic-clause' 'garbage'; expected 'read', 'write', 'update', or 'capture'}}
+  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc atomic garbage clause list
   i = j;

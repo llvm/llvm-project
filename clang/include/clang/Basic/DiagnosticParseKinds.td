@@ -1364,9 +1364,6 @@ def warn_pragma_acc_unimplemented_clause_parsing
 def err_acc_invalid_directive
     : Error<"invalid OpenACC directive '%select{%1|%1 %2}0'">;
 def err_acc_missing_directive : Error<"expected OpenACC directive">;
-def err_acc_invalid_atomic_clause
-    : Error<"%select{missing|invalid}0 OpenACC 'atomic-clause'%select{| "
-            "'%1'}0; expected 'read', 'write', 'update', or 'capture'">;
 
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<

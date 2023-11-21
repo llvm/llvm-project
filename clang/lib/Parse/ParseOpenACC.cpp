@@ -29,8 +29,6 @@ enum class OpenACCDirectiveKindEx {
   // 'enter data' and 'exit data'
   Enter,
   Exit,
-  // 'atomic read', 'atomic write', 'atomic update', and 'atomic capture'.
-  Atomic,
 };
 
 // Translate single-token string representations to the OpenACC Directive Kind.
@@ -47,6 +45,7 @@ OpenACCDirectiveKindEx getOpenACCDirectiveKind(StringRef Name) {
           .Case("data", OpenACCDirectiveKind::Data)
           .Case("host_data", OpenACCDirectiveKind::HostData)
           .Case("loop", OpenACCDirectiveKind::Loop)
+          .Case("atomic", OpenACCDirectiveKind::Atomic)
           .Case("declare", OpenACCDirectiveKind::Declare)
           .Case("init", OpenACCDirectiveKind::Init)
           .Case("shutdown", OpenACCDirectiveKind::Shutdown)
@@ -60,19 +59,18 @@ OpenACCDirectiveKindEx getOpenACCDirectiveKind(StringRef Name) {
   return llvm::StringSwitch<OpenACCDirectiveKindEx>(Name)
       .Case("enter", OpenACCDirectiveKindEx::Enter)
       .Case("exit", OpenACCDirectiveKindEx::Exit)
-      .Case("atomic", OpenACCDirectiveKindEx::Atomic)
       .Default(OpenACCDirectiveKindEx::Invalid);
 }
 
 // Since 'atomic' is effectively a compound directive, this will decode the
 // second part of the directive.
-OpenACCDirectiveKind getOpenACCAtomicDirectiveKind(StringRef Name) {
-  return llvm::StringSwitch<OpenACCDirectiveKind>(Name)
-      .Case("read", OpenACCDirectiveKind::AtomicRead)
-      .Case("write", OpenACCDirectiveKind::AtomicWrite)
-      .Case("update", OpenACCDirectiveKind::AtomicUpdate)
-      .Case("capture", OpenACCDirectiveKind::AtomicCapture)
-      .Default(OpenACCDirectiveKind::Invalid);
+OpenACCAtomicKind getOpenACCAtomicKind(StringRef Name) {
+  return llvm::StringSwitch<OpenACCAtomicKind>(Name)
+      .Case("read", OpenACCAtomicKind::Read)
+      .Case("write", OpenACCAtomicKind::Write)
+      .Case("update", OpenACCAtomicKind::Update)
+      .Case("capture", OpenACCAtomicKind::Capture)
+      .Default(OpenACCAtomicKind::Invalid);
 }
 
 bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, StringRef Tok) {
@@ -95,12 +93,10 @@ bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, StringRef Tok) {
   case OpenACCDirectiveKind::KernelsLoop:
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
-  case OpenACCDirectiveKind::AtomicRead:
-  case OpenACCDirectiveKind::AtomicWrite:
-  case OpenACCDirectiveKind::AtomicUpdate:
-  case OpenACCDirectiveKind::AtomicCapture:
     return false;
 
+  case OpenACCDirectiveKind::Atomic:
+    return Tok == "atomic";
   case OpenACCDirectiveKind::Declare:
     return Tok == "declare";
   case OpenACCDirectiveKind::Init:
@@ -143,26 +139,25 @@ ParseOpenACCEnterExitDataDirective(Parser &P, Token FirstTok,
              : OpenACCDirectiveKind::ExitData;
 }
 
-OpenACCDirectiveKind ParseOpenACCAtomicDirective(Parser &P) {
+OpenACCAtomicKind ParseOpenACCAtomicKind(Parser &P) {
   Token AtomicClauseToken = P.getCurToken();
 
-  if (AtomicClauseToken.isAnnotation()) {
-    P.Diag(AtomicClauseToken, diag::err_acc_invalid_atomic_clause) << 0;
-    return OpenACCDirectiveKind::Invalid;
-  }
+  // #pragma acc atomic is equivilent to update:
+  if (AtomicClauseToken.isAnnotation())
+    return OpenACCAtomicKind::Update;
 
   std::string AtomicClauseSpelling =
       P.getPreprocessor().getSpelling(AtomicClauseToken);
+  OpenACCAtomicKind AtomicKind = getOpenACCAtomicKind(AtomicClauseSpelling);
 
-  OpenACCDirectiveKind DirKind =
-      getOpenACCAtomicDirectiveKind(AtomicClauseSpelling);
-
-  if (DirKind == OpenACCDirectiveKind::Invalid)
-    P.Diag(AtomicClauseToken, diag::err_acc_invalid_atomic_clause)
-        << 1 << AtomicClauseSpelling;
+  // If we don't know what this is, treat it as 'nothing', and treat the rest of
+  // this as a clause list, which, despite being invalid, is likely what the
+  // user was trying to do.
+  if (AtomicKind == OpenACCAtomicKind::Invalid)
+    return OpenACCAtomicKind::Update;
 
   P.ConsumeToken();
-  return DirKind;
+  return AtomicKind;
 }
 
 // Parse and consume the tokens for OpenACC Directive/Construct kinds.
@@ -197,8 +192,6 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
     case OpenACCDirectiveKindEx::Exit:
       return ParseOpenACCEnterExitDataDirective(P, FirstTok, FirstTokSpelling,
                                                 ExDirKind);
-    case OpenACCDirectiveKindEx::Atomic:
-      return ParseOpenACCAtomicDirective(P);
     }
   }
 
@@ -240,7 +233,13 @@ void ParseOpenACCClauseList(Parser &P) {
 }
 
 void ParseOpenACCDirective(Parser &P) {
-  ParseOpenACCDirectiveKind(P);
+  OpenACCDirectiveKind DirKind = ParseOpenACCDirectiveKind(P);
+
+  // Once we've parsed the construct/directive name, some have additional
+  // specifiers that need to be taken care of. Atomic has an 'atomic-clause'
+  // that needs to be parsed.
+  if (DirKind == OpenACCDirectiveKind::Atomic)
+    ParseOpenACCAtomicKind(P);
 
   // Parses the list of clauses, if present.
   ParseOpenACCClauseList(P);

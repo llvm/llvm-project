@@ -41,13 +41,8 @@ enum class OpenACCDirectiveKind {
   SerialLoop,
   KernelsLoop,
 
-  // Atomic Construct.  The OpenACC standard considers these as a single
-  // construct, however the atomic-clause (read, write, update, capture) are
-  // important for legalization of the application of this to statements/blocks.
-  AtomicRead,
-  AtomicWrite,
-  AtomicUpdate,
-  AtomicCapture,
+  // Atomic Construct.
+  Atomic,
 
   // Declare Directive.
   Declare,
@@ -63,6 +58,14 @@ enum class OpenACCDirectiveKind {
   // FIXME: routine construct.
 
   // Invalid.
+  Invalid,
+};
+
+enum class OpenACCAtomicKind {
+  Read,
+  Write,
+  Update,
+  Capture,
   Invalid,
 };
 } // namespace clang
