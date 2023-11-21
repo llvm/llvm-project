@@ -94,7 +94,9 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
   if (CGM.supportsCOMDAT() && VTT->isWeakForLinker())
     VTT->setComdat(CGM.getModule().getOrInsertComdat(VTT->getName()));
 
-  // Set the right visibility.
+  // Set the visibility. This will already have been set on the VTT declaration.
+  // Set it again, now that we have a definition, as the implicit visibility can
+  // apply differently to definitions.
   CGM.setGVProperties(VTT, RD);
 }
 
