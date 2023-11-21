@@ -104,6 +104,82 @@ public:
 
     return false;
   }
+
+  bool isTerminator(const MCInst &Inst) const override {
+    if (MCInstrAnalysis::isTerminator(Inst))
+      return true;
+
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case LoongArch::JIRL:
+      return Inst.getOperand(0).getReg() == LoongArch::R0;
+    }
+  }
+
+  bool isCall(const MCInst &Inst) const override {
+    if (MCInstrAnalysis::isCall(Inst))
+      return true;
+
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case LoongArch::JIRL:
+      return Inst.getOperand(0).getReg() != LoongArch::R0;
+    }
+  }
+
+  bool isReturn(const MCInst &Inst) const override {
+    if (MCInstrAnalysis::isReturn(Inst))
+      return true;
+
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case LoongArch::JIRL:
+      return Inst.getOperand(0).getReg() == LoongArch::R0 &&
+             Inst.getOperand(1).getReg() == LoongArch::R1;
+    }
+  }
+
+  bool isBranch(const MCInst &Inst) const override {
+    if (MCInstrAnalysis::isBranch(Inst))
+      return true;
+
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case LoongArch::JIRL:
+      return Inst.getOperand(0).getReg() == LoongArch::R0 &&
+             Inst.getOperand(1).getReg() != LoongArch::R1;
+    }
+  }
+
+  bool isUnconditionalBranch(const MCInst &Inst) const override {
+    if (MCInstrAnalysis::isUnconditionalBranch(Inst))
+      return true;
+
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case LoongArch::JIRL:
+      return Inst.getOperand(0).getReg() == LoongArch::R0 &&
+             Inst.getOperand(1).getReg() != LoongArch::R1;
+    }
+  }
+
+  bool isIndirectBranch(const MCInst &Inst) const override {
+    if (MCInstrAnalysis::isIndirectBranch(Inst))
+      return true;
+
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case LoongArch::JIRL:
+      return Inst.getOperand(0).getReg() == LoongArch::R0 &&
+             Inst.getOperand(1).getReg() != LoongArch::R1;
+    }
+  }
 };
 
 } // end namespace

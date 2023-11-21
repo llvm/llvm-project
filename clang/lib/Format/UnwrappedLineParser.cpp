@@ -2017,8 +2017,7 @@ void UnwrappedLineParser::parseStructuralElement(
       } else if (Style.Language == FormatStyle::LK_Proto &&
                  FormatTok->is(tok::less)) {
         nextToken();
-        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
-                        /*ClosingBraceKind=*/tok::greater);
+        parseBracedList(/*IsAngleBracket=*/true);
       }
       break;
     case tok::l_square:
@@ -2379,9 +2378,7 @@ bool UnwrappedLineParser::tryToParseChildBlock() {
   return true;
 }
 
-bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
-                                          bool IsEnum,
-                                          tok::TokenKind ClosingBraceKind) {
+bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
   bool HasError = false;
 
   // FIXME: Once we have an expression parser in the UnwrappedLineParser,
@@ -2403,7 +2400,7 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
         parseChildBlock();
       }
     }
-    if (FormatTok->Tok.getKind() == ClosingBraceKind) {
+    if (FormatTok->is(IsAngleBracket ? tok::greater : tok::r_brace)) {
       if (IsEnum && !Style.AllowShortEnumsOnASingleLine)
         addUnwrappedLine();
       nextToken();
@@ -2434,14 +2431,9 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
       parseBracedList();
       break;
     case tok::less:
-      if (Style.Language == FormatStyle::LK_Proto ||
-          ClosingBraceKind == tok::greater) {
-        nextToken();
-        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
-                        /*ClosingBraceKind=*/tok::greater);
-      } else {
-        nextToken();
-      }
+      nextToken();
+      if (IsAngleBracket)
+        parseBracedList(/*IsAngleBracket=*/true);
       break;
     case tok::semi:
       // JavaScript (or more precisely TypeScript) can have semicolons in braced
@@ -2453,8 +2445,8 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
         break;
       }
       HasError = true;
-      if (!ContinueOnSemicolons)
-        return !HasError;
+      if (!IsEnum)
+        return false;
       nextToken();
       break;
     case tok::comma:
@@ -3618,8 +3610,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
         return;
 
       nextToken();
-      parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
-                      /*ClosingBraceKind=*/tok::greater);
+      parseBracedList(/*IsAngleBracket=*/true);
       break;
 
     default:
@@ -3650,8 +3641,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
       nextToken();
       if (FormatTok->is(tok::less)) {
         nextToken();
-        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
-                        /*ClosingBraceKind=*/tok::greater);
+        parseBracedList(/*IsAngleBracket=*/true);
       }
       TopLevelParensAllowed = false;
       break;
@@ -3732,8 +3722,7 @@ bool UnwrappedLineParser::parseEnum() {
     addUnwrappedLine();
     Line->Level += 1;
   }
-  bool HasError = !parseBracedList(/*ContinueOnSemicolons=*/true,
-                                   /*IsEnum=*/true);
+  bool HasError = !parseBracedList(/*IsAngleBracket=*/false, /*IsEnum=*/true);
   if (!Style.AllowShortEnumsOnASingleLine)
     Line->Level -= 1;
   if (HasError) {

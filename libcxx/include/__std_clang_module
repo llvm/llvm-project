@@ -200,6 +200,9 @@
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #  include <strstream>
 #endif
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <syncstream>
+#endif
 #include <system_error>
 #include <tgmath.h>
 #if !defined(_LIBCPP_HAS_NO_THREADS)

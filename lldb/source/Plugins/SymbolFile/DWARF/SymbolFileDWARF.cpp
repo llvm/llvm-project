@@ -210,17 +210,24 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
                               FileSpec::Style style,
                               llvm::StringRef compile_dir = {}) {
   FileSpecList support_files;
-  size_t first_file = 0;
-  if (prologue.getVersion() <= 4) {
-    // File index 0 is not valid before DWARF v5. Add a dummy entry to ensure
-    // support file list indices match those we get from the debug info and line
-    // tables.
-    support_files.Append(FileSpec());
-    first_file = 1;
-  }
 
-  const size_t number_of_files = prologue.FileNames.size();
-  for (size_t idx = first_file; idx <= number_of_files; ++idx) {
+  // Handle the case where there are no files first to avoid having to special
+  // case this later.
+  if (prologue.FileNames.empty())
+    return support_files;
+
+  // Before DWARF v5, the line table indexes were one based.
+  const bool is_one_based = prologue.getVersion() < 5;
+  const size_t file_names = prologue.FileNames.size();
+  const size_t first_file_idx = is_one_based ? 1 : 0;
+  const size_t last_file_idx = is_one_based ? file_names : file_names - 1;
+
+  // Add a dummy entry to ensure the support file list indices match those we
+  // get from the debug info and line tables.
+  if (is_one_based)
+    support_files.Append(FileSpec());
+
+  for (size_t idx = first_file_idx; idx <= last_file_idx; ++idx) {
     std::string remapped_file;
     if (auto file_path = GetFileByIndex(prologue, idx, compile_dir, style)) {
       if (auto remapped = module->RemapSourceFile(llvm::StringRef(*file_path)))
@@ -229,8 +236,15 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
         remapped_file = std::move(*file_path);
     }
 
+    Checksum checksum;
+    if (prologue.ContentTypes.HasMD5) {
+      const llvm::DWARFDebugLine::FileNameEntry &file_name_entry =
+          prologue.getFileNameEntry(idx);
+      checksum = file_name_entry.Checksum;
+    }
+
     // Unconditionally add an entry, so the indices match up.
-    support_files.EmplaceBack(remapped_file, style);
+    support_files.EmplaceBack(remapped_file, style, checksum);
   }
 
   return support_files;
@@ -3550,9 +3564,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   }
 
   // Prefer DW_AT_location over DW_AT_const_value. Both can be emitted e.g.
-  // for static constexpr member variables -- DW_AT_const_value will be
-  // present in the class declaration and DW_AT_location in the DIE defining
-  // the member.
+  // for static constexpr member variables -- DW_AT_const_value and
+  // DW_AT_location will both be present in the DIE defining the member.
   bool location_is_const_value_data =
       const_value_form.IsValid() && !location_form.IsValid();
 

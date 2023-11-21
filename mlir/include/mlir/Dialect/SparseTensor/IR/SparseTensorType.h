@@ -23,7 +23,7 @@ namespace sparse_tensor {
 ///
 /// (1) To provide a uniform API for querying aspects of sparse-tensor
 /// types; in particular, to make the "dimension" vs "level" distinction
-/// overt (i.e., explicit everywhere).  Thus, throughout the sparse-compiler
+/// overt (i.e., explicit everywhere).  Thus, throughout the sparsifier
 /// this class should be preferred over using `RankedTensorType` or
 /// `ShapedType` directly, since the methods of the latter do not make
 /// the "dimension" vs "level" distinction overt.
@@ -34,7 +34,7 @@ namespace sparse_tensor {
 /// That is, we want to manipulate dense-tensor types using the same API
 /// that we use for manipulating sparse-tensor types; both to keep the
 /// "dimension" vs "level" distinction overt, and to avoid needing to
-/// handle certain cases specially in the sparse-compiler.
+/// handle certain cases specially in the sparsifier.
 ///
 /// (3) To provide uniform handling of "defaults".  In particular
 /// this means that dense-tensors should always return the same answers
@@ -295,9 +295,15 @@ public:
   // `getLvlType` method instead of STEA's.
   bool isDenseLvl(Level l) const { return isDenseDLT(getLvlType(l)); }
   bool isCompressedLvl(Level l) const { return isCompressedDLT(getLvlType(l)); }
+  bool isLooseCompressedLvl(Level l) const {
+    return isLooseCompressedDLT(getLvlType(l));
+  }
   bool isSingletonLvl(Level l) const { return isSingletonDLT(getLvlType(l)); }
+  bool is2OutOf4Lvl(Level l) const { return is2OutOf4DLT(getLvlType(l)); }
   bool isOrderedLvl(Level l) const { return isOrderedDLT(getLvlType(l)); }
   bool isUniqueLvl(Level l) const { return isUniqueDLT(getLvlType(l)); }
+  bool isWithPos(Level l) const { return isDLTWithPos(getLvlType(l)); }
+  bool isWithCrd(Level l) const { return isDLTWithCrd(getLvlType(l)); }
 
   /// Returns the coordinate-overhead bitwidth, defaulting to zero.
   unsigned getCrdWidth() const { return enc ? enc.getCrdWidth() : 0; }

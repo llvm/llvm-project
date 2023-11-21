@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Tests ACHAR lowering (converting an INTEGER to a CHARACTER (singleton, LEN=1)
 ! along with conversion of CHARACTER to another KIND.

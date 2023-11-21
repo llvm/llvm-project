@@ -24,6 +24,7 @@ on:
       - 'openmp/docs/**'
       - 'polly/docs/**'
       - 'flang/docs/**'
+      - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
   pull_request:
     paths:
       - 'llvm/docs/**'
@@ -37,6 +38,7 @@ on:
       - 'openmp/docs/**'
       - 'polly/docs/**'
       - 'flang/docs/**'
+      - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
 
 jobs:
   check-docs-build:
@@ -80,6 +82,7 @@ jobs:
               - 'polly/docs/**'
             flang:
               - 'flang/docs/**'
+              - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
       - name: Fetch LLVM sources (PR)
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/checkout@v4

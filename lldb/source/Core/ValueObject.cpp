@@ -2594,34 +2594,30 @@ ValueObjectSP ValueObject::CreateConstantValue(ConstString name) {
 
 ValueObjectSP ValueObject::GetQualifiedRepresentationIfAvailable(
     lldb::DynamicValueType dynValue, bool synthValue) {
-  ValueObjectSP result_sp(GetSP());
-
+  ValueObjectSP result_sp;
   switch (dynValue) {
   case lldb::eDynamicCanRunTarget:
   case lldb::eDynamicDontRunTarget: {
-    if (!result_sp->IsDynamic()) {
-      if (result_sp->GetDynamicValue(dynValue))
-        result_sp = result_sp->GetDynamicValue(dynValue);
-    }
+    if (!IsDynamic())
+      result_sp = GetDynamicValue(dynValue);
   } break;
   case lldb::eNoDynamicValues: {
-    if (result_sp->IsDynamic()) {
-      if (result_sp->GetStaticValue())
-        result_sp = result_sp->GetStaticValue();
-    }
+    if (IsDynamic())
+      result_sp = GetStaticValue();
   } break;
   }
+  if (!result_sp)
+    result_sp = GetSP();
+  assert(result_sp);
 
-  if (synthValue) {
-    if (!result_sp->IsSynthetic()) {
-      if (result_sp->GetSyntheticValue())
-        result_sp = result_sp->GetSyntheticValue();
-    }
-  } else {
-    if (result_sp->IsSynthetic()) {
-      if (result_sp->GetNonSyntheticValue())
-        result_sp = result_sp->GetNonSyntheticValue();
-    }
+  bool is_synthetic = result_sp->IsSynthetic();
+  if (synthValue && !is_synthetic) {
+    if (auto synth_sp = result_sp->GetSyntheticValue())
+      return synth_sp;
+  }
+  if (!synthValue && is_synthetic) {
+    if (auto non_synth_sp = result_sp->GetNonSyntheticValue())
+      return non_synth_sp;
   }
 
   return result_sp;

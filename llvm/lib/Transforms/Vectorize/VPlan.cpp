@@ -714,6 +714,11 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE) {
   auto Plan = std::make_unique<VPlan>(Preheader, VecPreheader);
   Plan->TripCount =
       vputils::getOrCreateVPValueForSCEVExpr(*Plan, TripCount, SE);
+  // Create empty VPRegionBlock, to be filled during processing later.
+  auto *TopRegion = new VPRegionBlock("vector loop", false /*isReplicator*/);
+  VPBlockUtils::insertBlockAfter(TopRegion, VecPreheader);
+  VPBasicBlock *MiddleVPBB = new VPBasicBlock("middle.block");
+  VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
   return Plan;
 }
 

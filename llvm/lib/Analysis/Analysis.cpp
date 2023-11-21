@@ -25,14 +25,12 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeCallGraphDOTPrinterPass(Registry);
   initializeCallGraphPrinterLegacyPassPass(Registry);
   initializeCallGraphViewerPass(Registry);
-  initializeCostModelAnalysisPass(Registry);
   initializeCFGViewerLegacyPassPass(Registry);
   initializeCFGPrinterLegacyPassPass(Registry);
   initializeCFGOnlyViewerLegacyPassPass(Registry);
   initializeCFGOnlyPrinterLegacyPassPass(Registry);
   initializeCycleInfoWrapperPassPass(Registry);
   initializeDependenceAnalysisWrapperPassPass(Registry);
-  initializeDelinearizationPass(Registry);
   initializeDominanceFrontierWrapperPassPass(Registry);
   initializeDomViewerWrapperPassPass(Registry);
   initializeDomPrinterWrapperPassPass(Registry);
@@ -45,7 +43,6 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeAAResultsWrapperPassPass(Registry);
   initializeGlobalsAAWrapperPassPass(Registry);
   initializeIVUsersWrapperPassPass(Registry);
-  initializeInstCountLegacyPassPass(Registry);
   initializeIntervalPartitionPass(Registry);
   initializeIRSimilarityIdentifierWrapperPassPass(Registry);
   initializeLazyBranchProbabilityInfoPassPass(Registry);

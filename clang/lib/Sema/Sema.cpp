@@ -1286,8 +1286,6 @@ void Sema::ActOnEndOfTranslationUnit() {
       if (auto *FD = dyn_cast<FunctionDecl>(D)) {
         bool DefInPMF = false;
         if (auto *FDD = FD->getDefinition()) {
-          assert(FDD->getOwningModule() &&
-                 FDD->getOwningModule()->isModulePurview());
           DefInPMF = FDD->getOwningModule()->isPrivateModule();
           if (!DefInPMF)
             continue;

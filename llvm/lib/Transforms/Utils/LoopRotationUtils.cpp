@@ -352,16 +352,17 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
     LoopBackWeight = 0;
   }
 
-  MDBuilder MDB(LoopBI.getContext());
-  MDNode *LoopWeightMD =
-      MDB.createBranchWeights(SuccsSwapped ? LoopBackWeight : ExitWeight1,
-                              SuccsSwapped ? ExitWeight1 : LoopBackWeight);
-  LoopBI.setMetadata(LLVMContext::MD_prof, LoopWeightMD);
+  const uint32_t LoopBIWeights[] = {
+      SuccsSwapped ? LoopBackWeight : ExitWeight1,
+      SuccsSwapped ? ExitWeight1 : LoopBackWeight,
+  };
+  setBranchWeights(LoopBI, LoopBIWeights);
   if (HasConditionalPreHeader) {
-    MDNode *PreHeaderWeightMD =
-        MDB.createBranchWeights(SuccsSwapped ? EnterWeight : ExitWeight0,
-                                SuccsSwapped ? ExitWeight0 : EnterWeight);
-    PreHeaderBI.setMetadata(LLVMContext::MD_prof, PreHeaderWeightMD);
+    const uint32_t PreHeaderBIWeights[] = {
+        SuccsSwapped ? EnterWeight : ExitWeight0,
+        SuccsSwapped ? ExitWeight0 : EnterWeight,
+    };
+    setBranchWeights(PreHeaderBI, PreHeaderBIWeights);
   }
 }
 

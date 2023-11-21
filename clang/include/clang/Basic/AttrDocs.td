@@ -6701,7 +6701,7 @@ def ArmSmeStreamingCompatibleDocs : Documentation {
   let Category = DocCatArmSmeAttributes;
   let Content = [{
 The ``__arm_streaming_compatible`` keyword applies to prototyped function types and
-specifies that the function has a “streaming compatible interface”.  This
+specifies that the function has a "streaming compatible interface".  This
 means that:
 
 * the function may be entered in either non-streaming mode (PSTATE.SM=0) or
@@ -7412,6 +7412,171 @@ that ``p->array`` must have at least ``p->count`` number of elements available:
   void use_foo(int index) {
     p->count += SIZE_INCR + 1; /* 'count' is now larger than the number of elements of 'array'. */
     p->array[index] = 0;       /* the sanitizer can't properly check if this is an out-of-bounds access. */
+  }
+
+  }];
+}
+
+def CoroOnlyDestroyWhenCompleteDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The `coro_only_destroy_when_complete` attribute should be marked on a C++ class. The coroutines
+whose return type is marked with the attribute are assumed to be destroyed only after the coroutine has
+reached the final suspend point.
+
+This is helpful for the optimizers to reduce the size of the destroy function for the coroutines.
+
+For example,
+
+.. code-block:: c++
+
+  A foo() {
+    dtor d;
+    co_await something();
+    dtor d1;
+    co_await something();
+    dtor d2;
+    co_return 43;
+  }
+
+The compiler may generate the following pseudocode:
+
+.. code-block:: c++
+
+  void foo.destroy(foo.Frame *frame) {
+    switch(frame->suspend_index()) {
+      case 1:
+        frame->d.~dtor();
+        break;
+      case 2:
+        frame->d.~dtor();
+        frame->d1.~dtor();
+        break;
+      case 3:
+        frame->d.~dtor();
+        frame->d1.~dtor();
+        frame->d2.~dtor();
+        break;
+      default: // coroutine completed or haven't started
+        break;
+    }
+
+    frame->promise.~promise_type();
+    delete frame;
+  }
+
+The `foo.destroy()` function's purpose is to release all of the resources
+initialized for the coroutine when it is destroyed in a suspended state.
+However, if the coroutine is only ever destroyed at the final suspend state,
+the rest of the conditions are superfluous.
+
+The user can use the `coro_only_destroy_when_complete` attributo suppress
+generation of the other destruction cases, optimizing the above `foo.destroy` to:
+
+.. code-block:: c++
+
+  void foo.destroy(foo.Frame *frame) {
+    frame->promise.~promise_type();
+    delete frame;
+  }
+
+  }];
+}
+
+
+def CoroReturnTypeAndWrapperDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``[[clang::coro_return_type]]`` attribute is used to help static analyzers to recognize
+coroutines from the function signatures.
+
+The ``coro_return_type`` attribute should be marked on a C++ class to mark it as
+a **coroutine return type (CRT)**.
+
+A function ``R func(P1, .., PN)`` has a coroutine return type (CRT) ``R`` if ``R``
+is marked by ``[[clang::coro_return_type]]`` and  ``R`` has a promise type associated to it
+(i.e., std::coroutine_traits<R, P1, .., PN>::promise_type is a valid promise type).
+
+If the return type of a function is a ``CRT`` then the function must be a coroutine.
+Otherwise the program is invalid. It is allowed for a non-coroutine to return a ``CRT``
+if the function is marked with ``[[clang::coro_wrapper]]``.
+
+The ``[[clang::coro_wrapper]]`` attribute should be marked on a C++ function to mark it as
+a **coroutine wrapper**. A coroutine wrapper is a function which returns a ``CRT``,
+is not a coroutine itself and is marked with ``[[clang::coro_wrapper]]``.
+
+Clang will enforce that all functions that return a ``CRT`` are either coroutines or marked
+with ``[[clang::coro_wrapper]]``. Clang will enforce this with an error.
+
+From a language perspective, it is not possible to differentiate between a coroutine and a
+function returning a CRT by merely looking at the function signature.
+
+Coroutine wrappers, in particular, are susceptible to capturing
+references to temporaries and other lifetime issues. This allows to avoid such lifetime
+issues with coroutine wrappers.
+
+For example,
+
+.. code-block:: c++
+
+  // This is a CRT.
+  template <typename T> struct [[clang::coro_return_type]] Task {
+    using promise_type = some_promise_type;
+  };
+
+  Task<int> increment(int a) { co_return a + 1; } // Fine. This is a coroutine.
+  Task<int> foo() { return increment(1); } // Error. foo is not a coroutine.
+
+  // Fine for a coroutine wrapper to return a CRT.
+  Task<int> [[clang::coro_wrapper]] foo() { return increment(1); }
+
+  void bar() {
+    // Invalid. This intantiates a function which returns a CRT but is not marked as
+    // a coroutine wrapper.
+    std::function<Task<int>(int)> f = increment;
+  }
+
+Note: ``a_promise_type::get_return_object`` is exempted from this analysis as it is a necessary
+implementation detail of any coroutine library.
+}];
+}
+
+def CodeAlignAttrDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "clang::code_align";
+  let Content = [{
+The ``clang::code_align(N)`` attribute applies to a loop and specifies the byte
+alignment for a loop. The attribute accepts a positive integer constant
+initialization expression indicating the number of bytes for the minimum
+alignment boundary. Its value must be a power of 2, between 1 and 4096
+(inclusive).
+
+.. code-block:: c++
+
+  void foo() {
+    int var = 0;
+    [[clang::code_align(16)]] for (int i = 0; i < 10; ++i) var++;
+  }
+
+  void Array(int *array, size_t n) {
+    [[clang::code_align(64)]] for (int i = 0; i < n; ++i) array[i] = 0;
+  }
+
+  void count () {
+    int a1[10], int i = 0;
+    [[clang::code_align(32)]] while (i < 10) { a1[i] += 3; }
+  }
+
+  void check() {
+    int a = 10;
+    [[clang::code_align(8)]] do {
+      a = a + 1;
+    } while (a < 20);
+  }
+
+  template<int A>
+  void func() {
+    [[clang::code_align(A)]] for(;;) { }
   }
 
   }];

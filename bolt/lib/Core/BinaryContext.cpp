@@ -1402,7 +1402,7 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
 }
 
 void BinaryContext::fixBinaryDataHoles() {
-  assert(validateObjectNesting() && "object nesting inconsitency detected");
+  assert(validateObjectNesting() && "object nesting inconsistency detected");
 
   for (BinarySection &Section : allocatableSections()) {
     std::vector<std::pair<uint64_t, uint64_t>> Holes;
@@ -1451,7 +1451,7 @@ void BinaryContext::fixBinaryDataHoles() {
     }
   }
 
-  assert(validateObjectNesting() && "object nesting inconsitency detected");
+  assert(validateObjectNesting() && "object nesting inconsistency detected");
   assert(validateHoles() && "top level hole detected in object map");
 }
 
@@ -1738,6 +1738,15 @@ bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {
   return HasRelocations || Function.isSimple();
 }
 
+void BinaryContext::dump(const MCInst &Inst) const {
+  if (LLVM_UNLIKELY(!InstPrinter)) {
+    dbgs() << "Cannot dump for InstPrinter is not initialized.\n";
+    return;
+  }
+  InstPrinter->printInst(&Inst, 0, "", *STI, dbgs());
+  dbgs() << "\n";
+}
+
 void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
   uint32_t Operation = Inst.getOperation();
   switch (Operation) {
@@ -1796,7 +1805,7 @@ void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
 MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
   // For aarch64 and riscv, the ABI defines mapping symbols so we identify data
   // in the code section (see IHI0056B). $x identifies a symbol starting code or
-  // the end of a data chunk inside code, $d indentifies start of data.
+  // the end of a data chunk inside code, $d identifies start of data.
   if ((!isAArch64() && !isRISCV()) || ELFSymbolRef(Symbol).getSize())
     return MarkerSymType::NONE;
 
@@ -1897,6 +1906,8 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
   }
   if (std::optional<uint32_t> Offset = MIB->getOffset(Instruction))
     OS << " # Offset: " << *Offset;
+  if (std::optional<uint32_t> Size = MIB->getSize(Instruction))
+    OS << " # Size: " << *Size;
   if (MCSymbol *Label = MIB->getLabel(Instruction))
     OS << " # Label: " << *Label;
 
@@ -1924,10 +1935,27 @@ BinaryContext::getBaseAddressForMapping(uint64_t MMapAddress,
   // Find a segment with a matching file offset.
   for (auto &KV : SegmentMapInfo) {
     const SegmentInfo &SegInfo = KV.second;
-    if (alignDown(SegInfo.FileOffset, SegInfo.Alignment) == FileOffset) {
-      // Use segment's aligned memory offset to calculate the base address.
-      const uint64_t MemOffset = alignDown(SegInfo.Address, SegInfo.Alignment);
-      return MMapAddress - MemOffset;
+    // FileOffset is got from perf event,
+    // and it is equal to alignDown(SegInfo.FileOffset, pagesize).
+    // If the pagesize is not equal to SegInfo.Alignment.
+    // FileOffset and SegInfo.FileOffset should be aligned first,
+    // and then judge whether they are equal.
+    if (alignDown(SegInfo.FileOffset, SegInfo.Alignment) ==
+        alignDown(FileOffset, SegInfo.Alignment)) {
+      // The function's offset from base address in VAS is aligned by pagesize
+      // instead of SegInfo.Alignment. Pagesize can't be got from perf events.
+      // However, The ELF document says that SegInfo.FileOffset should equal
+      // to SegInfo.Address, modulo the pagesize.
+      // Reference: https://refspecs.linuxfoundation.org/elf/elf.pdf
+
+      // So alignDown(SegInfo.Address, pagesize) can be calculated by:
+      // alignDown(SegInfo.Address, pagesize)
+      //   = SegInfo.Address - (SegInfo.Address % pagesize)
+      //   = SegInfo.Address - (SegInfo.FileOffset % pagesize)
+      //   = SegInfo.Address - SegInfo.FileOffset +
+      //     alignDown(SegInfo.FileOffset, pagesize)
+      //   = SegInfo.Address - SegInfo.FileOffset + FileOffset
+      return MMapAddress - (SegInfo.Address - SegInfo.FileOffset + FileOffset);
     }
   }
 

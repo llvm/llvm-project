@@ -2178,7 +2178,7 @@ static void populateMap(LinalgOp linalgOp, MutableArrayRef<OpOperand> operands,
     for (unsigned i = 0; i < sourceShape.size(); i++) {
       if (sourceType.isDynamicDim(i))
         continue;
-      if (auto affineDimExpr = sourceMap.getResult(i).dyn_cast<AffineDimExpr>())
+      if (auto affineDimExpr = dyn_cast<AffineDimExpr>(sourceMap.getResult(i)))
         affineExprToSize.try_emplace(affineDimExpr, sourceShape[i]);
     }
   }

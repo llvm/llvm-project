@@ -3197,6 +3197,26 @@ TEST(TransferTest, AggregateInitialization_NotExplicitlyInitializedField) {
       });
 }
 
+TEST(TransferTest, AggregateInitializationFunctionPointer) {
+  // This is a repro for an assertion failure.
+  // nullptr takes on the type of a const function pointer, but its type was
+  // asserted to be equal to the *unqualified* type of Field, which no longer
+  // included the const.
+  std::string Code = R"(
+    struct S {
+      void (*const Field)();
+    };
+    
+    void target() {
+      S s{nullptr};
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
+}
+
 TEST(TransferTest, AssignToUnionMember) {
   std::string Code = R"(
     union A {

@@ -119,9 +119,14 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabled(Features, F, true);
 
   std::vector<std::string> UpdatedFeaturesVec;
-  bool HasEVEX512 = true;
-  bool HasAVX512F = false;
-  bool HasAVX10 = false;
+  std::vector<std::string> UpdatedAVX10FeaturesVec;
+  enum { FE_NOSET = -1, FE_FALSE, FE_TRUE };
+  int HasEVEX512 = FE_NOSET;
+  bool HasAVX512F = Features.lookup("avx512f");
+  bool HasAVX10 = Features.lookup("avx10.1-256");
+  bool HasAVX10_512 = Features.lookup("avx10.1-512");
+  std::string LastAVX10;
+  std::string LastAVX512;
   for (const auto &Feature : FeaturesVec) {
     // Expand general-regs-only to -x86, -mmx and -sse
     if (Feature == "+general-regs-only") {
@@ -131,35 +136,51 @@ bool X86TargetInfo::initFeatureMap(
       continue;
     }
 
-    if (Feature.substr(0, 7) == "+avx10.") {
-      HasAVX10 = true;
-      HasAVX512F = true;
-      if (Feature.substr(Feature.size() - 3, 3) == "512") {
-        HasEVEX512 = true;
-      } else if (Feature.substr(7, 2) == "1-") {
-        HasEVEX512 = false;
+    if (Feature.substr(1, 6) == "avx10.") {
+      if (Feature[0] == '+') {
+        HasAVX10 = true;
+        if (Feature.substr(Feature.size() - 3, 3) == "512")
+          HasAVX10_512 = true;
+        LastAVX10 = Feature;
+      } else if (HasAVX10 && Feature == "-avx10.1-256") {
+        HasAVX10 = false;
+        HasAVX10_512 = false;
+      } else if (HasAVX10_512 && Feature == "-avx10.1-512") {
+        HasAVX10_512 = false;
       }
+      // Postpone AVX10 features handling after AVX512 settled.
+      UpdatedAVX10FeaturesVec.push_back(Feature);
+      continue;
     } else if (!HasAVX512F && Feature.substr(0, 7) == "+avx512") {
       HasAVX512F = true;
+      LastAVX512 = Feature;
     } else if (HasAVX512F && Feature == "-avx512f") {
       HasAVX512F = false;
-    } else if (HasAVX10 && Feature == "-avx10.1-256") {
-      HasAVX10 = false;
-      HasAVX512F = false;
-    } else if (!HasEVEX512 && Feature == "+evex512") {
-      HasEVEX512 = true;
-    } else if (HasEVEX512 && Feature == "-avx10.1-512") {
-      HasEVEX512 = false;
-    } else if (HasEVEX512 && Feature == "-evex512") {
-      HasEVEX512 = false;
+    } else if (HasEVEX512 != FE_TRUE && Feature == "+evex512") {
+      HasEVEX512 = FE_TRUE;
+      continue;
+    } else if (HasEVEX512 != FE_FALSE && Feature == "-evex512") {
+      HasEVEX512 = FE_FALSE;
+      continue;
     }
 
     UpdatedFeaturesVec.push_back(Feature);
   }
-  if (HasAVX512F && HasEVEX512)
-    UpdatedFeaturesVec.push_back("+evex512");
-  else if (HasAVX10)
-    UpdatedFeaturesVec.push_back("-evex512");
+  llvm::append_range(UpdatedFeaturesVec, UpdatedAVX10FeaturesVec);
+  // HasEVEX512 is a three-states flag. We need to turn it into [+-]evex512
+  // according to other features.
+  if (HasAVX512F) {
+    UpdatedFeaturesVec.push_back(HasEVEX512 == FE_FALSE ? "-evex512"
+                                                        : "+evex512");
+    if (HasAVX10 && !HasAVX10_512 && HasEVEX512 != FE_FALSE)
+      Diags.Report(diag::warn_invalid_feature_combination)
+          << LastAVX512 + " " + LastAVX10 + "; will be promoted to avx10.1-512";
+  } else if (HasAVX10) {
+    if (HasEVEX512 != FE_NOSET)
+      Diags.Report(diag::warn_invalid_feature_combination)
+          << LastAVX10 + (HasEVEX512 == FE_TRUE ? " +evex512" : " -evex512");
+    UpdatedFeaturesVec.push_back(HasAVX10_512 ? "+evex512" : "-evex512");
+  }
 
   if (!TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec))
     return false;

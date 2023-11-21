@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/Inliner.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"

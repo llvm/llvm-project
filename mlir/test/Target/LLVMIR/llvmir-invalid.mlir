@@ -253,3 +253,10 @@ llvm.comdat @__llvm_comdat_1 {
   // expected-error @below{{comdat selection symbols must be unique even in different comdat regions}}
   llvm.comdat_selector @foo any
 }
+
+// -----
+
+llvm.func @foo() {
+  // expected-error @below{{must appear at the module level}}
+  llvm.linker_options ["test"]
+}

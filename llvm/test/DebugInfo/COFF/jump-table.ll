@@ -3,7 +3,7 @@
 ; REQUIRES: x86-registered-target
 ; RUN: llc -mtriple=i686-windows < %s | FileCheck %s --check-prefixes=CHECK,I686,NOTA32
 ; RUN: llc -mtriple=x86_64-windows < %s | FileCheck %s --check-prefixes=CHECK,X64,NOTA32
-; RUN: llc -mtriple=aarch64-windows < %s | FileCheck %s --check-prefixes=CHECK,A64,NOTA32
+; RUN: llc -mtriple=aarch64-windows -aarch64-min-jump-table-entries=4 < %s | FileCheck %s --check-prefixes=CHECK,A64,NOTA32
 ; RUN: llc -mtriple=thumbv7a-windows < %s | FileCheck %s --check-prefixes=CHECK,A32
 ; RUN: llc -mtriple=x86_64-windows -filetype=obj < %s | llvm-readobj - --codeview | FileCheck %s --check-prefixes=CV
 

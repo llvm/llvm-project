@@ -26,7 +26,7 @@
 # RUN: llvm-readelf -ds -x .fini_array %t-no-fini | FileCheck --check-prefix=CHECK-NO-FINI-RELOC %s
 
 ## Create a dummy shared library to link against to force creation of the dynamic section.
-# RUN: %clang %cflags %p/../Inputs/stub.c -fPIC -shared -o %t-stubs.so
+# RUN: %clang %cflags %p/../Inputs/stub.c -fPIC -shared -o %t-stub.so
 # RUN: %clang %cflags %s -no-pie -Wl,-q,-fini=0 %t-stub.so -o %t-no-pie-no-fini.exe
 # RUN: llvm-readelf -r %t-no-pie-no-fini.exe | FileCheck --check-prefix=RELOC-NO-PIE %s
 # RUN: llvm-bolt %t-no-pie-no-fini.exe -o %t-no-pie-no-fini --instrument

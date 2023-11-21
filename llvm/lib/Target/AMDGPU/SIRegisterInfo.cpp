@@ -499,11 +499,11 @@ SIRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const SIFrameLowering *TFI = ST.getFrameLowering();
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-  // During ISel lowering we always reserve the stack pointer in entry
+  // During ISel lowering we always reserve the stack pointer in entry and chain
   // functions, but never actually want to reference it when accessing our own
   // frame. If we need a frame pointer we use it, but otherwise we can just use
   // an immediate "0" which we represent by returning NoRegister.
-  if (FuncInfo->isEntryFunction()) {
+  if (FuncInfo->isEntryFunction() || FuncInfo->isChainFunction()) {
     return TFI->hasFP(MF) ? FuncInfo->getFrameOffsetReg() : Register();
   }
   return TFI->hasFP(MF) ? FuncInfo->getFrameOffsetReg()
@@ -1649,7 +1649,7 @@ void SIRegisterInfo::buildSpillLoadStore(
         if (UseVGPROffset && ScratchOffsetReg) {
           MIB.addReg(ScratchOffsetReg);
         } else {
-          assert(FuncInfo->isEntryFunction());
+          assert(FuncInfo->isEntryFunction() || FuncInfo->isChainFunction());
           MIB.addImm(0);
         }
       }
@@ -2424,7 +2424,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
       bool IsMUBUF = TII->isMUBUF(*MI);
 
-      if (!IsMUBUF && !MFI->isEntryFunction()) {
+      if (!IsMUBUF && !MFI->isEntryFunction() && !MFI->isChainFunction()) {
         // Convert to a swizzled stack address by scaling by the wave size.
         // In an entry function/kernel the offset is already swizzled.
         bool IsSALU = isSGPRClass(TII->getOpRegClass(*MI, FIOperandNum));

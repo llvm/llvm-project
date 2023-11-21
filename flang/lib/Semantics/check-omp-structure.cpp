@@ -609,7 +609,8 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
           [&](const auto &c) {},
       },
       c.u);
-  if (!eligibleTarget) {
+  if (!eligibleTarget &&
+      context_.ShouldWarn(common::UsageWarning::Portability)) {
     context_.Say(parser::FindSourceLocation(c),
         "If %s directive is nested inside TARGET region, the behaviour "
         "is unspecified"_port_en_US,
@@ -2747,6 +2748,17 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
   const auto &device{std::get<1>(deviceClause.t)};
   RequiresPositiveParameter(
       llvm::omp::Clause::OMPC_device, device, "device expression");
+  std::optional<parser::OmpDeviceClause::DeviceModifier> modifier =
+      std::get<0>(deviceClause.t);
+  if (modifier &&
+      *modifier == parser::OmpDeviceClause::DeviceModifier::Ancestor) {
+    if (GetContext().directive != llvm::omp::OMPD_target) {
+      context_.Say(GetContext().clauseSource,
+          "The ANCESTOR device-modifier must not appear on the DEVICE clause on"
+          " any directive other than the TARGET construct. Found on %s construct."_err_en_US,
+          parser::ToUpperCaseLetters(getDirectiveName(GetContext().directive)));
+    }
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
@@ -2769,15 +2781,17 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
 
 void OmpStructureChecker::CheckCopyingPolymorphicAllocatable(
     SymbolSourceMap &symbols, const llvm::omp::Clause clause) {
-  for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
-    const auto *symbol{it->first};
-    const auto source{it->second};
-    if (IsPolymorphicAllocatable(*symbol)) {
-      context_.Say(source,
-          "If a polymorphic variable with allocatable attribute '%s' is in "
-          "%s clause, the behavior is unspecified"_port_en_US,
-          symbol->name(),
-          parser::ToUpperCaseLetters(getClauseName(clause).str()));
+  if (context_.ShouldWarn(common::UsageWarning::Portability)) {
+    for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
+      const auto *symbol{it->first};
+      const auto source{it->second};
+      if (IsPolymorphicAllocatable(*symbol)) {
+        context_.Say(source,
+            "If a polymorphic variable with allocatable attribute '%s' is in "
+            "%s clause, the behavior is unspecified"_port_en_US,
+            symbol->name(),
+            parser::ToUpperCaseLetters(getClauseName(clause).str()));
+      }
     }
   }
 }

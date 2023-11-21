@@ -115,13 +115,14 @@ def DeclareTargetDeviceTypeAttr : EnumAttr<OpenMP_Dialect, DeclareTargetDeviceTy
   let assemblyFormat = "`(` $value `)`";
 }
 
-def CaptureClauseLink : I32EnumAttrCase<"to", 0>;
-def CaptureClauseTo   : I32EnumAttrCase<"link", 1>;
+def CaptureClauseTo : I32EnumAttrCase<"to", 0>;
+def CaptureClauseLink   : I32EnumAttrCase<"link", 1>;
+def CaptureClauseEnter   : I32EnumAttrCase<"enter", 2>;
 
 def DeclareTargetCaptureClause : I32EnumAttr<
     "DeclareTargetCaptureClause",
     "capture clause",
-    [CaptureClauseLink, CaptureClauseTo]> {
+    [CaptureClauseTo, CaptureClauseLink, CaptureClauseEnter]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::omp";
 }

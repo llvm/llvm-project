@@ -366,6 +366,8 @@ static bool isSignExtendingOpW(const MachineInstr &MI,
   // Copying from X0 produces zero.
   case RISCV::COPY:
     return MI.getOperand(1).getReg() == RISCV::X0;
+  case RISCV::PseudoAtomicLoadNand32:
+    return true;
   }
 
   return false;
@@ -383,6 +385,11 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       return false;
     MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
     if (!SrcMI)
+      return false;
+    // Code assumes the register is operand 0.
+    // TODO: Maybe the worklist should store register?
+    if (!SrcMI->getOperand(0).isReg() ||
+        SrcMI->getOperand(0).getReg() != SrcReg)
       return false;
     // Add SrcMI to the worklist.
     Worklist.push_back(SrcMI);
@@ -482,9 +489,16 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
 
       break;
     case RISCV::PseudoCCADDW:
+    case RISCV::PseudoCCADDIW:
     case RISCV::PseudoCCSUBW:
-      // Returns operand 4 or an ADDW/SUBW of operands 5 and 6. We only need to
-      // check if operand 4 is sign extended.
+    case RISCV::PseudoCCSLLW:
+    case RISCV::PseudoCCSRLW:
+    case RISCV::PseudoCCSRAW:
+    case RISCV::PseudoCCSLLIW:
+    case RISCV::PseudoCCSRLIW:
+    case RISCV::PseudoCCSRAIW:
+      // Returns operand 4 or an ADDW/SUBW/etc. of operands 5 and 6. We only
+      // need to check if operand 4 is sign extended.
       if (!AddRegDefToWorkList(MI->getOperand(4).getReg()))
         return false;
       break;

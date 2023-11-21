@@ -671,6 +671,20 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error synchronize(__tgt_async_info *AsyncInfo);
   virtual Error synchronizeImpl(__tgt_async_info &AsyncInfo) = 0;
 
+  /// Invokes any global constructors on the device if present and is required
+  /// by the target.
+  virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
+                                       DeviceImageTy &Image) {
+    return Error::success();
+  }
+
+  /// Invokes any global destructors on the device if present and is required
+  /// by the target.
+  virtual Error callGlobalDestructors(GenericPluginTy &Plugin,
+                                      DeviceImageTy &Image) {
+    return Error::success();
+  }
+
   /// Query for the completion of the pending operations on the __tgt_async_info
   /// structure in a non-blocking manner.
   Error queryAsync(__tgt_async_info *AsyncInfo);
@@ -850,6 +864,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return 0;
   }
 
+  virtual Error getDeviceStackSize(uint64_t &V) = 0;
+
 private:
   /// Register offload entry for global variable.
   Error registerGlobalOffloadEntry(DeviceImageTy &DeviceImage,
@@ -868,7 +884,6 @@ private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
   /// value to zero for the getters.
-  virtual Error getDeviceStackSize(uint64_t &V) = 0;
   virtual Error setDeviceStackSize(uint64_t V) = 0;
   virtual Error getDeviceHeapSize(uint64_t &V) = 0;
   virtual Error setDeviceHeapSize(uint64_t V) = 0;

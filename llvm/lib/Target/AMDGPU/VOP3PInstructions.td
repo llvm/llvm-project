@@ -353,23 +353,23 @@ foreach Type = ["I", "U"] in
                              (!cast<Extract>(Type#Index#"_4bit") node:$src1))>;
   }
 
-class UDot2Pat<Instruction Inst> : GCNPat <
+class UDot2Pat<VOP_Pseudo Inst> : GCNPat <
   (add (add_oneuse (AMDGPUmul_u24_oneuse (srl i32:$src0, (i32 16)),
                                          (srl i32:$src1, (i32 16))), i32:$src2),
        (AMDGPUmul_u24_oneuse (and i32:$src0, (i32 65535)),
                              (and i32:$src1, (i32 65535)))
    ),
   (Inst (i32 8), $src0, (i32 8), $src1, (i32 8), $src2, (i1 0))> {
-  let Predicates = !cast<VOP_Pseudo>(Inst).Predicates;
+  let Predicates = Inst.Predicates;
 }
 
-class SDot2Pat<Instruction Inst> : GCNPat <
+class SDot2Pat<VOP_Pseudo Inst> : GCNPat <
   (add (add_oneuse (AMDGPUmul_i24_oneuse (sra i32:$src0, (i32 16)),
                                          (sra i32:$src1, (i32 16))), i32:$src2),
        (AMDGPUmul_i24_oneuse (sext_inreg i32:$src0, i16),
                              (sext_inreg i32:$src1, i16))),
   (Inst (i32 8), $src0, (i32 8), $src1, (i32 8), $src2, (i1 0))> {
-  let Predicates = !cast<VOP_Pseudo>(Inst).Predicates;
+  let Predicates = Inst.Predicates;
 }
 
 let IsDOT = 1 in {

@@ -89,7 +89,15 @@ enum EdgeKind_aarch32 : Edge::Kind {
   /// Write immediate value to the top halfword of the destination register
   Thumb_MovtAbs,
 
-  LastThumbRelocation = Thumb_MovtAbs,
+  /// Write PC-relative immediate value to the lower halfword of the destination
+  /// register
+  Thumb_MovwPrelNC,
+
+  /// Write PC-relative immediate value to the top halfword of the destination
+  /// register
+  Thumb_MovtPrel,
+
+  LastThumbRelocation = Thumb_MovtPrel,
 };
 
 /// Flags enum for AArch32-specific symbol properties
@@ -192,8 +200,8 @@ template <> struct FixupInfo<Arm_MovwAbsNC> : public FixupInfo<Arm_MovtAbs> {
 };
 
 template <> struct FixupInfo<Thumb_Jump24> {
-  static constexpr HalfWords Opcode{0xf000, 0x8000};
-  static constexpr HalfWords OpcodeMask{0xf800, 0x8000};
+  static constexpr HalfWords Opcode{0xf000, 0x9000};
+  static constexpr HalfWords OpcodeMask{0xf800, 0x9000};
   static constexpr HalfWords ImmMask{0x07ff, 0x2fff};
 };
 
@@ -218,28 +226,30 @@ struct FixupInfo<Thumb_MovwAbsNC> : public FixupInfo<Thumb_MovtAbs> {
 };
 
 /// Helper function to read the initial addend for Data-class relocations.
-Expected<int64_t> readAddendData(LinkGraph &G, Block &B, const Edge &E);
+Expected<int64_t> readAddendData(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                 Edge::Kind Kind);
 
 /// Helper function to read the initial addend for Arm-class relocations.
-Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, const Edge &E);
+Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                Edge::Kind Kind);
 
 /// Helper function to read the initial addend for Thumb-class relocations.
-Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, const Edge &E,
-                                  const ArmConfig &ArmCfg);
+Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                  Edge::Kind Kind, const ArmConfig &ArmCfg);
 
 /// Read the initial addend for a REL-type relocation. It's the value encoded
 /// in the immediate field of the fixup location by the compiler.
-inline Expected<int64_t> readAddend(LinkGraph &G, Block &B, const Edge &E,
+inline Expected<int64_t> readAddend(LinkGraph &G, Block &B,
+                                    Edge::OffsetT Offset, Edge::Kind Kind,
                                     const ArmConfig &ArmCfg) {
-  Edge::Kind Kind = E.getKind();
   if (Kind <= LastDataRelocation)
-    return readAddendData(G, B, E);
+    return readAddendData(G, B, Offset, Kind);
 
   if (Kind <= LastArmRelocation)
-    return readAddendArm(G, B, E);
+    return readAddendArm(G, B, Offset, Kind);
 
   if (Kind <= LastThumbRelocation)
-    return readAddendThumb(G, B, E, ArmCfg);
+    return readAddendThumb(G, B, Offset, Kind, ArmCfg);
 
   llvm_unreachable("Relocation must be of class Data, Arm or Thumb");
 }

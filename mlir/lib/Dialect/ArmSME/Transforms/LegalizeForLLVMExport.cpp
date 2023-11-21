@@ -21,33 +21,6 @@ using namespace mlir;
 using namespace mlir::arm_sme;
 
 namespace {
-/// Insert 'llvm.aarch64.sme.za.enable' intrinsic at the start of 'func.func'
-/// ops to enable the ZA storage array.
-struct EnableZAPattern : public OpRewritePattern<func::FuncOp> {
-  using OpRewritePattern::OpRewritePattern;
-  LogicalResult matchAndRewrite(func::FuncOp op,
-                                PatternRewriter &rewriter) const final {
-    OpBuilder::InsertionGuard g(rewriter);
-    rewriter.setInsertionPointToStart(&op.front());
-    rewriter.create<arm_sme::aarch64_sme_za_enable>(op->getLoc());
-    rewriter.updateRootInPlace(op, [] {});
-    return success();
-  }
-};
-
-/// Insert 'llvm.aarch64.sme.za.disable' intrinsic before 'func.return' ops to
-/// disable the ZA storage array.
-struct DisableZAPattern : public OpRewritePattern<func::ReturnOp> {
-  using OpRewritePattern::OpRewritePattern;
-  LogicalResult matchAndRewrite(func::ReturnOp op,
-                                PatternRewriter &rewriter) const final {
-    OpBuilder::InsertionGuard g(rewriter);
-    rewriter.setInsertionPoint(op);
-    rewriter.create<arm_sme::aarch64_sme_za_disable>(op->getLoc());
-    rewriter.updateRootInPlace(op, [] {});
-    return success();
-  }
-};
 
 /// Lower 'arm_sme.zero' to SME intrinsics.
 ///
@@ -547,118 +520,6 @@ struct OuterProductOpConversion
   }
 };
 
-/// Lower `vector.extract` using `arm_sme.move_tile_slice_to_vector`.
-///
-/// Example:
-/// ```
-/// %el = vector.extract %tile[%row, %col]: i32 from vector<[4]x[4]xi32>
-/// ```
-/// Becomes:
-/// ```
-/// %slice = arm_sme.move_tile_slice_to_vector %tile[%row]
-///            : vector<[4]xi32> from vector<[4]x[4]xi32>
-/// %el = vector.extract %slice[%col] : i32 from vector<[4]xi32>
-/// ```
-struct VectorExtractToArmSMELowering
-    : public ConvertOpToLLVMPattern<vector::ExtractOp> {
-  using ConvertOpToLLVMPattern<vector::ExtractOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    VectorType sourceType = extractOp.getSourceVectorType();
-    if (!isValidSMETileVectorType(sourceType))
-      return failure();
-
-    auto loc = extractOp.getLoc();
-    auto position = extractOp.getMixedPosition();
-
-    Value sourceVector = extractOp.getVector();
-
-    // Extract entire vector. Should be handled by folder, but just to be safe.
-    if (position.empty()) {
-      rewriter.replaceOp(extractOp, sourceVector);
-      return success();
-    }
-
-    Value sliceIndex = vector::getAsValues(rewriter, loc, position[0]).front();
-    auto moveTileSliceToVector =
-        rewriter.create<arm_sme::MoveTileSliceToVectorOp>(loc, sourceVector,
-                                                          sliceIndex);
-
-    if (position.size() == 1) {
-      // Single index case: Extracts a 1D slice.
-      rewriter.replaceOp(extractOp, moveTileSliceToVector);
-      return success();
-    }
-
-    // Two indices case: Extracts a single element.
-    assert(position.size() == 2);
-    rewriter.replaceOpWithNewOp<vector::ExtractOp>(
-        extractOp, moveTileSliceToVector, position[1]);
-
-    return success();
-  }
-};
-
-/// Lower `vector.insert` using `arm_sme.move_vector_to_tile_slice` and
-/// `arm_sme.move_tile_slice_to_vector`.
-///
-/// Example:
-/// ```
-/// %new_tile = vector.insert %el, %tile[%row, %col]
-///                     : i32 into vector<[4]x[4]xi32>
-/// ```
-/// Becomes:
-/// ```
-/// %slice = arm_sme.move_tile_slice_to_vector %tile[%row]
-///            : vector<[4]xi32> from vector<[4]x[4]xi32>
-/// %new_slice = vector.insert %el, %slice[%col] : i32 into vector<[4]xi32>
-/// %new_tile = arm_sme.move_vector_to_tile_slice %new_slice, %tile, %row
-///               : vector<[4]xi32> into vector<[4]x[4]xi32>
-/// ```
-struct VectorInsertToArmSMELowering
-    : public ConvertOpToLLVMPattern<vector::InsertOp> {
-  using ConvertOpToLLVMPattern<vector::InsertOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    VectorType resultType = insertOp.getResult().getType();
-
-    if (!isValidSMETileVectorType(resultType))
-      return failure();
-
-    auto loc = insertOp.getLoc();
-    auto position = insertOp.getMixedPosition();
-
-    Value source = adaptor.getSource();
-
-    // Overwrite entire vector with value. Should be handled by folder, but
-    // just to be safe.
-    if (position.empty()) {
-      rewriter.replaceOp(insertOp, source);
-      return success();
-    }
-
-    Value tileSlice = source;
-    Value sliceIndex = vector::getAsValues(rewriter, loc, position[0]).front();
-    if (position.size() == 2) {
-      // Two indices case: Insert single element into tile.
-      // We need to first extract the existing slice and update the element.
-      tileSlice = rewriter.create<arm_sme::MoveTileSliceToVectorOp>(
-          loc, adaptor.getDest(), sliceIndex);
-      tileSlice = rewriter.create<vector::InsertOp>(loc, source, tileSlice,
-                                                    position[1]);
-    }
-
-    // Insert the slice into the destination tile.
-    rewriter.replaceOpWithNewOp<arm_sme::MoveVectorToTileSliceOp>(
-        insertOp, tileSlice, adaptor.getDest(), sliceIndex);
-    return success();
-  }
-};
-
 } // namespace
 
 void mlir::configureArmSMELegalizeForExportTarget(
@@ -678,42 +539,15 @@ void mlir::configureArmSMELegalizeForExportTarget(
       arm_sme::aarch64_sme_st1w_vert, arm_sme::aarch64_sme_st1d_vert,
       arm_sme::aarch64_sme_st1q_vert, arm_sme::aarch64_sme_read_horiz,
       arm_sme::aarch64_sme_read_vert, arm_sme::aarch64_sme_write_horiz,
-      arm_sme::aarch64_sme_write_vert, arm_sme::aarch64_sme_mopa,
-      arm_sme::aarch64_sme_za_enable, arm_sme::aarch64_sme_za_disable>();
+      arm_sme::aarch64_sme_write_vert, arm_sme::aarch64_sme_mopa>();
   target.addLegalOp<GetTileID>();
   target.addIllegalOp<vector::OuterProductOp>();
-
-  // Mark 'func.func' ops as legal if either:
-  //   1. no 'arm_za' function attribute is present.
-  //   2. the 'arm_za' function attribute is present and the first op in the
-  //      function is an 'arm_sme::aarch64_sme_za_enable' intrinsic.
-  target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp funcOp) {
-    if (funcOp.isDeclaration())
-      return true;
-    auto firstOp = funcOp.getBody().front().begin();
-    return !funcOp->hasAttr("arm_za") ||
-           isa<arm_sme::aarch64_sme_za_enable>(firstOp);
-  });
-
-  // Mark 'func.return' ops as legal if either:
-  //   1. no 'arm_za' function attribute is present.
-  //   2. the 'arm_za' function attribute is present and there's a preceding
-  //      'arm_sme::aarch64_sme_za_disable' intrinsic.
-  target.addDynamicallyLegalOp<func::ReturnOp>([&](func::ReturnOp returnOp) {
-    bool hasDisableZA = false;
-    auto funcOp = returnOp->getParentOp();
-    funcOp->walk<WalkOrder::PreOrder>(
-        [&](arm_sme::aarch64_sme_za_disable op) { hasDisableZA = true; });
-    return !funcOp->hasAttr("arm_za") || hasDisableZA;
-  });
 }
 
 void mlir::populateArmSMELegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
-  patterns.add<DisableZAPattern, EnableZAPattern>(patterns.getContext());
   patterns.add<
       LoadTileSliceToArmSMELowering, MoveTileSliceToVectorArmSMELowering,
       MoveVectorToTileSliceToArmSMELowering, StoreTileSliceToArmSMELowering,
-      OuterProductOpConversion, ZeroOpConversion, VectorExtractToArmSMELowering,
-      VectorInsertToArmSMELowering>(converter);
+      OuterProductOpConversion, ZeroOpConversion>(converter);
 }

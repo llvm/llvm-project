@@ -75,3 +75,8 @@
 // RUN: %clang -### %s 2>&1 --target=arm-unknown-haiku \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM-CPU %s
 // CHECK-ARM-CPU: "-target-cpu" "arm1176jzf-s"
+
+// Check passing LTO flags to the linker
+// RUN: %clang --target=x86_64-unknown-haiku -flto -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-LTO-FLAGS %s
+// CHECK-LTO-FLAGS: "-plugin-opt=mcpu=x86-64"

@@ -43,6 +43,7 @@ enum CondCode {
 };
 
 CondCode getOppositeBranchCondition(CondCode);
+unsigned getBrCond(CondCode CC);
 
 } // end of namespace RISCVCC
 
@@ -195,6 +196,9 @@ public:
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      outliner::Candidate &C) const override;
+
+  std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
+                                           Register Reg) const override;
 
   bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;

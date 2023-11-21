@@ -675,6 +675,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  copysignf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    copysignf128_test.cpp
+  HDRS
+    CopySignTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.copysignf128
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
   frexp_test
   SUITE
     libc-math-smoke-tests

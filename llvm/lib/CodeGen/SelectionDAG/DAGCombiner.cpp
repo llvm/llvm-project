@@ -10905,9 +10905,12 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N) {
   Op1 = AbsOp1.getOperand(1);
 
   unsigned Opc0 = Op0.getOpcode();
+
   // Check if the operands of the sub are (zero|sign)-extended.
+  // TODO: Should we use ValueTracking instead?
   if (Opc0 != Op1.getOpcode() ||
-      (Opc0 != ISD::ZERO_EXTEND && Opc0 != ISD::SIGN_EXTEND)) {
+      (Opc0 != ISD::ZERO_EXTEND && Opc0 != ISD::SIGN_EXTEND &&
+       Opc0 != ISD::SIGN_EXTEND_INREG)) {
     // fold (abs (sub nsw x, y)) -> abds(x, y)
     if (AbsOp1->getFlags().hasNoSignedWrap() && hasOperation(ISD::ABDS, VT) &&
         TLI.preferABDSToABSWithNSW(VT)) {
@@ -10917,17 +10920,24 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N) {
     return SDValue();
   }
 
-  EVT VT1 = Op0.getOperand(0).getValueType();
-  EVT VT2 = Op1.getOperand(0).getValueType();
-  unsigned ABDOpcode = (Opc0 == ISD::SIGN_EXTEND) ? ISD::ABDS : ISD::ABDU;
+  EVT VT0, VT1;
+  if (Opc0 == ISD::SIGN_EXTEND_INREG) {
+    VT0 = cast<VTSDNode>(Op0.getOperand(1))->getVT();
+    VT1 = cast<VTSDNode>(Op1.getOperand(1))->getVT();
+  } else {
+    VT0 = Op0.getOperand(0).getValueType();
+    VT1 = Op1.getOperand(0).getValueType();
+  }
+  unsigned ABDOpcode = (Opc0 == ISD::ZERO_EXTEND) ? ISD::ABDU : ISD::ABDS;
 
   // fold abs(sext(x) - sext(y)) -> zext(abds(x, y))
   // fold abs(zext(x) - zext(y)) -> zext(abdu(x, y))
-  // NOTE: Extensions must be equivalent.
-  if (VT1 == VT2 && hasOperation(ABDOpcode, VT1)) {
-    Op0 = Op0.getOperand(0);
-    Op1 = Op1.getOperand(0);
-    SDValue ABD = DAG.getNode(ABDOpcode, DL, VT1, Op0, Op1);
+  EVT MaxVT = VT0.bitsGT(VT1) ? VT0 : VT1;
+  if ((VT0 == MaxVT || Op0->hasOneUse()) &&
+      (VT1 == MaxVT || Op1->hasOneUse()) && hasOperation(ABDOpcode, MaxVT)) {
+    SDValue ABD = DAG.getNode(ABDOpcode, DL, MaxVT,
+                              DAG.getNode(ISD::TRUNCATE, DL, MaxVT, Op0),
+                              DAG.getNode(ISD::TRUNCATE, DL, MaxVT, Op1));
     ABD = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, ABD);
     return DAG.getZExtOrTrunc(ABD, DL, SrcVT);
   }
@@ -12540,11 +12550,16 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
       if (ShiftCAmt && (IsRotate || AndCMask) && ShiftCAmt->ult(NumBits)) {
         unsigned ShiftOpc = ShiftOrRotate.getOpcode();
         // Check that the constants meet the constraints.
-        bool CanTransform =
-            IsRotate ||
-            (*ShiftCAmt == (~*AndCMask).popcount() && ShiftOpc == ISD::SHL
-                 ? (~*AndCMask).isMask()
-                 : AndCMask->isMask());
+        bool CanTransform = IsRotate;
+        if (!CanTransform) {
+          // Check that mask and shift compliment eachother
+          CanTransform = *ShiftCAmt == (~*AndCMask).popcount();
+          // Check that we are comparing all bits
+          CanTransform &= (*ShiftCAmt + AndCMask->popcount()) == NumBits;
+          // Check that the and mask is correct for the shift
+          CanTransform &=
+              ShiftOpc == ISD::SHL ? (~*AndCMask).isMask() : AndCMask->isMask();
+        }
 
         // See if target prefers another shift/rotate opcode.
         unsigned NewShiftOpc = TLI.preferedOpcodeForCmpEqPiecesOfOperand(
@@ -17662,6 +17677,7 @@ SDValue DAGCombiner::visitFTRUNC(SDNode *N) {
   case ISD::FRINT:
   case ISD::FTRUNC:
   case ISD::FNEARBYINT:
+  case ISD::FROUNDEVEN:
   case ISD::FFLOOR:
   case ISD::FCEIL:
     return N0;
@@ -24060,7 +24076,8 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG,
   // Bail out if the target does not support a narrower version of the binop.
   EVT NarrowBVT = EVT::getVectorVT(*DAG.getContext(), WideBVT.getScalarType(),
                                    WideNumElts / NarrowingRatio);
-  if (!TLI.isOperationLegalOrCustomOrPromote(BOpcode, NarrowBVT))
+  if (!TLI.isOperationLegalOrCustomOrPromote(BOpcode, NarrowBVT,
+                                             LegalOperations))
     return SDValue();
 
   // If extraction is cheap, we don't need to look at the binop operands

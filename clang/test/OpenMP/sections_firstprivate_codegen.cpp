@@ -321,7 +321,7 @@ int main() {
 // CHECK1:       omp.inner.for.body:
 // CHECK1-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_SECTIONS_IV_]], align 4
 // CHECK1-NEXT:    switch i32 [[TMP10]], label [[DOTOMP_SECTIONS_EXIT:%.*]] [
-// CHECK1-NEXT:    i32 0, label [[DOTOMP_SECTIONS_CASE:%.*]]
+// CHECK1-NEXT:      i32 0, label [[DOTOMP_SECTIONS_CASE:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.sections.case:
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[T_VAR]], align 4
@@ -391,7 +391,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z5tmainIiET_v
-// CHECK1-SAME: () #[[ATTR5:[0-9]+]] {
+// CHECK1-SAME: () #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[TEST:%.*]] = alloca [[STRUCT_S_0:%.*]], align 4
@@ -493,7 +493,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z5tmainIiET_v.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR6:[0-9]+]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR5:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -565,8 +565,8 @@ int main() {
 // CHECK1:       omp.inner.for.body:
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_SECTIONS_IV_]], align 4
 // CHECK1-NEXT:    switch i32 [[TMP14]], label [[DOTOMP_SECTIONS_EXIT:%.*]] [
-// CHECK1-NEXT:    i32 0, label [[DOTOMP_SECTIONS_CASE:%.*]]
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_SECTIONS_CASE7:%.*]]
+// CHECK1-NEXT:      i32 0, label [[DOTOMP_SECTIONS_CASE:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_SECTIONS_CASE7:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.sections.case:
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i32, ptr [[T_VAR1]], align 4
@@ -970,7 +970,7 @@ int main() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@__main_block_invoke
-// CHECK4-SAME: (ptr noundef [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (ptr noundef [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[BLOCK_ADDR:%.*]] = alloca ptr, align 8
@@ -981,7 +981,7 @@ int main() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@__main_block_invoke.omp_outlined
-// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SIVAR:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SIVAR:%.*]]) #[[ATTR5:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1024,8 +1024,8 @@ int main() {
 // CHECK4:       omp.inner.for.body:
 // CHECK4-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_SECTIONS_IV_]], align 4
 // CHECK4-NEXT:    switch i32 [[TMP11]], label [[DOTOMP_SECTIONS_EXIT:%.*]] [
-// CHECK4-NEXT:    i32 0, label [[DOTOMP_SECTIONS_CASE:%.*]]
-// CHECK4-NEXT:    i32 1, label [[DOTOMP_SECTIONS_CASE2:%.*]]
+// CHECK4-NEXT:      i32 0, label [[DOTOMP_SECTIONS_CASE:%.*]]
+// CHECK4-NEXT:      i32 1, label [[DOTOMP_SECTIONS_CASE2:%.*]]
 // CHECK4-NEXT:    ]
 // CHECK4:       .omp.sections.case:
 // CHECK4-NEXT:    store i32 1, ptr [[G]], align 4
@@ -1066,7 +1066,7 @@ int main() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@var_block_invoke
-// CHECK4-SAME: (ptr noundef [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (ptr noundef [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR4]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[BLOCK_ADDR:%.*]] = alloca ptr, align 8

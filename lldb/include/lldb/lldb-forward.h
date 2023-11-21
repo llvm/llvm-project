@@ -96,6 +96,9 @@ class File;
 class FileSpec;
 class FileSpecList;
 class Flags;
+namespace FormatEntity {
+struct Entry;
+} // namespace FormatEntity
 class FormatManager;
 class FormattersMatchCandidate;
 class FuncUnwinders;
@@ -335,6 +338,7 @@ typedef std::shared_ptr<lldb_private::ExecutionContextRef>
 typedef std::shared_ptr<lldb_private::ExpressionVariable> ExpressionVariableSP;
 typedef std::unique_ptr<lldb_private::File> FileUP;
 typedef std::shared_ptr<lldb_private::File> FileSP;
+typedef std::shared_ptr<lldb_private::FormatEntity::Entry> FormatEntrySP;
 typedef std::shared_ptr<lldb_private::Function> FunctionSP;
 typedef std::shared_ptr<lldb_private::FuncUnwinders> FuncUnwindersSP;
 typedef std::shared_ptr<lldb_private::InlineFunctionInfo> InlineFunctionInfoSP;

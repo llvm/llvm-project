@@ -418,7 +418,7 @@ static Value *getStackGuard(const TargetLoweringBase *TLI, Module *M,
   Value *Guard = TLI->getIRStackGuard(B);
   StringRef GuardMode = M->getStackProtectorGuard();
   if ((GuardMode == "tls" || GuardMode.empty()) && Guard)
-    return B.CreateLoad(B.getInt8PtrTy(), Guard, true, "StackGuard");
+    return B.CreateLoad(B.getPtrTy(), Guard, true, "StackGuard");
 
   // Use SelectionDAG SSP handling, since there isn't an IR guard.
   //
@@ -539,7 +539,7 @@ bool StackProtector::InsertStackProtectors() {
       // Generate the function-based epilogue instrumentation.
       // The target provides a guard check function, generate a call to it.
       IRBuilder<> B(CheckLoc);
-      LoadInst *Guard = B.CreateLoad(B.getInt8PtrTy(), AI, true, "Guard");
+      LoadInst *Guard = B.CreateLoad(B.getPtrTy(), AI, true, "Guard");
       CallInst *Call = B.CreateCall(GuardCheck, {Guard});
       Call->setAttributes(GuardCheck->getAttributes());
       Call->setCallingConv(GuardCheck->getCallingConv());
@@ -578,7 +578,7 @@ bool StackProtector::InsertStackProtectors() {
 
       IRBuilder<> B(CheckLoc);
       Value *Guard = getStackGuard(TLI, M, B);
-      LoadInst *LI2 = B.CreateLoad(B.getInt8PtrTy(), AI, true);
+      LoadInst *LI2 = B.CreateLoad(B.getPtrTy(), AI, true);
       auto *Cmp = cast<ICmpInst>(B.CreateICmpNE(Guard, LI2));
       auto SuccessProb =
           BranchProbabilityInfo::getBranchProbStackProtector(true);

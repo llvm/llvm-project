@@ -909,6 +909,10 @@ public:
   bool isWaitVDST() const;
   bool isWaitEXP() const;
 
+  auto getPredicate(std::function<bool(const AMDGPUOperand &Op)> P) const {
+    return std::bind(P, *this);
+  }
+
   StringRef getToken() const {
     assert(isToken());
     return StringRef(Tok.Data, Tok.Length);
@@ -1773,7 +1777,6 @@ public:
 
   void cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands);
   void cvtVINTERP(MCInst &Inst, const OperandVector &Operands);
-  void cvtSMEMAtomic(MCInst &Inst, const OperandVector &Operands);
 
   bool parseDimId(unsigned &Encoding);
   ParseStatus parseDim(OperandVector &Operands);
@@ -7719,66 +7722,6 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
   }
 
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOffset);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyCPol, 0);
-}
-
-//===----------------------------------------------------------------------===//
-// SMEM
-//===----------------------------------------------------------------------===//
-
-void AMDGPUAsmParser::cvtSMEMAtomic(MCInst &Inst, const OperandVector &Operands) {
-  OptionalImmIndexMap OptionalIdx;
-  bool IsAtomicReturn = false;
-
-  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
-    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
-    if (!Op.isCPol())
-      continue;
-    IsAtomicReturn = Op.getImm() & AMDGPU::CPol::GLC;
-    break;
-  }
-
-  if (!IsAtomicReturn) {
-    int NewOpc = AMDGPU::getAtomicNoRetOp(Inst.getOpcode());
-    if (NewOpc != -1)
-      Inst.setOpcode(NewOpc);
-  }
-
-  IsAtomicReturn =  MII.get(Inst.getOpcode()).TSFlags &
-                    SIInstrFlags::IsAtomicRet;
-
-  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
-    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
-
-    // Add the register arguments
-    if (Op.isReg()) {
-      Op.addRegOperands(Inst, 1);
-      if (IsAtomicReturn && i == 1)
-        Op.addRegOperands(Inst, 1);
-      continue;
-    }
-
-    // Handle the case where soffset is an immediate
-    if (Op.isImm() && Op.getImmTy() == AMDGPUOperand::ImmTyNone) {
-      Op.addImmOperands(Inst, 1);
-      continue;
-    }
-
-    // Handle tokens like 'offen' which are sometimes hard-coded into the
-    // asm string.  There are no MCInst operands for these.
-    if (Op.isToken()) {
-      continue;
-    }
-    assert(Op.isImm());
-
-    // Handle optional arguments
-    OptionalIdx[Op.getImmTy()] = i;
-  }
-
-  if ((int)Inst.getNumOperands() <=
-      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::offset))
-    addOptionalImmOperand(Inst, Operands, OptionalIdx,
-                          AMDGPUOperand::ImmTySMEMOffsetMod);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyCPol, 0);
 }
 

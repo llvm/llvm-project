@@ -81,9 +81,9 @@ INSTR_PROF_DATA(const IntPtrT, IntPtrTy, BitmapPtr, RelativeBitmapPtr)
  * function name hashes during the conversion from raw to merged profile
  * data.
  */
-INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), FunctionPointer, \
+INSTR_PROF_DATA(const IntPtrT, llvm::PointerType::getUnqual(Ctx), FunctionPointer, \
                 FunctionAddr)
-INSTR_PROF_DATA(IntPtrT, llvm::Type::getInt8PtrTy(Ctx), Values, \
+INSTR_PROF_DATA(IntPtrT, llvm::PointerType::getUnqual(Ctx), Values, \
                 ValuesPtrExpr)
 INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumCounters, \
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumCounters))
@@ -116,7 +116,7 @@ INSTR_PROF_VALUE_NODE(uint64_t, llvm::Type::getInt64Ty(Ctx), Value, \
                       ConstantInt::get(llvm::Type::GetInt64Ty(Ctx), 0))
 INSTR_PROF_VALUE_NODE(uint64_t, llvm::Type::getInt64Ty(Ctx), Count, \
                       ConstantInt::get(llvm::Type::GetInt64Ty(Ctx), 0))
-INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::Type::getInt8PtrTy(Ctx), Next, \
+INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::PointerType::getUnqual(Ctx), Next, \
                       ConstantInt::get(llvm::Type::GetInt8PtrTy(Ctx), 0))
 #undef INSTR_PROF_VALUE_NODE
 /* INSTR_PROF_VALUE_NODE end. */
@@ -160,7 +160,7 @@ INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 #endif
 VALUE_PROF_FUNC_PARAM(uint64_t, TargetValue, Type::getInt64Ty(Ctx)) \
                       INSTR_PROF_COMMA
-VALUE_PROF_FUNC_PARAM(void *, Data, Type::getInt8PtrTy(Ctx)) INSTR_PROF_COMMA
+VALUE_PROF_FUNC_PARAM(void *, Data, PointerType::getUnqual(Ctx)) INSTR_PROF_COMMA
 VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
 #undef VALUE_PROF_FUNC_PARAM
 #undef INSTR_PROF_COMMA
@@ -213,9 +213,9 @@ VALUE_PROF_KIND(IPVK_Last, IPVK_MemOPSize, "last")
 #define INSTR_PROF_DATA_DEFINED
 #endif
 #ifdef COVMAP_V1
-COVMAP_FUNC_RECORD(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), \
+COVMAP_FUNC_RECORD(const IntPtrT, llvm::PointerType::getUnqual(Ctx), \
                    NamePtr, llvm::ConstantExpr::getBitCast(NamePtr, \
-                   llvm::Type::getInt8PtrTy(Ctx)))
+                   llvm::PointerType::getUnqual(Ctx)))
 COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), NameSize, \
                    llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), \
                    NameValue.size()))
@@ -350,7 +350,7 @@ typedef struct ValueProfRecord {
    * Do byte swap for this instance. \c Old is the original order before
    * the swap, and \c New is the New byte order.
    */
-  void swapBytes(support::endianness Old, support::endianness New);
+  void swapBytes(llvm::endianness Old, llvm::endianness New);
 #endif
 } ValueProfRecord;
 
@@ -405,15 +405,15 @@ typedef struct ValueProfData {
   static Expected<std::unique_ptr<ValueProfData>>
   getValueProfData(const unsigned char *SrcBuffer,
                    const unsigned char *const SrcBufferEnd,
-                   support::endianness SrcDataEndianness);
+                   llvm::endianness SrcDataEndianness);
   /*!
    * Swap byte order from \c Endianness order to host byte order.
    */
-  void swapBytesToHost(support::endianness Endianness);
+  void swapBytesToHost(llvm::endianness Endianness);
   /*!
    * Swap byte order from host byte order to \c Endianness order.
    */
-  void swapBytesFromHost(support::endianness Endianness);
+  void swapBytesFromHost(llvm::endianness Endianness);
   /*!
    * Return the total size of \c ValueProfileData.
    */

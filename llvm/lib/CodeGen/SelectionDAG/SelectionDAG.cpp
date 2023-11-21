@@ -10852,6 +10852,10 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
         uint64_t Offset;
         if (RHSConstant)
           Offset = N.getConstantOperandVal(1);
+        // We are not allowed to turn indirect debug values variadic, so
+        // don't salvage those.
+        if (!RHSConstant && DV->isIndirect())
+          continue;
 
         // Rewrite an ADD constant node into a DIExpression. Since we are
         // performing arithmetic to compute the variable's *value* in the
