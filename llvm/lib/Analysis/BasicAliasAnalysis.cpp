@@ -1230,9 +1230,6 @@ AliasResult BasicAAResult::aliasGEP(
     const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
     if (Var.Val.TruncBits == 0 &&
         isKnownNonZero(Var.Val.V, DL, 0, &AC, Var.CxtI, DT)) {
-      // If V != 0, then abs(VarIndex) > 0.
-      MinAbsVarIndex = APInt(Var.Scale.getBitWidth(), 1);
-
       // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
       // potentially wrapping math.
       auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
