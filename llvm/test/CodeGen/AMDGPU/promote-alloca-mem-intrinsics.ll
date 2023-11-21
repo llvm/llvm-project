@@ -54,8 +54,7 @@ define amdgpu_kernel void @promote_with_objectsize(ptr addrspace(1) %out) #0 {
 }
 
 ; CHECK-LABEL: @promote_with_objectsize_8(
-; CHECK: [[PTR:%[0-9]+]] = getelementptr inbounds [64 x [8 x i32]], ptr addrspace(3) @promote_with_objectsize_8.alloca, i32 0, i32 %{{[0-9]+}}
-; CHECK: call i32 @llvm.objectsize.i32.p3(ptr addrspace(3) [[PTR]], i1 false, i1 false, i1 false)
+; CHECK: store i32 32, ptr addrspace(1) %out, align 4
 define amdgpu_kernel void @promote_with_objectsize_8(ptr addrspace(1) %out) #0 {
   %alloca = alloca [8 x i32], align 4, addrspace(5)
   %size = call i32 @llvm.objectsize.i32.p5(ptr addrspace(5) %alloca, i1 false, i1 false, i1 false)

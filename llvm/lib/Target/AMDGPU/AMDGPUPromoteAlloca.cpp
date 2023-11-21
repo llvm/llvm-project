@@ -528,6 +528,15 @@ static Value *promoteAllocaUserToVector(
       return Builder.CreateVectorSplat(VectorTy->getElementCount(), Elt);
     }
 
+    if (auto *Intr = dyn_cast<IntrinsicInst>(Inst)) {
+      if (Intr->getIntrinsicID() == Intrinsic::objectsize) {
+        Intr->replaceAllUsesWith(
+            Builder.getIntN(Intr->getType()->getIntegerBitWidth(),
+                            DL.getTypeAllocSize(VectorTy)));
+        return nullptr;
+      }
+    }
+
     llvm_unreachable("Unsupported call when promoting alloca to vector");
   }
 
@@ -768,6 +777,13 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         TI->SrcIndex = Index;
       }
       continue;
+    }
+
+    if (auto *Intr = dyn_cast<IntrinsicInst>(Inst)) {
+      if (Intr->getIntrinsicID() == Intrinsic::objectsize) {
+        WorkList.push_back(Inst);
+        continue;
+      }
     }
 
     // Ignore assume-like intrinsics and comparisons used in assumes.
