@@ -496,14 +496,14 @@ static void handleAccessGroups(Operation *call,
 /// If `requestedAlignment` is higher than the alignment specified on `alloca`,
 /// realigns `alloca` if this does not exceed the natural stack alignment.
 /// Returns the post-alignment of `alloca`, whether it was realigned or not.
-static unsigned tryToEnforceAllocaAlignment(LLVM::AllocaOp alloca,
-                                            unsigned requestedAlignment,
+static uint64_t tryToEnforceAllocaAlignment(LLVM::AllocaOp alloca,
+                                            uint64_t requestedAlignment,
                                             DataLayout const &dataLayout) {
-  unsigned allocaAlignment = alloca.getAlignment().value_or(1);
+  uint64_t allocaAlignment = alloca.getAlignment().value_or(1);
   if (requestedAlignment <= allocaAlignment)
     // No realignment necessary.
     return allocaAlignment;
-  unsigned naturalStackAlignmentBits = dataLayout.getStackAlignment();
+  uint64_t naturalStackAlignmentBits = dataLayout.getStackAlignment();
   // If the natural stack alignment is not specified, the data layout returns
   // zero. Optimistically allow realignment in this case.
   if (naturalStackAlignmentBits == 0 ||
@@ -525,7 +525,7 @@ static unsigned tryToEnforceAllocaAlignment(LLVM::AllocaOp alloca,
 /// the pointer, then returns the resulting post-alignment, regardless of
 /// whether it was realigned or not. If no existing alignment attribute is
 /// found, returns 1 (i.e., assume that no alignment is guaranteed).
-static unsigned tryToEnforceAlignment(Value value, unsigned requestedAlignment,
+static uint64_t tryToEnforceAlignment(Value value, uint64_t requestedAlignment,
                                       DataLayout const &dataLayout) {
   if (Operation *definingOp = value.getDefiningOp()) {
     if (auto alloca = dyn_cast<LLVM::AllocaOp>(definingOp))
