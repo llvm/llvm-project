@@ -142,14 +142,23 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
 
   OpenACCDirectiveKindEx ExDirKind = getOpenACCDirectiveKind(FirstTokSpelling);
 
-  switch (ExDirKind) {
-  case OpenACCDirectiveKindEx::Invalid:
-    P.Diag(FirstTok, diag::err_acc_invalid_directive) << 0 << FirstTokSpelling;
-    return OpenACCDirectiveKind::Invalid;
-  case OpenACCDirectiveKindEx::Enter:
-  case OpenACCDirectiveKindEx::Exit:
-    return ParseOpenACCEnterExitDataDirective(P, FirstTok, FirstTokSpelling,
-                                              ExDirKind);
+  // OpenACCDirectiveKindEx is meant to be an extended list
+  // over OpenACCDirectiveKind, so any value below Invalid is one of the
+  // OpenACCDirectiveKind values.  This switch takes care of all of the extra
+  // parsing required for the Extended values.  At the end of this block,
+  // ExDirKind can be assumed to be a valid OpenACCDirectiveKind, so we can
+  // immediately cast it and use it as that.
+  if (ExDirKind >= OpenACCDirectiveKindEx::Invalid) {
+    switch (ExDirKind) {
+    case OpenACCDirectiveKindEx::Invalid:
+      P.Diag(FirstTok, diag::err_acc_invalid_directive)
+          << 0 << FirstTokSpelling;
+      return OpenACCDirectiveKind::Invalid;
+    case OpenACCDirectiveKindEx::Enter:
+    case OpenACCDirectiveKindEx::Exit:
+      return ParseOpenACCEnterExitDataDirective(P, FirstTok, FirstTokSpelling,
+                                                ExDirKind);
+    }
   }
 
   OpenACCDirectiveKind DirKind = static_cast<OpenACCDirectiveKind>(ExDirKind);
