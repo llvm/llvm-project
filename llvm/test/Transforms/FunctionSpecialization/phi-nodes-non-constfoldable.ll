@@ -1,4 +1,4 @@
-; RUN: opt -passes="ipsccp<func-spec>" -funcspec-min-function-size=20 -funcspec-for-literal-constant -S < %s
+; RUN: opt -passes="ipsccp<func-spec>" -funcspec-min-function-size=10 -funcspec-for-literal-constant -S < %s | FileCheck %s
 
 define i64 @bar(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i64 %x1) {
 ; CHECK-LABEL: define i64 @bar(

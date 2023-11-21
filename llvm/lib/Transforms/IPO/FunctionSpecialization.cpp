@@ -270,8 +270,7 @@ Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
 }
 
 bool InstCostVisitor::discoverTransitivelyIncomingValues(
-    Constant *Const, PHINode *Root, DenseSet<PHINode *> &TransitivePHIs,
-    SmallVectorImpl<PHINode *> &UnknownIncomingValues) {
+    Constant *Const, PHINode *Root, DenseSet<PHINode *> &TransitivePHIs) {
 
   SmallVector<PHINode *, 64> WorkList;
   WorkList.push_back(Root);
@@ -281,13 +280,8 @@ bool InstCostVisitor::discoverTransitivelyIncomingValues(
     PHINode *PN = WorkList.pop_back_val();
 
     if (++Iter > MaxDiscoveryIterations ||
-        PN->getNumIncomingValues() > MaxIncomingPhiValues) {
-      // For now just collect the Phi and later we will check whether it is
-      // in the Transitive set.
-      UnknownIncomingValues.push_back(PN);
-      continue;
-      // FIXME: return false here and remove the UnknownIncomingValues entirely.
-    }
+        PN->getNumIncomingValues() > MaxIncomingPhiValues)
+      return false;
 
     if (!TransitivePHIs.insert(PN).second)
       continue;
@@ -324,8 +318,6 @@ Constant *InstCostVisitor::visitPHINode(PHINode &I) {
     return nullptr;
 
   bool Inserted = VisitedPHIs.insert(&I).second;
-  SmallVector<PHINode *, 8> UnknownIncomingValues;
-  DenseSet<PHINode *> TransitivePHIs;
   Constant *Const = nullptr;
   bool HaveSeenIncomingPHI = false;
 
@@ -363,18 +355,15 @@ Constant *InstCostVisitor::visitPHINode(PHINode &I) {
     return nullptr;
   }
 
-  assert(Const && "Should have found at least one constant incoming value");
+  if (!Const)
+    return nullptr;
 
   if (!HaveSeenIncomingPHI)
     return Const;
 
-  if (!discoverTransitivelyIncomingValues(Const, &I, TransitivePHIs,
-                                          UnknownIncomingValues))
+  DenseSet<PHINode *> TransitivePHIs;
+  if (!discoverTransitivelyIncomingValues(Const, &I, TransitivePHIs))
     return nullptr;
-
-  for (PHINode *Phi : UnknownIncomingValues)
-    if (!TransitivePHIs.contains(Phi))
-      return nullptr;
 
   return Const;
 }

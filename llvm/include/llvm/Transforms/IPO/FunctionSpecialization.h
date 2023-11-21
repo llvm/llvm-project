@@ -217,9 +217,23 @@ private:
   Cost estimateSwitchInst(SwitchInst &I);
   Cost estimateBranchInst(BranchInst &I);
 
-  bool discoverTransitivelyIncomingValues(
-      Constant *Const, PHINode *Root, DenseSet<PHINode *> &TransitivePHIs,
-      SmallVectorImpl<PHINode *> &UnknownIncomingValues);
+  // Transitive Incoming Values are chains of PHI Nodes that
+  // may all refer to the same value.
+  //
+  // For example:
+  //
+  // %a = load %0
+  // %c = phi [%a, %d]
+  // %d = phi [%e, %c]
+  // %e = phi [%c, %f]
+  // %f = phi [%j, %h]
+  // %j = phi [%h, %j]
+  // %h = phi [%g, %c]
+  //
+  // In the real world, there would be branches and other code between these
+  // phi-nodes.
+  bool discoverTransitivelyIncomingValues(Constant *Const, PHINode *Root,
+                                          DenseSet<PHINode *> &TransitivePHIs);
 
   Constant *visitInstruction(Instruction &I) { return nullptr; }
   Constant *visitPHINode(PHINode &I);
