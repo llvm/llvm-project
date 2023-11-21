@@ -206,11 +206,19 @@ void Serializer::processMemoryModel() {
   encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
 }
 
+static std::string getDecorationName(StringRef attrName) {
+  // convertToCamelFromSnakeCase will convert this to FpFastMathMode instead of
+  // expected FPFastMathMode.
+  if (attrName == "fp_fast_math_mode")
+    return "FPFastMathMode";
+
+  return llvm::convertToCamelFromSnakeCase(attrName, /*capitalizeFirst=*/true);
+}
+
 LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
                                             NamedAttribute attr) {
   auto attrName = attr.getName().strref();
-  auto decorationName =
-      llvm::convertToCamelFromSnakeCase(attrName, /*capitalizeFirst=*/true);
+  auto decorationName = getDecorationName(attrName);
   auto decoration = spirv::symbolizeDecoration(decorationName);
   if (!decoration) {
     return emitError(
@@ -232,6 +240,13 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
     args.push_back(static_cast<uint32_t>(linkageType));
     break;
   }
+  case spirv::Decoration::FPFastMathMode:
+    if (auto intAttr = dyn_cast<FPFastMathModeAttr>(attr.getValue())) {
+      args.push_back(static_cast<uint32_t>(intAttr.getValue()));
+      break;
+    }
+    return emitError(loc, "expected FPFastMathModeAttr attribute for ")
+           << attrName;
   case spirv::Decoration::Binding:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Location:
@@ -256,8 +271,10 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
   case spirv::Decoration::NonReadable:
   case spirv::Decoration::NonWritable:
   case spirv::Decoration::NoPerspective:
-  case spirv::Decoration::Restrict:
+  case spirv::Decoration::NoSignedWrap:
+  case spirv::Decoration::NoUnsignedWrap:
   case spirv::Decoration::RelaxedPrecision:
+  case spirv::Decoration::Restrict:
     // For unit attributes, the args list has no values so we do nothing
     if (auto unitAttr = dyn_cast<UnitAttr>(attr.getValue()))
       break;
