@@ -41,7 +41,8 @@ enum class OpenACCDirectiveKind {
   SerialLoop,
   KernelsLoop,
 
-  // FIXME: atomic Construct variants.
+  // Atomic Construct.
+  Atomic,
 
   // Declare Directive.
   Declare,
@@ -57,6 +58,14 @@ enum class OpenACCDirectiveKind {
   // FIXME: routine construct.
 
   // Invalid.
+  Invalid,
+};
+
+enum class OpenACCAtomicKind {
+  Read,
+  Write,
+  Update,
+  Capture,
   Invalid,
 };
 } // namespace clang
