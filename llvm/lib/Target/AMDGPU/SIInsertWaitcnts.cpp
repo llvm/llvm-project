@@ -388,8 +388,6 @@ private:
   // message.
   DenseSet<MachineInstr *> ReleaseVGPRInsts;
 
-  // bool insertWaitcntAfterMemOp(MachineFunction &MF);
-
 public:
   static char ID;
 
@@ -1607,6 +1605,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     VCCZCorrect = false;
   }
 
+  bool IsGFX10Plus = AMDGPU::isGFX10Plus(*ST);
+
   // Walk over the instructions.
   MachineInstr *OldWaitcntInstr = nullptr;
 
@@ -1711,10 +1711,16 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     ++Iter;
     if (ST->isPreciseMemoryEnabled() && Inst.mayLoadOrStore()) {
-      auto builder =
+      auto Builder =
           BuildMI(Block, Iter, DebugLoc(), TII->get(AMDGPU::S_WAITCNT))
               .addImm(0);
-      OldWaitcntInstr = builder.getInstr();
+      if (IsGFX10Plus) {
+        Builder = 
+          BuildMI(Block, Iter, DebugLoc(), TII->get(AMDGPU::S_WAITCNT_VSCNT))
+                         .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
+                         .addImm(0);
+      }
+      OldWaitcntInstr = Builder.getInstr();
       Modified = true;
     }
   }
@@ -1818,25 +1824,6 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
   return HasVMemLoad && UsesVgprLoadedOutside;
 }
 
-#if 0
-bool SIInsertWaitcnts::insertWaitcntAfterMemOp(MachineFunction &MF) {
-  bool Modified = false;
-
-  for (auto &MBB : MF) {
-    for (auto It = MBB.begin(); It != MBB.end();) {
-      bool IsMemOp = It->mayLoadOrStore();
-      ++It;
-      if (IsMemOp) {
-        BuildMI(MBB, It, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(0);
-        Modified = true;
-      }
-    }
-  }
-
-  return Modified;
-}
-#endif
-
 bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
@@ -1846,12 +1833,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MLI = &getAnalysis<MachineLoopInfo>();
   PDT = &getAnalysis<MachinePostDominatorTree>();
-
-#if 0
-  if (ST->isPreciseMemoryEnabled()) {
-    Modified |= insertWaitcntAfterMemOp(MF);
-  }
-#endif
 
   ForceEmitZeroWaitcnts = ForceEmitZeroFlag;
   for (auto T : inst_counter_types())
