@@ -376,8 +376,7 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
         do {
           tag = t->GenerateRandomTag(/*num_bits=*/8);
         } while (UNLIKELY(tag < kShadowAlignment || tag == pointer_tag ||
-                          tag == previous_tag || tag == following_tag) &&
-                 tag != 0);
+                          tag == previous_tag || tag == following_tag));
       }
     } else {
       static_assert(kFallbackFreeTag >= kShadowAlignment,
