@@ -971,7 +971,7 @@ namespace X86II {
     ExplicitREX2Prefix = 1ULL << ExplicitOpPrefixShift,
     ExplicitVEXPrefix = 2ULL << ExplicitOpPrefixShift,
     ExplicitEVEXPrefix = 3ULL << ExplicitOpPrefixShift,
-    ExplicitOpPrefix = 3ULL << ExplicitOpPrefixShift
+    ExplicitOpPrefixMask = 3ULL << ExplicitOpPrefixShift
   };
 
   /// \returns true if the instruction with given opcode is a prefix.
