@@ -2700,7 +2700,7 @@ private:
     // Allocate and construct the AMDGPU kernel.
     AMDGPUKernelTy AMDGPUKernel(Name);
     if (auto Err = AMDGPUKernel.init(*this, Image))
-      return std::move(Err);
+      return Err;
 
     AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
 
@@ -2708,12 +2708,12 @@ private:
     if (auto Err = AMDGPUKernel.launchImpl(*this, /*NumThread=*/1u,
                                            /*NumBlocks=*/1ul, KernelArgs,
                                            /*Args=*/nullptr, AsyncInfoWrapper))
-      return std::move(Err);
+      return Err;
 
     Error Err = Plugin::success();
     AsyncInfoWrapper.finalize(Err);
 
-    return std::move(Err);
+    return Err;
   }
 
   /// Envar for controlling the number of HSA queues per device. High number of
