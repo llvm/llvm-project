@@ -108,7 +108,6 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 >} {
 }
 
-
 // -----
 
 module {
@@ -287,7 +286,6 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 }
 
 // -----
-
 
 // expected-error @below {{expected i64 entries for '!llvm.struct<()>'}}
 module attributes { dlti.dl_spec = #dlti.dl_spec<
