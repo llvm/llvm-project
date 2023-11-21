@@ -1168,7 +1168,7 @@ state of the value ``errno`` if applicable to the analysis. Many system
 functions set the ``errno`` value only if an error occurs (together with a
 specific return value of the function), otherwise it becomes undefined. This
 checker changes the analysis state to contain such information. This data is
-used by other checkers, for example :ref:`alpha-unix-Errno`.
+used by other checkers, for example :ref:`unix-Errno`.
 
 **Limitations**
 
