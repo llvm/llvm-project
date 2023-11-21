@@ -81,13 +81,14 @@ void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
   auto OtherRAII = varDecl(hasType(hasCanonicalType(hasDeclaration(
                                namedDecl(hasAnyName(RAIITypesList))))))
                        .bind("raii");
-  auto Allowed = awaiatable(
+  auto SafeSuspend = awaiatable(
       hasType(hasCanonicalType(hasDeclaration(isRAIISafeAwaitable()))));
-  Finder->addMatcher(expr(anyOf(coawaitExpr(unless(Allowed)), coyieldExpr()),
-                          forEachPrevStmt(declStmt(forEach(
-                              varDecl(anyOf(ScopedLockable, OtherRAII))))))
-                         .bind("suspension"),
-                     this);
+  Finder->addMatcher(
+      expr(anyOf(coawaitExpr(unless(SafeSuspend)), coyieldExpr()),
+           forEachPrevStmt(
+               declStmt(forEach(varDecl(anyOf(ScopedLockable, OtherRAII))))))
+          .bind("suspension"),
+      this);
 }
 
 void CoroutineHostileRAIICheck::check(const MatchFinder::MatchResult &Result) {
