@@ -131,9 +131,9 @@ translateDataLayout(DataLayoutSpecInterface attribute,
               } else {
                 layoutStream << "f";
               }
-              unsigned size = dataLayout.getTypeSizeInBits(type);
-              unsigned abi = dataLayout.getTypeABIAlignment(type) * 8u;
-              unsigned preferred =
+              uint64_t size = dataLayout.getTypeSizeInBits(type);
+              uint64_t abi = dataLayout.getTypeABIAlignment(type) * 8u;
+              uint64_t preferred =
                   dataLayout.getTypePreferredAlignment(type) * 8u;
               layoutStream << size << ":" << abi;
               if (abi != preferred)
@@ -142,12 +142,12 @@ translateDataLayout(DataLayoutSpecInterface attribute,
             })
             .Case([&](LLVMPointerType ptrType) {
               layoutStream << "p" << ptrType.getAddressSpace() << ":";
-              unsigned size = dataLayout.getTypeSizeInBits(type);
-              unsigned abi = dataLayout.getTypeABIAlignment(type) * 8u;
-              unsigned preferred =
+              uint64_t size = dataLayout.getTypeSizeInBits(type);
+              uint64_t abi = dataLayout.getTypeABIAlignment(type) * 8u;
+              uint64_t preferred =
                   dataLayout.getTypePreferredAlignment(type) * 8u;
               layoutStream << size << ":" << abi << ":" << preferred;
-              if (std::optional<unsigned> index = extractPointerSpecValue(
+              if (std::optional<uint64_t> index = extractPointerSpecValue(
                       entry.getValue(), PtrDLEntryPos::Index))
                 layoutStream << ":" << *index;
               return success();
@@ -246,15 +246,15 @@ convertDenseElementsAttr(Location loc, DenseElementsAttr denseElementsAttr,
   // raw data.
   // TODO: we may also need to consider endianness when cross-compiling to an
   // architecture where it is different.
-  unsigned elementByteSize = denseElementsAttr.getRawData().size() /
-                             denseElementsAttr.getNumElements();
+  int64_t elementByteSize = denseElementsAttr.getRawData().size() /
+                            denseElementsAttr.getNumElements();
   if (8 * elementByteSize != innermostLLVMType->getScalarSizeInBits())
     return nullptr;
 
   // Compute the shape of all dimensions but the innermost. Note that the
   // innermost dimension may be that of the vector element type.
   bool hasVectorElementType = isa<VectorType>(type.getElementType());
-  unsigned numAggregates =
+  int64_t numAggregates =
       denseElementsAttr.getNumElements() /
       (hasVectorElementType ? 1
                             : denseElementsAttr.getType().getShape().back());
@@ -305,8 +305,8 @@ convertDenseElementsAttr(Location loc, DenseElementsAttr denseElementsAttr,
   // Create innermost constants and defer to the default constant creation
   // mechanism for other dimensions.
   SmallVector<llvm::Constant *> constants;
-  unsigned aggregateSize = denseElementsAttr.getType().getShape().back() *
-                           (innermostLLVMType->getScalarSizeInBits() / 8);
+  int64_t aggregateSize = denseElementsAttr.getType().getShape().back() *
+                          (innermostLLVMType->getScalarSizeInBits() / 8);
   constants.reserve(numAggregates);
   for (unsigned i = 0; i < numAggregates; ++i) {
     StringRef data(denseElementsAttr.getRawData().data() + i * aggregateSize,
