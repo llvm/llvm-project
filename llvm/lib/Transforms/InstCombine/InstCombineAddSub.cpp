@@ -1662,6 +1662,23 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
                                     m_c_UMin(m_Deferred(A), m_Deferred(B))))))
     return BinaryOperator::CreateWithCopiedFlags(Instruction::Add, A, B, &I);
 
+  // (~X) + (~Y) --> -2 - (X + Y)
+  {
+    // To ensure we can save instructions we need to ensure that we consume both
+    // LHS/RHS (i.e they have a `not`).
+    bool ConsumesLHS, ConsumesRHS;
+    if (isFreeToInvert(LHS, LHS->hasOneUse(), ConsumesLHS) && ConsumesLHS &&
+        isFreeToInvert(RHS, RHS->hasOneUse(), ConsumesRHS) && ConsumesRHS) {
+      Value *NotLHS = getFreelyInverted(LHS, LHS->hasOneUse(), &Builder);
+      Value *NotRHS = getFreelyInverted(RHS, RHS->hasOneUse(), &Builder);
+      assert(NotLHS != nullptr && NotRHS != nullptr &&
+             "isFreeToInvert desynced with getFreelyInverted");
+      Value *LHSPlusRHS = Builder.CreateAdd(NotLHS, NotRHS);
+      return BinaryOperator::CreateSub(ConstantInt::get(RHS->getType(), -2),
+                                       LHSPlusRHS);
+    }
+  }
+
   // TODO(jingyue): Consider willNotOverflowSignedAdd and
   // willNotOverflowUnsignedAdd to reduce the number of invocations of
   // computeKnownBits.
