@@ -101,38 +101,38 @@ ReturnObject BasicNoWarning() {
 }
 
 ReturnObject scopedLockableTest() {
-  co_yield 0;
-  absl::Mutex a;
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: 'a' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
-  absl::Mutex2 b;
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'b' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
-  {
-      absl::Mutex no_warning_1;
-      { absl::Mutex no_warning_2; }
-  }
+    co_yield 0;
+    absl::Mutex a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: 'a' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
+    absl::Mutex2 b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'b' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
+    {
+        absl::Mutex no_warning_1;
+        { absl::Mutex no_warning_2; }
+    }
 
-  co_yield 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: note: suspension point is here
-  absl::Mutex c;
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: 'c' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
-  co_await std::suspend_always{};
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: note: suspension point is here
-  for(int i=1; i<=10; ++i ) {
-    absl::Mutex d;
-    // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: 'd' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
+    co_yield 1;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: note: suspension point is here
+    absl::Mutex c;
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: 'c' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
     co_await std::suspend_always{};
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: note: suspension point is here
-    co_yield 1;
-    absl::Mutex no_warning_3;
-  }
-  if (true) {
-    absl::Mutex e;
-    // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: 'e' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
-    co_yield 1;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: note: suspension point is here
-    absl::Mutex no_warning_4;
-  }
-  absl::Mutex no_warning_5;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: note: suspension point is here
+    for(int i=1; i<=10; ++i ) {
+      absl::Mutex d;
+      // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: 'd' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
+      co_await std::suspend_always{};
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: note: suspension point is here
+      co_yield 1;
+      absl::Mutex no_warning_3;
+    }
+    if (true) {
+      absl::Mutex e;
+      // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: 'e' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
+      co_yield 1;
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: note: suspension point is here
+      absl::Mutex no_warning_4;
+    }
+    absl::Mutex no_warning_5;
 }
 
 void lambda() {
