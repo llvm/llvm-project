@@ -2208,8 +2208,8 @@ define i128 @shift_zext_nneg(i8 %arg) {
 
 define i129 @shift_zext_not_nneg(i8 %arg) {
 ; CHECK-LABEL: @shift_zext_not_nneg(
-; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i8 [[ARG:%.*]] to i129
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i129 1, [[EXT]]
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[ARG:%.*]] to i129
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i129 1, [[EXT]]
 ; CHECK-NEXT:    ret i129 [[SHL]]
 ;
   %ext = zext i8 %arg to i129
