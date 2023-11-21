@@ -2445,23 +2445,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       kernelInput.push_back(mapData.OriginalValue[i]);
   }
 
-  // Do some very basic handling of implicit captures that are caught
-  // by use in the target region.
-  // TODO/FIXME: Remove on addition of IsolatedFromAbove patch series
-  // as this will become redundant and perhaps erroneous in cases
-  // where more complex implicit capture semantics are required.
-  llvm::SetVector<Value> uses;
-  getUsedValuesDefinedAbove(targetRegion, uses);
-
-  for (mlir::Value use : uses) {
-    llvm::Value *useValue = moduleTranslation.lookupValue(use);
-    if (useValue &&
-        !std::any_of(
-            mapData.OriginalValue.begin(), mapData.OriginalValue.end(),
-            [&](llvm::Value *mapValue) { return mapValue == useValue; }))
-      kernelInput.push_back(useValue);
-  }
-
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTarget(
       ompLoc, allocaIP, builder.saveIP(), entryInfo, defaultValTeams,
       defaultValThreads, kernelInput, genMapInfoCB, bodyCB, argAccessorCB));
