@@ -117,7 +117,6 @@ namespace {
       (void) llvm::createSingleLoopExtractorPass();
       (void) llvm::createTailCallEliminationPass();
       (void)llvm::createTLSVariableHoistPass();
-      (void) llvm::createInstCountPass();
       (void) llvm::createConstantHoistingPass();
       (void) llvm::createCodeGenPreparePass();
       (void) llvm::createEarlyCSEPass();
