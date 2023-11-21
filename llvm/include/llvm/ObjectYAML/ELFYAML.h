@@ -156,13 +156,6 @@ struct DynamicEntry {
   llvm::yaml::Hex64 Val;
 };
 
-struct BBAddrMapCommonBase {
-  uint8_t Version;
-  llvm::yaml::Hex8 Feature;
-  llvm::yaml::Hex64 Address;
-  std::optional<uint64_t> NumBlocks;
-};
-
 struct BBAddrMapEntry {
   struct BBEntry {
     uint32_t ID;
@@ -170,23 +163,24 @@ struct BBAddrMapEntry {
     llvm::yaml::Hex64 Size;
     llvm::yaml::Hex64 Metadata;
   };
-  BBAddrMapCommonBase Common;
+  uint8_t Version;
+  llvm::yaml::Hex8 Feature;
+  llvm::yaml::Hex64 Address;
+  std::optional<uint64_t> NumBlocks;
   std::optional<std::vector<BBEntry>> BBEntries;
 };
 
-struct PGOBBAddrMapEntry {
-  struct BBEntry {
+struct PGOAnalysisMapEntry {
+  struct PGOBBEntry {
     struct SuccessorEntry {
       uint32_t ID;
       llvm::yaml::Hex32 BrProb;
     };
-    BBAddrMapEntry::BBEntry Base;
     std::optional<uint64_t> BBFreq;
     std::optional<std::vector<SuccessorEntry>> Successors;
   };
-  BBAddrMapCommonBase Common;
   std::optional<uint64_t> FuncEntryCount;
-  std::optional<std::vector<BBEntry>> BBEntries;
+  std::optional<std::vector<PGOBBEntry>> PGOBBEntries;
 };
 
 struct StackSizeEntry {
@@ -223,7 +217,6 @@ struct Chunk {
     DependentLibraries,
     CallGraphProfile,
     BBAddrMap,
-    PGOBBAddrMap,
 
     // Special chunks.
     SpecialChunksStart,
@@ -337,6 +330,7 @@ struct SectionHeaderTable : Chunk {
 
 struct BBAddrMapSection : Section {
   std::optional<std::vector<BBAddrMapEntry>> Entries;
+  std::optional<std::vector<PGOAnalysisMapEntry>> PGOAnalyses;
 
   BBAddrMapSection() : Section(ChunkKind::BBAddrMap) {}
 
@@ -346,20 +340,6 @@ struct BBAddrMapSection : Section {
 
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::BBAddrMap;
-  }
-};
-
-struct PGOBBAddrMapSection : Section {
-  std::optional<std::vector<PGOBBAddrMapEntry>> Entries;
-
-  PGOBBAddrMapSection() : Section(ChunkKind::PGOBBAddrMap) {}
-
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", Entries.has_value()}};
-  };
-
-  static bool classof(const Chunk *S) {
-    return S->Kind == ChunkKind::PGOBBAddrMap;
   }
 };
 
@@ -771,10 +751,10 @@ bool shouldAllocateFileSpace(ArrayRef<ProgramHeader> Phdrs,
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::StackSizeEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry::BBEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::PGOBBAddrMapEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::PGOBBAddrMapEntry::BBEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::PGOAnalysisMapEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::PGOAnalysisMapEntry::PGOBBEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(
-    llvm::ELFYAML::PGOBBAddrMapEntry::BBEntry::SuccessorEntry)
+    llvm::ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::LinkerOption)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::CallGraphEntryWeight)
@@ -943,18 +923,19 @@ template <> struct MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry> {
   static void mapping(IO &IO, ELFYAML::BBAddrMapEntry::BBEntry &Rel);
 };
 
-template <> struct MappingTraits<ELFYAML::PGOBBAddrMapEntry> {
-  static void mapping(IO &IO, ELFYAML::PGOBBAddrMapEntry &Rel);
+template <> struct MappingTraits<ELFYAML::PGOAnalysisMapEntry> {
+  static void mapping(IO &IO, ELFYAML::PGOAnalysisMapEntry &Rel);
 };
 
-template <> struct MappingTraits<ELFYAML::PGOBBAddrMapEntry::BBEntry> {
-  static void mapping(IO &IO, ELFYAML::PGOBBAddrMapEntry::BBEntry &Rel);
+template <> struct MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry> {
+  static void mapping(IO &IO, ELFYAML::PGOAnalysisMapEntry::PGOBBEntry &Rel);
 };
 
 template <>
-struct MappingTraits<ELFYAML::PGOBBAddrMapEntry::BBEntry::SuccessorEntry> {
-  static void mapping(IO &IO,
-                      ELFYAML::PGOBBAddrMapEntry::BBEntry::SuccessorEntry &Rel);
+struct MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry> {
+  static void
+  mapping(IO &IO,
+          ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry &Rel);
 };
 
 template <> struct MappingTraits<ELFYAML::GnuHashHeader> {

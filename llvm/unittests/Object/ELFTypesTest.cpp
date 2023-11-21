@@ -100,17 +100,17 @@ TEST(ELFTypesTest, BBEntryMetadataInvalidEncodingTest) {
 }
 
 static_assert(
-    std::is_same_v<decltype(PGOBBAddrMap::BBEntry::SuccessorEntry::ID),
+    std::is_same_v<decltype(PGOAnalysisMap::PGOBBEntry::SuccessorEntry::ID),
                    decltype(BBAddrMap::BBEntry::ID)>,
-    "PGOBBAddrMap should use the same type for basic block ID as BBAddrMap");
+    "PGOAnalysisMap should use the same type for basic block ID as BBAddrMap");
 static_assert(BBAddrMap::BBEntry::Metadata::NumberOfBits <
                   (sizeof(uint32_t) * 8) - 2,
-              "currently PGOBBAddrMap relies on having two bits of space to "
+              "currently PGOAnalysisMap relies on having two bits of space to "
               "encode number of successors, to add more we need increase the "
               "encoded size of Metadata");
 
 TEST(ELFTypesTest, PGOBBEntryMetadataEncodingTest) {
-  using ST = PGOBBAddrMap::BBEntry::SuccessorsType;
+  using ST = PGOAnalysisMap::PGOBBEntry::SuccessorsType;
   const std::array<std::pair<BBAddrMap::BBEntry::Metadata, ST>, 7> Decoded = {
       {{{false, false, false, false, false}, ST::None},
        {{true, false, false, false, false}, ST::One},
@@ -124,11 +124,11 @@ TEST(ELFTypesTest, PGOBBEntryMetadataEncodingTest) {
                                             0b11'11111}};
   for (auto [Enc, Dec] : llvm::zip(Encoded, Decoded)) {
     auto [MD, SuccType] = Dec;
-    EXPECT_EQ(PGOBBAddrMap::BBEntry::encodeMD(MD, SuccType), Enc);
+    EXPECT_EQ(PGOAnalysisMap::PGOBBEntry::encodeMD(MD, SuccType), Enc);
   }
   for (auto [Enc, Dec] : llvm::zip(Encoded, Decoded)) {
     Expected<std::pair<BBAddrMap::BBEntry::Metadata, ST>> MetadataOrError =
-        PGOBBAddrMap::BBEntry::decodeMD(Enc);
+        PGOAnalysisMap::PGOBBEntry::decodeMD(Enc);
     ASSERT_THAT_EXPECTED(MetadataOrError, Succeeded());
     EXPECT_EQ(*MetadataOrError, Dec);
   }
@@ -141,7 +141,7 @@ TEST(ELFTypesTest, PGOBBEntryMetadataInvalidEncodingTest) {
       "invalid encoding for BBEntry::Metadata: 0x80"};
   const std::array<uint32_t, 3> Values = {0xFFFF, 0x100001, 0x00c0};
   for (auto [Val, Err] : llvm::zip(Values, Errors)) {
-    EXPECT_THAT_ERROR(PGOBBAddrMap::BBEntry::decodeMD(Val).takeError(),
+    EXPECT_THAT_ERROR(PGOAnalysisMap::PGOBBEntry::decodeMD(Val).takeError(),
                       FailedWithMessage(Err));
   }
 }

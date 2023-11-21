@@ -915,7 +915,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
       BBEntries.push_back({ID, Offset, Size, Metadata});
     }
     Entries.push_back(
-        {{Version, Feature, Address, /*NumBlocks=*/{}}, std::move(BBEntries)});
+        {Version, Feature, Address, /*NumBlocks=*/{}, std::move(BBEntries)});
   }
 
   if (!Cur) {

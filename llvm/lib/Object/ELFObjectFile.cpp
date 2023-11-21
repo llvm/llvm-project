@@ -33,6 +33,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 using namespace llvm;
 using namespace object;
@@ -708,18 +709,20 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
   return Result;
 }
 
-template <typename AddrMap, typename ELFT, typename DecodeAddrMapFn>
-Expected<std::vector<AddrMap>> static readBBAddrMapCommonImpl(
+template <class ELFT>
+Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
     const ELFFile<ELFT> &EF, std::optional<unsigned> TextSectionIndex,
-    ArrayRef<unsigned> SectionIDs, DecodeAddrMapFn DecodeAddrMap) {
+    std::vector<PGOAnalysisMap> *PGOAnalyses) {
   using Elf_Shdr = typename ELFT::Shdr;
   bool IsRelocatable = EF.getHeader().e_type == ELF::ET_REL;
-  std::vector<AddrMap> BBAddrMaps;
+  std::vector<BBAddrMap> BBAddrMaps;
+  if (PGOAnalyses)
+    PGOAnalyses->clear();
 
   const auto &Sections = cantFail(EF.sections());
   auto IsMatch = [&](const Elf_Shdr &Sec) -> Expected<bool> {
-    if (llvm::none_of(SectionIDs,
-                      [&](unsigned ID) { return ID == Sec.sh_type; }))
+    if (Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP &&
+        Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP_V0)
       return false;
     if (!TextSectionIndex)
       return true;
@@ -742,38 +745,18 @@ Expected<std::vector<AddrMap>> static readBBAddrMapCommonImpl(
     if (IsRelocatable && !RelocSec)
       return createError("unable to get relocation section for " +
                          describe(EF, *Sec));
-    Expected<std::vector<AddrMap>> BBAddrMapOrErr =
-        DecodeAddrMap(EF, *Sec, RelocSec);
-    if (!BBAddrMapOrErr)
+    Expected<std::vector<BBAddrMap>> BBAddrMapOrErr =
+        EF.decodeBBAddrMap(*Sec, RelocSec, PGOAnalyses);
+    if (!BBAddrMapOrErr) {
+      if (PGOAnalyses)
+        PGOAnalyses->clear();
       return createError("unable to read " + describe(EF, *Sec) + ": " +
                          toString(BBAddrMapOrErr.takeError()));
+    }
     std::move(BBAddrMapOrErr->begin(), BBAddrMapOrErr->end(),
               std::back_inserter(BBAddrMaps));
   }
   return BBAddrMaps;
-}
-
-template <class ELFT>
-Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
-    const ELFFile<ELFT> &EF, std::optional<unsigned> TextSectionIndex) {
-  return readBBAddrMapCommonImpl<BBAddrMap>(
-      EF, TextSectionIndex,
-      {ELF::SHT_LLVM_BB_ADDR_MAP, ELF::SHT_LLVM_BB_ADDR_MAP_V0},
-      [](const ELFFile<ELFT> &EF, const typename ELFFile<ELFT>::Elf_Shdr &Sec,
-         const typename ELFFile<ELFT>::Elf_Shdr *RelaSec) {
-        return EF.decodeBBAddrMap(Sec, RelaSec);
-      });
-}
-
-template <class ELFT>
-Expected<std::vector<PGOBBAddrMap>> static readPGOBBAddrMapImpl(
-    const ELFFile<ELFT> &EF, std::optional<unsigned> TextSectionIndex) {
-  return readBBAddrMapCommonImpl<PGOBBAddrMap>(
-      EF, TextSectionIndex, {ELF::SHT_LLVM_PGO_BB_ADDR_MAP},
-      [](const ELFFile<ELFT> &EF, const typename ELFFile<ELFT>::Elf_Shdr &Sec,
-         const typename ELFFile<ELFT>::Elf_Shdr *RelaSec) {
-        return EF.decodePGOBBAddrMap(Sec, RelaSec);
-      });
 }
 
 template <class ELFT>
@@ -846,25 +829,14 @@ ELFObjectFileBase::readDynsymVersions() const {
 }
 
 Expected<std::vector<BBAddrMap>> ELFObjectFileBase::readBBAddrMap(
-    std::optional<unsigned> TextSectionIndex) const {
+    std::optional<unsigned> TextSectionIndex,
+    std::vector<PGOAnalysisMap> *PGOAnalyses) const {
   if (const auto *Obj = dyn_cast<ELF32LEObjectFile>(this))
-    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
   if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
-    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
   if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
-    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
   return readBBAddrMapImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
-                           TextSectionIndex);
-}
-
-Expected<std::vector<PGOBBAddrMap>> ELFObjectFileBase::readPGOBBAddrMap(
-    std::optional<unsigned> TextSectionIndex) const {
-  if (const auto *Obj = dyn_cast<ELF32LEObjectFile>(this))
-    return readPGOBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
-  if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
-    return readPGOBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
-  if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
-    return readPGOBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
-  return readPGOBBAddrMapImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
-                              TextSectionIndex);
+                           TextSectionIndex, PGOAnalyses);
 }

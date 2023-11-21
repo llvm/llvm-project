@@ -10,7 +10,6 @@
 #define LLVM_OBJECT_ELFTYPES_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/Error.h"
@@ -883,26 +882,24 @@ struct BBAddrMap {
   std::vector<BBEntry> BBEntries; // Basic block entries for this function.
 };
 
-/// An extension of BBAddrMap that holds information relevant to PGO.
-struct PGOBBAddrMap {
+/// A feature extension of BBAddrMap that holds information relevant to PGO.
+struct PGOAnalysisMap {
   /// Bitmask of optional features to include in the PGO extended map.
   enum class Features {
-    None = 0,
     FuncEntryCnt = (1 << 0),
     BBFreq = (1 << 1),
     BrProb = (1 << 2),
-    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/BrProb),
   };
 
   /// Super-set of BBAddrMap::BBEntry with additional fields for block frequency
   /// and branch probability.
-  struct BBEntry {
+  struct PGOBBEntry {
     using BaseMetadata = BBAddrMap::BBEntry::Metadata;
 
     /// Enum indicating the how many successors a block has. This enum must fit
     /// into two bits.
     enum class SuccessorsType {
-      /// None should be present if PGOBBAddrMap has disabled branch
+      /// None should be present if BBAddrMap.feature has disabled branch
       /// probability.
       None = 0,
       /// Single successor blocks are not present in the successor entries.
@@ -926,8 +923,6 @@ struct PGOBBAddrMap {
       }
     };
 
-    /// Reuse of the fields provided by regular BBAddrMap
-    BBAddrMap::BBEntry Base;
     /// Block frequency taken from MBFI
     BlockFrequency BlockFreq;
     /// List of successors of the current block
@@ -958,26 +953,25 @@ struct PGOBBAddrMap {
       return std::make_pair(MD, SuccType);
     }
 
-    bool operator==(const BBEntry &Other) const {
-      return std::tie(Base, BlockFreq, Successors) ==
-             std::tie(Other.Base, Other.BlockFreq, Other.Successors);
+    bool operator==(const PGOBBEntry &Other) const {
+      return std::tie(BlockFreq, Successors) ==
+             std::tie(Other.BlockFreq, Other.Successors);
     }
   };
   // This field is duplicated from BBAddrMap since this class needs a different
   // type for the vector of entries.
-  uint64_t Addr;                  // Function address
-  std::vector<BBEntry> BBEntries; // Extended basic block entries
-  uint64_t FuncEntryCount;        // Prof count from IR function
+  uint64_t FuncEntryCount;           // Prof count from IR function
+  std::vector<PGOBBEntry> BBEntries; // Extended basic block entries
 
   // Flags to indicate if each PGO related info was enabled in this function
   bool FuncEntryCountEnabled : 1;
   bool BBFreqEnabled : 1;
   bool BBSuccProbEnabled : 1;
 
-  bool operator==(const PGOBBAddrMap &Other) const {
-    return std::tie(Addr, FuncEntryCount, BBEntries, FuncEntryCountEnabled,
+  bool operator==(const PGOAnalysisMap &Other) const {
+    return std::tie(FuncEntryCount, BBEntries, FuncEntryCountEnabled,
                     BBFreqEnabled, BBSuccProbEnabled) ==
-           std::tie(Other.Addr, Other.FuncEntryCount, Other.BBEntries,
+           std::tie(Other.FuncEntryCount, Other.BBEntries,
                     Other.FuncEntryCountEnabled, Other.BBFreqEnabled,
                     Other.BBSuccProbEnabled);
   }
