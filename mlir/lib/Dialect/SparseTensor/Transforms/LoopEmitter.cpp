@@ -1497,8 +1497,7 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
     levelReducedDep[tid][lvl]--;
     if (!resolved) {
       // TODO: support coiterating multiple slices
-      assert(loopInfo.trivialTidLvls.empty() &&
-             loopInfo.sliceDrivenInfo.size() == 1);
+      assert(loopInfo.sliceDrivenInfo.size() == 1);
       auto [nxNonEmpty, nxMinCrd, nxAbsOffset] =
           genSliceNextInduction(builder, loc, tid, lvl);
       // Update while loop induction operands.
