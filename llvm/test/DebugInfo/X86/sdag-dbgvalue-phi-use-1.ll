@@ -5,6 +5,10 @@
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:    -experimental-debug-variable-locations=false --try-experimental-debuginfo-iterators \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+
 ; This test case was generated from the following debug.c program,
 ; using: clang debug.c -g -O1 -S -o dbg_value_phi_isel1.ll -emit-llvm
 ; --------------------------------------
