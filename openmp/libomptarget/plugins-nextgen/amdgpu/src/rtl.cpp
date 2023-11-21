@@ -4056,7 +4056,9 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
         (xnackImageMode != utils::XnackBuildMode::XNACK_PLUS)) {
       FAILURE_MESSAGE(
           "Running a program that requries XNACK on a system where XNACK is "
-          "disabled! This may potentially cause memory errors! Just saying.\n");
+          "disabled. This may cause problems when using a OS-allocated pointer "
+          "inside a target region. "
+          "Re-run with HSA_XNACK=1 to remove this warning.\n");
     }
   }
 
