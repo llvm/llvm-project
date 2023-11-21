@@ -9801,11 +9801,30 @@ class sve_mem_128b_gld_64_unscaled<string mnemonic>
 }
 
 
-multiclass sve_mem_128b_gld_64_unscaled<string mnemonic> {
+multiclass sve_mem_128b_gld_64_unscaled<string mnemonic, SDPatternOperator op> {
   def NAME : sve_mem_128b_gld_64_unscaled<mnemonic>;
 
   def : InstAlias<mnemonic # " $Zt, $Pg/z, [$Zn]",
                   (!cast<Instruction>(NAME) Z_q:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 1>;
+
+
+  def : Pat<(nxv2i64 (op (nxv2i1 PPR3bAny:$Pg),  (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv2i64)),
+            (!cast<Instruction>(NAME) PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm)>;
+  def : Pat<(nxv4i32 (op (nxv4i1 PPR3bAny:$Pg), (nxv2i64 ZPR64:$Zn),  (i64 GPR64sp:$Rm), nxv4i32)),
+            (!cast<Instruction>(NAME) PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm)>;
+  def : Pat<(nxv8i16 (op (nxv8i1 PPR3bAny:$Pg), (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv8i16)),
+            (!cast<Instruction>(NAME) PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm)>;
+  def : Pat<(nxv16i8 (op (nxv16i1 PPR3bAny:$Pg), (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv16i8)),
+            (!cast<Instruction>(NAME) PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm)>;
+
+  def : Pat<(nxv2f64 (op (nxv2i1 PPR3bAny:$Pg), (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv2f64)),
+            (!cast<Instruction>(NAME) PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm)>;
+  def : Pat<(nxv4f32 (op (nxv4i1 PPR3bAny:$Pg), (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv4f32)),
+            (!cast<Instruction>(NAME) PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm)>;
+  def : Pat<(nxv8f16 (op (nxv8i1 PPR3bAny:$Pg), (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv8f16)),
+            (!cast<Instruction>(NAME) PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm)>;
+  def : Pat<(nxv8bf16 (op (nxv8i1 PPR3bAny:$Pg), (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv8bf16)),
+            (!cast<Instruction>(NAME) PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm)>;
 }
 
 class sve_mem_sst_128b_64_unscaled<string mnemonic>
@@ -9828,11 +9847,29 @@ class sve_mem_sst_128b_64_unscaled<string mnemonic>
 }
 
 
-multiclass sve_mem_sst_128b_64_unscaled<string mnemonic> {
+multiclass sve_mem_sst_128b_64_unscaled<string mnemonic, SDPatternOperator op> {
   def NAME : sve_mem_sst_128b_64_unscaled<mnemonic>;
 
   def : InstAlias<mnemonic # " $Zt, $Pg, [$Zn]",
                   (!cast<Instruction>(NAME) Z_q:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 1>;
+
+  def : Pat<(op (nxv2i64 Z_q:$Zt), (nxv2i1 PPR3bAny:$gp), (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv2i64),
+            (!cast<Instruction>(NAME) Z_q:$Zt, PPR3bAny:$gp, ZPR64:$Zn, GPR64:$Rm)>;
+  def : Pat<(op (nxv4i32 Z_q:$Zt), (nxv4i1 PPR3bAny:$gp), (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv4i32),
+            (!cast<Instruction>(NAME) Z_q:$Zt, PPR3bAny:$gp, ZPR64:$Zn, GPR64:$Rm)>;
+  def : Pat<(op (nxv8i16 Z_q:$Zt), (nxv8i1 PPR3bAny:$gp), (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv8i16),
+            (!cast<Instruction>(NAME) Z_q:$Zt, PPR3bAny:$gp,ZPR64:$Zn, GPR64:$Rm)>;
+  def : Pat<(op (nxv16i8 Z_q:$Zt), (nxv16i1 PPR3bAny:$gp), (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv16i8),
+            (!cast<Instruction>(NAME) Z_q:$Zt, PPR3bAny:$gp, ZPR64:$Zn, GPR64:$Rm)>;
+
+  def : Pat<(op (nxv2f64 Z_q:$Zt), (nxv2i1 PPR3bAny:$gp), (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv2f64),
+            (!cast<Instruction>(NAME) Z_q:$Zt, PPR3bAny:$gp, ZPR64:$Zn, GPR64:$Rm)>;
+  def : Pat<(op (nxv4f32 Z_q:$Zt), (nxv4i1 PPR3bAny:$gp), (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv4f32),
+            (!cast<Instruction>(NAME) Z_q:$Zt, PPR3bAny:$gp, ZPR64:$Zn, GPR64:$Rm)>;
+  def : Pat<(op (nxv8f16 Z_q:$Zt), (nxv8i1 PPR3bAny:$gp), (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv8f16),
+            (!cast<Instruction>(NAME) Z_q:$Zt, PPR3bAny:$gp, ZPR64:$Zn, GPR64:$Rm)>;
+  def : Pat<(op (nxv8bf16 Z_q:$Zt), (nxv8i1 PPR3bAny:$gp), (nxv2i64 ZPR64:$Zn), (i64 GPR64sp:$Rm), nxv8bf16),
+            (!cast<Instruction>(NAME) Z_q:$Zt, PPR3bAny:$gp, ZPR64:$Zn, GPR64:$Rm)>;
 }
 
 

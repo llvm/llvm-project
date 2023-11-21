@@ -100,6 +100,8 @@ def AArch64ldff1s_gather_imm_z         : SDNode<"AArch64ISD::GLDFF1S_IMM_MERGE_Z
 
 def AArch64ldnt1_gather_z  : SDNode<"AArch64ISD::GLDNT1_MERGE_ZERO",  SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 def AArch64ldnt1s_gather_z : SDNode<"AArch64ISD::GLDNT1S_MERGE_ZERO", SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
+// Gather vector base +  scalar offset
+def AArch64ld1q_gather_z: SDNode<"AArch64ISD::GLD1Q_MERGE_ZERO", SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 
 // Contiguous stores - node definitions
 //
@@ -131,6 +133,9 @@ def AArch64st1_scatter_sxtw_scaled : SDNode<"AArch64ISD::SST1_SXTW_SCALED_PRED",
 def AArch64st1_scatter_imm         : SDNode<"AArch64ISD::SST1_IMM_PRED",         SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore]>;
 
 def AArch64stnt1_scatter : SDNode<"AArch64ISD::SSTNT1_PRED", SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore]>;
+
+// Scatter vector base + scalar offset
+def AArch64st1q_scatter : SDNode<"AArch64ISD::SST1Q_PRED", SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore]>;
 
 // AArch64 SVE/SVE2 - the remaining node definitions
 //
@@ -1157,7 +1162,7 @@ let Predicates = [HasSVE] in {
   defm GLD1D      : sve_mem_64b_gld_vs2_64_unscaled<0b1110, "ld1d",    AArch64ld1_gather_z,    nxv2i64>;
   defm GLDFF1D    : sve_mem_64b_gld_vs2_64_unscaled<0b1111, "ldff1d",  AArch64ldff1_gather_z,  nxv2i64>;
   let Predicates = [HasSVE2p1] in {
-  defm GLD1Q      : sve_mem_128b_gld_64_unscaled<"ld1q">;
+  defm GLD1Q      : sve_mem_128b_gld_64_unscaled<"ld1q", AArch64ld1q_gather_z>;
   }
 
   // Gathers using scaled 64-bit offsets, e.g.
@@ -1338,6 +1343,49 @@ let Predicates = [HasSVEorSME] in {
   let Predicates = [HasSVE2p1] in {
   defm ST1D_Q : sve_mem_cst_ss<0b1110, "st1d", Z_q, ZPR128, GPR64NoXZRshifted64>;
   }
+
+  multiclass sve_ld1q_pat<ValueType Ty, ValueType PredTy, SDPatternOperator Load1qOp, Instruction RegRegInst, Instruction RegImmInst, ComplexPattern AddrCP> {
+    let AddedComplexity = 2 in {
+      def _reg_imm : Pat<(Ty (Load1qOp (PredTy PPR3bAny:$Pg), (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$imm))),
+                        (RegImmInst PPR3bAny:$Pg, GPR64sp:$base, simm4s1:$imm)>;
+    }
+
+    let AddedComplexity = 1 in {
+      def _reg_reg : Pat<(Ty (Load1qOp (PredTy PPR3bAny:$Pg), (AddrCP GPR64sp:$base, GPR64:$offset))),
+                        (RegRegInst PPR3bAny:$Pg, GPR64sp:$base, GPR64:$offset)>;
+    }
+
+    def _default : Pat<(Ty (Load1qOp (PredTy PPR3bAny:$Pg), (i64 GPR64sp:$base))),
+                     (RegImmInst PPR3bAny:$Pg, GPR64sp:$base, (i64 0))>;
+  }
+
+  multiclass sve_st1q_pat<ValueType DataType, ValueType PredTy, SDPatternOperator Store1qOp, Instruction RegRegInst, Instruction RegImmInst, ComplexPattern AddrCP> {
+    let AddedComplexity = 2 in {
+      def _reg_imm : Pat<(Store1qOp (DataType ZPR128:$Zt), (PredTy PPR3bAny:$Pg), (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$imm)),
+                        (RegImmInst Z_q:$Zt, PPR3bAny:$Pg, GPR64sp:$base, simm4s1:$imm)>;
+    }
+
+    let AddedComplexity = 1 in {
+      def _reg_reg : Pat<(Store1qOp (DataType ZPR128:$Zt), (PredTy PPR3bAny:$Pg), (AddrCP GPR64sp:$base, GPR64:$offset)),
+                        (RegRegInst Z_q:$Zt, PPR3bAny:$Pg, GPR64sp:$base, GPR64:$offset)>;
+    }
+
+    def _default : Pat<(Store1qOp (DataType ZPR128:$Zt), (PredTy PPR3bAny:$Pg), (i64 GPR64sp:$base)),
+                        (RegImmInst Z_q:$Zt, PPR3bAny:$Pg, GPR64sp:$base, (i64 0))>;
+  }
+
+  // ld1quw/st1quw
+  defm : sve_ld1q_pat<nxv4i32, nxv1i1, int_aarch64_sve_ld1uwq, LD1W_Q, LD1W_Q_IMM, am_sve_regreg_lsl2>;
+  defm : sve_ld1q_pat<nxv4f32, nxv1i1, int_aarch64_sve_ld1uwq, LD1W_Q, LD1W_Q_IMM, am_sve_regreg_lsl2>;
+  defm : sve_st1q_pat<nxv4i32, nxv1i1, int_aarch64_sve_st1uwq, ST1W_Q, ST1W_Q_IMM, am_sve_regreg_lsl2>;
+  defm : sve_st1q_pat<nxv4f32, nxv1i1, int_aarch64_sve_st1uwq, ST1W_Q, ST1W_Q_IMM, am_sve_regreg_lsl2>;
+
+  // ld1qud/st1qud
+  defm : sve_ld1q_pat<nxv2i64, nxv1i1, int_aarch64_sve_ld1udq, LD1D_Q, LD1D_Q_IMM, am_sve_regreg_lsl3>;
+  defm : sve_ld1q_pat<nxv2f64, nxv1i1, int_aarch64_sve_ld1udq, LD1D_Q, LD1D_Q_IMM, am_sve_regreg_lsl3>;
+  defm : sve_st1q_pat<nxv2i64, nxv1i1, int_aarch64_sve_st1udq, ST1D_Q, ST1D_Q_IMM, am_sve_regreg_lsl3>;
+  defm : sve_st1q_pat<nxv2f64, nxv1i1, int_aarch64_sve_st1udq, ST1D_Q, ST1D_Q_IMM, am_sve_regreg_lsl3>;
+
 } // End HasSVEorSME
 
 let Predicates = [HasSVE] in {
@@ -1385,7 +1433,7 @@ let Predicates = [HasSVE] in {
   defm SST1W_D : sve_mem_sst_sv_64_unscaled<0b10, "st1w", AArch64st1_scatter, nxv2i32>;
   defm SST1D   : sve_mem_sst_sv_64_unscaled<0b11, "st1d", AArch64st1_scatter, nxv2i64>;
   let Predicates = [HasSVE2p1] in {
-  defm SST1Q   : sve_mem_sst_128b_64_unscaled<"st1q">;
+  defm SST1Q   : sve_mem_sst_128b_64_unscaled<"st1q", AArch64st1q_scatter>;
   }
 
   // Scatters using scaled 64-bit offsets, e.g.
