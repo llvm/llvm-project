@@ -46,12 +46,6 @@ struct clang::CodeGen::CGCoroData {
   // The promise type's 'unhandled_exception' handler, if it defines one.
   Stmt *ExceptionHandler = nullptr;
 
-  // A temporary i1 alloca that stores whether 'await_resume' threw an
-  // exception. If it did, 'true' is stored in this variable, and the coroutine
-  // body must be skipped. If the promise type does not define an exception
-  // handler, this is null.
-  llvm::Value *ResumeEHVar = nullptr;
-
   // Stores the jump destination just before the coroutine memory is freed.
   // This is the destination that every suspend point jumps to for the cleanup
   // branch.
@@ -127,16 +121,6 @@ static SmallString<32> buildSuspendPrefixStr(CGCoroData &Coro, AwaitKind Kind) {
     Twine(No).toVector(Prefix);
   }
   return Prefix;
-}
-
-static bool memberCallExpressionCanThrow(const Expr *E) {
-  if (const auto *CE = dyn_cast<CXXMemberCallExpr>(E))
-    if (const auto *Proto =
-            CE->getMethodDecl()->getType()->getAs<FunctionProtoType>())
-      if (isNoexceptExceptionSpec(Proto->getExceptionSpecType()) &&
-          Proto->canThrow() == CT_Cannot)
-        return false;
-  return true;
 }
 
 // Emit suspend expression which roughly looks like:
@@ -229,34 +213,14 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   // Emit await_resume expression.
   CGF.EmitBlock(ReadyBlock);
 
-  // Exception handling requires additional IR. If the 'await_resume' function
-  // is marked as 'noexcept', we avoid generating this additional IR.
-  CXXTryStmt *TryStmt = nullptr;
-  if (Coro.ExceptionHandler && Kind == AwaitKind::Init &&
-      memberCallExpressionCanThrow(S.getResumeExpr())) {
-    Coro.ResumeEHVar =
-        CGF.CreateTempAlloca(Builder.getInt1Ty(), Prefix + Twine("resume.eh"));
-    Builder.CreateFlagStore(true, Coro.ResumeEHVar);
-
-    auto Loc = S.getResumeExpr()->getExprLoc();
-    auto *Catch = new (CGF.getContext())
-        CXXCatchStmt(Loc, /*exDecl=*/nullptr, Coro.ExceptionHandler);
-    auto *TryBody = CompoundStmt::Create(CGF.getContext(), S.getResumeExpr(),
-                                         FPOptionsOverride(), Loc, Loc);
-    TryStmt = CXXTryStmt::Create(CGF.getContext(), Loc, TryBody, Catch);
-    CGF.EnterCXXTryStmt(*TryStmt);
-  }
+  // Never create an LValue for an initial suspend.
+  assert(Kind != AwaitKind::Init || !forLValue);
 
   LValueOrRValue Res;
   if (forLValue)
     Res.LV = CGF.EmitLValue(S.getResumeExpr());
   else
     Res.RV = CGF.EmitAnyExpr(S.getResumeExpr(), aggSlot, ignoreResult);
-
-  if (TryStmt) {
-    Builder.CreateFlagStore(false, Coro.ResumeEHVar);
-    CGF.ExitCXXTryStmt(*TryStmt);
-  }
 
   return Res;
 }
@@ -708,41 +672,24 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
     CurCoro.Data->CurrentAwaitKind = AwaitKind::Init;
     CurCoro.Data->ExceptionHandler = S.getExceptionHandler();
-    EmitStmt(S.getInitSuspendStmt());
     CurCoro.Data->FinalJD = getJumpDestInCurrentScope(FinalBB);
 
-    CurCoro.Data->CurrentAwaitKind = AwaitKind::Normal;
-
     if (CurCoro.Data->ExceptionHandler) {
-      // If we generated IR to record whether an exception was thrown from
-      // 'await_resume', then use that IR to determine whether the coroutine
-      // body should be skipped.
-      // If we didn't generate the IR (perhaps because 'await_resume' was marked
-      // as 'noexcept'), then we skip this check.
-      BasicBlock *ContBB = nullptr;
-      if (CurCoro.Data->ResumeEHVar) {
-        BasicBlock *BodyBB = createBasicBlock("coro.resumed.body");
-        ContBB = createBasicBlock("coro.resumed.cont");
-        Value *SkipBody = Builder.CreateFlagLoad(CurCoro.Data->ResumeEHVar,
-                                                 "coro.resumed.eh");
-        Builder.CreateCondBr(SkipBody, ContBB, BodyBB);
-        EmitBlock(BodyBB);
-      }
-
       auto Loc = S.getBeginLoc();
       CXXCatchStmt Catch(Loc, /*exDecl=*/nullptr,
                          CurCoro.Data->ExceptionHandler);
+
       auto *TryStmt =
           CXXTryStmt::Create(getContext(), Loc, S.getBody(), &Catch);
 
       EnterCXXTryStmt(*TryStmt);
+      EmitStmt(S.getInitSuspendStmt());
+      CurCoro.Data->CurrentAwaitKind = AwaitKind::Normal;
       emitBodyAndFallthrough(*this, S, TryStmt->getTryBlock());
       ExitCXXTryStmt(*TryStmt);
-
-      if (ContBB)
-        EmitBlock(ContBB);
-    }
-    else {
+    } else {
+      EmitStmt(S.getInitSuspendStmt());
+      CurCoro.Data->CurrentAwaitKind = AwaitKind::Normal;
       emitBodyAndFallthrough(*this, S, S.getBody());
     }
 
