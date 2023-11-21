@@ -16,6 +16,7 @@
 #include "PredicateExpander.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstrItineraries.h"
@@ -134,7 +135,7 @@ class SubtargetEmitter {
 
   void EmitSchedModel(raw_ostream &OS);
   void emitMacroFusionBits(const CodeGenProcModel &ProcModel, raw_ostream &OS);
-  void emitGetMacroFusions(const std::string &ClassName, raw_ostream &OS);
+  void emitMacroFusionTable(RecVec Fusions, raw_ostream &OS);
   void EmitHwModeCheck(const std::string &ClassName, raw_ostream &OS);
   void ParseFeaturesFunction(raw_ostream &OS);
 
@@ -1789,25 +1790,23 @@ void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
     PE.expandSTIPredicate(OS, Fn);
 }
 
-void SubtargetEmitter::emitGetMacroFusions(const std::string &ClassName,
-                                           raw_ostream &OS) {
-  OS << "std::vector<MacroFusionPredTy> " << ClassName
-     << "::getMacroFusions() const {\n";
-  OS.indent(2) << "switch(getSchedModel().getProcessorID()) {\n";
-  for (auto &Proc : TGT.getSchedModels().procModels()) {
-    if (Proc.hasMacroFusions()) {
-      OS.indent(4) << "case " << Proc.Index << ": // " << Proc.ModelName
-                   << "\n";
-      OS.indent(4) << "  return {";
-      std::vector<std::string> Predicates;
-      for (auto *R : Proc.MacroFusions)
-        Predicates.push_back("is" + R->getNameInitAsString());
-      OS << llvm::join(Predicates, ", ");
-      OS << "};\n";
-    }
+void SubtargetEmitter::emitMacroFusionTable(RecVec Fusions, raw_ostream &OS) {
+  OS << "const llvm::MacroFusionEntry " << Target << "MacroFusionTable[] = {\n";
+
+  SmallSet<StringRef, 32> Names;
+  for (auto &Fusion : Fusions) {
+    StringRef Name = Fusion->getValueAsString("Name");
+    if (Name.empty())
+      PrintFatalError(Fusion->getLoc(),
+                      "The name of macro fusion cannot be empty");
+    if (Names.contains(Name))
+      PrintFatalError(Fusion->getLoc(),
+                      "The name of macro fusion already exists");
+    OS.indent(2) << "{\"" << Name << "\", "
+                 << "llvm::is" + Fusion->getNameInitAsString() << "},\n";
   }
-  OS.indent(2) << "}\n";
-  OS.indent(2) << "return {};\n}\n";
+
+  OS << "};\n\n";
 }
 
 void SubtargetEmitter::EmitHwModeCheck(const std::string &ClassName,
@@ -2027,9 +2026,6 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << " const;\n";
   if (TGT.getHwModes().getNumModeIds() > 1)
     OS << "  unsigned getHwMode() const override;\n";
-  if (TGT.getSchedModels().hasMacroFusions())
-    OS << "  std::vector<MacroFusionPredTy> getMacroFusions() const "
-          "override;\n";
 
   STIPredicateExpander PE(Target);
   PE.setByRef(false);
@@ -2043,6 +2039,13 @@ void SubtargetEmitter::run(raw_ostream &OS) {
 
   OS << "\n#ifdef GET_SUBTARGETINFO_CTOR\n";
   OS << "#undef GET_SUBTARGETINFO_CTOR\n\n";
+
+  std::vector<Record *> Fusions = Records.getAllDerivedDefinitions("Fusion");
+  // Sort macro fusions by name.
+  llvm::sort(Fusions, LessRecord());
+
+  if (!Fusions.empty())
+    emitMacroFusionTable(Fusions, OS);
 
   OS << "#include \"llvm/CodeGen/TargetSchedule.h\"\n\n";
   OS << "namespace llvm {\n";
@@ -2078,17 +2081,19 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << Target << "ReadAdvanceTable, ";
   OS << '\n'; OS.indent(24);
   if (SchedModels.hasItineraries()) {
-    OS << Target << "Stages, "
-       << Target << "OperandCycles, "
-       << Target << "ForwardingPaths";
+    OS << Target << "Stages, " << Target << "OperandCycles, " << Target
+       << "ForwardingPaths, ";
   } else
-    OS << "nullptr, nullptr, nullptr";
+    OS << "nullptr, nullptr, nullptr, ";
+  if (!Fusions.empty()) {
+    OS << "ArrayRef(" << Target << "MacroFusionTable, " << Fusions.size()
+       << ")";
+  } else
+    OS << "std::nullopt";
   OS << ") {}\n\n";
 
   EmitSchedModelHelpers(ClassName, OS);
   EmitHwModeCheck(ClassName, OS);
-  if (TGT.getSchedModels().hasMacroFusions())
-    emitGetMacroFusions(ClassName, OS);
 
   OS << "} // end namespace llvm\n\n";
 

@@ -92,6 +92,8 @@ class MCSubtargetInfo {
   FeatureBitset FeatureBits;           // Feature bits for current CPU + FS
   std::string FeatureString;           // Feature string
 
+  MacroFusionBitset FusionBits; // Fusion bits
+
 public:
   MCSubtargetInfo(const MCSubtargetInfo &) = default;
   MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
@@ -120,10 +122,13 @@ public:
     return FeatureBits[Feature];
   }
 
+  const MacroFusionBitset &getMacroFusionBits() const { return FusionBits; }
+  void enableMacroFusion(unsigned MacroFusion) { FusionBits.set(MacroFusion); }
+  void disableMacroFusion(unsigned MacroFusion) {
+    FusionBits.reset(MacroFusion);
+  }
   bool hasMacroFusion(unsigned MacroFusion) const {
-    const MacroFusionBitset *MacroFusionBits =
-        CPUSchedModel->getMacroFusionBits();
-    return MacroFusionBits && MacroFusionBits->test(MacroFusion);
+    return FusionBits.test(MacroFusion);
   }
 
 protected:
@@ -303,11 +308,7 @@ public:
   virtual bool shouldPrefetchAddressSpace(unsigned AS) const;
 
   /// Enable macro fusion for this subtarget.
-  virtual bool enableMacroFusion() const {
-    const MacroFusionBitset *MacroFusionBits =
-        CPUSchedModel->getMacroFusionBits();
-    return MacroFusionBits && MacroFusionBits->any();
-  }
+  virtual bool enableMacroFusion() const { return FusionBits.any(); }
 };
 
 } // end namespace llvm

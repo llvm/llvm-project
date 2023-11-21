@@ -215,6 +215,8 @@ void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef TuneCPU,
     CPUSchedModel = &getSchedModelForCPU(TuneCPU);
   else
     CPUSchedModel = &MCSchedModel::GetDefaultSchedModel();
+  if (CPUSchedModel->getMacroFusionBits())
+    FusionBits = *CPUSchedModel->getMacroFusionBits();
 }
 
 void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef TuneCPU,

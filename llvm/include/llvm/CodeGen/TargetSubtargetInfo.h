@@ -55,12 +55,31 @@ class TargetSchedModel;
 class Triple;
 
 //===----------------------------------------------------------------------===//
+
+/// Used to provide information for macro fusion.
+struct MacroFusionEntry {
+  const char *Name;       ///< Name of macro fusion
+  MacroFusionPredTy Pred; ///< Predicator function of macro fusion
+
+  /// Compare routine for std::lower_bound
+  bool operator<(StringRef S) const { return StringRef(Name) < S; }
+
+  /// Compare routine for std::is_sorted.
+  bool operator<(const MacroFusionEntry &Other) const {
+    return StringRef(Name) < StringRef(Other.Name);
+  }
+};
+
+//===----------------------------------------------------------------------===//
 ///
 /// TargetSubtargetInfo - Generic base class for all target subtargets.  All
 /// Target-specific options that control code generation and printing should
 /// be exposed through a TargetSubtargetInfo-derived class.
 ///
 class TargetSubtargetInfo : public MCSubtargetInfo {
+private:
+  ArrayRef<MacroFusionEntry> MacroFusionTable;
+
 protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                       StringRef FS, ArrayRef<SubtargetFeatureKV> PF,
@@ -68,7 +87,10 @@ protected: // Can only create subclasses...
                       const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
                       const MCReadAdvanceEntry *RA, const InstrStage *IS,
-                      const unsigned *OC, const unsigned *FP);
+                      const unsigned *OC, const unsigned *FP,
+                      ArrayRef<MacroFusionEntry> MF);
+
+  void overrideFusionBits();
 
 public:
   // AntiDepBreakMode - Type of anti-dependence breaking that should
@@ -326,7 +348,7 @@ public:
   virtual bool enableSpillageCopyElimination() const { return false; }
 
   /// Get the list of MacroFusion predicates.
-  virtual std::vector<MacroFusionPredTy> getMacroFusions() const { return {}; }
+  virtual std::vector<MacroFusionPredTy> getMacroFusions() const;
 };
 
 } // end namespace llvm
