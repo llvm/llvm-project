@@ -75,7 +75,7 @@ void foo1(int A)
   [[clang::code_align(9223372036854775808)]]
   for(int I=0; I<256; ++I) { bar(I); }
 
-  // expected-error@+1{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was (__int128_t)1311768467294899680ULL << 64}}
+  // cpp-local-error@+1{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was (__int128_t)1311768467294899680ULL << 64}}
   [[clang::code_align((__int128_t)0x1234567890abcde0ULL << 64)]]
   for(int I=0; I<256; ++I) { bar(I); }
 
@@ -85,7 +85,6 @@ void foo1(int A)
 
   // cpp-local-error@+3{{expression is not an integral constant expression}}
   // cpp-local-note@+2{{left shift of negative value -1311768467294899680}}
-  // c-local-error@+1{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was -(__int128_t)1311768467294899680ULL << 64}}
   [[clang::code_align(-(__int128_t)0x1234567890abcde0ULL << 64)]]
   for(int I=0; I<256; ++I) { bar(I); }
 
@@ -127,7 +126,7 @@ void code_align_dependent() {
   [[clang::code_align(A)]] // OK
   for(int I=0; I<128; ++I) { bar(I); }
 
-  [[clang::code_align(A)]] // expected-note{{previous attribute is here}}
+  [[clang::code_align(A)]] // cpp-local-note{{previous attribute is here}}
   [[clang::code_align(E)]] // cpp-local-error{{conflicting loop attribute 'code_align'}}
   for(int I=0; I<128; ++I) { bar(I); }
 
@@ -143,7 +142,7 @@ void code_align_dependent() {
 
 template<int ITMPL>
 void bar3() {
-  [[clang::code_align(8)]]      // expected-note{{previous attribute is here}}
+  [[clang::code_align(8)]]      // cpp-local-note{{previous attribute is here}}
   [[clang::code_align(ITMPL)]] // cpp-local-error{{conflicting loop attribute 'code_align'}} \
 	                       // cpp-local-note@#temp-instantiation{{in instantiation of function template specialization 'bar3<4>' requested here}}
   for(int I=0; I<128; ++I) { bar(I); }
@@ -151,7 +150,7 @@ void bar3() {
 
 template<int ITMPL1>
 void bar4() {
-  [[clang::code_align(ITMPL1)]] // expected-note{{previous attribute is here}}
+  [[clang::code_align(ITMPL1)]] // cpp-local-note{{previous attribute is here}}
   [[clang::code_align(32)]]    // cpp-local-error{{conflicting loop attribute 'code_align'}} \
 	                       // cpp-local-note@#temp-instantiation1{{in instantiation of function template specialization 'bar4<64>' requested here}}
   for(int I=0; I<128; ++I) { bar(I); }
