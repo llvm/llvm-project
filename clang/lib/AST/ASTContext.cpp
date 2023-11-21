@@ -1640,8 +1640,7 @@ CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
   bool IsPackedField = isa<FieldDecl>(D) &&
                        (D->hasAttr<PackedAttr>() ||
                         cast<FieldDecl>(D)->getParent()->hasAttr<PackedAttr>());
-  bool UseAlignAttrOnly =
-    isa<FieldDecl>(D) ? IsPackedField : AlignFromAttr;
+  bool UseAlignAttrOnly = isa<FieldDecl>(D) ? IsPackedField : AlignFromAttr;
   // If we're using the align attribute only, just ignore everything
   // else about the declaration and its type.
   if (UseAlignAttrOnly) {
