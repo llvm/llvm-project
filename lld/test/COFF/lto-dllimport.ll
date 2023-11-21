@@ -9,10 +9,7 @@
 ; RUN: lld-link %t.main.obj %t.other.obj -entry:main -out:%t.exe
 ; RUN: lld-link %t.main.bc  %t.other.bc  -entry:main -out:%t.exe
 ; RUN: lld-link %t.main.bc  %t.other.obj -entry:main -out:%t.exe
-
-;; This test currently fails if combining the regular object file main.obj
-;; with the bitcode object file other.bc.
-; RUN-skipped: lld-link %t.main.obj %t.other.bc  -entry:main -out:%t.exe
+; RUN: lld-link %t.main.obj %t.other.bc  -entry:main -out:%t.exe
 
 ;--- main.ll
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
