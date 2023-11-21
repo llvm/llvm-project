@@ -49,17 +49,17 @@ DebugNamesDWARFIndex::GetUnits(const DebugNames &debug_names) {
 
 std::optional<DIERef>
 DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
-  // Look for a CU offset or a local TU offset as they are both offsets into
-  // the .debug_info section.
-  std::optional<uint64_t> cu_offset = entry.getCUOffset();
-  if (!cu_offset) {
-    cu_offset = entry.getLocalTUOffset();
-    if (!cu_offset)
+  // Look for a DWARF unit offset (CU offset or local TU offset) as they are
+  // both offsets into the .debug_info section.
+  std::optional<uint64_t> unit_offset = entry.getCUOffset();
+  if (!unit_offset) {
+    unit_offset = entry.getLocalTUOffset();
+    if (!unit_offset)
       return std::nullopt;
   }
 
   DWARFUnit *cu =
-      m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *cu_offset);
+      m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *unit_offset);
   if (!cu)
     return std::nullopt;
 
