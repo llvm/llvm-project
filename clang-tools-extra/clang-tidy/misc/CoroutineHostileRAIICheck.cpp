@@ -59,6 +59,11 @@ AST_MATCHER_P(CoawaitExpr, awaiatable, ast_matchers::internal::Matcher<Expr>,
   return Node.getCommonExpr() &&
          InnerMatcher.matches(*Node.getCommonExpr(), Finder, Builder);
 }
+
+auto typeWithNameIn(const std::vector<StringRef> &Names) {
+  return hasType(
+      hasCanonicalType(hasDeclaration(namedDecl(hasAnyName(Names)))));
+}
 } // namespace
 
 CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
@@ -74,11 +79,8 @@ void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
   auto ScopedLockable = varDecl(hasType(hasCanonicalType(hasDeclaration(
                                     hasAttr(attr::Kind::ScopedLockable)))))
                             .bind("scoped-lockable");
-  auto OtherRAII = varDecl(hasType(hasCanonicalType(hasDeclaration(
-                               namedDecl(hasAnyName(RAIITypesList))))))
-                       .bind("raii");
-  auto SafeSuspend = awaiatable(hasType(hasCanonicalType(
-      hasDeclaration(namedDecl(hasAnyName(SafeAwaitablesList))))));
+  auto OtherRAII = varDecl(typeWithNameIn(RAIITypesList)).bind("raii");
+  auto SafeSuspend = awaiatable(typeWithNameIn(SafeAwaitablesList));
   Finder->addMatcher(
       expr(anyOf(coawaitExpr(unless(SafeSuspend)), coyieldExpr()),
            forEachPrevStmt(
