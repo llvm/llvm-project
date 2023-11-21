@@ -3259,6 +3259,14 @@ public:
     return false;
   }
 
+  // Should we fold (select_cc seteq (and x, y), 0, 0, A) -> (and (sra (shl x))
+  // A) where y has a single bit set?
+  virtual bool shouldFoldSelectWithSingleBitTest(EVT VT,
+                                                 const APInt &AndMask) const {
+    unsigned ShCt = AndMask.getBitWidth() - 1;
+    return !shouldAvoidTransformToShift(VT, ShCt);
+  }
+
   /// Does this target require the clearing of high-order bits in a register
   /// passed to the fp16 to fp conversion library function.
   virtual bool shouldKeepZExtForFP16Conv() const { return false; }
