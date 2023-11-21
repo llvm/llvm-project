@@ -1458,3 +1458,81 @@ entry:
  %1 = select i1 %cond, i32 %C, i32 %0
  ret i32 %1
 }
+
+define signext i32 @abs_i32(i32 signext %x) {
+; NOSFB-LABEL: abs_i32:
+; NOSFB:       # %bb.0:
+; NOSFB-NEXT:    sraiw a1, a0, 31
+; NOSFB-NEXT:    xor a0, a0, a1
+; NOSFB-NEXT:    subw a0, a0, a1
+; NOSFB-NEXT:    ret
+;
+; RV64SFB-LABEL: abs_i32:
+; RV64SFB:       # %bb.0:
+; RV64SFB-NEXT:    bgez a0, .LBB34_2
+; RV64SFB-NEXT:  # %bb.1:
+; RV64SFB-NEXT:    negw a0, a0
+; RV64SFB-NEXT:  .LBB34_2:
+; RV64SFB-NEXT:    ret
+;
+; ZICOND-LABEL: abs_i32:
+; ZICOND:       # %bb.0:
+; ZICOND-NEXT:    bgez a0, .LBB34_2
+; ZICOND-NEXT:  # %bb.1:
+; ZICOND-NEXT:    negw a0, a0
+; ZICOND-NEXT:  .LBB34_2:
+; ZICOND-NEXT:    ret
+;
+; RV32SFB-LABEL: abs_i32:
+; RV32SFB:       # %bb.0:
+; RV32SFB-NEXT:    bgez a0, .LBB34_2
+; RV32SFB-NEXT:  # %bb.1:
+; RV32SFB-NEXT:    neg a0, a0
+; RV32SFB-NEXT:  .LBB34_2:
+; RV32SFB-NEXT:    ret
+  %a = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  ret i32 %a
+}
+declare i32 @llvm.abs.i32(i32, i1)
+
+define i64 @abs_i64(i64 %x) {
+; NOSFB-LABEL: abs_i64:
+; NOSFB:       # %bb.0:
+; NOSFB-NEXT:    srai a1, a0, 63
+; NOSFB-NEXT:    xor a0, a0, a1
+; NOSFB-NEXT:    sub a0, a0, a1
+; NOSFB-NEXT:    ret
+;
+; RV64SFB-LABEL: abs_i64:
+; RV64SFB:       # %bb.0:
+; RV64SFB-NEXT:    bgez a0, .LBB35_2
+; RV64SFB-NEXT:  # %bb.1:
+; RV64SFB-NEXT:    neg a0, a0
+; RV64SFB-NEXT:  .LBB35_2:
+; RV64SFB-NEXT:    ret
+;
+; ZICOND-LABEL: abs_i64:
+; ZICOND:       # %bb.0:
+; ZICOND-NEXT:    bgez a0, .LBB35_2
+; ZICOND-NEXT:  # %bb.1:
+; ZICOND-NEXT:    neg a0, a0
+; ZICOND-NEXT:  .LBB35_2:
+; ZICOND-NEXT:    ret
+;
+; RV32SFB-LABEL: abs_i64:
+; RV32SFB:       # %bb.0:
+; RV32SFB-NEXT:    snez a2, a0
+; RV32SFB-NEXT:    add a2, a2, a1
+; RV32SFB-NEXT:    bgez a1, .LBB35_2
+; RV32SFB-NEXT:  # %bb.1:
+; RV32SFB-NEXT:    neg a0, a0
+; RV32SFB-NEXT:  .LBB35_2:
+; RV32SFB-NEXT:    bgez a1, .LBB35_4
+; RV32SFB-NEXT:  # %bb.3:
+; RV32SFB-NEXT:    neg a1, a2
+; RV32SFB-NEXT:  .LBB35_4:
+; RV32SFB-NEXT:    ret
+  %a = call i64 @llvm.abs.i64(i64 %x, i1 false)
+  ret i64 %a
+}
+declare i64 @llvm.abs.i64(i64, i1)
