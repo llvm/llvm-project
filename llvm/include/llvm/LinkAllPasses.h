@@ -90,7 +90,6 @@ namespace {
       (void) llvm::createLoopExtractorPass();
       (void) llvm::createLoopPredicationPass();
       (void) llvm::createLoopSimplifyPass();
-      (void) llvm::createLoopSimplifyCFGPass();
       (void) llvm::createLoopStrengthReducePass();
       (void) llvm::createLoopUnrollPass();
       (void) llvm::createLoopRotatePass();
