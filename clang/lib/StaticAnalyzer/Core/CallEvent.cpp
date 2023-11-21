@@ -530,7 +530,7 @@ const CallEventRef<> CallEvent::getCaller() const {
   return CEMgr.getCaller(CallStackFrameContext, State);
 }
 
-bool CallEvent::calledFromSystemHeader() const {
+bool CallEvent::isCalledFromSystemHeader() const {
   if (const CallEventRef<> Caller = getCaller())
     return Caller->isInSystemHeader();
 

@@ -152,7 +152,7 @@ public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const {
     // Check if the call was not made from a system header. If it was then
     // we do an early return because it is part of the implementation.
-    if (Call.calledFromSystemHeader())
+    if (Call.isCalledFromSystemHeader())
       return false;
 
     if (StdGet.matches(Call))

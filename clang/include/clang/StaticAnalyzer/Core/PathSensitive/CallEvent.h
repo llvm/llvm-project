@@ -456,7 +456,7 @@ public:
   // Returns true if the function was called from a standard library function.
   // If not or could not get the caller (it may be a top level function)
   // returns false.
-  bool calledFromSystemHeader() const;
+  bool isCalledFromSystemHeader() const;
 
   // Iterator access to formal parameters and their types.
 private:
