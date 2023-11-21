@@ -700,6 +700,7 @@ void mlir::scf::yieldReplacementForFusedProducer(
             sliceOp.getMixedSizes(), sliceOp.getMixedStrides());
         return {replacement};
       }
+      return SmallVector<Value>();
     };
 
     addInitOperandsToLoopNest(rewriter, loops,
