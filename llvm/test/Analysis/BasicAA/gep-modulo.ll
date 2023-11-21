@@ -326,7 +326,7 @@ define i8 @mul_may_overflow_var_nonzero_minabsvarindex_one_index(ptr %arr, i8 %x
 ; CHECK-NEXT:  PartialAlias (off 917): [2000 x i8]* %arr, i8* %gep.917
 ; CHECK-NEXT:  MayAlias: i8* %gep.917, i8* %gep.idx
 ; CHECK-NEXT:  MustAlias: [2000 x i8]* %arr, i8* %gep.0
-; CHECK-NEXT:  NoAlias: i8* %gep.0, i8* %gep.idx
+; CHECK-NEXT:  MayAlias: i8* %gep.0, i8* %gep.idx
 ; CHECK-NEXT:  NoAlias: i8* %gep.0, i8* %gep.917
 ;
   load [2000 x i8], ptr %arr
@@ -362,10 +362,9 @@ define i8 @mul_nsw_var_nonzero_minabsvarindex_one_index(ptr %arr, i8 %x, i64 %v)
   ret i8 %l
 }
 
-; FIXME: %gep and %p can alias.
 define i8 @test_pr72831_may_wrap(i64 %off) {
 ; CHECK-LABEL: Function: test_pr72831_may_wrap: 2 pointers, 0 call sites
-; CHECK-NEXT:  NoAlias:    i8* %gep, i8* %p
+; CHECK-NEXT:  MayAlias:    i8* %gep, i8* %p
 entry:
   %p = alloca [2 x i8], align 1
   %ext = zext i1 false to i64
