@@ -148,7 +148,7 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
       Args.getLastArgValue(OPT_continueOnCuIndexOverflow, "hard-stop");
   if (ContinueOption == "soft-stop") {
     OverflowOptValue = OnCuIndexOverflow::SoftStop;
-  } else if (ContinueOption == "soft-stop") {
+  } else if (ContinueOption == "continue") {
     OverflowOptValue = OnCuIndexOverflow::Continue;
   }
 
