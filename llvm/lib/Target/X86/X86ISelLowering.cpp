@@ -7512,6 +7512,14 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
   assert((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) &&
          "Unsupported vector type for broadcast.");
 
+  // On AVX512VL targets we're better off keeping the full width constant load
+  // and letting X86FixupVectorConstantsPass handle conversion to
+  // broadcast/broadcast-fold.
+  // AVX512 targets without AVX512VL can do this only for 512-bit vectors.
+  if (Subtarget.hasAVX512() && (Subtarget.hasVLX() || VT.is512BitVector()) &&
+      BVOp->isConstant())
+    return SDValue();
+
   // See if the build vector is a repeating sequence of scalars (inc. splat).
   SDValue Ld;
   BitVector UndefElements;

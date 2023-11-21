@@ -1524,8 +1524,8 @@ define <2 x i64> @test_x86_avx2_psrlv_q_const() {
 ;
 ; X64-AVX512VL-LABEL: test_x86_avx2_psrlv_q_const:
 ; X64-AVX512VL:       # %bb.0:
-; X64-AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [4,4]
-; X64-AVX512VL-NEXT:    # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x59,0x05,A,A,A,A]
+; X64-AVX512VL-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [4,4]
+; X64-AVX512VL-NEXT:    # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x22,0x05,A,A,A,A]
 ; X64-AVX512VL-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-AVX512VL-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf9,0x45,0x05,A,A,A,A]
 ; X64-AVX512VL-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
@@ -1581,8 +1581,8 @@ define <4 x i64> @test_x86_avx2_psrlv_q_256_const() {
 ;
 ; X64-AVX512VL-LABEL: test_x86_avx2_psrlv_q_256_const:
 ; X64-AVX512VL:       # %bb.0:
-; X64-AVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [4,4,4,4]
-; X64-AVX512VL-NEXT:    # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x59,0x05,A,A,A,A]
+; X64-AVX512VL-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [4,4,4,4]
+; X64-AVX512VL-NEXT:    # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x22,0x05,A,A,A,A]
 ; X64-AVX512VL-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-AVX512VL-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xfd,0x45,0x05,A,A,A,A]
 ; X64-AVX512VL-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte

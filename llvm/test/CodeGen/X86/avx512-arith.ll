@@ -303,7 +303,7 @@ define <2 x i64> @imulq128_bcast(<2 x i64> %x) {
 ;
 ; AVX512VL-LABEL: imulq128_bcast:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [8086,8086]
+; AVX512VL-NEXT:    vpmovsxwq {{.*#+}} xmm1 = [8086,8086]
 ; AVX512VL-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; AVX512VL-NEXT:    vpsrlq $32, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
