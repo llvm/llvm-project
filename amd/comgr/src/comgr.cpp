@@ -182,6 +182,8 @@ dispatchCompilerAction(amd_comgr_action_kind_t ActionKind,
     return Compiler.compileToRelocatable();
   case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
     return Compiler.compileToBitcode(true);
+  case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE:
+    return Compiler.compileToExecutable();
 
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
@@ -242,6 +244,8 @@ StringRef getActionKindName(amd_comgr_action_kind_t ActionKind) {
     return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN";
   case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
     return "AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC";
+  case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE:
+    return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE";
   }
 
   llvm_unreachable("invalid action");
@@ -259,6 +263,8 @@ static StringRef getLanguageName(amd_comgr_language_t Language) {
     return "AMD_COMGR_LANGUAGE_HC";
   case AMD_COMGR_LANGUAGE_HIP:
     return "AMD_COMGR_LANGUAGE_HIP";
+  case AMD_COMGR_LANGUAGE_LLVM_IR:
+    return "AMD_COMGR_LANGUAGE_LLVM_IR";
   }
 
   llvm_unreachable("invalid language");
@@ -1360,6 +1366,7 @@ amd_comgr_status_t AMD_COMGR_API
     case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE:
     case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN:
     case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
+    case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE:
       ActionStatus = dispatchCompilerAction(ActionKind, ActionInfoP, InputSetP,
                                             ResultSetP, *LogP);
       break;

@@ -91,6 +91,7 @@ add_test_input_binary(reloc2 source/reloc2.cl source/reloc2.o -c -mcode-object-v
 add_test_input_binary(reloc-asm source/reloc-asm.s source/reloc-asm.o -c -mcode-object-version=4)
 add_test_input_binary(shared source/shared.cl source/shared.so -mcode-object-version=4)
 add_test_input_binary(shared-debug source/shared.cl source/shared-debug.so -g -mcode-object-version=4)
+add_test_input_bitcode(source1 source/source1.cl source/source1.bc)
 
 configure_file("source/source1.cl" "source/source1.cl" COPYONLY)
 configure_file("source/source2.cl" "source/source2.cl" COPYONLY)
@@ -201,6 +202,7 @@ add_comgr_test(multithread_test cpp)
 add_comgr_test(name_expression_map_test c)
 add_comgr_test(nested_kernel_test c)
 add_comgr_test(map_elf_virtual_address_test c)
+add_comgr_test(compile_source_to_executable c)
 
 # Test : Compile HIP tests only if HIP-Clang is installed.
 if (DEFINED HIP_COMPILER AND "${HIP_COMPILER}" STREQUAL "clang")

@@ -274,9 +274,13 @@ typedef enum amd_comgr_language_s {
    */
   AMD_COMGR_LANGUAGE_HIP = 0x4,
   /**
+   * LLVM IR, either textual (.ll) or bitcode (.bc) format.
+   */
+  AMD_COMGR_LANGUAGE_LLVM_IR = 0x5,
+  /**
    * Marker for last valid language.
    */
-  AMD_COMGR_LANGUAGE_LAST = AMD_COMGR_LANGUAGE_HIP
+  AMD_COMGR_LANGUAGE_LAST = AMD_COMGR_LANGUAGE_LLVM_IR
 } amd_comgr_language_t;
 
 /**
@@ -1769,9 +1773,25 @@ typedef enum amd_comgr_action_kind_s {
    */
   AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE = 0x10,
   /**
+   * Compile each source data object in @p input and create a single executabele
+   * in @p result. Resolve any include source names using the names of include
+   * data objects in @p input. Resolve any include relative path names using the
+   * working directory path in @p info. Produce executable for isa name in @p
+   * info. Compile the source for the language in @p info. Link against
+   * the device-specific and language-specific bitcode device libraries
+   * required for compilation.
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR if any compilation
+   * fails.
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
+   * if isa name or language is not set in @p info.
+   */
+  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE = 0x11,
+  /**
    * Marker for last valid action kind.
    */
-  AMD_COMGR_ACTION_LAST = AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE
+  AMD_COMGR_ACTION_LAST = AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE
 } amd_comgr_action_kind_t;
 
 /**

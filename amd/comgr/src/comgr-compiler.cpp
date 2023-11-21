@@ -1039,6 +1039,9 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
   Args.push_back("-x");
 
   switch (ActionInfo->Language) {
+  case AMD_COMGR_LANGUAGE_LLVM_IR:
+    Args.push_back("ir");
+    break;
   case AMD_COMGR_LANGUAGE_OPENCL_1_2:
     Args.push_back("cl");
     Args.push_back("-std=cl1.2");
@@ -1149,6 +1152,36 @@ amd_comgr_status_t AMDGPUCompiler::compileToBitcode(bool WithDeviceLibs) {
   }
 
   return processFiles(AMD_COMGR_DATA_KIND_BC, ".bc");
+}
+
+amd_comgr_status_t AMDGPUCompiler::compileToExecutable() {
+  if (auto Status = createTmpDirs()) {
+    return Status;
+  }
+
+  if (ActionInfo->IsaName) {
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName, true)) {
+      return Status;
+    }
+  }
+
+  if (auto Status = addIncludeFlags()) {
+    return Status;
+  }
+
+  if (auto Status = addCompilationFlags()) {
+    return Status;
+  }
+
+#if _WIN32
+  Args.push_back("-fshort-wchar");
+#endif
+
+  if (auto Status = addDeviceLibraries()) {
+    return Status;
+  }
+
+  return processFiles(AMD_COMGR_DATA_KIND_EXECUTABLE, ".so");
 }
 
 amd_comgr_status_t AMDGPUCompiler::compileToRelocatable() {
