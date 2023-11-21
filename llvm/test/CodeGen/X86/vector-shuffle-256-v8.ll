@@ -1043,9 +1043,8 @@ define <8 x float> @shuffle_v8f32_32103210(<8 x float> %a, <8 x float> %b) {
 ;
 ; AVX512VL-FAST-ALL-LABEL: shuffle_v8f32_32103210:
 ; AVX512VL-FAST-ALL:       # %bb.0:
-; AVX512VL-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [3,2,1,0,3,2,1,0]
-; AVX512VL-FAST-ALL-NEXT:    # ymm1 = mem[0,1,0,1]
-; AVX512VL-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [3,2,1,0,3,2,1,0]
+; AVX512VL-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX512VL-FAST-ALL-NEXT:    retq
 ;
 ; AVX512VL-FAST-PERLANE-LABEL: shuffle_v8f32_32103210:
@@ -1091,9 +1090,8 @@ define <8 x float> @shuffle_v8f32_76547654(<8 x float> %a, <8 x float> %b) {
 ;
 ; AVX512VL-FAST-ALL-LABEL: shuffle_v8f32_76547654:
 ; AVX512VL-FAST-ALL:       # %bb.0:
-; AVX512VL-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [7,6,5,4,7,6,5,4]
-; AVX512VL-FAST-ALL-NEXT:    # ymm1 = mem[0,1,0,1]
-; AVX512VL-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [7,6,5,4,7,6,5,4]
+; AVX512VL-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX512VL-FAST-ALL-NEXT:    retq
 ;
 ; AVX512VL-FAST-PERLANE-LABEL: shuffle_v8f32_76547654:
@@ -2854,9 +2852,8 @@ define <8 x i32> @shuffle_v8i32_32103210(<8 x i32> %a, <8 x i32> %b) {
 ;
 ; AVX512VL-FAST-ALL-LABEL: shuffle_v8i32_32103210:
 ; AVX512VL-FAST-ALL:       # %bb.0:
-; AVX512VL-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [3,2,1,0,3,2,1,0]
-; AVX512VL-FAST-ALL-NEXT:    # ymm1 = mem[0,1,0,1]
-; AVX512VL-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [3,2,1,0,3,2,1,0]
+; AVX512VL-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX512VL-FAST-ALL-NEXT:    retq
 ;
 ; AVX512VL-FAST-PERLANE-LABEL: shuffle_v8i32_32103210:
@@ -2902,9 +2899,8 @@ define <8 x i32> @shuffle_v8i32_76547654(<8 x i32> %a, <8 x i32> %b) {
 ;
 ; AVX512VL-FAST-ALL-LABEL: shuffle_v8i32_76547654:
 ; AVX512VL-FAST-ALL:       # %bb.0:
-; AVX512VL-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [7,6,5,4,7,6,5,4]
-; AVX512VL-FAST-ALL-NEXT:    # ymm1 = mem[0,1,0,1]
-; AVX512VL-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [7,6,5,4,7,6,5,4]
+; AVX512VL-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX512VL-FAST-ALL-NEXT:    retq
 ;
 ; AVX512VL-FAST-PERLANE-LABEL: shuffle_v8i32_76547654:
