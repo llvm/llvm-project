@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple=x86_64-unknown-linux -fsyntax-only -verify=expected,c-local -x c %s
-// RUN: %clang_cc1 -triple=x86_64-unknown-linux -fsyntax-only -verify=expected,cpp-local -pedantic -x c++ -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -fsyntax-only -verify=expected,c-local -x c %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -fsyntax-only -verify=expected,cpp-local -pedantic -x c++ -std=c++11 %s
 
 void foo() {
   int i;
