@@ -1032,7 +1032,7 @@ void SystemZAsmPrinter::emitADASection() {
 
 static uint32_t getProductVersion(Module &M) {
   if (auto *VersionVal = mdconst::extract_or_null<ConstantInt>(
-        M.getModuleFlag("zos_product_major_version")))
+          M.getModuleFlag("zos_product_major_version")))
     return VersionVal->getValue().getZExtValue();
   return LLVM_VERSION_MAJOR;
 }
@@ -1076,23 +1076,16 @@ void SystemZAsmPrinter::emitIDRLSection(Module &M) {
 
   if (ProductID.empty()) {
     char ProductIDFormatted[11]; // 10 + null.
-    snprintf(ProductIDFormatted, sizeof(ProductIDFormatted), "LLVM  %02d%02d",
-             ProductVersion, ProductRelease);
+    snprintf(ProductIDFormatted, sizeof(ProductIDFormatted), "LLVM");
     ProductID = ProductIDFormatted;
   }
 
-  // Remove - from Product Id, which makes it consistent with legacy.
-  // The binder expects alphanumeric characters only.
-  std::size_t DashFound = ProductID.find("-");
-  if (DashFound != std::string::npos)
-    ProductID.erase(ProductID.begin() + DashFound);
-
   SmallString<IDRLDataLength + 1> TempStr;
   raw_svector_ostream O(TempStr);
-  O << formatv("{0}{1,0-2:d}{2,0-2:d}{3:%Y-%m-%d %H:%M:%S}", ProductID.c_str(),
-               ProductVersion, ProductRelease, llvm::sys::toUtcTime(Time));
+  O << formatv("{0}{1,0-2:d}{2,0-2:d}{3:%Y-%m-%d %H:%M:%S}",
+               ProductID.substr(0, 10).c_str(), ProductVersion, ProductRelease,
+               llvm::sys::toUtcTime(Time));
   SmallString<IDRLDataLength> Data;
-
   ConverterEBCDIC::convertToEBCDIC(TempStr, Data);
 
   OutStreamer->emitInt8(0);               // Reserved.
@@ -1441,7 +1434,7 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
     StringRef Language = cast<MDString>(MD)->getString();
     MemberSubId = StringSwitch<PPA2MemberSubId>(Language)
                       .Case("C", PPA2MemberSubId::C)
-                      .Case("CXX", PPA2MemberSubId::CXX)
+                      .Case("C++", PPA2MemberSubId::CXX)
                       .Case("Swift", PPA2MemberSubId::Swift)
                       .Case("Go", PPA2MemberSubId::Go)
                       .Default(PPA2MemberSubId::LLVMBasedLang);
