@@ -12,22 +12,8 @@
 //===----------------------------------------------------------------------===//
 #include "asan_win_new_delete_thunk_common.h"
 
-////////////////////////////////////
-// clang-format off
-// new() Fallback Ordering
-//
-// +----------+
-// |NEW_SCALAR|<---------------+
-// +----^-----+               |
-//      |                     |
-// +----+-------------+  +----+----+
-// |new_scalar_nothrow|  |new_array|
-// +------------------+  +----^----+
-//                            |
-//               +------------+----+
-//               |new_array_nothrow|
-//               +-----------------+
-// clang-format on
+// see diagram in asan_win_new_delete_thunk_common.h for the ordering of the
+// new/delete fallbacks.
 
 __asan_InitDefine<op_new_scalar> init_new_scalar;
 

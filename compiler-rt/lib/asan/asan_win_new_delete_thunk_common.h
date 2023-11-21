@@ -38,6 +38,8 @@ void operator delete[](void* ptr, std::align_val_t align) noexcept;
 ////////////////////////////////////
 // clang-format off
 // Fallback Ordering for new/delete
+// change this if the code called by a given operator in the case where the
+// "less specific" operators are not provided by asan changes.
 //
 // +----------+                                                     +----------------+
 // |new_scalar<---------------+                                     |new_scalar_align<--------------+

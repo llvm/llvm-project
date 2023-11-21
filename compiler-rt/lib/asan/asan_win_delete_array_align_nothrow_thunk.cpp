@@ -12,24 +12,8 @@
 //===----------------------------------------------------------------------===//
 #include "asan_win_new_delete_thunk_common.h"
 
-//////////////////////////////////////////////////////////////////////////////////
-// clang-format off
-// Aligned delete() Fallback Ordering
-//
-// +-------------------+
-// |delete_scalar_align<----+---------------------------+
-// +--^----------------+    |                           |
-//    |                     |                           |
-// +--+---------------+  +--+---------------------+  +--+------------------------+
-// |delete_array_align|  |delete_scalar_size_align|  |delete_scalar_align_nothrow|
-// +--^-----^---------+  +------------------------+  +---------------------------+
-//    |     |
-//    |     +------------------------+
-//    |                              |
-// +--+--------------------+  +------+-------------------+
-// |delete_array_size_align|  |DELETE_ARRAY_ALIGN_NOTHROW|
-// +-----------------------+  +--------------------------+
-// clang-format on
+// see diagram in asan_win_new_delete_thunk_common.h for the ordering of the
+// new/delete fallbacks.
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)

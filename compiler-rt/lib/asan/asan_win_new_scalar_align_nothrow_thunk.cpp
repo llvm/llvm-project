@@ -12,22 +12,8 @@
 //===----------------------------------------------------------------------===//
 #include "asan_win_new_delete_thunk_common.h"
 
-////////////////////////////////////////////////
-// clang-format off
-// Aligned new() Fallback Ordering
-//
-// +----------------+
-// |new_scalar_align<--------------+
-// +----^-----------+              |
-//      |                          |
-// +----+-------------------+  +---+-----------+
-// |NEW_SCALAR_ALIGN_NOTHROW|  |new_array_align|
-// +------------------------+  +---^-----------+
-//                                 |
-//                     +-----------+-----------+
-//                     |new_array_align_nothrow|
-//                     +-----------------------+
-// clang-format on
+// see diagram in asan_win_new_delete_thunk_common.h for the ordering of the
+// new/delete fallbacks.
 
 extern "C" void* __cdecl __asan_new_align_nothrow(size_t size,
                                                   std::align_val_t align);
