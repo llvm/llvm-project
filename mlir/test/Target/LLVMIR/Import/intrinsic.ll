@@ -755,6 +755,20 @@ define void @lifetime(ptr %0) {
   ret void
 }
 
+; CHECK-LABEL: llvm.func @vector_insert
+define void @vector_insert(<vscale x 4 x float> %0, <4 x float> %1) {
+  ; CHECK: llvm.intr.vector.insert %{{.*}}, %{{.*}}[4] : vector<4xf32> into !llvm.vec<? x 4 x  f32>
+  %3 = call <vscale x 4 x float>  @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> %0, <4 x float> %1, i64 4);
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @vector_extract
+define void @vector_extract(<vscale x 4 x float> %0) {
+  ; llvm.intr.vector.extract %{{.*}}[0] : vector<4xf32> from !llvm.vec<? x 4 x  f32>
+  %2 = call <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float> %0, i64 0);
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @vector_predication_intrinsics
 define void @vector_predication_intrinsics(<8 x i32> %0, <8 x i32> %1, <8 x float> %2, <8 x float> %3, <8 x i64> %4, <8 x double> %5, <8 x ptr> %6, i32 %7, float %8, ptr %9, ptr %10, <8 x i1> %11, i32 %12) {
   ; CHECK: "llvm.intr.vp.add"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
@@ -1085,3 +1099,5 @@ declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.assume(i1)
 declare float @llvm.ssa.copy.f32(float returned)
+declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float>, <4 x float>, i64)
+declare <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float>, i64)

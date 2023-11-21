@@ -380,6 +380,21 @@ private:
   bool emitExpensiveWarnings;
 };
 
+namespace detail {
+
+/// Converts the LLVM values for an intrinsic to mixed MLIR values and
+/// attributes. Attributes correspond to LLVM immargs. The list
+/// `immArgPositions` contains the positions of immargs on the LLVM intrinsic,
+/// and `immArgAttrNames` list (of the same length) contains the corresponding
+/// MLIR attribute names.
+LogicalResult convertIntrinsicArguments(
+    ModuleImport &moduleInport, ArrayRef<llvm::Value *> values,
+    ArrayRef<unsigned> immArgPositions, ArrayRef<StringLiteral> immArgAttrNames,
+    SmallVectorImpl<Value> &valuesOut,
+    SmallVectorImpl<NamedAttribute> &attrsOut);
+
+} // namespace detail
+
 } // namespace LLVM
 } // namespace mlir
 

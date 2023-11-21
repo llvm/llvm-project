@@ -1199,6 +1199,45 @@ ModuleImport::convertValues(ArrayRef<llvm::Value *> values) {
   return remapped;
 }
 
+LogicalResult mlir::LLVM::detail::convertIntrinsicArguments(
+    ModuleImport &moduleInport, ArrayRef<llvm::Value *> values,
+    ArrayRef<unsigned> immArgPositions, ArrayRef<StringLiteral> immArgAttrNames,
+    SmallVectorImpl<Value> &valuesOut,
+    SmallVectorImpl<NamedAttribute> &attrsOut) {
+
+  assert(immArgPositions.size() == immArgAttrNames.size() &&
+         "LLVM `immArgPositions` and MLIR `immArgAttrNames` should have equal "
+         "length");
+
+  auto maybeMlirValues = moduleInport.convertValues(values);
+  if (failed(maybeMlirValues))
+    return failure();
+
+  auto mlirValues = std::move(maybeMlirValues).value();
+  for (auto [immArgPos, immArgName] :
+       llvm::zip(immArgPositions, immArgAttrNames)) {
+    IntegerAttr integerAttr;
+    FloatAttr floatAttr;
+    Value &value = mlirValues[immArgPos];
+    auto nameAttr = StringAttr::get(value.getContext(), immArgName);
+    if (matchPattern(value, m_Constant(&integerAttr)))
+      attrsOut.push_back({nameAttr, integerAttr});
+    else if (matchPattern(value, m_Constant(&floatAttr)))
+      attrsOut.push_back({nameAttr, floatAttr});
+    else {
+      assert("expected immarg to be float or integer constant");
+      return failure();
+    }
+    // Mark matched attribute values as null (so they can be removed below).
+    value = nullptr;
+  }
+
+  llvm::copy_if(mlirValues, std::back_inserter(valuesOut),
+                [](Value value) { return bool(value); });
+
+  return success();
+}
+
 IntegerAttr ModuleImport::matchIntegerAttr(llvm::Value *value) {
   IntegerAttr integerAttr;
   FailureOr<Value> converted = convertValue(value);
