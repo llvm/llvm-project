@@ -783,6 +783,8 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
                 OverflowOptValue, SeeOverflowFlag))
           return Err;
       }
+      if (SeeOverflowFlag)
+        break;
       continue;
     }
 
