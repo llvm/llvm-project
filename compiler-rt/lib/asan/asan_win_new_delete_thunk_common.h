@@ -22,6 +22,8 @@
 // multiple TUs so each can be selected individually, and adding a dynamic
 // initializer to those TUs to mark whether that overload is included.
 //===----------------------------------------------------------------------===//
+#ifndef ASAN_WIN_NEW_DELETE_THUNK_COMMON_H
+#define ASAN_WIN_NEW_DELETE_THUNK_COMMON_H
 
 #include <sanitizer_common/sanitizer_internal_defs.h>
 // Fake std::nothrow_t and std::align_val_t to avoid including <new>.
@@ -97,3 +99,5 @@ struct __asan_InitDefine {
 
 template <defined_ops Id>
 int __asan_InitDefine<Id>::defined = 0;
+
+#endif // ASAN_WIN_NEW_DELETE_THUNK_COMMON_H
