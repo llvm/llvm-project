@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,c-local -x c %s
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp-local -pedantic -x c++ -std=c++11 %s
+// RUN: %clang_cc1 -triple=x86_64-unknown-linux -fsyntax-only -verify=expected,c-local -x c %s
+// RUN: %clang_cc1 -triple=x86_64-unknown-linux -fsyntax-only -verify=expected,cpp-local -pedantic -x c++ -std=c++11 %s
 
 void foo() {
   int i;
@@ -75,7 +75,7 @@ void foo1(int A)
   [[clang::code_align(9223372036854775808)]]
   for(int I=0; I<256; ++I) { bar(I); }
 
-  // cpp-local-error@+1{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was (__int128_t)1311768467294899680ULL << 64}}
+  // expected-error@+1{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was (__int128_t)1311768467294899680ULL << 64}}
   [[clang::code_align((__int128_t)0x1234567890abcde0ULL << 64)]]
   for(int I=0; I<256; ++I) { bar(I); }
 
@@ -85,6 +85,7 @@ void foo1(int A)
 
   // cpp-local-error@+3{{expression is not an integral constant expression}}
   // cpp-local-note@+2{{left shift of negative value -1311768467294899680}}
+  // c-local-error@+1{{'code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was -(__int128_t)1311768467294899680ULL << 64}}
   [[clang::code_align(-(__int128_t)0x1234567890abcde0ULL << 64)]]
   for(int I=0; I<256; ++I) { bar(I); }
 
