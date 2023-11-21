@@ -586,7 +586,6 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
 
   MachineBasicBlock *LastUseMBB = nullptr;
   bool UseInOneMBB = true;
-  SmallVector<MachineInstr *> DefMIs;
   const TargetRegisterClass *RegClass = MRI->getRegClass(VirtReg);
   for (MachineInstr &Use : MRI->reg_nodbg_instructions(VirtReg)) {
     if (LastUseMBB && Use.getParent() != LastUseMBB)
