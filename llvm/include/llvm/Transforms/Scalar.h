@@ -239,13 +239,6 @@ FunctionPass *createLoopDataPrefetchPass();
 
 //===----------------------------------------------------------------------===//
 //
-// LoopSimplifyCFG - This pass performs basic CFG simplification on loops,
-// primarily to help other loop passes.
-//
-Pass *createLoopSimplifyCFGPass();
-
-//===----------------------------------------------------------------------===//
-//
 // This pass does instruction simplification on each
 // instruction in a function.
 //
