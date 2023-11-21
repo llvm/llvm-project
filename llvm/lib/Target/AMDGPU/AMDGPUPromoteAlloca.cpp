@@ -1486,8 +1486,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
            PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS)});
 
       CallInst *NewCall = Builder.CreateCall(
-          ObjectSize,
-          {Src, Intr->getOperand(1), Intr->getOperand(2), Intr->getOperand(3)});
+          ObjectSize, {Src, Intr->getOperand(1), Intr->getOperand(2),
+                       Intr->getOperand(3), Intr->getOperand(4)});
       Intr->replaceAllUsesWith(NewCall);
       Intr->eraseFromParent();
       continue;

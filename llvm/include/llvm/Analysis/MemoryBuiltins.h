@@ -157,6 +157,11 @@ struct ObjectSizeOpts {
   /// Whether to round the result up to the alignment of allocas, byval
   /// arguments, and global variables.
   bool RoundToAlign = false;
+  /// If this is true, return the whole size of the object. Otherwise, return
+  /// the size of the closest surrounding subobject.
+  /// FIXME: The default before being added was to return the whole size of the
+  /// object. Review if this is the correct default.
+  bool WholeObjectSize = true;
   /// If this is true, null pointers in address space 0 will be treated as
   /// though they can't be evaluated. Otherwise, null is always considered to
   /// point to a 0 byte region of memory.
@@ -231,6 +236,7 @@ class ObjectSizeOffsetVisitor
   APInt Zero;
   SmallDenseMap<Instruction *, SizeOffsetAPInt, 8> SeenInsts;
   unsigned InstructionsVisited;
+  const StructType *AllocaTy = nullptr;
 
   APInt align(APInt Size, MaybeAlign Align);
 
@@ -241,6 +247,8 @@ public:
                           LLVMContext &Context, ObjectSizeOpts Options = {});
 
   SizeOffsetAPInt compute(Value *V);
+
+  const StructType *getAllocaType() const { return AllocaTy; }
 
   // These are "private", except they can't actually be made private. Only
   // compute() should be used by external users.
@@ -313,6 +321,7 @@ class ObjectSizeOffsetEvaluator
   PtrSetTy SeenVals;
   ObjectSizeOpts EvalOpts;
   SmallPtrSet<Instruction *, 8> InsertedInstructions;
+  const StructType *AllocaTy = nullptr;
 
   SizeOffsetValue compute_(Value *V);
 

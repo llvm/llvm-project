@@ -4393,12 +4393,16 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     break;
 
   case Intrinsic::objectsize: {
+    // The default behavior before the addition of the '<wholeobj>' argument
+    // was to return the size of the whole object.
+    Value *WholeObj = Builder.getTrue();
     Value *NullIsUnknownSize =
         CI->arg_size() == 2 ? Builder.getFalse() : CI->getArgOperand(2);
     Value *Dynamic =
         CI->arg_size() < 4 ? Builder.getFalse() : CI->getArgOperand(3);
-    NewCall = Builder.CreateCall(
-        NewFn, {CI->getArgOperand(0), CI->getArgOperand(1), NullIsUnknownSize, Dynamic});
+    NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0), WholeObj,
+                                         CI->getArgOperand(1),
+                                         NullIsUnknownSize, Dynamic});
     break;
   }
 

@@ -1103,12 +1103,17 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   Function *F =
       CGM.getIntrinsic(Intrinsic::objectsize, {ResType, Ptr->getType()});
 
+  // If the least significant bit is clear, objects are whole variables. If
+  // it's set, a closest surrounding subobject is considered the object a
+  // pointer points to.
+  Value *WholeObj = Builder.getInt1((Type & 1) == 0);
+
   // LLVM only supports 0 and 2, make sure that we pass along that as a boolean.
   Value *Min = Builder.getInt1((Type & 2) != 0);
   // For GCC compatibility, __builtin_object_size treat NULL as unknown size.
   Value *NullIsUnknown = Builder.getTrue();
   Value *Dynamic = Builder.getInt1(IsDynamic);
-  return Builder.CreateCall(F, {Ptr, Min, NullIsUnknown, Dynamic});
+  return Builder.CreateCall(F, {Ptr, WholeObj, Min, NullIsUnknown, Dynamic});
 }
 
 namespace {

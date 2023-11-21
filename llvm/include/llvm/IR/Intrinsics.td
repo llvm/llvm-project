@@ -1071,7 +1071,7 @@ def int_maximum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
 
 // Internal interface for object size checking
 def int_objectsize : DefaultAttrsIntrinsic<[llvm_anyint_ty],
-                               [llvm_anyptr_ty, llvm_i1_ty,
+                               [llvm_anyptr_ty, llvm_i1_ty, llvm_i1_ty,
                                 llvm_i1_ty, llvm_i1_ty],
                                [IntrNoMem, IntrSpeculatable, IntrWillReturn,
                                 ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>,

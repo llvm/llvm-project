@@ -615,9 +615,12 @@ Value *llvm::lowerObjectSizeCall(
   assert(ObjectSize->getIntrinsicID() == Intrinsic::objectsize &&
          "ObjectSize must be a call to llvm.objectsize!");
 
-  bool MaxVal = cast<ConstantInt>(ObjectSize->getArgOperand(1))->isZero();
+  bool MaxVal = cast<ConstantInt>(ObjectSize->getArgOperand(2))->isZero();
   ObjectSizeOpts EvalOptions;
   EvalOptions.AA = AA;
+
+  EvalOptions.WholeObjectSize =
+      cast<ConstantInt>(ObjectSize->getArgOperand(1))->isOne();
 
   // Unless we have to fold this to something, try to be as accurate as
   // possible.
@@ -628,10 +631,10 @@ Value *llvm::lowerObjectSizeCall(
     EvalOptions.EvalMode = ObjectSizeOpts::Mode::ExactSizeFromOffset;
 
   EvalOptions.NullIsUnknownSize =
-      cast<ConstantInt>(ObjectSize->getArgOperand(2))->isOne();
+      cast<ConstantInt>(ObjectSize->getArgOperand(3))->isOne();
 
   auto *ResultType = cast<IntegerType>(ObjectSize->getType());
-  bool StaticOnly = cast<ConstantInt>(ObjectSize->getArgOperand(3))->isZero();
+  bool StaticOnly = cast<ConstantInt>(ObjectSize->getArgOperand(4))->isZero();
   if (StaticOnly) {
     // FIXME: Does it make sense to just return a failure value if the size won't
     // fit in the output and `!MustSucceed`?
@@ -726,6 +729,20 @@ SizeOffsetAPInt ObjectSizeOffsetVisitor::computeImpl(Value *V) {
   if (!IndexTypeSizeChanged && Offset.isZero())
     return SOT;
 
+  if (!Options.WholeObjectSize && AllocaTy) {
+    const StructLayout &SL = *DL.getStructLayout(
+        const_cast<StructType *>(AllocaTy));
+
+    unsigned Idx = SL.getElementContainingOffset(Offset.getLimitedValue());
+
+    TypeSize ElemSize = DL.getTypeAllocSize(AllocaTy->getTypeAtIndex(Idx));
+    APInt Size(InitialIntTyBits, ElemSize.getKnownMinValue());
+
+    TypeSize ElemOffset = SL.getElementOffset(Idx);
+    Offset -= ElemOffset.getKnownMinValue();
+    SOT = SizeOffsetAPInt(Size, Offset);
+  }
+
   // We stripped an address space cast that changed the index type size or we
   // accumulated some constant offset (or both). Readjust the bit width to match
   // the argument index type size and apply the offset, as required.
@@ -736,6 +753,7 @@ SizeOffsetAPInt ObjectSizeOffsetVisitor::computeImpl(Value *V) {
         !::CheckedZextOrTrunc(SOT.Offset, InitialIntTyBits))
       SOT.Offset = APInt();
   }
+
   // If the computed offset is "unknown" we cannot add the stripped offset.
   return {SOT.Size,
           SOT.Offset.getBitWidth() > 1 ? SOT.Offset + Offset : SOT.Offset};
@@ -781,9 +799,12 @@ SizeOffsetAPInt ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
   TypeSize ElemSize = DL.getTypeAllocSize(I.getAllocatedType());
   if (ElemSize.isScalable() && Options.EvalMode != ObjectSizeOpts::Mode::Min)
     return ObjectSizeOffsetVisitor::unknown();
+
   APInt Size(IntTyBits, ElemSize.getKnownMinValue());
-  if (!I.isArrayAllocation())
+  if (!I.isArrayAllocation()) {
+    AllocaTy = dyn_cast<StructType>(I.getAllocatedType());
     return SizeOffsetAPInt(align(Size, I.getAlign()), Zero);
+  }
 
   Value *ArraySize = I.getArraySize();
   if (const ConstantInt *C = dyn_cast<ConstantInt>(ArraySize)) {
@@ -1086,6 +1107,8 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::compute(Value *V) {
 SizeOffsetValue ObjectSizeOffsetEvaluator::compute_(Value *V) {
   ObjectSizeOffsetVisitor Visitor(DL, TLI, Context, EvalOpts);
   SizeOffsetAPInt Const = Visitor.compute(V);
+  AllocaTy = Visitor.getAllocaType();
+
   if (Const.bothKnown())
     return SizeOffsetValue(ConstantInt::get(Context, Const.Size),
                            ConstantInt::get(Context, Const.Offset));
@@ -1188,12 +1211,16 @@ ObjectSizeOffsetEvaluator::visitExtractValueInst(ExtractValueInst &) {
 }
 
 SizeOffsetValue ObjectSizeOffsetEvaluator::visitGEPOperator(GEPOperator &GEP) {
-  SizeOffsetValue PtrData = compute_(GEP.getPointerOperand());
+  SizeOffsetValue PtrData;
+
+  PtrData = compute_(GEP.getPointerOperand());
+
   if (!PtrData.bothKnown())
     return ObjectSizeOffsetEvaluator::unknown();
 
   Value *Offset = emitGEPOffset(&Builder, DL, &GEP, /*NoAssumptions=*/true);
   Offset = Builder.CreateAdd(PtrData.Offset, Offset);
+
   return SizeOffsetValue(PtrData.Size, Offset);
 }
 
