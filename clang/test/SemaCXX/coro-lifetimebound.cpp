@@ -98,3 +98,23 @@ Co<int> value_coro(int b) { co_return co_await foo_coro(b); }
 [[clang::coro_wrapper]] Co<int> wrapper1(int b) { return value_coro(b); }
 [[clang::coro_wrapper]] Co<int> wrapper2(const int& b) { return value_coro(b); }
 }
+
+// =============================================================================
+// Lifetime bound but not a Coroutine Return Type: No analysis.
+// =============================================================================
+namespace not_a_crt {
+template <typename T> struct [[clang::coro_lifetimebound]] Co {
+  struct promise_type {
+    Co<T> get_return_object() {
+      return {};
+    }
+    suspend_always initial_suspend();
+    suspend_always final_suspend() noexcept;
+    void unhandled_exception();
+    void return_value(const T &t);
+  };
+};
+
+Co<int> foo_coro(const int& a) { co_return a; }
+Co<int> bar(int a) { return foo_coro(a); }
+} // namespace not_a_crt
