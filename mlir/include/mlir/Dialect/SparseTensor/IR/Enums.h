@@ -282,12 +282,12 @@ constexpr bool is2OutOf4DLT(DimLevelType dlt) {
 }
 
 /// Check if the `DimLevelType` needs positions array.
-constexpr bool isDLTWithPos(DimLevelType dlt) {
+constexpr bool isWithPosDLT(DimLevelType dlt) {
   return isCompressedDLT(dlt) || isLooseCompressedDLT(dlt);
 }
 
 /// Check if the `DimLevelType` needs coordinates array.
-constexpr bool isDLTWithCrd(DimLevelType dlt) {
+constexpr bool isWithCrdDLT(DimLevelType dlt) {
   return isCompressedDLT(dlt) || isSingletonDLT(dlt) ||
          isLooseCompressedDLT(dlt) || is2OutOf4DLT(dlt);
 }
