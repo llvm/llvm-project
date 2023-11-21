@@ -86,9 +86,14 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
       CodeModel::Model CM = TM.getCodeModel();
       assert(CM != CodeModel::Tiny &&
              "Tiny codesize model not supported on X86");
+      // Large objects use GOTOFF, otherwise use RIP-rel access.
       if (auto *GO = dyn_cast_or_null<GlobalObject>(GV))
         return TM.isLargeGlobalObject(GO) ? X86II::MO_GOTOFF
                                           : X86II::MO_NO_FLAG;
+
+      // For non-GlobalObjects, the small and medium code models treat them as
+      // accessible with a RIP-rel access. The large code model uses GOTOFF to
+      // access everything that's not explicitly small.
       return CM == CodeModel::Large ? X86II::MO_GOTOFF : X86II::MO_NO_FLAG;
     }
 
