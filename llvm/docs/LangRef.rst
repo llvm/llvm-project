@@ -10013,11 +10013,11 @@ The truth table used for the '``or``' instruction is:
 |   1 |   1 |   1 |
 +-----+-----+-----+
 
-``disjoint`` means for each bit, that bit is known to be zero in at least one of
-the inputs. This allows the Or to be treated as an Add since no carry can occur
-from any bit. If the disjoint keyword is present, the result value of the ``or``
-is a :ref:`poison value <poisonvalues>` if both inputs have a one in the same
-bit position. For vectors, only the element containing the bit is poison.
+``disjoint`` means for each bit, that bit is zero in at least one of the inputs.
+This allows the Or to be treated as an Add since no carry can occur from any
+bit. If the disjoint keyword is present, the result value of the ``or`` is a
+:ref:`poison value <poisonvalues>` if both inputs have a one in the same bit
+position. For vectors, only the element containing the bit is poison.
 
 Example:
 """"""""
