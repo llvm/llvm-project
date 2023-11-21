@@ -53,12 +53,6 @@ Pass *createLICMPass();
 
 //===----------------------------------------------------------------------===//
 //
-// LoopPredication - This pass does loop predication on guards.
-//
-Pass *createLoopPredicationPass();
-
-//===----------------------------------------------------------------------===//
-//
 // LoopStrengthReduce - This pass is strength reduces GEP instructions that use
 // a loop's canonical induction variable as one of their indices.
 //
