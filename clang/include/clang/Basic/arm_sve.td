@@ -298,6 +298,29 @@ let TargetGuard = "sve,bf16" in {
   def SVBFMLALT_LANE : SInst<"svbfmlalt_lane[_{0}]", "MMddi", "b", MergeNone, "aarch64_sve_bfmlalt_lane_v2", [IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
 }
 
+let TargetGuard = "sve2p1" in {
+  // Contiguous zero-extending load to quadword (single vector).
+  def SVLD1UWQ      : MInst<"svld1uwq[_{d}]", "dPc",  "iUif", [IsLoad], MemEltTyInt32, "aarch64_sve_ld1uwq">;
+  def SVLD1UWQ_VNUM : MInst<"svld1uwq_vnum[_{d}]", "dPcl", "iUif", [IsLoad], MemEltTyInt32, "aarch64_sve_ld1uwq">;
+
+  def SVLD1UDQ      : MInst<"svld1udq[_{d}]", "dPc",  "lUld", [IsLoad], MemEltTyInt64, "aarch64_sve_ld1udq">;
+  def SVLD1UDQ_VNUM : MInst<"svld1udq_vnum[_{d}]", "dPcl", "lUld", [IsLoad], MemEltTyInt64, "aarch64_sve_ld1udq">;
+
+  // Load one vector (vector base + scalar offset)
+  def SVLD1Q_GATHER_U64BASE_OFFSET : MInst<"svld1q_gather[_{2}base]_offset_{d}", "dPgl", "cUcsUsiUilUlfhdb", [IsGatherLoad, IsByteIndexed], MemEltTyDefault, "aarch64_sve_ld1q_gather_scalar_offset">;
+  def SVLD1Q_GATHER_U64BASE : MInst<"svld1q_gather[_{2}base]_{d}", "dPg", "cUcsUsiUilUlfhdb", [IsGatherLoad, IsByteIndexed], MemEltTyDefault, "aarch64_sve_ld1q_gather_scalar_offset">;
+
+  // Load N-element structure into N vectors (scalar base)
+  defm SVLD2Q : StructLoad<"svld2q[_{2}]", "2Pc", "aarch64_sve_ld2q_sret">;
+  defm SVLD3Q : StructLoad<"svld3q[_{2}]", "3Pc", "aarch64_sve_ld3q_sret">;
+  defm SVLD4Q : StructLoad<"svld4q[_{2}]", "4Pc", "aarch64_sve_ld4q_sret">;
+
+  // Load N-element structure into N vectors (scalar base, VL displacement)
+  defm SVLD2Q_VNUM : StructLoad<"svld2q_vnum[_{2}]", "2Pcl", "aarch64_sve_ld2q_sret">;
+  defm SVLD3Q_VNUM : StructLoad<"svld3q_vnum[_{2}]", "3Pcl", "aarch64_sve_ld3q_sret">;
+  defm SVLD4Q_VNUM : StructLoad<"svld4q_vnum[_{2}]", "4Pcl", "aarch64_sve_ld4q_sret">;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Stores
 
@@ -418,6 +441,29 @@ def SVSTNT1_VNUM : MInst<"svstnt1_vnum[_{d}]", "vPpld", "csilUcUsUiUlhfd", [IsSt
 let TargetGuard = "sve,bf16" in {
   def SVSTNT1_BF      : MInst<"svstnt1[_{d}]",      "vPpd",  "b", [IsStore], MemEltTyDefault, "aarch64_sve_stnt1">;
   def SVSTNT1_VNUM_BF : MInst<"svstnt1_vnum[_{d}]", "vPpld", "b", [IsStore], MemEltTyDefault, "aarch64_sve_stnt1">;
+}
+
+let TargetGuard = "sve2p1" in {
+  // Contiguous truncating store from quadword (single vector).
+  def SVST1UWQ      : MInst<"svst1uwq[_{d}]", "vPcd", "iUif",  [IsStore], MemEltTyInt32, "aarch64_sve_st1uwq">;
+  def SVST1UWQ_VNUM : MInst<"svst1uwq_vnum[_{d}]", "vPcld", "iUif", [IsStore], MemEltTyInt32, "aarch64_sve_st1uwq">;
+
+  def SVST1UDQ      : MInst<"svst1udq[_{d}]", "vPcd", "lUld",  [IsStore], MemEltTyInt64, "aarch64_sve_st1udq">;
+  def SVST1UDQ_VNUM : MInst<"svst1udq_vnum[_{d}]", "vPcld", "lUld", [IsStore], MemEltTyInt64, "aarch64_sve_st1udq">;
+
+  // Store one vector (vector base + scalar offset)
+  def SVST1Q_SCATTER_U64BASE_OFFSET : MInst<"svst1q_scatter[_{2}base]_offset[_{d}]",  "vPgld", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_scalar_offset">;
+  def SVST1Q_SCATTER_U64BASE : MInst<"svst1q_scatter[_{2}base][_{d}]",  "vPgd", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_scalar_offset">;
+
+  // Store N vectors into N-element structure (scalar base)
+  defm SVST2Q : StructStore<"svst2q[_{d}]", "vPc2", "aarch64_sve_st2q">;
+  defm SVST3Q : StructStore<"svst3q[_{d}]", "vPc3", "aarch64_sve_st3q">;
+  defm SVST4Q : StructStore<"svst4q[_{d}]", "vPc4", "aarch64_sve_st4q">;
+
+  // Store N vectors into N-element structure (scalar base, VL displacement)
+  defm SVST2Q_VNUM : StructStore<"svst2q_vnum[_{d}]", "vPcl2", "aarch64_sve_st2q">;
+  defm SVST3Q_VNUM : StructStore<"svst3q_vnum[_{d}]", "vPcl3", "aarch64_sve_st3q">;
+  defm SVST4Q_VNUM : StructStore<"svst4q_vnum[_{d}]", "vPcl4", "aarch64_sve_st4q">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
