@@ -1249,9 +1249,10 @@ def ConvertArmSMEToLLVM : Pass<"convert-arm-sme-to-llvm"> {
   let summary = "Lower the operations from the ArmSME dialect into the LLVM "
                 "dialect";
   let constructor = "mlir::createConvertArmSMEToLLVMPass()";
-    let dependentDialects = [
-      "arm_sme::ArmSMEDialect",
-      "LLVM::LLVMDialect"];
+  let dependentDialects = [
+    "arm_sme::ArmSMEDialect",
+    "LLVM::LLVMDialect"
+  ];
 }
 
 //===----------------------------------------------------------------------===//

@@ -11,6 +11,8 @@
 
 #include <memory>
 
+#include "mlir/Dialect/ArmSME/Transforms/Passes.h"
+
 namespace mlir {
 class Pass;
 class RewritePatternSet;
@@ -18,8 +20,18 @@ class RewritePatternSet;
 #define GEN_PASS_DECL_CONVERTARMSMETOLLVM
 #include "mlir/Conversion/Passes.h.inc"
 
-/// Create a pass to convert a subset of ArmSME ops to SCF.
+using arm_sme::ArmSMETypeConverter;
+
+/// Create a pass to convert from the ArmSME dialect to LLVM intrinsics.
 std::unique_ptr<Pass> createConvertArmSMEToLLVMPass();
+
+/// Configure target to convert from the ArmSME dialect to LLVM intrinsics.
+void configureArmSMEToLLVMConversionLegality(ConversionTarget &target);
+
+/// Populate the given list with patterns that convert from the ArmSME dialect
+/// to LLVM intrinsics.
+void populateArmSMEToLLVMConversionPatterns(ArmSMETypeConverter &converter,
+                                            RewritePatternSet &patterns);
 
 } // namespace mlir
 
