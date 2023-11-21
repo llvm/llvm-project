@@ -1466,6 +1466,15 @@ class AdvSIMD_GatherLoadQ_VS_Intrinsic
                 ],
                 [IntrReadMem]>;
 
+class AdvSIMD_GatherLoadQ_SV_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                [
+                  llvm_nxv1i1_ty,
+                  llvm_ptr_ty,
+                  llvm_nxv2i64_ty
+                ],
+                [IntrReadMem, IntrArgMemOnly]>;
+
 class AdvSIMD_GatherLoad_VS_WriteFFR_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [
@@ -1513,6 +1522,16 @@ class AdvSIMD_ScatterStoreQ_VS_Intrinsic
                  llvm_i64_ty
                ],
                [IntrWriteMem]>;
+
+class AdvSIMD_ScatterStoreQ_SV_Intrinsic
+    : DefaultAttrsIntrinsic<[],
+               [
+                 llvm_anyvector_ty,
+                 llvm_nxv1i1_ty,
+                 llvm_ptr_ty,
+                 llvm_nxv2i64_ty
+               ],
+               [IntrWriteMem, IntrArgMemOnly]>;
 
 class SVE_gather_prf_SV
     : DefaultAttrsIntrinsic<[],
@@ -2144,6 +2163,9 @@ def int_aarch64_sve_ld1_gather_uxtw : AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsi
 def int_aarch64_sve_ld1_gather_sxtw_index : AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic;
 def int_aarch64_sve_ld1_gather_uxtw_index : AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic;
 
+// 128-bit loads, scaled offsets (indices)
+def int_aarch64_sve_ld1q_gather_index : AdvSIMD_GatherLoadQ_SV_Intrinsic;
+
 //
 // Gather loads: vector base + scalar offset
 //
@@ -2221,6 +2243,9 @@ def int_aarch64_sve_st1_scatter_sxtw_index
 
 def int_aarch64_sve_st1_scatter_uxtw_index
     : AdvSIMD_ScatterStore_SV_32b_Offsets_Intrinsic;
+
+// 128-bit stores, scaled offsets (indices)
+def int_aarch64_sve_st1q_scatter_index : AdvSIMD_ScatterStoreQ_SV_Intrinsic;
 
 //
 // Scatter stores: vector base + scalar offset
