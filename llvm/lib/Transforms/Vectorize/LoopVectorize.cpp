@@ -407,9 +407,6 @@ static constexpr uint32_t MemCheckBypassWeights[] = {1, 127};
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
-// Likelyhood of bypassing the vectorized loop because of zero trips necessary.
-// See `emitMinimumVectorEpilogueIterCountCheck`.
-static constexpr uint32_t EpilogueMinItersBypassWeights[] = {1, 127};
 
 /// A helper function that returns true if the given type is irregular. The
 /// type is irregular if its allocated size doesn't equal the store size of an
@@ -3163,9 +3160,8 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton() {
       // Assume that `Count % VectorTripCount` is equally distributed.
       unsigned TripCount = UF * VF.getKnownMinValue();
       assert(TripCount > 0 && "trip count should not be zero");
-      MDBuilder MDB(ScalarLatchTerm->getContext());
-      MDNode *BranchWeights = MDB.createBranchWeights(1, TripCount - 1);
-      BI.setMetadata(LLVMContext::MD_prof, BranchWeights);
+      const uint32_t Weights[] = {1, TripCount - 1};
+      setBranchWeights(BI, Weights);
     }
   }
 
@@ -8093,8 +8089,19 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
 
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
-  if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator()))
-    setBranchWeights(BI, EpilogueMinItersBypassWeights);
+  if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
+    unsigned MainLoopStep = UF * VF.getKnownMinValue();
+    unsigned EpilogueLoopStep =
+        EPI.EpilogueUF * EPI.EpilogueVF.getKnownMinValue();
+    // We assume the remaining `Count` is equally distributed in
+    // [0, MainLoopStep)
+    // So the probability for `Count < EpilogueLoopStep` should be
+    // min(MainLoopStep, EpilogueLoopStep) / MainLoopStep
+    unsigned EstimatedSkipCount = std::min(MainLoopStep, EpilogueLoopStep);
+    const uint32_t Weights[] = {EstimatedSkipCount,
+                                MainLoopStep - EstimatedSkipCount};
+    setBranchWeights(BI, Weights);
+  }
   ReplaceInstWithInst(Insert->getTerminator(), &BI);
 
   LoopBypassBlocks.push_back(Insert);

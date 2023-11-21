@@ -620,8 +620,8 @@ struct AMDGPUKernelTy : public GenericKernelTy {
         {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &KernelObject},
         {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, &ArgsSize},
         {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE, &GroupSize},
-        {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE, &PrivateSize},
-        {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_DYNAMIC_CALLSTACK, &DynCallstack}};
+        {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_DYNAMIC_CALLSTACK, &DynamicStack},
+        {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE, &PrivateSize}};
 
     for (auto &Info : RequiredInfos) {
       Status = hsa_executable_symbol_get_info(Symbol, Info.first, Info.second);
@@ -723,6 +723,9 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// @return 56 for cov4 and 256 for cov5
   uint32_t getImplicitArgsSize() const { return ImplicitArgsSize; }
 
+  /// Indicates whether or not we need to set up our own private segment size.
+  bool usesDynamicStack() const { return DynamicStack; }
+
 private:
   /// The kernel object to execute.
   uint64_t KernelObject;
@@ -731,6 +734,7 @@ private:
   uint32_t ArgsSize;
   uint32_t GroupSize;
   uint32_t PrivateSize;
+  bool DynamicStack;
 
   // The kernel meta data if a dynamic callstack is being used.
   bool DynCallstack;
@@ -1130,7 +1134,8 @@ struct AMDGPUQueueTy {
   /// signal and can define an optional input signal (nullptr if none).
   Error pushKernelLaunch(const AMDGPUKernelTy &Kernel, void *KernelArgs,
                          uint32_t NumThreads, uint64_t NumBlocks,
-                         uint32_t GroupSize, AMDGPUSignalTy *OutputSignal,
+                         uint32_t GroupSize, uint64_t StackSize,
+                         AMDGPUSignalTy *OutputSignal,
                          AMDGPUSignalTy *InputSignal) {
     assert(OutputSignal && "Invalid kernel output signal");
 
@@ -1168,9 +1173,7 @@ struct AMDGPUQueueTy {
     Packet->grid_size_y = 1;
     Packet->grid_size_z = 1;
     Packet->private_segment_size =
-        Kernel.hasDynamicCallstack()
-            ? std::max(Kernel.getPrivateSize(), Kernel.getTargetStackSize())
-            : Kernel.getPrivateSize();
+        Kernel.usesDynamicStack() ? StackSize : Kernel.getPrivateSize();
     Packet->group_segment_size = GroupSize;
     Packet->kernel_object = Kernel.getKernelObject();
     Packet->kernarg_address = KernelArgs;
@@ -1705,7 +1708,7 @@ public:
   /// the kernel args buffer to the specified memory manager.
   Error pushKernelLaunch(const AMDGPUKernelTy &Kernel, void *KernelArgs,
                          uint32_t NumThreads, uint64_t NumBlocks,
-                         uint32_t GroupSize,
+                         uint32_t GroupSize, uint64_t StackSize,
                          AMDGPUMemoryManagerTy &MemoryManager) {
     if (Queue == nullptr)
       return Plugin::error("Target queue was nullptr");
@@ -1734,7 +1737,8 @@ public:
     // Push the kernel with the output signal and an input signal (optional)
     DP("Using Queue: %p with HSA Queue: %p\n", Queue, Queue->getHsaQueue());
     return Queue->pushKernelLaunch(Kernel, KernelArgs, NumThreads, NumBlocks,
-                                   GroupSize, OutputSignal, InputSignal);
+                                   GroupSize, StackSize, OutputSignal,
+                                   InputSignal);
   }
 
   /// Push an asynchronous memory copy between pinned memory buffers.
@@ -3369,11 +3373,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
-    // Return 1024, in conformity to hipLimitStackSize.
-    Value = 1024;
+    Value = StackSize;
     return Plugin::success();
   }
   Error setDeviceStackSize(uint64_t Value) override {
+    StackSize = Value;
     return Plugin::success();
   }
   Error getDeviceHeapSize(uint64_t &Value) override {
@@ -3620,6 +3624,10 @@ private:
 
   /// The current size of the global device memory pool (managed by us).
   uint64_t DeviceMemoryPoolSize = 1L << 29L /* 512MB */;
+
+  /// The current size of the stack that will be used in cases where it could
+  /// not be statically determined.
+  uint64_t StackSize = 16 * 1024 /* 16 KB */;
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
@@ -4262,6 +4270,11 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     GroupSize += MaxDynCGroupMem;
   }
 
+  uint64_t StackSize;
+  if (auto Err = GenericDevice.getDeviceStackSize(StackSize))
+    return Err;
+
+  // Initialize implicit arguments.
   utils::AMDGPUImplicitArgsTy *ImplArgs =
       reinterpret_cast<utils::AMDGPUImplicitArgsTy *>(
           advanceVoidPtr(AllArgs, KernelArgsSize));
@@ -4332,7 +4345,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   // Push the kernel launch into the stream.
   return Stream->pushKernelLaunch(*this, AllArgs, NumThreads, NumBlocks,
-                                  GroupSize, ArgsMemoryManager);
+                                  GroupSize, StackSize, ArgsMemoryManager);
 }
 
 void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
