@@ -193,7 +193,7 @@ MDNode *MachineLoop::getLoopID() const {
     }
   }
   if (LoopID &&
-      (LoopID->getNumOperands() == 0 || LoopID->getOperand(0) != LoopID)) {
+      (LoopID->getNumOperands() == 0 || LoopID->getOperand(0) != LoopID))
     LoopID = nullptr;
   return LoopID;
 }
