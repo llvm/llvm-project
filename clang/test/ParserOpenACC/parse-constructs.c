@@ -34,6 +34,33 @@ void func() {
   for(;;){}
   // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc enter data clause list
+  for(;;){}
+  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc exit data clause list
+  for(;;){}
+  // expected-error@+3{{invalid OpenACC directive 'enter invalid'}}
+  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc enter invalid
+  for(;;){}
+  // expected-error@+3{{invalid OpenACC directive 'exit invalid'}}
+  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc exit invalid
+  for(;;){}
+  // expected-error@+2{{invalid OpenACC directive 'enter'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc enter
+  for(;;){}
+  // expected-error@+3{{invalid OpenACC directive 'exit }'}}
+  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc exit }
+  for(;;){}
+  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc host_data clause list
   for(;;){}
   // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
