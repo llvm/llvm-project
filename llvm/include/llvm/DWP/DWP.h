@@ -15,6 +15,12 @@
 #include <vector>
 
 namespace llvm {
+enum OnCuIndexOverflow {
+  HardStop,
+  SoftStop,
+  Continue,
+};
+
 struct UnitIndexEntry {
   DWARFUnitIndex::Entry::SectionContribution Contributions[8];
   std::string Name;
