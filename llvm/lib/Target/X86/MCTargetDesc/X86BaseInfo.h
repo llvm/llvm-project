@@ -968,8 +968,12 @@ namespace X86II {
 
     // Force REX2/VEX/EVEX encoding
     ExplicitOpPrefixShift = NoTrackShift + 1,
+    // For instructions that require REX2 prefix even if EGPR is not used.
     ExplicitREX2Prefix = 1ULL << ExplicitOpPrefixShift,
+    // For instructions that use VEX encoding only when {vex}, {vex2} or {vex3}
+    // is present.
     ExplicitVEXPrefix = 2ULL << ExplicitOpPrefixShift,
+    // For instructions that are promoted to EVEX space for EGPR.
     ExplicitEVEXPrefix = 3ULL << ExplicitOpPrefixShift,
     ExplicitOpPrefixMask = 3ULL << ExplicitOpPrefixShift
   };
