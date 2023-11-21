@@ -413,7 +413,7 @@ public:
   /// within the text section that the SHT_LLVM_BB_ADDR_MAP section \p Sec
   /// is associated with. If the current ELFFile is relocatable, a corresponding
   /// \p RelaSec must be passed in as an argument.
-  /// Optional out variable to all collect PGO Analyses. New elements are only
+  /// Optional out variable to collect all PGO Analyses. New elements are only
   /// added if no error occurs. If not provided, the PGO Analyses are decoded
   /// then ignored.
   Expected<std::vector<BBAddrMap>>

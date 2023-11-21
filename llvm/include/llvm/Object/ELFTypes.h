@@ -896,7 +896,7 @@ struct PGOAnalysisMap {
   struct PGOBBEntry {
     using BaseMetadata = BBAddrMap::BBEntry::Metadata;
 
-    /// Enum indicating the how many successors a block has. This enum must fit
+    /// Enum indicating how many successors a block has. This enum must fit
     /// into two bits.
     enum class SuccessorsType {
       /// None should be present if BBAddrMap.feature has disabled branch
@@ -915,7 +915,7 @@ struct PGOAnalysisMap {
     struct SuccessorEntry {
       /// Unique ID of this successor basic block.
       uint32_t ID;
-      /// Branch Probability of the edge to this successor taken from MBPI
+      /// Branch Probability of the edge to this successor taken from MBPI.
       BranchProbability Prob;
 
       bool operator==(const SuccessorEntry &Other) const {
